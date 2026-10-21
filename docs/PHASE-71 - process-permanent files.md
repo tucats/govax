@@ -1,9 +1,9 @@
 # Phase 71 — process-permanent files
 
 **Status:** planned 2026-10-21; Part B's decisions and the proposed
-answers to its questions accepted by the author the same day. Subtask 1
-(the survey, and the VMS probe, `testdata/ppf71`) is done; subtask 2
-waits for the probe's VAX run.
+answers to its questions accepted by the author the same day. Subtasks 1
+(the survey, and the VMS probe, `testdata/ppf71`) and 2 (the probe's
+VAX run; Part A, "The probe's answers") are done.
 
 ## Goal
 
@@ -118,6 +118,113 @@ What it shows, before VMS's answers:
    and DCL's WRITE to it is CLI$_UNDFIL, as WRITE to `PPF71_ALIAS`
    (defined as `SYS$OUTPUT`) is not: DCL follows the names.
 
+### The probe's answers (2026-10-21)
+
+OpenVMS V7.1 on simh's VAX 8600, the volume on DUA1, run from the
+console terminal (OPA0:) as `@PPF71/OUTPUT=PPF71.LOG`, then parts T, D,
+and O at the terminal (`vax/ppf71-term.log`; its blank lines are the
+author's Returns, answering O1's `$FIND` and `$GET` of the terminal).
+Everything ran. Statuses below by name: RMS$_PRV 1829A, RMS$_FOP 1853C,
+RMS$_DEV 184C4, RMS$_IOP 18574, RMS$_FAC 18514, RMS$_IFI 18564.
+
+**The strings.** An equivalence string of a process-permanent file is
+ESC, 0, a word, then a device name, as the guide says. The word is
+`%X8000` plus an index (the entry's number, from 1) plus `%X100`,
+except for a file DCL's OPEN/READ opened (PPF71_IN: `%X8005`; its
+OPEN/WRITE file, PPF71_OUT, was `%X8106`). What `%X100` means isn't
+shown; govax will set it as observed. The device name is the node's
+physical name, `_SIMVAX$OPA0:` or `_SIMVAX$DUA1:`, with a colon for the
+files LOGINOUT and DCL's procedures open, without one for OPEN's.
+
+| Name | Where | Mode | Attributes | Word | Device |
+| ---- | ----- | ---- | ---------- | ---- | ------ |
+| SYS$INPUT, SYS$COMMAND | the terminal | exec | concealed, terminal | 8101 | `_SIMVAX$OPA0:` |
+| SYS$OUTPUT, SYS$ERROR | the terminal | exec | concealed, terminal | 8103 | `_SIMVAX$OPA0:` |
+| SYS$OUTPUT | DCL, at level 0 | super | concealed, terminal, confine | 8103 | the same entry |
+| SYS$INPUT | a procedure | super | terminal, confine | 8102 | `_SIMVAX$DUA1:` |
+| SYS$OUTPUT | under `@/OUTPUT=` | super | terminal, confine | 8104 | `_SIMVAX$DUA1:` |
+| SYS$INPUT | a nested procedure | super | terminal, confine | 8102 again | its own file |
+| SYS$OUTPUT | a nested `@/OUTPUT=` | super | terminal, confine | 8105 | its log |
+| PPF71_IN, PPF71_OUT | DCL's OPEN | super | terminal, confine | 8005, 8106 | `_SIMVAX$DUA1` |
+| SYS$OUTPUT, SYS$ERROR | a subprocess, `/OUTPUT=` | exec | terminal | 8101 | its log |
+| SYS$INPUT, SYS$COMMAND | a subprocess, `/INPUT=NL:` | exec | terminal | 8102 | `_NLA0:` |
+| SYS$INPUT | its procedure | super | terminal, confine | 8103 | the procedure |
+| SYS$OUTPUT | its DCL | super | terminal, confine | 8101 | the exec entry |
+
+So SYS$ERROR shares SYS$OUTPUT's entry and SYS$COMMAND SYS$INPUT's when
+they name the same device; at level 0 at the terminal there is no
+supervisor SYS$INPUT (the executive name is found); a nested procedure's
+input takes entry 2 again (DCL keeps one procedure file open), while
+each `/OUTPUT` file takes a new entry. Only the terminal's executive
+names are concealed. TT is not a process-permanent file: `OPA0:`
+(concealed, terminal) at the console, `_NLA0:` in the subprocess.
+
+**`$TRNLNM` and DCL.** `$TRNLNM` returns the whole string (length 17
+for `_SIMVAX$OPA0:`). **F$TRNLNM leaves out the four bytes** (length 13)
+though its LENGTH item says 17, so DCL never holds the prefix: `DEFINE
+PPF71_DCLCOPY "''X'"` makes a plain name, which RMS and `$GETDVI` follow
+to the disk and DCL's WRITE refuses (CLI$_UNDFIL). A copy made by
+`$CRELNM` with the whole string is a working process-permanent name
+(O13). SHOW LOGICAL and SHOW TRANSLATION show the string after the
+prefix (`/FULL` adds `[super,confine]` or `[exec]` and
+`[concealed,terminal]`). F$PARSE of SYS$OUTPUT is `SYS$OUTPUT:.;`, of
+`X.DAT` with SYS$OUTPUT as default `SYS$OUTPUT:X.DAT;`; F$SEARCH is
+empty. F$GETDVI, `$GETDVIW`, and `$ASSIGN` of the names reach the
+device after the prefix. (The probe's `F$TRNLNM(P1,,,"EXECUTIVE")`
+returned "" for every name, its empty table argument naming no table;
+govax agrees.)
+
+**A subprocess** gets its own entries (above); the parent's OPEN names
+didn't come with it (they're CONFINE: F$TRNLNM empty, READ CLI$_UNDFIL),
+its other names did.
+
+**Indirect access.** `$OPEN` or `$CREATE` (identically) of a
+process-permanent name:
+
+- STS RMS$_NORMAL; STV a small number that differs by entry (%X20 to
+  %X70; not modeled, masked); FAB$W_IFI `%XC080` plus the index
+  (`%XC084` for entry 4); FOP as given; FAC as given (O4's GET stays in
+  the FAB).
+- FAB$L_SDC the device's characteristics, without DEV$M_IDV for an
+  output stream (SYS$OUTPUT's log: `18CD4108`, the disk `1CCD4108`) or
+  DEV$M_ODV for an input stream (`14CD4108`); FAB$L_DEV the same with
+  RND, FOD, and DIR cleared and REC and CCL set (`08CD0103`). At the
+  terminal both are the terminal's own (`0C040007`).
+- ORG, RFM, RAT, MRS, FSZ, and ALQ from the file: the `/OUTPUT` logs
+  and OPEN/WRITE's file are VFC (2-byte header) print files; a
+  procedure is stream-LF with CR; ALQ the file's allocation now. At the
+  terminal, `$OPEN` showed VAR, CR, FSZ 2, and `$DISPLAY` VFC, print
+  (unconfirmed which `$OPEN` writes; govax will follow the log).
+- The NAM: ESA and RSA `NAME:.;` (the name used, `SYS$OUTPUT:.;`,
+  `PPF71_COPY:.;`; through an alias, the process-permanent name, not the
+  alias), not the guide's `NAME:`; FNB NAM$M_PPF and EXP_DEV
+  (`%X10080`); DVI the name as a counted string; FID 0. A file name
+  after the colon is kept (`SYS$OUTPUT:PPF71X.DAT;`, FNB adding
+  EXP_NAME and EXP_TYPE) and ignored.
+- `$CONNECT` gives an ISI (`%XC08n`, numbered apart from the IFIs;
+  masked).
+- **One position**: two opens, and DCL's own READ, read one stream in
+  turn (data records 1 to 8 in order across both opens; PPF71_IN's A1
+  by DCL, A2 to A6 by the image, A7 and A8 by DCL again); writes from
+  both opens and DCL interleave in order (PPF71B.DAT: B1 to B5).
+- `$REWIND` RMS$_IOP, on every stream, OPEN's files too. `$FIND`
+  (sequential) succeeds on an input stream (and the terminal's
+  SYS$OUTPUT, whose open had GET and PUT), RMS$_FAC on an output-only
+  file, as `$GET` is. `$PUT` to an input stream RMS$_FAC (I9, F7); to an
+  output stream opened with FAC=GET, success (O4): the original open's
+  FAC decides. `$ERASE` RMS$_IFI. `$DISPLAY` succeeds, writing the
+  real file's RSA (`DUA1:[000000]PPF71.LOG;1`), DVI (`_SIMVAX$DUA1`),
+  FID, the original FAC (a procedure's GET and EXE, `%X82`), and STV an
+  address in P1 (masked). `$GET` at the end RMS$_EOF; OPEN/WRITE's file
+  read through FAC=GET is at its end (RMS$_EOF), not refused.
+- FOP=PPF RMS$_PRV, before parsing (the NAM untouched); UFO and NFS
+  RMS$_FOP after it. `_SYS$OUTPUT:` RMS$_DEV, STV SS$_NOSUCHDEV, ESA
+  `_SYS$OUTPUT:[000000].;`. `$PARSE` succeeds (ESA `SYS$OUTPUT:.;`, the
+  same FNB and DVI, DEV and SDC set); `$SEARCH` after it RMS$_DEV,
+  SS$_NOSUCHDEV.
+- An image that ends with an indirect stream open leaves the file open
+  and its records in it; DCL writes on (part X).
+
 ## Part B — decisions and questions
 
 ### Decisions (accepted by the author, 2026-10-21)
@@ -172,6 +279,25 @@ What it shows, before VMS's answers:
    subprocess (they're CONFINE, and the DCL Dictionary says its open
    files aren't copied) is the probe's question; proposed: follow it.
 
+### Revised by the probe (2026-10-21)
+
+- Goal 1 and Decision 3: **F$TRNLNM leaves the prefix out**, as SHOW
+  does; only `$TRNLNM` (and `$CRELNM` given it) carries it.
+- Decision 2: the word is `%X8000` + `%X100` + the index (no `%X100`
+  for OPEN/READ's file); the device text has a colon but for OPEN's
+  files. SYS$ERROR shares SYS$OUTPUT's entry, and SYS$COMMAND
+  SYS$INPUT's, when they name the same device.
+- Decision 4: the NAM's strings are `NAME:.;`, and a file name after the
+  colon stays in them. FAB$W_IFI is `%XC080` + the index; STV, ISI, and
+  `$DISPLAY`'s STV are govax's own, masked. `$FIND` and `$GET` are
+  refused only by the original FAC; `$REWIND` always.
+- Decision 5: DCL defines the supervisor-mode names: SYS$OUTPUT at level
+  0 (the executive entry), a procedure's SYS$INPUT (one entry, reused
+  for a nested procedure), each `/OUTPUT` file's SYS$OUTPUT (an entry
+  each). The terminal's executive names are concealed; a subprocess's
+  aren't.
+- Question 3 settled: a subprocess doesn't get its parent's OPEN names.
+
 ### The probe's cases (subtask 1; `testdata/ppf71`)
 
 `PPF71.COM` runs at level 1 under `/OUTPUT`. DCL's view first: a `LEX`
@@ -223,7 +349,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
 1. **The survey and the probe** (this doc; `testdata/ppf71`, run on
    govax). Done 2026-10-21.
 2. **The probe's VAX run**: the answers in Part A, Part B revised by
-   them.
+   them. Done 2026-10-21.
 3. **The strings** (`lnm`): making and reading a process-permanent file
    string; file-spec translation stopping at one; SHOW LOGICAL and SHOW
    TRANSLATION; the device lookups (`$ASSIGN`, `$GETDVI`, F$GETDVI).
@@ -266,3 +392,15 @@ question: govax's own IFI numbering in VMS's form, masked by the
 oracle; the `$DECK`/`$EOD` checks staying in DCL's procedure reader,
 which becomes the SYS$INPUT entry's stream; a subprocess's names by
 what the probe shows. The author is running the probe on the VAX.
+
+### 2026-10-21 — Subtask 2: the probe's VAX run
+
+The author ran the probe on VMS V7.1 (simh's VAX 8600), the procedure
+and the terminal parts; the logs, PPF71B.DAT, and the image are in
+`testdata/ppf71/vax` (an interactive LINK writes no map, so copyout
+copies none). Part A's "The probe's answers" has what they show, and
+Part B's "Revised by the probe" what changes: chiefly that F$TRNLNM
+drops the prefix, that the NAM shows `NAME:.;`, and the supervisor-mode
+names DCL defines at each level. What stays unconfirmed (the word's
+`%X100`, the indirect open's STV, the terminal's RFM after `$OPEN`) is
+marked there and gets govax's own choice.

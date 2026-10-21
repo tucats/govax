@@ -1,0 +1,202 @@
+$ ! -- start of terminal run --
+$ DEFINE/USER_MODE PPF71_PART T
+$ RUN PPF71
+T1 the process-permanent names, executive mode
+SYS$INPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$OUTPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$ERROR at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T2 supervisor mode
+SYS$INPUT at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$OUTPUT at mode 2: 00000001, length 17, attributes 00000702, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$ERROR at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T3 user mode
+SYS$INPUT at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$OUTPUT at mode 3: 00000001, length 17, attributes 00000702, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$ERROR at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T4 other names, user mode
+TT at mode 3: 00000001, length 5, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 4F 50 3041, string "OPA0:", after 4 ":"
+SYS$DISK at mode 3: 00000001, length 5, attributes 00000404, mode 2, table LNM$PROCESS_TABLE
+  bytes 44 55 3141, string "DUA1:", after 4 ":"
+PPF71_IN at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_OUT at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_ALIAS at mode 3: 00000001, length 10, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 53 59 2453, string "SYS$OUTPUT", after 4 "OUTPUT"
+PPF71_DCLCOPY at mode 3: 00000001, length 13, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 5F 53 4D49, string "_SIMVAX$DUA1:", after 4 "VAX$DUA1:"
+SYS$OUTPUT: at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+$ DEFINE/USER_MODE PPF71_PART D
+$ RUN PPF71
+D1 the process-permanent names
+SYS$INPUT: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+SYS$OUTPUT: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+SYS$ERROR: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+SYS$COMMAND: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+D2 other names
+SYS$OUTPUT:: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+TT: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+PPF71_IN: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_OUT: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_ALIAS: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+PPF71_DCLCOPY: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+$ DEFINE/USER_MODE PPF71_PART O
+$ RUN PPF71
+O1 $OPEN SYS$OUTPUT, FAC=PUT, then every operation
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O1 a record through an indirect open
+$PUT 00010001 stv 03010001 isi C082 rsz 36 rfa 00000000,0000
+$DISPLAY 00010001 stv 7FF9C002 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 03 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:[].LOG;" fnb 00010080 dvi "_SIMVAX$OPA0" fid (0,0,0)
+$REWIND 00018574 stv 00000000 isi C082 rsz 36 rfa 00000000,0000
+
+$FIND 00010001 stv 0001000D isi C082 rsz 36 rfa 00000000,0000
+
+$GET 00010001 stv 0001000D isi C082 rsz 0 rfa 00000000,0000
+  record ""
+$ERASE 00018564 stv 00000000 ifi C083
+$CLOSE 00010001 stv 00000000 ifi 0000
+O2 $CREATE SYS$OUTPUT, FAC=PUT
+$CREATE 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O2 a record through an indirect create
+$PUT 00010001 stv 15010001 isi C082 rsz 38 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 two opens of SYS$OUTPUT at once
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O3 first open, record 1
+$PUT 00010001 stv 21010001 isi C082 rsz 23 rfa 00000000,0000
+O3 second open, record 1
+$PUT 00010001 stv 23010001 isi C082 rsz 24 rfa 00000000,0000
+O3 first open, record 2
+$PUT 00010001 stv 25010001 isi C082 rsz 23 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 first open, after the second closed
+$PUT 00010001 stv 28010001 isi C082 rsz 38 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O4 $OPEN SYS$OUTPUT, FAC=GET, then a $PUT
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O4 a record put with FAC=GET
+$PUT 00010001 stv 30010001 isi C082 rsz 28 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O5 $OPEN SYS$OUTPUT, FOP=PPF
+$OPEN 0001829A stv 00000000 ifi 0000 fop 00040000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "" rsa "" fnb 00000000 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O6 $OPEN SYS$OUTPUT, FOP=UFO
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00020000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O7 $OPEN SYS$OUTPUT, FOP=NFS
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00010000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O8 $OPEN SYS$OUTPUT: (with the colon)
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O9 $OPEN SYS$OUTPUT:PPF71X.DAT
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:PPF71X.DAT;" rsa "SYS$OUTPUT:PPF71X.DAT;" fnb 00010086 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O10 $OPEN _SYS$OUTPUT: (translation suppressed)
+$OPEN 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "_SYS$OUTPUT:[000000].;" rsa "" fnb 00000080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O11 $OPEN PPF71_ALIAS (DCL defined it as SYS$OUTPUT)
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O11 a record through PPF71_ALIAS
+$PUT 00010001 stv 22010001 isi C082 rsz 32 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O12 $PARSE and $SEARCH of SYS$OUTPUT
+$PARSE 00010001 stv 00000000 ifi 0000 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$SEARCH 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+O13 PPF71_COPY: SYS$OUTPUT's string, user mode, by $CRELNM
+  $CRELNM 00000001
+PPF71_COPY at mode 3: 00000001, length 17, attributes 00000400, mode 3, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+PPF71_COPY: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 80
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "PPF71_COPY:.;" rsa "PPF71_COPY:.;" fnb 00010080 dvi "PPF71_COPY" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O13 a record through PPF71_COPY
+$PUT 00010001 stv 03010001 isi C082 rsz 31 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O14 SYS$ERROR: $OPEN, a $PUT
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$ERROR:.;" rsa "SYS$ERROR:.;" fnb 00010080 dvi "SYS$ERROR" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+O14 a record through SYS$ERROR
+$PUT 00010001 stv 0B010001 isi C082 rsz 30 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O15 SYS$COMMAND: $OPEN only
+$OPEN 00010001 stv 00000040 ifi C081 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$COMMAND:.;" rsa "SYS$COMMAND:.;" fnb 00010080 dvi "SYS$COMMAND" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+$ 

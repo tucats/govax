@@ -1,0 +1,292 @@
+$ ! PPF71P.COM - Phase 71's probe, run in a subprocess
+$ ! (SPAWN/OUTPUT=PPF71P.LOG/INPUT=NL: @PPF71P, from PPF71.COM, while
+$ ! PPF71_IN and PPF71_OUT are open in the parent): the subprocess's own
+$ ! process-permanent names, and whether the parent's OPEN names came
+$ ! with it.
+$ SET NOON
+$ SET VERIFY
+$ CALL LEX SYS$INPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$INPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$INPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$INPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$OUTPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$OUTPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$OUTPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$OUTPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$ERROR
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$ERROR: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode EXECUTIVE, terminal TRUE, confine FALSE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$ERROR: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$ERROR:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$COMMAND
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$COMMAND: length 6 bytes 95 78 16716 after 4 "0:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode EXECUTIVE, terminal TRUE, confine FALSE, length 10, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$COMMAND: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$COMMAND:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_NLA0:"
+$   EXIT
+$ CALL LEX PPF71_IN
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_IN: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode , terminal , confine , length , table 
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_IN: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "DUA1:[000000]PPF71_IN.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+%SYSTEM-F-IVDEVNAM, invalid device name
+ \PPF71_IN\
+$ SHOW LOGICAL/PROCESS
+
+(LNM$PROCESS_TABLE)
+
+  "PPF71_ALIAS" = "SYS$OUTPUT"
+  "PPF71_DCLCOPY" = "_SIMVAX$DUA1:"
+  "SYS$COMMAND" = "_NLA0:"
+  "SYS$DISK" [super] = "DUA1:"
+  "SYS$DISK" [exec] = "DUA1:"
+  "SYS$ERROR" = "_SIMVAX$DUA1:"
+  "SYS$INPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$INPUT" [exec] = "_NLA0:"
+  "SYS$OUTPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [exec] = "_SIMVAX$DUA1:"
+  "TB70SHR" = "DUA1:[000000]TB70SHR.EXE"
+  "TT" = "_NLA0:"
+$ DEFINE/USER_MODE PPF71_PART T
+$ RUN PPF71
+T1 the process-permanent names, executive mode
+SYS$INPUT at mode 1: 00000001, length 10, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._NLA0:", after 4 "_NLA0:"
+SYS$OUTPUT at mode 1: 00000001, length 17, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 1: 00000001, length 17, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$COMMAND at mode 1: 00000001, length 10, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._NLA0:", after 4 "_NLA0:"
+T2 supervisor mode
+SYS$INPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 2: 00000001, length 17, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$COMMAND at mode 2: 00000001, length 10, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._NLA0:", after 4 "_NLA0:"
+T3 user mode
+SYS$INPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 3: 00000001, length 17, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$COMMAND at mode 3: 00000001, length 10, attributes 00000600, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._NLA0:", after 4 "_NLA0:"
+T4 other names, user mode
+TT at mode 3: 00000001, length 6, attributes 00000400, mode 1, table LNM$PROCESS_TABLE
+  bytes 5F 4E 414C, string "_NLA0:", after 4 "0:"
+SYS$DISK at mode 3: 00000001, length 5, attributes 00000404, mode 2, table LNM$PROCESS_TABLE
+  bytes 44 55 3141, string "DUA1:", after 4 ":"
+PPF71_IN at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_OUT at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_ALIAS at mode 3: 00000001, length 10, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 53 59 2453, string "SYS$OUTPUT", after 4 "OUTPUT"
+PPF71_DCLCOPY at mode 3: 00000001, length 13, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 5F 53 4D49, string "_SIMVAX$DUA1:", after 4 "VAX$DUA1:"
+SYS$OUTPUT: at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+$ DEFINE/USER_MODE PPF71_PART D
+$ RUN PPF71
+D1 the process-permanent names
+SYS$INPUT: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+SYS$OUTPUT: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+SYS$ERROR: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+SYS$COMMAND: $GETDVIW 00000001 iosb 0001, devnam "_NLA0:" full "_NLA0:" class 160 char 0C150001
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_NLA0:" full "_NLA0:"
+D2 other names
+SYS$OUTPUT:: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+TT: $GETDVIW 00000001 iosb 0001, devnam "_NLA0:" full "_NLA0:" class 160 char 0C150001
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_NLA0:" full "_NLA0:"
+PPF71_IN: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_OUT: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_ALIAS: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+PPF71_DCLCOPY: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 144
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+$ READ PPF71_IN REC
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ WRITE SYS$OUTPUT "PPF71P: done"
+PPF71P: done
+$ EXIT

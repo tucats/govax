@@ -1,0 +1,1119 @@
+$ ! PPF71.COM - Phase 71's probe of process-permanent files
+$ ! (testdata/ppf71/README.md). Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @PPF71/OUTPUT=PPF71.LOG
+$ !
+$ ! PPF71.LOG gets this procedure's log; PPF71S.LOG the nested
+$ ! procedure's (@PPF71S/OUTPUT=PPF71S.LOG); PPF71P.LOG the subprocess's;
+$ ! PPF71B.DAT the file DCL and the image both write.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ MACRO PPF71
+$ LINK PPF71
+$ DEFINE PPF71_ALIAS SYS$OUTPUT
+$ !
+$ ! L1: DCL's view of the process-permanent names, at level 1 under
+$ ! /OUTPUT.
+$ CALL LEX SYS$INPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$INPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$INPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$INPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$OUTPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$OUTPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$OUTPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$OUTPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$ERROR
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$ERROR: length 13 bytes 95 83 19785 after 4 "VAX$OPA0:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode EXECUTIVE, terminal TRUE, confine FALSE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$ERROR: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$ERROR:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_OPA0:"
+$   EXIT
+$ CALL LEX SYS$COMMAND
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$COMMAND: length 13 bytes 95 83 19785 after 4 "VAX$OPA0:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode EXECUTIVE, terminal TRUE, confine FALSE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$COMMAND: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$COMMAND:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_OPA0:"
+$   EXIT
+$ CALL LEX TT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+TT: length 5 bytes 79 80 12353 after 4 ":"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode EXECUTIVE, terminal TRUE, confine FALSE, length 5, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+TT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "TT:[000000].;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_OPA0:"
+$   EXIT
+$ CALL LEX PPF71_ALIAS
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+PPF71_ALIAS: length 10 bytes 83 89 9299 after 4 "OUTPUT"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal FALSE, confine FALSE, length 10, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_ALIAS: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$OUTPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ SHOW LOGICAL/FULL SYS$INPUT
+   "SYS$INPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/FULL SYS$OUTPUT
+   "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/FULL SYS$ERROR
+   "SYS$ERROR" [exec] = "_SIMVAX$OPA0:" [concealed,terminal] (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/FULL SYS$COMMAND
+   "SYS$COMMAND" [exec] = "_SIMVAX$OPA0:" [concealed,terminal] (LNM$PROCESS_TABLE)
+$ SHOW TRANSLATION SYS$OUTPUT
+  SYS$OUTPUT = "_SIMVAX$DUA1:"  (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/PROCESS
+
+(LNM$PROCESS_TABLE)
+
+  "PPF71_ALIAS" = "SYS$OUTPUT"
+  "SYS$COMMAND" = "_SIMVAX$OPA0:"
+  "SYS$DISK" [super] = "DUA1:"
+  "SYS$DISK" [exec] = "SYS$SYSROOT:"
+  "SYS$ERROR" = "_SIMVAX$OPA0:"
+  "SYS$INPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$INPUT" [exec] = "_SIMVAX$OPA0:"
+  "SYS$OUTPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [exec] = "_SIMVAX$OPA0:"
+  "TB70SHR" = "DUA1:[000000]TB70SHR.EXE"
+  "TT" = "OPA0:"
+$ WRITE SYS$OUTPUT "parse X.DAT with SYS$OUTPUT: """, F$PARSE("X.DAT","SYS$OUTPUT"), """"
+parse X.DAT with SYS$OUTPUT: "SYS$OUTPUT:X.DAT;"
+$ WRITE SYS$OUTPUT "parse SYS$OUTPUT:X.DAT: """, F$PARSE("SYS$OUTPUT:X.DAT"), """"
+parse SYS$OUTPUT:X.DAT: "SYS$OUTPUT:X.DAT;"
+$ WRITE SYS$OUTPUT "search SYS$OUTPUT: """, F$SEARCH("SYS$OUTPUT"), """"
+search SYS$OUTPUT: ""
+$ WRITE PPF71_ALIAS "L1 written to PPF71_ALIAS"
+L1 written to PPF71_ALIAS
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ !
+$ ! L2: the copied string under another name, by DCL.
+$ X = F$TRNLNM("SYS$OUTPUT")
+$ DEFINE PPF71_DCLCOPY "_SIMVAX$DUA1:"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW LOGICAL/FULL PPF71_DCLCOPY
+   "PPF71_DCLCOPY" [super] = "_SIMVAX$DUA1:" (LNM$PROCESS_TABLE)
+$ CALL LEX PPF71_DCLCOPY
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+PPF71_DCLCOPY: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal FALSE, confine FALSE, length 13, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_DCLCOPY: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "_SIMVAX$DUA1:[000000].;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ WRITE PPF71_DCLCOPY "L2 written to PPF71_DCLCOPY"
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ !
+$ ! Part T: the program's translations, and part D, its devices.
+$ DEFINE/USER_MODE PPF71_PART T
+$ RUN PPF71
+T1 the process-permanent names, executive mode
+SYS$INPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$OUTPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$ERROR at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T2 supervisor mode
+SYS$INPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8104, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T3 user mode
+SYS$INPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8104, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T4 other names, user mode
+TT at mode 3: 00000001, length 5, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 4F 50 3041, string "OPA0:", after 4 ":"
+SYS$DISK at mode 3: 00000001, length 5, attributes 00000404, mode 2, table LNM$PROCESS_TABLE
+  bytes 44 55 3141, string "DUA1:", after 4 ":"
+PPF71_IN at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_OUT at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_ALIAS at mode 3: 00000001, length 10, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 53 59 2453, string "SYS$OUTPUT", after 4 "OUTPUT"
+PPF71_DCLCOPY at mode 3: 00000001, length 13, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 5F 53 4D49, string "_SIMVAX$DUA1:", after 4 "VAX$DUA1:"
+SYS$OUTPUT: at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEFINE/USER_MODE PPF71_PART D
+$ RUN PPF71
+D1 the process-permanent names
+SYS$INPUT: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+SYS$OUTPUT: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+SYS$ERROR: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+SYS$COMMAND: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+D2 other names
+SYS$OUTPUT:: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+TT: $GETDVIW 00000001 iosb 0001, devnam "_OPA0:" full "_SIMVAX$OPA0:" class 66 char 0C040087
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_OPA0:" full "_SIMVAX$OPA0:"
+PPF71_IN: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_OUT: $GETDVIW 00000144 iosb 0144, devnam "" full "" class 0 char 00000000
+  $ASSIGN 00000144, channel 0
+PPF71_ALIAS: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+PPF71_DCLCOPY: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Part O: SYS$OUTPUT through RMS.
+$ DEFINE/USER_MODE PPF71_PART O
+$ RUN PPF71
+O1 $OPEN SYS$OUTPUT, FAC=PUT, then every operation
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O1 a record through an indirect open
+$PUT 00010001 stv 00000000 isi C084 rsz 36 rfa 00000023,01F8
+$DISPLAY 00010001 stv 7FF9C004 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "DUA1:[000000]PPF71.LOG;1" fnb 00010080 dvi "_SIMVAX$DUA1" fid (15,1,0)
+$REWIND 00018574 stv 00000000 isi C084 rsz 36 rfa 00000023,01F8
+$FIND 00018514 stv 00000000 isi C084 rsz 36 rfa 00000023,01F8
+$GET 00018514 stv 00000000 isi C084 rsz 36 rfa 00000023,01F8
+$ERASE 00018564 stv 00000000 ifi C084
+$CLOSE 00010001 stv 00000000 ifi 0000
+O2 $CREATE SYS$OUTPUT, FAC=PUT
+$CREATE 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O2 a record through an indirect create
+$PUT 00010001 stv 00000000 isi C084 rsz 38 rfa 00000025,01BA
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 two opens of SYS$OUTPUT at once
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O3 first open, record 1
+$PUT 00010001 stv 00000000 isi C084 rsz 23 rfa 00000027,00C4
+O3 second open, record 1
+$PUT 00010001 stv 00000000 isi C084 rsz 24 rfa 00000027,0120
+O3 first open, record 2
+$PUT 00010001 stv 00000000 isi C084 rsz 23 rfa 00000027,017C
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 first open, after the second closed
+$PUT 00010001 stv 00000000 isi C084 rsz 38 rfa 00000028,0002
+$CLOSE 00010001 stv 00000000 ifi 0000
+O4 $OPEN SYS$OUTPUT, FAC=GET, then a $PUT
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 02 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O4 a record put with FAC=GET
+$PUT 00010001 stv 00000000 isi C084 rsz 28 rfa 00000028,01EC
+$CLOSE 00010001 stv 00000000 ifi 0000
+O5 $OPEN SYS$OUTPUT, FOP=PPF
+$OPEN 0001829A stv 00000000 ifi 0000 fop 00040000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "" rsa "" fnb 00000000 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O6 $OPEN SYS$OUTPUT, FOP=UFO
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00020000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O7 $OPEN SYS$OUTPUT, FOP=NFS
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00010000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O8 $OPEN SYS$OUTPUT: (with the colon)
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O9 $OPEN SYS$OUTPUT:PPF71X.DAT
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:PPF71X.DAT;" rsa "SYS$OUTPUT:PPF71X.DAT;" fnb 00010086 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O10 $OPEN _SYS$OUTPUT: (translation suppressed)
+$OPEN 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "_SYS$OUTPUT:[000000].;" rsa "" fnb 00000080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O11 $OPEN PPF71_ALIAS (DCL defined it as SYS$OUTPUT)
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O11 a record through PPF71_ALIAS
+$PUT 00010001 stv 00000000 isi C084 rsz 32 rfa 0000002D,00B2
+$CLOSE 00010001 stv 00000000 ifi 0000
+O12 $PARSE and $SEARCH of SYS$OUTPUT
+$PARSE 00010001 stv 00000000 ifi 0000 fop 00000000 dev 18CD4108 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$SEARCH 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 18CD4108 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+O13 PPF71_COPY: SYS$OUTPUT's string, user mode, by $CRELNM
+  $CRELNM 00000001
+PPF71_COPY at mode 3: 00000001, length 17, attributes 00000400, mode 3, table LNM$PROCESS_TABLE
+  bytes 1B 00 8104, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+PPF71_COPY: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 128
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 48 fsz 2
+  esa "PPF71_COPY:.;" rsa "PPF71_COPY:.;" fnb 00010080 dvi "PPF71_COPY" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+O13 a record through PPF71_COPY
+$PUT 00010001 stv 00000000 isi C084 rsz 31 rfa 00000030,0014
+$CLOSE 00010001 stv 00000000 ifi 0000
+O14 SYS$ERROR: $OPEN, a $PUT
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$ERROR:.;" rsa "SYS$ERROR:.;" fnb 00010080 dvi "SYS$ERROR" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+$PUT 00010001 stv 2D010001 isi C082 rsz 30 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O15 SYS$COMMAND: $OPEN only
+$OPEN 00010001 stv 00000040 ifi C081 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$COMMAND:.;" rsa "SYS$COMMAND:.;" fnb 00010080 dvi "SYS$COMMAND" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "after part O"
+after part O
+$ SHOW LOGICAL PPF71_COPY
+%SHOW-S-NOTRAN, no translation for logical name PPF71_COPY
+$ !
+$ ! Part I: SYS$INPUT through RMS, from these eight data lines.
+$ DEFINE/USER_MODE PPF71_PART I
+$ RUN PPF71
+I1 $OPEN SYS$INPUT, two records
+$OPEN 00010001 stv 00000020 ifi C082 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 02 shr 00 org 00 rfm 05 rat 02 mrs 0 alq 9 fsz 0
+  esa "SYS$INPUT:.;" rsa "SYS$INPUT:.;" fnb 00010080 dvi "SYS$INPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C083 rsz 0 rfa 00000000,0000
+data record 1
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000004,01CC
+  record "data record 1"
+data record 2
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000004,01DA
+  record "data record 2"
+I2 a second open, a record
+$OPEN 00010001 stv 00000020 ifi C082 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 02 shr 00 org 00 rfm 05 rat 02 mrs 0 alq 9 fsz 0
+  esa "SYS$INPUT:.;" rsa "SYS$INPUT:.;" fnb 00010080 dvi "SYS$INPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C083 rsz 0 rfa 00000000,0000
+data record 3
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000004,01E8
+  record "data record 3"
+I3 the first open again
+data record 4
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000004,01F6
+  record "data record 4"
+I4 $REWIND, then a record
+$REWIND 00018574 stv 00000000 isi C083 rsz 13 rfa 00000004,01F6
+data record 5
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000005,0004
+  record "data record 5"
+I5 $FIND, then a record
+$FIND 00010001 stv 00000000 isi C083 rsz 13 rfa 00000005,0012
+data record 6
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000005,0012
+  record "data record 6"
+I6 $DISPLAY
+$DISPLAY 00010001 stv 7FF9C003 ifi C082 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 82 shr 00 org 00 rfm 05 rat 02 mrs 0 alq 9 fsz 0
+  esa "SYS$INPUT:.;" rsa "DUA1:[000000]PPF71.COM;1" fnb 00010080 dvi "_SIMVAX$DUA1" fid (12,1,0)
+I7 the rest, through the second open
+data record 7
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000005,0020
+  record "data record 7"
+data record 8
+$GET 00010001 stv 00000000 isi C083 rsz 13 rfa 00000005,002E
+  record "data record 8"
+$GET 0001827A stv 00000000 isi C083 rsz 0 rfa 00000000,0000
+I8 the first open, after the end
+$GET 0001827A stv 00000000 isi C083 rsz 0 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+I9 $OPEN SYS$INPUT, FAC=PUT, then a $PUT
+$OPEN 00010001 stv 00000020 ifi C082 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 01 shr 00 org 00 rfm 05 rat 02 mrs 0 alq 9 fsz 0
+  esa "SYS$INPUT:.;" rsa "SYS$INPUT:.;" fnb 00010080 dvi "SYS$INPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C083 rsz 0 rfa 00000000,0000
+$PUT 00018514 stv 00000000 isi C083 rsz 28 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+I10 $CREATE SYS$INPUT
+$CREATE 00010001 stv 00000020 ifi C082 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 01 shr 00 org 00 rfm 05 rat 02 mrs 0 alq 9 fsz 0
+  esa "SYS$INPUT:.;" rsa "SYS$INPUT:.;" fnb 00010080 dvi "SYS$INPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Part F: files DCL's OPEN opened, read and written by DCL and the
+$ ! image in turn.
+$ CREATE PPF71A.DAT
+A1 first record
+A2 second record
+A3 third record
+A4 fourth record
+A5 fifth record
+A6 sixth record
+A7 seventh record
+A8 eighth record
+$ OPEN/READ PPF71_IN PPF71A.DAT
+$ READ PPF71_IN REC
+$ SHOW SYMBOL REC
+  REC = "A1 first record"
+$ OPEN/WRITE PPF71_OUT PPF71B.DAT
+$ WRITE PPF71_OUT "B1 from DCL"
+$ CALL LEX PPF71_IN
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+PPF71_IN: length 12 bytes 95 83 19785 after 4 "VAX$DUA1"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 16, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_IN: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "PPF71_IN:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX PPF71_OUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+PPF71_OUT: length 12 bytes 95 83 19785 after 4 "VAX$DUA1"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 16, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+PPF71_OUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "PPF71_OUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ SHOW LOGICAL/FULL PPF71_IN
+   "PPF71_IN" [super,confine] = "_SIMVAX$DUA1" [terminal] (LNM$PROCESS_TABLE)
+$ DEFINE/USER_MODE PPF71_PART F
+$ RUN PPF71
+F1 the names
+PPF71_IN at mode 2: 00000001, length 16, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8005, string "...._SIMVAX$DUA1", after 4 "_SIMVAX$DUA1"
+PPF71_IN at mode 3: 00000001, length 16, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8005, string "...._SIMVAX$DUA1", after 4 "_SIMVAX$DUA1"
+PPF71_OUT at mode 3: 00000001, length 16, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8106, string "...._SIMVAX$DUA1", after 4 "_SIMVAX$DUA1"
+PPF71_IN: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 192
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+F2 $OPEN PPF71_IN, a record
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 1 fsz 0
+  esa "PPF71_IN:.;" rsa "PPF71_IN:.;" fnb 00010080 dvi "PPF71_IN" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+$GET 00010001 stv 00000000 isi C085 rsz 16 rfa 00000001,0012
+  record "A2 second record"
+F3 a second open, a record
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 1 fsz 0
+  esa "PPF71_IN:.;" rsa "PPF71_IN:.;" fnb 00010080 dvi "PPF71_IN" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+$GET 00010001 stv 00000000 isi C085 rsz 15 rfa 00000001,0024
+  record "A3 third record"
+F4 the first open again
+$GET 00010001 stv 00000000 isi C085 rsz 16 rfa 00000001,0036
+  record "A4 fourth record"
+F5 $REWIND, then a record
+$REWIND 00018574 stv 00000000 isi C085 rsz 16 rfa 00000001,0036
+$GET 00010001 stv 00000000 isi C085 rsz 15 rfa 00000001,0048
+  record "A5 fifth record"
+F6 $FIND, then a record
+$FIND 00010001 stv 00000000 isi C085 rsz 15 rfa 00000001,005A
+$GET 00010001 stv 00000000 isi C085 rsz 15 rfa 00000001,005A
+  record "A6 sixth record"
+$CLOSE 00010001 stv 00000000 ifi 0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+F7 $OPEN PPF71_IN, FAC=PUT, then a $PUT
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 1 fsz 0
+  esa "PPF71_IN:.;" rsa "PPF71_IN:.;" fnb 00010080 dvi "PPF71_IN" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+$PUT 00018514 stv 00000000 isi C085 rsz 27 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+F8 $OPEN PPF71_IN:PPF71X.DAT
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 04CD0103 sdc 14CD4108
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 1 fsz 0
+  esa "PPF71_IN:PPF71X.DAT;" rsa "PPF71_IN:PPF71X.DAT;" fnb 00010086 dvi "PPF71_IN" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+F9 $CREATE PPF71_OUT, a record, then a second open
+$CREATE 00010001 stv 00000070 ifi C086 fop 00000000 dev 0CCD0103 sdc 1CCD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 5 fsz 2
+  esa "PPF71_OUT:.;" rsa "PPF71_OUT:.;" fnb 00010080 dvi "PPF71_OUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C086 rsz 0 rfa 00000000,0000
+$PUT 00010001 stv 00000000 isi C086 rsz 26 rfa 00000001,0010
+$OPEN 00010001 stv 00000070 ifi C086 fop 00000000 dev 0CCD0103 sdc 1CCD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 5 fsz 2
+  esa "PPF71_OUT:.;" rsa "PPF71_OUT:.;" fnb 00010080 dvi "PPF71_OUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C086 rsz 0 rfa 00000000,0000
+$PUT 00010001 stv 00000000 isi C086 rsz 31 rfa 00000001,002E
+$PUT 00010001 stv 00000000 isi C086 rsz 32 rfa 00000001,0052
+$CLOSE 00010001 stv 00000000 ifi 0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+F10 $OPEN PPF71_OUT, FAC=GET, a record
+$OPEN 00010001 stv 00000070 ifi C086 fop 00000000 dev 0CCD0103 sdc 1CCD4108
+  fac 02 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 5 fsz 2
+  esa "PPF71_OUT:.;" rsa "PPF71_OUT:.;" fnb 00010080 dvi "PPF71_OUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C086 rsz 0 rfa 00000000,0000
+$GET 0001827A stv 00000000 isi C086 rsz 0 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ READ PPF71_IN REC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL REC
+  REC = "A7 seventh record"
+$ WRITE PPF71_OUT "B5 from DCL, after the image"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ !
+$ ! The subprocess, while PPF71_IN and PPF71_OUT are open.
+$ SPAWN/OUTPUT=PPF71P.LOG/INPUT=NL: @PPF71P
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ READ PPF71_IN REC
+$ SHOW SYMBOL REC
+  REC = "A8 eighth record"
+$ CLOSE PPF71_IN
+$ CLOSE PPF71_OUT
+$ TYPE PPF71B.DAT
+B1 from DCL
+B2 from the image's create
+B3 from the image's second open
+B4 from the image's create again
+B5 from DCL, after the image
+$ DIRECTORY/FULL PPF71B.DAT
+
+Directory DUA1:[000000]
+
+PPF71B.DAT;1                  File ID:  (19,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   21-OCT-2026 16:19:30.76
+Revised:   21-OCT-2026 16:19:30.82 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 32 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 1/1 block.
+$ !
+$ ! A nested procedure with an output file of its own.
+$ @PPF71S/OUTPUT=PPF71S.LOG
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ TYPE PPF71S.LOG
+$ ! PPF71S.COM - Phase 71's probe, a nested procedure with an output file
+$ ! of its own (@PPF71S/OUTPUT=PPF71S.LOG, from PPF71.COM): SYS$OUTPUT is
+$ ! this procedure's log, and the program writes into it.
+$ SET NOON
+$ SET VERIFY
+$ CALL LEX SYS$INPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$INPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$INPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$INPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ CALL LEX SYS$OUTPUT
+$ LEX: SUBROUTINE
+$   X = F$TRNLNM(P1)
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   ELSE
+$     WRITE SYS$OUTPUT P1, ": length ", L, " bytes ", F$CVUI(0,8,X), " ", -
+          F$CVUI(8,8,X), " ", F$CVUI(16,16,X), " after 4 """, -
+          F$EXTRACT(4,L-4,X), """"
+SYS$OUTPUT: length 13 bytes 95 83 19785 after 4 "VAX$DUA1:"
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  access mode ", F$TRNLNM(P1,,,,,"ACCESS_MODE"), -
+        ", terminal ", F$TRNLNM(P1,,,,,"TERMINAL"), -
+        ", confine ", F$TRNLNM(P1,,,,,"CONFINE"), -
+        ", length ", F$TRNLNM(P1,,,,,"LENGTH"), -
+        ", table ", F$TRNLNM(P1,,,,,"TABLE_NAME")
+  access mode SUPERVISOR, terminal TRUE, confine TRUE, length 17, table LNM$PROCESS_TABLE
+$   X = F$TRNLNM(P1,,,"EXECUTIVE")
+$   WRITE SYS$OUTPUT "  executive mode:"
+  executive mode:
+$   GOSUB BYTES
+$ BYTES:
+$   L = F$LENGTH(X)
+$   IF L .LT. 4
+$   THEN
+$     WRITE SYS$OUTPUT P1, ": length ", L, " """, X, """"
+SYS$OUTPUT: length 0 ""
+$   ELSE
+$   ENDIF
+$   RETURN
+$   WRITE SYS$OUTPUT "  parse """, F$PARSE(P1), """"
+  parse "SYS$OUTPUT:.;"
+$   WRITE SYS$OUTPUT "  devnam """, F$GETDVI(P1,"DEVNAM"), """"
+  devnam "_DUA1:"
+$   EXIT
+$ SHOW LOGICAL/FULL SYS$OUTPUT
+   "SYS$OUTPUT" [super,confine] = "_SIMVAX$DUA1:" [terminal] (LNM$PROCESS_TABLE)
+$ DEFINE/USER_MODE PPF71_PART T
+$ RUN PPF71
+T1 the process-permanent names, executive mode
+SYS$INPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$OUTPUT at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$ERROR at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 1: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T2 supervisor mode
+SYS$INPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 2: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8105, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 2: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T3 user mode
+SYS$INPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8102, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$OUTPUT at mode 3: 00000001, length 17, attributes 00000602, mode 2, table LNM$PROCESS_TABLE
+  bytes 1B 00 8105, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+SYS$ERROR at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8103, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+SYS$COMMAND at mode 3: 00000001, length 17, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 1B 00 8101, string "...._SIMVAX$OPA0:", after 4 "_SIMVAX$OPA0:"
+T4 other names, user mode
+TT at mode 3: 00000001, length 5, attributes 00000700, mode 1, table LNM$PROCESS_TABLE
+  bytes 4F 50 3041, string "OPA0:", after 4 ":"
+SYS$DISK at mode 3: 00000001, length 5, attributes 00000404, mode 2, table LNM$PROCESS_TABLE
+  bytes 44 55 3141, string "DUA1:", after 4 ":"
+PPF71_IN at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_OUT at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+PPF71_ALIAS at mode 3: 00000001, length 10, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 53 59 2453, string "SYS$OUTPUT", after 4 "OUTPUT"
+PPF71_DCLCOPY at mode 3: 00000001, length 13, attributes 00000400, mode 2, table LNM$PROCESS_TABLE
+  bytes 5F 53 4D49, string "_SIMVAX$DUA1:", after 4 "VAX$DUA1:"
+SYS$OUTPUT: at mode 3: 000001BC, length 0, attributes 00000000, mode 0, table 
+$ DEFINE/USER_MODE PPF71_PART O
+$ RUN PPF71
+O1 $OPEN SYS$OUTPUT, FAC=PUT, then every operation
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 16 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O1 a record through an indirect open
+$PUT 00010001 stv 00000000 isi C085 rsz 36 rfa 0000000D,01AA
+$DISPLAY 00010001 stv 7FF9C005 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 16 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "DUA1:[000000]PPF71S.LOG;1" fnb 00010080 dvi "_SIMVAX$DUA1" fid (21,1,0)
+$REWIND 00018574 stv 00000000 isi C085 rsz 36 rfa 0000000D,01AA
+$FIND 00018514 stv 00000000 isi C085 rsz 36 rfa 0000000D,01AA
+$GET 00018514 stv 00000000 isi C085 rsz 36 rfa 0000000D,01AA
+$ERASE 00018564 stv 00000000 ifi C085
+$CLOSE 00010001 stv 00000000 ifi 0000
+O2 $CREATE SYS$OUTPUT, FAC=PUT
+$CREATE 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 16 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O2 a record through an indirect create
+$PUT 00010001 stv 00000000 isi C085 rsz 38 rfa 0000000F,016C
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 two opens of SYS$OUTPUT at once
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 16 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 16 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O3 first open, record 1
+$PUT 00010001 stv 00000000 isi C085 rsz 23 rfa 00000011,0076
+O3 second open, record 1
+$PUT 00010001 stv 00000000 isi C085 rsz 24 rfa 00000011,00D2
+O3 first open, record 2
+$PUT 00010001 stv 00000000 isi C085 rsz 23 rfa 00000011,012E
+$CLOSE 00010001 stv 00000000 ifi 0000
+O3 first open, after the second closed
+$PUT 00010001 stv 00000000 isi C085 rsz 38 rfa 00000011,01B4
+$CLOSE 00010001 stv 00000000 ifi 0000
+O4 $OPEN SYS$OUTPUT, FAC=GET, then a $PUT
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 02 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 32 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O4 a record put with FAC=GET
+$PUT 00010001 stv 00000000 isi C085 rsz 28 rfa 00000012,019E
+$CLOSE 00010001 stv 00000000 ifi 0000
+O5 $OPEN SYS$OUTPUT, FOP=PPF
+$OPEN 0001829A stv 00000000 ifi 0000 fop 00040000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "" rsa "" fnb 00000000 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O6 $OPEN SYS$OUTPUT, FOP=UFO
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00020000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O7 $OPEN SYS$OUTPUT, FOP=NFS
+$OPEN 0001853C stv 00000000 ifi 0000 fop 00010000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O8 $OPEN SYS$OUTPUT: (with the colon)
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 32 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O9 $OPEN SYS$OUTPUT:PPF71X.DAT
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 32 fsz 2
+  esa "SYS$OUTPUT:PPF71X.DAT;" rsa "SYS$OUTPUT:PPF71X.DAT;" fnb 00010086 dvi "SYS$OUTPUT" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+O10 $OPEN _SYS$OUTPUT: (translation suppressed)
+$OPEN 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 00000000 sdc 00000000
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "_SYS$OUTPUT:[000000].;" rsa "" fnb 00000080 dvi "" fid (0,0,0)
+$CLOSE 00018564 stv 00000000 ifi 0000
+O11 $OPEN PPF71_ALIAS (DCL defined it as SYS$OUTPUT)
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 32 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O11 a record through PPF71_ALIAS
+$PUT 00010001 stv 00000000 isi C085 rsz 32 rfa 00000017,0064
+$CLOSE 00010001 stv 00000000 ifi 0000
+O12 $PARSE and $SEARCH of SYS$OUTPUT
+$PARSE 00010001 stv 00000000 ifi 0000 fop 00000000 dev 18CD4108 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$SEARCH 000184C4 stv 00000908 ifi 0000 fop 00000000 dev 18CD4108 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 0
+  esa "SYS$OUTPUT:.;" rsa "" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+O13 PPF71_COPY: SYS$OUTPUT's string, user mode, by $CRELNM
+  $CRELNM 00000001
+PPF71_COPY at mode 3: 00000001, length 17, attributes 00000400, mode 3, table LNM$PROCESS_TABLE
+  bytes 1B 00 8105, string "...._SIMVAX$DUA1:", after 4 "_SIMVAX$DUA1:"
+PPF71_COPY: $GETDVIW 00000001 iosb 0001, devnam "_DUA1:" full "_SIMVAX$DUA1:" class 1 char 1CCD4108
+  $ASSIGN 00000001, channel 160
+  by channel: $GETDVIW 00000001, devnam "_DUA1:" full "_SIMVAX$DUA1:"
+$OPEN 00010001 stv 00000050 ifi C085 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 32 fsz 2
+  esa "PPF71_COPY:.;" rsa "PPF71_COPY:.;" fnb 00010080 dvi "PPF71_COPY" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C085 rsz 0 rfa 00000000,0000
+O13 a record through PPF71_COPY
+$PUT 00010001 stv 00000000 isi C085 rsz 31 rfa 00000019,01C6
+$CLOSE 00010001 stv 00000000 ifi 0000
+O14 SYS$ERROR: $OPEN, a $PUT
+$OPEN 00010001 stv 00000060 ifi C083 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 01 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$ERROR:.;" rsa "SYS$ERROR:.;" fnb 00010080 dvi "SYS$ERROR" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C082 rsz 0 rfa 00000000,0000
+$PUT 00010001 stv 2E010001 isi C082 rsz 30 rfa 00000000,0000
+$CLOSE 00010001 stv 00000000 ifi 0000
+O15 SYS$COMMAND: $OPEN only
+$OPEN 00010001 stv 00000040 ifi C081 fop 00000000 dev 0C040007 sdc 0C040007
+  fac 02 shr 00 org 00 rfm 02 rat 02 mrs 0 alq 0 fsz 2
+  esa "SYS$COMMAND:.;" rsa "SYS$COMMAND:.;" fnb 00010080 dvi "SYS$COMMAND" fid (0,0,0)
+$CLOSE 00010001 stv 00000000 ifi 0000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "PPF71S: after part O"
+PPF71S: after part O
+$ EXIT
+$ !
+$ ! Part X: SYS$OUTPUT left open at image exit.
+$ DEFINE/USER_MODE PPF71_PART X
+$ RUN PPF71
+X1 $OPEN SYS$OUTPUT, a record, no $CLOSE
+$OPEN 00010001 stv 00000030 ifi C084 fop 00000000 dev 08CD0103 sdc 18CD4108
+  fac 01 shr 00 org 00 rfm 03 rat 04 mrs 0 alq 112 fsz 2
+  esa "SYS$OUTPUT:.;" rsa "SYS$OUTPUT:.;" fnb 00010080 dvi "SYS$OUTPUT" fid (0,0,0)
+$CONNECT 00010001 stv 00000000 isi C084 rsz 0 rfa 00000000,0000
+X1 a record; the image now ends
+$PUT 00010001 stv 00000000 isi C084 rsz 31 rfa 00000066,017E
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "after part X"
+after part X
+$ SHOW LOGICAL/PROCESS
+
+(LNM$PROCESS_TABLE)
+
+  "PPF71_ALIAS" = "SYS$OUTPUT"
+  "PPF71_DCLCOPY" = "_SIMVAX$DUA1:"
+  "SYS$COMMAND" = "_SIMVAX$OPA0:"
+  "SYS$DISK" [super] = "DUA1:"
+  "SYS$DISK" [exec] = "SYS$SYSROOT:"
+  "SYS$ERROR" = "_SIMVAX$OPA0:"
+  "SYS$INPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$INPUT" [exec] = "_SIMVAX$OPA0:"
+  "SYS$OUTPUT" [super] = "_SIMVAX$DUA1:"
+  "SYS$OUTPUT" [exec] = "_SIMVAX$OPA0:"
+  "TB70SHR" = "DUA1:[000000]TB70SHR.EXE"
+  "TT" = "OPA0:"
+$ EXIT

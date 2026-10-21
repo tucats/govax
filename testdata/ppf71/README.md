@@ -71,14 +71,22 @@ from an image:
 
        govax console < testdata/ppf71/copyout.cmd
 
-   That copies the three logs, PPF71B.DAT (the file DCL and the image
-   both wrote), and the map as text, and the image byte for byte into
+   That copies the three logs and PPF71B.DAT (the file DCL and the
+   image both wrote) as text, and the image byte for byte into
    `vax/`, so an oracle can run VMS's own image on govax.
 
 None of the sources calls a system macro but the RMS macros, `$FABDEF`,
 `$RABDEF`, `$NAMDEF`, `$LNMDEF`, `$DVIDEF`, `$TRNLNM_S`, `$CRELNM_S`,
 `$GETDVIW_S`, `$ASSIGN_S`, `$DASSGN_S`, and `$FAOL_S`, and nothing copied
 back is a DIGITAL file, so the volume needs no erasing afterward.
+
+## The run
+
+2026-10-21: OpenVMS V7.1 on simh's VAX 8600, the volume on DUA1, from
+the console terminal (OPA0:); every part ran, and step 3's terminal run
+too (`vax/ppf71-term.log`). An interactive LINK writes no map, so there
+is none. `docs/PHASE-71 - process-permanent files.md`'s Part A has the
+answers ("The probe's answers").
 
 ## govax's dry run
 
