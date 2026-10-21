@@ -4350,6 +4350,53 @@ widened."
   that saved nothing.
 - **Status**: fixed (docs/PHASE-69 - backup save sets.md).
 
+### [Phase 70] Traceback: what VMS 7.1 settled, and the rest chosen
+
+- **Where**: `internal/corevms` (`condition.go`'s search,
+  `traceback.go`, `excmsg.go`, `msgout.go`, `ast.go`'s AST exit),
+  `internal/dbgsym`'s `TraceName`, `internal/machine` (`run.go`'s image
+  startup frame, `shim.go`'s EXE$ASTRET), and `internal/cpu`
+  (`inttrap.go`, `call.go`); the probe is `testdata/tb70` (VMS V7.1 on
+  simh's VAX, two rounds, 2026-10-21), checked by `TestTB70Oracle`
+  (govax building and running the probe's procedures) and
+  `TestTB70Traceback`, `TestTB70ImproperlyHandled`, `TestTB70Output`
+  (VMS's own images).
+- **Changed to VMS's behavior**: an unhandled W, E, or F condition in
+  an image linked with traceback gets the symbolic stack dump; a
+  hardware exception's condition (however raised) that ends the image
+  gets the "improperly handled condition" dump in the catch-all; the
+  image startup's frame holds the traceback handler, and the catch-all
+  comes before the last-chance vector, which only an unreadable frame
+  reaches; a handler's own condition skips the frames already searched;
+  STS$M_INHIB_MSG hides the message; the messages and dumps go where
+  `$PUTMSG`'s do; an AST routine returns through EXE$ASTRET in S0;
+  integer overflow and divide by zero trap, and their messages, with
+  OPCDEC's and ROPRAND's, say `PSL=`. The separate entries above have
+  the CPU's and assembler's fixes found on the way (the traps, the
+  saved trap enables, the entry mask's IV and DV).
+- **Differs from VMS**: LIBRTL's routines are shims, so an access
+  violation in one (LIB$MOVC3, part L) is reported at its caller's PC;
+  govax places TB70SHR and LIBRTL elsewhere, so their PCs differ (the
+  names and lines don't). The "improperly handled" dump's registers and
+  stack longwords the program never set are govax's, not VMS's
+  activator's and DCL's, and its stack sits D53E8 bytes lower; govax's
+  image startup passes the main routine no arguments where VMS's passes
+  six. At a LIB$SIGNAL or LIB$STOP the dump's R0 is the stub's, not the
+  caller's.
+- **Unconfirmed**, govax's choices where the probe was silent (each
+  marked in the phase doc): which exception conditions besides ACCVIO,
+  OPCDEC, INTOVF, INTDIV, and ROPRAND get the "improperly handled" dump
+  and the `PSL=` form; the SP after a JSB entry's LIB$SIGNAL; a signal
+  array longer than ten longwords, and an unreadable stack longword, in
+  that dump; a program's own `$PUTMSG` of a success message going to
+  SYS$OUTPUT only; messages to a full mailbox; a shareable image's PC
+  within 400 of the main image's last routine left unnamed;
+  `@/OUTPUT`'s OPENOUT message; MACRO's line-number table leaving out a
+  row's instructions after data in shapes other than the probe's; and
+  how MACRO cuts a line-number record (TB70D.OBJ's is 5 bytes longer
+  than govax's).
+- **Status**: fixed (docs/PHASE-70 - traceback.md).
+
 <!--
 Entry template:
 

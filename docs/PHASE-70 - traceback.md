@@ -1,13 +1,13 @@
 # Phase 70 — traceback
 
-**Status:** in progress. Planned 2026-10-21; Part B's decisions
+**Status:** done 2026-10-21. Planned 2026-10-21; Part B's decisions
 accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
 after a blown run), 4 (the arithmetic traps), 5 (the image startup
 frame and the search's order), 6 (the traceback dump), 7
 (EXE$EXCMSG's dump), 8 (SYS$OUTPUT and SYS$ERROR), 9 (the AST exit
-in S0), and 10 (the oracle) are done.
+in S0), 10 (the oracle), and 11 (the close-out) are done.
 
 ## Goal
 
@@ -872,3 +872,18 @@ STARLET; it also lacks LNM$S_LNMDEF). The images' G^ cells for LIBRTL
 are in govax's fallback order (names ascending; Phase 68's
 `orderCells`), since the test has no LIBRTL.EXE to read LIBRTL's table
 from. Neither changes a line of the logs.
+
+### 2026-10-21 — Subtask 11: the close-out
+
+The manual already had the phase's behavior, each example run on
+govax: section 8's example 5 shows both dumps, section 9's "Traceback
+and debugging" names a PC's rules and where the messages go, section 7
+the `/OUTPUT` file, and section 13's internals the search's order,
+whose paragraph is reworded. CLAUDE.md records the phase (its summary,
+`testdata/tb70`, and the notes on `internal/cpu`, `internal/corevms`,
+and `internal/dbgsym`), PLAN.md's index marks it done, and
+docs/DEVIATIONS.md has its summary entry ("[Phase 70] Traceback: what
+VMS 7.1 settled, and the rest chosen"): what changed to VMS's behavior,
+where govax still differs, and the unconfirmed choices, beside the
+three entries for the CPU and assembler fixes found on the way. The
+phase is done.

@@ -193,8 +193,19 @@ never had.
   restores (with every saved attribute, by VMS's output-directory and
   existing-file rules), compares, and saves, a save set on a volume or
   the host; checked against VMS 7.1 by `testdata/backup69`, and VMS
-  read govax's save sets in its second round. Each later phase has a
-  planning doc.
+  read govax's save sets in its second round.
+  Phase 70 (done 2026-10-21) is traceback: an unhandled W, E, or F
+  condition in an image linked with traceback gets the traceback
+  facility's symbolic stack dump, from a handler in the image startup's
+  frame (EXE$TRACEBACK, `corevms/traceback.go`), and a hardware
+  exception's condition that ends the image gets EXE$EXCMSG's
+  "improperly handled condition" dump in the catch-all
+  (`corevms/excmsg.go`); the search's order and multiply active signals
+  are the Internals book's, the messages and dumps go where `$PUTMSG`'s
+  do (`corevms/msgout.go`), integer overflow and divide by zero trap
+  (`cpu/inttrap.go`), and an AST routine returns through EXE$ASTRET in
+  S0; checked against VMS 7.1 by `testdata/tb70`. Each later phase has
+  a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -399,6 +410,21 @@ never had.
   for `backup69Differences`. `round2/` is VMS reading govax's save sets
   (`run2.com`; results in `vax/round2/`), replayed by
   `TestBackup69Round2`.
+- `testdata/tb70/` — Phase 70's probe of traceback (README.md):
+  `tb70.mar` (21 parts by `TB70_PART`: conditions of every severity
+  and from every kind of place, the hardware exceptions, LIB$STOP,
+  handlers, ASTs, exit handlers, depth, long names, TB70SHR),
+  `tb70long.mar`, `tb70shr.mar`, `tb70.com` (builds TB70, TB70NT
+  `/NOTRACEBACK`, and TB70D `/DEBUG`, runs every part under each, then
+  SYS$OUTPUT and SYS$ERROR apart, a subprocess), and round 2's
+  `tb70b.mar` and `tb70b.com` (the routine limit, which conditions get
+  the "improperly handled" dump, its stack, where the catch-all
+  writes); `vax/` is VMS V7.1's logs, images, maps, and objects.
+  `TestTB70Oracle` runs both procedures on govax, building the images
+  from the sources, and matches the logs command by command
+  (`tb70LogDifferences`, `tb70SizeDifferences`); `TestTB70Traceback`,
+  `TestTB70ImproperlyHandled`, and `TestTB70Output` run VMS's own
+  images, part by part.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -510,7 +536,11 @@ expect adjustment as phases land):
   `decimal.go` (`decimalmath.go`, `decimalconvert.go`, `editpc.go`), and
   octawords through `Operand.LoadOctaword`/`StoreOctaword`. An arithmetic
   *trap* (integer or decimal overflow, DIVP by zero) is
-  `Engine.arithmeticTrap`, whose saved PC is the next instruction's. The
+  `Engine.arithmeticTrap`, whose saved PC is the next instruction's;
+  `inttrap.go` (Phase 70) takes integer overflow after an instruction
+  marked `TrapsOnOverflow` when V and PSL<IV> are set, and integer
+  divide by zero always. CALLS and CALLG save the PSW before setting
+  the entry mask's trap enables (IV bit 14, DV bit 15). The
   Phase 35 oracle (`testdata/insn35`, `TestInsn35Oracle` in
   `internal/console`) compares 567 instruction cases with VMS's run.
 - `internal/vaxfloat` — the VAX floating formats (Phase 35): `Unpack`/`Pack` for
@@ -1074,6 +1104,25 @@ expect adjustment as phases land):
   back and free pool pages, `ClaimS0` the microkernel's. An exception
   whose arrays the user stack can't take ends the image
   (`condition.go`'s `noStackToReport`, `lastChanceExit`).
+  Phase 70 (`docs/PHASE-70 - traceback.md`): the condition search
+  follows the Internals book (4.3.3, 4.5): a handler's own condition
+  skips the frames already searched (`pastSearchedFrames`), the frame
+  walk's end is the catch-all's (`stageCatchAll`), and the last-chance
+  vector is searched only when a frame can't be read. RUN's driver
+  holds the traceback handler, EXE$TRACEBACK (`traceback.go`, a shim),
+  in its frame when the image was linked with traceback (the machine's
+  `run.go`, `buildDriver`); it writes the message and the dump
+  (`tracebackDump`: the condition's PC and each frame's saved PC, a
+  handler's dispatch between "-----" lines, names from the main image's
+  debug symbol table through `System.TraceName`, `dbgsym`'s rules) and
+  continues W and E, ends the image for F, resignals the rest.
+  `excmsg.go`'s `improperlyHandledDump` is the catch-all's for an
+  exception condition that ends the image. `reportCondition` offers a
+  condition to the debugger first (no dump under it); `msgout.go`'s
+  `putMessage` writes messages as `$PUTMSG` does (SYS$ERROR, and a
+  different SYS$OUTPUT the image hasn't written itself; a success
+  message to SYS$OUTPUT only). An AST routine returns to EXE$ASTRET,
+  a stub in S0 the machine's `EnsureShims` places (`ASTExitStub`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is
@@ -1196,6 +1245,10 @@ expect adjustment as phases land):
   in expressions (`dbgnames.go`, `dbgtrace.go`, `dbgcalls.go`);
   `TestDebuggerOracle` matches `DISASSEMBLE` with every symbolic
   `EXAMINE/INSTRUCTION` in the sessions. Groundwork for a debugger.
+  `traceback.go` (Phase 70): `TraceName` names a PC as the traceback
+  dump does (a routine within 400 bytes, compared signed, then the
+  psect contribution, then nothing; the line of the PC for a fault, of
+  the byte before it otherwise), checked on `testdata/tb70`'s images.
 - `internal/asm` — assembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
