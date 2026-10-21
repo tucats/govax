@@ -834,9 +834,12 @@ equivalence ends in `.]` (`DEFINE/TRANSLATION=CONCEALED PROJ
 DUA1:[PROJECT.]`, then `PROJ:[SRC]`). govax doesn't yet treat such a name
 as the root of a directory tree.
 
-govax predefines `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, `SYS$COMMAND`,
-and `TT` (all the terminal, `_TTA0:`), `SYS$DISK` (set by `SET
-DEFAULT`), `DISK$label` for each mounted volume, and the date-format
+govax predefines `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and
+`SYS$COMMAND`, the terminal opened as process-permanent files, as VMS's
+LOGINOUT opens them: each name's equivalence string is the special form
+that leads RMS to the open file, which `SHOW LOGICAL` and `F$TRNLNM` show
+as the device, `_GOVAX$TTA0:`. It also predefines `TT` (`_TTA0:`),
+`SYS$DISK` (set by `SET DEFAULT`), `DISK$label` for each mounted volume, and the date-format
 names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. It doesn't define
 `SYS$LIBRARY`, `SYS$SHARE`, `SYS$SYSTEM`, or `SYS$LOGIN`, because there is
 no system disk; define them yourself (in a login procedure) if you keep

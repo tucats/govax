@@ -210,7 +210,7 @@ type inputStream struct {
 	buf *bufio.Reader
 }
 
-// ReadCommandLine is ReadInputLine from the process's terminal,
+// ReadCommandLine is readTerminalInput from the process's terminal,
 // SYS$COMMAND, even while RedirectInput has made a command procedure's
 // data lines its input (SYS$INPUT): for DCL's reads of the terminal
 // during a procedure (INQUIRE, READ SYS$COMMAND, the Ctrl/Y level) in a
@@ -226,7 +226,7 @@ func (env *Environment) ReadCommandLine(prompt string, maxLen int) (line string,
 		}()
 	}
 
-	return env.ReadInputLine(prompt, maxLen)
+	return env.readTerminalInput(prompt, maxLen)
 }
 
 // ReadLine reads one line from the process's input stream, as

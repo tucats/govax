@@ -196,8 +196,8 @@ func TestSpawn_rules(t *testing.T) {
 			first.Process.BasePriority, first.Process.Owner, one.Process.BasePriority)
 	}
 
-	if s := first.Startup; s == nil || s.CLI == nil || s.Output != "NL:" || s.Error != "NL:" || s.Input != "_TTA0:" {
-		t.Errorf("startup %+v; want the CLI, output and error NL:, and process 1's input, _TTA0:", s)
+	if s := first.Startup; s == nil || s.CLI == nil || s.Output != "NL:" || s.Error != "NL:" || s.Input != "_GOVAX$TTA0:" {
+		t.Errorf("startup %+v; want the CLI, output and error NL:, and process 1's input, _GOVAX$TTA0:", s)
 	}
 
 	has := func(env *corevms.Environment, name string) bool {

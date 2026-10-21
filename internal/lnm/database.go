@@ -431,9 +431,11 @@ func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*E
 //	SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND   executive mode, TERMINAL
 //	TT                                              supervisor mode
 //
-// All go in the process table. Real VMS prefixes the SYS$ names'
-// equivalence strings with a hidden 4-byte ESC/IFI header naming the
-// process-permanent file; govax doesn't.
+// All go in the process table. On VMS the SYS$ names' equivalence
+// strings are process-permanent file strings (ppf.go), naming the files
+// LOGINOUT opened; govax's process startup redefines them so once the
+// process has its files (corevms's OpenTerminalFiles), and these plain
+// names serve until then.
 func (db *Database) DefineProcessNames(terminal string) error {
 	for _, name := range []string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR", "SYS$COMMAND"} {
 		eqv := []Equivalence{{Value: terminal, Attrs: AttrTerminal}}

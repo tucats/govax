@@ -2,13 +2,14 @@ package rms
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/tucats/govax/internal/lnm"
 )
 
 // These tests are Phase 71's (docs/PHASE-71 - process-permanent files.md,
-// subtask 4): RMS's table of process-permanent files and an image's
+// subtasks 4 and 5): RMS's table of process-permanent files and an image's
 // indirect access to them, checked against what VMS 7.1 showed in
 // testdata/ppf71.
 
@@ -450,5 +451,66 @@ func TestPermanent_terminal(t *testing.T) {
 
 	if pf, ok := lnm.ParsePermanentFile(e.EquivalenceString()); !ok || pf.IFI != 0x8101 {
 		t.Errorf("string's IFI %#x, %v; want %#x", pf.IFI, ok, 0x8101)
+	}
+}
+
+// TestPermanent_fromGo: a process-permanent file's records written and
+// read from Go, as LIB$PUT_OUTPUT and LIB$GET_INPUT do (ppfstream.go): on
+// the entry's one stream, by the original open's access, a print file's
+// records with DCL's carriage control, without it when read.
+func TestPermanent_fromGo(t *testing.T) {
+	f := newPPFFixture(t, "TEST$IN", facGet, "R1", "R2")
+	ctx := f.ctx
+
+	for _, rec := range []string{"R1", "R2"} {
+		got, sts, err := ctx.GetPermanent(f.entry)
+		if err != nil || sts != rmsNormal || string(got) != rec {
+			t.Errorf("GetPermanent: %q, %#x, %v; want %q", got, sts, err, rec)
+		}
+	}
+
+	if _, sts, err := ctx.GetPermanent(f.entry); err != nil || sts != rmsEOF {
+		t.Errorf("GetPermanent at the end: %#x, %v; want RMS$_EOF", sts, err)
+	}
+
+	if sts, err := ctx.PutPermanent(f.entry, []byte("refused")); err != nil || sts != rmsFACNotAllowed {
+		t.Errorf("PutPermanent to a file opened to read: %#x, %v; want RMS$_FAC", sts, err)
+	}
+
+	if n, err := ctx.Files.ClosePermanentFiles(); n != 1 || err != nil {
+		t.Fatalf("ClosePermanentFiles closed %d, %v; want 1", n, err)
+	}
+
+	out := newPPFFixture(t, "TEST$OUT", facPut, "from DCL")
+
+	if sts, err := out.ctx.PutPermanent(out.entry, []byte("from Go")); err != nil || sts != rmsNormal {
+		t.Errorf("PutPermanent: %#x, %v; want RMS$_NORMAL", sts, err)
+	}
+
+	if _, sts, err := out.ctx.GetPermanent(out.entry); err != nil || sts != rmsFACNotAllowed {
+		t.Errorf("GetPermanent from a file opened to write: %#x, %v; want RMS$_FAC", sts, err)
+	}
+
+	if n, err := out.ctx.Files.ClosePermanentFiles(); n != 1 || err != nil {
+		t.Fatalf("ClosePermanentFiles closed %d, %v; want 1", n, err)
+	}
+
+	wantRecords(t, records(t, out.mounts, "PPF.LOG"), "\x01\x8Dfrom DCL", "\x01\x8Dfrom Go")
+
+	// The terminal's lines are its reader's.
+	console := &bytes.Buffer{}
+
+	term, err := out.ctx.Files.AddPermanent(&FileHandle{Console: console, Access: facGet | facPut},
+		PermanentOptions{Device: "_GOVAX$TTA0:", RAT: ratPRN, SQO: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if sts, err := out.ctx.PutPermanent(term, []byte("a line")); err != nil || sts != rmsNormal || console.String() != "a line\n" {
+		t.Errorf("PutPermanent to the terminal: %#x, %v, %q; want the line", sts, err, console.String())
+	}
+
+	if _, _, err := out.ctx.GetPermanent(term); !errors.Is(err, ErrTerminalEntry) {
+		t.Errorf("GetPermanent of the terminal: %v; want ErrTerminalEntry", err)
 	}
 }

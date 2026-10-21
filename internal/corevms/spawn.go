@@ -283,8 +283,17 @@ func (env *Environment) spawnName() string {
 }
 
 // processName returns the equivalence string of name in env's process
-// table, or "" when it has none there.
+// table as a person reads it, or "" when it has none there: a
+// process-permanent file string's device (lnm.DisplayValue), which names
+// the same thing in another process, where the string's entry isn't.
 func (env *Environment) processName(name string) string {
+	return lnm.DisplayValue(env.processValue(name))
+}
+
+// processValue returns the equivalence string of name in env's process
+// table, a process-permanent file string whole, or "" when it has none
+// there.
+func (env *Environment) processValue(name string) string {
 	e, err := env.Logicals.Translate(lnm.ProcessTableName, name, lnm.User, 0)
 	if err != nil || len(e.Equivalences) == 0 {
 		return ""
@@ -308,7 +317,7 @@ func (env *Environment) copyProcessNames(child *Environment) {
 		case e.IsTable(),
 			e.Mode < lnm.Supervisor,
 			e.Attrs&lnm.AttrConfine != 0,
-			slices.Contains([]string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR"}, e.Name):
+			slices.Contains([]string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR", "SYS$COMMAND"}, e.Name):
 			continue
 		}
 

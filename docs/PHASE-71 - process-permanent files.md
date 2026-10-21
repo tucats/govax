@@ -3,8 +3,9 @@
 **Status:** planned 2026-10-21; Part B's decisions and the proposed
 answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
-VAX run; Part A, "The probe's answers"), 3 (the strings), and 4 (RMS's
-table and indirect access) are done.
+VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
+table and indirect access), and 5 (process startup's four files) are
+done.
 
 ## Goal
 
@@ -362,7 +363,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
    the NAM's strings, the FAB from the entry, rundown. Done 2026-10-21.
 5. **Process startup's four files**: the terminal entries, the TTA0:
    case narrowed to a direct open, LIB$PUT_OUTPUT, LIB$GET_INPUT, and
-   `$PUTMSG` through the entries.
+   `$PUTMSG` through the entries. Done 2026-10-21.
 6. **Command procedures**: SYS$INPUT an entry on the procedure's
    reader (replacing `RedirectInput`), `/OUTPUT` an entry on a file, the
    supervisor-mode names at each level.
@@ -515,3 +516,69 @@ alias, `$PARSE` and `$SEARCH`, a default name, a copied string, a closed
 file), and `TestPermanent_terminal`. Nothing makes entries yet but the
 tests: process startup's (subtask 5), the procedures' (6), and OPEN's
 (7) come next.
+
+### 2026-10-21 — Subtask 5: process startup's four files
+
+`internal/corevms/ppfstart.go`: `OpenTerminalFiles` is LOGINOUT's step
+for process 1, which the machine calls as it makes process 1 (`newRTL`):
+two terminal entries, SYS$INPUT and SYS$COMMAND sharing one (access GET,
+unconfirmed), SYS$OUTPUT and SYS$ERROR the other (GET and PUT, as
+`$DISPLAY` showed), each with PRN and SQO, and the four names defined in
+executive mode, CONCEALED and TERMINAL, as their strings with the device
+`_GOVAX$TTA0:`. The console terminal isn't checked against the device
+table, which vax.init fills only after VMINIT. govax numbers the entries
+1 and 2, where VMS numbered process 1's output entry 3 (masked). The
+plain names `lnm.DefineProcessNames` makes stay until then (a machine
+with no INIT yet).
+
+A created process's startup (`prepareImage`) does the same through
+`openProcessFiles`: a value that names a terminal (by the device table;
+a creator's process-permanent string taken as its device) is opened as
+an entry of the process's own, with SYS$COMMAND sharing SYS$INPUT's,
+TERMINAL but not CONCEALED, as VMS's subprocess's were; SYS$ERROR shares
+SYS$OUTPUT's entry when they name the same thing. A mailbox, NL:, or file
+is defined as before, until subtasks 6 to 8 make those entries too.
+`processName` now gives a string's device (`lnm.DisplayValue`), which is
+what LIB$SPAWN passes a subprocess; `processValue` is the string whole.
+LIB$SPAWN no longer copies the creator's SYS$COMMAND.
+
+Through the entries: `permanentEntry` finds the entry a name leads to by
+RMS's translation (through an alias too). `PutOutput` (LIB$PUT_OUTPUT)
+and `putRecord` (`$PUTMSG`'s lines) write through it, SS$_NORMAL for a
+record written (VMS 7.1's LIB$PUT_OUTPUT returned 1, `testdata/lib57`),
+`$PUT`'s status otherwise; `putMessage` compares the two names' strings
+whole, so SYS$ERROR sharing SYS$OUTPUT's entry gets a message once.
+`ReadInputLine` (LIB$GET_INPUT, LIB$GET_FOREIGN's prompt) reads a
+non-terminal entry's records with no prompt; the terminal's lines are
+read as before (`readTerminalInput`, which the subprocess CLI's
+terminal input and `ReadCommandLine` use directly).
+`internal/rms/ppfstream.go` is RMS's side: `PutPermanent` and
+`GetPermanent` on an entry's one stream, by the original open's access,
+a print file's records with DCL's carriage control (DCLFile's `Put` and
+`Get` bodies, now `FileHandle.putSequential` and `getSequential`, shared).
+RMS's TTA0: case is left for a direct open of the terminal, which is all
+that reaches it now: SYS$OUTPUT and the rest go indirectly.
+
+Checked by running VMS's own PPF71.EXE at govax's terminal, parts T and
+O (without the procedure, so PPF71_ALIAS and the OPEN names weren't
+defined, and O11 opened a file of that name): the strings, words, and
+attributes match VMS's terminal log but for the device's name and the
+output entry's number, and the indirect opens of O1 to O9 and O12 to O15
+return VMS's statuses, FAB fields, and NAM strings. What still differs,
+for the oracle (subtask 9): DCL's supervisor-mode SYS$OUTPUT at level 0
+(subtask 6); O10's `_SYS$OUTPUT:` is RMS$_DNF with `[WORK]` in the ESA
+where VMS gave RMS$_DEV and `[000000]` (a missing device, older than
+this phase); `$DISPLAY`'s RSA for the terminal (VMS's
+`SYS$OUTPUT:[].LOG;`, subtask 4); the STV govax leaves after `$CONNECT`,
+`$PUT`, `$REWIND`, and `$CLOSE` of an indirect stream (the status, where
+VMS left 0, and for a `$PUT` the terminal's IOSB); and the terminal's
+DEVCHAR from `$GETDVIW` (`0C040007`, VMS's `0C040087`).
+
+Tests: `TestOpenTerminalFiles` (the four names, the entries' access,
+LIB$PUT_OUTPUT and a message through the output entry once, an alias),
+`TestOpenTerminalFiles_subprocess`, `TestPermanentEntry_notTerminal`
+(LIB$GET_INPUT and LIB$PUT_OUTPUT through a record device's entries, an
+input entry refusing a write), and rms's `TestPermanent_fromGo`; the
+console tests that showed `_TTA0:` for the SYS$ names now show
+`_GOVAX$TTA0:` (SHOW LOGICAL/FULL with `[concealed,terminal]`, as VMS
+does), and a created process's SYS$OUTPUT is its own entry.

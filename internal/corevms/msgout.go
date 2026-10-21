@@ -31,15 +31,18 @@ const severitySuccess = 1
 // putMessage writes lines, a message (and whatever follows it, a dump)
 // for the condition cond, where $PUTMSG writes it (this file's opening
 // comment). Two names are "different" when their process logical names
-// translate to different strings; a SYS$ERROR that isn't defined is
-// SYS$OUTPUT.
+// translate to different strings (two process-permanent file strings are
+// the same when they name one entry, as SYS$ERROR shares SYS$OUTPUT's at
+// the terminal); a SYS$ERROR that isn't defined is SYS$OUTPUT. Each
+// message line is a record put through the name's entry, when it leads
+// to one (recdevice.go's putRecord).
 func (env *Environment) putMessage(cond uint32, lines []string) {
 	if len(lines) == 0 {
 		return
 	}
 
-	output := strings.ToUpper(env.processName("SYS$OUTPUT"))
-	errorOutput := strings.ToUpper(env.processName("SYS$ERROR"))
+	output := strings.ToUpper(env.processValue("SYS$OUTPUT"))
+	errorOutput := strings.ToUpper(env.processValue("SYS$ERROR"))
 
 	if cond&7 == severitySuccess || errorOutput == "" || errorOutput == output {
 		env.putMessageLines(&env.output, lines)

@@ -173,12 +173,12 @@ func (env *Environment) OpenCommandInput() (CommandInput, uint32) {
 	return &fileInput{lines: lines}, ssNormal
 }
 
-// terminalInput reads command lines from the terminal (ReadInputLine),
-// prompting for each.
+// terminalInput reads command lines from the terminal
+// (readTerminalInput), prompting for each.
 type terminalInput struct{ env *Environment }
 
 func (t terminalInput) ReadLine(prompt string) (string, bool, error) {
-	return t.env.ReadInputLine(prompt, maxCommandLength)
+	return t.env.readTerminalInput(prompt, maxCommandLength)
 }
 
 func (terminalInput) Interactive() bool { return true }

@@ -24,7 +24,8 @@ import (
 //
 //  1. defines SYS$INPUT, SYS$OUTPUT, and SYS$ERROR in the process's own
 //     process table, executive mode, from $CREPRC's input, output, and
-//     error (each only if given);
+//     error (each only if given), a terminal opened as a process-permanent
+//     file, with SYS$COMMAND (ppfstart.go);
 //  2. has the console activate the image in the process's P0 and write
 //     its IMAGE$INIT driver (System.ActivateImage); and
 //  3. calls the driver as RUN calls an image's, in user mode on the
@@ -99,17 +100,9 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 // empty image name is no file at all: RMS$_FNF. (What VMS does with
 // $CREPRC's image omitted is unconfirmed.)
 func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
-	for _, n := range []struct{ name, value string }{
-		{"SYS$INPUT", st.Input}, {"SYS$OUTPUT", st.Output}, {"SYS$ERROR", st.Error},
-	} {
-		if n.value == "" {
-			continue
-		}
-
-		eqv := []lnm.Equivalence{{Value: n.value}}
-		if _, err := env.Logicals.Define(lnm.ProcessTableName, n.name, lnm.Executive, 0, eqv); err != nil {
-			return 0, err
-		}
+	// A terminal is opened as a process-permanent file (ppfstart.go).
+	if err := env.openProcessFiles(st.Input, st.Output, st.Error, lnm.AttrTerminal, env.terminalDevice); err != nil {
+		return 0, err
 	}
 
 	switch {

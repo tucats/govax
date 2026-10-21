@@ -181,15 +181,38 @@ func (env *Environment) StringSize(addr uint32) (uint32, bool) {
 // ends s with a newline.
 func (env *Environment) WriteOutput(s string) { env.writeConsole(s) }
 
-// ReadInputLine writes prompt to the process's output stream, then reads
-// a line of at most maxLen bytes from its input stream (SYS$INPUT, the
-// console terminal), as a terminal read does (readTerminalLine), without
-// the line's terminator. ok is false at the end of the input: CTRL/Z
-// typed on an empty line, or the end of the host's input. With the
-// scheduler on, err is ErrWait while the line hasn't been typed, or
-// another process's read comes first: the caller is called again
-// (terminal.go); the prompt is written only once.
+// ReadInputLine reads a line of at most maxLen bytes from SYS$INPUT, as
+// LIB$GET_INPUT does. When SYS$INPUT leads to a process-permanent file
+// that isn't the terminal, the line is its stream's next record, with no
+// prompt (ppfstart.go); ok is false at its end, or when it can't be read.
+// Otherwise it is readTerminalInput's.
 func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, ok bool, err error) {
+	e, found := env.permanentEntry("SYS$INPUT")
+	if !found || e.IsTerminal() {
+		return env.readTerminalInput(prompt, maxLen)
+	}
+
+	record, sts, err := env.rmsContext().GetPermanent(e)
+	if err != nil || sts&1 == 0 {
+		return "", false, err
+	}
+
+	if len(record) > maxLen {
+		record = record[:maxLen]
+	}
+
+	return string(record), true, nil
+}
+
+// readTerminalInput writes prompt to the process's output stream, then
+// reads a line of at most maxLen bytes from its input stream (the
+// terminal, or the lines RedirectInput gave it), as a terminal read does
+// (readTerminalLine), without the line's terminator. ok is false at the
+// end of the input: CTRL/Z typed on an empty line, or the end of the
+// host's input. With the scheduler on, err is ErrWait while the line
+// hasn't been typed, or another process's read comes first: the caller is
+// called again (terminal.go); the prompt is written only once.
+func (env *Environment) readTerminalInput(prompt string, maxLen int) (line string, ok bool, err error) {
 	if err := env.awaitTerminal(maxLen, prompt, lineEnd); err != nil {
 		return "", false, err
 	}

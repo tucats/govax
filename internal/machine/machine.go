@@ -477,6 +477,14 @@ func (m *Machine) newRTL() *corevms.Environment {
 	env := m.Hooks.NewProcessOne(sys)
 	m.processOne = env
 
+	// LOGINOUT's step: the console terminal as process 1's SYS$INPUT,
+	// SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND, process-permanent files
+	// (docs/PHASE-71 - process-permanent files.md, subtask 5). Defining
+	// the names can fail only for a full process table of names.
+	if err := env.OpenTerminalFiles(); err != nil {
+		fmt.Fprintf(m.Hooks.Output(), "%%GOVAX-W-PPF, opening the terminal's files: %v\n", err)
+	}
+
 	if m.pageFileStarted {
 		env.InstallPageFile()
 	}

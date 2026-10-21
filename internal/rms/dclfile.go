@@ -352,7 +352,12 @@ func (f *DCLFile) Get() ([]byte, uint32) {
 		return f.host.get()
 	}
 
-	h := f.handle
+	return f.handle.getSequential(f.ctx)
+}
+
+// getSequential is DCLFile.Get for h, a volume file's stream, in ctx: the
+// next record without its fixed control.
+func (h *FileHandle) getSequential(ctx *Context) ([]byte, uint32) {
 	s := &h.stream
 
 	if h.Reader == nil || s.fac&facReads == 0 {
@@ -377,7 +382,7 @@ func (f *DCLFile) Get() ([]byte, uint32) {
 		return nil, sts
 	}
 
-	h.readBuffer.touch(f.ctx, target)
+	h.readBuffer.touch(ctx, target)
 
 	s.current, s.hasCurrent, s.afterFind = target, true, false
 	s.next, s.atEnd = end, false
@@ -400,7 +405,12 @@ func (f *DCLFile) Put(record []byte) uint32 {
 		return f.host.put(record)
 	}
 
-	h := f.handle
+	return f.handle.putSequential(f.ctx, record)
+}
+
+// putSequential is DCLFile.Put for h, a volume file's stream, in ctx: the
+// record at the end of the file, with DCL's fixed control.
+func (h *FileHandle) putSequential(ctx *Context, record []byte) uint32 {
 	s := &h.stream
 
 	if h.Writer == nil {
@@ -415,7 +425,7 @@ func (f *DCLFile) Put(record []byte) uint32 {
 		return rmsNotAtEOF
 	}
 
-	h.wrote(f.ctx, h.endOfFile())
+	h.wrote(ctx, h.endOfFile())
 
 	control := make([]byte, h.vfcSize())
 	if len(control) == len(dclRecordControl) {

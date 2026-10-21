@@ -71,7 +71,7 @@ func TestShowLogical_manualExamples(t *testing.T) {
 	d, _, buf := logicalDispatcher(t)
 
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$INPUT",
-		"   \"SYS$INPUT\" = \"_TTA0:\" (LNM$PROCESS_TABLE)\n")
+		"   \"SYS$INPUT\" = \"_GOVAX$TTA0:\" (LNM$PROCESS_TABLE)\n")
 
 	mustDispatch(t, d, "DEFINE/SYSTEM WORK4 $255$DUA17:", "DEFINE MYDISK WORK4")
 	wantOutput(t, d, buf, "SHOW LOGICAL MYDISK",
@@ -84,7 +84,7 @@ func TestShowLogical_manualExamples(t *testing.T) {
 			"\t= \"[JONES.WORKFILES]\"\n")
 
 	wantOutput(t, d, buf, "SHOW LOGICAL/FULL SYS$ERROR",
-		"   \"SYS$ERROR\" [exec] = \"_TTA0:\" [terminal] (LNM$PROCESS_TABLE)\n")
+		"   \"SYS$ERROR\" [exec] = \"_GOVAX$TTA0:\" [concealed,terminal] (LNM$PROCESS_TABLE)\n")
 
 	wantOutput(t, d, buf, "SHOW LOGICAL NOSUCH",
 		"%SHOW-S-NOTRAN, no translation for logical name NOSUCH\n")
@@ -123,11 +123,11 @@ func TestShowLogical_tableListing(t *testing.T) {
 	mustDispatch(t, d, "DEFINE/USER_MODE SYS$OUTPUT X.LIS")
 	wantOutput(t, d, buf, "SHOW LOGICAL/TABLE=LNM$PROCESS",
 		"\n(LNM$PROCESS_TABLE)\n\n"+
-			"  \"SYS$COMMAND\" = \"_TTA0:\"\n"+
-			"  \"SYS$ERROR\" = \"_TTA0:\"\n"+
-			"  \"SYS$INPUT\" = \"_TTA0:\"\n"+
+			"  \"SYS$COMMAND\" = \"_GOVAX$TTA0:\"\n"+
+			"  \"SYS$ERROR\" = \"_GOVAX$TTA0:\"\n"+
+			"  \"SYS$INPUT\" = \"_GOVAX$TTA0:\"\n"+
 			"  \"SYS$OUTPUT\" [user] = \"X.LIS\"\n"+
-			"  \"SYS$OUTPUT\" [exec] = \"_TTA0:\"\n"+
+			"  \"SYS$OUTPUT\" [exec] = \"_GOVAX$TTA0:\"\n"+
 			"  \"TT\" = \"_TTA0:\"\n")
 
 	// Wildcards list the matches under every searched table's header,
