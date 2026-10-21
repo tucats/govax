@@ -1,8 +1,9 @@
 # Phase 71 — process-permanent files
 
-**Status:** planned 2026-10-21. Subtask 1 (the survey, and the VMS probe,
-`testdata/ppf71`) is done; Part B's decisions await the author's review,
-and subtask 2 the probe's VAX run.
+**Status:** planned 2026-10-21; Part B's decisions and the proposed
+answers to its questions accepted by the author the same day. Subtask 1
+(the survey, and the VMS probe, `testdata/ppf71`) is done; subtask 2
+waits for the probe's VAX run.
 
 ## Goal
 
@@ -119,7 +120,7 @@ What it shows, before VMS's answers:
 
 ## Part B — decisions and questions
 
-### Decisions (proposed; for the author's review)
+### Decisions (accepted by the author, 2026-10-21)
 
 1. **RMS keeps each process's process-permanent files**, in Go, as
    govax keeps its other per-process structures (the PFN database, the
@@ -157,7 +158,7 @@ What it shows, before VMS's answers:
    (`$CREATE TTA0:`), as a terminal record stream, which is what VMS
    does with it.
 
-### Questions for the author
+### Questions for the author (answered 2026-10-21: each as proposed)
 
 1. **IFI values.** VMS's numbers depend on its process I/O segment;
    the probe shows their form (which bits mark a process-permanent or
@@ -257,3 +258,11 @@ them with. Wrote `testdata/ppf71` (the program, three procedures, the
 exchange and copy-out scripts, the README) and ran it on govax: it runs
 to the end, and its answers are the side findings above. Waiting for the
 author's review of Part B and the VAX run.
+
+### 2026-10-21 — Plan accepted
+
+The author accepted Part B's decisions and the proposed answer to each
+question: govax's own IFI numbering in VMS's form, masked by the
+oracle; the `$DECK`/`$EOD` checks staying in DCL's procedure reader,
+which becomes the SYS$INPUT entry's stream; a subprocess's names by
+what the probe shows. The author is running the probe on the VAX.
