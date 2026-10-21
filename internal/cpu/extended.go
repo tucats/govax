@@ -61,10 +61,8 @@ func emulEmul(e *Engine, d *Decoded) error {
 // wasn't checked at all by emul_extended.c (it computed and truncated the
 // quotient unconditionally); fixed here in Phase 12 using the same
 // longMin/longMax bounds check the float->integer conversions already use
-// -- see docs/DEVIATIONS.md. No other instruction in this codebase raises
-// the architected arithmetic-trap fault for an integer-overflow V yet
-// either (see emulDiv in internal/cpu/integermath.go), so this isn't a gap
-// unique to EDIV.
+// -- see docs/DEVIATIONS.md. A zero divisor then traps (integer divide by
+// zero), and a quotient overflow traps under PSL<IV> (inttrap.go).
 func emulEdiv(e *Engine, d *Decoded) error {
 	divrRaw, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -88,8 +86,16 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	if err := d.Operands[2].Store(e.cpu, e.mem, uint64(uint32(quo))); err != nil {
 		return err
 	}
-	
-	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(rem)))
+
+	if err := d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(rem))); err != nil {
+		return err
+	}
+
+	if uint32(divrRaw) == 0 {
+		return e.integerDivideTrap()
+	}
+
+	return nil
 }
 
 // ExtendedMultiply is EMUL's arithmetic, shared with LIB$EMUL

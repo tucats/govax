@@ -471,6 +471,10 @@ func (e *Engine) Step() error {
 		return e.raise(err)
 	}
 
+	if err := e.integerOverflowTrap(dec.Instruction); err != nil {
+		return e.raise(err)
+	}
+
 	return nil
 }
 

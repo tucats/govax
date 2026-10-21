@@ -39,6 +39,11 @@ type Instruction struct {
 	// the C source's struct INSTRUCTION gave the whole instruction one
 	// type field instead, which Phase 35 retired.
 	DataType [6]DataType
+	// TrapsOnOverflow is set for the instructions whose V condition code
+	// reports an integer overflow, which trap when the PSL's IV bit is set
+	// (inttrap.go). Not part of the generated table: inttrap.go's init
+	// sets it.
+	TrapsOnOverflow bool
 }
 
 // Table is the VAX instruction table: every opcode the decoder knows about,

@@ -3,8 +3,8 @@
 **Status:** in progress. Planned 2026-10-21; Part B's decisions
 accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
-"The probe's answers"), and 3 (the nested-signal search and the stack
-after a blown run) are done.
+"The probe's answers"), 3 (the nested-signal search and the stack
+after a blown run), and 4 (the arithmetic traps) are done.
 
 ## Goal
 
@@ -524,3 +524,40 @@ dumps are subtasks 6 and 7. `TestSrchandler_multiplyActive`.
 
 A runaway recursion now ends with `$STATUS` `%X1000000C` and no
 message, in both paging modes, and the next image runs normally.
+
+### 2026-10-21 — Subtask 4: the arithmetic traps
+
+**Finding 3** wasn't the dispatcher's: its table of arithmetic type
+codes was right, but no integer instruction ever trapped. Parts I and Z
+ran on, and the images ended with R0 as their status (80000000 after the
+ADDL2, NOMSG; 0A, the dividend DIVL2 left, a bare ACCVIO). The
+architecture manual (8.4.6, 8.5.1, appendix E.1) has the rules, now
+govax's (`internal/cpu/inttrap.go`):
+
+- An instruction whose V reports an integer overflow (ADD, SUB, MUL,
+  DIV, ADWC, SBWC, INC, DEC, MNEG, ADAWI, ASHL, ASHQ, CVTWB, CVTLB,
+  CVTLW, ACB, AOB, SOB, EDIV) is marked in the instruction table
+  (`Instruction.TrapsOnOverflow`), and `Step` takes the integer overflow
+  trap (type 1) after it when V and PSL<IV> are both set: after its
+  stores, and after its branch, so the PC saved is the next
+  instruction's. Other instructions' V (REMQUE's empty queue, say)
+  doesn't trap.
+- An integer divide by zero (DIV, EDIV) always traps, type 2, IV or not,
+  after storing the dividend and setting V: VMS's PSL for part Z,
+  03C00002, has IV clear.
+- INDEX's subscript range was a fault that stored nothing; it's a trap
+  (E.1.7): the index stored and the condition codes set, then type 7
+  with the next instruction's PC.
+- The exception conditions' messages take the VAX's form,
+  `PC=!XL, PSL=!XL` (`vmsdef`'s `vaxMessages`), as ACCVIO's already did:
+  OPCDEC, ROPRAND, INTOVF, and INTDIV are confirmed by the probe; the
+  other exception conditions follow them (unconfirmed).
+
+VMS's TB70 and TB70NT on govax now print part I's
+`%SYSTEM-F-INTOVF, arithmetic trap, integer overflow at PC=00000C73,
+PSL=03C0002A` and part Z's INTDIV at C7F, PSL 03C00002, with `$STATUS`
+`%X1000047C` and `%X10000484`, and parts O and R VMS's OPCDEC and
+ROPRAND lines: all as in `vax/tb70.log`. `inttrap_test.go`'s tests
+replace the three that held the old behavior. docs/DEVIATIONS.md has
+the entry ("[Phase 70] Integer overflow and divide-by-zero never
+trapped").

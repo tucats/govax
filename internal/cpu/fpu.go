@@ -32,6 +32,7 @@ import (
 // instruction has completed), 8 to 10 are faults (it hasn't).
 const (
 	trapIntOvf  = 0x01 // integer overflow
+	trapIntDiv  = 0x02 // integer divide by zero
 	faultFltOvf = 0x08 // floating overflow
 	faultFltDiv = 0x09 // floating divide by zero
 	faultFltUnd = 0x0A // floating underflow (only when PSL<FU> is set)

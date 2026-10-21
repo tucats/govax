@@ -129,7 +129,10 @@ func emulMul(e *Engine, d *Decoded) error {
 // (MinInt/-1) and division by zero, per the manual -- unlike
 // emul_integer_math.c, which divides unconditionally before ever checking
 // for either (undefined behavior in C; a runtime panic in Go, which is why
-// this needed a guard in the first place).
+// this needed a guard in the first place). Either way the quotient stored
+// is the dividend. A zero divisor then always traps (integer divide by
+// zero); an overflow traps only under PSL<IV>, which Step checks
+// (inttrap.go).
 func emulDiv(e *Engine, d *Decoded) error {
 	divisor, dividend, size, err := loadPair(e, d)
 	if err != nil {
@@ -139,7 +142,15 @@ func emulDiv(e *Engine, d *Decoded) error {
 	result, v := divResult(dividend, divisor, size)
 	setArithPSL(e.cpu, result, v, false, size)
 
-	return storeResult(e, d, result)
+	if err := storeResult(e, d, result); err != nil {
+		return err
+	}
+
+	if isZero(divisor, size) {
+		return e.integerDivideTrap()
+	}
+
+	return nil
 }
 
 // setLogicalPSL is the BIS/BIC/XOR condition-code shape: N/Z from the

@@ -142,37 +142,6 @@ func TestEmulEdivNegativeDividendRemainderSign(t *testing.T) {
 	}
 }
 
-// TestEmulEdivDivideByZero checks Note 3: a zero divisor doesn't fault --
-// the quotient becomes bits 31:0 of the dividend, the remainder becomes
-// zero, and V is set.
-func TestEmulEdivDivideByZero(t *testing.T) {
-	cpu, mem := fixture()
-	e := NewEngine(cpu, mem)
-
-	if err := mem.StoreQuadword(cpu, 0x4000, 0x0000000123456789); err != nil {
-		t.Fatalf("StoreQuadword: %v", err)
-	}
-
-	cpu.SetGPR(registers.R1, 0) // divisor
-
-	bytes := []byte{0x7B, regMode(registers.R1)}
-	bytes = append(bytes, absoluteMode(0x4000)...)
-	bytes = append(bytes, regMode(registers.R2), regMode(registers.R3))
-	stepInstruction(t, e, bytes...)
-
-	if got := cpu.GPR(registers.R2); got != 0x23456789 {
-		t.Errorf("quotient = %#x, want 0x23456789 (bits 31:0 of the dividend)", got)
-	}
-
-	if got := cpu.GPR(registers.R3); got != 0 {
-		t.Errorf("remainder = %#x, want 0", got)
-	}
-
-	if !cpu.PSL().V() {
-		t.Error("V = false, want true (divide by zero)")
-	}
-}
-
 // TestEmulEdivQuotientOverflow checks the manual's second V condition (a
 // genuine quotient overflow, distinct from divide-by-zero): a large
 // quadword dividend divided by a small divisor whose true quotient doesn't

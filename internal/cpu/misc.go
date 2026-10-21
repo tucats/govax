@@ -49,10 +49,12 @@ func emulBug(e *Engine, d *Decoded) error {
 }
 
 // emulIndex is INDEX: computes an array-reference index, port of
-// emul_misc.c's emul_index. The index arithmetic (out <- (in+subscript)*size)
-// is computed before the range check, but -- matching the C source's early
-// return -- only stored and only reflected in the condition codes once the
-// subscript is confirmed in range; on the arithmetic fault, neither happens.
+// emul_misc.c's emul_index. The index (out <- (in+subscript)*size) is
+// stored and the condition codes set whether or not the subscript is in
+// range; one out of range then takes a subscript range trap, after the
+// instruction (the architecture manual's E.1.7: "The result is stored in
+// index out, and the condition codes are set as if the subscript were
+// within range"). The C source returned a fault before storing anything.
 func emulIndex(e *Engine, d *Decoded) error {
 	subscriptRaw, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -87,10 +89,6 @@ func emulIndex(e *Engine, d *Decoded) error {
 
 	out := (in + subscript) * size
 
-	if subscript < low || subscript > high {
-		return &Fault{Code: ExcArithmetic, Args: []uint32{trapSubRng}}
-	}
-
 	psl := e.cpu.PSL()
 	psl.SetN(out < 0)
 	psl.SetZ(out == 0)
@@ -98,7 +96,15 @@ func emulIndex(e *Engine, d *Decoded) error {
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
 
-	return d.Operands[5].Store(e.cpu, e.mem, uint64(uint32(out)))
+	if err := d.Operands[5].Store(e.cpu, e.mem, uint64(uint32(out))); err != nil {
+		return err
+	}
+
+	if subscript < low || subscript > high {
+		return e.arithmeticTrap(trapSubRng)
+	}
+
+	return nil
 }
 
 // emulBitpsw is BISPSW/BICPSW: sets or clears bits in the low byte of the

@@ -59,33 +59,6 @@ func TestEmulIndexInRange(t *testing.T) {
 	}
 }
 
-func TestEmulIndexOutOfRangeFaults(t *testing.T) {
-	e := newEngine()
-	cpu := e.cpu
-	cpu.SetGPR(registers.SP, 0x7000)
-	cpu.SetPR(registers.KSP, 0x7000)
-	putVector(t, e, ExcArithmetic, 0x300, 0)
-
-	cpu.SetGPR(registers.R0, 20) // subscript, out of [0,9]
-	cpu.SetGPR(registers.R1, 0)
-	cpu.SetGPR(registers.R2, 9)
-	cpu.SetGPR(registers.R3, 4)
-	cpu.SetGPR(registers.R4, 0)
-	cpu.SetGPR(registers.R5, 0xDEADBEEF)
-
-	stepInstruction(t, e, 0x0A,
-		regMode(registers.R0), regMode(registers.R1), regMode(registers.R2),
-		regMode(registers.R3), regMode(registers.R4), regMode(registers.R5))
-
-	if got := cpu.GPR(registers.PC); got != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (arithmetic fault vector)", got)
-	}
-
-	if got := cpu.GPR(registers.R5); got != 0xDEADBEEF {
-		t.Errorf("R5 = %#x, want unchanged 0xDEADBEEF (not stored on fault)", got)
-	}
-}
-
 func TestEmulBispswBicpsw(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)

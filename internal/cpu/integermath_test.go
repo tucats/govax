@@ -152,23 +152,6 @@ func TestEmulDivByte(t *testing.T) {
 	}
 }
 
-func TestEmulDivByZeroGuarded(t *testing.T) {
-	cpu, mem := fixture()
-	e := NewEngine(cpu, mem)
-	cpu.SetGPR(registers.R1, 0)  // divisor: zero
-	cpu.SetGPR(registers.R2, 10) // dividend
-
-	stepInstruction(t, e, 0x86, regMode(registers.R1), regMode(registers.R2)) // must not panic
-
-	if got := cpu.GPR(registers.R2); got != 10 {
-		t.Errorf("result = %d, want 10 (dividend left unchanged)", got)
-	}
-
-	if !cpu.PSL().V() {
-		t.Error("V = false, want true (divide by zero)")
-	}
-}
-
 func TestEmulDivMinIntOverflowGuarded(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)

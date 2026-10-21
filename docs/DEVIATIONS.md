@@ -712,12 +712,13 @@ changed as a result.
     reserved instructions, reserved operand and addressing mode,
     arithmetic). Breakpoint, trace, and compatibility-mode exceptions
     aren't signaled.
-  - Every exception is still delivered as a fault: the signal array's PC
-    is the faulting instruction's, even for the arithmetic *traps*
-    (types 1-7), whose architected PC is the next instruction's. (The
-    engine's ordinary exception frames do the same.) A handler that
-    continues a trap must change the PC itself, or the instruction runs
-    again.
+  - ~~Every exception is still delivered as a fault: the signal array's
+    PC is the faulting instruction's, even for the arithmetic *traps*
+    (types 1-7), whose architected PC is the next instruction's.~~
+    Resolved: the arithmetic traps save the next instruction's PC
+    (`cpu.Engine.arithmeticTrap`), INDEX's subscript range trap since
+    Phase 70 (see "[Phase 70] Integer overflow and divide-by-zero never
+    trapped").
   - An exception on the interrupt stack, or one whose stack can't be
     written, goes to the console's report instead of VMS's fatal-error
     handling.
@@ -2063,11 +2064,40 @@ sub-phase 2.
   float-to-integer conversions already use) and applies the manual's Note 3 fallback
   (quotient <- low 32 bits of the dividend, remainder <- 0, V set) on overflow, the
   same as the zero-divisor case. Verified by `internal/cpu/extended_test.go`'s new
-  `TestEmulEdivQuotientOverflow`. Still true, and unchanged by this fix: no
-  instruction in this codebase raises the architected arithmetic-trap fault for an
-  integer-overflow V regardless of the `IV` PSL bit (see `emulDiv` in
-  `internal/cpu/integermath.go`) — the whole trap-on-overflow mechanism is
-  unimplemented project-wide, a separate gap from EDIV's own V-bit computation.
+  `TestEmulEdivQuotientOverflow`. The separate gap this entry noted, that no
+  integer instruction raised the integer overflow trap under PSL<IV>, was fixed in
+  Phase 70 (see "[Phase 70] Integer overflow and divide-by-zero never trapped").
+
+### [Phase 70, resolved] Integer overflow and divide-by-zero never trapped
+
+- **Where**: `internal/cpu` (`inttrap.go`, `engine.go`'s `Step`,
+  `integermath.go`'s `emulDiv`, `extended.go`'s `emulEdiv`, `misc.go`'s
+  `emulIndex`); `internal/vmsdef/messages.go`.
+- **What**: the architecture manual's 8.4.6 and E.1.1: an integer
+  instruction whose result overflows, with PSL<IV> set, traps (type 1,
+  SS$_INTOVF) after completing; 8.5.1 and E.1.2: an integer divide with a
+  zero divisor always traps (type 2, SS$_INTDIV), IV or not. govax raised
+  neither: ADD, SUB, MUL, DIV, ADWC, SBWC, INC, DEC, MNEG, ADAWI, ASH,
+  the narrowing CVTs, ACB, AOB, SOB, and EDIV only set V (CVTPL, EMOD, and
+  the floating-to-integer conversions already trapped). A program
+  overflowing in an `^M<IV>` routine, or dividing by zero, went on with
+  the truncated result or the dividend (`testdata/tb70`'s parts I and Z
+  ended with R0 as their status: `%NONAME-W-NOMSG` and a bare
+  `%SYSTEM-E-ACCVIO`). And INDEX's subscript range (E.1.7, a trap: the
+  index stored and the condition codes set first) was a fault that stored
+  nothing, with INDEX's own PC.
+  The exception conditions' messages were the message file's, which say
+  `PC=!XH, PS=!XL`; a VAX shows `PC=!XL, PSL=!XL`.
+- **Status**: fixed in Phase 70's subtask 4. Each instruction whose V
+  reports an integer overflow is marked in the instruction table
+  (`Instruction.TrapsOnOverflow`), and `Step` traps after it when V and
+  IV are set, after its stores and branch; DIV and EDIV trap on a zero
+  divisor after storing; INDEX stores, then traps. VMS 7.1's images
+  (`testdata/tb70/vax/tb70.exe`, `tb70nt.exe`) now give VMS's messages,
+  PCs, PSLs, and statuses for parts I, Z, O, and R. The VAX message
+  forms of OPCDEC, ROPRAND, INTOVF, and INTDIV are confirmed; those of
+  OPCCUS, RADRMOD, ARTRES, and the floating, decimal, and subscript
+  conditions follow them, unconfirmed.
 
 ## Open questions carried forward (not yet findings)
 

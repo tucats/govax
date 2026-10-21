@@ -98,9 +98,28 @@ func sharedMessage(code uint32) (Message, bool) {
 // Alpha's (a 64-bit address shown with !XH, the PS rather than the PSL).
 // LookupMessage finds them first. SS$_ACCVIO's is VMS 7.1's on a VAX
 // (testdata/lib55, LIB$SYS_GETMSG), as every VAX log in testdata shows
-// it.
+// it. The others are the conditions of the hardware exceptions govax
+// signals (corevms's exceptionCondition), whose PC and PSL a VAX shows
+// as longwords after "PC=" and "PSL=": OPCDEC's, ROPRAND's, INTOVF's,
+// and INTDIV's are as VMS 7.1 showed them (testdata/tb70); the rest
+// follow them, unconfirmed.
 var vaxMessages = map[uint32]Message{
 	0x00000008: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL", FAOCount: 4},
+	0x00000430: {Facility: "SYSTEM", Ident: "OPCCUS", Text: "opcode reserved to customer fault at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000438: {Facility: "SYSTEM", Ident: "OPCDEC", Text: "opcode reserved to Digital fault at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000448: {Facility: "SYSTEM", Ident: "RADRMOD", Text: "reserved addressing fault at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000450: {Facility: "SYSTEM", Ident: "ROPRAND", Text: "reserved operand fault at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000470: {Facility: "SYSTEM", Ident: "ARTRES", Text: "reserved arithmetic trap at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000478: {Facility: "SYSTEM", Ident: "INTOVF", Text: "arithmetic trap, integer overflow at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000480: {Facility: "SYSTEM", Ident: "INTDIV", Text: "arithmetic trap, integer divide by zero at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000488: {Facility: "SYSTEM", Ident: "FLTOVF", Text: "arithmetic trap, floating overflow at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000490: {Facility: "SYSTEM", Ident: "FLTDIV", Text: "arithmetic trap, floating/decimal divide by zero at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000498: {Facility: "SYSTEM", Ident: "FLTUND", Text: "arithmetic trap, floating underflow at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x000004A0: {Facility: "SYSTEM", Ident: "DECOVF", Text: "arithmetic trap, decimal overflow at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x000004A8: {Facility: "SYSTEM", Ident: "SUBRNG", Text: "arithmetic trap, subscript out of range at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x000004B0: {Facility: "SYSTEM", Ident: "FLTOVF_F", Text: "arithmetic fault, floating overflow at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x000004B8: {Facility: "SYSTEM", Ident: "FLTDIV_F", Text: "arithmetic fault, floating divide by zero at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x000004C0: {Facility: "SYSTEM", Ident: "FLTUND_F", Text: "arithmetic fault, floating underflow at PC=!XL, PSL=!XL", FAOCount: 2},
 }
 
 // observedMessages are messages the system message file govax's tables
