@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/registers"
 )
 
@@ -325,5 +326,46 @@ func TestEnsureShims_overflowPages(t *testing.T) {
 	addr, ok := c.Symbols.Get(last)
 	if !ok || (addr >= c.shimBase && addr < c.shimBase+shimPageBytes) {
 		t.Errorf("%s at %08X (%v); want it in an overflow page, not VMInit's at %08X", last, addr, ok, c.shimBase)
+	}
+}
+
+// TestEnsureShims_placesASTExit: EnsureShims writes EXE$ASTRET, the AST
+// exit, in S0 after the table's stubs (docs/PHASE-70 - traceback.md,
+// subtask 9), a JMP to the SYS$CLRAST P1-vector entry's XFC, and
+// ASTExit returns its address only once it's there.
+func TestEnsureShims_placesASTExit(t *testing.T) {
+	c := newRunnableMachine(t)
+	c.Engine.SetModeStack(registers.Kernel, false)
+
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
+	if a := c.ASTExit(); a != 0 {
+		t.Errorf("ASTExit before EnsureShims = %#x, want 0", a)
+	}
+
+	if err := c.EnsureShims(); err != nil {
+		t.Fatalf("EnsureShims: %v", err)
+	}
+
+	exit := c.ASTExit()
+	if exit < maxP1 {
+		t.Fatalf("ASTExit = %#x, want an S0 address", exit)
+	}
+
+	for _, e := range ShimTable {
+		if addr, ok := c.Symbols.Get(fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)); ok && e.Code != 0 && e.Data == nil && addr == exit {
+			t.Errorf("EXE$ASTRET shares %s's stub at %#x", e.Name, exit)
+		}
+	}
+
+	dec, err := disasm.Disassemble(memByteReader{c}, exit)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := dec.String(), "JMP @#^X7FFEE10A"; got != want {
+		t.Errorf("EXE$ASTRET's instruction = %q, want %q", got, want)
 	}
 }

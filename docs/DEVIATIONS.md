@@ -449,7 +449,10 @@ changed as a result.
     conditions checked (IPL < 2, not on the interrupt stack, enabled,
     none active) are VMS's.
   - The AST exit is the `SYS$CLRAST` vector entry, reached by the
-    routine's `RET` rather than by VMS's own dispatcher code.
+    routine's `RET` rather than by VMS's own dispatcher code. (Since
+    Phase 70's subtask 9 the routine returns first to `EXE$ASTRET`, a
+    stub in S0 as VMS's AST return point is, which jumps to that entry,
+    so a traceback dump shows a system-space PC for the AST frame.)
   - No `ASTLM` quota (`SS$_EXQUOTA`) or `SS$_INSFMEM`.
 - **Status**: open, by design.
 

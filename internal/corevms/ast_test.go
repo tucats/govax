@@ -634,3 +634,36 @@ func TestGetjpiQueuesAST(t *testing.T) {
 		t.Errorf("%d ASTs, want still 2", env.PendingASTs())
 	}
 }
+
+// TestNextASTReturnsToASTExit: with the System's EXE$ASTRET in place, an
+// AST routine returns there rather than to the SYS$CLRAST entry, and the
+// stub jumps on to that entry's XFC; while it isn't (0), to the entry.
+func TestNextASTReturnsToASTExit(t *testing.T) {
+	env := astFixture(t, registers.User)
+	exit := uint32(0)
+	env.ASTExit = func() uint32 { return exit }
+
+	env.queueAST(0x1000, 0, uint32(registers.User))
+
+	if _, _, returnPC, ok, err := env.NextAST(); !ok || err != nil || returnPC != astExitAddr {
+		t.Errorf("without EXE$ASTRET: returnPC=%#x ok=%v err=%v, want %#x", returnPC, ok, err, astExitAddr)
+	}
+
+	env.Process.ast.active[registers.User] = false
+	exit = 0x8100
+
+	env.queueAST(0x1000, 0, uint32(registers.User))
+
+	if _, _, returnPC, ok, err := env.NextAST(); !ok || err != nil || returnPC != exit {
+		t.Errorf("with EXE$ASTRET: returnPC=%#x ok=%v err=%v, want %#x", returnPC, ok, err, exit)
+	}
+
+	stub := ASTExitStub()
+	if len(stub) != ASTExitStubSize || stub[0] != 0x17 || stub[1] != 0x9F {
+		t.Fatalf("ASTExitStub() = % X, want JMP @#... in %d bytes", stub, ASTExitStubSize)
+	}
+
+	if target := uint32(stub[2]) | uint32(stub[3])<<8 | uint32(stub[4])<<16 | uint32(stub[5])<<24; target != astExitAddr {
+		t.Errorf("ASTExitStub jumps to %#x, want the SYS$CLRAST entry's XFC, %#x", target, astExitAddr)
+	}
+}

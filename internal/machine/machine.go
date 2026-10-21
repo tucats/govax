@@ -7,7 +7,6 @@ import (
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
@@ -417,17 +416,43 @@ func (m *Machine) newRTL() *corevms.Environment {
 	// The traceback dump names PCs from the main image's debug symbol
 	// table only: VMS's left shareable images' PCs unnamed, though one
 	// was linked with traceback (docs/PHASE-70 - traceback.md).
+	//
+	// A PC in system space is the system's code on VMS, which rule 1
+	// names from the image's last routine; in govax the only such code a
+	// program's frames return to is EXE$ASTRET, the AST exit. The rest
+	// of govax's S0 code there (shim stubs, kernel.asm's LIBRTL routines)
+	// stands in for shareable images' code, which VMS has in P0, so it
+	// gets their blank columns. So does a PC in a shareable image the
+	// program activated: govax places one right after the image, where
+	// rule 1 would name it from the image's last routine, VMS's further
+	// off (TB70SHR at 24000), where it doesn't (unconfirmed for a
+	// shareable image within the limit on VMS).
 	sys.TraceName = func(env *corevms.Environment, pc uint32, exact bool) corevms.TraceName {
-		var prog *dbgsym.Program
+		unnamed := corevms.TraceName{Rel: pc}
 
-		if icbs := m.ImageState(env).ICBList; len(icbs) > 0 {
-			prog = icbs[0].Debug
+		if pc >= maxP1 && pc != m.ASTExit() {
+			return unnamed
 		}
 
-		n := prog.TraceName(pc, exact)
+		icbs := m.ImageState(env).ICBList
+		if len(icbs) == 0 {
+			return unnamed
+		}
+
+		for _, icb := range icbs[1:] {
+			if pc >= icb.Base && pc <= icb.End {
+				return unnamed
+			}
+		}
+
+		n := icbs[0].Debug.TraceName(pc, exact)
 
 		return corevms.TraceName{Module: n.Module, Routine: n.Routine, Rel: n.Rel, Line: n.Line}
 	}
+
+	// An AST routine returns to EXE$ASTRET in S0, as on VMS, once the
+	// stubs are in place (docs/PHASE-70 - traceback.md, subtask 9).
+	sys.ASTExit = m.ASTExit
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).

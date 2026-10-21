@@ -111,11 +111,13 @@ func tb70LogRuns(t *testing.T, file, define, run string) map[string][]string {
 	return runs
 }
 
-// tb70Masked masks the dump lines of a run (tb70VAXRuns's form) whose
-// PC is outside the main image, which ends below 1000: PCs in LIBRTL, in
-// TB70SHR, and in the system's AST exit, all of which govax places
-// elsewhere than VMS did (LIBRTL's routines are shims in S0, TB70SHR
-// follows the image, the AST exit is the SYS$CLRAST stub in P1).
+// tb70Masked masks the PCs of a run's dump lines (tb70VAXRuns's form)
+// whose PC is outside the main image, which ends below 1000: PCs in
+// LIBRTL, in TB70SHR, and in the system's AST exit, all of which govax
+// places elsewhere than VMS did (LIBRTL's routines are shims and
+// kernel.asm's code in S0, TB70SHR follows the image, the AST exit is
+// govax's EXE$ASTRET). The names and the line are kept: the AST exit's
+// are its rule 1 names, the others' blank.
 func tb70Masked(lines []string) []string {
 	out := make([]string, len(lines))
 
@@ -127,7 +129,7 @@ func tb70Masked(lines []string) []string {
 		}
 
 		if pc, err := strconv.ParseUint(line[69:], 16, 32); err == nil && (pc < 0x200 || pc >= 0x1000) {
-			out[i] = "(a PC outside the image)"
+			out[i] = line[:59] + "(PCs outside the image)"
 		}
 	}
 

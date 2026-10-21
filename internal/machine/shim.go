@@ -76,6 +76,8 @@ func (m *Machine) EnsureShims() error {
 		}
 	}
 
+	stubs++ // EXE$ASTRET, after the table's (corevms.ASTExitStub)
+
 	addr, end := m.shimBase, m.shimBase+shimPageBytes
 
 	// The stubs that don't fit in VMInit's page, and the tables, go to an
@@ -148,9 +150,36 @@ func (m *Machine) EnsureShims() error {
 		addr += corevms.ShimStubSize
 	}
 
+	// EXE$ASTRET, the AST exit in system space (corevms.ASTExitStub),
+	// takes the slot after the table's last stub, so no stub moves.
+	if addr+corevms.ASTExitStubSize > end {
+		addr = overflow
+	}
+
+	if err := m.storeBytes(addr, corevms.ASTExitStub()); err != nil {
+		return err
+	}
+
+	m.Symbols.Set(astExitName, addr, SymbolSystem)
+
 	m.shimsReady = true
 
 	return nil
+}
+
+// astExitName is the AST exit's symbol, which ASTExit looks up.
+const astExitName = "EXE$ASTRET"
+
+// ASTExit is the System's ASTExit (corevms.System): EXE$ASTRET's
+// address once EnsureShims has placed it, else 0.
+func (m *Machine) ASTExit() uint32 {
+	if !m.shimsReady {
+		return 0
+	}
+
+	addr, _ := m.Symbols.Get(astExitName)
+
+	return addr
 }
 
 // shimDataSize is the room a data entry takes in the overflow area: its

@@ -361,7 +361,8 @@ decides at each instruction boundary whether an AST can run (VMS's conditions:
 IPL < 2, enabled, none active in the mode) and pushes its argument list. The
 engine calls the routine with its `CALLG` frame builder, through an optional
 `cpu.ASTSource` interface. The routine's `RET` returns through the `SYS$CLRAST`
-vector entry, which restores the interrupted state. `$DCLAST`, a per-mode
+vector entry (since Phase 70, by way of `EXE$ASTRET`, a stub in S0), which
+restores the interrupted state. `$DCLAST`, a per-mode
 `$SETAST`, and the `astadr` arguments of `$SETIMR` and `$GETJPI` use it;
 waits are interrupted and resumed as on VMS (`testdata/asm/ast_delivery.asm`,
 `timer_ast.asm`).

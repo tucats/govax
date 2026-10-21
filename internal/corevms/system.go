@@ -164,6 +164,12 @@ type System struct {
 	// dump's columns blank.
 	TraceName func(env *Environment, pc uint32, exact bool) TraceName
 
+	// ASTExit, if set, returns the address of EXE$ASTRET, the AST exit
+	// in system space (ast.go's ASTExitStub), or 0 while it isn't in
+	// memory. The console installs it; nil, or 0, has an AST routine
+	// return straight to the SYS$CLRAST P1-vector entry.
+	ASTExit func() uint32
+
 	// sched is the scheduler (schedule.go): every process in procs is
 	// in it, by PID. It only decides anything while the engine has the
 	// System installed as its scheduling hook.

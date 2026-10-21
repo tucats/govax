@@ -80,6 +80,15 @@ import (
 // pops the six longwords and puts back R0, R1, PC, and PSL. Execution
 // continues at the interrupted instruction.
 //
+// On VMS the routine's return address is EXE$ASTRET, the AST return
+// point in the executive (the Internals book's 4.4.7 and 7.3), in
+// system space, and a traceback dump shows that PC as the AST frame's
+// saved PC. govax has an EXE$ASTRET too, in S0 (ASTExitStub): the
+// machine places it with the shim stubs and installs its address as the
+// System's ASTExit, and it jumps to the SYS$CLRAST entry's XFC. Until
+// then (or in a test with no stubs) the routine returns straight to
+// that XFC.
+//
 // This needs the P1 vector's stubs in memory (assembled by .P1VECTOR, as
 // any program calling system services has). NextAST checks the XFC is
 // there before delivering.
@@ -124,6 +133,37 @@ var astExitAddr = func() uint32 {
 }()
 
 const xfcP1VectorWord = 0x7AFC
+
+// ASTExitStubSize is the length in bytes of the EXE$ASTRET stub
+// (ASTExitStub): a shim stub's, so it fits in a stub's slot.
+const ASTExitStubSize = ShimStubSize
+
+// ASTExitStub returns EXE$ASTRET's code, the system-space AST exit an
+// AST routine's RET lands on (see "How an AST returns" above):
+// JMP @#addr (opcode 17, then the absolute mode's specifier 9F and the
+// address), addr being the SYS$CLRAST entry's XFC, padded with NOPs to
+// ASTExitStubSize. A JMP leaves SP at the AST frame, as the exit wants.
+func ASTExitStub() []byte {
+	a := astExitAddr
+
+	return []byte{
+		0x17, 0x9F, // JMP @#...
+		byte(a), byte(a >> 8), byte(a >> 16), byte(a >> 24),
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, // NOP, never reached
+	}
+}
+
+// astReturn is where an AST routine returns to: the System's EXE$ASTRET
+// when the machine has placed it, else the SYS$CLRAST entry's XFC.
+func (env *Environment) astReturn() uint32 {
+	if env.ASTExit != nil {
+		if a := env.ASTExit(); a != 0 {
+			return a
+		}
+	}
+
+	return astExitAddr
+}
 
 // astRequest is one queued AST (a VMS AST control block, ACB).
 type astRequest struct {
@@ -221,7 +261,7 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 	p.ast.active[mode] = true
 	p.ast.frame[mode] = sp
 
-	return a.routine, sp, astExitAddr, true, nil
+	return a.routine, sp, env.astReturn(), true, nil
 }
 
 // deliverableAST finds the AST the process would take next if the CPU

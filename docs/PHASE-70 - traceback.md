@@ -6,7 +6,8 @@ VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
 after a blown run), 4 (the arithmetic traps), 5 (the image startup
 frame and the search's order), 6 (the traceback dump), 7
-(EXE$EXCMSG's dump), and 8 (SYS$OUTPUT and SYS$ERROR) are done.
+(EXE$EXCMSG's dump), 8 (SYS$OUTPUT and SYS$ERROR), and 9 (the AST
+exit in S0) are done.
 
 ## Goal
 
@@ -774,3 +775,38 @@ TB70B.COM's N and M, command by command, and matches VMS's log, each
 file's TYPE included. `TestTB70OutputSameFile` checks one file for both
 names (one copy of the message) and a version per image. The manual's
 section 9 describes where the messages go.
+
+### 2026-10-21 — Subtask 9: the AST exit in S0
+
+**EXE$ASTRET.** An AST routine now returns to a stub in S0, as VMS's
+returns to EXE$ASTRET, "the AST return point in the executive" (the
+Internals book's 4.4.7): `corevms.ASTExitStub`, `JMP @#` the SYS$CLRAST
+P1-vector entry's XFC, which goes on as before. The machine's
+`EnsureShims` writes it in the slot after the table's last stub (no stub
+moves; the tables after the overflow area's stubs move 12 bytes) as the
+symbol EXE$ASTRET, and installs `Machine.ASTExit` as the System's
+`ASTExit`, which `NextAST`'s `astReturn` asks; with no stubs yet (or in
+corevms's tests) the routine returns straight to the P1 entry. So the
+dump names the AST frame's saved PC by rule 1, from the image's last
+routine with a "negative" rel PC, as VMS's does (S12, T:
+`TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX`, TB70D's `TB70` and a
+blank routine). govax's `$UNWIND` doesn't treat the AST frame specially
+(the book's 4.4.7), before or after: unchanged.
+
+**PCs outside the image.** With the AST exit's names compared,
+`tb70Masked` now masks only an outside PC's two hex columns, and the
+names showed two differences the old mask hid: a PC in govax's S0 code
+that stands in for LIBRTL (kernel.asm's LIB$CALLG, S13 and K) and a PC
+in TB70SHR (S16, N), which govax places right after the image, were
+named by rule 1 where VMS's are blank (rule 3: VMS's LIBRTL and TB70SHR
+are in P0, beyond the limit). The machine's `TraceName` now gives an S0
+PC other than EXE$ASTRET's, and a PC in another of the process's images
+(its ICB's range), blank columns. That VMS would leave a shareable
+image's PC within the limit unnamed is unconfirmed: its images were
+never placed there.
+
+`TestEnsureShims_placesASTExit` checks the stub's place and instruction,
+`TestNextASTReturnsToASTExit` the return address either way, and
+`TestTB70Traceback`, `TestTB70Output`, and `TestTB70ImproperlyHandled`
+now compare the module, routine, and line columns of every line outside
+the image, which match VMS's.
