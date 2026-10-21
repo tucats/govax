@@ -1,0 +1,100 @@
+$ ! TB70.COM - Phase 70's probe of traceback (testdata/tb70/README.md).
+$ ! Run it with the exchange volume's [000000] as the default directory:
+$ !
+$ !     @TB70/OUTPUT=TB70.LOG
+$ !
+$ ! TB70.LOG gets everything: the builds, then each part's run under
+$ ! each image, with $STATUS after it. P1, if given, is the list of
+$ ! parts to run instead of all of them (VMS's run gives none).
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ HERE = F$ENVIRONMENT("DEFAULT")
+$ !
+$ ! The objects: with traceback (MACRO's default), and with /DEBUG.
+$ !
+$ MACRO TB70
+$ MACRO TB70LONG
+$ MACRO TB70SHR
+$ MACRO/DEBUG/OBJECT=TB70D TB70
+$ MACRO/DEBUG/OBJECT=TB70LONGD TB70LONG
+$ !
+$ ! The shareable image, then the program three ways: with traceback,
+$ ! /NOTRACEBACK, and /DEBUG (run /NODEBUG, for traceback's lines).
+$ !
+$ LINK/SHAREABLE=TB70SHR/MAP=TB70SHR/FULL TB70SHR
+$ SHOW SYMBOL $STATUS
+$ DEFINE TB70SHR 'HERE'TB70SHR.EXE
+$ LINK/MAP=TB70/FULL TB70,TB70LONG,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+$ LINK/MAP=TB70NT/FULL/NOTRACEBACK/EXECUTABLE=TB70NT TB70,TB70LONG,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+$ LINK/MAP=TB70D/FULL/DEBUG/EXECUTABLE=TB70D TB70D,TB70LONGD,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! Every part, under each image.
+$ !
+$ LIST = "S,A,O,I,Z,R,J,P,L,K,W,E,H,T,X,D,G,V,C,M,N"
+$ IF P1 .NES. "" THEN LIST = P1
+$ IMAGE = "TB70"
+$ GOSUB RUNALL
+$ IMAGE = "TB70NT"
+$ GOSUB RUNALL
+$ IMAGE = "TB70D"
+$ GOSUB RUNALL
+$ !
+$ ! Where the dump goes: SYS$OUTPUT and SYS$ERROR apart, with traceback
+$ ! and without it, for part A (a hardware exception) and part S (the
+$ ! signaled ones).
+$ !
+$ DEFINE TB70_PART A
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTA.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRA.LOG
+$ RUN TB70
+$ SHOW SYMBOL $STATUS
+$ TYPE TB70OUTA.LOG
+$ TYPE TB70ERRA.LOG
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTANT.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRANT.LOG
+$ RUN TB70NT
+$ SHOW SYMBOL $STATUS
+$ TYPE TB70OUTANT.LOG
+$ TYPE TB70ERRANT.LOG
+$ DEFINE TB70_PART S
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTS.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRS.LOG
+$ RUN TB70
+$ SHOW SYMBOL $STATUS
+$ TYPE TB70OUTS.LOG
+$ TYPE TB70ERRS.LOG
+$ !
+$ ! A subprocess's run. (TB70D is never run without /NODEBUG: it
+$ ! would start the debugger.)
+$ !
+$ DEFINE TB70_PART A
+$ SPAWN/WAIT RUN TB70
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! No part.
+$ !
+$ DEASSIGN TB70_PART
+$ RUN TB70
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY/SIZE=ALL/DATE
+$ EXIT
+$ !
+$ ! RUNALL: run IMAGE once for each part in LIST.
+$ !
+$ RUNALL:
+$   I = 0
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART 'P'
+$   RUN/NODEBUG 'IMAGE'
+$   SHOW SYMBOL $STATUS
+$   I = I + 1
+$   GOTO RNEXT

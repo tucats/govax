@@ -1,0 +1,497 @@
+	.TITLE	TB70	Phase 70 traceback probe
+	.IDENT	/V1.0/
+;
+; Phase 70's probe (docs/PHASE-70 - traceback.md, subtask 1; README.md
+; here). It asks VMS what an unhandled condition prints: the
+; condition's message, the traceback facility's symbolic stack dump
+; (%TRACE-x-TRACEBACK), and, in an image linked /NOTRACEBACK, the
+; "Improperly handled condition" dump; which severities get each; which
+; frames the dump shows, and how it names a PC in a JSB subroutine, a
+; psect with no routine, data, LIBRTL, a shareable image, a handler, an
+; AST routine, an exit handler, or no image at all; how deep it goes;
+; and how it lays out long names.
+;
+; The logical name TB70_PART picks the part, one letter:
+;
+;   S  conditions the program goes on from, each signaled by
+;      LIB$SIGNAL: one of each severity, then errors from every kind of
+;      place; it ends with a severe condition (S20), which ends the image
+;   A  an access violation two calls deep, every register but AP, FP,
+;      SP, and PC set to a pattern first
+;   O  a privileged instruction (HALT) in the DATA psect
+;   I  an integer overflow trap (the PC is the next instruction's)
+;   Z  an integer divide by zero trap
+;   R  a reserved operand fault (MOVF of a reserved F_floating value)
+;   J  an access violation in a JSB subroutine
+;   P  a jump to an address no image holds
+;   L  an access violation inside LIBRTL (LIB$MOVC3 to address 0)
+;   K  LIB$STOP of SS$_ABORT, from a routine LIB$CALLG called
+;   W  LIB$STOP of a warning (SS$_ENDOFFILE)
+;   E  LIB$STOP of an error (RMS$_EOF)
+;   H  an access violation in a condition handler
+;   T  an access violation in an AST routine
+;   X  an access violation in an exit handler
+;   D  an access violation 100 calls deep
+;   G  an access violation in TB70LONG's routine with a 31-character
+;      name, in a module with a 31-character name
+;   V  an access violation with a last-chance handler set
+;   C  SS$_ACCVIO signaled by LIB$SIGNAL (software), reason mask 4 and
+;      address 1234
+;   M  an access violation in the shareable image TB70SHR
+;   N  an access violation in a routine of this image's that TB70SHR
+;      called back
+;
+; Each case says what it is with a line of its own, written with
+; LIB$PUT_OUTPUT, before it runs. The condition values are written out,
+; as Phase 29's FAILSIG does.
+;
+	$LNMDEF
+
+SS$_NORMAL	= ^X00000001		; success
+SS$_EOTIN	= ^X00000C03		; informational
+SS$_ENDOFFILE	= ^X00000870		; warning
+RMS$_EOF	= ^X0001827A		; error
+SS$_ABORT	= ^X0000002C		; severe
+SS$_BADPARAM	= ^X00000014		; severe
+SS$_ACCVIO	= ^X0000000C		; severe
+SS$_RESIGNAL	= ^X00000918
+STS$M_INHIB_MSG	= ^X10000000
+
+; A condition handler's first argument is the signal array's address;
+; the condition is the array's second longword.
+H_SIG	= 4
+SIG_NAM	= 4
+
+; SAY text: write the line text (in line, branched around).
+	.MACRO	SAY	TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAQ	LBL
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+; SIG cond: LIB$SIGNAL of cond, with no arguments.
+	.MACRO	SIG	COND
+	PUSHL	#COND
+	CALLS	#1,G^LIB$SIGNAL
+	.ENDM	SIG
+
+; STOP cond: LIB$STOP of cond, with no arguments.
+	.MACRO	STOP	COND
+	PUSHL	#COND
+	CALLS	#1,G^LIB$STOP
+	.ENDM	STOP
+
+	.EXTERNAL TB70_ROUTINE_20_CHRS, SHRDO, SHRCALL
+
+	.PSECT	DATA,NOEXE,WRT,LONG
+
+PARTNAM: .ASCID	/TB70_PART/
+TABNAM:	.ASCID	/LNM$FILE_DEV/
+PART:	.LONG	0
+PARTLEN: .LONG	0
+ITMLST:	.WORD	4,LNM$_STRING
+	.ADDRESS PART,PARTLEN
+	.LONG	0
+
+; Each part's routine, by letter (0: no such part).
+PARTTAB: .ADDRESS PART_A		; A
+	.LONG	0			; B
+	.ADDRESS PART_C			; C
+	.ADDRESS PART_D			; D
+	.ADDRESS PART_E			; E
+	.LONG	0			; F
+	.ADDRESS PART_G			; G
+	.ADDRESS PART_H			; H
+	.ADDRESS PART_I			; I
+	.ADDRESS PART_J			; J
+	.ADDRESS PART_K			; K
+	.ADDRESS PART_L			; L
+	.ADDRESS PART_M			; M
+	.ADDRESS PART_N			; N
+	.ADDRESS PART_O			; O
+	.ADDRESS PART_P			; P
+	.LONG	0			; Q
+	.ADDRESS PART_R			; R
+	.ADDRESS PART_S			; S
+	.ADDRESS PART_T			; T
+	.LONG	0			; U
+	.ADDRESS PART_V			; V
+	.ADDRESS PART_W			; W
+	.ADDRESS PART_X			; X
+	.LONG	0			; Y
+	.ADDRESS PART_Z			; Z
+
+; Part O jumps here: HALT, privileged in user mode.
+BADOP:	.BYTE	0
+
+; Part X's exit handler block and the status it's given.
+EXHBLK:	.LONG	0
+	.ADDRESS EXH
+	.LONG	1
+	.ADDRESS EXHST
+EXHST:	.LONG	0
+
+; Part L's LIB$MOVC3 arguments, and an empty argument list for
+; LIB$CALLG.
+SRC:	.LONG	^X12345678
+LEN4:	.WORD	4
+CGLIST:	.LONG	0
+
+; Part R's reserved F_floating operand: sign 1, exponent 0.
+FRES:	.LONG	^X00008000
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+
+; The main routine: run the part TB70_PART names.
+	.ENTRY	TB70,^M<R2>
+	$TRNLNM_S TABNAM=TABNAM,LOGNAM=PARTNAM,ITMLST=ITMLST
+	BLBS	R0,10$
+	SAY	</no TB70_PART/>
+	MOVL	#1,R0
+	RET
+10$:	MOVZBL	PART,R2
+	SUBL2	#^A/A/,R2
+	CMPL	R2,#25
+	BGTRU	20$
+	MOVL	PARTTAB[R2],R2
+	BEQL	20$
+	CALLS	#0,(R2)
+	RET
+20$:	SAY	</no such part/>
+	MOVL	#1,R0
+	RET
+
+; Part S: conditions the program goes on from.
+	.ENTRY	PART_S,^M<>
+	SAY	</S1 success/>
+	SIG	SS$_NORMAL
+	SAY	</S2 informational/>
+	SIG	SS$_EOTIN
+	SAY	</S3 warning/>
+	SIG	SS$_ENDOFFILE
+	SAY	</S4 error/>
+	SIG	RMS$_EOF
+	SAY	</S5 warning with STS$M_INHIB_MSG/>
+	SIG	SS$_ENDOFFILE!STS$M_INHIB_MSG
+	SAY	</S6 error, RECSIG 5 calls deep/>
+	PUSHL	#5
+	CALLS	#1,RECSIG
+	SAY	</S7 error from a JSB subroutine/>
+	JSB	JSBSIG
+	SAY	</S8 error from psect CODE2, which has no routine/>
+	JSB	NOROUT
+	SAY	</S9 error, a handler resignals it/>
+	CALLS	#0,RESIG
+	SAY	</S10 error, a handler makes it a warning/>
+	CALLS	#0,CHANGE
+	SAY	</S11 warning, whose handler signals an error/>
+	CALLS	#0,INHAND
+	SAY	</S12 error in an AST routine/>
+	$DCLAST_S ASTADR=ASTSIG
+	SAY	</S13 error in a routine LIB$CALLG called/>
+	PUSHAB	CGSIG
+	PUSHAL	CGLIST
+	CALLS	#2,G^LIB$CALLG
+	SAY	</S14 error in TB70LONG/>
+	PUSHL	#1
+	CALLS	#1,G^TB70_ROUTINE_20_CHRS
+	SAY	</S15 error in the shareable image/>
+	PUSHL	#1
+	CALLS	#1,G^SHRDO
+	SAY	</S16 error in a routine the shareable image called back/>
+	PUSHAB	CBSIG
+	CALLS	#1,G^SHRCALL
+	SAY	</S17 error, RECSIG 60 calls deep/>
+	PUSHL	#60
+	CALLS	#1,RECSIG
+	SAY	</S18 error, a last-chance handler set/>
+	$SETEXV_S VECTOR=#2,ADDRES=LASTCH
+	SIG	RMS$_EOF
+	$SETEXV_S VECTOR=#2
+	SAY	</S19 warning, a severe condition after it/>
+	PUSHL	#SS$_BADPARAM
+	PUSHL	#SS$_ENDOFFILE
+	CALLS	#2,G^LIB$SIGNAL
+	SAY	</S20 severe/>
+	SIG	SS$_BADPARAM
+	SAY	</S21 still running after a severe condition/>
+	MOVL	#1,R0
+	RET
+
+; RECSIG n: call itself until n calls deep, then signal an error.
+	.ENTRY	RECSIG,^M<>
+	SUBL3	#1,4(AP),R0
+	BLEQ	10$
+	PUSHL	R0
+	CALLS	#1,RECSIG
+	RET
+10$:	SIG	RMS$_EOF
+	RET
+
+; JSBSIG and JSBAV: JSB subroutines, which make no call frame, after
+; RECSIG's code in the same psect.
+JSBSIG:	SIG	RMS$_EOF
+	RSB
+
+JSBAV:	MOVL	@#0,R0
+	RSB
+
+; RESIG: an error under a handler that resignals it.
+	.ENTRY	RESIG,^M<>
+	MOVAB	RESIGH,(FP)
+	SIG	RMS$_EOF
+	RET
+
+	.ENTRY	RESIGH,^M<>
+	SAY	</  RESIGH called/>
+	MOVL	#SS$_RESIGNAL,R0
+	RET
+
+; CHANGE: an error under a handler that makes it a warning.
+	.ENTRY	CHANGE,^M<>
+	MOVAB	CHANGEH,(FP)
+	SIG	RMS$_EOF
+	RET
+
+	.ENTRY	CHANGEH,^M<R2>
+	MOVL	H_SIG(AP),R2
+	CMPL	SIG_NAM(R2),#RMS$_EOF
+	BNEQ	10$
+	MOVL	#SS$_ENDOFFILE,SIG_NAM(R2)
+	SAY	</  CHANGEH made it SS$_ENDOFFILE/>
+10$:	MOVL	#SS$_RESIGNAL,R0
+	RET
+
+; INHAND: a warning whose handler signals an error while it runs. The
+; handler says each time it's called, and for which condition: VMS's
+; search for the inner error should pass over it.
+	.ENTRY	INHAND,^M<>
+	MOVAB	INHANDH,(FP)
+	SIG	SS$_ENDOFFILE
+	RET
+
+	.ENTRY	INHANDH,^M<R2>
+	MOVL	H_SIG(AP),R2
+	CMPL	SIG_NAM(R2),#SS$_ENDOFFILE
+	BEQL	5$
+	SAY	</  INHANDH called for another condition/>
+	BRB	10$
+5$:	SAY	</  INHANDH called for SS$_ENDOFFILE; it signals an error/>
+	SIG	RMS$_EOF
+	SAY	</  INHANDH goes on/>
+10$:	MOVL	#SS$_RESIGNAL,R0
+	RET
+
+; ASTSIG, CGSIG, CBSIG: routines that signal an error, called as an
+; AST, by LIB$CALLG, and by TB70SHR.
+	.ENTRY	ASTSIG,^M<>
+	SIG	RMS$_EOF
+	RET
+
+	.ENTRY	CGSIG,^M<>
+	SIG	RMS$_EOF
+	RET
+
+	.ENTRY	CBSIG,^M<>
+	SIG	RMS$_EOF
+	RET
+
+; LASTCH: a last-chance handler that says it was called.
+	.ENTRY	LASTCH,^M<>
+	SAY	</  LASTCH called/>
+	MOVL	#SS$_RESIGNAL,R0
+	RET
+
+; Part A: an access violation in AV2, called by AV1.
+	.ENTRY	PART_A,^M<>
+	CALLS	#0,AV1
+	RET
+
+	.ENTRY	AV1,^M<>
+	NOP
+	CALLS	#0,AV2
+	RET
+
+	.ENTRY	AV2,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	#^X10101010,R0
+	MOVL	#^X11111111,R1
+	MOVL	#^X22222222,R2
+	MOVL	#^X33333333,R3
+	MOVL	#^X44444444,R4
+	MOVL	#^X55555555,R5
+	MOVL	#^X66666666,R6
+	MOVL	#^X77777777,R7
+	MOVL	#^X88888888,R8
+	MOVL	#^X99999999,R9
+	MOVL	#^XAAAAAAAA,R10
+	MOVL	#^XBBBBBBBB,R11
+	MOVL	@#0,R0
+	RET
+
+; Part O: HALT, in the DATA psect.
+	.ENTRY	PART_O,^M<>
+	JMP	BADOP
+
+; Part I: integer overflow, with IV set in the entry mask.
+	.ENTRY	PART_I,^M<>
+	CALLS	#0,OVF
+	RET
+
+	.ENTRY	OVF,^M<IV>
+	MOVL	#^X7FFFFFFF,R0
+	ADDL2	#1,R0
+	NOP
+	RET
+
+; Part Z: integer divide by zero.
+	.ENTRY	PART_Z,^M<>
+	CLRL	R1
+	MOVL	#10,R0
+	DIVL2	R1,R0
+	NOP
+	RET
+
+; Part R: a reserved operand.
+	.ENTRY	PART_R,^M<>
+	MOVF	FRES,R0
+	RET
+
+; Part J: an access violation in a JSB subroutine.
+	.ENTRY	PART_J,^M<>
+	JSB	JSBAV
+	RET
+
+; Part P: a jump to an address no image holds.
+	.ENTRY	PART_P,^M<>
+	JMP	@#^X3FFF0000
+
+; Part L: LIB$MOVC3 to address 0.
+	.ENTRY	PART_L,^M<>
+	PUSHL	#0
+	PUSHAB	SRC
+	PUSHAW	LEN4
+	CALLS	#3,G^LIB$MOVC3
+	RET
+
+; Part K: LIB$STOP from a routine LIB$CALLG called.
+	.ENTRY	PART_K,^M<>
+	PUSHAB	CGSTOP
+	PUSHAL	CGLIST
+	CALLS	#2,G^LIB$CALLG
+	RET
+
+	.ENTRY	CGSTOP,^M<>
+	STOP	SS$_ABORT
+	RET
+
+; Parts W and E: LIB$STOP of a warning and of an error.
+	.ENTRY	PART_W,^M<>
+	STOP	SS$_ENDOFFILE
+	SAY	</W after LIB$STOP/>
+	RET
+
+	.ENTRY	PART_E,^M<>
+	STOP	RMS$_EOF
+	SAY	</E after LIB$STOP/>
+	RET
+
+; Part H: an access violation in a condition handler, which an error
+; called.
+	.ENTRY	PART_H,^M<>
+	CALLS	#0,HFAIL
+	RET
+
+	.ENTRY	HFAIL,^M<>
+	MOVAB	HAV,(FP)
+	SIG	RMS$_EOF
+	SAY	</H after the error/>
+	RET
+
+	.ENTRY	HAV,^M<>
+	SAY	</  HAV called/>
+	MOVL	@#0,R0
+	RET
+
+; Part T: an access violation in an AST routine.
+	.ENTRY	PART_T,^M<>
+	$DCLAST_S ASTADR=ASTAV
+	SAY	</T after the AST/>
+	MOVL	#1,R0
+	RET
+
+	.ENTRY	ASTAV,^M<>
+	MOVL	@#0,R0
+	RET
+
+; Part X: an access violation in an exit handler.
+	.ENTRY	PART_X,^M<>
+	$DCLEXH_S DESBLK=EXHBLK
+	SAY	</X exit handler declared/>
+	MOVL	#1,R0
+	RET
+
+	.ENTRY	EXH,^M<>
+	SAY	</  EXH called/>
+	MOVL	@#0,R0
+	RET
+
+; Part D: an access violation RECAV 100 calls deep.
+	.ENTRY	PART_D,^M<>
+	PUSHL	#100
+	CALLS	#1,RECAV
+	RET
+
+	.ENTRY	RECAV,^M<>
+	SUBL3	#1,4(AP),R0
+	BLEQ	10$
+	PUSHL	R0
+	CALLS	#1,RECAV
+	RET
+10$:	MOVL	@#0,R0
+	RET
+
+; Part G: an access violation in TB70LONG.
+	.ENTRY	PART_G,^M<>
+	PUSHL	#2
+	CALLS	#1,G^TB70_ROUTINE_20_CHRS
+	RET
+
+; Part V: an access violation, a last-chance handler set.
+	.ENTRY	PART_V,^M<>
+	$SETEXV_S VECTOR=#2,ADDRES=LASTCH
+	CALLS	#0,AV1
+	RET
+
+; Part C: SS$_ACCVIO by LIB$SIGNAL.
+	.ENTRY	PART_C,^M<>
+	PUSHL	#^X1234
+	PUSHL	#4
+	PUSHL	#SS$_ACCVIO
+	CALLS	#3,G^LIB$SIGNAL
+	SAY	</C after LIB$SIGNAL/>
+	RET
+
+; Part M: an access violation in TB70SHR.
+	.ENTRY	PART_M,^M<>
+	PUSHL	#2
+	CALLS	#1,G^SHRDO
+	RET
+
+; Part N: an access violation in CBAV, which TB70SHR calls back.
+	.ENTRY	PART_N,^M<>
+	PUSHAB	CBAV
+	CALLS	#1,G^SHRCALL
+	RET
+
+	.ENTRY	CBAV,^M<>
+	MOVL	@#0,R0
+	RET
+
+; NOROUT: code in a psect of its own, with no routine (part S's S8).
+	.PSECT	CODE2,NOWRT,EXE,LONG
+NOROUT:	NOP
+	SIG	RMS$_EOF
+	RSB
+
+	.END	TB70

@@ -1,0 +1,26 @@
+	.TITLE	TB70_LONG_MODULE_NAME_IS_31_CHR	Phase 70 probe: long names
+	.IDENT	/V1.0/
+;
+; TB70's module with long names (README.md): a 31-character module
+; name, a routine with a 20-character name, and one with a 31-character
+; name, to show how traceback's columns take them. The argument is 1
+; to signal an error, 2 for an access violation.
+;
+RMS$_EOF = ^X0001827A
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	TB70_ROUTINE_20_CHRS,^M<>
+	PUSHL	4(AP)
+	CALLS	#1,TB70_LONG_ROUTINE_NAME_31_CHRSX
+	RET
+
+	.ENTRY	TB70_LONG_ROUTINE_NAME_31_CHRSX,^M<>
+	CMPL	4(AP),#1
+	BNEQ	10$
+	PUSHL	#RMS$_EOF
+	CALLS	#1,G^LIB$SIGNAL
+	RET
+10$:	MOVL	@#0,R0
+	RET
+
+	.END

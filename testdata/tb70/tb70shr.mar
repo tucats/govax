@@ -1,0 +1,37 @@
+	.TITLE	TB70SHR	Phase 70 probe: a shareable image
+	.IDENT	/V1.0/
+;
+; TB70's shareable image (README.md), linked with traceback:
+;
+;   SHRDO n	n 1 signals an error, 2 is an access violation
+;   SHRCALL r	calls the routine r (a CALLS #0)
+;
+RMS$_EOF = ^X0001827A
+
+	.PSECT	$$TB70SHR,EXE,NOWRT,PIC,SHR,GBL,PAGE
+
+	.TRANSFER SHRDO
+	.MASK	SHRDO
+	JMP	L^SHRDO+2
+
+	.TRANSFER SHRCALL
+	.MASK	SHRCALL
+	JMP	L^SHRCALL+2
+
+	.PSECT	TB70SHR_CODE,NOWRT,EXE,PIC,SHR,LONG
+
+	.ENTRY	SHRDO,^M<>
+	CMPL	4(AP),#1
+	BNEQ	10$
+	PUSHL	#RMS$_EOF
+	CALLS	#1,G^LIB$SIGNAL
+	RET
+10$:	MOVL	@#0,R0
+	RET
+
+	.ENTRY	SHRCALL,^M<>
+	NOP
+	CALLS	#0,@4(AP)
+	RET
+
+	.END
