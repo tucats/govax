@@ -1,0 +1,2454 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ HERE = F$ENVIRONMENT("DEFAULT")
+$ !
+$ ! The objects: with traceback (MACRO's default), and with /DEBUG.
+$ !
+$ MACRO TB70
+$ MACRO TB70LONG
+$ MACRO TB70SHR
+$ MACRO/DEBUG/OBJECT=TB70D TB70
+$ MACRO/DEBUG/OBJECT=TB70LONGD TB70LONG
+$ !
+$ ! The shareable image, then the program three ways: with traceback,
+$ ! /NOTRACEBACK, and /DEBUG (run /NODEBUG, for traceback's lines).
+$ !
+$ LINK/SHAREABLE=TB70SHR/MAP=TB70SHR/FULL TB70SHR
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ DEFINE TB70SHR DUA1:[000000]TB70SHR.EXE
+$ LINK/MAP=TB70/FULL TB70,TB70LONG,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ LINK/MAP=TB70NT/FULL/NOTRACEBACK/EXECUTABLE=TB70NT TB70,TB70LONG,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ LINK/MAP=TB70D/FULL/DEBUG/EXECUTABLE=TB70D TB70D,TB70LONGD,SYS$INPUT/OPTIONS
+TB70SHR/SHAREABLE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ !
+$ ! Every part, under each image.
+$ !
+$ LIST = "S,A,O,I,Z,R,J,P,L,K,W,E,H,T,X,D,G,V,C,M,N"
+$ IF P1 .NES. "" THEN LIST = P1
+$ IMAGE = "TB70"
+$ GOSUB RUNALL
+$ RUNALL:
+$   I = 0
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART S
+$   RUN/NODEBUG TB70
+S1 success
+%SYSTEM-S-NORMAL, normal successful completion
+S2 informational
+%SYSTEM-I-EOTIN, EOT response to text
+S3 warning
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     00000088  00000515
+TB70            TB70                                       00000067  00000467
+S4 error
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     000000B2  0000053F
+TB70            TB70                                       00000067  00000467
+S5 warning with STS$M_INHIB_MSG
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     000000F3  00000580
+TB70            TB70                                       00000067  00000467
+S6 error, RECSIG 5 calls deep
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000001D  000009D2
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            PART_S                                     0000012E  000005BB
+TB70            TB70                                       00000067  00000467
+S7 error from a JSB subroutine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000002B  000009E0
+TB70            TB70                                       00000067  00000467
+S8 error from psect CODE2, which has no routine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            0000002D  00000F46
+TB70            TB70                                       00000067  00000467
+S9 error, a handler resignals it
+  RESIGH called
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RESIG                                      00000016  000009FF
+TB70            PART_S                                     000001ED  0000067A
+TB70            TB70                                       00000067  00000467
+S10 error, a handler makes it a warning
+  CHANGEH made it SS$_ENDOFFILE
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CHANGE                                     00000016  00000A44
+TB70            PART_S                                     00000230  000006BD
+TB70            TB70                                       00000067  00000467
+S11 warning, whose handler signals an error
+  INHANDH called for SS$_ENDOFFILE; it signals an error
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHANDH                                    000000A6  00000B56
+----- above condition handler called with exception 00000870:
+%SYSTEM-W-ENDOFFILE, end of file
+----- end of exception message
+TB70            INHAND                                     00000016  00000AAF
+TB70            PART_S                                     00000277  00000704
+TB70            TB70                                       00000067  00000467
+  INHANDH goes on
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHAND                                     00000016  00000AAF
+TB70            PART_S                                     00000277  00000704
+TB70            TB70                                       00000067  00000467
+S12 error in an AST routine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            ASTSIG                                     0000000F  00000B93
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            8192A52E  8192B447
+TB70            PART_S                                     000002B6  00000743
+TB70            TB70                                       00000067  00000467
+S13 error in a routine LIB$CALLG called
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CGSIG                                      0000000F  00000BA3
+                                                           0000B118  0000B118
+TB70            PART_S                                     00000305  00000792
+TB70            TB70                                       00000067  00000467
+S14 error in TB70LONG
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            00000015  00000F2E
+TB70_LONG_MODUL TB70_ROUTINE_20_CHRS                       0000000C  00000F18
+TB70            PART_S                                     00000338  000007C5
+TB70            TB70                                       00000067  00000467
+S15 error in the shareable image
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00024025  00024025
+TB70            PART_S                                     00000376  00000803
+TB70            TB70                                       00000067  00000467
+S16 error in a routine the shareable image called back
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CBSIG                                      0000000F  00000BB3
+                                                           00024035  00024035
+TB70            PART_S                                     000003CE  0000085B
+TB70            TB70                                       00000067  00000467
+S17 error, RECSIG 60 calls deep
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000001D  000009D2
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            CODE                                       00000498  00000898
+TB70            TB70                                       00000067  00000467
+S18 error, a last-chance handler set
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       000004F1  000008F1
+TB70            TB70                                       00000067  00000467
+S19 warning, a severe condition after it
+%SYSTEM-W-ENDOFFILE, end of file
+-SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       0000054A  0000094A
+TB70            TB70                                       00000067  00000467
+S20 severe
+%SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       00000572  00000972
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000014"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART A
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                                        00000056  00000C4D
+TB70            AV1                                        0000000A  00000BF6
+TB70            PART_A                                     00000009  00000BEB
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART O
+$   RUN/NODEBUG TB70
+%SYSTEM-F-OPCDEC, opcode reserved to Digital fault at PC=000002A5, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            DATA                                       000000A5  000002A5
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000043C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART I
+$   RUN/NODEBUG TB70
+%SYSTEM-F-INTOVF, arithmetic trap, integer overflow at PC=00000C73, PSL=03C0002A
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            OVF                                        0000000C  00000C73
+TB70            PART_I                                     00000009  00000C66
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000047C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART Z
+$   RUN/NODEBUG TB70
+%SYSTEM-F-INTDIV, arithmetic trap, integer divide by zero at PC=00000C7F, PSL=03C00002
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_Z                                     0000000A  00000C7F
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000484"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART R
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ROPRAND, reserved operand fault at PC=00000C83, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_R                                     00000002  00000C83
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000454"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART J
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=000009E1, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000002C  000009E1
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART P
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=3FFF0000, PC=3FFF0000, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           3FFF0000  3FFF0000
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART L
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=000130DE, PSL=0BC00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000130DE  000130DE
+TB70            PART_L                                     00000017  00000CB1
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART K
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CGSTOP                                     0000000B  00000CD3
+                                                           0000B118  0000B118
+TB70            PART_K                                     00000015  00000CC7
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART W
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ENDOFFILE, end of file
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_W                                     0000000F  00000CE3
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000874"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART E
+$   RUN/NODEBUG TB70
+%RMS-F-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_E                                     0000000F  00000D18
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1001827C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART H
+$   RUN/NODEBUG TB70
+  HAV called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DA8, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            HAV                                        00000023  00000DA8
+----- above condition handler called with exception 0001827A:
+%RMS-E-EOF, end of file detected
+----- end of exception message
+TB70            HFAIL                                      00000016  00000D5E
+TB70            PART_H                                     00000009  00000D47
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART T
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DEB, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            ASTAV                                      00000002  00000DEB
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            8192A52E  8192B447
+TB70            PART_T                                     00000011  00000DC1
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART X
+$   RUN/NODEBUG TB70
+X exit handler declared
+  EXH called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E55, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 00000000
+		 00000000		 7FED53BC
+		 00000000		 7FED53A0
+		 00000E55		 81927962
+		 03C00000		 00000000
+					 00000001
+					 00000000
+					 00000000
+					 20140000
+
+	Register dump
+
+	R0 = 00000001  R1 = 00000000  R2 = 00000004  R3 = 7FF65BD3
+	R4 = 00000004  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5344  FP = 7FED5304  SP = 7FED5380  PC = 00000E55
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART D
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E7D, PSL=03C00004
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECAV                                      00000010  00000E7D
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            RECAV                                      0000000F  00000E7C
+TB70            PART_D                                     0000000F  00000E6C
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART G
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F2F, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            00000016  00000F2F
+TB70_LONG_MODUL TB70_ROUTINE_20_CHRS                       0000000C  00000F18
+TB70            PART_G                                     0000000B  00000E90
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART V
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                                        00000056  00000C4D
+TB70            AV1                                        0000000A  00000BF6
+TB70            PART_V                                     00000018  00000EA9
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART C
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00000EBD, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_C                                     00000013  00000EBD
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART M
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00024026, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00024026  00024026
+TB70            PART_M                                     0000000B  00000EF0
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART N
+$   RUN/NODEBUG TB70
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F03, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CBAV                                       00000002  00000F03
+                                                           00024035  00024035
+TB70            PART_N                                     0000000F  00000F00
+TB70            TB70                                       00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$ IMAGE = "TB70NT"
+$ GOSUB RUNALL
+$ RUNALL:
+$   I = 0
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART S
+$   RUN/NODEBUG TB70NT
+S1 success
+%SYSTEM-S-NORMAL, normal successful completion
+S2 informational
+%SYSTEM-I-EOTIN, EOT response to text
+S3 warning
+%SYSTEM-W-ENDOFFILE, end of file
+S4 error
+%RMS-E-EOF, end of file detected
+S5 warning with STS$M_INHIB_MSG
+S6 error, RECSIG 5 calls deep
+%RMS-E-EOF, end of file detected
+S7 error from a JSB subroutine
+%RMS-E-EOF, end of file detected
+S8 error from psect CODE2, which has no routine
+%RMS-E-EOF, end of file detected
+S9 error, a handler resignals it
+  RESIGH called
+%RMS-E-EOF, end of file detected
+S10 error, a handler makes it a warning
+  CHANGEH made it SS$_ENDOFFILE
+%SYSTEM-W-ENDOFFILE, end of file
+S11 warning, whose handler signals an error
+  INHANDH called for SS$_ENDOFFILE; it signals an error
+%RMS-E-EOF, end of file detected
+  INHANDH goes on
+%SYSTEM-W-ENDOFFILE, end of file
+S12 error in an AST routine
+%RMS-E-EOF, end of file detected
+S13 error in a routine LIB$CALLG called
+%RMS-E-EOF, end of file detected
+S14 error in TB70LONG
+%RMS-E-EOF, end of file detected
+S15 error in the shareable image
+%RMS-E-EOF, end of file detected
+S16 error in a routine the shareable image called back
+%RMS-E-EOF, end of file detected
+S17 error, RECSIG 60 calls deep
+%RMS-E-EOF, end of file detected
+S18 error, a last-chance handler set
+%RMS-E-EOF, end of file detected
+S19 warning, a severe condition after it
+%SYSTEM-W-ENDOFFILE, end of file
+-SYSTEM-F-BADPARAM, bad parameter value
+S20 severe
+%SYSTEM-F-BADPARAM, bad parameter value
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000014"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART A
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 2FFC0000
+		 00000000		 7FED5398
+		 00000000		 7FED5384
+		 00000C4D		 00000BF6
+		 03C00008		 00000BE2
+					 7FF65BD3
+					 7FFE5E0C
+					 7FFE5EBC
+					 7FFED188
+
+	Register dump
+
+	R0 = 10101010  R1 = 11111111  R2 = 22222222  R3 = 33333333
+	R4 = 44444444  R5 = 55555555  R6 = 66666666  R7 = 77777777
+	R8 = 88888888  R9 = 99999999  R10= AAAAAAAA  R11= BBBBBBBB
+	AP = 7FED5308  FP = 7FED52C8  SP = 7FED5344  PC = 00000C4D
+	PSL= 03C00008
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART O
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-OPCDEC, opcode reserved to Digital fault at PC=000002A5, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000003		 00000000
+	Name   = 0000043C		 20000000
+		 000002A5		 7FED53CC
+		 03C00000		 7FED53B4
+					 00000467
+					 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+					 7FED53E8
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000C55  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5368  FP = 7FED5328  SP = 7FED539C  PC = 000002A5
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000043C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART I
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-INTOVF, arithmetic trap, integer overflow at PC=00000C73, PSL=03C0002A
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000003		 00000000
+	Name   = 0000047C		 20000000
+		 00000C73		 7FED53B0
+		 03C0002A		 7FED539C
+					 00000C66
+					 00000000
+					 00000000
+					 20000000
+					 7FED53CC
+					 7FED53B4
+
+	Register dump
+
+	R0 = 80000000  R1 = 823E4000  R2 = 00000C5D  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5350  FP = 7FED5310  SP = 7FED5384  PC = 00000C73
+	PSL= 03C0002A
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000047C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART Z
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-INTDIV, arithmetic trap, integer divide by zero at PC=00000C7F, PSL=03C00002
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000003		 00000000
+	Name   = 00000484		 20000000
+		 00000C7F		 7FED53CC
+		 03C00002		 7FED53B4
+					 00000467
+					 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+					 7FED53E8
+
+	Register dump
+
+	R0 = 0000000A  R1 = 00000000  R2 = 00000C75  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5368  FP = 7FED5328  SP = 7FED539C  PC = 00000C7F
+	PSL= 03C00002
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000484"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART R
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ROPRAND, reserved operand fault at PC=00000C83, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000003		 00000000
+	Name   = 00000454		 20000000
+		 00000C83		 7FED53CC
+		 03C00000		 7FED53B4
+					 00000467
+					 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+					 7FED53E8
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000C81  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5368  FP = 7FED5328  SP = 7FED539C  PC = 00000C83
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000454"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART J
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=000009E1, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000C91
+	Name   = 0000000C		 00000000
+		 00000000		 20000000
+		 00000000		 7FED53CC
+		 000009E1		 7FED53B4
+		 03C00000		 00000467
+					 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000C8B  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED535C  FP = 7FED531C  SP = 7FED5398  PC = 000009E1
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART P
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=3FFF0000, PC=3FFF0000, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000001		 7FED53CC
+		 3FFF0000		 7FED53B4
+		 3FFF0000		 00000467
+		 03C00000		 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+					 7FED53E8
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000C92  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5360  FP = 7FED5320  SP = 7FED539C  PC = 3FFF0000
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART L
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=000130DE, PSL=0BC00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 203C0000
+		 00000004		 7FED53B0
+		 00000000		 7FED539C
+		 000130DE		 00000CB1
+		 0BC00000		 00000C9A
+					 7FF65BD3
+					 7FFE5E0C
+					 7FFE5EBC
+					 00000003
+
+	Register dump
+
+	R0 = 07000004  R1 = 000002BA  R2 = 00000004  R3 = 00000000
+	R4 = 00000000  R5 = 00000010  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED532C  FP = 7FED52EC  SP = 7FED5368  PC = 000130DE
+	PSL= 0BC00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART K
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ABORT, abort
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART W
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ENDOFFILE, end of file
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000874"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART E
+$   RUN/NODEBUG TB70NT
+%RMS-F-EOF, end of file detected
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1001827C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART H
+$   RUN/NODEBUG TB70NT
+  HAV called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DA8, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 00000000
+		 00000000		 7FED5398
+		 00000000		 7FED5384
+		 00000DA8		 80000014
+		 03C00000		 818E8C4D
+					 00000002
+					 7FED5374
+					 7FED535C
+					 00000004
+
+	Register dump
+
+	R0 = 00000001  R1 = 00000000  R2 = 00000D3E  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED52FC  FP = 7FED52BC  SP = 7FED5338  PC = 00000DA8
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART T
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DEB, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 00000000
+		 00000000		 7FED538C
+		 00000000		 7FED5368
+		 00000DEB		 8192B447
+		 03C00000		 00000005
+					 00000000
+					 00000001
+					 823E4000
+					 7FFEDEEE
+
+	Register dump
+
+	R0 = FF800000  R1 = 00000DE9  R2 = 00000000  R3 = 7FF65BD3
+	R4 = 81CEE800  R5 = 81C5CF40  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5300  FP = 7FED52C0  SP = 7FED533C  PC = 00000DEB
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART X
+$   RUN/NODEBUG TB70NT
+X exit handler declared
+  EXH called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E55, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 00000000
+		 00000000		 7FED53BC
+		 00000000		 7FED53A0
+		 00000E55		 81927962
+		 03C00000		 00000000
+					 00000001
+					 00000000
+					 00000000
+					 20140000
+
+	Register dump
+
+	R0 = 00000001  R1 = 00000000  R2 = 00000004  R3 = 7FF65BD3
+	R4 = 00000004  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5344  FP = 7FED5304  SP = 7FED5380  PC = 00000E55
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART D
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E7D, PSL=03C00004
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000000		 7FED48DC
+		 00000000		 7FED48C8
+		 00000E7D		 00000E7C
+		 03C00004		 00000001
+					 00000001
+					 00000000
+					 20000000
+					 7FED48F8
+
+	Register dump
+
+	R0 = 00000000  R1 = 823E4000  R2 = 00000E5D  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED4870  FP = 7FED4830  SP = 7FED48AC  PC = 00000E7D
+	PSL= 03C00004
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART G
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F2F, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000000		 7FED5394
+		 00000000		 7FED5380
+		 00000F2F		 00000F18
+		 03C00000		 00000001
+					 00000002
+					 00000000
+					 20000000
+					 7FED53B0
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000E85  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5328  FP = 7FED52E8  SP = 7FED5364  PC = 00000F2F
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART V
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 2FFC0000
+		 00000000		 7FED5398
+		 00000000		 7FED5384
+		 00000C4D		 00000BF6
+		 03C00008		 00000E91
+					 7FF65BD3
+					 7FFE5E0C
+					 7FFE5EBC
+					 7FFED188
+
+	Register dump
+
+	R0 = 10101010  R1 = 11111111  R2 = 22222222  R3 = 33333333
+	R4 = 44444444  R5 = 55555555  R6 = 66666666  R7 = 77777777
+	R8 = 88888888  R9 = 99999999  R10= AAAAAAAA  R11= BBBBBBBB
+	AP = 7FED5308  FP = 7FED52C8  SP = 7FED5344  PC = 00000C4D
+	PSL= 03C00008
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART C
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00000EBD, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000004		 7FED53CC
+		 00001234		 7FED53B4
+		 00000EBD		 00000467
+		 03C00000		 00000000
+					 00000000
+					 20040000
+					 7FED53FC
+					 7FED53E8
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000EAA  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5360  FP = 7FED5320  SP = 7FED539C  PC = 00000EBD
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART M
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00024026, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000000		 7FED53B0
+		 00000000		 7FED539C
+		 00024026		 00000EF0
+		 03C00000		 00000001
+					 00000002
+					 00000000
+					 20000000
+					 7FED53CC
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000EE5  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5344  FP = 7FED5304  SP = 7FED5380  PC = 00024026
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART N
+$   RUN/NODEBUG TB70NT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F03, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000000		 7FED5394
+		 00000000		 7FED5380
+		 00000F03		 00024035
+		 03C00000		 00000000
+					 00000000
+					 20000000
+					 7FED53B0
+					 7FED539C
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000EF1  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED532C  FP = 7FED52EC  SP = 7FED5368  PC = 00000F03
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$ IMAGE = "TB70D"
+$ GOSUB RUNALL
+$ RUNALL:
+$   I = 0
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART S
+$   RUN/NODEBUG TB70D
+S1 success
+%SYSTEM-S-NORMAL, normal successful completion
+S2 informational
+%SYSTEM-I-EOTIN, EOT response to text
+S3 warning
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                            172      00000088  00000515
+TB70            TB70                              159      00000067  00000467
+S4 error
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                            174      000000B2  0000053F
+TB70            TB70                              159      00000067  00000467
+S5 warning with STS$M_INHIB_MSG
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                            176      000000F3  00000580
+TB70            TB70                              159      00000067  00000467
+S6 error, RECSIG 5 calls deep
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                            229      0000001D  000009D2
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            PART_S                            179      0000012E  000005BB
+TB70            TB70                              159      00000067  00000467
+S7 error from a JSB subroutine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                            234      0000002B  000009E0
+TB70            TB70                              159      00000067  00000467
+S8 error from psect CODE2, which has no routine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70                                              494      0000000E  00000F46
+TB70            TB70                              159      00000067  00000467
+S9 error, a handler resignals it
+  RESIGH called
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RESIG                             243      00000016  000009FF
+TB70            PART_S                            185      000001ED  0000067A
+TB70            TB70                              159      00000067  00000467
+S10 error, a handler makes it a warning
+  CHANGEH made it SS$_ENDOFFILE
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CHANGE                            254      00000016  00000A44
+TB70            PART_S                            187      00000230  000006BD
+TB70            TB70                              159      00000067  00000467
+S11 warning, whose handler signals an error
+  INHANDH called for SS$_ENDOFFILE; it signals an error
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHANDH                           281      000000A6  00000B56
+----- above condition handler called with exception 00000870:
+%SYSTEM-W-ENDOFFILE, end of file
+----- end of exception message
+TB70            INHAND                            271      00000016  00000AAF
+TB70            PART_S                            189      00000277  00000704
+TB70            TB70                              159      00000067  00000467
+  INHANDH goes on
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHAND                            271      00000016  00000AAF
+TB70            PART_S                            189      00000277  00000704
+TB70            TB70                              159      00000067  00000467
+S12 error in an AST routine
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            ASTSIG                            289      0000000F  00000B93
+TB70                                                       8192A50F  8192B447
+TB70            PART_S                            191      000002B6  00000743
+TB70            TB70                              159      00000067  00000467
+S13 error in a routine LIB$CALLG called
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CGSIG                             293      0000000F  00000BA3
+                                                           0000B118  0000B118
+TB70            PART_S                            195      00000305  00000792
+TB70            TB70                              159      00000067  00000467
+S14 error in TB70LONG
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX    21      00000015  00000F2E
+TB70_LONG_MODUL TB70_ROUTINE_20_CHRS               14      0000000C  00000F18
+TB70            PART_S                            198      00000338  000007C5
+TB70            TB70                              159      00000067  00000467
+S15 error in the shareable image
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00024025  00024025
+TB70            PART_S                            201      00000376  00000803
+TB70            TB70                              159      00000067  00000467
+S16 error in a routine the shareable image called back
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CBSIG                             297      0000000F  00000BB3
+                                                           00024035  00024035
+TB70            PART_S                            204      000003CE  0000085B
+TB70            TB70                              159      00000067  00000467
+S17 error, RECSIG 60 calls deep
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                            229      0000001D  000009D2
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            RECSIG                            227      0000000F  000009C4
+TB70            CODE                              207      00000498  00000898
+TB70            TB70                              159      00000067  00000467
+S18 error, a last-chance handler set
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                              210      000004F1  000008F1
+TB70            TB70                              159      00000067  00000467
+S19 warning, a severe condition after it
+%SYSTEM-W-ENDOFFILE, end of file
+-SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                              215      0000054A  0000094A
+TB70            TB70                              159      00000067  00000467
+S20 severe
+%SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                              217      00000572  00000972
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000014"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART A
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                               329      00000056  00000C4D
+TB70            AV1                               313      0000000A  00000BF6
+TB70            PART_A                            308      00000009  00000BEB
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART O
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-OPCDEC, opcode reserved to Digital fault at PC=000002A5, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            DATA                                       000000A5  000002A5
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000043C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART I
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-INTOVF, arithmetic trap, integer overflow at PC=00000C73, PSL=03C0002A
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            OVF                               343      0000000C  00000C73
+TB70            PART_I                            338      00000009  00000C66
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000047C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART Z
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-INTDIV, arithmetic trap, integer divide by zero at PC=00000C7F, PSL=03C00002
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_Z                            351      0000000A  00000C7F
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000484"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART R
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ROPRAND, reserved operand fault at PC=00000C83, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_R                            357      00000002  00000C83
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000454"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART J
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=000009E1, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                            237      0000002C  000009E1
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART P
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=3FFF0000, PC=3FFF0000, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           3FFF0000  3FFF0000
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART L
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=000130DE, PSL=0BC00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000130DE  000130DE
+TB70            PART_L                            374      00000017  00000CB1
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART K
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CGSTOP                            385      0000000B  00000CD3
+                                                           0000B118  0000B118
+TB70            PART_K                            381      00000015  00000CC7
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART W
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ENDOFFILE, end of file
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_W                            390      0000000F  00000CE3
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000874"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART E
+$   RUN/NODEBUG TB70D
+%RMS-F-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_E                            395      0000000F  00000D18
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1001827C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART H
+$   RUN/NODEBUG TB70D
+  HAV called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DA8, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            HAV                               413      00000023  00000DA8
+----- above condition handler called with exception 0001827A:
+%RMS-E-EOF, end of file detected
+----- end of exception message
+TB70            HFAIL                             407      00000016  00000D5E
+TB70            PART_H                            402      00000009  00000D47
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART T
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000DEB, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            ASTAV                             424      00000002  00000DEB
+TB70                                                       8192A50F  8192B447
+TB70            PART_T                            418      00000011  00000DC1
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART X
+$   RUN/NODEBUG TB70D
+X exit handler declared
+  EXH called
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E55, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 00000000
+		 00000000		 7FED53BC
+		 00000000		 7FED53A0
+		 00000E55		 81927962
+		 03C00000		 00000000
+					 00000001
+					 00000000
+					 00000000
+					 20140000
+
+	Register dump
+
+	R0 = 00000001  R1 = 00000000  R2 = 00000004  R3 = 7FF65BD3
+	R4 = 00000004  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5344  FP = 7FED5304  SP = 7FED5380  PC = 00000E55
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART D
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000E7D, PSL=03C00004
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECAV                             451      00000010  00000E7D
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            RECAV                             449      0000000F  00000E7C
+TB70            PART_D                            442      0000000F  00000E6C
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART G
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F2F, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX    23      00000016  00000F2F
+TB70_LONG_MODUL TB70_ROUTINE_20_CHRS               14      0000000C  00000F18
+TB70            PART_G                            457      0000000B  00000E90
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART V
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                               329      00000056  00000C4D
+TB70            AV1                               313      0000000A  00000BF6
+TB70            PART_V                            463      00000018  00000EA9
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART C
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00000EBD, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_C                            472      00000013  00000EBD
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART M
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00024026, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00024026  00024026
+TB70            PART_M                            478      0000000B  00000EF0
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$   DEFINE/NOLOG TB70_PART N
+$   RUN/NODEBUG TB70D
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000F03, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CBAV                              488      00000002  00000F03
+                                                           00024035  00024035
+TB70            PART_N                            484      0000000F  00000F00
+TB70            TB70                              159      00000067  00000467
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   P = F$ELEMENT(I, ",", LIST)
+$   IF P .EQS. "," THEN RETURN
+$ !
+$ ! Where the dump goes: SYS$OUTPUT and SYS$ERROR apart, with traceback
+$ ! and without it, for part A (a hardware exception) and part S (the
+$ ! signaled ones).
+$ !
+$ DEFINE TB70_PART A
+%DCL-I-SUPERSEDE, previous value of TB70_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTA.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRA.LOG
+$ RUN TB70
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ TYPE TB70OUTA.LOG
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                                        00000056  00000C4D
+TB70            AV1                                        0000000A  00000BF6
+TB70            PART_A                                     00000009  00000BEB
+TB70            TB70                                       00000067  00000467
+$ TYPE TB70ERRA.LOG
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                                        00000056  00000C4D
+TB70            AV1                                        0000000A  00000BF6
+TB70            PART_A                                     00000009  00000BEB
+TB70            TB70                                       00000067  00000467
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTANT.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRANT.LOG
+$ RUN TB70NT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ TYPE TB70OUTANT.LOG
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 2FFC0000
+		 00000000		 7FED5398
+		 00000000		 7FED5384
+		 00000C4D		 00000BF6
+		 03C00008		 00000BE2
+					 7FF65BD3
+					 7FFE5E0C
+					 7FFE5EBC
+					 7FFED188
+
+	Register dump
+
+	R0 = 10101010  R1 = 11111111  R2 = 22222222  R3 = 33333333
+	R4 = 44444444  R5 = 55555555  R6 = 66666666  R7 = 77777777
+	R8 = 88888888  R9 = 99999999  R10= AAAAAAAA  R11= BBBBBBBB
+	AP = 7FED5308  FP = 7FED52C8  SP = 7FED5344  PC = 00000C4D
+	PSL= 03C00008
+
+$ TYPE TB70ERRANT.LOG
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 2FFC0000
+		 00000000		 7FED5398
+		 00000000		 7FED5384
+		 00000C4D		 00000BF6
+		 03C00008		 00000BE2
+					 7FF65BD3
+					 7FFE5E0C
+					 7FFE5EBC
+					 7FFED188
+
+	Register dump
+
+	R0 = 10101010  R1 = 11111111  R2 = 22222222  R3 = 33333333
+	R4 = 44444444  R5 = 55555555  R6 = 66666666  R7 = 77777777
+	R8 = 88888888  R9 = 99999999  R10= AAAAAAAA  R11= BBBBBBBB
+	AP = 7FED5308  FP = 7FED52C8  SP = 7FED5344  PC = 00000C4D
+	PSL= 03C00008
+
+$ DEFINE TB70_PART S
+%DCL-I-SUPERSEDE, previous value of TB70_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT TB70OUTS.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70ERRS.LOG
+$ RUN TB70
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000014"
+$ TYPE TB70OUTS.LOG
+S1 success
+S2 informational
+S3 warning
+S4 error
+S5 warning with STS$M_INHIB_MSG
+S6 error, RECSIG 5 calls deep
+S7 error from a JSB subroutine
+S8 error from psect CODE2, which has no routine
+S9 error, a handler resignals it
+  RESIGH called
+S10 error, a handler makes it a warning
+  CHANGEH made it SS$_ENDOFFILE
+S11 warning, whose handler signals an error
+  INHANDH called for SS$_ENDOFFILE; it signals an error
+  INHANDH goes on
+S12 error in an AST routine
+S13 error in a routine LIB$CALLG called
+S14 error in TB70LONG
+S15 error in the shareable image
+S16 error in a routine the shareable image called back
+S17 error, RECSIG 60 calls deep
+S18 error, a last-chance handler set
+S19 warning, a severe condition after it
+S20 severe
+$ TYPE TB70ERRS.LOG
+%SYSTEM-I-EOTIN, EOT response to text
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     00000088  00000515
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     000000B2  0000053F
+TB70            TB70                                       00000067  00000467
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            PART_S                                     000000F3  00000580
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000001D  000009D2
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            PART_S                                     0000012E  000005BB
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000002B  000009E0
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            0000002D  00000F46
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RESIG                                      00000016  000009FF
+TB70            PART_S                                     000001ED  0000067A
+TB70            TB70                                       00000067  00000467
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CHANGE                                     00000016  00000A44
+TB70            PART_S                                     00000230  000006BD
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHANDH                                    000000A6  00000B56
+----- above condition handler called with exception 00000870:
+%SYSTEM-W-ENDOFFILE, end of file
+----- end of exception message
+TB70            INHAND                                     00000016  00000AAF
+TB70            PART_S                                     00000277  00000704
+TB70            TB70                                       00000067  00000467
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            INHAND                                     00000016  00000AAF
+TB70            PART_S                                     00000277  00000704
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            ASTSIG                                     0000000F  00000B93
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            8192A52E  8192B447
+TB70            PART_S                                     000002B6  00000743
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CGSIG                                      0000000F  00000BA3
+                                                           0000B118  0000B118
+TB70            PART_S                                     00000305  00000792
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70_LONG_MODUL TB70_LONG_ROUTINE_NAME_31_CHRSX            00000015  00000F2E
+TB70_LONG_MODUL TB70_ROUTINE_20_CHRS                       0000000C  00000F18
+TB70            PART_S                                     00000338  000007C5
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00024025  00024025
+TB70            PART_S                                     00000376  00000803
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CBSIG                                      0000000F  00000BB3
+                                                           00024035  00024035
+TB70            PART_S                                     000003CE  0000085B
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            RECSIG                                     0000001D  000009D2
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            RECSIG                                     0000000F  000009C4
+TB70            CODE                                       00000498  00000898
+TB70            TB70                                       00000067  00000467
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       000004F1  000008F1
+TB70            TB70                                       00000067  00000467
+%SYSTEM-W-ENDOFFILE, end of file
+-SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       0000054A  0000094A
+TB70            TB70                                       00000067  00000467
+%SYSTEM-F-BADPARAM, bad parameter value
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            CODE                                       00000572  00000972
+TB70            TB70                                       00000067  00000467
+$ !
+$ ! A subprocess's run. (TB70D is never run without /NODEBUG: it
+$ ! would start the debugger.)
+$ !
+$ DEFINE TB70_PART A
+%DCL-I-SUPERSEDE, previous value of TB70_PART has been superseded
+$ SPAWN/WAIT RUN TB70
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000C4D, PSL=03C00008
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70            AV2                                        00000056  00000C4D
+TB70            AV1                                        0000000A  00000BF6
+TB70            PART_A                                     00000009  00000BEB
+TB70            TB70                                       00000067  00000467
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ !
+$ ! No part.
+$ !
+$ DEASSIGN TB70_PART
+$ RUN TB70
+no TB70_PART
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY/SIZE=ALL/DATE
+
+Directory DUA1:[000000]
+
+000000.DIR;1               3/3        21-OCT-2026 10:49:45.05
+BACKUP.SYS;1               0/0        21-OCT-2026 10:49:45.05
+BADBLK.SYS;1               0/0        21-OCT-2026 10:49:45.05
+BADLOG.SYS;1               0/0        21-OCT-2026 10:49:45.05
+BITMAP.SYS;1               7/7        21-OCT-2026 10:49:45.05
+CONTIN.SYS;1               0/0        21-OCT-2026 10:49:45.05
+CORIMG.SYS;1               0/0        21-OCT-2026 10:49:45.05
+INDEXF.SYS;1             829/829      21-OCT-2026 10:49:45.05
+SECURITY.SYS;1             1/6        21-OCT-2026 10:49:45.05
+TB70.COM;1                 6/6        21-OCT-2026 10:49:45.06
+TB70.EXE;1                11/11       21-OCT-2026 10:49:06.91
+TB70.LOG;1                 0/224      21-OCT-2026 10:49:06.56
+TB70.MAP;1                33/33       21-OCT-2026 10:49:06.89
+TB70.MAR;1                22/22       21-OCT-2026 10:49:45.06
+TB70.OBJ;1                15/15       21-OCT-2026 10:49:06.57
+TB70D.EXE;1               19/19       21-OCT-2026 10:49:07.04
+TB70D.MAP;1               33/33       21-OCT-2026 10:49:07.02
+TB70D.OBJ;1               19/19       21-OCT-2026 10:49:06.71
+TB70ERRA.LOG;1             2/2        21-OCT-2026 10:49:07.75
+TB70ERRANT.LOG;1           2/2        21-OCT-2026 10:49:07.76
+TB70ERRS.LOG;1            25/25       21-OCT-2026 10:49:07.77
+TB70LONG.MAR;1             2/2        21-OCT-2026 10:49:45.06
+TB70LONG.OBJ;1             2/2        21-OCT-2026 10:49:06.66
+TB70LONGD.OBJ;1            2/2        21-OCT-2026 10:49:06.79
+TB70NT.EXE;1               9/9        21-OCT-2026 10:49:06.98
+TB70NT.MAP;1              32/32       21-OCT-2026 10:49:06.95
+TB70OUTA.LOG;1             2/2        21-OCT-2026 10:49:07.75
+TB70OUTANT.LOG;1           2/2        21-OCT-2026 10:49:07.76
+TB70OUTS.LOG;1             2/2        21-OCT-2026 10:49:07.77
+TB70SHR.EXE;1              6/6        21-OCT-2026 10:49:06.85
+TB70SHR.MAP;1             17/17       21-OCT-2026 10:49:06.84
+TB70SHR.MAR;1              2/2        21-OCT-2026 10:49:45.06
+TB70SHR.OBJ;1              2/2        21-OCT-2026 10:49:06.68
+VOLSET.SYS;1               0/0        21-OCT-2026 10:49:45.05
+
+Total of 34 files, 1107/1336 blocks.
+$ EXIT

@@ -1,0 +1,61 @@
+$ ! TB70B.COM - round 2 of Phase 70's probe of traceback
+$ ! (testdata/tb70/README.md). Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @TB70B/OUTPUT=TB70B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO TB70B
+$ LINK/MAP=TB70B/FULL TB70B
+$ SHOW SYMBOL $STATUS
+$ LINK/MAP=TB70BNT/FULL/NOTRACEBACK/EXECUTABLE=TB70BNT TB70B
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! Where a routine ends, with traceback and without.
+$ !
+$ DEFINE TB70B_PART R
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+$ RUN TB70BNT
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! Which conditions get the "improperly handled" dump, and the stack
+$ ! it shows: without traceback (and part S with it).
+$ !
+$ DEFINE TB70B_PART O
+$ RUN TB70BNT
+$ SHOW SYMBOL $STATUS
+$ DEFINE TB70B_PART P
+$ RUN TB70BNT
+$ SHOW SYMBOL $STATUS
+$ DEFINE TB70B_PART Q
+$ RUN TB70BNT
+$ SHOW SYMBOL $STATUS
+$ DEFINE TB70B_PART S
+$ RUN TB70BNT
+$ SHOW SYMBOL $STATUS
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! Success, informational, and warning messages with SYS$OUTPUT and
+$ ! SYS$ERROR apart: the program writing nothing to SYS$OUTPUT (N), and
+$ ! a line first (M).
+$ !
+$ DEFINE TB70B_PART N
+$ DEFINE/USER_MODE SYS$OUTPUT TB70BOUTN.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70BERRN.LOG
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+$ TYPE TB70BOUTN.LOG
+$ TYPE TB70BERRN.LOG
+$ DEFINE TB70B_PART M
+$ DEFINE/USER_MODE SYS$OUTPUT TB70BOUTM.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70BERRM.LOG
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+$ TYPE TB70BOUTM.LOG
+$ TYPE TB70BERRM.LOG
+$ DIRECTORY/SIZE=ALL TB70B*.*
+$ DEASSIGN TB70B_PART
+$ EXIT

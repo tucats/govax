@@ -1,8 +1,10 @@
 # Phase 70 — traceback
 
-**Status:** planned (2026-10-21). Subtask 1, the survey and the VMS
-probe (`testdata/tb70`), is written and dry-run on govax; the probe
-awaits its VAX run. Part B's decisions await the author's review.
+**Status:** in progress. Planned 2026-10-21; Part B's decisions
+accepted by the author the same day. Subtask 1, the survey and the VMS
+probe (`testdata/tb70`), is done. Subtask 2, the probe's VAX run, has
+its first round's answers (Part A, "The probe's answers"); round 2
+(`tb70b.mar`), for what round 1 left open, awaits its run.
 
 ## Goal
 
@@ -158,9 +160,149 @@ it showed of govax, beside the missing dumps:
    message is shown. VMS's `$PUTMSG` doesn't look at the bit, but the
    catch-all may; the probe shows which.
 
-## Part B — decisions and questions (proposed, for the author)
+### The probe's answers (round 1, 2026-10-21)
 
-### Proposed decisions
+OpenVMS V7.1 on simh's VAX 8600 ran `@TB70/OUTPUT=TB70.LOG`
+(`testdata/tb70/vax/tb70.log`, with the images, maps, and objects). In
+summary, with the cases that show each rule:
+
+**When there's a dump.**
+
+- In an image linked with traceback, a W, E, or F condition no handler
+  takes gets the traceback dump; S and I conditions get only their
+  message (S1, S2). The `%TRACE` line's letter is the condition's
+  severity as the catch-all sees it: a handler's change counts (S10: W),
+  and only the first condition's severity matters (S19: W, with an F
+  after it). A W or E then goes on; an F ends the image.
+- With STS$M_INHIB_MSG set, the message isn't shown, but the dump is
+  (S5). Without traceback, nothing at all is shown (TB70NT's S5).
+- LIB$STOP makes any condition severe: `%SYSTEM-F-ENDOFFILE`,
+  `%RMS-F-EOF`, and `%TRACE-F` (parts W, E); `$STATUS` is the F form
+  with STS$M_INHIB_MSG (`%X10000874`).
+- Without traceback, the "improperly handled" dump follows the message
+  of every hardware exception (A, O, I, Z, R, J, P, L, H, T, D, G, V, M,
+  N) and of SS$_ACCVIO signaled by LIB$SIGNAL (C), but not of a severe
+  LIB$SIGNAL of SS$_BADPARAM (S20) or any LIB$STOP (K, W, E). So it
+  depends on the condition, not on how it was raised; round 2 asks
+  whether it's the condition's value or the signal array's size.
+- An exit handler's access violation (part X) gets the "improperly
+  handled" dump even in an image linked with traceback: by then image
+  rundown has removed the image startup's frame, and the catch-all
+  takes it.
+- A subprocess's run (SPAWN) prints the same dump.
+
+**The frames.** The lines are, innermost first: the condition's PC
+(the exception's, or for LIB$SIGNAL and LIB$STOP their return PC),
+then, for each call frame from the one the condition happened in
+(for LIB$SIGNAL, its caller's), the frame's saved PC; the frame whose
+caller is the image startup's isn't shown, so the main routine's line
+is the last (`TB70+67`, the return from its CALLS). Consequences:
+
+- A JSB subroutine makes no frame, so the routine that called it is
+  missing (S7, J: RECSIG's JSB code, then TB70; no PART_S).
+- An AST routine's frame's saved PC is in S0 (the AST delivery code,
+  8192B447), and the next line is the PC the AST interrupted (S12, T).
+- LIB$CALLG's frame shows as a PC in LIBRTL (S13, K), a callback
+  through TB70SHR as a PC in TB70SHR (S16, N).
+- No depth limit: 60 and 100 frames are all shown (S17, D).
+- A condition raised in a condition handler (S11, H): the handler's
+  frame's line, then
+
+      ----- above condition handler called with exception 00000870:
+      %SYSTEM-W-ENDOFFILE, end of file
+      ----- end of exception message
+
+  (the earlier condition's value and its message), then the earlier
+  condition's PC and the frames above it: the dispatcher's frames
+  between the handler and the earlier condition aren't shown.
+- A handler is never called again for a condition raised while it runs
+  (S11, H: one "HAV called"); side finding 1 is confirmed.
+
+**Naming a PC.** One rule, with traceback alone or with `/DEBUG`:
+
+1. The routine, of any module, with the greatest address at or below
+   the PC, if the PC less its address, *compared signed*, is below 400
+   (hexadecimal): that routine, rel PC from it. The DST's routine
+   sizes don't matter: PART_S+3CE is PART_S (S16), PART_S+40B isn't
+   (S17's next frame: `CODE`); code in psect CODE2 is TB70LONG's last
+   routine +2D (S8), and a PC in S0 is that routine too, with a
+   "negative" rel PC (8192A52E, S12, T). Round 2 pins the limit (+3FF,
+   +400).
+2. Otherwise the psect contribution holding the PC: its name in the
+   routine column and its module, rel PC from the contribution's start
+   (S17 to S20: `CODE` +498, from 400; O: `DATA` +A5).
+3. Otherwise nothing: blank columns, rel PC the same as abs PC (P's
+   3FFF0000; PCs in LIBRTL and TB70SHR: shareable images' own debug
+   tables aren't used, though TB70SHR was linked with traceback).
+
+`/DEBUG`'s DST gives code that's outside any `.ENTRY` routine a routine
+with no name (CODE2's, at F38, in TB70D), which rule 1 finds: S8 and
+the S0 PCs are `TB70` with a blank routine (rel from F38).
+
+**Line numbers** (TB70D): the module's line-number table's line for the
+condition's PC if a hardware fault raised it (AV2's MOVL, line 329; the
+reserved operand, 357), and for the address before the PC otherwise: a
+trap (INTOVF's ADDL2, 343; INTDIV's DIVL2, 351), LIB$SIGNAL and LIB$STOP
+(the line of the call), and every saved PC (the CALLS's line). The line
+is found whether or not rule 1 found a routine (`CODE` lines have one,
+207). A PC with no line (DATA, S0, other images) has a blank line.
+
+**The layout.** `%TRACE-x-TRACEBACK, symbolic stack dump follows`, the
+heading `module name     routine name                     line       rel PC    abs PC`,
+a blank line, then each line as `%-15.15s %-31s%6s      %08X  %08X`
+(module name cut to 15 characters, `TB70_LONG_MODUL`; the line number
+right-aligned in 6, blank without one; 77 characters).
+
+**The "improperly handled" dump** (EXE$EXCMSG): the message, a blank
+line, `  Improperly handled condition, image exit forced.`, a blank
+line, then (`\t` is a tab):
+
+    \tSignal arguments\t      Stack contents
+    (blank)
+    \tNumber = 00000005\t\t 00000000
+    \tName   = 0000000C\t\t 2FFC0000
+    \t\t 00000000\t\t 7FED5398
+    ...
+    \t\t\t\t\t 7FED5384
+    (blank)
+    \tRegister dump
+    (blank)
+    \tR0 = 10101010  R1 = 11111111  R2 = 22222222  R3 = 33333333
+    \tR4 = ...       R5 = ...  R6 = ...  R7 = ...
+    \tR8 = ...  R9 = ...  R10= ...  R11= ...
+    \tAP = ...  FP = ...  SP = ...  PC = ...
+    \tPSL= 03C00008
+    (blank)
+
+The signal array (its count and every longword) beside ten longwords
+of the stack. The registers are the program's at the exception (part
+A's patterns). The stack longwords start at the faulting frame (part
+A: AV2's frame, handler 0, mask 2FFC0000, ...). The SP shown is FP+7C
+in all four dumps on hand (A, X, C, and Phase 29's), which is no SP
+the program had; round 2's part S (three longwords pushed) asks
+whether the stack shown starts at SP or FP, and what SP is.
+
+**SYS$OUTPUT and SYS$ERROR apart.** Part A's message and dump went to
+both files, with and without traceback. Part S, whose program had
+already opened SYS$OUTPUT (LIB$PUT_OUTPUT, an RMS `$CREATE` of the
+file the logical name names), had its messages and dumps written to
+SYS$ERROR only, and its success message (S1) to neither: each file
+holds one version. The reading: the catch-all writes a success message
+to SYS$OUTPUT only, the others to SYS$ERROR and to SYS$OUTPUT if
+different, and an open of SYS$OUTPUT that fails (the program holds the
+file) is passed over. Round 2's parts N and M test it.
+
+**Side findings settled.** 1 is confirmed. 4 is confirmed: the
+program's last-chance handler was never called (S18, V); the catch-all
+is a frame's. 6: the catch-all honors STS$M_INHIB_MSG (S5). 3: VMS
+reports `%SYSTEM-F-INTOVF, arithmetic trap, integer overflow at
+PC=00000C73, PSL=03C0002A` and `%SYSTEM-F-INTDIV, arithmetic trap,
+integer divide by zero at PC=00000C7F, PSL=03C00002`. Also: OPCDEC's
+and ROPRAND's messages say `PSL=`, where govax's say `PS=`.
+
+## Part B — decisions and questions
+
+### Decisions (accepted by the author, 2026-10-21)
 
 1. **A real image startup frame.** RUN's driver gets a handler of its
    own in its frame, when the image's first transfer address is
@@ -185,16 +327,25 @@ it showed of govax, beside the missing dumps:
    subtask (findings 1 to 3 and 5 are bugs whatever VMS says; 4 and 6
    wait for the probe).
 
-### Questions for the author
+### Questions for the author (answered 2026-10-21)
 
-1. Is Decision 1's driver frame acceptable, or should traceback stay in
-   Go at the catch-all (simpler, but a program's handlers would never
-   see VMS's frame order)?
+1. Decision 1's driver frame, or traceback in Go at the catch-all? The
+   driver frame (accepted).
 2. Should the oracle run VMS's own images (`vax/*.exe`), as Phases 66
-   and 67's do, so that every PC matches? LIBRTL's addresses still
-   differ and would be masked.
+   and 67's do, with LIBRTL's addresses masked? Yes.
 
-### The probe's cases (subtask 1; `testdata/tb70`)
+### Revised by the probe (2026-10-21)
+
+- Decision 1's handler takes W, E, and F; it resignals S and I; and the
+  catch-all, the next frame's (DCL's), is found before the last-chance
+  vector, which only a stack that can't be searched reaches.
+- Decision 2: only the main image's debug symbol table is used.
+- Decision 4: the "improperly handled" dump is the catch-all's, for a
+  severe condition round 2's rule picks, in either kind of image (an
+  exit handler's exception in a traceback image gets it).
+- Decision 3: as Part A's answers read it, pending round 2.
+
+### The probe's cases (subtask 1; `testdata/tb70`, round 1)
 
 `tb70.mar`'s parts (by `TB70_PART`), each run under TB70 (traceback),
 TB70NT (`/NOTRACEBACK`), and TB70D (`LINK/DEBUG`, run `/NODEBUG`, for
@@ -229,11 +380,23 @@ line numbers):
 Then part A and part S with SYS$OUTPUT and SYS$ERROR in separate files
 (with and without traceback), part A in a subprocess, and no part.
 
+Round 2 (`tb70b.mar`, `tb70b.com`; parts by `TB70B_PART`), linked with
+traceback and `/NOTRACEBACK`:
+
+| Part | Case | What it settles |
+| --- | --- | --- |
+| R | warnings returning to routine+3FF and routine+400 | rule 1's limit |
+| O | LIB$SIGNAL of SS$_OPCDEC, no arguments (a signal array of 3) | the "improperly handled" dump's rule: the condition |
+| P | LIB$SIGNAL of SS$_BADPARAM with two longwords after it (5) | ... or the signal array's size |
+| Q | LIB$STOP of SS$_ACCVIO | ... and LIB$STOP |
+| S | access violation with three longwords pushed | where the dump's stack starts, and its SP |
+| N, M | S, I, and W conditions with SYS$OUTPUT and SYS$ERROR apart, without and with a line written to SYS$OUTPUT first | where the catch-all writes |
+
 ## Part C — subtasks
 
 1. **The survey and the probe** (this doc's Part A, `testdata/tb70`).
 2. **The probe's VMS run**: Part A's answers, and Part B revised by
-   them.
+   them; round 2 for what round 1 left open.
 3. **The nested-signal search** (finding 1) and stack recovery at
    rundown (finding 2).
 4. **Arithmetic trap conditions** (finding 3).
@@ -264,3 +427,25 @@ is ACCVIO's (govax showed `%SYSTEM-S-ACCVIO`; what VMS shows for 9 is
 unconfirmed), and gave LIB$SIGNAL FAO counts for system conditions,
 which take none; both fixed (SS$_NORMAL; no counts). Waiting for the
 VAX run.
+
+### 2026-10-21 — Plan accepted; subtask 2, the probe's first round
+
+The author accepted Part B's decisions and returned the probe's VAX
+run (`testdata/tb70/vax`: the log, the four images, their maps, and the
+objects). Its answers are Part A's "The probe's answers": which
+conditions get which dump, the frames shown (no depth limit; a
+handler's condition shown with the one it was handling), the rule that
+names a PC (a 400-byte routine limit, compared signed, then the psect,
+then nothing; shareable images unnamed), line numbers (the PC for a
+fault, the address before it otherwise), both dumps' layouts, and where
+the output goes when SYS$OUTPUT and SYS$ERROR differ. It confirmed side
+findings 1 and 4, settled 6 (the inhibit bit is honored), and gave
+VMS's messages for 3; it also showed that OPCDEC's and ROPRAND's
+messages say `PSL=` where govax's say `PS=`. Part B is revised to
+match.
+
+Round 2 (`tb70b.mar`, `tb70b.com`, `exchange2.cmd`, `copyout2.cmd`)
+asks what round 1 left open: the routine limit's exact value, which
+conditions get the "improperly handled" dump, where its stack starts
+and what its SP is, and where the catch-all writes with SYS$OUTPUT and
+SYS$ERROR apart. It assembles, links, and runs on govax.

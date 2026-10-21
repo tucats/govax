@@ -35,6 +35,8 @@ further.
 | `tb70.com` | Assembles everything, with traceback and with `/DEBUG`; links TB70SHR, then the program three ways (TB70 with traceback, TB70NT `/NOTRACEBACK`, TB70D `/DEBUG`); runs every part under each (`RUN/NODEBUG`), showing `$STATUS`; then SYS$OUTPUT and SYS$ERROR apart, a subprocess, and no part at all |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
+| `tb70b.mar`, `tb70b.com` | Round 2: what round 1 left open (the source's opening comment lists its parts, picked by `TB70B_PART`) |
+| `exchange2.cmd`, `copyout2.cmd` | Add round 2 to the exchange volume, and copy its results into `vax/` |
 
 `tb70.com` takes an optional P1, the list of parts to run (`"S,A,O"`);
 VMS's run gives none. govax's own dry run leaves part H out
@@ -71,3 +73,24 @@ VMS's run gives none. govax's own dry run leaves part H out
 None of the sources calls a system macro but `$LNMDEF`, `$TRNLNM_S`,
 `$DCLAST_S`, `$DCLEXH_S`, and `$SETEXV_S`, and nothing copied back is a
 DIGITAL file, so the volume needs no erasing afterward.
+
+## Round 2
+
+Round 2 asks what round 1 left open: where a routine ends for
+traceback (a return PC at routine+3FF and +400), which conditions get
+the "improperly handled" dump (SS$_OPCDEC by LIB$SIGNAL, SS$_BADPARAM
+with a longer signal array, LIB$STOP of SS$_ACCVIO), where that dump's
+stack starts and what its SP is (three longwords pushed), and where the
+catch-all writes with SYS$OUTPUT and SYS$ERROR apart (the program
+writing nothing to SYS$OUTPUT first, then a line). On the same volume:
+
+1. From the repository root: `govax console < testdata/tb70/exchange2.cmd`
+2. On the VAX, in the volume's `[000000]`: `@TB70B/OUTPUT=TB70B.LOG`
+3. From the repository root: `govax console < testdata/tb70/copyout2.cmd`
+
+## The runs
+
+Round 1: 2026-10-21, OpenVMS V7.1 on simh's VAX 8600, the volume on
+DUA1. MACRO and LINK had no messages; every part ran.
+`docs/PHASE-70 - traceback.md`'s Part A has the answers ("The probe's
+answers").

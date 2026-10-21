@@ -1,0 +1,139 @@
+	.TITLE	TB70B	Phase 70 traceback probe, round 2
+	.IDENT	/V1.0/
+;
+; Round 2 of Phase 70's probe (README.md here): what round 1 left open.
+; The logical name TB70B_PART picks the part:
+;
+;   R  warnings whose return PCs are 3FF and 400 bytes past the start of
+;      routines with nothing after them for a long way: where a routine
+;      ends for traceback
+;   O  LIB$SIGNAL of SS$_OPCDEC, no arguments (a signal array of 3)
+;   P  LIB$SIGNAL of SS$_BADPARAM with two arguments (an array of 5)
+;   Q  LIB$STOP of SS$_ACCVIO, reason mask 4 and address 1234
+;   S  an access violation with three longwords pushed on the stack
+;   N  success, informational, and warning conditions, nothing written
+;      to SYS$OUTPUT by the program
+;   M  the same, after a line written to SYS$OUTPUT
+;
+SS$_NORMAL	= ^X00000001
+SS$_EOTIN	= ^X00000C03
+SS$_ENDOFFILE	= ^X00000870
+SS$_BADPARAM	= ^X00000014
+SS$_ACCVIO	= ^X0000000C
+SS$_OPCDEC	= ^X0000043C
+
+	$LNMDEF
+
+	.MACRO	SAY	TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAQ	LBL
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	DATA,NOEXE,WRT,LONG
+PARTNAM: .ASCID	/TB70B_PART/
+TABNAM:	.ASCID	/LNM$FILE_DEV/
+PART:	.LONG	0
+PARTLEN: .LONG	0
+ITMLST:	.WORD	4,LNM$_STRING
+	.ADDRESS PART,PARTLEN
+	.LONG	0
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+
+	.ENTRY	TB70B,^M<>
+	$TRNLNM_S TABNAM=TABNAM,LOGNAM=PARTNAM,ITMLST=ITMLST
+	BLBS	R0,5$
+	BRW	90$
+5$:	CMPB	PART,#^A/R/
+	BNEQ	10$
+	CALLS	#0,PART_R
+	RET
+10$:	CMPB	PART,#^A/O/
+	BNEQ	20$
+	PUSHL	#SS$_OPCDEC
+	CALLS	#1,G^LIB$SIGNAL
+	RET
+20$:	CMPB	PART,#^A/P/
+	BNEQ	30$
+	PUSHL	#2
+	PUSHL	#1
+	PUSHL	#SS$_BADPARAM
+	CALLS	#3,G^LIB$SIGNAL
+	RET
+30$:	CMPB	PART,#^A/Q/
+	BNEQ	40$
+	PUSHL	#^X1234
+	PUSHL	#4
+	PUSHL	#SS$_ACCVIO
+	CALLS	#3,G^LIB$STOP
+	RET
+40$:	CMPB	PART,#^A/S/
+	BNEQ	50$
+	CALLS	#0,PART_S
+	RET
+50$:	CMPB	PART,#^A/N/
+	BNEQ	60$
+	CALLS	#0,CONDS
+	RET
+60$:	CMPB	PART,#^A/M/
+	BNEQ	90$
+	SAY	</M a line first/>
+	CALLS	#0,CONDS
+	RET
+90$:	SAY	</no such part/>
+	MOVL	#1,R0
+	RET
+
+; Part S: an access violation, three longwords on the stack.
+	.ENTRY	PART_S,^M<R2>
+	MOVL	#^X22222222,R2
+	PUSHL	#^X51515151
+	PUSHL	#^X52525252
+	PUSHL	#^X53535353
+	MOVL	@#0,R0
+	RET
+
+; Parts N and M: success, informational, and warning conditions.
+	.ENTRY	CONDS,^M<>
+	PUSHL	#SS$_NORMAL
+	CALLS	#1,G^LIB$SIGNAL
+	PUSHL	#SS$_EOTIN
+	CALLS	#1,G^LIB$SIGNAL
+	PUSHL	#SS$_ENDOFFILE
+	CALLS	#1,G^LIB$SIGNAL
+	MOVL	#1,R0
+	RET
+
+; Part R: R3FF's LIB$SIGNAL returns to R3FF+3FF, R400's to R400+400.
+; Before the padding: the entry mask (2 bytes), MOVL #^X870,R1 (7, a
+; longword immediate), and BRW (3); after it, PUSHL R1 (2) and
+; CALLS #1,G^LIB$SIGNAL (7). So a pad of 3FF-21 (3EA) puts the return PC
+; at R3FF+3FF, and 3EB puts it at R400+400. The padding is branched
+; over.
+	.ENTRY	PART_R,^M<>
+	SAY	</R1 return PC at routine+3FF/>
+	CALLS	#0,R3FF
+	SAY	</R2 return PC at routine+400/>
+	CALLS	#0,R400
+	MOVL	#1,R0
+	RET
+
+	.ENTRY	R3FF,^M<>
+	MOVL	#SS$_ENDOFFILE,R1
+	BRW	10$
+	.BLKB	^X3EA
+10$:	PUSHL	R1
+	CALLS	#1,G^LIB$SIGNAL
+	RET
+
+	.ENTRY	R400,^M<>
+	MOVL	#SS$_ENDOFFILE,R1
+	BRW	10$
+	.BLKB	^X3EB
+10$:	PUSHL	R1
+	CALLS	#1,G^LIB$SIGNAL
+	RET
+
+	.END	TB70B
