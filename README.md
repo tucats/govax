@@ -118,7 +118,6 @@ Here's a general list of next tasks:
 
 - More accurate device operations and reference counting
 - ANALYZE/DISK/REPAIR for ODS2 container volumes
-- Support for BACKUP command to manage save-sets
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
