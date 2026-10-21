@@ -95,7 +95,7 @@ $!
 $ set debug nouserhalt
 $! set debug process
 $!
-$ write sys$output " "
+$ print " "
 $!
 $! Create devices
 $!
