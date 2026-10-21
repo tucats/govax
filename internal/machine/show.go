@@ -158,7 +158,7 @@ func (m *Machine) showPagedRegions(env *corevms.Environment, bases, lens [3]uint
 	p1Pages := env.Space.P1Pages()
 	s0 := m.Regions[2]
 
-	// extent is the virtual addresses line for pages pages from low up.
+	// extent is the virtual addresses line for pages from low up.
 	extent := func(low, pages uint32) string {
 		if pages == 0 {
 			return "            Virtual addresses  = none\n"

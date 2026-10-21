@@ -193,7 +193,7 @@ func TestVMInit_rejectsOversizedRequest(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	
+
 	if err := c.VMInit(1000, 1000, 0, 1, 1, 1, 1, 8); err == nil {
 		t.Error("expected error for a VM request exceeding physical memory")
 	}
@@ -431,7 +431,7 @@ func TestVMInit_tableArea(t *testing.T) {
 	}
 }
 
-// newSizedMachine is a machine with pages pages of physical memory, after
+// newSizedMachine is a machine with `pages` of physical memory, after
 // INIT and before VMINIT.
 func newSizedMachine(t *testing.T, pages uint32) *Machine {
 	t.Helper()

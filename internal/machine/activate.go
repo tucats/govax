@@ -115,7 +115,7 @@ func linkedSection(icb *ICB, name string) *ISD {
 	return nil
 }
 
-// identMatches reports whether the shareable image image satisfies the
+// identMatches reports whether the named shareable image satisfies the
 // global section ISD linked, through which another image was linked
 // against it. The rule fits every run of testdata/link68's R5, R6, and
 // R9: the match controls must agree, and then the linked-with one
@@ -256,7 +256,7 @@ func (p *ImageProcess) placeEmulated(parent *ICB, name string) error {
 	for _, s := range placed {
 		isd := &ISD{
 			Pages: s.Pages, VPN: s.VPN - placed[0].VPN,
-			Flags: s.Flags &^ (isdGBL | isdBASED | vmsimage.ISDMatchMask) | isdDZRO, Name: "<NONE>",
+			Flags: s.Flags&^(isdGBL|isdBASED|vmsimage.ISDMatchMask) | isdDZRO, Name: "<NONE>",
 		}
 
 		if err := p.createPages(icb, isd); err != nil {
