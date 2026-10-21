@@ -209,6 +209,12 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		return fail(name, sts)
 	}
 
+	// $DISPLAY through an indirect open of the file, when it is a
+	// process-permanent one (AddDCLFile), shows its name and FID.
+	if handle.Found == nil {
+		handle.Found = &found
+	}
+
 	f := &DCLFile{Name: found.resultant().String(), Device: found.Device, ctx: ctx, handle: handle, ifi: ifi}
 
 	if sts := f.arm(fac, a.Append); sts != 0 {

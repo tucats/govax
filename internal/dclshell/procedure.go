@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
@@ -110,6 +111,18 @@ func (c *Interpreter) CommandLevel() int { return len(c.levels) }
 type procedureSource struct {
 	// name is the file that was read, for messages.
 	name string
+
+	// device is the volume's device the file is on ("DUA1"), "" for a
+	// host file: what the process-permanent file string of SYS$INPUT
+	// names while the procedure runs (dclppf.go).
+	device string
+
+	// file is the procedure's file, held open while it runs, as VMS's
+	// DCL holds it: what an indirect open of SYS$INPUT describes
+	// (dclppf.go); nil for a host file. ownsFile says this source opened
+	// it (a CALL subroutine's shares its procedure's).
+	file     *rms.DCLFile
+	ownsFile bool
 
 	// records are the file's lines, as they are in the file.
 	records []string
@@ -543,9 +556,19 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 		level.sysCommand, level.redirected = outer.sysCommand, outer.redirected
 	}
 
+	// The procedure's process-permanent files: its input first, as
+	// VMS 7.1 numbered them, then its /OUTPUT file (dclppf.go).
+	if !source.plain {
+		if err := c.openProcedureInput(); err != nil {
+			c.Printf("%%GOVAX-W-PPF, opening the procedure as SYS$INPUT: %v\n", err)
+		}
+	}
+
 	if cmd.hasOutput {
 		out, err := c.openProcedureOutput(cmd.output)
 		if err != nil {
+			_ = c.closeProcedureInput()
+
 			return exit, err
 		}
 
@@ -555,6 +578,9 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 
 	c.levels = append(c.levels, level)
 	c.dclSymbols.push()
+
+	// SYS$INPUT and SYS$OUTPUT name them (dclppf.go).
+	c.defineProcedureNames()
 
 	// The level starts, and ends, as after one of DCL's own commands
 	// (@ or CALL): a data line after it is a command (dclinput.go).
@@ -666,11 +692,9 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 			}
 		}
 
-		// The line runs with the procedure's data lines as SYS$INPUT,
-		// for an image it runs (dclinput.go).
-		run := func() error {
-			return c.withProcedureInput(source, func() error { return dispatch(line) })
-		}
+		// An image the line runs reads the procedure's data lines as
+		// SYS$INPUT (dclinput.go, dclppf.go).
+		run := func() error { return dispatch(line) }
 
 		// A command line is shown once it has been scanned
 		// (dclverify.go). Whether it runs an image is known when it
@@ -684,7 +708,7 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 
 				c.imageRan = false
 
-				return c.withProcedureInput(source, func() error { return dispatch(line) })
+				return dispatch(line)
 			}
 		}
 
@@ -824,19 +848,30 @@ func (c *Interpreter) endInput(dispatch func(string) error) error {
 }
 
 // endLevel pops level, the innermost command level: its local symbols
-// go, and its /OUTPUT file, if it has one, is closed and the console's
-// output put back.
+// go, its /OUTPUT file, if it has one, is closed and the console's
+// output put back, and the procedure's SYS$INPUT and SYS$OUTPUT are the
+// outer level's again.
 func (c *Interpreter) endLevel(level *commandLevel) error {
 	c.dclSymbols.pop()
 	c.levels = c.levels[:len(c.levels)-1]
 
+	// The procedure entry closes with the last procedure, and the names
+	// are the outer level's again (dclppf.go).
+	inputErr := c.closeProcedureInput()
+	c.defineProcedureNames()
+
+	if source := level.source; source.ownsFile {
+		inputErr = errors.Join(inputErr, source.file.Close())
+		source.file = nil
+	}
+
 	if level.output == nil {
-		return nil
+		return inputErr
 	}
 
 	c.Out = level.restoreOut
 
-	return level.output.close()
+	return errors.Join(level.output.close(), inputErr)
 }
 
 // procedureMessage shows the message for a command in a procedure that
@@ -949,7 +984,19 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 		lines[i] = string(r)
 	}
 
-	return &procedureSource{name: found.Name, records: lines, end: len(lines)}, nil
+	device, _, _ := strings.Cut(found.Name, ":")
+	source := &procedureSource{name: found.Name, device: device, records: lines, end: len(lines)}
+
+	// The file stays open, shared, for what SYS$INPUT's file looks like
+	// to an image (dclppf.go); a procedure runs without it if it can't.
+	if c.RTL != nil {
+		access := rms.DCLAccess{Read: true, ShareRead: true, ShareWrite: true}
+		if f, err := c.ContainerSession.OpenDCLFile(rms.FileLocation{Name: found.Name}, access); err == nil {
+			source.file, source.ownsFile = f, true
+		}
+	}
+
+	return source, nil
 }
 
 // procedureNotFound is @'s message for a procedure file that isn't
@@ -991,6 +1038,12 @@ type procedureOutput struct {
 	io.Writer
 
 	close func() error
+
+	// entry is the file as a process-permanent file, in env's process,
+	// which DCL's own output goes through and SYS$OUTPUT names
+	// (dclppf.go); nil for a console with no process to keep one.
+	entry *rms.PermanentEntry
+	env   *corevms.Environment
 }
 
 // openProcedureOutput opens the /OUTPUT file name names: a host file,
@@ -998,9 +1051,15 @@ type procedureOutput struct {
 // at once (so the procedure's own DIRECTORY lists it, as VMS's does) as
 // OPEN/WRITE makes one, a VFC print file, and written a record per line
 // as the procedure writes. A name with no file type gets .LIS. The null
-// device, NL:, discards the output.
+// device, NL:, discards the output. With a process, the file is one of
+// its process-permanent files (openOutputEntry), which images reach
+// through SYS$OUTPUT too.
 func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error) {
 	if isNullDevice(name) {
+		if c.RTL != nil {
+			return c.openOutputEntry(nil)
+		}
+
 		return &procedureOutput{Writer: io.Discard, close: func() error { return nil }}, nil
 	}
 
@@ -1011,7 +1070,7 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 
 	loc = loc.WithDefaultType("LIS")
 
-	if loc.Host {
+	if loc.Host && c.RTL == nil {
 		f, err := os.Create(loc.Name)
 		if err != nil {
 			return nil, dclcmd.FileFailure(err, name)
@@ -1032,16 +1091,21 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 		return nil, dclcmd.FileFailure(err, name)
 	}
 
-	w := &recordWriter{file: f}
+	if c.RTL != nil {
+		return c.openOutputEntry(f)
+	}
+
+	w := &recordWriter{put: f.Put, done: f.Close}
 
 	return &procedureOutput{Writer: w, close: w.close}, nil
 }
 
-// recordWriter writes text to a volume file a record per line: each
-// line goes to the file when its newline is written, and a last line
-// without one when the file is closed.
+// recordWriter writes text to a file a record per line, through put:
+// each line goes to the file when its newline is written, and a last line
+// without one when the file is closed, through done.
 type recordWriter struct {
-	file    *rms.DCLFile
+	put     func(record []byte) uint32
+	done    func() error
 	partial []byte
 }
 
@@ -1054,7 +1118,7 @@ func (w *recordWriter) Write(p []byte) (int, error) {
 			break
 		}
 
-		if sts := w.file.Put(line); sts&1 == 0 {
+		if sts := w.put(line); sts&1 == 0 {
 			return 0, rmsStatusFailure(sts, 0)
 		}
 
@@ -1067,14 +1131,14 @@ func (w *recordWriter) Write(p []byte) (int, error) {
 // close writes the last line, if it has no newline, and closes the file.
 func (w *recordWriter) close() error {
 	if len(w.partial) > 0 {
-		if sts := w.file.Put(w.partial); sts&1 == 0 {
-			_ = w.file.Close()
+		if sts := w.put(w.partial); sts&1 == 0 {
+			_ = w.done()
 
 			return rmsStatusFailure(sts, 0)
 		}
 	}
 
-	return w.file.Close()
+	return w.done()
 }
 
 // isNullDevice reports whether name is the null device, NL: (or NLA0:,

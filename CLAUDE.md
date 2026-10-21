@@ -205,11 +205,15 @@ never had.
   do (`corevms/msgout.go`), integer overflow and divide by zero trap
   (`cpu/inttrap.go`), and an AST routine returns through EXE$ASTRET in
   S0; checked against VMS 7.1 by `testdata/tb70`.
-  Phase 71 (planned 2026-10-21) is process-permanent files: the ESC/IFI
-  equivalence strings, one RMS table of files that outlive images, and
-  indirect access (the *Guide to OpenVMS File Applications*, 6.6), in
-  place of RMS's TTA0: case, `corevms/outfile.go`, `RedirectInput`,
-  and DCL's name walk; its probe, `testdata/ppf71`, awaits a VAX run.
+  Phase 71 (planned 2026-10-21; subtasks 1 to 6 done) is
+  process-permanent files: the ESC/IFI equivalence strings
+  (`lnm/ppf.go`), one RMS table of files that outlive images
+  (`rms/ppf.go`), and indirect access (`rms/ppfaccess.go`; the *Guide to
+  OpenVMS File Applications*, 6.6), in place of RMS's TTA0: case,
+  `corevms/outfile.go`, and DCL's name walk; checked against VMS 7.1 by
+  `testdata/ppf71`. Process startup opens the terminal's four
+  (`corevms/ppfstart.go`), and DCL a procedure and its `/OUTPUT` file
+  (`dclshell/dclppf.go`), with supervisor-mode SYS$INPUT and SYS$OUTPUT.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -812,12 +816,13 @@ expect adjustment as phases land):
   comment is performed and shown as its value (round 2 of the probe,
   `TestProbe50VOracle`). The console's SET has no `name=value` form:
   DCL's assignments replaced it.
-  **SYS$INPUT** (`dclinput.go`, subtask 16): each procedure line runs
-  with process 1's input redirected (`corevms.Environment.RedirectInput`)
-  to a `procedureInput`, which pulls the level's next data record
-  (`procedureSource.readData`) as an image reads, so LIB$GET_INPUT,
-  RMS's `$GET`, and terminal `$QIO` reads get the data lines up to the
-  next `$` line; TYPE SYS$INPUT reads the same way. DECK/EOD (a deck in
+  **SYS$INPUT** (`dclinput.go`, subtask 16; `dclppf.go`, Phase 71):
+  a procedure is a process-permanent file, an `rms.RecordStream` that
+  pulls the level's next data record (`procedureSource.readData`) as an
+  image reads, named by a supervisor-mode SYS$INPUT, so LIB$GET_INPUT,
+  RMS's indirect `$GET`, and the input shims get the data lines up to the
+  next `$` line; TYPE SYS$INPUT reads the same way. `/OUTPUT` files are
+  entries too, which DCL's own output goes through. DECK/EOD (a deck in
   `procedureSource`). Data nothing reads is SKPDAT after an image and a
   command after one of DCL's own commands (`dclOwnCommands`, by the
   grammar's syntax name; `Shell.imageRan`).

@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -94,6 +95,11 @@ const (
 type ProcessStartup struct {
 	Image, Input, Output, Error string
 	CLI                         *CLIStartup
+
+	// SharedOutput is the creator's process-permanent file the process's
+	// SYS$OUTPUT writes to as well, when LIB$SPAWN gave it none of its
+	// own in a command procedure with an /OUTPUT file (spawnDefault).
+	SharedOutput *rms.PermanentEntry
 }
 
 // QuotaItem is one entry of $CREPRC's quota list: a PQL$_ code and the

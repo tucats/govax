@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -129,14 +132,15 @@ func TestLibGetInput_noResult(t *testing.T) {
 
 // TestLibGetCommand reads SYS$COMMAND: the terminal, even while a
 // command procedure's data lines are the process's input (SYS$INPUT),
-// which LIB$GET_INPUT reads meanwhile. Each prompt is written once.
+// which LIB$GET_INPUT reads meanwhile, without a prompt. Each prompt is
+// written once.
 func TestLibGetCommand(t *testing.T) {
 	env, out := foreignFixture(t, "", "typed\r\nagain\r\n")
 	env.CLI = newFakeCLI()
 	a := newArena(t, env)
 	result, length, prompt := a.desc(strings.Repeat("x", 8)), a.word(0), a.desc("Cmd: ")
 
-	restore := env.RedirectInput(strings.NewReader("data one\ndata two\n"))
+	restore := procedureInput(t, env, "data one", "data two")
 
 	for _, c := range []struct{ routine, want string }{
 		{"LIB$GET_COMMAND", "typed"},
@@ -163,7 +167,8 @@ func TestLibGetCommand(t *testing.T) {
 		t.Errorf("status = %#x at the terminal's end, want RMS$_EOF", r0)
 	}
 
-	if got := out.String(); got != strings.Repeat("Cmd: ", 4) {
+	// Only the terminal's reads prompt: SYS$INPUT is a file here.
+	if got := out.String(); got != strings.Repeat("Cmd: ", 2) {
 		t.Errorf("prompts = %q", got)
 	}
 }
@@ -193,5 +198,40 @@ func TestLibGetCommand_errors(t *testing.T) {
 
 	if got, n := descText(t, env, result), word(t, env, length); got != "ABC" || n != 3 {
 		t.Errorf("result = %q, length %d; want ABC, 3", got, n)
+	}
+}
+
+// procedureInput makes records SYS$INPUT, as DCL does while a command
+// procedure runs: a process-permanent file whose stream gives them out,
+// named by SYS$INPUT in supervisor mode. The returned function closes it
+// and deletes the name.
+func procedureInput(t *testing.T, env *corevms.Environment, records ...string) (restore func()) {
+	t.Helper()
+
+	next := func() ([]byte, bool) {
+		if len(records) == 0 {
+			return nil, false
+		}
+
+		record := records[0]
+		records = records[1:]
+
+		return []byte(record), true
+	}
+
+	e, err := env.AddPermanentStream(&rms.RecordStream{Next: next}, byte(vmsdef.Symbols["FAB$M_GET"]),
+		rms.PermanentOptions{Device: "_DUA1:"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.Logicals.Define(lnm.ProcessTableName, "SYS$INPUT", lnm.Supervisor, lnm.AttrConfine,
+		[]lnm.Equivalence{{Value: e.EquivalenceString(), Attrs: lnm.AttrTerminal}}); err != nil {
+		t.Fatal(err)
+	}
+
+	return func() {
+		_ = env.ClosePermanentFile(e)
+		_, _ = env.Logicals.DeleteExact(lnm.ProcessTableName, "SYS$INPUT", lnm.Supervisor)
 	}
 }

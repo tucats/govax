@@ -161,9 +161,7 @@ func tb70Oracle(t *testing.T) {
 	for _, name := range []string{"TB70", "TB70B"} {
 		tb70CopySources(t, dispatch, name)
 
-		if out := dispatch("@" + name + "/OUTPUT=" + name + ".LOG"); out != "" {
-			t.Errorf("@%s wrote to the terminal: %q", name, out)
-		}
+		terminal := dispatch("@" + name + "/OUTPUT=" + name + ".LOG")
 
 		host := filepath.Join(dir, strings.ToLower(name)+".log")
 		dispatch("COPY DUA1:[000000]" + name + `.LOG "` + host + `"/HOST/QUIET`)
@@ -171,6 +169,20 @@ func tb70Oracle(t *testing.T) {
 		got, err := os.ReadFile(host)
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		// The condition messages and dumps go to SYS$ERROR, the terminal,
+		// as well as to the log (the README's step 2: VMS's terminal
+		// showed them as the runs went by); nothing else reaches it.
+		logLines := map[string]bool{}
+		for _, line := range strings.Split(strings.ReplaceAll(string(got), "\r", ""), "\n") {
+			logLines[line] = true
+		}
+
+		for _, line := range strings.Split(terminal, "|") {
+			if line != "" && !logLines[line] {
+				t.Errorf("@%s wrote %q to the terminal, which isn't in its log", name, line)
+			}
 		}
 
 		want, err := os.ReadFile(filepath.Join(tb70Dir, "vax", strings.ToLower(name)+".log"))

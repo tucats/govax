@@ -76,6 +76,10 @@ type Shell struct {
 	// last. Each has its own local symbol table in dclSymbols.
 	levels []*commandLevel
 
+	// procedureInput is the process-permanent file the levels' SYS$INPUT
+	// names while a command procedure runs, nil at level 0 (dclppf.go).
+	procedureInput *rms.PermanentEntry
+
 	// imageRan says the command a procedure just ran was one VMS runs as
 	// an image, not one DCL performs itself (dclinput.go): the data lines
 	// after it that nothing read are skipped (SKPDAT), where after one of

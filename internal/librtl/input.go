@@ -11,11 +11,13 @@ import (
 //
 //	LIB$GET_INPUT get-string [,prompt-string] [,resultant-length]
 //
-// It reads a line from SYS$INPUT (the console terminal), first writing
-// prompt-string, if it's given, as the read's prompt. The line, without
-// its terminator, goes into get-string (see writeString), and its length,
-// as a word, into resultant-length. A line ends as a terminal read's
-// does: at RETURN, or at CTRL/Z typed after some text
+// It reads a line from SYS$INPUT, first writing prompt-string, if it's
+// given, as the read's prompt when SYS$INPUT is the terminal. The line,
+// without its terminator, goes into get-string (see writeString), and its
+// length, as a word, into resultant-length. At the terminal a line ends
+// as a terminal read's does: at RETURN, or at CTRL/Z typed after some
+// text; from another process-permanent file (a command procedure's data
+// records, a mailbox) it is the next record
 // (corevms.Environment.ReadInputLine).
 //
 // It returns SS$_NORMAL; LIB$_INPSTRTRU when the line didn't fit a
@@ -27,8 +29,9 @@ import (
 // write is an access violation, signaled (memoryFault).
 //
 // Unconfirmed against VMS: that at the end of the input get-string and
-// resultant-length are left as they were; and SYS$INPUT is always the
-// terminal (a logical name redirecting it to a file isn't followed).
+// resultant-length are left as they were; and a SYS$INPUT that names a
+// file rather than a process-permanent file is the terminal (the logical
+// name isn't followed).
 func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return getLine(env, argv, env.ReadInputLine)
 }
@@ -45,10 +48,10 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 // (corevms.Environment.ReadCommandLine). Its arguments, results, and
 // statuses are GET_INPUT's.
 //
-// Unconfirmed against VMS: a subprocess whose input is a file or a
-// mailbox (SPAWN/INPUT, a LOGINOUT process) reads that input, its
-// SYS$COMMAND in govax; and the prompt is written whatever SYS$COMMAND
-// is (the manual: only to a terminal), as GET_INPUT's is.
+// Unconfirmed against VMS: a subprocess whose input is a mailbox
+// (SPAWN/INPUT, a LOGINOUT process) reads that input, its SYS$COMMAND in
+// govax; the prompt is written only to a terminal (the manual), as
+// GET_INPUT's is.
 //
 // A process with no CLI (one $CREPRC made to run an image) has no
 // SYS$COMMAND: the routine returns RMS$_FNF, with no prompt and nothing

@@ -127,6 +127,7 @@ func TestShowLogical_tableListing(t *testing.T) {
 			"  \"SYS$ERROR\" = \"_GOVAX$TTA0:\"\n"+
 			"  \"SYS$INPUT\" = \"_GOVAX$TTA0:\"\n"+
 			"  \"SYS$OUTPUT\" [user] = \"X.LIS\"\n"+
+			"  \"SYS$OUTPUT\" [super] = \"_GOVAX$TTA0:\"\n"+
 			"  \"SYS$OUTPUT\" [exec] = \"_GOVAX$TTA0:\"\n"+
 			"  \"TT\" = \"_TTA0:\"\n")
 
@@ -224,8 +225,9 @@ func TestDeassign(t *testing.T) {
 	wantDispatchStatus(t, d, "DEASSIGN DISK", vmserrors.SS_NOLOGNAM)
 
 	// Process-permanent names are executive mode: a default DEASSIGN
-	// can't remove them, and DEASSIGN/ALL leaves them behind.
-	wantDispatchStatus(t, d, "DEASSIGN SYS$OUTPUT", vmserrors.SS_NOLOGNAM)
+	// can't remove them, and DEASSIGN/ALL leaves them behind. (SYS$OUTPUT
+	// has DCL's supervisor-mode name too, which it can.)
+	wantDispatchStatus(t, d, "DEASSIGN SYS$INPUT", vmserrors.SS_NOLOGNAM)
 	mustDispatch(t, d, "DEASSIGN/ALL")
 
 	if _, err := c.Logicals.Translate("LNM$PROCESS", "WORK", lnm.User, 0); err == nil {

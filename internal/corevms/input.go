@@ -2,7 +2,6 @@ package corevms
 
 import (
 	"bufio"
-	"io"
 	"strings"
 )
 
@@ -107,7 +106,19 @@ func newlineEnd(b byte) bool { return b == '\n' }
 // and for a whole line, in LEF (ErrWait, the shim run again later), so
 // other processes run meanwhile rather than the machine stopping in the
 // host's read.
+//
+// SYS$INPUT that leads to another process-permanent file (a command
+// procedure's data records) is read instead: its next record, with a
+// newline, as a line from the terminal has one; "" at its end.
 func readSharedConsoleLine(env *Environment, maxLen int) (string, error) {
+	if line, ok, handled, err := env.inputRecord("SYS$INPUT", maxLen-1); handled {
+		if err != nil || !ok {
+			return "", err
+		}
+
+		return line + "\n", nil
+	}
+
 	if err := env.awaitTerminal(maxLen, "", newlineEnd); err != nil {
 		return "", err
 	}
@@ -177,62 +188,49 @@ func registerInputShims(t *ShimTable) {
 	t.Register(14, "DECC$GETS", shimDeccGets)
 }
 
-// RedirectInput makes r the process's input stream in place of the
-// terminal, until the returned function puts the terminal back: what a
-// VMS process's SYS$INPUT is while DCL runs a command procedure (the
-// console gives an image the procedure's data lines this way). Every
-// reader of the process's input reads r then (a terminal $QIO read,
-// RMS's $GET of the terminal, LIB$GET_INPUT, the input shims), through
-// a buffer of its own, so nothing taken from r is left in the
-// terminal's shared buffer and nothing typed ahead at the terminal is
-// read in its place. r should be a TerminalSource whose Ready is true
-// when its lines are already at hand, so a read never waits for it.
-func (env *Environment) RedirectInput(r io.Reader) (restore func()) {
-	saved, outer := &inputStream{env.consoleIn, env.consoleInBuf}, env.terminalIn
-
-	// The first redirection's is the terminal's (ReadCommandLine).
-	if outer == nil {
-		env.terminalIn = saved
-	}
-
-	env.consoleIn, env.consoleInBuf = r, bufio.NewReader(r)
-
-	return func() {
-		env.consoleIn, env.consoleInBuf = saved.in, saved.buf
-		env.terminalIn = outer
-	}
-}
-
-// inputStream is a process's input stream: the reader, and its buffer
-// (nil until it is first read).
-type inputStream struct {
-	in  io.Reader
-	buf *bufio.Reader
-}
-
-// ReadCommandLine is readTerminalInput from the process's terminal,
-// SYS$COMMAND, even while RedirectInput has made a command procedure's
-// data lines its input (SYS$INPUT): for DCL's reads of the terminal
-// during a procedure (INQUIRE, READ SYS$COMMAND, the Ctrl/Y level) in a
-// subprocess's CLI.
+// ReadCommandLine reads a line from SYS$COMMAND, as ReadInputLine reads
+// SYS$INPUT: the terminal, while a command procedure is SYS$INPUT, for
+// LIB$GET_COMMAND and DCL's reads of the terminal during a procedure
+// (INQUIRE, READ SYS$COMMAND, the Ctrl/Y level) in a subprocess's CLI.
 func (env *Environment) ReadCommandLine(prompt string, maxLen int) (line string, ok bool, err error) {
-	if t := env.terminalIn; t != nil {
-		in, buf := env.consoleIn, env.consoleInBuf
-		env.consoleIn, env.consoleInBuf = t.in, t.buf
-
-		defer func() {
-			t.buf = env.consoleInBuf
-			env.consoleIn, env.consoleInBuf = in, buf
-		}()
-	}
-
-	return env.readTerminalInput(prompt, maxLen)
+	return env.readPermanentLine("SYS$COMMAND", prompt, maxLen)
 }
 
-// ReadLine reads one line from the process's input stream, as
-// readTerminalLine does, without waiting its turn among other processes'
-// terminal reads: for the console's own commands (TYPE SYS$INPUT), which
-// read while no image runs. ok is false at the end of the input.
+// ReadLine reads one line from SYS$INPUT: its process-permanent file's
+// next record (inputRecord), or a line from the terminal as
+// readTerminalLine reads one, without waiting its turn among other
+// processes' terminal reads: for the console's own commands (TYPE
+// SYS$INPUT), which read while no image runs. ok is false at the end of
+// the input.
 func (env *Environment) ReadLine(maxLen int) (line string, ok bool) {
+	if line, ok, handled, _ := env.inputRecord("SYS$INPUT", maxLen); handled {
+		return line, ok
+	}
+
 	return readTerminalLine(env, maxLen)
+}
+
+// inputRecord reads the next record of the process-permanent file name
+// (SYS$INPUT, SYS$COMMAND) leads to, when that isn't the terminal (a
+// command procedure's data records, a mailbox, a file), truncated to
+// maxLen bytes. handled is false for the terminal, or a name that leads
+// to no process-permanent file: the caller reads the terminal. ok is
+// false at the file's end, or when it can't be read; err is a mailbox's
+// wait for a message (the caller is called again).
+func (env *Environment) inputRecord(name string, maxLen int) (line string, ok, handled bool, err error) {
+	e, found := env.permanentEntry(name)
+	if !found || e.IsTerminal() {
+		return "", false, false, nil
+	}
+
+	record, sts, err := env.rmsContext().GetPermanent(e)
+	if err != nil || sts&1 == 0 {
+		return "", false, true, err
+	}
+
+	if len(record) > maxLen {
+		record = record[:maxLen]
+	}
+
+	return string(record), true, true, nil
 }

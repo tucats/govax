@@ -95,6 +95,11 @@ func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
 	// The CLI's SYS$OUTPUT, if it's a file, is made now (outfile.go).
 	env.openPermanentOutput()
 
+	// DCL's own SYS$OUTPUT, at command level 0 (ppfdcl.go).
+	if err := env.DefineCLIOutput(); err != nil {
+		return 0, err
+	}
+
 	return env.Interpreter.Start(env, cli)
 }
 

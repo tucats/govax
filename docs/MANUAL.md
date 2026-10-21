@@ -838,7 +838,11 @@ govax predefines `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and
 `SYS$COMMAND`, the terminal opened as process-permanent files, as VMS's
 LOGINOUT opens them: each name's equivalence string is the special form
 that leads RMS to the open file, which `SHOW LOGICAL` and `F$TRNLNM` show
-as the device, `_GOVAX$TTA0:`. It also predefines `TT` (`_TTA0:`),
+as the device, `_GOVAX$TTA0:`. DCL defines its own `SYS$OUTPUT` in
+supervisor mode, naming the same file, and while a command procedure
+runs it defines `SYS$INPUT` as the procedure and `SYS$OUTPUT` as its
+`/OUTPUT` file (see "Command procedures"), so `SHOW LOGICAL/PROCESS`
+lists `SYS$OUTPUT` twice, `[super]` and `[exec]`. It also predefines `TT` (`_TTA0:`),
 `SYS$DISK` (set by `SET DEFAULT`), `DISK$label` for each mounted volume, and the date-format
 names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. It doesn't define
 `SYS$LIBRARY`, `SYS$SHARE`, `SYS$SYSTEM`, or `SYS$LOGIN`, because there is
@@ -1429,6 +1433,13 @@ level 0, and procedures may nest 32 deep. `/OUTPUT` sends its output to
 a file (`NL:` discards it). A volume file is made when the procedure
 starts, a print file written a line at a time, so the procedure's own
 DIRECTORY lists it.
+
+As on VMS, the procedure and its `/OUTPUT` file are process-permanent
+files: while it runs, `SYS$INPUT` names the procedure (an image it runs
+reads the data lines after the command, by `LIB$GET_INPUT` or RMS) and
+`SYS$OUTPUT` the `/OUTPUT` file (an image's output goes there too).
+`SYS$ERROR` is still the terminal, so an image's error messages, which
+go to both, are also shown at the terminal, as are DCL's.
 
 Up to eight parameters become the local symbols `P1` to `P8` (those not
 given are `""`). Unquoted parameters are made uppercase; quotes keep

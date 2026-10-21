@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -134,11 +135,11 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 
 	input, output, errorOutput := req.Input, req.Output, req.Output
 	if input == "" {
-		input = env.processName("SYS$INPUT")
+		input = env.spawnDefault("SYS$INPUT")
 	}
 
 	if output == "" {
-		output, errorOutput = env.processName("SYS$OUTPUT"), env.processName("SYS$ERROR")
+		output, errorOutput = env.spawnDefault("SYS$OUTPUT"), env.spawnDefault("SYS$ERROR")
 	}
 
 	p := env.Process
@@ -157,6 +158,10 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 	}
 
 	child.Startup.CLI = &CLIStartup{Command: req.Command, Prompt: req.Prompt}
+
+	if req.Output == "" {
+		child.Startup.SharedOutput = env.procedureOutput()
+	}
 
 	if req.Flags&cliNoLogNam == 0 {
 		env.copyProcessNames(child)
@@ -288,6 +293,49 @@ func (env *Environment) spawnName() string {
 // the same thing in another process, where the string's entry isn't.
 func (env *Environment) processName(name string) string {
 	return lnm.DisplayValue(env.processValue(name))
+}
+
+// spawnDefault is the value LIB$SPAWN gives a subprocess for one of the
+// SYS$ names it isn't given (processName): DCL's own definition of it, a
+// command procedure's input or /OUTPUT file in supervisor mode, is passed
+// over for the process's own, the executive-mode name, as if the SPAWN
+// came from command level 0; an /OUTPUT file is shared with the
+// subprocess instead (procedureOutput). How VMS passes a procedure's
+// files on is docs/PHASE-71 - process-permanent files.md's subtask 8.
+func (env *Environment) spawnDefault(name string) string {
+	e, err := env.Logicals.Translate(lnm.ProcessTableName, name, lnm.User, 0)
+	if err == nil && e.Mode == lnm.Supervisor && len(e.Equivalences) > 0 && isPermanentString(e.Equivalences[0].Value) {
+		if e, err = env.Logicals.Translate(lnm.ProcessTableName, name, lnm.Executive, 0); err == nil && len(e.Equivalences) > 0 {
+			return lnm.DisplayValue(e.Equivalences[0].Value)
+		}
+	}
+
+	return env.processName(name)
+}
+
+// procedureOutput is the process-permanent file DCL's supervisor-mode
+// SYS$OUTPUT names, when that is a command procedure's /OUTPUT file: nil
+// at command level 0 (the terminal), or when a user-mode SYS$OUTPUT comes
+// first. A subprocess LIB$SPAWN creates there writes its output to the
+// same file, through the same stream, as VMS 7.3's did into the log of
+// testdata/dcl50's round 5 (T5).
+func (env *Environment) procedureOutput() *rms.PermanentEntry {
+	e, err := env.Logicals.Translate(lnm.ProcessTableName, "SYS$OUTPUT", lnm.User, 0)
+	if err != nil || e.Mode != lnm.Supervisor || len(e.Equivalences) == 0 {
+		return nil
+	}
+
+	pf, ok := lnm.ParsePermanentFile(e.Equivalences[0].Value)
+	if !ok {
+		return nil
+	}
+
+	entry, ok := env.files.Permanent(pf.IFI)
+	if !ok || entry.IsTerminal() {
+		return nil
+	}
+
+	return entry
 }
 
 // processValue returns the equivalence string of name in env's process

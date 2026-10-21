@@ -1,7 +1,6 @@
 package dclshell
 
 import (
-	"io"
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
@@ -17,15 +16,14 @@ import (
 // to the next record that starts with "$", which is the image's end of
 // file (User's Manual, 13.1.3 and 14.1). govax runs an image to its end
 // inside the command that runs it, so the image pulls its lines from the
-// procedure while the command runs: each command line of a procedure is
-// dispatched with process 1's input stream redirected to a
-// procedureInput (withProcedureInput), which reads the level's next data
-// record each time the image wants more. Every way an image reads its
-// input reads it: a terminal $QIO read, RMS's $GET of SYS$INPUT,
-// LIB$GET_INPUT, and the input shims; a program that opens a logical
-// name for SYS$INPUT gets there through RMS's translation, to the
-// terminal. So does the console's TYPE SYS$INPUT (typeInput), by name or
-// through logical names (IsInputStream).
+// procedure while the command runs: the procedure is a process-permanent
+// file whose stream reads the level's next data record (readData) each
+// time the image wants more, and SYS$INPUT names it (dclppf.go, Phase
+// 71). Every way an image reads SYS$INPUT reads it: RMS's indirect $OPEN
+// and $GET, LIB$GET_INPUT, and the input shims, through a logical name for
+// SYS$INPUT too. A $QIO read reaches the device the name leads to, not
+// the records, as on VMS. So does the console's TYPE SYS$INPUT
+// (typeInput), by name or through logical names (IsInputStream).
 //
 // With image verification on (SET VERIFY=IMAGE), each record is shown as
 // the image reads it, before the image does anything with it: VMS 7.3
@@ -218,80 +216,6 @@ func (p *procedureSource) readData() (record string, ok bool) {
 	return "", false
 }
 
-// procedureInput is a command level's data records as a stream of lines:
-// process 1's input (SYS$INPUT) while a procedure's command runs. Each
-// Read that finds nothing left of the last line reads the next record
-// (readData), so an image takes records as it reads them, and those it
-// doesn't read stay in the procedure. It is a corevms.TerminalSource
-// that never waits.
-type procedureInput struct {
-	c      *Interpreter
-	source *procedureSource
-
-	// shell is the DCL whose procedure it is: an image may read while
-	// another process's DCL is the console's, and the record is shown with
-	// this one put back for the moment (subcli.go).
-	shell *Shell
-
-	// rest is what is left of the line Read last read, "\n" and all.
-	rest []byte
-
-	// closed says the command the stream was made for has ended: a
-	// process that kept it (a subprocess started meanwhile) is at its
-	// end of file.
-	closed bool
-}
-
-func (in *procedureInput) Read(b []byte) (int, error) {
-	if len(in.rest) == 0 {
-		if in.closed {
-			return 0, io.EOF
-		}
-
-		record, ok := in.source.readData()
-		if !ok {
-			return 0, io.EOF
-		}
-
-		restore := in.c.useShell(in.shell)
-		in.c.showData(record)
-		restore()
-
-		in.rest = []byte(record + "\n")
-	}
-
-	n := copy(b, in.rest)
-	in.rest = in.rest[n:]
-
-	return n, nil
-}
-
-// Ready says a read never waits: the records are at hand.
-func (in *procedureInput) Ready() bool { return true }
-
-// withProcedureInput runs fn, a line of source's procedure, with process
-// 1's input the procedure's data records (procedureInput), as an image
-// the line runs reads them, and puts the terminal back afterward. A
-// debugger command procedure's lines are all commands, so it has no
-// data; its lines run with the input as it is.
-func (c *Interpreter) withProcedureInput(source *procedureSource, fn func() error) error {
-	env := c.RTL
-	if env == nil || source.plain {
-		return fn()
-	}
-
-	in := &procedureInput{c: c, source: source, shell: c.Shell}
-	restore := env.RedirectInput(in)
-
-	defer func() {
-		in.closed = true
-
-		restore()
-	}()
-
-	return fn()
-}
-
 // IsInputStream reports whether a file specification names SYS$INPUT
 // (with or without its colon), itself or through logical names: the
 // process's input, which TYPE reads as lines rather than as a file
@@ -366,7 +290,7 @@ func isDCLName(name string) bool {
 
 // typeInput is TYPE SYS$INPUT: it types each line of the process's
 // input until its end of file. In a command procedure that is the data
-// records after the command (an image's SYS$INPUT, procedureInput), each
+// records after the command (an image's SYS$INPUT, dclppf.go), each
 // shown first with image verification on; at the terminal it is what is
 // typed, up to Ctrl/Z.
 func (c *Interpreter) typeInput() error {

@@ -217,7 +217,7 @@ func (c *Interpreter) callSubroutine(cmd procedureCommand, dispatch func(string)
 		return vmserrors.New(vmserrors.CLI_MSNGENDS)
 	}
 
-	source := &procedureSource{name: f.source.name, records: f.source.records, next: body, end: end}
+	source := &procedureSource{name: f.source.name, device: f.source.device, file: f.source.file, records: f.source.records, next: body, end: end}
 
 	// With verification on, the subroutine's SUBROUTINE line is shown as
 	// it starts (VMS 7.3).
@@ -238,7 +238,7 @@ func (c *Interpreter) callSubroutine(cmd procedureCommand, dispatch func(string)
 func (c *Interpreter) callPlainLabel(f *flowState, target labelTarget, cmd procedureCommand, dispatch func(string) error) error {
 	_, _, start, _, _ := f.source.lineAt(target.pos)
 
-	source := &procedureSource{name: f.source.name, records: f.source.records, next: start, end: f.source.end}
+	source := &procedureSource{name: f.source.name, device: f.source.device, file: f.source.file, records: f.source.records, next: start, end: f.source.end}
 
 	err := c.finishProcedure(c.runLevel(source, cmd, dispatch))
 	if c.stopping {

@@ -51,7 +51,8 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 }
 
 // findOnDevice is $FIND on the terminal or a record device: a record is
-// read (the terminal prompting as for $GET) and thrown away.
+// read (the terminal prompting as for $GET) and thrown away, but for a
+// RecordStream's, which the next $GET gets.
 func findOnDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
 	if h.IsConsole() {
 		_, status, err := terminalRecord(ctx, rabAddr, maxTerminalRecord)
@@ -70,8 +71,16 @@ func findOnDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
-	_, status, err := h.Device.Get()
-	if err != nil {
+	// A stream DCL keeps (a procedure's data records) is a file's: the
+	// record is located, for the next $GET, not read.
+	var (
+		status uint32
+		err    error
+	)
+
+	if stream, ok := h.Device.(*RecordStream); ok {
+		status = stream.Find()
+	} else if _, status, err = h.Device.Get(); err != nil {
 		return 0, err
 	}
 

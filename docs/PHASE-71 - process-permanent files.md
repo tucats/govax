@@ -4,8 +4,8 @@
 answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
 VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
-table and indirect access), and 5 (process startup's four files) are
-done.
+table and indirect access), 5 (process startup's four files), and 6
+(command procedures) are done.
 
 ## Goal
 
@@ -366,12 +366,14 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
    `$PUTMSG` through the entries. Done 2026-10-21.
 6. **Command procedures**: SYS$INPUT an entry on the procedure's
    reader (replacing `RedirectInput`), `/OUTPUT` an entry on a file, the
-   supervisor-mode names at each level.
+   supervisor-mode names at each level. Done 2026-10-21.
 7. **DCL's OPEN, READ, WRITE, CLOSE** through entries (replacing the
    map's string comparison and `processPermanentFile`); images reaching
    OPEN's files.
 8. **Subprocesses**: their input and output files as entries
    (replacing `outfile.go`), and the copying rule the probe shows.
+   (Subtask 6 began it: a subprocess LIB$SPAWN makes in a procedure with
+   an `/OUTPUT` file shares that file's stream.)
 9. **The oracle**: `TestPPF71Oracle` runs the probe on govax and holds
    it to VMS's logs; the other oracles' expectations follow (SHOW
    LOGICAL, the traceback's SYS$OUTPUT and SYS$ERROR, SPAWN's logs).
@@ -582,3 +584,96 @@ input entry refusing a write), and rms's `TestPermanent_fromGo`; the
 console tests that showed `_TTA0:` for the SYS$ names now show
 `_GOVAX$TTA0:` (SHOW LOGICAL/FULL with `[concealed,terminal]`, as VMS
 does), and a created process's SYS$OUTPUT is its own entry.
+
+### 2026-10-21 — Subtask 6: command procedures
+
+`internal/dclshell/dclppf.go`. A DCL procedure's input is one
+process-permanent entry per process (`Shell.procedureInput`), opened when
+the first procedure starts and closed when the last ends: an
+`rms.RecordStream` (new, `ppfstream.go`: a `RecordDevice` of Go
+functions) whose records are the innermost level's data records
+(`procedureSource.readData`, so the DECK and EOD checks stay where they
+were), with GET and EXE access, PRN, SQO, and a read-only disk file's
+characteristics (`rms.FileCharacteristics`). DCL now holds a volume
+procedure's file open while it runs (shared), and the entry describes
+it (`PermanentEntry.Describe`): an indirect `$OPEN` gets the file's
+attributes, `$DISPLAY` its name and FID. An `/OUTPUT` file is an entry of
+its own (`openOutputEntry`): a volume file DCL opened becomes one with its
+own stream and PUT access alone (`FileTable.AddDCLFile`; `18CD4108`, as
+VMS's log), a host file or NL: a `RecordStream`; DCL's own output goes
+through it (`recordWriter` on `Environment.PutPermanent`), so images and
+DCL write one stream. `defineProcedureNames` sets the supervisor-mode
+names from the stack as it is, as each level starts and ends: SYS$OUTPUT
+the innermost `/OUTPUT` file's string, or at level 0 DCL's own
+(`corevms.DefineCLIOutput`, the executive SYS$OUTPUT's string, CONFINE,
+which a subprocess's CLI defines at its start too); SYS$INPUT the
+procedure entry's, naming the innermost procedure's device (the node's
+physical name, or a host file's path), or none at level 0. Every one is
+CONFINE and TERMINAL. Entries are opened in VMS's order, the input
+before the log.
+
+`RedirectInput` and the `procedureInput` reader are gone: LIB$GET_INPUT,
+LIB$GET_COMMAND (`ReadCommandLine`, now SYS$COMMAND's entry), the input
+shims, and TYPE SYS$INPUT (`Environment.ReadLine`) read SYS$INPUT's
+entry when it isn't the terminal (`inputRecord`), without a prompt. A
+`$QIO` read of a channel to SYS$INPUT reaches the device after the
+prefix, as on VMS, not the records. The terminal's entry writes to the
+terminal itself (`consoleOutput`: level 0's output), not to an
+`/OUTPUT` file, so under `@/OUTPUT=` an image's messages, which go to
+SYS$ERROR (the terminal) and SYS$OUTPUT (the log), show at the terminal
+too, as testdata/tb70's README says VMS's did; `TestTB70Oracle` now
+checks that whatever reached the terminal is in the log.
+
+VMINIT (or INIT) in a procedure, as in vax.init, makes a new process 1:
+the machine's new `Hooks.ProcessOneStarted`, called after LOGINOUT's
+step, is DCL's `adoptProcedureFiles`, which makes the procedure entry
+and each level's `/OUTPUT` entry entries of the new process's
+(`FileTable.Adopt`) and defines the names again.
+
+LIB$SPAWN in a procedure (`spawnDefault`): DCL's supervisor-mode names
+are passed over for the executive ones, and a procedure's `/OUTPUT` file
+is shared with the subprocess (`ProcessStartup.SharedOutput`,
+`shareOutput`: an entry of the subprocess's on the same stream,
+`FileTable.Share`, which its rundown doesn't close), as VMS 7.3 wrote a
+SPAWN's output into the procedure's log (testdata/dcl50's T5). The rest
+of a subprocess's files are subtask 8's.
+
+Found on the way, from the probe's answers:
+
+- An indirect `$FIND` then `$GET` on a procedure's input: VMS's `$GET`
+  returned the record `$FIND` located (I5). A `RecordStream`'s `$FIND`
+  now holds the record for the next `$GET` (`Find`), and verification
+  shows a record when a reader gets it (`Taken`), as VMS's did. At the
+  end, such a stream's `$GET` leaves RAB$W_RSZ 0 (I7).
+- `$DISPLAY` through an indirect open of a DCL-opened volume file had no
+  name or FID: OPEN/WRITE's handle now records the file it found.
+- SHOW LOGICAL without `/FULL` showed `[super,confine]`; VMS shows only
+  the mode, `[super]` (ppf71.log's SHOW LOGICAL/PROCESS), and the name's
+  attributes only with `/FULL`.
+- DEASSIGN SYS$OUTPUT at level 0 now removes DCL's supervisor-mode name
+  (unconfirmed against VMS); `TestDeassign`'s check that a default
+  DEASSIGN can't remove a process-permanent name uses SYS$INPUT.
+
+Checked by running the probe (`@PPF71/OUTPUT=PPF71.LOG`) on govax: SHOW
+LOGICAL, `$TRNLNM` of the four names at each mode (the words but for
+govax's numbering: entries 3, 4, 5 where VMS had 2, 4, 5), parts O and
+X under `/OUTPUT` (the FAB, NAM, `$DISPLAY`, the records in the log),
+part I (the eight data records in VMS's order through two opens, the
+refusals, the procedure file's attributes), and the nested procedure's
+names and log match VMS's but for what the oracle will mask or what
+other subtasks own: STVs after `$CONNECT`, `$PUT`, `$REWIND`, `$CLOSE`,
+and `$GET` (subtask 5's list), RFAs of a procedure's records, ALQ (VMS's
+log grew in bigger steps), the RAT of the procedure govax's COPY/HOST
+made (0, VMS's EXCHANGE file had CR), the disk's DEVCHAR from
+`$GETDVIW`, OPEN's names (subtask 7), the subprocess's own files
+(subtask 8), and DCL's view (F$TRNLNM with an empty table, F$PARSE of a
+process-permanent name, TT, SYS$DISK; subtask 9's).
+
+Tests: `TestProcedureFiles_names` (level 0, an outer and a nested
+procedure with a host `/OUTPUT` file, the names put back, the entries
+closed), `TestProcedureFiles_volume` (the device text, a volume log with
+DCL's and TYPE SYS$INPUT's records, nothing on the terminal),
+`TestProcedureFiles_vminit` (the entry taken over by VMINIT's process 1),
+rms's `TestRecordStream` and `TestPermanent_share`; `TestLibGetCommand`
+gives SYS$INPUT an entry as DCL does, and LIB$GET_INPUT no longer
+prompts for a procedure's record.

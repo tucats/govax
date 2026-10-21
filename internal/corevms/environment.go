@@ -145,10 +145,6 @@ type Environment struct {
 	consoleInBuf *bufio.Reader
 	consoleOut   io.Writer
 
-	// terminalIn is the terminal's input stream while RedirectInput has
-	// replaced it (nil otherwise), for ReadCommandLine.
-	terminalIn *inputStream
-
 	// imageData is the data an RTL package keeps for the running image
 	// (ImageData): what LIBRTL.EXE keeps in the image's own P0 space on
 	// VMS, so ImageRundown forgets it.

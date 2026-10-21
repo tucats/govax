@@ -329,7 +329,12 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 	fmt.Fprintf(&b, "%s%q", prefix, e.Name)
 
 	if showMode {
-		fmt.Fprintf(&b, " [%s]", strings.Join(append([]string{e.Mode.String()}, nameAttrTags(e.Attrs)...), ","))
+		tags := []string{e.Mode.String()}
+		if showAttrs {
+			tags = append(tags, nameAttrTags(e.Attrs)...)
+		}
+
+		fmt.Fprintf(&b, " [%s]", strings.Join(tags, ","))
 	}
 
 	if e.IsTable() {
@@ -356,7 +361,8 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 
 // nameAttrTags are SHOW LOGICAL/FULL's words for a name's own
 // attributes, after its mode: "[super,confine]" for a name DCL's OPEN
-// defined, as VMS 7.3 showed it (testdata/dcl50's F1). Where no_alias
+// defined, as VMS 7.3 showed it (testdata/dcl50's F1). Without /FULL only
+// the mode shows (VMS 7.1, testdata/ppf71: "[super]"). Where no_alias
 // goes among them is unconfirmed.
 func nameAttrTags(attrs uint32) []string {
 	var tags []string

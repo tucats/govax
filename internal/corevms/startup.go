@@ -105,6 +105,10 @@ func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
 		return 0, err
 	}
 
+	if err := env.shareOutput(st.SharedOutput); err != nil {
+		return 0, err
+	}
+
 	switch {
 	case st.CLI != nil || isLoginout(st.Image):
 		return env.startInterpreter(st.CLI)

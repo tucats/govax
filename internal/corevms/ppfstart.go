@@ -188,3 +188,24 @@ func (env *Environment) putPermanent(e *rms.PermanentEntry, record string) (uint
 
 	return sts, nil
 }
+
+// shareOutput makes shared, the creator's process-permanent file
+// (ProcessStartup.SharedOutput), the process's SYS$OUTPUT too: an entry
+// of the process's own on the same stream, which the process's rundown
+// doesn't close (rms.FileTable.Share), and SYS$OUTPUT defined as its
+// string, TERMINAL, in executive mode. nil shares nothing.
+func (env *Environment) shareOutput(shared *rms.PermanentEntry) error {
+	if shared == nil {
+		return nil
+	}
+
+	e, err := env.files.Share(shared)
+	if err != nil {
+		return err
+	}
+
+	_, err = env.Logicals.Define(lnm.ProcessTableName, "SYS$OUTPUT", lnm.Executive, 0,
+		[]lnm.Equivalence{{Value: e.EquivalenceString(), Attrs: lnm.AttrTerminal}})
+
+	return err
+}

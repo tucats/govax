@@ -187,26 +187,21 @@ func (env *Environment) WriteOutput(s string) { env.writeConsole(s) }
 // prompt (ppfstart.go); ok is false at its end, or when it can't be read.
 // Otherwise it is readTerminalInput's.
 func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, ok bool, err error) {
-	e, found := env.permanentEntry("SYS$INPUT")
-	if !found || e.IsTerminal() {
-		return env.readTerminalInput(prompt, maxLen)
+	return env.readPermanentLine("SYS$INPUT", prompt, maxLen)
+}
+
+// readPermanentLine is ReadInputLine for name, SYS$INPUT or SYS$COMMAND.
+func (env *Environment) readPermanentLine(name, prompt string, maxLen int) (line string, ok bool, err error) {
+	if line, ok, handled, err := env.inputRecord(name, maxLen); handled {
+		return line, ok, err
 	}
 
-	record, sts, err := env.rmsContext().GetPermanent(e)
-	if err != nil || sts&1 == 0 {
-		return "", false, err
-	}
-
-	if len(record) > maxLen {
-		record = record[:maxLen]
-	}
-
-	return string(record), true, nil
+	return env.readTerminalInput(prompt, maxLen)
 }
 
 // readTerminalInput writes prompt to the process's output stream, then
 // reads a line of at most maxLen bytes from its input stream (the
-// terminal, or the lines RedirectInput gave it), as a terminal read does
+// terminal), as a terminal read does
 // (readTerminalLine), without the line's terminator. ok is false at the
 // end of the input: CTRL/Z typed on an empty line, or the end of the
 // host's input. With the scheduler on, err is ErrWait while the line

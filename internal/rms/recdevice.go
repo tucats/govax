@@ -197,6 +197,14 @@ func getRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error
 	case ssNormal:
 		return storeRecord(ctx, rabAddr, record)
 	case ssEndOfFile:
+		// A stream DCL keeps is a file's, whose RAB$W_RSZ is 0 at the end
+		// (VMS 7.1, testdata/ppf71's I7).
+		if _, ok := h.Device.(*RecordStream); ok {
+			if err := ctx.storeWord(rabAddr+rabRSZ, 0); err != nil {
+				return 0, err
+			}
+		}
+
 		// RAB$L_STV is 0 (VMS 7.3, testdata/mp/probe3).
 		return rabStatus(ctx, rabAddr, rmsEOF, 0)
 	}

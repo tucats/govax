@@ -268,6 +268,11 @@ type Hooks struct {
 	// terminal streams, logical names, and session.
 	NewProcessOne func(sys *corevms.System) *corevms.Environment
 
+	// ProcessOneStarted is told when process 1 has its process-permanent
+	// files (OpenTerminalFiles): its CLI's step, which defines DCL's own
+	// names for them. nil for none.
+	ProcessOneStarted func(env *corevms.Environment)
+
 	// ProcessDeleted is told of each process the System deletes.
 	ProcessDeleted func(env *corevms.Environment)
 
@@ -483,6 +488,12 @@ func (m *Machine) newRTL() *corevms.Environment {
 	// the names can fail only for a full process table of names.
 	if err := env.OpenTerminalFiles(); err != nil {
 		fmt.Fprintf(m.Hooks.Output(), "%%GOVAX-W-PPF, opening the terminal's files: %v\n", err)
+	}
+
+	// Then the CLI's (DCL's own SYS$OUTPUT, and its command procedures'
+	// files if it is running some: VMINIT in vax.init).
+	if m.Hooks.ProcessOneStarted != nil {
+		m.Hooks.ProcessOneStarted(env)
 	}
 
 	if m.pageFileStarted {

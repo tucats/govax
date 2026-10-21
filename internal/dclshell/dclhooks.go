@@ -53,15 +53,16 @@ func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 
 			return c.statusFailure(status)
 		},
-		ControlYTaken:   func() bool { return c.controlYTaken },
-		CLIImageEnded:   c.cliImageEnded,
-		NewProcessOne:   c.newProcessOne,
-		ProcessDeleted:  c.processDeleted,
-		Input:           func() io.Reader { return c.In },
-		ConsoleCommand:  c.consoleCommand,
-		RequestQuit:     func() { c.quit = true },
-		HandleAttention: c.HandleAttention,
-		DCLSymbol:       c.numericSymbol,
+		ControlYTaken:     func() bool { return c.controlYTaken },
+		CLIImageEnded:     c.cliImageEnded,
+		NewProcessOne:     c.newProcessOne,
+		ProcessOneStarted: c.adoptProcedureFiles,
+		ProcessDeleted:    c.processDeleted,
+		Input:             func() io.Reader { return c.In },
+		ConsoleCommand:    c.consoleCommand,
+		RequestQuit:       func() { c.quit = true },
+		HandleAttention:   c.HandleAttention,
+		DCLSymbol:         c.numericSymbol,
 	}
 
 	c.setStatus(ssNormal, nil)
@@ -127,11 +128,15 @@ func (r consoleInput) Ready() bool {
 }
 
 // consoleOutput is the terminal, as every process's terminal output
-// reaches it: process 1's Out, whichever process's DCL runs now.
+// reaches it: process 1's Out at command level 0, whichever process's DCL
+// runs now, and whatever /OUTPUT file a procedure's own output goes to.
 type consoleOutput struct{ c *Interpreter }
 
 func (w consoleOutput) Write(p []byte) (int, error) {
 	out := w.c.home.Out
+	if levels := w.c.home.levels; len(levels) > 0 {
+		out = levels[0].sysCommand
+	}
 
 	if out == nil {
 		return len(p), nil

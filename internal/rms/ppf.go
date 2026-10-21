@@ -127,6 +127,11 @@ type PermanentOptions struct {
 
 	// SQO is FAB$V_SQO: the file is sequential only, as LOGINOUT's are.
 	SQO bool
+
+	// Characteristics, when not 0, are the device characteristics the
+	// entry reports in place of its stream's kind's: a command
+	// procedure's data records are a disk file's on VMS.
+	Characteristics uint32
 }
 
 // PermanentEntry is one process-permanent file: its stream and what the
@@ -140,6 +145,10 @@ type PermanentEntry struct {
 	handle *FileHandle
 
 	options PermanentOptions
+
+	// borrowed says the stream is another process's entry's (Share):
+	// closing this entry leaves it open.
+	borrowed bool
 
 	// characteristics are the device's (FAB$L_SDC of an indirect open):
 	// a volume file's without input (DEV$M_IDV) if the open doesn't
@@ -201,15 +210,7 @@ func (t *FileTable) AddPermanent(h *FileHandle, opts PermanentOptions) (*Permane
 	case h.IsRecordDevice():
 		e.characteristics = recordDevChar
 	default:
-		e.characteristics = diskDevChar
-
-		if h.Access&facReads == 0 {
-			e.characteristics &^= devIDV
-		}
-
-		if h.Access&facPut == 0 {
-			e.characteristics &^= devODV
-		}
+		e.characteristics = fileDevChar(h.Access)
 
 		// A stream that only writes can only add to the file: it starts
 		// at the end.
@@ -225,6 +226,10 @@ func (t *FileTable) AddPermanent(h *FileHandle, opts PermanentOptions) (*Permane
 		}
 	}
 
+	if opts.Characteristics != 0 {
+		e.characteristics = opts.Characteristics
+	}
+
 	if t.permanent == nil {
 		t.permanent = map[uint16]*PermanentEntry{}
 	}
@@ -232,6 +237,27 @@ func (t *FileTable) AddPermanent(h *FileHandle, opts PermanentOptions) (*Permane
 	t.permanent[index] = e
 
 	return e, nil
+}
+
+// FileCharacteristics is fileDevChar for DCL, whose command procedure
+// input entry reports a disk file's characteristics.
+func FileCharacteristics(fac byte) uint32 { return fileDevChar(fac) }
+
+// fileDevChar is a volume file's device characteristics as an entry
+// reports them for an open with access fac: without input (DEV$M_IDV) if
+// it doesn't read, without output (DEV$M_ODV) if it doesn't write.
+func fileDevChar(fac byte) uint32 {
+	c := diskDevChar
+
+	if fac&facReads == 0 {
+		c &^= devIDV
+	}
+
+	if fac&facPut == 0 {
+		c &^= devODV
+	}
+
+	return c
 }
 
 // MakePermanent makes the file t has open as ifi (by $OPEN or $CREATE) a
@@ -251,6 +277,27 @@ func (t *FileTable) MakePermanent(ifi uint16, opts PermanentOptions) (*Permanent
 	delete(t.handles, ifi)
 
 	return e, nil
+}
+
+// Adopt makes e, an entry of another table's (an earlier process 1's,
+// which ZERO, INIT, or VMINIT replaced), an entry of t's on the same open
+// stream, with the same options.
+func (t *FileTable) Adopt(e *PermanentEntry) (*PermanentEntry, error) {
+	return t.AddPermanent(e.handle, e.options)
+}
+
+// Share makes e, another process's entry, an entry of t's on the same
+// stream, which closing this one leaves open: a subprocess writing to its
+// creator's /OUTPUT file.
+func (t *FileTable) Share(e *PermanentEntry) (*PermanentEntry, error) {
+	shared, err := t.AddPermanent(e.handle, e.options)
+	if err != nil {
+		return nil, err
+	}
+
+	shared.borrowed = true
+
+	return shared, nil
 }
 
 // freePermanent returns the lowest free entry and stream numbers, 0 when
@@ -337,6 +384,10 @@ func (t *FileTable) ClosePermanent(ifi uint16) (bool, error) {
 
 	delete(t.permanent, e.index)
 
+	if e.borrowed {
+		return true, nil
+	}
+
 	return true, closeHandle(e.handle)
 }
 
@@ -350,6 +401,12 @@ func (t *FileTable) ClosePermanentFiles() (int, error) {
 	)
 
 	for index, e := range t.permanent {
+		if e.borrowed {
+			delete(t.permanent, index)
+
+			continue
+		}
+
 		if err := closeHandle(e.handle); err != nil && firstErr == nil {
 			firstErr = err
 		}

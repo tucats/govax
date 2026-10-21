@@ -514,3 +514,110 @@ func TestPermanent_fromGo(t *testing.T) {
 		t.Errorf("GetPermanent of the terminal: %v; want ErrTerminalEntry", err)
 	}
 }
+
+// TestRecordStream: a stream DCL keeps (subtask 6). A $FIND locates a
+// record the next $GET returns, and Taken hears of each record a reader
+// gets, not of one a $FIND located: VMS 7.1's verification showed a
+// procedure's data record at the $GET after a $FIND (testdata/ppf71's I5).
+func TestRecordStream(t *testing.T) {
+	records := []string{"one", "two", "three"}
+
+	var taken []string
+
+	s := &RecordStream{
+		Next: func() ([]byte, bool) {
+			if len(records) == 0 {
+				return nil, false
+			}
+
+			r := records[0]
+			records = records[1:]
+
+			return []byte(r), true
+		},
+		Taken: func(r []byte) { taken = append(taken, string(r)) },
+	}
+
+	get := func(want string) {
+		t.Helper()
+
+		r, sts, err := s.Get()
+		if err != nil || sts != ssNormal || string(r) != want {
+			t.Fatalf("Get = %q, %#x, %v; want %q", r, sts, err, want)
+		}
+	}
+
+	get("one")
+
+	if sts := s.Find(); sts != ssNormal {
+		t.Fatalf("Find = %#x", sts)
+	}
+
+	if len(taken) != 1 {
+		t.Errorf("taken after Find = %q, want only the first record", taken)
+	}
+
+	get("two")
+	get("three")
+
+	if sts := s.Find(); sts != ssEndOfFile {
+		t.Errorf("Find at the end = %#x, want SS$_ENDOFFILE", sts)
+	}
+
+	if _, sts, _ := s.Get(); sts != ssEndOfFile {
+		t.Errorf("Get at the end = %#x, want SS$_ENDOFFILE", sts)
+	}
+
+	if want := []string{"one", "two", "three"}; len(taken) != 3 || taken[0] != want[0] || taken[2] != want[2] {
+		t.Errorf("taken = %q, want %q", taken, want)
+	}
+
+	// A stream that throws its records away takes them all.
+	if sts, _, _ := (&RecordStream{}).Put([]byte("x"), false); sts != ssNormal {
+		t.Errorf("Put to a discarding stream = %#x", sts)
+	}
+}
+
+// TestPermanent_share: a subprocess's entry on its creator's /OUTPUT
+// file (Share) writes to the same stream, and closing it, or every entry
+// of the subprocess's, leaves the creator's file open.
+func TestPermanent_share(t *testing.T) {
+	var written []string
+
+	done := 0
+	stream := &RecordStream{
+		Write: func(r []byte) error { written = append(written, string(r)); return nil },
+		Done:  func() { done++ },
+	}
+
+	parent, child := NewFileTable(nil), NewFileTable(nil)
+
+	e, err := parent.AddPermanent(&FileHandle{Device: stream, Access: facPut}, PermanentOptions{Device: "_DUA1:", RAT: ratPRN})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	shared, err := child.Share(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := &Context{Files: child}
+	for _, entry := range []*PermanentEntry{e, shared} {
+		if sts, err := ctx.PutPermanent(entry, []byte("rec")); err != nil || sts != rmsNormal {
+			t.Fatalf("PutPermanent = %#x, %v", sts, err)
+		}
+	}
+
+	if len(written) != 2 {
+		t.Errorf("written = %q, want both records", written)
+	}
+
+	if _, err := child.ClosePermanentFiles(); err != nil || done != 0 {
+		t.Errorf("the subprocess's rundown: err %v, the stream ended %d times, want 0", err, done)
+	}
+
+	if _, err := parent.ClosePermanent(e.IFI()); err != nil || done != 1 {
+		t.Errorf("the creator's close: err %v, the stream ended %d times, want 1", err, done)
+	}
+}
