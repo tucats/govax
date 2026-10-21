@@ -12,7 +12,6 @@ import (
 
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
-	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -230,35 +229,12 @@ func (f fileName) String() string {
 // armForFAC): at the first record, or with appending at the end of the
 // file.
 func (f *DCLFile) arm(fac byte, appending bool) uint32 {
-	h := f.handle
-
 	var rop uint32
 	if appending {
 		rop = ropEOF
 	}
 
-	h.startStream(fac, rop)
-
-	if fac&facPut != 0 {
-		w, err := odsrms.NewAppender(h.File)
-		if err != nil {
-			return rmsDeviceError
-		}
-
-		w.SetShared(h.Accessor != nil && h.stream.fresh)
-		h.Writer = w
-	}
-
-	if fac&facReads != 0 {
-		r, err := odsrms.NewReader(h.File)
-		if err != nil {
-			return rmsDeviceError
-		}
-
-		h.Reader = r
-	}
-
-	return 0
+	return f.handle.arm(fac, rop)
 }
 
 // dclVFCSize is how many bytes of fixed control a record of a file OPEN

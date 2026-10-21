@@ -408,7 +408,7 @@ func (ctx *Context) streamOf(rabAddr uint32) (*FileHandle, uint32, error) {
 		return nil, 0, err
 	}
 
-	handle, ok := ctx.Files.Lookup(isi)
+	handle, ok := ctx.Files.LookupStream(isi)
 	if !ok {
 		sts, err := storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidISI)
 

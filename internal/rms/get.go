@@ -59,12 +59,16 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	handle, ok := ctx.Files.Lookup(ifi)
+	handle, ok := ctx.Files.LookupStream(ifi)
 	if !ok {
 		// This RAB was never SYS$CONNECTed at all — a real, expected
 		// RMS$_IFI condition, not a bug in this package (see SysPut's own
 		// identical check for the fuller explanation).
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
+	}
+
+	if sts, err := ctx.indirectAccess(rabAddr, facGet); err != nil || sts != 0 {
+		return sts, err
 	}
 
 	if handle.IsConsole() || handle.IsRecordDevice() {

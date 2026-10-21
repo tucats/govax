@@ -22,7 +22,7 @@ func SysWait(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	if h, ok := ctx.Files.Lookup(isi); ok && h.IsRecordDevice() && h.PutPending {
+	if h, ok := ctx.Files.LookupStream(isi); ok && h.IsRecordDevice() && h.PutPending {
 		return waitRecordDevice(ctx, rabAddr, h)
 	}
 

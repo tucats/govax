@@ -18,7 +18,7 @@ func SysFlush(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	handle, ok := ctx.Files.Lookup(ifi)
+	handle, ok := ctx.Files.LookupStream(ifi)
 	if !ok {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
 	}

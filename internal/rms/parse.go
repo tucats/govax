@@ -127,6 +127,10 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return rmsNormal, 0, nil
 	}
 
+	if p.Permanent != nil {
+		return ctx.parseIndirect(fab, nam, p)
+	}
+
 	did, sts, stv := ctx.checkParsed(p)
 	if sts != 0 {
 		return sts, stv, nil

@@ -3,7 +3,8 @@
 **Status:** planned 2026-10-21; Part B's decisions and the proposed
 answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
-VAX run; Part A, "The probe's answers"), and 3 (the strings) are done.
+VAX run; Part A, "The probe's answers"), 3 (the strings), and 4 (RMS's
+table and indirect access) are done.
 
 ## Goal
 
@@ -285,7 +286,9 @@ process-permanent name:
   does; only `$TRNLNM` (and `$CRELNM` given it) carries it.
 - Decision 2: the word is `%X8000` + `%X100` + the index (no `%X100`
   for OPEN/READ's file); the device text has a colon but for OPEN's
-  files. SYS$ERROR shares SYS$OUTPUT's entry, and SYS$COMMAND
+  files. (Subtask 4: the `%X100` is FAB$V_PPF_RAT, bits 6 to 13, holding
+  PRN, the RAT of the open that made the file; an indirect IFI's `%X80`
+  is the accessor's RAT, CR.) SYS$ERROR shares SYS$OUTPUT's entry, and SYS$COMMAND
   SYS$INPUT's, when they name the same device.
 - Decision 4: the NAM's strings are `NAME:.;`, and a file name after the
   colon stays in them. FAB$W_IFI is `%XC080` + the index; STV, ISI, and
@@ -356,7 +359,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
    Done 2026-10-21.
 4. **RMS's table and indirect access**: the entries, `$OPEN`/`$CREATE`
    by IFI, `$CONNECT`, `$GET`/`$PUT` on the one stream, the refusals,
-   the NAM's strings, the FAB from the entry, rundown.
+   the NAM's strings, the FAB from the entry, rundown. Done 2026-10-21.
 5. **Process startup's four files**: the terminal entries, the TTA0:
    case narrowed to a direct open, LIB$PUT_OUTPUT, LIB$GET_INPUT, and
    `$PUTMSG` through the entries.
@@ -436,3 +439,79 @@ procedures' (6), and OPEN's (7) come with their entries. Tests:
 `TestLexicalPermanentFile`, `TestShowLogical_permanentFile`, and
 `TestServiceSysAssignAndGetdviPermanentFile` (with and without the
 node's name and the colon, through an alias; `$TRNLNM` whole).
+
+### 2026-10-21 — Subtask 4: RMS's table and indirect access
+
+**The words explained.** VMS's definitions have FAB$V_PPIFI (bit 15),
+FAB$V_PPF_IND (bit 14), and FAB$V_PPF_RAT (bits 6 to 13, mask
+`%X3FC0`) in FAB$W_IFI, and the probe's words fit them exactly: the
+string's `%X8101` is PPIFI, RAT=PRN (`4 << 6`), index 1; OPEN/READ's
+`%X8005` has RAT 0; an indirect `%XC084` is PPIFI, PPF_IND, RAT=CR (the
+accessor's FAB as given), index 4. So the `%X100` Part A left open is
+the PRN of the open that made the file, and the "record attributes saved
+at each Open and Connect" of the guide are saved in the IFI and the ISI,
+which is how govax keeps them too: no per-accessor state at all. The
+ISI's index is the entry's stream's (SYS$INPUT file 2, stream 3), and
+`$DISPLAY`'s STV, `%X7FF9C000` plus the stream's number, fits all four
+of the probe's.
+
+`internal/rms/ppf.go`: each `FileTable` keeps its process-permanent files
+apart from the image's (`permanent`, by index, so `Rundown` at image exit
+leaves them), each a `PermanentEntry`: the open stream (a `FileHandle`:
+the terminal, a volume file, a record device), the `PermanentOptions`
+(the device text the string carries, the opener's RAT, SQO), and the
+device characteristics (a volume file's without IDV if the open doesn't
+read, without ODV if it doesn't write, as VMS 7.1's `18CD4108` and
+`14CD4108`). `AddPermanent` makes an open stream an entry (arming it, at
+the end of the file if it only writes), `MakePermanent` an open IFI's
+file; `IFI` and `EquivalenceString` are what DCL will define names with;
+`Permanent` finds an entry by any word naming it; `ClosePermanent` and
+`ClosePermanentFiles` close them (corevms's `processRundown` calls the
+second at process deletion). Entries and streams are numbered from 1,
+lowest free first. `FileHandle.arm` is `$CONNECT`'s arming, now shared by
+`armForFAC`, `DCLFile.arm`, and `AddPermanent`.
+
+Name processing (`name.go`) stops at a process-permanent string: the
+device is the logical name with a colon, the program's own name, type,
+and version are kept, nothing else is merged, and FNB has NAM$M_PPF and
+EXP_DEV (a default name's device leads there too, without EXP_DEV:
+`permanentName`; unconfirmed beyond F$PARSE's answer). `ppfaccess.go` is
+the services' side:
+
+- `$OPEN` and `$CREATE` (`openIndirect`): FOP's PPF RMS$_PRV before the
+  name is processed; UFO and NFS RMS$_FOP after it; the FAB's IFI the
+  indirect word, DEV and SDC, a volume file's attributes (the terminal's:
+  only FSZ, 2, as VMS 7.1 left the rest); the NAM's RSA the expanded
+  string, DVI the logical name, FID and DID zero. STV is 0 (VMS's
+  varied, masked by the oracle). `$CREATE`'s refusal of an access without
+  PUT still comes first (unconfirmed for an indirect create).
+- `$CONNECT`: the ISI, nothing armed or moved. `$CLOSE`: the IFI cleared,
+  the file left open. `$DISPLAY` (`displayIndirect`): the original FAC,
+  the file's RSA, FID, and DVI, and for the terminal VFC, PRN, FSZ 2
+  and the device's DVI (VMS's RSA for it, `SYS$OUTPUT:[].LOG;`, isn't
+  written). `$PARSE` (`parseIndirect`): DVI the logical name, DEV and
+  SDC both the device's characteristics; `$SEARCH` after it was already
+  RMS$_DEV, SS$_NOSUCHDEV.
+- The RAB services find an indirect stream by `LookupStream`. `$GET` and
+  `$FIND` need the original open's GET, `$PUT` its PUT (RMS$_FAC,
+  `indirectAccess`), `$REWIND` is RMS$_IOP; `$ERASE` of an open FAB was
+  already RMS$_IFI. A `$PUT` to a VFC print file takes carriage control
+  from the accessor's RAT (CR: `01 8D`, as DCL's records; otherwise
+  zeros; unconfirmed, `indirectControl`).
+- Not modeled: the guide's "no random access" for SQO files (an indirect
+  `$GET` by RFA goes through), and a name whose file has been closed is
+  RMS$_IFI at `$OPEN` and RMS$_DEV at `$PARSE` (both unconfirmed).
+
+Found on the way: `$CREATE` ignored FAB$B_FSZ, so a VFC file it made
+had no fixed control; it now takes FSZ, 0 meaning 2 (RMS manual).
+
+Tests (`internal/rms/ppf_test.go`): `TestPermanentWords` (the probe's
+words), `TestPermanent_outputIndirect` (O1, O2, O4: the FAB and NAM,
+`$DISPLAY`, the refusals, `$CLOSE`, rundown, the records with their
+carriage control), `TestPermanent_twoOpensOneStream` (O3, I1 to I9: two
+opens read one stream in turn; an input stream's characteristics),
+`TestPermanent_names` (O5 to O13: FOP, a name after the colon, an
+alias, `$PARSE` and `$SEARCH`, a default name, a copied string, a closed
+file), and `TestPermanent_terminal`. Nothing makes entries yet but the
+tests: process startup's (subtask 5), the procedures' (6), and OPEN's
+(7) come next.

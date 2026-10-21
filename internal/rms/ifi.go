@@ -172,6 +172,10 @@ type FileTable struct {
 	// searches is $PARSE and $SEARCH's wildcard contexts, by number
 	// (search.go).
 	searches map[uint32]*searchState
+
+	// permanent is the process-permanent files, by index (ppf.go): not
+	// the image's, so not in handles, which rundown closes.
+	permanent map[uint16]*PermanentEntry
 }
 
 // NewFileTable returns a FileTable with IFI 1 (SYS$OUTPUT) pre-seeded to

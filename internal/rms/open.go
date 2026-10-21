@@ -74,6 +74,13 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// FAB$V_PPF is for opens in executive mode, which no program's is:
+	// VMS 7.1 refused it before processing the name (testdata/ppf71's
+	// O5).
+	if fop&fopPPF != 0 {
+		return fabStatus(ctx, fabAddr, rmsPrivilegeViolation, 0)
+	}
+
 	if sts := ufoSharing(fop, shr); sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, 0)
 	}
@@ -134,6 +141,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 
 		if p.FNB&fnbWildcard != 0 {
 			return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
+		}
+
+		// A process-permanent file is reached indirectly (ppfaccess.go).
+		if p.Permanent != nil {
+			return ctx.openIndirect(fabAddr, nam, p, fop)
 		}
 
 		devIFI, isDevice, devStatus, devSTV, err := ctx.openRecordDevice(fabAddr, p.Lookup, fac)

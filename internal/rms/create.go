@@ -72,6 +72,13 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// FAB$V_PPF is for opens in executive mode, which no program's is:
+	// VMS 7.1 refused it before processing the name (testdata/ppf71's
+	// O5).
+	if fop&fopPPF != 0 {
+		return fabStatus(ctx, fabAddr, rmsPrivilegeViolation, 0)
+	}
+
 	// FAB$L_ALQ as the program set it: a user file open's end of file
 	// (ufoEndOfFile), before the create writes back the allocation.
 	alqInput, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
@@ -124,6 +131,12 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 	if p.FNB&fnbWildcard != 0 {
 		return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
+	}
+
+	// A process-permanent file is reached indirectly, $CREATE being
+	// $OPEN then (ppfaccess.go).
+	if p.Permanent != nil {
+		return ctx.openIndirect(fabAddr, nam, p, fop)
 	}
 
 	var (
@@ -357,6 +370,21 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		Format:        format,
 		Attributes:    rat,
 		MaxRecordSize: mrs,
+	}
+
+	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS
+	// manual, FAB$B_FSZ).
+	if format == ondisk.RecordFormatVFC {
+		fsz, err := ctx.loadByte(fabAddr + fabOffset("FSZ"))
+		if err != nil {
+			return 0, found, false, 0, err
+		}
+
+		if fsz == 0 {
+			fsz = 2
+		}
+
+		recAttr.VfcSize = fsz
 	}
 
 	f, err := vol.CreateFileVersion(dir, name, version, recAttr, bm, ib)

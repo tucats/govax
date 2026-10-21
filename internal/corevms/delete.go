@@ -225,9 +225,15 @@ func (sys *System) awaitSubprocesses(env *Environment) bool {
 // leaves a process's privileged-mode state for its next image): every
 // channel, in any access mode, so a temporary mailbox the process held
 // the last channel to is deleted; every device it allocated; and every
-// AST, exit handler, and I/O request still queued, in any mode; and
-// every lock it holds or waits for.
+// AST, exit handler, and I/O request still queued, in any mode; every
+// lock it holds or waits for; and its process-permanent files, which
+// image rundown leaves open.
 func (env *Environment) processRundown() {
+	if n, err := env.files.ClosePermanentFiles(); n > 0 && env.cpu.DebugEnabled(registers.DebugProcess) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d process-permanent file(s), error %v\n",
+			env.Process.PID, n, err)
+	}
+
 	for _, c := range append([]*channel(nil), env.channels...) {
 		env.releaseChannel(c)
 	}
@@ -314,10 +320,11 @@ func (sys *System) releaseMemory(env *Environment) {
 // wrote and never closed is on the volume (rms.FileTable.Rundown), and
 // the host files it opened through the C library's descriptors, which on
 // VMS are RMS files too. VMS keeps a process-permanent file, one opened
-// in executive mode (by DCL), open across images; govax doesn't record
-// the mode a file was opened in, and every file its programs open is the
-// image's, so it closes them all. Its terminal stays open. A process
-// with no files open is left as it was.
+// in executive mode (by DCL), open across images: govax keeps those apart
+// (rms's ppf.go), and only process deletion closes them
+// (processRundown). Every file a program opens is the image's, so it
+// closes them all. Its terminal stays open. A process with no files open
+// is left as it was.
 func (env *Environment) CloseFiles() {
 	if n, err := env.files.Rundown(); n > 0 && env.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d file(s), error %v\n",

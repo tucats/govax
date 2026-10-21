@@ -44,7 +44,7 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	handle, ok := ctx.Files.Lookup(ifi)
+	handle, ok := ctx.Files.LookupStream(ifi)
 	if !ok {
 		// Lookup returning false means this RAB was never SYS$CONNECTed
 		// at all (RAB$W_ISI is still whatever zero value newFAB-style
@@ -53,6 +53,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 		// range) — a real, expected RMS$_IFI condition, not a bug in
 		// this package.
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
+	}
+
+	if sts, err := ctx.indirectAccess(rabAddr, facPut); err != nil || sts != 0 {
+		return sts, err
 	}
 
 	rac, err := ctx.loadByte(rabAddr + rabRAC)
@@ -106,6 +110,12 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// stricter string type). record is what both the console-write and
 	// the ods2 Writer.Put paths below actually consume.
 	record := []byte(recordString)
+
+	// An indirect accessor's record to a VFC file takes the fixed
+	// control its record attributes call for (ppfaccess.go).
+	if control := ctx.indirectControl(ifi, handle); len(control) > 0 {
+		record = append(control, record...)
+	}
 
 	if handle.IsRecordDevice() {
 		return putRecordDevice(ctx, rabAddr, handle, record)

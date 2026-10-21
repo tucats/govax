@@ -34,6 +34,10 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 		return sts, err
 	}
 
+	if sts, err := ctx.indirectAccess(rabAddr, facGet); err != nil || sts != 0 {
+		return sts, err
+	}
+
 	if handle.IsConsole() || handle.IsRecordDevice() {
 		return findOnDevice(ctx, rabAddr, handle)
 	}
@@ -324,13 +328,20 @@ func SysDelete(ctx *Context, argv []uint32) (uint32, error) {
 // SysRewind implements SYS$REWIND (RAB at argv[0]): the stream's next
 // record becomes the file's first; the current record is unchanged (the
 // guide, Table 8-3). On a terminal or a mailbox it does nothing
-// (unconfirmed).
+// (unconfirmed). An indirect accessor's is RMS$_IOP: a process-permanent
+// file's stream can't be rewound (VMS 7.1, testdata/ppf71's O1, I4, F5).
 func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 	rabAddr := argv[0]
 
 	handle, sts, err := ctx.streamOf(rabAddr)
 	if err != nil || sts != 0 {
 		return sts, err
+	}
+
+	if isi, err := ctx.loadWord(rabAddr + rabISI); err != nil {
+		return 0, err
+	} else if isIndirect(isi) {
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
 	}
 
 	if !handle.IsConsole() && !handle.IsRecordDevice() {

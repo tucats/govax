@@ -19,6 +19,10 @@ func SysDisplay(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	if e, ok := ctx.Files.indirectFile(ifi); ok {
+		return ctx.displayIndirect(fab, e)
+	}
+
 	h, ok := ctx.Files.Lookup(ifi)
 	if !ok || h.IsConsole() || h.IsRecordDevice() {
 		return fabStatus(ctx, fab, rmsInvalidIFI, 0)

@@ -344,6 +344,11 @@ type parsedName struct {
 
 	// FNB is the NAM$L_FNB bits name processing sets.
 	FNB uint32
+
+	// Permanent, when the name led to a process-permanent file (ppf.go),
+	// is the file; Dev is then the logical name whose string named it,
+	// with a colon, and Lookup that name.
+	Permanent *lnm.PermanentFile
 }
 
 // String is the expanded specification.
@@ -410,6 +415,11 @@ var (
 type translatedName struct {
 	fileName
 	Concealed string
+
+	// Permanent is the process-permanent file the name led to, if any:
+	// the fields are then only the program's own, with the logical name
+	// as the device.
+	Permanent *lnm.PermanentFile
 }
 
 // translateName translates text's logical name and scans each result,
@@ -431,6 +441,16 @@ func translateName(db *lnm.Database, text string) ([]translatedName, uint32) {
 		own, sts := scanName(f.Remainder)
 		if sts != 0 {
 			return nil, sts
+		}
+
+		// A process-permanent file ends name processing: the device is
+		// the logical name, and nothing else is merged (the Guide to
+		// OpenVMS File Applications, 6.2).
+		if f.Permanent != nil {
+			own.Dev = f.PermanentName + ":"
+			out = append(out, translatedName{fileName: own, Permanent: f.Permanent})
+
+			continue
 		}
 
 		prefix := f.Spec[:len(f.Spec)-len(f.Remainder)]
@@ -542,6 +562,12 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 	searchList := len(primaries) > 1
 
 	for _, p := range primaries {
+		if perm := permanentName(p, defs[0]); perm != nil {
+			out = append(out, *perm)
+
+			continue
+		}
+
 		var fnb uint32
 
 		if p.Dev != "" {
@@ -647,6 +673,41 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 	}
 
 	return out, 0
+}
+
+// permanentName is the name a primary name p, with the default name def,
+// expands to when either leads to a process-permanent file: p's device
+// or, when it has none, def's (NAM$M_EXP_DEV only for p's own). Only the
+// device comes from def (VMS 7.1:
+// F$PARSE("X.DAT","SYS$OUTPUT") is SYS$OUTPUT:X.DAT;); the name has no
+// directory, and no other default applies. It is nil for any other name.
+func permanentName(p, def translatedName) *parsedName {
+	fnb := fnbPPF | fnbExpDev
+
+	if p.Permanent == nil {
+		if p.Dev != "" || def.Permanent == nil {
+			return nil
+		}
+
+		p.Permanent, p.Dev = def.Permanent, def.Dev
+		fnb = fnbPPF
+	}
+
+	for _, f := range []struct {
+		field string
+		bit   uint32
+	}{{p.Dir, fnbExpDir}, {p.Name, fnbExpName}, {p.Type, fnbExpType}, {p.Ver, fnbExpVer}} {
+		if f.field != "" {
+			fnb |= f.bit
+		}
+	}
+
+	dir := p.Dir
+	n := finishName(p.fileName, "", fnb, false)
+	n.Dir = dir
+	n.Permanent = p.Permanent
+
+	return &n
 }
 
 // finishName fills in the fields no source gave and works out the FNB

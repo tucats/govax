@@ -1,9 +1,5 @@
 package rms
 
-import (
-	odsrms "github.com/tucats/ods2/rms"
-)
-
 // SysConnect implements SYS$CONNECT: given a RAB's VAX address (argv[0]),
 // binds it to the IFI ("internal file index" — see ifi.go's FileTable)
 // its related FAB already holds, and — for a real ODS-2-backed file, as
@@ -42,6 +38,17 @@ func SysConnect(ctx *Context, argv []uint32) (uint32, error) {
 	ifi, err := ctx.loadWord(fabAddr + fabIFI)
 	if err != nil {
 		return 0, err
+	}
+
+	// An indirect accessor's stream is the process-permanent file's one
+	// stream, already connected: the RAB gets its ISI, with the record
+	// attributes the FAB's IFI saved (ppf.go).
+	if e, ok := ctx.Files.indirectFile(ifi); ok {
+		if err := ctx.storeWord(rabAddr+rabISI, indirectWord(e.stream, wordRAT(ifi))); err != nil {
+			return 0, err
+		}
+
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)
 	}
 
 	handle, ok := ctx.Files.Lookup(ifi)
@@ -114,35 +121,8 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr, rabAddr uint32) (failS
 
 	// The stream's context starts at the first record, or with RAB$V_EOF
 	// at the end of the file (RMS manual, RAB$L_ROP); a $PUT at the start
-	// of a file with records in it is RMS$_NEF (stream.go).
-	handle.startStream(fac, rop)
-
-	if fac&facPut != 0 && handle.Writer == nil {
-		w, err := odsrms.NewAppender(handle.File)
-		if err != nil {
-			// handle.File wasn't armed for writing (volume.File.
-			// OpenForWrite never called on it) or has an unsupported
-			// record format — a real ods2-layer problem, not a Go bug, so
-			// it's reported as an ordinary RMS device error rather than
-			// propagated.
-			return rmsDeviceError, nil
-		}
-
-		// A file others may read or write, or that this stream also reads
-		// or changes in place, gets each record on the disk as it's put,
-		// at the end of file as it is then.
-		w.SetShared(handle.Accessor != nil && handle.stream.fresh)
-		handle.Writer = w
-	}
-
-	if fac&facReads != 0 && handle.Reader == nil {
-		r, err := odsrms.NewReader(handle.File)
-		if err != nil {
-			return rmsDeviceError, nil
-		}
-
-		handle.Reader = r
-	}
-
-	return 0, nil
+	// of a file with records in it is RMS$_NEF (stream.go). A Reader or
+	// Writer the file has already is kept: a second RAB connected to it
+	// continues the same stream rather than racing it.
+	return handle.arm(fac, rop), nil
 }

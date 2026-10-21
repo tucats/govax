@@ -41,6 +41,16 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// An indirect accessor's $CLOSE ends its access, and leaves the
+	// process-permanent file open (ppf.go).
+	if _, ok := ctx.Files.indirectFile(ifi); ok {
+		if err := ctx.storeWord(fabAddr+fabIFI, 0); err != nil {
+			return 0, err
+		}
+
+		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsNormal)
+	}
+
 	handle, ok := ctx.Files.Lookup(ifi)
 	if !ok {
 		// Either this FAB's FAB$W_IFI was never set by a successful
