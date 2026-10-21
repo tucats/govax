@@ -228,7 +228,13 @@ against real VMS.
   it and RMS uses it. govax stores the plain device name, and RMS reaches
   the console through its `TTA0` device special case instead.
 - **Status**: open, deliberate. Out of scope until RMS models
-  process-permanent files.
+  process-permanent files. **Revisited 2026-10-21**: Phase 71
+  (`docs/PHASE-71 - process-permanent files.md`) plans VMS's model in
+  place of the special cases, and its probe (`testdata/ppf71`) awaits a
+  VAX run. govax's dry run of the probe found worse than a missing
+  prefix: an image's `$CREATE` of a name DCL's OPEN defined makes a new
+  file named after the name's text (`_GOVAX$DUA1.;1`), and
+  `@file/OUTPUT=` leaves SYS$OUTPUT translating to the terminal.
 
 ### [Phase 25] Smaller DCL/RMS simplifications
 

@@ -204,8 +204,13 @@ never had.
   are the Internals book's, the messages and dumps go where `$PUTMSG`'s
   do (`corevms/msgout.go`), integer overflow and divide by zero trap
   (`cpu/inttrap.go`), and an AST routine returns through EXE$ASTRET in
-  S0; checked against VMS 7.1 by `testdata/tb70`. Each later phase has
-  a planning doc.
+  S0; checked against VMS 7.1 by `testdata/tb70`.
+  Phase 71 (planned 2026-10-21) is process-permanent files: the ESC/IFI
+  equivalence strings, one RMS table of files that outlive images, and
+  indirect access (the *Guide to OpenVMS File Applications*, 6.6), in
+  place of RMS's TTA0: case, `corevms/outfile.go`, `RedirectInput`,
+  and DCL's name walk; its probe, `testdata/ppf71`, awaits a VAX run.
+  Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -1,0 +1,795 @@
+	.TITLE	PPF71	Phase 71 process-permanent file probe
+	.IDENT	/V1.0/
+;
+; Phase 71's probe (docs/PHASE-71 - process-permanent files.md, subtask
+; 1; README.md here). It asks VMS how a process-permanent file looks to
+; an image: the ESC/IFI equivalence strings of SYS$INPUT, SYS$OUTPUT,
+; SYS$ERROR, SYS$COMMAND, and the names DCL's OPEN defines, at each
+; access mode; what $GETDVI and $ASSIGN make of them; and RMS's indirect
+; access (the Guide to OpenVMS File Applications, 6.6): what $OPEN and
+; $CREATE of such a name return in the FAB and NAM, a shared record
+; position, which operations are refused, and what image rundown leaves.
+;
+; The logical name PPF71_PART picks the part, one letter:
+;
+;   T  translations: $TRNLNM of the process-permanent names (and of
+;      the other names PPF71.COM defines) in LNM$FILE_DEV, at executive,
+;      supervisor, and user mode, each with its length, attributes, mode,
+;      table, first four bytes, and text
+;   D  devices: $GETDVIW and $ASSIGN of those names, and $GETDVIW of the
+;      channel
+;   O  SYS$OUTPUT through RMS: $OPEN and $CREATE, two opens at once,
+;      operations an indirect accessor may not do, FAC and FOP choices,
+;      names with more after the colon, $PARSE and $SEARCH, a copy of the
+;      equivalence string under another name, SYS$ERROR and SYS$COMMAND
+;   I  SYS$INPUT through RMS: the procedure's data lines read through
+;      two opens at once, $REWIND and $FIND, the end, a $PUT
+;   F  files DCL's OPEN opened (PPF71_IN, read; PPF71_OUT, write): read
+;      and written through indirect opens between DCL's own READs and
+;      WRITEs
+;   X  SYS$OUTPUT opened, a record written, and the image ended without
+;      a $CLOSE
+;
+; Every line the program writes goes through LIB$PUT_OUTPUT. Each case
+; writes a line saying what it is first.
+;
+	$FABDEF
+	$RABDEF
+	$NAMDEF
+	$LNMDEF
+	$DVIDEF
+
+MODE_EXEC	= 1
+MODE_SUPER	= 2
+MODE_USER	= 3
+EQVMAX		= 255
+
+; One set of RMS blocks: a FAB, its RAB and NAM, the NAM's expanded and
+; resultant strings, and a record buffer, at these offsets.
+S_FAB	= 0
+S_RAB	= S_FAB+FAB$C_BLN
+S_NAM	= S_RAB+RAB$C_BLN
+S_ESA	= S_NAM+NAM$C_BLN
+S_RSA	= S_ESA+256
+S_BUF	= S_RSA+256
+S_LEN	= S_BUF+256
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; TRN name, mode: report $TRNLNM of name in LNM$FILE_DEV at mode.
+	.MACRO	TRN	NAME,MODE,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	/NAME/
+OVER:	PUSHL	#MODE
+	PUSHAQ	LBL
+	CALLS	#2,TRNR
+	.ENDM	TRN
+
+; DVI name: report $GETDVIW and $ASSIGN of name.
+	.MACRO	DVI	NAME,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	/NAME/
+OVER:	PUSHAQ	LBL
+	CALLS	#1,DVIR
+	.ENDM	DVI
+
+; SETUP set, name, fac, fop: make set's blocks new, its FAB naming name
+; with FAC fac and FOP fop, and connected to its RAB and NAM.
+	.MACRO	SETUP	SET,NAME,FAC,FOP=#0,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	/NAME/
+OVER:	PUSHL	FOP
+	PUSHL	FAC
+	PUSHAQ	LBL
+	PUSHAB	SET
+	CALLS	#4,SETUPR
+	.ENDM	SETUP
+
+; DO op, set: do one RMS operation on set and report it (op is OPEN,
+; CREATE, CONNECT, GET, FIND, REWIND, ERASE, DISPLAY, CLOSE, PARSE, or
+; SEARCH).
+	.MACRO	DO	OP,SET
+	PUSHAB	SET
+	CALLS	#1,OP'R
+	.ENDM	DO
+
+; PUT set, text: $PUT the record text through set's RAB and report it.
+	.MACRO	PUT	SET,TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	/TEXT/
+OVER:	PUSHAQ	LBL
+	PUSHAB	SET
+	CALLS	#2,PUTR
+	.ENDM	PUT
+
+	.PSECT	DATA,NOEXE,WRT,LONG
+
+PARTNAM: .ASCID	/PPF71_PART/
+FILEDEV: .ASCID	/LNM$FILE_DEV/
+PROCTAB: .ASCID	/LNM$PROCESS_TABLE/
+COPYNAM: .ASCID	/PPF71_COPY/
+OUTNAM:	.ASCID	/SYS$OUTPUT/
+PART:	.LONG	0
+PARTLEN: .LONG	0
+PARTLST: .WORD	4,LNM$_STRING
+	.ADDRESS PART,PARTLEN
+	.LONG	0
+
+; Each part's routine, by letter (0: no such part).
+PARTTAB: .LONG	0			; A
+	.LONG	0			; B
+	.LONG	0			; C
+	.ADDRESS PART_D			; D
+	.LONG	0			; E
+	.ADDRESS PART_F			; F
+	.LONG	0			; G
+	.LONG	0			; H
+	.ADDRESS PART_I			; I
+	.LONG	0			; J
+	.LONG	0			; K
+	.LONG	0			; L
+	.LONG	0			; M
+	.LONG	0			; N
+	.ADDRESS PART_O			; O
+	.LONG	0			; P
+	.LONG	0			; Q
+	.LONG	0			; R
+	.LONG	0			; S
+	.ADDRESS PART_T			; T
+	.LONG	0			; U
+	.LONG	0			; V
+	.LONG	0			; W
+	.ADDRESS PART_X			; X
+	.LONG	0			; Y
+	.LONG	0			; Z
+
+; $FAOL's output.
+OUTD:	.LONG	200
+	.ADDRESS OUTBUF
+OUTBUF:	.BLKB	200
+OUTLEN:	.WORD	0
+
+; $TRNLNM's arguments and results.
+MODEB:	.BYTE	0
+EQV:	.BLKB	EQVMAX
+EQVLEN:	.LONG	0
+ATTRS:	.LONG	0
+ACMB:	.LONG	0
+TAB:	.BLKB	32
+TABLEN:	.LONG	0
+TRNLST:	.WORD	EQVMAX,LNM$_STRING
+	.ADDRESS EQV,EQVLEN
+	.WORD	4,LNM$_ATTRIBUTES
+	.ADDRESS ATTRS,0
+	.WORD	1,LNM$_ACMODE
+	.ADDRESS ACMB,0
+	.WORD	31,LNM$_TABLE
+	.ADDRESS TAB,TABLEN
+	.LONG	0
+
+; $CRELNM's item list for PPF71_COPY: the equivalence string $TRNLNM
+; returned for SYS$OUTPUT, as it is.
+CRELST:	.WORD	0,LNM$_STRING
+	.ADDRESS EQV,0
+	.LONG	0
+
+; $GETDVIW's arguments and results.
+CHAN:	.WORD	0
+IOSB:	.QUAD	0
+DEVNAM:	.BLKB	64
+DEVLEN:	.LONG	0
+FULLNAM: .BLKB	64
+FULLLEN: .LONG	0
+DEVCLS:	.LONG	0
+DEVCHR:	.LONG	0
+DVILST:	.WORD	64,DVI$_DEVNAM
+	.ADDRESS DEVNAM,DEVLEN
+	.WORD	64,DVI$_FULLDEVNAM
+	.ADDRESS FULLNAM,FULLLEN
+	.WORD	4,DVI$_DEVCLASS
+	.ADDRESS DEVCLS,0
+	.WORD	4,DVI$_DEVCHAR
+	.ADDRESS DEVCHR,0
+	.LONG	0
+
+; The operations' names, for the reports.
+L_OPEN:	.ASCID	/$OPEN/
+L_CREATE: .ASCID /$CREATE/
+L_CONNECT: .ASCID /$CONNECT/
+L_GET:	.ASCID	/$GET/
+L_FIND:	.ASCID	/$FIND/
+L_REWIND: .ASCID /$REWIND/
+L_ERASE: .ASCID	/$ERASE/
+L_DISPLAY: .ASCID /$DISPLAY/
+L_CLOSE: .ASCID	/$CLOSE/
+L_PARSE: .ASCID	/$PARSE/
+L_SEARCH: .ASCID /$SEARCH/
+L_PUT:	.ASCID	/$PUT/
+
+; Scratch longwords for the reports' arguments.
+T1:	.LONG	0
+T2:	.LONG	0
+T3:	.LONG	0
+T4:	.LONG	0
+T5:	.LONG	0
+T6:	.LONG	0
+T7:	.LONG	0
+T8:	.LONG	0
+T9:	.LONG	0
+
+; The templates SETUP copies, and two sets of blocks.
+FABT:	$FAB
+RABT:	$RAB
+NAMT:	$NAM
+	.ALIGN	LONG
+SET1:	.BLKB	S_LEN
+SET2:	.BLKB	S_LEN
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+
+; The main routine: run the part PPF71_PART names.
+	.ENTRY	PPF71,^M<R2>
+	$TRNLNM_S TABNAM=FILEDEV,LOGNAM=PARTNAM,ITMLST=PARTLST
+	BLBS	R0,10$
+	SAY	</no PPF71_PART/>
+	MOVL	#1,R0
+	RET
+10$:	MOVZBL	PART,R2
+	SUBL2	#^A/A/,R2
+	CMPL	R2,#25
+	BGTRU	20$
+	MOVL	PARTTAB[R2],R2
+	BEQL	20$
+	CALLS	#0,(R2)
+	MOVL	#1,R0
+	RET
+20$:	SAY	</no such part/>
+	MOVL	#1,R0
+	RET
+
+; Part T: translations.
+	.ENTRY	PART_T,^M<>
+	SAY	</T1 the process-permanent names, executive mode/>
+	TRN	SYS$INPUT,MODE_EXEC
+	TRN	SYS$OUTPUT,MODE_EXEC
+	TRN	SYS$ERROR,MODE_EXEC
+	TRN	SYS$COMMAND,MODE_EXEC
+	SAY	</T2 supervisor mode/>
+	TRN	SYS$INPUT,MODE_SUPER
+	TRN	SYS$OUTPUT,MODE_SUPER
+	TRN	SYS$ERROR,MODE_SUPER
+	TRN	SYS$COMMAND,MODE_SUPER
+	SAY	</T3 user mode/>
+	TRN	SYS$INPUT,MODE_USER
+	TRN	SYS$OUTPUT,MODE_USER
+	TRN	SYS$ERROR,MODE_USER
+	TRN	SYS$COMMAND,MODE_USER
+	SAY	</T4 other names, user mode/>
+	TRN	TT,MODE_USER
+	TRN	SYS$DISK,MODE_USER
+	TRN	PPF71_IN,MODE_USER
+	TRN	PPF71_OUT,MODE_USER
+	TRN	PPF71_ALIAS,MODE_USER
+	TRN	PPF71_DCLCOPY,MODE_USER
+	TRN	SYS$OUTPUT:,MODE_USER
+	RET
+
+; Part D: devices.
+	.ENTRY	PART_D,^M<>
+	SAY	</D1 the process-permanent names/>
+	DVI	SYS$INPUT
+	DVI	SYS$OUTPUT
+	DVI	SYS$ERROR
+	DVI	SYS$COMMAND
+	SAY	</D2 other names/>
+	DVI	SYS$OUTPUT:
+	DVI	TT
+	DVI	PPF71_IN
+	DVI	PPF71_OUT
+	DVI	PPF71_ALIAS
+	DVI	PPF71_DCLCOPY
+	RET
+
+; Part O: SYS$OUTPUT through RMS.
+	.ENTRY	PART_O,^M<R2,R3,R4,R5>
+	SAY	</O1 $OPEN SYS$OUTPUT, FAC=PUT, then every operation/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O1 a record through an indirect open>
+	DO	DISPLAY,SET1
+	DO	REWIND,SET1
+	DO	FIND,SET1
+	DO	GET,SET1
+	DO	ERASE,SET1
+	DO	CLOSE,SET1
+
+	SAY	</O2 $CREATE SYS$OUTPUT, FAC=PUT/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT
+	DO	CREATE,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O2 a record through an indirect create>
+	DO	CLOSE,SET1
+
+	SAY	</O3 two opens of SYS$OUTPUT at once/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	SETUP	SET2,SYS$OUTPUT,#FAB$M_PUT
+	DO	OPEN,SET2
+	DO	CONNECT,SET2
+	PUT	SET1,<O3 first open, record 1>
+	PUT	SET2,<O3 second open, record 1>
+	PUT	SET1,<O3 first open, record 2>
+	DO	CLOSE,SET2
+	PUT	SET1,<O3 first open, after the second closed>
+	DO	CLOSE,SET1
+
+	SAY	</O4 $OPEN SYS$OUTPUT, FAC=GET, then a $PUT/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O4 a record put with FAC=GET>
+	DO	CLOSE,SET1
+
+	SAY	</O5 $OPEN SYS$OUTPUT, FOP=PPF/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT,#FAB$M_PPF
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</O6 $OPEN SYS$OUTPUT, FOP=UFO/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT,#FAB$M_UFO
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</O7 $OPEN SYS$OUTPUT, FOP=NFS/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT,#FAB$M_NFS
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+
+	SAY	</O8 $OPEN SYS$OUTPUT: (with the colon)/>
+	SETUP	SET1,SYS$OUTPUT:,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</O9 $OPEN SYS$OUTPUT:PPF71X.DAT/>
+	SETUP	SET1,SYS$OUTPUT:PPF71X.DAT,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</O10 $OPEN _SYS$OUTPUT: (translation suppressed)/>
+	SETUP	SET1,_SYS$OUTPUT:,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</O11 $OPEN PPF71_ALIAS (DCL defined it as SYS$OUTPUT)/>
+	SETUP	SET1,PPF71_ALIAS,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O11 a record through PPF71_ALIAS>
+	DO	CLOSE,SET1
+
+	SAY	</O12 $PARSE and $SEARCH of SYS$OUTPUT/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT
+	DO	PARSE,SET1
+	DO	SEARCH,SET1
+
+	SAY	</O13 PPF71_COPY: SYS$OUTPUT's string, user mode, by $CRELNM/>
+	MOVB	#MODE_USER,MODEB
+	$TRNLNM_S TABNAM=FILEDEV,LOGNAM=OUTNAM,ACMODE=MODEB,ITMLST=TRNLST
+	MOVW	EQVLEN,CRELST
+	$CRELNM_S TABNAM=PROCTAB,LOGNAM=COPYNAM,ACMODE=MODEB,ITMLST=CRELST
+	MOVL	R0,R2
+	SAY	</  $CRELNM !XL/>,R2
+	TRN	PPF71_COPY,MODE_USER
+	DVI	PPF71_COPY
+	SETUP	SET1,PPF71_COPY,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O13 a record through PPF71_COPY>
+	DO	CLOSE,SET1
+
+	SAY	</O14 SYS$ERROR: $OPEN, a $PUT/>
+	SETUP	SET1,SYS$ERROR,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<O14 a record through SYS$ERROR>
+	DO	CLOSE,SET1
+	SAY	</O15 SYS$COMMAND: $OPEN only/>
+	SETUP	SET1,SYS$COMMAND,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	RET
+
+; Part I: SYS$INPUT through RMS. PPF71.COM gives the image eight data
+; lines.
+	.ENTRY	PART_I,^M<R2,R3,R4,R5,R6>
+	SAY	</I1 $OPEN SYS$INPUT, two records/>
+	SETUP	SET1,SYS$INPUT,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	DO	GET,SET1
+	DO	GET,SET1
+	SAY	</I2 a second open, a record/>
+	SETUP	SET2,SYS$INPUT,#FAB$M_GET
+	DO	OPEN,SET2
+	DO	CONNECT,SET2
+	DO	GET,SET2
+	SAY	</I3 the first open again/>
+	DO	GET,SET1
+	SAY	</I4 $REWIND, then a record/>
+	DO	REWIND,SET1
+	DO	GET,SET1
+	SAY	</I5 $FIND, then a record/>
+	DO	FIND,SET1
+	DO	GET,SET1
+	SAY	</I6 $DISPLAY/>
+	DO	DISPLAY,SET1
+	SAY	</I7 the rest, through the second open/>
+	MOVL	#10,R6
+10$:	DO	GET,SET2
+	BLBC	R0,20$
+	SOBGTR	R6,10$
+20$:	SAY	</I8 the first open, after the end/>
+	DO	GET,SET1
+	DO	CLOSE,SET2
+	DO	CLOSE,SET1
+	SAY	</I9 $OPEN SYS$INPUT, FAC=PUT, then a $PUT/>
+	SETUP	SET1,SYS$INPUT,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<I9 a record put to SYS$INPUT>
+	DO	CLOSE,SET1
+	SAY	</I10 $CREATE SYS$INPUT/>
+	SETUP	SET1,SYS$INPUT,#FAB$M_PUT
+	DO	CREATE,SET1
+	DO	CLOSE,SET1
+	RET
+
+; Part F: the files DCL's OPEN opened. PPF71.COM has read PPF71_IN's
+; first record and written PPF71_OUT's first.
+	.ENTRY	PART_F,^M<R2,R3,R4,R5>
+	SAY	</F1 the names/>
+	TRN	PPF71_IN,MODE_SUPER
+	TRN	PPF71_IN,MODE_USER
+	TRN	PPF71_OUT,MODE_USER
+	DVI	PPF71_IN
+	SAY	</F2 $OPEN PPF71_IN, a record/>
+	SETUP	SET1,PPF71_IN,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	DO	GET,SET1
+	SAY	</F3 a second open, a record/>
+	SETUP	SET2,PPF71_IN,#FAB$M_GET
+	DO	OPEN,SET2
+	DO	CONNECT,SET2
+	DO	GET,SET2
+	SAY	</F4 the first open again/>
+	DO	GET,SET1
+	SAY	</F5 $REWIND, then a record/>
+	DO	REWIND,SET1
+	DO	GET,SET1
+	SAY	</F6 $FIND, then a record/>
+	DO	FIND,SET1
+	DO	GET,SET1
+	DO	CLOSE,SET2
+	DO	CLOSE,SET1
+	SAY	</F7 $OPEN PPF71_IN, FAC=PUT, then a $PUT/>
+	SETUP	SET1,PPF71_IN,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<F7 a record put to PPF71_IN>
+	DO	CLOSE,SET1
+	SAY	</F8 $OPEN PPF71_IN:PPF71X.DAT/>
+	SETUP	SET1,PPF71_IN:PPF71X.DAT,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CLOSE,SET1
+	SAY	</F9 $CREATE PPF71_OUT, a record, then a second open/>
+	SETUP	SET1,PPF71_OUT,#FAB$M_PUT
+	DO	CREATE,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<B2 from the image's create>
+	SETUP	SET2,PPF71_OUT,#FAB$M_PUT
+	DO	OPEN,SET2
+	DO	CONNECT,SET2
+	PUT	SET2,<B3 from the image's second open>
+	PUT	SET1,<B4 from the image's create again>
+	DO	CLOSE,SET2
+	DO	CLOSE,SET1
+	SAY	</F10 $OPEN PPF71_OUT, FAC=GET, a record/>
+	SETUP	SET1,PPF71_OUT,#FAB$M_GET
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	DO	GET,SET1
+	DO	CLOSE,SET1
+	RET
+
+; Part X: SYS$OUTPUT left open at image exit.
+	.ENTRY	PART_X,^M<>
+	SAY	</X1 $OPEN SYS$OUTPUT, a record, no $CLOSE/>
+	SETUP	SET1,SYS$OUTPUT,#FAB$M_PUT
+	DO	OPEN,SET1
+	DO	CONNECT,SET1
+	PUT	SET1,<X1 a record; the image now ends>
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP),OUTLEN=OUTLEN,OUTBUF=OUTD,PRMLST=8(AP)
+	MOVW	OUTLEN,OUTD
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#200,OUTD
+	RET
+
+; TRNR name, mode: $TRNLNM of name at mode, two lines: the status,
+; length, attributes, mode, and table; then the first four bytes (as
+; ESC/IFI would be: two bytes and a word), the whole string, and the
+; string after the fourth byte.
+	.ENTRY	TRNR,^M<R2,R3,R4,R5,R6>
+	MOVB	8(AP),MODEB
+	MOVC5	#0,(SP),#0,#EQVMAX,EQV
+	CLRL	EQVLEN
+	CLRL	ATTRS
+	CLRL	ACMB
+	CLRL	TABLEN
+	$TRNLNM_S TABNAM=FILEDEV,LOGNAM=@4(AP),ACMODE=MODEB,ITMLST=TRNLST
+	MOVL	R0,R6
+	SAY	</!AS at mode !UL: !XL, length !UL, attributes !XL, mode !UB, table !AF/>, -
+		4(AP),8(AP),R6,EQVLEN,ATTRS,ACMB,TABLEN,#TAB
+	BLBS	R6,5$
+	BRW	20$
+5$:	MOVZBL	EQV,R2
+	MOVZBL	EQV+1,R3
+	MOVZWL	EQV+2,R4
+	SUBL3	#4,EQVLEN,R5
+	BGEQ	10$
+	CLRL	R5
+10$:	SAY	</  bytes !XB !XB !XW, string "!AF", after 4 "!AF"/>, -
+		R2,R3,R4,EQVLEN,#EQV,R5,#EQV+4
+20$:	RET
+
+; DVIR name: $GETDVIW of name, $ASSIGN of it, and $GETDVIW of the
+; channel.
+	.ENTRY	DVIR,^M<R2,R3,R4,R5,R6>
+	CLRL	DEVLEN
+	CLRL	FULLLEN
+	CLRL	DEVCLS
+	CLRL	DEVCHR
+	CLRQ	IOSB
+	$GETDVIW_S DEVNAM=@4(AP),ITMLST=DVILST,IOSB=IOSB
+	MOVL	R0,R6
+	MOVZWL	IOSB,R2
+	SAY	</!AS: $GETDVIW !XL iosb !XW, devnam "!AF" full "!AF" class !UL char !XL/>, -
+		4(AP),R6,R2,DEVLEN,#DEVNAM,FULLLEN,#FULLNAM,DEVCLS,DEVCHR
+	CLRW	CHAN
+	$ASSIGN_S DEVNAM=@4(AP),CHAN=CHAN
+	MOVL	R0,R6
+	MOVZWL	CHAN,R2
+	SAY	</  $ASSIGN !XL, channel !UW/>,R6,R2
+	BLBS	R6,5$
+	BRW	10$
+5$:	CLRL	DEVLEN
+	CLRL	FULLLEN
+	$GETDVIW_S CHAN=CHAN,ITMLST=DVILST,IOSB=IOSB
+	MOVL	R0,R6
+	SAY	</  by channel: $GETDVIW !XL, devnam "!AF" full "!AF"/>, -
+		R6,DEVLEN,#DEVNAM,FULLLEN,#FULLNAM
+	$DASSGN_S CHAN=CHAN
+10$:	RET
+
+; SETUPR set, name, fac, fop: as SETUP.
+	.ENTRY	SETUPR,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6
+	MOVC5	#0,(SP),#0,#S_LEN,(R6)
+	MOVC3	#FAB$C_BLN,FABT,S_FAB(R6)
+	MOVC3	#RAB$C_BLN,RABT,S_RAB(R6)
+	MOVC3	#NAM$C_BLN,NAMT,S_NAM(R6)
+	MOVL	8(AP),R0
+	MOVB	(R0),FAB$B_FNS(R6)
+	MOVL	4(R0),FAB$L_FNA(R6)
+	MOVB	12(AP),FAB$B_FAC(R6)
+	MOVL	16(AP),FAB$L_FOP(R6)
+	MOVB	#FAB$C_VAR,FAB$B_RFM(R6)
+	MOVB	#FAB$M_CR,FAB$B_RAT(R6)
+	MOVAB	S_NAM(R6),FAB$L_NAM(R6)
+	MOVAB	S_FAB(R6),S_RAB+RAB$L_FAB(R6)
+	MOVAB	S_ESA(R6),S_NAM+NAM$L_ESA(R6)
+	MOVB	#255,S_NAM+NAM$B_ESS(R6)
+	MOVAB	S_RSA(R6),S_NAM+NAM$L_RSA(R6)
+	MOVB	#255,S_NAM+NAM$B_RSS(R6)
+	MOVAB	S_BUF(R6),S_RAB+RAB$L_UBF(R6)
+	MOVW	#255,S_RAB+RAB$W_USZ(R6)
+	MOVAB	S_BUF(R6),S_RAB+RAB$L_RBF(R6)
+	RET
+
+; The operations: each does one RMS service on its set and reports it.
+; Each returns the service's status in R0.
+	.ENTRY	OPENR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$OPEN	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_OPEN
+	CALLS	#2,FABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	CREATER,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$CREATE	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_CREATE
+	CALLS	#2,FABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	PARSER,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$PARSE	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_PARSE
+	CALLS	#2,FABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	SEARCHR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$SEARCH	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_SEARCH
+	CALLS	#2,FABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	DISPLAYR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$DISPLAY FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_DISPLAY
+	CALLS	#2,FABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	ERASER,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$ERASE	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_ERASE
+	CALLS	#2,FABSTS
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	CLOSER,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$CLOSE	FAB=(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_CLOSE
+	CALLS	#2,FABSTS
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	CONNECTR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$CONNECT RAB=S_RAB(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_CONNECT
+	CALLS	#2,RABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	GETR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MOVAB	S_BUF(R6),S_RAB+RAB$L_UBF(R6)
+	$GET	RAB=S_RAB(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_GET
+	CALLS	#2,RABREP
+	BLBC	R7,10$
+	MOVZWL	S_RAB+RAB$W_RSZ(R6),R2
+	SAY	</  record "!AF"/>,R2,S_RAB+RAB$L_RBF(R6)
+10$:	MOVL	R7,R0
+	RET
+
+	.ENTRY	FINDR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$FIND	RAB=S_RAB(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_FIND
+	CALLS	#2,RABREP
+	MOVL	R7,R0
+	RET
+
+	.ENTRY	REWINDR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	$REWIND	RAB=S_RAB(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_REWIND
+	CALLS	#2,RABREP
+	MOVL	R7,R0
+	RET
+
+; PUTR set, text: $PUT text as a record.
+	.ENTRY	PUTR,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MOVL	8(AP),R0
+	MOVW	(R0),S_RAB+RAB$W_RSZ(R6)
+	MOVL	4(R0),S_RAB+RAB$L_RBF(R6)
+	$PUT	RAB=S_RAB(R6)
+	MOVL	R0,R7
+	PUSHL	R6
+	PUSHAQ	L_PUT
+	CALLS	#2,RABREP
+	MOVL	R7,R0
+	RET
+
+; FABSTS label, set: the FAB's status, STV, and IFI.
+	.ENTRY	FABSTS,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6
+	MOVZWL	FAB$W_IFI(R6),R2
+	SAY	</!AS !XL stv !XL ifi !XW/>,4(AP),FAB$L_STS(R6),FAB$L_STV(R6),R2
+	RET
+
+; FABREP label, set: FABSTS's line, then the FAB's fields and the NAM's
+; outputs.
+	.ENTRY	FABREP,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6
+	MOVZWL	FAB$W_IFI(R6),R2
+	SAY	</!AS !XL stv !XL ifi !XW fop !XL dev !XL sdc !XL/>, -
+		4(AP),FAB$L_STS(R6),FAB$L_STV(R6),R2,FAB$L_FOP(R6),FAB$L_DEV(R6),FAB$L_SDC(R6)
+	MOVZBL	FAB$B_FAC(R6),T1
+	MOVZBL	FAB$B_SHR(R6),T2
+	MOVZBL	FAB$B_ORG(R6),T3
+	MOVZBL	FAB$B_RFM(R6),T4
+	MOVZBL	FAB$B_RAT(R6),T5
+	MOVZWL	FAB$W_MRS(R6),T6
+	MOVZBL	FAB$B_FSZ(R6),T7
+	SAY	</  fac !XB shr !XB org !XB rfm !XB rat !XB mrs !UW alq !UL fsz !UB/>, -
+		T1,T2,T3,T4,T5,T6,FAB$L_ALQ(R6),T7
+	MOVAB	S_NAM(R6),R2
+	MOVZBL	NAM$B_ESL(R2),T1
+	MOVZBL	NAM$B_RSL(R2),T2
+	MOVZWL	NAM$W_FID(R2),T3
+	MOVZWL	NAM$W_FID+2(R2),T4
+	MOVZWL	NAM$W_FID+4(R2),T5
+	MOVAB	NAM$T_DVI(R2),T6
+	MOVAB	S_ESA(R6),T7
+	MOVAB	S_RSA(R6),T8
+	SAY	</  esa "!AF" rsa "!AF" fnb !XL dvi "!AC" fid (!UW,!UW,!UW)/>, -
+		T1,T7,T2,T8,NAM$L_FNB(R2),T6,T3,T4,T5
+	RET
+
+; RABREP label, set: the RAB's status, STV, ISI, record size, and RFA.
+	.ENTRY	RABREP,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R6
+	MOVAB	S_RAB(R6),R2
+	MOVZWL	RAB$W_ISI(R2),T1
+	MOVZWL	RAB$W_RSZ(R2),T2
+	MOVZWL	RAB$W_RFA+4(R2),T3
+	SAY	</!AS !XL stv !XL isi !XW rsz !UW rfa !XL,!XW/>, -
+		4(AP),RAB$L_STS(R2),RAB$L_STV(R2),T1,T2,RAB$W_RFA(R2),T3
+	RET
+
+	.END	PPF71
