@@ -4,7 +4,8 @@
 accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
-after a blown run), and 4 (the arithmetic traps) are done.
+after a blown run), 4 (the arithmetic traps), and 5 (the image startup
+frame and the search's order) are done.
 
 ## Goal
 
@@ -561,3 +562,53 @@ ROPRAND lines: all as in `vax/tb70.log`. `inttrap_test.go`'s tests
 replace the three that held the old behavior. docs/DEVIATIONS.md has
 the entry ("[Phase 70] Integer overflow and divide-by-zero never
 trapped").
+
+### 2026-10-21 — Subtask 5: the image startup frame, and the search's order
+
+**Decision 1.** The traceback handler is `corevms/traceback.go`'s
+EXE$TRACEBACK, a shim (code 3000, outside LIBRTL's ranges) whose stub
+`EnsureShims` writes with the others (`corevms.CRTLLinks`, library
+EVAX). RUN's IMAGE$INIT driver (`machine/run.go`'s `buildDriver`, so
+also a `$CREPRC` process's and a subprocess's image) stores the stub's
+address in its own frame, `MOVL I^#handler, (FP)` after its entry
+mask, when the image's first transfer address is SYS$IMGSTA's: the
+image was linked with traceback. The search then finds it after every
+frame of the program's own, as VMS's does: in VMS's TB70 on govax,
+part V's access violation reaches it at depth 4 (AV2, AV1, PART_V,
+TB70, the driver), and TB70NT's goes to the catch-all.
+
+The handler, by the Internals book's 4.5.1 and 21.1.3.3: a warning,
+error, or severe condition (as the signal array has it now, so a
+handler's change counts) gets its message, and is continued (W, E) or
+ends the image by a tail call of `$EXIT` with the condition marked
+STS$M_INHIB_MSG (F), the dispatch removed; success, informational, and
+SS$_DEBUG are resignaled to the catch-all. The dump goes where the
+message ends (subtask 6). It offers the condition to the debugger as
+the catch-all does (`reportCondition`, now shared: the message once,
+then `OnUnhandled`, with the same ErrWait rerun). A condition raised
+while the image's exit handlers run is resignaled: on VMS image rundown
+has removed the startup frame by then (part X); `Process.exiting` is
+set by `$EXIT` and cleared at rundown (`cancelUserExitHandlers`).
+
+**Finding 4.** The frame walk's end (frame 0 or the console's sentinel)
+is now the catch-all's (`stageCatchAll`); the last-chance vector is
+searched only when a frame can't be read, as 4.5.2 says. VMS's TB70's
+S18 and V no longer call the program's last-chance handler.
+`testdata/asm/exception_vectors.asm`, which relied on the old order,
+now points FP at an address no page backs before its access violation,
+so its last-chance vector is reached the VMS way (its golden listing
+regenerated).
+
+**Finding 6.** The catch-all, and the traceback handler, show no
+message for a condition marked STS$M_INHIB_MSG (S5; TB70NT's S5 now
+prints nothing, as VMS's did).
+
+The debugger's step.dlg session differs from VMS's at two more
+commands (#40, #41) under the listed reason: its break on the
+unhandled warning now happens inside the traceback handler, so
+stepping out runs one more RET (the stub's) through the paused
+dispatcher. Tests: `traceback_test.go` (each severity, SS$_DEBUG, the
+exiting image, the inhibit bit), `TestSrchandler_catchAllBeforeLastChance`,
+`TestSrchandler_catchAllInhibited`, `TestSrchandler_vectors` (the last
+chance reached past an unreadable frame).
+

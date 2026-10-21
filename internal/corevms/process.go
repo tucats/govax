@@ -166,6 +166,11 @@ type Process struct {
 	// CTL$GL_THEXIT and friends (exit.go). Kernel mode's is always empty.
 	exitHandlers [4][]uint32
 
+	// exiting is true from the image's first $EXIT to its rundown, while
+	// its exit handlers run: the image startup's frame is VMS's no longer
+	// then, so its traceback handler passes conditions by (traceback.go).
+	exiting bool
+
 	// ExitStatus is the completion status of the last $EXIT, which VMS
 	// saves in the process header.
 	ExitStatus uint32

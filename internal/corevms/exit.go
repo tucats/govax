@@ -220,6 +220,7 @@ func serviceSysExit(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	p.ExitStatus = status
+	p.exiting = true
 
 	list := &p.exitHandlers[env.cpu.PSL().CurMod()]
 
@@ -274,9 +275,10 @@ func (env *Environment) ExitHandlers(mode registers.AccessMode) int {
 // cancelUserExitHandlers is image rundown's exit-handler step: user-mode
 // exit control blocks live in the image's memory, so any the image left
 // declared (it ended without $EXIT, or they were declared after it
-// began) are forgotten.
+// began) are forgotten, and the image is no longer exiting.
 func (env *Environment) cancelUserExitHandlers() {
 	env.Process.exitHandlers[registers.User] = nil
+	env.Process.exiting = false
 }
 
 func registerExitServices(t *ServiceTable) {

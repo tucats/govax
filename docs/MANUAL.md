@@ -2402,8 +2402,9 @@ Handler: caught an access violation, unwinding
 Main: back from RISKY, R0 = SS$_ACCVIO
 ```
 
-Without the handler, the access violation would reach VMS's last-chance
-handler, which ends the image with its message:
+Without the handler, the access violation would go unhandled: the
+traceback handler (or, for an image linked `/NOTRACEBACK`, the
+catch-all) ends the image with its message:
 
 ```text
 %SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000020E, PSL=03C00004
@@ -3461,9 +3462,12 @@ block* (SCB), a page of vectors. The debugger's `SHOW SCB` lists them.
 For a user program, VMS turns an exception into a *condition*: it builds
 a signal array and a mechanism array on the user stack and calls the
 condition handlers established in the call frames, innermost first (the
-handler in the program's frame at `(FP)`, then its caller's, ...),
-ending at the last-chance handler that prints the message and ends the
-image. govax does this in Go, calling the program's handlers as VAX
+handler in the program's frame at `(FP)`, then its caller's, ...).
+Below the program's frames are the image startup's, whose traceback
+handler (in an image linked with traceback) prints the message of a
+warning, error, or severe condition, and the catch-all's, which prints
+any other; a severe condition ends the image. The last-chance vector
+is searched only when the frames can't be read. govax does this in Go, calling the program's handlers as VAX
 procedures, so `LIB$SIGNAL`, `$UNWIND`, `LIB$ESTABLISH`, and handlers
 written in MACRO behave as on VMS (section 8, example 5).
 

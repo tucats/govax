@@ -4,9 +4,11 @@
 ;
 ;   1. $SETEXV sets the primary vector to PRIM (which counts its calls,
 ;      records its depth, and resignals) and the last-chance vector to
-;      LAST (which records its depth and continues at RESUME1). MAIN has
-;      no frame handler, so an access violation goes PRIM, the frames
-;      (none), then LAST.
+;      LAST (which records its depth and continues at RESUME1). The
+;      last-chance vector is searched only when the frames can't be
+;      read (the catch-all is the outermost frame's handler), so MAIN
+;      points FP at an address no page backs before the access
+;      violation, which goes PRIM, the frames (unreadable), then LAST.
 ;   2. $SETEXV clears the primary vector, getting PRIM back in PRVHND,
 ;      and sets the secondary vector to SEC, which continues at RESUME2.
 ;      A second access violation reaches SEC without PRIM being called.
@@ -17,7 +19,7 @@
 	.p1vector
 	.scb	exc$accvio, console$handler
 
-	.entry	main, ^m<>
+	.entry	main, ^m<r3>
 	pushl	#0			; prvhnd
 	pushl	#0			; acmode: the caller's
 	pushal	@#prim			; addres
@@ -30,8 +32,11 @@
 	pushl	#2			; last chance
 	calls	#4, @#sys$setexv
 	blbc	r0, fail
+	movl	fp, r3
+	movl	#^X30000000, fp		; no frame there
 	movl	@#0, r1			; access violation
 resume1:
+	movl	r3, fp
 	pushal	@#prvhnd
 	pushl	#0
 	pushl	#0			; no address: clear

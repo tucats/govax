@@ -59,11 +59,20 @@ import (
 //
 // A third answer is to unwind the stack with $UNWIND (unwind.go).
 //
+// An image linked with traceback (LINK's default) is called from a frame
+// whose handler is the traceback handler (traceback.go): it takes every
+// warning, error, and severe condition the program's own handlers pass
+// on, writing its message, and resignals the rest.
+//
 // If every handler resignals, VMS's *catch-all* handler — established by
 // the system in the program's outermost frame — prints the condition's
 // message (%SYSTEM-F-ACCVIO, access violation, ...) and, if the
 // condition's severity is SEVERE (F), ends the image through $EXIT;
-// otherwise the program continues.
+// otherwise the program continues. The catch-all is a frame's handler,
+// so it is found when the frames run out; the last-chance vector is
+// searched only when the frames can't be read (Internals book, 4.5.2;
+// testdata/tb70's S18 and V never call the program's last-chance
+// handler).
 //
 // # How govax does it
 //
@@ -129,7 +138,7 @@ const (
 	stageFrames
 
 	// stageLastChance is the last-chance exception vector, searched when
-	// the frames have nothing more.
+	// a frame can't be read: the stack is invalid.
 	stageLastChance
 
 	// stageCatchAll is the end: no handler continued, so the catch-all
@@ -538,9 +547,11 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 			}
 
 		case stageFrames:
+			// The bottom of the stack: the catch-all is the outermost
+			// frame's handler.
 			frame, depth := d.fp, d.depth
 			if frame == 0 || frame == consoleCallSentinel {
-				d.stage = stageLastChance
+				d.stage = stageCatchAll
 
 				continue
 			}
@@ -711,7 +722,7 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 
 // catchAll is what happens when no handler continued (the search's
 // stageCatchAll): VMS's catch-all handler. It writes the condition's
-// message to the terminal, then either continues the program (a
+// message to the terminal (unless STS$M_INHIB_MSG says not to), then either continues the program (a
 // condition that isn't SEVERE, signaled by LIB$SIGNAL or the hardware)
 // or ends the image through $EXIT with the condition value as the status
 // (a SEVERE one, or any LIB$STOP), marked STS$M_INHIB_MSG because the
@@ -730,24 +741,8 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 
 	cond := words[0]
 
-	if !d.reported {
-		body, tail := words[:len(words)-2], words[len(words)-2:]
-
-		for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
-			env.writeConsole(line + "\n")
-		}
-
-		d.reported = true
-
-		// A debugger gets to look at the program before the catch-all
-		// acts (the VMS debugger's "break on unhandled exception"). If it
-		// wants to, the service is made to wait: the XFC runs again on the
-		// next instruction, finds the message already shown, and carries
-		// on with the catch-all's action, so letting the program continue
-		// is just running it.
-		if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, cond)) {
-			return 0, ErrWait
-		}
+	if env.reportCondition(d, words) {
+		return 0, ErrWait
 	}
 
 	if d.kind == kindStop || cond&7 == severitySevere {
@@ -755,6 +750,33 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	}
 
 	return env.continueCondition(d)
+}
+
+// reportCondition writes the message of d's condition, whose signal
+// array words holds (sigWords), and offers the condition to a debugger,
+// once for d: the catch-all's first step, and the traceback handler's.
+// A condition marked STS$M_INHIB_MSG has no message (testdata/tb70's
+// S5). It reports true if the debugger wants to look at the program
+// first (the VMS debugger's "break on unhandled exception"): the caller
+// is then to wait (ErrWait), so its XFC runs again on the next
+// instruction, finds the message already shown, and carries on with
+// its action, and letting the program continue is just running it.
+func (env *Environment) reportCondition(d *conditionDispatch, words []uint32) bool {
+	if d.reported {
+		return false
+	}
+
+	d.reported = true
+
+	if words[0]&stsInhibitMsg == 0 {
+		body, tail := words[:len(words)-2], words[len(words)-2:]
+
+		for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
+			env.writeConsole(line + "\n")
+		}
+	}
+
+	return env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0]))
 }
 
 // UnhandledCondition describes a condition no handler continued, as the

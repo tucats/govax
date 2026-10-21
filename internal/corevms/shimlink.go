@@ -24,10 +24,10 @@ type ShimLink struct {
 }
 
 // CRTLLinks are the C library's routines (DECC$SHR) and govax's own
-// (EVAX) that this package's shims stand in for, codes 3 to 32
-// (registerShims; the name a routine is registered under there is its
-// shim's, which may differ from the one a program links to, as
-// DECC$OPEN's shim is EXE$OPEN). LIBRTL.EXE's are internal/librtl's
+// (EVAX) that this package's shims stand in for, codes 3 to 32 and the
+// traceback handler's (registerShims; the name a routine is registered
+// under there is its shim's, which may differ from the one a program
+// links to, as DECC$OPEN's shim is EXE$OPEN). LIBRTL.EXE's are internal/librtl's
 // (librtl.Links). Offsets are each routine's transfer-vector entry.
 var CRTLLinks = []ShimLink{
 	{Name: "EXE$INPUT", Library: "EVAX", Offset: 0x0004, Code: 3},
@@ -57,6 +57,10 @@ var CRTLLinks = []ShimLink{
 	{Name: "DECC$ISXDIGIT", Library: "DECC$SHR", Offset: 0x0070, Code: 27},
 	{Name: "DECC$ISASCII", Library: "DECC$SHR", Offset: 0x0028, Code: 28},
 	{Name: "DECC$TIME", Library: "DECC$SHR", Offset: 0x0768, Code: 32},
+
+	// The traceback handler, which RUN's driver puts in its frame
+	// (traceback.go); no program links to it.
+	{Name: "EXE$TRACEBACK", Library: "EVAX", Offset: 0x0008, Code: tracebackShimCode},
 }
 
 // ShimStubSize is the length in bytes of one stub (ShimStub).

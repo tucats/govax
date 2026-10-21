@@ -335,7 +335,8 @@ const (
 	reasonCall = "CALL's %VAL argument and its \"value returned is\" message (Future features)"
 
 	reasonStepException = "STEP, and what follows it, from a break on an exception: govax runs the paused " +
-		"dispatcher (docs/PHASE-42.md: stepping into a handler is a Future feature)"
+		"dispatcher, and from a break in the traceback handler its stub's RET (docs/PHASE-42.md: stepping " +
+		"into a handler is a Future feature)"
 
 	reasonGlobalName = "VMS names a data address past the last label by the global constant GLIMIT " +
 		"(GLIMIT+25D); govax by the label before it"
@@ -400,6 +401,7 @@ var expectedDifferences = map[string]map[int]string{
 	"step.dlg": {
 		26: reasonStepException, 29: reasonStepException, 30: reasonStepException, 33: reasonStepException,
 		37: reasonStepException, 38: reasonStepException, 39: reasonStepException,
+		40: reasonStepException, 41: reasonStepException,
 	},
 }
 

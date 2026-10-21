@@ -270,7 +270,8 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 
 // BuildImageInitDriver writes a small procedure in p's driver page (for
 // process 1, at CONSOLE$SCRATCH+8; see ImageProcess.driver) (an
-// empty entry mask, then one PUSHL/PUSHL/PUSHL/CALLS sequence per
+// empty entry mask, a MOVL of the traceback handler into its frame for
+// an image linked with traceback, then one PUSHL/PUSHL/PUSHL/CALLS sequence per
 // dependency's LIB$INITIALIZE entry point if runInits, then a final CALLS
 // to main's own entry point, a call to $EXIT with main's status when the
 // P1 vector is present, and a RET) and returns its address -- the Go
@@ -302,6 +303,20 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 	}
 
 	code := []byte{0x00, 0x00} // entry mask: no registers saved
+
+	// An image linked with traceback starts at SYS$IMGSTA, VMS's image
+	// startup, which puts the traceback handler in its own frame before
+	// calling the image: this frame is govax's (corevms/traceback.go).
+	if main.Transfer[0] == imgstaAddr {
+		handler, ok := c.Symbols.Get(tracebackHandler)
+		if !ok {
+			return 0, false, vmserrors.New(vmserrors.LIB_UNRESOLVED, tracebackHandler)
+		}
+
+		code = append(code, 0xD0, 0x8F) // MOVL I^#handler, (FP)
+		code = append(code, byte(handler), byte(handler>>8), byte(handler>>16), byte(handler>>24))
+		code = append(code, 0x6D)
+	}
 
 	if hibernate {
 		hiber, ok := p.p1Stub("SYS$HIBER")
@@ -360,6 +375,14 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 
 	return driverAddr, true, nil
 }
+
+// imgstaAddr is SYS$IMGSTA's P1-vector entry, an image's first transfer
+// address when it was linked with traceback, and tracebackHandler the
+// traceback handler's stub (corevms.CRTLLinks), which EnsureShims
+// defines.
+var imgstaAddr = vmsdef.LibrarySymbols["SYS$IMGSTA"]
+
+const tracebackHandler = "EXE$TRACEBACK"
 
 // driverAddress is where p's IMAGE$INIT driver goes. Process 1's is
 // CONSOLE$SCRATCH+8, where it has always been. Another process's is a

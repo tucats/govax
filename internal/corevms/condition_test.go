@@ -370,6 +370,58 @@ func TestSrchandler_catchAll(t *testing.T) {
 	}
 }
 
+// TestSrchandler_catchAllBeforeLastChance checks that the end of the
+// frames is the catch-all's, with the last-chance vector set: it is
+// searched only for a stack that can't be read (testdata/tb70's S18 and
+// V never call the program's last-chance handler).
+func TestSrchandler_catchAllBeforeLastChance(t *testing.T) {
+	env := conditionFixture(t)
+	env.consoleOut = &strings.Builder{}
+	c := env.cpu
+	env.Process.exceptionVectors[c.PSL().CurMod()][vectorLastChance] = 0x5400
+
+	putLongword(t, env, condFrameA, 0)
+	putLongword(t, env, condFrameB, 0)
+
+	if ok, _ := env.DispatchException(scbReservedOp, nil, 0x3000, c.PSL()); !ok {
+		t.Fatal("not dispatched")
+	}
+
+	if _, err := serviceSysSrchandler(env, nil); err == nil {
+		t.Fatal("expected the catch-all's $EXIT call")
+	} else if call, ok := err.(*CallRequest); !ok || call.Routine != exitEntryAddr {
+		t.Errorf("SYS$SRCHANDLER = %v; want the catch-all's $EXIT call, not the last-chance handler", err)
+	}
+}
+
+// TestSrchandler_catchAllInhibited checks that the catch-all shows no
+// message for a condition marked STS$M_INHIB_MSG (testdata/tb70's S5),
+// and still acts on it.
+func TestSrchandler_catchAllInhibited(t *testing.T) {
+	env := conditionFixture(t)
+	out := &strings.Builder{}
+	env.consoleOut = out
+	c := env.cpu
+
+	putLongword(t, env, condFrameA, 0)
+	putLongword(t, env, condFrameB, 0)
+
+	if ok, _ := env.DispatchException(scbReservedOp, nil, 0x3000, c.PSL()); !ok {
+		t.Fatal("not dispatched")
+	}
+
+	d := env.Process.conditions[0]
+	putLongword(t, env, d.sig+4, 0x10000870) // SS$_ENDOFFILE, a warning, inhibited
+
+	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(registers.PC) != 0x3000 {
+		t.Errorf("catch-all: %v, PC %#x; want the warning continued", err, c.GPR(registers.PC))
+	}
+
+	if out.Len() != 0 {
+		t.Errorf("output %q, want none", out.String())
+	}
+}
+
 // TestSrchandler_unreadableFrame checks that a frame that can't be read
 // ends the walk, like the end of the chain.
 func TestSrchandler_unreadableFrame(t *testing.T) {
@@ -555,7 +607,8 @@ func TestSetexv(t *testing.T) {
 }
 
 // TestSrchandler_vectors walks a search through all three vectors: the
-// primary and secondary before the frames, the last chance after.
+// primary and secondary before the frames, the last chance when a frame
+// can't be read.
 func TestSrchandler_vectors(t *testing.T) {
 	env := conditionFixture(t)
 	c := env.cpu
@@ -565,6 +618,9 @@ func TestSrchandler_vectors(t *testing.T) {
 
 	// Another mode's vectors are never searched.
 	env.Process.exceptionVectors[(mode+1)&3] = [3]uint32{0x6200, 0x6300, 0x6400}
+
+	// Frame B's caller is beyond memory.
+	putLongword(t, env, condFrameB+12, 0x7FFF0000)
 
 	if ok, _ := env.DispatchException(scbReservedOp, nil, 0x3000, c.PSL()); !ok {
 		t.Fatal("not dispatched")
