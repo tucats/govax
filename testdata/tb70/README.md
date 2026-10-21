@@ -91,6 +91,7 @@ writing nothing to SYS$OUTPUT first, then a line). On the same volume:
 ## The runs
 
 Round 1: 2026-10-21, OpenVMS V7.1 on simh's VAX 8600, the volume on
-DUA1. MACRO and LINK had no messages; every part ran.
+DUA1. MACRO and LINK had no messages; every part ran. Round 2: the same
+day, on the same system and volume; every part ran.
 `docs/PHASE-70 - traceback.md`'s Part A has the answers ("The probe's
 answers").

@@ -1,0 +1,222 @@
+$ ! TB70B.COM - round 2 of Phase 70's probe of traceback
+$ ! (testdata/tb70/README.md). Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @TB70B/OUTPUT=TB70B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO TB70B
+$ LINK/MAP=TB70B/FULL TB70B
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ LINK/MAP=TB70BNT/FULL/NOTRACEBACK/EXECUTABLE=TB70BNT TB70B
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ !
+$ ! Where a routine ends, with traceback and without.
+$ !
+$ DEFINE TB70B_PART R
+$ RUN TB70B
+R1 return PC at routine+3FF
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           R3FF                                       000003FF  000009C0
+TB70B           PART_R                                     00000039  00000586
+TB70B           TB70B                                      00000036  00000436
+R2 return PC at routine+400
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           CODE                                       000009C1  00000DC1
+TB70B           PART_R                                     00000070  000005BD
+TB70B           TB70B                                      00000036  00000436
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ RUN TB70BNT
+R1 return PC at routine+3FF
+%SYSTEM-W-ENDOFFILE, end of file
+R2 return PC at routine+400
+%SYSTEM-W-ENDOFFILE, end of file
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Which conditions get the "improperly handled" dump, and the stack
+$ ! it shows: without traceback (and part S with it).
+$ !
+$ DEFINE TB70B_PART O
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ RUN TB70BNT
+%SYSTEM-F-OPCDEC, opcode reserved to Digital fault at PC=0000044E, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000003		 00000000
+	Name   = 0000043C		 20000000
+		 0000044E		 7FED53FC
+		 03C00000		 7FED53E8
+					 7FF65F2E
+					 00000006
+					 7FFE5E3C
+					 7FF6B997
+					 7FFE5E0C
+					 7FFE5EBC
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000004  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5384  FP = 7FED5344  SP = 7FED53B8  PC = 0000044E
+	PSL= 03C00000
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000043C"
+$ DEFINE TB70B_PART P
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ RUN TB70BNT
+%SYSTEM-F-BADPARAM, bad parameter value
+-SYSTEM-S-NORMAL, normal successful completion
+-NONAME-E-NOMSG, Message number 00000002
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000014"
+$ DEFINE TB70B_PART Q
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ RUN TB70BNT
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00000482, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20000000
+		 00000004		 7FED53FC
+		 00001234		 7FED53E8
+		 00000482		 7FF65F2E
+		 03C00000		 00000006
+					 7FFE5E3C
+					 7FF6B997
+					 7FFE5E0C
+					 7FFE5EBC
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 00000004  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED537C  FP = 7FED533C  SP = 7FED53B8  PC = 00000482
+	PSL= 03C00000
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ DEFINE TB70B_PART S
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ RUN TB70BNT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000051C, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 53535353
+	Name   = 0000000C		 52525252
+		 00000000		 51515151
+		 00000000		 00000000
+		 0000051C		 20040000
+		 03C00000		 7FED53CC
+					 7FED53B8
+					 00000494
+					 00000004
+					 00000000
+
+	Register dump
+
+	R0 = 00000001  R1 = 823E4000  R2 = 22222222  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5354  FP = 7FED5314  SP = 7FED5390  PC = 0000051C
+	PSL= 03C00000
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ RUN TB70B
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000051C, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           PART_S                                     0000001B  0000051C
+TB70B           TB70B                                      00000094  00000494
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ !
+$ ! Success, informational, and warning messages with SYS$OUTPUT and
+$ ! SYS$ERROR apart: the program writing nothing to SYS$OUTPUT (N), and
+$ ! a line first (M).
+$ !
+$ DEFINE TB70B_PART N
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT TB70BOUTN.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70BERRN.LOG
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ TYPE TB70BOUTN.LOG
+%SYSTEM-S-NORMAL, normal successful completion
+%SYSTEM-I-EOTIN, EOT response to text
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           CONDS                                      00000025  00000549
+TB70B           TB70B                                      000000A6  000004A6
+$ TYPE TB70BERRN.LOG
+%SYSTEM-I-EOTIN, EOT response to text
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           CONDS                                      00000025  00000549
+TB70B           TB70B                                      000000A6  000004A6
+$ DEFINE TB70B_PART M
+%DCL-I-SUPERSEDE, previous value of TB70B_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT TB70BOUTM.LOG
+$ DEFINE/USER_MODE SYS$ERROR TB70BERRM.LOG
+$ RUN TB70B
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ TYPE TB70BOUTM.LOG
+M a line first
+$ TYPE TB70BERRM.LOG
+%SYSTEM-I-EOTIN, EOT response to text
+%SYSTEM-W-ENDOFFILE, end of file
+%TRACE-W-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+TB70B           CONDS                                      00000025  00000549
+TB70B           TB70B                                      000000DB  000004DB
+$ DIRECTORY/SIZE=ALL TB70B*.*
+
+Directory DUA1:[000000]
+
+TB70B.COM;1                3/3      
+TB70B.EXE;1                9/9      
+TB70B.LOG;1                0/16     
+TB70B.MAP;1               17/17     
+TB70B.MAR;1                6/6      
+TB70B.OBJ;1                3/3      
+TB70BERRM.LOG;1            1/1      
+TB70BERRN.LOG;1            1/1      
+TB70BNT.EXE;1              8/8      
+TB70BNT.MAP;1             17/17     
+TB70BOUTM.LOG;1            1/1      
+TB70BOUTN.LOG;1            1/1      
+
+Total of 12 files, 67/83 blocks.
+$ DEASSIGN TB70B_PART
+$ EXIT

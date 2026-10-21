@@ -1,10 +1,9 @@
 # Phase 70 — traceback
 
 **Status:** in progress. Planned 2026-10-21; Part B's decisions
-accepted by the author the same day. Subtask 1, the survey and the VMS
-probe (`testdata/tb70`), is done. Subtask 2, the probe's VAX run, has
-its first round's answers (Part A, "The probe's answers"); round 2
-(`tb70b.mar`), for what round 1 left open, awaits its run.
+accepted by the author the same day. Subtasks 1 (the survey and the
+VMS probe, `testdata/tb70`) and 2 (the probe's two VAX rounds; Part A,
+"The probe's answers") are done.
 
 ## Goal
 
@@ -182,9 +181,12 @@ summary, with the cases that show each rule:
 - Without traceback, the "improperly handled" dump follows the message
   of every hardware exception (A, O, I, Z, R, J, P, L, H, T, D, G, V, M,
   N) and of SS$_ACCVIO signaled by LIB$SIGNAL (C), but not of a severe
-  LIB$SIGNAL of SS$_BADPARAM (S20) or any LIB$STOP (K, W, E). So it
-  depends on the condition, not on how it was raised; round 2 asks
-  whether it's the condition's value or the signal array's size.
+  LIB$SIGNAL of SS$_BADPARAM (S20) or any LIB$STOP (K, W, E). Round 2:
+  it's the condition's value. SS$_OPCDEC by LIB$SIGNAL (a signal array
+  of 3) and LIB$STOP of SS$_ACCVIO get it; SS$_BADPARAM with an array
+  of 5 doesn't. govax gives it for the conditions its exception
+  dispatcher raises (`exceptionCondition`'s); only ACCVIO, OPCDEC,
+  INTOVF, INTDIV, and ROPRAND are confirmed.
 - An exit handler's access violation (part X) gets the "improperly
   handled" dump even in an image linked with traceback: by then image
   rundown has removed the image startup's frame, and the catch-all
@@ -226,8 +228,8 @@ is the last (`TB70+67`, the return from its CALLS). Consequences:
    sizes don't matter: PART_S+3CE is PART_S (S16), PART_S+40B isn't
    (S17's next frame: `CODE`); code in psect CODE2 is TB70LONG's last
    routine +2D (S8), and a PC in S0 is that routine too, with a
-   "negative" rel PC (8192A52E, S12, T). Round 2 pins the limit (+3FF,
-   +400).
+   "negative" rel PC (8192A52E, S12, T). Round 2 pinned the limit:
+   +3FF is the routine, +400 isn't (`R3FF +3FF`, then `CODE +9C1`).
 2. Otherwise the psect contribution holding the PC: its name in the
    routine column and its module, rel PC from the contribution's start
    (S17 to S20: `CODE` +498, from 400; O: `DATA` +A5).
@@ -275,12 +277,18 @@ line, then (`\t` is a tab):
     (blank)
 
 The signal array (its count and every longword) beside ten longwords
-of the stack. The registers are the program's at the exception (part
-A's patterns). The stack longwords start at the faulting frame (part
-A: AV2's frame, handler 0, mask 2FFC0000, ...). The SP shown is FP+7C
-in all four dumps on hand (A, X, C, and Phase 29's), which is no SP
-the program had; round 2's part S (three longwords pushed) asks
-whether the stack shown starts at SP or FP, and what SP is.
+of the stack. R0 to R11, PC, and PSL are the program's at the
+exception (part A's patterns; the signal array's PC and PSL). Round 2's
+part S (three longwords pushed) showed the rest:
+
+- **SP** is the program's SP at the exception, and the stack shown is
+  the ten longwords from it (53535353 first). For a condition from
+  LIB$SIGNAL or LIB$STOP, it's the SP its caller will have after the
+  call returns (round 2's O and Q: the caller's frame first).
+- **FP and AP** aren't the program's: in all seven dumps FP is
+  SP − (68 + 4n), n the signal array's count (SP − 7C for 5, SP − 74
+  for 3), and AP is FP+40: VMS's own frames below the condition's
+  arrays. govax shows the same values.
 
 **SYS$OUTPUT and SYS$ERROR apart.** Part A's message and dump went to
 both files, with and without traceback. Part S, whose program had
@@ -290,7 +298,10 @@ SYS$ERROR only, and its success message (S1) to neither: each file
 holds one version. The reading: the catch-all writes a success message
 to SYS$OUTPUT only, the others to SYS$ERROR and to SYS$OUTPUT if
 different, and an open of SYS$OUTPUT that fails (the program holds the
-file) is passed over. Round 2's parts N and M test it.
+file) is passed over. Round 2 confirmed it: with the program writing
+nothing (N), SYS$OUTPUT got the success message, and both files the
+informational and warning messages and the dump; after a line (M),
+SYS$OUTPUT held only that line and SYS$ERROR the rest.
 
 **Side findings settled.** 1 is confirmed. 4 is confirmed: the
 program's last-chance handler was never called (S18, V); the catch-all
@@ -343,7 +354,9 @@ and ROPRAND's messages say `PSL=`, where govax's say `PS=`.
 - Decision 4: the "improperly handled" dump is the catch-all's, for a
   severe condition round 2's rule picks, in either kind of image (an
   exit handler's exception in a traceback image gets it).
-- Decision 3: as Part A's answers read it, pending round 2.
+- Decision 3: a success message to SYS$OUTPUT only; the rest to
+  SYS$ERROR, and to SYS$OUTPUT if it's a different file the program
+  doesn't hold open.
 
 ### The probe's cases (subtask 1; `testdata/tb70`, round 1)
 
@@ -449,3 +462,15 @@ asks what round 1 left open: the routine limit's exact value, which
 conditions get the "improperly handled" dump, where its stack starts
 and what its SP is, and where the catch-all writes with SYS$OUTPUT and
 SYS$ERROR apart. It assembles, links, and runs on govax.
+
+### 2026-10-21 — Subtask 2: the probe's second round
+
+The author returned round 2 (`vax/tb70b.log`, its images, maps, and
+object). It settled every open question: the routine limit is 400
+(+3FF in the routine, +400 not); the "improperly handled" dump follows
+exception conditions whichever way they're raised; its stack starts at
+the program's SP, which it shows, and its FP and AP are VMS's own
+(SP − (68 + 4n) for a signal array of n, and FP+40); a success message
+goes to SYS$OUTPUT only, the rest to SYS$ERROR and to a different
+SYS$OUTPUT the program doesn't hold. Part A and Part B record the
+answers. Subtask 2 is done; the probe has no more questions.
