@@ -94,7 +94,7 @@ exit
 $!
 $ set debug nouserhalt
 $! set debug process
-$!
+$ set radix dec
 $ print " "
 $!
 $! Create devices
