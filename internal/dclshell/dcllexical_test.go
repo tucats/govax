@@ -181,6 +181,27 @@ func TestLexicalLogicalNames(t *testing.T) {
 	})
 }
 
+// TestLexicalPermanentFile: F$TRNLNM and F$LOGICAL of a process-permanent
+// file's name leave out the string's 4-byte prefix, though LENGTH counts
+// it (VMS 7.1, testdata/ppf71: 17 for "_SIMVAX$OPA0:"), so DCL never
+// holds the prefix.
+func TestLexicalPermanentFile(t *testing.T) {
+	c := lexConsole(t)
+
+	eqv := []lnm.Equivalence{{Value: lnm.PermanentFileString(0x8103, "_SIMVAX$OPA0:"), Attrs: lnm.AttrTerminal | lnm.AttrConcealed}}
+	if _, err := c.Logicals.Define(lnm.ProcessTableName, "PPF_OUT", lnm.Executive, 0, eqv); err != nil {
+		t.Fatal(err)
+	}
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$TRNLNM("PPF_OUT")`, want: "_SIMVAX$OPA0:"},
+		{text: `F$LENGTH(F$TRNLNM("PPF_OUT"))`, integer: true, want: "13"},
+		{text: `F$TRNLNM("PPF_OUT",,,,, "LENGTH")`, integer: true, want: "17"},
+		{text: `F$TRNLNM("PPF_OUT",,,,, "TERMINAL")`, want: "TRUE"},
+		{text: `F$LOGICAL("PPF_OUT")`, want: "_SIMVAX$OPA0:"},
+	})
+}
+
 // TestLexicalMessage: F$MESSAGE's text for a condition value, its
 // directives left as they are.
 func TestLexicalMessage(t *testing.T) {

@@ -297,7 +297,7 @@ func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, lev
 	}
 
 	for _, q := range e.Equivalences {
-		if q.Attrs&lnm.AttrTerminal != 0 {
+		if _, ok := lnm.ParsePermanentFile(q.Value); ok || q.Attrs&lnm.AttrTerminal != 0 {
 			continue
 		}
 
@@ -318,6 +318,8 @@ func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, lev
 //	<tab>= "VALUE2" [attributes]
 //
 // (a search list's further values follow a tab, as VMS 7.3 wrote them).
+// A process-permanent file's value shows without its prefix
+// (lnm.DisplayValue), as VMS shows it.
 // showMode adds the "[mode]" tag, showAttrs the equivalence attributes,
 // and table (when not "") the trailing "(TABLE)". A table-name entry,
 // which has no equivalence strings, shows as [table] = "".
@@ -339,7 +341,7 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 		first = e.Equivalences[0]
 	}
 
-	fmt.Fprintf(&b, " = %q%s", first.Value, attrTags(first.Attrs, showAttrs))
+	fmt.Fprintf(&b, " = %q%s", lnm.DisplayValue(first.Value), attrTags(first.Attrs, showAttrs))
 
 	if table != "" {
 		fmt.Fprintf(&b, " (%s)", table)
@@ -348,7 +350,7 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 	d.out("%s\n", b.String())
 
 	for _, q := range e.Equivalences[min(1, len(e.Equivalences)):] {
-		d.out("\t= %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
+		d.out("\t= %q%s\n", lnm.DisplayValue(q.Value), attrTags(q.Attrs, showAttrs))
 	}
 }
 
@@ -419,7 +421,8 @@ func (c *Context) printTableTree(t *lnm.Table, depth int) {
 //
 //	NAME = "VALUE" (TABLE)
 //
-// A name that isn't found prints %SHOW-S-NOTRAN.
+// A name that isn't found prints %SHOW-S-NOTRAN. A process-permanent
+// file's value shows without its prefix.
 func (c *Context) ShowTranslation(table, name string) error {
 	if table == "" {
 		table = dclLogicalName
@@ -439,7 +442,7 @@ func (c *Context) ShowTranslation(table, name string) error {
 
 	value := ""
 	if len(e.Equivalences) > 0 {
-		value = e.Equivalences[0].Value
+		value = lnm.DisplayValue(e.Equivalences[0].Value)
 	}
 
 	c.Printf("%s = %q (%s)\n", e.Name, value, e.Table.Name)

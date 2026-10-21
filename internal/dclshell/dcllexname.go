@@ -47,6 +47,9 @@ var trnlnmItems = map[string]func(e *lnm.Entry, eqv *lnm.Equivalence) dclValue{
 	"CONCEALED":   func(_ *lnm.Entry, eqv *lnm.Equivalence) dclValue { return dclTrueFalse(eqvHas(eqv, lnm.AttrConcealed)) },
 	"CONFINE":     func(e *lnm.Entry, _ *lnm.Equivalence) dclValue { return dclTrueFalse(e.Attrs&lnm.AttrConfine != 0) },
 	"CRELOG":      func(e *lnm.Entry, _ *lnm.Equivalence) dclValue { return dclTrueFalse(e.Attrs&lnm.AttrCrelog != 0) },
+	// LENGTH counts a process-permanent file string's prefix, which VALUE
+	// leaves out (VMS 7.1, testdata/ppf71: 17 for "_SIMVAX$OPA0:", whose
+	// VALUE is 13 long), so DCL never holds the prefix.
 	"LENGTH": func(_ *lnm.Entry, eqv *lnm.Equivalence) dclValue {
 		if eqv == nil {
 			return dclInteger(0)
@@ -64,7 +67,7 @@ var trnlnmItems = map[string]func(e *lnm.Entry, eqv *lnm.Equivalence) dclValue{
 			return dclString("")
 		}
 
-		return dclString(eqv.Value)
+		return dclString(lnm.DisplayValue(eqv.Value))
 	},
 }
 
@@ -139,14 +142,16 @@ func lexTrnlnm(e *dclExpression, args []lexicalArg) (dclValue, error) {
 
 // lexLogical is F$LOGICAL(logical-name): the logical name's first
 // equivalence string, from the process, job, group, and system tables,
-// or "" (15.5: F$TRNLNM supersedes it).
+// or "" (15.5: F$TRNLNM supersedes it). A process-permanent file's
+// string loses its prefix, as F$TRNLNM's does (unconfirmed for
+// F$LOGICAL).
 func lexLogical(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	entry, err := e.console.Logicals.Translate(lnm.FileDevName, strings.ToUpper(args[0].str()), lnm.User, 0)
 	if err != nil || len(entry.Equivalences) == 0 {
 		return dclString(""), nil //nolint:nilerr // no such name: ""
 	}
 
-	return dclString(entry.Equivalences[0].Value), nil
+	return dclString(lnm.DisplayValue(entry.Equivalences[0].Value)), nil
 }
 
 // lexMessage is F$MESSAGE(status-code): the system message file's text

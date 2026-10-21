@@ -122,6 +122,44 @@ func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 	}
 }
 
+// TestServiceSysAssignAndGetdviPermanentFile: $ASSIGN and $GETDVI of a
+// name whose equivalence string is a process-permanent file's reach the
+// device after the string's prefix, with the node's name in front or not,
+// and with or without a colon (DCL's OPEN leaves it out), through an
+// alias too; $TRNLNM returns the string whole.
+func TestServiceSysAssignAndGetdviPermanentFile(t *testing.T) {
+	env, _ := fixture()
+	env.NodeName = "govax"
+	defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+	a := newArena(t, env)
+
+	ppf := lnm.PermanentFileString(0x8103, "_GOVAX$TTA0:")
+	defineLogical(t, env, "LNM$PROCESS", "PPF_OUT", lnm.Executive, lnm.AttrTerminal, ppf)
+	defineLogical(t, env, "LNM$PROCESS", "PPF_OPEN", lnm.Supervisor, lnm.AttrTerminal, lnm.PermanentFileString(0x8106, "_GOVAX$TTA0"))
+	defineLogical(t, env, "LNM$PROCESS", "PPF_BARE", lnm.Supervisor, 0, lnm.PermanentFileString(0x8101, "_TTA0:"))
+	defineLogical(t, env, "LNM$PROCESS", "PPF_ALIAS", lnm.Supervisor, 0, "PPF_OUT")
+
+	for _, name := range []string{"PPF_OUT", "PPF_OUT:", "PPF_OPEN", "PPF_BARE:", "PPF_ALIAS"} {
+		wantR0(t, callLNM(t, env, serviceSysAssign, a.desc(name), a.alloc(2)), ssNormal)
+
+		buf := a.alloc(4)
+		argv := make([]uint32, 8)
+		argv[2] = a.desc(name)
+		argv[3] = a.items(item{code: dviCode(t, "DVI$_DEVBUFSIZ"), buflen: 4, buf: buf})
+
+		wantR0(t, callLNM(t, env, serviceSysGetdvi, argv...), ssNormal)
+	}
+
+	str, ret := a.alloc(64), a.alloc(2)
+	list := a.items(item{code: lnmString, buflen: 64, buf: str, ret: ret})
+
+	wantR0(t, callLNM(t, env, serviceSysTrnlnm, 0, a.desc("LNM$FILE_DEV"), a.desc("PPF_OUT"), 0, list), ssNormal)
+
+	if got := a.readString(str, readWordEnv(t, env, ret)); got != ppf {
+		t.Errorf("$TRNLNM PPF_OUT = %q, want %q", got, ppf)
+	}
+}
+
 // allocCall runs $ALLOC on name with a 16-byte phybuf, returning R0 and
 // the physical name returned.
 func allocCall(t *testing.T, env *Environment, a *arena, name string, acmode, flags uint32) (uint32, string) {

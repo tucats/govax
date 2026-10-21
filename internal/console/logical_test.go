@@ -299,6 +299,35 @@ func TestShowTranslation(t *testing.T) {
 	wantDispatchStatus(t, d, "SHOW TRANSLATION/TABLE=NOSUCH X", vmserrors.SS_NOLOGTAB)
 }
 
+// TestShowLogical_permanentFile: SHOW LOGICAL and SHOW TRANSLATION show a
+// process-permanent file's string without its prefix, as VMS does
+// (testdata/ppf71's "SYS$OUTPUT" [exec] = "_SIMVAX$OPA0:"
+// [concealed,terminal]), and SHOW LOGICAL doesn't follow the device name
+// as another logical name.
+func TestShowLogical_permanentFile(t *testing.T) {
+	d, c, buf := logicalDispatcher(t)
+
+	eqv := []lnm.Equivalence{{Value: lnm.PermanentFileString(0x8106, "_GOVAX$DUA1"), Attrs: lnm.AttrTerminal}}
+	if _, err := c.Logicals.Define(lnm.ProcessTableName, "PPF_OUT", lnm.Supervisor, lnm.AttrConfine, eqv); err != nil {
+		t.Fatal(err)
+	}
+
+	wantOutput(t, d, buf, "SHOW TRANSLATION PPF_OUT", "PPF_OUT = \"_GOVAX$DUA1\" (LNM$PROCESS_TABLE)\n")
+	wantOutput(t, d, buf, "SHOW LOGICAL/FULL PPF_OUT",
+		"   \"PPF_OUT\" [super,confine] = \"_GOVAX$DUA1\" [terminal] (LNM$PROCESS_TABLE)\n")
+
+	// A copy of the string ($CRELNM given it whole, the probe's O13)
+	// without TERMINAL still ends there.
+	eqv = []lnm.Equivalence{{Value: lnm.PermanentFileString(0x8106, "GOVAX_DISK")}}
+	if _, err := c.Logicals.Define(lnm.ProcessTableName, "PPF_COPY", lnm.User, 0, eqv); err != nil {
+		t.Fatal(err)
+	}
+
+	mustDispatch(t, d, "DEFINE GOVAX_DISK DUA1:")
+	wantOutput(t, d, buf, "SHOW LOGICAL PPF_COPY",
+		"   \"PPF_COPY\" = \"GOVAX_DISK\" (LNM$PROCESS_TABLE)\n")
+}
+
 func TestLogicals_trace(t *testing.T) {
 	d, c, buf := logicalDispatcher(t)
 

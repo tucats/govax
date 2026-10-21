@@ -35,6 +35,16 @@ type FileSpec struct {
 	// string's, as RMS does (PAY_FILE:*.DAT with PAY_FILE =
 	// DISK1:[SALES_STAFF]PAYROLL means DISK1:[SALES_STAFF]*.DAT).
 	Remainder string
+
+	// Permanent, when the translation reached a process-permanent file
+	// string (ppf.go), is the file it names, and PermanentName the
+	// logical name whose equivalence string it was: through an alias
+	// (PPF71_ALIAS = "SYS$OUTPUT"), the process-permanent name, which is
+	// what RMS writes in a NAM's strings. Spec is then the file's device
+	// name followed by the rest of the caller's spec, so what looks only
+	// for a device ($ASSIGN, $GETDVI) reaches it.
+	Permanent     *PermanentFile
+	PermanentName string
 }
 
 // TranslateFileSpec performs the logical-name translation RMS and DCL
@@ -56,6 +66,9 @@ type FileSpec struct {
 //   - A search list fans out: each equivalence string is translated in
 //     turn, depth-first, so a nested list's elements appear in place of
 //     the name that led to it (the User's Manual's NESTED example).
+//   - A process-permanent file string (ppf.go) ends the translation: RMS
+//     stops there (the Guide to OpenVMS File Applications, 6.2), and the
+//     result's Permanent says which file it names.
 //
 // The equivalence string and the rest of the spec are joined as text in
 // Spec; applying defaults and merging fields is the caller's job, which
@@ -131,6 +144,17 @@ func (db *Database) substitute(e *Entry, rest, spec string, mode Mode, depth int
 		c, d := concealed, display
 		if c == "" && eqv.Attrs&AttrConcealed != 0 {
 			c, d = e.Name, spec
+		}
+
+		if pf, ok := ParsePermanentFile(eqv.Value); ok {
+			next = pf.deviceSpec() + rest
+			if c == "" {
+				d = next
+			}
+
+			*out = append(*out, FileSpec{Spec: next, Concealed: c, Display: d, Remainder: remainder, Permanent: &pf, PermanentName: e.Name})
+
+			continue
 		}
 
 		if eqv.Attrs&AttrTerminal != 0 {

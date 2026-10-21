@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-10-21; Part B's decisions and the proposed
 answers to its questions accepted by the author the same day. Subtasks 1
-(the survey, and the VMS probe, `testdata/ppf71`) and 2 (the probe's
-VAX run; Part A, "The probe's answers") are done.
+(the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
+VAX run; Part A, "The probe's answers"), and 3 (the strings) are done.
 
 ## Goal
 
@@ -353,6 +353,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
 3. **The strings** (`lnm`): making and reading a process-permanent file
    string; file-spec translation stopping at one; SHOW LOGICAL and SHOW
    TRANSLATION; the device lookups (`$ASSIGN`, `$GETDVI`, F$GETDVI).
+   Done 2026-10-21.
 4. **RMS's table and indirect access**: the entries, `$OPEN`/`$CREATE`
    by IFI, `$CONNECT`, `$GET`/`$PUT` on the one stream, the refusals,
    the NAM's strings, the FAB from the entry, rundown.
@@ -404,3 +405,34 @@ drops the prefix, that the NAM shows `NAME:.;`, and the supervisor-mode
 names DCL defines at each level. What stays unconfirmed (the word's
 `%X100`, the indirect open's STV, the terminal's RFM after `$OPEN`) is
 marked there and gets govax's own choice.
+
+### 2026-10-21 — Subtask 3: the strings
+
+`internal/lnm/ppf.go`: `PermanentFileString(ifi, device)` makes the
+string (ESC, 0, the IFI low byte first, the device), `ParsePermanentFile`
+reads one into a `PermanentFile` (IFI, Device), and `DisplayValue` is a
+value as a person sees it (the device, or any other string unchanged).
+The database stores the string whole, so `$TRNLNM` returns it and
+`$CRELNM` of a copy makes a working name, with nothing more to do.
+
+`TranslateFileSpec` stops at such a string, whatever its attributes (a
+`$CRELNM` copy may have none): the result's `Permanent` is the file and
+`PermanentName` the name whose string it was (through an alias, the
+process-permanent name, which the NAM's strings will show), and its
+`Spec` is the device, given a colon if it has none (OPEN's strings
+don't), followed by the rest of the caller's spec. So the device
+lookups (`rms.PhysicalDevice`, under corevms's `deviceName`: `$ASSIGN`,
+`$GETDVI`, F$GETDVI) reach the device after the prefix unchanged, and
+RMS, until subtask 4 takes `Permanent` for indirect access, opens the
+device as before.
+
+F$TRNLNM's value and F$LOGICAL drop the prefix (F$LOGICAL's unconfirmed,
+following F$TRNLNM), while LENGTH counts it; SHOW LOGICAL (every value,
+`/FULL` too) and SHOW TRANSLATION show the device, and SHOW LOGICAL
+doesn't follow a process-permanent string as another name. Nothing
+defines such strings yet: process startup's (subtask 5), the
+procedures' (6), and OPEN's (7) come with their entries. Tests:
+`TestPermanentFileString`, `TestTranslateFileSpec_permanentFile`,
+`TestLexicalPermanentFile`, `TestShowLogical_permanentFile`, and
+`TestServiceSysAssignAndGetdviPermanentFile` (with and without the
+node's name and the colon, through an alias; `$TRNLNM` whole).
