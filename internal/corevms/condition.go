@@ -611,22 +611,16 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 // The establisher is the earlier condition's mechanism array's frame.
 // That array is found from the handler's frame as the book finds it: the
 // SP before the handler's call, which the frame's register save mask and
-// stack alignment give, is the handler's argument list, whose second
-// longword is the mechanism array's address. ok is false if any of it
-// can't be read.
+// stack alignment give, is the handler's argument list (handlerArgList),
+// whose second longword is the mechanism array's address. ok is false if
+// any of it can't be read.
 func (env *Environment) pastSearchedFrames(frame uint32) (next uint32, ok bool) {
 	c := env.cpu
 
-	maskPSW, err := env.mem.LoadLongword(c, frame+4)
-	if err != nil {
+	argList, ok := env.handlerArgList(frame)
+	if !ok {
 		return 0, false
 	}
-
-	// Bits 16-27 are the entry mask's registers, saved after the frame's
-	// five longwords; bits 30-31 the bytes CALLG's longword alignment
-	// dropped.
-	saved := uint32(bits.OnesCount32(maskPSW >> 16 & 0xFFF))
-	argList := frame + 20 + 4*saved + maskPSW>>30
 
 	mech, err1 := env.mem.LoadLongword(c, argList+8)
 	establisher, err2 := env.mem.LoadLongword(c, mech+4)
@@ -637,6 +631,25 @@ func (env *Environment) pastSearchedFrames(frame uint32) (next uint32, ok bool) 
 	}
 
 	return next, true
+}
+
+// handlerArgList returns the address of the argument list frame's
+// procedure was called with by CALLG: the SP before the call, just above
+// the frame's five longwords, the registers its entry mask saved, and the
+// bytes the call's longword alignment dropped. ok is false if the frame
+// can't be read.
+func (env *Environment) handlerArgList(frame uint32) (argList uint32, ok bool) {
+	maskPSW, err := env.mem.LoadLongword(env.cpu, frame+frameMaskPSW)
+	if err != nil {
+		return 0, false
+	}
+
+	// Bits 16-27 are the entry mask's registers, saved after the frame's
+	// five longwords; bits 30-31 the bytes CALLG's longword alignment
+	// dropped.
+	saved := uint32(bits.OnesCount32(maskPSW >> 16 & 0xFFF))
+
+	return frame + frameSavedRegs + 4*saved + maskPSW>>30, true
 }
 
 // callConditionHandler calls handler for d with the mechanism array's
@@ -741,7 +754,7 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 
 	cond := words[0]
 
-	if env.reportCondition(d, words) {
+	if env.reportCondition(d, words, nil) {
 		return 0, ErrWait
 	}
 
@@ -761,7 +774,13 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 // is then to wait (ErrWait), so its XFC runs again on the next
 // instruction, finds the message already shown, and carries on with
 // its action, and letting the program continue is just running it.
-func (env *Environment) reportCondition(d *conditionDispatch, words []uint32) bool {
+//
+// after, if not nil, writes what follows the message when no debugger
+// takes the condition: the traceback handler's dump. Under the VMS
+// debugger an unhandled condition gets its message and the debugger's
+// break, and never a dump, even when the program goes on
+// (testdata/dbgcmd's except.dlg).
+func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, after func()) bool {
 	if d.reported {
 		return false
 	}
@@ -776,7 +795,15 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32) bo
 		}
 	}
 
-	return env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0]))
+	if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0])) {
+		return true
+	}
+
+	if after != nil {
+		after()
+	}
+
+	return false
 }
 
 // UnhandledCondition describes a condition no handler continued, as the

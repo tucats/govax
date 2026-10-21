@@ -4,8 +4,8 @@
 accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
-after a blown run), 4 (the arithmetic traps), and 5 (the image startup
-frame and the search's order) are done.
+after a blown run), 4 (the arithmetic traps), 5 (the image startup
+frame and the search's order), and 6 (the traceback dump) are done.
 
 ## Goal
 
@@ -423,9 +423,14 @@ traceback and `/NOTRACEBACK`:
 7. **EXE$EXCMSG's dump** for `/NOTRACEBACK`.
 8. **Output to SYS$OUTPUT and SYS$ERROR** (Decision 3), and RUN's
    `DEFINE/USER_MODE SYS$OUTPUT file` (finding 5).
-9. **The oracle**: `TestTB70Oracle` runs `tb70.com`'s parts on govax
-   and matches VMS's log.
-10. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
+9. **The AST exit in S0** (added by subtask 6): an AST routine returns
+   to EXE$ASTRET, system code in S0 (Internals book, 7.3.1 and 7.3.3),
+   where govax's returns to the SYS$CLRAST P1-vector stub; VMS's dump
+   names that PC by rule 1 (`8192B447`, S12 and T), govax's has blank
+   columns.
+10. **The oracle**: `TestTB70Oracle` runs `tb70.com`'s parts on govax
+    and matches VMS's log.
+11. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
     PLAN.md.
 
 ## Progress log
@@ -612,3 +617,62 @@ exiting image, the inhibit bit), `TestSrchandler_catchAllBeforeLastChance`,
 `TestSrchandler_catchAllInhibited`, `TestSrchandler_vectors` (the last
 chance reached past an unreadable frame).
 
+### 2026-10-21 — Subtask 6: the traceback dump
+
+**The dump** (Decision 2) is `corevms/traceback.go`'s `tracebackDump`,
+which the traceback handler writes after the condition's message: the
+`%TRACE` line with the condition's severity as the signal array has it
+now, the heading, a blank line, then a line per PC in VMS's layout. The
+PCs are the condition's, then each call frame's saved PC from the frame
+the condition happened in (`startFP`: for LIB$SIGNAL and LIB$STOP their
+caller's), stopping at the frame whose caller is the image startup's
+(the frame the handler was called for, the mechanism array's), so the
+main routine's line is the last. A frame whose saved PC is
+SYS$SRCHANDLER's is a handler's: the dispatch that called it is found
+by the handler's argument list (`dispatchForHandler`, through
+`handlerArgList`, now shared with `pastSearchedFrames`), and its
+condition is shown between the "-----" lines, then its PC and its
+frames. There's no depth limit, as on VMS; a chain that doesn't climb
+the stack ends the dump.
+
+**Naming a PC** is `internal/dbgsym`'s `Program.TraceName`, Part A's
+three rules from the main image's debug symbol table (`ICB.Debug`),
+reached through `corevms.System.TraceName`, which the machine installs
+(`ImageState(env).ICBList[0]`). The line is the PC's own for a fault
+and the byte before it otherwise, and VMS decides which **by the
+condition, not by how it was raised**: TB70D's part C, SS$_ACCVIO from
+LIB$SIGNAL, has the line of the instruction after the call (472), so a
+condition of an exception that's a fault (`faultConditions`: ACCVIO,
+OPCDEC, OPCCUS, ROPRAND, RADRMOD, the floating faults) uses the PC's
+line, wherever it came from (ACCVIO, OPCDEC, ROPRAND confirmed).
+
+**The AST frame** needed nothing special: VMS's line after an AST
+routine's is the saved PC of the frame the AST interrupted (S12: 743,
+PART_S's return from the service it was waiting in), as the frame chain
+gives it. The Internals book's 7.3 describes AST delivery as govax does
+it (a CALLG with the six-longword argument list, the frame's saved FP
+the interrupted one), but for the return address: VMS's EXE$ASTRET is
+in S0, govax's the SYS$CLRAST stub in P1, so VMS's dump names that PC
+by rule 1 with a "negative" rel PC, and govax's has blank columns. That
+is subtask 9 (Part C, added).
+
+**The debugger**: under the VMS debugger an unhandled condition gets
+its message and the debugger's break, and no dump, even when the
+program goes on (`testdata/dbgcmd`'s except.dlg: GO after the break
+exits normally). `reportCondition` offers the condition to the debugger
+before the dump, and writes the dump only when the debugger doesn't
+take it; every debugger oracle session matches as before.
+
+`TestTB70Traceback` (`internal/console/tb70_test.go`) runs every part of
+VMS's TB70 and TB70D on govax and matches VMS's log, dumps, line
+numbers, and `$STATUS`, but for the PCs outside the image, which govax
+places elsewhere (LIBRTL's shims in S0, TB70SHR after the image, the AST
+exit; `tb70Masked`), and three parts (`tb70DumpDifferences`): L
+(LIB$MOVC3 is a shim, so its fault is reported at its caller), M
+(TB70SHR's PC in the message), and X (subtask 7's dump). `TestTraceName`
+checks the rules on VMS's images, round 2's +3FF and +400 among them;
+`traceback_test.go` the walk, the layout, the inhibit bit, and the
+debugger's case. Two LIBRTL tests (`TestLibrtlMissingRoutine`,
+`TestLibrtlMissingJSBEntry`), whose images are linked with traceback,
+now expect the dump. The manual's example 5 shows the dump (run on
+govax), and section 9 describes it.

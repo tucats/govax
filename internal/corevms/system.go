@@ -157,6 +157,13 @@ type System struct {
 	// image state) to go too.
 	ProcessDeleted func(env *Environment)
 
+	// TraceName, if set, names a PC in env's main image for the
+	// traceback dump (traceback.go): exact says the PC is a fault's, not
+	// a return address. The console installs it, from the image's debug
+	// symbol table; nil, or a PC the table doesn't describe, leaves the
+	// dump's columns blank.
+	TraceName func(env *Environment, pc uint32, exact bool) TraceName
+
 	// sched is the scheduler (schedule.go): every process in procs is
 	// in it, by PID. It only decides anything while the engine has the
 	// System installed as its scheduling hook.

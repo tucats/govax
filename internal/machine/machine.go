@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
@@ -411,6 +412,21 @@ func (m *Machine) newRTL() *corevms.Environment {
 		if m.Hooks.ProcessDeleted != nil {
 			m.Hooks.ProcessDeleted(env)
 		}
+	}
+
+	// The traceback dump names PCs from the main image's debug symbol
+	// table only: VMS's left shareable images' PCs unnamed, though one
+	// was linked with traceback (docs/PHASE-70 - traceback.md).
+	sys.TraceName = func(env *corevms.Environment, pc uint32, exact bool) corevms.TraceName {
+		var prog *dbgsym.Program
+
+		if icbs := m.ImageState(env).ICBList; len(icbs) > 0 {
+			prog = icbs[0].Debug
+		}
+
+		n := prog.TraceName(pc, exact)
+
+		return corevms.TraceName{Module: n.Module, Routine: n.Routine, Rel: n.Rel, Line: n.Line}
 	}
 
 	// $SETIMR's timers run on the engine's system time, the same time

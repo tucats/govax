@@ -22,8 +22,8 @@ func jsbProgram(handler string) string {
 
 // TestLibrtlMissingJSBEntry: an image that JSBs to a JSB entry govax
 // lacks links and runs; the call signals SS$_UNSUPPORTED with the
-// routine's name, raised in the caller's frame, which the catch-all
-// shows; the condition being an error, the JSB returns, its R0
+// routine's name, raised in the caller's frame, which the traceback
+// handler shows with its dump, the JSB's return address in START; the condition being an error, the JSB returns, its R0
 // SS$_UNSUPPORTED, with the stack and the other registers as they were.
 func TestLibrtlMissingJSBEntry(t *testing.T) {
 	r0, out := runMacroProgram(t, jsbProgram(""))
@@ -33,7 +33,10 @@ func TestLibrtlMissingJSBEntry(t *testing.T) {
 	}
 
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
-		"-GOVAX-E-NOTIMPL, routine OTS$MOVE3_R5 is not implemented in govax\n"
+		"-GOVAX-E-NOTIMPL, routine OTS$MOVE3_R5 is not implemented in govax\n" +
+		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
+		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		".MAIN.          START                                      0000000E  0000020E\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}

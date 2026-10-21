@@ -114,9 +114,8 @@ replays those VMS runs to keep it that way.
 - **It is a single-user system.** You are the user `SYSTEM`, with all
   privileges. There is no login, no user authorization file, no batch
   or print queues, no networking (DECnet or TCP/IP), and no cluster.
-- **Some things VMS does are missing or simplified.** For example, a
-  program that fails prints its condition message but not yet VMS's
-  symbolic traceback; there is no `INSTALL`; there is no swapping. Where
+- **Some things VMS does are missing or simplified.** For example,
+  there is no `INSTALL`, and there is no swapping. Where
   govax knowingly differs from VMS, this manual says so, and
   `docs/DEVIATIONS.md` keeps the detailed list.
 
@@ -2402,13 +2401,23 @@ Handler: caught an access violation, unwinding
 Main: back from RISKY, R0 = SS$_ACCVIO
 ```
 
-Without the handler, the access violation would go unhandled: the
-traceback handler (or, for an image linked `/NOTRACEBACK`, the
-catch-all) ends the image with its message:
+Without the handler (take out the `MOVAB`), the access violation would
+go unhandled: the traceback handler ends the image with its message and
+a symbolic stack dump, innermost call first, each line a frame's module,
+routine, and PC (relative to the routine, and absolute):
 
 ```text
-%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000020E, PSL=03C00004
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000423, PSL=03C00004
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+HANDLER         RISKY                                      00000004  00000423
+HANDLER         MAIN                                       00000009  00000409
 ```
+
+The line column is filled in for an image linked `/DEBUG` (section 9).
+An image linked `/NOTRACEBACK` gets only the message, from the
+catch-all.
 
 `LIB$SIGNAL` and `LIB$STOP` raise conditions of your own, and
 `LIB$ESTABLISH`, `LIB$REVERT`, and `LIB$SIG_TO_RET` work as on VMS.
@@ -2806,9 +2815,16 @@ numbers, which the debugger's `SHOW CALLS` uses. With `MACRO/DEBUG` and
 `LINK/DEBUG`, it also carries the full debugger records (every symbol,
 its type, the source line table), and `RUN` starts it under the debugger.
 
-(On VMS, traceback records also give a failing program its symbolic
-stack dump. govax doesn't print that dump yet: a failing program shows
-only its condition's message.)
+The traceback records also give a failing program its symbolic stack
+dump: a warning, error, or severe condition that no handler of the
+program's takes is shown with a line for each call frame, from the
+innermost to the main routine, naming the module, the routine, and,
+for an image linked `/DEBUG`, the listing line (section 8, example 5).
+A warning or an error then goes on; a severe condition ends the image.
+As on VMS, a PC more than 3FF bytes past the routine before it is named
+by its psect instead, and only the main image's PCs are named: one in a
+shareable image or LIBRTL has blank columns. Under the debugger an
+unhandled condition breaks into it instead, with no dump.
 
 ---
 
@@ -3464,8 +3480,9 @@ a signal array and a mechanism array on the user stack and calls the
 condition handlers established in the call frames, innermost first (the
 handler in the program's frame at `(FP)`, then its caller's, ...).
 Below the program's frames are the image startup's, whose traceback
-handler (in an image linked with traceback) prints the message of a
-warning, error, or severe condition, and the catch-all's, which prints
+handler (in an image linked with traceback) prints the message and the
+symbolic stack dump of a warning, error, or severe condition, and the
+catch-all's, which prints
 any other; a severe condition ends the image. The last-chance vector
 is searched only when the frames can't be read. govax does this in Go, calling the program's handlers as VAX
 procedures, so `LIB$SIGNAL`, `$UNWIND`, `LIB$ESTABLISH`, and handlers
@@ -4012,8 +4029,6 @@ The main differences, gathered from the rest of the manual:
 - A program's RMS calls reach only files on mounted Files-11 volumes,
   not host files (section 5).
 - No rooted-directory logical names (`DEV:[ROOT.]`).
-- A failing program shows its condition's message, but not yet the
-  symbolic traceback (section 9).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).
 - Some LIBRTL routines aren't implemented yet (Appendix B).

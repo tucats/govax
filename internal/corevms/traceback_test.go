@@ -1,10 +1,12 @@
 package corevms
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // tracebackFixture dispatches a reserved operand from the condition
@@ -26,21 +28,32 @@ func tracebackFixture(t *testing.T, cond uint32) (*Environment, *strings.Builder
 	r0, err := serviceSysSrchandler(env, nil)
 	expectHandlerCall(t, env, r0, err, condH1, condFrameA, 0)
 
+	// The handler is the image startup's, in frame B, which frame A's
+	// procedure (the main routine) was called from.
 	d := env.Process.conditions[0]
 	putLongword(t, env, d.sig+4, cond)
+	putLongword(t, env, d.mech+4, condFrameB)
 
 	return env, out, d, []uint32{d.sig, d.mech}
 }
 
+// tracebackDumpOf is the traceback dump of a condition of severity
+// letter sev at PC 3000 in the main routine, which tracebackFixture's
+// frames have: one line, as no TraceName names the PC.
+func tracebackDumpOf(sev string) string {
+	return "%TRACE-" + sev + "-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\n\n" +
+		"                                                           00003000  00003000\n"
+}
+
 // TestTraceback_warningAndError checks that a warning and an error get
-// their message and are continued.
+// their message and the dump, and are continued.
 func TestTraceback_warningAndError(t *testing.T) {
 	for _, tc := range []struct {
 		cond uint32
 		want string
 	}{
-		{0x870, "%SYSTEM-W-ENDOFFILE, end of file\n"},
-		{0x1827A, "%RMS-E-EOF, end of file detected\n"}, // RMS$_EOF
+		{0x870, "%SYSTEM-W-ENDOFFILE, end of file\n" + tracebackDumpOf("W")},
+		{0x1827A, "%RMS-E-EOF, end of file detected\n" + tracebackDumpOf("E")}, // RMS$_EOF
 	} {
 		env, out, _, argv := tracebackFixture(t, tc.cond)
 
@@ -123,7 +136,8 @@ func TestTraceback_resignals(t *testing.T) {
 }
 
 // TestTraceback_inhibited checks that a condition marked STS$M_INHIB_MSG
-// has no message, but is still taken (testdata/tb70's S5).
+// has no message, but is still taken, and gets its dump (testdata/tb70's
+// S5).
 func TestTraceback_inhibited(t *testing.T) {
 	env, out, _, argv := tracebackFixture(t, 0x10000870)
 
@@ -131,8 +145,69 @@ func TestTraceback_inhibited(t *testing.T) {
 		t.Errorf("%#x, %v; want SS$_CONTINUE", r0, err)
 	}
 
-	if out.Len() != 0 {
-		t.Errorf("output %q, want none", out.String())
+	if want := tracebackDumpOf("W"); out.String() != want {
+		t.Errorf("output %q, want %q", out.String(), want)
+	}
+}
+
+// TestTraceback_debugger checks that a condition a debugger takes gets
+// its message but no dump, then or when the handler runs again
+// (testdata/dbgcmd's except.dlg).
+func TestTraceback_debugger(t *testing.T) {
+	env, out, _, argv := tracebackFixture(t, 0x870)
+	env.OnUnhandled = func(UnhandledCondition) bool { return true }
+
+	if _, err := shimTraceback(env, argv); !errors.Is(err, ErrWait) {
+		t.Fatalf("%v; want ErrWait", err)
+	}
+
+	if r0, err := shimTraceback(env, argv); err != nil || r0 != ssContinue {
+		t.Errorf("again: %#x, %v; want SS$_CONTINUE", r0, err)
+	}
+
+	if want := "%SYSTEM-W-ENDOFFILE, end of file\n"; out.String() != want {
+		t.Errorf("output %q, want %q", out.String(), want)
+	}
+}
+
+// TestTracebackDump_frames checks the dump's walk and layout: the
+// condition's PC (a fault's, so its own line), then each frame's saved
+// PC (the byte before it names the line), up to the frame the image
+// startup called, whose saved PC isn't shown; the names come from the
+// TraceName hook, the module name cut to 15 characters.
+func TestTracebackDump_frames(t *testing.T) {
+	const (
+		condFrameC = 0x12000 // the image startup's frame
+		mainPC     = 0x1111  // frame A's saved PC, in frame B's routine
+	)
+
+	env, out, d, argv := tracebackFixture(t, vmsdef.Symbols["SS$_ROPRAND"])
+
+	putLongword(t, env, condFrameA+16, mainPC)
+	putLongword(t, env, condFrameB+12, condFrameC)
+	putLongword(t, env, condFrameB+16, 0x2222)
+	putLongword(t, env, condFrameC+12, consoleCallSentinel)
+
+	putLongword(t, env, d.mech+4, condFrameC)
+
+	env.TraceName = func(_ *Environment, pc uint32, exact bool) TraceName {
+		if pc == 0x3000 {
+			return TraceName{Module: "A_VERY_LONG_MODULE_NAME", Routine: "SUB", Rel: 0x10, Line: map[bool]int{true: 12, false: 11}[exact]}
+		}
+
+		return TraceName{Module: "MAIN", Routine: "MAIN", Rel: pc - 0x1000, Line: map[bool]int{true: 7, false: 6}[exact]}
+	}
+
+	if _, err := shimTraceback(env, argv); err == nil {
+		t.Fatal("a severe condition was continued")
+	}
+
+	want := "%TRACE-F-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\n\n" +
+		"A_VERY_LONG_MOD SUB                                12      00000010  00003000\n" +
+		"MAIN            MAIN                                6      00000111  00001111\n"
+
+	if got := out.String(); !strings.HasSuffix(got, "\n"+want) {
+		t.Errorf("output:\n%s\nwant:\n%s", got, want)
 	}
 }
 

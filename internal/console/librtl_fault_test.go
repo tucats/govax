@@ -43,8 +43,9 @@ func runMacroProgram(t *testing.T, source string) (uint32, string) {
 
 // TestLibrtlMissingRoutine: an image calling LIB$GETQUI, which govax
 // doesn't have (no queue manager), links and runs; the call signals SS$_UNSUPPORTED with
-// the routine's name, which the catch-all shows, and, the condition being
-// an error rather than a severe one, returns SS$_UNSUPPORTED.
+// the routine's name, which the traceback handler shows with its dump
+// (the image was linked with traceback), and, the condition being an
+// error rather than a severe one, returns SS$_UNSUPPORTED.
 func TestLibrtlMissingRoutine(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^LIB$GETQUI\n\tRET\n\t.END\tSTART\n")
@@ -54,7 +55,10 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 	}
 
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
-		"-GOVAX-E-NOTIMPL, routine LIB$GETQUI is not implemented in govax\n"
+		"-GOVAX-E-NOTIMPL, routine LIB$GETQUI is not implemented in govax\n" +
+		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
+		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		".MAIN.          START                                      00000009  00000209\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}
