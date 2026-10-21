@@ -2416,8 +2416,45 @@ HANDLER         MAIN                                       00000009  00000409
 ```
 
 The line column is filled in for an image linked `/DEBUG` (section 9).
-An image linked `/NOTRACEBACK` gets only the message, from the
-catch-all.
+An image linked `/NOTRACEBACK` has no traceback handler, so the
+catch-all takes the condition. For a hardware exception's condition
+(an access violation, a reserved instruction or operand, an arithmetic
+trap), however it was raised, it follows the message with VMS's
+"improperly handled condition" dump: the signal array beside ten
+longwords of the stack from the program's SP, then the registers at
+the exception. Linked `/NOTRACEBACK`, the program without its handler
+prints:
+
+```text
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=00000423, PSL=03C00004
+
+  Improperly handled condition, image exit forced.
+
+        Signal arguments              Stack contents
+
+        Number = 00000005                00000000
+        Name   = 0000000C                20000000
+                 00000000                7FDFFFE4
+                 00000000                7FDFFFD0
+                 00000423                00000409
+                 03C00004                00000000
+                                         00000000
+                                         20000000
+                                         7FDFFFFC
+                                         7FDFFFE8
+
+        Register dump
+
+        R0 = 00000000  R1 = 00000000  R2 = 00000000  R3 = 00000000
+        R4 = 00000000  R5 = 00000000  R6 = 00000000  R7 = 00000000
+        R8 = 00000000  R9 = 00000000  R10= 00000000  R11= 00000000
+        AP = 7FDFFF7C  FP = 7FDFFF3C  SP = 7FDFFFB8  PC = 00000423
+        PSL= 03C00004
+```
+
+Any other condition gets only its message. The FP and AP shown aren't
+the program's: as on VMS, they are where VMS's own frames below the
+condition's arrays would be.
 
 `LIB$SIGNAL` and `LIB$STOP` raise conditions of your own, and
 `LIB$ESTABLISH`, `LIB$REVERT`, and `LIB$SIG_TO_RET` work as on VMS.
@@ -3483,7 +3520,9 @@ Below the program's frames are the image startup's, whose traceback
 handler (in an image linked with traceback) prints the message and the
 symbolic stack dump of a warning, error, or severe condition, and the
 catch-all's, which prints
-any other; a severe condition ends the image. The last-chance vector
+any other, with the "improperly handled condition" dump of the
+registers and stack for an exception's condition that ends the image;
+a severe condition ends the image. The last-chance vector
 is searched only when the frames can't be read. govax does this in Go, calling the program's handlers as VAX
 procedures, so `LIB$SIGNAL`, `$UNWIND`, `LIB$ESTABLISH`, and handlers
 written in MACRO behave as on VMS (section 8, example 5).

@@ -361,7 +361,7 @@ func TestSrchandler_catchAll(t *testing.T) {
 	}
 
 	want := "%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00003000, PSL=0000001B\n"
-	if out.String() != want {
+	if got, _, _ := strings.Cut(out.String(), "\n\n  Improperly handled condition"); got+"\n" != want {
 		t.Errorf("output %q\nwant   %q", out.String(), want)
 	}
 

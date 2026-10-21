@@ -207,6 +207,12 @@ type conditionDispatch struct {
 	// PSL at the time, whose mode and IPL a continue keeps.
 	resumeSP, resumeFP, resumePC uint32
 	resumePSL                    registers.PSL
+
+	// conditionSP is the program's SP as the condition leaves it, which
+	// the "improperly handled condition" dump shows (excmsg.go): for an
+	// exception, the SP when it happened; for LIB$SIGNAL and LIB$STOP,
+	// the SP their caller has once the call returns.
+	conditionSP uint32
 }
 
 // Status values the condition dispatcher uses.
@@ -358,9 +364,10 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 	c := env.cpu
 	d := &conditionDispatch{
 		kind:      kindException,
-		resumeSP:  c.GPR(registers.SP),
-		resumeFP:  c.GPR(registers.FP),
-		resumePSL: psl,
+		resumeSP:    c.GPR(registers.SP),
+		resumeFP:    c.GPR(registers.FP),
+		resumePSL:   psl,
+		conditionSP: c.GPR(registers.SP),
 	}
 
 	sig := append(append([]uint32{cond}, detail...), pc, uint32(psl))
@@ -735,7 +742,9 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 
 // catchAll is what happens when no handler continued (the search's
 // stageCatchAll): VMS's catch-all handler. It writes the condition's
-// message to the terminal (unless STS$M_INHIB_MSG says not to), then either continues the program (a
+// message to the terminal (unless STS$M_INHIB_MSG says not to), and for
+// an exception's condition that ends the image the "improperly handled
+// condition" dump (excmsg.go), then either continues the program (a
 // condition that isn't SEVERE, signaled by LIB$SIGNAL or the hardware)
 // or ends the image through $EXIT with the condition value as the status
 // (a SEVERE one, or any LIB$STOP), marked STS$M_INHIB_MSG because the
@@ -753,12 +762,24 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	}
 
 	cond := words[0]
+	exiting := d.kind == kindStop || cond&7 == severitySevere
 
-	if env.reportCondition(d, words, nil) {
+	// An exception's condition that ends the image gets EXE$EXCMSG's
+	// dump after its message.
+	var dump func()
+	if exiting && exceptionConditions[cond&condIDMask] {
+		dump = func() {
+			for _, line := range env.improperlyHandledDump(d, words) {
+				env.writeConsole(line + "\n")
+			}
+		}
+	}
+
+	if env.reportCondition(d, words, dump) {
 		return 0, ErrWait
 	}
 
-	if d.kind == kindStop || cond&7 == severitySevere {
+	if exiting {
 		return env.exitForCondition(d, cond)
 	}
 

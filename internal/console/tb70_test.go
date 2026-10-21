@@ -1,8 +1,11 @@
 package console_test
 
 import (
+	"cmp"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -30,7 +33,7 @@ func tb70Console(t *testing.T) (*console.Console, func(string) string) {
 	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
 	dispatch("SET DEFAULT DUA1:[000000]")
 
-	for _, image := range []string{"TB70", "TB70NT", "TB70D", "TB70SHR"} {
+	for _, image := range []string{"TB70", "TB70NT", "TB70D", "TB70SHR", "TB70B", "TB70BNT"} {
 		src, err := filepath.Abs(filepath.Join(tb70Dir, "vax", strings.ToLower(image)+".exe"))
 		if err != nil {
 			t.Fatal(err)
@@ -51,7 +54,23 @@ func tb70Console(t *testing.T) (*console.Console, func(string) string) {
 func tb70VAXRuns(t *testing.T, image string) map[string][]string {
 	t.Helper()
 
-	data, err := os.ReadFile(filepath.Join(tb70Dir, "vax", "tb70.log"))
+	return tb70LogRuns(t, "tb70.log", "$   DEFINE/NOLOG TB70_PART ", "$   RUN/NODEBUG "+image)
+}
+
+// tb70BRuns is tb70VAXRuns for round 2's log, TB70B.COM's runs of image.
+func tb70BRuns(t *testing.T, image string) map[string][]string {
+	t.Helper()
+
+	return tb70LogRuns(t, "tb70b.log", "$ DEFINE TB70B_PART ", "$ RUN "+image)
+}
+
+// tb70LogRuns returns the runs, by part, of the VMS log file in vax/
+// whose part is defined by a line starting with define and whose run is
+// the line run.
+func tb70LogRuns(t *testing.T, file, define, run string) map[string][]string {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(tb70Dir, "vax", file))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,13 +82,13 @@ func tb70VAXRuns(t *testing.T, image string) map[string][]string {
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 
-		if p, ok := strings.CutPrefix(line, "$   DEFINE/NOLOG TB70_PART "); ok {
+		if p, ok := strings.CutPrefix(line, define); ok {
 			part = p
 
 			continue
 		}
 
-		if line != "$   RUN/NODEBUG "+image || part == "" {
+		if line != run || part == "" {
 			continue
 		}
 
@@ -124,8 +143,8 @@ var tb70DumpDifferences = map[string]string{
 	"L": "LIBRTL's routines are shims",
 	// The access violation's message has TB70SHR's PC (VMS: 00024026).
 	"M": "TB70SHR's place",
-	// An exit handler's condition gets the "improperly handled" dump
-	// (subtask 7).
+	// An exit handler's condition gets the "improperly handled" dump,
+	// which TestTB70ImproperlyHandled compares.
 	"X": "EXE$EXCMSG's dump",
 }
 
@@ -155,4 +174,230 @@ func TestTB70Traceback(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestTB70ImproperlyHandled runs the parts of VMS's TB70NT (linked
+// /NOTRACEBACK) and of round 2's TB70BNT on govax, and part X of each
+// round 1 image, and matches VMS's output and its "improperly handled
+// condition" dumps (excmsgMatch's rules), but for the PCs outside the
+// image (tb70Masked) and tb70DumpDifferences, X aside.
+func TestTB70ImproperlyHandled(t *testing.T) {
+	_, dispatch := tb70Console(t)
+
+	type run struct {
+		image, part, define string
+		want                []string
+	}
+
+	var runs []run
+
+	nt := tb70VAXRuns(t, "TB70NT")
+	for _, part := range tb70Parts {
+		if _, ok := tb70DumpDifferences[part]; !ok || part == "X" {
+			runs = append(runs, run{"TB70NT", part, "TB70_PART", nt[part]})
+		}
+	}
+
+	for _, image := range []string{"TB70", "TB70D"} {
+		runs = append(runs, run{image, "X", "TB70_PART", tb70VAXRuns(t, image)["X"]})
+	}
+
+	bnt := tb70BRuns(t, "TB70BNT")
+	for _, part := range []string{"O", "P", "Q", "S"} {
+		runs = append(runs, run{"TB70BNT", part, "TB70B_PART", bnt[part]})
+	}
+
+	for _, r := range runs {
+		if len(r.want) == 0 {
+			t.Fatalf("%s part %s: not in VMS's log", r.image, r.part)
+		}
+
+		dispatch("DEFINE/NOLOG " + r.define + " " + r.part)
+
+		got := strings.Split(dispatch("RUN/NODEBUG "+r.image), "|")
+		got = append(got, strings.TrimSpace(dispatch("SHOW SYMBOL $STATUS")))
+
+		for _, problem := range excmsgMatch(tb70Masked(got), tb70Masked(r.want), excmsgLoose[r.part] != "", excmsgUnset[r.image+" "+r.part]) {
+			t.Errorf("%s part %s: %s\ngot:\n%s\nwant:\n%s", r.image, r.part, problem, strings.Join(got, "\n"), strings.Join(r.want, "\n"))
+		}
+	}
+}
+
+// excmsgLoose are the parts whose dumps' registers and stack aren't
+// compared, and why: their layout, signal arrays, PCs, and PSLs are.
+var excmsgLoose = map[string]string{
+	// An access violation in a condition handler: SP is below the
+	// dispatcher's frames and arrays, which aren't VMS's.
+	"H": "the dispatcher's frames",
+	// An access violation in an AST routine: SP is below the AST
+	// delivery's frame, which isn't VMS's.
+	"T": "the AST delivery's frame",
+	// TB70SHR's frames hold its PCs, and govax places it elsewhere.
+	"N": "TB70SHR's place",
+	// The exit handler is called by image rundown's code, which isn't
+	// VMS's: its frame is elsewhere on the stack, the stack below it
+	// holds rundown's frames, and the registers are rundown's.
+	"X": "image rundown's frames and registers",
+}
+
+// excmsgUnset are, by run, the registers and stack longwords ("stack
+// n", n from 0) of the dumps that aren't compared, beside those
+// excmsgMatch passes over itself: values the program never set.
+var excmsgUnset = map[string][]string{
+	// The program's R0 at a LIB$SIGNAL or LIB$STOP call, which VMS
+	// shows, is gone by the time govax's shim runs: its stub has loaded
+	// its own code into R0.
+	"TB70NT C": {"R0"},
+	// TB70B's main routine never sets R2, which VMS's image activator
+	// left 4 and govax's leaves something else; part S's PART_S saves
+	// it in its frame.
+	"TB70BNT O": {"R0", "R2"},
+	"TB70BNT Q": {"R0", "R2"},
+	"TB70BNT S": {"R2", "stack 8"},
+}
+
+// excmsgHex is a longword in a dump.
+var excmsgHex = regexp.MustCompile(`[0-9A-F]{8}`)
+
+// excmsgRegister is a register's name and value in a register dump line.
+var excmsgRegister = regexp.MustCompile(`(R[0-9]+|AP|FP|SP|PC|PSL) ?= ([0-9A-F]{8})`)
+
+// govaxStackOffset is what moves an address in govax's user stack, in
+// a run under RUN, to the same place in VMS's: VMS's is D53E8 bytes
+// higher (testdata/tb70's runs). Above the main routine's argument list
+// (govaxStartup, VMS's vmsStartup), it's D5400:
+// that's the image startup's and DCL's part of the stack, laid out
+// differently (VMS's image startup passes the main routine six
+// arguments, govax's none).
+const (
+	govaxStackOffset = 0xD53E8
+	govaxStartup     = 0x7FDFFFE4
+	vmsStartup       = 0x7FED53CC
+	startupOffset    = 0xD5400
+)
+
+// excmsgMatch compares a run's lines, got (govax's) and want (VMS's),
+// returning what differs. Outside an "improperly handled condition"
+// dump they must be the same. In one, the layout and the signal array,
+// PC, and PSL must be the same; SP, FP, AP, and the stack's addresses
+// the same once govax's are moved to VMS's stack (govaxStackOffset).
+// A register or stack longword must be the same too, unless VMS's is an
+// address in its own P1 or system space (7FF00000 and up), a value the
+// program never set, left by the image activator or DCL, which govax
+// doesn't have; the stack from the main routine's argument list up
+// (vmsStartup) isn't compared; nor are unset's values, nor a loose
+// part's registers and stack.
+func excmsgMatch(got, want []string, loose bool, unset []string) []string {
+	if len(got) != len(want) {
+		return []string{fmt.Sprintf("%d lines, want %d", len(got), len(want))}
+	}
+
+	var problems []string
+
+	skip := map[string]bool{}
+	for _, name := range unset {
+		skip[name] = true
+	}
+
+	// VMS's SP, where the stack column starts.
+	var vmsSP uint64
+
+	for _, w := range want {
+		for _, m := range excmsgRegister.FindAllStringSubmatch(w, -1) {
+			if m[1] == "SP" {
+				vmsSP, _ = strconv.ParseUint(m[2], 16, 32)
+			}
+		}
+	}
+
+	inDump, inStack, row := false, false, 0
+
+	for i := range got {
+		g, w := got[i], want[i]
+
+		switch {
+		case strings.HasPrefix(w, "  Improperly handled condition"):
+			inDump = true
+		case strings.HasPrefix(w, "\tSignal arguments"):
+			inStack, row = true, 0
+
+			continue
+		case strings.HasPrefix(w, "\tRegister dump"):
+			inStack = false
+		}
+
+		if !inDump {
+			if g != w {
+				problems = append(problems, fmt.Sprintf("line %d: %q, want %q", i+1, g, w))
+			}
+
+			continue
+		}
+
+		if strings.HasPrefix(w, "\tPSL=") {
+			inDump = false
+		}
+
+		if excmsgHex.ReplaceAllString(g, "#") != excmsgHex.ReplaceAllString(w, "#") {
+			problems = append(problems, fmt.Sprintf("line %d's layout: %q, want %q", i+1, g, w))
+
+			continue
+		}
+
+		gv, wv := excmsgHex.FindAllString(g, -1), excmsgHex.FindAllString(w, -1)
+		names := make([]string, len(wv))
+
+		if inStack && len(wv) > 0 {
+			// The last longword is the stack's, any before it the
+			// signal array's.
+			names[len(names)-1] = fmt.Sprintf("stack %d", row)
+
+			if vmsSP+uint64(4*row) >= vmsStartup {
+				names[len(names)-1] = "startup"
+			}
+
+			row++
+		} else {
+			for j, m := range excmsgRegister.FindAllStringSubmatch(w, -1) {
+				names[j] = m[1]
+			}
+		}
+
+		for j := range wv {
+			name := names[j]
+
+			if skip[name] || name == "startup" || excmsgValueMatches(name, gv[j], wv[j], loose) {
+				continue
+			}
+
+			problems = append(problems, fmt.Sprintf("line %d's %s: %s, want %s", i+1, cmp.Or(name, "signal array"), gv[j], wv[j]))
+		}
+	}
+
+	return problems
+}
+
+// excmsgValueMatches is excmsgMatch's rule for one longword of a dump,
+// named name ("stack n", a register's name, or "" for the signal
+// array's).
+func excmsgValueMatches(name, got, want string, loose bool) bool {
+	g, _ := strconv.ParseUint(got, 16, 32)
+	w, _ := strconv.ParseUint(want, 16, 32)
+
+	switch {
+	case g > govaxStartup && g < 0x7FE00000:
+		g += startupOffset
+	case g >= 0x7FC00000 && g <= govaxStartup:
+		g += govaxStackOffset
+	}
+
+	switch name {
+	case "", "PC", "PSL":
+		return got == want
+
+	case "SP", "FP", "AP":
+		return loose || g == w
+	}
+
+	return loose || g == w || w >= 0x7FF00000
 }

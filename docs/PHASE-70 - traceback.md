@@ -5,7 +5,8 @@ accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
 after a blown run), 4 (the arithmetic traps), 5 (the image startup
-frame and the search's order), and 6 (the traceback dump) are done.
+frame and the search's order), 6 (the traceback dump), and 7
+(EXE$EXCMSG's dump) are done.
 
 ## Goal
 
@@ -676,3 +677,60 @@ debugger's case. Two LIBRTL tests (`TestLibrtlMissingRoutine`,
 `TestLibrtlMissingJSBEntry`), whose images are linked with traceback,
 now expect the dump. The manual's example 5 shows the dump (run on
 govax), and section 9 describes it.
+
+### 2026-10-21 — Subtask 7: EXE$EXCMSG's dump
+
+**The dump** (Decision 4, as revised) is `corevms/excmsg.go`'s
+`improperlyHandledDump`, which the catch-all writes after the message
+when it ends the image (a severe condition, or any LIB$STOP) for a
+condition its exception dispatcher raises (`exceptionConditions`:
+`exceptionCondition`'s, by condition ID), however it was raised: so
+TB70NT's hardware exceptions, part C's SS$_ACCVIO by LIB$SIGNAL, and
+round 2's SS$_OPCDEC by LIB$SIGNAL and SS$_ACCVIO by LIB$STOP get it;
+S20's SS$_BADPARAM and every other LIB$STOP don't. It goes through
+`reportCondition`'s `after`, so under the debugger there's no dump, as
+for traceback's. Part X, an exit handler's access violation, gets it in
+TB70 and TB70D too, the traceback handler having resignaled (subtask 5).
+
+The layout is Part A's, tabs and all: the signal array (count, "Name",
+the rest) beside ten longwords of the stack, as many rows as the longer
+column (a signal array longer than ten longwords goes on alone, and an
+unreadable stack longword ends its column: neither confirmed); then R0
+and R1 from the mechanism array, R2 to R11 the CPU's (the program's:
+every handler has returned), AP, FP, SP, PC, and PSL. SP is the
+program's as the condition leaves it, a new `conditionDispatch` field
+(`conditionSP`): the SP at the exception, or for LIB$SIGNAL and
+LIB$STOP their caller's once the call returns (`spAfterReturn`: the
+stub frame's argument list, a CALLS's arguments popped; a JSB entry's
+return address popped, unconfirmed). FP is SP − (68 + 4n) and AP FP+40,
+VMS's own frames, as round 2 found. PC and PSL are the signal array's.
+
+**A CPU bug** the dump's stack showed (part I: the frame's saved PSW
+20000020 where VMS's is 20000000): CALLS and CALLG saved the PSW after
+setting the entry mask's trap enables, so a frame held the callee's IV
+and DV, and RET gave them to the caller. The manual's order is clear
+(condition codes cleared, PSW pushed, then the enables set);
+`buildCallFrame` now saves first. docs/DEVIATIONS.md has the entry
+("[Phase 70, resolved] CALLS and CALLG saved the callee's trap
+enables"); `TestEmulRetRestoresFullPSWFromFrame`, which held the old
+behavior, now checks the caller's IV coming back.
+
+`TestTB70ImproperlyHandled` (`internal/console/tb70_test.go`) runs every
+part of VMS's TB70NT, round 2's TB70BNT O, P, Q, and S, and part X of
+TB70, TB70D, and TB70NT, and matches VMS's output and dumps line for
+line (`excmsgMatch`): the layout, the signal arrays, PCs, and PSLs
+exactly; SP, FP, AP, and the stack's addresses once govax's stack is
+moved to VMS's (D53E8 bytes higher, D5400 above the main routine's
+argument list: VMS's image startup passes the main routine six
+arguments, govax's driver none, a difference left as it is); registers
+and stack longwords the program set. Not compared: values the program
+never set (VMS's are its activator's and DCL's, in its own P1 and S0
+space), the stack from the main routine's argument list up, R0 at a
+LIB$SIGNAL or LIB$STOP (govax's stub has replaced the caller's R0 by
+the time the shim runs: VMS shows the caller's), TB70B's never-set R2,
+and the registers and stack of four parts whose frames come from code
+that isn't VMS's (`excmsgLoose`: H, the dispatcher's; T, the AST
+delivery's; N, TB70SHR's place; X, image rundown's). `excmsg_test.go`
+checks the layout, which conditions get the dump by LIB$SIGNAL and
+LIB$STOP, the SP after a CALLS, and a long signal array. The manual's
+example 5 shows the dump (run on govax).

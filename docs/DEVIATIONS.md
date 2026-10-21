@@ -4358,3 +4358,20 @@ Entry template:
   say it should do.
 - **Status**: deferred (Go replicates C behavior as-is) | fixed in Go (rationale).
 -->
+
+### [Phase 70, resolved] CALLS and CALLG saved the callee's trap enables
+
+- **Where**: `internal/cpu/call.go`'s `buildCallFrame`.
+- **What**: the architecture manual's CALLG and CALLS: the condition
+  codes are cleared, the PSW is pushed (T cleared), and only then are
+  the trap enables set from the entry mask (IV from bit 14, DV from bit
+  15, FU cleared). govax set the enables first, so a frame's saved PSW
+  held the called routine's IV and DV, not the caller's, and RET, which
+  restores the PSW from the frame, gave them to the caller: a routine
+  with `^M<IV>` left integer overflow traps enabled in its caller after
+  it returned. VMS 7.1's frame shows the caller's (`testdata/tb70`'s part
+  I, the "improperly handled condition" dump's stack: 20000000 where
+  govax had 20000020).
+- **Status**: fixed in Phase 70's subtask 7: the PSW is saved before the
+  enables are set. `TestEmulRetRestoresFullPSWFromFrame`, which held the
+  old behavior, now checks the caller's IV coming back through RET.

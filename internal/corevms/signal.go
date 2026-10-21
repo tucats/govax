@@ -118,11 +118,12 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 	sig = append(sig, returnPC, uint32(psl))
 
 	d := &conditionDispatch{
-		kind:      kind,
-		resumeSP:  resumeSP,
-		resumeFP:  fp,
-		resumePC:  c.GPR(registers.PC),
-		resumePSL: c.PSL(),
+		kind:        kind,
+		resumeSP:    resumeSP,
+		resumeFP:    fp,
+		resumePC:    c.GPR(registers.PC),
+		resumePSL:   c.PSL(),
+		conditionSP: env.spAfterReturn(fp, maskPSW, resumeSP),
 	}
 
 	if !env.startDispatch(d, sig, r0, c.GPR(registers.R1)) {

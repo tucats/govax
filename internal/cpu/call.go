@@ -117,22 +117,23 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 		return err
 	}
 
-	// Condition codes are cleared; IV/DV trap enables come from the entry
-	// mask; FU is cleared; T is unaffected. Apply this to the live PSL
-	// before snapshotting it into the frame, so the frame's saved psw field
-	// reflects the same post-CALL state a later RET or exception handler
-	// would see live.
+	// The manual's order: the condition codes are cleared, the PSW is
+	// pushed (with T cleared: "the processor status word (PSW) in bits
+	// 15:0 with T cleared are pushed on the stack"; the live T is
+	// unaffected), and only then are the trap enables set from the entry
+	// mask (IV from bit 14, DV from bit 15, FU cleared). So the frame keeps
+	// the caller's trap enables, which RET gives back to the caller: VMS
+	// 7.1's frames show it (testdata/tb70's part I, the caller's IV clear
+	// in the frame of a routine whose mask sets it).
 	psl := e.cpu.PSL()
 	psl.SetNZVC(false, false, false, false)
+
+	snapshotPSW := uint32(psl) & 0x0000FFFF &^ 0x0010
+
 	psl.SetIV(mask&(1<<14) != 0)
 	psl.SetDV(mask&(1<<15) != 0)
 	psl.SetFU(false)
 	e.cpu.SetPSL(psl)
-
-	// The frame's own psw snapshot additionally has T cleared, per "the
-	// processor status word (PSW) in bits 15:0 with T cleared are pushed on
-	// the stack" -- distinct from the live PSW's T, which is unaffected.
-	snapshotPSW := uint32(psl) & 0x0000FFFF &^ 0x0010
 
 	var calltypeBit uint32
 	if calls {

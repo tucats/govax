@@ -458,30 +458,38 @@ func TestEmulRetReservedOperandFault(t *testing.T) {
 	}
 }
 
-// TestEmulRetRestoresFullPSWFromFrame checks the fix for RET's "PSW <-
-// tmp1<15:0>" full-replacement behavior -- not the partial bits-6:15-only
-// restore emul_call.c's emul_ret implements -- by round-tripping a CALLG
-// whose entry mask sets IV, then confirming RET restores IV from the frame
-// even though the live PSL was changed in between.
+// TestEmulRetRestoresFullPSWFromFrame checks RET's "PSW <- tmp1<15:0>"
+// full replacement, and what CALLG saves for it: the caller's trap
+// enables, pushed before the entry mask's are set (the manual's order;
+// testdata/tb70's part I, on VMS). The caller runs with IV set and calls
+// a routine whose entry mask clears it; RET gives the caller its IV back
+// from the frame, even though the live PSL was changed in between.
 func TestEmulRetRestoresFullPSWFromFrame(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	cpu.SetGPR(registers.SP, 0x9000)
 
-	// Entry mask: no saved registers, IV set (bit 14), followed immediately
-	// by a RET at the entry point.
-	putBytes(t, cpu, mem, 0x2000, 0x00, 0x40, 0x04)
+	psl := cpu.PSL()
+	psl.SetIV(true)
+	cpu.SetPSL(psl)
+
+	// Entry mask: no saved registers, IV clear, followed immediately by a
+	// RET at the entry point.
+	putBytes(t, cpu, mem, 0x2000, 0x00, 0x00, 0x04)
 
 	stepInstruction(t, e, 0xFA, 0x9F, 0x00, 0x30, 0x00, 0x00, 0x9F, 0x00, 0x20, 0x00, 0x00)
 
-	if !cpu.PSL().IV() {
-		t.Fatal("IV = false after CALLG, want true")
+	if cpu.PSL().IV() {
+		t.Fatal("IV = true after CALLG, want false (the entry mask's)")
+	}
+
+	if saved, err := mem.LoadLongword(cpu, cpu.GPR(registers.FP)+4); err != nil || saved&0x20 == 0 {
+		t.Fatalf("frame's saved psw %#x (%v), want the caller's IV set", saved, err)
 	}
 
 	// Tamper with the live PSL so a RET that merely preserved live state
-	// (rather than reading the frame) would pass IV through unchanged.
-	psl := cpu.PSL()
-	psl.SetIV(false)
+	// (rather than reading the frame) would leave IV clear.
+	psl = cpu.PSL()
 	psl.SetN(true)
 	cpu.SetPSL(psl)
 
