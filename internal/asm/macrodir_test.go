@@ -369,7 +369,7 @@ func TestDefaultDisplacement(t *testing.T) {
 // but not R0, R1, AP, or FP.
 func TestEntryMACRO(t *testing.T) {
 	a := macroAssemble(t, ".PSECT CODE\n.ENTRY A, 0\nRET\n.ENTRY B, ^M<R2>!^M<IV>\nRET")
-	requireBytes(t, psectBytes(t, a, "CODE"), 0, 0, 4, 0x04, 0x80, 4)
+	requireBytes(t, psectBytes(t, a, "CODE"), 0, 0, 4, 0x04, 0x40, 4)
 
 	requireMACROError(t, ".PSECT CODE\n.ENTRY A, ^M<R0>", vmserrors.VAX_ENTRYMASK)
 	requireMACROError(t, ".PSECT CODE\n.ENTRY A, ^X1000", vmserrors.VAX_ENTRYMASK)

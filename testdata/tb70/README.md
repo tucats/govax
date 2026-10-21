@@ -67,9 +67,9 @@ until subtask 3).
        govax console < testdata/tb70/copyout.cmd
 
    That copies the log and maps as text and the images
-   byte for byte into `vax/` (`TestTB70Oracle` will run VMS's own
-   images on govax, so the PCs match), and the objects in the host
-   variable-length record layout.
+   byte for byte into `vax/` (`TestTB70Traceback` and its neighbors run
+   VMS's own images on govax, so the PCs match), and the objects in the
+   host variable-length record layout.
 
 None of the sources calls a system macro but `$LNMDEF`, `$TRNLNM_S`,
 `$DCLAST_S`, `$DCLEXH_S`, and `$SETEXV_S`, and nothing copied back is a
@@ -96,3 +96,9 @@ DUA1. MACRO and LINK had no messages; every part ran. Round 2: the same
 day, on the same system and volume; every part ran.
 `docs/PHASE-70 - traceback.md`'s Part A has the answers ("The probe's
 answers").
+
+`TestTB70Oracle` (`internal/console/tb70oracle_test.go`) does on govax
+what the author did on VMS: it puts each round's files on a fresh RD51
+as DUA1, runs `@TB70/OUTPUT=TB70.LOG` and `@TB70B/OUTPUT=TB70B.LOG`,
+which build every image with govax's MACRO and LINK, and holds both
+logs to VMS's, command by command, with paging off and on.

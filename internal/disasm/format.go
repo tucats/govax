@@ -186,8 +186,9 @@ func widthMask(width int) uint32 {
 
 // FormatMask renders a 16-bit register-set mask as "^M<...>" text,
 // matching console_disasm.c's format_mask(): a routine's entry mask (see
-// EntryMask). Bit 15 is IV (integer overflow trap enable), bit 14 is DV
-// (decimal overflow trap enable); bits 0-13 print as "R<n>", matching the
+// EntryMask). Bit 14 is IV (integer overflow trap enable), bit 15 is DV
+// (decimal overflow trap enable), as the architecture defines a CALLS or
+// CALLG entry mask; bits 0-13 print as "R<n>", matching the
 // reference tool's own formatting even though only R0-R11 are ever
 // settable through internal/asm's mask parser.
 func FormatMask(mask uint16) string {
@@ -199,9 +200,9 @@ func FormatMask(mask uint16) string {
 		}
 
 		switch n {
-		case 15:
-			names = append(names, "IV")
 		case 14:
+			names = append(names, "IV")
+		case 15:
 			names = append(names, "DV")
 		default:
 			names = append(names, fmt.Sprintf("R%d", n))

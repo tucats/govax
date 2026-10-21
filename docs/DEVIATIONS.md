@@ -4378,3 +4378,27 @@ Entry template:
 - **Status**: fixed in Phase 70's subtask 7: the PSW is saved before the
   enables are set. `TestEmulRetRestoresFullPSWFromFrame`, which held the
   old behavior, now checks the caller's IV coming back through RET.
+
+### [Phase 70, resolved] The assembler and disassembler swapped an entry mask's IV and DV
+
+- **Where**: `reference/eVAX/eVAX/Source/Assembler/asm_value.c`'s
+  `asm_mask` (IV to bit 15, DV to bit 14) and
+  `Source/Console/console_disasm.c`'s mask formatting (bit 15 named IV,
+  14 DV), ported to `internal/asm/value.go`'s `maskBits`,
+  `internal/disasm/format.go`'s `FormatMask`, and
+  `internal/disasm/symbolic.go`'s `debuggerMask`.
+- **What**: the architecture manual's CALLG and CALLS take IV from the
+  entry mask's bit 14 and DV from bit 15, as govax's CPU did
+  (`internal/cpu/call.go`); the assembler put `^M<IV>` in bit 15, so a
+  routine whose mask asked for integer overflow traps got decimal
+  overflow traps instead, and the disassemblers named the bits the same
+  wrong way. ANALYZE/OBJECT's names (`internal/anl/gsd.go`) were right.
+  Found by `TestTB70Oracle`: govax's own TB70 (assembled from
+  `testdata/tb70/tb70.mar`) didn't trap in part I's `OVF`, whose mask is
+  `^M<IV>`, where VMS's did; real MACRO's TB70.OBJ has `^X4000` there.
+  The earlier fixtures hadn't shown it: dbgsub's mask has both bits, and
+  the golden snapshot of `testdata/asm/bench.asm` held the wrong byte.
+- **Status**: fixed in Phase 70's subtask 10, in all three places;
+  `TestExpressionMask`, `TestEntryMACRO`, `TestEntryMask`,
+  `TestDisassemble_entryMask`, and bench's golden snapshot now hold the
+  architecture's bits.

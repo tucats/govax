@@ -114,7 +114,7 @@ func TestEntryMask(t *testing.T) {
 		t.Fatalf("EntryMask = %+v", dec)
 	}
 
-	if got, want := dec.String(), ".ENTRY SUB2,^M<R2,R3,R4,DV,IV>"; got != want {
+	if got, want := dec.String(), ".ENTRY SUB2,^M<R2,R3,R4,IV,DV>"; got != want {
 		t.Errorf("String = %q, want %q", got, want)
 	}
 }

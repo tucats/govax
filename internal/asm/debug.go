@@ -272,12 +272,19 @@ func (a *Assembler) noCallRoutines() []*section {
 // the row before it at the same line (a macro's expansion is one row,
 // its call's line) joins it. Data stored right after a row's code (in
 // its psect, where its code ends) is part of the row, as real MACRO
-// counts it (dstln1.mar's .BYTE and .LONG in code). Code anywhere but
-// where the last row's segment ends starts a new segment: after a gap, or
-// in another psect.
+// counts it (dstln1.mar's .BYTE and .LONG in code). An instruction of
+// the row's line after such data is in no row: real MACRO's TB70D.OBJ
+// (testdata/tb70) ends the row of a SAY macro's call, a BRW over an
+// .ASCID then a PUSHAQ and a CALLS, after the .ASCID, and its next row,
+// the line after, starts a new segment past the PUSHAQ and CALLS.
+// Code anywhere but where the last row's segment ends starts a new
+// segment: after a gap, or in another psect.
 func (a *Assembler) lineRows() []lineRow {
 	var (
 		end uint32 // where the last row's segment ends
+		// data says data ended the last row: an instruction of its
+		// line after it is in no row.
+		data bool
 	)
 
 	rows := make([]lineRow, 0)
@@ -294,14 +301,21 @@ func (a *Assembler) lineRows() []lineRow {
 			// Data: part of the row before it, if it continues it. (A
 			// macro call's line, or a repeat block's, spans its
 			// expansion's lines, which are recorded too.)
-			_, data := dataDirectiveTypes[strings.TrimPrefix(l.op, ".")]
-			if data && continues && len(l.fields) > 0 {
+			_, isData := dataDirectiveTypes[strings.TrimPrefix(l.op, ".")]
+			if isData && continues && len(l.fields) > 0 {
 				end = l.endLoc
 				rows[n-1].size = end - rows[n-1].loc
+				data = true
 			}
 
 			continue
 		}
+
+		if n > 0 && data && !l.debugRepeat && rows[n-1].line == l.debugLine {
+			continue
+		}
+
+		data = false
 
 		if continues && !l.debugRepeat && rows[n-1].line == l.debugLine {
 			end = l.endLoc

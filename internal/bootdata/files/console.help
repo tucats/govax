@@ -170,6 +170,8 @@
 //                          of specifications
 //              10/20/26    COPY makes its output at the version given
 //              10/20/26    Added BACKUP (docs/PHASE-69 - backup save sets.md)
+//              10/21/26    @/OUTPUT makes a volume file when the procedure
+//                          starts
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1041,7 +1043,9 @@ $@
 
         /OUTPUT=file    Sends the procedure's output to the file instead
                         of the terminal (.LIS by default; NL: discards
-                        it).  Error messages go to the terminal too.  The
+                        it).  Error messages go to the terminal too.  A
+                        file on a volume is made when the procedure
+                        starts, and written a line at a time.  The
                         qualifier must follow the file name with no blank
                         between them; otherwise it is a parameter.
 

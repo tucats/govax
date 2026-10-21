@@ -994,9 +994,11 @@ type procedureOutput struct {
 }
 
 // openProcedureOutput opens the /OUTPUT file name names: a host file,
-// written as the procedure writes, or a file on a mounted volume, written
-// when the procedure ends (a volume file is written whole). A name with
-// no file type gets .LIS. The null device, NL:, discards the output.
+// written as the procedure writes, or a file on a mounted volume, made
+// at once (so the procedure's own DIRECTORY lists it, as VMS's does) as
+// OPEN/WRITE makes one, a VFC print file, and written a record per line
+// as the procedure writes. A name with no file type gets .LIS. The null
+// device, NL:, discards the output.
 func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error) {
 	if isNullDevice(name) {
 		return &procedureOutput{Writer: io.Discard, close: func() error { return nil }}, nil
@@ -1018,26 +1020,61 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 		return &procedureOutput{Writer: f, close: f.Close}, nil
 	}
 
-	var buf bytes.Buffer
+	access := rms.DCLAccess{Write: true, ShareRead: true}
 
-	session := c.ContainerSession
-
-	return &procedureOutput{Writer: &buf, close: func() error {
-		text := strings.TrimSuffix(buf.String(), "\n")
-
-		var records [][]byte
-		if text != "" {
-			for _, line := range strings.Split(text, "\n") {
-				records = append(records, []byte(line))
-			}
+	f, err := c.ContainerSession.OpenDCLFile(loc, access)
+	if err != nil {
+		var fe *rms.DCLFileError
+		if errors.As(err, &fe) {
+			return nil, openFailure(fe, access)
 		}
 
-		if _, err := session.CreateRecordFile(loc, rms.TextRecords, records); err != nil {
-			return dclcmd.FileFailure(err, name)
+		return nil, dclcmd.FileFailure(err, name)
+	}
+
+	w := &recordWriter{file: f}
+
+	return &procedureOutput{Writer: w, close: w.close}, nil
+}
+
+// recordWriter writes text to a volume file a record per line: each
+// line goes to the file when its newline is written, and a last line
+// without one when the file is closed.
+type recordWriter struct {
+	file    *rms.DCLFile
+	partial []byte
+}
+
+func (w *recordWriter) Write(p []byte) (int, error) {
+	w.partial = append(w.partial, p...)
+
+	for {
+		line, rest, found := bytes.Cut(w.partial, []byte("\n"))
+		if !found {
+			break
 		}
 
-		return nil
-	}}, nil
+		if sts := w.file.Put(line); sts&1 == 0 {
+			return 0, rmsStatusFailure(sts, 0)
+		}
+
+		w.partial = append(w.partial[:0], rest...)
+	}
+
+	return len(p), nil
+}
+
+// close writes the last line, if it has no newline, and closes the file.
+func (w *recordWriter) close() error {
+	if len(w.partial) > 0 {
+		if sts := w.file.Put(w.partial); sts&1 == 0 {
+			_ = w.file.Close()
+
+			return rmsStatusFailure(sts, 0)
+		}
+	}
+
+	return w.file.Close()
 }
 
 // isNullDevice reports whether name is the null device, NL: (or NLA0:,

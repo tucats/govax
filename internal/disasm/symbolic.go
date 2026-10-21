@@ -127,8 +127,8 @@ var debuggerMnemonics = map[string]string{
 }
 
 // debuggerMask renders a register-save mask as the debugger does: the
-// registers, then IV and DV, in that order (^M<R2,...,R11,IV,DV>), where
-// FormatMask goes by bit number and puts DV first.
+// registers, then IV (bit 14) and DV (bit 15), in that order
+// (^M<R2,...,R11,IV,DV>).
 func debuggerMask(mask uint16) string {
 	var names []string
 
@@ -138,11 +138,11 @@ func debuggerMask(mask uint16) string {
 		}
 	}
 
-	if mask&0x8000 != 0 {
+	if mask&0x4000 != 0 {
 		names = append(names, "IV")
 	}
 
-	if mask&0x4000 != 0 {
+	if mask&0x8000 != 0 {
 		names = append(names, "DV")
 	}
 

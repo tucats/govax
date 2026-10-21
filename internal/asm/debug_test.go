@@ -2,6 +2,7 @@ package asm
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -211,4 +212,57 @@ func splitSymbolRecords(t *testing.T, m *obj.Module) (*obj.Module, []string) {
 	}
 
 	return rest, syms
+}
+
+// TestLineRowsDataInMacro checks a row whose code is followed by data
+// and then more code of its line, a macro call like testdata/tb70's SAY
+// (a BRW over an .ASCID, then a PUSHAQ and a CALLS): as in real MACRO's
+// TB70D.OBJ, the row ends after the data, the PUSHAQ and CALLS are in no
+// row, and the next line's row starts a new segment past them.
+func TestLineRowsDataInMacro(t *testing.T) {
+	a := macroAssembler()
+	if err := a.SetFunctions([]string{"DEBUG", "TRACEBACK"}, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	src := `	.MACRO	SAY	TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAQ	LBL
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	MAIN,^M<>
+	SAY	</HI/>
+	MOVL	#1,R0
+	RET
+	.END
+`
+	if _, err := a.Assemble(src); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+
+	type row struct {
+		line      int
+		loc, size uint32
+		first     bool
+	}
+
+	var got []row
+	for _, r := range a.lineRows() {
+		got = append(got, row{r.line, r.loc, r.size, r.first})
+	}
+
+	// The entry mask (2 bytes); SAY's BRW (3) and .ASCID (8 and 2);
+	// then, past the PUSHAQ (3) and CALLS (7), MOVL and RET.
+	want := []row{
+		{8, 0, 2, true},
+		{9, 2, 13, false},
+		{10, 25, 3, true},
+		{11, 28, 1, false},
+	}
+
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("rows = %v, want %v", got, want)
+	}
 }

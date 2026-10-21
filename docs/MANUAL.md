@@ -1423,7 +1423,9 @@ The file's type defaults to `.COM`. It may be on a volume or the host
 (quote a host name: `@"build.com"`). The procedure runs at a new
 *command level*, one deeper than the one that ran it; the terminal is
 level 0, and procedures may nest 32 deep. `/OUTPUT` sends its output to
-a file (`NL:` discards it).
+a file (`NL:` discards it). A volume file is made when the procedure
+starts, a print file written a line at a time, so the procedure's own
+DIRECTORY lists it.
 
 Up to eight parameters become the local symbols `P1` to `P8` (those not
 given are `""`). Unquoted parameters are made uppercase; quotes keep

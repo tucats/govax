@@ -6,8 +6,8 @@ VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
 after a blown run), 4 (the arithmetic traps), 5 (the image startup
 frame and the search's order), 6 (the traceback dump), 7
-(EXE$EXCMSG's dump), 8 (SYS$OUTPUT and SYS$ERROR), and 9 (the AST
-exit in S0) are done.
+(EXE$EXCMSG's dump), 8 (SYS$OUTPUT and SYS$ERROR), 9 (the AST exit
+in S0), and 10 (the oracle) are done.
 
 ## Goal
 
@@ -430,8 +430,9 @@ traceback and `/NOTRACEBACK`:
    where govax's returns to the SYS$CLRAST P1-vector stub; VMS's dump
    names that PC by rule 1 (`8192B447`, S12 and T), govax's has blank
    columns.
-10. **The oracle**: `TestTB70Oracle` runs `tb70.com`'s parts on govax
-    and matches VMS's log.
+10. **The oracle**: `TestTB70Oracle` runs `tb70.com` and `tb70b.com`
+    on govax, building the images from the sources, and matches VMS's
+    logs.
 11. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
     PLAN.md.
 
@@ -810,3 +811,64 @@ never placed there.
 `TestTB70Traceback`, `TestTB70Output`, and `TestTB70ImproperlyHandled`
 now compare the module, routine, and line columns of every line outside
 the image, which match VMS's.
+
+### 2026-10-21 — Subtask 10: the oracle
+
+**`TestTB70Oracle`** (`internal/console/tb70oracle_test.go`) does on
+govax what the author did on VMS: each round's files on a fresh RD51 as
+DUA1 (round 2's only before `@TB70B`, as `exchange2.cmd` added them),
+then `@TB70/OUTPUT=TB70.LOG` and `@TB70B/OUTPUT=TB70B.LOG`, which
+assemble and link every image with govax's MACRO and LINK and run every
+part under each, through the procedures' own DCL. Both logs are held to
+VMS's command by command (`tb70CompareLogs`), with paging off and on:
+the echoed lines exactly, each command's output line for line, an
+"improperly handled condition" dump by `excmsgMatch`'s rules, PCs
+outside the image by `tb70Masked`'s, the runs of
+`tb70DumpDifferences` (L, M) passed over, and DIRECTORY's listings
+with their times masked and the sizes of `tb70SizeDifferences` (the
+volume's directory and index file, the open logs, LINK's maps). Only
+F$GETSYI's version line is left out (`tb70LogDifferences`). The tests
+before it ran VMS's own images; this one found three things they
+couldn't:
+
+**IV and DV.** govax's TB70 didn't trap in part I: the assembler put
+`^M<IV>` in the entry mask's bit 15, DV's, where CALLS takes IV from
+bit 14 (real MACRO's TB70.OBJ: `^X4000`), so `OVF` ran with decimal
+overflow traps on and integer overflow traps off, and its sum, 80000000,
+was the image's exit status. The disassemblers (`FormatMask`,
+`debuggerMask`) named the bits the same wrong way; ANALYZE's were right.
+All three are fixed (docs/DEVIATIONS.md, "The assembler and
+disassembler swapped an entry mask's IV and DV"), with
+`testdata/asm/bench.asm`'s golden snapshot, which held the wrong byte.
+
+**`@/OUTPUT`'s file.** VMS's TB70.COM ends with a DIRECTORY that lists
+`TB70.LOG;1`, the log the procedure is writing (0/224: its header has no
+end of file while it's open). govax made a volume `/OUTPUT` file only
+when the procedure ended. `openProcedureOutput` now makes it when the
+procedure starts, through OPEN/WRITE's `rms.Session.OpenDCLFile` (a VFC
+print file, as DCL's output files are, shared for reading), and writes
+a record per line (`recordWriter`). A file it can't make is OPEN's
+OPENOUT message (unconfirmed for `@`). The manual and HELP @ say so.
+
+**MACRO's line-number table.** govax's TB70D.EXE was a block short: its
+TB70D.OBJ had one DBG record fewer. Real MACRO's line-number table ends
+the row of each SAY call (a BRW over an `.ASCID`, then a PUSHAQ and a
+CALLS) after the `.ASCID`, leaves the PUSHAQ and CALLS out of the table,
+and starts a new segment (TERM, SET_ABS_PC) at the next line, past
+them; govax joined them to the row. `lineRows` now leaves an
+instruction of a row's line out of the table once data has followed
+the row's code (`TestLineRowsDataInMacro`); a data line followed by
+another line's code, as in dstln1 and dbgdis, is as before. TB70D.EXE
+is now 19 blocks, as VMS's. That an instruction of the line after data
+is left out in other shapes than this one is unconfirmed.
+
+**What's still different.** TB70D.OBJ's line-number program is now
+VMS's, command for command, but one of its DST line-number records is
+cut 5 bytes earlier: VMS's holds 248 bytes of data where FORTH's hold at
+most 247 (`lineRecordMax`, from FORTH's), the command after fitting in
+both, so the rule isn't a byte limit alone; left as it is (unconfirmed).
+Its `$LNMDEF` symbol records differ as FORTH's `$$` records do (govax's
+STARLET; it also lacks LNM$S_LNMDEF). The images' G^ cells for LIBRTL
+are in govax's fallback order (names ascending; Phase 68's
+`orderCells`), since the test has no LIBRTL.EXE to read LIBRTL's table
+from. Neither changes a line of the logs.

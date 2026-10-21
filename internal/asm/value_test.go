@@ -78,7 +78,7 @@ func TestExpressionMask(t *testing.T) {
 
 	got := evalNoForward(t, a, "^M<R0,R2,R11,IV>")
 
-	want := uint32(1<<0 | 1<<2 | 1<<11 | 1<<15)
+	want := uint32(1<<0 | 1<<2 | 1<<11 | 1<<14)
 	if got != want {
 		t.Errorf("mask = %#x, want %#x", got, want)
 	}

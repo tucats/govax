@@ -40,7 +40,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 
 	c.Symbols.SetEntry("MAIN", 0x1000, machine.SymbolUser)
 
-	// Mask word: bit 2 (R2) and bit 14 (DV) set, little-endian.
+	// Mask word: bit 2 (R2) and bit 14 (IV) set, little-endian.
 	if err := c.Deposit("", 0x1000, machine.SizeByte, 0x04); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 
 	got := buf.String()
 
-	want := "00001000: .ENTRY MAIN,^M<R2,DV>\n00001002: CLRL R3\n"
+	want := "00001000: .ENTRY MAIN,^M<R2,IV>\n00001002: CLRL R3\n"
 	if got != want {
 		t.Errorf("Disassemble output = %q, want %q", got, want)
 	}

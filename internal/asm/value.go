@@ -777,9 +777,11 @@ func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
 }
 
 // maskLiteral parses a "<R0,R1,...>" register-set mask (the argument to
-// ^M, .MASK, and .ENTRY's second operand) into a 16-bit bitmask, matching
-// asm_mask(). IV (integer overflow trap) is bit 15, DV (decimal overflow
-// trap) is bit 14 — the two non-register bits an entry mask can carry.
+// ^M, .MASK, and .ENTRY's second operand) into a 16-bit bitmask. IV
+// (integer overflow trap) is bit 14, DV (decimal overflow trap) bit 15 —
+// the two non-register bits an entry mask can carry, where CALLS and
+// CALLG take them (real MACRO's TB70.OBJ, testdata/tb70: ^M<IV> is
+// ^X4000).
 func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	c.skipBlanks()
 
@@ -848,7 +850,7 @@ var maskBits = map[string]uint{
 	"R0": 0, "R1": 1, "R2": 2, "R3": 3,
 	"R4": 4, "R5": 5, "R6": 6, "R7": 7,
 	"R8": 8, "R9": 9, "R10": 10, "R11": 11,
-	"IV": 15, "DV": 14,
+	"IV": 14, "DV": 15,
 }
 
 func maskBit(name string) (uint, bool) {
