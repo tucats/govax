@@ -218,14 +218,24 @@ func (p *procedureSource) readData() (record string, ok bool) {
 
 // IsInputStream reports whether a file specification names SYS$INPUT
 // (with or without its colon), itself or through logical names: the
-// process's input, which TYPE reads as lines rather than as a file
+// process's input, which TYPE reads as lines rather than as a file. A
+// name that leads to a process-permanent file is SYS$INPUT when it is the
+// file SYS$INPUT leads to; one that leads to none is found by its name
 // (processPermanentFile).
 func (c *Interpreter) IsInputStream(spec string) bool {
+	if e, ok := c.permanentFile(strings.TrimSpace(spec)); ok {
+		input, _ := c.permanentFile("SYS$INPUT")
+
+		return e == input
+	}
+
 	return c.processPermanentFile(spec) == "SYS$INPUT"
 }
 
 // processPermanentNames are the process-permanent files every process
-// has, which DCL's READ and WRITE use without an OPEN (dclfile.go).
+// has, which DCL's READ and WRITE use without an OPEN (dclfile.go), found
+// by name where they aren't yet entries of the process's (a subprocess's
+// files: docs/PHASE-71 - process-permanent files.md, subtask 8).
 var processPermanentNames = map[string]bool{
 	"SYS$INPUT": true, "SYS$OUTPUT": true, "SYS$ERROR": true, "SYS$COMMAND": true,
 }

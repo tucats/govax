@@ -264,3 +264,49 @@ func TestProcedureFiles_vminit(t *testing.T) {
 		t.Errorf("output:\n%s", got)
 	}
 }
+
+// TestProcedureFiles_vminitOpen: a file DCL's OPEN opened before VMINIT
+// becomes an entry of the new process 1's, its name defined again, so
+// WRITE and CLOSE after it reach it.
+func TestProcedureFiles_vminitOpen(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	t.Chdir(t.TempDir())
+
+	proc := writeProcedure(t, t.TempDir(), "init.com",
+		`$ OPEN/WRITE KEEP KEPT.TXT`, `$ WRITE KEEP "before"`, "$ VMINIT", `$ WRITE KEEP "after"`,
+		"$ CHECK", "$ CLOSE KEEP", "$ TYPE KEPT.TXT")
+
+	open := false
+
+	route := func(line string) error {
+		if line != "CHECK" {
+			return d.Dispatch(line)
+		}
+
+		e, err := c.Logicals.Translate(lnm.ProcessTableName, "KEEP", lnm.Supervisor, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if pf, ok := lnm.ParsePermanentFile(e.Equivalences[0].Value); ok {
+			_, open = c.RTL.PermanentEntryFor(pf.IFI)
+		}
+
+		return nil
+	}
+
+	c.SetRoute(route)
+	defer c.SetRoute(d.Dispatch)
+
+	if err := route("@" + proc); err != nil {
+		t.Fatalf("@init: %v\n%s", err, buf.String())
+	}
+
+	if !open {
+		t.Error("after VMINIT, KEEP doesn't name an entry of the new process 1's")
+	}
+
+	if got := buf.String(); !strings.HasSuffix(got, "before\nafter\n") {
+		t.Errorf("output:\n%s", got)
+	}
+}

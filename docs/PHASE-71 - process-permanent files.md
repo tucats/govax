@@ -4,8 +4,8 @@
 answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
 VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
-table and indirect access), 5 (process startup's four files), and 6
-(command procedures) are done.
+table and indirect access), 5 (process startup's four files), 6
+(command procedures), and 7 (DCL's OPEN, READ, WRITE, CLOSE) are done.
 
 ## Goal
 
@@ -369,7 +369,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
    supervisor-mode names at each level. Done 2026-10-21.
 7. **DCL's OPEN, READ, WRITE, CLOSE** through entries (replacing the
    map's string comparison and `processPermanentFile`); images reaching
-   OPEN's files.
+   OPEN's files. Done 2026-10-21.
 8. **Subprocesses**: their input and output files as entries
    (replacing `outfile.go`), and the copying rule the probe shows.
    (Subtask 6 began it: a subprocess LIB$SPAWN makes in a procedure with
@@ -677,3 +677,55 @@ DCL's and TYPE SYS$INPUT's records, nothing on the terminal),
 rms's `TestRecordStream` and `TestPermanent_share`; `TestLibGetCommand`
 gives SYS$INPUT an entry as DCL does, and LIB$GET_INPUT no longer
 prompts for a procedure's record.
+
+### 2026-10-21 — Subtask 7: DCL's OPEN, READ, WRITE, CLOSE
+
+`internal/dclshell/dclfile.go`. OPEN opens its file as before
+(`rms.Session.OpenDCLFile`) and makes it a process-permanent file of the
+process's (`openEntry`): a volume file's handle becomes the entry
+(`AddPermanentDCLFile`), a host file a `RecordStream` on it, NL: an empty
+one; the access is OPEN's FAB$B_FAC (`rms.DCLAccess.FAC`, new), the
+record attributes in the word PRN for an open that writes and none for
+OPEN/READ (VMS's `%X8106` and `%X8005`; /APPEND's and /READ/WRITE's
+unconfirmed), and the device text `_GOVAX$DUA1` without a colon, or the
+host file's path. The logical name is defined as the entry's string
+(supervisor mode, CONFINE, TERMINAL, as before), so SHOW LOGICAL still
+shows `"_GOVAX$DUA0"`. DCL keeps its own `DCLFile` for READ, WRITE, and
+WRITE/UPDATE, on the same handle as the entry, so DCL and an image read
+and write one stream in turn; CLOSE and `CloseDCLFiles` close the entry,
+which closes the file.
+
+`Shell.dclFiles` is now keyed by entry, and the orphans list is gone: a
+name names an open file by the IFI in the string it leads to
+(`openFile`, `permanentFile`: RMS's translation, through aliases, of a
+name that leads to nothing past the device), and a file whose name was
+deassigned or redefined stays in the map, out of reach, until the
+session's (or the subprocess's DCL's) end (`OrphanedDCLFiles` counts
+them). READ and WRITE find the other process-permanent files the same
+way (`dclTarget`): the procedure entry (READ takes the procedure's next
+record, whatever it is, as before), a terminal entry (READ prompts and
+reads the terminal, WRITE goes to `terminalOut`), the innermost
+`/OUTPUT` file (`levelOutput`, through `Printf` as DCL's own lines), and
+any other through `PutPermanent` and the new `Environment.GetPermanent`.
+TYPE's SYS$INPUT test (`IsInputStream`) compares entries too. A name
+that leads to no entry still goes by `processPermanentFile`'s walk of
+names: what a subprocess's SYS$OUTPUT naming a file needs until
+subtask 8 makes it an entry; then the walk can go. A name with a colon
+after it still isn't a process-permanent file to READ and WRITE
+(CLI$_UNDFIL, VMS 7.3's F6), though it reaches OPEN's own files as
+before.
+
+VMINIT in a procedure: `adoptOpenFiles`, beside `adoptProcedureFiles`,
+makes OPEN's files entries of the new process 1's and defines again each
+name that still named its file.
+
+Checked with VMS 7.1's own PPF71.EXE, part F, on govax
+(`TestDCLOpenFiles_partF`): F1 to F10 and the DCL READ and TYPE after
+it match VMS's log line for line, masking only the entries' numbers
+(govax's 4 and 5 where VMS's were 5 and 6), the string's length (the
+node's name), STVs, ALQ, the channel, and the disk's DEVCHAR from
+`$GETDVIW` (known since subtask 6); the RFAs, the records' order across
+DCL and the image's two opens, the refusals, and PPF71B.DAT's five
+records are VMS's. `TestProcedureFiles_vminitOpen` checks the adoption.
+The other DCL file tests (`TestDCLFile_*`, testdata/dcl50's oracles)
+pass unchanged.

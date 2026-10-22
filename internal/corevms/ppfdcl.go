@@ -3,6 +3,7 @@ package corevms
 import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // The process-permanent files DCL opens (docs/PHASE-71 - process-permanent
@@ -91,4 +92,20 @@ func isPermanentString(value string) bool {
 	_, ok := lnm.ParsePermanentFile(value)
 
 	return ok
+}
+
+// rmsRER is RMS$_RER, a record that couldn't be read.
+var rmsRER = vmsdef.Symbols["RMS$_RER"]
+
+// GetPermanent reads the next record from e, as DCL's READ of a file it
+// didn't open itself does (rms.Context.GetPermanent): the record and
+// RMS$_NORMAL, or the status for why there is none. A stream that would
+// have to wait for its record is RMS$_RER.
+func (env *Environment) GetPermanent(e *rms.PermanentEntry) ([]byte, uint32) {
+	record, sts, err := env.rmsContext().GetPermanent(e)
+	if err != nil {
+		return nil, rmsRER
+	}
+
+	return record, sts
 }

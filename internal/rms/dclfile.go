@@ -83,6 +83,10 @@ func (a DCLAccess) fac() byte {
 	return facGet
 }
 
+// FAC is the open's FAB$B_FAC (fac), which DCL gives the
+// process-permanent file it makes of the open file.
+func (a DCLAccess) FAC() byte { return a.fac() }
+
 // shr is the open's FAB$B_SHR: GET for /SHARE=READ, GET, PUT, UPD, and
 // DEL for /SHARE, and none without /SHARE (RMS's default).
 func (a DCLAccess) shr() byte {

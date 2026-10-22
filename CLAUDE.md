@@ -205,7 +205,7 @@ never had.
   do (`corevms/msgout.go`), integer overflow and divide by zero trap
   (`cpu/inttrap.go`), and an AST routine returns through EXE$ASTRET in
   S0; checked against VMS 7.1 by `testdata/tb70`.
-  Phase 71 (planned 2026-10-21; subtasks 1 to 6 done) is
+  Phase 71 (planned 2026-10-21; subtasks 1 to 7 done) is
   process-permanent files: the ESC/IFI equivalence strings
   (`lnm/ppf.go`), one RMS table of files that outlive images
   (`rms/ppf.go`), and indirect access (`rms/ppfaccess.go`; the *Guide to
@@ -213,7 +213,10 @@ never had.
   `corevms/outfile.go`, and DCL's name walk; checked against VMS 7.1 by
   `testdata/ppf71`. Process startup opens the terminal's four
   (`corevms/ppfstart.go`), and DCL a procedure and its `/OUTPUT` file
-  (`dclshell/dclppf.go`), with supervisor-mode SYS$INPUT and SYS$OUTPUT.
+  (`dclshell/dclppf.go`), with supervisor-mode SYS$INPUT and SYS$OUTPUT;
+  DCL's OPEN makes each file an entry its name's string names, so
+  READ, WRITE, CLOSE, and an image's indirect `$OPEN` share one stream
+  (`dclshell/dclfile.go`, `Shell.dclFiles` by entry).
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

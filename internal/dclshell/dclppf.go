@@ -228,9 +228,10 @@ func (c *Interpreter) openOutputEntry(f *rms.DCLFile) (*procedureOutput, error) 
 var rmsWER = vmsdef.Symbols["RMS$_WER"]
 
 // adoptProcedureFiles is the Hooks.ProcessOneStarted step for a new
-// process 1 (VMINIT in vax.init): the procedure entry and each level's
-// /OUTPUT file, still open in the process 1 VMINIT replaced, become
-// entries of the new one's, and the names are defined again.
+// process 1 (VMINIT in vax.init): the procedure entry, each level's
+// /OUTPUT file, and the files OPEN has open, still open in the process 1
+// VMINIT replaced, become entries of the new one's, and the names are
+// defined again.
 func (c *Interpreter) adoptProcedureFiles(env *corevms.Environment) {
 	restore := c.useShell(c.home)
 	defer restore()
@@ -257,9 +258,46 @@ func (c *Interpreter) adoptProcedureFiles(env *corevms.Environment) {
 		}
 	}
 
+	errs = append(errs, c.adoptOpenFiles(env))
+
 	if err := errors.Join(errs...); err != nil {
 		c.Printf("%%GOVAX-W-PPF, keeping the command procedures' files: %v\n", err)
 	}
 
 	c.defineProcedureNames()
+}
+
+// adoptOpenFiles makes the files OPEN has open entries of env's, a new
+// process 1's, and defines again each logical name that still leads to
+// its file, as the new entry's string (its IFI may differ).
+func (c *Interpreter) adoptOpenFiles(env *corevms.Environment) error {
+	var errs []error
+
+	files := c.dclFiles
+	c.dclFiles = map[*rms.PermanentEntry]*dclOpenFile{}
+
+	for old, f := range files {
+		named := false
+		if e, err := c.Logicals.Translate(lnm.ProcessTableName, f.logical, lnm.Supervisor, 0); err == nil &&
+			len(e.Equivalences) > 0 && e.Equivalences[0].Value == old.EquivalenceString() {
+			named = true
+		}
+
+		adopted, err := env.AdoptPermanentFile(old)
+		if err != nil {
+			errs = append(errs, err)
+			c.dclFiles[old] = f
+
+			continue
+		}
+
+		f.entry, f.env = adopted, env
+		c.dclFiles[adopted] = f
+
+		if named {
+			c.defineLevelName(f.logical, adopted.EquivalenceString())
+		}
+	}
+
+	return errors.Join(errs...)
 }

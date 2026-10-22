@@ -135,10 +135,9 @@ type Shell struct {
 	endStatus    uint32
 	endStatusErr error
 
-	// dclFiles are the files DCL's OPEN has open (dclfile.go), by
-	// logical name, and dclOrphans those whose logical names are gone.
-	dclFiles   map[string]*dclOpenFile
-	dclOrphans []*dclOpenFile
+	// dclFiles are the files DCL's OPEN has open (dclfile.go), by their
+	// process-permanent files, those whose logical names are gone too.
+	dclFiles map[*rms.PermanentEntry]*dclOpenFile
 
 	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
 	// id: where each search has got to.

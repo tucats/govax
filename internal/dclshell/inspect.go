@@ -38,7 +38,17 @@ func (c *Interpreter) DCLFileOpen(name string) bool {
 
 // OrphanedDCLFiles is the number of files DCL's OPEN has open whose
 // logical names are gone.
-func (c *Interpreter) OrphanedDCLFiles() int { return len(c.dclOrphans) }
+func (c *Interpreter) OrphanedDCLFiles() int {
+	n := 0
+
+	for _, f := range c.dclFiles {
+		if g, open := c.openFile(f.logical); !open || g != f {
+			n++
+		}
+	}
+
+	return n
+}
 
 // VerifyImage is image verification (SET VERIFY=IMAGE), and VerifyPrefix
 // SET PREFIX's control string.

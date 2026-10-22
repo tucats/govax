@@ -1745,7 +1745,9 @@ a new version; `/APPEND` adds to the end; `/READ/WRITE` reads and
 updates. `READ` reads a record into a symbol, keeping its case and
 blanks. `WRITE` writes one record made of its expressions' values.
 `CLOSE` closes the file. A file stays open until it's closed, even after
-the procedure ends.
+the procedure ends. As on VMS, the file is a process-permanent file: a
+program that opens the logical name (`$OPEN` or `$CREATE`) reads or
+writes the same file, at the same place, as `READ` and `WRITE` do.
 
 `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and `SYS$COMMAND` need no `OPEN`.
 `READ SYS$COMMAND` and `INQUIRE` read the terminal, even inside a
