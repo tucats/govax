@@ -864,14 +864,14 @@ modules. eVAX had no object output, so there is no C behavior to
 preserve. The references are the VAX MACRO manual, the VMS 5.0 Linker
 manual's object language chapter, and objects real VAX MACRO V5.4-3
 wrote from the fixtures in `testdata/mar/`. All twelve fixtures match
-real MACRO record for record, apart from traceback records, and VMS 7.3
-accepts govax's objects (`ANALYZE/OBJECT`, `LINK`, `RUN`). These entries
-record what govax knowingly leaves out, and the encoding choices no
-fixture has confirmed yet.
+real MACRO record for record (traceback records too, since Phase 29),
+and VMS 7.3 accepts govax's objects (`ANALYZE/OBJECT`, `LINK`, `RUN`).
+These entries record what govax knowingly leaves out, and the encoding
+choices no fixture has confirmed yet.
 
 ### [Phase 27] No listings, or traceback and debugger records
 
-- **Where**: `internal/asm` (MACRO dialect), `internal/console/macro.go`.
+- **Where**: `internal/asm` (MACRO dialect), `internal/dclcmd/macro.go`.
 - **What**:
   - (The macro facility this entry also listed came with Phase 28: see
     that phase's entries below.)
@@ -881,20 +881,28 @@ fixture has confirmed yet.
     writes traceback records by default (`.ENABLE TRACEBACK`), so a
     govax-built image can't give a symbolic traceback when it fails.
     `.ENABLE TRACEBACK`/`DEBUG` are recorded and have no effect.
-- **Status**: open. Planned as Phase 29 (listings, traceback, and
-  debugger records).
+- **Status**: resolved (Phase 29, 2026-10-05). MACRO writes listings
+  (`/LIST`, `/SHOW`, `/CROSS_REFERENCE`; `listing.go`, `listctl.go`,
+  `xref.go`), and `.SUBTITLE`/`.SBTTL` make the listing's table of
+  contents. Objects carry traceback records by default and debugger
+  records with `/DEBUG` or `.ENABLE DEBUG` (`debug.go`, `internal/obj`'s
+  `dst.go` and `dbg.go`); `/ENABLE` and `/DISABLE` set the functions.
+  `TestDebugRecords` matches real MACRO's `/DEBUG` objects, and LINK runs
+  the records into the image's debug symbol table, which Phase 70's
+  traceback reads.
 
 ### [Phase 27] Smaller MACRO simplifications and extensions
 
-- **Where**: `internal/asm/macrodir.go`, `internal/console/macro.go`,
+- **Where**: `internal/asm/macrodir.go`, `internal/dclcmd/macro.go`,
   `internal/rms/copy.go`.
 - **What**:
   - `.ENABLE TRUNCATION` and `VECTOR` aren't supported: enabling one is
     the warning `VAX_IGNORED`, and assembly goes on.
-  - The `MACRO` command takes only `/OBJECT`, `/NOOBJECT`, and (Phase
-    28) a govax-style `/LIBRARY=(file,...)`: no `/LIST`, `/DEBUG`,
-    `/ENABLE`, or `/DISABLE`, and no `A+B` concatenation of several
-    sources into one module, nor VMS's `PROG+LIB/LIBRARY`.
+  - The `MACRO` command has no `A+B` concatenation of several sources
+    into one module, nor VMS's `PROG+LIB/LIBRARY`; macro libraries come
+    from a govax-style `/LIBRARY=(file,...)` (Phase 28). (`/LIST`,
+    `/SHOW`, `/CROSS_REFERENCE`, `/DEBUG`, `/ENABLE`, and `/DISABLE`
+    came with Phase 29.)
   - Error messages are govax's (`%CLI-E-ASSEMBLING, ... line N:
     VAX-E-...`), not MACRO's. After an error, assembly goes on to the
     next statement, so a later message can follow from an earlier
@@ -906,9 +914,10 @@ fixture has confirmed yet.
     and its SRC header is the command line as typed, as real MACRO
     records its own.
   - A host `.OBJ` is kept in ODS-2's on-disk variable-length record
-    layout, and COPY always copies `.OBJ` files as records. Host files
-    have no record attributes, so that's govax's convention, not VMS
-    behavior.
+    layout, and COPY always copies `.OBJ` files (and the other types in
+    `internal/rms/recordfile.go`'s `hostRecordTypes`) as records. Host
+    files have no record attributes, so that's govax's convention, not
+    VMS behavior.
 - **Status**: open, by design.
 
 ### [Phase 27] Object encoding choices no fixture confirms
@@ -934,13 +943,14 @@ fixture has confirmed yet.
 ### [Phase 28] Macro facility and librarian: what govax leaves out or does differently
 
 - **Where**: `internal/asm` (macros, `maclib.go`, `message.go`),
-  `internal/lbr` (`write.go`, `input.go`), `internal/console` (`macro.go`,
+  `internal/lbr` (`write.go`, `input.go`), `internal/dclcmd` (`macro.go`,
   `library.go`), `internal/bootdata/files/starlet.mar`.
 - **What**:
-  - **govax's STARLET.MLB is small**: `$EXIT_S`, `$ASSIGN_S`,
-    `$DASSGN_S`, `$QIO_S`, `$QIOW_S`, and the helpers they use. A program
-    needing any other system macro (`$FAB`, `$IODEF`, ...) needs VMS's
-    STARLET.MLB, through `SYS$LIBRARY` or the `vax.library` setting.
+  - (govax's own STARLET.MLB, which this entry listed as small, grew in
+    Phase 32 and after: `starlet.mar`'s system service and RMS macros,
+    `$FAB` and `$RAB` among them, and `starletdef.mar`'s `$xxxDEF`
+    macros. A system macro it still lacks needs VMS's, through
+    `SYS$LIBRARY` or the `vax.library` setting.)
   - **A `;` inside `<...>`** in a macro call's arguments still ends the
     statement (preprocessing sees it as a comment), so `<A;B>` is
     `VAX_NOCLOSE`. Whether real MACRO takes the `;` as part of the
