@@ -821,24 +821,41 @@ changed as a result.
 
 ### [Phase 26] Virtual address space simplifications
 
-- **Where**: `internal/corevms/vaspace.go`, `internal/console/vminit.go`.
-- **What**:
-  - The page tables are built once by VMINIT and never grow: `$CRETVA`
-    beyond them is `SS$_VASFULL`, where VMS would extend the region.
-  - No paging-file quota (`SS$_EXQUOTA`) or working-set limit
-    (`SS$_INSFWSL`) is checked.
-  - `$CNTREG` deletes the pages but leaves `P0LR`/`P1LR` alone; the pages
-    are gone either way. Its P1 end is the lowest page `P1LR` admits,
-    the page `P1LR` names (since the length checks were fixed, Phase 43;
-    before, the page after it).
-  - `$SETPRT` never charges the paging-file quota, and there are no
-    sections, so its global-section rules don't arise.
-  - The page-locking services (subtask 36) only remember which pages
-    are locked, for their `SS$_WASSET`/`WASCLR` status: nothing pages,
-    so there's no locked-page or working-set limit (`SS$_LCKPAGFUL`,
-    `SS$_LKWSETFUL`), and image rundown unlocks every page, not just the
-    image's user-mode locks.
-- **Status**: open, by design.
+- **Where**: `internal/corevms/vaspace.go`, `regions.go`, `pgflquota.go`,
+  `pageprot.go`, `internal/machine/vminit.go`.
+- **What** (revised 2026-10-22: Phases 63 to 67 changed much of this
+  with paging on, `vax.sysgen.paging.enable`):
+  - With paging off, the page tables are built once by VMINIT, every
+    page in them exists from the start, and the length registers never
+    move: `$CRETVA` beyond the tables is `SS$_VASFULL`, where VMS would
+    extend the region. With paging on (Phase 67, created space) the
+    lengths describe the pages that exist and the creating services
+    lengthen the regions, within the process's table area
+    (`vax.sysgen.virtualpagecnt`); `SS$_VASFULL` is a page past the
+    area, or a P1 range it can't hold (refused before any page is made).
+  - The paging file quota (`SS$_EXQUOTA`) is checked only with paging
+    on (Phase 64, `pgflquota.go`). The working-set limit `SS$_INSFWSL`
+    is never returned: with paging on, physical memory with no frame for
+    a page-table page the region needs is `SS$_VASFULL` (govax's choice;
+    VMS's tables are in the process header, charged to the working set).
+  - With paging off, `$CNTREG` deletes the pages but leaves
+    `P0LR`/`P1LR` alone; the pages are gone either way. With paging on
+    it shortens the region (`contractRegions`). Its P1 end is the lowest
+    page `P1LR` admits, the page `P1LR` names (since the length checks
+    were fixed, Phase 43; before, the page after it).
+  - `$SETPRT` never charges the paging file quota, in either mode, and
+    has no rules of its own for section pages (a writable section page
+    made read-only or the reverse); sections exist since Phases 46 and
+    49, so these cases can now arise.
+  - Page locking: with paging on (Phase 63) a locked page is faulted in
+    and pinned in the working set list, and `SS$_LKWSETFUL` comes from
+    the list; with paging off nothing pages, so the services only
+    remember which pages are locked (for `SS$_WASSET`/`WASCLR`) and
+    `SS$_LKWSETFUL` is counted from those records against MINWSCNT
+    (unconfirmed). In both modes `$LCKPAG` has no system limit and never
+    returns `SS$_LCKPAGFUL` (Phase 63's finding 7), and image rundown
+    unlocks every page, not just the image's user-mode locks.
+- **Status**: open, by design (paging off keeps the simpler model).
 
 ## Phase 27 (MACRO-32 object modules) findings
 
