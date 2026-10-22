@@ -119,6 +119,13 @@ type Debugger interface {
 
 	// Dispatch runs one line of debugger command.
 	Dispatch(line string) error
+
+	// NewImage is RUN's notice that a new image is about to start. On VMS
+	// each image gets a debugger of its own, so nothing an earlier
+	// session set (breakpoints, tracepoints, watchpoints, SET STEP's
+	// defaults, a STEP or exception it was waiting on) may change how
+	// the new image runs; the debugger forgets it all here.
+	NewImage()
 }
 
 // InDebugger reports whether a debugger session is in progress, for the

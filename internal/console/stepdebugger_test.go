@@ -19,6 +19,8 @@ type stepDebugger struct {
 
 func (s *stepDebugger) Active() bool { return false }
 
+func (s *stepDebugger) NewImage() {}
+
 func (s *stepDebugger) Dispatch(string) error { return vmserrors.New(vmserrors.DBG_NOTAVAILABLE) }
 
 func (s *stepDebugger) Start(a machine.Activation) error {

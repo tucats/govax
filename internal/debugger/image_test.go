@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -212,5 +213,54 @@ func TestUnhandledOutsideImageDebug(t *testing.T) {
 
 	if !strings.Contains(out, "%SYSTEM-F-ACCVIO") {
 		t.Errorf("no ACCVIO message:\n%s", out)
+	}
+}
+
+// TestRunForgetsEarlierSession: what a debugger session set for one image
+// doesn't carry over to the next RUN, which on VMS gets a debugger of its
+// own. After a session that set a breakpoint, a tracepoint on every
+// instruction, a watchpoint, an instruction and a fault breakpoint, and
+// SET STEP INTO, a RUN/NODEBUG of the image runs to its end with no
+// report of any of them, and the debugger has none left.
+func TestRunForgetsEarlierSession(t *testing.T) {
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
+
+	for _, cmd := range []string{
+		"SET BREAK 410",
+		"SET TRACE/INSTRUCTION",
+		"SET WATCH 400",
+		"SET BREAK/INSTRUCTION=MOVL",
+		"SET BREAK/FAULT=10",
+		"SET STEP INTO",
+		"EXIT",
+	} {
+		if err := c.Debugger.Dispatch(cmd); err != nil {
+			t.Fatalf("%s: %v", cmd, err)
+		}
+	}
+
+	buf := c.Out.(*bytes.Buffer)
+	buf.Reset()
+
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOff}); err != nil {
+		t.Fatalf("RUN/NODEBUG: %v", err)
+	}
+
+	out := buf.String()
+	if c.InDebugger() || strings.Contains(out, "trace") || strings.Contains(out, "break") ||
+		!strings.Contains(out, "DBGDIS: done") {
+		t.Errorf("RUN/NODEBUG after a session: session %v, output:\n%s", c.InDebugger(), out)
+	}
+
+	d := dbgOf(c)
+	if len(d.Breakpoints) != 0 || len(d.Tracepoints) != 0 || len(d.Watchpoints) != 0 ||
+		len(d.InstructionBreakpoints) != 0 || len(c.Engine.FaultBreakpoints()) != 0 {
+		t.Errorf("left after RUN: %d breakpoints, %d tracepoints, %d watchpoints, %d instruction breakpoints, %d fault breakpoints",
+			len(d.Breakpoints), len(d.Tracepoints), len(d.Watchpoints),
+			len(d.InstructionBreakpoints), len(c.Engine.FaultBreakpoints()))
+	}
+
+	if d.StepMode != debugger.StepOver {
+		t.Errorf("StepMode = %v after RUN, want the default, OVER", d.StepMode)
 	}
 }

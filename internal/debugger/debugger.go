@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -292,6 +293,44 @@ func (d *Debugger) Dispatch(line string) error {
 // End ends the session: the prompt and the command lines go back to the
 // console. EXIT and QUIT call it.
 func (d *Debugger) End() { d.active = false }
+
+// NewImage forgets what the debugger kept from the image before, when RUN
+// starts another (machine.Debugger). A VMS image gets a debugger of its
+// own, so an earlier session's eventpoints (breakpoints of every kind,
+// SET BREAK/FAULT's in the engine, tracepoints, watchpoints), SET STEP's
+// defaults, a STEP/RETURN or condition it was waiting on, and the
+// modules and locations it was looking at all go. What only changes how
+// things are shown (SET MODE, SET RADIX, SET TYPE) stays.
+func (d *Debugger) NewImage() {
+	if d.running > 0 {
+		// RUN from inside a run (a program's XFC$CONSOLE_CMD): a STEP in
+		// progress keeps the breakpoints it armed for itself, as CANCEL
+		// BREAK/ALL does.
+		d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool { return !bp.Step && !bp.Quiet })
+	} else {
+		d.Breakpoints = nil
+	}
+
+	d.Tracepoints = nil
+	d.Watchpoints = nil
+	d.InstructionBreakpoints = nil
+	d.Machine.Engine.ClearFaultBreakpoints()
+
+	d.StepMode = StepOver
+	d.stepDefaults = stepSettings{}
+	d.pendingReturn = nil
+
+	d.imageDebug = false
+	d.imageExited = false
+	d.unhandled = nil
+	d.signalled, d.signalBP = nil, nil
+	d.pendingDo = ""
+	d.exception = nil
+
+	d.symbolsSet = nil
+	d.examined = examineState{}
+	d.curval = currentValue{}
+}
 
 // firstWord returns the first word of a command line, the part up to a
 // blank or a qualifier's slash.

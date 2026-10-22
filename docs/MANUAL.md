@@ -3189,6 +3189,14 @@ There are three ways in:
   assembling code.
 - **A breakpoint** reached while a program runs from the debugger.
 
+Each `RUN` starts its image with a fresh debugger, as VMS gives each
+image a debugger of its own: the breakpoints, tracepoints, and
+watchpoints an earlier session set (every kind, `SET TRACE/INSTRUCTION`
+and `SET BREAK/FAULT` among them), and its `SET STEP` defaults, are
+gone, whether or not the new image runs under the debugger. The display
+settings (`SET MODE`, `SET RADIX`, `SET TYPE`) stay. Before the new image
+starts, an earlier one that was stopped and never exited is run down.
+
 For source-line debugging, assemble with `/DEBUG` and link with
 `/DEBUG`:
 

@@ -29,6 +29,8 @@ func installPlainDebugger(c *Console) *plainDebugger {
 
 func (p *plainDebugger) Active() bool { return p.active }
 
+func (p *plainDebugger) NewImage() {}
+
 func (p *plainDebugger) Start(a machine.Activation) error {
 	c := p.c
 

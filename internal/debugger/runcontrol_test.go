@@ -29,27 +29,25 @@ func stepBreakpoints(c *console.Console) int {
 	return n
 }
 
-// TestRunStopsAtBreakpoint: RUN/NODEBUG stops at a breakpoint set
-// before it, and GO then finishes the image (bug 1: RUN used to run past
-// every breakpoint to "DBGDIS: done").
+// TestRunStopsAtBreakpoint: an image RUN started stops at a breakpoint
+// set in its session, and GO then finishes it (bug 1: RUN's driver used
+// to run past every breakpoint to "DBGDIS: done"). A breakpoint set
+// before the RUN no longer applies: RUN forgets an earlier session's
+// (TestRunForgetsEarlierSession).
 func TestRunStopsAtBreakpoint(t *testing.T) {
-	c := newRunnableConsole(t)
-
-	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
-		t.Fatalf("Assemble(kernel.asm): %v", err)
-	}
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	dbgOf(c).AddBreakpoint(0x55A)
 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOff}); err != nil {
-		t.Fatalf("RUN: %v", err)
+	if err := c.Execute(nil); err != nil {
+		t.Fatalf("GO: %v", err)
 	}
 
 	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
-		t.Fatalf("RUN: got %q, want the break at SUB2", got)
+		t.Fatalf("first GO: got %q, want the break at SUB2", got)
 	}
 
 	buf.Reset()
@@ -61,7 +59,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 	// SUB2 is called twice (SUB1 is called by CALLS and by CALLG), so GO
 	// stops there once more before the image finishes.
 	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
-		t.Fatalf("first GO: got %q, want the second break at SUB2", got)
+		t.Fatalf("second GO: got %q, want the second break at SUB2", got)
 	}
 
 	dbgOf(c).ClearAllBreakpoints()

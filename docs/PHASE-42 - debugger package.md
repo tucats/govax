@@ -246,7 +246,9 @@ unknown verb, plus a hint (`EXIT to return to the console`). HELP at
 - **RUN** of an image linked `/DEBUG` (`IHD$V_LNKDEBUG`), or `RUN/DEBUG`
   of an image with a DST, starts the session stopped at the main
   routine's first instruction, as VMS does. `RUN/NODEBUG` runs without
-  stopping. Breakpoints set earlier still apply (bug 1). `RUN/STEP`
+  stopping. Breakpoints set earlier still apply (bug 1; since
+  2026-10-22 no longer: RUN forgets an earlier session's eventpoints,
+  "RUN starts a fresh debugger" below). `RUN/STEP`
   remains a govax synonym for `/DEBUG`.
 - **Once `DBG>` has appeared, the session lasts until `EXIT` or `QUIT`.**
   If the program ends meanwhile, the debugger reports it
@@ -1961,6 +1963,37 @@ without a check on VMS).
 - Tests: the machine-table SHOW SYMBOL tests and CLEAR SYMBOL/TEMPORARY
   moved to `internal/debugger/symtable_test.go`; `TestGrammarSplit`
   updated.
+
+## 2026-10-22: RUN starts a fresh debugger
+
+The author asked that nothing an earlier image's debugger session set
+affect how the next RUN's image runs. It did: a plain RUN's driver runs
+through the debugger's run loop (bug 1's fix), so a `SET TRACE/INSTRUCTION`,
+a breakpoint, a watchpoint, `SET BREAK/INSTRUCTION`, or `SET BREAK/FAULT`
+left from an exited session fired in the next image, and `SET STEP`'s
+defaults carried over.
+
+- `machine.Debugger` has `NewImage`, which `Machine.Run` calls after
+  running down an abandoned image (`EndAbandonedImage`) and before
+  activating the new one. The debugger's (`debugger.go`) drops every
+  breakpoint (a RUN from inside a run keeps a STEP's own, as CANCEL
+  BREAK/ALL does), tracepoint, watchpoint, instruction breakpoint, and
+  the engine's fault breakpoints; resets `SET STEP` to OVER, LINE,
+  NOSILENT, SOURCE; and forgets a pending STEP/RETURN, a pending
+  condition or DO clause, the current exception, `imageDebug` and
+  `imageExited` (so a non-debug image isn't stopped for an unhandled
+  condition as the last one was), the set modules, the current location,
+  and the current value. SET MODE, RADIX, and TYPE stay: they change
+  only what is shown.
+- This reverses the subtask 2 rule that breakpoints set before RUN
+  apply to it. `TestRunStopsAtBreakpoint` now sets its breakpoint in the
+  image's own session (RUN/DEBUG, then GO), which still covers bug 1;
+  `TestRunForgetsEarlierSession` is the new rule.
+- Paging needed nothing: the abandoned image's rundown already resets
+  the working set and its locked pages, and `ResetICBList` deletes the P0
+  and image P1 pages a rundown under the debugger kept.
+- `Machine.Trace` (the old console SET TRACE flag) isn't reset: no
+  command sets it any more, only tests.
 
 ## Part B progress log
 

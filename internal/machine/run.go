@@ -66,6 +66,13 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
+	// Nor does anything an earlier debugger session set carry over to
+	// this image, whether or not it runs under the debugger: a plain
+	// RUN's driver runs through the debugger's run loop too (Call).
+	if m.Debugger != nil {
+		m.Debugger.NewImage()
+	}
+
 	savedMode := m.CPU.PSL().CurMod()
 	m.Engine.SetModeStack(registers.Kernel, false)
 	defer m.Engine.SetModeStack(savedMode, false) // safety net on an early-error return
