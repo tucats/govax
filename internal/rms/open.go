@@ -230,7 +230,7 @@ func openOnVolume(ctx *Context, fac, shr byte, p parsedName) (ifi uint16, found 
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
 	if !ok {
-		return 0, found, rmsDeviceNotReady, nil
+		return 0, found, ctx.unmountedStatus(spec.Device), nil
 	}
 
 	if spec.Name == "" && spec.Type == "" {

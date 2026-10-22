@@ -61,6 +61,25 @@ type DeviceOpener interface {
 	OpenRecordDevice(device string, fac byte) (dev RecordDevice, found bool, status uint32)
 }
 
+// DeviceFinder is what a DeviceOpener may also answer: whether the
+// system has a device of that name (a physical name, without its
+// underscore and colon).
+type DeviceFinder interface {
+	DeviceExists(device string) bool
+}
+
+// unmountedStatus is $OPEN's status for a device with no volume mounted:
+// RMS$_DNR for a device the system has, RMS$_DEV (STV SS$_NOSUCHDEV,
+// stvFor) for a name no device has, as VMS 7.1's $OPEN of _SYS$OUTPUT:
+// was (testdata/ppf71's O10). Without a device table to ask, RMS$_DNR.
+func (ctx *Context) unmountedStatus(device string) uint32 {
+	if finder, ok := ctx.Devices.(DeviceFinder); ok && !finder.DeviceExists(normalizeDeviceName(device)) {
+		return rmsDeviceError
+	}
+
+	return rmsDeviceNotReady
+}
+
 // The RMS statuses of a record device's failures: the operation's
 // status, its STV the system service status.
 var (

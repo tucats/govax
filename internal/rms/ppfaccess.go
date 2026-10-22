@@ -126,7 +126,8 @@ func (ctx *Context) storeIndirectAttributes(fab uint32, e *PermanentEntry, full 
 // open's FAB$B_FAC, and in FAB$L_STV an address in P1 on VMS (VMS 7.1:
 // ^X7FF9C000 plus the stream's number; govax writes the same, meaning
 // nothing); a NAM the file's resultant string, FID, DID, and DVI, as for
-// any open file. The terminal's NAM gets only the device's DVI.
+// any open file. The terminal's NAM gets the device's DVI, and for an
+// output file a resultant string of its own (storeTerminalResultant).
 func (ctx *Context) displayIndirect(fab uint32, e *PermanentEntry) (uint32, error) {
 	nam, sts, err := fabNAMBlock(ctx, fab)
 	if err != nil {
@@ -149,8 +150,14 @@ func (ctx *Context) displayIndirect(fab uint32, e *PermanentEntry) (uint32, erro
 			if sts != 0 {
 				return fabStatus(ctx, fab, sts, 0)
 			}
-		} else if err := ctx.storeDVI(nam, strings.TrimSuffix(e.options.Device, ":")); err != nil {
-			return 0, err
+		} else {
+			if err := ctx.storeDVI(nam, strings.TrimSuffix(e.options.Device, ":")); err != nil {
+				return 0, err
+			}
+
+			if err := ctx.storeTerminalResultant(nam, e); err != nil {
+				return 0, err
+			}
 		}
 	}
 
@@ -178,6 +185,41 @@ func (ctx *Context) displayIndirect(fab uint32, e *PermanentEntry) (uint32, erro
 	}
 
 	return fabStatus(ctx, fab, rmsNormal, ppfDisplaySTV|uint32(e.stream))
+}
+
+// storeTerminalResultant is $DISPLAY's resultant string for a terminal
+// that is a process-permanent output file: the device of the expanded
+// string the accessor's open wrote (the logical name used), then "[].LOG;",
+// as VMS 7.1 wrote "SYS$OUTPUT:[].LOG;" (testdata/ppf71's terminal run;
+// the name and type left from LOGINOUT's open of the file, it seems). An
+// input file's, or another stream's, is left as the open wrote it
+// (unconfirmed).
+func (ctx *Context) storeTerminalResultant(nam uint32, e *PermanentEntry) error {
+	if !e.IsTerminal() || e.handle.Access&facPut == 0 {
+		return nil
+	}
+
+	esa, err := ctx.loadLongword(nam + namESA)
+	if err != nil {
+		return err
+	}
+
+	esl, err := ctx.loadByte(nam + namESL)
+	if err != nil {
+		return err
+	}
+
+	expanded, err := ctx.loadFixedString(esa, int(esl))
+	if err != nil {
+		return err
+	}
+
+	device, _, found := strings.Cut(expanded, ":")
+	if esa == 0 || !found {
+		return nil
+	}
+
+	return ctx.storeResultant(nam, fileName{Dev: device + ":", Dir: "[]", Type: ".LOG", Ver: ";"})
 }
 
 // ppfDisplaySTV is the base of $DISPLAY's FAB$L_STV for an indirect

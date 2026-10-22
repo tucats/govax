@@ -129,7 +129,7 @@ func TestShowLogical_tableListing(t *testing.T) {
 			"  \"SYS$OUTPUT\" [user] = \"X.LIS\"\n"+
 			"  \"SYS$OUTPUT\" [super] = \"_GOVAX$TTA0:\"\n"+
 			"  \"SYS$OUTPUT\" [exec] = \"_GOVAX$TTA0:\"\n"+
-			"  \"TT\" = \"_TTA0:\"\n")
+			"  \"TT\" = \"TTA0:\"\n")
 
 	// Wildcards list the matches under every searched table's header,
 	// after a blank line; a header with no names under it has no blank
@@ -294,8 +294,8 @@ func TestShowTranslation(t *testing.T) {
 
 	mustDispatch(t, d, "DEFINE/SYSTEM WORK4 $255$DUA17:", "DEFINE MYDISK WORK4")
 
-	wantOutput(t, d, buf, "SHOW TRANSLATION MYDISK", "MYDISK = \"WORK4\" (LNM$PROCESS_TABLE)\n")
-	wantOutput(t, d, buf, "SHOW TRANSLATION/TABLE=LNM$SYSTEM WORK4", "WORK4 = \"$255$DUA17:\" (LNM$SYSTEM_TABLE)\n")
+	wantOutput(t, d, buf, "SHOW TRANSLATION MYDISK", "  MYDISK = \"WORK4\"  (LNM$PROCESS_TABLE)\n")
+	wantOutput(t, d, buf, "SHOW TRANSLATION/TABLE=LNM$SYSTEM WORK4", "  WORK4 = \"$255$DUA17:\"  (LNM$SYSTEM_TABLE)\n")
 	wantOutput(t, d, buf, "SHOW TRANSLATION/TABLE=LNM$SYSTEM MYDISK",
 		"%SHOW-S-NOTRAN, no translation for logical name MYDISK\n")
 	wantDispatchStatus(t, d, "SHOW TRANSLATION/TABLE=NOSUCH X", vmserrors.SS_NOLOGTAB)
@@ -314,7 +314,7 @@ func TestShowLogical_permanentFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantOutput(t, d, buf, "SHOW TRANSLATION PPF_OUT", "PPF_OUT = \"_GOVAX$DUA1\" (LNM$PROCESS_TABLE)\n")
+	wantOutput(t, d, buf, "SHOW TRANSLATION PPF_OUT", "  PPF_OUT = \"_GOVAX$DUA1\"  (LNM$PROCESS_TABLE)\n")
 	wantOutput(t, d, buf, "SHOW LOGICAL/FULL PPF_OUT",
 		"   \"PPF_OUT\" [super,confine] = \"_GOVAX$DUA1\" [terminal] (LNM$PROCESS_TABLE)\n")
 
@@ -370,7 +370,7 @@ func TestLogical_jobTable(t *testing.T) {
 		"\n(LNM$JOB_80000100)\n\n"+
 			"  \"WORKAREA\" = \"DUA1:[WORK]\"\n")
 	wantOutput(t, d, buf, "SHOW TRANSLATION WORKAREA",
-		"WORKAREA = \"DUA1:[WORK]\" (LNM$JOB_80000100)\n")
+		"  WORKAREA = \"DUA1:[WORK]\"  (LNM$JOB_80000100)\n")
 
 	mustDispatch(t, d, "DEASSIGN/JOB WORKAREA")
 	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "\n(LNM$JOB_80000100)\n")

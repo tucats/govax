@@ -94,3 +94,12 @@ govax runs the whole procedure (2026-10-21), and its answers are the
 phase doc's Part A, "What govax does today": no prefix anywhere, `/OUTPUT`
 leaving SYS$OUTPUT naming the terminal, and an image's `$CREATE` of a
 name DCL opened making a new file called `_GOVAX$DUA1.;1`.
+
+## The oracle
+
+`internal/console`'s `TestPPF71Oracle` runs the procedure on govax as
+step 2 ran it on the VAX and matches the three logs and PPF71B.DAT with
+`vax/`'s, and `TestPPF71Terminal` runs `vax/ppf71.exe`'s parts T, D, and
+O at govax's terminal against `vax/ppf71-term.log` (Phase 71, subtask 9).
+`ppf71oracle_test.go` lists the masks and the lines the VAX's own setup
+put in its logs.

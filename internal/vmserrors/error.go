@@ -161,8 +161,11 @@ func (e VMSError) Error() string {
 // TKNOVF of a 300-character value, testdata/dcl50's F10).
 const maxSegmentLine = 255
 
-// segmentLine is the line under a message that shows the part of the
+// SegmentLine is the line under a message that shows the part of the
 // command it is about: " \SEGMENT\".
+func SegmentLine(segment string) string { return segmentLine(segment) }
+
+// segmentLine is SegmentLine.
 func segmentLine(segment string) string {
 	line := " \\" + segment + "\\"
 

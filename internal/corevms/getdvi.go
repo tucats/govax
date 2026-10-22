@@ -189,8 +189,14 @@ func dviItem(code uint16) (dviItemFunc, bool) {
 // "_TTA0:".
 func physicalName(d *iodev.Device) string { return "_" + d.Name + ":" }
 
-// nodeDeviceName is d's name with the node's: "_GOVAX$TTA0:".
+// nodeDeviceName is d's name with the node's: "_GOVAX$TTA0:"; the null
+// device's has none, "_NLA0:", as VMS 7.1's DVI$_FULLDEVNAM had none
+// (testdata/ppf71's subprocess; a mailbox's is unconfirmed).
 func nodeDeviceName(env *Environment, d *iodev.Device) string {
+	if d.Name == nullDeviceName {
+		return "_" + d.Name + ":"
+	}
+
 	return "_" + env.NodeName + "$" + d.Name + ":"
 }
 
@@ -331,7 +337,8 @@ func (env *Environment) volumeInfo(d *iodev.Device) volumeFacts {
 // then set, the IOSB gets the final status, and if astadr isn't 0 an AST
 // is queued with astprm in the caller's mode. A request rejected before
 // it starts (too few arguments, a bad event flag, an unwritable IOSB, no
-// such device) completes nothing. An item code not in the registry ends
+// such device) completes nothing, but for a device name that can't be
+// one (SS$_IVDEVNAM), whose status goes to the IOSB too. An item code not in the registry ends
 // the item list with SS$_BADPARAM, and the request still completes with
 // that status.
 //
@@ -357,6 +364,21 @@ func serviceSysGetdvi(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	d, st := env.dviTarget(chanNum, devnam)
+	if st == ssIvDevNam && devnam != 0 {
+		// A name that can't be a device's completes the request with
+		// that status in the IOSB, as VMS 7.1's did (testdata/ppf71's
+		// D2: iosb 0144).
+		if iosb != 0 {
+			if err := env.mem.StoreLongword(env.cpu, iosb, st); err != nil {
+				return ssAccVio, nil
+			}
+		}
+
+		env.postFlag(efn, sched.ClassIOCompletion)
+
+		return st, nil
+	}
+
 	if st != 0 {
 		return st, nil
 	}

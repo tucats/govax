@@ -494,7 +494,12 @@ func init() {
 // lexGetDVI is F$GETDVI(device-name, item): the item (dviItems) for the
 // device, named as $GETDVI takes it (a device or a logical name for one).
 // A name that is no device is SS$_NOSUCHDEV, except for EXISTS, which is
-// then "FALSE".
+// then "FALSE"; one that can't be a device's name is SS$_IVDEVNAM, shown
+// with the name as its segment, as VMS 7.1 showed it (testdata/ppf71's
+// subprocess).
+// ssIvDevNam is SS$_IVDEVNAM.
+var ssIvDevNam = vmsdef.Symbols["SS$_IVDEVNAM"]
+
 func lexGetDVI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	env, err := e.console.lexicalEnvironment()
 	if err != nil {
@@ -515,6 +520,13 @@ func lexGetDVI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	}
 
 	data, status := env.DVIItem(device, "DVI$_"+key)
+	if status == ssIvDevNam {
+		return dclValue{}, vmserrors.ConditionError{
+			Status: status,
+			Text:   e.console.statusText(status) + "\n" + vmserrors.SegmentLine(strings.ToUpper(device)),
+		}
+	}
+
 	if status != 0 {
 		return dclValue{}, e.console.statusFailure(status)
 	}

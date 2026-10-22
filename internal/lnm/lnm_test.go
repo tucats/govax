@@ -743,13 +743,14 @@ func TestDefineProcessNames(t *testing.T) {
 
 	for _, name := range []string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR", "SYS$COMMAND", "TT"} {
 		e := mustTranslate(t, db, "LNM$FILE_DEV", name)
-		if e.Table.Name != ProcessTableName || e.Equivalences[0].Value != "_TTA0:" {
-			t.Errorf("%s = %+v in %s", name, e.Equivalences, e.Table.Name)
+
+		wantValue, wantMode, wantAttrs := "_TTA0:", Executive, AttrTerminal
+		if name == "TT" {
+			wantValue, wantAttrs = "TTA0:", AttrConcealed|AttrTerminal
 		}
 
-		wantMode, wantAttrs := Executive, AttrTerminal
-		if name == "TT" {
-			wantMode, wantAttrs = Supervisor, 0
+		if e.Table.Name != ProcessTableName || e.Equivalences[0].Value != wantValue {
+			t.Errorf("%s = %+v in %s", name, e.Equivalences, e.Table.Name)
 		}
 
 		if e.Mode != wantMode || e.Equivalences[0].Attrs != wantAttrs {

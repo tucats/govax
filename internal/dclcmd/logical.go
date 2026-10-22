@@ -23,7 +23,9 @@ const dclLogicalName = "LNM$DCL_LOGICAL"
 // first table designated, at mode, with one equivalence string per
 // element of values, each carrying attrs (AttrConcealed, AttrTerminal).
 // When log is set and an existing definition was replaced, it prints
-// DCL's %DCL-I-SUPERSEDE message. Removing ASSIGN's trailing colon is the
+// DCL's %DCL-I-SUPERSEDE message. A new name leaves $STATUS SS$_NORMAL,
+// $CRELNM's, as VMS 7.1's DEFINE did (testdata/ppf71; a superseding
+// one's status stays DCL's). Removing ASSIGN's trailing colon is the
 // caller's job.
 func (c *Context) DefineLogicalName(table, name string, values []string, mode lnm.Mode, attrs uint32, log bool) error {
 	eqv := make([]lnm.Equivalence, len(values))
@@ -38,6 +40,10 @@ func (c *Context) DefineLogicalName(table, name string, values []string, mode ln
 
 	if superseded && log {
 		c.Printf("%%DCL-I-SUPERSEDE, previous value of %s has been superseded\n", name)
+	}
+
+	if !superseded && c.SetStatus != nil {
+		c.SetStatus(ssNormal)
 	}
 
 	return nil
@@ -423,9 +429,11 @@ func (c *Context) printTableTree(t *lnm.Table, depth int) {
 
 // ShowTranslation implements SHOW TRANSLATION: one level of translation
 // of name ($TRNLNM's lookup, no iteration), searching table
-// (LNM$DCL_LOGICAL when ""), shown as
+// (LNM$DCL_LOGICAL when ""), shown as VMS 7.1 showed it, indented two
+// and with two blanks before the table (testdata/ppf71, and VMS 7.3's
+// testdata/dcl50's probe50i.log; both of a process-permanent name):
 //
-//	NAME = "VALUE" (TABLE)
+//	  NAME = "VALUE"  (TABLE)
 //
 // A name that isn't found prints %SHOW-S-NOTRAN. A process-permanent
 // file's value shows without its prefix.
@@ -451,7 +459,7 @@ func (c *Context) ShowTranslation(table, name string) error {
 		value = lnm.DisplayValue(e.Equivalences[0].Value)
 	}
 
-	c.Printf("%s = %q (%s)\n", e.Name, value, e.Table.Name)
+	c.Printf("  %s = %q  (%s)\n", e.Name, value, e.Table.Name)
 
 	return nil
 }

@@ -5,8 +5,8 @@ answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
 VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
 table and indirect access), 5 (process startup's four files), 6
-(command procedures), 7 (DCL's OPEN, READ, WRITE, CLOSE), and 8
-(subprocesses) are done.
+(command procedures), 7 (DCL's OPEN, READ, WRITE, CLOSE), 8
+(subprocesses), and 9 (the oracle) are done.
 
 ## Goal
 
@@ -378,6 +378,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
 9. **The oracle**: `TestPPF71Oracle` runs the probe on govax and holds
    it to VMS's logs; the other oracles' expectations follow (SHOW
    LOGICAL, the traceback's SYS$OUTPUT and SYS$ERROR, SPAWN's logs).
+   Done 2026-10-21.
 10. **The close-out**: DEVIATIONS.md, MANUAL.md, CLAUDE.md.
 
 ## Progress log
@@ -779,3 +780,56 @@ by SYS$OUTPUT and SYS$ERROR) and the console's `TestSpawn_permanentFiles`
 and devices, as PPF71P's on VMS, and DCL's lines, an image's, and WRITE
 to SYS$OUTPUT and SYS$ERROR in order in the log); the earlier SPAWN,
 LOGINOUT, and traceback tests pass unchanged.
+
+### 2026-10-21 — Subtask 9: the oracle
+
+`internal/console/ppf71oracle_test.go`. `TestPPF71Oracle` runs the probe
+as the VAX ran it (`@PPF71/OUTPUT=PPF71.LOG` on a fresh RD51 volume as
+DUA1, the program assembled and linked by the procedure) and holds
+PPF71.LOG, PPF71S.LOG, PPF71P.LOG, and PPF71B.DAT to VMS 7.1's, line for
+line. `TestPPF71Terminal` runs VMS's own PPF71.EXE, parts T, D, and O,
+at govax's terminal (PPF71_ALIAS and PPF71_DCLCOPY defined as the
+procedure left them on the VAX, two Returns as input) and holds its
+lines to `vax/ppf71-term.log`. Both mask what was agreed (part F's
+`ppfMasks`: entries' numbers, the strings' lengths, STVs, ALQ, channels,
+the disk's DEVCHAR from `$GETDVIW`) and the node's and terminal's names,
+RFAs, and times; and rewrite the lines from the VAX's own setup
+(`ppf71VAXOnly`): its login's executive-mode SYS$DISK, a TB70SHR an
+earlier probe left, SET DEFAULT's CRELOG attribute on SYS$DISK, and the
+procedures' RAT (EXCHANGE gave CR, govax's COPY/HOST gives none).
+
+What running the whole probe found, now changed to VMS's answers:
+
+- **LNM$DCL_LOGICAL is supervisor mode** (`lnm/database.go`), so
+  F$TRNLNM's default table isn't found at executive mode: VMS's
+  `F$TRNLNM(name,,,"EXECUTIVE")` was "" for every name. (Part A said
+  govax agreed; it no longer did after subtask 5's names.)
+- **F$PARSE** of a process-permanent name is RMS's name processing's
+  (`rms.Session.Parse`, `parsePermanent`): `SYS$INPUT:.;`,
+  `SYS$OUTPUT:X.DAT;`, `PPF71_IN:.;`. A name that translates to a
+  physical name keeps its underscore (`_GOVAX$DUA1:[000000].;`), and a
+  device that holds no volume parses (`TT:[000000].;`; the console's
+  session has `DeviceExists`).
+- **TT** is executive mode, CONCEALED and TERMINAL, the device's name
+  without its underscore (`TTA0:`); a created process's is its input
+  device's physical name with no attributes (`_NLA0:`,
+  `defineTerminalName`), no longer copied from the creator.
+- **DEFINE** of a new name leaves $STATUS SS$_NORMAL, `$CRELNM`'s (a
+  superseding one's is unchanged, unconfirmed).
+- **SHOW TRANSLATION**'s layout is `  NAME = "value"  (TABLE)`, as both
+  VMS logs that show it have it (`probe50i.log` too).
+- **A name that can't be a device's** (letters, digits, and "$" only:
+  PPF71_IN before OPEN defined it) is SS$_IVDEVNAM from `$GETDVI`,
+  `$ASSIGN`, and F$GETDVI (`deviceName`), where a well-formed one no
+  device has is still SS$_NOSUCHDEV; `$GETDVI` completes it into the
+  IOSB, and F$GETDVI shows the name as the message's segment.
+- **`$OPEN` of a device that doesn't exist** (`_SYS$OUTPUT:`, O10) is
+  RMS$_DEV with STV SS$_NOSUCHDEV, not RMS$_DNR (`unmountedStatus`,
+  asking the process's devices through `rms.DeviceFinder`).
+- **NL:'s DVI$_FULLDEVNAM** has no node's name (`_NLA0:`; a mailbox's is
+  unconfirmed and keeps the node's).
+- **`$DISPLAY` of the terminal's output entry** writes the resultant
+  string VMS did, `SYS$OUTPUT:[].LOG;` (`storeTerminalResultant`).
+
+What the oracles don't hold govax to is only what the masks and
+`ppf71VAXOnly` name.

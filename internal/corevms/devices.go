@@ -485,7 +485,28 @@ func (env *Environment) deviceName(name string) (string, uint32) {
 		device = nullDeviceName
 	}
 
+	// A device's name is letters, digits, and "$": VMS 7.1's $GETDVIW and
+	// $ASSIGN of PPF71_IN, a name that wasn't defined, were SS$_IVDEVNAM
+	// (testdata/ppf71's D2), where a well-formed name no device has is
+	// SS$_NOSUCHDEV.
+	if !validDeviceName(strings.TrimPrefix(device, "_")) {
+		return "", ssIvDevNam
+	}
+
 	return device, 0
+}
+
+// validDeviceName reports whether device, a physical device name without
+// its underscore or colon, is made of letters, digits, and "$" only.
+func validDeviceName(device string) bool {
+	for i := range len(device) {
+		ch := device[i]
+		if !(ch >= 'A' && ch <= 'Z') && !(ch >= 'a' && ch <= 'z') && !(ch >= '0' && ch <= '9') && ch != '$' {
+			return false
+		}
+	}
+
+	return device != ""
 }
 
 // assignFileChannel is RMS's user file open (FAB$V_UFO, rms/ufo.go): it

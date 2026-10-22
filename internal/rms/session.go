@@ -92,6 +92,12 @@ type Session struct {
 	// directory that isn't in the current directory (hostfile.go). The
 	// console sets it to its search-path resolver's ReadFile.
 	HostFallback func(name string) ([]byte, error)
+
+	// DeviceExists, when set, reports whether the system has a device of
+	// a physical name ("TTA0"): F$PARSE of a device that holds no volume,
+	// a terminal, is a name all the same (Parse). The console sets it to
+	// its device table's.
+	DeviceExists func(device string) bool
 }
 
 // NewSession returns a Session sharing mounts (a Console's existing

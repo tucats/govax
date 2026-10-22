@@ -72,7 +72,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 	// name, and a spec with no device then uses it.
 	mustDispatch(t, d, "SET DEFAULT DISK$WORKB:[000000]")
 	wantOutput(t, d, buf, "SHOW DEFAULT", "  DISK$WORKB:[000000]\n")
-	wantOutput(t, d, buf, "SHOW TRANSLATION SYS$DISK", "SYS$DISK = \"DISK$WORKB:\" (LNM$PROCESS_TABLE)\n")
+	wantOutput(t, d, buf, "SHOW TRANSLATION SYS$DISK", "  SYS$DISK = \"DISK$WORKB:\"  (LNM$PROCESS_TABLE)\n")
 	wantOutput(t, d, buf, "TYPE ONLY.TXT", "second\n")
 
 	// SET DEFAULT to a search list (User's Manual §11.7.2).

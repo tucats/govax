@@ -122,6 +122,31 @@ func sameDevice(a, b string) bool {
 	return strings.EqualFold(lnm.DisplayValue(a), lnm.DisplayValue(b))
 }
 
+// defineTerminalName defines TT for a created process, in executive mode,
+// as the physical name of the device its SYS$INPUT value names, with no
+// attributes: VMS 7.1's subprocess with /INPUT=NL: had TT "_NLA0:"
+// (testdata/ppf71; a terminal's or a file's device is unconfirmed). An
+// input that names no device defines nothing.
+func (env *Environment) defineTerminalName(input string) error {
+	if input == "" {
+		return nil
+	}
+
+	device, st := env.deviceName(lnm.DisplayValue(input))
+	if st != 0 {
+		return nil
+	}
+
+	if _, found := env.Devices.Find(device); !found {
+		return nil
+	}
+
+	_, err := env.Logicals.Define(lnm.ProcessTableName, "TT", lnm.Executive, 0,
+		[]lnm.Equivalence{{Value: "_" + device + ":"}})
+
+	return err
+}
+
 // openStartupEntry opens value, one of a created process's SYS$ names'
 // values, as a process-permanent file with access fac (GET for SYS$INPUT,
 // GET and PUT for the output names) and returns its entry: a terminal

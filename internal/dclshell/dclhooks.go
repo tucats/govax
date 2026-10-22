@@ -17,6 +17,11 @@ import (
 func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 	session := rms.NewSession(m.Mounts)
 	session.Logicals = m.ProcessOneLogicals()
+	session.DeviceExists = func(device string) bool {
+		_, found := m.Devices.Find(device)
+
+		return found
+	}
 
 	c := &Interpreter{
 		Shell: &Shell{

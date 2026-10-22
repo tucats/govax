@@ -32,11 +32,21 @@ func (p ParsedName) String() string {
 // then the device (SYS$DISK) and directory of the process's default.
 // The device is shown as the user named it: a concealed logical name
 // stays, unless noConceal. Unless syntaxOnly, the device must be mounted
-// and the directory (one with no wildcards) must be on it; found is false
-// when one isn't. A specification RMS can't parse is an error. With no
+// and the directory (one with no wildcards) must be on it, or be a device
+// that holds no volume (DeviceExists); found is false when one isn't. A specification RMS can't parse is an error. With no
 // device at all (no SYS$DISK, as when the default is on the host), there
 // is nothing to check, and the fields are returned.
+//
+// A name that leads to a process-permanent file (ppf.go), itself or as
+// the default, is parsed as $PARSE parses it: the logical name as the
+// device, no directory, the name, type, and version given, and nothing
+// to check (VMS 7.1: "SYS$OUTPUT:.;", "SYS$OUTPUT:X.DAT;";
+// testdata/ppf71).
 func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (p ParsedName, found bool, err error) {
+	if p, ok := s.parsePermanent(spec, def); ok {
+		return p, true, nil
+	}
+
 	var defaults resolvedSpec
 
 	if def != "" {
@@ -93,6 +103,11 @@ func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (
 		display = fs[0].Concealed
 	case own.Device == "" && defaults.Display != "":
 		display = defaults.Display
+	case strings.HasPrefix(fs[0].Spec, "_"):
+		// A physical name keeps its underscore: VMS 7.1's F$PARSE of a
+		// name defined as "_SIMVAX$DUA1:" was "_SIMVAX$DUA1:[000000].;"
+		// (testdata/ppf71).
+		display = "_" + full.Device
 	}
 
 	p = ParsedName{
@@ -112,7 +127,11 @@ func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (
 
 	vol, ok := s.Mounts.Lookup(full.Device)
 	if !ok {
-		return p, false, nil
+		// A device with no volume, a terminal, has nothing to check: VMS
+		// 7.1's F$PARSE("TT") was "TT:[000000].;" (testdata/ppf71).
+		found := s.DeviceExists != nil && s.DeviceExists(normalizeDeviceName(full.Device))
+
+		return p, found, nil
 	}
 
 	if !full.Recursive && !strings.ContainsAny(strings.Join(full.Dirs, "."), "*%") {
@@ -195,4 +214,20 @@ func (s *Session) Search(spec string) ([]string, error) {
 // it: "[WORK]", or "[000000]" for the master file directory.
 func (s *Session) DefaultDirectory() string {
 	return filespec.Spec{Dirs: s.Default.Dirs}.String()
+}
+
+// parsePermanent is Parse for a name that leads, itself or through its
+// default, to a process-permanent file, by RMS's name processing
+// (name.go's permanentName); ok is false for any other name.
+func (s *Session) parsePermanent(spec, def string) (ParsedName, bool) {
+	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s}
+
+	names, sts := ctx.expandName(nameInputs{Primary: spec, Default: def})
+	if sts != 0 || len(names) == 0 || names[0].Permanent == nil {
+		return ParsedName{}, false
+	}
+
+	n := names[0]
+
+	return ParsedName{Device: n.Dev, Directory: n.Dir, Name: n.Name, Type: n.Type, Version: n.Ver}, true
 }

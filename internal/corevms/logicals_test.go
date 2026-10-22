@@ -262,7 +262,7 @@ func TestSysTrnlnm_chain(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysTrnlnm, 0, a.desc("LNM$FILE_DEV"), a.desc("TT"), 0, first), ssNormal)
 
-	if got := a.readString(str, readWordEnv(t, env, ret)); got != "_TTA0:" {
+	if got := a.readString(str, readWordEnv(t, env, ret)); got != "TTA0:" {
 		t.Errorf("chained string = %q", got)
 	}
 

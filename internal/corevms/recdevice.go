@@ -85,6 +85,18 @@ func (env *Environment) OpenRecordDevice(device string, fac byte) (rms.RecordDev
 	return &recordDevice{env: env, ch: c, mbx: mbx}, true, ssNormal
 }
 
+// DeviceExists reports whether the system has device (a physical name,
+// without its underscore and colon), for RMS (rms.DeviceFinder).
+func (env *Environment) DeviceExists(device string) bool {
+	if name, st := env.deviceName("_" + device + ":"); st == 0 {
+		device = name
+	}
+
+	_, found := env.Devices.Find(device)
+
+	return found
+}
+
 // Characteristics is the device's DEVCHAR.
 func (r *recordDevice) Characteristics() uint32 { return r.env.devChar(r.ch.Device) }
 

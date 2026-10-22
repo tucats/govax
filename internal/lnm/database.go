@@ -87,15 +87,16 @@ type sharedTables struct {
 //	    LNM$DT_FORMAT_TABLE    names the date and time formats' table
 //	    LNM$SYSTEM             = "LNM$SYSTEM_TABLE"
 //	    LNM$FILE_DEV           = "LNM$PROCESS", "LNM$JOB", "LNM$GROUP", "LNM$SYSTEM"
-//	    LNM$DCL_LOGICAL        = "LNM$FILE_DEV"
+//	    LNM$DCL_LOGICAL        = "LNM$FILE_DEV" (supervisor mode)
 //	    LNM$DIRECTORIES        = "LNM$PROCESS_DIRECTORY", "LNM$SYSTEM_DIRECTORY"
 //	    LNM$TEMPORARY_MAILBOX  = "LNM$JOB"
 //	    LNM$PERMANENT_MAILBOX  = "LNM$SYSTEM"
 //
 // This follows the User's Manual's tables 11-1, 11-2 and 11-4, minus the
 // cluster tables govax doesn't have. The tables are kernel mode, and the
-// directory logical names are executive mode, so they're visible to a
-// translation at any access mode. None of these tables can be deleted.
+// directory logical names executive mode, so they're visible to a
+// translation at any access mode but kernel; LNM$DCL_LOGICAL is
+// supervisor mode, as VMS's is. None of these tables can be deleted.
 func NewDatabase(uic uint32) *Database {
 	sh := &sharedTables{}
 
@@ -113,18 +114,25 @@ func NewDatabase(uic uint32) *Database {
 	for _, n := range []struct {
 		name string
 		eqv  []string
+		mode Mode
 	}{
-		{"LNM$SYSTEM", []string{SystemTableName}},
-		{"LNM$FILE_DEV", []string{"LNM$PROCESS", "LNM$JOB", "LNM$GROUP", "LNM$SYSTEM"}},
-		{"LNM$DCL_LOGICAL", []string{"LNM$FILE_DEV"}},
-		{"LNM$DIRECTORIES", []string{ProcessDirectoryName, SystemDirectoryName}},
+		{"LNM$SYSTEM", []string{SystemTableName}, Executive},
+		{"LNM$FILE_DEV", []string{"LNM$PROCESS", "LNM$JOB", "LNM$GROUP", "LNM$SYSTEM"}, Executive},
+		// DCL's own search list is supervisor mode, so a user may
+		// redefine it, and a translation at executive or kernel mode
+		// doesn't find it: VMS 7.1's F$TRNLNM(name,,,"EXECUTIVE") was ""
+		// for every name (testdata/ppf71).
+		{"LNM$DCL_LOGICAL", []string{"LNM$FILE_DEV"}, Supervisor},
+		{"LNM$DIRECTORIES", []string{ProcessDirectoryName, SystemDirectoryName}, Executive},
 		// Where $CREMBX puts mailbox logical names (docs/PHASE-26.md
 		// subtask 29): a temporary mailbox's in the job table, so every
 		// process in the job can find it.
-		{"LNM$TEMPORARY_MAILBOX", []string{"LNM$JOB"}},
-		{"LNM$PERMANENT_MAILBOX", []string{"LNM$SYSTEM"}},
+		{"LNM$TEMPORARY_MAILBOX", []string{"LNM$JOB"}, Executive},
+		{"LNM$PERMANENT_MAILBOX", []string{"LNM$SYSTEM"}, Executive},
 	} {
-		sys.add(directoryName(n.name, n.eqv))
+		e := directoryName(n.name, n.eqv)
+		e.Mode = n.mode
+		sys.add(e)
 	}
 
 	// The first process's group table, then its job's, so the system
@@ -429,7 +437,10 @@ func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*E
 // physical device name terminal (for example "_TTA0:"):
 //
 //	SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND   executive mode, TERMINAL
-//	TT                                              supervisor mode
+//	TT                                              executive mode, CONCEALED, TERMINAL
+//
+// TT's string is the device's name without its underscore ("TTA0:"), as
+// VMS 7.1's was ("OPA0:", testdata/ppf71).
 //
 // All go in the process table. On VMS the SYS$ names' equivalence
 // strings are process-permanent file strings (ppf.go), naming the files
@@ -444,7 +455,8 @@ func (db *Database) DefineProcessNames(terminal string) error {
 		}
 	}
 
-	_, err := db.Define(ProcessTableName, "TT", Supervisor, 0, []Equivalence{{Value: terminal}})
+	_, err := db.Define(ProcessTableName, "TT", Executive, 0,
+		[]Equivalence{{Value: strings.TrimPrefix(terminal, "_"), Attrs: AttrConcealed | AttrTerminal}})
 
 	return err
 }
