@@ -74,9 +74,8 @@ design, parameter-scoped qualifiers) are DCL-engine/UX decisions captured
 directly in `PHASE-23.md`'s own "Design decisions" section rather than logged
 here, per that doc's own subtask 12 note. The entries below are the two
 places where `ods2`'s own CLI output shape was found to visibly diverge from
-real VMS DCL's `DIRECTORY` conventions, left unresolved (not obviously a bug
-to fix, not obviously acceptable forever either) rather than silently
-guessed at.
+real VMS DCL's `DIRECTORY` conventions; Phase 51 resolved both when it laid
+DIRECTORY out as VMS does.
 
 ### [Phase 23] `DIRECTORY`'s master-file-directory header prints `Directory DUA0:[]` instead of real VMS's `[000000]` form
 
@@ -94,12 +93,10 @@ guessed at.
   own "closely enough to be recognizable, not necessarily byte-identical"
   framing for `DIRECTORY` output — but it is a real, visible divergence any
   operator familiar with genuine VMS DCL would notice immediately.
-- **Status**: open, deferred. Kept matching `ods2`'s own current output rather
-  than diverging from the behavioral reference unilaterally, or second-guessing
-  `ods2`'s own documented simplification on this project's own initiative.
-  Revisit if `ods2` itself ever fixes this, or if a future phase decides
-  `DIRECTORY` output should target closer VMS-visual fidelity than `ods2`'s own
-  CLI provides (see the next entry, the same open question either way).
+- **Status**: resolved (Phase 51, 2026-10-12). DIRECTORY now names each
+  directory with RMS's own `dirSpec.String` (`internal/rms/name.go`), which
+  writes the MFD as `[000000]`, as VMS 7.3's logs in `testdata/dcl50` show
+  (`Directory DUA1:[000000]`). See "[Phase 51] DIRECTORY's layouts".
 
 ### [Phase 23] `DIRECTORY`'s one-file-per-line output doesn't match real VMS's column-aligned multi-file-per-line listings
 
@@ -115,12 +112,10 @@ guessed at.
   left leaning toward inheriting the simplification (matching this phase's
   general "`ods2`'s CLI is the reference" framing) rather than investing in
   closer VMS visual fidelity.
-- **Status**: open, deferred, per explicit flagging in `PHASE-23.md` itself
-  rather than a silent, undocumented choice. No test in this project's own
-  suite currently depends on either the single- or multi-file-per-line shape,
-  so there is no compatibility cost either way today — revisit if an operator
-  workflow, or a future phase's own acceptance criteria, actually needs the
-  denser, real-VMS-style layout.
+- **Status**: resolved (Phase 51, 2026-10-12). The brief listing is now
+  VMS 7.3's: four 20-character columns per line, a long name taking as many
+  columns as it needs. The round 4 and 6 oracles of `testdata/dcl50` compare
+  it with VMS's logs. See "[Phase 51] DIRECTORY's layouts".
 
 ## Phase 25 (logical names) findings
 
@@ -254,8 +249,6 @@ against real VMS.
     is positional.
   - COPY takes a search list's first element for its source, not the first
     element where the file exists.
-  - DIRECTORY over several directories prints one `Total of` line, with no
-    `Grand total` line.
   - User-mode names are run down only when RUN's image returns from its main
     routine. govax has no `SYS$EXIT`, so an image ending in HALT or a fatal
     exception isn't run down.
