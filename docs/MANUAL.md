@@ -842,7 +842,8 @@ as the device, `_GOVAX$TTA0:`. DCL defines its own `SYS$OUTPUT` in
 supervisor mode, naming the same file, and while a command procedure
 runs it defines `SYS$INPUT` as the procedure and `SYS$OUTPUT` as its
 `/OUTPUT` file (see "Command procedures"), so `SHOW LOGICAL/PROCESS`
-lists `SYS$OUTPUT` twice, `[super]` and `[exec]`. It also predefines `TT` (`_TTA0:`),
+lists `SYS$OUTPUT` twice, `[super]` and `[exec]`. It also predefines `TT` (`TTA0:`,
+concealed, in executive mode),
 `SYS$DISK` (set by `SET DEFAULT`), `DISK$label` for each mounted volume, and the date-format
 names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. It doesn't define
 `SYS$LIBRARY`, `SYS$SHARE`, `SYS$SYSTEM`, or `SYS$LOGIN`, because there is
@@ -1295,6 +1296,10 @@ process logical names, and your default directory. With a command, it
 runs that command and logs out; without one, it reads commands from its
 input (you get a `$ ` prompt) until `LOGOUT`. Unless `/NOWAIT`, your
 process waits for it, and the terminal is the subprocess's meanwhile.
+Its `/INPUT` and `/OUTPUT` (a file, `NL:`, a mailbox, or the terminal)
+are its own process-permanent files, so its DCL, its images, and its
+`WRITE SYS$OUTPUT` all write one log, in order; your `OPEN` files are not
+passed to it.
 `SPAWN`'s status is the subprocess's final status.
 
 ```text

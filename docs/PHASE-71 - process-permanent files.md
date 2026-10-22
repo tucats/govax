@@ -1,12 +1,13 @@
 # Phase 71 — process-permanent files
 
-**Status:** planned 2026-10-21; Part B's decisions and the proposed
-answers to its questions accepted by the author the same day. Subtasks 1
+**Status:** done 2026-10-21. Planned 2026-10-21; Part B's decisions
+and the proposed answers to its questions accepted by the author the
+same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
 VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
 table and indirect access), 5 (process startup's four files), 6
 (command procedures), 7 (DCL's OPEN, READ, WRITE, CLOSE), 8
-(subprocesses), and 9 (the oracle) are done.
+(subprocesses), 9 (the oracle), and 10 (the close-out) are done.
 
 ## Goal
 
@@ -379,7 +380,8 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
    it to VMS's logs; the other oracles' expectations follow (SHOW
    LOGICAL, the traceback's SYS$OUTPUT and SYS$ERROR, SPAWN's logs).
    Done 2026-10-21.
-10. **The close-out**: DEVIATIONS.md, MANUAL.md, CLAUDE.md.
+10. **The close-out**: DEVIATIONS.md, MANUAL.md, CLAUDE.md. Done
+    2026-10-21.
 
 ## Progress log
 
@@ -833,3 +835,12 @@ What running the whole probe found, now changed to VMS's answers:
 
 What the oracles don't hold govax to is only what the masks and
 `ppf71VAXOnly` name.
+
+### 2026-10-21 — Subtask 10: the close-out
+
+DEVIATIONS.md: Phase 25's "no ESC/IFI prefix" entry is fixed, the
+Phase 25 and Phase 50 entries say what this phase changed (TT, DEFINE's
+status, an image's access to OPEN's files), and a new entry lists the
+choices VMS didn't settle. MANUAL.md: TT's definition, and SPAWN's
+`/INPUT` and `/OUTPUT` as the subprocess's process-permanent files.
+CLAUDE.md and PLAN.md: the phase is done. The phase is complete.

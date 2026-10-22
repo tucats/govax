@@ -205,7 +205,7 @@ never had.
   do (`corevms/msgout.go`), integer overflow and divide by zero trap
   (`cpu/inttrap.go`), and an AST routine returns through EXE$ASTRET in
   S0; checked against VMS 7.1 by `testdata/tb70`.
-  Phase 71 (planned 2026-10-21; subtasks 1 to 7 done) is
+  Phase 71 (done 2026-10-21) is
   process-permanent files: the ESC/IFI equivalence strings
   (`lnm/ppf.go`), one RMS table of files that outlive images
   (`rms/ppf.go`), and indirect access (`rms/ppfaccess.go`; the *Guide to
@@ -216,7 +216,12 @@ never had.
   (`dclshell/dclppf.go`), with supervisor-mode SYS$INPUT and SYS$OUTPUT;
   DCL's OPEN makes each file an entry its name's string names, so
   READ, WRITE, CLOSE, and an image's indirect `$OPEN` share one stream
-  (`dclshell/dclfile.go`, `Shell.dclFiles` by entry).
+  (`dclshell/dclfile.go`, `Shell.dclFiles` by entry); a created process's
+  terminal, mailbox, NL:, or file is an entry of its own
+  (`openStartupEntry`), and `outfile.go` is left with an image's own
+  SYS$OUTPUT file under a name its DCL defined for it alone, an open file
+  closed at rundown. `TestPPF71Oracle` and `TestPPF71Terminal` hold the
+  probe's logs to VMS's (`internal/console/ppf71oracle_test.go`).
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -836,7 +841,8 @@ expect adjustment as phases land):
   and defines its logical name (process table, supervisor mode);
   `Shell.dclFiles` keeps it open past its procedure, until CLOSE or
   `EndSession`. READ/WRITE need no OPEN for SYS$INPUT, SYS$OUTPUT,
-  SYS$ERROR, and SYS$COMMAND (`processPermanentFile`); READ SYS$INPUT
+  SYS$ERROR, and SYS$COMMAND, found by their entries (`dclTarget`;
+  Phase 71); READ SYS$INPUT
   takes the procedure's next record, SYS$COMMAND and INQUIRE read the
   terminal (`readTerminal`). The logical name is the way to the file
   (`openFile`; TYPE of it reads the same stream). /ERROR and
@@ -996,7 +1002,8 @@ expect adjustment as phases land):
   processes that run a CLI rather than an image (`cliprocess.go`:
   `CommandInterpreter`, the console's; `$CREPRC` of LOGINOUT;
   `OpenCommandInput`; LOGOUT's report, `logout.go`); a SYS$OUTPUT that
-  names a file (`outfile.go`). The scheduler is on by default
+  names a file (`outfile.go`; since Phase 71 only an image's own, a
+  process's files being process-permanent ones, `ppfstart.go`). The scheduler is on by default
   (`vax.process.scheduler`). Every completed `$QIO` counts in its
   device's operations (UCB$L_OPCNT; a mounted disk's are ods2's).
   Phase 49: file-backed sections (`filesec.go`): `$CRMPSC` with a

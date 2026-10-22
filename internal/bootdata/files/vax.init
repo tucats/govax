@@ -108,7 +108,8 @@ $!
 $! (202702849 is 0C150001 hex, the DEVCHAR VMS 7.1 gives NLA0:.)
 $ define/device nla0/devclass=mailbox/devtype=null/devchar=202702849/ownuic=65537/devbufsiz=512
 $!
-$! TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
+$! TT (TTA0:) and SYS$INPUT/OUTPUT/ERROR/COMMAND (the terminal as
+$! process-permanent files, _GOVAX$TTA0:) are predefined.
 $!
 $! A command left on govax's own command line (the one-shot command) is
 $! run once this file is done, as the command interpreter's input after a

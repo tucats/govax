@@ -148,6 +148,8 @@ against real VMS.
   entries, search lists, and `CONCEALED`/`TERMINAL`/`NO_ALIAS`/`CONFINE`.
   `internal/io/logical.go` is deleted. The process-permanent names are now
   `_TTA0:` at executive mode with `TERMINAL`, and `TT` is `_TTA0:`.
+  (Phase 71: the names are process-permanent file strings, and `TT` is
+  `TTA0:`, executive mode, CONCEALED and TERMINAL, as VMS 7.1's.)
 
 ### [Phase 25] eVAX console `DEFINE/LOGICAL` wrote to a table nothing searched
 
@@ -227,8 +229,15 @@ against real VMS.
   4-byte ESC/IFI header naming the process-permanent file. `$TRNLNM` returns
   it and RMS uses it. govax stores the plain device name, and RMS reaches
   the console through its `TTA0` device special case instead.
-- **Status**: open, deliberate. Out of scope until RMS models
-  process-permanent files. **Revisited 2026-10-21**: Phase 71
+- **Status**: fixed by Phase 71 (done 2026-10-21): the names' strings
+  are VMS's, RMS keeps each process's process-permanent files and gives
+  images indirect access to them, and the TTA0:, output-file, and
+  input-redirection special cases are gone; `TestPPF71Oracle` and
+  `TestPPF71Terminal` hold govax to VMS 7.1's run of `testdata/ppf71`.
+  What stays unconfirmed is "[Phase 71] Process-permanent files: the
+  choices VMS didn't settle" below. Before: open, deliberate. Out of
+  scope until RMS models process-permanent files. **Revisited
+  2026-10-21**: Phase 71
   (`docs/PHASE-71 - process-permanent files.md`) plans VMS's model in
   place of the special cases, and its probe (`testdata/ppf71`) awaits a
   VAX run. govax's dry run of the probe found worse than a missing
@@ -3406,7 +3415,9 @@ widened."
     unconfirmed.
   - A host file's logical name is equated to its path.
   - DEASSIGN's %X00000001 is taken as $DELLNM's SS$_NORMAL (it could be
-    DEASSIGN leaving the OPEN's); DEFINE's status is unchanged.
+    DEASSIGN leaving the OPEN's); DEFINE's status is unchanged. (Phase
+    71: VMS 7.1's DEFINE of a new name left %X00000001, and govax's now
+    does.)
   - READ SYS$INPUT's success status is CLI$_NORMAL, as a file's is.
   - A colon after an OPEN's logical name in READ, WRITE, and CLOSE is
     accepted (the manual's `logical-name[:]`); only the
@@ -3417,7 +3428,9 @@ widened."
   - READ's 2048-byte limit (RMS$_RTB, the record cut) and /TIME_OUT,
     WRITE's 1024-byte buffer, record locks, indexed files, OPEN of a
     mailbox or terminal (NL: works), and an image's access to a file
-    DCL has open are not done or not checked.
+    DCL has open are not done or not checked. (Phase 71 did the last:
+    an image's `$OPEN` of OPEN's name reaches DCL's file, VMS 7.1's
+    part F.)
 - **Fixed in passing**: TYPE (and COPY to the host, which share
   `rms.writeRecords`) treated every VFC file as a print file, expanding
   its fixed control as carriage control; the RMS manual makes it carriage
@@ -4455,3 +4468,33 @@ Entry template:
   `TestExpressionMask`, `TestEntryMACRO`, `TestEntryMask`,
   `TestDisassemble_entryMask`, and bench's golden snapshot now hold the
   architecture's bits.
+
+### [Phase 71] Process-permanent files: the choices VMS didn't settle
+
+- **Where**: `internal/rms/ppf.go`, `ppfaccess.go`, `ppfstream.go`;
+  `internal/corevms/ppfstart.go`, `ppfdcl.go`, `outfile.go`;
+  `internal/dclshell/dclppf.go`, `dclfile.go`; `internal/lnm/ppf.go`.
+- **What**: VMS 7.1's run of `testdata/ppf71` settled the strings, the
+  entries' sharing, indirect access, and DCL's names
+  (`docs/PHASE-71 - process-permanent files.md`, Part A), and the
+  oracles hold govax to it. Chosen without VMS:
+  - Entries and streams are numbered lowest free first (VMS's numbers
+    depend on its process I/O segment; masked), and the indirect STV is
+    0 (VMS's varied; masked).
+  - The terminal's input entry's access is GET; a mailbox's device text
+    in its string, `_MBAn:`, and its DVI$_FULLDEVNAM, with the node's
+    name; a created process's TT for terminal or file input.
+  - An image's own SYS$OUTPUT file (a name its DCL defined for it alone)
+    is VAR with CR; `$DISPLAY`'s resultant string is VMS's for the
+    terminal's output entry only.
+  - The guide's "no random access" for SQO files isn't enforced (an
+    indirect `$GET` by RFA works), and a name whose file has been closed
+    is RMS$_IFI at `$OPEN` and RMS$_DEV at `$PARSE`.
+  - DEFINE superseding a name keeps DCL's status; SHOW TRANSLATION's
+    layout is VMS's for every name (both logs show it only for
+    process-permanent names); DEASSIGN SYS$OUTPUT at level 0 removes
+    DCL's supervisor-mode name.
+  - govax's COPY/HOST gives a copied procedure no record attributes,
+    where VMS's EXCHANGE gave CR (the oracle rewrites VMS's RAT).
+- **Status**: open, unconfirmed; each would need another VAX run.
+
