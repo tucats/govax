@@ -344,3 +344,70 @@ func TestSpawn_outputFile(t *testing.T) {
 		t.Errorf("the output file:\n%s\nwant:\n%s", b, want)
 	}
 }
+
+// TestSpawn_permanentFiles: a subprocess's /OUTPUT file and /INPUT=NL:
+// are process-permanent files of its own (docs/PHASE-71 -
+// process-permanent files.md, subtask 8), as VMS 7.1's were
+// (testdata/ppf71's PPF71P): SYS$OUTPUT and SYS$ERROR one entry on the
+// log and SYS$INPUT and SYS$COMMAND one on _NLA0:, in executive mode,
+// TERMINAL but not CONCEALED; its procedure's SYS$INPUT is DCL's, in
+// supervisor mode, as is its SYS$OUTPUT, on the log's entry (SHOW LOGICAL
+// finds those first); and its DCL, its images, and WRITE put records on the
+// log's one stream, in order.
+func TestSpawn_permanentFiles(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	echo := buildImage(t, c, "echo", echoSource)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	if err := d.Dispatch(`ECHO :== "$` + echo + `"`); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	log := filepath.Join(dir, "spawn.log")
+	procedure := filepath.Join(dir, "sub.com")
+
+	lines := []string{
+		"$ SHOW LOGICAL/FULL SYS$OUTPUT",
+		"$ SHOW LOGICAL/FULL SYS$ERROR",
+		"$ SHOW LOGICAL/FULL SYS$COMMAND",
+		"$ SHOW LOGICAL/FULL/PROCESS SYS$INPUT",
+		"$ ECHO first",
+		`$ WRITE SYS$OUTPUT "between"`,
+		`$ WRITE SYS$ERROR "to the error stream"`,
+		"$ ECHO last",
+	}
+
+	if err := os.WriteFile(procedure, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch(`SPAWN/INPUT=NL:/OUTPUT="` + log + `" @"` + procedure + `"`); err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(out.String(), "FIRST") {
+		t.Errorf("the subprocess wrote on the terminal: %q", out.String())
+	}
+
+	b, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	text := string(b)
+
+	for _, want := range []string{
+		`"SYS$OUTPUT" [super,confine] = "` + log + `" [terminal] (LNM$PROCESS_TABLE)`,
+		`"SYS$ERROR" [exec] = "` + log + `" [terminal] (LNM$PROCESS_TABLE)`,
+		`"SYS$COMMAND" [exec] = "_NLA0:" [terminal] (LNM$PROCESS_TABLE)`,
+		`"SYS$INPUT" [super,confine] = "` + procedure + `" [terminal] (LNM$PROCESS_TABLE)`,
+		"FIRST\nbetween\nto the error stream\nLAST\n",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the log has no %q:\n%s", want, text)
+		}
+	}
+}

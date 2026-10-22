@@ -4,40 +4,36 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// SYS$OUTPUT and SYS$ERROR as files (docs/PHASE-48.md, subtask 2;
-// docs/PHASE-70 - traceback.md, subtask 8).
+// SYS$OUTPUT and SYS$ERROR as an image's own files (docs/PHASE-70 -
+// traceback.md, subtask 8; docs/PHASE-71 - process-permanent files.md,
+// subtask 8).
 //
-// A process LIB$SPAWN or $CREPRC creates with an output file (a log, say,
-// LIB$SPAWN's output-file) has SYS$OUTPUT translating to that file's name
-// rather than to a device. On VMS the process's CLI creates the file when
-// it starts and keeps it open as a process-permanent file, and every line
-// written to SYS$OUTPUT is a record in it. govax creates the file at the
-// first line written and writes each line through as it comes (the file
-// is written again whole, keeping its version), so that whoever reads it
-// later, the creator after the process ends, sees every line.
-//
-// A file an image's own writes or a condition's messages (msgout.go)
-// made instead, under a SYS$OUTPUT or SYS$ERROR the image's DCL defined
-// (DEFINE/USER_MODE SYS$OUTPUT file, then RUN), is the image's: image
-// rundown forgets it (forgetImageOutput), so the next image makes a new
-// version, as each image's own open does on VMS.
+// A process's SYS$OUTPUT and SYS$ERROR are normally process-permanent
+// files (ppfstart.go, and DCL's), which LIB$PUT_OUTPUT and $PUTMSG reach
+// through their entries. A name the image's DCL defined for it instead
+// (DEFINE/USER_MODE SYS$OUTPUT file, then RUN) leads to no entry: on VMS
+// LIB$PUT_OUTPUT's $CREATE of SYS$OUTPUT then makes the file, which the
+// image holds open until its rundown, and a condition's message, which
+// $PUTMSG writes through an open of its own, can't go there (testdata/
+// tb70's part S; msgout.go). govax makes the file at the first record
+// written to it (variable-length records, carriage-return carriage
+// control: rms.DCLAccess.Variable), keeps it open, and
+// closes it at image rundown (closeImageOutput), so the next image makes
+// a new version.
 
-// outputFile is SYS$OUTPUT or SYS$ERROR as a file: the name it was opened
-// for, where the file is, and its records so far.
+// outputFile is SYS$OUTPUT or SYS$ERROR as an image's file: the name it
+// was opened for, and the open file.
 type outputFile struct {
-	spec    string
-	loc     rms.FileLocation
-	records [][]byte
+	spec string
+	file *rms.DCLFile
 
 	// held is set when the image wrote to the file itself (PutOutput): on
-	// VMS it then has the file open, and a condition's message, which
-	// $PUTMSG writes through an open of its own, can't go there
-	// (testdata/tb70's part S; msgout.go).
+	// VMS it then has the file open, and $PUTMSG's own open of it fails.
 	held bool
 }
 
 // processOutput is where one of the process's output names, SYS$OUTPUT
-// or SYS$ERROR, sends records when it doesn't name the terminal.
+// or SYS$ERROR, sends records when it leads to no process-permanent file.
 type processOutput struct {
 	// name is the logical name, "SYS$OUTPUT" or "SYS$ERROR".
 	name string
@@ -46,10 +42,8 @@ type processOutput struct {
 	// to a mailbox or NL: (recdevice.go).
 	stream *recordDevice
 
-	// permanent is the file the CLI made when the process started (a
-	// SPAWN's log), kept for the process's life; file is one an image
-	// made, kept until its rundown.
-	permanent, file *outputFile
+	// file is the file the image made, kept until its rundown.
+	file *outputFile
 }
 
 // putRecordFile writes record to out's file when its name translates to
@@ -62,37 +56,27 @@ func (env *Environment) putRecordFile(out *processOutput, record string) bool {
 		return false
 	}
 
-	return env.appendRecord(f, record)
-}
-
-// appendRecord adds record to f's file, reporting whether it could.
-func (env *Environment) appendRecord(f *outputFile, record string) bool {
-	f.records = append(f.records, []byte(record))
-
-	loc, err := env.Session.RewriteRecordFile(f.loc, rms.TextRecords, f.records)
-	if err != nil {
-		return false
-	}
-
-	f.loc = loc
-
-	return true
+	return f.file.Put([]byte(record))&1 != 0
 }
 
 // openRecordFile returns out's file, creating it (a new version) the
-// first time, or when out's name has come to name another; nil when the
-// name isn't defined in the process table, names a device that holds no
-// files, or the file can't be made.
+// first time, or when out's name has come to name another (the one before
+// is closed); nil when the name isn't defined in the process table, names
+// a device that holds no files, or the file can't be made; nil too when
+// the name leads to a process-permanent file, open or closed, which is
+// never the image's.
 func (env *Environment) openRecordFile(out *processOutput) *outputFile {
 	spec := env.processName(out.name)
-	if spec == "" || env.Session == nil {
+	if spec == "" || env.Session == nil || isPermanentString(env.processValue(out.name)) {
 		return nil
 	}
 
-	for _, f := range []*outputFile{out.permanent, out.file} {
-		if f != nil && f.spec == spec {
-			return f
-		}
+	if _, ok := env.permanentEntry(out.name); ok {
+		return nil
+	}
+
+	if f := out.file; f != nil && f.spec == spec {
+		return f
 	}
 
 	if device, st := env.deviceName(out.name); st == 0 && !env.isFileDevice(device) {
@@ -104,29 +88,28 @@ func (env *Environment) openRecordFile(out *processOutput) *outputFile {
 		return nil
 	}
 
-	found, err := env.Session.CreateRecordFile(loc, rms.TextRecords, nil)
+	file, err := env.Session.OpenDCLFile(loc, rms.DCLAccess{Write: true, ShareRead: true, Variable: true})
 	if err != nil {
 		return nil
 	}
 
-	out.file = &outputFile{spec: spec, loc: found}
+	closeOutputFile(out)
+	out.file = &outputFile{spec: spec, file: file}
 
 	return out.file
 }
 
-// openPermanentOutput makes the CLI's SYS$OUTPUT file, if SYS$OUTPUT
-// names one, when a CLI process starts (startInterpreter), so its log
-// exists, empty, even if nothing is written to it, as DCL's does; it's
-// kept for the process's life.
-func (env *Environment) openPermanentOutput() {
-	if f := env.openRecordFile(&env.output); f != nil && f == env.output.file {
-		env.output.permanent, env.output.file = f, nil
+// closeOutputFile closes out's file, if it has one.
+func closeOutputFile(out *processOutput) {
+	if out.file != nil {
+		_ = out.file.file.Close()
+		out.file = nil
 	}
 }
 
-// forgetImageOutput is image rundown's step for the files the image made
+// closeImageOutput is image rundown's step for the files the image made
 // (this file's opening comment).
-func (env *Environment) forgetImageOutput() {
-	env.output.file = nil
-	env.errorOutput.file = nil
+func (env *Environment) closeImageOutput() {
+	closeOutputFile(&env.output)
+	closeOutputFile(&env.errorOutput)
 }

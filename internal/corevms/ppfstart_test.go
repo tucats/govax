@@ -98,9 +98,9 @@ func TestOpenTerminalFiles(t *testing.T) {
 }
 
 // TestOpenTerminalFiles_subprocess: a subprocess's startup opens its own
-// terminal entries from its creator's string (the creator's entry isn't
-// the subprocess's), not concealed, and defines a mailbox or NL: as given
-// (until subprocesses' files are entries too).
+// entries from its creator's string (the creator's entry isn't the
+// subprocess's), not concealed: the terminal, and NL: as one entry for
+// SYS$OUTPUT and SYS$ERROR, its device text without the node's name.
 func TestOpenTerminalFiles_subprocess(t *testing.T) {
 	parent, _ := fixture()
 	defineTestDevice(parent, "TTA0", iodev.DeviceClassTT)
@@ -113,7 +113,7 @@ func TestOpenTerminalFiles_subprocess(t *testing.T) {
 	child := newSubprocess(t, parent)
 	terminal := parent.processValue("SYS$INPUT")
 
-	if err := child.openProcessFiles(terminal, "NL:", "NL:", lnm.AttrTerminal, child.terminalDevice); err != nil {
+	if err := child.openProcessFiles(terminal, "NL:", "NL:", lnm.AttrTerminal, child.openStartupEntry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,9 +131,16 @@ func TestOpenTerminalFiles_subprocess(t *testing.T) {
 	}
 
 	for _, name := range []string{"SYS$OUTPUT", "SYS$ERROR"} {
-		if v := child.processValue(name); v != "NL:" {
-			t.Errorf("the child's %s = %q; want NL:", name, v)
+		e, pf := permanentName(t, child, name)
+
+		if pf.IFI != 0x8102 || pf.Device != "_NLA0:" || e.Equivalences[0].Attrs != lnm.AttrTerminal {
+			t.Errorf("the child's %s: IFI %04X, device %q, attributes %#x; want 8102, _NLA0:, terminal",
+				name, pf.IFI, pf.Device, e.Equivalences[0].Attrs)
 		}
+	}
+
+	if st, err := child.PutOutput("into the null device"); err != nil || st != ssNormal {
+		t.Errorf("PutOutput to NL: = %08X, %v; want SS$_NORMAL", st, err)
 	}
 }
 

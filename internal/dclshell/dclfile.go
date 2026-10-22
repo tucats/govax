@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -65,11 +66,10 @@ import (
 // EOD, VMS 7.3 showed: testdata/dcl50's I6); READ of the terminal's
 // entries (SYS$INPUT at level 0, SYS$COMMAND) reads the terminal,
 // prompting with /PROMPT's string ("Data:" and a tab without one, Q6);
-// WRITE SYS$OUTPUT writes to the procedure's /OUTPUT file or the
-// terminal, and WRITE SYS$ERROR and SYS$COMMAND to the terminal (even
-// under /OUTPUT, Q11). A name that leads to no entry of the process's
-// (a subprocess's SYS$OUTPUT that names a file: subtask 8 makes those
-// entries) is still found by its name (processPermanentFile).
+// WRITE SYS$OUTPUT writes where DCL's own output goes (the procedure's
+// /OUTPUT file, the terminal, a subprocess's log), and WRITE SYS$ERROR
+// and SYS$COMMAND to their entries (the terminal even under /OUTPUT,
+// Q11). A name that leads to no entry of the process's is CLI$_UNDFIL.
 //
 // A failure is an RMS status. OPEN's is shown as DCL shows a procedure
 // it can't open (VMS 7.3, F3):
@@ -106,7 +106,6 @@ import (
 var (
 	rmsNormalStatus = vmsdef.Symbols["RMS$_NORMAL"]
 	rmsEOFStatus    = vmsdef.Symbols["RMS$_EOF"]
-	rmsFACStatus    = vmsdef.Symbols["RMS$_FAC"]
 	rmsRTBStatus    = vmsdef.Symbols["RMS$_RTB"]
 )
 
@@ -568,11 +567,11 @@ func (c *Interpreter) readDCLRecord(logical, prompt string) (string, uint32, err
 		sts    = rmsNormalStatus
 	)
 
-	switch f, e, ppf := c.dclTarget(logical); {
+	switch f, e := c.dclTarget(logical); {
 	case f != nil:
 		data, s := f.stream.Get()
 		record, sts = string(data), s
-	case e != nil && e == c.procedureInput, e == nil && ppf == "SYS$INPUT":
+	case e != nil && e == c.procedureInput:
 		level := c.currentLevel()
 		if level == nil || level.source.plain {
 			return c.readTerminalRecord(prompt)
@@ -587,7 +586,7 @@ func (c *Interpreter) readDCLRecord(logical, prompt string) (string, uint32, err
 	case e != nil && !e.IsTerminal():
 		data, s := c.RTL.GetPermanent(e)
 		record, sts = string(data), s
-	case e != nil, ppf != "":
+	case e != nil, c.undefinedPermanent(logical, "SYS$INPUT", "SYS$COMMAND"):
 		return c.readTerminalRecord(prompt)
 	default:
 		return "", 0, vmserrors.New(vmserrors.CLI_UNDFIL)
@@ -616,24 +615,57 @@ func (c *Interpreter) readTerminalRecord(prompt string) (string, uint32, error) 
 }
 
 // dclTarget is what READ and WRITE find for the logical name they were
-// given, as typed: a file OPEN opened (f, with its entry e), another of
-// the process's process-permanent files (e alone; not with a colon after
-// the name), or, for a name that leads to no entry, which of the four
-// process-permanent names it leads to by name (ppf; processPermanentFile).
-func (c *Interpreter) dclTarget(logical string) (f *dclOpenFile, e *rms.PermanentEntry, ppf string) {
+// given, as typed: a file OPEN opened (f, with its entry e), or another
+// of the process's process-permanent files (e alone; not with a colon
+// after the name); neither for a name that leads to no entry.
+func (c *Interpreter) dclTarget(logical string) (f *dclOpenFile, e *rms.PermanentEntry) {
 	if f, open := c.openFile(logical); open {
-		return f, f.entry, ""
+		return f, f.entry
 	}
 
 	if strings.HasSuffix(strings.TrimSpace(logical), ":") {
-		return nil, nil, ""
+		return nil, nil
 	}
 
 	if e, ok := c.permanentFile(strings.TrimSpace(logical)); ok {
-		return nil, e, ""
+		return nil, e
 	}
 
-	return nil, nil, c.processPermanentFile(logical)
+	return nil, nil
+}
+
+// undefinedPermanent reports whether logical, as typed, is one of names
+// (SYS$ names a process normally has as process-permanent files) with no
+// file behind it: a DCL with no process, which has no entries, or a
+// process created with no such name in its process table. READ and WRITE
+// of them go to the terminal and DCL's own output.
+func (c *Interpreter) undefinedPermanent(logical string, names ...string) bool {
+	name := strings.ToUpper(strings.TrimSpace(logical))
+	if !slices.Contains(names, name) {
+		return false
+	}
+
+	if c.RTL == nil || c.Logicals == nil {
+		return true
+	}
+
+	e, err := c.Logicals.Translate(lnm.ProcessTableName, name, lnm.User, 0)
+
+	return err != nil || len(e.Equivalences) == 0
+}
+
+// dclOutput is the process-permanent file DCL's own output goes to: the
+// innermost /OUTPUT file, or the one SYS$OUTPUT leads to (at level 0 the
+// executive-mode SYS$OUTPUT's: the terminal, or a subprocess's log or
+// mailbox); nil for none.
+func (c *Interpreter) dclOutput() *rms.PermanentEntry {
+	if e := c.levelOutput(); e != nil {
+		return e
+	}
+
+	e, _ := c.permanentFile("SYS$OUTPUT")
+
+	return e
 }
 
 // isDCLSymbolName reports whether name can be a DCL symbol's name: 1 to
@@ -673,12 +705,12 @@ func (c *Interpreter) writeCommand(id int64, r *dcl.Result) error {
 
 	sts := rmsNormalStatus
 
-	switch f, e, ppf := c.dclTarget(r.String("LOGICAL_NAME")); {
+	switch f, e := c.dclTarget(r.String("LOGICAL_NAME")); {
 	case f != nil && r.Present("UPDATE"):
 		sts = f.stream.Update([]byte(record))
 	case f != nil:
 		sts = f.stream.Put([]byte(record))
-	case e != nil && e == c.levelOutput(), e == nil && ppf == "SYS$OUTPUT":
+	case e != nil && e == c.dclOutput(), c.undefinedPermanent(logical, "SYS$OUTPUT", "SYS$ERROR"):
 		// The procedure's own output, where DCL's lines go too.
 		c.Printf("%s\n", record)
 	case e != nil && e.IsTerminal():
@@ -687,10 +719,6 @@ func (c *Interpreter) writeCommand(id int64, r *dcl.Result) error {
 		if sts, err = c.RTL.PutPermanent(e, record); err != nil {
 			sts = rmsWER
 		}
-	case ppf == "SYS$INPUT" && c.currentLevel() != nil:
-		sts = rmsFACStatus
-	case ppf != "":
-		fmt.Fprintf(c.terminalOut(), "%s\n", record)
 	default:
 		undefined := vmserrors.New(vmserrors.CLI_UNDFIL)
 

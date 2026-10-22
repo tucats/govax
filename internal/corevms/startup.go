@@ -100,8 +100,9 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 // empty image name is no file at all: RMS$_FNF. (What VMS does with
 // $CREPRC's image omitted is unconfirmed.)
 func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
-	// A terminal is opened as a process-permanent file (ppfstart.go).
-	if err := env.openProcessFiles(st.Input, st.Output, st.Error, lnm.AttrTerminal, env.terminalDevice); err != nil {
+	// The SYS$ names' values are opened as process-permanent files
+	// (ppfstart.go).
+	if err := env.openProcessFiles(st.Input, st.Output, st.Error, lnm.AttrTerminal, env.openStartupEntry); err != nil {
 		return 0, err
 	}
 

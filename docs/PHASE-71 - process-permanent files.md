@@ -5,7 +5,8 @@ answers to its questions accepted by the author the same day. Subtasks 1
 (the survey, and the VMS probe, `testdata/ppf71`), 2 (the probe's
 VAX run; Part A, "The probe's answers"), 3 (the strings), 4 (RMS's
 table and indirect access), 5 (process startup's four files), 6
-(command procedures), and 7 (DCL's OPEN, READ, WRITE, CLOSE) are done.
+(command procedures), 7 (DCL's OPEN, READ, WRITE, CLOSE), and 8
+(subprocesses) are done.
 
 ## Goal
 
@@ -373,7 +374,7 @@ The README's optional step 3 runs T, D, and O at the terminal, where no
 8. **Subprocesses**: their input and output files as entries
    (replacing `outfile.go`), and the copying rule the probe shows.
    (Subtask 6 began it: a subprocess LIB$SPAWN makes in a procedure with
-   an `/OUTPUT` file shares that file's stream.)
+   an `/OUTPUT` file shares that file's stream.) Done 2026-10-21.
 9. **The oracle**: `TestPPF71Oracle` runs the probe on govax and holds
    it to VMS's logs; the other oracles' expectations follow (SHOW
    LOGICAL, the traceback's SYS$OUTPUT and SYS$ERROR, SPAWN's logs).
@@ -729,3 +730,52 @@ DCL and the image's two opens, the refusals, and PPF71B.DAT's five
 records are VMS's. `TestProcedureFiles_vminitOpen` checks the adoption.
 The other DCL file tests (`TestDCLFile_*`, testdata/dcl50's oracles)
 pass unchanged.
+
+### 2026-10-21 — Subtask 8: subprocesses
+
+`internal/corevms/ppfstart.go`. A created process's startup
+(`prepareImage`) now makes every SYS$ value it is given an entry of the
+process's own (`openStartupEntry`, in place of `terminalDevice`): a
+terminal as before; a mailbox or NL: a record stream on a channel of the
+process's, in executive mode (`openRecordEntry`, its device text
+`_NLA0:` without the node's name, as VMS 7.1's; a mailbox's,
+`_MBAn:`, unconfirmed); a file opened as DCL's OPEN opens one, an output
+file made new as a VFC print file with PUT access alone (VMS's
+subprocess log, `18CD4108`), an input file read from its start, the
+device text the volume's (`_GOVAX$DUA1:`) or the host file's path. Each
+is PRN and SQO; SYS$ERROR shares SYS$OUTPUT's entry and SYS$COMMAND
+SYS$INPUT's, as before. A value that can't be opened is defined as given
+(an input file that isn't there stays the CLI's RMS$_FNF). The CLI's
+commands come through the entry (`OpenCommandInput`'s `entryInput`, a
+mailbox's `ErrWait` passed on), and DCL's supervisor-mode SYS$OUTPUT at
+level 0 names the log's entry (`DefineCLIOutput`, unchanged). The
+copying rule the probe showed was already LIB$SPAWN's: CONFINE names,
+OPEN's among them, aren't copied (`copyProcessNames`).
+
+`outfile.go`'s rewrite of a whole file for every line is gone, and with
+it the CLI's "permanent" file (`openPermanentOutput`). What is left of it
+is the case VMS has too: a SYS$OUTPUT or SYS$ERROR the image's DCL
+defined for it alone (`DEFINE/USER_MODE SYS$OUTPUT file`, then RUN),
+which leads to no entry. The image's first record makes the file, now an
+open file (`rms.Session.OpenDCLFile`, with the new `DCLAccess.Variable`:
+VAR and CR, as before; VMS 7.1's TB70ERRS.LOG's 25 blocks agree), written
+a record at a time and closed at image rundown (`closeImageOutput`) or
+the process's. `$PUTMSG`'s lines to a mailbox entry don't wait for it
+(`rms.Context.PutPermanentNoWait`), as they didn't on the old stream.
+
+DCL's name walk (`processPermanentFile`) is gone: READ, WRITE, and TYPE
+SYS$INPUT find every file by its entry. WRITE to the entry DCL's own
+output goes to (`dclOutput`: the innermost `/OUTPUT` file, or SYS$OUTPUT's
+entry, a subprocess's log among them) goes through DCL's output, so its
+records stay in order with DCL's lines. One narrow case is kept
+(`undefinedPermanent`): a bare SYS$OUTPUT, SYS$ERROR, SYS$INPUT, or
+SYS$COMMAND with no file behind it at all (a DCL with no process, or a
+process created with no output) reads the terminal or writes DCL's
+output.
+
+Tests: `TestOpenTerminalFiles_subprocess` (NL: an entry, `_NLA0:`, shared
+by SYS$OUTPUT and SYS$ERROR) and the console's `TestSpawn_permanentFiles`
+(SPAWN/INPUT=NL:/OUTPUT= of a procedure: the names' modes, attributes,
+and devices, as PPF71P's on VMS, and DCL's lines, an image's, and WRITE
+to SYS$OUTPUT and SYS$ERROR in order in the log); the earlier SPAWN,
+LOGINOUT, and traceback tests pass unchanged.

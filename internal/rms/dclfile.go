@@ -62,6 +62,23 @@ import (
 type DCLAccess struct {
 	Read, Write, Append   bool
 	ShareRead, ShareWrite bool
+
+	// Variable makes a new volume file with variable-length records and
+	// carriage-return carriage control (VAR, CR) rather than OPEN's VFC
+	// print file: an image's own file for SYS$OUTPUT, as LIB$PUT_OUTPUT's
+	// $CREATE makes one (corevms's outfile.go; the record attributes are
+	// unconfirmed, the blocks used VMS 7.1's, testdata/tb70).
+	Variable bool
+}
+
+// recordAttributes are the record attributes of a file the open makes
+// (Variable).
+func (a DCLAccess) recordAttributes() ondisk.RecAttr {
+	if a.Variable {
+		return ondisk.RecAttr{Format: ondisk.RecordFormatVariable, Attributes: ondisk.AttrImpliedCC}
+	}
+
+	return ondisk.RecAttr{Format: ondisk.RecordFormatVFC, Attributes: dclRatPrint, VfcSize: dclVFCSize}
 }
 
 // creates reports whether the open makes a new file: /WRITE without
@@ -181,7 +198,7 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		}
 
 		if a.creates() {
-			handle, found, sts = createDCLFile(ctx, fac, shr, p)
+			handle, found, sts = createDCLFile(ctx, fac, shr, a.recordAttributes(), p)
 			if sts != 0 {
 				return fail(name, sts)
 			}
@@ -263,7 +280,7 @@ const dclRatPrint = ondisk.AttrPrintCC
 // sequential file of VFC records with print-file carriage control. It returns the file's handle, opened
 // for access fac with sharing shr, and the file made, or the RMS status
 // for why not.
-func createDCLFile(ctx *Context, fac, shr byte, p parsedName) (*FileHandle, foundFile, uint32) {
+func createDCLFile(ctx *Context, fac, shr byte, attr ondisk.RecAttr, p parsedName) (*FileHandle, foundFile, uint32) {
 	var found foundFile
 
 	spec := p.spec()
@@ -308,8 +325,6 @@ func createDCLFile(ctx *Context, fac, shr byte, p parsedName) (*FileHandle, foun
 	if err != nil {
 		return nil, found, rmsDeviceError
 	}
-
-	attr := ondisk.RecAttr{Format: ondisk.RecordFormatVFC, Attributes: dclRatPrint, VfcSize: dclVFCSize}
 
 	file, err := vol.CreateFileVersion(dir, name, version, attr, bm, ib)
 	if errors.Is(err, volume.ErrExists) {

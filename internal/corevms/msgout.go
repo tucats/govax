@@ -55,10 +55,10 @@ func (env *Environment) putMessage(cond uint32, lines []string) {
 }
 
 // putMessageLines writes lines to out's name, as records (putRecord), but
-// not to a file the image holds (outputFile.held). A full mailbox doesn't
-// wait: the line is left pending on its stream, to go when there's room,
-// and the lines after it are lost (VMS's $PUTMSG likely waits for room;
-// unconfirmed).
+// not to a file the image holds (outputFile.held, outfile.go). A full
+// mailbox doesn't wait: the line is left pending on its stream, to go
+// when there's room, and the lines after it are lost (VMS's $PUTMSG
+// likely waits for room; unconfirmed).
 func (env *Environment) putMessageLines(out *processOutput, lines []string) {
 	if f := env.openRecordFile(out); f != nil && f.held {
 		return

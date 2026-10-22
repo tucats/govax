@@ -229,6 +229,8 @@ func (sys *System) awaitSubprocesses(env *Environment) bool {
 // lock it holds or waits for; and its process-permanent files, which
 // image rundown leaves open.
 func (env *Environment) processRundown() {
+	env.closeImageOutput()
+
 	if n, err := env.files.ClosePermanentFiles(); n > 0 && env.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d process-permanent file(s), error %v\n",
 			env.Process.PID, n, err)

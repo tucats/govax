@@ -25,6 +25,19 @@ func (e *PermanentEntry) IsTerminal() bool { return e.handle.IsConsole() }
 // terminal a record is a line. A non-nil error is a mailbox's wait for
 // room (the caller is called again) or a failure of the machine.
 func (ctx *Context) PutPermanent(e *PermanentEntry, record []byte) (uint32, error) {
+	return ctx.putPermanent(e, record, false)
+}
+
+// PutPermanentNoWait is PutPermanent for a writer that doesn't wait for a
+// mailbox to take its record ($PUTMSG's lines): the record is left
+// pending on the stream, to go when there is room, and the status is
+// RMS$_NORMAL.
+func (ctx *Context) PutPermanentNoWait(e *PermanentEntry, record []byte) (uint32, error) {
+	return ctx.putPermanent(e, record, true)
+}
+
+// putPermanent is PutPermanent, waiting for a mailbox unless async.
+func (ctx *Context) putPermanent(e *PermanentEntry, record []byte, async bool) (uint32, error) {
 	h := e.handle
 
 	if h.Access&facPut == 0 {
@@ -41,9 +54,13 @@ func (ctx *Context) PutPermanent(e *PermanentEntry, record []byte) (uint32, erro
 
 		return rmsNormal, nil
 	case h.IsRecordDevice():
-		status, _, err := h.Device.Put(record, false)
+		status, pending, err := h.Device.Put(record, async)
 		if err != nil {
 			return 0, err
+		}
+
+		if pending {
+			return rmsNormal, nil
 		}
 
 		switch status {

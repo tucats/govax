@@ -262,35 +262,34 @@ func (r *recordDevice) Close() {
 
 // PutOutput writes record to SYS$OUTPUT as one record, which is what
 // LIB$PUT_OUTPUT does. If SYS$OUTPUT leads to a process-permanent file
-// (the terminal LOGINOUT opened, ppfstart.go), the record goes through
-// its entry, a line on the terminal. If SYS$OUTPUT names a mailbox or NL:, the record
-// is a message written there, through a stream the process keeps open in
-// executive mode (as VMS keeps SYS$OUTPUT open as a process-permanent
-// file), which a change of SYS$OUTPUT's translation replaces; it returns
-// the write's status, or ErrWait while the mailbox is full. Otherwise the
-// record is a line on the terminal, and the status is SS$_NORMAL. A
-// SYS$OUTPUT that names a file (no device, or a disk) gets the line as a
-// record of that file (outfile.go), or, if the file can't be written, the
-// terminal does. A file the image writes this way is one it holds open
-// (outputFile.held).
+// (the terminal LOGINOUT opened, a subprocess's log, mailbox, or NL:, a
+// command procedure's /OUTPUT file; ppfstart.go), the record goes through
+// its entry, and a mailbox's write waits (ErrWait) until it is read. A
+// SYS$OUTPUT the image's DCL defined for it alone leads to no entry: a
+// mailbox or NL: gets the record through a stream the process keeps open
+// in executive mode, which a change of SYS$OUTPUT's translation replaces;
+// a file (no device, or a disk) gets it as a record of a file the image
+// holds open (outfile.go), or, if the file can't be made, the terminal
+// does, and the status is SS$_NORMAL.
 func (env *Environment) PutOutput(record string) (uint32, error) {
-	if _, ok := env.permanentEntry(env.output.name); ok {
-		return env.putRecord(&env.output, record, false)
-	}
-
-	if f := env.openRecordFile(&env.output); f != nil && f != env.output.permanent {
-		f.held = true
+	if _, ok := env.permanentEntry(env.output.name); !ok {
+		if f := env.openRecordFile(&env.output); f != nil {
+			f.held = true
+		}
 	}
 
 	return env.putRecord(&env.output, record, false)
 }
 
-// putRecord writes record to out's name as PutOutput describes. A
-// process-permanent file's entry is written synchronously. async
-// true doesn't wait for room in a full mailbox: the record is left
-// pending on the stream (recordDevice.Put), and the status is SS$_NORMAL.
+// putRecord writes record to out's name as PutOutput describes. async
+// true doesn't wait for a mailbox to take the record: it is left pending
+// on the stream (recordDevice.Put), and the status is SS$_NORMAL.
 func (env *Environment) putRecord(out *processOutput, record string, async bool) (uint32, error) {
 	if e, ok := env.permanentEntry(out.name); ok {
+		if async {
+			return env.putPermanentNoWait(e, record)
+		}
+
 		return env.putPermanent(e, record)
 	}
 

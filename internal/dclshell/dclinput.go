@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -218,84 +217,20 @@ func (p *procedureSource) readData() (record string, ok bool) {
 
 // IsInputStream reports whether a file specification names SYS$INPUT
 // (with or without its colon), itself or through logical names: the
-// process's input, which TYPE reads as lines rather than as a file. A
-// name that leads to a process-permanent file is SYS$INPUT when it is the
-// file SYS$INPUT leads to; one that leads to none is found by its name
-// (processPermanentFile).
+// process's input, which TYPE reads as lines rather than as a file. It
+// does when the name leads to the process-permanent file SYS$INPUT leads
+// to (so INFILE, defined as SYS$INPUT, is the input stream too: the DCL
+// Dictionary's DECK example 2 types a procedure's data through such a
+// name).
 func (c *Interpreter) IsInputStream(spec string) bool {
-	if e, ok := c.permanentFile(strings.TrimSpace(spec)); ok {
-		input, _ := c.permanentFile("SYS$INPUT")
-
-		return e == input
+	e, ok := c.permanentFile(strings.TrimSpace(spec))
+	if !ok {
+		return false
 	}
 
-	return c.processPermanentFile(spec) == "SYS$INPUT"
-}
+	input, _ := c.permanentFile("SYS$INPUT")
 
-// processPermanentNames are the process-permanent files every process
-// has, which DCL's READ and WRITE use without an OPEN (dclfile.go), found
-// by name where they aren't yet entries of the process's (a subprocess's
-// files: docs/PHASE-71 - process-permanent files.md, subtask 8).
-var processPermanentNames = map[string]bool{
-	"SYS$INPUT": true, "SYS$OUTPUT": true, "SYS$ERROR": true, "SYS$COMMAND": true,
-}
-
-// processPermanentFile returns which of the process-permanent files
-// (processPermanentNames) a file specification names, with or without
-// its colon, itself or through logical names; "" for none. RMS
-// translates a file specification's logical name again and again, as far
-// as LNM$C_MAXDEPTH levels, until nothing translates or an equivalence
-// is terminal (lnm.TranslateFileSpec), and the process-permanent names
-// are among those names: so INFILE, defined as SYS$INPUT, is the input
-// stream too (the DCL Dictionary's DECK example 2 types a procedure's
-// data through such a name). Each step takes a name's first equivalence
-// string; one with anything after the name and its colon (a directory, a
-// file name) is a file, not a process-permanent one.
-func (c *Interpreter) processPermanentFile(spec string) string {
-	name := strings.ToUpper(strings.TrimSpace(spec))
-
-	for range lnm.MaxDepth {
-		name = strings.TrimSuffix(name, ":")
-		if processPermanentNames[name] {
-			return name
-		}
-
-		if c.Logicals == nil || name == "" || !isDCLName(name) {
-			return ""
-		}
-
-		e, err := c.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
-		if err != nil || len(e.Equivalences) == 0 {
-			return ""
-		}
-
-		eqv := e.Equivalences[0]
-		name = strings.ToUpper(strings.TrimSpace(eqv.Value))
-
-		if eqv.Attrs&lnm.AttrTerminal != 0 {
-			name = strings.TrimSuffix(name, ":")
-			if processPermanentNames[name] {
-				return name
-			}
-
-			return ""
-		}
-	}
-
-	return ""
-}
-
-// isDCLName reports whether name could be a logical name: letters,
-// digits, "$", "_", and "-" only.
-func isDCLName(name string) bool {
-	for i := range len(name) {
-		ch := name[i]
-		if !(ch >= 'A' && ch <= 'Z') && !(ch >= '0' && ch <= '9') && ch != '$' && ch != '_' && ch != '-' {
-			return false
-		}
-	}
-
-	return true
+	return e == input
 }
 
 // typeInput is TYPE SYS$INPUT: it types each line of the process's

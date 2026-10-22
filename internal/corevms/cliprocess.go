@@ -92,9 +92,6 @@ func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
 		cli = &CLIStartup{Login: true}
 	}
 
-	// The CLI's SYS$OUTPUT, if it's a file, is made now (outfile.go).
-	env.openPermanentOutput()
-
 	// DCL's own SYS$OUTPUT, at command level 0 (ppfdcl.go).
 	if err := env.DefineCLIOutput(); err != nil {
 		return 0, err
@@ -123,7 +120,11 @@ const maxCommandLength = 1024
 // OpenCommandInput opens env's SYS$INPUT for its CLI to read commands
 // from, as DCL opens SYS$INPUT when a process logs in:
 //
-//   - the terminal, when SYS$INPUT isn't defined in the process table
+//   - the process-permanent file process startup opened (ppfstart.go):
+//     the terminal, prompted for, or a file, mailbox, or NL:, read a
+//     record at a time through the entry;
+//   - otherwise (a name startup couldn't open, or one defined as given)
+//     the terminal, when SYS$INPUT isn't defined in the process table
 //     (the process shares its creator's terminal) or names a terminal;
 //   - a mailbox or NL:, read a message at a time, as RMS reads one
 //     (recdevice.go); NL: is at its end at once;
@@ -133,6 +134,14 @@ const maxCommandLength = 1024
 // It returns the input and SS$_NORMAL, or nil and the failure's status
 // (RMS$_FNF for a file that isn't there, or the device's).
 func (env *Environment) OpenCommandInput() (CommandInput, uint32) {
+	if entry, ok := env.permanentEntry("SYS$INPUT"); ok {
+		if entry.IsTerminal() {
+			return terminalInput{env}, ssNormal
+		}
+
+		return entryInput{env, entry}, ssNormal
+	}
+
 	e, err := env.Logicals.Translate(lnm.ProcessTableName, "SYS$INPUT", lnm.User, 0)
 	if err != nil || len(e.Equivalences) == 0 {
 		return terminalInput{env}, ssNormal
@@ -177,6 +186,29 @@ func (env *Environment) OpenCommandInput() (CommandInput, uint32) {
 
 	return &fileInput{lines: lines}, ssNormal
 }
+
+// entryInput reads command lines from a process-permanent file that isn't
+// the terminal (a subprocess's input file, mailbox, or NL:; ppfstart.go),
+// a record each, through its entry's one stream.
+type entryInput struct {
+	env   *Environment
+	entry *rms.PermanentEntry
+}
+
+func (in entryInput) ReadLine(string) (string, bool, error) {
+	record, sts, err := in.env.rmsContext().GetPermanent(in.entry)
+	if err != nil {
+		return "", false, err
+	}
+
+	if sts&1 == 0 {
+		return "", false, nil
+	}
+
+	return string(record), true, nil
+}
+
+func (entryInput) Interactive() bool { return false }
 
 // terminalInput reads command lines from the terminal
 // (readTerminalInput), prompting for each.
