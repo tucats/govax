@@ -164,12 +164,12 @@ From the manual, in govax's terms:
    dropped, and the program's handler doesn't see it. Until the probe
    runs, subtask 3 builds the debugger's side so that choice is one
    place to change.
-6. **Services stay shims; the probe measures the difference.** A
-   program tracing through a service call gets a trace at each
-   instruction of the P1 vector entry it runs (Question 6). Where the
-   probe's count or PCs differ from govax's, the stub's traces are made
-   to match VMS's if that's simple (the XFC standing for the CHMK);
-   otherwise the difference is logged in `docs/DEVIATIONS.md`.
+6. **Services stay shims, traced as govax runs them** (the author,
+   2026-10-24). A program tracing through a service call gets a trace
+   at each instruction govax's P1 vector entry really runs (Question
+   6). govax doesn't add, drop, or move traces to imitate VMS's
+   `CHMK`. The probe records VMS's traces, and where they differ the
+   difference is described in `docs/DEVIATIONS.md` and the manual.
 7. **AST routines aren't traced** (answer 3): `deliverAST` clears T
    and TP in the PSL the routine runs in, and the AST's exit restores
    the interrupted PSL, T and TP with it. The probe confirms it.
@@ -189,8 +189,10 @@ the question was unclear. What it meant: on VMS a service call is
 service in kernel mode untraced (the trace comes after its REI), then
 a `RET`. A traced program sees a trace before each of those. govax's
 entry runs an XFC to a Go shim instead, so the number of traces, and
-the PCs they report, may differ. The probe records VMS's, and Decision
-6 says what govax does about a difference.
+the PCs they report, may differ. The probe records VMS's. The author's
+answer, once the question was explained: report govax's traces as they
+are, and document the difference, rather than fake traces to match
+VMS (Decision 6).
 
 1. A probe on the simh VAX (VMS 7.1), `testdata/trace73`, for
    subtask 4? It would answer questions 2 to 6.
