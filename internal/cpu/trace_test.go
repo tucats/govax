@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"encoding/binary"
+	"errors"
 	"testing"
 
 	"github.com/tucats/govax/internal/registers"
@@ -372,4 +373,67 @@ func TestTraceInterrupt(t *testing.T) {
 	}
 
 	checkPCs(t, runTraced(t, e), base+1, base+2, tracedEnd)
+}
+
+// TestTraceFaultBreakpoint: a fault breakpoint on the trace fault stops
+// before delivery with the trace still pending (TP set, PC the instruction
+// it comes before), and the next step delivers it without stopping again;
+// the trace after that stops again. Clearing TP at the stop drops it.
+func TestTraceFaultBreakpoint(t *testing.T) {
+	e := newTraceEngine(t, nop, nop, nop, jumpEnd())
+	e.SetFaultBreakpoint(ExcTracePending)
+	setT(e)
+
+	if err := e.Step(); err != nil { // the first NOP, TP ← T
+		t.Fatalf("first NOP: %v", err)
+	}
+
+	var fb *FaultBreak
+
+	stop := func(pc uint32) {
+		t.Helper()
+
+		if err := e.Step(); !errors.As(err, &fb) || fb.Code != ExcTracePending {
+			t.Fatalf("Step = %v, want the trace fault's break", err)
+		}
+
+		if got := e.cpu.GPR(registers.PC); got != pc {
+			t.Errorf("PC at the break = %#x, want %#x", got, pc)
+		}
+
+		if !e.cpu.PSL().TP() {
+			t.Error("TP clear at the break, want the trace pending")
+		}
+	}
+
+	stop(base + 1)
+
+	// Delivered: the trace handler (an REI) is entered.
+	if err := e.Step(); err != nil {
+		t.Fatalf("delivering the held trace: %v", err)
+	}
+
+	if got := e.cpu.GPR(registers.PC); got != traceVector {
+		t.Fatalf("PC after delivery = %#x, want the trace handler %#x", got, traceVector)
+	}
+
+	for range 2 { // the handler's REI, then the second NOP
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step: %v", err)
+		}
+	}
+
+	stop(base + 2)
+
+	psl := e.cpu.PSL()
+	psl.SetTP(false)
+	e.cpu.SetPSL(psl)
+
+	if err := e.Step(); err != nil { // the third NOP, untraced before it
+		t.Fatalf("third NOP: %v", err)
+	}
+
+	if got := e.cpu.GPR(registers.PC); got != base+3 {
+		t.Errorf("PC after the dropped trace = %#x, want %#x", got, base+3)
+	}
 }

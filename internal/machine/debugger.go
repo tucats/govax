@@ -101,6 +101,11 @@ type UnhandledException struct {
 	// not the one that raised it (a hardware fault).
 	PC        uint32
 	Preceding bool
+
+	// Message is the condition's message, a line for each message in its
+	// signal array, with the $FAO parameters filled in, as the catch-all
+	// shows it.
+	Message []string
 }
 
 // Debugger is what the console asks of the debugger. internal/debugger

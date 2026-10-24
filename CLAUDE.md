@@ -593,7 +593,8 @@ expect adjustment as phases land):
   `Step` takes it at an instruction's start when PSL<TP> is set, else
   copies T into TP; a fault clears TP, a trap (`Fault.Trap`) keeps it;
   exceptions and ASTs start with T and TP clear; REI keeps TP set if T
-  was set. CALLS and CALLG save the PSW before setting
+  was set; a fault breakpoint on the trace fault stops with TP set
+  again and delivers the trace at the next boundary (`holdTrace`). CALLS and CALLG save the PSW before setting
   the entry mask's trap enables (IV bit 14, DV bit 15). The
   Phase 35 oracle (`testdata/insn35`, `TestInsn35Oracle` in
   `internal/console`) compares 567 instruction cases with VMS's run.
@@ -961,7 +962,13 @@ expect adjustment as phases land):
   the console and the debugger each have their own radix. `SET PROCESS
   [pid|name]` (`process.go`) moves the CPU to another process so the
   debugger shows its context (STEP and breakpoints stay with process 1),
-  and the debugger's `SHOW PROCESS` lists the processes. **Symbols are
+  and the debugger's `SHOW PROCESS` lists the processes. A program
+  that traces itself (Phase 73, `traced.go`) gets every trace: a STEP
+  whose instruction has a trace pending runs the program's handler
+  first, silently, then the instruction (`deliverPendingTrace`;
+  `programGetsTrace` is Decision 5's one place to change), and a run
+  that starts at a breakpoint stays exempt from it until the program is
+  back from that trace (`runLoop`). DEPOSIT to the PSL is `depositPSL`. **Symbols are
   split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
   DCL's (`internal/dclshell/dclsym.go`'s `dclSymbolTable`: a global table
   and a local table per command level), and the machine's symbol table

@@ -152,6 +152,12 @@ type Engine struct {
 	// live on Console.Breakpoints; see faultbreak.go's own doc comment.
 	faultBreaks map[Exception]bool
 
+	// traceHeld is set when a fault breakpoint stopped the trace fault:
+	// the trace is still pending (PSL<TP> set again), and is delivered at
+	// the next instruction boundary without stopping a second time
+	// (trace.go's holdTrace).
+	traceHeld bool
+
 	// Fault/exception event history ring buffer (SET FAULT/HISTORY, the
 	// history half of SHOW FAULT) -- see faulthistory.go.
 	faultHistory      []FaultRecord
@@ -543,7 +549,9 @@ func (e *Engine) raise(err error) error {
 	// entirely — see faultbreak.go's own top comment on why this matches
 	// vax.c's own "set vax.fault_pending, return VAX_BREAK" rather than
 	// running handle_fault first.
-	if e.faultBreakHit(f.Code) {
+	if e.faultBreakHit(f.Code) && !f.held {
+		e.holdTrace(f)
+
 		return &FaultBreak{Code: f.Code}
 	}
 

@@ -2,8 +2,8 @@
 
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day: the probe runs, and govax follows its
-answers. Subtasks 1 (the CPU's trace rules) and 2 (SS$_TBIT) are
-done.
+answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), and 3 (the
+debugger beside a traced program) are done.
 
 ## Goal
 
@@ -39,8 +39,11 @@ machine, and keeps doing so: Decision 5).
 - **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`),
   and subtask 2, SS$_TBIT (`internal/corevms/condition.go`): a program
   can trace itself, and `ots72t.mar`'s self-test runs on govax as on
-  VMS (the progress log).
-- **Next**: subtask 3, the debugger beside a traced program.
+  VMS (the progress log). Subtask 3, the debugger beside a traced
+  program (`internal/debugger/traced.go`): the program gets every
+  trace, a STEP included, with Decision 5's other answer one function
+  away (`programGetsTrace`).
+- **Next**: subtask 4, the probe.
 
 ## Part A — the survey (2026-10-24)
 
@@ -330,3 +333,61 @@ same day; Decisions 5 to 8 record the answers.
   `TestTrace73Unhandled` a BISPSW with no handler (the first trace
   before the second instruction after it). The assembler's kernel.asm
   golden image has the new SCB longword.
+
+### 2026-10-24 — Subtask 3, the debugger beside a traced program
+
+What each command does when the program traces itself; the opening
+comment of `internal/debugger/traced.go` lists them.
+
+- EXAMINE PSL already showed T and TP. DEPOSIT to the PSL wasn't
+  implemented (it evaluated `PSL` as an address): `depositPSL`
+  (`data.go`) replaces the PSL with a longword, and with `/WORD` or
+  `/BYTE` only its low word or byte, as the VMS debugger manuals'
+  `DEPOSIT/WORD PSL = 0` and the 2.0 reference's `DEP/HEX/WORD PSL =
+  expression` do; other sizes are OPTNOTALLOW. Setting T starts
+  tracing. govax lets every bit change, as its SET PSL does;
+  unconfirmed what VMS's debugger, a user-mode program, does when
+  asked to change the privileged half.
+- STEP: before this, a step whose instruction had a trace pending ran
+  the trace fault's dispatch, landing in the dispatcher's stub
+  (`stepped to 7FFEE118: XFC #^X7A`) and then the handler, so stepping
+  traced code took several STEPs per instruction. Now `stepOne` first
+  gives the pending trace to the program (`deliverPendingTrace`): the
+  handler runs silently, as STEP/OVER runs a called routine, until the
+  program is back (same mode, off the interrupt stack, TP clear, SP at
+  or above where it was: `traceReturn.back`), and then the step runs
+  its instruction. A step still moves one instruction, and the handler
+  sees every trace, as under GO. A breakpoint in the handler, or a SET
+  BREAK/EXCEPTION, stops the step there.
+- Any run that starts at a breakpoint (GO, STEP/CALL, STEP/RETURN, and
+  the run above) keeps its first-instruction exemption until the
+  program is back from a trace pending there, so a breakpoint at the
+  instruction a trace comes before doesn't stop the program a second
+  time when the handler returns (`runLoop`).
+- Decision 5: `programGetsTrace` is the one place that decides who
+  takes a trace pending when a STEP begins; it says the program, until
+  the probe. With the debugger taking it (`takeTraces`, set only by the
+  tests), the trace is dropped (TP cleared) and the program's handler
+  misses the traces of the instructions stepped.
+- SET BREAK/EXCEPTION stopped at each SS$_TBIT, but its message showed
+  the $FAO directives unfilled (`T-bit pending trap at PC=!XH,
+  PS=!XL`), as it would have for any condition with parameters: the
+  message is now formatted from the signal array as the catch-all
+  formats it (`corevms`'s `signalMessage`, carried to the debugger in
+  `UnhandledCondition.Message`). GO passes the condition on to the
+  handler. The break says "at" the instruction the trace comes before;
+  whether VMS says "at" or "preceding" is the probe's. At the break the
+  registers are still the dispatcher's, as for every condition
+  (the session oracle's `reasonDispatcher`).
+- SET BREAK/FAULT=28 (the trace fault's vector) stopped before
+  delivery, but the trace was lost: `beginTrace` had cleared TP, and
+  GO went on without it. Now the stop leaves TP set (EXAMINE PSL shows
+  the trace pending) and the next instruction boundary delivers it
+  without stopping again (`cpu.Engine`'s `holdTrace`, `Fault.held`);
+  clearing TP at the stop drops it.
+- Tests: `internal/debugger/traced_test.go` (EXAMINE PSL, STEP through
+  traced code, GO and STEP from a breakpoint before a pending trace, a
+  breakpoint in the handler, SET BREAK/EXCEPTION, SET BREAK/FAULT=28,
+  DEPOSIT to the PSL, and Decision 5's other answer), and
+  `TestTraceFaultBreakpoint` in `internal/cpu/trace_test.go`.
+- `debug.help`'s DEPOSIT and STEP, and the manual's DEPOSIT row.

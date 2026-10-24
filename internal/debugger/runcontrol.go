@@ -238,7 +238,10 @@ func (d *Debugger) removeBreakpointPtr(target *Breakpoint) {
 // whether an instruction breakpoint fires on a run's very first
 // instruction incidentally depends on whether the unrelated address/fault
 // breakpoint_list happens to be non-empty; a debugger-tool quirk with no
-// ISA-fidelity stakes.
+// ISA-fidelity stakes. When the program traces itself and a trace is
+// pending at that first instruction, the exemption lasts until the
+// program's handler has taken it and the program is back there
+// (traced.go).
 //
 // trace is called with each instruction's PC immediately before it
 // executes and must return a finish func to call once it has executed —
@@ -255,6 +258,17 @@ func (d *Debugger) removeBreakpointPtr(target *Breakpoint) {
 func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (runOutcome, error) {
 	c := d.Machine
 	first := skipFirstCheck
+
+	// A trace pending at the first instruction comes before it
+	// (traced.go). stepTrace says this run is a STEP's, delivering that
+	// trace alone.
+	var pending *traceReturn
+	if first {
+		pending = d.pendingTrace()
+	}
+
+	stepTrace := d.stepTrace
+	d.stepTrace = false
 
 	// Source lines are shown once per instruction while the loop runs
 	// (showSource). A loop inside another (a condition handler's) leaves
@@ -282,6 +296,21 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 		// The eventpoints are process 1's (Console.RunningProcessOne):
 		// another process at the same address doesn't reach them.
 		mine := c.RunningProcessOne()
+
+		// Back from the program's handler for the pending trace: a STEP
+		// delivering it is done, and any other run is at its first
+		// instruction again, exempt as before.
+		if pending != nil && !first && mine && pending.back(c) {
+			pending = nil
+
+			if stepTrace {
+				d.traceDone = true
+
+				return runStopped, nil
+			}
+
+			first = true
+		}
 
 		if !first && mine {
 			d.traceHit(pc)

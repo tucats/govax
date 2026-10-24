@@ -449,6 +449,54 @@ func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]
 	return data[:size], nil
 }
 
+// depositPSL is DEPOSIT to the PSL: a longword replaces it, and a byte or
+// word (DEPOSIT/WORD PSL = 0, the VMS debugger manuals' way to clear the
+// condition codes and trap enables) its low byte or word, the PSW, the
+// rest left as it is. A type of another size is %DEBUG-E-OPTNOTALLOW.
+// Setting T starts tracing: the next instruction runs, and the trace
+// comes before the one after it (the VAX/VMS 2.0 Symbolic Debugger
+// Reference: "setting the trace trap condition code may cause a T-bit
+// pending trap"; traced.go). govax lets every bit be changed, as SET PSL
+// does: VMS's debugger, a user-mode program, can't change the privileged
+// half (unconfirmed what it does when asked to).
+func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
+	size := uint32(4)
+
+	if typed {
+		var fixed bool
+		if size, fixed = t.fixedSize(); !fixed || t.kind == typeInstruction || (size != 1 && size != 2 && size != 4) {
+			return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+		}
+	}
+
+	var data []byte
+
+	if typed {
+		var err error
+		if data, err = d.depositBytes(0, t, value); err != nil {
+			return err
+		}
+	} else {
+		v, err := d.Machine.EvalWholeIn(d.inputRadix, value)
+		if err != nil {
+			return err
+		}
+
+		data = []byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
+	}
+
+	psl := uint32(d.Machine.CPU.PSL())
+
+	for b := range min(size, uint32(len(data))) {
+		psl = psl&^(0xFF<<(8*b)) | uint32(data[b])<<(8*b)
+	}
+
+	d.Machine.CPU.SetPSL(registers.PSL(psl))
+	d.setCurrentValue(data)
+
+	return nil
+}
+
 // setRegisterBytes stores data in the registers from reg on, as
 // registerBytes reads them: a register that data only partly fills keeps
 // its other bytes.
@@ -982,6 +1030,11 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 
 	if r.Present("INSTRUCTION") {
 		t, typed = dataType{kind: typeInstruction}, true
+	}
+
+	// The PSL takes a longword, or the low byte or word (depositPSL).
+	if _, _, isPSL, isReg := registerOf(target); isReg && isPSL {
+		return dbg.depositPSL(t, typed, value)
 	}
 
 	// A register takes a longword, or the type given.

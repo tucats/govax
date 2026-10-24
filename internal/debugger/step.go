@@ -422,6 +422,11 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 		return runStopped, true, nil
 	}
 
+	// A trace pending from the instruction before comes first (traced.go).
+	if outcome, done, err := d.deliverPendingTrace(); done {
+		return outcome, true, err
+	}
+
 	d.snapshotWatches()
 
 	startPC := c.CPU.GPR(registers.PC)

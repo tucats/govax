@@ -51,11 +51,16 @@ package cpu
 func (e *Engine) beginTrace() *Fault {
 	psl := e.cpu.PSL()
 
+	// A trace a fault breakpoint held is the one pending now, if any is:
+	// whatever happened at the stop, it doesn't outlast this boundary.
+	held := e.traceHeld
+	e.traceHeld = false
+
 	if psl.TP() {
 		psl.SetTP(false)
 		e.cpu.SetPSL(psl)
 
-		return &Fault{Code: ExcTracePending}
+		return &Fault{Code: ExcTracePending, held: held}
 	}
 
 	if psl.T() {
@@ -74,4 +79,25 @@ func (e *Engine) clearTracePending() {
 		psl.SetTP(false)
 		e.cpu.SetPSL(psl)
 	}
+}
+
+// holdTrace is a fault breakpoint (SET BREAK/FAULT, faultbreak.go)
+// stopping the trace fault before delivery. Every other fault comes again
+// when its instruction runs again, but the trace fault comes from PSL<TP>,
+// which beginTrace has just cleared: so TP is set again, and the machine
+// stops with the trace still pending (EXAMINE PSL shows TP 1), PC at the
+// instruction the trace comes before. When the program goes on, the trace
+// is delivered to it at once, without stopping again (beginTrace marks
+// the fault held). If the debugger clears TP meanwhile, there is no
+// trace.
+func (e *Engine) holdTrace(f *Fault) {
+	if f.Code != ExcTracePending {
+		return
+	}
+
+	psl := e.cpu.PSL()
+	psl.SetTP(true)
+	e.cpu.SetPSL(psl)
+
+	e.traceHeld = true
 }

@@ -23,6 +23,8 @@
 //              10/15/26    SHOW MEMORY's page frame counts with paging on;
 //                          SHOW PAGE names the PTE's form.
 //              10/17/26    SHOW MEMORY's page file section.
+//              10/24/26    DEPOSIT to the PSL; STEP and a program that
+//                          traces itself (Phase 73, subtask 3).
 //
 
 $HELP
@@ -329,6 +331,12 @@ $D
   A value wider than a longword deposited in a register fills the
   registers after it too (DEPOSIT/D_FLOAT R0 = 1.5 sets R0 and R1).
 
+  DEPOSIT PSL replaces the processor status longword; DEPOSIT/WORD and
+  DEPOSIT/BYTE change only its low word (the PSW) or byte. Setting T
+  (^X10) makes the program trace itself: the next instruction runs, and a
+  trace fault, SS$_TBIT to the program's condition handlers, comes before
+  each instruction after it.
+
   /INSTRUCTION (or SET TYPE INSTRUCTION) assembles one machine
   instruction, in quotes, at the location: its numbers are in the input
   radix, its names the program's, and a branch's displacement is from the
@@ -343,6 +351,7 @@ $D
     DEPOSIT/FLOAT RATE = 2.75
     DEPOSIT/ASCIC NAME = 'SMITH'
     DEPOSIT/INSTRUCTION .PC = 'MOVL #20A,R0'
+    DEPOSIT/WORD PSL = 0
 
 $EVAL
   Shows the value of an expression.
@@ -1261,6 +1270,13 @@ $S
   it.
 
   With a qualifier left out, STEP uses what SET STEP chose.
+
+  A program may trace itself (PSL<T> set, its condition handler taking
+  SS$_TBIT after each instruction). The debugger doesn't use the trace
+  bit, so the program gets every trace: when a trace is due before the
+  instruction a step runs, the program's handler takes it first, as part
+  of the step, and the step then runs the instruction. A breakpoint in
+  the handler stops the step there.
 
 $SYMB
   Shows each name the debugger has for an address.

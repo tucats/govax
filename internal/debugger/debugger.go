@@ -73,6 +73,14 @@ type Debugger struct {
 	// given for (step.go), or nil.
 	pendingReturn *pendingReturn
 
+	// stepTrace is set for a run that gives the program the trace pending
+	// before a STEP's instruction, and traceDone when that run has done so
+	// (traced.go). takeTraces makes the debugger take such a trace instead
+	// (programGetsTrace): false, unless the probe shows VMS's debugger
+	// does.
+	stepTrace, traceDone bool
+	takeTraces           bool
+
 	// running counts the runs in progress. It is more than one when a run
 	// starts another from inside itself: the console's condition handling
 	// calls a VMS condition handler while the faulting program's run is

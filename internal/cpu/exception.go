@@ -55,6 +55,10 @@ type Fault struct {
 	// instruction's. A trap leaves PSL<TP> as it is in the saved PSL,
 	// where a fault clears it (trace.go).
 	Trap bool
+
+	// held marks a trace fault a fault breakpoint has already stopped
+	// once (trace.go's holdTrace): this time it is delivered.
+	held bool
 }
 
 func (f *Fault) Error() string {

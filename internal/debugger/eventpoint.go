@@ -326,9 +326,18 @@ func (d *Debugger) signalBreak() bool {
 	}
 
 	// VMS shows the condition's message before the break, as it does for
-	// an unhandled one (where the catch-all shows it).
-	if text := d.Machine.StatusText(u.Condition); text != "" {
-		d.Machine.Printf("%s\n", text)
+	// an unhandled one (where the catch-all shows it): formatted from the
+	// signal array, so an exception's PC and PSL are in it.
+	switch {
+	case len(u.Message) > 0:
+		for _, line := range u.Message {
+			d.Machine.Printf("%s\n", line)
+		}
+
+	default:
+		if text := d.Machine.StatusText(u.Condition); text != "" {
+			d.Machine.Printf("%s\n", text)
+		}
 	}
 
 	d.Machine.Printf("break on exception %s %s\n", where, d.exceptionLocation(u.PC))

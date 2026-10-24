@@ -272,8 +272,7 @@ func (env *Environment) earlierCondition(d *conditionDispatch) []string {
 	}
 
 	lines := []string{fmt.Sprintf("----- above condition handler called with exception %08X:", words[0])}
-	body, tail := words[:len(words)-2], words[len(words)-2:]
-	lines = append(lines, env.formatMessageVector(body, tail, defaultMessageFlags, "")...)
+	lines = append(lines, env.signalMessage(words)...)
 
 	return append(lines, "----- end of exception message")
 }

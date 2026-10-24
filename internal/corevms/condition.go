@@ -767,11 +767,8 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 // (a SEVERE one, or any LIB$STOP), marked STS$M_INHIB_MSG because the
 // message has been shown.
 //
-// The message is formatted from the signal array the handlers leave, as
-// VMS's catch-all does: the condition and its detail, with the PC and
-// PSL left off the vector but available as the last message's trailing
-// $FAO parameters (see formatMessageVector), which is where the system
-// exception messages take theirs from.
+// The message is formatted from the signal array the handlers leave
+// (signalMessage).
 func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	words, err := env.sigWords(d)
 	if err != nil || len(words) < 3 {
@@ -823,9 +820,7 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 	d.reported = true
 
 	if words[0]&stsInhibitMsg == 0 {
-		body, tail := words[:len(words)-2], words[len(words)-2:]
-
-		env.putMessage(words[0], env.formatMessageVector(body, tail, defaultMessageFlags, ""))
+		env.putMessage(words[0], env.signalMessage(words))
 	}
 
 	if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0])) {
@@ -837,6 +832,17 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 	}
 
 	return false
+}
+
+// signalMessage formats the message of a condition whose signal array
+// words holds (sigWords: the condition, its detail, then PC and PSL), as
+// VMS's catch-all does: the PC and PSL are left off the vector but are
+// the last message's trailing $FAO parameters (see formatMessageVector),
+// which is where the system exception messages take theirs from.
+func (env *Environment) signalMessage(words []uint32) []string {
+	body, tail := words[:len(words)-2], words[len(words)-2:]
+
+	return env.formatMessageVector(body, tail, defaultMessageFlags, "")
 }
 
 // UnhandledCondition describes a condition no handler continued, as the
@@ -855,6 +861,13 @@ type UnhandledCondition struct {
 	// signaled the condition (a LIB$SIGNAL or LIB$STOP call), which the
 	// VMS debugger words as "preceding".
 	Preceding bool
+
+	// Message is the condition's message, formatted from its signal array
+	// as the catch-all formats it (signalMessage): a line for each
+	// message, the system exception messages' $FAO parameters filled in
+	// ("T-bit pending trap at PC=00000205, PS=03C00010"). Empty when the
+	// signal array can't be read.
+	Message []string
 }
 
 // unhandledCondition builds d's UnhandledCondition. A hardware exception's
@@ -862,6 +875,10 @@ type UnhandledCondition struct {
 // the call frame of the LIB$SIGNAL or LIB$STOP stub, which resumeFP is.
 func (env *Environment) unhandledCondition(d *conditionDispatch, cond uint32) UnhandledCondition {
 	u := UnhandledCondition{Condition: cond}
+
+	if words, err := env.sigWords(d); err == nil && len(words) >= 3 {
+		u.Message = env.signalMessage(words)
+	}
 
 	if d.kind == kindException {
 		u.PC, _ = env.mem.LoadLongword(env.cpu, d.sig+4*(d.sigCount-1))
