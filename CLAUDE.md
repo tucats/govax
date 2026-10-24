@@ -1180,6 +1180,10 @@ expect adjustment as phases land):
   different SYS$OUTPUT the image hasn't written itself; a success
   message to SYS$OUTPUT only). An AST routine returns to EXE$ASTRET,
   a stub in S0 the machine's `EnsureShims` places (`ASTExitStub`).
+  Phase 73: the trace fault (kernel.asm's SCB sends EXC$TP to
+  console$handler) is SS$_TBIT with no detail; its handlers run with
+  T and TP clear in the live PSL, and a continue takes T from the
+  signal array's PSL and TP from the exception's (`condition.go`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is

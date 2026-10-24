@@ -1416,6 +1416,7 @@ exe$dclstring:  .blkb           ^X100
                 .scb            exc$resop,     console$handler; exe$resop
                 .scb            exc$resaddr,   console$handler; exe$resaddr
                 .scb            exc$tnv,       console$handler
+                .scb            exc$tp,        console$handler
                 .scb            exc$arith,     console$handler
                 .scb            exc$interval,  exe$interval
                 .scb            exc$software2, exe$deliver_ast

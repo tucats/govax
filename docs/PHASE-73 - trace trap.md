@@ -2,7 +2,8 @@
 
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day: the probe runs, and govax follows its
-answers. Subtask 1 (the CPU's trace rules) is done.
+answers. Subtasks 1 (the CPU's trace rules) and 2 (SS$_TBIT) are
+done.
 
 ## Goal
 
@@ -35,12 +36,11 @@ machine, and keeps doing so: Decision 5).
 
 ## Where things stand (2026-10-24)
 
-- **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`;
-  the progress log). A program in a machine whose trace vector is a
-  real SCB vector is traced; with the console-handler vector (VMS
-  programs) the trace fault reaches `DispatchException`, which doesn't
-  signal it yet.
-- **Next**: subtask 2, SS$_TBIT.
+- **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`),
+  and subtask 2, SS$_TBIT (`internal/corevms/condition.go`): a program
+  can trace itself, and `ots72t.mar`'s self-test runs on govax as on
+  VMS (the progress log).
+- **Next**: subtask 3, the debugger beside a traced program.
 
 ## Part A — the survey (2026-10-24)
 
@@ -292,3 +292,41 @@ same day; Decisions 5 to 8 record the answers.
   set in the frame resuming it after the instruction after the RET; REI
   in six combinations of T and the restored T and TP; an interrupt
   between instructions saving TP and taking the trace after its REI.
+
+### 2026-10-24 — Subtask 2, SS$_TBIT
+
+- kernel.asm's SCB sends the trace fault (EXC$TP, ^X28) to
+  console$handler, so a running program's trace fault reaches
+  `DispatchException`. It had no vector before: the fault would have
+  gone to vector 0.
+- `exceptionCondition` maps it to SS$_TBIT with no detail longwords
+  (Decision 4); `TestExceptionCondition` no longer lists ^X28 among
+  the exceptions that aren't signaled.
+- `DispatchException` clears T and TP in the live PSL once the arrays
+  are laid out, so the handler search and the handlers run untraced
+  (Decision 3), as `HandleFault`'s SCB path already does. The signal
+  array keeps the exception's PSL. `continueCondition` was already
+  right: T comes from the signal array's low byte, TP from the
+  exception's PSL (clear for a trace fault, kept for a trap).
+- An unhandled SS$_TBIT is severe: the catch-all writes
+  `%SYSTEM-F-TBIT, T-bit pending trap at PC=..., PS=...`, the
+  traceback handler (in an image linked with traceback) its dump, and
+  the image ends with SS$_TBIT, message inhibited. Unconfirmed until
+  the probe (Decision 8).
+- Left as it is until the probe (Decision 8): LIB$SIGNAL and LIB$STOP
+  don't touch T, so the handlers a traced LIB$SIGNAL calls run with
+  PSL<T> as the caller had it (CALLS saves T clear but leaves PSL<T>)
+  and are traced, their traces nested dispatches.
+- Side fix: SHOW's SCB vector names had the trace vector at ^X29
+  (`machine/show.go`; and "Chnage Mode" for CHMS).
+- Tests: `internal/corevms/trace_test.go` (the signal array and the
+  untraced search; continuing with T kept, T cleared, and a new PC; a
+  trap's TP kept through a dispatch; the unhandled catch-all's message
+  and status), and `internal/console/trace73_test.go`:
+  `TestTrace73SelfTest` runs `ots72t.mar` and checks its case 0
+  against VMS's run (tracer state 2, the value at R0, R2 `12345678` at
+  the RSB, `87654321` below R1; the SS$_TBIT signal array left in the
+  frame, `00000003 00000464 000011F5 03C00000`, is VMS's too), and
+  `TestTrace73Unhandled` a BISPSW with no handler (the first trace
+  before the second instruction after it). The assembler's kernel.asm
+  golden image has the new SCB longword.

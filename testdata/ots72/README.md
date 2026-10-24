@@ -79,9 +79,10 @@ Case 0 tests the tracer on the program's own JSB routine: it should show
 tracer state 2, R2 `12345678` at the RSB, and `87654321` in the frame's
 last longword below R1 at the RSB.
 
-govax has no trace trap, so on govax every case shows tracer state 0,
-and the FORRTL calls signal `SS$_UNSUPPORTED` (govax lacks the routine
-being studied).
+When the study was written govax had no trace trap, and every case
+showed tracer state 0. Since Phase 73's subtask 2 govax traces, and
+`TestTrace73SelfTest` (`internal/console/trace73_test.go`) holds case
+0 to VMS's run; the FORRTL cases need VMS's FORRTL.EXE.
 
 ## The VAX run
 

@@ -251,6 +251,7 @@ const (
 	scbReservedAddr  = 0x1C // reserved addressing mode
 	scbAccessViol    = 0x20 // access control violation
 	scbTranslationNV = 0x24 // translation not valid
+	scbTracePending  = 0x28 // trace fault (PSL<TP>; cpu/trace.go)
 	scbArithmetic    = 0x34 // arithmetic trap or fault
 )
 
@@ -261,6 +262,12 @@ var simpleExceptions = map[uint32]uint32{
 	scbCustomer:     vmsdef.Symbols["SS$_OPCCUS"],
 	scbReservedOp:   vmsdef.Symbols["SS$_ROPRAND"],
 	scbReservedAddr: vmsdef.Symbols["SS$_RADRMOD"],
+
+	// The trace fault is SS$_TBIT, "T-bit pending trap", with no
+	// detail (Internals book, Table 4-2): a program tracing itself
+	// takes it in a handler after each instruction. Its severity is F,
+	// so unhandled it ends the image.
+	scbTracePending: vmsdef.Symbols["SS$_TBIT"],
 }
 
 // arithmeticConditions maps an arithmetic exception's type code (its one
@@ -379,6 +386,16 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 
 		return false, nil
 	}
+
+	// The handlers run untraced, as an exception's handler does when the
+	// hardware delivers it (cpu.Engine.HandleFault): T and TP are cleared
+	// in the live PSL, so a trace handler doesn't trace itself. The
+	// signal array keeps the exception's PSL, and continuing brings T
+	// back from it (continueCondition), TP from resumePSL.
+	live := c.PSL()
+	live.SetT(false)
+	live.SetTP(false)
+	c.SetPSL(live)
 
 	if c.DebugEnabled(registers.DebugExceptions) {
 		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): DISPATCH, CONDITION=%08X  PC=%08X  SIGNAL=%08X\n", cond, pc, d.sig)
