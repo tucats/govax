@@ -1,9 +1,10 @@
 # Phase 72 — legacy images
 
 **Status:** in progress. Planned 2026-10-24; the author answered Part
-B's questions the same day. Subtask 1 (reading a V1 image's header,
-and RUN/DEBUG of one) is done; subtask 2's probe (`testdata/legacy72`)
-ran both its rounds on VMS 7.1 (Part A, "The probe's answers").
+B's questions the same day. Subtasks 1 (reading a V1 image's header,
+and RUN/DEBUG of one), 2 (the probe, `testdata/legacy72`, both rounds
+run on VMS 7.1; Part A, "The probe's answers"), and 3 (the old system
+service vector) are done.
 
 ## Goal
 
@@ -196,14 +197,17 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
 `legacy72b.log`, `dun72b.dlg`, `global.lis`, and `dungeon-term.log`:
 
 8. **The old S0 vector is still there on VMS 7.1, with the P1
-   vector's layout and extent.** Its entries are the system's own
+   vector's layout.** Its entries are the system's own
    stubs: offset 0 (SYS$QIOW's in P1) is `.WORD ^XFFC`, `CHMK #^X32`,
    `BLBC R0, ...`; ^X1B8 (SYS$NUMTIM) `.WORD ^XFC`, `CHME #^XB`, `RET`;
    ^X168 (SYS$IMGSTA) `.WORD 0`, `JMP @#81929BC6` (into the executive);
-   ^X800 `.WORD 0`, `JMP @#80003C50`; ^X400 and ^X918 (the P1 vector's
-   last entry) change-mode stubs. ^X920 holds no entry (^X898F) and
-   ^XA00 is zero. So the old vector and the P1 vector have the same
-   entries at the same offsets, which confirms Part A's inference.
+   ^X800 `.WORD 0`, `JMP @#80003C50`; ^X400 and ^X918 change-mode
+   stubs. ^X920 holds no entry (^X898F) and ^XA00 is zero. So the old
+   vector and the P1 vector have the same entries at the same offsets,
+   which confirms Part A's inference. (The probe took ^X918 for the P1
+   vector's last entry; it's SYS$SYNCH_INT's at ^XB10. So the old vector
+   ends somewhere past ^X918, before the P1 vector does: where is
+   unconfirmed.)
    (The P1 entries examined showed `JMP @#SHARE$DBGSSISHR+...`: the
    debugger intercepts services there, so they say nothing of the
    undebugged P1 vector.)
@@ -379,4 +383,39 @@ extent, as Decision 3 assumed, and its SYS$IMGSTA entry is a mask and
 a JMP, the form Decision 3's stubs take. VMSRTL's vector needs only
 Phase 68's activation once VMSRTL is at ^X1A600. `dungeon-term.log`
 is the phase's end-to-end target. The probe is done.
+
+### 2026-10-24 — Subtask 3: the old system service vector
+
+- `machine/legacyvector.go`: VMS V1's vector, a stub at each P1
+  vector entry's offset from ^X80000000 (`legacyStub`): the entry's
+  empty mask (.P1VECTOR's) and `JMP @#` its XFC, two bytes in, whose
+  dispatch goes by the P1 address; for SYS$SRCHANDLER, reached by JMP,
+  the jump alone; none for the two data cells. That's every P1 entry,
+  to ^XB18 (`legacyVectorBytes`, six pages): VMS's old vector reaches at
+  least ^X918, and a superset is harmless (answer 8's correction).
+  `legacyVectorBase`, `p1VectorBase`, and `legacyImgsta` moved here
+  from `run.go`.
+- VMINIT: S0 still maps frame n at page n, so the vector is physical
+  0 to ^XBFF, written by `writeLegacyVector` before MAPEN goes on, and
+  the system page table follows it: SBR is ^XC00, where it was 0, and
+  the rest of the layout moves up by ^XC00 (CONSOLE$SCRATCH ^X8002E000
+  at the default sizes, where it was ^X8002D400). The places that took
+  S0 page n's PTE to be at physical n*4 (`setS0Protection`, the string
+  pool's protection) add SBR; `internal/vm` already did.
+  `layoutPages` and the paging-off S0TOOSMALL check count the vector's
+  pages.
+- Tests: `TestLegacyVectorStubs` (every stub in memory after VMINIT),
+  `TestLegacyStubForms`, and the console's `TestLegacyVectorService`
+  (an assembled program calls $NUMTIM through ^X800001B8, as DUNGEON
+  does, and through the P1 vector, and gets the same date). Adjusted:
+  `TestVMInit_pageTablesPacked` (the tables after the vector; SBR),
+  `TestVaxInitPagingSizes` (S0BR 00000C00), and `sysgen_test.go`'s two
+  page file tests, whose 96-page S0 no longer held the layout and 32
+  pages more (104 now).
+- The manual's VMINIT paragraph names the vector, and its SHOW MEMORY
+  and SHOW PAGE examples have the new addresses (P0BR 80008C00, a PTE
+  at 8001CBFC), rerun on govax; `docs/MODE-STACKS.md` says the tables
+  follow the vector.
+- DUNGEON.EXE: unchanged, as expected. RUN still stops at ^X1A778, in
+  VMSRTL's range, until subtask 4 maps it.
 

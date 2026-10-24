@@ -311,7 +311,7 @@ func TestVMInitClosesPageFile(t *testing.T) {
 	withSettings(t, map[string]string{pageFileSetting: `"` + path + `"`, pageSizeSetting: "50"})
 
 	c, out := newTestMachine(t)
-	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 96, 4, 0, 0, 0, 0); err != nil {
+	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 104, 4, 0, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -320,7 +320,7 @@ func TestVMInitClosesPageFile(t *testing.T) {
 		t.Fatalf("the page file didn't open: %q", out)
 	}
 
-	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 96, 4, 0, 0, 0, 0); err != nil {
+	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 104, 4, 0, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -346,7 +346,7 @@ func TestStartPageFile(t *testing.T) {
 	withSettings(t, map[string]string{pageFileSetting: `"` + path + `"`, pageSizeSetting: "50"})
 
 	c, out := newTestMachine(t)
-	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 96, 4, 0, 0, 0, 0); err != nil {
+	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 104, 4, 0, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -360,7 +360,7 @@ func TestStartPageFile(t *testing.T) {
 		t.Fatalf("StartPageFile didn't install a 50-block page file: %q", out)
 	}
 
-	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 96, 4, 0, 0, 0, 0); err != nil {
+	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 104, 4, 0, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -378,7 +378,7 @@ func TestStartPageFile(t *testing.T) {
 
 	withSettings(t, map[string]string{pageDeferSetting: "true"})
 
-	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 96, 4, 0, 0, 0, 0); err != nil {
+	if err := c.VMInitPaging(true, 64, corevms.MinPagingP1Pages, 104, 4, 0, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 

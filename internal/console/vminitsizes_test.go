@@ -68,7 +68,7 @@ func TestVaxInitPagingSizes(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"Size = 00004000 (16384 decimal) pages\n            PFN database = 128 pages  S0BR = 00000000    S0LR = 00004000",
+		"Size = 00004000 (16384 decimal) pages\n            PFN database = 128 pages  S0BR = 00000C00    S0LR = 00004000",
 		"Virtual addresses  = 80000000-807FFFFF",
 	} {
 		if !strings.Contains(buf.String(), want) {

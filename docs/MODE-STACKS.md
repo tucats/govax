@@ -20,7 +20,9 @@ and executive mode write the page and no other mode touch it.
 
 ## The layout
 
-VMINIT builds the page tables in S0 space, and then lays out the
+VMINIT writes VMS V1's system service vector at S0's start (six pages;
+`docs/PHASE-72 - legacy images.md`), builds the page tables in S0 space
+after it, and then lays out the
 privileged stacks in S0 right after them, in this order (addresses
 increasing):
 

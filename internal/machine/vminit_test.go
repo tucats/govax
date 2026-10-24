@@ -320,25 +320,32 @@ func TestVMInit_pageTablesPacked(t *testing.T) {
 	}
 
 	// S0's table (8192 entries) fills 64 pages exactly, and P0's (16384)
-	// 128. P1's 100 entries fill 400 bytes of one page.
+	// 128. P1's 100 entries fill 400 bytes of one page. S0's table
+	// follows VMS V1's system service vector (legacyvector.go).
 	if err := c.VMInit(16384, 100, 8192, 20, 0, 0, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	if got, want := c.CPU.PR(registers.P0BR), uint32(0x80000000+64*512); got != want {
+	base := uint32(0x80000000) + legacyVectorPages*512
+
+	if got, want := c.CPU.PR(registers.SBR), legacyVectorPages*512; got != want {
+		t.Errorf("SBR = %#x, want %#x (right after the old system service vector)", got, want)
+	}
+
+	if got, want := c.CPU.PR(registers.P0BR), base+64*512; got != want {
 		t.Errorf("P0BR = %#x, want %#x (right after S0's 64-page table)", got, want)
 	}
 
 	// P1BR points 2**21 entries before the end of P1's table; P1's table
 	// starts right after P0's 128 pages.
 	p1Table := c.CPU.PR(registers.P1BR) + c.CPU.PR(registers.P1LR)*4
-	if want := uint32(0x80000000 + (64+128)*512); p1Table != want {
+	if want := base + (64+128)*512; p1Table != want {
 		t.Errorf("P1's table at %#x, want %#x (right after P0's 128-page table)", p1Table, want)
 	}
 
 	// The kernel stack follows P1's table, padded to its one page.
 	ksp := c.CPU.PR(registers.KSP)
-	if want := uint32(0x80000000 + (64+128+1+20)*512 - 4); ksp != want {
+	if want := base + (64+128+1+20)*512 - 4; ksp != want {
 		t.Errorf("KSP = %#x, want %#x (a 20-page stack after P1's one-page table)", ksp, want)
 	}
 }

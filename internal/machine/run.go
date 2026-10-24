@@ -401,16 +401,6 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 // defines.
 var imgstaAddr = vmsdef.LibrarySymbols["SYS$IMGSTA"]
 
-// VMS V1 had its system service vector in S0, at legacyVectorBase, laid
-// out as V4's P1 vector at p1VectorBase is: SYS$IMGSTA is 168 bytes in
-// in both (docs/PHASE-72 - legacy images.md). legacyImgsta is its old
-// entry.
-const (
-	legacyVectorBase = 0x80000000
-	p1VectorBase     = 0x7FFEDE00
-)
-
-var legacyImgsta = legacyVectorBase + imgstaAddr - p1VectorBase
 
 // legacyStartupStub reports whether a V1 image's first transfer
 // address, va (relative to its base), is its image startup stub: as

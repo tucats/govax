@@ -3679,7 +3679,7 @@ page's PTE and what its form means:
 DBG> SHOW PAGE 7FDFFE00
     Virtual address:   7FDFFE00
     Region:            01
-    PTE Address:       8001BFFC
+    PTE Address:       8001CBFC
     PTE Longword:      A5802006
     PTE Form:          valid, PFN 00002006
         VALID: 1
@@ -3694,7 +3694,10 @@ DBG> SHOW PAGE 7FDFFE00
 #### VMINIT: setting up memory
 
 At startup, `vax.init` runs `INITIALIZE/VAX` (physical memory, 8 MB by
-default) and then `VMINIT`, which builds the system page table and the
+default) and then `VMINIT`, which writes VMS V1's system service vector
+at the start of S0 (80000000: an entry per service, at its P1 vector
+entry's offset, that jumps to that entry, for images linked before VMS
+V4 that call services there), builds the system page table and the
 console process's P0 and P1 tables, places the privileged stacks in S0
 (kernel, executive, and supervisor, the latter two with no-access *guard
 pages* below them so that an overflow faults instead of overwriting
@@ -3713,7 +3716,7 @@ VAX> SHOW MEMORY
 
         P0 Region
             Size = 00004000 (16384 decimal) pages
-            PFN database = 128 pages  P0BR = 80008000    P0LR = 00004000
+            PFN database = 128 pages  P0BR = 80008C00    P0LR = 00004000
             Physical addresses = 00400000-00BFFFFF
             Virtual addresses  = 00000000-007FFFFF
 

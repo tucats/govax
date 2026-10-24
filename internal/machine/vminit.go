@@ -95,7 +95,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 			return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
 		}
 
-		page := uint32(0)
+		page := legacyVectorPages
 		for _, s := range size {
 			page += pageTablePages(s)
 		}
@@ -118,7 +118,10 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.Engine.SetSystemServices(m)
 	m.CPU.SetPR(registers.MAPEN, 0)
 
-	paddr := uint32(0)
+	// S0 starts with VMS V1's system service vector (legacyvector.go),
+	// and the system page table follows it.
+	sbr := legacyVectorPages * 512
+	paddr := sbr
 	page := uint32(0)
 
 	mapped := size[2]
@@ -126,12 +129,13 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 		mapped = layout
 	}
 
-	// S0 system region: identity-style page table starting at physical 0.
-	// With paging off every S0 page is mapped now; with it on only the
-	// first `mapped` pages, VMINIT's layout, and every other S0 page keeps
-	// the all-zero PTE memory was just cleared to (no frame, no access)
-	// until the pool hands it out.
-	m.CPU.SetPR(registers.SBR, 0)
+	// S0 system region: an identity-style page table, S0 page n mapping
+	// frame n, from the vector's first page at physical 0. With paging off
+	// every S0 page is mapped now; with it on only the first `mapped`
+	// pages, VMINIT's layout, and every other S0 page keeps the all-zero
+	// PTE memory was just cleared to (no frame, no access) until the pool
+	// hands it out.
+	m.CPU.SetPR(registers.SBR, sbr)
 	m.CPU.SetPR(registers.SLR, size[2])
 
 	for i := uint32(0); i < size[2]; i++ {
@@ -156,6 +160,10 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 		}
 
 		paddr += 4
+	}
+
+	if err := m.writeLegacyVector(); err != nil {
+		return err
 	}
 
 	m.Regions[2] = vmRegion{
@@ -359,12 +367,12 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// here (expr.go's parseQuotedString, or a running program's own RTL
 	// calls) takes a protection-violation page fault -- the S0 loop above
 	// leaves every page it creates, this range included, at ProtURKW.
-	// Read-modify-write via each page's raw physical PTE address (SBR==0
-	// for S0, so S0 page N's PTE lives at physical address N*4) rather
-	// than StorePTE/LookupPTE, which both require MAPEN already on -- not
-	// yet true this early in VMInit.
+	// Read-modify-write via each page's raw physical PTE address (S0
+	// page N's PTE lives at physical address SBR+N*4) rather than
+	// StorePTE/LookupPTE, which both require MAPEN already on -- not yet
+	// true this early in VMInit.
 	for off := uint32(0); off < stringPoolSize; off += 512 {
-		pteAddr := ((paddr + off) >> 9) * 4
+		pteAddr := sbr + ((paddr+off)>>9)*4
 
 		raw, err := m.Mem.LoadLongword(m.CPU, pteAddr)
 		if err != nil {
@@ -515,8 +523,8 @@ func physicalSizes(physPages, p0Pages, p1Pages, s0Pages uint32) [3]uint32 {
 }
 
 // layoutPages is how many S0 pages VMINIT's layout fills, from S0's first
-// page, for regions of size's pages and the stacks given: the system page
-// table, P0's and P1's tables (one table area with paging on, the same
+// page, for regions of size's pages and the stacks given: VMS V1's system
+// service vector, the system page table, P0's and P1's tables (one table area with paging on, the same
 // pages), the kernel stack, a guard page and the executive stack, a guard
 // page and the supervisor stack, the interrupt stack, CONSOLE$SCRATCH,
 // the shim stub page, the SCB page, and the string pool. VMInitPaging
@@ -526,7 +534,7 @@ func layoutPages(size [3]uint32, kspPages, espPages, sspPages, ispPages, stringP
 	stacks := kspPages + 1 + espPages + 1 + sspPages + ispPages
 	fixed := uint32(1) + shimPageBytes/512 + 1
 
-	return tables + stacks + fixed + stringPoolPages
+	return legacyVectorPages + tables + stacks + fixed + stringPoolPages
 }
 
 // VMInitSizes returns the P0 and P1 sizes, in pages, the last VMINIT
@@ -563,11 +571,13 @@ func (m *Machine) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (ui
 
 // setS0Protection sets the protection of the pages S0 pages starting at
 // physical (and S0-offset) address paddr. It edits the PTEs through their
-// physical addresses (SBR is 0, so S0 page N's PTE is at N*4), since
-// VMINIT runs this before turning MAPEN on.
+// physical addresses (S0 page N's PTE is at SBR+N*4), since VMINIT runs
+// this before turning MAPEN on.
 func (m *Machine) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
+	sbr := m.CPU.PR(registers.SBR)
+
 	for i := uint32(0); i < pages; i++ {
-		pteAddr := (paddr>>9 + i) * 4
+		pteAddr := sbr + (paddr>>9+i)*4
 
 		raw, err := m.Mem.LoadLongword(m.CPU, pteAddr)
 		if err != nil {
