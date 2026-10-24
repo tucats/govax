@@ -50,6 +50,11 @@ type Fault struct {
 	// Args holds this exception's signal arguments (0-6 of them), matching
 	// set_fault's variadic Count/... parameters.
 	Args []uint32
+	// Trap is true for an exception taken after its instruction has
+	// completed (an arithmetic trap, CHMx), whose saved PC is the next
+	// instruction's. A trap leaves PSL<TP> as it is in the saved PSL,
+	// where a fault clears it (trace.go).
+	Trap bool
 }
 
 func (f *Fault) Error() string {

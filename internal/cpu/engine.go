@@ -435,6 +435,12 @@ func (e *Engine) Step() error {
 
 	e.instructionPC = e.cpu.GPR(registers.PC)
 
+	// The trace fault, if the last instruction was traced, comes before
+	// anything else this instruction could do (trace.go).
+	if f := e.beginTrace(); f != nil {
+		return e.raise(f)
+	}
+
 	// The decoder reads the instruction stream through the memory's
 	// instruction-fetch window (internal/vm/fetch.go; docs/PERFORMANCE.md,
 	// Study 1, R4), one page translated once and then read directly.
@@ -495,6 +501,13 @@ func (e *Engine) raise(err error) error {
 	}
 
 	e.cpu.SetGPR(registers.PC, e.instructionPC)
+
+	// A fault saves the PSL with PSL<TP> clear, so the instruction is
+	// traced when it runs again; a trap leaves TP for its handler's REI
+	// (trace.go).
+	if !f.Trap {
+		e.clearTracePending()
+	}
 
 	// recordFault matches set_fault's own unconditional store_fault call —
 	// see faulthistory.go's own doc comment on why this runs ahead of the

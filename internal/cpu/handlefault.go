@@ -145,8 +145,12 @@ func (e *Engine) HandleFault(f *Fault) error {
 	// (not yet ported — Phase 09) device-interrupt admission logic; for a
 	// pure exception/fault raised by decode or an instruction handler it's
 	// already in sync with the current PSL's IPL, making this a no-op.
+	// The handler starts untraced: T and TP are cleared in the new PSL,
+	// and the saved one keeps them for the REI (trace.go).
 	psl := e.cpu.PSL()
 	psl.SetIPL(e.cpu.PR(registers.IPL))
+	psl.SetT(false)
+	psl.SetTP(false)
 	e.cpu.SetPSL(psl)
 
 	switch stack {

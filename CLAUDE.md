@@ -589,7 +589,11 @@ expect adjustment as phases land):
   `Engine.arithmeticTrap`, whose saved PC is the next instruction's;
   `inttrap.go` (Phase 70) takes integer overflow after an instruction
   marked `TrapsOnOverflow` when V and PSL<IV> are set, and integer
-  divide by zero always. CALLS and CALLG save the PSW before setting
+  divide by zero always. `trace.go` (Phase 73) is the trace fault:
+  `Step` takes it at an instruction's start when PSL<TP> is set, else
+  copies T into TP; a fault clears TP, a trap (`Fault.Trap`) keeps it;
+  exceptions and ASTs start with T and TP clear; REI keeps TP set if T
+  was set. CALLS and CALLG save the PSW before setting
   the entry mask's trap enables (IV bit 14, DV bit 15). The
   Phase 35 oracle (`testdata/insn35`, `TestInsn35Oracle` in
   `internal/console`) compares 567 instruction cases with VMS's run.

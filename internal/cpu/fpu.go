@@ -152,7 +152,7 @@ func (e *Engine) floatException(err error) error {
 func (e *Engine) arithmeticTrap(code uint32) error {
 	e.instructionPC = e.cpu.GPR(registers.PC)
 
-	return &Fault{Code: ExcArithmetic, Args: []uint32{code}}
+	return &Fault{Code: ExcArithmetic, Args: []uint32{code}, Trap: true}
 }
 
 // setFloatCC sets N and Z from v and clears V; it clears C too unless

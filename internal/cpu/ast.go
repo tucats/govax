@@ -93,6 +93,15 @@ func (e *Engine) deliverAST() error {
 
 	e.instructionPC = call.Routine
 
+	// The AST routine isn't traced (docs/PHASE-73 - trace trap.md,
+	// Decision 7): its delivery is an interrupt, which starts with T and
+	// TP clear. The interrupted PSL, in the AST's argument list, keeps
+	// them, and the AST's exit restores them (trace.go).
+	psl := e.cpu.PSL()
+	psl.SetT(false)
+	psl.SetTP(false)
+	e.cpu.SetPSL(psl)
+
 	// CALLG's own steps (emulCall): remember SP as it is, align it to a
 	// longword, and build the frame. calls=false: RET won't pop the
 	// argument list, which the RTL's AST exit reads and removes itself.

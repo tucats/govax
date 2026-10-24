@@ -319,7 +319,15 @@ func emulRei(e *Engine, d *Decoded) error {
 		e.cpu.SetPR(registers.PrivReg(oldPSL.CurMod()), sp)
 	}
 
-	e.cpu.SetPSL(registers.PSL(newPSL))
+	// The instruction after an REI is traced if T was set when the REI
+	// began (Step copied it into TP then) or TP is set in the restored
+	// PSL (trace.go).
+	restored := registers.PSL(newPSL)
+	if oldPSL.TP() {
+		restored.SetTP(true)
+	}
+
+	e.cpu.SetPSL(restored)
 	e.cpu.SetPR(registers.IPL, e.cpu.PSL().IPL())
 
 	e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.PrivReg(e.cpu.PSL().CurMod())))

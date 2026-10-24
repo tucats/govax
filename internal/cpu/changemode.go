@@ -43,5 +43,7 @@ func emulChmx(e *Engine, d *Decoded) error {
 
 	modeIndex := d.Opcode.Function - 0xBC // 0=K, 1=E, 2=S, 3=U
 
-	return &Fault{Code: ExcChangeModeK + Exception(modeIndex*4), Args: []uint32{code}}
+	// A trap, so a traced CHMx's saved PSL keeps T and TP, and the trace
+	// comes after the service's REI (trace.go).
+	return &Fault{Code: ExcChangeModeK + Exception(modeIndex*4), Args: []uint32{code}, Trap: true}
 }

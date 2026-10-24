@@ -1,7 +1,8 @@
 # Phase 73 — the trace trap
 
-**Status:** planned (2026-10-24). The author answered Part B's
-questions the same day: the probe runs, and govax follows its answers.
+**Status:** in progress. Planned 2026-10-24; the author answered Part
+B's questions the same day: the probe runs, and govax follows its
+answers. Subtask 1 (the CPU's trace rules) is done.
 
 ## Goal
 
@@ -34,7 +35,12 @@ machine, and keeps doing so: Decision 5).
 
 ## Where things stand (2026-10-24)
 
-- Planned. Nothing is implemented yet.
+- **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`;
+  the progress log). A program in a machine whose trace vector is a
+  real SCB vector is traced; with the console-handler vector (VMS
+  programs) the trace fault reaches `DispatchException`, which doesn't
+  signal it yet.
+- **Next**: subtask 2, SS$_TBIT.
 
 ## Part A — the survey (2026-10-24)
 
@@ -259,3 +265,30 @@ The survey and proposals above, from the architecture manual, the
 Internals book, the debugger manuals, and govax's CPU, condition
 dispatch, and debugger. The author answered Part B's questions the
 same day; Decisions 5 to 8 record the answers.
+
+### 2026-10-24 — Subtask 1, the CPU's trace rules
+
+- `internal/cpu/trace.go`: `beginTrace`, run by `Step` after interrupt
+  and AST delivery and before the decode, takes the trace fault if TP
+  is set (clearing it; the saved PC is the instruction about to run),
+  and otherwise copies T into TP. The file's opening comment explains
+  the two bits for a reader new to them.
+- `Fault.Trap` (Decision 2): `arithmeticTrap` and `emulChmx` set it.
+  `raise` clears TP before delivering a fault, and leaves it for a
+  trap, so a trapping instruction's trace comes after the trap
+  handler's REI.
+- `HandleFault` clears T and TP in the PSL its handler starts with
+  (the saved PSL keeps them), on the SCB-vector path. The
+  console-handler path, `DispatchException`, is subtask 2's.
+- REI sets TP if T was set when it began (rule 7), as well as when the
+  restored PSL has TP.
+- `deliverAST` clears T and TP for the AST routine (Decision 7); the
+  AST's exit already restores the interrupted PSL whole.
+- Tests (`trace_test.go`), from the manual's Table 5.3: every
+  instruction traced with T, none without; BISPSW starting tracing an
+  instruction late and BICPSW traced last; a fault's saved TP clear;
+  an arithmetic trap's TP set and its trace after the handler; CHMK's
+  handler untraced; CALLS saving T clear, RET ending tracing, and a T
+  set in the frame resuming it after the instruction after the RET; REI
+  in six combinations of T and the restored T and TP; an interrupt
+  between instructions saving TP and taking the trace after its REI.
