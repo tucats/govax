@@ -26,9 +26,14 @@ import (
 // digits (the value rounded to them, half away from zero), and the
 // exponent, right-justified in the fixed-length string with blanks
 // before it. The exponent is E, its sign, and two digits; one of three
-// digits drops the E (FORTRAN's rule, 0.1234+100). A result too long for
-// the string fills it with asterisks and returns OTS$_OUTCONERR. A
-// reserved operand returns SS$_ROPRAND, the string unchanged.
+// digits drops the E (FORTRAN's rule, 0.1234+100), and one of four (an
+// H value's) the E and a digit of the fraction too, so the text is as
+// long as with two (VMS's run, testdata/ots72: 1.0E1000 with four
+// digits is 0.100+1001). A result too long for the string fills it with
+// asterisks and returns OTS$_OUTCONERR, as does an omitted
+// digits-in-fraction (VMS's routine reads whatever follows its argument
+// list, which in the probe was too many digits). A reserved operand is
+// SS$_ROPRAND, signaled, the string unchanged.
 //
 // From text, by the input string's descriptor (any class):
 //
@@ -51,15 +56,18 @@ import (
 // left-justified in the word. An invalid character or a value out of
 // the format's range is OTS$_INPCONERR, with +0.0 stored.
 //
-// Unconfirmed (the manual doesn't say; testdata/ots72 asks VMS): the
-// exponent of an H value past 999 (asterisks here: it overflows the
-// two-digit field by more than one digit); a result that fits only
-// without its leading zero (written without it, as FORTRAN's E editing
-// allows); digits-in-fraction 0 ("0.E+01"); digits beyond the format's
-// precision (the true value's, rounded); a string of blanks, a sign, a
-// period, or a letter with no digits (all 0); blanks between the
-// exponent's letter and its sign (passed over); what CNVOUT returns in
-// R0 on success (SS$_NORMAL).
+// The input string may be of any class: one readDescriptor doesn't know
+// (a class 3 descriptor in VMS's run) is read by its length and pointer.
+// The extension bits are stored only with a value: not on an error.
+//
+// VMS's run of testdata/ots72 confirmed the rest of this file's choices
+// (a result that fits only without its leading zero is written without
+// it; digits-in-fraction 0 is "0.E+01"; digits beyond the format's
+// precision are the true value's; a string of blanks, a sign, a period,
+// or a letter with no digits is 0; blanks between the exponent's letter
+// and its sign are passed over), but for H's extension bits: VMS's
+// differ from the true value's in the last bits, as the manual warns
+// ("calculations are only carried to 128 bits"). govax's are exact.
 
 // The flags of the text-to-floating routines.
 const (
@@ -99,7 +107,7 @@ func otsCnvoutH(env *corevms.Environment, argv []uint32) (uint32, error) {
 func cnvout(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, error) {
 	v, err := loadFloat(env, f, arg(argv, 0))
 	if errors.Is(err, vaxfloat.ErrReserved) {
-		return ssRopRand, nil
+		return env.SignalFailure([]uint32{ssRopRand}, ssRopRand)
 	} else if err != nil {
 		return memoryFault(env, err)
 	}
@@ -112,8 +120,8 @@ func cnvout(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32,
 	width := int(d.length)
 	digits := arg(argv, 2)
 
-	// "0." and the digits alone must fit.
-	if uint64(digits)+1 > uint64(width) {
+	// "0." and the digits alone must fit; an omitted count never does.
+	if len(argv) < 3 || uint64(digits)+1 > uint64(width) {
 		return storeRightJustified(env, arg(argv, 1), strings.Repeat("*", width+1))
 	}
 
@@ -130,8 +138,25 @@ func cnvout(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32,
 
 // exponentText is v in FORTRAN's E format with digits digits after the
 // point: [-]0.ddd, then E+nn, or +nnn when the exponent needs three
-// digits. ok is false for an exponent of four digits or more.
+// digits; one that needs four gives up a digit of the fraction for it,
+// +nnnn. ok is false when there's no digit to give up, or the exponent
+// needs five.
 func exponentText(v *big.Rat, digits int) (text string, ok bool) {
+	text, long, ok := exponentForm(v, digits, false)
+	if long {
+		if digits == 0 {
+			return "", false
+		}
+
+		text, _, ok = exponentForm(v, digits-1, true)
+	}
+
+	return text, ok
+}
+
+// exponentForm is exponentText's work with a fixed number of digits.
+// long reports an exponent of four digits, which only allowLong takes.
+func exponentForm(v *big.Rat, digits int, allowLong bool) (text string, long, ok bool) {
 	a := new(big.Rat).Abs(v)
 	exp := 0
 
@@ -167,8 +192,12 @@ func exponentText(v *big.Rat, digits int) (text string, ok bool) {
 		e = "E" + esign + e
 	case len(e) == 3:
 		e = esign + e
+	case len(e) == 4 && allowLong:
+		e = esign + e
+	case len(e) == 4:
+		return "", true, true
 	default:
-		return "", false
+		return "", false, false
 	}
 
 	sign := ""
@@ -176,7 +205,7 @@ func exponentText(v *big.Rat, digits int) (text string, ok bool) {
 		sign = "-"
 	}
 
-	return sign + "0." + frac + e, true
+	return sign + "0." + frac + e, false, true
 }
 
 // decimalExponent is the e with 0.1 <= a / 10^e < 1, for a positive a:
@@ -214,7 +243,7 @@ func otsCvtTH(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 // textToFloat is the CVT_T_z routines' work, into format f.
 func textToFloat(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, error) {
-	text, err := readString(env, arg(argv, 0))
+	text, err := readAnyString(env, arg(argv, 0))
 	if err != nil {
 		return otsStringFailure(env, err)
 	}
@@ -254,7 +283,7 @@ func textToFloat(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (ui
 		}
 	}
 
-	if extAddr != 0 {
+	if extAddr != 0 && status == ssNormal {
 		e := extensionBits[f]
 		left := uint64(8*e.size - e.bits) // the bits are left-justified
 
@@ -264,6 +293,30 @@ func textToFloat(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (ui
 	}
 
 	return storeFloatResult(env, f, arg(argv, 1), v, status)
+}
+
+// readAnyString reads the string the descriptor at addr describes: by
+// readString's rules for a class it knows, else by its length and
+// pointer alone.
+func readAnyString(env *corevms.Environment, addr uint32) (string, error) {
+	text, err := readString(env, addr)
+	if !errors.Is(err, errInvStrDes) {
+		return text, err
+	}
+
+	mem, cpu := env.Memory(), env.CPU()
+
+	length, err := mem.LoadWord(cpu, addr)
+	if err != nil {
+		return "", err
+	}
+
+	ptr, err := mem.LoadLongword(cpu, addr+4)
+	if err != nil {
+		return "", err
+	}
+
+	return readText(env, ptr, uint32(length))
 }
 
 // storeFloatResult stores v at addr and returns status.

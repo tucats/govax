@@ -10,13 +10,15 @@ MACRO programs:
   entries), and the dynamic strings (`OTS$SCOPY_DXDX`, `OTS$SCOPY_R_DX`,
   `OTS$SGET1_DD`, `OTS$SFREE1_DD`, `OTS$SFREEN_DD`, and theirs). The
   cases cover the manual's examples, each flag, and every choice the
-  phase doc marks unconfirmed. Once VMS has run it, an oracle test will
-  hold govax's output to VMS's, as `TestLib54Oracle` does Phase 54's.
+  phase doc marked unconfirmed. `TestOTS72Oracle`
+  (`internal/console/ots72_test.go`) holds govax's output to VMS's,
+  `vax/ots72-vax.txt`, as `TestLib54Oracle` does Phase 54's.
 - **`ots72t.mar`** is a study, run on VMS only: how VMS's FORRTL calls
   LIBRTL's undocumented `OTS$$CVT_D_T_R8`, `_F_`, `_G_`, and `_H_`,
   which its `F`, `E`, `D`, and `G` edit descriptors use. No manual
-  describes them, so the program watches FORRTL call them (below), and
-  what it prints is what govax's versions will be written from.
+  describes them, so the program watches FORRTL call them (below);
+  govax's versions (`internal/librtl/otscvtfor.go`) were written from
+  what it caught, and `TestOTSCvtForDigits` checks them against it.
 
 `gen.go` writes everything here but the output files:
 
@@ -103,3 +105,16 @@ being studied).
 
    which puts them in `vax/` as `ots72-vax.txt`, `ots72t-vax.txt`, and
    `ots72.log`.
+
+## The run
+
+2026-10-24, OpenVMS V7.1 on simh's VAX 8600. MACRO wrote no messages,
+both programs exited with SS$_NORMAL, and the tracer caught every call.
+VMS differed from govax's choices in about a dozen lines of
+`ots72-vax.txt`; govax now does what VMS did (the phase doc's "The
+probe's answers (`testdata/ots72`)" lists them), but for what
+`TestOTS72Oracle` expects to differ: H's extension bits, which VMS
+computes to 128 bits only, and the registers the dynamic-string JSB
+entries leave (VMS's heap internals). Run on govax with VMS's FORRTL,
+`ots72t.mar`'s FORRTL conversions give VMS's text but for the 40-digit
+H case's last digits, where VMS's digits drift from the true value's.

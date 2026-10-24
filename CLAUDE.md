@@ -237,13 +237,15 @@ never had.
   and 5 (FORRTL's I/O: RMS's keyed reads of fixed-length sequential
   files, `rms/keyed.go`; the terminal's input entry writable; FORTRAN
   carriage control at the terminal, `rms/ftncc.go`; OTS$'s integer
-  conversions, `librtl/otscvt.go`; SET DEBUG RMS, `rms/trace.go`)
-  are done; subtask 6's first part (OTS$'s documented floating
-  conversions, moves, and dynamic strings, `librtl/otsfloat.go` and
-  `otsstring.go`, and the probe, `testdata/ots72`: `ots72.mar`'s cases
-  and `ots72t.mar`, a VMS-only trace-trap study of FORRTL's calls to
-  the undocumented `OTS$$CVT_x_T_R8`) is done, its VMS run next, and
-  the phase doc's "Where things stand" says what's next.
+  conversions, `librtl/otscvt.go`; SET DEBUG RMS, `rms/trace.go`),
+  and 6 (OTS$'s floating conversions, moves, and dynamic strings,
+  `librtl/otsfloat.go` and `otsstring.go`, and the undocumented
+  `OTS$$CVT_x_T_R8` FORRTL's floating edit descriptors use,
+  `librtl/otscvtfor.go`, written from `testdata/ots72/ots72t.mar`, a
+  VMS-only trace-trap study of FORRTL's calls; `TestOTS72Oracle` holds
+  `ots72.mar` to VMS 7.1's run) are done; subtask 7 (the debugger on
+  FORTRAN images) is next, and the phase doc's "Where things stand"
+  says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

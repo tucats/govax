@@ -5,9 +5,10 @@ B's questions the same day. Subtasks 1 (reading a V1 image's header,
 and RUN/DEBUG of one), 2 (the probe, `testdata/legacy72`, both rounds
 run on VMS 7.1; Part A, "The probe's answers"), 3 (the old system
 service vector), 4 (global section ISDs, VMSRTL mapped), and 5
-(FORRTL's I/O: both games play at the terminal) are done. Subtask 6's
-first part (OTS$'s documented floating conversions, moves, and dynamic
-strings, and the probe, `testdata/ots72`) is done; its VMS run is next.
+(FORRTL's I/O: both games play at the terminal), and 6 (OTS$'s
+floating conversions, moves, and dynamic strings, and FORRTL's floating
+edit descriptors, checked against VMS 7.1 by `testdata/ots72`) are
+done.
 
 ## Goal
 
@@ -43,13 +44,10 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 - **Done**: subtasks 1 to 5 (see the progress log). RUN DUNGEON and
   RUN DUNGEON_V552 play at the terminal as VMS 7.1 does: a pty run of
   `look`, `score`, and `quit` matches `dungeon-term.log` line for line.
-  Subtask 6's first part: the documented OTS$ routines and the probe.
-  **Next**: the author runs `testdata/ots72` on VMS 7.1 (its README);
-  then subtask 6's second part: govax changed to the probe's answers,
-  `TestOTS72Oracle`, and the `OTS$$CVT_x_T_R8` routines written from
-  what `ots72t.mar` caught (Part A, "OTS$ in LIBRTL"). Then subtask 7,
-  the debugger on FORTRAN images. What follows in this item is subtask
-  4's plan, kept for the record.
+  Subtask 6: the OTS$ routines, and FORRTL's F, E, D, and G edit
+  descriptors through `OTS$$CVT_x_T_R8`, matching VMS 7.1's run of
+  `testdata/ots72`. **Next**: subtask 7, the debugger on FORTRAN images.
+  What follows in this item is subtask 4's plan, kept for the record.
 - **Subtask 4** (done), Decision 4. When an image's ISD has ISD$V_GBL
   and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
   `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
@@ -322,7 +320,45 @@ where the JSB reached govax's NOTIMPL stub, the stub saw:
   VMS's own routine through the trace trap instead (its README).
 
 These observations, made by running VMS's FORRTL under govax and
-watching the call, are black-box: nothing was disassembled.
+watching the call, are black-box: nothing was disassembled (the author
+agreed the method is within the clean-room rules, 2026-10-24).
+
+### The probe's answers (`testdata/ots72`, 2026-10-24)
+
+VMS V7.1 on the VAX 8600 ran both programs (`vax/`). `ots72.mar`
+matched govax's choices but for these, which govax now follows:
+
+- **CNVOUT**: a reserved operand is SS$_ROPRAND *signaled*; an H value
+  with a four-digit exponent is written, the E and one digit of the
+  fraction given up for it (1.0E1000 with 4 digits: `0.100+1001`);
+  with digits-in-fraction omitted, asterisks and OTS$_OUTCONERR (VMS
+  reads past the argument list).
+- **CVT_T_z**: the extension bits aren't stored on an error; an input
+  descriptor of an unknown class (3) is read by its length and pointer;
+  VMS's H extension bits differ from the true value's in the last bits
+  (the manual's 128-bit caveat): an expected difference.
+- **The moves**: MOVE3_R5 takes its destination in R2 (R0, R1, R2, the
+  CALL entry's order, as MOVE5_R5's R0 to R4).
+- **The copies' JSB entries** leave R0 in R6 too.
+- **SFREE1_DD and SFREEN_DD check the class**, which the manual says
+  they don't: a class 0 descriptor is OTS$_INVSTRDES, signaled; storage
+  that isn't a dynamic string's is STR$_ERRFREDYN, signaled.
+- Everything else the files marked unconfirmed was as govax chose.
+
+`ots72t.mar`'s tracer caught every call (its self-test too), and the
+records give `OTS$$CVT_x_T_R8`'s contract, which `librtl/otscvtfor.go`'s
+opening comment states in full: R0 the value, R1 FORRTL's FP, R2 the
+digit buffer's size; FP-9 the descriptor's kind (0 E or D, 1 G, 2 F),
+FP-16 E's significant digits, FP-20 the buffer, FP-36 F's digits after
+the point; out, a guard 0 and the exact decimal digits in ASCII,
+rounded in place (the digits after the rounding position left as they
+were; a carry into the guard moves the first digit back), FP-32 the
+first digit's offset, FP-28 the decimal exponent, FP-24 the sign. G is
+not rounded: FORRTL rounds it. VMS's routine produces its digits in
+groups of nine (it works in longwords of 10^9), fewer than govax's
+exact ones, but FORRTL prints none past those it asked for. Its H
+digits drift past H's 34 significant digits (a 40-digit E of 3.14159
+ends `...117173`, the true value `...116973`), which govax doesn't copy.
 
 ### Side findings
 
@@ -413,9 +449,9 @@ watching the call, are black-box: nothing was disassembled.
    ones as cheap done too. Written from the 5.0 OTS$ manual, on
    `internal/vaxfloat`, and checked by a probe on VMS 7.1. In two parts
    (the internal routines have no manual): first the documented
-   routines and the probe, `testdata/ots72` (done); then, after VMS's
-   run, govax changed to its answers, the oracle test, and the internal
-   routines written from the study's (next).
+   routines and the probe, `testdata/ots72`; then, after VMS's run,
+   govax changed to its answers, the oracle test, and the internal
+   routines written from the study's (both done).
 7. **The debugger on a FORTRAN image** (Decision 6).
 8. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
    PLAN.md.
@@ -684,3 +720,27 @@ The survey (Part A, "OTS$ in LIBRTL"), then:
 - The manual's FORTRAN paragraph says the OTS$ floating conversions a
   program calls itself work, and FORRTL's floating edit descriptors
   don't yet.
+
+### 2026-10-24 — Subtask 6, part 2: VMS's answers, and FORRTL's floating output
+
+The author ran `testdata/ots72` on VMS 7.1 (Part A, "The probe's
+answers (`testdata/ots72`)"). Then:
+
+- `otsfloat.go` and `otsstring.go` changed to VMS's answers (CNVOUT's
+  signaled ROPRAND, four-digit exponent, and omitted digits; CVT_T_z's
+  extension bits and any input class; MOVE3_R5's R2; the copies' R6;
+  SFREE's class check and STR$_ERRFREDYN), their opening comments
+  rewritten to say what VMS confirmed.
+- `librtl/otscvtfor.go`: OTS$$CVT_D_T_R8, _F_, _G_, and _H_ (JSB
+  codes 218 to 221), from the study's contract. A reserved operand is
+  SS$_ROPRAND, signaled (unconfirmed).
+- `TestOTS72Oracle` (`internal/console/ots72_test.go`) matches
+  `vax/ots72-vax.txt` line for line but for `expectedOTS72Differences`
+  (H's extension bits; the dynamic-string JSB entries' heap registers).
+  `TestOTSCvtForDigits` (librtl) runs the R8 routines in frames laid
+  out as FORRTL's, against VMS's records. `ots72t.mar` itself needs
+  VMS's FORRTL.EXE, which can't be committed: run by hand with the
+  author's DUA1 FORRTL, its 29 FORRTL conversions give VMS's text but
+  for the 40-digit H case's last digits (above).
+- The manual's FORTRAN paragraph now says the floating edit descriptors
+  work.

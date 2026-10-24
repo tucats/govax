@@ -33,7 +33,7 @@ func TestOTSMove(t *testing.T) {
 
 	putBytes(t, env, 0x3400, "........")
 
-	regs := callJSB(t, env, "OTS$MOVE3_R5", 3, 0x3100, 0, 0x3400, 0, 0, 0x66)
+	regs := callJSB(t, env, "OTS$MOVE3_R5", 3, 0x3100, 0x3400, 0, 0, 0, 0x66)
 	if want := (corevms.JSBRegisters{0, 0x3103, 0, 0x3403, 0, 0, 0x66}); regs != want || bytesAt(t, env, 0x3400, 4) != "ABC." {
 		t.Errorf("MOVE3_R5: %08X, %q; want %08X", regs, bytesAt(t, env, 0x3400, 4), want)
 	}
@@ -47,7 +47,7 @@ func TestOTSMove(t *testing.T) {
 // TestOTSCopy: OTS$SCOPY_DXDX and OTS$SCOPY_R_DX return the bytes they
 // didn't copy (truncation is no error), take the length by value, fill
 // a dynamic string, and signal a bad descriptor; the JSB entries leave
-// MOVC5's registers, R6 alone.
+// MOVC5's registers, and R0 in R6 too.
 func TestOTSCopy(t *testing.T) {
 	env := fixture(t)
 	putBytes(t, env, 0x3000, "HELLO, WORLD")
@@ -72,7 +72,7 @@ func TestOTSCopy(t *testing.T) {
 	putDesc(t, env, 0x1108, 8, dscClassS, 0x4100)
 
 	regs := callJSB(t, env, "OTS$SCOPY_DXDX6", 0x1000, 0x1108, 0, 0, 0, 0, 0x66)
-	if want := (corevms.JSBRegisters{4, 0x3008, 0, 0x4108, 0, 0, 0x66}); regs != want {
+	if want := (corevms.JSBRegisters{4, 0x3008, 0, 0x4108, 0, 0, 4}); regs != want {
 		t.Errorf("SCOPY_DXDX6: %08X; want %08X", regs, want)
 	}
 
@@ -115,7 +115,14 @@ func TestOTSDynamic(t *testing.T) {
 		}
 	}
 
-	// Storage that isn't a dynamic string's: signaled.
+	// A descriptor that isn't class D, and storage that isn't a dynamic
+	// string's: signaled.
+	putDesc(t, env, dynDesc+8, 0, 0, 0)
+
+	if _, err := shim(t, env, "OTS$SFREE1_DD")(env, []uint32{dynDesc + 8}); err == nil || !strings.Contains(err.Error(), "signal") {
+		t.Errorf("class 0: err = %v, want a signal", err)
+	}
+
 	putDesc(t, env, dynDesc, 4, dscClassD, 0x3000)
 
 	if _, err := shim(t, env, "OTS$SFREE1_DD")(env, []uint32{dynDesc}); err == nil || !strings.Contains(err.Error(), "signal") {

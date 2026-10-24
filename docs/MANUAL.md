@@ -3164,11 +3164,10 @@ A FORTRAN program run with VMS's FORRTL reads and writes the terminal
 through its units 5 and 6 (SYS$INPUT and SYS$OUTPUT), with FORTRAN
 carriage control: a `$` record is a prompt, which leaves the cursor at
 its end for the reply, and a `+` record continues the line. Its
-integer edit descriptors (`I`, `O`, `Z`, `L`) use govax's OTS$
-conversions; its floating-point ones (`F`, `E`, `D`, `G`) are not yet
-implemented, and signal as above. (The OTS$ floating conversions a
-program calls itself, `OTS$CNVOUT` and `OTS$CVT_T_D`, `_F`, `_G`, and
-`_H`, are.) `SET DEBUG RMS` shows each RMS call
+integer and floating-point edit descriptors (`I`, `O`, `Z`, `L`, `F`,
+`E`, `D`, `G`) use govax's OTS$ conversions, as do the routines a
+program may call itself (`OTS$CNVOUT`, `OTS$CVT_T_D`, `_F`, `_G`, and
+`_H`). `SET DEBUG RMS` shows each RMS call
 the program makes, with its file or record and status, which is the
 quickest way to see why such a program's I/O fails.
 

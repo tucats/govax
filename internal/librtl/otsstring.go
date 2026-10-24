@@ -12,28 +12,26 @@ import (
 // OTS$SGET1_DD, OTS$SFREE1_DD, and OTS$SFREEN_DD (OTS-89 to OTS-98),
 // LIB$'s dynamic-string routines (dynstr.go, copy.go) with their scalars
 // by value and their errors signaled, not returned: OTS$_INVSTRDES,
-// OTS$_INSVIRMEM, OTS$_FATINTERR. Each has a JSB entry.
+// OTS$_INSVIRMEM, and STR$_ERRFREDYN. Each has a JSB entry.
 //
 // The copies' CALL entries return in R0 what MOVC5 leaves there, the
 // number of source bytes not copied (truncation is no error), and their
 // JSB entries leave R0 to R5 as MOVC5 does (copyMoved): R0 that number,
 // R1 one byte beyond the source bytes copied, R2 0, R3 one byte beyond
-// the destination, R4 and R5 0. The JSB entries take their arguments in
-// R0, R1, and R2, in the CALL entry's order, a length in R0<15:0>.
+// the destination, R4 and R5 0, and R6 a copy of R0. Every JSB entry
+// takes its arguments in R0, R1, ..., in the CALL entry's order, a
+// length in R0<15:0>; MOVE3_R5's destination is R2 and MOVE5_R5's R4.
+// The routines that return nothing leave in R0 what MOVC3 (MOVE3: 0) or
+// MOVC5 (MOVE5: the bytes not moved) would, or SS$_NORMAL (SGET1,
+// SFREE1, SFREEN). SFREE1_DD and SFREEN_DD check the class, which the
+// manual says they don't: a descriptor that isn't class D is
+// OTS$_INVSTRDES, signaled; storage that isn't a dynamic string's is
+// STR$_ERRFREDYN, signaled. (All VMS 7.1's answers, testdata/ots72.)
 //
-// Unconfirmed (the manual doesn't say; testdata/ots72 asks VMS): the
-// MOVE routines' JSB entries' input registers (MOVE3_R5 as MOVC3 holds
-// them, R0 the length, R1 the source, R3 the destination; MOVE5_R5 in
-// MOVC5's operand order, R0 to R4); a negative length (0); what the
-// routines that return nothing leave in R0 (MOVE3 0, as MOVC3 does;
-// MOVE5 MOVC5's R0; SGET1, SFREE1, and SFREEN SS$_NORMAL); that the
-// copies' JSB entries leave R6 alone; and the condition SFREE1_DD
-// signals for a pointer that isn't a dynamic string's (OTS$_FATINTERR,
-// the one the manual lists; LIB$SFREE1_DD returns STR$_ERRFREDYN).
+// Unconfirmed: a negative length (taken as 0).
 
 var (
 	otsInsVirMem   = vmsdef.LibrarySymbols["OTS$_INSVIRMEM"]
-	otsFatIntErr   = vmsdef.LibrarySymbols["OTS$_FATINTERR"]
 	otsStatusOfLIB = map[uint32]uint32{libInvStrDes: otsInvStrDes, libInsVirMem: otsInsVirMem}
 )
 
@@ -92,10 +90,10 @@ func otsMove5(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return srcLen - moved, nil
 }
 
-// otsMove3R5 is OTS$MOVE3_R5: R0 the length, R1 the source, R3 the
-// destination (unconfirmed), leaving the registers as MOVC3 does.
+// otsMove3R5 is OTS$MOVE3_R5: R0 the length, R1 the source, R2 the
+// destination, leaving the registers as MOVC3 does.
 func otsMove3R5(env *corevms.Environment, regs *corevms.JSBRegisters) error {
-	n, src, dst := length(regs[registers.R0]), regs[registers.R1], regs[registers.R3]
+	n, src, dst := length(regs[registers.R0]), regs[registers.R1], regs[registers.R2]
 
 	if _, err := moveLong(env, n, src, 0, n, dst); err != nil {
 		_, err = memoryFault(env, err)
@@ -109,8 +107,8 @@ func otsMove3R5(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 }
 
 // otsMove5R5 is OTS$MOVE5_R5: R0 to R4 the source length, source, fill,
-// destination length, and destination (unconfirmed), leaving the
-// registers as MOVC5 does.
+// destination length, and destination, leaving the registers as MOVC5
+// does.
 func otsMove5R5(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 	srcLen, src, dstLen, dst := length(regs[registers.R0]), regs[registers.R1], length(regs[registers.R3]), regs[registers.R4]
 
@@ -129,8 +127,8 @@ func otsMove5R5(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 // otsSignal turns a LIB$ string helper's status into OTS$'s rules:
 // success and truncation are ok; LIB$_INVSTRDES and LIB$_INSVIRMEM are
 // signaled as OTS$_INVSTRDES and OTS$_INSVIRMEM, and STR$_ERRFREDYN as
-// OTS$_FATINTERR; anything else was signaled already (an access
-// violation, memoryFault's), and r0 is what that left.
+// itself; anything else was signaled already (an access violation,
+// memoryFault's), and r0 is what that left.
 func otsSignal(env *corevms.Environment, status uint32, err error) (r0 uint32, ok bool, _ error) {
 	if err != nil {
 		return 0, false, err
@@ -138,7 +136,7 @@ func otsSignal(env *corevms.Environment, status uint32, err error) (r0 uint32, o
 
 	cond, bad := otsStatusOfLIB[status]
 	if status == strErrFreDyn {
-		cond, bad = otsFatIntErr, true
+		cond, bad = strErrFreDyn, true
 	}
 
 	switch {
@@ -155,7 +153,7 @@ func otsSignal(env *corevms.Environment, status uint32, err error) (r0 uint32, o
 
 // otsCopyText is the copies' work: s, whose bytes are at src, into the
 // destination string at dst, returning the bytes not copied. regs, when
-// it isn't nil, gets MOVC5's registers (R6 left as it was).
+// it isn't nil, gets MOVC5's registers, and R6 R0's value.
 func otsCopyText(env *corevms.Environment, s string, src, dst uint32, regs *corevms.JSBRegisters) (uint32, error) {
 	var work corevms.JSBRegisters
 
@@ -167,9 +165,8 @@ func otsCopyText(env *corevms.Environment, s string, src, dst uint32, regs *core
 	unmoved := uint32(len(s) - moved)
 
 	if regs != nil {
-		r6 := regs[registers.R6]
 		*regs = work
-		regs[registers.R0], regs[registers.R6] = unmoved, r6
+		regs[registers.R0], regs[registers.R6] = unmoved, unmoved
 	}
 
 	return unmoved, nil
@@ -251,9 +248,35 @@ func otsSget1DD(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return otsDynamic(env, status, err)
 }
 
+// otsFreeDynamic is freeDynamic for the OTS$ routines: the descriptor
+// must be class D (LIB$_INVSTRDES, for otsSignal, if it isn't).
+func otsFreeDynamic(env *corevms.Environment, desc uint32) (uint32, error) {
+	class, err := env.Memory().LoadByte(env.CPU(), desc+3)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if class != dscClassD {
+		return libInvStrDes, nil
+	}
+
+	return freeDynamic(env, desc)
+}
+
+// otsFreeDynamics is freeDynamics with otsFreeDynamic's check.
+func otsFreeDynamics(env *corevms.Environment, count, first uint32) (uint32, error) {
+	for i := range count {
+		if status, err := otsFreeDynamic(env, first+8*i); err != nil || status != ssNormal {
+			return status, err
+		}
+	}
+
+	return ssNormal, nil
+}
+
 // otsSfree1DD is OTS$SFREE1_DD (OTS-94): dynamic-descriptor.mq.r.
 func otsSfree1DD(env *corevms.Environment, argv []uint32) (uint32, error) {
-	status, err := freeDynamic(env, arg(argv, 0))
+	status, err := otsFreeDynamic(env, arg(argv, 0))
 
 	return otsDynamic(env, status, err)
 }
@@ -261,7 +284,7 @@ func otsSfree1DD(env *corevms.Environment, argv []uint32) (uint32, error) {
 // otsSfreenDD is OTS$SFREEN_DD (OTS-95): descriptor-count.rlu.v,
 // first-descriptor.mq.r.
 func otsSfreenDD(env *corevms.Environment, argv []uint32) (uint32, error) {
-	status, err := freeDynamics(env, arg(argv, 0), arg(argv, 1))
+	status, err := otsFreeDynamics(env, arg(argv, 0), arg(argv, 1))
 
 	return otsDynamic(env, status, err)
 }
@@ -277,7 +300,7 @@ func otsSget1DDR6(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 
 // otsSfree1DD6 is OTS$SFREE1_DD6: R0 the descriptor's address.
 func otsSfree1DD6(env *corevms.Environment, regs *corevms.JSBRegisters) error {
-	status, err := freeDynamic(env, regs[registers.R0])
+	status, err := otsFreeDynamic(env, regs[registers.R0])
 	regs[registers.R0], err = otsDynamic(env, status, err)
 
 	return err
@@ -286,7 +309,7 @@ func otsSfree1DD6(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 // otsSfreenDD6 is OTS$SFREEN_DD6: R0 the count, R1 the first
 // descriptor's address.
 func otsSfreenDD6(env *corevms.Environment, regs *corevms.JSBRegisters) error {
-	status, err := freeDynamics(env, regs[registers.R0], regs[registers.R1])
+	status, err := otsFreeDynamics(env, regs[registers.R0], regs[registers.R1])
 	regs[registers.R0], err = otsDynamic(env, status, err)
 
 	return err

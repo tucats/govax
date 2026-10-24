@@ -101,6 +101,10 @@ var JSBRoutines = []JSBRoutine{
 	{"OTS$SGET1_DD_R6", 215, otsSget1DDR6},
 	{"OTS$SFREE1_DD6", 216, otsSfree1DD6},
 	{"OTS$SFREEN_DD6", 217, otsSfreenDD6},
+	{"OTS$$CVT_D_T_R8", 218, otsCvtDTR8},
+	{"OTS$$CVT_F_T_R8", 219, otsCvtFTR8},
+	{"OTS$$CVT_G_T_R8", 220, otsCvtGTR8},
+	{"OTS$$CVT_H_T_R8", 221, otsCvtHTR8},
 }
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones

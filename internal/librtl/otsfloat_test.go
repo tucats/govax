@@ -1,6 +1,7 @@
 package librtl
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -64,7 +65,8 @@ func TestOTSCnvout(t *testing.T) {
 		{"OTS$CNVOUT_G", vaxfloat.G, "1E100", 10, 4, "0.1000+101", ssNormal},
 		{"OTS$CNVOUT_G", vaxfloat.G, "-2.5E-200", 12, 5, "-0.25000-199", ssNormal},
 		{"OTS$CNVOUT_H", vaxfloat.H, "1.25", 12, 3, "   0.125E+01", ssNormal},
-		{"OTS$CNVOUT_H", vaxfloat.H, "1E1000", 14, 4, "**************", otsOutConErr},
+		{"OTS$CNVOUT_H", vaxfloat.H, "1E1000", 14, 4, "    0.100+1001", ssNormal}, // a digit given up
+		{"OTS$CNVOUT_H", vaxfloat.H, "1E1000", 14, 0, "**************", otsOutConErr},
 	}
 
 	for _, c := range cases {
@@ -77,13 +79,23 @@ func TestOTSCnvout(t *testing.T) {
 		}
 	}
 
-	// A reserved operand: SS$_ROPRAND, the string unchanged.
+	// No digits-in-fraction: asterisks, as on VMS.
+	putDecimal(t, env, vaxfloat.D, otsValueAddr, "2.5")
+	putDescriptor(t, env, otsDescAddr, otsTextAddr, string(make([]byte, 6)))
+
+	if sts := call(t, env, "OTS$CNVOUT", otsValueAddr, otsDescAddr); sts != otsOutConErr || otsText(t, env, 6) != "******" {
+		t.Errorf("two arguments: %#x %q; want OTS$_OUTCONERR, asterisks", sts, otsText(t, env, 6))
+	}
+
+	// A reserved operand: SS$_ROPRAND, signaled, the string unchanged.
+	// (The fixture can't deliver it, so the signal fails with an error.)
 	putLongword(t, env, otsValueAddr, 0x8000)
 	putLongword(t, env, otsValueAddr+4, 0)
 	putDescriptor(t, env, otsDescAddr, otsTextAddr, "UNCHANGED")
 
-	if sts := call(t, env, "OTS$CNVOUT", otsValueAddr, otsDescAddr, 2); sts != ssRopRand || otsText(t, env, 9) != "UNCHANGED" {
-		t.Errorf("reserved: %#x %q; want SS$_ROPRAND, unchanged", sts, otsText(t, env, 9))
+	if _, err := shim(t, env, "OTS$CNVOUT")(env, []uint32{otsValueAddr, otsDescAddr, 2}); err == nil ||
+		!strings.Contains(err.Error(), "signal") || otsText(t, env, 9) != "UNCHANGED" {
+		t.Errorf("reserved: err = %v, %q; want a signal, unchanged", err, otsText(t, env, 9))
 	}
 }
 
@@ -210,8 +222,14 @@ func TestExponentText(t *testing.T) {
 		}
 	}
 
+	// Four exponent digits take one from the fraction; with none to
+	// give, there's no text.
 	v, _ := vaxfloat.Parse("1E999")
-	if got, ok := exponentText(v.Rat(), 2); ok {
-		t.Errorf("exponentText(1E999) = %q %v; want not ok", got, ok)
+	if got, ok := exponentText(v.Rat(), 2); !ok || got != "0.1+1000" {
+		t.Errorf("exponentText(1E999, 2) = %q %v; want \"0.1+1000\"", got, ok)
+	}
+
+	if got, ok := exponentText(v.Rat(), 0); ok {
+		t.Errorf("exponentText(1E999, 0) = %q %v; want not ok", got, ok)
 	}
 }
