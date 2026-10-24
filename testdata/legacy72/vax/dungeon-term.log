@@ -1,0 +1,119 @@
+$ mount/over=id dua1:
+%MOUNT-I-MOUNTED, LEGACY72 mounted on _SIMVAX$DUA1:
+$ set def dua1:[000000]
+$ dir
+
+Directory DUA1:[000000]
+
+000000.DIR;1        BACKUP.SYS;1        BADBLK.SYS;1        BADLOG.SYS;1       
+BITMAP.SYS;1        CONTIN.SYS;1        CORIMG.SYS;1        DINDX.DAT;1        
+DTEXT.DAT;1         DUN72.DBG;1         DUN72.DLG;1         DUN72B.DBG;1       
+DUNGEON.ANI;1       DUNGEON.EXE;1       DUNGEON_V552.EXE;1  INDEXF.SYS;1       
+LEGACY72.COM;1      LEGACY72.LOG;1      LEGACY72B.COM;1     RUN.DBG;1          
+SECURITY.SYS;1      VMSRTL.ANI;1        VOLSET.SYS;1        
+
+Total of 23 files.
+$ @LEGACY72B/OUTPUT=LEGACY72B.LOG
+$ DEFINE DINDX DINDX.DAT
+%DCL-I-SUPERSEDE, previous value of DINDX has been superseded
+$ DEFINE DTEXT DTEXT.DAT
+%DCL-I-SUPERSEDE, previous value of DTEXT has been superseded
+$ RUN DUNGEON
+Welcome to Dungeon.			This version created 3-NOV-78.
+You are in an open field west of a big white house with a boarded
+front door.
+There is a small mailbox here.
+>look
+You are in an open field west of a big white house with a boarded
+front door.
+There is a small mailbox here.
+>open mailbox
+Opening the mailbox reveals:
+  A leaflet.
+>take leaflet
+Taken.
+>read leaflet
+		    Welcome to Dungeon!
+ 
+   Dungeon is a game of adventure, danger, and low cunning.  In it
+you will explore some of the most amazing territory ever seen by mortal
+man.  Hardened adventurers have run screaming from the terrors contained
+within.
+ 
+   In Dungeon, the intrepid explorer delves into the forgotten secrets
+of a lost labyrinth deep in the bowels of the earth, searching for
+vast treasures long hidden from prying eyes, treasures guarded by
+fearsome monsters and diabolical traps!
+ 
+   No DECsystem should be without one!
+ 
+   Dungeon was created at the Programming Technology Division of the MIT
+Laboratory for Computer Science by Tim Anderson, Marc Blank, Bruce
+Daniels, and Dave Lebling.  It was inspired by the Adventure game of
+Crowther and Woods, and the Dungeons and Dragons game of Gygax
+and Arneson.  The original version was written in MDL (alias MUDDLE).
+The current version was translated from MDL into FORTRAN IV by
+a somewhat paranoid DEC engineer who prefers to remain anonymous.
+ 
+   On-line information may be obtained with the commands HELP and INFO.
+>inventory
+You are carrying:
+  A leaflet.
+>score
+Your score is   0 [total of 585 points], in    6 moves.
+This gives you the rank of Beginner.
+>quit
+Your score would be   0 [total of 585 points], in    7 moves.
+This gives you the rank of Beginner.
+Do you wish to leave the game?
+y
+$ run dungeon_v552
+Welcome to Dungeon.			This version created 3-NOV-78.
+You are in an open field west of a big white house with a boarded
+front door.
+There is a small mailbox here.
+>look
+You are in an open field west of a big white house with a boarded
+front door.
+There is a small mailbox here.
+>open mailbox
+Opening the mailbox reveals:
+  A leaflet.
+>take leaflet
+Taken.
+>read leaflet
+		    Welcome to Dungeon!
+ 
+   Dungeon is a game of adventure, danger, and low cunning.  In it
+you will explore some of the most amazing territory ever seen by mortal
+man.  Hardened adventurers have run screaming from the terrors contained
+within.
+ 
+   In Dungeon, the intrepid explorer delves into the forgotten secrets
+of a lost labyrinth deep in the bowels of the earth, searching for
+vast treasures long hidden from prying eyes, treasures guarded by
+fearsome monsters and diabolical traps!
+ 
+   No DECsystem should be without one!
+ 
+   Dungeon was created at the Programming Technology Division of the MIT
+Laboratory for Computer Science by Tim Anderson, Marc Blank, Bruce
+Daniels, and Dave Lebling.  It was inspired by the Adventure game of
+Crowther and Woods, and the Dungeons and Dragons game of Gygax
+and Arneson.  The original version was written in MDL (alias MUDDLE).
+The current version was translated from MDL into FORTRAN IV by
+a somewhat paranoid DEC engineer who prefers to remain anonymous.
+ 
+   On-line information may be obtained with the commands HELP and INFO.
+>inventory
+You are carrying:
+  A leaflet.
+>score
+Your score is   0 [total of 585 points], in    6 moves.
+This gives you the rank of Beginner.
+>quit
+Your score would be   0 [total of 585 points], in    7 moves.
+This gives you the rank of Beginner.
+Do you wish to leave the game?
+y
+$ 

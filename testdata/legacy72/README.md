@@ -119,3 +119,10 @@ volume.
 
        govax console < testdata/legacy72/copyout2.cmd
 
+## Round 2's results (2026-10-24)
+
+`vax/legacy72b.log`, `vax/dun72b.dlg`, `vax/global.lis` (INSTALL's
+global sections), and `vax/dungeon-term.log` (both games played at the
+terminal, the author's screen). `docs/PHASE-72 - legacy images.md`,
+Part A, answers 8 to 12, says what they show.
+

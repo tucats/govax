@@ -3,8 +3,7 @@
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day. Subtask 1 (reading a V1 image's header,
 and RUN/DEBUG of one) is done; subtask 2's probe (`testdata/legacy72`)
-ran its first round on VMS 7.1 (Part A, "The probe's answers"), and
-its second round is waiting for its VAX run.
+ran both its rounds on VMS 7.1 (Part A, "The probe's answers").
 
 ## Goal
 
@@ -192,6 +191,41 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
 7. Every `%X` address was refused (`MISOPEMIS`): the S0 vector and
    VMSRTL's transfer vector are round 2's.
 
+### The probe's answers (round 2, 2026-10-24)
+
+`legacy72b.log`, `dun72b.dlg`, `global.lis`, and `dungeon-term.log`:
+
+8. **The old S0 vector is still there on VMS 7.1, with the P1
+   vector's layout and extent.** Its entries are the system's own
+   stubs: offset 0 (SYS$QIOW's in P1) is `.WORD ^XFFC`, `CHMK #^X32`,
+   `BLBC R0, ...`; ^X1B8 (SYS$NUMTIM) `.WORD ^XFC`, `CHME #^XB`, `RET`;
+   ^X168 (SYS$IMGSTA) `.WORD 0`, `JMP @#81929BC6` (into the executive);
+   ^X800 `.WORD 0`, `JMP @#80003C50`; ^X400 and ^X918 (the P1 vector's
+   last entry) change-mode stubs. ^X920 holds no entry (^X898F) and
+   ^XA00 is zero. So the old vector and the P1 vector have the same
+   entries at the same offsets, which confirms Part A's inference.
+   (The P1 entries examined showed `JMP @#SHARE$DBGSSISHR+...`: the
+   debugger intercepts services there, so they say nothing of the
+   undebugged P1 vector.)
+9. **VMSRTL's transfer vector** is an ordinary 02.05 shareable image's:
+   8-byte entries, `.WORD ^XFFC` and `JMP @L^cell(PC)` through a cell in
+   its fixup section (offset 0 through ^X28D0, ^X178 through ^X298C,
+   ...). The entry at ^X230 has no mask (`JMP @L^...`, a JSB entry), as
+   does ^X430. So once VMSRTL is mapped at ^X1A600, Phase 68's
+   activation, with its fixups, makes the vector work.
+10. **The old VMSRTL_002 and _003 ranges** are other images': ^X1AE00
+    is SHARE$VMSRTL+800, ^X21000 is SHARE$MTHRTL+3000. Answer 1 holds.
+11. **INSTALL's global sections**: VMSRTL is installed with one section,
+    `INS$81B09BA0_001`, ident ^X01000C1C, 16 pages (its transfer
+    vector section only: the fixup section is private). The installed
+    images' sections are named `INS$address_001`, not `VMSRTL_001`, so
+    VMS finds a V1 ISD's image by the name before `_nnn`, not by a
+    global section of that name.
+12. **The games at a terminal** (`dungeon-term.log`): DUNGEON and
+    DUNGEON_V552 both play the probe's eight moves with the same
+    output, from `Welcome to Dungeon.` to `Do you wish to leave the
+    game?`. That's the phase's end-to-end target.
+
 ### Side findings
 
 - **DIRECTORY with a list of specs** (`DIRECTORY/FULL
@@ -222,10 +256,16 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
    as for a first transfer address of 0x7FFEDF68, and calls the second
    transfer address. That's what SYS$IMGSTA does, and it doesn't need
    the old vector yet.
-3. **The old vector as forwarding stubs** in S0 at 0x80000000. Each
-   entry at offset n jumps to the P1 vector's entry at 0x7FFEDE00+n
-   (keeping the caller's frame, so the service sees its arguments as
-   usual). VMINIT's S0 layout moves up past the vector (subtask 3).
+3. **The old vector as forwarding stubs** in S0 at 0x80000000, one
+   for each P1 vector entry, at the same offset (answer 8). A
+   procedure entry's stub is the P1 entry's own entry mask and
+   `JMP @#P1-entry+2`, so a CALL saves what the P1 entry's call would
+   (VMS's own SYS$IMGSTA entry is this form, answer 8); a JMP entry's
+   (SYS$SRCHANDLER) is `JMP @#P1-entry`; the data cells get none.
+   S0 is an identity map of physical memory (VA ^X80000000+x is PA x),
+   and VMINIT's layout starts at physical 0, so it moves up past the
+   vector's pages (subtask 3). The author accepted moving S0's layout
+   and adjusting the tests (Question 2).
 4. **A V1 global section ISD named `NAME_nnn`** maps the shareable
    image `NAME` (`SYS$SHARE:NAME.EXE` by the Phase 68 locator), whole,
    at the first such ISD's address, and the image's other ISDs naming
@@ -330,4 +370,13 @@ Decision 4 is settled by it, and Decisions 5 and 6 are new. Subtask 5
   SYS$OUTPUT, the EXAMINEs with `SET RADIX HEXADECIMAL` (and the old
   vector's extent: entries at ^X400, ^X800, ^X918, ^X920, ^XA00), and
   the games played at a terminal, the screen saved.
+
+### 2026-10-24 — Subtask 2: round 2's answers
+
+The author ran round 2 and played both games at a terminal (Part A,
+answers 8 to 12). The old S0 vector has the P1 vector's layout and
+extent, as Decision 3 assumed, and its SYS$IMGSTA entry is a mask and
+a JMP, the form Decision 3's stubs take. VMSRTL's vector needs only
+Phase 68's activation once VMSRTL is at ^X1A600. `dungeon-term.log`
+is the phase's end-to-end target. The probe is done.
 
