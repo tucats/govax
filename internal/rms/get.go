@@ -152,6 +152,8 @@ func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
 		return 0, err
 	}
 
+	ctx.terminalRead()
+
 	ctx.countIO(1, 0)
 
 	if status != 0 {

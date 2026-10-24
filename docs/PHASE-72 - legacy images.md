@@ -4,7 +4,8 @@
 B's questions the same day. Subtasks 1 (reading a V1 image's header,
 and RUN/DEBUG of one), 2 (the probe, `testdata/legacy72`, both rounds
 run on VMS 7.1; Part A, "The probe's answers"), 3 (the old system
-service vector), and 4 (global section ISDs, VMSRTL mapped) are done.
+service vector), 4 (global section ISDs, VMSRTL mapped), and 5
+(FORRTL's I/O: both games play at the terminal) are done.
 
 ## Goal
 
@@ -37,12 +38,12 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 
 ## Where things stand (2026-10-24, for picking the phase up again)
 
-- **Done**: subtasks 1 to 4 (see the progress log). RUN DUNGEON maps
-  VMSRTL at ^X1A600 and runs into GAME, then stops on its first write
-  to unit 5 with FOR-F-ERRDURWRI, as DUNGEON_V552 does on govax. **Next**:
-  find why FORRTL's unit 5 write fails on govax at a terminal (both
-  games, so a FORRTL/terminal matter), then subtask 5. What follows
-  in this item is subtask 4's plan, kept for the record.
+- **Done**: subtasks 1 to 5 (see the progress log). RUN DUNGEON and
+  RUN DUNGEON_V552 play at the terminal as VMS 7.1 does: a pty run of
+  `look`, `score`, and `quit` matches `dungeon-term.log` line for line.
+  **Next**: subtask 6, OTS$'s floating-point conversions (Part C). Then
+  subtask 7, the debugger on FORTRAN images. What follows in this item
+  is subtask 4's plan, kept for the record.
 - **Subtask 4** (done), Decision 4. When an image's ISD has ISD$V_GBL
   and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
   `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
@@ -59,7 +60,7 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
   shareable images (`imageBase`). Where the current loaders skip a GBL
   ISD of a main image with no fixup section is the place to start.
   VMS's placement to match is answer 1 and 2's SHOW IMAGE.
-- **Then**: subtask 5 (the debugger on FORTRAN images: decimal radix,
+- **Then**: subtask 7 (the debugger on FORTRAN images: decimal radix,
   SHOW MODULE's language column, EXAMINE's next location after
   `EXAMINE/INSTRUCTION .PC`; answer 6), and an end-to-end check against
   `testdata/legacy72/vax/dungeon-term.log` (the eight moves; the game
@@ -209,7 +210,11 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
    with `%FOR-F-ERRDURWRI` on unit 5, which is SYS$INPUT there. govax's
    DUNGEON_V552 stops with the same condition (its `Message number
    0018813C`), so that side finding was the procedure's input, not a
-   govax bug. govax lacks the FOR facility's message texts.
+   govax bug. govax lacks the FOR facility's message texts. (Corrected
+   2026-10-24, subtask 5: `0018813C` is FOR-F-ERRDURREA, govax's RMS
+   lacking keyed reads of DTEXT.DAT; VMS's ERRDURWRI in a procedure is
+   the input entry's GET-only access, which govax now matches, its
+   `00188134`.)
 4. **ANALYZE/IMAGE of a 02.01 image** (`dungeon.ani`): govax's layout,
    but with no "debug module/psect table" line. The image name shows as
    `"DUN"` and four NULs, flagged `Symbol contains invalid
@@ -282,7 +287,8 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
   against FORRTL) activates and runs on govax, then stops with
   `Message number 0018813C`. The probe showed it's FOR-F-ERRDURWRI, as
   on VMS when unit 5 can't be written (answer 3); govax lacks the FOR
-  facility's message texts.
+  facility's message texts. (Corrected 2026-10-24: `0018813C` is
+  ERRDURREA; see subtask 5's entry. Both games now play.)
 - **govax's debugger on a FORTRAN image** (answer 6): it keeps
   hexadecimal where VMS's uses decimal, SHOW MODULE has no language
   column and other sizes, and EXAMINE with no address after
@@ -342,8 +348,21 @@ VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
    vector, STEP), and the two games' output for a few moves.
 3. **The old system service vector** (Decision 3).
 4. **Global section ISDs** (Decision 4), with VMSRTL.EXE.
-5. **The debugger on a FORTRAN image** (Decision 6).
-6. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
+5. **FORRTL's I/O** (added 2026-10-24, when the games stopped at their
+   first message; the author put the RMS and debugging tools they
+   needed in scope): random access by relative record number, the
+   terminal's input entry writable, FORTRAN carriage control at the
+   terminal, OTS$'s integer conversions, and SET DEBUG RMS.
+6. **OTS$'s floating-point conversions** (added 2026-10-24 at the
+   author's request; next): at least OTS$CNVOUT (D, G, H), OTS$CVT_T_D,
+   _F, _G, and _H, and the `OTS$$CVT_x_T_R8` routines FORRTL's F, E,
+   D, and G edit descriptors use, as standard FORTRAN and C programs
+   will need them; with the rest of OTS$ surveyed (MOVE3/MOVE5, the
+   SCOPY/SGET/SFREE family, the packed and power routines) and the
+   ones as cheap done too. Written from the 5.0 OTS$ manual, on
+   `internal/vaxfloat`, and checked by a probe on VMS 7.1.
+7. **The debugger on a FORTRAN image** (Decision 6).
+8. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
    PLAN.md.
 
 ## Progress log
@@ -505,3 +524,69 @@ is the phase's end-to-end target. The probe is done.
   (`CALL ^X800323B0`, a BASRTL stub, gives the NOTIMPL message).
 - The manual's section on VAX programs says when a library's own image
   is used, shows the new message, and mentions V1 images.
+
+### 2026-10-24 — Subtask 5: FORRTL's I/O
+
+Both games stopped in FORRTL at their first message. SET DEBUG RMS,
+which had no consumer, was given one first, and it found three things
+in turn; a fourth was a missing routine.
+
+- **SET DEBUG RMS** (`rms/trace.go`, called from `corevms/rms.go`'s
+  service wrappers): after each RMS service, one `DEBUG(RMS):` line with
+  the FAB (file and default names, FAC, SHR, ORG, RFM, RAT, MRS, IFI,
+  STV) or the RAB (ISI, the stream's kind and access: file, terminal,
+  record device, or indirect; RAC, ROP, the record number for
+  RAB$C_KEY, RSZ and the record's first 60 bytes), and the status by
+  name (`StatusName`, `RMS$_FAC/F (00018514)`). In console.help.
+- **The first failure was a read, not a write**: FOR-F-ERRDURREA
+  (`0018813C`, FORTRAN's error 39; the "ERRDURWRI" in subtask 4's entry
+  was wrong), from `$GET` of DTEXT.DAT with RAB$C_KEY, RMS$_RAC. DTEXT
+  is a sequential file of 80-byte fixed-length records, read by record
+  number (FORTRAN's direct-access READ), which govax's RMS lacked.
+  `rms/keyed.go`: RAB$C_KEY on a sequential file of fixed-length
+  records, the longword at RAB$L_KBF the record number (from 1),
+  RAB$B_KSZ 0 or 4 (else RMS$_KSZ), from the RMS Reference Manual and
+  the File Applications guide (8.4.1.2); a sequential `$GET` then reads
+  the next record. Unconfirmed: RMS$_KEY for record 0, RMS$_EOF past
+  the end, RMS$_RAC for another format, and odd record sizes laid end
+  to end (as govax's sequential reads lay them). Keyed `$PUT` (with
+  RAB$V_UIF) is not done: nothing on hand uses it.
+- **Then FOR-F-ERRDURWRI** (`00188134`): FORRTL's unit 5 is a `$CREATE`
+  of `SYS$INPUT:` (default `FOR005.DAT`, RAT FTN), an indirect access to
+  the terminal's input entry, which `corevms/ppfstart.go` opened with
+  GET alone (marked unconfirmed in Phase 71), so the `$PUT` was
+  RMS$_FAC. VMS 7.1 runs the game at the terminal, so its terminal
+  input entry takes PUT: `openTerminalEntry` now gives a terminal entry
+  GET and PUT. A procedure's or file's input entry stays GET only, as
+  Phase 71's probe showed (I9).
+- **FORTRAN carriage control at the terminal** (`rms/ftncc.go`): the
+  game's records start with FORTRAN carriage control (`$>` its prompt,
+  `$Your score is` and `+   0 [...]` its score line), which govax wrote
+  as text. An indirect accessor whose open asked for FTN (FAB$V_PPF_RAT
+  in the ISI) now has the control character turned into the terminal's
+  line model: `' '` a line, `'0'` a blank line first, `'1'` a form feed
+  first, `'+'` continuing an open line, `'$'` leaving the line open,
+  NUL neither. The open line is the process's (`FileTable.lineOpen`),
+  so SYS$OUTPUT's records (LIB$PUT_OUTPUT, `$PUTMSG`) end it, and a
+  terminal read ends it (the echoed reply). With piped input nothing is
+  echoed, so a reply's output follows the prompt on its line. A
+  terminal opened directly (not through a process-permanent file) is
+  written as before: its RAT isn't kept (unconfirmed).
+- **OTS$CVT_L_TI** was a NOTIMPL stub, as were all 54 OTS$ entries in
+  LIBRTL (the LIB$ program, Phases 53 to 61, covered LIB$ only).
+  `librtl/otscvt.go` has the integer conversions from the VMS 5.0
+  OTS$ manual: CVT_L_TI, _TU, _TB, _TO, _TZ, _TL and CVT_TI_L, _TU_L,
+  _TB_L, _TO_L, _TZ_L, _TL_L (codes 185 to 196), with the file's
+  unconfirmed choices listed in its opening comment. The manual's
+  CVT_TO_L example gives 1017346 octal as 274150; it is 270054. The
+  floating, packed, and string routines are still stubs: subtask 6.
+- **Result**: both games play. Under a pty, `look`, `score`, `quit`, `y`
+  match `testdata/legacy72/vax/dungeon-term.log` line for line,
+  `Your score is   0 [total of 585 points], in    2 moves.` included.
+- Tests: `TestSysGetByRelativeRecordNumber`, `TestSysGetByKeyStatuses`,
+  `TestTraceShowsKeyedGet`, `TestFTNTerminalText`,
+  `TestTerminalTextJoinsPromptAndReply` (rms), `TestOTSIntegerToText`,
+  `TestOTSTextToInteger` (librtl); `TestOpenTerminalFiles` now wants the
+  terminal's input entry GET and PUT, and `TestSysGet_invalidRAC` uses an
+  access mode RMS doesn't define. The games themselves can't be
+  committed, so the end-to-end run was by hand.

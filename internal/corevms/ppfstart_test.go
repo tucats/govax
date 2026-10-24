@@ -60,8 +60,10 @@ func TestOpenTerminalFiles(t *testing.T) {
 	input, _ := env.permanentEntry("SYS$INPUT")
 	output, _ := env.permanentEntry("SYS$OUTPUT")
 
-	if input == nil || !input.IsTerminal() || input.Access() != fabFACGet {
-		t.Errorf("SYS$INPUT's entry %+v; want the terminal, GET", input)
+	// A terminal's input entry is written too: FORTRAN's unit 5
+	// (Phase 72).
+	if input == nil || !input.IsTerminal() || input.Access() != fabFACGet|fabFACPut {
+		t.Errorf("SYS$INPUT's entry %+v; want the terminal, GET and PUT", input)
 	}
 
 	if output == nil || !output.IsTerminal() || output.Access() != fabFACGet|fabFACPut {

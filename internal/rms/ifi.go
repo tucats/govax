@@ -176,6 +176,10 @@ type FileTable struct {
 	// permanent is the process-permanent files, by index (ppf.go): not
 	// the image's, so not in handles, which rundown closes.
 	permanent map[uint16]*PermanentEntry
+
+	// lineOpen is whether the terminal's last line is open: a FORTRAN
+	// carriage control prompt left the cursor at its end (ftncc.go).
+	lineOpen bool
 }
 
 // NewFileTable returns a FileTable with IFI 1 (SYS$OUTPUT) pre-seeded to

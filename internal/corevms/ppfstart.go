@@ -27,7 +27,11 @@ import (
 //   - Each entry's word carries the PRN record attribute of the open that
 //     made it, and the files are sequential only (SQO).
 //   - The output entry's access is GET and PUT, as $DISPLAY of SYS$OUTPUT
-//     showed; the input entry's is GET (unconfirmed).
+//     showed. A terminal's input entry has PUT too: a FORTRAN program
+//     writes its unit 5 by a $CREATE of SYS$INPUT and $PUTs to it, which
+//     VMS 7.1 allowed at the terminal (testdata/legacy72's DUNGEON run;
+//     Phase 72). Another input entry's access is GET, as a procedure's
+//     was (testdata/ppf71, I9).
 //   - VMS numbered process 1's input entry 1 and its output entry 3; govax
 //     numbers them lowest free first, so its output entry is 2 (the
 //     oracle masks the numbers).
@@ -231,8 +235,9 @@ func (env *Environment) openRecordEntry(device string, fac byte) *rms.PermanentE
 }
 
 // openTerminalEntry opens a process-permanent file on the terminal device
-// ("TTA0"), with access fac, and returns its entry; nil if the process's
-// table is full.
+// ("TTA0"), with access fac and PUT (a terminal is written through its
+// input entry too: see this file's opening comment), and returns its
+// entry; nil if the process's table is full.
 func (env *Environment) openTerminalEntry(device string, fac byte) *rms.PermanentEntry {
 	// A handle with no console writer isn't the terminal to RMS: a process
 	// with nowhere to write writes nowhere.
@@ -241,7 +246,7 @@ func (env *Environment) openTerminalEntry(device string, fac byte) *rms.Permanen
 		console = env.consoleOut
 	}
 
-	e, err := env.files.AddPermanent(&rms.FileHandle{Console: console, Access: fac},
+	e, err := env.files.AddPermanent(&rms.FileHandle{Console: console, Access: fac | fabFACPut},
 		rms.PermanentOptions{Device: "_" + env.NodeName + "$" + device + ":", RAT: fabRATPRN, SQO: true})
 	if err != nil {
 		return nil

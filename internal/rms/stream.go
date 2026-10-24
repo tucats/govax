@@ -209,6 +209,17 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 		}
 
 		target = off
+	case racKey:
+		off, sts, err := ctx.keyedRecord(rabAddr, h)
+		if err != nil {
+			return located{}, 0, err
+		}
+
+		if sts != 0 {
+			return fail(sts)
+		}
+
+		target = off
 	default:
 		return fail(rmsInvalidRAC)
 	}

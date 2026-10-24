@@ -233,8 +233,12 @@ never had.
   VMINIT's layout now starts past it, SBR ^XC00), and 4 (a V1 global
   section ISD's image mapped at its first ISD, `machine/legacyshare.go`;
   a run-time library's routine govax lacks resolves to a stub that
-  signals NOTIMPL with the library and offset, `machine/unresolved.go`)
-  are done, and the
+  signals NOTIMPL with the library and offset, `machine/unresolved.go`),
+  and 5 (FORRTL's I/O: RMS's keyed reads of fixed-length sequential
+  files, `rms/keyed.go`; the terminal's input entry writable; FORTRAN
+  carriage control at the terminal, `rms/ftncc.go`; OTS$'s integer
+  conversions, `librtl/otscvt.go`; SET DEBUG RMS, `rms/trace.go`)
+  are done; subtask 6 (OTS$'s floating conversions) is next, and the
   phase doc's "Where things stand" says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc

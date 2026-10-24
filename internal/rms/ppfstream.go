@@ -46,7 +46,7 @@ func (ctx *Context) putPermanent(e *PermanentEntry, record []byte, async bool) (
 
 	switch {
 	case h.IsConsole():
-		if _, err := h.Console.Write(append(record, '\n')); err != nil {
+		if _, err := h.Console.Write(ctx.terminalText(0, record)); err != nil {
 			return rmsDeviceError, nil
 		}
 

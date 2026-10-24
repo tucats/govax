@@ -1,6 +1,11 @@
 package corevms
 
-import "github.com/tucats/govax/internal/rms"
+import (
+	"fmt"
+
+	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
+)
 
 // This file is internal/rtl's half of docs/PHASE-22.md's subtask 11: it
 // wires internal/rms's already-implemented, already-tested RMS service
@@ -25,7 +30,17 @@ import "github.com/tucats/govax/internal/rms"
 func registerRMSServices(t *ServiceTable) {
 	for name, fn := range rmsServices {
 		t.Register(name, func(env *Environment, argv []uint32) (uint32, error) {
-			return fn(env.rmsContext(), argv)
+			ctx := env.rmsContext()
+			r0, err := fn(ctx, argv)
+
+			// SET DEBUG RMS: the control block as the service left it
+			// (rms's trace.go); a service that waits is shown when it
+			// completes.
+			if err == nil && len(argv) > 0 && env.cpu.DebugEnabled(registers.DebugRMS) {
+				fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(RMS): %s\n", rms.Trace(ctx, name, argv[0], r0))
+			}
+
+			return r0, err
 		})
 	}
 }

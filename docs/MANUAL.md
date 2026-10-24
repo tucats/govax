@@ -3160,6 +3160,16 @@ They call the system through V1's system service vector at
 sections at fixed addresses, so `SYS$SHARE:VMSRTL.EXE` (VMS 7's, from a
 VMS system) is mapped there, with the libraries it uses after it.
 
+A FORTRAN program run with VMS's FORRTL reads and writes the terminal
+through its units 5 and 6 (SYS$INPUT and SYS$OUTPUT), with FORTRAN
+carriage control: a `$` record is a prompt, which leaves the cursor at
+its end for the reply, and a `+` record continues the line. Its
+integer edit descriptors (`I`, `O`, `Z`, `L`) use govax's OTS$
+conversions; its floating-point ones (`F`, `E`, `D`, `G`) are not yet
+implemented, and signal as above. `SET DEBUG RMS` shows each RMS call
+the program makes, with its file or record and status, which is the
+quickest way to see why such a program's I/O fails.
+
 ### Processes
 
 Each `RUN` runs the image in your own process, the console's (named

@@ -122,18 +122,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.IsConsole() {
-		if _, err := handle.Console.Write(record); err != nil {
-			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
-		}
-
-		// Real RMS has no notion of "line endings" for the terminal
-		// pseudo-device the way this emulator's console actually
-		// works — each SYS$PUT is logically one output line, so a
-		// newline is appended after every record written this way,
-		// exactly matching the deleted Phase 10 stopgap's own
-		// console-output behavior (git history: internal/rtl/rms.go's
-		// serviceSysPut, "if fabIfi <= 3").
-		if _, err := handle.Console.Write([]byte{'\n'}); err != nil {
+		// The terminal is written a line at a time: each SYS$PUT is
+		// one line, the record and a newline, but for FORTRAN carriage
+		// control (ftncc.go).
+		if _, err := handle.Console.Write(ctx.terminalText(ifi, record)); err != nil {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 		}
 

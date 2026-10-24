@@ -252,6 +252,18 @@ var Routines = []Routine{
 	{"LIB$FIND_VM_ZONE", 182, libFindVMZone},     // LIBRTL2
 	{"LIB$SHOW_VM_ZONE", 183, libShowVMZone},     // LIBRTL2
 	{"LIB$VERIFY_VM_ZONE", 184, libVerifyVMZone}, // LIBRTL2
+	{"OTS$CVT_L_TI", 185, otsCvtLTI},
+	{"OTS$CVT_L_TU", 186, otsCvtLTU},
+	{"OTS$CVT_L_TB", 187, otsCvtLTB},
+	{"OTS$CVT_L_TO", 188, otsCvtLTO},
+	{"OTS$CVT_L_TZ", 189, otsCvtLTZ},
+	{"OTS$CVT_L_TL", 190, otsCvtLTL},
+	{"OTS$CVT_TI_L", 191, otsCvtTIL},
+	{"OTS$CVT_TU_L", 192, otsCvtTUL},
+	{"OTS$CVT_TB_L", 193, otsCvtTBL},
+	{"OTS$CVT_TO_L", 194, otsCvtTOL},
+	{"OTS$CVT_TZ_L", 195, otsCvtTZL},
+	{"OTS$CVT_TL_L", 196, otsCvtTLL},
 }
 
 // callsBack names the routines that call back into the program (a

@@ -91,6 +91,14 @@ var (
 	// RAB$V_PMT is set.
 	rabPBF = rabOffset("PBF")
 	rabPSZ = rabOffset("PSZ")
+
+	// rabKBF/rabKSZ are RAB$L_KBF/RAB$B_KSZ, the key buffer's address
+	// and size for random access by key (RAB$C_KEY). They share their
+	// offsets with PBF and PSZ: a terminal read never uses a key. For a
+	// sequential file of fixed-length records the key is a longword
+	// relative record number (keyed.go).
+	rabKBF = rabOffset("KBF")
+	rabKSZ = rabOffset("KSZ")
 )
 
 // ropPMT is RAB$M_PMT, the ROP bit asking a terminal $GET to prompt;
@@ -116,7 +124,7 @@ var ropEOF = vmsConst("RAB$M_EOF")
 // racRFA is for future expansion (no indexed-file support yet).
 var (
 	racSeq = byte(vmsConst("RAB$C_SEQ")) // sequential access; the only mode this phase implements.
-	racKey = byte(vmsConst("RAB$C_KEY")) // keyed access; not implemented (no indexed-file support yet).
+	racKey = byte(vmsConst("RAB$C_KEY")) // keyed access: by relative record number on a fixed-length sequential file (keyed.go); no indexed files yet.
 	//racRFA = byte(vmsConst("RAB$C_RFA")) // direct access by record file address; not implemented.
 )
 

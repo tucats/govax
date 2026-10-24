@@ -255,7 +255,7 @@ func TestSysGet_invalidRAC(t *testing.T) {
 	createAndCloseTestFile(t, f.ctx, "RAC.DAT", bytes.Repeat([]byte{'R'}, 80))
 	openAndConnectForRead(t, f.ctx, "RAC.DAT")
 
-	putByte(t, f.ctx, testRabAddr+rabRAC, racKey) // not sequential
+	putByte(t, f.ctx, testRabAddr+rabRAC, 9) // no access mode RMS defines
 
 	r0, err := SysGet(f.ctx, []uint32{testRabAddr})
 	if err != nil {

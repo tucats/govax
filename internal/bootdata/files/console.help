@@ -1641,6 +1641,13 @@ $SET ,DEBU
 
                  SERVICES      Debug P1 vector calls to VMS system services.
 
+                 RMS           Show each RMS service's FAB or RAB as the
+                               service left it: the file and default
+                               names, FAC, record format, and IFI; or the
+                               stream (file, terminal, indirect), record
+                               access mode, record number, the record,
+                               and the status by name.
+
                  DCL           Debug DCL command line parsing in console.
 
                  CHM           Enable debug messages on CHMx or REI.
