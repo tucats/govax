@@ -1397,7 +1397,10 @@ expect adjustment as phases land):
   a model fitted to VMS's (`iocount.go`, `Context.CountIO`).
   Phase 51: `Session.Directory` lays out DIRECTORY as VMS 7.3 does
   (brief columns, /SIZE, /DATE, /FULL, totals; every version when none is
-  given), `Session.NotFound` is a missing file's expanded name and
+  given; a list of specs by `speclist.go`'s `SplitSpecList` and
+  `TemporaryDefaults`, the User's Manual's 4.3.3: node, device, and
+  directory carried, elements in one directory under one heading),
+  `Session.NotFound` is a missing file's expanded name and
   RMS$_FNF/DNF for DCL's messages, `fileattr.go` copies a header into a
   `FileAttributes` (F$FILE_ATTRIBUTES, DIRECTORY), `dump.go` reads blocks
   and records with RFAs for DUMP, and `$PUT` and DCL's WRITE record the
