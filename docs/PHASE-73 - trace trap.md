@@ -1,6 +1,7 @@
 # Phase 73 — the trace trap
 
-**Status:** planned (2026-10-24). Part B's questions are the author's.
+**Status:** planned (2026-10-24). The author answered Part B's
+questions the same day: the probe runs, and govax follows its answers.
 
 ## Goal
 
@@ -155,18 +156,41 @@ From the manual, in govax's terms:
    detail longwords (Internals Table 4-2). Unhandled, the catch-all
    writes `%SYSTEM-F-TBIT` and its severity ends the image, as for any
    F condition (VMS's ending is a probe question).
-5. **The debugger stays outside the machine.** It doesn't take the T
-   bit for its own work, so a program tracing itself under govax's
-   debugger gets every trace. Where VMS's debugger, sharing the T bit,
-   would take a trace the program meant for itself, govax's choice
-   waits for the probe (Question 2), and is logged unconfirmed until
-   then.
-6. **Services stay shims.** The extra traces in a service stub's
-   instructions (Part A) are a logged difference
-   (`docs/DEVIATIONS.md`), not changed: a program sees a trace after
-   each of its own instructions either way.
+5. **The debugger stays outside the machine, and follows VMS's
+   debugger** (answer 2). It doesn't use the T bit for its own work.
+   Where the probe shows VMS's debugger taking a trace the program
+   meant for itself (the instruction a STEP runs, say), govax's
+   debugger takes it too: the trace that step leaves pending is
+   dropped, and the program's handler doesn't see it. Until the probe
+   runs, subtask 3 builds the debugger's side so that choice is one
+   place to change.
+6. **Services stay shims; the probe measures the difference.** A
+   program tracing through a service call gets a trace at each
+   instruction of the P1 vector entry it runs (Question 6). Where the
+   probe's count or PCs differ from govax's, the stub's traces are made
+   to match VMS's if that's simple (the XFC standing for the CHMK);
+   otherwise the difference is logged in `docs/DEVIATIONS.md`.
+7. **AST routines aren't traced** (answer 3): `deliverAST` clears T
+   and TP in the PSL the routine runs in, and the AST's exit restores
+   the interrupted PSL, T and TP with it. The probe confirms it.
+8. **LIB$SIGNAL and an unhandled SS$_TBIT follow the probe** (answers
+   4 and 5): whether the handlers a traced LIB$SIGNAL calls are traced,
+   the SS$_TBIT signal array's PSL, and how an unhandled SS$_TBIT ends
+   the image. Decision 4's catch-all ending stands until then.
 
-### Questions for the author
+### Questions for the author (answered 2026-10-24)
+
+The author's answers, in order: 1, yes, the author will run the probe;
+2, follow VMS: if the probe shows the debugger taking the traces,
+govax's does too (Decision 5); 3, ASTs aren't traced (Decision 7); 4,
+follow the probe; 5, follow the probe where possible (Decision 8); 6,
+the question was unclear. What it meant: on VMS a service call is
+`CALLS` to the P1 vector entry, then a `CHMK` there that runs the
+service in kernel mode untraced (the trace comes after its REI), then
+a `RET`. A traced program sees a trace before each of those. govax's
+entry runs an XFC to a Go shim instead, so the number of traces, and
+the PCs they report, may differ. The probe records VMS's, and Decision
+6 says what govax does about a difference.
 
 1. A probe on the simh VAX (VMS 7.1), `testdata/trace73`, for
    subtask 4? It would answer questions 2 to 6.
@@ -231,4 +255,5 @@ From the manual, in govax's terms:
 
 The survey and proposals above, from the architecture manual, the
 Internals book, the debugger manuals, and govax's CPU, condition
-dispatch, and debugger.
+dispatch, and debugger. The author answered Part B's questions the
+same day; Decisions 5 to 8 record the answers.
