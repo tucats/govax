@@ -243,9 +243,12 @@ never had.
   `OTS$$CVT_x_T_R8` FORRTL's floating edit descriptors use,
   `librtl/otscvtfor.go`, written from `testdata/ots72/ots72t.mar`, a
   VMS-only trace-trap study of FORRTL's calls; `TestOTS72Oracle` holds
-  `ots72.mar` to VMS 7.1's run) are done; subtask 7 (the debugger on
-  FORTRAN images) is next, and the phase doc's "Where things stand"
-  says what's next.
+  `ots72.mar` to VMS 7.1's run), and 7 (the debugger on FORTRAN
+  images: the radix by language, decimal instructions,
+  `disasm.Options.Decimal`; EXAMINE/INSTRUCTION going on,
+  `machine.DisassembleRange`; SHOW MODULE's language column;
+  `SHARE$image+offset` names) are done; subtask 8, the close-out, is
+  next, and the phase doc's "Where things stand" says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

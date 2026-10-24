@@ -138,7 +138,8 @@ func TestSetModeAndRadix(t *testing.T) {
 		t.Errorf("SYMBOLIC: %q", got)
 	}
 
-	// 20 in decimal is 14 in hexadecimal.
+	// 10 in decimal is 0A in hexadecimal: the same instruction, its
+	// operands' numbers written in each radix.
 	dispatch(t, c, "SET RADIX DECIMAL")
 
 	pc := examineOutput(t, c, "EXAMINE/INSTRUCTION %LINE 47+10")
@@ -146,8 +147,12 @@ func TestSetModeAndRadix(t *testing.T) {
 
 	hex := examineOutput(t, c, "EXAMINE/INSTRUCTION %LINE 47+0A")
 
-	if pc == "" || pc != hex {
-		t.Errorf("%%LINE 47+10 in decimal (%q) differs from +A in hexadecimal (%q)", pc, hex)
+	if want := "DBGDIS\\START\\%LINE 48+3:        MOVG     @W^-10769(R0),@L^-565116929(FP)\n"; pc != want {
+		t.Errorf("%%LINE 47+10 in decimal:\n got %q\nwant %q", pc, want)
+	}
+
+	if want := "DBGDIS\\START\\%LINE 48+3:        MOVG     @W^D5EF(R0),@L^DE50FFFF(FP)\n"; hex != want {
+		t.Errorf("%%LINE 47+0A in hexadecimal:\n got %q\nwant %q", hex, want)
 	}
 
 	if err := c.Debugger.Dispatch("SET RADIX NONSENSE"); err == nil {

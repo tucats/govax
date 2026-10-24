@@ -75,14 +75,28 @@ type DisassembleOptions struct {
 	// or 16). Zero takes the console's own (symbolRadix); the debugger,
 	// which has a radix of its own (Decision 8), sets it.
 	Radix int
+
+	// Decimal writes the debugger layout's numbers in decimal: the
+	// operands (disasm.Options.Decimal) and a location nothing names.
+	// The debugger sets it when its output radix is decimal.
+	Decimal bool
 }
 
 // DisassembleWith implements DISASSEMBLE: decodes and prints instructions
 // from start through end (at least one, starting at start, even if end <
 // start).
 func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
+	_, _, err := m.DisassembleRange(start, end, opts)
+
+	return err
+}
+
+// DisassembleRange is DisassembleWith, and also returns the address of the
+// last instruction shown and the address after it, where the debugger's
+// EXAMINE/INSTRUCTION with no location goes on from.
+func (m *Machine) DisassembleRange(start, end uint32, opts DisassembleOptions) (last, next uint32, err error) {
 	if err := m.requireInit(); err != nil {
-		return err
+		return 0, 0, err
 	}
 
 	if end < start {
@@ -103,14 +117,17 @@ func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 	names := consoleSymbolizer{m: m, radix: radix, numeric: !opts.Symbolic}
 	format := m.formatOptions(opts, names)
 
-	for pc := start; pc <= end; {
+	pc := start
+
+	for pc <= end {
 		if !debuggerLayout {
 			dec, err := m.decodeInstruction(r, pc)
 			if err != nil {
-				return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
+				return last, pc, vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 			}
 
 			m.Printf("%08X: %s\n", pc, dec.Format(format))
+			last = pc
 			pc += dec.Length
 
 			continue
@@ -119,12 +136,12 @@ func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 		// An address the program can't read isn't shown as the HALT that
 		// reading zeros decodes to (the debugger: %DEBUG-E-NOACCESSR).
 		if _, err := m.ReadBytes(pc, 1); err != nil {
-			return err
+			return last, pc, err
 		}
 
 		dec, err := m.decodeAt(r, pc)
 		if err != nil {
-			return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
+			return last, pc, vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 		}
 
 		loc, ok := "", false
@@ -137,7 +154,7 @@ func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 		}
 
 		if !ok {
-			loc = fmt.Sprintf("%08X", pc)
+			loc = addressText(pc, opts.Decimal)
 		}
 
 		m.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
@@ -146,14 +163,26 @@ func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 			m.printOperands(dec, format, names)
 		}
 
+		last = pc
 		pc += dec.Length
 
 		if strings.HasPrefix(dec.Mnemonic, "CASE") {
-			pc = m.printCaseTable(r, dec, pc, names)
+			pc = m.printCaseTable(r, dec, pc, names, opts.Decimal)
 		}
 	}
 
-	return nil
+	return last, pc, nil
+}
+
+// addressText is an address nothing names, as the debugger's layout
+// writes it: eight hexadecimal digits, or in decimal when its output radix
+// is (unconfirmed: no probe line has an unnamed location in decimal).
+func addressText(addr uint32, decimal bool) string {
+	if decimal {
+		return fmt.Sprintf("%d", addr)
+	}
+
+	return fmt.Sprintf("%08X", addr)
 }
 
 // formatOptions are the disassembler's options for opts: the debugger's
@@ -165,6 +194,7 @@ func (m *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer
 	if opts.Symbolic || opts.Numeric {
 		format.Style = disasm.StyleDebugger
 		format.Symbolizer = names
+		format.Decimal = opts.Decimal
 	}
 
 	if opts.Constants {
@@ -209,7 +239,7 @@ const maxCaseEntries = 1024
 // address after it. The table has limit+1 word entries; a limit that
 // isn't a literal or immediate can't be known, so nothing is printed and
 // the words that follow are decoded as instructions.
-func (m *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
+func (m *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer, decimal bool) uint32 {
 	if len(dec.Operands) < 3 {
 		return table
 	}
@@ -232,7 +262,7 @@ func (m *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 
 		text, ok := names.Symbolize(dest)
 		if !ok {
-			text = fmt.Sprintf("%08X", dest)
+			text = addressText(dest, decimal)
 		}
 
 		m.Printf("%16s%s\n", "", text)

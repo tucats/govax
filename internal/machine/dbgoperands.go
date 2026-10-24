@@ -62,7 +62,7 @@ func (m *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names
 			continue
 		}
 
-		text := op.DebuggerText()
+		text := op.DebuggerTextIn(format.Decimal)
 
 		if len(text) <= operandTextWidth {
 			m.Printf("%*s%-*s %s\n", operandIndent, "", operandTextWidth, text, desc)

@@ -48,6 +48,10 @@ func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 	c.Printf("\n         GOVAX DEBUG\n\n")
 	c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_INITIAL, a.Language, a.Module))
 
+	// The language sets the radix numbers are typed and shown in.
+	d.languageRadix = languageRadixOf(a.Language)
+	d.inputRadix, d.outputRadix = d.languageRadix, d.languageRadix
+
 	d.imageDebug = true
 	d.imageExited = false
 	d.pendingReturn = nil
@@ -72,6 +76,18 @@ func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 	}
 
 	return outcome, err
+}
+
+// languageRadixOf is the radix the debugger starts in for a program in
+// language: decimal for FORTRAN (dun72.dlg: "input radix : decimal"),
+// hexadecimal for MACRO and the rest (unconfirmed for languages govax has
+// no images of).
+func languageRadixOf(language string) int {
+	if language == "FORTRAN" {
+		return 10
+	}
+
+	return 16
 }
 
 // onUnhandled is the console's report that a condition no handler

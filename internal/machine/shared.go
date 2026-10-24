@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -58,15 +59,19 @@ func (m *Machine) Cell(addr uint32) (string, bool) {
 
 // sharedSymbolizer is a disasm.Symbolizer for addresses in the shareable
 // images a program loaded: an address that is one of an image's universal
-// symbols (a transfer-vector entry, say) is named by it. It doesn't name
+// symbols (a transfer-vector entry, say) is named by it, and any other
+// address in the image by the image, SHARE$name+offset, as the VMS
+// debugger names an image it has no symbols for (SHARE$VMSRTL+28D0,
+// SHARE$MTHRTL, in testdata/legacy72/vax/dun72b.dlg). It doesn't name
 // shim stubs, which the console's own symbol table already does
-// (ensureShims), or anything in the main image.
+// (ensureShims), or anything in the main image. radix is the offsets'.
 type sharedSymbolizer struct {
-	m *Machine
+	m     *Machine
+	radix int
 }
 
 // Symbolize returns the universal symbol at addr in a loaded shareable
-// image, if there is one.
+// image, if there is one, else the image's name and addr's offset in it.
 func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
 	main := s.m.FindMainICB()
 
@@ -78,6 +83,13 @@ func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
 		if name, ok := sharedName(icb.Name, addr-icb.Base); ok {
 			return name, true
 		}
+
+		// An image the shims stand for has no pages of its own to name.
+		if icb.End <= icb.Base {
+			continue
+		}
+
+		return "SHARE$" + icb.Name + dbgsym.Offset(addr-icb.Base, s.radix), true
 	}
 
 	return "", false

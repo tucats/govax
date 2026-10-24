@@ -71,6 +71,45 @@ func TestDebuggerStyle(t *testing.T) {
 	}
 }
 
+// TestDebuggerDecimal checks StyleDebugger's text with Options.Decimal,
+// the debugger's decimal output radix: DUNGEON's MOVAL L^11720,R11 and
+// CALLS S^#0,L^51724 (testdata/legacy72/vax/dun72.dlg), and the forms no
+// probe line shows (a signed displacement, an immediate, a branch).
+func TestDebuggerDecimal(t *testing.T) {
+	const pc = 0x1000
+
+	cases := []struct {
+		name  string
+		bytes []byte
+		want  string
+	}{
+		// MOVAL L^00002DC8,R11: the displacement 0x1DC2 ends at 0x1006.
+		{"relative", []byte{0xDE, 0xEF, 0xC2, 0x1D, 0x00, 0x00, 0x5B}, "MOVAL    L^11720,R11"},
+		{"short literal", []byte{0xFB, 0x00, 0xEF, 0x00, 0x00, 0x00, 0x00}, "CALLS    S^#0,L^4103"},
+		{"negative displacement", []byte{0xD0, 0xAD, 0xFC, 0x50}, "MOVL     B^-4(FP),R0"},
+		{"immediate longword", []byte{0xD0, 0x8F, 0xE8, 0x03, 0x00, 0x00, 0x53}, "MOVL     I^#1000,R3"},
+		{"immediate quadword", []byte{0x7D, 0x8F, 0x01, 0, 0, 0, 0, 0, 0, 0x01, 0x50}, "MOVQ     I^#72057594037927937,R0"},
+		{"absolute", []byte{0xD0, 0x9F, 0x00, 0x02, 0x00, 0x00, 0x50}, "MOVL     @#512,R0"},
+		{"branch", []byte{0x13, 0x05}, "BEQL     4103"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := make(SliceReader, pc+len(tc.bytes))
+			copy(r[pc:], tc.bytes)
+
+			dec, err := Disassemble(r, pc)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got := dec.Format(Options{Style: StyleDebugger, Decimal: true}); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // TestDebuggerMask checks an entry mask's debugger text: IV before DV.
 func TestDebuggerMask(t *testing.T) {
 	r := SliceReader{0xFC, 0xCF}

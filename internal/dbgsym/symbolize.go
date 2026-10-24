@@ -244,6 +244,10 @@ func offset(n uint32, radix int) string {
 	return "+" + number(int64(n), radix)
 }
 
+// Offset is "+n", an offset after a name as the debugger writes it in
+// radix (+0B90, +28D0), or "" for 0.
+func Offset(n uint32, radix int) string { return offset(n, radix) }
+
 // subscript is an array subscript in radix.
 func subscript(n int32, radix int) string {
 	return number(int64(n), radix)

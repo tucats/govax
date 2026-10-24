@@ -3220,7 +3220,10 @@ image a debugger of its own: the breakpoints, tracepoints, and
 watchpoints an earlier session set (every kind, `SET TRACE/INSTRUCTION`
 and `SET BREAK/FAULT` among them), and its `SET STEP` defaults, are
 gone, whether or not the new image runs under the debugger. The display
-settings (`SET MODE`, `SET RADIX`, `SET TYPE`) stay. Before the new image
+settings (`SET MODE`, `SET TYPE`) stay. The radix is the main module's
+language's, as on VMS: hexadecimal for MACRO, decimal for FORTRAN, so a
+FORTRAN program's instructions show `MOVAL L^11720,R11`; `SET RADIX`
+changes it and `CANCEL RADIX` goes back to it. Before the new image
 starts, an earlier one that was stopped and never exited is run down.
 
 For source-line debugging, assemble with `/DEBUG` and link with
@@ -3311,7 +3314,7 @@ An address or value is an expression:
 
 | Form | Meaning |
 | --- | --- |
-| `200`, `^D512`, `%HEX 10` | numbers, in the input radix (hexadecimal unless `SET RADIX` says otherwise); `^X`, `^D`, `^O`, `^B` force one |
+| `200`, `^D512`, `%HEX 10` | numbers, in the input radix (the language's, hexadecimal for MACRO, unless `SET RADIX` says otherwise); `^X`, `^D`, `^O`, `^B` force one |
 | `COUNT`, `FACTORIAL` | a program's symbol (data, label, or routine) |
 | `FACT\FACTORIAL\20$` | a path name: module, routine, label |
 | `%LINE 34`, `FACT\%LINE 34` | the code of a source line |
@@ -3349,14 +3352,14 @@ An address or value is an expression:
 | Command | Meaning |
 | --- | --- |
 | `EXAMINE [/type] location[,...]` | Show data, typed by the program's symbols or a qualifier: `/BYTE`, `/WORD`, `/LONGWORD`, `/QUADWORD`, `/OCTAWORD`, `/FLOAT`, `/D_FLOAT`, `/G_FLOAT`, `/H_FLOAT`, `/PACKED:n`, `/ASCII:n`, `/ASCIC`, `/ASCIZ`, `/ASCID`, `/DATE_TIME`, `/CONDITION_VALUE`, `/PSL`, `/PTE`; and `/HEX`, `/DECIMAL`, `/OCTAL`, `/BINARY`. |
-| `EXAMINE/INSTRUCTION location` | Disassemble, with symbolic names; `/OPERANDS` explains each operand. |
+| `EXAMINE/INSTRUCTION location` | Disassemble, with symbolic names; `/OPERANDS` explains each operand. With no location, the instruction after the last one shown. An address in a shareable image with no symbols is named `SHARE$image+offset`. |
 | `DEPOSIT [/type] location = value` | Change memory or a register. `DEPOSIT/INSTRUCTION .PC = 'MOVL #1,R0'` assembles an instruction in place. |
 | `EVALUATE [/radix] expr` | Show a value; `/ADDRESS` an address; `/CONDITION_VALUE` a status's message. |
 | `SYMBOLIZE address` | The names for an address. |
 | `SHOW CALLS`, `SHOW STACK` | The call frames. |
 | `SHOW REGISTERS`, `SHOW PSL`, `SHOW name` | Registers, including privileged ones (`SHOW P0BR`). |
 | `SHOW IMAGE [/FULL]` | The loaded images; `/FULL` shows their sections, protections, and page states. |
-| `SHOW MODULE`, `SHOW SYMBOL pattern`, `SHOW SCOPE` | The program's debug symbols. |
+| `SHOW MODULE`, `SHOW SYMBOL pattern`, `SHOW SCOPE` | The program's debug symbols; `SHOW MODULE` has a language column when the modules' languages differ. |
 
 **Settings**
 

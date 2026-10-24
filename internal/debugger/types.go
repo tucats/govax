@@ -731,7 +731,7 @@ func (d *Debugger) fixedText(t dataType, data []byte, radix int) (text string, m
 		return d.Machine.FormatPTE(uint32(littleEndian(data).Uint64())), false
 	}
 
-	return formatBig(littleEndian(data), uint32(len(data)), radix), false
+	return leadingDigit(formatBig(littleEndian(data), uint32(len(data)), radix)), false
 }
 
 // bindTypes binds SET TYPE, SHOW TYPE, and CANCEL TYPE.

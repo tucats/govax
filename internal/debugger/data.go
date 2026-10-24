@@ -103,6 +103,18 @@ func formatRadix(v uint64, size uint32, radix int) string {
 	return fmt.Sprintf("%0*X", size*2, v)
 }
 
+// leadingDigit is a number as the debugger writes a value: a hexadecimal
+// one that begins with a letter gets a leading zero, so that it reads as
+// a number (EVALUATE's 0FFFFFFFF in exam.dlg; EXAMINE's 0FF170FFC and
+// 0FF17 in dun72b.dlg).
+func leadingDigit(text string) string {
+	if text != "" && text[0] >= 'A' && text[0] <= 'F' {
+		return "0" + text
+	}
+
+	return text
+}
+
 // examineRadix is the radix a data value is shown in: the one the command
 // asked for (/DECIMAL, ...), else the session's output radix.
 func (d *Debugger) examineRadix(r *dcl.Result) int {
@@ -164,6 +176,10 @@ func (d *Debugger) locationName(addr uint32) string {
 		if name, ok := prog.Symbolize(addr, d.symbolRadix()); ok {
 			return name
 		}
+	}
+
+	if name, ok := d.Machine.SharedName(addr, d.symbolRadix()); ok {
+		return name
 	}
 
 	return fmt.Sprintf("%08X", addr)
@@ -601,9 +617,7 @@ func (d *Debugger) examineTyped(addr uint32, t dataType, datum *dbgsym.Datum, ra
 
 	switch t.kind {
 	case typeInstruction:
-		d.examined = examineState{addr: addr, size: 1, set: true}
-
-		return c.DisassembleWith(addr, addr, d.instructionOptions())
+		return d.disassemble(addr, addr, d.instructionOptions())
 
 	case typeSymbol:
 		return d.examineSymbolTyped(addr, t.datum, radix)
@@ -794,7 +808,7 @@ func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum)
 			radix = d.examineRadix(r)
 		}
 
-		c.Printf("%s%s\n", tabPad(fmt.Sprintf("    [%d]:", i)), formatRadix(value, size, radix))
+		c.Printf("%s%s\n", tabPad(fmt.Sprintf("    [%d]:", i)), leadingDigit(formatRadix(value, size, radix)))
 	}
 
 	d.examined = examineState{addr: addr, size: size * uint32(bounds.Upper-bounds.Lower+1), set: true}
@@ -894,16 +908,7 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 		return nil
 	}
 
-	radix := dbg.examineRadix(r)
-	out := formatRadix(uint64(value), 4, radix)
-
-	// A hexadecimal number that begins with a letter is written with a
-	// leading zero, so that it reads as a number (0FFFFFFFF).
-	if radix == 16 && out[0] >= 'A' {
-		out = "0" + out
-	}
-
-	dbg.Machine.Printf("%s\n", out)
+	dbg.Machine.Printf("%s\n", leadingDigit(formatRadix(uint64(value), 4, dbg.examineRadix(r))))
 
 	return nil
 }

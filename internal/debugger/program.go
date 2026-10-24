@@ -2,6 +2,7 @@ package debugger
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -185,15 +186,15 @@ func (d *Debugger) showImage(full bool) error {
 // leaving the working set for the free and modified lists, and going to
 // the page file. For example, part way through a run:
 //
-//	    file DUA0:[000000]IMAP.EXE;1, mapped
-//	    section       start     end       pages  prot  backing store
-//	    demand zero   00000400  000053FF     40  ALL   page file
-//	                  pages: 28 valid, 12 in transition (on the modified list)
-//	                  in memory: 40 backed by the page file
-//	    read-only     00005400  00005DFF      5  UR    image file from VBN 3 (section 1)
-//	                  pages: 1 valid, 4 in transition (on the free list)
-//	                  in memory: 5 backed by the image file
-//	    user stack                           20        the process's own stack, not mapped
+//	file DUA0:[000000]IMAP.EXE;1, mapped
+//	section       start     end       pages  prot  backing store
+//	demand zero   00000400  000053FF     40  ALL   page file
+//	              pages: 28 valid, 12 in transition (on the modified list)
+//	              in memory: 40 backed by the page file
+//	read-only     00005400  00005DFF      5  UR    image file from VBN 3 (section 1)
+//	              pages: 1 valid, 4 in transition (on the free list)
+//	              in memory: 5 backed by the image file
+//	user stack                           20        the process's own stack, not mapped
 //
 // With paging off, an image is copied: every page is in memory, with no
 // backing store.
@@ -338,7 +339,7 @@ func frameBacking(s machine.ImageSection) string {
 
 // showModule runs SHOW MODULE: a table of every module of the loaded
 // images, by name, with whether its symbols are set and the size of its
-// debug records. VMS's layout:
+// debug records. VMS's layout, when the modules share a language:
 //
 //	module name                     symbols    size
 //
@@ -347,8 +348,20 @@ func frameBacking(s machine.ImageSection) string {
 //
 //	total MACRO modules: 2.         bytes allocated: 67120.
 //
-// As in SHOW IMAGE, "bytes allocated" is govax's figure (the size of the
-// set modules' records), since VMS's counts its own memory.
+// When they don't, each module's language has a column of its own, and
+// the footer names none (testdata/legacy72's dun72.dlg, DUNGEON's FORTRAN
+// and MACRO modules):
+//
+//	module name                     symbols   language   size
+//
+//	DUNGEO                          yes       FORTRAN     108
+//	FOR$IDATE                       no        MACRO       224
+//
+//	total modules: 93.              bytes allocated: 84528.
+//
+// As in SHOW IMAGE, the sizes and "bytes allocated" are govax's figures
+// (the size of each module's records, and of the set modules'), since
+// VMS's count its own memory.
 func (d *Debugger) showModule() error {
 	c := d.Machine
 
@@ -359,12 +372,24 @@ func (d *Debugger) showModule() error {
 	modules := d.allModules()
 	sort.SliceStable(modules, func(i, j int) bool { return modules[i].Name < modules[j].Name })
 
-	c.Printf("module name                     symbols    size\n\n")
+	// The modules' languages, in the order they're first seen.
+	var languages []string
 
-	var (
-		total     uint32
-		languages []string
-	)
+	for _, m := range modules {
+		if lang := machine.LanguageName(m.Language); !slices.Contains(languages, lang) {
+			languages = append(languages, lang)
+		}
+	}
+
+	mixed := len(languages) > 1
+
+	if mixed {
+		c.Printf("module name                     symbols   language   size\n\n")
+	} else {
+		c.Printf("module name                     symbols    size\n\n")
+	}
+
+	var total uint32
 
 	for _, m := range modules {
 		set := d.moduleSet(m)
@@ -372,12 +397,10 @@ func (d *Debugger) showModule() error {
 			total += m.DSTSize
 		}
 
-		c.Printf("%-32s%-3s%12d\n", m.Name, yesNo(set), m.DSTSize)
-
-		// The footer names the language the modules share ("MACRO").
-		lang := machine.LanguageName(m.Language)
-		if len(languages) == 0 || languages[len(languages)-1] != lang {
-			languages = append(languages, lang)
+		if mixed {
+			c.Printf("%-32s%-10s%-8s%7d\n", m.Name, yesNo(set), machine.LanguageName(m.Language), m.DSTSize)
+		} else {
+			c.Printf("%-32s%-3s%12d\n", m.Name, yesNo(set), m.DSTSize)
 		}
 	}
 

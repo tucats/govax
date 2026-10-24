@@ -7,8 +7,8 @@ run on VMS 7.1; Part A, "The probe's answers"), 3 (the old system
 service vector), 4 (global section ISDs, VMSRTL mapped), and 5
 (FORRTL's I/O: both games play at the terminal), and 6 (OTS$'s
 floating conversions, moves, and dynamic strings, and FORRTL's floating
-edit descriptors, checked against VMS 7.1 by `testdata/ots72`) are
-done.
+edit descriptors, checked against VMS 7.1 by `testdata/ots72`), and 7
+(the debugger on FORTRAN images) are done.
 
 ## Goal
 
@@ -46,8 +46,13 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
   `look`, `score`, and `quit` matches `dungeon-term.log` line for line.
   Subtask 6: the OTS$ routines, and FORRTL's F, E, D, and G edit
   descriptors through `OTS$$CVT_x_T_R8`, matching VMS 7.1's run of
-  `testdata/ots72`. **Next**: subtask 7, the debugger on FORTRAN images.
-  What follows in this item is subtask 4's plan, kept for the record.
+  `testdata/ots72`. Subtask 7: the debugger's radix by language,
+  EXAMINE/INSTRUCTION going on, SHOW MODULE's language column, and
+  `SHARE$image+offset` names; `dun72b.dlg`'s commands match VMS's but
+  for the expected lines (its progress log entry). **Next**: subtask 8,
+  the close-out. Left open: naming only from set modules (below, side
+  findings). What follows in this item is subtask 4's plan, kept for the
+  record.
 - **Subtask 4** (done), Decision 4. When an image's ISD has ISD$V_GBL
   and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
   `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
@@ -376,10 +381,20 @@ ends `...117173`, the true value `...116973`), which govax doesn't copy.
   on VMS when unit 5 can't be written (answer 3); govax lacks the FOR
   facility's message texts. (Corrected 2026-10-24: `0018813C` is
   ERRDURREA; see subtask 5's entry. Both games now play.)
-- **govax's debugger on a FORTRAN image** (answer 6): it keeps
-  hexadecimal where VMS's uses decimal, SHOW MODULE has no language
+- **govax's debugger on a FORTRAN image** (answer 6): it kept
+  hexadecimal where VMS's uses decimal, SHOW MODULE had no language
   column and other sizes, and EXAMINE with no address after
-  `EXAMINE/INSTRUCTION .PC` shows ^X200, not the next instruction.
+  `EXAMINE/INSTRUCTION .PC` showed ^X200, not the next instruction.
+  (Done in subtask 7 but for the sizes, which are VMS's own memory.)
+- **The debugger names only from set modules** (open, found in subtask
+  7): VMS writes DUNGEO's `CALLG (R11),L^52688` where govax writes
+  `L^INIT`. VMS names an address from the modules whose symbols are set
+  (only DUNGEO at the start) and the GST, which a V1 image lacks; govax
+  names from every module. Its SHOW CALLS shows an unset module's frame
+  with no routine or line (`RSPSB2 ... 00000000 0000F726`), and a
+  shareable image's frames as `SHARE$FORRTL`. Neither is done: the rule
+  would change naming across the debugger (STEP, SHOW CALLS, EXAMINE),
+  with SET MODE DYNAMIC setting modules as the program enters them.
 
 ## Part B — decisions and questions
 
@@ -744,3 +759,49 @@ answers (`testdata/ots72`)"). Then:
   for the 40-digit H case's last digits (above).
 - The manual's FORTRAN paragraph now says the floating edit descriptors
   work.
+
+### 2026-10-24 — Subtask 7: the debugger on FORTRAN images
+
+From the probe's answer 6 and `dun72b.dlg`:
+
+- **The radix by language** (`debugger/image.go`, `languageRadixOf`):
+  a session started on an image takes its main module's language's
+  radix, decimal for FORTRAN, hexadecimal otherwise (unconfirmed for
+  languages govax has no images of); CANCEL RADIX goes back to it
+  (`Debugger.languageRadix`). So a RUN no longer keeps an earlier
+  session's SET RADIX (the manual says so).
+- **Instructions in decimal** (`disasm.Options.Decimal`, from
+  `machine.DisassembleOptions.Decimal`, set when the output radix is
+  decimal): addresses and literals unpadded (`MOVAL L^11720,R11`,
+  `CALLS S^#0,L^51724`, as VMS's). Unconfirmed: a displacement signed
+  (`B^-4(FP)`), immediates, inline data, and an unnamed location in
+  decimal; EXAMINE/OPERANDS's descriptions stay hexadecimal.
+- **EXAMINE/INSTRUCTION goes on** (`Debugger.disassemble`, over
+  `machine.DisassembleRange`, which returns the last instruction shown
+  and the address after it): the last instruction shown is the current
+  location, so a bare EXAMINE/INSTRUCTION shows the next one, and "."
+  is that instruction.
+- **A hexadecimal value starting with a letter gets a leading 0** in
+  EXAMINE too (`leadingDigit`: `0FF170FFC`, `0FF17`), as EVALUATE's
+  already did (exam.dlg's `0FFFFFFFF`). That changed one of govax's own
+  unconfirmed expectations (`TestTypeQualifier`'s `A5`, now `0A5`).
+- **SHOW MODULE's language column** (`showModule`): when the modules'
+  languages differ, a column headed `language` and a footer naming none
+  (`total modules: 93.`), as dun72.dlg's; one language keeps the MACRO
+  sessions' layout. The sizes are still govax's figures.
+- **`SHARE$image+offset`** (`machine/shared.go`'s `sharedSymbolizer`,
+  and EXAMINE's `locationName` through `Machine.SharedName`): an address
+  in a shareable image with pages and no universal symbol there is named
+  by the image (`SHARE$VMSRTL+28D0`, `SHARE$MTHRTL`), as VMS's are.
+- **Result**: `dun72b.dbg`'s commands on govax match `dun72b.dlg` but
+  for the old vector's entries (govax's own stubs, Decision 3), the P1
+  entries VMS's debugger intercepts, and `L^INIT` for `L^0000CDD0`
+  (naming from set modules, a side finding left open). Round 1's
+  decimal commands match but for `L^INIT` and `L^GAME`, and SHOW
+  IMAGE's and SHOW MODULE's sizes. Checked by hand: DUNGEON.EXE can't be
+  committed.
+- Tests: `TestDebuggerDecimal` (disasm), `TestLanguageRadix`,
+  `TestExamineInstructionGoesOn`, `TestShowModuleLanguages` (debugger,
+  the last on DBGDIS with DBGSUB made FORTRAN), `TestSharedSymbolizer`'s
+  new cases (machine); `TestSetModeAndRadix` now checks the decimal and
+  hexadecimal texts themselves.

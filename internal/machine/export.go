@@ -455,6 +455,13 @@ func (m *Machine) ScopeFrames() (paths []string, ok bool, err error) {
 	return paths, ok, err
 }
 
+// SharedName names an address in a shareable image the program loaded, as
+// the debugger's EXAMINE does: by a universal symbol, or SHARE$name+offset
+// with the offset in radix (sharedSymbolizer).
+func (m *Machine) SharedName(addr uint32, radix int) (string, bool) {
+	return sharedSymbolizer{m: m, radix: radix}.Symbolize(addr)
+}
+
 // LanguageName is the name of the language a module's DST says it was
 // written in, as the debugger shows it (MACRO).
 func LanguageName(code uint32) string { return languageName(code) }

@@ -114,12 +114,15 @@ type Debugger struct {
 	// whether each operand gets an explanation. inputRadix and outputRadix
 	// are SET RADIX's: the radix numbers without a prefix are typed in,
 	// and the one the offsets in names are shown in. The debugger's own
-	// radix is separate from the console's (Decision 8).
-	symbolic    bool
-	modes       displayModes
-	operands    machine.OperandsMode
-	inputRadix  int
-	outputRadix int
+	// radix is separate from the console's (Decision 8). languageRadix is
+	// the radix the image's language starts them at, which CANCEL RADIX
+	// goes back to (languageRadixOf).
+	symbolic      bool
+	modes         displayModes
+	operands      machine.OperandsMode
+	inputRadix    int
+	outputRadix   int
+	languageRadix int
 
 	// defaultType is SET TYPE's type for locations the program's symbols
 	// don't type, nil for the default, a longword; overrideType is SET
@@ -180,7 +183,7 @@ func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
 	d := &Debugger{
 		Machine: c, Console: front, StepMode: StepOver,
 		symbolic: machine.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
-		modes: defaultDisplayModes(),
+		languageRadix: 16, modes: defaultDisplayModes(),
 	}
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled

@@ -93,7 +93,7 @@ func (d *Dispatcher) bindExamine() {
 	g.Bind("SET_MODE", func(id int64, r *dcl.Result) error { return d.Debugger.setMode(r.String("WORDS")) })
 	g.Bind("SET_RADIX", func(id int64, r *dcl.Result) error { return d.setRadix(r) })
 	g.Bind("CANCEL_RADIX", func(id int64, r *dcl.Result) error {
-		d.Debugger.inputRadix, d.Debugger.outputRadix = 16, 16
+		d.Debugger.inputRadix, d.Debugger.outputRadix = d.Debugger.languageRadix, d.Debugger.languageRadix
 
 		return nil
 	})
@@ -138,8 +138,15 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 
 	locations := strings.TrimSpace(r.String("LOCATION"))
 	if locations == "" {
-		// With no location, the instruction at the current location.
-		return dbg.Machine.DisassembleWith(dbg.Machine.DepositAddr, dbg.Machine.DepositAddr, opts)
+		// With no location, the instruction after the last location
+		// shown: EXAMINE/INSTRUCTION .PC, then EXAMINE/INSTRUCTION, shows
+		// the next instruction (testdata/legacy72's dun72.dlg).
+		next := dbg.Machine.DepositAddr
+		if cur := dbg.examined; cur.set {
+			next = cur.addr + cur.size
+		}
+
+		return dbg.disassemble(next, next, opts)
 	}
 
 	items, err := splitList(locations)
@@ -171,12 +178,28 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 		// instruction by that line, as the debugger does.
 		opts.StartLine = strings.Contains(strings.ToUpper(start), "%LINE")
 
-		if err := dbg.Machine.DisassembleWith(first, last, opts); err != nil {
+		if err := dbg.disassemble(first, last, opts); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// disassemble shows the instructions from first through last, and makes
+// the last one shown the current location: "." is that instruction, and
+// the next EXAMINE with no location goes on from the one after it.
+func (d *Debugger) disassemble(first, last uint32, opts machine.DisassembleOptions) error {
+	shown, next, err := d.Machine.DisassembleRange(first, last, opts)
+
+	// An error before any instruction was shown leaves the location as
+	// it was.
+	if err == nil || next != first {
+		d.examined = examineState{addr: shown, size: next - shown, set: true}
+		d.Machine.DepositAddr = next
+	}
+
+	return err
 }
 
 // instructionOptions are how EXAMINE/INSTRUCTION lays instructions out by
@@ -187,6 +210,7 @@ func (d *Debugger) instructionOptions() machine.DisassembleOptions {
 		Numeric:  !d.symbolic,
 		Operands: d.operands,
 		Radix:    d.symbolRadix(),
+		Decimal:  d.outputRadix == 10,
 	}
 }
 

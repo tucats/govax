@@ -209,7 +209,7 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 		}
 	}
 
-	return sharedSymbolizer{m: s.m}.Symbolize(addr)
+	return sharedSymbolizer{m: s.m, radix: s.radix}.Symbolize(addr)
 }
 
 // lineName names addr by its line alone, MOD\ROUTINE\%LINE n, when an

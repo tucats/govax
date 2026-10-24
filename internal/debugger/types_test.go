@@ -204,12 +204,13 @@ func TestSetType(t *testing.T) {
 func TestTypeQualifier(t *testing.T) {
 	c := dataSession(t)
 
+	// A hexadecimal value that begins with a letter gets a leading zero.
 	say(t, c, "DEPOSIT WATCHL = 0A5")
-	expect(t, "EXAMINE/TYPE=(WATCHB) WATCHL", say(t, c, "EXAMINE/TYPE=(WATCHB) WATCHL"), "DBGCMD\\WATCHL:  A5\n")
+	expect(t, "EXAMINE/TYPE=(WATCHB) WATCHL", say(t, c, "EXAMINE/TYPE=(WATCHB) WATCHL"), "DBGCMD\\WATCHL:  0A5\n")
 
 	say(t, c, "SET TYPE/OVERRIDE TYPE=(WATCHB)")
 	expect(t, "SHOW TYPE/OVERRIDE", say(t, c, "SHOW TYPE/OVERRIDE"), "type/override: type of WATCHB\n")
-	expect(t, "EXAMINE WATCHL", say(t, c, "EXAMINE WATCHL"), "DBGCMD\\WATCHL:  A5\n")
+	expect(t, "EXAMINE WATCHL", say(t, c, "EXAMINE WATCHL"), "DBGCMD\\WATCHL:  0A5\n")
 	say(t, c, "CANCEL TYPE/OVERRIDE")
 
 	if _, err := sayErr(c, "EXAMINE/TYPE=(FACT) WATCHL"); err == nil {

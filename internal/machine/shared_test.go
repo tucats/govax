@@ -116,4 +116,26 @@ func TestSharedSymbolizer(t *testing.T) {
 	if got, ok := s.Symbolize(0x40478); ok {
 		t.Errorf("Symbolize(40478), outside every image, = %q; want nothing", got)
 	}
+
+	// An address no symbol names is the image's name and an offset, as
+	// the VMS debugger writes them (SHARE$VMSRTL+28D0, SHARE$MTHRTL).
+	// VMSRTL has no universal symbols; an image the shims stand for (no
+	// pages) names nothing.
+	c.images().ICBList = append(c.images().ICBList,
+		&ICB{Name: "VMSRTL", Base: 0x50000, End: 0x53FFF},
+		&ICB{Name: "COBRTL"})
+
+	for addr, want := range map[uint32]string{
+		0x50000: "SHARE$VMSRTL",
+		0x50B90: "SHARE$VMSRTL+0B90",
+		0x528D0: "SHARE$VMSRTL+28D0",
+	} {
+		if got, ok := s.Symbolize(addr); !ok || got != want {
+			t.Errorf("Symbolize(%X) = %q, %v; want %s", addr, got, ok, want)
+		}
+	}
+
+	if got, ok := (sharedSymbolizer{m: c, radix: 10}).Symbolize(0x50B90); !ok || got != "SHARE$VMSRTL+2960" {
+		t.Errorf("Symbolize(50B90) in decimal = %q, %v; want SHARE$VMSRTL+2960", got, ok)
+	}
 }

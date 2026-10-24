@@ -2,6 +2,7 @@ package disasm
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -67,6 +68,14 @@ type Options struct {
 	Symbolizer Symbolizer
 	Constants  ConstantNamer
 	Cells      CellNamer
+
+	// Decimal writes StyleDebugger's numbers in decimal, as the debugger
+	// does when its output radix is decimal (a FORTRAN program's default):
+	// L^11720, S^#0, CALLG (R11),L^52688 (testdata/legacy72's dun72.dlg).
+	// Numbers are unpadded, and a displacement is signed (B^-4(FP);
+	// unconfirmed: no probe line has a displacement, an immediate, or an
+	// instruction's inline data in decimal).
+	Decimal bool
 }
 
 // Format renders dec as opts say. An operand that refers to an address
@@ -111,7 +120,7 @@ func (dec Decoded) Format(opts Options) string {
 			b.WriteByte(',')
 		}
 
-		b.WriteString(op.debuggerString())
+		b.WriteString(op.debuggerString(opts.Decimal))
 	}
 
 	return b.String()
@@ -203,9 +212,10 @@ func (op Operand) isConstant() bool {
 	return (op.Mode == ModeLiteral || (op.Mode == ModeImmediate && op.Width <= 4)) && !op.Type.IsFloat()
 }
 
-// debuggerString renders one operand in StyleDebugger.
-func (op Operand) debuggerString() string {
-	text := op.debuggerBase()
+// debuggerString renders one operand in StyleDebugger, its numbers in
+// decimal when decimal is set.
+func (op Operand) debuggerString(decimal bool) string {
+	text := op.debuggerBase(decimal)
 
 	if op.Indexed() {
 		text += "[" + cpu.RegisterName(op.Index) + "]"
@@ -221,7 +231,7 @@ func (op Operand) debuggerString() string {
 // displacement is shown as its raw bytes (B^FC(FP)), XFC's and BUGx's
 // inline data as #value, and floating values other than F_floating short
 // literals with the significant digits of their format.
-func (op Operand) debuggerBase() string {
+func (op Operand) debuggerBase(decimal bool) string {
 	rn := ""
 	if op.Register >= 0 {
 		rn = cpu.RegisterName(op.Register)
@@ -229,10 +239,10 @@ func (op Operand) debuggerBase() string {
 
 	switch op.Mode {
 	case ModeInline:
-		return "#" + hexDigits(op.Value, op.Width)
+		return "#" + number(op.Value, op.Width, decimal)
 
 	case ModeBranch:
-		return op.debuggerTarget()
+		return op.debuggerTarget(decimal)
 
 	case ModeLiteral:
 		if op.Symbol != "" {
@@ -243,7 +253,7 @@ func (op Operand) debuggerBase() string {
 			return "S^#" + debuggerFloat(op.Type.FloatFormat(), vaxfloat.ShortLiteral(byte(op.Value)))
 		}
 
-		return "S^#" + hexDigits(op.Value, 1)
+		return "S^#" + number(op.Value, 1, decimal)
 
 	case ModeRegister:
 		return rn
@@ -262,9 +272,22 @@ func (op Operand) debuggerBase() string {
 
 	case ModeDisplacement:
 		raw := uint32(op.Displacement) & widthMask(op.Width)
+		disp := hexDigits(raw, op.Width)
 
-		return op.deferral() + widthPrefix(op.Width) + hexDigits(raw, op.Width) + "(" + rn + ")"
+		if decimal {
+			disp = fmt.Sprintf("%d", op.Displacement)
+		}
 
+		return op.deferral() + widthPrefix(op.Width) + disp + "(" + rn + ")"
+	}
+
+	return op.debuggerOther(decimal)
+}
+
+// debuggerOther renders the immediate, absolute, and relative modes for
+// debuggerBase.
+func (op Operand) debuggerOther(decimal bool) string {
+	switch op.Mode {
 	case ModeImmediate:
 		if op.Symbol != "" {
 			return "I^#" + op.Symbol
@@ -277,20 +300,24 @@ func (op Operand) debuggerBase() string {
 		}
 
 		if op.Width > 4 {
+			if decimal {
+				return "I^#" + wideDecimal(op.Bytes)
+			}
+
 			return "I^#" + strings.TrimPrefix(formatWideHex(op.Bytes), "^X")
 		}
 
-		return "I^#" + hexDigits(op.Value, op.Width)
+		return "I^#" + number(op.Value, op.Width, decimal)
 
 	case ModeAbsolute:
-		return "@#" + op.debuggerTarget()
+		return "@#" + op.debuggerTarget(decimal)
 
 	case ModeRelative:
 		if op.Cell != "" {
 			return "G^" + op.Cell
 		}
 
-		return op.deferral() + widthPrefix(op.Width) + op.debuggerTarget()
+		return op.deferral() + widthPrefix(op.Width) + op.debuggerTarget(decimal)
 	}
 
 	return "?"
@@ -298,13 +325,13 @@ func (op Operand) debuggerBase() string {
 
 // debuggerTarget is the operand's Target as the debugger writes it: its
 // Symbol, or the address in eight hexadecimal digits, whatever the
-// displacement's width (W^00000200).
-func (op Operand) debuggerTarget() string {
+// displacement's width (W^00000200), or in decimal (L^52688).
+func (op Operand) debuggerTarget(decimal bool) string {
 	if op.Symbol != "" {
 		return op.Symbol
 	}
 
-	return hexDigits(op.Target, 4)
+	return number(op.Target, 4, decimal)
 }
 
 // floatBits gathers an immediate floating operand's bytes into the bits
@@ -324,6 +351,29 @@ func (op Operand) floatBits() vaxfloat.Bits {
 	}
 
 	return bits
+}
+
+// number formats v, a value of size bytes, as the debugger writes it: in
+// hexadecimal as hexDigits does, or in decimal, unpadded.
+func number(v uint32, size int, decimal bool) string {
+	if decimal {
+		return fmt.Sprintf("%d", v)
+	}
+
+	return hexDigits(v, size)
+}
+
+// wideDecimal formats an immediate wider than a longword (its bytes, low
+// byte first) as one unsigned decimal number.
+func wideDecimal(b []byte) string {
+	v := new(big.Int)
+
+	for i := len(b) - 1; i >= 0; i-- {
+		v.Lsh(v, 8)
+		v.Or(v, big.NewInt(int64(b[i])))
+	}
+
+	return v.String()
 }
 
 // hexDigits formats v in hexadecimal, zero-padded to two digits per
@@ -365,4 +415,8 @@ func (dec Decoded) Symbolized(opts Options) Decoded {
 
 // DebuggerText is the operand as the debugger writes it in StyleDebugger
 // (L^DBGDIS\COUNT, (R1)+, S^#03), including its index register.
-func (op Operand) DebuggerText() string { return op.debuggerString() }
+func (op Operand) DebuggerText() string { return op.debuggerString(false) }
+
+// DebuggerTextIn is DebuggerText with numbers in decimal when decimal is
+// set, as Options.Decimal writes them.
+func (op Operand) DebuggerTextIn(decimal bool) string { return op.debuggerString(decimal) }
