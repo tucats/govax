@@ -44,7 +44,7 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 - **The phase is done.** What it left for later, none of it needed by
   the games: the FOR facility's message texts (govax shows `Message
   number 00188134` where VMS shows `%FOR-F-ERRDURWRI`), the debugger's
-  `DBG$INPUT`, DIRECTORY with a list of specs, keyed `$PUT`, OTS$'s
+  `DBG$INPUT`, keyed `$PUT`, OTS$'s
   packed and `$$CVT_MUL` routines, the trace trap (PSL<T>), and SHOW
   CALLS's naming of unset modules' and shareable images' frames. The
   items below are the record of how it got here.
@@ -379,7 +379,10 @@ ends `...117173`, the true value `...116973`), which govax doesn't copy.
   (SS$_TBIT), so a program can't trace itself as the study does, and
   the study runs on VMS only.
 - **DIRECTORY with a list of specs** (`DIRECTORY/FULL
-  DUA2:[000000]*.EXE,*.DAT`) lists only the first spec's files.
+  DUA2:[000000]*.EXE,*.DAT`) lists only the first spec's files. (Fixed
+  2026-10-24, after the phase: the list's temporary defaults, the User's
+  Manual's 4.3.3, `rms/speclist.go`; elements in one directory share
+  its heading and total, as VMS's logs show.)
 - **govax's debugger ignores `DBG$INPUT`**: RUN/DEBUG in a procedure
   that defines it shows the INITIAL message and ends the session at
   once, where VMS's debugger reads its commands from the file.

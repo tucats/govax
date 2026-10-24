@@ -133,19 +133,19 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 
 	cols := opts.columns()
 
-	var (
-		b                     strings.Builder
-		dirs, files           int
-		totalUsed, totalAlloc uint32
-	)
+	l := directoryListing{opts: opts, cols: cols}
+	l.brief = newBriefColumns(&l.b)
 
 	// A list of names (DIRECTORY [R3...],[R4...]), like a search list,
-	// lists each element in turn (User's Manual §11.7.1), under that
-	// element's own "Directory" headers, with one grand total (VMS's
-	// log of testdata/backup69). VMS carries a name or type from one
-	// element to the next (sticky defaults); govax doesn't.
-	err := eachListed(specText, func(text string) error {
-		return s.eachSpec(text, func(vol *volume.Volume, r resolvedSpec) error {
+	// lists each element in turn (User's Manual §11.7.1), with one grand
+	// total (VMS's log of testdata/backup69). Each element takes the
+	// node, device, and directory before it as temporary defaults
+	// (TemporaryDefaults), and an element's files in the directory the
+	// one before it ended in continue that directory's listing, under
+	// one heading and total (DIRECTORY ERRORS.*,ERREND.* in testdata/mar/
+	// list's log; *.EXE,*.AN2,*.OLB in testdata/link68's round 2).
+	for _, text := range TemporaryDefaults(SplitSpecList(specText)) {
+		err := s.eachSpec(text, func(vol *volume.Volume, r resolvedSpec) error {
 			// A name without a version lists every version, as VMS 7.3's
 			// DIRECTORY did (testdata/dcl50's round 4).
 			spec := r.Spec
@@ -159,96 +159,127 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 			}
 
 			for _, group := range groupMatchesByDir(matches) {
-				dirName := r.Display + ":" + dirSpec{Elems: group.dirs}.String()
 				listed := newestVersions(group.matches, opts.Versions)
-
 				if len(listed) == 0 {
 					continue
 				}
 
-				if !opts.NoHeading {
-					fmt.Fprintf(&b, "\nDirectory %s\n\n", dirName)
-				}
-
-				var used, alloc uint32
-
-				brief := newBriefColumns(&b)
-
-				for _, m := range listed {
-					name := m.ShortName(directoryVersionDelim)
-					if opts.NoHeading {
-						name = dirName + name
-					}
-
-					if opts.brief() && !opts.NoHeading {
-						brief.add(name)
-
-						continue
-					}
-
-					if opts.brief() {
-						fmt.Fprintln(&b, name)
-
-						continue
-					}
-
-					a, err := matchAttributes(vol, m)
-					if err != nil {
-						return err
-					}
-
-					used += a.Used()
-					alloc += a.Allocated
-
-					if opts.Full {
-						writeFullEntry(&b, name, m, a, opts)
-
-						continue
-					}
-
-					writeColumnsEntry(&b, name, m, a, cols, opts)
-				}
-
-				brief.end()
-
-				dirs++
-				files += len(listed)
-				totalUsed += used
-				totalAlloc += alloc
-
-				if !opts.NoTrailing {
-					if !opts.Full {
-						b.WriteString("\n")
-					}
-
-					fmt.Fprintf(&b, "Total of %s%s.\n", countText(len(listed), "file"), blocksText(cols, used, alloc))
+				if err := l.list(vol, r.Display+":"+dirSpec{Elems: group.dirs}.String(), listed); err != nil {
+					return err
 				}
 			}
 
 			return nil
 		})
-	})
-	if err != nil {
-		return "", false, fmt.Errorf("directory: %w", err)
-	}
-
-	if dirs > 1 && !opts.NoTrailing {
-		fmt.Fprintf(&b, "\nGrand total of %s, %s%s.\n", countText(dirs, "directory"), countText(files, "file"), blocksText(cols, totalUsed, totalAlloc))
-	}
-
-	return b.String(), files > 0, nil
-}
-
-// eachListed calls each for each element of text, a comma-separated
-// list of names, in order.
-func eachListed(text string, each func(string) error) error {
-	for _, element := range strings.Split(text, ",") {
-		if err := each(strings.TrimSpace(element)); err != nil {
-			return err
+		if err != nil {
+			return "", false, fmt.Errorf("directory: %w", err)
 		}
 	}
 
+	l.endDirectory()
+
+	if l.dirs > 1 && !opts.NoTrailing {
+		fmt.Fprintf(&l.b, "\nGrand total of %s, %s%s.\n", countText(l.dirs, "directory"), countText(l.files, "file"), blocksText(cols, l.totalUsed, l.totalAlloc))
+	}
+
+	return l.b.String(), l.files > 0, nil
+}
+
+// directoryListing is DIRECTORY's listing as it's written: the text so
+// far, the directory being listed (dir, "" before the first) with its
+// file count and blocks, and the totals of the directories done.
+type directoryListing struct {
+	b     strings.Builder
+	opts  DirectoryOptions
+	cols  DirectoryOptions
+	brief *briefColumns
+
+	dir         string
+	count       int
+	used, alloc uint32
+
+	dirs, files           int
+	totalUsed, totalAlloc uint32
+}
+
+// list writes the files listed, found in the directory dirName, under
+// that directory's heading: a new one unless dirName is the directory
+// listed last.
+func (l *directoryListing) list(vol *volume.Volume, dirName string, listed []filespec.Match) error {
+	opts := l.opts
+
+	if dirName != l.dir {
+		l.endDirectory()
+		l.dir = dirName
+
+		if !opts.NoHeading {
+			fmt.Fprintf(&l.b, "\nDirectory %s\n\n", dirName)
+		}
+	}
+
+	for _, m := range listed {
+		name := m.ShortName(directoryVersionDelim)
+		if opts.NoHeading {
+			name = dirName + name
+		}
+
+		if opts.brief() && !opts.NoHeading {
+			l.brief.add(name)
+
+			continue
+		}
+
+		if opts.brief() {
+			fmt.Fprintln(&l.b, name)
+
+			continue
+		}
+
+		a, err := matchAttributes(vol, m)
+		if err != nil {
+			return err
+		}
+
+		l.used += a.Used()
+		l.alloc += a.Allocated
+
+		if opts.Full {
+			writeFullEntry(&l.b, name, m, a, opts)
+
+			continue
+		}
+
+		writeColumnsEntry(&l.b, name, m, a, l.cols, opts)
+	}
+
+	l.count += len(listed)
+
 	return nil
+}
+
+// endDirectory ends the directory being listed, if any: its last brief
+// line and its "Total of" line, its counts added to the grand total's.
+func (l *directoryListing) endDirectory() {
+	if l.dir == "" {
+		return
+	}
+
+	l.brief.end()
+
+	l.dirs++
+	l.files += l.count
+	l.totalUsed += l.used
+	l.totalAlloc += l.alloc
+
+	if !l.opts.NoTrailing {
+		if !l.opts.Full {
+			l.b.WriteString("\n")
+		}
+
+		fmt.Fprintf(&l.b, "Total of %s%s.\n", countText(l.count, "file"), blocksText(l.cols, l.used, l.alloc))
+	}
+
+	l.dir, l.count, l.used, l.alloc = "", 0, 0, 0
 }
 
 // countText is "1 file", "2 files", "2 directories".

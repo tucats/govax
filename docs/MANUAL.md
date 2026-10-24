@@ -887,7 +887,7 @@ General rules, as in VMS's DCL:
 #### DIRECTORY
 
 ```text
-DIRECTORY [file-spec[,...]]
+DIRECTORY [file-spec[,...]]   (or file-spec+file-spec)
     /SIZE[=USED|ALLOCATION|ALL]  /DATE  /OWNER  /PROTECTION  /FILE
     /FULL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
 ```
@@ -895,6 +895,24 @@ DIRECTORY [file-spec[,...]]
 Lists files on a volume, laid out as VMS lays them out. With no file
 spec, every version of every file in the default directory. Wildcards `*`
 and `%` work in every field, and `[...]` searches a directory tree.
+
+A list of specs is listed in order, as on VMS. Each spec takes the
+device and directory of the one before it unless it gives its own (`[]`
+is the default directory), and files found in the directory just
+listed go under the same heading and total:
+
+```text
+VAX> DIRECTORY/SIZE DUA0:[WORK.DUNGEON]*.EXE,*.DAT
+
+Directory DUA0:[WORK.DUNGEON]
+
+DUNGEON.EXE;1            210
+DUNGEON_V552.EXE;1       209
+DINDX.DAT;1               26
+DTEXT.DAT;1              462
+
+Total of 4 files, 907 blocks.
+```
 
 ```text
 VAX> DIRECTORY/SIZE/DATE
