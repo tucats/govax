@@ -227,8 +227,11 @@ never had.
   blocks are shorter (`vmsimage`'s `layouts` by minor id,
   `Image.Legacy`), whose first transfer address is a stub jumping to
   SYS$IMGSTA in the old S0 system service vector (`ICB.LegacyStartup`),
-  and which map VMSRTL through global section ISDs; subtask 1 (the
-  header and RUN/DEBUG) is done.
+  and which map VMSRTL through global section ISDs; subtasks 1 (the
+  header and RUN/DEBUG), 2 (the probe, `testdata/legacy72`, two rounds
+  on VMS 7.1), and 3 (the old S0 vector, `machine/legacyvector.go`;
+  VMINIT's layout now starts past it, SBR ^XC00) are done, and the
+  phase doc's "Where things stand" says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

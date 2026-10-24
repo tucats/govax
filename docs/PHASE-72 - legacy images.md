@@ -35,6 +35,44 @@ address.
 Out of scope: formats 02.02 to 02.04 (nothing on hand shows them; they
 are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 
+## Where things stand (2026-10-24, for picking the phase up again)
+
+- **Done**: subtasks 1 to 3 (see the progress log). RUN/DEBUG DUNGEON
+  works; RUN DUNGEON gets into the program, then takes an access
+  violation at ^X1A778, VMSRTL's vector, which nothing maps yet.
+- **Next: subtask 4**, Decision 4. When an image's ISD has ISD$V_GBL
+  and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
+  `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
+  `rms.ImageLocator`/`machine.ImageLocator`, Phase 68) whole at the
+  first such ISD's address (^X1A600 for DUNGEON), and pass over the
+  image's other ISDs naming it (VMSRTL_002, _003). VMSRTL.EXE is VMS
+  7.1's PIC jacket (Part A, "VMSRTL.EXE"), with its own fixup section
+  and shareable image list (BASRTL, COBRTL, CMA$TIS_SHR, FORRTL,
+  LIBRTL, MTHRTL), so once it's placed, Phase 68's activation (fixups,
+  the images it uses, activated from its list's end: answer 2) should
+  do the rest. Both loaders need it: the copying one
+  (`machine/image.go`, paging off) and the mapping one
+  (`machine/imagemap.go`, paging on); `machine/activate.go` places
+  shareable images (`imageBase`). Where the current loaders skip a GBL
+  ISD of a main image with no fixup section is the place to start.
+  VMS's placement to match is answer 1 and 2's SHOW IMAGE.
+- **Then**: subtask 5 (the debugger on FORTRAN images: decimal radix,
+  SHOW MODULE's language column, EXAMINE's next location after
+  `EXAMINE/INSTRUCTION .PC`; answer 6), and an end-to-end check against
+  `testdata/legacy72/vax/dungeon-term.log` (the eight moves; the game
+  reads and writes FORTRAN unit 5 at the terminal). Side findings to
+  file or fix: DIRECTORY with a list of specs, the debugger's
+  DBG$INPUT, the FOR facility's message texts.
+- **The author's setup**: DUNGEON.EXE, DUNGEON_V552.EXE, DINDX.DAT, and
+  DTEXT.DAT are in `DUA0:[WORK.DUNGEON]` on the work volume
+  (`~/work.dsk`, the default profile). The FORTRAN RTLs and VMSRTL.EXE
+  are in `DUA1:[XFER]` on `testdata/disks/xfer.dsk`, which the work
+  volume's `SYS$STARTUP.COM` mounts (with SYS$SHARE, FORRTL, FORRTL2,
+  and MTHRTL logical names; `startup.com` at the repository root, not
+  committed, is a copy). So run govax from the repository root, and
+  use DUA2 for exchange volumes. Copy an image to the host with
+  COPY/BINARY.
+
 ## Part A — the survey (2026-10-24)
 
 ### Sources
