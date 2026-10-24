@@ -251,6 +251,10 @@ never had.
   module, not only set ones, by the author's choice) are done, as is 8,
   the close-out; the phase doc's "Where things stand" lists what it left
   for later.
+  Phase 73 (planned 2026-10-24) is the trace trap: PSL<T> and <TP> by
+  the architecture's rules, SS$_TBIT signaled to the program's
+  handlers so a program can trace itself, and the debugger beside a
+  traced program.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
