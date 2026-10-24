@@ -137,6 +137,11 @@ type Machine struct {
 	shimBase   uint32
 	shimsReady bool
 
+	// unresolved are the stubs of run-time library routines govax lacks
+	// (unresolved.go), made as fixups reach them; their codes are the
+	// current System's, so a new System starts them again (newRTL).
+	unresolved unresolvedStubs
+
 	// s0Free is the first S0 virtual address past every region VMInit
 	// itself reserves -- see vminit.go's own doc comment on why a live ASM
 	// session's S0 content must start here rather than at the assembler's
@@ -402,6 +407,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)
 	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
+	m.unresolved = unresolvedStubs{}
 
 	// The old System's other processes are gone with it, and so is their
 	// image state; process 1's is the console's and stays (images.go).

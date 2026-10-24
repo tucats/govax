@@ -229,8 +229,12 @@ never had.
   SYS$IMGSTA in the old S0 system service vector (`ICB.LegacyStartup`),
   and which map VMSRTL through global section ISDs; subtasks 1 (the
   header and RUN/DEBUG), 2 (the probe, `testdata/legacy72`, two rounds
-  on VMS 7.1), and 3 (the old S0 vector, `machine/legacyvector.go`;
-  VMINIT's layout now starts past it, SBR ^XC00) are done, and the
+  on VMS 7.1), 3 (the old S0 vector, `machine/legacyvector.go`;
+  VMINIT's layout now starts past it, SBR ^XC00), and 4 (a V1 global
+  section ISD's image mapped at its first ISD, `machine/legacyshare.go`;
+  a run-time library's routine govax lacks resolves to a stub that
+  signals NOTIMPL with the library and offset, `machine/unresolved.go`)
+  are done, and the
   phase doc's "Where things stand" says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc

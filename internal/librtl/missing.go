@@ -163,6 +163,15 @@ func notImplemented(name string) corevms.ShimFunc {
 	}
 }
 
+// NotImplemented is notImplemented for the image activator: the shim of
+// a routine of a run-time library govax stands for, which no table here
+// names (BASRTL's, COBRTL's, ...), made when a program's fixup reaches it
+// (docs/PHASE-72 - legacy images.md, subtask 4). name says which entry
+// it is, for the message.
+func NotImplemented(name string) corevms.ShimFunc {
+	return notImplemented(name)
+}
+
 // notImplementedJSB is notImplemented for a JSB entry. The name goes on
 // the stack below the JSB's return address; a handler that continues
 // resumes with SP as the JSB left it, so the stub's RSB returns.

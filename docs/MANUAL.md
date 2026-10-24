@@ -3143,7 +3143,22 @@ starts, and the call signals:
 Programs from VAX compilers also need their language's run-time library
 (`FOR$`, `BAS$`, `PAS$`, `DECC$`); govax implements part of the C
 library and none of the others, so such programs need those libraries'
-images from a VMS system.
+images from a VMS system. govax uses a library's image when a logical
+name of the library's own name leads to it (`DEFINE FORRTL
+SYS$SHARE:FORRTL.EXE`). Without one, a call of a routine of the library
+govax lacks signals as above, naming the library and the routine's
+offset in its transfer vector:
+
+```text
+%SYSTEM-E-UNSUPPORTED, unsupported operation or function
+-GOVAX-E-NOTIMPL, routine at BASRTL+^X518 is not implemented in govax
+```
+
+Images linked by VMS V1 (such as a FORTRAN program from 1978) run too.
+They call the system through V1's system service vector at
+`^X80000000`, which govax provides. They reach VMSRTL through global
+sections at fixed addresses, so `SYS$SHARE:VMSRTL.EXE` (VMS 7's, from a
+VMS system) is mapped there, with the libraries it uses after it.
 
 ### Processes
 

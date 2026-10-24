@@ -592,6 +592,10 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 
 	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(img, err, data, icb.Base)
 
+	if err == nil && img.Legacy() {
+		return p.activateLegacyImages(icb)
+	}
+
 	if icb.FixupISD == nil {
 		return nil
 	}
@@ -750,12 +754,17 @@ func (p *ImageProcess) resolveFixupTarget(shr *SHR, offset uint32) (uint32, erro
 
 	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
 
-	v, ok := p.m.Symbols.Get(name)
-	if !ok {
-		return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
+	if v, ok := p.m.Symbols.Get(name); ok {
+		return v, nil
 	}
 
-	return v, nil
+	// A run-time library's routine govax lacks runs as far as its call
+	// (unresolved.go).
+	if runtimeLibraries[strings.ToUpper(shr.Name)] {
+		return p.m.unresolvedStub(strings.ToUpper(shr.Name), offset)
+	}
+
+	return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
 }
 
 // imageFixup performs load-time linking for icb: G^ fixups (each fixup

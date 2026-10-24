@@ -3,8 +3,8 @@
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day. Subtasks 1 (reading a V1 image's header,
 and RUN/DEBUG of one), 2 (the probe, `testdata/legacy72`, both rounds
-run on VMS 7.1; Part A, "The probe's answers"), and 3 (the old system
-service vector) are done.
+run on VMS 7.1; Part A, "The probe's answers"), 3 (the old system
+service vector), and 4 (global section ISDs, VMSRTL mapped) are done.
 
 ## Goal
 
@@ -37,10 +37,13 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 
 ## Where things stand (2026-10-24, for picking the phase up again)
 
-- **Done**: subtasks 1 to 3 (see the progress log). RUN/DEBUG DUNGEON
-  works; RUN DUNGEON gets into the program, then takes an access
-  violation at ^X1A778, VMSRTL's vector, which nothing maps yet.
-- **Next: subtask 4**, Decision 4. When an image's ISD has ISD$V_GBL
+- **Done**: subtasks 1 to 4 (see the progress log). RUN DUNGEON maps
+  VMSRTL at ^X1A600 and runs into GAME, then stops on its first write
+  to unit 5 with FOR-F-ERRDURWRI, as DUNGEON_V552 does on govax. **Next**:
+  find why FORRTL's unit 5 write fails on govax at a terminal (both
+  games, so a FORRTL/terminal matter), then subtask 5. What follows
+  in this item is subtask 4's plan, kept for the record.
+- **Subtask 4** (done), Decision 4. When an image's ISD has ISD$V_GBL
   and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
   `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
   `rms.ImageLocator`/`machine.ImageLocator`, Phase 68) whole at the
@@ -457,3 +460,48 @@ is the phase's end-to-end target. The probe is done.
 - DUNGEON.EXE: unchanged, as expected. RUN still stops at ^X1A778, in
   VMSRTL's range, until subtask 4 maps it.
 
+### 2026-10-24 — Subtask 4: global section ISDs
+
+- `machine/legacyshare.go`: `finishLoad` of a V1 image
+  (`vmsimage.Image.Legacy`) calls `activateLegacyImages`. Each image its
+  global section ISDs name (`legacyImageNames`: the name before a final
+  `_nnn`, in the order of their first ISDs) is loaded by `loadImage`,
+  both loaders alike, with its first ISD as the linked section, marked
+  based, so `imageBase` puts its first section at that ISD's address
+  (VMSRTL at ^X1A600). The other ISDs naming it are passed over. Its ident
+  is checked as any shareable image's (DUNGEON's 0x010003E8 LEQUAL
+  against VMSRTL's 0x01000C1C). VMSRTL's own fixup section then
+  activates its images from its list's end, by Phase 68's code.
+  An image the shims stand for gets nothing (none on hand).
+- **Run-time library routines govax lacks** (the author's choice, asked
+  when VMSRTL's activation stopped on `SHIM$BASRTL_00000088`): VMSRTL has
+  a G^ cell for every routine of BASRTL, COBRTL, and CMA$TIS_SHR, which
+  govax stands for (`runtimeLibraries`) with no shims. Phase 68 made
+  such a cell `LIB$_UNRESOLVED` at activation. Now `resolveFixupTarget`
+  resolves it to a stub of its own (`machine/unresolved.go`,
+  `unresolvedStub`: a CALL stub in S0, its code from 10000 registered
+  with the System's shims, one per library and offset, made again for
+  each new System). If called, it signals SS$_UNSUPPORTED and
+  `GOVAX-E-NOTIMPL, routine at BASRTL+^X518 is not implemented in govax`
+  (`librtl.NotImplemented`), which names what a new shim would need. A
+  library whose file a logical name of its name leads to is still
+  activated from that file (FORRTL, MTHRTL here). A JSB entry reached
+  through such a stub runs its entry mask as a HALT: nothing says which
+  entries are JSB ones. An image of the user's with no shims still
+  stops activation.
+- **Result**: `RUN DUNGEON` activates DUNGEON, VMSRTL at ^X1A600 to
+  ^X1DFFF, and MTHRTL at ^X1E000, as on VMS (answer 1 and 2's SHOW
+  IMAGE). FORRTL follows MTHRTL at ^X48400 because govax's LIBRTL is
+  shims and takes no pages (VMS's LIBRTL is at ^X48400 and its FORRTL at
+  ^X6B200). The game runs INIT into GAME, then stops at its first
+  message with FOR-F-ERRDURWRI (`Message number 0018813C`) in FORRTL,
+  at the terminal too (tried through a pty). **DUNGEON_V552 stops the
+  same way at the same place**, so this is FORRTL's unit 5 I/O on govax
+  and not the V1 activation. That's the next thing to find. It blocks the
+  end-to-end check against `dungeon-term.log`.
+- Tests: `TestLegacyImageNames`, `TestUnresolvedRuntimeStub`. The
+  activation itself needs DUNGEON.EXE and VMSRTL.EXE, which can't be
+  committed. It was checked by hand, as above, and with the debugger
+  (`CALL ^X800323B0`, a BASRTL stub, gives the NOTIMPL message).
+- The manual's section on VAX programs says when a library's own image
+  is used, shows the new message, and mentions V1 images.
