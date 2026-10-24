@@ -1,6 +1,6 @@
 # Phase 72 — legacy images
 
-**Status:** in progress. Planned 2026-10-24; the author answered Part
+**Status:** done (2026-10-24). Planned 2026-10-24; the author answered Part
 B's questions the same day. Subtasks 1 (reading a V1 image's header,
 and RUN/DEBUG of one), 2 (the probe, `testdata/legacy72`, both rounds
 run on VMS 7.1; Part A, "The probe's answers"), 3 (the old system
@@ -8,7 +8,7 @@ service vector), 4 (global section ISDs, VMSRTL mapped), and 5
 (FORRTL's I/O: both games play at the terminal), and 6 (OTS$'s
 floating conversions, moves, and dynamic strings, and FORRTL's floating
 edit descriptors, checked against VMS 7.1 by `testdata/ots72`), and 7
-(the debugger on FORTRAN images) are done.
+(the debugger on FORTRAN images), and 8 (the close-out) are done.
 
 ## Goal
 
@@ -41,6 +41,14 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
 
 ## Where things stand (2026-10-24, for picking the phase up again)
 
+- **The phase is done.** What it left for later, none of it needed by
+  the games: the FOR facility's message texts (govax shows `Message
+  number 00188134` where VMS shows `%FOR-F-ERRDURWRI`), the debugger's
+  `DBG$INPUT`, DIRECTORY with a list of specs, keyed `$PUT`, OTS$'s
+  packed and `$$CVT_MUL` routines, the trace trap (PSL<T>), and SHOW
+  CALLS's naming of unset modules' and shareable images' frames. The
+  items below are the record of how it got here.
+
 - **Done**: subtasks 1 to 5 (see the progress log). RUN DUNGEON and
   RUN DUNGEON_V552 play at the terminal as VMS 7.1 does: a pty run of
   `look`, `score`, and `quit` matches `dungeon-term.log` line for line.
@@ -49,10 +57,10 @@ are read as 02.05), and DUNGEON_V552.EXE's own failure (below).
   `testdata/ots72`. Subtask 7: the debugger's radix by language,
   EXAMINE/INSTRUCTION going on, SHOW MODULE's language column, and
   `SHARE$image+offset` names; `dun72b.dlg`'s commands match VMS's but
-  for the expected lines (its progress log entry). **Next**: subtask 8,
-  the close-out. Left open: naming only from set modules (below, side
-  findings). What follows in this item is subtask 4's plan, kept for the
-  record.
+  for the expected lines (its progress log entry). Subtask 8, the
+  close-out. Naming only from set modules is not done, by the author's
+  choice (below, side findings). What follows in this item is subtask
+  4's plan, kept for the record.
 - **Subtask 4** (done), Decision 4. When an image's ISD has ISD$V_GBL
   and a name `NAME_nnn` and the image is a V1 image (`ICB`/`vmsimage`'s
   `Legacy`), activate `NAME` (here VMSRTL: `SYS$SHARE:VMSRTL.EXE` by
@@ -386,15 +394,16 @@ ends `...117173`, the true value `...116973`), which govax doesn't copy.
   column and other sizes, and EXAMINE with no address after
   `EXAMINE/INSTRUCTION .PC` showed ^X200, not the next instruction.
   (Done in subtask 7 but for the sizes, which are VMS's own memory.)
-- **The debugger names only from set modules** (open, found in subtask
-  7): VMS writes DUNGEO's `CALLG (R11),L^52688` where govax writes
+- **The debugger names only from set modules** (found in subtask 7;
+  kept as govax's by the author's choice, 2026-10-24: names from every
+  module give more context to someone reading the program): VMS writes DUNGEO's `CALLG (R11),L^52688` where govax writes
   `L^INIT`. VMS names an address from the modules whose symbols are set
   (only DUNGEO at the start) and the GST, which a V1 image lacks; govax
   names from every module. Its SHOW CALLS shows an unset module's frame
   with no routine or line (`RSPSB2 ... 00000000 0000F726`), and a
-  shareable image's frames as `SHARE$FORRTL`. Neither is done: the rule
-  would change naming across the debugger (STEP, SHOW CALLS, EXAMINE),
-  with SET MODE DYNAMIC setting modules as the program enters them.
+  shareable image's frames as `SHARE$FORRTL`. govax keeps naming
+  addresses from every module, a deliberate difference from VMS; SHOW
+  CALLS's frame naming is left for later.
 
 ## Part B — decisions and questions
 
@@ -805,3 +814,15 @@ From the probe's answer 6 and `dun72b.dlg`:
   the last on DBGDIS with DBGSUB made FORTRAN), `TestSharedSymbolizer`'s
   new cases (machine); `TestSetModeAndRadix` now checks the decimal and
   hexadecimal texts themselves.
+
+### 2026-10-24 — Subtask 8: the close-out
+
+- The author prefers govax's symbolic naming, from every module, to
+  VMS's naming from set modules alone (`L^INIT` where VMS writes
+  `L^52688`): a deliberate difference, recorded in the side findings.
+- `docs/MANUAL.md`: the V1 paragraph says RUN/DEBUG of a V1 image works
+  in FORTRAN's decimal radix (subtask 7 updated the debugger section).
+- `CLAUDE.md` and `docs/PLAN.md`: the phase is done. "Where things
+  stand" lists what it left for later.
+- The end-to-end target, `dungeon-term.log`, was met in subtask 5 (both
+  games, by hand: the images can't be committed).

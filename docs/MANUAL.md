@@ -3159,6 +3159,9 @@ They call the system through V1's system service vector at
 `^X80000000`, which govax provides. They reach VMSRTL through global
 sections at fixed addresses, so `SYS$SHARE:VMSRTL.EXE` (VMS 7's, from a
 VMS system) is mapped there, with the libraries it uses after it.
+`RUN/DEBUG` of one stops at its main program, as for any image; the
+debugger names the language from the image's debug symbols (FORTRAN),
+and so works in decimal.
 
 A FORTRAN program run with VMS's FORRTL reads and writes the terminal
 through its units 5 and 6 (SYS$INPUT and SYS$OUTPUT), with FORTRAN

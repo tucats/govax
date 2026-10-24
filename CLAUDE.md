@@ -222,7 +222,7 @@ never had.
   SYS$OUTPUT file under a name its DCL defined for it alone, an open file
   closed at rundown. `TestPPF71Oracle` and `TestPPF71Terminal` hold the
   probe's logs to VMS's (`internal/console/ppf71oracle_test.go`).
-  Phase 72 (in progress, planned 2026-10-24) is legacy images: images
+  Phase 72 (done 2026-10-24) is legacy images: images
   linked by VMS V1's linker (format 02.01, DUNGEON.EXE), whose header
   blocks are shorter (`vmsimage`'s `layouts` by minor id,
   `Image.Legacy`), whose first transfer address is a stub jumping to
@@ -247,8 +247,10 @@ never had.
   images: the radix by language, decimal instructions,
   `disasm.Options.Decimal`; EXAMINE/INSTRUCTION going on,
   `machine.DisassembleRange`; SHOW MODULE's language column;
-  `SHARE$image+offset` names) are done; subtask 8, the close-out, is
-  next, and the phase doc's "Where things stand" says what's next.
+  `SHARE$image+offset` names; govax names addresses from every
+  module, not only set ones, by the author's choice) are done, as is 8,
+  the close-out; the phase doc's "Where things stand" lists what it left
+  for later.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
