@@ -2,6 +2,7 @@ package anl
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -224,14 +225,28 @@ func (a *imageAnalyzer) header() {
 	a.part("Global Symbol Table & Debug Symbol Table Information")
 	a.line(fmt.Sprintf("\t\tdebug symbol table VBN:  %d, block count: %d", img.DSTVBN, img.DSTBlocks))
 	a.line(fmt.Sprintf("\t\tglobal symbol table VBN: %d, record count: %d", img.GSTVBN, img.GSTRecords))
-	a.line(fmt.Sprintf("\t\tdebug module/psect table VBN: %d, byte count: %d", img.DMTVBN, img.DMTBytes))
+	// A V1 image's symbol table block has no debug module table, and
+	// VMS's report has no line for it (testdata/legacy72).
+	if !img.Legacy() {
+		a.line(fmt.Sprintf("\t\tdebug module/psect table VBN: %d, byte count: %d", img.DMTVBN, img.DMTBytes))
+	}
 	a.blank()
 
 	a.part("Image Identification Information")
-	a.line("\t\timage name: " + quote(img.Name))
+	name, linkerID := img.Name, img.LinkerID
+	if img.Legacy() {
+		name, linkerID = legacyIdentField(name), legacyIdentField(linkerID)
+	}
+
+	a.line("\t\timage name: " + quote(name))
+
+	if !printable(name) {
+		a.fail("Symbol contains invalid character(s).")
+	}
+
 	a.line("\t\timage file identification: " + quote(img.FileID))
 	a.line("\t\tlink date/time: " + vmsTime(vmsdef.GoTime(img.LinkTime)))
-	a.line("\t\tlinker identification: " + quote(img.LinkerID))
+	a.line("\t\tlinker identification: " + quote(linkerID))
 	a.blank()
 
 	a.part("Patch Information")
@@ -252,6 +267,34 @@ func (a *imageAnalyzer) header() {
 	}
 
 	a.problems(vmsimage.PartSections)
+}
+
+// legacyIdentField is a V1 image's image name or linker ident as VMS's
+// ANALYZE shows it: only the counted field's first longword, its count
+// and three characters, survive, the rest of the count being NULs
+// ("DUNGEON" shows as "DUN" and four NULs, "01.20" as "01." and two;
+// testdata/legacy72). The file ident, "01" in the one V1 image seen,
+// fits in a longword, so whether it's cut the same way is unconfirmed;
+// it's shown whole.
+func legacyIdentField(s string) string {
+	if len(s) <= 3 {
+		return s
+	}
+
+	return s[:3] + strings.Repeat("\x00", len(s)-3)
+}
+
+// printable reports whether s has no control characters: VMS's ANALYZE
+// calls a NUL in an image name an invalid character (testdata/legacy72;
+// which other characters it refuses is unconfirmed).
+func printable(s string) bool {
+	for _, r := range s {
+		if r < ' ' || r > '~' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // problems reports what couldn't be decoded in part of the image.

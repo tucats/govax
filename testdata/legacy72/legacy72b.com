@@ -1,0 +1,26 @@
+$ ! LEGACY72B.COM - Phase 72's probe, round 2 (README.md): what round 1
+$ ! couldn't get. INSTALL's list of global sections (its LIST has no
+$ ! /OUTPUT), and the debugger's EXAMINEs (DUN72B.DBG, logged to
+$ ! DUN72B.DLG), with the radix set to hexadecimal.
+$ !
+$ ! Run it with the exchange volume as the default directory:
+$ !
+$ !     @LEGACY72B/OUTPUT=LEGACY72B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ DEFINE/USER_MODE SYS$OUTPUT GLOBAL.LIS
+$ INSTALL LIST/GLOBAL
+$ SEARCH GLOBAL.LIS VMSRTL,LIBRTL,FORRTL,MTHRTL
+$ !
+$ OPEN/WRITE DBGF RUN.DBG
+$ WRITE DBGF "SET LOG DUN72B.DLG"
+$ WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$ WRITE DBGF "@DUN72B.DBG"
+$ WRITE DBGF "EXIT"
+$ CLOSE DBGF
+$ DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$ RUN/DEBUG DUNGEON
+$ SHOW SYMBOL $STATUS
+$ EXIT

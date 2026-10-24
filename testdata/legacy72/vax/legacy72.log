@@ -1,0 +1,359 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ DIRECTORY/FULL DUNGEON.EXE
+
+Directory DUA1:[000000]
+
+DUNGEON.EXE;1                 File ID:  (13,1,0)              
+Size:          210/210        Owner:    [SYSTEM]
+Created:   24-OCT-2026 10:38:42.74
+Revised:   24-OCT-2026 10:38:42.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 210, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 210/210 blocks.
+$ !
+$ ! 1. The images, as ANALYZE and INSTALL see them.
+$ !
+$ ANALYZE/IMAGE/OUTPUT=DUNGEON.ANI DUNGEON.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]DUNGEON.EXE;1                              1 error
+$ ANALYZE/IMAGE/OUTPUT=VMSRTL.ANI SYS$SHARE:VMSRTL.EXE
+%ANALYZE-I-ERRORS, SYS$COMMON:[SYSLIB]VMSRTL.EXE;1                         0 errors
+$ SHOW LOGICAL VMSRTL
+%SHOW-S-NOTRAN, no translation for logical name VMSRTL
+$ SHOW LOGICAL SYS$SHARE
+   "SYS$SHARE" = "SYS$SYSROOT:[SYSLIB]" (LNM$SYSTEM_TABLE)
+$ INSTALL LIST/FULL SYS$SHARE:VMSRTL.EXE
+
+DISK$OPENVMS071:<SYS0.SYSCOMMON.SYSLIB>.EXE
+   VMSRTL;1         Open Hdr Shar          Lnkbl 
+        Entry access count         = 1
+        Current / Maximum shared   = 1 / 1
+        Global section count       = 1
+
+$ INSTALL LIST/GLOBAL/OUTPUT=GLOBAL.LIS
+%CLI-W-IVQUAL, unrecognized qualifier - check validity, spelling, and placement
+ \OUTPUT\
+$ SEARCH GLOBAL.LIS VMSRTL,LIBRTL,FORRTL,MTHRTL
+%SEARCH-W-OPENIN, error opening DUA1:[000000]GLOBAL.LIS; as input
+-RMS-E-FNF, file not found
+%SEARCH-E-NOFILE, no file found
+$ !
+$ ! The game's files, by the names DUNGEON.COM gave them too.
+$ !
+$ DEFINE DINDX DUA1:[000000]DINDX.DAT
+$ DEFINE DTEXT DUA1:[000000]DTEXT.DAT
+$ !
+$ ! 2. The debugger session. DUN72.DBG's commands, with the session
+$ !    logged to DUN72.DLG.
+$ !
+$ OPEN/WRITE DBGF RUN.DBG
+$ WRITE DBGF "SET LOG DUN72.DLG"
+$ WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$ WRITE DBGF "@DUN72.DBG"
+$ WRITE DBGF "EXIT"
+$ CLOSE DBGF
+$ DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$ RUN/DEBUG DUNGEON
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: FORTRAN, Module: DUNGEO
+%DEBUG-I-VERIFYICF, entering command procedure DUN72.DBG
+ ! DUN72.DBG - Phase 72's debugger session on DUNGEON.EXE, a VMS V1
+ ! image (README.md). Addresses are given with %X: DUNGEON is FORTRAN,
+ ! whose default radix is decimal.
+ !
+ ! Where the debugger starts, and how it names the language and module.
+ SHOW LANGUAGE
+language: FORTRAN
+ SHOW RADIX
+input radix : decimal
+output radix: decimal
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DUNGEO          DUNGEO                               00000002         0000E1B2
+ EXAMINE/INSTRUCTION .PC
+DUNGEO+2:       MOVAL    L^11720,R11
+ !
+ ! The images: where DUNGEON's sections and VMSRTL (and what VMSRTL
+ ! uses) were mapped.
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ BASRTL                          no     000AA000       000C3BFF
+ CMA$TIS_SHR                     no     00074200       00075FFF
+ COBRTL                          no     00076000       000A9FFF
+ DBGSSISHR                       no     0012DA00       00130FFF
+ DBGTBKMSG                       no     00135000       001415FF
+ DEBUG                           no     000C3C00       0012D9FF
+*DUNGEON                         yes    00000200       0001A5FF
+ FORRTL                          no     0006B200       000741FF
+ LIBRTL                          no     00048400       0006B1FF
+ MTHRTL                          no     0001E000       000483FF
+ VAXCMSG                         no     00131000       00134FFF
+ VMSRTL                          no     0001A600       0001DFFF
+
+ total images: 12                bytes allocated: 83776
+ SHOW MODULE
+module name                     symbols   language   size
+
+AAPPLI                          no        FORTRAN     108
+BALLOP                          no        FORTRAN     108
+BLOW                            no        FORTRAN     108
+BUG                             no        FORTRAN     108
+CEVAPP                          no        FORTRAN     108
+CLOCKD                          no        FORTRAN     108
+CPGOTO                          no        FORTRAN     108
+CPINFO                          no        FORTRAN     108
+CXAPPL                          no        FORTRAN     108
+CYCLOP                          no        FORTRAN     108
+DROP                            no        FORTRAN     108
+DUNGEO                          yes       FORTRAN     108
+ENCRYP                          no        FORTRAN     108
+EWTELL                          no        FORTRAN     108
+FIGHTD                          no        FORTRAN     108
+FIGHTS                          no        FORTRAN     108
+FINDXT                          no        FORTRAN     108
+FOR$IDATE                       no        MACRO       224
+FWIM                            no        FORTRAN     108
+GAME                            no        FORTRAN     108
+GDT                             no        FORTRAN     108
+GETOBJ                          no        FORTRAN     108
+GHERE                           no        FORTRAN     108
+GTTIME                          no        FORTRAN     108
+GWIM                            no        FORTRAN     108
+INFEST                          no        FORTRAN     108
+INIT                            no        FORTRAN     108
+INVENT                          no        FORTRAN     108
+ITIME                           no        FORTRAN     108
+JIGSUP                          no        FORTRAN     108
+LEX                             no        FORTRAN     108
+LIGHTP                          no        FORTRAN     108
+LIT                             no        FORTRAN     108
+LITINT                          no        FORTRAN     108
+LOOKTO                          no        FORTRAN     108
+MIRPAN                          no        FORTRAN     108
+MOVETO                          no        FORTRAN     108
+MRHERE                          no        FORTRAN     108
+MTH$MOD                         no        MACRO       320
+NEWSTA                          no        FORTRAN     108
+NOBJS                           no        FORTRAN     108
+OACTOR                          no        FORTRAN     108
+OAPPLI                          no        FORTRAN     108
+OBJACT                          no        FORTRAN     108
+OPNCLS                          no        FORTRAN     108
+ORPHAN                          no        FORTRAN     108
+OTS$LINKAGE                     no        MACRO       224
+PARSE                           no        FORTRAN     108
+PRINCO                          no        FORTRAN     108
+PRINCR                          no        FORTRAN     108
+PROB                            no        FORTRAN     108
+PROTCT                          no        FORTRAN     108
+PUT                             no        FORTRAN     108
+QEMPTY                          no        FORTRAN     108
+QHERE                           no        FORTRAN     108
+RAPPL1                          no        FORTRAN     108
+RAPPL2                          no        FORTRAN     108
+RAPPLI                          no        FORTRAN     108
+RDLINE                          no        FORTRAN     108
+RMINFO                          no        FORTRAN     108
+RND                             no        MACRO        64
+ROBADV                          no        FORTRAN     108
+ROBRM                           no        FORTRAN     108
+RSPEAK                          no        FORTRAN     108
+RSPSB2                          no        FORTRAN     108
+RSPSUB                          no        FORTRAN     108
+RSTRGM                          no        FORTRAN     108
+SAVEGM                          no        FORTRAN     108
+SCHLST                          no        FORTRAN     108
+SCORE                           no        FORTRAN     108
+SCRUPD                          no        FORTRAN     108
+SOBJS                           no        FORTRAN     108
+SPARSE                          no        FORTRAN     108
+SVERBS                          no        FORTRAN     108
+SWORDD                          no        FORTRAN     108
+SYNEQL                          no        FORTRAN     108
+SYNMCH                          no        FORTRAN     108
+TAKE                            no        FORTRAN     108
+TAKEIT                          no        FORTRAN     108
+THIEFD                          no        FORTRAN     108
+THIEFP                          no        FORTRAN     108
+THISIT                          no        FORTRAN     108
+TROLLP                          no        FORTRAN     108
+UNPACK                          no        FORTRAN     108
+VALUAC                          no        FORTRAN     108
+VAPPLI                          no        FORTRAN     108
+VILSTR                          no        FORTRAN     108
+WALK                            no        FORTRAN     108
+WEIGHT                          no        FORTRAN     108
+WINNIN                          no        FORTRAN     108
+XENDMV                          no        FORTRAN     108
+XVEHIC                          no        FORTRAN     108
+YESNO                           no        FORTRAN     108
+
+total modules: 93.              bytes allocated: 84528.
+ !
+ ! The startup stub, the first transfer address: a jump to the old
+ ! SYS$IMGSTA.
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ !
+ ! The old system service vector in S0: SYS$IMGSTA (^X168), SYS$NUMTIM
+ ! (^X1B8, the one service DUNGEON calls there), and the first entry,
+ ! each as its entry mask and its first two instructions; then the same
+ ! P1 vector entries.
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ EXAMINE/INSTRUCTION
+DUNGEO\%LINE 218:       CALLG    (R11),L^52688
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ EXAMINE/INSTRUCTION
+DUNGEO\%LINE 218+7:     BLBC     R0,DUNGEO\%LINE 219
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ EXAMINE/INSTRUCTION
+DUNGEO\%LINE 218+10:    CALLS    S^#0,L^51724
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ !
+ ! VMSRTL's transfer vector where DUNGEON calls it (VMSRTL_001, from
+ ! ^X1A600), as longwords, then the entries DUNGEON uses, each as its
+ ! entry mask and its first instruction.
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ !
+ ! Whether the old VMSRTL_002 (^X1AE00, 49 pages) and VMSRTL_003
+ ! (^X21000, 2 pages) ranges are mapped, and where VMSRTL ends.
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '%'
+ !
+ ! Two steps: the second calls INIT, which opens the game's files.
+ STEP
+stepped to DUNGEO\%LINE 218
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DUNGEO          DUNGEO             218               00000009         0000E1B9
+ STEP
+%FOR-F-ERRDURWRI, error during write
+  unit 5  file SYS$INPUT:.;
+  user PC 0000F726
+-RMS-F-FAC, record operation not permitted by specified file access (FAC)
+break on unhandled exception preceding SHARE$FORRTL+29842
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+ SHARE$FORRTL                                         00000000         00072692
+ SHARE$FORRTL                                         00000000         0007259F
+ SHARE$FORRTL                                         00000000         0006F103
+ SHARE$FORRTL                                         00000000         0006EC04
+ RSPSB2                                               00000000         0000F726
+ RSPEAK                                               00000000         0000F5F5
+ GAME                                                 00000000         0000CA1C
+*DUNGEO          DUNGEO             218               0000001A         0000E1CA
+%DEBUG-I-VERIFYICF, exiting command procedure DUN72.DBG
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ !
+$ ! 3. The game, a few moves from this procedure's data lines.
+$ !
+$ RUN DUNGEON
+%FOR-F-ERRDURWRI, error during write
+  unit 5  file SYS$INPUT:.;
+  user PC 0000F726
+-RMS-F-FAC, record operation not permitted by specified file access (FAC)
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           00072692  00072692
+                                                           0007259F  0007259F
+                                                           0006F103  0006F103
+                                                           0006EC04  0006EC04
+RSPSB2          RSPSB2                             27      00000112  0000F726
+RSPEAK          RSPEAK                              3      00000015  0000F5F5
+GAME            GAME                               94      00000010  0000CA1C
+DUNGEO          DUNGEO                            218      0000001A  0000E1CA
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10188134"
+$ IF F$SEARCH("DUNGEON_V552.EXE") .EQS. "" THEN GOTO DONE
+$ RUN DUNGEON_V552
+%FOR-F-ERRDURWRI, error during write
+  unit 5  file SYS$INPUT:.;
+  user PC 00013A4E
+-RMS-F-FAC, record operation not permitted by specified file access (FAC)
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           0006EC92  0006EC92
+                                                           0006EB9F  0006EB9F
+                                                           0006B703  0006B703
+                                                           0006B204  0006B204
+RSPSB2          RSPSB2                             27      00000112  00013A4E
+RSPEAK          RSPEAK                              3      00000015  0000C7AD
+GAME            GAME                               94      00000010  0000AC38
+DUNGEO          DUNGEO                            218      0000001A  0000AC1A
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10188134"
+$ DONE:
+$ DIRECTORY/SIZE=ALL/DATE *.*
+
+Directory DUA1:[000000]
+
+000000.DIR;1               2/2        24-OCT-2026 10:38:42.74
+BACKUP.SYS;1               0/0        24-OCT-2026 10:38:42.74
+BADBLK.SYS;1               0/0        24-OCT-2026 10:38:42.74
+BADLOG.SYS;1               0/0        24-OCT-2026 10:38:42.74
+BITMAP.SYS;1               7/7        24-OCT-2026 10:38:42.74
+CONTIN.SYS;1               0/0        24-OCT-2026 10:38:42.74
+CORIMG.SYS;1               0/0        24-OCT-2026 10:38:42.74
+DINDX.DAT;1               26/26       24-OCT-2026 10:38:42.75
+DTEXT.DAT;1              462/462      24-OCT-2026 10:38:42.75
+DUN72.DBG;1                5/5        24-OCT-2026 10:38:42.74
+DUN72.DLG;1               24/24       24-OCT-2026 10:40:03.25
+DUNGEON.ANI;1             18/18       24-OCT-2026 10:40:03.02
+DUNGEON.EXE;1            210/210      24-OCT-2026 10:38:42.74
+DUNGEON_V552.EXE;1       209/209      24-OCT-2026 10:38:42.74
+INDEXF.SYS;1             829/829      24-OCT-2026 10:38:42.74
+LEGACY72.COM;1             5/5        24-OCT-2026 10:38:42.74
+LEGACY72.LOG;1             0/48       24-OCT-2026 10:40:03.00
+RUN.DBG;1                  1/1        24-OCT-2026 10:40:03.08
+SECURITY.SYS;1             1/6        24-OCT-2026 10:38:42.74
+VMSRTL.ANI;1              41/41       24-OCT-2026 10:40:03.04
+VOLSET.SYS;1               0/0        24-OCT-2026 10:38:42.74
+
+Total of 21 files, 1840/1893 blocks.
+$ EXIT

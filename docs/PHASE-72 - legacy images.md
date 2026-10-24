@@ -3,7 +3,8 @@
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day. Subtask 1 (reading a V1 image's header,
 and RUN/DEBUG of one) is done; subtask 2's probe (`testdata/legacy72`)
-is written and waiting for its VAX run.
+ran its first round on VMS 7.1 (Part A, "The probe's answers"), and
+its second round is waiting for its VAX run.
 
 ## Goal
 
@@ -146,6 +147,51 @@ the first VMSRTL ISD's address, so the old vector offsets land on the
 new image's vector, and ignores the other two. The probe's SHOW IMAGE
 and EXAMINEs settle it.
 
+### The probe's answers (round 1, 2026-10-24)
+
+VMS V7.1 on a VAX 8600 (`testdata/legacy72/vax/`):
+
+1. **VMSRTL is mapped whole at the first VMSRTL ISD's address.** The
+   debugger's SHOW IMAGE shows `VMSRTL 0001A600 0001DFFF`: all 29
+   pages, its vector and its fixup section, at VMSRTL_001's address.
+   VMSRTL_002's and _003's ranges aren't VMSRTL's: MTHRTL starts at
+   ^X1E000, just past it. So VMS maps the image a V1 global section
+   ISD names once, at the first such ISD, and ignores the others.
+2. **The images VMSRTL uses follow it**, in the reverse of its ISD
+   list's order: MTHRTL ^X1E000, LIBRTL ^X48400, FORRTL ^X6B200,
+   CMA$TIS_SHR ^X74200, COBRTL ^X76000, BASRTL ^X0AA000 (its list is
+   BASRTL, COBRTL, CMA$TIS_SHR, FORRTL, LIBRTL, MTHRTL). That's Phase
+   68's rule for an image's shareable image list. The debugger's own
+   images come last.
+3. **The game runs on VMS**: DUNGEON gets through INIT into GAME, as
+   DUNGEON_V552 does. In a procedure both stop at their first message
+   with `%FOR-F-ERRDURWRI` on unit 5, which is SYS$INPUT there. govax's
+   DUNGEON_V552 stops with the same condition (its `Message number
+   0018813C`), so that side finding was the procedure's input, not a
+   govax bug. govax lacks the FOR facility's message texts.
+4. **ANALYZE/IMAGE of a 02.01 image** (`dungeon.ani`): govax's layout,
+   but with no "debug module/psect table" line. The image name shows as
+   `"DUN"` and four NULs, flagged `Symbol contains invalid
+   character(s).` (the report's one error), and the linker ident as
+   `"01."` and two NULs. VMS apparently converts the V1 header and keeps
+   only the first longword of those counted strings. The file ident
+   ("01") and the link time are right.
+5. **INSTALL**: VMSRTL is installed `Open Hdr Shar Lnkbl` with one
+   global section. `INSTALL LIST` has no `/OUTPUT` (round 2).
+6. **The debugger on a V1 FORTRAN image** (`dun72.dlg`):
+   `%DEBUG-I-INITIAL, Language: FORTRAN, Module: DUNGEO`; SHOW LANGUAGE
+   `language: FORTRAN`; the radix is decimal for input and output
+   (`DUNGEO+2: MOVAL L^11720,R11`); SHOW CALLS and the first STEP
+   (`stepped to DUNGEO\%LINE 218`, line 218, rel PC 9) as govax's.
+   SHOW MODULE has a language column (FORTRAN, and MACRO for
+   FOR$IDATE, MTH$MOD, OTS$LINKAGE, and RND), headed `module name
+   symbols language size`, and ends `total modules: 93.`. EXAMINE with
+   no address goes on from the last instruction examined. The second
+   STEP stopped on the unit 5 write, with a SHOW CALLS whose FORRTL
+   frames are named `SHARE$FORRTL`.
+7. Every `%X` address was refused (`MISOPEMIS`): the S0 vector and
+   VMSRTL's transfer vector are round 2's.
+
 ### Side findings
 
 - **DIRECTORY with a list of specs** (`DIRECTORY/FULL
@@ -155,9 +201,13 @@ and EXAMINEs settle it.
   once, where VMS's debugger reads its commands from the file.
 - **DUNGEON_V552.EXE** (02.05, the same game linked on VMS 5.5-2
   against FORRTL) activates and runs on govax, then stops with
-  `Message number 0018813C` (FOR facility, number 39, severe, likely
-  FOR$_ERRDURREA) and a traceback through FORRTL. That's a separate
-  problem, for later.
+  `Message number 0018813C`. The probe showed it's FOR-F-ERRDURWRI, as
+  on VMS when unit 5 can't be written (answer 3); govax lacks the FOR
+  facility's message texts.
+- **govax's debugger on a FORTRAN image** (answer 6): it keeps
+  hexadecimal where VMS's uses decimal, SHOW MODULE has no language
+  column and other sizes, and EXAMINE with no address after
+  `EXAMINE/INSTRUCTION .PC` shows ^X200, not the next instruction.
 
 ## Part B — decisions and questions
 
@@ -177,10 +227,15 @@ and EXAMINEs settle it.
    (keeping the caller's frame, so the service sees its arguments as
    usual). VMINIT's S0 layout moves up past the vector (subtask 3).
 4. **A V1 global section ISD named `NAME_nnn`** maps the shareable
-   image `NAME` (`SYS$SHARE:NAME.EXE` by the Phase 68 locator). The
-   cluster-for-cluster reading proposed first doesn't fit VMSRTL.EXE
-   (above); how VMS places it is the probe's question, and this
-   decision waits for its answer.
+   image `NAME` (`SYS$SHARE:NAME.EXE` by the Phase 68 locator), whole,
+   at the first such ISD's address, and the image's other ISDs naming
+   `NAME` are passed over (the probe's answer 1). The images `NAME`
+   uses are activated after it by Phase 68's rules (answer 2).
+5. **ANALYZE/IMAGE as VMS's** for a 02.01 image (answer 4), its quirks
+   included, in the report alone: `vmsimage` keeps the true strings.
+6. **The debugger's language rules** (answer 6), a subtask of their
+   own: decimal for FORTRAN, SHOW MODULE's language column, EXAMINE's
+   next location.
 
 ### Questions for the author (answered 2026-10-24)
 
@@ -202,7 +257,8 @@ and EXAMINEs settle it.
    vector, STEP), and the two games' output for a few moves.
 3. **The old system service vector** (Decision 3).
 4. **Global section ISDs** (Decision 4), with VMSRTL.EXE.
-5. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
+5. **The debugger on a FORTRAN image** (Decision 6).
+6. **The close-out**: the manual (`docs/MANUAL.md`), CLAUDE.md,
    PLAN.md.
 
 ## Progress log
@@ -254,4 +310,24 @@ work volume; `copyout.cmd` brings back the log, the debugger's log,
 both analyses, and the global section listing. A dry run on govax ran
 the procedure through (two side findings: DIRECTORY's list, the
 debugger's DBG$INPUT).
+
+### 2026-10-24 — Subtask 2: round 1's answers; round 2 written
+
+The author ran round 1 on VMS 7.1 (Part A, "The probe's answers").
+Decision 4 is settled by it, and Decisions 5 and 6 are new. Subtask 5
+(the debugger on a FORTRAN image) is new.
+
+- ANALYZE/IMAGE matches VMS's report of DUNGEON.EXE (Decision 5): no
+  DMT line for a V1 image; the image name and linker ident cut to their
+  first longword (`legacyIdentField`); an image name with a control
+  character gets `Symbol contains invalid character(s).` (`printable`;
+  which printable characters VMS refuses is unconfirmed).
+  `TestLegacyImagePages` matches `vax/dungeon.ani` page for page, from
+  the header block alone (`testdata/legacy72/dungeon-hdr.bin`, no code)
+  and zeros to the file's 210 blocks.
+- Round 2 (`legacy72b.com`, `dun72b.dbg`, `exchange2.cmd`,
+  `copyout2.cmd`): INSTALL's global sections through a user-mode
+  SYS$OUTPUT, the EXAMINEs with `SET RADIX HEXADECIMAL` (and the old
+  vector's extent: entries at ^X400, ^X800, ^X918, ^X920, ^XA00), and
+  the games played at a terminal, the screen saved.
 
