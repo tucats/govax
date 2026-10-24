@@ -412,3 +412,23 @@ func TestConstants(t *testing.T) {
 		t.Errorf("a shared value was named %q", name)
 	}
 }
+
+// TestModuleAtByRoutines: a module with no psect records and no debug
+// module table, as in a VMS V1 image's DST, is found by its routines.
+func TestModuleAtByRoutines(t *testing.T) {
+	p := &Program{Modules: []*Module{
+		{Name: "INIT", Routines: []*Routine{{Name: "INIT", Address: 0xCDD0, Size: 0x400}}},
+		{Name: "DUNGEO", Routines: []*Routine{{Name: "DUNGEO", Address: 0xE1B0, Size: 0x40}}},
+	}}
+
+	for addr, want := range map[uint32]string{0xE1B2: "DUNGEO", 0xD0CD: "INIT", 0xE1F0: "", 0x200: ""} {
+		got := ""
+		if m, ok := p.ModuleAt(addr); ok {
+			got = m.Name
+		}
+
+		if got != want {
+			t.Errorf("ModuleAt(%X) = %q, want %q", addr, got, want)
+		}
+	}
+}

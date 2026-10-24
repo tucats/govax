@@ -184,7 +184,7 @@ func (p *Program) ModuleNamed(name string) (*Module, bool) {
 // ModuleAt returns the module one of whose psects holds addr: by the
 // debug module table's ranges where the image has one, as the debugger
 // finds a module without reading its DST records, or else by the DST's
-// PSECT records.
+// PSECT records, or, for a module with none, by its routines.
 func (p *Program) ModuleAt(addr uint32) (*Module, bool) {
 	for _, m := range p.Modules {
 		if len(m.Ranges) > 0 {
@@ -201,6 +201,13 @@ func (p *Program) ModuleAt(addr uint32) (*Module, bool) {
 			if addr >= ps.Address && addr < ps.End() {
 				return m, true
 			}
+		}
+
+		// A VMS V1 image's DST has no psect records, and it has no
+		// debug module table: its routines are all a module has to
+		// place it by (docs/PHASE-72 - legacy images.md).
+		if len(m.Psects) == 0 && m.RoutineAt(addr) != nil {
+			return m, true
 		}
 	}
 

@@ -27,6 +27,76 @@ import (
 // BlockSize is a disk block's size, and a VAX page's.
 const BlockSize = 512
 
+// Image formats an image header's major and minor ids name. VMS V4 and
+// later write 02.05; 02.01 is the format of VMS V1's linker (linker
+// ident "01.20"; docs/PHASE-72 - legacy images.md), whose header blocks
+// are shorter. Nothing on hand shows 02.02 to 02.04, which are read as
+// 02.05.
+const (
+	FormatMajor  = "02"
+	FormatV1     = "01"
+	FormatLatest = "05"
+)
+
+// layout is where an image format puts its header's parts: the fixed
+// header's length, and the activation, symbol table, and identification
+// blocks' lengths and fields.
+type layout struct {
+	fixedLength int
+
+	// hasFixupVA says the fixed header holds IHD$L_SYSVER and
+	// IHD$L_IAFVA, after the ident.
+	hasFixupVA bool
+
+	activationLength int
+	hasInitShare     bool
+
+	symbolTableLength int
+	hasDMT            bool // the debug module table's VBN and size, and the 32-bit sizes
+
+	// The identification block: the image name's and file ident's
+	// counted-string fields, then the link time, then the linker's
+	// ident (16 bytes in both).
+	nameLength, fileIDLength int
+}
+
+// layouts are the image formats' header layouts, by minor id. 02.01's
+// were read off DUNGEON.EXE, a V1 image (unconfirmed by any manual).
+var layouts = map[string]layout{
+	FormatV1: {
+		fixedLength:       0x28,
+		activationLength:  0x10, // three transfer addresses and a zero
+		symbolTableLength: 0x0C, // the DST's and GST's VBNs and sizes
+		nameLength:        16,
+		fileIDLength:      16,
+	},
+	FormatLatest: {
+		fixedLength:       IHDFixedLength,
+		hasFixupVA:        true,
+		activationLength:  IHALength,
+		hasInitShare:      true,
+		symbolTableLength: IHSLength,
+		hasDMT:            true,
+		nameLength:        40,
+		fileIDLength:      16,
+	},
+}
+
+// layoutOf is the header layout of an image whose ids are major and
+// minor: the latest format's for any but those layouts lists.
+func layoutOf(major, minor string) layout {
+	if l, ok := layouts[minor]; ok && major == FormatMajor {
+		return l
+	}
+
+	return layouts[FormatLatest]
+}
+
+// Legacy reports whether the image is in VMS V1's format, 02.01.
+func (img *Image) Legacy() bool {
+	return img.MajorID == FormatMajor && img.MinorID == FormatV1
+}
+
 // Fixed header ($IHD) offsets.
 const (
 	IHDISDOffset     = 0x00 // word: the first ISD
@@ -166,8 +236,10 @@ type Image struct {
 	// report shows each as an error, at the end of the part it's about.
 	Problems []Problem
 
-	// part is the part being decoded, which a problem is about.
-	part Part
+	// part is the part being decoded, which a problem is about, and
+	// layout the header's layout, by its format.
+	part   Part
+	layout layout
 }
 
 // Part is a part of an image a problem is about.
@@ -282,13 +354,19 @@ func ReadImage(data []byte) (*Image, error) {
 
 	img.MajorID = string(h[IHDMajorIDOffset : IHDMajorIDOffset+2])
 	img.MinorID = string(h[IHDMinorIDOffset : IHDMinorIDOffset+2])
+	img.layout = layoutOf(img.MajorID, img.MinorID)
 	img.Type = h[IHDImageType]
 	img.IOChannels = le.Uint16(h[IHDIOChannels:])
 	img.IOPages = le.Uint16(h[IHDIOPages:])
 	img.LinkFlags = le.Uint32(h[IHDLinkFlags:])
 	img.Ident = le.Uint32(h[IHDIdent:])
-	img.SysVersion = le.Uint32(h[IHDSysVersion:])
-	img.IAFVA = le.Uint32(h[IHDIAFVA:])
+
+	// A V1 header ends after the ident: what follows is its activation
+	// block, not a system version and a fixup section's address.
+	if img.layout.hasFixupVA {
+		img.SysVersion = le.Uint32(h[IHDSysVersion:])
+		img.IAFVA = le.Uint32(h[IHDIAFVA:])
+	}
 
 	img.ActivOffset = int(le.Uint16(h[IHDActivOffset:]))
 	img.SymDbgOffset = int(le.Uint16(h[IHDSymDbgOffset:]))
@@ -369,7 +447,7 @@ func (img *Image) problem(format string, args ...any) {
 // block returns the n bytes of the header block at offset, or nil (with
 // a problem recorded) when they aren't all in the header.
 func (img *Image) block(h []byte, what string, offset, n int) []byte {
-	if offset < IHDFixedLength || offset+n > BlockSize {
+	if offset < img.layout.fixedLength || offset+n > BlockSize {
 		img.problem("The %s block's offset, %d, is outside the header.", what, offset)
 
 		return nil
@@ -384,6 +462,8 @@ const (
 	IHAInitShare = 0x10
 	IHSLength    = 0x1C
 	IHILength    = 0x50
+
+	linkerIDLength = 16
 )
 
 func (img *Image) activation(h []byte) {
@@ -391,7 +471,7 @@ func (img *Image) activation(h []byte) {
 		return
 	}
 
-	b := img.block(h, "activation", img.ActivOffset, IHALength)
+	b := img.block(h, "activation", img.ActivOffset, img.layout.activationLength)
 	if b == nil {
 		return
 	}
@@ -402,8 +482,10 @@ func (img *Image) activation(h []byte) {
 
 	// After the transfer addresses comes a zero longword that ends them,
 	// then the initialization list's address (unconfirmed: no fixture
-	// image sets IHD$V_INISHR).
-	img.InitShare = binary.LittleEndian.Uint32(b[IHAInitShare:])
+	// image sets IHD$V_INISHR). A V1 image's block ends at the zero.
+	if img.layout.hasInitShare {
+		img.InitShare = binary.LittleEndian.Uint32(b[IHAInitShare:])
+	}
 }
 
 func (img *Image) symbolTables(h []byte) {
@@ -411,7 +493,7 @@ func (img *Image) symbolTables(h []byte) {
 		return
 	}
 
-	b := img.block(h, "symbol table", img.SymDbgOffset, IHSLength)
+	b := img.block(h, "symbol table", img.SymDbgOffset, img.layout.symbolTableLength)
 	if b == nil {
 		return
 	}
@@ -421,6 +503,13 @@ func (img *Image) symbolTables(h []byte) {
 	img.GSTVBN = le.Uint32(b[4:])
 	img.DSTBlocks = le.Uint16(b[8:])
 	img.GSTRecords = le.Uint16(b[10:])
+
+	// A V1 image's block ends at the GST's size: it has no debug module
+	// table, and no 32-bit sizes.
+	if !img.layout.hasDMT {
+		return
+	}
+
 	img.DMTVBN = le.Uint32(b[12:])
 	img.DMTBytes = le.Uint32(b[16:])
 	img.DSTBlocksLong = le.Uint32(b[20:])
@@ -469,15 +558,18 @@ func (img *Image) identification(h []byte) {
 		return
 	}
 
-	b := img.block(h, "identification", img.ImgIDOffset, IHILength)
+	l := img.layout
+	time := l.nameLength + l.fileIDLength
+
+	b := img.block(h, "identification", img.ImgIDOffset, time+8+linkerIDLength)
 	if b == nil {
 		return
 	}
 
-	img.Name = counted(b[0:40])
-	img.FileID = counted(b[40:56])
-	img.LinkTime = binary.LittleEndian.Uint64(b[56:])
-	img.LinkerID = counted(b[64:80])
+	img.Name = counted(b[0:l.nameLength])
+	img.FileID = counted(b[l.nameLength:time])
+	img.LinkTime = binary.LittleEndian.Uint64(b[time:])
+	img.LinkerID = counted(b[time+8 : time+8+linkerIDLength])
 }
 
 // IHPLength is the patch block's size (unconfirmed: no fixture image
@@ -497,7 +589,7 @@ func (img *Image) sections(h []byte, offset int) {
 	le := binary.LittleEndian
 	p := offset
 
-	if p < IHDFixedLength {
+	if p < img.layout.fixedLength {
 		img.problem("The image section descriptors' offset, %d, is inside the fixed header.", p)
 
 		return
@@ -735,4 +827,26 @@ func (img *Image) protections(b []byte, offset uint32) []Protection {
 	}
 
 	return out
+}
+
+// At returns the n bytes the image file data puts at virtual address va
+// (relative to the image's base), read through the private section
+// that holds them, or nil when no section with blocks in the file holds
+// them all: a demand-zero or global section, or a short file.
+func (img *Image) At(data []byte, va uint32, n int) []byte {
+	for _, d := range img.ISDs {
+		start, end := d.Address(), d.Address()+uint32(d.Pages)*BlockSize
+		if d.Flags&(ISDFlagGBL|ISDFlagDZRO) != 0 || d.VBN == 0 || va < start || uint64(va)+uint64(n) > uint64(end) {
+			continue
+		}
+
+		p := uint64(d.VBN-1)*BlockSize + uint64(va-start)
+		if p+uint64(n) > uint64(len(data)) {
+			return nil
+		}
+
+		return data[p : p+uint64(n)]
+	}
+
+	return nil
 }

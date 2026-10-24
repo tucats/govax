@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -9,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // RunDebug is RUN's /[NO]DEBUG choice: whether the image runs under the
@@ -178,11 +180,16 @@ func (m *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
 // languageName is the name the debugger shows for a module's source
 // language, from the language code in the debug symbol table's module
 // record. Only MACRO (code 0) is confirmed, by every image the Phase 41
-// and 42 probes ran; govax's tools write no other kind, so any other code
-// is shown as UNKNOWN until a probe of a compiler's output settles it.
+// and 42 probes ran; govax's tools write no other kind. FORTRAN (code 1,
+// docs/DEBUG-RECORDS.md, 4.5) is a VMS V1 FORTRAN image's (Phase 72,
+// unconfirmed). Any other code is shown as UNKNOWN until a probe of a
+// compiler's output settles it.
 func languageName(code uint32) string {
-	if code == 0 {
+	switch code {
+	case 0:
 		return "MACRO"
+	case 1:
+		return "FORTRAN"
 	}
 
 	return "UNKNOWN"
@@ -266,7 +273,12 @@ func (m *Machine) DefaultRunInits() bool {
 // address (nonzero, below 0x3FFFFFFF) -- transfer[0] is often a debugger/
 // LIB$INITIALIZE-style entry point outside that range, hence the fallback.
 func mainTransferAddress(icb *ICB) (uint32, bool) {
-	for _, addr := range icb.Transfer[:3] {
+	transfers := icb.Transfer[:3]
+	if icb.LegacyStartup {
+		transfers = transfers[1:]
+	}
+
+	for _, addr := range transfers {
 		if addr > 0 && addr < 0x3FFFFFFF {
 			return addr, true
 		}
@@ -314,7 +326,7 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 	// An image linked with traceback starts at SYS$IMGSTA, VMS's image
 	// startup, which puts the traceback handler in its own frame before
 	// calling the image: this frame is govax's (corevms/traceback.go).
-	if main.Transfer[0] == imgstaAddr {
+	if main.Transfer[0] == imgstaAddr || main.LegacyStartup {
 		handler, ok := c.Symbols.Get(tracebackHandler)
 		if !ok {
 			return 0, false, vmserrors.New(vmserrors.LIB_UNRESOLVED, tracebackHandler)
@@ -388,6 +400,35 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 // traceback handler's stub (corevms.CRTLLinks), which EnsureShims
 // defines.
 var imgstaAddr = vmsdef.LibrarySymbols["SYS$IMGSTA"]
+
+// VMS V1 had its system service vector in S0, at legacyVectorBase, laid
+// out as V4's P1 vector at p1VectorBase is: SYS$IMGSTA is 168 bytes in
+// in both (docs/PHASE-72 - legacy images.md). legacyImgsta is its old
+// entry.
+const (
+	legacyVectorBase = 0x80000000
+	p1VectorBase     = 0x7FFEDE00
+)
+
+var legacyImgsta = legacyVectorBase + imgstaAddr - p1VectorBase
+
+// legacyStartupStub reports whether a V1 image's first transfer
+// address, va (relative to its base), is its image startup stub: as
+// VMS V1's linker made it for an image with traceback, a procedure
+// with an empty entry mask that jumps past SYS$IMGSTA's entry mask in
+// the old vector (JMP @#80000168+2). The stub is read from the image
+// file, before any of the image is in memory.
+func legacyStartupStub(img *vmsimage.Image, data []byte, va uint32) bool {
+	b := img.At(data, va, 8)
+	if b == nil {
+		return false
+	}
+
+	const jmpAbsolute = 0x17 // JMP, then mode 9F: @#address
+
+	return binary.LittleEndian.Uint16(b) == 0 && b[2] == jmpAbsolute && b[3] == 0x9F &&
+		binary.LittleEndian.Uint32(b[4:]) == legacyImgsta+2
+}
 
 const tracebackHandler = "EXE$TRACEBACK"
 

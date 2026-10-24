@@ -196,7 +196,9 @@ func (a *imageAnalyzer) header() {
 		a.line("\t\t\tmatch control: " + match)
 	}
 
-	if img.MajorID != "02" || img.MinorID != "05" {
+	// VMS V1's format, 02.01, is read too (docs/PHASE-72 - legacy
+	// images.md); what VMS's ANALYZE says of it is unconfirmed.
+	if img.MajorID != vmsimage.FormatMajor || img.MinorID != vmsimage.FormatLatest && !img.Legacy() {
 		a.fail("Image format %s.%s is not the VAX image format, 02.05.", img.MajorID, img.MinorID)
 	}
 

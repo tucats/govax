@@ -141,6 +141,12 @@ type ICB struct {
 	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
 	LinkDebug bool
 
+	// LegacyStartup is set when the first transfer address is a VMS V1
+	// image's image startup stub, a jump to SYS$IMGSTA's entry in the
+	// old system vector (legacyStartupStub): the image was linked with
+	// traceback, and its main routine is the next transfer address.
+	LegacyStartup bool
+
 	// Protections are the fixup section's protection changes (each a
 	// run of pages from an address relative to the image's lowest
 	// section, imageLow, and a PRT$C_ code), applied after the fixups
@@ -577,6 +583,7 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 	img, err := vmsimage.ReadImage(data)
 	if err == nil {
 		icb.Ident, icb.Match, icb.Type = img.Ident, int(img.LinkFlags>>24&7), img.Type
+		icb.LegacyStartup = img.Legacy() && legacyStartupStub(img, data, icb.Transfer[0]-icb.Base)
 
 		if img.Fixups != nil {
 			icb.Protections = img.Fixups.Protections

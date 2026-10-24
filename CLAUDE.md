@@ -222,6 +222,13 @@ never had.
   SYS$OUTPUT file under a name its DCL defined for it alone, an open file
   closed at rundown. `TestPPF71Oracle` and `TestPPF71Terminal` hold the
   probe's logs to VMS's (`internal/console/ppf71oracle_test.go`).
+  Phase 72 (in progress, planned 2026-10-24) is legacy images: images
+  linked by VMS V1's linker (format 02.01, DUNGEON.EXE), whose header
+  blocks are shorter (`vmsimage`'s `layouts` by minor id,
+  `Image.Legacy`), whose first transfer address is a stub jumping to
+  SYS$IMGSTA in the old S0 system service vector (`ICB.LegacyStartup`),
+  and which map VMSRTL through global section ISDs; subtask 1 (the
+  header and RUN/DEBUG) is done.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
