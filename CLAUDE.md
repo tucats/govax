@@ -238,8 +238,12 @@ never had.
   files, `rms/keyed.go`; the terminal's input entry writable; FORTRAN
   carriage control at the terminal, `rms/ftncc.go`; OTS$'s integer
   conversions, `librtl/otscvt.go`; SET DEBUG RMS, `rms/trace.go`)
-  are done; subtask 6 (OTS$'s floating conversions) is next, and the
-  phase doc's "Where things stand" says what's next.
+  are done; subtask 6's first part (OTS$'s documented floating
+  conversions, moves, and dynamic strings, `librtl/otsfloat.go` and
+  `otsstring.go`, and the probe, `testdata/ots72`: `ots72.mar`'s cases
+  and `ots72t.mar`, a VMS-only trace-trap study of FORRTL's calls to
+  the undocumented `OTS$$CVT_x_T_R8`) is done, its VMS run next, and
+  the phase doc's "Where things stand" says what's next.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

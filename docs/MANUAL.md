@@ -3166,7 +3166,9 @@ carriage control: a `$` record is a prompt, which leaves the cursor at
 its end for the reply, and a `+` record continues the line. Its
 integer edit descriptors (`I`, `O`, `Z`, `L`) use govax's OTS$
 conversions; its floating-point ones (`F`, `E`, `D`, `G`) are not yet
-implemented, and signal as above. `SET DEBUG RMS` shows each RMS call
+implemented, and signal as above. (The OTS$ floating conversions a
+program calls itself, `OTS$CNVOUT` and `OTS$CVT_T_D`, `_F`, `_G`, and
+`_H`, are.) `SET DEBUG RMS` shows each RMS call
 the program makes, with its file or record and status, which is the
 quickest way to see why such a program's I/O fails.
 

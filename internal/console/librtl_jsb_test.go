@@ -2,7 +2,7 @@ package console
 
 import "testing"
 
-// jsbProgram calls OTS$MOVE3_R5, a JSB entry govax lacks, with R6 and SP
+// jsbProgram calls OTS$CVTDP_R9, a JSB entry govax lacks, with R6 and SP
 // noted first, and ends with the JSB's R0 if R6 and SP came back as they
 // were, or 4 if not. handler, if it isn't empty, is a condition handler
 // established for START.
@@ -15,7 +15,7 @@ func jsbProgram(handler string) string {
 	return "\t.PSECT\tCODE,NOWRT,EXE\n" + handler +
 		"\t.ENTRY\tSTART,^M<R6,R7>\n" + establish +
 		"\tMOVL\t#5,R6\n\tMOVL\tSP,R7\n" +
-		"\tJSB\tG^OTS$MOVE3_R5\n" +
+		"\tJSB\tG^OTS$CVTDP_R9\n" +
 		"\tCMPL\tSP,R7\n\tBNEQ\t10$\n\tCMPL\tR6,#5\n\tBNEQ\t10$\n\tRET\n" +
 		"10$:\tMOVL\t#4,R0\n\tRET\n\t.END\tSTART\n"
 }
@@ -33,7 +33,7 @@ func TestLibrtlMissingJSBEntry(t *testing.T) {
 	}
 
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
-		"-GOVAX-E-NOTIMPL, routine OTS$MOVE3_R5 is not implemented in govax\n" +
+		"-GOVAX-E-NOTIMPL, routine OTS$CVTDP_R9 is not implemented in govax\n" +
 		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
 		"module name     routine name                     line       rel PC    abs PC\n\n" +
 		".MAIN.          START                                      0000000E  0000020E\n"

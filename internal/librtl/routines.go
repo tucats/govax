@@ -94,6 +94,13 @@ var JSBRoutines = []JSBRoutine{
 	{"LIB$SCOPY_DXDX6", 88, libScopyDxdx6},
 	{"LIB$SCOPY_R_DX6", 89, libScopyRDx6},
 	{"LIB$ANALYZE_SDESC_R2", 90, libAnalyzeSdescR2},
+	{"OTS$MOVE3_R5", 211, otsMove3R5},
+	{"OTS$MOVE5_R5", 212, otsMove5R5},
+	{"OTS$SCOPY_DXDX6", 213, otsScopyDxdx6},
+	{"OTS$SCOPY_R_DX6", 214, otsScopyRDx6},
+	{"OTS$SGET1_DD_R6", 215, otsSget1DDR6},
+	{"OTS$SFREE1_DD6", 216, otsSfree1DD6},
+	{"OTS$SFREEN_DD6", 217, otsSfreenDD6},
 }
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
@@ -264,6 +271,20 @@ var Routines = []Routine{
 	{"OTS$CVT_TO_L", 194, otsCvtTOL},
 	{"OTS$CVT_TZ_L", 195, otsCvtTZL},
 	{"OTS$CVT_TL_L", 196, otsCvtTLL},
+	{"OTS$CNVOUT", 197, otsCnvout},
+	{"OTS$CNVOUT_G", 198, otsCnvoutG},
+	{"OTS$CNVOUT_H", 199, otsCnvoutH},
+	{"OTS$CVT_T_D", 200, otsCvtTD},
+	{"OTS$CVT_T_F", 201, otsCvtTF},
+	{"OTS$CVT_T_G", 202, otsCvtTG},
+	{"OTS$CVT_T_H", 203, otsCvtTH},
+	{"OTS$MOVE3", 204, otsMove3},
+	{"OTS$MOVE5", 205, otsMove5},
+	{"OTS$SCOPY_DXDX", 206, otsScopyDxdx},
+	{"OTS$SCOPY_R_DX", 207, otsScopyRDx},
+	{"OTS$SGET1_DD", 208, otsSget1DD},
+	{"OTS$SFREE1_DD", 209, otsSfree1DD},
+	{"OTS$SFREEN_DD", 210, otsSfreenDD},
 }
 
 // callsBack names the routines that call back into the program (a

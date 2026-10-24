@@ -81,7 +81,7 @@ func Missing() []Routine {
 
 // MissingJSB returns a JSBRoutine for each JSB entry of LIBRTL.EXE's
 // transfer vector that JSBRoutines doesn't provide (STR$COPY_DX_R8,
-// OTS$MOVE3_R5, ...), coded from missingJSBCodeBase. A program that names
+// OTS$CVTDP_R9, ...), coded from missingJSBCodeBase. A program that names
 // one runs, as with Missing's, until it reaches it; the call then signals
 // as a missing CALL entry's does, raised in its caller's frame (a JSB
 // routine has none of its own), and if a handler continues it returns

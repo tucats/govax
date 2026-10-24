@@ -78,7 +78,7 @@ func TestSharedName(t *testing.T) {
 		want   string
 	}{
 		{"LIBRTL", 0x0478, "LIB$PUT_OUTPUT"},       // a shim
-		{"LIBRTL", 0x0940, "OTS$CNVOUT"},           // a missing routine's stub
+		{"LIBRTL", 0x0A20, "OTS$DIV_PK_LONG"},      // a missing routine's stub
 		{"LIBRTL", 0x0308, "LIB$ANALYZE_SDESC_R2"}, // no stub (JSB): vmsdef.ImageSymbols
 		{"DECC$SHR", 0x0380, "DECC$PRINTF"},        // a shim for an image vmsdef lacks
 		{"LIBRTL", 0x0001, ""},                     // not an entry
