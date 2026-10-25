@@ -1834,3 +1834,34 @@ Entry template:
     where VMS's EXCHANGE gave CR (the oracle rewrites VMS's RAT).
 - **Status**: open, unconfirmed; each would need another VAX run.
 
+### [Phase 73] Tracing through services and run-time library routines
+
+- **Where**: `internal/corevms`'s system service and shim stubs (the P1
+  vector entries, `SHIM$LIBRTL_<offset>` stubs), and `corevms/signal.go`'s
+  `tracedSignal`; `docs/PHASE-73 - trace trap.md`, Decision 6.
+- **What**: a program tracing itself (PSL<T>, SS$_TBIT) gets a trace at
+  each instruction govax really runs, which isn't what VMS runs.
+  VMS 7.1's run of `testdata/trace73` showed:
+  - A system service called by `CALLS`/`CALLG` gives three traces on
+    both, but at the vector entry's `+2` and `+6` on VMS (its `CHMK` is
+    four bytes) and `+2` and `+4` on govax (an `XFC` of two).
+  - A LIBRTL routine is VMS's VAX code, about 15 traces with IV set by
+    its entry mask; on govax it's a Go shim behind a three-instruction
+    stub (`+2`, `+9`, `+B`).
+  - `LIB$SIGNAL` from traced code: VMS traces 54 instructions of its
+    code and the user-mode condition search, then ends the image with
+    the condition's message and the condition (STS$M_INHIB_MSG) as its
+    status, calling no handler. govax ends the image the same way, but
+    its traces before are the stub's. LIB$STOP is assumed to do the same
+    (unconfirmed).
+  - Under the debugger, VMS's own debugger code in P0 is traced after a
+    service's `CHMK` (the TRSVC session); govax's debugger has no code in
+    the program's address space.
+  - A STEP from a break on SS$_TBIT goes into the handler on VMS ("to
+    routine TRACER") and clears T in the signal array's PSL; govax's
+    steps the dispatcher, as for every condition.
+- **Status**: kept, by the author's choice (2026-10-24): govax doesn't
+  add, drop, or move traces to imitate VMS's code. `TestTrace73Oracle`
+  compares those parts without the records outside the program
+  (`trace73Differences`), and the debugger's session oracle lists the
+  STEP difference (`reasonStepException`).

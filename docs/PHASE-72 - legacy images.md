@@ -377,7 +377,9 @@ ends `...117173`, the true value `...116973`), which govax doesn't copy.
 
 - **govax has no trace trap**: PSL<T> is kept but never traps
   (SS$_TBIT), so a program can't trace itself as the study does, and
-  the study runs on VMS only.
+  the study runs on VMS only. (Fixed 2026-10-25 by Phase 73, the trace
+  trap: the study runs on govax with VMS's FORRTL, and
+  `TestOTS72TOracle` holds it to VMS's run.)
 - **DIRECTORY with a list of specs** (`DIRECTORY/FULL
   DUA2:[000000]*.EXE,*.DAT`) lists only the first spec's files. (Fixed
   2026-10-24, after the phase: the list's temporary defaults, the User's
@@ -385,7 +387,8 @@ ends `...117173`, the true value `...116973`), which govax doesn't copy.
   its heading and total, as VMS's logs show.)
 - **govax's debugger ignores `DBG$INPUT`**: RUN/DEBUG in a procedure
   that defines it shows the INITIAL message and ends the session at
-  once, where VMS's debugger reads its commands from the file.
+  once, where VMS's debugger reads its commands from the file. (Fixed
+  2026-10-25 by Phase 73's subtask 5, with SET LOG and SET OUTPUT.)
 - **DUNGEON_V552.EXE** (02.05, the same game linked on VMS 5.5-2
   against FORRTL) activates and runs on govax, then stops with
   `Message number 0018813C`. The probe showed it's FOR-F-ERRDURWRI, as

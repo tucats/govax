@@ -251,14 +251,16 @@ never had.
   module, not only set ones, by the author's choice) are done, as is 8,
   the close-out; the phase doc's "Where things stand" lists what it left
   for later.
-  Phase 73 (planned 2026-10-24) is the trace trap: PSL<T> and <TP> by
+  Phase 73 (done 2026-10-25) is the trace trap: PSL<T> and <TP> by
   the architecture's rules, SS$_TBIT signaled to the program's
   handlers so a program can trace itself, and the debugger beside a
-  traced program as VMS 7.1's is (subtasks 1 to 6 done, checked by
-  `testdata/trace73`; 5 is `DBG$INPUT` and the debugger's SET LOG and
-  SET OUTPUT; 6 is `testdata/ots72`'s `ots72t.mar` traced into VMS's
-  FORRTL, `TestOTS72TOracle`, which finds FORRTL.EXE on a local volume
-  in `testdata/disks` or skips).
+  traced program as VMS 7.1's is, checked by `testdata/trace73`;
+  subtask 5 is `DBG$INPUT` and the debugger's SET LOG and SET OUTPUT,
+  6 `testdata/ots72`'s `ots72t.mar` traced into VMS's FORRTL
+  (`TestOTS72TOracle`, which finds FORRTL.EXE on a local volume in
+  `testdata/disks` or skips), and 7 the close-out (the manual's section
+  8, example 6, and section 12's "A program that traces itself";
+  DEVIATIONS.md's entry for the traces of services and LIBRTL routines).
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

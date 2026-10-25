@@ -1,11 +1,11 @@
 # Phase 73 — the trace trap
 
-**Status:** in progress. Planned 2026-10-24; the author answered Part
+**Status:** done 2026-10-25. Planned 2026-10-24; the author answered Part
 B's questions the same day: the probe runs, and govax follows its
 answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), 3 (the
 debugger beside a traced program), 4 (the probe, and govax changed
 to its answers), 5 (DBG$INPUT and the debugger's log), and 6
-(`ots72t.mar` with VMS's FORRTL) are done.
+(`ots72t.mar` with VMS's FORRTL), and 7 (the close-out) are done.
 
 ## Goal
 
@@ -51,7 +51,15 @@ machine, and keeps doing so: Decision 5).
 - **Done**: subtask 6, `ots72t.mar` on govax with VMS's FORRTL:
   `TestOTS72TOracle` holds every case to VMS's run when a local volume
   has FORRTL.EXE.
-- **Next**: subtask 7, the close-out.
+- **Done**: subtask 7, the close-out: the manual's section 8, example
+  6 (a program that traces itself) and section 12's "A program that
+  traces itself", the trace fault in section 13; `docs/DEVIATIONS.md`'s
+  Phase 73 entry (Decision 6's differences); Phase 72's side findings
+  marked fixed; CLAUDE.md and PLAN.md.
+- **Left for later**: STEP from a break on SS$_TBIT going into the
+  handler, as VMS's does (govax steps the dispatcher, as for every
+  condition); LIB$STOP from traced code, and EXIT's ending of an image
+  still running (no exit handlers), unconfirmed.
 
 ## Part A — the survey (2026-10-24)
 
@@ -702,3 +710,19 @@ VMS logs:
   name as its translation (a single one as itself, so a default type
   goes on the translation), as RMS translates the primary name before
   applying related-file fields; `TestLocateRelated` has the case.
+
+### 2026-10-25 — Subtask 7, the close-out
+
+- `docs/MANUAL.md`: section 8's example 6, `TRACER`, a program that
+  counts the instructions a loop runs by tracing itself (12, run on
+  govax), with the rules a traced program sees and Decision 6's
+  difference; section 12's "A program that traces itself", what the
+  debugger does beside one, with a session run on govax (an exception
+  break on SS$_TBIT, a breakpoint taking the next trace, GO ending the
+  tracing: "Sum 15, 1 instruction traced"); section 13's exceptions,
+  the trace fault and TP.
+- `docs/DEVIATIONS.md`: "[Phase 73] Tracing through services and
+  run-time library routines", kept by the author's choice.
+- Phase 72's side findings "govax has no trace trap" and "govax's
+  debugger ignores `DBG$INPUT`" marked fixed; PLAN.md's row and
+  CLAUDE.md's overview say the phase is done.

@@ -2503,6 +2503,92 @@ condition's arrays would be.
 `LIB$SIGNAL` and `LIB$STOP` raise conditions of your own, and
 `LIB$ESTABLISH`, `LIB$REVERT`, and `LIB$SIG_TO_RET` work as on VMS.
 
+### Example 6: A program that traces itself
+
+The PSL's *T bit* (trace, bit 4) makes the processor take a *trace
+fault* after each instruction, which VMS reports to the program as the
+condition `SS$_TBIT`. A program can trace itself with it: set T, and a
+condition handler is called once per instruction. This one counts the
+instructions a loop runs:
+
+```asm
+        .TITLE  TRACER  Count the instructions a loop runs
+        $SSDEF                          ; SS$_ symbols
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+COUNT:  .LONG   0                       ; traces taken
+SUM:    .LONG   0
+FORMAT: .ASCID  /Sum !UL, !UL instruction!%S traced/
+LINE:   .ASCID  /                                        /
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+
+        .ENTRY  MAIN, ^M<>
+        MOVAB   TRACER, (FP)            ; the handler that takes SS$_TBIT
+        MOVL    #5, R1
+        BISPSW  #^X10                   ; set PSL<T>
+        CLRL    R0                      ; the first instruction traced
+10$:    ADDL2   R1, R0
+        SOBGTR  R1, 10$
+        BICPSW  #^X10                   ; clear PSL<T>: the last one traced
+        MOVL    R0, SUM
+        $FAO_S  CTRSTR=FORMAT, OUTLEN=LINE, OUTBUF=LINE, P1=SUM, P2=COUNT
+        PUSHAQ  LINE
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        MOVL    #SS$_NORMAL, R0
+        RET
+
+; TRACER(signal-array, mechanism-array): count SS$_TBIT and continue;
+; resignal anything else.
+        .ENTRY  TRACER, ^M<>
+        MOVL    4(AP), R0               ; the signal array
+        CMPL    4(R0), #SS$_TBIT        ; its condition
+        BNEQ    20$
+        INCL    COUNT
+        MOVL    #SS$_CONTINUE, R0       ; go on at the next instruction
+        RET
+20$:    MOVL    #SS$_RESIGNAL, R0
+        RET
+        .END    MAIN
+```
+
+```text
+$ govax run tracer.exe
+Sum 15, 12 instructions traced
+```
+
+The twelve are the `CLRL`, five each of `ADDL2` and `SOBGTR`, and the
+`BICPSW`. The rules, which are the VAX architecture's and VMS's:
+
+- Tracing starts with the second instruction after the one that sets
+  T, and the instruction that clears it is the last traced.
+- `SS$_TBIT`'s signal array has no arguments of its own: the PC is the
+  next instruction to run, and the PSL has T set. A handler that
+  returns `SS$_CONTINUE` goes on there; it can change the signal
+  array's PC to go elsewhere, or clear T in its PSL (bit 4) to stop the
+  tracing.
+- Handlers, and AST routines, run untraced, and the program's T comes
+  back when they return.
+- `CALLS` and `CALLG` save T clear in the frame and `RET` restores it,
+  so tracing stops at the `RET` of a routine called while tracing,
+  unless a handler sets T in that frame's saved PSW.
+- Integer overflow and the other arithmetic traps come first; the trace
+  of that instruction follows the trap's handler.
+- With no handler, `SS$_TBIT` is severe and ends the image:
+  `%SYSTEM-F-TBIT, T-bit pending trap at PC=00000409, PSL=03C00014`,
+  with the traceback dump.
+- `LIB$SIGNAL` or `LIB$STOP` called with T set ends the image with the
+  condition's message and the condition as its status, its handlers
+  never called, as VMS 7.1 does.
+
+A system service or run-time library call is traced as govax runs it,
+which isn't VMS's way: VMS's routines are VAX code, and a traced program
+sees each of their instructions (about 15 for a LIBRTL routine), where
+govax's routines are Go behind a stub of three instructions. A service's
+vector entry gives three traces on both, but at different offsets
+(`SYS$GETTIM+4` on govax, `+6` on VMS, whose `CHMK` is four bytes).
+`docs/DEVIATIONS.md` has the details.
+
 ### The listing
 
 `/LIST` writes a listing laid out as VAX MACRO's. Here is the first page
@@ -3415,6 +3501,59 @@ $ DEFINE/USER_MODE DBG$INPUT RUN.DBG
 $ RUN/DEBUG PROG
 ```
 
+### A program that traces itself
+
+The debugger steps a program from outside the machine, never with the T
+bit, so a program that traces itself (section 8, example 6) can be
+debugged. It behaves as VMS 7.1's debugger does:
+
+- A breakpoint at an instruction that a trace is pending before takes
+  the trace: the program's handler doesn't see it, and `EXAMINE PSL`
+  shows T set and TP clear.
+- Going on from a breakpoint or a step, by `GO` or `STEP`, runs one
+  instruction and then clears the program's T, so the program takes no
+  further traces. A T set with `DEPOSIT` goes the same way.
+- A breakpoint in the program's trace handler doesn't disturb the
+  tracing: `GO` from it, and the program gets every trace.
+- `SET BREAK/EXCEPTION` stops at each `SS$_TBIT`, "at" the instruction
+  the trace comes before; `GO` passes the condition to the program's
+  handler, and the tracing goes on.
+- An unhandled `SS$_TBIT` stops as any unhandled condition does;
+  `GO` says `%DEBUG-I-CONFROMEXC, WARNING: continuing after severe
+  error; integrity not guaranteed` and continues the program.
+
+Here the example's program stops at its first trace by `SET
+BREAK/EXCEPTION`, and its handler gets it; the breakpoint on the
+`SOBGTR` takes the next trace, and the `GO` from there ends the tracing:
+
+```text
+VAX> MACRO/DEBUG TRACER
+VAX> LINK/DEBUG TRACER
+VAX> RUN TRACER
+
+         GOVAX DEBUG
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TRACER
+DBG> SET BREAK %LINE 18
+DBG> SET BREAK/EXCEPTION
+DBG> GO
+%SYSTEM-F-TBIT, T-bit pending trap at PC=00000410, PSL=03C00014
+break on exception at TRACER\MAIN\%LINE 17
+    17: 10$:    ADDL2   R1, R0
+DBG> GO
+break at TRACER\MAIN\%LINE 18
+    18:         SOBGTR  R1, 10$
+DBG> EXAMINE PSL
+TRACER\MAIN\%PSL:
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+DBG> CANCEL BREAK/ALL
+DBG> GO
+Sum 15, 1 instruction traced
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+DBG> EXIT
+```
+
 ### govax's machine commands
 
 These go beyond VMS's debugger, to the machine itself:
@@ -3644,6 +3783,15 @@ the image. The last-chance vector is searched only when the frames
 can't be read. govax does this in Go, calling the program's handlers as VAX
 procedures, so `LIB$SIGNAL`, `$UNWIND`, `LIB$ESTABLISH`, and handlers
 written in MACRO behave as on VMS (section 8, example 5).
+
+The *trace fault* is taken at the start of an instruction when the
+PSL's trace-pending bit (TP) is set; at each instruction's start the
+processor copies the T bit into TP, so the fault comes after each
+instruction that ran with T set. A fault that restarts its instruction
+clears TP, so the instruction is traced when it completes; a trap keeps
+it, so the trace follows the trap's handler. Every exception handler
+starts with T and TP clear. VMS signals the trace fault as `SS$_TBIT`
+(section 8, example 6).
 
 *Interrupts* come from outside the instruction stream (the clock,
 devices, software interrupts requested with `SIRR`) and are taken when
