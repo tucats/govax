@@ -1,0 +1,38 @@
+@TRGO.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRGO.DBG
+! ! TRGO.DBG - GO from breakpoints in code the program traces (part A):
+! ! does the program's handler get the trace of each instruction the
+! ! debugger runs to go on from a breakpoint? A4 is the SOBGTR, reached
+! ! three times.
+! SET BREAK A2
+! SET BREAK A4
+! SET BREAK A8
+! GO
+!break at TRACE73\PART_A\A2
+!   367: A2:     MOVL    #3,R2
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!break at TRACE73\PART_A\A4
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!break at TRACE73\PART_A\A4
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!break at TRACE73\PART_A\A4
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!break at TRACE73\PART_A\A8
+!   373: A8:     NOP
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRGO.DBG
+EXIT

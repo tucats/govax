@@ -1,0 +1,50 @@
+@TREXC.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TREXC.DBG
+! ! TREXC.DBG - SET BREAK/EXCEPTION and SS$_TBIT (part A): what the
+! ! break shows, where the program is, and whether GO and STEP pass the
+! ! condition on to the program's handler.
+! SET BREAK/EXCEPTION
+! SHOW BREAK
+!breakpoint on exception
+! GO
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=000037E0, PSL=03C00010
+!break on exception at TRACE73\PART_A\A2
+!   367: A2:     MOVL    #3,R2
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! EVALUATE %EXC_NAME
+!'TBIT'
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE73         PART_A             367               0000002E         000037E0
+!*TRACE73         TRACE73            199               000000B2         000034B2
+! EXAMINE/INSTRUCTION .PC
+!TRACE73\PART_A\A2:      MOVL     S^#03,R2
+! GO
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=000037E3, PSL=03C00010
+!break on exception at TRACE73\PART_A\A3
+!   368: A3:     ADDL2   #1,R0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000001
+! STEP
+!stepped to routine TRACE73\TRACER
+!   232:         MOVL    4(AP),R1                ; the signal array
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE73         TRACER             232               00000002         00003520
+!----- above condition handler called with exception 00000464:
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=000037E3, PSL=03C00000
+!----- end of exception message
+!*TRACE73         PART_A             368               00000031         000037E3
+!*TRACE73         TRACE73            199               000000B2         000034B2
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000001
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TREXC.DBG
+EXIT

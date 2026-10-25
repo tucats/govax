@@ -445,3 +445,61 @@ sessions do nothing on govax, and `RUN/DEBUG` in a command procedure
 leaves the session's image file open after the procedure's next `$`
 line (DISMOUNT then reports a user file open). The oracle will replay
 the `.dbg` files directly, as `TestDebuggerSessionOracle` does.
+
+### 2026-10-25 — Subtask 4, VMS's answers (round 1)
+
+Round 1 ran on OpenVMS V7.1 (simh's VAX 8600); `testdata/trace73/vax`
+has the log, sessions, maps, objects, and images (VMS's image matches
+govax's byte for byte past the header, so the PCs name the same
+labels). What it says, against govax's dry run above:
+
+- **The same on both**: parts A, B, C, D, F, H, K, record for record
+  (the PC, the signal PSL, the handler's PSL); J's traceback, the
+  "improperly handled" dump's signal array, and `$STATUS`
+  `%X10000464`. ASTs aren't traced (Decision 7 confirmed).
+- **The message**: VMS 7.1 says `T-bit pending trap at PC=00003B1D,
+  PSL=03C00010`; govax's text (the generated table's) says `PS=`. To
+  go in `vmsdef`'s `vaxMessages`.
+- **Part I**: VMS honors TP set in the signal array's PSL: a second
+  trace before I2. govax takes TP from the exception's PSL. Taking it
+  from the signal array instead also gives part B's answer (a trap's
+  signal PSL has TP set) and part K's (a fault's has it clear).
+- **Part E** (Decision 6's difference): a service call gives three
+  traces on both, at the entry's `+2` and `+6` on VMS (its CHMK is four
+  bytes) and `+2` and `+4` on govax. A LIBRTL routine gives about 15
+  traces in VMS's code, with IV set (its entry mask), and three in
+  govax's stub. To be documented, not imitated.
+- **Part G**: LIB$SIGNAL from traced code ended the image before its
+  report, with `%SYSTEM-W-ENDOFFILE` and `$STATUS %X10000870`. Round 2
+  (`trace73b.mar`) reports from an exit handler, and tries the signal
+  with LIB$SIGNAL's own code untraced (part L) and with no handler in
+  the part's frame (part M).
+- **The debugger** (Question 2; Decision 5 says follow VMS):
+  - A breakpoint at an instruction a trace is pending before takes the
+    trace: the break shows T 1 and TP 0, and the program's handler
+    never sees it (TRSTEP, TRGO, TRSVC, TRCALL).
+  - Going on from a breakpoint or a step, by STEP or GO, clears the
+    program's T after the first instruction: after the first STEP, T
+    is 0 and no trace reaches the program again (TRSTEP, TRCALL); GO
+    from breakpoints in traced code gives the program no traces
+    (TRGO). A T set by DEPOSIT goes the same way (TRDEP, TRDEPGO: no
+    traces).
+  - A breakpoint in the trace handler doesn't disturb the tracing: GO
+    from it, and the program gets every trace (TRHAND).
+  - SET BREAK/EXCEPTION stops at each SS$_TBIT with its message
+    (`PSL=`), "break on exception at" the instruction the trace comes
+    before, with the exception's registers and frames (SHOW CALLS shows
+    the program's), `%EXC_NAME` `'TBIT'`; GO passes it to the handler,
+    and tracing goes on. A STEP from it goes "to routine TRACER", and
+    the signal array's PSL then has T clear, so the tracing stops after
+    the handler continues (TREXC).
+  - An unhandled SS$_TBIT: "break on unhandled exception at" the
+    instruction; GO says `%DEBUG-I-CONFROMEXC, WARNING: continuing after
+    severe error; integrity not guaranteed` and continues the program,
+    which takes the next trace (TRUNH).
+  - DEPOSIT to the PSL changes only its low word: `DEPOSIT PSL =
+    03C00000` and `DEPOSIT PSL = 0` leave the modes as they were, and
+    `DEPOSIT/BYTE PSL = 0F` sets the condition codes (TRPRIV).
+  - Under the debugger, VMS's own debugger code in P0 is traced after a
+    service's CHMK (TRSVC's records at `P0 000912xx`): VMS's internals,
+    nothing govax can match.

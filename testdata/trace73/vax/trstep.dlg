@@ -1,0 +1,66 @@
+@TRSTEP.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRSTEP.DBG
+! ! TRSTEP.DBG - STEP through code the program traces (part A). Is the
+! ! trace of each instruction a STEP runs the program's (TCOUNT goes up)
+! ! or the debugger's? Does T stay set after each step?
+! SET STEP INSTRUCTION
+! SET BREAK A2
+! GO
+!break at TRACE73\PART_A\A2: MOVL     S^#03,R2
+!   367: A2:     MOVL    #3,R2
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A3: ADDL2    S^#01,R0
+!   368: A3:     ADDL2   #1,R0
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A4: SOBGTR   R2,TRACE73\PART_A\A3
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A3: ADDL2    S^#01,R0
+!   368: A3:     ADDL2   #1,R0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A4: SOBGTR   R2,TRACE73\PART_A\A3
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A3: ADDL2    S^#01,R0
+!   368: A3:     ADDL2   #1,R0
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_A\A4: SOBGTR   R2,TRACE73\PART_A\A3
+!   369: A4:     SOBGTR  R2,A3
+! EXAMINE PSL
+!TRACE73\PART_A\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRSTEP.DBG
+EXIT

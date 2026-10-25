@@ -1,0 +1,32 @@
+@TRPRIV.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRPRIV.DBG
+! ! TRPRIV.DBG - DEPOSIT to the PSL's privileged half (part N): what the
+! ! debugger accepts, and what EXAMINE then shows. Last, since the GO
+! ! after it may fail.
+! SET BREAK N1
+! GO
+!break at TRACE73\PART_N\N1
+!   597: N1:     NOP
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! DEPOSIT PSL = 03C00000
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! DEPOSIT/BYTE PSL = 0F
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 1 1 1 1
+! DEPOSIT PSL = 0
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRPRIV.DBG
+EXIT

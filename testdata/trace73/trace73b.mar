@@ -1,0 +1,408 @@
+	.TITLE	TRACE73B	Phase 73 trace trap probe, round 2
+	.IDENT	/V1.0/
+;
+; Round 2 of Phase 73's probe (README.md): what round 1's part G left
+; open. There, LIB$SIGNAL of SS$_ENDOFFILE from traced code ended the
+; image (%SYSTEM-W-ENDOFFILE, $STATUS %X10000870) before the part's
+; report. Here an exit handler prints the report, so the records kept up
+; to the image's end are seen, with the exit status. The program is
+; trace73.mar's (its handlers, records, and report), with these parts,
+; picked by the logical name TRACE73B_PART:
+;
+;   G  round 1's part G again: LIB$SIGNAL of SS$_ENDOFFILE from traced
+;      code, TRACER continuing it
+;   L  the same, but TRACER clears T at the first trace outside this
+;      program, so LIB$SIGNAL's own code runs untraced
+;   M  the same as G, but with no handler in the part's frame: only
+;      OUTER, in the main routine's
+;   S  LIB$SIGNAL from untraced code, for comparison
+;
+	$LNMDEF
+
+SS$_CONTINUE	= ^X00000001
+SS$_ACCVIO	= ^X0000000C
+SS$_TBIT	= ^X00000464
+SS$_ENDOFFILE	= ^X00000870
+SS$_RESIGNAL	= ^X00000918
+SS$_UNWIND	= ^X00000920
+
+MAXREC	= 600			; records kept
+RECSIZ	= 20			; bytes in a record
+
+; SAY text: write the line text (in line, branched around).
+	.MACRO	SAY	TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAQ	LBL
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	DATA,NOEXE,WRT,LONG
+
+PARTNAM: .ASCID	/TRACE73B_PART/
+TABNAM:	.ASCID	/LNM$FILE_DEV/
+PART:	.LONG	0
+PARTLEN: .LONG	0
+ITMLST:	.WORD	4,LNM$_STRING
+	.ADDRESS PART,PARTLEN
+	.LONG	0
+
+; Each part's routine, by letter (0: no such part).
+PARTTAB: .LONG	0			; A
+	.LONG	0			; B
+	.LONG	0			; C
+	.LONG	0			; D
+	.LONG	0			; E
+	.LONG	0			; F
+	.ADDRESS PART_G			; G
+	.LONG	0			; H
+	.LONG	0			; I
+	.LONG	0			; J
+	.LONG	0			; K
+	.ADDRESS PART_L			; L
+	.ADDRESS PART_M			; M
+	.LONG	0			; N
+	.LONG	0			; O
+	.LONG	0			; P
+	.LONG	0			; Q
+	.LONG	0			; R
+	.ADDRESS PART_S			; S
+
+; The handlers' state.
+LIMIT:	.LONG	300		; traces each handler takes before it stops them
+TCOUNT:	.LONG	0		; SS$_TBITs TRACER was called for
+OCOUNT:	.LONG	0		; and OUTER
+RECN:	.LONG	0		; records kept
+RECS:	.BLKB	MAXREC*RECSIZ	; who, condition, PC, PSL, the handler's PSL
+
+; What a part asks TRACER to do to the PC or PSL it continues with, at
+; a trace whose PC is the one given (0: nothing).
+SKIPPC:	.LONG	0		; continue at SKIPTO instead
+SKIPTO:	.LONG	0
+TPPC:	.LONG	0		; set TP (once)
+ZPC:	.LONG	0		; set Z
+STOPPC:	.LONG	0		; clear T
+FAULTTO: .LONG	0		; an access violation: continue here
+OUTSTOP: .LONG	0		; clear T at the first trace outside CODE
+
+; The exit handler's block and the status it's given.
+EXHBLK:	.LONG	0
+	.ADDRESS EXH
+	.LONG	1
+	.ADDRESS EXHST
+EXHST:	.LONG	0
+EXHCTL:	.ASCID	/  exit status !XL/
+
+; Part F's AST routine's record, part I's fall-through flag.
+ASTN:	.LONG	0
+ASTPSL:	.LONG	0
+IFELL:	.LONG	0
+
+; Part E's arguments.
+TIME:	.QUAD	0
+EFN:	.LONG	0
+GTARGS:	.LONG	1
+	.ADDRESS TIME
+
+; The entry points PCs are named by: each address (filled in at the
+; start) and its name. A PC from the address to 1F past it (a vector
+; entry) is named by the nearest.
+ANCHORS:
+ANC_GT:	.LONG	0
+	.ADDRESS NAM_GT
+ANC_DA:	.LONG	0
+	.ADDRESS NAM_DA
+ANC_GE:	.LONG	0
+	.ADDRESS NAM_GE
+ANC_FE:	.LONG	0
+	.ADDRESS NAM_FE
+ANC_SG:	.LONG	0
+	.ADDRESS NAM_SG
+	.LONG	0
+NAM_GT:	.ASCIC	/SYS$GETTIM/
+NAM_DA:	.ASCIC	/SYS$DCLAST/
+NAM_GE:	.ASCIC	/LIB$GET_EF/
+NAM_FE:	.ASCIC	/LIB$FREE_EF/
+NAM_SG:	.ASCIC	/LIB$SIGNAL/
+NAM_P0:	.ASCIC	/P0/
+NAM_P1:	.ASCIC	/P1/
+NAM_S0:	.ASCIC	/S0/
+WHO_T:	.ASCIC	/T/
+WHO_O:	.ASCIC	/O/
+
+; Output.
+LINLEN:	.WORD	0
+	.ALIGN	LONG
+LINDSC:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS LINE
+OUTDSC:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS LINE
+LINE:	.BLKB	132
+WHRLEN:	.WORD	0
+	.ALIGN	LONG
+WHRBUF:	.WORD	40
+	.BYTE	14,1
+	.ADDRESS WHRTXT
+WHRDSC:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS WHRTXT
+WHRTXT:	.BLKB	40
+WCODE:	.ASCID	/CODE+!XW/
+WANCH:	.ASCID	/!AC+!XW/
+WRAW:	.ASCID	/!AC !XL/
+SUMCTL:	.ASCID	/  traces: tracer !UL, outer !UL; records !UL/
+EXTCTL:	.ASCID	/  AST calls !UL, AST PSL !XL; BEQL fell through !UL/
+RECCTL:	.ASCID	/  !AC !XL !AS PSL=!XL handler=!XL/
+
+	.PSECT	CODE,NOWRT,EXE,LONG
+CODESTART:
+
+; The main routine: declare the exit handler, which reports, and run
+; the part TRACE73B_PART names, with OUTER as its handler.
+	.ENTRY	TRACE73B,^M<R2>
+	$TRNLNM_S TABNAM=TABNAM,LOGNAM=PARTNAM,ITMLST=ITMLST
+	BLBS	R0,10$
+	SAY	</no TRACE73_PART/>
+	MOVL	#1,R0
+	RET
+10$:	MOVAB	G^SYS$GETTIM,ANC_GT
+	MOVAB	G^SYS$DCLAST,ANC_DA
+	MOVAB	G^LIB$GET_EF,ANC_GE
+	MOVAB	G^LIB$FREE_EF,ANC_FE
+	MOVAB	G^LIB$SIGNAL,ANC_SG
+	MOVZBL	PART,R2
+	SUBL2	#^A/A/,R2
+	CMPL	R2,#^A/S/-^A/A/
+	BGTRU	20$
+	MOVL	PARTTAB[R2],R2
+	BEQL	20$
+	$DCLEXH_S DESBLK=EXHBLK
+	MOVAB	OUTER,(FP)
+	CALLS	#0,(R2)
+	SAY	</  the part returned/>
+	MOVL	#1,R0
+	RET
+20$:	SAY	</no such part/>
+	MOVL	#1,R0
+	RET
+
+; REC: a JSB subroutine that keeps a record, if there is room: R0 the
+; ASCIC name of the handler, R1 the signal array. The PSL it records
+; last is the handler's own (a JSB doesn't change it).
+REC:	PUSHR	#^M<R2,R3,R4>
+	MOVL	RECN,R2
+	CMPL	R2,#MAXREC
+	BGEQU	9$
+	MULL3	#RECSIZ,R2,R3
+	MOVAB	RECS[R3],R3
+	MOVL	R0,(R3)+		; who
+	MOVL	4(R1),(R3)+		; the condition
+	MOVL	(R1),R4			; the count: the PC is at n-1, the PSL at n
+	MOVL	-4(R1)[R4],(R3)+	; the PC
+	MOVL	(R1)[R4],(R3)+		; the PSL
+	MOVPSL	(R3)			; the handler's PSL
+	INCL	RECN
+9$:	POPR	#^M<R2,R3,R4>
+	RSB
+
+; TRACER, each part's handler: records what it's called for. SS$_TBIT
+; continues, doing what the part asked (SKIPPC and its neighbors), and
+; stops the tracing after LIMIT; an access violation continues at
+; FAULTTO if a part set it, and is resignaled otherwise; anything else
+; (an arithmetic trap, LIB$SIGNAL's warning) continues.
+	.ENTRY	TRACER,^M<R2,R3>
+	MOVL	4(AP),R1		; the signal array
+	CMPL	4(R1),#SS$_UNWIND
+	BNEQ	1$
+	RET
+1$:	MOVAB	WHO_T,R0
+	JSB	REC
+	MOVL	(R1),R2
+	MOVAL	(R1)[R2],R3		; the PSL's address; the PC's is 4 less
+	CMPL	4(R1),#SS$_TBIT
+	BEQL	10$
+	CMPL	4(R1),#SS$_ACCVIO
+	BNEQ	5$
+	TSTL	FAULTTO
+	BEQL	6$
+	MOVL	FAULTTO,-4(R3)
+5$:	MOVL	#SS$_CONTINUE,R0
+	RET
+6$:	MOVL	#SS$_RESIGNAL,R0
+	RET
+10$:	INCL	TCOUNT
+	CMPL	TCOUNT,LIMIT
+	BLSS	11$
+	BICL2	#^X10,(R3)
+11$:	TSTL	OUTSTOP
+	BEQL	16$
+	MOVAB	CODESTART,R0
+	SUBL3	R0,-4(R3),R0
+	CMPL	R0,#CODEEND-CODESTART
+	BLSSU	16$
+	BICL2	#^X10,(R3)
+	CLRL	OUTSTOP
+16$:	CMPL	-4(R3),SKIPPC
+	BNEQ	12$
+	MOVL	SKIPTO,-4(R3)
+12$:	CMPL	-4(R3),TPPC
+	BNEQ	13$
+	BISL2	#^X40000000,(R3)
+	CLRL	TPPC
+13$:	CMPL	-4(R3),ZPC
+	BNEQ	14$
+	BISL2	#4,(R3)
+14$:	CMPL	-4(R3),STOPPC
+	BNEQ	15$
+	BICL2	#^X10,(R3)
+15$:	MOVL	#SS$_CONTINUE,R0
+	RET
+
+; OUTER, the main routine's handler: records what it's called for;
+; continues SS$_TBIT (stopping the tracing after LIMIT) and resignals
+; anything else.
+	.ENTRY	OUTER,^M<R2>
+	MOVL	4(AP),R1
+	CMPL	4(R1),#SS$_UNWIND
+	BNEQ	1$
+	RET
+1$:	MOVAB	WHO_O,R0
+	JSB	REC
+	CMPL	4(R1),#SS$_TBIT
+	BEQL	10$
+	MOVL	#SS$_RESIGNAL,R0
+	RET
+10$:	INCL	OCOUNT
+	CMPL	OCOUNT,LIMIT
+	BLSS	11$
+	MOVL	(R1),R2
+	BICL2	#^X10,(R1)[R2]
+11$:	MOVL	#SS$_CONTINUE,R0
+	RET
+
+; WHERE pc: names pc in WHRDSC.
+	.ENTRY	WHERE,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R2
+	MOVAB	CODESTART,R3
+	SUBL3	R3,R2,R4
+	CMPL	R4,#CODEEND-CODESTART
+	BGEQU	10$
+	$FAO_S	CTRSTR=WCODE,OUTLEN=WHRLEN,OUTBUF=WHRBUF,P1=R4
+	BRW	90$
+10$:	MOVAL	ANCHORS,R3		; the nearest entry point at or below pc
+	CLRL	R5			; its name
+	MOVL	#^X20,R6		; and the distance, at most 1F
+20$:	MOVL	(R3)+,R4
+	BEQL	30$
+	MOVL	(R3)+,R1
+	SUBL3	R4,R2,R0
+	CMPL	R0,R6
+	BGEQU	20$
+	MOVL	R0,R6
+	MOVL	R1,R5
+	BRB	20$
+30$:	TSTL	R5
+	BEQL	40$
+	$FAO_S	CTRSTR=WANCH,OUTLEN=WHRLEN,OUTBUF=WHRBUF,P1=R5,P2=R6
+	BRB	90$
+40$:	MOVAB	NAM_P0,R5
+	CMPL	R2,#^X40000000
+	BLSSU	50$
+	MOVAB	NAM_P1,R5
+	CMPL	R2,#^X80000000
+	BLSSU	50$
+	MOVAB	NAM_S0,R5
+50$:	$FAO_S	CTRSTR=WRAW,OUTLEN=WHRLEN,OUTBUF=WHRBUF,P1=R5,P2=R2
+90$:	MOVW	WHRLEN,WHRDSC
+	RET
+
+; PRINT: write LINE, LINLEN long.
+	.ENTRY	PRINT,^M<>
+	MOVW	LINLEN,OUTDSC
+	PUSHAQ	OUTDSC
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RET
+
+; REPORT: the counts, the AST routine's and part I's notes, then each
+; record.
+	.ENTRY	REPORT,^M<R2,R3,R4>
+	$FAO_S	CTRSTR=SUMCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,-
+		P1=TCOUNT,P2=OCOUNT,P3=RECN
+	CALLS	#0,PRINT
+	$FAO_S	CTRSTR=EXTCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,-
+		P1=ASTN,P2=ASTPSL,P3=IFELL
+	CALLS	#0,PRINT
+	MOVAB	RECS,R2
+	MOVL	RECN,R3
+	MOVAQ	WHRDSC,R4
+10$:	TSTL	R3
+	BEQL	90$
+	PUSHL	8(R2)
+	CALLS	#1,WHERE
+	$FAO_S	CTRSTR=RECCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,-
+		P1=(R2),P2=4(R2),P3=R4,P4=12(R2),P5=16(R2)
+	CALLS	#0,PRINT
+	ADDL2	#RECSIZ,R2
+	DECL	R3
+	BRB	10$
+90$:	RET
+
+; EXH, the exit handler: the exit status, then the report.
+	.ENTRY	EXH,^M<>
+	$FAO_S	CTRSTR=EXHCTL,OUTLEN=LINLEN,OUTBUF=LINDSC,P1=EXHST
+	CALLS	#0,PRINT
+	CALLS	#0,REPORT
+	RET
+
+; Part G: round 1's part G.
+	.ENTRY	PART_G,^M<>
+	MOVAB	TRACER,(FP)
+	SAY	</G LIB$SIGNAL from traced code/>
+	BISPSW	#^X10
+G1:	NOP
+	PUSHL	#SS$_ENDOFFILE
+G2:	CALLS	#1,G^LIB$SIGNAL
+G3:	NOP
+G4:	NOP
+	BICPSW	#^X10
+	RET
+
+; Part L: as G, but LIB$SIGNAL's own code runs untraced.
+	.ENTRY	PART_L,^M<>
+	MOVAB	TRACER,(FP)
+	SAY	</L LIB$SIGNAL, tracing stopped inside it/>
+	MOVL	#1,OUTSTOP
+	BISPSW	#^X10
+L1:	NOP
+	PUSHL	#SS$_ENDOFFILE
+L2:	CALLS	#1,G^LIB$SIGNAL
+L3:	NOP
+L4:	NOP
+	BICPSW	#^X10
+	RET
+
+; Part M: as G, with no handler in this frame.
+	.ENTRY	PART_M,^M<>
+	SAY	</M LIB$SIGNAL from traced code, OUTER only/>
+	BISPSW	#^X10
+M1:	NOP
+	PUSHL	#SS$_ENDOFFILE
+M2:	CALLS	#1,G^LIB$SIGNAL
+M3:	NOP
+M4:	NOP
+	BICPSW	#^X10
+	RET
+
+; Part S: LIB$SIGNAL from untraced code.
+	.ENTRY	PART_S,^M<>
+	MOVAB	TRACER,(FP)
+	SAY	</S LIB$SIGNAL from untraced code/>
+	PUSHL	#SS$_ENDOFFILE
+S2:	CALLS	#1,G^LIB$SIGNAL
+S3:	NOP
+	RET
+
+CODEEND:
+	.END	TRACE73B

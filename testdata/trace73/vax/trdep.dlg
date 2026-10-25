@@ -1,0 +1,48 @@
+@TRDEP.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRDEP.DBG
+! ! TRDEP.DBG - DEPOSIT to the PSL setting T (part N, which doesn't trace
+! ! itself): does the program trace itself after it, and does STEP give
+! ! its handler the traces?
+! SET STEP INSTRUCTION
+! SET BREAK N1
+! GO
+!break at TRACE73\PART_N\N1: NOP     
+!   597: N1:     NOP
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! DEPOSIT/WORD PSL = 10
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_N\N2: NOP     
+!   598: N2:     NOP
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_N\N3: NOP     
+!   599: N3:     NOP
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_N\N4: NOP     
+!   600: N4:     NOP
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRDEP.DBG
+EXIT

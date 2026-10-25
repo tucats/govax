@@ -1,0 +1,24 @@
+@TRUNH.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRUNH.DBG
+! ! TRUNH.DBG - an SS$_TBIT no handler takes, under the debugger (part J).
+! GO
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=00003B1D, PSL=03C00010
+!break on unhandled exception at TRACE73\PART_J\J2
+!   572: J2:     NOP
+! EXAMINE PSL
+!TRACE73\PART_J\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE73         PART_J             572               00000031         00003B1D
+!*TRACE73         TRACE73            199               000000B2         000034B2
+! EXAMINE/INSTRUCTION .PC
+!TRACE73\PART_J\J2:      NOP     
+! GO
+!%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=00003B1E, PSL=03C00010
+!break on unhandled exception at TRACE73\PART_J\J3
+!   573: J3:     BICPSW  #^X10
+!%DEBUG-I-VERIFYICF, exiting command procedure TRUNH.DBG
+EXIT

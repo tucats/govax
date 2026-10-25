@@ -1,0 +1,46 @@
+@TRHAND.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRHAND.DBG
+! ! TRHAND.DBG - a breakpoint in the program's trace handler (part A):
+! ! SHOW CALLS there, the PSL the handler runs with, and stepping in it.
+! SET BREAK TRACER
+! GO
+!break at routine TRACE73\TRACER
+!   232:         MOVL    4(AP),R1                ; the signal array
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE73         TRACER             232               00000002         00003520
+!----- above condition handler called with exception 00000464:
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=000037E0, PSL=03C00010
+!----- end of exception message
+!*TRACE73         PART_A             367               0000002E         000037E0
+!*TRACE73         TRACE73            199               000000B2         000034B2
+! EXAMINE PSL
+!TRACE73\TRACER\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! STEP
+!stepped to TRACE73\TRACER\%LINE 233
+!   233:         CMPL    4(R1),#SS$_UNWIND
+! STEP
+!stepped to TRACE73\TRACER\%LINE 234
+!   234:         BNEQ    1$
+! EXAMINE PSL
+!TRACE73\TRACER\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 1 0 0 1
+! GO
+!break at routine TRACE73\TRACER
+!   232:         MOVL    4(AP),R1                ; the signal array
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE73         TRACER             232               00000002         00003520
+!----- above condition handler called with exception 00000464:
+!%SYSTEM-F-TBIT, T-bit pending trap at PC=000037E3, PSL=03C00010
+!----- end of exception message
+!*TRACE73         PART_A             368               00000031         000037E3
+!*TRACE73         TRACE73            199               000000B2         000034B2
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRHAND.DBG
+EXIT

@@ -1,0 +1,17 @@
+@TRDEPGO.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRDEPGO.DBG
+! ! TRDEPGO.DBG - DEPOSIT to the PSL setting T, then GO (part N): the
+! ! traces the program's handler gets.
+! SET BREAK N1
+! GO
+!break at TRACE73\PART_N\N1
+!   597: N1:     NOP
+! DEPOSIT/WORD PSL = 10
+! EXAMINE PSL
+!TRACE73\PART_N\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRDEPGO.DBG
+EXIT

@@ -1,0 +1,79 @@
+@TRCALL.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRCALL.DBG
+! ! TRCALL.DBG - stepping traced calls (part C): STEP/INTO a traced
+! ! CALLS, the RET that ends the tracing, then STEP/OVER of the CALLS
+! ! whose routine sets T in its frame, and of the JSB.
+! SET STEP INSTRUCTION
+! SET BREAK C2
+! GO
+!break at TRACE73\PART_C\C2: CALLS    S^#00,L^TRACE73\CSUB
+!   400: C2:     CALLS   #0,CSUB                 ; its RET restores T clear
+! EXAMINE PSL
+!TRACE73\PART_C\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 1 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP/INTO
+!stepped to TRACE73\CSUB\CS1: NOP     
+!   414: CS1:    NOP
+! EXAMINE PSL
+!TRACE73\CSUB\%PSL:      
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\CSUB\CS2: RET     
+!   415: CS2:    RET
+! STEP
+!stepped to TRACE73\PART_C\C3: NOP     
+!   401: C3:     NOP
+! EXAMINE PSL
+!TRACE73\PART_C\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_C\C4: NOP     
+!   402: C4:     NOP
+! EXAMINE PSL
+!TRACE73\PART_C\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! SET BREAK C6
+! GO
+!break at TRACE73\PART_C\C6: CALLS    S^#00,L^TRACE73\CSUBT
+!   405: C6:     CALLS   #0,CSUBT                ; its RET restores T set
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_C\C7: NOP     
+!   406: C7:     NOP
+! EXAMINE PSL
+!TRACE73\PART_C\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_C\C8: JSB      L^TRACE73\CSUBT\CJSB
+!   407: C8:     JSB     CJSB
+! EXAMINE PSL
+!TRACE73\PART_C\%PSL:    
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! STEP
+!stepped to TRACE73\PART_C\C9: NOP     
+!   408: C9:     NOP
+! EXAMINE TCOUNT
+!TRACE73\TCOUNT: 00000000
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure TRCALL.DBG
+EXIT

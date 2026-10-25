@@ -31,6 +31,8 @@ They answer the phase's open questions (Part B):
 | `tr*.dbg` | The debugger sessions' commands, each run on one part (`trace73.com`'s `CALL DEBUG` lines name it); each file's opening comment says what it asks |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
+| `trace73b.mar`, `trace73b.com` | Round 2: what round 1's part G left open (the source's opening comment lists its parts, picked by `TRACE73B_PART`) |
+| `exchange2.cmd`, `copyout2.cmd` | Add round 2 to the exchange volume, and copy its results into `vax/` |
 
 ## How the program works
 
@@ -94,6 +96,23 @@ most 600 records are kept. Part J has no handler at all, so its
 The program calls no system macro but `$LNMDEF`, `$TRNLNM_S`, `$FAO_S`,
 and `$DCLAST_S`, and nothing copied back is a DIGITAL file, so the
 volume needs no erasing afterward.
+
+## Round 2
+
+Round 1's part G (LIB$SIGNAL from traced code) ended the image before
+it could report. Round 2 reports from an exit handler, so what was
+recorded before the image ended is seen. On the same volume:
+
+1. From the repository root: `govax console < testdata/trace73/exchange2.cmd`
+2. On the VAX, in the volume's `[000000]`: `@TRACE73B/OUTPUT=TRACE73B.LOG`
+3. From the repository root: `govax console < testdata/trace73/copyout2.cmd`
+
+## The runs
+
+Round 1: 2026-10-25, OpenVMS V7.1 on simh's VAX 8600, the volume on
+DUA1. MACRO and LINK had no messages; every part and session ran; part
+G ended its image early. `docs/PHASE-73 - trace trap.md`'s progress log
+has the answers.
 
 ## govax's dry run
 
