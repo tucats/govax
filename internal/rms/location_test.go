@@ -190,6 +190,7 @@ func TestLocate_bareNameFollowsSetDefault(t *testing.T) {
 
 func TestLocateRelated(t *testing.T) {
 	s := newLocateSession(t)
+	defineLogical(t, s, "FORRTL", "DUA0:[SYSLIB]FORRTL.EXE")
 
 	hostSource := FileLocation{Host: true, Name: filepath.Join("src", "dir", "hello.mar")}
 	volSource := FileLocation{Name: "DUA0:[X.Y]HELLO.MAR;3"}
@@ -204,6 +205,9 @@ func TestLocateRelated(t *testing.T) {
 		{"other.obj", false, hostSource, FileLocation{Host: true, Name: filepath.Join("src", "dir", "other.obj")}},
 		{"OTHER.OBJ", false, volSource, FileLocation{Name: "DUA0:[X.Y]OTHER.OBJ"}},
 		{"OTHER", false, volSource, FileLocation{Name: "DUA0:[X.Y]OTHER"}},
+		// A logical name is its translation, before the related file's
+		// fields (an options file's FORRTL/SHAREABLE).
+		{"FORRTL", false, volSource, FileLocation{Name: "DUA0:[SYSLIB]FORRTL.EXE"}},
 		// Anything else is Locate's.
 		{"other.obj", true, volSource, FileLocation{Host: true, Name: "other.obj"}},
 		{"./other.obj", false, volSource, FileLocation{Host: true, Name: "./other.obj"}},

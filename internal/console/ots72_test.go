@@ -13,8 +13,9 @@ import (
 // returned, signaled, and stored. vax/ots72-vax.txt is its output on VMS
 // (V7.1 on simh's VAX 8600, 2026-10-24), which govax's must match line
 // for line, but for expectedOTS72Differences. (ots72t.mar, the study of
-// FORRTL's calls, needs VMS's FORRTL.EXE, which can't be committed; its
-// answers are checked by librtl's TestOTSCvtForDigits.)
+// FORRTL's calls, needs VMS's FORRTL.EXE, which can't be committed:
+// TestOTS72TOracle runs it when a local volume has one, and librtl's
+// TestOTSCvtForDigits checks its answers without FORRTL.)
 
 // ots72Dir is the probe's directory, from this package's.
 var ots72Dir = filepath.Join("..", "..", "testdata", "ots72")

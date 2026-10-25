@@ -16,7 +16,8 @@ import (
 // tracer's self-test on the program's own JSB routine: the tracer
 // catches the JSB's entry and its RSB (state 2), R2 is 12345678 at the
 // RSB, and the routine has stored 87654321 in the longword below R1.
-// The other cases need VMS's FORRTL.EXE, which can't be committed.
+// The other cases need VMS's FORRTL.EXE, which can't be committed:
+// TestOTS72TOracle runs them when a local volume has it.
 // Registers and frames that hold stack addresses differ from VMS's run
 // (vax/ots72t-vax.txt); what the self-test computes doesn't.
 func TestTrace73SelfTest(t *testing.T) {

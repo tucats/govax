@@ -4,7 +4,8 @@
 B's questions the same day: the probe runs, and govax follows its
 answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), 3 (the
 debugger beside a traced program), 4 (the probe, and govax changed
-to its answers), and 5 (DBG$INPUT and the debugger's log) are done.
+to its answers), 5 (DBG$INPUT and the debugger's log), and 6
+(`ots72t.mar` with VMS's FORRTL) are done.
 
 ## Goal
 
@@ -47,7 +48,10 @@ machine, and keeps doing so: Decision 5).
 - **Done**: subtask 5, `DBG$INPUT`, `SET LOG`, and `SET OUTPUT`:
   `trace73.com` and `testdata/dbgcmd`'s `dbgcmd.com` run on govax as they
   did on VMS (`TestTrace73Procedure`, `TestDbgcmdProcedure`).
-- **Next**: subtask 6, `ots72t.mar` on govax with VMS's FORRTL.
+- **Done**: subtask 6, `ots72t.mar` on govax with VMS's FORRTL:
+  `TestOTS72TOracle` holds every case to VMS's run when a local volume
+  has FORRTL.EXE.
+- **Next**: subtask 7, the close-out.
 
 ## Part A — the survey (2026-10-24)
 
@@ -666,3 +670,35 @@ VMS logs:
   the new history empty, so govax keeps each mode's lines and its file
   itself and refills readline's in-memory history when the mode changes
   (`modeHistories`, `TestModeHistories`).
+
+### 2026-10-25 — Subtask 6, `ots72t.mar` with VMS's FORRTL
+
+- `TestOTS72TOracle` (`internal/console/ots72toracle_test.go`): VMS 7.1's
+  FORRTL.EXE is licensed, so the test looks for it on the local-only
+  volumes (`testdata/disks/rq0-ra92.dsk`, the simh VAX's system disk,
+  then `xfer.dsk`), mounts it read-only as DUA5, defines FORRTL to it,
+  and MACROs, links (`FORRTL/SHAREABLE` in an options file), and runs
+  `ots72t.mar` on a fresh volume, as `ots72.com` did on VMS; without one
+  it skips. The study's 29 FORRTL cases are traced into FORRTL and
+  caught at the JSB to govax's `OTS$$CVT_x_T_R8` and at its RSB, as on
+  VMS, and `$STATUS` is SS$_NORMAL.
+- What it holds to `vax/ots72t-vax.txt`: each case's text (what FORRTL
+  wrote) and tracer state, the value at R0, and the records' fields
+  both sides decide: FORRTL's arguments (R0, R2, the kind at FP-9, FP-16
+  for E, FP-36 for F), the buffer's offset from FP and the frame's shape
+  (AP and SP from FP, at the JSB and the RSB), and the routine's results
+  (the sign; the exponent, or for a zero that it's left as it was; the
+  guard digit; the digits, govax's starting with all of VMS's, which
+  stop sooner). Not compared, being VMS's own: stack addresses, its
+  images' addresses (FORRTL is placed elsewhere), the registers its
+  routine leaves (VMS's changes R2; FORRTL reads none), FP-32 before
+  the call, and what earlier calls left on the stack. Everything matches
+  but the 40-digit H case (`ots72tDifferences`): VMS's H digits drift
+  past H's precision, Phase 72's known difference.
+- Found and fixed: LINK didn't translate a bare name in an options file
+  as a logical name, applying the options file's device and directory
+  instead (`FORRTL/SHAREABLE` with FORRTL defined: NOSUCHFILE).
+  `rms.Session.LocateRelated` now takes a bare name that is a logical
+  name as its translation (a single one as itself, so a default type
+  goes on the translation), as RMS translates the primary name before
+  applying related-file fields; `TestLocateRelated` has the case.

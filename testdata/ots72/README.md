@@ -82,7 +82,19 @@ last longword below R1 at the RSB.
 When the study was written govax had no trace trap, and every case
 showed tracer state 0. Since Phase 73's subtask 2 govax traces, and
 `TestTrace73SelfTest` (`internal/console/trace73_test.go`) holds case
-0 to VMS's run; the FORRTL cases need VMS's FORRTL.EXE.
+0 to VMS's run. The FORRTL cases need VMS's FORRTL.EXE, which can't be
+committed: `TestOTS72TOracle` (`internal/console/ots72toracle_test.go`,
+Phase 73's subtask 6) looks for it on the local-only volumes in
+`testdata/disks` (the simh VAX's system disk, `rq0-ra92.dsk`, or
+`xfer.dsk`), mounted read-only, and skips without one. It links the
+study against that FORRTL, runs it, and holds every case to VMS's run:
+the text FORRTL wrote and the tracer's state whole, the value at R0,
+and the records' fields both sides decide (FORRTL's arguments in R0 and
+R2 and at FP-9, FP-16 for E, FP-36 for F; the buffer's place and the
+frame's shape; the routine's sign, exponent, guard digit, and digits,
+govax's starting with all of VMS's). The rest of a record is VMS's
+own: stack addresses, addresses in its images, the registers its
+routine leaves, and what earlier calls left on the stack.
 
 ## The VAX run
 
