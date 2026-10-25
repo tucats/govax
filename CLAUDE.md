@@ -475,6 +475,12 @@ never had.
   (`tb70LogDifferences`, `tb70SizeDifferences`); `TestTB70Traceback`,
   `TestTB70ImproperlyHandled`, and `TestTB70Output` run VMS's own
   images, part by part.
+- `testdata/trace73/` — Phase 73's probe of the trace trap (README.md):
+  `trace73.mar` (12 parts by `TRACE73_PART`, each tracing itself under
+  a handler that records every condition it's called for, printed after
+  the part), `trace73.com` (builds TRACE73, TRACE73NT `/NOTRACEBACK`,
+  TRACE73D `/DEBUG`; runs every part; ten debugger sessions, `tr*.dbg`).
+  Written 2026-10-25; waiting for its VMS 7.1 run.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

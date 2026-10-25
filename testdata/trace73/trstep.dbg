@@ -1,0 +1,25 @@
+! TRSTEP.DBG - STEP through code the program traces (part A). Is the
+! trace of each instruction a STEP runs the program's (TCOUNT goes up)
+! or the debugger's? Does T stay set after each step?
+SET STEP INSTRUCTION
+SET BREAK A2
+GO
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE TCOUNT
+STEP
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+GO

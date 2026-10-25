@@ -1,0 +1,13 @@
+! TRHAND.DBG - a breakpoint in the program's trace handler (part A):
+! SHOW CALLS there, the PSL the handler runs with, and stepping in it.
+SET BREAK TRACER
+GO
+SHOW CALLS
+EXAMINE PSL
+STEP
+STEP
+EXAMINE PSL
+GO
+SHOW CALLS
+CANCEL BREAK/ALL
+GO

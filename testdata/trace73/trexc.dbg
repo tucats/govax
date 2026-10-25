@@ -1,0 +1,18 @@
+! TREXC.DBG - SET BREAK/EXCEPTION and SS$_TBIT (part A): what the
+! break shows, where the program is, and whether GO and STEP pass the
+! condition on to the program's handler.
+SET BREAK/EXCEPTION
+SHOW BREAK
+GO
+EXAMINE PSL
+EXAMINE TCOUNT
+EVALUATE %EXC_NAME
+SHOW CALLS
+EXAMINE/INSTRUCTION .PC
+GO
+EXAMINE TCOUNT
+STEP
+SHOW CALLS
+EXAMINE TCOUNT
+CANCEL BREAK/ALL
+GO

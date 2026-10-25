@@ -1,0 +1,7 @@
+! TRDEPGO.DBG - DEPOSIT to the PSL setting T, then GO (part N): the
+! traces the program's handler gets.
+SET BREAK N1
+GO
+DEPOSIT/WORD PSL = 10
+EXAMINE PSL
+GO

@@ -1,0 +1,18 @@
+! TRGO.DBG - GO from breakpoints in code the program traces (part A):
+! does the program's handler get the trace of each instruction the
+! debugger runs to go on from a breakpoint? A4 is the SOBGTR, reached
+! three times.
+SET BREAK A2
+SET BREAK A4
+SET BREAK A8
+GO
+EXAMINE TCOUNT
+GO
+EXAMINE TCOUNT
+GO
+EXAMINE TCOUNT
+GO
+EXAMINE TCOUNT
+GO
+EXAMINE TCOUNT
+GO

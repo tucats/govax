@@ -1,0 +1,19 @@
+! TRDEP.DBG - DEPOSIT to the PSL setting T (part N, which doesn't trace
+! itself): does the program trace itself after it, and does STEP give
+! its handler the traces?
+SET STEP INSTRUCTION
+SET BREAK N1
+GO
+EXAMINE PSL
+DEPOSIT/WORD PSL = 10
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE PSL
+EXAMINE TCOUNT
+STEP
+EXAMINE TCOUNT
+GO

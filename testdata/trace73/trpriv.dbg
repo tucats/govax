@@ -1,0 +1,13 @@
+! TRPRIV.DBG - DEPOSIT to the PSL's privileged half (part N): what the
+! debugger accepts, and what EXAMINE then shows. Last, since the GO
+! after it may fail.
+SET BREAK N1
+GO
+EXAMINE PSL
+DEPOSIT PSL = 03C00000
+EXAMINE PSL
+DEPOSIT/BYTE PSL = 0F
+EXAMINE PSL
+DEPOSIT PSL = 0
+EXAMINE PSL
+GO

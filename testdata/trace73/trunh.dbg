@@ -1,0 +1,6 @@
+! TRUNH.DBG - an SS$_TBIT no handler takes, under the debugger (part J).
+GO
+EXAMINE PSL
+SHOW CALLS
+EXAMINE/INSTRUCTION .PC
+GO

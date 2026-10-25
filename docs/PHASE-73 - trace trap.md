@@ -43,7 +43,10 @@ machine, and keeps doing so: Decision 5).
   program (`internal/debugger/traced.go`): the program gets every
   trace, a STEP included, with Decision 5's other answer one function
   away (`programGetsTrace`).
-- **Next**: subtask 4, the probe.
+- **In progress**: subtask 4, the probe. `testdata/trace73` is written
+  and runs on govax (the progress log has govax's answers); it waits
+  for the VAX run, after which govax follows its answers and gets an
+  oracle test.
 
 ## Part A — the survey (2026-10-24)
 
@@ -391,3 +394,54 @@ comment of `internal/debugger/traced.go` lists them.
   DEPOSIT to the PSL, and Decision 5's other answer), and
   `TestTraceFaultBreakpoint` in `internal/cpu/trace_test.go`.
 - `debug.help`'s DEPOSIT and STEP, and the manual's DEPOSIT row.
+
+### 2026-10-25 — Subtask 4, the probe written
+
+`testdata/trace73` (its README says how to run it): `trace73.mar`, 12
+parts picked by `TRACE73_PART`, each tracing itself under a handler,
+`TRACER`, that records every condition it's called for (who, the
+condition, the signal array's PC and PSL, the handler's own PSL), and
+the main routine's `OUTER`, which gets the traces taken while `TRACER`
+itself runs. Parts: A ordinary code; B arithmetic traps; C CALLS/RET, a
+routine setting T in its frame, JSB/RSB; D REI with each T and TP; E
+SYS$GETTIM by CALLS and CALLG, LIB$GET_EF, LIB$FREE_EF; F `$DCLAST`;
+G LIB$SIGNAL; H the handler moving the PC; I the handler setting TP
+and Z and clearing T in the signal PSL; J an unhandled SS$_TBIT (also
+under TRACE73NT, `/NOTRACEBACK`, and TRACE73D run `/NODEBUG`); K an
+access violation while tracing; N nothing traced, for the debugger.
+Ten debugger sessions (`tr*.dbg`) ask Question 2: STEP and GO through
+traced code, SET BREAK/EXCEPTION, a breakpoint in TRACER, stepping
+traced calls and services, DEPOSIT to the PSL (the low word, then the
+privileged half last), and an unhandled SS$_TBIT under the debugger.
+
+govax's dry run (2026-10-25), by label, to compare with VMS's:
+
+- A, C, D, H, K follow the architecture's rules: the first trace
+  before the second instruction after the BISPSW, the BICPSW traced,
+  RET ending the tracing unless the routine set T in its frame, each
+  REI case as rule 7 says, the moved PC obeyed, the access violation's
+  signal PSL with TP clear and the trace after the instruction it
+  continued at.
+- B: a trap's signal PSL has TP set (`43C00032`), and the trace at the
+  same PC follows the handler's continue.
+- E: three traces for each service call (`SYS$GETTIM+2`, `+4`, then the
+  instruction after the CALLS), and three in each LIBRTL routine's stub
+  (`+2`, `+9`, `+B`): Decision 6's difference, to be set beside VMS's.
+- F: the AST routine runs untraced (its PSL `03C00000`) and no trace
+  falls inside it (Decision 7).
+- G: TRACER is called by govax's LIB$SIGNAL with T and TP set
+  (`handler=43C00010`), so it runs traced and OUTER gets its 28 traces;
+  the ENDOFFILE signal array's PSL is `43C00000` (Decision 8, the
+  probe's).
+- I: TP set in the signal PSL is ignored (no second trace before I2:
+  `continueCondition` takes TP from the exception's PSL); Z is obeyed
+  (the BEQL branches); clearing T stops the tracing.
+- J: `%SYSTEM-F-TBIT, T-bit pending trap at PC=..., PS=03C00010`, the
+  traceback (with lines under TRACE73D), the "improperly handled" dump
+  without traceback; `$STATUS` `%X10000464`.
+
+Side finding: govax's debugger doesn't read `DBG$INPUT`, so the
+sessions do nothing on govax, and `RUN/DEBUG` in a command procedure
+leaves the session's image file open after the procedure's next `$`
+line (DISMOUNT then reports a user file open). The oracle will replay
+the `.dbg` files directly, as `TestDebuggerSessionOracle` does.
