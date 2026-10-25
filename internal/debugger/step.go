@@ -533,7 +533,7 @@ func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 
 	d.pendingReturn = &pendingReturn{
 		frame:  c.CPU.GPR(registers.FP),
-		from:   c.LocationText(c.CPU.GPR(registers.PC)),
+		from:   d.locationText(c.CPU.GPR(registers.PC)),
 		silent: req.silent,
 
 		noSource: req.noSource,
@@ -576,7 +576,7 @@ func (d *Debugger) returnDue() bool {
 
 	if !p.silent {
 		pc := c.CPU.GPR(registers.PC)
-		c.Printf("stepped on return from %s to %s: %s\n", p.from, c.LocationText(pc), c.InstructionText(pc))
+		c.Printf("stepped on return from %s to %s: %s\n", p.from, d.locationText(pc), d.instructionAt(pc))
 
 		if !p.noSource {
 			d.showSource(pc)
@@ -617,13 +617,13 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 	// has no line numbers a step by line is one instruction too, but without
 	// the instruction's text (dbgtrc.dlg).
 	if req.byInstruction {
-		c.Printf("stepped to %s: %s\n", c.LocationText(pc), c.InstructionText(pc))
+		c.Printf("stepped to %s: %s\n", d.locationText(pc), d.instructionAt(pc))
 		d.stepSource(req, pc)
 
 		return
 	}
 
-	c.Printf("stepped to %s\n", c.LocationText(pc))
+	c.Printf("stepped to %s\n", d.locationText(pc))
 	d.stepSource(req, pc)
 }
 

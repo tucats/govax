@@ -281,14 +281,14 @@ func (d *Debugger) reportWatch(wp *Watchpoint, item, pc uint32, before, now []by
 		name = fmt.Sprintf("%s[%d]", wp.Name, wp.Lower+int32(item))
 	}
 
-	c.Printf("watch of %s at %s\n", name, c.LocationText(pc))
+	c.Printf("watch of %s at %s\n", name, d.locationText(pc))
 	d.showSource(pc)
 
 	c.Printf("   old value: %s\n", d.itemValue(before, item, wp.Elem))
 	c.Printf("   new value: %s\n", d.itemValue(now, item, wp.Elem))
 
 	next := c.CPU.GPR(registers.PC)
-	c.Printf("break at %s\n", c.LocationText(next))
+	c.Printf("break at %s\n", d.locationText(next))
 	d.showSource(next)
 }
 

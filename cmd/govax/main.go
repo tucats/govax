@@ -348,10 +348,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			historyFile = historyFilePath()
 		}
 
+		// The history files are the prompt modes' own (history.go), so
+		// readline keeps its history in memory only.
+		histories := newModeHistories(historyFile)
+
 		rlConfig := &readline.Config{
-			Prompt:      c.Prompt(),
-			HistoryFile: historyFile,
-			Stdin:       rlStdin,
+			Prompt: c.Prompt(),
+			Stdin:  rlStdin,
 		}
 
 		keys := newPromptKeys(rlConfig)
@@ -380,17 +383,23 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		aborted := func() bool { return attn != nil && attn.abortRequested() }
 
 		for c.Running() && !aborted() {
-			// Wwitches between console, debugger,and mini-assembler prompts.
+			// Switches between console, debugger, and mini-assembler prompts.
 			// The console prompt can be set via a SET PROMPT command.
 			prompt := c.Prompt()
+			mode := ""
 
 			if c.InAssemblerMode() {
-				prompt = "ASM> "
+				prompt, mode = "ASM> ", "asm"
 			} else if c.InDebugger() {
-				prompt = debugger.Prompt
+				prompt, mode = debugger.Prompt, "debug"
 			}
 
 			rl.SetPrompt(prompt)
+
+			// The history recalled is the mode's own (history.go), so
+			// leaving the debugger doesn't bring its commands back at the
+			// console's prompt.
+			histories.use(rl, mode)
 
 			// CTRL/Z typed after the last line's text makes this read end
 			// of file, with nothing typed.
@@ -420,6 +429,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 				break // the end of the input (io.EOF)
 			}
+
+			histories.add(line)
 
 			// A command that has shown its own messages (RENAME)
 			// returns its failure with the message inhibited.
@@ -656,6 +667,19 @@ func historyFilePath() string {
 	}
 
 	return filepath.Join(home, ".govax", "history.txt")
+}
+
+// modeHistory is the history file of a prompt's mode, beside console,
+// the console's: "debug_history.txt" for the debugger's DBG>, and
+// "asm_history.txt" for the assembler's ASM>; console itself for the
+// console's mode (""). With no console history file (a test, or no home
+// directory), there is none.
+func modeHistory(console, mode string) string {
+	if console == "" || mode == "" {
+		return console
+	}
+
+	return filepath.Join(filepath.Dir(console), mode+"_history.txt")
 }
 
 // parseVersion is a helper function that parses a version string into its major, minor, and build components.

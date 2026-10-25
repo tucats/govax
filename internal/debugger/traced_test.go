@@ -293,3 +293,24 @@ func TestTracedUnhandledContinues(t *testing.T) {
 		"%SYSTEM-F-TBIT, T-bit pending trap at PC=00000207, PSL=00C00010\n"+
 		"break on unhandled exception at TRACED\\START\\%LINE 8: BICPSW   S^#10\n     8:         BICPSW  #^X10\n")
 }
+
+// TestSetOutput: SET OUTPUT's keywords, as SHOW OUTPUT lists them in the
+// manual's form, and SHOW LOG before a log is open; an unknown keyword is
+// %DEBUG-E-SYNTAX.
+func TestSetOutput(t *testing.T) {
+	c := tracedSession(t, tracedSource)
+
+	expect(t, "SHOW OUTPUT", say(t, c, "SHOW OUTPUT"), "noverify, terminal, noscreen_log, nolog\n")
+	expect(t, "SHOW LOG", say(t, c, "SHOW LOG"), "not logging; the log file is DEBUG.LOG\n")
+
+	say(t, c, "SET OUTPUT VERIFY,NOTERMINAL")
+	say(t, c, "SET OUTPUT TERMINAL")
+	expect(t, "SHOW OUTPUT", say(t, c, "SHOW OUTPUT"), "verify, terminal, noscreen_log, nolog\n")
+
+	say(t, c, "SET LOG TRACED")
+	expect(t, "SHOW LOG", say(t, c, "SHOW LOG"), "not logging; the log file is TRACED\n")
+
+	if _, err := sayErr(c, "SET OUTPUT LOUD"); err == nil || !strings.Contains(err.Error(), "SYNTAX") {
+		t.Errorf("SET OUTPUT LOUD: %v", err)
+	}
+}

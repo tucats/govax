@@ -26,6 +26,8 @@
 //              10/24/26    DEPOSIT to the PSL; STEP and a program that
 //                          traces itself (Phase 73, subtask 3).
 //              10/25/26    Both as VMS 7.1's debugger has them (subtask 4).
+//              10/25/26    DBG$INPUT, SET LOG, SET OUTPUT, SHOW LOG, SHOW
+//                          OUTPUT; @ and EXIT as VMS's (subtask 5).
 //
 
 $HELP
@@ -141,9 +143,19 @@ $INCL
 
     @file-spec
 
-  The file is read a line at a time, as typed at the DBG> prompt. If a
-  command in it ends the debugger session (EXIT), the lines after it are
-  console commands.
+  The file is read a line at a time, as typed at the DBG> prompt; a file
+  name without a type gets .COM. A command that fails is reported, and the
+  file goes on. With SET OUTPUT VERIFY each line is echoed after a blank
+  as it runs (not at all if it fails before any output), between
+  %DEBUG-I-VERIFYICF's "entering" and "exiting" lines. If a command in it
+  ends the debugger session (EXIT), the lines after it are console
+  commands.
+
+  When RUN starts the debugger on an image and the logical name DBG$INPUT
+  names a file, the debugger reads its commands from that file instead of
+  the terminal, to its end, which is EXIT, before RUN is over (as a
+  command procedure gives the VMS debugger its commands with DEFINE
+  /USER_MODE DBG$INPUT file).
 
 $CALL
   Calls a routine under the debugger.
@@ -487,8 +499,10 @@ $EXAM,/SYM
   instruction's addresses are names.
 
 $EXIT
-  Ends the debugger session and returns to the console. The machine is
-  left as it is.
+  Ends the debugger session and returns to the console. A program still
+  running under it is ended (its exit handlers aren't run), and RUN's
+  status becomes the program's exit status, or %X10028009 if it hadn't
+  exited. A log being written (SET OUTPUT LOG) is closed.
 
   Format:
 
@@ -517,8 +531,7 @@ $HELP,HELP
 $QUIT
   Ends the debugger session and returns to the console, as EXIT does.
   (On VMS, QUIT skips the program's exit handlers, which EXIT runs.
-  govax's debugger doesn't run exit handlers yet, so the two are the
-  same.)
+  govax's debugger runs none for either, so the two are the same.)
 
   Format:
 
@@ -628,6 +641,38 @@ $SE,STEP
     SOURCE | NOSOURCE      whether the source line is shown
 
   SHOW STEP shows the settings.
+
+$SET,LOG
+$SE,LOG
+  Names the file SET OUTPUT LOG writes the session to (DEBUG.LOG unless
+  this names another; .LOG when the name has no type). If the session is
+  being logged already, logging goes on in the new file.
+
+  Format:
+
+    SET LOG file-spec
+
+$SET,OUTP
+$SE,OUTP
+  Sets where the debugger's output goes, and what is echoed.
+
+  Format:
+
+    SET OUTPUT keyword[,keyword...]
+
+  The keywords are:
+
+    LOG | NOLOG            whether the session is written to the log file
+                           (SET LOG): each command read, as it was read,
+                           and every line of the debugger's output after
+                           a "!", so the log can be run with @. The
+                           program's own output isn't in it.
+    VERIFY | NOVERIFY      whether an @ file's lines are echoed
+    TERMINAL | NOTERMINAL  whether the output is shown at the terminal
+    SCREEN_LOG | NOSCREEN_LOG
+                           accepted; govax has no screen mode
+
+  SHOW OUTPUT shows the settings.
 
 $SET,SOUR
 $SE,SOUR
@@ -930,6 +975,23 @@ $SH,STEP
   Format:
 
     SHOW STEP
+
+$SHOW,LOG
+$SH,LOG
+  Says whether the session is being logged, and to what file.
+
+  Format:
+
+    SHOW LOG
+
+$SHOW,OUTP
+$SH,OUTP
+  Shows SET OUTPUT's settings, as "noverify, terminal, noscreen_log,
+  logging to DUA0:[WORK]DEBUG.LOG;1".
+
+  Format:
+
+    SHOW OUTPUT
 
 $SHOW,SOUR
 $SH,SOUR

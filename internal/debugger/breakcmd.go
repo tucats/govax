@@ -242,7 +242,7 @@ func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, targe
 
 		if d.Machine.RoutineEntry(addr) {
 			bp.Routine = true
-			bp.Name = d.Machine.LocationText(addr)
+			bp.Name = d.locationText(addr)
 			bp.Addr = addr + 2
 		}
 
@@ -299,7 +299,7 @@ func (d *Debugger) setReturnBreak(list *[]*Breakpoint, proto Breakpoint, target 
 
 	proto.Kind = BreakReturn
 	proto.Start, proto.Size = start, size
-	proto.Name = d.Machine.LocationText(start)
+	proto.Name = d.locationText(start)
 
 	d.replaceClassBreak(list, &proto)
 
@@ -450,7 +450,7 @@ func (d *Debugger) breakDescription(bp *Breakpoint, word string) string {
 		if bp.Routine {
 			text = word + " at routine " + bp.Name
 		} else {
-			text = word + " at " + d.Machine.LocationText(bp.Addr)
+			text = word + " at " + d.locationText(bp.Addr)
 		}
 	}
 

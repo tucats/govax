@@ -81,6 +81,16 @@ func (d *Debugger) symbolRadix() int {
 	return 16
 }
 
+// locationText and instructionAt are the machine's names for a location
+// and its instruction, offsets in the debugger's radix (symbolRadix).
+func (d *Debugger) locationText(pc uint32) string {
+	return d.Machine.LocationTextIn(pc, d.symbolRadix())
+}
+
+func (d *Debugger) instructionAt(pc uint32) string {
+	return d.Machine.InstructionTextIn(pc, d.symbolRadix())
+}
+
 // bindExamine binds EXAMINE, and SET MODE, SET RADIX, and CANCEL RADIX,
 // which change how it shows things.
 func (d *Dispatcher) bindExamine() {

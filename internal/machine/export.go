@@ -33,7 +33,11 @@ func (m *Machine) RequireInit() error { return m.requireInit() }
 // LocationText is pc as STEP's "Stepped to" and a breakpoint's "Break at"
 // show it: a symbolic name where the program has one, else the address
 // in 8 hex digits.
-func (m *Machine) LocationText(pc uint32) string { return m.locationText(pc) }
+func (m *Machine) LocationText(pc uint32) string { return m.locationText(pc, m.symbolRadix()) }
+
+// LocationTextIn is LocationText with an offset in radix (16 or 10): the
+// debugger's.
+func (m *Machine) LocationTextIn(pc uint32, radix int) string { return m.locationText(pc, radix) }
 
 // TraceStep prints the instruction about to execute at pc when tracing is
 // on (SET TRACE), or when force is true, and returns a function to call
@@ -542,6 +546,17 @@ func (m *Machine) OtherImageCount() int { return len(m.otherImages) }
 // (or stopped), whose return is its image exit (ImageActive): RUN sets
 // it; a test may, to stand for RUN.
 func (m *Machine) SetImageActive(on bool) { m.imageActive = on }
+
+// DebuggedImageStatus returns the exit status of the image RUN started
+// under the debugger, and whether it exited, which RUN, returned long
+// before, didn't report; asking forgets it. The debugger's EXIT makes it
+// RUN's status.
+func (m *Machine) DebuggedImageStatus() (uint32, bool) {
+	status, ended := m.imageStatus, m.imageEnded
+	m.imageEnded = false
+
+	return status, ended
+}
 
 // AsmSession is the ASM command's assembler session, nil until the first
 // ASM after INIT or VMINIT; ResetAsmSession forgets it, so the next ASM

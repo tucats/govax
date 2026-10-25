@@ -190,7 +190,10 @@ prompt, or press **Ctrl/Y**.
 
 The prompt has a line editor: the arrow keys move through the line and
 through earlier commands, which govax keeps between sessions in
-`~/.govax/history.txt`.
+`~/.govax/history.txt`. The debugger's `DBG>` and the assembler's `ASM>`
+prompts recall their own commands, kept in `debug_history.txt` and
+`asm_history.txt` beside it, so the console's history holds only
+console commands.
 
 ### Hello, world
 
@@ -3390,7 +3393,27 @@ An address or value is an expression:
 | `SET MODE [NO]SYMBOLIC`, `OPERANDS`, `[NO]LINE` | Display modes. |
 | `SET TYPE [/OVERRIDE] type` | The default type for `EXAMINE` and `DEPOSIT`. |
 | `SET SOURCE dir,...` | Where to find source files. |
-| `@file` | Run debugger commands from a file. |
+| `@file` | Run debugger commands from a file (`.COM` when it has no type); with `SET OUTPUT VERIFY` each line is echoed as it runs. |
+| `SET LOG file`, `SET OUTPUT [NO]LOG,[NO]VERIFY,[NO]TERMINAL` | Log the session (to `DEBUG.LOG` unless `SET LOG` names another file): each command as read, and every output line after a `!`, so the log can be run with `@`. |
+| `SHOW LOG`, `SHOW OUTPUT` | Whether the session is logged, and the other output settings. |
+| `EXIT`, `QUIT` | End the session, and a program still running under it. |
+
+A command procedure can give the debugger its commands, as on VMS: a
+`DEFINE/USER_MODE DBG$INPUT file` before `RUN/DEBUG` makes the debugger
+read that file instead of the terminal, to its end, which ends the
+session (and RUN). For example, run the program under the debugger with
+`TRACE.DBG`'s commands, logging the session to `TRACE.DLG`:
+
+```
+$ OPEN/WRITE DBGF RUN.DBG
+$ WRITE DBGF "SET LOG TRACE.DLG"
+$ WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$ WRITE DBGF "@TRACE.DBG"
+$ WRITE DBGF "EXIT"
+$ CLOSE DBGF
+$ DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$ RUN/DEBUG PROG
+```
 
 ### govax's machine commands
 

@@ -151,11 +151,19 @@ func TestTraceback_inhibited(t *testing.T) {
 }
 
 // TestTraceback_debugger checks that a condition a debugger takes gets
-// its message but no dump, then or when the handler runs again
-// (testdata/dbgcmd's except.dlg).
+// no dump, then or when the handler runs again (testdata/dbgcmd's
+// except.dlg), and that its message is the debugger's to show: it is
+// given the formatted message, and nothing is written here.
 func TestTraceback_debugger(t *testing.T) {
 	env, out, _, argv := tracebackFixture(t, 0x870)
-	env.OnUnhandled = func(UnhandledCondition) bool { return true }
+
+	var message []string
+
+	env.OnUnhandled = func(u UnhandledCondition) bool {
+		message = u.Message
+
+		return true
+	}
 
 	if _, err := shimTraceback(env, argv); !errors.Is(err, ErrWait) {
 		t.Fatalf("%v; want ErrWait", err)
@@ -165,8 +173,12 @@ func TestTraceback_debugger(t *testing.T) {
 		t.Errorf("again: %#x, %v; want SS$_CONTINUE", r0, err)
 	}
 
-	if want := "%SYSTEM-W-ENDOFFILE, end of file\n"; out.String() != want {
-		t.Errorf("output %q, want %q", out.String(), want)
+	if out.String() != "" {
+		t.Errorf("output %q, want none", out.String())
+	}
+
+	if len(message) != 1 || message[0] != "%SYSTEM-W-ENDOFFILE, end of file" {
+		t.Errorf("the debugger's message %q", message)
 	}
 }
 

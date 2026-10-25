@@ -169,7 +169,7 @@ func (d *Debugger) framePC(pc uint32) string {
 		return "<console>"
 	}
 
-	return d.Machine.LocationText(pc)
+	return d.locationText(pc)
 }
 
 // maskText is a register save mask the way MACRO writes it: ^M<R2,R3>.

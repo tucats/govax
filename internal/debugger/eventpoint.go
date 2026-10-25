@@ -205,13 +205,13 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 		return ""
 	}
 
-	where := d.Machine.LocationText(pc)
+	where := d.locationText(pc)
 
 	// A class of instruction reached at a routine's first instruction
 	// (the one after its entry mask) says "at routine NAME", as an address
 	// breakpoint at the routine's name does (the probe's trace.dlg).
 	if bp.Kind != BreakAddress && bp.Kind != BreakReturn && pc >= 2 && d.Machine.RoutineEntry(pc-2) {
-		where = "routine " + d.Machine.LocationText(pc-2)
+		where = "routine " + d.locationText(pc-2)
 	}
 
 	switch bp.Kind {
@@ -372,11 +372,63 @@ func (d *Debugger) runCommands(text string) {
 		return
 	}
 
-	for _, command := range splitTop(unparenthesize(text), ';') {
+	// With SET OUTPUT VERIFY each command is echoed as VMS's debugger
+	// echoes a DO clause's (testdata/dbgcmd's break.dlg): the clause's
+	// text cut after each ";", which stays with the command before it,
+	// each piece after a blank (" EXAMINE R0;", "  SHOW CALLS"). They
+	// aren't the debugger's input, so they aren't logged as input.
+	inner := unparenthesize(text)
+
+	if d.output.verify {
+		for _, piece := range cutAfter(inner, ';') {
+			d.Machine.Printf(" %s\n", piece)
+		}
+	}
+
+	d.procDepth++
+	defer func() { d.procDepth-- }()
+
+	for _, command := range splitTop(inner, ';') {
 		if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {
 			d.Machine.Printf("%%%s\n", err)
 		}
 	}
+}
+
+// cutAfter cuts text after each sep outside parentheses and quotes, the
+// separator kept with the piece before it, the blanks after it with the
+// piece after.
+func cutAfter(text string, sep byte) []string {
+	var (
+		pieces []string
+		depth  int
+		quote  byte
+		start  int
+	)
+
+	for i := 0; i < len(text); i++ {
+		switch ch := text[i]; {
+		case quote != 0:
+			if ch == quote {
+				quote = 0
+			}
+		case ch == '"' || ch == '\'':
+			quote = ch
+		case ch == '(':
+			depth++
+		case ch == ')':
+			depth--
+		case ch == sep && depth == 0:
+			pieces = append(pieces, text[start:i+1])
+			start = i + 1
+		}
+	}
+
+	if start < len(text) {
+		pieces = append(pieces, text[start:])
+	}
+
+	return pieces
 }
 
 // unparenthesize removes the parentheses around text, if it is wrapped in

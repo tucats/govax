@@ -125,6 +125,11 @@ func (d *Debugger) unhandledBreak() bool {
 	d.unhandled = nil
 	d.setException(u)
 
+	// The condition's message, which the catch-all left to the debugger.
+	for _, line := range u.Message {
+		d.Machine.Printf("%s\n", line)
+	}
+
 	// A severe condition (not a LIB$STOP) goes on when the program does,
 	// with a warning (confromexc).
 	d.severeHeld = u.Condition&7 == 4 && !u.Stop
@@ -202,10 +207,10 @@ func (d *Debugger) requireProgram() error {
 // no probe of a break at an address was, so the rule is applied to the
 // exception breaks alone (unconfirmed for the others).
 func (d *Debugger) exceptionLocation(pc uint32) string {
-	where := d.Machine.LocationText(pc)
+	where := d.locationText(pc)
 
 	if d.stepDefaults.byInstruction {
-		where += ": " + d.Machine.InstructionText(pc)
+		where += ": " + d.instructionAt(pc)
 	}
 
 	return where

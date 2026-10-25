@@ -3,8 +3,8 @@
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day: the probe runs, and govax follows its
 answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), 3 (the
-debugger beside a traced program), and 4 (the probe, and govax changed
-to its answers) are done.
+debugger beside a traced program), 4 (the probe, and govax changed
+to its answers), and 5 (DBG$INPUT and the debugger's log) are done.
 
 ## Goal
 
@@ -44,9 +44,10 @@ machine, and keeps doing so: Decision 5).
   govax changed to its answers and two oracles: `TestTrace73Oracle`
   (`internal/console`, VMS's images part by part) and the debugger's
   session oracle, which replays the ten sessions.
-- **Next**: subtask 5, `DBG$INPUT`, `SET LOG`, and `SET OUTPUT` (the
-  author's request, 2026-10-25), so `trace73.com` runs on govax as it
-  did on VMS.
+- **Done**: subtask 5, `DBG$INPUT`, `SET LOG`, and `SET OUTPUT`:
+  `trace73.com` and `testdata/dbgcmd`'s `dbgcmd.com` run on govax as they
+  did on VMS (`TestTrace73Procedure`, `TestDbgcmdProcedure`).
+- **Next**: subtask 6, `ots72t.mar` on govax with VMS's FORRTL.
 
 ## Part A — the survey (2026-10-24)
 
@@ -600,3 +601,68 @@ govax can run `trace73.com` as VMS did), then the oracle test.
   its instruction (`stepped to TRACE73\CSUB\CS1: NOP`), by line the
   routine (`stepped to routine ...`, unconfirmed which of the unit and
   the label decides).
+
+### 2026-10-25 — Subtask 5, DBG$INPUT, SET LOG, SET OUTPUT
+
+From the *VMS 5.5 Debugger Manual*'s 8.1 and 8.3, and the two probes'
+VMS logs:
+
+- **DBG$INPUT** (`debugger/dbginput.go`): when RUN/DEBUG opens a session
+  and the logical name names a file (not a terminal), the debugger reads
+  its commands from it (DCL's `DebuggerInput` and `ReadDebuggerFile`,
+  `dclshell/dbginput.go`) until one ends the session or the file ends,
+  which is EXIT; RUN is over when the session is. The file is read once
+  the run that opened the session is over (`Start` around `start`), so a
+  GO among its commands is a run of its own, and the image's exit is
+  reported (`%DEBUG-I-EXITSTATUS`).
+- **EXIT and QUIT** (`exitSession`) end a program still running under
+  the session (`EndAbandonedImage`; no exit handlers, unconfirmed), or
+  let go of one that exited, whose memory the session kept for examining
+  (corevms's KeepP0) and which held the image file open
+  (`ResetICBList`). RUN's status is the image's, marked STS$M_INHIB_MSG
+  (`%X10000001`), or `%X10028009` for an image still running, as VMS
+  7.1's (TRUNH). This also ends the image file being left open by
+  RUN/DEBUG in a procedure (subtask 4's side finding), and a session a
+  procedure's `$` line ends the same way.
+- **The log** (`debugger/dbglog.go`): SET LOG file (`.LOG` default,
+  DEBUG.LOG when none is named; a quoted host name is taken as DCL's
+  OPEN takes it), SET OUTPUT [NO]LOG, [NO]VERIFY, [NO]TERMINAL,
+  [NO]SCREEN_LOG (accepted), SHOW OUTPUT (the manual's form), SHOW LOG
+  (govax's words). The debugger's output is the machine's output while a
+  session is in progress (`installOutput`); the program's goes to its
+  terminal another way, so it isn't logged. Each command read from the
+  debugger's input (DBG$INPUT, the terminal, a procedure's data lines) is
+  logged as read; output lines after a "!". DCL makes the file
+  (`CreateDebuggerLog`, a VAR file of records).
+- **@** reads its file itself now (`runProcedure`; DCL's
+  `RunDebuggerProcedure` and its "plain" levels are left without callers,
+  to be taken out): a failing command is reported and the file goes on
+  (the manual); with VERIFY each line is echoed after a blank, between
+  `%DEBUG-I-VERIFYICF` lines, the echo held until the command's first
+  output or its end and dropped if it fails first, as VMS's logs leave
+  out a failing command's echo (`pendingEcho`); a GO, STEP, or CALL
+  shows it as it starts. A DO clause's commands are echoed with VERIFY
+  as VMS's are (`cutAfter`: " EXAMINE R0;", "  SHOW CALLS").
+- **Found by the full runs**, changed:
+  - The message of an unhandled condition the debugger takes is the
+    debugger's to show (`unhandledBreak`), so it is in the log; the
+    catch-all writes it only when no debugger takes it.
+  - "break at", "stepped to", and the rest named a location's offset in
+    the console's radix, which vax.init sets decimal (`PART_N+176` for
+    VMS's `PART_N+0B0`): the machine's `LocationTextIn` and
+    `InstructionTextIn` take the debugger's radix (`locationText`,
+    `instructionAt`).
+- **Results**: on govax, `trace73.com`'s TRSTEP, TRGO, TRCALL, TRDEP,
+  TRDEPGO, and TRPRIV logs are VMS 7.1's line for line, and
+  `dbgcmd.com`'s BRKCLS, WATCH, and TRACE VMS 7.3's; every other
+  difference is one the session oracle lists. `TestTrace73Procedure` and
+  `TestDbgcmdProcedure` (`internal/console/trace73session_test.go`) run
+  both procedures on a fresh volume and hold those logs to VMS's, the
+  RUN/DEBUG statuses to trace73's, and check that the volume dismounts.
+- **The prompt's history** (the author's request, `cmd/govax/history.go`):
+  the console, the debugger, and the assembler each recall their own
+  commands, kept in `~/.govax/history.txt`, `debug_history.txt`, and
+  `asm_history.txt`. readline's own switch (`SetHistoryPath`) starts
+  the new history empty, so govax keeps each mode's lines and its file
+  itself and refills readline's in-memory history when the mode changes
+  (`modeHistories`, `TestModeHistories`).

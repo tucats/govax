@@ -124,6 +124,8 @@ grammar debugger
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     type                /syntax=set_type/nonegatable
+        keyword     log                 /syntax=set_log/nonegatable
+        keyword     output              /syntax=set_output/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -178,6 +180,20 @@ grammar debugger
             parameter   words/id=34             -
                         /type=$rest_of_line     -
                         /prompt="Step type"
+
+        ! SET LOG file names the session's log (DEBUG.LOG by default);
+        ! SET OUTPUT [NO]LOG,[NO]VERIFY,[NO]TERMINAL,[NO]SCREEN_LOG says
+        ! whether the session is logged, an @ procedure's lines echoed, and
+        ! the output shown at the terminal.
+        syntax set_log/id=1810
+            parameter   file/id=1811            -
+                        /type=$rest_of_line     -
+                        /prompt="File"
+
+        syntax set_output/id=1812
+            parameter   words/id=1813           -
+                        /type=$rest_of_line     -
+                        /prompt="Output"
 
         ! SET SOURCE dir[,dir...]: the directories searched for source files.
         syntax set_source/id=70
@@ -281,6 +297,8 @@ grammar debugger
         keyword     watch               /syntax=show_watch
         keyword     watchpoints         /syntax=show_watch
         keyword     step                /syntax=show_step
+        keyword     log                 /syntax=show_log
+        keyword     output              /syntax=show_output
         keyword     source              /syntax=show_source
         keyword     registers           /syntax=show_reg
         keyword     reg                 /syntax=show_reg
@@ -382,6 +400,10 @@ grammar debugger
                     /prompt="What"
 
         syntax show_break/id=42
+
+        syntax show_log/id=1814
+
+        syntax show_output/id=1815
 
         syntax show_trace/id=303
 

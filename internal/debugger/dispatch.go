@@ -41,14 +41,11 @@ func newDispatcher(d *Debugger, g *dcl.Grammar, help *help.File) *Dispatcher {
 func (d *Dispatcher) bind() {
 	g := d.Grammar
 
-	// EXIT and QUIT end the session. They differ on VMS only in whether
-	// the program's exit handlers run, and govax has none to run yet.
+	// EXIT and QUIT end the session, and an image still running under it
+	// (dbginput.go's exitSession). On VMS they differ in whether the
+	// program's exit handlers run; govax runs none for either.
 	end := func(id int64, r *dcl.Result) error {
-		d.Debugger.End()
-
-		// The console's prompt is process 1's (docs/PHASE-44.md,
-		// subtask 9).
-		return d.Debugger.Machine.ReturnToProcessOne()
+		return d.Debugger.exitSession()
 	}
 
 	d.bindBreak()
@@ -114,8 +111,10 @@ func (d *Dispatcher) bind() {
 			dispatch = console
 		}
 
-		return front.RunDebuggerProcedure(r.String("FILE"), dispatch)
+		return d.Debugger.runProcedure(r.String("FILE"), dispatch)
 	})
+
+	d.bindOutput()
 }
 
 // Dispatch parses and runs one command line. Blank lines and comments

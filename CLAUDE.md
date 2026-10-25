@@ -254,9 +254,9 @@ never had.
   Phase 73 (planned 2026-10-24) is the trace trap: PSL<T> and <TP> by
   the architecture's rules, SS$_TBIT signaled to the program's
   handlers so a program can trace itself, and the debugger beside a
-  traced program as VMS 7.1's is (subtasks 1 to 4 done, checked by
-  `testdata/trace73`); subtask 5 is `DBG$INPUT` and the debugger's SET
-  LOG and SET OUTPUT.
+  traced program as VMS 7.1's is (subtasks 1 to 5 done, checked by
+  `testdata/trace73`; 5 is `DBG$INPUT` and the debugger's SET LOG and
+  SET OUTPUT).
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -485,7 +485,9 @@ never had.
   and round 2's `trace73b.mar` (LIB$SIGNAL from traced code); `vax/` is
   VMS V7.1's. `TestTrace73Oracle` runs VMS's images part by part on
   govax and matches the reports but for `trace73Differences`;
-  `TestDebuggerSessionOracle` replays the sessions.
+  `TestDebuggerSessionOracle` replays the sessions, and
+  `TestTrace73Procedure` runs `trace73.com` itself (with
+  `TestDbgcmdProcedure`, `dbgcmd.com`).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -982,7 +984,12 @@ expect adjustment as phases land):
   (`deliverPendingTrace`). GO from a break on an unhandled severe
   condition continues it with %DEBUG-I-CONFROMEXC (`confromexc`; the RTL
   side is `conditionDispatch.debuggerHeld`). DEPOSIT to the PSL changes
-  only its low word (`depositPSL`). **Symbols are
+  only its low word (`depositPSL`). `dbginput.go` (Phase 73, subtask
+  5): RUN/DEBUG reads DBG$INPUT's file of commands to its end
+  (`readInput`), `@` reads its own file (`runProcedure`, VERIFY's echo),
+  and EXIT ends the image with the session (`exitSession`); `dbglog.go`
+  is SET LOG and SET OUTPUT, the session log in VMS's form, teed from the
+  machine's output while a session is in progress. **Symbols are
   split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
   DCL's (`internal/dclshell/dclsym.go`'s `dclSymbolTable`: a global table
   and a local table per command level), and the machine's symbol table
@@ -1551,7 +1558,9 @@ expect adjustment as phases land):
   or `--time-limit` stopped it), and volumes still mounted are dismounted (flushed)
   when a session ends. The control keys are VMS's (`attention.go`,
   `terminal_unix.go`; `HELP KEYS`): Ctrl-C interrupts, Ctrl-Y ends govax,
-  Ctrl-Z is end of file. Briefly moved to the repo
+  Ctrl-Z is end of file. The console's, the debugger's, and the
+  assembler's prompts each recall their own history (`history.go`).
+  Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout
   (`go build ./...`/`go run ./cmd/govax`).
 - `tucats/gopackages` also brings config-settings support (`app-cli/settings`), read at

@@ -815,9 +815,9 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	return env.continueCondition(d)
 }
 
-// reportCondition writes the message of d's condition, whose signal
-// array words holds (sigWords), and offers the condition to a debugger,
-// once for d: the catch-all's first step, and the traceback handler's.
+// reportCondition offers d's condition, whose signal array words holds
+// (sigWords), to a debugger, which shows its message, or else writes the
+// message itself, once for d: the catch-all's first step, and the traceback handler's.
 // A condition marked STS$M_INHIB_MSG has no message (testdata/tb70's
 // S5). It reports true if the debugger wants to look at the program
 // first (the VMS debugger's "break on unhandled exception"): the caller
@@ -838,14 +838,26 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 
 	d.reported = true
 
-	if words[0]&stsInhibitMsg == 0 {
-		env.putMessage(words[0], env.signalMessage(words))
+	inhibited := words[0]&stsInhibitMsg != 0
+
+	// A debugger that takes the condition shows its message itself, so
+	// that it is part of the debugger's output, and its log, as VMS's is
+	// (testdata/trace73's TRUNH).
+	if env.OnUnhandled != nil {
+		u := env.unhandledCondition(d, words[0])
+		if inhibited {
+			u.Message = nil
+		}
+
+		if env.OnUnhandled(u) {
+			d.debuggerHeld = true
+
+			return true
+		}
 	}
 
-	if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0])) {
-		d.debuggerHeld = true
-
-		return true
+	if !inhibited {
+		env.putMessage(words[0], env.signalMessage(words))
 	}
 
 	if after != nil {

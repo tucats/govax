@@ -29,6 +29,7 @@ const (
 	dbgNoExc
 	dbgNotNumeric
 	dbgConFromExc
+	dbgVerifyICF
 )
 
 // DBG facility status codes.
@@ -121,6 +122,10 @@ const (
 	// from a break on an unhandled severe condition, which it then
 	// continues (VMS 7.1's text, testdata/trace73's TRUNH).
 	DBG_CONFROMEXC = DBGFacility<<FacilityPosition | dbgConFromExc<<MessagePosition | StatusInfo
+	// DBG_VERIFYICF is shown, with SET OUTPUT VERIFY, as a debugger
+	// command procedure (@) starts and ends: "entering" or "exiting", and
+	// the file as given (VMS 7.1's text, testdata/trace73's sessions).
+	DBG_VERIFYICF = DBGFacility<<FacilityPosition | dbgVerifyICF<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -142,6 +147,7 @@ func init() {
 	DefineMessage(DBG_NOTYPE, DBGFacility, "NOTYPE", "'!S' does not name a data type")
 	DefineMessage(DBG_INVTIME, DBGFacility, "INVTIME", "invalid date or time at or near '!S'")
 	DefineMessage(DBG_NEEDQUOTE, DBGFacility, "NEEDQUOTE", "an instruction must be in quotes at or near '!S'")
+	DefineMessage(DBG_VERIFYICF, DBGFacility, "VERIFYICF", "!S command procedure !S")
 	DefineMessage(DBG_CONFROMEXC, DBGFacility, "CONFROMEXC", "WARNING: continuing after severe error; integrity not guaranteed")
 	DefineMessage(DBG_ASMERROR, DBGFacility, "ASMERROR", "cannot assemble '!S'")
 	DefineMessage(DBG_NOCURVAL, DBGFacility, "NOCURVAL", "no value has been examined, evaluated, or deposited")

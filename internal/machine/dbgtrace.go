@@ -31,13 +31,14 @@ func (m *Machine) debugImageAt(addr uint32) *dbgsym.Program {
 // specific name its image's debug symbol table gives (a routine, a label,
 // a line, or a routine plus an offset), else its address in 8 hex digits.
 // ok is false when the console's display applies instead: symbolic display
-// is off, or pc isn't in an image with a debug symbol table.
-func (m *Machine) symbolicLocation(pc uint32) (loc string, names consoleSymbolizer, ok bool) {
+// is off, or pc isn't in an image with a debug symbol table. Offsets are
+// in radix (16 or 10).
+func (m *Machine) symbolicLocation(pc uint32, radix int) (loc string, names consoleSymbolizer, ok bool) {
 	if m.debugImageAt(pc) == nil || !symbolicDefault() {
 		return "", consoleSymbolizer{}, false
 	}
 
-	names = consoleSymbolizer{m: m, radix: m.symbolRadix()}
+	names = consoleSymbolizer{m: m, radix: radix}
 
 	loc, found := names.Symbolize(pc)
 	if !found {
@@ -50,8 +51,8 @@ func (m *Machine) symbolicLocation(pc uint32) (loc string, names consoleSymboliz
 // locationText is pc as STEP's "Stepped to" and a breakpoint's "Break at"
 // show it: symbolicLocation's name where it applies (the debugger's
 // "stepped to DBGDIS\START\%LINE 43"), else the address in 8 hex digits.
-func (m *Machine) locationText(pc uint32) string {
-	if loc, _, ok := m.symbolicLocation(pc); ok {
+func (m *Machine) locationText(pc uint32, radix int) string {
+	if loc, _, ok := m.symbolicLocation(pc, radix); ok {
 		return loc
 	}
 
@@ -64,7 +65,7 @@ func (m *Machine) locationText(pc uint32) string {
 // (FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0). ok is false where it
 // doesn't.
 func (m *Machine) symbolicTraceLine(pc uint32) (text string, ok bool, err error) {
-	loc, names, ok := m.symbolicLocation(pc)
+	loc, names, ok := m.symbolicLocation(pc, m.symbolRadix())
 	if !ok {
 		return "", false, nil
 	}
@@ -84,8 +85,14 @@ func (m *Machine) symbolicTraceLine(pc uint32) (text string, ok bool, err error)
 // to eight columns, and symbolic names where pc is inside an image that
 // has a debug symbol table. Where it isn't, the text is the console's own
 // disassembly. An instruction that can't be decoded is "<unreadable>".
-func (m *Machine) InstructionText(pc uint32) string {
-	if _, names, ok := m.symbolicLocation(pc); ok {
+// Names' offsets are in the console's radix; InstructionTextIn takes one.
+func (m *Machine) InstructionText(pc uint32) string { return m.InstructionTextIn(pc, m.symbolRadix()) }
+
+// InstructionTextIn is InstructionText with names' offsets in radix (16 or
+// 10): the debugger's, which isn't the console's (vax.init's SET RADIX
+// DECIMAL is the console's alone).
+func (m *Machine) InstructionTextIn(pc uint32, radix int) string {
+	if _, names, ok := m.symbolicLocation(pc, radix); ok {
 		if dec, err := m.decodeAt(memByteReader{m: m}, pc); err == nil {
 			return dec.Format(m.formatOptions(DisassembleOptions{Symbolic: true}, names))
 		}
@@ -126,5 +133,5 @@ func (m *Machine) EnteredRoutine(pc uint32) (string, bool) {
 		return "", false
 	}
 
-	return m.locationText(r.Address), true
+	return m.locationText(r.Address, m.symbolRadix()), true
 }

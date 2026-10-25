@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"io"
 	"slices"
 	"strings"
 
@@ -79,6 +80,16 @@ type Debugger struct {
 	// the next instruction it runs is the debugger's own (traced.go).
 	stepTrace, traceDone bool
 	ownsNext             bool
+
+	// output is SET OUTPUT's and SET LOG's (dbglog.go); procDepth counts
+	// the @ procedures being read (dbginput.go), whose lines aren't the
+	// debugger's input.
+	output    outputSettings
+	procDepth int
+
+	// pendingEcho is the VERIFY echo of the @ procedure line being run,
+	// until the command's first output shows it (dbginput.go).
+	pendingEcho string
 
 	// severeHeld says the program is stopped at a break on an unhandled
 	// severe condition, which it continues when it goes on (image.go's
@@ -182,9 +193,18 @@ type Console interface {
 	// IsConsoleVerb reports whether word is one of the console's verbs.
 	IsConsoleVerb(word string) bool
 
-	// RunDebuggerProcedure runs a debugger command procedure (@file),
-	// each line through dispatch.
-	RunDebuggerProcedure(file string, dispatch func(string) error) error
+	// ReadDebuggerFile reads a debugger command file (@file, DBG$INPUT's
+	// file), found as DCL finds a command procedure, and returns its full
+	// name and lines.
+	ReadDebuggerFile(file string) (string, []string, error)
+
+	// DebuggerInput is the file the logical name DBG$INPUT names, and
+	// false when it names none (or a terminal).
+	DebuggerInput() (string, bool)
+
+	// CreateDebuggerLog creates SET LOG's file, a text file, and returns
+	// it with its full name.
+	CreateDebuggerLog(file string) (io.WriteCloser, string, error)
 }
 
 // New returns a debugger for the console c's machine, with its commands bound to grammar g
@@ -198,6 +218,8 @@ func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
 		languageRadix: 16, modes: defaultDisplayModes(),
 	}
 	d.Dispatcher = newDispatcher(d, g, help)
+	d.output.terminal = true
+	d.installOutput()
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal
 	c.DebugBuiltins = d.builtinSymbol
@@ -233,6 +255,26 @@ func (d *Debugger) Active() bool { return d.active }
 //     prompt comes back. A session that was open when the run started
 //     stays open either way, until EXIT.
 func (d *Debugger) Start(a machine.Activation) error {
+	err := d.start(a)
+
+	// An image's session reads DBG$INPUT's commands, if it names a file,
+	// before RUN is over (dbginput.go); once the run that opened the
+	// session is over, so that a GO among them is a run of its own.
+	if err == nil && a.Kind == machine.ActivateImage && d.active && d.running == 0 {
+		if name, ok := d.Console.DebuggerInput(); ok {
+			d.readInput(name)
+		}
+	}
+
+	return err
+}
+
+// start is Start but for DBG$INPUT.
+func (d *Debugger) start(a machine.Activation) error {
+	// A procedure's GO, STEP, or CALL is echoed before the program runs,
+	// so the echo precedes the program's own output.
+	d.flushEcho()
+
 	if a.Kind == machine.ActivateAttach {
 		d.active = true
 
@@ -302,6 +344,12 @@ func (d *Debugger) Start(a machine.Activation) error {
 // Dispatch parses and runs one line of debugger command, as the console's
 // Dispatch does for the console's.
 func (d *Debugger) Dispatch(line string) error {
+	// A command read from the debugger's input, not an @ procedure's, is
+	// logged as it was read (dbglog.go).
+	if d.procDepth == 0 {
+		d.logInput(line)
+	}
+
 	return d.Dispatcher.Dispatch(line)
 }
 
@@ -339,6 +387,8 @@ func (d *Debugger) NewImage() {
 	d.imageExited = false
 	d.unhandled = nil
 	d.severeHeld, d.ownsNext = false, false
+	d.closeLog()
+	d.output = outputSettings{terminal: true}
 	d.signalled, d.signalBP = nil, nil
 	d.pendingDo = ""
 	d.exception = nil

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -430,5 +432,78 @@ func TestPromptKeys(t *testing.T) {
 
 	if r, ok := k.filter(readline.CharDelete); !ok || r != readline.CharDelete {
 		t.Error("CTRL/D after text didn't reach readline")
+	}
+}
+
+// TestModeHistory: the console's history file, and the debugger's and the
+// assembler's beside it; none without the console's.
+func TestModeHistory(t *testing.T) {
+	console := filepath.Join("home", ".govax", "history.txt")
+
+	for _, tc := range []struct{ mode, want string }{
+		{"", console},
+		{"debug", filepath.Join("home", ".govax", "debug_history.txt")},
+		{"asm", filepath.Join("home", ".govax", "asm_history.txt")},
+	} {
+		if got := modeHistory(console, tc.mode); got != tc.want {
+			t.Errorf("modeHistory(%q) = %q, want %q", tc.mode, got, tc.want)
+		}
+	}
+
+	if got := modeHistory("", "debug"); got != "" {
+		t.Errorf("with no console history: %q", got)
+	}
+}
+
+// fakeRecall is readline's in-memory history, for TestModeHistories.
+type fakeRecall struct{ lines []string }
+
+func (f *fakeRecall) ResetHistory() { f.lines = nil }
+
+func (f *fakeRecall) SaveHistory(line string) error {
+	f.lines = append(f.lines, line)
+
+	return nil
+}
+
+// TestModeHistories: each mode recalls its own lines, which survive a
+// switch to another mode and back, and are kept in its own file.
+func TestModeHistories(t *testing.T) {
+	console := filepath.Join(t.TempDir(), "history.txt")
+	if err := os.WriteFile(console, []byte("DIRECTORY\nSHOW TIME\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	h := newModeHistories(console)
+	rl := &fakeRecall{}
+
+	h.use(rl, "")
+	h.add("RUN/DEBUG PROG")
+
+	h.use(rl, "debug")
+	if len(rl.lines) != 0 {
+		t.Errorf("the debugger's first history %q, want none", rl.lines)
+	}
+
+	h.add("GO")
+	h.add("EXIT")
+
+	h.use(rl, "")
+	if got := strings.Join(rl.lines, "|"); got != "DIRECTORY|SHOW TIME|RUN/DEBUG PROG" {
+		t.Errorf("the console's history back %q", got)
+	}
+
+	h.use(rl, "debug")
+	if got := strings.Join(rl.lines, "|"); got != "GO|EXIT" {
+		t.Errorf("the debugger's history back %q", got)
+	}
+
+	data, err := os.ReadFile(modeHistory(console, "debug"))
+	if err != nil || string(data) != "GO\nEXIT\n" {
+		t.Errorf("the debugger's file %q, %v", data, err)
+	}
+
+	if data, _ := os.ReadFile(console); string(data) != "DIRECTORY\nSHOW TIME\nRUN/DEBUG PROG\n" {
+		t.Errorf("the console's file %q", data)
 	}
 }

@@ -328,7 +328,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 			}
 
 			if d.instructionBreakpointHit() {
-				c.Printf("Instruction break at %s\n", c.LocationText(pc))
+				c.Printf("Instruction break at %s\n", d.locationText(pc))
 				d.stopTakesTrace()
 
 				return runStopped, nil
