@@ -9,7 +9,6 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dclcmd"
-	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 )
@@ -112,91 +111,64 @@ func pslLine(t *testing.T, c *console.Console) string {
 	return strings.Join(strings.Fields(lines[2]), " ")
 }
 
-// TestTracedExaminePSL: EXAMINE PSL shows T once the BISPSW has run, and
-// TP too once the instruction after it has (the trace is then pending).
-func TestTracedExaminePSL(t *testing.T) {
+// TestTracedBreakTakesTrace: a breakpoint takes the trace pending where
+// it stops (the handler never sees it; T shows set and TP clear), and a
+// STEP from it leaves T clear, so the program's tracing ends, as VMS
+// 7.1's debugger does (testdata/trace73's TRSTEP).
+func TestTracedBreakTakesTrace(t *testing.T) {
 	c := tracedSession(t, tracedSource)
 
-	say(t, c, "STEP")
-	say(t, c, "STEP")
+	say(t, c, "SET BREAK %LINE 9")
+	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 9: NOP     \n     9:         NOP\n")
 
 	//                                  CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
-	expect(t, "EXAMINE PSL after BISPSW", pslLine(t, c), "0 0 0 0 KERNEL USER 0 0 0 0 1 0 0 0 0")
+	expect(t, "EXAMINE PSL at the break", pslLine(t, c), "0 0 0 0 KERNEL USER 0 0 0 0 1 0 0 0 0")
+	expectCount(t, c, "00000000")
 
-	say(t, c, "STEP")
-	expect(t, "EXAMINE PSL after a traced NOP", pslLine(t, c), "0 1 0 0 KERNEL USER 0 0 0 0 1 0 0 0 0")
-}
-
-// TestTracedStep: a STEP whose instruction has a trace pending lets the
-// program's handler take it, silently, then runs the instruction: each
-// step moves one instruction, as it does without tracing, and the handler
-// sees every trace, as under GO.
-func TestTracedStep(t *testing.T) {
-	c := tracedSession(t, tracedSource)
-
-	for _, s := range []struct{ step, count string }{
-		{"stepped to TRACED\\START\\%LINE 7: BISPSW   S^#10\n", "00000000"},
-		{"stepped to TRACED\\START\\%LINE 8: NOP     \n", "00000000"},
-		{"stepped to TRACED\\START\\%LINE 9: NOP     \n", "00000000"},
-		{"stepped to TRACED\\START\\%LINE 10: NOP     \n", "00000001"},
-		{"stepped to TRACED\\START\\%LINE 11: BICPSW   S^#10\n", "00000002"},
-		{"stepped to TRACED\\START\\%LINE 12: NOP     \n", "00000003"},
-		{"stepped to TRACED\\START\\%LINE 13: MOVL     S^#01,R0\n", "00000004"},
-	} {
-		out := say(t, c, "STEP")
-		if first, _, _ := strings.Cut(out, "\n"); first+"\n" != s.step {
-			t.Errorf("STEP:\n got %q\nwant %q", out, s.step)
-		}
-
-		expectCount(t, c, s.count)
+	if out := say(t, c, "STEP"); !strings.HasPrefix(out, "stepped to TRACED\\START\\%LINE 10: ") {
+		t.Errorf("STEP:\n%s", out)
 	}
+
+	expect(t, "EXAMINE PSL after STEP", pslLine(t, c), "0 0 0 0 KERNEL USER 0 0 0 0 0 0 0 0 0")
+	expectCount(t, c, "00000000")
+
+	say(t, c, "GO")
+	expectCount(t, c, "00000000")
 }
 
-// TestTracedGoFromBreak: a breakpoint stops before a trace that is
-// pending there; GO gives the trace to the program and runs on, without
-// stopping at the same breakpoint again when the handler returns.
+// TestTracedGoFromBreak: going on from a breakpoint in traced code, the
+// first instruction is the debugger's and the program's T is cleared
+// after it, so its handler gets no more traces, though later breakpoints
+// are still reached (TRGO).
 func TestTracedGoFromBreak(t *testing.T) {
 	c := tracedSession(t, tracedSource)
 
-	say(t, c, "SET BREAK %LINE 10")
+	say(t, c, "SET BREAK %LINE 9")
 	say(t, c, "SET BREAK %LINE 12")
 
-	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 10\n    10:         NOP\n")
-	expect(t, "EXAMINE PSL", pslLine(t, c), "0 1 0 0 KERNEL USER 0 0 0 0 1 0 0 0 0")
-	expectCount(t, c, "00000001")
+	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 9: NOP     \n     9:         NOP\n")
+	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 12: NOP     \n    12:         NOP\n")
+	expectCount(t, c, "00000000")
 
-	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 12\n    12:         NOP\n")
-	expectCount(t, c, "00000003")
-
-	// STEP from a breakpoint is the same: one instruction, the trace
-	// before it taken.
-	if out := say(t, c, "STEP"); !strings.HasPrefix(out, "stepped to TRACED\\START\\%LINE 13: ") {
-		t.Errorf("STEP from the breakpoint:\n%s", out)
-	}
-
-	expectCount(t, c, "00000004")
+	say(t, c, "GO")
+	expectCount(t, c, "00000000")
 }
 
-// TestTracedStepBreakInHandler: a breakpoint in the handler stops a STEP
-// that is giving the program its trace; the handler can be stepped, and GO
-// goes back to the program.
-func TestTracedStepBreakInHandler(t *testing.T) {
+// TestTracedBreakInHandler: a breakpoint in the trace handler doesn't
+// disturb the tracing: it is reached at each trace, and the handler takes
+// every one (TRHAND).
+func TestTracedBreakInHandler(t *testing.T) {
 	c := tracedSession(t, tracedSource)
 
-	say(t, c, "STEP 3") // to line 9, the trace pending
 	say(t, c, "SET BREAK TRACER")
 
-	expect(t, "STEP", say(t, c, "STEP"), "break at routine TRACED\\TRACER\n    16:         MOVL    4(AP),R0\n")
-
-	if out := say(t, c, "STEP"); !strings.HasPrefix(out, "stepped to TRACED\\TRACER\\%LINE 17: ") {
-		t.Errorf("STEP in the handler:\n%s", out)
+	for range 2 {
+		expect(t, "GO", say(t, c, "GO"), "break at routine TRACED\\TRACER\n    16:         MOVL    4(AP),R0\n")
 	}
 
 	say(t, c, "CANCEL BREAK/ALL")
-	say(t, c, "SET BREAK %LINE 10")
-
-	expect(t, "GO", say(t, c, "GO"), "break at TRACED\\START\\%LINE 10\n    10:         NOP\n")
-	expectCount(t, c, "00000001")
+	say(t, c, "GO")
+	expectCount(t, c, "00000004")
 }
 
 // TestTracedBreakException: SET BREAK/EXCEPTION stops at each SS$_TBIT
@@ -209,7 +181,7 @@ func TestTracedBreakException(t *testing.T) {
 	say(t, c, "SET BREAK/EXCEPTION")
 
 	out := say(t, c, "GO")
-	want := "%SYSTEM-F-TBIT, T-bit pending trap at PC=0000040C, PS=00C00010\n" +
+	want := "%SYSTEM-F-TBIT, T-bit pending trap at PC=0000040C, PSL=00C00010\n" +
 		"break on exception at TRACED\\START\\%LINE 9: NOP     \n"
 
 	if !strings.HasPrefix(out, want) {
@@ -250,25 +222,23 @@ func TestTracedFaultBreak(t *testing.T) {
 	expect(t, "GO", say(t, c, "GO"), "Break on fault 28 TP at PC = 0000040D\n")
 	expectCount(t, c, "00000001")
 
-	// A STEP from the stop delivers the trace too.
+	// A STEP from the stop delivers the trace, then ends the tracing, as
+	// any step does.
 	if out := say(t, c, "STEP"); !strings.HasPrefix(out, "stepped to TRACED\\START\\%LINE 11: ") {
 		t.Errorf("STEP from the fault break:\n%s", out)
 	}
 
 	expectCount(t, c, "00000002")
 
-	// Clearing TP at the stop drops the trace.
-	expect(t, "GO", say(t, c, "GO"), "Break on fault 28 TP at PC = 0000040E\n")
-	say(t, c, "DEPOSIT PSL = 10")
 	say(t, c, "CANCEL BREAK/ALL")
 	say(t, c, "GO")
-	expectCount(t, c, "00000003")
+	expectCount(t, c, "00000002")
 }
 
-// TestTracedDeposit: DEPOSIT to the PSL setting T starts tracing (the
-// next instruction runs, and the trace comes before the one after it);
-// /WORD and /BYTE change only the low word or byte; other sizes are
-// refused.
+// TestTracedDeposit: DEPOSIT to the PSL changes only its low word
+// (TRPRIV): a longword or word sets the PSW, a byte its low byte. A T it
+// sets is the debugger's to clear when the program goes on from the stop
+// (TRDEP, TRDEPGO). Other sizes are refused.
 func TestTracedDeposit(t *testing.T) {
 	c := tracedSession(t, untracedSource)
 
@@ -283,48 +253,43 @@ func TestTracedDeposit(t *testing.T) {
 	}
 
 	say(t, c, "STEP")
-	expect(t, "EXAMINE PSL", pslLine(t, c), "0 1 0 0 KERNEL USER 0 0 0 0 1 0 0 0 0")
-	expectCount(t, c, "00000000")
+	expect(t, "EXAMINE PSL", pslLine(t, c), "0 0 0 0 KERNEL USER 0 0 0 0 0 0 0 0 0")
 
-	say(t, c, "STEP")
-	expectCount(t, c, "00000001")
-
+	say(t, c, "DEPOSIT/WORD PSL = 10")
 	say(t, c, "GO")
-	expectCount(t, c, "00000004")
+	expectCount(t, c, "00000000")
 
 	if _, err := sayErr(c, "DEPOSIT/QUADWORD PSL = 0"); err == nil || !strings.Contains(err.Error(), "OPTNOTALLOW") {
 		t.Errorf("DEPOSIT/QUADWORD PSL: %v", err)
 	}
 
+	high := uint32(c.CPU.PSL()) &^ 0xFFFF
+
 	say(t, c, "DEPOSIT PSL = 12345678")
 
-	if got := uint32(c.CPU.PSL()); got != 0x12345678 {
-		t.Errorf("PSL after DEPOSIT = %08X", got)
+	if got := uint32(c.CPU.PSL()); got != high|0x5678 {
+		t.Errorf("PSL after DEPOSIT = %08X, want %08X", got, high|0x5678)
 	}
 
-	say(t, c, "DEPOSIT/BYTE PSL = 0")
+	say(t, c, "DEPOSIT/BYTE PSL = 0F")
 
-	if got := uint32(c.CPU.PSL()); got != 0x12345600 {
-		t.Errorf("PSL after DEPOSIT/BYTE = %08X", got)
+	if got := uint32(c.CPU.PSL()); got != high|0x560F {
+		t.Errorf("PSL after DEPOSIT/BYTE = %08X, want %08X", got, high|0x560F)
 	}
 }
 
-// TestTracedDebuggerTakes: with the other answer to Decision 5, the
-// debugger takes the trace pending when a STEP begins, so the program's
-// handler doesn't see the traces of the instructions stepped; under GO
-// it sees the rest.
-func TestTracedDebuggerTakes(t *testing.T) {
-	c := tracedSession(t, tracedSource)
-	debugger.SetTakeTraces(dbgOf(c), true)
+// TestTracedUnhandledContinues: GO from a break on an unhandled SS$_TBIT
+// (a severe condition) warns, %DEBUG-I-CONFROMEXC, and continues the
+// program, which takes its next trace, as VMS 7.1's debugger does
+// (TRUNH).
+func TestTracedUnhandledContinues(t *testing.T) {
+	c := tracedSession(t, "\t.TITLE\tTRACED\n\t.PSECT\tCODE,NOWRT,EXE\n\t.ENTRY\tSTART,^M<>\n"+
+		"\tNOP\n\tBISPSW\t#^X10\n\tNOP\n\tNOP\n\tBICPSW\t#^X10\n\tMOVL\t#1,R0\n\tRET\n\t.END\tSTART\n")
 
-	// To line 11: the traces before lines 9 and 10 are dropped, and the
-	// one before line 11 is pending.
-	for range 5 {
-		say(t, c, "STEP")
-	}
+	expect(t, "GO", say(t, c, "GO"), "%SYSTEM-F-TBIT, T-bit pending trap at PC=00000206, PSL=00C00010\n"+
+		"break on unhandled exception at TRACED\\START\\%LINE 7: NOP     \n     7:         NOP\n")
 
-	expectCount(t, c, "00000000")
-
-	say(t, c, "GO")
-	expectCount(t, c, "00000002") // before the BICPSW, and after it
+	expect(t, "GO", say(t, c, "GO"), "%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed\n"+
+		"%SYSTEM-F-TBIT, T-bit pending trap at PC=00000207, PSL=00C00010\n"+
+		"break on unhandled exception at TRACED\\START\\%LINE 8: BICPSW   S^#10\n     8:         BICPSW  #^X10\n")
 }

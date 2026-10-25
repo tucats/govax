@@ -25,6 +25,7 @@
 //              10/17/26    SHOW MEMORY's page file section.
 //              10/24/26    DEPOSIT to the PSL; STEP and a program that
 //                          traces itself (Phase 73, subtask 3).
+//              10/25/26    Both as VMS 7.1's debugger has them (subtask 4).
 //
 
 $HELP
@@ -331,11 +332,11 @@ $D
   A value wider than a longword deposited in a register fills the
   registers after it too (DEPOSIT/D_FLOAT R0 = 1.5 sets R0 and R1).
 
-  DEPOSIT PSL replaces the processor status longword; DEPOSIT/WORD and
-  DEPOSIT/BYTE change only its low word (the PSW) or byte. Setting T
-  (^X10) makes the program trace itself: the next instruction runs, and a
-  trace fault, SS$_TBIT to the program's condition handlers, comes before
-  each instruction after it.
+  DEPOSIT PSL changes only the processor status longword's low word (the
+  PSW); DEPOSIT/BYTE only its low byte. The rest of the PSL (the access
+  modes, IPL) stays as it was; SET PSL changes those. Setting T (^X10)
+  asks for tracing, but going on from the stop clears it again (HELP
+  STEP).
 
   /INSTRUCTION (or SET TYPE INSTRUCTION) assembles one machine
   instruction, in quotes, at the location: its numbers are in the input
@@ -1272,11 +1273,12 @@ $S
   With a qualifier left out, STEP uses what SET STEP chose.
 
   A program may trace itself (PSL<T> set, its condition handler taking
-  SS$_TBIT after each instruction). The debugger doesn't use the trace
-  bit, so the program gets every trace: when a trace is due before the
-  instruction a step runs, the program's handler takes it first, as part
-  of the step, and the step then runs the instruction. A breakpoint in
-  the handler stops the step there.
+  SS$_TBIT after each instruction). As the VMS debugger does, a
+  breakpoint takes the trace due where it stops, and going on from a
+  breakpoint or a step, by STEP or GO, clears T after the first
+  instruction, so the program's tracing ends there. A breakpoint in the
+  program's trace handler, or SET BREAK/EXCEPTION, leaves the tracing as
+  it is.
 
 $SYMB
   Shows each name the debugger has for an address.

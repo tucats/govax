@@ -3374,7 +3374,7 @@ An address or value is an expression:
 | --- | --- |
 | `EXAMINE [/type] location[,...]` | Show data, typed by the program's symbols or a qualifier: `/BYTE`, `/WORD`, `/LONGWORD`, `/QUADWORD`, `/OCTAWORD`, `/FLOAT`, `/D_FLOAT`, `/G_FLOAT`, `/H_FLOAT`, `/PACKED:n`, `/ASCII:n`, `/ASCIC`, `/ASCIZ`, `/ASCID`, `/DATE_TIME`, `/CONDITION_VALUE`, `/PSL`, `/PTE`; and `/HEX`, `/DECIMAL`, `/OCTAL`, `/BINARY`. |
 | `EXAMINE/INSTRUCTION location` | Disassemble, with symbolic names; `/OPERANDS` explains each operand. With no location, the instruction after the last one shown. An address in a shareable image with no symbols is named `SHARE$image+offset`. |
-| `DEPOSIT [/type] location = value` | Change memory or a register. `DEPOSIT/INSTRUCTION .PC = 'MOVL #1,R0'` assembles an instruction in place. `DEPOSIT/WORD PSL = 10` changes the PSL's low word, here setting T, so the program traces itself. |
+| `DEPOSIT [/type] location = value` | Change memory or a register. `DEPOSIT/INSTRUCTION .PC = 'MOVL #1,R0'` assembles an instruction in place. `DEPOSIT/WORD PSL = 10` changes the PSL's low word, here setting T; DEPOSIT changes only the low word. |
 | `EVALUATE [/radix] expr` | Show a value; `/ADDRESS` an address; `/CONDITION_VALUE` a status's message. |
 | `SYMBOLIZE address` | The names for an address. |
 | `SHOW CALLS`, `SHOW STACK` | The call frames. |

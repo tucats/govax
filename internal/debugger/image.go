@@ -125,6 +125,10 @@ func (d *Debugger) unhandledBreak() bool {
 	d.unhandled = nil
 	d.setException(u)
 
+	// A severe condition (not a LIB$STOP) goes on when the program does,
+	// with a warning (confromexc).
+	d.severeHeld = u.Condition&7 == 4 && !u.Stop
+
 	where := "at"
 	if u.Preceding {
 		where = "preceding"
@@ -134,6 +138,17 @@ func (d *Debugger) unhandledBreak() bool {
 	d.showSource(u.PC)
 
 	return true
+}
+
+// confromexc is the warning GO and STEP give, as VMS 7.1's debugger
+// does, when the program goes on from a break on an unhandled severe
+// condition, which the catch-all then continues (testdata/trace73's
+// TRUNH).
+func (d *Debugger) confromexc() {
+	if d.severeHeld {
+		d.severeHeld = false
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_CONFROMEXC))
+	}
 }
 
 // imageExit handles a run that ended because the image exited: it shows

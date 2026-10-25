@@ -198,3 +198,36 @@ func TestLibEstablishRevert(t *testing.T) {
 		t.Errorf("the stub's own frame was changed: %#x", got)
 	}
 }
+
+// TestLibSignal_traced: LIB$SIGNAL called with PSL<T> set (from code
+// that traces itself) calls no handler: it writes the condition's message
+// and ends the image with the condition as its status, T and TP cleared,
+// as VMS 7.1 does (testdata/trace73's round 2, part G).
+func TestLibSignal_traced(t *testing.T) {
+	env, out := signalFixture(t)
+	c := env.cpu
+
+	psl := c.PSL()
+	psl.SetT(true)
+	psl.SetTP(true)
+	c.SetPSL(psl)
+
+	_, err := env.Signal([]uint32{0x870}, false) // SS$_ENDOFFILE: W
+
+	call, ok := err.(*CallRequest)
+	if !ok || call.Routine != exitEntryAddr {
+		t.Fatalf("traced LIB$SIGNAL = %v; want a call of SYS$EXIT", err)
+	}
+
+	if args := longwordsAt(t, env, call.ArgList, 2); args[1] != 0x870|stsInhibitMsg {
+		t.Errorf("exit status %#x, want %#x", args[1], 0x870|stsInhibitMsg)
+	}
+
+	if out.String() != "%SYSTEM-W-ENDOFFILE, end of file\n" {
+		t.Errorf("output %q", out.String())
+	}
+
+	if got := c.PSL(); got.T() || got.TP() || len(env.Process.conditions) != 0 {
+		t.Errorf("PSL %#x, %d dispatches; want T and TP clear, none", uint32(got), len(env.Process.conditions))
+	}
+}

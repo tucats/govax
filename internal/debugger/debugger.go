@@ -74,12 +74,16 @@ type Debugger struct {
 	pendingReturn *pendingReturn
 
 	// stepTrace is set for a run that gives the program the trace pending
-	// before a STEP's instruction, and traceDone when that run has done so
-	// (traced.go). takeTraces makes the debugger take such a trace instead
-	// (programGetsTrace): false, unless the probe shows VMS's debugger
-	// does.
+	// before a STEP's instruction, and traceDone when that run has done so;
+	// ownsNext says the program is stopped at a breakpoint or a step, so
+	// the next instruction it runs is the debugger's own (traced.go).
 	stepTrace, traceDone bool
-	takeTraces           bool
+	ownsNext             bool
+
+	// severeHeld says the program is stopped at a break on an unhandled
+	// severe condition, which it continues when it goes on (image.go's
+	// confromexc).
+	severeHeld bool
 
 	// running counts the runs in progress. It is more than one when a run
 	// starts another from inside itself: the console's condition handling
@@ -334,6 +338,7 @@ func (d *Debugger) NewImage() {
 	d.imageDebug = false
 	d.imageExited = false
 	d.unhandled = nil
+	d.severeHeld, d.ownsNext = false, false
 	d.signalled, d.signalBP = nil, nil
 	d.pendingDo = ""
 	d.exception = nil

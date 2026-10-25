@@ -133,11 +133,39 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 	// Search from the caller's frame, not LIB$SIGNAL's own.
 	d.startFP, d.fp = callerFP, callerFP
 
+	if c.PSL().T() {
+		return env.tracedSignal(d, sig)
+	}
+
 	if c.DebugEnabled(registers.DebugExceptions) {
 		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): %s, CONDITION=%08X  PC=%08X  SIGNAL=%08X\n", name, sig[0], returnPC, d.sig)
 	}
 
 	return 0, nil
+}
+
+// tracedSignal is LIB$SIGNAL or LIB$STOP called with PSL<T> set: from
+// code that traces itself (CALLS leaves PSL<T> as it was). On VMS 7.1
+// the program's handlers then get the traces of LIB$SIGNAL's code and of
+// the condition search's, and are never called for the condition: the
+// image ends with the condition's message (as $PUTMSG writes it) and the
+// condition, marked STS$M_INHIB_MSG, as its status, and its exit
+// handlers run (testdata/trace73's round 2, parts G and M). govax's
+// LIB$SIGNAL is a shim, with no search code of its own to trace, so the
+// image ends here, at the shim. T and TP are cleared first: the exit
+// handlers run untraced. LIB$STOP's case is unconfirmed: the probe
+// signals only with LIB$SIGNAL.
+func (env *Environment) tracedSignal(d *conditionDispatch, sig []uint32) (uint32, error) {
+	if sig[0]&stsInhibitMsg == 0 {
+		env.putMessage(sig[0], env.signalMessage(sig))
+	}
+
+	psl := env.cpu.PSL()
+	psl.SetT(false)
+	psl.SetTP(false)
+	env.cpu.SetPSL(psl)
+
+	return env.exitForCondition(d, sig[0])
 }
 
 // setCallerHandler stores handler in the frame of the procedure that

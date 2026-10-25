@@ -196,6 +196,11 @@ type conditionDispatch struct {
 	// program continue, doesn't show the message twice.
 	reported bool
 
+	// debuggerHeld says a debugger stopped the program for the condition
+	// (OnUnhandled said so), so a severe one continues when the program
+	// goes on (catchAll).
+	debuggerHeld bool
+
 	// unwind is the $UNWIND a handler asked for, carried out when the
 	// handler returns (unwind.go); nil if none.
 	unwind *unwindRequest
@@ -719,10 +724,14 @@ func (env *Environment) sigWords(d *conditionDispatch) ([]uint32, error) {
 //
 // For an exception, PC is the signal array's PC — a handler may have
 // changed it, to skip the faulting instruction say — and the PSL's
-// condition codes and trap enables (its low byte) come from the signal
-// array's PSL; its mode, IPL, and the rest stay as they were, as REI
-// would insist. For LIB$SIGNAL, execution returns from LIB$SIGNAL. A
-// LIB$STOP can't be continued: the image exits instead.
+// condition codes, T, and trap enables (its low byte) and TP come from
+// the signal array's PSL; its mode, IPL, and the rest stay as they were,
+// as REI would insist. TP is the signal array's as VMS 7.1's is: a
+// handler that sets it gets a trace before the instruction it continues
+// at, and it is already set there for a trap taken while tracing, clear
+// for a fault (testdata/trace73, parts I, B, and K). For LIB$SIGNAL,
+// execution returns from LIB$SIGNAL. A LIB$STOP can't be continued: the
+// image exits instead.
 func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) {
 	c := env.cpu
 
@@ -748,7 +757,9 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 	switch d.kind {
 	case kindException:
 		c.SetGPR(registers.PC, pc)
-		c.SetPSL(d.resumePSL&^0xFF | registers.PSL(psl&0xFF))
+		const kept = 0xFF | 1<<30 // the low byte, and TP
+
+		c.SetPSL(d.resumePSL&^kept | registers.PSL(psl&kept))
 
 	default:
 		c.SetGPR(registers.PC, d.resumePC)
@@ -789,6 +800,14 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 		return 0, ErrWait
 	}
 
+	// A severe condition the debugger stopped for goes on when the user
+	// lets the program go on, as under VMS 7.1's debugger, which says
+	// %DEBUG-I-CONFROMEXC (testdata/trace73's TRUNH). A LIB$STOP still
+	// ends the image (unconfirmed).
+	if exiting && d.debuggerHeld && d.kind != kindStop {
+		return env.continueCondition(d)
+	}
+
 	if exiting {
 		return env.exitForCondition(d, cond)
 	}
@@ -824,6 +843,8 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 	}
 
 	if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0])) {
+		d.debuggerHeld = true
+
 		return true
 	}
 
@@ -862,10 +883,13 @@ type UnhandledCondition struct {
 	// VMS debugger words as "preceding".
 	Preceding bool
 
+	// Stop is true for LIB$STOP, which can't be continued.
+	Stop bool
+
 	// Message is the condition's message, formatted from its signal array
 	// as the catch-all formats it (signalMessage): a line for each
 	// message, the system exception messages' $FAO parameters filled in
-	// ("T-bit pending trap at PC=00000205, PS=03C00010"). Empty when the
+	// ("T-bit pending trap at PC=00000205, PSL=03C00010"). Empty when the
 	// signal array can't be read.
 	Message []string
 }
@@ -874,7 +898,7 @@ type UnhandledCondition struct {
 // PC is in the signal array; a software signal's is the return address in
 // the call frame of the LIB$SIGNAL or LIB$STOP stub, which resumeFP is.
 func (env *Environment) unhandledCondition(d *conditionDispatch, cond uint32) UnhandledCondition {
-	u := UnhandledCondition{Condition: cond}
+	u := UnhandledCondition{Condition: cond, Stop: d.kind == kindStop}
 
 	if words, err := env.sigWords(d); err == nil && len(words) >= 3 {
 		u.Message = env.signalMessage(words)

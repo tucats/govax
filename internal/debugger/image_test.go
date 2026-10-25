@@ -141,8 +141,10 @@ func TestImageExitStatus(t *testing.T) {
 
 // TestUnhandledExceptionBreak: an access violation no handler takes is
 // shown as VMS's catch-all shows it, and then the debugger breaks at the
-// faulting instruction ("at", faillnk.dlg). GO lets the catch-all end the
-// image with the condition as its status.
+// faulting instruction ("at", faillnk.dlg). GO from the break continues
+// the severe condition with %DEBUG-I-CONFROMEXC, as VMS 7.1's debugger
+// does (testdata/trace73's TRUNH): the instruction runs again and faults
+// again, which is a new access violation, with its own message and break.
 func TestUnhandledExceptionBreak(t *testing.T) {
 	c, _ := runImage(t, dbgImagePath(t, "faillnk.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
@@ -159,18 +161,14 @@ func TestUnhandledExceptionBreak(t *testing.T) {
 		t.Errorf("GO:\n%s\nwant the break at FAILSUB\\SUB2\\%%LINE 12", out)
 	}
 
-	// The message is shown once, however the program is continued.
 	out, err = goOutput(t, c)
 	if err != nil {
 		t.Fatalf("GO after the break: %v", err)
 	}
 
-	if strings.Contains(out, "reason mask=00") {
-		t.Errorf("the message was shown again:\n%s", out)
-	}
-
-	if !strings.Contains(out, "%DEBUG-I-EXITSTATUS, is '%SYSTEM-F-ACCVIO, access violation") {
-		t.Errorf("GO after the break:\n%s\nwant the image's exit with ACCVIO", out)
+	if !strings.HasPrefix(out, "%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error; integrity not guaranteed\n%SYSTEM-F-ACCVIO, ") ||
+		!strings.HasSuffix(out, "break on unhandled exception at FAILSUB\\SUB2\\%LINE 12\n") {
+		t.Errorf("GO after the break:\n%s\nwant CONFROMEXC, then the access violation again", out)
 	}
 }
 

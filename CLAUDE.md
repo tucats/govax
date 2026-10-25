@@ -968,13 +968,16 @@ expect adjustment as phases land):
   the console and the debugger each have their own radix. `SET PROCESS
   [pid|name]` (`process.go`) moves the CPU to another process so the
   debugger shows its context (STEP and breakpoints stay with process 1),
-  and the debugger's `SHOW PROCESS` lists the processes. A program
-  that traces itself (Phase 73, `traced.go`) gets every trace: a STEP
-  whose instruction has a trace pending runs the program's handler
-  first, silently, then the instruction (`deliverPendingTrace`;
-  `programGetsTrace` is Decision 5's one place to change), and a run
-  that starts at a breakpoint stays exempt from it until the program is
-  back from that trace (`runLoop`). DEPOSIT to the PSL is `depositPSL`. **Symbols are
+  and the debugger's `SHOW PROCESS` lists the processes. Beside a
+  program that traces itself (Phase 73, `traced.go`) it does what VMS
+  7.1's debugger does: a breakpoint takes the trace pending where it
+  stops (`stopTakesTrace`), going on from a breakpoint or a step clears
+  T after the first instruction (`ownsNext`, `dropTracing`), and a step's
+  end clears it (`stepEnded`); other stops leave the trace to the program
+  (`deliverPendingTrace`). GO from a break on an unhandled severe
+  condition continues it with %DEBUG-I-CONFROMEXC (`confromexc`; the RTL
+  side is `conditionDispatch.debuggerHeld`). DEPOSIT to the PSL changes
+  only its low word (`depositPSL`). **Symbols are
   split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
   DCL's (`internal/dclshell/dclsym.go`'s `dclSymbolTable`: a global table
   and a local table per command level), and the machine's symbol table

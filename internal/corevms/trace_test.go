@@ -47,17 +47,21 @@ func TestDispatchException_traceFault(t *testing.T) {
 // TestSrchandler_traceContinue: a handler that continues from SS$_TBIT
 // leaving the signal array alone goes on tracing (T set again, TP clear
 // so the next instruction runs before the next trace); one that clears T
-// in the signal array's PSL stops it; one that moves the PC is obeyed.
+// in the signal array's PSL stops it; one that moves the PC is obeyed;
+// one that sets TP there gets a trace before the instruction it continues
+// at, as on VMS 7.1 (testdata/trace73, part I).
 func TestSrchandler_traceContinue(t *testing.T) {
 	cases := []struct {
 		name  string
 		pc    uint32 // the PC the handler leaves, 0 for unchanged
 		clear bool   // the handler clears T in the signal array's PSL
+		setTP bool   // the handler sets TP there
 		wantT bool
 	}{
-		{"tracing goes on", 0, false, true},
-		{"tracing stops", 0, true, false},
-		{"resumed elsewhere", 0x4000, false, true},
+		{"tracing goes on", 0, false, false, true},
+		{"tracing stops", 0, true, false, false},
+		{"resumed elsewhere", 0x4000, false, false, true},
+		{"TP set", 0, false, true, true},
 	}
 
 	for _, tc := range cases {
@@ -81,9 +85,10 @@ func TestSrchandler_traceContinue(t *testing.T) {
 			putLongword(t, env, d.sig+4*2, tc.pc)
 		}
 
-		if tc.clear {
+		if tc.clear || tc.setTP {
 			sigPSL := psl
-			sigPSL.SetT(false)
+			sigPSL.SetT(!tc.clear)
+			sigPSL.SetTP(tc.setTP)
 			putLongword(t, env, d.sig+4*3, uint32(sigPSL))
 		}
 
@@ -94,9 +99,9 @@ func TestSrchandler_traceContinue(t *testing.T) {
 		}
 
 		got := c.PSL()
-		if got.T() != tc.wantT || got.TP() || c.GPR(registers.PC) != wantPC {
-			t.Errorf("%s: PC %#x PSL %#x (T %v, TP %v); want PC %#x, T %v, TP clear",
-				tc.name, c.GPR(registers.PC), uint32(got), got.T(), got.TP(), wantPC, tc.wantT)
+		if got.T() != tc.wantT || got.TP() != tc.setTP || c.GPR(registers.PC) != wantPC {
+			t.Errorf("%s: PC %#x PSL %#x (T %v, TP %v); want PC %#x, T %v, TP %v",
+				tc.name, c.GPR(registers.PC), uint32(got), got.T(), got.TP(), wantPC, tc.wantT, tc.setTP)
 		}
 	}
 }
@@ -161,7 +166,7 @@ func TestSrchandler_traceUnhandled(t *testing.T) {
 		t.Errorf("$EXIT's status %#x, want 0x10000464 (TBIT, message inhibited)", args[1])
 	}
 
-	want := "%SYSTEM-F-TBIT, T-bit pending trap at PC=00003002, PS=03C00010"
+	want := "%SYSTEM-F-TBIT, T-bit pending trap at PC=00003002, PSL=03C00010"
 	if !strings.HasPrefix(out.String(), want) {
 		t.Errorf("output %q\nwant it to start %q", out.String(), want)
 	}

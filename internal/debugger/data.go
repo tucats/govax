@@ -449,16 +449,15 @@ func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]
 	return data[:size], nil
 }
 
-// depositPSL is DEPOSIT to the PSL: a longword replaces it, and a byte or
-// word (DEPOSIT/WORD PSL = 0, the VMS debugger manuals' way to clear the
-// condition codes and trap enables) its low byte or word, the PSW, the
-// rest left as it is. A type of another size is %DEBUG-E-OPTNOTALLOW.
-// Setting T starts tracing: the next instruction runs, and the trace
-// comes before the one after it (the VAX/VMS 2.0 Symbolic Debugger
-// Reference: "setting the trace trap condition code may cause a T-bit
-// pending trap"; traced.go). govax lets every bit be changed, as SET PSL
-// does: VMS's debugger, a user-mode program, can't change the privileged
-// half (unconfirmed what it does when asked to).
+// depositPSL is DEPOSIT to the PSL. Only its low word, the PSW, changes,
+// as with VMS 7.1's debugger: DEPOSIT PSL = 0 leaves the access modes and
+// the rest of the privileged half as they were (testdata/trace73's
+// TRPRIV). A longword or word sets the PSW; a byte (DEPOSIT/BYTE PSL =
+// 0F) its low byte, the condition codes, T, and the trap enables. A type
+// of another size is %DEBUG-E-OPTNOTALLOW. Setting T makes the program
+// trace itself, but the debugger clears it again when the program goes on
+// from a breakpoint (traced.go), as VMS's does. SET PSL changes the
+// other fields.
 func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 	size := uint32(4)
 
@@ -487,7 +486,7 @@ func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 
 	psl := uint32(d.Machine.CPU.PSL())
 
-	for b := range min(size, uint32(len(data))) {
+	for b := range min(size, 2, uint32(len(data))) {
 		psl = psl&^(0xFF<<(8*b)) | uint32(data[b])<<(8*b)
 	}
 

@@ -302,6 +302,7 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 	}
 
 	c.Engine.BeginRun()
+	d.confromexc()
 
 	// A step is of the debugged process alone: no other process runs
 	// while it does (docs/PHASE-43.md, Decision 11; docs/PHASE-44.md,
@@ -327,6 +328,8 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 		if err != nil || outcome != runStopped || !completed {
 			return outcome, err
 		}
+
+		d.stepEnded()
 	}
 
 	return outcome, err
@@ -419,6 +422,8 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 	c := d.Machine
 
 	if d.returnDue() {
+		d.stopTakesTrace()
+
 		return runStopped, true, nil
 	}
 
@@ -426,6 +431,9 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 	if outcome, done, err := d.deliverPendingTrace(); done {
 		return outcome, true, err
 	}
+
+	owned := d.ownsNext
+	d.ownsNext = false
 
 	d.snapshotWatches()
 
@@ -452,9 +460,19 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 
 	finish()
 
+	if owned {
+		d.dropTracing()
+	}
+
 	// A watched location the instruction changed ends the step with the
 	// watchpoint's report, and so does a condition nobody handled.
-	if d.watchHit(startPC) || d.signalBreak() || d.unhandledBreak() {
+	if d.watchHit(startPC) {
+		d.stopTakesTrace()
+
+		return runStopped, true, nil
+	}
+
+	if d.signalBreak() || d.unhandledBreak() {
 		return runStopped, true, nil
 	}
 

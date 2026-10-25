@@ -113,7 +113,7 @@ func TestTrace73Unhandled(t *testing.T) {
 		t.Errorf("R0 = %#x, want SS$_TBIT (0x464)", r0)
 	}
 
-	if !strings.HasPrefix(out, "%SYSTEM-F-TBIT, T-bit pending trap at PC=00000205, PS=03C00010\n") {
+	if !strings.HasPrefix(out, "%SYSTEM-F-TBIT, T-bit pending trap at PC=00000205, PSL=03C00010\n") {
 		t.Errorf("output:\n%s", out)
 	}
 

@@ -28,6 +28,7 @@ const (
 	dbgNoCurVal
 	dbgNoExc
 	dbgNotNumeric
+	dbgConFromExc
 )
 
 // DBG facility status codes.
@@ -116,6 +117,10 @@ const (
 	// DBG_NOTNUMERIC reports a string built-in symbol (%EXC_NAME) used
 	// where a number is needed (govax's own text).
 	DBG_NOTNUMERIC = DBGFacility<<FacilityPosition | dbgNotNumeric<<MessagePosition | StatusError
+	// DBG_CONFROMEXC is GO's (or STEP's) warning when the program goes on
+	// from a break on an unhandled severe condition, which it then
+	// continues (VMS 7.1's text, testdata/trace73's TRUNH).
+	DBG_CONFROMEXC = DBGFacility<<FacilityPosition | dbgConFromExc<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -137,6 +142,7 @@ func init() {
 	DefineMessage(DBG_NOTYPE, DBGFacility, "NOTYPE", "'!S' does not name a data type")
 	DefineMessage(DBG_INVTIME, DBGFacility, "INVTIME", "invalid date or time at or near '!S'")
 	DefineMessage(DBG_NEEDQUOTE, DBGFacility, "NEEDQUOTE", "an instruction must be in quotes at or near '!S'")
+	DefineMessage(DBG_CONFROMEXC, DBGFacility, "CONFROMEXC", "WARNING: continuing after severe error; integrity not guaranteed")
 	DefineMessage(DBG_ASMERROR, DBGFacility, "ASMERROR", "cannot assemble '!S'")
 	DefineMessage(DBG_NOCURVAL, DBGFacility, "NOCURVAL", "no value has been examined, evaluated, or deposited")
 	DefineMessage(DBG_NOEXC, DBGFacility, "NOEXC", "there is no current exception")

@@ -102,6 +102,9 @@ type UnhandledException struct {
 	PC        uint32
 	Preceding bool
 
+	// Stop is true for a LIB$STOP, which can't be continued.
+	Stop bool
+
 	// Message is the condition's message, a line for each message in its
 	// signal array, with the $FAO parameters filled in, as the catch-all
 	// shows it.

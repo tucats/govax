@@ -511,13 +511,13 @@ func (m *Machine) newRTL() *corevms.Environment {
 	// debugger installed later still gets it.
 	env.OnSignal = func(u corevms.UnhandledCondition) {
 		if m.OnSignal != nil {
-			m.OnSignal(UnhandledException{Condition: u.Condition, PC: u.PC, Preceding: u.Preceding, Message: u.Message})
+			m.OnSignal(UnhandledException{Condition: u.Condition, PC: u.PC, Preceding: u.Preceding, Message: u.Message, Stop: u.Stop})
 		}
 	}
 
 	env.OnUnhandled = func(u corevms.UnhandledCondition) bool {
 		return m.OnUnhandled != nil && m.OnUnhandled(UnhandledException{
-			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding, Message: u.Message,
+			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding, Message: u.Message, Stop: u.Stop,
 		})
 	}
 

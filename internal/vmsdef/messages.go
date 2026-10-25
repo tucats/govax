@@ -101,14 +101,15 @@ func sharedMessage(code uint32) (Message, bool) {
 // it. The others are the conditions of the hardware exceptions govax
 // signals (corevms's exceptionCondition), whose PC and PSL a VAX shows
 // as longwords after "PC=" and "PSL=": OPCDEC's, ROPRAND's, INTOVF's,
-// and INTDIV's are as VMS 7.1 showed them (testdata/tb70); the rest
-// follow them, unconfirmed.
+// and INTDIV's are as VMS 7.1 showed them (testdata/tb70), and TBIT's
+// (testdata/trace73); the rest follow them, unconfirmed.
 var vaxMessages = map[uint32]Message{
 	0x00000008: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL", FAOCount: 4},
 	0x00000430: {Facility: "SYSTEM", Ident: "OPCCUS", Text: "opcode reserved to customer fault at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000438: {Facility: "SYSTEM", Ident: "OPCDEC", Text: "opcode reserved to Digital fault at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000448: {Facility: "SYSTEM", Ident: "RADRMOD", Text: "reserved addressing fault at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000450: {Facility: "SYSTEM", Ident: "ROPRAND", Text: "reserved operand fault at PC=!XL, PSL=!XL", FAOCount: 2},
+	0x00000460: {Facility: "SYSTEM", Ident: "TBIT", Text: "T-bit pending trap at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000470: {Facility: "SYSTEM", Ident: "ARTRES", Text: "reserved arithmetic trap at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000478: {Facility: "SYSTEM", Ident: "INTOVF", Text: "arithmetic trap, integer overflow at PC=!XL, PSL=!XL", FAOCount: 2},
 	0x00000480: {Facility: "SYSTEM", Ident: "INTDIV", Text: "arithmetic trap, integer divide by zero at PC=!XL, PSL=!XL", FAOCount: 2},

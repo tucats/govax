@@ -270,6 +270,12 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 	stepTrace := d.stepTrace
 	d.stepTrace = false
 
+	// Going on from a breakpoint or a step, the first instruction is the
+	// debugger's own, as VMS's runs it with the trace bit: the program's
+	// T and TP are cleared after it (traced.go).
+	owned := d.ownsNext
+	d.ownsNext = false
+
 	// Source lines are shown once per instruction while the loop runs
 	// (showSource). A loop inside another (a condition handler's) leaves
 	// the outer's setting as it found it.
@@ -316,11 +322,14 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 			d.traceHit(pc)
 
 			if d.breakpointHit(pc) {
+				d.stopTakesTrace()
+
 				return runStopped, nil
 			}
 
 			if d.instructionBreakpointHit() {
 				c.Printf("Instruction break at %s\n", c.LocationText(pc))
+				d.stopTakesTrace()
 
 				return runStopped, nil
 			}
@@ -329,6 +338,8 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 		// A STEP/RETURN waiting for this RET fires before it runs, even on
 		// the run's first instruction.
 		if mine && d.returnDue() {
+			d.stopTakesTrace()
+
 			return runStopped, nil
 		}
 
@@ -347,12 +358,24 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 
 		finish()
 
+		if owned && mine {
+			owned = false
+
+			d.dropTracing()
+		}
+
 		// A watched location the instruction changed stops the program
 		// after it; so does a condition nobody handled, at the
 		// instruction that raised it. Watchpoints are checked after
 		// process 1's instructions only (a change another process makes
 		// to a shared S0 location is seen after process 1's next one).
-		if (c.RunningProcessOne() && d.watchHit(pc)) || d.signalBreak() || d.unhandledBreak() {
+		if c.RunningProcessOne() && d.watchHit(pc) {
+			d.stopTakesTrace()
+
+			return runStopped, nil
+		}
+
+		if d.signalBreak() || d.unhandledBreak() {
 			return runStopped, nil
 		}
 	}
@@ -431,6 +454,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 	}
 
 	c.Engine.BeginRun()
+	d.confromexc()
 
 	return d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
 }

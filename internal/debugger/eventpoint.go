@@ -242,7 +242,9 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 		return "break at routine " + bp.Name
 	}
 
-	return "break at " + where
+	// With SET STEP INSTRUCTION the instruction is shown too, as at an
+	// exception (testdata/trace73's TRSTEP and TRCALL).
+	return "break at " + d.exceptionLocation(pc)
 }
 
 // whenHolds evaluates bp's WHEN condition. A condition that can't be

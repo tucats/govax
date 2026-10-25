@@ -503,3 +503,61 @@ labels). What it says, against govax's dry run above:
   - Under the debugger, VMS's own debugger code in P0 is traced after a
     service's CHMK (TRSVC's records at `P0 000912xx`): VMS's internals,
     nothing govax can match.
+
+### 2026-10-25 — Subtask 4, round 2 and govax changed to the answers
+
+Round 2 (`trace73b.mar`, `vax/trace73b.log`) answers part G: LIB$SIGNAL
+from traced code gives the handlers 54 traces of LIB$SIGNAL's code and
+of the condition search's user-mode code (in S0), then no handler is
+ever called for the condition: the image ends with its message
+(`%SYSTEM-W-ENDOFFILE`, as `$PUTMSG` writes it) and the condition,
+marked STS$M_INHIB_MSG, as its status (`10000870`), and the exit
+handler runs. With no handler in the part's frame (M) the same; with
+LIB$SIGNAL's own code untraced (L) the signal is handled as usual, its
+signal PSL with T clear (govax's too). Decision 8's answer.
+
+govax now follows round 1 and round 2:
+
+- `vmsdef`'s `vaxMessages` has SS$_TBIT's VAX text, `PC=!XL, PSL=!XL`.
+- `continueCondition` takes TP from the signal array's PSL with its low
+  byte (part I; B and K come out the same either way).
+- `corevms/signal.go`'s `tracedSignal`: LIB$SIGNAL (and LIB$STOP,
+  unconfirmed) called with PSL<T> set writes the condition's message,
+  clears T and TP, and ends the image by `$EXIT` with the condition as
+  its status. govax's LIB$SIGNAL is a shim, so the traces before it are
+  the stub's (`+2`, `+9`), where VMS's are its code's and the search's:
+  a Decision 6 difference.
+- The debugger (Decision 5, `traced.go`): a breakpoint, watchpoint, or
+  STEP/RETURN's RET takes the trace pending where it stops
+  (`stopTakesTrace`); going on from such a stop the first instruction
+  is the debugger's and T and TP are cleared after it (`ownsNext`,
+  `dropTracing`); a STEP's end clears them (`stepEnded`). Exception
+  breaks, Ctrl-C, and govax's fault breakpoints leave the trace to the
+  program, as subtask 3 had it. The Decision 5 switch
+  (`programGetsTrace`, `takeTraces`) is gone. With SET STEP INSTRUCTION
+  a breakpoint's "break at" line shows the instruction (TRSTEP,
+  TRCALL), as an exception break's already did.
+- GO (or STEP) from a break on an unhandled severe condition says
+  `%DEBUG-I-CONFROMEXC, WARNING: continuing after severe error;
+  integrity not guaranteed` and continues it (TRUNH): the catch-all and
+  the traceback handler continue a severe condition the debugger held
+  (`conditionDispatch.debuggerHeld`), but a LIB$STOP (unconfirmed). An
+  access violation so continued runs its instruction again and faults
+  again (`TestUnhandledExceptionBreak`, which had assumed the image
+  ended: no VMS log had a GO there).
+- DEPOSIT to the PSL changes only its low word (TRPRIV).
+- Left as differences: STEP from a break on SS$_TBIT (VMS goes into the
+  handler and clears T in the signal array's PSL; govax steps the
+  dispatcher, as for every condition, the session oracle's
+  `reasonStepException`); the traces in VMS's LIBRTL and debugger code
+  (parts E and G, TRSVC); the service vector's offsets (`+6` on VMS,
+  `+4` on govax).
+- Tests: `internal/debugger/traced_test.go` rewritten to VMS's answers
+  (a breakpoint takes the trace; GO from a breakpoint ends the tracing;
+  a breakpoint in the handler doesn't; SET BREAK/EXCEPTION; the fault
+  breakpoint; DEPOSIT's low word; GO from an unhandled SS$_TBIT);
+  `TestSrchandler_traceContinue`'s TP case; `TestLibSignal_traced`.
+
+Next in this subtask: `DBG$INPUT` and the debugger's `SET LOG` and `SET
+OUTPUT`, which the probe's sessions use (the author asked for them, so
+govax can run `trace73.com` as VMS did), then the oracle test.
