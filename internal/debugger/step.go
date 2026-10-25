@@ -602,7 +602,11 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 
 	c := d.Machine
 
-	if name, ok := c.EnteredRoutine(pc); ok {
+	// By line, a step into a routine names the routine; by instruction
+	// it names the place, with the instruction (testdata/trace73's TRCALL:
+	// "stepped to TRACE73\CSUB\CS1: NOP"; whether the label there or the
+	// unit decides is unconfirmed).
+	if name, ok := c.EnteredRoutine(pc); ok && !req.byInstruction {
 		c.Printf("stepped to routine %s\n", name)
 		d.stepSource(req, pc)
 

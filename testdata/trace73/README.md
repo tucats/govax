@@ -111,13 +111,17 @@ recorded before the image ended is seen. On the same volume:
 
 Round 1: 2026-10-25, OpenVMS V7.1 on simh's VAX 8600, the volume on
 DUA1. MACRO and LINK had no messages; every part and session ran; part
-G ended its image early. `docs/PHASE-73 - trace trap.md`'s progress log
-has the answers.
+G ended its image early. Round 2: the same day, on the same system and
+volume; every part ran (G and M end their images, as VMS does).
+`docs/PHASE-73 - trace trap.md`'s progress log has the answers.
+
+`TestTrace73Oracle` (`internal/console/trace73oracle_test.go`) runs
+VMS's images part by part on govax and holds the reports and `$STATUS`
+to VMS's logs; `TestDebuggerSessionOracle` (`internal/debugger`)
+replays the sessions. Once govax reads `DBG$INPUT` (the phase's
+subtask 5), `trace73.com` can run on govax whole.
 
 ## govax's dry run
 
-govax runs every part (2026-10-25, before the VAX run); its answers are
-the phase doc's Decisions as they stand, recorded in the progress log
-to be compared with VMS's. govax's debugger doesn't read `DBG$INPUT`,
-so the sessions do nothing there; the oracle will replay the `.dbg`
-files itself, as `TestDebuggerSessionOracle` does `testdata/dbgcmd`'s.
+govax ran every part before the VAX run (2026-10-25); the progress log
+records its answers then, beside VMS's.

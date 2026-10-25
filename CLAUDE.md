@@ -254,7 +254,9 @@ never had.
   Phase 73 (planned 2026-10-24) is the trace trap: PSL<T> and <TP> by
   the architecture's rules, SS$_TBIT signaled to the program's
   handlers so a program can trace itself, and the debugger beside a
-  traced program.
+  traced program as VMS 7.1's is (subtasks 1 to 4 done, checked by
+  `testdata/trace73`); subtask 5 is `DBG$INPUT` and the debugger's SET
+  LOG and SET OUTPUT.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -479,8 +481,11 @@ never had.
   `trace73.mar` (12 parts by `TRACE73_PART`, each tracing itself under
   a handler that records every condition it's called for, printed after
   the part), `trace73.com` (builds TRACE73, TRACE73NT `/NOTRACEBACK`,
-  TRACE73D `/DEBUG`; runs every part; ten debugger sessions, `tr*.dbg`).
-  Written 2026-10-25; waiting for its VMS 7.1 run.
+  TRACE73D `/DEBUG`; runs every part; ten debugger sessions, `tr*.dbg`),
+  and round 2's `trace73b.mar` (LIB$SIGNAL from traced code); `vax/` is
+  VMS V7.1's. `TestTrace73Oracle` runs VMS's images part by part on
+  govax and matches the reports but for `trace73Differences`;
+  `TestDebuggerSessionOracle` replays the sessions.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

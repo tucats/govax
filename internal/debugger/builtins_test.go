@@ -119,8 +119,8 @@ func TestExceptionSymbols(t *testing.T) {
 	for _, s := range []struct{ command, want string }{
 		{"EVALUATE %EXC_NUMBER", "00000870\n"},
 		{"EVALUATE %EXC_SEVERITY", "00000000\n"},
-		{"EVALUATE %EXC_NAME", "\"ENDOFFILE\"\n"},
-		{"EVALUATE %EXC_FACILITY", "\"SYSTEM\"\n"},
+		{"EVALUATE %EXC_NAME", "'ENDOFFILE'\n"},
+		{"EVALUATE %EXC_FACILITY", "'SYSTEM'\n"},
 		{"EVALUATE/CONDITION_VALUE %EXC_NUMBER", "%SYSTEM-W-ENDOFFILE, end of file\n"},
 	} {
 		expect(t, s.command, say(t, c, s.command), s.want)
@@ -139,7 +139,7 @@ func TestExceptionSymbols(t *testing.T) {
 		t.Errorf("GO with WHEN (%%EXC_NAME NEQ ...):\n%s", out)
 	}
 
-	expect(t, "EVALUATE %EXC_NAME", say(t, c, "EVALUATE %EXC_NAME"), "\"ENDOFFILE\"\n")
+	expect(t, "EVALUATE %EXC_NAME", say(t, c, "EVALUATE %EXC_NAME"), "'ENDOFFILE'\n")
 
 	// Running again forgets the exception.
 	say(t, c, "STEP/INSTRUCTION")

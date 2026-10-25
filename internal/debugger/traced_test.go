@@ -188,7 +188,7 @@ func TestTracedBreakException(t *testing.T) {
 		t.Errorf("GO:\n got %q\nwant %q...", out, want)
 	}
 
-	expect(t, "EVALUATE %EXC_NAME", say(t, c, "EVALUATE %EXC_NAME"), "\"TBIT\"\n")
+	expect(t, "EVALUATE %EXC_NAME", say(t, c, "EVALUATE %EXC_NAME"), "'TBIT'\n")
 	expectCount(t, c, "00000000")
 
 	if out := say(t, c, "GO"); !strings.Contains(out, "PC=0000040D") {

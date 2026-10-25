@@ -2,8 +2,9 @@
 
 **Status:** in progress. Planned 2026-10-24; the author answered Part
 B's questions the same day: the probe runs, and govax follows its
-answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), and 3 (the
-debugger beside a traced program) are done.
+answers. Subtasks 1 (the CPU's trace rules), 2 (SS$_TBIT), 3 (the
+debugger beside a traced program), and 4 (the probe, and govax changed
+to its answers) are done.
 
 ## Goal
 
@@ -34,19 +35,18 @@ Out of scope: tracing in compatibility mode (govax has none); making
 the debugger implement STEP with the T bit (it steps from outside the
 machine, and keeps doing so: Decision 5).
 
-## Where things stand (2026-10-24)
+## Where things stand (2026-10-25)
 
-- **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`),
-  and subtask 2, SS$_TBIT (`internal/corevms/condition.go`): a program
-  can trace itself, and `ots72t.mar`'s self-test runs on govax as on
-  VMS (the progress log). Subtask 3, the debugger beside a traced
-  program (`internal/debugger/traced.go`): the program gets every
-  trace, a STEP included, with Decision 5's other answer one function
-  away (`programGetsTrace`).
-- **In progress**: subtask 4, the probe. `testdata/trace73` is written
-  and runs on govax (the progress log has govax's answers); it waits
-  for the VAX run, after which govax follows its answers and gets an
-  oracle test.
+- **Done**: subtask 1, the CPU's trace rules (`internal/cpu/trace.go`);
+  subtask 2, SS$_TBIT (`internal/corevms/condition.go`); subtask 3, the
+  debugger beside a traced program (`internal/debugger/traced.go`); and
+  subtask 4, the probe (`testdata/trace73`, two rounds on VMS 7.1), with
+  govax changed to its answers and two oracles: `TestTrace73Oracle`
+  (`internal/console`, VMS's images part by part) and the debugger's
+  session oracle, which replays the ten sessions.
+- **Next**: subtask 5, `DBG$INPUT`, `SET LOG`, and `SET OUTPUT` (the
+  author's request, 2026-10-25), so `trace73.com` runs on govax as it
+  did on VMS.
 
 ## Part A — the survey (2026-10-24)
 
@@ -255,11 +255,21 @@ VMS (Decision 6).
    an AST, a LIB$SIGNAL, and an unhandled SS$_TBIT, logging each trace's
    PC and PSL; and a debugger session over it (Question 2). Run on
    VMS 7.1, then govax changed to its answers, with an oracle test.
-5. **`ots72t.mar` on govax**: with VMS's FORRTL, the study's
+5. **`DBG$INPUT`, `SET LOG`, `SET OUTPUT`** (added 2026-10-25, the
+   author's request): RUN/DEBUG reads its commands from the file
+   `DBG$INPUT` names, if one does, until EXIT, QUIT, or its end (which is
+   EXIT); `SET LOG file` and `SET OUTPUT [NO]LOG, [NO]VERIFY,
+   [NO]TERMINAL` write a session log in VMS's form (the lines read from
+   `DBG$INPUT` as they are, every output line after a `!`, an `@`
+   procedure's lines echoed with a blank before them; the program's own
+   output not in it). Then `trace73.com` and `testdata/dbgcmd`'s
+   `dbgcmd.com` run on govax as they did on VMS, and RUN/DEBUG in a
+   procedure no longer leaves its session (and image file) open.
+6. **`ots72t.mar` on govax**: with VMS's FORRTL, the study's
    FORRTL cases traced as on VMS. `ots72t-vax.txt` becomes an oracle
    for what the tracer records, but for what depends on VMS's own
    routines (addresses in VMS's images, the H digits).
-6. **The close-out**: `docs/MANUAL.md` (the debugger and a traced
+7. **The close-out**: `docs/MANUAL.md` (the debugger and a traced
    program; SS$_TBIT), `docs/DEVIATIONS.md` (Decision 6), Phase 72's
    side finding marked fixed, CLAUDE.md, PLAN.md.
 
@@ -561,3 +571,32 @@ govax now follows round 1 and round 2:
 Next in this subtask: `DBG$INPUT` and the debugger's `SET LOG` and `SET
 OUTPUT`, which the probe's sessions use (the author asked for them, so
 govax can run `trace73.com` as VMS did), then the oracle test.
+
+### 2026-10-25 — Subtask 4, the oracles
+
+- `TestTrace73Oracle` (`internal/console/trace73oracle_test.go`) runs
+  VMS's own TRACE73, TRACE73NT, TRACE73D (`/NODEBUG`), and TRACE73B on
+  govax, part by part, and holds each part's report and `$STATUS` to
+  VMS's logs. Parts E and F (the service vector's offsets, LIBRTL's
+  code) and round 2's G and M (LIB$SIGNAL's code) are compared without
+  their records outside the program and the counts (`trace73Differences`);
+  part J's "improperly handled" dump by `excmsgMatch`'s rules, R1 aside
+  (what LIB$PUT_OUTPUT leaves, which varies on VMS too).
+- The debugger's session oracle (`TestDebuggerSessionOracle`) replays
+  the ten sessions on VMS's TRACE73D with `TRACE73_PART` defined
+  (`runImageDefining`), the program's own lines left out
+  (`trace73Output`). TRSTEP, TRGO, TRCALL, TRDEP, TRDEPGO, and TRPRIV
+  match VMS's logs whole; TREXC, TRHAND, and TRUNH differ only where
+  govax pauses in the dispatcher at an exception break or SHOW CALLS in
+  a handler lacks the "above condition handler" lines (both known), and
+  TRSVC in the traces VMS's own debugger code added.
+- The oracle normalizes the test console's kernel mode to user mode in
+  a PSL (it runs programs in kernel mode, VMS in user mode), which also
+  took faillnk's ACCVIO message and exam's EXAMINE PSL off the list
+  (their reason, `reasonUserMode`, is gone).
+- Found along the way, changed to VMS's answers: EVALUATE shows a
+  string in apostrophes (`'TBIT'`; govax had double quotes, which no
+  log showed); a STEP into a routine by instruction names the place and
+  its instruction (`stepped to TRACE73\CSUB\CS1: NOP`), by line the
+  routine (`stepped to routine ...`, unconfirmed which of the unit and
+  the label decides).

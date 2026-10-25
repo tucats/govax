@@ -1,7 +1,6 @@
 package debugger
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/tucats/govax/internal/machine"
@@ -182,5 +181,7 @@ func (d *Debugger) setException(u *machine.UnhandledException) {
 	d.exception = &copied
 }
 
-// quotedString is a string value as EVALUATE shows one: in quotes.
-func quotedString(s string) string { return fmt.Sprintf("%q", s) }
+// quotedString is a string value as EVALUATE shows one: in apostrophes,
+// as VMS 7.1's debugger shows %EXC_NAME ('TBIT', testdata/trace73's
+// TREXC). An apostrophe in the text is doubled (unconfirmed).
+func quotedString(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }

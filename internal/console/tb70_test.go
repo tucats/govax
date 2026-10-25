@@ -70,7 +70,16 @@ func tb70BRuns(t *testing.T, image string) map[string][]string {
 func tb70LogRuns(t *testing.T, file, define, run string) map[string][]string {
 	t.Helper()
 
-	data, err := os.ReadFile(filepath.Join(tb70Dir, "vax", file))
+	return logRuns(t, tb70Dir, file, define, run)
+}
+
+// logRuns is tb70LogRuns for the log file in dir's vax/: each part's
+// lines from the RUN to the next DCL line, without blank lines, and the
+// line after them ($STATUS's).
+func logRuns(t *testing.T, dir, file, define, run string) map[string][]string {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(dir, "vax", file))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package debugger_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -33,24 +35,35 @@ type sessionCase struct {
 	log    string // the VMS session log, in testdata/<dir>/vax
 	image  string // the image path, from the repository root
 	source string // the directory holding the program's source files
+	part   string // TRACE73_PART's value, for testdata/trace73's sessions
 }
 
 // sessionCases lists every session the probes logged.
 func sessionCases() []sessionCase {
 	cases := []sessionCase{
-		{"dbg", "dbgdis.dbg", "dbgdis.dlg", "testdata/dbg/vax/dbgdis.exe", "testdata/dbg"},
-		{"dbg", "dbgdis.dbg", "gvdbgdis.dlg", "testdata/dbg/vax/gvdbgdis.exe", "testdata/dbg"},
-		{"dbg", "dbgdis.dbg", "dbgtrc.dlg", "testdata/dbg/vax/dbgtrc.exe", "testdata/dbg"},
-		{"dbg", "trace.dbg", "trdbglnk.dlg", "testdata/dbg/vax/trdbglnk.exe", "testdata/mar/list"},
-		{"dbg", "trace.dbg", "trlnkdbg.dlg", "testdata/dbg/vax/trlnkdbg.exe", "testdata/mar/list"},
-		{"dbg", "trace.dbg", "trdbgtrc.dlg", "testdata/dbg/vax/trdbgtrc.exe", "testdata/mar/list"},
-		{"dbg", "trace.dbg", "gvtrace.dlg", "testdata/dbg/vax/gvtrace.exe", "testdata/mar/list"},
-		{"dbg", "fail.dbg", "faillnk.dlg", "testdata/dbg/vax/faillnk.exe", "testdata/mar/list"},
-		{"dbg", "forth.dbg", "forth.dlg", "testdata/dbg/vax/forth.exe", "testdata/mar"},
+		{"dbg", "dbgdis.dbg", "dbgdis.dlg", "testdata/dbg/vax/dbgdis.exe", "testdata/dbg", ""},
+		{"dbg", "dbgdis.dbg", "gvdbgdis.dlg", "testdata/dbg/vax/gvdbgdis.exe", "testdata/dbg", ""},
+		{"dbg", "dbgdis.dbg", "dbgtrc.dlg", "testdata/dbg/vax/dbgtrc.exe", "testdata/dbg", ""},
+		{"dbg", "trace.dbg", "trdbglnk.dlg", "testdata/dbg/vax/trdbglnk.exe", "testdata/mar/list", ""},
+		{"dbg", "trace.dbg", "trlnkdbg.dlg", "testdata/dbg/vax/trlnkdbg.exe", "testdata/mar/list", ""},
+		{"dbg", "trace.dbg", "trdbgtrc.dlg", "testdata/dbg/vax/trdbgtrc.exe", "testdata/mar/list", ""},
+		{"dbg", "trace.dbg", "gvtrace.dlg", "testdata/dbg/vax/gvtrace.exe", "testdata/mar/list", ""},
+		{"dbg", "fail.dbg", "faillnk.dlg", "testdata/dbg/vax/faillnk.exe", "testdata/mar/list", ""},
+		{"dbg", "forth.dbg", "forth.dlg", "testdata/dbg/vax/forth.exe", "testdata/mar", ""},
 	}
 
 	for _, name := range []string{"break", "brkcls", "call", "errors", "exam", "except", "step", "trace", "watch"} {
-		cases = append(cases, sessionCase{"dbgcmd", name + ".dbg", name + ".dlg", "testdata/dbgcmd/vax/dbgcmd.exe", "testdata/dbgcmd"})
+		cases = append(cases, sessionCase{"dbgcmd", name + ".dbg", name + ".dlg", "testdata/dbgcmd/vax/dbgcmd.exe", "testdata/dbgcmd", ""})
+	}
+
+	// Phase 73's sessions beside a program that traces itself, each on one
+	// part of VMS's own TRACE73D (trace73.com's CALL DEBUG lines).
+	for _, s := range []struct{ name, part string }{
+		{"trstep", "A"}, {"trgo", "A"}, {"trexc", "A"}, {"trhand", "A"}, {"trcall", "C"},
+		{"trsvc", "E"}, {"trdep", "N"}, {"trdepgo", "N"}, {"trunh", "J"}, {"trpriv", "N"},
+	} {
+		cases = append(cases, sessionCase{"trace73", s.name + ".dbg", s.name + ".dlg",
+			"testdata/trace73/vax/trace73d.exe", "testdata/trace73", s.part})
 	}
 
 	return cases
@@ -182,7 +195,7 @@ func govaxOutput(c *console.Console, command string) []string {
 	var lines []string
 
 	for _, l := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
-		if l = strings.TrimRight(l, " "); l != "" && !programOutput[l] {
+		if l = strings.TrimRight(l, " "); l != "" && !isProgramOutput(l) {
 			lines = append(lines, l)
 		}
 	}
@@ -199,6 +212,15 @@ var programOutput = map[string]bool{
 	"TRACE: three routines ran": true,
 }
 
+// trace73Output matches what testdata/trace73's program prints: a part's
+// title, and its report's lines.
+var trace73Output = regexp.MustCompile(`^([A-N] [A-Za-z].*|  (traces: |AST calls |[TO] [0-9A-F]{8} ).*)$`)
+
+// isProgramOutput reports whether l is a line a probe's program printed.
+func isProgramOutput(l string) bool {
+	return programOutput[l] || trace73Output.MatchString(l)
+}
+
 // replaySession runs a session and returns the commands whose output
 // differed from the log's.
 func replaySession(t *testing.T, sc sessionCase) []sessionDiff {
@@ -209,7 +231,7 @@ func replaySession(t *testing.T, sc sessionCase) []sessionDiff {
 	echoes := alignScript(lines, script)
 	groups, want := expectedOutput(lines, echoes)
 
-	c, _ := runImage(t, consoletest.RepoPath(t, filepath.FromSlash(sc.image)), machine.RunOptions{Debug: machine.DebugOn})
+	c, _ := runImageDefining(t, consoletest.RepoPath(t, filepath.FromSlash(sc.image)), "TRACE73_PART", sc.part)
 	noUserStep(c)
 	say(t, c, `SET SOURCE "`+consoletest.RepoPath(t, filepath.FromSlash(sc.source))+`"`)
 
@@ -255,6 +277,7 @@ var (
 	sessionDescriptorAddress = regexp.MustCompile(`descriptor address: [0-9A-F]{8}`)
 	moduleSize               = regexp.MustCompile(`(\s)\d+\.?\s*$`)
 	bytesAllocated           = regexp.MustCompile(`bytes allocated: \d+`)
+	kernelPSL                = regexp.MustCompile(`(PSL=)00C`)
 )
 
 // normalize makes one command's output comparable. It leaves out what can't
@@ -282,6 +305,11 @@ func normalize(command string, lines []string) []string {
 				l = moduleSize.ReplaceAllString(l, "$1")
 			}
 		}
+
+		// The test console runs programs in kernel mode, where VMS ran them
+		// in user mode: the current mode in a PSL is the harness's.
+		l = strings.Replace(l, " KERNEL  USER ", "  USER   USER ", 1)
+		l = kernelPSL.ReplaceAllString(l, "${1}03C")
 
 		l = stackAddress.ReplaceAllString(l, "<stack>")
 		l = sessionDescriptorAddress.ReplaceAllString(l, "descriptor address: <heap>")
@@ -347,7 +375,8 @@ const (
 	reasonUnconfirmedMSG = "EVALUATE/ADDRESS of a string label: VMS shows the string's own address, govax the " +
 		"descriptor's (unconfirmed)"
 
-	reasonUserMode = "VMS ran the program in user mode, and govax's test console in kernel mode (PSL)"
+	reasonDebuggerTraced = "under the debugger VMS ran its own debugger code traced after the service's " +
+		"CHMK (TRACE73.LOG's records at P0 000912xx), adding traces govax has no code for"
 )
 
 // expectedDifferences are the commands, by session log and position among
@@ -362,8 +391,6 @@ var expectedDifferences = map[string]map[int]string{
 	"gvtrace.dlg":  {5: reasonSymbolListing, 13: reasonUnconfirmedMSG},
 
 	"faillnk.dlg": {
-		2: "the ACCVIO message: VMS 7.3 prints \"reason mask=00\" and \"PSL=\" where govax's " +
-			"(vmsdef's generated text) prints \"mask=02\" and \"PS=\", and the PSL is of another mode",
 		3: reasonDispatcher, 4: reasonDispatcher, 7: reasonDispatcher, 8: reasonDispatcher,
 	},
 
@@ -389,7 +416,6 @@ var expectedDifferences = map[string]map[int]string{
 
 	"exam.dlg": {
 		4:  "SHOW STACK's last frames: VMS's are the debugger's own (SHARE$DEBUG), govax's the console's",
-		12: reasonUserMode, 13: reasonUserMode,
 		77: "SET MODE NOLINE: a location is named by routine plus offset (FACT+1A); govax records the mode " +
 			"and doesn't act on it (modes.go)",
 	},
@@ -397,6 +423,11 @@ var expectedDifferences = map[string]map[int]string{
 	"except.dlg": {
 		3: reasonDispatcher, 4: reasonDispatcher, 6: reasonHandlerCalls, 8: reasonDispatcher, 10: reasonDispatcher,
 	},
+
+	"trexc.dlg":  {3: reasonDispatcher, 6: reasonDispatcher, 7: reasonDispatcher, 11: reasonHandlerCalls},
+	"trhand.dlg": {2: reasonHandlerCalls, 8: reasonHandlerCalls},
+	"trsvc.dlg":  {9: reasonDebuggerTraced, 12: reasonDebuggerTraced},
+	"trunh.dlg":  {1: reasonDispatcher, 2: reasonDispatcher, 3: reasonDispatcher},
 
 	"step.dlg": {
 		26: reasonStepException, 29: reasonStepException, 30: reasonStepException, 33: reasonStepException,
@@ -431,4 +462,32 @@ func TestDebuggerSessionOracle(t *testing.T) {
 			}
 		})
 	}
+}
+
+// runImageDefining is runImage with the logical name name defined first
+// (none when value is empty), as trace73.com defines TRACE73_PART before
+// each session.
+func runImageDefining(t *testing.T, path, name, value string) (*console.Console, string) {
+	t.Helper()
+
+	c := newRunnableConsole(t)
+
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
+	if value != "" {
+		if err := c.Commands().DefineLogicalName("LNM$PROCESS", name, []string{value}, lnm.Supervisor, 0, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	buf := c.Out.(*bytes.Buffer)
+	buf.Reset()
+
+	if err := c.Run(path, machine.RunOptions{Debug: machine.DebugOn}); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("RUN: %v", err)
+	}
+
+	return c, buf.String()
 }
