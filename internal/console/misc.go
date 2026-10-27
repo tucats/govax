@@ -37,13 +37,37 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 		return nil
 	}
 
+	startCount := c.Engine.InstructionCount()
 	start := time.Now()
 	err := dispatch(cmd)
 	elapsed := time.Since(start)
+	executed := c.Engine.InstructionCount() - startCount
 
-	c.Printf("Elapsed time: %f seconds\n", elapsed.Seconds())
+	// Only a command that ran VAX instructions has a count and a rate.
+	if executed > 0 && elapsed > 0 {
+		rate := float64(executed) / elapsed.Seconds()
+
+		c.Printf("Elapsed time: %f seconds, %s instructions, %s instructions/second\n",
+			elapsed.Seconds(), scaleCount(float64(executed)), scaleCount(rate))
+	} else {
+		c.Printf("Elapsed time: %f seconds\n", elapsed.Seconds())
+	}
 
 	return err
+}
+
+// scaleCount formats a count with a k, m, or b suffix, such as 2.3m.
+func scaleCount(n float64) string {
+	switch {
+	case n >= 1e9:
+		return fmt.Sprintf("%.1fb", n/1e9)
+	case n >= 1e6:
+		return fmt.Sprintf("%.1fm", n/1e6)
+	case n >= 1e3:
+		return fmt.Sprintf("%.1fk", n/1e3)
+	}
+
+	return fmt.Sprintf("%.0f", n)
 }
 
 // RunCommandLine runs the one-shot command: the text left on govax's own
