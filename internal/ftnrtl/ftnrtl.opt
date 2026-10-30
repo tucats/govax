@@ -1,0 +1,17 @@
+! FTNRTL.OPT - the options that link FTNRTL.EXE, govax's FORTRAN run-time
+! library (docs/PHASE-74 - FORTRAN plan.md, Decision 13). go generate
+! ./internal/ftnrtl builds the image from these, as
+!
+!	$ MACRO FTN_VECTOR
+!	$ MACRO FTN_CONTROL
+!	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
+!
+! would, with internal/asm and internal/link. The transfer vector is a
+! cluster of its own, first, so that it starts the image; the modules
+! follow. GSMATCH=LEQUAL lets a program linked against this FTNRTL run on
+! any later one: add 1 to the minor number whenever the vector gains an
+! entry, and change the major number only if an entry's meaning changes.
+CLUSTER=FTNRTL_VECTOR,,,FTN_VECTOR.OBJ
+FTN_CONTROL.OBJ
+GSMATCH=LEQUAL,1,0
+IDENTIFICATION="V1.0"

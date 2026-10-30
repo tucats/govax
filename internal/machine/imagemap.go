@@ -56,9 +56,9 @@ func (p *ImageProcess) imageMap(fn string, flag uint32, linked *ISD) (*ICB, erro
 	if flag == icbMain {
 		data, src, spec, err = p.m.openImage(fn, true)
 	} else {
-		var loc rms.FileLocation
-		if loc, err = p.findShareable(fn); err == nil {
-			data, src, spec, err = p.openShareable(loc)
+		var found rms.FoundImage
+		if found, err = p.findShareable(fn); err == nil {
+			data, src, spec, err = p.openShareable(found)
 		}
 	}
 

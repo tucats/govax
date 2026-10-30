@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/ftnrtl"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/rms"
@@ -30,7 +31,11 @@ import (
 //     vmsdef.ImageSymbols, and STARLET.OLB's definition modules' symbols
 //     captured in vmsdef.LibrarySymbols (docs/PHASE-31.md); the routines
 //     the shims stand for (shimTable) in images not captured; and the
-//     system services at their addresses in the P1 vector.
+//     system services at their addresses in the P1 vector. Before them,
+//     FTNRTL, the FORTRAN run-time library (docs/PHASE-74 - FORTRAN
+//     plan.md, Decision 13), read from the image the locator finds,
+//     govax's own built-in one if no other (ftnrtlSource), so a FORTRAN
+//     program links against it with no options file.
 //
 // Each library is looked for through SYS$LIBRARY on a mounted volume
 // first, then in the host library directory the vax.library setting
@@ -100,9 +105,10 @@ func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 // sysLib is false, then govax's own tables.
 func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	govax := GovaxSymbols(c.ShimLinks)
+	ftn := &ftnrtlSource{open: func() (link.SymbolSource, error) { return c.openSharedImage(ftnrtl.Name, govax) }}
 
 	if !sysLib {
-		return []link.SymbolSource{govax}, nil
+		return []link.SymbolSource{ftn, govax}, nil
 	}
 
 	var sources []link.SymbolSource
@@ -135,7 +141,65 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 		sources = append(sources, &link.ObjectLibrarySource{File: loc.Name, Library: lib, System: true})
 	}
 
-	return append(sources, govax), nil
+	return append(sources, ftn, govax), nil
+}
+
+// ftnrtlSource is FTNRTL's symbols, as a source among the system's: the
+// global symbol table of the image the locator finds (openSharedImage).
+// It is read only when a link looks for one of FTNRTL's routines, all
+// named FTN$..., and counted among the files a map reports only then, so
+// a link that doesn't use FTNRTL is as it was without it.
+type ftnrtlSource struct {
+	open func() (link.SymbolSource, error)
+	src  link.SymbolSource
+	err  error
+	used bool
+}
+
+// ftnrtlPrefix starts every name FTNRTL defines.
+const ftnrtlPrefix = "FTN$"
+
+// Lookup implements link.SymbolSource.
+func (f *ftnrtlSource) Lookup(name string) (link.Definition, bool, error) {
+	if !strings.HasPrefix(strings.ToUpper(name), ftnrtlPrefix) {
+		return link.Definition{}, false, nil
+	}
+
+	if f.src == nil && f.err == nil {
+		f.src, f.err = f.open()
+	}
+
+	if f.err != nil {
+		return link.Definition{}, false, f.err
+	}
+
+	d, ok, err := f.src.Lookup(name)
+	f.used = f.used || ok
+
+	return d, ok, err
+}
+
+// Image implements link.SymbolSource: once read, the image FTNRTL.
+func (f *ftnrtlSource) Image(name string) (link.SharedImage, bool) {
+	if f.src == nil {
+		return link.SharedImage{}, false
+	}
+
+	return f.src.Image(name)
+}
+
+// Files implements link.FileCounter: the image's file, once a routine
+// came from it.
+func (f *ftnrtlSource) Files() int {
+	if !f.used {
+		return 0
+	}
+
+	if fc, ok := f.src.(link.FileCounter); ok {
+		return fc.Files()
+	}
+
+	return 0
 }
 
 // openSharedImage returns the symbols of the shareable image image: its
@@ -159,9 +223,12 @@ func (c *Context) openSharedImage(image string, govax *link.TableSource) (link.S
 
 	var data []byte
 
-	if loc.Host {
+	switch {
+	case found.Builtin != nil:
+		data = found.Builtin
+	case loc.Host:
 		data, err = os.ReadFile(loc.Name)
-	} else {
+	default:
 		data, loc, err = c.ContainerSession.ReadRawFile(loc)
 	}
 
@@ -237,9 +304,13 @@ func libraryDirectory(name string) string {
 // ImageLocator is how LINK finds a shareable image's file
 // (rms.ImageLocator), as RUN does but for govax's shims: a logical name
 // of the image's name, SYS$SHARE, then the host (SET SHARE_PREFIX's
-// prefix, the host library directory, the current directory).
+// prefix, the host library directory, the current directory), and last
+// the images built into govax (FTNRTL).
 func (c *Context) ImageLocator() rms.ImageLocator {
-	return rms.ImageLocator{Session: c.ContainerSession, Prefix: c.SharePrefix, Library: c.HostLibraryDir()}
+	return rms.ImageLocator{
+		Session: c.ContainerSession, Prefix: c.SharePrefix, Library: c.HostLibraryDir(),
+		Builtin: ftnrtl.Image,
+	}
 }
 
 // usedImages is the source of the shareable images that a shareable image

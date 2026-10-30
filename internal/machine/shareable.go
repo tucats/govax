@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+	"github.com/tucats/govax/internal/ftnrtl"
 	"github.com/tucats/govax/internal/rms"
 )
 
@@ -21,9 +22,13 @@ var errEmulated = errors.New("emulated by govax's shims")
 
 // ImageLocator is the locator of shareable images for a process whose
 // volumes and logical names are session's: SET SHARE_PREFIX's prefix,
-// the host library directory, and the shims of ShimTable.
+// the host library directory, the shims of ShimTable, and last the
+// images built into govax (FTNRTL).
 func (m *Machine) ImageLocator(session *rms.Session) rms.ImageLocator {
-	return rms.ImageLocator{Session: session, Prefix: m.SharePrefix, Library: m.libraryDir(), Emulated: Emulated}
+	return rms.ImageLocator{
+		Session: session, Prefix: m.SharePrefix, Library: m.libraryDir(),
+		Emulated: Emulated, Builtin: ftnrtl.Image,
+	}
 }
 
 // FindShareableImage finds the shareable image name for process 1, as RUN
@@ -100,29 +105,34 @@ func (p *ImageProcess) session() *rms.Session {
 
 // findShareable finds p's process's shareable image fn: errEmulated when
 // the shims stand for it, an *rms.ImageNotFoundError when nothing has it.
-func (p *ImageProcess) findShareable(fn string) (rms.FileLocation, error) {
+func (p *ImageProcess) findShareable(fn string) (rms.FoundImage, error) {
 	found, err := p.m.ImageLocator(p.session()).Find(fn)
 
 	switch {
 	case err != nil:
-		return rms.FileLocation{}, err
+		return rms.FoundImage{}, err
 	case found.Emulated:
-		return rms.FileLocation{}, errEmulated
+		return rms.FoundImage{}, errEmulated
 	}
 
-	return found.Location, nil
+	return found, nil
 }
 
-// readShareable reads the shareable image file at loc, returning where
-// it is.
-func (p *ImageProcess) readShareable(loc rms.FileLocation) ([]byte, imageSpec, error) {
-	if loc.Host {
+// readShareable reads the shareable image found, returning where it is.
+func (p *ImageProcess) readShareable(found rms.FoundImage) ([]byte, imageSpec, error) {
+	loc := found.Location
+
+	switch {
+	case found.Builtin != nil:
+		return found.Builtin, imageSpec{Name: loc.Name}, nil
+
+	case loc.Host:
 		data, err := p.m.Paths.ReadFile(loc.Name)
 
 		return data, hostImageSpec(loc.Name), err
 	}
 
-	data, found, err := p.session().ReadRawFile(loc)
+	data, located, err := p.session().ReadRawFile(loc)
 
-	return data, imageSpec{Name: found.Physical}, err
+	return data, imageSpec{Name: located.Physical}, err
 }

@@ -3,8 +3,8 @@
 **Status:** in progress. Part A (the survey), Part B (the decisions),
 and Part C (the phases) were reviewed and accepted by the author on
 2026-10-29 (the answers are under "The review" at the end). Subtasks 1
-(the plan), 2 (the compiler's skeleton and the FORTRAN command), and 3
-(source forms) are done; subtasks 4 and 5 are next. Phases 75 to 86 each have a
+(the plan), 2 (the compiler's skeleton and the FORTRAN command), 3
+(source forms), and 4 (FTNRTL's pipeline) are done; subtask 5 is next. Phases 75 to 86 each have a
 skeletal planning doc of their own. Needs nothing new: MACRO-32 (Phases
 27–29), LINK and shareable images (Phases 30 and 68), the RTL machinery
 (Phases 34 and 53–59), and traceback (Phase 70) are all in place.
@@ -713,7 +713,7 @@ review after each.
    `/CONT=40`), labels, and INCLUDE of files (nested, with a depth limit),
    each statement with its file, line, and column for messages and for
    the `.MAR` comments.
-4. **FTNRTL's pipeline** (`internal/ftnrtl`): the package, its first
+4. **FTNRTL's pipeline** (done 2026-10-29; `internal/ftnrtl`): the package, its first
    module (a version routine, and FTN$STOP), the transfer vector, the
    generator, the embedded image; the locator's fallback for RUN and
    LINK; LINK's govax source naming FTNRTL. A MACRO program calls FTNRTL,
@@ -928,3 +928,52 @@ and the later phases' docs have been changed to follow them.
     and `TestDispatch_fortranSource` (TOOMANYCONT, `/CONTINUATIONS=20`,
     `=100`, `=0`, `/D_LINES`); `cmd/govax`'s `TestFortranCommand` and
     `TestFortranThenMacro`, now with an INCLUDE.
+- **2026-10-29:** Subtask 4 done: FTNRTL's pipeline.
+  - `internal/ftnrtl` is a leaf package: the sources (`mar/ftn_vector.mar`,
+    the transfer vector; `mar/ftn_control.mar`, the first module),
+    `ftnrtl.opt` (the vector a cluster of its own, first;
+    `GSMATCH=LEQUAL,1,0`; `IDENTIFICATION="V1.0"`), and the committed
+    `ftnrtl.exe`, all embedded (`Files`); `Image(name)` returns the
+    image's bytes for FTNRTL.
+  - The first routines: `FTN$VERSION([text])` returns ^X00010000 in R0
+    and writes "FTNRTL V1.0" into a string given, blank-padded or cut
+    short, as FORTRAN assigns strings; `FTN$STOP([display])` writes the
+    display, or "FORTRAN STOP" without one (the manual's 5.10), to
+    SYS$OUTPUT through LIB$PUT_OUTPUT and ends the image with `$EXIT`
+    and SS$_NORMAL. SYS$OUTPUT and the status are choices of ours,
+    unconfirmed (the manual says "your terminal"). The routines are
+    PIC: no stored addresses (STOP's own descriptor is built on the
+    stack), and govax's STARLET has no `$DSCDEF`, so the module defines
+    the descriptor constants it uses.
+  - `internal/ftnrtl/build` assembles each module the options file names
+    with `internal/asm` (govax's own system macros from bootdata) and
+    links them with `internal/link` as `LINK/SHAREABLE=FTNRTL/NOSYSLIB
+    FTNRTL/OPTIONS` would, against `dclcmd.GovaxSymbols` only, with the
+    times and the tools' names fixed, so a build is the same byte for
+    byte (it is a package of its own since it needs dclcmd, which needs
+    `internal/ftnrtl`). `go generate ./internal/ftnrtl` runs
+    `mkftnrtl`, which writes `ftnrtl.exe`; `TestCommittedImage` checks
+    the committed image against a fresh build, and `TestImage` its
+    global symbol table (FTN$VERSION at 0, FTN$STOP at 8, LEQUAL 1.0).
+  - The locator (`rms.ImageLocator`) has a fourth rule, `Builtin`: after
+    a logical name, SYS$SHARE, and the host, an image govax carries
+    (`FoundImage.Builtin`, named `FTNRTL.EXE (built into govax)`,
+    `rms.BuiltinSpec`). The machine's two loaders take it
+    (`findShareable` now returns the `FoundImage`; the mapping loader's
+    page source for it is in memory, a `HostPageSource` over the bytes),
+    and so does LINK's `openSharedImage`.
+  - LINK's system sources gain `ftnrtlSource`, before govax's tables:
+    FTNRTL's global symbol table from the image the locator finds, read
+    only when a link looks up an `FTN$` name, and counted among a map's
+    files only when a routine came from it, so links that don't use
+    FTNRTL (the VMS oracles' maps among them) are unchanged.
+  - No MACRO or LINK bugs turned up.
+  - Tests: the console's `TestFTNRTL`, in both paging modes: MACRO and
+    LINK (no options file) of a program calling FTN$VERSION and FTN$STOP
+    with a display and of one calling FTN$STOP with an omitted argument,
+    their runs and `$STATUS`, the image activated being the built-in one;
+    then FTNRTL built on the volume from its sources with MACRO and
+    `LINK/SHAREABLE/NOSYSLIB FTNRTL/OPTIONS` (12 bytes from the built-in
+    image: the times and the linker's name), `DEFINE FTNRTL` to it, and
+    RUN and LINK using it. `rms`'s `TestImageLocatorBuiltin`;
+    `TestLink_libraryLogicalNames` counts the new source.

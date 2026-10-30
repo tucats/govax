@@ -391,9 +391,9 @@ func (p *ImageProcess) loadImage(fn string, flag uint32, linked *ISD) (*ICB, err
 	if flag == icbMain {
 		data, spec, err = p.m.readImage(fn, true)
 	} else {
-		var loc rms.FileLocation
-		if loc, err = p.findShareable(fn); err == nil {
-			data, spec, err = p.readShareable(loc)
+		var found rms.FoundImage
+		if found, err = p.findShareable(fn); err == nil {
+			data, spec, err = p.readShareable(found)
 		}
 	}
 
@@ -922,12 +922,12 @@ func (m *Machine) readImage(fn string, main bool) ([]byte, imageSpec, error) {
 	if !main {
 		p := m.images()
 
-		loc, err := p.findShareable(fn)
+		found, err := p.findShareable(fn)
 		if err != nil {
 			return nil, imageSpec{}, err
 		}
 
-		return p.readShareable(loc)
+		return p.readShareable(found)
 	}
 
 	if s := m.Hooks.Session(); main && s != nil {

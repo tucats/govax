@@ -30,6 +30,9 @@ import (
 //     search list in SYS$SHARE is searched in order.
 //  3. The host: the SET SHARE_PREFIX prefix, the host library directory
 //     (vax.library), then the name as given (the current directory).
+//  4. An image built into govax (FTNRTL, docs/PHASE-74 - FORTRAN
+//     plan.md, Decision 13), so that it is always there, but anywhere
+//     above may hold a version of one's own.
 
 // ShareableDefault is the default file specification of a shareable
 // image's name.
@@ -52,13 +55,26 @@ type ImageLocator struct {
 	// nil for none, as for LINK, which reads an image's file whenever
 	// there is one.
 	Emulated func(name string) bool
+
+	// Builtin returns the contents of an image govax carries, named
+	// name, and true, or false for none (rule 4); nil means none.
+	Builtin func(name string) ([]byte, bool)
 }
 
-// FoundImage is where a shareable image is: its shims (Emulated), or a
-// file on a mounted volume or the host (Location).
+// FoundImage is where a shareable image is: its shims (Emulated), a file
+// on a mounted volume or the host (Location), or an image built into
+// govax (Builtin, its contents; Location.Name is then BuiltinSpec's).
 type FoundImage struct {
 	Emulated bool
 	Location FileLocation
+	Builtin  []byte
+}
+
+// BuiltinSpec is how an image built into govax is named where a file's
+// specification would be (SHOW PROCESS's image, a map): its name, the
+// type EXE, and a note that it is govax's own.
+func BuiltinSpec(name string) string {
+	return strings.ToUpper(name) + ".EXE (built into govax)"
 }
 
 // ImageNotFoundError is a shareable image no rule found. Spec is the file
@@ -107,6 +123,12 @@ func (l ImageLocator) Find(name string) (FoundImage, error) {
 
 	if path, ok := l.hostFile(name); ok {
 		return FoundImage{Location: FileLocation{Host: true, Name: path}}, nil
+	}
+
+	if l.Builtin != nil {
+		if data, ok := l.Builtin(upper); ok {
+			return FoundImage{Builtin: data, Location: FileLocation{Name: BuiltinSpec(upper)}}, nil
+		}
 	}
 
 	return FoundImage{}, &ImageNotFoundError{Image: upper, Spec: tried}

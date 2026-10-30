@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
@@ -33,12 +34,12 @@ func (m *Machine) openImage(fn string, main bool) ([]byte, corevms.PageSource, i
 	if !main {
 		p := m.images()
 
-		loc, err := p.findShareable(fn)
+		found, err := p.findShareable(fn)
 		if err != nil {
 			return nil, nil, imageSpec{}, err
 		}
 
-		return p.openShareable(loc)
+		return p.openShareable(found)
 	}
 
 	if s := m.Hooks.Session(); main && s != nil {
@@ -91,19 +92,27 @@ func openHostImage(path string) ([]byte, corevms.PageSource, error) {
 	return data, corevms.NewHostPageSource(f, int64(len(data)), f), nil
 }
 
-// openShareable opens the shareable image file at loc as OpenImage opens
-// an image.
-func (p *ImageProcess) openShareable(loc rms.FileLocation) ([]byte, corevms.PageSource, imageSpec, error) {
+// openShareable opens the shareable image found as OpenImage opens an
+// image. An image built into govax is its own page source, in memory.
+func (p *ImageProcess) openShareable(found rms.FoundImage) ([]byte, corevms.PageSource, imageSpec, error) {
+	loc := found.Location
+
+	if found.Builtin != nil {
+		data := found.Builtin
+
+		return data, corevms.NewHostPageSource(bytes.NewReader(data), int64(len(data)), nil), imageSpec{Name: loc.Name}, nil
+	}
+
 	if loc.Host {
 		data, src, err := openHostImage(loc.Name)
 
 		return data, src, hostImageSpec(loc.Name), err
 	}
 
-	a, data, found, err := p.session().AccessImage(loc)
+	a, data, located, err := p.session().AccessImage(loc)
 	if err != nil {
 		return nil, nil, imageSpec{}, err
 	}
 
-	return data, a, imageSpec{Name: found.Physical}, nil
+	return data, a, imageSpec{Name: located.Physical}, nil
 }

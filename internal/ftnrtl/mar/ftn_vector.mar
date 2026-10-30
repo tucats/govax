@@ -1,0 +1,45 @@
+	.TITLE	FTN_VECTOR - FTNRTL's transfer vector
+	.IDENT	/V1.0/
+;
+; FTNRTL.EXE is the run-time library of govax's FORTRAN compiler: the
+; routines a compiled program calls to do what the instructions it was
+; compiled into don't (I/O, STOP, ...). It is a shareable image, so a
+; program links against it rather than copying its routines, and many
+; programs share one copy (docs/PHASE-74 - FORTRAN plan.md, Decision 13).
+;
+; A program linked against a shareable image refers to each routine by
+; the image's name and the routine's offset in the image. If the
+; routines themselves were those targets, their offsets would change
+; whenever one of them grew, and every program linked before would call
+; the wrong code. So the image starts with a transfer vector: one small
+; entry per routine, at an offset that never changes, which jumps to the
+; routine wherever it is. LINK links this module first, in a cluster of
+; its own (FTNRTL.OPT), so the vector is at the start of the image.
+;
+; Each entry is 8 bytes, as the VMS Linker manual lays out a CALL entry
+; (its Example 4-1):
+;
+;	.TRANSFER name	tells LINK that name is a universal symbol, one
+;			that programs linking against the image may use,
+;			whose value is this entry's address (no bytes);
+;	.MASK name	the routine's entry mask (2 bytes): CALLS and CALLG
+;			read the register save mask at the address they're
+;			given, so the entry needs one, the routine's own;
+;	JMP L^name+2	a jump past the routine's own mask to its first
+;			instruction (6 bytes).
+;
+; New entries go at the end, never between, so that the old ones keep
+; their offsets; each one added raises GSMATCH's minor number in
+; FTNRTL.OPT.
+;
+	.PSECT	$$FTN_VECTOR,EXE,NOWRT,PIC,SHR,GBL,PAGE
+
+	.TRANSFER FTN$VERSION		; 0: FTNRTL's version
+	.MASK	FTN$VERSION
+	JMP	L^FTN$VERSION+2
+
+	.TRANSFER FTN$STOP		; 8: the STOP statement
+	.MASK	FTN$STOP
+	JMP	L^FTN$STOP+2
+
+	.END

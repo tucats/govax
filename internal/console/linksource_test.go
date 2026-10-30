@@ -307,8 +307,8 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 	c.HostLibrary = t.TempDir()
 
 	src, err := c.cmd().LinkSources(true)
-	if err != nil || len(src) != 1 {
-		t.Fatalf("sources %d, %v; want govax's alone", len(src), err)
+	if err != nil || len(src) != 2 {
+		t.Fatalf("sources %d, %v; want FTNRTL's and govax's alone", len(src), err)
 	}
 
 	for _, name := range []string{"SYS$LIBRARY", "SYS$SHARE"} {
@@ -318,8 +318,8 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 	}
 
 	src, err = c.cmd().LinkSources(true)
-	if err != nil || len(src) != 2 {
-		t.Fatalf("sources %d, %v; want IMAGELIB's and govax's", len(src), err)
+	if err != nil || len(src) != 3 {
+		t.Fatalf("sources %d, %v; want IMAGELIB's, FTNRTL's, and govax's", len(src), err)
 	}
 
 	d, ok, err := src[0].Lookup("LIB$GET_INPUT")

@@ -1,0 +1,97 @@
+	.TITLE	FTN_CONTROL - FTNRTL's version and STOP
+	.IDENT	/V1.0/
+;
+; The routines of FTNRTL that control a program as a whole: FTN$VERSION,
+; which says which FTNRTL a program is running with, and FTN$STOP, which
+; is FORTRAN's STOP statement.
+;
+; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
+; VAX calling standard: AP points at the argument list, whose first byte
+; is the number of arguments, followed by one longword per argument (for
+; a string, the address of its descriptor). A routine returns its value
+; in R0, and saves in its entry mask any of R2 to R11 it changes. FTNRTL
+; is a shareable image, mapped wherever the image activator puts it, so
+; its code reaches its own data only through PC-relative addresses (a
+; label used as an operand), never through stored addresses.
+;
+	$SSDEF				; SS$_NORMAL
+
+; A string descriptor (the VAX calling standard's): a word of length, a
+; byte of data type, a byte of class, then the string's address. govax's
+; STARLET has no $DSCDEF yet, so the values this module uses are here.
+DSC$W_LENGTH	= 0			; the length, in bytes
+DSC$A_POINTER	= 4			; the string's address
+DSC$K_DTYPE_T	= 14			; data type: text
+DSC$K_CLASS_S	= 1			; class: a fixed-length string
+
+; FTNRTL's version, 1.0, as FTN$VERSION returns it: the major number in
+; the high word, the minor number in the low.
+FTN_K_VERSION	= ^X00010000
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+VERSION_TEXT:	.ASCII	/FTNRTL V1.0/	; FTN$VERSION's text
+VERSION_LEN	= .-VERSION_TEXT
+
+STOP_TEXT:	.ASCII	/FORTRAN STOP/	; STOP's message with no display
+STOP_LEN	= .-STOP_TEXT
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; version = FTN$VERSION([text])
+;
+; Returns FTNRTL's version in R0 (^X00010000 for V1.0). Given a string
+; descriptor, it also writes the version's text there ("FTNRTL V1.0"),
+; padded with blanks to the string's length or cut short to it, as
+; FORTRAN assigns one character string to another.
+;
+	.ENTRY	FTN$VERSION,^M<R2,R3,R4,R5>
+	TSTB	(AP)			; any arguments?
+	BEQL	10$			; no
+	MOVL	4(AP),R0		; the descriptor's address, or 0 for
+	BEQL	10$			; an omitted argument: CALL X(,...)
+	;
+	; MOVC5 copies a source string to a destination, filling the rest
+	; of the destination with its fill character (a blank here), or
+	; stopping at the destination's end. It uses R0 to R5 as it goes
+	; (which is why the entry mask saves R2 to R5), so the result is
+	; put in R0 only after it.
+	;
+	MOVC5	#VERSION_LEN,VERSION_TEXT,#^A/ /, -
+		DSC$W_LENGTH(R0),@DSC$A_POINTER(R0)
+10$:	MOVL	#FTN_K_VERSION,R0
+	RET
+
+;
+; FTN$STOP([display])
+;
+; FORTRAN's STOP statement (the 1988 Language Reference Manual, 5.10):
+; writes the display, a character string (the compiler passes STOP 98's
+; digits as one), to SYS$OUTPUT, or "FORTRAN STOP" without one, and ends
+; the image with SS$_NORMAL. The manual says the display goes to "your
+; terminal"; SYS$OUTPUT, and the status, are govax's choice, unconfirmed.
+; It never returns: $EXIT runs the image's exit handlers and runs down
+; the image.
+;
+	.ENTRY	FTN$STOP,^M<>
+	TSTB	(AP)			; a display?
+	BEQL	10$			; no
+	MOVL	4(AP),R0		; its descriptor, or 0 if omitted
+	BEQL	10$
+	PUSHL	R0			; LIB$PUT_OUTPUT's one argument
+	BRB	20$
+	;
+	; Without a display, the message's descriptor is made on the stack:
+	; a descriptor holds an address, which a stored one in a shareable
+	; image would need fixed up wherever the image went. Pushed in
+	; reverse, the address goes in first, then the longword of length,
+	; type, and class, and SP then points at the whole descriptor.
+	;
+10$:	PUSHAB	STOP_TEXT		; DSC$A_POINTER
+	PUSHL	#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>!STOP_LEN
+	PUSHL	SP			; the descriptor's address
+20$:	CALLS	#1,G^LIB$PUT_OUTPUT	; write the line to SYS$OUTPUT
+	$EXIT_S	#SS$_NORMAL		; end the image
+
+	.END
