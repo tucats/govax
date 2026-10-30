@@ -53,6 +53,24 @@ var messages = map[string]kind{
 	// INCLDEPTH is INCLUDE files nested too deeply, most likely a file
 	// that includes itself.
 	"INCLDEPTH": {Fatal, "the INCLUDE files are nested more than %d deep"},
+
+	// The lexer's messages (internal/fortran/lex).
+
+	// NOQUOTE is a character constant with no closing apostrophe before
+	// the statement ends.
+	"NOQUOTE": {Error, "character constant has no closing apostrophe"},
+
+	// HOLLEND is a Hollerith constant whose count runs past the end of
+	// the statement.
+	"HOLLEND": {Error, "this Hollerith constant should have %d characters, but the statement ends after %d"},
+
+	// UNRECSTMT is a statement the lexer can't take for any FORTRAN
+	// statement: no keyword it knows starts it, and it isn't an
+	// assignment.
+	"UNRECSTMT": {Error, "statement not recognized"},
+
+	// BADCHAR is a character FORTRAN doesn't use, outside a constant.
+	"BADCHAR": {Error, "the character %q is not allowed here"},
 }
 
 // Known reports whether ident is a message in the table, and its

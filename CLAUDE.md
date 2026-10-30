@@ -1606,8 +1606,18 @@ expect adjustment as phases land):
   constants (`comment.go`), and INCLUDE through an `Opener`
   (`include.go`). `codegen` so far is `Writer`, the MACRO file's layout
   (columns, the 132-character limit, `SourceLine`/`SourceLineAt`, an
-  included line's prefix starting with its depth). `lex`, `ast`,
-  `parse`, `sema`, `ir`, and `opt` come in later phases.
+  included line's prefix starting with its depth). `lex` is the second
+  pass (Phase 75, subtask 2): `Lex` turns each `source.Statement` into a
+  `lex.Statement` (its `Kind`, label, `Token`s with offsets back to the
+  source, a logical IF's statement as `Then`, a typed FUNCTION's
+  `FunctionType`, a keyword statement's `Body`) in three steps, each its
+  own file: squeeze out blanks outside constants (`squeeze.go`, the same
+  constant rules as `source/comment.go`), classify (`lex.go`: the IF
+  test, the `=`/DO comma test, then the longest keyword of `kinds.go`'s
+  table of every VAX FORTRAN statement; typed FUNCTION only at a unit's
+  start), and tokenize (`tokenize.go`, with modes for DO's label and type
+  lengths); FORMAT's specification isn't tokenized. `ast`, `parse`,
+  `sema`, `ir`, and `opt` come in later subtasks and phases.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`

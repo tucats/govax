@@ -198,6 +198,18 @@ func (s *Statement) Position(offset int) diag.Position {
 	return linePosition(p.line, p.column+offset-p.offset)
 }
 
+// Initial is the part of the statement's text that came from its initial
+// line, before any continuation line's. The manual's section 5.5 needs
+// it: an initial line holding only END is an END statement, whatever
+// continuation lines follow it.
+func (s *Statement) Initial() string {
+	if len(s.pieces) < 2 {
+		return s.Text
+	}
+
+	return s.Text[:s.pieces[1].offset]
+}
+
 // LabelPosition is where the statement's label is: the line and column of
 // its first digit.
 func (s *Statement) LabelPosition() diag.Position {

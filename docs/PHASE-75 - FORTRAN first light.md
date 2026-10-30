@@ -443,8 +443,9 @@ steps, which the package's `doc.go` teaches in this order:
    keeping for each remaining character its offset in the statement's
    text (`source.Statement.Position` maps that to file, line, and
    column). An unterminated character constant is an error (`NOQUOTE`).
-   Hollerith constants (`nH...`, whose text keeps its blanks) are
-   NOTIMPL until Phase 82.
+   Hollerith constants (`nH...`, whose text keeps its blanks) are found
+   by the source pass's rule and lexed; the parser reports them NOTIMPL
+   until Phase 82.
 2. **Classify.** In this order:
    - text starting `IF(` or `ELSEIF(`: find the matching `)`. If `=`
      follows it, the statement is an assignment (to an array element
@@ -478,8 +479,10 @@ steps, which the package's `doc.go` teaches in this order:
    split off: `DO10I=1,5` gives the keyword DO, then `10`, `I`, `=`,
    ...
 
-Messages: `NOQUOTE`, `UNRECSTMT`, `BADCHAR` (a character FORTRAN
-doesn't use, outside a constant), `BADDOTOP` (`.FOO.`).
+Messages: `NOQUOTE`, `HOLLEND` (a Hollerith count past the statement's
+end), `UNRECSTMT`, `BADCHAR` (a character FORTRAN doesn't use, outside
+a constant). A period that starts no dotted operator is the operator
+`.`, left to the parser (Phase 82's record fields use it).
 
 ## The AST (`internal/fortran/ast`, subtask 3)
 
@@ -888,3 +891,49 @@ To go into the progress log as each is built, and into MANUAL.md's
 - **2026-10-30:** The author accepted the survey, the design, and the
   four corrections. Phase 74's Decision 11 now names `filename$MAIN`,
   and its sketch points here for the settled form. Subtask 2 is next.
+- **2026-10-30:** Subtask 2 done: the lexer (`internal/fortran/lex`).
+  - `Lex` turns the source pass's statements into `lex.Statement`s:
+    `Kind`, `Label`, `Tokens` (each with its kind, text, and offset in the
+    statement's text), `Then` (a logical IF's statement, lexed as one of
+    its own), `FunctionType` (a typed FUNCTION's type keyword), `Offset`,
+    and `Body` (where a keyword statement's text starts after its
+    keyword). `Dump` is the one-line form tests compare.
+  - Three steps, each in its own file, as Part B designed: `squeeze.go`
+    (blanks out outside constants, capitals, each character's offset and
+    whether it is in a constant, with the source pass's rules for
+    character constants, Hollerith counts, and READ's `1'10`);
+    `lex.go`'s `classify` (IF and ELSE IF by what follows the condition,
+    the `=` and DO-comma test, then the longest keyword of `kinds.go`'s
+    table of every VAX FORTRAN statement, typed FUNCTION only at a unit's
+    start, DO WHILE); `tokenize.go` (names, numbers with the dotted
+    operator test, character, Hollerith, and typeless constants, `**` and
+    `//`, the other operators, `<` and `>` for Phase 80's variable format
+    expressions).
+  - Two cases the design didn't foresee: a DO statement's label followed
+    by a name starting E, D, or Q and a digit (`DO 10 E1 = 1, 5`
+    squeezes to `DO10E1=1,5`, whose `10E1` is a real constant), and a
+    type length before such a name (`REAL*8 D1`). The tokenizer takes
+    digits only there (`modeLabel`, `modeLengths`); in a declaration a
+    `*` after a number is still a repeat count (`X/3*1.5E2/`).
+  - FORMAT statements aren't tokenized (F8.2 is one edit descriptor):
+    their specification is read from `Body` by Phase 80's parser.
+  - The END rule (5.5) needed the initial line's text:
+    `source.Statement.Initial`.
+  - Choices of ours: `INTEGER FUNCTIONX` at a unit's start is a FUNCTION
+    statement, though a main program could begin with that declaration;
+    an empty statement (a label alone) is kind `Empty`, left to the
+    parser.
+  - Messages: NOQUOTE, HOLLEND, UNRECSTMT, BADCHAR. `Compile` now runs
+    the lexer after the source pass, so the FORTRAN command reports them.
+  - Left for later: VAX's old `PARAMETER X = 1` (no parentheses) is an
+    assignment to PARAMETERX by the `=` test (Phase 76); `ASSIGN 10 TO
+    I` tokenizes `TOI` as one name, for Phase 79's parser to split.
+  - DUNGEON V3.2A (local only): all 51,717 statements of its nine
+    sources, with `/CONTINUATIONS=40`, lex without a message, every one
+    classified.
+  - Tests: `TestClassify` (71 statements: the DO and IF tests, keywords
+    as names, typed FUNCTIONs, lengths, numbers and dotted operators,
+    constants, the other keyword statements), `TestTokenKinds`,
+    `TestUnitStarts`, `TestEndWithContinuation`, `TestLabels`,
+    `TestPositions` (across a continuation line), `TestMessages`,
+    `TestDirective`, `TestKindTable`, `TestFormatBody`.

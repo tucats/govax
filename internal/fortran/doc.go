@@ -33,9 +33,10 @@
 //
 // The passes are built a phase at a time (docs/PHASE-74's Part C). So far
 // the compiler has its driver (this package), its messages (diag), the
-// source pass, and the start of codegen: Compile reads the source and its
-// INCLUDE files into statements, reporting any problem with their layout,
-// and copies every line into a MACRO file as comments, which MACRO
+// source pass, the lexer, and the start of codegen: Compile reads the
+// source and its INCLUDE files into statements, reporting any problem
+// with their layout, lexes each statement, reporting what the lexer finds
+// wrong, and copies every line into a MACRO file as comments, which MACRO
 // assembles into an empty module.
 //
 // The compiler is plain Go. It knows nothing of govax's console, RMS, or
