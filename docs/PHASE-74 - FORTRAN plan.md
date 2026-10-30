@@ -513,7 +513,7 @@ qualifier arrives with the phase that needs it:
 
 | Qualifier | Phase |
 |---|---|
-| `/MACRO[=file]`, `/NOMACRO` (check only), `/[NO]EXTEND_SOURCE`, `/[NO]D_LINES` | 74 |
+| `/MACRO[=file]`, `/NOMACRO` (check only), `/[NO]EXTEND_SOURCE`, `/[NO]D_LINES`, `/CONTINUATIONS=n` | 74 |
 | `/[NO]G_FLOATING`, `/[NO]I4` | 78 |
 | `/LIBRARY` | 83 |
 | `/[NO]OPTIMIZE` | 84 |
@@ -708,7 +708,9 @@ review after each.
    (label field, continuation column, statement field, sequence field),
    tab-format lines, `/EXTEND_SOURCE`, comment lines (`C`, `*`, `!`),
    D lines, `!` comments outside character constants, continuation
-   limits, labels, and INCLUDE of files (nested, with a depth limit),
+   limits (`/CONTINUATIONS=n`, 0 to 99, default 19: the User Manual's
+   numbers as remembered, unconfirmed; DUNGEON's VMS build uses
+   `/CONT=40`), labels, and INCLUDE of files (nested, with a depth limit),
    each statement with its file, line, and column for messages and for
    the `.MAR` comments.
 4. **FTNRTL's pipeline** (`internal/ftnrtl`): the package, its first
@@ -761,7 +763,10 @@ and the later phases' docs have been changed to follow them.
    likes DUNGEON, and will look for its FORTRAN source from a freely
    available place and check that its license allows our use. Until
    then, Phase 86 plans for DUNGEON with classic programs as the
-   fallback.
+   fallback. *Later the same day* the author placed DUNGEON V3.2A's
+   source, cleared as freely available, in
+   `~/Documents/Technical Doc/VMS/dungeon-3.2A/`; Phase 86's doc has
+   what it needs.
 7. **`/OPTIMIZE` as the default** once the optimizer passes the whole
    corpus both ways? **Answer** Agreed (Decision 9, Phase 84).
 8. **Names:** `FTN$` for FTNRTL's entries, `%FORT-` for the compiler's
@@ -840,3 +845,8 @@ and the later phases' docs have been changed to follow them.
     file assembled by MACRO without a message; `cmd/govax`'s
     `TestFortranCommand` and `TestFortranThenMacro`; the grammar tests'
     verb count and the grammar split.
+- **2026-10-29:** The milestone's source arrived: DUNGEON V3.2A
+  (1-Oct-94), in `~/Documents/Technical Doc/VMS/dungeon-3.2A/`. It is
+  written for VAX FORTRAN on OpenVMS (its `dungeon.doc` gives the VMS
+  build: `FORT/NOCHECK/CONT=40`), so subtask 3 adds `/CONTINUATIONS=n`.
+  Phase 86's doc lists what else it needs.
