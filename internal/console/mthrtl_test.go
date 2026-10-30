@@ -20,7 +20,6 @@ X:	.FLOAT	1.0
 	.ENTRY	START,^M<>
 	PUSHAF	X
 	CALLS	#1,G^MTH$RANDOM
-	CALLS	#0,G^MTH$IINT
 	MOVF	X,R0
 	JSB	G^MTH$SQRT_R2
 	MOVL	#1,R0
@@ -47,12 +46,11 @@ func TestMTHRTLLinks(t *testing.T) {
 		buf.Reset()
 		_ = d.Dispatch("RUN MTHCALL")
 
-		// The error isn't severe, so the program goes on to the next call:
-		// a CALL entry, the entry MTH$IINT shares with MTH$IIFIX (the stub
-		// goes by the first name), and a JSB entry.
+		// The error isn't severe, so the program goes on to the next call: a
+		// CALL entry, then a JSB entry.
 		out := buf.String()
 
-		for _, routine := range []string{"MTH$RANDOM", "MTH$IIFIX", "MTH$SQRT_R2"} {
+		for _, routine := range []string{"MTH$RANDOM", "MTH$SQRT_R2"} {
 			if !strings.Contains(out, "routine "+routine+" is not implemented") {
 				t.Errorf("no NOTIMPL for %s; RUN said:\n%s", routine, out)
 			}

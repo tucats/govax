@@ -316,7 +316,9 @@ never had.
   and logarithms in all four formats, CALL and JSB; subtask 4 (2026-10-30)
   is the trigonometric functions and their inverses, radians and degrees,
   with SINCOS's two results; subtask 5 (2026-10-30) is the hyperbolic
-  functions and ATAN2.
+  functions and ATAN2; subtask 6 (2026-10-30) is the manual's Table 1-1:
+  absolute value, positive difference, sign, floor, truncation, nearest
+  integer, remainder, maximum and minimum, conversions, and bit functions.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1404,7 +1406,12 @@ expect adjustment as phases land):
   `arcSin`, `arcCos`, `arcTan2`. `trig.go` makes radians' and degrees' functions
   from these. `enginehyper.go` is `sinhCosh` (exponentials, or that series below
   1) and `arcTanh`; `hyperbolic.go` makes the routines, the sine, cosine, and
-  tangent by `trig.go`'s makers on `sinhCosh`.
+  tangent by `trig.go`'s makers on `sinhCosh`. The manual's Table 1-1 is
+  `floating.go` (`wholeNumber`, `remainder`, conversions), `integer.go` (`width`,
+  `returnInteger`, `integerEntry`, `wholeEntry`, the bit functions), and
+  `extreme.go` (maximum and minimum, any number of arguments, through a `loader`);
+  `condition.go`'s `trapError` is a hardware exception (`SS$_FLTOVF_F`, ...) as a
+  function's error, where the other routines signal `MTH$_` conditions.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

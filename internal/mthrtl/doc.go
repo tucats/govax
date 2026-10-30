@@ -40,6 +40,10 @@
 // function.go makes a table's routines from a function and a format; explog.go
 // is the square root, exponential, and logarithm functions; trig.go, on
 // enginetrig.go's part of the engine, is the trigonometric functions and their
-// inverses, in radians and degrees; and hyperbolic.go, on enginehyper.go's, is
-// the hyperbolic functions.
+// inverses, in radians and degrees; hyperbolic.go, on enginehyper.go's, is the
+// hyperbolic functions; floating.go is the routines of the manual's Table 1-1
+// that a floating instruction or two could do (absolute value, truncation,
+// remainder, conversions, ...); integer.go the ones with word and longword
+// arguments or results, the bit functions among them; and extreme.go the maximum
+// and minimum of any number of arguments.
 package mthrtl

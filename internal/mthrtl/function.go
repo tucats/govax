@@ -34,6 +34,7 @@ var (
 	errLogZeroNeg = domainError(vmsdef.LibrarySymbols["MTH$_LOGZERNEG"])
 	errSqrtNeg    = domainError(vmsdef.LibrarySymbols["MTH$_SQUROONEG"])
 	errInvalidArg = domainError(vmsdef.LibrarySymbols["MTH$_INVARGMAT"])
+	errWrongCount = domainError(vmsdef.LibrarySymbols["MTH$_WRONUMARG"])
 
 	mthFloOveMat = vmsdef.LibrarySymbols["MTH$_FLOOVEMAT"]
 	mthFloUndMat = vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
@@ -62,9 +63,14 @@ func gateUnderflow(env *corevms.Environment, v vaxfloat.Value, err error) (vaxfl
 // returns what the routine returns. The result a handler continues with is
 // the reserved operand, but for an underflow, where the manual's is 0.0.
 func signalFailure(env *corevms.Environment, err error) (uint32, error) {
-	var domain domainError
+	var (
+		domain domainError
+		trap   trapError
+	)
 
 	switch {
+	case errors.As(err, &trap):
+		return signalTrap(env, trap)
 	case errors.Is(err, vaxfloat.ErrOverflow):
 		return signalCondition(env, mthFloOveMat)
 	case errors.Is(err, vaxfloat.ErrUnderflow):
@@ -78,30 +84,48 @@ func signalFailure(env *corevms.Environment, err error) (uint32, error) {
 
 // callEntry makes the routine reached by CALLS or CALLG for fn in format f.
 func callEntry(f vaxfloat.Format, fn function) corevms.ShimFunc {
-	return callWithArguments(f, 1, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
-		return fn(f, args[0])
+	return conversionEntry(floatArgs(f), f, fn)
+}
+
+// conversionEntry is callEntry for a routine whose argument load reads, and whose
+// result fn gives in format out: MTH$DBLE's F_floating argument and D_floating
+// result, or MTH$FLOATJ's longword and F_floating.
+func conversionEntry(load loader, out vaxfloat.Format, fn function) corevms.ShimFunc {
+	return callWithArguments(load, out, 1, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
+		return fn(out, args[0])
 	})
 }
 
 // callBinaryEntry is callEntry for a function of two arguments.
 func callBinaryEntry(f vaxfloat.Format, fn binaryFunction) corevms.ShimFunc {
-	return callWithArguments(f, 2, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
+	return callWithArguments(floatArgs(f), f, 2, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
 		return fn(f, args[0], args[1])
 	})
 }
 
+// loader reads one argument of a routine, by reference, as a Value, whatever the
+// argument's type. Its error is one that fail signals.
+type loader func(env *corevms.Environment, addr uint32) (vaxfloat.Value, error)
+
+// floatArgs is the loader of format f's arguments.
+func floatArgs(f vaxfloat.Format) loader {
+	return func(env *corevms.Environment, addr uint32) (vaxfloat.Value, error) {
+		return loadArg(env, f, addr)
+	}
+}
+
 // callWithArguments makes a routine reached by CALLS or CALLG that computes its
-// result from count arguments, by reference, as the MTH$ routines' are. An F, D,
-// or G result comes back in R0 or R0:R1, and the arguments start with the first.
-// An H result is too long for that, so it goes through the first argument, and
-// the values follow it.
+// result, in format out, from count arguments, by reference, as the MTH$
+// routines' are. An F, D, or G result comes back in R0 or R0:R1, and the
+// arguments start with the first. An H result is too long for that, so it goes
+// through the first argument, and the values follow it.
 //
 // A handler that continues from the routine's condition can correct only R0 and
 // R1, not a result in memory, so what's there is what the condition leaves: the
 // reserved operand, or 0.0 for an underflow. Unconfirmed (the probe, subtask 10).
-func callWithArguments(f vaxfloat.Format, count int, compute func(args []vaxfloat.Value) (vaxfloat.Value, error)) corevms.ShimFunc {
+func callWithArguments(load loader, out vaxfloat.Format, count int, compute func(args []vaxfloat.Value) (vaxfloat.Value, error)) corevms.ShimFunc {
 	first := 0
-	if f == vaxfloat.H {
+	if out == vaxfloat.H {
 		first = 1
 	}
 
@@ -109,7 +133,7 @@ func callWithArguments(f vaxfloat.Format, count int, compute func(args []vaxfloa
 		args := make([]vaxfloat.Value, count)
 
 		for i := range args {
-			x, err := loadArg(env, f, arg(argv, first+i))
+			x, err := load(env, arg(argv, first+i))
 			if err != nil {
 				return fail(env, err)
 			}
@@ -121,8 +145,8 @@ func callWithArguments(f vaxfloat.Format, count int, compute func(args []vaxfloa
 		v, err = gateUnderflow(env, v, err)
 
 		if err != nil {
-			if f == vaxfloat.H {
-				if serr := storeFailed(env, f, arg(argv, 0), err); serr != nil {
+			if out == vaxfloat.H {
+				if serr := storeFailed(env, out, arg(argv, 0), err); serr != nil {
 					return fail(env, serr)
 				}
 			}
@@ -130,11 +154,11 @@ func callWithArguments(f vaxfloat.Format, count int, compute func(args []vaxfloa
 			return signalFailure(env, err)
 		}
 
-		if f != vaxfloat.H {
-			return returnFloat(env, f, v), nil
+		if out != vaxfloat.H {
+			return returnFloat(env, out, v), nil
 		}
 
-		if err := storeResult(env, f, arg(argv, 0), v); err != nil {
+		if err := storeResult(env, out, arg(argv, 0), v); err != nil {
 			return fail(env, err)
 		}
 

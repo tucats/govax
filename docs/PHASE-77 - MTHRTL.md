@@ -3,8 +3,9 @@
 **Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
 its Decision 3 accepted by the author the same day; subtasks 2, the package
 and its registration, 3, the engine, square root, exponentials, and
-logarithms, 4, the trigonometric functions and their inverses, and 5, the
-hyperbolic functions and ATAN2, the same day). Needs Phase 74 (the plan)
+logarithms, 4, the trigonometric functions and their inverses, 5, the
+hyperbolic functions and ATAN2, and 6, Table 1-1's routines, the same day).
+Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -170,8 +171,9 @@ documented neighbor.
 | `MTH$` JSB, two results (`SINCOS`) | as above | R0:Rm, then R(m+1):R(2m+1): `HSINCOS_R7` ends in R7 |
 | `OTS$` CALL | **by value** in the argument list: a D is two longwords, an H or D complex four | R0, R0:R1, or R0:R3 |
 
-Exceptions to "by reference": `MTH$UMAX` and `MTH$UMIN` are by value, and
-`MAX`/`MIN` take any number of arguments.
+Exceptions to "by reference": none. (The survey said `MTH$UMAX` and `MTH$UMIN`
+are by value; their pages in the 7.3 manual say by reference, and subtask 6
+follows them.) `MAX`/`MIN`, `UMAX`, and `UMIN` take any number of arguments.
 
 ### Conditions
 
@@ -189,7 +191,7 @@ are there too, each with one FAO argument, `user PC !XL`.
 | `MTH$_WRONUMARG` | `0x168284` | in neither manual's routine pages |
 | `MTH$_SIGLOSMAT` (`SINCOSSIG`) | `0x1682BC` | in neither manual's routine pages |
 | `SS$_ROPRAND` | | any floating input with sign 1 and exponent 0 |
-| `SS$_FLTOVF`, `SS$_FLTDIV`, `SS$_INTOVF`, `SS$_INTDIV` | | hardware traps Table 1-1's footnotes and the `OTS$` pages name |
+| `SS$_FLTOVF_F`, `SS$_FLTDIV_F`, `SS$_FLTUND_F`, `SS$_INTOVF`, `SS$_INTDIV` | | hardware exceptions Table 1-1's footnotes and the `OTS$` pages name; floating ones in the fault forms govax's CPU takes (the survey had the trap names) |
 
 The limits follow from the formats, so no table of them is needed. Rounding
 reports `ErrOverflow` and `ErrUnderflow`, and the manual's limits become
@@ -340,6 +342,31 @@ be corrected.
     description doesn't mention underflow;
   - `ATAN2` of 0 and a negative cosine: govax gives pi, the manual's
     `pi * sign(Y)` with 0 counted as positive;
+  - Table 1-1's conditions: which floating exceptions these routines really
+    signal, under which names (`SS$_FLTOVF_F` or a trap's, `MTH$_FLOOVEMAT`), and
+    what a continuing handler finds, since VMS's would resume in a faulting
+    instruction;
+  - `MTH$AMOD`'s kind: whether a quotient beyond the format overflows (govax says
+    yes, from the footnote), what a quotient too small does with FU set (govax
+    goes on, the remainder being the dividend), what a zero divisor signals (no
+    footnote; govax signals `SS$_FLTDIV_F`), and how exact a remainder is when the
+    quotient has more bits than the format;
+  - `MTH$SNGLG`'s and `MTH$AMOD`'s underflow: which condition, and whether it
+    follows the caller's FU, as govax has it, since a CALL entry clears FU for its
+    own instructions (the 5.0 manual also gives `MTH$DIM` underflow, and 7.3 not);
+  - `MTH$ANINT` just below 0.5: govax's 0 is the true nearest, where the FORTRAN
+    manual's `INT(a + .5)` in F_floating would give 1;
+  - `MTH$JMOD(-2**31, -1)` and `MTH$IMOD(-32768, -1)`: govax's 0, from the footnote's
+    silence, though VMS's mask sets IV; and R0 after continuing from a zero divisor
+    (govax's dividend);
+  - a word result's high word in R0 (govax's is the sign);
+  - `MTH$AMAX1`'s kind with no arguments: govax signals `MTH$_WRONUMARG`;
+  - `MTH$UMAX` by reference, and `MTH$SGN` of a G or H value;
+  - `MTH$CVT_DA_GA`'s kind: R0, and an element out of range (govax stores what a
+    single conversion leaves, goes on, and signals once at the end, the handlers
+    running only after the Go routine ends);
+  - the undocumented JSB entries of this family: `MTH$AMOD_R5`, `DMOD_R9`,
+    `GMOD_R9`, `SIGN_R1`, `DSIGN_R3`, `GSIGN_R3`, `SGN_R1`;
   - last-bit comparison, reported as a count rather than held as a test.
 
 ## Subtasks (revised by the survey)
@@ -356,7 +383,7 @@ be corrected.
 5. **Hyperbolic functions and ATAN2.** Done.
 6. **Table 1-1's routines:** absolute value, positive difference, sign, floor,
    truncation, nearest integer, remainder, maximum and minimum, conversions,
-   bit functions. (New: the plan's subtask 5 was too large.)
+   bit functions. (New: the plan's subtask 5 was too large.) Done.
 7. **Complex functions and parts.**
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
    to agree (`sema/constant.go`'s `power`, `complexArith`).
@@ -522,3 +549,49 @@ be corrected.
   hyperbolic sine or cosine by exponentials, 2.0 to 3.7 us by the series, 2.1 to
   3.3 us for a tangent, 2.6 to 4.8 us for `ATANH`, and 2.7 to 5.2 us for `ATAN2`,
   F to H: still tens of VAX instructions' time.
+- **2026-10-30:** Subtask 6. `floating.go` is the routines on floating values:
+  absolute value, positive difference, transfer of sign, `wholeNumber` (`floorOf`,
+  `truncated`, `nearest`, all exact), `remainder`, the conversions, `productEntry`,
+  and `convertArrayEntry`. `integer.go` is the word and longword ones: `width`
+  (`load`, `lowBits`, `holds`), `returnInteger` (R0 the low-order bits, and
+  `SS$_INTOVF` with them in R0 if it doesn't fit), `integerEntry`, `wholeEntry`
+  (floating argument, integer result, `MTH$SGN` among them), `integerRemainderEntry`,
+  and the bit functions. `extreme.go` is the maximum and minimum, any number of
+  arguments through a `loader`, which `callWithArguments` now takes too, so a
+  routine's argument type and result format can differ (`conversionEntry`).
+  `condition.go`'s `trapError` is a hardware exception as a function's error, with
+  its vaxfloat cause under it so the FU gate still sees an underflow; `trapping` and
+  `noUnderflow` say what a routine's footnotes give it. The tables gain 101 CALL
+  lines (103 names, `MTH$IIFIX` and `MTH$JIFIX` standing for their second names)
+  and the 8 JSB entries the manual gives. The 7 undocumented JSB entries of these
+  families stay stubs (Decision 7), and `TestMTHRTLLinks` no longer calls the
+  shared `MTH$IIFIX` entry, now written; `TestVector` holds its stub's name.
+
+  Table 1-1 gives no algorithms and only footnotes for conditions, and the 5.0 and
+  7.3 manuals' footnotes differ, so these follow 7.3's, the nearer to VMS 7.1, with
+  what the routines compute from their names and the FORTRAN manual's Table D-3. A
+  second reading of VMS's vector showed each entry's mask: IV is set on every
+  routine with the integer overflow footnote (and on `MTH$SGN`, `IMOD`, and `JMOD`,
+  without it), clear on `IISIGN` and `JISIGN`, so those two wrap quietly and the rest
+  trap whatever the caller's IV. Three choices the manuals don't settle, each a
+  question for the probe: a remainder is exact however large the quotient, a quotient
+  beyond the format being `SS$_FLTOVF_F`; a zero floating divisor is `SS$_FLTDIV_F`,
+  in no footnote; and no arguments to `MTH$AMAX1`'s kind is `MTH$_WRONUMARG`. The
+  survey's "`UMAX` and `UMIN` are by value" was wrong: their pages say by reference.
+
+  `floating_test.go` holds the whole numbers and the remainder to a reference in
+  rationals, in every format, and the rest at their limits. `TestTable1FromAProgram`
+  runs every entry from a generated MACRO program (328 calls: answers, each condition
+  continued, the signal array's size, FU clear and set, reserved operands, arguments
+  it can't read, H's result through its first argument), `TestTable1Covers` holds it
+  to the list of names, `TestConvertArray` runs the array routines, and
+  `TestHardwareConditionsUnhandled` is the messages and the image's end. Breaking the
+  code showed the checks can tell, from 1 to 65 failures for each of 31 changes:
+  nearest truncating 63, a floor the wrong way 49, a floored quotient in the remainder
+  21, no quotient overflow 16, no integer overflow 50, the range one bit wide 52, word
+  arguments not sign-extended 24, word results 37, maximum and minimum swapped 34, H's
+  arguments off by one 65, an array stopping at its first failure 2, and a wrong line
+  in the table (`IIFIX`, `IIGNNT`, `AJMIN0`, `HFLOOR_R7`) 1 to 3. Three changes first
+  got through: `DPROD`'s underflow and `AJMIN0`'s width were gaps, now cases; an `ISHFT`
+  case for counts past the width was redundant, Go's shifts being defined there, and
+  it's gone. Only `DIM` at equal values passes, rightly, the result being 0 either way.

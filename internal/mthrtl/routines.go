@@ -175,12 +175,125 @@ var Routines = []Routine{
 	{"MTH$DATANH", callEntry(vaxfloat.D, arcHyperbolicTangent)},
 	{"MTH$GATANH", callEntry(vaxfloat.G, arcHyperbolicTangent)},
 	{"MTH$HATANH", callEntry(vaxfloat.H, arcHyperbolicTangent)},
+
+	{"MTH$ABS", callEntry(vaxfloat.F, absolute)},
+	{"MTH$DABS", callEntry(vaxfloat.D, absolute)},
+	{"MTH$GABS", callEntry(vaxfloat.G, absolute)},
+	{"MTH$HABS", callEntry(vaxfloat.H, absolute)},
+	{"MTH$IIABS", integerEntry(word, 1, integerAbsolute)},
+	{"MTH$JIABS", integerEntry(long, 1, integerAbsolute)},
+
+	{"MTH$DIM", callBinaryEntry(vaxfloat.F, positiveDifference)},
+	{"MTH$DDIM", callBinaryEntry(vaxfloat.D, positiveDifference)},
+	{"MTH$GDIM", callBinaryEntry(vaxfloat.G, positiveDifference)},
+	{"MTH$HDIM", callBinaryEntry(vaxfloat.H, positiveDifference)},
+	{"MTH$IIDIM", integerEntry(word, 2, integerDifference)},
+	{"MTH$JIDIM", integerEntry(long, 2, integerDifference)},
+
+	{"MTH$SIGN", callBinaryEntry(vaxfloat.F, transferSign)},
+	{"MTH$DSIGN", callBinaryEntry(vaxfloat.D, transferSign)},
+	{"MTH$GSIGN", callBinaryEntry(vaxfloat.G, transferSign)},
+	{"MTH$HSIGN", callBinaryEntry(vaxfloat.H, transferSign)},
+	{"MTH$IISIGN", integerEntry(word, 2, integerSign)},
+	{"MTH$JISIGN", integerEntry(long, 2, integerSign)},
+	{"MTH$SGN", wholeEntry(vaxfloat.F, long, signOf)},
+
+	{"MTH$FLOOR", callEntry(vaxfloat.F, wholeNumber(floorOf))},
+	{"MTH$DFLOOR", callEntry(vaxfloat.D, wholeNumber(floorOf))},
+	{"MTH$GFLOOR", callEntry(vaxfloat.G, wholeNumber(floorOf))},
+	{"MTH$HFLOOR", callEntry(vaxfloat.H, wholeNumber(floorOf))},
+
+	{"MTH$AINT", callEntry(vaxfloat.F, wholeNumber(truncated))},
+	{"MTH$DINT", callEntry(vaxfloat.D, wholeNumber(truncated))},
+	{"MTH$GINT", callEntry(vaxfloat.G, wholeNumber(truncated))},
+	{"MTH$HINT", callEntry(vaxfloat.H, wholeNumber(truncated))},
+	{"MTH$IIFIX", wholeEntry(vaxfloat.F, word, truncated)}, // MTH$IINT too
+	{"MTH$JIFIX", wholeEntry(vaxfloat.F, long, truncated)}, // MTH$JINT too
+	{"MTH$IIDINT", wholeEntry(vaxfloat.D, word, truncated)},
+	{"MTH$JIDINT", wholeEntry(vaxfloat.D, long, truncated)},
+	{"MTH$IIGINT", wholeEntry(vaxfloat.G, word, truncated)},
+	{"MTH$JIGINT", wholeEntry(vaxfloat.G, long, truncated)},
+	{"MTH$IIHINT", wholeEntry(vaxfloat.H, word, truncated)},
+	{"MTH$JIHINT", wholeEntry(vaxfloat.H, long, truncated)},
+
+	{"MTH$ANINT", callEntry(vaxfloat.F, wholeNumber(nearest))},
+	{"MTH$DNINT", callEntry(vaxfloat.D, wholeNumber(nearest))},
+	{"MTH$GNINT", callEntry(vaxfloat.G, wholeNumber(nearest))},
+	{"MTH$HNINT", callEntry(vaxfloat.H, wholeNumber(nearest))},
+	{"MTH$ININT", wholeEntry(vaxfloat.F, word, nearest)},
+	{"MTH$JNINT", wholeEntry(vaxfloat.F, long, nearest)},
+	{"MTH$IIDNNT", wholeEntry(vaxfloat.D, word, nearest)},
+	{"MTH$JIDNNT", wholeEntry(vaxfloat.D, long, nearest)},
+	{"MTH$IIGNNT", wholeEntry(vaxfloat.G, word, nearest)},
+	{"MTH$JIGNNT", wholeEntry(vaxfloat.G, long, nearest)},
+	{"MTH$IIHNNT", wholeEntry(vaxfloat.H, word, nearest)},
+	{"MTH$JIHNNT", wholeEntry(vaxfloat.H, long, nearest)},
+
+	{"MTH$AMOD", callBinaryEntry(vaxfloat.F, remainder)},
+	{"MTH$DMOD", callBinaryEntry(vaxfloat.D, remainder)},
+	{"MTH$GMOD", callBinaryEntry(vaxfloat.G, remainder)},
+	{"MTH$HMOD", callBinaryEntry(vaxfloat.H, remainder)},
+	{"MTH$IMOD", integerRemainderEntry(word)},
+	{"MTH$JMOD", integerRemainderEntry(long)},
+
+	{"MTH$AIMAX0", extremeFloatEntry(integerArgs(word), vaxfloat.F, wantLargest)},
+	{"MTH$AJMAX0", extremeFloatEntry(integerArgs(long), vaxfloat.F, wantLargest)},
+	{"MTH$IMAX0", extremeIntegerEntry(integerArgs(word), word, wantLargest)},
+	{"MTH$JMAX0", extremeIntegerEntry(integerArgs(long), long, wantLargest)},
+	{"MTH$AMAX1", extremeFloatEntry(floatArgs(vaxfloat.F), vaxfloat.F, wantLargest)},
+	{"MTH$DMAX1", extremeFloatEntry(floatArgs(vaxfloat.D), vaxfloat.D, wantLargest)},
+	{"MTH$GMAX1", extremeFloatEntry(floatArgs(vaxfloat.G), vaxfloat.G, wantLargest)},
+	{"MTH$HMAX1", extremeFloatEntry(floatArgs(vaxfloat.H), vaxfloat.H, wantLargest)},
+	{"MTH$IMAX1", extremeIntegerEntry(floatArgs(vaxfloat.F), word, wantLargest)},
+	{"MTH$JMAX1", extremeIntegerEntry(floatArgs(vaxfloat.F), long, wantLargest)},
+	{"MTH$UMAX", extremeIntegerEntry(integerArgs(unsignedLong), unsignedLong, wantLargest)},
+
+	{"MTH$AIMIN0", extremeFloatEntry(integerArgs(word), vaxfloat.F, wantSmallest)},
+	{"MTH$AJMIN0", extremeFloatEntry(integerArgs(long), vaxfloat.F, wantSmallest)},
+	{"MTH$IMIN0", extremeIntegerEntry(integerArgs(word), word, wantSmallest)},
+	{"MTH$JMIN0", extremeIntegerEntry(integerArgs(long), long, wantSmallest)},
+	{"MTH$AMIN1", extremeFloatEntry(floatArgs(vaxfloat.F), vaxfloat.F, wantSmallest)},
+	{"MTH$DMIN1", extremeFloatEntry(floatArgs(vaxfloat.D), vaxfloat.D, wantSmallest)},
+	{"MTH$GMIN1", extremeFloatEntry(floatArgs(vaxfloat.G), vaxfloat.G, wantSmallest)},
+	{"MTH$HMIN1", extremeFloatEntry(floatArgs(vaxfloat.H), vaxfloat.H, wantSmallest)},
+	{"MTH$IMIN1", extremeIntegerEntry(floatArgs(vaxfloat.F), word, wantSmallest)},
+	{"MTH$JMIN1", extremeIntegerEntry(floatArgs(vaxfloat.F), long, wantSmallest)},
+	{"MTH$UMIN", extremeIntegerEntry(integerArgs(unsignedLong), unsignedLong, wantSmallest)},
+
+	{"MTH$DBLE", conversionEntry(floatArgs(vaxfloat.F), vaxfloat.D, convert)},
+	{"MTH$GDBLE", conversionEntry(floatArgs(vaxfloat.F), vaxfloat.G, convert)},
+	{"MTH$SNGL", conversionEntry(floatArgs(vaxfloat.D), vaxfloat.F, convertTrapping)},
+	{"MTH$SNGLG", conversionEntry(floatArgs(vaxfloat.G), vaxfloat.F, convertTrapping)},
+	{"MTH$FLOATI", conversionEntry(integerArgs(word), vaxfloat.F, convert)},
+	{"MTH$DFLOTI", conversionEntry(integerArgs(word), vaxfloat.D, convert)},
+	{"MTH$GFLOTI", conversionEntry(integerArgs(word), vaxfloat.G, convert)},
+	{"MTH$FLOATJ", conversionEntry(integerArgs(long), vaxfloat.F, convert)},
+	{"MTH$DFLOTJ", conversionEntry(integerArgs(long), vaxfloat.D, convert)},
+	{"MTH$GFLOTJ", conversionEntry(integerArgs(long), vaxfloat.G, convert)},
+	{"MTH$DPROD", productEntry(vaxfloat.D)},
+	{"MTH$GPROD", productEntry(vaxfloat.G)},
+	{"MTH$CVT_D_G", conversionEntry(floatArgs(vaxfloat.D), vaxfloat.G, convert)},
+	{"MTH$CVT_G_D", conversionEntry(floatArgs(vaxfloat.G), vaxfloat.D, convert)},
+	{"MTH$CVT_DA_GA", convertArrayEntry(vaxfloat.D, vaxfloat.G)},
+	{"MTH$CVT_GA_DA", convertArrayEntry(vaxfloat.G, vaxfloat.D)},
+
+	{"MTH$IIAND", integerEntry(word, 2, integerAnd)},
+	{"MTH$JIAND", integerEntry(long, 2, integerAnd)},
+	{"MTH$IIOR", integerEntry(word, 2, integerOr)},
+	{"MTH$JIOR", integerEntry(long, 2, integerOr)},
+	{"MTH$IIEOR", integerEntry(word, 2, integerExclusiveOr)},
+	{"MTH$JIEOR", integerEntry(long, 2, integerExclusiveOr)},
+	{"MTH$INOT", integerEntry(word, 1, integerNot)},
+	{"MTH$JNOT", integerEntry(long, 1, integerNot)},
+	{"MTH$IISHFT", integerEntry(word, 2, integerShift)},
+	{"MTH$JISHFT", integerEntry(long, 2, integerShift)},
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides. The
 // vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2,
 // MTH$HTAN_R7, MTH$HTAND_R7, the hyperbolic functions' (MTH$SINH_R5, ...), and
-// the two-argument MTH$ATAN2_R4's kind, which no manual gives and whose registers
+// the two-argument MTH$ATAN2_R4's and MTH$AMOD_R5's kind, and the sign's
+// (MTH$SIGN_R1, MTH$SGN_R1, ...), which no manual gives and whose registers
 // wait for the VMS probe (Decision 7). A name that has a neighbor with a smaller
 // register number, such as MTH$DEXP_R7 beside MTH$DEXP_R6 or MTH$ASIN_R5 beside
 // MTH$ASIN_R4, is a second entry: in VMS's image the two jump to the same
@@ -285,6 +398,16 @@ var JSBRoutines = []JSBRoutine{
 	{"MTH$DATAND_R7", jsbEntry(vaxfloat.D, arcTangentDegrees)},
 	{"MTH$GATAND_R7", jsbEntry(vaxfloat.G, arcTangentDegrees)},
 	{"MTH$HATAND_R8", jsbEntry(vaxfloat.H, arcTangentDegrees)},
+
+	{"MTH$FLOOR_R1", jsbEntry(vaxfloat.F, wholeNumber(floorOf))},
+	{"MTH$DFLOOR_R3", jsbEntry(vaxfloat.D, wholeNumber(floorOf))},
+	{"MTH$GFLOOR_R3", jsbEntry(vaxfloat.G, wholeNumber(floorOf))},
+	{"MTH$HFLOOR_R7", jsbEntry(vaxfloat.H, wholeNumber(floorOf))},
+
+	{"MTH$AINT_R2", jsbEntry(vaxfloat.F, wholeNumber(truncated))},
+	{"MTH$DINT_R4", jsbEntry(vaxfloat.D, wholeNumber(truncated))},
+	{"MTH$GINT_R4", jsbEntry(vaxfloat.G, wholeNumber(truncated))},
+	{"MTH$HINT_R8", jsbEntry(vaxfloat.H, wholeNumber(truncated))},
 }
 
 // jsbName matches the names of the JSB entries: a name like MTH$SIN_R4 is

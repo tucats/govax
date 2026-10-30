@@ -76,6 +76,75 @@ func signalKeepingR1(env *corevms.Environment, condition, r0 uint32) (uint32, er
 	return env.SignalFailure([]uint32{condition, 1, pc}, r0)
 }
 
+// trapError is a function's failure as the exception a floating instruction takes
+// in the routine, rather than one of the library's own conditions: Table 1-1's
+// routines give "floating-point overflow exceptions can occur" where the others
+// list MTH$_FLOOVEMAT. Its cause is the vaxfloat error it stands for, which
+// errors.Is sees, so an underflow is still gated by the caller's FU.
+type trapError struct {
+	condition uint32
+	cause     error
+}
+
+func (t trapError) Error() string { return t.cause.Error() }
+func (t trapError) Unwrap() error { return t.cause }
+
+// The exceptions. Floating overflow, divide by zero, and underflow are the fault
+// forms, the _F names, the ones this emulator's CPU takes for its floating
+// instructions. The two integer exceptions are traps. VMS's PC would be inside
+// MTHRTL, and a handler that continued from a fault there would run the instruction
+// again; here, as for SS$_ROPRAND, the PC is the routine's return address and
+// continuing returns to its caller (the phase doc's Decision 8).
+var (
+	ssFltOvf = vmsdef.Symbols["SS$_FLTOVF_F"]
+	ssFltDiv = vmsdef.Symbols["SS$_FLTDIV_F"]
+	ssFltUnd = vmsdef.Symbols["SS$_FLTUND_F"]
+	ssIntOvf = vmsdef.Symbols["SS$_INTOVF"]
+	ssIntDiv = vmsdef.Symbols["SS$_INTDIV"]
+
+	errFloatOverflow  = trapError{ssFltOvf, vaxfloat.ErrOverflow}
+	errFloatDivide    = trapError{ssFltDiv, vaxfloat.ErrDivideByZero}
+	errFloatUnderflow = trapError{ssFltUnd, vaxfloat.ErrUnderflow}
+)
+
+// trapping turns a floating result's range error into the exception a floating
+// instruction takes for it: the wrapper of a Table 1-1 routine's arithmetic.
+func trapping(v vaxfloat.Value, err error) (vaxfloat.Value, error) {
+	switch {
+	case errors.Is(err, vaxfloat.ErrOverflow):
+		return v, errFloatOverflow
+	case errors.Is(err, vaxfloat.ErrUnderflow):
+		return v, errFloatUnderflow
+	}
+
+	return v, err
+}
+
+// noUnderflow makes a result too small for its format 0.0, whatever the caller's
+// FU, for a routine the manual gives no underflow: a CALL entry clears FU for its
+// own instructions (section 1.2), so that's what they would leave.
+func noUnderflow(v vaxfloat.Value, err error) (vaxfloat.Value, error) {
+	if errors.Is(err, vaxfloat.ErrUnderflow) {
+		return vaxfloat.Value{}, nil
+	}
+
+	return v, err
+}
+
+// signalTrap signals trap's exception, whose signal array, as the hardware's, has
+// no arguments between the condition and the PC and PSL. A handler that continues
+// gets the reserved operand, what an overflow leaves in the destination, or 0.0
+// for an underflow.
+func signalTrap(env *corevms.Environment, trap trapError) (uint32, error) {
+	if errors.Is(trap, vaxfloat.ErrUnderflow) {
+		env.CPU().SetGPR(registers.R1, 0)
+
+		return env.SignalFailure([]uint32{trap.condition}, 0)
+	}
+
+	return signalReserved(env, []uint32{trap.condition})
+}
+
 // fail is what a routine does with the error from reading an argument or
 // writing a result: a reserved operand is signaled as SS$_ROPRAND, the
 // fault the hardware's own floating instructions take on one, and a memory
