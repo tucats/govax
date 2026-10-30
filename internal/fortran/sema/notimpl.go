@@ -17,7 +17,7 @@ import (
 // (unimplemented), and keeps only its part in the unit's structure.
 func handled(s ast.Stmt) bool {
 	switch s := s.(type) {
-	case *ast.TypeStmt, *ast.DimensionStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt,
+	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
 		return true

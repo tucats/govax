@@ -2,6 +2,7 @@
 
 **Status:** in progress (subtask 1, the survey, done and accepted
 2026-10-30; subtask 2, the parser's remaining statements, done
+2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
@@ -499,8 +500,9 @@ Subtasks 2 to 9 below are revised to match.
    the tables, the I/O control list and I/O list grammar, STRUCTURE
    blocks, the A.4 PARAMETER, ASSIGN's TO, `"nn` integers, DEFINE FILE
    executable; the parser's NOTIMPL messages moved to sema.
-3. **Type declarations, IMPLICIT, and statement order**, every type and
-   length; Figure 1-1's order; statement functions recognized.
+3. **Type declarations, IMPLICIT, and statement order** (done
+   2026-10-30), every type and length; Figure 1-1's order; statement
+   functions recognized.
 4. **PARAMETER and constant folding** in every type, both forms, the
    constant-expression intrinsics.
 5. **Arrays:** bounds, lower bounds, adjustable and assumed-size forms,
@@ -603,3 +605,66 @@ Subtasks 2 to 9 below are revised to match.
   - Found along the way: a fixed-form test line longer than 72 columns
     loses its end, as it should (a test of ours was wrong, not the
     compiler).
+- **2026-10-30:** Subtask 3 done: type declarations, IMPLICIT, and
+  statement order (`internal/fortran/sema`).
+  - **Every type and length** (`types.go`): a `Type` is a kind
+    (INTEGER, REAL, LOGICAL, COMPLEX, CHARACTER) and a size, Table 2-1's
+    lengths each its own type (BYTE is LOGICAL*1, DOUBLE PRECISION
+    REAL*8, DOUBLE COMPLEX COMPLEX*16; CHARACTER's size is its length,
+    0 for `*(*)`). `typeOf` checks a length against its type (BADLENGTH;
+    NOLENGTH for BYTE, DOUBLE PRECISION, DOUBLE COMPLEX), and
+    `characterType` a CHARACTER length, a constant or a parenthesized
+    integer constant expression from 1 to 65535 (BADCHARLEN). A type
+    statement's own length is checked once, at the statement; a name's
+    after it, at the name. A passed length on a name that isn't a dummy
+    argument, a function, or (subtask 4) a PARAMETER constant is
+    PASSEDLEN.
+  - **Using them:** declarations no longer stop at a type Phase 78
+    compiles: every name gets its type and storage, and NOTIMPL ("the
+    REAL*8 type") moves to the first expression that uses such a name
+    (`uncompiledUse`, once per name), or to the FUNCTION statement of a
+    function of such a type (`functionResult`). `Type.Compiled` is
+    INTEGER, REAL, and LOGICAL longwords.
+  - **Storage** at natural alignment (`Type.Align`): a longword's on a
+    multiple of 4, a word's on 2, a COMPLEX's that of its parts,
+    CHARACTER anywhere, never more than 4 (`$LOCAL` is LONG-aligned);
+    `LocalSize` is rounded to a longword so the compiler's cells stay
+    aligned. Nothing changed for Phase 75's programs, all longwords.
+  - **IMPLICIT** (`implicit.go`): the unit's IMPLICIT statements are
+    read first, so they type the header's names too; a letter typed
+    twice is DUPIMPLICIT (the survey's choice), IMPLICIT NONE with
+    another IMPLICIT IMPLNONE (D-2, 4.8). Under IMPLICIT NONE a name
+    with no declaration is NOTYPE once the unit is read (`untyped`),
+    and quiet until then (its type is Invalid); a subroutine's name
+    needs none.
+  - **Statement order** (`order.go`): Figure 1-1 as groups (IMPLICIT
+    NONE, IMPLICIT, other specifications, statement functions,
+    executable), each statement with the group it puts the unit in and
+    the last it may come in: PARAMETER from IMPLICIT to the
+    specifications, DATA from the specifications on, FORMAT, ENTRY,
+    NAMELIST, and directives anywhere. Out of order is LATEDECL after an
+    executable statement (as before), ORDER otherwise, naming the first
+    statement that took the unit past its place.
+  - **Statement functions** (`statementFunction`): F(p,...) = e before
+    the executable statements, F not an array or dummy argument, each p
+    a name, is a definition; F's class is `StmtFunction` (no storage;
+    a type, which IMPLICIT NONE requires). A definition is NOTIMPL
+    (Phase 79), a reference an error already reported; calling one,
+    using it as a variable, or assigning to it is BADUSE; a second
+    definition DUPSTMTFUNC; a dummy twice DUPDUMMY. A parenthesized
+    item that isn't a name (AVG(A,B,3.) = ...) makes it an assignment
+    to an array element, NOTARRAY.
+  - **Messages:** ORDER, NOLENGTH, NUMLENGTH, BADCHARLEN, PASSEDLEN,
+    IMPLNONE, DUPIMPLICIT, NOTYPE, DUPSTMTFUNC.
+  - **Tests:** sema's `TestErrors` has cases for each type and length,
+    IMPLICIT, the order, and statement functions; golden
+    `sema/testdata/types.for` shows every type's symbol and `$LOCAL`
+    place; `codegen` and `ir`'s `declare.for` compile mixed declarations
+    and IMPLICIT NONE through to MACRO (gaps of `.BLKB` before aligned
+    variables). The sema dump's type column is wider (13), so every
+    golden's symbol lines moved.
+  - Choices of ours, unconfirmed: `FUNCTION F*8` (a length with no type
+    keyword) gives the length to F's implicit type; a CHARACTER*(*)
+    external function is allowed (the survey's reading of 4.4.2); a
+    statement function whose name is an intrinsic's is the statement
+    function (6.2.1's own SINH example).

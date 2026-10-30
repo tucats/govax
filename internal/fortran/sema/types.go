@@ -14,18 +14,26 @@ const (
 	Real
 	Logical
 	Character
+	Complex
 )
 
 // Type is a data type: its kind and its size in bytes (section 2.1.1,
-// Table 2-1). In this phase every variable is a longword (INTEGER*4,
-// REAL*4, LOGICAL*4), and CHARACTER is only the type of a character
-// constant, whose size is its length.
+// Table 2-1). Every length VAX FORTRAN has is a Type: INTEGER*2 is
+// {Integer, 2}, DOUBLE PRECISION {Real, 8}, BYTE {Logical, 1} (BYTE is
+// LOGICAL*1), DOUBLE COMPLEX {Complex, 16}. A CHARACTER type's size is
+// its length in characters, 1 to 65535, or 0 for a passed length,
+// CHARACTER*(*), which a dummy argument takes from its actual argument.
+//
+// Declarations may give a name any of these types (Phase 76); the
+// expressions this phase compiles are on the longword types, INTEGER*4,
+// REAL*4, and LOGICAL*4 (Compiled), and a name of any other type is
+// NOTIMPL where an expression uses it, until Phase 78.
 type Type struct {
 	Kind Kind
 	Size int
 }
 
-// The types of the subset's variables, and the Invalid type.
+// The default types, and the Invalid type.
 var (
 	IntegerType = Type{Integer, 4}
 	RealType    = Type{Real, 4}
@@ -33,21 +41,68 @@ var (
 	invalid     = Type{}
 )
 
-// String is the type as FORTRAN writes it, for messages and dumps:
-// INTEGER, REAL, LOGICAL, CHARACTER*5.
+// String is the type as FORTRAN writes it, for messages and dumps: a
+// type of its kind's default length without one (INTEGER, REAL,
+// LOGICAL, COMPLEX), any other with it (INTEGER*2, REAL*8, LOGICAL*1,
+// COMPLEX*16, CHARACTER*5, CHARACTER*(*)).
 func (t Type) String() string {
+	name, def := "", 4
+
 	switch t.Kind {
 	case Integer:
-		return "INTEGER"
+		name = "INTEGER"
 	case Real:
-		return "REAL"
+		name = "REAL"
 	case Logical:
-		return "LOGICAL"
+		name = "LOGICAL"
+	case Complex:
+		name, def = "COMPLEX", 8
 	case Character:
+		if t.Size == 0 {
+			return "CHARACTER*(*)"
+		}
+
 		return "CHARACTER*" + strconv.Itoa(t.Size)
+	default:
+		return "(invalid)"
 	}
 
-	return "(invalid)"
+	if t.Size == def {
+		return name
+	}
+
+	return name + "*" + strconv.Itoa(t.Size)
+}
+
+// Compiled reports whether expressions of the type are compiled yet:
+// INTEGER*4, REAL*4, and LOGICAL*4 are (Phase 75); the other types and
+// lengths are Phase 78's.
+func (t Type) Compiled() bool {
+	switch t {
+	case IntegerType, RealType, LogicalType:
+		return true
+	}
+
+	return false
+}
+
+// Align is the boundary a variable of the type is placed on in $LOCAL:
+// its natural alignment (a longword's on a multiple of 4, a word's of 2;
+// a COMPLEX's that of its parts), but never more than a longword, the
+// boundary the $LOCAL program section itself is aligned on, so no
+// stricter one could be kept. The VAX reaches unaligned data too, but
+// more slowly.
+func (t Type) Align() int {
+	size := t.Size
+
+	switch t.Kind {
+	case Character:
+		return 1
+	case Complex:
+		size /= 2
+	}
+
+	return min(max(size, 1), 4)
 }
 
 // letter is the type's one-letter tag in the dump: (+:R X Y) is a REAL
@@ -62,6 +117,8 @@ func (t Type) letter() string {
 		return "L"
 	case Character:
 		return "C"
+	case Complex:
+		return "X"
 	}
 
 	return "?"
@@ -70,7 +127,7 @@ func (t Type) letter() string {
 // rank is the type's rank in a mixed operation (section 2.3.1.2): the
 // operand of lower rank is converted to the other's type before the
 // operation, and the result has the higher rank's type. LOGICAL is
-// lowest; INTEGER*2 (2) comes with Phase 78.
+// lowest; INTEGER*2 (2) and the longer types come with Phase 78.
 func (t Type) rank() int {
 	switch t.Kind {
 	case Logical:
@@ -91,14 +148,4 @@ func higher(t, u Type) Type {
 	}
 
 	return t
-}
-
-// implicitType is the type a name has when no declaration gives it one
-// (section 2.2.2.2): INTEGER if it starts with I to N, REAL otherwise.
-func implicitType(name string) Type {
-	if name != "" && name[0] >= 'I' && name[0] <= 'N' {
-		return IntegerType
-	}
-
-	return RealType
 }

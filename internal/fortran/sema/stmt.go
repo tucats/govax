@@ -106,8 +106,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 	}
 
 	switch s := s.(type) {
-	case *ast.TypeStmt, *ast.DimensionStmt:
-		// Their work was done by declarations.
+	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt:
+		// Their work was done by implicits and declarations.
 		return
 
 	case *ast.IfThenStmt:
@@ -210,7 +210,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
-		*ast.TypeStmt, *ast.DimensionStmt:
+		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt:
 		return aStatement(s)
 	}
 
@@ -436,6 +436,9 @@ func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 	}
 
 	switch v.Sym.Type.Kind {
+	case Invalid:
+		// No type (IMPLICIT NONE): NOTYPE says so.
+		return nil
 	case Integer, Real:
 	default:
 		a.report("DOVAR", n.Pos, n.Name, v.Sym.Type.String())

@@ -168,8 +168,42 @@ var messages = map[string]kind{
 	// statement (Figure 1-1).
 	"LATEDECL": {Error, "a declaration must come before the executable statements, the first of which is at line %d"},
 
+	// ORDER is a statement out of Figure 1-1's order other than a
+	// declaration after an executable statement (LATEDECL): IMPLICIT
+	// after a type statement, a type statement after a statement
+	// function's definition.
+	"ORDER": {Error, "this %s must come before the %s at line %d"},
+
 	// BADLENGTH is a length a type doesn't have: INTEGER*3.
 	"BADLENGTH": {Error, "%s*%d is not a data type; %s's lengths are %s"},
+
+	// NOLENGTH is a length after a type keyword that names one: BYTE,
+	// DOUBLE PRECISION, DOUBLE COMPLEX.
+	"NOLENGTH": {Error, "%s can't be given a length"},
+
+	// NUMLENGTH is an expression or (*) as a numeric type's length.
+	"NUMLENGTH": {Error, "a length in parentheses is a CHARACTER length, and this function is %s"},
+
+	// BADCHARLEN is a CHARACTER length that isn't an integer constant
+	// expression from 1 to 65535 (section 4.4.2).
+	"BADCHARLEN": {Error, "a CHARACTER length must be an integer constant expression from 1 to 65535, or (*)"},
+
+	// PASSEDLEN is a passed length, CHARACTER*(*), on a name that can't
+	// take one.
+	"PASSEDLEN": {Error, "%s can't have the length (*): only a dummy argument, a function, or a PARAMETER constant can"},
+
+	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
+	// statement (section 4.8).
+	"IMPLNONE": {Error, "a program unit with an IMPLICIT NONE statement can't have another IMPLICIT statement, and this one has the %s statement at line %d"},
+
+	// DUPIMPLICIT is a letter given a type by two IMPLICIT rules.
+	"DUPIMPLICIT": {Error, "the letter %s already has a type, from the IMPLICIT statement at line %d"},
+
+	// NOTYPE is a name with no type under IMPLICIT NONE.
+	"NOTYPE": {Error, "%s has no type: with IMPLICIT NONE, every name must be declared"},
+
+	// DUPSTMTFUNC is a second definition of a statement function.
+	"DUPSTMTFUNC": {Error, "the statement function %s is already defined, at line %d"},
 
 	// BADBOUND is an array bound that isn't an integer constant
 	// expression (where an adjustable array's isn't allowed).

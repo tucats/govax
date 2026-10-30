@@ -1,6 +1,6 @@
 == main program SQUARES
-  SQUARES              program unit
-  I         INTEGER    variable         $LOCAL+0
+  SQUARES                 program unit
+  I         INTEGER       variable         $LOCAL+0
   $LOCAL is 4 bytes
 3           DO 10 I = 1, 5, 1
 4             PRINT * I (*:I I I)

@@ -1,14 +1,14 @@
 == main program SUBSET
-  SUBSET               program unit
-  I         INTEGER    variable         $LOCAL+0
-  N         INTEGER    variable         $LOCAL+4
-  TABLE     INTEGER    array(1:10)      $LOCAL+8
-  X         REAL       variable         $LOCAL+48
-  Y         REAL       variable         $LOCAL+52
-  AVG       REAL       function
-  DONE      LOGICAL    variable         $LOCAL+56
-  V         REAL       array(0:9)       $LOCAL+60
-  SUMUP                subroutine
+  SUBSET                  program unit
+  I         INTEGER       variable         $LOCAL+0
+  N         INTEGER       variable         $LOCAL+4
+  TABLE     INTEGER       array(1:10)      $LOCAL+8
+  X         REAL          variable         $LOCAL+48
+  Y         REAL          variable         $LOCAL+52
+  AVG       REAL          function
+  DONE      LOGICAL       variable         $LOCAL+56
+  V         REAL          array(0:9)       $LOCAL+60
+  SUMUP                   subroutine
   $LOCAL is 100 bytes
 7           N = 10
 8           DONE = .FALSE.
@@ -33,11 +33,11 @@
 28          STOP
 29          END
 == SUBROUTINE SUMUP
-  SUMUP                program unit
-  T         INTEGER    array(1:*)       argument 1
-  N         INTEGER    variable         argument 2
-  S         REAL       variable         argument 3
-  K         INTEGER    variable         $LOCAL+0
+  SUMUP                   program unit
+  T         INTEGER       array(1:*)       argument 1
+  N         INTEGER       variable         argument 2
+  S         REAL          variable         argument 3
+  K         INTEGER       variable         $LOCAL+0
   $LOCAL is 4 bytes
 33          S = 0.0
 34          DO 100 K = N, 1, -1
@@ -45,10 +45,10 @@
 36          RETURN
 37          END
 == FUNCTION AVG
-  AVG       REAL       result           $LOCAL+0
-  T         INTEGER    array(1:10)      argument 1
-  N         INTEGER    variable         argument 2
-  J         INTEGER    variable         $LOCAL+4
+  AVG       REAL          result           $LOCAL+0
+  T         INTEGER       array(1:10)      argument 1
+  N         INTEGER       variable         argument 2
+  J         INTEGER       variable         $LOCAL+4
   $LOCAL is 8 bytes
 41          AVG = 0.0
 42          DO 200 J = 1, N, 1

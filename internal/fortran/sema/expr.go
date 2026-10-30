@@ -72,6 +72,10 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		return a.bad(n.Pos)
 	}
 
+	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.uncompiledUse(s, n.Pos) {
+		return a.bad(n.Pos)
+	}
+
 	switch s.Class {
 	case Unclassified:
 		s.Class = Variable
@@ -117,7 +121,16 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	}
 
 	switch s.Class {
+	case StmtFunction:
+		// A reference to a statement function, whose definition is
+		// reported NOTIMPL (Phase 79).
+		return a.bad(e.Pos)
+
 	case Array:
+		if a.uncompiledUse(s, e.Pos) {
+			return a.bad(e.Pos)
+		}
+
 		return a.element(s, e)
 
 	case Unclassified:
@@ -133,6 +146,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		fallthrough
 
 	case Function:
+		if a.uncompiledUse(s, e.Pos) {
+			return a.bad(e.Pos)
+		}
+
 		args := a.args(e.Args)
 		a.unit.calls = append(a.unit.calls, routineRef{s, len(args), e.Pos})
 
@@ -157,6 +174,23 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	}
 
 	return a.bad(e.Pos)
+}
+
+// uncompiledUse reports, once, a name used in an expression whose type
+// this phase doesn't compile (NOTIMPL: "the REAL*8 type", Phase 78's),
+// and makes the name broken, so its other uses are quiet. It reports
+// whether it did. A name with no type at all (IMPLICIT NONE) has its own
+// message, NOTYPE.
+func (a *analyzer) uncompiledUse(s *Symbol, pos diag.Position) bool {
+	if s.Type.Kind == Invalid || s.Type.Compiled() {
+		return false
+	}
+
+	a.notImplForm(pos, "the "+s.Type.String()+" type")
+
+	s.broken = true
+
+	return true
 }
 
 // element analyzes an array element, s(subscripts): one subscript per

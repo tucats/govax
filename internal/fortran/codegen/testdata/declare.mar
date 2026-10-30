@@ -1,0 +1,134 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for DECLARE, the main program
+;   FLAG    LOGICAL*1    $LOCAL+0   DECLARE.FLAG
+;   SHORT   INTEGER*2    $LOCAL+2   DECLARE.SHORT
+;   NAME    CHARACTER*5  $LOCAL+4   DECLARE.NAME
+;   BIG     REAL*8       $LOCAL+12  DECLARE.BIG
+;   I       INTEGER      $LOCAL+20  DECLARE.I
+;   TOTAL   INTEGER      $LOCAL+24  DECLARE.TOTAL
+;   AVG     REAL         $LOCAL+28  DECLARE.AVG
+;   SCORES  INTEGER (3)  $LOCAL+32  DECLARE.SCORES
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DECLARE.FLAG:
+	.BLKB	1			; FLAG
+	.BLKB	1
+DECLARE.SHORT:
+	.BLKB	2			; SHORT
+DECLARE.NAME:
+	.BLKB	5			; NAME
+	.BLKB	3
+DECLARE.BIG:
+	.BLKL	2			; BIG
+DECLARE.I:
+	.BLKL	1			; I
+DECLARE.TOTAL:
+	.BLKL	1			; TOTAL
+DECLARE.AVG:
+	.BLKL	1			; AVG
+DECLARE.SCORES:
+	.BLKL	3			; SCORES, INTEGER (3)
+DECLARE.$C1:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+DECLARE.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+DECLARE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS DECLARE.TOTAL
+DECLARE.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS DECLARE.AVG
+DECLARE.$F1:
+	.LONG	^X00004140		; 3.0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Declarations of every type and length, with IMPLICIT and IMPLICIT
+;    2  C     NONE (Phase 76, subtask 3): each variable takes its place in
+;    3  C     $LOCAL at its natural boundary, and the compiler's own cells
+;    4  C     follow on a longword. Only the longword types are used: the
+;    5  C     others' code is Phase 78's.
+;    6        PROGRAM DECLARE
+	.ENTRY	DECLARE,^M<>
+;    7        IMPLICIT NONE
+;    8        BYTE FLAG
+;    9        INTEGER*2 SHORT
+;   10        CHARACTER*5 NAME
+;   11        REAL*8 BIG
+;   12        INTEGER I, TOTAL
+;   13        REAL AVG
+;   14        DIMENSION SCORES(3)
+;   15        INTEGER SCORES
+;   16        TOTAL = 0
+	CLRL	DECLARE.TOTAL
+;   17        DO 10 I = 1, 3
+	MOVL	#3,DECLARE.$C1		; DO 10's count
+	MOVL	#1,DECLARE.I
+DECLARE.$1:				; DO 10's body
+;   18           SCORES(I) = I*I
+	MOVL	DECLARE.I,R0
+	MULL3	DECLARE.I,DECLARE.I,DECLARE.SCORES-4[R0]
+;   19           TOTAL = TOTAL + SCORES(I)
+	MOVL	DECLARE.I,R0
+	ADDL2	DECLARE.SCORES-4[R0],DECLARE.TOTAL
+;   20     10 CONTINUE
+DECLARE.L10:
+	INCL	DECLARE.I
+	DECL	DECLARE.$C1		; one pass fewer
+	BLEQ	DECLARE.$2
+	BRW	DECLARE.$1
+DECLARE.$2:
+;   21        AVG = TOTAL/3.0
+	CVTLF	DECLARE.TOTAL,R0
+	DIVF3	DECLARE.$F1,R0,DECLARE.AVG
+;   22        PRINT *, TOTAL, AVG
+	PUSHAB	DECLARE.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	DECLARE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	DECLARE.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   23        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for HALF, a subroutine
+;   X     LOGICAL    argument 1  @HALF.X(AP)
+;   Y     LOGICAL    argument 2  @HALF.Y(AP)
+;   B     LOGICAL*1  $LOCAL+0    HALF.B
+;
+HALF.X = 4				; X is argument 1
+HALF.Y = 8				; Y is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+HALF.B:	.BLKB	1			; B
+	.BLKB	3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   24        SUBROUTINE HALF(X, Y)
+	.ENTRY	HALF,^M<>
+;   25        IMPLICIT DOUBLE PRECISION (D), LOGICAL (X-Y)
+;   26        LOGICAL*1 B
+;   27        IF (X) Y = .NOT. Y
+	BLBS	@HALF.X(AP),HALF.$2
+	BRW	HALF.$1
+HALF.$2:
+	MCOML	@HALF.Y(AP),@HALF.Y(AP)
+HALF.$1:
+;   28        END
+	RET
+
+	.END	DECLARE

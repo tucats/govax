@@ -105,8 +105,10 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 // assignment the declarations found to define a statement function is
 // Phase 79's.
 func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
-	if a.stmtFuncs[s] {
-		a.notImpl(s.Pos, "a statement function")
+	if fn, ok := a.stmtFuncs[s]; ok {
+		if fn != nil {
+			a.notImpl(s.Pos, "a statement function")
+		}
 
 		return nil
 	}
@@ -155,9 +157,18 @@ func (a *analyzer) target(e ast.Expr) Expr {
 			return nil
 		}
 
-		if s == nil || s.Class != Array {
+		switch {
+		case s != nil && s.Class == StmtFunction:
+			a.badUse(s, e.Pos, "be assigned a value")
+
+			return nil
+
+		case s == nil || s.Class != Array:
 			a.report("NOTARRAY", e.Pos, e.Name)
 
+			return nil
+
+		case a.uncompiledUse(s, e.Pos):
 			return nil
 		}
 

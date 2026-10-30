@@ -30,10 +30,15 @@
 //
 // # The symbol table
 //
-// The first walk reads the declarations: the type statements and
-// DIMENSION. Every name the unit uses gets a Symbol, with its type
-// (declared, or implicit from its first letter), its dimensions if it is
-// an array, and its position among the dummy arguments if it is one.
+// Before anything else, the unit's IMPLICIT statements say what type
+// each first letter gives a name (implicit.go): by default INTEGER for I
+// to N and REAL for the rest, or none at all with IMPLICIT NONE. Then
+// the first walk reads the declarations: the type statements, of every
+// type and length (Table 2-1: INTEGER*2, REAL*8, COMPLEX*16,
+// CHARACTER*n, ...), and DIMENSION. Every name the unit uses gets a
+// Symbol, with its type (declared, or implicit from its first letter),
+// its dimensions if it is an array, and its position among the dummy
+// arguments if it is one.
 // What a name *is* (its Class) comes from how it is used, since FORTRAN
 // has no declaration for most of that: REAL F declares only a type, and
 // F becomes a variable when the unit uses F alone, or an external
@@ -43,7 +48,12 @@
 // Doing the declarations first means every statement sees every
 // declaration, which is what FORTRAN requires anyway: Figure 1-1 puts
 // the declarations before the executable statements, and a declaration
-// after one is an error (LATEDECL).
+// after one is an error (LATEDECL). The same walk checks the rest of
+// Figure 1-1's order (order.go: IMPLICIT before the other declarations,
+// statement functions after them, ORDER), and finds the statement
+// function definitions, F(X) = ... before the first executable
+// statement with F not an array, which only the declarations tell from
+// assignments to array elements.
 //
 // # Expressions get their types
 //
@@ -98,16 +108,22 @@
 // # Storage
 //
 // Last, each variable and array gets its place in the unit's static
-// storage, the $LOCAL program section: in order of first appearance, on
-// longword boundaries. A dummy argument has no storage of its own; it is
+// storage, the $LOCAL program section: in order of first appearance,
+// each on its type's natural boundary (a longword on a multiple of 4, a
+// LOGICAL*1 anywhere). A dummy argument has no storage of its own; it is
 // the caller's, reached through the argument list.
+//
+// A name may have any type, but the expressions this phase compiles are
+// on INTEGER, REAL, and LOGICAL longwords only; a name of any other type
+// is NOTIMPL where an expression first uses it (Phase 78's), and only
+// declaring it costs nothing but its storage.
 //
 // # Errors
 //
 // A mistake is reported once. An expression with an error has the
 // Invalid type, and an operation on an Invalid operand is Invalid too,
 // without another message. A name whose declaration had an error (a
-// bound that isn't a constant, a type this phase doesn't compile) is
+// bound that isn't a constant, a length its type doesn't have) is
 // marked, and its uses get no messages of their own. A statement the
 // parser rejected still keeps its place in the blocks (an IF THEN with
 // a syntax error still opens a block, so its END IF isn't "not in an IF
@@ -125,7 +141,7 @@
 // later phase moves statements and forms from one side to the other.
 //
 // Some declarations can't be read yet at all: COMMON, PARAMETER,
-// IMPLICIT, and the rest are NOTIMPL until Phase 76's later subtasks.
+// EQUIVALENCE, and the rest are NOTIMPL until Phase 76's later subtasks.
 // Without them, most of what this pass would say about a unit's names
 // would be wrong (an array declared in COMMON would be "not an array" at
 // every use), so a unit with one gets only the messages about its
@@ -142,11 +158,11 @@
 // operator's type:
 //
 //	== SUBROUTINE SUMUP
-//	  SUMUP                program unit
-//	  T         INTEGER    array(1:10)      argument 1
-//	  N         INTEGER    variable         argument 2
-//	  S         REAL       variable         argument 3
-//	  K         INTEGER    variable         $LOCAL+0
+//	  SUMUP                   program unit
+//	  T         INTEGER       array(1:10)      argument 1
+//	  N         INTEGER       variable         argument 2
+//	  S         REAL          variable         argument 3
+//	  K         INTEGER       variable         $LOCAL+0
 //	  $LOCAL is 4 bytes
 //	3           S = 0.0
 //	4           DO 100 K = 1, N, 1

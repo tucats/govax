@@ -17,8 +17,8 @@ import (
 // are in brackets, A[I], and a whole array is A[].
 //
 //	== main program SQUARES
-//	  SQUARES              program unit
-//	  I         INTEGER    variable         $LOCAL+0
+//	  SQUARES                 program unit
+//	  I         INTEGER       variable         $LOCAL+0
 //	  $LOCAL is 4 bytes
 //	3           DO 10 I = 1, 5, 1
 //	4             PRINT * I (*:I I I)
@@ -71,7 +71,7 @@ func dumpSymbol(s *Symbol) string {
 		where = "$LOCAL+" + strconv.Itoa(s.Offset)
 	}
 
-	return fmt.Sprintf("%-9s %-10s %-16s %s", s.Name, typ, class, where)
+	return fmt.Sprintf("%-9s %-13s %-16s %s", s.Name, typ, class, where)
 }
 
 // dims is an array's dimensions as declared: 1:10, 0:9, 1:*.

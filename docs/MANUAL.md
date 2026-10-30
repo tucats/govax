@@ -4404,11 +4404,21 @@ output it prints.
 - **Program units:** a main program, with or without a PROGRAM statement;
   SUBROUTINE; FUNCTION, typed INTEGER, REAL, or LOGICAL, or by its
   name's first letter; END. A file may hold several units.
-- **Declarations:** INTEGER, REAL, and LOGICAL (`INTEGER*4`, `REAL*4`,
-  `LOGICAL*4`), and DIMENSION, of variables and arrays with constant
-  bounds (a lower bound with a colon, `V(0:9)`); a dummy array may be
-  `A(*)`. Undeclared names have the
-  implicit types: I to N INTEGER, the rest REAL.
+- **Declarations:** type statements of every type and length (BYTE;
+  LOGICAL `*1`, `*2`, `*4`; INTEGER `*2`, `*4`; REAL `*4`, `*8`, `*16`;
+  DOUBLE PRECISION; COMPLEX `*8`, `*16`; DOUBLE COMPLEX; CHARACTER`*n`,
+  `*(expr)`, and `*(*)` for a dummy argument), and DIMENSION, of
+  variables and arrays with constant bounds (a lower bound with a colon,
+  `V(0:9)`); a dummy array may be `A(*)`. Every variable gets its storage,
+  but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
+  statements yet; a name of another type is reported not implemented
+  where a statement first uses it. Undeclared names have the implicit
+  types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
+  with IMPLICIT NONE every name must be declared. The statements must
+  come in the order the language sets (IMPLICIT, then the other
+  declarations, then statement function definitions, then the executable
+  statements); statement function definitions are recognized, and
+  reported not implemented yet.
 - **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
   `+ - * /` and unary minus, INTEGER and REAL mixed by the usual
   conversions (INTEGER division truncates); the relational operators
@@ -4718,6 +4728,12 @@ FORTRAN compiler was available to check them). So far:
   LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
   do on INTEGERs.
 - A name only declared, never used, is a variable, and gets storage.
+- Variables are placed in `$LOCAL` at their natural alignment, at most
+  a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
+  `INTEGER*2` on a word, the rest on a longword.
+- A letter given a type by two IMPLICIT rules is an error.
+- `FUNCTION F*8(X)`, a length with no type keyword, gives the length to
+  the type F has from its first letter (here `REAL*8`).
 - Integer overflow isn't detected (the result wraps, as with VAX
   FORTRAN's `/CHECK=NOOVERFLOW`); an integer division by zero ends the
   program with the VAX's divide-by-zero trap.

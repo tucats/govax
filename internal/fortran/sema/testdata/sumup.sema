@@ -1,9 +1,9 @@
 == SUBROUTINE SUMUP
-  SUMUP                program unit
-  T         INTEGER    array(1:10)      argument 1
-  N         INTEGER    variable         argument 2
-  S         REAL       variable         argument 3
-  K         INTEGER    variable         $LOCAL+0
+  SUMUP                   program unit
+  T         INTEGER       array(1:10)      argument 1
+  N         INTEGER       variable         argument 2
+  S         REAL          variable         argument 3
+  K         INTEGER       variable         $LOCAL+0
   $LOCAL is 4 bytes
 3           S = 0.0
 4           DO 100 K = 1, N, 1

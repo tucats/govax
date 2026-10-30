@@ -40,7 +40,9 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 		a := &analyzer{
 			messages:  messages,
 			units:     units,
-			stmtFuncs: map[ast.Stmt]bool{},
+			stmtFuncs: map[ast.Stmt]*Symbol{},
+			implicit:  defaultImplicit(),
+			rejected:  map[ast.Stmt]bool{},
 		}
 
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
@@ -129,14 +131,20 @@ type analyzer struct {
 	units    map[string]*fileUnit
 	unit     *Unit
 
-	// firstExec is the unit's first executable statement, after which no
-	// declaration may come; nil until there is one.
-	firstExec ast.Stmt
+	// implicit are the unit's letters' types (implicit.go), and
+	// rejected the IMPLICIT statements left out of them.
+	implicit *implicitRules
+	rejected map[ast.Stmt]bool
+
+	// group is the group of Figure 1-1 the unit's statements have
+	// reached, and firsts the first statement of each group (order.go).
+	group  group
+	firsts [execGroup + 1]ast.Stmt
 
 	// stmtFuncs are the assignments that are statement function
-	// definitions: F(X) = ..., F not an array, before the first
-	// executable statement.
-	stmtFuncs map[ast.Stmt]bool
+	// definitions (statementFunction), each with its function's symbol,
+	// or nil for one with an error.
+	stmtFuncs map[ast.Stmt]*Symbol
 
 	// open are the IF blocks and DO loops open at the statement being
 	// analyzed, outermost first; nextID numbers them.
@@ -173,6 +181,9 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 
 	u.incomplete = incompleteDeclarations(au.Body)
 
+	// The IMPLICIT statements first, since they give the header's
+	// names their types too.
+	a.implicits(au.Body)
 	a.header(au)
 
 	// Declarations first, then the executable statements, so that every
@@ -181,8 +192,11 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
 	a.declarations(au.Body)
+	a.functionResult()
 	a.statements(au.Body)
 	a.checkLabels()
+	a.untyped()
+	a.passedLengths()
 	a.layout()
 
 	return u
@@ -201,8 +215,8 @@ func (a *analyzer) header(au *ast.Unit) {
 		u.Result = s
 
 		if h.Type != nil {
-			if t, ok := a.typeOf(*h.Type, h.Type.Length, h.Type.Pos); ok {
-				s.Type, s.Typed, s.TypePos = t, true, h.Pos
+			if t, ok := a.functionType(*h.Type, s); ok {
+				s.Type, s.Typed, s.TypePos = t, t.Kind != Invalid, h.Pos
 			} else {
 				s.broken = true
 			}
@@ -259,7 +273,8 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 		return s
 	}
 
-	s := &Symbol{Name: name, Type: implicitType(name), Offset: -1, Pos: pos}
+	t, untyped := a.implicit.typeOf(name)
+	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos}
 	a.unit.byName[name] = s
 	a.unit.Symbols = append(a.unit.Symbols, s)
 
@@ -316,7 +331,8 @@ func (a *analyzer) report(ident string, pos diag.Position, args ...any) {
 // structural are the messages about a unit's structure (its labels,
 // blocks, loops, and statement order), which no declaration changes.
 var structural = map[string]bool{
-	"DUPDUMMY": true, "LATEDECL": true, "MAINRETURN": true,
+	"DUPDUMMY": true, "LATEDECL": true, "ORDER": true, "MAINRETURN": true,
+	"IMPLNONE": true, "DUPIMPLICIT": true,
 	"NOIF": true, "NOENDIF": true, "ELSEORDER": true,
 	"NODO": true, "DOTERM": true, "DONEST": true,
 	"DUPLABEL": true, "UNDEFLBL": true, "NOTEXEC": true,
@@ -325,7 +341,7 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// not implemented yet (COMMON, PARAMETER, IMPLICIT, ...), or one the
+// not implemented yet (COMMON, PARAMETER, EQUIVALENCE, ...), or one the
 // parser rejected. Without it, what semantic analysis would say about the
 // unit's names would mostly be wrong (an array declared in COMMON isn't
 // an array, a PARAMETER constant in a bound is a variable), so such a

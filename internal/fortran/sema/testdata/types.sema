@@ -1,0 +1,41 @@
+== SUBROUTINE TYPES
+  TYPES                   program unit
+  C         CHARACTER*(*) variable         argument 1
+  N         INTEGER       variable         argument 2
+  B1        LOGICAL*1     variable         $LOCAL+0
+  I2        INTEGER*2     variable         $LOCAL+2
+  I4        INTEGER       variable         $LOCAL+4
+  L2        LOGICAL*2     variable         $LOCAL+8
+  R8        REAL*8        variable         $LOCAL+12
+  R16       REAL*16       variable         $LOCAL+20
+  X8        COMPLEX       variable         $LOCAL+36
+  X16       COMPLEX*16    variable         $LOCAL+44
+  DC        COMPLEX*16    variable         $LOCAL+60
+  S5        CHARACTER*5   variable         $LOCAL+76
+  S7        CHARACTER*7   variable         $LOCAL+81
+  SA        CHARACTER*2   array(1:3)       $LOCAL+88
+  SC        CHARACTER*1   variable         $LOCAL+94
+  S         CHARACTER*5   variable         $LOCAL+95
+  IVEC      INTEGER       array(1:10)      $LOCAL+100
+  B2        LOGICAL*1     array(1:3)       $LOCAL+140
+  DX        REAL*8        array(1:2)       $LOCAL+144
+  TV        CHARACTER*8   array(1:2)       $LOCAL+160
+  SQ        REAL          statement function
+  K         INTEGER       variable         $LOCAL+176
+  $LOCAL is 180 bytes
+21          K = N
+22          END
+== main program NONE
+  NONE                    program unit
+  I         INTEGER       variable         $LOCAL+0
+  X         REAL          variable         $LOCAL+4
+  $LOCAL is 8 bytes
+28          I = 2
+29          X = (REAL I)
+30          PRINT * X
+31          END
+
+%FORT-E-NOTIMPL, a statement function is not implemented yet
+  at line 20 of TYPES.FOR
+        SQ(Y) = Y*Y
+  ------^

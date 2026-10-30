@@ -1,0 +1,56 @@
+routine DECLARE main
+  cell  FLAG    L  $LOCAL+0    variable FLAG
+  cell  SHORT   L  $LOCAL+2    variable SHORT
+  cell  NAME    L  $LOCAL+4    variable NAME
+  cell  BIG     F  $LOCAL+12   variable BIG
+  cell  I       L  $LOCAL+20   variable I
+  cell  TOTAL   L  $LOCAL+24   variable TOTAL
+  cell  AVG     F  $LOCAL+28   variable AVG
+  cell  SCORES  L  $LOCAL+32   array SCORES, 12 bytes
+  cell  $C1     L  $LOCAL+44   DO 10's count
+  $LOCAL is 48 bytes
+  datum $IO1    control PRINT *
+  datum $D1     descriptor L S 4 TOTAL
+  datum $D2     descriptor F S 4 AVG
+B1:
+  ; line 16
+  assign TOTAL = 0
+  ; line 17
+  assign $C1 = 3
+  assign I = 1
+  jump B2
+B2:  ; DO 10's body
+  ; line 18
+  assign SCORES-4[I] = mul.L(I, I)
+  ; line 19
+  assign TOTAL = add.L(TOTAL, SCORES-4[I])
+  ; line 20
+  jump B3
+B3: L10
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B4
+B4:
+  ; line 21
+  assign AVG = div.F(cvt.LF(TOTAL), 3.0)
+  ; line 22
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 23
+  return 1
+routine HALF subroutine
+  param X       L  argument 1
+  param Y       L  argument 2
+  cell  B       L  $LOCAL+0    variable B
+  $LOCAL is 4 bytes
+B1:
+  ; line 27
+  branch @X B2 B3
+B2:
+  assign @Y = not.L(@Y)
+  jump B3
+B3:
+  ; line 28
+  return

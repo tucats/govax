@@ -80,7 +80,15 @@ func (a *analyzer) jumpTarget(s ast.Stmt) bool {
 		return false
 	}
 
-	return ast.Executable(s) && !a.stmtFuncs[s]
+	return ast.Executable(s) && !a.isStmtFunc(s)
+}
+
+// isStmtFunc reports whether s is a statement function's definition
+// (statementFunction), with an error or without.
+func (a *analyzer) isStmtFunc(s ast.Stmt) bool {
+	_, ok := a.stmtFuncs[s]
+
+	return ok
 }
 
 // inBlocks reports whether a jump from a statement at path stays out of

@@ -91,11 +91,16 @@ const (
 	// UnitName is the main program's name, or a subroutine's own name
 	// within it: names that may not stand for anything else.
 	UnitName
+
+	// StmtFunction is a statement function the unit defines (section
+	// 6.2.1).
+	StmtFunction
 )
 
 // String is the class as messages say it: "a variable".
 func (c Class) String() string {
-	return [...]string{"a name", "a variable", "an array", "a function", "a subroutine", "the name of this program unit"}[c]
+	return [...]string{"a name", "a variable", "an array", "a function", "a subroutine",
+		"the name of this program unit", "a statement function"}[c]
 }
 
 // Symbol is one name in a unit.
@@ -108,6 +113,11 @@ type Symbol struct {
 	// gave the name its type; TypePos is where.
 	Typed   bool
 	TypePos diag.Position
+
+	// untyped is set for a name entered under IMPLICIT NONE, whose
+	// first letter gives it no type: unless a declaration gives it one,
+	// it is NOTYPE.
+	untyped bool
 
 	// Dims are an array's dimensions; DimPos is where they were
 	// declared.
@@ -129,6 +139,9 @@ type Symbol struct {
 
 	// Pos is where the name first appears.
 	Pos diag.Position
+
+	// defPos is where a statement function is defined.
+	defPos diag.Position
 
 	// broken is set when a declaration of the name had an error, which
 	// has been reported: its uses get no messages of their own, which

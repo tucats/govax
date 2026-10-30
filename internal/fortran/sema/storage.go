@@ -2,7 +2,10 @@ package sema
 
 // layout gives each of the unit's variables and arrays its place in the
 // unit's static storage, $LOCAL (Decision 10 of docs/PHASE-74 - FORTRAN
-// plan.md): in order of first appearance, each on a longword boundary.
+// plan.md): in order of first appearance, each on its type's natural
+// boundary (Type.Align: a longword's on a multiple of 4, a LOGICAL*1 or
+// a CHARACTER variable anywhere). The size is rounded up to a longword,
+// so that the compiler's own cells, which follow, are aligned.
 // Storage is static because FORTRAN-77's routines aren't recursive
 // (section 6.2), so a routine's variables are never live in two calls at
 // once, and a variable keeps its value from one call to the next as VAX
@@ -23,9 +26,10 @@ func (a *analyzer) layout() {
 			continue
 		}
 
-		s.Offset = offset
-		offset += (s.Size() + 3) &^ 3
+		align := s.Type.Align()
+		s.Offset = (offset + align - 1) / align * align
+		offset = s.Offset + s.Size()
 	}
 
-	a.unit.LocalSize = offset
+	a.unit.LocalSize = (offset + 3) &^ 3
 }
