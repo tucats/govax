@@ -269,24 +269,41 @@ func (ctx *Context) indirectAccess(rabAddr uint32, need byte) (uint32, error) {
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 }
 
-// indirectControl is the fixed control an indirect accessor's $PUT gives
-// a record of a VFC file, isi its RAB$W_ISI: a print file's carriage
-// control from the record attributes the accessor's FAB had at $OPEN
-// (FAB$V_PPF_RAT): carriage return, "a line feed before, a carriage
-// return after" (01 8D, as DCL's own records); otherwise none, zeros
-// (unconfirmed). It is nil for a stream that isn't indirect or a file
-// without fixed control.
-func (ctx *Context) indirectControl(isi uint16, h *FileHandle) []byte {
+// indirectRecord is the record an indirect accessor's $PUT writes to a
+// VFC file, isi its RAB$W_ISI: the fixed control the record attributes
+// the accessor's FAB had at $OPEN (FAB$V_PPF_RAT) call for, then the
+// record. On a print file (two bytes of fixed control, RAT=PRN) a
+// carriage return accessor's control is "a line feed before, a carriage
+// return after" (01 8D, as DCL's own records), and a FORTRAN accessor's
+// record gives its first byte, its carriage control, to the fixed control
+// (ftnPrintControl) instead of to the data; otherwise the control is
+// zeros (unconfirmed). A stream that isn't indirect, or a file without
+// fixed control, gets the record as it is.
+func (ctx *Context) indirectRecord(isi uint16, h *FileHandle, record []byte) []byte {
 	if !isIndirect(isi) || h.File == nil {
-		return nil
+		return record
 	}
 
 	ra := h.File.Header.RecordAttributes
-
-	control := make([]byte, ra.VfcSize)
-	if ra.VfcSize == 2 && ra.Attributes&ratPRN != 0 && wordRAT(isi)&ratCR != 0 {
-		copy(control, dclRecordControl)
+	if ra.VfcSize == 0 {
+		return record
 	}
 
-	return control
+	control := make([]byte, ra.VfcSize)
+
+	if ra.VfcSize == 2 && ra.Attributes&ratPRN != 0 {
+		switch rat := wordRAT(isi); {
+		case rat&ratFTN != 0:
+			c := byte(' ')
+			if len(record) > 0 {
+				c, record = record[0], record[1:]
+			}
+
+			copy(control, ftnPrintControl(c))
+		case rat&ratCR != 0:
+			copy(control, dclRecordControl)
+		}
+	}
+
+	return append(control, record...)
 }

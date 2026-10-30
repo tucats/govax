@@ -283,9 +283,10 @@ never had.
   the compiler's driver, messages, and first pass (source forms and
   INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
   LINK); Phase 75 (first light, every pass for a small subset) is in
-  progress: subtasks 1 to 6 (the survey and design, the lexer, the AST
+  progress: subtasks 1 to 7 (the survey and design, the lexer, the AST
   and parser, semantic analysis, the IR and lowering, the code
-  generator) are done, FTNRTL's list-directed output is next.
+  generator, FTNRTL's list-directed output) are done, the end-to-end
+  harness is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1676,7 +1677,10 @@ expect adjustment as phases land):
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION and
-  FTN$STOP), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  FTN$STOP; `ftn_units.mar`, the default output unit, SYS$OUTPUT with
+  RAT=FTN; `ftn_listout.mar`, list-directed output, FTN$PRINT_LIST,
+  FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END, with the control block's
+  layout, Phase 75), linked by `ftnrtl.opt` (the vector its own cluster, first;
   `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
   as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
   assembles and links it with `internal/asm` and `internal/link` as

@@ -1,7 +1,7 @@
 # Phase 75 — FORTRAN first light: every pass, end to end
 
-**Status:** in progress: subtasks 1 to 6 done (2026-10-30); FTNRTL's
-list-directed output (subtask 7) is next. Subtask 1, the survey (Part
+**Status:** in progress: subtasks 1 to 7 done (2026-10-30); the
+end-to-end harness and the first programs (subtask 8) are next. Subtask 1, the survey (Part
 A) and the design (Part B), was written 2026-10-30 and accepted by the
 author the same day, with its four corrections to the plan. Needs Phase 74 (the
 FORTRAN command, source forms, FTNRTL's pipeline). Part of the FORTRAN
@@ -298,7 +298,10 @@ rule means for a pass is in brackets.
   editing; with E editing it puts one digit before the point and d
   after it (the manual's `1PE12.3` of -270.139 is `-2.701E+02`). So
   `1PG15.7E2` shows 7 significant digits in F form and 8 in E form:
-  3.4 is `   3.400000    `, 1.0E-5 is ` 1.0000000E-05`.
+  3.4 is `   3.400000    `, 1.0E-5 is ` 1.0000000E-05`. [Corrected in
+  subtask 7: the E form has two leading blanks in 15 columns, and the
+  F_floating value nearest 1.0E-5 is below it, so it is
+  `  9.9999997E-06`; 2**-10 is `  9.7656250E-04`.]
 - **L editing** (8.3.8): T or F at the field's right end: `L2` is
   ` T`.
 - **Carriage control** (8.4, Table 8-5): the record's first character
@@ -1237,3 +1240,58 @@ To go into the progress log as each is built, and into MANUAL.md's
     links it with a MACRO module that prints integers and REAL bits
     (`OTS$CVT_L_TI`, `OTS$CVT_L_TZ`), and runs it in both paging modes:
     every value is FORTRAN's.
+- **2026-10-30:** Subtask 7 done: FTNRTL's list-directed output.
+  - Four entries appended to the vector, `FTN$PRINT_LIST` (16),
+    `FTN$WRITE_LIST` (24), `FTN$IO_ITEM` (32), `FTN$IO_END` (40), and
+    GSMATCH's minor id raised to 4. Two modules: `ftn_units.mar`, the
+    default output unit (a FAB and RAB in a NOSHR psect, `RAT=FTN`,
+    `RFM=VAR`, `FAC=PUT`; their addresses stored with `$FAB_STORE` and
+    `$RAB_STORE` at the first use, so the shareable image stores none;
+    `$CREATE` of SYS$OUTPUT, an indirect accessor of the process-permanent
+    file, and `$CONNECT`; internal routines `FTN$$OUTPUT_OPEN` and
+    `FTN$$OUTPUT_PUT`, global but not universal), and `ftn_listout.mar`,
+    the record buffer and the formats. An RMS error ends the image with
+    its status (LIB$STOP) until Phase 80's error model; a descriptor of a
+    type FTNRTL can't write, with SS$_BADPARAM.
+  - The control block is settled as subtask 6 wrote it (a word of size,
+    8; a word of flags, 0; the unit, -1 for `*`), documented at the top
+    of `ftn_listout.mar`. Every unit is SYS$OUTPUT for now.
+  - `FTN$IO_ITEM` takes class S and class A descriptors (an array's
+    elements in storage order, `DSC$L_ARSIZE` over the length). The
+    formats: L2 from bit 0; I12 by `OTS$CVT_L_TI`; text copied;
+    `1PG15.7E2` from `OTS$$CVT_F_T_R8`'s digits, called (JSB) in the
+    item routine's own frame with E rounding: rounded to 7 significant
+    digits to choose the form (an exponent from 0 to 7 is F form, so the
+    choice is by the rounded value, as FORTRAN-77's rule says), then for
+    E form again to 8. The rounding is LIBRTL's, not FTNRTL's as Part B
+    said: the routine rounds as asked, so FTNRTL needn't. Zero is E form
+    without a call. With F_floating's precision the rounded-range rule
+    can't actually change a form: no F_floating value lies between
+    0.1 - 0.5E-8 and 0.1, or between 10**7 - 0.5 and 10**7.
+  - Records: the start writes the blank, a value that doesn't fit what's
+    left (80 bytes) begins the next record unless the record is still
+    empty, a text longer than a record begins a new one and fills as
+    many as it needs, the end writes the last. `PRINT *` with no items
+    is a record of the blank alone (an empty line).
+  - Part A's question, a file as SYS$OUTPUT: RMS now gives an FTN
+    accessor's record to a VFC print file (a procedure's `/OUTPUT=` log)
+    its carriage control as the print control and leaves it out of the
+    data (`rms/ppfaccess.go`'s `indirectRecord`, which replaces
+    `indirectControl`; `rms/ftncc.go`'s `ftnPrintControl`: ' ' 01 8D,
+    '0' 02 8D, '1' 8C 8D, '+' 00 8D, '$' 01 00, NUL 00 00). Unconfirmed,
+    as is leaving the byte in the data on a file without fixed control.
+  - Choices of ours, unconfirmed (MANUAL.md's 14.5): the record length,
+    no blanks between values beyond their fields', a text that doesn't
+    fit starting a new record, zero in E form, both statements writing
+    SYS$OUTPUT.
+  - A compiled program that prints now links and runs: SQUARES prints
+    its table, and MANUAL.md's 14.4 example was compiled and run.
+  - Tests: `TestImage` (the new offsets and minor id) and
+    `TestCommittedImage`; the console's `TestFTNRTLListOutput`, a MACRO
+    program calling the entries as compiled code does (I12's limits,
+    logicals and texts, REALs in both forms and both signs, F form at
+    its ends, a record that wraps, arrays of both types, a text longer
+    than a record, an empty statement), at the terminal and through
+    `@FTNLIST/OUTPUT=` (each log record's fixed control 01 8D, the data
+    without the blank), in both paging modes; `rms`'s
+    `TestFTNPrintControl`.

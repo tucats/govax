@@ -427,7 +427,7 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 }
 
 // The I/O control block's layout (Decision 12 of docs/PHASE-74 -
-// FORTRAN plan.md; FTNRTL reads it, Phase 75's subtask 7): a word of
+// FORTRAN plan.md; FTNRTL reads it, mar/ftn_listout.mar): a word of
 // its size in bytes, a word of flags saying which of the statement's
 // optional parts it has (none yet), and the unit number, -1 for *.
 const controlSize = 8

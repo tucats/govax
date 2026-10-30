@@ -113,9 +113,7 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 
 	// An indirect accessor's record to a VFC file takes the fixed
 	// control its record attributes call for (ppfaccess.go).
-	if control := ctx.indirectControl(ifi, handle); len(control) > 0 {
-		record = append(control, record...)
-	}
+	record = ctx.indirectRecord(ifi, handle, record)
 
 	if handle.IsRecordDevice() {
 		return putRecordDevice(ctx, rabAddr, handle, record)

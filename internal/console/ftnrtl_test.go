@@ -208,3 +208,189 @@ func ftnrtlBuild(t *testing.T, d *Dispatcher, c *Console) {
 		t.Error("the commands' FTNRTL has no FTN$STOP")
 	}
 }
+
+// ftnLister calls FTNRTL's list-directed output routines as a compiled
+// PRINT * or WRITE (*,*) does (docs/PHASE-75 - FORTRAN first light.md,
+// subtask 7): integers at I12's limits, logicals, texts, REAL values on
+// each side of G editing's ranges, six REALs (a record that wraps), whole
+// arrays, a text longer than a record, and a statement with no items.
+const ftnLister = `	.TITLE	FTNLIST
+	.MACRO	DESC	NAME,TYPE,LEN,ADDR
+NAME:	.WORD	LEN
+	.BYTE	TYPE,1
+	.ADDRESS ADDR
+	.ENDM
+	.MACRO	ARRAY	NAME,TYPE,LEN,COUNT,ADDR
+NAME:	.WORD	LEN
+	.BYTE	TYPE,4
+	.ADDRESS ADDR
+	.BYTE	0,0,^XE0,1
+	.LONG	LEN*COUNT
+	.ADDRESS ADDR
+	.LONG	COUNT
+	.LONG	1,COUNT
+	.ENDM
+	.MACRO	STATEMENT START,ITEMS
+	PUSHAB	ICB
+	CALLS	#1,G^START
+	.IRP	X,<ITEMS>
+	PUSHAQ	X
+	CALLS	#1,G^FTN$IO_ITEM
+	.ENDR
+	CALLS	#0,G^FTN$IO_END
+	.ENDM
+	.PSECT	DATA,WRT,NOEXE,LONG
+ICB:	.WORD	8,0
+	.LONG	-1
+I1:	.LONG	42
+I2:	.LONG	-7
+I3:	.LONG	0
+I4:	.LONG	2147483647
+I5:	.LONG	^X80000000
+LT:	.LONG	-1
+LF:	.LONG	0
+L3:	.LONG	3
+R1:	.F_FLOATING 3.4
+R2:	.F_FLOATING 1234567.0
+R3:	.F_FLOATING 0.25
+R4:	.F_FLOATING 0.0009765625
+R5:	.F_FLOATING 0.0
+R6:	.F_FLOATING -3.4
+R7:	.F_FLOATING 9999999.0
+R8:	.F_FLOATING 10000000.0
+R9:	.F_FLOATING 0.1
+R10:	.F_FLOATING 0.09999
+R11:	.F_FLOATING 1.0E38
+R12:	.F_FLOATING -7.888609052210118E-31
+R13:	.F_FLOATING 123.456
+R14:	.F_FLOATING 99999.996
+IA:	.LONG	1,-2,3
+RA:	.F_FLOATING 1.5,-0.5
+T1:	.ASCII	/TEXT/
+T2:	.ASCII	/IT'S/
+T3:	.ASCII	/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQR/
+	DESC	DI1,8,4,I1
+	DESC	DI2,8,4,I2
+	DESC	DI3,8,4,I3
+	DESC	DI4,8,4,I4
+	DESC	DI5,8,4,I5
+	DESC	DLT,4,4,LT
+	DESC	DLF,4,4,LF
+	DESC	DL3,4,4,L3
+	DESC	DR1,10,4,R1
+	DESC	DR2,10,4,R2
+	DESC	DR3,10,4,R3
+	DESC	DR4,10,4,R4
+	DESC	DR5,10,4,R5
+	DESC	DR6,10,4,R6
+	DESC	DR7,10,4,R7
+	DESC	DR8,10,4,R8
+	DESC	DR9,10,4,R9
+	DESC	DR10,10,4,R10
+	DESC	DR11,10,4,R11
+	DESC	DR12,10,4,R12
+	DESC	DR13,10,4,R13
+	DESC	DR14,10,4,R14
+	DESC	DT1,14,4,T1
+	DESC	DT2,14,4,T2
+	DESC	DT3,14,100,T3
+	ARRAY	DIA,8,4,3,IA
+	ARRAY	DRA,10,4,2,RA
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	START,^M<>
+	STATEMENT FTN$PRINT_LIST,<DI1,DI2,DI3,DI4,DI5>
+	STATEMENT FTN$WRITE_LIST,<DLT,DLF,DL3,DT1,DT2,DI1>
+	STATEMENT FTN$PRINT_LIST,<DR1,DR2,DR3,DR4,DR5>
+	STATEMENT FTN$PRINT_LIST,<DR6,DR7,DR8,DR9,DR10,DR11>
+	STATEMENT FTN$PRINT_LIST,<DR12,DR13,DR14>
+	STATEMENT FTN$PRINT_LIST,<DIA,DRA>
+	STATEMENT FTN$PRINT_LIST,<DI1,DT3,DT1>
+	STATEMENT FTN$PRINT_LIST,<>
+	STATEMENT FTN$WRITE_LIST,<DT1>
+	MOVL	#1,R0
+	RET
+	.END	START
+`
+
+// ftnListerRecords is what FTNLIST writes, each record's carriage control
+// (a blank) first.
+var ftnListerRecords = []string{
+	"           42          -7           0  2147483647 -2147483648",
+	"  T F TTEXTIT'S          42",
+	"    3.400000       1234567.      0.2500000      9.7656250E-04  0.0000000E+00",
+	"   -3.400000       9999999.      1.0000000E+07  0.1000000      9.9990003E-02",
+	"   9.9999997E+37",
+	"  -7.8886091E-31   123.4560       99999.99    ",
+	"            1          -2           3   1.500000     -0.5000000    ",
+	"           42",
+	" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456",
+	" 789ABCDEFGHIJKLMNOPQRTEXT",
+	" ",
+	" TEXT",
+}
+
+// TestFTNRTLListOutput runs FTNLIST at the terminal, where the carriage
+// control is the line's (a blank, a new line), and in a command
+// procedure with /OUTPUT=, whose log is a print file: there each
+// record's carriage control becomes its fixed control (01 8D, a line),
+// not data.
+func TestFTNRTLListOutput(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+		s := c.ContainerSession
+
+		files := map[string]string{"FTNLIST.MAR": ftnLister, "FTNLIST.COM": "$ RUN FTNLIST\n"}
+		for name, text := range files {
+			if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name}, rms.TextRecords, splitSource(text)); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		shareFindRun(t, d, "MACRO FTNLIST")
+		shareFindRun(t, d, "LINK FTNLIST")
+
+		if out := buf.String(); out != "" {
+			t.Fatalf("MACRO and LINK said:\n%s", out)
+		}
+
+		var want strings.Builder
+		for _, r := range ftnListerRecords {
+			want.WriteString(r[1:] + "\n")
+		}
+
+		want.WriteString("  $STATUS == \"%X00000001\"\n")
+
+		if got := shareRun(t, d, buf, "FTNLIST"); got != want.String() {
+			t.Errorf("FTNLIST:\n%s\nwant:\n%s", got, want.String())
+		}
+
+		if err := d.Dispatch("@FTNLIST/OUTPUT=FTNLIST.LOG"); err != nil && !vmserrors.MessageInhibited(err) {
+			t.Fatalf("@FTNLIST: %v\n%s", err, buf)
+		}
+
+		records, _, err := s.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]FTNLIST.LOG"}, rms.VariableRecords)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got []string
+		for _, r := range records {
+			if len(r) < 2 || r[0] != 0x01 || r[1] != 0x8D {
+				t.Errorf("record %q: fixed control % X, want 01 8D", r, r[:min(len(r), 2)])
+
+				continue
+			}
+
+			got = append(got, string(r[2:]))
+		}
+
+		var wantLog []string
+		for _, r := range ftnListerRecords {
+			wantLog = append(wantLog, r[1:])
+		}
+
+		if strings.Join(got, "\n") != strings.Join(wantLog, "\n") {
+			t.Errorf("FTNLIST.LOG:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(wantLog, "\n"))
+		}
+	})
+}

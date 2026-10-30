@@ -1,0 +1,419 @@
+	.TITLE	FTN_LISTOUT - FTNRTL's list-directed output
+	.IDENT	/V1.0/
+;
+; List-directed output: PRINT * and WRITE (*,*), whose values are
+; written in formats the type of each one chooses rather than a FORMAT
+; statement's (the 1988 VAX FORTRAN Language Reference Manual, 7.3.1.2).
+; The compiler turns such a statement into a call per part:
+;
+;	PRINT *, I, X		CALLS #1,G^FTN$PRINT_LIST	(the start)
+;				CALLS #1,G^FTN$IO_ITEM		(I)
+;				CALLS #1,G^FTN$IO_ITEM		(X)
+;				CALLS #0,G^FTN$IO_END		(the end)
+;
+; The start's argument is the statement's control block, made by the
+; compiler in its read-only data:
+;
+;	+0	word	the block's size in bytes (8 here)
+;	+2	word	flags: which of UNIT=, FMT=, REC=, ERR=, END=, and
+;			IOSTAT= the statement gives (0 here: none yet)
+;	+4	long	the unit, -1 for *
+;
+; Later phases add fields after these, raising the size; a routine reads
+; only the fields the size says are there. For now every unit is the
+; default output unit, SYS$OUTPUT (FTN_UNITS).
+;
+; An item's argument is a descriptor (the VAX calling standard's): of a
+; scalar (class S), whose data type says how it's written, or of a whole
+; array (class A), whose elements are written one after another, in
+; storage order. The formats are the manual's Table 7-1:
+;
+;	LOGICAL*4	(DSC$K_DTYPE_LU)	L2		" T" or " F"
+;	INTEGER*4	(DSC$K_DTYPE_L)		I12		"          42"
+;	REAL*4		(DSC$K_DTYPE_F)		1PG15.7E2	"   3.400000    "
+;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
+;
+; A record is at most 80 bytes long, its first the carriage control, a
+; blank (a new line). The start begins a record with that blank; each
+; value goes at the record's end, unless it doesn't fit there, when the
+; record is written and the value begins the next; the end writes the
+; last record. So a statement writes at least one record, and a value is
+; never split across records, but for a character value longer than a
+; record, which begins a record and fills as many as it needs. The
+; record length (80), the values following one another with no blank
+; between them beyond their fields' own, and a character value's start
+; on a fresh record are govax's choices, unconfirmed.
+;
+; G editing (8.3.6.4, Table 8-2) writes a value whose magnitude, rounded
+; to 7 significant digits, is from 0.1 up to 10**7 in F form, in the
+; field's first 11 columns with 7 significant digits, followed by 4
+; blanks; any other in E form, where the scale factor 1P (8.3.7) puts
+; one digit before the point and 7 after it. Zero is below 0.1, so it is
+; E form too (govax's reading, unconfirmed):
+;
+;	3.4		"   3.400000    "	F form: 1 digit, then 6
+;	1234567.0	"   1234567.    "	F form: 7 digits, then none
+;	0.25		"  0.2500000    "	F form: 0 digits, then 7
+;	0.0009765625	"  9.7656250E-04"	E form
+;	1.0E-5		"  9.9999997E-06"	E form: the F_floating value
+;						nearest 10**-5 is below it
+;	0.0		"  0.0000000E+00"	E form
+;
+; The digits come from LIBRTL's OTS$$CVT_F_T_R8, the routine VMS's own
+; FORTRAN run-time library uses, which writes a value's decimal digits,
+; rounded to as many significant digits as asked, into its caller's
+; frame (internal/librtl/otscvtfor.go has its interface).
+;
+	$SSDEF				; SS$_NORMAL, SS$_BADPARAM
+
+; The descriptor's fields and codes (the VAX calling standard's; govax's
+; STARLET has no $DSCDEF yet).
+DSC$W_LENGTH	= 0			; the length, in bytes
+DSC$B_DTYPE	= 2			; the data type
+DSC$B_CLASS	= 3			; the class
+DSC$A_POINTER	= 4			; the data's address
+DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_DTYPE_LU	= 4			; longword logical
+DSC$K_DTYPE_L	= 8			; longword integer
+DSC$K_DTYPE_F	= 10			; F_floating
+DSC$K_DTYPE_T	= 14			; text
+DSC$K_CLASS_S	= 1			; a scalar or fixed-length string
+DSC$K_CLASS_A	= 4			; an array
+
+RECORD_MAX	= 80			; a record's length, at most
+
+;
+; The record being built: data each program has its own copy of.
+;
+	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+
+RECORD_LEN:	.LONG	0		; the bytes in RECORD so far
+RECORD:		.BLKB	RECORD_MAX	; the carriage control, then the values
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$PRINT_LIST(icb)
+; FTN$WRITE_LIST(icb)
+;
+; Starts a list-directed output statement, PRINT * or WRITE (*,*): the
+; argument is its control block. Connects the unit, if it isn't yet,
+; and starts a record. Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$PRINT_LIST,^M<>
+	CALLG	(AP),START_LIST
+	RET
+
+	.ENTRY	FTN$WRITE_LIST,^M<>
+	CALLG	(AP),START_LIST
+	RET
+
+;
+; START_LIST(icb): both statements' start. (A routine of this module's
+; own, called with CALLS or CALLG like any other: its first word is its
+; entry mask, as .ENTRY would make, but its name isn't global.)
+;
+START_LIST:
+	.WORD	^M<>
+	CALLS	#0,FTN$$OUTPUT_OPEN	; FTN_UNITS
+	CALLS	#0,NEW_RECORD
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$IO_ITEM(desc)
+;
+; Writes one output item, a scalar or a whole array, described by desc.
+; Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$IO_ITEM,^M<R2,R3,R4,R5>
+	MOVL	4(AP),R5		; the descriptor
+	MOVZWL	DSC$W_LENGTH(R5),R2	; an element's length
+	MOVL	DSC$A_POINTER(R5),R3	; the first element
+	MOVL	#1,R4			; how many: one, for a scalar
+	CMPB	DSC$B_CLASS(R5),#DSC$K_CLASS_A
+	BNEQ	10$
+	TSTL	R2			; an array of no bytes: nothing
+	BEQL	90$
+	DIVL3	R2,DSC$L_ARSIZE(R5),R4	; the array's elements
+	BEQL	90$
+10$:	PUSHL	R2			; each element: its length,
+	PUSHL	R3			;  its address,
+	MOVZBL	DSC$B_DTYPE(R5),-(SP)	;  and its type
+	CALLS	#3,PUT_VALUE
+	ADDL2	R2,R3			; the next element
+	SOBGTR	R4,10$
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$IO_END()
+;
+; Ends a list-directed output statement: writes the last record.
+; Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$IO_END,^M<>
+	CALLS	#0,PUT_RECORD
+	CLRL	RECORD_LEN		; no record is being built
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; NEW_RECORD(): starts a record with its carriage control, a blank.
+;
+NEW_RECORD:
+	.WORD	^M<>
+	MOVB	#^A/ /,RECORD
+	MOVL	#1,RECORD_LEN
+	RET
+
+;
+; PUT_RECORD(): writes the record built so far, and starts the next.
+;
+PUT_RECORD:
+	.WORD	^M<>
+	PUSHL	RECORD_LEN
+	PUSHAB	RECORD
+	CALLS	#2,FTN$$OUTPUT_PUT	; FTN_UNITS
+	CALLS	#0,NEW_RECORD
+	RET
+
+;
+; PUT_FIELD(address, length): puts one value's field, length bytes at
+; address, at the record's end, after writing the record first if the
+; field doesn't fit there (and the record holds a value already).
+;
+PUT_FIELD:
+	.WORD	^M<R2,R3,R4,R5>
+	ADDL3	RECORD_LEN,8(AP),R0	; the record's length with the field
+	CMPL	R0,#RECORD_MAX
+	BLEQ	10$			; it fits
+	CMPL	RECORD_LEN,#1
+	BLEQ	10$			; a record of its own, then
+	CALLS	#0,PUT_RECORD
+10$:	MOVAB	RECORD,R3
+	ADDL2	RECORD_LEN,R3		; where the field goes
+	ADDL2	8(AP),RECORD_LEN
+	MOVC3	8(AP),@4(AP),(R3)	; MOVC3 changes R0 to R5
+	RET
+
+;
+; PUT_TEXT(address, length): puts a character value at the record's
+; end. One that doesn't fit begins a new record, and one longer than a
+; record fills as many as it needs, the last left for what follows.
+;
+PUT_TEXT:
+	.WORD	^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6		; the text not yet put
+	MOVL	8(AP),R7		; and its length
+	ADDL3	RECORD_LEN,R7,R0
+	CMPL	R0,#RECORD_MAX
+	BLEQ	10$			; it fits
+	CMPL	RECORD_LEN,#1
+	BLEQ	10$			; nothing in the record yet
+	CALLS	#0,PUT_RECORD
+10$:	TSTL	R7			; any text left?
+	BLEQ	90$
+	SUBL3	RECORD_LEN,#RECORD_MAX,R2 ; the record's room
+	CMPL	R7,R2
+	BGEQ	20$
+	MOVL	R7,R2			; the rest, if less
+20$:	MOVAB	RECORD,R3
+	ADDL2	RECORD_LEN,R3
+	ADDL2	R2,RECORD_LEN
+	SUBL2	R2,R7
+	PUSHL	R2			; MOVC3 changes R2; keep the count
+	MOVC3	R2,(R6),(R3)
+	ADDL2	(SP)+,R6		; past the text put
+	TSTL	R7
+	BLEQ	90$			; that was the end of it
+	CALLS	#0,PUT_RECORD		; the record is full
+	BRB	10$
+90$:	RET
+
+;
+; PUT_VALUE(type, address, length): puts one value, of data type type
+; (a DSC$K_DTYPE_ code), length bytes at address, in its list-directed
+; format. A type FTNRTL can't write ends the image with SS$_BADPARAM.
+;
+; The routine works in a frame of its own (below FP, made by subtracting
+; from SP): OTS$$CVT_F_T_R8 reads its arguments and writes its results at
+; fixed offsets from the FP it is given, these:
+;
+CVT_KIND	= -9			; byte: 0 for E editing's rounding
+CVT_SIGNIF	= -16			; the significant digits to round to
+CVT_BUFFER	= -20			; the digit buffer's address
+CVT_SIGN	= -24			; out: 1, -1, or 0 for zero
+CVT_EXPONENT	= -28			; out: the value is 0.ddd x 10**this
+CVT_FIRST	= -32			; out: the first digit's offset
+CVT_FDIGITS	= -36			; F editing's digits (not used here)
+DIGITS		= -52			; the digit buffer, 16 bytes
+DIGITS_LEN	= 16
+FIELD		= -68			; the field being formatted, 16 bytes
+FIELD_DESC	= -76			; a descriptor of FIELD
+FRAME_SIZE	= 76
+
+PUT_VALUE:
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
+	SUBL2	#FRAME_SIZE,SP		; the frame's local storage
+	MOVL	8(AP),R6		; the value
+	CASEB	4(AP),#DSC$K_DTYPE_LU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_LU>
+10$:	.WORD	LOGICAL-10$		; 4: LU
+	.WORD	BAD_TYPE-10$		; 5
+	.WORD	BAD_TYPE-10$		; 6
+	.WORD	BAD_TYPE-10$		; 7
+	.WORD	INTEGER-10$		; 8: L
+	.WORD	BAD_TYPE-10$		; 9
+	.WORD	REAL-10$		; 10: F
+	.WORD	BAD_TYPE-10$		; 11
+	.WORD	BAD_TYPE-10$		; 12
+	.WORD	BAD_TYPE-10$		; 13
+	.WORD	TEXT-10$		; 14: T
+BAD_TYPE:
+	PUSHL	#SS$_BADPARAM
+	CALLS	#1,G^LIB$STOP		; never returns
+
+;
+; L2: a blank, then T or F by the value's bit 0 (the manual's C.4: only
+; the low bit of a LOGICAL is defined).
+;
+LOGICAL:
+	MOVB	#^A/ /,FIELD(FP)
+	MOVB	#^A/F/,FIELD+1(FP)
+	BLBC	(R6),10$
+	MOVB	#^A/T/,FIELD+1(FP)
+10$:	PUSHL	#2
+	BRW	PUT_THE_FIELD
+
+;
+; I12: OTS$CVT_L_TI writes the integer right-justified in the field,
+; with blanks before it.
+;
+INTEGER:
+	MOVL	#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>!12,FIELD_DESC(FP)
+	MOVAB	FIELD(FP),FIELD_DESC+DSC$A_POINTER(FP)
+	PUSHAB	FIELD_DESC(FP)
+	PUSHL	R6
+	CALLS	#2,G^OTS$CVT_L_TI
+	BLBS	R0,10$
+	PUSHL	R0			; can't happen: 12 is room enough
+	CALLS	#1,G^LIB$STOP
+10$:	PUSHL	#12
+	BRW	PUT_THE_FIELD
+
+;
+; A character value: the text itself.
+;
+TEXT:
+	PUSHL	12(AP)
+	PUSHL	R6
+	CALLS	#2,PUT_TEXT
+	RET
+
+;
+; 1PG15.7E2, as the module's introduction describes.
+;
+REAL:
+	MOVC5	#0,(SP),#^A/ /,#15,FIELD(FP) ; 15 blanks
+	TSTF	(R6)
+	BNEQ	10$
+	MOVC5	#0,(SP),#^A/0/,#DIGITS_LEN,DIGITS(FP) ; zero: all zeros,
+	CLRL	R7			;  the first at offset 0,
+	MOVL	#1,R8			;  0.0 x 10**1, E+00 in E form,
+	CLRL	CVT_SIGN(FP)		;  and no sign
+	BRB	E_FORM
+	;
+	; The digits rounded to 7 significant ones tell which form: F, for
+	; a magnitude from 0.1 (0.1 x 10**0) to under 10**7 (0.1 x 10**8).
+	;
+10$:	MOVL	#7,R0
+	BSBW	DIGITS_OF
+	CMPL	R8,#7
+	BGTRU	E_DIGITS		; an exponent below 0 or above 7
+	;
+	; F form in the field's first 11 columns, right-justified: the 7
+	; digits, R8 of them before the point (or a 0, for none), the rest
+	; after it, and a minus sign before them all for a negative value.
+	; R10 is the column of the leftmost character written so far (MOVC3
+	; changes R0 to R5, so nothing it needs after is kept in those).
+	;
+	SUBL3	R8,#7,R9		; the digits after the point
+	SUBL3	R9,#11,R10		; where they start
+	ADDL3	R7,R8,R0		; the first of them in the buffer
+	MOVC3	R9,DIGITS(FP)[R0],FIELD(FP)[R10]
+	DECL	R10
+	MOVB	#^A/./,FIELD(FP)[R10]
+	TSTL	R8			; digits before the point?
+	BNEQ	20$
+	DECL	R10			; no: a 0
+	MOVB	#^A/0/,FIELD(FP)[R10]
+	BRB	30$
+20$:	SUBL2	R8,R10
+	MOVC3	R8,DIGITS(FP)[R7],FIELD(FP)[R10]
+30$:	TSTL	CVT_SIGN(FP)
+	BGEQ	40$
+	DECL	R10
+	MOVB	#^A/-/,FIELD(FP)[R10]
+40$:	PUSHL	#15
+	BRB	PUT_THE_FIELD
+	;
+	; E form: the digits again, rounded to 8 significant ones this
+	; time, then "sd.dddddddEsxx" right-justified in the 15 columns: the
+	; first digit before the point, 7 after it, and the exponent one
+	; less than OTS$'s, since the point is after the first digit rather
+	; than before it.
+	;
+E_DIGITS:
+	MOVL	#8,R0
+	BSBW	DIGITS_OF
+E_FORM:
+	MOVB	DIGITS(FP)[R7],FIELD+2(FP)
+	MOVB	#^A/./,FIELD+3(FP)
+	INCL	R7
+	MOVC3	#7,DIGITS(FP)[R7],FIELD+4(FP)
+	TSTL	CVT_SIGN(FP)
+	BGEQ	10$
+	MOVB	#^A/-/,FIELD+1(FP)
+10$:	MOVB	#^A/E/,FIELD+11(FP)
+	MOVB	#^A/+/,FIELD+12(FP)
+	DECL	R8			; the exponent shown
+	BGEQ	20$
+	MOVB	#^A/-/,FIELD+12(FP)
+	MNEGL	R8,R8
+20$:	CLRL	R9			; R8:R9 as a quadword, for EDIV
+	EDIV	#10,R8,R0,R1		; tens in R0, units in R1
+	ADDB3	#^A/0/,R0,FIELD+13(FP)
+	ADDB3	#^A/0/,R1,FIELD+14(FP)
+	PUSHL	#15
+	;
+	; Every format but A ends here, the field's length on the stack.
+	;
+PUT_THE_FIELD:
+	PUSHAB	FIELD(FP)
+	CALLS	#2,PUT_FIELD
+	RET
+
+;
+; DIGITS_OF, a subroutine of PUT_VALUE (BSBW, RSB, in its frame): the
+; value at R6 in the digit buffer, rounded to R0 significant digits. On
+; return R7 is the first digit's offset in the buffer and R8 the
+; decimal exponent; CVT_SIGN(FP) is the sign. OTS$$CVT_F_T_R8 may
+; change R0 to R6, so the value's address is put back in R6 after it.
+;
+DIGITS_OF:
+	CLRB	CVT_KIND(FP)		; E editing's rounding
+	MOVL	R0,CVT_SIGNIF(FP)
+	MOVAB	DIGITS(FP),CVT_BUFFER(FP)
+	CLRL	CVT_FDIGITS(FP)
+	CLRL	CVT_SIGN(FP)
+	MOVL	R6,-(SP)		; keep the value's address
+	MOVL	R6,R0			; the value
+	MOVL	FP,R1			; the frame
+	MOVL	#DIGITS_LEN,R2		; the buffer's size
+	JSB	G^OTS$$CVT_F_T_R8
+	MOVL	(SP)+,R6
+	MOVL	CVT_FIRST(FP),R7
+	MOVL	CVT_EXPONENT(FP),R8
+	RSB
+
+	.END

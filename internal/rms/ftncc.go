@@ -68,6 +68,41 @@ func ftnTerminalText(record []byte, lineOpen bool) (text []byte, open bool) {
 	return append(text, '\n'), false
 }
 
+// ftnPrintControl is the two bytes of print-file fixed control (a
+// prefix, what comes before the record, and a postfix, what comes
+// after: the RMS Reference Manual's FAB$B_RAT PRN) that stand for a
+// FORTRAN carriage control character, for an FTN accessor's record
+// written to a print file, as a command procedure's /OUTPUT file is
+// (ppfaccess.go's indirectRecord). A prefix byte 0 to 127 is that many
+// new lines and ^X8C a form feed (bit 7 set: bits 0 to 4 a control
+// character); a postfix of ^X8D is a carriage return, 0 nothing:
+//
+//	' '  01 8D, a line, as DCL's own records are
+//	'0'  02 8D, a blank line first
+//	'1'  8C 8D, a new page
+//	'+'  00 8D, overprinting
+//	'$'  01 00, a prompt: no carriage return after it
+//	NUL  00 00
+//
+// and any other character as a blank. Unconfirmed: what VMS's RMS
+// writes for an FTN accessor's records to a print file.
+func ftnPrintControl(control byte) []byte {
+	switch control {
+	case '0':
+		return []byte{0x02, 0x8D}
+	case '1':
+		return []byte{0x8C, 0x8D}
+	case '+':
+		return []byte{0x00, 0x8D}
+	case '$':
+		return []byte{0x01, 0x00}
+	case 0:
+		return []byte{0x00, 0x00}
+	}
+
+	return []byte{0x01, 0x8D}
+}
+
 // terminalText is what SYS$PUT sends the terminal for record on a stream
 // whose ISI is isi: the record and a newline, or for an FTN accessor
 // (ftnTerminalText) its carriage control's, the process's open line

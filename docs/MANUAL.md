@@ -4355,9 +4355,9 @@ subroutines, and INTEGER, REAL, and LOGICAL functions; INTEGER, REAL,
 and LOGICAL scalars and arrays; assignment and arithmetic, relational,
 and logical expressions; IF, block IF, DO, GO TO, CALL, RETURN, STOP;
 `PRINT *` and `WRITE (*,*)`) it generates code: the MACRO file assembles
-into a module that links and runs. FTNRTL exists, with its first two
-routines; list-directed output (`FTN$PRINT_LIST` and its companions)
-is the next step, so for now a program that prints doesn't link.
+into a module that links and runs, and FTNRTL has the list-directed
+output those `PRINT` and `WRITE` statements call, so such a program
+runs and prints.
 
 ### 14.1 The FORTRAN command
 
@@ -4561,12 +4561,41 @@ resolves its routines with no options file. Its routines are named
 `FTN$...`, and its transfer vector keeps each at a fixed offset, so a
 program linked against one FTNRTL runs with any later one.
 
-So far it has two routines, which MACRO programs can call too:
+So far it has these routines, which MACRO programs can call too:
 
 | Routine | What it does |
 | --- | --- |
 | `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
+| `FTN$PRINT_LIST(icb)` | Starts a `PRINT *` statement: `icb` is its control block (a word of size, 8; a word of flags, 0; a longword unit, -1 for `*`) |
+| `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
+| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `LOGICAL*4` (`DSC$K_DTYPE_LU`), `INTEGER*4` (`L`), `REAL*4` (`F`), or text (`T`) |
+| `FTN$IO_END()` | Ends the statement, writing its last record |
+
+A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
+control: each record begins with a blank (a new line at the terminal),
+and holds at most 80 bytes. Each value is in its type's format (the
+*Language Reference Manual*'s Table 7-1): a LOGICAL as ` T` or ` F`
+(L2), an INTEGER in 12 columns (I12), a REAL as `1PG15.7E2`, and text
+as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
+up to 10\*\*7 in fixed-point form, followed by 4 blanks; any other, zero
+included, with an exponent:
+
+```text
+      PRINT *, 42, .TRUE., 'IT''S', 3.4, 0.25, 1234567.0, 1.0E-5, 0.0
+          42 TIT'S   3.400000      0.2500000       1234567.      9.9999997E-06
+  0.0000000E+00
+```
+
+(1.0E-5 shows as `9.9999997E-06` because the F_floating value nearest
+it is just below it.) A value that doesn't fit in what's left of the
+record starts the next one: the first record above, at 79 bytes, had no
+room for the last REAL. Only a text longer
+than a record is split, filling as many records as it needs. With
+`SYS$OUTPUT` a print file, such as a command procedure's `/OUTPUT=`
+log, each record's carriage control becomes the record's print control
+(a line, a blank line first, a new page, overprinting, a prompt), as a
+terminal shows it, rather than a character of the record.
 
 ```text
 VAX> TYPE STOPPER.MAR
@@ -4592,6 +4621,8 @@ name at it:
 ```text
 VAX> MACRO FTN_VECTOR
 VAX> MACRO FTN_CONTROL
+VAX> MACRO FTN_UNITS
+VAX> MACRO FTN_LISTOUT
 VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
 ```
@@ -4628,6 +4659,11 @@ FORTRAN compiler was available to check them). So far:
   program with the VAX's divide-by-zero trap.
 - A constant passed as an argument is read-only: a routine that assigns
   to its dummy argument gets an access violation.
+- List-directed output's records are 80 bytes long, carriage control
+  included; values follow one another with no blanks between them but
+  their fields' own; a text that doesn't fit begins a new record; zero
+  is written with an exponent (` 0.0000000E+00`). `PRINT *` and `WRITE
+  (*,*)` both write `SYS$OUTPUT`.
 
 ---
 

@@ -286,8 +286,9 @@ func (d *Descriptor) Size() int {
 
 // Control is an I/O statement's control block (Decision 12 of
 // docs/PHASE-74 - FORTRAN plan.md), which the statement's first FTNRTL
-// call is given. Its layout is FTNRTL's (Phase 75, subtask 7); here it
-// says what the statement is and which unit it uses.
+// call is given. Its layout is FTNRTL's (internal/ftnrtl's
+// mar/ftn_listout.mar describes it); here it says what the statement is
+// and which unit it uses.
 type Control struct {
 	// Write is set for WRITE (*,*), clear for PRINT *.
 	Write bool

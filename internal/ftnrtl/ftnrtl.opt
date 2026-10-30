@@ -4,6 +4,8 @@
 !
 !	$ MACRO FTN_VECTOR
 !	$ MACRO FTN_CONTROL
+!	$ MACRO FTN_UNITS
+!	$ MACRO FTN_LISTOUT
 !	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 !
 ! would, with internal/asm and internal/link. The transfer vector is a
@@ -13,5 +15,7 @@
 ! entry, and change the major number only if an entry's meaning changes.
 CLUSTER=FTNRTL_VECTOR,,,FTN_VECTOR.OBJ
 FTN_CONTROL.OBJ
-GSMATCH=LEQUAL,1,0
+FTN_UNITS.OBJ
+FTN_LISTOUT.OBJ
+GSMATCH=LEQUAL,1,4
 IDENTIFICATION="V1.0"

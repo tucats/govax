@@ -1,0 +1,93 @@
+	.TITLE	FTN_UNITS - FTNRTL's logical units
+	.IDENT	/V1.0/
+;
+; A FORTRAN program reads and writes logical units: numbers its I/O
+; statements name (WRITE (6,...)), or * for the default ones (PRINT *,
+; WRITE (*,*)). Each unit is connected to a file through RMS, with a FAB
+; (the file) and a RAB (the stream of records), which this module keeps.
+;
+; For now there is one unit: the default output unit, which PRINT * and
+; WRITE (*,*) both write, connected to SYS$OUTPUT. Later phases add the
+; numbered units and OPEN, CLOSE, and the logical names that choose a
+; unit's file (FOR$PRINT and the like).
+;
+; The unit's file is created at its first use: a $CREATE of SYS$OUTPUT,
+; which, SYS$OUTPUT being a process-permanent file, opens no new file but
+; gives this FAB indirect access to the one the process has. The FAB asks
+; for FORTRAN carriage control (RAT=FTN): each record's first byte is
+; its carriage control (' ' a new line, '0' a blank line first, '1' a
+; new page, '+' overprinting, '$' a prompt), which RMS turns into what
+; the terminal is sent, or a print file's fixed control.
+;
+; The FAB and RAB hold addresses (the file's name, the FAB, the record),
+; which a shareable image can't store at link time without the image
+; activator fixing them up wherever the image goes. So the blocks are
+; made with those fields zero, and the addresses are stored in them, with
+; $FAB_STORE and $RAB_STORE, at the first use.
+;
+	$FABDEF				; the FAB's fields
+	$RABDEF				; the RAB's fields
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+OUTPUT_NAME:	.ASCII	/SYS$OUTPUT/	; the default output unit's file
+OUTPUT_LEN	= .-OUTPUT_NAME
+
+;
+; The units' state: data each program has its own copy of (NOSHR), as
+; it changes.
+;
+	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+
+OUTPUT_OPEN:	.LONG	0		; 1 once the unit is connected
+OUTPUT_FAB:	$FAB	FAC=PUT,RAT=FTN,RFM=VAR
+OUTPUT_RAB:	$RAB
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$OUTPUT_OPEN()
+;
+; Connects the default output unit to SYS$OUTPUT, if it isn't yet: a
+; list-directed output statement's start calls it. An RMS error ends the
+; image with that status (LIB$STOP): FORTRAN's I/O errors are severe
+; unless the statement says otherwise, which these statements can't yet.
+; Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$$OUTPUT_OPEN,^M<>
+	BLBS	OUTPUT_OPEN,10$		; connected already
+	$FAB_STORE FAB=OUTPUT_FAB,FNA=OUTPUT_NAME,FNS=#OUTPUT_LEN
+	$RAB_STORE RAB=OUTPUT_RAB,FAB=OUTPUT_FAB
+	$CREATE	FAB=OUTPUT_FAB
+	BLBC	R0,90$
+	$CONNECT RAB=OUTPUT_RAB
+	BLBC	R0,90$
+	MOVL	#1,OUTPUT_OPEN
+10$:	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+90$:	PUSHL	R0			; the RMS status
+	CALLS	#1,G^LIB$STOP		; never returns
+
+;
+; FTN$$OUTPUT_PUT(record, length)
+;
+; Writes a record, its first byte the carriage control, to the default
+; output unit, which FTN$$OUTPUT_OPEN has connected: the record's
+; address is the first argument, its length (a longword, by value) the
+; second. An RMS error ends the image with its status. Returns
+; SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$$OUTPUT_PUT,^M<>
+	MOVAB	OUTPUT_RAB,R0
+	MOVL	4(AP),RAB$L_RBF(R0)	; the record
+	MOVW	8(AP),RAB$W_RSZ(R0)	; and its length
+	$PUT	RAB=OUTPUT_RAB
+	BLBC	R0,90$
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+90$:	PUSHL	R0
+	CALLS	#1,G^LIB$STOP
+
+	.END
