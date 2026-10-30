@@ -116,6 +116,8 @@ does.
 
 Here's a general list of next tasks:
 
+- A FORTRAN compiler (not an emulation of DEC FORTRAN, but supporting DEC extensions)
+- Better HELP command emulation of VMS HELP output and formatting
 - More accurate device operations and reference counting
 - ANALYZE/DISK/REPAIR for ODS2 container volumes
 
