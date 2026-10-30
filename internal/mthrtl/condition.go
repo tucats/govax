@@ -60,14 +60,20 @@ func signalReserved(env *corevms.Environment, argv []uint32) (uint32, error) {
 // with 0.0 as the R0 and R1 a handler that continues gives the caller: the
 // manual's result for an underflow.
 func signalZero(env *corevms.Environment, condition uint32) (uint32, error) {
+	env.CPU().SetGPR(registers.R1, 0)
+
+	return signalKeepingR1(env, condition, 0)
+}
+
+// signalKeepingR1 signals condition with the user PC, with r0 and what the CPU
+// has in R1 as the R0 and R1 a handler that continues gives the caller.
+func signalKeepingR1(env *corevms.Environment, condition, r0 uint32) (uint32, error) {
 	pc, err := env.CallerPC()
 	if err != nil {
 		return 0, err
 	}
 
-	env.CPU().SetGPR(registers.R1, 0)
-
-	return env.SignalFailure([]uint32{condition, 1, pc}, 0)
+	return env.SignalFailure([]uint32{condition, 1, pc}, r0)
 }
 
 // fail is what a routine does with the error from reading an argument or

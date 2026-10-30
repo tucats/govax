@@ -29,6 +29,7 @@ func (d domainError) Error() string { return "argument out of the function's dom
 var (
 	errLogZeroNeg = domainError(vmsdef.LibrarySymbols["MTH$_LOGZERNEG"])
 	errSqrtNeg    = domainError(vmsdef.LibrarySymbols["MTH$_SQUROONEG"])
+	errInvalidArg = domainError(vmsdef.LibrarySymbols["MTH$_INVARGMAT"])
 
 	mthFloOveMat = vmsdef.LibrarySymbols["MTH$_FLOOVEMAT"]
 	mthFloUndMat = vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
@@ -165,5 +166,101 @@ func jsbEntry(f vaxfloat.Format, fn function) corevms.JSBShimFunc {
 		storeRegisters(f, regs, 0, v)
 
 		return nil
+	}
+}
+
+// pairFunction computes two results of one floating argument, rounded to
+// format f: MTH$SINCOS's sine and cosine. The only error is
+// vaxfloat.ErrUnderflow, for a first result too small for the format, and the
+// results are still good: that first result is 0.0, and the second is right.
+type pairFunction func(f vaxfloat.Format, x vaxfloat.Value) (first, second vaxfloat.Value, err error)
+
+// evaluatePair runs fn on x for the routine's caller. It returns the results
+// and whether to signal the underflow: only for a caller that set PSW<FU>, as
+// in evaluate. Its error is the one from reading the caller's PSW.
+func evaluatePair(env *corevms.Environment, fn pairFunction, f vaxfloat.Format, x vaxfloat.Value) (first, second vaxfloat.Value, signal bool, err error) {
+	first, second, ferr := fn(f, x)
+	if ferr == nil {
+		return first, second, false, nil
+	}
+
+	signal, err = env.CallerFU()
+
+	return first, second, signal, err
+}
+
+// callPairEntry makes the routine reached by CALLS or CALLG for fn in format
+// f, in every format the same: the argument's address, then the addresses to
+// write the two results to. Nothing comes back in registers.
+//
+// Each result is in memory before the condition is signaled, so a handler that
+// continues leaves the caller with 0.0 and the good second result. Unconfirmed
+// (the probe, subtask 10).
+func callPairEntry(f vaxfloat.Format, fn pairFunction) corevms.ShimFunc {
+	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
+		x, err := loadArg(env, f, arg(argv, 0))
+		if err != nil {
+			return fail(env, err)
+		}
+
+		first, second, signal, err := evaluatePair(env, fn, f, x)
+		if err != nil {
+			return fail(env, err)
+		}
+
+		if err := storeResult(env, f, arg(argv, 1), first); err != nil {
+			return fail(env, err)
+		}
+
+		if err := storeResult(env, f, arg(argv, 2), second); err != nil {
+			return fail(env, err)
+		}
+
+		if signal {
+			return signalZero(env, mthFloUndMat)
+		}
+
+		return 0, nil
+	}
+}
+
+// jsbPairEntry makes the routine reached by JSB for fn in format f: its
+// argument is in R0:Rm, m being 0 for F, 1 for D and G, and 3 for H, its first
+// result goes in the same registers, and its second in R(m+1):R(2m+1). An H
+// pair so takes all of R0:R7.
+//
+// A signal's dispatch doesn't take the routine's regs back (JSBShim), so before
+// a condition the results go straight in the CPU's registers. For an F pair the
+// second result is in R1, which the mechanism array holds and a handler could
+// change; the result a continuing handler leaves is, as in callPairEntry,
+// unconfirmed.
+func jsbPairEntry(f vaxfloat.Format, fn pairFunction) corevms.JSBShimFunc {
+	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+		x, err := loadRegisters(f, regs[:], 0)
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		first, second, signal, err := evaluatePair(env, fn, f, x)
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		storeRegisters(f, regs, 0, first)
+		storeRegisters(f, regs, f.Size()/4, second)
+
+		if signal {
+			for i, r := range regs {
+				env.CPU().SetGPR(registers.Reg(i), r)
+			}
+
+			_, err = signalKeepingR1(env, mthFloUndMat, regs[0])
+		}
+
+		return err
 	}
 }

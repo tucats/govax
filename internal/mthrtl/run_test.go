@@ -355,8 +355,10 @@ func TestUnhandledCondition(t *testing.T) {
 }
 
 // The routines from a real program: every entry of the square root,
-// exponential, and logarithm families, CALL and JSB, for answers, each
-// condition, and a handler that continues from it.
+// exponential, logarithm, trigonometric, and inverse trigonometric families,
+// CALL and JSB, for answers, each condition, and a handler that continues from
+// it. MTH$SINCOS and MTH$SINCOSD return two results, and have a program of
+// their own (TestPairsFromAProgram).
 
 // entryCase is one call in the generated program, by what's looked at: the
 // argument's text as a MACRO floating literal (or empty for a reserved
@@ -399,6 +401,49 @@ var entryFamilies = map[string]entryFamily{
 		[4]string{"MTH$ALOG10", "MTH$DLOG10", "MTH$GLOG10", "MTH$HLOG10"},
 		[4][]string{{"MTH$ALOG10_R5"}, {"MTH$DLOG10_R8"}, {"MTH$GLOG10_R8"}, {"MTH$HLOG10_R8"}},
 	},
+	"SIN":   trigFamily("SIN", "4", "7", "5"),
+	"COS":   trigFamily("COS", "4", "7", "5"),
+	"TAN":   trigFamily("TAN", "4 5", "7", "5"),
+	"SIND":  trigFamily("SIND", "4", "7", "5"),
+	"COSD":  trigFamily("COSD", "4", "7", "5"),
+	"TAND":  trigFamily("TAND", "4 5", "7", "5"),
+	"ASIN":  trigFamily("ASIN", "4 5", "7 9", "8"),
+	"ACOS":  trigFamily("ACOS", "4 5", "7 9", "8"),
+	"ATAN":  trigFamily("ATAN", "4", "7", "8"),
+	"ASIND": trigFamily("ASIND", "4", "7", "8"),
+	"ACOSD": trigFamily("ACOSD", "4", "7", "8"),
+	"ATAND": trigFamily("ATAND", "4", "7", "8"),
+}
+
+// trigFamily spells a family's entries, whose names follow one rule: MTH$xNAME
+// with x empty, D, G, or H, and each JSB entry _Rn for the n's given, for F, for
+// D and G alike, and for H.
+func trigFamily(stem, f, dg, h string) entryFamily {
+	var family entryFamily
+
+	for i, prefix := range []string{"", "D", "G", "H"} {
+		family.call[i] = "MTH$" + prefix + stem
+
+		numbers := []string{f, dg, dg, h}[i]
+		for _, n := range strings.Fields(numbers) {
+			family.jsb[i] = append(family.jsb[i], "MTH$"+prefix+stem+"_R"+n)
+		}
+	}
+
+	return family
+}
+
+// tinyArgument is a value of format f as a MACRO floating literal, about the
+// format's smallest, so that its sine in degrees is below the format's range.
+func tinyArgument(f vaxfloat.Format) string {
+	switch f {
+	case vaxfloat.G:
+		return "6.0E-309"
+	case vaxfloat.H:
+		return "9.0E-4933"
+	default:
+		return "3.0E-39"
+	}
 }
 
 // entryCases makes the program's calls: each row below for each family it
@@ -424,6 +469,7 @@ func entryCases(t *testing.T) []entryCase {
 	rows := []struct {
 		family    string
 		arg       string
+		tiny      bool // the argument is tinyArgument's
 		fu        bool
 		want      string // empty: the reserved operand, or 0 when zero is set
 		zero      bool
@@ -456,6 +502,73 @@ func entryCases(t *testing.T) []entryCase {
 		{family: "LOG10", arg: "1000.0", want: "3"},
 		{family: "LOG10", arg: "0.0", condition: symbol("MTH$_LOGZERNEG")},
 		{family: "LOG10", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "SIN", arg: "0.0", want: "0"},
+		{family: "SIN", arg: "1.0", want: "0.841470984807896506652502321630298999622"},
+		{family: "COS", arg: "0.0", want: "1"},
+		{family: "COS", arg: "1.0", want: "0.540302305868139717400936607442976603732"},
+		{family: "TAN", arg: "0.0", want: "0"},
+		{family: "TAN", arg: "1.0", want: "1.557407724654902230506974807458360173087"},
+		{family: "SIND", arg: "30.0", want: "0.5"},
+		{family: "SIND", arg: "90.0", want: "1"},
+		{family: "SIND", arg: "180.0", want: "0"},
+		{family: "SIND", arg: "-90.0", want: "-1"},
+		{family: "COSD", arg: "60.0", want: "0.5"},
+		{family: "COSD", arg: "90.0", want: "0"},
+		{family: "COSD", arg: "180.0", want: "-1"},
+		{family: "TAND", arg: "45.0", want: "1"},
+		{family: "TAND", arg: "-45.0", want: "-1"},
+		{family: "TAND", arg: "180.0", want: "0"},
+		{family: "ASIN", arg: "0.0", want: "0"},
+		{family: "ASIN", arg: "1.0", want: "1.570796326794896619231321691639751442098"},
+		{family: "ASIN", arg: "-1.0", want: "-1.570796326794896619231321691639751442098"},
+		{family: "ACOS", arg: "1.0", want: "0"},
+		{family: "ACOS", arg: "-1.0", want: "3.141592653589793238462643383279502884197"},
+		{family: "ACOS", arg: "0.0", want: "1.570796326794896619231321691639751442098"},
+		{family: "ATAN", arg: "0.0", want: "0"},
+		{family: "ATAN", arg: "1.0", want: "0.785398163397448309615660845819875721049"},
+		{family: "ATAN", arg: "-1.0", want: "-0.785398163397448309615660845819875721049"},
+		{family: "ASIND", arg: "1.0", want: "90"},
+		{family: "ASIND", arg: "0.5", want: "30"},
+		{family: "ASIND", arg: "-1.0", want: "-90"},
+		{family: "ACOSD", arg: "0.5", want: "60"},
+		{family: "ACOSD", arg: "-1.0", want: "180"},
+		{family: "ACOSD", arg: "0.0", want: "90"},
+		{family: "ATAND", arg: "1.0", want: "45"},
+		{family: "ATAND", arg: "-1.0", want: "-45"},
+		{family: "ATAND", arg: "0.0", want: "0"},
+
+		// Too large a result, only where a cosine is exactly 0.
+		{family: "TAND", arg: "90.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "TAND", arg: "-270.0", condition: symbol("MTH$_FLOOVEMAT")},
+
+		// A result too small for the format: 0.0 quietly, unless the caller
+		// set FU.
+		{family: "SIND", tiny: true, zero: true},
+		{family: "SIND", tiny: true, fu: true, zero: true, condition: symbol("MTH$_FLOUNDMAT")},
+		{family: "TAND", tiny: true, zero: true},
+		{family: "TAND", tiny: true, fu: true, zero: true, condition: symbol("MTH$_FLOUNDMAT")},
+		{family: "COSD", tiny: true, want: "1"},
+		{family: "COSD", tiny: true, fu: true, want: "1"},
+
+		// No sine or cosine is beyond 1.
+		{family: "ASIN", arg: "2.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ACOS", arg: "-2.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ASIND", arg: "-2.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ACOSD", arg: "2.0", condition: symbol("MTH$_INVARGMAT")},
+
+		{family: "SIN", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "COS", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "TAN", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "SIND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "COSD", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "TAND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ASIN", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ACOS", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ATAN", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ASIND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ACOSD", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ATAND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
 	}
 
 	var cases []entryCase
@@ -471,6 +584,9 @@ func entryCases(t *testing.T) []entryCase {
 
 			for _, name := range names {
 				c := entryCase{entry: name, format: f, arg: row.arg, fu: row.fu, condition: row.condition}
+				if row.tiny {
+					c.arg = tinyArgument(f)
+				}
 
 				switch {
 				case row.want != "":
@@ -656,5 +772,227 @@ Z:	.FLOAT	0.0
 
 	if strings.Contains(text, "MTH$SIN") {
 		t.Errorf("the image went on after a severe condition:\n%s", text)
+	}
+}
+
+// pairCase is one call of MTH$SINCOS's or MTH$SINCOSD's kind: the argument (or
+// empty for a reserved operand), whether the caller has FU set, the two results,
+// and the condition the handler should see.
+type pairCase struct {
+	entry        string
+	format       vaxfloat.Format
+	arg          string
+	fu           bool
+	sine, cosine string
+	condition    uint32
+}
+
+// pairCases are each row below by each entry of the kind the row names.
+func pairCases() []pairCase {
+	floundmat := vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
+	ropRand := vmsdef.Symbols["SS$_ROPRAND"]
+
+	rows := []struct {
+		stem         string
+		arg          string
+		tiny, fu     bool
+		sine, cosine string
+		condition    uint32
+	}{
+		{stem: "SINCOS", arg: "0.0", sine: "0", cosine: "1"},
+		{
+			stem: "SINCOS", arg: "1.0",
+			sine:   "0.841470984807896506652502321630298999622",
+			cosine: "0.540302305868139717400936607442976603732",
+		},
+		{stem: "SINCOS", condition: ropRand},
+
+		{stem: "SINCOSD", arg: "30.0", sine: "0.5", cosine: "0.866025403784438646763723170752936183471"},
+		{stem: "SINCOSD", arg: "90.0", sine: "1", cosine: "0"},
+		{stem: "SINCOSD", arg: "-180.0", sine: "0", cosine: "-1"},
+		{stem: "SINCOSD", tiny: true, sine: "0", cosine: "1"},
+		{stem: "SINCOSD", tiny: true, fu: true, sine: "0", cosine: "1", condition: floundmat},
+		{stem: "SINCOSD", condition: ropRand},
+	}
+
+	var cases []pairCase
+
+	for _, row := range rows {
+		for i, f := range []vaxfloat.Format{vaxfloat.F, vaxfloat.D, vaxfloat.G, vaxfloat.H} {
+			prefix := []string{"", "D", "G", "H"}[i]
+			register := []string{"5", "7", "7", "7"}[i]
+
+			for _, name := range []string{"MTH$" + prefix + row.stem, "MTH$" + prefix + row.stem + "_R" + register} {
+				c := pairCase{
+					entry: name, format: f, arg: row.arg, fu: row.fu,
+					sine: row.sine, cosine: row.cosine, condition: row.condition,
+				}
+				if row.tiny {
+					c.arg = tinyArgument(f)
+				}
+
+				cases = append(cases, c)
+			}
+		}
+	}
+
+	return cases
+}
+
+// pairProgram is the MACRO for the cases. Each call is followed by what puts the
+// two results in the registers a JSB entry returns them in, so that one check
+// does for both kinds of entry, and SHOW, which prints R0 to R7 and the condition
+// the handler saw.
+func pairProgram(cases []pairCase) string {
+	directive := map[vaxfloat.Format]string{
+		vaxfloat.F: ".F_FLOATING", vaxfloat.D: ".D_FLOATING", vaxfloat.G: ".G_FLOATING", vaxfloat.H: ".H_FLOATING",
+	}
+
+	var data, code strings.Builder
+
+	for i, c := range cases {
+		label := fmt.Sprintf("A%d", i)
+
+		if c.arg == "" {
+			fmt.Fprintf(&data, "%s:\t.LONG\t^X8000,0,0,0\n", label)
+		} else {
+			fmt.Fprintf(&data, "%s:\t%s\t%s\n", label, directive[c.format], c.arg)
+		}
+
+		fmt.Fprintf(&code, "\t; %d. %s\n\tCLRL\tSCOND\n", i, c.entry)
+
+		if c.fu {
+			code.WriteString("\tBISPSW\t#^X40\n")
+		}
+
+		if strings.Contains(c.entry, "_R") {
+			switch c.format {
+			case vaxfloat.F:
+				fmt.Fprintf(&code, "\tMOVL\t%s,R0\n", label)
+			case vaxfloat.H:
+				fmt.Fprintf(&code, "\tMOVQ\t%s,R0\n\tMOVQ\t%s+8,R2\n", label, label)
+			default:
+				fmt.Fprintf(&code, "\tMOVQ\t%s,R0\n", label)
+			}
+
+			fmt.Fprintf(&code, "\tJSB\tG^%s\n", c.entry)
+		} else {
+			fmt.Fprintf(&code, "\tPUSHAL\tRCOS\n\tPUSHAL\tRSIN\n\tPUSHAL\t%s\n\tCALLS\t#3,G^%s\n", label, c.entry)
+
+			switch c.format {
+			case vaxfloat.F:
+				code.WriteString("\tMOVL\tRSIN,R0\n\tMOVL\tRCOS,R1\n")
+			case vaxfloat.H:
+				code.WriteString("\tMOVQ\tRSIN,R0\n\tMOVQ\tRSIN+8,R2\n\tMOVQ\tRCOS,R4\n\tMOVQ\tRCOS+8,R6\n")
+			default:
+				code.WriteString("\tMOVQ\tRSIN,R0\n\tMOVQ\tRCOS,R2\n")
+			}
+		}
+
+		if c.fu {
+			code.WriteString("\tBICPSW\t#^X40\n")
+		}
+
+		code.WriteString("\tJSB\tSHOW\n")
+	}
+
+	return `	.TITLE	MTHPAIR
+	.PSECT	DATA,WRT,NOEXE,LONG
+RSIN:	.BLKL	4
+RCOS:	.BLKL	4
+SCOND:	.BLKL	1
+CTL:	.ASCID	/!XL !XL !XL !XL !XL !XL !XL !XL c=!XL/
+BUF:	.BLKB	132
+OUT:	.LONG	132
+	.ADDRESS BUF
+LEN:	.BLKL	1
+LINE:	.BLKL	2
+` + data.String() + `	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	HANDLER,^M<>
+	MOVL	4(AP),R0
+	MOVL	4(R0),SCOND
+	MOVL	#1,R0
+	RET
+SHOW:	PUSHL	SCOND
+	PUSHL	R7
+	PUSHL	R6
+	PUSHL	R5
+	PUSHL	R4
+	PUSHL	R3
+	PUSHL	R2
+	PUSHL	R1
+	PUSHL	R0
+	PUSHAL	OUT
+	PUSHAL	LEN
+	PUSHAQ	CTL
+	CALLS	#12,G^SYS$FAO
+	MOVL	LEN,LINE
+	MOVAB	BUF,LINE+4
+	PUSHAQ	LINE
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RSB
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVAL	HANDLER,(FP)
+` + code.String() + `	MOVL	#1,R0
+	RET
+	.END	START
+`
+}
+
+// TestPairsFromAProgram: MTH$SINCOS and MTH$SINCOSD, in every format, by both
+// kinds of entry. The second result of a JSB entry starts at R1, R2, or R4 by
+// format, and that's how the program shows a CALL entry's. An underflow signaled
+// leaves the sine 0.0 and the cosine good, for a handler that continues, in R1
+// too for an F JSB entry, whose cosine goes through the mechanism array.
+func TestPairsFromAProgram(t *testing.T) {
+	_, d, out := boot(t)
+	cases := pairCases()
+
+	build(t, d, out, "MTHPAIR", pairProgram(cases))
+
+	if err := d.Dispatch("RUN MTHPAIR"); err != nil {
+		t.Fatalf("RUN: %v\n%s", err, out)
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != len(cases) {
+		t.Fatalf("%d lines, want %d:\n%s", len(lines), len(cases), out)
+	}
+
+	words := func(f vaxfloat.Format, text string) []string {
+		x, err := vaxfloat.Parse(text)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		bits, err := vaxfloat.Pack(f, x)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		list := make([]string, f.Size()/4)
+		for j, w := range []uint32{uint32(bits.Lo), uint32(bits.Lo >> 32), uint32(bits.Hi), uint32(bits.Hi >> 32)}[:len(list)] {
+			list[j] = fmt.Sprintf("%08X", w)
+		}
+
+		return list
+	}
+
+	for i, c := range cases {
+		fields := strings.Fields(lines[i])
+
+		if got, want := fields[8], fmt.Sprintf("c=%08X", c.condition); got != want {
+			t.Errorf("%s(%q): %s, want %s", c.entry, c.arg, got, want)
+		}
+
+		// A reserved operand has no results to look at.
+		if c.arg == "" {
+			continue
+		}
+
+		want := append(words(c.format, c.sine), words(c.format, c.cosine)...)
+		if got := strings.Join(fields[:len(want)], " "); got != strings.Join(want, " ") {
+			t.Errorf("%s(%q): registers %s, want %s", c.entry, c.arg, got, strings.Join(want, " "))
+		}
 	}
 }

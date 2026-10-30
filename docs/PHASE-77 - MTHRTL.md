@@ -2,8 +2,9 @@
 
 **Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
 its Decision 3 accepted by the author the same day; subtasks 2, the package
-and its registration, and 3, the engine, square root, exponentials, and
-logarithms, the same day). Needs Phase 74 (the plan)
+and its registration, 3, the engine, square root, exponentials, and
+logarithms, and 4, the trigonometric functions and their inverses, the same
+day). Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -183,7 +184,7 @@ are there too, each with one FAO argument, `user PC !XL`.
 | `MTH$_LOGZERNEG` | `0x16829C` | a logarithm of x <= 0 |
 | `MTH$_SQUROONEG` | `0x1682A4` | a square root of x < 0 |
 | `MTH$_FLOOVEMAT` | `0x1682C4` | a result too large: `EXP` above 88.029 (F, D), 709.089 (G), 11355.830 (H); `COSH`, `SINH` above 88.722, 709.782, 11356.523; `TAN`, complex forms, conversions |
-| `MTH$_FLOUNDMAT` | `0x1682CC` | `EXP` at or below -88.722 (F; H -11356.523) *if the caller has FU set*, else 0.0 quietly; `SIND`-family angles below 180/pi * 2^-m (no such gate stated) |
+| `MTH$_FLOUNDMAT` | `0x1682CC` | `EXP` at or below -88.722 (F; H -11356.523) *if the caller has FU set*, else 0.0 quietly; `SIND`-family angles below 180/pi * 2^-m (the routine's conditions state no gate, but `SINCOSD`'s and `TAND`'s descriptions do: "and underflow signaling is enabled") |
 | `MTH$_UNDEXP` | `0x168294` | an `OTS$` power of 0 to 0 or below, or a negative base to a floating exponent |
 | `MTH$_WRONUMARG` | `0x168284` | in neither manual's routine pages |
 | `MTH$_SIGLOSMAT` (`SINCOSSIG`) | `0x1682BC` | in neither manual's routine pages |
@@ -320,7 +321,16 @@ be corrected.
     limit, 1024 ln 2, is -709.783. govax follows the format, as the other three
     forms' figures do;
   - `AMAX1` with no arguments (`WRONUMARG`?);
-  - whether `SIN` of a huge argument signals `SIGLOSMAT`;
+  - whether `SIN` of a huge argument signals `SIGLOSMAT` (govax computes the
+    true value, whatever the size);
+  - what a handler that continues from `SINCOSD`'s `FLOUNDMAT` finds in the two
+    results (govax has 0.0 and the good cosine, in memory or registers, an F JSB
+    entry's cosine going through the mechanism array's R1);
+  - what `TAND` gives where the cosine is exactly 0 beyond the manual's "signal
+    overflow": R0 and R1 after continuing (govax's reserved operand), and whether
+    `TAND(90)` is exact on VMS at all, or a large finite value, as `TAN` is;
+  - what `MTH$TAN`'s overflow is for: no argument in any format reaches it in
+    govax;
   - the undocumented JSB entries' registers, starting with `COSH_R4` and
     `SQRT_R2`;
   - last-bit comparison, reported as a count rather than held as a test.
@@ -335,7 +345,7 @@ be corrected.
 3. **The engine, square root, exponentials, logarithms** in all four formats,
    JSB entries with them. Done.
 4. **Trigonometric and inverse functions**, radians and degrees, exact
-   reduction.
+   reduction. Done.
 5. **Hyperbolic functions and ATAN2.**
 6. **Table 1-1's routines:** absolute value, positive difference, sign, floor,
    truncation, nearest integer, remainder, maximum and minimum, conversions,
@@ -417,3 +427,49 @@ be corrected.
   probe's questions gained three: H results after a condition, FLOUNDMAT's
   continued result, and G's underflow limit, where the manual's -709.774 isn't
   the format's -709.783.
+- **2026-10-30:** Subtask 4. `enginetrig.go` is the engine's part. `pi` is a
+  `constant` from Machin's formula in fixed point, which is much cheaper at
+  thousands of bits than a `big.Float` series; asked for more bits than it has,
+  a constant now at least doubles them. `reduceRadians` works at the bits of the
+  angle's integer part plus `reductionSlack`, looks at how far the difference
+  cancelled, and tries again with twice the slack if it went further (the
+  nearest double to a multiple of pi/2 cancels about 61 bits, and each format's
+  own nearest value to pi/2 all of its own). `reduceDegrees` is exact, in
+  integers (Decision 4), so a multiple of 90 reduces to exactly 0 however large.
+  `sinCosSeries` makes both functions in one loop. `arcTan` inverts above 1 and
+  halves with the half-angle formula, down below 1/8, then sums `atanSeries`,
+  which with `atanhSeries` is now one `oddPowerSeries`. `arcSin` and `arcCos` are
+  the manual's forms through `complementRoot`, which is `(1 - x) * (1 + x)` so
+  nothing cancels near 1. `trig.go` makes the functions from these, radians and
+  degrees alike. `pairFunction`, `callPairEntry`, and `jsbPairEntry` are the
+  two-result routines, `SINCOS` and `SINCOSD`, with their results in R0:R7 for H.
+  The tables gain 56 CALL and 64 JSB entries, the second entries `TAN_R5`,
+  `TAND_R5`, `ACOS_R5`, `ASIN_R5`, `DACOS_R9`, `DASIN_R9`, `GACOS_R9`, and
+  `GASIN_R9` among them (Decision 7). `MTH$HTAN_R7` and `MTH$HTAND_R7`, which no
+  manual gives and whose targets differ from their neighbors', stay stubs, as
+  `MTH$SQRT_R2` does; `TestMTHRTLLinks` moved to `MTH$SINH` and `MTH$SQRT_R2`, now
+  that `MTH$SIN` is written.
+  `TAND` at an odd multiple of 90 is `FLOOVEMAT`; `TAN` has no such argument, so
+  its overflow, which the manual lists, is never reached (the probe's question).
+  `SIND`, `TAND`, and `SINCOSD`'s underflow follows FU as `EXP`'s does; the 7.3
+  manual's descriptions say so, though its condition tables don't.
+  `enginetrig_test.go` checks each function against a reference by other means at
+  1024 bits (pi from the Gauss-Legendre iteration, checked against published
+  digits; an angle reduced by 2 pi with no quadrants, or in rationals for
+  degrees; the Taylor series directly; `tan y = x` solved by iteration), in every
+  format, over the whole range, at the tiny end, near multiples of pi/2 and 45
+  degrees, and near the arcs' ends. It also checks published digits, the largest
+  angle in each format, the published hardest double (`6381956970095103 * 2^797`,
+  whose cosine is `-4.68716592425462761112E-19`), exact values, the manual's
+  limits, and the domains. Breaking the code showed the checks can tell: guard and
+  scratch bits at 0 fail 8,161, no retry in the reduction 246, no bits for the
+  angle's size 146, `1 - x * x` 14, pi 40 working bits short 3, a wrong sign in the
+  quadrants 2,364. Taking out the degree reduction's rounding to nearest fails
+  none, rightly, since that only makes the series a little longer.
+  `TestEntriesFromAProgram` runs every new single-result entry from its generated
+  MACRO program (answers, each condition continued, FU clear and set, a reserved
+  operand), and `TestPairsFromAProgram` the pairs, CALL and JSB. A call costs 2.3
+  to 4.1 us for a sine or cosine, 1.3 to 2.6 us in degrees at an angle needing no
+  reduction, 3.3 to 6.4 us for an arc tangent, and 3.5 to 7.8 us for an arc sine
+  or cosine, F to H: still tens of VAX instructions' time. Pi to the 16,700 bits
+  H's largest angles need takes 5.2 ms, once.

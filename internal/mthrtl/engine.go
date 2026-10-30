@@ -70,12 +70,19 @@ type constant struct {
 // at returns the constant to at least prec bits. The caller must not change
 // the result, which others share. An operation that reads it rounds to its
 // own result's precision, so a value longer than asked for does no harm.
+//
+// Asked for more bits than it has, a constant at least doubles them, so that
+// a program whose arguments keep growing (pi's bits follow an angle's size)
+// has it recomputed a few times, not at each call.
 func (c *constant) at(prec uint) *big.Float {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.value == nil || c.value.Prec() < prec {
+	switch {
+	case c.value == nil:
 		c.value = c.compute(max(prec, constantFloor))
+	case c.value.Prec() < prec:
+		c.value = c.compute(max(prec, 2*c.value.Prec()))
 	}
 
 	return c.value
@@ -107,10 +114,27 @@ func atanhOfReciprocal(n int64, prec uint) *big.Float {
 //
 //	atanh(z) = z + z^3/3 + z^5/5 + z^7/7 + ...
 //
-// for |z| well below 1: each term gains the bits z^2 is below 1. It stops at
-// the first term too small to change the sum. The sum's relative error is
-// small however small z is, since the first term is z itself.
+// for |z| well below 1.
 func atanhSeries(z *big.Float, prec uint) *big.Float {
+	return oddPowerSeries(z, false, prec)
+}
+
+// atanSeries returns atan(z), to prec bits, from its power series
+//
+//	atan(z) = z - z^3/3 + z^5/5 - z^7/7 + ...
+//
+// for |z| well below 1.
+func atanSeries(z *big.Float, prec uint) *big.Float {
+	return oddPowerSeries(z, true, prec)
+}
+
+// oddPowerSeries sums z + s*z^3/3 + z^5/5 + s*z^7/7 + ..., to prec bits, s
+// being -1 if alternating is set and 1 otherwise: multiplying by z^2, or by
+// -z^2 to alternate, is the only difference between the two series. Each term
+// gains the bits z^2 is below 1. It stops at the first term too small to change
+// the sum. The sum's relative error is small however small z is, since the
+// first term is z itself.
+func oddPowerSeries(z *big.Float, alternating bool, prec uint) *big.Float {
 	w := prec + scratchBits
 	sum := newFloat(w).Set(z)
 
@@ -119,7 +143,11 @@ func atanhSeries(z *big.Float, prec uint) *big.Float {
 	}
 
 	square := newFloat(w).Mul(z, z)
-	power := newFloat(w).Set(z) // z^(2k+1), as k goes up
+	if alternating {
+		square.Neg(square)
+	}
+
+	power := newFloat(w).Set(z) // z^(2k+1), with its sign, as k goes up
 	term := newFloat(w)
 	divisor := newFloat(w)
 

@@ -75,13 +75,85 @@ var Routines = []Routine{
 	{"MTH$DLOG10", callEntry(vaxfloat.D, base10Log)},
 	{"MTH$GLOG10", callEntry(vaxfloat.G, base10Log)},
 	{"MTH$HLOG10", callEntry(vaxfloat.H, base10Log)},
+
+	{"MTH$SIN", callEntry(vaxfloat.F, sine)},
+	{"MTH$DSIN", callEntry(vaxfloat.D, sine)},
+	{"MTH$GSIN", callEntry(vaxfloat.G, sine)},
+	{"MTH$HSIN", callEntry(vaxfloat.H, sine)},
+
+	{"MTH$COS", callEntry(vaxfloat.F, cosine)},
+	{"MTH$DCOS", callEntry(vaxfloat.D, cosine)},
+	{"MTH$GCOS", callEntry(vaxfloat.G, cosine)},
+	{"MTH$HCOS", callEntry(vaxfloat.H, cosine)},
+
+	{"MTH$TAN", callEntry(vaxfloat.F, tangent)},
+	{"MTH$DTAN", callEntry(vaxfloat.D, tangent)},
+	{"MTH$GTAN", callEntry(vaxfloat.G, tangent)},
+	{"MTH$HTAN", callEntry(vaxfloat.H, tangent)},
+
+	{"MTH$SINCOS", callPairEntry(vaxfloat.F, sineCosine)},
+	{"MTH$DSINCOS", callPairEntry(vaxfloat.D, sineCosine)},
+	{"MTH$GSINCOS", callPairEntry(vaxfloat.G, sineCosine)},
+	{"MTH$HSINCOS", callPairEntry(vaxfloat.H, sineCosine)},
+
+	{"MTH$SIND", callEntry(vaxfloat.F, sineDegrees)},
+	{"MTH$DSIND", callEntry(vaxfloat.D, sineDegrees)},
+	{"MTH$GSIND", callEntry(vaxfloat.G, sineDegrees)},
+	{"MTH$HSIND", callEntry(vaxfloat.H, sineDegrees)},
+
+	{"MTH$COSD", callEntry(vaxfloat.F, cosineDegrees)},
+	{"MTH$DCOSD", callEntry(vaxfloat.D, cosineDegrees)},
+	{"MTH$GCOSD", callEntry(vaxfloat.G, cosineDegrees)},
+	{"MTH$HCOSD", callEntry(vaxfloat.H, cosineDegrees)},
+
+	{"MTH$TAND", callEntry(vaxfloat.F, tangentDegrees)},
+	{"MTH$DTAND", callEntry(vaxfloat.D, tangentDegrees)},
+	{"MTH$GTAND", callEntry(vaxfloat.G, tangentDegrees)},
+	{"MTH$HTAND", callEntry(vaxfloat.H, tangentDegrees)},
+
+	{"MTH$SINCOSD", callPairEntry(vaxfloat.F, sineCosineDegrees)},
+	{"MTH$DSINCOSD", callPairEntry(vaxfloat.D, sineCosineDegrees)},
+	{"MTH$GSINCOSD", callPairEntry(vaxfloat.G, sineCosineDegrees)},
+	{"MTH$HSINCOSD", callPairEntry(vaxfloat.H, sineCosineDegrees)},
+
+	{"MTH$ASIN", callEntry(vaxfloat.F, arcSine)},
+	{"MTH$DASIN", callEntry(vaxfloat.D, arcSine)},
+	{"MTH$GASIN", callEntry(vaxfloat.G, arcSine)},
+	{"MTH$HASIN", callEntry(vaxfloat.H, arcSine)},
+
+	{"MTH$ACOS", callEntry(vaxfloat.F, arcCosine)},
+	{"MTH$DACOS", callEntry(vaxfloat.D, arcCosine)},
+	{"MTH$GACOS", callEntry(vaxfloat.G, arcCosine)},
+	{"MTH$HACOS", callEntry(vaxfloat.H, arcCosine)},
+
+	{"MTH$ATAN", callEntry(vaxfloat.F, arcTangent)},
+	{"MTH$DATAN", callEntry(vaxfloat.D, arcTangent)},
+	{"MTH$GATAN", callEntry(vaxfloat.G, arcTangent)},
+	{"MTH$HATAN", callEntry(vaxfloat.H, arcTangent)},
+
+	{"MTH$ASIND", callEntry(vaxfloat.F, arcSineDegrees)},
+	{"MTH$DASIND", callEntry(vaxfloat.D, arcSineDegrees)},
+	{"MTH$GASIND", callEntry(vaxfloat.G, arcSineDegrees)},
+	{"MTH$HASIND", callEntry(vaxfloat.H, arcSineDegrees)},
+
+	{"MTH$ACOSD", callEntry(vaxfloat.F, arcCosineDegrees)},
+	{"MTH$DACOSD", callEntry(vaxfloat.D, arcCosineDegrees)},
+	{"MTH$GACOSD", callEntry(vaxfloat.G, arcCosineDegrees)},
+	{"MTH$HACOSD", callEntry(vaxfloat.H, arcCosineDegrees)},
+
+	{"MTH$ATAND", callEntry(vaxfloat.F, arcTangentDegrees)},
+	{"MTH$DATAND", callEntry(vaxfloat.D, arcTangentDegrees)},
+	{"MTH$GATAND", callEntry(vaxfloat.G, arcTangentDegrees)},
+	{"MTH$HATAND", callEntry(vaxfloat.H, arcTangentDegrees)},
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides. The
-// vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2, which
-// no manual gives and whose registers wait for the VMS probe (Decision 7).
-// MTH$DEXP_R7 and MTH$GEXP_R7 are second entries: in VMS's image each jumps
-// to the same address as its _R6.
+// vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2,
+// MTH$HTAN_R7, and MTH$HTAND_R7, which no manual gives and whose registers wait
+// for the VMS probe (Decision 7). A name that has a neighbor with a smaller
+// register number, such as MTH$DEXP_R7 beside MTH$DEXP_R6 or MTH$ASIN_R5 beside
+// MTH$ASIN_R4, is a second entry: in VMS's image the two jump to the same
+// address.
 var JSBRoutines = []JSBRoutine{
 	{"MTH$SQRT_R3", jsbEntry(vaxfloat.F, squareRoot)},
 	{"MTH$DSQRT_R5", jsbEntry(vaxfloat.D, squareRoot)},
@@ -104,6 +176,84 @@ var JSBRoutines = []JSBRoutine{
 	{"MTH$DLOG10_R8", jsbEntry(vaxfloat.D, base10Log)},
 	{"MTH$GLOG10_R8", jsbEntry(vaxfloat.G, base10Log)},
 	{"MTH$HLOG10_R8", jsbEntry(vaxfloat.H, base10Log)},
+
+	{"MTH$SIN_R4", jsbEntry(vaxfloat.F, sine)},
+	{"MTH$DSIN_R7", jsbEntry(vaxfloat.D, sine)},
+	{"MTH$GSIN_R7", jsbEntry(vaxfloat.G, sine)},
+	{"MTH$HSIN_R5", jsbEntry(vaxfloat.H, sine)},
+
+	{"MTH$COS_R4", jsbEntry(vaxfloat.F, cosine)},
+	{"MTH$DCOS_R7", jsbEntry(vaxfloat.D, cosine)},
+	{"MTH$GCOS_R7", jsbEntry(vaxfloat.G, cosine)},
+	{"MTH$HCOS_R5", jsbEntry(vaxfloat.H, cosine)},
+
+	{"MTH$TAN_R4", jsbEntry(vaxfloat.F, tangent)},
+	{"MTH$TAN_R5", jsbEntry(vaxfloat.F, tangent)},
+	{"MTH$DTAN_R7", jsbEntry(vaxfloat.D, tangent)},
+	{"MTH$GTAN_R7", jsbEntry(vaxfloat.G, tangent)},
+	{"MTH$HTAN_R5", jsbEntry(vaxfloat.H, tangent)},
+
+	{"MTH$SINCOS_R5", jsbPairEntry(vaxfloat.F, sineCosine)},
+	{"MTH$DSINCOS_R7", jsbPairEntry(vaxfloat.D, sineCosine)},
+	{"MTH$GSINCOS_R7", jsbPairEntry(vaxfloat.G, sineCosine)},
+	{"MTH$HSINCOS_R7", jsbPairEntry(vaxfloat.H, sineCosine)},
+
+	{"MTH$SIND_R4", jsbEntry(vaxfloat.F, sineDegrees)},
+	{"MTH$DSIND_R7", jsbEntry(vaxfloat.D, sineDegrees)},
+	{"MTH$GSIND_R7", jsbEntry(vaxfloat.G, sineDegrees)},
+	{"MTH$HSIND_R5", jsbEntry(vaxfloat.H, sineDegrees)},
+
+	{"MTH$COSD_R4", jsbEntry(vaxfloat.F, cosineDegrees)},
+	{"MTH$DCOSD_R7", jsbEntry(vaxfloat.D, cosineDegrees)},
+	{"MTH$GCOSD_R7", jsbEntry(vaxfloat.G, cosineDegrees)},
+	{"MTH$HCOSD_R5", jsbEntry(vaxfloat.H, cosineDegrees)},
+
+	{"MTH$TAND_R4", jsbEntry(vaxfloat.F, tangentDegrees)},
+	{"MTH$TAND_R5", jsbEntry(vaxfloat.F, tangentDegrees)},
+	{"MTH$DTAND_R7", jsbEntry(vaxfloat.D, tangentDegrees)},
+	{"MTH$GTAND_R7", jsbEntry(vaxfloat.G, tangentDegrees)},
+	{"MTH$HTAND_R5", jsbEntry(vaxfloat.H, tangentDegrees)},
+
+	{"MTH$SINCOSD_R5", jsbPairEntry(vaxfloat.F, sineCosineDegrees)},
+	{"MTH$DSINCOSD_R7", jsbPairEntry(vaxfloat.D, sineCosineDegrees)},
+	{"MTH$GSINCOSD_R7", jsbPairEntry(vaxfloat.G, sineCosineDegrees)},
+	{"MTH$HSINCOSD_R7", jsbPairEntry(vaxfloat.H, sineCosineDegrees)},
+
+	{"MTH$ASIN_R4", jsbEntry(vaxfloat.F, arcSine)},
+	{"MTH$ASIN_R5", jsbEntry(vaxfloat.F, arcSine)},
+	{"MTH$DASIN_R7", jsbEntry(vaxfloat.D, arcSine)},
+	{"MTH$DASIN_R9", jsbEntry(vaxfloat.D, arcSine)},
+	{"MTH$GASIN_R7", jsbEntry(vaxfloat.G, arcSine)},
+	{"MTH$GASIN_R9", jsbEntry(vaxfloat.G, arcSine)},
+	{"MTH$HASIN_R8", jsbEntry(vaxfloat.H, arcSine)},
+
+	{"MTH$ACOS_R4", jsbEntry(vaxfloat.F, arcCosine)},
+	{"MTH$ACOS_R5", jsbEntry(vaxfloat.F, arcCosine)},
+	{"MTH$DACOS_R7", jsbEntry(vaxfloat.D, arcCosine)},
+	{"MTH$DACOS_R9", jsbEntry(vaxfloat.D, arcCosine)},
+	{"MTH$GACOS_R7", jsbEntry(vaxfloat.G, arcCosine)},
+	{"MTH$GACOS_R9", jsbEntry(vaxfloat.G, arcCosine)},
+	{"MTH$HACOS_R8", jsbEntry(vaxfloat.H, arcCosine)},
+
+	{"MTH$ATAN_R4", jsbEntry(vaxfloat.F, arcTangent)},
+	{"MTH$DATAN_R7", jsbEntry(vaxfloat.D, arcTangent)},
+	{"MTH$GATAN_R7", jsbEntry(vaxfloat.G, arcTangent)},
+	{"MTH$HATAN_R8", jsbEntry(vaxfloat.H, arcTangent)},
+
+	{"MTH$ASIND_R4", jsbEntry(vaxfloat.F, arcSineDegrees)},
+	{"MTH$DASIND_R7", jsbEntry(vaxfloat.D, arcSineDegrees)},
+	{"MTH$GASIND_R7", jsbEntry(vaxfloat.G, arcSineDegrees)},
+	{"MTH$HASIND_R8", jsbEntry(vaxfloat.H, arcSineDegrees)},
+
+	{"MTH$ACOSD_R4", jsbEntry(vaxfloat.F, arcCosineDegrees)},
+	{"MTH$DACOSD_R7", jsbEntry(vaxfloat.D, arcCosineDegrees)},
+	{"MTH$GACOSD_R7", jsbEntry(vaxfloat.G, arcCosineDegrees)},
+	{"MTH$HACOSD_R8", jsbEntry(vaxfloat.H, arcCosineDegrees)},
+
+	{"MTH$ATAND_R4", jsbEntry(vaxfloat.F, arcTangentDegrees)},
+	{"MTH$DATAND_R7", jsbEntry(vaxfloat.D, arcTangentDegrees)},
+	{"MTH$GATAND_R7", jsbEntry(vaxfloat.G, arcTangentDegrees)},
+	{"MTH$HATAND_R8", jsbEntry(vaxfloat.H, arcTangentDegrees)},
 }
 
 // jsbName matches the names of the JSB entries: a name like MTH$SIN_R4 is
