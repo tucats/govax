@@ -1,9 +1,12 @@
 package fortran
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tucats/govax/internal/fortran/source"
 )
 
 // testOptions are fixed options, so the header doesn't change between
@@ -43,7 +46,8 @@ func TestCompileSkeleton(t *testing.T) {
 		"; from DUA0:[WORK]SQUARES.FOR;1",
 		"; by the command FORTRAN SQUARES",
 		";",
-		"; Each line of the FORTRAN source appears below as a comment, with its line number.",
+		"; Each line of the FORTRAN source appears below as a comment, with its line number;",
+		"; a line from an INCLUDE file has its include depth before the number.",
 		"; This version of the compiler generates no code yet; MACRO assembles this file",
 		"; into an empty module.",
 		";",
@@ -59,6 +63,90 @@ func TestCompileSkeleton(t *testing.T) {
 
 	if got := strings.Join(r.MACRO, "\n"); got != strings.Join(want, "\n") {
 		t.Errorf("MACRO file:\n%s\nwant:\n%s", got, strings.Join(want, "\n"))
+	}
+}
+
+// includes is an Opener over files in memory.
+type includes map[string][]string
+
+func (fs includes) OpenInclude(name string, _ *source.File) (*source.File, error) {
+	lines, ok := fs[name]
+	if !ok {
+		return nil, errors.New("no such file")
+	}
+
+	return &source.File{Spec: "[INC]" + name, Lines: lines}, nil
+}
+
+// TestCompileIncludes checks that included files' lines are in the MACRO
+// file, marked with their depth and their files' names.
+func TestCompileIncludes(t *testing.T) {
+	opts := testOptions
+	opts.Includes = includes{
+		"A": {"      INCLUDE 'B'", "      X = 1"},
+		"B": {"      Y = 2", "      INCLUDE 'C'"},
+		"C": {"C     innermost"},
+	}
+
+	r := Compile(opts, File{
+		Spec:  "MAIN.FOR",
+		Name:  "MAIN",
+		Lines: []string{"      INCLUDE 'A'", "      INCLUDE 'C'", "      END"},
+	})
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	want := []string{
+		";    1        INCLUDE 'A'",
+		"; INCLUDE file [INC]A:",
+		";1   1        INCLUDE 'B'",
+		"; INCLUDE file [INC]B:",
+		";2   1        Y = 2",
+		";2   2        INCLUDE 'C'",
+		"; INCLUDE file [INC]C:",
+		";3   1  C     innermost",
+		"; end of [INC]C",
+		"; end of [INC]B",
+		";1   2        X = 1",
+		"; end of [INC]A",
+		";    2        INCLUDE 'C'",
+		"; INCLUDE file [INC]C:",
+		";1   1  C     innermost",
+		"; end of [INC]C",
+		";    3        END",
+		"",
+		"\t.END",
+	}
+
+	got := r.MACRO[len(r.MACRO)-len(want):]
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("MACRO file ends:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestCompileSourceErrors checks that the source pass's errors are the
+// compilation's: no MACRO file, the messages counted.
+func TestCompileSourceErrors(t *testing.T) {
+	r := Compile(testOptions, File{
+		Spec:  "BAD.FOR",
+		Name:  "BAD",
+		Lines: []string{"     1X = 1", "      INCLUDE 'NONE'", "      END"},
+	})
+
+	if r.MACRO != nil || r.Errors != 2 || len(r.Messages) != 2 ||
+		r.Messages[0].Ident != "NOINITIAL" || r.Messages[1].Ident != "INCLOPEN" {
+		t.Errorf("result: %d errors, %v", r.Errors, r.Messages)
+	}
+
+	// The continuation limit and /D_LINES reach the source pass.
+	opts := testOptions
+	opts.Continuations = source.NoContinuations
+	opts.DLines = true
+
+	r = Compile(opts, File{Spec: "D.FOR", Name: "D", Lines: []string{"D     X = 1", "D    1 + 2"}})
+	if r.Errors != 1 || r.Messages[0].Ident != "TOOMANYCONT" {
+		t.Errorf("/CONTINUATIONS=0 /D_LINES: %v", r.Messages)
 	}
 }
 

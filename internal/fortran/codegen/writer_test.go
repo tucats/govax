@@ -124,6 +124,26 @@ func TestSourceLine(t *testing.T) {
 	}
 }
 
+// TestSourceLineAt checks an included line's prefix: the depth, then the
+// number, still one tab stop wide.
+func TestSourceLineAt(t *testing.T) {
+	var w Writer
+
+	w.SourceLineAt(1, 12, "\tPARAMETER (M=100)")
+	w.SourceLineAt(10, 3, "      X = 1")
+	w.SourceLineAt(2, 12345, "C LONG")
+
+	want := []string{
+		";1  12  \tPARAMETER (M=100)",
+		";10  3        X = 1",
+		";2:12345 C LONG",
+	}
+
+	if got := w.Lines(); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("lines:\n%q\nwant\n%q", got, want)
+	}
+}
+
 // TestSourceLineLong checks that a source line too long for MACRO is
 // continued, every piece within the limit, nothing lost.
 func TestSourceLineLong(t *testing.T) {

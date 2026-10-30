@@ -61,6 +61,11 @@ type fortranFlags struct {
 	noMacro      bool   // --no-macro
 	extendSource bool   // --extend-source
 	dLines       bool   // --d-lines
+
+	// continuations is --continuations: the most continuation lines a
+	// statement may have, and whether it was given.
+	continuations      int
+	continuationsGiven bool
 }
 
 // macroFlags are the macro subcommand's options, which become the MACRO
@@ -294,6 +299,17 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.dLines = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "continuations",
+		Description: "The most continuation lines a statement may have, 0 to 99 (default 19)",
+		OptionType:  cli.IntType,
+		Action: func(c *cli.Context) error {
+			fortran.continuations, _ = c.Integer("continuations")
+			fortran.continuationsGiven = true
 
 			return nil
 		},
@@ -759,6 +775,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.dLines {
 		command += "/D_LINES"
+	}
+
+	if f.continuationsGiven {
+		command += fmt.Sprintf("/CONTINUATIONS=%d", f.continuations)
 	}
 
 	return command

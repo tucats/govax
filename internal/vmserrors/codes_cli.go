@@ -211,6 +211,7 @@ const (
 	cliForErrors
 	cliForWarnings
 	cliForSameFile
+	cliForContRange
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -542,6 +543,10 @@ const (
 	// source file itself (a host source whose type is already MAR), which
 	// would destroy the source.
 	CLI_FORSAMEFILE = CLIFacility<<FacilityPosition | cliForSameFile<<MessagePosition | StatusError
+
+	// CLI_FORCONTRANGE refuses a FORTRAN whose /CONTINUATIONS=n is out
+	// of the range VAX FORTRAN allows, 0 to 99.
+	CLI_FORCONTRANGE = CLIFacility<<FacilityPosition | cliForContRange<<MessagePosition | StatusError
 )
 
 func init() {
@@ -702,5 +707,6 @@ func init() {
 	DefineMessage(CLI_FORERRORS, CLIFacility, "FORERRORS", "!D error(s) compiling !S; no MACRO file written")
 	DefineMessage(CLI_FORWARNINGS, CLIFacility, "FORWARNINGS", "!D warning(s) compiling !S")
 	DefineMessage(CLI_FORSAMEFILE, CLIFacility, "FORSAMEFILE", "the MACRO file !S would replace the FORTRAN source; name another with /MACRO=")
+	DefineMessage(CLI_FORCONTRANGE, CLIFacility, "FORCONTRANGE", "/CONTINUATIONS=!D is out of range; give 0 to !D")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

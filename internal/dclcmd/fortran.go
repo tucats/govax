@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/fortran"
+	"github.com/tucats/govax/internal/fortran/source"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -15,7 +16,7 @@ import (
 // Decision 18; subtask 2):
 //
 //	FORTRAN source[,...][/HOST] [/MACRO[=file] | /NOMACRO]
-//	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
+//	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -30,6 +31,15 @@ import (
 // $STATUS a warning. Several sources, separated by commas, are compiled
 // one after another, each to its own MACRO file, and the command's
 // status is the last failure's.
+//
+// A source's INCLUDE 'file' statements name files found as MACRO's
+// .INCLUDE finds them: relative to the file that includes them (on the
+// host, in its directory, for a bare name or a relative path; on a
+// volume, on its device and in its directory), with the default type FOR
+// (subtask 3). Whether VAX
+// FORTRAN looks beside the including file or in the default directory
+// isn't in the manuals to hand; for a source in the default directory
+// the two agree. govax's choice, unconfirmed.
 
 // FortranOptions is one FORTRAN command.
 type FortranOptions struct {
@@ -51,8 +61,33 @@ type FortranOptions struct {
 	ExtendSource bool
 	DLines       bool
 
+	// Continuations is /CONTINUATIONS=n.
+	Continuations FortranContinuations
+
 	// CommandLine is the command as typed, for the MACRO file's header.
 	CommandLine string
+}
+
+// FortranContinuations is /CONTINUATIONS=n: whether it was given, and
+// n, the most continuation lines one statement may have.
+type FortranContinuations struct {
+	Given bool
+	Lines int64
+}
+
+// limit is the compiler's Options.Continuations for the qualifier, or an
+// error if n is out of range.
+func (fc FortranContinuations) limit() (int, error) {
+	switch {
+	case !fc.Given:
+		return 0, nil
+	case fc.Lines < 0 || fc.Lines > source.MaxContinuations:
+		return 0, vmserrors.New(vmserrors.CLI_FORCONTRANGE, fc.Lines, source.MaxContinuations)
+	case fc.Lines == 0:
+		return source.NoContinuations, nil
+	}
+
+	return int(fc.Lines), nil
 }
 
 // defaultFortranType is the file type FORTRAN gives a source named
@@ -62,6 +97,10 @@ const defaultFortranType = "FOR"
 // Fortran compiles each source file and, unless opts.NoMacro, writes its
 // MACRO file.
 func (c *Context) Fortran(opts FortranOptions) error {
+	if _, err := opts.Continuations.limit(); err != nil {
+		return err
+	}
+
 	if len(opts.Sources) == 1 {
 		return c.compileFortran(opts.Sources[0], opts)
 	}
@@ -107,21 +146,23 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 		return FileFailure(err, loc.Name)
 	}
 
-	lines := make([]string, len(records))
-	for i, r := range records {
-		lines[i] = string(r)
-	}
+	lines := recordLines(records)
+
+	continuations, _ := opts.Continuations.limit() // checked by Fortran
 
 	result := fortran.Compile(fortran.Options{
-		ExtendSource: opts.ExtendSource,
-		DLines:       opts.DLines,
-		Version:      BuildVersion,
-		Compiled:     time.Now(),
-		CommandLine:  opts.CommandLine,
+		ExtendSource:  opts.ExtendSource,
+		DLines:        opts.DLines,
+		Continuations: continuations,
+		Includes:      fortranIncludes{c},
+		Version:       BuildVersion,
+		Compiled:      time.Now(),
+		CommandLine:   opts.CommandLine,
 	}, fortran.File{
-		Spec:  sourceSpec(found),
-		Name:  sourceStem(found),
-		Lines: lines,
+		Spec:   sourceSpec(found),
+		Name:   sourceStem(found),
+		Lines:  lines,
+		Handle: found,
 	})
 
 	for _, m := range result.Messages {
@@ -147,6 +188,50 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 	}
 
 	return nil
+}
+
+// fortranIncludes reads the files a source's INCLUDE statements name
+// (source.Opener).
+type fortranIncludes struct {
+	c *Context
+}
+
+// OpenInclude reads the file named name, which the file from includes:
+// name is resolved relative to from, with the default type FOR.
+func (fi fortranIncludes) OpenInclude(name string, from *source.File) (*source.File, error) {
+	s := fi.c.ContainerSession
+
+	related, _ := from.Handle.(rms.FileLocation)
+
+	loc, err := s.LocateRelated(name, false, related)
+	if err != nil {
+		return nil, FileFailure(err, name)
+	}
+
+	// A relative host path (inc/limits.for) is relative to the including
+	// file's directory too, as a bare name is.
+	if loc.Host && related.Host && strings.ContainsAny(name, `/\`) && !filepath.IsAbs(name) {
+		loc.Name = filepath.Join(filepath.Dir(related.Name), name)
+	}
+
+	loc = loc.WithDefaultType(defaultFortranType)
+
+	records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
+	if err != nil {
+		return nil, FileFailure(err, loc.Name)
+	}
+
+	return &source.File{Spec: sourceSpec(found), Lines: recordLines(records), Handle: found}, nil
+}
+
+// recordLines is a text file's records as strings.
+func recordLines(records [][]byte) []string {
+	lines := make([]string, len(records))
+	for i, r := range records {
+		lines[i] = string(r)
+	}
+
+	return lines
 }
 
 // writeMACRO writes the MACRO file lines for the source found, named

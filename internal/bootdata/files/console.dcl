@@ -783,8 +783,10 @@ grammar console
     ! qualifier at all, the MACRO file is the source's name with type
     ! MAR, and /NOMACRO compiles without writing one. EXTEND_SOURCE and
     ! D_LINES are VAX FORTRAN's /[NO]EXTEND_SOURCE (statements to column
-    ! 132) and /[NO]D_LINES (compile the debugging lines). Later phases
-    ! add the rest of the compiler's qualifiers.
+    ! 132) and /[NO]D_LINES (compile the debugging lines), and
+    ! CONTINUATIONS is /CONTINUATIONS=n, the most continuation lines a
+    ! statement may have (0 to 99; 19 when not given). Later phases add
+    ! the rest of the compiler's qualifiers.
     !
     verb fortran/id=1370
 
@@ -799,6 +801,8 @@ grammar console
                     /default=""
         qualifier   extend_source/id=1374
         qualifier   d_lines/id=1375
+        qualifier   continuations/id=1376       -
+                    /type=$integer
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

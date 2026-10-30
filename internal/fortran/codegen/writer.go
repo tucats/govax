@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -119,14 +120,31 @@ func (w *Writer) Label(label string) {
 // MACRO is continued on further comment lines whose prefix shows a "-"
 // where the number was.
 func (w *Writer) SourceLine(number int, text string) {
+	w.SourceLineAt(0, number, text)
+}
+
+// SourceLineAt is SourceLine for a line of a file included depth deep
+// (0 for the file being compiled). An included line's prefix starts with
+// the depth, as VAX FORTRAN's listings mark included lines:
+//
+//	;1  12        PARAMETER (M=100)
+func (w *Writer) SourceLineAt(depth, number int, text string) {
 	text = strings.TrimRight(printable(text), " \t")
 
 	prefix := fmt.Sprintf(";%5d  ", number)
+	if depth > 0 {
+		digits := strconv.Itoa(depth)
+		prefix = fmt.Sprintf(";%s%*d  ", digits, sourcePrefixed-3-len(digits), number)
+	}
+
 	if len(prefix) != sourcePrefixed {
-		// A line number past 99999 doesn't fit the five columns. One
-		// blank keeps the prefix at 8 characters up to 999999; past that
-		// the tabs' layout shifts, but the line is still all there.
+		// A line number too long for its columns. One blank keeps the
+		// prefix at 8 characters a while longer; past that the tabs'
+		// layout shifts, but the line is still all there.
 		prefix = fmt.Sprintf(";%d ", number)
+		if depth > 0 {
+			prefix = fmt.Sprintf(";%d:%d ", depth, number)
+		}
 	}
 
 	room := MaxLine - len(prefix)

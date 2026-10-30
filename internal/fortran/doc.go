@@ -32,12 +32,15 @@
 // diag holds every pass's error and warning messages.
 //
 // The passes are built a phase at a time (docs/PHASE-74's Part C). So far
-// the compiler has only its driver (this package), its messages (diag),
-// and the start of codegen: Compile copies the source into a MACRO file
-// as comments, which MACRO assembles into an empty module.
+// the compiler has its driver (this package), its messages (diag), the
+// source pass, and the start of codegen: Compile reads the source and its
+// INCLUDE files into statements, reporting any problem with their layout,
+// and copies every line into a MACRO file as comments, which MACRO
+// assembles into an empty module.
 //
 // The compiler is plain Go. It knows nothing of govax's console, RMS, or
 // the emulated machine: the FORTRAN command (internal/dclcmd/fortran.go)
-// reads the source, from the host or a Files-11 volume, and writes the
-// MACRO file Compile returns.
+// reads the source, from the host or a Files-11 volume, hands Compile a
+// source.Opener that reads the files INCLUDE statements name, and writes
+// the MACRO file Compile returns.
 package fortran

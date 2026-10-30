@@ -173,6 +173,7 @@
 //              10/21/26    @/OUTPUT makes a volume file when the procedure
 //                          starts
 //              10/29/26    Added FORTRAN (docs/PHASE-74 - FORTRAN plan.md)
+//              10/29/26    FORTRAN: /CONTINUATIONS, INCLUDE (Phase 74, subtask 3)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -4005,17 +4006,26 @@ $FOR
 
     The MACRO file is meant to be read: it holds the FORTRAN source as
     comments, each line with its number, so the code and the FORTRAN it
-    came from are side by side.
+    came from are side by side.  A line from an INCLUDE file has its
+    include depth before its number.
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
-    FORTRAN plan.md).  So far it copies the source into the MACRO file as
-    comments and generates no code: MACRO assembles the file into an
-    empty module.
+    FORTRAN plan.md).  So far it reads the source's lines into
+    statements, checking their layout (labels, continuation lines, the
+    columns of fixed-format and tab-format lines) and reading INCLUDE
+    files, and copies the lines into the MACRO file as comments.  It
+    generates no code yet: MACRO assembles the file into an empty module.
+
+    INCLUDE 'file' reads a file, by default of type .FOR, found relative
+    to the file that includes it: on the host, in its directory; on a
+    volume, on its device and in its directory.  INCLUDE '(module)', a
+    text library's module, is not implemented yet.
 
     Syntax:
 
         FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
+                [/CONTINUATIONS=<n>]
 
     Parameter:
 
@@ -4054,6 +4064,10 @@ $FOR
         /NOD_LINES      column 1) as statements.  The default is
                         /NOD_LINES: they are comments.
 
+        /CONTINUATIONS=<n>
+                        The most continuation lines one statement may
+                        have, from 0 to 99.  The default is 19.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, ENCODE is not implemented yet
@@ -4068,7 +4082,8 @@ $FOR
     it happens and the others are still compiled.
 
     From the host shell, "govax fortran <source>..." runs this command,
-    with --macro <file> or --no-macro, --extend-source, and --d-lines.
+    with --macro <file> or --no-macro, --extend-source, --d-lines, and
+    --continuations <n>.
 
     Examples:
 
@@ -4079,6 +4094,8 @@ $FOR
         FORTRAN DUA0:[SRC]PROG /MACRO=DUA0:[OBJ]
 
         FORTRAN A,B,C
+
+        FORTRAN DUNGEON /CONTINUATIONS=40
 
         $ govax --mount-write DUA0=work.dsk fortran DUA0:[000000]PROG.FOR
 

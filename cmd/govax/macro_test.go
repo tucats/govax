@@ -253,6 +253,8 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{macro: "out/sq.mar"}, `FORTRAN "sq"/MACRO="out/sq.mar"`},
 		{[]string{"sq"}, fortranFlags{noMacro: true, macro: "ignored"}, `FORTRAN "sq"/NOMACRO`},
 		{[]string{"sq"}, fortranFlags{extendSource: true, dLines: true}, `FORTRAN "sq"/EXTEND_SOURCE/D_LINES`},
+		{[]string{"sq"}, fortranFlags{continuations: 40, continuationsGiven: true}, `FORTRAN "sq"/CONTINUATIONS=40`},
+		{[]string{"sq"}, fortranFlags{continuationsGiven: true}, `FORTRAN "sq"/CONTINUATIONS=0`},
 	}
 
 	for _, c := range cases {
@@ -269,8 +271,13 @@ func TestFortranThenMacro(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "squares.for")
 
-	program := "      PROGRAM SQUARES\n      DO 10 I = 1, 5\n10    PRINT *, I, I*I\n      END\n"
+	program := "      PROGRAM SQUARES\n      INCLUDE 'limits'\n      DO 10 I = 1, N\n10    PRINT *, I, I*I\n      END\n"
 	if err := os.WriteFile(source, []byte(program), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// An INCLUDE file beside the source, found with the default type.
+	if err := os.WriteFile(filepath.Join(dir, "limits.for"), []byte("      PARAMETER (N=5)\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

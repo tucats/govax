@@ -1281,20 +1281,27 @@ These commands are described fully in their own sections:
 
 ```text
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
-    /[NO]EXTEND_SOURCE  /[NO]D_LINES
+    /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
 source files, which MACRO assembles and LINK links. govax's FORTRAN
 compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
-plan.md`): so far it copies the source into the MACRO file as comments,
-each line with its number, and generates no code, so MACRO assembles the
+plan.md`): so far it reads the source's lines into statements, checking
+their layout (labels, continuation lines, fixed-format and tab-format
+columns) and reading INCLUDE files, and copies the lines into the MACRO
+file as comments, each with its number (an included line with its
+include depth first). It generates no code yet, so MACRO assembles the
 file into an empty module. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
 `/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
-run to column 132, and `/D_LINES` compiles the lines with a `D` in
-column 1. The compiler's messages show the line and column:
+run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
+and `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
+19 by default). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+found relative to the file that includes it, in its host directory or on
+its volume's device and directory. The compiler's messages show the line
+and column:
 
 ```text
 %FORT-E-NOTIMPL, ENCODE is not implemented yet

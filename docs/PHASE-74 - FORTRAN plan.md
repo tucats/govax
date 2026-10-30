@@ -3,8 +3,8 @@
 **Status:** in progress. Part A (the survey), Part B (the decisions),
 and Part C (the phases) were reviewed and accepted by the author on
 2026-10-29 (the answers are under "The review" at the end). Subtasks 1
-(the plan) and 2 (the compiler's skeleton and the FORTRAN command) are
-done; subtasks 3 to 5 are next. Phases 75 to 86 each have a
+(the plan), 2 (the compiler's skeleton and the FORTRAN command), and 3
+(source forms) are done; subtasks 4 and 5 are next. Phases 75 to 86 each have a
 skeletal planning doc of their own. Needs nothing new: MACRO-32 (Phases
 27–29), LINK and shareable images (Phases 30 and 68), the RTL machinery
 (Phases 34 and 53–59), and traceback (Phase 70) are all in place.
@@ -704,7 +704,7 @@ review after each.
    compiler at this stage writes a header, each source line as a comment,
    and `.END`: an empty module MACRO assembles cleanly. Tests on host and
    volume files.
-3. **Source forms** (`internal/fortran/source`): fixed-format lines
+3. **Source forms** (done 2026-10-29; `internal/fortran/source`): fixed-format lines
    (label field, continuation column, statement field, sequence field),
    tab-format lines, `/EXTEND_SOURCE`, comment lines (`C`, `*`, `!`),
    D lines, `!` comments outside character constants, continuation
@@ -850,3 +850,81 @@ and the later phases' docs have been changed to follow them.
   written for VAX FORTRAN on OpenVMS (its `dungeon.doc` gives the VMS
   build: `FORT/NOCHECK/CONT=40`), so subtask 3 adds `/CONTINUATIONS=n`.
   Phase 86's doc lists what else it needs.
+- **2026-10-29:** Subtask 3 done: source forms.
+  - `internal/fortran/source` is the first pass. `Read(Form, *File,
+    Opener, *diag.List)` returns a `Program`: every line read, in order,
+    each with its file, number, include depth, and kind (comment,
+    initial, continuation, directive), and the statements, each with its
+    label, its text (the statement fields joined, end-of-line comments
+    removed, blanks kept for the lexer), the indexes of its first and
+    last lines, and a map from each character back to its file, line,
+    and column (`Statement.Position`, `LabelPosition`). Its `doc.go`
+    teaches the card-column layout.
+  - `lines.go` splits a line into fields: comment lines (C, c, *, ! in
+    column 1; blank lines, form feeds included), debugging lines (a
+    comment, or with `/D_LINES` column 1 read as a blank), CDEC$
+    directives (columns 1 to 5, a blank or tab in column 6; never
+    continued), fixed-format fields, and tab-format lines (a tab in
+    columns 1 to 6 ends the label field; a digit 1 to 9 after it is the
+    continuation indicator). The statement field ends at column 72, or
+    132 with `/EXTEND_SOURCE`, where nonblank text past 132 is fatal
+    (LINETOOLONG), as section 1.3.5 says.
+  - `comment.go` finds a `!` comment outside character and Hollerith
+    constants, across continuation lines. A Hollerith count is digits
+    after `( , / = .`, or after `*` with a digit before it (DATA's
+    repeat count), so `REAL*8 H` and `DO 10 H = 1, 2` aren't counts; an
+    apostrophe after a name or number inside parentheses is the `u'r`
+    record separator of `READ (1'10)`, not a quote.
+  - `include.go`: an INCLUDE statement is recognized by its shape,
+    blanks and case ignored (`IN CLUDE 'X'`), and replaced by the file's
+    lines and statements; `/LIST` and `/NOLIST` are dropped (listings
+    are Phase 85's). `INCLUDE '(module)'` and `'lib(module)'` are
+    NOTIMPL until Phase 83. The command's opener
+    (`dclcmd.fortranIncludes`) finds a file as MACRO's `.INCLUDE` does,
+    relative to the including file (a relative host path too), with the
+    default type FOR.
+  - Messages (in `diag`'s table): NOINITIAL, CONTLABEL, TOOMANYCONT,
+    BADLABEL, ZEROLABEL (errors); LINETOOLONG, INCLOPEN, INCLDEPTH
+    (fatal: reading stops); BADINCLUDE (error).
+  - `Compile` runs the pass and writes every line read into the MACRO
+    file, an included line's prefix starting with its depth
+    (`codegen.Writer.SourceLineAt`: `;1  12  `, still one tab stop
+    wide), each included file's lines between `; INCLUDE file spec:` and
+    `; end of spec`.
+  - `/CONTINUATIONS=n` (console.dcl id 1376, `FortranContinuations`;
+    `--continuations` for `govax fortran`): 0 to 99, CLI_FORCONTRANGE
+    outside it; `fortran.Options.Continuations` is 0 for the default and
+    `source.NoContinuations` for none. `/EXTEND_SOURCE` and `/D_LINES`
+    now take effect.
+  - **Choices of ours, unconfirmed** (the User Manual isn't to hand):
+    the continuation limits (19, 0 to 99); a tab in the label field
+    stands for the columns before column 7 (or 6, before a continuation
+    digit), so a tab-format statement field also ends at column 72 (all
+    of DUNGEON's tab-format lines past that are in `!` comments, which
+    fits); a 0 after the tab marks an initial line, as in column 6; a
+    line whose first nonblank character is `!` (anywhere but column 6 of
+    a fixed-format line) is a comment line, so it doesn't end a
+    statement whose continuation lines follow; CPAR$ lines are comments
+    (no `/PARALLEL`); short lines aren't padded to column 72, so a
+    character constant continued from one runs straight on; text past
+    column 132 counts only on lines with a statement; INCLUDE files are
+    found beside the including file (where VAX FORTRAN may use the
+    default directory; the two agree for a source in it), nested at most
+    10 deep (`MaxIncludeDepth`); a label on an INCLUDE statement is
+    ignored; TOOMANYCONT is an error, not fatal, and the excess lines
+    are still joined.
+  - DUNGEON V3.2A (local only): all nine sources read without a message
+    under `/CONTINUATIONS=40`; under the default, three statements of
+    `parser.f` have more than 19 continuation lines, which is why its VMS
+    build used `/CONT=40`. Its `game.f`'s MACRO file, with `dparam.for`
+    included five times, assembles without a message.
+  - Tests: `source`'s (fixed and tab format, comments, continuation,
+    the statement field's end, D lines, directives, end-of-line comments
+    in constants, layout errors, the continuation limit, positions,
+    INCLUDE and its failures and message); `codegen`'s
+    `TestSourceLineAt`; `fortran`'s `TestCompileIncludes` and
+    `TestCompileSourceErrors`; the console's `TestFortran_include` (host,
+    nested, a relative path, a missing file), `TestFortran_includeVolume`,
+    and `TestDispatch_fortranSource` (TOOMANYCONT, `/CONTINUATIONS=20`,
+    `=100`, `=0`, `/D_LINES`); `cmd/govax`'s `TestFortranCommand` and
+    `TestFortranThenMacro`, now with an INCLUDE.

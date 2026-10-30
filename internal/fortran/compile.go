@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/source"
 )
 
 // Options are the choices a compilation is made with: the FORTRAN
@@ -19,6 +20,15 @@ type Options struct {
 	// statements instead of being treated as comments (VAX FORTRAN's
 	// debugging lines).
 	DLines bool
+
+	// Continuations is /CONTINUATIONS=n, the most continuation lines a
+	// statement may have: 0 means the default (19), and
+	// source.NoContinuations means none (/CONTINUATIONS=0).
+	Continuations int
+
+	// Includes reads the files INCLUDE statements name; nil means a
+	// program can include nothing.
+	Includes source.Opener
 
 	// Version is govax's version ("1.0-115"), named in the header as the
 	// compiler's version.
@@ -46,6 +56,10 @@ type File struct {
 
 	// Lines are the file's records, without line terminators.
 	Lines []string
+
+	// Handle is the caller's note of where the file is, handed to
+	// Options.Includes to find the files it includes relative to it.
+	Handle any
 }
 
 // Result is what a compilation produced.
@@ -74,13 +88,18 @@ func Compile(opts Options, file File) Result {
 
 	module := ModuleName(file.Name)
 
+	// The first pass: the source's lines into statements.
+	program := source.Read(source.Form{
+		ExtendSource:  opts.ExtendSource,
+		DLines:        opts.DLines,
+		Continuations: opts.Continuations,
+	}, &source.File{Spec: file.Spec, Lines: file.Lines, Handle: file.Handle}, opts.Includes, &messages)
+
 	writeHeader(&w, opts, file, module)
 
 	// For now the compiler copies the source into the MACRO file as
 	// comments. Later phases put each statement's code after its lines.
-	for i, line := range file.Lines {
-		w.SourceLine(i+1, line)
-	}
+	writeSourceLines(&w, program.Lines)
 
 	w.Blank()
 	w.Statement("", ".END", "", "")
@@ -112,10 +131,41 @@ func writeHeader(w *codegen.Writer, opts Options, file File, module string) {
 	}
 
 	w.Comment("")
-	w.Comment("Each line of the FORTRAN source appears below as a comment, with its line number.")
+	w.Comment("Each line of the FORTRAN source appears below as a comment, with its line number;")
+	w.Comment("a line from an INCLUDE file has its include depth before the number.")
 	w.Comment("This version of the compiler generates no code yet; MACRO assembles this file")
 	w.Comment("into an empty module.")
 	w.Comment("")
+}
+
+// writeSourceLines writes the source's lines as comments, each included
+// file's lines between a comment naming the file and one marking its end.
+func writeSourceLines(w *codegen.Writer, lines []*source.Line) {
+	// files is the stack of files being included: files[d] is the file
+	// at depth d.
+	var files []*source.File
+
+	for _, line := range lines {
+		for len(files) > line.Depth+1 || (len(files) == line.Depth+1 && files[line.Depth] != line.File) {
+			w.Comment("end of " + files[len(files)-1].Spec)
+			files = files[:len(files)-1]
+		}
+
+		if len(files) == line.Depth {
+			if line.Depth > 0 {
+				w.Comment("INCLUDE file " + line.File.Spec + ":")
+			}
+
+			files = append(files, line.File)
+		}
+
+		w.SourceLineAt(line.Depth, line.Number, line.Text)
+	}
+
+	for len(files) > 1 {
+		w.Comment("end of " + files[len(files)-1].Spec)
+		files = files[:len(files)-1]
+	}
 }
 
 // ModuleName is the MACRO module name for a source file named name: the
