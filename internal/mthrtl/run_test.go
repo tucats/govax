@@ -367,6 +367,8 @@ type entryCase struct {
 	entry     string
 	format    vaxfloat.Format
 	arg       string
+	binary    bool // the routine takes two arguments, the second arg2 (empty: a reserved operand)
+	arg2      string
 	fu        bool
 	want      vaxfloat.Value
 	reserved  bool   // the result is the reserved operand, not want
@@ -413,6 +415,14 @@ var entryFamilies = map[string]entryFamily{
 	"ASIND": trigFamily("ASIND", "4", "7", "8"),
 	"ACOSD": trigFamily("ACOSD", "4", "7", "8"),
 	"ATAND": trigFamily("ATAND", "4", "7", "8"),
+
+	// These have JSB entries too, which no manual gives (Decision 7).
+	"ATAN2":  trigFamily("ATAN2", "", "", ""),
+	"ATAND2": trigFamily("ATAND2", "", "", ""),
+	"SINH":   trigFamily("SINH", "", "", ""),
+	"COSH":   trigFamily("COSH", "", "", ""),
+	"TANH":   trigFamily("TANH", "", "", ""),
+	"ATANH":  trigFamily("ATANH", "", "", ""),
 }
 
 // trigFamily spells a family's entries, whose names follow one rule: MTH$xNAME
@@ -469,6 +479,8 @@ func entryCases(t *testing.T) []entryCase {
 	rows := []struct {
 		family    string
 		arg       string
+		binary    bool
+		arg2      string
 		tiny      bool // the argument is tinyArgument's
 		fu        bool
 		want      string // empty: the reserved operand, or 0 when zero is set
@@ -569,6 +581,58 @@ func entryCases(t *testing.T) []entryCase {
 		{family: "ASIND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
 		{family: "ACOSD", condition: vmsdef.Symbols["SS$_ROPRAND"]},
 		{family: "ATAND", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "SINH", arg: "0.0", want: "0"},
+		{family: "SINH", arg: "1.0", want: "1.175201193643801456882381850595600815155"},
+		{family: "SINH", arg: "-1.0", want: "-1.175201193643801456882381850595600815155"},
+		{family: "SINH", arg: "20000.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "SINH", arg: "-20000.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "SINH", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "COSH", arg: "0.0", want: "1"},
+		{family: "COSH", arg: "1.0", want: "1.543080634815243778477905620757061682601"},
+		{family: "COSH", arg: "-1.0", want: "1.543080634815243778477905620757061682601"},
+		{family: "COSH", arg: "20000.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "COSH", arg: "-20000.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "COSH", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "TANH", arg: "0.0", want: "0"},
+		{family: "TANH", arg: "1.0", want: "0.761594155955764888119458282604793590412"},
+		{family: "TANH", arg: "20000.0", want: "1"},
+		{family: "TANH", arg: "-20000.0", want: "-1"},
+		{family: "TANH", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "ATANH", arg: "0.0", want: "0"},
+		{family: "ATANH", arg: "0.5", want: "0.549306144334054845697622618461262852323"},
+		{family: "ATANH", arg: "-0.5", want: "-0.549306144334054845697622618461262852323"},
+		{family: "ATANH", arg: "1.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ATANH", arg: "-1.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ATANH", arg: "2.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ATANH", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "ATAN2", binary: true, arg: "1.0", arg2: "1.0", want: "0.785398163397448309615660845819875721049"},
+		{family: "ATAN2", binary: true, arg: "-1.0", arg2: "-1.0", want: "-2.356194490192344928846982537459627163147"},
+		{family: "ATAN2", binary: true, arg: "1.0", arg2: "0.0", want: "1.570796326794896619231321691639751442098"},
+		{family: "ATAN2", binary: true, arg: "-1.0", arg2: "0.0", want: "-1.570796326794896619231321691639751442098"},
+		{family: "ATAN2", binary: true, arg: "0.0", arg2: "-1.0", want: "3.141592653589793238462643383279502884197"},
+		{family: "ATAN2", binary: true, arg: "0.0", arg2: "1.0", want: "0"},
+		{family: "ATAN2", binary: true, arg: "0.0", arg2: "0.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ATAN2", binary: true, arg: "1.0", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+		{family: "ATAN2", binary: true, arg2: "1.0", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "ATAND2", binary: true, arg: "1.0", arg2: "1.0", want: "45"},
+		{family: "ATAND2", binary: true, arg: "1.0", arg2: "-1.0", want: "135"},
+		{family: "ATAND2", binary: true, arg: "-1.0", arg2: "-1.0", want: "-135"},
+		{family: "ATAND2", binary: true, arg: "1.0", arg2: "0.0", want: "90"},
+		{family: "ATAND2", binary: true, arg: "0.0", arg2: "-1.0", want: "180"},
+		{family: "ATAND2", binary: true, arg: "0.0", arg2: "0.0", condition: symbol("MTH$_INVARGMAT")},
+		{family: "ATAND2", binary: true, arg: "1.0", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		// A quotient too small for the format: 0.0 quietly, whatever the
+		// caller's FU, the manual giving these routines no underflow.
+		{family: "ATAN2", binary: true, tiny: true, arg2: "1.0E30", zero: true},
+		{family: "ATAN2", binary: true, tiny: true, arg2: "1.0E30", fu: true, zero: true},
+		{family: "ATAND2", binary: true, tiny: true, arg2: "1.0E30", fu: true, zero: true},
 	}
 
 	var cases []entryCase
@@ -583,7 +647,10 @@ func entryCases(t *testing.T) []entryCase {
 			names = append(names, family.jsb[i]...)
 
 			for _, name := range names {
-				c := entryCase{entry: name, format: f, arg: row.arg, fu: row.fu, condition: row.condition}
+				c := entryCase{
+					entry: name, format: f, arg: row.arg, binary: row.binary, arg2: row.arg2,
+					fu: row.fu, condition: row.condition,
+				}
 				if row.tiny {
 					c.arg = tinyArgument(f)
 				}
@@ -618,17 +685,32 @@ func entryProgram(cases []entryCase) string {
 	for i, c := range cases {
 		label := fmt.Sprintf("A%d", i)
 
-		if c.arg == "" {
-			// A reserved operand: the sign set and the exponent zero, in any format.
-			fmt.Fprintf(&data, "%s:\t.LONG\t^X8000,0,0,0\n", label)
-		} else {
-			fmt.Fprintf(&data, "%s:\t%s\t%s\n", label, directive[c.format], c.arg)
-		}
-
 		fmt.Fprintf(&code, "\t; %d. %s\n\tCLRL\tSCOND\n", i, c.entry)
 
 		if c.fu {
 			code.WriteString("\tBISPSW\t#^X40\n")
+		}
+
+		define := func(label, arg string) {
+			if arg == "" {
+				// A reserved operand: the sign set and the exponent zero, in any format.
+				fmt.Fprintf(&data, "%s:\t.LONG\t^X8000,0,0,0\n", label)
+			} else {
+				fmt.Fprintf(&data, "%s:\t%s\t%s\n", label, directive[c.format], arg)
+			}
+		}
+
+		define(label, c.arg)
+
+		// A CALLS's arguments are pushed last first.
+		count := 1
+
+		if c.binary {
+			second := fmt.Sprintf("B%d", i)
+			define(second, c.arg2)
+			fmt.Fprintf(&code, "\tPUSHAL\t%s\n", second)
+
+			count = 2
 		}
 
 		isJSB := strings.Contains(c.entry, "_R")
@@ -652,9 +734,9 @@ func entryProgram(cases []entryCase) string {
 		case isJSB:
 			fmt.Fprintf(&code, "\tJSB\tG^%s\n", c.entry)
 		case c.format == vaxfloat.H:
-			fmt.Fprintf(&code, "\tCALLS\t#2,G^%s\n\tMOVQ\tHRES,R0\n\tMOVQ\tHRES+8,R2\n", c.entry)
+			fmt.Fprintf(&code, "\tCALLS\t#%d,G^%s\n\tMOVQ\tHRES,R0\n\tMOVQ\tHRES+8,R2\n", count+1, c.entry)
 		default:
-			fmt.Fprintf(&code, "\tCALLS\t#1,G^%s\n", c.entry)
+			fmt.Fprintf(&code, "\tCALLS\t#%d,G^%s\n", count, c.entry)
 		}
 
 		if c.fu {
@@ -736,11 +818,11 @@ func TestEntriesFromAProgram(t *testing.T) {
 
 		fields := strings.Fields(lines[i])
 		if got := strings.Join(fields[:len(want)], " "); got != strings.Join(want, " ") {
-			t.Errorf("%s(%q): registers %s, want %s", c.entry, c.arg, got, strings.Join(want, " "))
+			t.Errorf("%s(%q, %q): registers %s, want %s", c.entry, c.arg, c.arg2, got, strings.Join(want, " "))
 		}
 
 		if got, want := fields[4], fmt.Sprintf("c=%08X", c.condition); got != want {
-			t.Errorf("%s(%q): %s, want %s", c.entry, c.arg, got, want)
+			t.Errorf("%s(%q, %q): %s, want %s", c.entry, c.arg, c.arg2, got, want)
 		}
 	}
 }

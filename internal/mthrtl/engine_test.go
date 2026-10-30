@@ -104,9 +104,10 @@ func TestConstantFromGoroutines(t *testing.T) {
 
 // TestWorkingPrecisionUnderConstantFloor: at H's working precision, a constant
 // needs computing only once, whichever function asks first. The exponential
-// adds the bits of its argument's integer part, 14 at most in range.
+// adds the bits of its argument's integer part, 14 at most in range, and a
+// hyperbolic tangent asks for it at scratchBits above a function's own.
 func TestWorkingPrecisionUnderConstantFloor(t *testing.T) {
-	if most := workingPrecision(vaxfloat.H) + 2*scratchBits + exponentialHalvings + 14; most > constantFloor {
+	if most := workingPrecision(vaxfloat.H) + 3*scratchBits + exponentialHalvings + 14; most > constantFloor {
 		t.Errorf("the engine can ask for %d bits, above the constants' floor", most)
 	}
 }

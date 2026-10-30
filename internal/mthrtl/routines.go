@@ -145,12 +145,43 @@ var Routines = []Routine{
 	{"MTH$DATAND", callEntry(vaxfloat.D, arcTangentDegrees)},
 	{"MTH$GATAND", callEntry(vaxfloat.G, arcTangentDegrees)},
 	{"MTH$HATAND", callEntry(vaxfloat.H, arcTangentDegrees)},
+
+	{"MTH$ATAN2", callBinaryEntry(vaxfloat.F, arcTangent2)},
+	{"MTH$DATAN2", callBinaryEntry(vaxfloat.D, arcTangent2)},
+	{"MTH$GATAN2", callBinaryEntry(vaxfloat.G, arcTangent2)},
+	{"MTH$HATAN2", callBinaryEntry(vaxfloat.H, arcTangent2)},
+
+	{"MTH$ATAND2", callBinaryEntry(vaxfloat.F, arcTangent2Degrees)},
+	{"MTH$DATAND2", callBinaryEntry(vaxfloat.D, arcTangent2Degrees)},
+	{"MTH$GATAND2", callBinaryEntry(vaxfloat.G, arcTangent2Degrees)},
+	{"MTH$HATAND2", callBinaryEntry(vaxfloat.H, arcTangent2Degrees)},
+
+	{"MTH$SINH", callEntry(vaxfloat.F, hyperbolicSine)},
+	{"MTH$DSINH", callEntry(vaxfloat.D, hyperbolicSine)},
+	{"MTH$GSINH", callEntry(vaxfloat.G, hyperbolicSine)},
+	{"MTH$HSINH", callEntry(vaxfloat.H, hyperbolicSine)},
+
+	{"MTH$COSH", callEntry(vaxfloat.F, hyperbolicCosine)},
+	{"MTH$DCOSH", callEntry(vaxfloat.D, hyperbolicCosine)},
+	{"MTH$GCOSH", callEntry(vaxfloat.G, hyperbolicCosine)},
+	{"MTH$HCOSH", callEntry(vaxfloat.H, hyperbolicCosine)},
+
+	{"MTH$TANH", callEntry(vaxfloat.F, hyperbolicTangent)},
+	{"MTH$DTANH", callEntry(vaxfloat.D, hyperbolicTangent)},
+	{"MTH$GTANH", callEntry(vaxfloat.G, hyperbolicTangent)},
+	{"MTH$HTANH", callEntry(vaxfloat.H, hyperbolicTangent)},
+
+	{"MTH$ATANH", callEntry(vaxfloat.F, arcHyperbolicTangent)},
+	{"MTH$DATANH", callEntry(vaxfloat.D, arcHyperbolicTangent)},
+	{"MTH$GATANH", callEntry(vaxfloat.G, arcHyperbolicTangent)},
+	{"MTH$HATANH", callEntry(vaxfloat.H, arcHyperbolicTangent)},
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides. The
 // vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2,
-// MTH$HTAN_R7, and MTH$HTAND_R7, which no manual gives and whose registers wait
-// for the VMS probe (Decision 7). A name that has a neighbor with a smaller
+// MTH$HTAN_R7, MTH$HTAND_R7, the hyperbolic functions' (MTH$SINH_R5, ...), and
+// the two-argument MTH$ATAN2_R4's kind, which no manual gives and whose registers
+// wait for the VMS probe (Decision 7). A name that has a neighbor with a smaller
 // register number, such as MTH$DEXP_R7 beside MTH$DEXP_R6 or MTH$ASIN_R5 beside
 // MTH$ASIN_R4, is a second entry: in VMS's image the two jump to the same
 // address.

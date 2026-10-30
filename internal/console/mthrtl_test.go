@@ -19,7 +19,7 @@ X:	.FLOAT	1.0
 	.PSECT	CODE,NOWRT,EXE,LONG
 	.ENTRY	START,^M<>
 	PUSHAF	X
-	CALLS	#1,G^MTH$SINH
+	CALLS	#1,G^MTH$RANDOM
 	CALLS	#0,G^MTH$IINT
 	MOVF	X,R0
 	JSB	G^MTH$SQRT_R2
@@ -52,7 +52,7 @@ func TestMTHRTLLinks(t *testing.T) {
 		// goes by the first name), and a JSB entry.
 		out := buf.String()
 
-		for _, routine := range []string{"MTH$SINH", "MTH$IIFIX", "MTH$SQRT_R2"} {
+		for _, routine := range []string{"MTH$RANDOM", "MTH$IIFIX", "MTH$SQRT_R2"} {
 			if !strings.Contains(out, "routine "+routine+" is not implemented") {
 				t.Errorf("no NOTIMPL for %s; RUN said:\n%s", routine, out)
 			}

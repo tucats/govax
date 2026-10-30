@@ -175,19 +175,28 @@ func reduceDegrees(x *big.Float) (r *big.Float, quadrant uint) {
 //
 //	sin y = y - y^3/3! + y^5/5! - ...
 //	cos y = 1 - y^2/2! + y^4/4! - ...
-//
-// Between them they're every power of y over its factorial, so one loop makes
-// both for the price of either. Since the terms get smaller, it stops at the
-// first that's too small to change the sine, the smaller of the two for such a
-// y: for a tiny y that's at once, and the sine is exactly y.
 func sinCosSeries(y *big.Float, prec uint) (sine, cosine *big.Float) {
+	return factorialSeries(y, true, prec)
+}
+
+// factorialSeries sums the two series
+//
+//	odd  = y + s*y^3/3! + y^5/5! + s*y^7/7! + ...
+//	even = 1 + s*y^2/2! + y^4/4! + s*y^6/6! + ...
+//
+// for |y| below 1, to prec bits, s being -1 if alternating is set and 1
+// otherwise. Between them they're every power of y over its factorial, so one
+// loop makes both for the price of either. Since the terms get smaller, it stops
+// at the first that's too small to change the odd series, the smaller of the two
+// for such a y: for a tiny y that's at once, and that sum is exactly y.
+func factorialSeries(y *big.Float, alternating bool, prec uint) (odd, even *big.Float) {
 	w := prec + scratchBits
 
-	sine = newFloat(w).Set(y)
-	cosine = newFloat(w).SetInt64(1)
+	odd = newFloat(w).Set(y)
+	even = newFloat(w).SetInt64(1)
 
 	if y.Sign() == 0 {
-		return sine, cosine
+		return odd, even
 	}
 
 	smallest := y.MantExp(nil) - int(w)
@@ -199,20 +208,21 @@ func sinCosSeries(y *big.Float, prec uint) (sine, cosine *big.Float) {
 		term.Quo(term, divisor.SetInt64(k))
 
 		if term.Sign() == 0 || term.MantExp(nil) < smallest {
-			return sine, cosine
+			return odd, even
 		}
 
-		// The four cases go round as the series do: y^2 subtracted from the
-		// cosine, y^3 from the sine, y^4 added to the cosine, y^5 to the sine.
-		switch k % 4 {
-		case 0:
-			cosine.Add(cosine, term)
-		case 1:
-			sine.Add(sine, term)
-		case 2:
-			cosine.Sub(cosine, term)
-		case 3:
-			sine.Sub(sine, term)
+		sum := even
+		if k%2 == 1 {
+			sum = odd
+		}
+
+		// To alternate, the signs go round every four terms: y^2 subtracted
+		// from the even series, y^3 from the odd, y^4 added to the even, y^5 to
+		// the odd.
+		if alternating && k%4 >= 2 {
+			sum.Sub(sum, term)
+		} else {
+			sum.Add(sum, term)
 		}
 	}
 }
@@ -374,6 +384,45 @@ func arcCos(x *big.Float, prec uint) *big.Float {
 	if x.Signbit() {
 		half := halfPi(w)
 		angle.Add(angle, half.SetMantExp(half, 1))
+	}
+
+	return newFloat(prec).Set(angle)
+}
+
+// arcTan2 returns the angle in radians, between -pi and pi, whose tangent is
+// y/x, in the quadrant the signs of y and x say, to prec bits. y and x mustn't
+// both be 0. The manual's rule:
+//
+//	x = 0    pi/2, with y's sign
+//	x > 0    atan(y/x)
+//	x < 0    pi, with y's sign, plus atan(y/x)
+//
+// where 0 counts as positive, a VAX value having no -0. So an angle of x < 0 and
+// y = 0 is pi. When x < 0, atan(y/x) has the opposite sign to y and is at most
+// pi/2 in size, so the sum never cancels more than a bit.
+func arcTan2(y, x *big.Float, prec uint) *big.Float {
+	w := prec + scratchBits
+
+	if x.Sign() == 0 {
+		angle := newFloat(prec).Set(halfPi(w))
+		if y.Signbit() {
+			angle.Neg(angle)
+		}
+
+		return angle
+	}
+
+	angle := arcTan(newFloat(w).Quo(y, x), w)
+
+	if x.Signbit() {
+		half := halfPi(w)
+		half.SetMantExp(half, 1)
+
+		if y.Signbit() {
+			half.Neg(half)
+		}
+
+		angle.Add(angle, half)
 	}
 
 	return newFloat(prec).Set(angle)

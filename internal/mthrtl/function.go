@@ -20,6 +20,10 @@ import (
 // vaxfloat.ErrOverflow or vaxfloat.ErrUnderflow, or a domainError.
 type function func(f vaxfloat.Format, x vaxfloat.Value) (vaxfloat.Value, error)
 
+// binaryFunction is a function of two floating arguments: MTH$ATAN2's sine and
+// cosine. Its errors are a function's.
+type binaryFunction func(f vaxfloat.Format, a, b vaxfloat.Value) (vaxfloat.Value, error)
+
 // domainError is an argument a function isn't defined on, as the condition
 // value its routine signals.
 type domainError uint32
@@ -35,13 +39,11 @@ var (
 	mthFloUndMat = vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
 )
 
-// evaluate runs fn on x for the routine's caller. An underflow is an error
-// only for a caller that set PSW<FU> (floating underflow enable, with BISPSW
-// or an entry mask): for any other, the manual's result is 0.0 and nothing
-// is signaled.
-func evaluate(env *corevms.Environment, fn function, f vaxfloat.Format, x vaxfloat.Value) (vaxfloat.Value, error) {
-	v, err := fn(f, x)
-
+// gateUnderflow is what a function's result and error mean to the routine's
+// caller. An underflow is an error only for a caller that set PSW<FU> (floating
+// underflow enable, with BISPSW or an entry mask): for any other, the manual's
+// result is 0.0 and nothing is signaled.
+func gateUnderflow(env *corevms.Environment, v vaxfloat.Value, err error) (vaxfloat.Value, error) {
 	if errors.Is(err, vaxfloat.ErrUnderflow) {
 		enabled, ferr := env.CallerFU()
 		if ferr != nil {
@@ -75,57 +77,64 @@ func signalFailure(env *corevms.Environment, err error) (uint32, error) {
 }
 
 // callEntry makes the routine reached by CALLS or CALLG for fn in format f.
-// Its arguments are by reference, as the MTH$ routines' are. An F, D, or G
-// result comes back in R0 or R0:R1, and the argument is the first one; an H
-// result is too long for that, so it goes through the first argument, and
-// the value is the second.
 func callEntry(f vaxfloat.Format, fn function) corevms.ShimFunc {
-	if f == vaxfloat.H {
-		return throughFirstArgument(fn)
-	}
-
-	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
-		x, err := loadArg(env, f, arg(argv, 0))
-		if err != nil {
-			return fail(env, err)
-		}
-
-		v, err := evaluate(env, fn, f, x)
-		if err != nil {
-			return signalFailure(env, err)
-		}
-
-		return returnFloat(env, f, v), nil
-	}
+	return callWithArguments(f, 1, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
+		return fn(f, args[0])
+	})
 }
 
-// throughFirstArgument is callEntry for an H_floating result.
+// callBinaryEntry is callEntry for a function of two arguments.
+func callBinaryEntry(f vaxfloat.Format, fn binaryFunction) corevms.ShimFunc {
+	return callWithArguments(f, 2, func(args []vaxfloat.Value) (vaxfloat.Value, error) {
+		return fn(f, args[0], args[1])
+	})
+}
+
+// callWithArguments makes a routine reached by CALLS or CALLG that computes its
+// result from count arguments, by reference, as the MTH$ routines' are. An F, D,
+// or G result comes back in R0 or R0:R1, and the arguments start with the first.
+// An H result is too long for that, so it goes through the first argument, and
+// the values follow it.
 //
-// A handler that continues from the routine's condition can correct only R0
-// and R1, not this result, so what's in memory is what the condition leaves:
-// the reserved operand, or 0.0 for an underflow. Unconfirmed (the probe,
-// subtask 10).
-func throughFirstArgument(fn function) corevms.ShimFunc {
-	const f = vaxfloat.H
+// A handler that continues from the routine's condition can correct only R0 and
+// R1, not a result in memory, so what's there is what the condition leaves: the
+// reserved operand, or 0.0 for an underflow. Unconfirmed (the probe, subtask 10).
+func callWithArguments(f vaxfloat.Format, count int, compute func(args []vaxfloat.Value) (vaxfloat.Value, error)) corevms.ShimFunc {
+	first := 0
+	if f == vaxfloat.H {
+		first = 1
+	}
 
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
-		x, err := loadArg(env, f, arg(argv, 1))
-		if err != nil {
-			return fail(env, err)
+		args := make([]vaxfloat.Value, count)
+
+		for i := range args {
+			x, err := loadArg(env, f, arg(argv, first+i))
+			if err != nil {
+				return fail(env, err)
+			}
+
+			args[i] = x
 		}
 
-		result := arg(argv, 0)
+		v, err := compute(args)
+		v, err = gateUnderflow(env, v, err)
 
-		v, err := evaluate(env, fn, f, x)
 		if err != nil {
-			if serr := storeFailed(env, f, result, err); serr != nil {
-				return fail(env, serr)
+			if f == vaxfloat.H {
+				if serr := storeFailed(env, f, arg(argv, 0), err); serr != nil {
+					return fail(env, serr)
+				}
 			}
 
 			return signalFailure(env, err)
 		}
 
-		if err := storeResult(env, f, result, v); err != nil {
+		if f != vaxfloat.H {
+			return returnFloat(env, f, v), nil
+		}
+
+		if err := storeResult(env, f, arg(argv, 0), v); err != nil {
 			return fail(env, err)
 		}
 
@@ -151,7 +160,9 @@ func jsbEntry(f vaxfloat.Format, fn function) corevms.JSBShimFunc {
 			return err
 		}
 
-		v, err := evaluate(env, fn, f, x)
+		v, err := fn(f, x)
+		v, err = gateUnderflow(env, v, err)
+
 		if err != nil {
 			if f == vaxfloat.H {
 				env.CPU().SetGPR(registers.R2, 0)
@@ -177,7 +188,7 @@ type pairFunction func(f vaxfloat.Format, x vaxfloat.Value) (first, second vaxfl
 
 // evaluatePair runs fn on x for the routine's caller. It returns the results
 // and whether to signal the underflow: only for a caller that set PSW<FU>, as
-// in evaluate. Its error is the one from reading the caller's PSW.
+// in gateUnderflow. Its error is the one from reading the caller's PSW.
 func evaluatePair(env *corevms.Environment, fn pairFunction, f vaxfloat.Format, x vaxfloat.Value) (first, second vaxfloat.Value, signal bool, err error) {
 	first, second, ferr := fn(f, x)
 	if ferr == nil {

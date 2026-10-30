@@ -3,8 +3,8 @@
 **Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
 its Decision 3 accepted by the author the same day; subtasks 2, the package
 and its registration, 3, the engine, square root, exponentials, and
-logarithms, and 4, the trigonometric functions and their inverses, the same
-day). Needs Phase 74 (the plan)
+logarithms, 4, the trigonometric functions and their inverses, and 5, the
+hyperbolic functions and ATAN2, the same day). Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -332,7 +332,14 @@ be corrected.
   - what `MTH$TAN`'s overflow is for: no argument in any format reaches it in
     govax;
   - the undocumented JSB entries' registers, starting with `COSH_R4` and
-    `SQRT_R2`;
+    `SQRT_R2`, and how the two-argument ones (`ATAN2_R4`, `DATAN2_R7`, ...)
+    take their arguments;
+  - `ATAN2` of a sine too small beside its cosine for the quotient to fit the
+    format: govax returns 0.0 quietly, whatever FU, because the routine's
+    conditions list no `FLOUNDMAT` and, unlike `SIND`'s and `TAND`'s, its
+    description doesn't mention underflow;
+  - `ATAN2` of 0 and a negative cosine: govax gives pi, the manual's
+    `pi * sign(Y)` with 0 counted as positive;
   - last-bit comparison, reported as a count rather than held as a test.
 
 ## Subtasks (revised by the survey)
@@ -346,7 +353,7 @@ be corrected.
    JSB entries with them. Done.
 4. **Trigonometric and inverse functions**, radians and degrees, exact
    reduction. Done.
-5. **Hyperbolic functions and ATAN2.**
+5. **Hyperbolic functions and ATAN2.** Done.
 6. **Table 1-1's routines:** absolute value, positive difference, sign, floor,
    truncation, nearest integer, remainder, maximum and minimum, conversions,
    bit functions. (New: the plan's subtask 5 was too large.)
@@ -473,3 +480,45 @@ be corrected.
   reduction, 3.3 to 6.4 us for an arc tangent, and 3.5 to 7.8 us for an arc sine
   or cosine, F to H: still tens of VAX instructions' time. Pi to the 16,700 bits
   H's largest angles need takes 5.2 ms, once.
+- **2026-10-30:** Subtask 5. `enginehyper.go` is the engine's part. `sinhCosh`
+  uses the exponentials for |x| of at least 1 and below that the Taylor series,
+  where a difference of exponentials would cancel; the series is
+  `factorialSeries`, the loop `sinCosSeries` already had, now with an
+  `alternating` flag, as `oddPowerSeries` has. `arcTanh` is `atanhSeries` below 1/8
+  and the manual's logarithm above it. `arcTan2` (`enginetrig.go`) is the manual's
+  three cases, with 0 counted as positive. `hyperbolic.go` makes the routines:
+  to `sineFunction`, `cosineFunction`, and `tangentFunction` a hyperbolic pair is
+  one more pair, so `angleFunction` became `sinCosFunction`, and `MTH$TANH` is
+  `tangentFunction(sinhCosh)`. `function.go`'s `binaryFunction` and
+  `callBinaryEntry` are the two-argument routines; `callEntry` and they now share
+  `callWithArguments`, in place of `throughFirstArgument`, and `evaluate` became
+  `gateUnderflow`, on a result already computed. The tables gain 24 CALL entries.
+  The 15 JSB entries of these families, which no manual gives, stay stubs
+  (Decision 7), and `TestMTHRTLLinks` moved from `MTH$SINH` to `MTH$RANDOM`.
+  The manual's piecewise limits aren't written down, since rounding reaches
+  them: `a(z)`'s "returns X" or "returns 1", `b(z)`'s single exponential, `h`'s
+  sign, `ATAN2`'s `Y/X > 2^(f+1)`. `SINH` and `COSH` overflow past the manual's
+  88.722, 709.782, and 11356.523, and `TANH` is 1 at each format's `h`, both held
+  by tests. The manual's `g` is not: `TANH` at `G`'s `2^-26` and `H`'s `2^-56`, both
+  powers of 2, rounds to the value just below the `X` the manual returns, so govax
+  is the more accurate there. The H page's
+  `zLOG((X + 1)/(X - 1))/2` for `ATANH` is a misprint; the F page's
+  `(1 + X)/(1 - X)` is right, and `(X + 1)/(X - 1)` is negative inside the domain.
+  `enginehyper_test.go` checks each function against a reference by other means at
+  512 or 1024 bits (the definitions on `referenceExp`, `tanh` as
+  `(e^2x - 1)/(e^2x + 1)`, `atanh` by `referenceLog` where the code uses its series,
+  and the first terms of the power series for a tiny argument), in every format,
+  across the range and out of it, either side of the points where the code changes
+  method, and at each end. It also checks published digits, symmetry, exact values
+  (`ATAND2` of the axes and diagonals), the limits, the domains, and the
+  extremes, where a quotient is beyond any format. `TestEntriesFromAProgram` runs
+  every new entry from its MACRO program, its generator now taking a second
+  argument. Breaking the code showed the checks can tell: guard and scratch bits
+  at 0 fail 11,234, sinh by exponentials everywhere 549, an alternating series
+  1,326, atanh by logarithm everywhere 370, `1 - x` at 64 bits 94, no pi for a
+  negative cosine 894, pi's sign ignoring the sine's 554, a quotient at 64 bits 181,
+  `ATAN2`'s underflow reported 53, its arguments swapped 40, and H's arguments off
+  by one 179; `ATANH`'s domain admitting 1 panics. A call costs 1.7 to 2.9 us for a
+  hyperbolic sine or cosine by exponentials, 2.0 to 3.7 us by the series, 2.1 to
+  3.3 us for a tangent, 2.6 to 4.8 us for `ATANH`, and 2.7 to 5.2 us for `ATAN2`,
+  F to H: still tens of VAX instructions' time.

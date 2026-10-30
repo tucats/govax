@@ -38,7 +38,8 @@
 // Values; condition.go signals the library's conditions. engine.go is the
 // functions on arbitrary-precision numbers, written once for every format;
 // function.go makes a table's routines from a function and a format; explog.go
-// is the square root, exponential, and logarithm functions; and trig.go, on
+// is the square root, exponential, and logarithm functions; trig.go, on
 // enginetrig.go's part of the engine, is the trigonometric functions and their
-// inverses, in radians and degrees.
+// inverses, in radians and degrees; and hyperbolic.go, on enginehyper.go's, is
+// the hyperbolic functions.
 package mthrtl

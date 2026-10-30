@@ -315,7 +315,8 @@ never had.
   (2026-10-30) is its `math/big` engine, with square root, exponentials,
   and logarithms in all four formats, CALL and JSB; subtask 4 (2026-10-30)
   is the trigonometric functions and their inverses, radians and degrees,
-  with SINCOS's two results.
+  with SINCOS's two results; subtask 5 (2026-10-30) is the hyperbolic
+  functions and ATAN2.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1390,16 +1391,20 @@ expect adjustment as phases land):
   format's plus 40 bits, and rounds once with `vaxfloat`; Go's `math` isn't
   used for a result, so every host gets the same bits); `constant` holds ln 2
   and ln 10, made on first need. `function.go` makes a table's routine from a
-  `function` and a format (`callEntry`, `jsbEntry`; `pairFunction`,
-  `callPairEntry`, and `jsbPairEntry` for SINCOS's two results), and turns the
-  function's error into the condition, an underflow only if the caller set FU.
+  `function` and a format (`callEntry`, `jsbEntry`; `binaryFunction` and
+  `callBinaryEntry` for ATAN2's two arguments; `pairFunction`, `callPairEntry`,
+  and `jsbPairEntry` for SINCOS's two results), and turns the function's error
+  into the condition, an underflow only if the caller set FU.
   `enginetrig.go` is the engine's angles: `pi` to as many bits as an H angle
   needs (`computePi`, in fixed point; 16,700 bits for the largest),
   `reduceRadians` (it looks at how far the difference cancelled, and tries
   again with more bits if too far), `reduceDegrees` (exact, in integers, so a
   multiple of 90 gets exact answers), one series for a sine and cosine
-  together, and `arcTan`, `arcSin`, `arcCos`. `trig.go` makes radians' and
-  degrees' functions from these.
+  together (`factorialSeries`, which alternates or not), and `arcTan`,
+  `arcSin`, `arcCos`, `arcTan2`. `trig.go` makes radians' and degrees' functions
+  from these. `enginehyper.go` is `sinhCosh` (exponentials, or that series below
+  1) and `arcTanh`; `hyperbolic.go` makes the routines, the sine, cosine, and
+  tangent by `trig.go`'s makers on `sinhCosh`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s
