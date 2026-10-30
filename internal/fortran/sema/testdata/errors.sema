@@ -1,0 +1,67 @@
+== main program ERRS
+  ERRS                 program unit
+  I         INTEGER    variable         $LOCAL+0
+  A         INTEGER    array(1:10)      $LOCAL+4
+  X         REAL       variable         $LOCAL+44
+  J         INTEGER    variable         $LOCAL+48
+  SUB                  subroutine
+  $LOCAL is 52 bytes
+6           I = 1
+13          DO 10 I = 1, 10, 1
+15            IF (LOGICAL A[I]) GO TO 30
+16    10      CONTINUE
+18          CALL SUB(A[], X)
+19          GO TO 20
+20          END
+== SUBROUTINE SUB
+  SUB                  program unit
+  A         INTEGER    array(1:*)       argument 1
+  X         REAL       variable         argument 2
+  I         INTEGER    variable         $LOCAL+0
+  $LOCAL is 4 bytes
+27          DO 40 I = 1, 3, 1
+28            IF (.EQ.:I I 2) THEN
+29              X = (REAL A[I])
+30    40        CONTINUE
+31            END IF
+32          END
+
+%FORT-E-SYNTAX, expected an expression, but found ')'
+  at line 8 of ERRORS.FOR
+        IF (X .GT.) THEN
+  ----------------^
+
+%FORT-E-NOTIMPL, the READ statement is not implemented yet
+  at line 14 of ERRORS.FOR
+           READ *, A(I)
+  ---------^
+
+%FORT-E-SYNTAX, expected the subroutine's name, but found '('
+  at line 22 of ERRORS.FOR
+        SUBROUTINE (B)
+  -----------------^
+
+%FORT-E-LATEDECL, a declaration must come before the executable statements, the first of which is at line 6
+  at line 7 of ERRORS.FOR
+        INTEGER J
+  ------^
+
+%FORT-E-NEEDSUBSCRIPT, the array A can't be used without subscripts here
+  at line 17 of ERRORS.FOR
+        X = A
+  ----------^
+
+%FORT-E-UNDEFLBL, statement label 30 is never defined
+  at line 15 of ERRORS.FOR
+           IF (A(I)) GO TO 30
+  -------------------------^
+
+%FORT-E-UNDEFLBL, statement label 20 is never defined
+  at line 19 of ERRORS.FOR
+        GO TO 20
+  ------------^
+
+%FORT-E-DONEST, the IF block at line 28 must end before the DO loop of line 27 ends
+  at line 30 of ERRORS.FOR
+     40    CONTINUE
+  ---------^

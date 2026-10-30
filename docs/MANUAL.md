@@ -4347,8 +4347,10 @@ compiler's object code, messages, or listings is not a goal.
 source's lines into statements, checks their layout, and reads INCLUDE
 files; it lexes and parses each statement, reporting syntax errors and
 any statement outside what it can compile so far (`%FORT-E-NOTIMPL`,
-naming the statement: "the READ statement is not implemented yet"). It
-generates no code yet, so the MACRO file it writes assembles into an
+naming the statement: "the READ statement is not implemented yet"); and
+it checks each program unit's meaning: declarations and types, IF
+blocks and DO loops, statement labels and jumps, and calls between the
+file's units. It generates no code yet, so the MACRO file it writes assembles into an
 empty module. FTNRTL exists, with its first two routines.
 
 ### 14.1 The FORTRAN command
@@ -4521,6 +4523,16 @@ FORTRAN compiler was available to check them). So far:
 - INCLUDE files are found relative to the including file, ten deep at
   most.
 - `FTN$STOP` writes to `SYS$OUTPUT`.
+- Where one file holds both a routine and a reference to it, the
+  compiler checks them against each other: a FUNCTION's type, a
+  SUBROUTINE called and not referenced as a function, and the number of
+  arguments. VAX FORTRAN compiled each unit alone and couldn't.
+- Changing a DO loop's control variable inside the loop is an error
+  (the manual forbids it; govax checks the loop's own statements).
+- `.TRUE.` is the longword -1 and `.FALSE.` 0 (only bit 0 counts); on
+  LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
+  do on INTEGERs.
+- A name only declared, never used, is a variable, and gets storage.
 
 ---
 

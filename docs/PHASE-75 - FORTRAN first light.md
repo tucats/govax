@@ -1006,3 +1006,109 @@ To go into the progress log as each is built, and into MANUAL.md's
     `subset` with three units and every statement of the subset,
     `errors`), whose `.ast` files `-update` rewrites; and the driver's
     `TestCompileParseErrors`.
+- **2026-10-30:** Subtask 4 done: semantic analysis
+  (`internal/fortran/sema`).
+  - `Analyze(file, mainName, messages)` returns a `Program` of `Unit`s:
+    each with its `Symbols` in order of first appearance (`Symbol`: type,
+    `Class`, dimensions, dummy position, `$LOCAL` offset), `Params`,
+    `Result`, `Labels`, `LocalSize`, and `Body`, the structured tree of
+    Part B (`Assign`, `Call`, `Goto`, `If` with `Arm`s, `Else`, and
+    `EndIf`, also a logical IF's one arm; `Do` holding its body,
+    `Continue`, `Stop`, `Return`, `End`, `Print` for PRINT and WRITE).
+    Expressions are `Const`, `Var`, `Elem`, `ArrayRef` (a whole array, an
+    argument or I/O item only), `FuncRef`, `Unary`, `Binary`, `Compare`,
+    and `Convert`; actual arguments are `Arg`s, `Copy` marking a
+    parenthesized variable or element. `Dump` is the golden tests' form.
+  - Two walks per unit: `decl.go` (type statements, DIMENSION, LATEDECL,
+    and which `F(X) = ...` assignments are statement function
+    definitions: those before the first executable statement whose F
+    isn't an array), then `stmt.go` and `exec.go` (the executable
+    statements, with a stack of open constructs that builds the blocks
+    and finds the nesting errors). `labels.go` checks each jump against
+    the target's path of open blocks; END IF is in the block before it.
+    `storage.go` lays out `$LOCAL`; `fold.go` folds constants with
+    vaxfloat (16777217 + 0.0 is 16777218.0, the VAX's rounding of a
+    tie, not IEEE's).
+  - Classes come from use: a name only typed is `Unclassified` until a
+    statement uses it as a variable or a function; at the end it is a
+    variable. The unit's own name is `UnitName` (a function's is its
+    `Result` variable).
+  - `Compile` runs sema after the parser, even after the parser's
+    errors (the tree keeps a broken statement's place and label), and
+    names an unnamed main program `MainName(file)`, the file's module
+    name cut to 26 with `$MAIN`. Nothing uses the result yet; the
+    MACRO module is still named for the file (Correction 1 is subtask
+    6's).
+  - Messages (all errors): DUPUNIT, TWOMAINS, DUPDUMMY, DUPDECL, DUPDIM,
+    LATEDECL, BADLENGTH, BADBOUND, BOUNDORDER, ASSUMEDSIZE, BADUSE,
+    RECURSIVE, NOTARRAY, NEEDSUBSCRIPT, SUBSCRIPTS, NOSIZE, BADOPERAND,
+    NOTLOGICAL, BADTARGET, INTRANGE, REALRANGE, DIVZERO, MAINRETURN, NOIF,
+    NOENDIF, ELSEORDER, NODO, DOTERM, DONEST, DOVAR, DOVARSET, DOSTEP0,
+    DUPLABEL, UNDEFLBL, NOTEXEC (also for ELSE IF's and ELSE's labels),
+    INTOBLOCK, SHAREDTERM (the shared-terminal rule, split from
+    INTOBLOCK for a clearer text), FUNCTYPE, ARGCOUNT. Part B's MIXTYPES
+    isn't needed yet: a character constant where a number is wanted is
+    a Hollerith constant in VAX FORTRAN (2.2.1.6), so it is NOTIMPL
+    until Phase 82, and no CHARACTER variables exist yet.
+  - NOTIMPL in sema: `**`, `//`, `.EQV.`/`.NEQV.`/`.XOR.`, lengths other
+    than 4 (INTEGER*2, REAL*8, ...), D and Q exponents, adjustable
+    arrays, statement functions, alternate returns, dummy procedures,
+    the intrinsic functions (Table D-3's generic and specific names; the
+    OCR's "AFLOAT" taken for QFLOAT) and the system subroutines and
+    functions of D.4, character comparison, character constants as
+    arguments or in numeric contexts, formats other than `*`, units
+    other than `*`, unformatted WRITE.
+  - Additions to the design, ours: assumed-size dummy arrays (`T(*)`)
+    are accepted now, since without bounds checking a one-dimensional
+    one compiles as any other dummy array (not as a whole I/O item,
+    NOSIZE); arrays of more than one dimension with constant bounds are
+    accepted (`Elem` has a subscript per dimension; lowering computes
+    the column-major offset); changing an active DO variable is an error
+    (DOVARSET); a DO whose label is already defined is NODO at once;
+    `IF (e)` takes an INTEGER condition as well as a LOGICAL one (2.3.4
+    lists integer elements among a logical expression's), converted to
+    LOGICAL; LOGICAL operands of arithmetic and relational operators are
+    INTEGERs (2.3.1.2). Between the file's units: a unit's name used as
+    a variable elsewhere is BADUSE, a function's references must agree
+    with its type (FUNCTYPE), and every reference must pass as many
+    arguments as there are dummies (ARGCOUNT); VAX FORTRAN couldn't
+    check these, compiling each unit alone.
+  - Recovery, so a mistake is reported once: an expression with an
+    error has the `Invalid` type, and operations on it are silent; a
+    name whose declaration failed (a bad bound, a type this phase can't
+    compile) is `broken`, and its uses are silent; a statement the
+    parser rejected keeps its block structure (a broken IF THEN still
+    opens a block); a loop whose nesting or terminal statement was
+    reported closes quietly at the unit's end. A unit with a declaration
+    the parser couldn't read (a NOTIMPL or rejected specification
+    statement other than FORMAT and DATA: COMMON, PARAMETER, IMPLICIT,
+    ...) is `incomplete`: it gets only the `structural` messages
+    (labels, blocks, loops, statement order), since without those
+    declarations the rest would mostly be wrong. A unit whose header the
+    parser rejected is left out.
+  - Choices of ours, unconfirmed: `.TRUE.` is -1 in folding as well as
+    storage, and `.AND.`, `.OR.`, `.NOT.` fold bit by bit on LOGICALs
+    too; a name only declared is a variable with storage; an INTEGER*2
+    constant (-32768 to 32767) is an INTEGER*4 one, as Part A says;
+    folding an underflowing REAL gives 0 silently (the CPU's default),
+    while a REAL literal out of range is REALRANGE; NODO, DONEST, and
+    DOTERM leave the loop open instead of guessing where it ends. The
+    first three are in MANUAL.md's 14.5.
+  - Left for later: whether a use before a declaration (4.4) is checked
+    (with every declaration before the executable statements it can't
+    happen in this subset; PARAMETER, Phase 76, makes it possible);
+    argument types between the file's units; a function whose result is
+    never assigned.
+  - DUNGEON V3.2A (local only): its 93 units compile without a panic,
+    and still get only the parser's 44,320 NOTIMPL messages, the units
+    with COMMON, PARAMETER, and the like being incomplete. (Before the
+    incomplete rule it got 956 messages of cascade, NOTARRAY from arrays
+    in COMMON and BADBOUND from PARAMETER bounds among them.)
+  - Tests: `TestErrors` (125 programs, each with its messages and their
+    columns), `TestExpressions` (56 expressions: types, conversions,
+    folding), `TestConstants` (F_floating bits), and `TestGolden` over
+    `sema/testdata` (`squares`, `subset` with three units, `nesting`
+    with shared terminals and nested blocks, `sumup`, the package doc's
+    example, and `errors`, recovery from syntax errors); `-update`
+    rewrites the `.sema` files. The driver's `TestCompileParseErrors`
+    now sees sema's UNDEFLBL after the parser's errors.

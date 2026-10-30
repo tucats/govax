@@ -98,6 +98,153 @@ var messages = map[string]kind{
 	// not execute (section 5.7.2): a block IF, a DO, another logical IF,
 	// END, or a statement that isn't executable.
 	"BADIFSTMT": {Error, "a logical IF can't execute %s"},
+
+	// Semantic analysis's messages (internal/fortran/sema).
+
+	// Program units.
+
+	// DUPUNIT is a second program unit with a name the file has already
+	// given one.
+	"DUPUNIT": {Error, "there is already a program unit named %s, at line %d"},
+
+	// TWOMAINS is a second main program in a file.
+	"TWOMAINS": {Error, "a file can hold only one main program, and there is one at line %d"},
+
+	// DUPDUMMY is a name twice among a subprogram's dummy arguments.
+	"DUPDUMMY": {Error, "%s is already a dummy argument of this %s"},
+
+	// Declarations.
+
+	// DUPDECL is a second type declaration of a name.
+	"DUPDECL": {Error, "%s's type is already declared, at line %d"},
+
+	// DUPDIM is a second array declarator for a name.
+	"DUPDIM": {Error, "%s's dimensions are already declared, at line %d"},
+
+	// LATEDECL is a declaration after the unit's first executable
+	// statement (Figure 1-1).
+	"LATEDECL": {Error, "a declaration must come before the executable statements, the first of which is at line %d"},
+
+	// BADLENGTH is a length a type doesn't have: INTEGER*3.
+	"BADLENGTH": {Error, "%s*%d is not a data type; %s's lengths are %s"},
+
+	// BADBOUND is an array bound that isn't an integer constant
+	// expression (where an adjustable array's isn't allowed).
+	"BADBOUND": {Error, "an array's bounds must be integer constants here"},
+
+	// BOUNDORDER is an upper bound less than its lower bound.
+	"BOUNDORDER": {Error, "the upper bound %d is less than the lower bound %d"},
+
+	// ASSUMEDSIZE is an upper bound of * anywhere but a dummy array's last
+	// dimension.
+	"ASSUMEDSIZE": {Error, "only a dummy array's last upper bound can be *"},
+
+	// Names and expressions.
+
+	// BADUSE is a name used as something it can't be: a variable called
+	// as a subroutine, a subroutine's own name given a type.
+	"BADUSE": {Error, "%s is %s, so it can't %s"},
+
+	// RECURSIVE is a subprogram referring to itself (section 6.2).
+	"RECURSIVE": {Error, "%s can't refer to itself: a FORTRAN subprogram is not recursive"},
+
+	// NOTARRAY is subscripts on a name that isn't an array.
+	"NOTARRAY": {Error, "%s is not an array, so it can't have subscripts"},
+
+	// NEEDSUBSCRIPT is a whole array where only an element or a scalar
+	// may be (section 2.2.3.5).
+	"NEEDSUBSCRIPT": {Error, "the array %s can't be used without subscripts here"},
+
+	// SUBSCRIPTS is an array element with the wrong number of subscripts.
+	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},
+
+	// NOSIZE is an assumed-size array as a whole in an I/O list.
+	"NOSIZE": {Error, "the assumed-size array %s has no size, so it can't be written as a whole"},
+
+	// BADOPERAND is an operator applied to a type it doesn't take:
+	// .AND. on a REAL.
+	"BADOPERAND": {Error, "%s can't be applied to a %s value"},
+
+	// NOTLOGICAL is an IF's condition that is neither LOGICAL nor
+	// INTEGER.
+	"NOTLOGICAL": {Error, "a condition must be LOGICAL or INTEGER, and this one is %s"},
+
+	// BADTARGET is an assignment to something that can't hold a value.
+	"BADTARGET": {Error, "can't assign a value to %s"},
+
+	// INTRANGE is an integer constant, or a constant expression's value,
+	// outside INTEGER*4's range.
+	"INTRANGE": {Error, "%s is outside INTEGER's range, -2147483648 to 2147483647"},
+
+	// REALRANGE is a real constant, or a constant expression's value,
+	// too large or too small for REAL (F_floating).
+	"REALRANGE": {Error, "%s is outside REAL's range, about 0.29E-38 to 1.7E38"},
+
+	// DIVZERO is a constant expression that divides by zero.
+	"DIVZERO": {Error, "this constant expression divides by zero"},
+
+	// Statements and blocks.
+
+	// MAINRETURN is RETURN in a main program (section 5.9).
+	"MAINRETURN": {Error, "a main program can't have a RETURN statement; use STOP or END"},
+
+	// NOIF is ELSE IF, ELSE, or END IF outside any IF block.
+	"NOIF": {Error, "this %s statement is not in an IF block"},
+
+	// NOENDIF is an IF block the unit's END reaches before its END IF.
+	"NOENDIF": {Error, "this IF block has no END IF statement"},
+
+	// ELSEORDER is ELSE IF or ELSE after the block's ELSE, which only END
+	// IF may follow (section 5.7.3).
+	"ELSEORDER": {Error, "this %s statement comes after the IF block's ELSE statement, at line %d"},
+
+	// NODO is a DO loop whose terminal statement never comes after it.
+	"NODO": {Error, "no statement after this DO statement has the label %d"},
+
+	// DOTERM is a statement that may not end a DO loop (section 5.3.1).
+	"DOTERM": {Error, "a DO loop can't end with %s"},
+
+	// DONEST is a DO loop or IF block that doesn't nest wholly inside
+	// the construct around it (sections 5.3.1.2 and 5.7.3.1).
+	"DONEST": {Error, "the %s at line %d must end before %s"},
+
+	// DOVAR is a DO variable that isn't an INTEGER or REAL variable.
+	"DOVAR": {Error, "a DO loop's variable must be an INTEGER or REAL variable, and %s is %s"},
+
+	// DOVARSET is a change to an active DO loop's control variable.
+	"DOVARSET": {Error, "%s is the control variable of the DO loop at line %d, which can't change it"},
+
+	// DOSTEP0 is a DO loop whose increment is the constant zero.
+	"DOSTEP0": {Error, "a DO loop's increment can't be zero"},
+
+	// Labels.
+
+	// DUPLABEL is a statement label defined twice in a unit.
+	"DUPLABEL": {Error, "statement label %d is already on the statement at line %d"},
+
+	// UNDEFLBL is a jump to a label no statement in the unit has.
+	"UNDEFLBL": {Error, "statement label %d is never defined"},
+
+	// NOTEXEC is a jump to a statement that can't be jumped to.
+	"NOTEXEC": {Error, "statement label %d is on %s, which a jump can't go to"},
+
+	// INTOBLOCK is a jump into an IF block from outside it, or from one
+	// of its blocks to another (section 5.7.3.1).
+	"INTOBLOCK": {Error, "this jump to label %d goes into an IF block from outside it"},
+
+	// SHAREDTERM is a jump to the terminal statement nested DO loops
+	// share from outside the innermost of them (section 5.3.1.3).
+	"SHAREDTERM": {Error, "statement label %d ends more than one DO loop, so only the innermost loop can jump to it"},
+
+	// References between the file's units.
+
+	// FUNCTYPE is a reference to a function of the file whose type it
+	// doesn't agree with.
+	"FUNCTYPE": {Error, "the function %s is %s (line %d), but is used here as %s"},
+
+	// ARGCOUNT is a reference to a routine of the file with a different
+	// number of arguments from its dummy arguments.
+	"ARGCOUNT": {Error, "%s takes %s (line %d), but is given %d here"},
 }
 
 // Known reports whether ident is a message in the table, and its

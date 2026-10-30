@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
 	"github.com/tucats/govax/internal/fortran/parse"
+	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
 )
 
@@ -97,13 +98,15 @@ func Compile(opts Options, file File) Result {
 		Continuations: opts.Continuations,
 	}, &source.File{Spec: file.Spec, Lines: file.Lines, Handle: file.Handle}, opts.Includes, &messages)
 
-	// The second and third passes: each statement's kind and tokens,
-	// then the syntax tree. Nothing uses the tree yet (semantic analysis
-	// is Phase 75's subtask 4), but the lexer's and the parser's messages
-	// are reported, a statement the compiler can't compile yet among them
-	// (NOTIMPL).
+	// The second, third, and fourth passes: each statement's kind and
+	// tokens, then the syntax tree, then its meaning. Semantic analysis
+	// runs even after the parser's errors, since the tree keeps a
+	// statement with an error (and its label) in its place, so that one
+	// compilation reports as much as it can. Nothing uses its result yet
+	// (the IR is Phase 75's subtask 5), but its messages are reported.
 	if !messages.Failed() {
-		parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+		sema.Analyze(tree, MainName(file.Name), &messages)
 	}
 
 	writeHeader(&w, opts, file, module)
@@ -210,6 +213,18 @@ func ModuleName(name string) string {
 	}
 
 	return module
+}
+
+// MainName is the name of a main program without a PROGRAM statement in
+// the source file named name (section 4.12): the file's name, cut to 26
+// characters, with $MAIN after it, so SQUARES.FOR's is SQUARES$MAIN.
+func MainName(name string) string {
+	module := ModuleName(name)
+	if len(module) > 26 {
+		module = module[:26]
+	}
+
+	return module + "$MAIN"
 }
 
 // vmsTime is t as VMS shows a date and time: 29-OCT-2026 14:05:11.20.
