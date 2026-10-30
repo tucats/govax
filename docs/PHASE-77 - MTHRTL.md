@@ -1,8 +1,9 @@
 # Phase 77 — MTHRTL: VMS's mathematics library, emulated
 
-**Status:** planned (2026-10-29). Needs Phase 74 (the plan) only: this
-phase is independent of the compiler and could be done at any time
-before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
+**Status:** in progress (subtask 1, the survey and capture, 2026-10-30;
+Decision 3 below needs the author's answer). Needs Phase 74 (the plan)
+only: this phase is independent of the compiler and could be done at any
+time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
 
 ## Goal
@@ -66,41 +67,284 @@ made), not part of FTNRTL. This was the author's direction
   LIBRTL) is settled by the captured tables; the routine goes where VMS
   put it.
 
+## The survey (subtask 1)
+
+### Sources
+
+- VMS 5.0 *MTH$* manual (`AA-LA72A`) and *OTS$* manual (`AA-LA73A`), both
+  OCR, read with their errors in mind; the 7.3 *MTH$* manual
+  (`OVMS_73_RTL_MTH.PDF`), whose text is clean.
+- MTHRTL.EXE from VMS 7.1's system disk (`testdata/disks/rq0-ra92.dsk`,
+  `[VMS$COMMON.SYSLIB]`): its global symbol table, captured into `vmsdef`,
+  and the first eight bytes of each transfer vector entry, read once to
+  tell CALL entries from JSB entries. The code behind the vector was not
+  read. The image stays local.
+
+### What MTHRTL.EXE holds
+
+Its header says 337 pages, ident major 129 minor `0x800D`, match LEQUAL,
+and 404 universal symbols: 376 `MTH$` and 28 `OTS$`. It has no `MTH$_`
+condition values; those are STARLET's, and `vmsdef.LibrarySymbols` already
+has them.
+
+An entry is 8 bytes. A CALL entry is a two-byte mask and a `JMP`; a JSB
+entry is a `JMP` alone. That settles the mechanism of every name:
+
+- **262 CALL entries, 142 JSB entries.** Every JSB entry's name ends
+  `_Rn`, and every `_Rn` name that isn't a JSB entry is an `OTS$` one.
+- **The `OTS$..._R3` routines are CALL entries** (11 of them), which the
+  manual doesn't say outright. Their arguments are by value in the argument
+  list and their results are in R0:R3. Their masks leave R2 and R3 unsaved,
+  which is how a result gets back through `RET`.
+- **Two pairs of names share an entry:** `MTH$IIFIX`/`MTH$IINT` and
+  `MTH$JIFIX`/`MTH$JINT`. So 402 entries, and the table must allow a stub
+  with two names.
+- **Ten JSB names are another name's second entry:** both `JMP` to the same
+  address. `ACOS_R4`/`_R5`, `ASIN_R4`/`_R5`, `TAN_R4`/`_R5`,
+  `TAND_R4`/`_R5`, `DACOS_R7`/`_R9`, `DASIN_R7`/`_R9`, `GACOS_R7`/`_R9`,
+  `GASIN_R7`/`_R9`, `DEXP_R6`/`_R7`, `GEXP_R6`/`_R7`.
+- **The masks' IV bit** (integer overflow enable) is set on 97 CALL entries.
+  It is set on the integer-result routines Table 1-1 footnotes (`JIFIX`,
+  `JNINT`, `IMOD`, `JIABS`, ...) and on `OTS$POWII` and `OTS$POWJJ`. It is
+  clear on many others, such as `MTH$EXP`. So section 1.2's "All CALL entry
+  points ... enable integer overflow" doesn't hold literally, and it doesn't
+  matter to a Go routine.
+
+### The routines
+
+Counts of names in MTHRTL.EXE. "JSB, manual" is a JSB entry either manual
+names. "JSB, not in the manuals" is one neither names.
+
+| Family | CALL | JSB, manual | JSB, not in the manuals | Subtask |
+|---|---:|---:|---:|---:|
+| Square root (`SQRT`, D, G, H) | 4 | 4 | 1 | 3 |
+| Exponential (`EXP`, D, G, H) | 4 | 4 | 2 | 3 |
+| Logarithms (`ALOG`, `ALOG2`, `ALOG10`; D, G, H) | 12 | 8 | 0 | 3 |
+| `SIN`, `COS`, `TAN`, `SINCOS`, radians | 16 | 16 | 2 | 4 |
+| `SIND`, `COSD`, `TAND`, `SINCOSD`, degrees | 16 | 16 | 2 | 4 |
+| `ASIN`, `ACOS`, `ATAN`, radians and degrees | 24 | 24 | 6 | 4 |
+| `ATAN2`, `ATAND2` | 8 | 0 | 6 | 5 |
+| `SINH`, `COSH`, `TANH`, `ATANH` | 16 | 0 | 9 | 5 |
+| Absolute value (`ABS`, D, G, H, `IIABS`, `JIABS`) | 6 | 0 | 0 | 6 |
+| Positive difference (`DIM`, ...) | 6 | 0 | 0 | 6 |
+| Sign (`SIGN`, ..., `SGN`) | 7 | 0 | 4 | 6 |
+| Greatest integer (`FLOOR`, ...) | 4 | 4 | 0 | 6 |
+| Truncation (`AINT`, ..., `JIFIX`, ...) | 14 | 4 | 0 | 6 |
+| Nearest integer (`ANINT`, ..., `JNINT`) | 12 | 0 | 0 | 6 |
+| Remainder (`AMOD`, ..., `IMOD`, `JMOD`) | 6 | 0 | 3 | 6 |
+| Maximum, minimum (`AMAX1`, ..., `UMAX`, `UMIN`) | 22 | 0 | 0 | 6 |
+| Conversions (`DBLE`, `SNGL`, `FLOATJ`, `DPROD`, `CVT_D_G`, ...) | 16 | 0 | 0 | 6 |
+| Bit functions (`IIAND`, ..., `JISHFT`, `JNOT`) | 10 | 0 | 0 | 6 |
+| Complex functions (`CABS`, `CEXP`, `CLOG`, `CSIN`, `CCOS`, `CSQRT`; C, CD, CG) | 18 | 0 | 18 | 7 |
+| Complex parts (`CMPLX`, `CONJG`, `AIMAG`, `REAL`; F, D, G) | 12 | 0 | 0 | 7 |
+| `RANDOM` | 1 | 0 | 0 | 9 |
+| Internal reduction (`MTH$$REDUCE_...`) | 0 | 0 | 9 | stays a stub |
+| **All `MTH$`** | **234** | **80** | **62** | |
+| `OTS$POW`: floating and integer | 17 | 0 | 0 | 8 |
+| `OTS$POW`: complex (`CC`, `CJ`, `CDCD_R3`, `CDJ_R3`, `CGCG_R3`, `CGJ_R3`) | 6 | 0 | 0 | 8 |
+| `OTS$DIVC`, `DIVCD_R3`, `DIVCG_R3`, `MULCD_R3`, `MULCG_R3` | 5 | 0 | 0 | 8 |
+
+The `OTS$` names are `POWDD`, `POWDJ`, `POWDLU`, `POWDR`, `POWGG`, `POWGJ`,
+`POWGLU`, `POWHH_R3`, `POWHJ_R3`, `POWHLU_R3`, `POWII`, `POWJJ`, `POWLULU`,
+`POWRD`, `POWRJ`, `POWRLU`, `POWRR`, and the complex and multiply/divide
+names above.
+
+The 62 JSB names no manual gives: the 10 second entries; 18 complex
+(section 1.5 says complex functions have no JSB entries); 9 hyperbolic; 9
+`MTH$$REDUCE_`; 9 two-argument (`ATAN2`, `ATAND2`, `MOD`); 4 sign; and
+`SQRT_R2`, `HTAN_R7`, `HTAND_R7`, none of which shares a target with its
+documented neighbor.
+
+### Calling conventions
+
+| Kind | Arguments | Result |
+|---|---|---|
+| `MTH$` CALL, F or integer result | by reference | R0 |
+| `MTH$` CALL, D or G result, F complex | by reference | R0:R1 |
+| `MTH$` CALL, H, D complex, or G complex result | by reference, after the result | written through the first argument |
+| `MTH$` JSB, F | R0 | R0 |
+| `MTH$` JSB, D or G | R0:R1 | R0:R1 |
+| `MTH$` JSB, H | R0:R3 | R0:R3 |
+| `MTH$` JSB, two results (`SINCOS`) | as above | R0:Rm, then R(m+1):R(2m+1): `HSINCOS_R7` ends in R7 |
+| `OTS$` CALL | **by value** in the argument list: a D is two longwords, an H or D complex four | R0, R0:R1, or R0:R3 |
+
+Exceptions to "by reference": `MTH$UMAX` and `MTH$UMIN` are by value, and
+`MAX`/`MIN` take any number of arguments.
+
+### Conditions
+
+Every value is in `vmsdef`, and all have severity SEVERE. The message texts
+are there too, each with one FAO argument, `user PC !XL`.
+
+| Condition | Value | When (the manual) |
+|---|---|---|
+| `MTH$_INVARGMAT` | `0x16828C` | `ASIN`, `ACOS` with \|x\| > 1; `ATAN2` of (0, 0); `ATANH` with \|x\| >= 1 |
+| `MTH$_LOGZERNEG` | `0x16829C` | a logarithm of x <= 0 |
+| `MTH$_SQUROONEG` | `0x1682A4` | a square root of x < 0 |
+| `MTH$_FLOOVEMAT` | `0x1682C4` | a result too large: `EXP` above 88.029 (F, D), 709.089 (G), 11355.830 (H); `COSH`, `SINH` above 88.722, 709.782, 11356.523; `TAN`, complex forms, conversions |
+| `MTH$_FLOUNDMAT` | `0x1682CC` | `EXP` at or below -88.722 (F; H -11356.523) *if the caller has FU set*, else 0.0 quietly; `SIND`-family angles below 180/pi * 2^-m (no such gate stated) |
+| `MTH$_UNDEXP` | `0x168294` | an `OTS$` power of 0 to 0 or below, or a negative base to a floating exponent |
+| `MTH$_WRONUMARG` | `0x168284` | in neither manual's routine pages |
+| `MTH$_SIGLOSMAT` (`SINCOSSIG`) | `0x1682BC` | in neither manual's routine pages |
+| `SS$_ROPRAND` | | any floating input with sign 1 and exponent 0 |
+| `SS$_FLTOVF`, `SS$_FLTDIV`, `SS$_INTOVF`, `SS$_INTDIV` | | hardware traps Table 1-1's footnotes and the `OTS$` pages name |
+
+The limits follow from the formats, so no table of them is needed. Rounding
+reports `ErrOverflow` and `ErrUnderflow`, and the manual's limits become
+test cases.
+
+A math routine's condition is signaled through LIB$SIGNAL with the reserved
+operand (-0.0: R0 `0x8000`, R1 0) as the mechanism array's R0 and R1. A
+handler that returns SS$_CONTINUE returns those registers, corrected if it
+changed them, to the routine's caller. A result in memory or in R2:R3 can't
+be corrected.
+
+### What the code has, and what it lacks
+
+- **The signal and continue path is enough.** `signal` takes R1 from the CPU
+  and R0 from its argument, and `continueCondition` restores both from the
+  mechanism array, for CALL and JSB alike. So a routine sets R1 to 0 and calls
+  `SignalFailure(argv, 0x8000)`. No `corevms` change is needed.
+- **Writing R2 and R3 from a CALL shim works:** `ShimStub`'s mask is 0, so
+  `RET` restores nothing. `Environment.CPU()` gives the registers.
+- **`JSBRegisters` is R0 to R6, and `HSINCOS_R7` and `HSINCOSD_R7` return in
+  R4:R7.** It must grow by one register. Nothing else needs R7 or above: the
+  `n` of `_Rn` is what a routine may change, not what it must.
+- **The caller's FU bit isn't exported.** `signal` reads the frame's saved
+  PSW (the PSL for a JSB); `EXP` needs the same answer before it signals.
+- **`librtl`'s `memoryFault` is private.** An argument a routine can't reach
+  should signal SS$_ACCVIO here too.
+- **`vaxfloat.Value` hides its `big.Float`.** The routines need a way in and
+  out. `math/big` has `Sqrt` but no exp, log, or arc tangent, and pi must be
+  computed: to about 16,500 bits for H's largest angle, once, on first need.
+- **A JSB to today's NOTIMPL stub doesn't reach its message.** `unresolvedStub`
+  makes a CALL stub, whose first bytes are a zero mask, and `00` is HALT. This
+  comes from reading the stub's bytes, not from a run. The JSB names govax
+  lacks need `JSBShimStub` stubs, as `librtl.MissingJSB` makes.
+- **Shim codes:** `librtl` is below 1000, its missing routines start at 1000
+  and 2000, and unresolved stubs start at 10000. 3000 up is free.
+- **404 stubs at 12 bytes is about 10 pages of S0.** That moves whatever
+  `EnsureShims` places after them, so the oracles must be rerun in subtask 2.
+
+### Measurements
+
+- **Go's `math` isn't the same from host to host.** Two million arguments each
+  through 15 functions, hashing the result bits, on arm64 and amd64 (under
+  Rosetta): only `Sqrt` agreed. The other 14 differ somewhere. The Go spec lets
+  arm64 fuse multiply-add, and some amd64 routines are assembly. A G result's
+  last bit would depend on the host, which breaks a repeatable test or
+  transcript.
+- **`float64` doesn't hold every G value.** G's range starts at 2^-1024, and
+  float64's normal range at 2^-1022, so the lowest band is subnormal and loses
+  bits.
+- **`math/big` is cheap beside emulation.** A sine's Taylor series on this
+  machine took 0.8 us at 64 bits (F plus guard bits), 1.3 us at 93 (G), 1.4 us
+  at 96 (D), and 2.0 us at 153 (H), against 3 ns for `math.Sin`. Reduction,
+  unpacking, and packing are extra. At 10 to 20 million VAX instructions a
+  second, 1 us is 10 to 20 instructions.
+
+### Findings for later phases
+
+- **Integer powers:** the `OTS$POWRJ` and `POWDJ` tables give a negative
+  exponent as 1.0 over the product. Phase 76's folding
+  (`sema/constant.go`'s `power`) takes the product from the reciprocal, which
+  can differ in the last bit. Subtask 8 changes the folding to the manual's
+  order unless the probe says otherwise.
+- **`OTS$POWII` and `POWJJ`** say a negative base is `MTH$_UNDEXP`, and name
+  floating traps, which looks copied from a floating page: FORTRAN's `(-2)**3`
+  is -8. Until the probe answers, a negative base computes normally, and only
+  zero to zero or below signals. Unconfirmed.
+- **COPY to the host isn't a byte copy of an image.** Copying MTHRTL.EXE with
+  govax's COPY wrote each fixed-length record with a newline, then failed with
+  "corrupt record" on the last record, which LINK ends mid-block. `ods2 copy
+  /BINARY` copied it whole. This is not fixed here; it needs its own decision
+  on what a host copy of a binary file should be.
+
+## Decisions
+
+1. **The set is VMS 7.1's image, not a manual's** (answers "the exact set"):
+   every one of the 404 names resolves. The 7.3 manual's additions are the
+   vector routines (`MTH$V...`), which are VMTHRTL's and out of scope. The
+   manuals are the behavior, and the image is the list.
+2. **The `OTS$` routines go in MTHRTL** (answers "which library"): all 28 are
+   in its table, and none is in LIBRTL's.
+3. **One `math/big` engine for all four formats. Needs the author's answer,
+   as it changes the plan's Decision 14** ("F and G are computed in float64").
+   Every function is written once, taking a precision: the format's fraction
+   plus 40 guard bits, rounded once by `vaxfloat`. It gives the same bits on
+   every host, covers G's whole range, needs one implementation and one set of
+   tests, and is correctly rounded except about once in 2^40, so within the
+   plan's one ulp. It costs several hundred times `math.Sin`, or tens of
+   VAX instructions a call. The alternative keeps the plan: F and G through
+   `math`, with G's tests allowing an ulp and a special case for G's low band.
+   Subtask 3 is written either way after the answer.
+4. **Exact last bits aren't a goal, and exact values are.** `SIND(180)`,
+   `COSD(90)`, `TAND(45)`, `SQRT(4)`, and `EXP(0)` come out exact: degrees are
+   reduced exactly, in rational arithmetic, before any conversion to radians.
+5. **`MTH$RANDOM` is the manual's generator:** SEED = (69069 * SEED + 1) mod
+   2^32, with the high 24 bits as a fraction in [0, 1). How those bits become
+   an F value is for the probe.
+6. **Entries are a table, as LIBRTL's are:** name, code, and function, with
+   offsets from `vmsdef.ImageSymbols` and a stub for each entry. Codes start at
+   3000. A name with no routine gets a missing-routine stub of its kind: JSB if
+   it is `MTH$..._Rn`, CALL otherwise, a rule all 404 names satisfy.
+7. **Second entries share the first's routine.** The 10 pairs are the same
+   code by the vector. Undocumented JSB entries with one argument follow
+   section 1.2's convention and are added with their family, if the probe
+   confirms it. The others stay stubs until a probe or a program asks.
+8. **Hardware conditions are signaled from Go** (`SS$_ROPRAND`, `SS$_INTOVF`,
+   ...), with PC the routine's return address. VMS's PC would be inside MTHRTL,
+   so a traceback line differs. No program can depend on that address.
+
 ## Open questions
 
-- **The exact set:** the 5.0 manual's routines, or 7.3's too
-  (`OVMS_73_RTL_MTH.PDF`)? Start with 5.0, add 7.3's when a probe or
-  program asks.
-- **MTH$RANDOM's sequence:** the manual documents the generator (a
-  linear congruential one), so VMS's sequence can be matched exactly;
-  FORTRAN's RAN uses it.
-- **A VMS probe:** a MACRO program calling each routine with edge
-  arguments, run on VMS 7.1, would confirm conditions and the
-  last-bit results. Optional, since exact last bits aren't a goal.
+- **Decision 3**, for the author.
+- **For the VMS probe** (subtask 10, `testdata/mth77`, run by the author):
+  - the signal array's arguments for each `MTH$_` condition, and what user PC
+    holds;
+  - whether `SIND`'s `FLOUNDMAT` depends on FU;
+  - what continuing from `SS$_ROPRAND` returns;
+  - `OTS$POWII` and `POWJJ` for negative bases and exponents, and their
+    overflow;
+  - `MTH$RANDOM`'s values from known seeds;
+  - `AMAX1` with no arguments (`WRONUMARG`?);
+  - whether `SIN` of a huge argument signals `SIGLOSMAT`;
+  - the undocumented JSB entries' registers, starting with `COSH_R4` and
+    `SQRT_R2`;
+  - last-bit comparison, reported as a count rather than held as a test.
 
-## Subtasks (provisional)
+## Subtasks (revised by the survey)
 
-1. **Survey and capture:** the MTH$ and OTS$ manuals' routine lists,
-   arguments, entry points, and conditions; MTHRTL.EXE's global symbol
-   table captured into `vmsdef` (the image itself is licensed and stays
-   local).
-2. **The package and its registration**, with the stubs, LINK's symbols,
-   and the missing-routine stubs.
-3. **Square root, exponentials, logarithms** in all four formats.
-4. **Trigonometric and inverse functions**, radians and degrees.
-5. **Hyperbolic functions, ATAN2, and the remaining real functions.**
-6. **Complex functions.**
-7. **OTS$ powers and complex division.** Phase 76's folding
-   (`sema/constant.go`'s `power`, `complexArith`) squares repeatedly,
-   rounding each product, from the reciprocal for a negative exponent, and
-   rounds a complex quotient's parts once; unconfirmed. These routines and
-   it should agree, whichever changes.
-8. **JSB entries, MTH$RANDOM, and the conditions.**
-9. **Tests from MACRO** programs, and the optional VMS probe.
-10. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
+1. **Survey and capture.** Done.
+2. **The package and its registration:** `internal/mthrtl`, the table, stubs of
+   both kinds, `Emulated`'s entry, `JSBRegisters` to R7, the helpers (signal
+   with the reserved operand, caller's FU, argument access, H and R0:R3
+   results), `vaxfloat`'s way in and out; the oracles rerun.
+3. **The engine, square root, exponentials, logarithms** in all four formats,
+   JSB entries with them.
+4. **Trigonometric and inverse functions**, radians and degrees, exact
+   reduction.
+5. **Hyperbolic functions and ATAN2.**
+6. **Table 1-1's routines:** absolute value, positive difference, sign, floor,
+   truncation, nearest integer, remainder, maximum and minimum, conversions,
+   bit functions. (New: the plan's subtask 5 was too large.)
+7. **Complex functions and parts.**
+8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
+   to agree (`sema/constant.go`'s `power`, `complexArith`).
+9. **MTH$RANDOM and the remaining conditions.**
+10. **Tests from MACRO** programs, and the VMS probe.
+11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
 
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74. The author directed that the
   MTH$ functions be general RTL support, usable outside FORTRAN, and
   approved capturing VMS 7.1's MTHRTL vector.
+- **2026-10-30:** Subtask 1. Read the 5.0 MTH$ and OTS$ manuals and the 7.3
+  MTH$ manual; merged VMS 7.1's MTHRTL.EXE into `vmsdef`
+  (`gen -image`, 404 symbols, `ImageSources` now names it); read each
+  transfer vector entry's first bytes for its mechanism. LINK now resolves
+  MTH$ and OTS$ names from the table with no MTHRTL.EXE present, and a call
+  signals NOTIMPL (`TestMTHRTLLinks`, in both paging modes); `TestMTHRTLVector`
+  holds the table's shape. The survey's Decision 3 changes the plan's accuracy
+  method and waits for the author.

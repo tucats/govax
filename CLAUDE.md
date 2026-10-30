@@ -307,6 +307,10 @@ never had.
   8 (2026-10-30) programs end to end, `testdata/fortran/modules` several
   files linked in several orders, and subtask 9 (2026-10-30) the
   close-out, FORTRAN-INTERNALS.md's section 8 on declarations and storage.
+  Phase 77 (in progress) is MTHRTL: subtask 1 (2026-10-30) is the survey
+  in its phase doc, and VMS 7.1's MTHRTL.EXE symbol table in `vmsdef`
+  (404 names, the `OTS$` powers among them), so LINK finds them; a call
+  signals NOTIMPL until the routines exist.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
