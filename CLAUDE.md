@@ -282,7 +282,9 @@ never had.
   `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`; `govax fortran`),
   the compiler's driver, messages, and first pass (source forms and
   INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
-  LINK); Phase 75 (first light, every pass for a small subset) is next.
+  LINK); Phase 75 (first light, every pass for a small subset) is in
+  progress: subtasks 1 to 3 (the survey and design, the lexer, the AST
+  and parser) are done, semantic analysis is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1616,8 +1618,19 @@ expect adjustment as phases land):
   test, the `=`/DO comma test, then the longest keyword of `kinds.go`'s
   table of every VAX FORTRAN statement; typed FUNCTION only at a unit's
   start), and tokenize (`tokenize.go`, with modes for DO's label and type
-  lengths); FORMAT's specification isn't tokenized. `ast`, `parse`,
-  `sema`, `ir`, and `opt` come in later subtasks and phases.
+  lengths); FORMAT's specification isn't tokenized. `ast` is
+  the syntax tree (Phase 75, subtask 3): a `File` of `Unit`s (`Header`, a
+  flat `Body`, END last; IF and DO blocks are sema's to match), a
+  `StmtBase` (position, label, `source.Statement`) in every statement,
+  `NotImplStmt` and `BadStmt` keeping a statement's label after its
+  message, untyped expressions (`Apply` is an array element or a
+  function reference), and `Dump` for golden tests. `parse` is the third
+  pass: `Parse` forms the units (NOEND) and calls each kind's function
+  from `parsers` (a kind not there is NOTIMPL by name); an error reports
+  and panics with a `bailout` that `statement` recovers; expressions are
+  precedence climbing (`expr.go`); golden dumps are in `parse/testdata`
+  (`-update` rewrites them). `sema`, `ir`, and `opt` come in later
+  subtasks and phases.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`

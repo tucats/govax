@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
+	"github.com/tucats/govax/internal/fortran/parse"
 	"github.com/tucats/govax/internal/fortran/source"
 )
 
@@ -96,11 +97,13 @@ func Compile(opts Options, file File) Result {
 		Continuations: opts.Continuations,
 	}, &source.File{Spec: file.Spec, Lines: file.Lines, Handle: file.Handle}, opts.Includes, &messages)
 
-	// The second pass: each statement's kind and tokens. Nothing uses
-	// them yet (the parser is Phase 75's subtask 3), but the lexer's
-	// messages are reported.
+	// The second and third passes: each statement's kind and tokens,
+	// then the syntax tree. Nothing uses the tree yet (semantic analysis
+	// is Phase 75's subtask 4), but the lexer's and the parser's messages
+	// are reported, a statement the compiler can't compile yet among them
+	// (NOTIMPL).
 	if !messages.Failed() {
-		lex.Lex(program.Statements, &messages)
+		parse.Parse(lex.Lex(program.Statements, &messages), &messages)
 	}
 
 	writeHeader(&w, opts, file, module)

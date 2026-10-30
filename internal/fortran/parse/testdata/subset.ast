@@ -1,0 +1,45 @@
+== main program SUBSET
+2           PROGRAM SUBSET
+3           INTEGER I, N, TABLE(10)
+4           REAL X, Y, AVG
+5           LOGICAL DONE
+6           DIMENSION V(0:9)
+7           N = 10
+8           DONE = .FALSE.
+10          DO 10 I = 1, N
+11          TABLE(I) = (+ (- (* I I) (* 2 I)) 1)
+12          V((- I 1)) = (/ FLOAT(I) 2.0)
+13    10    CONTINUE
+14          CALL SUMUP(TABLE, N, X)
+15          Y = AVG(TABLE, N)
+16          IF (.AND. (.GT. Y 100.0) (.NOT. DONE)) THEN
+17          PRINT * 'BIG' Y
+18          ELSE IF (.GT. Y 10.) THEN
+19          WRITE (*, *) 'MEDIUM' Y
+20          ELSE
+21          WRITE (*, *) 'SMALL' Y DONE
+22          END IF
+23          I = 0
+24    20    I = (+ I 1)
+25          IF (.LT. I 3) GO TO 20
+26          IF (.NE. I 3) STOP 'WRONG COUNT'
+27          PRINT *
+28          STOP
+29          END
+== SUBROUTINE SUMUP
+31          SUBROUTINE SUMUP(T, N, S)
+32          INTEGER N, T(N)
+33          S = 0.0
+34          DO 100 K = N, 1, (- 1)
+35    100   S = (+ S T(K))
+36          RETURN
+37          END
+== FUNCTION AVG
+39          REAL FUNCTION AVG(T, N)
+40          INTEGER N, T(*)
+41          AVG = 0
+42          DO 200 J = 1, N
+43          AVG = (+ AVG T(J))
+44    200   CONTINUE
+45          AVG = (/ AVG N)
+46          END

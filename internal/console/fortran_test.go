@@ -293,7 +293,7 @@ func TestFortran_include(t *testing.T) {
 	src := filepath.Join(dir, "squares.for")
 
 	writeHostFile(t, src, "      PROGRAM SQUARES\n      INCLUDE 'inc/limits'\n      END\n")
-	writeHostFile(t, filepath.Join(dir, "inc", "limits.for"), "      PARAMETER (N=5)\n      INCLUDE 'more.inc'\n")
+	writeHostFile(t, filepath.Join(dir, "inc", "limits.for"), "      INTEGER N\n      INCLUDE 'more.inc'\n")
 	writeHostFile(t, filepath.Join(dir, "inc", "more.inc"), "C     found beside limits.for\n")
 
 	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}}); err != nil {
@@ -309,7 +309,7 @@ func TestFortran_include(t *testing.T) {
 
 	for _, want := range []string{
 		"; INCLUDE file " + filepath.Join(dir, "inc", "limits.for") + ":",
-		";1   1        PARAMETER (N=5)",
+		";1   1        INTEGER N",
 		";2   1  C     found beside limits.for",
 		"; end of " + filepath.Join(dir, "inc", "more.inc"),
 		";    3        END",
@@ -354,7 +354,7 @@ func TestFortran_includeVolume(t *testing.T) {
 	s := c.ContainerSession
 	for name, text := range map[string]string{
 		"DUA0:[000000]SQUARES.FOR": "      PROGRAM SQUARES\n      INCLUDE 'LIMITS'\n      INCLUDE 'DUA0:[000000]OTHER.INC'\n      END\n",
-		"DUA0:[000000]LIMITS.FOR":  "      PARAMETER (N=5)\n",
+		"DUA0:[000000]LIMITS.FOR":  "      INTEGER N\n",
 		"DUA0:[000000]OTHER.INC":   "      INTEGER K\n",
 	} {
 		if _, err := s.CreateRecordFile(rms.FileLocation{Name: name}, rms.TextRecords, splitSource(text)); err != nil {
@@ -369,7 +369,7 @@ func TestFortran_includeVolume(t *testing.T) {
 	text := strings.Join(readMACRO(t, c, rms.FileLocation{Name: "DUA0:[000000]SQUARES.MAR;1"}), "\n")
 	for _, want := range []string{
 		"; INCLUDE file DUA0:[000000]LIMITS.FOR;1:",
-		";1   1        PARAMETER (N=5)",
+		";1   1        INTEGER N",
 		"; INCLUDE file DUA0:[000000]OTHER.INC;1:",
 		";1   1        INTEGER K",
 	} {

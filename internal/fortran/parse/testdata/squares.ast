@@ -1,0 +1,7 @@
+== main program SQUARES
+1           PROGRAM SQUARES
+3           INTEGER I
+4           DO 10 I = 1, 5
+5           PRINT * I (* I I)
+6     10    CONTINUE
+7           END

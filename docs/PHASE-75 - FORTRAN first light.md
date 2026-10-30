@@ -937,3 +937,72 @@ To go into the progress log as each is built, and into MANUAL.md's
     `TestUnitStarts`, `TestEndWithContinuation`, `TestLabels`,
     `TestPositions` (across a continuation line), `TestMessages`,
     `TestDirective`, `TestKindTable`, `TestFormatBody`.
+- **2026-10-30:** Subtask 3 done: the AST (`internal/fortran/ast`) and
+  the parser (`internal/fortran/parse`).
+  - `ast` is Part B's design: `File`, `Unit` (`Header`, `Body`, and
+    `Kind`/`Name` from the header), a `StmtBase` in every statement (its
+    position, label, and `source.Statement`, which codegen will need for
+    the source lines before each statement), the subset's statements, the
+    expressions, `Op`, and `Executable`. `Dump` writes a line per
+    statement after a `==` line naming each unit; `DumpStmt` and
+    `DumpExpr` are its pieces.
+  - Additions to the design: `BadStmt` beside `NotImplStmt` (a statement
+    with an error, kept for its label and its lexer kind), and a header
+    in error still gives its unit's kind; a logical IF whose statement is
+    NOTIMPL or in error becomes that itself, so sema never looks inside
+    one; `CallStmt.NamePos`; `FormatSpec` and `UnitSpec` are structs with
+    a `Star` flag; a `Binary`'s position is its operator's, for messages
+    about the operation. Parentheses are kept (`Paren`), and so is a
+    unary plus.
+  - `Parse` divides the statements into units (a header or any statement
+    with no unit open starts one; the lexer's END kind ends one, so `END
+    X` with its error still does) and calls the kind's function from a
+    table, `parsers`; a kind not in it is NOTIMPL by name. A statement's
+    error reports and panics with a `bailout`, which `statement`
+    recovers, as go/parser does. Expressions are precedence climbing
+    over `binaryOps`, with Part A's two rules: `**` groups right to left,
+    and a sign, at a term's start or after another operator, takes the
+    multiplying operators after it (`A**-B*C` is `A**(-(B*C))`, `A*-B+C`
+    is `A*(-B)+C`).
+  - Messages: SYNTAX, EXTRATEXT, NOEND (at the end of the unit's last
+    statement), BADLABELREF, and two of ours: EMPTYSTMT (a label alone)
+    and BADIFSTMT (a logical IF's DO, block IF statement, logical IF,
+    END, or non-executable statement).
+  - NOTIMPL in the parser: every statement kind outside the subset (and
+    CDEC$ directives and OPTIONS, which belong to no unit), the types
+    but INTEGER, REAL, and LOGICAL, in declarations and FUNCTION
+    statements; within statements, Hollerith, typeless, and COMPLEX
+    constants, `%VAL` and the like, substrings (an array element's too,
+    `A(I)(1:3)`), implied-DO lists, alternate returns (dummies and
+    arguments), the computed and assigned GO TO, a DO without a label,
+    a type statement's initial values, a length after an untyped
+    FUNCTION's name, and WRITE's ERR=, IOSTAT=, REC=, NML=, and `u'r`.
+  - Left to sema, because the tree holds them: type lengths (INTEGER*2,
+    REAL*8), `**`, `//`, `.EQV.`/`.NEQV.`/`.XOR.`, `RETURN i`, `D` and
+    `Q` exponents, a format that isn't `*`, a unit that isn't `*`, an
+    unformatted WRITE, statement functions, and bounds that aren't
+    constants.
+  - Choices of ours: relational operators group left to right (`A .LT.
+    B .LT. C` parses, and sema rejects it by its operands' types);
+    `.NOT.` is taken wherever an operand may start; a null argument only
+    in CALL; `CALL S` has no argument list and `CALL S()` an empty one; a
+    header in the middle of a unit is NOEND for the unit before it; text
+    after a file's last END starts a main program without a PROGRAM
+    statement.
+  - `Compile` runs the parser after the lexer, so the FORTRAN command now
+    reports NOTIMPL for statements outside the subset. Three INCLUDE
+    tests (`internal/console`, `cmd/govax`) and MANUAL.md's 14.3 example
+    included `PARAMETER (N=5)`; they include `INTEGER N` now, and the
+    chapter's "Where things stand" mentions NOTIMPL.
+  - DUNGEON V3.2A (local only): its nine sources make 93 units, and every
+    one of their 44,320 messages is NOTIMPL (PARAMETER's are most of
+    them). The run found the array-element substrings, which were a
+    syntax error at first.
+  - Tests: `TestExpressions` (43 expressions: precedence, the signs,
+    .NOT., leaves), `TestStatements` (56 statements), `TestErrors` (46
+    statements with one message each, its column and text, the
+    statement kept with its label), `TestUnits`, `TestNoStatements`,
+    `TestPositions`, and `TestGolden` over `parse/testdata` (`squares`,
+    `subset` with three units and every statement of the subset,
+    `errors`), whose `.ast` files `-update` rewrites; and the driver's
+    `TestCompileParseErrors`.

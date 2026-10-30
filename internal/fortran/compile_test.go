@@ -150,6 +150,31 @@ func TestCompileSourceErrors(t *testing.T) {
 	}
 }
 
+// TestCompileParseErrors checks that the parser runs: its messages, and
+// NOTIMPL for a statement the compiler can't compile yet, are the
+// compilation's, each statement reported, and no MACRO file is written.
+func TestCompileParseErrors(t *testing.T) {
+	r := Compile(testOptions, File{
+		Spec: "P.FOR",
+		Name: "P",
+		Lines: []string{
+			"      PROGRAM P",
+			"      X = (1 + 2",
+			"      READ *, Y",
+			"      GO TO 10",
+		},
+	})
+
+	var got []string
+	for _, m := range r.Messages {
+		got = append(got, m.Ident)
+	}
+
+	if r.MACRO != nil || r.Errors != 3 || strings.Join(got, " ") != "SYNTAX NOTIMPL NOEND" {
+		t.Errorf("result: %d errors, %v", r.Errors, r.Messages)
+	}
+}
+
 // TestCompileEmpty checks that an empty source still makes a file MACRO
 // can assemble.
 func TestCompileEmpty(t *testing.T) {

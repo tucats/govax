@@ -1,0 +1,72 @@
+== main program ERRORS
+2           PROGRAM ERRORS
+3           error: INTEGER
+4           error: assignment
+5           not implemented: the READ statement
+6           error: DO
+7     10    error: CONTINUE
+8           error: logical IF
+9     20    error: GO TO
+10          error: CALL
+12          PRINT * 'OK'
+== SUBROUTINE S
+13          SUBROUTINE S(A, B)
+14          not implemented: a Hollerith constant
+15          END
+== main program (no PROGRAM statement)
+16          X = 1
+
+%FORT-E-SYNTAX, expected an expression, but found the end of the statement
+  at line 3 of ERRORS.FOR
+        INTEGER I, J(
+  -------------------^
+
+%FORT-E-SYNTAX, expected ')', but found the end of the statement
+  at line 4 of ERRORS.FOR
+        X = (A + B
+  ----------------^
+
+%FORT-E-NOTIMPL, the READ statement is not implemented yet
+  at line 5 of ERRORS.FOR
+        READ *, X
+  ------^
+
+%FORT-E-SYNTAX, expected '=', but found ','
+  at line 6 of ERRORS.FOR
+        DO 10 I 1, 5
+  ---------------^
+
+%FORT-E-EXTRATEXT, the statement should end before the number 5
+  at line 7 of ERRORS.FOR
+     10 CONTINUE 5
+  ---------------^
+
+%FORT-E-BADIFSTMT, a logical IF can't execute a DO statement
+  at line 8 of ERRORS.FOR
+        IF (X .GT. 0) DO 20 I = 1, 2
+  --------------------^
+
+%FORT-E-BADLABELREF, 0 is not a statement label, which is 1 to 5 digits, not all zeros
+  at line 9 of ERRORS.FOR
+     20 GO TO 0
+  ------------^
+
+%FORT-E-SYNTAX, expected ')', but found the end of the statement
+  at line 11 of ERRORS.FOR
+       1       B
+  --------------^
+
+%FORT-E-NOEND, the main program ERRORS has no END statement
+  at line 12 of ERRORS.FOR
+        PRINT *, 'OK'
+  -------------------^
+
+%FORT-E-NOTIMPL, a Hollerith constant is not implemented yet
+  at line 14 of ERRORS.FOR
+        A = 5HHELLO
+  ----------^
+
+%FORT-E-NOEND, the main program has no END statement
+  at line 16 of ERRORS.FOR
+        X = 1
+  -----------^

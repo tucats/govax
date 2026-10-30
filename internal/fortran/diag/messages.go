@@ -71,6 +71,33 @@ var messages = map[string]kind{
 
 	// BADCHAR is a character FORTRAN doesn't use, outside a constant.
 	"BADCHAR": {Error, "the character %q is not allowed here"},
+
+	// The parser's messages (internal/fortran/parse).
+
+	// SYNTAX is a statement whose tokens don't follow its grammar: the
+	// first argument says what the parser expected, the second what it
+	// found instead.
+	"SYNTAX": {Error, "expected %s, but found %s"},
+
+	// EXTRATEXT is text after a statement's grammar is complete.
+	"EXTRATEXT": {Error, "the statement should end before %s"},
+
+	// NOEND is a program unit the file ends, or the next unit's header
+	// starts, without an END statement. It is reported at the end of the
+	// unit's last statement.
+	"NOEND": {Error, "%s has no END statement"},
+
+	// BADLABELREF is a reference to a statement label that can't be one:
+	// more than five digits, or all zeros.
+	"BADLABELREF": {Error, "%s is not a statement label, which is 1 to 5 digits, not all zeros"},
+
+	// EMPTYSTMT is a statement label with no statement after it.
+	"EMPTYSTMT": {Error, "statement label %d is on no statement"},
+
+	// BADIFSTMT is a logical IF whose statement is one a logical IF may
+	// not execute (section 5.7.2): a block IF, a DO, another logical IF,
+	// END, or a statement that isn't executable.
+	"BADIFSTMT": {Error, "a logical IF can't execute %s"},
 }
 
 // Known reports whether ident is a message in the table, and its

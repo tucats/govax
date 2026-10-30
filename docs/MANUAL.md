@@ -4343,8 +4343,11 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 74):** the compiler reads a source's lines
-into statements, checks their layout, and reads INCLUDE files; it
+**Where things stand (Phase 75, in progress):** the compiler reads a
+source's lines into statements, checks their layout, and reads INCLUDE
+files; it lexes and parses each statement, reporting syntax errors and
+any statement outside what it can compile so far (`%FORT-E-NOTIMPL`,
+naming the statement: "the READ statement is not implemented yet"). It
 generates no code yet, so the MACRO file it writes assembles into an
 empty module. FTNRTL exists, with its first two routines.
 
@@ -4407,7 +4410,7 @@ starts with what made it, and holds every line of the source as a
 comment, with its number; a line from an INCLUDE file has its include
 depth before the number, between comments naming the file. For this
 program and its INCLUDE file, `LIMITS.FOR`, which holds
-`PARAMETER (N=5)`:
+`INTEGER N`:
 
 ```text
       PROGRAM SQUARES
@@ -4440,7 +4443,7 @@ code after its lines):
 ;    2  C     Squares of the first N integers
 ;    3        INCLUDE 'limits'
 ; INCLUDE file DUA0:[WORK]LIMITS.FOR;1:
-;1   1        PARAMETER (N=5)
+;1   1        INTEGER N
 ; end of DUA0:[WORK]LIMITS.FOR;1
 ;    4        DO 10 I = 1, N
 ;    5  	PRINT *, I,

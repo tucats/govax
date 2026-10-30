@@ -277,7 +277,7 @@ func TestFortranThenMacro(t *testing.T) {
 	}
 
 	// An INCLUDE file beside the source, found with the default type.
-	if err := os.WriteFile(filepath.Join(dir, "limits.for"), []byte("      PARAMETER (N=5)\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "limits.for"), []byte("      INTEGER N\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

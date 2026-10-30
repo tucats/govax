@@ -29,15 +29,18 @@
 //   - opt: improves the IR, optionally;
 //   - codegen: chooses VAX instructions and writes the MACRO file.
 //
-// diag holds every pass's error and warning messages.
+// diag holds every pass's error and warning messages, and ast the syntax
+// tree's node types, which parse builds and sema reads.
 //
 // The passes are built a phase at a time (docs/PHASE-74's Part C). So far
 // the compiler has its driver (this package), its messages (diag), the
-// source pass, the lexer, and the start of codegen: Compile reads the
-// source and its INCLUDE files into statements, reporting any problem
-// with their layout, lexes each statement, reporting what the lexer finds
-// wrong, and copies every line into a MACRO file as comments, which MACRO
-// assembles into an empty module.
+// source pass, the lexer, the syntax tree (ast) and its parser, and the
+// start of codegen: Compile reads the source and its INCLUDE files into
+// statements, reporting any problem with their layout, lexes and parses
+// each statement, reporting what the lexer and parser find wrong (a
+// statement the compiler can't compile yet among them), and copies every
+// line into a MACRO file as comments, which MACRO assembles into an empty
+// module.
 //
 // The compiler is plain Go. It knows nothing of govax's console, RMS, or
 // the emulated machine: the FORTRAN command (internal/dclcmd/fortran.go)
