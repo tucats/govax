@@ -46,7 +46,7 @@
 // remainder, conversions, ...); integer.go the ones with word and longword
 // arguments or results, the bit functions among them; extreme.go the maximum and
 // minimum of any number of arguments; complex.go the functions of complex
-// numbers; and ots.go the OTS$ powers and complex multiplication and division,
+// numbers; random.go the random number generator; and ots.go the OTS$ powers and complex multiplication and division,
 // whose integer powers and complex arithmetic are vaxfloat's, shared with the
 // FORTRAN compiler's constants.
 package mthrtl

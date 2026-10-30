@@ -5,8 +5,8 @@ its Decision 3 accepted by the author the same day; subtasks 2, the package
 and its registration, 3, the engine, square root, exponentials, and
 logarithms, 4, the trigonometric functions and their inverses, 5, the
 hyperbolic functions and ATAN2, 6, Table 1-1's routines, 7, the complex
-functions and parts, and 8, the OTS$ powers, multiplication, and division, the
-same day).
+functions and parts, 8, the OTS$ powers, multiplication, and division, and 9,
+MTH$RANDOM and the conditions' audit, the same day).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -292,6 +292,9 @@ be corrected.
 5. **`MTH$RANDOM` is the manual's generator:** SEED = (69069 * SEED + 1) mod
    2^32, with the high 24 bits as a fraction in [0, 1). How those bits become
    an F value is for the probe.
+   With `vax.runtime.random` true (the author's request, 2026-10-30; off by
+   default), each new seed is instead 32 bits from the host's `crypto/rand`: see
+   subtask 9's log.
 6. **Entries are a table, as LIBRTL's are:** name, code, and function, with
    offsets from `vmsdef.ImageSymbols` and a stub for each entry. Codes start at
    4000, and each is 4000 plus the entry's offset over 8, computed rather than
@@ -315,7 +318,8 @@ be corrected.
   - what continuing from `SS$_ROPRAND` returns;
   - `OTS$POWII` and `POWJJ` for negative bases and exponents, and their
     overflow;
-  - `MTH$RANDOM`'s values from known seeds;
+  - `MTH$RANDOM`'s values from known seeds, how its bits become an F value, and
+    whether it leaves R1 alone;
   - what an H routine's result in memory holds after a handler continues from
     its condition (govax writes the reserved operand, or 0.0 for an underflow,
     before signaling), and R2:R3 after an H JSB entry's (govax clears them);
@@ -429,7 +433,7 @@ be corrected.
 7. **Complex functions and parts.** Done.
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
    to agree (`sema/constant.go`'s `power`, `complexArith`). Done.
-9. **MTH$RANDOM and the remaining conditions.**
+9. **MTH$RANDOM and the remaining conditions.** Done.
 10. **Tests from MACRO** programs, and the VMS probe.
 11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
 
@@ -753,3 +757,40 @@ be corrected.
   integer power, 4 to 6.9 us for a floating exponent, and 1.2 to 1.9 us for a complex
   quotient, F to H, so tens of VAX instructions' time as before. A complex power is the
   first that isn't: 12 to 15 us, 120 to 300 instructions' time at 10 to 20 million a second.
+- **2026-10-30:** Subtask 9. `random.go` is `MTH$RANDOM`, the manual's generator: the seed
+  read, `(69069 * SEED + 1)` modulo 2^32 written back, and the new seed's high 24 bits over
+  2^24 in R0 (Decision 5). F_floating's 24 bits hold each exactly, so none rounds up to 1.0,
+  and the library keeps no state: two seeds are two sequences. A seed it can't read or write
+  is `SS$_ACCVIO`, the seed having modify access. The conversion is the one thing the manual
+  leaves open ("converted"); the probe has it.
+
+  At the author's request `vax.runtime.random` (`randomSetting`, read at each call; off when
+  unset) makes the generator unpredictable: the new seed is 32 bits from `crypto/rand`
+  (`hostSeed`), and the old seed plays no part. The seed is still read and rewritten and the
+  result is still its high bits, so a program that looks at its seed or scales the result
+  behaves as before, and only one that sets a seed again to replay a sequence sees the
+  difference, which is what the setting asks for. Keeping the seed cell's role, rather than
+  ignoring it, was the choice here: it also keeps the access violation for a seed the caller
+  can't write. Off is what the probe and every oracle compare, as `vax.hardware.clock`'s
+  default is for time.
+
+  "The remaining conditions" turned out to be none. `conditions_test.go`'s
+  `TestPagesConditions` is an audit: each condition each of the 7.3 manual's routine pages
+  lists, one call per name (249 calls), and every one was already signaled, with the right
+  signal array. `MTH$HTAN`'s and `TAN`'s `FLOOVEMAT` stay out, no argument reaching them
+  (subtask 4). `MTH$_SIGLOSMAT` and `MTH$_NOTIMP` are in no routine's list, and nothing signals
+  them. `TestConditionMessages` is each condition govax does signal, with no handler: the
+  message file's text, the user PC, the image's end. `TestLeftAsStubs` holds what's left: every
+  CALL entry now has its routine, and the 52 stubs are JSB entries no manual gives, 9 of them
+  the internal `MTH$$REDUCE_`, the survey's 62 less the 10 second entries.
+
+  `random_test.go` holds the formula to wider integers and to a sequence worked out apart, the
+  value to rationals at 100,000 seeds and the range's edges, and the spread over 16 bins;
+  `TestRandomFromAProgram` runs the routine with bit patterns worked out apart, and arguments
+  it can't reach; `TestRandomSetting` and `TestRandomSettingFromAProgram` run it both ways. The
+  three "went on after a severe condition" tests used a call of the `MTH$RANDOM` stub as their
+  sign, and now print a line instead, and `TestMTHRTLLinks` has `MTH$RANDOM` answering beside
+  the JSB stub's NOTIMPL. Breaking the code showed the checks can tell, 1 to 24 failures for
+  each of 10 changes: a wrong multiplier 24 or increment 8, 23 bits 6, the wrong scale 8, no
+  store 8, a failed store not signaled 2, the setting reversed 11 or ignored 2, a generator
+  with 16 values 1, a fixed seed 2.

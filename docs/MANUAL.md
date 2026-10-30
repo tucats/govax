@@ -593,6 +593,7 @@ govax config set "vax.startup.procedure=DUA0:[WORK]LOGIN.COM"
 | --- | --- | --- |
 | `vax.hardware.clock` | true: the system time and clock follow the host's real time. false: time advances with the instructions executed, so every run is exactly repeatable. | false |
 | `vax.quantum` | In instruction-count mode, the instructions between clock ticks. (`vax.init` sets it to 1 with `SET QUANTUM 1`, so each instruction is one emulated millisecond.) | 20 |
+| `vax.runtime.random` | true: `MTH$RANDOM`'s numbers come from the host's cryptographic generator, and can't be predicted or repeated; the seed is still rewritten, but its old value plays no part. false: each number follows from the seed by the VMS manual's formula, so setting the same seed repeats a sequence, run after run. | false |
 
 #### Memory
 

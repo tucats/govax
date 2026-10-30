@@ -288,6 +288,8 @@ var Routines = []Routine{
 	{"MTH$IISHFT", integerEntry(word, 2, integerShift)},
 	{"MTH$JISHFT", integerEntry(long, 2, integerShift)},
 
+	{"MTH$RANDOM", random},
+
 	{"MTH$CABS", modulusEntry(vaxfloat.F)},
 	{"MTH$CDABS", modulusEntry(vaxfloat.D)},
 	{"MTH$CGABS", modulusEntry(vaxfloat.G)},

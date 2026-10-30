@@ -442,10 +442,12 @@ func TestOTSUnhandled(t *testing.T) {
 			build(t, d, out, "OTSEND", `	.TITLE	OTSEND
 	.PSECT	DATA,WRT,NOEXE,LONG
 `+c.data+`
+WENT:	.ASCID	/WENT ON/
 	.PSECT	CODE,NOWRT,EXE,LONG
 	.ENTRY	START,^M<>
 	`+c.call+`
-	CALLS	#0,G^MTH$RANDOM
+	PUSHAQ	WENT
+	CALLS	#1,G^LIB$PUT_OUTPUT
 	RET
 	.END	START
 `)
@@ -458,7 +460,7 @@ func TestOTSUnhandled(t *testing.T) {
 				t.Errorf("no %s message; RUN said:\n%s", c.message, text)
 			}
 
-			if strings.Contains(text, "MTH$RANDOM") {
+			if strings.Contains(text, "WENT ON") {
 				t.Errorf("the image went on after a severe condition:\n%s", text)
 			}
 		})

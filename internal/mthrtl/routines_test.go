@@ -2,6 +2,7 @@ package mthrtl
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 
@@ -153,6 +154,53 @@ func TestTables(t *testing.T) {
 
 	for _, r := range JSBRoutines {
 		note(r.Name, true)
+	}
+}
+
+// TestLeftAsStubs: every CALL entry has its routine, and every JSB entry the
+// manuals give. What's left is the JSB entries they don't (the phase doc's survey
+// and Decision 7), MTH$$REDUCE_ internal to VMS's library and the rest waiting for
+// the probe to give their registers.
+func TestLeftAsStubs(t *testing.T) {
+	written := map[string]bool{}
+
+	for _, r := range Routines {
+		written[r.Name] = true
+	}
+
+	for _, r := range JSBRoutines {
+		written[r.Name] = true
+	}
+
+	var left []string
+
+	for _, e := range entries() {
+		if written[e.name] {
+			continue
+		}
+
+		if !e.jsb {
+			t.Errorf("the CALL entry %s has no routine", e.name)
+		}
+
+		left = append(left, strings.TrimPrefix(e.name, "MTH$"))
+	}
+
+	slices.Sort(left)
+
+	want := strings.Fields(`
+		$REDUCE_DEGREES_D_R4 $REDUCE_DEGREES_F_R2 $REDUCE_DEGREES_G_R4
+		$REDUCE_LARGE_D_R7 $REDUCE_LARGE_F_R4 $REDUCE_LARGE_G_R7
+		$REDUCE_RADIANS_D_R5 $REDUCE_RADIANS_F_R3 $REDUCE_RADIANS_G_R5
+		AMOD_R5 ATAN2_R4 ATAND2_R4
+		CABS_R4 CCOS_R8 CDABS_R6 CDCOS_R9 CDEXP_R9 CDLOG_R9 CDSIN_R9 CDSQRT_R9 CEXP_R6
+		CGABS_R6 CGCOS_R9 CGEXP_R9 CGLOG_R9 CGSIN_R9 CGSQRT_R9 CLOG_R6 COSH_R4 CSIN_R8 CSQRT_R7
+		DATAN2_R7 DATAND2_R7 DCOSH_R7 DMOD_R9 DSIGN_R3 DSINH_R8 DTANH_R9
+		GATAN2_R7 GATAND2_R7 GCOSH_R7 GMOD_R9 GSIGN_R3 GSINH_R8 GTANH_R9
+		HTAND_R7 HTAN_R7 SGN_R1 SIGN_R1 SINH_R5 SQRT_R2 TANH_R5`)
+
+	if !slices.Equal(left, want) {
+		t.Errorf("left as stubs:\n%s", strings.Join(left, " "))
 	}
 }
 

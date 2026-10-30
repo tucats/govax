@@ -321,7 +321,9 @@ never had.
   integer, remainder, maximum and minimum, conversions, and bit functions;
   subtask 7 (2026-10-30) is the complex functions and parts; subtask 8
   (2026-10-30) is the `OTS$` powers, complex multiplication and division,
-  and FORTRAN's folding made to use the same code.
+  and FORTRAN's folding made to use the same code; subtask 9 (2026-10-30)
+  is `MTH$RANDOM`, with `vax.runtime.random`, and an audit of each manual
+  page's conditions.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1423,6 +1425,8 @@ expect adjustment as phases land):
   the 28 `OTS$` routines, by value (`valueArguments`, `loadRegisters`) with results in R0 up
   (`returnWords`, `failInRegisters`): `power`, `integerPower`, `complexPower`,
   `complexIntegerPower`, `complexQuotient`, `complexProduct`, `integerPowerOfEntry`.
+  `random.go` is `MTH$RANDOM`: the manual's generator, or with `vax.runtime.random`
+  true each new seed from `crypto/rand`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s
@@ -1871,6 +1875,8 @@ expect adjustment as phases land):
   unset). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
+  `vax.runtime.random` (bool, off when unset) — `MTH$RANDOM`'s seeds from the host's
+  cryptographic generator rather than the manual's formula (`mthrtl/random.go`).
   `vax.library` (string) — the host directory LINK and MACRO look
   in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
   `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;

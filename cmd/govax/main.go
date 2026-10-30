@@ -739,6 +739,7 @@ var validConfigs = map[string]bool{
 	"vax.console.prompt":   true,
 	"vax.console.lines":    true,
 	"vax.language":         true,
+	"vax.runtime.random":   true,
 
 	"vax.default.volume.file":      true,
 	"vax.default.volume.label":     true,

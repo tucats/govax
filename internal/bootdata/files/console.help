@@ -2157,6 +2157,15 @@ $CONF,KEY
                                       the routine returns ENGLISH and
                                       LIB$_ENGLUSED.
 
+        vax.runtime.random            When true, MTH$RANDOM's numbers come
+                                      from the host's cryptographic
+                                      generator, and can't be predicted or
+                                      repeated; the seed is rewritten, but
+                                      its old value plays no part.  When
+                                      false, each follows from the seed by
+                                      the VMS manual's formula, so a seed
+                                      repeats its sequence.  Default false.
+
     The machine
 
         vax.hardware.clock            true or false: drive the interval
