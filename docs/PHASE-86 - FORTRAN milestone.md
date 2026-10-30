@@ -90,18 +90,21 @@ checks its part):
 - DTEXT.DAT on a volume as a file of fixed 80-byte records, made by
   COPY's record format qualifiers or by the test.
 
+**Kept local, never committed** (the author's decision, 2026-10-29):
+every file says "COPYRIGHT 1980, 1990, INFOCOM ... ALL RIGHTS RESERVED,
+COMMERCIAL USAGE STRICTLY PROHIBITED". DUNGEON is used for development
+from its folder (or a gitignored local copy), and the milestone test
+finds it there and skips without it, as the tests on `testdata/disks`
+volumes do. Only govax's own additions (the test, its ITIME, its
+scripted game) are committed, and they must not quote the game's source
+or text.
+
 ## What earlier phases leave in place
 
 - The compiler, FTNRTL, MTHRTL, and the corpus with its tests.
 
 ## Open questions
 
-- **Where DUNGEON's source lives.** Every file says "COPYRIGHT 1980,
-  1990, INFOCOM ... ALL RIGHTS RESERVED, COMMERCIAL USAGE STRICTLY
-  PROHIBITED", and `dungeon.doc` says copyright is retained by Infocom.
-  The author has cleared it as freely available. Whether to commit it
-  under `testdata/`, or keep it local with a test that skips without it
-  (as `testdata/disks` is kept), is the author's call.
 - **A scripted game:** the test needs a fixed sequence of moves whose
   output doesn't depend on the random seed (IDATE and ITIME seed RAN),
   or a way to fix the seed (a logical name the test's ITIME reads).
@@ -123,3 +126,5 @@ checks its part):
 - **2026-10-29:** Planned with Phase 74.
 - **2026-10-29:** The author supplied DUNGEON V3.2A's source; surveyed
   above.
+- **2026-10-29:** The author decided DUNGEON stays local: used for
+  development, never committed.
