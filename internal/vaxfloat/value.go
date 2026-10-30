@@ -103,6 +103,17 @@ func (v Value) Decimal() string {
 	return v.x.Text('f', -1)
 }
 
+// Text returns v in decimal as strconv.FormatFloat would write it, in
+// format ('e', 'f', or 'g') with prec digits; prec -1 is the fewest digits
+// that identify v among the values of the format it was rounded to.
+func (v Value) Text(format byte, prec int) string {
+	if v.x == nil {
+		return new(big.Float).Text(format, prec)
+	}
+
+	return v.x.Text(format, prec)
+}
+
 // String returns v in decimal, with enough digits to show an H value.
 func (v Value) String() string { return v.float().Text('g', 36) }
 
@@ -325,6 +336,22 @@ func Div(f Format, a, b Value) (Value, error) {
 	}
 
 	return operate(f, (*big.Float).Quo, a, b)
+}
+
+// Sqrt returns the square root of v, rounded to f, or ErrReserved if v is
+// negative (as MTH$SQRT signals for a negative argument).
+func Sqrt(f Format, v Value) (Value, error) {
+	switch v.Sign() {
+	case -1:
+		return Value{}, ErrReserved
+	case 0:
+		return Value{}, nil
+	}
+
+	z := new(big.Float).SetMode(big.ToNearestAway).SetPrec(f.Precision())
+	z.Sqrt(v.x)
+
+	return check(f, z)
 }
 
 // MulExact returns a * b, exactly (with as many bits as the product

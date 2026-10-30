@@ -1,0 +1,30 @@
+C     Section 4.11's example of PARAMETER, with constants of every type
+C     and their uses in declarations and expressions.
+      SUBROUTINE PARAMS(A)
+      REAL*4 PI, PIOV2
+      REAL*8 DPI, DPIOV2
+      LOGICAL FLAG
+      CHARACTER*(*) LONGNAME
+      PARAMETER (PI=3.1415927, DPI=3.141592653589793238D0)
+      PARAMETER (PIOV2=PI/2, DPIOV2=DPI/2)
+      PARAMETER (FLAG=.TRUE., LONGNAME='A STRING OF 25 CHARACTERS')
+      PARAMETER (MU=1.23, N=8, NSQ=N**2)
+      INTEGER*2 SMALL
+      COMPLEX Z, W
+      COMPLEX*16 DZ
+      PARAMETER (SMALL='7FFF'X, Z=(1.0,-2.0), W=Z*Z, DZ=(DPI,1))
+      CHARACTER*(N) NAME
+      PARAMETER (NAME='AB'//CHAR(67))
+      DIMENSION A(0:NSQ-1), B(N, -N:N)
+      X = PI * MU
+      B(1, -N) = A(NSQ - 1) + PIOV2
+      PRINT *, LONGNAME, NAME, FLAG, MAX(N, NSQ)
+      END
+C     Appendix A.4's form: each constant has its value's type.
+      SUBROUTINE OLD
+      PARAMETER PI=3.1415927, DPI=3.141592653589793238D0
+      PARAMETER PIOV2=PI/2, DPIOV2=DPI/2
+      PARAMETER FLAG=.TRUE., LONGNAME='A STRING OF 25 CHARACTERS'
+      PARAMETER IMASK='FF'X
+      PRINT *, PIOV2, FLAG, LONGNAME, IMASK
+      END

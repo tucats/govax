@@ -95,12 +95,16 @@ const (
 	// StmtFunction is a statement function the unit defines (section
 	// 6.2.1).
 	StmtFunction
+
+	// Constant is a named constant, a PARAMETER statement's (section
+	// 4.11, appendix A.4): writing its name is writing its value.
+	Constant
 )
 
 // String is the class as messages say it: "a variable".
 func (c Class) String() string {
 	return [...]string{"a name", "a variable", "an array", "a function", "a subroutine",
-		"the name of this program unit", "a statement function"}[c]
+		"the name of this program unit", "a statement function", "a constant"}[c]
 }
 
 // Symbol is one name in a unit.
@@ -140,8 +144,15 @@ type Symbol struct {
 	// Pos is where the name first appears.
 	Pos diag.Position
 
-	// defPos is where a statement function is defined.
-	defPos diag.Position
+	// Value is a constant's value, with its type; nil for a constant
+	// whose PARAMETER statement had an error.
+	Value *Const
+
+	// defPos is where a statement function or a constant is defined;
+	// oldForm is set for a constant appendix A.4's PARAMETER defined,
+	// whose type is its value's.
+	defPos  diag.Position
+	oldForm bool
 
 	// broken is set when a declaration of the name had an error, which
 	// has been reported: its uses get no messages of their own, which
@@ -326,15 +337,27 @@ func (*exprBase) exprNode() {}
 // The expressions.
 type (
 	// Const is a constant, or a constant expression semantic analysis
-	// folded. Its value is in the field its type uses: Int for INTEGER
-	// and LOGICAL (a LOGICAL's longword: .TRUE. is -1 and .FALSE. 0,
-	// though only bit 0 counts, appendix C.4), Real for REAL (already
-	// rounded to F_floating), Text for CHARACTER.
+	// folded. Its value is in the fields its type uses: Int for INTEGER
+	// and LOGICAL (a LOGICAL's value: .TRUE. is -1 and .FALSE. 0, though
+	// only bit 0 counts, appendix C.4), Real for REAL (already rounded to
+	// the type's format: F_floating, D_floating, or H_floating), Real and
+	// Imag for COMPLEX's two parts, Text for CHARACTER.
 	Const struct {
 		exprBase
 		Int  int32
 		Real vaxfloat.Value
+		Imag vaxfloat.Value
 		Text string
+
+		// literal is set for a REAL or COMPLEX constant as written (or
+		// negated), and exactRe and exactIm are its parts' values before
+		// rounding. In an operation of higher precision it is rounded
+		// again from them: section 2.3.1.2 says that "additional
+		// precision will be retained for the constant", so 1.0D0 +
+		// 0.3333333 is 1.0D0 + 0.3333333000000000D0, not 1.0D0 plus
+		// 0.3333333's F_floating value.
+		literal          bool
+		exactRe, exactIm vaxfloat.Value
 	}
 
 	// Var is a scalar variable.
@@ -418,10 +441,18 @@ func (c *Const) Truth() bool {
 	return c.Int&1 != 0
 }
 
-// Bits is a REAL constant's longword as the VAX holds it in memory, read
-// as a little-endian longword: 1.0 is ^X00004080.
+// Bits is a REAL*4 constant's longword as the VAX holds it in memory,
+// read as a little-endian longword: 1.0 is ^X00004080.
 func (c *Const) Bits() uint32 {
 	b, _ := vaxfloat.Pack(vaxfloat.F, c.Real)
 
 	return uint32(b.Lo)
+}
+
+// at is a copy of c at pos: a constant's value where its name is used.
+func (c *Const) at(pos diag.Position) *Const {
+	d := *c
+	d.Pos = pos
+
+	return &d
 }

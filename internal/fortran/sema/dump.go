@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/vaxfloat"
 )
 
 // Dump writes the program as the golden tests compare it. For each unit:
@@ -65,6 +66,8 @@ func dumpSymbol(s *Symbol) string {
 	where := ""
 
 	switch {
+	case s.Class == Constant && s.Value != nil:
+		where = "= " + dumpConst(s.Value)
 	case s.Dummy != 0:
 		where = "argument " + strconv.Itoa(s.Dummy)
 	case s.Offset >= 0:
@@ -232,19 +235,18 @@ func DumpExpr(e Expr) string {
 	return fmt.Sprintf("%T", e)
 }
 
-// dumpConst is a constant: 5, 1.5, .TRUE., 'TEXT'. A REAL constant is
-// shown with the fewest digits that give its F_floating value again, and
-// always with a period or an exponent, so that 1.0 doesn't look like the
-// integer 1.
+// dumpConst is a constant: 5, 1.5, .TRUE., 'TEXT', (1.0, -2.5). A REAL
+// constant is shown with the fewest digits that give its value again in
+// its format, and always with a period or an exponent, so that 1.0
+// doesn't look like the integer 1: a REAL*8's exponent is D (2.5D0), a
+// REAL*16's Q.
 func dumpConst(c *Const) string {
 	switch c.T.Kind {
 	case Real:
-		text := strings.ToUpper(strconv.FormatFloat(c.Real.Float64(), 'g', -1, 32))
-		if !strings.ContainsAny(text, ".E") {
-			text += ".0"
-		}
+		return dumpReal(c.Real, c.T)
 
-		return text
+	case Complex:
+		return "(" + dumpReal(c.Real, c.T.part()) + ", " + dumpReal(c.Imag, c.T.part()) + ")"
 
 	case Logical:
 		switch c.Int {
@@ -261,6 +263,34 @@ func dumpConst(c *Const) string {
 	}
 
 	return strconv.Itoa(int(c.Int))
+}
+
+// dumpReal is a value of REAL type t, as dumpConst shows it.
+func dumpReal(v vaxfloat.Value, t Type) string {
+	if t.Size == 4 {
+		text := strings.ToUpper(strconv.FormatFloat(v.Float64(), 'g', -1, 32))
+		if !strings.ContainsAny(text, ".E") {
+			text += ".0"
+		}
+
+		return text
+	}
+
+	letter := "D"
+	if t.Size == 16 {
+		letter = "Q"
+	}
+
+	text := strings.ToUpper(v.Text('g', -1))
+	if !strings.ContainsRune(text, '.') && !strings.ContainsRune(text, 'E') {
+		text += ".0"
+	}
+
+	if i := strings.IndexByte(text, 'E'); i >= 0 {
+		return text[:i] + letter + strings.TrimPrefix(text[i+1:], "+")
+	}
+
+	return text + letter + "0"
 }
 
 // quote is a character constant as FORTRAN writes it.

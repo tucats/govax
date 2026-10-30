@@ -4407,9 +4407,10 @@ output it prints.
 - **Declarations:** type statements of every type and length (BYTE;
   LOGICAL `*1`, `*2`, `*4`; INTEGER `*2`, `*4`; REAL `*4`, `*8`, `*16`;
   DOUBLE PRECISION; COMPLEX `*8`, `*16`; DOUBLE COMPLEX; CHARACTER`*n`,
-  `*(expr)`, and `*(*)` for a dummy argument), and DIMENSION, of
-  variables and arrays with constant bounds (a lower bound with a colon,
-  `V(0:9)`); a dummy array may be `A(*)`. Every variable gets its storage,
+  `*(expr)`, and `*(*)` for a dummy argument or a PARAMETER constant), and
+  DIMENSION, of variables and arrays with constant bounds (a lower bound
+  with a colon, `V(0:9)`; a bound may be a constant expression); a dummy
+  array may be `A(*)`. Every variable gets its storage,
   but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit
@@ -4419,11 +4420,22 @@ output it prints.
   declarations, then statement function definitions, then the executable
   statements); statement function definitions are recognized, and
   reported not implemented yet.
+- **Constants:** PARAMETER in both forms: `PARAMETER (N=10)`, where N has
+  its declared or implicit type and the value is converted to it, and
+  `PARAMETER N=10`, where N has its value's type. A value is a constant
+  expression of any type, using `+ - * /`, `**` with an INTEGER exponent,
+  `//`, the relational and logical operators, and MIN, MAX, ABS, MOD,
+  ICHAR, NINT, DIM, DPROD, CMPLX, CONJG, IMAG, IAND, IOR, IEOR, NOT,
+  ISHFT, LGE, LGT, LLE, LLT, and CHAR of constants. A constant's name may
+  be used in declarations and statements; one that isn't INTEGER, REAL,
+  LOGICAL (`*4`), or CHARACTER is reported not implemented where a
+  statement uses it.
 - **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
   `+ - * /` and unary minus, INTEGER and REAL mixed by the usual
   conversions (INTEGER division truncates); the relational operators
   (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`; array elements and
-  function references.
+  function references. The other operators and the intrinsic functions
+  above work so far only on constants, computed when compiling.
 - **Statements:** assignment; logical IF; block IF with ELSE IF and
   ELSE; DO with a label, ending at CONTINUE or another statement, with
   any step, and a REAL control variable too; unconditional GO TO; CALL;
@@ -4728,6 +4740,11 @@ FORTRAN compiler was available to check them). So far:
   LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
   do on INTEGERs.
 - A name only declared, never used, is a variable, and gets storage.
+- In a constant expression, a COMPLEX product's or quotient's parts are
+  each computed exactly and rounded once; a REAL or COMPLEX base's power
+  is repeated squaring, rounded at each product, from the reciprocal for
+  a negative exponent. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
+  arguments of one kind. Zero to a power of zero or less is an error.
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.

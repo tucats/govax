@@ -24,11 +24,28 @@ const (
 	maxInt = math.MaxInt32
 )
 
+// valueText is what a range message says is out of range when it isn't
+// a constant as written.
+const valueText = "the value of this expression"
+
+// intRangeError reports what, of INTEGER type t, as out of t's range
+// (INTRANGE).
+func (a *analyzer) intRangeError(pos diag.Position, what string, t Type) {
+	lo, hi := t.intRange()
+	a.report("INTRANGE", pos, what, t.String(), lo, hi)
+}
+
+// realRangeError reports what, of REAL or COMPLEX type t, as out of the
+// range of t's format (REALRANGE).
+func (a *analyzer) realRangeError(pos diag.Position, what string, t Type) {
+	a.report("REALRANGE", pos, what, t.part().String(), t.realRange())
+}
+
 // intConst is the constant an integer literal writes.
 func (a *analyzer) intConst(e *ast.IntConst) Expr {
 	v, err := intValue(e)
 	if err != nil || v > maxInt {
-		a.report("INTRANGE", e.Pos, ast.DumpExpr(e))
+		a.intRangeError(e.Pos, ast.DumpExpr(e), IntegerType)
 
 		return a.bad(e.Pos)
 	}
@@ -49,19 +66,13 @@ func intValue(e *ast.IntConst) (int64, error) {
 }
 
 // realConst is the constant a real literal writes, rounded to
-// F_floating. A D or Q exponent makes a REAL*8 or REAL*16 constant,
-// Phase 78's.
+// F_floating. A D or Q exponent makes a REAL*8 or REAL*16 constant, a
+// constant expression's (constant.go) whose uses are Phase 78's.
 func (a *analyzer) realConst(e *ast.RealConst) Expr {
-	switch {
-	case strings.ContainsRune(e.Text, 'D'):
-		a.notImpl(e.Pos, "a REAL*8 constant")
+	if strings.ContainsAny(e.Text, "DQ") {
+		v, _ := a.folded(e)
 
-		return a.bad(e.Pos)
-
-	case strings.ContainsRune(e.Text, 'Q'):
-		a.notImpl(e.Pos, "a REAL*16 constant")
-
-		return a.bad(e.Pos)
+		return v
 	}
 
 	v, err := vaxfloat.Parse(e.Text)
@@ -70,7 +81,7 @@ func (a *analyzer) realConst(e *ast.RealConst) Expr {
 	}
 
 	if err != nil {
-		a.report("REALRANGE", e.Pos, e.Text)
+		a.realRangeError(e.Pos, e.Text, RealType)
 
 		return a.bad(e.Pos)
 	}
@@ -149,7 +160,7 @@ func (a *analyzer) realOp(op ast.Op, x, y vaxfloat.Value, pos diag.Position) (va
 		return v, false
 
 	case errors.Is(err, vaxfloat.ErrOverflow):
-		a.report("REALRANGE", pos, "the value of this expression")
+		a.realRangeError(pos, valueText, RealType)
 
 		return v, false
 	}
@@ -207,7 +218,7 @@ func (a *analyzer) foldConvert(x *Const, t Type, pos diag.Position) Expr {
 		// CVTFL truncates (Table 3-1).
 		i := x.Real.Int(false)
 		if !i.IsInt64() || i.Int64() < minInt || i.Int64() > maxInt {
-			a.report("INTRANGE", pos, "the value of this expression")
+			a.intRangeError(pos, valueText, IntegerType)
 
 			return a.bad(pos)
 		}
@@ -266,35 +277,5 @@ func (a *analyzer) foldBinary(e *Binary, x, y *Const) Expr {
 
 // foldCompare is the LOGICAL value of x op y for the constants x and y.
 func foldCompare(e *Compare, x, y *Const) Expr {
-	var order int
-
-	if x.T.Kind == Real {
-		order = x.Real.Cmp(y.Real)
-	} else {
-		switch {
-		case x.Int < y.Int:
-			order = -1
-		case x.Int > y.Int:
-			order = 1
-		}
-	}
-
-	var v bool
-
-	switch e.Op {
-	case ast.EQ:
-		v = order == 0
-	case ast.NE:
-		v = order != 0
-	case ast.LT:
-		v = order < 0
-	case ast.LE:
-		v = order <= 0
-	case ast.GT:
-		v = order > 0
-	case ast.GE:
-		v = order >= 0
-	}
-
-	return logicalConst(v, e.Pos)
+	return logicalConst(relation(e.Op, order(x, y)), e.Pos)
 }

@@ -3,6 +3,7 @@
 **Status:** in progress (subtask 1, the survey, done and accepted
 2026-10-30; subtask 2, the parser's remaining statements, done
 2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
+2026-10-30; subtask 4, PARAMETER and constant folding, done
 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
@@ -503,8 +504,8 @@ Subtasks 2 to 9 below are revised to match.
 3. **Type declarations, IMPLICIT, and statement order** (done
    2026-10-30), every type and length; Figure 1-1's order; statement
    functions recognized.
-4. **PARAMETER and constant folding** in every type, both forms, the
-   constant-expression intrinsics.
+4. **PARAMETER and constant folding** (done 2026-10-30) in every type,
+   both forms, the constant-expression intrinsics.
 5. **Arrays:** bounds, lower bounds, adjustable and assumed-size forms,
    element offsets.
 6. **COMMON and EQUIVALENCE:** the layout algorithm and its errors.
@@ -668,3 +669,54 @@ Subtasks 2 to 9 below are revised to match.
     external function is allowed (the survey's reading of 4.4.2); a
     statement function whose name is an intrinsic's is the statement
     function (6.2.1's own SINH example).
+- **2026-10-30:** Subtask 4 done: PARAMETER and constant expressions
+  (`internal/fortran/sema`).
+  - **The evaluator** (`constant.go`, `constfuncs.go`) computes section
+    4.11's constant expressions from the syntax tree, so a name that isn't
+    a constant is never entered as a variable. Every type: INTEGER*2 and
+    *4, REAL*4, *8, and *16 (F, D, and H through `vaxfloat`), COMPLEX*8
+    and *16, LOGICAL, CHARACTER; every operator (`**` of an INTEGER
+    exponent only, `//`, `.EQV.`, `.NEQV.`, `.XOR.`, character
+    comparisons, COMPLEX equality); and section 4.11's functions, IMAG and
+    AIMAG both. `Type.rank` and `higher` are section 2.3.1.2's whole
+    table, COMPLEX*8 with REAL*8 or REAL*16 being COMPLEX*16. A real or
+    COMPLEX literal keeps its exact value (`Const.literal`), so `1D0 +
+    0.3333333` is `1D0 + 0.3333333000000000D0` as 2.3.1.2 says.
+  - **PARAMETER** (`parameter.go`): both forms. The standard one converts
+    the value to the name's type (`MU=1.23` is the INTEGER 1), a
+    CHARACTER*(*) constant takes its value's length, and appendix A.4's
+    takes the value's type whatever the name's letter. A constant is class
+    `Constant`, with `Value` and no storage; the dump shows its value.
+    `constInt` (bounds, CHARACTER lengths) is the evaluator's now, so
+    those may use constants, `**`, and the functions.
+  - **Executable statements:** a constant's name is its value; a type not
+    compiled yet is NOTIMPL, once (`constantUse`). Forms compiled only as
+    constants (`**`, the functions, `//`, `.EQV.` and its kin, REAL*8 and
+    COMPLEX constants, comparing character constants) go to the evaluator
+    (`folded`, first quietly to learn whether they are constant), and
+    otherwise keep their NOTIMPL. Octal and hexadecimal constants stay
+    NOTIMPL there (Phase 82), since an assignment's target decides their
+    type.
+  - **vaxfloat:** `Sqrt` (a COMPLEX's ABS) and `Text`.
+  - **Messages:** UNDEFPOW, NOTCONST, DUPPARAM, TYPEAFTER, OLDPARAMTYPE,
+    PARAMTYPE, BADCOMPLEX, INTRINARGS, BADARG, BADTYPELESS; INTRANGE and
+    REALRANGE now name the type and its range (the same text for INTEGER
+    and REAL).
+  - **Tests:** `TestParameterValues` (values in every type, both forms),
+    `TestErrors`' PARAMETER section, `TestExpressions`' folded forms,
+    golden `sema/testdata/params.for` (section 4.11's and A.4's examples),
+    and `testdata/fortran/params.for` end to end. The old NOTIMPL cases
+    for what is now constant changed: `2.0 ** 3` and `'A' // 'B'` use a
+    variable instead, `'A' .EQ. 'B'` moved to `TestExpressions`, and
+    PARAMETER's two have no NOTIMPL.
+  - Choices of ours, unconfirmed (no VAX FORTRAN to check): a COMPLEX
+    product's or quotient's parts computed exactly and rounded once;
+    powers of REAL and COMPLEX bases by repeated squaring, rounded at each
+    product, from the reciprocal for a negative exponent (Phases 77 and 78
+    must agree, so that a folded expression has the value the program
+    would compute); zero to a power of zero or less an error; a REAL*16
+    part making a COMPLEX constant COMPLEX*16; generic functions' arguments
+    of one kind (BADARG); an octal or hexadecimal constant INTEGER*4 in the
+    old form and beside no operand, and the other operand's type beside
+    one; a literal's extra precision kept through a PARAMETER of its own
+    type, and lost through a conversion.

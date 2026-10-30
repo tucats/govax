@@ -90,7 +90,11 @@ made), not part of FTNRTL. This was the author's direction
 4. **Trigonometric and inverse functions**, radians and degrees.
 5. **Hyperbolic functions, ATAN2, and the remaining real functions.**
 6. **Complex functions.**
-7. **OTS$ powers and complex division.**
+7. **OTS$ powers and complex division.** Phase 76's folding
+   (`sema/constant.go`'s `power`, `complexArith`) squares repeatedly,
+   rounding each product, from the reciprocal for a negative exponent, and
+   rounds a complex quotient's parts once; unconfirmed. These routines and
+   it should agree, whichever changes.
 8. **JSB entries, MTH$RANDOM, and the conditions.**
 9. **Tests from MACRO** programs, and the optional VMS probe.
 10. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.

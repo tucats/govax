@@ -6,7 +6,9 @@ import (
 )
 
 // declarations is the first walk over a unit's statements: the type
-// statements and DIMENSION statements, and the order of every statement
+// statements, DIMENSION statements, and PARAMETER statements, in order
+// (so that a constant may be used in the declarations after its
+// definition), and the order of every statement
 // (Figure 1-1, order.go). It also finds the statement function
 // definitions, which look like assignments to array elements and can be
 // told from them only here, where it is known which names are arrays.
@@ -27,6 +29,11 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 		case *ast.DimensionStmt:
 			for _, d := range s.Entities {
 				a.dimension(a.lookup(d.Name, d.Pos), d)
+			}
+
+		case *ast.ParameterStmt:
+			for _, d := range s.Defs {
+				a.parameter(s, d)
 			}
 		}
 	}
@@ -68,7 +75,7 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.report("DUPSTMTFUNC", ap.Pos, ap.Name, sym.defPos.Line)
 		a.stmtFuncs[s] = nil
 
-	case sym.Class == UnitName || sym.Result:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant:
 		a.badUse(sym, ap.Pos, "be a statement function")
 		a.stmtFuncs[s] = nil
 
@@ -123,6 +130,10 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		switch {
 		case sym.Class == UnitName:
 			a.badUse(sym, d.Pos, "be given a type")
+		case sym.Class == Constant && sym.oldForm:
+			a.report("OLDPARAMTYPE", d.Pos, d.Name, "PARAMETER statement", sym.defPos.Line)
+		case sym.Class == Constant:
+			a.report("TYPEAFTER", d.Pos, d.Name, sym.defPos.Line)
 		case sym.Typed:
 			a.report("DUPDECL", d.Pos, d.Name, sym.TypePos.Line)
 		default:
@@ -302,7 +313,7 @@ func article(text string) string {
 // array.
 func (a *analyzer) dimension(sym *Symbol, d *ast.Declarator) {
 	switch {
-	case sym.Class == UnitName || sym.Result:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant:
 		a.badUse(sym, d.Pos, "be an array")
 
 		sym.broken = true
@@ -391,90 +402,29 @@ func (a *analyzer) bound(sym *Symbol, e ast.Expr) (int, bool) {
 	return 0, false
 }
 
-// constKind is what constInt found.
-type constKind int
-
-const (
-	constOK         constKind = iota
-	constNamed                // the expression names a variable
-	constNotInteger           // it isn't an integer expression
-	constFailed               // an error, already reported
-)
-
 // constInt is the value of an integer constant expression in a
-// declaration, where its names mustn't be entered in the symbol table as
-// variables (a later phase's PARAMETER constants will be allowed in
-// them).
+// declaration (an array bound, a CHARACTER length), which may use the
+// unit's constants; names that aren't constants aren't entered in the
+// symbol table as variables (constNamed).
 func (a *analyzer) constInt(e ast.Expr) (int32, constKind) {
-	switch e := e.(type) {
-	case *ast.IntConst:
-		v, err := intValue(e)
-		if err != nil || v > maxInt {
-			a.report("INTRANGE", e.Pos, ast.DumpExpr(e))
+	c, err := a.declEval().eval(e)
 
-			return 0, constFailed
-		}
-
-		return int32(v), constOK
-
-	case *ast.Paren:
-		return a.constInt(e.X)
-
-	case *ast.Unary:
-		if e.Op != ast.Add && e.Op != ast.Sub {
-			return 0, constNotInteger
-		}
-
-		x, kind := a.constInt(e.X)
-		if kind != constOK || e.Op == ast.Add {
-			return x, kind
-		}
-
-		return a.checkInt(-int64(x), e.Pos)
-
-	case *ast.Binary:
-		switch e.Op {
-		case ast.Add, ast.Sub, ast.Mul, ast.Div:
-		default:
-			return 0, constNotInteger
-		}
-
-		x, kx := a.constInt(e.X)
-		y, ky := a.constInt(e.Y)
-
-		switch {
-		case kx == constFailed || ky == constFailed:
-			return 0, constFailed
-		case kx != constOK:
-			return 0, kx
-		case ky != constOK:
-			return 0, ky
-		}
-
-		v, ok := a.intOp(e.Op, x, y, e.Pos)
-		if !ok {
-			return 0, constFailed
-		}
-
-		return v, constOK
-
-	case *ast.Name, *ast.Apply:
-		return 0, constNamed
+	switch {
+	case err != nil && err.kind == constNot:
+		return 0, constNotInteger
+	case err != nil:
+		return 0, err.kind
+	case c.T.Kind != Integer:
+		return 0, constNotInteger
 	}
 
-	if what := formWhat(e); what != "" {
-		a.notImplForm(e.Position(), what)
-
-		return 0, constFailed
-	}
-
-	return 0, constNotInteger
+	return c.Int, constOK
 }
 
 // checkInt is v, if it is in INTEGER's range.
 func (a *analyzer) checkInt(v int64, pos diag.Position) (int32, constKind) {
 	if v < minInt || v > maxInt {
-		a.report("INTRANGE", pos, "the value of this expression")
+		a.intRangeError(pos, valueText, IntegerType)
 
 		return 0, constFailed
 	}

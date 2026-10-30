@@ -250,15 +250,56 @@ var messages = map[string]kind{
 	"BADTARGET": {Error, "can't assign a value to %s"},
 
 	// INTRANGE is an integer constant, or a constant expression's value,
-	// outside INTEGER*4's range.
-	"INTRANGE": {Error, "%s is outside INTEGER's range, -2147483648 to 2147483647"},
+	// outside its INTEGER type's range.
+	"INTRANGE": {Error, "%s is outside %s's range, %d to %d"},
 
 	// REALRANGE is a real constant, or a constant expression's value,
-	// too large or too small for REAL (F_floating).
-	"REALRANGE": {Error, "%s is outside REAL's range, about 0.29E-38 to 1.7E38"},
+	// too large or too small for its REAL type's format.
+	"REALRANGE": {Error, "%s is outside %s's range, about %s"},
 
 	// DIVZERO is a constant expression that divides by zero.
 	"DIVZERO": {Error, "this constant expression divides by zero"},
+
+	// UNDEFPOW is a constant expression raising zero to a power of zero
+	// or less, which has no value.
+	"UNDEFPOW": {Error, "this constant expression raises zero to the power %d, which has no value"},
+
+	// Constants and constant expressions (section 4.11, appendix A.4).
+
+	// NOTCONST is a PARAMETER value that isn't a constant expression;
+	// the argument says why.
+	"NOTCONST": {Error, "a PARAMETER constant's value must be a constant expression, and %s"},
+
+	// DUPPARAM is a second definition of a constant.
+	"DUPPARAM": {Error, "%s is already a constant, defined at line %d"},
+
+	// TYPEAFTER is a type statement for a constant after the PARAMETER
+	// statement that defined it.
+	"TYPEAFTER": {Error, "%s's type must be declared before the PARAMETER statement that defines it, at line %d"},
+
+	// OLDPARAMTYPE is a declared type for a constant appendix A.4's
+	// PARAMETER defines, which takes its value's type.
+	"OLDPARAMTYPE": {Error, "%s can't be given a type: PARAMETER without parentheses gives a constant its value's type (the %s is at line %d)"},
+
+	// PARAMTYPE is a PARAMETER value that can't be converted to its
+	// constant's type.
+	"PARAMTYPE": {Error, "the constant %s is %s, and can't take the value of %s expression"},
+
+	// BADCOMPLEX is a part of a COMPLEX constant that isn't a constant or
+	// a constant's name (section 2.2.1.3).
+	"BADCOMPLEX": {Error, "each part of a COMPLEX constant must be an INTEGER or REAL constant, or the name of one"},
+
+	// INTRINARGS is an intrinsic function given the wrong number of
+	// arguments.
+	"INTRINARGS": {Error, "the intrinsic function %s takes %s, not %d"},
+
+	// BADARG is an intrinsic function's argument of a type or value it
+	// doesn't take.
+	"BADARG": {Error, "the intrinsic function %s's arguments must be %s, and this one is %s"},
+
+	// BADTYPELESS is an octal or hexadecimal constant whose bits are a
+	// reserved operand in the floating type it is given.
+	"BADTYPELESS": {Error, "this constant's bits are a reserved operand, not a %s value"},
 
 	// Statements and blocks.
 

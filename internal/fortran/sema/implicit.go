@@ -163,7 +163,7 @@ func (a *analyzer) passedLengths() {
 		}
 
 		switch {
-		case s.Dummy != 0, s.Result, s.Class == Function:
+		case s.Dummy != 0, s.Result, s.Class == Function, s.Class == Constant:
 			continue
 		}
 

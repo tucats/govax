@@ -151,8 +151,8 @@ func TestErrors(t *testing.T) {
 
 		// Statement order (Figure 1-1).
 		{"IMPLICIT after a type statement", []string{"INTEGER I", "IMPLICIT REAL (A)", "END"}, "ORDER@2:7"},
-		{"IMPLICIT NONE after PARAMETER", []string{"PARAMETER (N = 1)", "IMPLICIT NONE", "END"}, "ORDER@2:7 NOTIMPL@1:7"},
-		{"PARAMETER between IMPLICITs", []string{"IMPLICIT REAL (A)", "PARAMETER (N = 1)", "IMPLICIT REAL (B)", "END"}, "NOTIMPL@2:7"},
+		{"IMPLICIT NONE after PARAMETER", []string{"PARAMETER (N = 1)", "IMPLICIT NONE", "END"}, "ORDER@2:7 NOTYPE@1:18"},
+		{"PARAMETER between IMPLICITs", []string{"IMPLICIT REAL (A)", "PARAMETER (N = 1)", "IMPLICIT REAL (B)", "END"}, ""},
 		{"IMPLICIT after an executable", []string{"X = 1", "IMPLICIT REAL (A)", "END"}, "LATEDECL@2:7"},
 		{"DATA before IMPLICIT", []string{"DATA X /1.0/", "IMPLICIT INTEGER (I)", "END"}, "ORDER@2:7 NOTIMPL@1:7"},
 		{"DATA among the specifications", []string{"REAL X", "DATA X /1.0/", "INTEGER I", "END"}, "NOTIMPL@2:7"},
@@ -160,6 +160,48 @@ func TestErrors(t *testing.T) {
 		{"a declaration after a statement function", []string{"F(X) = X", "REAL Y", "END"}, "ORDER@2:7 NOTIMPL@1:7"},
 		{"FORMAT and NAMELIST anywhere", []string{"10 FORMAT (I5)", "IMPLICIT REAL (A)", "NAMELIST /G/ A", "X = 1", "END"}, "NOTIMPL@1:7 NOTIMPL@3:7"},
 		{"COMMON after an executable", []string{"X = 1", "COMMON /C/ Y", "END"}, "LATEDECL@2:7 NOTIMPL@2:7"},
+
+		// PARAMETER and constant expressions (section 4.11, appendix A.4).
+		{"constants in declarations", []string{"PARAMETER (N = 10, L = N * 2)", "DIMENSION A(N), B(-N:L)", "CHARACTER*(L) C", "END"}, ""},
+		{"constants in expressions", []string{"PARAMETER (N = 10, PI = 3.1415927)", "X = PI * N", "PRINT *, N, 2 ** N, MAX(N, 3)", "END"}, ""},
+		{"a CHARACTER constant printed", []string{"CHARACTER*(*) T", "PARAMETER (T = 'HI')", "PRINT *, T, T // '!'", "END"}, ""},
+		{"a REAL*8 constant used", []string{"DOUBLE PRECISION D", "PARAMETER (D = 1D0)", "X = D", "Y = D", "END"}, "NOTIMPL@3:11"},
+		{"a COMPLEX constant expression used", []string{"X = CMPLX(1.0, 2.0)", "END"}, "NOTIMPL@1:11"},
+		{"a constant defined twice", []string{"PARAMETER (N = 1)", "PARAMETER (N = 2)", "END"}, "DUPPARAM@2:18"},
+		{"a constant assigned", []string{"PARAMETER (N = 1)", "N = 2", "END"}, "BADUSE@2:7"},
+		{"a constant as a DO variable", []string{"PARAMETER (N = 1)", "DO 10 N = 1, 2", "10 CONTINUE", "END"}, "BADUSE@2:13"},
+		{"a constant called", []string{"PARAMETER (N = 1)", "CALL N", "END"}, "BADUSE@2:12"},
+		{"a constant with subscripts", []string{"PARAMETER (N = 1)", "I = N(1)", "END"}, "BADUSE@2:11"},
+		{"a constant dimensioned", []string{"PARAMETER (N = 1)", "DIMENSION N(3)", "END"}, "BADUSE@2:17"},
+		{"an array as a constant", []string{"DIMENSION N(3)", "PARAMETER (N = 1)", "END"}, "BADUSE@2:18"},
+		{"a dummy as a constant", []string{"SUBROUTINE S(N)", "PARAMETER (N = 1)", "END"}, "BADUSE@2:18"},
+		{"a constant's type after it", []string{"PARAMETER (N = 1)", "REAL N", "END"}, "TYPEAFTER@2:12"},
+		{"the old form's constant typed", []string{"REAL P", "PARAMETER P = 1", "END"}, "OLDPARAMTYPE@2:17"},
+		{"the old form's constant typed after", []string{"PARAMETER P = 1", "REAL P", "END"}, "OLDPARAMTYPE@2:12"},
+		{"the old form's type is its value's", []string{"IMPLICIT NONE", "PARAMETER P = 1, Q = 2.5", "INTEGER I", "I = P", "END"}, ""},
+		{"a variable in a value", []string{"PARAMETER (N = M + 1)", "END"}, "NOTCONST@1:22"},
+		{"a function in a value", []string{"PARAMETER (X = SQRT(2.0))", "END"}, "NOTCONST@1:22"},
+		{"a REAL exponent in a value", []string{"PARAMETER (X = 2.0 ** 0.5)", "END"}, "NOTCONST@1:29"},
+		{"a constant's value too large", []string{"PARAMETER (N = 2 ** 31)", "END"}, "INTRANGE@1:24"},
+		{"zero to the power zero", []string{"PARAMETER (N = 0 ** 0)", "END"}, "UNDEFPOW@1:24"},
+		{"a division by zero", []string{"PARAMETER (X = 1.0 / 0)", "END"}, "DIVZERO@1:26"},
+		{"a REAL*8 value out of range", []string{"PARAMETER (D = 1D39)", "END"}, "REALRANGE@1:22"},
+		{"a CHARACTER value for an INTEGER", []string{"PARAMETER (N = 'AB')", "END"}, "NOTIMPL@1:22"},
+		{"an INTEGER value for a CHARACTER", []string{"CHARACTER*2 C", "PARAMETER (C = 1)", "END"}, "PARAMTYPE@2:22"},
+		{"a REAL value for a LOGICAL", []string{"LOGICAL L", "PARAMETER (L = 1.0)", "END"}, "PARAMTYPE@2:22"},
+		{"a variable in a COMPLEX constant", []string{"PARAMETER (C = (X, 1.0))", "END"}, "BADCOMPLEX@1:23"},
+		{"an expression in a COMPLEX constant", []string{"PARAMETER (C = (1.0 + 1, 1.0))", "END"}, "BADCOMPLEX@1:27"},
+		{"constants in a COMPLEX constant", []string{"COMPLEX C", "PARAMETER (R = 1.0, C = (R, -R))", "END"}, ""},
+		{"a variable in a COMPLEX constant, executed", []string{"Y = 1", "C = (Y, 1.0)", "END"}, "BADCOMPLEX@2:12"},
+		{"a COMPLEX comparison", []string{"PARAMETER (L = (1.0, 2.0) .LT. (1.0, 2.0))", "END"}, "BADOPERAND@1:33"},
+		{"an intrinsic's arguments counted", []string{"PARAMETER (N = MOD(1))", "END"}, "INTRINARGS@1:22"},
+		{"an intrinsic's arguments of two types", []string{"PARAMETER (N = MAX(1, 2.0))", "END"}, "BADARG@1:29"},
+		{"ICHAR of a long string", []string{"PARAMETER (N = ICHAR('AB'))", "END"}, "BADARG@1:28"},
+		{"CHAR out of range", []string{"CHARACTER C", "PARAMETER (C = CHAR(256))", "END"}, "BADARG@2:27"},
+		{"a reserved operand's bits", []string{"PARAMETER (X = '8000'X)", "END"}, "BADTYPELESS@1:22"},
+		{"a typeless constant executed", []string{"I = '1F'X", "END"}, "NOTIMPL@1:11"},
+		{"a constant under IMPLICIT NONE", []string{"IMPLICIT NONE", "PARAMETER (N = 1)", "END"}, "NOTYPE@2:18"},
+		{"a constant as an adjustable bound", []string{"SUBROUTINE S(A)", "PARAMETER (N = 3)", "DIMENSION A(N)", "END"}, ""},
 
 		// Names.
 		{"a variable called", []string{"X = 1", "CALL X", "END"}, "BADUSE@2:12"},
@@ -198,14 +240,13 @@ func TestErrors(t *testing.T) {
 		{"a dummy function", []string{"SUBROUTINE S(P)", "X = P(1)", "END"}, "NOTIMPL@2:11"},
 
 		// Expressions.
-		{"**", []string{"X = 2.0 ** 3", "END"}, "NOTIMPL@1:15"},
-		{"//", []string{"PRINT *, 'A' // 'B'", "END"}, "NOTIMPL@1:20"},
+		{"**", []string{"X = Y ** 3", "END"}, "NOTIMPL@1:13"},
+		{"//", []string{"PRINT *, 'A' // C", "END"}, "NOTIMPL@1:20"},
 		{".EQV.", []string{"L = L .EQV. L", "END"}, "NOTIMPL@1:13"},
 		{".AND. of REALs", []string{"L = X .AND. Y", "END"}, "BADOPERAND@1:13"},
 		{".NOT. of a REAL", []string{"L = .NOT. X", "END"}, "BADOPERAND@1:11"},
 		{"a character constant assigned", []string{"X = 'AB'", "END"}, "NOTIMPL@1:11"},
 		{"a character constant added", []string{"X = 1 + 'AB'", "END"}, "NOTIMPL@1:15"},
-		{"character constants compared", []string{"L = 'A' .EQ. 'B'", "END"}, "NOTIMPL@1:15"},
 		{"a character constant passed", []string{"CALL S('AB')", "END"}, "NOTIMPL@1:14"},
 		{"a REAL condition", []string{"IF (X) STOP", "END"}, "NOTLOGICAL@1:11"},
 		{"an INTEGER too big", []string{"I = 2147483648", "END"}, "INTRANGE@1:11"},
@@ -468,6 +509,19 @@ func TestExpressions(t *testing.T) {
 		// to even (16777216).
 		"16777217 + 0.0": "1.6777218E+07",
 		"1E-38 / 1E10":   "0.0",
+
+		// Forms compiled only as constant expressions (constant.go).
+		"2 ** 10":               "1024",
+		"2.0 ** (-2)":           "0.25",
+		"I + 2 ** 3":            "(+:I I 8)",
+		"MAX(1, 4) * J":         "(*:I 4 J)",
+		"ICHAR('A')":            "65",
+		"NINT(2.5D0)":           "3",
+		"IMAG((1.0, 2.0))":      "2.0",
+		"'AB' // 'C'":           "'ABC'",
+		"'A' .LT. 'B'":          ".TRUE.",
+		".TRUE. .EQV. .FALSE.":  ".FALSE.",
+		"LGE('B', 'A') .AND. L": "(.AND.:L .TRUE. L)",
 	}
 
 	for text, want := range cases {
@@ -522,6 +576,151 @@ func TestConstants(t *testing.T) {
 
 		if got := c.Bits(); got != want {
 			t.Errorf("%s: ^X%08X, want ^X%08X", text, got, want)
+		}
+	}
+}
+
+// TestParameterValues checks constant expressions in every type through
+// the value a PARAMETER statement gives its constant P: each case is P's
+// declaration (or none, for its implicit type, or OLD for appendix A.4's
+// form, P taking its value's type), its value's text, and the value
+// dumped.
+func TestParameterValues(t *testing.T) {
+	cases := []struct {
+		decl, value, want string
+	}{
+		// INTEGER, and conversions to it.
+		{"INTEGER P", "2 + 3 * 4", "14"},
+		{"INTEGER P", "-7 / 2", "-3"},
+		{"INTEGER P", "2 ** 10", "1024"},
+		{"INTEGER P", "(-2) ** 3", "-8"},
+		{"INTEGER P", "2 ** (-1)", "0"},
+		{"INTEGER P", "(-1) ** (-3)", "-1"},
+		{"INTEGER P", "7 ** 0", "1"},
+		{"INTEGER P", "1.23", "1"}, // section 4.11's MU
+		{"INTEGER P", "-2.9", "-2"},
+		{"INTEGER P", "(3.5, 1.0)", "3"},
+		{"INTEGER P", "'17'O", "15"},
+		{"INTEGER P", "'FFFFFFFF'X", "-1"},
+		{"INTEGER P", "'1FFFFFFFF'X", "-1"},
+		{"INTEGER*2 P", "'FFFF'X", "-1"},
+		{"INTEGER*2 P", "200 * 300", ""}, // INTRANGE
+		{"INTEGER P", "MAX(3, 7, 5)", "7"},
+		{"INTEGER P", "MIN(3, -7, 5)", "-7"},
+		{"INTEGER P", "ABS(-4)", "4"},
+		{"INTEGER P", "MOD(-7, 3)", "-1"},
+		{"INTEGER P", "DIM(7, 3) + DIM(3, 7)", "4"},
+		{"INTEGER P", "ICHAR('A')", "65"},
+		{"INTEGER P", "NINT(2.5) + NINT(-2.5)", "0"},
+		{"INTEGER P", "NINT(2.49)", "2"},
+		{"INTEGER P", "IAND(12, 10)", "8"},
+		{"INTEGER P", "IOR(12, 10)", "14"},
+		{"INTEGER P", "IEOR(12, 10)", "6"},
+		{"INTEGER P", "NOT(0)", "-1"},
+		{"INTEGER P", "ISHFT(1, 4)", "16"},
+		{"INTEGER P", "ISHFT(-1, -28)", "15"},
+		{"INTEGER P", "ISHFT(1, 32)", "0"},
+		{"INTEGER P", "6 .AND. 3", "2"},
+		{"INTEGER P", "6 .XOR. 3", "5"},
+		{"INTEGER P", "6 .EQV. 3", "-6"},
+
+		// REAL, D_floating, H_floating.
+		{"REAL P", "1.23", "1.23"},
+		{"REAL P", "1 / 3.0", "0.33333334"},
+		{"REAL P", "2.0 ** 3", "8.0"},
+		{"REAL P", "2.0 ** (-2)", "0.25"},
+		{"REAL P", "MAX(1.5, 2.5)", "2.5"},
+		{"REAL P", "MOD(7.5, 2.0)", "1.5"},
+		{"REAL P", "ABS((3.0, 4.0))", "5.0"},
+		{"REAL P", "IMAG((3.0, 4.0))", "4.0"},
+		{"REAL P", "AIMAG((3.0, 4.0))", "4.0"},
+		{"REAL P", "3.14159265358979D0", "3.1415927"},
+		{"REAL P", "'4080'X", "1.0"},   // F_floating's bits, read as a little-endian longword
+		{"REAL*8 P", "1.23", "1.23D0"}, // section 4.11's MU, declared REAL*8
+		{"REAL*8 P", "3.141592653589793238D0", "3.1415926535897932D0"},
+		{"REAL*8 P", "1D0 + 0.3333333", "1.3333333D0"}, // section 2.3.1.2
+		{"REAL*8 P", "1D0 / 3", "0.333333333333333336D0"},
+		{"REAL*8 P", "DPROD(0.1, 10.0)", "1.0000000149011612D0"},
+		{"REAL*16 P", "1Q0 / 3", "0.3333333333333333333333333333333333Q0"},
+		{"REAL*16 P", "1Q4000", "1Q4000"},
+		{"DOUBLE PRECISION P", "2D0 ** 100", "1.2676506002282294D30"},
+
+		// COMPLEX.
+		{"COMPLEX P", "(1.0, -2.5)", "(1.0, -2.5)"},
+		{"COMPLEX P", "(1, 2) * (3, 4)", "(-5.0, 10.0)"},
+		{"COMPLEX P", "(1, 2) / (3, 4)", "(0.44, 0.08)"},
+		{"COMPLEX P", "(0.0, 1.0) ** 2", "(-1.0, 0.0)"},
+		{"COMPLEX P", "(0.0, 1.0) ** (-1)", "(0.0, -1.0)"},
+		{"COMPLEX P", "CONJG((1.0, 2.0))", "(1.0, -2.0)"},
+		{"COMPLEX P", "CMPLX(1, 2)", "(1.0, 2.0)"},
+		{"COMPLEX P", "CMPLX(3.5)", "(3.5, 0.0)"},
+		{"COMPLEX P", "2.5", "(2.5, 0.0)"},
+		{"COMPLEX*16 P", "(1D0, 0.1)", "(1.0D0, 0.1D0)"},
+		{"OLD", "(1.0, 2D0)", "(1.0D0, 2.0D0)"},
+		{"OLD", "(1.0, 2.0) * 1D0", "(1.0D0, 2.0D0)"},
+
+		// LOGICAL.
+		{"LOGICAL P", ".TRUE. .AND. .NOT. .FALSE.", ".TRUE."},
+		{"LOGICAL P", "2 .GT. 1", ".TRUE."},
+		{"LOGICAL P", "(1.0, 2.0) .NE. (1.0, 2.0)", ".FALSE."},
+		{"LOGICAL P", "'ABC' .EQ. 'ABC  '", ".TRUE."},
+		{"LOGICAL P", "'AB' .LT. 'B'", ".TRUE."},
+		{"LOGICAL P", "LGT('B', 'AAA')", ".TRUE."},
+		{"LOGICAL P", "LLE('A', 'A')", ".TRUE."},
+		{"LOGICAL P", "LGE(' ', '')", ".TRUE."},
+		{"LOGICAL P", ".TRUE. .EQV. .FALSE.", ".FALSE."},
+		{"LOGICAL P", "-1", ".TRUE."},
+		{"LOGICAL*1 P", "256", ".FALSE."},
+
+		// CHARACTER.
+		{"CHARACTER*(*) P", "'A STRING OF 25 CHARACTERS'", "'A STRING OF 25 CHARACTERS'"},
+		{"CHARACTER*5 P", "'AB'", "'AB   '"},
+		{"CHARACTER*2 P", "'ABCD'", "'AB'"},
+		{"CHARACTER*(*) P", "'AB' // 'CD' // CHAR(69)", "'ABCDE'"},
+
+		// Appendix A.4's form: the value's own type.
+		{"OLD", "3.1415927", "3.1415927"},
+		{"OLD", "3.141592653589793238D0", "3.1415926535897932D0"},
+		{"OLD", ".TRUE.", ".TRUE."},
+		{"OLD", "'A STRING OF 25 CHARACTERS'", "'A STRING OF 25 CHARACTERS'"},
+		{"OLD", "'FF'X", "255"},
+	}
+
+	for _, c := range cases {
+		lines := []string{"      PARAMETER (P = " + c.value + ")"}
+
+		switch c.decl {
+		case "OLD":
+			lines = []string{"      PARAMETER P = " + c.value}
+		case "":
+		default:
+			lines = append([]string{"      " + c.decl}, lines...)
+		}
+
+		prog, ms := analyzeLines(t, "T.FOR", append(lines, "      END")...)
+		p := prog.Units[0].Lookup("P")
+
+		got := ""
+		if p.Value != nil {
+			got = dumpConst(p.Value)
+		}
+
+		if c.want == "" {
+			if len(ms) == 0 {
+				t.Errorf("%s = %s: got %s, want an error", c.decl, c.value, got)
+			}
+
+			continue
+		}
+
+		if len(ms) != 0 {
+			t.Errorf("%s = %s: %v", c.decl, c.value, ms)
+
+			continue
+		}
+
+		if got != c.want {
+			t.Errorf("%s = %s: got %s, want %s", c.decl, c.value, got, c.want)
 		}
 	}
 }

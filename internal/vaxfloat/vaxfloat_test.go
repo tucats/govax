@@ -427,3 +427,36 @@ func benchmarkOp(b *testing.B, f Format, op func(Format, Value, Value) (Value, e
 		}
 	}
 }
+
+func TestSqrtAndText(t *testing.T) {
+	cases := []struct {
+		f    Format
+		in   string
+		want string
+	}{
+		{F, "4", "2"},
+		{F, "2", "1.4142135"},
+		{D, "2", "1.41421356237309506"},
+		{H, "0", "0"},
+	}
+
+	for _, c := range cases {
+		v, err := Parse(c.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		r, err := Sqrt(c.f, v)
+		if err != nil {
+			t.Fatalf("Sqrt(%s, %s): %v", c.f, c.in, err)
+		}
+
+		if got := r.Text('g', -1); got != c.want {
+			t.Errorf("Sqrt(%s, %s) = %s, want %s", c.f, c.in, got, c.want)
+		}
+	}
+
+	if _, err := Sqrt(F, FromInt(-1)); err != ErrReserved {
+		t.Errorf("Sqrt(-1): %v, want ErrReserved", err)
+	}
+}

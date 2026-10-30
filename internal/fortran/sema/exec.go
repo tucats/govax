@@ -136,6 +136,14 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 	switch e := e.(type) {
 	case *ast.Name:
+		if s := a.unit.byName[e.Name]; s != nil && s.Class == Constant {
+			if !s.broken {
+				a.badUse(s, e.Pos, "be assigned a value")
+			}
+
+			return nil
+		}
+
 		t = a.name(e, true)
 
 		if r, ok := t.(*ArrayRef); ok {

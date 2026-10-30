@@ -106,7 +106,7 @@ func (a *analyzer) statement(s ast.Stmt) {
 	}
 
 	switch s := s.(type) {
-	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt:
+	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt:
 		// Their work was done by implicits and declarations.
 		return
 
@@ -210,7 +210,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
-		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt:
+		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt:
 		return aStatement(s)
 	}
 
@@ -423,6 +423,12 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 // loop it is inside (DOVARSET).
 func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 	var v *Var
+
+	if s := a.unit.byName[n.Name]; s != nil && s.Class == Constant && !s.broken {
+		a.badUse(s, n.Pos, "be a DO loop's variable")
+
+		return nil
+	}
 
 	switch e := a.name(n, true).(type) {
 	case *Var:

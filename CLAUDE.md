@@ -292,7 +292,9 @@ never had.
   is the survey, with a table of every statement and its phase, and
   subtask 2 (2026-10-30) the parser's remaining statements, and
   subtask 3 (2026-10-30) types, IMPLICIT, statement order, and
-  statement functions recognized.
+  statement functions recognized, and subtask 4 (2026-10-30) PARAMETER
+  and constant expressions in every type (`sema/constant.go`,
+  `constfuncs.go`, `parameter.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1693,7 +1695,11 @@ expect adjustment as phases land):
   2-1's types and lengths (`Compiled` says which expressions take,
   `Align` its `$LOCAL` boundary), IMPLICIT is `implicit.go`, Figure
   1-1's order `order.go`, and statement functions are recognized
-  (`StmtFunction`). `Compile` runs it after the parser, even after the
+  (`StmtFunction`). Subtask 4: `evaluator` computes constant expressions
+  from the syntax tree in every type (`constant.go`, `constfuncs.go`), so
+  names aren't entered as variables; a PARAMETER name is class `Constant`
+  with its `Value` (`parameter.go`), and an executable expression uses
+  the evaluator only for forms it compiles only as constants (`folded`). `Compile` runs it after the parser, even after the
   parser's errors. `ir` is the fifth pass (Phase 75, subtask 5):
   `Lower` turns each `sema.Unit` into a `Routine` of `Params`, `Cells`
   (`$LOCAL`: the unit's variables, then `$Cn`/`$Sn` DO counts and steps,

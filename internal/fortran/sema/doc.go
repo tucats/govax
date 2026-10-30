@@ -78,6 +78,14 @@
 // program would have computed. 1.0/3 becomes the constant 0.33333334,
 // whose F_floating longword is ^XAAAB3FAA.
 //
+// PARAMETER's values, array bounds, and CHARACTER lengths are constant
+// expressions in every type (constant.go, constfuncs.go, parameter.go):
+// INTEGER, REAL*4, REAL*8, REAL*16, COMPLEX, LOGICAL, and CHARACTER, with
+// ** of an INTEGER exponent and the intrinsic functions section 4.11
+// lists. Writing a constant's name is writing its value. An executable
+// statement's expression comes to the same evaluator only for the forms
+// it compiles only as constants (2**10, MAX(1, 4), 'A'//'B').
+//
 // # Blocks and loops
 //
 // The parser left each unit a flat list of statements. Here the IF
@@ -140,8 +148,8 @@
 // an implied-DO list) is reported where the expression is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
-// Some declarations can't be read yet at all: COMMON, PARAMETER,
-// EQUIVALENCE, and the rest are NOTIMPL until Phase 76's later subtasks.
+// Some declarations can't be read yet at all: COMMON, EQUIVALENCE, and
+// the rest are NOTIMPL until Phase 76's later subtasks.
 // Without them, most of what this pass would say about a unit's names
 // would be wrong (an array declared in COMMON would be "not an array" at
 // every use), so a unit with one gets only the messages about its

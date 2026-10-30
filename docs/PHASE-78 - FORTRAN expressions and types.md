@@ -34,7 +34,11 @@ computation a FORTRAN program can write compiles and runs correctly:
 
 ## What earlier phases leave in place
 
-- **Phase 76:** every expression parsed and typed, constants folded.
+- **Phase 76:** every expression parsed and typed, constants folded
+  (`sema/constant.go`). Its folding computes a COMPLEX product's or
+  quotient's parts exactly and rounds once (`complexArith`, unconfirmed);
+  the code generated here should round the same, or folding should change
+  with it, so a folded expression has the value the program would compute.
 - **Phase 77:** MTHRTL's routines and the OTS$ powers.
 - **Phase 75:** the generator's instruction selection for longword and
   F_floating; registers; the subset's operators.

@@ -341,10 +341,10 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// not implemented yet (COMMON, PARAMETER, EQUIVALENCE, ...), or one the
-// parser rejected. Without it, what semantic analysis would say about the
-// unit's names would mostly be wrong (an array declared in COMMON isn't
-// an array, a PARAMETER constant in a bound is a variable), so such a
+// not implemented yet (COMMON, EQUIVALENCE, ...), or one the parser
+// rejected. Without it, what semantic analysis would say about the unit's
+// names would mostly be wrong (an array declared in COMMON isn't an
+// array), so such a
 // unit gets only the messages about its structure, and its statements'
 // own NOTIMPLs.
 func incompleteDeclarations(body []ast.Stmt) bool {

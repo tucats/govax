@@ -56,11 +56,46 @@ func (a *analyzer) value(e ast.Expr) Expr {
 		return a.binary(e)
 	}
 
+	if c, ok := e.(*ast.ComplexConst); ok {
+		v, _ := a.folded(c)
+
+		return v
+	}
+
 	if what := formWhat(e); what != "" {
 		a.notImplForm(e.Position(), what)
 	}
 
 	return a.bad(e.Position())
+}
+
+// folded is the value of e if it is a constant expression (constant.go),
+// for a form this phase compiles only as one: **, the intrinsic
+// functions, character operations, REAL*8 and COMPLEX constants. ok is
+// false if e isn't constant, for the caller to report the form as it
+// would. A constant of a type the code generator doesn't handle yet is
+// NOTIMPL (Phase 78's); a CHARACTER one is a value wherever a character
+// constant is.
+func (a *analyzer) folded(e ast.Expr) (v Expr, ok bool) {
+	// First quietly, to learn whether e is constant at all, then for
+	// its messages.
+	if _, err := (&evaluator{a: a, quiet: true}).eval(e); err != nil && err.kind != constFailed {
+		return nil, false
+	}
+
+	c, err := (&evaluator{a: a}).eval(e)
+
+	switch {
+	case err != nil:
+		return a.bad(e.Position()), true
+
+	case !c.T.Compiled() && c.T.Kind != Character:
+		a.notImpl(e.Position(), article(c.T.String()+" constant"))
+
+		return a.bad(e.Position()), true
+	}
+
+	return c, true
 }
 
 // name analyzes a name standing alone: a variable, or, where wholeOK
@@ -70,6 +105,10 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 
 	if s.broken {
 		return a.bad(n.Pos)
+	}
+
+	if s.Class == Constant {
+		return a.constantUse(s, n)
 	}
 
 	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.uncompiledUse(s, n.Pos) {
@@ -107,6 +146,12 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	s := a.unit.byName[e.Name]
 
 	if s == nil || (s.Class == Unclassified && s.Dummy == 0) {
+		if _, ok := constFuncs[e.Name]; ok {
+			if v, ok := a.folded(e); ok {
+				return v
+			}
+		}
+
 		if what := builtin(e.Name, true); what != "" {
 			a.notImpl(e.Pos, what)
 
@@ -329,6 +374,13 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 // binary analyzes X op Y.
 func (a *analyzer) binary(e *ast.Binary) Expr {
 	switch e.Op {
+	case ast.Pow, ast.Concat, ast.Eqv, ast.Neqv, ast.Xor:
+		if v, ok := a.folded(e); ok {
+			return v
+		}
+	}
+
+	switch e.Op {
 	case ast.Pow:
 		// Exponentiation calls the OTS$ powers (Phases 77 and 78).
 		a.notImpl(e.Pos, "the ** operator")
@@ -374,6 +426,13 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 // LOGICAL.
 func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 	if x.Type().Kind == Character && y.Type().Kind == Character {
+		cx, okx := x.(*Const)
+		cy, oky := y.(*Const)
+
+		if okx && oky {
+			return logicalConst(relation(e.Op, compareText(cx.Text, cy.Text)), e.Pos)
+		}
+
 		a.notImpl(e.Pos, "comparing character values")
 
 		return a.bad(e.Pos)

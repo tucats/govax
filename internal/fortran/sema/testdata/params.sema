@@ -1,0 +1,36 @@
+== SUBROUTINE PARAMS
+  PARAMS                  program unit
+  A         REAL          array(0:63)      argument 1
+  PI        REAL          constant         = 3.1415927
+  PIOV2     REAL          constant         = 1.5707964
+  DPI       REAL*8        constant         = 3.1415926535897932D0
+  DPIOV2    REAL*8        constant         = 1.5707963267948966D0
+  FLAG      LOGICAL       constant         = .TRUE.
+  LONGNAME  CHARACTER*25  constant         = 'A STRING OF 25 CHARACTERS'
+  MU        INTEGER       constant         = 1
+  N         INTEGER       constant         = 8
+  NSQ       INTEGER       constant         = 64
+  SMALL     INTEGER*2     constant         = 32767
+  Z         COMPLEX       constant         = (1.0, -2.0)
+  W         COMPLEX       constant         = (-3.0, -4.0)
+  DZ        COMPLEX*16    constant         = (3.1415926535897932D0, 1.0D0)
+  NAME      CHARACTER*8   constant         = 'ABC     '
+  B         REAL          array(1:8, -8:8) $LOCAL+0
+  X         REAL          variable         $LOCAL+544
+  $LOCAL is 548 bytes
+19          X = 3.1415927
+20          B[1, -8] = (+:R A[63] 1.5707964)
+21          PRINT * 'A STRING OF 25 CHARACTERS' 'ABC     ' .TRUE. 64
+22          END
+== SUBROUTINE OLD
+  OLD                     program unit
+  PI        REAL          constant         = 3.1415927
+  DPI       REAL*8        constant         = 3.1415926535897932D0
+  PIOV2     REAL          constant         = 1.5707964
+  DPIOV2    REAL*8        constant         = 1.5707963267948966D0
+  FLAG      LOGICAL       constant         = .TRUE.
+  LONGNAME  CHARACTER*25  constant         = 'A STRING OF 25 CHARACTERS'
+  IMASK     INTEGER       constant         = 255
+  $LOCAL is 0 bytes
+29          PRINT * 1.5707964 .TRUE. 'A STRING OF 25 CHARACTERS' 255
+30          END
