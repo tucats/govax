@@ -1,10 +1,12 @@
 # Phase 74 — FORTRAN: the plan, the decisions, and the groundwork
 
-**Status:** in progress. Part A (the survey), Part B (the decisions),
-and Part C (the phases) were reviewed and accepted by the author on
-2026-10-29 (the answers are under "The review" at the end). Subtasks 1
-(the plan), 2 (the compiler's skeleton and the FORTRAN command), 3
-(source forms), and 4 (FTNRTL's pipeline) are done; subtask 5 is next. Phases 75 to 86 each have a
+**Status:** done 2026-10-29. Part A (the survey), Part B (the
+decisions), and Part C (the phases) were reviewed and accepted by the
+author on 2026-10-29 (the answers are under "The review" at the end).
+All five subtasks are done: the plan, the compiler's skeleton and the
+FORTRAN command, source forms, FTNRTL's pipeline, and the close-out;
+"Left for later" at the end of the progress log lists what the phase
+didn't do. Phase 75 is next. Phases 75 to 86 each have a
 skeletal planning doc of their own. Needs nothing new: MACRO-32 (Phases
 27–29), LINK and shareable images (Phases 30 and 68), the RTL machinery
 (Phases 34 and 53–59), and traceback (Phase 70) are all in place.
@@ -719,7 +721,7 @@ review after each.
    LINK; LINK's govax source naming FTNRTL. A MACRO program calls FTNRTL,
    links with no options file, and runs, in both paging modes, and the
    committed image matches a fresh build. MACRO and LINK fixes as found.
-5. **Close-out:** CLAUDE.md's package descriptions (`internal/fortran`,
+5. **Close-out** (done 2026-10-29): CLAUDE.md's package descriptions (`internal/fortran`,
    `internal/ftnrtl`), HELP, MANUAL.md's new chapter's skeleton,
    `docs/FORTRAN-INTERNALS.md` begun, PLAN.md.
 
@@ -977,3 +979,32 @@ and the later phases' docs have been changed to follow them.
     image: the times and the linker's name), `DEFINE FTNRTL` to it, and
     RUN and LINK using it. `rms`'s `TestImageLocatorBuiltin`;
     `TestLink_libraryLogicalNames` counts the new source.
+- **2026-10-29:** Subtask 5 done: the close-out, and the phase.
+  - MANUAL.md's chapter 14, "Programming in FORTRAN" (after Internals;
+    the Appendices became 15, since chapter 13's sections are cited by
+    number elsewhere): the compiler and where it stands, the command,
+    source lines and INCLUDE, the MACRO file, FTNRTL (its routines,
+    finding it, building one's own), and "Differences from VAX
+    FORTRAN" so far; its examples were run on govax. Chapter 1 and the
+    linker chapter no longer say govax has no FORTRAN compiler, and 6.5's
+    FORTRAN points to the chapter.
+  - `docs/FORTRAN-INTERNALS.md` begun: the compiler's shape, the driver,
+    the messages, the source pass (columns, tab format, statements and
+    positions, comments inside constants, INCLUDE), the MACRO writer,
+    and FTNRTL (the transfer vector, position independence, the
+    reproducible build, how RUN and LINK find it).
+  - HELP FORTRAN describes FTNRTL; CLAUDE.md describes `internal/fortran`
+    and `internal/ftnrtl` and the locator's built-in images; PLAN.md's
+    row is done.
+  - An INCLUDE file that isn't there is now just SYSTEM-W-NOSUCHFILE in
+    the compiler's message, without the reasons beneath it.
+  - While making the manual's examples, two scripted console runs wrote
+    their files to the author's own default volume and XFER volume
+    (`vax.init` had mounted both, so the scratch volume's MOUNT failed);
+    the files were deleted at once, by name and version.
+  - **Left for later:** Decision 18's `file+file` concatenation (and
+    `+LIB/LIBRARY`, Phase 83); INCLUDE of text library modules (Phase
+    83); `/LIST` on INCLUDE (Phase 85's listings); a `$DSCDEF` in govax's
+    STARLET (FTNRTL's module defines the three values it uses);
+    statement labels on INCLUDE statements are ignored without a
+    message.

@@ -31,7 +31,8 @@ times, node names, and version numbers will differ on your system.
 11. [Running programs](#11-running-programs)
 12. [The debugger](#12-the-debugger)
 13. [Internals](#13-internals)
-14. [Appendices](#14-appendices)
+14. [Programming in FORTRAN](#14-programming-in-fortran)
+15. [Appendices](#15-appendices)
 
 ---
 
@@ -100,9 +101,11 @@ replays those VMS runs to keep it that way.
   does that very well. govax is VMS-compatible from the program's point
   of view: its "operating system" is a small microkernel plus Go code
   that behaves as VMS's services do.
-- **It doesn't include VMS's compilers or utilities.** There is no
-  FORTRAN, C, BASIC, or Pascal compiler; MACRO-32 is the language you can
-  build programs in. Images built by those compilers on a real VAX will
+- **It doesn't include VMS's compilers or utilities.** There is no C,
+  BASIC, or Pascal compiler; MACRO-32 is the language you can build
+  programs in, and govax's own FORTRAN compiler, which writes MACRO-32,
+  is being built ([14. Programming in FORTRAN](#14-programming-in-fortran)).
+  Images built by those compilers on a real VAX will
   run if every run-time library routine they call is one govax provides
   (see [Running programs built on VMS](#running-programs-built-on-vms)).
 - **It contains no DIGITAL, Compaq, HP, or VSI code or files.** govax was
@@ -1312,7 +1315,9 @@ and column:
 
 After an error no MACRO file is written, and the command fails with
 `DCL-E-FORERRORS`; after warnings the file is written and `$STATUS` is a
-warning.
+warning. [Chapter 14](#14-programming-in-fortran) describes the
+compiler, its source forms, the MACRO file, and FTNRTL, the run-time
+library programs link against.
 
 ### 6.6 Running programs and processes
 
@@ -2774,8 +2779,10 @@ README lists them.
 
 ### Mixing in other languages
 
-govax has no compilers, but object modules compiled on a VAX (FORTRAN,
-C, Pascal, BASIC) can be linked by govax's `LINK` with your MACRO
+Besides MACRO (and govax's FORTRAN compiler, which writes MACRO:
+[chapter 14](#14-programming-in-fortran)), govax has no compilers, but
+object modules compiled on a VAX (FORTRAN, C, Pascal, BASIC) can be
+linked by govax's `LINK` with your MACRO
 modules, given the libraries above, and run if the run-time routines they
 call are ones govax provides ([Appendix B](#appendix-b-run-time-library-routines)).
 
@@ -4314,7 +4321,207 @@ programs on VMS.
 
 ---
 
-## 14. Appendices
+## 14. Programming in FORTRAN
+
+govax is gaining a FORTRAN compiler, built a phase at a time
+(`docs/PHASE-74 - FORTRAN plan.md` lays out the program, Phases 74 to
+86). This chapter describes what is there so far, and grows with each
+phase. The compiler accepts VAX FORTRAN V5.0, FORTRAN-77 with DEC's
+extensions, as the 1988 *VAX FORTRAN Language Reference Manual*
+describes it. It doesn't write object modules: it writes a MACRO-32
+source file, which `MACRO` assembles and `LINK` links against FTNRTL,
+govax's FORTRAN run-time library:
+
+```text
+$ FORTRAN SQUARES          ! SQUARES.FOR -> SQUARES.MAR
+$ MACRO SQUARES            ! SQUARES.MAR -> SQUARES.OBJ
+$ LINK SQUARES             ! SQUARES.OBJ + FTNRTL.EXE -> SQUARES.EXE
+$ RUN SQUARES
+```
+
+The goal is programs that compile and run correctly, as the manual
+defines the language and its run-time behavior. Matching DIGITAL's
+compiler's object code, messages, or listings is not a goal.
+
+**Where things stand (Phase 74):** the compiler reads a source's lines
+into statements, checks their layout, and reads INCLUDE files; it
+generates no code yet, so the MACRO file it writes assembles into an
+empty module. FTNRTL exists, with its first two routines.
+
+### 14.1 The FORTRAN command
+
+The command's syntax and qualifiers are in
+[section 6.5](#fortran): the source files, `/MACRO` and `/NOMACRO`,
+`/EXTEND_SOURCE`, `/D_LINES`, and `/CONTINUATIONS=n`. From the host
+shell, `govax fortran` runs it.
+
+### 14.2 Source lines
+
+A FORTRAN source is laid out in columns, from its days on punched
+cards (the language manual's section 1.3):
+
+| Columns | Field |
+| --- | --- |
+| 1-5 | the statement label, 1 to 5 digits (blanks and leading zeros don't count) |
+| 6 | the continuation indicator: anything but a blank or 0 makes the line part of the statement before it |
+| 7-72 | the statement (to 132 with `/EXTEND_SOURCE`) |
+| 73-80 | a sequence number, ignored (none with `/EXTEND_SOURCE`) |
+
+A tab within the first six columns ends the label field
+(*tab-format* lines): after it, a digit from 1 to 9 is the continuation
+indicator, and anything else starts the statement. A C, `*`, or `!` in
+column 1, or a blank line, is a comment; a `!` elsewhere starts a
+comment to the end of the line, unless it's in a character or Hollerith
+constant. A D in column 1 marks a debugging line, compiled with
+`/D_LINES` and a comment otherwise. A statement may have 19
+continuation lines, or as many as `/CONTINUATIONS=n` says (to 99).
+`CDEC$` lines are compiler directives (Phase 82 compiles them).
+
+`INCLUDE 'file'` reads a file (type `.FOR` unless given) in the
+statement's place. A file is found relative to the file that includes
+it: on the host in its directory, on a volume on its device and in its
+directory. Included files may include others, ten deep.
+`INCLUDE '(module)'`, a text library's module, comes in Phase 83.
+
+A problem with a line's layout is reported with the line and column;
+after an error no MACRO file is written, and a fatal error (an INCLUDE
+file that can't be read) stops the compilation:
+
+```text
+VAX> FORTRAN BAD
+%FORT-E-BADLABEL, statement label field holds "X", which is not a label of 1 to 5 digits
+  at line 2 of DUA1:[WORK]BAD.FOR;1
+    X   Y = 2
+  --^
+%FORT-F-INCLOPEN, can't read the INCLUDE file 'NOWHERE': SYSTEM-W-NOSUCHFILE, File DUA1:[WORK]NOWHERE.FOR not found
+  at line 5 of DUA1:[WORK]BAD.FOR;1
+        INCLUDE 'NOWHERE'
+  --------------^
+%DCL-E-FORERRORS, 2 error(s) compiling DUA1:[WORK]BAD.FOR;1; no MACRO file written
+```
+
+### 14.3 The MACRO file
+
+The MACRO file is meant to be read beside the program it came from. It
+starts with what made it, and holds every line of the source as a
+comment, with its number; a line from an INCLUDE file has its include
+depth before the number, between comments naming the file. For this
+program and its INCLUDE file, `LIMITS.FOR`, which holds
+`PARAMETER (N=5)`:
+
+```text
+      PROGRAM SQUARES
+C     Squares of the first N integers
+      INCLUDE 'limits'
+      DO 10 I = 1, N
+	PRINT *, I,
+	1  I*I
+10    CONTINUE
+      END
+```
+
+FORTRAN writes this `SQUARES.MAR` (later phases put each statement's
+code after its lines):
+
+```text
+	.TITLE	SQUARES
+	.IDENT	/01/
+;
+; Compiled by govax FORTRAN V1.0-607 on 29-OCT-2026 22:05:44.66
+; from DUA0:[WORK]SQUARES.FOR;1
+; by the command FORTRAN SQUARES
+;
+; Each line of the FORTRAN source appears below as a comment, with its line number;
+; a line from an INCLUDE file has its include depth before the number.
+; This version of the compiler generates no code yet; MACRO assembles this file
+; into an empty module.
+;
+;    1        PROGRAM SQUARES
+;    2  C     Squares of the first N integers
+;    3        INCLUDE 'limits'
+; INCLUDE file DUA0:[WORK]LIMITS.FOR;1:
+;1   1        PARAMETER (N=5)
+; end of DUA0:[WORK]LIMITS.FOR;1
+;    4        DO 10 I = 1, N
+;    5  	PRINT *, I,
+;    6  	1  I*I
+;    7  10    CONTINUE
+;    8        END
+
+	.END
+```
+
+Each source line's prefix is one tab stop wide, so tab-format lines keep
+their layout.
+
+### 14.4 FTNRTL, the run-time library
+
+FTNRTL.EXE holds the routines compiled programs call (I/O, STOP, and so
+on). It is a shareable image written in MACRO-32, its sources in
+`internal/ftnrtl` (`mar/*.mar` and the options file `ftnrtl.opt`), and
+built into govax, so it is always there. RUN and LINK look for it as for
+any shareable image (a logical name `FTNRTL`, `SYS$SHARE:FTNRTL.EXE`,
+the host library directory) and take govax's own last, so `LINK`
+resolves its routines with no options file. Its routines are named
+`FTN$...`, and its transfer vector keeps each at a fixed offset, so a
+program linked against one FTNRTL runs with any later one.
+
+So far it has two routines, which MACRO programs can call too:
+
+| Routine | What it does |
+| --- | --- |
+| `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
+| `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
+
+```text
+VAX> TYPE STOPPER.MAR
+	.TITLE	STOPPER
+	.PSECT	DATA,NOWRT,NOEXE,LONG
+TEXT:	.ASCID	/ALL DONE/
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	START,^M<>
+	PUSHAQ	TEXT
+	CALLS	#1,G^FTN$STOP	; STOP 'ALL DONE'
+	.END	START
+VAX> MACRO STOPPER
+VAX> LINK STOPPER
+VAX> RUN STOPPER
+ALL DONE
+VAX> SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+```
+
+To change FTNRTL, build your own from its sources and point the logical
+name at it:
+
+```text
+VAX> MACRO FTN_VECTOR
+VAX> MACRO FTN_CONTROL
+VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
+VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
+```
+
+### 14.5 Differences from VAX FORTRAN
+
+Where the manuals at hand don't settle a rule, govax makes a choice
+(each phase's document lists its own, unconfirmed on VMS, since no VAX
+FORTRAN compiler was available to check them). So far:
+
+- `/CONTINUATIONS` allows 0 to 99, and 19 without it.
+- In a tab-format line, the tab stands for the columns before column 7,
+  so the statement still ends at column 72 (or 132).
+- A line whose first nonblank character is `!` is a comment line, and
+  doesn't end a statement whose continuation lines follow.
+- Lines aren't padded with blanks to column 72: a character constant
+  continued from a short line goes straight on to the next.
+- `CPAR$` lines (parallel directives) are comments.
+- INCLUDE files are found relative to the including file, ten deep at
+  most.
+- `FTN$STOP` writes to `SYS$OUTPUT`.
+
+---
+
+## 15. Appendices
 
 ### Appendix A: System services
 

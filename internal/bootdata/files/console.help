@@ -4021,6 +4021,14 @@ $FOR
     volume, on its device and in its directory.  INCLUDE '(module)', a
     text library's module, is not implemented yet.
 
+    Compiled programs call FTNRTL, govax's FORTRAN run-time library, a
+    shareable image written in MACRO-32 and built into govax.  LINK
+    finds its routines (named FTN$...) without an options file, and RUN
+    finds the image.  Both look for a file of one's own first: a logical
+    name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
+    directory.  So far FTNRTL has FTN$VERSION and FTN$STOP, which MACRO
+    programs can call too.
+
     Syntax:
 
         FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]

@@ -277,12 +277,17 @@ never had.
   (`internal/mthrtl`, by the author's direction, usable outside FORTRAN).
   Bugs and gaps found in MACRO, LINK, RMS, and `ods2` along the way are
   in scope; RMS indexed files are deferred to a later program.
-  Each later phase has a planning doc.
+  Each later phase has a planning doc. Phase 74 (done 2026-10-29) is
+  the groundwork: the plan, the FORTRAN command (`/MACRO`, `/NOMACRO`,
+  `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`; `govax fortran`),
+  the compiler's driver, messages, and first pass (source forms and
+  INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
+  LINK); Phase 75 (first light, every pass for a small subset) is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
   line and configuration, every DCL command, command procedures, MACRO, LINK,
-  LIBRARY, RUN, the debugger, and internals. Its examples were run on govax; when
+  LIBRARY, RUN, the debugger, internals, and FORTRAN (chapter 14). Its examples were run on govax; when
   a change alters a command, a message, or an example's output, update it too.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -297,6 +302,10 @@ never had.
   log of the fixes made.
 - `docs/MODE-STACKS.md` — where VMINIT puts each access mode's stack, their sizes and
   page protections, and what was deliberately left unchanged.
+- `docs/FORTRAN-INTERNALS.md` — a guided tour of the FORTRAN compiler and
+  FTNRTL (Phase 74 on), for someone who wants to write a compiler for the
+  VAX under VMS; each FORTRAN phase extends it. MANUAL.md's chapter 14 is
+  the user's side.
 
 ## Reference material
 
@@ -791,6 +800,10 @@ expect adjustment as phases land):
   GSMATCH check (`identMatches`, `IdentMismatchError`), placement
   (`imageBase`; `placeEmulated` for LIBRTL placed at link time), and a
   failed activation taken down (`ResetICBList`).
+  Phase 74: the locator's last place is an image built into govax
+  (`Builtin: ftnrtl.Image`); `findShareable` returns the `rms.FoundImage`,
+  and both loaders take a built-in image's bytes (the mapping loader's
+  page source over them in memory).
 - `internal/dclcmd` — the utility commands (Phase 52; earlier in
   `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
   DUMP (`dump.go`, Phase 51),
@@ -799,8 +812,12 @@ expect adjustment as phases land):
   DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, SET and SHOW
   WORKING_SET (`workingset.go`, Phase 63), BACKUP (`backup*.go`,
   Phase 69), MACRO, LINK
-  (`linksource.go`, `GovaxSymbols`), LIBRARY, ANALYZE, the VMS library
-  search (`syslib.go`), and paging (`page.go`). Each is a method of
+  (`linksource.go`, `GovaxSymbols`; since Phase 74 `ftnrtlSource`,
+  FTNRTL's symbols, read only for an `FTN$` name), LIBRARY, ANALYZE,
+  FORTRAN (`fortran.go`, Phase 74: the compiler's driver run on each
+  source, `fortranIncludes` finding INCLUDE files relative to the
+  including file), the VMS library search (`syslib.go`), and paging
+  (`page.go`). Each is a method of
   `Context`, which the console builds for each command from the DCL
   running it (`Console.cmd`; tests and cmd/govax use
   `Console.Commands`); what a command asks of DCL is its function fields
@@ -1479,7 +1496,9 @@ expect adjustment as phases land):
   defined, then `Session.FindShareableImage` (the name parsed with the
   default `SYS$SHARE:.EXE`, each element of a search list in turn),
   then the host; a missing image is an `ImageNotFoundError` with the
-  spec RMS tried last.
+  spec RMS tried last. Phase 74: last of all `Builtin`, an image govax
+  carries (FTNRTL), found as `FoundImage.Builtin`, named
+  `BuiltinSpec`'s "FTNRTL.EXE (built into govax)".
   Phase 69: `saveset.go`'s `OpenSaveSet` (a save set as an
   `io.ReaderAt`), and `restore.go`'s `Session.RestoreFile`: one
   `backup.File` made on a volume with every saved header field, its
@@ -1569,10 +1588,45 @@ expect adjustment as phases land):
   sharing `analyzeFiles`) find files (and object libraries' modules) and
   write the report; in `console.dcl` each kind of analysis is a qualifier
   switching to its own syntax.
+- `internal/fortran` — the FORTRAN compiler (Phases 74–86;
+  `docs/PHASE-74 - FORTRAN plan.md`, `docs/FORTRAN-INTERNALS.md`): VAX
+  FORTRAN V5.0 source in, an annotated MACRO-32 file out. A package per
+  pass, each with a `doc.go` that teaches it; plain Go, knowing nothing
+  of the machine, RMS, or the console (the FORTRAN command,
+  `internal/dclcmd/fortran.go`, reads and writes the files). The driver
+  is `Compile(Options, File) Result` (`compile.go`). `diag` is the
+  messages: one table (`messages.go`) of identifiers, severities, and
+  texts; a `Message` prints the line and a pointer to its column.
+  `source` is the first pass (Phase 74, subtask 3): `Read` turns lines
+  into a `Program` of every line (with its file, number, include depth,
+  and kind) and `Statement`s (label, joined text, `Position` back to
+  file, line, and column); fixed and tab format, comments, D lines,
+  CDEC$ directives, the statement field's end (72 or 132), the
+  continuation limit, `!` comments outside character and Hollerith
+  constants (`comment.go`), and INCLUDE through an `Opener`
+  (`include.go`). `codegen` so far is `Writer`, the MACRO file's layout
+  (columns, the 132-character limit, `SourceLine`/`SourceLineAt`, an
+  included line's prefix starting with its depth). `lex`, `ast`,
+  `parse`, `sema`, `ir`, and `opt` come in later phases.
+- `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
+  74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
+  `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
+  entries at fixed offsets; `ftn_control.mar`, FTN$VERSION and
+  FTN$STOP), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
+  as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
+  assembles and links it with `internal/asm` and `internal/link` as
+  `LINK/SHAREABLE/NOSYSLIB` would, times and tool names fixed so the
+  build is reproducible; `go generate ./internal/ftnrtl` (`mkftnrtl`)
+  rewrites the image, and `TestCommittedImage` checks it. The
+  locator's `Builtin` and LINK's `ftnrtlSource` find it last, so
+  `DEFINE FTNRTL` to an image of one's own takes precedence; the
+  console's `TestFTNRTL` links and runs a MACRO program against both,
+  in both paging modes.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
-  `console`/`run`/`macro`/`link`/`library`/`analyze` subcommands;
+  `console`/`run`/`macro`/`fortran`/`link`/`library`/`analyze` subcommands;
   `analyze --image` is ANALYZE/IMAGE). A one-shot subcommand that fails
   makes govax exit nonzero (124, as timeout(1) does, when `--instruction-limit`
   or `--time-limit` stopped it), and volumes still mounted are dismounted (flushed)

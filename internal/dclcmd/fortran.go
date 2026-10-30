@@ -2,6 +2,7 @@ package dclcmd
 
 import (
 	"errors"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"time"
@@ -218,6 +219,14 @@ func (fi fortranIncludes) OpenInclude(name string, from *source.File) (*source.F
 
 	records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
+		// A missing file is the commonest failure: its message alone,
+		// without the reasons beneath it, reads best inside the
+		// compiler's.
+		var notFound *rms.NotFoundError
+		if errors.As(err, &notFound) || errors.Is(err, fs.ErrNotExist) {
+			return nil, vmserrors.New(vmserrors.SS_NOSUCHFILE, loc.Name)
+		}
+
 		return nil, FileFailure(err, loc.Name)
 	}
 
