@@ -475,10 +475,10 @@ all four floating formats (MTH$SQRT, MTH$DSQRT, MTH$GSQRT, MTH$HSQRT,
 ...), the complex ones (MTH$CABS, MTH$CEXP, ...), and the OTS$ powers
 (OTS$POWII, OTS$POWRR, OTS$POWDJ, ...) and complex division, with the
 manual's condition signals (MTH$_LOGZERNEG, MTH$_SQUROONEG, ...: the
-texts exist). Accuracy: F and G are computed in float64, which holds
-them exactly, and rounded once to the format. D (56 bits) and H (113
-bits) need more than float64, and are computed with `math/big` series
-to within an ulp. MTHRTL's vector is VMS's, captured from VMS 7.1's
+texts exist). Accuracy: every format is computed with `math/big` to within
+an ulp and rounded once (changed 2026-10-30 by `PHASE-77`'s Decision 3:
+the plan first had F and G in float64, whose results differ between hosts).
+MTHRTL's vector is VMS's, captured from VMS 7.1's
 MTHRTL.EXE on the local system disk with `vmsdef/gen -image` as
 LIBRTL's was, so VMS-compiled images that call MTHRTL also work (the
 review's answer 2).

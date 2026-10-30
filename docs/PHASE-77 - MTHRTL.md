@@ -1,7 +1,7 @@
 # Phase 77 — MTHRTL: VMS's mathematics library, emulated
 
 **Status:** in progress (subtask 1, the survey and capture, 2026-10-30;
-Decision 3 below needs the author's answer). Needs Phase 74 (the plan)
+its Decision 3 accepted by the author the same day). Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -51,12 +51,11 @@ made), not part of FTNRTL. This was the author's direction
   mechanisms and return F and integer results in R0 and D and G results
   in R0:R1. Per the calling standard, H and D/G complex results come
   back through a first argument.
-- **Accuracy:** F and G values fit exactly in a float64, so those forms
-  compute with Go's `math` and round once with `vaxfloat`. D (56-bit
-  fraction) and H (113-bit) are computed with `math/big` at enough
-  precision (argument reduction and series), then rounded. Results
-  should be within one ulp of the true value. The tests compare each
-  form against a high-precision reference.
+- **Accuracy:** every form, F, D, G, and H, is computed with `math/big` at
+  the format's precision plus guard bits, then rounded once with
+  `vaxfloat` (the survey's Decision 3, which replaced the plan's `float64`
+  for F and G). Results should be within one ulp of the true value. The
+  tests compare each form against a high-precision reference.
 - **The vector** (the author's answer to Phase 74's review question 2):
   MTHRTL's global symbol table is captured from VMS 7.1's MTHRTL.EXE on
   the local system disk (`testdata/disks/rq0-ra92.dsk`) with
@@ -268,16 +267,16 @@ be corrected.
    manuals are the behavior, and the image is the list.
 2. **The `OTS$` routines go in MTHRTL** (answers "which library"): all 28 are
    in its table, and none is in LIBRTL's.
-3. **One `math/big` engine for all four formats. Needs the author's answer,
-   as it changes the plan's Decision 14** ("F and G are computed in float64").
+3. **One `math/big` engine for all four formats. Accepted by the author
+   (2026-10-30), who chose results that agree across hosts over speed; it
+   replaces the plan's Decision 14 on this point** ("F and G are computed in
+   float64").
    Every function is written once, taking a precision: the format's fraction
    plus 40 guard bits, rounded once by `vaxfloat`. It gives the same bits on
    every host, covers G's whole range, needs one implementation and one set of
    tests, and is correctly rounded except about once in 2^40, so within the
    plan's one ulp. It costs several hundred times `math.Sin`, or tens of
-   VAX instructions a call. The alternative keeps the plan: F and G through
-   `math`, with G's tests allowing an ulp and a special case for G's low band.
-   Subtask 3 is written either way after the answer.
+   VAX instructions a call. Go's `math` is not used for any result.
 4. **Exact last bits aren't a goal, and exact values are.** `SIND(180)`,
    `COSD(90)`, `TAND(45)`, `SQRT(4)`, and `EXP(0)` come out exact: degrees are
    reduced exactly, in rational arithmetic, before any conversion to radians.
@@ -298,7 +297,6 @@ be corrected.
 
 ## Open questions
 
-- **Decision 3**, for the author.
 - **For the VMS probe** (subtask 10, `testdata/mth77`, run by the author):
   - the signal array's arguments for each `MTH$_` condition, and what user PC
     holds;
@@ -346,5 +344,6 @@ be corrected.
   transfer vector entry's first bytes for its mechanism. LINK now resolves
   MTH$ and OTS$ names from the table with no MTHRTL.EXE present, and a call
   signals NOTIMPL (`TestMTHRTLLinks`, in both paging modes); `TestMTHRTLVector`
-  holds the table's shape. The survey's Decision 3 changes the plan's accuracy
-  method and waits for the author.
+  holds the table's shape. The author accepted the survey's Decision 3 the same
+  day: one `math/big` engine for all four formats, in place of the plan's
+  `float64` for F and G.
