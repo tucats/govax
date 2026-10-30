@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/librtl"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -49,11 +50,61 @@ type JSBRoutine struct {
 
 // Routines are the routines reached by CALL that govax provides. The
 // transfer vector's other CALL entries signal NOTIMPL.
-var Routines = []Routine{}
+var Routines = []Routine{
+	{"MTH$SQRT", callEntry(vaxfloat.F, squareRoot)},
+	{"MTH$DSQRT", callEntry(vaxfloat.D, squareRoot)},
+	{"MTH$GSQRT", callEntry(vaxfloat.G, squareRoot)},
+	{"MTH$HSQRT", callEntry(vaxfloat.H, squareRoot)},
+
+	{"MTH$EXP", callEntry(vaxfloat.F, exp)},
+	{"MTH$DEXP", callEntry(vaxfloat.D, exp)},
+	{"MTH$GEXP", callEntry(vaxfloat.G, exp)},
+	{"MTH$HEXP", callEntry(vaxfloat.H, exp)},
+
+	{"MTH$ALOG", callEntry(vaxfloat.F, naturalLog)},
+	{"MTH$DLOG", callEntry(vaxfloat.D, naturalLog)},
+	{"MTH$GLOG", callEntry(vaxfloat.G, naturalLog)},
+	{"MTH$HLOG", callEntry(vaxfloat.H, naturalLog)},
+
+	{"MTH$ALOG2", callEntry(vaxfloat.F, base2Log)},
+	{"MTH$DLOG2", callEntry(vaxfloat.D, base2Log)},
+	{"MTH$GLOG2", callEntry(vaxfloat.G, base2Log)},
+	{"MTH$HLOG2", callEntry(vaxfloat.H, base2Log)},
+
+	{"MTH$ALOG10", callEntry(vaxfloat.F, base10Log)},
+	{"MTH$DLOG10", callEntry(vaxfloat.D, base10Log)},
+	{"MTH$GLOG10", callEntry(vaxfloat.G, base10Log)},
+	{"MTH$HLOG10", callEntry(vaxfloat.H, base10Log)},
+}
 
 // JSBRoutines are the routines reached by JSB that govax provides. The
-// vector's other JSB entries signal NOTIMPL.
-var JSBRoutines = []JSBRoutine{}
+// vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2, which
+// no manual gives and whose registers wait for the VMS probe (Decision 7).
+// MTH$DEXP_R7 and MTH$GEXP_R7 are second entries: in VMS's image each jumps
+// to the same address as its _R6.
+var JSBRoutines = []JSBRoutine{
+	{"MTH$SQRT_R3", jsbEntry(vaxfloat.F, squareRoot)},
+	{"MTH$DSQRT_R5", jsbEntry(vaxfloat.D, squareRoot)},
+	{"MTH$GSQRT_R5", jsbEntry(vaxfloat.G, squareRoot)},
+	{"MTH$HSQRT_R8", jsbEntry(vaxfloat.H, squareRoot)},
+
+	{"MTH$EXP_R4", jsbEntry(vaxfloat.F, exp)},
+	{"MTH$DEXP_R6", jsbEntry(vaxfloat.D, exp)},
+	{"MTH$DEXP_R7", jsbEntry(vaxfloat.D, exp)},
+	{"MTH$GEXP_R6", jsbEntry(vaxfloat.G, exp)},
+	{"MTH$GEXP_R7", jsbEntry(vaxfloat.G, exp)},
+	{"MTH$HEXP_R6", jsbEntry(vaxfloat.H, exp)},
+
+	{"MTH$ALOG_R5", jsbEntry(vaxfloat.F, naturalLog)},
+	{"MTH$DLOG_R8", jsbEntry(vaxfloat.D, naturalLog)},
+	{"MTH$GLOG_R8", jsbEntry(vaxfloat.G, naturalLog)},
+	{"MTH$HLOG_R8", jsbEntry(vaxfloat.H, naturalLog)},
+
+	{"MTH$ALOG10_R5", jsbEntry(vaxfloat.F, base10Log)},
+	{"MTH$DLOG10_R8", jsbEntry(vaxfloat.D, base10Log)},
+	{"MTH$GLOG10_R8", jsbEntry(vaxfloat.G, base10Log)},
+	{"MTH$HLOG10_R8", jsbEntry(vaxfloat.H, base10Log)},
+}
 
 // jsbName matches the names of the JSB entries: a name like MTH$SIN_R4 is
 // reached by JSB. OTS$POWHH_R3 is not: it's a CALL entry whose result comes

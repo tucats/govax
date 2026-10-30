@@ -1,8 +1,9 @@
 # Phase 77 — MTHRTL: VMS's mathematics library, emulated
 
 **Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
-its Decision 3 accepted by the author the same day; subtask 2, the package
-and its registration, the same day). Needs Phase 74 (the plan)
+its Decision 3 accepted by the author the same day; subtasks 2, the package
+and its registration, and 3, the engine, square root, exponentials, and
+logarithms, the same day). Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -310,6 +311,14 @@ be corrected.
   - `OTS$POWII` and `POWJJ` for negative bases and exponents, and their
     overflow;
   - `MTH$RANDOM`'s values from known seeds;
+  - what an H routine's result in memory holds after a handler continues from
+    its condition (govax writes the reserved operand, or 0.0 for an underflow,
+    before signaling), and R2:R3 after an H JSB entry's (govax clears them);
+  - what a handler that continues from `FLOUNDMAT` gets in R0 and R1 (the
+    manual says "the result is set to 0.0", which govax follows);
+  - `MTH$GEXP`'s underflow limit: the manual says -709.774, where the format's
+    limit, 1024 ln 2, is -709.783. govax follows the format, as the other three
+    forms' figures do;
   - `AMAX1` with no arguments (`WRONUMARG`?);
   - whether `SIN` of a huge argument signals `SIGLOSMAT`;
   - the undocumented JSB entries' registers, starting with `COSH_R4` and
@@ -324,7 +333,7 @@ be corrected.
    with the reserved operand, caller's FU, argument access, H and R0:R3
    results), `vaxfloat`'s way in and out; the oracles rerun. Done.
 3. **The engine, square root, exponentials, logarithms** in all four formats,
-   JSB entries with them.
+   JSB entries with them. Done.
 4. **Trigonometric and inverse functions**, radians and degrees, exact
    reduction.
 5. **Hyperbolic functions and ATAN2.**
@@ -378,3 +387,33 @@ be corrected.
   assumed the table fit VMINIT's page. The console, debugger, and machine
   packages skip five tests, none about this: `TestLink68Oracle`'s `files.lst`
   and `myshr.olb` comparisons in each loader, and `TestMacro_realStarlet`.
+- **2026-10-30:** Subtask 3. `engine.go` is the engine: each function takes a
+  precision and works above it, and a routine asks for its format's precision
+  plus 40 bits and rounds once (`rounded`). `exponential` is 2^k times a Taylor
+  series after 8 halvings, `logarithm` is n ln 2 plus the atanh series, which
+  stays accurate however close x is to 1, `logBase2` makes a power of 2 exact
+  by keeping n apart, and ln 2 and ln 10 are `constant`s made once from atanh
+  series (a `constant` recomputes only for more bits, so pi can follow it to
+  H's 16,500 bits in subtask 4). Square root is `vaxfloat.Sqrt`. `function.go`
+  makes a routine from a function and a format: `callEntry` (R0 or R0:R1, or
+  through the first argument for H) and `jsbEntry`, with `evaluate`, which gives
+  0.0 quietly for an underflow unless the caller set FU, and `signalFailure`,
+  which turns the function's error into the condition. The tables hold 20 CALL
+  and 18 JSB entries, the second entries `DEXP_R7` and `GEXP_R7` among them
+  (Decision 7). `MTH$SQRT_R2` stays a NOTIMPL stub until the probe gives its
+  registers.
+  `engine_test.go` checks each function against a reference by other means at
+  512 bits (a Taylor series with no ln 2 in it, Halley's method on it for the
+  logarithm, and exact squares for the root), in every format, over the whole
+  range, near 1, and past the limits; a run with the guard and scratch bits set
+  to 0 fails 713 of its checks, so the comparisons can tell. It also checks
+  published digits, exact values, the manual's limits, and the domains.
+  `TestEntriesFromAProgram` runs every entry from a MACRO program it generates:
+  answers, each condition continued from a handler, FU clear and set, a reserved
+  operand. `TestRoutineUnhandled` is the message and the image's end. A call
+  costs 1.5 to 2.2 us for an exponential, 2 to 3.9 us for a natural logarithm,
+  2.5 to 5.2 us for a common logarithm, and under 0.3 us for a square root,
+  F to H, so tens of VAX instructions' time, as the survey estimated. The
+  probe's questions gained three: H results after a condition, FLOUNDMAT's
+  continued result, and G's underflow limit, where the manual's -709.774 isn't
+  the format's -709.783.

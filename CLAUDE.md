@@ -311,7 +311,9 @@ never had.
   in its phase doc, and VMS 7.1's MTHRTL.EXE symbol table in `vmsdef`
   (404 names, the `OTS$` powers among them), so LINK finds them; subtask 2
   (2026-10-30) is `internal/mthrtl`, a stub for each of the 402 entries,
-  each signaling NOTIMPL with its name until its routine exists.
+  each signaling NOTIMPL with its name until its routine exists; subtask 3
+  (2026-10-30) is its `math/big` engine, with square root, exponentials,
+  and logarithms in all four formats, CALL and JSB.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1381,7 +1383,13 @@ expect adjustment as phases land):
   for every entry of the vector, JSB for a `MTH$..._Rn` name), and `Register`
   (NOTIMPL for an entry no table has). `float.go` moves values between
   memory, registers, and `vaxfloat.Value`s; `condition.go` signals with the
-  reserved operand as the R0 and R1 a handler continues with.
+  reserved operand as the R0 and R1 a handler continues with. `engine.go` is
+  the functions in `math/big`, each taking a precision (a routine asks for its
+  format's plus 40 bits, and rounds once with `vaxfloat`; Go's `math` isn't
+  used for a result, so every host gets the same bits); `constant` holds ln 2
+  and ln 10, made on first need. `function.go` makes a table's routine from a
+  `function` and a format (`callEntry`, `jsbEntry`), and turns the function's
+  error into the condition, an underflow only if the caller set FU.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

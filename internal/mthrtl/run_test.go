@@ -353,3 +353,308 @@ func TestUnhandledCondition(t *testing.T) {
 		t.Errorf("the image went on after a severe condition:\n%s", text)
 	}
 }
+
+// The routines from a real program: every entry of the square root,
+// exponential, and logarithm families, CALL and JSB, for answers, each
+// condition, and a handler that continues from it.
+
+// entryCase is one call in the generated program, by what's looked at: the
+// argument's text as a MACRO floating literal (or empty for a reserved
+// operand), whether the caller has FU set, and what should come back.
+type entryCase struct {
+	entry     string
+	format    vaxfloat.Format
+	arg       string
+	fu        bool
+	want      vaxfloat.Value
+	reserved  bool   // the result is the reserved operand, not want
+	condition uint32 // what the handler should see, or 0
+}
+
+// entryFamily is a family's entries in format order, F, D, G, H. A format's
+// JSB names may be several (a second entry), and LOG2's are none.
+type entryFamily struct {
+	call [4]string
+	jsb  [4][]string
+}
+
+var entryFamilies = map[string]entryFamily{
+	"SQRT": {
+		[4]string{"MTH$SQRT", "MTH$DSQRT", "MTH$GSQRT", "MTH$HSQRT"},
+		[4][]string{{"MTH$SQRT_R3"}, {"MTH$DSQRT_R5"}, {"MTH$GSQRT_R5"}, {"MTH$HSQRT_R8"}},
+	},
+	"EXP": {
+		[4]string{"MTH$EXP", "MTH$DEXP", "MTH$GEXP", "MTH$HEXP"},
+		[4][]string{{"MTH$EXP_R4"}, {"MTH$DEXP_R6", "MTH$DEXP_R7"}, {"MTH$GEXP_R6", "MTH$GEXP_R7"}, {"MTH$HEXP_R6"}},
+	},
+	"LOG": {
+		[4]string{"MTH$ALOG", "MTH$DLOG", "MTH$GLOG", "MTH$HLOG"},
+		[4][]string{{"MTH$ALOG_R5"}, {"MTH$DLOG_R8"}, {"MTH$GLOG_R8"}, {"MTH$HLOG_R8"}},
+	},
+	"LOG2": {
+		[4]string{"MTH$ALOG2", "MTH$DLOG2", "MTH$GLOG2", "MTH$HLOG2"},
+		[4][]string{},
+	},
+	"LOG10": {
+		[4]string{"MTH$ALOG10", "MTH$DLOG10", "MTH$GLOG10", "MTH$HLOG10"},
+		[4][]string{{"MTH$ALOG10_R5"}, {"MTH$DLOG10_R8"}, {"MTH$GLOG10_R8"}, {"MTH$HLOG10_R8"}},
+	},
+}
+
+// entryCases makes the program's calls: each row below for each family it
+// names, in each format, by each of the family's entries.
+func entryCases(t *testing.T) []entryCase {
+	t.Helper()
+
+	symbol := func(name string) uint32 { return vmsdef.LibrarySymbols[name] }
+	number := func(f vaxfloat.Format, s string) vaxfloat.Value {
+		x, err := vaxfloat.Parse(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		v, err := vaxfloat.Round(f, x)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	rows := []struct {
+		family    string
+		arg       string
+		fu        bool
+		want      string // empty: the reserved operand, or 0 when zero is set
+		zero      bool
+		condition uint32
+	}{
+		{family: "SQRT", arg: "2.25", want: "1.5"},
+		{family: "SQRT", arg: "0.0", want: "0"},
+		{family: "SQRT", arg: "-1.0", condition: symbol("MTH$_SQUROONEG")},
+		{family: "SQRT", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "EXP", arg: "0.0", want: "1"},
+		{family: "EXP", arg: "1.0", want: "2.718281828459045235360287471352662497757247"},
+		{family: "EXP", arg: "20000.0", condition: symbol("MTH$_FLOOVEMAT")},
+		{family: "EXP", arg: "-20000.0", zero: true},
+		{family: "EXP", arg: "-20000.0", fu: true, zero: true, condition: symbol("MTH$_FLOUNDMAT")},
+		{family: "EXP", arg: "1.0", fu: true, want: "2.718281828459045235360287471352662497757247"},
+		{family: "EXP", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "LOG", arg: "1.0", want: "0"},
+		{family: "LOG", arg: "10.0", want: "2.302585092994045684017991454684364207601101"},
+		{family: "LOG", arg: "0.0", condition: symbol("MTH$_LOGZERNEG")},
+		{family: "LOG", arg: "-2.0", condition: symbol("MTH$_LOGZERNEG")},
+		{family: "LOG", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "LOG2", arg: "8.0", want: "3"},
+		{family: "LOG2", arg: "0.25", want: "-2"},
+		{family: "LOG2", arg: "0.0", condition: symbol("MTH$_LOGZERNEG")},
+		{family: "LOG2", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+
+		{family: "LOG10", arg: "1000.0", want: "3"},
+		{family: "LOG10", arg: "0.0", condition: symbol("MTH$_LOGZERNEG")},
+		{family: "LOG10", condition: vmsdef.Symbols["SS$_ROPRAND"]},
+	}
+
+	var cases []entryCase
+
+	formats := []vaxfloat.Format{vaxfloat.F, vaxfloat.D, vaxfloat.G, vaxfloat.H}
+
+	for _, row := range rows {
+		family := entryFamilies[row.family]
+
+		for i, f := range formats {
+			names := []string{family.call[i]}
+			names = append(names, family.jsb[i]...)
+
+			for _, name := range names {
+				c := entryCase{entry: name, format: f, arg: row.arg, fu: row.fu, condition: row.condition}
+
+				switch {
+				case row.want != "":
+					c.want = number(f, row.want)
+				case !row.zero:
+					c.reserved = true
+				}
+
+				// SS$_ROPRAND leaves an H result in memory alone, so the
+				// program finds there what it put there, which is the
+				// reserved operand too.
+				cases = append(cases, c)
+			}
+		}
+	}
+
+	return cases
+}
+
+// entryProgram is the MACRO for the cases. Each call is followed by SHOW, which
+// prints R0 to R3 and the condition the handler saw.
+func entryProgram(cases []entryCase) string {
+	directive := map[vaxfloat.Format]string{
+		vaxfloat.F: ".F_FLOATING", vaxfloat.D: ".D_FLOATING", vaxfloat.G: ".G_FLOATING", vaxfloat.H: ".H_FLOATING",
+	}
+
+	var data, code strings.Builder
+
+	for i, c := range cases {
+		label := fmt.Sprintf("A%d", i)
+
+		if c.arg == "" {
+			// A reserved operand: the sign set and the exponent zero, in any format.
+			fmt.Fprintf(&data, "%s:\t.LONG\t^X8000,0,0,0\n", label)
+		} else {
+			fmt.Fprintf(&data, "%s:\t%s\t%s\n", label, directive[c.format], c.arg)
+		}
+
+		fmt.Fprintf(&code, "\t; %d. %s\n\tCLRL\tSCOND\n", i, c.entry)
+
+		if c.fu {
+			code.WriteString("\tBISPSW\t#^X40\n")
+		}
+
+		isJSB := strings.Contains(c.entry, "_R")
+
+		switch {
+		case isJSB && c.format == vaxfloat.F:
+			fmt.Fprintf(&code, "\tMOVL\t%s,R0\n", label)
+		case isJSB && c.format == vaxfloat.H:
+			fmt.Fprintf(&code, "\tMOVQ\t%s,R0\n\tMOVQ\t%s+8,R2\n", label, label)
+		case isJSB:
+			fmt.Fprintf(&code, "\tMOVQ\t%s,R0\n", label)
+		case c.format == vaxfloat.H:
+			// What a reserved argument leaves in the result: this.
+			fmt.Fprintf(&code, "\tMOVL\t#^X8000,HRES\n\tCLRL\tHRES+4\n\tCLRQ\tHRES+8\n")
+			fmt.Fprintf(&code, "\tPUSHAL\t%s\n\tPUSHAL\tHRES\n", label)
+		default:
+			fmt.Fprintf(&code, "\tPUSHAL\t%s\n", label)
+		}
+
+		switch {
+		case isJSB:
+			fmt.Fprintf(&code, "\tJSB\tG^%s\n", c.entry)
+		case c.format == vaxfloat.H:
+			fmt.Fprintf(&code, "\tCALLS\t#2,G^%s\n\tMOVQ\tHRES,R0\n\tMOVQ\tHRES+8,R2\n", c.entry)
+		default:
+			fmt.Fprintf(&code, "\tCALLS\t#1,G^%s\n", c.entry)
+		}
+
+		if c.fu {
+			code.WriteString("\tBICPSW\t#^X40\n")
+		}
+
+		code.WriteString("\tJSB\tSHOW\n")
+	}
+
+	return `	.TITLE	MTHFAM
+	.PSECT	DATA,WRT,NOEXE,LONG
+HRES:	.BLKL	4
+SCOND:	.BLKL	1
+CTL:	.ASCID	/!XL !XL !XL !XL c=!XL/
+BUF:	.BLKB	132
+OUT:	.LONG	132
+	.ADDRESS BUF
+LEN:	.BLKL	1
+LINE:	.BLKL	2
+` + data.String() + `	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	HANDLER,^M<>
+	MOVL	4(AP),R0
+	MOVL	4(R0),SCOND
+	MOVL	#1,R0
+	RET
+SHOW:	PUSHL	SCOND
+	PUSHL	R3
+	PUSHL	R2
+	PUSHL	R1
+	PUSHL	R0
+	PUSHAL	OUT
+	PUSHAL	LEN
+	PUSHAQ	CTL
+	CALLS	#8,G^SYS$FAO
+	MOVL	LEN,LINE
+	MOVAB	BUF,LINE+4
+	PUSHAQ	LINE
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	RSB
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVAL	HANDLER,(FP)
+` + code.String() + `	MOVL	#1,R0
+	RET
+	.END	START
+`
+}
+
+func TestEntriesFromAProgram(t *testing.T) {
+	_, d, out := boot(t)
+	cases := entryCases(t)
+
+	build(t, d, out, "MTHFAM", entryProgram(cases))
+
+	if err := d.Dispatch("RUN MTHFAM"); err != nil {
+		t.Fatalf("RUN: %v\n%s", err, out)
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != len(cases) {
+		t.Fatalf("%d lines, want %d:\n%s", len(lines), len(cases), out)
+	}
+
+	for i, c := range cases {
+		// The result's longwords, in the registers its format takes.
+		want := make([]string, c.format.Size()/4)
+
+		bits, err := vaxfloat.Pack(c.format, c.want)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if c.reserved {
+			bits = vaxfloat.Reserved(c.format)
+		}
+
+		for j, w := range []uint32{uint32(bits.Lo), uint32(bits.Lo >> 32), uint32(bits.Hi), uint32(bits.Hi >> 32)}[:len(want)] {
+			want[j] = fmt.Sprintf("%08X", w)
+		}
+
+		fields := strings.Fields(lines[i])
+		if got := strings.Join(fields[:len(want)], " "); got != strings.Join(want, " ") {
+			t.Errorf("%s(%q): registers %s, want %s", c.entry, c.arg, got, strings.Join(want, " "))
+		}
+
+		if got, want := fields[4], fmt.Sprintf("c=%08X", c.condition); got != want {
+			t.Errorf("%s(%q): %s, want %s", c.entry, c.arg, got, want)
+		}
+	}
+}
+
+// TestRoutineUnhandled: a routine's condition with no handler to take it is
+// the condition's message, and the severe condition ends the image.
+func TestRoutineUnhandled(t *testing.T) {
+	_, d, out := boot(t)
+
+	build(t, d, out, "MTHLOG", `	.TITLE	MTHLOG
+	.PSECT	DATA,WRT,NOEXE,LONG
+Z:	.FLOAT	0.0
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	START,^M<>
+	PUSHAL	Z
+	CALLS	#1,G^MTH$ALOG
+	CALLS	#0,G^MTH$SIN
+	RET
+	.END	START
+`)
+
+	_ = d.Dispatch("RUN MTHLOG") // the image's end is what's looked at
+
+	text := out.String()
+
+	if !strings.Contains(text, "%MTH-F-LOGZERNEG, ") {
+		t.Errorf("no message; RUN said:\n%s", text)
+	}
+
+	if strings.Contains(text, "MTH$SIN") {
+		t.Errorf("the image went on after a severe condition:\n%s", text)
+	}
+}

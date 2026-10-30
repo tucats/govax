@@ -35,5 +35,8 @@
 //
 // routines.go is the tables and the stubs' registration; float.go moves
 // floating values between the VAX's registers and memory and vaxfloat's
-// Values; condition.go signals the library's conditions.
+// Values; condition.go signals the library's conditions. engine.go is the
+// functions on arbitrary-precision numbers, written once for every format;
+// function.go makes a table's routines from a function and a format; and
+// explog.go is the square root, exponential, and logarithm functions.
 package mthrtl

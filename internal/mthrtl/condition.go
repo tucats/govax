@@ -56,6 +56,20 @@ func signalReserved(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return env.SignalFailure(argv, reservedR0)
 }
 
+// signalZero signals condition with the user PC, as signalCondition does, but
+// with 0.0 as the R0 and R1 a handler that continues gives the caller: the
+// manual's result for an underflow.
+func signalZero(env *corevms.Environment, condition uint32) (uint32, error) {
+	pc, err := env.CallerPC()
+	if err != nil {
+		return 0, err
+	}
+
+	env.CPU().SetGPR(registers.R1, 0)
+
+	return env.SignalFailure([]uint32{condition, 1, pc}, 0)
+}
+
 // fail is what a routine does with the error from reading an argument or
 // writing a result: a reserved operand is signaled as SS$_ROPRAND, the
 // fault the hardware's own floating instructions take on one, and a memory

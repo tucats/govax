@@ -1,6 +1,8 @@
 package mthrtl
 
 import (
+	"errors"
+
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/registers"
@@ -34,6 +36,31 @@ func loadArg(env *corevms.Environment, f vaxfloat.Format, addr uint32) (vaxfloat
 // is the memory's, marked as a write's, which fail signals.
 func storeResult(env *corevms.Environment, f vaxfloat.Format, addr uint32, v vaxfloat.Value) error {
 	return librtl.StoreFloat(env, f, addr, v)
+}
+
+// storeFailed writes what a routine whose result goes through addr leaves there
+// when err, one of its function's errors, gives it no result: 0.0 for an
+// underflow, and otherwise the reserved operand, whose longwords are ^X8000
+// and then zeros. A reserved operand can't be stored as a Value, which is why
+// this isn't storeResult.
+func storeFailed(env *corevms.Environment, f vaxfloat.Format, addr uint32, err error) error {
+	first := uint32(reservedR0)
+	if errors.Is(err, vaxfloat.ErrUnderflow) {
+		first = 0
+	}
+
+	for i := range f.Size() / 4 {
+		word := uint32(0)
+		if i == 0 {
+			word = first
+		}
+
+		if err := env.Memory().StoreLongword(env.CPU(), addr+uint32(4*i), word); err != nil {
+			return librtl.Writing(err)
+		}
+	}
+
+	return nil
 }
 
 // registerWords returns v, already rounded to format f, as the longwords
