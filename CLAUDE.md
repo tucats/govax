@@ -287,6 +287,9 @@ never had.
   IR and lowering, the code generator, FTNRTL's list-directed output,
   and the end-to-end harness (`testdata/fortran`); FORTRAN-INTERNALS.md
   follows one program through every pass.
+  Phase 76 (in progress) is the whole front end: every statement
+  parsed, declarations and storage; its Part A (subtask 1, 2026-10-30)
+  is the survey, with a table of every statement and its phase.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
