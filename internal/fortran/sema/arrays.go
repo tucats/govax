@@ -305,9 +305,7 @@ func (a *analyzer) checkArrays() {
 
 // checkBoundName checks a name in an adjustable array's bound: a dummy
 // argument or a variable in a common block (section 6.1.1.1), of a type
-// that converts to INTEGER. Until COMMON is read (subtask 6), a unit with
-// a COMMON statement is incomplete, and these messages aren't reported in
-// it.
+// that converts to INTEGER.
 func (a *analyzer) checkBoundName(n *ast.Name) bool {
 	s := a.unit.byName[n.Name]
 
@@ -320,7 +318,7 @@ func (a *analyzer) checkBoundName(n *ast.Name) bool {
 
 		return false
 
-	case s.Dummy == 0:
+	case s.Dummy == 0 && s.Common == nil:
 		// A constant among them, defined after the bound that uses it.
 		a.report("BOUNDVAR", n.Pos, n.Name)
 

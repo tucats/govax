@@ -47,6 +47,10 @@ type Unit struct {
 	// contribution to $LOCAL, in bytes.
 	LocalSize int
 
+	// Commons are the common blocks the unit declares, in order of first
+	// appearance.
+	Commons []*CommonBlock
+
 	byName map[string]*Symbol
 
 	// calls are the unit's references to routines, which Analyze checks
@@ -137,9 +141,23 @@ type Symbol struct {
 	// Result is set for a function's own name within the function.
 	Result bool
 
-	// Offset is the name's place in the unit's $LOCAL storage, in
-	// bytes, or -1 if it has none (a dummy argument, a routine).
+	// Offset is the name's place, in bytes, in its common block if it is
+	// in one, or else in the unit's $LOCAL storage; or -1 if it has none
+	// (a dummy argument, a routine).
 	Offset int
+
+	// Common is the common block the name is in, by a COMMON statement or
+	// by EQUIVALENCE with a name in one; nil if none (common.go).
+	Common *CommonBlock
+
+	// Equivalenced is set for a name in an EQUIVALENCE list, whose storage
+	// may overlap other names'. group is the names it is tied to, and
+	// groupOffset its place among them; equivPos is its first appearance
+	// in a list (equivalence.go).
+	Equivalenced bool
+	group        *equivGroup
+	groupOffset  int
+	equivPos     diag.Position
 
 	// Pos is where the name first appears.
 	Pos diag.Position

@@ -24,4 +24,5 @@ to check against. To add a program, add both files; this directory's
 | `args.for` | SUBROUTINE, INTEGER and REAL FUNCTION, an untyped FUNCTION, arguments by reference: an actual changed, expressions copied, an array whole and from an element, RETURN in the middle, functions in expressions |
 | `params.for` | PARAMETER in both forms, constants in array bounds and expressions, a CHARACTER\*(\*) constant, `**`, `//`, comparison, and intrinsic functions of constants |
 | `arrays.for` | Arrays of up to seven dimensions: lower bounds of every sign, bounds from constants and REAL expressions, column-major order seen through whole-array output and one-dimensional dummies, assumed-size dummies with lower bounds, an array passed from an element, a REAL subscript |
+| `common.for` | COMMON, blank and named, under other names in other units; a block lengthened by EQUIVALENCE and seen whole from another unit; a REAL's bits read through an INTEGER; arrays overlaid in `$LOCAL` |
 | `grades.for` | Block IF with ELSE IF and ELSE, a nested block IF, GO TO from a block to the loop's end, LOGICAL output, STOP with a display |

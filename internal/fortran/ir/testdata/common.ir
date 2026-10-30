@@ -1,0 +1,34 @@
+routine COMMON1 main
+  cell  I       L  BLK+0    variable I
+  cell  A       F  BLK+4    array A, 12 bytes
+  cell  X       F  BLK+16   variable X
+  cell  K       L  $BLANK+0    variable K
+  cell  R       F  $LOCAL+4    variable R
+  cell  N       L  $LOCAL+4    variable N
+  cell  IA      L  $LOCAL+0    array IA, 8 bytes
+  $LOCAL is 8 bytes
+  datum $IO1    control PRINT *
+  datum $D1     descriptor F A 4 (1:3) A
+  datum $D2     descriptor L S 4 IA
+B1:
+  ; line 9
+  assign A+4 = X
+  ; line 10
+  assign K = I
+  ; line 11
+  assign N = 1
+  ; line 12
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 13
+  return 1
+routine S subroutine
+  cell  J       L  BLK+0    variable J
+  $LOCAL is 0 bytes
+B1:
+  ; line 16
+  assign J = 1
+  ; line 17
+  return

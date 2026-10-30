@@ -37,6 +37,10 @@ func Dump(p *Program) string {
 
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
 
+		for _, c := range u.Commons {
+			fmt.Fprintf(&b, "  %s is %d bytes\n", c, c.Size)
+		}
+
 		dumpStmts(&b, u.Body, 0)
 	}
 
@@ -70,6 +74,8 @@ func dumpSymbol(s *Symbol) string {
 		where = "= " + dumpConst(s.Value)
 	case s.Dummy != 0:
 		where = "argument " + strconv.Itoa(s.Dummy)
+	case s.Common != nil:
+		where = s.Common.Psect + "+" + strconv.Itoa(s.Offset)
 	case s.Offset >= 0:
 		where = "$LOCAL+" + strconv.Itoa(s.Offset)
 	}

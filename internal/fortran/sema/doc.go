@@ -115,7 +115,14 @@
 //
 // # Storage
 //
-// Last, each variable and array gets its place in the unit's static
+// Once the declarations are read, the names in COMMON statements get
+// their places in their blocks, one after another with nothing between
+// them (common.go), and the EQUIVALENCE statements tie names into groups
+// that are placed together, a group with a name in a block going in that
+// block, perhaps lengthening it (equivalence.go; its comment works an
+// example through).
+//
+// Last, each other variable and array gets its place in the unit's static
 // storage, the $LOCAL program section: in order of first appearance,
 // each on its type's natural boundary (a longword on a multiple of 4, a
 // LOGICAL*1 anywhere). A dummy argument has no storage of its own; it is
@@ -141,18 +148,18 @@
 //
 // The parser builds a node for every statement and form of VAX FORTRAN,
 // and this pass is where one it can't compile yet is reported, as it
-// reaches it (notimpl.go): a statement it doesn't handle (READ, COMMON,
+// reaches it (notimpl.go): a statement it doesn't handle (READ, SAVE,
 // FORMAT) is "the READ statement is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
 // inside a statement it does handle (a Hollerith constant, a substring,
 // an implied-DO list) is reported where the expression is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
-// Some declarations can't be read yet at all: COMMON, EQUIVALENCE, and
-// the rest are NOTIMPL until Phase 76's later subtasks.
+// Some declarations can't be read yet at all: SAVE, EXTERNAL, RECORD, and
+// the rest are NOTIMPL until later phases and subtasks.
 // Without them, most of what this pass would say about a unit's names
-// would be wrong (an array declared in COMMON would be "not an array" at
-// every use), so a unit with one gets only the messages about its
+// would be wrong (a name declared in a RECORD statement would be "not a
+// record" at every use), so a unit with one gets only the messages about its
 // structure (labels, blocks, loops, and statement order) and the
 // NOTIMPLs of what it wrote (notImplForm). A unit whose header the
 // parser rejected, or a BLOCK DATA unit (subtask 7's), is left out

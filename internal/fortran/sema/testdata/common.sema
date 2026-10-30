@@ -1,0 +1,87 @@
+== main program MAINP
+  MAINP                   program unit
+  HEAT      REAL          variable         $BLANK+0
+  X         REAL          variable         $BLANK+4
+  KILO      INTEGER       variable         BLK1+0
+  Q         REAL          variable         BLK1+4
+  R         REAL          array(1:3)       BLK1+8
+  D         REAL*8        variable         TYPES+1
+  B         LOGICAL*1     variable         TYPES+0
+  N         INTEGER       variable         TYPES+9
+  C         CHARACTER*5   variable         CH+0
+  M         INTEGER       variable         CH+5
+  LOCAL     INTEGER       variable         $LOCAL+0
+  $LOCAL is 4 bytes
+  blank common is 8 bytes
+  /BLK1/ is 20 bytes
+  /TYPES/ is 13 bytes
+  /CH/ is 9 bytes
+12          LOCAL = KILO
+13          END
+== SUBROUTINE FIGURE
+  FIGURE                  program unit
+  LIMA      INTEGER       variable         BLK1+0
+  R         REAL          variable         BLK1+4
+  ALFA      REAL          variable         $BLANK+0
+  BET       REAL          variable         $BLANK+4
+  BLK1      REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+  /BLK1/ is 8 bytes
+  blank common is 8 bytes
+18          BLK1 = 1.0
+19          END
+== SUBROUTINE EQUIV1
+  EQUIV1                  program unit
+  DVAR      REAL*8        variable         $LOCAL+0
+  IARR      INTEGER*2     array(1:4)       $LOCAL+0
+  KEY       CHARACTER*16  variable         $LOCAL+8
+  STAR      CHARACTER*10  variable         $LOCAL+8
+  FIRST     REAL          variable         $LOCAL+24
+  $LOCAL is 28 bytes
+27          FIRST = 1.0
+28          END
+== SUBROUTINE TABLE1
+  TABLE1                  program unit
+  TABLE     REAL          array(1:2, 1:2)  $LOCAL+12
+  TRIPLE    REAL          array(1:2, 1:2, 1:2) $LOCAL+0
+  T2        REAL          array(1:2, 1:2)  $LOCAL+44
+  T3        REAL          array(1:2, 1:2, 1:2) $LOCAL+32
+  U2        REAL          array(1:2, 1:2)  $LOCAL+76
+  U3        REAL          array(1:2, 1:2, 1:2) $LOCAL+64
+  $LOCAL is 96 bytes
+37          END
+== SUBROUTINE TABLE2
+  TABLE2                  program unit
+  A         REAL          array(2:3, 1:4)  $LOCAL+8
+  B         REAL          array(2:4, 1:4)  $LOCAL+0
+  $LOCAL is 48 bytes
+42          END
+== SUBROUTINE SUBSTR
+  SUBSTR                  program unit
+  NAME      CHARACTER*16  variable         $LOCAL+0
+  ID        CHARACTER*9   variable         $LOCAL+8
+  FIELDS    CHARACTER*4   array(1:100)     $LOCAL+23
+  STAR      CHARACTER*5   array(1:5)       $LOCAL+17
+  $LOCAL is 424 bytes
+49          END
+== SUBROUTINE GROUPS
+  GROUPS                  program unit
+  FLAG      LOGICAL*1     variable         $LOCAL+0
+  BYTES     LOGICAL*1     array(1:8)       $LOCAL+2
+  LONG      INTEGER       variable         $LOCAL+4
+  W         REAL          variable         $LOCAL+4
+  Z         REAL          variable         $LOCAL+12
+  $LOCAL is 16 bytes
+56          Z = 1.0
+57          END
+== SUBROUTINE EXTEND
+  EXTEND                  program unit
+  A         REAL          array(1:4)       $BLANK+0
+  B         REAL          array(1:6)       $BLANK+4
+  P         REAL          variable         SHORT+0
+  Q         REAL          variable         SHORT+4
+  V         REAL          array(1:3)       SHORT+4
+  $LOCAL is 0 bytes
+  blank common is 28 bytes
+  /SHORT/ is 16 bytes
+67          END

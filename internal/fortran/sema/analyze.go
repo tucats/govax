@@ -153,6 +153,10 @@ type analyzer struct {
 	adjustable []*adjustableArray
 	boundVars  map[*Symbol]diag.Position
 
+	// equivStmts are the unit's EQUIVALENCE statements, read when every
+	// declaration is known (equivalence.go).
+	equivStmts []*ast.EquivalenceStmt
+
 	// open are the IF blocks and DO loops open at the statement being
 	// analyzed, outermost first; nextID numbers them.
 	open   []*construct
@@ -199,7 +203,10 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
 	a.declarations(au.Body)
+	a.layoutCommon()
+	a.equivalences()
 	a.checkArrays()
+	a.checkCommonSizes()
 	a.functionResult()
 	a.statements(au.Body)
 	a.checkLabels()
@@ -349,11 +356,10 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// not implemented yet (COMMON, EQUIVALENCE, ...), or one the parser
+// not implemented yet (SAVE, EXTERNAL, ...), or one the parser
 // rejected. Without it, what semantic analysis would say about the unit's
-// names would mostly be wrong (an array declared in COMMON isn't an
-// array), so such a
-// unit gets only the messages about its structure, and its statements'
+// names would mostly be wrong (a name in EXTERNAL isn't a variable), so
+// such a unit gets only the messages about its structure, and its statements'
 // own NOTIMPLs.
 func incompleteDeclarations(body []ast.Stmt) bool {
 	for _, s := range body {
@@ -423,6 +429,12 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 	}
 
 	for _, u := range prog.Units {
+		for _, b := range u.Commons {
+			checkBlockName(u, b, units, messages)
+		}
+	}
+
+	for _, u := range prog.Units {
 		for _, r := range u.calls {
 			fu := units[r.sym.Name]
 			if fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || u.incomplete || fu.unit.incomplete {
@@ -433,6 +445,38 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, r.args)
 			}
 		}
+	}
+}
+
+// checkBlockName reports a common block with the name of a routine, or of
+// the main program (section 1.1.3, Table 1-1; section 4.2 says so for
+// functions, subroutines, and entries): those of the file's units, and the
+// routines the unit that declares the block references. A variable may
+// share a block's name.
+func checkBlockName(u *Unit, b *CommonBlock, units map[string]*fileUnit, messages *diag.List) {
+	if b.Name == "" {
+		return
+	}
+
+	what := ""
+
+	if fu := units[b.Name]; fu != nil {
+		what = "a " + fu.kind.String() + " in this file"
+
+		if fu.kind == ast.MainProgram {
+			what = "the main program"
+		}
+	} else if s := u.Lookup(b.Name); s != nil && !u.incomplete && !s.broken {
+		switch s.Class {
+		case Function:
+			what = "a function this unit references"
+		case Subroutine:
+			what = "a subroutine this unit calls"
+		}
+	}
+
+	if what != "" {
+		messages.Report("COMMONNAME", b.NamePos, b.String(), what)
 	}
 }
 

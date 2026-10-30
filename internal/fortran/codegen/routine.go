@@ -12,6 +12,9 @@ import (
 type routineGen struct {
 	r     *ir.Routine
 	names *routineNames
+
+	// bases names the common blocks' first bytes.
+	bases *namer
 	src   *sourceLines
 
 	// pre is what comes before the routine's .ENTRY in $CODE: the source
@@ -58,6 +61,7 @@ func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 	return &routineGen{
 		r:       r,
 		names:   names.routine(r.Name),
+		bases:   names,
 		src:     src,
 		labels:  map[*ir.Block]string{},
 		targets: map[*ir.Block]bool{},

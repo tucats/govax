@@ -121,8 +121,12 @@ type Cell struct {
 	// array; Long for a descriptor.
 	T Type
 
-	// Size is the cell's size in bytes, and Offset its place in $LOCAL.
+	// Size is the cell's size in bytes, and Offset its place in $LOCAL,
+	// or in its common block.
 	Size, Offset int
+
+	// Common is the common block the cell is in; nil for a cell in $LOCAL.
+	Common *sema.CommonBlock
 
 	// Sym is the variable, array, or function result the cell holds;
 	// nil for the compiler's cells.

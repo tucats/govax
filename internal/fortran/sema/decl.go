@@ -6,9 +6,10 @@ import (
 )
 
 // declarations is the first walk over a unit's statements: the type
-// statements, DIMENSION statements, and PARAMETER statements, in order
-// (so that a constant may be used in the declarations after its
-// definition), and the order of every statement
+// statements, DIMENSION statements, COMMON statements, and PARAMETER
+// statements, in order (so that a constant may be used in the
+// declarations after its definition), the EQUIVALENCE statements, kept
+// for when every declaration is known, and the order of every statement
 // (Figure 1-1, order.go). It also finds the statement function
 // definitions, which look like assignments to array elements and can be
 // told from them only here, where it is known which names are arrays.
@@ -30,6 +31,12 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 			for _, d := range s.Entities {
 				a.dimension(a.lookup(d.Name, d.Pos), d)
 			}
+
+		case *ast.CommonStmt:
+			a.commonStatement(s)
+
+		case *ast.EquivalenceStmt:
+			a.equivStmts = append(a.equivStmts, s)
 
 		case *ast.ParameterStmt:
 			for _, d := range s.Defs {
@@ -75,7 +82,7 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.report("DUPSTMTFUNC", ap.Pos, ap.Name, sym.defPos.Line)
 		a.stmtFuncs[s] = nil
 
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil:
 		a.badUse(sym, ap.Pos, "be a statement function")
 		a.stmtFuncs[s] = nil
 

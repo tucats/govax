@@ -236,6 +236,60 @@ var messages = map[string]kind{
 	// dimension.
 	"ASSUMEDSIZE": {Error, "only a dummy array's last upper bound can be *"},
 
+	// COMMON and EQUIVALENCE (sections 4.2, 4.6).
+
+	// COMMONDUMMY is a dummy argument in a common block.
+	"COMMONDUMMY": {Error, "%s is a dummy argument, so it can't be in a common block"},
+
+	// DUPCOMMON is a name listed in a common block twice, or in two.
+	"DUPCOMMON": {Error, "%s is already in %s"},
+
+	// COMMONNAME is a common block with the name of a routine or the main
+	// program.
+	"COMMONNAME": {Error, "the common block %s can't have the name of %s"},
+
+	// COMMONSIZE is a common block too large for the VAX to address.
+	"COMMONSIZE": {Error, "the common block %s is too large: it takes more than 2147483647 bytes"},
+
+	// EQUIVONE is an EQUIVALENCE list of one item.
+	"EQUIVONE": {Error, "an EQUIVALENCE list must have at least two items"},
+
+	// EQUIVFORM is an item that isn't a variable, an array, an array
+	// element, or a substring of one: a record's field.
+	"EQUIVFORM": {Error, "an EQUIVALENCE list can hold only variables, arrays, array elements, and substrings"},
+
+	// EQUIVDUMMY is a dummy argument in an EQUIVALENCE list.
+	"EQUIVDUMMY": {Error, "%s is a dummy argument, so it can't be in an EQUIVALENCE list"},
+
+	// EQUIVCONST is a subscript or substring bound that isn't an integer
+	// constant expression.
+	"EQUIVCONST": {Error, "a subscript or substring bound in an EQUIVALENCE list must be an integer constant expression"},
+
+	// EQUIVRANGE is an element outside its array.
+	"EQUIVRANGE": {Error, "this element is outside the array %s"},
+
+	// EQUIVSUBSTR is a substring of a name that isn't CHARACTER.
+	"EQUIVSUBSTR": {Error, "%s is %s, so it can't have a substring"},
+
+	// EQUIVSUBRANGE is a substring outside its variable or element.
+	"EQUIVSUBRANGE": {Error, "the substring (%d:%d) isn't within %s's %d characters"},
+
+	// EQUIVCONFLICT is a name the lists put in two places: two elements of
+	// one array associated, or two substrings of one variable starting at
+	// different characters.
+	"EQUIVCONFLICT": {Error, "this EQUIVALENCE puts %s in two places at once"},
+
+	// EQUIVBLOCKS is two names in different common blocks associated.
+	"EQUIVBLOCKS": {Error, "this EQUIVALENCE ties %s in %s to %s in %s, but they can't share storage"},
+
+	// EQUIVCOMMON is two names of one block associated at places the
+	// block's order disagrees with.
+	"EQUIVCOMMON": {Error, "this EQUIVALENCE puts %s and %s in different places from those %s gives them"},
+
+	// EQUIVBEFORE is EQUIVALENCE extending a common block before its first
+	// element (section 4.6.3).
+	"EQUIVBEFORE": {Error, "this EQUIVALENCE puts %s before the start of %s"},
+
 	// Names and expressions.
 
 	// BADUSE is a name used as something it can't be: a variable called

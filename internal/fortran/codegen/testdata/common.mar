@@ -1,0 +1,100 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Common block /BLK/, 20 bytes, the most any unit in this file declares
+	.PSECT	BLK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+BLK.$BASE:
+	.BLKB	20
+
+; Blank common, 4 bytes, the most any unit in this file declares
+	.PSECT	$BLANK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+$BLANK.$BASE:
+	.BLKB	4
+
+; Storage map for COMMON1, the main program
+;   I     INTEGER      BLK+0     COMMON1.I
+;   A     REAL (3)     BLK+4     COMMON1.A
+;   X     REAL         BLK+16    COMMON1.X
+;   K     INTEGER      $BLANK+0  COMMON1.K
+;   R     REAL         $LOCAL+4  COMMON1.R
+;   N     INTEGER      $LOCAL+4  COMMON1.N
+;   IA    INTEGER (2)  $LOCAL+0  COMMON1.IA
+;
+COMMON1.I = BLK.$BASE			; I, in /BLK/
+COMMON1.A = BLK.$BASE+4			; A, REAL (3), in /BLK/
+COMMON1.X = BLK.$BASE+16		; X, in /BLK/
+COMMON1.K = $BLANK.$BASE		; K, in blank common
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+COMMON1.IA:
+	.BLKB	8			; IA, INTEGER (2)
+COMMON1.R = COMMON1.IA+4		; R
+COMMON1.N = COMMON1.IA+4		; N
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+COMMON1.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+COMMON1.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.ADDRESS COMMON1.A
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS COMMON1.A-4		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+COMMON1.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS COMMON1.IA
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Names in common blocks and overlapping names in $LOCAL are cells
+;    2  C     with places of their own; the code reaches them as any other.
+;    3        PROGRAM COMMON1
+	.ENTRY	COMMON1,^M<>
+;    4        COMMON /BLK/ I, A(3), X
+;    5        COMMON K
+;    6        REAL R
+;    7        INTEGER N, IA(2)
+;    8        EQUIVALENCE (R, N), (IA(2), R)
+;    9        A(2) = X
+	MOVF	COMMON1.X,COMMON1.A+4
+;   10        K = I
+	MOVL	COMMON1.I,COMMON1.K
+;   11        N = 1
+	MOVL	#1,COMMON1.N
+;   12        PRINT *, A, IA(1)
+	PUSHAB	COMMON1.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	COMMON1.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	COMMON1.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   13        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for S, a subroutine
+;   J     INTEGER  BLK+0  S.J
+;
+S.J = BLK.$BASE				; J, in /BLK/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   14        SUBROUTINE S
+	.ENTRY	S,^M<>
+;   15        COMMON /BLK/ J
+;   16        J = 1
+	MOVL	#1,S.J
+;   17        END
+	RET
+
+	.END	COMMON1

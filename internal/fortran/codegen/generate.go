@@ -21,6 +21,13 @@ const (
 	localPsect = "$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG"
 )
 
+// commonAttributes are a common block's program section's attributes
+// (Table 10-1 of the Language Reference Manual, Decision 10): overlaid, so
+// that LINK starts every module's contribution at the same place and makes
+// the section as long as the longest; global, so that it is one section
+// across clusters.
+const commonAttributes = ",PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG"
+
 // The flags of a class A descriptor (the OpenVMS Calling Standard's
 // DSC$B_AFLAGS): FORTRAN's arrays are stored by columns, and the
 // descriptor holds the multipliers and the bounds.
@@ -43,6 +50,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line) {
 	names := &namer{}
 
 	writeDefinitions(w, routines)
+	writeCommons(w, routines, names)
 
 	main := ""
 
@@ -116,9 +124,55 @@ func writeDefinitions(w *Writer, routines []*ir.Routine) {
 	w.Comment("")
 }
 
+// writeCommons writes the file's common blocks, each once, whichever units
+// declare it, as long as the longest of their declarations. A module can't
+// have each unit contribute its own part, as separate modules do: within a
+// module, MACRO goes on from where a program section was left, overlaid or
+// not, so the second unit's part would come after the first's. So the
+// section is written here, and each unit's names are symbols assigned from
+// its first byte (writeCommonNames).
+func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
+	sizes := map[string]int{}
+
+	var blocks []*sema.CommonBlock
+
+	for _, r := range routines {
+		for _, b := range r.Unit.Commons {
+			if _, seen := sizes[b.Psect]; !seen {
+				blocks = append(blocks, b)
+			}
+
+			sizes[b.Psect] = max(sizes[b.Psect], b.Size)
+		}
+	}
+
+	for _, b := range blocks {
+		w.Blank()
+		what := "Common block " + b.String()
+		if b.Name == "" {
+			what = "Blank common"
+		}
+
+		w.Comment(fmt.Sprintf("%s, %d bytes, the most any unit in this file declares", what, sizes[b.Psect]))
+		w.Statement("", ".PSECT", b.Psect+commonAttributes, "")
+		w.Statement(names.base(b.Psect), ".BLKB", strconv.Itoa(sizes[b.Psect]), "")
+	}
+}
+
+// writeCommonNames defines the symbols of the routine's names in common
+// blocks: UNIT.KILO = BLK1.$BASE+4.
+func (g *routineGen) writeCommonNames(w *Writer) {
+	for _, c := range g.r.Cells {
+		if c.Common != nil {
+			w.Assignment(g.names.symbol(c.Name), withOffset(g.bases.base(c.Common.Psect), c.Offset),
+				g.cellNote(c)+", in "+c.Common.String())
+		}
+	}
+}
+
 // write writes the routine: its storage map, the definitions of its
-// dummy arguments' offsets, its $LOCAL storage, its $PDATA data, and its
-// code.
+// dummy arguments' offsets and its names in common blocks, its $LOCAL
+// storage, its $PDATA data, and its code.
 func (g *routineGen) write(w *Writer) {
 	r := g.r
 
@@ -129,6 +183,8 @@ func (g *routineGen) write(w *Writer) {
 		w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
 			fmt.Sprintf("%s is argument %d", p.Name, p.Index))
 	}
+
+	g.writeCommonNames(w)
 
 	if len(g.cells()) > 0 {
 		w.Blank()
@@ -181,8 +237,13 @@ func (g *routineGen) writeMap(w *Writer) {
 
 	for _, c := range g.r.Cells {
 		if c.Sym != nil {
+			section := "$LOCAL"
+			if c.Common != nil {
+				section = c.Common.Psect
+			}
+
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
-				"$LOCAL+" + strconv.Itoa(c.Offset), g.names.symbol(c.Name)})
+				section + "+" + strconv.Itoa(c.Offset), g.names.symbol(c.Name)})
 		}
 	}
 
@@ -238,10 +299,18 @@ func typeText(s *sema.Symbol) string {
 	return text + " (" + strings.Join(bounds, ",") + ")"
 }
 
-// cells are the routine's $LOCAL cells in order: lowering's, then the
-// code generator's own.
+// cells are the routine's $LOCAL cells in order: lowering's (but for those
+// in common blocks), then the code generator's own.
 func (g *routineGen) cells() []*ir.Cell {
-	cells := append(append([]*ir.Cell(nil), g.r.Cells...), g.spills...)
+	var cells []*ir.Cell
+
+	for _, c := range g.r.Cells {
+		if c.Common == nil {
+			cells = append(cells, c)
+		}
+	}
+
+	cells = append(cells, g.spills...)
 	sort.SliceStable(cells, func(i, j int) bool { return cells[i].Offset < cells[j].Offset })
 
 	return cells
@@ -249,16 +318,40 @@ func (g *routineGen) cells() []*ir.Cell {
 
 // writeLocal writes the routine's static storage: a block of longwords
 // for each variable, array, and cell, and the descriptors whose
-// addresses the code stores (their other fields set here).
+// addresses the code stores (their other fields set here). Names that
+// EQUIVALENCE overlaps are one block, labeled by the first, and the others
+// symbols assigned from that label.
 func (g *routineGen) writeLocal(w *Writer) {
 	at := 0
+	cells := g.cells()
 
-	for _, c := range g.cells() {
+	for i := 0; i < len(cells); i++ {
+		c := cells[i]
+
 		if c.Offset > at {
 			w.Statement("", ".BLKB", strconv.Itoa(c.Offset-at), "")
 		}
 
 		label := g.names.symbol(c.Name)
+
+		if overlap := overlapping(cells[i:]); len(overlap) > 1 {
+			end := c.Offset
+
+			for _, o := range overlap {
+				end = max(end, o.Offset+o.Size)
+			}
+
+			w.Statement(label, ".BLKB", strconv.Itoa(end-c.Offset), g.cellNote(c))
+
+			for _, o := range overlap[1:] {
+				w.Assignment(g.names.symbol(o.Name), withOffset(label, o.Offset-c.Offset), g.cellNote(o))
+			}
+
+			i += len(overlap) - 1
+			at = end
+
+			continue
+		}
 
 		if c.Kind == ir.DescriptorCell {
 			w.Label(label)
@@ -278,6 +371,22 @@ func (g *routineGen) writeLocal(w *Writer) {
 	if end := g.localSize(); end > at {
 		w.Statement("", ".BLKB", strconv.Itoa(end-at), "")
 	}
+}
+
+// overlapping is the cells, from the first of cells on, that EQUIVALENCE
+// makes share storage with it or with each other; cells are in order of
+// offset.
+func overlapping(cells []*ir.Cell) []*ir.Cell {
+	first := cells[0]
+	end := first.Offset + first.Size
+	n := 1
+
+	for n < len(cells) && cells[n].Offset < end && cells[n].Sym != nil && cells[n].Sym.Equivalenced {
+		end = max(end, cells[n].Offset+cells[n].Size)
+		n++
+	}
+
+	return cells[:n]
 }
 
 // cellNote says what a cell holds, for its comment.

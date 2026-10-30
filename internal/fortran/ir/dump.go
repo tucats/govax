@@ -56,7 +56,12 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 	}
 
 	for _, c := range r.Cells {
-		fmt.Fprintf(b, "  cell  %-7s %-2s $LOCAL+%-4d %s\n", c.Name, c.T, c.Offset, cellNote(c))
+		section := "$LOCAL"
+		if c.Common != nil {
+			section = c.Common.Psect
+		}
+
+		fmt.Fprintf(b, "  cell  %-7s %-2s %s+%-4d %s\n", c.Name, c.T, section, c.Offset, cellNote(c))
 	}
 
 	fmt.Fprintf(b, "  $LOCAL is %d bytes\n", r.LocalSize)

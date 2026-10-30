@@ -1,13 +1,16 @@
 package ir
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // Check verifies what the code generator relies on in a routine: every
 // block ends with a terminator, every jump and branch goes to one of the
 // routine's blocks, the blocks' names are unique, every cell and datum a
 // statement uses is the routine's, and the cells lie in $LOCAL one after
-// another without overlapping. It returns the first problem found, or
-// nil. Lowering's tests run it on every routine.
+// another, overlapping only where EQUIVALENCE made them. It returns the
+// first problem found, or nil. Lowering's tests run it on every routine.
 func Check(r *Routine) error {
 	blocks := map[*Block]bool{}
 	names := map[string]bool{}
@@ -21,15 +24,27 @@ func Check(r *Routine) error {
 	}
 
 	cells := map[*Cell]bool{}
-	end := 0
+
+	var local []*Cell
 
 	for _, c := range r.Cells {
-		if c.Offset < end {
+		cells[c] = true
+
+		if c.Common == nil {
+			local = append(local, c)
+		}
+	}
+
+	sort.SliceStable(local, func(i, j int) bool { return local[i].Offset < local[j].Offset })
+
+	end := 0
+
+	for _, c := range local {
+		if c.Offset < end && (c.Sym == nil || !c.Sym.Equivalenced) {
 			return fmt.Errorf("%s: cell %s at %d overlaps the cell before it", r.Name, c.Name, c.Offset)
 		}
 
-		cells[c] = true
-		end = c.Offset + c.Size
+		end = max(end, c.Offset+c.Size)
 	}
 
 	if end > r.LocalSize {

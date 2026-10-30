@@ -4,7 +4,8 @@
 2026-10-30; subtask 2, the parser's remaining statements, done
 2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
 2026-10-30; subtask 4, PARAMETER and constant folding, done
-2026-10-30; subtask 5, arrays, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+2026-10-30; subtask 5, arrays, done 2026-10-30; subtask 6, COMMON and EQUIVALENCE,
+done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -508,7 +509,8 @@ Subtasks 2 to 9 below are revised to match.
    both forms, the constant-expression intrinsics.
 5. **Arrays** (done 2026-10-30): bounds, lower bounds, adjustable and
    assumed-size forms, element offsets.
-6. **COMMON and EQUIVALENCE:** the layout algorithm and its errors.
+6. **COMMON and EQUIVALENCE** (done 2026-10-30): the layout algorithm and
+   its errors.
 7. **DATA, SAVE, BLOCK DATA:** initial values in the `.MAR` file,
    typeless and Hollerith constants among them.
 8. **End to end:** programs sharing COMMON across units and files,
@@ -767,3 +769,68 @@ Subtasks 2 to 9 below are revised to match.
     manual's "arithmetic expression" might take COMPLEX; a bound's power of
     a variable (`N**2`) accepted, the manual's forbidding only array and
     function references.
+- **2026-10-30:** Subtask 6 done: COMMON and EQUIVALENCE
+  (`internal/fortran/sema/common.go`, `equivalence.go`).
+  - **COMMON:** every form of 4.2: blank common, named blocks, a block
+    named again continuing, array declarators. A unit's `Commons` are its
+    `CommonBlock`s (name, psect, members, size); a name's `Symbol.Common`
+    is its block and `Offset` its place there, with nothing aligned
+    inside a block. Places wait until every declaration is read
+    (`layoutCommon`), as a name's type and dimensions may follow.
+    `checkBoundName` now takes a variable in a block as an adjustable
+    array's bound, as subtask 5 left for this one, EQUIVALENCE's among
+    them.
+  - **EQUIVALENCE:** groups of names merged list by list, each name with
+    its place in its group (the design notes' union-find, done by moving
+    every member of one group, since the groups are small; the file's
+    comment works an example through). A bare array is its first element,
+    a multidimensional array's one subscript its element number from 1
+    (4.6.1), a substring its first character's place in its variable or
+    element. A group with a name in a block is placed there, lengthening
+    the block at its end; any other goes in `$LOCAL` whole, when `layout`
+    reaches its first name. Tables 4-1 and 4-2, Figure 4-1, and 4.6.3's two
+    examples are in the tests.
+  - **In the `.MAR` file:** a module can't let each unit contribute its own
+    part of a block: MACRO goes on from where a psect was left, overlaid or
+    not, so a second unit's part would follow the first's. So
+    `writeCommons` writes each block once, at the top of the file, its
+    psect with Table 10-1's attributes, a `BLK.$BASE` label, and a `.BLKB`
+    of the longest declaration in the file; each unit's names are direct
+    assignments, `UNIT.KILO = BLK.$BASE+4`. Subtask 7's DATA fits this: one
+    image per block per module. In `$LOCAL`, the names of a group are one
+    `.BLKB` labeled by the lowest, and assignments from that label. The IR's
+    `Cell.Common` is the block; `Check` allows overlaps only between
+    equivalenced names.
+  - **Messages:** COMMONDUMMY, DUPCOMMON, COMMONNAME, COMMONSIZE, EQUIVONE,
+    EQUIVFORM, EQUIVDUMMY, EQUIVCONST, EQUIVRANGE, EQUIVSUBSTR,
+    EQUIVSUBRANGE, EQUIVCONFLICT, EQUIVBLOCKS, EQUIVCOMMON, EQUIVBEFORE.
+    A dummy argument, function result, unit name, constant, or statement
+    function in either statement is an error (BADUSE for those without a
+    message of their own), and a name in COMMON or EQUIVALENCE is a variable
+    from then on, so `F(1.0)` of it is NOTARRAY.
+  - **What stays not implemented:** a type statement's initial values and
+    DATA (subtask 7); BLOCK DATA units (subtask 7), so a block name isn't
+    yet checked against one's name; RECORD in COMMON (the RECORD statement,
+    Phase 82, leaves its unit incomplete); CDEC$ PSECT's changes to a
+    block's attributes (Phase 82).
+  - **Tests:** `TestErrors`' COMMON and EQUIVALENCE sections, goldens
+    `sema/testdata/common.for` (the manual's examples; the offsets checked by
+    hand against its tables and figures), `ir/testdata/common.for`,
+    `codegen/testdata/common.for` (assembled by MACRO), and
+    `testdata/fortran/common.for` end to end, its output worked out by hand:
+    units sharing blocks under other names, a block lengthened by
+    EQUIVALENCE and seen in full from another unit, a REAL's bits read as an
+    INTEGER, and arrays overlaid in `$LOCAL`. A one-off run of two separately
+    compiled modules, blocks of different lengths, shared correctly and took
+    the longest; subtask 8 adds that as a test.
+  - Choices of ours, unconfirmed (no VAX FORTRAN to check): the standard's
+    rules the manual doesn't state (a dummy argument or function result in
+    COMMON, a name in two blocks, two blocks associated); a block's name
+    checked against the main program's, from Table 1-1, and against routines
+    a unit references; a one-item list an error, from "must contain at least
+    two"; a group in `$LOCAL` placed on its strictest member's boundary, the
+    others where the lists put them; a one-subscript element number accepted
+    only from 1 to the array's size, an assumed-size array being a dummy and
+    so never in a list; a one-dimensional array's one subscript read as an
+    ordinary subscript, by its lower bound; the symbol `BLK.$BASE`; the
+    2147483647-byte limit on a block.

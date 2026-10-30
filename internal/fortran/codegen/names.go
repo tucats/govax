@@ -20,6 +20,27 @@ const maxSymbol = 31
 // The storage map lists the numbered forms.
 type namer struct {
 	long int
+
+	// bases are the symbols of the file's common blocks' first bytes, by
+	// program section.
+	bases map[string]string
+}
+
+// base is the symbol of the first byte of the common block in the program
+// section psect: BLK1.$BASE, named like the things a routine owns.
+func (n *namer) base(psect string) string {
+	if s, ok := n.bases[psect]; ok {
+		return s
+	}
+
+	if n.bases == nil {
+		n.bases = map[string]string{}
+	}
+
+	s := n.routine(psect).symbol("$BASE")
+	n.bases[psect] = s
+
+	return s
 }
 
 // routineNames are one routine's symbols.

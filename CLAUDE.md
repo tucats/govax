@@ -296,7 +296,10 @@ never had.
   and constant expressions in every type (`sema/constant.go`,
   `constfuncs.go`, `parameter.go`), and subtask 5 (2026-10-30) arrays:
   bounds of every kind, adjustable arrays declared and checked, and
-  element numbers (`sema/arrays.go`).
+  element numbers (`sema/arrays.go`), and subtask 6 (2026-10-30) COMMON
+  and EQUIVALENCE: layouts and their errors (`sema/common.go`,
+  `equivalence.go`), each block one psect per module with units' names
+  assigned from its base (`codegen`'s `writeCommons`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1705,7 +1708,11 @@ expect adjustment as phases land):
   Subtask 5: `arrays.go` reads array declarators (a `Dim`'s bounds are
   constants, or `LowerExpr`/`UpperExpr` for an adjustable array, whose code
   is Phase 79's; `checkArrays` runs after the declarations), and
-  `ElementNumber` is an element's storage place for constant subscripts. `Compile` runs it after the parser, even after the
+  `ElementNumber` is an element's storage place for constant subscripts.
+  Subtask 6: `common.go` (`CommonBlock`; `Symbol.Common` and `Offset` are a
+  name's place in its block) and `equivalence.go` (groups of names merged
+  list by list, placed in a block, lengthening it, or in `$LOCAL` whole,
+  `equivGroup.place`; its comment works an example through). `Compile` runs it after the parser, even after the
   parser's errors. `ir` is the fifth pass (Phase 75, subtask 5):
   `Lower` turns each `sema.Unit` into a `Routine` of `Params`, `Cells`
   (`$LOCAL`: the unit's variables, then `$Cn`/`$Sn` DO counts and steps,

@@ -4412,8 +4412,14 @@ output it prints.
   with constant bounds (a lower bound with a colon, `V(0:9)`; a bound may
   be a constant expression, and a REAL one is truncated); a dummy array's
   last upper bound may be `*`, as in `A(3,*)`. An adjustable array,
-  `A(M,N)` with bounds from dummy arguments, is checked, then reported not
-  implemented. Every variable gets its storage,
+  `A(M,N)` with bounds from dummy arguments or variables in common blocks,
+  is checked, then reported not implemented.
+  COMMON, blank and named: units that declare a block of one name share its
+  storage, each with names of its own, laid out in order with no gaps, and
+  the block is as long as the longest declaration. EQUIVALENCE, with arrays,
+  elements (a multidimensional array's by one subscript, its element number,
+  too), and substrings: it may lengthen a common block at its end, never
+  before its start. Every variable gets its storage,
   but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit

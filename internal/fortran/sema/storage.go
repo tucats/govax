@@ -1,11 +1,14 @@
 package sema
 
-// layout gives each of the unit's variables and arrays its place in the
-// unit's static storage, $LOCAL (Decision 10 of docs/PHASE-74 - FORTRAN
-// plan.md): in order of first appearance, each on its type's natural
-// boundary (Type.Align: a longword's on a multiple of 4, a LOGICAL*1 or
-// a CHARACTER variable anywhere). The size is rounded up to a longword,
-// so that the compiler's own cells, which follow, are aligned.
+// layout gives each of the unit's variables and arrays not in a common
+// block (common.go) its place in the unit's static storage, $LOCAL
+// (Decision 10 of docs/PHASE-74 - FORTRAN plan.md): in order of first
+// appearance, each on its type's natural boundary (Type.Align: a
+// longword's on a multiple of 4, a LOGICAL*1 or a CHARACTER variable
+// anywhere), and a group of names EQUIVALENCE ties together
+// (equivalence.go) as a unit when its first name is reached. The size is
+// rounded up to a longword, so that the compiler's own cells, which
+// follow, are aligned.
 // Storage is static because FORTRAN-77's routines aren't recursive
 // (section 6.2), so a routine's variables are never live in two calls at
 // once, and a variable keeps its value from one call to the next as VAX
@@ -22,7 +25,15 @@ func (a *analyzer) layout() {
 			s.Class = Variable
 		}
 
-		if s.Dummy != 0 || (s.Class != Variable && s.Class != Array) {
+		if s.Dummy != 0 || s.Common != nil || (s.Class != Variable && s.Class != Array) {
+			continue
+		}
+
+		if s.group != nil {
+			if !s.group.placed {
+				offset = s.group.place(offset)
+			}
+
 			continue
 		}
 

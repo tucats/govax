@@ -101,7 +101,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 			continue
 		}
 
-		c := &Cell{Name: s.Name, Kind: VariableCell, T: typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Sym: s}
+		c := &Cell{Name: s.Name, Kind: VariableCell, T: typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Common: s.Common, Sym: s}
 
 		switch {
 		case s.Result:
