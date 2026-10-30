@@ -125,9 +125,10 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// GOTO, GOSUB, RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE, DECK
 	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE, and LOGOUT and
 	// MCR; and ABOUT goes (HELP ABOUT is its replacement); and WAIT.
-	// Phase 51 adds DUMP, Phase 57 ATTACH, and Phase 69 BACKUP.
-	if len(g.verbOrder) != 65 {
-		t.Errorf("got %d verbs, want 65: %v", len(g.verbOrder), verbNames(g))
+	// Phase 51 adds DUMP, Phase 57 ATTACH, Phase 69 BACKUP, and Phase 74
+	// FORTRAN.
+	if len(g.verbOrder) != 66 {
+		t.Errorf("got %d verbs, want 66: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

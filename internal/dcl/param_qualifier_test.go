@@ -278,20 +278,21 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // (docs/PHASE-28.md subtask 7), whose SOURCE, OBJECTS, LIBRARY, and INPUTS
 // take COPY's /HOST, RUN (docs/PHASE-37.md), whose FILE does, and
 // ANALYZE/OBJECT and ANALYZE/IMAGE (docs/PHASE-38.md, PHASE-40.md), whose
-// FILES do, CREATE, whose FILE does, OPEN, whose FILESPEC does, and
+// FILES do, CREATE, whose FILE does, OPEN, whose FILESPEC does,
 // BACKUP (docs/PHASE-69 - backup save sets.md), whose INPUT and OUTPUT
-// carry their own save-set and file qualifiers.
+// carry their own save-set and file qualifiers, and FORTRAN
+// (docs/PHASE-74 - FORTRAN plan.md), whose SOURCES take /HOST.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" {
+		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" {
 			continue
 		}
 
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, and BACKUP declare any)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, CREATE, OPEN, BACKUP, and FORTRAN declare any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}

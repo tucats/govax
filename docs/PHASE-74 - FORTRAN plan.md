@@ -2,8 +2,9 @@
 
 **Status:** in progress. Part A (the survey), Part B (the decisions),
 and Part C (the phases) were reviewed and accepted by the author on
-2026-10-29 (the answers are under "The review" at the end). Subtask 1,
-the plan, is done; the groundwork (subtasks 2 to 5) is next. Phases 75 to 86 each have a
+2026-10-29 (the answers are under "The review" at the end). Subtasks 1
+(the plan) and 2 (the compiler's skeleton and the FORTRAN command) are
+done; subtasks 3 to 5 are next. Phases 75 to 86 each have a
 skeletal planning doc of their own. Needs nothing new: MACRO-32 (Phases
 27–29), LINK and shareable images (Phases 30 and 68), the RTL machinery
 (Phases 34 and 53–59), and traceback (Phase 70) are all in place.
@@ -694,7 +695,8 @@ review after each.
 1. **The survey and plan** (this doc, the skeletal docs of Phases 75 to
    86, PLAN.md's rows, CLAUDE.md's overview, the 1988 manual's text):
    written 2026-10-29, for review.
-2. **The compiler's skeleton and the FORTRAN command:** the driver
+2. **The compiler's skeleton and the FORTRAN command** (done
+   2026-10-29): the driver
    (`internal/fortran`: `Options`, `Compile`, `Result`), `diag`, the
    FORTRAN verb in `console.dcl` with Decision 18's first qualifiers,
    `dclcmd.Context.Fortran` reading the source from the host or a volume
@@ -784,3 +786,57 @@ and the later phases' docs have been changed to follow them.
   copy; `/OPTIMIZE` becomes the default once the corpus passes both
   ways; the names accepted. The decisions and Phases 77, 81, 85, and 86
   were updated to match. Subtask 1 is done; subtask 2 is next.
+- **2026-10-29:** Subtask 2 done: the compiler's skeleton and the
+  FORTRAN command.
+  - `internal/fortran` is the driver: `Options` (the qualifiers, the
+    version, the compile time, the command line), `File` (the source's
+    specification, name, and lines), `Result` (the MACRO file's lines,
+    nil after an error, and the messages with their counts), and
+    `Compile`, which so far writes the header, each source line as a
+    comment, and `.END`. The module is named for the source file
+    (`ModuleName`: capitals, `_` for a character MACRO can't take, `F_`
+    before a leading digit, 31 characters) until the compiler can name it
+    for its first program unit.
+  - `internal/fortran/diag` is Decision 19's messages: `Severity` (I, W,
+    E, F, with their VMS status codes), `Position`, `Message` (printed
+    with the line quoted and a pointer that copies the line's tabs, so it
+    lines up under tab-format lines), `List` (`Report` by identifier,
+    `Worst`, `Failed`), and the table of messages (`messages.go`), which
+    holds only NOTIMPL so far; later phases add theirs.
+  - `internal/fortran/codegen` starts with `Writer`, the MACRO file's
+    layout: statements in MACRO's columns (opcode at 8, operands at 16,
+    comments at 40), a label of seven characters or more on its own
+    line, comment lines split at blanks, and `SourceLine`, whose
+    8-character prefix (`;`, the number in five columns, two blanks) is
+    one tab stop, so a tab-format source line keeps its layout. Every
+    line is kept within MACRO's 132 characters (the VAX MACRO manual's
+    limit): a long source line continues on lines prefixed `;    -  `,
+    and a statement's comment that won't fit goes on the line before.
+    Control characters become `?`.
+  - The command is `internal/dclcmd/fortran.go` (`FortranOptions`,
+    `Context.Fortran`), bound in `internal/console/dispatch.go`, with
+    the verb in `console.dcl` (ids 1370 to 1375): a list of sources,
+    `/HOST`, `/[NO]MACRO[=file]`, `/[NO]EXTEND_SOURCE`, `/[NO]D_LINES`.
+    It follows MACRO's file rules (the MACRO file beside the source, in
+    the source's case, a VMS name without a type given MAR). New
+    statuses in `vmserrors`: CLI_FORERRORS (no MACRO file after errors),
+    CLI_FORWARNINGS ($STATUS after warnings, not shown), and
+    CLI_FORSAMEFILE, which refuses a host source whose default MACRO
+    file would be itself (a `.MAR` source), a choice of ours. With
+    several sources each failure is shown as it happens, the rest are
+    still compiled, and `$STATUS` is the last failure's.
+  - `govax fortran SOURCE... [--macro FILE | --no-macro]
+    [--extend-source] [--d-lines]`; `HELP FORTRAN` (keys `FORT` and
+    `FOR`) and the HELP index; MANUAL.md's command reference (6.5) and
+    the subcommand table.
+  - Left for later: Decision 18's `file+file` concatenation (with the
+    `+LIB/LIBRARY` form, Phase 83), and `/EXTEND_SOURCE` and `/D_LINES`
+    having an effect (subtask 3; they are accepted and passed to the
+    compiler now).
+  - Tests: `diag`'s and `codegen`'s units, `TestCompileSkeleton` (the
+    whole file for a small program), the console's `TestFortran_*` (host
+    and volume sources, names, versions, `/MACRO=`, `/NOMACRO`, the
+    failures, and DCL's dispatch with a list and `$STATUS`), each MACRO
+    file assembled by MACRO without a message; `cmd/govax`'s
+    `TestFortranCommand` and `TestFortranThenMacro`; the grammar tests'
+    verb count and the grammar split.

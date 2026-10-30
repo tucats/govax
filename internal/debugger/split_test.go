@@ -44,6 +44,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"DISMOUNT DUA0", consoleOnly},
 		{"ECHO 1", consoleOnly},
 		{"IF 1 THEN ECHO 1", consoleOnly},
+		{"FORTRAN A", consoleOnly},
 		{"INQUIRE X", consoleOnly},
 		{"INITIALIZE/VAX 100", consoleOnly},
 		{"LIBRARY A", consoleOnly},

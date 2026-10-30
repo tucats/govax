@@ -353,6 +353,7 @@ you, so their case is kept.
 | --- | --- | --- |
 | `govax console CMD...` | `CMD` | Run one DCL command (the default). |
 | `govax run IMAGE [text...]` | `RUN IMAGE` | Run an image. Any words after the image's name are its command text, which it reads with `LIB$GET_FOREIGN`. |
+| `govax fortran SOURCE...` | `FORTRAN SOURCE,...` | Compile FORTRAN source files into MACRO-32 source files. |
 | `govax macro SOURCE` | `MACRO SOURCE` | Assemble a MACRO-32 source file. |
 | `govax link OBJECT...` | `LINK OBJECT,...` | Link object modules into an image. |
 | `govax library LIB [INPUT...]` | `LIBRARY LIB INPUT,...` | Create, change, list, or extract from a library. |
@@ -366,6 +367,9 @@ Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
 
 ```text
 govax run [--debug | --no-debug] IMAGE [text...]
+
+govax fortran [--macro FILE | --no-macro] [--extend-source] [--d-lines]
+              SOURCE...
 
 govax macro [--object FILE | --no-object] [--list | --list-file FILE]
             [--show OPTS] [--no-show OPTS] [--cross-reference]
@@ -1267,10 +1271,41 @@ These commands are described fully in their own sections:
 
 | Command | Section |
 | --- | --- |
+| `FORTRAN source[,...] [qualifiers]` | [FORTRAN](#fortran), below |
 | `MACRO source [qualifiers]` | [8. Programming in MACRO-32](#8-programming-in-macro-32) |
 | `LINK file[,...] [qualifiers]` | [9. The linker](#9-the-linker) |
 | `LIBRARY library [input[,...]] [qualifiers]` | [10. The librarian](#10-the-librarian) |
 | `ANALYZE/OBJECT` and `ANALYZE/IMAGE` | [Analyzing objects and images](#analyzing-objects-and-images) |
+
+#### FORTRAN
+
+```text
+FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
+    /[NO]EXTEND_SOURCE  /[NO]D_LINES
+```
+
+Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
+source files, which MACRO assembles and LINK links. govax's FORTRAN
+compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
+plan.md`): so far it copies the source into the MACRO file as comments,
+each line with its number, and generates no code, so MACRO assembles the
+file into an empty module. Sources and the MACRO file follow MACRO's
+rules for a source and its object: the MACRO file has the source's name
+with the type `MAR`, beside the source, unless `/MACRO=` names another;
+`/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
+run to column 132, and `/D_LINES` compiles the lines with a `D` in
+column 1. The compiler's messages show the line and column:
+
+```text
+%FORT-E-NOTIMPL, ENCODE is not implemented yet
+  at line 7 of DUA0:[WORK]PROG.FOR;1
+        ENCODE (8, 10, BUF) X
+  ------^
+```
+
+After an error no MACRO file is written, and the command fails with
+`DCL-E-FORERRORS`; after warnings the file is written and `$STATUS` is a
+warning.
 
 ### 6.6 Running programs and processes
 

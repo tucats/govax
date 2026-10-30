@@ -239,3 +239,56 @@ func TestRun_mountFailure(t *testing.T) {
 		t.Error("run with a missing container succeeded")
 	}
 }
+
+// TestFortranCommand checks the console FORTRAN command the fortran
+// subcommand runs (docs/PHASE-74 - FORTRAN plan.md).
+func TestFortranCommand(t *testing.T) {
+	cases := []struct {
+		sources []string
+		flags   fortranFlags
+		want    string
+	}{
+		{[]string{"sq.for"}, fortranFlags{}, `FORTRAN "sq.for"`},
+		{[]string{"a.for", "/x/B"}, fortranFlags{}, `FORTRAN "a.for","/x/B"`},
+		{[]string{"sq"}, fortranFlags{macro: "out/sq.mar"}, `FORTRAN "sq"/MACRO="out/sq.mar"`},
+		{[]string{"sq"}, fortranFlags{noMacro: true, macro: "ignored"}, `FORTRAN "sq"/NOMACRO`},
+		{[]string{"sq"}, fortranFlags{extendSource: true, dLines: true}, `FORTRAN "sq"/EXTEND_SOURCE/D_LINES`},
+	}
+
+	for _, c := range cases {
+		if got := fortranCommand(c.sources, c.flags); got != c.want {
+			t.Errorf("fortranCommand(%q, %+v) = %q, want %q", c.sources, c.flags, got, c.want)
+		}
+	}
+}
+
+// TestFortranThenMacro runs the fortran and macro subcommands' commands
+// one after the other, as a user would: FORTRAN writes the MACRO file
+// beside the source, and MACRO assembles it without a message.
+func TestFortranThenMacro(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "squares.for")
+
+	program := "      PROGRAM SQUARES\n      DO 10 I = 1, 5\n10    PRINT *, I, I*I\n      END\n"
+	if err := os.WriteFile(source, []byte(program), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{
+		fortranCommand([]string{source}, fortranFlags{}),
+		macroCommand(filepath.Join(dir, "squares.mar"), macroFlags{}),
+	} {
+		var out bytes.Buffer
+		if err := run(nil, 0, 0, &out, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, out.String())
+		}
+
+		if out.Len() != 0 {
+			t.Errorf("%s said:\n%s", command, out.String())
+		}
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "squares.obj")); err != nil {
+		t.Errorf("no object file: %v", err)
+	}
+}

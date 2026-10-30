@@ -26,6 +26,9 @@ var (
 	// macro holds the macro subcommand's options.
 	macro macroFlags
 
+	// fortran holds the fortran subcommand's options.
+	fortran fortranFlags
+
 	// link holds the link subcommand's options.
 	link linkFlags
 
@@ -49,6 +52,15 @@ type libraryFlags struct {
 	noSqueeze               bool     // --no-squeeze
 	selective               bool     // --selective-search
 	log                     bool     // --log
+}
+
+// fortranFlags are the fortran subcommand's options, which become the
+// FORTRAN command's qualifiers (docs/PHASE-74 - FORTRAN plan.md).
+type fortranFlags struct {
+	macro        string // --macro: the MACRO file's name
+	noMacro      bool   // --no-macro
+	extendSource bool   // --extend-source
+	dLines       bool   // --d-lines
 }
 
 // macroFlags are the macro subcommand's options, which become the MACRO
@@ -173,6 +185,15 @@ var grammar = []cli.Option{
 		Value:                macroGrammar,
 	},
 	{
+		LongName:             "fortran",
+		Description:          "Compile FORTRAN source files into MACRO-32 source files",
+		OptionType:           cli.Subcommand,
+		Action:               fortranCmd,
+		ParametersExpected:   -99,
+		ParameterDescription: "source...",
+		Value:                fortranGrammar,
+	},
+	{
 		LongName:             "link",
 		Description:          "Link object modules into a VMS executable image",
 		OptionType:           cli.Subcommand,
@@ -228,6 +249,51 @@ var runGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			runOpts.noDebug = true
+
+			return nil
+		},
+	},
+}
+
+// fortranGrammar is the fortran subcommand's own options.
+var fortranGrammar = []cli.Option{
+	{
+		LongName:    "macro",
+		ShortName:   "o",
+		Description: "MACRO file name (default: the source's, with type .mar)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.macro, _ = c.String("macro")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-macro",
+		Description: "Compile and report errors without writing a MACRO file",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noMacro = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "extend-source",
+		Description: "Statements in fixed-format lines run to column 132, not 72",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.extendSource = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "d-lines",
+		Description: "Compile the debugging lines (a D in column 1) as statements",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.dLines = true
 
 			return nil
 		},
@@ -655,6 +721,47 @@ func consoleCmd(c *cli.Context) error {
 	args := c.FindGlobal().Parameters
 
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, args)
+}
+
+// fortranCmd runs the console's FORTRAN command for the source files
+// given, quoted as macroCmd's are.
+func fortranCmd(c *cli.Context) error {
+	sources := c.FindGlobal().Parameters
+	if len(sources) == 0 {
+		return fmt.Errorf("fortran: expected one or more source files")
+	}
+
+	paths = loadConfigPaths(paths)
+
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{fortranCommand(sources, fortran)})
+}
+
+// fortranCommand is the console FORTRAN command for the fortran
+// subcommand's source files and options.
+func fortranCommand(sources []string, f fortranFlags) string {
+	quoted := make([]string, len(sources))
+	for i, name := range sources {
+		quoted[i] = dclQuote(name)
+	}
+
+	command := "FORTRAN " + strings.Join(quoted, ",")
+
+	switch {
+	case f.noMacro:
+		command += "/NOMACRO"
+	case f.macro != "":
+		command += "/MACRO=" + dclQuote(f.macro)
+	}
+
+	if f.extendSource {
+		command += "/EXTEND_SOURCE"
+	}
+
+	if f.dLines {
+		command += "/D_LINES"
+	}
+
+	return command
 }
 
 // macroCmd runs the console's MACRO command. The file names are quoted,

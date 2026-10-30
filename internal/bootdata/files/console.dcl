@@ -773,6 +773,34 @@ grammar console
                     /default=""
 
     !
+    ! govax-native extension (docs/PHASE-74 - FORTRAN plan.md, Decision
+    ! 18; internal/console + internal/fortran + internal/rms): FORTRAN
+    ! compiles FORTRAN source files into MACRO-32 source files, which
+    ! MACRO assembles. SOURCES is a comma-separated list, each compiled to
+    ! its own MACRO file, and its /HOST applies to each, as LINK's does to
+    ! its objects. MACRO is /[NO]MACRO[=file], the output as MACRO's
+    ! /OBJECT is its object: with no value (the empty default), or no
+    ! qualifier at all, the MACRO file is the source's name with type
+    ! MAR, and /NOMACRO compiles without writing one. EXTEND_SOURCE and
+    ! D_LINES are VAX FORTRAN's /[NO]EXTEND_SOURCE (statements to column
+    ! 132) and /[NO]D_LINES (compile the debugging lines). Later phases
+    ! add the rest of the compiler's qualifiers.
+    !
+    verb fortran/id=1370
+
+        parameter   sources/id=1371             -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   host/id=1372                -
+                    /parameter=sources
+
+        qualifier   macro/id=1373               -
+                    /type=$string               -
+                    /default=""
+        qualifier   extend_source/id=1374
+        qualifier   d_lines/id=1375
+
+    !
     ! govax-native extension (docs/PHASE-30.md, internal/console +
     ! internal/link): LINK links object modules into a VMS executable
     ! image. OBJECTS is a comma-separated list, and its /HOST applies to

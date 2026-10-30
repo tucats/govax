@@ -624,6 +624,20 @@ func (d *Dispatcher) bindGrammar() {
 			CommandLine: d.Console.Line(),
 		})
 	})
+
+	// docs/PHASE-74 - FORTRAN plan.md: FORTRAN compiles FORTRAN sources
+	// into MACRO-32 sources (dclcmd.Context.Fortran, internal/fortran).
+	g.Bind("FORTRAN", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().Fortran(dclcmd.FortranOptions{
+			Sources:      r.List("SOURCES"),
+			SourceHost:   r.ParamPresent("SOURCES", "HOST"),
+			Macro:        r.String("MACRO"),
+			NoMacro:      r.Present("MACRO") && r.Negated("MACRO"),
+			ExtendSource: r.Present("EXTEND_SOURCE") && !r.Negated("EXTEND_SOURCE"),
+			DLines:       r.Present("D_LINES") && !r.Negated("D_LINES"),
+			CommandLine:  d.Console.Line(),
+		})
+	})
 }
 
 // nonEmpty drops empty strings from a list: a list qualifier given

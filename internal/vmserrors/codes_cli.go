@@ -206,6 +206,11 @@ const (
 	// docs/PHASE-67 - address space under paging.md: VMINIT's /P1 with
 	// paging on.
 	cliP1TooSmall
+
+	// docs/PHASE-74 - FORTRAN plan.md: the FORTRAN command.
+	cliForErrors
+	cliForWarnings
+	cliForSameFile
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -521,6 +526,22 @@ const (
 	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
 	// can't hold P1's permanent part and the user stack.
 	CLI_P1TOOSMALL = CLIFacility<<FacilityPosition | cliP1TooSmall<<MessagePosition | StatusError
+
+	// CLI_FORERRORS ends a FORTRAN whose compilation found errors, after
+	// the compiler has reported each: no MACRO file is written, as MACRO
+	// writes no object after errors.
+	CLI_FORERRORS = CLIFacility<<FacilityPosition | cliForErrors<<MessagePosition | StatusError
+
+	// CLI_FORWARNINGS is the status of a FORTRAN whose compilation found
+	// warnings but no errors: the MACRO file is written, and the command
+	// sets $STATUS to this warning without showing it again (the
+	// compiler's own messages have said what went wrong).
+	CLI_FORWARNINGS = CLIFacility<<FacilityPosition | cliForWarnings<<MessagePosition | StatusWarning
+
+	// CLI_FORSAMEFILE refuses a FORTRAN whose MACRO file would be the
+	// source file itself (a host source whose type is already MAR), which
+	// would destroy the source.
+	CLI_FORSAMEFILE = CLIFacility<<FacilityPosition | cliForSameFile<<MessagePosition | StatusError
 )
 
 func init() {
@@ -678,5 +699,8 @@ func init() {
 	DefineMessage(CLI_STRTOOLNG, CLIFacility, "STRTOOLNG", "string argument is too long - shorten")
 	DefineMessage(CLI_BUFOVF, CLIFacility, "BUFOVF", "command buffer overflow - shorten expression or command line")
 	DefineMessage(CLI_P1TOOSMALL, CLIFacility, "P1TOOSMALL", "P1 region too small to hold its permanent part and the user stack")
+	DefineMessage(CLI_FORERRORS, CLIFacility, "FORERRORS", "!D error(s) compiling !S; no MACRO file written")
+	DefineMessage(CLI_FORWARNINGS, CLIFacility, "FORWARNINGS", "!D warning(s) compiling !S")
+	DefineMessage(CLI_FORSAMEFILE, CLIFacility, "FORSAMEFILE", "the MACRO file !S would replace the FORTRAN source; name another with /MACRO=")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

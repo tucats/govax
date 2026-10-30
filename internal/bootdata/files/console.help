@@ -172,6 +172,7 @@
 //              10/20/26    Added BACKUP (docs/PHASE-69 - backup save sets.md)
 //              10/21/26    @/OUTPUT makes a volume file when the procedure
 //                          starts
+//              10/29/26    Added FORTRAN (docs/PHASE-74 - FORTRAN plan.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2522,6 +2523,7 @@ $HELP
     CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
     EOD             End a command procedure's data lines
     EXIT            End a command procedure, or govax at the terminal
+    FORTRAN         Compile a FORTRAN source file into a MACRO-32 source file
     IF              Run a command when an expression is true
     GOSUB           Call a subroutine at a label (RETURN comes back)
     GOTO            Go on at a label of a command procedure
@@ -3988,6 +3990,99 @@ $COPY
         COPY "/Users/tom/foo.txt" /HOST BAR.TXT
 
     See also the help for TYPE, DIRECTORY, MOUNT, and SET DEFAULT.
+
+$FORT
+$FOR 
+
+    The FORTRAN command compiles a VAX FORTRAN source file into a VAX
+    MACRO-32 source file (.MAR).  MACRO assembles that file into an
+    object module, and LINK links the object into an image RUN runs:
+
+        FORTRAN SQUARES         ! SQUARES.FOR -> SQUARES.MAR
+        MACRO SQUARES           ! SQUARES.MAR -> SQUARES.OBJ
+        LINK SQUARES            ! SQUARES.OBJ -> SQUARES.EXE
+        RUN SQUARES
+
+    The MACRO file is meant to be read: it holds the FORTRAN source as
+    comments, each line with its number, so the code and the FORTRAN it
+    came from are side by side.
+
+    The compiler is being built a phase at a time (docs/PHASE-74 -
+    FORTRAN plan.md).  So far it copies the source into the MACRO file as
+    comments and generates no code: MACRO assembles the file into an
+    empty module.
+
+    Syntax:
+
+        FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
+                [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
+
+    Parameter:
+
+        <source>        The source file, or several separated by commas,
+                        each compiled to its own MACRO file.  Without a
+                        file type a source is .FOR.  A source can be a
+                        host file or a file on a mounted volume, by the
+                        rules MACRO's source follows (HELP MACRO): /HOST
+                        makes each a host path, a name with a directory
+                        in brackets or a device is on a volume, a name
+                        with "/" is a host path, and a bare name follows
+                        SET DEFAULT.  Quote a host path to keep its case.
+
+    Qualifiers:
+
+        /MACRO[=<file>] Writes the MACRO file.  This is the default.
+                        Without a file name, it has the source's name and
+                        location, with the type MAR in the same case as
+                        the source's type: squares.for gives squares.mar.
+                        A name is placed as MACRO's /OBJECT= places its
+                        object, and a VMS name without a type gets MAR.
+                        On a volume, the file is the next version of its
+                        name.  A host source whose type is already MAR is
+                        refused unless /MACRO= names another file, since
+                        its MACRO file would replace it.
+
+        /NOMACRO        Compiles the source and reports any errors, but
+                        writes no MACRO file.
+
+        /EXTEND_SOURCE  Lets the statement field of a fixed-format line
+        /NOEXTEND_SOURCE
+                        run to column 132 instead of column 72.  The
+                        default is /NOEXTEND_SOURCE.
+
+        /D_LINES        Compiles the debugging lines (those with a D in
+        /NOD_LINES      column 1) as statements.  The default is
+                        /NOD_LINES: they are comments.
+
+    The compiler reports each problem it finds with the line it is on:
+
+        %FORT-E-NOTIMPL, ENCODE is not implemented yet
+          at line 7 of DUA0:[WORK]PROG.FOR;1
+                ENCODE (8, 10, BUF) X
+          ------^
+
+    After an error (E) or a fatal error (F) no MACRO file is written, so
+    a failed compilation never replaces a good one, and the command ends
+    with DCL-E-FORERRORS.  After warnings (W) the file is written and
+    $STATUS is a warning.  With several sources, each failure is shown as
+    it happens and the others are still compiled.
+
+    From the host shell, "govax fortran <source>..." runs this command,
+    with --macro <file> or --no-macro, --extend-source, and --d-lines.
+
+    Examples:
+
+        FORTRAN SQUARES
+
+        FORTRAN "squares.for"
+
+        FORTRAN DUA0:[SRC]PROG /MACRO=DUA0:[OBJ]
+
+        FORTRAN A,B,C
+
+        $ govax --mount-write DUA0=work.dsk fortran DUA0:[000000]PROG.FOR
+
+    See also the help for MACRO, LINK, and RUN.
 
 $MACR
 

@@ -1,0 +1,43 @@
+// Package fortran is govax's FORTRAN compiler: it compiles a VAX FORTRAN
+// source file into a VAX MACRO-32 source file, which the MACRO command
+// assembles and LINK links against FTNRTL, the FORTRAN run-time library
+// (docs/PHASE-74 - FORTRAN plan.md).
+//
+//	$ FORTRAN SQUARES      ! SQUARES.FOR -> SQUARES.MAR
+//	$ MACRO SQUARES        ! SQUARES.MAR -> SQUARES.OBJ
+//	$ LINK SQUARES         ! SQUARES.OBJ -> SQUARES.EXE
+//	$ RUN SQUARES
+//
+// # How a compiler is put together
+//
+// A compiler is a series of passes. Each reads what the one before it
+// produced and hands on something a step closer to machine code. govax's
+// compiler has these, each in a package of its own beneath this one, with
+// a doc comment that explains its pass:
+//
+//   - source: reads the source file's lines, which FORTRAN lays out in
+//     columns (a label field, a continuation column, the statement), and
+//     joins them into statements;
+//   - lex: splits each statement into tokens (names, numbers, operators).
+//     FORTRAN makes this harder than most languages do, because it
+//     ignores blanks and has no reserved words;
+//   - parse: recognizes each statement's grammar and builds a syntax tree;
+//   - sema: semantic analysis, giving every name its type and storage and
+//     checking the rules a grammar can't (labels, DO loops, arguments);
+//   - ir: lowers the tree into a simpler intermediate representation of
+//     basic blocks and expression trees;
+//   - opt: improves the IR, optionally;
+//   - codegen: chooses VAX instructions and writes the MACRO file.
+//
+// diag holds every pass's error and warning messages.
+//
+// The passes are built a phase at a time (docs/PHASE-74's Part C). So far
+// the compiler has only its driver (this package), its messages (diag),
+// and the start of codegen: Compile copies the source into a MACRO file
+// as comments, which MACRO assembles into an empty module.
+//
+// The compiler is plain Go. It knows nothing of govax's console, RMS, or
+// the emulated machine: the FORTRAN command (internal/dclcmd/fortran.go)
+// reads the source, from the host or a Files-11 volume, and writes the
+// MACRO file Compile returns.
+package fortran
