@@ -43,6 +43,7 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 			stmtFuncs: map[ast.Stmt]*Symbol{},
 			implicit:  defaultImplicit(),
 			rejected:  map[ast.Stmt]bool{},
+			boundVars: map[*Symbol]diag.Position{},
 		}
 
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
@@ -146,6 +147,12 @@ type analyzer struct {
 	// or nil for one with an error.
 	stmtFuncs map[ast.Stmt]*Symbol
 
+	// adjustable are the arrays declared with bounds that aren't
+	// constant, and boundVars the names used in those bounds, each with
+	// where it was first used so (arrays.go).
+	adjustable []*adjustableArray
+	boundVars  map[*Symbol]diag.Position
+
 	// open are the IF blocks and DO loops open at the statement being
 	// analyzed, outermost first; nextID numbers them.
 	open   []*construct
@@ -192,6 +199,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
 	a.declarations(au.Body)
+	a.checkArrays()
 	a.functionResult()
 	a.statements(au.Body)
 	a.checkLabels()

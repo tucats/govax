@@ -47,6 +47,9 @@ Generate code for all of the manual's chapters 5 and 6:
 - **Adjustable arrays:** their bounds and multipliers are computed on
   entry, from the arguments' values, into static cells (the manual: a
   later change to the bound variables doesn't change the array).
+  Phase 76's subtask 5 declares and checks them: `sema/arrays.go` keeps
+  each bound that isn't constant as its syntax tree (`Dim.LowerExpr`,
+  `UpperExpr`) and reports NOTIMPL at it, in `checkArrays`.
 - **PAUSE** writes its message to SYS$OUTPUT and reads a line from
   SYS$INPUT (VAX FORTRAN's PAUSE at a terminal waits for CONTINUE; in a
   batch-like run it is a no-op). The choice is recorded.

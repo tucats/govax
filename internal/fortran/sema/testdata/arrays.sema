@@ -1,0 +1,45 @@
+== main program ARRAYS
+  ARRAYS                  program unit
+  N         INTEGER       constant         = 3
+  LO        INTEGER       constant         = -3
+  BOS       REAL          array(1:3, 1:3, 1:3) $LOCAL+0
+  V         REAL          array(0:9)       $LOCAL+108
+  W         REAL          array(-3:3, 1:6) $LOCAL+148
+  X         REAL          array(1:2)       $LOCAL+316
+  M         INTEGER       array(3:4)       $LOCAL+324
+  Z         REAL          array(-1:1)      $LOCAL+332
+  SUM2                    subroutine
+  $LOCAL is 344 bytes
+7           BOS[2, 1, 3] = (+:R V[0] W[-3, 6])
+8           M[4] = 1
+9           X[2] = BOS[1, 1, 1]
+10          Z[0] = 0.0
+11          CALL SUM2(BOS[], 3, 3)
+12          END
+== SUBROUTINE SUM2
+  SUM2                    program unit
+  A         REAL          array(1:3, 1:3, 1:*) argument 1
+  B         REAL          array(-1:*)      argument 2
+  C         REAL          array(1:*)       argument 3
+  $LOCAL is 0 bytes
+16          A[1, 2, 3] = (+:R B[-1] C[1])
+17          END
+== SUBROUTINE ADJ
+  ADJ                     program unit
+  X         REAL          array((- (/ I 2)):(/ I 2), 1:J) argument 1
+  I         INTEGER       variable         argument 2
+  J         INTEGER       variable         argument 3
+  Y         REAL          array(K:*)       argument 4
+  K         INTEGER       variable         argument 5
+  $LOCAL is 0 bytes
+22          END
+
+%FORT-E-NOTIMPL, an adjustable array is not implemented yet
+  at line 21 of ARRAYS.FOR
+        DIMENSION X(-I/2:I/2, J), Y(K:*)
+  ------------------^
+
+%FORT-E-NOTIMPL, an adjustable array is not implemented yet
+  at line 21 of ARRAYS.FOR
+        DIMENSION X(-I/2:I/2, J), Y(K:*)
+  ----------------------------------^

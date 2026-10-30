@@ -205,9 +205,29 @@ var messages = map[string]kind{
 	// DUPSTMTFUNC is a second definition of a statement function.
 	"DUPSTMTFUNC": {Error, "the statement function %s is already defined, at line %d"},
 
-	// BADBOUND is an array bound that isn't an integer constant
-	// expression (where an adjustable array's isn't allowed).
-	"BADBOUND": {Error, "an array's bounds must be integer constants here"},
+	// BADBOUND is an array bound that isn't an arithmetic expression.
+	"BADBOUND": {Error, "an array's bound must be an INTEGER or REAL expression"},
+
+	// ADJNOTDUMMY is a bound that isn't constant on an array that isn't
+	// a dummy argument: only those can be adjustable.
+	"ADJNOTDUMMY": {Error, "the bounds of %s must be constants: only a dummy argument can be an adjustable array"},
+
+	// BOUNDVAR is a name in an adjustable array's bound that isn't a
+	// dummy argument or in a common block.
+	"BOUNDVAR": {Error, "%s can't be used in an array's bounds: it isn't a dummy argument or in a common block"},
+
+	// BOUNDREF is an array or a function in an array's bound.
+	"BOUNDREF": {Error, "%s can't be used in an array's bounds: arrays and functions aren't allowed there"},
+
+	// BOUNDTYPE is a type statement changing the type of a name already
+	// used in an array's bounds.
+	"BOUNDTYPE": {Error, "the type of %s can't change: it is used in an array's bounds, at line %d"},
+
+	// TOOMANYDIMS is an array declarator of more than seven dimensions.
+	"TOOMANYDIMS": {Error, "an array can have at most 7 dimensions, not %d"},
+
+	// ARRAYSIZE is an array too large for the VAX to address.
+	"ARRAYSIZE": {Error, "the array %s is too large: it takes more than 2147483647 bytes"},
 
 	// BOUNDORDER is an upper bound less than its lower bound.
 	"BOUNDORDER": {Error, "the upper bound %d is less than the lower bound %d"},

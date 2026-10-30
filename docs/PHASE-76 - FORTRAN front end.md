@@ -4,7 +4,7 @@
 2026-10-30; subtask 2, the parser's remaining statements, done
 2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
 2026-10-30; subtask 4, PARAMETER and constant folding, done
-2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+2026-10-30; subtask 5, arrays, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -506,8 +506,8 @@ Subtasks 2 to 9 below are revised to match.
    functions recognized.
 4. **PARAMETER and constant folding** (done 2026-10-30) in every type,
    both forms, the constant-expression intrinsics.
-5. **Arrays:** bounds, lower bounds, adjustable and assumed-size forms,
-   element offsets.
+5. **Arrays** (done 2026-10-30): bounds, lower bounds, adjustable and
+   assumed-size forms, element offsets.
 6. **COMMON and EQUIVALENCE:** the layout algorithm and its errors.
 7. **DATA, SAVE, BLOCK DATA:** initial values in the `.MAR` file,
    typeless and Hollerith constants among them.
@@ -720,3 +720,50 @@ Subtasks 2 to 9 below are revised to match.
     old form and beside no operand, and the other operand's type beside
     one; a literal's extra precision kept through a PARAMETER of its own
     type, and lost through a conversion.
+- **2026-10-30:** Subtask 5 done: arrays (`internal/fortran/sema/arrays.go`).
+  - **Bounds:** constant ones are computed by the evaluator and converted
+    to INTEGER (2.2.3.1: "converted to an integer if necessary", so
+    `DIMENSION A(2.5)` has two elements, where Phase 75 said BADBOUND);
+    LOGICAL and CHARACTER ones are BADBOUND. More than seven dimensions
+    is TOOMANYDIMS. An array over 2147483647 bytes is ARRAYSIZE, checked
+    once the declarations are read, since its type may come after its
+    dimensions.
+  - **Adjustable arrays are declared and checked; their code is Phase
+    79's.** A bound that isn't constant is kept as its syntax tree
+    (`Dim.LowerExpr`, `UpperExpr`), and the array is NOTIMPL at that bound.
+    It stays an array, so its uses' subscripts are still counted. On an
+    array that isn't a dummy argument, or in a main program, it is
+    ADJNOTDUMMY. The form is checked where it is read: the arithmetic
+    operators, constants, and names, an array element or a function being
+    BOUNDREF, anything else BADBOUND. Each name is checked after the
+    declarations (`checkArrays`), since they may follow the bound: a dummy
+    argument, INTEGER or REAL (BOUNDVAR, BOUNDREF for an array, BADBOUND).
+    A type statement that changes the type of a name a bound has used is
+    BOUNDTYPE, section 6.1.1.1's invalid example; one that repeats the type
+    is fine. A variable in a common block is the other kind of name a bound
+    may use: a unit with COMMON is incomplete until subtask 6, so these
+    messages don't reach it, and subtask 6 must add the case to
+    `checkBoundName`.
+  - **Assumed-size arrays** take adjustable bounds too (4.5's `A2(N3:*)`,
+    6.1.1.2's `A(1:N,1:*)`); `Symbol.AssumedSize` answers NOSIZE's
+    question, since `Elements` is 0 for adjustable arrays as well.
+  - **Element offsets:** `Symbol.ElementNumber` is an element's place in
+    storage order for constant subscripts, or false if it is outside the
+    array, for EQUIVALENCE and DATA; `Dim.Extent` is shared with the IR.
+    Lowering's `mem` was n-dimensional already (Phase 75), and so were
+    descriptors; goldens now show it.
+  - **Messages:** ADJNOTDUMMY, BOUNDVAR, BOUNDREF, BOUNDTYPE, TOOMANYDIMS,
+    ARRAYSIZE; BADBOUND's text.
+  - **Tests:** `TestErrors`' cases, `TestElementNumber` (Figure 2-1's
+    positions), goldens `sema/testdata/arrays.for` (2.2.3's, 4.5's, and
+    6.1.1's forms), `ir/testdata/arrays.for` and `codegen/testdata/arrays.for`
+    (offsets checked by hand), and `testdata/fortran/arrays.for` end to end,
+    up to seven dimensions.
+  - Choices of ours, unconfirmed (no VAX FORTRAN to check): a constant
+    subscript outside an array's bounds isn't diagnosed in an executable
+    statement, since `DIMENSION A(1)` for a dummy of any length is a common
+    idiom and the manual leaves bounds to `/CHECK=BOUNDS` at run time; the
+    2147483647-byte limit; a COMPLEX or LOGICAL bound rejected, though the
+    manual's "arithmetic expression" might take COMPLEX; a bound's power of
+    a variable (`N**2`) accepted, the manual's forbidding only array and
+    function references.

@@ -77,17 +77,26 @@ func dumpSymbol(s *Symbol) string {
 	return fmt.Sprintf("%-9s %-13s %-16s %s", s.Name, typ, class, where)
 }
 
-// dims is an array's dimensions as declared: 1:10, 0:9, 1:*.
+// dims is an array's dimensions as declared: 1:10, 0:9, 1:*, and an
+// adjustable array's bounds as the syntax tree's dump writes them.
 func dims(list []Dim) string {
 	text := make([]string, len(list))
 
 	for i, d := range list {
-		upper := strconv.Itoa(d.Upper)
-		if d.Assumed {
-			upper = "*"
+		lower, upper := strconv.Itoa(d.Lower), strconv.Itoa(d.Upper)
+
+		if d.LowerExpr != nil {
+			lower = ast.DumpExpr(d.LowerExpr)
 		}
 
-		text[i] = strconv.Itoa(d.Lower) + ":" + upper
+		switch {
+		case d.Assumed:
+			upper = "*"
+		case d.UpperExpr != nil:
+			upper = ast.DumpExpr(d.UpperExpr)
+		}
+
+		text[i] = lower + ":" + upper
 	}
 
 	return strings.Join(text, ", ")

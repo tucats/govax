@@ -287,7 +287,7 @@ func (a *analyzer) items(list []ast.Expr) []Expr {
 		if n, ok := e.(*ast.Name); ok {
 			item = a.name(n, true)
 
-			if r, ok := item.(*ArrayRef); ok && r.Sym.Elements() == 0 {
+			if r, ok := item.(*ArrayRef); ok && r.Sym.AssumedSize() {
 				a.report("NOSIZE", n.Pos, n.Name)
 			}
 		} else {

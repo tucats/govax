@@ -1,0 +1,55 @@
+routine ARRAYS main
+  cell  M       L  $LOCAL+0    array M, 24 bytes
+  cell  B       F  $LOCAL+24   array B, 48 bytes
+  cell  J       L  $LOCAL+72   variable J
+  cell  I       L  $LOCAL+76   variable I
+  cell  $C1     L  $LOCAL+80   DO 10's count
+  cell  $C2     L  $LOCAL+84   DO 10's count
+  $LOCAL is 88 bytes
+  datum $IO1    control PRINT *
+  datum $D1     descriptor L A 4 (1:3,0:1) M
+  datum $K1     L 3
+B1:
+  ; line 7
+  assign $C1 = 2
+  assign J = 0
+  jump B2
+B2:  ; DO 10's body
+  ; line 8
+  assign $C2 = 3
+  assign I = 1
+  jump B3
+B3: L10  ; DO 10's body
+  ; line 9
+  assign M-4[add.L(I, mul.L(J, 3))] = add.L(I, mul.L(10, J))
+  assign I = add.L(I, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B3 B4
+B4:
+  assign J = add.L(J, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B5
+B5:
+  ; line 10
+  assign B+16 = cvt.LF(M+16)
+  ; line 11
+  assign B+24[add.L(I, mul.L(J, 3))] = 1.5
+  ; line 12
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 13
+  call TWO(ref M, ref $K1)
+  ; line 14
+  return 1
+routine TWO subroutine
+  param A       L  argument 1
+  param L       L  argument 2
+  $LOCAL is 0 bytes
+B1:
+  ; line 17
+  assign @A+8[@L] = add.L(@A-36[mul.L(@L, 3)], 1)
+  ; line 18
+  call ONE(ref @A+12)
+  ; line 19
+  return

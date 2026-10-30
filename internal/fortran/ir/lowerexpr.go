@@ -125,7 +125,7 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 				index = arith(Add, Long, index, arith(Mul, Long, v, LongConst(int32(multiplier))))
 			}
 
-			multiplier *= dim.Upper - dim.Lower + 1
+			multiplier *= dim.Extent()
 		}
 
 		m.Offset = first * e.Sym.Type.Size

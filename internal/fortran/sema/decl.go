@@ -127,6 +127,8 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 			a.notImplForm(d.InitPos, "a type statement's initial values")
 		}
 
+		a.checkBoundType(sym, t, ok, d.Pos)
+
 		switch {
 		case sym.Class == UnitName:
 			a.badUse(sym, d.Pos, "be given a type")
@@ -304,102 +306,6 @@ func article(text string) string {
 	}
 
 	return "a " + text
-}
-
-// dimension gives sym the dimensions its array declarator d declares
-// (sections 2.2.3.1, 4.5). In this phase a bound must be a constant
-// (adjustable arrays, whose bounds are dummy arguments, are Phase 79's),
-// and only a dummy array's last upper bound may be *, an assumed-size
-// array.
-func (a *analyzer) dimension(sym *Symbol, d *ast.Declarator) {
-	switch {
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant:
-		a.badUse(sym, d.Pos, "be an array")
-
-		sym.broken = true
-
-		return
-
-	case sym.Dims != nil:
-		a.report("DUPDIM", d.Pos, d.Name, sym.DimPos.Line)
-
-		return
-	}
-
-	dims := make([]Dim, len(d.Dims))
-
-	// Whatever goes wrong, the name is an array: its uses are elements.
-	sym.Class, sym.DimPos = Array, d.Pos
-	sym.Dims = dims
-
-	for i, b := range d.Dims {
-		dim := Dim{Lower: 1}
-
-		if b.Lower != nil {
-			lower, ok := a.bound(sym, b.Lower)
-			if !ok {
-				sym.broken = true
-
-				return
-			}
-
-			dim.Lower = lower
-		}
-
-		if b.Star {
-			if sym.Dummy == 0 || i != len(d.Dims)-1 {
-				a.report("ASSUMEDSIZE", d.Pos)
-
-				sym.broken = true
-
-				return
-			}
-
-			dim.Assumed = true
-		} else {
-			upper, ok := a.bound(sym, b.Upper)
-			if !ok {
-				sym.broken = true
-
-				return
-			}
-
-			if upper < dim.Lower {
-				a.report("BOUNDORDER", b.Upper.Position(), upper, dim.Lower)
-
-				sym.broken = true
-
-				return
-			}
-
-			dim.Upper = upper
-		}
-
-		dims[i] = dim
-	}
-}
-
-// bound is the value of an array bound, which must be an integer
-// constant expression; a bound that names a variable is an adjustable
-// array's, NOTIMPL for a dummy array in a subprogram and BADBOUND
-// anywhere else.
-func (a *analyzer) bound(sym *Symbol, e ast.Expr) (int, bool) {
-	v, kind := a.constInt(e)
-
-	switch kind {
-	case constOK:
-		return int(v), true
-	case constNamed:
-		if sym.Dummy != 0 {
-			a.notImpl(e.Position(), "an adjustable array")
-		} else {
-			a.report("BADBOUND", e.Position())
-		}
-	case constNotInteger:
-		a.report("BADBOUND", e.Position())
-	}
-
-	return 0, false
 }
 
 // constInt is the value of an integer constant expression in a

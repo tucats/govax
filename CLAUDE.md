@@ -294,7 +294,9 @@ never had.
   subtask 3 (2026-10-30) types, IMPLICIT, statement order, and
   statement functions recognized, and subtask 4 (2026-10-30) PARAMETER
   and constant expressions in every type (`sema/constant.go`,
-  `constfuncs.go`, `parameter.go`).
+  `constfuncs.go`, `parameter.go`), and subtask 5 (2026-10-30) arrays:
+  bounds of every kind, adjustable arrays declared and checked, and
+  element numbers (`sema/arrays.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1699,7 +1701,11 @@ expect adjustment as phases land):
   from the syntax tree in every type (`constant.go`, `constfuncs.go`), so
   names aren't entered as variables; a PARAMETER name is class `Constant`
   with its `Value` (`parameter.go`), and an executable expression uses
-  the evaluator only for forms it compiles only as constants (`folded`). `Compile` runs it after the parser, even after the
+  the evaluator only for forms it compiles only as constants (`folded`).
+  Subtask 5: `arrays.go` reads array declarators (a `Dim`'s bounds are
+  constants, or `LowerExpr`/`UpperExpr` for an adjustable array, whose code
+  is Phase 79's; `checkArrays` runs after the declarations), and
+  `ElementNumber` is an element's storage place for constant subscripts. `Compile` runs it after the parser, even after the
   parser's errors. `ir` is the fifth pass (Phase 75, subtask 5):
   `Lower` turns each `sema.Unit` into a `Routine` of `Params`, `Cells`
   (`$LOCAL`: the unit's variables, then `$Cn`/`$Sn` DO counts and steps,

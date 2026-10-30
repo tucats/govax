@@ -4408,9 +4408,12 @@ output it prints.
   LOGICAL `*1`, `*2`, `*4`; INTEGER `*2`, `*4`; REAL `*4`, `*8`, `*16`;
   DOUBLE PRECISION; COMPLEX `*8`, `*16`; DOUBLE COMPLEX; CHARACTER`*n`,
   `*(expr)`, and `*(*)` for a dummy argument or a PARAMETER constant), and
-  DIMENSION, of variables and arrays with constant bounds (a lower bound
-  with a colon, `V(0:9)`; a bound may be a constant expression); a dummy
-  array may be `A(*)`. Every variable gets its storage,
+  DIMENSION and VIRTUAL, of variables and arrays of up to seven dimensions
+  with constant bounds (a lower bound with a colon, `V(0:9)`; a bound may
+  be a constant expression, and a REAL one is truncated); a dummy array's
+  last upper bound may be `*`, as in `A(3,*)`. An adjustable array,
+  `A(M,N)` with bounds from dummy arguments, is checked, then reported not
+  implemented. Every variable gets its storage,
   but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit

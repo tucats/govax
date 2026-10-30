@@ -1,0 +1,119 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for ARRAYS, the main program
+;   M     INTEGER (3,0:1)  $LOCAL+0   ARRAYS.M
+;   B     REAL (-1:1,2,2)  $LOCAL+24  ARRAYS.B
+;   J     INTEGER          $LOCAL+72  ARRAYS.J
+;   I     INTEGER          $LOCAL+76  ARRAYS.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ARRAYS.M:
+	.BLKL	6			; M, INTEGER (3,0:1)
+ARRAYS.B:
+	.BLKL	12			; B, REAL (-1:1,2,2)
+ARRAYS.J:
+	.BLKL	1			; J
+ARRAYS.I:
+	.BLKL	1			; I
+ARRAYS.$C1:
+	.BLKL	1			; DO 10's count
+ARRAYS.$C2:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+ARRAYS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+ARRAYS.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.ADDRESS ARRAYS.M
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	24			; the array's size in bytes
+	.ADDRESS ARRAYS.M-4		; A0, where the element with zero subscripts would be
+	.LONG	3,2			; multipliers
+	.LONG	1,3,0,1			; bounds
+ARRAYS.$K1:
+	.LONG	3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM ARRAYS
+	.ENTRY	ARRAYS,^M<>
+;    2  C     Elements in several dimensions, with lower bounds of every sign,
+;    3  C     constant and computed subscripts, and whole arrays.
+;    4        PARAMETER (N = 3)
+;    5        DIMENSION M(N, 0:1), B(-1:1, 2, 2)
+;    6        INTEGER M
+;    7        DO 10 J = 0, 1
+	MOVL	#2,ARRAYS.$C1		; DO 10's count
+	CLRL	ARRAYS.J
+ARRAYS.$1:				; DO 10's body
+;    8        DO 10 I = 1, N
+	MOVL	#3,ARRAYS.$C2		; DO 10's count
+	MOVL	#1,ARRAYS.I
+;    9     10 M(I, J) = I + 10 * J
+ARRAYS.L10:				; DO 10's body
+	MULL3	#10,ARRAYS.J,R0
+	MULL3	ARRAYS.J,#3,R1
+	ADDL2	ARRAYS.I,R1
+	ADDL3	ARRAYS.I,R0,ARRAYS.M-4[R1]
+	INCL	ARRAYS.I
+	DECL	ARRAYS.$C2		; one pass fewer
+	BLEQ	ARRAYS.$2
+	BRW	ARRAYS.L10
+ARRAYS.$2:
+	INCL	ARRAYS.J
+	DECL	ARRAYS.$C1		; one pass fewer
+	BLEQ	ARRAYS.$3
+	BRW	ARRAYS.$1
+ARRAYS.$3:
+;   10        B(0, 2, 1) = M(2, 1)
+	CVTLF	ARRAYS.M+16,ARRAYS.B+16
+;   11        B(I - 1, J + 1, 2) = 1.5
+	MULL3	ARRAYS.J,#3,R0
+	ADDL2	ARRAYS.I,R0
+	MOVL	#^X000040C0,ARRAYS.B+24[R0] ; 1.5
+;   12        PRINT *, M
+	PUSHAB	ARRAYS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	ARRAYS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   13        CALL TWO(M, 3)
+	PUSHAL	ARRAYS.$K1
+	PUSHAL	ARRAYS.M
+	CALLS	#2,G^TWO
+;   14        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for TWO, a subroutine
+;   A     INTEGER (3,*)  argument 1  @TWO.A(AP)
+;   L     INTEGER        argument 2  @TWO.L(AP)
+;
+TWO.A = 4				; A is argument 1
+TWO.L = 8				; L is argument 2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   15        SUBROUTINE TWO(A, L)
+	.ENTRY	TWO,^M<>
+;   16        INTEGER A(3, *)
+;   17        A(L, 2) = A(1, L - 2) + 1
+	MULL3	@TWO.L(AP),#3,R0
+	SUBL2	#9,R0
+	ADDL3	@TWO.L(AP),#2,R1
+	ADDL3	@TWO.A(AP)[R0],#1,@TWO.A(AP)[R1]
+;   18        CALL ONE(A(1, 2))
+	MOVL	#3,R0
+	PUSHAL	@TWO.A(AP)[R0]
+	CALLS	#1,G^ONE
+;   19        END
+	RET
+
+	.END	ARRAYS

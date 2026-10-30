@@ -162,23 +162,45 @@ type Symbol struct {
 
 // Dim is one dimension of an array: its bounds. Assumed is an
 // assumed-size dummy array's last dimension, written *, whose upper bound
-// is unknown.
+// is unknown. LowerExpr and UpperExpr are an adjustable array's bounds
+// that aren't constant, which are computed when the subprogram is entered
+// (section 6.1.1.1, Phase 79's code); nil for a constant bound, which is
+// Lower or Upper.
 type Dim struct {
-	Lower, Upper int
-	Assumed      bool
+	Lower, Upper         int
+	Assumed              bool
+	LowerExpr, UpperExpr ast.Expr
+}
+
+// known reports whether the dimension's bounds are both known now.
+func (d Dim) known() bool {
+	return !d.Assumed && d.LowerExpr == nil && d.UpperExpr == nil
+}
+
+// Extent is how many elements the dimension has, du - dl + 1 (section
+// 2.2.3.1), if both its bounds are known.
+func (d Dim) Extent() int {
+	return d.Upper - d.Lower + 1
+}
+
+// AssumedSize reports whether s is an assumed-size array, whose last
+// upper bound is * (section 6.1.1.2).
+func (s *Symbol) AssumedSize() bool {
+	return len(s.Dims) > 0 && s.Dims[len(s.Dims)-1].Assumed
 }
 
 // Elements is how many elements the array has (1 for a scalar), or 0 for
-// an assumed-size array, whose size isn't known.
+// an assumed-size or adjustable array, whose size isn't known until the
+// program runs.
 func (s *Symbol) Elements() int {
 	n := 1
 
 	for _, d := range s.Dims {
-		if d.Assumed {
+		if !d.known() {
 			return 0
 		}
 
-		n *= d.Upper - d.Lower + 1
+		n *= d.Extent()
 	}
 
 	return n

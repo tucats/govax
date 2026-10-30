@@ -119,9 +119,38 @@ func TestErrors(t *testing.T) {
 		{"a passed length on a dummy", []string{"SUBROUTINE S(C)", "CHARACTER*(*) C", "END"}, ""},
 		{"a passed-length function", []string{"CHARACTER*(*) FUNCTION F(X)", "END"}, "NOTIMPL@1:7"},
 		{"a passed-length external function", []string{"CHARACTER*(*) F", "CALL S(F(1))", "END"}, "NOTIMPL@2:14"},
-		{"a bound naming a variable", []string{"DIMENSION A(N)", "END"}, "BADBOUND@1:19"},
-		{"a REAL bound", []string{"DIMENSION A(2.5)", "END"}, "BADBOUND@1:19"},
+		{"a bound naming a variable", []string{"DIMENSION A(N)", "END"}, "ADJNOTDUMMY@1:19"},
+		{"a variable bound on a local array", []string{"SUBROUTINE S(N)", "DIMENSION A(N)", "END"}, "ADJNOTDUMMY@2:19"},
+		{"a REAL bound is converted", []string{"DIMENSION A(2.5)", "A(2) = 1", "END"}, ""},
+		{"a LOGICAL bound", []string{"DIMENSION A(.TRUE.)", "END"}, "BADBOUND@1:19"},
+		{"a CHARACTER bound", []string{"DIMENSION A('X')", "END"}, "BADBOUND@1:19"},
 		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "END"}, "NOTIMPL@2:19"},
+		{"an adjustable lower bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N:5)", "END"}, "NOTIMPL@2:19"},
+		{"both bounds, and an expression", []string{"SUBROUTINE S(X, I, J)", "DIMENSION X(-I/2:I/2, J)", "END"}, "NOTIMPL@2:19"},
+		{"adjustable and assumed-size", []string{"SUBROUTINE S(A, N)", "DIMENSION A(1:N, 1:*)", "END"}, "NOTIMPL@2:21"},
+		{"adjustable arrays in a type statement", []string{"SUBROUTINE S(A, N)", "REAL A(N)", "END"}, "NOTIMPL@2:14"},
+		{"a REAL dummy in a bound", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "END"}, "NOTIMPL@2:19"},
+		{"a bound's name declared after, with its type", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "INTEGER N", "END"}, "NOTIMPL@2:19"},
+		{"a bound's type changed", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "INTEGER X", "END"}, "BOUNDTYPE@3:15 NOTIMPL@2:19"},
+		{"a bound's name not a dummy", []string{"SUBROUTINE S(A)", "DIMENSION A(N)", "END"}, "BOUNDVAR@2:19"},
+		{"a bound's name an array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N), N(3)", "END"}, "BOUNDREF@2:19"},
+		{"a bound's name its own array", []string{"SUBROUTINE S(A)", "DIMENSION A(A)", "END"}, "BOUNDREF@2:19"},
+		{"a bound's name a CHARACTER dummy", []string{"SUBROUTINE S(A, C)", "CHARACTER C", "DIMENSION A(C)", "END"}, "BADBOUND@3:19"},
+		{"a bound's name a constant defined after", []string{"SUBROUTINE S(A)", "DIMENSION A(N)", "PARAMETER (N = 2)", "END"}, "BOUNDVAR@2:19"},
+		{"a function in a bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(F(N))", "END"}, "BOUNDREF@2:19"},
+		{"an array element in a bound", []string{"SUBROUTINE S(A, N)", "DIMENSION N(3), A(N(1))", "END"}, "BOUNDREF@2:25"},
+		{"a comparison in a bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N .GT. 1)", "END"}, "BADBOUND@2:21"},
+		{"a real power, not constant, no name", []string{"SUBROUTINE S(A)", "DIMENSION A(2.0 ** 0.5)", "END"}, "BADBOUND@2:23"},
+		{"an adjustable array's subscripts counted", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A(1, 2) = 0", "END"}, "NOTIMPL@2:19 SUBSCRIPTS@3:7"},
+		{"a bound's name in COMMON, unchecked yet", []string{"SUBROUTINE S(A)", "COMMON N", "DIMENSION A(N)", "END"}, "NOTIMPL@2:7"},
+		{"an ENTRY's dummy, unchecked yet", []string{"SUBROUTINE S", "DIMENSION A(N), B(*)", "RETURN", "ENTRY E(A, B, N)", "END"}, "NOTIMPL@4:7"},
+		{"seven dimensions", []string{"DIMENSION A(2,2,2,2,2,2,2)", "A(1,1,1,1,1,1,1) = 1", "END"}, ""},
+		{"eight dimensions", []string{"DIMENSION A(2,2,2,2,2,2,2,2)", "END"}, "TOOMANYDIMS@1:17"},
+		{"too large an array", []string{"DIMENSION A(1000000000)", "END"}, "ARRAYSIZE@1:17"},
+		{"too large once its type is known", []string{"DIMENSION A(300000000)", "REAL*8 A", "END"}, "ARRAYSIZE@1:17"},
+		{"too large in seven dimensions", []string{"DIMENSION A(5000,5000,5000,5000,5000,5000,5000)", "END"}, "ARRAYSIZE@1:17"},
+		{"the largest array", []string{"BYTE A(2147483647)", "END"}, ""},
+		{"too large before its assumed size", []string{"SUBROUTINE S(A)", "DIMENSION A(1000000000, *)", "END"}, "ARRAYSIZE@2:17"},
 		{"bounds out of order", []string{"DIMENSION A(5:1)", "END"}, "BOUNDORDER@1:21"},
 		{"assumed size, not a dummy", []string{"DIMENSION A(*)", "END"}, "ASSUMEDSIZE@1:17"},
 		{"assumed size, not the last", []string{"SUBROUTINE S(A)", "DIMENSION A(*, 2)", "END"}, "ASSUMEDSIZE@2:17"},
@@ -317,7 +346,7 @@ func TestErrors(t *testing.T) {
 		// Recovery: a name whose declaration had an error gets no more
 		// messages, and a unit with a declaration this phase can't read
 		// gets only the messages about its structure.
-		{"a bound with an error", []string{"DIMENSION A(N)", "A(1) = 2", "X = A(2) + A", "END"}, "BADBOUND@1:19"},
+		{"a bound with an error", []string{"DIMENSION A(N)", "A(1) = 2", "X = A(2) + A", "END"}, "ADJNOTDUMMY@1:19"},
 		{"a type not compiled yet", []string{"LOGICAL*1 B", "L = B .AND. .TRUE.", "CALL S(B)", "END"}, "NOTIMPL@2:11"},
 		{"an array in COMMON", []string{"COMMON /C/ A(10)", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
 		{"a declaration with a syntax error", []string{"INTEGER A(", "X = A(1)", "END IF", "END"}, "SYNTAX@1:17 NOIF@3:7"},
@@ -392,6 +421,63 @@ func TestErrors(t *testing.T) {
 			for _, m := range ms {
 				t.Log(m.String())
 			}
+		}
+	}
+}
+
+// TestElementNumber checks an element's place in storage order (section
+// 2.2.3.3), for the constant subscripts EQUIVALENCE and DATA use.
+func TestElementNumber(t *testing.T) {
+	prog, ms := analyzeLines(t, "T.FOR",
+		"      SUBROUTINE S(D, E, N)",
+		"      DIMENSION BOS(3,3,3), V(0:9), W(-2:2,5:6), D(2:3,0:*), E(N)",
+		"      END")
+
+	// E's NOTIMPL is expected: the rest has no messages.
+	if len(ms) != 1 || ms[0].Ident != "NOTIMPL" {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	u := prog.Units[0]
+
+	cases := []struct {
+		name string
+		subs []int
+		want int // -1 if it isn't an element
+	}{
+		// Figure 2-1's memory positions, each one more than the number.
+		{"BOS", []int{1, 1, 1}, 0},
+		{"BOS", []int{3, 1, 1}, 2},
+		{"BOS", []int{1, 2, 1}, 3},
+		{"BOS", []int{2, 1, 3}, 19},
+		{"BOS", []int{3, 3, 3}, 26},
+		{"V", []int{0}, 0},
+		{"V", []int{9}, 9},
+		{"W", []int{-2, 5}, 0},
+		{"W", []int{2, 5}, 4},
+		{"W", []int{-2, 6}, 5},
+		{"W", []int{0, 6}, 7},
+		{"D", []int{2, 0}, 0},
+		{"D", []int{3, 1000}, 2001}, // no upper bound on the last
+
+		{"BOS", []int{4, 1, 1}, -1},
+		{"BOS", []int{1, 1}, -1},
+		{"V", []int{-1}, -1},
+		{"V", []int{10}, -1},
+		{"W", []int{0, 4}, -1},
+		{"D", []int{4, 0}, -1},
+		{"D", []int{2, -1}, -1},
+		{"E", []int{1}, -1},
+	}
+
+	for _, c := range cases {
+		got, ok := u.Lookup(c.name).ElementNumber(c.subs)
+		if !ok {
+			got = -1
+		}
+
+		if got != c.want {
+			t.Errorf("%s%v: got %d, want %d", c.name, c.subs, got, c.want)
 		}
 	}
 }
