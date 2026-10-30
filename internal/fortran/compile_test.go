@@ -211,9 +211,9 @@ func TestCompileSourceErrors(t *testing.T) {
 }
 
 // TestCompileParseErrors checks that the parser runs: its messages, and
-// NOTIMPL for a statement the compiler can't compile yet, are the
-// compilation's, each statement reported, and no MACRO file is written.
-// Semantic analysis runs after the parser's errors too (UNDEFLBL).
+// semantic analysis's NOTIMPL for a statement the compiler can't compile
+// yet, are the compilation's, each statement reported, and no MACRO file
+// is written. Semantic analysis runs after the parser's errors too.
 func TestCompileParseErrors(t *testing.T) {
 	r := Compile(testOptions, File{
 		Spec: "P.FOR",
@@ -231,7 +231,7 @@ func TestCompileParseErrors(t *testing.T) {
 		got = append(got, m.Ident)
 	}
 
-	if r.MACRO != nil || r.Errors != 4 || strings.Join(got, " ") != "SYNTAX NOTIMPL NOEND UNDEFLBL" {
+	if r.MACRO != nil || r.Errors != 4 || strings.Join(got, " ") != "SYNTAX NOEND NOTIMPL UNDEFLBL" {
 		t.Errorf("result: %d errors, %v", r.Errors, r.Messages)
 	}
 }

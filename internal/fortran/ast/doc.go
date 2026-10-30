@@ -23,9 +23,10 @@
 //
 // # A file, its units, and their statements
 //
-// A File is a list of program units (a main program, a FUNCTION, or a
-// SUBROUTINE), and each Unit is its header statement and a list of the
-// statements after it, END last. The list is flat: an IF block's
+// A File is a list of program units (a main program, a FUNCTION, a
+// SUBROUTINE, or a BLOCK DATA subprogram), and each Unit is its header
+// statement and a list of the statements after it, END last; an OPTIONS
+// statement or directive before a unit is its Prologue. The list is flat: an IF block's
 // statements and a DO loop's body are simply the statements between
 // their first and last, in order, as they are in the source. Semantic
 // analysis matches each IF with its END IF and each DO with its terminal
@@ -38,10 +39,17 @@
 // it came from, which says which source lines it occupies. Every
 // expression has its position too.
 //
-// A statement the compiler recognizes but can't compile yet becomes a
-// NotImplStmt, and one with a syntax error a BadStmt, after the parser
-// has reported it. Both keep the statement's label, so that a jump to it
+// Every statement of VAX FORTRAN has a node (stmt.go), whether or not
+// the compiler can compile it yet: semantic analysis, not the parser,
+// says that a statement or a form is not implemented, where it reaches
+// it. A statement with a syntax error becomes a BadStmt after the parser
+// has reported it, keeping the statement's label, so that a jump to it
 // isn't reported a second time as a jump to a label that doesn't exist.
+//
+// Structure declarations are the one place statements nest: a
+// StructureStmt holds its field declarations, its unions (UnionStmt),
+// their maps (MapStmt), and its END STRUCTURE, so that a type statement
+// inside one is never taken for a declaration of a variable.
 //
 // # The dump
 //

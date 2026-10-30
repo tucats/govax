@@ -31,11 +31,6 @@
         IF (X .GT.) THEN
   ----------------^
 
-%FORT-E-NOTIMPL, the READ statement is not implemented yet
-  at line 14 of ERRORS.FOR
-           READ *, A(I)
-  ---------^
-
 %FORT-E-SYNTAX, expected the subroutine's name, but found '('
   at line 22 of ERRORS.FOR
         SUBROUTINE (B)
@@ -45,6 +40,11 @@
   at line 7 of ERRORS.FOR
         INTEGER J
   ------^
+
+%FORT-E-NOTIMPL, the READ statement is not implemented yet
+  at line 14 of ERRORS.FOR
+           READ *, A(I)
+  ---------^
 
 %FORT-E-NEEDSUBSCRIPT, the array A can't be used without subscripts here
   at line 17 of ERRORS.FOR

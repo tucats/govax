@@ -125,60 +125,40 @@ func (p *parser) unary(minPrec int) ast.Expr {
 	return p.primary()
 }
 
-// primary reads a constant, a name, an array element or function
-// reference, or a parenthesized expression.
+// primary reads a constant, a reference (a name, an array element or
+// function reference, a substring, a record's field), a parenthesized
+// expression, a complex constant, or one of the built-in functions of
+// section 6.1.2.
 func (p *parser) primary() ast.Expr {
 	t := p.peek()
 	if t == nil {
 		p.syntax("an expression")
 	}
 
-	base := ast.ExprBase{Pos: p.pos(*t)}
-
-	switch t.Kind {
-	case lex.IntegerConst:
-		p.next()
-
-		return &ast.IntConst{ExprBase: base, Text: t.Text}
-
-	case lex.RealConst:
-		p.next()
-
-		return &ast.RealConst{ExprBase: base, Text: t.Text}
-
-	case lex.LogicalConst:
-		p.next()
-
-		return &ast.LogicalConst{ExprBase: base, Value: t.Text == ".TRUE."}
-
-	case lex.CharConst:
-		p.next()
-
-		return &ast.CharConst{ExprBase: base, Value: t.Text}
-
-	case lex.HollerithConst:
-		p.notImpl("a Hollerith constant", base.Pos)
-
-	case lex.TypelessConst:
-		p.notImpl("an octal or hexadecimal constant", base.Pos)
-
-	case lex.Name:
-		p.next()
-
-		if p.at("(") {
-			return p.apply(*t, base)
-		}
-
-		return &ast.Name{ExprBase: base, Name: t.Text}
+	if c := p.literal(); c != nil {
+		return c
 	}
 
+	base := ast.ExprBase{Pos: p.pos(*t)}
+
 	switch {
+	case t.Kind == lex.Name:
+		p.next()
+
+		return p.referenceAfter(*t)
+
 	case t.Is("("):
+		// (X) or a complex constant, (1.0, 2.0). The parts of a complex
+		// constant are read as expressions, for semantic analysis to say
+		// what is wrong with (X, Y): it should be CMPLX(X, Y).
 		p.next()
 
 		x := p.expr()
-		if p.at(",") {
-			p.notImpl("a COMPLEX constant", base.Pos)
+		if p.accept(",") {
+			im := p.expr()
+			p.expect(")")
+
+			return &ast.ComplexConst{ExprBase: base, Re: x, Im: im}
 		}
 
 		p.expect(")")
@@ -187,9 +167,19 @@ func (p *parser) primary() ast.Expr {
 
 	case t.Is("%"):
 		// %LOC, %VAL, %REF, %DESCR (section 6.1.2).
-		if n := p.peekAt(1); n != nil && n.Kind == lex.Name {
-			p.notImpl("%"+n.Text, base.Pos)
+		if n := p.peekAt(1); n != nil && n.Kind == lex.Name && builtinArgs[n.Text] {
+			p.next()
+			p.next()
+			p.expect("(")
+
+			x := p.expr()
+			p.expect(")")
+
+			return &ast.BuiltinArg{ExprBase: base, Func: n.Text, X: x}
 		}
+
+		p.next()
+		p.syntax("LOC, VAL, REF, or DESCR")
 	}
 
 	p.syntax("an expression")
@@ -197,22 +187,147 @@ func (p *parser) primary() ast.Expr {
 	return nil
 }
 
-// apply reads the parenthesized list after the name t, making an Apply.
-// A second list after the first is a substring of a character array's
-// element, A(I)(1:3) (Phase 82).
-func (p *parser) apply(t lex.Token, base ast.ExprBase) *ast.Apply {
-	a := &ast.Apply{ExprBase: base, Name: t.Text, Args: p.subscripts()}
+// builtinArgs are the names after % of section 6.1.2's built-in
+// functions.
+var builtinArgs = map[string]bool{"LOC": true, "VAL": true, "REF": true, "DESCR": true}
 
-	if p.at("(") {
-		p.notImpl("a character substring", p.here())
+// literal reads a literal constant, if the next token is one: an integer,
+// real, logical, character, Hollerith, octal, or hexadecimal constant;
+// otherwise it returns nil and reads nothing. A sign isn't part of it.
+func (p *parser) literal() ast.Expr {
+	t := p.peek()
+	if t == nil {
+		return nil
 	}
 
-	return a
+	base := ast.ExprBase{Pos: p.pos(*t)}
+
+	var e ast.Expr
+
+	switch t.Kind {
+	case lex.IntegerConst:
+		e = &ast.IntConst{ExprBase: base, Text: t.Text, Radix: t.Radix}
+	case lex.RealConst:
+		e = &ast.RealConst{ExprBase: base, Text: t.Text}
+	case lex.LogicalConst:
+		e = &ast.LogicalConst{ExprBase: base, Value: t.Text == ".TRUE."}
+	case lex.CharConst:
+		e = &ast.CharConst{ExprBase: base, Value: t.Text}
+	case lex.HollerithConst:
+		e = &ast.HollerithConst{ExprBase: base, Value: t.Text}
+	case lex.TypelessConst:
+		e = &ast.TypelessConst{ExprBase: base, Digits: t.Text, Radix: t.Radix}
+	default:
+		return nil
+	}
+
+	p.next()
+
+	return e
+}
+
+// reference reads a reference to storage: a name, then what may follow
+// it (referenceAfter). what says what was expected, for the message if
+// there is no name.
+func (p *parser) reference(what string) ast.Expr {
+	if !p.atKind(lex.Name) {
+		p.syntax(what)
+	}
+
+	return p.referenceAfter(p.next())
+}
+
+// referenceAfter reads what follows the name t in a reference: a
+// parenthesized list (an array element's subscripts or a function's
+// arguments, A(I, J), making an Apply; or a substring's bounds, C(1:3)),
+// a substring's bounds after an element, NAMES(1, 3)(:7), and record
+// fields, REC.FIELD, each of which may have subscripts and a substring
+// of its own.
+func (p *parser) referenceAfter(t lex.Token) ast.Expr {
+	base := ast.ExprBase{Pos: p.pos(t)}
+
+	var x ast.Expr = &ast.Name{ExprBase: base, Name: t.Text}
+
+	if p.at("(") {
+		if p.substringAhead() {
+			return p.substring(x)
+		}
+
+		x = &ast.Apply{ExprBase: base, Name: t.Text, Args: p.subscripts()}
+	}
+
+	for {
+		switch {
+		case p.at("(") && p.substringAhead():
+			return p.substring(x)
+
+		case p.at(".") && p.peekAt(1) != nil && p.peekAt(1).Kind == lex.Name:
+			p.next()
+
+			f := p.next()
+			ref := &ast.FieldRef{ExprBase: ast.ExprBase{Pos: p.pos(f)}, X: x, Field: f.Text}
+
+			if p.at("(") && !p.substringAhead() {
+				ref.Args = p.subscripts()
+			}
+
+			x = ref
+
+		default:
+			return x
+		}
+	}
+}
+
+// substringAhead reports whether the parenthesized list that is next has
+// a : outside any inner parenthesis: a substring's bounds, not
+// subscripts.
+func (p *parser) substringAhead() bool {
+	depth := 0
+
+	for _, t := range p.tokens[p.i:] {
+		switch {
+		case t.Is("("):
+			depth++
+		case t.Is(")"):
+			if depth--; depth == 0 {
+				return false
+			}
+		case t.Is(":") && depth == 1:
+			return true
+		}
+	}
+
+	return false
+}
+
+// substring reads a substring's bounds after x, ([e1]:[e2]) (section
+// 2.2.4).
+func (p *parser) substring(x ast.Expr) ast.Expr {
+	s := &ast.Substring{ExprBase: ast.ExprBase{Pos: x.Position()}, X: x}
+
+	p.expect("(")
+
+	if !p.at(":") {
+		s.Lower = p.expr()
+	}
+
+	p.expect(":")
+
+	if !p.at(")") {
+		s.Upper = p.expr()
+	}
+
+	p.expect(")")
+
+	return s
 }
 
 // subscripts reads the parenthesized list after a name in an
 // expression: an array element's subscripts or a function's arguments.
-// F() is a function reference with no arguments.
+// F() is a function reference with no arguments. An argument may be an
+// alternate return specifier only in a CALL (stmt.go), where this isn't
+// used, and a null argument only there too.
 func (p *parser) subscripts() []ast.Expr {
 	p.expect("(")
 
@@ -223,15 +338,7 @@ func (p *parser) subscripts() []ast.Expr {
 	}
 
 	for {
-		if p.at(":") {
-			p.notImpl("a character substring", p.here())
-		}
-
 		list = append(list, p.expr())
-
-		if p.at(":") {
-			p.notImpl("a character substring", p.here())
-		}
 
 		if !p.accept(",") {
 			break

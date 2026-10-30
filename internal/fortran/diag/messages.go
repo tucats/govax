@@ -99,6 +99,49 @@ var messages = map[string]kind{
 	// END, or a statement that isn't executable.
 	"BADIFSTMT": {Error, "a logical IF can't execute %s"},
 
+	// BADSPECIFIER is a keyword specifier the statement doesn't take:
+	// WRITE (6, END=10).
+	"BADSPECIFIER": {Error, "%s= is not a specifier of the %s statement"},
+
+	// DUPSPECIFIER is a specifier given twice in one statement.
+	"DUPSPECIFIER": {Error, "the %s specifier is given twice"},
+
+	// BADLETTERS is an IMPLICIT statement's range of letters out of
+	// alphabetical order (section 4.8): Z-A.
+	"BADLETTERS": {Error, "%c-%c is not a range of letters in alphabetical order"},
+
+	// NOF77 is the EXTERNAL statement's *name form, which only /NOF77
+	// allows (appendix A.6), and govax has no /NOF77.
+	"NOF77": {Error, "the form EXTERNAL *%s is appendix A.6's, for /NOF77, which govax doesn't have"},
+
+	// BADDIRECTIVE is a CDEC$ line naming no general directive (section
+	// 10.3).
+	"BADDIRECTIVE": {Error, "there is no CDEC$ %s directive; the directives are IDENT, PSECT, TITLE, and SUBTITLE"},
+
+	// Structure declarations (section 4.15).
+
+	// NOBLOCKEND is a STRUCTURE, UNION, or MAP declaration with no END
+	// STRUCTURE, END UNION, or END MAP before the unit's END (or before
+	// the end of the declaration around it).
+	"NOBLOCKEND": {Error, "this %s declaration has no %s statement"},
+
+	// NOBLOCK is END STRUCTURE, END UNION, or END MAP with no declaration
+	// of its kind open.
+	"NOBLOCK": {Error, "this %s statement ends no %s declaration"},
+
+	// NOTINBLOCK is a declaration, or a field declaration, where it can't
+	// be: a MAP outside a UNION, a field in a UNION but no MAP.
+	"NOTINBLOCK": {Error, "%s can only be in %s"},
+
+	// FIELDSTMT is a statement inside a structure declaration that
+	// declares no field: only type statements, RECORD, PARAMETER, and
+	// nested STRUCTURE and UNION declarations may be there.
+	"FIELDSTMT": {Error, "%s can't be in a structure declaration, which holds only field declarations"},
+
+	// FILLNAME is %FILL, an unnamed field, outside a structure
+	// declaration.
+	"FILLNAME": {Error, "%%FILL names an unnamed field, so it can only be in a structure declaration"},
+
 	// Semantic analysis's messages (internal/fortran/sema).
 
 	// Program units.

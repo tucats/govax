@@ -61,12 +61,29 @@ func (a *analyzer) lateDeclaration(s ast.Stmt) {
 // typeStatement gives each name a type statement declares its type, and
 // an array declarator's name its dimensions (section 4.4.1).
 func (a *analyzer) typeStatement(s *ast.TypeStmt) {
+	// A type this phase doesn't compile is reported once, at the
+	// statement's keyword, and its names are broken: no more messages.
+	if what := uncompiledType(s.Type); what != "" {
+		a.notImplForm(s.Type.Pos, what)
+
+		for _, d := range s.Entities {
+			sym := a.lookup(d.Name, d.Pos)
+			sym.Typed, sym.TypePos, sym.broken = true, d.Pos, true
+		}
+
+		return
+	}
+
 	for _, d := range s.Entities {
 		sym := a.lookup(d.Name, d.Pos)
 
 		length := s.Type.Length
 		if d.Length != 0 {
 			length = d.Length
+		}
+
+		if d.Init != nil {
+			a.notImplForm(d.InitPos, "a type statement's initial values")
 		}
 
 		switch {
@@ -101,6 +118,12 @@ var lengths = map[ast.BaseType]struct {
 // BADLENGTH; one it has but this phase doesn't compile (INTEGER*2,
 // REAL*8, ...) is NOTIMPL.
 func (a *analyzer) typeOf(spec ast.TypeSpec, length int, pos diag.Position) (Type, bool) {
+	if what := uncompiledType(spec); what != "" {
+		a.notImplForm(pos, what)
+
+		return invalid, false
+	}
+
 	if length != 0 && length != 4 {
 		l := lengths[spec.Type]
 
@@ -127,6 +150,21 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, length int, pos diag.Position) (Typ
 	}
 
 	return invalid, false
+}
+
+// uncompiledType is NOTIMPL's subject for a data type this phase doesn't
+// compile (the types Phase 78 adds), or "" for one it does, or may (the
+// lengths are typeOf's to check).
+func uncompiledType(spec ast.TypeSpec) string {
+	switch spec.Type {
+	case ast.Byte, ast.DoublePrecision, ast.Complex, ast.DoubleComplex, ast.Character:
+		return "the " + spec.Type.String() + " type"
+	case 0:
+		// FUNCTION F*8: a length with no type.
+		return "a length after an untyped function's name"
+	}
+
+	return ""
 }
 
 // dimension gives sym the dimensions its array declarator d declares
@@ -242,9 +280,9 @@ const (
 func (a *analyzer) constInt(e ast.Expr) (int32, constKind) {
 	switch e := e.(type) {
 	case *ast.IntConst:
-		v, err := strconv.ParseInt(e.Text, 10, 64)
+		v, err := intValue(e)
 		if err != nil || v > maxInt {
-			a.report("INTRANGE", e.Pos, e.Text)
+			a.report("INTRANGE", e.Pos, ast.DumpExpr(e))
 
 			return 0, constFailed
 		}
@@ -294,6 +332,12 @@ func (a *analyzer) constInt(e ast.Expr) (int32, constKind) {
 
 	case *ast.Name, *ast.Apply:
 		return 0, constNamed
+	}
+
+	if what := formWhat(e); what != "" {
+		a.notImplForm(e.Position(), what)
+
+		return 0, constFailed
 	}
 
 	return 0, constNotInteger

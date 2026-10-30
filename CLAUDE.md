@@ -289,7 +289,8 @@ never had.
   follows one program through every pass.
   Phase 76 (in progress) is the whole front end: every statement
   parsed, declarations and storage; its Part A (subtask 1, 2026-10-30)
-  is the survey, with a table of every statement and its phase.
+  is the survey, with a table of every statement and its phase, and
+  subtask 2 (2026-10-30) the parser's remaining statements.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1641,19 +1642,34 @@ expect adjustment as phases land):
   constant rules as `source/comment.go`), classify (`lex.go`: the IF
   test, the `=`/DO comma test, then the longest keyword of `kinds.go`'s
   table of every VAX FORTRAN statement; typed FUNCTION only at a unit's
-  start), and tokenize (`tokenize.go`, with modes for DO's label and type
-  lengths); FORMAT's specification isn't tokenized. `ast` is
-  the syntax tree (Phase 75, subtask 3): a `File` of `Unit`s (`Header`, a
-  flat `Body`, END last; IF and DO blocks are sema's to match), a
-  `StmtBase` (position, label, `source.Statement`) in every statement,
-  `NotImplStmt` and `BadStmt` keeping a statement's label after its
-  message, untyped expressions (`Apply` is an array element or a
-  function reference), and `Dump` for golden tests. `parse` is the third
-  pass: `Parse` forms the units (NOEND) and calls each kind's function
-  from `parsers` (a kind not there is NOTIMPL by name); an error reports
-  and panics with a `bailout` that `statement` recovers; expressions are
-  precedence climbing (`expr.go`); golden dumps are in `parse/testdata`
-  (`-update` rewrites them). `sema` is the fourth pass (Phase 75,
+  start; appendix A.4's PARAMETER p=c only before the unit's first
+  executable statement, `oldParameter`), and tokenize (`tokenize.go`,
+  with modes for DO's label and type lengths; `"17` an `IntegerConst`
+  of `Radix` 8); FORMAT's specification isn't tokenized, a CDEC$
+  directive's text is, its name first. `ast` is
+  the syntax tree (Phase 75, subtask 3; every statement since Phase 76,
+  subtask 2, `stmt.go`): a `File` of `Unit`s (`Prologue`, OPTIONS and
+  directives before it; `Header`; a flat `Body`, END last; IF and DO
+  blocks are sema's to match; `File.Trailing` after the last unit), a
+  `StmtBase` (position, label, the lexer's `Kind`, `source.Statement`)
+  in every statement, nodes shared by statements of one grammar and told
+  apart by `Kind` (`AttrStmt` for SAVE, EXTERNAL, VOLATILE, ...;
+  `PrintStmt` for PRINT, TYPE, ACCEPT, and READ f; `TransferStmt` for
+  READ, WRITE, REWRITE with a control list, its unit, format, namelist,
+  and record taken out of it; `AuxIOStmt` for OPEN to FIND), structure
+  declarations nesting their statements (`StructureStmt`, `UnionStmt`,
+  `MapStmt`), `BadStmt` keeping a statement's label after its message,
+  untyped expressions (`Apply` is an array element or a function
+  reference; `Substring`, `FieldRef`, `ImpliedDo`, `ComplexConst`,
+  `HollerithConst`, `TypelessConst`, `BuiltinArg`, `AltReturn`), and
+  `Dump` for golden tests. `parse` is the third pass: `Parse` forms the
+  units (NOEND), gathers structure declarations (`blocks.go`), and calls
+  each kind's function from `parsers`, which has one for every kind
+  (`TestEveryKindParses`); an error reports and panics with a `bailout`
+  that `statement` recovers; the I/O statements share `io.go`'s
+  `controlList`, with a table of each statement's keywords; expressions
+  are precedence climbing (`expr.go`); golden dumps are in
+  `parse/testdata` (`-update` rewrites them). `sema` is the fourth pass (Phase 75,
   subtask 4): `Analyze` gives each unit a symbol table (`Symbol`: type,
   `Class` from declarations and use, dimensions, dummy position,
   `$LOCAL` offset), typed expressions (`Const`, `Var`, `Elem`,
@@ -1665,7 +1681,12 @@ expect adjustment as phases land):
   blocks (`labels.go`), and references between the file's units at the
   end (FUNCTYPE, ARGCOUNT). A name whose declaration failed is `broken`
   (no more messages), and a unit with a NOTIMPL declaration is
-  `incomplete` (only `structural` messages). Golden dumps are in
+  `incomplete` (only `structural` messages and its own forms'
+  NOTIMPLs). Since Phase 76 NOTIMPL is sema's, not the parser's
+  (`notimpl.go`: `handled` says which statements it compiles,
+  `unimplemented` reports the rest where the walk reaches them,
+  `formWhat` names the expression forms it doesn't compile yet,
+  `notImplForm` reports them whatever the declarations). Golden dumps are in
   `sema/testdata`. `Compile` runs it after the parser, even after the
   parser's errors. `ir` is the fifth pass (Phase 75, subtask 5):
   `Lower` turns each `sema.Unit` into a `Routine` of `Params`, `Cells`

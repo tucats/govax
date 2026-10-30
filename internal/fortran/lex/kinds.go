@@ -152,7 +152,7 @@ var kinds = [numKinds]kindInfo{
 	Continue:        {name: "CONTINUE", keyword: "CONTINUE", executable: true},
 	Data:            {name: "DATA", keyword: "DATA"},
 	Decode:          {name: "DECODE", keyword: "DECODE", executable: true},
-	DefineFile:      {name: "DEFINE FILE", keyword: "DEFINEFILE"},
+	DefineFile:      {name: "DEFINE FILE", keyword: "DEFINEFILE", executable: true},
 	Delete:          {name: "DELETE", keyword: "DELETE", executable: true},
 	Dictionary:      {name: "DICTIONARY", keyword: "DICTIONARY"},
 	Dimension:       {name: "DIMENSION", keyword: "DIMENSION"},

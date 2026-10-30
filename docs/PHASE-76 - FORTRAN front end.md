@@ -1,7 +1,8 @@
 # Phase 76 — FORTRAN's whole front end: every statement, every declaration
 
-**Status:** in progress (subtask 1, the survey, done 2026-10-30, for
-review). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+**Status:** in progress (subtask 1, the survey, done and accepted
+2026-10-30; subtask 2, the parser's remaining statements, done
+2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -464,7 +465,7 @@ Found reading the manual against Phase 75's code:
   truncation). Phase 82 keeps their uses in expressions and arguments.
   This is the first proposed correction below.
 
-## Corrections to the plan (for the author's review)
+## Corrections to the plan (accepted 2026-10-30)
 
 1. **Typeless and Hollerith constants in DATA and initial values move
    from Phase 82 to Phase 76** (above). Phase 82 keeps them in
@@ -493,11 +494,11 @@ Subtasks 2 to 9 below are revised to match.
 1. **Survey** (done 2026-10-30): chapters 1, 2, and 4 and appendices A
    and D's statement table; a table of every statement form, with its
    phase (Part A).
-2. **The parser's remaining statements**, with golden AST dumps for
-   each form in the manual's examples: every statement in the tables,
-   the I/O control list and I/O list grammar, STRUCTURE blocks, the A.4
-   PARAMETER, ASSIGN's TO, `"nn` integers, DEFINE FILE executable; the
-   parser's NOTIMPL messages moved to sema.
+2. **The parser's remaining statements** (done 2026-10-30), with golden
+   AST dumps for each form in the manual's examples: every statement in
+   the tables, the I/O control list and I/O list grammar, STRUCTURE
+   blocks, the A.4 PARAMETER, ASSIGN's TO, `"nn` integers, DEFINE FILE
+   executable; the parser's NOTIMPL messages moved to sema.
 3. **Type declarations, IMPLICIT, and statement order**, every type and
    length; Figure 1-1's order; statement functions recognized.
 4. **PARAMETER and constant folding** in every type, both forms, the
@@ -540,3 +541,65 @@ Subtasks 2 to 9 below are revised to match.
     IMPLICITs for a letter an error, an EQUIVALENCE group's alignment in
     `$LOCAL`, DATA in named COMMON allowed in any unit and in blank
     common diagnosed, `filename$DATA` for an unnamed BLOCK DATA.
+- **2026-10-30:** The author accepted the survey and its five
+  corrections. Subtask 2 is next.
+- **2026-10-30:** Subtask 2 done: the parser's remaining statements.
+  - **The lexer** (`internal/fortran/lex`): appendix A.4's PARAMETER
+    p=c is its own statement before a unit's first executable statement
+    (`oldParameter`; the IF's statement never), `"17` is an
+    `IntegerConst` of `Radix` 8 (A.5), DEFINE FILE is executable, a
+    CDEC$ directive's text is tokenized, `OPTIONS /CHECK=ALL` isn't an
+    assignment for its =, and a length after a CHARACTER array's bounds
+    (`A(10)*8`) is read as a length.
+  - **The AST** (`ast/stmt.go`): a node for every statement (the
+    manual's Table D-2), statements of one grammar sharing a node told
+    apart by `StmtBase.Kind` (`AttrStmt`, `PrintStmt`, `TransferStmt`,
+    `AuxIOStmt`, `DimensionStmt` for VIRTUAL, `StopStmt` for PAUSE);
+    `NotImplStmt` is gone. Types are every type with a `Len` (`*n`,
+    `*(e)`, `*(*)`); declarators have initial values; new expressions
+    are `Substring`, `FieldRef`, `ImpliedDo`, `ComplexConst`,
+    `HollerithConst`, `TypelessConst`, `BuiltinArg` (`%LOC`, `%VAL`,
+    `%REF`, `%DESCR`), `AltReturn`, and `KeyList` (OPEN's KEY=). A
+    unit's `Prologue` holds an OPTIONS statement and directives before
+    it, `File.Trailing` those after the last.
+  - **The parser**: every kind has a function (`TestEveryKindParses`).
+    `decl.go` has the headers (BLOCK DATA, ENTRY, `*` dummies, typed
+    functions of every type) and the type statements (lengths in both
+    orders, as each type has them; `/clist/`), DIMENSION and VIRTUAL,
+    IMPLICIT, and PARAMETER in both forms; `spec.go` COMMON (blank
+    common by position, `//`, or `/ /`), EQUIVALENCE, DATA (implied DO
+    lists, nested), SAVE and its kin, NAMELIST, RECORD, STRUCTURE,
+    UNION, MAP, DICTIONARY, OPTIONS, the CDEC$ directives, and FORMAT
+    (its text kept); `stmt.go` ASSIGN (TO split from the name it runs
+    into), the computed and assigned GO TO, the arithmetic IF, DO
+    without a label, DO WHILE, END DO, PAUSE, alternate return
+    arguments; `io.go` READ, WRITE, REWRITE, PRINT, TYPE, ACCEPT, ENCODE,
+    DECODE, OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, UNLOCK,
+    DELETE, FIND, and DEFINE FILE over one control-list grammar with a
+    table of each statement's keywords (BADSPECIFIER, DUPSPECIFIER).
+    Structure declarations nest (`blocks.go`: NOBLOCKEND, NOBLOCK,
+    NOTINBLOCK, FIELDSTMT, FILLNAME). Other new messages: BADLETTERS,
+    NOF77 (the survey's correction 3), BADDIRECTIVE.
+  - **sema** (`notimpl.go`): NOTIMPL is semantic analysis's now (the
+    survey's correction 4). `handled` is the statements it compiles;
+    any other is reported where the walk reaches it and keeps its place
+    in the blocks; the expression forms it doesn't compile are reported
+    as their expressions are analyzed (`formWhat`). These NOTIMPLs are
+    reported in incomplete units too (`notImplForm`), as the parser's
+    were. A type statement of a type not compiled yet (CHARACTER,
+    COMPLEX, ...) no longer makes its unit incomplete: the type is
+    reported once, and its names are broken. BLOCK DATA units and
+    prologues are reported and left out, until subtask 7.
+  - **Tests**: the lexer's new cases; `TestStatements` has every
+    statement's forms, most from the manual's examples (chapters 3 to
+    9 and appendix A); `TestErrors` the parser's new messages;
+    `TestBlocks` structure declarations and their errors; two golden
+    programs, `parse/testdata/spec.for` and `exec.for`, from the
+    manual's examples; sema's `TestErrors` a case for each statement or
+    form that moved its NOTIMPL from the parser. Phase 75's goldens
+    changed only where the parser had reported NOTIMPL: those
+    statements now parse, and their NOTIMPLs come from sema, later in
+    the message list.
+  - Found along the way: a fixed-form test line longer than 72 columns
+    loses its end, as it should (a test of ours was wrong, not the
+    compiler).

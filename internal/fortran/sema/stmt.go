@@ -99,6 +99,12 @@ func (a *analyzer) statement(s ast.Stmt) {
 		}
 	}
 
+	if !handled(s) {
+		a.unimplemented(s)
+
+		return
+	}
+
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt:
 		// Their work was done by declarations.
@@ -154,9 +160,6 @@ func (a *analyzer) statement(s ast.Stmt) {
 		a.closeAll()
 		a.add(&End{stmtBase{s}})
 
-	case *ast.NotImplStmt:
-		a.brokenStatement(s.Kind, s)
-
 	case *ast.BadStmt:
 		a.brokenStatement(s.Kind, s)
 
@@ -204,18 +207,18 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 // DO; and any non-executable statement, since the terminal statement's
 // label is an executable statement's), or "" if it may.
 func forbiddenTerminal(s ast.Stmt) string {
-	switch s := s.(type) {
-	case *ast.GotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
+	switch s.(type) {
+	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
 		*ast.TypeStmt, *ast.DimensionStmt:
 		return aStatement(s)
+	}
 
-	case *ast.NotImplStmt:
-		// Reported already; but END DO and the like still mustn't end
-		// a labeled loop.
-		if s.Kind == lex.ArithmeticIf || s.Kind == lex.DoWhile || !s.Kind.Executable() {
-			return aStatement(s)
-		}
+	// A statement not compiled yet is reported already; but an
+	// arithmetic IF, a DO WHILE, and anything not executable still
+	// mustn't end a labeled loop.
+	if k := s.Base().Kind; !handled(s) && (k == lex.ArithmeticIf || k == lex.DoWhile || !k.Executable()) {
+		return aStatement(s)
 	}
 
 	return ""

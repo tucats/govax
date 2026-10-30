@@ -113,13 +113,26 @@
 // a syntax error still opens a block, so its END IF isn't "not in an IF
 // block"), and its label, so a jump to it isn't "never defined".
 //
+// # Not implemented yet
+//
+// The parser builds a node for every statement and form of VAX FORTRAN,
+// and this pass is where one it can't compile yet is reported, as it
+// reaches it (notimpl.go): a statement it doesn't handle (READ, COMMON,
+// FORMAT) is "the READ statement is not implemented yet" at the
+// statement, keeping its place in the blocks and its label; a form
+// inside a statement it does handle (a Hollerith constant, a substring,
+// an implied-DO list) is reported where the expression is analyzed. Each
+// later phase moves statements and forms from one side to the other.
+//
 // Some declarations can't be read yet at all: COMMON, PARAMETER,
-// IMPLICIT, and the rest are NOTIMPL until Phase 76. Without them, most
-// of what this pass would say about a unit's names would be wrong (an
-// array declared in COMMON would be "not an array" at every use), so a
-// unit with one gets only the messages about its structure: labels,
-// blocks, loops, and statement order. A unit whose header the parser
-// rejected is left out entirely.
+// IMPLICIT, and the rest are NOTIMPL until Phase 76's later subtasks.
+// Without them, most of what this pass would say about a unit's names
+// would be wrong (an array declared in COMMON would be "not an array" at
+// every use), so a unit with one gets only the messages about its
+// structure (labels, blocks, loops, and statement order) and the
+// NOTIMPLs of what it wrote (notImplForm). A unit whose header the
+// parser rejected, or a BLOCK DATA unit (subtask 7's), is left out
+// entirely.
 //
 // # The dump
 //

@@ -24,6 +24,12 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return &Goto{stmtBase{s}, s.Target.Label}
 
 	case *ast.IfStmt:
+		if !handled(s.Then) {
+			a.notImplForm(s.Then.Position(), statementWhat(s.Then))
+
+			return nil
+		}
+
 		ifs := &If{stmtBase: stmtBase{s}}
 		arm := &Arm{AST: s, Cond: a.condition(s.Cond)}
 		ifs.Arms = []*Arm{arm}
@@ -65,8 +71,20 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 
 		return &Print{stmtBase: stmtBase{s}, Items: a.items(s.Items)}
 
-	case *ast.WriteStmt:
+	case *ast.TransferStmt:
 		switch {
+		case len(s.Specs) > 0:
+			a.notImplForm(s.Specs[0].Pos, "the "+s.Specs[0].Keyword+"= specifier")
+
+			return nil
+		case s.Namelist != nil:
+			a.notImplForm(s.Namelist.Pos, "namelist-directed output")
+
+			return nil
+		case s.Rec != nil:
+			a.notImplForm(s.Rec.Position(), "direct access output")
+
+			return nil
 		case !s.Unit.Star:
 			a.notImpl(s.Unit.Pos, "a unit other than *")
 		case s.Format == nil:
@@ -96,13 +114,13 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	target := a.target(s.Target)
 	value := a.value(s.Value)
 
-	if value.Type().Kind == Character {
-		a.notImpl(value.Position(), hollerith)
-
+	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
 		return nil
 	}
 
-	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
+	if value.Type().Kind == Character {
+		a.notImpl(value.Position(), hollerith)
+
 		return nil
 	}
 
@@ -123,6 +141,11 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 			return nil
 		}
+
+	case *ast.Substring, *ast.FieldRef:
+		a.notImplForm(e.Position(), formWhat(e))
+
+		return nil
 
 	case *ast.Apply:
 		// After the first executable statement, F(X) = ... can only be

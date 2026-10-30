@@ -26,14 +26,26 @@ const (
 
 // intConst is the constant an integer literal writes.
 func (a *analyzer) intConst(e *ast.IntConst) Expr {
-	v, err := strconv.ParseInt(e.Text, 10, 64)
+	v, err := intValue(e)
 	if err != nil || v > maxInt {
-		a.report("INTRANGE", e.Pos, e.Text)
+		a.report("INTRANGE", e.Pos, ast.DumpExpr(e))
 
 		return a.bad(e.Pos)
 	}
 
 	return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(v)}
+}
+
+// intValue is an integer constant's value: its digits in decimal, or in
+// octal for appendix A.5's "17 (Radix 8), which is an INTEGER like any
+// other.
+func intValue(e *ast.IntConst) (int64, error) {
+	radix := 10
+	if e.Radix != 0 {
+		radix = e.Radix
+	}
+
+	return strconv.ParseInt(e.Text, radix, 64)
 }
 
 // realConst is the constant a real literal writes, rounded to

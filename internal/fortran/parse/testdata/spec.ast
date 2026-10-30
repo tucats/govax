@@ -1,0 +1,57 @@
+3           OPTIONS /CHECK=ALL /EXTEND_SOURCE
+== main program SPEC
+4           PROGRAM SPEC
+5           IMPLICIT DOUBLE PRECISION (D)
+6           IMPLICIT COMPLEX (S, Y), LOGICAL*1 (L, A-C)
+7           PARAMETER (LENGTH = 4)
+8           PARAMETER PI = 3.1415927, DPI = 3.141592653589793238D0
+9           CHARACTER*((+ 4 LENGTH)) LAST, FIRST
+10          CHARACTER*32 NAMES(100), SOCSEC*9(100), NAMETY*10 /'ABCDEFGHIJ'/
+11          INTEGER*2 I, J, K, M12*4, Q, IVEC*4(10)
+12          REAL*16 QPI /3.14159Q0/, E /2.72Q0/, QARRAY(10) /5*0.0, 5*1.0/
+13          DIMENSION X(5, 5, 5), Y(4, 85), Z(100)
+14          COMMON // HEAT, X /BLK1/ KILO, Q
+15          DOUBLE PRECISION DVAR
+16          INTEGER*2 IARR(4)
+17          EQUIVALENCE (DVAR, IARR(1))
+18          CHARACTER NAME*16, ID*9
+19          EQUIVALENCE (NAME(10:13), ID(2:5))
+20          INTEGER A(10), B(10)
+21          CHARACTER BELL, TAB, LF, FF, STARS*6
+22          DATA A, STARS /10*0, '****'/
+23          DATA BELL, TAB, LF, FF /7, 9, 10, 12/
+24          DATA (do B(I); I = 1, 10, 2) /5*1/
+25          EXTERNAL CTN
+26          INTRINSIC SIN, COS
+27          NAMELIST /INPUT/ NAME, GRADE, DATE /OUTPUT/ TOTAL, NAME
+28          SAVE
+29          VOLATILE /BLK1/, D, E
+30          CDEC$ PSECT /BLK1/ NOWRT, ALIGN=3
+31          STRUCTURE /DATE/
+32            LOGICAL*1 DAY, MONTH
+33            INTEGER*2 YEAR
+34            END STRUCTURE
+35          STRUCTURE /WORDS_LONG/
+36            UNION
+37              MAP
+38                INTEGER*2 WORD_0, WORD_1, WORD_2
+39                END MAP
+40              MAP
+41                INTEGER*4 LONG
+42                END MAP
+43              END UNION
+44            END STRUCTURE
+45          RECORD /DATE/ TODAY, YESTERDAY
+46          TODAY.YEAR = 1988
+47          END
+== BLOCK DATA BLKDAT
+48          BLOCK DATA BLKDAT
+49          INTEGER S, X
+50          LOGICAL T, W
+51          DOUBLE PRECISION U
+52          DIMENSION R(3)
+53          COMMON /AREA1/ R, S, T, U /AREA2/ W, X, Y
+54          DATA R /1.0, 2*2.0/ T /.FALSE./ U /0.214537D-7/ W /.TRUE./ Y /3.5/
+55          END
+== after the last unit
+56          CDEC$ TITLE 'THE END'

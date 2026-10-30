@@ -67,13 +67,14 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 			}
 
 		case c == '"':
-			// VAX FORTRAN's octal constant: "17.
+			// Appendix A.5's octal integer constant, "17: an INTEGER
+			// written in octal, not a typeless constant like '17'O.
 			k := i + 1
 			for k < j && text[k] >= '0' && text[k] <= '7' {
 				k++
 			}
 
-			tokens = append(tokens, Token{Kind: TypelessConst, Text: string(text[i+1 : k]), Radix: 8, Offset: l.offset(i)})
+			tokens = append(tokens, Token{Kind: IntegerConst, Text: string(text[i+1 : k]), Radix: 8, Offset: l.offset(i)})
 			i = k
 
 		case c == '*' || c == '/':
@@ -99,15 +100,16 @@ func (l *lexer) tokenize(i, j int, mode tokenMode) []Token {
 }
 
 // afterLengthStar reports whether the next number is a type length: it
-// follows a * that follows the type keyword (nothing yet), a name, or a
-// keyword (REAL*8, X*4, FUNCTION F*8).
+// follows a * that follows the type keyword (nothing yet), a name, a
+// keyword, or the parenthesis closing a CHARACTER array's bounds
+// (REAL*8, X*4, FUNCTION F*8, CHARACTER A(10)*8).
 func afterLengthStar(tokens []Token) bool {
 	n := len(tokens)
 	if n == 0 || !tokens[n-1].Is("*") {
 		return false
 	}
 
-	return n == 1 || tokens[n-2].Kind == Name || tokens[n-2].Kind == Keyword
+	return n == 1 || tokens[n-2].Kind == Name || tokens[n-2].Kind == Keyword || tokens[n-2].Is(")")
 }
 
 // character adds the character constant whose opening apostrophe is at i,

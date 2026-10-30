@@ -56,6 +56,10 @@ func (a *analyzer) value(e ast.Expr) Expr {
 		return a.binary(e)
 	}
 
+	if what := formWhat(e); what != "" {
+		a.notImplForm(e.Position(), what)
+	}
+
 	return a.bad(e.Position())
 }
 

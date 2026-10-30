@@ -66,6 +66,7 @@ func Lex(statements []*source.Statement, messages *diag.List) []*Statement {
 	// the file, and after an END. Only there can INTEGER FUNCTIONF(X) be a
 	// FUNCTION statement (classify's typed FUNCTION test).
 	unitStart := true
+	l.specPart = true
 
 	for _, src := range statements {
 		st := l.statement(src, unitStart)
@@ -73,10 +74,11 @@ func Lex(statements []*source.Statement, messages *diag.List) []*Statement {
 
 		switch st.Kind {
 		case End:
-			unitStart = true
+			unitStart, l.specPart = true, true
 		case Options, Directive, Empty:
 		default:
 			unitStart = false
+			l.specPart = l.specPart && !st.Kind.Executable()
 		}
 	}
 
@@ -89,20 +91,28 @@ type lexer struct {
 
 	src *source.Statement
 	sq  *squeezed
+
+	// specPart is true until the unit's first executable statement:
+	// only there is PARAMETER P=1 appendix A.4's PARAMETER statement
+	// rather than an assignment to PARAMETERP (oldParameter).
+	specPart bool
 }
 
 // statement lexes one statement.
 func (l *lexer) statement(src *source.Statement, unitStart bool) *Statement {
-	if src.Directive {
-		return &Statement{Kind: Directive, Source: src}
-	}
-
 	sq, problems := squeeze(src.Text)
 	for _, p := range problems {
 		l.messages.Report(p.ident, src.Position(p.offset), p.args...)
 	}
 
 	l.src, l.sq = src, sq
+
+	if src.Directive {
+		// A CDEC$ directive's text (what follows the tag) is its name,
+		// IDENT, PSECT, TITLE, or SUBTITLE, and the name's operands: all
+		// of it tokens, the name first.
+		return &Statement{Kind: Directive, Offset: l.offset(0), Tokens: l.tokenize(0, len(sq.text), modeNone), Source: src}
+	}
 
 	// Section 5.5: an initial line holding only END is an END statement,
 	// whatever continuation lines follow it.
@@ -157,11 +167,21 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 	}
 
 	// An = outside parentheses: an assignment, or a DO statement if a
-	// comma follows the = outside parentheses too.
-	if eq := l.findLevel0(i, j, '='); eq >= 0 {
+	// comma follows the = outside parentheses too. (OPTIONS
+	// /CHECK=ALL has one, but no assignment's target is followed by a
+	// slash.)
+	if eq := l.findLevel0(i, j, '='); eq >= 0 && !l.hasPrefix(i, j, "OPTIONS/") {
 		if l.hasPrefix(i, j, "DO") && l.findLevel0(eq+1, j, ',') >= 0 {
 			st.Kind = Do
 			st.Tokens = l.tokenize(i+2, j, modeLabel)
+
+			return st
+		}
+
+		if l.oldParameter(i, eq) {
+			st.Kind = Parameter
+			st.Body = l.offset(i + len("PARAMETER"))
+			st.Tokens = l.tokenize(i+len("PARAMETER"), j, modeNone)
 
 			return st
 		}
@@ -267,10 +287,43 @@ func (l *lexer) ifStatement(st *Statement, elseIf bool, open, close, j int) *Sta
 		st.Tokens = append(st.Tokens, l.tokenize(rest, j, modeNone)...)
 
 	default:
+		// The IF is the unit's first executable statement if nothing
+		// before it was, so what it executes is past the specification
+		// part.
+		spec := l.specPart
+		l.specPart = false
 		st.Then = l.classify(rest, j, false)
+		l.specPart = spec
 	}
 
 	return st
+}
+
+// oldParameter reports whether the squeezed text from i, whose first =
+// at level 0 is at eq, is appendix A.4's PARAMETER statement, PARAMETER
+// p=c [,p=c]..., which has no parentheses. Squeezed, PARAMETER PI=3.14
+// is PARAMETERPI=3.14, the same text as an assignment to a variable
+// named PARAMETERPI, so the text alone can't tell them apart. The rule
+// here is ours (docs/PHASE-76 - FORTRAN front end.md, Part A, unconfirmed
+// on VMS): in a unit's specification part, before its first executable
+// statement, text that starts with PARAMETER and then a name running up
+// to the = is the PARAMETER statement. An assignment there would be the
+// unit's first executable statement, and a statement function's
+// definition (PARAMETERF(X) = ...) has a parenthesis before its =.
+func (l *lexer) oldParameter(i, eq int) bool {
+	const kw = "PARAMETER"
+
+	if !l.specPart || !l.hasPrefix(i, eq, kw) || i+len(kw) >= eq || !isLetter(l.sq.text[i+len(kw)]) {
+		return false
+	}
+
+	for k := i + len(kw); k < eq; k++ {
+		if !isNameChar(l.sq.text[k]) || l.sq.lit[k] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // typedFunction recognizes a typed FUNCTION statement (INTEGER FUNCTION
@@ -449,6 +502,10 @@ func (t Token) short() string {
 		return "'" + strings.ReplaceAll(t.Text, "'", "''") + "'"
 	case HollerithConst:
 		return strconv.Itoa(len(t.Text)) + `H"` + t.Text + `"`
+	case IntegerConst:
+		if t.Radix == 8 {
+			return `"` + t.Text
+		}
 	case TypelessConst:
 		if t.Radix == 8 {
 			return "'" + t.Text + "'O"

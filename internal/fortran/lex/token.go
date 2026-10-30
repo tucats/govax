@@ -18,7 +18,8 @@ const (
 	Keyword
 
 	// IntegerConst is an integer constant: digits, without a sign (a sign is
-	// an operator, which the parser applies).
+	// an operator, which the parser applies). Its Radix is 0 (decimal), or 8 for
+	// appendix A.5's "17, whose Text is the digits after the quote.
 	IntegerConst
 
 	// RealConst is a real constant: 1.5, 2., .5, 1E3, 2.5D0, 1Q0.
@@ -32,9 +33,9 @@ const (
 	// after the H.
 	HollerithConst
 
-	// TypelessConst is an octal or hexadecimal constant: '17'O, '1F'X, or VAX
-	// FORTRAN's older "17 for octal. Text is its digits, and Radix 8 or
-	// 16.
+	// TypelessConst is an octal or hexadecimal constant: '17'O or '1F'X.
+	// Text is its digits, and Radix 8 or 16. (Appendix A.5's "17 is an
+	// IntegerConst with Radix 8: it is an INTEGER, not typeless.)
 	TypelessConst
 
 	// LogicalConst is a logical constant: Text is .TRUE. or .FALSE.
@@ -61,7 +62,8 @@ type Token struct {
 	// .EQ., 1.5E3), or a constant's value (see the kinds).
 	Text string
 
-	// Radix is a TypelessConst token's base, 8 or 16.
+	// Radix is a TypelessConst token's base, 8 or 16, or 8 for an octal
+	// IntegerConst ("17); 0 for every other token.
 	Radix int
 
 	// Offset is where the token starts in its statement's text

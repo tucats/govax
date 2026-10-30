@@ -30,11 +30,29 @@
 // was expected where (p.expect("=") reports "expected '=', but found
 // ','").
 //
-// A statement the compiler recognizes but can't compile yet has no
-// function in the table, and is reported by its kind's name: "the READ
-// statement is not implemented yet" (NOTIMPL). A feature inside a
-// statement the parser does know (a Hollerith constant, an implied-DO
-// list) is reported the same way, where it is.
+// Every statement of VAX FORTRAN has a function in the table (Phase 76),
+// whether or not the compiler can compile it yet: the parser builds its
+// node, and semantic analysis says "the READ statement is not
+// implemented yet" (NOTIMPL) when it reaches one it has no meaning for.
+// The files follow the manual's chapters: decl.go the headers and the
+// declarations of types and shapes (type statements, DIMENSION,
+// IMPLICIT, PARAMETER), spec.go the other specification statements and
+// compilation control (COMMON, DATA, NAMELIST, STRUCTURE, OPTIONS, the
+// CDEC$ directives, FORMAT), stmt.go assignment and control, and io.go
+// input and output.
+//
+// # Control lists
+//
+// The I/O statements share one grammar, the control list of section
+// 7.1.1: specifiers in parentheses, each keyword=value, except that the
+// unit (first) and the format or namelist (second, after a unit without
+// its keyword) may leave their keywords out, and a direct access record
+// may follow the unit as u'r. io.go's controlList reads every
+// statement's list, and a table says which keywords each statement takes
+// and what follows each (an expression, a label for ERR= and END=, or
+// nothing for OPEN's READONLY). The unit, format, namelist, and record
+// are taken out of the list into the statement's own fields, so later
+// passes needn't care how they were written.
 //
 // # Expressions: precedence climbing
 //
@@ -64,13 +82,22 @@
 // FORTRAN makes recovery easy: a statement is never more than its own
 // tokens, so an error in one can't confuse the parser about the next.
 //
-// # Program units
+// # Program units and structures
 //
 // Parse also divides the file into program units. A PROGRAM, FUNCTION,
 // SUBROUTINE, or BLOCK DATA statement starts a unit; so does any other
 // statement when no unit is open, which begins a main program without a
 // PROGRAM statement; END ends a unit. A unit with no END (the file ends,
-// or another unit's header comes first) is NOEND.
+// or another unit's header comes first) is NOEND. An OPTIONS statement
+// or a directive between units starts none: it is the next unit's
+// Prologue (OPTIONS must come before the header it applies to).
+//
+// Structure declarations are the one place statements nest (blocks.go):
+// STRUCTURE ... END STRUCTURE holds field declarations, nested
+// structures, and unions, a UNION holds MAPs, and a MAP holds fields.
+// Parse keeps a stack of the declarations open and puts each statement
+// into the innermost one's Body, so that INTEGER*2 YEAR inside a
+// structure is a field, never a variable.
 //
 // The parser doesn't match IF with END IF, or a DO with the statement
 // whose label it names: a unit's statements are a flat list, and

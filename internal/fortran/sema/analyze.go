@@ -24,8 +24,16 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 	units := unitNames(file, mainName, messages)
 
 	for _, au := range file.Units {
+		prologue(au.Prologue, messages)
+
 		switch au.Header.(type) {
-		case *ast.BadStmt, *ast.NotImplStmt:
+		case *ast.BadStmt:
+			continue
+
+		case *ast.BlockDataStmt:
+			// BLOCK DATA is subtask 7's.
+			messages.Report("NOTIMPL", au.Header.Position(), statementWhat(au.Header))
+
 			continue
 		}
 
@@ -38,9 +46,20 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
 	}
 
+	prologue(file.Trailing, messages)
 	checkReferences(prog, units, messages)
 
 	return prog
+}
+
+// prologue reports the OPTIONS statements and directives before a unit,
+// or after the last, none of which is implemented yet.
+func prologue(list []ast.Stmt, messages *diag.List) {
+	for _, s := range list {
+		if _, bad := s.(*ast.BadStmt); !bad {
+			messages.Report("NOTIMPL", s.Position(), statementWhat(s))
+		}
+	}
 }
 
 // unitName is the name of the unit au.
@@ -184,6 +203,8 @@ func (a *analyzer) header(au *ast.Unit) {
 		if h.Type != nil {
 			if t, ok := a.typeOf(*h.Type, h.Type.Length, h.Type.Pos); ok {
 				s.Type, s.Typed, s.TypePos = t, true, h.Pos
+			} else {
+				s.broken = true
 			}
 		}
 
@@ -206,6 +227,16 @@ func (a *analyzer) header(au *ast.Unit) {
 // params enters the dummy arguments.
 func (a *analyzer) params(params []*ast.Name) {
 	for _, p := range params {
+		if p.Name == "*" {
+			// An alternate return's place (Phase 79). The unit's dummy
+			// arguments are then not what its calls count, so it is
+			// left incomplete: only its structure is checked.
+			a.notImplForm(p.Pos, "an alternate return")
+			a.unit.incomplete = true
+
+			continue
+		}
+
 		s := a.lookup(p.Name, p.Pos)
 
 		switch {
@@ -255,9 +286,20 @@ func (a *analyzer) badUse(s *Symbol, pos diag.Position, what string) {
 	a.report("BADUSE", pos, s.Name, a.describe(s), what)
 }
 
-// notImpl reports that what isn't implemented yet (NOTIMPL).
+// notImpl reports that what isn't implemented yet (NOTIMPL), when the
+// question depends on the declarations: a name that may be an intrinsic
+// function's, a dummy procedure. A unit whose declarations are incomplete
+// doesn't get it (see report).
 func (a *analyzer) notImpl(pos diag.Position, what string) {
 	a.report("NOTIMPL", pos, what)
+}
+
+// notImplForm reports that what, a statement or a form the program wrote
+// (a COMMON statement, a Hollerith constant, an implied-DO list), isn't
+// implemented yet (NOTIMPL). No declaration changes that, so every unit
+// gets it, whatever its declarations.
+func (a *analyzer) notImplForm(pos diag.Position, what string) {
+	a.messages.Report("NOTIMPL", pos, what)
 }
 
 // report reports the message ident about pos, unless the unit's
@@ -283,27 +325,20 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// NOTIMPL (COMMON, PARAMETER, IMPLICIT, CHARACTER, ...), or a type
-// statement or DIMENSION the parser rejected. Without it, what semantic
-// analysis would say about the unit's names would mostly be wrong (an
-// array declared in COMMON isn't an array, a PARAMETER constant in a
-// bound is a variable), so such a unit gets only the messages about its
-// structure. The parser has reported the statement itself.
+// not implemented yet (COMMON, PARAMETER, IMPLICIT, ...), or one the
+// parser rejected. Without it, what semantic analysis would say about the
+// unit's names would mostly be wrong (an array declared in COMMON isn't
+// an array, a PARAMETER constant in a bound is a variable), so such a
+// unit gets only the messages about its structure, and its statements'
+// own NOTIMPLs.
 func incompleteDeclarations(body []ast.Stmt) bool {
 	for _, s := range body {
-		var kind lex.Kind
-
-		switch s := s.(type) {
-		case *ast.NotImplStmt:
-			kind = s.Kind
-		case *ast.BadStmt:
-			kind = s.Kind
-		default:
+		if _, bad := s.(*ast.BadStmt); !bad && handled(s) {
 			continue
 		}
 
-		switch {
-		case kind == lex.Format, kind == lex.Data, kind == lex.Unknown:
+		switch kind := s.Base().Kind; {
+		case kind == lex.Format, kind == lex.Data, kind == lex.Directive, kind == lex.Options, kind == lex.Unknown:
 			// These declare nothing.
 		case !kind.Executable():
 			return true
@@ -345,7 +380,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 
 			switch {
 			case s.Class == Function && target.Kind == ast.FunctionUnit:
-				if t := target.Result.Type; t != s.Type {
+				if t := target.Result.Type; t != s.Type && !target.Result.broken {
 					messages.Report("FUNCTYPE", s.Pos, s.Name, t.String(), fu.pos.Line, s.Type.String())
 				}
 

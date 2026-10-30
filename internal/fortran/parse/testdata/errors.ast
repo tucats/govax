@@ -2,7 +2,7 @@
 2           PROGRAM ERRORS
 3           error: INTEGER
 4           error: assignment
-5           not implemented: the READ statement
+5           READ * X
 6           error: DO
 7     10    error: CONTINUE
 8           error: logical IF
@@ -11,7 +11,7 @@
 12          PRINT * 'OK'
 == SUBROUTINE S
 13          SUBROUTINE S(A, B)
-14          not implemented: a Hollerith constant
+14          A = 5HHELLO
 15          END
 == main program (no PROGRAM statement)
 16          X = 1
@@ -25,11 +25,6 @@
   at line 4 of ERRORS.FOR
         X = (A + B
   ----------------^
-
-%FORT-E-NOTIMPL, the READ statement is not implemented yet
-  at line 5 of ERRORS.FOR
-        READ *, X
-  ------^
 
 %FORT-E-SYNTAX, expected '=', but found ','
   at line 6 of ERRORS.FOR
@@ -60,11 +55,6 @@
   at line 12 of ERRORS.FOR
         PRINT *, 'OK'
   -------------------^
-
-%FORT-E-NOTIMPL, a Hollerith constant is not implemented yet
-  at line 14 of ERRORS.FOR
-        A = 5HHELLO
-  ----------^
 
 %FORT-E-NOEND, the main program has no END statement
   at line 16 of ERRORS.FOR

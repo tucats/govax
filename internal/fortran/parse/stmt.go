@@ -1,37 +1,66 @@
 package parse
 
 import (
+	"strings"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // The executable statements, but for I/O (io.go).
 
-// parseAssignment parses v = e (chapter 3). The target is a name or a
-// name with a parenthesized list: a variable, an array element, or a
-// statement function's definition, F(X) = X*X, which only the
-// declarations can tell from an array element.
+// parseAssignment parses v = e (chapter 3). The target is a variable, an
+// array element, a substring, or a record's field, or a statement
+// function's definition, F(X) = X*X, which only the declarations can
+// tell from an array element.
 func parseAssignment(p *parser) ast.Stmt {
 	s := &ast.AssignStmt{StmtBase: p.base()}
-
-	if !p.atKind(lex.Name) {
-		p.syntax("a variable or an array element")
-	}
-
-	t := p.next()
-	base := ast.ExprBase{Pos: p.pos(t)}
-
-	if p.at("(") {
-		s.Target = p.apply(t, base)
-	} else {
-		s.Target = &ast.Name{ExprBase: base, Name: t.Text}
-	}
-
+	s.Target = p.reference("a variable or an array element")
 	p.expect("=")
 	s.Value = p.expr()
 	p.end()
 
 	return s
+}
+
+// parseAssignLabel parses ASSIGN s TO v (section 3.5). Squeezed, ASSIGN
+// 10 TO I is ASSIGN10TOI, so the tokenizer makes 10 and a name TOI, from
+// which TO is taken here.
+func parseAssignLabel(p *parser) ast.Stmt {
+	s := &ast.AssignLabelStmt{StmtBase: p.base(), Target: p.labelRef()}
+
+	t := p.peek()
+	if t == nil || t.Kind != lex.Name || len(t.Text) <= 2 || !strings.HasPrefix(t.Text, "TO") {
+		p.syntax("TO and an integer variable")
+	}
+
+	p.next()
+
+	s.Var = &ast.Name{ExprBase: ast.ExprBase{Pos: p.st.Position(t.Offset + offsetAfter(p.st.Source.Text, t.Offset, 2))}, Name: t.Text[2:]}
+	p.end()
+
+	return s
+}
+
+// offsetAfter is how far into the statement's text, from offset, the
+// n-th character outside blanks after offset is: where the variable's
+// name starts after TO, wherever the source put blanks.
+func offsetAfter(text string, offset, n int) int {
+	k := 0
+
+	for i := offset; i < len(text); i++ {
+		if text[i] == ' ' || text[i] == '\t' {
+			continue
+		}
+
+		if k == n {
+			return i - offset
+		}
+
+		k++
+	}
+
+	return 0
 }
 
 // parseCall parses CALL name [([a][,[a]]...)] (section 5.1). An argument
@@ -63,7 +92,9 @@ func parseCall(p *parser) ast.Stmt {
 			s.Args = append(s.Args, nil)
 
 		case p.at("*") || p.at("&"):
-			p.notImpl("an alternate return argument", p.here())
+			pos := p.here()
+			p.next()
+			s.Args = append(s.Args, &ast.AltReturn{ExprBase: ast.ExprBase{Pos: pos}, Target: p.labelRef()})
 
 		default:
 			s.Args = append(s.Args, p.expr())
@@ -80,15 +111,30 @@ func parseCall(p *parser) ast.Stmt {
 	return s
 }
 
-// parseGoTo parses the unconditional GO TO s (section 5.6.1). The
-// computed GO TO, GO TO (s,s...) i, and the assigned GO TO, GO TO v,
-// are later phases'.
+// parseGoTo parses the three GO TO statements (section 5.6): the
+// unconditional GO TO s, the computed GO TO (s[,s]...)[,] e, and the
+// assigned GO TO v [[,](s[,s]...)].
 func parseGoTo(p *parser) ast.Stmt {
 	switch {
 	case p.at("("):
-		p.notImpl("the computed GO TO statement", p.base().Pos)
+		s := &ast.ComputedGotoStmt{StmtBase: p.base(), Targets: p.labelList()}
+		p.accept(",")
+		s.Index = p.expr()
+		p.end()
+
+		return s
+
 	case p.atKind(lex.Name):
-		p.notImpl("the assigned GO TO statement", p.base().Pos)
+		s := &ast.AssignedGotoStmt{StmtBase: p.base(), Var: p.name("an integer variable")}
+
+		if !p.atEnd() {
+			p.accept(",")
+			s.Targets = p.labelList()
+		}
+
+		p.end()
+
+		return s
 	}
 
 	s := &ast.GotoStmt{StmtBase: p.base(), Target: p.labelRef()}
@@ -126,14 +172,29 @@ func parseLogicalIf(p *parser) ast.Stmt {
 
 	s.Then = statement(then, p.messages)
 
-	// If the statement had an error, or isn't implemented, the IF as a
-	// whole is the same: later passes needn't look inside it.
-	switch t := s.Then.(type) {
-	case *ast.NotImplStmt:
-		panic(bailout{what: t.What})
-	case *ast.BadStmt:
+	// If the statement had an error, the IF as a whole has one: later
+	// passes needn't look inside it.
+	if _, bad := s.Then.(*ast.BadStmt); bad {
 		panic(bailout{})
 	}
+
+	return s
+}
+
+// parseArithIf parses the arithmetic IF, IF (e) s1, s2, s3 (section
+// 5.7.1).
+func parseArithIf(p *parser) ast.Stmt {
+	s := &ast.ArithIfStmt{StmtBase: p.base(), Cond: p.condition()}
+
+	for i := range s.Targets {
+		if i > 0 {
+			p.expect(",")
+		}
+
+		s.Targets[i] = p.labelRef()
+	}
+
+	p.end()
 
 	return s
 }
@@ -189,16 +250,12 @@ func parseEndIf(p *parser) ast.Stmt {
 	return &ast.EndIfStmt{StmtBase: p.base()}
 }
 
-// parseDo parses DO s [,] v = e1, e2 [, e3] (section 5.3.1). The lexer
-// has made sure there is a comma after the =, or it would have been an
-// assignment (DO 10 I = 1.5 assigns to DO10I).
+// parseDo parses DO [s[,]] v = e1, e2 [, e3] (section 5.3.1); VAX
+// FORTRAN lets the label be left out, and END DO end the loop (5.4). The
+// lexer has made sure there is a comma after the =, or it would have
+// been an assignment (DO 10 I = 1.5 assigns to DO10I).
 func parseDo(p *parser) ast.Stmt {
-	if p.atKind(lex.Name) {
-		p.notImpl("a DO loop without a statement label", p.base().Pos)
-	}
-
-	s := &ast.DoStmt{StmtBase: p.base(), Target: p.labelRef()}
-	p.accept(",")
+	s := &ast.DoStmt{StmtBase: p.base(), Target: p.doLabel()}
 
 	s.Var = p.name("the DO variable")
 	p.expect("=")
@@ -215,6 +272,37 @@ func parseDo(p *parser) ast.Stmt {
 	return s
 }
 
+// doLabel reads a DO statement's label and the comma that may follow it,
+// or nothing for a loop without a label (whose LabelRef's Label is 0).
+func (p *parser) doLabel() ast.LabelRef {
+	if !p.atKind(lex.IntegerConst) {
+		return ast.LabelRef{}
+	}
+
+	l := p.labelRef()
+	p.accept(",")
+
+	return l
+}
+
+// parseDoWhile parses DO [s[,]] WHILE (e) (section 5.3.2); the lexer has
+// made WHILE a keyword token.
+func parseDoWhile(p *parser) ast.Stmt {
+	s := &ast.DoWhileStmt{StmtBase: p.base(), Target: p.doLabel()}
+	p.expect("WHILE")
+	s.Cond = p.condition()
+	p.end()
+
+	return s
+}
+
+// parseEndDo parses END DO (section 5.4).
+func parseEndDo(p *parser) ast.Stmt {
+	p.end()
+
+	return &ast.EndDoStmt{StmtBase: p.base()}
+}
+
 // parseContinue parses CONTINUE (section 5.2).
 func parseContinue(p *parser) ast.Stmt {
 	p.end()
@@ -222,8 +310,8 @@ func parseContinue(p *parser) ast.Stmt {
 	return &ast.ContinueStmt{StmtBase: p.base()}
 }
 
-// parseStop parses STOP [disp] (section 5.10), where disp is a character
-// constant or one to five digits.
+// parseStop parses STOP [disp] (section 5.10), and PAUSE [disp] (5.8),
+// where disp is a character constant or one to five digits.
 func parseStop(p *parser) ast.Stmt {
 	s := &ast.StopStmt{StmtBase: p.base()}
 

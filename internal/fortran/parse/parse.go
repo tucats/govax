@@ -17,26 +17,24 @@ import (
 // FUNCTION, SUBROUTINE, or BLOCK DATA statement starts one, as does any
 // other statement when no unit is open (a main program without a PROGRAM
 // statement), and END ends one. A unit the next unit's header or the
-// file's end interrupts has no END: NOEND.
+// file's end interrupts has no END: NOEND. OPTIONS statements and CDEC$
+// directives between units begin none: they wait for the next unit, as
+// its Prologue (or the file's Trailing statements, after the last).
+//
+// And it gathers structure declarations' statements into the
+// declarations (blocks.go), the one place statements nest.
 func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 	file := &ast.File{}
 
 	var (
-		unit *ast.Unit      // the unit being read; nil between units
-		last *lex.Statement // the unit's last statement so far, for NOEND
+		unit     *ast.Unit      // the unit being read; nil between units
+		last     *lex.Statement // the unit's last statement so far, for NOEND
+		prologue []ast.Stmt     // OPTIONS and directives waiting for a unit
+		blocks   = &blockStack{messages: messages}
 	)
 
 	for _, ls := range statements {
-		switch {
-		case ls.Kind == lex.Directive, ls.Kind == lex.Options:
-			// These come before a unit, or between statements, and say
-			// how to compile; none is implemented yet, and none belongs
-			// to a unit's statements.
-			messages.Report("NOTIMPL", ls.Position(ls.Offset), what(ls.Kind))
-
-			continue
-
-		case ls.Kind == lex.Empty:
+		if ls.Kind == lex.Empty {
 			if ls.Label != 0 {
 				messages.Report("EMPTYSTMT", ls.Source.LabelPosition(), ls.Label)
 			}
@@ -46,20 +44,39 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 
 		s := statement(ls, messages)
 
+		if unit == nil && (ls.Kind == lex.Options || ls.Kind == lex.Directive) {
+			prologue = append(prologue, s)
+
+			continue
+		}
+
+		// A unit's END, or the next unit's header, ends any structure
+		// declaration left open; otherwise a statement inside one goes
+		// into it.
+		if ls.Kind == lex.End || isHeader(ls.Kind) {
+			blocks.closeAll()
+		} else if blocks.take(s) {
+			last = ls
+
+			continue
+		}
+
 		if isHeader(ls.Kind) {
 			if unit != nil {
 				noEnd(unit, last, messages)
 			}
 
-			unit = &ast.Unit{Header: s}
+			unit = &ast.Unit{Prologue: prologue, Header: s}
 			file.Units = append(file.Units, unit)
+			prologue = nil
 		} else {
 			if unit == nil {
-				unit = &ast.Unit{}
+				unit = &ast.Unit{Prologue: prologue}
 				file.Units = append(file.Units, unit)
+				prologue = nil
 			}
 
-			unit.Body = append(unit.Body, s)
+			unit.Body = append(unit.Body, blocks.outside(s))
 		}
 
 		last = ls
@@ -74,8 +91,11 @@ func Parse(statements []*lex.Statement, messages *diag.List) *ast.File {
 	}
 
 	if unit != nil {
+		blocks.closeAll()
 		noEnd(unit, last, messages)
 	}
+
+	file.Trailing = prologue
 
 	return file
 }
@@ -106,47 +126,102 @@ func noEnd(unit *ast.Unit, last *lex.Statement, messages *diag.List) {
 	messages.Report("NOEND", last.Position(len(last.Source.Text)), what)
 }
 
-// parsers is the function that parses each kind of statement the
-// compiler can compile so far; a kind not here is NOTIMPL. (It is filled
-// in by init, not in its declaration, because parseLogicalIf parses its
-// own statement through it: Go won't initialize a variable whose value
-// refers back to the variable.)
+// parsers is the function that parses each kind of statement: every kind
+// the lexer knows, so every statement of VAX FORTRAN, has one. (It is
+// filled in by init, not in its declaration, because parseLogicalIf
+// parses its own statement through it: Go won't initialize a variable
+// whose value refers back to the variable.)
 var parsers map[lex.Kind]func(*parser) ast.Stmt
 
 func init() {
 	parsers = map[lex.Kind]func(*parser) ast.Stmt{
+		// Headers (decl.go).
 		lex.Program:    parseProgram,
 		lex.Function:   parseFunction,
 		lex.Subroutine: parseSubroutine,
-		lex.Integer:    parseTypeStmt,
-		lex.Real:       parseTypeStmt,
-		lex.Logical:    parseTypeStmt,
-		lex.Dimension:  parseDimension,
-		lex.Assignment: parseAssignment,
-		lex.Call:       parseCall,
-		lex.GoTo:       parseGoTo,
-		lex.LogicalIf:  parseLogicalIf,
-		lex.IfThen:     parseIfThen,
-		lex.ElseIf:     parseElseIf,
-		lex.Else:       parseElse,
-		lex.EndIf:      parseEndIf,
-		lex.Do:         parseDo,
-		lex.Continue:   parseContinue,
-		lex.Stop:       parseStop,
-		lex.Return:     parseReturn,
-		lex.End:        parseEnd,
+		lex.BlockData:  parseBlockData,
+		lex.Entry:      parseEntry,
+
+		// Declarations (decl.go).
+		lex.Integer:         parseTypeStmt,
+		lex.Real:            parseTypeStmt,
+		lex.Logical:         parseTypeStmt,
+		lex.Byte:            parseTypeStmt,
+		lex.DoublePrecision: parseTypeStmt,
+		lex.Complex:         parseTypeStmt,
+		lex.DoubleComplex:   parseTypeStmt,
+		lex.Character:       parseTypeStmt,
+		lex.Dimension:       parseDimension,
+		lex.Virtual:         parseDimension,
+		lex.Implicit:        parseImplicit,
+		lex.Parameter:       parseParameter,
+
+		// The other specification statements (spec.go).
+		lex.Common:       parseCommon,
+		lex.Equivalence:  parseEquivalence,
+		lex.Data:         parseData,
+		lex.Save:         parseAttr,
+		lex.External:     parseAttr,
+		lex.Intrinsic:    parseAttr,
+		lex.Volatile:     parseAttr,
+		lex.Automatic:    parseAttr,
+		lex.Static:       parseAttr,
+		lex.Namelist:     parseNamelist,
+		lex.Record:       parseRecord,
+		lex.Structure:    parseStructure,
+		lex.Union:        parseUnion,
+		lex.Map:          parseMap,
+		lex.EndStructure: parseEndBlock,
+		lex.EndUnion:     parseEndBlock,
+		lex.EndMap:       parseEndBlock,
+		lex.Dictionary:   parseDictionary,
+
+		// Compilation control (spec.go).
+		lex.Options:   parseOptions,
+		lex.Directive: parseDirective,
+		lex.Format:    parseFormat,
+		lex.Include:   parseInclude,
+
+		// Assignment and control (stmt.go).
+		lex.Assignment:   parseAssignment,
+		lex.Assign:       parseAssignLabel,
+		lex.Call:         parseCall,
+		lex.GoTo:         parseGoTo,
+		lex.LogicalIf:    parseLogicalIf,
+		lex.ArithmeticIf: parseArithIf,
+		lex.IfThen:       parseIfThen,
+		lex.ElseIf:       parseElseIf,
+		lex.Else:         parseElse,
+		lex.EndIf:        parseEndIf,
+		lex.Do:           parseDo,
+		lex.DoWhile:      parseDoWhile,
+		lex.EndDo:        parseEndDo,
+		lex.Continue:     parseContinue,
+		lex.Stop:         parseStop,
+		lex.Pause:        parseStop,
+		lex.Return:       parseReturn,
+		lex.End:          parseEnd,
+
+		// Input and output (io.go).
 		lex.Print:      parsePrint,
-		lex.Write:      parseWrite,
+		lex.Type:       parsePrint,
+		lex.Accept:     parsePrint,
+		lex.Read:       parseRead,
+		lex.Write:      parseTransfer,
+		lex.Rewrite:    parseTransfer,
+		lex.Encode:     parseCode,
+		lex.Decode:     parseCode,
+		lex.Open:       parseAuxIO,
+		lex.Close:      parseAuxIO,
+		lex.Inquire:    parseAuxIO,
+		lex.Rewind:     parseAuxIO,
+		lex.Backspace:  parseAuxIO,
+		lex.EndFile:    parseAuxIO,
+		lex.Unlock:     parseAuxIO,
+		lex.Delete:     parseAuxIO,
+		lex.Find:       parseAuxIO,
+		lex.DefineFile: parseDefineFile,
 	}
-}
-
-// what is how a NOTIMPL message names a kind of statement.
-func what(k lex.Kind) string {
-	if k == lex.Directive {
-		return "a CDEC$ directive"
-	}
-
-	return "the " + k.String() + " statement"
 }
 
 // parser is the parser's state for one statement: the statement and a
@@ -160,13 +235,10 @@ type parser struct {
 
 // bailout is what a parsing function panics with when it has reported an
 // error, to abandon the statement: statement recovers it and returns a
-// BadStmt, or a NotImplStmt if what is set. (A panic unwinds every
-// parsing function between the error and the statement at once, which
-// spares each of them checking for an error after every call; Go's own
-// parser, go/parser, works the same way.)
-type bailout struct {
-	what string // the NOTIMPL message's subject, or "" for an error
-}
+// BadStmt. (A panic unwinds every parsing function between the error and
+// the statement at once, which spares each of them checking for an error
+// after every call; Go's own parser, go/parser, works the same way.)
+type bailout struct{}
 
 // statement parses one statement.
 func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
@@ -175,38 +247,26 @@ func statement(ls *lex.Statement, messages *diag.List) (s ast.Stmt) {
 
 	if ls.Kind == lex.Unknown {
 		// The lexer reported it (UNRECSTMT).
-		return &ast.BadStmt{StmtBase: base, Kind: ls.Kind}
-	}
-
-	parse, ok := parsers[ls.Kind]
-	if !ok {
-		messages.Report("NOTIMPL", base.Pos, what(ls.Kind))
-
-		return &ast.NotImplStmt{StmtBase: base, What: what(ls.Kind), Kind: ls.Kind}
+		return &ast.BadStmt{StmtBase: base}
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
-			b, ok := r.(bailout)
-			if !ok {
+			if _, ok := r.(bailout); !ok {
 				panic(r) // a bug in the parser, not an error in the program
 			}
 
-			if b.what != "" {
-				s = &ast.NotImplStmt{StmtBase: base, What: b.what, Kind: ls.Kind}
-			} else {
-				s = &ast.BadStmt{StmtBase: base, Kind: ls.Kind}
-			}
+			s = &ast.BadStmt{StmtBase: base}
 		}
 	}()
 
-	return parse(p)
+	return parsers[ls.Kind](p)
 }
 
 // base is the statement's label and position, which every node made from
 // it starts with.
 func (p *parser) base() ast.StmtBase {
-	return ast.StmtBase{Pos: p.st.Position(p.st.Offset), Label: p.st.Label, Source: p.st.Source}
+	return ast.StmtBase{Pos: p.st.Position(p.st.Offset), Label: p.st.Label, Kind: p.st.Kind, Source: p.st.Source}
 }
 
 // peek is the next token, or nil at the end of the statement.
@@ -245,6 +305,49 @@ func (p *parser) at(text string) bool {
 	t := p.peek()
 
 	return t != nil && t.Is(text)
+}
+
+// atName reports whether the next token is the name text.
+func (p *parser) atName(text string) bool {
+	return isName(p.peek(), text)
+}
+
+// isName reports whether t is the name text.
+func isName(t *lex.Token, text string) bool {
+	return t != nil && t.Kind == lex.Name && t.Text == text
+}
+
+// atKeyword reports whether the next tokens are a keyword specifier's
+// keyword and its =: a name followed by =, as UNIT= or ERR=.
+func (p *parser) atKeyword() bool {
+	t, eq := p.peek(), p.peekAt(1)
+
+	return t != nil && t.Kind == lex.Name && eq != nil && eq.Is("=")
+}
+
+// fail reports the message ident at pos, and abandons the statement.
+func (p *parser) fail(ident string, pos diag.Position, args ...any) {
+	p.messages.Report(ident, pos, args...)
+	panic(bailout{})
+}
+
+// labelList reads a parenthesized list of statement labels, (10, 20).
+func (p *parser) labelList() []ast.LabelRef {
+	p.expect("(")
+
+	var list []ast.LabelRef
+
+	for {
+		list = append(list, p.labelRef())
+
+		if !p.accept(",") {
+			break
+		}
+	}
+
+	p.expect(")")
+
+	return list
 }
 
 // atKind reports whether the next token is of kind k.
@@ -314,13 +417,6 @@ func (p *parser) here() diag.Position {
 func (p *parser) syntax(expected string) {
 	p.messages.Report("SYNTAX", p.here(), expected, describe(p.peek()))
 	panic(bailout{})
-}
-
-// notImpl reports that what, at pos, is not implemented yet, and
-// abandons the statement, which becomes a NotImplStmt.
-func (p *parser) notImpl(what string, pos diag.Position) {
-	p.messages.Report("NOTIMPL", pos, what)
-	panic(bailout{what: what})
 }
 
 // labelRef reads a reference to a statement label: an integer constant

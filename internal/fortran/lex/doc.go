@@ -58,6 +58,14 @@
 //     text taken for one. The lexer knows where units start because END
 //     ends them.
 //
+//     Appendix A.4's PARAMETER statement has the same trouble: PARAMETER
+//     PI=3.14 squeezes to PARAMETERPI=3.14, an assignment to a variable
+//     PARAMETERPI by the = test. So before a unit's first executable
+//     statement, where an assignment can't yet be, text that is
+//     PARAMETER, a name, and the = is the PARAMETER statement
+//     (oldParameter; our rule, unconfirmed on VMS). OPTIONS /CHECK=ALL
+//     has an = too, and is never an assignment.
+//
 //  3. Tokenize (tokenize.go): with the kind known, split the text after
 //     the keyword into tokens: names, numbers, constants, and operators.
 //     A name runs as far as letters and digits go, which is safe only

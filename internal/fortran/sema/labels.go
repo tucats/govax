@@ -108,56 +108,9 @@ func inPath(path []frame, f frame) bool {
 }
 
 // statementName is what a statement is called in messages: GO TO, END
-// IF, INTEGER.
+// IF, INTEGER, assignment: its lexer's kind's name.
 func statementName(s ast.Stmt) string {
-	switch s := s.(type) {
-	case *ast.ProgramStmt:
-		return "PROGRAM"
-	case *ast.FunctionStmt:
-		return "FUNCTION"
-	case *ast.SubroutineStmt:
-		return "SUBROUTINE"
-	case *ast.TypeStmt:
-		return s.Type.Type.String()
-	case *ast.DimensionStmt:
-		return "DIMENSION"
-	case *ast.AssignStmt:
-		return "assignment"
-	case *ast.CallStmt:
-		return "CALL"
-	case *ast.GotoStmt:
-		return "GO TO"
-	case *ast.IfStmt:
-		return "logical IF"
-	case *ast.IfThenStmt:
-		return "IF THEN"
-	case *ast.ElseIfStmt:
-		return "ELSE IF"
-	case *ast.ElseStmt:
-		return "ELSE"
-	case *ast.EndIfStmt:
-		return "END IF"
-	case *ast.DoStmt:
-		return "DO"
-	case *ast.ContinueStmt:
-		return "CONTINUE"
-	case *ast.StopStmt:
-		return "STOP"
-	case *ast.ReturnStmt:
-		return "RETURN"
-	case *ast.EndStmt:
-		return "END"
-	case *ast.PrintStmt:
-		return "PRINT"
-	case *ast.WriteStmt:
-		return "WRITE"
-	case *ast.NotImplStmt:
-		return s.Kind.String()
-	case *ast.BadStmt:
-		return s.Kind.String()
-	}
-
-	return "statement"
+	return s.Base().Kind.String()
 }
 
 // aStatement is "a GO TO statement", "an END IF statement", "an

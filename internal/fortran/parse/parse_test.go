@@ -2,6 +2,7 @@ package parse
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -191,17 +192,170 @@ func TestStatements(t *testing.T) {
 		{"WRITE (FMT=*, UNIT=6) X", "WRITE (6, *) X"},
 		{"WRITE (LUN, *) X", "WRITE (LUN, *) X"},
 		{"WRITE (6) X", "WRITE (6) X"},
+
+		// Headers.
+		{"BLOCK DATA BLKDAT", "BLOCK DATA BLKDAT"},
+		{"BLOCK DATA", "BLOCK DATA"},
+		{"SUBROUTINE CHECK(X, Y, *, *, C)", "SUBROUTINE CHECK(X, Y, *, *, C)"},
+		{"CHARACTER*(*) FUNCTION H(S)", "CHARACTER*(*) FUNCTION H(S)"},
+		{"CHARACTER FUNCTION C*10(S)", "CHARACTER*10 FUNCTION C(S)"},
+		{"DOUBLE PRECISION FUNCTION D(X)", "DOUBLE PRECISION FUNCTION D(X)"},
+		{"COMPLEX*16 FUNCTION Z()", "COMPLEX*16 FUNCTION Z()"},
+		{"FUNCTION F*8(X)", "*8 FUNCTION F(X)"},
+		{"ENTRY E2(A, *)", "ENTRY E2(A, *)"},
+
+		// Type declarations (section 4.4).
+		{"INTEGER COUNT, MATRIX(4,4), SUM", "INTEGER COUNT, MATRIX(4, 4), SUM"},
+		{"REAL*8 WX1, WX2, WX3*4, WX5, WX6*4", "REAL*8 WX1, WX2, WX3*4, WX5, WX6*4"},
+		{"REAL*16 PI/3.14159Q0/, E/2.72Q0/, QARRAY(10)/5*0.0,5*1.0/",
+			"REAL*16 PI /3.14159Q0/, E /2.72Q0/, QARRAY(10) /5*0.0, 5*1.0/"},
+		{"BYTE B", "BYTE B"},
+		{"DOUBLE COMPLEX Z(2)/2*(1.0D0, -1.0D0)/", "DOUBLE COMPLEX Z(2) /2*(complex 1.0D0 (- 1.0D0))/"},
+		{"LOGICAL*1 L/.TRUE./, M/'10'X/, N/1HA/", "LOGICAL*1 L /.TRUE./, M /'10'X/, N /1HA/"},
+		{"CHARACTER*32 NAMES(100),SOCSEC(100)*9,NAMETY*10/'ABCDEFGHIJ'/",
+			"CHARACTER*32 NAMES(100), SOCSEC*9(100), NAMETY*10 /'ABCDEFGHIJ'/"},
+		{"CHARACTER*(4+LENGTH) LAST, FIRST", "CHARACTER*((+ 4 LENGTH)) LAST, FIRST"},
+		{"CHARACTER LETTER(26), BUBBLE*(*)", "CHARACTER LETTER(26), BUBBLE*(*)"},
+		{"CHARACTER*8, A, B*4", "CHARACTER*8 A, B*4"},
+		{"INTEGER I/-1/, J/N/, K/\"17/", "INTEGER I /(- 1)/, J /N/, K /\"17/"},
+		{"DIMENSION BUD(12,24,10)", "DIMENSION BUD(12, 24, 10)"},
+		{"DIMENSION A1(N1:N2), A2(N3:*)", "DIMENSION A1(N1:N2), A2(N3:*)"},
+		{"VIRTUAL A(10)", "VIRTUAL A(10)"},
+
+		// IMPLICIT and PARAMETER (sections 4.8, 4.11).
+		{"IMPLICIT INTEGER (I,J,K,L,M,N)", "IMPLICIT INTEGER (I, J, K, L, M, N)"},
+		{"IMPLICIT REAL (A-H, O-Z)", "IMPLICIT REAL (A-H, O-Z)"},
+		{"IMPLICIT DOUBLE PRECISION (D)", "IMPLICIT DOUBLE PRECISION (D)"},
+		{"IMPLICIT COMPLEX (S,Y), LOGICAL*1 (L,A-C)", "IMPLICIT COMPLEX (S, Y), LOGICAL*1 (L, A-C)"},
+		{"IMPLICIT CHARACTER*32 (T-V)", "IMPLICIT CHARACTER*32 (T-V)"},
+		{"IMPLICIT NONE", "IMPLICIT NONE"},
+		{"PARAMETER (PI=3.1415927, DPI=3.141592653589793238D0)", "PARAMETER (PI = 3.1415927, DPI = 3.141592653589793238D0)"},
+		{"PARAMETER (FLAG=.TRUE., LONGNAME='A STRING')", "PARAMETER (FLAG = .TRUE., LONGNAME = 'A STRING')"},
+
+		// The other specification statements (chapter 4).
+		{"COMMON HEAT,X /BLK1/KILO,Q", "COMMON // HEAT, X /BLK1/ KILO, Q"},
+		{"COMMON /BLK1/LIMA,R / /ALFA,BET", "COMMON /BLK1/ LIMA, R // ALFA, BET"},
+		{"COMMON /AREA1/R,S,T,U /AREA2/W,X,Y", "COMMON /AREA1/ R, S, T, U /AREA2/ W, X, Y"},
+		{"COMMON X(M), Y(M), // Z", "COMMON // X(M), Y(M) // Z"},
+		{"EQUIVALENCE (DVAR, IARR(1))", "EQUIVALENCE (DVAR, IARR(1))"},
+		{"EQUIVALENCE (TABLE(2,2), TRIPLE(1,2,2)), (A, B)", "EQUIVALENCE (TABLE(2, 2), TRIPLE(1, 2, 2)), (A, B)"},
+		{"EQUIVALENCE (NAME(10:13), ID(2:5))", "EQUIVALENCE (NAME(10:13), ID(2:5))"},
+		{"EQUIVALENCE (FIELDS(1)(2:4), STAR(2)(3:5))", "EQUIVALENCE (FIELDS(1)(2:4), STAR(2)(3:5))"},
+		{"DATA A,STARS /10*0,'****'/", "DATA A, STARS /10*0, '****'/"},
+		{"DATA BELL,TAB,LF,FF /7,9,10,12/", "DATA BELL, TAB, LF, FF /7, 9, 10, 12/"},
+		{"DATA (B(I), I=1,10,2) /5*1/", "DATA (do B(I); I = 1, 10, 2) /5*1/"},
+		{"DATA R/1.0,2*2.0/, T/.FALSE./, U/0.214537D-7/", "DATA R /1.0, 2*2.0/ T /.FALSE./ U /0.214537D-7/"},
+		{"DATA ((M(I,J), I=1,J), J=1,3) /6*0/", "DATA (do (do M(I, J); I = 1, J); J = 1, 3) /6*0/"},
+		{"DATA X/4HABCD/ C(2:3)/'XY'/", "DATA X /4HABCD/ C(2:3) /'XY'/"},
+		{"SAVE", "SAVE"},
+		{"SAVE A, /BLK/, B", "SAVE A, /BLK/, B"},
+		{"EXTERNAL CTN, SIN", "EXTERNAL CTN, SIN"},
+		{"INTRINSIC SIN, COS", "INTRINSIC SIN, COS"},
+		{"VOLATILE /BLK1/,D,E", "VOLATILE /BLK1/, D, E"},
+		{"AUTOMATIC A, B", "AUTOMATIC A, B"},
+		{"STATIC C", "STATIC C"},
+		{"NAMELIST /INPUT/ NAME, GRADE, DATE /OUTPUT/ TOTAL, NAME", "NAMELIST /INPUT/ NAME, GRADE, DATE /OUTPUT/ TOTAL, NAME"},
+		{"NAMELIST /A/ X, /B/ Y", "NAMELIST /A/ X /B/ Y"},
+		{"RECORD /DATE/ TODAY,YESTERDAY", "RECORD /DATE/ TODAY, YESTERDAY"},
+		{"RECORD /CHECK/ CURRENT_CHECK, CHECKBOOK(1000), /DATE/ D", "RECORD /CHECK/ CURRENT_CHECK, CHECKBOOK(1000), /DATE/ D"},
+		{"DICTIONARY 'CDD$TOP.SALES.JONES.SALARY'", "DICTIONARY 'CDD$TOP.SALES.JONES.SALARY'"},
+
+		// Compilation control.
+		{"FORMAT (1X, I5, 'X=', F8.2)", "FORMAT (1X, I5, 'X=', F8.2)"},
+		{"CDEC$ IDENT '1.0'", "CDEC$ IDENT '1.0'"},
+		{"CDEC$ TITLE", "CDEC$ TITLE"},
+		{"CDEC$ PSECT /COM1/ NOWRT, ALIGN=3", "CDEC$ PSECT /COM1/ NOWRT, ALIGN=3"},
+		{"CDEC$ PSECT // GBL", "CDEC$ PSECT // GBL"},
+
+		// Assignment and control (chapters 3 and 5).
+		{"ASSIGN 10 TO NSTART", "ASSIGN 10 TO NSTART"},
+		{"ASSIGN 99999 TO KSTOP", "ASSIGN 99999 TO KSTOP"},
+		{"GO TO (12,24,36), INDEX", "GO TO (12, 24, 36) INDEX"},
+		{"GO TO (320,330,340,350) ITEM", "GO TO (320, 330, 340, 350) ITEM"},
+		{"GO TO NEXT,(10,20,30)", "GO TO NEXT (10, 20, 30)"},
+		{"GO TO NEXT (10, 20)", "GO TO NEXT (10, 20)"},
+		{"GO TO NEXT", "GO TO NEXT"},
+		{"IF (THETA-CHI) 50,50,100", "IF (- THETA CHI) 50, 50, 100"},
+		{"IF (X) READ *, Y", "IF X READ * Y"},
+		{"DO I = 1, 10", "DO I = 1, 10"},
+		{"DO WHILE (X .LT. 5)", "DO WHILE (.LT. X 5)"},
+		{"DO 10, WHILE (I .GT. J)", "DO 10 WHILE (.GT. I J)"},
+		{"END DO", "END DO"},
+		{"PAUSE", "PAUSE"},
+		{"PAUSE 'MOUNT TAPE'", "PAUSE 'MOUNT TAPE'"},
+		{"CALL S(*10, &20, %VAL(N), %REF(A), %DESCR(C))", "CALL S(*10, *20, %VAL(N), %REF(A), %DESCR(C))"},
+		{"X = %LOC(A)", "X = %LOC(A)"},
+		{"X = 5HHELLO + '17'O + '1F'X + \"17", "X = (+ (+ (+ 5HHELLO '17'O) '1F'X) \"17)"},
+		{"X = (1.0, 2.0)", "X = (complex 1.0 2.0)"},
+		{"C(1:3) = 'ABC'", "C(1:3) = 'ABC'"},
+		{"C(:I) = C(2:)", "C(:I) = C(2:)"},
+		{"C(I)(1:3) = 'ABC'", "C(I)(1:3) = 'ABC'"},
+		{"IF (C(I)(1:1) .EQ. 'X') GO TO 10", "IF (.EQ. C(I)(1:1) 'X') GO TO 10"},
+		{"APP.APP_TIME(1).HOUR = 2", "APP.APP_TIME(1).HOUR = 2"},
+		{"CHECKBOOK(5).AMOUNT = X", "CHECKBOOK(5).AMOUNT = X"},
+		{"R.NAME(1:3) = 'ABC'", "R.NAME(1:3) = 'ABC'"},
+
+		// Input and output (chapters 7 and 9, appendix A).
+		{"READ *, X", "READ * X"},
+		{"READ 100, A, B", "READ 100 A B"},
+		{"READ (5, 100, ERR=50, END=60, IOSTAT=IOS) J, K", "READ (5, 100, ERR=50, END=60, IOSTAT=IOS) J K"},
+		{"READ (UNIT=1, FMT='(I5)', REC=N) X", "READ (1, '(I5)', REC=N) X"},
+		{"READ (1'10) X", "READ (1, REC=10) X"},
+		{"READ (1'10, 20) X", "READ (1, 20, REC=10) X"},
+		{"READ (5, NML=INPUT)", "READ (5, NML=INPUT)"},
+		{"READ (5, INPUT)", "READ (5, INPUT)"},
+		{"READ (3, KEYGE=K, KEYID=1) R", "READ (3, KEYGE=K, KEYID=1) R"},
+		{"READ (BUF, *) A, (B(I), I=1,N)", "READ (BUF, *) A (do B(I); I = 1, N)"},
+		{"READ INPUT", "READ INPUT"},
+		{"WRITE (6, 10) J, K(3), 4, (L+4)/2, N", "WRITE (6, 10) J K(3) 4 (/ (paren (+ L 4)) 2) N"},
+		{"WRITE (*, *, ERR=10) X", "WRITE (*, *, ERR=10) X"},
+		{"WRITE (1'10) X", "WRITE (1, REC=10) X"},
+		{"PRINT *, ((A(I,J), I=1,2), J=1,3)", "PRINT * (do (do A(I, J); I = 1, 2); J = 1, 3)"},
+		{"REWRITE (1, 10) X", "REWRITE (1, 10) X"},
+		{"ACCEPT *, X", "ACCEPT * X"},
+		{"ACCEPT 10, X, Y", "ACCEPT 10 X Y"},
+		{"TYPE *, 'X'", "TYPE * 'X'"},
+		{"TYPE OUTPUT", "TYPE OUTPUT"},
+		{"PRINT NL", "PRINT NL"},
+		{"ENCODE (12,100,B) K(3), K(2), K(1)", "ENCODE (12, 100, B) K(3) K(2) K(1)"},
+		{"DECODE (12,100,A,IOSTAT=I,ERR=9) K", "DECODE (12, 100, A, IOSTAT=I, ERR=9) K"},
+		{"OPEN (UNIT=1, FILE='X.DAT', STATUS='OLD', READONLY, SHARED)", "OPEN (1, FILE='X.DAT', STATUS='OLD', READONLY, SHARED)"},
+		{"OPEN (2, FILE=F, KEY=(1:10:CHARACTER, 11:14:INTEGER:DESCENDING))",
+			"OPEN (2, FILE=F, KEY=(keys 1:10:CHARACTER, 11:14:INTEGER:DESCENDING))"},
+		{"OPEN (FILE='X', USEROPEN=MYOPEN, TYPE='NEW')", "OPEN (FILE='X', USEROPEN=MYOPEN, TYPE='NEW')"},
+		{"CLOSE (UNIT=1, STATUS='DELETE', ERR=10)", "CLOSE (1, STATUS='DELETE', ERR=10)"},
+		{"INQUIRE (FILE='X', EXIST=EX, NUMBER=N)", "INQUIRE (FILE='X', EXIST=EX, NUMBER=N)"},
+		{"INQUIRE (3, OPENED=OP)", "INQUIRE (3, OPENED=OP)"},
+		{"REWIND 5", "REWIND (5)"},
+		{"REWIND (UNIT=5, ERR=10)", "REWIND (5, ERR=10)"},
+		{"BACKSPACE 3", "BACKSPACE (3)"},
+		{"END FILE 2", "ENDFILE (2)"},
+		{"ENDFILE (2, IOSTAT=I)", "ENDFILE (2, IOSTAT=I)"},
+		{"UNLOCK 4", "UNLOCK (4)"},
+		{"DELETE (1'N)", "DELETE (1, REC=N)"},
+		{"DELETE (UNIT=1, REC=N, ERR=10)", "DELETE (1, REC=N, ERR=10)"},
+		{"FIND (4'INDX)", "FIND (4, REC=INDX)"},
+		{"FIND (UNIT=4, REC=1)", "FIND (4, REC=1)"},
+		{"DEFINE FILE 3 (1000,48,U,NREC)", "DEFINE FILE 3(1000, 48, U, NREC)"},
+		{"DEFINE FILE LUN(100,10,U,NR), 4(10,2,U,N4)", "DEFINE FILE LUN(100, 10, U, NR), 4(10, 2, U, N4)"},
 	}
 
 	for _, c := range cases {
 		var lines []string
 
+		text := fixed(c.text)
+		if strings.HasPrefix(c.text, "CDEC$") {
+			text = c.text
+		}
+
 		switch {
 		case strings.Contains(c.text, "FUNCTION"), strings.HasPrefix(c.text, "SUBROUTINE"),
-			strings.HasPrefix(c.text, "PROGRAM"):
-			lines = []string{fixed(c.text), fixed("END")}
+			strings.HasPrefix(c.text, "PROGRAM"), strings.HasPrefix(c.text, "BLOCK DATA"):
+			lines = []string{text, fixed("END")}
+		case strings.HasPrefix(c.text, "FORMAT"):
+			lines = []string{fixed("CONTINUE"), "   10 " + c.text, fixed("END")}
 		default:
-			lines = []string{fixed("CONTINUE"), fixed(c.text), fixed("END")}
+			lines = []string{fixed("CONTINUE"), text, fixed("END")}
 		}
 
 		file, ms := parseLines(t, "S.FOR", lines...)
@@ -243,42 +397,50 @@ func TestErrors(t *testing.T) {
 		{"DO 10 I 1, 5", "SYNTAX", 16, "expected '=', but found ','"},
 		{"DO 0 I = 1, 5", "BADLABELREF", 10, "0 is not a statement label, which is 1 to 5 digits, not all zeros"},
 		{"GO TO 123456", "BADLABELREF", 13, ""},
-		{"GO TO X1", "NOTIMPL", 7, "the assigned GO TO statement is not implemented yet"},
-		{"GO TO (10, 20), I", "NOTIMPL", 7, "the computed GO TO statement is not implemented yet"},
 		{"IF (X .GT. 0", "SYNTAX", 19, ""},
 		{"IF (X)", "SYNTAX", 13, "expected a statement after the condition, but found the end of the statement"},
 		{"IF (X) DO 10 I = 1, 5", "BADIFSTMT", 14, "a logical IF can't execute a DO statement"},
 		{"IF (X) IF (Y) Z = 1", "BADIFSTMT", 14, "a logical IF can't execute another logical IF"},
 		{"IF (X) INTEGER I", "BADIFSTMT", 14, "a logical IF can't execute an INTEGER statement"},
 		{"IF (X) END IF", "BADIFSTMT", 14, ""},
-		{"IF (X) READ *, Y", "NOTIMPL", 14, "the READ statement is not implemented yet"},
 		{"IF (X .GT. 0)", "SYNTAX", 20, ""},
 		{"ELSE IF (X)", "SYNTAX", 18, "expected 'THEN', but found the end of the statement"},
 		{"STOP 123456", "SYNTAX", 12, "expected a character constant or 1 to 5 digits, but found the number 123456"},
 		{"STOP X", "SYNTAX", 12, ""},
 		{"CALL S(A", "SYNTAX", 15, ""},
-		{"CALL S(*10)", "NOTIMPL", 14, "an alternate return argument is not implemented yet"},
-		{"CALL S(%VAL(X))", "NOTIMPL", 14, "%VAL is not implemented yet"},
-		{"X = 5HHELLO", "NOTIMPL", 11, "a Hollerith constant is not implemented yet"},
-		{"X = '17'O", "NOTIMPL", 11, ""},
-		{"X = (1.0, 2.0)", "NOTIMPL", 11, "a COMPLEX constant is not implemented yet"},
-		{"C(1:3) = 'ABC'", "NOTIMPL", 10, "a character substring is not implemented yet"},
-		{"C(I)(1:3) = 'ABC'", "NOTIMPL", 11, ""},
-		{"IF (C(I)(1:1) .EQ. 'X') GO TO 10", "NOTIMPL", 15, ""},
-		{"INTEGER A(10)/10*0/", "NOTIMPL", 20, ""},
 		{"DIMENSION A", "SYNTAX", 18, "expected '(', but found the end of the statement"},
-		{"PRINT *, (A(I), I = 1, 10)", "NOTIMPL", 16, "an implied-DO list is not implemented yet"},
 		{"PRINT * X", "SYNTAX", 15, "expected ',', but found the name X"},
-		{"WRITE (*, *, ERR=10) X", "NOTIMPL", 20, "the ERR= specifier is not implemented yet"},
 		{"WRITE (FMT=*) X", "SYNTAX", 19, "expected a unit (UNIT=), but found ')'"},
 		{"WRITE (*, *, *) X", "SYNTAX", 20, ""},
-		{"WRITE (BAD=1) X", "SYNTAX", 14, "expected UNIT=, FMT=, ERR=, IOSTAT=, REC=, or NML=, but found BAD="},
-		{"WRITE (1'10) X", "NOTIMPL", 15, ""},
-		{"DO I = 1, 10", "NOTIMPL", 7, "a DO loop without a statement label is not implemented yet"},
-		{"READ *, X", "NOTIMPL", 7, "the READ statement is not implemented yet"},
-		{"COMMON /B/ X", "NOTIMPL", 7, "the COMMON statement is not implemented yet"},
-		{"CHARACTER*10 S", "NOTIMPL", 7, "the CHARACTER statement is not implemented yet"},
-		{"IF (X) 10, 20, 30", "NOTIMPL", 7, "the arithmetic IF statement is not implemented yet"},
+		{"WRITE (BAD=1) X", "BADSPECIFIER", 14, "BAD= is not a specifier of the WRITE statement"},
+		{"WRITE (6, END=10) X", "BADSPECIFIER", 17, ""},
+		{"READ (5, *, ERR=10, ERR=20) X", "DUPSPECIFIER", 27, "the ERR= specifier is given twice"},
+		{"READ (5, UNIT=6) X", "DUPSPECIFIER", 16, ""},
+		{"READ (5, *, ERR=X) Y", "SYNTAX", 23, "expected a statement label, but found the name X"},
+		{"CLOSE (STATUS='KEEP')", "SYNTAX", 27, "expected a unit (UNIT=), but found ')'"},
+		{"OPEN (1, READONLY=1)", "SYNTAX", 24, ""},
+		{"ENCODE (8, 10, B, END=20) X", "BADSPECIFIER", 25, ""},
+		{"DEFINE FILE 3(100, 10, F, N)", "SYNTAX", 30, "expected U, for an unformatted file, but found the name F"},
+		{"ASSIGN 10 I", "SYNTAX", 17, "expected TO and an integer variable, but found the name I"},
+		{"IMPLICIT REAL (Z-A)", "BADLETTERS", 22, "Z-A is not a range of letters in alphabetical order"},
+		{"IMPLICIT REAL (AB)", "SYNTAX", 22, "expected a letter, but found the name AB"},
+		{"IMPLICIT FOO (A)", "SYNTAX", 16, "expected a data type, but found the name FOO"},
+		{"EXTERNAL F, *TAN", "NOF77", 19, "the form EXTERNAL *TAN is appendix A.6's, for /NOF77, which govax doesn't have"},
+		{"INTEGER*(4) I", "SYNTAX", 15, "expected a length in bytes, but found '('"},
+		{"CHARACTER A*4(10)", "EXTRATEXT", 20, ""},
+		{"INTEGER A(10)/1, 2", "SYNTAX", 25, "expected '/', but found the end of the statement"},
+		{"DATA A/1/, B", "SYNTAX", 19, "expected '/', but found the end of the statement"},
+		{"COMMON /B, X", "SYNTAX", 16, "expected '/', but found ','"},
+		{"SAVE /B/, C(1)", "EXTRATEXT", 18, ""},
+		{"INTRINSIC /B/", "SYNTAX", 17, "expected a name, but found '/'"},
+		{"PRINT *, %FOO(X)", "SYNTAX", 17, "expected LOC, VAL, REF, or DESCR, but found the name FOO"},
+		{"GO TO (10, 20)", "SYNTAX", 21, "expected an expression, but found the end of the statement"},
+		{"IF (X) 10, 20", "SYNTAX", 20, "expected ',', but found the end of the statement"},
+		{"DO 10 WHILE X", "SYNTAX", 20, "expected '=', but found the end of the statement"},
+		{"INTEGER %FILL", "FILLNAME", 15, ""},
+		{"END MAP", "NOBLOCK", 7, "this END MAP statement ends no MAP declaration"},
+		{"UNION", "NOTINBLOCK", 7, "a UNION declaration can only be in a STRUCTURE declaration"},
+		{"OPTIONS G_FLOATING", "SYNTAX", 15, "expected '/', but found the name G_FLOATING"},
 	}
 
 	for _, c := range cases {
@@ -300,17 +462,8 @@ func TestErrors(t *testing.T) {
 			continue
 		}
 
-		switch s := u.Body[1].(type) {
-		case *ast.NotImplStmt:
-			if c.ident != "NOTIMPL" {
-				t.Errorf("%s: a NotImplStmt for %s", c.text, c.ident)
-			}
-		case *ast.BadStmt:
-			if c.ident == "NOTIMPL" {
-				t.Errorf("%s: a BadStmt for NOTIMPL", c.text)
-			}
-		default:
-			t.Errorf("%s: kept as %T", c.text, s)
+		if _, ok := u.Body[1].(*ast.BadStmt); !ok {
+			t.Errorf("%s: kept as %T", c.text, u.Body[1])
 		}
 	}
 }
@@ -344,7 +497,7 @@ func TestUnits(t *testing.T) {
 		t.Errorf("units %q, want %q", got, want)
 	}
 
-	if strings.Join(idents(ms), " ") != "NOEND NOTIMPL NOEND" {
+	if strings.Join(idents(ms), " ") != "NOEND NOEND" {
 		t.Fatalf("messages: %v", ms)
 	}
 
@@ -352,8 +505,8 @@ func TestUnits(t *testing.T) {
 		t.Errorf("first NOEND: %v", ms[0])
 	}
 
-	if ms[2].Text != "the main program LATE has no END statement" || ms[2].Pos.Line != 11 {
-		t.Errorf("second NOEND: %v", ms[2])
+	if ms[1].Text != "the main program LATE has no END statement" || ms[1].Pos.Line != 11 {
+		t.Errorf("second NOEND: %v", ms[1])
 	}
 
 	if _, ok := file.Units[0].Body[1].(*ast.EndStmt); !ok || file.Units[0].Header != nil {
@@ -361,21 +514,134 @@ func TestUnits(t *testing.T) {
 	}
 }
 
-// TestNoStatements checks the things that are in no unit: a file of
-// comments, a directive, and a label with no statement.
+// TestNoStatements checks the things that are in no unit's body: a file
+// of comments, a directive or OPTIONS between units (the next unit's
+// prologue, or the file's trailing statements), and a label with no
+// statement.
 func TestNoStatements(t *testing.T) {
 	file, ms := parseLines(t, "N.FOR", "C     nothing")
 	if len(file.Units) != 0 || len(ms) != 0 {
 		t.Errorf("a file of comments: %d units, %v", len(file.Units), ms)
 	}
 
-	file, ms = parseLines(t, "N.FOR", "CDEC$ IDENT 'X'", "   10", fixed("END"))
-	if strings.Join(idents(ms), " ") != "NOTIMPL EMPTYSTMT" || len(file.Units) != 1 || len(file.Units[0].Body) != 1 {
-		t.Errorf("a directive and an empty statement: %v %s", ms, ast.Dump(file))
+	file, ms = parseLines(t, "N.FOR", "CDEC$ IDENT 'X'", fixed("OPTIONS /G_FLOATING"), "   10", fixed("END"),
+		"CDEC$ TITLE 'T'")
+	if strings.Join(idents(ms), " ") != "EMPTYSTMT" || len(file.Units) != 1 || len(file.Units[0].Body) != 1 ||
+		len(file.Units[0].Prologue) != 2 || len(file.Trailing) != 1 {
+		t.Errorf("directives and an empty statement: %v %s", ms, ast.Dump(file))
 	}
 
-	if ms[1].Text != "statement label 10 is on no statement" || ms[1].Pos.Column != 4 {
-		t.Errorf("EMPTYSTMT: %v", ms[1])
+	if ms[0].Text != "statement label 10 is on no statement" || ms[0].Pos.Column != 4 {
+		t.Errorf("EMPTYSTMT: %v", ms[0])
+	}
+
+	// OPTIONS before a header doesn't stop the lexer finding a typed
+	// FUNCTION statement.
+	file, ms = parseLines(t, "N.FOR", fixed("OPTIONS /CHECK=(BOUNDS, NOOVERFLOW) /NOI4"), fixed("REAL FUNCTION F(X)"),
+		fixed("END"))
+	if len(ms) != 0 || len(file.Units) != 1 || file.Units[0].Kind() != ast.FunctionUnit {
+		t.Errorf("OPTIONS and a FUNCTION: %v %s", ms, ast.Dump(file))
+	}
+
+	if got := ast.DumpStmt(file.Units[0].Prologue[0]); got != "OPTIONS /CHECK=(BOUNDS, NOOVERFLOW) /NOI4" {
+		t.Errorf("OPTIONS: %s", got)
+	}
+}
+
+// TestBlocks checks structure declarations: their statements gathered
+// into them, nesting, and the messages about their ends and contents.
+func TestBlocks(t *testing.T) {
+	file, ms := parseLines(t, "B.FOR",
+		fixed("STRUCTURE /APPOINTMENT/"),
+		fixed("  RECORD /DATE/ APP_DATE"),
+		fixed("  STRUCTURE /TIME/ APP_TIME (2)"),
+		fixed("    LOGICAL*1 HOUR, MINUTE"),
+		fixed("  END STRUCTURE"),
+		fixed("  CHARACTER*20 APP_MEMO (4)"),
+		fixed("  UNION"),
+		fixed("    MAP"),
+		fixed("      INTEGER*2 WORD_0, %FILL"),
+		fixed("    END MAP"),
+		fixed("    MAP"),
+		fixed("      INTEGER*4 LONG /0/"),
+		fixed("    END MAP"),
+		fixed("  END UNION"),
+		fixed("END STRUCTURE"),
+		fixed("X = 1"),
+		fixed("END"),
+	)
+
+	want := `== main program (no PROGRAM statement)
+1           STRUCTURE /APPOINTMENT/
+2             RECORD /DATE/ APP_DATE
+3             STRUCTURE /TIME/ APP_TIME(2)
+4               LOGICAL*1 HOUR, MINUTE
+5               END STRUCTURE
+6             CHARACTER*20 APP_MEMO(4)
+7             UNION
+8               MAP
+9                 INTEGER*2 WORD_0, %FILL
+10                END MAP
+11              MAP
+12                INTEGER*4 LONG /0/
+13                END MAP
+14              END UNION
+15            END STRUCTURE
+16          X = 1
+17          END
+`
+
+	if got := ast.Dump(file); len(ms) != 0 || got != want {
+		t.Errorf("messages %v, dump:\n%s\nwant:\n%s", ms, got, want)
+	}
+
+	cases := []struct {
+		lines []string
+		want  string
+	}{
+		{[]string{"STRUCTURE /S/", "INTEGER I", "END"}, "NOBLOCKEND@1:7"},
+		{[]string{"STRUCTURE /S/", "UNION", "MAP", "END STRUCTURE", "END"}, "NOBLOCKEND@3:7 NOBLOCKEND@2:7"},
+		{[]string{"STRUCTURE /S/", "MAP", "END MAP", "END STRUCTURE", "END"}, "NOTINBLOCK@2:7"},
+		{[]string{"STRUCTURE /S/", "UNION", "INTEGER I", "END UNION", "END STRUCTURE", "END"}, "NOTINBLOCK@3:7"},
+		{[]string{"STRUCTURE /S/", "UNION", "UNION", "END UNION", "END UNION", "END STRUCTURE", "END"}, "NOTINBLOCK@3:7"},
+		{[]string{"STRUCTURE /S/", "X = 1", "END STRUCTURE", "END"}, "FIELDSTMT@2:7"},
+		{[]string{"STRUCTURE /S/", "END UNION", "END STRUCTURE", "END"}, "NOBLOCK@2:7"},
+		{[]string{"STRUCTURE /S/", "PARAMETER (N = 2)", "INTEGER A(N)", "END STRUCTURE", "END"}, ""},
+		{[]string{"MAP", "INTEGER I", "END MAP", "END"}, "NOTINBLOCK@1:7"},
+		{[]string{"STRUCTURE /S/", "INTEGER I", "SUBROUTINE T", "END"}, "NOBLOCKEND@1:7 NOEND@2:16"},
+	}
+
+	for _, c := range cases {
+		lines := make([]string, len(c.lines))
+		for i, l := range c.lines {
+			lines[i] = fixed(l)
+		}
+
+		_, ms := parseLines(t, "B.FOR", lines...)
+
+		var got []string
+		for _, m := range ms {
+			got = append(got, fmt.Sprintf("%s@%d:%d", m.Ident, m.Pos.Line, m.Pos.Column))
+		}
+
+		if g := strings.Join(got, " "); g != c.want {
+			t.Errorf("%q: got %q, want %q", c.lines, g, c.want)
+		}
+	}
+}
+
+// TestEveryKindParses checks that every kind of statement the lexer
+// knows has a parser: no statement of VAX FORTRAN is left to a "not
+// implemented" from the parser.
+func TestEveryKindParses(t *testing.T) {
+	for k := lex.Kind(0); k.String() != "unknown kind"; k++ {
+		if k == lex.Unknown || k == lex.Empty {
+			continue
+		}
+
+		if parsers[k] == nil {
+			t.Errorf("no parser for %s", k)
+		}
 	}
 }
 

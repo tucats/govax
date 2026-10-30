@@ -104,6 +104,11 @@ func TestClassify(t *testing.T) {
 		{text: "DOUBLE PRECISION D", want: "DOUBLE PRECISION: D"},
 		{text: "DIMENSION A(-1:5), B(10)", want: "DIMENSION: A ( - 1 : 5 ) , B ( 10 )"},
 		{text: "PARAMETER (N = 10)", want: "PARAMETER: ( N = 10 )"},
+		{text: "PARAMETER PI=3.14, N=2", want: "PARAMETER: PI = 3.14 , N = 2", first: true},
+		{text: "PARAMETERF(X) = X", want: "assignment: PARAMETERF ( X ) = X"},
+		{text: "CHARACTER*32 NAMES(100), SOCSEC(100)*9", want: "CHARACTER: * 32 NAMES ( 100 ) , SOCSEC ( 100 ) * 9"},
+		{text: "CHARACTER A(2)*8D1", want: "CHARACTER: A ( 2 ) * 8 D1"},
+		{text: "ASSIGN 10 TO I", want: "ASSIGN: 10 TOI"},
 		{text: "PROGRAM SQUARES", want: "PROGRAM: SQUARES", first: true},
 		{text: "SUBROUTINE CHECK(X,Y,*,*,C)", want: "SUBROUTINE: CHECK ( X , Y , * , * , C )", first: true},
 
@@ -125,7 +130,7 @@ func TestClassify(t *testing.T) {
 		{text: "STOP 98", want: "STOP: 98"},
 		{text: "CALL S(5HHELLO, 4H A B)", want: `CALL: S ( 5H"HELLO" , 4H" A B" )`},
 		{text: "DATA X/2*4HAB D/", want: `DATA: X / 2 * 4H"AB D" /`},
-		{text: "I = '17'O + '1F'X + \"17", want: "assignment: I = '17'O + '1F'X + '17'O"},
+		{text: "I = '17'O + '1F'X + \"17", want: "assignment: I = '17'O + '1F'X + \"17"},
 		{text: "READ (1'10) X", want: "READ: ( 1 ' 10 ) X"},
 		{text: "WRITE (*,*) 'X =', X", want: "WRITE: ( * , * ) 'X =' , X"},
 
@@ -313,7 +318,7 @@ func TestMessages(t *testing.T) {
 func TestDirective(t *testing.T) {
 	_, dumps, idents := lexLines(t, "CDEC$ IDENT '1.0'", fixed("END"))
 
-	want := []string{"CDEC$ directive:", "END:"}
+	want := []string{"CDEC$ directive: IDENT '1.0'", "END:"}
 	if len(idents) != 0 || !reflect.DeepEqual(dumps, want) {
 		t.Errorf("got %q %v, want %q", dumps, idents, want)
 	}
@@ -349,5 +354,48 @@ func TestFormatBody(t *testing.T) {
 
 	if got := s.Source.Text[s.Body:]; got != "(1X, F8.2)" {
 		t.Errorf("the specification is %q", got)
+	}
+}
+
+// TestOldParameter checks where PARAMETER P=1 is appendix A.4's
+// PARAMETER statement: only before the unit's first executable
+// statement, and never as a logical IF's statement.
+func TestOldParameter(t *testing.T) {
+	_, dumps, _ := lexLines(t,
+		fixed("PARAMETER N=10"),
+		fixed("IF (L) PARAMETERX = 1"),
+		fixed("PARAMETER M=2"),
+		fixed("END"),
+		fixed("PARAMETER K=3"),
+		fixed("END"),
+	)
+
+	want := []string{
+		"PARAMETER: N = 10",
+		"logical IF: ( L ) / assignment: PARAMETERX = 1",
+		"assignment: PARAMETERM = 2",
+		"END:",
+		"PARAMETER: K = 3",
+		"END:",
+	}
+
+	if !reflect.DeepEqual(dumps, want) {
+		t.Errorf("got %q, want %q", dumps, want)
+	}
+}
+
+// TestDirectiveTokens checks that a directive's text is tokenized, its
+// name first, and that DEFINE FILE is executable (appendix A.2: it is
+// executed before the I/O it describes).
+func TestDirectiveTokens(t *testing.T) {
+	_, dumps, idents := lexLines(t, "CDEC$ PSECT /COM/ NOWRT, ALIGN=2", "CDEC$ TITLE 'A B'", fixed("END"))
+
+	want := []string{"CDEC$ directive: PSECT / COM / NOWRT , ALIGN = 2", "CDEC$ directive: TITLE 'A B'", "END:"}
+	if len(idents) != 0 || !reflect.DeepEqual(dumps, want) {
+		t.Errorf("got %q %v, want %q", dumps, idents, want)
+	}
+
+	if !DefineFile.Executable() {
+		t.Error("DEFINE FILE isn't executable")
 	}
 }

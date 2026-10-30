@@ -288,9 +288,22 @@ parser (Decision 6) is **recursive descent**: a table (`parse.go`'s
 `parsers`) maps each kind to a function that reads the tokens in the
 order its statement's grammar gives them, so each function reads like
 the grammar rule it implements, and an error can say exactly what was
-expected where (`expected '=', but found ','`). A kind with no function
-is a statement the compiler knows but can't compile yet, reported by
-name: `%FORT-E-NOTIMPL, the READ statement is not implemented yet`.
+expected where (`expected '=', but found ','`). Every kind has a
+function, since Phase 76: the parser builds a node for every statement
+of VAX FORTRAN, and it is semantic analysis that reports one it can't
+compile yet, by name, where it reaches it: `%FORT-E-NOTIMPL, the READ
+statement is not implemented yet`. Keeping that judgment out of the
+parser means the grammar is finished once, and each later phase only
+gives statements their meaning.
+
+The I/O statements share one grammar, the **control list**: specifiers
+in parentheses, each `keyword=value`, except that the first (the unit)
+and the second (the format) may leave their keywords out, and a direct
+access record may follow the unit as `u'r`. One function reads every
+statement's list, with a table saying which keywords each statement
+takes and what follows each (an expression, a label, or nothing), and
+takes the unit, format, and record out into the statement's own fields,
+however they were written: `WRITE (6, 10)`, `WRITE (FMT=10, UNIT=6)`.
 
 **Expressions** are parsed by **precedence climbing** (`expr.go`): one
 function, `binary(min)`, reads an operand and then every operator that
@@ -309,7 +322,11 @@ list of program units, and each unit's statements are a **flat list**:
 the parser doesn't match IF with END IF or a DO with its terminal
 statement. Keeping block structure out of the parser keeps it a function
 per statement, and puts every rule about blocks and labels in one place,
-the next pass.
+the next pass. The one exception is the structure declaration
+(STRUCTURE ... END STRUCTURE, with UNION and MAP inside): its type
+statements declare a record's fields, not variables, so the parser puts
+them inside the declaration's node, where the next pass can't mistake
+them for declarations of the unit's names.
 
 **Errors** recover at the statement: a parsing function that finds a
 mistake reports it and panics with a private value, which the statement
