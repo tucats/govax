@@ -283,8 +283,9 @@ never had.
   the compiler's driver, messages, and first pass (source forms and
   INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
   LINK); Phase 75 (first light, every pass for a small subset) is in
-  progress: subtasks 1 to 4 (the survey and design, the lexer, the AST
-  and parser, semantic analysis) are done, the IR and lowering are next.
+  progress: subtasks 1 to 5 (the survey and design, the lexer, the AST
+  and parser, semantic analysis, the IR and lowering) are done, the code
+  generator is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1643,7 +1644,21 @@ expect adjustment as phases land):
   (no more messages), and a unit with a NOTIMPL declaration is
   `incomplete` (only `structural` messages). Golden dumps are in
   `sema/testdata`. `Compile` runs it after the parser, even after the
-  parser's errors. `ir` and `opt` come in later subtasks and phases.
+  parser's errors. `ir` is the fifth pass (Phase 75, subtask 5):
+  `Lower` turns each `sema.Unit` into a `Routine` of `Params`, `Cells`
+  (`$LOCAL`: the unit's variables, then `$Cn`/`$Sn` DO counts and steps,
+  `$Tn` temporaries pooled per statement, `$Dn` descriptor cells),
+  `Data` (`$PDATA`: `$Kn` constants and texts, `$Dn` descriptors, `$IOn`
+  control blocks, one per contents), and basic `Blocks` in layout order
+  (`Assign` and `Call` statements, each keeping its FORTRAN statement,
+  `Source()`; `Jump`, `Branch`, `Return`, `NoReturn`), over expression
+  trees (`Const`, `Load`, `Addr`, `Op`, `Cmp`) and `Mem`s (a cell,
+  datum, or dummy `Param`, an offset, an index: indexed mode). Calls
+  are taken out of expressions into temporaries; DO is a count computed
+  before the variable is set; PRINT is FTNRTL's calls with a descriptor
+  per item (`lowerstmt.go`); `arith` folds as it builds. `Check`
+  verifies a routine; golden dumps (`Dump`) are in `ir/testdata`.
+  `Compile` lowers a program without errors; `opt` is Phase 84's.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`

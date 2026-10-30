@@ -1,0 +1,96 @@
+routine NEST main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  K       L  $LOCAL+8    variable K
+  cell  M       L  $LOCAL+12   array M, 48 bytes
+  cell  L       L  $LOCAL+60   variable L
+  cell  X       F  $LOCAL+64   variable X
+  cell  $C1     L  $LOCAL+68   DO 20's count
+  cell  $C2     L  $LOCAL+72   DO 20's count
+  cell  $C3     L  $LOCAL+76   DO 30's count
+  $LOCAL is 80 bytes
+  datum $IO1    control PRINT *
+  datum $K1     text 'ODD'
+  datum $D1     descriptor T S 3 $K1
+  datum $D2     descriptor L S 4 K
+B1:
+  ; line 5
+  assign L = -1
+  ; line 6
+  assign $C1 = 3
+  assign I = 1
+  jump B2
+B2:  ; DO 20's body
+  ; line 7
+  assign $C2 = 4
+  assign J = 1
+  jump B3
+B3:  ; DO 20's body
+  ; line 8
+  assign M-16[add.L(I, mul.L(J, 3))] = add.L(I, J)
+  ; line 9
+  branch gt.L(M-16[add.L(I, mul.L(J, 3))], 5) B5 B4
+B4:
+  ; line 10
+  assign M-16[add.L(I, mul.L(J, 3))] = neg.L(M-16[add.L(I, mul.L(J, 3))])
+  ; line 11
+  jump B5
+B5: L20
+  assign J = add.L(J, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B3 B6
+B6:
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B7
+B7:
+  ; line 12
+  assign K = 0
+  ; line 13
+  branch L B8 B15
+B8:
+  ; line 14
+  assign $C3 = 5
+  assign X = 0.5
+  jump B9
+B9:  ; DO 30's body
+  ; line 15
+  branch eq.F(X, 1.5) B10 B11
+B10:
+  ; line 16
+  assign K = add.L(K, 1)
+  ; line 17
+  jump B13
+B11:
+  branch gt.F(X, 2.0) B12 B13
+B12:
+  ; line 18
+  jump B15
+B13: L30
+  ; line 20
+  assign X = add.F(X, 0.5)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B9 B14
+B14:
+  ; line 21
+  jump B15
+B15: L40
+  ; line 22
+  branch K B16 B17
+B16:
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  jump B17
+B17:
+  ; line 23
+  branch or.L(not.L(L), eq.L(K, 1)) B18 B19
+B18:
+  assign K = 3
+  jump B19
+B19:
+  ; line 24
+  assign L = and.L(K, 6)
+  ; line 25
+  return 1

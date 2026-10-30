@@ -1,0 +1,377 @@
+package ir
+
+import (
+	"strconv"
+
+	"github.com/tucats/govax/internal/fortran/sema"
+)
+
+// The FTNRTL routines lowered statements call (Decision 12 of
+// docs/PHASE-74 - FORTRAN plan.md).
+const (
+	ftnStop      = "FTN$STOP"
+	ftnPrintList = "FTN$PRINT_LIST"
+	ftnWriteList = "FTN$WRITE_LIST"
+	ftnIOItem    = "FTN$IO_ITEM"
+	ftnIOEnd     = "FTN$IO_END"
+)
+
+// stmts lowers a list of statements.
+func (l *lowerer) stmts(list []sema.Stmt) {
+	for _, s := range list {
+		l.stmt(s)
+	}
+}
+
+// stmt lowers one statement. A labeled statement starts a block, since
+// a jump may go to it; the temporaries the statement used are given
+// back after it.
+func (l *lowerer) stmt(s sema.Stmt) {
+	l.from = s.Source()
+
+	if _, ok := s.(*sema.End); ok && l.cur == nil && l.from.Base().Label == 0 {
+		// END after a RETURN, GO TO, or STOP can't be reached: the
+		// usual end of a subprogram (RETURN, END) gets one return.
+		return
+	}
+
+	if n := l.from.Base().Label; n != 0 {
+		l.startLabel(n)
+	}
+
+	switch s := s.(type) {
+	case *sema.Assign:
+		l.assign(s)
+
+	case *sema.Call:
+		l.emit(&Call{origin: l.origin(), Routine: s.Sub.Name, Args: l.args(s.Args)})
+
+	case *sema.Goto:
+		l.terminate(&Jump{l.origin(), l.labelBlock(s.Label)})
+
+	case *sema.If:
+		if s.Block {
+			l.blockIf(s)
+		} else {
+			l.logicalIf(s)
+		}
+
+	case *sema.Do:
+		l.do(s)
+
+	case *sema.Continue:
+		// Nothing to do: CONTINUE is there for its label.
+
+	case *sema.Stop:
+		l.stop(s)
+
+	case *sema.Return, *sema.End:
+		l.terminate(&Return{origin: l.origin(), Value: l.returnValue()})
+
+	case *sema.Print:
+		l.print(s)
+	}
+
+	l.release()
+}
+
+// returnValue is what the routine returns in R0: a function's value, the
+// last one assigned to its name; SS$_NORMAL (1) from a main program, for
+// the image's exit status; nothing from a subroutine.
+func (l *lowerer) returnValue() Expr {
+	switch l.r.Kind {
+	case Function:
+		return &Load{l.symbolMem(l.unit.Result)}
+	case Main:
+		return LongConst(1)
+	}
+
+	return nil
+}
+
+// assign lowers Target = Value. J = F(X), a function's value stored as
+// it is, has the call put the value straight into J.
+func (l *lowerer) assign(s *sema.Assign) {
+	dst := l.mem(s.Target)
+
+	if f, ok := s.Value.(*sema.FuncRef); ok {
+		l.callFunction(f, dst)
+
+		return
+	}
+
+	l.emit(&Assign{l.origin(), dst, l.expr(s.Value)})
+}
+
+// blockIf lowers an IF THEN ... END IF construct: each arm's condition
+// branches to its block or to the next arm's test; each block ends by
+// jumping past the construct, to the block where END IF is (a jump to
+// END IF's label goes there too).
+//
+//	B1: branch cond1 B2 B3
+//	B2: (the IF block)       jump B5
+//	B3: branch cond2 B4 B5
+//	B4: (the ELSE IF block)  jump B5
+//	B5: (after END IF)
+func (l *lowerer) blockIf(s *sema.If) {
+	var join *Block
+
+	if s.EndIf != nil && s.EndIf.Base().Label != 0 {
+		join = l.labelBlock(s.EndIf.Base().Label)
+	} else {
+		join = l.newBlock()
+	}
+
+	for i, arm := range s.Arms {
+		l.from = arm.AST
+
+		then := l.newBlock()
+
+		next := join
+		if i < len(s.Arms)-1 || s.Else != nil {
+			next = l.newBlock()
+		}
+
+		l.branch(l.expr(arm.Cond), then, next)
+		l.release()
+
+		l.begin(then)
+		l.stmts(arm.Body)
+
+		// The jump past the construct is written with the statement
+		// that ends the block: the next ELSE IF, the ELSE, or END IF.
+		switch {
+		case i < len(s.Arms)-1:
+			l.from = s.Arms[i+1].AST
+		case s.Else != nil:
+			l.from = s.Else.AST
+		default:
+			l.from = s.EndIf
+		}
+
+		if next != join {
+			l.jump(join)
+			l.begin(next)
+		}
+	}
+
+	if s.Else != nil {
+		l.stmts(s.Else.Body)
+	}
+
+	l.from = s.EndIf
+	l.begin(join)
+}
+
+// logicalIf lowers IF (e) st: a branch around st, or for IF (e) GO TO n
+// a branch to n.
+func (l *lowerer) logicalIf(s *sema.If) {
+	arm := s.Arms[0]
+	cond := l.expr(arm.Cond)
+	next := l.newBlock()
+
+	if len(arm.Body) == 1 {
+		if g, ok := arm.Body[0].(*sema.Goto); ok {
+			l.branch(cond, l.labelBlock(g.Label), next)
+			l.begin(next)
+
+			return
+		}
+	}
+
+	then := l.newBlock()
+	l.branch(cond, then, next)
+	l.begin(then)
+	l.stmts(arm.Body)
+	l.from = s.AST
+	l.begin(next)
+}
+
+// do lowers a DO loop (section 5.3.1.1). The parameters are evaluated
+// first, then the iteration count, (e2 - e1 + e3)/e3 truncated to an
+// integer, then the variable is set to e1: in that order, so that a
+// parameter that uses the variable sees its value before the loop. A
+// count of zero or less skips the body. After each pass through the
+// body the variable is stepped and the count decreased, and the loop
+// goes round again while the count is above zero. The count and the
+// step are computed once, so nothing the body does changes how many
+// times it runs.
+//
+//	  assign $C1 = <count>
+//	  assign I = <e1>
+//	  branch le.L($C1, 0) B3 B2      (not when the count is a constant)
+//	B2: (the body, ending with the terminal statement)
+//	  assign I = add.L(I, <e3>)
+//	  assign $C1 = sub.L($C1, 1)
+//	  branch gt.L($C1, 0) B2 B3
+//	B3: (after the loop)
+func (l *lowerer) do(d *sema.Do) {
+	l.loops++
+	n := l.loops
+
+	t := typeOf(d.Var.Type)
+	v := l.symbolMem(d.Var)
+
+	start := l.expr(d.Start)
+	limit := l.expr(d.Limit)
+	step := l.expr(d.Step)
+
+	if _, ok := step.(*Const); !ok {
+		s := l.loopCell(StepCell, n, t, d.Label)
+		l.emit(&Assign{l.origin(), s, step})
+		step = &Load{s}
+	}
+
+	count := l.loopCell(CountCell, n, Long, d.Label)
+	trips := tripCount(t, start, limit, step)
+
+	l.emit(&Assign{l.origin(), count, trips})
+	l.emit(&Assign{l.origin(), v, start})
+	l.release()
+
+	body := l.newBlock()
+	body.Note = "DO " + strconv.Itoa(d.Label) + "'s body"
+	exit := l.newBlock()
+
+	switch c, ok := trips.(*Const); {
+	case !ok:
+		l.branch(&Cmp{Le, &Load{count}, LongConst(0)}, exit, body)
+	case c.Int() <= 0:
+		l.jump(exit)
+	}
+
+	l.begin(body)
+	l.stmts(d.Body)
+
+	// The step is the terminal statement's code, after its own.
+	if label := l.unit.Labels[d.Label]; label != nil {
+		l.from = label.Stmt
+	}
+
+	l.emit(&Assign{l.origin(), v, arith(Add, t, &Load{v}, step)})
+	l.emit(&Assign{l.origin(), count, arith(Sub, Long, &Load{count}, LongConst(1))})
+	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, body, exit)
+	l.begin(exit)
+}
+
+// tripCount is a DO loop's iteration count, a Long: (e2 - e1 + e3)/e3,
+// computed in the loop variable's type t; a REAL count is converted by
+// truncation, as CVTFL does. With a step of 1 or -1 the division goes,
+// and constant parameters make a constant count.
+func tripCount(t Type, e1, e2, e3 Expr) Expr {
+	if t == Long {
+		if c, ok := e3.(*Const); ok {
+			switch c.Int() {
+			case 1:
+				return arith(Add, Long, arith(Sub, Long, e2, e1), LongConst(1))
+			case -1:
+				return arith(Add, Long, arith(Sub, Long, e1, e2), LongConst(1))
+			}
+		}
+
+		return arith(Div, Long, arith(Add, Long, arith(Sub, Long, e2, e1), e3), e3)
+	}
+
+	return arith(Cvt, Long, arith(Div, t, arith(Add, t, arith(Sub, t, e2, e1), e3), e3), nil)
+}
+
+// stop lowers STOP: a call of FTN$STOP, with the display's descriptor if
+// there is one, from which nothing returns.
+func (l *lowerer) stop(s *sema.Stop) {
+	var args []Arg
+
+	if s.HasDisplay {
+		args = []Arg{{Ref: l.textDescriptor(s.Display)}}
+	}
+
+	l.emit(&Call{origin: l.origin(), Routine: ftnStop, Args: args})
+	l.terminate(&NoReturn{l.origin()})
+}
+
+// print lowers PRINT * and WRITE (*,*) to Decision 12's calls: the
+// statement's begin call with its control block, a call of FTN$IO_ITEM
+// with each item's descriptor, and FTN$IO_END, which writes the record.
+func (l *lowerer) print(s *sema.Print) {
+	routine := ftnPrintList
+	if s.Write {
+		routine = ftnWriteList
+	}
+
+	icb := l.control(Control{Write: s.Write, Unit: DefaultUnit})
+	l.emit(&Call{origin: l.origin(), Routine: routine, Args: []Arg{{Ref: icb}}})
+
+	for _, item := range s.Items {
+		desc := l.item(item)
+		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: desc}}})
+	}
+
+	l.emit(&Call{origin: l.origin(), Routine: ftnIOEnd})
+}
+
+// item is the descriptor of an output list item. A variable, an array
+// element, or a whole array is described where it is; a character
+// constant by its text; a numeric constant by a datum holding it; any
+// other value is computed into a temporary, which is described.
+func (l *lowerer) item(e sema.Expr) *Mem {
+	t := e.Type()
+	d := &Descriptor{DType: dtypeOf(t), Class: ClassS, Length: t.Size}
+
+	switch e := e.(type) {
+	case *sema.Const:
+		if t.Kind == sema.Character {
+			return l.textDescriptor(e.Text)
+		}
+
+		return l.describe(d, l.constant(constOf(e)))
+
+	case *sema.Var, *sema.Elem:
+		return l.describe(d, l.mem(e))
+
+	case *sema.ArrayRef:
+		d.Class = ClassA
+
+		for _, dim := range e.Sym.Dims {
+			d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper})
+		}
+
+		return l.describe(d, l.symbolMem(e.Sym))
+	}
+
+	return l.describe(d, l.value(l.expr(e)))
+}
+
+// textDescriptor is the descriptor of a character constant.
+func (l *lowerer) textDescriptor(s string) *Mem {
+	return l.describe(&Descriptor{DType: DTypeT, Class: ClassS, Length: len(s)}, l.text(s))
+}
+
+// describe is a descriptor d of the place m. If the linker knows m's
+// address, the descriptor is a datum; otherwise it is a descriptor
+// cell, into which the statement stores m's address (and, for an array,
+// A0: the address of the element whose subscripts are all zero, which
+// is m's less the offset of the first element from it).
+func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
+	if m.Param == nil && m.Index == nil {
+		d.Target = m
+
+		return l.descriptor(d)
+	}
+
+	c := l.descriptorCell(d)
+	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{m}})
+
+	if d.Class == ClassA {
+		first, multiplier := 0, 1
+
+		for _, b := range d.Dims {
+			first += b.Lower * multiplier
+			multiplier *= b.Upper - b.Lower + 1
+		}
+
+		a0 := *m
+		a0.Offset -= first * d.Length
+		l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: A0Offset, T: Long}, &Addr{&a0}})
+	}
+
+	return &Mem{Cell: c, T: Long}
+}

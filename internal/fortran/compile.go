@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/ir"
 	"github.com/tucats/govax/internal/fortran/lex"
 	"github.com/tucats/govax/internal/fortran/parse"
 	"github.com/tucats/govax/internal/fortran/sema"
@@ -102,11 +103,16 @@ func Compile(opts Options, file File) Result {
 	// tokens, then the syntax tree, then its meaning. Semantic analysis
 	// runs even after the parser's errors, since the tree keeps a
 	// statement with an error (and its label) in its place, so that one
-	// compilation reports as much as it can. Nothing uses its result yet
-	// (the IR is Phase 75's subtask 5), but its messages are reported.
+	// compilation reports as much as it can. Then, for a program with no
+	// errors, the fifth: lowering each unit to the IR, which the code
+	// generator (Phase 75's subtask 6) will read; nothing reads it yet.
 	if !messages.Failed() {
 		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		sema.Analyze(tree, MainName(file.Name), &messages)
+		prog := sema.Analyze(tree, MainName(file.Name), &messages)
+
+		if !messages.Failed() {
+			_ = ir.Lower(prog)
+		}
 	}
 
 	writeHeader(&w, opts, file, module)

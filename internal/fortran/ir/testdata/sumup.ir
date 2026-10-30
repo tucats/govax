@@ -1,0 +1,23 @@
+routine SUMUP subroutine
+  param T       L  argument 1
+  param N       L  argument 2
+  param S       F  argument 3
+  cell  K       L  $LOCAL+0    variable K
+  cell  $C1     L  $LOCAL+4    DO 100's count
+  $LOCAL is 8 bytes
+B1:
+  ; line 3
+  assign @S = 0.0
+  ; line 4
+  assign $C1 = @N
+  assign K = 1
+  branch le.L($C1, 0) B3 B2
+B2: L100  ; DO 100's body
+  ; line 5
+  assign @S = add.F(@S, cvt.LF(@T-4[K]))
+  assign K = add.L(K, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 6
+  return

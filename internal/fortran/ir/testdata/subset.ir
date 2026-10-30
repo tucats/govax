@@ -1,0 +1,151 @@
+routine SUBSET main
+  cell  I       L  $LOCAL+0    variable I
+  cell  N       L  $LOCAL+4    variable N
+  cell  TABLE   L  $LOCAL+8    array TABLE, 40 bytes
+  cell  X       F  $LOCAL+48   variable X
+  cell  Y       F  $LOCAL+52   variable Y
+  cell  DONE    L  $LOCAL+56   variable DONE
+  cell  V       F  $LOCAL+60   array V, 40 bytes
+  cell  $C1     L  $LOCAL+100  DO 10's count
+  $LOCAL is 104 bytes
+  datum $IO1    control PRINT *
+  datum $K1     text 'BIG'
+  datum $D1     descriptor T S 3 $K1
+  datum $D2     descriptor F S 4 Y
+  datum $IO2    control WRITE (*,*)
+  datum $K2     text 'MEDIUM'
+  datum $D3     descriptor T S 6 $K2
+  datum $K3     text 'SMALL'
+  datum $D4     descriptor T S 5 $K3
+  datum $D5     descriptor LU S 4 DONE
+  datum $D6     descriptor F A 4 (0:9) V
+  datum $K4     text 'WRONG COUNT'
+  datum $D7     descriptor T S 11 $K4
+B1:
+  ; line 7
+  assign N = 10
+  ; line 8
+  assign DONE = 0
+  ; line 10
+  assign $C1 = N
+  assign I = 1
+  branch le.L($C1, 0) B4 B2
+B2:  ; DO 10's body
+  ; line 11
+  assign TABLE-4[I] = add.L(sub.L(mul.L(I, I), mul.L(2, I)), 1)
+  ; line 12
+  assign V-4[I] = div.F(cvt.LF(I), 2.0)
+  ; line 13
+  jump B3
+B3: L10
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B4
+B4:
+  ; line 14
+  call SUMUP(ref TABLE, ref N, ref X)
+  ; line 15
+  call AVG(ref TABLE, ref N) -> Y
+  ; line 16
+  branch and.L(gt.F(Y, 100.0), not.L(DONE)) B5 B6
+B5:
+  ; line 17
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 18
+  jump B9
+B6:
+  branch gt.F(Y, 10.0) B7 B8
+B7:
+  ; line 19
+  call FTN$WRITE_LIST(ref $IO2)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 20
+  jump B9
+B8:
+  ; line 21
+  call FTN$WRITE_LIST(ref $IO2)
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_ITEM(ref $D6)
+  call FTN$IO_END()
+  ; line 22
+  jump B9
+B9:
+  ; line 23
+  assign I = 0
+  ; line 24
+  jump B10
+B10: L20
+  assign I = add.L(I, 1)
+  ; line 25
+  branch lt.L(I, 3) B10 B11
+B11:
+  ; line 26
+  branch ne.L(I, 3) B12 B13
+B12:
+  call FTN$STOP(ref $D7)
+  noreturn
+B13:
+  ; line 27
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_END()
+  ; line 28
+  call FTN$STOP()
+  noreturn
+routine SUMUP subroutine
+  param T       L  argument 1
+  param N       L  argument 2
+  param S       F  argument 3
+  cell  K       L  $LOCAL+0    variable K
+  cell  $C1     L  $LOCAL+4    DO 100's count
+  $LOCAL is 8 bytes
+B1:
+  ; line 33
+  assign @S = 0.0
+  ; line 34
+  assign $C1 = @N
+  assign K = @N
+  branch le.L($C1, 0) B3 B2
+B2: L100  ; DO 100's body
+  ; line 35
+  assign @S = add.F(@S, cvt.LF(@T-4[K]))
+  assign K = sub.L(K, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 36
+  return
+routine AVG function F
+  param T       L  argument 1
+  param N       L  argument 2
+  cell  AVG     F  $LOCAL+0    result AVG
+  cell  J       L  $LOCAL+4    variable J
+  cell  $C1     L  $LOCAL+8    DO 200's count
+  $LOCAL is 12 bytes
+B1:
+  ; line 41
+  assign AVG = 0.0
+  ; line 42
+  assign $C1 = @N
+  assign J = 1
+  branch le.L($C1, 0) B4 B2
+B2:  ; DO 200's body
+  ; line 43
+  assign AVG = add.F(AVG, cvt.LF(@T-4[J]))
+  ; line 44
+  jump B3
+B3: L200
+  assign J = add.L(J, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B4
+B4:
+  ; line 45
+  assign AVG = div.F(AVG, cvt.LF(@N))
+  ; line 46
+  return AVG

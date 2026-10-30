@@ -1112,3 +1112,61 @@ To go into the progress log as each is built, and into MANUAL.md's
     example, and `errors`, recovery from syntax errors); `-update`
     rewrites the `.sema` files. The driver's `TestCompileParseErrors`
     now sees sema's UNDEFLBL after the parser's errors.
+- **2026-10-30:** Subtask 5 done: the IR and lowering
+  (`internal/fortran/ir`).
+  - `Lower(prog)` turns each `sema.Unit` into a `Routine`: `Params`,
+    `Cells` (the unit's variables, arrays, and result at sema's offsets,
+    then the compiler's: `$Cn` counts, `$Sn` steps, `$Tn` temporaries,
+    `$Dn` descriptor cells), `LocalSize`, `Data` (`$Kn` constants and
+    texts, `$Dn` descriptors, `$IOn` control blocks, each made once per
+    contents), and `Blocks` in layout order. Statements are `Assign` and
+    `Call` (its value to `Result`, a `Mem`); terminators `Jump`,
+    `Branch` (on bit 0 of its condition), `Return`, `NoReturn`;
+    expressions `Const` (the value's memory image), `Load`, `Addr`, `Op`
+    (add, sub, mul, div, neg, and, or, not, cvt), `Cmp`. A `Mem` is a
+    cell, datum, or dummy argument (`Param`) with an offset and an
+    optional index, the VAX's indexed mode. The machine types are `Long`
+    (INTEGER and LOGICAL) and `Float`.
+  - `Dump` is the golden tests' form (Part B's, with a `; line n` line
+    where the FORTRAN statement changes); `Check` verifies a routine's
+    structure (terminators, targets, places, operand types), run on every
+    routine the tests lower.
+  - Additions to the design: every IR statement and terminator keeps the
+    FORTRAN statement it came from (`Source()`), in place of a block's
+    `Lines`, so the code generator can write each source line before its
+    own statement's code; a DO loop's step is a `$Sn` cell when it isn't
+    a constant; `Addr` and descriptor cells, for an item whose address
+    isn't known until run time (a dummy argument, an element with a
+    subscript that isn't constant, a dummy array, whose A0 is stored
+    too), the descriptor's address fields stored by `Assign`s at
+    `PointerOffset` and `A0Offset`; a call's `Result` is a `Mem`, so `J
+    = F(X)` and `A(I) = F(X)` both store straight into the target.
+  - Lowering's rules: a DO's parameters, then its count, then its
+    variable, in 5.3.1.1's order (the design's dump set the variable
+    first); the count folded when the parameters are constants, a
+    constant count above zero dropping the test and one of zero or less
+    jumping past the body; `IF (e) GO TO n` a branch to n; a labeled
+    statement starting a block, or naming the block just begun if nothing
+    is in it yet (a DO's body, an IF block, END IF's join); END after
+    RETURN, GO TO, or STOP without a label dropped; a constant condition
+    a jump. `arith` folds as it builds: Long operations in 32 bits,
+    wrapping as the VAX does, Float ones with vaxfloat, a Long sum's
+    constants collected into one (`DO 10 I = 1, N` counts `N`,
+    `V(I-1)` with `V(0:9)` is `V-4[I]`), adding 0 and multiplying by 1
+    dropped. An operation that would overflow, divide by zero, or
+    convert out of range is left for run time.
+  - Temporaries come from a pool per type, given back at each
+    statement's end (and after an IF's condition), so a routine has as
+    many as its busiest statement needs; descriptor cells likewise, by
+    shape. An argument that is a function's value passes its temporary
+    itself.
+  - `Compile` lowers a program with no errors; nothing reads the IR yet
+    (the code generator is subtask 6). No new messages.
+  - Tests: `TestGolden` over `ir/testdata` (`squares`, `sumup`, the
+    package doc's example, `subset` and `nesting` from sema's testdata,
+    `calls` with function values, every kind of argument and output item,
+    a REAL loop, a variable step, a zero-trip loop, STOP), `-update`
+    rewriting the `.ir` files; `TestExpressions` (23 assignments:
+    conversions, folding, elements' offsets and indexes in one and two
+    dimensions), `TestFolding`, `TestTripCounts`, `TestLabelsTakeBlocks`,
+    `TestTemporaries`, `TestCheck`.

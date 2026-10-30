@@ -1,0 +1,204 @@
+routine CALLS main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  K       L  $LOCAL+8    variable K
+  cell  M       L  $LOCAL+12   array M, 24 bytes
+  cell  X       F  $LOCAL+36   variable X
+  cell  Y       F  $LOCAL+40   variable Y
+  cell  OK      L  $LOCAL+44   variable OK
+  cell  $T1     L  $LOCAL+48   temporary
+  cell  $T2     L  $LOCAL+52   temporary
+  cell  $T3     L  $LOCAL+56   temporary
+  cell  $D6     L  $LOCAL+60   descriptor L S 4
+  cell  $C1     L  $LOCAL+68   DO 10's count
+  cell  $S2     L  $LOCAL+72   DO 20's step
+  cell  $C2     L  $LOCAL+76   DO 20's count
+  cell  $C3     L  $LOCAL+80   DO 40's count
+  $LOCAL is 84 bytes
+  datum $K1     L 2
+  datum $K2     L 5
+  datum $K3     L 6
+  datum $IO1    control PRINT *
+  datum $K4     text 'M(1,1) IS'
+  datum $D1     descriptor T S 9 $K4
+  datum $D2     descriptor L S 4 M
+  datum $K5     F 1.5
+  datum $D3     descriptor F S 4 $K5
+  datum $D4     descriptor LU S 4 OK
+  datum $K6     L -1
+  datum $D5     descriptor LU S 4 $K6
+  datum $K7     L 4
+  datum $D7     descriptor L S 4 $T1
+  datum $K8     text '99'
+  datum $D8     descriptor T S 2 $K8
+  datum $K9     L 1
+  datum $K10    L 3
+B1:
+  ; line 6
+  assign I = 3
+  ; line 9
+  call ISQ(ref I) -> J
+  ; line 10
+  assign $T2 = add.L(I, 1)
+  call ISQ(ref $T2) -> $T1
+  assign X = cvt.LF($T1)
+  ; line 11
+  call ISQ(ref $K1) -> $T1
+  call ISQ(ref $T1) -> $T2
+  call ISQ(ref J) -> $T3
+  assign K = add.L($T2, $T3)
+  ; line 13
+  assign $T3 = mul.L(I, 2)
+  assign $T1 = J
+  call SHOW(ref $K2, ref $T3, ref $T1, val 0, ref M-12[mul.L(K, 2)])
+  ; line 14
+  call FILL(ref M, ref $K3)
+  ; line 15
+  call TOTAL(ref M, ref $K3) -> Y
+  ; line 16
+  assign M = add.L(M+20, M-12[add.L(I, mul.L(J, 2))])
+  ; line 18
+  assign OK = or.L(gt.F(Y, 10.0), eq.L(I, 0))
+  ; line 19
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_ITEM(ref $D5)
+  assign $D6+4 = addr(M+4[I])
+  call FTN$IO_ITEM(ref $D6)
+  call ISQ(ref $K7) -> $T1
+  call FTN$IO_ITEM(ref $D7)
+  call FTN$IO_END()
+  ; line 21
+  assign $C1 = 5
+  assign X = 1.0
+  jump B2
+B2: L10  ; DO 10's body
+  ; line 22
+  assign X = add.F(X, 0.25)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 23
+  assign $S2 = sub.L(J, 1)
+  assign $C2 = div.L(add.L(sub.L(K, J), $S2), $S2)
+  assign I = J
+  branch le.L($C2, 0) B6 B4
+B4:  ; DO 20's body
+  ; line 24
+  branch gt.L(I, 10) B7 B5
+B5: L20
+  ; line 25
+  assign I = add.L(I, $S2)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B4 B6
+B6:
+  ; line 26
+  jump B7
+B7: L30
+  assign $C3 = -3
+  assign I = 5
+  jump B9
+B8: L40  ; DO 40's body
+  ; line 27
+  assign I = add.L(I, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B8 B9
+B9:
+  ; line 28
+  branch not.L(OK) B10 B11
+B10:
+  call FTN$STOP(ref $D8)
+  noreturn
+B11:
+  ; line 29
+  branch OK B12 B13
+B12:
+  call SHOW(ref $K9, ref $K1, ref $K10, ref $K7, ref $K2)
+  jump B13
+B13:
+  ; line 30
+  return 1
+routine ISQ function L
+  param N       L  argument 1
+  cell  ISQ     L  $LOCAL+0    result ISQ
+  $LOCAL is 4 bytes
+B1:
+  ; line 33
+  assign ISQ = mul.L(@N, @N)
+  ; line 34
+  return ISQ
+routine FILL subroutine
+  param A       L  argument 1
+  param N       L  argument 2
+  cell  I       L  $LOCAL+0    variable I
+  cell  $C1     L  $LOCAL+4    DO 10's count
+  cell  $D1     L  $LOCAL+8    descriptor L S 4
+  cell  $D2     L  $LOCAL+16   descriptor L S 4
+  cell  $D3     L  $LOCAL+24   descriptor L A 4 (1:6)
+  $LOCAL is 56 bytes
+  datum $IO1    control PRINT *
+B1:
+  ; line 38
+  assign $C1 = @N
+  assign I = 1
+  branch le.L($C1, 0) B4 B2
+B2:  ; DO 10's body
+  ; line 39
+  assign @A-4[I] = I
+  ; line 40
+  jump B3
+B3: L10
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B4
+B4:
+  ; line 41
+  call FTN$PRINT_LIST(ref $IO1)
+  assign $D1+4 = addr(@N)
+  call FTN$IO_ITEM(ref $D1)
+  assign $D2+4 = addr(@A-4[@N])
+  call FTN$IO_ITEM(ref $D2)
+  assign $D3+4 = addr(@A)
+  assign $D3+16 = addr(@A-4)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 42
+  return
+routine SHOW subroutine
+  param A       L  argument 1
+  param B       L  argument 2
+  param C       L  argument 3
+  param D       L  argument 4
+  param E       L  argument 5
+  cell  $D1     L  $LOCAL+0    descriptor L S 4
+  cell  $D2     L  $LOCAL+8    descriptor L S 4
+  cell  $D3     L  $LOCAL+16   descriptor L S 4
+  cell  $D4     L  $LOCAL+24   descriptor L S 4
+  cell  $D5     L  $LOCAL+32   descriptor L S 4
+  $LOCAL is 40 bytes
+  datum $IO1    control WRITE (*,*)
+B1:
+  ; line 46
+  call FTN$WRITE_LIST(ref $IO1)
+  assign $D1+4 = addr(@A)
+  call FTN$IO_ITEM(ref $D1)
+  assign $D2+4 = addr(@B)
+  call FTN$IO_ITEM(ref $D2)
+  assign $D3+4 = addr(@C)
+  call FTN$IO_ITEM(ref $D3)
+  assign $D4+4 = addr(@D)
+  call FTN$IO_ITEM(ref $D4)
+  assign $D5+4 = addr(@E)
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_END()
+  ; line 47
+  branch lt.L(@A, 0) B2 B3
+B2:
+  return
+B3:
+  ; line 48
+  call FTN$STOP()
+  noreturn
