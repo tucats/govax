@@ -282,11 +282,11 @@ never had.
   `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`; `govax fortran`),
   the compiler's driver, messages, and first pass (source forms and
   INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
-  LINK); Phase 75 (first light, every pass for a small subset) is in
-  progress: subtasks 1 to 7 (the survey and design, the lexer, the AST
-  and parser, semantic analysis, the IR and lowering, the code
-  generator, FTNRTL's list-directed output, the end-to-end harness,
-  `testdata/fortran`) are done, the close-out is next.
+  LINK); Phase 75 (done 2026-10-30) is first light, every pass for a
+  small subset: the lexer, the AST and parser, semantic analysis, the
+  IR and lowering, the code generator, FTNRTL's list-directed output,
+  and the end-to-end harness (`testdata/fortran`); FORTRAN-INTERNALS.md
+  follows one program through every pass.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

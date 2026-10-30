@@ -1,7 +1,6 @@
 # Phase 75 — FORTRAN first light: every pass, end to end
 
-**Status:** in progress: subtasks 1 to 8 done (2026-10-30); the
-close-out (subtask 9) is next. Subtask 1, the survey (Part
+**Status:** done (2026-10-30): all nine subtasks. Subtask 1, the survey (Part
 A) and the design (Part B), was written 2026-10-30 and accepted by the
 author the same day, with its four corrections to the plan. Needs Phase 74 (the
 FORTRAN command, source forms, FTNRTL's pipeline). Part of the FORTRAN
@@ -1326,3 +1325,36 @@ To go into the progress log as each is built, and into MANUAL.md's
   - The repository's `.gitignore` ignores `*.out`; the directory's own
     `.gitignore` takes the rule back, so a new program's expected output
     can't be left out by accident.
+- **2026-10-30:** Subtask 9 done: the close-out, and the phase.
+  - `docs/FORTRAN-INTERNALS.md` follows one program, AVERAGE (a main
+    program filling an array, a REAL function given it), through every
+    pass, with each pass's own dump: section 1 the pipeline and the
+    program, 2 the driver (which passes run after which errors, the
+    module's name), then new chapters on lexing (5: why FORTRAN's lexer
+    squeezes and classifies before tokenizing), the syntax tree and
+    parsing (6: recursive descent by kind, precedence climbing, a flat
+    list of statements, recovery at the statement), semantic analysis
+    (7: two walks, classes from use, explicit conversions, folding with
+    vaxfloat, the block stack and label rules, storage, the checks
+    between units, with AVERAGE's FUNCTYPE when MEAN is left
+    undeclared), the IR and lowering (8: blocks over trees and why,
+    cells and data, DO counts, elements as addresses, PRINT as calls),
+    and code generation (9: operands in place, Sethi–Ullman registers,
+    places, constants, branches around BRW, MEAN's code; the old MACRO
+    file section is its "Writing the file"); FTNRTL (now 10) gains "List-
+    directed output", and 11 is how the compiler is tested.
+  - MANUAL.md: chapter 14's status is the phase's end; new sections 14.1
+    (AVERAGE compiled and run, and its FUNCTYPE mistake, both run on
+    govax) and 14.2 (what the compiler accepts so far), the others
+    renumbered 14.3 to 14.7; 6.5's FORTRAN entry no longer says the
+    compiler generates no code, and its NOTIMPL example has the
+    parser's wording ("the ENCODE statement is not implemented yet").
+    HELP FORTRAN: the example run, the checks between units, FTNRTL's
+    list-directed output, the same NOTIMPL wording. PLAN.md's index has
+    the phase done.
+  - `testdata/fortran/average.for` is the manual's program, so the
+    harness checks its example.
+  - Left for later phases, as planned: the rest of the language (Phase
+    76 on), the optimizer's shorter branches and loop instructions
+    (Phase 84), and every choice in "Choices of ours, unconfirmed"
+    above, which only a VAX FORTRAN could settle.

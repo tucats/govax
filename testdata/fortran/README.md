@@ -17,6 +17,7 @@ to check against. To add a program, add both files; this directory's
 
 | Program | What it exercises |
 | ------- | ----------------- |
+| `average.for` | The manual's first program (14.1) and the internals tour's: a REAL function given an array, a function reference in a PRINT list |
 | `squares.for` | A main program with no PROGRAM statement (`SQUARES$MAIN`), DO, PRINT of a text and integers |
 | `factorials.for` | INTEGER and REAL arithmetic, REAL output in G's F and E forms, mixed-mode conversions, truncating division, WRITE (\*,\*) |
 | `primes.for` | Nested DO, logical IF, GO TO out of a loop, a labeled block IF, a whole array printed, a LOGICAL expression printed |

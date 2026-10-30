@@ -1290,12 +1290,12 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
 source files, which MACRO assembles and LINK links. govax's FORTRAN
 compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
-plan.md`): so far it reads the source's lines into statements, checking
-their layout (labels, continuation lines, fixed-format and tab-format
-columns) and reading INCLUDE files, and copies the lines into the MACRO
-file as comments, each with its number (an included line with its
-include depth first). It generates no code yet, so MACRO assembles the
-file into an empty module. Sources and the MACRO file follow MACRO's
+plan.md`); so far it compiles a first subset of the language (main
+programs, subroutines, and functions; INTEGER, REAL, and LOGICAL
+variables and arrays; expressions; IF, DO, GO TO, CALL, RETURN, STOP;
+`PRINT *` and `WRITE (*,*)`), and reports any other statement as not
+implemented yet. The MACRO file holds every source line as a comment,
+with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
 `/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
@@ -1307,7 +1307,7 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, ENCODE is not implemented yet
+%FORT-E-NOTIMPL, the ENCODE statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
         ENCODE (8, 10, BUF) X
   ------^
@@ -4343,30 +4343,94 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 75, in progress):** the compiler reads a
-source's lines into statements, checks their layout, and reads INCLUDE
-files; it lexes and parses each statement, reporting syntax errors and
-any statement outside what it can compile so far (`%FORT-E-NOTIMPL`,
-naming the statement: "the READ statement is not implemented yet"); and
-it checks each program unit's meaning: declarations and types, IF
-blocks and DO loops, statement labels and jumps, and calls between the
-file's units. For the statements of Phase 75's subset (main programs,
-subroutines, and INTEGER, REAL, and LOGICAL functions; INTEGER, REAL,
-and LOGICAL scalars and arrays; assignment and arithmetic, relational,
-and logical expressions; IF, block IF, DO, GO TO, CALL, RETURN, STOP;
-`PRINT *` and `WRITE (*,*)`) it generates code: the MACRO file assembles
-into a module that links and runs, and FTNRTL has the list-directed
-output those `PRINT` and `WRITE` statements call, so such a program
-runs and prints.
+**Where things stand (Phase 75, done 2026-10-30):** every pass of the
+compiler is in place for a first subset of the language (section 14.2),
+and programs written in it compile, link, and run. Any other statement
+draws `%FORT-E-NOTIMPL`, naming it ("the READ statement is not
+implemented yet"); the later phases widen the language.
+`docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
-### 14.1 The FORTRAN command
+### 14.1 A first program
+
+This program fills an array and prints the mean of its values, which a
+function computes:
+
+```text
+      PROGRAM AVERAGE
+      REAL V(4), MEAN
+      DO 10 I = 1, 4
+   10 V(I) = I * 1.5
+      PRINT *, 'Mean:', MEAN(V, 4)
+      END
+C
+      REAL FUNCTION MEAN(A, N)
+      REAL A(*)
+      MEAN = 0
+      DO 10 I = 1, N
+   10 MEAN = MEAN + A(I)
+      MEAN = MEAN / N
+      END
+```
+
+Compiled, assembled, linked, and run (FORTRAN, MACRO, and LINK say
+nothing when all is well):
+
+```text
+VAX> FORTRAN AVERAGE
+VAX> MACRO AVERAGE
+VAX> LINK AVERAGE
+VAX> RUN AVERAGE
+Mean:   3.750000
+```
+
+The compiler checks the units of one file against each other. Without
+`MEAN` in the main program's REAL statement, its first letter would make
+it an INTEGER function there:
+
+```text
+VAX> FORTRAN AVERAGE
+%FORT-E-FUNCTYPE, the function MEAN is REAL (line 8), but is used here as INTEGER
+  at line 5 of DUA0:[WORK]AVERAGE.FOR;1
+        PRINT *, 'Mean:', MEAN(V, 4)
+  ------------------------^
+%DCL-E-FORERRORS, 1 error(s) compiling DUA0:[WORK]AVERAGE.FOR;1; no MACRO file written
+```
+
+More programs are in govax's `testdata/fortran` directory, each with the
+output it prints.
+
+### 14.2 What the compiler accepts so far
+
+- **Program units:** a main program, with or without a PROGRAM statement;
+  SUBROUTINE; FUNCTION, typed INTEGER, REAL, or LOGICAL, or by its
+  name's first letter; END. A file may hold several units.
+- **Declarations:** INTEGER, REAL, and LOGICAL (`INTEGER*4`, `REAL*4`,
+  `LOGICAL*4`), and DIMENSION, of variables and arrays with constant
+  bounds (a lower bound with a colon, `V(0:9)`); a dummy array may be
+  `A(*)`. Undeclared names have the
+  implicit types: I to N INTEGER, the rest REAL.
+- **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
+  `+ - * /` and unary minus, INTEGER and REAL mixed by the usual
+  conversions (INTEGER division truncates); the relational operators
+  (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`; array elements and
+  function references.
+- **Statements:** assignment; logical IF; block IF with ELSE IF and
+  ELSE; DO with a label, ending at CONTINUE or another statement, with
+  any step, and a REAL control variable too; unconditional GO TO; CALL;
+  RETURN; STOP, with or without a display; `PRINT *` and `WRITE (*,*)`
+  of values, arrays, and character constants.
+- **Arguments** are passed by reference: a routine that assigns to its
+  dummy argument changes the caller's variable. An expression, or a
+  variable in parentheses `(K)`, passes a copy.
+
+### 14.3 The FORTRAN command
 
 The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, and `/CONTINUATIONS=n`. From the host
 shell, `govax fortran` runs it.
 
-### 14.2 Source lines
+### 14.4 Source lines
 
 A FORTRAN source is laid out in columns, from its days on punched
 cards (the language manual's section 1.3):
@@ -4411,7 +4475,7 @@ VAX> FORTRAN BAD
 %DCL-E-FORERRORS, 2 error(s) compiling DUA1:[WORK]BAD.FOR;1; no MACRO file written
 ```
 
-### 14.3 The MACRO file
+### 14.5 The MACRO file
 
 The MACRO file is meant to be read beside the program it came from. It
 starts with what made it, and holds every line of the source as a
@@ -4549,7 +4613,7 @@ their layout. What to look for in the code:
 - **Every branch reaches** however far its target is: a conditional
   branch is the opposite condition's byte branch around a `BRW`.
 
-### 14.4 FTNRTL, the run-time library
+### 14.6 FTNRTL, the run-time library
 
 FTNRTL.EXE holds the routines compiled programs call (I/O, STOP, and so
 on). It is a shareable image written in MACRO-32, its sources in
@@ -4627,7 +4691,7 @@ VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
 ```
 
-### 14.5 Differences from VAX FORTRAN
+### 14.7 Differences from VAX FORTRAN
 
 Where the manuals at hand don't settle a rule, govax makes a choice
 (each phase's document lists its own, unconfirmed on VMS, since no VAX

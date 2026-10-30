@@ -174,6 +174,9 @@
 //                          starts
 //              10/29/26    Added FORTRAN (docs/PHASE-74 - FORTRAN plan.md)
 //              10/29/26    FORTRAN: /CONTINUATIONS, INCLUDE (Phase 74, subtask 3)
+//              10/30/26    FORTRAN compiles its first subset, FTNRTL's
+//                          list-directed output (docs/PHASE-75 - FORTRAN
+//                          first light.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -4015,8 +4018,17 @@ $FOR
     functions; INTEGER, REAL, and LOGICAL variables and arrays;
     assignment and expressions; IF, block IF, DO, GO TO, CALL, RETURN,
     and STOP; PRINT * and WRITE (*,*).  Any other statement draws
-    %FORT-E-NOTIMPL.  The MACRO file holds each source line as a
-    comment before the instructions it became.
+    %FORT-E-NOTIMPL.  Such programs compile, link, and run:
+
+        FORTRAN AVERAGE
+        MACRO AVERAGE
+        LINK AVERAGE
+        RUN AVERAGE
+        Mean:   3.750000
+
+    The compiler checks the program units of one file against each
+    other: a function's type where it is used, and the number of
+    arguments of each call.
 
     INCLUDE 'file' reads a file, by default of type .FOR, found relative
     to the file that includes it: on the host, in its directory; on a
@@ -4028,8 +4040,13 @@ $FOR
     finds its routines (named FTN$...) without an options file, and RUN
     finds the image.  Both look for a file of one's own first: a logical
     name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
-    directory.  So far FTNRTL has FTN$VERSION and FTN$STOP, which MACRO
-    programs can call too.
+    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, and the
+    list-directed output of PRINT * and WRITE (*,*) (FTN$PRINT_LIST,
+    FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END), which MACRO programs can
+    call too.  List-directed output goes to SYS$OUTPUT in records of 80
+    bytes, each starting with a blank (its carriage control), each value
+    in its type's format: LOGICAL as T or F, INTEGER in 12 columns, REAL
+    with 7 significant digits.
 
     Syntax:
 
@@ -4080,7 +4097,7 @@ $FOR
 
     The compiler reports each problem it finds with the line it is on:
 
-        %FORT-E-NOTIMPL, ENCODE is not implemented yet
+        %FORT-E-NOTIMPL, the ENCODE statement is not implemented yet
           at line 7 of DUA0:[WORK]PROG.FOR;1
                 ENCODE (8, 10, BUF) X
           ------^
