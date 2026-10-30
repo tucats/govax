@@ -1,9 +1,9 @@
 # Phase 74 — FORTRAN: the plan, the decisions, and the groundwork
 
-**Status:** planned (2026-10-29). Part A (the survey), Part B (the
-decisions, proposed), and Part C (the phases) are written for the
-author's review. Nothing is implemented yet. The questions the plan asks
-are under "For the review" at the end. Phases 75 to 86 each have a
+**Status:** in progress. Part A (the survey), Part B (the decisions),
+and Part C (the phases) were reviewed and accepted by the author on
+2026-10-29 (the answers are under "The review" at the end). Subtask 1,
+the plan, is done; the groundwork (subtasks 2 to 5) is next. Phases 75 to 86 each have a
 skeletal planning doc of their own. Needs nothing new: MACRO-32 (Phases
 27–29), LINK and shareable images (Phases 30 and 68), the RTL machinery
 (Phases 34 and 53–59), and traceback (Phase 70) are all in place.
@@ -231,7 +231,7 @@ Grouped by how much work each is:
   expressions, pointers, allocatable arrays, derived types in the
   Fortran 90 sense).
 
-# Part B — decisions (proposed 2026-10-29)
+# Part B — decisions (accepted 2026-10-29)
 
 **Decision 1 — the dialect is VAX FORTRAN V5.0**, as the 1988 manual
 describes it: FORTRAN-77 with DEC's extensions (the list above). The
@@ -356,7 +356,8 @@ strength reduction of subscripts, and allocation of R6–R11 to loop
 variables and frequently used addresses; a peephole pass uses VAX loop
 instructions (`AOBLEQ`, `SOBGTR`, `ACBL`). Every test program runs both
 ways and must print the same thing. `/NOOPTIMIZE` stays the default
-until that holds for the whole corpus (see "For the review").
+until that holds for the whole corpus, then `/OPTIMIZE` becomes it, as
+in VAX FORTRAN (the review's answer 7).
 
 **Decision 10 — storage is static, as VAX FORTRAN's is by default.** A
 program unit's variables and the compiler's temporaries live in a
@@ -472,10 +473,10 @@ manual's condition signals (MTH$_LOGZERNEG, MTH$_SQUROONEG, ...: the
 texts exist). Accuracy: F and G are computed in float64, which holds
 them exactly, and rounded once to the format. D (56 bits) and H (113
 bits) need more than float64, and are computed with `math/big` series
-to within an ulp. If the author agrees, MTHRTL's vector is VMS's,
-captured from the local system disk with `vmsdef/gen -image` as
-LIBRTL's was, so VMS-compiled images that call MTHRTL also work (see
-"For the review").
+to within an ulp. MTHRTL's vector is VMS's, captured from VMS 7.1's
+MTHRTL.EXE on the local system disk with `vmsdef/gen -image` as
+LIBRTL's was, so VMS-compiled images that call MTHRTL also work (the
+review's answer 2).
 
 **Decision 15 — FOR messages are govax's own text, under VAX FORTRAN's
 condition values.** `vmsdef` has the FOR$_ values; a hand-written
@@ -515,7 +516,7 @@ qualifier arrives with the phase that needs it:
 | `/[NO]G_FLOATING`, `/[NO]I4` | 78 |
 | `/LIBRARY` | 83 |
 | `/[NO]OPTIMIZE` | 84 |
-| `/[NO]LIST`, `/SHOW`, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/[NO]DEBUG` | 85 |
+| `/[NO]LIST`, `/SHOW`, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/[NO]DEBUG`, `/[NO]OBJECT` (runs MACRO; off by default) | 85 |
 
 `$STATUS` is the worst message's severity, and no `.MAR` file is
 written when there are errors, as MACRO writes no object. `govax
@@ -551,10 +552,10 @@ can, so one run reports many. A feature not yet implemented is
   for all, from Phase 84.
 - **FTNRTL's and MTHRTL's routines** are also tested directly, from
   MACRO test programs, as LIBRTL's are.
-- **Optionally, VMS:** if the simh VAX has a VAX FORTRAN compiler, some
-  programs run there too, to check our outputs (not code) against VAX
-  FORTRAN's; and VMS's MACRO can assemble our `.MAR` files and FTNRTL,
-  to run our code on real VMS (Phase 86).
+- **Optionally, VMS:** VMS's MACRO can assemble our `.MAR` files and
+  FTNRTL, to run our code on real VMS (Phase 86). There is no VAX
+  FORTRAN compiler on the simh VAX (the review's answer 5), so our
+  run-time output isn't compared with VAX FORTRAN's.
 
 **Decision 21 — what the program finds missing elsewhere, it fixes.**
 A bug found in MACRO, LINK, RMS, the CPU, or the services is fixed in
@@ -664,10 +665,9 @@ SQUARES.L10$END:
 | **86** | The milestone and close-out: a substantial program compiled and run, the manual's chapter, the internals tour, and an optional VMS round | all |
 
 Indexed files (ORGANIZATION='INDEXED', keyed READ, REWRITE, DELETE,
-UNLOCK) are not in the table. That depends on the review's answer
-(question 4). If they are in scope, they would be one or two phases of
-their own after 81: RMS's indexed organization is a large piece of work
-on its own.
+UNLOCK on them) are not in the table: the review deferred them to a
+later program (answer 4), since RMS's indexed organization is a large
+piece of work on its own.
 
 Each later phase has a planning doc of its own: its goal, what earlier
 phases leave in place, its design notes, its open questions, and its
@@ -728,47 +728,43 @@ review after each.
 - A FORTRAN-77 compatible FORRTL, so VMS-compiled FORTRAN images run
   without VMS's FORRTL.EXE.
 - RECURSIVE routines (VAX FORTRAN V5 had none).
+- RMS indexed files, and FORTRAN's keyed I/O on them (deferred by the
+  review).
 
-## For the review
+## The review (2026-10-29)
 
-The questions the plan asks, with a recommendation for each:
+The questions the plan asked, with the author's answers; the decisions
+and the later phases' docs have been changed to follow them.
 
-1. **MTHRTL in Go or in MACRO?** *Answered during planning
-   (2026-10-29):* the MTH$ functions extend govax's RTL support, usable
-   inside and outside FORTRAN, not embedded in FTNRTL. Decision 14 (Go,
-   `internal/mthrtl`) follows that.
-2. **MTHRTL's vector.** Capture VMS 7.1's MTHRTL.EXE global symbol table
+1. **MTHRTL in Go or in MACRO?** **Answer** (given during planning): the
+   MTH$ functions extend govax's RTL support, usable inside and outside
+   FORTRAN, not embedded in FTNRTL. Decision 14 (Go, `internal/mthrtl`).
+2. **MTHRTL's vector:** capture VMS 7.1's MTHRTL.EXE global symbol table
    from the local system disk (`testdata/disks/rq0-ra92.dsk`) with
-   `vmsdef/gen -image`, as LIBRTL's was, so programs VMS's compilers
-   linked against MTHRTL find its routines at VMS's offsets? Or give
-   govax's MTHRTL its own layout? *Recommended: capture VMS's.*
-3. **`/OBJECT`.** Should FORTRAN be able to run MACRO for the user
-   (`FORTRAN/OBJECT`, keeping the `.MAR` file), so the VMS workflow
-   `FORTRAN; LINK; RUN` works? You described the user running MACRO
-   themselves. *Recommended: yes, as an opt-in qualifier in Phase 85;
-   the default stays `.MAR` only.*
-4. **Relative and indexed files.** Phase 81 includes relative files
-   (fixed cells by record number, the smaller job) and direct access on
-   sequential files. Indexed files are RMS's B-tree organization: a large
-   RMS project on their own. In scope as their own phases, or left for a
-   later RMS program, with OPEN ORGANIZATION='INDEXED' failing with a
-   FOR$_ error until then? *Recommended: leave indexed files for a later
-   program.*
-5. **A VAX FORTRAN compiler on the simh VAX?** If there is one, a few
-   probes comparing program *output* (list-directed layouts, E and G
-   editing, error messages) would settle what the manual leaves open.
-   Without one, our choices stand, marked unconfirmed.
-6. **A milestone program.** Phase 86 compiles and runs a substantial
-   program. Do you have one in mind? DUNGEON's FORTRAN source would be a
-   natural pairing with Phase 72, if a copy we may use is at hand.
-   Otherwise, a set of classic programs written for the corpus.
-7. **`/OPTIMIZE` as the default.** VAX FORTRAN optimizes by default.
-   Decision 9 keeps `/NOOPTIMIZE` the default until the optimizer passes
-   the whole corpus, then switches. Agreed?
-8. **Names.** `FTN$` for FTNRTL's entries (beside VMS's `FOR$` condition
-   values), `internal/fortran` for the compiler, `internal/ftnrtl` and
-   `internal/mthrtl` for the libraries, and `%FORT-` for the compiler's
-   messages. Any preferences?
+   `vmsdef/gen -image`, as LIBRTL's was, or give govax's MTHRTL its own
+   layout? **Answer** Yes, capture VMS's (Decision 14, Phase 77).
+3. **`/OBJECT`:** should FORTRAN be able to run MACRO for the user,
+   keeping the `.MAR` file? **Answer** Yes: an opt-in qualifier in
+   Phase 85; by default FORTRAN writes only the `.MAR` file (Decision 18).
+4. **Indexed files:** in this program, or a later RMS program?
+   **Answer** Defer to later. Phase 81 keeps relative files and direct
+   access on sequential files; OPEN with ORGANIZATION='INDEXED' fails
+   with a FOR$_ error until a later program adds the organization.
+5. **A VAX FORTRAN compiler on the simh VAX?** **Answer** There isn't
+   one. Run-time choices the manual leaves open stand as ours, marked
+   unconfirmed in each phase's doc and collected in the manual's
+   "Differences from VAX FORTRAN". VMS's MACRO and LINK can still check
+   our generated code on a real VAX (Phase 86's optional round).
+6. **A milestone program?** **Answer** None in mind yet; the author
+   likes DUNGEON, and will look for its FORTRAN source from a freely
+   available place and check that its license allows our use. Until
+   then, Phase 86 plans for DUNGEON with classic programs as the
+   fallback.
+7. **`/OPTIMIZE` as the default** once the optimizer passes the whole
+   corpus both ways? **Answer** Agreed (Decision 9, Phase 84).
+8. **Names:** `FTN$` for FTNRTL's entries, `%FORT-` for the compiler's
+   messages, `internal/fortran`, `internal/ftnrtl`, `internal/mthrtl`.
+   **Answer** Agreed.
 
 ## Progress log
 
@@ -780,3 +776,11 @@ The questions the plan asks, with a recommendation for each:
   that the MTH$ functions must be general RTL support usable outside
   FORTRAN too, not part of FTNRTL (Decision 14; question 1 answered).
   For review before any implementation.
+- **2026-10-29:** The author reviewed the plan and answered its
+  questions (under "The review"): MTHRTL's vector captured from VMS 7.1;
+  `/OBJECT` as an opt-in qualifier; indexed files deferred to a later
+  program; no VAX FORTRAN compiler is available for output checks;
+  DUNGEON's source is the hoped-for milestone, pending a freely usable
+  copy; `/OPTIMIZE` becomes the default once the corpus passes both
+  ways; the names accepted. The decisions and Phases 77, 81, 85, and 86
+  were updated to match. Subtask 1 is done; subtask 2 is next.

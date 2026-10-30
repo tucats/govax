@@ -43,8 +43,8 @@ order of payoff:
   rules are FORTRAN's (a dummy argument may not be modified through
   another name), which the doc explains.
 - **The default:** `/NOOPTIMIZE` until the whole corpus passes both
-  ways, then `/OPTIMIZE`, as VAX FORTRAN's default (Phase 74's question
-  7).
+  ways, then `/OPTIMIZE`, as VAX FORTRAN's default (agreed in Phase 74's
+  review, answer 7).
 
 ## Open questions
 

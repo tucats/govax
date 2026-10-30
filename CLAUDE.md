@@ -261,7 +261,8 @@ never had.
   `testdata/disks` or skips), and 7 the close-out (the manual's section
   8, example 6, and section 12's "A program that traces itself";
   DEVIATIONS.md's entry for the traces of services and LIBRTL routines).
-  Phases 74–86 (planned 2026-10-29, for the author's review) are the
+  Phases 74–86 (planned 2026-10-29, the plan reviewed and accepted by
+  the author the same day; `PHASE-74`'s "The review") are the
   FORTRAN program: `PHASE-74 - FORTRAN plan.md`'s Part A is the survey,
   Part B the decisions, Part C the phases. A `FORTRAN` command compiles
   VAX FORTRAN V5.0 (FORTRAN-77 plus DEC's extensions; the 1988 *VAX
@@ -275,7 +276,7 @@ never had.
   LINK), and MTHRTL is emulated in Go as general RTL support
   (`internal/mthrtl`, by the author's direction, usable outside FORTRAN).
   Bugs and gaps found in MACRO, LINK, RMS, and `ods2` along the way are
-  in scope.
+  in scope; RMS indexed files are deferred to a later program.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

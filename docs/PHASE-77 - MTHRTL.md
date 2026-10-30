@@ -56,11 +56,12 @@ made), not part of FTNRTL. This was the author's direction
   precision (argument reduction and series), then rounded. Results
   should be within one ulp of the true value. The tests compare each
   form against a high-precision reference.
-- **The vector:** with the author's agreement (Phase 74's question 2),
+- **The vector** (the author's answer to Phase 74's review question 2):
   MTHRTL's global symbol table is captured from VMS 7.1's MTHRTL.EXE on
-  the local system disk, so each routine's offset is VMS's and images
-  VMS's compilers made call the right routine. Otherwise govax gives
-  MTHRTL its own layout, and LINK gets it from govax's tables.
+  the local system disk (`testdata/disks/rq0-ra92.dsk`) with
+  `vmsdef/gen -image`, so each routine's offset is VMS's and images
+  VMS's compilers made call the right routine. LINK then gets MTHRTL's
+  symbols from govax's tables, as it does LIBRTL's.
 - **Which library holds the OTS$ powers** on VMS 7.1 (MTHRTL or
   LIBRTL) is settled by the captured tables; the routine goes where VMS
   put it.
@@ -79,9 +80,10 @@ made), not part of FTNRTL. This was the author's direction
 
 ## Subtasks (provisional)
 
-1. **Survey:** the MTH$ and OTS$ manuals' routine lists, arguments,
-   entry points, and conditions; MTHRTL.EXE's global symbol table, if
-   captured.
+1. **Survey and capture:** the MTH$ and OTS$ manuals' routine lists,
+   arguments, entry points, and conditions; MTHRTL.EXE's global symbol
+   table captured into `vmsdef` (the image itself is licensed and stays
+   local).
 2. **The package and its registration**, with the stubs, LINK's symbols,
    and the missing-routine stubs.
 3. **Square root, exponentials, logarithms** in all four formats.
@@ -96,4 +98,5 @@ made), not part of FTNRTL. This was the author's direction
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74. The author directed that the
-  MTH$ functions be general RTL support, usable outside FORTRAN.
+  MTH$ functions be general RTL support, usable outside FORTRAN, and
+  approved capturing VMS 7.1's MTHRTL vector.

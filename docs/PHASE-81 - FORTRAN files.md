@@ -32,8 +32,12 @@ supports, on volume files and host files:
 - **the RMS (and `ods2`) additions** these need.
 
 Indexed files (ORGANIZATION='INDEXED', keyed READ, REWRITE, DELETE,
-UNLOCK on them) are not in this phase. Phase 74's question 4 decides
-whether they come later in this program or in another.
+UNLOCK on them) are not in this phase: the author deferred them to a
+later program (Phase 74's review, answer 4). Until then, OPEN with
+ORGANIZATION='INDEXED' fails with a FOR$_ error (the survey picks which;
+FOR$_INCFILORG or FOR$_NOTIMP), and the keyed statements compile but
+report the same at run time. REWRITE and UNLOCK on relative files are
+in this phase.
 
 ## What earlier phases leave in place
 
@@ -89,4 +93,4 @@ whether they come later in this program or in another.
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74. The author confirmed that ods2
-  changes are fair game.
+  changes are fair game, and deferred indexed files to a later program.

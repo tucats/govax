@@ -9,17 +9,20 @@ plan.md`.
 Show the compiler working on real programs, and finish the program's
 documentation:
 
-- **the milestone:** a substantial FORTRAN program (Phase 74's question
-  6 chooses it: DUNGEON's FORTRAN source if a usable copy exists, or a
-  set of classic programs), compiled, assembled, linked, and run on
-  govax, on volume files and host files, in both paging modes and both
-  optimizer settings, its output checked by a test;
+- **the milestone:** a substantial FORTRAN program, compiled, assembled,
+  linked, and run on govax, on volume files and host files, in both
+  paging modes and both optimizer settings, its output checked by a
+  test. The hope is
+  DUNGEON's FORTRAN source, pairing with Phase 72's DUNGEON.EXE: the
+  author is looking for a freely available copy whose license allows our
+  use (Phase 74's review, answer 6). Without one, a set of classic
+  programs written for the corpus;
 - **an optional VMS round:** VMS's MACRO assembles a few of our `.MAR`
   files and FTNRTL's sources, VMS's LINK links them, and the programs
   run on VMS 7.1 with our FTNRTL, printing what govax printed. That
-  checks our generated code on real VAX semantics. If the simh VAX has
-  a VAX FORTRAN compiler (Phase 74's question 5), the same programs
-  compiled by it show where our run-time output differs;
+  checks our generated code on real VAX semantics. There is no VAX
+  FORTRAN compiler on the simh VAX (Phase 74's review, answer 5), so
+  our run-time output isn't compared with VAX FORTRAN's;
 - **the documentation:** MANUAL.md's chapter "Programming in FORTRAN"
   (the command, the language as supported, FTNRTL, calling VMS,
   debugging through the `.MAR` file, "Differences from VAX FORTRAN"),
@@ -34,7 +37,10 @@ documentation:
 
 ## Open questions
 
-- **The milestone program** (Phase 74's question 6).
+- **The milestone program:** DUNGEON's source, if the author finds a
+  freely usable copy. Its dialect (it was written for VAX FORTRAN and
+  ported widely) may need features the corpus hasn't; whatever it needs
+  is fixed in subtasks of its own.
 - **Whether the VMS round is wanted**, and on which volume.
 
 ## Subtasks (provisional)

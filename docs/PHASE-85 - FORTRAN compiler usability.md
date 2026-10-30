@@ -28,8 +28,10 @@ spirit but our own layouts:
 - **`/[NO]DEBUG`:** the `.MAR` file gets `.ENABLE DEBUG`, so MACRO
   writes debugger records without being asked, and every variable a
   labeled symbol the debugger can EXAMINE;
-- **`/OBJECT`**, if Phase 74's question 3 is answered yes: FORTRAN runs
-  MACRO on the `.MAR` file it wrote;
+- **`/[NO]OBJECT[=file]`** (approved in Phase 74's review, answer 3):
+  FORTRAN runs MACRO on the `.MAR` file it wrote, keeping the `.MAR`
+  file, so `FORTRAN/OBJECT; LINK; RUN` works as on VMS. Off by default:
+  FORTRAN writes only the `.MAR` file unless asked;
 - **`/F77` and `/NOF77`**, if kept (appendix A.6).
 
 ## What earlier phases leave in place
@@ -52,7 +54,7 @@ spirit but our own layouts:
 3. **`/CROSS_REFERENCE`.**
 4. **`/CHECK`.**
 5. **`/WARNINGS` and `/STANDARD`.**
-6. **`/DEBUG`** (and `/OBJECT` if approved).
+6. **`/DEBUG` and `/OBJECT`.**
 7. **Close-out:** HELP FORTRAN complete; MANUAL.md.
 
 ## Progress log
