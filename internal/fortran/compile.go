@@ -54,8 +54,9 @@ type File struct {
 	Spec string
 
 	// Name is the file's name without its directory, type, or version
-	// (SQUARES), from which the MACRO module is named until the compiler
-	// can name it for its first program unit.
+	// (SQUARES), from which a main program without a PROGRAM statement
+	// is named (SQUARES$MAIN), and the MACRO module of a file with no
+	// program units.
 	Name string
 
 	// Lines are the file's records, without line terminators.
@@ -87,10 +88,8 @@ type Result struct {
 func Compile(opts Options, file File) Result {
 	var (
 		messages diag.List
-		w        codegen.Writer
+		routines []*ir.Routine
 	)
-
-	module := ModuleName(file.Name)
 
 	// The first pass: the source's lines into statements.
 	program := source.Read(source.Form{
@@ -104,25 +103,15 @@ func Compile(opts Options, file File) Result {
 	// runs even after the parser's errors, since the tree keeps a
 	// statement with an error (and its label) in its place, so that one
 	// compilation reports as much as it can. Then, for a program with no
-	// errors, the fifth: lowering each unit to the IR, which the code
-	// generator (Phase 75's subtask 6) will read; nothing reads it yet.
+	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
 		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
 		prog := sema.Analyze(tree, MainName(file.Name), &messages)
 
 		if !messages.Failed() {
-			_ = ir.Lower(prog)
+			routines = ir.Lower(prog)
 		}
 	}
-
-	writeHeader(&w, opts, file, module)
-
-	// For now the compiler copies the source into the MACRO file as
-	// comments. Later phases put each statement's code after its lines.
-	writeSourceLines(&w, program.Lines)
-
-	w.Blank()
-	w.Statement("", ".END", "", "")
 
 	result := Result{
 		Messages: messages.Messages(),
@@ -130,9 +119,22 @@ func Compile(opts Options, file File) Result {
 		Warnings: messages.Count(diag.Warning),
 	}
 
-	if !messages.Failed() {
-		result.MACRO = w.Lines()
+	if messages.Failed() {
+		return result
 	}
+
+	// The last pass: the MACRO file. Its module is named for the first
+	// program unit (Decision 3), or for the source file if it has none.
+	module := ModuleName(file.Name)
+	if len(routines) > 0 {
+		module = routines[0].Name
+	}
+
+	var w codegen.Writer
+
+	writeHeader(&w, opts, file, module)
+	codegen.Generate(&w, routines, program.Lines)
+	result.MACRO = w.Lines()
 
 	return result
 }
@@ -151,41 +153,10 @@ func writeHeader(w *codegen.Writer, opts Options, file File, module string) {
 	}
 
 	w.Comment("")
-	w.Comment("Each line of the FORTRAN source appears below as a comment, with its line number;")
-	w.Comment("a line from an INCLUDE file has its include depth before the number.")
-	w.Comment("This version of the compiler generates no code yet; MACRO assembles this file")
-	w.Comment("into an empty module.")
+	w.Comment("Each line of the FORTRAN source appears as a comment, with its line number, before")
+	w.Comment("the instructions it became; a line from an INCLUDE file has its include depth")
+	w.Comment("before the number. Each routine's storage map says where its variables are.")
 	w.Comment("")
-}
-
-// writeSourceLines writes the source's lines as comments, each included
-// file's lines between a comment naming the file and one marking its end.
-func writeSourceLines(w *codegen.Writer, lines []*source.Line) {
-	// files is the stack of files being included: files[d] is the file
-	// at depth d.
-	var files []*source.File
-
-	for _, line := range lines {
-		for len(files) > line.Depth+1 || (len(files) == line.Depth+1 && files[line.Depth] != line.File) {
-			w.Comment("end of " + files[len(files)-1].Spec)
-			files = files[:len(files)-1]
-		}
-
-		if len(files) == line.Depth {
-			if line.Depth > 0 {
-				w.Comment("INCLUDE file " + line.File.Spec + ":")
-			}
-
-			files = append(files, line.File)
-		}
-
-		w.SourceLineAt(line.Depth, line.Number, line.Text)
-	}
-
-	for len(files) > 1 {
-		w.Comment("end of " + files[len(files)-1].Spec)
-		files = files[:len(files)-1]
-	}
 }
 
 // ModuleName is the MACRO module name for a source file named name: the

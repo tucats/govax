@@ -1,8 +1,9 @@
 # Phase 75 — FORTRAN first light: every pass, end to end
 
-**Status:** in progress. Subtask 1, the survey (Part A) and the design
-(Part B), was written 2026-10-30 and accepted by the author the same
-day, with its four corrections to the plan. Needs Phase 74 (the
+**Status:** in progress: subtasks 1 to 6 done (2026-10-30); FTNRTL's
+list-directed output (subtask 7) is next. Subtask 1, the survey (Part
+A) and the design (Part B), was written 2026-10-30 and accepted by the
+author the same day, with its four corrections to the plan. Needs Phase 74 (the
 FORTRAN command, source forms, FTNRTL's pipeline). Part of the FORTRAN
 program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 4 to 8, 10
 to 13, and 20 are first built here).
@@ -1170,3 +1171,69 @@ To go into the progress log as each is built, and into MANUAL.md's
     conversions, folding, elements' offsets and indexes in one and two
     dimensions), `TestFolding`, `TestTripCounts`, `TestLabelsTakeBlocks`,
     `TestTemporaries`, `TestCheck`.
+- **2026-10-30:** Subtask 6 done: the code generator
+  (`internal/fortran/codegen`).
+  - `Generate(w, routines, lines)` writes the module after the driver's
+    header: the `DSC$K_` codes the descriptors use, then per routine a
+    storage map (each variable, array, and dummy argument with its type,
+    its place, and its symbol), the dummies' offsets (`ISQ.N = 4`), its
+    `$LOCAL` cells (descriptor cells written with their constant fields,
+    their addresses stored at run time), its `$PDATA` data (longword data
+    first, then the texts), and its `$CODE`, each source line written
+    just before the code of the statement it ends (`source.go`), a
+    labeled block's label after its statement's lines; `.END` names the
+    main program. Each routine's code is generated before its storage is
+    written, since the code makes cells and constants of its own.
+  - Selection (`expr.go`): a tree's leaves are operands in place; an
+    operation writes straight to an assignment's target, two-operand
+    when the target is an operand, `INCL`/`DECL` for 1; interior values
+    in R0–R5 by Sethi and Ullman's order; `.AND.` is `BICL3` with the
+    complement (`MCOML`, a constant's complement, or `Z` itself for
+    `.NOT. Z`); a comparison's value is `CLRL`, `CMPx`, a byte branch,
+    `MNEGL #1`. An expression needing more than 4 registers has parts
+    computed first into spill cells (`$Xn`, `fit`), so 6 registers
+    always suffice (4, plus two operands held while an element's index is
+    computed); a routine's entry mask names the registers from R2 it
+    uses. A dummy array's offset goes into the index (`@A(AP)[R0]` with
+    `I-1` in R0), since `@n(AP)` has no room for one. REAL constants are
+    `$PDATA` longwords (`$Fn`, sharing lowering's `$Kn` of the same bits);
+    a REAL constant stored whole is `MOVL #^X...`, 0 and 0.0 `CLRL`/`CLRF`.
+  - Branches (`cond.go`): on comparisons (`TSTx` against zero, swapped if
+    the zero was first) and on bit 0 (`BLBS`/`BLBC`) otherwise;
+    `.NOT.`, `.AND.`, `.OR.` short-circuit; every branch to a block is
+    the opposite byte branch around a `BRW`; a block reached by falling
+    through gets no label or branch. One peephole now: a `TST` of what
+    the instruction just before wrote (of the same type: a `MOVL` of a
+    REAL's bits doesn't set its floating condition codes) is left out.
+  - Names (`names.go`): `routine.name`; a symbol past 31 characters is
+    the routine's name cut, `.$N`, and a number counted through the
+    module, listed in the storage map.
+  - Correction 1 is in: the module is named for the file's first
+    program unit (`SQUARES$MAIN` for an unnamed main program), or for
+    the file when it has none. The header's comment now says the source
+    lines come before their code.
+  - The I/O control block is provisional: a word of size (8), a word of
+    flags (0), the unit (-1 for `*`); subtask 7 settles it with FTNRTL.
+  - Choices of ours, unconfirmed (MANUAL.md's 14.5 has the first two):
+    integer overflow isn't detected (the entry mask's IV clear), integer
+    division by zero traps; a constant argument is read-only; every call
+    is `CALLS #n,G^name`, a routine of the same file included; a whole
+    REAL move is `MOVF`; `.TRUE.` from a comparison is -1.
+  - Left for later (Phase 84's peephole): two labels in a row where a
+    skip label meets a block's; `SOBGTR`/`AOBLEQ` and byte branches where
+    the distance is known; a comparison's value computed by branching
+    rather than kept in the condition codes.
+  - Tests: `TestGolden` over `codegen/testdata` (the IR's five programs,
+    each `.mar` assembled by govax's MACRO, which must say nothing),
+    `TestSelection` (44 statements' instructions: moves, the two-operand
+    and INC/DEC forms, register order, conversions, logical operations,
+    elements, branches, short-circuits, calls), `TestSpill`,
+    `TestLongNames`, `TestTexts` (delimiters, unprintable characters, long
+    texts); the driver's `TestCompileSquares` and `TestCompileModuleName`;
+    and the console's `TestFortranCodeRuns`, which compiles a program of
+    every construct of the subset (loops of every kind, arrays of one and
+    two dimensions, an array's tail passed, functions, an argument changed
+    and one copied, logicals, block IF, a spilled expression, STOP),
+    links it with a MACRO module that prints integers and REAL bits
+    (`OTS$CVT_L_TI`, `OTS$CVT_L_TZ`), and runs it in both paging modes:
+    every value is FORTRAN's.

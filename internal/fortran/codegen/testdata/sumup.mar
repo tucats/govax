@@ -1,0 +1,46 @@
+	.TITLE	TEST
+
+; Storage map for SUMUP, a subroutine
+;   T     INTEGER (10)  argument 1  @SUMUP.T(AP)
+;   N     INTEGER       argument 2  @SUMUP.N(AP)
+;   S     REAL          argument 3  @SUMUP.S(AP)
+;   K     INTEGER       $LOCAL+0    SUMUP.K
+;
+SUMUP.T = 4				; T is argument 1
+SUMUP.N = 8				; N is argument 2
+SUMUP.S = 12				; S is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUMUP.K:
+	.BLKL	1			; K
+SUMUP.$C1:
+	.BLKL	1			; DO 100's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        SUBROUTINE SUMUP(T, N, S)
+	.ENTRY	SUMUP,^M<>
+;    2        INTEGER N, T(10)
+;    3        S = 0
+	CLRF	@SUMUP.S(AP)
+;    4        DO 100 K = 1, N
+	MOVL	@SUMUP.N(AP),SUMUP.$C1	; DO 100's count
+	MOVL	#1,SUMUP.K
+	TSTL	SUMUP.$C1
+	BGTR	SUMUP.$2
+	BRW	SUMUP.$1
+SUMUP.$2:
+;    5    100 S = S + T(K)
+SUMUP.L100:				; DO 100's body
+	SUBL3	#1,SUMUP.K,R0
+	CVTLF	@SUMUP.T(AP)[R0],R0
+	ADDF2	R0,@SUMUP.S(AP)
+	INCL	SUMUP.K
+	DECL	SUMUP.$C1		; one pass fewer
+	BLEQ	SUMUP.$3
+	BRW	SUMUP.L100
+SUMUP.$3:
+SUMUP.$1:
+;    6        END
+	RET
+
+	.END

@@ -13,8 +13,8 @@ import (
 
 // The FORTRAN command (docs/PHASE-74 - FORTRAN plan.md, subtask 2): it
 // reads a FORTRAN source from the host or a volume and writes a MACRO
-// file, which so far holds the source as comments and assembles into an
-// empty module.
+// file, the source's lines as comments among the code, which MACRO
+// assembles without a message.
 
 // fortranSource is a small program, with a tab-format line.
 const fortranSource = "      PROGRAM SQUARES\n" +
@@ -76,13 +76,14 @@ func checkMACRO(t *testing.T, c *Console, buf interface {
 
 // TestFortran_host compiles a host source: the MACRO file goes beside it,
 // named for it with the type MAR in the source's case, and the source's
-// type defaults to FOR.
+// type defaults to FOR. The module is named for the program, whatever
+// the file's name.
 func TestFortran_host(t *testing.T) {
 	cases := []struct{ source, typed, want, module string }{
 		{"squares.for", "squares.for", "squares.mar", "SQUARES"},
 		{"SQUARES.FOR", "SQUARES.FOR", "SQUARES.MAR", "SQUARES"},
-		{"prog.for", "prog", "prog.mar", "PROG"}, // the default type
-		{"my-prog.f", "my-prog.f", "my-prog.mar", "MY_PROG"},
+		{"prog.for", "prog", "prog.mar", "SQUARES"}, // the default type
+		{"my-prog.f", "my-prog.f", "my-prog.mar", "SQUARES"},
 	}
 
 	for _, tc := range cases {
@@ -258,7 +259,7 @@ func TestDispatch_fortran(t *testing.T) {
 		t.Fatalf("FOR/MACRO=: %v", err)
 	}
 
-	checkMACRO(t, c, buf, rms.FileLocation{Host: true, Name: filepath.Join(dir, "named.mar")}, "A")
+	checkMACRO(t, c, buf, rms.FileLocation{Host: true, Name: filepath.Join(dir, "named.mar")}, "SQUARES")
 
 	if status := c.Status() &^ stsInhibitMsg; status != 1 {
 		t.Errorf("$STATUS after a clean compilation = %%X%08X, want SS$_NORMAL", status)
@@ -276,7 +277,7 @@ func TestDispatch_fortran(t *testing.T) {
 	}
 
 	for _, name := range []string{"a.mar", "b.mar"} {
-		checkMACRO(t, c, buf, rms.FileLocation{Host: true, Name: filepath.Join(dir, name)}, strings.ToUpper(strings.TrimSuffix(name, ".mar")))
+		checkMACRO(t, c, buf, rms.FileLocation{Host: true, Name: filepath.Join(dir, name)}, "SQUARES")
 	}
 
 	if status := c.Status() &^ stsInhibitMsg; status != vmserrors.SS_NOSUCHFILE {

@@ -1,0 +1,61 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for SQUARES, the main program
+;   I     INTEGER  $LOCAL+0  SQUARES.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SQUARES.I:
+	.BLKL	1			; I
+SQUARES.$C1:
+	.BLKL	1			; DO 10's count
+SQUARES.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SQUARES.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SQUARES.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SQUARES.I
+SQUARES.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SQUARES.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM SQUARES
+	.ENTRY	SQUARES,^M<>
+;    2        INTEGER I
+;    3        DO 10 I = 1, 5
+	MOVL	#5,SQUARES.$C1		; DO 10's count
+	MOVL	#1,SQUARES.I
+SQUARES.$1:				; DO 10's body
+;    4           PRINT *, I, I*I
+	PUSHAB	SQUARES.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	SQUARES.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	SQUARES.I,SQUARES.I,SQUARES.$T1
+	PUSHAQ	SQUARES.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;    5     10 CONTINUE
+SQUARES.L10:
+	INCL	SQUARES.I
+	DECL	SQUARES.$C1		; one pass fewer
+	BLEQ	SQUARES.$2
+	BRW	SQUARES.$1
+SQUARES.$2:
+;    6        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	SQUARES

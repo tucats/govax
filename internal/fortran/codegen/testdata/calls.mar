@@ -1,0 +1,450 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_LU = 4			; longword logical
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for CALLS, the main program
+;   I     INTEGER        $LOCAL+0   CALLS.I
+;   J     INTEGER        $LOCAL+4   CALLS.J
+;   K     INTEGER        $LOCAL+8   CALLS.K
+;   M     INTEGER (2,3)  $LOCAL+12  CALLS.M
+;   X     REAL           $LOCAL+36  CALLS.X
+;   Y     REAL           $LOCAL+40  CALLS.Y
+;   OK    LOGICAL        $LOCAL+44  CALLS.OK
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CALLS.I:
+	.BLKL	1			; I
+CALLS.J:
+	.BLKL	1			; J
+CALLS.K:
+	.BLKL	1			; K
+CALLS.M:
+	.BLKL	6			; M, INTEGER (2,3)
+CALLS.X:
+	.BLKL	1			; X
+CALLS.Y:
+	.BLKL	1			; Y
+CALLS.OK:
+	.BLKL	1			; OK
+CALLS.$T1:
+	.BLKL	1			; temporary
+CALLS.$T2:
+	.BLKL	1			; temporary
+CALLS.$T3:
+	.BLKL	1			; temporary
+CALLS.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+CALLS.$C1:
+	.BLKL	1			; DO 10's count
+CALLS.$S2:
+	.BLKL	1			; DO 20's step
+CALLS.$C2:
+	.BLKL	1			; DO 20's count
+CALLS.$C3:
+	.BLKL	1			; DO 40's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CALLS.$K1:
+	.LONG	2
+CALLS.$K2:
+	.LONG	5
+CALLS.$K3:
+	.LONG	6
+CALLS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+CALLS.$D1:
+	.WORD	9			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CALLS.$K4
+CALLS.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS CALLS.M
+CALLS.$K5:
+	.LONG	^X000040C0		; 1.5
+CALLS.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS CALLS.$K5
+CALLS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_LU,DSC$K_CLASS_S
+	.ADDRESS CALLS.OK
+CALLS.$K6:
+	.LONG	-1
+CALLS.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_LU,DSC$K_CLASS_S
+	.ADDRESS CALLS.$K6
+CALLS.$K7:
+	.LONG	4
+CALLS.$D7:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS CALLS.$T1
+CALLS.$D8:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CALLS.$K8
+CALLS.$K9:
+	.LONG	1
+CALLS.$K10:
+	.LONG	3
+CALLS.$F1:
+	.LONG	^X00004220		; 10.0
+CALLS.$F2:
+	.LONG	^X00003F80		; 0.25
+CALLS.$K4:
+	.ASCII	/M(1,1) IS/
+CALLS.$K8:
+	.ASCII	/99/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Arguments, function values, and output items of every kind.
+;    2        PROGRAM CALLS
+	.ENTRY	CALLS,^M<>
+;    3        INTEGER I, J, K, M(2,3), ISQ
+;    4        REAL X, Y, TOTAL
+;    5        LOGICAL OK
+;    6        I = 3
+	MOVL	#3,CALLS.I
+;    7  C     A function's value straight into its target, and through a
+;    8  C     temporary when it is converted or part of an expression.
+;    9        J = ISQ(I)
+	PUSHAL	CALLS.I
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.J
+;   10        X = ISQ(I+1)
+	ADDL3	CALLS.I,#1,CALLS.$T2
+	PUSHAL	CALLS.$T2
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.$T1
+	CVTLF	CALLS.$T1,CALLS.X
+;   11        K = ISQ(ISQ(2)) + ISQ(J)
+	PUSHAL	CALLS.$K1
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.$T1
+	PUSHAL	CALLS.$T1
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.$T2
+	PUSHAL	CALLS.J
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.$T3
+	ADDL3	CALLS.$T2,CALLS.$T3,CALLS.K
+;   12  C     A constant, an expression, a copy, a null argument, an element.
+;   13        CALL SHOW(5, I*2, (J), , M(2,K-1))
+	MULL3	CALLS.I,#2,CALLS.$T3
+	MOVL	CALLS.J,CALLS.$T1
+	MULL3	CALLS.K,#2,R0
+	PUSHAL	CALLS.M-12[R0]
+	PUSHL	#0
+	PUSHAL	CALLS.$T1
+	PUSHAL	CALLS.$T3
+	PUSHAL	CALLS.$K2
+	CALLS	#5,G^SHOW
+;   14        CALL FILL(M, 6)
+	PUSHAL	CALLS.$K3
+	PUSHAL	CALLS.M
+	CALLS	#2,G^FILL
+;   15        Y = TOTAL(M, 6)
+	PUSHAL	CALLS.$K3
+	PUSHAL	CALLS.M
+	CALLS	#2,G^TOTAL
+	MOVF	R0,CALLS.Y
+;   16        M(1,1) = M(2,3) + M(I,J)
+	MULL3	CALLS.J,#2,R0
+	ADDL2	CALLS.I,R0
+	ADDL3	CALLS.M+20,CALLS.M-12[R0],CALLS.M
+;   17  C     Output: constants, a dummy-free element, a logical, a function.
+;   18        OK = Y .GT. 10.0 .OR. I .EQ. 0
+	CLRL	R0
+	CMPF	CALLS.Y,CALLS.$F1
+	BLEQ	CALLS.$1
+	MNEGL	#1,R0
+CALLS.$1:
+	CLRL	R1
+	TSTL	CALLS.I
+	BNEQ	CALLS.$2
+	MNEGL	#1,R1
+CALLS.$2:
+	BISL3	R0,R1,CALLS.OK
+;   19        PRINT *, 'M(1,1) IS', M(1,1), 1.5, OK, .TRUE., M(I,2), ISQ(4)
+	PUSHAB	CALLS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	CALLS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CALLS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CALLS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CALLS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CALLS.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	CALLS.I,R0
+	MOVAL	CALLS.M+4[R0],CALLS.$D6+4
+	PUSHAQ	CALLS.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAL	CALLS.$K7
+	CALLS	#1,G^ISQ
+	MOVL	R0,CALLS.$T1
+	PUSHAQ	CALLS.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   20  C     Loops: a REAL variable, a step that isn't constant, no trips.
+;   21        DO 10 X = 1.0, 2.0, 0.25
+	MOVL	#5,CALLS.$C1		; DO 10's count
+	MOVL	#^X00004080,CALLS.X	; 1.0
+;   22     10 CONTINUE
+CALLS.L10:				; DO 10's body
+	ADDF2	CALLS.$F2,CALLS.X
+	DECL	CALLS.$C1		; one pass fewer
+	BLEQ	CALLS.$3
+	BRW	CALLS.L10
+CALLS.$3:
+;   23        DO 20 I = J, K, J - 1
+	SUBL3	#1,CALLS.J,CALLS.$S2	; DO 20's step
+	SUBL3	CALLS.J,CALLS.K,R0	; DO 20's count
+	ADDL2	CALLS.$S2,R0
+	DIVL3	CALLS.$S2,R0,CALLS.$C2
+	MOVL	CALLS.J,CALLS.I
+	TSTL	CALLS.$C2
+	BGTR	CALLS.$5
+	BRW	CALLS.$4
+CALLS.$5:
+CALLS.$6:				; DO 20's body
+;   24           IF (I .GT. 10) GO TO 30
+	CMPL	CALLS.I,#10
+	BLEQ	CALLS.$7
+	BRW	CALLS.L30
+CALLS.$7:
+;   25     20 CONTINUE
+CALLS.L20:
+	ADDL2	CALLS.$S2,CALLS.I
+	DECL	CALLS.$C2		; one pass fewer
+	BLEQ	CALLS.$8
+	BRW	CALLS.$6
+CALLS.$8:
+CALLS.$4:
+;   26     30 DO 40 I = 5, 1
+CALLS.L30:
+	MOVL	#-3,CALLS.$C3		; DO 40's count
+	MOVL	#5,CALLS.I
+	BRW	CALLS.$9
+;   27     40 CONTINUE
+CALLS.L40:				; DO 40's body
+	INCL	CALLS.I
+	DECL	CALLS.$C3		; one pass fewer
+	BLEQ	CALLS.$10
+	BRW	CALLS.L40
+CALLS.$10:
+CALLS.$9:
+;   28        IF (.NOT. OK) STOP 99
+	BLBC	CALLS.OK,CALLS.$12
+	BRW	CALLS.$11
+CALLS.$12:
+	PUSHAQ	CALLS.$D8
+	CALLS	#1,G^FTN$STOP
+CALLS.$11:
+;   29        IF (OK) CALL SHOW(1, 2, 3, 4, 5)
+	BLBS	CALLS.OK,CALLS.$14
+	BRW	CALLS.$13
+CALLS.$14:
+	PUSHAL	CALLS.$K2
+	PUSHAL	CALLS.$K7
+	PUSHAL	CALLS.$K10
+	PUSHAL	CALLS.$K1
+	PUSHAL	CALLS.$K9
+	CALLS	#5,G^SHOW
+CALLS.$13:
+;   30        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for ISQ, an INTEGER function
+;   N     INTEGER  argument 1  @ISQ.N(AP)
+;   ISQ   INTEGER  $LOCAL+0    ISQ.ISQ
+;
+ISQ.N = 4				; N is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ISQ.ISQ:
+	.BLKL	1			; ISQ, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   31  C
+;   32        INTEGER FUNCTION ISQ(N)
+	.ENTRY	ISQ,^M<>
+;   33        ISQ = N*N
+	MULL3	@ISQ.N(AP),@ISQ.N(AP),ISQ.ISQ
+;   34        END
+	MOVL	ISQ.ISQ,R0		; the function's value
+	RET
+
+; Storage map for FILL, a subroutine
+;   A     INTEGER (6)  argument 1  @FILL.A(AP)
+;   N     INTEGER      argument 2  @FILL.N(AP)
+;   I     INTEGER      $LOCAL+0    FILL.I
+;
+FILL.A = 4				; A is argument 1
+FILL.N = 8				; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FILL.I:	.BLKL	1			; I
+FILL.$C1:
+	.BLKL	1			; DO 10's count
+FILL.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FILL.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+FILL.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	24			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	6			; multipliers
+	.LONG	1,6			; bounds
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FILL.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   35  C
+;   36        SUBROUTINE FILL(A, N)
+	.ENTRY	FILL,^M<>
+;   37        INTEGER N, A(6)
+;   38        DO 10 I = 1, N
+	MOVL	@FILL.N(AP),FILL.$C1	; DO 10's count
+	MOVL	#1,FILL.I
+	TSTL	FILL.$C1
+	BGTR	FILL.$2
+	BRW	FILL.$1
+FILL.$2:
+FILL.$3:				; DO 10's body
+;   39           A(I) = I
+	SUBL3	#1,FILL.I,R0
+	MOVL	FILL.I,@FILL.A(AP)[R0]
+;   40     10 CONTINUE
+FILL.L10:
+	INCL	FILL.I
+	DECL	FILL.$C1		; one pass fewer
+	BLEQ	FILL.$4
+	BRW	FILL.$3
+FILL.$4:
+FILL.$1:
+;   41        PRINT *, N, A(N), A
+	PUSHAB	FILL.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	MOVAL	@FILL.N(AP),FILL.$D1+4
+	PUSHAQ	FILL.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	#1,@FILL.N(AP),R0
+	MOVAL	@FILL.A(AP)[R0],FILL.$D2+4
+	PUSHAQ	FILL.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	@FILL.A(AP),FILL.$D3+4
+	MOVL	#-1,R0
+	MOVAL	@FILL.A(AP)[R0],FILL.$D3+16
+	PUSHAQ	FILL.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   42        END
+	RET
+
+; Storage map for SHOW, a subroutine
+;   A     INTEGER  argument 1  @SHOW.A(AP)
+;   B     INTEGER  argument 2  @SHOW.B(AP)
+;   C     INTEGER  argument 3  @SHOW.C(AP)
+;   D     INTEGER  argument 4  @SHOW.D(AP)
+;   E     INTEGER  argument 5  @SHOW.E(AP)
+;
+SHOW.A = 4				; A is argument 1
+SHOW.B = 8				; B is argument 2
+SHOW.C = 12				; C is argument 3
+SHOW.D = 16				; D is argument 4
+SHOW.E = 20				; E is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SHOW.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SHOW.$IO1:
+	.WORD	8			; WRITE (*,*)'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   43  C
+;   44        SUBROUTINE SHOW(A, B, C, D, E)
+	.ENTRY	SHOW,^M<>
+;   45        INTEGER A, B, C, D, E
+;   46        WRITE (*,*) A, B, C, D, E
+	PUSHAB	SHOW.$IO1
+	CALLS	#1,G^FTN$WRITE_LIST
+	MOVAL	@SHOW.A(AP),SHOW.$D1+4
+	PUSHAQ	SHOW.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	@SHOW.B(AP),SHOW.$D2+4
+	PUSHAQ	SHOW.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	@SHOW.C(AP),SHOW.$D3+4
+	PUSHAQ	SHOW.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	@SHOW.D(AP),SHOW.$D4+4
+	PUSHAQ	SHOW.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	@SHOW.E(AP),SHOW.$D5+4
+	PUSHAQ	SHOW.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   47        IF (A .LT. 0) RETURN
+	TSTL	@SHOW.A(AP)
+	BLSS	SHOW.$2
+	BRW	SHOW.$1
+SHOW.$2:
+	RET
+SHOW.$1:
+;   48        STOP
+	CALLS	#0,G^FTN$STOP
+;   49        END
+
+	.END	CALLS

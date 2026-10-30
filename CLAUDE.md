@@ -283,9 +283,9 @@ never had.
   the compiler's driver, messages, and first pass (source forms and
   INCLUDE), and FTNRTL's pipeline (built into govax, found by RUN and
   LINK); Phase 75 (first light, every pass for a small subset) is in
-  progress: subtasks 1 to 5 (the survey and design, the lexer, the AST
-  and parser, semantic analysis, the IR and lowering) are done, the code
-  generator is next.
+  progress: subtasks 1 to 6 (the survey and design, the lexer, the AST
+  and parser, semantic analysis, the IR and lowering, the code
+  generator) are done, FTNRTL's list-directed output is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1607,9 +1607,21 @@ expect adjustment as phases land):
   CDEC$ directives, the statement field's end (72 or 132), the
   continuation limit, `!` comments outside character and Hollerith
   constants (`comment.go`), and INCLUDE through an `Opener`
-  (`include.go`). `codegen` so far is `Writer`, the MACRO file's layout
-  (columns, the 132-character limit, `SourceLine`/`SourceLineAt`, an
-  included line's prefix starting with its depth). `lex` is the second
+  (`include.go`). `codegen` is the last pass (Phase 75, subtask 6):
+  `Writer` is the MACRO file's layout (columns, the 132-character
+  limit, `SourceLine`/`SourceLineAt`, an included line's prefix starting
+  with its depth), and `Generate` writes the routines: the `DSC$K_`
+  definitions used, then per routine a storage map, `$LOCAL` (cells,
+  descriptor cells initialized but for their addresses), `$PDATA` (longword
+  data, then texts), and `$CODE` (`routine.go`: blocks, calls, terminators;
+  `expr.go`: Sethi–Ullman registers R0–R5, spill cells `$Xn` past a budget
+  of 4, two-operand and INC/DEC forms, `.AND.` as BIC; `cond.go`: branches
+  on comparisons and bit 0, short-circuit, every branch a byte branch around
+  a `BRW`, a TST of what was just written left out), each source line
+  before its code (`source.go`); names `unit.name`, numbered `.$Nn` past 31
+  characters (`names.go`). Golden `.mar` files are in `codegen/testdata`,
+  each assembled by `internal/asm`; the console's `TestFortranCodeRuns`
+  links a program with a MACRO printing helper and runs it. `lex` is the second
   pass (Phase 75, subtask 2): `Lex` turns each `source.Statement` into a
   `lex.Statement` (its `Kind`, label, `Token`s with offsets back to the
   source, a logical IF's statement as `Then`, a typed FUNCTION's
@@ -1658,7 +1670,8 @@ expect adjustment as phases land):
   before the variable is set; PRINT is FTNRTL's calls with a descriptor
   per item (`lowerstmt.go`); `arith` folds as it builds. `Check`
   verifies a routine; golden dumps (`Dump`) are in `ir/testdata`.
-  `Compile` lowers a program without errors; `opt` is Phase 84's.
+  `Compile` lowers a program without errors and generates its code,
+  the module named for the first unit; `opt` is Phase 84's.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`

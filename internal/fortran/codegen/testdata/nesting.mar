@@ -1,0 +1,163 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for NEST, the main program
+;   I     INTEGER        $LOCAL+0   NEST.I
+;   J     INTEGER        $LOCAL+4   NEST.J
+;   K     INTEGER        $LOCAL+8   NEST.K
+;   M     INTEGER (3,4)  $LOCAL+12  NEST.M
+;   L     LOGICAL        $LOCAL+60  NEST.L
+;   X     REAL           $LOCAL+64  NEST.X
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+NEST.I:	.BLKL	1			; I
+NEST.J:	.BLKL	1			; J
+NEST.K:	.BLKL	1			; K
+NEST.M:	.BLKL	12			; M, INTEGER (3,4)
+NEST.L:	.BLKL	1			; L
+NEST.X:	.BLKL	1			; X
+NEST.$C1:
+	.BLKL	1			; DO 20's count
+NEST.$C2:
+	.BLKL	1			; DO 20's count
+NEST.$C3:
+	.BLKL	1			; DO 30's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+NEST.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+NEST.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS NEST.$K1
+NEST.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS NEST.K
+NEST.$F1:
+	.LONG	^X000040C0		; 1.5
+NEST.$F2:
+	.LONG	^X00004100		; 2.0
+NEST.$F3:
+	.LONG	^X00004000		; 0.5
+NEST.$K1:
+	.ASCII	/ODD/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Blocks inside blocks, loops sharing a terminal statement, jumps.
+;    2        PROGRAM NEST
+	.ENTRY	NEST,^M<>
+;    3        INTEGER I, J, K, M(3,4)
+;    4        LOGICAL L
+;    5        L = .TRUE.
+	MOVL	#-1,NEST.L
+;    6        DO 20 I = 1, 3
+	MOVL	#3,NEST.$C1		; DO 20's count
+	MOVL	#1,NEST.I
+NEST.$1:				; DO 20's body
+;    7           DO 20 J = 1, 4
+	MOVL	#4,NEST.$C2		; DO 20's count
+	MOVL	#1,NEST.J
+NEST.$2:				; DO 20's body
+;    8              M(I,J) = I + J
+	MULL3	NEST.J,#3,R0
+	ADDL2	NEST.I,R0
+	ADDL3	NEST.I,NEST.J,NEST.M-16[R0]
+;    9              IF (M(I,J) .GT. 5) GO TO 20
+	MULL3	NEST.J,#3,R0
+	ADDL2	NEST.I,R0
+	CMPL	NEST.M-16[R0],#5
+	BLEQ	NEST.$3
+	BRW	NEST.L20
+NEST.$3:
+;   10              M(I,J) = -M(I,J)
+	MULL3	NEST.J,#3,R0
+	ADDL2	NEST.I,R0
+	MULL3	NEST.J,#3,R1
+	ADDL2	NEST.I,R1
+	MNEGL	NEST.M-16[R0],NEST.M-16[R1]
+;   11     20 CONTINUE
+NEST.L20:
+	INCL	NEST.J
+	DECL	NEST.$C2		; one pass fewer
+	BLEQ	NEST.$4
+	BRW	NEST.$2
+NEST.$4:
+	INCL	NEST.I
+	DECL	NEST.$C1		; one pass fewer
+	BLEQ	NEST.$5
+	BRW	NEST.$1
+NEST.$5:
+;   12        K = 0
+	CLRL	NEST.K
+;   13        IF (L) THEN
+	BLBS	NEST.L,NEST.$6
+	BRW	NEST.L40
+NEST.$6:
+;   14           DO 30 X = 0.5, 2.5, 0.5
+	MOVL	#5,NEST.$C3		; DO 30's count
+	MOVL	#^X00004000,NEST.X	; 0.5
+NEST.$7:				; DO 30's body
+;   15              IF (X .EQ. 1.5) THEN
+	CMPF	NEST.X,NEST.$F1
+	BEQL	NEST.$9
+	BRW	NEST.$8
+NEST.$9:
+;   16                 K = K + 1
+	INCL	NEST.K
+;   17              ELSE IF (X .GT. 2) THEN
+	BRW	NEST.L30
+NEST.$8:
+	CMPF	NEST.X,NEST.$F2
+	BGTR	NEST.$10
+	BRW	NEST.L30
+NEST.$10:
+;   18                 GO TO 40
+	BRW	NEST.L40
+;   19              END IF
+;   20     30    CONTINUE
+NEST.L30:
+	ADDF2	NEST.$F3,NEST.X
+	DECL	NEST.$C3		; one pass fewer
+	BLEQ	NEST.$11
+	BRW	NEST.$7
+NEST.$11:
+;   21     40 END IF
+NEST.L40:
+;   22        IF (K) PRINT *, 'ODD', K
+	BLBS	NEST.K,NEST.$13
+	BRW	NEST.$12
+NEST.$13:
+	PUSHAB	NEST.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	NEST.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	NEST.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+NEST.$12:
+;   23        IF (.NOT. L .OR. K .EQ. 2 * 3 - 5) K = 7 / 2
+	BLBS	NEST.L,NEST.$16
+	BRW	NEST.$15
+NEST.$16:
+	CMPL	NEST.K,#1
+	BEQL	NEST.$17
+	BRW	NEST.$14
+NEST.$17:
+NEST.$15:
+	MOVL	#3,NEST.K
+NEST.$14:
+;   24        L = K .AND. 6
+	BICL3	#-7,NEST.K,NEST.L
+;   25        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	NEST

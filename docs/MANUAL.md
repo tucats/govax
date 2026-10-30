@@ -4350,8 +4350,14 @@ any statement outside what it can compile so far (`%FORT-E-NOTIMPL`,
 naming the statement: "the READ statement is not implemented yet"); and
 it checks each program unit's meaning: declarations and types, IF
 blocks and DO loops, statement labels and jumps, and calls between the
-file's units. It generates no code yet, so the MACRO file it writes assembles into an
-empty module. FTNRTL exists, with its first two routines.
+file's units. For the statements of Phase 75's subset (main programs,
+subroutines, and INTEGER, REAL, and LOGICAL functions; INTEGER, REAL,
+and LOGICAL scalars and arrays; assignment and arithmetic, relational,
+and logical expressions; IF, block IF, DO, GO TO, CALL, RETURN, STOP;
+`PRINT *` and `WRITE (*,*)`) it generates code: the MACRO file assembles
+into a module that links and runs. FTNRTL exists, with its first two
+routines; list-directed output (`FTN$PRINT_LIST` and its companions)
+is the next step, so for now a program that prints doesn't link.
 
 ### 14.1 The FORTRAN command
 
@@ -4409,10 +4415,11 @@ VAX> FORTRAN BAD
 
 The MACRO file is meant to be read beside the program it came from. It
 starts with what made it, and holds every line of the source as a
-comment, with its number; a line from an INCLUDE file has its include
-depth before the number, between comments naming the file. For this
-program and its INCLUDE file, `LIMITS.FOR`, which holds
-`INTEGER N`:
+comment, with its number, just before the instructions it became, so
+comments and declarations appear where they are in the source; a line
+from an INCLUDE file has its include depth before the number, between
+comments naming the file. For this program and its INCLUDE file,
+`LIMITS.FOR`, which holds `INTEGER N`:
 
 ```text
       PROGRAM SQUARES
@@ -4425,39 +4432,122 @@ C     Squares of the first N integers
       END
 ```
 
-FORTRAN writes this `SQUARES.MAR` (later phases put each statement's
-code after its lines):
+FORTRAN writes this `SQUARES.MAR`:
 
 ```text
 	.TITLE	SQUARES
 	.IDENT	/01/
 ;
-; Compiled by govax FORTRAN V1.0-607 on 29-OCT-2026 22:05:44.66
+; Compiled by govax FORTRAN V1.0-612 on 30-OCT-2026 08:49:36.21
 ; from DUA0:[WORK]SQUARES.FOR;1
 ; by the command FORTRAN SQUARES
 ;
-; Each line of the FORTRAN source appears below as a comment, with its line number;
-; a line from an INCLUDE file has its include depth before the number.
-; This version of the compiler generates no code yet; MACRO assembles this file
-; into an empty module.
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became; a line from an INCLUDE file has its include depth
+; before the number. Each routine's storage map says where its variables are.
 ;
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for SQUARES, the main program
+;   N     INTEGER  $LOCAL+0  SQUARES.N
+;   I     INTEGER  $LOCAL+4  SQUARES.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SQUARES.N:
+	.BLKL	1			; N
+SQUARES.I:
+	.BLKL	1			; I
+SQUARES.$C1:
+	.BLKL	1			; DO 10's count
+SQUARES.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SQUARES.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SQUARES.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SQUARES.I
+SQUARES.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SQUARES.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;    1        PROGRAM SQUARES
+	.ENTRY	SQUARES,^M<>
 ;    2  C     Squares of the first N integers
 ;    3        INCLUDE 'limits'
 ; INCLUDE file DUA0:[WORK]LIMITS.FOR;1:
 ;1   1        INTEGER N
 ; end of DUA0:[WORK]LIMITS.FOR;1
 ;    4        DO 10 I = 1, N
+	MOVL	SQUARES.N,SQUARES.$C1	; DO 10's count
+	MOVL	#1,SQUARES.I
+	TSTL	SQUARES.$C1
+	BGTR	SQUARES.$2
+	BRW	SQUARES.$1
+SQUARES.$2:
+SQUARES.$3:				; DO 10's body
 ;    5  	PRINT *, I,
 ;    6  	1  I*I
+	PUSHAB	SQUARES.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	SQUARES.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	SQUARES.I,SQUARES.I,SQUARES.$T1
+	PUSHAQ	SQUARES.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
 ;    7  10    CONTINUE
+SQUARES.L10:
+	INCL	SQUARES.I
+	DECL	SQUARES.$C1		; one pass fewer
+	BLEQ	SQUARES.$4
+	BRW	SQUARES.$3
+SQUARES.$4:
+SQUARES.$1:
 ;    8        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
 
-	.END
+	.END	SQUARES
 ```
 
 Each source line's prefix is one tab stop wide, so tab-format lines keep
-their layout.
+their layout. What to look for in the code:
+
+- **The module** is named for the file's first program unit (here the
+  PROGRAM statement's name; a main program without one is named
+  `file$MAIN`, as section 4.12 of the language manual says), and `.END`
+  names the main program, the image's transfer address. Each program
+  unit is a routine, a `.ENTRY` with its register save mask, called by
+  `CALLS` under the VAX calling standard.
+- **Storage is static.** Each routine's variables, arrays, and the
+  compiler's cells are in the `$LOCAL` program section, named
+  `routine.name` (`SQUARES.I`), so `MACRO/DEBUG` and the debugger can
+  name them; constants, descriptors, and I/O control blocks are in
+  `$PDATA`, read-only; the code is in `$CODE`. The compiler's own names
+  have a `$`: `$Cn` a DO loop's count, `$Sn` its step, `$Tn` a
+  temporary, `$Kn` and `$Fn` constants, `$Dn` descriptors, `$IOn` I/O
+  control blocks, `$Xn` part of an expression set aside, and `$n` a
+  label. FORTRAN's label 10 is `SQUARES.L10`. A name longer than MACRO's
+  31 characters becomes a numbered one, `.$Nn`, listed in the storage
+  map.
+- **Dummy arguments** are reached through the argument list:
+  `ISQ.N = 4` names N's offset, and `@ISQ.N(AP)` is N.
+- **A DO loop** computes its iteration count first, skips the body if
+  it is zero or less, and counts down at the end (section 5.3.1.1 of
+  the manual); the variable ends one step past its last value.
+- **Every branch reaches** however far its target is: a conditional
+  branch is the opposite condition's byte branch around a `BRW`.
 
 ### 14.4 FTNRTL, the run-time library
 
@@ -4533,6 +4623,11 @@ FORTRAN compiler was available to check them). So far:
   LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
   do on INTEGERs.
 - A name only declared, never used, is a variable, and gets storage.
+- Integer overflow isn't detected (the result wraps, as with VAX
+  FORTRAN's `/CHECK=NOOVERFLOW`); an integer division by zero ends the
+  program with the VAX's divide-by-zero trap.
+- A constant passed as an argument is read-only: a routine that assigns
+  to its dummy argument gets an access violation.
 
 ---
 

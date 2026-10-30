@@ -1,0 +1,313 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_LU = 4			; longword logical
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for SUBSET, the main program
+;   I      INTEGER       $LOCAL+0   SUBSET.I
+;   N      INTEGER       $LOCAL+4   SUBSET.N
+;   TABLE  INTEGER (10)  $LOCAL+8   SUBSET.TABLE
+;   X      REAL          $LOCAL+48  SUBSET.X
+;   Y      REAL          $LOCAL+52  SUBSET.Y
+;   DONE   LOGICAL       $LOCAL+56  SUBSET.DONE
+;   V      REAL (0:9)    $LOCAL+60  SUBSET.V
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUBSET.I:
+	.BLKL	1			; I
+SUBSET.N:
+	.BLKL	1			; N
+SUBSET.TABLE:
+	.BLKL	10			; TABLE, INTEGER (10)
+SUBSET.X:
+	.BLKL	1			; X
+SUBSET.Y:
+	.BLKL	1			; Y
+SUBSET.DONE:
+	.BLKL	1			; DONE
+SUBSET.V:
+	.BLKL	10			; V, REAL (0:9)
+SUBSET.$C1:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SUBSET.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SUBSET.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SUBSET.$K1
+SUBSET.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS SUBSET.Y
+SUBSET.$IO2:
+	.WORD	8			; WRITE (*,*)'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SUBSET.$D3:
+	.WORD	6			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SUBSET.$K2
+SUBSET.$D4:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SUBSET.$K3
+SUBSET.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_LU,DSC$K_CLASS_S
+	.ADDRESS SUBSET.DONE
+SUBSET.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.ADDRESS SUBSET.V
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	40			; the array's size in bytes
+	.ADDRESS SUBSET.V		; A0, where the element with zero subscripts would be
+	.LONG	10			; multipliers
+	.LONG	0,9			; bounds
+SUBSET.$D7:
+	.WORD	11			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SUBSET.$K4
+SUBSET.$F1:
+	.LONG	^X00004100		; 2.0
+SUBSET.$F2:
+	.LONG	^X000043C8		; 100.0
+SUBSET.$F3:
+	.LONG	^X00004220		; 10.0
+SUBSET.$K1:
+	.ASCII	/BIG/
+SUBSET.$K2:
+	.ASCII	/MEDIUM/
+SUBSET.$K3:
+	.ASCII	/SMALL/
+SUBSET.$K4:
+	.ASCII	/WRONG COUNT/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Every statement of Phase 75's subset, in three program units.
+;    2        PROGRAM SUBSET
+	.ENTRY	SUBSET,^M<>
+;    3        INTEGER I, N, TABLE(10)
+;    4        REAL X, Y, AVG
+;    5        LOGICAL DONE
+;    6        DIMENSION V(0:9)
+;    7        N = 10
+	MOVL	#10,SUBSET.N
+;    8        DONE = .FALSE.
+	CLRL	SUBSET.DONE
+;    9  C     Fill the table, then sum it.
+;   10        DO 10 I = 1, N
+	MOVL	SUBSET.N,SUBSET.$C1	; DO 10's count
+	MOVL	#1,SUBSET.I
+	TSTL	SUBSET.$C1
+	BGTR	SUBSET.$2
+	BRW	SUBSET.$1
+SUBSET.$2:
+SUBSET.$3:				; DO 10's body
+;   11           TABLE(I) = I*I - 2*I + 1
+	MULL3	SUBSET.I,SUBSET.I,R0
+	MULL3	#2,SUBSET.I,R1
+	SUBL2	R1,R0
+	MOVL	SUBSET.I,R1
+	ADDL3	R0,#1,SUBSET.TABLE-4[R1]
+;   12           V(I-1) = I / 2.0
+	CVTLF	SUBSET.I,R0
+	MOVL	SUBSET.I,R1
+	DIVF3	SUBSET.$F1,R0,SUBSET.V-4[R1]
+;   13     10 CONTINUE
+SUBSET.L10:
+	INCL	SUBSET.I
+	DECL	SUBSET.$C1		; one pass fewer
+	BLEQ	SUBSET.$4
+	BRW	SUBSET.$3
+SUBSET.$4:
+SUBSET.$1:
+;   14        CALL SUMUP(TABLE, N, X)
+	PUSHAL	SUBSET.X
+	PUSHAL	SUBSET.N
+	PUSHAL	SUBSET.TABLE
+	CALLS	#3,G^SUMUP
+;   15        Y = AVG(TABLE, N)
+	PUSHAL	SUBSET.N
+	PUSHAL	SUBSET.TABLE
+	CALLS	#2,G^AVG
+	MOVF	R0,SUBSET.Y
+;   16        IF (Y .GT. 100.0 .AND. .NOT. DONE) THEN
+	CMPF	SUBSET.Y,SUBSET.$F2
+	BGTR	SUBSET.$6
+	BRW	SUBSET.$5
+SUBSET.$6:
+	BLBC	SUBSET.DONE,SUBSET.$7
+	BRW	SUBSET.$5
+SUBSET.$7:
+;   17           PRINT *, 'BIG', Y
+	PUSHAB	SUBSET.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	SUBSET.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUBSET.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   18        ELSE IF (Y .GT. 10) THEN
+	BRW	SUBSET.$8
+SUBSET.$5:
+	CMPF	SUBSET.Y,SUBSET.$F3
+	BGTR	SUBSET.$10
+	BRW	SUBSET.$9
+SUBSET.$10:
+;   19           WRITE (*,*) 'MEDIUM', Y
+	PUSHAB	SUBSET.$IO2
+	CALLS	#1,G^FTN$WRITE_LIST
+	PUSHAQ	SUBSET.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUBSET.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   20        ELSE
+	BRW	SUBSET.$8
+SUBSET.$9:
+;   21           WRITE (UNIT=*, FMT=*) 'SMALL', Y, DONE, V
+	PUSHAB	SUBSET.$IO2
+	CALLS	#1,G^FTN$WRITE_LIST
+	PUSHAQ	SUBSET.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUBSET.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUBSET.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUBSET.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   22        END IF
+SUBSET.$8:
+;   23        I = 0
+	CLRL	SUBSET.I
+;   24     20 I = I + 1
+SUBSET.L20:
+	INCL	SUBSET.I
+;   25        IF (I .LT. 3) GO TO 20
+	CMPL	SUBSET.I,#3
+	BGEQ	SUBSET.$11
+	BRW	SUBSET.L20
+SUBSET.$11:
+;   26        IF (I .NE. 3) STOP 'WRONG COUNT'
+	CMPL	SUBSET.I,#3
+	BNEQ	SUBSET.$13
+	BRW	SUBSET.$12
+SUBSET.$13:
+	PUSHAQ	SUBSET.$D7
+	CALLS	#1,G^FTN$STOP
+SUBSET.$12:
+;   27        PRINT *
+	PUSHAB	SUBSET.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#0,G^FTN$IO_END
+;   28        STOP
+	CALLS	#0,G^FTN$STOP
+;   29        END
+
+; Storage map for SUMUP, a subroutine
+;   T     INTEGER (*)  argument 1  @SUMUP.T(AP)
+;   N     INTEGER      argument 2  @SUMUP.N(AP)
+;   S     REAL         argument 3  @SUMUP.S(AP)
+;   K     INTEGER      $LOCAL+0    SUMUP.K
+;
+SUMUP.T = 4				; T is argument 1
+SUMUP.N = 8				; N is argument 2
+SUMUP.S = 12				; S is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUMUP.K:
+	.BLKL	1			; K
+SUMUP.$C1:
+	.BLKL	1			; DO 100's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   30  C
+;   31        SUBROUTINE SUMUP(T, N, S)
+	.ENTRY	SUMUP,^M<>
+;   32        INTEGER N, T(*)
+;   33        S = 0.0
+	CLRF	@SUMUP.S(AP)
+;   34        DO 100, K = N, 1, -1
+	MOVL	@SUMUP.N(AP),SUMUP.$C1	; DO 100's count
+	MOVL	@SUMUP.N(AP),SUMUP.K
+	TSTL	SUMUP.$C1
+	BGTR	SUMUP.$2
+	BRW	SUMUP.$1
+SUMUP.$2:
+;   35    100 S = S + T(K)
+SUMUP.L100:				; DO 100's body
+	SUBL3	#1,SUMUP.K,R0
+	CVTLF	@SUMUP.T(AP)[R0],R0
+	ADDF2	R0,@SUMUP.S(AP)
+	DECL	SUMUP.K
+	DECL	SUMUP.$C1		; one pass fewer
+	BLEQ	SUMUP.$3
+	BRW	SUMUP.L100
+SUMUP.$3:
+SUMUP.$1:
+;   36        RETURN
+	RET
+;   37        END
+
+; Storage map for AVG, a REAL function
+;   T     INTEGER (10)  argument 1  @AVG.T(AP)
+;   N     INTEGER       argument 2  @AVG.N(AP)
+;   AVG   REAL          $LOCAL+0    AVG.AVG
+;   J     INTEGER       $LOCAL+4    AVG.J
+;
+AVG.T = 4				; T is argument 1
+AVG.N = 8				; N is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+AVG.AVG:
+	.BLKL	1			; AVG, the function's value
+AVG.J:	.BLKL	1			; J
+AVG.$C1:
+	.BLKL	1			; DO 200's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   38  C
+;   39        REAL FUNCTION AVG(T, N)
+	.ENTRY	AVG,^M<>
+;   40        INTEGER N, T(10)
+;   41        AVG = 0
+	CLRF	AVG.AVG
+;   42        DO 200 J = 1, N
+	MOVL	@AVG.N(AP),AVG.$C1	; DO 200's count
+	MOVL	#1,AVG.J
+	TSTL	AVG.$C1
+	BGTR	AVG.$2
+	BRW	AVG.$1
+AVG.$2:
+AVG.$3:					; DO 200's body
+;   43           AVG = AVG + T(J)
+	SUBL3	#1,AVG.J,R0
+	CVTLF	@AVG.T(AP)[R0],R0
+	ADDF2	R0,AVG.AVG
+;   44    200 CONTINUE
+AVG.L200:
+	INCL	AVG.J
+	DECL	AVG.$C1			; one pass fewer
+	BLEQ	AVG.$4
+	BRW	AVG.$3
+AVG.$4:
+AVG.$1:
+;   45        AVG = AVG / N
+	CVTLF	@AVG.N(AP),R0
+	DIVF2	R0,AVG.AVG
+;   46        END
+	MOVF	AVG.AVG,R0		; the function's value
+	RET
+
+	.END	SUBSET

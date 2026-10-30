@@ -32,17 +32,14 @@
 // diag holds every pass's error and warning messages, and ast the syntax
 // tree's node types, which parse builds and sema reads.
 //
-// The passes are built a phase at a time (docs/PHASE-74's Part C). So far
-// the compiler has its driver (this package), its messages (diag), the
-// source pass, the lexer, the syntax tree (ast) and its parser, semantic
-// analysis, lowering to the IR, and the start of codegen: Compile reads
+// The passes are built a phase at a time (docs/PHASE-74's Part C). Every
+// pass now exists, for Phase 75's subset of the language: Compile reads
 // the source and its INCLUDE files into statements, reporting any problem
 // with their layout, lexes and parses each statement, and analyzes each
 // program unit, reporting what each pass finds wrong (a statement the
-// compiler can't compile yet among them); it lowers a program without
-// errors to the IR, and copies every line into a MACRO file as comments,
-// which MACRO assembles into an empty module until the code generator
-// reads the IR.
+// compiler can't compile yet among them); a program without errors is
+// lowered to the IR, and the code generator writes it as a MACRO file,
+// each source line a comment before the instructions it became.
 //
 // The compiler is plain Go. It knows nothing of govax's console, RMS, or
 // the emulated machine: the FORTRAN command (internal/dclcmd/fortran.go)

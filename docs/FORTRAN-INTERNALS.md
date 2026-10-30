@@ -174,8 +174,9 @@ package never touches a file system.
 
 ## 5. The MACRO file: `codegen.Writer`
 
-The code generator's second job, and the only one so far, is writing
-text another program reads. `Writer` lays out each MACRO line in the
+The code generator has two jobs: choosing instructions, which Phase
+75's subtask 6 began (its chapter comes with the phase's close-out), and
+writing text another program reads. `Writer` lays out each MACRO line in the
 columns MACRO programmers use (opcode at 8, operands at 16, comment at
 40), keeps every line within MACRO's 132 characters (a comment that
 won't fit moves to a line of its own, a long one is split), and writes

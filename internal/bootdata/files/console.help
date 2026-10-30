@@ -4010,11 +4010,13 @@ $FOR
     include depth before its number.
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
-    FORTRAN plan.md).  So far it reads the source's lines into
-    statements, checking their layout (labels, continuation lines, the
-    columns of fixed-format and tab-format lines) and reading INCLUDE
-    files, and copies the lines into the MACRO file as comments.  It
-    generates no code yet: MACRO assembles the file into an empty module.
+    FORTRAN plan.md).  So far it compiles a subset of the language:
+    main programs, subroutines, and INTEGER, REAL, and LOGICAL
+    functions; INTEGER, REAL, and LOGICAL variables and arrays;
+    assignment and expressions; IF, block IF, DO, GO TO, CALL, RETURN,
+    and STOP; PRINT * and WRITE (*,*).  Any other statement draws
+    %FORT-E-NOTIMPL.  The MACRO file holds each source line as a
+    comment before the instructions it became.
 
     INCLUDE 'file' reads a file, by default of type .FOR, found relative
     to the file that includes it: on the host, in its directory; on a

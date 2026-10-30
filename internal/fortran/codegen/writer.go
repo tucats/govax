@@ -104,9 +104,63 @@ func (w *Writer) Statement(label, opcode, operands, comment string) {
 	w.lines = append(w.lines, line)
 }
 
+// Assignment writes a direct assignment statement, symbol = value, at
+// the start of its line, with an optional comment: ISQ.N = 4.
+func (w *Writer) Assignment(symbol, value, comment string) {
+	line := symbol + " = " + value
+
+	if comment != "" {
+		var b strings.Builder
+
+		b.WriteString(line)
+		padTo(&b, commentColumn)
+		b.WriteString("; " + printable(comment))
+
+		if b.Len() <= MaxLine {
+			line = b.String()
+		} else {
+			w.Comment(comment)
+		}
+	}
+
+	w.lines = append(w.lines, line)
+}
+
 // Label writes a label alone on its line.
 func (w *Writer) Label(label string) {
 	w.lines = append(w.lines, label+":")
+}
+
+// LabelComment writes a label alone on its line, with a comment in the
+// comment column (none if comment is empty).
+func (w *Writer) LabelComment(label, comment string) {
+	if comment == "" {
+		w.Label(label)
+
+		return
+	}
+
+	var b strings.Builder
+
+	b.WriteString(label + ":")
+	padTo(&b, commentColumn)
+	b.WriteString("; " + printable(comment))
+
+	if b.Len() > MaxLine {
+		w.Comment(comment)
+		w.Label(label)
+
+		return
+	}
+
+	w.lines = append(w.lines, b.String())
+}
+
+// Append writes the lines another Writer holds, after this one's: a
+// part of the file built on its own, such as a routine's code, which is
+// generated before the storage it uses is written.
+func (w *Writer) Append(part *Writer) {
+	w.lines = append(w.lines, part.lines...)
 }
 
 // SourceLine writes one line of the FORTRAN source as a comment, with its

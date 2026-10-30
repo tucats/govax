@@ -17,9 +17,10 @@ var testOptions = Options{
 	CommandLine: "FORTRAN SQUARES",
 }
 
-// TestCompileSkeleton checks the whole MACRO file this stage writes for
-// a small program: the header, the source as comments, and .END.
-func TestCompileSkeleton(t *testing.T) {
+// TestCompileSquares checks the MACRO file for a small program: the
+// header, then the code, each source line before the instructions it
+// became, and .END naming the main program.
+func TestCompileSquares(t *testing.T) {
 	file := File{
 		Spec: "DUA0:[WORK]SQUARES.FOR;1",
 		Name: "SQUARES",
@@ -38,7 +39,7 @@ func TestCompileSkeleton(t *testing.T) {
 		t.Fatalf("messages: %v", r.Messages)
 	}
 
-	want := []string{
+	header := []string{
 		"\t.TITLE\tSQUARES",
 		"\t.IDENT\t/01/",
 		";",
@@ -46,23 +47,78 @@ func TestCompileSkeleton(t *testing.T) {
 		"; from DUA0:[WORK]SQUARES.FOR;1",
 		"; by the command FORTRAN SQUARES",
 		";",
-		"; Each line of the FORTRAN source appears below as a comment, with its line number;",
-		"; a line from an INCLUDE file has its include depth before the number.",
-		"; This version of the compiler generates no code yet; MACRO assembles this file",
-		"; into an empty module.",
+		"; Each line of the FORTRAN source appears as a comment, with its line number, before",
+		"; the instructions it became; a line from an INCLUDE file has its include depth",
+		"; before the number. Each routine's storage map says where its variables are.",
 		";",
-		";    1        PROGRAM SQUARES",
-		";    2  C     Squares of the first five integers",
-		";    3        DO 10 I = 1, 5",
-		";    4  \t PRINT *, I, I*I",
-		";    5  10    CONTINUE",
-		";    6        END",
-		"",
-		"\t.END",
 	}
 
-	if got := strings.Join(r.MACRO, "\n"); got != strings.Join(want, "\n") {
-		t.Errorf("MACRO file:\n%s\nwant:\n%s", got, strings.Join(want, "\n"))
+	if got := strings.Join(r.MACRO[:len(header)], "\n"); got != strings.Join(header, "\n") {
+		t.Errorf("header:\n%s\nwant:\n%s", got, strings.Join(header, "\n"))
+	}
+
+	code := []string{
+		";    1        PROGRAM SQUARES",
+		"\t.ENTRY\tSQUARES,^M<>",
+		";    2  C     Squares of the first five integers",
+		";    3        DO 10 I = 1, 5",
+		"\tMOVL\t#5,SQUARES.$C1\t\t; DO 10's count",
+		"\tMOVL\t#1,SQUARES.I",
+		"SQUARES.$1:\t\t\t\t; DO 10's body",
+		";    4  \t PRINT *, I, I*I",
+		"\tPUSHAB\tSQUARES.$IO1",
+		"\tCALLS\t#1,G^FTN$PRINT_LIST",
+		"\tPUSHAQ\tSQUARES.$D1",
+		"\tCALLS\t#1,G^FTN$IO_ITEM",
+		"\tMULL3\tSQUARES.I,SQUARES.I,SQUARES.$T1",
+		"\tPUSHAQ\tSQUARES.$D2",
+		"\tCALLS\t#1,G^FTN$IO_ITEM",
+		"\tCALLS\t#0,G^FTN$IO_END",
+		";    5  10    CONTINUE",
+		"SQUARES.L10:",
+		"\tINCL\tSQUARES.I",
+		"\tDECL\tSQUARES.$C1\t\t; one pass fewer",
+		"\tBLEQ\tSQUARES.$2",
+		"\tBRW\tSQUARES.$1",
+		"SQUARES.$2:",
+		";    6        END",
+		"\tMOVL\t#1,R0\t\t\t; SS$_NORMAL",
+		"\tRET",
+		"",
+		"\t.END\tSQUARES",
+	}
+
+	if got := strings.Join(r.MACRO[len(r.MACRO)-len(code):], "\n"); got != strings.Join(code, "\n") {
+		t.Errorf("code:\n%s\nwant:\n%s", got, strings.Join(code, "\n"))
+	}
+}
+
+// TestCompileModuleName checks that the module is named for the first
+// program unit (Decision 3), a main program without PROGRAM being
+// file$MAIN (section 4.12), and for the file when it has no units.
+func TestCompileModuleName(t *testing.T) {
+	cases := []struct {
+		lines  []string
+		module string
+		end    string
+	}{
+		{[]string{"      X = 1", "      END"}, "PROG$MAIN", "\t.END\tPROG$MAIN"},
+		{[]string{"      SUBROUTINE S", "      END", "      PROGRAM P", "      END"}, "S", "\t.END\tP"},
+		{[]string{"      FUNCTION F(X)", "      F = X", "      END"}, "F", "\t.END"},
+		{[]string{"C     nothing"}, "PROG", "\t.END"},
+	}
+
+	for _, tc := range cases {
+		r := Compile(testOptions, File{Spec: "PROG.FOR", Name: "prog", Lines: tc.lines})
+		if len(r.Messages) != 0 || r.MACRO == nil {
+			t.Errorf("%q: %v", tc.lines, r.Messages)
+
+			continue
+		}
+
+		if r.MACRO[0] != "\t.TITLE\t"+tc.module || r.MACRO[len(r.MACRO)-1] != tc.end {
+			t.Errorf("%q: %q ... %q, want module %s and %q", tc.lines, r.MACRO[0], r.MACRO[len(r.MACRO)-1], tc.module, tc.end)
+		}
 	}
 }
 
@@ -103,20 +159,24 @@ func TestCompileIncludes(t *testing.T) {
 		";1   1        INCLUDE 'B'",
 		"; INCLUDE file [INC]B:",
 		";2   1        Y = 2",
+		"\tMOVL\t#^X00004100,MAIN$MAIN.Y\t; 2.0",
 		";2   2        INCLUDE 'C'",
 		"; INCLUDE file [INC]C:",
 		";3   1  C     innermost",
 		"; end of [INC]C",
 		"; end of [INC]B",
 		";1   2        X = 1",
+		"\tMOVL\t#^X00004080,MAIN$MAIN.X\t; 1.0",
 		"; end of [INC]A",
 		";    2        INCLUDE 'C'",
 		"; INCLUDE file [INC]C:",
 		";1   1  C     innermost",
 		"; end of [INC]C",
 		";    3        END",
+		"\tMOVL\t#1,R0\t\t\t; SS$_NORMAL",
+		"\tRET",
 		"",
-		"\t.END",
+		"\t.END\tMAIN$MAIN",
 	}
 
 	got := r.MACRO[len(r.MACRO)-len(want):]
@@ -177,7 +237,7 @@ func TestCompileParseErrors(t *testing.T) {
 }
 
 // TestCompileEmpty checks that an empty source still makes a file MACRO
-// can assemble.
+// can assemble, its module named for the file.
 func TestCompileEmpty(t *testing.T) {
 	r := Compile(testOptions, File{Spec: "empty.for", Name: "empty"})
 
