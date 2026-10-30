@@ -107,7 +107,17 @@ func (w *Writer) Statement(label, opcode, operands, comment string) {
 // Assignment writes a direct assignment statement, symbol = value, at
 // the start of its line, with an optional comment: ISQ.N = 4.
 func (w *Writer) Assignment(symbol, value, comment string) {
-	line := symbol + " = " + value
+	w.assignment(symbol+" = "+value, comment)
+}
+
+// GlobalAssignment writes a direct assignment that makes a global symbol,
+// symbol == value, with a comment: BLKDAT == 0.
+func (w *Writer) GlobalAssignment(symbol, value, comment string) {
+	w.assignment(symbol+" == "+value, comment)
+}
+
+// assignment writes an assignment's text, with its comment.
+func (w *Writer) assignment(line, comment string) {
 
 	if comment != "" {
 		var b strings.Builder

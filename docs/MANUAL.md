@@ -4403,7 +4403,9 @@ output it prints.
 
 - **Program units:** a main program, with or without a PROGRAM statement;
   SUBROUTINE; FUNCTION, typed INTEGER, REAL, or LOGICAL, or by its
-  name's first letter; END. A file may hold several units.
+  name's first letter; BLOCK DATA, named or not, which holds declarations
+  and initial values for named common blocks; END. A file may hold several
+  units.
 - **Declarations:** type statements of every type and length (BYTE;
   LOGICAL `*1`, `*2`, `*4`; INTEGER `*2`, `*4`; REAL `*4`, `*8`, `*16`;
   DOUBLE PRECISION; COMPLEX `*8`, `*16`; DOUBLE COMPLEX; CHARACTER`*n`,
@@ -4419,7 +4421,12 @@ output it prints.
   the block is as long as the longest declaration. EQUIVALENCE, with arrays,
   elements (a multidimensional array's by one subscript, its element number,
   too), and substrings: it may lengthen a common block at its end, never
-  before its start. Every variable gets its storage,
+  before its start. SAVE is accepted and checked; it changes nothing, since
+  every variable keeps its value from call to call. EXTERNAL says a name is
+  a routine outside the unit, even one with an intrinsic function's name
+  (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
+  it is FORTRAN's own. Either name as an argument is reported not implemented.
+  Every variable gets its storage,
   but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit
@@ -4429,6 +4436,15 @@ output it prints.
   declarations, then statement function definitions, then the executable
   statements); statement function definitions are recognized, and
   reported not implemented yet.
+- **Initial values:** DATA, with implied-DO lists and repeat counts
+  (`DATA (B(I), I=1,10,2) /5*1/`), and values in slashes in a type statement
+  (`INTEGER M(3)/1, 2*7/`). Numbers are converted to the item's type; octal
+  and hexadecimal constants are extended or cut on the left; character and
+  Hollerith constants, for a number too, are padded with blanks or cut on the
+  right; an integer from 0 to 255 is a CHARACTER\*1 item's code. Any named
+  common block may be initialized from any unit, but not blank common, dummy
+  arguments, or a byte twice in one file. Two separately compiled modules
+  initializing one byte of a block get whatever LINK leaves, the last one's.
 - **Constants:** PARAMETER in both forms: `PARAMETER (N=10)`, where N has
   its declared or implicit type and the value is converted to it, and
   `PARAMETER N=10`, where N has its value's type. A value is a constant

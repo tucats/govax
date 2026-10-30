@@ -33,7 +33,8 @@ func (a *analyzer) parameter(s *ast.ParameterStmt, d *ast.ParamDef) {
 	case sym.Class == Constant:
 		a.report("DUPPARAM", d.Name.Pos, sym.Name, sym.defPos.Line)
 
-	case sym.Class == UnitName || sym.Result || sym.Class == Array || sym.Class == StmtFunction:
+	case sym.Class == UnitName || sym.Result || sym.Class == Array || sym.Class == StmtFunction ||
+		sym.External || sym.Class == Intrinsic:
 		a.badUse(sym, d.Name.Pos, "be a constant")
 
 	case sym.Dummy != 0:

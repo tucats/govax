@@ -14,11 +14,12 @@ const (
 	Main Kind = iota
 	Subroutine
 	Function
+	BlockData
 )
 
 // String names the kind, for the dump.
 func (k Kind) String() string {
-	return [...]string{"main", "subroutine", "function"}[k]
+	return [...]string{"main", "subroutine", "function", "block data"}[k]
 }
 
 // Type is a value's type as the machine sees it: what size it is and
@@ -76,8 +77,18 @@ type Routine struct {
 	Data []*Datum
 
 	// Blocks are the routine's code, in the order the code generator
-	// lays them out; the first is the entry.
+	// lays them out; the first is the entry. A block data subprogram has
+	// none: it has only storage and initial values.
 	Blocks []*Block
+
+	// Initials are the initial values of the routine's variables, in
+	// order of place: bytes in the image, which no code stores.
+	Initials []*sema.Initial
+
+	// Externals are the names an EXTERNAL statement says are routines
+	// outside the unit (a dummy argument's aside), which the object module
+	// refers to whether or not any code calls them.
+	Externals []string
 
 	// Unit is the program unit the routine came from.
 	Unit *sema.Unit

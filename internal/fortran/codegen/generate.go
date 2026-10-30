@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strconv"
@@ -136,6 +138,8 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 
 	var blocks []*sema.CommonBlock
 
+	initials := map[string][]*sema.Initial{}
+
 	for _, r := range routines {
 		for _, b := range r.Unit.Commons {
 			if _, seen := sizes[b.Psect]; !seen {
@@ -143,6 +147,12 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 			}
 
 			sizes[b.Psect] = max(sizes[b.Psect], b.Size)
+		}
+
+		for _, in := range r.Initials {
+			if b := in.Sym.Common; b != nil {
+				initials[b.Psect] = append(initials[b.Psect], in)
+			}
 		}
 	}
 
@@ -155,7 +165,115 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 
 		w.Comment(fmt.Sprintf("%s, %d bytes, the most any unit in this file declares", what, sizes[b.Psect]))
 		w.Statement("", ".PSECT", b.Psect+commonAttributes, "")
-		w.Statement(names.base(b.Psect), ".BLKB", strconv.Itoa(sizes[b.Psect]), "")
+
+		if list := initials[b.Psect]; len(list) > 0 {
+			sort.SliceStable(list, func(i, j int) bool { return list[i].Offset < list[j].Offset })
+			w.Label(names.base(b.Psect))
+			writeInitials(w, list, 0, sizes[b.Psect])
+		} else {
+			w.Statement(names.base(b.Psect), ".BLKB", strconv.Itoa(sizes[b.Psect]), "")
+		}
+	}
+}
+
+// writeInitials writes the storage from offset at to offset end of a section:
+// the initial values in it, list being in order of place, and .BLKB for the
+// gaps. Items in a row with one value are one statement: .LONG 0[1000]. Each
+// value's comment says what it is, and a floating value's bits are written in
+// hexadecimal with the source's spelling beside them (Decision 16).
+func writeInitials(w *Writer, list []*sema.Initial, at, end int) {
+	for i := 0; i < len(list); {
+		in := list[i]
+
+		if in.Offset > at {
+			w.Statement("", ".BLKB", strconv.Itoa(in.Offset-at), "")
+		}
+
+		n := repeats(list[i:])
+		writeInitial(w, in, list[i+n-1], n)
+
+		at = in.Offset + n*len(in.Bytes)
+		i += n
+	}
+
+	if end > at {
+		w.Statement("", ".BLKB", strconv.Itoa(end-at), "")
+	}
+}
+
+// repeats is how many of the items at the start of list are next to each other
+// and can be written as one statement: numbers with one value, whose longwords
+// (if they have more than one) are all alike.
+func repeats(list []*sema.Initial) int {
+	first := list[0]
+	size := len(first.Bytes)
+
+	if first.Type.Kind == sema.Character {
+		return 1
+	}
+
+	for at := 4; at < size; at += 4 {
+		if !bytes.Equal(first.Bytes[:4], first.Bytes[at:at+4]) {
+			return 1
+		}
+	}
+
+	n := 1
+
+	for n < len(list) && list[n].Offset == first.Offset+n*size && bytes.Equal(list[n].Bytes, first.Bytes) {
+		n++
+	}
+
+	return n
+}
+
+// writeInitial writes n items in a row with one value, first to last.
+func writeInitial(w *Writer, first, last *sema.Initial, n int) {
+	what := first.Item
+	if n > 1 {
+		what += " to " + last.Item
+	}
+
+	if first.Type.Kind == sema.Character {
+		pieces := asciiPieces(string(first.Bytes))
+		w.Statement("", ".ASCII", pieces[0], what)
+
+		for _, p := range pieces[1:] {
+			w.Statement("", ".ASCII", p, "")
+		}
+
+		return
+	}
+
+	what += " = " + first.Source
+	b := first.Bytes
+	repeat := ""
+
+	if n > 1 {
+		repeat = "[" + strconv.Itoa(n*len(b)/min(len(b), 4)) + "]"
+	}
+
+	switch {
+	case first.Type.Kind == sema.Real || first.Type.Kind == sema.Complex:
+		if n > 1 {
+			b = b[:4]
+		}
+
+		longs := make([]string, 0, len(b)/4)
+		for at := 0; at < len(b); at += 4 {
+			longs = append(longs, fmt.Sprintf("^X%08X", binary.LittleEndian.Uint32(b[at:])))
+		}
+
+		w.Statement("", ".LONG", strings.Join(longs, ",")+repeat, what)
+
+	case len(b) == 1:
+		w.Statement("", ".BYTE", strconv.Itoa(int(int8(b[0])))+repeat, what)
+
+	case len(b) == 2:
+		w.Statement("", ".WORD", strconv.Itoa(int(int16(binary.LittleEndian.Uint16(b))))+repeat, what)
+
+	default:
+		w.Statement("", ".LONG", strconv.Itoa(int(int32(binary.LittleEndian.Uint32(b))))+repeat, what)
 	}
 }
 
@@ -186,6 +304,17 @@ func (g *routineGen) write(w *Writer) {
 
 	g.writeCommonNames(w)
 
+	if r.Kind == ir.BlockData {
+		// Nothing runs, but a name in another unit's EXTERNAL statement
+		// makes LINK look for this module, so the name is a global symbol
+		// (section 4.1), which it can be with no code to name.
+		w.GlobalAssignment(r.Name, "0", "this block data subprogram's name, for EXTERNAL statements")
+	}
+
+	if len(r.Externals) > 0 {
+		w.Statement("", ".EXTRN", strings.Join(r.Externals, ","), "named in an EXTERNAL statement")
+	}
+
 	if len(g.cells()) > 0 {
 		w.Blank()
 		w.Statement("", ".PSECT", localPsect, "")
@@ -196,6 +325,14 @@ func (g *routineGen) write(w *Writer) {
 		w.Blank()
 		w.Statement("", ".PSECT", pdataPsect, "")
 		g.writeData(w)
+	}
+
+	if r.Kind == ir.BlockData {
+		w.Blank()
+		w.Append(&g.pre)
+		w.Append(&g.code)
+
+		return
 	}
 
 	w.Blank()
@@ -217,6 +354,8 @@ func (g *routineGen) what() string {
 		return article + g.r.Unit.Result.Type.String() + " function"
 	case ir.Subroutine:
 		return "a subroutine"
+	case ir.BlockData:
+		return "a block data subprogram"
 	}
 
 	return "the main program"
@@ -341,7 +480,12 @@ func (g *routineGen) writeLocal(w *Writer) {
 				end = max(end, o.Offset+o.Size)
 			}
 
-			w.Statement(label, ".BLKB", strconv.Itoa(end-c.Offset), g.cellNote(c))
+			if list := g.localInitials(c.Offset, end); len(list) > 0 {
+				w.Label(label)
+				writeInitials(w, list, c.Offset, end)
+			} else {
+				w.Statement(label, ".BLKB", strconv.Itoa(end-c.Offset), g.cellNote(c))
+			}
 
 			for _, o := range overlap[1:] {
 				w.Assignment(g.names.symbol(o.Name), withOffset(label, o.Offset-c.Offset), g.cellNote(o))
@@ -353,7 +497,10 @@ func (g *routineGen) writeLocal(w *Writer) {
 			continue
 		}
 
-		if c.Kind == ir.DescriptorCell {
+		if list := g.localInitials(c.Offset, c.Offset+c.Size); len(list) > 0 {
+			w.Label(label)
+			writeInitials(w, list, c.Offset, c.Offset+c.Size)
+		} else if c.Kind == ir.DescriptorCell {
 			w.Label(label)
 			writeDescriptor(w, c.Desc, "0", "0", "set when the descriptor is used")
 		} else {
@@ -371,6 +518,20 @@ func (g *routineGen) writeLocal(w *Writer) {
 	if end := g.localSize(); end > at {
 		w.Statement("", ".BLKB", strconv.Itoa(end-at), "")
 	}
+}
+
+// localInitials are the routine's initial values in $LOCAL from offset start
+// up to end, in order of place.
+func (g *routineGen) localInitials(start, end int) []*sema.Initial {
+	var list []*sema.Initial
+
+	for _, in := range g.r.Initials {
+		if in.Sym.Common == nil && in.Offset >= start && in.Offset < end {
+			list = append(list, in)
+		}
+	}
+
+	return list
 }
 
 // overlapping is the cells, from the first of cells on, that EQUIVALENCE

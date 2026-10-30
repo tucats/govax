@@ -1,0 +1,109 @@
+== main program DATAS
+  DATAS                   program unit
+  A         INTEGER       array(1:10)      $LOCAL+0
+  B         INTEGER       array(1:10)      $LOCAL+40
+  BELL      CHARACTER*1   variable         $LOCAL+80
+  TAB       CHARACTER*1   variable         $LOCAL+81
+  LF        CHARACTER*1   variable         $LOCAL+82
+  FF        CHARACTER*1   variable         $LOCAL+83
+  STARS     CHARACTER*6   variable         $LOCAL+84
+  X         REAL          variable         $LOCAL+92
+  D         REAL*8        variable         $LOCAL+96
+  K         INTEGER*2     variable         $LOCAL+104
+  L         LOGICAL*1     variable         $LOCAL+106
+  Z         COMPLEX       variable         $LOCAL+108
+  H         INTEGER       variable         $LOCAL+116
+  HC        INTEGER*2     variable         $LOCAL+120
+  HR        REAL          variable         $LOCAL+124
+  HH        INTEGER       variable         $LOCAL+128
+  CC        INTEGER       variable         $LOCAL+132
+  SUB       CHARACTER*4   variable         $LOCAL+136
+  NAMES     CHARACTER*4   array(1:2)       $LOCAL+140
+  T         INTEGER       array(1:2, 1:3)  $LOCAL+148
+  NSIX      INTEGER       constant         = 6
+  PI        REAL          constant         = 3.14
+  V         INTEGER       variable         $LOCAL+172
+  VV        INTEGER       array(1:3)       $LOCAL+176
+  Y         REAL          variable         $LOCAL+188
+  $LOCAL is 192 bytes
+  initial $LOCAL+0 A(1) INTEGER = 00 00 00 00
+  initial $LOCAL+4 A(2) INTEGER = 00 00 00 00
+  initial $LOCAL+8 A(3) INTEGER = 00 00 00 00
+  initial $LOCAL+12 A(4) INTEGER = 00 00 00 00
+  initial $LOCAL+16 A(5) INTEGER = 00 00 00 00
+  initial $LOCAL+20 A(6) INTEGER = 00 00 00 00
+  initial $LOCAL+24 A(7) INTEGER = 00 00 00 00
+  initial $LOCAL+28 A(8) INTEGER = 00 00 00 00
+  initial $LOCAL+32 A(9) INTEGER = 00 00 00 00
+  initial $LOCAL+36 A(10) INTEGER = 00 00 00 00
+  initial $LOCAL+40 B(1) INTEGER = 01 00 00 00
+  initial $LOCAL+48 B(3) INTEGER = 01 00 00 00
+  initial $LOCAL+56 B(5) INTEGER = 01 00 00 00
+  initial $LOCAL+64 B(7) INTEGER = 01 00 00 00
+  initial $LOCAL+72 B(9) INTEGER = 01 00 00 00
+  initial $LOCAL+80 BELL CHARACTER*1 = 07
+  initial $LOCAL+81 TAB CHARACTER*1 = 09
+  initial $LOCAL+82 LF CHARACTER*1 = 0A
+  initial $LOCAL+83 FF CHARACTER*1 = 0C
+  initial $LOCAL+84 STARS CHARACTER*6 = 2A 2A 2A 2A 20 20
+  initial $LOCAL+92 X REAL = 80 40 00 00
+  initial $LOCAL+96 D REAL*8 = CC 3E CC CC CC CC CD CC
+  initial $LOCAL+104 K INTEGER*2 = FE FF
+  initial $LOCAL+106 L LOGICAL*1 = FF
+  initial $LOCAL+108 Z COMPLEX = 80 40 00 00 80 C0 00 00
+  initial $LOCAL+116 H INTEGER = FF 00 00 00
+  initial $LOCAL+120 HC INTEGER*2 = 45 23
+  initial $LOCAL+124 HR REAL = 80 40 00 00
+  initial $LOCAL+128 HH INTEGER = 41 42 20 20
+  initial $LOCAL+132 CC INTEGER = 41 42 43 44
+  initial $LOCAL+137 SUB(2:3) CHARACTER*2 = 58 59
+  initial $LOCAL+144 NAMES(2)(1:1) CHARACTER*1 = 51
+  initial $LOCAL+148 T(1,1) INTEGER = 01 00 00 00
+  initial $LOCAL+152 T(2,1) INTEGER = 02 00 00 00
+  initial $LOCAL+164 T(1,3) INTEGER = 03 00 00 00
+  initial $LOCAL+168 T(2,3) INTEGER = 04 00 00 00
+  initial $LOCAL+172 V INTEGER = 05 00 00 00
+  initial $LOCAL+176 VV(1) INTEGER = 06 00 00 00
+  initial $LOCAL+180 VV(2) INTEGER = 07 00 00 00
+  initial $LOCAL+184 VV(3) INTEGER = 07 00 00 00
+  initial $LOCAL+188 Y REAL = 48 41 C3 F5
+36          END
+== BLOCK DATA BLKDAT
+  BLKDAT                  program unit
+  S         INTEGER       variable         AREA1+12
+  X         INTEGER       variable         AREA2+4
+  T         LOGICAL       variable         AREA1+16
+  W         LOGICAL       variable         AREA2+0
+  U         REAL*8        variable         AREA1+20
+  R         REAL          array(1:3)       AREA1+0
+  Y         REAL          variable         AREA2+8
+  $LOCAL is 0 bytes
+  /AREA1/ is 28 bytes
+  /AREA2/ is 12 bytes
+  initial AREA1+0 R(1) REAL = 80 40 00 00
+  initial AREA1+4 R(2) REAL = 00 41 00 00
+  initial AREA1+8 R(3) REAL = 00 41 00 00
+  initial AREA1+16 T LOGICAL = 00 00 00 00
+  initial AREA1+20 U REAL*8 = B8 33 2F 49 6C 6A 04 49
+  initial AREA2+0 W LOGICAL = FF FF FF FF
+  initial AREA2+8 Y REAL = 60 41 00 00
+47          END
+== BLOCK DATA T$DATA
+  T$DATA                  program unit
+  I         INTEGER       variable         AREA3+0
+  $LOCAL is 0 bytes
+  /AREA3/ is 4 bytes
+  initial AREA3+0 I INTEGER = 03 00 00 00
+52          END
+== SUBROUTINE USES
+  USES                    program unit
+  DUMMY     REAL          variable         argument 1
+  BLKDAT    REAL          external procedure
+  SQRT      REAL          function
+  OTHER                   subroutine
+  SIN       REAL          intrinsic function
+  Y         REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+59          Y = SQRT(2.0)
+60          CALL OTHER()
+61          END

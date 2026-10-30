@@ -41,6 +41,10 @@ func Dump(p *Program) string {
 			fmt.Fprintf(&b, "  %s is %d bytes\n", c, c.Size)
 		}
 
+		for _, in := range u.Initials {
+			b.WriteString(dumpInitial(in) + "\n")
+		}
+
 		dumpStmts(&b, u.Body, 0)
 	}
 

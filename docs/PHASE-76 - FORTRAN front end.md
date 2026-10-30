@@ -5,7 +5,7 @@
 2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
 2026-10-30; subtask 4, PARAMETER and constant folding, done
 2026-10-30; subtask 5, arrays, done 2026-10-30; subtask 6, COMMON and EQUIVALENCE,
-done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+done 2026-10-30; subtask 7, DATA, SAVE, BLOCK DATA, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -511,8 +511,10 @@ Subtasks 2 to 9 below are revised to match.
    assumed-size forms, element offsets.
 6. **COMMON and EQUIVALENCE** (done 2026-10-30): the layout algorithm and
    its errors.
-7. **DATA, SAVE, BLOCK DATA:** initial values in the `.MAR` file,
-   typeless and Hollerith constants among them.
+7. **DATA, SAVE, BLOCK DATA** (done 2026-10-30): initial values in the
+   `.MAR` file, typeless and Hollerith constants among them; EXTERNAL and
+   INTRINSIC's declarations, which BLOCK DATA needs and no other subtask
+   had.
 8. **End to end:** programs sharing COMMON across units and files,
    EQUIVALENCE overlays, DATA-initialized tables.
 9. **Close-out:** FORTRAN-INTERNALS.md's chapter on semantic analysis
@@ -834,3 +836,69 @@ Subtasks 2 to 9 below are revised to match.
     so never in a list; a one-dimensional array's one subscript read as an
     ordinary subscript, by its lower bound; the symbol `BLK.$BASE`; the
     2147483647-byte limit on a block.
+- **2026-10-30:** Subtask 7 done: DATA, SAVE, BLOCK DATA
+  (`internal/fortran/sema/data.go`, `attributes.go`), and EXTERNAL and
+  INTRINSIC, the last specification statements the table gives this phase,
+  which no subtask named and BLOCK DATA's EXTERNAL needs.
+  - **Initial values** are bytes in the image, so every rule of 4.3 is a rule
+    about bytes (`Initial`, `initialBytes`; the file's comment has each rule
+    beside an example). A type statement's `/clist/` is a DATA list of one
+    name. The lists are read once every declaration is known, since DATA may
+    come before a name's type or dimensions (Figure 1-1). Names and values are
+    walked together, not expanded and compared, so a list with too many items
+    stops at the first with no value, whatever its implied-DO lists would have
+    made. An implied-DO variable exists only in its list (`evaluator.vars`),
+    never in the symbol table.
+  - **Places** wait for layout (`placeInitials`). Two values for one byte are
+    DATATWICE, through EQUIVALENCE too; a common block's are checked across
+    the file's units after every unit is read (`checkCommonInitials`), since
+    its one image is shared.
+  - **In the `.MAR` file** (`writeInitials`): `.BLKB` for gaps, `.LONG`,
+    `.WORD`, `.BYTE`, `.ASCII`, floating values in hexadecimal with the
+    source's spelling beside them (Decision 16), and items in a row with one
+    value as a repetition, `.LONG 0[1000]`. In `$LOCAL`, under the cell's
+    label, overlays' one label included; a common block's image is merged from
+    every unit in the file, as subtask 6's design has it.
+  - **SAVE** changes nothing, as 4.14's note says; its list is checked
+    (`saves`). **EXTERNAL** makes a name class `External`, with no storage: a
+    reference makes it a Function or Subroutine, so EXTERNAL SQRT is the
+    program's own SQRT, and a procedure as an argument is NOTIMPL (Phase 79).
+    The object module refers to every EXTERNAL name (`.EXTRN`), called or not,
+    which is what makes LINK find a BLOCK DATA in a library. **INTRINSIC**
+    makes a name class `Intrinsic`; references are as before (the constant
+    functions folded, the rest NOTIMPL, Phase 78).
+  - **BLOCK DATA** is a unit with storage and no code (`ir.BlockData`, no
+    blocks, no `.ENTRY`), its name a global symbol, `BLKDAT == 0`, for EXTERNAL
+    to refer to. A statement 4.1 doesn't list is BLOCKSTMT, and left out. Its
+    name is in the file's unit names now, so DUPUNIT, and COMMONNAME for a
+    block of its name, reach it.
+  - **Messages:** DATACOUNT, DATAREPEAT, DATAVALUE, DATAFORM, DATACONST,
+    DATARANGE, DATASUBSTR, DATASUBRANGE, DATASIZE, DATADOVAR, DATADOSTEP,
+    DATADUMMY, DATABLANK, DATABLOCK, DATATYPE, DATACHAR, DATATWICE, SAVEDUMMY,
+    SAVECOMMON, SAVEBLANK, SAVEBLOCK, DUPATTR, BADINTRINSIC, BLOCKSTMT.
+  - **Found along the way:** a COMMON or EQUIVALENCE statement's label could
+    end a DO loop, which `forbiddenTerminal` now refuses.
+  - **Tests:** `TestErrors`' new sections, goldens `sema/testdata/data.for`
+    (4.1's and 4.3's examples; the bytes checked by hand, D_floating 0.1 and
+    F_floating 3.14 by working out their bits), `ir/testdata/data.for`,
+    `codegen/testdata/data.for` (assembled by MACRO), `testdata/fortran/data.for`
+    end to end in both paging modes, its output worked out by hand, and
+    `TestFortranBlockDataLibrary`: a BLOCK DATA in an object library, the
+    EXTERNAL statement the only reference to it, its values not hidden by the
+    main program's contribution to the overlaid section, which comes first.
+  - Choices of ours, unconfirmed (no VAX FORTRAN to check): the standard's rules
+    the manual doesn't state (no dummy arguments, function results, or blank
+    common in DATA; a SAVE'd block must be declared in the unit; one EXTERNAL
+    per name); a block data subprogram's local variables can't be initialized,
+    from 4.1's "entities in named common blocks"; a named block initialized in
+    any unit; two units of a file initializing one byte of a block an error, even
+    with one value; a Hollerith or character constant allowed for a LOGICAL item,
+    the manual saying "numeric"; an INTEGER constant for a LOGICAL item and a
+    LOGICAL for a number allowed, as assignment's conversions are; a REAL literal
+    for a REAL\*8 item rounded from its exact value (`DATA D /0.1/` is 0.1 in
+    D_floating, not F_floating's 0.1 extended), as section 2.3.1.2 keeps a
+    literal's precision elsewhere; a PARAMETER after a DATA that uses it accepted,
+    as the lists are read last; an implied-DO variable's reuse by an inner list an
+    error; `filename$DATA` for an unnamed BLOCK DATA (the survey's), and two of
+    them DUPUNIT; `.EXTRN` for an EXTERNAL name that nothing defines, so LINK
+    reports it even if no code calls it; the name a global absolute symbol.

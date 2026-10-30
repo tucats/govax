@@ -6,10 +6,11 @@ import (
 )
 
 // declarations is the first walk over a unit's statements: the type
-// statements, DIMENSION statements, COMMON statements, and PARAMETER
-// statements, in order (so that a constant may be used in the
-// declarations after its definition), the EQUIVALENCE statements, kept
-// for when every declaration is known, and the order of every statement
+// statements, DIMENSION statements, COMMON statements, PARAMETER
+// statements, and EXTERNAL and INTRINSIC statements, in order (so that a
+// constant may be used in the declarations after its definition), the
+// EQUIVALENCE, DATA, and SAVE statements, kept for when every declaration
+// is known, and the order of every statement
 // (Figure 1-1, order.go). It also finds the statement function
 // definitions, which look like assignments to array elements and can be
 // told from them only here, where it is known which names are arrays.
@@ -42,6 +43,12 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 			for _, d := range s.Defs {
 				a.parameter(s, d)
 			}
+
+		case *ast.DataStmt:
+			a.dataStatement(s)
+
+		case *ast.AttrStmt:
+			a.attributeStatement(s)
 		}
 	}
 }
@@ -82,7 +89,7 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.report("DUPSTMTFUNC", ap.Pos, ap.Name, sym.defPos.Line)
 		a.stmtFuncs[s] = nil
 
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil || sym.External || sym.Class == Intrinsic:
 		a.badUse(sym, ap.Pos, "be a statement function")
 		a.stmtFuncs[s] = nil
 
@@ -131,7 +138,7 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		}
 
 		if d.Init != nil {
-			a.notImplForm(d.InitPos, "a type statement's initial values")
+			a.initialValues(d)
 		}
 
 		a.checkBoundType(sym, t, ok, d.Pos)

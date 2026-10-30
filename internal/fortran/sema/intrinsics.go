@@ -4,7 +4,7 @@ import "strings"
 
 // intrinsics are the names of VAX FORTRAN's intrinsic functions, generic
 // and specific (appendix D, Table D-3). A name the unit doesn't declare
-// as an array (or, later, EXTERNAL) that is used as a function and is
+// as an array or EXTERNAL that is used as a function and is
 // one of these is the intrinsic function, which Phase 78 compiles; until
 // then it is NOTIMPL rather than taken for an external function the
 // program doesn't have.

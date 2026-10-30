@@ -106,7 +106,8 @@ func (a *analyzer) statement(s ast.Stmt) {
 	}
 
 	switch s := s.(type) {
-	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt:
+	case *ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
+		*ast.CommonStmt, *ast.EquivalenceStmt:
 		// Their work was done by implicits and declarations.
 		return
 
@@ -210,7 +211,8 @@ func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
-		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt:
+		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
+		*ast.CommonStmt, *ast.EquivalenceStmt:
 		return aStatement(s)
 	}
 

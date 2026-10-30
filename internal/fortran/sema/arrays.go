@@ -62,7 +62,7 @@ type adjustableArray struct {
 // array, so its uses are elements; it is broken, so they get no messages.
 func (a *analyzer) dimension(sym *Symbol, d *ast.Declarator) {
 	switch {
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.External || sym.Class == Intrinsic:
 		a.badUse(sym, d.Pos, "be an array")
 
 		sym.broken = true

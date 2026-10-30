@@ -148,22 +148,28 @@
 //
 // The parser builds a node for every statement and form of VAX FORTRAN,
 // and this pass is where one it can't compile yet is reported, as it
-// reaches it (notimpl.go): a statement it doesn't handle (READ, SAVE,
+// reaches it (notimpl.go): a statement it doesn't handle (READ, VOLATILE,
 // FORMAT) is "the READ statement is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
 // inside a statement it does handle (a Hollerith constant, a substring,
 // an implied-DO list) is reported where the expression is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
-// Some declarations can't be read yet at all: SAVE, EXTERNAL, RECORD, and
-// the rest are NOTIMPL until later phases and subtasks.
+// Some declarations can't be read yet at all: VOLATILE, RECORD, and
+// the rest are NOTIMPL until later phases.
 // Without them, most of what this pass would say about a unit's names
 // would be wrong (a name declared in a RECORD statement would be "not a
 // record" at every use), so a unit with one gets only the messages about its
 // structure (labels, blocks, loops, and statement order) and the
 // NOTIMPLs of what it wrote (notImplForm). A unit whose header the
-// parser rejected, or a BLOCK DATA unit (subtask 7's), is left out
-// entirely.
+// parser rejected is left out entirely.
+//
+// # Initial values
+//
+// A DATA statement's values, and a type statement's in slashes, make no
+// code: each is an Initial, an item's place and its bytes as the VAX holds
+// them, which the code generator writes in the MACRO file (data.go). A
+// BLOCK DATA unit is a unit with only these and its declarations.
 //
 // # The dump
 //

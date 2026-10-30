@@ -53,7 +53,7 @@ var constFuncs = map[string]constFunc{
 // constFuncs, of constant arguments. An array element, or any other
 // function, isn't constant.
 func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
-	if s := ev.a.unit.byName[e.Name]; s != nil && (s.Class != Unclassified || s.Dummy != 0) {
+	if s := ev.a.unit.byName[e.Name]; s != nil && s.Class != Intrinsic && (s.Class != Unclassified || s.Dummy != 0) {
 		if s.Class == Array {
 			return nil, named("the array element "+e.Name+"(...) is not a constant", e.Pos)
 		}

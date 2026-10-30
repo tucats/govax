@@ -111,6 +111,18 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		return a.constantUse(s, n)
 	}
 
+	if s.External || s.Class == Intrinsic {
+		// A procedure's name where a value would be: as an argument, the
+		// procedure itself (Phase 79); anywhere else, a mistake.
+		if wholeOK {
+			a.notImpl(n.Pos, "a procedure as an argument")
+		} else {
+			a.badUse(s, n.Pos, "be used as a variable")
+		}
+
+		return a.bad(n.Pos)
+	}
+
 	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.uncompiledUse(s, n.Pos) {
 		return a.bad(n.Pos)
 	}
@@ -145,7 +157,7 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 func (a *analyzer) apply(e *ast.Apply) Expr {
 	s := a.unit.byName[e.Name]
 
-	if s == nil || (s.Class == Unclassified && s.Dummy == 0) {
+	if s == nil || (s.Class == Unclassified && s.Dummy == 0) || s.Class == Intrinsic {
 		if _, ok := constFuncs[e.Name]; ok {
 			if v, ok := a.folded(e); ok {
 				return v
@@ -178,7 +190,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 
 		return a.element(s, e)
 
-	case Unclassified:
+	case Unclassified, External:
 		if s.Dummy != 0 {
 			// A dummy argument used as a function is a dummy procedure.
 			a.notImpl(e.Pos, "a dummy procedure")

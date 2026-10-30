@@ -65,7 +65,7 @@ type lowerer struct {
 
 // lowerUnit lowers one program unit.
 func lowerUnit(u *sema.Unit) *Routine {
-	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize}
+	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize, Initials: u.Initials}
 
 	switch u.Kind {
 	case ast.FunctionUnit:
@@ -73,6 +73,8 @@ func lowerUnit(u *sema.Unit) *Routine {
 		r.Result = typeOf(u.Result.Type)
 	case ast.SubroutineUnit:
 		r.Kind = Subroutine
+	case ast.BlockDataUnit:
+		r.Kind = BlockData
 	default:
 		r.Kind = Main
 	}
@@ -97,6 +99,10 @@ func lowerUnit(u *sema.Unit) *Routine {
 	// The unit's variables and arrays keep the places semantic analysis
 	// gave them; the compiler's cells come after them.
 	for _, s := range u.Symbols {
+		if s.External && s.Dummy == 0 {
+			r.Externals = append(r.Externals, s.Name)
+		}
+
 		if s.Offset < 0 {
 			continue
 		}
@@ -112,6 +118,10 @@ func lowerUnit(u *sema.Unit) *Routine {
 
 		r.Cells = append(r.Cells, c)
 		l.cells[s] = c
+	}
+
+	if r.Kind == BlockData {
+		return r
 	}
 
 	l.begin(l.newBlock())

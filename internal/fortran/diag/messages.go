@@ -296,6 +296,69 @@ var messages = map[string]kind{
 	// as a subroutine, a subroutine's own name given a type.
 	"BADUSE": {Error, "%s is %s, so it can't %s"},
 
+	// The DATA statement's messages, and a type statement's initial
+	// values' (section 4.3, internal/fortran/sema/data.go). DATACOUNT is
+	// lists that don't come out even.
+	"DATACOUNT": {Error, "this list has %s"},
+
+	// DATAREPEAT is a repeat count that isn't a positive integer constant.
+	"DATAREPEAT": {Error, "a repeat count must be a positive integer constant, or a name of one"},
+
+	// DATAVALUE is a value that isn't a constant; the argument says why.
+	"DATAVALUE": {Error, "an initial value must be a constant, and %s"},
+
+	// DATAFORM is an item a list can't hold: an implied-DO list holds
+	// array elements, substrings, and other implied-DO lists, no bare names.
+	"DATAFORM": {Error, "a DATA list can hold only variables, arrays, array elements, substrings, and implied-DO lists, and an implied-DO list no variable or array by itself"},
+
+	// DATACONST is a subscript or bound that isn't constant.
+	"DATACONST": {Error, "a subscript, substring bound, or implied-DO limit in a DATA list must be an integer constant expression"},
+
+	// DATARANGE is an element outside its array.
+	"DATARANGE": {Error, "this element is outside the array %s"},
+
+	// DATASUBSTR is a substring of a name not of type CHARACTER, and
+	// DATASUBRANGE one that runs outside its variable.
+	"DATASUBSTR":   {Error, "%s is %s, so it can't have a substring"},
+	"DATASUBRANGE": {Error, "the substring (%d:%d) isn't within %s's %d characters"},
+
+	// DATASIZE is a whole array whose size isn't known.
+	"DATASIZE": {Error, "the array %s's size isn't known, so it can't be given initial values"},
+
+	// DATADOVAR is an implied-DO variable that can't be one; DATADOSTEP a
+	// step of zero.
+	"DATADOVAR":  {Error, "the implied-DO variable %s %s"},
+	"DATADOSTEP": {Error, "an implied-DO list's step can't be zero"},
+
+	// DATADUMMY is a dummy argument given an initial value, DATABLANK a
+	// name in blank common, and DATABLOCK a name a block data subprogram
+	// has no named block for.
+	"DATADUMMY": {Error, "%s is a dummy argument, so it can't be given an initial value"},
+	"DATABLANK": {Error, "%s is in blank common, which can't be given initial values"},
+	"DATABLOCK": {Error, "%s isn't in a named common block, and a block data subprogram initializes only those"},
+
+	// DATATYPE is a constant of a type its item can't be given, and
+	// DATACHAR section 4.3's rule for a number given to a CHARACTER item.
+	"DATATYPE": {Error, "%s constant can't initialize %s item"},
+	"DATACHAR": {Error, "only an integer, octal, or hexadecimal constant from 0 to 255 can initialize a CHARACTER item, and only one of length 1"},
+
+	// DATATWICE is two initial values for one byte.
+	"DATATWICE": {Error, "%s has an initial value already, from line %d"},
+
+	// SAVE's messages (section 4.14).
+	"SAVEDUMMY":  {Error, "%s is a dummy argument, so it can't be in a SAVE statement"},
+	"SAVECOMMON": {Error, "%s is in %s: a SAVE statement names the block, not its names"},
+	"SAVEBLANK":  {Error, "blank common can't be in a SAVE statement"},
+	"SAVEBLOCK":  {Error, "this unit has no common block /%s/"},
+
+	// EXTERNAL's and INTRINSIC's messages (sections 4.7, 4.9).
+	"DUPATTR":      {Error, "%s is %s already"},
+	"BADINTRINSIC": {Error, "%s is not one of FORTRAN's intrinsic functions"},
+
+	// BLOCKSTMT is a statement section 4.1 doesn't allow in a block data
+	// subprogram.
+	"BLOCKSTMT": {Error, "%s can't be in a block data subprogram"},
+
 	// RECURSIVE is a subprogram referring to itself (section 6.2).
 	"RECURSIVE": {Error, "%s can't refer to itself: a FORTRAN subprogram is not recursive"},
 

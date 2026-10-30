@@ -101,7 +101,8 @@ func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
 
 		return
 
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Class == StmtFunction:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Class == StmtFunction ||
+		sym.External || sym.Class == Intrinsic:
 		a.badUse(sym, d.Pos, "be in a common block")
 
 		sym.broken = true

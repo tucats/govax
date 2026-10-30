@@ -17,12 +17,13 @@ type Unit struct {
 	// AST is the unit the parser built.
 	AST *ast.Unit
 
-	// Kind is a main program, a FUNCTION, or a SUBROUTINE.
+	// Kind is a main program, a FUNCTION, a SUBROUTINE, or BLOCK DATA.
 	Kind ast.UnitKind
 
 	// Name is the unit's name: its header's, or, for a main program
 	// without a PROGRAM statement, the source file's name cut to 26
-	// characters with $MAIN after it (section 4.12).
+	// characters with $MAIN after it (section 4.12), or for a BLOCK DATA
+	// statement without a name, with $DATA after it.
 	Name string
 
 	// Symbols are every name the unit uses, in order of first
@@ -50,6 +51,10 @@ type Unit struct {
 	// Commons are the common blocks the unit declares, in order of first
 	// appearance.
 	Commons []*CommonBlock
+
+	// Initials are the initial values DATA statements and type statements
+	// give the unit's names, in order of place (data.go).
+	Initials []*Initial
 
 	byName map[string]*Symbol
 
@@ -103,12 +108,23 @@ const (
 	// Constant is a named constant, a PARAMETER statement's (section
 	// 4.11, appendix A.4): writing its name is writing its value.
 	Constant
+
+	// External is a name an EXTERNAL statement says is a routine outside
+	// the unit, not yet used as a function or called (section 4.7). A
+	// reference makes it a Function or a Subroutine; its External field
+	// stays set.
+	External
+
+	// Intrinsic is a name an INTRINSIC statement says is FORTRAN's own
+	// function (section 4.9).
+	Intrinsic
 )
 
 // String is the class as messages say it: "a variable".
 func (c Class) String() string {
 	return [...]string{"a name", "a variable", "an array", "a function", "a subroutine",
-		"the name of this program unit", "a statement function", "a constant"}[c]
+		"the name of this program unit", "a statement function", "a constant",
+		"an external procedure", "an intrinsic function"}[c]
 }
 
 // Symbol is one name in a unit.
@@ -149,6 +165,10 @@ type Symbol struct {
 	// Common is the common block the name is in, by a COMMON statement or
 	// by EQUIVALENCE with a name in one; nil if none (common.go).
 	Common *CommonBlock
+
+	// External is set for a name in an EXTERNAL statement, a dummy
+	// argument's among them.
+	External bool
 
 	// Equivalenced is set for a name in an EQUIVALENCE list, whose storage
 	// may overlap other names'. group is the names it is tied to, and

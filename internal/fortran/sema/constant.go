@@ -86,11 +86,13 @@ func worse(x, y *constErr) *constErr {
 // report nothing, to learn whether an expression is constant at all
 // before it is evaluated for its messages; typeless allows octal and
 // hexadecimal constants, which only declarations may use yet (their use
-// in executable statements is Phase 82's).
+// in executable statements is Phase 82's). vars are the implied-DO
+// variables in scope, in a DATA statement's list, with their values now.
 type evaluator struct {
 	a        *analyzer
 	quiet    bool
 	typeless bool
+	vars     map[string]int32
 }
 
 // declEval is the evaluator for declarations.
@@ -175,6 +177,10 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 		return ev.typelessAs(e, IntegerType)
 
 	case *ast.Name:
+		if v, ok := ev.vars[e.Name]; ok {
+			return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: v}, nil
+		}
+
 		s := ev.a.unit.byName[e.Name]
 
 		switch {

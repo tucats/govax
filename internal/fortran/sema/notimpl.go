@@ -18,10 +18,15 @@ import (
 func handled(s ast.Stmt) bool {
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.CommonStmt, *ast.EquivalenceStmt, *ast.ImplicitStmt, *ast.ParameterStmt,
-		*ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt,
+		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
 		return true
+
+	case *ast.AttrStmt:
+		// VOLATILE is Phase 82's, and AUTOMATIC and STATIC aren't in the
+		// 1988 manual.
+		return s.Kind == lex.Save || s.Kind == lex.External || s.Kind == lex.Intrinsic
 
 	case *ast.DoStmt:
 		// A loop without a label, which END DO ends, is Phase 79's.

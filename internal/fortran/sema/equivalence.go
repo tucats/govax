@@ -167,7 +167,8 @@ func (a *analyzer) equivalenceName(name string, pos diag.Position) (*Symbol, boo
 
 		return s, false
 
-	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction:
+	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
+		s.External || s.Class == Intrinsic:
 		a.badUse(s, pos, "be in an EQUIVALENCE list")
 
 		s.broken = true

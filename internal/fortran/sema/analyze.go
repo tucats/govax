@@ -2,6 +2,7 @@ package sema
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
@@ -15,8 +16,7 @@ import (
 //
 // Analysis goes on after an error, a unit at a time, so that one
 // compilation reports as much as it can. A unit whose header statement
-// the parser rejected (or BLOCK DATA, which is a later phase's) is left
-// out: without its header its dummy arguments aren't known, and what
+// the parser rejected is left out: without its header its dummy arguments aren't known, and what
 // sema said about the rest would mislead. The Program returned is
 // meaningful only if no error was reported.
 func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
@@ -26,14 +26,7 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 	for _, au := range file.Units {
 		prologue(au.Prologue, messages)
 
-		switch au.Header.(type) {
-		case *ast.BadStmt:
-			continue
-
-		case *ast.BlockDataStmt:
-			// BLOCK DATA is subtask 7's.
-			messages.Report("NOTIMPL", au.Header.Position(), statementWhat(au.Header))
-
+		if _, bad := au.Header.(*ast.BadStmt); bad {
 			continue
 		}
 
@@ -51,6 +44,7 @@ func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
 
 	prologue(file.Trailing, messages)
 	checkReferences(prog, units, messages)
+	checkCommonInitials(prog, messages)
 
 	return prog
 }
@@ -71,7 +65,18 @@ func unitName(au *ast.Unit, mainName string) string {
 		return name
 	}
 
+	if au.Kind() == ast.BlockDataUnit {
+		return blockDataName(mainName)
+	}
+
 	return mainName
+}
+
+// blockDataName is the name of a BLOCK DATA statement without one, from the
+// name of a main program without one: SQUARES$DATA in SQUARES.FOR. Section 4.12
+// mentions such a name without saying what it is (ours, unconfirmed).
+func blockDataName(mainName string) string {
+	return strings.TrimSuffix(mainName, "$MAIN") + "$DATA"
 }
 
 // fileUnit is a program unit of the file, as another unit's references
@@ -91,9 +96,6 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 
 	for _, au := range file.Units {
 		kind := au.Kind()
-		if kind == ast.BlockDataUnit {
-			continue
-		}
 
 		if kind == ast.MainProgram {
 			if main != nil {
@@ -105,14 +107,7 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 			main = au
 		}
 
-		name := au.Name()
-		if name == "" && kind == ast.MainProgram {
-			name = mainName
-		}
-
-		if name == "" {
-			continue
-		}
+		name := unitName(au, mainName)
 
 		if first, ok := units[name]; ok {
 			messages.Report("DUPUNIT", au.Position(), name, first.pos.Line)
@@ -157,6 +152,12 @@ type analyzer struct {
 	// declaration is known (equivalence.go).
 	equivStmts []*ast.EquivalenceStmt
 
+	// dataSets are the unit's lists of names and values, and saveStmts its
+	// SAVE statements, both read when every declaration is known (data.go,
+	// attributes.go).
+	dataSets  []dataSet
+	saveStmts []*ast.AttrStmt
+
 	// open are the IF blocks and DO loops open at the statement being
 	// analyzed, outermost first; nextID numbers them.
 	open   []*construct
@@ -190,11 +191,16 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 		fu.unit = u
 	}
 
-	u.incomplete = incompleteDeclarations(au.Body)
+	body := au.Body
+	if u.Kind == ast.BlockDataUnit {
+		body = a.blockDataBody(body)
+	}
+
+	u.incomplete = incompleteDeclarations(body)
 
 	// The IMPLICIT statements first, since they give the header's
 	// names their types too.
-	a.implicits(au.Body)
+	a.implicits(body)
 	a.header(au)
 
 	// Declarations first, then the executable statements, so that every
@@ -202,17 +208,20 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// statement uses it. (A declaration after an executable statement is
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
-	a.declarations(au.Body)
+	a.declarations(body)
 	a.layoutCommon()
 	a.equivalences()
 	a.checkArrays()
 	a.checkCommonSizes()
 	a.functionResult()
-	a.statements(au.Body)
+	a.saves()
+	a.dataStatements()
+	a.statements(body)
 	a.checkLabels()
 	a.untyped()
 	a.passedLengths()
 	a.layout()
+	a.placeInitials()
 
 	return u
 }
@@ -304,8 +313,12 @@ func (a *analyzer) describe(s *Symbol) string {
 		return "the value of this function"
 	case s.Class == UnitName && a.unit.Kind == ast.MainProgram:
 		return "the name of this program"
+	case s.Class == UnitName && a.unit.Kind == ast.BlockDataUnit:
+		return "the name of this block data subprogram"
 	case s.Class == UnitName:
 		return "the name of this subroutine"
+	case s.External:
+		return External.String()
 	}
 
 	return s.Class.String()
@@ -356,9 +369,9 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// not implemented yet (SAVE, EXTERNAL, ...), or one the parser
+// not implemented yet (VOLATILE, RECORD, ...), or one the parser
 // rejected. Without it, what semantic analysis would say about the unit's
-// names would mostly be wrong (a name in EXTERNAL isn't a variable), so
+// names would mostly be wrong (a name in RECORD isn't a variable), so
 // such a unit gets only the messages about its structure, and its statements'
 // own NOTIMPLs.
 func incompleteDeclarations(body []ast.Stmt) bool {
@@ -368,7 +381,7 @@ func incompleteDeclarations(body []ast.Stmt) bool {
 		}
 
 		switch kind := s.Base().Kind; {
-		case kind == lex.Format, kind == lex.Data, kind == lex.Directive, kind == lex.Options, kind == lex.Unknown:
+		case kind == lex.Format, kind == lex.Directive, kind == lex.Options, kind == lex.Unknown:
 			// These declare nothing.
 		case !kind.Executable():
 			return true
@@ -416,6 +429,11 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 
 			case s.Class == Subroutine && target.Kind == ast.SubroutineUnit:
 
+			case s.Class == External || s.Class == Intrinsic:
+				// A name EXTERNAL makes no reference of any kind yet (a
+				// BLOCK DATA unit's is meant to be just this), and an
+				// INTRINSIC name is FORTRAN's, not the unit of that name.
+
 			case s.Class == Function:
 				messages.Report("BADUSE", s.Pos, s.Name, kind, "be used as a function")
 
@@ -437,7 +455,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 	for _, u := range prog.Units {
 		for _, r := range u.calls {
 			fu := units[r.sym.Name]
-			if fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || u.incomplete || fu.unit.incomplete {
+			if fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || fu.kind == ast.BlockDataUnit || u.incomplete || fu.unit.incomplete {
 				continue
 			}
 

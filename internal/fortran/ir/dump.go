@@ -66,6 +66,19 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 
 	fmt.Fprintf(b, "  $LOCAL is %d bytes\n", r.LocalSize)
 
+	for _, in := range r.Initials {
+		section := "$LOCAL"
+		if in.Sym.Common != nil {
+			section = in.Sym.Common.Psect
+		}
+
+		fmt.Fprintf(b, "  init  %s+%d %s = % X\n", section, in.Offset, in.Item, in.Bytes)
+	}
+
+	for _, name := range r.Externals {
+		fmt.Fprintf(b, "  external %s\n", name)
+	}
+
 	for _, d := range r.Data {
 		fmt.Fprintf(b, "  datum %-7s %s\n", d.Name, datumText(d))
 	}

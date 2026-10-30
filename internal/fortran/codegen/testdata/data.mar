@@ -1,0 +1,159 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Common block /SHARED/, 12 bytes, the most any unit in this file declares
+	.PSECT	SHARED,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+SHARED.$BASE:
+	.BLKB	4
+	.LONG	3			; J = 3
+	.LONG	^X00004120		; Y = 2.5
+
+; Common block /OTHER/, 16 bytes, the most any unit in this file declares
+	.PSECT	OTHER,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+OTHER.$BASE:
+	.LONG	^X00000000[4]		; DBL(1) to DBL(2) = 0D0
+
+; Storage map for DATAS, the main program
+;   A      INTEGER (12)  $LOCAL+0    DATAS.A
+;   B      INTEGER (5)   $LOCAL+48   DATAS.B
+;   K      INTEGER       $LOCAL+68   DATAS.K
+;   X      REAL          $LOCAL+72   DATAS.X
+;   R      REAL (2)      $LOCAL+76   DATAS.R
+;   D      REAL*8        $LOCAL+84   DATAS.D
+;   W      INTEGER*2     $LOCAL+92   DATAS.W
+;   L      LOGICAL*1     $LOCAL+94   DATAS.L
+;   STARS  CHARACTER*6   $LOCAL+95   DATAS.STARS
+;   C      CHARACTER*3   $LOCAL+104  DATAS.C
+;   CI     INTEGER       $LOCAL+104  DATAS.CI
+;   I      INTEGER       SHARED+0    DATAS.I
+;   J      INTEGER       SHARED+4    DATAS.J
+;   Y      REAL          SHARED+8    DATAS.Y
+;
+DATAS.I = SHARED.$BASE			; I, in /SHARED/
+DATAS.J = SHARED.$BASE+4		; J, in /SHARED/
+DATAS.Y = SHARED.$BASE+8		; Y, in /SHARED/
+	.EXTRN	BLKDAT			; named in an EXTERNAL statement
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DATAS.A:
+	.LONG	0[12]			; A(1) to A(12) = 0
+DATAS.B:
+	.BLKB	4
+	.LONG	7			; B(2) = 7
+	.BLKB	4
+	.LONG	8			; B(4) = 8
+	.BLKB	4
+DATAS.K:
+	.LONG	5			; K = 5
+DATAS.X:
+	.LONG	^X000040C0		; X = 1.5
+DATAS.R:
+	.LONG	^X00000000[2]		; R(1) to R(2) = 0.0
+DATAS.D:
+	.LONG	^X00004080,^X00000000	; D = 1D0
+DATAS.W:
+	.WORD	-2			; W = -2
+DATAS.L:
+	.BYTE	-1			; L = .TRUE.
+DATAS.STARS:
+	.ASCII	/****  /		; STARS
+	.BLKB	3
+DATAS.C:
+	.BLKB	1
+	.ASCII	/XY/			; C(2:3)
+	.BLKB	1
+DATAS.CI = DATAS.C			; CI
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+DATAS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+DATAS.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS DATAS.K
+DATAS.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS DATAS.X
+DATAS.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS DATAS.B+4
+DATAS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS DATAS.Y
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Initial values in $LOCAL and in common blocks: gaps, repeats, floating
+;    2  C     values in hexadecimal, text, and overlays by EQUIVALENCE.
+;    3        PROGRAM DATAS
+	.ENTRY	DATAS,^M<>
+;    4        EXTERNAL BLKDAT
+;    5        INTEGER A(12), B(5), K/5/
+;    6        REAL X/1.5/, R(2)
+;    7        DOUBLE PRECISION D
+;    8        INTEGER*2 W
+;    9        LOGICAL*1 L
+;   10        CHARACTER*6 STARS
+;   11        CHARACTER*3 C
+;   12        INTEGER CI
+;   13        EQUIVALENCE (C, CI)
+;   14        DATA A /12*0/, B(2), B(4) /7, 8/, R /2*0.0/
+;   15        DATA D /1D0/, W /-2/, L /.TRUE./, STARS /'****'/, C(2:3) /'XY'/
+;   16        COMMON /SHARED/ I, J, Y
+;   17        DATA J /3/
+;   18        K = K + I
+	ADDL2	DATAS.I,DATAS.K
+;   19        PRINT *, K, X, B(2), Y
+	PUSHAB	DATAS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	DATAS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	DATAS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	DATAS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	DATAS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   20        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for BLKDAT, a block data subprogram
+;   I     INTEGER     SHARED+0  BLKDAT.I
+;   J     INTEGER     SHARED+4  BLKDAT.J
+;   Y     REAL        SHARED+8  BLKDAT.Y
+;   DBL   REAL*8 (2)  OTHER+0   BLKDAT.DBL
+;
+BLKDAT.I = SHARED.$BASE			; I, in /SHARED/
+BLKDAT.J = SHARED.$BASE+4		; J, in /SHARED/
+BLKDAT.Y = SHARED.$BASE+8		; Y, in /SHARED/
+BLKDAT.DBL = OTHER.$BASE		; DBL, REAL*8 (2), in /OTHER/
+BLKDAT == 0				; this block data subprogram's name, for EXTERNAL statements
+
+;   21
+;   22        BLOCK DATA BLKDAT
+;   23        COMMON /SHARED/ I, J, Y
+;   24        COMMON /OTHER/ DBL(2)
+;   25        DOUBLE PRECISION DBL
+;   26        DATA Y /2.5/, DBL /2*0D0/
+;   27        END
+
+; Storage map for T$DATA, a block data subprogram
+;   (no variables)
+;
+T$DATA == 0				; this block data subprogram's name, for EXTERNAL statements
+
+;   28
+;   29        BLOCK DATA
+;   30        END
+
+	.END	DATAS

@@ -144,6 +144,12 @@ func (a *analyzer) target(e ast.Expr) Expr {
 			return nil
 		}
 
+		if s := a.unit.byName[e.Name]; s != nil && !s.broken && (s.External || s.Class == Intrinsic) {
+			a.badUse(s, e.Pos, "be assigned a value")
+
+			return nil
+		}
+
 		t = a.name(e, true)
 
 		if r, ok := t.(*ArrayRef); ok {
@@ -228,7 +234,7 @@ func (a *analyzer) call(s *ast.CallStmt) Stmt {
 	}
 
 	switch sym.Class {
-	case Unclassified:
+	case Unclassified, External:
 		if sym.Dummy != 0 {
 			a.notImpl(s.NamePos, "a dummy procedure")
 
