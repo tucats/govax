@@ -261,6 +261,21 @@ never had.
   `testdata/disks` or skips), and 7 the close-out (the manual's section
   8, example 6, and section 12's "A program that traces itself";
   DEVIATIONS.md's entry for the traces of services and LIBRTL routines).
+  Phases 74–86 (planned 2026-10-29, for the author's review) are the
+  FORTRAN program: `PHASE-74 - FORTRAN plan.md`'s Part A is the survey,
+  Part B the decisions, Part C the phases. A `FORTRAN` command compiles
+  VAX FORTRAN V5.0 (FORTRAN-77 plus DEC's extensions; the 1988 *VAX
+  FORTRAN Language Reference Manual*, OCR text
+  `~/Documents/Technical Doc/VMS/vax-fortran-lrm-1988.txt`) into an
+  annotated MACRO-32 file that MACRO and LINK turn into an image.
+  Fidelity is to the language and its documented run-time behavior, not
+  to VAX FORTRAN's object code. The compiler is `internal/fortran`
+  (a package per pass, written to teach), its run-time library FTNRTL.EXE
+  is MACRO we write (`internal/ftnrtl`, built by govax's own MACRO and
+  LINK), and MTHRTL is emulated in Go as general RTL support
+  (`internal/mthrtl`, by the author's direction, usable outside FORTRAN).
+  Bugs and gaps found in MACRO, LINK, RMS, and `ods2` along the way are
+  in scope.
   Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
