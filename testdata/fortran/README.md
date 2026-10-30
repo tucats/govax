@@ -26,4 +26,19 @@ to check against. To add a program, add both files; this directory's
 | `arrays.for` | Arrays of up to seven dimensions: lower bounds of every sign, bounds from constants and REAL expressions, column-major order seen through whole-array output and one-dimensional dummies, assumed-size dummies with lower bounds, an array passed from an element, a REAL subscript |
 | `common.for` | COMMON, blank and named, under other names in other units; a block lengthened by EQUIVALENCE and seen whole from another unit; a REAL's bits read through an INTEGER; arrays overlaid in `$LOCAL` |
 | `data.for` | DATA and initial values in type statements, in `$LOCAL` and in COMMON from a BLOCK DATA named in EXTERNAL; a value kept by SAVE from call to call; section 4.3's byte rules read through EQUIVALENCE (numbers converted, octal, hexadecimal, Hollerith, and character constants, codes for CHARACTER\*1 items); implied-DO lists over two dimensions, with steps |
+| `overlay.for` | EQUIVALENCE overlays: a matrix filled through a vector, a multidimensional array's element by its number, two lists chained into one group, a LOGICAL's and a REAL's bits read and changed through an INTEGER, an overlay's neighbors left alone, a common block under an overlay in two units |
+| `tables.for` | Tables set by DATA and put to use: days in the months, a binary search, an interpolation, tax brackets in a common block from a BLOCK DATA, a matrix product of matrices given by rows and by columns |
 | `grades.for` | Block IF with ELSE IF and ELSE, a nested block IF, GO TO from a block to the loop's end, LOGICAL output, STOP with a display |
+
+## Programs of several files
+
+Each directory of `modules/` is one program, run by `TestFortranModules`
+in both paging modes. Its `.for` files are compiled and assembled
+separately, and any other file but the two below (an INCLUDE file) is
+only copied to the volume. `links.txt` has one LINK command's modules per
+line: the program is linked each way, and must print `name.out`, named
+for the directory, every time.
+
+| Program | What it exercises |
+| ------- | ----------------- |
+| `modules/ledger` | Four files sharing common blocks, blank and named: one block's layout from an INCLUDE file, another's declared at three lengths and in another file lengthened by EQUIVALENCE, its values from a BLOCK DATA in a file of its own that EXTERNAL names; the modules linked in three orders, so that the main program's short declaration, the module with the values, or another view of the block comes first |

@@ -5,7 +5,8 @@
 2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
 2026-10-30; subtask 4, PARAMETER and constant folding, done
 2026-10-30; subtask 5, arrays, done 2026-10-30; subtask 6, COMMON and EQUIVALENCE,
-done 2026-10-30; subtask 7, DATA, SAVE, BLOCK DATA, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+done 2026-10-30; subtask 7, DATA, SAVE, BLOCK DATA, done 2026-10-30; subtask
+8, end to end, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -515,7 +516,7 @@ Subtasks 2 to 9 below are revised to match.
    `.MAR` file, typeless and Hollerith constants among them; EXTERNAL and
    INTRINSIC's declarations, which BLOCK DATA needs and no other subtask
    had.
-8. **End to end:** programs sharing COMMON across units and files,
+8. **End to end** (done 2026-10-30): programs sharing COMMON across units and files,
    EQUIVALENCE overlays, DATA-initialized tables.
 9. **Close-out:** FORTRAN-INTERNALS.md's chapter on semantic analysis
    and storage.
@@ -902,3 +903,29 @@ Subtasks 2 to 9 below are revised to match.
     error; `filename$DATA` for an unnamed BLOCK DATA (the survey's), and two of
     them DUPUNIT; `.EXTRN` for an EXTERNAL name that nothing defines, so LINK
     reports it even if no code calls it; the name a global absolute symbol.
+- **2026-10-30:** Subtask 8 done: end to end. Every program's output was worked
+  out by hand before it first ran, and all of them matched: the phase's
+  front end needed no changes.
+  - **`testdata/fortran/overlay.for`:** EQUIVALENCE overlays, 4.6's forms in a
+    running program: a matrix filled through a vector, an element by its number
+    (`GRID(5)`), two lists chained through one array, a LOGICAL's and a REAL's
+    bits read and changed through an INTEGER (adding 128 to 1.5's longword
+    doubles it), an overlay's neighbors left alone, one block under an overlay in
+    two units.
+  - **`testdata/fortran/tables.for`:** tables set by DATA and put to use: days in
+    the months, a binary search, an interpolation, tax brackets in a common block
+    from a BLOCK DATA, and a matrix product of matrices given by rows (an
+    implied-DO) and by columns. Both programs also run with paging on.
+  - **`TestFortranModules`** is the harness for programs of several files:
+    each directory of `testdata/fortran/modules` is one program, compiled and
+    assembled file by file, then linked once per line of its `links.txt`, and it
+    must print its `.out` every time. `modules/ledger` is the one subtask 6 left
+    for this one: four files, a block's layout from an INCLUDE file, another
+    declared at three lengths and lengthened by EQUIVALENCE in another file, blank
+    common, and its values from a BLOCK DATA in a file of its own. It runs in both
+    paging modes, linked in three orders.
+  - **`TestFortranMissingBlockData`:** LINK reports a BLOCK DATA that EXTERNAL
+    names and no module defines, though no code calls it, which subtask 7 chose and
+    nothing yet checked.
+  - **The harness:** the programs had filled the one small volume they share, so
+    each now deletes its files when it ends (`deleteFilesAfter`).
