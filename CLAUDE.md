@@ -285,8 +285,8 @@ never had.
   LINK); Phase 75 (first light, every pass for a small subset) is in
   progress: subtasks 1 to 7 (the survey and design, the lexer, the AST
   and parser, semantic analysis, the IR and lowering, the code
-  generator, FTNRTL's list-directed output) are done, the end-to-end
-  harness is next.
+  generator, FTNRTL's list-directed output, the end-to-end harness,
+  `testdata/fortran`) are done, the close-out is next.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -521,6 +521,13 @@ never had.
   `TestDebuggerSessionOracle` replays the sessions, and
   `TestTrace73Procedure` runs `trace73.com` itself (with
   `TestDbgcmdProcedure`, `dbgcmd.com`).
+- `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
+  subtask 8; README.md): each `name.for` with `name.out`, its terminal
+  output and `$STATUS`, written by hand from the language's rules.
+  `TestFortranPrograms` (`internal/console/fortranprograms_test.go`)
+  runs FORTRAN, MACRO, LINK, and RUN on each (the first three must say
+  nothing) and compares the output; `fortranPagingPrograms` also run
+  with paging on. Its `.gitignore` keeps `*.out` in the repository.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

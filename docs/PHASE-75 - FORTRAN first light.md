@@ -1,7 +1,7 @@
 # Phase 75 — FORTRAN first light: every pass, end to end
 
-**Status:** in progress: subtasks 1 to 7 done (2026-10-30); the
-end-to-end harness and the first programs (subtask 8) are next. Subtask 1, the survey (Part
+**Status:** in progress: subtasks 1 to 8 done (2026-10-30); the
+close-out (subtask 9) is next. Subtask 1, the survey (Part
 A) and the design (Part B), was written 2026-10-30 and accepted by the
 author the same day, with its four corrections to the plan. Needs Phase 74 (the
 FORTRAN command, source forms, FTNRTL's pipeline). Part of the FORTRAN
@@ -1295,3 +1295,34 @@ To go into the progress log as each is built, and into MANUAL.md's
     `@FTNLIST/OUTPUT=` (each log record's fixed control 01 8D, the data
     without the blank), in both paging modes; `rms`'s
     `TestFTNPrintControl`.
+- **2026-10-30:** Subtask 8 done: the end-to-end harness.
+  - `testdata/fortran/` holds the programs (README.md): `name.for` and
+    `name.out`, the terminal output followed by SHOW SYMBOL's
+    `$STATUS` line. `TestFortranPrograms`
+    (`internal/console/fortranprograms_test.go`) writes each source to
+    DUA1, runs FORTRAN, MACRO, LINK, and RUN through the console, fails
+    if any of the first three prints anything, and compares RUN's
+    output. Every program runs with paging off; `args` runs with paging
+    on too (`fortranPagingPrograms`). A new program is two new files.
+  - The first five: `squares` (no PROGRAM statement, so module
+    `SQUARES$MAIN`; DO; PRINT of a text and integers), `factorials`
+    (INTEGER and REAL factorials to 12!, G's F form through 10! and E
+    form from 11!, truncating division, mixed-mode operations, REAL
+    assigned to INTEGER, WRITE (*,*)), `primes` (nested DO, logical
+    IF, GO TO out of a loop to a labeled block IF, the remainder by hand,
+    a whole array printed six to a record, a LOGICAL expression
+    printed), `args` (SUBROUTINE, INTEGER, REAL, and untyped FUNCTION;
+    an actual changed, `K + 1` and `(K)` copied, an array whole and from
+    an element, RETURN in the middle, functions in a PRINT list and an
+    expression), and `grades` (block IF with ELSE IF and ELSE, one
+    nested, GO TO from a block to the loop's terminal statement, LOGICAL
+    output, STOP with a display before END).
+  - Each `.out` was written from the manual's rules and checked by hand
+    against the run: every program compiled, assembled, linked, and ran
+    correctly the first time, so the subtask found no bugs in the passes
+    or FTNRTL. (One value worth noting: 1 + 1/2 + 1/3 + 1/4 in
+    F_floating is 2.08333349..., so divided by 10000 its eight E-form
+    digits are 2.0833335E-04, not ...33E-04.)
+  - The repository's `.gitignore` ignores `*.out`; the directory's own
+    `.gitignore` takes the rule back, so a new program's expected output
+    can't be left out by accident.
