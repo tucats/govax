@@ -287,7 +287,7 @@ never had.
   IR and lowering, the code generator, FTNRTL's list-directed output,
   and the end-to-end harness (`testdata/fortran`); FORTRAN-INTERNALS.md
   follows one program through every pass.
-  Phase 76 (in progress) is the whole front end: every statement
+  Phase 76 (done 2026-10-30) is the whole front end: every statement
   parsed, declarations and storage; its Part A (subtask 1, 2026-10-30)
   is the survey, with a table of every statement and its phase, and
   subtask 2 (2026-10-30) the parser's remaining statements, and
@@ -303,7 +303,10 @@ never had.
   (2026-10-30) DATA, initial values in type statements, SAVE, EXTERNAL,
   INTRINSIC, and BLOCK DATA: each value an `Initial`, its bytes in the
   image (`sema/data.go`, `attributes.go`; `codegen`'s `writeInitials`), and
-  BLOCK DATA a unit with no code, its name a global symbol.
+  BLOCK DATA a unit with no code, its name a global symbol, and subtask
+  8 (2026-10-30) programs end to end, `testdata/fortran/modules` several
+  files linked in several orders, and subtask 9 (2026-10-30) the
+  close-out, FORTRAN-INTERNALS.md's section 8 on declarations and storage.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -545,6 +548,9 @@ never had.
   runs FORTRAN, MACRO, LINK, and RUN on each (the first three must say
   nothing) and compares the output; `fortranPagingPrograms` also run
   with paging on. Its `.gitignore` keeps `*.out` in the repository.
+  `modules/` is programs of several files (Phase 76, subtask 8), a
+  directory each, linked once per line of its `links.txt` and printing
+  one output every time (`TestFortranModules`).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

@@ -1,0 +1,27 @@
+== main program STORE
+  STORE                   program unit
+  N         INTEGER       constant         = 3
+  COUNT     INTEGER       variable         SHARED+0
+  TOTAL     REAL          array(1:3)       SHARED+4
+  TABLE     INTEGER       array(1:3)       $LOCAL+0
+  BITS      INTEGER       variable         $LOCAL+12
+  X         REAL          variable         $LOCAL+12
+  $LOCAL is 16 bytes
+  /SHARED/ is 16 bytes
+  initial $LOCAL+0 TABLE(1) INTEGER = 01 00 00 00
+  initial $LOCAL+4 TABLE(2) INTEGER = 07 00 00 00
+  initial $LOCAL+8 TABLE(3) INTEGER = 07 00 00 00
+  initial $LOCAL+12 X REAL = 80 40 00 00
+10          COUNT = TABLE[2]
+11          PRINT * COUNT BITS TOTAL[]
+12          END
+== BLOCK DATA START
+  START                   program unit
+  COUNT     INTEGER       variable         SHARED+0
+  TOTAL     REAL          array(1:3)       SHARED+4
+  $LOCAL is 0 bytes
+  /SHARED/ is 16 bytes
+  initial SHARED+4 TOTAL(1) REAL = 20 41 00 00
+  initial SHARED+8 TOTAL(2) REAL = 20 41 00 00
+  initial SHARED+12 TOTAL(3) REAL = 20 41 00 00
+18          END

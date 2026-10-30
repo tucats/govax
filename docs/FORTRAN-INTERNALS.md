@@ -7,12 +7,15 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 and 75) every pass is in place for a first subset of
-the language: main programs, subroutines, and functions; INTEGER, REAL,
+So far (Phases 74 to 76) the compiler parses every statement of the
+language and gives every declaration its meaning and its storage, and
+every pass is in place to compile a first subset of the executable
+statements: main programs, subroutines, and functions; INTEGER, REAL,
 and LOGICAL scalars and arrays; assignment and expressions; IF, block
 IF, DO, GO TO, CALL, RETURN, and STOP; and `PRINT *` and `WRITE (*,*)`.
 The tour follows one small program through every pass (section 1), then
-takes the passes in order, then FTNRTL, then how the compiler is tested.
+takes the passes in order, with a second program for declarations and
+storage (section 8), then FTNRTL, then how the compiler is tested.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -26,12 +29,12 @@ produced and handing on something a step closer to machine code:
      |
  source ---------- lines into statements: columns, continuations,
      |             comments, INCLUDE                     (Phase 74)
- lex ------------- each statement's kind, and its tokens (Phase 75)
- parse ----------- tokens into a syntax tree             (Phase 75)
+ lex ------------- each statement's kind, and its tokens (Phases 75-76)
+ parse ----------- tokens into a syntax tree             (Phases 75-76)
  sema ------------ names, types, blocks, labels, storage (Phases 75-76)
  ir -------------- the tree lowered to basic blocks      (Phase 75)
  opt ------------- optional improvements                 (Phase 84)
- codegen --------- VAX instructions, as MACRO-32 text    (Phases 74-75)
+ codegen --------- VAX instructions, as MACRO-32 text    (Phases 74-76)
      |
  AVERAGE.MAR --MACRO--> AVERAGE.OBJ --LINK (FTNRTL)--> AVERAGE.EXE
 ```
@@ -438,7 +441,229 @@ INTEGER in the main program:
 A mistake is reported once: an expression with an error has the
 `Invalid` type, and nothing built on it reports again.
 
-## 8. The fifth pass: the IR and lowering (`internal/fortran/ir`)
+## 8. Declarations and storage
+
+AVERAGE declares very little. A real FORTRAN program's declarations are
+half its text, and they make an awkward demand on a compiler: **a
+declaration can come after a statement that depends on it.** A name's
+dimensions can come before its type or after it, and DATA may give an array
+its values before the statement that says how long it is. So semantic
+analysis lays nothing out as it reads. The first walk only collects; when
+every declaration has been read, `analyzeUnit` (`analyze.go`) runs these
+stages, among others, in the one order that works:
+
+```
+layoutCommon    each common block's names get their places
+equivalences    EQUIVALENCE's groups, and those in blocks placed
+checkArrays     an adjustable array's bounds, now every name is known
+dataStatements  each DATA list's values worked out, as bytes
+layout          everything left gets its place in $LOCAL
+placeInitials   each value gets its place, now its name has one
+```
+
+Here is a program that uses most of it (`testdata/fortran/store.for`):
+
+```
+      PROGRAM STORE
+      PARAMETER (N = 3)
+      COMMON /SHARED/ COUNT, TOTAL(N)
+      INTEGER COUNT, TABLE(N)/1, 2*7/, BITS
+      REAL X
+      EQUIVALENCE (X, BITS)
+      DATA X /1.0/
+      COUNT = TABLE(2)
+      PRINT *, COUNT, BITS, TOTAL
+      END
+
+      BLOCK DATA START
+      COMMON /SHARED/ COUNT, TOTAL(3)
+      INTEGER COUNT
+      DATA TOTAL /3*2.5/
+      END
+```
+
+and what semantic analysis makes of it (`sema.Dump`):
+
+```
+== main program STORE
+  STORE                   program unit
+  N         INTEGER       constant         = 3
+  COUNT     INTEGER       variable         SHARED+0
+  TOTAL     REAL          array(1:3)       SHARED+4
+  TABLE     INTEGER       array(1:3)       $LOCAL+0
+  BITS      INTEGER       variable         $LOCAL+12
+  X         REAL          variable         $LOCAL+12
+  $LOCAL is 16 bytes
+  /SHARED/ is 16 bytes
+  initial $LOCAL+0 TABLE(1) INTEGER = 01 00 00 00
+  initial $LOCAL+4 TABLE(2) INTEGER = 07 00 00 00
+  initial $LOCAL+8 TABLE(3) INTEGER = 07 00 00 00
+  initial $LOCAL+12 X REAL = 80 40 00 00
+10          COUNT = TABLE[2]
+11          PRINT * COUNT BITS TOTAL[]
+12          END
+== BLOCK DATA START
+  START                   program unit
+  COUNT     INTEGER       variable         SHARED+0
+  TOTAL     REAL          array(1:3)       SHARED+4
+  $LOCAL is 0 bytes
+  /SHARED/ is 16 bytes
+  initial SHARED+4 TOTAL(1) REAL = 20 41 00 00
+  initial SHARED+8 TOTAL(2) REAL = 20 41 00 00
+  initial SHARED+12 TOTAL(3) REAL = 20 41 00 00
+18          END
+```
+
+### Types, IMPLICIT, and statement order
+
+A `Type` is a kind and a size, so each line of the manual's Table 2-1 is its
+own type, and BYTE is only another way to write LOGICAL\*1 (`types.go`).
+Phase 76 gives every type its size and alignment; `Type.Compiled` says
+which ones expressions can use so far. A name of another type still gets
+its storage and initial values, and draws `%FORT-E-NOTIMPL` only where a
+statement first uses it, so each later phase has only expressions to add.
+
+The IMPLICIT statements are read before anything else in the unit, since
+they type the names in the unit's own header (`implicit.go`).
+
+Figure 1-1's rules of order become a number (`order.go`): each statement
+has a group it puts the unit in, and the last group it may come in, and
+the unit's group only rises. A statement is out of order when the unit is
+already past its last group, and the message names the statement that took
+the unit there.
+
+### Constant expressions
+
+`PARAMETER (N = 3)` makes N a name for a value, not a variable: it has no
+storage, and `TOTAL(N)` is an array of three. Constant expressions are
+computed from the syntax tree by an evaluator of their own (`constant.go`),
+not by analyzing them and folding the result, because analyzing an
+expression enters its names in the symbol table as variables, and a bound
+or a DATA subscript must not create any. The evaluator works in every type
+through `vaxfloat`, so that a value worked out at compile time is the one
+the VAX's own instructions would have computed; and it keeps a REAL
+literal's exact value until it knows the type wanted, so that `1D0 + 0.1`
+adds D_floating 0.1, not F_floating's 0.1 made longer.
+
+### COMMON: the linker does the sharing
+
+Nothing in FORTRAN says that a unit's view of a block agrees with another's:
+STORE calls its two pieces COUNT and TOTAL, and another unit may call them
+something else, or stop at the first. All a unit knows is its own list, so a
+name's place is simply the sum of the sizes before it, with **nothing aligned**:
+aligning would move one unit's names away from another's (`common.go`). The
+VAX doesn't mind, and reads unaligned data.
+
+The sharing is the linker's. Each block is a program section of its name, with
+the attributes the manual's Table 10-1 gives (blank common's named `$BLANK`):
+`GBL` so that every module's section of that name is one section, and `OVR` so
+that each module's part starts at its base rather than following the last. LINK
+makes it as long as the longest part. So a compiler need only write, in each
+module:
+
+```
+; Common block /SHARED/, 16 bytes, the most any unit in this file declares
+	.PSECT	SHARED,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+SHARED.$BASE:
+	.BLKB	4
+	.LONG	^X00004120[3]		; TOTAL(1) to TOTAL(3) = 2.5
+```
+
+One catch is worth knowing if you write a compiler like this. `OVR` is a word
+to the *linker*, about modules. Inside one module MACRO goes on from where a
+section was left, overlaid or not, so two units of one file each writing their
+part of a block would put the second after the first. Hence each block is
+written **once per file**, at the top, with its longest length and every unit's
+initial values merged; and each unit's names are only direct assignments from
+its base, which is why they cost nothing and the debugger can name them:
+
+```
+STORE.COUNT = SHARED.$BASE		; COUNT, in /SHARED/
+STORE.TOTAL = SHARED.$BASE+4		; TOTAL, REAL (3), in /SHARED/
+```
+
+### EQUIVALENCE: groups of names
+
+An EQUIVALENCE list says its items start at one place, so what the lists
+really describe are groups of names with fixed places relative to each other
+(`equivalence.go`). Take
+
+```
+      DIMENSION A(4), B(6)
+      EQUIVALENCE (A(2), B(1)), (B(3), C)
+```
+
+The first list puts B 4 bytes after A, since A(2) is 4 bytes into A and B(1) is
+B's start: in the group's own coordinates, A is at 0 and B at 4. The second list
+has C 8 bytes into B, so C joins them at 12. Reading a list is merging two groups:
+each name starts alone, at 0, and merging moves every member of one group by
+whatever makes the two items' places equal. This is the classic union-find with
+an offset on every member, done the plain way, moving each member, since a
+group is rarely more than a few names. If both items are already in one group,
+nothing can move, and their places either agree or the program has put a name
+in two places (`EQUIVCONFLICT`).
+
+Then the group is placed. If a member is in a common block, the member's place
+there says where the group's 0 is: it may not fall before the block's start
+(`EQUIVBEFORE`), and the group may run past the end, which lengthens the block.
+Any other group goes in `$LOCAL` as one unit when `layout` reaches its first
+name, on the boundary of its strictest member. In the `.MAR` file a group is one
+piece of storage under the label of its lowest name, and the others are
+assignments from that label, as with BITS and X:
+
+```
+STORE.BITS:
+	.LONG	^X00004080		; X = 1.0
+STORE.X = STORE.BITS			; X
+```
+
+### DATA: values are bytes
+
+An initial value makes no code, so every rule in the manual's section 4.3 comes
+down to *which bytes an item gets* (`data.go`), and they are simple to state that
+way:
+
+```
+INTEGER*2 K / '12345'X /      a hexadecimal constant is cut on the left: 45 23
+CHARACTER*6 STARS / '****' /  a character constant is padded with blanks
+REAL X / 'AB' /               so is one given to a number: A, B, two blanks
+CHARACTER BELL / 7 /          an integer is one character's code
+REAL Y / 1 /                  a number becomes the type first: 80 40 00 00
+```
+
+(That last line isn't a mistake: an F_floating value's bytes begin with the word
+holding its sign and exponent.) A type statement's `TABLE(N)/1, 2*7/` is just a DATA
+list of one name. A list of names and a list of values are walked together, an
+array name or an implied-DO list producing items and a repeat count holding
+a value's place, so that a list with too many items is reported at the first
+with no value, however many its implied-DO lists would have made. An implied-DO's
+variable lives only in the evaluator, and never enters the symbol table.
+
+Each value is an `Initial`, its bytes and later its place. The code generator
+writes them in order of place, with `.BLKB` for the gaps, and floating values in
+hexadecimal with the source's spelling beside them, so nothing is left to MACRO's
+own conversion of a decimal number. Items in a row with one value become a
+repetition, `.LONG 0[1000]`, which keeps a large table's file short.
+
+### BLOCK DATA and EXTERNAL
+
+A block data subprogram is a unit with storage and no code: the IR's routine has
+no blocks, and the generator writes no `.ENTRY`. It still needs a symbol, for
+the sake of libraries. If START is in an object library, nothing makes LINK pull
+it out, since no one calls it. The language's answer is to name it in an EXTERNAL
+statement (the manual's section 4.1), so the compiler writes a reference for
+every EXTERNAL name, called or not, and the BLOCK DATA defines its name as a
+global absolute symbol:
+
+```
+	.EXTRN	START			; named in an EXTERNAL statement
+START == 0				; this block data subprogram's name, for EXTERNAL statements
+```
+
+So a block data module left out of the link draws LINK's undefined symbol
+message, rather than a program quietly running with zeros.
+
+## 9. The fifth pass: the IR and lowering (`internal/fortran/ir`)
 
 After semantic analysis the program still reads like FORTRAN: a DO holds
 its body, PRINT its items, an element its subscripts. Lowering turns it
@@ -548,7 +773,7 @@ Things to see in it:
 jump within the routine, operand types agreeing); the tests run it on
 everything they lower.
 
-## 9. The last pass: code generation (`internal/fortran/codegen`)
+## 10. The last pass: code generation (`internal/fortran/codegen`)
 
 The code generator has two jobs: choosing instructions, and writing
 text another program reads.
@@ -654,7 +879,7 @@ characters becomes a numbered one, `.$Nn`, listed in the storage map.
 
 The manual's section 14.5 shows a whole MACRO file.
 
-## 10. FTNRTL: the run-time library (`internal/ftnrtl`)
+## 11. FTNRTL: the run-time library (`internal/ftnrtl`)
 
 Compiled code does arithmetic and branches itself; for I/O, STOP, and
 the like it calls FTNRTL. FTNRTL is written in MACRO-32 (Decision 13),
@@ -751,7 +976,7 @@ FTNRTL calls LIBRTL for the conversions as any VAX program would, through
 LIBRTL's transfer vector; a run-time library built on another is the
 normal arrangement on VMS.
 
-## 11. Testing a compiler
+## 12. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.
@@ -778,3 +1003,10 @@ pipeline is tested end to end on govax.
   FORTRAN to check against). FTNRTL's routines are tested from MACRO
   callers (`TestFTNRTL`, `TestFTNRTLListOutput`), in both of RUN's
   paging modes.
+- **Programs of several files.** `TestFortranModules` compiles and
+  assembles each file of a directory of `testdata/fortran/modules`
+  apart, and links them once per line of the directory's `links.txt`,
+  in different orders: whichever module's part of a common block comes
+  first, or is longest, or holds the values, the program must print the
+  same thing. That is the test of everything the compiler leaves to the
+  linker.

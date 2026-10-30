@@ -1291,10 +1291,11 @@ Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
 source files, which MACRO assembles and LINK links. govax's FORTRAN
 compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
 plan.md`); so far it compiles a first subset of the language (main
-programs, subroutines, and functions; INTEGER, REAL, and LOGICAL
-variables and arrays; expressions; IF, DO, GO TO, CALL, RETURN, STOP;
-`PRINT *` and `WRITE (*,*)`), and reports any other statement as not
-implemented yet. The MACRO file holds every source line as a comment,
+programs, subroutines, functions, and BLOCK DATA; every type's
+declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
+EQUIVALENCE, DATA, SAVE, EXTERNAL; INTEGER, REAL, and LOGICAL
+expressions; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and `WRITE
+(*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
@@ -4343,11 +4344,12 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 75, done 2026-10-30):** every pass of the
-compiler is in place for a first subset of the language (section 14.2),
-and programs written in it compile, link, and run. Any other statement
-draws `%FORT-E-NOTIMPL`, naming it ("the READ statement is not
-implemented yet"); the later phases widen the language.
+**Where things stand (Phase 76, done 2026-10-30):** the compiler reads
+every statement of the language and gives every declaration its meaning
+and its storage, and compiles a first subset of the executable statements
+and expressions (section 14.2): programs written in it compile, link, and
+run. Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the READ
+statement is not implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
 ### 14.1 A first program
@@ -4396,8 +4398,46 @@ VAX> FORTRAN AVERAGE
 %DCL-E-FORERRORS, 1 error(s) compiling DUA0:[WORK]AVERAGE.FOR;1; no MACRO file written
 ```
 
+A program may be several files, each compiled and assembled on its own.
+They share data through common blocks: a block of one name is the same
+storage in every unit that declares it, whatever names each gives its parts,
+and a block's initial values may come from a BLOCK DATA in a file of its own.
+EXTERNAL says the program needs that unit, which no code calls. With these
+three files,
+
+```text
+      PROGRAM STORE                   ! STORE.FOR
+      EXTERNAL START
+      COMMON /SHARED/ COUNT, TOTAL(3)
+      INTEGER COUNT
+      COUNT = 7
+      CALL SHOW
+      END
+
+      SUBROUTINE SHOW                 ! SHOW.FOR
+      COMMON /SHARED/ N, T(3)
+      PRINT *, N, T
+      END
+
+      BLOCK DATA START                ! START.FOR
+      COMMON /SHARED/ COUNT, TOTAL(3)
+      INTEGER COUNT
+      DATA TOTAL /3*2.5/
+      END
+```
+
+```text
+VAX> FORTRAN STORE,SHOW,START
+VAX> MACRO STORE
+VAX> MACRO SHOW
+VAX> MACRO START
+VAX> LINK STORE,SHOW,START
+VAX> RUN STORE
+           7   2.500000       2.500000       2.500000
+```
+
 More programs are in govax's `testdata/fortran` directory, each with the
-output it prints.
+output it prints, and programs of several files in its `modules` directory.
 
 ### 14.2 What the compiler accepts so far
 
@@ -4652,6 +4692,16 @@ their layout. What to look for in the code:
   label. FORTRAN's label 10 is `SQUARES.L10`. A name longer than MACRO's
   31 characters becomes a numbered one, `.$Nn`, listed in the storage
   map.
+- **Common blocks** come first in the file, each once, as long as the
+  longest declaration of it in the file, and holding every unit's initial
+  values: a program section of the block's name (blank common's is
+  `$BLANK`), overlaid, so that LINK starts every module's part at one
+  place. A unit's names in it are assignments, `STORE.TOTAL =
+  SHARED.$BASE+4`, as are names that EQUIVALENCE overlays, and take no room.
+- **Initial values** are in the storage itself: `.LONG`, `.WORD`, `.BYTE`,
+  and `.ASCII`, with `.BLKB` for the gaps. A floating value is in
+  hexadecimal, its source spelling in the comment; items in a row with one
+  value are a repetition, `.LONG 0[1000]`.
 - **Dummy arguments** are reached through the argument list:
   `ISQ.N = 4` names N's offset, and `@ISQ.N(AP)` is N.
 - **A DO loop** computes its iteration count first, skips the body if
@@ -4774,6 +4824,22 @@ FORTRAN compiler was available to check them). So far:
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.
 - A letter given a type by two IMPLICIT rules is an error.
+- A common block's names have no gaps between them, whatever their types.
+  In `$LOCAL`, an EQUIVALENCE group goes on the boundary of its strictest
+  member, the others where the lists put them.
+- The standard's rules the manual doesn't state are errors: a dummy argument
+  or function result in COMMON or EQUIVALENCE, a name in two blocks, two blocks
+  associated, DATA for a dummy argument, a function result, or blank common.
+- DATA may initialize a named common block in any unit, not only BLOCK DATA,
+  though a BLOCK DATA unit may initialize only names in common blocks.
+- Blank common's program section is `$BLANK`, and an unnamed BLOCK DATA's name
+  is `file$DATA`, so a file holds at most one.
+- An EXTERNAL name is a reference in the object module whether or not code
+  uses it, so LINK reports one that nothing defines.
+- A character or Hollerith constant may initialize a LOGICAL item as it may a
+  number, and INTEGER and LOGICAL constants initialize each other's items, as
+  assignment converts them. A REAL literal for a `REAL*8` item is rounded from
+  its exact value: `DATA D /0.1/` is 0.1 in D_floating.
 - `FUNCTION F*8(X)`, a length with no type keyword, gives the length to
   the type F has from its first letter (here `REAL*8`).
 - Integer overflow isn't detected (the result wraps, as with VAX

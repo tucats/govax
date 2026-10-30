@@ -1,12 +1,7 @@
 # Phase 76 — FORTRAN's whole front end: every statement, every declaration
 
-**Status:** in progress (subtask 1, the survey, done and accepted
-2026-10-30; subtask 2, the parser's remaining statements, done
-2026-10-30; subtask 3, types, IMPLICIT, and statement order, done
-2026-10-30; subtask 4, PARAMETER and constant folding, done
-2026-10-30; subtask 5, arrays, done 2026-10-30; subtask 6, COMMON and EQUIVALENCE,
-done 2026-10-30; subtask 7, DATA, SAVE, BLOCK DATA, done 2026-10-30; subtask
-8, end to end, done 2026-10-30). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
+**Status:** done 2026-10-30 (subtask 1, the survey, accepted by the author
+the same day; subtasks 2 to 9 below). Needs Phase 75 (every pass for a subset). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 1, 6, 7, 10, 16, and 19).
 
 ## Goal
@@ -518,7 +513,7 @@ Subtasks 2 to 9 below are revised to match.
    had.
 8. **End to end** (done 2026-10-30): programs sharing COMMON across units and files,
    EQUIVALENCE overlays, DATA-initialized tables.
-9. **Close-out:** FORTRAN-INTERNALS.md's chapter on semantic analysis
+9. **Close-out** (done 2026-10-30): FORTRAN-INTERNALS.md's chapter on semantic analysis
    and storage.
 
 ## Progress log
@@ -929,3 +924,26 @@ Subtasks 2 to 9 below are revised to match.
     nothing yet checked.
   - **The harness:** the programs had filled the one small volume they share, so
     each now deletes its files when it ends (`deleteFilesAfter`).
+- **2026-10-30:** Subtask 9 done: the close-out, and the phase.
+  - `docs/FORTRAN-INTERNALS.md`: a new section 8, "Declarations and storage",
+    follows a second program, STORE (`testdata/fortran/store.for`, with goldens
+    `sema/testdata/store.sema` and `codegen/testdata/store.mar`), through
+    semantic analysis's stages and into the MACRO file: why layout waits for
+    every declaration, types, IMPLICIT, and order, the constant evaluator,
+    COMMON as overlaid psects and why a block is written once per file,
+    EQUIVALENCE's groups, DATA as bytes, BLOCK DATA and EXTERNAL. The old
+    sections 8 to 11 are 9 to 12, and section 12 has the new harness. The
+    tour's opening and pipeline show the phase.
+  - `docs/MANUAL.md`: chapter 14's status is this phase's end; 14.1 has a
+    program of three files, which `testdata/fortran/modules/store` runs; 14.5
+    common blocks and initial values in the MACRO file; 14.7 this phase's
+    choices; 6.5's FORTRAN entry and `HELP FORTRAN` what the compiler now takes.
+    `docs/PLAN.md`'s index has the phase done.
+  - Left for later phases, as Part A's tables have it: code for what parses and
+    is reported NOTIMPL (Phases 78 to 82), adjustable arrays' and statement
+    functions' code (79), procedures as arguments (79), typeless and Hollerith
+    constants in expressions (82), RECORD and CDEC$ PSECT's effect on COMMON
+    (82), OPTIONS `/EXTEND_SOURCE`'s reach into the source pass (82), and
+    FORMAT's apostrophes (80). Every choice under "Choices of ours, unconfirmed"
+    above stands until a VAX FORTRAN can settle it. Phase 77, MTHRTL, needs
+    nothing from this one and is next.

@@ -1,0 +1,7 @@
+      PROGRAM STORE
+      EXTERNAL START
+      COMMON /SHARED/ COUNT, TOTAL(3)
+      INTEGER COUNT
+      COUNT = 7
+      CALL SHOW
+      END

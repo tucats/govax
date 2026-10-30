@@ -1,0 +1,98 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Common block /SHARED/, 16 bytes, the most any unit in this file declares
+	.PSECT	SHARED,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+SHARED.$BASE:
+	.BLKB	4
+	.LONG	^X00004120[3]		; TOTAL(1) to TOTAL(3) = 2.5
+
+; Storage map for STORE, the main program
+;   COUNT  INTEGER      SHARED+0   STORE.COUNT
+;   TOTAL  REAL (3)     SHARED+4   STORE.TOTAL
+;   TABLE  INTEGER (3)  $LOCAL+0   STORE.TABLE
+;   BITS   INTEGER      $LOCAL+12  STORE.BITS
+;   X      REAL         $LOCAL+12  STORE.X
+;
+STORE.COUNT = SHARED.$BASE		; COUNT, in /SHARED/
+STORE.TOTAL = SHARED.$BASE+4		; TOTAL, REAL (3), in /SHARED/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+STORE.TABLE:
+	.LONG	1			; TABLE(1) = 1
+	.LONG	7[2]			; TABLE(2) to TABLE(3) = 7
+STORE.BITS:
+	.LONG	^X00004080		; X = 1.0
+STORE.X = STORE.BITS			; X
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+STORE.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+STORE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS STORE.COUNT
+STORE.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS STORE.BITS
+STORE.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.ADDRESS STORE.TOTAL
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS STORE.TOTAL-4		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     The tour's program for declarations and storage
+;    2  C     (docs/FORTRAN-INTERNALS.md, section 8).
+;    3        PROGRAM STORE
+	.ENTRY	STORE,^M<>
+;    4        PARAMETER (N = 3)
+;    5        COMMON /SHARED/ COUNT, TOTAL(N)
+;    6        INTEGER COUNT, TABLE(N)/1, 2*7/, BITS
+;    7        REAL X
+;    8        EQUIVALENCE (X, BITS)
+;    9        DATA X /1.0/
+;   10        COUNT = TABLE(2)
+	MOVL	STORE.TABLE+4,STORE.COUNT
+;   11        PRINT *, COUNT, BITS, TOTAL
+	PUSHAB	STORE.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	STORE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	STORE.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	STORE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   12        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for START, a block data subprogram
+;   COUNT  INTEGER   SHARED+0  START.COUNT
+;   TOTAL  REAL (3)  SHARED+4  START.TOTAL
+;
+START.COUNT = SHARED.$BASE		; COUNT, in /SHARED/
+START.TOTAL = SHARED.$BASE+4		; TOTAL, REAL (3), in /SHARED/
+START == 0				; this block data subprogram's name, for EXTERNAL statements
+
+;   13
+;   14        BLOCK DATA START
+;   15        COMMON /SHARED/ COUNT, TOTAL(3)
+;   16        INTEGER COUNT
+;   17        DATA TOTAL /3*2.5/
+;   18        END
+
+	.END	STORE

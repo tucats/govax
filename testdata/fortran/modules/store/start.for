@@ -1,0 +1,5 @@
+      BLOCK DATA START
+      COMMON /SHARED/ COUNT, TOTAL(3)
+      INTEGER COUNT
+      DATA TOTAL /3*2.5/
+      END

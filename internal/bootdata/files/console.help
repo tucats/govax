@@ -177,6 +177,8 @@
 //              10/30/26    FORTRAN compiles its first subset, FTNRTL's
 //                          list-directed output (docs/PHASE-75 - FORTRAN
 //                          first light.md)
+//              10/30/26    FORTRAN's declarations and storage (docs/PHASE-76
+//                          - FORTRAN front end.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -4013,12 +4015,15 @@ $FOR
     include depth before its number.
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
-    FORTRAN plan.md).  So far it compiles a subset of the language:
-    main programs, subroutines, and INTEGER, REAL, and LOGICAL
-    functions; INTEGER, REAL, and LOGICAL variables and arrays;
-    assignment and expressions; IF, block IF, DO, GO TO, CALL, RETURN,
-    and STOP; PRINT * and WRITE (*,*).  Any other statement draws
-    %FORT-E-NOTIMPL.  Such programs compile, link, and run:
+    FORTRAN plan.md).  So far it reads every statement of the language,
+    and compiles a subset: main programs, subroutines, INTEGER, REAL,
+    and LOGICAL functions, and BLOCK DATA; declarations of every type,
+    IMPLICIT, PARAMETER, arrays, COMMON, EQUIVALENCE, DATA, SAVE,
+    EXTERNAL, and INTRINSIC; assignment and expressions in INTEGER,
+    REAL, and LOGICAL; IF, block IF, DO, GO TO, CALL, RETURN, and STOP;
+    PRINT * and WRITE (*,*).  Any other statement, or a statement using
+    a name of another type, draws %FORT-E-NOTIMPL.  Such programs
+    compile, link, and run:
 
         FORTRAN AVERAGE
         MACRO AVERAGE
@@ -4029,6 +4034,19 @@ $FOR
     The compiler checks the program units of one file against each
     other: a function's type where it is used, and the number of
     arguments of each call.
+
+    A program may be several files, each compiled and assembled on its
+    own, then linked together.  A common block of one name is the same
+    storage in each unit that declares it, as long as the longest
+    declaration.  A BLOCK DATA may give it initial values from another
+    file; name the BLOCK DATA in an EXTERNAL statement, so that LINK
+    reports it if it's missing and finds it in a library:
+
+        FORTRAN STORE,SHOW,START
+        MACRO STORE
+        MACRO SHOW
+        MACRO START
+        LINK STORE,SHOW,START
 
     INCLUDE 'file' reads a file, by default of type .FOR, found relative
     to the file that includes it: on the host, in its directory; on a
