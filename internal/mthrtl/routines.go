@@ -287,13 +287,54 @@ var Routines = []Routine{
 	{"MTH$JNOT", integerEntry(long, 1, integerNot)},
 	{"MTH$IISHFT", integerEntry(word, 2, integerShift)},
 	{"MTH$JISHFT", integerEntry(long, 2, integerShift)},
+
+	{"MTH$CABS", modulusEntry(vaxfloat.F)},
+	{"MTH$CDABS", modulusEntry(vaxfloat.D)},
+	{"MTH$CGABS", modulusEntry(vaxfloat.G)},
+
+	{"MTH$CEXP", complexEntry(vaxfloat.F, complexAt, complexExponential)},
+	{"MTH$CDEXP", complexEntry(vaxfloat.D, complexAt, complexExponential)},
+	{"MTH$CGEXP", complexEntry(vaxfloat.G, complexAt, complexExponential)},
+
+	{"MTH$CLOG", complexEntry(vaxfloat.F, complexAt, complexLog)},
+	{"MTH$CDLOG", complexEntry(vaxfloat.D, complexAt, complexLog)},
+	{"MTH$CGLOG", complexEntry(vaxfloat.G, complexAt, complexLog)},
+
+	{"MTH$CSIN", complexEntry(vaxfloat.F, complexAt, complexSine)},
+	{"MTH$CDSIN", complexEntry(vaxfloat.D, complexAt, complexSine)},
+	{"MTH$CGSIN", complexEntry(vaxfloat.G, complexAt, complexSine)},
+
+	{"MTH$CCOS", complexEntry(vaxfloat.F, complexAt, complexCosine)},
+	{"MTH$CDCOS", complexEntry(vaxfloat.D, complexAt, complexCosine)},
+	{"MTH$CGCOS", complexEntry(vaxfloat.G, complexAt, complexCosine)},
+
+	{"MTH$CSQRT", complexEntry(vaxfloat.F, complexAt, complexSquareRoot)},
+	{"MTH$CDSQRT", complexEntry(vaxfloat.D, complexAt, complexSquareRoot)},
+	{"MTH$CGSQRT", complexEntry(vaxfloat.G, complexAt, complexSquareRoot)},
+
+	{"MTH$CMPLX", complexEntry(vaxfloat.F, complexFromParts, asComplex)},
+	{"MTH$DCMPLX", complexEntry(vaxfloat.D, complexFromParts, asComplex)},
+	{"MTH$GCMPLX", complexEntry(vaxfloat.G, complexFromParts, asComplex)},
+
+	{"MTH$CONJG", complexEntry(vaxfloat.F, complexAt, conjugate)},
+	{"MTH$DCONJG", complexEntry(vaxfloat.D, complexAt, conjugate)},
+	{"MTH$GCONJG", complexEntry(vaxfloat.G, complexAt, conjugate)},
+
+	{"MTH$REAL", callEntry(vaxfloat.F, convert)},
+	{"MTH$DREAL", callEntry(vaxfloat.D, convert)},
+	{"MTH$GREAL", callEntry(vaxfloat.G, convert)},
+
+	{"MTH$AIMAG", conversionEntry(imaginaryArgs(vaxfloat.F), vaxfloat.F, convert)},
+	{"MTH$DIMAG", conversionEntry(imaginaryArgs(vaxfloat.D), vaxfloat.D, convert)},
+	{"MTH$GIMAG", conversionEntry(imaginaryArgs(vaxfloat.G), vaxfloat.G, convert)},
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides. The
 // vector's other JSB entries signal NOTIMPL, among them MTH$SQRT_R2,
 // MTH$HTAN_R7, MTH$HTAND_R7, the hyperbolic functions' (MTH$SINH_R5, ...), and
-// the two-argument MTH$ATAN2_R4's and MTH$AMOD_R5's kind, and the sign's
-// (MTH$SIGN_R1, MTH$SGN_R1, ...), which no manual gives and whose registers
+// the two-argument MTH$ATAN2_R4's and MTH$AMOD_R5's kind, the sign's (MTH$SIGN_R1,
+// MTH$SGN_R1, ...), and the complex functions' (MTH$CABS_R4, MTH$CDSIN_R9, ...), of
+// which section 1.5 says there are none. No manual gives these, and their registers
 // wait for the VMS probe (Decision 7). A name that has a neighbor with a smaller
 // register number, such as MTH$DEXP_R7 beside MTH$DEXP_R6 or MTH$ASIN_R5 beside
 // MTH$ASIN_R4, is a second entry: in VMS's image the two jump to the same

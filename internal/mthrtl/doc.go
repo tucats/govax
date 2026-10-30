@@ -44,6 +44,7 @@
 // hyperbolic functions; floating.go is the routines of the manual's Table 1-1
 // that a floating instruction or two could do (absolute value, truncation,
 // remainder, conversions, ...); integer.go the ones with word and longword
-// arguments or results, the bit functions among them; and extreme.go the maximum
-// and minimum of any number of arguments.
+// arguments or results, the bit functions among them; extreme.go the maximum and
+// minimum of any number of arguments; and complex.go the functions of complex
+// numbers.
 package mthrtl

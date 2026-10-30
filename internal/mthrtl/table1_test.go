@@ -496,7 +496,14 @@ func table1Program(cases []table1Case) string {
 		code.WriteString("\tJSB\tSHOW\n")
 	}
 
-	return `	.TITLE	TABLE1
+	return showProgram("TABLE1", data.String(), code.String())
+}
+
+// showProgram is a program of calls: the data and code given, a handler that keeps
+// the signal array's size and condition, and SHOW, which prints R0 to R3 and those
+// two.
+func showProgram(title, data, code string) string {
+	return `	.TITLE	` + title + `
 	.PSECT	DATA,WRT,NOEXE,LONG
 HRES:	.BLKL	4
 SCOND:	.BLKL	1
@@ -507,7 +514,7 @@ OUT:	.LONG	132
 	.ADDRESS BUF
 LEN:	.BLKL	1
 LINE:	.BLKL	2
-` + data.String() + `	.PSECT	CODE,NOWRT,EXE,LONG
+` + data + `	.PSECT	CODE,NOWRT,EXE,LONG
 	.ENTRY	HANDLER,^M<>
 	MOVL	4(AP),R0
 	MOVL	(R0),SCOUNT
@@ -531,7 +538,7 @@ SHOW:	PUSHL	SCOUNT
 	RSB
 	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9>
 	MOVAL	HANDLER,(FP)
-` + code.String() + `	MOVL	#1,R0
+` + code + `	MOVL	#1,R0
 	RET
 	.END	START
 `

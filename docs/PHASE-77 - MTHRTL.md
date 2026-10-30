@@ -4,7 +4,8 @@
 its Decision 3 accepted by the author the same day; subtasks 2, the package
 and its registration, 3, the engine, square root, exponentials, and
 logarithms, 4, the trigonometric functions and their inverses, 5, the
-hyperbolic functions and ATAN2, and 6, Table 1-1's routines, the same day).
+hyperbolic functions and ATAN2, 6, Table 1-1's routines, and 7, the complex
+functions and parts, the same day).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -182,7 +183,7 @@ are there too, each with one FAO argument, `user PC !XL`.
 
 | Condition | Value | When (the manual) |
 |---|---|---|
-| `MTH$_INVARGMAT` | `0x16828C` | `ASIN`, `ACOS` with \|x\| > 1; `ATAN2` of (0, 0); `ATANH` with \|x\| >= 1 |
+| `MTH$_INVARGMAT` | `0x16828C` | `ASIN`, `ACOS` with \|x\| > 1; `ATAN2` of (0, 0); `ATANH` with \|x\| >= 1; `CDLOG`, `CGLOG` of (0, 0) |
 | `MTH$_LOGZERNEG` | `0x16829C` | a logarithm of x <= 0 |
 | `MTH$_SQUROONEG` | `0x1682A4` | a square root of x < 0 |
 | `MTH$_FLOOVEMAT` | `0x1682C4` | a result too large: `EXP` above 88.029 (F, D), 709.089 (G), 11355.830 (H); `COSH`, `SINH` above 88.722, 709.782, 11356.523; `TAN`, complex forms, conversions |
@@ -367,6 +368,25 @@ be corrected.
     running only after the Go routine ends);
   - the undocumented JSB entries of this family: `MTH$AMOD_R5`, `DMOD_R9`,
     `GMOD_R9`, `SIGN_R1`, `DSIGN_R3`, `GSIGN_R3`, `SGN_R1`;
+  - `MTH$CEXP` of a large negative r: the page's overflow says "the absolute value
+    of r", where govax takes only a large positive r, and gives a part too small for
+    the format as 0.0;
+  - `MTH$CSIN`'s and `MTH$CCOS`' overflow: whether it's at the page's 88.029 (EXP's
+    limit, which govax follows, whatever r) or at `COSH`'s 88.722, and if r can save
+    an i past it;
+  - `MTH$CLOG` of (0, 0), whose F page has no condition (govax signals the D and G
+    pages' `MTH$_INVARGMAT`), and of a number whose modulus overflows, which only
+    the D and G pages give (`SS$_FLTOVF_F`, there "signaled from `MTH$CxABS`", whose
+    own page says `MTH$_FLOOVEMAT`);
+  - what arguments give `MTH$CSQRT`'s `SS$_FLTOVF_F`, which no result needs: govax
+    takes it at the page's `ABS(r) + CABS(r, i)`, so (1.0E38, 0.0) signals;
+  - what a handler that continues from a complex routine's condition finds: an F
+    result's R1 (govax's 0), and a D or G result's two parts in memory (govax's
+    reserved operands);
+  - whether a complex routine's part too small for the format follows FU (govax's
+    0.0 doesn't, no page listing `MTH$_FLOUNDMAT`);
+  - whether `MTH$REAL` and `MTH$AIMAG` fault on a reserved operand in the part they
+    don't return (govax doesn't read it);
   - last-bit comparison, reported as a count rather than held as a test.
 
 ## Subtasks (revised by the survey)
@@ -384,7 +404,7 @@ be corrected.
 6. **Table 1-1's routines:** absolute value, positive difference, sign, floor,
    truncation, nearest integer, remainder, maximum and minimum, conversions,
    bit functions. (New: the plan's subtask 5 was too large.) Done.
-7. **Complex functions and parts.**
+7. **Complex functions and parts.** Done.
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
    to agree (`sema/constant.go`'s `power`, `complexArith`).
 9. **MTH$RANDOM and the remaining conditions.**
@@ -595,3 +615,56 @@ be corrected.
   got through: `DPROD`'s underflow and `AJMIN0`'s width were gaps, now cases; an `ISHFT`
   case for counts past the width was redundant, Go's shifts being defined there, and
   it's gone. Only `DIM` at equal values passes, rightly, the result being 0 either way.
+- **2026-10-30:** Subtask 7. `complex.go` is the 30 CALL entries: `MTH$CABS`, `CEXP`,
+  `CLOG`, `CSIN`, `CCOS`, `CSQRT` and their D and G forms, and `CMPLX`, `CONJG`, `REAL`,
+  and `AIMAG` and theirs. `complexEntry` makes a routine with a complex result, in R0
+  and R1 for F and through the first argument for D and G, from a `complexFunction` and
+  a `complexLoader` (`complexAt`, or `complexFromParts` for `CMPLX`'s two addresses);
+  `modulusEntry` is `CABS`; `REAL` is `callEntry` with `convert`, and `AIMAG`
+  `conversionEntry` with the `imaginaryArgs` loader. The pages' formulas are each
+  part's exact value, rounded once. `sumOfSquares` is exact (`vaxfloat.MulExact`,
+  `AddExact`), however far apart the parts are, so the logarithm's real part is right
+  when the modulus is within far less than a last bit of 1: `CGLOG(1, 2^-500)` is
+  `2^-1001`. The 18 JSB entries of these families, of which section 1.5 says there are
+  none, stay stubs (Decision 7).
+
+  The pages settle when a routine gives up, and not all of it. `CEXP`'s overflow
+  is the factor `EXP(r)`'s, the page's 88.029 and 709.089, whatever the sine and cosine;
+  a large negative r is 0.0, though the page says "the absolute value of r". `CSIN`'s and
+  `CCOS`' is at the same figures on |i|, which are EXP's and not `COSH`'s 88.722, so
+  `MTH$COSH(88.5)` has an answer and `MTH$CCOS(1, 88.5)` overflows. `CDLOG` and `CGLOG`
+  signal `SS$_FLTOVF_F` when the modulus overflows, as their page says, and `CLOG`, whose
+  page doesn't, has its answer. `CSQRT`'s `SS$_FLTOVF_F` has to be an intermediate's,
+  no root being that large, so it's the sum in the page's `ROOT`, which overflows at
+  (1.0E38, 0.0). Zero's root is 0, where the page's Q has no value. No page lists
+  `MTH$_FLOUNDMAT`, so a part too small is 0.0, whatever FU, as for `ATAN2`. A D or G
+  result that fails holds two reserved operands; an F result is R0 reserved and R1
+  clear, as section 1.4 has it, the registers corrected "as double-precision" for
+  every routine. `REAL` and `AIMAG` read only their part. Each is a new question for
+  the probe.
+
+  `complex_test.go` holds each function to a reference by other means at 512 bits (the
+  manual's `MAX * SQRT((MIN/MAX)^2 + 1)` for the modulus; `ln(1 + d)`'s series on a
+  difference from 1 in rationals near the unit circle; the root as two square roots,
+  long enough for their cancelling; the existing exponential, trigonometric, hyperbolic,
+  and `ATAN2` references), in all three formats: parts of a size, far apart, or zero,
+  moderate and tiny. It also checks exact values, the page's printed examples, the near
+  circle, every limit either side, and parts too small. `TestComplexFromAProgram` runs
+  every entry from a generated MACRO program (answers, each condition continued, the
+  signal array's size, FU, reserved operands in each part, results over arguments,
+  arguments and results it can't reach); `TestManualsComplexExample` is section 1.7's
+  `COMPLEX_EX1` and `EX2`, whose R0 `0210404E` and R1 `63383FED` match; `TestComplexCovers`
+  holds it to the list of names; `TestComplexUnhandled` is the messages and the image's
+  end. `table1Program`'s frame is now `showProgram`, shared.
+
+  Breaking the code showed the checks can tell: 41 changes, 39 of them failing from 2
+  to 7,739 checks: a modulus rounded before the logarithm 59, `COSH`'s limit 88, a sum of squares
+  at 128 bits 43, no factor precision 245, a `CSQRT` overflow at the modulus 18, or under
+  `FLOOVEMAT`'s name 19, an underflow reported 67 and 364, the failed result's second part
+  36, no store before signaling 74, a wrong line in the table 2 to 37. The other two panic and hang, rightly: `CSQRT` and `CLOG`
+  with no zero case, the logarithm of 0 having no end. Two first got through. `DCMPLX` reading one complex number passed because the
+  test's parts were side by side, so now a word is between them; and `DREAL` as `GREAL`,
+  since each passes the bits on, so now a part of `^X8070`, reserved in D and a value in G,
+  tells them apart. A call costs 0.4 us for a modulus, 1.1 us for a square root, 4.4 to
+  5.3 us for an exponential, 5.8 to 7.7 us for a logarithm, and 5.9 to 7.3 us for a sine
+  or cosine, F to G: still tens of VAX instructions' time.
