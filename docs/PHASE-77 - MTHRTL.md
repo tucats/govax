@@ -4,8 +4,9 @@
 its Decision 3 accepted by the author the same day; subtasks 2, the package
 and its registration, 3, the engine, square root, exponentials, and
 logarithms, 4, the trigonometric functions and their inverses, 5, the
-hyperbolic functions and ATAN2, 6, Table 1-1's routines, and 7, the complex
-functions and parts, the same day).
+hyperbolic functions and ATAN2, 6, Table 1-1's routines, 7, the complex
+functions and parts, and 8, the OTS$ powers, multiplication, and division, the
+same day).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -387,6 +388,27 @@ be corrected.
     0.0 doesn't, no page listing `MTH$_FLOUNDMAT`);
   - whether `MTH$REAL` and `MTH$AIMAG` fault on a reserved operand in the part they
     don't return (govax doesn't read it);
+  - an integer power's rounding and order: whether VMS's `OTS$POWRJ` rounds at each
+    product, as its page says, and takes 1.0 over the product, so `2.0 ** (-127)` in F
+    overflows though its value fits, and `3.0 ** (-5)` has govax's last bit;
+  - which overflow each `OTS$` power signals where its page lists both `SS$_FLTOVF` and
+    `MTH$_FLOOVEMAT` (govax's is `MTH$_FLOOVEMAT` for real bases, and for a complex base
+    `POWCC`'s and `SS$_FLTOVF_F` for `POWCJ`, by their lists), and whether a product of
+    logarithm and exponent too large for the format is one of them;
+  - `OTS$POWRJ(0.5, -100000)`, whose products reach 0.0 with FU clear: govax signals
+    `SS$_FLTDIV_F`, which only the complex page lists; and with FU set `MTH$_FLOUNDMAT`;
+  - what a handler that continues finds in R0 to R3: govax has the reserved operand in R0
+    and R1 to R3 clear, for an H or D or G complex, and an integer routine's R0 after
+    `MTH$_UNDEXP` is that `^X8000` too;
+  - `OTS$POWCC`'s result where a part should be exactly 0, `(-1, 0) ** (2, 0)`: govax's is
+    a tiny number, far below the other part's last bit;
+  - `OTS$POWCC`'s overflow and small parts, which govax takes from `MTH$CEXP`'s;
+  - `OTS$POWCJ` with a negative exponent, whose row says only "the product";
+  - `OTS$MULCx` and `DIVCx`: how each part rounds (govax's is exact, then rounded once),
+    and whether a part too small follows FU (govax's is 0.0, whatever FU);
+  - `OTS$POWII`'s and `POWJJ`'s negative bases and exponents (the survey's finding):
+    `(-2) ** 3`, `2 ** (-1)`, `(-1) ** (-3)`, and overflow, `SS$_INTOVF` with the low-order
+    bits in R0;
   - last-bit comparison, reported as a count rather than held as a test.
 
 ## Subtasks (revised by the survey)
@@ -406,7 +428,7 @@ be corrected.
    bit functions. (New: the plan's subtask 5 was too large.) Done.
 7. **Complex functions and parts.** Done.
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
-   to agree (`sema/constant.go`'s `power`, `complexArith`).
+   to agree (`sema/constant.go`'s `power`, `complexArith`). Done.
 9. **MTH$RANDOM and the remaining conditions.**
 10. **Tests from MACRO** programs, and the VMS probe.
 11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
@@ -668,3 +690,66 @@ be corrected.
   tells them apart. A call costs 0.4 us for a modulus, 1.1 us for a square root, 4.4 to
   5.3 us for an exponential, 5.8 to 7.7 us for a logarithm, and 5.9 to 7.3 us for a sine
   or cosine, F to G: still tens of VAX instructions' time.
+- **2026-10-30:** Subtask 8. `ots.go` is all 28 `OTS$` entries, by value in the argument
+  list, their results in R0 up. `power` is the floating exponents' table and
+  `exp(y * ln x)`, the exact value rounded once; `powerEntry` takes the base's, the
+  exponent's, and the result's formats, for `POWRD` and `POWDR`. `integerPower` is the
+  integer exponents', `integerPowerEntry` taking a `width` for signed and unsigned.
+  `complexPower` is the page's `exp(y * log(x))`, on `exponentialParts`, which is
+  `MTH$CEXP`'s work taken out of `complexExponential`; `complexIntegerPower`,
+  `complexQuotient`, and `complexProduct` are the rest, and `integerPowerOfEntry` is
+  `POWII`, `POWJJ`, and `POWLULU`.
+
+  The agreement with FORTRAN's folding is by sharing the code: `vaxfloat/power.go` has
+  `PowerBySquaring`, generic in the kind of number, and `ComplexMul` and `ComplexDiv`,
+  moved from `sema/constant.go`, whose `power` and `complexArith` now call them. As the
+  survey said it would, the folding took the manual's order in place of its reciprocal
+  first: the product of the base's squares, each rounded, then 1.0 over it. So
+  `PARAMETER (X = 2.0 ** (-127))` is now `REALRANGE`, the product being too large though
+  its reciprocal fits, and `0.5 ** (-100000)` is `DIVZERO`, the product having reached
+  0.0, and `3.0 ** (-5)` changes in its last bit. The integer powers round at each
+  product because their tables spell a product out and their pages say "the same
+  precision as the base"; a floating exponent follows Decision 3 instead, the same page's
+  words notwithstanding. An exact tie can round either way there, as `4097.0 ** 2.0`
+  is exactly halfway in F, which stays within the plan's one ulp and isn't handled.
+
+  Where a page lists both overflows, it's `MTH$_FLOOVEMAT`, the one `POWDD` and
+  `POWxLU`, of the same algorithms, list alone. `POWCJ` and `DIVC` have the hardware's,
+  `MULC` `MTH$_FLOOVEMAT`, and `POWCC`'s base of (0, 0) is `MTH$_INVARGMAT` even for a
+  positive exponent, as its page says. The survey's reading of `POWII` and `POWJJ` stands:
+  a negative base computes, and overflow is `SS$_INTOVF` with the low-order bits in R0.
+  `POWLULU` is only low-order bits. An H or D or G complex result that fails has R2 and R3
+  clear. The new questions are in the list above. `POWCxJ`'s page lists `SS$_FLTDIV`, which
+  is what 1.0 over a product of (0.0, 0.0) takes; `POWRJ`'s doesn't, and govax signals it
+  there too, the hardware's answer to the same division.
+
+  `ots_test.go` holds `power` to `referenceExp(y * referenceLog(x))` across each format's
+  range and past it, near 1, and with tiny exponents, and to an exact product for whole
+  exponents; the integer powers to their products spelled out by hand; `complexPower` to
+  a reference with its angle from `referenceAtan`, including an angle of many turns; and
+  products and quotients to exact rationals. It also checks the pages' printed examples
+  (`POWRD`, `POWGG`, `POWHH_R3`, `POWCC`, whose `POWCGCG_R3` twin misprints its imaginary
+  part), and every table. `TestOTSFromAProgram` runs every entry from a generated MACRO
+  program (answers from mpmath, each condition continued, the signal array's size, FU,
+  reserved operands in each place, R2 and R3 left alone by a short result, and the high
+  word of a word argument); `TestOTSCovers` holds it to all 28 names; `TestOTSUnhandled`
+  is the messages and the image's end. `vaxfloat/power_test.go` counts `PowerBySquaring`'s
+  steps and tells the orders apart; `TestParameterValues` has the folded constants that the
+  program test has at run time, the two sharing the code but each checked.
+
+  Breaking the code showed the checks can tell: of 42 changes, 38 failed from 1 to 1,744
+  checks, among them the reciprocal first 50, a wrong sign in a product 805 or in a quotient
+  915, R2 and R3 left set 66, a complex power's overflow not a trap 9, a table line naming
+  the wrong format or width 4 to 15, the exponent's bits left out of `complexPower` 3, and
+  the product at only the format's bits 1,744, or 20 bits short of the working precision 1.
+  Two make the run time out, which the tests' limit catches: a negative base reaching the
+  logarithm, and `integerPowerBits` with no shortcut for a large exponent, whose exact value
+  has 3.4 billion bits. Two pass, rightly. `POWDR` reading its F exponent as a D is the same
+  value, an F in the list reading as that D with nothing after it. And the product at the
+  working precision, without its extra bits, still has guard bits enough for these seeded
+  runs; the extra bits are margin no run shows.
+
+  A function's cost, from the benchmarks, leaving out the stub: 0.2 to 0.3 us for an
+  integer power, 4 to 6.9 us for a floating exponent, and 1.2 to 1.9 us for a complex
+  quotient, F to H, so tens of VAX instructions' time as before. A complex power is the
+  first that isn't: 12 to 15 us, 120 to 300 instructions' time at 10 to 20 million a second.

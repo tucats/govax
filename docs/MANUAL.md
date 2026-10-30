@@ -4817,8 +4817,9 @@ FORTRAN compiler was available to check them). So far:
 - A name only declared, never used, is a variable, and gets storage.
 - In a constant expression, a COMPLEX product's or quotient's parts are
   each computed exactly and rounded once; a REAL or COMPLEX base's power
-  is repeated squaring, rounded at each product, from the reciprocal for
-  a negative exponent. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
+  is repeated squaring, rounded at each product, and for a negative
+  exponent 1.0 over that product, as the `OTS$` routines' are, so
+  `2.0 ** (-127)` is out of range though its value would fit. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
   arguments of one kind. Zero to a power of zero or less is an error.
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an

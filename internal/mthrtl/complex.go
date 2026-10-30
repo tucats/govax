@@ -201,14 +201,20 @@ func overflows(f vaxfloat.Format, x *big.Float) bool {
 // which can't overflow, so it isn't taken at its word: e^r is too small for the
 // format, and so the result is 0.0. Unconfirmed (the probe, subtask 10).
 func complexExponential(f vaxfloat.Format, z complexValue) (complexValue, error) {
+	return exponentialParts(f, z.re.Big(), z.im.Big())
+}
+
+// exponentialParts is e to the (r, i), for parts that may have more bits than a
+// format's: MTH$CEXP's work, and OTS$POWCC's.
+func exponentialParts(f vaxfloat.Format, r, i *big.Float) (complexValue, error) {
 	w := workingPrecision(f)
 
-	e := exponential(z.re.Big(), w+scratchBits)
+	e := exponential(r, w+scratchBits)
 	if overflows(f, e) {
 		return complexValue{}, vaxfloat.ErrOverflow
 	}
 
-	s, c := sinCos(z.im.Big(), w+scratchBits)
+	s, c := sinCos(i, w+scratchBits)
 
 	return bothParts(f, product(e, c, w), product(e, s, w))
 }

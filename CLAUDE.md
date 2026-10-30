@@ -319,7 +319,9 @@ never had.
   functions and ATAN2; subtask 6 (2026-10-30) is the manual's Table 1-1:
   absolute value, positive difference, sign, floor, truncation, nearest
   integer, remainder, maximum and minimum, conversions, and bit functions;
-  subtask 7 (2026-10-30) is the complex functions and parts.
+  subtask 7 (2026-10-30) is the complex functions and parts; subtask 8
+  (2026-10-30) is the `OTS$` powers, complex multiplication and division,
+  and FORTRAN's folding made to use the same code.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -691,8 +693,10 @@ expect adjustment as phases land):
   F, D, G, and H, and exact `Value`s (`math/big`) whose arithmetic rounds once,
   half away from zero, to the destination format, reporting overflow,
   underflow, reserved operands, and divide by zero; plus EMOD and POLY's
-  arithmetic, short literals, and decimal parsing for the assembler. A leaf
-  package: no CPU dependency.
+  arithmetic, short literals, and decimal parsing for the assembler; and
+  `power.go`, what the FORTRAN compiler's constants and the `OTS$` routines must do
+  alike (`PowerBySquaring`, `ComplexMul`, `ComplexDiv`). A leaf package: no CPU
+  dependency.
 - `internal/sched` — VMS's scheduling rules as plain Go (Phase 44), from
   *VAX/VMS Internals and Data Structures*, chapter 10: `State` (the
   `SCH$C_*` codes) and MWAIT `Resource`s, priority-boost `Class`es (Table
@@ -1415,7 +1419,10 @@ expect adjustment as phases land):
   function's error, where the other routines signal `MTH$_` conditions. `complex.go`
   is the complex functions and parts: `complexEntry`, from a `complexFunction` and a
   `complexLoader`, an F result in R0 and R1 and a D or G one through the first argument;
-  `sumOfSquares` is exact, so the logarithm is right near the unit circle.
+  `sumOfSquares` is exact, so the logarithm is right near the unit circle. `ots.go` is
+  the 28 `OTS$` routines, by value (`valueArguments`, `loadRegisters`) with results in R0 up
+  (`returnWords`, `failInRegisters`): `power`, `integerPower`, `complexPower`,
+  `complexIntegerPower`, `complexQuotient`, `complexProduct`, `integerPowerOfEntry`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

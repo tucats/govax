@@ -5,7 +5,6 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/librtl"
-	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -78,19 +77,13 @@ func registerWords(f vaxfloat.Format, v vaxfloat.Value) []uint32 {
 // routine to return. A stub saves no registers (its entry mask is 0), so
 // the RET that ends it leaves R1 to R3 as they're set here.
 func returnFloat(env *corevms.Environment, f vaxfloat.Format, v vaxfloat.Value) uint32 {
-	words := registerWords(f, v)
-
-	for i, w := range words[1:] {
-		env.CPU().SetGPR(registers.Reg(i+1), w)
-	}
-
-	return words[0]
+	return returnWords(env, registerWords(f, v))
 }
 
 // loadRegisters reads a format f value from regs, starting at R(first).
 // A reserved operand is vaxfloat.ErrReserved. It's how a JSB entry gets its
-// argument (first is 0) and how an OTS$ routine's by-value arguments,
-// copied into an array of the same shape, could be read.
+// argument (first is 0) and how an OTS$ routine reads its by-value arguments,
+// from the argument list.
 func loadRegisters(f vaxfloat.Format, regs []uint32, first int) (vaxfloat.Value, error) {
 	var b vaxfloat.Bits
 

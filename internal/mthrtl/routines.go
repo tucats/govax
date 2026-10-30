@@ -327,6 +327,42 @@ var Routines = []Routine{
 	{"MTH$AIMAG", conversionEntry(imaginaryArgs(vaxfloat.F), vaxfloat.F, convert)},
 	{"MTH$DIMAG", conversionEntry(imaginaryArgs(vaxfloat.D), vaxfloat.D, convert)},
 	{"MTH$GIMAG", conversionEntry(imaginaryArgs(vaxfloat.G), vaxfloat.G, convert)},
+
+	{"OTS$POWRR", powerEntry(vaxfloat.F, vaxfloat.F, vaxfloat.F)},
+	{"OTS$POWRD", powerEntry(vaxfloat.F, vaxfloat.D, vaxfloat.D)},
+	{"OTS$POWDR", powerEntry(vaxfloat.D, vaxfloat.F, vaxfloat.D)},
+	{"OTS$POWDD", powerEntry(vaxfloat.D, vaxfloat.D, vaxfloat.D)},
+	{"OTS$POWGG", powerEntry(vaxfloat.G, vaxfloat.G, vaxfloat.G)},
+	{"OTS$POWHH_R3", powerEntry(vaxfloat.H, vaxfloat.H, vaxfloat.H)},
+
+	{"OTS$POWRJ", integerPowerEntry(vaxfloat.F, long)},
+	{"OTS$POWDJ", integerPowerEntry(vaxfloat.D, long)},
+	{"OTS$POWGJ", integerPowerEntry(vaxfloat.G, long)},
+	{"OTS$POWHJ_R3", integerPowerEntry(vaxfloat.H, long)},
+
+	{"OTS$POWRLU", integerPowerEntry(vaxfloat.F, unsignedLong)},
+	{"OTS$POWDLU", integerPowerEntry(vaxfloat.D, unsignedLong)},
+	{"OTS$POWGLU", integerPowerEntry(vaxfloat.G, unsignedLong)},
+	{"OTS$POWHLU_R3", integerPowerEntry(vaxfloat.H, unsignedLong)},
+
+	{"OTS$POWII", integerPowerOfEntry(word)},
+	{"OTS$POWJJ", integerPowerOfEntry(long)},
+	{"OTS$POWLULU", integerPowerOfEntry(unsignedLong)},
+
+	{"OTS$POWCC", complexOperationEntry(vaxfloat.F, complexPower)},
+	{"OTS$POWCDCD_R3", complexOperationEntry(vaxfloat.D, complexPower)},
+	{"OTS$POWCGCG_R3", complexOperationEntry(vaxfloat.G, complexPower)},
+
+	{"OTS$POWCJ", complexIntegerPowerEntry(vaxfloat.F)},
+	{"OTS$POWCDJ_R3", complexIntegerPowerEntry(vaxfloat.D)},
+	{"OTS$POWCGJ_R3", complexIntegerPowerEntry(vaxfloat.G)},
+
+	{"OTS$DIVC", complexOperationEntry(vaxfloat.F, complexQuotient)},
+	{"OTS$DIVCD_R3", complexOperationEntry(vaxfloat.D, complexQuotient)},
+	{"OTS$DIVCG_R3", complexOperationEntry(vaxfloat.G, complexQuotient)},
+
+	{"OTS$MULCD_R3", complexOperationEntry(vaxfloat.D, complexProduct)},
+	{"OTS$MULCG_R3", complexOperationEntry(vaxfloat.G, complexProduct)},
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides. The

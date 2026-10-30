@@ -631,66 +631,36 @@ func realArith(op ast.Op, f vaxfloat.Format, x, y vaxfloat.Value) (vaxfloat.Valu
 	return v, err
 }
 
-// complexArith is (a, b) op (c, d) in format f. Each part of a product
-// or quotient is computed exactly and rounded once: (ac - bd, ad + bc),
-// and ((ac + bd) / (c² + d²), (bc - ad) / (c² + d²)). The VAX has no
-// complex instructions, and how VAX FORTRAN's code rounds a product's
-// parts isn't documented; this is ours, unconfirmed, and Phase 78's code
-// must round as it does.
+// complexArith is (a, b) op (c, d) in format f. A product or quotient is
+// vaxfloat's, the same code the OTS$ routines use, so a constant has the
+// value the same expression computes at run time; Phase 78's code for a
+// product it writes in line must round as it does.
 func complexArith(op ast.Op, f vaxfloat.Format, a, b, c, d vaxfloat.Value) (vaxfloat.Value, vaxfloat.Value, error) {
-	exact := func(v vaxfloat.Value) (vaxfloat.Value, error) { return round(f, v) }
-
-	minus := func(x, y vaxfloat.Value) vaxfloat.Value { return vaxfloat.AddExact(x, y.Neg()) }
-
-	var re, im vaxfloat.Value
-
 	switch op {
-	case ast.Add, ast.Sub:
-		r, err := realArith(op, f, a, c)
-		if err != nil {
-			return r, r, err
-		}
-
-		i, err := realArith(op, f, b, d)
-
-		return r, i, err
-
 	case ast.Mul:
-		re = minus(vaxfloat.MulExact(a, c), vaxfloat.MulExact(b, d))
-		im = vaxfloat.AddExact(vaxfloat.MulExact(a, d), vaxfloat.MulExact(b, c))
-
+		return vaxfloat.ComplexMul(f, a, b, c, d)
 	case ast.Div:
-		den := vaxfloat.AddExact(vaxfloat.MulExact(c, c), vaxfloat.MulExact(d, d))
-		if den.IsZero() {
-			return re, im, vaxfloat.ErrDivideByZero
-		}
-
-		quo := func(n vaxfloat.Value) vaxfloat.Value {
-			return vaxfloat.FromRat(new(big.Rat).Quo(n.Rat(), den.Rat()))
-		}
-
-		re = quo(vaxfloat.AddExact(vaxfloat.MulExact(a, c), vaxfloat.MulExact(b, d)))
-		im = quo(minus(vaxfloat.MulExact(b, c), vaxfloat.MulExact(a, d)))
+		return vaxfloat.ComplexDiv(f, a, b, c, d)
 	}
 
-	r, err := exact(re)
+	r, err := realArith(op, f, a, c)
 	if err != nil {
 		return r, r, err
 	}
 
-	i, err := exact(im)
+	i, err := realArith(op, f, b, d)
 
 	return r, i, err
 }
 
 // power is x ** y, which is a constant expression only for an INTEGER
 // exponent (section 4.11). An INTEGER base gives an INTEGER of the higher
-// type; a REAL or COMPLEX base its own type, computed by repeated
-// squaring, each product rounded to the base's format, and for a
-// negative exponent from the base's reciprocal: OTS$'s method is not
-// documented, so this is ours, unconfirmed, and Phase 77's routines must
-// agree with it. Zero to a power of zero or less has no value
-// (UNDEFPOW).
+// type; a REAL or COMPLEX base its own type, by vaxfloat.PowerBySquaring,
+// which is the OTS$ routines' own order: the product of the base's squares,
+// each rounded to its format, and 1.0 over it for a negative exponent, so a
+// product too large is an error even where its reciprocal would fit. An
+// INTEGER power's rules are mthrtl's too. Zero to a power of zero or less
+// has no value (UNDEFPOW).
 func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	x, err := ev.arithmetic(x)
 	if err != nil {
@@ -750,48 +720,27 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		return nil, ev.report("UNDEFPOW", e.Pos, n)
 	}
 
-	mul := func(op ast.Op, p, q *Const) (*Const, error) {
-		r := &Const{exprBase: exprBase{t, e.Pos}}
+	arith := func(op ast.Op) func(p, q *Const) (*Const, error) {
+		return func(p, q *Const) (*Const, error) {
+			r := &Const{exprBase: exprBase{t, e.Pos}}
 
-		var err error
+			var err error
 
-		if t.Kind == Real {
-			r.Real, err = realArith(op, f, p.Real, q.Real)
-		} else {
-			r.Real, r.Imag, err = complexArith(op, f, p.Real, p.Imag, q.Real, q.Imag)
+			if t.Kind == Real {
+				r.Real, err = realArith(op, f, p.Real, q.Real)
+			} else {
+				r.Real, r.Imag, err = complexArith(op, f, p.Real, p.Imag, q.Real, q.Imag)
+			}
+
+			return r, err
 		}
-
-		return r, err
 	}
 
 	one := &Const{exprBase: exprBase{t, e.Pos}, Real: vaxfloat.FromInt(1)}
-	base := x
 
-	if n < 0 {
-		r, err := mul(ast.Div, one, base)
-		if err != nil {
-			return nil, ev.floatError(err, e.Pos, t)
-		}
-
-		base, n = r, -n
-	}
-
-	result := one
-
-	for n > 0 {
-		var err error
-
-		if n&1 != 0 {
-			if result, err = mul(ast.Mul, result, base); err != nil {
-				return nil, ev.floatError(err, e.Pos, t)
-			}
-		}
-
-		if n >>= 1; n > 0 {
-			if base, err = mul(ast.Mul, base, base); err != nil {
-				return nil, ev.floatError(err, e.Pos, t)
-			}
-		}
+	result, perr := vaxfloat.PowerBySquaring(x, one, n, arith(ast.Mul), arith(ast.Div))
+	if perr != nil {
+		return nil, ev.floatError(perr, e.Pos, t)
 	}
 
 	return result, nil

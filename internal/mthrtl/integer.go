@@ -47,6 +47,19 @@ func (w width) load(env *corevms.Environment, addr uint32) (int64, error) {
 	return int64(int32(v)), err
 }
 
+// fromValue is an integer of this width passed by value, in a longword of an
+// argument list: a word is the longword's low-order word.
+func (w width) fromValue(v uint32) int64 {
+	switch {
+	case w.bits == 16:
+		return int64(int16(v))
+	case w.unsigned:
+		return int64(v)
+	}
+
+	return int64(int32(v))
+}
+
 // lowBits is i's low-order bits, as this width holds them and as a two's complement
 // number, however large i is, in the form R0 returns them.
 func (w width) lowBits(i *big.Int) uint32 {
