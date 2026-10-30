@@ -1,7 +1,8 @@
 # Phase 75 — FORTRAN first light: every pass, end to end
 
 **Status:** in progress. Subtask 1, the survey (Part A) and the design
-(Part B), was written 2026-10-30, for review. Needs Phase 74 (the
+(Part B), was written 2026-10-30 and accepted by the author the same
+day, with its four corrections to the plan. Needs Phase 74 (the
 FORTRAN command, source forms, FTNRTL's pipeline). Part of the FORTRAN
 program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 4 to 8, 10
 to 13, and 20 are first built here).
@@ -109,7 +110,7 @@ rule means for a pass is in brackets.
   first. Without it the main program is named **`filename$MAIN`**, the
   source file's name cut to 26 characters. Its name may not name
   anything else in the program. [Phase 74's Decision 11 said `MAIN`;
-  see "Corrections to the plan".]
+  see "Corrections to the plan", accepted.]
 - **No recursion** (6.2): "A subprogram can refer to other
   subprograms, but it cannot refer to itself, either directly or
   indirectly." [Decision 10's static storage is safe: a routine's
@@ -396,7 +397,7 @@ rule means for a pass is in brackets.
   the statement's end, so the routine's `$LOCAL` holds as many as its
   busiest statement needs.
 
-## Corrections to the plan (for review)
+## Corrections to the plan (accepted 2026-10-30)
 
 1. **The main program's default name is `filename$MAIN`** (4.12), not
    `MAIN` as Decision 11 and the sketch say. The `.MAR` file's module is
@@ -414,8 +415,8 @@ rule means for a pass is in brackets.
    `CALLS #0`.
 
 None changes a decision's substance; the first is a fact the plan
-missed, and Decision 11's text should say `filename$MAIN` once the
-author agrees.
+missed. The author accepted all four on 2026-10-30, and Phase 74's
+Decision 11 and its sketch's introduction now say so.
 
 # Part B — the design
 
@@ -840,7 +841,7 @@ To go into the progress log as each is built, and into MANUAL.md's
 
 ## Subtasks (provisional)
 
-1. **Survey** (done 2026-10-30, for review): the subset's rules in the
+1. **Survey** (done 2026-10-30, accepted): the subset's rules in the
    manual (chapters 2, 3, 5, 6; Table 3-1's conversions; Table 7-1),
    the calling standard's VAX chapter, and a written design of the AST
    and IR in this doc.
@@ -884,3 +885,6 @@ To go into the progress log as each is built, and into MANUAL.md's
     floating value, so REAL constants are `$PDATA` longwords;
     `OTS$$CVT_F_T_R8` and `OTS$CVT_L_TI` are in LIBRTL's vector, so
     FTNRTL can call them.
+- **2026-10-30:** The author accepted the survey, the design, and the
+  four corrections. Phase 74's Decision 11 now names `filename$MAIN`,
+  and its sketch points here for the settled form. Subtask 2 is next.

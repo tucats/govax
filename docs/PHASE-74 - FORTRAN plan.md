@@ -398,8 +398,10 @@ nnn) and `unit.$n` (the compiler's own). Names that would pass MACRO's
 - R0 and R1 are scratch. A routine saves the R2–R11 it uses in its entry
   mask. The character instructions destroy R0–R5, which the register
   allocator knows;
-- a main program is a `.ENTRY` named for its PROGRAM statement (or
-  `MAIN`), the transfer address in `.END`, returning SS$_NORMAL in R0.
+- a main program is a `.ENTRY` named for its PROGRAM statement (or,
+  without one, `filename$MAIN`, the manual's 4.12: corrected by Phase
+  75's survey, 2026-10-30), the transfer address in `.END`, returning
+  SS$_NORMAL in R0.
 
 This is what makes a FORTRAN program able to call any system service or
 RTL routine, and makes FORTRAN routines usable as condition handlers,
@@ -597,7 +599,9 @@ For this program:
 ```
 
 the `.MAR` file would look roughly like this (the details are settled
-in Phase 75):
+in Phase 75, whose Part B has the settled form: its `SOBGTR` and
+`BLEQ` are byte branches, replaced there by long forms, and the begin
+call takes its control block):
 
 ```
         .TITLE  SQUARES
