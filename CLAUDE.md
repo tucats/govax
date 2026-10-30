@@ -309,8 +309,9 @@ never had.
   close-out, FORTRAN-INTERNALS.md's section 8 on declarations and storage.
   Phase 77 (in progress) is MTHRTL: subtask 1 (2026-10-30) is the survey
   in its phase doc, and VMS 7.1's MTHRTL.EXE symbol table in `vmsdef`
-  (404 names, the `OTS$` powers among them), so LINK finds them; a call
-  signals NOTIMPL until the routines exist.
+  (404 names, the `OTS$` powers among them), so LINK finds them; subtask 2
+  (2026-10-30) is `internal/mthrtl`, a stub for each of the 402 entries,
+  each signaling NOTIMPL with its name until its routine exists.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1373,6 +1374,14 @@ expect adjustment as phases land):
   LIB$SPAWN in process 1; in a subprocess (Phase 51) it calls corevms's
   `Spawn` from Go and waits with `AwaitSpawn` through a `cliYield`
   (`spawnInSubprocess`).
+- `internal/mthrtl` — MTHRTL.EXE's routines (Phase 77; usable by any
+  program, not part of FTNRTL), beside `internal/librtl` and using its
+  exports. `routines.go` is the tables (`Routines`, `JSBRoutines`: a name and
+  a function, the code 4000 plus the entry's offset over 8), `Links` (a stub
+  for every entry of the vector, JSB for a `MTH$..._Rn` name), and `Register`
+  (NOTIMPL for an entry no table has). `float.go` moves values between
+  memory, registers, and `vaxfloat.Value`s; `condition.go` signals with the
+  reserved operand as the R0 and R1 a handler continues with.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

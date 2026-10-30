@@ -6,14 +6,15 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/librtl"
+	"github.com/tucats/govax/internal/mthrtl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ShimTable is every routine a program may link to that govax provides:
 // LIBRTL.EXE's (internal/librtl), the C library's and govax's own
-// (corevms.CRTLLinks), whose stubs ensureShims writes, and the
-// microkernel's (kernelLinks), which need none.
-var ShimTable = slices.Concat(librtl.Links(), corevms.CRTLLinks, kernelLinks)
+// (corevms.CRTLLinks), MTHRTL.EXE's (internal/mthrtl), whose stubs
+// ensureShims writes, and the microkernel's (kernelLinks), which need none.
+var ShimTable = slices.Concat(librtl.Links(), corevms.CRTLLinks, mthrtl.Links(), kernelLinks)
 
 // kernelLinks are the code-0 rows (corevms.ShimLink): routines
 // kernel.asm implements as native VAX code, transcribed from its second

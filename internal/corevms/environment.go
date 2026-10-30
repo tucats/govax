@@ -458,7 +458,7 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 }
 
 // JSBShim implements cpu.SystemServices' XFC$JSBSHIM: run the JSB
-// routine registered under code on the registers R0 to R6, which it
+// routine registered under code on the registers R0 to R7, which it
 // changes in place. The XFC has popped the code, so SP is as the JSB left
 // it: the return address on top. While it runs, a signal it raises is
 // dispatched as its caller's (jsbCall). If it started a condition

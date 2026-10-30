@@ -58,7 +58,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want kernel.asm's own DECC$MAIN (%#x)", addr2, deccMain)
 	}
 
-	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(ShimTable))*corevms.ShimStubSize {
+	if addr2 >= c.shimBase && addr2 < c.shimBase+shimPageBytes {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want an address outside the synthesized shim page", addr2)
 	}
 

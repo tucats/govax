@@ -90,23 +90,16 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 	fp := c.GPR(registers.FP)
 	resumeSP := c.GPR(registers.SP)
 
-	callerFP, err1 := env.mem.LoadLongword(c, fp+frameSavedFP)
-	returnPC, err2 := env.mem.LoadLongword(c, fp+frameSavedPC)
-	maskPSW, err3 := env.mem.LoadLongword(c, fp+frameMaskPSW)
-
-	// A routine reached by JSB has no frame: FP is its caller's, the
-	// condition is raised there, at the JSB's return address, and a
-	// handler's SS$_CONTINUE resumes with SP as the JSB left it, so the
-	// stub's RSB returns (whatever the routine put below it).
-	if env.jsbCall {
-		callerFP, err1, err3 = fp, nil, nil
-		returnPC, err2 = env.mem.LoadLongword(c, env.jsbSP)
-		maskPSW = uint32(c.PSL()) & 0xFFFF
-		resumeSP = env.jsbSP
+	callerFP, returnPC, maskPSW, err := env.callerState()
+	if err != nil {
+		return 0, fmt.Errorf("rtl: %s can't read its call frame at %08X", name, fp)
 	}
 
-	if err1 != nil || err2 != nil || err3 != nil {
-		return 0, fmt.Errorf("rtl: %s can't read its call frame at %08X", name, fp)
+	// A handler's SS$_CONTINUE resumes a routine reached by JSB with SP as
+	// the JSB left it, so the stub's RSB returns (whatever the routine put
+	// below it).
+	if env.jsbCall {
+		resumeSP = env.jsbSP
 	}
 
 	sig := append([]uint32(nil), argv...)
@@ -166,6 +159,35 @@ func (env *Environment) tracedSignal(d *conditionDispatch, sig []uint32) (uint32
 	env.cpu.SetPSL(psl)
 
 	return env.exitForCondition(d, sig[0])
+}
+
+// callerState reads what the running shim's caller left: its frame
+// pointer, the address the call returns to, and the longword holding the
+// PSW the call saved (in its low word; the high word is the frame's entry
+// mask). A routine reached by JSB has no frame: FP is its caller's, the
+// return address is on top of the stack the JSB left, and the PSL is
+// still its caller's.
+func (env *Environment) callerState() (callerFP, returnPC, maskPSW uint32, err error) {
+	c := env.cpu
+	fp := c.GPR(registers.FP)
+
+	if env.jsbCall {
+		returnPC, err = env.mem.LoadLongword(c, env.jsbSP)
+
+		return fp, returnPC, uint32(c.PSL()) & 0xFFFF, err
+	}
+
+	if callerFP, err = env.mem.LoadLongword(c, fp+frameSavedFP); err != nil {
+		return 0, 0, 0, err
+	}
+
+	if returnPC, err = env.mem.LoadLongword(c, fp+frameSavedPC); err != nil {
+		return 0, 0, 0, err
+	}
+
+	maskPSW, err = env.mem.LoadLongword(c, fp+frameMaskPSW)
+
+	return callerFP, returnPC, maskPSW, err
 }
 
 // setCallerHandler stores handler in the frame of the procedure that

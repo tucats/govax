@@ -59,7 +59,7 @@ func Emulated(name string) bool {
 // runtimeLibraries are VMS's run-time libraries, the shareable images in
 // SYS$SHARE that DIGITAL's compilers' programs use: govax stands for each
 // as it does for LIBRTL, its routines that no shim stands for resolving
-// to LIB$_UNRESOLVED (resolveFixupTarget). A DEC C program names MTHRTL
+// to a stub that signals NOTIMPL (resolveFixupTarget). A DEC C program names MTHRTL
 // and CMA$TIS_SHR whether or not it calls them (testdata/exe's
 // simple.exe), so a missing file of one of these can't stop activation
 // as a missing image of the user's does. The list is of VMS 7's

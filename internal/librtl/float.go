@@ -61,6 +61,17 @@ func loadFloat(env *corevms.Environment, f vaxfloat.Format, addr uint32) (vaxflo
 	return vaxfloat.Unpack(f, bits)
 }
 
+// LoadFloat is loadFloat for another RTL package's routines
+// (internal/mthrtl).
+func LoadFloat(env *corevms.Environment, f vaxfloat.Format, addr uint32) (vaxfloat.Value, error) {
+	return loadFloat(env, f, addr)
+}
+
+// StoreFloat is storeFloat for another RTL package's routines.
+func StoreFloat(env *corevms.Environment, f vaxfloat.Format, addr uint32, v vaxfloat.Value) error {
+	return storeFloat(env, f, addr, v)
+}
+
 // storeFloat writes v, already rounded to format f, at addr. An error is
 // the memory's, marked as a write's.
 func storeFloat(env *corevms.Environment, f vaxfloat.Format, addr uint32, v vaxfloat.Value) error {

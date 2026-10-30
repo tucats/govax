@@ -1,7 +1,8 @@
 # Phase 77 — MTHRTL: VMS's mathematics library, emulated
 
-**Status:** in progress (subtask 1, the survey and capture, 2026-10-30;
-its Decision 3 accepted by the author the same day). Needs Phase 74 (the plan)
+**Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
+its Decision 3 accepted by the author the same day; subtask 2, the package
+and its registration, the same day). Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decision 14).
@@ -221,7 +222,9 @@ be corrected.
   comes from reading the stub's bytes, not from a run. The JSB names govax
   lacks need `JSBShimStub` stubs, as `librtl.MissingJSB` makes.
 - **Shim codes:** `librtl` is below 1000, its missing routines start at 1000
-  and 2000, and unresolved stubs start at 10000. 3000 up is free.
+  and 2000, the traceback handler is 3000, and unresolved stubs start at
+  10000. 4000 up is free. (The survey said 3000 up, missing the traceback
+  handler; subtask 2's first test run found it.)
 - **404 stubs at 12 bytes is about 10 pages of S0.** That moves whatever
   `EnsureShims` places after them, so the oracles must be rerun in subtask 2.
 
@@ -285,7 +288,9 @@ be corrected.
    an F value is for the probe.
 6. **Entries are a table, as LIBRTL's are:** name, code, and function, with
    offsets from `vmsdef.ImageSymbols` and a stub for each entry. Codes start at
-   3000. A name with no routine gets a missing-routine stub of its kind: JSB if
+   4000, and each is 4000 plus the entry's offset over 8, computed rather than
+   written in the table (subtask 2), so the two names of an entry are one
+   routine and a code can't disagree with the vector. A name with no routine gets a missing-routine stub of its kind: JSB if
    it is `MTH$..._Rn`, CALL otherwise, a rule all 404 names satisfy.
 7. **Second entries share the first's routine.** The 10 pairs are the same
    code by the vector. Undocumented JSB entries with one argument follow
@@ -317,7 +322,7 @@ be corrected.
 2. **The package and its registration:** `internal/mthrtl`, the table, stubs of
    both kinds, `Emulated`'s entry, `JSBRegisters` to R7, the helpers (signal
    with the reserved operand, caller's FU, argument access, H and R0:R3
-   results), `vaxfloat`'s way in and out; the oracles rerun.
+   results), `vaxfloat`'s way in and out; the oracles rerun. Done.
 3. **The engine, square root, exponentials, logarithms** in all four formats,
    JSB entries with them.
 4. **Trigonometric and inverse functions**, radians and degrees, exact
@@ -347,3 +352,29 @@ be corrected.
   holds the table's shape. The author accepted the survey's Decision 3 the same
   day: one `math/big` engine for all four formats, in place of the plan's
   `float64` for F and G.
+- **2026-10-30:** Subtask 2. `internal/mthrtl` is the tables (empty so far),
+  the 402 stubs (`Links`, in `machine.ShimTable` after the C library's), and
+  `Register`, which gives each entry a NOTIMPL routine by its name's kind
+  until a table has it: a call now names the routine (`routine MTH$SIN is not
+  implemented`, no longer `at MTHRTL+^X...`), and a JSB entry reaches its
+  message, where it used to run the unresolved stub's mask as a HALT. An
+  entry's two names share a stub, which goes by the name that sorts first
+  (`MTH$IIFIX`, `MTH$JIFIX`), the rule `machine`'s `sharedName` already
+  follows. The helpers are `float.go`'s (`loadArg`, `storeResult`,
+  `returnFloat`, `loadRegisters`, `storeRegisters`) and `condition.go`'s
+  (`signalCondition`, whose array is the condition, 1, and the user PC, and
+  `fail`, for SS$_ROPRAND and SS$_ACCVIO), over `corevms`'s new `CallerPC` and
+  `CallerFU` (`callerState`, now `signal`'s too) and `librtl`'s exported
+  `MemoryFault`, `Writing`, `LoadFloat`, `StoreFloat`, and `NotImplementedJSB`.
+  `JSBRegisters` is R0 to R7. `vaxfloat` gains `FromBig` and `Value.Big`.
+  `TestHelpersFromAProgram` (`run_test.go`, an external test package, since
+  the console imports this one) runs a MACRO program against routines built on
+  the helpers: conditions continued from a CALL and a JSB entry, a reserved
+  operand, an argument it can't read, results in R0:R1, R0:R3, R0:R7, and
+  through the first argument, the caller's FU both ways.
+  `TestUnhandledCondition` is the message and the image's end. The 10 pages of
+  stubs moved nothing an oracle looks at: every oracle passes unchanged, and
+  the only test that changed for the move is `shim_test.go`'s, whose bound
+  assumed the table fit VMINIT's page. The console, debugger, and machine
+  packages skip five tests, none about this: `TestLink68Oracle`'s `files.lst`
+  and `myshr.olb` comparisons in each loader, and `TestMacro_realStarlet`.

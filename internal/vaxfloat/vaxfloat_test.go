@@ -460,3 +460,36 @@ func TestSqrtAndText(t *testing.T) {
 		t.Errorf("Sqrt(-1): %v, want ErrReserved", err)
 	}
 }
+
+// TestBig: Big and FromBig are the way in and out of math/big, exact at
+// any precision, and neither shares its big.Float with the Value.
+func TestBig(t *testing.T) {
+	x := new(big.Float).SetPrec(200).SetInt64(3)
+	x.Quo(x, big.NewFloat(7))
+
+	v := FromBig(x)
+	if v.Big().Cmp(x) != 0 || v.Big().Prec() != 200 {
+		t.Errorf("FromBig then Big = %v at %d bits, want %v at 200", v.Big(), v.Big().Prec(), x)
+	}
+
+	want := new(big.Float).Copy(x)
+	x.SetInt64(5) // the Value kept its own copy
+
+	got := v.Big()
+	if got.Cmp(want) != 0 {
+		t.Errorf("changing the argument changed the Value: %v", got)
+	}
+
+	got.SetInt64(9) // and Big gives out a copy
+	if v.Big().Cmp(want) != 0 {
+		t.Errorf("changing Big's result changed the Value: %v", v.Big())
+	}
+
+	if zero := FromBig(new(big.Float)); !zero.IsZero() || zero.Big().Sign() != 0 {
+		t.Errorf("FromBig(0) = %v", zero)
+	}
+
+	if negZero := FromBig(new(big.Float).Neg(new(big.Float))); !negZero.IsZero() {
+		t.Errorf("FromBig(-0) isn't zero: the VAX has no negative zero")
+	}
+}

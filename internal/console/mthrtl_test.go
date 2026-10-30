@@ -9,8 +9,9 @@ import (
 
 // MTHRTL, VMS's mathematics library (docs/PHASE-77 - MTHRTL.md): LINK
 // finds its routines in the table captured from VMS 7.1's image, so a
-// program that calls one links with no MTHRTL.EXE anywhere. Subtask 1 has
-// no routines, so the call signals NOTIMPL.
+// program that calls one links with no MTHRTL.EXE anywhere. Every entry
+// has a stub of its kind, and a routine that isn't written yet signals
+// NOTIMPL with its name.
 
 const mthCaller = `	.TITLE	MTHCALL
 	.PSECT	DATA,WRT,NOEXE,LONG
@@ -19,6 +20,9 @@ X:	.FLOAT	1.0
 	.ENTRY	START,^M<>
 	PUSHAF	X
 	CALLS	#1,G^MTH$SIN
+	CALLS	#0,G^MTH$IINT
+	MOVF	X,R0
+	JSB	G^MTH$SIN_R4
 	MOVL	#1,R0
 	RET
 	.END	START
@@ -43,8 +47,15 @@ func TestMTHRTLLinks(t *testing.T) {
 		buf.Reset()
 		_ = d.Dispatch("RUN MTHCALL")
 
-		if out := buf.String(); !strings.Contains(out, "NOTIMPL") || !strings.Contains(out, "MTHRTL") {
-			t.Errorf("RUN said:\n%s", out)
+		// The error isn't severe, so the program goes on to the next call:
+		// a CALL entry, the entry MTH$IINT shares with MTH$IIFIX (the stub
+		// goes by the first name), and a JSB entry.
+		out := buf.String()
+
+		for _, routine := range []string{"MTH$SIN", "MTH$IIFIX", "MTH$SIN_R4"} {
+			if !strings.Contains(out, "routine "+routine+" is not implemented") {
+				t.Errorf("no NOTIMPL for %s; RUN said:\n%s", routine, out)
+			}
 		}
 	})
 }

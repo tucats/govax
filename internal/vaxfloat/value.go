@@ -142,6 +142,22 @@ func FromRat(r *big.Rat) Value {
 	return newValue(new(big.Float).SetPrec(parsePrecision).SetRat(r))
 }
 
+// FromBig returns x as a Value, exactly, at x's own precision. Round it to
+// a format with Round. The Value keeps its own copy, so the caller may go
+// on using x. It panics on an infinity, which no VAX value is.
+func FromBig(x *big.Float) Value {
+	if x.IsInf() {
+		panic("vaxfloat: FromBig of an infinity")
+	}
+
+	return newValue(new(big.Float).Copy(x))
+}
+
+// Big returns v as a big.Float, exactly: a copy the caller may change. It
+// is the way in to math/big for arithmetic this package doesn't have (the
+// mathematics library's functions, internal/mthrtl).
+func (v Value) Big() *big.Float { return new(big.Float).Copy(v.float()) }
+
 // Rat returns v exactly, as a rational number.
 func (v Value) Rat() *big.Rat {
 	if v.x == nil {

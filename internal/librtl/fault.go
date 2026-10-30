@@ -84,6 +84,17 @@ func memoryFault(env *corevms.Environment, err error) (uint32, error) {
 	return accessViolation(env, va, reason)
 }
 
+// MemoryFault is memoryFault for another RTL package's routines
+// (internal/mthrtl): a memory error from one of its own loads or stores
+// is signaled as SS$_ACCVIO.
+func MemoryFault(env *corevms.Environment, err error) (uint32, error) {
+	return memoryFault(env, err)
+}
+
+// Writing is writing for another RTL package's routines: it marks a
+// memory error as a write's, for MemoryFault's reason mask.
+func Writing(err error) error { return writing(err) }
+
 // isMemoryError reports whether err is a memory error (a translation
 // fault), the kind memoryFault signals: for the few routines whose
 // manual entries return SS$_ACCVIO instead.

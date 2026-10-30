@@ -47,6 +47,24 @@ func (env *Environment) SignalFailure(argv []uint32, status uint32) (uint32, err
 	return env.signal(kindSignal, argv, status)
 }
 
+// CallerPC returns the address the running shim's call returns to: the
+// "user PC" a mathematics routine's condition message reports.
+func (env *Environment) CallerPC() (uint32, error) {
+	_, pc, _, err := env.callerState()
+
+	return pc, err
+}
+
+// CallerFU reports whether the running shim's caller has floating
+// underflow faults enabled (PSW bit FU, which a program sets with BISPSW).
+// A mathematics routine's result too small to represent is an error only
+// for a caller that asked to hear of it.
+func (env *Environment) CallerFU() (bool, error) {
+	_, _, maskPSW, err := env.callerState()
+
+	return registers.PSL(maskPSW & 0xFFFF).FU(), err
+}
+
 // SetCallerHandler makes handler (0 for none) the condition handler of the
 // frame of the procedure that called the running shim, returning the one
 // it replaces. name is the routine's, for errors.

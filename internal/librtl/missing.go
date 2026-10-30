@@ -172,6 +172,12 @@ func NotImplemented(name string) corevms.ShimFunc {
 	return notImplemented(name)
 }
 
+// NotImplementedJSB is notImplementedJSB for another RTL package: the
+// shim of a JSB entry of its library that govax lacks (internal/mthrtl).
+func NotImplementedJSB(name string) corevms.JSBShimFunc {
+	return notImplementedJSB(name)
+}
+
 // notImplementedJSB is notImplemented for a JSB entry. The name goes on
 // the stack below the JSB's return address; a handler that continues
 // resumes with SP as the JSB left it, so the stub's RSB returns.

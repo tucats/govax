@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
+	"github.com/tucats/govax/internal/mthrtl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
@@ -407,6 +408,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)
 	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
+	mthrtl.Register(sys.Shims()) // MTHRTL.EXE's (docs/PHASE-77 - MTHRTL.md)
 	m.unresolved = unresolvedStubs{}
 
 	// The old System's other processes are gone with it, and so is their
