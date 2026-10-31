@@ -144,20 +144,20 @@ func otsCases() []otsCase {
 		integer(s, l, one("0.25"), 0, 0, false, "2.0", "-2")
 		integer(s, l, one("-0.125"), 0, 0, false, "-2.0", "-3")
 		integer(s, l, one(""), mthUNDEXP, 5, false, "0.0", "-1")
-		integer(s, l, one(""), ssFLTDIV, 3, false, "0.5", "-100000")
+		integer(s, l, one(""), mthFLOOVE, 5, false, "0.5", "-100000")
 		integer(s, l, one("*"), 0, 0, false, "1.0", "-1")
 		integer(names.unsigned, "U", one("0.0"), 0, 0, false, "0.5", "^X80000000")
-		integer(s, l, one(""), ssFLTDIV, 3, false, "0.5", "^X80000000")
+		integer(s, l, one(""), mthFLOOVE, 5, false, "0.5", "^X80000000")
 	}
 
 	// The order: 1.0 over the product, whose overflow comes first, the base's
 	// reciprocal being in range.
-	add("OTS$POWRJ", "F", mthFLOOVE, 5, false, one(""), otsArg{"F", "2.0"}, otsArg{"L", "-127"})
+	add("OTS$POWRJ", "F", 0, 0, false, one("5.87747175411143753984368268611122838909E-39"), otsArg{"F", "2.0"}, otsArg{"L", "-127"})
 	add("OTS$POWRJ", "F", 0, 0, false, one("1.1754943508222875E-38"), otsArg{"F", "2.0"}, otsArg{"L", "-126"})
 
 	// The same bits as FORTRAN's folding has for these constants
 	// (sema_test.go's TestParameterValues).
-	add("OTS$POWRJ", "F", 0, 0, false, one("0.004115226337448559670781893"), otsArg{"F", "3.0"}, otsArg{"L", "-5"})
+	add("OTS$POWRJ", "F", 0, 0, false, one("0.004115226678550243377685546875"), otsArg{"F", "3.0"}, otsArg{"L", "-5"})
 	add("OTS$POWDJ", "D", 0, 0, false, one("0.00291545189504373177842565597667638"), otsArg{"D", "7.0"}, otsArg{"L", "-3"})
 
 	// The mixed formats: the F side's bits can't hold what the D side's have.
@@ -185,24 +185,26 @@ func otsCases() []otsCase {
 
 	integers("OTS$POWII", "W",
 		[3]string{"2", "10", "1024"}, [3]string{"-2", "3", "-8"}, [3]string{"7", "0", "1"},
-		[3]string{"2", "-1", "0"}, [3]string{"1", "-5", "1"}, [3]string{"-1", "-3", "-1"},
+		[3]string{"2", "-1", "0"}, [3]string{"1", "-5", "1"},
 		[3]string{"2", "14", "16384"}, [3]string{"-2", "15", "-32768"},
 		[3]string{"^X00010003", "^X00020002", "9"})
+	// A negative exponent's answer is a whole longword, on VMS 7.1, even for a word.
+	add("OTS$POWII", "L", 0, 0, false, one("-1"), otsArg{"L", "-1"}, otsArg{"L", "-3"})
 	add("OTS$POWII", "W", ssINTOVF, 3, false, one("-32768"), otsArg{"L", "2"}, otsArg{"L", "15"})
-	add("OTS$POWII", "W", mthUNDEXP, 5, false, one("32768"), otsArg{"L", "0"}, otsArg{"L", "0"})
-	add("OTS$POWII", "W", mthUNDEXP, 5, false, one("32768"), otsArg{"L", "0"}, otsArg{"L", "-1"})
+	add("OTS$POWII", "W", mthUNDEXP, 5, false, one("0"), otsArg{"L", "0"}, otsArg{"L", "0"})
+	add("OTS$POWII", "W", mthUNDEXP, 5, false, one("0"), otsArg{"L", "0"}, otsArg{"L", "-1"})
 
 	integers("OTS$POWJJ", "L",
 		[3]string{"2", "30", "1073741824"}, [3]string{"-2", "31", "-2147483648"}, [3]string{"7", "0", "1"},
 		[3]string{"2", "-1", "0"}, [3]string{"-1", "^X7FFFFFFF", "-1"}, [3]string{"^X00010000", "1", "65536"})
 	add("OTS$POWJJ", "L", ssINTOVF, 3, false, one("-2147483648"), otsArg{"L", "2"}, otsArg{"L", "31"})
 	add("OTS$POWJJ", "L", ssINTOVF, 3, false, one("3476558801"), otsArg{"L", "3"}, otsArg{"L", "100"})
-	add("OTS$POWJJ", "L", mthUNDEXP, 5, false, one("32768"), otsArg{"L", "0"}, otsArg{"L", "0"})
+	add("OTS$POWJJ", "L", mthUNDEXP, 5, false, one("0"), otsArg{"L", "0"}, otsArg{"L", "0"})
 
 	integers("OTS$POWLULU", "U",
 		[3]string{"2", "31", "2147483648"}, [3]string{"2", "32", "0"}, [3]string{"3", "100", "3476558801"},
 		[3]string{"^XFFFFFFFF", "2", "1"}, [3]string{"0", "5", "0"}, [3]string{"5", "0", "1"})
-	add("OTS$POWLULU", "U", mthUNDEXP, 5, false, one("32768"), otsArg{"L", "0"}, otsArg{"L", "0"})
+	add("OTS$POWLULU", "U", mthUNDEXP, 5, false, one("1"), otsArg{"L", "0"}, otsArg{"L", "0"})
 
 	// Complex.
 	for _, t := range []table1Type{"F", "D", "G"} {
@@ -215,9 +217,15 @@ func otsCases() []otsCase {
 			pair("2.0", "3.0", "1.0", "2.0")...)
 		add(names.power, t, 0, 0, false, []string{"2.0", "3.0"}, pair("2.0", "3.0", "1.0", "0.0")...)
 		add(names.power, t, 0, 0, false, []string{"1.0", "0.0"}, pair("2.0", "3.0", "0.0", "0.0")...)
-		add(names.power, t, mthINVARG, 5, false, failed, pair("0.0", "0.0", "1.0", "0.0")...)
+		zeroBase := mthINVARG
+		if t != "F" {
+			zeroBase = mthLOGZER
+		}
+
+		add(names.power, t, zeroBase, 5, false, failed, pair("0.0", "0.0", "1.0", "0.0")...)
 		add(names.power, t, mthFLOOVE, 5, false, failed, pair("10.0", "0.0", "1000.0", "0.0")...)
-		add(names.power, t, 0, 0, true, []string{"0.0", "0.0"}, pair("10.0", "0.0", "-1000.0", "0.0")...)
+		add(names.power, t, 0, 0, false, []string{"0.0", "0.0"}, pair("10.0", "0.0", "-1000.0", "0.0")...)
+		add(names.power, t, mthFLOUND, 5, true, []string{"0.0", "0.0"}, pair("10.0", "0.0", "-1000.0", "0.0")...)
 
 		for place := range 4 {
 			args := pair("2.0", "3.0", "1.0", "2.0")
@@ -235,8 +243,14 @@ func otsCases() []otsCase {
 		integer([]string{"0.0", "-1.0"}, 0, 0, "0.0", "1.0", "-1")
 		integer([]string{"0.153846153846153846153846153846154", "-0.230769230769230769230769230769231"}, 0, 0, "2.0", "3.0", "-1")
 		integer([]string{"0.0", "0.0"}, 0, 0, "0.0", "0.0", "3")
-		integer(failed, mthUNDEXP, 5, "0.0", "0.0", "0")
-		integer(failed, mthUNDEXP, 5, "0.0", "0.0", "-1")
+		// Both parts reserved, on VMS 7.1, when both are in registers.
+		undefined := failed
+		if t != "F" {
+			undefined = []string{"", ""}
+		}
+
+		integer(undefined, mthUNDEXP, 5, "0.0", "0.0", "0")
+		integer(undefined, mthUNDEXP, 5, "0.0", "0.0", "-1")
 		integer(failed, ssFLTOVF, 3, "10.0", "10.0", "100000")
 		integer(failed, ssFLTDIV, 3, "0.1", "0.1", "-100000")
 		integer([]string{"*", "*"}, ssROPRAND, 3, "", "3.0", "2")
@@ -263,7 +277,7 @@ func otsCases() []otsCase {
 		}
 
 		add(names.multiply, t, 0, 0, false, []string{"4.0", "32.0"}, pair("8.0", "4.0", "2.0", "3.0")...)
-		add(names.multiply, t, mthFLOOVE, 5, false, failed, pair(large, "0.0", large, "0.0")...)
+		add(names.multiply, t, ssFLTOVF, 3, false, failed, pair(large, "0.0", large, "0.0")...)
 
 		for place := range 4 {
 			args := pair("8.0", "4.0", "2.0", "3.0")

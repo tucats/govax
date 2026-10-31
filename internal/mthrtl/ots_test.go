@@ -206,10 +206,17 @@ func TestIntegerPowerSteps(t *testing.T) {
 			t.Errorf("%v: 1.1 ** 13 = %v, %v, want %v", f, got, err, x13)
 		}
 
-		inverse, err := vaxfloat.Div(f, vaxfloat.FromInt(1), x13)
-		if err != nil {
-			t.Fatal(err)
+		// A negative exponent: the product of the squares' reciprocals.
+		over := func(a vaxfloat.Value) vaxfloat.Value {
+			v, err := vaxfloat.Div(f, vaxfloat.FromInt(1), a)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return v
 		}
+
+		inverse := times(times(over(x), over(x4)), over(x8))
 
 		got, err = integerPower(f, x, -13, noUnderflow)
 		if err != nil || got.Cmp(inverse) != 0 {
@@ -219,9 +226,9 @@ func TestIntegerPowerSteps(t *testing.T) {
 }
 
 // TestIntegerPowerTable is the integer exponents' table, and what happens at the
-// format's ends: a product too large is MTH$_FLOOVEMAT, even where its reciprocal
-// would fit, and one too small is the caller's FU's to decide. The trap that follows
-// is the one no real page lists.
+// format's ends: a product too large is MTH$_FLOOVEMAT, a reciprocal that fits is
+// found though its power wouldn't, and a product too small is the caller's FU's to
+// decide.
 func TestIntegerPowerTable(t *testing.T) {
 	var trap trapError
 
@@ -249,7 +256,7 @@ func TestIntegerPowerTable(t *testing.T) {
 			{"just in range", two, int64(high - 1), "", nil},
 			{"its reciprocal", two, -int64(high - 1), "", nil},
 			{"product too large", two, int64(high), "", vaxfloat.ErrOverflow},
-			{"reciprocal would fit", two, -int64(high), "", vaxfloat.ErrOverflow},
+			{"its square past the end", two, -int64(high) - 200, "", vaxfloat.ErrOverflow},
 			{"square too large", edge, 2, "", vaxfloat.ErrOverflow},
 			{"too small, FU clear", half, 1 << 20, "0.0", nil},
 		} {
@@ -266,9 +273,12 @@ func TestIntegerPowerTable(t *testing.T) {
 			t.Errorf("%v: too small, FU set: %v", f, err)
 		}
 
-		// With FU clear the products are 0.0 by the division.
-		if _, err := integerPower(f, half, -(1 << 20), noUnderflow); !errors.As(err, &trap) || trap.condition != ssFltDiv {
-			t.Errorf("%v: 1.0 over a product of 0.0: %v", f, err)
+		// A negative exponent's square too small has a reciprocal too large, whatever FU.
+		for _, gate := range []func(vaxfloat.Value, error) (vaxfloat.Value, error){noUnderflow, keepUnderflow} {
+			_, err := integerPower(f, half, -(1 << 20), gate)
+			if !errors.Is(err, vaxfloat.ErrOverflow) || errors.As(err, &trap) {
+				t.Errorf("%v: 0.5 ** -(2 ** 20): %v", f, err)
+			}
 		}
 	}
 }
@@ -281,11 +291,11 @@ func TestIntegerPowerBits(t *testing.T) {
 		overflow bool
 	}{
 		{word, 2, 14, 16384, false},
-		{word, 2, 15, 0xFFFF8000, true},
-		{word, -2, 15, 0xFFFF8000, false},
+		{word, 2, 15, 0x8000, true},
+		{word, -2, 15, 0x8000, false},
 		{word, -2, 16, 0, true},
 		{word, 181, 2, 32761, false},
-		{word, 182, 2, 0xFFFF8164, true},
+		{word, 182, 2, 0x8164, true},
 		{long, 2, 30, 1 << 30, false},
 		{long, 2, 31, 0x80000000, true},
 		{long, -2, 31, 0x80000000, false},
@@ -414,11 +424,11 @@ func TestComplexPowerValues(t *testing.T) {
 			t.Errorf("%v: (2, 3) ** 1 = (%v, %v), %v", f, got.re, got.im, err)
 		}
 
-		if _, err := complexPower(f, complexValue{}, one); !errors.Is(err, errInvalidArg) {
+		if _, err := complexPower(f, complexValue{}, one); !errors.Is(err, zeroComplexBase(f)) {
 			t.Errorf("%v: (0, 0) ** 1: %v", f, err)
 		}
 
-		if _, err := complexPower(f, complexValue{}, complexValue{}); !errors.Is(err, errInvalidArg) {
+		if _, err := complexPower(f, complexValue{}, complexValue{}); !errors.Is(err, zeroComplexBase(f)) {
 			t.Errorf("%v: (0, 0) ** 0: %v", f, err)
 		}
 
@@ -426,8 +436,8 @@ func TestComplexPowerValues(t *testing.T) {
 			t.Errorf("%v: 10 ** 1000: %v", f, err)
 		}
 
-		if got, err := complexPower(f, complexValue{v("10.0"), vaxfloat.Value{}}, complexValue{v("-1000.0"), vaxfloat.Value{}}); err != nil || !got.re.IsZero() || !got.im.IsZero() {
-			t.Errorf("%v: 10 ** -1000 = (%v, %v), %v, want parts of 0.0", f, got.re, got.im, err)
+		if got, err := complexPower(f, complexValue{v("10.0"), vaxfloat.Value{}}, complexValue{v("-1000.0"), vaxfloat.Value{}}); !errors.Is(err, vaxfloat.ErrUnderflow) || !got.re.IsZero() || !got.im.IsZero() {
+			t.Errorf("%v: 10 ** -1000 = (%v, %v), %v, want an underflow, for FU to decide", f, got.re, got.im, err)
 		}
 
 		// A base of size 1 on an axis and a huge exponent, a multiple of 4, are a
@@ -491,10 +501,16 @@ func TestComplexIntegerPower(t *testing.T) {
 			t.Errorf("%v: ** 5 = (%v, %v), %v", f, got.re, got.im, err)
 		}
 
-		inverse, err := complexQuotient(f, complexValue{re: vaxfloat.FromInt(1)}, z5)
-		if err != nil {
-			t.Fatal(err)
+		over := func(a complexValue) complexValue {
+			q, err := complexQuotient(f, complexValue{re: vaxfloat.FromInt(1)}, a)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return q
 		}
+
+		inverse := times(over(z), over(z4))
 
 		got, err = complexIntegerPower(f, z, -5)
 		if err != nil || got.re.Cmp(inverse.re) != 0 || got.im.Cmp(inverse.im) != 0 {
@@ -562,8 +578,8 @@ func TestComplexMultiplyDivide(t *testing.T) {
 
 		huge := complexValue{v(large), vaxfloat.Value{}}
 
-		if _, err := complexProduct(f, huge, huge); !errors.Is(err, vaxfloat.ErrOverflow) || errors.As(err, &trap) {
-			t.Errorf("%v: product's overflow: %v, want MTH$_FLOOVEMAT's", f, err)
+		if _, err := complexProduct(f, huge, huge); !errors.As(err, &trap) || trap.condition != ssFltOvf {
+			t.Errorf("%v: product's overflow: %v, want the hardware's", f, err)
 		}
 
 		if _, err := complexQuotient(f, huge, complexValue{v("0.01"), vaxfloat.Value{}}); !errors.As(err, &trap) || trap.condition != ssFltOvf {

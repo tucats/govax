@@ -253,14 +253,13 @@ func TestRemainderCases(t *testing.T) {
 		}
 
 		_, err := remainder(f, value(t, f, "1"), vaxfloat.Value{})
-		if !errors.Is(err, vaxfloat.ErrDivideByZero) {
+		if !errors.Is(err, errInvalidArg) {
 			t.Errorf("%v remainder by zero: %v", f, err)
 		}
 
-		// A quotient beyond the format.
-		_, err = remainder(f, b, a)
-		if !errors.Is(err, vaxfloat.ErrOverflow) {
-			t.Errorf("%v remainder(huge, smallest): %v", f, err)
+		// A quotient beyond the format is 0.0, on VMS 7.1.
+		if got, err := remainder(f, b, a); err != nil || !got.IsZero() {
+			t.Errorf("%v remainder(huge, smallest) = %v, %v", f, got, err)
 		}
 
 		// A true remainder below the format's range: 2 * smallest less a little
@@ -344,9 +343,9 @@ func TestFloatingRoutines(t *testing.T) {
 		t.Errorf("SNGLG of G's largest: %v", err)
 	}
 
-	_, err := convertTrapping(vaxfloat.F, smallest(vaxfloat.G))
-	if asTrap(err) != ssFltUnd || !errors.Is(err, vaxfloat.ErrUnderflow) {
-		t.Errorf("SNGLG of G's smallest: %v", err)
+	// At the other end it's 0.0, whatever FU, on VMS 7.1.
+	if got, err := convertTrapping(vaxfloat.F, smallest(vaxfloat.G)); err != nil || !got.IsZero() {
+		t.Errorf("SNGLG of G's smallest: %v, %v", got, err)
 	}
 
 	// Rounding: 2^24 + 1 in F_floating is a tie, away from zero. And MTH$CVT_G_D
@@ -378,8 +377,8 @@ func TestWidths(t *testing.T) {
 		holds bool
 	}{
 		{word, big.NewInt(32767), 32767, true},
-		{word, big.NewInt(32768), 0xFFFF8000, false},
-		{word, big.NewInt(-32768), 0xFFFF8000, true},
+		{word, big.NewInt(32768), 0x8000, false},
+		{word, big.NewInt(-32768), 0x8000, true},
 		{word, big.NewInt(-32769), 32767, false},
 		{word, big.NewInt(65537), 1, false},
 		{long, big.NewInt(1<<31 - 1), 1<<31 - 1, true},

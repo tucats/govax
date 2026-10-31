@@ -43,6 +43,10 @@ func storeResult(env *corevms.Environment, f vaxfloat.Format, addr uint32, v vax
 // and then zeros. A reserved operand can't be stored as a Value, which is why
 // this isn't storeResult.
 func storeFailed(env *corevms.Environment, f vaxfloat.Format, addr uint32, err error) error {
+	if errors.Is(err, errNoAngle) {
+		return nil
+	}
+
 	first := uint32(reservedR0)
 	if errors.Is(err, vaxfloat.ErrUnderflow) {
 		first = 0

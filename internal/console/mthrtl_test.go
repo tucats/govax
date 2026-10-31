@@ -10,8 +10,8 @@ import (
 // MTHRTL, VMS's mathematics library (docs/PHASE-77 - MTHRTL.md): LINK
 // finds its routines in the table captured from VMS 7.1's image, so a
 // program that calls one links with no MTHRTL.EXE anywhere. Every entry
-// has a stub of its kind: every CALL entry has its routine by now, and a JSB
-// entry no manual gives signals NOTIMPL with its name.
+// has a stub of its kind: all have their routines but MTH$$REDUCE_, internal to VMS's
+// library, which signals NOTIMPL with its name.
 
 const mthCaller = `	.TITLE	MTHCALL
 	.PSECT	DATA,WRT,NOEXE,LONG
@@ -24,7 +24,7 @@ NEXT:	.ASCID	/RANDOM RETURNED/
 	PUSHAQ	NEXT
 	CALLS	#1,G^LIB$PUT_OUTPUT
 	MOVF	X,R0
-	JSB	G^MTH$SQRT_R2
+	JSB	G^MTH$$REDUCE_LARGE_F_R4
 	MOVL	#1,R0
 	RET
 	.END	START
@@ -56,8 +56,8 @@ func TestMTHRTLLinks(t *testing.T) {
 			t.Errorf("MTH$RANDOM didn't return; RUN said:\n%s", out)
 		}
 
-		if !strings.Contains(out, "routine MTH$SQRT_R2 is not implemented") {
-			t.Errorf("no NOTIMPL for MTH$SQRT_R2; RUN said:\n%s", out)
+		if !strings.Contains(out, "routine MTH$$REDUCE_LARGE_F_R4 is not implemented") {
+			t.Errorf("no NOTIMPL for MTH$$REDUCE_LARGE_F_R4; RUN said:\n%s", out)
 		}
 	})
 }

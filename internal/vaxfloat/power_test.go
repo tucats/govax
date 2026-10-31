@@ -22,7 +22,7 @@ func powerOf(t *testing.T, f Format, base float64, n int64) (Value, error) {
 }
 
 // TestPowerSteps counts what PowerBySquaring asks of mul and div: a square only as
-// far as a bit needs it, and a division only for a negative exponent, last.
+// far as a bit needs it, and for a negative exponent a division for each bit.
 func TestPowerSteps(t *testing.T) {
 	for _, c := range []struct {
 		n        int64
@@ -35,7 +35,7 @@ func TestPowerSteps(t *testing.T) {
 		{5, 243, 4, 0}, // two squares, two products
 		{8, 6561, 4, 0},
 		{-1, 3, 1, 1},
-		{-5, 243, 4, 1},
+		{-5, 243, 4, 2},
 	} {
 		muls, divs := 0, 0
 
@@ -43,10 +43,6 @@ func TestPowerSteps(t *testing.T) {
 			func(a, b int64) (int64, error) { muls++; return a * b, nil },
 			func(a, b int64) (int64, error) {
 				divs++
-
-				if muls != c.mul {
-					t.Errorf("n = %d: div after %d multiplications", c.n, muls)
-				}
 
 				if a != 1 {
 					t.Errorf("n = %d: div of %d", c.n, a)
@@ -83,34 +79,40 @@ func TestPowerLargestExponents(t *testing.T) {
 	}
 }
 
-// TestPowerOrder: 1.0 over the product, not the product of reciprocals. In F_floating
+// TestPowerOrder: the product of reciprocals, not 1.0 over the product. In F_floating
 // 2 ** -127 is in range, and 2 ** 127 isn't.
 func TestPowerOrder(t *testing.T) {
-	if _, err := powerOf(t, F, 2, -127); !errors.Is(err, ErrOverflow) {
-		t.Errorf("2 ** -127: %v, want an overflow from the product", err)
+	if _, err := powerOf(t, F, 2, 127); !errors.Is(err, ErrOverflow) {
+		t.Errorf("2 ** 127: %v, want an overflow", err)
 	}
 
-	if v, err := powerOf(t, F, 2, -126); err != nil || v.Float64() != 1.0/(1<<63)/(1<<63) {
-		t.Errorf("2 ** -126 = %v, %v", v, err)
+	if v, err := powerOf(t, F, 2, -127); err != nil || v.Float64() != 1.0/(1<<63)/(1<<63)/2 {
+		t.Errorf("2 ** -127 = %v, %v", v, err)
 	}
 
-	// 3 ** -5 differs in the last bit between the orders, if the case is any use.
+	// 3 ** -5 differs in the last bit between the orders, if the case is any use. VMS
+	// 7.1's bits are ^XD9063C86 (testdata/mth77).
 	three := FromInt(3)
 	inverse, _ := Div(F, FromInt(1), three)
-	square, _ := Mul(F, inverse, inverse)
+	square, _ := Mul(F, three, three)
 	fourth, _ := Mul(F, square, square)
-	reciprocalFirst, _ := Mul(F, inverse, fourth)
+	inverseFourth, _ := Div(F, FromInt(1), fourth)
+	want, _ := Mul(F, inverse, inverseFourth)
 
 	got, err := powerOf(t, F, 3, -5)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if want, _ := Div(F, FromInt(1), FromInt(243)); got.Cmp(want) != 0 {
+	if got.Cmp(want) != 0 {
 		t.Errorf("3 ** -5 = %v, want %v", got, want)
 	}
 
-	if got.Cmp(reciprocalFirst) == 0 {
+	if b, err := Pack(F, got); err != nil || uint32(b.Lo) != 0xD9063C86 {
+		t.Errorf("3 ** -5's bits are %08X, %v", uint32(b.Lo), err)
+	}
+
+	if whole, _ := Div(F, FromInt(1), FromInt(243)); got.Cmp(whole) == 0 {
 		t.Errorf("3 ** -5 can't tell the orders apart: both %v", got)
 	}
 }

@@ -323,7 +323,9 @@ never had.
   (2026-10-30) is the `OTS$` powers, complex multiplication and division,
   and FORTRAN's folding made to use the same code; subtask 9 (2026-10-30)
   is `MTH$RANDOM`, with `vax.runtime.random`, and an audit of each manual
-  page's conditions.
+  page's conditions; subtask 10 (2026-10-30) is the probe, `testdata/mth77`, and VMS
+  7.1's answers, with all but the internal `MTH$$REDUCE_` of the JSB entries no
+  manual gives.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -562,8 +564,8 @@ never had.
   `mth77.mar` (1,950 lines: conditions and limits by family, Table 1-1, complex,
   `OTS$`, the JSB entries no manual gives, and a sweep in exact bits), `mth77.com`,
   `exchange.cmd`, and `copyout.cmd` (DUA2 on govax, since a startup procedure may
-  mount DUA1). `TestMTH77Oracle` compares VMS's `vax/mth77-vax.txt` once it exists,
-  the sweep to within a few last bits.
+  mount DUA1). `TestMTH77Oracle` holds govax to VMS V7.1's `vax/mth77-vax.txt`, results
+  by value to within a few last bits, but for `expectedMTH77Differences`.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.
@@ -703,7 +705,8 @@ expect adjustment as phases land):
   underflow, reserved operands, and divide by zero; plus EMOD and POLY's
   arithmetic, short literals, and decimal parsing for the assembler; and
   `power.go`, what the FORTRAN compiler's constants and the `OTS$` routines must do
-  alike (`PowerBySquaring`, `ComplexMul`, `ComplexDiv`). A leaf package: no CPU
+  alike (`PowerBySquaring`, in VMS 7.1's order, the product of the squares' reciprocals
+  for a negative exponent; `ComplexMul`, `ComplexDiv`). A leaf package: no CPU
   dependency.
 - `internal/sched` — VMS's scheduling rules as plain Go (Phase 44), from
   *VAX/VMS Internals and Data Structures*, chapter 10: `State` (the

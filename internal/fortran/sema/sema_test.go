@@ -217,8 +217,7 @@ func TestErrors(t *testing.T) {
 		{"a constant's value too large", []string{"PARAMETER (N = 2 ** 31)", "END"}, "INTRANGE@1:24"},
 		{"zero to the power zero", []string{"PARAMETER (N = 0 ** 0)", "END"}, "UNDEFPOW@1:24"},
 		{"a division by zero", []string{"PARAMETER (X = 1.0 / 0)", "END"}, "DIVZERO@1:26"},
-		{"a power's product too large, though 1.0 over it fits", []string{"PARAMETER (X = 2.0 ** (-127))", "END"}, "REALRANGE@1:26"},
-		{"a power's product too small to divide by", []string{"PARAMETER (X = 0.5 ** (-100000))", "END"}, "DIVZERO@1:26"},
+		{"a power's reciprocal squared too far", []string{"PARAMETER (X = 0.5 ** (-100000))", "END"}, "REALRANGE@1:26"},
 		{"a REAL*8 value out of range", []string{"PARAMETER (D = 1D39)", "END"}, "REALRANGE@1:22"},
 		{"a CHARACTER value for an INTEGER", []string{"PARAMETER (N = 'AB')", "END"}, "NOTIMPL@1:22"},
 		{"an INTEGER value for a CHARACTER", []string{"CHARACTER*2 C", "PARAMETER (C = 1)", "END"}, "PARAMTYPE@2:22"},
@@ -910,10 +909,10 @@ func TestParameterValues(t *testing.T) {
 		{"REAL*16 P", "1Q4000", "1Q4000"},
 		{"DOUBLE PRECISION P", "2D0 ** 100", "1.2676506002282294D30"},
 
-		// 1.0 over the product, the OTS$ manual's order, which mthrtl's
-		// TestOTSFromAProgram holds OTS$POWRJ and OTS$POWDJ to: these are
-		// 1.0 / 243 and 1.0 / 343.
-		{"REAL P", "3.0 ** (-5)", "0.004115226"},
+		// The product of the squares' reciprocals, the order mthrtl's
+		// TestOTSFromAProgram holds OTS$POWRJ and OTS$POWDJ to, whose F result
+		// here is 1.0 / 243's but for its last bit: VMS 7.1's (testdata/mth77).
+		{"REAL P", "3.0 ** (-5)", "0.0041152267"},
 		{"DOUBLE PRECISION P", "7D0 ** (-3)", "0.0029154518950437318D0"},
 		{"REAL P", "2.0 ** (-126)", "1.1754944E-38"},
 

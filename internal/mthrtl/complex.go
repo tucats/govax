@@ -20,7 +20,8 @@ import (
 // that formula's exact value, rounded once, like every other result in this
 // library. What's left of the pages is when a routine gives up, and those are the
 // comments below. No page lists MTH$_FLOUNDMAT, so a part too small for the format
-// is 0.0, whatever the caller's FU, as for MTH$ATAN2.
+// is 0.0, whatever the caller's FU, as for MTH$ATAN2; only MTH$CEXP's factor has
+// an underflow of its own.
 
 // complexValue is a complex number.
 type complexValue struct{ re, im vaxfloat.Value }
@@ -68,8 +69,8 @@ func complexFromParts(env *corevms.Environment, f vaxfloat.Format, args []uint32
 // correct it, so what's there is what the condition leaves: each part the reserved
 // operand. An F result gets what any routine's does, R0 the reserved operand and
 // R1 clear: section 1.4 tells a handler to correct the two registers as a
-// double-precision value, for single and double alike. Both unconfirmed (the probe,
-// subtask 10).
+// double-precision value, for single and double alike. Where VMS 7.1 goes on using
+// those values and faults (testdata/mth77), this returns them: the phase doc's list.
 func complexEntry(f vaxfloat.Format, load complexLoader, fn complexFunction) corevms.ShimFunc {
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
 		args := argv
@@ -82,7 +83,7 @@ func complexEntry(f vaxfloat.Format, load complexLoader, fn complexFunction) cor
 			return fail(env, err)
 		}
 
-		z, err = fn(f, z)
+		z, err = gatedComplex(env, f, fn, z)
 		if err != nil {
 			if f != vaxfloat.F {
 				if serr := storeComplexFailed(env, f, arg(argv, 0), err); serr != nil {
@@ -110,6 +111,25 @@ func complexEntry(f vaxfloat.Format, load complexLoader, fn complexFunction) cor
 
 		return 0, nil
 	}
+}
+
+// gatedComplex runs fn on z, for a caller whose FU decides what an underflow is.
+func gatedComplex(env *corevms.Environment, f vaxfloat.Format, fn complexFunction, z complexValue) (complexValue, error) {
+	z, err := fn(f, z)
+
+	return gateComplexUnderflow(env, z, err)
+}
+
+// gateComplexUnderflow is gateUnderflow for a complex result: the result is 0.0, and
+// the error is gone unless the caller set FU.
+func gateComplexUnderflow(env *corevms.Environment, z complexValue, err error) (complexValue, error) {
+	if !errors.Is(err, vaxfloat.ErrUnderflow) {
+		return z, err
+	}
+
+	_, err = gateUnderflow(env, vaxfloat.Value{}, err)
+
+	return complexValue{}, err
 }
 
 // storeComplexFailed is storeFailed for both parts of a result at addr.
@@ -198,8 +218,9 @@ func overflows(f vaxfloat.Format, x *big.Float) bool {
 // 709.089 in G, whatever the sine and cosine would make of it.
 //
 // That page says "the absolute value of r", but a large negative r has e^r near 0,
-// which can't overflow, so it isn't taken at its word: e^r is too small for the
-// format, and so the result is 0.0. Unconfirmed (the probe, subtask 10).
+// which can't overflow. The factor too small for the format is MTH$EXP's underflow,
+// which VMS 7.1 signals here too (testdata/mth77) for a caller with FU set, though the
+// page lists no MTH$_FLOUNDMAT. Otherwise the result is 0.0.
 func complexExponential(f vaxfloat.Format, z complexValue) (complexValue, error) {
 	return exponentialParts(f, z.re.Big(), z.im.Big())
 }
@@ -210,8 +231,8 @@ func exponentialParts(f vaxfloat.Format, r, i *big.Float) (complexValue, error) 
 	w := workingPrecision(f)
 
 	e := exponential(r, w+scratchBits)
-	if overflows(f, e) {
-		return complexValue{}, vaxfloat.ErrOverflow
+	if _, err := rounded(f, e); err != nil {
+		return complexValue{}, err
 	}
 
 	s, c := sinCos(i, w+scratchBits)
@@ -226,7 +247,7 @@ func exponentialParts(f vaxfloat.Format, r, i *big.Float) (complexValue, error) 
 // F and D, or 709.089 in G. Those are EXP's limits, not COSH's and SINH's, which are
 // about ln 2 higher (88.722), so the test is on e^|i|, which is cosh i + |sinh i|.
 // Between the two limits a part could be in range and the routine still overflows,
-// and past them whatever r is. Unconfirmed (the probe, subtask 10).
+// and past them whatever r is, as on VMS 7.1 (testdata/mth77).
 func complexTrigFactors(f vaxfloat.Format, z complexValue, prec uint) (s, c, sh, ch *big.Float, err error) {
 	sh, ch = sinhCosh(z.im.Big(), prec)
 
@@ -265,25 +286,33 @@ func complexCosine(f vaxfloat.Format, z complexValue) (complexValue, error) {
 	return bothParts(f, product(c, ch, w), im.Neg(im))
 }
 
+// zeroComplexBase is what the logarithm of (0, 0) signals in format f.
+func zeroComplexBase(f vaxfloat.Format) error {
+	if f == vaxfloat.F {
+		return errInvalidArg
+	}
+
+	return errLogZeroNeg
+}
+
 // complexLog is MTH$CLOG and its kind: (LOG(CABS(z)), ATAN2(i, r)).
 //
 // The real part is taken as ln(|z|^2) / 2, from sumOfSquares, because rounding the
 // modulus first would lose all of it for z near the unit circle.
 //
-// The conditions are the pages'. CDLOG's and CGLOG's list SS$_FLTOVF_F, "signaled
-// from MTH$CxABS when MTH$CxABS overflows", and MTH$_INVARGMAT for r = i = 0. CLOG's
-// lists neither: its modulus doesn't overflow, the result being a modest number in
-// any case, and at 0 no result exists, so it signals what its D and G forms do.
-// Unconfirmed (the probe, subtask 10).
+// The conditions are VMS 7.1's (testdata/mth77), which aren't the pages'. A modulus
+// past the format's range is MTH$CxABS's own MTH$_FLOOVEMAT, in all three forms. At 0,
+// the F form signals MTH$_INVARGMAT, and the D and G forms the logarithm's
+// MTH$_LOGZERNEG (zeroComplexBase).
 func complexLog(f vaxfloat.Format, z complexValue) (complexValue, error) {
 	if z.re.IsZero() && z.im.IsZero() {
-		return complexValue{}, errInvalidArg
+		return complexValue{}, zeroComplexBase(f)
 	}
 
 	w := workingPrecision(f)
 
-	if f != vaxfloat.F && overflows(f, modulus(z, w)) {
-		return complexValue{}, errFloatOverflow
+	if overflows(f, modulus(z, w)) {
+		return complexValue{}, vaxfloat.ErrOverflow
 	}
 
 	logSquare := logarithm(sumOfSquares(z), w)
@@ -312,10 +341,10 @@ func complexLog(f vaxfloat.Format, z complexValue) (complexValue, error) {
 //	r < 0, i < 0    (-Q, -ROOT)
 //
 // which add only positive numbers, so nothing cancels. A square root is much
-// smaller than a value near the format's limit, so the result can't overflow, and
-// the page's SS$_FLTOVF_F has to be one of those steps': the sum, which is at least
-// the modulus. So this overflows with r near the limit even if i is 0. Zero, on
-// which Q has no value, has the root 0. Unconfirmed (the probe, subtask 10).
+// smaller than a value near the format's limit, so the result can't overflow. The
+// page's SS$_FLTOVF_F has no argument here: VMS 7.1 has answers for (1.5E38, 0.0)
+// and the like (testdata/mth77), where the page's sum would overflow, so this doesn't
+// check it. Zero, on which Q has no value, has the root 0.
 func complexSquareRoot(f vaxfloat.Format, z complexValue) (complexValue, error) {
 	if z.re.IsZero() && z.im.IsZero() {
 		return complexValue{}, nil
@@ -325,10 +354,6 @@ func complexSquareRoot(f vaxfloat.Format, z complexValue) (complexValue, error) 
 	inner := w + scratchBits
 
 	sum := newFloat(inner).Add(z.re.Abs().Big(), modulus(z, inner))
-	if overflows(f, sum) {
-		return complexValue{}, errFloatOverflow
-	}
-
 	root := newFloat(inner).Sqrt(sum.SetMantExp(sum, -1))
 	q := newFloat(inner).Quo(z.im.Big(), root)
 	q.SetMantExp(q, -1)

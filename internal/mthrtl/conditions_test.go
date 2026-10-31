@@ -82,9 +82,11 @@ var complexResult = []pageFamily{famCcos, famCsin, famCexp, famClog, famCsqrt, f
 
 // pageRows is the manual's lists. A routine's reserved operand is in every list.
 // MTH$HTAN's overflow is the one condition left out: the phase doc's subtask 4 found
-// no argument in any format reaches it, a question for the probe. So are the pages'
-// conditions in Table 1-1's routines and MTH$CVT_x_x, which TestTable1FromAProgram
-// holds by name.
+// no argument in any format reaches it, and VMS 7.1 signals nothing there either. So
+// are the pages' conditions in Table 1-1's routines and MTH$CVT_x_x, which
+// TestTable1FromAProgram holds by name. VMS 7.1 (testdata/mth77) has the last word
+// where it differs: MTH$CxLOG's conditions, and MTH$CxSQRT's page's SS$_FLTOVF_F,
+// which it never signals.
 func pageRows() []pageRow {
 	rop := func(families ...pageFamily) pageRow {
 		return pageRow{families: families, args: []string{""}, condition: ssROPRAND, count: 3}
@@ -105,7 +107,8 @@ func pageRows() []pageRow {
 		{families: []pageFamily{famAcos, famAcosd, famAsin, famAsind}, args: []string{"2.0"}, condition: mthINVARG, count: severe},
 		{families: []pageFamily{famAtan2, famAtand2}, args: []string{"0.0", "0.0"}, condition: mthINVARG, count: severe},
 		{families: []pageFamily{famAtanh}, args: []string{"1.0"}, condition: mthINVARG, count: severe},
-		{families: []pageFamily{famClog}, args: []string{"0.0,0.0"}, condition: mthINVARG, count: severe},
+		{families: []pageFamily{"MTH$CLOG"}, args: []string{"0.0,0.0"}, condition: mthINVARG, count: severe},
+		{families: []pageFamily{"MTH$CDLOG MTH$CGLOG"}, args: []string{"0.0,0.0"}, condition: mthLOGZER, count: severe},
 
 		{families: []pageFamily{famLog, famLog2, famLog10}, args: []string{"0.0"}, condition: mthLOGZER, count: severe},
 		{families: []pageFamily{famLog, famLog2, famLog10}, args: []string{"-1.0"}, condition: mthLOGZER, count: severe},
@@ -121,8 +124,7 @@ func pageRows() []pageRow {
 		{families: []pageFamily{famSind, famTand}, args: []string{"TINY"}, condition: mthFLOUND, count: severe, fu: true},
 		{families: []pageFamily{famSincod}, args: []string{"TINY", "0.0", "0.0"}, condition: mthFLOUND, count: severe, fu: true},
 
-		{families: []pageFamily{"MTH$CDLOG MTH$CGLOG"}, args: []string{"HUGE,HUGE"}, condition: ssFLTOVF, count: 3},
-		{families: []pageFamily{famCsqrt}, args: []string{"HUGE,0.0"}, condition: ssFLTOVF, count: 3},
+		{families: []pageFamily{famClog}, args: []string{"HUGE,HUGE"}, condition: mthFLOOVE, count: severe},
 	}
 }
 
@@ -136,7 +138,7 @@ func pageCases() []table1Case {
 			names := strings.Fields(string(family))
 			offset := 0
 
-			if len(names) == 2 { // MTH$CDLOG and MTH$CGLOG alone: F has no such condition
+			if len(names) == 2 { // MTH$CDLOG and MTH$CGLOG alone
 				offset = 1
 			}
 
@@ -144,7 +146,7 @@ func pageCases() []table1Case {
 				f := table1Formats[i+offset]
 				out := f.t
 
-				if slices.Contains(complexResult, family) || family == "MTH$CDLOG MTH$CGLOG" {
+				if slices.Contains(complexResult, family) || family == "MTH$CDLOG MTH$CGLOG" || family == "MTH$CLOG" {
 					if f.t != "F" {
 						out = "H"
 					}
@@ -214,7 +216,6 @@ func TestConditionMessages(t *testing.T) {
 		data  string
 		call  string
 	}{
-		{"WRONUMARG", "", "CALLS\t#0,G^MTH$AMAX1"},
 		{"INVARGMAT", "X:\t.FLOAT\t2.0", "PUSHAL\tX\n\tCALLS\t#1,G^MTH$ASIN"},
 		{"UNDEXP", "A:\t.FLOAT\t0.0,-1.0", "PUSHL\tA+4\n\tPUSHL\tA\n\tCALLS\t#2,G^OTS$POWRR"},
 		{"LOGZERNEG", "X:\t.FLOAT\t0.0", "PUSHAL\tX\n\tCALLS\t#1,G^MTH$ALOG"},

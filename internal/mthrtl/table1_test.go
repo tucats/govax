@@ -74,7 +74,6 @@ var (
 	ssFLTUND  = vmsdef.Symbols["SS$_FLTUND_F"]
 	ssINTOVF  = vmsdef.Symbols["SS$_INTOVF"]
 	ssINTDIV  = vmsdef.Symbols["SS$_INTDIV"]
-	mthWRONG  = vmsdef.LibrarySymbols["MTH$_WRONUMARG"]
 	mthFLOOVE = vmsdef.LibrarySymbols["MTH$_FLOOVEMAT"]
 	mthFLOUND = vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
 )
@@ -168,8 +167,8 @@ func table1Cases() []table1Case {
 	floating(mod, nil, []string{"5.5", "2.0"}, "1.5", 0, 0, false)
 	floating(mod, nil, []string{"-5.5", "2.0"}, "-1.5", 0, 0, false)
 	floating(mod, nil, []string{"5.5", "-2.0"}, "1.5", 0, 0, false)
-	floating(mod, nil, []string{"1.0", "0.0"}, "", ssFLTDIV, 3, false)
-	floating(mod, nil, []string{"HUGE", "TINY"}, "", ssFLTOVF, 3, false)
+	floating(mod, nil, []string{"1.0", "0.0"}, "", mthINVARG, 5, false)
+	floating(mod, nil, []string{"HUGE", "TINY"}, "0", 0, 0, false)
 	floating(mod, nil, []string{"", "1.0"}, "", ssROPRAND, 3, false)
 	floating(mod, nil, []string{"1.0", ""}, "", ssROPRAND, 3, false)
 
@@ -223,11 +222,11 @@ func table1Cases() []table1Case {
 		{"MTH$IMOD", "W", "-7 3", "-1", 0},
 		{"MTH$IMOD", "W", "7 -3", "1", 0},
 		{"MTH$IMOD", "W", "-32768 -1", "0", 0},
-		{"MTH$IMOD", "W", "7 0", "7", ssINTDIV},
+		{"MTH$IMOD", "W", "7 0", "0", ssINTDIV},
 		{"MTH$JMOD", "L", "7 3", "1", 0},
 		{"MTH$JMOD", "L", "-7 3", "-1", 0},
-		{"MTH$JMOD", "L", "-2147483648 -1", "0", 0},
-		{"MTH$JMOD", "L", "-7 0", "-7", ssINTDIV},
+		{"MTH$JMOD", "L", "-2147483648 -1", "0", ssINTOVF},
+		{"MTH$JMOD", "L", "-7 0", "0", ssINTDIV},
 		{"MTH$IIAND", "W", "^XF0F0 ^XFF00", "-4096", 0},
 		{"MTH$JIAND", "L", "^XF0F0 ^XFF00", "61440", 0},
 		{"MTH$IIOR", "W", "^X00F0 ^X0F00", "4080", 0},
@@ -249,15 +248,11 @@ func table1Cases() []table1Case {
 		{"MTH$JMIN0", "L", "1 -2 3 -2147483648", "-2147483648", 0},
 		{"MTH$UMAX", "U", "1 ^XFFFFFFFF 3", "4294967295", 0},
 		{"MTH$UMIN", "U", "^XFFFFFFFF 7 ^X80000000", "7", 0},
-		{"MTH$IMAX0", "W", "", "*", mthWRONG},
-		{"MTH$JMIN0", "L", "", "*", mthWRONG},
-		{"MTH$UMAX", "U", "", "*", mthWRONG},
+		{"MTH$IMAX0", "W", "", "0", 0},
+		{"MTH$JMIN0", "L", "", "0", 0},
+		{"MTH$UMAX", "U", "", "0", 0},
 	} {
 		integer(row.entry, row.t, row.t, strings.Fields(row.args), row.want, row.condition)
-
-		if row.condition == mthWRONG {
-			cases[len(cases)-1].count = 5
-		}
 	}
 
 	// A floating argument, and an integer result, or the reverse.
@@ -364,13 +359,14 @@ func table1Cases() []table1Case {
 		}
 	}
 
-	// MTH$SNGLG and MTH$CVT_G_D below the range: quietly, and with FU set. MTH$DPROD
-	// and MTH$DIM have no underflow, so FU makes no difference to them.
+	// MTH$SNGLG and MTH$CVT_G_D below the range: quietly, and with FU set, which only
+	// MTH$CVT_G_D minds on VMS 7.1. MTH$DPROD and MTH$DIM have no underflow, so FU makes
+	// no difference to them.
 	cases = append(cases,
 		table1Case{entry: "MTH$DPROD", in: "F", out: "D", args: []string{"1.0E-30", "1.0E-30"}, want: "0", fu: true},
 		table1Case{entry: "MTH$DIM", in: "F", out: "F", args: []string{"^X00010080", "^X00000080"}, want: "0", fu: true},
 		table1Case{entry: "MTH$SNGLG", in: "G", out: "F", args: []string{"1.0E-300"}, want: "0"},
-		table1Case{entry: "MTH$SNGLG", in: "G", out: "F", args: []string{"1.0E-300"}, want: "0", fu: true, condition: ssFLTUND, count: 3},
+		table1Case{entry: "MTH$SNGLG", in: "G", out: "F", args: []string{"1.0E-300"}, want: "0", fu: true},
 		table1Case{entry: "MTH$CVT_G_D", in: "G", out: "D", args: []string{"1.0E-300"}, want: "0", fu: true, condition: mthFLOUND, count: 5},
 	)
 
@@ -383,11 +379,11 @@ func table1Cases() []table1Case {
 			{entry: maximum, args: []string{"1.5", "-2.0", "3.5"}, want: "3.5"},
 			{entry: maximum, args: []string{"-1.5"}, want: "-1.5"},
 			{entry: maximum, args: []string{"1.5", "", "3.5"}, want: "", condition: ssROPRAND, count: 3},
-			{entry: maximum, args: nil, want: "", condition: mthWRONG, count: 5},
+			{entry: maximum, args: nil, want: "0"},
 			{entry: minimum, args: []string{"1.5", "-2.0", "3.5"}, want: "-2"},
 			{entry: minimum, args: []string{"HUGE"}, want: "*"},
 			{entry: minimum, args: []string{"1.5", ""}, want: "", condition: ssROPRAND, count: 3},
-			{entry: minimum, args: nil, want: "", condition: mthWRONG, count: 5},
+			{entry: minimum, args: nil, want: "0"},
 		} {
 			c.in, c.out = f.t, f.t
 			for j, a := range c.args {
@@ -556,6 +552,10 @@ func wantRegisters(t *testing.T, c table1Case) []string {
 			t.Fatalf("%s: %q: %v", c.entry, c.want, err)
 		}
 
+		if c.out == "W" { // a word result's high word is clear
+			i &= 0xFFFF
+		}
+
 		return []string{fmt.Sprintf("%08X", uint32(i))}
 	}
 
@@ -689,10 +689,8 @@ LINE:	.BLKL	2
 	MOVL	4(R0),SCOND
 	MOVL	#1,R0
 	RET
-	; SHOW prints DST, R0 less DST's address, and what the handler saw, and
-	; clears them.
+	; SHOW prints DST, R0, and what the handler saw, and clears them.
 SHOW:	MOVAB	DST,R1
-	SUBL2	R1,R0
 	PUSHL	SCOUNT
 	PUSHL	SCOND
 	PUSHL	R0
@@ -844,9 +842,9 @@ SHOW:	MOVAB	DST,R1
 			t.Errorf("step %d: memory\n  got %s\n want %s", i+1, got, want.memory)
 		}
 
-		// With no condition R0 is the output array's address.
+		// With no condition R0 is 0, on VMS 7.1.
 		if want.condition == 0 && fields[8] != "r0=00000000" {
-			t.Errorf("step %d: %s, want the output's address", i+1, fields[8])
+			t.Errorf("step %d: %s, want 0", i+1, fields[8])
 		}
 
 		if got, wantCond := fields[9], fmt.Sprintf("c=%08X", want.condition); got != wantCond {
@@ -868,7 +866,7 @@ func TestHardwareConditionsUnhandled(t *testing.T) {
 	}{
 		{"JIABS", "X:\t.LONG\t^X80000000", "PUSHAL\tX\n\tCALLS\t#1,G^MTH$JIABS", "%SYSTEM-F-INTOVF, "},
 		{"JMOD", "X:\t.LONG\t7,0", "PUSHAL\tX+4\n\tPUSHAL\tX\n\tCALLS\t#2,G^MTH$JMOD", "%SYSTEM-F-INTDIV, "},
-		{"AMOD", "X:\t.FLOAT\t7.0,0.0", "PUSHAL\tX+4\n\tPUSHAL\tX\n\tCALLS\t#2,G^MTH$AMOD", "%SYSTEM-F-FLTDIV_F, "},
+		{"AMOD", "X:\t.FLOAT\t7.0,0.0", "PUSHAL\tX+4\n\tPUSHAL\tX\n\tCALLS\t#2,G^MTH$AMOD", "%MTH-F-INVARGMAT, "},
 		{"DPROD", "X:\t.FLOAT\t1.0E30,1.0E30", "PUSHAL\tX+4\n\tPUSHAL\tX\n\tCALLS\t#2,G^MTH$DPROD", "%SYSTEM-F-FLTOVF_F, "},
 	} {
 		t.Run(c.name, func(t *testing.T) {

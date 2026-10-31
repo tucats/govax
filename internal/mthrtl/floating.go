@@ -81,19 +81,18 @@ func wholeNumber(whole func(vaxfloat.Value) *big.Int) function {
 // of b's last bit or a's, so it has no more bits than they do. It can still be
 // too small for the format, whose range stops short of b's last bit.
 //
-// The footnotes give all four floating overflow, and F and D floating underflow.
-// A remainder can't overflow, so the overflow has to be the quotient's; a quotient
-// too small says nothing about the remainder, which is a, so only a remainder too
-// small is an underflow here, and G's and H's are 0.0 quietly. Divide by zero is in
-// no footnote, but a floating divide is what the definition does, and there's no
-// other answer. All of this is unconfirmed (the probe, subtask 10).
+// VMS 7.1's answers (testdata/mth77) take the place of the footnotes' floating
+// overflow: a quotient past the format's range gives a result of 0.0 and no condition,
+// and a zero divisor is MTH$_INVARGMAT. A quotient too small says nothing about the
+// remainder, which is a, so only a remainder too small is an underflow here, and G's
+// and H's are 0.0 quietly.
 func remainder(f vaxfloat.Format, a, b vaxfloat.Value) (vaxfloat.Value, error) {
 	if b.IsZero() {
-		return vaxfloat.Value{}, errFloatDivide
+		return vaxfloat.Value{}, errInvalidArg
 	}
 
 	if _, err := vaxfloat.Div(f, a, b); errors.Is(err, vaxfloat.ErrOverflow) {
-		return vaxfloat.Value{}, errFloatOverflow
+		return vaxfloat.Value{}, nil
 	}
 
 	quotient := new(big.Rat).Quo(a.Rat(), b.Rat())
@@ -114,10 +113,12 @@ func convert(f vaxfloat.Format, x vaxfloat.Value) (vaxfloat.Value, error) {
 	return vaxfloat.Round(f, x)
 }
 
-// convertTrapping is a conversion with Table 1-1's footnotes: MTH$SNGL, which can
-// overflow by rounding up, and MTH$SNGLG, which can underflow too.
+// convertTrapping is a conversion with Table 1-1's footnotes: MTH$SNGL and
+// MTH$SNGLG, which can overflow. A value too small for F_floating is 0.0, whatever
+// the caller's FU, though the footnote gives MTH$SNGLG an underflow: so does VMS 7.1
+// (testdata/mth77).
 func convertTrapping(f vaxfloat.Format, x vaxfloat.Value) (vaxfloat.Value, error) {
-	return trapping(vaxfloat.Round(f, x))
+	return trapping(noUnderflow(vaxfloat.Round(f, x)))
 }
 
 // productEntry makes MTH$DPROD and MTH$GPROD, the product of two F_floating
@@ -132,8 +133,8 @@ func productEntry(out vaxfloat.Format) corevms.ShimFunc {
 
 // convertArrayEntry makes MTH$CVT_DA_GA and MTH$CVT_GA_DA: an array at the first
 // argument converted to an array at the second, the number of elements at the
-// third, 1 if it isn't given. R0 is the output array's address, which is one way
-// to read the page's "return the address of the output array".
+// third, 1 if it isn't given. R0 is 0, as on VMS 7.1 (testdata/mth77), for all the
+// page's "return the address of the output array".
 //
 // The Go routine can't return from a signal to go on with the loop, since the
 // handlers run after it ends. So an element that's out of range is stored as a
@@ -187,6 +188,6 @@ func convertArrayEntry(in, out vaxfloat.Format) corevms.ShimFunc {
 			return signalFailure(env, failure)
 		}
 
-		return dest, nil
+		return 0, nil
 	}
 }

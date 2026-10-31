@@ -657,9 +657,8 @@ func complexArith(op ast.Op, f vaxfloat.Format, a, b, c, d vaxfloat.Value) (vaxf
 // exponent (section 4.11). An INTEGER base gives an INTEGER of the higher
 // type; a REAL or COMPLEX base its own type, by vaxfloat.PowerBySquaring,
 // which is the OTS$ routines' own order: the product of the base's squares,
-// each rounded to its format, and 1.0 over it for a negative exponent, so a
-// product too large is an error even where its reciprocal would fit. An
-// INTEGER power's rules are mthrtl's too. Zero to a power of zero or less
+// each rounded to its format, or for a negative exponent of their reciprocals.
+// An INTEGER power's rules are mthrtl's too. Zero to a power of zero or less
 // has no value (UNDEFPOW).
 func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	x, err := ev.arithmetic(x)

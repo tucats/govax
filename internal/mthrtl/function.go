@@ -2,6 +2,7 @@ package mthrtl
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
@@ -34,11 +35,15 @@ var (
 	errLogZeroNeg = domainError(vmsdef.LibrarySymbols["MTH$_LOGZERNEG"])
 	errSqrtNeg    = domainError(vmsdef.LibrarySymbols["MTH$_SQUROONEG"])
 	errInvalidArg = domainError(vmsdef.LibrarySymbols["MTH$_INVARGMAT"])
-	errWrongCount = domainError(vmsdef.LibrarySymbols["MTH$_WRONUMARG"])
 
 	mthFloOveMat = vmsdef.LibrarySymbols["MTH$_FLOOVEMAT"]
 	mthFloUndMat = vmsdef.LibrarySymbols["MTH$_FLOUNDMAT"]
 )
+
+// errNoAngle is MTH$_INVARGMAT for ATAN2 of (0, 0), which is the one failure of an H
+// routine that leaves the result through its first argument untouched, on VMS 7.1
+// (testdata/mth77): the others store the reserved operand there first.
+var errNoAngle = fmt.Errorf("%w: no angle at the origin", errInvalidArg)
 
 // gateUnderflow is what a function's result and error mean to the routine's
 // caller. An underflow is an error only for a caller that set PSW<FU> (floating
@@ -202,6 +207,111 @@ func jsbEntry(f vaxfloat.Format, fn function) corevms.JSBShimFunc {
 
 		return nil
 	}
+}
+
+// jsbFailure signals err for a JSB entry, its result of count longwords in R0 up.
+// R2 and R3 are this routine's to clear, as in jsbEntry.
+func jsbFailure(env *corevms.Environment, count int, err error) error {
+	if count > 2 {
+		env.CPU().SetGPR(registers.R2, 0)
+		env.CPU().SetGPR(registers.R3, 0)
+	}
+
+	_, err = signalFailure(env, err)
+
+	return err
+}
+
+// jsbBinaryEntry is jsbEntry for a function of two arguments, the second in the
+// registers after the first: MTH$ATAN2_R4's sine in R0 and cosine in R1. No manual
+// gives these entries; VMS 7.1 does (testdata/mth77).
+func jsbBinaryEntry(f vaxfloat.Format, fn binaryFunction) corevms.JSBShimFunc {
+	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+		x, err := loadRegisters(f, regs[:], 0)
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		y, err := loadRegisters(f, regs[:], longwords(f))
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		v, err := fn(f, x, y)
+		v, err = gateUnderflow(env, v, err)
+
+		if err != nil {
+			return jsbFailure(env, longwords(f), err)
+		}
+
+		storeRegisters(f, regs, 0, v)
+
+		return nil
+	}
+}
+
+// jsbComplexEntry is jsbEntry for a function of a complex number with a complex
+// result, both in R0 up: R0 and R1 for F, R0:R3 for D and G. Section 1.5 says complex
+// functions have no JSB entries, and VMS 7.1 has them (testdata/mth77).
+func jsbComplexEntry(f vaxfloat.Format, fn complexFunction) corevms.JSBShimFunc {
+	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+		z, err := complexInRegisters(f, regs[:], 0)
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		z, err = gatedComplex(env, f, fn, z)
+		if err != nil {
+			return jsbFailure(env, 2*longwords(f), err)
+		}
+
+		storeRegisters(f, regs, 0, z.re)
+		storeRegisters(f, regs, longwords(f), z.im)
+
+		return nil
+	}
+}
+
+// jsbModulusEntry is MTH$CABS_R4 and its kind: a complex number in R0 up, and one
+// value in R0 or R0:R1.
+func jsbModulusEntry(f vaxfloat.Format) corevms.JSBShimFunc {
+	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+		z, err := complexInRegisters(f, regs[:], 0)
+		if err != nil {
+			_, err = fail(env, err)
+
+			return err
+		}
+
+		v, err := complexAbsolute(f, z)
+		if err != nil {
+			return jsbFailure(env, longwords(f), err)
+		}
+
+		storeRegisters(f, regs, 0, v)
+
+		return nil
+	}
+}
+
+// jsbSignEntry is MTH$SGN_R1: an F_floating value in R0, and -1, 0, or 1 in R0.
+func jsbSignEntry(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+	x, err := loadRegisters(vaxfloat.F, regs[:], 0)
+	if err != nil {
+		_, err = fail(env, err)
+
+		return err
+	}
+
+	regs[0] = uint32(int32(x.Sign()))
+
+	return nil
 }
 
 // pairFunction computes two results of one floating argument, rounded to

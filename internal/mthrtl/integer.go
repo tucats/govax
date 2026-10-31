@@ -1,6 +1,7 @@
 package mthrtl
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -61,18 +62,14 @@ func (w width) fromValue(v uint32) int64 {
 }
 
 // lowBits is i's low-order bits, as this width holds them and as a two's complement
-// number, however large i is, in the form R0 returns them.
+// number, however large i is, in the form R0 returns them: a word result's high word
+// is clear, as VMS 7.1's are (testdata/mth77), not its sign.
 func (w width) lowBits(i *big.Int) uint32 {
 	// big.Int's And treats a negative number as two's complement, with as
 	// many sign bits as it takes.
 	mask := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), w.bits), big.NewInt(1))
-	low := uint32(new(big.Int).And(i, mask).Uint64())
 
-	if w.bits == 16 {
-		return uint32(int32(int16(low)))
-	}
-
-	return low
+	return uint32(new(big.Int).And(i, mask).Uint64())
 }
 
 // holds reports whether this width can hold i.
@@ -186,7 +183,7 @@ func integerSign(w width, args []int64) int64 {
 		x = -x
 	}
 
-	return int64(int32(w.lowBits(big.NewInt(x))))
+	return w.fromValue(w.lowBits(big.NewInt(x)))
 }
 
 // integerRemainderEntry makes MTH$IMOD and MTH$JMOD, whose result has the
@@ -202,8 +199,14 @@ func integerRemainderEntry(w width) corevms.ShimFunc {
 			return fail(env, err)
 		}
 
-		if args[1] == 0 {
-			return env.SignalFailure([]uint32{ssIntDiv}, w.lowBits(big.NewInt(args[0])))
+		// A zero divisor leaves R0 clear. The largest negative longword over -1 is
+		// the one quotient that overflows, and a longword's division traps on it where
+		// a word's, done in longwords, doesn't. So says VMS 7.1 (testdata/mth77).
+		switch {
+		case args[1] == 0:
+			return env.SignalFailure([]uint32{ssIntDiv}, 0)
+		case w == long && args[0] == math.MinInt32 && args[1] == -1:
+			return env.SignalFailure([]uint32{ssIntOvf}, 0)
 		}
 
 		return w.lowBits(big.NewInt(args[0] % args[1])), nil
@@ -233,5 +236,5 @@ func integerShift(w width, args []int64) int64 {
 		bits >>= uint(-count)
 	}
 
-	return int64(int32(w.lowBits(new(big.Int).SetUint64(bits))))
+	return w.fromValue(w.lowBits(new(big.Int).SetUint64(bits)))
 }

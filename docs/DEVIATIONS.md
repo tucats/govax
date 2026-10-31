@@ -1865,3 +1865,11 @@ Entry template:
   compares those parts without the records outside the program
   (`trace73Differences`), and the debugger's session oracle lists the
   STEP difference (`reasonStepException`).
+
+## [Phase 77] MTHRTL beside VMS 7.1's
+
+`testdata/mth77`'s oracle holds the library to VMS 7.1's. What it can't match is in
+`docs/PHASE-77 - MTHRTL.md`'s "What still differs from VMS 7.1". The one a program could
+notice: VMS's routines go on after a handler continues from their condition, and may then fault
+on the reserved operand (`MTH$CEXP`, `MTH$CLOG`, ...), or store a corrected result (`MTH$HEXP`).
+govax's Go routines have ended by then, so the caller gets what the first signal left.

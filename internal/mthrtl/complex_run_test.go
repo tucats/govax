@@ -163,22 +163,27 @@ func complexCases() []complexCase {
 	add(familyCos, complexToComplex, "1.0", "OVER", gives(mthFLOOVE, 5))
 	add(familyCos, complexToComplex, "1.0", "-OVER", gives(mthFLOOVE, 5))
 	add(familyCos, complexToComplex, "1.0", "-NEAR", nothing)
-	add(familyLog, complexToComplex, "0.0", "0.0", gives(mthINVARG, 5))
-	add(familyLog, complexToComplex, "HUGE", "HUGE", func(c *complexCase) {
+	add(familyLog, complexToComplex, "0.0", "0.0", func(c *complexCase) {
 		if c.f == "F" {
-			nothing(c)
+			gives(mthINVARG, 5)(c)
 		} else {
-			gives(ssFLTOVF, 3)(c)
+			gives(mthLOGZER, 5)(c)
 		}
 	})
-	add(familySqrt, complexToComplex, "BIG", "0.0", gives(ssFLTOVF, 3))
-	add(familySqrt, complexToComplex, "HUGE", "HUGE", gives(ssFLTOVF, 3))
+	add(familyLog, complexToComplex, "HUGE", "HUGE", gives(mthFLOOVE, 5))
+	add(familySqrt, complexToComplex, "BIG", "0.0", nothing)
+	add(familySqrt, complexToComplex, "HUGE", "HUGE", nothing)
 	add(familySqrt, complexToComplex, "LOW", "LOW", nothing)
 
 	// An exponential too small for the format, and the same with underflow enabled:
-	// no page lists MTH$_FLOUNDMAT.
+	// no page lists MTH$_FLOUNDMAT, but VMS 7.1 signals it.
 	zero := func(fu bool) func(*complexCase) {
-		return func(c *complexCase) { c.want, c.fu = [2]string{"0.0", "0.0"}, fu }
+		return func(c *complexCase) {
+			c.want, c.fu = [2]string{"0.0", "0.0"}, fu
+			if fu {
+				c.condition, c.count = mthFLOUND, 5
+			}
+		}
 	}
 
 	add(familyExp, complexToComplex, "-30000.0", "1.0", zero(false))
@@ -491,8 +496,8 @@ func TestComplexUnhandled(t *testing.T) {
 		name, data, call, message string
 	}{
 		{"CEXP", "Z:\t.FLOAT\t100.0,1.0", "PUSHAL\tZ\n\tCALLS\t#1,G^MTH$CEXP", "%MTH-F-FLOOVEMAT, "},
-		{"CDLOG", "R:\t.BLKD\t2\nZ:\t.D_FLOATING\t0.0,0.0", "PUSHAL\tZ\n\tPUSHAL\tR\n\tCALLS\t#2,G^MTH$CDLOG", "%MTH-F-INVARGMAT, "},
-		{"CSQRT", "Z:\t.FLOAT\t1.0E38,0.0", "PUSHAL\tZ\n\tCALLS\t#1,G^MTH$CSQRT", "%SYSTEM-F-FLTOVF_F, "},
+		{"CDLOG", "R:\t.BLKD\t2\nZ:\t.D_FLOATING\t0.0,0.0", "PUSHAL\tZ\n\tPUSHAL\tR\n\tCALLS\t#2,G^MTH$CDLOG", "%MTH-F-LOGZERNEG, "},
+		{"CGLOG", "R:\t.BLKG\t2\nZ:\t.G_FLOATING\t8.0E307,8.0E307", "PUSHAL\tZ\n\tPUSHAL\tR\n\tCALLS\t#2,G^MTH$CGLOG", "%MTH-F-FLOOVEMAT, "},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			_, d, out := boot(t)

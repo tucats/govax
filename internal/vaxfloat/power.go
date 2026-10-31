@@ -10,16 +10,17 @@ import (
 // expression would compute. It's here, the one package both use, so that they can't
 // come to differ.
 
-// PowerBySquaring returns base ** n, for any kind of number, as the OTS$ manual's
-// tables give it: the product of base ** (2 ** i) for each bit i set in |n|, each
-// product computed by mul, and for a negative n, 1.0 over that product, by div. one
-// is the type's 1.0, which is also the answer when n is 0.
+// PowerBySquaring returns base ** n, for any kind of number: the product of
+// base ** (2 ** i) for each bit i set in |n|, each product computed by mul, and for a
+// negative n the product of those squares' reciprocals, each by div. one is the type's
+// 1.0, which is also the answer when n is 0.
 //
 // The order matters. A real or complex mul rounds, so each step's error is in the
-// result, and the reciprocal of a product isn't always the product of reciprocals
-// in the last bit. And a product may overflow where its reciprocal wouldn't, which
-// is mul's error to report. A base is squared only as often as a bit of n still
-// needs it, so a square that overflows is one the result would contain.
+// result. The OTS$ manual's tables read as 1.0 over the whole product, but VMS 7.1
+// (testdata/mth77) has 2.0 ** (-127) in F_floating, whose product doesn't fit, and this
+// order is the one that comes closest to its bits; they aren't always the same, and
+// aren't a goal. A base is squared only as often as a bit of n still needs it, so a
+// square that overflows is one the result would contain.
 //
 // An error from mul or div ends the computation.
 func PowerBySquaring[T any](base, one T, n int64, mul, div func(a, b T) (T, error)) (T, error) {
@@ -34,7 +35,15 @@ func PowerBySquaring[T any](base, one T, n int64, mul, div func(a, b T) (T, erro
 
 	for count > 0 {
 		if count&1 != 0 {
-			if result, err = mul(result, base); err != nil {
+			factor := base
+
+			if n < 0 {
+				if factor, err = div(one, base); err != nil {
+					return result, err
+				}
+			}
+
+			if result, err = mul(result, factor); err != nil {
 				return result, err
 			}
 		}
@@ -44,10 +53,6 @@ func PowerBySquaring[T any](base, one T, n int64, mul, div func(a, b T) (T, erro
 				return result, err
 			}
 		}
-	}
-
-	if n < 0 {
-		return div(one, result)
 	}
 
 	return result, nil

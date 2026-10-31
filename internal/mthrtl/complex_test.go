@@ -476,10 +476,12 @@ func TestComplexLimits(t *testing.T) {
 		// e^r for a large negative r is too small to matter, not an overflow.
 		for _, r := range []string{"-" + c.above, "-" + c.coshInRange, "-30000"} {
 			got, err := complexExponential(c.f, complexValue{value(t, c.f, r), one})
-			if err != nil {
+			if r == "-30000" {
+				if !errors.Is(err, vaxfloat.ErrUnderflow) || !got.re.IsZero() || !got.im.IsZero() {
+					t.Errorf("CEXP %v(%s, 1) = (%s, %s), %v, want an underflow", c.f, r, got.re, got.im, err)
+				}
+			} else if err != nil {
 				t.Errorf("CEXP %v(%s, 1): %v", c.f, r, err)
-			} else if r == "-30000" && (!got.re.IsZero() || !got.im.IsZero()) {
-				t.Errorf("CEXP %v(%s, 1) = (%s, %s)", c.f, r, got.re, got.im)
 			}
 		}
 	}
@@ -507,13 +509,9 @@ func TestComplexLimits(t *testing.T) {
 			t.Errorf("CABS %v(%s, %s): %v", f, s[1], s[1], err)
 		}
 
-		// The logarithm of that: F's has its answer, and D's and G's the page's fault.
-		_, err := complexLog(f, pastModulus)
-		if f == vaxfloat.F && err != nil {
-			t.Errorf("CLOG (%s, %s): %v", s[1], s[1], err)
-		}
-
-		if f != vaxfloat.F && !errors.Is(err, errFloatOverflow) {
+		// The logarithm of that is MTH$CxABS's overflow, on VMS 7.1, in every form.
+		var trap trapError
+		if _, err := complexLog(f, pastModulus); !errors.Is(err, vaxfloat.ErrOverflow) || errors.As(err, &trap) {
 			t.Errorf("CLOG %v(%s, %s): %v", f, s[1], s[1], err)
 		}
 
@@ -521,20 +519,26 @@ func TestComplexLimits(t *testing.T) {
 			t.Errorf("CSQRT %v(%s, %s): %v", f, s[2], s[2], err)
 		}
 
+		// The page's overflow has no argument, on VMS 7.1.
 		for _, z := range []complexValue{pastModulus, {single, vaxfloat.Value{}}} {
-			if _, err := complexSquareRoot(f, z); !errors.Is(err, errFloatOverflow) {
+			if _, err := complexSquareRoot(f, z); err != nil {
 				t.Errorf("CSQRT %v(%s, %s): %v", f, z.re, z.im, err)
 			}
 		}
 	}
 }
 
-// TestComplexLogOfZero: the page's MTH$_INVARGMAT.
+// TestComplexLogOfZero: MTH$_INVARGMAT in F, and the logarithm's MTH$_LOGZERNEG in D
+// and G, as on VMS 7.1.
 func TestComplexLogOfZero(t *testing.T) {
 	for _, f := range complexFormats {
-		if _, err := complexLog(f, complexValue{}); !errors.Is(err, errInvalidArg) {
+		if _, err := complexLog(f, complexValue{}); !errors.Is(err, zeroComplexBase(f)) {
 			t.Errorf("%v: %v", f, err)
 		}
+	}
+
+	if !errors.Is(zeroComplexBase(vaxfloat.F), errInvalidArg) || !errors.Is(zeroComplexBase(vaxfloat.G), errLogZeroNeg) {
+		t.Error("zeroComplexBase has the formats the wrong way round")
 	}
 }
 

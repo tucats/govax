@@ -98,11 +98,11 @@ func arcFunction(arc func(*big.Float, uint) *big.Float, bounded bool, convert fu
 // A small sine over a large cosine can be too small for any format. MTH$_FLOUNDMAT
 // isn't among these routines' conditions, and no description says otherwise, as
 // MTH$SIND's and MTH$TAND's do, so the result is 0.0 and nothing is signaled,
-// whatever the caller's FU. Unconfirmed (the probe, subtask 10).
+// whatever the caller's FU, as VMS 7.1's is (testdata/mth77).
 func arcTangent2Function(convert func(*big.Float, uint) *big.Float) binaryFunction {
 	return func(f vaxfloat.Format, sine, cosine vaxfloat.Value) (vaxfloat.Value, error) {
 		if sine.IsZero() && cosine.IsZero() {
-			return vaxfloat.Value{}, errInvalidArg
+			return vaxfloat.Value{}, errNoAngle
 		}
 
 		w := workingPrecision(f)

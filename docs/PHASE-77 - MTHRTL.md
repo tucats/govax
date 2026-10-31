@@ -6,8 +6,7 @@ and its registration, 3, the engine, square root, exponentials, and
 logarithms, 4, the trigonometric functions and their inverses, 5, the
 hyperbolic functions and ATAN2, 6, Table 1-1's routines, 7, the complex
 functions and parts, 8, the OTS$ powers, multiplication, and division, and 9,
-MTH$RANDOM and the conditions' audit, the same day; subtask 10's probe is written,
-and waits for its VAX run).
+MTH$RANDOM and the conditions' audit, 10, the probe and VMS's answers, the same day).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -291,8 +290,7 @@ be corrected.
    `COSD(90)`, `TAND(45)`, `SQRT(4)`, and `EXP(0)` come out exact: degrees are
    reduced exactly, in rational arithmetic, before any conversion to radians.
 5. **`MTH$RANDOM` is the manual's generator:** SEED = (69069 * SEED + 1) mod
-   2^32, with the high 24 bits as a fraction in [0, 1). How those bits become
-   an F value is for the probe.
+   2^32, with the high 24 bits as a fraction in [0, 1), exactly, as the probe found.
    With `vax.runtime.random` true (the author's request, 2026-10-30; off by
    default), each new seed is instead 32 bits from the host's `crypto/rand`: see
    subtask 9's log.
@@ -303,118 +301,37 @@ be corrected.
    routine and a code can't disagree with the vector. A name with no routine gets a missing-routine stub of its kind: JSB if
    it is `MTH$..._Rn`, CALL otherwise, a rule all 404 names satisfy.
 7. **Second entries share the first's routine.** The 10 pairs are the same
-   code by the vector. Undocumented JSB entries with one argument follow
-   section 1.2's convention and are added with their family, if the probe
-   confirms it. The others stay stubs until a probe or a program asks.
+   code by the vector. The JSB entries no manual gives follow section 1.2's convention,
+   as the probe confirmed, and all are written but `MTH$$REDUCE_`, internal to the library.
 8. **Hardware conditions are signaled from Go** (`SS$_ROPRAND`, `SS$_INTOVF`,
    ...), with PC the routine's return address. VMS's PC would be inside MTHRTL,
    so a traceback line differs. No program can depend on that address.
 
 ## Open questions
 
-- **For the VMS probe** (subtask 10, `testdata/mth77`, run by the author):
-  - the signal array's arguments for each `MTH$_` condition, and what user PC
-    holds;
-  - whether `SIND`'s `FLOUNDMAT` depends on FU;
-  - what continuing from `SS$_ROPRAND` returns;
-  - `OTS$POWII` and `POWJJ` for negative bases and exponents, and their
-    overflow;
-  - `MTH$RANDOM`'s values from known seeds, how its bits become an F value, and
-    whether it leaves R1 alone;
-  - what an H routine's result in memory holds after a handler continues from
-    its condition (govax writes the reserved operand, or 0.0 for an underflow,
-    before signaling), and R2:R3 after an H JSB entry's (govax clears them);
-  - what a handler that continues from `FLOUNDMAT` gets in R0 and R1 (the
-    manual says "the result is set to 0.0", which govax follows);
-  - `MTH$GEXP`'s underflow limit: the manual says -709.774, where the format's
-    limit, 1024 ln 2, is -709.783. govax follows the format, as the other three
-    forms' figures do;
-  - `AMAX1` with no arguments (`WRONUMARG`?);
-  - whether `SIN` of a huge argument signals `SIGLOSMAT` (govax computes the
-    true value, whatever the size);
-  - what a handler that continues from `SINCOSD`'s `FLOUNDMAT` finds in the two
-    results (govax has 0.0 and the good cosine, in memory or registers, an F JSB
-    entry's cosine going through the mechanism array's R1);
-  - what `TAND` gives where the cosine is exactly 0 beyond the manual's "signal
-    overflow": R0 and R1 after continuing (govax's reserved operand), and whether
-    `TAND(90)` is exact on VMS at all, or a large finite value, as `TAN` is;
-  - what `MTH$TAN`'s overflow is for: no argument in any format reaches it in
-    govax;
-  - the undocumented JSB entries' registers, starting with `COSH_R4` and
-    `SQRT_R2`, and how the two-argument ones (`ATAN2_R4`, `DATAN2_R7`, ...)
-    take their arguments;
-  - `ATAN2` of a sine too small beside its cosine for the quotient to fit the
-    format: govax returns 0.0 quietly, whatever FU, because the routine's
-    conditions list no `FLOUNDMAT` and, unlike `SIND`'s and `TAND`'s, its
-    description doesn't mention underflow;
-  - `ATAN2` of 0 and a negative cosine: govax gives pi, the manual's
-    `pi * sign(Y)` with 0 counted as positive;
-  - Table 1-1's conditions: which floating exceptions these routines really
-    signal, under which names (`SS$_FLTOVF_F` or a trap's, `MTH$_FLOOVEMAT`), and
-    what a continuing handler finds, since VMS's would resume in a faulting
-    instruction;
-  - `MTH$AMOD`'s kind: whether a quotient beyond the format overflows (govax says
-    yes, from the footnote), what a quotient too small does with FU set (govax
-    goes on, the remainder being the dividend), what a zero divisor signals (no
-    footnote; govax signals `SS$_FLTDIV_F`), and how exact a remainder is when the
-    quotient has more bits than the format;
-  - `MTH$SNGLG`'s and `MTH$AMOD`'s underflow: which condition, and whether it
-    follows the caller's FU, as govax has it, since a CALL entry clears FU for its
-    own instructions (the 5.0 manual also gives `MTH$DIM` underflow, and 7.3 not);
-  - `MTH$ANINT` just below 0.5: govax's 0 is the true nearest, where the FORTRAN
-    manual's `INT(a + .5)` in F_floating would give 1;
-  - `MTH$JMOD(-2**31, -1)` and `MTH$IMOD(-32768, -1)`: govax's 0, from the footnote's
-    silence, though VMS's mask sets IV; and R0 after continuing from a zero divisor
-    (govax's dividend);
-  - a word result's high word in R0 (govax's is the sign);
-  - `MTH$AMAX1`'s kind with no arguments: govax signals `MTH$_WRONUMARG`;
-  - `MTH$UMAX` by reference, and `MTH$SGN` of a G or H value;
-  - `MTH$CVT_DA_GA`'s kind: R0, and an element out of range (govax stores what a
-    single conversion leaves, goes on, and signals once at the end, the handlers
-    running only after the Go routine ends);
-  - the undocumented JSB entries of this family: `MTH$AMOD_R5`, `DMOD_R9`,
-    `GMOD_R9`, `SIGN_R1`, `DSIGN_R3`, `GSIGN_R3`, `SGN_R1`;
-  - `MTH$CEXP` of a large negative r: the page's overflow says "the absolute value
-    of r", where govax takes only a large positive r, and gives a part too small for
-    the format as 0.0;
-  - `MTH$CSIN`'s and `MTH$CCOS`' overflow: whether it's at the page's 88.029 (EXP's
-    limit, which govax follows, whatever r) or at `COSH`'s 88.722, and if r can save
-    an i past it;
-  - `MTH$CLOG` of (0, 0), whose F page has no condition (govax signals the D and G
-    pages' `MTH$_INVARGMAT`), and of a number whose modulus overflows, which only
-    the D and G pages give (`SS$_FLTOVF_F`, there "signaled from `MTH$CxABS`", whose
-    own page says `MTH$_FLOOVEMAT`);
-  - what arguments give `MTH$CSQRT`'s `SS$_FLTOVF_F`, which no result needs: govax
-    takes it at the page's `ABS(r) + CABS(r, i)`, so (1.0E38, 0.0) signals;
-  - what a handler that continues from a complex routine's condition finds: an F
-    result's R1 (govax's 0), and a D or G result's two parts in memory (govax's
-    reserved operands);
-  - whether a complex routine's part too small for the format follows FU (govax's
-    0.0 doesn't, no page listing `MTH$_FLOUNDMAT`);
-  - whether `MTH$REAL` and `MTH$AIMAG` fault on a reserved operand in the part they
-    don't return (govax doesn't read it);
-  - an integer power's rounding and order: whether VMS's `OTS$POWRJ` rounds at each
-    product, as its page says, and takes 1.0 over the product, so `2.0 ** (-127)` in F
-    overflows though its value fits, and `3.0 ** (-5)` has govax's last bit;
-  - which overflow each `OTS$` power signals where its page lists both `SS$_FLTOVF` and
-    `MTH$_FLOOVEMAT` (govax's is `MTH$_FLOOVEMAT` for real bases, and for a complex base
-    `POWCC`'s and `SS$_FLTOVF_F` for `POWCJ`, by their lists), and whether a product of
-    logarithm and exponent too large for the format is one of them;
-  - `OTS$POWRJ(0.5, -100000)`, whose products reach 0.0 with FU clear: govax signals
-    `SS$_FLTDIV_F`, which only the complex page lists; and with FU set `MTH$_FLOUNDMAT`;
-  - what a handler that continues finds in R0 to R3: govax has the reserved operand in R0
-    and R1 to R3 clear, for an H or D or G complex, and an integer routine's R0 after
-    `MTH$_UNDEXP` is that `^X8000` too;
-  - `OTS$POWCC`'s result where a part should be exactly 0, `(-1, 0) ** (2, 0)`: govax's is
-    a tiny number, far below the other part's last bit;
-  - `OTS$POWCC`'s overflow and small parts, which govax takes from `MTH$CEXP`'s;
-  - `OTS$POWCJ` with a negative exponent, whose row says only "the product";
-  - `OTS$MULCx` and `DIVCx`: how each part rounds (govax's is exact, then rounded once),
-    and whether a part too small follows FU (govax's is 0.0, whatever FU);
-  - `OTS$POWII`'s and `POWJJ`'s negative bases and exponents (the survey's finding):
-    `(-2) ** 3`, `2 ** (-1)`, `(-1) ** (-3)`, and overflow, `SS$_INTOVF` with the low-order
-    bits in R0;
-  - last-bit comparison, reported as a count rather than held as a test.
+None are left: subtask 10's probe answered them (the progress log has what it found),
+and what still differs is the oracle's list, below.
+
+### What still differs from VMS 7.1
+
+`expectedMTH77Differences` (`internal/console/mth77_test.go`) lists each line. By kind:
+
+- **What a Go routine can't do.** A shim has ended before the handlers run, so nothing
+  happens after a handler continues. VMS's routines go on: `MTH$HEXP` stores the corrected
+  R0 and R1 in its result, `MTH$CVT_GA_DA` goes on with its loop, and a routine that uses
+  the reserved operand it got (`MTH$HLOG2`, `MTH$CEXP`, `MTH$CSIN`, `MTH$CCOS`, `MTH$CLOG`,
+  `OTS$POWCx` at a base of 0) faults, a second signal, `h=2` in the probe. govax returns
+  what the first signal left. The oracle compares such a line's first condition.
+- **VMS's own oddities**, not copied. `MTH$DSQRT`'s user PC is inside the library. Just
+  past the range `MTH$HEXP` and `MTH$DTAND` leave dirty zeros with no condition.
+  `OTS$POWHLU_R3` leaves R2 and R3 alone, losing half its result. With no argument
+  `MTH$RANDOM` and the integer `MAX`s and `MIN`s read what follows the argument list.
+- **Last bits.** VMS's results are off from true by up to a few last bits, and govax's
+  aren't (Decision 4). 1,681 lines of 1,950 are the same and 256 within 3 last bits, or
+  200 for complex logarithms, powers, and quotients, whose VMS code rounds at each step.
+  A part that should be 0, `(-1, 0) ** (2, 0)`'s imaginary part, is listed.
+- **The PC** of a signal is the return address in govax (Decision 8). The oracle doesn't
+  compare it, nor the mechanism array's R1, which is whatever the routine had there.
 
 ## Subtasks (revised by the survey)
 
@@ -435,8 +352,7 @@ be corrected.
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
    to agree (`sema/constant.go`'s `power`, `complexArith`). Done.
 9. **MTH$RANDOM and the remaining conditions.** Done.
-10. **Tests from MACRO** programs, and the VMS probe. The probe is written
-    (`testdata/mth77`); its VAX run, and what follows from it, are to come.
+10. **Tests from MACRO** programs, and the VMS probe. Done.
 11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
 
 ## Progress log
@@ -817,3 +733,47 @@ be corrected.
   caller's frame, but `requestUnwind` counted one, so it listed that frame twice, and the first
   copy's return address became a second `RET`. `conditionDispatch.hasStubFrame` now tells them
   apart, and `TestUnwindFromJSB` fails without it. No earlier test unwound from a JSB entry.
+- **2026-10-30:** Subtask 10, VMS's answers. The author ran the probe on VMS 7.1 (simh's VAX
+  8600); `vax/mth77-vax.txt` is its output, all 1,950 lines and a normal exit. The first
+  comparison showed 350 lines differ. Most were the system's, so `TestMTH77Oracle` now takes each
+  line apart (`parseMTH77`) and compares results as values, by format: PC and R1 aren't compared,
+  and a value with sign and exponent 0 is 0.0 whatever its fraction, VMS's H routines leaving such
+  dirty zeros. govax changed to VMS's answers:
+
+  - **Integer powers.** The manual's tables read as 1.0 over the product, which the survey and
+    subtask 8 followed, but VMS has `2.0 ** (-127)` in F_floating, and `0.5 ** (-100000)` is
+    `MTH$_FLOOVEMAT`. Taking the reciprocal first fixes those and is 3 to 15 last bits off on the
+    sweep, and a study of the bits (`F` all of 7, `D` and `G` most) favors the product of each
+    square's reciprocal, now `vaxfloat.PowerBySquaring`'s order. FORTRAN's folding shares it, so
+    `PARAMETER (X = 2.0 ** (-127))` compiles again and `3.0 ** (-5)` has VMS's bits. No order tried
+    matches every bit. The real and complex forms both use it.
+  - **Word results** have a clear high word (`MTH$IIABS(-32768)` is `^X00008000`), except
+    `OTS$POWII`'s negative exponents, whose -1 is a whole longword.
+  - **`MTH$AMOD` and its kind:** a zero divisor is `MTH$_INVARGMAT`, and a quotient past the range
+    gives 0.0 quietly. **`MTH$JMOD`** traps `SS$_INTOVF` on the largest negative over -1 (`IMOD`
+    doesn't), and both leave R0 clear after `SS$_INTDIV`.
+  - **`MAX` and `MIN` with no arguments:** no `MTH$_WRONUMARG`, which nothing signals. **`MTH$SNGLG`**
+    below the range is 0.0 whatever FU. **`MTH$CVT_xA_xA`** returns 0.
+  - **`MTH$CEXP`'s factor** too small is `MTH$_FLOUNDMAT` under FU, though no page lists it, and so
+    `OTS$POWCC`'s. **`MTH$CxLOG`** of a modulus past the range is `MTH$_FLOOVEMAT`, in F too, and of 0
+    `MTH$_LOGZERNEG` in D and G (`INVARGMAT` in F); `OTS$POWCx` of a base of 0 the same.
+    **`MTH$CxSQRT`** has no overflow at all, whatever its page's `SS$_FLTOVF_F`.
+  - **`OTS$MULCx`'s overflow** is the hardware's, and `OTS$POWCx`'s too when the exponent times the
+    logarithm is what overflows. `OTS$POWCxJ` of 0 to 0 or below leaves both parts reserved.
+    `OTS$POWII`, `POWJJ` leave R0 clear after `MTH$_UNDEXP`, and `POWLULU` 1.
+  - **`MTH$HATAN2` of (0, 0)** leaves its result alone (`errNoAngle`), the other H failures storing
+    the reserved operand.
+
+  What VMS confirmed as govax had it: `MTH$RANDOM`'s values, FU's gate on `SIND`, `SINCOSD`, and `TAND`
+  (but `DTAND`, below), `TAN` and `SIN` of a huge argument (a value, no `SIGLOSMAT`), the limits of
+  `EXP`, `CSIN`, and `CCOS` (EXP's, not `COSH`'s), `MTH$GEXP`'s underflow at the format's limit rather
+  than the manual's, `ANINT` just below 0.5, `ATAN2`'s quiet underflow and its pi at (0, -1), `REAL` and
+  `AIMAG`, `SINCOSD`'s results after a continue, `IMOD(-32768, -1)`, `(-2) ** 3`, and the 8 F, D, and
+  G conditions continued. And the 43 JSB entries no manual gives take their arguments in R0 up,
+  one after the other, with results from R0, as section 1.2 has it for one argument: all are written
+  (`jsbBinaryEntry`, `jsbComplexEntry`, `jsbModulusEntry`, `jsbSignEntry`), and only `MTH$$REDUCE_`
+  stays a stub. The oracle looks only at their result registers, VMS's others being its scratch.
+
+  What's left is the "What still differs" list above. Breaking the code showed the checks can tell:
+  15 changes, each failing the oracle, and most unit tests too (the ones without, the JSB entries'
+  table lines, `errNoAngle`, and `POWCx`'s overflow, the oracle holds alone). The full suite passes.

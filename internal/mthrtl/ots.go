@@ -37,9 +37,10 @@ import (
 // may round either way: 4097.0 ** 2.0 is exactly halfway in F_floating. Still within
 // the plan's one ulp.
 //
-// Several pages list both SS$_FLTOVF and MTH$_FLOOVEMAT. Overflow is MTH$_FLOOVEMAT
-// wherever the page has it, the two pages of the same algorithm that list only one
-// (OTS$POWDD, OTS$POWxLU) naming that. Unconfirmed (the probe, subtask 10).
+// Several pages list both SS$_FLTOVF and MTH$_FLOOVEMAT. A real power's overflow is
+// MTH$_FLOOVEMAT, as on VMS 7.1 (testdata/mth77). A complex product's or quotient's is
+// the hardware's, and a complex power's is the hardware's if the exponent times the
+// logarithm is what overflows, and otherwise MTH$CEXP's.
 
 var errUndefinedPower = domainError(vmsdef.LibrarySymbols["MTH$_UNDEXP"])
 
@@ -69,7 +70,7 @@ func returnWords(env *corevms.Environment, words []uint32) uint32 {
 // failInRegisters signals err's condition for a routine with a result of count
 // longwords in registers. A handler can correct only R0 and R1, so R2 and R3 are
 // clear when it continues, what the reserved operand or an underflow's 0.0 has
-// there. Unconfirmed (the probe, subtask 10).
+// there.
 func failInRegisters(env *corevms.Environment, count int, err error) (uint32, error) {
 	if count > 2 {
 		env.CPU().SetGPR(registers.R2, 0)
@@ -143,19 +144,28 @@ func powerEntry(baseFormat, exponentFormat, out vaxfloat.Format) corevms.ShimFun
 
 // integerPower is base ** n in format f, for an integer exponent. gate says what an
 // underflow in a product means, which the caller's FU decides: 0.0, going on, or the
-// error. If the products have come to 0.0 by then, 1.0 over them for a negative n
-// is the divide by zero the hardware would take; no real page lists it, and the
-// complex one does. Unconfirmed (the probe, subtask 10).
+// error. A negative n multiplies the reciprocals of the base's squares. A square too
+// small for the format has a reciprocal too large, so 0.5 ** (-100000) is MTH$_FLOOVEMAT,
+// as on VMS 7.1 (testdata/mth77), where the page's table reads as a divide by zero.
 func integerPower(f vaxfloat.Format, base vaxfloat.Value, n int64, gate func(vaxfloat.Value, error) (vaxfloat.Value, error)) (vaxfloat.Value, error) {
 	if base.IsZero() && n <= 0 {
 		return vaxfloat.Value{}, errUndefinedPower
 	}
 
-	mul := func(a, b vaxfloat.Value) (vaxfloat.Value, error) { return gate(vaxfloat.Mul(f, a, b)) }
+	mul := func(a, b vaxfloat.Value) (vaxfloat.Value, error) {
+		if n < 0 {
+			return noUnderflow(vaxfloat.Mul(f, a, b))
+		}
+
+		return gate(vaxfloat.Mul(f, a, b))
+	}
 	div := func(a, b vaxfloat.Value) (vaxfloat.Value, error) {
 		v, err := vaxfloat.Div(f, a, b)
+		if errors.Is(err, vaxfloat.ErrDivideByZero) {
+			return v, vaxfloat.ErrOverflow
+		}
 
-		return v, asTrap(err, vaxfloat.ErrDivideByZero)
+		return v, err
 	}
 
 	return vaxfloat.PowerBySquaring(base, vaxfloat.FromInt(1), n, mul, div)
@@ -228,17 +238,18 @@ func complexOperationEntry(f vaxfloat.Format, op complexOperation) corevms.ShimF
 		}
 
 		z, err := op(f, a, b)
+		z, err = gateComplexUnderflow(env, z, err)
 
 		return returnComplex(env, f, z, err)
 	}
 }
 
-// complexProduct is OTS$MULCD_R3 and OTS$MULCG_R3. Overflow is the page's
-// MTH$_FLOOVEMAT.
+// complexProduct is OTS$MULCD_R3 and OTS$MULCG_R3. Overflow is the hardware's, as on
+// VMS 7.1 (testdata/mth77), where the page lists MTH$_FLOOVEMAT.
 func complexProduct(f vaxfloat.Format, a, b complexValue) (complexValue, error) {
 	re, im, err := vaxfloat.ComplexMul(f, a.re, a.im, b.re, b.im)
 
-	return complexValue{re, im}, err
+	return complexValue{re, im}, asTrap(err, vaxfloat.ErrOverflow)
 }
 
 // complexQuotient is OTS$DIVC and its kind, whose page lists the hardware's
@@ -250,9 +261,10 @@ func complexQuotient(f vaxfloat.Format, a, b complexValue) (complexValue, error)
 }
 
 // complexPower is OTS$POWCC and its kind, the page's exp(y * log(x)). A base of 0
-// has no logarithm, so it's the page's MTH$_INVARGMAT whatever the exponent. The
-// overflow and the parts too small are MTH$CEXP's, this being that function of a
-// number that isn't rounded to the format first.
+// has no logarithm, so it's what the logarithm signals whatever the exponent
+// (zeroComplexBase). A product beyond the format is the hardware's overflow, and the
+// rest of the overflow and the parts too small are MTH$CEXP's, this being that function
+// of a number that isn't rounded to the format first.
 //
 // The product's imaginary part is an angle, and needs a good absolute accuracy to
 // find its sine, however large the exponent makes it, so the logarithm has the bits
@@ -262,7 +274,7 @@ func complexQuotient(f vaxfloat.Format, a, b complexValue) (complexValue, error)
 // the part that should be 0 is the angle's error, some 2^-30 of a last bit of the other.
 func complexPower(f vaxfloat.Format, x, y complexValue) (complexValue, error) {
 	if x.re.IsZero() && x.im.IsZero() {
-		return complexValue{}, errInvalidArg
+		return complexValue{}, zeroComplexBase(f)
 	}
 
 	size := max(y.re.Big().MantExp(nil), y.im.Big().MantExp(nil), 0)
@@ -275,23 +287,22 @@ func complexPower(f vaxfloat.Format, x, y complexValue) (complexValue, error) {
 	re := newFloat(inner).Sub(product(y.re.Big(), logRe, inner), product(y.im.Big(), logIm, inner))
 	im := newFloat(inner).Add(product(y.re.Big(), logIm, inner), product(y.im.Big(), logRe, inner))
 
+	if overflows(f, re) || overflows(f, im) {
+		return complexValue{}, errFloatOverflow
+	}
+
 	return exponentialParts(f, re, im)
 }
 
 // complexIntegerPower is OTS$POWCJ and its kind, in format f. The page's "Not (0.,0.)
 // <0" row says only "the product", but a power with a negative exponent has to be the
-// reciprocal, in the order of the real pages. It lists the hardware's exceptions,
-// and SS$_FLTDIV is what 1.0 over a product that has come to (0.0, 0.0) takes.
+// reciprocal, in the order of the real pages. It lists the hardware's exceptions.
 func complexIntegerPower(f vaxfloat.Format, base complexValue, n int64) (complexValue, error) {
 	if base.re.IsZero() && base.im.IsZero() && n <= 0 {
 		return complexValue{}, errUndefinedPower
 	}
 
-	mul := func(a, b complexValue) (complexValue, error) {
-		z, err := complexProduct(f, a, b)
-
-		return z, asTrap(err, vaxfloat.ErrOverflow)
-	}
+	mul := func(a, b complexValue) (complexValue, error) { return complexProduct(f, a, b) }
 	div := func(a, b complexValue) (complexValue, error) { return complexQuotient(f, a, b) }
 
 	return vaxfloat.PowerBySquaring(base, complexValue{re: vaxfloat.FromInt(1)}, n, mul, div)
@@ -311,6 +322,15 @@ func complexIntegerPowerEntry(f vaxfloat.Format) corevms.ShimFunc {
 
 		z, err := complexIntegerPower(f, base, long.fromValue(words[size]))
 
+		// A power with no value leaves both parts reserved on VMS 7.1: R2 too, when
+		// the imaginary part is there.
+		if errors.Is(err, errUndefinedPower) && size > 2 {
+			env.CPU().SetGPR(registers.R2, reservedR0)
+			env.CPU().SetGPR(registers.R3, 0)
+
+			return signalFailure(env, err)
+		}
+
 		return returnComplex(env, f, z, err)
 	}
 }
@@ -318,12 +338,13 @@ func complexIntegerPowerEntry(f vaxfloat.Format) corevms.ShimFunc {
 // integerPowerOfEntry makes OTS$POWII, OTS$POWJJ, and OTS$POWLULU.
 //
 // OTS$POWII's and OTS$POWJJ's pages have no table, and name floating traps and "a
-// negative base" as undefined, which looks copied from a floating page: FORTRAN's
-// (-2) ** 3 is -8. So only zero to zero or below signals MTH$_UNDEXP, and a negative
-// exponent is 1 / base ** |n|, truncated as an integer division is. VMS's mask sets IV
-// on these, so an overflow is SS$_INTOVF, with the low-order bits in R0. All
-// unconfirmed (the probe, subtask 10). OTS$POWLULU's page says it can't overflow: its
-// result is simply the low-order bits, and it has no negative numbers.
+// negative base" as undefined, which was copied from a floating page: FORTRAN's
+// (-2) ** 3 is -8. VMS 7.1 (testdata/mth77) says only zero to zero or below signals
+// MTH$_UNDEXP, a continuing handler then finding R0 clear (1 for OTS$POWLULU); a
+// negative exponent is 1 / base ** |n|, truncated as an integer division is, its answer
+// a whole longword, even a word's -1; and an overflow is SS$_INTOVF, with the low-order
+// bits in R0. OTS$POWLULU's page says it can't overflow: its result is simply the
+// low-order bits, and it has no negative numbers.
 func integerPowerOfEntry(w width) corevms.ShimFunc {
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
 		words := valueArguments(argv, 2)
@@ -331,9 +352,14 @@ func integerPowerOfEntry(w width) corevms.ShimFunc {
 
 		switch {
 		case base == 0 && n <= 0:
-			return signalFailure(env, errUndefinedPower)
+			r0 := uint32(0)
+			if w.unsigned {
+				r0 = 1
+			}
+
+			return signalKeepingR1(env, uint32(errUndefinedPower), r0)
 		case n < 0:
-			return w.lowBits(big.NewInt(negativePower(base, n))), nil
+			return uint32(negativePower(base, n)), nil
 		}
 
 		low, overflow := integerPowerBits(w, base, n)

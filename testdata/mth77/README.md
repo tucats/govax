@@ -69,3 +69,8 @@ count of last bits. The letter after it is the format.
 
 No licensed file goes on the volume, so it needs no erasing. `MTH77.MLG` is MACRO's log, and
 isn't copied.
+
+## The VAX run (2026-10-30)
+
+OpenVMS V7.1 on simh's VAX 8600: all 1,950 lines, `$STATUS` 1. The phase doc's progress log has
+what it found, and its "What still differs" what remains.

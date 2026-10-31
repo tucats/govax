@@ -21,14 +21,10 @@ const (
 )
 
 // extreme finds the routine's answer among the arguments in values, in order, so a
-// reserved operand anywhere faults. With none, it's MTH$_WRONUMARG, the message for
-// a wrong number of arguments; the manual gives these routines "n" of them, and no
-// condition at all (a question for the probe, subtask 10).
+// reserved operand anywhere faults. With none it's 0, and no condition, as MTH$AMAX1's
+// is on VMS 7.1 (testdata/mth77), whose integer forms read whatever follows the
+// argument list.
 func extreme(env *corevms.Environment, load loader, values []uint32, want int) (vaxfloat.Value, error) {
-	if len(values) == 0 {
-		return vaxfloat.Value{}, errWrongCount
-	}
-
 	var best vaxfloat.Value
 
 	for i, addr := range values {
