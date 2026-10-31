@@ -492,7 +492,8 @@ never had.
   `tparsematch.go`, on `corevms.Environment.CallbackList`), `$FILESCAN`
   (`corevms/filescan.go`), and the `$TPADEF`, `$FSCNDEF`, `$INIT_STATE`, `$STATE`,
   `$TRAN`, and `$END_STATE` macros; FORRTL's namelist input over them matches VMS's
-  run, and `testdata/tpa80`'s probe waits for its VMS run.
+  run, and so does `testdata/tpa80`'s probe (the manual has msk-adr and the mask the
+  wrong way round).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -755,8 +756,9 @@ never had.
   table's bytes, which characters each symbol type takes, every grammar under both
   routines, raw type bytes, argument blocks, `$FILESCAN`), `tpa80b.mar` and
   `tpa80c.mar` (macro forms, assembled only), `tpa80.com`, `exchange.cmd`, and
-  `copyout.cmd`. `TestTPA80Oracle` matches `vax/tpa80-vax.txt` once VMS has run it;
-  `TestTPA80Manual` holds cases to the manuals until then.
+  `copyout.cmd`. `TestTPA80Oracle` matches VMS V7.1's `vax/tpa80-vax.txt` line for line
+  but for `expectedTPA80Differences`; `vax/round1` is the first run, which real MACRO
+  stopped.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.

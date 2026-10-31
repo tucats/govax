@@ -15,16 +15,19 @@ type tpaMatch struct {
 	// n is how many characters the token is.
 	n uint32
 
-	// char says the type is a single character's: value8 goes to TPA$B_CHAR
-	// for an action routine, and to msk-adr as a byte.
+	// char says the type is a single character's: value8 goes to TPA$B_CHAR's
+	// longword, and to msk-adr as a byte.
 	char   bool
 	value8 byte
 
-	// number says value goes to TPA$L_NUMBER for an action routine; longword
-	// that it also goes to msk-adr as a longword, where another type stores
-	// its token's descriptor.
+	// number says value goes to TPA$L_NUMBER; longword that it also goes to
+	// msk-adr as a longword, where another type stores its token's descriptor.
 	number, longword bool
 	value            uint32
+
+	// failure is the status of a match that failed in a service: it stands
+	// for the parse's status as a failing action routine's does.
+	failure uint32
 }
 
 // tpaInput reads the string left to parse. A memory error ends the string, and
@@ -90,27 +93,25 @@ func isDigitChar(c byte) bool { return c >= '0' && c <= '9' }
 func isOctalChar(c byte) bool { return c >= '0' && c <= '7' }
 
 func isHexChar(c byte) bool {
-	return isDigitChar(c) || c >= 'A' && c <= 'F'
+	return isDigitChar(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f'
 }
 
 func isLetterChar(c byte) bool {
 	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
 }
 
-// isMultinational says whether c is a letter of the DEC multinational set.
+// isMultinational says whether c is a letter of the DEC multinational set: the
+// codes from ^XC0 to ^XFD but the three VMS's parser refuses (testdata/tpa80).
 func isMultinational(c byte) bool {
-	return c >= 0xC0 && c <= 0xFD
+	return c >= 0xC0 && c <= 0xFD && c != 0xD0 && c != 0xDE && c != 0xF0
 }
 
 func isAlphaChar(c byte) bool { return isLetterChar(c) || isMultinational(c) }
 
-func isStringChar(c byte) bool { return isLetterChar(c) || isDigitChar(c) }
+func isStringChar(c byte) bool { return isAlphaChar(c) || isDigitChar(c) }
 
-// isKeywordChar is the symbol constituent set a keyword is written in.
-func isKeywordChar(c byte) bool { return isStringChar(c) || c == '$' || c == '_' }
-
-// isSymbolChar is TPA$_SYMBOL's set: the keywords', and multinational letters.
-func isSymbolChar(c byte) bool { return isKeywordChar(c) || isMultinational(c) }
+// isSymbolChar is TPA$_SYMBOL's set, which also ends a keyword's token.
+func isSymbolChar(c byte) bool { return isStringChar(c) || c == '$' || c == '_' }
 
 // tpaSymbolTypes is each symbol type's matcher, by its type code.
 var tpaSymbolTypes = map[byte]func(*tparser, tpaInput) (tpaMatch, bool){
@@ -154,7 +155,7 @@ var tpaSymbolTypes = map[byte]func(*tparser, tpaInput) (tpaMatch, bool){
 		return tpaMatch{n: n}, options&tpaBlanks != 0 && n > 0
 	},
 	243: numberOf(10, isDigitChar),
-	244: numberOf(8, isOctalChar),
+	244: octalNumber,
 	245: numberOf(16, isHexChar),
 	246: func(*tparser, tpaInput) (tpaMatch, bool) { return tpaMatch{}, true },
 	247: func(_ *tparser, in tpaInput) (tpaMatch, bool) { return tpaMatch{}, in.n == 0 },
@@ -195,6 +196,19 @@ func numberOf(radix uint64, class func(byte) bool) func(*tparser, tpaInput) (tpa
 	}
 }
 
+// octalNumber takes all the digits in front, and fails if an 8 or 9 is among
+// them, where TPA$_HEX and TPA$_DECIMAL stop at a character they can't use.
+func octalNumber(_ *tparser, in tpaInput) (tpaMatch, bool) {
+	n := in.run(0, isDigitChar)
+	if n == 0 || in.run(0, isOctalChar) != n {
+		return tpaMatch{}, false
+	}
+
+	value, ok := in.value(0, n, 8)
+
+	return tpaMatch{n: n, number: true, longword: true, value: value}, ok
+}
+
 // value converts n digits at offset i, and says whether it's less than 2**32.
 func (in tpaInput) value(i, n uint32, radix uint64) (uint32, bool) {
 	total := uint64(0)
@@ -206,7 +220,11 @@ func (in tpaInput) value(i, n uint32, radix uint64) (uint32, bool) {
 		}
 
 		digit := uint64(c - '0')
-		if c >= 'A' {
+
+		switch {
+		case c >= 'a':
+			digit = uint64(c-'a') + 10
+		case c >= 'A':
 			digit = uint64(c-'A') + 10
 		}
 
@@ -219,21 +237,34 @@ func (in tpaInput) value(i, n uint32, radix uint64) (uint32, bool) {
 	return uint32(total), true
 }
 
-// uicField reads one field of a UIC at offset i: octal digits up to a word, or
-// * for all of its bits. It returns the value and the field's length.
-func (in tpaInput) uicField(i uint32) (uint32, uint32, bool) {
+// uicField reads one field of a UIC at offset i, after any blanks: octal digits
+// up to limit, or * for limit. It returns the value and the offset past the
+// field and the blanks after it. The group's limit is ^X3FFF, as a UIC's group
+// is 14 bits (testdata/tpa80).
+func (in tpaInput) uicField(i, limit uint32) (uint32, uint32, bool) {
+	i += in.run(i, isBlankChar)
+
+	var value uint32
+
 	if c, ok := in.at(i); ok && c == '*' {
-		return 0xFFFF, 1, true
+		value = limit
+		i++
+	} else {
+		n := in.run(i, isOctalChar)
+		if n == 0 {
+			return 0, 0, false
+		}
+
+		v, ok := in.value(i, n, 8)
+		if !ok || v > limit {
+			return 0, 0, false
+		}
+
+		value = v
+		i += n
 	}
 
-	n := in.run(i, isOctalChar)
-	if n == 0 {
-		return 0, 0, false
-	}
-
-	value, ok := in.value(i, n, 8)
-
-	return value, n, ok && value <= 0xFFFF
+	return value, i + in.run(i, isBlankChar), true
 }
 
 // closingBracket returns the bracket that ends one opening at c.
@@ -248,9 +279,8 @@ func closingBracket(c byte) (byte, bool) {
 	return 0, false
 }
 
-// matchUIC matches [group,member] or <group,member>. Its value is an action
-// routine's TPA$L_NUMBER; msk-adr gets its descriptor (Table LIB-21 calls only
-// the three number types numbers).
+// matchUIC matches [group,member] or <group,member>. Its value goes to
+// TPA$L_NUMBER and to msk-adr as a number's does.
 func matchUIC(_ *tparser, in tpaInput) (tpaMatch, bool) {
 	open, ok := in.at(0)
 	if !ok {
@@ -262,31 +292,31 @@ func matchUIC(_ *tparser, in tpaInput) (tpaMatch, bool) {
 		return tpaMatch{}, false
 	}
 
-	group, n, ok := in.uicField(1)
+	group, i, ok := in.uicField(1, 0x3FFF)
 	if !ok {
 		return tpaMatch{}, false
 	}
 
-	i := 1 + n
 	if c, ok := in.at(i); !ok || c != ',' {
 		return tpaMatch{}, false
 	}
 
-	member, n, ok := in.uicField(i + 1)
+	member, i, ok := in.uicField(i+1, 0xFFFF)
 	if !ok {
 		return tpaMatch{}, false
 	}
 
-	i += 1 + n
 	if c, ok := in.at(i); !ok || c != closing {
 		return tpaMatch{}, false
 	}
 
-	return tpaMatch{n: i + 1, number: true, value: group<<16 | member}, true
+	return tpaMatch{n: i + 1, number: true, longword: true, value: group<<16 | member}, true
 }
 
-// matchIdent matches a rights identifier in any of the manual's forms: a UIC,
-// [name1,name2], [name], and their angle-bracketed forms, name, %Xhex, or *.
+// matchIdent matches a rights identifier in the manual's forms: a UIC, [name],
+// and <name>, name, %Xhex, or *. A name $ASCTOID refuses fails with its status.
+// [name1,name2], which the manual also gives, is a syntax error here: VMS 7.1
+// refuses [SYSTEM,SYSTEM], and what it would take is unconfirmed.
 func matchIdent(p *tparser, in tpaInput) (tpaMatch, bool) {
 	if m, ok := matchUIC(p, in); ok {
 		return m, true
@@ -295,6 +325,10 @@ func matchIdent(p *tparser, in tpaInput) (tpaMatch, bool) {
 	first, ok := in.at(0)
 	if !ok {
 		return tpaMatch{}, false
+	}
+
+	number := func(n, value uint32) tpaMatch {
+		return tpaMatch{n: n, number: true, longword: true, value: value}
 	}
 
 	if first == '%' {
@@ -309,63 +343,48 @@ func matchIdent(p *tparser, in tpaInput) (tpaMatch, bool) {
 
 		value, ok := in.value(2, n, 16)
 
-		return tpaMatch{n: 2 + n, number: true, value: value}, ok
+		return number(2+n, value), ok
 	}
 
 	if first == '*' {
-		return tpaMatch{n: 1, number: true, value: 0xFFFFFFFF}, true
+		return number(1, 0xFFFFFFFF), true
 	}
 
-	lookup := func(start, n uint32) (uint32, bool) {
-		var name strings.Builder
-
-		for k := range n {
-			c, _ := in.at(start + k)
-			name.WriteByte(c)
-		}
-
-		value, status := p.env.IdentifierValue(name.String())
-
-		return value, status == 0
-	}
+	start, end := uint32(0), uint32(0)
 
 	closing, bracketed := closingBracket(first)
-	if !bracketed {
-		n := in.run(0, isKeywordChar)
-		if n == 0 {
-			return tpaMatch{}, false
-		}
-
-		value, ok := lookup(0, n)
-
-		return tpaMatch{n: n, number: true, value: value}, ok
+	if bracketed {
+		start = 1
 	}
 
-	n := in.run(1, isKeywordChar)
+	n := in.run(start, isSymbolChar)
 	if n == 0 {
 		return tpaMatch{}, false
 	}
 
-	start, i := uint32(1), 1+n
+	end = start + n
 
-	if c, ok := in.at(i); ok && c == ',' {
-		start = i + 1
-
-		n = in.run(start, isKeywordChar)
-		if n == 0 {
+	if bracketed {
+		if c, ok := in.at(end); !ok || c != closing {
 			return tpaMatch{}, false
 		}
 
-		i = start + n
+		end++
 	}
 
-	if c, ok := in.at(i); !ok || c != closing {
-		return tpaMatch{}, false
+	var name strings.Builder
+
+	for k := range n {
+		c, _ := in.at(start + k)
+		name.WriteByte(c)
 	}
 
-	value, ok := lookup(start, n)
+	value, status := p.env.IdentifierValue(name.String())
+	if status != 0 {
+		return tpaMatch{failure: status}, false
+	}
 
-	return tpaMatch{n: i + 1, number: true, value: value}, ok
+	return number(end, value), true
 }
 
 // match says whether t's type matches the front of the string.
@@ -423,7 +442,7 @@ func (p *tparser) matchKeyword(index byte, in tpaInput, ambiguous *bool) (tpaMat
 		return tpaMatch{}, false, nil
 	}
 
-	token := in.run(0, isKeywordChar)
+	token := in.run(0, isSymbolChar)
 	if token == 0 {
 		return tpaMatch{}, false, nil
 	}
@@ -458,6 +477,11 @@ func (p *tparser) matchKeyword(index byte, in tpaInput, ambiguous *bool) (tpaMat
 	case options&tpaAbbrfm != 0:
 		return tpaMatch{n: token}, true, nil
 
+	// The manual has TPA$B_MCOUNT ignored with TPA$V_ABBREV set. VMS 7.1 looks
+	// at it first (testdata/tpa80).
+	case options>>24 != 0 && token >= options>>24:
+		return tpaMatch{n: token}, true, nil
+
 	case options&tpaAbbrev != 0:
 		following, _, err := p.keywordAt(next)
 		if err != nil {
@@ -472,8 +496,6 @@ func (p *tparser) matchKeyword(index byte, in tpaInput, ambiguous *bool) (tpaMat
 
 		return tpaMatch{n: token}, true, nil
 
-	case options>>24 != 0 && token >= options>>24:
-		return tpaMatch{n: token}, true, nil
 	}
 
 	return tpaMatch{}, false, nil

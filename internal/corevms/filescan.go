@@ -27,8 +27,13 @@ type FileSpecParts struct {
 	End int
 }
 
-// FileSpecPart is one part's place in the string scanned.
-type FileSpecPart struct{ Start, End int }
+// FileSpecPart is one part's place in the string scanned. Found is its flag in
+// $FILESCAN's mask, which a part may have with no characters: a type alone sets
+// the name's, and "::" the primary node's (testdata/tpa80).
+type FileSpecPart struct {
+	Start, End int
+	Found      bool
+}
 
 // Len is the part's length, 0 when it's missing.
 func (p FileSpecPart) Len() int { return p.End - p.Start }
@@ -36,7 +41,8 @@ func (p FileSpecPart) Len() int { return p.End - p.Start }
 // isFileNameChar says whether c can be in a node, device, name, or type.
 func isFileNameChar(c byte) bool {
 	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' ||
-		c == '$' || c == '_' || c == '-'
+		c == '$' || c == '_' || c == '-' ||
+		c >= 0xC0 && c <= 0xFD && c != 0xD0 && c != 0xDE && c != 0xF0
 }
 
 // isWildChar says whether c can be in a name or type but not a node or device.
@@ -68,10 +74,6 @@ func scanNodes(text string, parts *FileSpecParts) int {
 			name++
 		}
 
-		if name == i {
-			return i
-		}
-
 		access := name
 		if access < len(text) && text[access] == '"' {
 			end := closingQuote(text, access)
@@ -87,13 +89,13 @@ func scanNodes(text string, parts *FileSpecParts) int {
 		}
 
 		if parts.Node.End == 0 {
-			parts.Primary = FileSpecPart{i, name}
-			parts.Access = FileSpecPart{name, access}
+			parts.Primary = FileSpecPart{i, name, true}
+			parts.Access = FileSpecPart{name, access, access > name}
 		} else {
-			parts.Secondary = FileSpecPart{parts.Access.End + 2, access + 2}
+			parts.Secondary = FileSpecPart{parts.Access.End + 2, access + 2, true}
 		}
 
-		parts.Node = FileSpecPart{0, access + 2}
+		parts.Node = FileSpecPart{0, access + 2, true}
 		i = access + 2
 	}
 }
@@ -129,29 +131,33 @@ func scanDevice(text string, i int, parts *FileSpecParts) int {
 		return i
 	}
 
-	parts.Device = FileSpecPart{i, j + 1}
+	parts.Device = FileSpecPart{i, j + 1, true}
 
 	return j + 1
 }
 
-// scanDirectory reads [dir] or <dir>, or a root and then a directory,
-// [root.][dir], at text[i:].
+// scanDirectory reads [dir] or <dir>, or a root and then perhaps a directory,
+// [root.][dir], at text[i:]. A directory ending in "." is a root by that alone,
+// unless the "." is the end of "...".
 func scanDirectory(text string, i int, parts *FileSpecParts) int {
 	end := directoryEnd(text, i)
 	if end < 0 {
 		return i
 	}
 
-	if text[end-2] == '.' {
-		if next := directoryEnd(text, end); next >= 0 {
-			parts.Root = FileSpecPart{i, end}
-			parts.Directory = FileSpecPart{end, next}
+	if text[end-2] != '.' || strings.HasSuffix(text[:end-1], "...") {
+		parts.Directory = FileSpecPart{i, end, true}
 
-			return next
-		}
+		return end
 	}
 
-	parts.Directory = FileSpecPart{i, end}
+	parts.Root = FileSpecPart{i, end, true}
+
+	if next := directoryEnd(text, end); next >= 0 {
+		parts.Directory = FileSpecPart{end, next, true}
+
+		return next
+	}
 
 	return end
 }
@@ -174,11 +180,19 @@ func directoryEnd(text string, i int) int {
 		return -1
 	}
 
+	comma := false
+
 	for j := i + 1; j < len(text); j++ {
 		switch c := text[j]; {
 		case c == closing:
+			if comma && !isUICText(text[i+1:j]) {
+				return -1
+			}
+
 			return j + 1
-		case isFileNameChar(c), isWildChar(c), c == '.', c == ',':
+		case c == ',':
+			comma = true
+		case isFileNameChar(c), isWildChar(c), c == '.':
 		default:
 			return -1
 		}
@@ -187,12 +201,30 @@ func directoryEnd(text string, i int) int {
 	return -1
 }
 
+// isUICText says whether a directory with a comma in it is a numeric UIC, the
+// only directory that may have one: "[1,2]", and not "[A,B]" (testdata/tpa80;
+// wildcards here are unconfirmed).
+func isUICText(text string) bool {
+	group, member, found := strings.Cut(text, ",")
+	if !found || group == "" || member == "" {
+		return false
+	}
+
+	for _, c := range []byte(group + member) {
+		if (c < '0' || c > '9') && !isWildChar(c) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // scanFileName reads the name, type, and version at text[i:]. After a node, the
 // name may be a quoted file specification, quotation marks included.
 func scanFileName(text string, i int, parts *FileSpecParts) int {
 	if parts.Node.End > 0 && i < len(text) && text[i] == '"' {
 		if end := closingQuote(text, i); end >= 0 {
-			parts.Name = FileSpecPart{i, end + 1}
+			parts.Name = FileSpecPart{i, end + 1, true}
 
 			return end + 1
 		}
@@ -206,21 +238,34 @@ func scanFileName(text string, i int, parts *FileSpecParts) int {
 		return j
 	}
 
-	j := nameChars(i)
-	parts.Name = FileSpecPart{i, j}
-
-	if j >= len(text) || text[j] != '.' {
-		return scanVersion(text, j, ';', parts)
+	// A hyphen can't start a name.
+	j := i
+	if j < len(text) && text[j] != '-' {
+		j = nameChars(i)
 	}
 
-	k := nameChars(j + 1)
-	parts.Type = FileSpecPart{j, k}
+	parts.Name = FileSpecPart{i, j, j > i}
 
-	if k < len(text) && text[k] == '.' {
-		return scanVersion(text, k, '.', parts)
+	end := j
+
+	if j < len(text) && text[j] == '.' {
+		end = nameChars(j + 1)
+		parts.Type = FileSpecPart{j, end, true}
+
+		if end < len(text) && text[end] == '.' {
+			end = scanVersion(text, end, '.', parts)
+		} else {
+			end = scanVersion(text, end, ';', parts)
+		}
+	} else {
+		end = scanVersion(text, j, ';', parts)
 	}
 
-	return scanVersion(text, k, ';', parts)
+	if parts.Type.Found || parts.Version.Found {
+		parts.Name.Found = true
+	}
+
+	return end
 }
 
 // scanVersion reads a version at text[i:], after its delimiter: digits with an
@@ -239,7 +284,7 @@ func scanVersion(text string, i int, delimiter byte, parts *FileSpecParts) int {
 		j++
 	}
 
-	parts.Version = FileSpecPart{i, j}
+	parts.Version = FileSpecPart{i, j, true}
 
 	return j
 }
@@ -287,10 +332,11 @@ func serviceSysFilescan(env *Environment, argv []uint32) (uint32, error) {
 
 	parts := ScanFileSpec(text)
 
-	// With an auxiliary buffer, the string is copied there and the addresses
-	// are the buffer's. (Reducing a primary node's quotation isn't done: a
-	// quoted node name is not one this scanner takes.)
-	if aux := optArg(argv, 3); aux != 0 {
+	// With an auxiliary buffer and a node to simplify, the string is copied
+	// there and the addresses are the buffer's. VMS 7.1 leaves the buffer and
+	// retlen alone for a specification with no node (testdata/tpa80). With one
+	// it's unconfirmed, and a quoted primary node isn't reduced.
+	if aux := optArg(argv, 3); aux != 0 && parts.Node.Found {
 		size, err := mem.LoadWord(cpu, aux)
 		if err != nil {
 			return ssAccVio, nil
@@ -325,7 +371,7 @@ func serviceSysFilescan(env *Environment, argv []uint32) (uint32, error) {
 		var mask uint32
 
 		for bit, item := range fileScanItems {
-			if item.part(&parts).Len() > 0 {
+			if item.part(&parts).Found {
 				mask |= 1 << bit
 			}
 		}
@@ -357,7 +403,7 @@ func storeFileScanItems(env *Environment, list, base uint32, parts *FileSpecPart
 
 		switch code := int(head >> 16); {
 		case code == fscnFilespec:
-			part = FileSpecPart{0, parts.End}
+			part = FileSpecPart{Start: 0, End: parts.End}
 		case code > fscnFilespec && code <= fscnFilespec+len(fileScanItems):
 			part = fileScanItems[code-fscnFilespec-1].part(parts)
 		default:

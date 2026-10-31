@@ -33,9 +33,12 @@ import (
 //	subexpr   word   the subexpression's state, self-relative
 //	argument  long   for the action routine, as it is
 //	action    long   the action routine, self-relative
-//	mask      long   ORed into the longword at msk-adr
 //	msk-adr   long   self-relative
+//	mask      long   ORed into the longword at msk-adr
 //	target    word   self-relative, or tpaExit or tpaFail
+//
+// The manual has the mask before msk-adr; VMS's macros write them this way
+// round (testdata/tpa80's table dump).
 //
 // The two routines differ in how they call an action routine. LIB$TPARSE calls
 // it with CALLG, the argument block being its argument list (so it reaches the
@@ -90,6 +93,7 @@ const (
 	tpaExit     = -1
 	tpaFail     = -2
 	tpaKeywords = 220
+	tpaLambda   = 246
 	tpaSubexpr  = 248
 )
 
@@ -100,7 +104,7 @@ const tpaMaxDepth = 16384
 
 var (
 	libInvType   = vmsdef.Symbols["LIB$_INVTYPE"]
-	libInvArgTPA = vmsdef.Symbols["LIB$_INVARG"]
+	ssInsfArgTPA = vmsdef.Symbols["SS$_INSFARG"]
 )
 
 // errTPAInvalidType is a table entry no type code means: LIB$_INVTYPE.
@@ -158,8 +162,8 @@ func tparse(env *corevms.Environment, argv []uint32, byCalls bool) (uint32, erro
 		return memoryFault(env, err)
 	}
 
-	if int32(count) < tpaCount0 {
-		return libInvArgTPA, nil
+	if count < tpaCount0 {
+		return ssInsfArgTPA, nil
 	}
 
 	ok, status, err := p.run(arg(argv, 1), 0)
@@ -233,11 +237,12 @@ func (p *tparser) run(state uint32, depth int) (ok bool, status uint32, err erro
 	}
 
 	for {
-		if err := p.enterState(); err != nil {
+		entry, err := p.enterState()
+		if err != nil {
 			return false, 0, err
 		}
 
-		next, final, failed, status, err := p.runState(state, depth)
+		next, final, failed, status, err := p.runState(state, entry, depth)
 
 		switch {
 		case err != nil:
@@ -256,43 +261,40 @@ func (p *tparser) run(state uint32, depth int) (ok bool, status uint32, err erro
 
 // enterState does what's done on entering any state: TPA$V_AMBIG is cleared,
 // and unless blanks are significant the blanks and tabs in front are removed.
-func (p *tparser) enterState() error {
+// It returns the string as it was before that.
+func (p *tparser) enterState() (tpaInput, error) {
 	options, err := p.field(tpaOptions)
 	if err != nil {
-		return err
+		return tpaInput{}, err
 	}
 
 	if options&tpaAmbig != 0 {
 		if err := p.setField(tpaOptions, options&^tpaAmbig); err != nil {
-			return err
+			return tpaInput{}, err
 		}
 	}
 
-	if options&tpaBlanks != 0 {
-		return nil
-	}
-
 	in, err := p.input()
-	if err != nil {
-		return err
+	if err != nil || options&tpaBlanks != 0 {
+		return in, err
 	}
 
 	n := in.run(0, isBlankChar)
 	if p.err != nil {
-		return p.err
+		return in, p.err
 	}
 
 	if n == 0 {
-		return nil
+		return in, nil
 	}
 
-	return p.setString(in.n-n, in.ptr+n)
+	return in, p.setString(in.n-n, in.ptr+n)
 }
 
 // runState tries state's transitions in order. If one is taken, it returns the
 // next state, or final if that's TPA$_EXIT or TPA$_FAIL (with the status of a
 // failure). If none is, failed is true, with the status.
-func (p *tparser) runState(state uint32, depth int) (next uint32, final int16, failed bool, status uint32, err error) {
+func (p *tparser) runState(state uint32, entry tpaInput, depth int) (next uint32, final int16, failed bool, status uint32, err error) {
 	var (
 		alternate uint32 // a failing action routine's status
 		ambiguous bool   // keywords aren't recognized in this state
@@ -304,7 +306,7 @@ func (p *tparser) runState(state uint32, depth int) (next uint32, final int16, f
 			return 0, 0, false, 0, err
 		}
 
-		taken, err := p.try(&t, depth, &alternate, &ambiguous)
+		taken, err := p.try(&t, entry, depth, &alternate, &ambiguous)
 		if err != nil {
 			return 0, 0, false, 0, err
 		}
@@ -445,12 +447,6 @@ func (p *tparser) decode(at uint32) (tpaTransition, error) {
 		t.action = pos + d
 	}
 
-	if t.has(tpaFlagMask) {
-		if t.mask, err = long(); err != nil {
-			return t, err
-		}
-	}
-
 	if t.has(tpaFlagMskAdr) {
 		d, err := long()
 		if err != nil {
@@ -458,6 +454,12 @@ func (p *tparser) decode(at uint32) (tpaTransition, error) {
 		}
 
 		t.mskAdr = pos + d
+	}
+
+	if t.has(tpaFlagMask) {
+		if t.mask, err = long(); err != nil {
+			return t, err
+		}
 	}
 
 	if t.has(tpaFlagTarget) {
@@ -496,7 +498,7 @@ func (p *tparser) bytes(addr uint32, n int) ([]byte, error) {
 
 // try tries one transition, and takes it if it matches and its action routine,
 // if any, agrees. A transition that isn't taken leaves the string as it was.
-func (p *tparser) try(t *tpaTransition, depth int, alternate *uint32, ambiguous *bool) (bool, error) {
+func (p *tparser) try(t *tpaTransition, entry tpaInput, depth int, alternate *uint32, ambiguous *bool) (bool, error) {
 	in, err := p.input()
 	if err != nil {
 		return false, err
@@ -505,6 +507,16 @@ func (p *tparser) try(t *tpaTransition, depth int, alternate *uint32, ambiguous 
 	var m tpaMatch
 
 	if t.has(tpaFlagSymbol) && t.kind == tpaSubexpr {
+		// A subexpression's type with no pointer is a bad table, and the token
+		// is what a failure's is.
+		if !t.has(tpaFlagSubexpr) {
+			if err := p.failedToken(); err != nil {
+				return false, err
+			}
+
+			return false, errTPAInvalidType
+		}
+
 		ok, status, err := p.run(t.subexpr, depth+1)
 		if err != nil {
 			return false, err
@@ -533,7 +545,16 @@ func (p *tparser) try(t *tpaTransition, depth int, alternate *uint32, ambiguous 
 		}
 
 		if !matched {
+			if m.failure != 0 {
+				*alternate = m.failure
+			}
+
 			return false, nil
+		}
+
+		// TPA$_LAMBDA uses nothing, not even the blanks the state took off.
+		if t.has(tpaFlagSymbol) && t.kind == tpaLambda {
+			in = entry
 		}
 
 		if err := p.setString(in.n-m.n, in.ptr+m.n); err != nil {
@@ -545,8 +566,22 @@ func (p *tparser) try(t *tpaTransition, depth int, alternate *uint32, ambiguous 
 		return false, err
 	}
 
+	// The manual has these set only for an action routine; VMS 7.1 sets them
+	// on any match (testdata/tpa80).
+	if m.char {
+		if err := p.setField(tpaChar, uint32(m.value8)); err != nil {
+			return false, err
+		}
+	}
+
+	if m.number {
+		if err := p.setField(tpaNumber, m.value); err != nil {
+			return false, err
+		}
+	}
+
 	if t.has(tpaFlagAction) {
-		accepted, err := p.callAction(t, &m, alternate)
+		accepted, err := p.callAction(t, alternate)
 		if err != nil {
 			return false, err
 		}
@@ -560,21 +595,8 @@ func (p *tparser) try(t *tpaTransition, depth int, alternate *uint32, ambiguous 
 }
 
 // callAction calls t's action routine and reports whether it accepted the
-// transition. The fields it may look at are set only now, each only by the
-// kind of transition it belongs to.
-func (p *tparser) callAction(t *tpaTransition, m *tpaMatch, alternate *uint32) (bool, error) {
-	if m.char {
-		if err := p.mem.StoreByte(p.cpu, p.block+tpaChar, m.value8); err != nil {
-			return false, writing(err)
-		}
-	}
-
-	if m.number {
-		if err := p.setField(tpaNumber, m.value); err != nil {
-			return false, err
-		}
-	}
-
+// transition.
+func (p *tparser) callAction(t *tpaTransition, alternate *uint32) (bool, error) {
 	if t.hasArgument {
 		if err := p.setField(tpaParam, t.argument); err != nil {
 			return false, err

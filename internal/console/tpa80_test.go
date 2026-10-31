@@ -12,7 +12,7 @@ import (
 // (docs/PHASE-80 - FORTRAN formatted IO.md, subtask 10): testdata/tpa80's
 // tpa80.mar runs them case by case, and prints what each returned and stored.
 // vax/tpa80-vax.txt is its output on VMS, which govax's must match line for
-// line.
+// line, but for expectedTPA80Differences.
 
 var tpa80Dir = filepath.Join("..", "..", "testdata", "tpa80")
 
@@ -52,6 +52,35 @@ func runTPA80(t *testing.T) []string {
 	return strings.Split(dispatch("RUN TPA80"), "|")
 }
 
+// expectedTPA80Differences are the cases whose reports differ from VMS's, by
+// their first word, with why.
+var expectedTPA80Differences = map[string]string{
+	// A keyword index past the vector: the parser reads whatever is there, so
+	// it depends on what follows the vector in the image. On VMS that was a
+	// keyword that didn't match, and here an offset to an unmapped address.
+	"RAW219": "the keyword vector's neighbors",
+}
+
+// withoutExpected removes the cases expectedTPA80Differences names.
+func withoutExpected(lines []string) []string {
+	var out []string
+
+	skip := false
+
+	for _, line := range lines {
+		if !strings.HasPrefix(line, " ") {
+			first, _, _ := strings.Cut(line, " ")
+			_, skip = expectedTPA80Differences[first]
+		}
+
+		if !skip {
+			out = append(out, line)
+		}
+	}
+
+	return out
+}
+
 // TestTPA80Oracle holds the probe's output to VMS's.
 func TestTPA80Oracle(t *testing.T) {
 	got := runTPA80(t)
@@ -75,7 +104,16 @@ func TestTPA80Oracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lines := strings.Split(strings.ReplaceAll(strings.TrimRight(string(want), "\r\n"), "\r", ""), "\n")
+	// The console's output has no blank lines, so neither does what's compared.
+	var lines []string
+
+	for line := range strings.SplitSeq(strings.ReplaceAll(string(want), "\r", ""), "\n") {
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	got, lines = withoutExpected(got), withoutExpected(lines)
 
 	for i := range max(len(got), len(lines)) {
 		var g, w string
@@ -105,7 +143,7 @@ var tpa80Cases = []struct{ name, want string }{
 	{"KW1 <AB>", "R0=00158284"},
 	{"DECIMAL <4294967295>", "num=FFFFFFFF"},
 	{"DECIMAL <4294967296>", "R0=00158284"},
-	{"UIC <[*,2]>", "num=FFFF0002"},
+	{"UIC <[*,2]>", "num=3FFF0002"},
 	{"FILESPEC <DEV:[DIR]A.B;1 X>", `tok=14@0 "DEV:[DIR]A.B;1"`},
 	{"FAILA <ABC D>", `tok=3@0 "ABC"`},
 	{"REJECT <A>", "param=00000001"},
@@ -127,7 +165,7 @@ var tpa80Cases = []struct{ name, want string }{
 	{"ABR <BE> opt 2000000", "rest=0@2"},
 	{"ABR2 <GET> opt 2", "R0=00000001"},
 	{"RAW250 <12>", "R0=0015828C"},
-	{"count 7", "R0=00158234"},
+	{"count 7", "R0=00000114"},
 }
 
 // TestTPA80Manual holds the cases to the manuals, with or without VMS's run.

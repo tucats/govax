@@ -53,6 +53,11 @@ asks about `'~'` alone. The author audited the logs of MACRO's messages, `*.mlg`
 found none of VMS's macro text in them. A new round's logs need the same audit before
 they're read.
 
+## Round 2
+
+`vax/`. It ran whole; the phase doc lists what it settled. `TPA80C` shows VMS refuses
+`'~'` too (`vax/tpa80c.mlg`, which the author audited).
+
 ## The VAX run
 
 1. Build the volume from the repository root: `govax console < testdata/tpa80/exchange.cmd`.
@@ -74,8 +79,8 @@ looping grammar has input to use up, and each failure returns.
 ## On govax
 
 `TestTPA80Oracle` (`internal/console/tpa80_test.go`) runs the program and matches
-`vax/tpa80-vax.txt` line for line, and skips that comparison until the file is
-here. `TestTPA80Manual` holds some cases to the manuals' words regardless.
+VMS V7.1's `vax/tpa80-vax.txt` line for line, but for `expectedTPA80Differences`.
+`TestTPA80Manual` holds some cases to what the manuals and VMS's run say.
 `TestFor80RunsOnFORRTL` runs VMS's FORRTL over govax's LIB$TPARSE and holds the
 namelist cases to VMS's `testdata/for80/vax/for80-vax.txt`, on the tables VMS's own
 macros built.

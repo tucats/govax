@@ -8,7 +8,7 @@ interpreter) done the same day; subtask 5 (integer, logical, and character
 editing), subtask 6 (floating editing), subtask 7 (list-directed output
 and input), subtask 8 (variable format expressions and run-time formats), and
 subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
-(LIB$TPARSE) built the same day, its probe waiting for a VMS run. Needs Phase 79 (control flow, for
+(LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -795,8 +795,8 @@ subtasks land.
     routine, TABLE_PARSE, and govax's own `$INIT_STATE`/`$STATE`/`$TRAN`/
     `$END_STATE` macros, from the LIB$ manual (LIB-411 to LIB-452), clean room,
     with a probe of its own on VMS. Phase 60's trees stay there. FTNRTL's
-    namelist input is its own code either way. Built, with `$FILESCAN`
-    ("Subtask 10", below); `testdata/tpa80` waits for its VMS run.
+    namelist input is its own code either way. Done, with `$FILESCAN` ("Subtask
+    10", below), held to `testdata/tpa80`'s run on VMS.
 11. **NAMELIST.**
 12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
@@ -1390,38 +1390,62 @@ manuals where they give them (offsets, type bytes), and otherwise chosen, each
 printed by the probe: the options' bits (BLANKS 0, ABBREV 1, ABBRFM 2, AMBIG 16), a
 type's value as 256 plus its byte, and every FSCN$ code and flag.
 
-**Unconfirmed, each a case of `testdata/tpa80`, until VMS's run:**
+**Round 1 on VMS** (`testdata/tpa80/vax/round1`): real MACRO refused 15 lines of
+`tpa80.mar`, so nothing ran. VMS's `$TRAN` refuses a bracketed `<^X...>` as its last
+argument (UNTERMARG), though not as its mask; a type starting with a digit, though the
+manual says any expression (ILLIFCOND, IFDIRSYNX); and `'<'` and `'>'` (between them
+UNTERMARG, ILLCHR, DIRSYNX, and a generated INVALID CHARACTER '>'). govax's macro
+takes all of these, a superset left as it is. Round 2 states them another way.
 
-- what a count below 8 returns (LIB$_INVARG here, the manuals name no status), and
-  what a count of -1, VSI's 64-bit block, does on a VAX;
-- type bytes 228 to 233: TPA$_NODE and its neighbors are VSI's, not the 5.0 manual's.
-  231 to 233 are done with `$FILESCAN`, and 228 to 230, the 64-bit numbers, are
-  LIB$_INVTYPE;
-- which characters each type takes: ALPHA and SYMBOL's multinational letters (^XC0 to
-  ^XFD here), lowercase in TPA$_HEX (refused here, as the manual writes A through F);
-- what msk-adr gets from a subexpression: the manual's examples disagree, one a
-  descriptor, one "its value" (a descriptor here);
-- whether a subexpression's failing action status reaches its caller's failure (it
-  does here), and which status wins when two actions fail in a state (the last here);
-- whether TPA$L_NUMBER and TPA$B_CHAR change only for an action routine, as the
-  manual says (only then here), though the look-ahead example's note reads otherwise;
-- the string after a transition to TPA$_FAIL (past the token here), and whether an
-  exact keyword with a longer neighbor is ambiguous under ABBREV (not here);
-- UIC and identifier details: blanks inside, `[name1,name2]`'s value (name2's here);
-- `.PSECT` left as `$INIT_STATE` found it after `$END_STATE`, and `$TRAN`'s argument
-  names for keyword use;
-- `$FILESCAN`'s edges: `.`, `::`, `[A][B]`, `A:B:C`, and a bad item code's status
-  (SS$_BADPARAM here).
+**Round 2 on VMS** ran whole, and govax now matches all of it but one case's six
+reports (`expectedTPA80Differences`: a keyword index past the vector reads what's
+there, which depends on the image). What it settled, where a manual was wrong or
+silent:
 
-**Round 1 on VMS** (2026-10-31, `testdata/tpa80/vax/round1`): real MACRO refused 15
-lines of `tpa80.mar`, so nothing ran. VMS's `$TRAN` refuses a bracketed `<^X...>` as
-its last argument (UNTERMARG), though not as its mask; a type starting with a digit,
-though the manual says any expression (ILLIFCOND, IFDIRSYNX); and `'<'` and `'>'`
-(between them UNTERMARG, ILLCHR, DIRSYNX, and a generated INVALID CHARACTER '>').
-govax's macro takes all of these, a superset left as it is. The partial objects' analyses settled the psects: `_LIB$STATE$` byte,
-`_LIB$KEY0$` and `_LIB$KEY1$` word, each PIC, SHR, EXE, RD, NOWRT, in that order, and
-the table names global; the macros now do the same. Round 2 states the refused forms
-another way.
+- **The manual's layout is wrong in one place:** msk-adr comes before the mask. FORRTL's
+  tables didn't show it, since its namelist grammar uses neither.
+- **TPA$B_CHAR and TPA$L_NUMBER are set on any match,** action routine or not, the
+  manual saying only for one; TPA$B_CHAR as a whole longword, its text saying the rest
+  is unused. A UIC and an identifier go to msk-adr as numbers, not descriptors.
+- **Characters:** the multinational set is ^XC0 to ^XFD but ^XD0, ^XDE, and ^XF0.
+  TPA$_ALPHA, TPA$_STRING, TPA$_SYMBOL, and a keyword's token all take it, STRING
+  against the manual. TPA$_HEX takes lowercase. TPA$_OCTAL takes every digit and fails
+  on an 8 or 9, where DECIMAL and HEX stop at what they can't use.
+- **TPA$_LAMBDA gives back the blanks** the state took off.
+- **Keywords:** TPA$B_MCOUNT is looked at before TPA$V_ABBREV, not ignored.
+- **UICs:** the group is at most ^X3FFF, which `*` means too; blanks may be around a
+  field.
+- **Identifiers:** a name `$ASCTOID` refuses makes its status the parse's, as a failing
+  action routine's does (SS$_NOSUCHID, SS$_IVIDENT).
+- **Statuses:** a count below 8 is SS$_INSFARG, unsigned, so -1 is a large count and
+  works, on a VAX, where VSI's 64-bit block doesn't exist. A subexpression's type with no
+  pointer is LIB$_INVTYPE.
+- **Type bytes:** 231 to 233, TPA$_NODE and its neighbors, work on 7.1, and 228 to 230
+  are LIB$_INVTYPE, with no `TPA$_DECIMAL_64` defined.
+- **Definitions:** every value chosen above stands; `TPA$_KEYWORD` is 256, and there's
+  no `TPA$_SUBEXPR`.
+- **`$FILESCAN`:** an empty name has its flag when a type or version follows; a
+  directory ending in `.` is a root with or without a directory after it, unless it
+  ends in `...`; `::` is a node with an empty primary name, which has its flag; a comma
+  is only for a numeric UIC; a hyphen can't start a name. It left the auxiliary buffer
+  and retlen alone for a specification with no node, against VSI's page.
+- **The macros' psects:** `.PSECT` is back as `$INIT_STATE` found it after `$END_STATE`.
+  VMS also refuses `'~'`.
+
+Table dumps match byte for byte, and the psects' attributes and sizes do. `TPA80B`'s
+records differ in ways that don't reach the image: VMS writes a transition once, knowing
+if it's last, where govax stores its flags again, and govax's `$INIT_STATE` leaves an
+empty `$ABS$` psect.
+
+**One oddity, not explained:** in `tpa80b.mar`, VMS stored `'A*'` as the two characters
+`A*`, though in `tpa80.mar` it stored `'K*'` and `'A*'` as one, as the manual says. That
+module's earlier lines have the odd characters (`'%'`, `'\\'`, and the like), which may be
+why. govax always stores one.
+
+**Still unconfirmed,** the probe having no case: `$FILESCAN`'s auxiliary buffer with a
+node, and a quoted primary node reduced in it; which `[name1,name2]` VMS takes, if any
+(it refuses `[SYSTEM,SYSTEM]`, and so does govax); wildcards in a UIC directory; and
+`$TRAN`'s argument names for keyword use.
 
 Tests: `TestTPA80Manual` (31 cases held to the manuals), `TestTPA80Oracle` (skips the
 comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
@@ -1526,3 +1550,7 @@ comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
   refused 15 lines, for reasons recorded under "Subtask 10", so no image was made; the
   analyses gave the psects' attributes, which the macros now follow. Round 2 is the
   same program with those lines restated.
+- **2026-10-31, subtask 10, round 2 on VMS, and done.** The author ran `@TPA80`, which
+  ran whole. govax now matches VMS's 5,278 lines but for one case's reports
+  (`TestTPA80Oracle`). The run corrected the manual's order of msk-adr and the mask, and
+  the rules listed under "Subtask 10".

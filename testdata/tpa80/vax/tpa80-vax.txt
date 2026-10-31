@@ -1,0 +1,5960 @@
+
+##### Definitions
+TPA$K_COUNT0=00000008
+TPA$K_LENGTH0=00000024
+TPA$L_COUNT=00000000
+TPA$L_OPTIONS=00000004
+TPA$B_MCOUNT=00000007
+TPA$L_STRINGCNT=00000008
+TPA$L_STRINGPTR=0000000C
+TPA$L_TOKENCNT=00000010
+TPA$L_TOKENPTR=00000014
+TPA$B_CHAR=00000018
+TPA$L_NUMBER=0000001C
+TPA$L_PARAM=00000020
+TPA$V_BLANKS=00000000
+TPA$M_BLANKS=00000001
+TPA$V_ABBREV=00000001
+TPA$M_ABBREV=00000002
+TPA$V_ABBRFM=00000002
+TPA$M_ABBRFM=00000004
+TPA$V_AMBIG=00000010
+TPA$M_AMBIG=00010000
+TPA$_EXIT=FFFFFFFF
+TPA$_FAIL=FFFFFFFE
+TPA$_KEYWORD=00000100
+TPA$_NODE_ACS=000001E7
+TPA$_NODE_PRIMARY=000001E8
+TPA$_NODE=000001E9
+TPA$_FILESPEC=000001EA
+TPA$_UIC=000001EB
+TPA$_IDENT=000001EC
+TPA$_ANY=000001ED
+TPA$_ALPHA=000001EE
+TPA$_DIGIT=000001EF
+TPA$_STRING=000001F0
+TPA$_SYMBOL=000001F1
+TPA$_BLANK=000001F2
+TPA$_DECIMAL=000001F3
+TPA$_OCTAL=000001F4
+TPA$_HEX=000001F5
+TPA$_LAMBDA=000001F6
+TPA$_EOS=000001F7
+TPA$_SUBEXPR undefined
+TPA$_DECIMAL_64 undefined
+TPA$_OCTAL_64 undefined
+TPA$_HEX_64 undefined
+TPA64$K_COUNT0 undefined
+TPA64$K_LENGTH0 undefined
+FSCN$_FILESPEC=00000001
+FSCN$_NODE=00000002
+FSCN$_DEVICE=00000003
+FSCN$_ROOT=00000004
+FSCN$_DIRECTORY=00000005
+FSCN$_NAME=00000006
+FSCN$_TYPE=00000007
+FSCN$_VERSION=00000008
+FSCN$_NODE_PRIMARY=00000009
+FSCN$_NODE_ACS=0000000A
+FSCN$_NODE_SECONDARY=0000000B
+FSCN$M_NODE=00000001
+FSCN$V_NODE=00000000
+FSCN$M_DEVICE=00000002
+FSCN$V_DEVICE=00000001
+FSCN$M_ROOT=00000004
+FSCN$V_ROOT=00000002
+FSCN$M_DIRECTORY=00000008
+FSCN$V_DIRECTORY=00000003
+FSCN$M_NAME=00000010
+FSCN$V_NAME=00000004
+FSCN$M_TYPE=00000020
+FSCN$V_TYPE=00000005
+FSCN$M_VERSION=00000040
+FSCN$V_VERSION=00000006
+FSCN$M_NODE_PRIMARY=00000080
+FSCN$V_NODE_PRIMARY=00000007
+FSCN$M_NODE_ACS=00000100
+FSCN$V_NODE_ACS=00000008
+FSCN$M_NODE_SECONDARY=00000200
+FSCN$V_NODE_SECONDARY=00000009
+
+##### The table's bytes: states, vector, strings
+  41 00 42 10 FA FF 43 10 FF FF 44 14 FE FF 00 01 
+  01 11 EC FF 02 05 03 01 04 05 F8 09 E2 FF F8 19 
+  DE FF F6 FF F8 1D D8 FF FF FF ED 81 D0 FF FF FF 
+  EE 61 CA FF FF FF 44 33 22 11 EF 41 C0 FF FF FF 
+  F0 07 01 88 77 66 55 F1 F3 01 08 07 06 05 AE FF 
+  FF FF C4 FF FF FF 04 03 02 01 BE FF F8 FB 01 B9 
+  FF 08 07 06 05 97 FF FF FF AD FF FF FF 04 03 02 
+  01 A7 FF 05 F7 01 08 07 06 05 82 FF FF FF 98 FF 
+  FF FF 04 03 02 01 92 FF F2 01 F3 01 F4 01 F5 01 
+  F6 01 F7 01 EB 01 EC 01 EA 05 08 00 2C 00 2C 00 
+  2F 00 3D 00 02 04 
+  44 00 48 00 4C 00 4F 00 53 00 58 00 
+  4B 57 31 FF 4B 57 32 FF 4B FF FF 4B 57 33 FF 4B 
+  57 31 FF FF 4B 57 34 FF FF 
+
+##### Every character
+
+map TPA$_ANY
+  1111111111111111111111111111111111111111111111111111111111111111
+  1111111111111111111111111111111111111111111111111111111111111111
+  1111111111111111111111111111111111111111111111111111111111111111
+  1111111111111111111111111111111111111111111111111111111111111111
+
+map TPA$_ALPHA
+  0000000000000000000000000000000000000000000000000000000000000000
+  0111111111111111111111111110000001111111111111111111111111100000
+  0000000000000000000000000000000000000000000000000000000000000000
+  1111111111111111011111111111110111111111111111110111111111111100
+
+map TPA$_DIGIT
+  0000000000000000000000000000000000000000000000001111111111000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+
+map TPA$_STRING
+  0000000000000000000000000000000000000000000000001111111111000000
+  0111111111111111111111111110000001111111111111111111111111100000
+  0000000000000000000000000000000000000000000000000000000000000000
+  1111111111111111011111111111110111111111111111110111111111111100
+
+map TPA$_SYMBOL
+  0000000000000000000000000000000000001000000000001111111111000000
+  0111111111111111111111111110000101111111111111111111111111100000
+  0000000000000000000000000000000000000000000000000000000000000000
+  1111111111111111011111111111110111111111111111110111111111111100
+
+map TPA$_BLANK
+  0000000001000000000000000000000010000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+
+map TPA$_DECIMAL
+  0000000000000000000000000000000000000000000000001111111111000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+
+map TPA$_OCTAL
+  0000000000000000000000000000000000000000000000001111111100000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+
+map TPA$_HEX
+  0000000000000000000000000000000000000000000000001111111111000000
+  0111111000000000000000000000000001111110000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+
+map TPA$_FILESPEC
+  0000000000000000000000000000000000001100001000101111111111010000
+  0111111111111111111111111110000101111111111111111111111111100000
+  0000000000000000000000000000000000000000000000000000000000000000
+  1111111111111111011111111111110111111111111111110111111111111100
+
+map TPA$_IDENT
+  0000000000000000000000000000000000000000001000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+  0000000000000000000000000000000000000000000000000000000000000000
+keyword AB, then the character, as AB<c>
+  1111111111111111111111111111111111110111111111110000000000111111
+  1000000000000000000000000001111010000000000000000000000000011111
+  1111111111111111111111111111111111111111111111111111111111111111
+  0000000000000000100000000000001000000000000000001000000000000011
+
+##### LIB$TPARSE
+
+CHAR <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <AB>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR <a>
+  R0=00158284 signal=00000000
+  tok=1@0 "a"
+  rest=1@0 "a"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR < A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR <<TAB>A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+KW <ABC>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <ABCD>
+  R0=00158284 signal=00000000
+  tok=4@0 "ABCD"
+  rest=4@0 "ABCD"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW <ABC+>
+  action r0low=1 argc=00000008 block=0
+    rest=1@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=1@3 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <ABC D>
+  action r0low=1 argc=00000008 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=2@3 " D"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <AB>
+  R0=00158284 signal=00000000
+  tok=2@0 "AB"
+  rest=2@0 "AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW <abc>
+  R0=00158284 signal=00000000
+  tok=3@0 "abc"
+  rest=3@0 "abc"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW < ABC >
+  action r0low=1 argc=00000008 block=0
+    rest=1@4 tok=3@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@1 "ABC"
+  rest=1@4 " "
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @1
+
+KW <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW1 <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <AB>
+  R0=00158284 signal=00000000
+  tok=2@0 "AB"
+  rest=2@0 "AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW1 <A+>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <A B>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 " B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ANY <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ANY <+>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=2B num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "+"
+  rest=0@1 ""
+  char=0000002B num=55555555 param=00000001 opt=00000000
+  cell=5555552B
+
+ANY < A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ANY <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ANY < A> opt 1
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=20 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@0 " "
+  rest=1@1 "A"
+  char=00000020 num=55555555 param=00000001 opt=00000001
+  cell=55555520
+
+ALPHA <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ALPHA <z>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=7A num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "z"
+  rest=0@1 ""
+  char=0000007A num=55555555 param=00000001 opt=00000000
+  cell=5555557A
+
+ALPHA <1>
+  R0=00158284 signal=00000000
+  tok=1@0 "1"
+  rest=1@0 "1"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALPHA <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DIGIT <0>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=30 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "0"
+  rest=0@1 ""
+  char=00000030 num=55555555 param=00000001 opt=00000000
+  cell=55555530
+
+DIGIT <9>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=39 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "9"
+  rest=0@1 ""
+  char=00000039 num=55555555 param=00000001 opt=00000000
+  cell=55555539
+
+DIGIT <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DIGIT <12>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=31 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "1"
+  rest=1@1 "2"
+  char=00000031 num=55555555 param=00000001 opt=00000000
+  cell=55555531
+
+STRING <AB12+>
+  action r0low=1 argc=00000008 block=0
+    rest=1@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=4@0 "AB12"
+  rest=1@4 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000004 desc @0
+
+STRING <a1>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "a1"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+STRING <$AB>
+  R0=00158284 signal=00000000
+  tok=3@0 "$AB"
+  rest=3@0 "$AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <_A>
+  R0=00158284 signal=00000000
+  tok=2@0 "_A"
+  rest=2@0 "_A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <12>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+STRING <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SYMBOL <A$B_C+>
+  action r0low=1 argc=00000008 block=0
+    rest=1@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A$B_C"
+  rest=1@5 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+SYMBOL <$>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "$"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <1A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "1A"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+SYMBOL <A.B>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 ".B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <_>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "_"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SYMBOL <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLANK < A>
+  R0=00158284 signal=00000000
+  tok=1@1 "A"
+  rest=1@1 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLANK < A> opt 1
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@0 " "
+  rest=1@1 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000001
+  cell=00000001 desc @0
+
+BLANK <  <TAB> A> opt 1
+  action r0low=1 argc=00000008 block=0
+    rest=1@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=4@0 "  . "
+  rest=1@4 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000001
+  cell=00000004 desc @0
+
+BLANK <A> opt 1
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLANK <> opt 1
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+DECIMAL <123>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=0000007B param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "123"
+  rest=0@3 ""
+  char=55555555 num=0000007B param=00000001 opt=00000000
+  cell=0000007B
+
+DECIMAL <123A>
+  action r0low=1 argc=00000008 block=0
+    rest=1@3 tok=3@0 char=55 num=0000007B param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "123"
+  rest=1@3 "A"
+  char=55555555 num=0000007B param=00000001 opt=00000000
+  cell=0000007B
+
+DECIMAL <4294967295>
+  action r0low=1 argc=00000008 block=0
+    rest=0@10 tok=10@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=10@0 "4294967295"
+  rest=0@10 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+DECIMAL <4294967296>
+  R0=00158284 signal=00000000
+  tok=10@0 "4294967296"
+  rest=10@0 "4294967296"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <0>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=00000000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "0"
+  rest=0@1 ""
+  char=55555555 num=00000000 param=00000001 opt=00000000
+  cell=00000000
+
+DECIMAL <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <-1>
+  R0=00158284 signal=00000000
+  tok=1@0 "-"
+  rest=2@0 "-1"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <007>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=00000007 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "007"
+  rest=0@3 ""
+  char=55555555 num=00000007 param=00000001 opt=00000000
+  cell=00000007
+
+DECIMAL <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <777>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=000001FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "777"
+  rest=0@3 ""
+  char=55555555 num=000001FF param=00000001 opt=00000000
+  cell=000001FF
+
+OCTAL <778>
+  R0=00158284 signal=00000000
+  tok=3@0 "778"
+  rest=3@0 "778"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <8>
+  R0=00158284 signal=00000000
+  tok=1@0 "8"
+  rest=1@0 "8"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <37777777777>
+  action r0low=1 argc=00000008 block=0
+    rest=0@11 tok=11@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=11@0 "37777777777"
+  rest=0@11 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+OCTAL <40000000000>
+  R0=00158284 signal=00000000
+  tok=11@0 "40000000000"
+  rest=11@0 "40000000000"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <7FF>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7FF"
+  rest=0@3 ""
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <7ff>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7ff"
+  rest=0@3 ""
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <G>
+  R0=00158284 signal=00000000
+  tok=1@0 "G"
+  rest=1@0 "G"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <FFFFFFFF>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "FFFFFFFF"
+  rest=0@8 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+HEX <100000000>
+  R0=00158284 signal=00000000
+  tok=9@0 "100000000"
+  rest=9@0 "100000000"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <7FFG>
+  action r0low=1 argc=00000008 block=0
+    rest=1@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7FF"
+  rest=1@3 "G"
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <abc>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=00000ABC param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "abc"
+  rest=0@3 ""
+  char=55555555 num=00000ABC param=00000001 opt=00000000
+  cell=00000ABC
+
+EOS <>
+  action r0low=1 argc=00000008 block=0
+    rest=0@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+EOS <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+EOS < >
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @1
+
+LAMBDA <>
+  action r0low=1 argc=00000008 block=0
+    rest=0@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+LAMBDA <A>
+  action r0low=1 argc=00000008 block=0
+    rest=1@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+LAMBDA < A>
+  action r0low=1 argc=00000008 block=0
+    rest=2@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=2@0 " A"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+UIC <[1,2]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,2]"
+  rest=0@5 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <<1,2>>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "<1,2>"
+  rest=0@5 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <[*,2]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFF0002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,2]"
+  rest=0@5 ""
+  char=55555555 num=3FFF0002 param=00000001 opt=00000000
+  cell=3FFF0002
+
+UIC <[1,*]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=0001FFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,*]"
+  rest=0@5 ""
+  char=55555555 num=0001FFFF param=00000001 opt=00000000
+  cell=0001FFFF
+
+UIC <[*,*]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,*]"
+  rest=0@5 ""
+  char=55555555 num=3FFFFFFF param=00000001 opt=00000000
+  cell=3FFFFFFF
+
+UIC <[177777,177777]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=15@0 "[177777,177777]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[200000,1]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=10@0 "[200000,1]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[1,2"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1 ,2]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@6 tok=6@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "[1 ,2]"
+  rest=0@6 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <[8,1]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=5@0 "[8,1]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2>>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=5@0 "[1,2>"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[,2]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[,2]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2]X>
+  action r0low=1 argc=00000008 block=0
+    rest=1@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,2]"
+  rest=1@5 "X"
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <1,2>
+  R0=00158284 signal=00000000
+  tok=1@0 "1"
+  rest=3@0 "1,2"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <[1,4]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,4]"
+  rest=0@5 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <[SYSTEM]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "[SYSTEM]"
+  rest=0@8 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <SYSTEM>
+  action r0low=1 argc=00000008 block=0
+    rest=0@6 tok=6@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "SYSTEM"
+  rest=0@6 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <%X10>
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=00000010 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=4@0 "%X10"
+  rest=0@4 ""
+  char=55555555 num=00000010 param=00000001 opt=00000000
+  cell=00000010
+
+IDENT <%X80010000>
+  action r0low=1 argc=00000008 block=0
+    rest=0@10 tok=10@0 char=55 num=80010000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=10@0 "%X80010000"
+  rest=0@10 ""
+  char=55555555 num=80010000 param=00000001 opt=00000000
+  cell=80010000
+
+IDENT <NOSUCH>
+  R0=000021EC signal=00000000
+  tok=6@0 "NOSUCH"
+  rest=6@0 "NOSUCH"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <*>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "*"
+  rest=0@1 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+IDENT <[*,*]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,*]"
+  rest=0@5 ""
+  char=55555555 num=3FFFFFFF param=00000001 opt=00000000
+  cell=3FFFFFFF
+
+IDENT <<SYSTEM>>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "<SYSTEM>"
+  rest=0@8 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <[NOSUCH]>
+  R0=000021EC signal=00000000
+  tok=1@0 "["
+  rest=8@0 "[NOSUCH]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <123>
+  R0=00002224 signal=00000000
+  tok=3@0 "123"
+  rest=3@0 "123"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <[SYSTEM,SYSTEM]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=15@0 "[SYSTEM,SYSTEM]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <%XG>
+  R0=00158284 signal=00000000
+  tok=1@0 "%"
+  rest=3@0 "%XG"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <A.B;1>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A.B;1"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <DEV:[DIR]A.B;1 X>
+  action r0low=1 argc=00000008 block=0
+    rest=2@14 tok=14@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=14@0 "DEV:[DIR]A.B;1"
+  rest=2@14 " X"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000E desc @0
+
+FILESPEC <NODE::DEV:A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@11 tok=11@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=11@0 "NODE::DEV:A"
+  rest=0@11 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000B desc @0
+
+FILESPEC <A.B.1>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A.B.1"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <[A.B]>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[A.B]"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <[A.B>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[A.B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <*.*;*>
+  action r0low=1 argc=00000008 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "*.*;*"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <A,B>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 ",B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+FILESPEC <A B>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 " B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+FILESPEC <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <NODE"u p"::X>
+  action r0low=1 argc=00000008 block=0
+    rest=0@12 tok=12@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=12@0 "NODE"u p"::X"
+  rest=0@12 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000C desc @0
+
+FILESPEC <[A.][B]C>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "[A.][B]C"
+  rest=0@8 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+FILESPEC <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <A:B:C>
+  action r0low=1 argc=00000008 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "A:B"
+  rest=2@3 ":C"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+FILESPEC <.B>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 ".B"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+FILESPEC <;1>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 ";1"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+NEXT <AB>
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <CB>
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <A>
+  R0=00158284 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <ACB>
+  R0=00158284 signal=00000000
+  tok=2@1 "CB"
+  rest=2@1 "CB"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <AAA>
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <AAB>
+  R0=00158284 signal=00000000
+  tok=1@2 "B"
+  rest=1@2 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <>
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <AX>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "X"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <BX>
+  R0=00000001 signal=00000000
+  tok=1@0 "B"
+  rest=1@1 "X"
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <CX>
+  R0=00158284 signal=00000000
+  tok=2@0 "CX"
+  rest=2@0 "CX"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILA <ABC D>
+  action r0low=1 argc=00000008 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00158284 signal=00000000
+  tok=3@0 "ABC"
+  rest=2@3 " D"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+FAILA <X>
+  R0=00158284 signal=00000000
+  tok=1@0 "X"
+  rest=1@0 "X"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILS <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+REJECT <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+REJECT <B>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=42 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "B"
+  rest=0@1 ""
+  char=00000042 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+REJECT <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALT <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ALT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALT2 <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001240 opt=00000000
+  R0=00001240 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001240 opt=00000000
+  cell=55555555
+
+ALT3 <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00000000 opt=00000000
+  cell=55555555
+
+ALT4 <AB>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ALT4 <AC>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "C"
+  rest=1@1 "C"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ODD <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000003 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000003 opt=00000000
+  cell=55555555
+
+SIG <A>
+  R0=00001234 signal=00001234
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SKIP <ABC>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@2 "C"
+  rest=0@3 ""
+  char=00000043 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SKIP <AC>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NOARG <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <AB  X> opt 1
+  action r0low=1 argc=00000008 block=0
+    rest=1@4 tok=2@2 char=42 num=55555555 param=55555555 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@4 "X"
+  rest=0@5 ""
+  char=00000058 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <AB X > opt 1
+  action r0low=1 argc=00000008 block=0
+    rest=2@3 tok=1@2 char=42 num=55555555 param=55555555 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@3 "X"
+  rest=1@4 " "
+  char=00000058 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <ABX> opt 1
+  R0=00158284 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000058 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON <A B>
+  action r0low=1 argc=00000008 block=0
+    rest=2@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 " "
+  rest=1@2 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON <AB>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "B"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON < A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+MASK <A>
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=5555555F
+
+MASKA <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=555555F5
+
+MASKR <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00000000 opt=00000000
+  cell=55555555
+
+MASKN <12>
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=0@2 ""
+  char=55555555 num=0000000C param=55555555 opt=00000000
+  cell=5555555F
+
+MASKS <AB>
+  R0=00000001 signal=00000000
+  tok=2@0 "AB"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=5555555F
+
+QUOTE </ABC/> opt 1
+  R0=00000001 signal=00000000
+  tok=1@4 "/"
+  rest=0@5 ""
+  char=0000002F num=55555555 param=55555555 opt=00000001
+  cell=00000003 desc @1
+
+QUOTE <//> opt 1
+  R0=00000001 signal=00000000
+  tok=1@1 "/"
+  rest=0@2 ""
+  char=0000002F num=55555555 param=55555555 opt=00000001
+  cell=00000000 desc @1
+
+QUOTE </AB> opt 1
+  R0=00158284 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000042 num=55555555 param=55555555 opt=00000001
+  cell=00000002 desc @1
+
+QUOTE </A B/>
+  R0=00000001 signal=00000000
+  tok=1@4 "/"
+  rest=0@5 ""
+  char=0000002F num=55555555 param=55555555 opt=00000000
+  cell=00000003 desc @1
+
+LOOK <10/OCTAL>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=2F num=00000008 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "10/OCTAL"
+  rest=0@8 ""
+  char=0000002F num=00000008 param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+LOOK <32768/DECIMAL>
+  action r0low=1 argc=00000008 block=0
+    rest=0@13 tok=13@0 char=2F num=00008000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=13@0 "32768/DECIMAL"
+  rest=0@13 ""
+  char=0000002F num=00008000 param=00000001 opt=00000000
+  cell=0000000D desc @0
+
+LOOK <77AF/HEX>
+  action r0low=1 argc=00000008 block=0
+    rest=0@8 tok=8@0 char=2F num=000077AF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "77AF/HEX"
+  rest=0@8 ""
+  char=0000002F num=000077AF param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+LOOK <10/HEX>
+  action r0low=1 argc=00000008 block=0
+    rest=0@6 tok=6@0 char=2F num=00000010 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "10/HEX"
+  rest=0@6 ""
+  char=0000002F num=00000010 param=00000001 opt=00000000
+  cell=00000006 desc @0
+
+LOOK <99/OCTAL>
+  R0=00158284 signal=00000000
+  tok=2@0 "99"
+  rest=8@0 "99/OCTAL"
+  char=0000002F num=00000099 param=55555555 opt=00000000
+  cell=55555555
+
+LOOK <ZZ/HEX>
+  R0=00158284 signal=00000000
+  tok=2@0 "ZZ"
+  rest=6@0 "ZZ/HEX"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOK <10/>
+  R0=00158284 signal=00000000
+  tok=2@0 "10"
+  rest=3@0 "10/"
+  char=0000002F num=00000010 param=55555555 opt=00000000
+  cell=55555555
+
+SUBEND <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBEND < A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @1
+
+SUBEND <A >
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBEND <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBEND <AB>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "B"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBFAIL <AB>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBFAIL <AC>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "C"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBFAIL <XY>
+  action r0low=1 argc=00000008 block=0
+    rest=1@1 tok=1@0 char=58 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "X"
+  rest=1@1 "Y"
+  char=00000058 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBALT <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+SUBALT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBALT2 <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+SUBSIDE <12X>
+  action r0low=1 argc=00000008 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "12X"
+  rest=0@3 ""
+  char=00000058 num=0000000C param=00000001 opt=00000000
+  cell=5555555F
+
+SUBSIDE <12Y>
+  action r0low=1 argc=00000008 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=1@2 "Y"
+  char=55555555 num=0000000C param=00000001 opt=00000000
+  cell=5555555F
+
+SUBNEST <(A)>
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000003 desc @0
+
+SUBNEST <((A))>
+  R0=00000001 signal=00000000
+  tok=0@5 ""
+  rest=0@5 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000005 desc @0
+
+SUBNEST <(((A)))>
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000007 desc @0
+
+SUBNEST <((A)>
+  R0=00158284 signal=00000000
+  tok=1@0 "("
+  rest=4@0 "((A)"
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBNEST <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBLAST <12A>
+  action r0low=1 argc=00000008 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=1@2 char=41 num=0000000C param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=41 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "12A"
+  rest=0@3 ""
+  char=00000041 num=0000000C param=00000001 opt=00000000
+  cell=55555555
+
+ABR <AL>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <BE>
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <BET>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=0@3 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <BETT>
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <BETTERX>
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <C>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <CATX>
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <CAT>
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <BETA>
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <beta>
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+ABR <AL> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <A> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BE> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00010002
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BET> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00010002
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=0@3 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETT> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETTERX> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <C> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "C"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <CATX> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <CAT> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETA> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <beta> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <AL> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <A> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <BE> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=2@0 "BE"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <BET> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=3@0 "BET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <BETT> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <BETTERX> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=00000004
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <C> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=1@0 "C"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <CATX> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000004
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <CAT> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <BETA> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <beta> opt 4
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000004
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000004
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000004
+  cell=55555555
+
+ABR <AL> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <A> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <BE> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=2@0 "BE"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <BET> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=3@0 "BET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <BETT> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <BETTERX> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=00000006
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <C> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=1@0 "C"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <CATX> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000006
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <CAT> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <BETA> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <beta> opt 6
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000006
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000006
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000006
+  cell=55555555
+
+ABR <AL> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <A> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=02000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <BE> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=2@0 "BE"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <BET> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=3@0 "BET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <BETT> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <BETTERX> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=02000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <C> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=02000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <CATX> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <CAT> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <BETA> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <beta> opt 2000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=02000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000000
+  cell=55555555
+
+ABR <AL> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <A> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <BE> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <BET> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=3@0 "BET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <BETT> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <BETTERX> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <C> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <CATX> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <CAT> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <BETA> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <beta> opt 3000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=03000000
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=03000000
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=03000000
+  cell=55555555
+
+ABR <AL> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <A> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <BE> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=2@0 "BE"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <BET> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=3@0 "BET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <BETT> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <BETTERX> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=02000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <C> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=1@0 "C"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <CATX> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <CAT> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <BETA> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR <beta> opt 2000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=02000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=02000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=02000002
+  cell=55555555
+
+ABR2 <G> opt 2
+  R0=00158284 signal=00000000
+  tok=1@0 "G"
+  rest=1@0 "G"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR2 <GE> opt 2
+  R0=00158284 signal=00000000
+  tok=2@0 "GE"
+  rest=2@0 "GE"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR2 <GET> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "GET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR2 <GETX> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "GETX"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR2 <GETZ> opt 2
+  R0=00158284 signal=00000000
+  tok=4@0 "GETZ"
+  rest=4@0 "GETZ"
+  char=55555555 num=55555555 param=55555555 opt=00000002
+  cell=55555555
+
+ABR3 <O> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "O"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR3 <ONE> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "ONE"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR4 <T THREE> opt 2
+  action r0low=1 argc=00000008 block=0
+    rest=6@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=0@7 tok=5@2 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=5@2 "THREE"
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR4 <O T> opt 2
+  R0=00158284 signal=00000000
+  tok=1@0 "O"
+  rest=3@0 "O T"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR4 <ON TH> opt 2
+  R0=00158284 signal=00000000
+  tok=2@0 "ON"
+  rest=5@0 "ON TH"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+CODES <A>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+CODES <,>
+  action r0low=1 argc=00000008 block=0
+    rest=0@1 tok=1@0 char=2C num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 ","
+  rest=0@1 ""
+  char=0000002C num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+CODES <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UFD <CREATE/DIR DEV:[A.B.C]> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=11@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000008 block=0
+    rest=5@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=3@19 tok=1@18 char=2E num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=1@21 tok=1@20 char=2E num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@22 ""
+  rest=0@22 ""
+  char=0000005D num=55555555 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[202,31]/ENTRIES=100> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=24@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000008 block=0
+    rest=0@35 tok=3@32 char=3D num=00000064 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@35 ""
+  rest=0@35 ""
+  char=0000003D num=00000064 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[A]/OWN=[1,2]/PROT=(SYSTEM:R,OWNER:RWED,GROUP:R,WORLD:R)> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=60@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000008 block=0
+    rest=54@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@71 ""
+  rest=0@71 ""
+  char=00000029 num=00000002 param=00000001 opt=00000002
+  cell=0000000F desc @11
+
+UFD <CREATE/DIR DEV:[A]/E=1/P=(S:R)> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=19@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000008 block=0
+    rest=13@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000008 block=0
+    rest=8@22 tok=1@21 char=3D num=00000001 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@30 ""
+  rest=0@30 ""
+  char=00000029 num=00000001 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[A]/X> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=9@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000008 block=0
+    rest=3@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  R0=00158284 signal=00000000
+  tok=1@19 "X"
+  rest=1@19 "X"
+  char=0000002F num=55555555 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:A> opt 3
+  action r0low=1 argc=00000008 block=0
+    rest=5@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  R0=00158284 signal=00000000
+  tok=1@15 "A"
+  rest=1@15 "A"
+  char=0000003A num=55555555 param=55555555 opt=00000002
+  cell=00000003 desc @11
+
+##### LIB$TABLE_PARSE
+
+CHAR <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <AB>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR <a>
+  R0=00158284 signal=00000000
+  tok=1@0 "a"
+  rest=1@0 "a"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR < A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+CHAR <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+CHAR <<TAB>A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+KW <ABC>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <ABCD>
+  R0=00158284 signal=00000000
+  tok=4@0 "ABCD"
+  rest=4@0 "ABCD"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW <ABC+>
+  action r0low=1 argc=00000001 block=0
+    rest=1@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=1@3 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <ABC D>
+  action r0low=1 argc=00000001 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "ABC"
+  rest=2@3 " D"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+KW <AB>
+  R0=00158284 signal=00000000
+  tok=2@0 "AB"
+  rest=2@0 "AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW <abc>
+  R0=00158284 signal=00000000
+  tok=3@0 "abc"
+  rest=3@0 "abc"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW < ABC >
+  action r0low=1 argc=00000001 block=0
+    rest=1@4 tok=3@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@1 "ABC"
+  rest=1@4 " "
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @1
+
+KW <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW1 <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <AB>
+  R0=00158284 signal=00000000
+  tok=2@0 "AB"
+  rest=2@0 "AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+KW1 <A+>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <A B>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 " B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+KW1 <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ANY <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ANY <+>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=2B num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "+"
+  rest=0@1 ""
+  char=0000002B num=55555555 param=00000001 opt=00000000
+  cell=5555552B
+
+ANY < A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "A"
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ANY <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ANY < A> opt 1
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=20 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@0 " "
+  rest=1@1 "A"
+  char=00000020 num=55555555 param=00000001 opt=00000001
+  cell=55555520
+
+ALPHA <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+ALPHA <z>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=7A num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "z"
+  rest=0@1 ""
+  char=0000007A num=55555555 param=00000001 opt=00000000
+  cell=5555557A
+
+ALPHA <1>
+  R0=00158284 signal=00000000
+  tok=1@0 "1"
+  rest=1@0 "1"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALPHA <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DIGIT <0>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=30 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "0"
+  rest=0@1 ""
+  char=00000030 num=55555555 param=00000001 opt=00000000
+  cell=55555530
+
+DIGIT <9>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=39 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "9"
+  rest=0@1 ""
+  char=00000039 num=55555555 param=00000001 opt=00000000
+  cell=55555539
+
+DIGIT <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DIGIT <12>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=31 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "1"
+  rest=1@1 "2"
+  char=00000031 num=55555555 param=00000001 opt=00000000
+  cell=55555531
+
+STRING <AB12+>
+  action r0low=1 argc=00000001 block=0
+    rest=1@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=4@0 "AB12"
+  rest=1@4 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000004 desc @0
+
+STRING <a1>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "a1"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+STRING <$AB>
+  R0=00158284 signal=00000000
+  tok=3@0 "$AB"
+  rest=3@0 "$AB"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <_A>
+  R0=00158284 signal=00000000
+  tok=2@0 "_A"
+  rest=2@0 "_A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <12>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+STRING <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+STRING <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SYMBOL <A$B_C+>
+  action r0low=1 argc=00000001 block=0
+    rest=1@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A$B_C"
+  rest=1@5 "+"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+SYMBOL <$>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "$"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <1A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "1A"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+SYMBOL <A.B>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 ".B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <_>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "_"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SYMBOL <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SYMBOL <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLANK < A>
+  R0=00158284 signal=00000000
+  tok=1@1 "A"
+  rest=1@1 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLANK < A> opt 1
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@0 " "
+  rest=1@1 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000001
+  cell=00000001 desc @0
+
+BLANK <  <TAB> A> opt 1
+  action r0low=1 argc=00000001 block=0
+    rest=1@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000001
+  R0=00000001 signal=00000000
+  tok=4@0 "  . "
+  rest=1@4 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000001
+  cell=00000004 desc @0
+
+BLANK <A> opt 1
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLANK <> opt 1
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+DECIMAL <123>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=0000007B param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "123"
+  rest=0@3 ""
+  char=55555555 num=0000007B param=00000001 opt=00000000
+  cell=0000007B
+
+DECIMAL <123A>
+  action r0low=1 argc=00000001 block=0
+    rest=1@3 tok=3@0 char=55 num=0000007B param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "123"
+  rest=1@3 "A"
+  char=55555555 num=0000007B param=00000001 opt=00000000
+  cell=0000007B
+
+DECIMAL <4294967295>
+  action r0low=1 argc=00000001 block=0
+    rest=0@10 tok=10@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=10@0 "4294967295"
+  rest=0@10 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+DECIMAL <4294967296>
+  R0=00158284 signal=00000000
+  tok=10@0 "4294967296"
+  rest=10@0 "4294967296"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <0>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=00000000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "0"
+  rest=0@1 ""
+  char=55555555 num=00000000 param=00000001 opt=00000000
+  cell=00000000
+
+DECIMAL <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <-1>
+  R0=00158284 signal=00000000
+  tok=1@0 "-"
+  rest=2@0 "-1"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+DECIMAL <007>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=00000007 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "007"
+  rest=0@3 ""
+  char=55555555 num=00000007 param=00000001 opt=00000000
+  cell=00000007
+
+DECIMAL <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <777>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=000001FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "777"
+  rest=0@3 ""
+  char=55555555 num=000001FF param=00000001 opt=00000000
+  cell=000001FF
+
+OCTAL <778>
+  R0=00158284 signal=00000000
+  tok=3@0 "778"
+  rest=3@0 "778"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <8>
+  R0=00158284 signal=00000000
+  tok=1@0 "8"
+  rest=1@0 "8"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <37777777777>
+  action r0low=1 argc=00000001 block=0
+    rest=0@11 tok=11@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=11@0 "37777777777"
+  rest=0@11 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+OCTAL <40000000000>
+  R0=00158284 signal=00000000
+  tok=11@0 "40000000000"
+  rest=11@0 "40000000000"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+OCTAL <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <7FF>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7FF"
+  rest=0@3 ""
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <7ff>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7ff"
+  rest=0@3 ""
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <G>
+  R0=00158284 signal=00000000
+  tok=1@0 "G"
+  rest=1@0 "G"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <FFFFFFFF>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "FFFFFFFF"
+  rest=0@8 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+HEX <100000000>
+  R0=00158284 signal=00000000
+  tok=9@0 "100000000"
+  rest=9@0 "100000000"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+HEX <7FFG>
+  action r0low=1 argc=00000001 block=0
+    rest=1@3 tok=3@0 char=55 num=000007FF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "7FF"
+  rest=1@3 "G"
+  char=55555555 num=000007FF param=00000001 opt=00000000
+  cell=000007FF
+
+HEX <abc>
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=00000ABC param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "abc"
+  rest=0@3 ""
+  char=55555555 num=00000ABC param=00000001 opt=00000000
+  cell=00000ABC
+
+EOS <>
+  action r0low=1 argc=00000001 block=0
+    rest=0@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+EOS <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+EOS < >
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=0@1 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @1
+
+LAMBDA <>
+  action r0low=1 argc=00000001 block=0
+    rest=0@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+LAMBDA <A>
+  action r0low=1 argc=00000001 block=0
+    rest=1@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+LAMBDA < A>
+  action r0low=1 argc=00000001 block=0
+    rest=2@0 tok=0@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=2@0 " A"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000000 desc @0
+
+UIC <[1,2]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,2]"
+  rest=0@5 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <<1,2>>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "<1,2>"
+  rest=0@5 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <[*,2]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFF0002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,2]"
+  rest=0@5 ""
+  char=55555555 num=3FFF0002 param=00000001 opt=00000000
+  cell=3FFF0002
+
+UIC <[1,*]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=0001FFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,*]"
+  rest=0@5 ""
+  char=55555555 num=0001FFFF param=00000001 opt=00000000
+  cell=0001FFFF
+
+UIC <[*,*]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,*]"
+  rest=0@5 ""
+  char=55555555 num=3FFFFFFF param=00000001 opt=00000000
+  cell=3FFFFFFF
+
+UIC <[177777,177777]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=15@0 "[177777,177777]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[200000,1]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=10@0 "[200000,1]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[1,2"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1 ,2]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@6 tok=6@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "[1 ,2]"
+  rest=0@6 ""
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <[8,1]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=5@0 "[8,1]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2>>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=5@0 "[1,2>"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[,2]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[,2]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UIC <[1,2]X>
+  action r0low=1 argc=00000001 block=0
+    rest=1@5 tok=5@0 char=55 num=00010002 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,2]"
+  rest=1@5 "X"
+  char=55555555 num=00010002 param=00000001 opt=00000000
+  cell=00010002
+
+UIC <1,2>
+  R0=00158284 signal=00000000
+  tok=1@0 "1"
+  rest=3@0 "1,2"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <[1,4]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[1,4]"
+  rest=0@5 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <[SYSTEM]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "[SYSTEM]"
+  rest=0@8 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <SYSTEM>
+  action r0low=1 argc=00000001 block=0
+    rest=0@6 tok=6@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "SYSTEM"
+  rest=0@6 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <%X10>
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=00000010 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=4@0 "%X10"
+  rest=0@4 ""
+  char=55555555 num=00000010 param=00000001 opt=00000000
+  cell=00000010
+
+IDENT <%X80010000>
+  action r0low=1 argc=00000001 block=0
+    rest=0@10 tok=10@0 char=55 num=80010000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=10@0 "%X80010000"
+  rest=0@10 ""
+  char=55555555 num=80010000 param=00000001 opt=00000000
+  cell=80010000
+
+IDENT <NOSUCH>
+  R0=000021EC signal=00000000
+  tok=6@0 "NOSUCH"
+  rest=6@0 "NOSUCH"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <*>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=FFFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "*"
+  rest=0@1 ""
+  char=55555555 num=FFFFFFFF param=00000001 opt=00000000
+  cell=FFFFFFFF
+
+IDENT <[*,*]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=3FFFFFFF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[*,*]"
+  rest=0@5 ""
+  char=55555555 num=3FFFFFFF param=00000001 opt=00000000
+  cell=3FFFFFFF
+
+IDENT <<SYSTEM>>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=55 num=00010004 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "<SYSTEM>"
+  rest=0@8 ""
+  char=55555555 num=00010004 param=00000001 opt=00000000
+  cell=00010004
+
+IDENT <[NOSUCH]>
+  R0=000021EC signal=00000000
+  tok=1@0 "["
+  rest=8@0 "[NOSUCH]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <123>
+  R0=00002224 signal=00000000
+  tok=3@0 "123"
+  rest=3@0 "123"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <[SYSTEM,SYSTEM]>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=15@0 "[SYSTEM,SYSTEM]"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+IDENT <%XG>
+  R0=00158284 signal=00000000
+  tok=1@0 "%"
+  rest=3@0 "%XG"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <A.B;1>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A.B;1"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <DEV:[DIR]A.B;1 X>
+  action r0low=1 argc=00000001 block=0
+    rest=2@14 tok=14@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=14@0 "DEV:[DIR]A.B;1"
+  rest=2@14 " X"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000E desc @0
+
+FILESPEC <NODE::DEV:A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@11 tok=11@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=11@0 "NODE::DEV:A"
+  rest=0@11 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000B desc @0
+
+FILESPEC <A.B.1>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "A.B.1"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <[A.B]>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "[A.B]"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <[A.B>
+  R0=00158284 signal=00000000
+  tok=1@0 "["
+  rest=4@0 "[A.B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <*.*;*>
+  action r0low=1 argc=00000001 block=0
+    rest=0@5 tok=5@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=5@0 "*.*;*"
+  rest=0@5 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000005 desc @0
+
+FILESPEC <A,B>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 ",B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+FILESPEC <A B>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=2@1 " B"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+FILESPEC <+>
+  R0=00158284 signal=00000000
+  tok=1@0 "+"
+  rest=1@0 "+"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <NODE"u p"::X>
+  action r0low=1 argc=00000001 block=0
+    rest=0@12 tok=12@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=12@0 "NODE"u p"::X"
+  rest=0@12 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=0000000C desc @0
+
+FILESPEC <[A.][B]C>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "[A.][B]C"
+  rest=0@8 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+FILESPEC <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FILESPEC <A:B:C>
+  action r0low=1 argc=00000001 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "A:B"
+  rest=2@3 ":C"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+FILESPEC <.B>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 ".B"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+FILESPEC <;1>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 ";1"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000002 desc @0
+
+NEXT <AB>
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <CB>
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <A>
+  R0=00158284 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NEXT <ACB>
+  R0=00158284 signal=00000000
+  tok=2@1 "CB"
+  rest=2@1 "CB"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <AAA>
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <AAB>
+  R0=00158284 signal=00000000
+  tok=1@2 "B"
+  rest=1@2 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOP <>
+  R0=00000001 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <AX>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "X"
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <BX>
+  R0=00000001 signal=00000000
+  tok=1@0 "B"
+  rest=1@1 "X"
+  char=00000042 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILT <CX>
+  R0=00158284 signal=00000000
+  tok=2@0 "CX"
+  rest=2@0 "CX"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILA <ABC D>
+  action r0low=1 argc=00000001 block=0
+    rest=2@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000000
+  R0=00158284 signal=00000000
+  tok=3@0 "ABC"
+  rest=2@3 " D"
+  char=55555555 num=55555555 param=00000001 opt=00000000
+  cell=00000003 desc @0
+
+FAILA <X>
+  R0=00158284 signal=00000000
+  tok=1@0 "X"
+  rest=1@0 "X"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+FAILS <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+REJECT <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+REJECT <B>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=42 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "B"
+  rest=0@1 ""
+  char=00000042 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+REJECT <>
+  R0=00158284 signal=00000000
+  tok=0@0 ""
+  rest=0@0 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALT <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ALT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+ALT2 <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001240 opt=00000000
+  R0=00001240 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001240 opt=00000000
+  cell=55555555
+
+ALT3 <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00000000 opt=00000000
+  cell=55555555
+
+ALT4 <AB>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 "B"
+  rest=0@2 ""
+  char=00000042 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ALT4 <AC>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "C"
+  rest=1@1 "C"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+ODD <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000003 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000003 opt=00000000
+  cell=55555555
+
+SIG <A>
+  R0=00001234 signal=00001234
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SKIP <ABC>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@2 "C"
+  rest=0@3 ""
+  char=00000043 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SKIP <AC>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+NOARG <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <AB  X> opt 1
+  action r0low=1 argc=00000001 block=0
+    rest=1@4 tok=2@2 char=42 num=55555555 param=55555555 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@4 "X"
+  rest=0@5 ""
+  char=00000058 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <AB X > opt 1
+  action r0low=1 argc=00000001 block=0
+    rest=2@3 tok=1@2 char=42 num=55555555 param=55555555 opt=00000001
+  R0=00000001 signal=00000000
+  tok=1@3 "X"
+  rest=1@4 " "
+  char=00000058 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+BLKOFF <ABX> opt 1
+  R0=00158284 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000058 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON <A B>
+  action r0low=1 argc=00000001 block=0
+    rest=2@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@1 " "
+  rest=1@2 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON <AB>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "B"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+BLKON < A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=55555555 opt=00000000
+  R0=00158284 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=55555555 opt=00000001
+  cell=55555555
+
+MASK <A>
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=5555555F
+
+MASKA <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=555555F5
+
+MASKR <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000000 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00000000 opt=00000000
+  cell=55555555
+
+MASKN <12>
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=0@2 ""
+  char=55555555 num=0000000C param=55555555 opt=00000000
+  cell=5555555F
+
+MASKS <AB>
+  R0=00000001 signal=00000000
+  tok=2@0 "AB"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=5555555F
+
+QUOTE </ABC/> opt 1
+  R0=00000001 signal=00000000
+  tok=1@4 "/"
+  rest=0@5 ""
+  char=0000002F num=55555555 param=55555555 opt=00000001
+  cell=00000003 desc @1
+
+QUOTE <//> opt 1
+  R0=00000001 signal=00000000
+  tok=1@1 "/"
+  rest=0@2 ""
+  char=0000002F num=55555555 param=55555555 opt=00000001
+  cell=00000000 desc @1
+
+QUOTE </AB> opt 1
+  R0=00158284 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000042 num=55555555 param=55555555 opt=00000001
+  cell=00000002 desc @1
+
+QUOTE </A B/>
+  R0=00000001 signal=00000000
+  tok=1@4 "/"
+  rest=0@5 ""
+  char=0000002F num=55555555 param=55555555 opt=00000000
+  cell=00000003 desc @1
+
+LOOK <10/OCTAL>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=2F num=00000008 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "10/OCTAL"
+  rest=0@8 ""
+  char=0000002F num=00000008 param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+LOOK <32768/DECIMAL>
+  action r0low=1 argc=00000001 block=0
+    rest=0@13 tok=13@0 char=2F num=00008000 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=13@0 "32768/DECIMAL"
+  rest=0@13 ""
+  char=0000002F num=00008000 param=00000001 opt=00000000
+  cell=0000000D desc @0
+
+LOOK <77AF/HEX>
+  action r0low=1 argc=00000001 block=0
+    rest=0@8 tok=8@0 char=2F num=000077AF param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=8@0 "77AF/HEX"
+  rest=0@8 ""
+  char=0000002F num=000077AF param=00000001 opt=00000000
+  cell=00000008 desc @0
+
+LOOK <10/HEX>
+  action r0low=1 argc=00000001 block=0
+    rest=0@6 tok=6@0 char=2F num=00000010 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=6@0 "10/HEX"
+  rest=0@6 ""
+  char=0000002F num=00000010 param=00000001 opt=00000000
+  cell=00000006 desc @0
+
+LOOK <99/OCTAL>
+  R0=00158284 signal=00000000
+  tok=2@0 "99"
+  rest=8@0 "99/OCTAL"
+  char=0000002F num=00000099 param=55555555 opt=00000000
+  cell=55555555
+
+LOOK <ZZ/HEX>
+  R0=00158284 signal=00000000
+  tok=2@0 "ZZ"
+  rest=6@0 "ZZ/HEX"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+LOOK <10/>
+  R0=00158284 signal=00000000
+  tok=2@0 "10"
+  rest=3@0 "10/"
+  char=0000002F num=00000010 param=55555555 opt=00000000
+  cell=55555555
+
+SUBEND <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@1 ""
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBEND < A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=1@1 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @1
+
+SUBEND <A >
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBEND <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBEND <AB>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00158284 signal=00000000
+  tok=1@1 "B"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=00000001 desc @0
+
+SUBFAIL <AB>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "B"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBFAIL <AC>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=1@1 "C"
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBFAIL <XY>
+  action r0low=1 argc=00000001 block=0
+    rest=1@1 tok=1@0 char=58 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "X"
+  rest=1@1 "Y"
+  char=00000058 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+SUBALT <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+SUBALT <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBALT2 <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+SUBSIDE <12X>
+  action r0low=1 argc=00000001 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "12X"
+  rest=0@3 ""
+  char=00000058 num=0000000C param=00000001 opt=00000000
+  cell=5555555F
+
+SUBSIDE <12Y>
+  action r0low=1 argc=00000001 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=2@0 "12"
+  rest=1@2 "Y"
+  char=55555555 num=0000000C param=00000001 opt=00000000
+  cell=5555555F
+
+SUBNEST <(A)>
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000003 desc @0
+
+SUBNEST <((A))>
+  R0=00000001 signal=00000000
+  tok=0@5 ""
+  rest=0@5 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000005 desc @0
+
+SUBNEST <(((A)))>
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=00000007 desc @0
+
+SUBNEST <((A)>
+  R0=00158284 signal=00000000
+  tok=1@0 "("
+  rest=4@0 "((A)"
+  char=00000029 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBNEST <A>
+  R0=00158284 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+SUBLAST <12A>
+  action r0low=1 argc=00000001 block=0
+    rest=1@2 tok=2@0 char=55 num=0000000C param=00000001 opt=00000000
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=1@2 char=41 num=0000000C param=00000001 opt=00000000
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=41 num=0000000C param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=3@0 "12A"
+  rest=0@3 ""
+  char=00000041 num=0000000C param=00000001 opt=00000000
+  cell=55555555
+
+ABR <AL> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=2@0 "AL"
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <A> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BE> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=2@0 char=55 num=55555555 param=00000001 opt=00010002
+  action r0low=1 argc=00000001 block=0
+    rest=0@2 tok=0@2 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@2 ""
+  rest=0@2 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BET> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00010002
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=0@3 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@3 ""
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETT> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETT"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETTERX> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@7 tok=7@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=0@7 tok=0@7 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@7 ""
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <C> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "C"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <CATX> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <CAT> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "CAT"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <BETA> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "BETA"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR <beta> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=0@4 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@4 ""
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR2 <G> opt 2
+  R0=00158284 signal=00000000
+  tok=1@0 "G"
+  rest=1@0 "G"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR2 <GE> opt 2
+  R0=00158284 signal=00000000
+  tok=2@0 "GE"
+  rest=2@0 "GE"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR2 <GET> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "GET"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR2 <GETX> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@4 tok=4@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=4@0 "GETX"
+  rest=0@4 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR2 <GETZ> opt 2
+  R0=00158284 signal=00000000
+  tok=4@0 "GETZ"
+  rest=4@0 "GETZ"
+  char=55555555 num=55555555 param=55555555 opt=00000002
+  cell=55555555
+
+ABR3 <O> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=1@0 "O"
+  rest=0@1 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR3 <ONE> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=0@3 tok=3@0 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=3@0 "ONE"
+  rest=0@3 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR4 <T THREE> opt 2
+  action r0low=1 argc=00000001 block=0
+    rest=6@1 tok=1@0 char=55 num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=0@7 tok=5@2 char=55 num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=5@2 "THREE"
+  rest=0@7 ""
+  char=55555555 num=55555555 param=00000001 opt=00000002
+  cell=55555555
+
+ABR4 <O T> opt 2
+  R0=00158284 signal=00000000
+  tok=1@0 "O"
+  rest=3@0 "O T"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+ABR4 <ON TH> opt 2
+  R0=00158284 signal=00000000
+  tok=2@0 "ON"
+  rest=5@0 "ON TH"
+  char=55555555 num=55555555 param=55555555 opt=00010002
+  cell=55555555
+
+CODES <A>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+CODES <,>
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=2C num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 ","
+  rest=0@1 ""
+  char=0000002C num=55555555 param=00000001 opt=00000000
+  cell=55555555
+
+CODES <B>
+  R0=00158284 signal=00000000
+  tok=1@0 "B"
+  rest=1@0 "B"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+UFD <CREATE/DIR DEV:[A.B.C]> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=11@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000001 block=0
+    rest=5@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=3@19 tok=1@18 char=2E num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=1@21 tok=1@20 char=2E num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@22 ""
+  rest=0@22 ""
+  char=0000005D num=55555555 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[202,31]/ENTRIES=100> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=24@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000001 block=0
+    rest=0@35 tok=3@32 char=3D num=00000064 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@35 ""
+  rest=0@35 ""
+  char=0000003D num=00000064 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[A]/OWN=[1,2]/PROT=(SYSTEM:R,OWNER:RWED,GROUP:R,WORLD:R)> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=60@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000001 block=0
+    rest=54@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@71 ""
+  rest=0@71 ""
+  char=00000029 num=00000002 param=00000001 opt=00000002
+  cell=0000000F desc @11
+
+UFD <CREATE/DIR DEV:[A]/E=1/P=(S:R)> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=19@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000001 block=0
+    rest=13@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  action r0low=1 argc=00000001 block=0
+    rest=8@22 tok=1@21 char=3D num=00000001 param=00000001 opt=00000002
+  R0=00000001 signal=00000000
+  tok=0@30 ""
+  rest=0@30 ""
+  char=00000029 num=00000001 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:[A]/X> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=9@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  action r0low=1 argc=00000001 block=0
+    rest=3@17 tok=1@16 char=5B num=55555555 param=00000001 opt=00000002
+  R0=00158284 signal=00000000
+  tok=1@19 "X"
+  rest=1@19 "X"
+  char=0000002F num=55555555 param=00000001 opt=00000002
+  cell=00000003 desc @11
+
+UFD <CREATE/DIR DEV:A> opt 3
+  action r0low=1 argc=00000001 block=0
+    rest=5@11 tok=1@10 char=52 num=55555555 param=55555555 opt=00000003
+  R0=00158284 signal=00000000
+  tok=1@15 "A"
+  rest=1@15 "A"
+  char=0000003A num=55555555 param=55555555 opt=00000002
+  cell=00000003 desc @11
+
+##### Type bytes no macro makes
+
+RAW219 <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW219 table <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW219 <NODE::A>
+  R0=00158284 signal=00000000
+  tok=4@0 "NODE"
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW219 table <NODE::A>
+  R0=00158284 signal=00000000
+  tok=4@0 "NODE"
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW219 <NODE"U P"::A>
+  R0=00158284 signal=00000000
+  tok=4@0 "NODE"
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW219 table <NODE"U P"::A>
+  R0=00158284 signal=00000000
+  tok=4@0 "NODE"
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW220 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW227 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW228 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW229 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW230 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 table <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 <NODE::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=3@4 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 table <NODE::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=3@4 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=9@0 "NODE"U P""
+  rest=3@9 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW231 table <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=9@0 "NODE"U P""
+  rest=3@9 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 table <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 <NODE::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=3@4 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 table <NODE::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=3@4 "::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=8@4 ""U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW232 table <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=4@0 "NODE"
+  rest=8@4 ""U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 table <12>
+  R0=00158284 signal=00000000
+  tok=2@0 "12"
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 <NODE::A>
+  R0=00000001 signal=00000000
+  tok=6@0 "NODE::"
+  rest=1@6 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 table <NODE::A>
+  R0=00000001 signal=00000000
+  tok=6@0 "NODE::"
+  rest=1@6 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=11@0 "NODE"U P"::"
+  rest=1@11 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW233 table <NODE"U P"::A>
+  R0=00000001 signal=00000000
+  tok=11@0 "NODE"U P"::"
+  rest=1@11 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW249 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW250 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 table <12>
+  R0=0015828C signal=00000000
+  rest=2@0 "12"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 table <NODE::A>
+  R0=0015828C signal=00000000
+  rest=7@0 "NODE::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAW255 table <NODE"U P"::A>
+  R0=0015828C signal=00000000
+  rest=12@0 "NODE"U P"::A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAWBAD
+  R0=0015828C signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAWSUB
+  R0=0015828C signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+RAWPTR
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+##### Argument blocks
+
+count 0
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 0 table
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 0 action
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 1
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 1 table
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 1 action
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 7
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 7 table
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 7 action
+  R0=00000114 signal=00000000
+  rest=1@0 "A"
+  char=55555555 num=55555555 param=55555555 opt=00000000
+  cell=55555555
+
+count 9
+  action r0low=1 argc=00000009 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 9 table
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 9 action
+  action r0low=1 argc=00000009 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+count 16
+  action r0low=1 argc=00000010 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 16 table
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 16 action
+  action r0low=1 argc=00000010 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+count 255
+  action r0low=1 argc=000000FF block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 255 table
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 255 action
+  action r0low=1 argc=000000FF block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+count 256
+  action r0low=1 argc=00000100 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 256 table
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count 256 action
+  action r0low=1 argc=00000100 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+count -1
+  action r0low=1 argc=FFFFFFFF block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count -1 table
+  action r0low=1 argc=00000001 block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00000001 opt=00000000
+  R0=00000001 signal=00000000
+  tok=1@0 "A"
+  rest=0@1 ""
+  char=00000041 num=55555555 param=00000001 opt=00000000
+  cell=55555541
+
+count -1 action
+  action r0low=1 argc=FFFFFFFF block=0
+    rest=0@1 tok=1@0 char=41 num=55555555 param=00001230 opt=00000000
+  R0=00001230 signal=00000000
+  tok=1@0 "A"
+  rest=1@0 "A"
+  char=00000041 num=55555555 param=00001230 opt=00000000
+  cell=55555555
+
+##### Bad arguments, each under the handler
+block 0 R0=0000000C signal=0000000C
+string unmapped R0=0000000C signal=0000000C
+keyword table 0 R0=0000000C signal=0000000C
+state table 0 R0=0000000C signal=0000000C
+
+##### $FILESCAN
+
+scan ""
+  R0=00000001 flags=00000000
+  item 1 len=0 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A"
+  R0=00000001 flags=00000010
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B"
+  R0=00000001 flags=00000030
+  item 1 len=3 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B;1"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B.1"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A;1"
+  R0=00000001 flags=00000050
+  item 1 len=3 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=0 at=0
+  item 8 len=2 at=1
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan ";1"
+  R0=00000001 flags=00000050
+  item 1 len=2 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=2 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan ".B"
+  R0=00000001 flags=00000030
+  item 1 len=2 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=2 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "."
+  R0=00000001 flags=00000030
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=1 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan ";"
+  R0=00000001 flags=00000050
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=1 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "DEV:"
+  R0=00000001 flags=00000002
+  item 1 len=4 at=0
+  item 2 len=0 at=0
+  item 3 len=4 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "DEV:A"
+  R0=00000001 flags=00000012
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=4 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=4
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "DEV:[DIR]"
+  R0=00000001 flags=0000000A
+  item 1 len=9 at=0
+  item 2 len=0 at=0
+  item 3 len=4 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=4
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "DEV:[DIR]A.B;1"
+  R0=00000001 flags=0000007A
+  item 1 len=14 at=0
+  item 2 len=0 at=0
+  item 3 len=4 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=4
+  item 6 len=1 at=9
+  item 7 len=2 at=10
+  item 8 len=2 at=12
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[DIR]A"
+  R0=00000001 flags=00000018
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=0
+  item 6 len=1 at=5
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "<DIR>A"
+  R0=00000001 flags=00000018
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=0
+  item 6 len=1 at=5
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[A.B.C]"
+  R0=00000001 flags=00000008
+  item 1 len=7 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=7 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[A.B"
+  R0=00000001 flags=00000000
+  item 1 len=0 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[A,B]"
+  R0=00000001 flags=00000000
+  item 1 len=0 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[1,2]X"
+  R0=00000001 flags=00000018
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=0
+  item 6 len=1 at=5
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[ROOT.][DIR]A"
+  R0=00000001 flags=0000001C
+  item 1 len=13 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=7 at=0
+  item 5 len=5 at=7
+  item 6 len=1 at=12
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[ROOT.]A"
+  R0=00000001 flags=00000014
+  item 1 len=8 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=7 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=7
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[.A]"
+  R0=00000001 flags=00000008
+  item 1 len=4 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=4 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[-.A]"
+  R0=00000001 flags=00000008
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[...]"
+  R0=00000001 flags=00000008
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=5 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[A...]"
+  R0=00000001 flags=00000008
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=6 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "NODE::"
+  R0=00000001 flags=00000081
+  item 1 len=6 at=0
+  item 2 len=6 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=4 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "NODE::A"
+  R0=00000001 flags=00000091
+  item 1 len=7 at=0
+  item 2 len=6 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=6
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=4 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "NODE::DEV:[DIR]A.B;1"
+  R0=00000001 flags=000000FB
+  item 1 len=20 at=0
+  item 2 len=6 at=0
+  item 3 len=4 at=6
+  item 4 len=0 at=0
+  item 5 len=5 at=10
+  item 6 len=1 at=15
+  item 7 len=2 at=16
+  item 8 len=2 at=18
+  item 9 len=4 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "N1::N2::A"
+  R0=00000001 flags=00000291
+  item 1 len=9 at=0
+  item 2 len=8 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=8
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=2 at=0
+  item 10 len=0 at=0
+  item 11 len=4 at=4
+
+scan "NODE"U P"::A"
+  R0=00000001 flags=00000191
+  item 1 len=12 at=0
+  item 2 len=11 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=11
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=4 at=0
+  item 10 len=5 at=4
+  item 11 len=0 at=0
+
+scan "NODE"U P"::N2"X"::A"
+  R0=00000001 flags=00000391
+  item 1 len=19 at=0
+  item 2 len=18 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=18
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=4 at=0
+  item 10 len=5 at=4
+  item 11 len=7 at=11
+
+scan "NODE::"FILE SPEC""
+  R0=00000001 flags=00000091
+  item 1 len=17 at=0
+  item 2 len=6 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=11 at=6
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=4 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "NODE"U"
+  R0=00000001 flags=00000010
+  item 1 len=4 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=4 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A B"
+  R0=00000001 flags=00000010
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A,B"
+  R0=00000001 flags=00000010
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A+B"
+  R0=00000001 flags=00000010
+  item 1 len=1 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "+"
+  R0=00000001 flags=00000000
+  item 1 len=0 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "*.*;*"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A%.B*"
+  R0=00000001 flags=00000030
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=2 at=0
+  item 7 len=3 at=2
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B;-1"
+  R0=00000001 flags=00000070
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=3 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B;*"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A:B:C"
+  R0=00000001 flags=00000012
+  item 1 len=3 at=0
+  item 2 len=0 at=0
+  item 3 len=2 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=2
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "::"
+  R0=00000001 flags=00000081
+  item 1 len=2 at=0
+  item 2 len=2 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "_DEV:A"
+  R0=00000001 flags=00000012
+  item 1 len=6 at=0
+  item 2 len=0 at=0
+  item 3 len=5 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=5
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "$A_B-C.D"
+  R0=00000001 flags=00000030
+  item 1 len=8 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=6 at=0
+  item 7 len=2 at=6
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "a.b;1"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B;1X"
+  R0=00000001 flags=00000070
+  item 1 len=5 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=2 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A.B.C.D"
+  R0=00000001 flags=00000070
+  item 1 len=4 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=2 at=1
+  item 8 len=1 at=3
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "A..B"
+  R0=00000001 flags=00000070
+  item 1 len=3 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=1 at=0
+  item 7 len=1 at=1
+  item 8 len=1 at=2
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "DEV:DEV2:A"
+  R0=00000001 flags=00000012
+  item 1 len=8 at=0
+  item 2 len=0 at=0
+  item 3 len=4 at=0
+  item 4 len=0 at=0
+  item 5 len=0 at=0
+  item 6 len=4 at=4
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+
+scan "[A][B]"
+  R0=00000001 flags=00000008
+  item 1 len=3 at=0
+  item 2 len=0 at=0
+  item 3 len=0 at=0
+  item 4 len=0 at=0
+  item 5 len=3 at=0
+  item 6 len=0 at=0
+  item 7 len=0 at=0
+  item 8 len=0 at=0
+  item 9 len=0 at=0
+  item 10 len=0 at=0
+  item 11 len=0 at=0
+aux R0=00000001 len=0 ""
+bad item R0=00000014
+no list R0=00000001
+
+##### the end of the cases
