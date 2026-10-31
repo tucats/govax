@@ -4072,14 +4072,15 @@ $FOR
     FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END), which MACRO programs can
     call too.  List-directed output goes to SYS$OUTPUT in records of 80
     bytes, each starting with a blank (its carriage control), each value
-    in its type's format: LOGICAL as T or F, INTEGER in 12 columns, REAL
+    in its type's format: LOGICAL as T or F but for LOGICAL*1 and BYTE,
+    an integer in 5 columns, INTEGER*2 in 7 columns, INTEGER*4 in 12, REAL
     with 7 significant digits.
 
     Syntax:
 
         FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
-                [/CONTINUATIONS=<n>]
+                [/CONTINUATIONS=<n>] [/[NO]I4]
 
     Parameter:
 
@@ -4121,6 +4122,12 @@ $FOR
         /CONTINUATIONS=<n>
                         The most continuation lines one statement may
                         have, from 0 to 99.  The default is 19.
+
+        /I4             INTEGER and LOGICAL with no length, and implied
+        /NOI4           integers, are 4 bytes.  With /NOI4 they are 2, and
+                        an integer constant from -32768 to 32767 is an
+                        INTEGER*2.  The default is /I4.  A unit's OPTIONS
+                        statement overrides this for that unit.
 
     The compiler reports each problem it finds with the line it is on:
 

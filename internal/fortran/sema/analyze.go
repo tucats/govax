@@ -9,6 +9,15 @@ import (
 	"github.com/tucats/govax/internal/fortran/lex"
 )
 
+// Options are the qualifiers on the FORTRAN command that semantic analysis
+// needs, which a unit's OPTIONS statements may override (section 1.4.3). The
+// zero value is the default.
+type Options struct {
+	// NoI4 is /NOI4: INTEGER and LOGICAL with no length are 2 bytes, and an
+	// integer constant in a word's range is an INTEGER*2 (Table 2-1).
+	NoI4 bool
+}
+
 // Analyze gives the parser's tree its meaning, reporting what is wrong
 // with it to messages. mainName is the name of a main program without a
 // PROGRAM statement (section 4.12: the source file's name, cut to 26
@@ -19,44 +28,70 @@ import (
 // the parser rejected is left out: without its header its dummy arguments aren't known, and what
 // sema said about the rest would mislead. The Program returned is
 // meaningful only if no error was reported.
-func Analyze(file *ast.File, mainName string, messages *diag.List) *Program {
+func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List) *Program {
 	prog := &Program{}
 	units := unitNames(file, mainName, messages)
 
 	for _, au := range file.Units {
-		prologue(au.Prologue, messages)
+		unitOpts := prologue(au.Prologue, opts, messages)
 
 		if _, bad := au.Header.(*ast.BadStmt); bad {
 			continue
 		}
 
+		defaultInt, defaultLogical := IntegerType, LogicalType
+		if unitOpts.NoI4 {
+			defaultInt, defaultLogical = Type{Integer, 2}, Type{Logical, 2}
+		}
+
 		a := &analyzer{
-			messages:  messages,
-			units:     units,
-			stmtFuncs: map[ast.Stmt]*Symbol{},
-			implicit:  defaultImplicit(),
-			rejected:  map[ast.Stmt]bool{},
-			boundVars: map[*Symbol]diag.Position{},
+			messages:       messages,
+			units:          units,
+			stmtFuncs:      map[ast.Stmt]*Symbol{},
+			implicit:       defaultImplicit(defaultInt),
+			rejected:       map[ast.Stmt]bool{},
+			boundVars:      map[*Symbol]diag.Position{},
+			defaultInt:     defaultInt,
+			defaultLogical: defaultLogical,
 		}
 
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
 	}
 
-	prologue(file.Trailing, messages)
+	prologue(file.Trailing, opts, messages)
 	checkReferences(prog, units, messages)
 	checkCommonInitials(prog, messages)
 
 	return prog
 }
 
-// prologue reports the OPTIONS statements and directives before a unit,
-// or after the last, none of which is implemented yet.
-func prologue(list []ast.Stmt, messages *diag.List) {
+// prologue is the options a unit is compiled with: the compilation's, as
+// the OPTIONS statements before it change them, until the unit's end
+// (section 1.4.3). The qualifiers and directives not implemented yet are
+// reported.
+func prologue(list []ast.Stmt, opts Options, messages *diag.List) Options {
 	for _, s := range list {
-		if _, bad := s.(*ast.BadStmt); !bad {
+		switch s := s.(type) {
+		case *ast.BadStmt:
+
+		case *ast.OptionsStmt:
+			for _, q := range s.Qualifiers {
+				switch q.Name {
+				case "I4":
+					opts.NoI4 = false
+				case "NOI4":
+					opts.NoI4 = true
+				default:
+					messages.Report("NOTIMPL", s.Position(), "the OPTIONS statement's /"+q.Name)
+				}
+			}
+
+		default:
 			messages.Report("NOTIMPL", s.Position(), statementWhat(s))
 		}
 	}
+
+	return opts
 }
 
 // unitName is the name of the unit au.
@@ -126,6 +161,10 @@ type analyzer struct {
 	messages *diag.List
 	units    map[string]*fileUnit
 	unit     *Unit
+
+	// defaultInt and defaultLogical are the types INTEGER and LOGICAL with
+	// no length mean in this unit: 4 bytes, or with /NOI4 2.
+	defaultInt, defaultLogical Type
 
 	// implicit are the unit's letters' types (implicit.go), and
 	// rejected the IMPLICIT statements left out of them.

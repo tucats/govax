@@ -1,22 +1,20 @@
 package sema
 
 import (
-	"errors"
 	"math"
 	"strconv"
-	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
-	"github.com/tucats/govax/internal/vaxfloat"
 )
 
-// Constants, and constant folding: an operation whose operands are all
-// constants is done here, at compile time, and replaced by its value.
-// REAL arithmetic goes through vaxfloat, which rounds as the VAX's
-// floating instructions do (Decision 16 of docs/PHASE-74 - FORTRAN
-// plan.md), so a folded expression has the value the program would have
-// computed.
+// Constant folding: an operation whose operands are all constants is done
+// at compile time and replaced by its value. The values are the
+// evaluator's (constant.go), one set of rules for an executable statement
+// and a PARAMETER statement alike. REAL arithmetic goes through vaxfloat,
+// which rounds as the VAX's floating instructions do (Decision 16 of
+// docs/PHASE-74 - FORTRAN plan.md), so a folded expression has the value
+// the program would have computed.
 
 // INTEGER*4's range (section 2.2.1.1).
 const (
@@ -41,16 +39,15 @@ func (a *analyzer) realRangeError(pos diag.Position, what string, t Type) {
 	a.report("REALRANGE", pos, what, t.part().String(), t.realRange())
 }
 
-// intConst is the constant an integer literal writes.
-func (a *analyzer) intConst(e *ast.IntConst) Expr {
-	v, err := intValue(e)
-	if err != nil || v > maxInt {
-		a.intRangeError(e.Pos, ast.DumpExpr(e), IntegerType)
-
-		return a.bad(e.Pos)
+// constantType is the type of an integer constant whose value is v (never
+// negative: a sign is an operator). It is the unit's default integer, unless
+// v needs more than that has.
+func (a *analyzer) constantType(v int64) Type {
+	if v > math.MaxInt16 {
+		return IntegerType
 	}
 
-	return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(v)}
+	return a.defaultInt
 }
 
 // intValue is an integer constant's value: its digits in decimal, or in
@@ -65,30 +62,6 @@ func intValue(e *ast.IntConst) (int64, error) {
 	return strconv.ParseInt(e.Text, radix, 64)
 }
 
-// realConst is the constant a real literal writes, rounded to
-// F_floating. A D or Q exponent makes a REAL*8 or REAL*16 constant, a
-// constant expression's (constant.go) whose uses are Phase 78's.
-func (a *analyzer) realConst(e *ast.RealConst) Expr {
-	if strings.ContainsAny(e.Text, "DQ") {
-		v, _ := a.folded(e)
-
-		return v
-	}
-
-	v, err := vaxfloat.Parse(e.Text)
-	if err == nil {
-		v, err = vaxfloat.Round(vaxfloat.F, v)
-	}
-
-	if err != nil {
-		a.realRangeError(e.Pos, e.Text, RealType)
-
-		return a.bad(e.Pos)
-	}
-
-	return &Const{exprBase: exprBase{RealType, e.Pos}, Real: v}
-}
-
 // logicalConst is .TRUE. (-1) or .FALSE. (0).
 func logicalConst(value bool, pos diag.Position) *Const {
 	c := &Const{exprBase: exprBase{LogicalType, pos}}
@@ -99,183 +72,67 @@ func logicalConst(value bool, pos diag.Position) *Const {
 	return c
 }
 
-// intOp is x op y for INTEGER constants: the four arithmetic operators,
-// .AND., and .OR. (bit by bit, section 2.3.4). An overflow or a division
-// by zero is reported, and ok is false.
-func (a *analyzer) intOp(op ast.Op, x, y int32, pos diag.Position) (int32, bool) {
-	var v int64
-
-	switch op {
-	case ast.Add:
-		v = int64(x) + int64(y)
-	case ast.Sub:
-		v = int64(x) - int64(y)
-	case ast.Mul:
-		v = int64(x) * int64(y)
-	case ast.Div:
-		if y == 0 {
-			a.report("DIVZERO", pos)
-
-			return 0, false
-		}
-
-		// Go's division truncates toward zero, as FORTRAN's does (1/4
-		// is 0, -7/2 is -3).
-		v = int64(x) / int64(y)
-	case ast.And:
-		return x & y, true
-	case ast.Or:
-		return x | y, true
-	}
-
-	r, kind := a.checkInt(v, pos)
-
-	return r, kind == constOK
-}
-
-// realOp is x op y for REAL constants, rounded to F_floating. A result
-// too small for F_floating is zero, as the VAX's is with floating
-// underflow faults disabled (the CPU's default).
-func (a *analyzer) realOp(op ast.Op, x, y vaxfloat.Value, pos diag.Position) (vaxfloat.Value, bool) {
-	var (
-		v   vaxfloat.Value
-		err error
-	)
-
-	switch op {
-	case ast.Add:
-		v, err = vaxfloat.Add(vaxfloat.F, x, y)
-	case ast.Sub:
-		v, err = vaxfloat.Sub(vaxfloat.F, x, y)
-	case ast.Mul:
-		v, err = vaxfloat.Mul(vaxfloat.F, x, y)
-	case ast.Div:
-		v, err = vaxfloat.Div(vaxfloat.F, x, y)
-	}
-
-	switch {
-	case errors.Is(err, vaxfloat.ErrDivideByZero):
-		a.report("DIVZERO", pos)
-
-		return v, false
-
-	case errors.Is(err, vaxfloat.ErrOverflow):
-		a.realRangeError(pos, valueText, RealType)
-
-		return v, false
-	}
-
-	return v, true
-}
-
 // fold replaces e, an operation, by its value if its operands are all
 // constants; otherwise it returns e as it is.
 func (a *analyzer) fold(e Expr) Expr {
+	ev := &evaluator{a: a}
+
+	var (
+		c   *Const
+		err *constErr
+	)
+
 	switch e := e.(type) {
 	case *Convert:
-		if x, ok := e.X.(*Const); ok {
-			return a.foldConvert(x, e.T, e.Pos)
+		x, ok := e.X.(*Const)
+		if !ok {
+			return e
 		}
 
+		c, err = ev.assigned(x, e.T, e.Pos)
+
 	case *Unary:
-		if x, ok := e.X.(*Const); ok {
-			return a.foldUnary(e, x)
+		x, ok := e.X.(*Const)
+		if !ok {
+			return e
+		}
+
+		if e.Op == ast.Not {
+			c = &Const{exprBase: exprBase{e.T, e.Pos}, Int: ^x.Int}
+		} else {
+			c, err = ev.negate(x, e.Pos)
 		}
 
 	case *Binary:
 		x, okx := e.X.(*Const)
 		y, oky := e.Y.(*Const)
 
-		if okx && oky {
-			return a.foldBinary(e, x, y)
+		switch {
+		case !okx || !oky:
+			return e
+		case e.Op == ast.And, e.Op == ast.Or, e.Op == ast.Eqv, e.Op == ast.Neqv, e.Op == ast.Xor:
+			c = bitwiseConst(e.Op, x, y, e.Pos)
+		default:
+			c, err = ev.operate(e.Op, x, y, e.Pos)
 		}
 
 	case *Compare:
 		x, okx := e.X.(*Const)
 		y, oky := e.Y.(*Const)
 
-		if okx && oky {
-			return foldCompare(e, x, y)
-		}
-	}
-
-	return e
-}
-
-// foldConvert is the constant x converted to type t.
-func (a *analyzer) foldConvert(x *Const, t Type, pos diag.Position) Expr {
-	c := &Const{exprBase: exprBase{t, pos}}
-
-	switch {
-	case t.Kind == Real && x.T.Kind == Real:
-		c.Real = x.Real
-
-	case t.Kind == Real:
-		// CVTLF: exact up to 2**24, rounded beyond.
-		c.Real, _ = vaxfloat.Round(vaxfloat.F, vaxfloat.FromInt(int64(x.Int)))
-
-	case x.T.Kind == Real:
-		// CVTFL truncates (Table 3-1).
-		i := x.Real.Int(false)
-		if !i.IsInt64() || i.Int64() < minInt || i.Int64() > maxInt {
-			a.intRangeError(pos, valueText, IntegerType)
-
-			return a.bad(pos)
+		if !okx || !oky {
+			return e
 		}
 
-		c.Int = int32(i.Int64())
+		return logicalConst(relation(e.Op, order(x, y)), e.Pos)
 
 	default:
-		// INTEGER and LOGICAL are the same longword.
-		c.Int = x.Int
+		return e
+	}
+
+	if err != nil {
+		return a.bad(e.Position())
 	}
 
 	return c
-}
-
-// foldUnary is -x or .NOT. x for the constant x.
-func (a *analyzer) foldUnary(e *Unary, x *Const) Expr {
-	c := &Const{exprBase: e.exprBase}
-
-	switch {
-	case e.Op == ast.Not:
-		c.Int = ^x.Int
-
-	case e.T.Kind == Real:
-		c.Real = x.Real.Neg()
-
-	default:
-		v, kind := a.checkInt(-int64(x.Int), e.Pos)
-		if kind != constOK {
-			return a.bad(e.Pos)
-		}
-
-		c.Int = v
-	}
-
-	return c
-}
-
-// foldBinary is x op y for the constants x and y.
-func (a *analyzer) foldBinary(e *Binary, x, y *Const) Expr {
-	c := &Const{exprBase: e.exprBase}
-
-	var ok bool
-
-	if e.T.Kind == Real {
-		c.Real, ok = a.realOp(e.Op, x.Real, y.Real, e.Pos)
-	} else {
-		c.Int, ok = a.intOp(e.Op, x.Int, y.Int, e.Pos)
-	}
-
-	if !ok {
-		return a.bad(e.Pos)
-	}
-
-	return c
-}
-
-// foldCompare is the LOGICAL value of x op y for the constants x and y.
-func foldCompare(e *Compare, x, y *Const) Expr {
-	return logicalConst(relation(e.Op, order(x, y)), e.Pos)
 }

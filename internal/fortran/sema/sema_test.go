@@ -28,7 +28,7 @@ func analyzeLines(t *testing.T, spec string, lines ...string) (*Program, []diag.
 
 	program := source.Read(source.Form{}, &source.File{Spec: spec, Lines: lines}, nil, &messages)
 	file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-	prog := Analyze(file, "T$MAIN", &messages)
+	prog := Analyze(file, "T$MAIN", Options{}, &messages)
 
 	return prog, messages.Messages()
 }
@@ -106,7 +106,15 @@ func TestErrors(t *testing.T) {
 		{"every type and length", []string{"BYTE B", "LOGICAL*1 L1", "LOGICAL*2 L2", "LOGICAL*4 L4",
 			"INTEGER*2 I2", "INTEGER*4 I4", "REAL*4 R4", "REAL*8 R8", "REAL*16 R16", "DOUBLE PRECISION D",
 			"COMPLEX*8 X8", "COMPLEX*16 X16", "DOUBLE COMPLEX DX", "CHARACTER C", "CHARACTER*65535 C2", "END"}, ""},
-		{"a length not compiled yet, used", []string{"INTEGER*2 I", "I = 1", "X = I", "END"}, "NOTIMPL@2:7"},
+		{"a length not compiled yet, used", []string{"REAL*8 I", "I = 1", "X = I", "END"}, "NOTIMPL@2:7"},
+		{"a BYTE holds 255", []string{"BYTE B", "B = 255", "END"}, ""},
+		{"a BYTE doesn't hold 256", []string{"BYTE B", "B = 256", "END"}, "INTRANGE@2:11"},
+		{"a BYTE doesn't hold -129", []string{"BYTE B", "B = -129", "END"}, "INTRANGE@2:11"},
+		{"an INTEGER*2 holds 65535", []string{"INTEGER*2 I", "I = 65535", "END"}, ""},
+		{"an INTEGER*2 doesn't hold 65536", []string{"INTEGER*2 I", "I = 65536", "END"}, "INTRANGE@2:11"},
+		{"a LOGICAL*2 doesn't hold 65536", []string{"LOGICAL*2 L", "L = 65536", "END"}, "INTRANGE@2:11"},
+		{"a REAL constant to a LOGICAL truncates", []string{"LOGICAL L", "L = 1.5", "END"}, ""},
+		{"two short constants overflow a word", []string{"INTEGER*2 I", "PARAMETER (I = 30000)", "J = I + I", "END"}, "INTRANGE@3:13"},
 		{"LOGICAL*8", []string{"LOGICAL*8 L", "END"}, "BADLENGTH@1:7"},
 		{"COMPLEX*4", []string{"COMPLEX C*4", "END"}, "BADLENGTH@1:15"},
 		{"BYTE with a length", []string{"BYTE*1 B", "END"}, "NOLENGTH@1:7"},
@@ -275,7 +283,9 @@ func TestErrors(t *testing.T) {
 		// Expressions.
 		{"**", []string{"X = Y ** 3", "END"}, "NOTIMPL@1:13"},
 		{"//", []string{"PRINT *, 'A' // C", "END"}, "NOTIMPL@1:20"},
-		{".EQV.", []string{"L = L .EQV. L", "END"}, "NOTIMPL@1:13"},
+		{".EQV.", []string{"L = L .EQV. L", "END"}, ""},
+		{".XOR. of REALs", []string{"L = X .XOR. Y", "END"}, "BADOPERAND@1:13"},
+		{".NEQV. of a logical and a REAL", []string{"LOGICAL L", "L = L .NEQV. Y", "END"}, "BADOPERAND@2:13"},
 		{".AND. of REALs", []string{"L = X .AND. Y", "END"}, "BADOPERAND@1:13"},
 		{".NOT. of a REAL", []string{"L = .NOT. X", "END"}, "BADOPERAND@1:11"},
 		{"a character constant assigned", []string{"X = 'AB'", "END"}, "NOTIMPL@1:11"},
@@ -412,7 +422,7 @@ func TestErrors(t *testing.T) {
 		// messages, and a unit with a declaration this phase can't read
 		// gets only the messages about its structure.
 		{"a bound with an error", []string{"DIMENSION A(N)", "A(1) = 2", "X = A(2) + A", "END"}, "ADJNOTDUMMY@1:19"},
-		{"a type not compiled yet", []string{"LOGICAL*1 B", "L = B .AND. .TRUE.", "CALL S(B)", "END"}, "NOTIMPL@2:11"},
+		{"a type not compiled yet", []string{"REAL*8 B", "L = B + 1", "CALL S(B)", "END"}, "NOTIMPL@2:11"},
 		{"a declaration not read yet", []string{"VOLATILE A", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
 		{"a declaration with a syntax error", []string{"INTEGER A(", "X = A(1)", "END IF", "END"}, "SYNTAX@1:17 NOIF@3:7"},
 		{"a FORMAT declares nothing", []string{"10 FORMAT (I5)", "X = 1", "Y = X(2)", "END"}, "NOTIMPL@1:7 NOTARRAY@3:11"},
@@ -436,7 +446,9 @@ func TestErrors(t *testing.T) {
 		{"a length after an untyped function", []string{"FUNCTION F*8(X)", "F = X", "END"}, "NOTIMPL@1:7"},
 		{"a length after an untyped INTEGER function", []string{"FUNCTION IF*4(X)", "IF = X", "END"}, ""},
 		{"a bad length after an untyped function", []string{"FUNCTION IF*8(X)", "IF = X", "END"}, "BADLENGTH@1:18"},
-		{"a function typed by a type statement", []string{"FUNCTION F(X)", "INTEGER*2 F", "F = X", "END"}, "NOTIMPL@1:7"},
+		{"a function typed by a type statement", []string{"FUNCTION F(X)", "REAL*8 F", "F = X", "END"}, "NOTIMPL@1:7"},
+		{"a word function", []string{"FUNCTION F(X)", "INTEGER*2 F", "F = X", "END"}, ""},
+		{"OPTIONS /I4 and /NOI4", []string{"OPTIONS /I4/NOI4", "PROGRAM P", "END"}, ""},
 		{"an alternate return's dummy", []string{"SUBROUTINE S(A, *)", "CALL T(*10)", "10 END"}, "NOTIMPL@1:23 NOTIMPL@2:14"},
 		{"a Hollerith constant", []string{"X = 5HHELLO", "END"}, "NOTIMPL@1:11"},
 		{"an octal constant", []string{"I = '17'O", "END"}, "NOTIMPL@1:11"},
@@ -993,5 +1005,105 @@ func TestParameterValues(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%s = %s: got %s, want %s", c.decl, c.value, got, c.want)
 		}
+	}
+}
+
+// exprType is the type of the value assigned by the last statement before
+// END in a unit of lines, under opts: the expression's own, Convert aside.
+func exprType(t *testing.T, opts Options, lines ...string) string {
+	t.Helper()
+
+	var messages diag.List
+
+	program := source.Read(source.Form{}, &source.File{Spec: "T.FOR", Lines: lines}, nil, &messages)
+	file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+	prog := Analyze(file, "T$MAIN", opts, &messages)
+
+	if messages.Failed() {
+		t.Fatalf("%v: %v", lines, messages.Messages())
+	}
+
+	body := prog.Units[0].Body
+	e := body[len(body)-2].(*Assign).Value
+
+	if c, ok := e.(*Convert); ok {
+		e = c.X
+	}
+
+	return e.Type().String()
+}
+
+// TestOperationTypes checks each operation's type by section 2.3.1.2's ranks,
+// 2.3.4's logical operators, and what the survey's answer 2 says of a small
+// constant beside a word.
+func TestOperationTypes(t *testing.T) {
+	decls := []string{"      BYTE B", "      LOGICAL*2 L2", "      LOGICAL*4 L4", "      INTEGER*2 I2", "      INTEGER*4 I4", "      REAL R"}
+
+	cases := []struct{ expr, want string }{
+		{"I2 + I2", "INTEGER*2"},
+		{"I2 + I4", "INTEGER"},
+		{"I2 + 1", "INTEGER*2"},
+		{"1 + I2", "INTEGER*2"},
+		{"I2 + 32767", "INTEGER*2"},
+		{"I2 + 32768", "INTEGER"},
+		{"I2 + (-32768)", "INTEGER*2"},
+		{"I4 + 1", "INTEGER"},
+		{"I2 + R", "REAL"},
+		{"B + B", "INTEGER*2"},
+		{"L2 + L2", "INTEGER*2"},
+		{"L4 + L4", "INTEGER"},
+		{"L2 + L4", "INTEGER"},
+		{"L4 + I2", "INTEGER*2"},
+		{"B + 1", "INTEGER*2"},
+		{"-B", "INTEGER*2"},
+		{"-L4", "INTEGER"},
+		{"B .AND. B", "LOGICAL*1"},
+		{"B .OR. L2", "LOGICAL*2"},
+		{"L2 .XOR. L4", "LOGICAL"},
+		{"L4 .EQV. B", "LOGICAL"},
+		{".NOT. B", "LOGICAL*1"},
+		{"I2 .AND. I4", "INTEGER"},
+		{"I2 .AND. 3", "INTEGER*2"},
+		{"I2 .NEQV. L4", "INTEGER*2"},
+		{"I4 .OR. B", "INTEGER"},
+		{"I2 .EQ. I4", "LOGICAL"},
+	}
+
+	for _, c := range cases {
+		lines := append(append([]string(nil), decls...), "      X = "+c.expr, "      END")
+		if got := exprType(t, Options{}, lines...); got != c.want {
+			t.Errorf("%s: %s, want %s", c.expr, got, c.want)
+		}
+	}
+}
+
+// TestNoI4 checks what /NOI4 changes: the default lengths, implicit types,
+// and constants that fit a word; and that OPTIONS overrides the command for
+// its unit alone.
+func TestNoI4(t *testing.T) {
+	noi4 := Options{NoI4: true}
+
+	if got := exprType(t, noi4, "      X = I", "      END"); got != "INTEGER*2" {
+		t.Errorf("implicit integer: %s", got)
+	}
+
+	if got := exprType(t, noi4, "      INTEGER J", "      X = J", "      END"); got != "INTEGER*2" {
+		t.Errorf("INTEGER: %s", got)
+	}
+
+	if got := exprType(t, noi4, "      LOGICAL L", "      M = L .AND. L", "      END"); got != "LOGICAL*2" {
+		t.Errorf("LOGICAL: %s", got)
+	}
+
+	if got := exprType(t, noi4, "      PARAMETER (K = 5)", "      X = I + 40000", "      END"); got != "INTEGER" {
+		t.Errorf("a constant past a word: %s", got)
+	}
+
+	if got := exprType(t, noi4, "      OPTIONS /I4", "      X = I", "      END"); got != "INTEGER" {
+		t.Errorf("OPTIONS /I4 under /NOI4: %s", got)
+	}
+
+	if got := exprType(t, Options{}, "      OPTIONS /NOI4", "      X = I", "      END"); got != "INTEGER*2" {
+		t.Errorf("OPTIONS /NOI4: %s", got)
 	}
 }

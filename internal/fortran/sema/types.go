@@ -29,16 +29,17 @@ const (
 // its length in characters, 1 to 65535, or 0 for a passed length,
 // CHARACTER*(*), which a dummy argument takes from its actual argument.
 //
-// Declarations may give a name any of these types (Phase 76); the
-// expressions this phase compiles are on the longword types, INTEGER*4,
-// REAL*4, and LOGICAL*4 (Compiled), and a name of any other type is
-// NOTIMPL where an expression uses it, until Phase 78.
+// Declarations may give a name any of these types (Phase 76); expressions
+// are compiled on the types Compiled says, and a name of any other type is
+// NOTIMPL where an expression uses it, until a later subtask of Phase 78.
 type Type struct {
 	Kind Kind
 	Size int
 }
 
-// The default types, and the Invalid type.
+// INTEGER*4, REAL*4, LOGICAL*4, and the Invalid type. A name declared
+// INTEGER or LOGICAL with no length has its unit's default (analyzer's
+// defaultInt, defaultLogical), these unless /NOI4.
 var (
 	IntegerType = Type{Integer, 4}
 	RealType    = Type{Real, 4}
@@ -80,12 +81,14 @@ func (t Type) String() string {
 }
 
 // Compiled reports whether expressions of the type are compiled yet:
-// INTEGER*4, REAL*4, and LOGICAL*4 are (Phase 75); the other types and
-// lengths are Phase 78's.
+// INTEGER and LOGICAL of every length, and REAL*4. The other types are
+// later subtasks' of Phase 78.
 func (t Type) Compiled() bool {
-	switch t {
-	case IntegerType, RealType, LogicalType:
+	switch t.Kind {
+	case Integer, Logical:
 		return true
+	case Real:
+		return t.Size == 4
 	}
 
 	return false
@@ -174,6 +177,42 @@ func higher(t, u Type) Type {
 
 	if t == (Type{Complex, 8}) && u.Kind == Real && u.Size > 4 {
 		return Type{Complex, 16}
+	}
+
+	return t
+}
+
+// operationType is the type an arithmetic operation or a comparison on a t
+// and a u is done in. A logical ranks lowest (section 2.3.1.2), so it takes
+// any other operand's type. Two logicals are "treated as integers": of the
+// longer one's length, and for two LOGICAL*1s INTEGER*2, there being no
+// INTEGER*1 (our reading, unconfirmed).
+func operationType(t, u Type) Type {
+	h := higher(t, u)
+	if h.Kind == Logical {
+		return Type{Integer, max(t.Size, u.Size, 2)}
+	}
+
+	return h
+}
+
+// logicalType is the type of .AND., .OR., .EQV., .NEQV., or .XOR. on a t and
+// a u (section 2.3.4): on logicals a logical, of the longer one's length; on
+// integers, or an integer and a logical, an integer.
+func logicalType(t, u Type) Type {
+	if t.Kind == Logical && u.Kind == Logical {
+		return Type{Logical, max(t.Size, u.Size)}
+	}
+
+	return operationType(t, u)
+}
+
+// integer is the INTEGER type a logical is treated as when it is alone in an
+// arithmetic context: its own length, or INTEGER*2 for a LOGICAL*1. Any other
+// type is itself.
+func (t Type) integer() Type {
+	if t.Kind == Logical {
+		return Type{Integer, max(t.Size, 2)}
 	}
 
 	return t

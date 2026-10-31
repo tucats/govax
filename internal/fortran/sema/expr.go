@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"math"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -26,11 +28,10 @@ func (a *analyzer) bad(pos diag.Position) Expr {
 // for the caller to accept or not.
 func (a *analyzer) value(e ast.Expr) Expr {
 	switch e := e.(type) {
-	case *ast.IntConst:
-		return a.intConst(e)
+	case *ast.IntConst, *ast.RealConst:
+		v, _ := a.folded(e)
 
-	case *ast.RealConst:
-		return a.realConst(e)
+		return v
 
 	case *ast.LogicalConst:
 		return logicalConst(e.Value, e.Pos)
@@ -325,7 +326,7 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 func (a *analyzer) arithmetic(e Expr) Expr {
 	switch e.Type().Kind {
 	case Logical:
-		return a.convert(e, IntegerType)
+		return a.convert(e, e.Type().integer())
 	case Character:
 		a.notImpl(e.Position(), hollerith)
 
@@ -335,10 +336,10 @@ func (a *analyzer) arithmetic(e Expr) Expr {
 	return e
 }
 
-// convert is e converted to type t: e itself if it already has t's
-// kind, else a Convert (folded, if e is a constant).
+// convert is e converted to type t: e itself if it already has that type,
+// else a Convert (folded, if e is a constant).
 func (a *analyzer) convert(e Expr, t Type) Expr {
-	if k := e.Type().Kind; k == t.Kind || k == Invalid {
+	if e.Type() == t || e.Type().Kind == Invalid {
 		return e
 	}
 
@@ -386,7 +387,7 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 // binary analyzes X op Y.
 func (a *analyzer) binary(e *ast.Binary) Expr {
 	switch e.Op {
-	case ast.Pow, ast.Concat, ast.Eqv, ast.Neqv, ast.Xor:
+	case ast.Pow, ast.Concat:
 		if v, ok := a.folded(e); ok {
 			return v
 		}
@@ -403,11 +404,6 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		a.notImpl(e.Pos, "character concatenation (//)")
 
 		return a.bad(e.Pos)
-
-	case ast.Eqv, ast.Neqv, ast.Xor:
-		a.notImpl(e.Pos, "the "+e.Op.String()+" operator")
-
-		return a.bad(e.Pos)
 	}
 
 	x, y := a.value(e.X), a.value(e.Y)
@@ -419,18 +415,46 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 	case e.Op.Relational():
 		return a.compare(e, x, y)
 
-	case e.Op == ast.And || e.Op == ast.Or:
+	case e.Op == ast.And || e.Op == ast.Or || e.Op == ast.Eqv || e.Op == ast.Neqv || e.Op == ast.Xor:
 		return a.logical(e, x, y)
 	}
+
+	t := a.mixedType(x, y)
 
 	x, y = a.arithmetic(x), a.arithmetic(y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
 
-	t := higher(x.Type(), y.Type())
-
 	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+}
+
+// mixedType is the type an arithmetic operation or comparison on x and y is
+// done in: operationType, but for an INTEGER constant from -32768 to 32767,
+// which "is treated as an INTEGER*2" (section 2.2.1.1; 2.3.1.2 says so of a
+// PARAMETER constant too): beside an INTEGER*2 or a shorter logical that isn't
+// constant it is one, so I2*1000 is done in a word, and wraps if the product
+// doesn't fit one. Two constants aren't affected, so 30000+30000 is 60000; and
+// neither is a constant alone, which is a longword as an argument or an output
+// item. The author's choice (Phase 78's survey, answer 2), unconfirmed.
+func (a *analyzer) mixedType(x, y Expr) Type {
+	t := operationType(x.Type(), y.Type())
+
+	cx, okx := x.(*Const)
+	cy, oky := y.(*Const)
+
+	switch {
+	case okx == oky:
+		return t
+	case oky:
+		cx, y = cy, x
+	}
+
+	if t == IntegerType && cx.T == IntegerType && cx.Int >= math.MinInt16 && cx.Int <= math.MaxInt16 && y.Type().integer().Size == 2 {
+		return Type{Integer, 2}
+	}
+
+	return t
 }
 
 // compare analyzes a relational expression (section 2.3.3): its operands
@@ -450,20 +474,21 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 		return a.bad(e.Pos)
 	}
 
+	t := a.mixedType(x, y)
+
 	x, y = a.arithmetic(x), a.arithmetic(y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
 
-	t := higher(x.Type(), y.Type())
-
 	return a.fold(&Compare{exprBase{LogicalType, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
 }
 
-// logical analyzes .AND. and .OR. (section 2.3.4): on LOGICAL operands
-// the result is LOGICAL; on INTEGER operands, or one of each, the
-// operation is done bit by bit and the result is INTEGER. Nothing else
-// may be an operand.
+// logical analyzes .AND., .OR., .EQV., .NEQV., and .XOR. (section 2.3.4):
+// on LOGICAL operands the result is LOGICAL; on INTEGER operands, or one of
+// each, the operation is done bit by bit and the result is INTEGER (of the
+// types' higher rank, and a constant beside a word is a word: mixedType).
+// Nothing else may be an operand.
 func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
 	for _, o := range []Expr{x, y} {
 		switch o.Type().Kind {
@@ -472,16 +497,16 @@ func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
 
 			return a.bad(e.Pos)
 
-		case Real:
+		case Real, Complex:
 			a.report("BADOPERAND", e.Pos, e.Op.String(), o.Type().String())
 
 			return a.bad(e.Pos)
 		}
 	}
 
-	t := LogicalType
-	if x.Type().Kind == Integer || y.Type().Kind == Integer {
-		t = IntegerType
+	t := logicalType(x.Type(), y.Type())
+	if t.Kind == Integer {
+		t = a.mixedType(x, y)
 	}
 
 	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
@@ -498,7 +523,7 @@ func (a *analyzer) condition(e ast.Expr) Expr {
 	case Logical, Invalid:
 		return c
 	case Integer:
-		return a.convert(c, LogicalType)
+		return a.convert(c, Type{Logical, c.Type().Size})
 	case Character:
 		a.notImpl(c.Position(), hollerith)
 	default:

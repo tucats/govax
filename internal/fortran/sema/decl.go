@@ -220,6 +220,13 @@ func (a *analyzer) typeOf(spec ast.TypeSpec, l ast.Len, pos diag.Position) (Type
 	}
 
 	if !l.HasLength() {
+		switch spec.Type {
+		case ast.Integer:
+			return a.defaultInt, true
+		case ast.Logical:
+			return a.defaultLogical, true
+		}
+
 		return info.def, true
 	}
 
@@ -339,15 +346,4 @@ func (a *analyzer) constInt(e ast.Expr) (int32, constKind) {
 	}
 
 	return c.Int, constOK
-}
-
-// checkInt is v, if it is in INTEGER's range.
-func (a *analyzer) checkInt(v int64, pos diag.Position) (int32, constKind) {
-	if v < minInt || v > maxInt {
-		a.intRangeError(pos, valueText, IntegerType)
-
-		return 0, constFailed
-	}
-
-	return int32(v), constOK
 }

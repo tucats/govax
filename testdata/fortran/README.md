@@ -29,6 +29,7 @@ to check against. To add a program, add both files; this directory's
 | `overlay.for` | EQUIVALENCE overlays: a matrix filled through a vector, a multidimensional array's element by its number, two lists chained into one group, a LOGICAL's and a REAL's bits read and changed through an INTEGER, an overlay's neighbors left alone, a common block under an overlay in two units |
 | `tables.for` | Tables set by DATA and put to use: days in the months, a binary search, an interpolation, tax brackets in a common block from a BLOCK DATA, a matrix product of matrices given by rows and by columns |
 | `store.for` | The internals tour's program for storage (section 8): PARAMETER in a bound, COMMON from a BLOCK DATA, EQUIVALENCE, DATA and initial values |
+| `lengths.for` | INTEGER and LOGICAL of every length: unsigned constants in short variables, word arithmetic wrapping, a small constant beside a word, mixed lengths, the logical operators bit by bit, conversions, short conditions, a word DO variable and function, short arguments with subscripts, OPTIONS /NOI4 for one unit |
 | `grades.for` | Block IF with ELSE IF and ELSE, a nested block IF, GO TO from a block to the loop's end, LOGICAL output, STOP with a display |
 
 ## Programs of several files

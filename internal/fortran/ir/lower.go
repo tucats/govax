@@ -145,11 +145,18 @@ func lowerUnit(u *sema.Unit) *Routine {
 	return r
 }
 
-// typeOf is the machine type of a FORTRAN type: INTEGER and LOGICAL are
-// longwords, REAL is F_floating.
+// typeOf is the machine type of a FORTRAN type: an INTEGER or LOGICAL is a
+// byte, a word, or a longword by its size, and a REAL F_floating.
 func typeOf(t sema.Type) Type {
-	if t.Kind == sema.Real {
+	switch {
+	case t.Kind == sema.Real:
 		return Float
+	case t.Kind != sema.Integer && t.Kind != sema.Logical:
+		return Long
+	case t.Size == 1:
+		return Byte
+	case t.Size == 2:
+		return Word
 	}
 
 	return Long
@@ -159,11 +166,22 @@ func typeOf(t sema.Type) Type {
 func dtypeOf(t sema.Type) DType {
 	switch t.Kind {
 	case sema.Logical:
+		switch t.Size {
+		case 1:
+			return DTypeBU
+		case 2:
+			return DTypeWU
+		}
+
 		return DTypeLU
 	case sema.Real:
 		return DTypeF
 	case sema.Character:
 		return DTypeT
+	}
+
+	if t.Size == 2 {
+		return DTypeW
 	}
 
 	return DTypeL

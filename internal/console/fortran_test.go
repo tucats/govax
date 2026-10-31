@@ -247,7 +247,7 @@ func TestDispatch_fortran(t *testing.T) {
 	writeHostFile(t, a, fortranSource)
 	writeHostFile(t, b, fortranSource)
 
-	if err := d.Dispatch(`FORTRAN/NOMACRO/EXTEND_SOURCE/D_LINES "` + a + `"`); err != nil {
+	if err := d.Dispatch(`FORTRAN/NOMACRO/EXTEND_SOURCE/D_LINES/NOI4 "` + a + `"`); err != nil {
 		t.Fatalf("FORTRAN/NOMACRO: %v", err)
 	}
 

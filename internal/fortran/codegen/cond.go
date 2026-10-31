@@ -148,8 +148,23 @@ func (g *routineGen) branchTo(e ir.Expr, sense bool, target string) {
 	}
 
 	// A LOGICAL's value (or an integer's, as a condition): its low bit.
+	// BLBC and BLBS read a longword, which is past the end of a byte or word
+	// in memory, so a shorter value there is tested with BIT. The branch
+	// written goes around the jump to target, so it is the opposite of sense.
 	v := g.eval(g.fit(e))
 	g.free(v)
+
+	if t := e.Type(); t.Size() < 4 && !v.isRegister() {
+		op := "BEQL"
+		if !sense {
+			op = "BNEQ"
+		}
+
+		g.emit("BIT"+t.String(), ir.None, "#1", v.text)
+		g.around(op, nil, target)
+
+		return
+	}
 
 	op := "BLBC"
 	if !sense {

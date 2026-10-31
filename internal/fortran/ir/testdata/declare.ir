@@ -1,6 +1,6 @@
 routine DECLARE main
-  cell  FLAG    L  $LOCAL+0    variable FLAG
-  cell  SHORT   L  $LOCAL+2    variable SHORT
+  cell  FLAG    B  $LOCAL+0    variable FLAG
+  cell  SHORT   W  $LOCAL+2    variable SHORT
   cell  NAME    L  $LOCAL+4    variable NAME
   cell  BIG     F  $LOCAL+12   variable BIG
   cell  I       L  $LOCAL+20   variable I
@@ -43,7 +43,7 @@ B4:
 routine HALF subroutine
   param X       L  argument 1
   param Y       L  argument 2
-  cell  B       L  $LOCAL+0    variable B
+  cell  B       B  $LOCAL+0    variable B
   $LOCAL is 4 bytes
 B1:
   ; line 27

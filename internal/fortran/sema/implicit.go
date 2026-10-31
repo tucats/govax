@@ -31,12 +31,12 @@ type implicitRules struct {
 }
 
 // defaultImplicit is the rules with no IMPLICIT statement.
-func defaultImplicit() *implicitRules {
+func defaultImplicit(defaultInt Type) *implicitRules {
 	r := &implicitRules{}
 
 	for c := 'A'; c <= 'Z'; c++ {
 		if c >= 'I' && c <= 'N' {
-			r.types[c-'A'] = IntegerType
+			r.types[c-'A'] = defaultInt
 		} else {
 			r.types[c-'A'] = RealType
 		}

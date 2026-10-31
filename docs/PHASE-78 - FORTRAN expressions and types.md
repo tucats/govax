@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
-**Status:** in progress: subtask 1, the survey, done and accepted by the
-author 2026-10-30. Needs Phase 76 (declarations and
+**Status:** in progress: subtasks 1 (the survey, accepted by the author) and
+2 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -562,3 +562,36 @@ stops for review.
   its corrections to the plan, but for one: each intrinsic name with no MTHRTL
   entry gets an FTNRTL routine, where the survey proposed an error. Part A and
   Phases 79, 80, and 85's docs now say so.
+- **2026-10-30, subtask 2:** every length of INTEGER and LOGICAL.
+  - **`sema`:** `fold` now uses the evaluator's operations, so there is one set
+    of constant rules (`fold.go` kept only `fold` itself, and an executable
+    statement's literals keep their exact values). `operationType` and
+    `logicalType` are the ranks with logicals (a logical takes the other's type;
+    two are an integer of the longer length, INTEGER*2 for two bytes);
+    `mixedType` is the author's answer 2; `assigned` (in `exec.go`) is 2.2.1.1's
+    unsigned ranges for a constant, past which INTRANGE. `convert` compares whole
+    types. `.EQV.`, `.NEQV.`, and `.XOR.` compile. `Analyze` takes `Options`, each
+    unit's defaults are `defaultInt` and `defaultLogical`, and `prologue` reads
+    OPTIONS's `/I4` and `/NOI4` for the unit following; its other qualifiers are
+    NOTIMPL, one message each.
+  - **`ir`:** `Byte` and `Word`; `IntConst` and `Const.Int` by type; `Xor`; `.EQV.`
+    as `not(xor)`; folding by type. A constant datum is a `.LONG` whatever its
+    length: the low bytes come first, so a word's reference reads it, and what
+    follows stays aligned. Word DO counts are computed in longwords.
+  - **`codegen`:** INC and DEC by type, `addressOp` (MOVAx and PUSHAx by the element's
+    type), XOR, and a short operand in memory tested with BIT rather than BLBC,
+    which reads a longword. Spill cells stay longwords until subtask 3.
+  - **FTNRTL:** Table 7-1's I5 and I7 and L2 of a word; `LOGICAL` tests its first
+    byte alone, for the same reason.
+  - **The command:** `/[NO]I4`, `govax fortran --no-i4`, HELP, and MANUAL.md.
+  - **Tests:** `testdata/fortran/lengths`, in both paging modes;
+    `shorts.for` golden in `ir` and `codegen`; `TestOperationTypes`, `TestNoI4`.
+  - **Beyond the survey:** Decision 10 leaves a FUNCTION of a new type to Phase 79,
+    but a word or byte function needs nothing that isn't here (its value in R0,
+    stored with MOVW or MOVB), and with `/NOI4` every implicitly typed integer
+    function is one, so `Compiled` admits them. An INTEGER*2 DO variable is the same
+    case, since `/NOI4` makes every implicit one a word; the other DO forms stay
+    Phase 79's. REAL*8 functions and the rest stay NOTIMPL.
+  - **Unconfirmed, ours:** two LOGICAL*1s in arithmetic are an INTEGER*2; INTRANGE
+    for a constant past a short variable's unsigned range; `.TRUE.` and comparisons
+    remain LOGICAL*4 under `/NOI4`, which only SIZEOF could show.

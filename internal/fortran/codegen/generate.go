@@ -79,7 +79,10 @@ var definitions = []struct {
 	value   int
 	comment string
 }{
+	{"DSC$K_DTYPE_BU", int(ir.DTypeBU), "byte logical"},
+	{"DSC$K_DTYPE_WU", int(ir.DTypeWU), "word logical"},
 	{"DSC$K_DTYPE_LU", int(ir.DTypeLU), "longword logical"},
+	{"DSC$K_DTYPE_W", int(ir.DTypeW), "word integer"},
 	{"DSC$K_DTYPE_L", int(ir.DTypeL), "longword integer"},
 	{"DSC$K_DTYPE_F", int(ir.DTypeF), "F_floating"},
 	{"DSC$K_DTYPE_T", int(ir.DTypeT), "text"},

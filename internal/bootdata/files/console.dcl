@@ -785,7 +785,9 @@ grammar console
     ! D_LINES are VAX FORTRAN's /[NO]EXTEND_SOURCE (statements to column
     ! 132) and /[NO]D_LINES (compile the debugging lines), and
     ! CONTINUATIONS is /CONTINUATIONS=n, the most continuation lines a
-    ! statement may have (0 to 99; 19 when not given). Later phases add
+    ! statement may have (0 to 99; 19 when not given). I4 is /[NO]I4:
+    ! INTEGER and LOGICAL with no length are 4 bytes, or with /NOI4 2.
+    ! Later phases add
     ! the rest of the compiler's qualifiers.
     !
     verb fortran/id=1370
@@ -801,6 +803,7 @@ grammar console
                     /default=""
         qualifier   extend_source/id=1374
         qualifier   d_lines/id=1375
+        qualifier   i4/id=1377
         qualifier   continuations/id=1376       -
                     /type=$integer
 

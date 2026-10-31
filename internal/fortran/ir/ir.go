@@ -24,9 +24,9 @@ func (k Kind) String() string {
 
 // Type is a value's type as the machine sees it: what size it is and
 // which instructions work on it. FORTRAN's INTEGER*4 and LOGICAL*4 are
-// both a longword, so both are Long here; the difference that matters
-// (how a LOGICAL is tested, what a descriptor says it is) has been
-// settled by the time a value is lowered.
+// both a longword, so both are Long here, and INTEGER*2 and LOGICAL*2 both
+// a Word; the difference that matters (how a LOGICAL is tested, what a
+// descriptor says it is) has been settled by the time a value is lowered.
 type Type int
 
 // The types. None is a subroutine's (absent) result.
@@ -34,17 +34,24 @@ const (
 	None  Type = iota
 	Long       // a longword: INTEGER*4, LOGICAL*4; the L of ADDL3
 	Float      // F_floating: REAL*4; the F of ADDF3
+	Byte       // a byte: BYTE, LOGICAL*1; the B of BISB3
+	Word       // a word: INTEGER*2, LOGICAL*2; the W of ADDW3
 )
 
 // String is the type's letter, the suffix of the VAX instructions that
-// work on it: L, F.
+// work on it: L, F, B, W.
 func (t Type) String() string {
-	return [...]string{"", "L", "F"}[t]
+	return [...]string{"", "L", "F", "B", "W"}[t]
 }
 
 // Size is the type's size in bytes.
 func (t Type) Size() int {
-	return [...]int{0, 4, 4}[t]
+	return [...]int{0, 4, 4, 1, 2}[t]
+}
+
+// Integer reports whether t is an integer type: Byte, Word, or Long.
+func (t Type) Integer() bool {
+	return t == Byte || t == Word || t == Long
 }
 
 // Routine is one program unit, lowered: its storage, its read-only data,
@@ -192,19 +199,28 @@ type Datum struct {
 // describes.
 type DType int
 
-// The data types the subset uses.
+// The data types in use.
 const (
+	DTypeBU DType = 2  // a byte logical (unsigned): BYTE, LOGICAL*1
+	DTypeWU DType = 3  // a word logical (unsigned): LOGICAL*2
 	DTypeLU DType = 4  // a longword logical (unsigned): LOGICAL*4
+	DTypeW  DType = 7  // a word integer: INTEGER*2
 	DTypeL  DType = 8  // a longword integer: INTEGER*4
 	DTypeF  DType = 10 // F_floating: REAL*4
 	DTypeT  DType = 14 // text: a character string
 )
 
-// String is the code's name after DSC$K_DTYPE_: LU, L, F, T.
+// String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, T.
 func (d DType) String() string {
 	switch d {
+	case DTypeBU:
+		return "BU"
+	case DTypeWU:
+		return "WU"
 	case DTypeLU:
 		return "LU"
+	case DTypeW:
+		return "W"
 	case DTypeL:
 		return "L"
 	case DTypeF:
@@ -464,6 +480,7 @@ const (
 	Neg
 	And // bit by bit, as .AND. is on LOGICALs stored as -1 and 0
 	Or
+	Xor
 	Not
 	Cvt // conversion to the Op's type: CVTLF, or CVTFL (which truncates)
 	Eq
@@ -476,7 +493,7 @@ const (
 
 // String is the operator's name in the dump.
 func (o Operator) String() string {
-	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "not", "cvt",
+	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "xor", "not", "cvt",
 		"eq", "ne", "lt", "le", "gt", "ge"}[o]
 }
 
@@ -544,6 +561,21 @@ func LongConst(n int32) *Const {
 	return &Const{T: Long, Bits: uint64(uint32(n))}
 }
 
+// IntConst is the constant n of the integer type t: its low bits, as memory
+// holds a t.
+func IntConst(t Type, n int32) *Const {
+	bits := uint64(uint32(n))
+
+	switch t {
+	case Byte:
+		bits &= 0xFF
+	case Word:
+		bits &= 0xFFFF
+	}
+
+	return &Const{T: t, Bits: bits}
+}
+
 // FloatConst is the F_floating constant v, which must already be one
 // (rounded to F_floating's precision and range).
 func FloatConst(v vaxfloat.Value) *Const {
@@ -552,8 +584,15 @@ func FloatConst(v vaxfloat.Value) *Const {
 	return &Const{T: Float, Bits: b.Lo}
 }
 
-// Int is a Long constant's value.
+// Int is an integer constant's value, a Byte's or Word's sign-extended.
 func (c *Const) Int() int32 {
+	switch c.T {
+	case Byte:
+		return int32(int8(c.Bits))
+	case Word:
+		return int32(int16(c.Bits))
+	}
+
 	return int32(uint32(c.Bits))
 }
 

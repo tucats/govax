@@ -235,8 +235,8 @@ func (g *routineGen) call(s *ir.Call) {
 
 // pushAddress is the instruction that pushes the address of m: PUSHAB
 // for an I/O control block, PUSHAQ for a descriptor (a quadword, at
-// least), PUSHAL for a longword value or an array of them. The letter
-// only scales an index, which only a longword's place has.
+// least), and for a value or an array of them the letter of its type. The
+// letter only scales an index (addressOp).
 func pushAddress(m *ir.Mem) string {
 	switch {
 	case m.Datum != nil && m.Datum.Kind == ir.ControlDatum:
@@ -246,7 +246,7 @@ func pushAddress(m *ir.Mem) string {
 		return "PUSHAQ"
 	}
 
-	return "PUSHAL"
+	return addressOp("PUSHA", m)
 }
 
 // terminator writes a block's terminator, next being the block laid out

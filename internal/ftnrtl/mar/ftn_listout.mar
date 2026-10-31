@@ -28,7 +28,10 @@
 ; array (class A), whose elements are written one after another, in
 ; storage order. The formats are the manual's Table 7-1:
 ;
+;	BYTE, LOGICAL*1	(DSC$K_DTYPE_BU)	I5		"   42"
+;	LOGICAL*2	(DSC$K_DTYPE_WU)	L2		" T" or " F"
 ;	LOGICAL*4	(DSC$K_DTYPE_LU)	L2		" T" or " F"
+;	INTEGER*2	(DSC$K_DTYPE_W)		I7		"     42"
 ;	INTEGER*4	(DSC$K_DTYPE_L)		I12		"          42"
 ;	REAL*4		(DSC$K_DTYPE_F)		1PG15.7E2	"   3.400000    "
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
@@ -73,7 +76,10 @@ DSC$B_DTYPE	= 2			; the data type
 DSC$B_CLASS	= 3			; the class
 DSC$A_POINTER	= 4			; the data's address
 DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_DTYPE_BU	= 2			; byte logical
+DSC$K_DTYPE_WU	= 3			; word logical
 DSC$K_DTYPE_LU	= 4			; longword logical
+DSC$K_DTYPE_W	= 7			; word integer
 DSC$K_DTYPE_L	= 8			; longword integer
 DSC$K_DTYPE_F	= 10			; F_floating
 DSC$K_DTYPE_T	= 14			; text
@@ -257,12 +263,14 @@ PUT_VALUE:
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
 	SUBL2	#FRAME_SIZE,SP		; the frame's local storage
 	MOVL	8(AP),R6		; the value
-	CASEB	4(AP),#DSC$K_DTYPE_LU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_LU>
-10$:	.WORD	LOGICAL-10$		; 4: LU
+	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+10$:	.WORD	BYTE_I5-10$		; 2: BU
+	.WORD	LOGICAL-10$		; 3: WU
+	.WORD	LOGICAL-10$		; 4: LU
 	.WORD	BAD_TYPE-10$		; 5
 	.WORD	BAD_TYPE-10$		; 6
-	.WORD	BAD_TYPE-10$		; 7
-	.WORD	INTEGER-10$		; 8: L
+	.WORD	WORD_I7-10$		; 7: W
+	.WORD	LONG_I12-10$		; 8: L
 	.WORD	BAD_TYPE-10$		; 9
 	.WORD	REAL-10$		; 10: F
 	.WORD	BAD_TYPE-10$		; 11
@@ -275,30 +283,47 @@ BAD_TYPE:
 
 ;
 ; L2: a blank, then T or F by the value's bit 0 (the manual's C.4: only
-; the low bit of a LOGICAL is defined).
+; the low bit of a LOGICAL is defined). BIT looks at the first byte alone,
+; which every length of LOGICAL has; BLBC would read a longword.
 ;
 LOGICAL:
 	MOVB	#^A/ /,FIELD(FP)
 	MOVB	#^A/F/,FIELD+1(FP)
-	BLBC	(R6),10$
+	BITB	#1,(R6)
+	BEQL	10$
 	MOVB	#^A/T/,FIELD+1(FP)
 10$:	PUSHL	#2
 	BRW	PUT_THE_FIELD
 
 ;
-; I12: OTS$CVT_L_TI writes the integer right-justified in the field,
-; with blanks before it.
+; I5, I7, and I12: OTS$CVT_L_TI writes the integer, R7 bytes long,
+; right-justified in a field of R8 columns, with blanks before it. Its
+; third argument is the fewest digits to write. No value of a type is too
+; long for its field.
 ;
+BYTE_I5:
+	MOVL	#1,R7
+	MOVL	#5,R8
+	BRB	INTEGER
+WORD_I7:
+	MOVL	#2,R7
+	MOVL	#7,R8
+	BRB	INTEGER
+LONG_I12:
+	MOVL	#4,R7
+	MOVL	#12,R8
 INTEGER:
-	MOVL	#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>!12,FIELD_DESC(FP)
+	BISL3	R8,#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>,FIELD_DESC(FP)
 	MOVAB	FIELD(FP),FIELD_DESC+DSC$A_POINTER(FP)
+	PUSHL	R7
+	PUSHL	#1
 	PUSHAB	FIELD_DESC(FP)
 	PUSHL	R6
-	CALLS	#2,G^OTS$CVT_L_TI
+	CALLS	#4,G^OTS$CVT_L_TI
 	BLBS	R0,10$
-	PUSHL	R0			; can't happen: 12 is room enough
+	PUSHL	R0			; can't happen: each field is room enough
 	CALLS	#1,G^LIB$STOP
-10$:	PUSHL	#12
+10$:	PUSHL	R8
 	BRW	PUT_THE_FIELD
 
 ;

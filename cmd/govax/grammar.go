@@ -61,6 +61,7 @@ type fortranFlags struct {
 	noMacro      bool   // --no-macro
 	extendSource bool   // --extend-source
 	dLines       bool   // --d-lines
+	noI4         bool   // --no-i4
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -299,6 +300,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.dLines = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-i4",
+		Description: "INTEGER and LOGICAL with no length are 2 bytes, not 4",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noI4 = true
 
 			return nil
 		},
@@ -775,6 +786,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.dLines {
 		command += "/D_LINES"
+	}
+
+	if f.noI4 {
+		command += "/NOI4"
 	}
 
 	if f.continuationsGiven {

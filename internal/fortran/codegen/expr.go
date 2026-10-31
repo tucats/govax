@@ -169,14 +169,14 @@ func opOperands(e *ir.Op) (ir.Expr, ir.Expr) {
 
 	switch m := y.(type) {
 	case *ir.Const:
-		return x, ir.LongConst(^m.Int())
+		return x, ir.IntConst(e.T, ^m.Int())
 	case *ir.Op:
 		if m.Op == ir.Not {
 			return x, m.X
 		}
 	}
 
-	return x, &ir.Op{Op: ir.Not, T: ir.Long, X: y}
+	return x, &ir.Op{Op: ir.Not, T: e.T, X: y}
 }
 
 // fit returns e, with any part that would take it past the register
@@ -328,7 +328,7 @@ func (g *routineGen) eval(e ir.Expr) operand {
 		g.free(m)
 
 		r := g.alloc()
-		g.emit("MOVAL", ir.Long, m.text, register(r))
+		g.emit(addressOp("MOVA", e.Mem), ir.Long, m.text, register(r))
 
 		return inRegister(r)
 
@@ -380,6 +380,8 @@ func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
 		g.arithmetic("MUL"+t, e.T, x, y, dst, true)
 	case ir.Or:
 		g.arithmetic("BIS"+t, e.T, x, y, dst, true)
+	case ir.Xor:
+		g.arithmetic("XOR"+t, e.T, x, y, dst, true)
 	case ir.Sub:
 		g.arithmetic("SUB"+t, e.T, x, y, dst, false)
 	case ir.Div:
@@ -413,19 +415,24 @@ func (g *routineGen) arithmetic(op string, t ir.Type, x, y operand, dst string, 
 	}
 
 	same := func(o operand) bool { return o.text == dst && !strings.Contains(dst, "[") }
-	increment := t == ir.Long && (strings.HasPrefix(op, "ADD") || strings.HasPrefix(op, "SUB"))
+	increment := t.Integer() && (strings.HasPrefix(op, "ADD") || strings.HasPrefix(op, "SUB"))
+	inc := "INC" + t.String()
+
+	if strings.HasPrefix(op, "SUB") {
+		inc = "DEC" + t.String()
+	}
 
 	switch {
 	case same(second):
 		if increment && first.text == "#1" {
-			g.emit(map[bool]string{true: "INCL", false: "DECL"}[strings.HasPrefix(op, "ADD")], t, dst)
+			g.emit(inc, t, dst)
 		} else {
 			g.emit(op+"2", t, first.text, dst)
 		}
 
 	case commutative && same(first):
 		if increment && second.text == "#1" {
-			g.emit("INCL", t, dst)
+			g.emit(inc, t, dst)
 		} else {
 			g.emit(op+"2", t, second.text, dst)
 		}
@@ -480,7 +487,7 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 
 			g.emit("MOVL", ir.Long, fmt.Sprintf("#^X%08X", uint32(s.Bits)), d.text)
 		default:
-			g.emit("MOVL", ir.Long, g.constant(s), d.text)
+			g.emit("MOV"+t.String(), t, g.constant(s), d.text)
 		}
 
 		g.free(d)
@@ -488,7 +495,7 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 	case *ir.Addr:
 		a := g.mem(s.Mem)
 		d := g.mem(dst)
-		g.emit("MOVAL", ir.Long, a.text, d.text)
+		g.emit(addressOp("MOVA", s.Mem), ir.Long, a.text, d.text)
 		g.free(a, d)
 
 	case *ir.Op:
@@ -505,6 +512,19 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 		g.move(t, v.text, d.text)
 		g.free(v, d)
 	}
+}
+
+// addressOp is MOVA or PUSHA with the letter for the place m: an index
+// register is multiplied by the size the letter says, so an element's address
+// takes its own type's letter (MOVAW A[R0],R1 for a word's). Only a place with
+// an index cares, and a byte's or word's is the one that isn't L.
+func addressOp(op string, m *ir.Mem) string {
+	switch m.T {
+	case ir.Byte, ir.Word:
+		return op + m.T.String()
+	}
+
+	return op + "L"
 }
 
 // move writes MOVL or MOVF from src to dst, unless they are the same.

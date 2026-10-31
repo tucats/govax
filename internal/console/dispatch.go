@@ -635,6 +635,7 @@ func (d *Dispatcher) bindGrammar() {
 			NoMacro:      r.Present("MACRO") && r.Negated("MACRO"),
 			ExtendSource: r.Present("EXTEND_SOURCE") && !r.Negated("EXTEND_SOURCE"),
 			DLines:       r.Present("D_LINES") && !r.Negated("D_LINES"),
+			NoI4:         r.Present("I4") && r.Negated("I4"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),

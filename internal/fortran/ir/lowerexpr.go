@@ -40,8 +40,15 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.Binary:
 		x := l.expr(e.X)
 		y := l.expr(e.Y)
+		t := typeOf(e.T)
 
-		return arith(operators[e.Op], typeOf(e.T), x, y)
+		// .EQV. is the opposite of .NEQV., bit by bit: the VAX has XOR
+		// but no instruction for its complement.
+		if e.Op == ast.Eqv {
+			return arith(Not, t, arith(Xor, t, x, y), nil)
+		}
+
+		return arith(operators[e.Op], t, x, y)
 
 	case *sema.Compare:
 		x := l.expr(e.X)
@@ -50,8 +57,8 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return &Cmp{operators[e.Op], x, y}
 
 	case *sema.Convert:
-		// INTEGER and LOGICAL are one longword: converting between them
-		// does nothing.
+		// An INTEGER and a LOGICAL of one size are the same bits: converting
+		// between them does nothing.
 		x := l.expr(e.X)
 		if t := typeOf(e.T); t != x.Type() {
 			return arith(Cvt, t, x, nil)
@@ -66,18 +73,18 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 // operators are the IR's operators for FORTRAN's.
 var operators = map[ast.Op]Operator{
 	ast.Add: Add, ast.Sub: Sub, ast.Mul: Mul, ast.Div: Div,
-	ast.And: And, ast.Or: Or,
+	ast.And: And, ast.Or: Or, ast.Neqv: Xor, ast.Xor: Xor,
 	ast.EQ: Eq, ast.NE: Ne, ast.LT: Lt, ast.LE: Le, ast.GT: Gt, ast.GE: Ge,
 }
 
-// constOf is a constant's IR form: a LOGICAL's longword (-1 or 0), an
-// INTEGER's, or a REAL's F_floating bits.
+// constOf is a constant's IR form: an INTEGER's or a LOGICAL's bits in its
+// own size (a LOGICAL's -1 or 0), or a REAL's F_floating bits.
 func constOf(c *sema.Const) *Const {
 	if c.T.Kind == sema.Real {
 		return FloatConst(c.Real)
 	}
 
-	return LongConst(c.Int)
+	return IntConst(typeOf(c.T), c.Int)
 }
 
 // symbolMem is where a variable or array is: its cell, or, for a dummy
@@ -197,9 +204,9 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 // arith is the operation op on x and y (y nil for Neg, Not, and Cvt) in
 // type t, folded when it can be:
 //
-//   - an operation on constants is done now, a Long one in 32 bits as
-//     the VAX's instructions do it (wrapping around on overflow, which
-//     the code doesn't detect), a Float one with package vaxfloat, which
+//   - an operation on constants is done now, an integer one in its type's
+//     bits as the VAX's instructions do it (wrapping around on overflow,
+//     which the code doesn't detect), a Float one with package vaxfloat, which
 //     rounds as the VAX does; an operation that would overflow, divide
 //     by zero, or give a reserved operand is left for run time;
 //   - a Long addition or subtraction collects its constants into one
@@ -321,10 +328,10 @@ func linear(op Operator, x, y Expr) Expr {
 func foldUnary(op Operator, t Type, x *Const) *Const {
 	switch {
 	case op == Not:
-		return LongConst(^x.Int())
+		return IntConst(t, ^x.Int())
 
-	case op == Neg && t == Long:
-		return LongConst(-x.Int())
+	case op == Neg && t.Integer():
+		return IntConst(t, -x.Int())
 
 	case op == Neg:
 		return FloatConst(x.Real().Neg())
@@ -335,43 +342,64 @@ func foldUnary(op Operator, t Type, x *Const) *Const {
 
 		return FloatConst(v)
 
+	case op == Cvt && x.T.Integer():
+		// A shorter type's value is the longer one's low bits.
+		return IntConst(t, x.Int())
+
 	case op == Cvt:
-		// CVTFL truncates; a value out of a longword's range is left
+		// CVTFL truncates; a value out of the type's range is left
 		// for the CPU, which sets V.
+		lo, hi := intRange(t)
+
 		i := x.Real().Int(false)
-		if !i.IsInt64() || i.Int64() < math.MinInt32 || i.Int64() > math.MaxInt32 {
+		if !i.IsInt64() || i.Int64() < lo || i.Int64() > hi {
 			return nil
 		}
 
-		return LongConst(int32(i.Int64()))
+		return IntConst(t, int32(i.Int64()))
 	}
 
 	return nil
 }
 
+// intRange is the range of an integer type's values.
+func intRange(t Type) (lo, hi int64) {
+	switch t {
+	case Byte:
+		return math.MinInt8, math.MaxInt8
+	case Word:
+		return math.MinInt16, math.MaxInt16
+	}
+
+	return math.MinInt32, math.MaxInt32
+}
+
 // foldBinary is x op y for constants of type t, or nil if it isn't done
 // now.
 func foldBinary(op Operator, t Type, x, y *Const) *Const {
-	if t == Long {
+	if t.Integer() {
 		a, b := x.Int(), y.Int()
+		lo, _ := intRange(t)
 
 		switch op {
 		case Add:
-			return LongConst(a + b)
+			return IntConst(t, a+b)
 		case Sub:
-			return LongConst(a - b)
+			return IntConst(t, a-b)
 		case Mul:
-			return LongConst(a * b)
+			return IntConst(t, a*b)
 		case Div:
-			if b == 0 || (a == math.MinInt32 && b == -1) {
+			if b == 0 || (int64(a) == lo && b == -1) {
 				return nil
 			}
 
-			return LongConst(a / b)
+			return IntConst(t, a/b)
 		case And:
-			return LongConst(a & b)
+			return IntConst(t, a&b)
 		case Or:
-			return LongConst(a | b)
+			return IntConst(t, a|b)
+		case Xor:
+			return IntConst(t, a^b)
 		}
 
 		return nil

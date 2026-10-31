@@ -1286,7 +1286,7 @@ These commands are described fully in their own sections:
 
 ```text
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
-    /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n
+    /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -1303,8 +1303,9 @@ rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
 `/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
 run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
-and `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
-19 by default). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+`/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
+19 by default), and `/NOI4` makes INTEGER and LOGICAL with no length 2
+bytes rather than 4. `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory. The compiler's messages show the line
 and column:
@@ -4469,7 +4470,7 @@ output it prints, and programs of several files in its `modules` directory.
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
   it is FORTRAN's own. Either name as an argument is reported not implemented.
   Every variable gets its storage,
-  but only INTEGER, REAL, and LOGICAL (`*4`) names can be used in
+  but only INTEGER, LOGICAL, and REAL\*4 names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
@@ -4494,13 +4495,16 @@ output it prints, and programs of several files in its `modules` directory.
   `//`, the relational and logical operators, and MIN, MAX, ABS, MOD,
   ICHAR, NINT, DIM, DPROD, CMPLX, CONJG, IMAG, IAND, IOR, IEOR, NOT,
   ISHFT, LGE, LGT, LLE, LLT, and CHAR of constants. A constant's name may
-  be used in declarations and statements; one that isn't INTEGER, REAL,
-  LOGICAL (`*4`), or CHARACTER is reported not implemented where a
+  be used in declarations and statements; one that isn't INTEGER, REAL\*4,
+  LOGICAL, or CHARACTER is reported not implemented where a
   statement uses it.
 - **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
-  `+ - * /` and unary minus, INTEGER and REAL mixed by the usual
-  conversions (INTEGER division truncates); the relational operators
-  (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`; array elements and
+  `+ - * /` and unary minus, on INTEGER and REAL\*4, mixed by the usual
+  conversions (INTEGER division truncates; two INTEGER\*2s are computed in
+  a word, and a word that overflows wraps); the relational operators
+  (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`, `.EQV.`, `.NEQV.`,
+  `.XOR.`, on LOGICALs of every length or bit by bit on INTEGERs; array
+  elements and
   function references. The other operators and the intrinsic functions
   above work so far only on constants, computed when compiling.
 - **Statements:** assignment; logical IF; block IF with ELSE IF and
@@ -4516,8 +4520,8 @@ output it prints, and programs of several files in its `modules` directory.
 
 The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, `/MACRO` and `/NOMACRO`,
-`/EXTEND_SOURCE`, `/D_LINES`, and `/CONTINUATIONS=n`. From the host
-shell, `govax fortran` runs it.
+`/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, and `/[NO]I4`. From the
+host shell, `govax fortran` runs it.
 
 ### 14.4 Source lines
 
@@ -4738,9 +4742,10 @@ So far it has these routines, which MACRO programs can call too:
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
 control: each record begins with a blank (a new line at the terminal),
 and holds at most 80 bytes. Each value is in its type's format (the
-*Language Reference Manual*'s Table 7-1): a LOGICAL as ` T` or ` F`
-(L2), an INTEGER in 12 columns (I12), a REAL as `1PG15.7E2`, and text
-as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
+*Language Reference Manual*'s Table 7-1): a LOGICAL\*2 or \*4 as ` T` or
+` F` (L2), a LOGICAL\*1 or BYTE as an integer in 5 columns (I5), an
+INTEGER\*2 in 7 columns (I7), an INTEGER\*4 in 12 (I12), a REAL as
+`1PG15.7E2`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
 up to 10\*\*7 in fixed-point form, followed by 4 blanks; any other, zero
 included, with an exponent:
 
@@ -4826,6 +4831,14 @@ FORTRAN compiler was available to check them). So far:
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.
+- An integer constant from -32768 to 32767 beside an INTEGER\*2 or a
+  shorter logical is a word, as the language manual's 2.2.1.1 says, so with
+  `I2` at 100, `J = I2*1000` wraps to -31072. Two constants are computed in
+  the default integer, so `30000+30000` is 60000. Two LOGICAL\*1s or BYTEs in
+  arithmetic are an INTEGER\*2; a LOGICAL beside an INTEGER takes that
+  INTEGER's length.
+- A constant assigned to a short variable may have the variable's unsigned
+  range too (`B = 255` in a BYTE is -1); past that it is an error.
 - A letter given a type by two IMPLICIT rules is an error.
 - A common block's names have no gaps between them, whatever their types.
   In `$LOCAL`, an EQUIVALENCE group goes on the boundary of its strictest

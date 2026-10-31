@@ -256,9 +256,15 @@ func (l *lowerer) do(d *sema.Do) {
 
 // tripCount is a DO loop's iteration count, a Long: (e2 - e1 + e3)/e3,
 // computed in the loop variable's type t; a REAL count is converted by
-// truncation, as CVTFL does. With a step of 1 or -1 the division goes,
-// and constant parameters make a constant count.
+// truncation, as CVTFL does, and a Word loop's is computed in longwords,
+// which its parameters' differences can't overflow. With a step of 1 or -1
+// the division goes, and constant parameters make a constant count.
 func tripCount(t Type, e1, e2, e3 Expr) Expr {
+	if t.Integer() && t != Long {
+		e1, e2, e3 = arith(Cvt, Long, e1, nil), arith(Cvt, Long, e2, nil), arith(Cvt, Long, e3, nil)
+		t = Long
+	}
+
 	if t == Long {
 		if c, ok := e3.(*Const); ok {
 			switch c.Int() {

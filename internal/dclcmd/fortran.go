@@ -17,7 +17,7 @@ import (
 // Decision 18; subtask 2):
 //
 //	FORTRAN source[,...][/HOST] [/MACRO[=file] | /NOMACRO]
-//	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n]
+//	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -61,6 +61,9 @@ type FortranOptions struct {
 	// (fortran.Options).
 	ExtendSource bool
 	DLines       bool
+
+	// NoI4 is /NOI4 (fortran.Options).
+	NoI4 bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -154,6 +157,7 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 	result := fortran.Compile(fortran.Options{
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
+		NoI4:          opts.NoI4,
 		Continuations: continuations,
 		Includes:      fortranIncludes{c},
 		Version:       BuildVersion,

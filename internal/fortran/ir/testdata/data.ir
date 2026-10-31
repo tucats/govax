@@ -5,8 +5,8 @@ routine DATAS main
   cell  X       F  $LOCAL+72   variable X
   cell  R       F  $LOCAL+76   array R, 8 bytes
   cell  D       F  $LOCAL+84   variable D
-  cell  W       L  $LOCAL+92   variable W
-  cell  L       L  $LOCAL+94   variable L
+  cell  W       W  $LOCAL+92   variable W
+  cell  L       B  $LOCAL+94   variable L
   cell  STARS   L  $LOCAL+95   variable STARS
   cell  C       L  $LOCAL+104  variable C
   cell  CI      L  $LOCAL+104  variable CI

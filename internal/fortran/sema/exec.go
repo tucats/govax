@@ -1,6 +1,8 @@
 package sema
 
 import (
+	"math"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 )
@@ -126,7 +128,34 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	return &Assign{stmtBase{s}, target, a.convert(value, target.Type())}
+	return &Assign{stmtBase{s}, target, a.assigned(value, target.Type())}
+}
+
+// assigned is value converted to t, the type of the variable it is assigned
+// to. An integer constant may hold more of a short variable's bits than its
+// value's range: BYTE and LOGICAL*1 take -128 to 255, LOGICAL*2 and INTEGER*2
+// -32768 to 65535, and X = 255 in a BYTE is -1 (section 2.2.1.1). Past those
+// ranges it is INTRANGE, as a DATA statement's is (ours; the manual doesn't
+// say).
+func (a *analyzer) assigned(value Expr, t Type) Expr {
+	c, ok := value.(*Const)
+	if !ok || t.Size >= 4 || (c.T.Kind != Integer && c.T.Kind != Logical) ||
+		(t.Kind != Integer && t.Kind != Logical) {
+		return a.convert(value, t)
+	}
+
+	lo, hi := int64(math.MinInt8), int64(math.MaxUint8)
+	if t.Size == 2 {
+		lo, hi = math.MinInt16, math.MaxUint16
+	}
+
+	if v := int64(c.Int); v < lo || v > hi {
+		a.report("INTRANGE", c.Pos, valueText, t.String(), lo, hi)
+
+		return a.bad(c.Pos)
+	}
+
+	return &Const{exprBase: exprBase{t, c.Pos}, Int: truncate(c.Int, t.Size)}
 }
 
 // target analyzes an assignment's target: a variable or an array

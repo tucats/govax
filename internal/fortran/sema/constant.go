@@ -153,7 +153,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 			return nil, ev.intRange(e.Pos, ast.DumpExpr(e), IntegerType)
 		}
 
-		return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(v)}, nil
+		return &Const{exprBase: exprBase{ev.a.constantType(v), e.Pos}, Int: int32(v)}, nil
 
 	case *ast.RealConst:
 		return ev.real(e)
@@ -174,7 +174,7 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 
 		// "When the constant is used in any other context, an INTEGER*4
 		// data type is assumed" (section 2.2.1.4).
-		return ev.typelessAs(e, IntegerType)
+		return ev.typelessAs(e, ev.a.defaultInt)
 
 	case *ast.Name:
 		if v, ok := ev.vars[e.Name]; ok {
@@ -406,13 +406,18 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 		return x, err
 	}
 
-	c := &Const{exprBase: exprBase{x.T, e.Pos}}
+	return ev.negate(x, e.Pos)
+}
+
+// negate is -x, x being an INTEGER, REAL, or COMPLEX constant.
+func (ev *evaluator) negate(x *Const, pos diag.Position) (*Const, *constErr) {
+	c := &Const{exprBase: exprBase{x.T, pos}}
 
 	switch x.T.Kind {
 	case Integer:
 		v := -int64(x.Int)
 		if lo, hi := x.T.intRange(); v < lo || v > hi {
-			return nil, ev.intRange(e.Pos, valueText, x.T)
+			return nil, ev.intRange(pos, valueText, x.T)
 		}
 
 		c.Int = int32(v)
@@ -425,12 +430,29 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 	return c, nil
 }
 
+// assigned is c converted to type t as an assignment or a mixed operation
+// converts it. That is convert, but for a REAL or COMPLEX value given to a
+// LOGICAL, which Table 3-1 treats as it does an INTEGER (truncating), where
+// a PARAMETER statement's constant has no such conversion.
+func (ev *evaluator) assigned(c *Const, t Type, pos diag.Position) (*Const, *constErr) {
+	if t.Kind == Logical && (c.T.Kind == Real || c.T.Kind == Complex) {
+		i, err := ev.convert(c, IntegerType, pos)
+		if err != nil {
+			return nil, err
+		}
+
+		c = i
+	}
+
+	return ev.convert(c, t, pos)
+}
+
 // arithmetic makes x an arithmetic operand, as the analyzer's arithmetic
 // does: a LOGICAL is an INTEGER, a CHARACTER a Hollerith constant.
 func (ev *evaluator) arithmetic(x *Const) (*Const, *constErr) {
 	switch x.T.Kind {
 	case Logical:
-		return ev.convert(x, IntegerType, x.Pos)
+		return ev.convert(x, x.T.integer(), x.Pos)
 	case Character:
 		return nil, ev.notImpl(x.Pos, hollerith)
 	}
@@ -509,6 +531,8 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 		return ev.power(e, x, y)
 	}
 
+	t := operationType(x.T, y.T)
+
 	if x, err = ev.arithmetic(x); err != nil {
 		return nil, err
 	}
@@ -516,8 +540,6 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 	if y, err = ev.arithmetic(y); err != nil {
 		return nil, err
 	}
-
-	t := higher(x.T, y.T)
 
 	if x, err = ev.convert(x, t, x.Pos); err != nil {
 		return nil, err
@@ -757,6 +779,8 @@ func (ev *evaluator) compare(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		return logicalConst(relation(e.Op, compareText(x.Text, y.Text)), e.Pos), nil
 	}
 
+	t := operationType(x.T, y.T)
+
 	x, err := ev.arithmetic(x)
 	if err != nil {
 		return nil, err
@@ -765,8 +789,6 @@ func (ev *evaluator) compare(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	if y, err = ev.arithmetic(y); err != nil {
 		return nil, err
 	}
-
-	t := higher(x.T, y.T)
 
 	if t.Kind == Complex && e.Op != ast.EQ && e.Op != ast.NE {
 		return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), t.String())
@@ -848,16 +870,7 @@ func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		}
 	}
 
-	var t Type
-
-	switch {
-	case x.T.Kind == Integer && y.T.Kind == Integer:
-		t = higher(x.T, y.T)
-	case x.T.Kind == Integer || y.T.Kind == Integer:
-		t = IntegerType
-	default:
-		t = Type{Logical, max(x.T.Size, y.T.Size)}
-	}
+	t := logicalType(x.T, y.T)
 
 	x, err := ev.convert(x, t, x.Pos)
 	if err != nil {
@@ -868,9 +881,15 @@ func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		return nil, err
 	}
 
-	c := &Const{exprBase: exprBase{t, e.Pos}}
+	return bitwiseConst(e.Op, x, y, e.Pos), nil
+}
 
-	switch e.Op {
+// bitwiseConst is x op y for the logical operators, bit by bit, x and y
+// being of one type.
+func bitwiseConst(op ast.Op, x, y *Const, pos diag.Position) *Const {
+	c := &Const{exprBase: exprBase{x.T, pos}}
+
+	switch op {
 	case ast.And:
 		c.Int = x.Int & y.Int
 	case ast.Or:
@@ -882,7 +901,7 @@ func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 		c.Int = x.Int ^ y.Int
 	}
 
-	return c, nil
+	return c
 }
 
 // convert is c converted to type t, by assignment's rules (Table 3-1):

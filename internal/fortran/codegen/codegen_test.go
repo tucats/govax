@@ -35,7 +35,7 @@ func generate(t *testing.T, spec string, lines ...string) []string {
 
 	program := source.Read(source.Form{}, &source.File{Spec: spec, Lines: lines}, nil, &messages)
 	file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-	prog := sema.Analyze(file, "T$MAIN", &messages)
+	prog := sema.Analyze(file, "T$MAIN", sema.Options{}, &messages)
 
 	for _, m := range messages.Messages() {
 		t.Errorf("%s: %s", spec, m)

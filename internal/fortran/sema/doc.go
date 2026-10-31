@@ -128,10 +128,10 @@
 // LOGICAL*1 anywhere). A dummy argument has no storage of its own; it is
 // the caller's, reached through the argument list.
 //
-// A name may have any type, but the expressions this phase compiles are
-// on INTEGER, REAL, and LOGICAL longwords only; a name of any other type
-// is NOTIMPL where an expression first uses it (Phase 78's), and only
-// declaring it costs nothing but its storage.
+// A name may have any type, but expressions are compiled only on the types
+// Type.Compiled says; a name of any other type is NOTIMPL where an
+// expression first uses it (Phase 78's), and only declaring it costs nothing
+// but its storage.
 //
 // # Errors
 //
