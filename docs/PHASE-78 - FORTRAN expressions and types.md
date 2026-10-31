@@ -530,7 +530,7 @@ stops for review.
 1. **Survey** (this Part A). Done.
 2. **Integer and logical lengths:** Byte and Word in the IR, one constant path in
    sema, conversions, every operator, `.EQV.`, `.NEQV.`, `.XOR.`, indexes scaled by
-   type, BIT tests, `/[NO]I4` and OPTIONS's.
+   type, BIT tests, `/[NO]I4` and OPTIONS's. Done.
 3. **Floating:** D, G, and H, 128-bit constants, register runs, wide spills,
    `/[NO]G_FLOATING`, Table 3-1's real cells.
 4. **COMPLEX:** splitting in lowering, by-value arguments and wide results, products
