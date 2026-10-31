@@ -527,7 +527,7 @@ Each adds its types' list-directed output and its programs to
 `testdata/fortran`, in both D and G where a type has both, and each
 stops for review.
 
-1. **Survey** (this Part A).
+1. **Survey** (this Part A). Done.
 2. **Integer and logical lengths:** Byte and Word in the IR, one constant path in
    sema, conversions, every operator, `.EQV.`, `.NEQV.`, `.XOR.`, indexes scaled by
    type, BIT tests, `/[NO]I4` and OPTIONS's.
