@@ -453,6 +453,18 @@ type (
 		Args []Arg
 	}
 
+	// Substring is X(Lower:Upper), part of a CHARACTER variable or array
+	// element (section 2.2.4): X is a *Var or an *Elem, and Lower and Upper
+	// INTEGER positions in it, counted from 1; Upper is nil for X's last
+	// character, when the substring gives none. Its type is CHARACTER of its
+	// length, or of the size 0 when a bound isn't constant and the length is
+	// known only when the program runs.
+	Substring struct {
+		exprBase
+		X            Expr
+		Lower, Upper Expr
+	}
+
 	// Unary is -X (Op ast.Sub) or .NOT. X (Op ast.Not). A unary plus is
 	// dropped.
 	Unary struct {
@@ -470,7 +482,8 @@ type (
 	}
 
 	// Compare is X Op Y for a relational operator: LOGICAL, with X and Y
-	// of one type, the operands' (which the dump shows).
+	// of one type, the operands' (which the dump shows); or two CHARACTER
+	// values, of any lengths.
 	Compare struct {
 		exprBase
 		Op   ast.Op

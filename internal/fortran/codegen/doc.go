@@ -70,6 +70,12 @@
 //	BRW     T.L10             (yes: to label 10)
 //	T.$2:
 //
+// A comparison of CHARACTER values is a CMPC3 or CMPC5 (chars.go), which
+// compares bytes unsigned, so its branches are the unsigned ones (BLSSU,
+// BGTRU, ...); an assignment of one is a MOVC3 or MOVC5, filling with
+// blanks. Both leave R0 to R5 or R0 to R3 changed, which the entry mask
+// saves.
+//
 // A block the one before falls into needs no branch at all. Phase 84's
 // optimizer can shorten what this writes; the point here is code that
 // is always right. One small thing is done now: a TST of the value the

@@ -1,0 +1,67 @@
+routine CHARS main
+  cell  S       B  $LOCAL+0    variable S
+  cell  T       B  $LOCAL+8    variable T
+  cell  NAMES   B  $LOCAL+11   array NAMES, 15 bytes
+  cell  L       L  $LOCAL+28   variable L
+  cell  I       L  $LOCAL+32   variable I
+  cell  J       L  $LOCAL+36   variable J
+  cell  $T1     L  $LOCAL+40   temporary
+  cell  $D3     L  $LOCAL+44   descriptor T S 5
+  cell  $D4     L  $LOCAL+52   descriptor T S 0
+  $LOCAL is 60 bytes
+  datum $K1     text 'ABC'
+  datum $K2     text 'X'
+  datum $K3     text 'Q'
+  datum $IO1    control PRINT *
+  datum $D1     descriptor T S 8 S
+  datum $D2     descriptor T S 2 T+1
+  datum $D5     descriptor T A 5 (2:4) NAMES
+B1:
+  ; line 5
+  move S(8) = $K1(3)
+  ; line 6
+  move T(3) = S(8)
+  ; line 7
+  move S(8) = T(3)
+  ; line 8
+  move NAMES-10[mul.L(I, 5)](5) = S+1(5)
+  ; line 9
+  move S-1[I](add.L(sub.L(J, I), 1)) = T(3)
+  ; line 10
+  move S[I](sub.L(8, I)) = NAMES+5(J)
+  ; line 11
+  assign L = eq.T(S(8), T(3))
+  ; line 12
+  assign $T1 = lt.T(S(8), $K2(1))
+  assign L = and.L($T1, L)
+  ; line 13
+  branch gt.T(S(8), NAMES-10[mul.L(I, 5)](5)) B2 B3
+B2:
+  assign I = 1
+  jump B3
+B3:
+  ; line 14
+  branch or.L(eq.T(T(3), $K1(3)), not.L(ne.T(S-1[I](1), $K3(1)))) B4 B5
+B4:
+  assign I = 2
+  jump B5
+B5:
+  ; line 15
+  branch and.L(L, le.T(T(3), S(8))) B6 B7
+B6:
+  assign I = 3
+  jump B7
+B7:
+  ; line 16
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  assign $D3+4 = addr(NAMES-10[mul.L(I, 5)])
+  call FTN$IO_ITEM(ref $D3)
+  assign $D4 = cvt.LW(add.L(sub.L(J, I), 1))
+  assign $D4+4 = addr(S-1[I])
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_END()
+  ; line 17
+  return 1

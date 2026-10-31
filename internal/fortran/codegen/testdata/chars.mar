@@ -1,0 +1,171 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for CHARS, the main program
+;   S      CHARACTER*8        $LOCAL+0   CHARS.S
+;   T      CHARACTER*3        $LOCAL+8   CHARS.T
+;   NAMES  CHARACTER*5 (2:4)  $LOCAL+11  CHARS.NAMES
+;   L      LOGICAL            $LOCAL+28  CHARS.L
+;   I      INTEGER            $LOCAL+32  CHARS.I
+;   J      INTEGER            $LOCAL+36  CHARS.J
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CHARS.S:
+	.BLKL	2			; S
+CHARS.T:
+	.BLKB	3			; T
+CHARS.NAMES:
+	.BLKB	15			; NAMES, CHARACTER*5 (2:4)
+	.BLKB	2
+CHARS.L:
+	.BLKL	1			; L
+CHARS.I:
+	.BLKL	1			; I
+CHARS.J:
+	.BLKL	1			; J
+CHARS.$T1:
+	.BLKL	1			; temporary
+CHARS.$D3:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+CHARS.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CHARS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+CHARS.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CHARS.S
+CHARS.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CHARS.T+1
+CHARS.$D5:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.ADDRESS CHARS.NAMES
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	15			; the array's size in bytes
+	.ADDRESS CHARS.NAMES-10		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	2,4			; bounds
+CHARS.$K1:
+	.ASCII	/ABC/
+CHARS.$K2:
+	.ASCII	/X/
+CHARS.$K3:
+	.ASCII	/Q/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     CHARACTER values' instructions (Phase 78, subtask 5).
+;    2        PROGRAM CHARS
+	.ENTRY	CHARS,^M<R2,R3,R4,R5>
+;    3        CHARACTER*8 S, T*3, NAMES(2:4)*5
+;    4        LOGICAL L
+;    5        S = 'ABC'
+	MOVC5	#3,CHARS.$K1,#^A/ /,#8,CHARS.S
+;    6        T = S
+	MOVC3	#3,CHARS.S,CHARS.T
+;    7        S = T
+	MOVC5	#3,CHARS.T,#^A/ /,#8,CHARS.S
+;    8        NAMES(I) = S(2:6)
+	MULL3	CHARS.I,#5,R0
+	MOVC3	#5,CHARS.S+1,CHARS.NAMES-10[R0]
+;    9        S(I:J) = T
+	SUBL3	CHARS.I,CHARS.J,R0
+	INCL	R0
+	MOVL	CHARS.I,R1
+	MOVC5	#3,CHARS.T,#^A/ /,R0,CHARS.S-1[R1]
+;   10        S(I+1:) = NAMES(3)(:J)
+	SUBL3	CHARS.I,#8,R0
+	MOVL	CHARS.I,R1
+	MOVC5	CHARS.J,CHARS.NAMES+5,#^A/ /,R0,CHARS.S[R1]
+;   11        L = S .EQ. T
+	CMPC5	#8,CHARS.S,#^A/ /,#3,CHARS.T
+	BNEQ	CHARS.$1
+	MNEGL	#1,R0
+	BRB	CHARS.$2
+CHARS.$1:
+	CLRL	R0
+CHARS.$2:
+	MOVL	R0,CHARS.L
+;   12        L = S .LT. 'X' .AND. L
+	CMPC5	#8,CHARS.S,#^A/ /,#1,CHARS.$K2
+	BGEQU	CHARS.$3
+	MNEGL	#1,R0
+	BRB	CHARS.$4
+CHARS.$3:
+	CLRL	R0
+CHARS.$4:
+	MOVL	R0,CHARS.$T1
+	MCOML	CHARS.L,R0
+	BICL3	R0,CHARS.$T1,CHARS.L
+;   13        IF (S .GT. NAMES(I)) I = 1
+	MULL3	CHARS.I,#5,R0
+	CMPC5	#8,CHARS.S,#^A/ /,#5,CHARS.NAMES-10[R0]
+	BGTRU	CHARS.$6
+	BRW	CHARS.$5
+CHARS.$6:
+	MOVL	#1,CHARS.I
+CHARS.$5:
+;   14        IF (T .EQ. 'ABC' .OR. .NOT. S(I:I) .NE. 'Q') I = 2
+	CMPC3	#3,CHARS.T,CHARS.$K1
+	BNEQ	CHARS.$9
+	BRW	CHARS.$8
+CHARS.$9:
+	MOVL	CHARS.I,R0
+	CMPC3	#1,CHARS.S-1[R0],CHARS.$K3
+	BEQL	CHARS.$10
+	BRW	CHARS.$7
+CHARS.$10:
+CHARS.$8:
+	MOVL	#2,CHARS.I
+CHARS.$7:
+;   15        IF (L .AND. T .LE. S) I = 3
+	BLBS	CHARS.L,CHARS.$12
+	BRW	CHARS.$11
+CHARS.$12:
+	CMPC5	#3,CHARS.T,#^A/ /,#8,CHARS.S
+	BLEQU	CHARS.$13
+	BRW	CHARS.$11
+CHARS.$13:
+	MOVL	#3,CHARS.I
+CHARS.$11:
+;   16        PRINT *, S, T(2:3), NAMES(I), S(I:J), NAMES
+	PUSHAB	CHARS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	CHARS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CHARS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	CHARS.I,#5,R0
+	MOVAB	CHARS.NAMES-10[R0],CHARS.$D3+4
+	PUSHAQ	CHARS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	SUBL3	CHARS.I,CHARS.J,R0
+	INCL	R0
+	CVTLW	R0,CHARS.$D4
+	MOVL	CHARS.I,R0
+	MOVAB	CHARS.S-1[R0],CHARS.$D4+4
+	PUSHAQ	CHARS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CHARS.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   17        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	CHARS

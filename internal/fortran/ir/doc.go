@@ -63,6 +63,15 @@
 // quotients VAX FORTRAN computes in the OTS$ routines are Calls whose
 // arguments are the parts by value.
 //
+// A CHARACTER value is a Text: a Byte place (an element's index multiplied
+// by its length, since the VAX's indexed mode multiplies only by the
+// operand's size, a byte's 1) and a length, which a substring with bounds
+// that aren't constant computes. Assigning one is a statement, CharMove, and
+// comparing two an expression, CharCmp, that may stand only where no
+// register is held across it: as a Branch's condition (under And, Or, and
+// Not), or as the whole value of an Assign; anywhere else lowering computes
+// it into a temporary first, as it does a call.
+//
 // # Storage
 //
 // FORTRAN's variables are static (Decision 10): each routine's live in

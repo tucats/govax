@@ -55,6 +55,9 @@ func (a *analyzer) value(e ast.Expr) Expr {
 
 	case *ast.Binary:
 		return a.binary(e)
+
+	case *ast.Substring:
+		return a.substring(e)
 	}
 
 	if c, ok := e.(*ast.ComplexConst); ok {
@@ -73,11 +76,8 @@ func (a *analyzer) value(e ast.Expr) Expr {
 // folded is the value of e if it is a constant expression (constant.go),
 // for a form this phase compiles only as one (**, the intrinsic
 // functions, character operations), and for a numeric or COMPLEX
-// constant, whose value it is. ok is
-// false if e isn't constant, for the caller to report the form as it
-// would. A constant of a type the code generator doesn't handle yet is
-// NOTIMPL (Phase 78's); a CHARACTER one is a value wherever a character
-// constant is.
+// constant, whose value it is. ok is false if e isn't constant, for the
+// caller to report the form as it would.
 func (a *analyzer) folded(e ast.Expr) (v Expr, ok bool) {
 	// First quietly, to learn whether e is constant at all, then for
 	// its messages.
@@ -86,14 +86,7 @@ func (a *analyzer) folded(e ast.Expr) (v Expr, ok bool) {
 	}
 
 	c, err := (&evaluator{a: a}).eval(e)
-
-	switch {
-	case err != nil:
-		return a.bad(e.Position()), true
-
-	case !c.T.Compiled() && c.T.Kind != Character:
-		a.notImpl(e.Position(), article(c.T.String()+" constant"))
-
+	if err != nil {
 		return a.bad(e.Position()), true
 	}
 
@@ -125,7 +118,7 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		return a.bad(n.Pos)
 	}
 
-	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.uncompiledUse(s, n.Pos) {
+	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.characterDummy(s, n.Pos) {
 		return a.bad(n.Pos)
 	}
 
@@ -186,7 +179,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 
 	case Array:
-		if a.uncompiledUse(s, e.Pos) {
+		if a.characterDummy(s, e.Pos) {
 			return a.bad(e.Pos)
 		}
 
@@ -205,10 +198,6 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		fallthrough
 
 	case Function:
-		if a.uncompiledUse(s, e.Pos) {
-			return a.bad(e.Pos)
-		}
-
 		if t := s.Type; t.Kind != Invalid && !t.returned() {
 			a.notImplForm(e.Pos, article(t.String()+" function"))
 
@@ -243,21 +232,127 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	return a.bad(e.Pos)
 }
 
-// uncompiledUse reports, once, a name used in an expression whose type
-// this phase doesn't compile (NOTIMPL: "the REAL*8 type", Phase 78's),
-// and makes the name broken, so its other uses are quiet. It reports
-// whether it did. A name with no type at all (IMPLICIT NONE) has its own
-// message, NOTYPE.
-func (a *analyzer) uncompiledUse(s *Symbol, pos diag.Position) bool {
-	if s.Type.Kind == Invalid || s.Type.Compiled() {
+// characterDummy reports, once, a CHARACTER dummy argument used in an
+// expression (NOTIMPL): its value comes by descriptor (Decision 11 of
+// docs/PHASE-74 - FORTRAN plan.md), which is a later subtask of Phase 78's.
+// It makes the name broken, so its other uses are quiet, and reports
+// whether it did.
+func (a *analyzer) characterDummy(s *Symbol, pos diag.Position) bool {
+	if s.Type.Kind != Character || s.Dummy == 0 {
 		return false
 	}
 
-	a.notImplForm(pos, "the "+s.Type.String()+" type")
+	a.notImplForm(pos, "a CHARACTER dummy argument")
 
 	s.broken = true
 
 	return true
+}
+
+// substring analyzes X(Lower:Upper) (section 2.2.4): X a CHARACTER variable
+// or array element, each bound made INTEGER (a REAL one is truncated, as a
+// subscript is). Lower left out is 1. A constant bound must be within X, 1 <=
+// Lower <= Upper <= X's length; one that isn't constant is checked only by
+// /CHECK=BOUNDS (Phase 85).
+func (a *analyzer) substring(e *ast.Substring) Expr {
+	var (
+		x    Expr
+		name string
+	)
+
+	switch n := e.X.(type) {
+	case *ast.Name:
+		if s := a.unit.byName[n.Name]; s != nil && s.Class == Constant {
+			if !s.broken {
+				a.badUse(s, n.Pos, "have a substring")
+			}
+
+			return a.bad(e.Pos)
+		}
+
+		x, name = a.name(n, false), n.Name
+
+	case *ast.Apply:
+		x, name = a.apply(n), n.Name
+
+	default:
+		a.notImplForm(e.X.Position(), formWhat(e.X))
+
+		return a.bad(e.Pos)
+	}
+
+	t := x.Type()
+
+	switch x.(type) {
+	case *Var, *Elem:
+	default:
+		if t.Kind != Invalid {
+			// A function's value (CHARACTER functions are Phase 79's) or a
+			// constant expression.
+			a.report("SUBSTR", e.Pos, name, "not a variable or an array element")
+		}
+
+		return a.bad(e.Pos)
+	}
+
+	if t.Kind != Character {
+		a.report("SUBSTR", e.Pos, name, t.String())
+
+		return a.bad(e.Pos)
+	}
+
+	lower := Expr(&Const{exprBase: exprBase{IntegerType, e.Pos}, Int: 1})
+	if e.Lower != nil {
+		lower = a.convert(a.arithmetic(a.value(e.Lower)), IntegerType)
+	}
+
+	var upper Expr
+	if e.Upper != nil {
+		upper = a.convert(a.arithmetic(a.value(e.Upper)), IntegerType)
+	}
+
+	if lower.Type().Kind == Invalid || (upper != nil && upper.Type().Kind == Invalid) {
+		return a.bad(e.Pos)
+	}
+
+	first, firstKnown := constantInt(lower)
+	last, lastKnown := t.Size, true
+
+	if upper != nil {
+		last, lastKnown = constantInt(upper)
+	}
+
+	switch {
+	case firstKnown && lastKnown:
+		if first < 1 || first > last || last > t.Size {
+			a.report("SUBRANGE", e.Pos, first, last, name, t.Size)
+
+			return a.bad(e.Pos)
+		}
+
+		return &Substring{exprBase{Type{Character, last - first + 1}, e.Pos}, x, lower, upper}
+
+	case firstKnown && (first < 1 || first > t.Size):
+		a.report("SUBBOUND", e.Pos, first, name, t.Size)
+
+		return a.bad(e.Pos)
+
+	case lastKnown && (last < 1 || last > t.Size):
+		a.report("SUBBOUND", e.Pos, last, name, t.Size)
+
+		return a.bad(e.Pos)
+	}
+
+	return &Substring{exprBase{Type{Character, 0}, e.Pos}, x, lower, upper}
+}
+
+// constantInt is e's value if it is an INTEGER constant.
+func constantInt(e Expr) (int, bool) {
+	if c, ok := e.(*Const); ok && c.T.Kind == Integer {
+		return int(c.Int), true
+	}
+
+	return 0, false
 }
 
 // element analyzes an array element, s(subscripts): one subscript per
@@ -322,6 +417,12 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 			a.notImpl(c.Pos, "a character constant as an argument")
 
 			args[i].Expr = a.bad(c.Pos)
+		} else if x := args[i].Expr; x != nil && x.Type().Kind == Character {
+			// A character argument is passed by descriptor (Decision 11),
+			// a later subtask's.
+			a.notImpl(x.Position(), "a character value as an argument")
+
+			args[i].Expr = a.bad(x.Position())
 		}
 	}
 
@@ -330,19 +431,33 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as
 // an INTEGER (section 2.3.1.2: "Logical entities used in an arithmetic
-// context are treated as integers"), and a character constant is a
-// Hollerith constant, NOTIMPL.
+// context are treated as integers"), a character constant is a
+// Hollerith constant, NOTIMPL, and any other CHARACTER value is an error
+// (CHARNUMBER): FORTRAN converts no character value to a number.
 func (a *analyzer) arithmetic(e Expr) Expr {
 	switch e.Type().Kind {
 	case Logical:
 		return a.convert(e, e.Type().integer())
 	case Character:
-		a.notImpl(e.Position(), hollerith)
+		a.notCharacter(e)
 
 		return a.bad(e.Position())
 	}
 
 	return e
+}
+
+// notCharacter reports a CHARACTER value where a number or a logical value
+// must be: a character constant is a Hollerith constant there (NOTIMPL, Phase
+// 82's), and any other is CHARNUMBER.
+func (a *analyzer) notCharacter(e Expr) {
+	if _, ok := e.(*Const); ok {
+		a.notImpl(e.Position(), hollerith)
+
+		return
+	}
+
+	a.report("CHARNUMBER", e.Position(), article(e.Type().String()))
 }
 
 // convert is e converted to type t: e itself if it already has that type,
@@ -376,7 +491,7 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 			// bit's (section 2.3.4).
 			return a.fold(&Unary{exprBase{x.Type(), e.Pos}, ast.Not, x})
 		case Character:
-			a.notImpl(x.Position(), hollerith)
+			a.notCharacter(x)
 		default:
 			a.report("BADOPERAND", e.Pos, ".NOT.", x.Type().String())
 		}
@@ -468,17 +583,34 @@ func (a *analyzer) mixedType(x, y Expr) Type {
 
 // compare analyzes a relational expression (section 2.3.3): its operands
 // are converted to the higher-ranked one's type, and its value is
-// LOGICAL. COMPLEX operands take only .EQ. and .NE.
+// LOGICAL. COMPLEX operands take only .EQ. and .NE. Two CHARACTER values
+// are compared as they are, whatever their lengths, the shorter as if
+// padded with blanks; a CHARACTER value can't be compared with any other
+// (COMPARETYPE), but for a character constant, which is a Hollerith
+// constant beside a number (NOTIMPL).
 func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
-	if x.Type().Kind == Character && y.Type().Kind == Character {
-		cx, okx := x.(*Const)
-		cy, oky := y.(*Const)
+	switch cx, cy := x.Type().Kind == Character, y.Type().Kind == Character; {
+	case cx && cy:
+		kx, okx := x.(*Const)
+		ky, oky := y.(*Const)
 
 		if okx && oky {
-			return logicalConst(relation(e.Op, compareText(cx.Text, cy.Text)), e.Pos)
+			return logicalConst(relation(e.Op, compareText(kx.Text, ky.Text)), e.Pos)
 		}
 
-		a.notImpl(e.Pos, "comparing character values")
+		return &Compare{exprBase{LogicalType, e.Pos}, e.Op, x, y}
+
+	case cx || cy:
+		c, o := x, y
+		if cy {
+			c, o = y, x
+		}
+
+		if _, ok := c.(*Const); ok {
+			a.notImpl(c.Position(), hollerith)
+		} else {
+			a.report("COMPARETYPE", e.Pos, article(c.Type().String()), article(o.Type().String()))
+		}
 
 		return a.bad(e.Pos)
 	}
@@ -509,7 +641,7 @@ func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
 	for _, o := range []Expr{x, y} {
 		switch o.Type().Kind {
 		case Character:
-			a.notImpl(o.Position(), hollerith)
+			a.notCharacter(o)
 
 			return a.bad(e.Pos)
 
@@ -541,7 +673,13 @@ func (a *analyzer) condition(e ast.Expr) Expr {
 	case Integer:
 		return a.convert(c, Type{Logical, c.Type().Size})
 	case Character:
-		a.notImpl(c.Position(), hollerith)
+		if _, ok := c.(*Const); ok {
+			a.notImpl(c.Position(), hollerith)
+
+			break
+		}
+
+		fallthrough
 	default:
 		a.report("NOTLOGICAL", e.Position(), c.Type().String())
 	}

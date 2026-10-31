@@ -118,19 +118,9 @@ func (a *analyzer) notConstant(err *constErr) {
 }
 
 // constantUse is a constant's value where an executable statement's
-// expression uses its name. A constant whose type the code generator
-// doesn't handle yet is NOTIMPL, once (Phase 78's); CHARACTER constants
-// are values wherever a character constant is.
+// expression uses its name.
 func (a *analyzer) constantUse(s *Symbol, n *ast.Name) Expr {
 	if s.Value == nil {
-		return a.bad(n.Pos)
-	}
-
-	if t := s.Type; !t.Compiled() && t.Kind != Character {
-		a.notImpl(n.Pos, article(t.String()+" constant"))
-
-		s.broken = true
-
 		return a.bad(n.Pos)
 	}
 

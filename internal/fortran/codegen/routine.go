@@ -142,6 +142,8 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 		switch s := s.(type) {
 		case *ir.Assign:
 			g.assign(s)
+		case *ir.CharMove:
+			g.charMove(s)
 		case *ir.Call:
 			g.call(s)
 		}

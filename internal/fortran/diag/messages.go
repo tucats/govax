@@ -379,6 +379,28 @@ var messages = map[string]kind{
 	// .AND. on a REAL.
 	"BADOPERAND": {Error, "%s can't be applied to a %s value"},
 
+	// CHARNUMBER is a CHARACTER value where a number or a logical value
+	// must be: FORTRAN converts no character value to one.
+	"CHARNUMBER": {Error, "%s value can't be used as a number or a logical value"},
+
+	// COMPARETYPE is a CHARACTER value compared with a value of another
+	// type: a character value can be compared only with another.
+	"COMPARETYPE": {Error, "%s value can't be compared with %s value"},
+
+	// ASSIGNTYPE is an assignment of a CHARACTER value to a numeric or
+	// logical place, or of another value to a CHARACTER one (section 3.3).
+	"ASSIGNTYPE": {Error, "%s value can't be assigned to %s, which is %s"},
+
+	// SUBSTR is a substring of something that isn't a CHARACTER variable
+	// or array element.
+	"SUBSTR": {Error, "%s is %s, so it can't have a substring"},
+
+	// SUBRANGE is a substring whose constant bounds aren't within its
+	// variable (section 2.2.4: 1 <= first <= last <= the length), and
+	// SUBBOUND one of whose bounds is constant and outside it.
+	"SUBRANGE": {Error, "the substring (%d:%d) isn't within %s's %d characters"},
+	"SUBBOUND": {Error, "the substring's bound %d isn't within %s's %d characters"},
+
 	// NOTLOGICAL is an IF's condition that is neither LOGICAL nor
 	// INTEGER.
 	"NOTLOGICAL": {Error, "a condition must be LOGICAL or INTEGER, and this one is %s"},

@@ -60,8 +60,17 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return arith(operators[e.Op], t, x, y)
 
 	case *sema.Compare:
-		if e.X.Type().Kind == sema.Complex {
+		switch e.X.Type().Kind {
+		case sema.Complex:
 			return l.complexCompare(e)
+
+		case sema.Character:
+			// Computed before the statement, so that no register is held
+			// across its CMPC (CharCmp).
+			t := l.temp(Long)
+			l.emit(&Assign{l.origin(), t, l.charCompare(e)})
+
+			return &Load{t}
 		}
 
 		x := l.expr(e.X)
@@ -89,6 +98,69 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	}
 
 	panic("ir: an expression semantic analysis left that lowering can't lower")
+}
+
+// cond lowers a Branch's condition. It is expr's lowering, but for a
+// character comparison, which is kept in the condition rather than computed
+// before it, as long as only .AND., .OR., and .NOT. are above it: the code
+// generator branches on each of those as it goes, and holds no register
+// across a comparison.
+func (l *lowerer) cond(e sema.Expr) Expr {
+	switch e := e.(type) {
+	case *sema.Compare:
+		if e.X.Type().Kind == sema.Character {
+			return l.charCompare(e)
+		}
+
+	case *sema.Unary:
+		if e.Op == ast.Not && e.T.Kind == sema.Logical {
+			return arith(Not, l.typeOf(e.T), l.cond(e.X), nil)
+		}
+
+	case *sema.Binary:
+		if (e.Op == ast.And || e.Op == ast.Or) && e.T.Kind == sema.Logical {
+			return arith(operators[e.Op], l.typeOf(e.T), l.cond(e.X), l.cond(e.Y))
+		}
+	}
+
+	return l.expr(e)
+}
+
+// charCompare lowers a comparison of two CHARACTER values.
+func (l *lowerer) charCompare(e *sema.Compare) *CharCmp {
+	return &CharCmp{operators[e.Op], l.chars(e.X), l.chars(e.Y)}
+}
+
+// chars is where a CHARACTER value is, and its length: a constant's text, a
+// variable, an array element, or a substring of either. S(I:J) is S's place
+// I-1 bytes on, the constant part of that in the offset and the rest added
+// to the index, and J-I+1 characters long (S's length if J is left out).
+func (l *lowerer) chars(e sema.Expr) Text {
+	switch e := e.(type) {
+	case *sema.Const:
+		return Text{l.text(e.Text), LongConst(int32(len(e.Text)))}
+
+	case *sema.Var, *sema.Elem:
+		return Text{l.mem(e), LongConst(int32(e.Type().Size))}
+
+	case *sema.Substring:
+		t := l.chars(e.X)
+		lower := l.expr(e.Lower)
+
+		upper := t.Len
+		if e.Upper != nil {
+			upper = l.expr(e.Upper)
+		}
+
+		v, k := split(lower)
+		m := *t.Mem
+		m.Offset += int(k) - 1
+		m.Index = arith(Add, Long, m.Index, v)
+
+		return Text{&m, arith(Sub, Long, arith(Add, Long, upper, LongConst(1)), lower)}
+	}
+
+	panic("ir: a CHARACTER value semantic analysis left that lowering can't lower")
 }
 
 // operators are the IR's operators for FORTRAN's.
@@ -160,6 +232,12 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 			}
 
 			multiplier *= dim.Extent()
+		}
+
+		// A CHARACTER element's place is a Byte place, whose index the VAX
+		// doesn't multiply by the element's length: it is multiplied here.
+		if e.Sym.Type.Kind == sema.Character && index != nil {
+			index = arith(Mul, Long, index, LongConst(int32(e.Sym.Type.Size)))
 		}
 
 		m.Offset = first * e.Sym.Type.Size
@@ -327,7 +405,8 @@ func split(e Expr) (Expr, int32) {
 }
 
 // linear is x+y or x-y for Longs, with their constants collected into
-// one, added (or subtracted) last.
+// one, added (or subtracted) last, and a part that isn't constant
+// subtracted from itself gone.
 func linear(op Operator, x, y Expr) Expr {
 	vx, kx := split(x)
 	vy, ky := split(y)
@@ -342,6 +421,11 @@ func linear(op Operator, x, y Expr) Expr {
 	switch {
 	case vy == nil:
 		v = vx
+	case op == Sub && vx != nil && ExprText(vx) == ExprText(vy):
+		// I - I is 0, whatever I is: an expression has no side effects
+		// (lowering took the calls out), and two that read alike have the
+		// same value. So S(I:I) is one character long.
+		v = nil
 	case vx == nil && op == Sub && k != 0:
 		// 5 - I stays a subtraction (SUBL3 I,#5,...).
 		return &Op{Sub, Long, LongConst(k), vy}

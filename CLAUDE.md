@@ -338,7 +338,13 @@ never had.
   or `Octa` that only moves, F products in line (folded by
   `vaxfloat.ComplexMulSteps`), D and G products and every quotient by
   the OTS$ routines with the parts by value, and FTNRTL's complex
-  output.
+  output, and subtask 5 (2026-10-30) CHARACTER values: substrings
+  (`sema.Substring`), assignment and comparison of any lengths, each value
+  an IR `Text` (a Byte place and a length), assigned by `CharMove` and
+  compared by `CharCmp`, which stands only where no register is held
+  (a branch's condition, an Assign's whole value; `ir`'s `cond`), written
+  as MOVC3/MOVC5 and CMPC3/CMPC5 with the unsigned branches
+  (`codegen/chars.go`); CHARACTER dummies and arguments are subtask 6's.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

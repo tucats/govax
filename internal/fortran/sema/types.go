@@ -29,9 +29,10 @@ const (
 // its length in characters, 1 to 65535, or 0 for a passed length,
 // CHARACTER*(*), which a dummy argument takes from its actual argument.
 //
-// Declarations may give a name any of these types (Phase 76); expressions
-// are compiled on the types Compiled says, and a name of any other type is
-// NOTIMPL where an expression uses it, until a later subtask of Phase 78.
+// Declarations may give a name any of these types (Phase 76), and
+// expressions of every one are compiled (Phase 78). A CHARACTER expression
+// whose length isn't known until the program runs, a substring with a
+// bound that isn't constant, has the size 0 too.
 type Type struct {
 	Kind Kind
 	Size int
@@ -80,25 +81,14 @@ func (t Type) String() string {
 	return name + "*" + strconv.Itoa(t.Size)
 }
 
-// Compiled reports whether expressions of the type are compiled yet:
-// INTEGER, LOGICAL, REAL, and COMPLEX of every length. CHARACTER is a later
-// subtask's of Phase 78.
-func (t Type) Compiled() bool {
-	switch t.Kind {
-	case Integer, Logical, Real, Complex:
-		return true
-	}
-
-	return false
-}
-
 // returned reports whether a function of the type can be compiled yet: a
-// type Compiled says whose value comes back in registers, R0 or R0 and R1
-// (a COMPLEX*8's real part in R0, its imaginary part in R1). A REAL*16 or
-// COMPLEX*16 function's value comes back through a hidden first argument
-// (Decision 11 of docs/PHASE-74 - FORTRAN plan.md), which is Phase 79's.
+// numeric or LOGICAL type whose value comes back in registers, R0 or R0
+// and R1 (a COMPLEX*8's real part in R0, its imaginary part in R1). A
+// REAL*16 or COMPLEX*16 function's value comes back through a hidden first
+// argument, and a CHARACTER function's through a descriptor passed as one
+// (Decision 11 of docs/PHASE-74 - FORTRAN plan.md), which are Phase 79's.
 func (t Type) returned() bool {
-	return t.Compiled() && t.Size <= 8
+	return t.Kind != Character && t.Size <= 8
 }
 
 // Align is the boundary a variable of the type is placed on in $LOCAL:

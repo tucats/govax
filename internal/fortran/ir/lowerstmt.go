@@ -90,9 +90,23 @@ func (l *lowerer) returnValue() Expr {
 }
 
 // assign lowers Target = Value. J = F(X), a function's value stored as
-// it is, has the call put the value straight into J.
+// it is, has the call put the value straight into J. A CHARACTER value is
+// moved (CharMove), and a character comparison's value stored as it is
+// computed.
 func (l *lowerer) assign(s *sema.Assign) {
+	if s.Target.Type().Kind == sema.Character {
+		l.emit(&CharMove{l.origin(), l.chars(s.Target), l.chars(s.Value)})
+
+		return
+	}
+
 	dst := l.mem(s.Target)
+
+	if c, ok := s.Value.(*sema.Compare); ok && c.X.Type().Kind == sema.Character && dst.T == Long {
+		l.emit(&Assign{l.origin(), dst, l.charCompare(c)})
+
+		return
+	}
 
 	if f, ok := s.Value.(*sema.FuncRef); ok {
 		l.callFunction(f, dst)
@@ -138,7 +152,7 @@ func (l *lowerer) blockIf(s *sema.If) {
 			next = l.newBlock()
 		}
 
-		l.branch(l.expr(arm.Cond), then, next)
+		l.branch(l.cond(arm.Cond), then, next)
 		l.release()
 
 		l.begin(then)
@@ -173,7 +187,7 @@ func (l *lowerer) blockIf(s *sema.If) {
 // a branch to n.
 func (l *lowerer) logicalIf(s *sema.If) {
 	arm := s.Arms[0]
-	cond := l.expr(arm.Cond)
+	cond := l.cond(arm.Cond)
 	next := l.newBlock()
 
 	if len(arm.Body) == 1 {
@@ -336,6 +350,9 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 
 		return l.describe(d, l.constant(l.constOf(e)))
 
+	case *sema.Substring:
+		return l.describeText(d, l.chars(e))
+
 	case *sema.Var, *sema.Elem:
 		return l.describe(d, l.mem(e))
 
@@ -350,6 +367,24 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 	}
 
 	return l.describe(d, l.value(l.expr(e)))
+}
+
+// describeText is a descriptor d of the CHARACTER value at t: describe's,
+// when t's length is a constant; otherwise a descriptor cell, into which the
+// statement stores the length (a word, CVTLW) and the address.
+func (l *lowerer) describeText(d *Descriptor, t Text) *Mem {
+	if n, ok := t.Len.(*Const); ok {
+		d.Length = int(n.Int())
+
+		return l.describe(d, t.Mem)
+	}
+
+	d.Length = 0
+	c := l.descriptorCell(d)
+	l.emit(&Assign{l.origin(), &Mem{Cell: c, T: Word}, arith(Cvt, Word, t.Len, nil)})
+	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{t.Mem}})
+
+	return &Mem{Cell: c, T: Long}
 }
 
 // textDescriptor is the descriptor of a character constant.

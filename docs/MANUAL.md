@@ -4471,10 +4471,9 @@ output it prints, and programs of several files in its `modules` directory.
   a routine outside the unit, even one with an intrinsic function's name
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
   it is FORTRAN's own. Either name as an argument is reported not implemented.
-  Every variable gets its storage,
-  but only INTEGER, LOGICAL, REAL, and COMPLEX names can be used in
-  statements yet; a name of another type is reported not implemented
-  where a statement first uses it. Undeclared names have the implicit
+  Every variable gets its storage, and names of every type can be used in
+  statements, but for a CHARACTER dummy argument, which is reported not
+  implemented where a statement first uses it. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
   with IMPLICIT NONE every name must be declared. The statements must
   come in the order the language sets (IMPLICIT, then the other
@@ -4512,13 +4511,20 @@ output it prints, and programs of several files in its `modules` directory.
   COMPLEX values, which are equal if both parts are); `.NOT.`, `.AND.`, `.OR.`, `.EQV.`, `.NEQV.`,
   `.XOR.`, on LOGICALs of every length or bit by bit on INTEGERs; array
   elements and
-  function references. The other operators and the intrinsic functions
-  above work so far only on constants, computed when compiling.
-- **Statements:** assignment; logical IF; block IF with ELSE IF and
+  function references. CHARACTER variables, array elements, and substrings,
+  `S(2:5)`, `S(I:)`, `NAMES(K)(:J)`, whose bounds may be expressions (a
+  constant bound must be within the variable); a character value compared
+  with another, in ASCII's order (the codes as unsigned bytes, so 200 is
+  after `Z`), the shorter as though filled with blanks; but a character value
+  can't be passed as an argument yet. The other operators and the intrinsic
+  functions above work so far only on constants, computed when compiling.
+- **Statements:** assignment, of a character value to a character place cut
+  or filled with blanks on the right to the place's length, and right even
+  when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
   ELSE; DO with a label, ending at CONTINUE or another statement, with
   any step, and a REAL control variable too; unconditional GO TO; CALL;
   RETURN; STOP, with or without a display; `PRINT *` and `WRITE (*,*)`
-  of values, arrays, and character constants.
+  of values, arrays, character constants, and substrings.
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy.
@@ -4901,6 +4907,11 @@ FORTRAN compiler was available to check them). So far:
   program with the VAX's divide-by-zero trap.
 - A constant passed as an argument is read-only: a routine that assigns
   to its dummy argument gets an access violation.
+- A substring's bounds that aren't constants aren't checked when the program
+  runs (as with VAX FORTRAN's `/CHECK=NOBOUNDS`): a substring past its
+  variable's end reaches the bytes after it, and one whose last position is
+  before its first moves or compares the characters an unsigned word of its
+  length says, so `S(5:4)` is empty but `S(5:3)` is 65535 characters long.
 - List-directed output's records are 80 bytes long, carriage control
   included; values follow one another with no blanks between them but
   their fields' own; a text that doesn't fit begins a new record; zero

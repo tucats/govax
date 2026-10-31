@@ -13,6 +13,7 @@ var conditions = map[ir.Operator]string{
 // opposite is the condition that holds when another doesn't.
 var opposite = map[string]string{
 	"EQL": "NEQ", "NEQ": "EQL", "LSS": "GEQ", "GEQ": "LSS", "LEQ": "GTR", "GTR": "LEQ",
+	"LSSU": "GEQU", "GEQU": "LSSU", "LEQU": "GTRU", "GTRU": "LEQU",
 }
 
 // swapped is the comparison that holds of Y and X when op holds of X and
@@ -111,6 +112,16 @@ func (g *routineGen) branchTo(e ir.Expr, sense bool, target string) {
 
 	case *ir.Cmp:
 		cc := g.compare(g.compareOperands(g.fit(e).(*ir.Cmp)))
+		if !sense {
+			cc = opposite[cc]
+		}
+
+		g.around("B"+opposite[cc], nil, target)
+
+		return
+
+	case *ir.CharCmp:
+		cc := g.charCompare(e)
 		if !sense {
 			cc = opposite[cc]
 		}

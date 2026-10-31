@@ -190,6 +190,9 @@ func StmtText(s Stmt) string {
 	case *Assign:
 		return "assign " + MemText(s.Dst) + " = " + ExprText(s.Src)
 
+	case *CharMove:
+		return "move " + TextText(s.Dst) + " = " + TextText(s.Src)
+
 	case *Call:
 		args := make([]string, len(s.Args))
 
@@ -256,6 +259,12 @@ func MemText(m *Mem) string {
 	return text
 }
 
+// TextText is a CHARACTER value's place and length as the dump writes it:
+// S(8), S+1[J](3), $K1(5).
+func TextText(t Text) string {
+	return MemText(t.Mem) + "(" + ExprText(t.Len) + ")"
+}
+
 // ExprText is an expression as the dump writes it.
 func ExprText(e Expr) string {
 	switch e := e.(type) {
@@ -292,6 +301,9 @@ func ExprText(e Expr) string {
 
 	case *Cmp:
 		return e.Op.String() + "." + e.X.Type().String() + "(" + ExprText(e.X) + ", " + ExprText(e.Y) + ")"
+
+	case *CharCmp:
+		return e.Op.String() + ".T(" + TextText(e.X) + ", " + TextText(e.Y) + ")"
 	}
 
 	return fmt.Sprintf("%T", e)

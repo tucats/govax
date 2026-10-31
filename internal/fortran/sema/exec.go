@@ -122,13 +122,45 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	if value.Type().Kind == Character {
-		a.notImpl(value.Position(), hollerith)
+	// A CHARACTER value is assigned only to a CHARACTER place, of any
+	// length: it is cut or filled with blanks on the right to the place's
+	// length when the program runs (section 3.3).
+	switch tt, vt := target.Type(), value.Type(); {
+	case tt.Kind == Character && vt.Kind == Character:
+		return &Assign{stmtBase{s}, target, value}
+
+	case vt.Kind == Character:
+		if _, ok := value.(*Const); ok {
+			a.notImpl(value.Position(), hollerith)
+		} else {
+			a.report("ASSIGNTYPE", s.Pos, article(vt.String()), placeName(target), tt.String())
+		}
+
+		return nil
+
+	case tt.Kind == Character:
+		a.report("ASSIGNTYPE", s.Pos, article(vt.String()), placeName(target), tt.String())
 
 		return nil
 	}
 
 	return &Assign{stmtBase{s}, target, a.assigned(value, target.Type())}
+}
+
+// placeName names an assignment's target for a message: a variable's name,
+// an array element's array's ("an element of A"), a substring's ("a
+// substring of S").
+func placeName(e Expr) string {
+	switch e := e.(type) {
+	case *Var:
+		return e.Sym.Name
+	case *Elem:
+		return "an element of " + e.Sym.Name
+	case *Substring:
+		return "a substring of " + placeName(e.X)
+	}
+
+	return "it"
 }
 
 // assigned is value converted to t, the type of the variable it is assigned
@@ -158,8 +190,8 @@ func (a *analyzer) assigned(value Expr, t Type) Expr {
 	return &Const{exprBase: exprBase{t, c.Pos}, Int: truncate(c.Int, t.Size)}
 }
 
-// target analyzes an assignment's target: a variable or an array
-// element. It returns nil after an error.
+// target analyzes an assignment's target: a variable, an array element,
+// or a substring of either. It returns nil after an error.
 func (a *analyzer) target(e ast.Expr) Expr {
 	var t Expr
 
@@ -187,7 +219,10 @@ func (a *analyzer) target(e ast.Expr) Expr {
 			return nil
 		}
 
-	case *ast.Substring, *ast.FieldRef:
+	case *ast.Substring:
+		t = a.substring(e)
+
+	case *ast.FieldRef:
 		a.notImplForm(e.Position(), formWhat(e))
 
 		return nil
@@ -211,7 +246,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 			return nil
 
-		case a.uncompiledUse(s, e.Pos):
+		case a.characterDummy(s, e.Pos):
 			return nil
 		}
 
@@ -224,7 +259,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 		return t
 
-	case *Elem:
+	case *Elem, *Substring:
 		return t
 	}
 

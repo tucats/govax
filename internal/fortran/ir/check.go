@@ -83,11 +83,21 @@ func (c *checker) block(b *Block) error {
 		switch s := s.(type) {
 		case *Assign:
 			if err = c.mem(s.Dst); err == nil {
-				err = c.expr(s.Src)
+				// A character comparison may be the whole value assigned.
+				if cmp, ok := s.Src.(*CharCmp); ok {
+					err = c.charCompare(cmp)
+				} else {
+					err = c.expr(s.Src)
+				}
 			}
 
 			if err == nil && s.Dst.T != s.Src.Type() {
 				err = fmt.Errorf("%s assigns a %s value to a %s place", StmtText(s), s.Src.Type(), s.Dst.T)
+			}
+
+		case *CharMove:
+			if err = c.text(s.Dst); err == nil {
+				err = c.text(s.Src)
 			}
 
 		case *Call:
@@ -127,7 +137,7 @@ func (c *checker) block(b *Block) error {
 			return err
 		}
 
-		return c.expr(t.Cond)
+		return c.condition(t.Cond)
 	case *Return:
 		if t.Value != nil {
 			return c.expr(t.Value)
@@ -166,6 +176,56 @@ func (c *checker) mem(m *Mem) error {
 	}
 
 	return nil
+}
+
+// condition checks a Branch's condition: an expression, in which a
+// character comparison may be an operand of And, Or, and Not, which the
+// code generator branches on as it goes.
+func (c *checker) condition(e Expr) error {
+	switch e := e.(type) {
+	case *CharCmp:
+		return c.charCompare(e)
+
+	case *Op:
+		switch e.Op {
+		case Not:
+			return c.condition(e.X)
+		case And, Or:
+			if err := c.condition(e.X); err != nil {
+				return err
+			}
+
+			return c.condition(e.Y)
+		}
+	}
+
+	return c.expr(e)
+}
+
+// charCompare checks a character comparison's two places.
+func (c *checker) charCompare(e *CharCmp) error {
+	if err := c.text(e.X); err != nil {
+		return err
+	}
+
+	return c.text(e.Y)
+}
+
+// text checks a CHARACTER value's place: a Byte place and a Long length.
+func (c *checker) text(t Text) error {
+	if t.Mem.T != Byte {
+		return fmt.Errorf("a character value in a %s place", t.Mem.T)
+	}
+
+	if t.Len.Type() != Long {
+		return fmt.Errorf("a character value's length of type %s", t.Len.Type())
+	}
+
+	if err := c.mem(t.Mem); err != nil {
+		return err
+	}
+
+	return c.expr(t.Len)
 }
 
 // expr checks an expression's places and operand types.
@@ -208,6 +268,9 @@ func (c *checker) expr(e Expr) error {
 		if e.X.Type() != e.Y.Type() {
 			return fmt.Errorf("%s compares a %s with a %s", ExprText(e), e.X.Type(), e.Y.Type())
 		}
+
+	case *CharCmp:
+		return fmt.Errorf("%s is inside an expression, where it would hold registers across CMPC", ExprText(e))
 	}
 
 	return nil

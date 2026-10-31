@@ -237,6 +237,8 @@ func DumpExpr(e Expr) string {
 		return e.Sym.Name + "[" + strings.Join(subs, ", ") + "]"
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
+	case *Substring:
+		return DumpExpr(e.X) + "(" + DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper) + ")"
 	case *FuncRef:
 		return e.Fn.Name + dumpArgs(e.Args)
 	case *Unary:

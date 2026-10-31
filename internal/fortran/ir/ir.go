@@ -403,7 +403,7 @@ type Block struct {
 	End   Terminator
 }
 
-// Stmt is a statement in a block: an Assign or a Call.
+// Stmt is a statement in a block: an Assign, a CharMove, or a Call.
 type Stmt interface {
 	// Source is the FORTRAN statement the IR statement came from, which
 	// says which source lines the code generator writes before its
@@ -435,6 +435,18 @@ type (
 		Src Expr
 	}
 
+	// CharMove is Dst = Src for CHARACTER values (section 3.3 of the
+	// language manual): Src's characters, cut to Dst's length, or filled
+	// after with blanks to it. It is MOVC3 or MOVC5, which leave R0 to R5
+	// changed (Decision 2 of docs/PHASE-78 - FORTRAN expressions and
+	// types.md): every operand is computed before the instruction runs, so
+	// none is held across it. A Dst that overlaps Src is right, as the
+	// instructions move characters as though Src were read first.
+	CharMove struct {
+		origin
+		Dst, Src Text
+	}
+
 	// Call is a call of an external routine, by CALLS: the arguments
 	// pushed last to first, then their count in longwords. A function's
 	// value goes to Result, from R0 up by its type's width (R0:R3 for an
@@ -447,8 +459,9 @@ type (
 	}
 )
 
-func (*Assign) stmtNode() {}
-func (*Call) stmtNode()   {}
+func (*Assign) stmtNode()   {}
+func (*CharMove) stmtNode() {}
+func (*Call) stmtNode()     {}
 
 // The terminators.
 type (
@@ -513,6 +526,16 @@ type Mem struct {
 
 	// T is the type of the value there.
 	T Type
+}
+
+// Text is a CHARACTER value's place: Mem, a Byte place whose offset and
+// index count bytes (the VAX's indexed mode multiplies an index by the
+// operand's size, a byte's 1, so an element of a CHARACTER*8 array has its
+// subscript times 8 as its index), and Len, its length in characters, a
+// Long expression, constant where the compiler knows it.
+type Text struct {
+	Mem *Mem
+	Len Expr
 }
 
 // Expr is an expression: a tree whose leaves are constants, loads,
@@ -592,6 +615,17 @@ type (
 		Op   Operator
 		X, Y Expr
 	}
+
+	// CharCmp is a comparison of two CHARACTER values (section 2.3.3), in
+	// the ASCII order, the shorter as if filled with blanks: CMPC3 or
+	// CMPC5, which leave R0 to R3 changed. So that no register is held
+	// across it, it is only ever a Branch's condition (or an operand of
+	// that condition's And, Or, and Not, which branch as they go), or the
+	// whole of an Assign's Src, its value a LOGICAL like Cmp's.
+	CharCmp struct {
+		Op   Operator
+		X, Y Text
+	}
 )
 
 // Type is the constant's type.
@@ -609,11 +643,15 @@ func (o *Op) Type() Type { return o.T }
 // Type is Long: a comparison's value is a LOGICAL.
 func (*Cmp) Type() Type { return Long }
 
-func (*Const) exprNode() {}
-func (*Load) exprNode()  {}
-func (*Addr) exprNode()  {}
-func (*Op) exprNode()    {}
-func (*Cmp) exprNode()   {}
+// Type is Long: a comparison's value is a LOGICAL.
+func (*CharCmp) Type() Type { return Long }
+
+func (*Const) exprNode()   {}
+func (*Load) exprNode()    {}
+func (*Addr) exprNode()    {}
+func (*Op) exprNode()      {}
+func (*Cmp) exprNode()     {}
+func (*CharCmp) exprNode() {}
 
 // LongConst is the Long constant n.
 func LongConst(n int32) *Const {

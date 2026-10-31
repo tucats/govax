@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, and 4 done 2026-10-30. Needs Phase 76 (declarations and
+3, 4, and 5 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -536,7 +536,7 @@ stops for review.
 4. **COMPLEX:** splitting in lowering, by-value arguments and wide results, products
    and OTS$DIVC, the folding change. Done.
 5. **CHARACTER values:** places, substrings, array elements, assignment, comparison,
-   the unsigned branches.
+   the unsigned branches. Done.
 6. **CHARACTER arguments and concatenation:** descriptors at run time, passed-length
    dummies, static temporaries, LIB$SGET1_DD.
 7. **Exponentiation:** the table above, in-line small powers in OTS$'s order.
@@ -680,3 +680,44 @@ stops for review.
     before); a complex value never split across records, though the manual allows
     a split after the comma. Efficiency is Phase 84's: an element's index is
     computed once per part, and a dummy's offset makes an index of its own.
+- **2026-10-30, subtask 5:** CHARACTER values.
+  - **`sema`:** `Compiled` and `uncompiledUse` are gone (every type compiles);
+    `characterDummy` reports a CHARACTER dummy argument NOTIMPL where a statement
+    first uses it, subtask 6's, and any character value as an argument is
+    NOTIMPL too. `Substring` (`substring`): of a variable or array element, its
+    bounds made INTEGER, Lower 1 when left out and Upper nil for the last
+    character; its type CHARACTER of its length, or of size 0 when a bound isn't
+    constant. A constant bound outside the variable is SUBRANGE (both constant)
+    or SUBBOUND (one), and a substring of anything else SUBSTR (a constant's is
+    BADUSE). Assignment between CHARACTER places of any lengths is an `Assign`
+    with no `Convert`; CHARACTER and anything else is ASSIGNTYPE, but for a
+    character constant, still a Hollerith constant (NOTIMPL). Two CHARACTER values
+    compare as they are; with a number, COMPARETYPE. A CHARACTER value in
+    arithmetic or as a logical operand is CHARNUMBER, and as a condition
+    NOTLOGICAL. A CHARACTER FUNCTION stays Phase 79's (`returned`).
+  - **`ir`:** Decision 2. A character value's place is a `Text`, a Byte place (a
+    CHARACTER cell's type is Byte now; an element's index is multiplied by its
+    length in `mem`) and a Long length (`chars`: a substring's offset and index
+    from its first bound, its length `(upper+1)-lower`). `CharMove` is the
+    assignment; `CharCmp` the comparison, which `cond` keeps in a branch's
+    condition under `.AND.`, `.OR.`, and `.NOT.` and `assign` keeps as an Assign's
+    whole value, and which `expr` computes into a temporary anywhere else; `Check`
+    refuses it elsewhere. A substring output item whose length isn't constant has a
+    descriptor cell whose length is stored with CVTLW (`describeText`). `linear`
+    folds `X - X` when the two read alike, so `S(I:I)` is one character long.
+  - **`codegen`:** `chars.go`. MOVC3 when both lengths are constant and the
+    source's is at least the destination's, MOVC5 with a blank fill otherwise;
+    CMPC3 for two equal constant lengths, CMPC5 otherwise, branched on with the
+    unsigned conditions (`unsigned`, and their opposites); a comparison's value is
+    a branch to `MNEGL #1` or `CLRL`, the register taken after the CMPC. Each marks
+    R0 to R5 or R0 to R3 changed, for the entry mask, and checks that no register
+    holds a value (`holdingNothing`).
+  - **FTNRTL:** nothing new: FTN$IO_ITEM already wrote text, a whole array of it
+    too (Table 7-1's An).
+  - **Tests:** `testdata/fortran/chars`, in both paging modes, its output worked by
+    hand; `chars.for` golden in `ir` and `codegen`; sema cases for each message.
+  - **Unconfirmed, ours:** the messages' wording; a bound that isn't constant
+    unchecked until `/CHECK=BOUNDS` (Phase 85), a negative length becoming the
+    unsigned word MOVC5 reads (MANUAL.md's differences); a comparison computed
+    before its statement when it isn't a branch's condition, so `L = I .GT. 0
+    .AND. S(I:I) .EQ. 'X'` compares even when I is 0 (2.3.4 allows either).

@@ -149,9 +149,12 @@ func lowerUnit(u *sema.Unit) *Routine {
 // byte, a word, or a longword by its size; a REAL*4 F_floating, a REAL*8
 // D_floating, or G_floating if the unit says so (/G_FLOATING), and a
 // REAL*16 H_floating. A COMPLEX value as a whole is a Quad or an Octa, which
-// only moves; its parts have the type partOf says.
+// only moves; its parts have the type partOf says. A CHARACTER value is
+// bytes, its place a Byte place (Text).
 func (l *lowerer) typeOf(t sema.Type) Type {
 	switch {
+	case t.Kind == sema.Character:
+		return Byte
 	case t.Kind == sema.Complex && t.Size == 8:
 		return Quad
 	case t.Kind == sema.Complex:
@@ -425,7 +428,7 @@ func (l *lowerer) constant(c *Const) *Mem {
 	return &Mem{Datum: d, T: c.T}
 }
 
-// text is a datum holding a character constant's text.
+// text is a datum holding a character constant's text, a Byte place.
 func (l *lowerer) text(s string) *Mem {
 	d := l.datum("text "+s, func() *Datum {
 		l.konsts++
@@ -433,7 +436,7 @@ func (l *lowerer) text(s string) *Mem {
 		return &Datum{Name: "$K" + strconv.Itoa(l.konsts), Kind: TextDatum, Text: s}
 	})
 
-	return &Mem{Datum: d}
+	return &Mem{Datum: d, T: Byte}
 }
 
 // descriptor is a datum holding the descriptor d, whose Target's address

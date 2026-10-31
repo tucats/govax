@@ -1,7 +1,7 @@
 routine DECLARE main
   cell  FLAG    B  $LOCAL+0    variable FLAG
   cell  SHORT   W  $LOCAL+2    variable SHORT
-  cell  NAME    L  $LOCAL+4    variable NAME
+  cell  NAME    B  $LOCAL+4    variable NAME
   cell  BIG     D  $LOCAL+12   variable BIG
   cell  I       L  $LOCAL+20   variable I
   cell  TOTAL   L  $LOCAL+24   variable TOTAL

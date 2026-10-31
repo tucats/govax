@@ -116,6 +116,11 @@ func need(e ir.Expr) int {
 	case *ir.Cmp:
 		// One more, for the value -1 or 0, while the operands are held.
 		return pairNeed(e.X, e.Y, 1) + 1
+
+	case *ir.CharCmp:
+		// Its value; its operands are computed when nothing else is held
+		// (charCompare).
+		return 1
 	}
 
 	return 0
@@ -144,7 +149,7 @@ func held(e ir.Expr) int {
 	switch e := e.(type) {
 	case *ir.Op:
 		return e.T.Width()
-	case *ir.Cmp, *ir.Addr:
+	case *ir.Cmp, *ir.CharCmp, *ir.Addr:
 		return 1
 	case *ir.Load:
 		return min(memNeed(e.Mem), 1)
@@ -403,6 +408,9 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.Cmp:
 		return g.comparison(e)
+
+	case *ir.CharCmp:
+		return g.charComparison(e)
 	}
 
 	panic(fmt.Sprintf("codegen: an expression of type %T", e))

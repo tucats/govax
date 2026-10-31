@@ -76,8 +76,6 @@ func formWhat(e ast.Expr) string {
 		return "an octal or hexadecimal constant"
 	case *ast.ComplexConst:
 		return "a COMPLEX constant"
-	case *ast.Substring:
-		return "a character substring"
 	case *ast.FieldRef:
 		return "a record's field"
 	case *ast.BuiltinArg:

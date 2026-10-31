@@ -7,8 +7,8 @@ routine DATAS main
   cell  D       D  $LOCAL+84   variable D
   cell  W       W  $LOCAL+92   variable W
   cell  L       B  $LOCAL+94   variable L
-  cell  STARS   L  $LOCAL+95   variable STARS
-  cell  C       L  $LOCAL+104  variable C
+  cell  STARS   B  $LOCAL+95   variable STARS
+  cell  C       B  $LOCAL+104  variable C
   cell  CI      L  $LOCAL+104  variable CI
   cell  I       L  SHARED+0    variable I
   cell  J       L  SHARED+4    variable J
