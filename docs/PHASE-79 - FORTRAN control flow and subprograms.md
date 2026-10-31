@@ -20,9 +20,9 @@ Generate code for all of the manual's chapters 5 and 6:
   (CHARACTER and COMPLEX through the hidden argument), statement
   functions (expanded inline), ENTRY in subroutines and functions,
   alternate return arguments (`*label`), adjustable arrays with bounds
-  from arguments or COMMON, assumed-size arrays, passed-length
-  CHARACTER arguments, CHARACTER and Hollerith constants as actual
-  arguments, procedure names as arguments (EXTERNAL and INTRINSIC),
+  from arguments or COMMON, assumed-size arrays, Hollerith constants as
+  actual arguments, procedure names as arguments (EXTERNAL, and calling
+  through a dummy what Phase 78 passes for INTRINSIC),
   null arguments, and %VAL, %REF, %DESCR, and %LOC (Table 6-1);
 - **the calling standard** (Decision 11) as the rest of VMS sees it, so
   a FORTRAN routine can be a callback (Phase 83 uses this).
@@ -31,7 +31,10 @@ Generate code for all of the manual's chapters 5 and 6:
 
 - **Phase 75:** CALL, simple functions, logical and block IF, labeled DO.
 - **Phase 76:** label tables and the statement order rules.
-- **Phase 78:** every type's code.
+- **Phase 78:** every type's code; character arguments and passed-length
+  dummies; an intrinsic's name passed as an argument (its Part A's
+  corrections, accepted 2026-10-30), with FTNRTL routines for the names
+  MTHRTL lacks.
 
 ## Design notes
 
@@ -74,7 +77,7 @@ Generate code for all of the manual's chapters 5 and 6:
 5. **Function results of every type**, CHARACTER and COMPLEX functions.
 6. **ENTRY.**
 7. **Alternate returns.**
-8. **Adjustable and assumed-size arrays, passed-length characters.**
+8. **Adjustable and assumed-size arrays**, passed-length character arrays.
 9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.**
 10. **Statement functions.**
 11. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter

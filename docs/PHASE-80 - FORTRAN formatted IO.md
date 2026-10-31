@@ -15,8 +15,8 @@ terminal and in internal files:
   groups, reversion, variable format expressions (`<n>`), and default
   field widths (Table 8-4);
 - **run-time formats** in character variables, arrays, and expressions;
-- **list-directed** input and output in full (7.2.1.2, Table 7-1): value
-  separators, repeat counts (`3*5`), null values, slash termination,
+- **list-directed** input and output in full (7.2.1.2; Table 7-1's output
+  formats are Phase 78's): value separators, repeat counts (`3*5`), null values, slash termination,
   complex and character input;
 - **NAMELIST** input and output (4.10, 7.2.1.3, 7.3.1.3);
 - **internal files** (READ and WRITE to CHARACTER variables and arrays),
@@ -32,6 +32,8 @@ terminal and in internal files:
 
 - **Phase 75:** FTNRTL's list-directed output, the I/O call protocol,
   the unit table, SYS$OUTPUT.
+- **Phase 78:** list-directed output of every type (its Part A's
+  corrections, accepted 2026-10-30).
 - **LIBRTL:** OTS$CVT_T_F/D/G/H (text to floating), OTS$CVT_TI_L,
   TO_L, TZ_L, TL_L (text to integer), OTS$CVT_L_Tx, and
   `OTS$$CVT_x_T_R8` (floating to digits with FORTRAN's rounding).

@@ -36,6 +36,8 @@ spirit but our own layouts:
 
 ## What earlier phases leave in place
 
+- `/[NO]I4` and `/[NO]G_FLOATING`, on the command and in OPTIONS (Phase 78);
+  OPTIONS's `/CHECK` and `/EXTEND_SOURCE` are this phase's.
 - `diag`'s messages with positions (Phase 74), the storage map comment
   (Phases 75–76), MACRO's `/DEBUG` and the debugger's EXAMINE by symbol.
 

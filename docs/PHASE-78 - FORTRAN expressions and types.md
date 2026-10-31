@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
-**Status:** in progress: subtask 1, the survey, done 2026-10-30 (its
-questions and corrections await the author). Needs Phase 76 (declarations and
+**Status:** in progress: subtask 1, the survey, done and accepted by the
+author 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -17,7 +17,8 @@ computation a FORTRAN program can write compiles and runs correctly:
   mixed-type expressions (2.3.1.2);
 - **arithmetic:** every operator in every type; integer division
   truncating; `**` inline for small integer constant exponents, else
-  OTS$POWxx; complex multiplication inline, division by OTS$DIVC;
+  OTS$POWxx; COMPLEX*8 multiplication inline, COMPLEX*16's by
+  OTS$MULCD_R3 or MULCG_R3, division by OTS$DIVC and its D and G forms;
 - **CHARACTER:** substrings, concatenation (into temporaries sized at
   compile time where they can be), assignment with blank fill and
   truncation, comparison with blank padding (CMPC5), assumed-length
@@ -25,13 +26,14 @@ computation a FORTRAN program can write compiles and runs correctly:
 - **relational and logical operators**, `.EQV.`, `.NEQV.`, `.XOR.`, and
   logical values as VAX FORTRAN keeps them (low bit; -1 for .TRUE.);
 - **the intrinsic functions** of Table D-3: inline where an instruction
-  or two does it (ABS, MIN, MAX, MOD, SIGN, DIM, INT, NINT, AINT, ANINT,
+  or two does it (ABS, MIN, MAX, integer MOD, SIGN, DIM, INT, NINT,
   REAL, DBLE, CMPLX, AIMAG, CONJG, ICHAR, CHAR, LEN, ZEXT, DPROD, the
   bit functions IAND, IOR, IEOR, NOT, ISHFT, ISHFTC, IBITS, BTEST,
   IBSET, IBCLR), INDEX and the lexical comparisons (LGE, LGT, LLE,
   LLT) inline or through LIBRTL, and the rest through MTHRTL; generic
   names resolved by argument type; intrinsics passed as actual
-  arguments (their specific names).
+  arguments (their specific names), with an FTNRTL routine for each name
+  MTHRTL lacks.
 
 ## What earlier phases leave in place
 
@@ -245,7 +247,7 @@ routine is its G routine (`MTH$DSQRT` is `MTH$GSQRT`, `MTH$CDSQRT` is
 | IBITS | IIBITS, JIBITS | EXTZV |
 | IBSET, IBCLR | II and J forms | BISL, BICL, with a mask made by ASHL if the bit isn't constant |
 | BTEST | BITEST, BJTEST | EXTZV, then MNEGL |
-| ISHFTC | IISHFTC, JISHFTC | a new FTNRTL routine, FTN$ISHFTC: no instruction does it, and MTHRTL has none |
+| ISHFTC | IISHFTC, JISHFTC | FTNRTL's FTN$IISHFTC, FTN$JISHFTC: no instruction does it, and MTHRTL has none |
 | — | LEN | a constant, or the descriptor's first word |
 | — | INDEX | MATCHC |
 | — | ICHAR | MOVZBL |
@@ -261,13 +263,15 @@ subroutine, Phase 83's.
 
 **The table's three odd rows.** IIBITS, IIBCLR, and IISHFTC are printed
 with an INTEGER*2 argument and an **INTEGER*4 result**, against IIBSET's
-INTEGER*2. It isn't the OCR: page D-42 prints it so. See question 3.
+INTEGER*2. It isn't the OCR: page D-42 prints it so. The author's answer 3
+follows the table.
 
 **Specific names with no routine to pass.** MTHRTL has no entry for
 LEN, INDEX, ICHAR, CHAR, LLT, LLE, LGT, LGE, BITEST, BJTEST, IIBITS, JIBITS,
 IIBSET, JIBSET, IIBCLR, JIBCLR, IISHFTC, JISHFTC, IZEXT, JZEXT, SNGLQ, DBLEQ,
 QEXT, and QEXTD. NWORKERS and SIZEOF aren't routines. Every other specific
-name has one, by the mapping above. See question 4.
+name has one, by the mapping above. The author's answer 4 gives each an FTNRTL
+routine.
 
 ## Which routines the calls use (Phase 77's survey)
 
@@ -359,8 +363,8 @@ are by type already.
   they must be marked used.
 
 **`internal/ftnrtl`:** `FTN$IO_ITEM`'s CASEB has four types. Table 7-1 needs
-the other nine; `OTS$$CVT_D_T_R8`, `_G_`, and `_H_` give the digits. Its
-minor id goes up with FTN$ISHFTC.
+the other nine; `OTS$$CVT_D_T_R8`, `_G_`, and `_H_` give the digits. It gets
+the routines for names MTHRTL lacks (below), and its minor id goes up.
 
 **The command:** `console.dcl`, `dclcmd/fortran.go`, `fortran.Options`, and
 HELP get `/[NO]I4` and `/[NO]G_FLOATING`; sema reads OPTIONS's. OPTIONS's
@@ -368,7 +372,7 @@ other qualifiers stay NOTIMPL (Phase 85).
 
 ## Decisions
 
-Each is the survey's, for the author to overrule.
+Each is the survey's, accepted by the author (2026-10-30).
 
 1. **Complex values are split in lowering.** A complex expression becomes
    its real part's tree and its imaginary part's, over F, D, or G
@@ -404,56 +408,94 @@ Each is the survey's, for the author to overrule.
    doesn't forbid one. Static cells while lengths are known. A passed-length
    operand takes LIB$SGET1_DD's string, freed at the statement's end. MOVC's
    overlap handling already makes a plain `S(2:) = S` right.
-9. **`PRINT *, 5` stays I12.** Question 2's rule applies only inside a mixed
+9. **`PRINT *, 5` stays I12.** The author's answer 2's rule applies only inside a mixed
    operation; a constant alone remains a longword, as an argument is.
 10. **External FUNCTION results stay Phase 79's** (its subtask 5). This phase
     has the mechanism for MTH$ and OTS$; the FUNCTION statement of a new type,
     and a reference to one, stay NOTIMPL.
 
-## Questions for the author
+## The author's answers (2026-10-30)
 
-Each has what will happen unless the author says otherwise.
+The author accepted Part A's decisions, and answered its questions:
 
-1. **COMPLEX products and folding.** The Goal says in line. But folding uses
-   `vaxfloat.ComplexMul`, exact and rounded once, shared with `OTS$MULCD_R3`.
-   Four MULs and an ADD and a SUB round each step and can differ in the last
-   bits, which breaks "a folded expression has the value the program would
-   compute". **Proposed:** D and G call `OTS$MULCD_R3` and `OTS$MULCG_R3`, the
-   same code as folding by construction. F, with no routine to call, is in line
-   in F's own instructions, and folding of an F product changes to those same
-   steps (`vaxfloat.ComplexMulSteps`). The alternative for F, computing in D and
-   rounding once, stays closer to exact and costs four conversions and is not
-   what a reader of the code would expect of COMPLEX*8.
-2. **Small integer constants and INTEGER*2** (2.2.1.1): a constant from -32768
-   to 32767 "is treated as an INTEGER*2 data type", and 2.3.1.2 says the same of
-   PARAMETER constants. Taken literally, `J = I2*1000` multiplies in a word, so
-   100*1000 wraps to -31072, and `J = 30000+30000` overflows. **Proposed:** in a
-   mixed operation, an INTEGER constant that fits takes an INTEGER*2 or logical
-   partner's type (so `I2*1000` is MULW, as the manual says), but two constants
-   fold in the default integer (so 30000+30000 is 60000, as today). Unconfirmed
-   either way. The alternative, always widening to INTEGER*4, is friendlier
-   to a program and further from the words.
-3. **IIBITS, IIBCLR, and IISHFTC's INTEGER*4 results.** D.5.2 says each
-   generic has a form "for each type", and IIBSET is INTEGER*2, so these may be
-   misprints. But the table is the only statement. **Proposed:** follow the
-   table as printed, computing in a word and sign-extending. It shows only in
-   PRINT's width and in mixed arithmetic.
-4. **Passing a name with no routine.** 4.9 limits nothing, but 24 specific names
-   have no MTHRTL entry. **Proposed:** a new error, NOTPASSABLE, naming the
-   function, and listed in MANUAL.md's differences. FORTRAN-77 forbids most of
-   them as arguments anyway (type conversions, lexical comparisons). A generic
-   name is passed as its default-typed specific where one exists (`IABS` as
-   `JIABS`, `MOD` as `JMOD`, `LOG` as `ALOG`), and otherwise is NOTPASSABLE. The
-   alternative is a small FTNRTL routine per name.
-5. **The corrections below** move work between phases.
+1. **COMPLEX products and folding.** Accepted as proposed. In-line MULs round
+   at each step, where folding's `vaxfloat.ComplexMul` is exact and rounded
+   once, shared with `OTS$MULCD_R3`, and a folded expression must have the value
+   the program would compute. So D and G call `OTS$MULCD_R3` and `OTS$MULCG_R3`,
+   the same code as folding by construction. F, with no routine to call, is in
+   line in F's own instructions, and folding of an F product changes to those
+   same steps (`vaxfloat.ComplexMulSteps`).
+2. **Small integer constants and INTEGER*2.** Accepted as proposed. A constant
+   from -32768 to 32767 "is treated as an INTEGER*2 data type" (2.2.1.1), and
+   2.3.1.2 says the same of PARAMETER constants. In a mixed operation, an INTEGER
+   constant that fits takes an INTEGER*2 or logical partner's type, so `I2*1000`
+   is MULW, and with `I2` = 100 wraps to -31072. Two constants fold in the default
+   integer, so 30000+30000 is 60000, as today. Unconfirmed.
+3. **IIBITS, IIBCLR, and IISHFTC's INTEGER*4 results.** Accepted as proposed:
+   the table as printed, computing in a word and sign-extending. D.5.2's "for each
+   type" and IIBSET's INTEGER*2 suggest misprints, but the table is the only
+   statement, and it shows only in PRINT's width and in mixed arithmetic.
+4. **Passing a name with no routine: FTNRTL gets a routine for each** (the author's
+   choice, in place of the proposed NOTPASSABLE error). See "Routines for names MTHRTL
+   lacks" below.
+5. **The corrections below** are accepted.
 
-## Corrections to the plan (proposed)
+## Routines for names MTHRTL lacks
+
+4.9 limits nothing, so every function name but SIZEOF can be passed. Each name with
+no MTHRTL entry gets a small routine in FTNRTL, in MACRO, of the same name under
+`FTN$`, called as any FORTRAN function of its type would be through a dummy (Decision
+11): numeric arguments by reference, character ones by descriptor, a value in R0, or
+through a hidden first argument (CHAR's by descriptor, QEXT's by reference).
+
+| Routines | Do | Result |
+|---|---|---|
+| `FTN$LEN`, `FTN$INDEX`, `FTN$ICHAR` | a descriptor's length, MATCHC, MOVZBL | R0, INTEGER*4 |
+| `FTN$CHAR` | MOVB through the result's descriptor | hidden, CHARACTER |
+| `FTN$LLT`, `FTN$LLE`, `FTN$LGT`, `FTN$LGE` | CMPC5, -1 or 0 | R0, LOGICAL*4 |
+| `FTN$BITEST`, `FTN$BJTEST` | EXTZV | R0, LOGICAL*2, LOGICAL*4 |
+| `FTN$IIBITS`, `FTN$JIBITS` | EXTZV | R0, INTEGER*4 (Table D-3) |
+| `FTN$IIBSET`, `FTN$JIBSET` | BISx | R0, INTEGER*2, INTEGER*4 |
+| `FTN$IIBCLR`, `FTN$JIBCLR` | BICx | R0, INTEGER*4 (Table D-3) |
+| `FTN$IISHFTC`, `FTN$JISHFTC` | a circular shift of the low bits | R0, INTEGER*4 (Table D-3) |
+| `FTN$IZEXT`, `FTN$JZEXT` | MOVZ, of the argument's low word | R0, INTEGER*2, INTEGER*4 |
+| `FTN$SNGLQ` | CVTHF | R0, REAL*4 |
+| `FTN$DBLEQ`, and `FTN$GBLEQ` under `/G_FLOATING` | CVTHD, CVTHG | R0:R1, REAL*8 |
+| `FTN$QEXT` | CVTFH | hidden, REAL*16 |
+| `FTN$QEXTD`, and `FTN$QEXTG` under `/G_FLOATING` | CVTDH, CVTGH | hidden, REAL*16 |
+| `FTN$QFLOAT` | CVTLH; QFLOAT has no specific name, so an INTEGER*4 argument | hidden, REAL*16 |
+| `FTN$NWORKERS` | the constant 1 | R0, INTEGER*4 |
+
+That is 28 routines: the 24 names, two more that `/G_FLOATING` needs, and QFLOAT and
+NWORKERS, which would otherwise be the only functions unpassable but SIZEOF, so that
+the rule has one exception.
+
+A routine reached by reference can't see its argument's length, and Table D-3 gives
+CHAR, IZEXT, and JZEXT several argument types. The VAX stores low bytes first, so a
+shorter read of any of them is its low part: CHAR reads a byte, and IZEXT and JZEXT read
+a word. So a JZEXT passed as an argument and given an INTEGER*4 loses that value's high
+word, which a direct reference doesn't (unconfirmed).
+
+**SIZEOF** takes anything and has no value at run time, so it alone is an error as an
+argument: NOTPASSABLE, naming it, and listed in MANUAL.md's differences.
+
+**Generic names** passed are treated as specific (6.3.1.1): a name that is also a
+specific name is that one; another is its default-typed specific where one exists
+(`IABS` as `JIABS`, `MOD` as `JMOD`, `LOG` as `ALOG`, `INT` as `JINT`, `MAX` as `JMAX0`),
+by `/[NO]I4` where that chooses, unconfirmed. `CMPLX` and `DCMPLX` are MTHRTL's own
+(`MTH$CMPLX`, `MTH$DCMPLX`, or `MTH$GCMPLX`).
+
+The ISHFTC routines are also what ordinary references to ISHFTC call, since no
+instruction does it. Each routine is tested directly from MACRO (Decision 20), beside
+the in-line form it must agree with. `ftnrtl.opt`'s minor id goes up.
+
+## Corrections to the plan (accepted 2026-10-30)
 
 1. **Character arguments move from Phase 79 to here:** descriptors for variables,
    elements, substrings, constants, and expressions as actual arguments, and
    passed-length dummies. This phase's Goal already claims assumed-length dummies
-   and LEN, which can't be tested without calls, and Phase 79's subtask 8 also
-   lists them. Phase 79 keeps Hollerith arguments and CHARACTER functions.
+   and LEN, which can't be tested without calls. Phase 79 keeps Hollerith arguments
+   and CHARACTER functions.
 2. **List-directed output of every type moves from Phase 80 to here**, with
    each type's subtask: Table 7-1's formats, so that each type's programs can
    print what they compute. Phase 80 keeps list-directed input and the rest. Its
@@ -466,7 +508,7 @@ Each has what will happen unless the author says otherwise.
 5. **AINT, ANINT, real MOD, and ISHFT by a variable count aren't in line,** though
    the Goal lists AINT, ANINT, and MOD: none is "an instruction or two".
 
-Phases 79 and 80's docs change when these are accepted.
+Phases 79, 80, and 85's docs have these.
 
 ## The open questions, answered
 
@@ -477,7 +519,7 @@ Phases 79 and 80's docs change when these are accepted.
 - **Mixed INTEGER*2 and INTEGER*4:** 2.3.1.2 settles it. The result has the
   higher rank; two INTEGER*2s compute in a word (ADDW3), wrapping, with no
   widening of intermediate results, and an assignment converts the final value.
-  What 2.2.1.1 does to constants is question 2.
+  What 2.2.1.1 does to constants is the author's answer 2.
 
 ## Subtasks (revised by the survey)
 
@@ -499,8 +541,10 @@ stops for review.
    dummies, static temporaries, LIB$SGET1_DD.
 7. **Exponentiation:** the table above, in-line small powers in OTS$'s order.
 8. **In-line intrinsics:** the table, generic selection, footnotes 10 and 11,
-   conversions, bit functions, FTN$ISHFTC, character functions, argument messages.
-9. **MTHRTL intrinsics** by format, and intrinsic names as arguments.
+   conversions, bit functions, FTN$IISHFTC and FTN$JISHFTC, character functions,
+   argument messages.
+9. **MTHRTL intrinsics** by format, intrinsic names as arguments, and FTNRTL's
+   routines for the names MTHRTL lacks.
 10. **End to end:** programs on each type, mixed arithmetic, character handling, the
     math functions, in both paging modes for a subset.
 11. **Close-out:** FORTRAN-INTERNALS.md's chapter on instruction selection, MANUAL.md's
@@ -513,5 +557,8 @@ stops for review.
   appendix C, Tables 6-3, 7-1, and D-3 (the odd rows in the PDF), and the
   compiler's sema, ir, and codegen; assembled a probe of the instructions to
   come on govax's MACRO (no messages); compared sema's intrinsic names
-  with the table and with MTHRTL's entries. Nothing in the code changes. Five
-  questions for the author, and five corrections to the plan, are in Part A.
+  with the table and with MTHRTL's entries. Nothing in the code changes.
+- **2026-10-30:** the author accepted the survey's decisions, its proposals, and
+  its corrections to the plan, but for one: each intrinsic name with no MTHRTL
+  entry gets an FTNRTL routine, where the survey proposed an error. Part A and
+  Phases 79, 80, and 85's docs now say so.

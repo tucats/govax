@@ -327,7 +327,7 @@ never had.
   7.1's answers, with all but the internal `MTH$$REDUCE_` of the JSB entries no
   manual gives; subtask 11 (2026-10-30) the close-out, MANUAL.md's Appendix B.
   Phase 78 is every expression in every type; subtask 1 (2026-10-30)
-  is the survey, its doc's Part A, with questions for the author.
+  is the survey, its doc's Part A, accepted by the author.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
