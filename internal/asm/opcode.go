@@ -62,6 +62,14 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		name = realName
 	}
 
+	// POPL isn't a VAX instruction, but VAX MACRO takes POPL dst for
+	// MOVL (SP)+,dst (the MACRO and Instruction Set manual, PUSHL's
+	// notes): the source operand is supplied here, before the one written.
+	if name == "POPL" {
+		name = "MOVL"
+		c.s = c.s[:c.pos] + " (SP)+," + c.s[c.pos:]
+	}
+
 	inst := a.table.ByName(name)
 	if inst == nil {
 		return vmserrors.New(vmserrors.VAX_BADOPCODE, name)

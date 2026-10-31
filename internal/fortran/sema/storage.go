@@ -30,7 +30,7 @@ func (a *analyzer) layout() {
 
 	for _, s := range a.unit.Symbols {
 		if s.Class == Unclassified {
-			s.Class = Variable
+			s.Class, s.onlyDeclared = Variable, true
 		}
 
 		if s.Dummy != 0 || s.Common != nil || (s.Class != Variable && s.Class != Array) {

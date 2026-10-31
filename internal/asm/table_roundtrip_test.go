@@ -103,6 +103,10 @@ func TestFloatingAliases(t *testing.T) {
 		})
 	}
 
+	// POPL dst is MACRO's MOVL (SP)+,dst.
+	requireBytes(t, assembleBytes(t, "POPL R1"), assembleBytes(t, "MOVL (SP)+,R1")...)
+	requireBytes(t, assembleBytes(t, "POPL 4(R2)"), 0xD0, 0x8E, 0xA2, 0x04)
+
 	// The octaword forms are two-byte opcodes: 0xFD, then 0x7C for CLRO.
 	requireBytes(t, assembleBytes(t, "CLRH R0"), 0xFD, 0x7C, 0x50)
 }

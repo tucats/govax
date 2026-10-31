@@ -1,5 +1,5 @@
 	.TITLE	FTN_UNITS - FTNRTL's logical units
-	.IDENT	/V1.3/
+	.IDENT	/V1.4/
 ;
 ; A FORTRAN program reads and writes logical units: numbers its I/O
 ; statements name (WRITE (6,...)), or the default units of the
@@ -18,8 +18,10 @@
 ; the next one continues, whichever of them writes it.
 ;
 ; So far there are just these two streams: OUTPUT, for -1, -2, and 6,
-; which may only be written, and INPUT, for -3, -4, and 5, which may be
-; read and, as on VMS, written too (DUNGEON writes unit 5 at a terminal).
+; which may be written, and read only at a terminal, and INPUT, for -3,
+; -4, and 5, which may be read and, as on VMS, written too (a program may
+; write unit 5 and read unit 6 at a terminal, as DUNGEON does; where
+; SYS$INPUT is a procedure, RMS refuses the write).
 ; The other units VMS has, 0 to 119, are FOR$_NOTIMP until Phase 81 adds
 ; the rest of the table, OPEN, and CLOSE; any other number is
 ; FOR$_INVLOGUNI, as on VMS.
@@ -97,9 +99,9 @@ INPUT_LEN	= .-INPUT_NAME
 ;
 	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
 
-OUTPUT_UNIT:	.LONG	0, 0		; not open; written only
-		.LONG	0, 0, 0		; no failure; no records
-		$FAB	FAC=PUT,RAT=FTN,RFM=VAR
+OUTPUT_UNIT:	.LONG	0, 0		; not open; written (read at a
+		.LONG	0, 0, 0		;  terminal); no failure; no records
+		$FAB	FAC=<GET,PUT>,RAT=FTN,RFM=VAR
 		$RAB
 		$NAM	RSS=RSA_SIZE
 		.BLKB	RSA_SIZE+1
@@ -120,9 +122,11 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 ; SS$_NORMAL and in R1 the stream's block, or in R0 the FOR$_ condition
 ; that the unit can't be used: INVLOGUNI for a number outside -4 to 119,
 ; NOTIMP for a unit FTNRTL doesn't have yet (R1 0 for these two), and
-; ERRDURREA for a read of an output unit (R1 its block, whose STS is then
-; RMS$_FAC, as VMS's $GET of SYS$OUTPUT reported). Doesn't connect the
-; stream.
+; ERRDURREA for a read of an output unit that isn't a terminal (R1 its
+; block, whose STS is then RMS$_FAC, as VMS's $GET of SYS$OUTPUT reported
+; where it was a file). Doesn't connect the stream, but for a read of an
+; output unit not yet connected, which must be connected to see whether
+; it is a terminal.
 ;
 	.ENTRY	FTN$$UNIT_FIND,^M<>
 	MOVL	4(AP),R0		; the unit
@@ -151,14 +155,23 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 10$:	MOVL	#SS$_NORMAL,R0		; an input unit: read or written
 	RET
 
-20$:	BLBC	8(AP),10$		; an output unit: written,
-	MOVL	#RMS$_FAC,UB_STS(R1)	;  never read
-	CLRL	UB_STV(R1)
-	MOVL	#FOR$_ERRDURREA,R0
-	RET
-
 80$:	CLRL	R1
 	MOVL	#FOR$_INVLOGUNI,R0
+	RET
+
+20$:	BLBC	8(AP),10$		; an output unit: written,
+	BLBS	UB_OPEN(R1),30$		;  and read at a terminal
+	PUSHL	R1
+	PUSHL	R1
+	CALLS	#1,FTN$$UNIT_OPEN	; connected, to see which
+	MOVL	(SP)+,R1
+	BLBC	R0,50$			; RMS's status kept in the block
+30$:	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R1),40$
+	MOVL	#SS$_NORMAL,R0
+	RET
+40$:	MOVL	#RMS$_FAC,UB_STS(R1)	; never elsewhere
+	CLRL	UB_STV(R1)
+50$:	MOVL	#FOR$_ERRDURREA,R0
 	RET
 
 ;

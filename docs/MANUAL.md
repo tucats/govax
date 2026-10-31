@@ -4626,6 +4626,14 @@ output it prints, and programs of several files in its `modules` directory.
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
   runs formatted, list-directed, and namelist input and output, to the
   default units, units 5 and 6 (SYS$INPUT and SYS$OUTPUT), and internal files.
+  At a terminal a program may also write unit 5 and read unit 6, as an
+  interactive program does; where SYS$OUTPUT isn't a terminal, a READ of unit 6
+  is `%FOR-F-ERRDURREA`, as on VMS. A prompt written with `$` leaves the cursor
+  after it for the reply, and a prompt the program leaves open when it ends is
+  ended, so DCL's next line starts a line of its own. govax's terminal is written
+  a line at a time, so a `+` record after a line that ended starts a new line
+  where VMS's terminal would overprint the old one; after a `$` record it
+  continues that line, as on VMS.
   `WRITE (STR, '(F10.2)') VAL` and `ENCODE (20, '(F10.2)', STR) VAL` both write to
   memory, as `READ` and `DECODE` both read from it. An array is a record per
   element. A record's limit is its own length; what doesn't fit is

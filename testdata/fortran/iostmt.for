@@ -31,6 +31,8 @@ C     is PRINT's; 6 can't be read (ERRDURREA, 39).
       PRINT *, 'UNIT 7', IOS
       WRITE (-1, *, IOSTAT=IOS) 'UNIT -1', 10
       PRINT *, 'UNIT -1', IOS
+C     Unit 6 is read only at a terminal, as it is here, whose input
+C     has ended: -1 (elsewhere ERRDURREA, 39).
       READ (6, *, IOSTAT=IOS) I
       PRINT *, 'READ (6)', IOS
 C     An internal file: NOTIMP so far.

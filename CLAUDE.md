@@ -506,7 +506,12 @@ never had.
   ERRSNS, which `sema/errsns.go` makes a call of `FTN$ERRSNS` or `FTN$ERRSNS_W`
   (GSMATCH 1,9); RMS's `$GET` into a short user buffer is RTB (STV the record's
   size), and a status's STV is 0 unless set; `TestFor80FTNRTLMessages`
-  (`for80e.for`) matches VMS's run 3, and the oracles compare ERRSNS's values.
+  (`for80e.for`) matches VMS's run 3, and the oracles compare ERRSNS's values;
+  subtask 13 (2026-10-31) is the terminal statements end to end, as DUNGEON uses
+  them: unit 6 read at a terminal (`FTN$$UNIT_FIND`, DEV$V_TRM; elsewhere still
+  ERRDURREA), a `$` prompt left open at image rundown ended (`rms.FileTable.Rundown`),
+  a name only declared no use of another unit's (`sema`'s `onlyDeclared`), and MACRO's
+  POPL; `TestFortranTerminal`, `TestFortranTerminalControl` (FOR80T as FORTRAN).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

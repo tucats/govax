@@ -10,7 +10,8 @@ and input), subtask 8 (variable format expressions and run-time formats), and
 subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
 (LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run; subtask 11
 (NAMELIST) done the same day, held to VMS's FORRTL; subtask 12 (the error model)
-done the same day. Needs Phase 79 (control flow, for
+done the same day; subtask 13 (the terminal statements end to end) done the same
+day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -804,7 +805,7 @@ subtasks land.
 12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
     Done ("Subtask 12", below).
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
-    and DUNGEON's use of them.
+    and DUNGEON's use of them. Done ("Subtask 13", below).
 14. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
     FTNRTL; MANUAL.md's chapter 14 and its differences).
 
@@ -1612,6 +1613,58 @@ call is reported after the statement's items, where FORRTL may report at once
 (unconfirmed, as subtask 3 said); FORRTL's messages from errors that aren't
 I/O's (ERRSNS after a math library error) are Phase 83's.
 
+## Subtask 13: what was built (2026-10-31)
+
+The terminal statements were compiled and run by the earlier subtasks; this one
+runs them as an interactive program does and fixes what that found.
+
+**DUNGEON's use of them.** Every file of DUNGEON V3.2A (the local copy, never
+committed) was compiled. Its terminal statements all compile: the prompt, a
+FORMAT ending in `$`, then a READ with `(A)` and END=; the debugging tool's
+prompts and replies; a score line written as a `$` record and a `+` record; and a
+READ of unit 6, the output unit, for a reply. What's left is other phases': OPEN,
+CLOSE, direct access and unformatted I/O (Phase 81), and the system routines
+EXIT, IDATE, and RAN (Phase 83). One compiler defect showed, a name only declared
+in one unit and a FUNCTION in another (`LOGICAL F` in a unit that never calls F):
+`checkReferences` took it for a variable and reported BADUSE. A name a unit
+declares and never uses is now no use of another unit's name
+(`Symbol.onlyDeclared`, set when `layout` makes it a variable).
+
+**Unit 6 read at a terminal.** FTNRTL refused every read of the output units with
+ERRDURREA and RMS$_FAC, as VMS's FORRTL did where SYS$OUTPUT was a procedure's log
+(round 2). At a terminal a program reads unit 6 (SYS$OUTPUT is the terminal, as
+SYS$INPUT is), so the output stream's FAB now asks for GET and PUT, and
+`FTN$$UNIT_FIND` refuses a read only when the stream, connected first if it isn't
+yet, isn't a terminal (DEV$V_TRM). Unconfirmed: no VMS run read unit 6 at a
+terminal. `testdata/fortran/iostmt.for`'s READ (6), run with the terminal's input
+already ended, is now -1 where it was 39.
+
+**A prompt open at the image's end.** A `$` record left the terminal's line open
+(Phase 72's `rms/ftncc.go`), and DCL's next output went on that line. RMS's
+rundown (`FileTable.Rundown`) now ends it, as VMS's DCL starts its output with a
+new line.
+
+**MACRO's POPL.** The MACRO and Instruction Set manual's PUSHL notes say MACRO
+takes `POPL dst` for `MOVL (SP)+,dst`; govax's MACRO refused it, found writing
+FTNRTL. It now assembles it (`asm/opcode.go`).
+
+**Carriage control at the terminal.** FOR80T, VMS's terminal session, run as
+FORTRAN gives VMS's lines but for overprinting: govax's terminal is written a
+line at a time, so a `+` record after a line that ended starts a new one where
+VMS's terminal writes over the old (the session's first line and ` after $`).
+After a `$` record a `+` record continues the line on both. This is Phase 72's
+design, kept; MANUAL.md says so.
+
+Tests: `TestFortranTerminal` (both paging modes: prompts, TYPE with `$` and `+`,
+a WRITE to unit 5 and a READ of unit 6, ACCEPT, READ f, READ \*, READ (\*,f),
+END= at the input's end, a prompt open at the end), `TestFortranTerminalControl`
+(FOR80T as FORTRAN, against VMS's log but for the overprinting),
+`TestFortranReadOutputFile` (unit 6 where SYS$OUTPUT is a file: ERRDURREA, 39,
+RMS$_FAC, as round 2), sema's error table (a function's name only declared
+elsewhere), and `TestFloatingAliases` (POPL). Run by hand under a pseudo-terminal
+through cmd/govax, a prompt, its echoed reply, and Ctrl/Z (`*Exit*`, then END=)
+fall as on VMS.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1724,3 +1777,7 @@ I/O's (ERRSNS after a math library error) are Phase 83's.
   FTNRTL, and two RMS fixes ($GET's RTB, STV); FTNRTL's run 3 and namelist
   messages match VMS's, and ERRSNS's values match VMS's in every oracle case;
   "Subtask 12" above.
+- **2026-10-31, subtask 13, done.** The terminal statements end to end, as
+  DUNGEON uses them: unit 6 read at a terminal, a prompt open at the image's end
+  ended, a sema BADUSE defect DUNGEON's sources showed, and MACRO's POPL;
+  "Subtask 13" above.

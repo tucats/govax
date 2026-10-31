@@ -539,7 +539,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			// A dummy procedure's name is the unit's own, whatever routine
 			// it stands for when the program runs.
 			fu := units[s.Name]
-			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.broken || s.DummyProcedure() {
+			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.broken || s.onlyDeclared || s.DummyProcedure() {
 				continue
 			}
 

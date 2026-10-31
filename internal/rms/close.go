@@ -215,11 +215,23 @@ func closeVolumeFile(handle *FileHandle, finish func() error) error {
 // volume, as if the program had closed it. No XABs are applied: no FAB
 // is at hand, as none is on VMS. It returns how many files it closed and
 // the first error a close met (every file is closed regardless).
+//
+// A line a FORTRAN prompt left open at the terminal is ended, so what DCL
+// writes next starts a line of its own, as VMS's DCL starts its output
+// and prompt with a new line (ftncc.go).
 func (t *FileTable) Rundown() (int, error) {
 	var (
 		closed   int
 		firstErr error
 	)
+
+	if t.lineOpen {
+		t.lineOpen = false
+
+		if h := t.handles[1]; h != nil && h.Console != nil {
+			_, firstErr = h.Console.Write([]byte{'\n'})
+		}
+	}
 
 	for ifi, h := range t.handles {
 		if h.IsConsole() {

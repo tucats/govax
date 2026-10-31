@@ -10,7 +10,7 @@ UNIT 200          32
 UNIT 7           2
 UNIT -1          10
 UNIT -1           0
-READ (6)          39
+READ (6)          -1
 INTERNAL           0
 INNER
 OUTER           0END

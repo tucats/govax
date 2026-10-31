@@ -168,6 +168,12 @@ type Symbol struct {
 	Typed   bool
 	TypePos diag.Position
 
+	// onlyDeclared is set for a name a unit declares and never uses, which
+	// layout makes a variable: so it is no use of another unit's name
+	// (checkReferences): a unit may declare LOGICAL F for a function F
+	// it never calls.
+	onlyDeclared bool
+
 	// untyped is set for a name entered under IMPLICIT NONE, whose
 	// first letter gives it no type: unless a declaration gives it one,
 	// it is NOTYPE.

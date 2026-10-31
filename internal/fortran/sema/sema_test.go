@@ -127,6 +127,8 @@ func TestErrors(t *testing.T) {
 		{"an entry point's type checked", []string{"FUNCTION F()", "ENTRY G", "END", "PROGRAM M", "INTEGER G", "I = G()", "END"}, "FUNCTYPE@5:15"},
 		{"a function entry point called", []string{"FUNCTION F()", "ENTRY G", "END", "PROGRAM M", "CALL G", "END"}, "BADUSE@5:12"},
 		{"an entry point's name as a variable elsewhere", []string{"SUBROUTINE S", "ENTRY E", "END", "PROGRAM M", "E = 1", "END"}, "BADUSE@5:7"},
+		{"a function's name only declared elsewhere", []string{"LOGICAL FUNCTION F()", "F = .TRUE.", "END",
+			"SUBROUTINE S", "LOGICAL F", "END"}, ""},
 
 		// The jumps of sections 5.6 and 5.7.1, and ASSIGN (3.5).
 		{"every jump", []string{"INTEGER*2 N", "ASSIGN 10 TO K", "GO TO K", "GO TO K, (10)", "10 GO TO (10, 20), X",
