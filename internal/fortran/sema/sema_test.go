@@ -293,7 +293,8 @@ func TestErrors(t *testing.T) {
 		{"a dummy function", []string{"SUBROUTINE S(P)", "X = P(1)", "END"}, "NOTIMPL@2:11"},
 
 		// Expressions.
-		{"**", []string{"X = Y ** 3", "END"}, "NOTIMPL@1:13"},
+		{"** of a CHARACTER", []string{"CHARACTER S", "X = S ** 3", "END"}, "CHARNUMBER@2:11"},
+		{"** compiles", []string{"X = Y ** 3 + 2 ** I + Y ** Y", "END"}, ""},
 		{"//", []string{"PRINT *, 'A' // C", "END"}, "BADOPERAND@1:20"},
 		{"// of a number", []string{"CHARACTER*2 S", "PRINT *, S // 1", "END"}, "BADOPERAND@2:18"},
 		{"// of variables", []string{"CHARACTER*2 S, T", "PRINT *, S // T // 'X'", "END"}, ""},
@@ -1103,6 +1104,69 @@ func TestOperationTypes(t *testing.T) {
 		lines := append(append([]string(nil), decls...), "      X = "+c.expr, "      END")
 		if got := exprType(t, Options{}, lines...); got != c.want {
 			t.Errorf("%s: %s, want %s", c.expr, got, c.want)
+		}
+	}
+}
+
+// TestPowerTypes checks the types powerTypes gives X ** Y, its base, and its
+// exponent: those of the OTS$ routine computing it, by the survey's table.
+func TestPowerTypes(t *testing.T) {
+	decls := []string{"      INTEGER*2 I2", "      INTEGER*4 I4", "      LOGICAL*4 L4", "      REAL R", "      REAL*8 D",
+		"      REAL*16 Q", "      COMPLEX C", "      COMPLEX*16 Z"}
+
+	cases := []struct {
+		expr                   string
+		gfloating              bool
+		result, base, exponent string
+	}{
+		{"I2 ** I2", false, "INTEGER*2", "INTEGER*2", "INTEGER*2"},
+		{"I2 ** 2", false, "INTEGER*2", "INTEGER*2", "INTEGER*2"},
+		{"I2 ** 40000", false, "INTEGER", "INTEGER", "INTEGER"},
+		{"I2 ** I4", false, "INTEGER", "INTEGER", "INTEGER"},
+		{"L4 ** 2", false, "INTEGER", "INTEGER", "INTEGER"},
+		{"R ** I2", false, "REAL", "REAL", "INTEGER"},
+		{"Q ** I4", false, "REAL*16", "REAL*16", "INTEGER"},
+		{"C ** I2", false, "COMPLEX", "COMPLEX", "INTEGER"},
+		{"I4 ** R", false, "REAL", "REAL", "REAL"},
+		{"R ** D", false, "REAL*8", "REAL", "REAL*8"},
+		{"D ** R", false, "REAL*8", "REAL*8", "REAL"},
+		{"R ** D", true, "REAL*8", "REAL*8", "REAL*8"},
+		{"R ** Q", false, "REAL*16", "REAL*16", "REAL*16"},
+		{"C ** R", false, "COMPLEX", "COMPLEX", "COMPLEX"},
+		{"C ** D", false, "COMPLEX*16", "COMPLEX*16", "COMPLEX*16"},
+		{"D ** C", false, "COMPLEX*16", "COMPLEX*16", "COMPLEX*16"},
+		{"Z ** C", false, "COMPLEX*16", "COMPLEX*16", "COMPLEX*16"},
+	}
+
+	for _, c := range cases {
+		lines := append(append([]string(nil), decls...), "      X = "+c.expr, "      END")
+
+		var messages diag.List
+
+		program := source.Read(source.Form{}, &source.File{Spec: "T.FOR", Lines: lines}, nil, &messages)
+		file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+		prog := Analyze(file, "T$MAIN", Options{GFloating: c.gfloating}, &messages)
+
+		if messages.Failed() {
+			t.Fatalf("%s: %v", c.expr, messages.Messages())
+		}
+
+		body := prog.Units[0].Body
+		e := body[len(body)-2].(*Assign).Value
+
+		if v, ok := e.(*Convert); ok {
+			e = v.X
+		}
+
+		b, ok := e.(*Binary)
+		if !ok {
+			t.Errorf("%s: a %T", c.expr, e)
+
+			continue
+		}
+
+		if got := [3]string{b.T.String(), b.X.Type().String(), b.Y.Type().String()}; got != [3]string{c.result, c.base, c.exponent} {
+			t.Errorf("%s (G %v): %v, want %v", c.expr, c.gfloating, got, [3]string{c.result, c.base, c.exponent})
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/vaxfloat"
 )
 
 // Expressions: each syntax tree expression becomes a typed one. Names
@@ -518,10 +519,7 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 
 	switch e.Op {
 	case ast.Pow:
-		// Exponentiation calls the OTS$ powers (Phases 77 and 78).
-		a.notImpl(e.Pos, "the ** operator")
-
-		return a.bad(e.Pos)
+		return a.power(e)
 
 	case ast.Concat:
 		return a.concat(e)
@@ -548,6 +546,61 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 	}
 
 	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+}
+
+// power analyzes X ** Y (section 2.3.1), which isn't folded: its operands
+// keep the types the OTS$ routine computing it takes, which needn't be the
+// result's (powerTypes).
+func (a *analyzer) power(e *ast.Binary) Expr {
+	x, y := a.value(e.X), a.value(e.Y)
+	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	x, y = a.arithmetic(x), a.arithmetic(y)
+	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	t, base, exponent := a.powerTypes(x, y)
+
+	return &Binary{exprBase{t, e.Pos}, ast.Pow, a.convert(x, base), a.convert(y, exponent)}
+}
+
+// powerTypes are the types of x ** y, its base, and its exponent, by the
+// powers' table in Phase 78's survey (which OTS$ routine computes each):
+//
+//   - an INTEGER to an INTEGER power is an INTEGER of the higher type,
+//     both operands of it (OTS$POWII or OTS$POWJJ); a constant exponent
+//     that fits a word is one beside an INTEGER*2 base, as in any other
+//     mixed operation (mixedType), so I2**2 is a word;
+//   - a REAL or COMPLEX to an INTEGER power has the base's type, and the
+//     exponent is widened to a longword, the only integer exponent the
+//     routines take (OTS$POWRJ, OTS$POWCJ, ...);
+//   - a REAL*4 and a REAL*8 keep their own types in D_floating (OTS$POWRD,
+//     OTS$POWDR), there being no such routine in G_floating, where both
+//     are G_floating (OTS$POWGG);
+//   - anything else is done in the higher type, both operands of it
+//     (OTS$POWRR, OTS$POWHH_R3, OTS$POWCC, ...).
+func (a *analyzer) powerTypes(x, y Expr) (result, base, exponent Type) {
+	xt, yt := x.Type(), y.Type()
+
+	switch {
+	case yt.Kind == Integer && xt.Kind == Integer:
+		t := a.mixedType(x, y)
+
+		return t, t, t
+
+	case yt.Kind == Integer:
+		return xt, xt, IntegerType
+
+	case xt.Kind == Real && yt.Kind == Real && xt != yt && xt.Size+yt.Size == 12 && a.format(Type{Real, 8}) == vaxfloat.D:
+		return Type{Real, 8}, xt, yt
+	}
+
+	t := higher(xt, yt)
+
+	return t, t, t
 }
 
 // concat analyzes X // Y (section 2.3.2): two CHARACTER values, joined.

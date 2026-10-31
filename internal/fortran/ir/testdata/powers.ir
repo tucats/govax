@@ -1,0 +1,52 @@
+routine POWERS main
+  cell  I       L  $LOCAL+0    variable I
+  cell  N       L  $LOCAL+4    variable N
+  cell  I2      W  $LOCAL+8    variable I2
+  cell  X       F  $LOCAL+12   variable X
+  cell  Y       F  $LOCAL+16   variable Y
+  cell  A       F  $LOCAL+20   array A, 12 bytes
+  cell  D       D  $LOCAL+32   variable D
+  cell  C       Q  $LOCAL+40   variable C
+  cell  Z       O  $LOCAL+48   variable Z
+  cell  $T1     L  $LOCAL+64   temporary
+  cell  $T2     F  $LOCAL+68   temporary
+  cell  $T3     F  $LOCAL+72   temporary
+  cell  $T4     F  $LOCAL+76   temporary
+  cell  $T5     D  $LOCAL+80   temporary
+  cell  $T6     D  $LOCAL+88   temporary
+  cell  $T7     D  $LOCAL+96   temporary
+  cell  $T8     Q  $LOCAL+104  temporary
+  cell  $T9     Q  $LOCAL+112  temporary
+  cell  $T10    O  $LOCAL+120  temporary
+  $LOCAL is 136 bytes
+B1:
+  ; line 11
+  assign $T1 = mul.L(I, I)
+  assign I = mul.L(mul.L(I, $T1), mul.L($T1, $T1))
+  ; line 12
+  call OTS$POWJJ(val cvt.WL(I2), val N) -> $T1
+  assign I2 = cvt.LW(add.L(cvt.WL(mul.W(I2, mul.W(I2, I2))), $T1))
+  ; line 13
+  assign $T2 = add.F(X, 1.0)
+  assign X = add.F(mul.F($T2, $T2), mul.F(A-4[I], mul.F(A-4[I], A-4[I])))
+  ; line 14
+  call OTS$POWRJ(val X, val -2) -> $T2
+  call OTS$POWRR(val X, val Y) -> $T3
+  call OTS$POWRJ(val X, val 9) -> $T4
+  assign Y = add.F(add.F($T2, $T3), $T4)
+  ; line 15
+  assign $T5 = mul.D(D, D)
+  assign $T6 = mul.D($T5, $T5)
+  call OTS$POWRD(val X, val D) -> $T7
+  assign D = add.D(mul.D($T6, $T6), $T7)
+  ; line 16
+  call OTS$POWCJ(val C, val C+4, val 2) -> $T8
+  call OTS$POWCC(val C, val C+4, val Y, val 0.0) -> $T9
+  assign C = add.F($T8, $T9)
+  assign C+4 = add.F($T8+4, $T9+4)
+  ; line 17
+  call OTS$POWCDJ_R3(val Z, val Z+8, val N) -> $T10
+  assign Z = $T10
+  assign Z+8 = $T10+8
+  ; line 18
+  return 1

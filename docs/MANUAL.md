@@ -4519,8 +4519,9 @@ output it prints, and programs of several files in its `modules` directory.
   S(1:1)` is right (a temporary as long as the value can be, or, when that
   isn't known when compiling, as with a passed-length dummy argument, a
   dynamic string from LIB$SGET1_DD, freed by LIB$SFREE1_DD at the statement's
-  end). The other operators and the intrinsic functions above work so far only
-  on constants, computed when compiling.
+  end). `**` on every numeric type: an INTEGER, REAL, or COMPLEX base, an
+  INTEGER, REAL, or COMPLEX exponent. The intrinsic functions above work so far
+  only on constants, computed when compiling.
 - **Statements:** assignment, of a character value to a character place cut
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
@@ -4875,11 +4876,23 @@ FORTRAN compiler was available to check them). So far:
   A constant expression's product or quotient is computed the same way, so it
   has the value the program would compute; a COMPLEX\*8 product can differ
   from the exactly rounded one in a part's last bit.
-- In a constant expression, a REAL or COMPLEX base's power
-  is repeated squaring, rounded at each product, and for a negative
-  exponent the product of the squares' reciprocals, as the `OTS$` routines'
-  are, so `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
-  arguments of one kind. Zero to a power of zero or less is an error.
+- A power is computed by MTHRTL's `OTS$` routines (`OTS$POWJJ`, `OTS$POWRJ`,
+  `OTS$POWDD`, `OTS$POWCJ`, and the rest), but for an INTEGER or REAL base
+  with a constant exponent from 1 to 8, which is multiplied out in line:
+  `X**2` is `X*X`. Either way, and in a constant expression too, a power to an
+  INTEGER exponent is repeated squaring, rounded at each product, and for a
+  negative exponent the product of the squares' reciprocals, as the `OTS$`
+  routines' are, so `X**7` is `(X * X**2) * X**4`, each product rounded, and
+  `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. A COMPLEX power is
+  always called, its products' parts rounded once. An INTEGER\*2 to an
+  INTEGER\*2 power (or to a small constant) is an INTEGER\*2, so with `I2` at
+  10, `I2**5` wraps to -31072; in line, an INTEGER power that overflows wraps,
+  where the routine signals `SS$_INTOVF`. A REAL\*4 and a REAL\*8 are
+  computed by `OTS$POWRD` or `OTS$POWDR` in D_floating, and both in G_floating
+  under `/G_FLOATING`, which has no such routine. Zero to a power of zero or
+  less is an error in a constant expression, and `MTH$_UNDEXP` when the
+  program runs. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need arguments of
+  one kind.
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.

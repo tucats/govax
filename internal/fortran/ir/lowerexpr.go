@@ -47,6 +47,10 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return arith(op, l.typeOf(e.T), l.expr(e.X), nil)
 
 	case *sema.Binary:
+		if e.Op == ast.Pow {
+			return l.power(e)
+		}
+
 		x := l.expr(e.X)
 		y := l.expr(e.Y)
 		t := l.typeOf(e.T)

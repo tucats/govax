@@ -352,7 +352,12 @@ never had.
   `direct`), a passed-length one's length MOVZWL (`Zext`), and passed on
   with its own descriptor; `sema.Concat`'s parts moved into a static
   `TextCell` as long as the value can be, or a class D dynamic string from
-  LIB$SGET1_DD, freed at the statement's end (`lowerer.after`, `flush`).
+  LIB$SGET1_DD, freed at the statement's end (`lowerer.after`, `flush`),
+  and subtask 7 (2026-10-30) exponentiation: `sema`'s `powerTypes` gives
+  a `**`'s operands the types of the OTS$ routine that computes it, and
+  `ir/lowerpower.go` calls it by value or, for an INTEGER or REAL base
+  and a constant exponent from 1 to 8, multiplies it out in
+  `vaxfloat.PowerBySquaring`'s order; a COMPLEX power is always called.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

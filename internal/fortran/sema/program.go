@@ -485,7 +485,8 @@ type (
 	}
 
 	// Binary is X Op Y for the arithmetic operators and .AND. and .OR.;
-	// X and Y have the result's type.
+	// X and Y have the result's type, but for **, whose operands have the
+	// types its OTS$ routine takes (powerTypes).
 	Binary struct {
 		exprBase
 		Op   ast.Op

@@ -104,8 +104,9 @@ func (c *checker) block(b *Block) error {
 			for _, a := range s.Args {
 				if a.Ref != nil {
 					err = c.mem(a.Ref)
-				} else {
-					err = c.expr(a.Value)
+				} else if err = c.expr(a.Value); err == nil && a.Value.Type().Size() < 4 {
+					// A value is pushed as one or more longwords.
+					err = fmt.Errorf("%s passes a %s value, shorter than a longword", StmtText(s), a.Value.Type())
 				}
 
 				if err != nil {

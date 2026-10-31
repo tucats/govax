@@ -25,7 +25,8 @@ import (
 // each product and sum rounded as the VAX's instructions round, which is what
 // folding a constant product does too (vaxfloat.ComplexMulSteps). A D or G
 // product calls OTS$MULCD_R3 or OTS$MULCG_R3, and every quotient OTS$DIVC,
-// OTS$DIVCD_R3, or OTS$DIVCG_R3, with the parts by value.
+// OTS$DIVCD_R3, or OTS$DIVCG_R3, with the parts by value, and every power
+// one of the OTS$ powers (lowerpower.go).
 
 // The OTS$ routines for a product or quotient, by the parts' type.
 var (
@@ -105,6 +106,10 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 
 // complexBinary lowers X op Y for COMPLEX operands, whose parts have type p.
 func (l *lowerer) complexBinary(e *sema.Binary, p Type) (re, im Expr) {
+	if e.Op == ast.Pow {
+		return l.complexPower(e, p)
+	}
+
 	a, b := l.complexParts(e.X)
 	c, d := l.complexParts(e.Y)
 

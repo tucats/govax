@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, 5, and 6 done 2026-10-30. Needs Phase 76 (declarations and
+3, 4, 5, 6, and 7 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -539,7 +539,7 @@ stops for review.
    the unsigned branches. Done.
 6. **CHARACTER arguments and concatenation:** descriptors at run time, passed-length
    dummies, static temporaries, LIB$SGET1_DD. Done.
-7. **Exponentiation:** the table above, in-line small powers in OTS$'s order.
+7. **Exponentiation:** the table above, in-line small powers in OTS$'s order. Done.
 8. **In-line intrinsics:** the table, generic selection, footnotes 10 and 11,
    conversions, bit functions, FTN$IISHFTC and FTN$JISHFTC, character functions,
    argument messages.
@@ -773,3 +773,37 @@ stops for review.
     it a Hollerith constant for a numeric dummy, 6.1.1.4); a concatenation longer
     than 65535 characters not reported. LEN, which section 6.1.1.3's example uses
     with a passed-length dummy, is subtask 8's; `strings.for` gets along without it.
+- **2026-10-30, subtask 7:** exponentiation.
+  - **`sema`:** `**` compiles (`power`); it isn't folded unless its operands are
+    constants and the exponent an INTEGER, as before. `powerTypes` is the survey's
+    table: an INTEGER base and exponent are both of the higher type, by
+    `mixedType`, so `I2**2` is a word (the author's answer 2); a REAL or COMPLEX
+    base keeps its type, an INTEGER exponent widened to a longword; a REAL\*4 and
+    a REAL\*8 keep their own types in D_floating (OTS$POWRD, OTS$POWDR), both G in
+    G_floating; anything else both of the higher type. So a `**` Binary's operands
+    have the routine's types, not the result's, the one Binary whose don't.
+  - **`ir`:** `lowerpower.go`. The routine follows from the operands' IR types
+    (`realPowers`, `complexPowers`); a call passes both by value, an INTEGER\*2
+    converted to a longword (`Check` now refuses a value argument shorter than a
+    longword, which PUSHL would misread). An INTEGER or REAL base with a constant
+    exponent from 1 to 8 is multiplied out (`inlinePower`), in
+    `vaxfloat.PowerBySquaring`'s order, a value used again `reusable`. The survey
+    said 2 to 8; 1 is the base itself, exactly, so it's in line too. A COMPLEX
+    power is always called (`complexPower`; OTS$POWCJ and its kind with a longword
+    exponent, OTS$POWCC and its kind through `complexCall`): the routines round a
+    product's parts once, as constant folding does (`complexOTS`), and a COMPLEX\*8
+    product in line rounds each step, so a small power written in line would differ
+    from its folded value.
+  - **`codegen`:** nothing new: a call's value arguments and wide results were
+    subtask 4's, and an `_R3` routine's R2 and R3 are saved by the entry mask.
+  - **FTNRTL:** nothing new.
+  - **Tests:** `testdata/fortran/powers` in both paging modes, its output worked by
+    hand (powers of 3 and 1.5 exactly, the square roots and 1.5\*\*1.5 to each
+    format's digits, the complex identities); `powers.for` golden in `ir` and
+    `codegen`; `TestPowerTypes`; sema's NOTIMPL case for `**` replaced.
+  - **Unconfirmed, ours:** an INTEGER power in line wraps on overflow (as any
+    multiplication does without `/CHECK=OVERFLOW`, Phase 85) where OTS$POWJJ and
+    OTS$POWII signal SS$_INTOVF; a base used again that isn't a variable,
+    element, or constant is computed before its statement, so in `IF (I .NE. 0
+    .AND. (10/I)**2 .GT. 1)` the quotient is computed even when I is 0 (2.3.4
+    allows it, as subtask 5 noted for comparisons).
