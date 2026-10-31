@@ -1,6 +1,7 @@
 package sema
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -145,6 +146,15 @@ func (fu *fileUnit) params() []*Symbol {
 	return fu.unit.Params
 }
 
+// altPlaces are the places of the *s in the routine's dummy argument list.
+func (fu *fileUnit) altPlaces() []int {
+	if fu.entry != nil {
+		return fu.entry.AltPlaces
+	}
+
+	return fu.unit.AltPlaces
+}
+
 // result is the function's name, whose type is the type of its value.
 func (fu *fileUnit) result() *Symbol {
 	if fu.entry != nil {
@@ -277,6 +287,10 @@ type routineRef struct {
 	sym  *Symbol
 	args []Arg
 	pos  diag.Position
+
+	// altPlaces are the places of the alternate return specifiers in the
+	// CALL's list, which args leaves out.
+	altPlaces []int
 }
 
 // analyzeUnit analyzes one unit.
@@ -352,13 +366,13 @@ func (a *analyzer) header(au *ast.Unit) {
 			}
 		}
 
-		a.params(h.Params)
+		a.params(h.Params, &u.AltPlaces)
 
 	case *ast.SubroutineStmt:
 		s := a.lookup(h.Name, h.Pos)
 		s.Class = UnitName
 
-		a.params(h.Params)
+		a.params(h.Params, &u.AltPlaces)
 
 	default:
 		// A main program's name, whether its PROGRAM statement gave it
@@ -368,15 +382,12 @@ func (a *analyzer) header(au *ast.Unit) {
 	}
 }
 
-// params enters the dummy arguments.
-func (a *analyzer) params(params []*ast.Name) {
-	for _, p := range params {
+// params enters the dummy arguments, and notes the place in the list of
+// each * in places.
+func (a *analyzer) params(params []*ast.Name, places *[]int) {
+	for i, p := range params {
 		if p.Name == "*" {
-			// An alternate return's place (Phase 79). The unit's dummy
-			// arguments are then not what its calls count, so it is
-			// left incomplete: only its structure is checked.
-			a.notImplForm(p.Pos, "an alternate return")
-			a.unit.incomplete = true
+			a.altPlace(p, i, places, "FUNCRETURN")
 
 			continue
 		}
@@ -583,8 +594,17 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				continue
 			}
 
-			if n := len(fu.params()); n != len(r.args) {
-				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, len(r.args))
+			// ARGCOUNT counts an alternate return as an argument, though it
+			// has no place in the argument list that is built.
+			n, given := len(fu.params())+len(fu.altPlaces()), len(r.args)+len(r.altPlaces)
+			if n != given {
+				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, given)
+
+				continue
+			}
+
+			if !slices.Equal(fu.altPlaces(), r.altPlaces) {
+				messages.Report("ALTPLACE", r.pos, r.sym.Name, fu.pos.Line)
 
 				continue
 			}

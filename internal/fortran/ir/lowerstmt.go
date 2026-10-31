@@ -47,7 +47,7 @@ func (l *lowerer) stmt(s sema.Stmt) {
 		l.assign(s)
 
 	case *sema.Call:
-		l.emit(&Call{origin: l.origin(), Routine: s.Sub.Name, Args: l.args(s.Args)})
+		l.call(s)
 
 	case *sema.Goto:
 		l.terminate(&Jump{l.origin(), l.labelBlock(s.Label)})
@@ -88,7 +88,14 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Stop:
 		l.stop(s)
 
-	case *sema.Return, *sema.End:
+	case *sema.Return:
+		if s.Alt != nil {
+			l.terminate(&Return{origin: l.origin(), Value: l.expr(s.Alt)})
+		} else {
+			l.returnFromRoutine()
+		}
+
+	case *sema.End:
 		l.returnFromRoutine()
 
 	case *sema.EntryPoint:
@@ -134,6 +141,39 @@ func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
 	l.begin(next)
 }
 
+// call lowers CALL. With alternate return specifiers, the routine's value says
+// where to go on (section 5.9), and anything but 1 to the number of them is the
+// next statement, as CASEL has it:
+//
+//	  call CHECK(...)
+//	  switch R0 [L10 L20] B2
+//	B2: (the next statement)
+//
+// What the statement must do last (freeing a concatenation's dynamic string)
+// comes before the Switch and uses R0, so then the value waits in a temporary.
+func (l *lowerer) call(s *sema.Call) {
+	call := &Call{origin: l.origin(), Routine: s.Sub.Name, Args: l.args(s.Args)}
+
+	if s.AltReturns == nil {
+		l.emit(call)
+
+		return
+	}
+
+	var index Expr = &CallValue{}
+
+	if len(l.after) > 0 {
+		call.Result = l.temp(Long)
+		index = &Load{call.Result}
+	}
+
+	l.emit(call)
+
+	next := l.newBlock()
+	l.terminate(&Switch{l.origin(), index, l.labelBlocks(s.AltReturns), next})
+	l.begin(next)
+}
+
 // arithIf lowers IF (e) s1, s2, s3 to a Sign of e. A constant e is a
 // jump to its label.
 func (l *lowerer) arithIf(s *sema.ArithIf) {
@@ -159,7 +199,8 @@ func (l *lowerer) arithIf(s *sema.ArithIf) {
 // returnValue is what the routine returns in R0: a function's value, the
 // last one assigned to its name, unless assigning it put it where the
 // caller wanted it (a hidden argument); SS$_NORMAL (1) from a main program,
-// for the image's exit status; nothing from a subroutine.
+// for the image's exit status; from a subroutine with alternate returns 0, the
+// caller's sign to go on to its next statement; nothing from another subroutine.
 func (l *lowerer) returnValue() Expr {
 	switch l.r.Kind {
 	case Function:
@@ -170,6 +211,10 @@ func (l *lowerer) returnValue() Expr {
 		return &Load{l.symbolMem(l.unit.Result)}
 	case Main:
 		return LongConst(1)
+	case Subroutine:
+		if l.unit.HasAltReturns() {
+			return LongConst(0)
+		}
 	}
 
 	return nil

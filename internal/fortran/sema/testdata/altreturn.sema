@@ -1,0 +1,51 @@
+== main program ALT
+  ALT                     program unit
+  A         REAL          variable         $LOCAL+0
+  B         REAL          variable         $LOCAL+4
+  C         REAL          variable         $LOCAL+8
+  K         INTEGER       variable         $LOCAL+12
+  CHECK                   subroutine
+  NONE                    subroutine
+  ONLY                    subroutine
+  OTHER                   subroutine
+  $LOCAL is 16 bytes
+7           CALL CHECK(A, B, C) or to (10, 20)
+8           K = 1
+9     10    K = 2
+10    20    CALL NONE() or to (30)
+11          IF (.GT.:I K 0) CALL NONE() or to (10)
+12          CALL ONLY() or to (10, 20, 30)
+13          CALL OTHER(A) or to (30)
+14    30    END
+== SUBROUTINE CHECK
+  CHECK                   program unit
+  X         REAL          variable         argument 1
+  Y         REAL          variable         argument 2
+  Z         REAL          variable         argument 3
+  header *s at places (2, 3)
+  $LOCAL is 0 bytes
+18          IF ((-:R X Y)) 60, 70, 80
+19    60    RETURN
+20    70    RETURN 1
+21    80    RETURN (INTEGER (+:R Z 1.0))
+22          END
+== SUBROUTINE NONE
+  NONE                    program unit
+  ONLY                    program unit
+  OTHER                   program unit
+  Q         REAL          variable         argument 1
+  entry ONLY () *s at places (0, 1, 2)
+  entry OTHER (Q) *s at places (1)
+  header *s at places (0)
+  $LOCAL is 0 bytes
+25          RETURN 1
+26          ENTRY ONLY
+27          ENTRY OTHER
+28          Q = 1.0
+29          END
+== SUBROUTINE PLAIN
+  PLAIN                   program unit
+  I         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+32          RETURN (+:I I 1)
+33          END

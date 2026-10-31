@@ -565,9 +565,10 @@ type (
 		Targets []*Block
 	}
 
-	// Return returns from the routine, with Value in R0 (nil for a
-	// subroutine): SS$_NORMAL from a main program, a function's value
-	// from a function.
+	// Return returns from the routine, with Value in R0 (nil for most
+	// subroutines): SS$_NORMAL from a main program, a function's value
+	// from a function, the alternate return's number from a subroutine
+	// that has them.
 	Return struct {
 		origin
 		Value Expr
@@ -707,6 +708,11 @@ type (
 		Block *Block
 	}
 
+	// CallValue is the Long a Call just left in R0, which nothing has
+	// changed since: a subroutine's alternate return number (section 5.9),
+	// in the Switch that follows the Call.
+	CallValue struct{}
+
 	// ArgPointer is the address the argument list holds for Param, a Long:
 	// the longword at 4*Index(AP) itself, not what it points at. A
 	// CHARACTER dummy's is its descriptor's address.
@@ -777,6 +783,7 @@ func (*ArgPointer) Type() Type { return Long }
 
 // Type is Long: an address.
 func (*LabelAddr) Type() Type { return Long }
+func (*CallValue) Type() Type { return Long }
 
 // Type is the operation's type.
 func (o *Op) Type() Type { return o.T }
@@ -797,6 +804,7 @@ func (*Const) exprNode()      {}
 func (*Load) exprNode()       {}
 func (*Addr) exprNode()       {}
 func (*LabelAddr) exprNode()  {}
+func (*CallValue) exprNode()  {}
 func (*ArgPointer) exprNode() {}
 func (*Op) exprNode()         {}
 func (*Cmp) exprNode()        {}

@@ -167,6 +167,10 @@ var messages = map[string]kind{
 	// statement (section 6.2.4).
 	"ENTRYRETURN": {Error, "alternate returns can only be in a subroutine's ENTRY statements"},
 
+	// FUNCRETURN is a * among a FUNCTION statement's dummy arguments, or
+	// RETURN i in a function (sections 5.9 and 6.1.1.5).
+	"FUNCRETURN": {Error, "a function can't have alternate returns"},
+
 	// ENTRYLATE is an entry point's name or a dummy argument used in an
 	// executable statement before the ENTRY statement that first names it
 	// (section 6.2.4).
@@ -582,6 +586,10 @@ var messages = map[string]kind{
 	// ARGCOUNT is a reference to a routine of the file with a different
 	// number of arguments from its dummy arguments.
 	"ARGCOUNT": {Error, "%s takes %s (line %d), but is given %d here"},
+
+	// ALTPLACE is a CALL of a routine of the file whose alternate return
+	// specifiers aren't in the places of the routine's *s (section 6.1.1.5).
+	"ALTPLACE": {Error, "the alternate return specifiers in this call of %s aren't in the places of its dummy argument list's *s (line %d)"},
 }
 
 // Known reports whether ident is a message in the table, and its

@@ -73,8 +73,6 @@ func formWhat(e ast.Expr) string {
 		return "a record's field"
 	case *ast.BuiltinArg:
 		return "%" + e.Func
-	case *ast.AltReturn:
-		return "an alternate return argument"
 	case *ast.ImpliedDo:
 		return "an implied-DO list"
 	case *ast.KeyList:

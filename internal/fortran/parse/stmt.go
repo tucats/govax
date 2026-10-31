@@ -337,8 +337,8 @@ func parseStop(p *parser) ast.Stmt {
 	return s
 }
 
-// parseReturn parses RETURN [i] (section 5.9). An alternate return's
-// number is kept for semantic analysis to report until Phase 79.
+// parseReturn parses RETURN [i] (section 5.9), i an alternate return's
+// number.
 func parseReturn(p *parser) ast.Stmt {
 	s := &ast.ReturnStmt{StmtBase: p.base()}
 

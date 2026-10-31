@@ -6,7 +6,8 @@ same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
 done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
 extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
 done 2026-10-31; subtask 5 (function results of every type) done
-2026-10-31; subtask 6 (ENTRY) done 2026-10-31.
+2026-10-31; subtask 6 (ENTRY) done 2026-10-31; subtask 7 (alternate
+returns) done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -522,7 +523,7 @@ recommendation:
    comes with subtask 7.) Done.
 5. **Function results of every type**, CHARACTER and COMPLEX functions. Done.
 6. **ENTRY.** Done.
-7. **Alternate returns.**
+7. **Alternate returns.** Done.
 8. **Adjustable and assumed-size arrays**, passed-length character arrays.
 9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.**
 10. **Statement functions.**
@@ -691,3 +692,32 @@ recommendation:
   end to end in both paging modes, and `testdata/fortran/modules/entries`, entry
   points called from another file, linked in both orders. MANUAL.md's 14.2 and
   the README list them.
+- **2026-10-31, subtask 7 (alternate returns):** Decision 2 and answer 2 as
+  written. Sema (`sema/altreturn.go`): a `*` in a dummy list is a place in
+  `Unit.AltPlaces` or `Entry.AltPlaces`, not a dummy, so `Params` and every
+  argument's position are what the argument list holds, and ENTRY's cells needed
+  nothing new. `altReturns` divides a CALL's list; the specifiers' labels are
+  `Call.AltReturns`, each a jump checked as GO TO's is (UNDEFLBL, NOTEXEC,
+  INTOBLOCK, SHAREDTERM). `Return.Alt` is RETURN i's value, any arithmetic value
+  converted to INTEGER\*4 (`CHARNUMBER` for a CHARACTER one). ARGCOUNT counts the
+  `*`s; new messages: ALTPLACE (the same number, but in other places, which 6.1.1.5's
+  "corresponding positions" forbids and a file holding both units can see; ours, as
+  ARGCOUNT is), and FUNCRETURN (a `*` in a FUNCTION statement, RETURN i in a function;
+  section 5.9). The IR: `lowerer.call` follows the Call with a `Switch` on `CallValue`,
+  a new expression for the R0 a call just left, and the next statement in a block of
+  its own. A statement with a dynamic string to free (`S // T` among the arguments)
+  frees it before any terminator, which uses R0, so there the Call's `Result` is a
+  temporary and the Switch is on that. A subroutine with a `*` in any of its lists
+  returns 0 from a plain RETURN or END (`returnValue`; `CLRL R0`), and RETURN i returns
+  i, unchecked; a subroutine with no `*`s sets R0 only for a RETURN i, which no caller
+  looks at. Ours, unconfirmed: RETURN i is allowed in a subroutine with no `*`s (5.9
+  says an i past the number of alternate returns goes on normally, so it does); the
+  `*`'s absence from the argument list (answer 2) means a program calling across a
+  mismatched list gets the wrong longwords, as with any argument mismatch. A dummy
+  procedure called with specifiers comes with subtask 9. Codegen: `CallValue` is the
+  operand R0, and the note on CASEL and the RET says what the value is. Tests:
+  `altreturn.for` golden files in `sema`, `ir`, and `codegen`; sema error cases for
+  each message and for each jump check; `testdata/fortran/altreturns.for` end to end in
+  both paging modes (the manual's CHECK, with its `Z` computed and its third list
+  argument reached past the `*`s), and `testdata/fortran/modules/altreturns`, linked in
+  both orders. MANUAL.md's 14.2 lists them, with the differences.

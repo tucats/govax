@@ -410,7 +410,11 @@ never had.
   cell (`Param.Through`, `$A1`) each entry point copies its address to, a
   function's names share one place, and if their types differ a return is a
   `Switch` on `$E`; `codegen`'s `writeEntry` writes the other `.ENTRY`s after
-  the routine's code.
+  the routine's code; subtask 7 (2026-10-31) alternate returns:
+  `sema/altreturn.go` (a `*` is a place in `AltPlaces`, not a dummy, and a
+  specifier has no longword in the argument list; `Call.AltReturns`,
+  `Return.Alt`), and the IR's `Switch` on `CallValue`, the R0 a call just left
+  (`lowerer.call`): RETURN i leaves i there, a plain RETURN 0.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -29,6 +29,10 @@ type Entry struct {
 
 	// Params are the entry point's dummy arguments, in its list's order.
 	Params []*Symbol
+
+	// AltPlaces are the places in its list of the *s, which Params leaves
+	// out, as the argument list does.
+	AltPlaces []int
 }
 
 // EntryPoint is an ENTRY statement among the unit's statements, where the
@@ -106,15 +110,9 @@ func (a *analyzer) entryName(s *ast.EntryStmt) *Entry {
 func (a *analyzer) entryParams(e *Entry) {
 	seen := map[*Symbol]bool{}
 
-	for _, p := range e.AST.Params {
+	for i, p := range e.AST.Params {
 		if p.Name == "*" {
-			if a.unit.Kind == ast.FunctionUnit {
-				a.report("ENTRYRETURN", p.Pos)
-			} else {
-				// As params says of a * in a header.
-				a.notImplForm(p.Pos, "an alternate return")
-				a.unit.incomplete = true
-			}
+			a.altPlace(p, i, &e.AltPlaces, "ENTRYRETURN")
 
 			continue
 		}

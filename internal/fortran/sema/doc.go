@@ -176,6 +176,9 @@
 // body as an EntryPoint, where its code begins. A function's entry points'
 // names are Result names, sharing one place.
 //
+// An alternate return's * (altreturn.go) is a place in a dummy list, no dummy,
+// and a CALL's *s is a jump, no argument: neither is in an argument list.
+//
 // # The dump
 //
 // Dump writes the result for the golden tests in testdata: each unit's

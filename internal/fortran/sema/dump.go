@@ -41,7 +41,11 @@ func Dump(p *Program) string {
 				params[i] = s.Name
 			}
 
-			fmt.Fprintf(&b, "  entry %s (%s)\n", e.Sym.Name, strings.Join(params, ", "))
+			fmt.Fprintf(&b, "  entry %s (%s)%s\n", e.Sym.Name, strings.Join(params, ", "), dumpAltPlaces(e.AltPlaces))
+		}
+
+		if u.AltPlaces != nil {
+			fmt.Fprintf(&b, "  header%s\n", dumpAltPlaces(u.AltPlaces))
 		}
 
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
@@ -220,7 +224,12 @@ func stmtText(list []Stmt) string {
 			return "CALL " + s.Sub.Name
 		}
 
-		return "CALL " + s.Sub.Name + dumpArgs(s.Args)
+		text := "CALL " + s.Sub.Name + dumpArgs(s.Args)
+		if s.AltReturns != nil {
+			text += " or to (" + labelList(s.AltReturns) + ")"
+		}
+
+		return text
 	case *Goto:
 		return "GO TO " + strconv.Itoa(s.Label)
 	case *ComputedGoto:
@@ -251,6 +260,10 @@ func stmtText(list []Stmt) string {
 	case *EntryPoint:
 		return "ENTRY " + s.Entry.Sym.Name
 	case *Return:
+		if s.Alt != nil {
+			return "RETURN " + DumpExpr(s.Alt)
+		}
+
 		return "RETURN"
 	case *End:
 		return "END"
@@ -268,6 +281,16 @@ func stmtText(list []Stmt) string {
 	}
 
 	return fmt.Sprintf("%T", list[0])
+}
+
+// dumpAltPlaces shows where a dummy argument list has *s, counted from 0, or
+// nothing if it has none.
+func dumpAltPlaces(places []int) string {
+	if places == nil {
+		return ""
+	}
+
+	return " *s at places (" + labelList(places) + ")"
 }
 
 // labelList is labels separated by commas: 10, 20, 30.

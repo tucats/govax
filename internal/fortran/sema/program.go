@@ -53,6 +53,11 @@ type Unit struct {
 	// Labels are the statement labels defined in the unit.
 	Labels map[int]*Label
 
+	// AltPlaces are the places in the header's dummy argument list of its
+	// *s, alternate returns' places (section 6.1.1.5), which Params leaves
+	// out: an actual argument list has no longword for one.
+	AltPlaces []int
+
 	// Assigned are the labels the unit's ASSIGN statements give, each
 	// once, in the order they first appear: where an assigned GO TO
 	// without a list may go.
@@ -319,6 +324,10 @@ type (
 		stmtBase
 		Sub  *Symbol
 		Args []Arg
+
+		// AltReturns are the labels of the alternate return specifiers, in
+		// order, which the argument list doesn't hold (altreturn.go).
+		AltReturns []int
 	}
 
 	// Goto is GO TO Label.
@@ -421,9 +430,11 @@ type (
 		Pause      bool
 	}
 
-	// Return is RETURN in a subprogram.
+	// Return is RETURN in a subprogram; Alt, an INTEGER*4, is RETURN i's
+	// value, nil for a plain RETURN.
 	Return struct {
 		stmtBase
+		Alt Expr
 	}
 
 	// End is END, the unit's last statement.

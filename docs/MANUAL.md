@@ -4453,8 +4453,8 @@ output it prints, and programs of several files in its `modules` directory.
   length or `CHARACTER*(*)`, taking its length from the unit that references
   it; ENTRY in a SUBROUTINE or FUNCTION, each entry point with a dummy
   argument list of its own (a function's of any types that can share a
-  value, section 6.2.4.1 of the language manual), but not yet with `*`
-  alternate returns; BLOCK DATA, named or not, which holds declarations
+  value, section 6.2.4.1 of the language manual); `*` alternate returns in
+  a SUBROUTINE's or ENTRY's dummy list; BLOCK DATA, named or not, which holds declarations
   and initial values for named common blocks; END. A file may hold several
   units.
 - **Declarations:** type statements of every type and length (BYTE;
@@ -4576,7 +4576,10 @@ output it prints, and programs of several files in its `modules` directory.
   the list naming where it may go) after `ASSIGN 10 TO K`, which stores the
   statement's address, so K must be INTEGER\*4 (an INTEGER\*2 can't hold
   one: `%FORT-E-ASSIGNVAR`); the arithmetic IF (`IF (X - Y) 10, 20, 30`) of
-  an INTEGER or REAL value of any length; CALL; RETURN; STOP, with or
+  an INTEGER or REAL value of any length; CALL, with alternate return
+  specifiers (`CALL CHECK(A, B, *10, &20, C)`); RETURN, and RETURN i, which
+  goes to the i-th specifier, or to the statement after the CALL if there is
+  no i-th; STOP, with or
   without a display; PAUSE, with or without one, which writes the display
   (or `FORTRAN PAUSE`) and suspends the program at DCL's prompt: `CONTINUE`
   goes on at the next statement, `EXIT` or `STOP` end the program, and in
@@ -4934,8 +4937,14 @@ FORTRAN compiler was available to check them). So far:
   `LIB$PAUSE`), not the VMS debugger attached to the program.
 - Where one file holds both a routine and a reference to it, the
   compiler checks them against each other: a FUNCTION's type, a
-  SUBROUTINE called and not referenced as a function, and the number of
-  arguments. VAX FORTRAN compiled each unit alone and couldn't.
+  SUBROUTINE called and not referenced as a function, the number of
+  arguments, and that alternate return specifiers are in the places of the
+  routine's `*`s. VAX FORTRAN compiled each unit alone and couldn't.
+- An alternate return specifier has no longword in the argument list
+  (`CALL CHECK(A, B, *10, *20, C)` is `CALLS #3`), and the number RETURN i
+  chooses comes back in R0, 0 from a plain RETURN; a MACRO routine a FORTRAN
+  program calls with specifiers does the same. The language manual doesn't
+  say how VAX FORTRAN laid these out.
 - Changing a DO loop's control variable inside the loop is an error
   (the manual forbids it; govax checks the loop's own statements).
 - `.TRUE.` is the longword -1 and `.FALSE.` 0 (only bit 0 counts); on

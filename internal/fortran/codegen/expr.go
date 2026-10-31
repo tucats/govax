@@ -553,6 +553,9 @@ func (g *routineGen) eval(e ir.Expr) operand {
 		// The argument list's longword itself: SUB.A(AP).
 		return operand{text: g.argumentPlace(e.Param)}
 
+	case *ir.CallValue:
+		return operand{text: "R0"}
+
 	case *ir.LabelAddr:
 		r := g.alloc(ir.Long)
 		g.emit("MOVAB", ir.Long, g.blockLabel(e.Block), register(r))

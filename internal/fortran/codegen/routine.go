@@ -347,15 +347,22 @@ func (g *routineGen) terminator(t ir.Terminator, next *ir.Block) {
 
 	case *ir.Return:
 		if t.Value != nil {
-			if g.r.Kind == ir.Main {
+			switch g.r.Kind {
+			case ir.Main:
 				g.note = "SS$_NORMAL"
-			} else {
+			case ir.Subroutine:
+				g.note = "the alternate return's number"
+			default:
 				g.note = "the function's value"
 			}
 
-			v := g.eval(g.fit(t.Value))
-			g.move(t.Value.Type(), v.text, "R0")
-			g.free(v)
+			if c, ok := t.Value.(*ir.Const); ok && c.T == ir.Long && c.Bits == 0 {
+				g.emit("CLRL", ir.Long, "R0")
+			} else {
+				v := g.eval(g.fit(t.Value))
+				g.move(t.Value.Type(), v.text, "R0")
+				g.free(v)
+			}
 		}
 
 		g.emit("RET", ir.None)
@@ -390,6 +397,10 @@ func (g *routineGen) terminator(t ir.Terminator, next *ir.Block) {
 func (g *routineGen) caseTable(t *ir.Switch, next *ir.Block) {
 	index := g.eval(g.fit(t.Index))
 	g.free(index)
+
+	if _, ok := t.Index.(*ir.CallValue); ok {
+		g.note = "the alternate return's number"
+	}
 
 	g.emit("CASEL", ir.None, index.text, "#1", "#"+strconv.Itoa(len(t.Targets)-1))
 

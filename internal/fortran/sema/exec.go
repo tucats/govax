@@ -19,7 +19,7 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return a.assignment(s)
 
 	case *ast.CallStmt:
-		return a.call(s)
+		return a.call(s, path)
 
 	case *ast.GotoStmt:
 		a.refs = append(a.refs, labelRef{label: s.Target.Label, pos: s.Target.Pos, path: path})
@@ -73,14 +73,7 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return st
 
 	case *ast.ReturnStmt:
-		switch {
-		case s.Alt != nil:
-			a.notImpl(s.Alt.Position(), "an alternate return")
-		case a.unit.Kind == ast.MainProgram:
-			a.report("MAINRETURN", s.Pos)
-		}
-
-		return &Return{stmtBase{s}}
+		return a.returnStmt(s)
 
 	case *ast.PrintStmt:
 		a.listDirected(&s.Format)
@@ -291,7 +284,10 @@ func (a *analyzer) checkLoopVariable(s *Symbol, pos diag.Position) {
 }
 
 // call analyzes CALL name(args) (section 5.1).
-func (a *analyzer) call(s *ast.CallStmt) Stmt {
+func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
+	list, targets, places := altReturns(s.Args)
+	a.jumps(targets, path)
+
 	sym := a.unit.byName[s.Name]
 
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
@@ -339,10 +335,15 @@ func (a *analyzer) call(s *ast.CallStmt) Stmt {
 		return nil
 	}
 
-	args := a.args(s.Args)
-	a.unit.calls = append(a.unit.calls, routineRef{sym, args, s.NamePos})
+	args := a.args(list)
+	a.unit.calls = append(a.unit.calls, routineRef{sym, args, s.NamePos, places})
 
-	return &Call{stmtBase{s}, sym, args}
+	c := &Call{stmtBase: stmtBase{s}, Sub: sym, Args: args}
+	for _, t := range targets {
+		c.AltReturns = append(c.AltReturns, t.Label)
+	}
+
+	return c
 }
 
 // listDirected reports a format other than *: formatted I/O is Phase

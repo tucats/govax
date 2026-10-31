@@ -1,0 +1,111 @@
+routine ALT main
+  cell  A       F  $LOCAL+0    variable A
+  cell  B       F  $LOCAL+4    variable B
+  cell  C       F  $LOCAL+8    variable C
+  cell  K       L  $LOCAL+12   variable K
+  $LOCAL is 16 bytes
+B1:
+  ; line 7
+  call CHECK(ref A, ref B, ref C)
+  switch R0 [B3 B4] B2
+B2:
+  ; line 8
+  assign K = 1
+  ; line 9
+  jump B3
+B3: L10
+  assign K = 2
+  ; line 10
+  jump B4
+B4: L20
+  call NONE()
+  switch R0 [B11] B5
+B5:
+  ; line 11
+  branch gt.L(K, 0) B6 B8
+B6:
+  call NONE()
+  switch R0 [B3] B7
+B7:
+  jump B8
+B8:
+  ; line 12
+  call ONLY()
+  switch R0 [B3 B4 B11] B9
+B9:
+  ; line 13
+  call OTHER(ref A)
+  switch R0 [B11] B10
+B10:
+  ; line 14
+  jump B11
+B11: L30
+  return 1
+routine CHECK subroutine
+  param X       F  argument 1
+  param Y       F  argument 2
+  param Z       F  argument 3
+  $LOCAL is 0 bytes
+B1:
+  ; line 18
+  sign sub.F(@X, @Y) B2 B3 B4
+B2: L60
+  ; line 19
+  return 0
+B3: L70
+  ; line 20
+  return 1
+B4: L80
+  ; line 21
+  return cvt.FL(add.F(@Z, 1.0))
+routine NONE subroutine
+  param Q       F  through $A1
+  entry 1 NONE
+  entry 2 ONLY at B2
+  entry 3 OTHER Q=1 at B3
+  cell  $A1     L  $LOCAL+0    address of Q
+  $LOCAL is 4 bytes
+B1:
+  ; line 25
+  return 1
+B2:  ; ENTRY ONLY
+  ; line 27
+  jump B3
+B3:  ; ENTRY OTHER
+  ; line 28
+  assign @Q = 1.0
+  ; line 29
+  return 0
+routine PLAIN subroutine
+  param I       L  argument 1
+  $LOCAL is 0 bytes
+B1:
+  ; line 32
+  return add.L(@I, 1)
+routine JOINED subroutine
+  param S       B  argument 1
+  param T       B  argument 2
+  cell  $D1     L  $LOCAL+0    descriptor T D 0
+  cell  $T1     W  $LOCAL+8    temporary
+  cell  $D2     L  $LOCAL+12   descriptor T S 0
+  cell  $T2     L  $LOCAL+20   temporary
+  $LOCAL is 24 bytes
+  datum $K1     text 'A'
+B1:
+  ; line 38
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg S)), zext.WL(@(arg T))))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(zext.WL(@(arg S))) = @(@(arg S)+4)(zext.WL(@(arg S)))
+  move @($D1+4)[zext.WL(@(arg S))](zext.WL(@(arg T))) = @(@(arg T)+4)(zext.WL(@(arg T)))
+  assign $D2 = cvt.LW(add.L(zext.WL(@(arg S)), zext.WL(@(arg T))))
+  assign $D2+4 = addr(@($D1+4))
+  call TAKES(ref $D2) -> $T2
+  call LIB$SFREE1_DD(ref $D1)
+  switch $T2 [B3] B2
+B2:
+  ; line 39
+  move @(@(arg S)+4)(zext.WL(@(arg S))) = $K1(1)
+  ; line 40
+  jump B3
+B3: L10
+  return

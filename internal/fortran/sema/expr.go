@@ -197,7 +197,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 
 	case Function:
 		args := a.args(e.Args)
-		a.unit.calls = append(a.unit.calls, routineRef{s, args, e.Pos})
+		a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
 
 		return &FuncRef{exprBase{s.Type, e.Pos}, s, args}
 

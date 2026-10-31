@@ -1,0 +1,234 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_D = 2			; dynamic string
+;
+
+; Storage map for ALT, the main program
+;   A     REAL     $LOCAL+0   ALT.A
+;   B     REAL     $LOCAL+4   ALT.B
+;   C     REAL     $LOCAL+8   ALT.C
+;   K     INTEGER  $LOCAL+12  ALT.K
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ALT.A:	.BLKL	1			; A
+ALT.B:	.BLKL	1			; B
+ALT.C:	.BLKL	1			; C
+ALT.K:	.BLKL	1			; K
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Alternate returns (sections 5.9 and 6.1.1.5): the specifiers aren't in
+;    2  C     the argument list, a RETURN i of any arithmetic value, an ENTRY's own
+;    3  C     places, and a specifier in a logical IF's CALL.
+;    4        PROGRAM ALT
+	.ENTRY	ALT,^M<>
+;    5        REAL A, B, C
+;    6        INTEGER K
+;    7        CALL CHECK(A, B, *10, *20, C)
+	PUSHAL	ALT.C
+	PUSHAL	ALT.B
+	PUSHAL	ALT.A
+	CALLS	#3,G^CHECK
+	CASEL	R0,#1,#1		; the alternate return's number
+ALT.$1:
+	.WORD	ALT.L10-ALT.$1
+	.WORD	ALT.L20-ALT.$1
+;    8        K = 1
+	MOVL	#1,ALT.K
+;    9  10    K = 2
+ALT.L10:
+	MOVL	#2,ALT.K
+;   10  20    CALL NONE(*30)
+ALT.L20:
+	CALLS	#0,G^NONE
+	CASEL	R0,#1,#0		; the alternate return's number
+ALT.$2:
+	.WORD	ALT.L30-ALT.$2
+;   11        IF (K .GT. 0) CALL NONE(*10)
+	TSTL	ALT.K
+	BGTR	ALT.$4
+	BRW	ALT.$3
+ALT.$4:
+	CALLS	#0,G^NONE
+	CASEL	R0,#1,#0		; the alternate return's number
+ALT.$5:
+	.WORD	ALT.L10-ALT.$5
+ALT.$3:
+;   12        CALL ONLY(&10, &20, &30)
+	CALLS	#0,G^ONLY
+	CASEL	R0,#1,#2		; the alternate return's number
+ALT.$6:
+	.WORD	ALT.L10-ALT.$6
+	.WORD	ALT.L20-ALT.$6
+	.WORD	ALT.L30-ALT.$6
+;   13        CALL OTHER(A, *30)
+	PUSHAL	ALT.A
+	CALLS	#1,G^OTHER
+	CASEL	R0,#1,#0		; the alternate return's number
+ALT.$7:
+	.WORD	ALT.L30-ALT.$7
+;   14  30    END
+ALT.L30:
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for CHECK, a subroutine
+;   X     REAL  argument 1  @CHECK.X(AP)
+;   Y     REAL  argument 2  @CHECK.Y(AP)
+;   Z     REAL  argument 3  @CHECK.Z(AP)
+;
+CHECK.X = 4				; X is argument 1
+CHECK.Y = 8				; Y is argument 2
+CHECK.Z = 12				; Z is argument 3
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CHECK.$F1:
+	.LONG	^X00004080		; 1.0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   15
+;   16        SUBROUTINE CHECK(X, Y, *, *, Z)
+	.ENTRY	CHECK,^M<>
+;   17        REAL X, Y, Z
+;   18        IF (X - Y) 60, 70, 80
+	SUBF3	@CHECK.Y(AP),@CHECK.X(AP),R0
+	BLEQ	CHECK.$1
+	BRW	CHECK.L80
+CHECK.$1:
+	BNEQ	CHECK.$2
+	BRW	CHECK.L70
+CHECK.$2:
+;   19  60    RETURN
+CHECK.L60:
+	CLRL	R0			; the alternate return's number
+	RET
+;   20  70    RETURN 1
+CHECK.L70:
+	MOVL	#1,R0			; the alternate return's number
+	RET
+;   21  80    RETURN Z + 1.0
+CHECK.L80:
+	ADDF3	@CHECK.Z(AP),CHECK.$F1,R0 ; the alternate return's number
+	CVTFL	R0,R0
+	RET
+;   22        END
+
+; Storage map for NONE, a subroutine
+;   Q     REAL  an argument  @NONE.$A1
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+NONE.$A1:
+	.BLKL	1			; Q's longword of the argument list, set at each entry point
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   23
+;   24        SUBROUTINE NONE(*)
+	.ENTRY	NONE,^M<>
+;   25        RETURN 1
+	MOVL	#1,R0			; the alternate return's number
+	RET
+;   26        ENTRY ONLY(*, *, *)
+NONE.$1:				; ENTRY ONLY
+;   27        ENTRY OTHER(Q, *)
+NONE.$2:				; ENTRY OTHER
+;   28        Q = 1.0
+	MOVL	#^X00004080,@NONE.$A1	; 1.0
+;   29        END
+	CLRL	R0			; the alternate return's number
+	RET
+
+	.ENTRY	ONLY,^M<>
+	BRW	NONE.$1
+
+	.ENTRY	OTHER,^M<>
+	MOVL	4(AP),NONE.$A1		; Q is argument 1
+	BRW	NONE.$2
+
+; Storage map for PLAIN, a subroutine
+;   I     INTEGER  argument 1  @PLAIN.I(AP)
+;
+PLAIN.I = 4				; I is argument 1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   30
+;   31        SUBROUTINE PLAIN(I)
+	.ENTRY	PLAIN,^M<>
+;   32        RETURN I + 1
+	ADDL3	@PLAIN.I(AP),#1,R0	; the alternate return's number
+	RET
+;   33        END
+
+; Storage map for JOINED, a subroutine
+;   S     CHARACTER*(*)  argument 1  @JOINED.S(AP)
+;   T     CHARACTER*(*)  argument 2  @JOINED.T(AP)
+;
+JOINED.S = 4				; S is argument 1
+JOINED.T = 8				; T is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+JOINED.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+JOINED.$T1:
+	.BLKB	2			; temporary
+	.BLKB	2
+JOINED.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+JOINED.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+JOINED.$K1:
+	.ASCII	/A/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   34
+;   35  C     A dynamic string is freed before the jump, so R0 waits in a temporary.
+;   36        SUBROUTINE JOINED(S, T)
+	.ENTRY	JOINED,^M<R2,R3,R4,R5>
+;   37        CHARACTER*(*) S, T
+;   38        CALL TAKES(S // T, *10)
+	MOVZWL	@JOINED.S(AP),R0
+	MOVZWL	@JOINED.T(AP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,JOINED.$T1
+	PUSHAQ	JOINED.$D1
+	PUSHAW	JOINED.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@JOINED.S(AP),R0
+	MOVL	JOINED.S(AP),R1
+	MOVC3	R0,@4(R1),@JOINED.$D1+4
+	MOVZWL	@JOINED.T(AP),R0
+	MOVL	JOINED.T(AP),R1
+	MOVL	JOINED.$D1+4,R2
+	MOVZWL	@JOINED.S(AP),R3
+	MOVC3	R0,@4(R1),(R2)[R3]
+	MOVZWL	@JOINED.S(AP),R0
+	MOVZWL	@JOINED.T(AP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,JOINED.$D2
+	MOVAB	@JOINED.$D1+4,JOINED.$D2+4
+	PUSHAQ	JOINED.$D2
+	CALLS	#1,G^TAKES
+	MOVL	R0,JOINED.$T2
+	PUSHAQ	JOINED.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+	CASEL	JOINED.$T2,#1,#0
+JOINED.$1:
+	.WORD	JOINED.L10-JOINED.$1
+;   39        S = 'A'
+	MOVZWL	@JOINED.S(AP),R0
+	MOVL	JOINED.S(AP),R1
+	MOVC5	#1,JOINED.$K1,#^A/ /,R0,@4(R1)
+;   40  10    RETURN
+JOINED.L10:
+	RET
+;   41        END
+
+	.END	ALT

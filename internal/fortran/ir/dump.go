@@ -336,6 +336,9 @@ func ExprText(e Expr) string {
 	case *LabelAddr:
 		return "label(" + e.Block.Name + ")"
 
+	case *CallValue:
+		return "R0"
+
 	case *ArgPointer:
 		return "arg " + e.Param.Name
 
