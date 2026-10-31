@@ -1,0 +1,1066 @@
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 1
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 48 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "TPA80B"
+	module version: "0"
+	creation   date/time: 31-OCT-2026 13:49
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 19 bytes
+
+	Textual information:
+	"MACRO/LIST TPA80B"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 34 bytes
+
+	Textual information:
+	"Phase 80 state table macro forms"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.¼......|
+		       42 30 38 41 50 54|  0008  |TPA80B  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 25 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 0 (%X'00000000')
+		symbol: "BK"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 2
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		symbol: "BT"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 4 (%X'00000004')
+		symbol: ". BLANK ."
+
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 3
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 21 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        1
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        1
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 40 (%X'00000028')
+		symbol: "_LIB$STATE$"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 20 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 2-byte boundary                       <-- psect 3
+		attribute flags:
+			(0)  GPS$V_PIC        1
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        1
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 4
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 12 (%X'0000000C')
+		symbol: "_LIB$KEY0$"
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 20 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 2-byte boundary                       <-- psect 4
+		attribute flags:
+			(0)  GPS$V_PIC        1
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        1
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 24 (%X'00000018')
+		symbol: "_LIB$KEY1$"
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 5
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	8)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	10)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	12)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	14)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	16)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	18)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	19)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	20)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	21)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             FF FF 11 ED|  0000  |í...    |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.96   Page 6
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	23)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	24)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   FF 3C|  0000  |<.      |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	26)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	29)  TIR$C_OPR_SUB (52, %X'34')                         stack depth: 1
+
+	30)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	32)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	34)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	36)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 00|  0000  |..      |
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 4
+		value: 2 (%X'00000002')
+
+	39)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 7
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	40)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   FF 3E|  0000  |>.      |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 3
+		value: 2 (%X'00000002')
+
+	42)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	43)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 4
+		value: 2 (%X'00000002')
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	45)  TIR$C_OPR_SUB (52, %X'34')                         stack depth: 1
+
+	46)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+	47)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	48)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 6 (%X'00000006')
+
+	50)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 6 (%X'00000006')
+
+	52)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	53)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 01|  0000  |..      |
+
+	54)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	55)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	56)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 8
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+
+	57)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	58)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+	59)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	60)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 21|  0000  |!.      |
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	62)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	63)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 10 (%X'0000000A')
+
+	64)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 10 (%X'0000000A')
+
+	66)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 3B|  0000  |;.      |
+
+	68)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	69)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 12 (%X'0000000C')
+
+	71)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 12 (%X'0000000C')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 9
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	73)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	74)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 25|  0000  |%.      |
+
+	75)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	76)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 14 (%X'0000000E')
+
+	78)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	79)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 14 (%X'0000000E')
+
+	80)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	81)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 5E|  0000  |^.      |
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	83)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	84)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	85)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	86)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	87)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	88)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 5C|  0000  |\.      |
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 10
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	90)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 18 (%X'00000012')
+
+	92)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 18 (%X'00000012')
+
+	94)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	95)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 22|  0000  |".      |
+
+	96)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	97)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 20 (%X'00000014')
+
+	99)  TIR$C_CTL_SETRB (80, %X'50')                       stack depth: 0
+
+	100)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 20 (%X'00000014')
+
+	101)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	102)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 28|  0000  |(.      |
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	104)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	105)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 22 (%X'00000016')
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 11
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+
+	106)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	107)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 22 (%X'00000016')
+
+	108)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	109)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 29|  0000  |).      |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	112)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 24 (%X'00000018')
+
+	113)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	114)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 24 (%X'00000018')
+
+	115)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	116)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             FF FF 10 58|  0000  |X...    |
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	118)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	119)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 28 (%X'0000001C')
+
+	120)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 28 (%X'0000001C')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 12
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	122)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	123)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             FF E0 10 59|  0000  |Y.à.    |
+
+	124)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 4 (%X'00000004')
+
+	125)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	126)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       FF 72 65 77 6F 6C|  0000  |lower.  |
+
+	127)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 3
+		value: 4 (%X'00000004')
+
+	128)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 4 (%X'00000004')
+
+	130)  TIR$C_STA_PB (4, %X'04')                          stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	131)  TIR$C_OPR_SUB (52, %X'34')                        stack depth: 1
+
+	132)  TIR$C_STO_W (38, %X'26')                          stack depth: 0
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	134)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	135)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 32 (%X'00000020')
+
+	136)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 32 (%X'00000020')
+
+	138)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 13
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	139)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 02|  0000  |..      |
+
+	140)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 10 (%X'0000000A')
+
+	141)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	142)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	143)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	144)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	145)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	146)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	147)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	148)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	149)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	150)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	151)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	152)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	153)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	154)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	155)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 11 (%X'0000000B')
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 14
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+
+	156)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	157)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       FF 43 5F 42 24 41|  0000  |A$B_C.  |
+
+	158)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 3
+		value: 6 (%X'00000006')
+
+	159)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	160)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 11 (%X'0000000B')
+
+	161)  TIR$C_STA_PB (4, %X'04')                          stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	162)  TIR$C_OPR_SUB (52, %X'34')                        stack depth: 1
+
+	163)  TIR$C_STO_W (38, %X'26')                          stack depth: 0
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	165)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	166)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	167)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	168)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 34 (%X'00000022')
+
+	169)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	170)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 03|  0000  |..      |
+
+	171)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 17 (%X'00000011')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 15
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	172)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	173)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   2A 41|  0000  |A*      |
+
+	174)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: -1 (%X'FFFFFFFF')
+
+	175)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	176)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 3
+		value: 8 (%X'00000008')
+
+	177)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	178)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 17 (%X'00000011')
+
+	179)  TIR$C_STA_PB (4, %X'04')                          stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	180)  TIR$C_OPR_SUB (52, %X'34')                        stack depth: 1
+
+	181)  TIR$C_STO_W (38, %X'26')                          stack depth: 0
+
+	182)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	183)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	184)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 36 (%X'00000024')
+
+	185)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	186)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 36 (%X'00000024')
+
+	187)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	188)  Store Immediate, 2 bytes:
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 16
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 04|  0000  |..      |
+
+	189)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 19 (%X'00000013')
+
+	190)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	191)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             FF 2A 42 41|  0000  |AB*.    |
+
+	192)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 3
+		value: 10 (%X'0000000A')
+
+	193)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	194)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 19 (%X'00000013')
+
+	195)  TIR$C_STA_PB (4, %X'04')                          stack depth: 2
+		psect: 3
+		value: 0 (%X'00000000')
+
+	196)  TIR$C_OPR_SUB (52, %X'34')                        stack depth: 1
+
+	197)  TIR$C_STO_W (38, %X'26')                          stack depth: 0
+
+	198)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	199)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	200)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 2
+		value: 38 (%X'00000026')
+
+	201)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	202)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 05|  0000  |..      |
+
+	203)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 4
+		value: 23 (%X'00000017')
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 17
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+	204)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	205)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	206)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	207)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	208)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 00 00|  0000  |...     |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 3 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      00|  0000  |.       |
+
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 96 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 14|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 4B 4E 41 4C 42 20 2E 09|  0000  |.. BLANK|
+		 B8 16 00 00 00 04 2E 20|  0008  | ......¸|
+		                      00|  0010  |.       |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 19 bytes:
+
+Analyze Object File                          31-OCT-2026 13:49:59.97   Page 18
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 54 53 24 42 49 4C 5F 0B|  0000  |._LIB$ST|
+		 00 00 00 28 24 45 54 41|  0008  |ATE$(...|
+		                00 B8 15|  0010  |.¸.     |
+
+	8)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	9)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	10)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 4B 24 42 49 4C 5F 0A|  0000  |._LIB$KE|
+		 15 00 00 00 0C 24 30 59|  0008  |Y0$.....|
+		                   00 B8|  0010  |¸.      |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 4B 24 42 49 4C 5F 0A|  0000  |._LIB$KE|
+		 01 00 00 00 18 24 31 59|  0008  |Y1$.....|
+		                      BD|  0010  |½       |
+
+
+18.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: errors (2)
+
+
+
+Analyze Object File                          31-OCT-2026 13:49:59.98   Page 19
+DUA1:[000000]TPA80B.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   119
+OBJ$C_GSD	    6	   124
+OBJ$C_TIR	    5	   479
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	   112
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   18	   836
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=TPA80B.ANL TPA80B                                         

@@ -159,7 +159,7 @@ var grammars = []grammar{
 	{"ABR4", []string{"$TRAN 'ONE'", "$TRAN 'ONES'", "$TRAN 'TWO',,ACT,,,1", "$STATE", "$TRAN 'THREE',TPA$_EXIT,ACT,,,1"}, with(abbrev, "T THREE", "O T", "ON TH")},
 
 	// A numeric character code, and symbols for ones a macro call can't hold.
-	{"CODES", []string{"$TRAN 65,TPA$_EXIT,ACT,,,1", "$TRAN COMMA,TPA$_EXIT,ACT,,,1", "$TRAN <','>,TPA$_EXIT,ACT,,,1"}, in("A", ",", "B")},
+	{"CODES", []string{"$TRAN LETA,TPA$_EXIT,ACT,,,1", "$TRAN COMMA,TPA$_EXIT,ACT,,,1", "$TRAN <','>,TPA$_EXIT,ACT,,,1"}, in("A", ",", "B")},
 
 	// The manual's CREATE/DIRECTORY example, its actions left out.
 	{"UFD", []string{"$TRAN TPA$_BLANK,,ACTOFF", "$TRAN TPA$_ANY,UFD",
@@ -229,6 +229,9 @@ const prologue = `	.TITLE	TPA80	Phase 80 LIB$TPARSE and $FILESCAN probe
 	$FSCNDEF
 
 COMMA = 44
+EIGHT = 8			; round 1: a type starting with a digit is refused
+TWO = 1+1
+LETA = 65
 
 	.MACRO	P CTR,A,B,C,D,E,F,G,H
 	.SAVE_PSECT LOCAL_BLOCK
@@ -608,18 +611,43 @@ var dumpTable = []string{
 	"$STATE", "$TRAN TPA$_ANY,,D1", "$TRAN TPA$_ALPHA,,,^X11223344,D1", "$TRAN TPA$_DIGIT,,,,D1", "$TRAN TPA$_STRING,,,,,^X55667788",
 	"$STATE", "$TRAN TPA$_SYMBOL,D2,D1,^X01020304,D2,^X05060708", "$TRAN !D2,D2,D1,^X01020304,D2,^X05060708", "$TRAN 'KW4',D2,D1,^X01020304,D2,^X05060708",
 	"$STATE", "$TRAN TPA$_BLANK", "$TRAN TPA$_DECIMAL", "$TRAN TPA$_OCTAL", "$TRAN TPA$_HEX", "$TRAN TPA$_LAMBDA", "$TRAN TPA$_EOS", "$TRAN TPA$_UIC", "$TRAN TPA$_IDENT", "$TRAN TPA$_FILESPEC",
-	"$STATE", "$TRAN 8", "$TRAN COMMA", "$TRAN <','>", "$TRAN '/'", "$TRAN '='", "$TRAN 1+1",
+	"$STATE", "$TRAN EIGHT", "$TRAN COMMA", "$TRAN <','>", "$TRAN '/'", "$TRAN '='", "$TRAN TWO",
 }
 
-// hexArgument is a hexadecimal argument, which a macro call would read as text
-// delimited by X's unless it's in brackets.
-var hexArgument = regexp.MustCompile(`\^X[0-9A-F]+`)
+// hexArgument is a hexadecimal argument. A macro call reads ^X... as text
+// delimited by X's, and round 1 showed that VMS's $TRAN refuses a bracketed one as
+// its last argument (UNTERMARG), so each is a symbol, H_<digits>.
+var hexArgument = regexp.MustCompile(`\^X([0-9A-F]+)`)
 
 func bracketed(line string) string {
-	return hexArgument.ReplaceAllStringFunc(line, func(s string) string { return "<" + s + ">" })
+	return hexArgument.ReplaceAllString(line, "H_$1")
+}
+
+// writeHexSymbols defines the symbols bracketed makes.
+func writeHexSymbols(b *strings.Builder) {
+	seen := map[string]bool{}
+
+	note := func(lines []string) {
+		for _, line := range lines {
+			for _, m := range hexArgument.FindAllStringSubmatch(line, -1) {
+				if !seen[m[1]] {
+					seen[m[1]] = true
+					fmt.Fprintf(b, "H_%s = ^X%s\n", m[1], m[1])
+				}
+			}
+		}
+	}
+
+	note(dumpTable)
+
+	for _, g := range grammars {
+		note(g.lines)
+	}
 }
 
 func writeTables(b *strings.Builder) {
+	writeHexSymbols(b)
+
 	fmt.Fprintf(b, "\t$INIT_STATE\tDT,DK\n")
 
 	for _, line := range dumpTable {
@@ -898,8 +926,6 @@ func module() string {
 	$INIT_STATE	BT,BK
 	$STATE	B1
 	$TRAN	TPA$_ANY,TPA$_EXIT
-	$TRAN	'<'
-	$TRAN	'>'
 	$TRAN	'!'
 	$TRAN	<';'>
 	$TRAN	'%'
@@ -922,15 +948,14 @@ HERE:	.LONG	0
 `
 }
 
-// hardForms holds two transitions govax's macro can't take, a character that is
-// its delimiter and a blank that ends a macro argument, for VMS's messages.
+// hardForms holds a transition govax's macro can't take, the character that is
+// its delimiter, for VMS's answer. (Round 1 had a blank here too, which VMS refuses.)
 const hardForms = `	.TITLE	TPA80C	Phase 80 state table macro forms
 ; Written by testdata/tpa80/gen.go: do not edit. Assembled for its messages and
-; object, and never run. govax refuses both transitions.
+; object, and never run. govax refuses this transition.
 	$INIT_STATE	CT,CK
 	$STATE
 	$TRAN	'~'
-	$TRAN	' '
 	$END_STATE
 	.END
 `

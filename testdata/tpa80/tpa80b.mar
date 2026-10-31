@@ -5,8 +5,6 @@
 	$INIT_STATE	BT,BK
 	$STATE	B1
 	$TRAN	TPA$_ANY,TPA$_EXIT
-	$TRAN	'<'
-	$TRAN	'>'
 	$TRAN	'!'
 	$TRAN	<';'>
 	$TRAN	'%'

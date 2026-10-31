@@ -1,9 +1,8 @@
 	.TITLE	TPA80C	Phase 80 state table macro forms
 ; Written by testdata/tpa80/gen.go: do not edit. Assembled for its messages and
-; object, and never run. govax refuses both transitions.
+; object, and never run. govax refuses this transition.
 	$INIT_STATE	CT,CK
 	$STATE
 	$TRAN	'~'
-	$TRAN	' '
 	$END_STATE
 	.END

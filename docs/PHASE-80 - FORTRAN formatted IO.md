@@ -1383,9 +1383,9 @@ copied as it is.
 Representation" and its example tables. A transition's "last in the state" flag isn't
 known until the next state, so `$STATE` and `$END_STATE` go back and store the flags
 byte again (`.` set back, as `$FAB` does, and `overwrite.go` keeps). `$TRAN` looks at
-its type argument as text, delimited by `~`, so `'~'` must be written 126, and a
-blank can't be in a macro argument, so `' '` must be 32: both are `tpa80c.mar`'s
-questions for VMS. No definitions were to hand: the TPA$ and FSCN$ values are from the
+its type argument as text, delimited by `~`, so `'~'` must be written 126
+(`tpa80c.mar`'s question for VMS), and a blank can't be in a macro argument, so
+`' '` must be 32. No definitions were to hand: the TPA$ and FSCN$ values are from the
 manuals where they give them (offsets, type bytes), and otherwise chosen, each
 printed by the probe: the options' bits (BLANKS 0, ABBREV 1, ABBRFM 2, AMBIG 16), a
 type's value as 256 plus its byte, and every FSCN$ code and flag.
@@ -1408,12 +1408,22 @@ type's value as 256 plus its byte, and every FSCN$ code and flag.
 - the string after a transition to TPA$_FAIL (past the token here), and whether an
   exact keyword with a longer neighbor is ambiguous under ABBREV (not here);
 - UIC and identifier details: blanks inside, `[name1,name2]`'s value (name2's here);
-- the psects' attributes, `.PSECT` left as `$INIT_STATE` found it after `$END_STATE`,
-  and `$TRAN`'s argument names for keyword use;
+- `.PSECT` left as `$INIT_STATE` found it after `$END_STATE`, and `$TRAN`'s argument
+  names for keyword use;
 - `$FILESCAN`'s edges: `.`, `::`, `[A][B]`, `A:B:C`, and a bad item code's status
   (SS$_BADPARAM here).
 
-Tests: `TestTPA80Manual` (30 cases held to the manuals), `TestTPA80Oracle` (skips the
+**Round 1 on VMS** (2026-10-31, `testdata/tpa80/vax/round1`): real MACRO refused 15
+lines of `tpa80.mar`, so nothing ran. VMS's `$TRAN` refuses a bracketed `<^X...>` as
+its last argument (UNTERMARG), though not as its mask; a type starting with a digit,
+though the manual says any expression (ILLIFCOND, IFDIRSYNX); and `'<'` and `'>'`
+(a generated INVALID CHARACTER error). govax's macro takes all of these, a superset
+left as it is. The partial objects' analyses settled the psects: `_LIB$STATE$` byte,
+`_LIB$KEY0$` and `_LIB$KEY1$` word, each PIC, SHR, EXE, RD, NOWRT, in that order, and
+the table names global; the macros now do the same. Round 2 states the refused forms
+another way.
+
+Tests: `TestTPA80Manual` (31 cases held to the manuals), `TestTPA80Oracle` (skips the
 comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
 `TestFor80RunsOnFORRTL`'s namelist check.
 
@@ -1512,3 +1522,7 @@ comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
   macros, and `testdata/tpa80`; "Subtask 10" above. FORRTL's namelist input over the
   new parser matches VMS's run in all 400 lines of that section, on VMS's own tables.
   The probe's choices stay unconfirmed until the author runs it on the simh VAX.
+- **2026-10-31, subtask 10, round 1 on VMS.** The author ran `@TPA80`. Real MACRO
+  refused 15 lines, for reasons recorded under "Subtask 10", so no image was made; the
+  analyses gave the psects' attributes, which the macros now follow. Round 2 is the
+  same program with those lines restated.
