@@ -103,3 +103,97 @@ func TestFor80RunsOnFORRTL(t *testing.T) {
 		t.Errorf("no K=14 from the manual's list-directed READ")
 	}
 }
+
+// for80MessageLine says whether a line of run 3 is one the test compares: the
+// conditions' messages, FOR80E's own line, the field before OUTCONERR's
+// message, and the statuses. The tracebacks' addresses are VMS's images'.
+func for80MessageLine(line string) bool {
+	for _, prefix := range []string{"%FOR-", "-FOR-", "-RMS-", "  unit ", "  user PC ", "FOR80E:", "**", "  $STATUS"} {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// TestFor80Messages runs FOR80.COM's run 3, each FOR condition with no handler,
+// against VMS's FORRTL.EXE, and holds the messages and statuses to VMS's log:
+// the FOR texts are vmsdef's (forMessages), and $PUTMSG's walk of FORRTL's
+// signal arrays is govax's.
+func TestFor80Messages(t *testing.T) {
+	disk, file := findFORRTL(t)
+	_, dispatch := wsDispatcher(t)
+	dsk := filepath.Join(t.TempDir(), "for80.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD51 FOR80`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch(`MOUNT/NOWRITE DUA5 "` + disk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+	dispatch("DEFINE/NOLOG FORRTL DUA5:" + file)
+	copyFor80(t, dispatch)
+
+	log, err := os.ReadFile(filepath.Join(for80Dir, "vax", "for80.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Run 3 is the log from FOR80E's symbol to the DIRECTORY after it. VMS
+	// writes a message of several lines as one record, CR LF between them.
+	text := strings.ReplaceAll(string(log), "\r", "")
+	start := strings.Index(text, "$ FOR80E := ")
+	end := strings.Index(text, "$ DIRECTORY/SIZE FOR*.*")
+
+	if start < 0 || end < start {
+		t.Fatal("no run 3 in VMS's log")
+	}
+
+	var proc strings.Builder
+
+	var want []string
+
+	proc.WriteString("$ SET NOON\n$ FOR80E := $DUA1:[000000]FOR80E\n")
+
+	for _, line := range strings.Split(text[start:end], "\n")[1:] {
+		switch {
+		case strings.HasPrefix(line, "$ FOR80E ") || strings.HasPrefix(line, "$ SHOW SYMBOL"):
+			proc.WriteString(line + "\n")
+		case line == "ABC":
+			proc.WriteString(line + "\n") // part F's record
+		case for80MessageLine(line):
+			want = append(want, line)
+		}
+	}
+
+	host := filepath.Join(t.TempDir(), "run3.com")
+	opt := filepath.Join(t.TempDir(), "for80.opt")
+
+	for name, body := range map[string]string{host: proc.String(), opt: "FORRTL/SHAREABLE\n"} {
+		if err := os.WriteFile(name, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	dispatch(`COPY "` + host + `"/HOST RUN3.COM`)
+	dispatch(`COPY "` + opt + `"/HOST FOR80.OPT`)
+
+	if out := dispatch("MACRO/NOLIST FOR80E"); out != "" {
+		t.Fatalf("MACRO: %s", out)
+	}
+
+	if out := dispatch("LINK/NOMAP/TRACEBACK FOR80E,FOR80/OPTIONS"); out != "" {
+		t.Fatalf("LINK: %s", out)
+	}
+
+	var got []string
+
+	for _, line := range strings.Split(dispatch("@RUN3"), "|") {
+		if for80MessageLine(line) {
+			got = append(got, line)
+		}
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("run 3:\ngovax:\n%s\nVMS:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

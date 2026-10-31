@@ -444,6 +444,16 @@ func (env *Environment) formatMessageVector(vec, tail []uint32, flags uint32, fa
 
 	for i < len(vec) {
 		code := take(1)[0]
+
+		// A zero condition value after the first message is passed over, as
+		// VMS 7.1's $PUTMSG passed over the two zero longwords FORRTL's
+		// conditions carry where an RMS status and value go when there are
+		// none (testdata/for80, round 1's run 3). As the first message it's
+		// shown, NOMSG (testdata/dcl50's EXIT 0).
+		if code == 0 && len(lines) > 0 {
+			continue
+		}
+
 		m, _ := messageFor(code)
 
 		switch code >> 16 & 0xFFF {

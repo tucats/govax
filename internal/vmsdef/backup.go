@@ -69,7 +69,7 @@ var (
 )
 
 // backupMessages are BACKUP's messages, keyed as Messages is.
-// LookupMessage finds them after observedMessages.
+// LookupMessage finds them after forMessages.
 var backupMessages = map[uint32]Message{}
 
 func init() {

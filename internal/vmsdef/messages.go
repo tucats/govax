@@ -47,6 +47,10 @@ func LookupMessage(code uint32) (Message, bool) {
 	}
 
 	if !ok {
+		m, ok = forMessages[code&messageKeyMask]
+	}
+
+	if !ok {
 		m, ok = backupMessages[code&messageKeyMask]
 	}
 

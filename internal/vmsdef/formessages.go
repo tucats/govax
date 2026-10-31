@@ -1,0 +1,72 @@
+package vmsdef
+
+// forMessages are the FOR facility's messages, VMS's FORTRAN run-time
+// library's, as VMS 7.1's $GETMSG returned them for FOR numbers 0 to 255
+// (testdata/for80, round 2's message table), keyed as Messages is. The texts
+// were taken by the author's leave (docs/PHASE-80, the answers to Part A's
+// questions). The two past 255, INVTEX and INVTEXREC, are as VMS 7.1 showed
+// them as secondary messages in round 1's run 3, their $FAO directives
+// unconfirmed. A message's "!+!+" skips the unit and file arguments that a
+// condition about no unit still passes. LookupMessage finds them after
+// observedMessages.
+var forMessages = map[uint32]Message{
+	0x00188008: {Facility: "FOR", Ident: "NOTFORSPE", Text: "not a FORTRAN-specific error!/!+!+  user PC !XL", FAOCount: 3},
+	0x00188010: {Facility: "FOR", Ident: "NOTIMP", Text: "not implemented!/!+!+  user PC !XL", FAOCount: 3},
+	0x00188018: {Facility: "FOR", Ident: "IGNORED", Text: "ignored requested disposition!/!+!+  user PC !XL", FAOCount: 3},
+	0x00188020: {Facility: "FOR", Ident: "IGNNOTDEL", Text: "ignored requested disposition, file not deleted!/!+!+  user PC !XL", FAOCount: 3},
+	0x00188088: {Facility: "FOR", Ident: "SYNERRNAM", Text: "syntax error in NAMELIST input at or before \"!AS\"!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 4},
+	0x00188090: {Facility: "FOR", Ident: "TOOMANVAL", Text: "too many values for NAMELIST variable \"!AC\"!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 4},
+	0x00188098: {Facility: "FOR", Ident: "INVREFVAR", Text: "invalid reference to variable \"!AS\" in NAMELIST input!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 4},
+	0x001880A0: {Facility: "FOR", Ident: "REWERR", Text: "REWIND error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880A8: {Facility: "FOR", Ident: "DUPFILSPE", Text: "duplicate file specifications!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880B0: {Facility: "FOR", Ident: "INPRECTOO", Text: "input record too long!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880B8: {Facility: "FOR", Ident: "BACERR", Text: "BACKSPACE error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880C0: {Facility: "FOR", Ident: "ENDDURREA", Text: "end-of-file during read!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880C8: {Facility: "FOR", Ident: "RECNUMOUT", Text: "record number outside range!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880D0: {Facility: "FOR", Ident: "OPEDEFREQ", Text: "OPEN or DEFINE FILE required for keyed or direct access!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880D8: {Facility: "FOR", Ident: "TOOMANREC", Text: "too many records in I/O statement!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880E0: {Facility: "FOR", Ident: "CLOERR", Text: "CLOSE error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880E8: {Facility: "FOR", Ident: "FILNOTFOU", Text: "file not found!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880F0: {Facility: "FOR", Ident: "OPEFAI", Text: "open failure!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001880F8: {Facility: "FOR", Ident: "MIXFILACC", Text: "mixed file access modes!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188100: {Facility: "FOR", Ident: "INVLOGUNI", Text: "invalid logical unit number!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188108: {Facility: "FOR", Ident: "ENDFILERR", Text: "ENDFILE error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188110: {Facility: "FOR", Ident: "UNIALROPE", Text: "unit already open!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188118: {Facility: "FOR", Ident: "SEGRECFOR", Text: "segmented record format error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188120: {Facility: "FOR", Ident: "ATTACCNON", Text: "attempt to access non-existent record!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188128: {Facility: "FOR", Ident: "INCRECLEN", Text: "inconsistent record length!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188130: {Facility: "FOR", Ident: "ERRDURWRI", Text: "error during write!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188138: {Facility: "FOR", Ident: "ERRDURREA", Text: "error during read!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188140: {Facility: "FOR", Ident: "RECIO_OPE", Text: "recursive I/O operation!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188148: {Facility: "FOR", Ident: "INSVIRMEM", Text: "insufficient virtual memory!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188150: {Facility: "FOR", Ident: "NO_SUCDEV", Text: "no such device!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188158: {Facility: "FOR", Ident: "FILNAMSPE", Text: "file name specification error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188160: {Facility: "FOR", Ident: "INCRECTYP", Text: "inconsistent record type!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188168: {Facility: "FOR", Ident: "KEYVALERR", Text: "keyword value error in OPEN statement!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188170: {Facility: "FOR", Ident: "INCOPECLO", Text: "inconsistent OPEN/CLOSE parameters!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188178: {Facility: "FOR", Ident: "WRIREAFIL", Text: "write to READONLY file!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188180: {Facility: "FOR", Ident: "INVARGFOR", Text: "invalid argument to FORTRAN Run-Time Library!/!+!+  user PC !XL", FAOCount: 3},
+	0x00188188: {Facility: "FOR", Ident: "INVKEYSPE", Text: "invalid key specification!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188190: {Facility: "FOR", Ident: "INCKEYCHG", Text: "inconsistent key change or duplicate key!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188198: {Facility: "FOR", Ident: "INCFILORG", Text: "inconsistent file organization!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881A0: {Facility: "FOR", Ident: "SPERECLOC", Text: "specified record locked!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881A8: {Facility: "FOR", Ident: "NO_CURREC", Text: "no current record!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881B0: {Facility: "FOR", Ident: "REWRITERR", Text: "REWRITE error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881B8: {Facility: "FOR", Ident: "DELERR", Text: "DELETE error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881C0: {Facility: "FOR", Ident: "UNLERR", Text: "UNLOCK error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881C8: {Facility: "FOR", Ident: "FINERR", Text: "FIND error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881D8: {Facility: "FOR", Ident: "LISIO_SYN", Text: "list-directed I/O syntax error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881E0: {Facility: "FOR", Ident: "INFFORLOO", Text: "infinite format loop!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881E8: {Facility: "FOR", Ident: "FORVARMIS", Text: "format/variable-type mismatch!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881F0: {Facility: "FOR", Ident: "SYNERRFOR", Text: "syntax error in format!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001881F8: {Facility: "FOR", Ident: "OUTCONERR", Text: "output conversion error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188200: {Facility: "FOR", Ident: "INPCONERR", Text: "input conversion error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188210: {Facility: "FOR", Ident: "OUTSTAOVE", Text: "output statement overflows record!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188218: {Facility: "FOR", Ident: "INPSTAREQ", Text: "input statement requires too much data!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188220: {Facility: "FOR", Ident: "VFEVALERR", Text: "variable format expression value error!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001882E8: {Facility: "FOR", Ident: "ADJARRDIM", Text: "adjustable array dimension error", FAOCount: 0},
+	0x001882F0: {Facility: "FOR", Ident: "INVMATKEY", Text: "invalid key match specifier for key direction!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x001882F8: {Facility: "FOR", Ident: "FLOCONFAI", Text: "floating point conversion failed!/  unit !SL  file !AS!/  user PC !XL", FAOCount: 3},
+	0x00188830: {Facility: "FOR", Ident: "INVTEXREC", Text: "invalid text is \"!AS\" in record number !UL", FAOCount: 2},
+	0x00188838: {Facility: "FOR", Ident: "INVTEX", Text: "invalid text is \"!AS\"", FAOCount: 1},
+}
