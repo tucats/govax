@@ -17,14 +17,16 @@ import (
 // output followed by SHOW SYMBOL's line for $STATUS. FORTRAN, MACRO, and
 // LINK must say nothing. To add a program, add the two files; the
 // expected output is written by hand from the language's rules, never
-// copied from a run.
+// copied from a run. A program that reads the terminal has a third file,
+// name.in, the lines typed (Phase 80, subtask 14); the terminal doesn't
+// echo them, so a reply doesn't show after its prompt.
 
 // fortranPrograms is the harness's directory.
 var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "altreturns", "args", "callback", "chars", "complex", "complexg", "data", "entries", "floatedit", "flow", "formats", "funcs", "funcsg", "intedit", "internal", "intrinsics", "iostmt", "jumps", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "powers", "procs", "reals", "realsg", "runformat", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text", "vfe"}
+var fortranPagingPrograms = []string{"adjust", "altreturns", "args", "callback", "chars", "complex", "complexg", "data", "dialog", "entries", "floatedit", "flow", "formats", "funcs", "funcsg", "intedit", "internal", "intrinsics", "inventory", "iostmt", "jumps", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "powers", "procs", "reals", "realsg", "runformat", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text", "vfe"}
 
 func TestFortranPrograms(t *testing.T) {
 	sources, err := filepath.Glob(filepath.Join(fortranPrograms, "*.for"))
@@ -69,6 +71,13 @@ func TestFortranPrograms(t *testing.T) {
 						t.Fatalf("%s%s said:\n%s", command, upper, out)
 					}
 				}
+
+				input, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".in")
+				if err != nil && !os.IsNotExist(err) {
+					t.Fatal(err)
+				}
+
+				c.In = strings.NewReader(string(input))
 
 				if got := shareRun(t, d, buf, upper); got != string(want) {
 					t.Errorf("RUN %s printed:\n%s\nwant:\n%s", upper, got, want)

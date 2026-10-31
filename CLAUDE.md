@@ -431,7 +431,7 @@ never had.
   the programs end to end (`testdata/fortran/flow.for`, `callback.for`, a FORTRAN
   routine as a handler, an AST routine, and LIB$CALLG's), and the close-out,
   FORTRAN-INTERNALS.md's section 12 on control flow and subprograms.
-  Phase 80 (in progress) is formatted, list-directed, and namelist I/O; subtask 1
+  Phase 80 (done 2026-10-31) is formatted, list-directed, and namelist I/O; subtask 1
   (2026-10-31) is the survey, its doc's Part A, which runs VMS's FORRTL.EXE
   as a black box (`FOR$WRITE_SO` takes a format's text), accepted by the author the
   same day; subtask 2 (2026-10-31) is the probe, `testdata/for80`, two rounds on
@@ -511,7 +511,12 @@ never had.
   them: unit 6 read at a terminal (`FTN$$UNIT_FIND`, DEV$V_TRM; elsewhere still
   ERRDURREA), a `$` prompt left open at image rundown ended (`rms.FileTable.Rundown`),
   a name only declared no use of another unit's (`sema`'s `onlyDeclared`), and MACRO's
-  POPL; `TestFortranTerminal`, `TestFortranTerminalControl` (FOR80T as FORTRAN).
+  POPL; `TestFortranTerminal`, `TestFortranTerminalControl` (FOR80T as FORTRAN);
+  subtask 14 (2026-10-31) is programs end to end with terminal input
+  (`testdata/fortran`'s `name.in`: `inventory.for`, `dialog.for`) and the close-out
+  (FORTRAN-INTERNALS.md's sections on NAMELIST, units and the terminal, and the
+  error model; MANUAL.md's 14.7); the phase doc's "Where things stand" lists what
+  is left (OPEN and the other units are Phase 81's).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -790,7 +795,8 @@ never had.
   stopped.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
-  output and `$STATUS`, written by hand from the language's rules.
+  output and `$STATUS`, written by hand from the language's rules, and
+  for a program that reads the terminal `name.in`, what is typed (Phase 80).
   `TestFortranPrograms` (`internal/console/fortranprograms_test.go`)
   runs FORTRAN, MACRO, LINK, and RUN on each (the first three must say
   nothing) and compares the output; `fortranPagingPrograms` also run

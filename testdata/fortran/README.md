@@ -9,6 +9,10 @@ first three said nothing, and compares RUN's output with `name.out`.
 Every program runs with paging off; those in `fortranPagingPrograms`
 run with paging on too.
 
+A program that reads the terminal has a third file, `name.in`, the lines
+typed at it (Phase 80, subtask 14); the test's terminal doesn't echo them,
+so a reply doesn't show after its prompt.
+
 The expected output is written from the language's rules (the *VAX
 FORTRAN Language Reference Manual*, and the phase doc's choices for
 list-directed output), not copied from a run: there is no VAX FORTRAN
@@ -80,3 +84,5 @@ for the directory, every time.
 | `formats.for` | Formatted output through FTNRTL's format interpreter (Phase 80, subtask 4): text and H constants, X, T, TL, and TR, slashes, a group with a colon, reversion to a group, a `$` record continued by a `+` one, run-time formats in a variable and an array, A of several widths and of an integer, Q passing an item over, TYPE, and the conditions SYNERRFOR, INFFORLOO (taken by ERR=), and OUTSTAOVE past column 133 |
 | `intedit.for` | Integer and logical editing (Phase 80, subtask 5): I with minimum digits, SP and SS, and I3.0 of 0; O and Z of an integer, a word, and a byte; L; the default widths of Table 8-4; Z and O of a REAL's bytes; asterisks and OUTCONERR, the statement going on; I of a REAL, FORVARMIS at the statement's end, its record written |
 | `floatedit.for` | Floating editing (Phase 80, subtask 6): F, E, D, and G with widths and digits; the scale factor and how long it lasts; SP and SS; complex values as two fields; the default widths of Table 8-4 by the item's type; the forms G chooses; asterisks and OUTCONERR, the statement going on; F of an INTEGER, FORVARMIS at the statement's end, its records written |
+| `inventory.for` | Formatted input end to end (Phase 80, subtask 14), `inventory.in` its records: fixed columns read by a FORMAT until END=, a bad number taken by ERR= and counted, a price with no decimal point placed by F8.2, a short record padded with blanks; a report with headings at tab stops, repeated characters, a line per item, totals, a title written to an internal file, and the totals as a NAMELIST group |
+| `dialog.for` | An interactive program (Phase 80, subtask 14), `dialog.in` what is typed: prompts left open by `$`, a command loop ended by the input's end, ACCEPT with A and list-directed (a repeat count, a null value, a slash), a bad number taken by IOSTAT=, a NAMELIST group read from the terminal and written back |

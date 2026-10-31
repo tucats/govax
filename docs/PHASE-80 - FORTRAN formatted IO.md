@@ -1,17 +1,15 @@
 # Phase 80 — FORTRAN formatted and list-directed I/O
 
-**Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
-accepted by the author the same day; subtask 2 (the probe) done the same day, two
-rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
-compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
-interpreter) done the same day; subtask 5 (integer, logical, and character
-editing), subtask 6 (floating editing), subtask 7 (list-directed output
-and input), subtask 8 (variable format expressions and run-time formats), and
-subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
-(LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run; subtask 11
-(NAMELIST) done the same day, held to VMS's FORRTL; subtask 12 (the error model)
-done the same day; subtask 13 (the terminal statements end to end) done the same
-day. Needs Phase 79 (control flow, for
+**Status:** done 2026-10-31: subtask 1 (the survey, Part A) accepted by the
+author the same day; subtask 2 (the probe), two rounds on VMS 7.1; subtasks 3 to 9
+(FORMAT's check and every statement through the compiler, the format interpreter,
+integer, logical, character, and floating editing, list-directed I/O, variable
+format expressions and run-time formats, internal files, ENCODE, and DECODE);
+subtask 10 (LIB$TPARSE, with `$FILESCAN`), held to VMS 7.1's run; subtask 11
+(NAMELIST), held to VMS's FORRTL; subtask 12 (the error model); subtask 13 (the
+terminal statements end to end); and subtask 14 (programs end to end and the
+close-out), all the same day; "Where things stand", before the progress log,
+lists what is left for later. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -807,7 +805,8 @@ subtasks land.
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
     and DUNGEON's use of them. Done ("Subtask 13", below).
 14. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
-    FTNRTL; MANUAL.md's chapter 14 and its differences).
+    FTNRTL; MANUAL.md's chapter 14 and its differences). Done ("Subtask 14",
+    below).
 
 ## Subtask 3: what was built (2026-10-31)
 
@@ -1665,6 +1664,56 @@ elsewhere), and `TestFloatingAliases` (POPL). Run by hand under a pseudo-termina
 through cmd/govax, a prompt, its echoed reply, and Ctrl/Z (`*Exit*`, then END=)
 fall as on VMS.
 
+## Subtask 14: what was built (2026-10-31)
+
+**Programs end to end.** `TestFortranPrograms` takes a program's terminal input
+from `name.in` beside it, when there is one, and two programs use it, both run in
+both paging modes, their outputs written by hand from the rules:
+
+- `inventory.for`: fixed-column records read by a FORMAT until END=, a bad number
+  taken by ERR= and counted, a price with no decimal point placed by F8.2's d, a
+  short record padded with blanks; a report with headings at tab stops, repeated
+  groups, totals, a title written to an internal file, and the totals as a
+  NAMELIST group. Its NAMELIST lines were first written wrongly by hand (a blank
+  before each, a full field after `= `); govax's are VMS's layout (round 2), so the
+  expected file was corrected, not govax.
+- `dialog.for`: an interactive program: prompts left open by `$`, a command loop
+  ended by the input's end, ACCEPT with A and list-directed (a repeat count, a null
+  value, a slash), a bad number taken by IOSTAT= (LISIO_SYN, 59), and a NAMELIST
+  group read from the terminal and written back.
+
+**The close-out.** FORTRAN-INTERNALS.md's chapter 13 has three new sections:
+NAMELIST (a statement with no items, built from list-directed I/O's pieces),
+units and the terminal (two streams, process-permanent files, RMS's carriage
+control and the open line), and the error model (one status, taken by a branch, a
+store, or a signal; the signal's layout; ERRSNS's two routines), and chapter 14 the
+probes of VMS's library as FTNRTL's requirement; the tour's introduction covers
+Phase 80. MANUAL.md's chapter 14 says the phase is done and adds this phase's choices
+to its differences (14.7): the record limits, BLANK's default, units 5 and 6, the
+terminal's overprinting, namelist array input, and ERRSNS. PLAN.md marks the phase
+done.
+
+## Where things stand
+
+Phase 80 is done: every formatted, list-directed, and namelist I/O statement at the
+terminal and to internal files, with ERR=, END=, IOSTAT=, the FOR messages, and
+ERRSNS, held to VMS's FORRTL by `testdata/for80` and `testdata/nml80`. Left for
+later:
+
+- **Phase 81:** OPEN and CLOSE and the other units (0 to 119, now NOTIMP), with
+  their default names (FOR$READ, FOR$PRINT, FORnnn.DAT), BLANK='NULL' after OPEN,
+  unformatted and direct access I/O (which DUNGEON's data base needs).
+- **Phase 83:** the system routines DUNGEON calls (EXIT, IDATE, RAN), and ERRSNS
+  after a math library error.
+- **Phase 86:** DUNGEON itself. Its terminal statements already compile and run as
+  this phase's tests use them.
+- **Unconfirmed on VMS,** each a choice recorded above: the record limits at a
+  terminal; reading unit 6 at a terminal; a `+` record after an ended line, which
+  starts a line of its own on govax's line-at-a-time terminal where VMS's
+  overprints; namelist input to arrays; whether ERRSNS saves an error a specifier
+  took; the user PC of an error found by an item's call; which of units -1 and -2,
+  and -3 and -4, each statement uses.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1781,3 +1830,8 @@ fall as on VMS.
   DUNGEON uses them: unit 6 read at a terminal, a prompt open at the image's end
   ended, a sema BADUSE defect DUNGEON's sources showed, and MACRO's POPL;
   "Subtask 13" above.
+- **2026-10-31, subtask 14, done, and the phase.** Two end-to-end programs with
+  terminal input (`inventory.for`, `dialog.for`, the harness's `name.in`), and the
+  close-out: FORTRAN-INTERNALS.md's sections on NAMELIST, units and the terminal,
+  and the error model; MANUAL.md's chapter 14 and its differences; "Subtask 14" and
+  "Where things stand" above.

@@ -7,7 +7,7 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 79) the compiler parses every statement of the
+So far (Phases 74 to 80) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
@@ -15,7 +15,10 @@ adjustable arrays, procedures as arguments, the built-in functions, and
 statement functions; every expression in every type (BYTE, LOGICAL and
 INTEGER of every length, REAL\*4, \*8 in D or G, and \*16, COMPLEX\*8 and
 \*16, CHARACTER), with every intrinsic function; assignment; every IF, DO,
-and GO TO, CALL, RETURN, STOP, and PAUSE; and `PRINT *` and `WRITE (*,*)`.
+and GO TO, CALL, RETURN, STOP, and PAUSE; and the I/O statements, READ,
+WRITE, PRINT, TYPE, ACCEPT, ENCODE, and DECODE, formatted, list-directed,
+and namelist, at the terminal and to internal files, with ERR=, END=,
+IOSTAT=, and ERRSNS (the other units, OPEN, and CLOSE are Phase 81's).
 The tour follows one small program through every pass (section 1), then
 takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
@@ -1699,6 +1702,75 @@ characters, at the address of a variable of any type. Their fourth argument is t
 count as a longword rather than a descriptor's length, because the real library takes
 counts a descriptor's word can't hold.
 
+### NAMELIST: a statement with no items
+
+`READ (5, PARAM)` names no items: the group's names are in the input, in any
+order, any subset. So a namelist statement can't be the begin, item, and end calls
+the others are; `FTN$READ_SN` and `FTN$WRITE_SN` do the whole statement at the begin
+call, and `FTN$IO_END` only ends it. What the compiler gives them is the group's
+block in `$PDATA`: the group's name, a count, and for each entity its name and a
+descriptor, the same descriptor an item call would have had. With the names at run
+time, input becomes a lookup: read a name, find its descriptor, read the subscripts
+or substring after it and narrow the descriptor to the place they name, then read
+values into it as list-directed input does.
+
+`ftn_namelist.mar` is mostly reuse, which is the point of having built list-directed
+I/O in pieces: input takes `ftn_listin.mar`'s exported routines for the blanks
+between values, a character constant across records, and a value's text kept for each
+item's conversion, and output sends each value through `ftn_listout.mar`'s field
+routine with a flag that captures the field rather than placing it in a record, so a
+namelist value is written exactly as a list-directed one is. What is new is the
+grammar around them (where a group starts and ends, what a word followed by `=` means,
+the conditions that name what they found) and VMS's library settled each of those
+rules, by a probe of 786 cases (`testdata/nml80`).
+
+### Units and the terminal
+
+A unit (`ftn_units.mar`) is a block holding a FAB, a RAB, and a NAM, connected at
+its first use by `$CREATE` and `$CONNECT`, never at image start: a program that does
+no I/O opens nothing. There are two streams so far, SYS$OUTPUT for units 6, -1, and
+-2 and SYS$INPUT for 5, -3, and -4, and a unit shares its stream with the default
+units on the same file. That sharing is visible: a prompt written by `TYPE` with `$`
+leaves the line open, and the `READ (5,...)` that follows reads the reply on it. The
+other unit numbers, 0 to 119, wait for OPEN.
+
+Both files are process-permanent (`SYS$OUTPUT` and `SYS$INPUT` exist before the image
+does), so `$CREATE` opens nothing new: it gives the FAB indirect access to the
+process's own file, the terminal or a procedure's data lines. That is why FTNRTL needn't
+know which it has, with two exceptions it asks the FAB's device characteristics about:
+a namelist `?` is answered only at a terminal, and an output unit may be read only at
+one, as a program like DUNGEON does (elsewhere VMS's library refuses, RMS$_FAC).
+
+`RAT=FTN` makes RMS, not FTNRTL, turn a record's first byte into what the terminal is
+sent: a new line, a blank line first, a new page, nothing for `+`, and for `$` no
+carriage return after, the cursor left at the prompt's end. govax's terminal is written
+a line at a time, so RMS keeps one fact, whether the last line is still open, and ends
+it before any record that starts its own line, when the terminal is read, and at
+image rundown, so DCL's prompt comes on a line of its own.
+
+### Errors: one status, three ways to take it
+
+An I/O error is found deep inside a statement: in an item's conversion, in RMS, in
+the format's walk. FTNRTL doesn't act on it there. The first error goes in the
+statement's context, the remaining item calls do nothing, and `FTN$IO_END` returns it
+as R0. Compiled code then does what the statement asked: with END= or ERR=, a branch
+on the status (an end of file is one value, `FOR$_ENDDURREA`, and anything else
+another); with IOSTAT=, the FOR number stored, -1 at an end of file; with neither,
+FTNRTL signals the condition itself before returning. So the compiler's side of every
+I/O statement is the same few instructions, whatever went wrong, and the run-time
+library alone decides what an error is.
+
+A signaled condition is laid out as VMS's library's, because a user sees its
+message: the condition, then FAO arguments for its text (the unit, the file's name,
+which RMS returned in the unit's NAM, and the user PC), then RMS's own status and
+status value for an error that came from RMS, so `$PUTMSG` adds `-RMS-E-EOF`, then
+for a conversion error the text that failed, `FOR$_INVTEXREC`. An error, not severe,
+is signaled with LIB$SIGNAL and the program goes on; a severe one with LIB$STOP. Every
+failure is also saved, taken or not, for `CALL ERRSNS`, which the compiler turns into
+a call of `FTN$ERRSNS` or, for INTEGER\*2 arguments, `FTN$ERRSNS_W`: a routine taking
+arguments by reference can't see their lengths, so the compiler, which can, chooses
+the routine.
+
 ## 14. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
@@ -1730,6 +1802,15 @@ pipeline is tested end to end on govax.
   prints them rounded, so that its output is the mathematics'. FTNRTL's routines are tested from MACRO
   callers (`TestFTNRTL`, `TestFTNRTLListOutput`), in both of RUN's
   paging modes.
+- **A real run-time library as the requirement.** No VAX FORTRAN compiler was at
+  hand, but VMS's FORRTL.EXE was, and MACRO programs can call its statement
+  routines directly, a format as text. So FTNRTL's behavior is VMS's library's,
+  studied from outside, never its code: `testdata/for80` and `testdata/nml80` ran
+  thousands of cases on VMS (and on FORRTL over govax), and generated FORTRAN
+  twins of the same cases, `for80.for` among them, hold FTNRTL to those records line
+  for line (`TestFor80Oracle`, `TestFor80InputOracle`, `TestNML80Oracle`). A
+  program that reads the terminal in `testdata/fortran` has a `name.in` of what is
+  typed.
 - **Programs of several files.** `TestFortranModules` compiles and
   assembles each file of a directory of `testdata/fortran/modules`
   apart, and links them once per line of the directory's `links.txt`,

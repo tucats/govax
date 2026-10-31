@@ -1,0 +1,19 @@
+ 6 items, 1 refused
+Item          Qty    Price      Value
+-------------------------------------
+WIDGET         10     2.50      25.00
+GADGET          3    19.99      59.97
+BOLT          250     0.04      10.00
+GEAR            7     4.50      31.50
+FLANGE          2  1234.50    2469.00
+NUT             0     0.00       0.00
+-------------------------------------
+Total         272             2595.47
+Average price         9.54
+$TOTALS
+N       =           6,
+NBAD    =           1,
+TOTQTY  =         272,
+TOTAL   =   2595.470    
+$END
+  $STATUS == "%X00000001"

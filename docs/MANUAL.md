@@ -4351,7 +4351,7 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 80, in progress, 2026-10-31):** the compiler reads
+**Where things stand (Phase 80 done, 2026-10-31):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
@@ -4359,7 +4359,8 @@ subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
 input and output, with every edit descriptor and variable format
 expressions, list-directed input and output, and namelist input and output, and stops a
-program with `%FOR-F-NOTIMP` at a unit other than the terminal's (section 14.2). Any other statement draws
+program with `%FOR-F-NOTIMP` at a unit other than the terminal's (section 14.2):
+OPEN, CLOSE, and the other units are Phase 81's. Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -5253,6 +5254,23 @@ FORTRAN compiler was available to check them). So far:
   library does: a number alone for a COMPLEX item, and a number for a
   LOGICAL item (`1` stores 1). `0*7` stores the 7, then is
   `%FOR-F-LISIO_SYN`.
+- A formatted record written to a unit holds 133 bytes with its carriage
+  control, and one read holds 199 (`%FOR-F-OUTSTAOVE`, `%FOR-F-INPRECTOO`), the
+  limits VMS's library showed writing a file and reading a procedure's data;
+  at a terminal they weren't checked on VMS.
+- Without OPEN, a blank in a numeric input field is a zero (BLANK='ZERO', the
+  language manual's default with no OPEN), so `1 2` under I3 is 102; BN and BZ
+  in the FORMAT change it.
+- Units 5 and 6 at a terminal may each be read and written; elsewhere a READ
+  of unit 6 is `%FOR-F-ERRDURREA`, as VMS's library gave, and a WRITE of unit 5
+  is what RMS allows SYS$INPUT. Reading unit 6 at a terminal wasn't checked on
+  VMS.
+- A `+` record after a line that ended starts a new line at govax's terminal,
+  where VMS's would overprint the line before (section 14.2).
+- Namelist input to an array follows the language manual; VMS's library
+  couldn't be made to read one from MACRO, so it is unconfirmed.
+- ERRSNS reports every I/O error since its last call, those taken by ERR=,
+  END=, or IOSTAT= too; whether VMS's library saves those wasn't checked.
 
 ---
 

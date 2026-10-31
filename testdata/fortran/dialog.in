@@ -1,0 +1,13 @@
+Pat Smith
+A
+1.5 2*2.25,, /
+S
+3
+S
+x
+N
+ $SETUP K=2, A(4)=0.5, VERBOSE=T $
+L
+?
+S
+5

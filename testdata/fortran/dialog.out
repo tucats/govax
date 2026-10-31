@@ -1,0 +1,12 @@
+Your name? Hello, Pat.
+Command: Five numbers: Command: How many? Sum of the first 3:    6.000
+Command: How many? Not a number:          59
+Command: Command: $SETUP
+K       =           2,
+VERBOSE = T,
+A       =   1.500000    , 2*2.250000    ,  0.5000000    ,   9.000000    
+$END
+Command: Unknown command: ?
+Command: How many? Sum of the first 5:   15.500
+Command: Goodbye.
+  $STATUS == "%X00000001"
