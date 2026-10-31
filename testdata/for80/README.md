@@ -19,8 +19,9 @@ holds FTNRTL to `vax/for80-vax.txt`.
 | `for80r.com` | Runs `FOR80`, with the records its unit 5 cases read |
 | `for80.com` | Builds and runs everything |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
-| `for80.for` | The output cases to unit 6 as FORTRAN statements, for govax (Decision 2) |
-| `for80i.for`, `for80i.dat` | The formatted and list-directed input cases as FORTRAN READs from SYS$INPUT, and their records, each case's under its number, for govax |
+| `for80.for` | The output cases to unit 6 as FORTRAN statements, for govax (Decision 2), each ending with ERRSNS's five values, compared with VMS's `e=` (subtask 12) |
+| `for80i.for`, `for80i.dat` | The formatted and list-directed input cases as FORTRAN READs from SYS$INPUT, and their records, each case's under its number, for govax; ERRSNS's values after each, as in `for80.for` |
+| `for80e.for` | `for80e.mar`'s ten conditions as FORTRAN statements, for govax: `TestFor80FTNRTLMessages` holds FTNRTL's messages to run 3's (subtask 12) |
 | `vax/for80-vax.txt` | Run 1 on VMS, as `FOR80D` printed it |
 | `vax/for80p-vax.txt` | Run 2 on VMS: the same cases with unit 6 a process-permanent file |
 | `vax/for80.log` | `FOR80.COM`'s log: run 3's messages, and the file's attributes |
@@ -140,9 +141,10 @@ holds their messages and statuses to VMS's `vax/for80.log`.
 holds FTNRTL to VMS's run: `for80.for` is round 1's output cases to unit 6, each
 a run-time format in a character constant (so a format the compiler would refuse
 reaches FTNRTL's parser, as it reached FORRTL's), between a `#n` line and a `=n`
-line with its IOSTAT. The test runs it with SYS$OUTPUT a file, so its records
-keep their first bytes as VMS's FOR006 file did, and matches each case's records
-and IOSTAT with `vax/for80-vax.txt`'s records and e=. A case whose IOSTAT is 2,
+line with its IOSTAT and, since subtask 12, ERRSNS's five values. The test runs it
+with SYS$OUTPUT a file, so its records keep their first bytes as VMS's FOR006 file
+did, and matches each case's records, IOSTAT, and ERRSNS with `vax/for80-vax.txt`'s
+records and e= line. A case whose IOSTAT is 2,
 NOTIMP, uses an edit FTNRTL doesn't have yet, and waits for its subtask.
 
 `TestFor80InputOracle` (the same file, Phase 80's subtask 5) does the same for
@@ -151,8 +153,10 @@ record, and `rd5` and `rl5`, from SYS$INPUT; those with G-floating items come la
 subroutines with `OPTIONS /G_FLOATING`, as `for80.for`'s do), each a READ from unit 5 with a run-time format or `*`, its
 items in 16-byte slots of a COMMON block whose bytes are first set to 55s as
 VMS's were. `for80i.dat` holds each case's records under a `#n` line, then three
-`/` lines as `FOR80R.COM` had, and the test types it at the program. Each case
-prints its IOSTAT and what its slots hold, which must be VMS's e= and `v` lines.
+`/` lines as `FOR80R.COM` had, and the test runs the program from a command
+procedure with those records as its data lines, as `FOR80R.COM` did. Each case
+prints its IOSTAT, ERRSNS's values, and what its slots hold, which must be VMS's
+e= and `v` lines (an `rd` case's unit is 5 on govax, -5 on VMS).
 An internal record read as a record of SYS$INPUT is the same to the format but
 for what follows it, so the cases whose internal record ran out (e=24) aren't
 compared.

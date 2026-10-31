@@ -189,13 +189,91 @@ func TestFor80Messages(t *testing.T) {
 	dispatch("DEFINE/NOLOG FORRTL DUA5:" + file)
 	copyFor80(t, dispatch)
 
+	proc, want := for80Run3(t)
+	opt := filepath.Join(t.TempDir(), "for80.opt")
+
+	if err := os.WriteFile(opt, []byte("FORRTL/SHAREABLE\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for80CopyRun3(t, dispatch, proc)
+	dispatch(`COPY "` + opt + `"/HOST FOR80.OPT`)
+
+	if out := dispatch("MACRO/NOLIST FOR80E"); out != "" {
+		t.Fatalf("MACRO: %s", out)
+	}
+
+	if out := dispatch("LINK/NOMAP/TRACEBACK FOR80E,FOR80/OPTIONS"); out != "" {
+		t.Fatalf("LINK: %s", out)
+	}
+
+	got := for80MessageLines(dispatch("@RUN3"))
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("run 3:\ngovax:\n%s\nVMS:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestFor80FTNRTLMessages runs run 3 on FTNRTL: FOR80E.FOR, each part of
+// FOR80E.MAR as the FORTRAN statement that makes it (gen.go's errorFortran),
+// with no handler, and holds the messages and statuses to VMS's log (Phase 80,
+// subtask 12): the unit, the file's name, the secondary messages (INVTEX,
+// INVTEXREC with the record number, RMS's EOF), and the image's status. The
+// user PC is each image's own, so its value isn't compared.
+func TestFor80FTNRTLMessages(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+	dsk := filepath.Join(t.TempDir(), "for80.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD51 FOR80`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+
+	path, err := filepath.Abs(filepath.Join(for80Dir, "for80e.for"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dispatch(`COPY "` + path + `"/HOST FOR80E.FOR`)
+
+	proc, want := for80Run3(t)
+	for80CopyRun3(t, dispatch, proc)
+
+	for _, command := range []string{"FORTRAN FOR80E", "MACRO/NOLIST FOR80E", "LINK/NOMAP FOR80E"} {
+		if out := dispatch(command); out != "" {
+			t.Fatalf("%s: %s", command, out)
+		}
+	}
+
+	got := for80MessageLines(dispatch("@RUN3"))
+
+	for i := range want {
+		want[i] = for80UserPC.ReplaceAllString(want[i], "${1}xxxxxxxx")
+	}
+
+	for i := range got {
+		got[i] = for80UserPC.ReplaceAllString(got[i], "${1}xxxxxxxx")
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("run 3 on FTNRTL:\ngovax:\n%s\nVMS:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// for80UserPC matches a FOR message's user PC line.
+var for80UserPC = regexp.MustCompile(`^(  user PC )[0-9A-F]{8}$`)
+
+// for80Run3 reads run 3 from VMS's log, FOR80E's symbol to the DIRECTORY
+// after it: the procedure that runs it again (each part, the record part F
+// reads, the statuses shown) and the lines for80MessageLine compares. VMS
+// writes a message of several lines as one record, CR LF between them.
+func for80Run3(t *testing.T) (string, []string) {
+	t.Helper()
+
 	log, err := os.ReadFile(filepath.Join(for80Dir, "vax", "for80.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Run 3 is the log from FOR80E's symbol to the DIRECTORY after it. VMS
-	// writes a message of several lines as one record, CR LF between them.
 	text := strings.ReplaceAll(string(log), "\r", "")
 	start := strings.Index(text, "$ FOR80E := ")
 	end := strings.Index(text, "$ DIRECTORY/SIZE FOR*.*")
@@ -221,37 +299,33 @@ func TestFor80Messages(t *testing.T) {
 		}
 	}
 
-	host := filepath.Join(t.TempDir(), "run3.com")
-	opt := filepath.Join(t.TempDir(), "for80.opt")
+	return proc.String(), want
+}
 
-	for name, body := range map[string]string{host: proc.String(), opt: "FORRTL/SHAREABLE\n"} {
-		if err := os.WriteFile(name, []byte(body), 0o600); err != nil {
-			t.Fatal(err)
-		}
+// for80CopyRun3 puts run 3's procedure on the default volume as RUN3.COM.
+func for80CopyRun3(t *testing.T, dispatch func(string) string, proc string) {
+	t.Helper()
+
+	host := filepath.Join(t.TempDir(), "run3.com")
+	if err := os.WriteFile(host, []byte(proc), 0o600); err != nil {
+		t.Fatal(err)
 	}
 
 	dispatch(`COPY "` + host + `"/HOST RUN3.COM`)
-	dispatch(`COPY "` + opt + `"/HOST FOR80.OPT`)
+}
 
-	if out := dispatch("MACRO/NOLIST FOR80E"); out != "" {
-		t.Fatalf("MACRO: %s", out)
-	}
+// for80MessageLines is the lines of a run's output that for80MessageLine
+// compares, the output's records joined by bars.
+func for80MessageLines(out string) []string {
+	var lines []string
 
-	if out := dispatch("LINK/NOMAP/TRACEBACK FOR80E,FOR80/OPTIONS"); out != "" {
-		t.Fatalf("LINK: %s", out)
-	}
-
-	var got []string
-
-	for _, line := range strings.Split(dispatch("@RUN3"), "|") {
+	for line := range strings.SplitSeq(out, "|") {
 		if for80MessageLine(line) {
-			got = append(got, line)
+			lines = append(lines, line)
 		}
 	}
 
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Errorf("run 3:\ngovax:\n%s\nVMS:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
-	}
+	return lines
 }
 
 // TestFor80Round3 runs round 3 of the probe, what rounds 1 and 2 left open of

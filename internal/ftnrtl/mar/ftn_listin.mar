@@ -111,11 +111,17 @@ CTX_LI_SLASH	= CTX_LI_AFTER+1	; byte: 1 once a slash ended the statement
 CTX_LI_ZERO	= CTX_LI_SLASH+1	; byte: 1 if the repeat count was 0
 CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a new record starts:
 					;  0, or 1 for namelist input (FTN_NAMELIST)
+CTX_TEXT	= CTX_RECP+36		; long: an input conversion error's text,
+					;  and its length (FTN_STATEMENT's message)
 
 V_NULL		= 0			; the forms of a value
 V_WORD		= 1
 V_TEXT		= 2
 V_COMPLEX	= 3
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+APOSTROPHE:	.ASCII	/'/		; a character constant's text, in a message
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -406,7 +412,9 @@ READ_COMPLEX:
 	BNEQ	80$
 	INCL	CTX_POS(R6)
 	RSB
-80$:	PUSHL	#FOR$_INPCONERR
+80$:	MOVL	CTX_LI_BUFFER(R6),CTX_TEXT(R6) ; the text so far, for a message
+	MOVL	CTX_LI_LENGTH(R6),CTX_TEXT+4(R6)
+	PUSHL	#FOR$_INPCONERR
 	PUSHL	R6
 	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
 90$:	RSB
@@ -465,6 +473,12 @@ GROW:	.WORD	^M<R2,R3,R4,R5,R6,R7>
 ; (a DSC$K_DTYPE_ code), length bytes at address, the current value, as the
 ; introduction says, or fails the statement and leaves the item alone.
 ;
+; FOR$_INPCONERR's message shows a text (FTN_STATEMENT's FOR$_INVTEX), as
+; VMS's namelist input showed it (testdata/nml80, nml80e): the value's text,
+; but for a character constant a lone apostrophe ('A' to an INTEGER), and
+; for a number too large for a shorter integer item nothing (70000 to an
+; INTEGER*2). List-directed input's are taken to be the same, unconfirmed.
+;
 ; The routine's frame, below FP, holds the converted value, so that nothing
 ; reaches the item unless all of it is good.
 ;
@@ -505,7 +519,13 @@ BAD_TYPE:
 	BRW	FAILED
 
 CANT_CONVERT:
-	PUSHL	#FOR$_INPCONERR
+	MOVL	R7,CTX_TEXT(R6)		; the text, for the message
+	MOVL	R8,CTX_TEXT+4(R6)
+	CMPB	CTX_LI_KIND(R6),#V_TEXT
+	BNEQ	10$
+	MOVAB	APOSTROPHE,CTX_TEXT(R6)	; a character constant's
+	MOVL	#1,CTX_TEXT+4(R6)
+10$:	PUSHL	#FOR$_INPCONERR
 	BRW	FAILED
 
 ;
@@ -571,19 +591,22 @@ PUT_INTEGER:
 	CMPL	16(AP),#1
 	BNEQ	20$
 	CVTLB	R2,R3
-	BVS	NOT_INTEGER
+	BVS	NARROW
 	MOVB	R3,@12(AP)
 	RET
 20$:	CMPL	16(AP),#2
 	BNEQ	30$
 	CVTLW	R2,R3
-	BVS	NOT_INTEGER
+	BVS	NARROW
 	MOVW	R3,@12(AP)
 	RET
 30$:	MOVL	R2,@12(AP)
 	RET
 NOT_INTEGER:
 	BRW	CANT_CONVERT
+NARROW:	CLRL	CTX_TEXT+4(R6)		; too large for a byte or a word: the
+	PUSHL	#FOR$_INPCONERR		;  message shows no text
+	BRW	FAILED
 
 ;
 ; The floating types: R2 is which of OTS$CVT_T_F, D, G, or H (CONVERT).

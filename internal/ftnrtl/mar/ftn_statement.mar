@@ -40,10 +40,35 @@
 ; control block gives none of ERR=, END=, and IOSTAT= never sees a
 ; failure: FTN$IO_END signals the condition (LIB$STOP, ending the image,
 ; for a severe one; LIB$SIGNAL for an error, after which the program
-; goes on) with VMS's three FAO arguments, the unit, the file, and the
-; user PC (where FTN$IO_END returns). An end of file goes to END=, or
-; ERR= without it, so either one, or IOSTAT=, takes it; any other error
-; is taken by ERR= or IOSTAT=.
+; goes on). An end of file goes to END=, or ERR= without it, so either
+; one, or IOSTAT=, takes it; any other error is taken by ERR= or IOSTAT=.
+;
+; The signal is laid out as VMS's run-time library lays out its own
+; (testdata/for80's run 3, testdata/nml80's conditions):
+;
+;	the condition, then its FAO count and arguments: the unit, the
+;		file's name (a descriptor), and the user PC (where FTN$IO_END
+;		returns), after a namelist condition's text or name
+;	RMS's status and status value, for a failure RMS reported, else
+;		two zeros, which $PUTMSG passes over: -RMS-E-EOF follows
+;		FOR$_ENDDURREA's message
+;	for FOR$_INPCONERR, FOR$_INVTEXREC with the text that couldn't be
+;		converted and the unit's record number, or for an internal file
+;		FOR$_INVTEX with the text alone
+;
+; The file's name is the one RMS gave when the unit was connected
+; (SYS$INPUT:.; for a process-permanent file), and empty for an internal
+; file, a unit not yet connected, and the conditions VMS's library finds
+; before it reaches the file: FOR$_INVLOGUNI, FOR$_RECIO_OPE, and
+; FOR$_SYNERRFOR (a run-time format is parsed first; VMS showed no name
+; for one at a unit not yet used, and the rule for one already in use is
+; govax's, unconfirmed).
+;
+; ERRSNS. Every failure FTN$IO_END sees, taken by a specifier or signaled,
+; is saved for the system subroutine ERRSNS (the manual's D.4.3): its FOR
+; number (24 at an end of file), RMS's status and value (as in the signal),
+; the unit, and the condition value. FTN$ERRSNS and FTN$ERRSNS_W return
+; them, as longwords or as words, and clear them.
 ;
 ; Statements nest: a function called for an item of one statement may
 ; do I/O of its own, to another unit or an internal file (the 1988 VAX
@@ -81,6 +106,12 @@ FOR$_ERRDURWRI	= ^X00188134
 FOR$_ERRDURREA	= ^X0018813C
 FOR$_RECIO_OPE	= ^X00188144
 FOR$_INSVIRMEM	= ^X0018814C
+FOR$_INVLOGUNI	= ^X00188104
+FOR$_INPRECTOO	= ^X001880B4
+FOR$_SYNERRFOR	= ^X001881F4
+FOR$_INPCONERR	= ^X00188204
+FOR$_INVTEXREC	= ^X00188834
+FOR$_INVTEX	= ^X0018883C
 
 ; The control block's fields and flags.
 ICB_W_SIZE	= 0
@@ -123,7 +154,9 @@ CTX_NM_FAO	= CTX_RECP+12		; long: FTN_NAMELIST's message's first FAO
 CTX_NM_CAPTURE	= CTX_RECP+24		; long: where FTN_LISTOUT puts a field for
 					;  FTN_NAMELIST, or 0
 CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a record starts
-CTX_SIZE	= CTX_RECP+36
+CTX_TEXT	= CTX_RECP+36		; long: FOR$_INPCONERR's text, and its
+					;  length (FTN_EDIT, FTN_LISTIN)
+CTX_SIZE	= CTX_RECP+44
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -148,6 +181,10 @@ INTERNAL_UNIT	= -5			; an internal file's unit, as VMS's
 
 STMT_TOP:	.LONG	0		; the statement in progress, or 0
 FREE_LIST:	.LONG	0		; contexts to use again
+
+; The last failure, for ERRSNS: its FOR number, RMS's status and value,
+; the unit, and the condition value, in ERRSNS's order; all 0 for none.
+LAST_ERROR:	.LONG	0, 0, 0, 0, 0
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -274,6 +311,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CLRL	CTX_NM_FAO(R3)
 	CLRL	CTX_NM_CAPTURE(R3)
 	CLRL	CTX_LI_COLUMN(R3)
+	CLRQ	CTX_TEXT(R3)
 	CLRL	CTX_STREAM(R3)
 	CLRL	CTX_RECLEN(R3)
 	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
@@ -294,9 +332,10 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)	; its stream, or 0 for no unit
 	BLBS	R0,37$
 	BRW	FAIL
-37$:	MOVL	R1,CTX_STREAM(R3)
+37$:
 	MOVL	CTX_NEXT(R3),R1		; the statements below
 40$:	BEQL	60$
 	TSTB	CTX_INTERNAL(R1)
@@ -392,10 +431,18 @@ FAIL:	TSTL	CTX_STATUS(R3)
 ; FTN$IO_END()
 ;
 ; Ends the statement in progress: writes its last record, pops its
-; context, and returns its status in R0, or signals its error, as the
-; introduction says.
+; context, saves a failure for ERRSNS, and returns its status in R0, or
+; signals its error, as the introduction says.
 ;
-	.ENTRY	FTN$IO_END,^M<R2,R3>
+; The frame below FP holds the signal's two descriptors, the text's and
+; the file's, and the unit's report (FTN$$UNIT_REPORT's five longwords).
+;
+TEXT_DESC	= -8
+FILE_DESC	= -16
+REPORT		= -36			; the name's length and address, RMS's
+					;  status and value, the records
+
+	.ENTRY	FTN$IO_END,^M<R2,R3,R4,R5,R6>
 	MOVL	STMT_TOP,R2
 	BNEQ	5$
 	CLRL	R0			; no statement
@@ -425,43 +472,132 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	CLRL	R0			; success
 	RET
 	;
-	; A failure: its FOR number (the message number, bits 3 to 14 of the
-	; condition), or -1 for an end of file; returned if a specifier
-	; takes it, signaled if none does.
+	; A failure. What its unit's stream says of it: the file's name, and
+	; RMS's status and value, used only for the failures RMS reports.
 	;
-20$:	EXTZV	#3,#12,R3,R0
+20$:	SUBL2	#-REPORT,SP
+	CLRQ	REPORT(FP)		; no name, no RMS status
+	CLRQ	REPORT+8(FP)
+	CLRL	REPORT+16(FP)
+	MOVL	CTX_STREAM(R2),R0
+	BEQL	30$
+	PUSHAB	REPORT(FP)
+	PUSHL	R0
+	CALLS	#2,FTN$$UNIT_REPORT	; FTN_UNITS
+	CMPL	R3,#FOR$_INVLOGUNI	; found before the file is reached:
+	BEQL	22$			;  no name
+	CMPL	R3,#FOR$_RECIO_OPE
+	BEQL	22$
+	CMPL	R3,#FOR$_SYNERRFOR
+	BNEQ	24$
+22$:	CLRL	REPORT(FP)
+24$:	CMPL	R3,#FOR$_ENDDURREA	; reported by RMS?
+	BEQL	30$
+	CMPL	R3,#FOR$_INPRECTOO
+	BEQL	30$
+	CMPL	R3,#FOR$_ERRDURREA
+	BEQL	30$
+	CMPL	R3,#FOR$_ERRDURWRI
+	BEQL	30$
+	CLRQ	REPORT+8(FP)		; no: no RMS status
+	;
+	; Saved for ERRSNS.
+	;
+30$:	EXTZV	#3,#12,R3,LAST_ERROR	; the FOR number: bits 3 to 14
+	MOVQ	REPORT+8(FP),LAST_ERROR+4 ; RMS's status and value
+	MOVL	CTX_UNIT(R2),LAST_ERROR+12
+	MOVL	R3,LAST_ERROR+16
+	;
+	; Returned if a specifier takes it: the FOR number, or -1 for an end
+	; of file.
+	;
+	EXTZV	#3,#12,R3,R0
 	CMPL	R3,#FOR$_ENDDURREA
-	BNEQ	30$
+	BNEQ	35$
 	MNEGL	#1,R0
 	BITW	#FLAG_END!FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
-	BNEQ	90$
+	BNEQ	38$
 	BRB	40$
-30$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
-	BNEQ	90$
+35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BEQL	40$
+38$:	RET
 	;
-	; Signaled, with the FAO arguments the FOR messages take: the unit
-	; (a longword), the file (a descriptor's address: an empty name, for
-	; now), and the user PC (where this call returns), after a namelist
-	; condition's text or name. Pushed last first, the descriptor itself
-	; on the stack.
+	; Signaled, the arguments pushed last first; R6 counts them.
 	;
-40$:	CLRQ	-(SP)			; an empty descriptor
-	MOVL	SP,R1
-	PUSHL	16(FP)			; the user PC
-	PUSHL	R1			; the file
-	PUSHL	CTX_UNIT(R2)		; the unit
-	MOVL	#5,R1			; the arguments: the condition, a count,
-	MOVL	CTX_NM_FAO(R2),R0	;  and three FAO arguments,
-	BEQL	45$
-	PUSHL	R0			;  or four
-	INCL	R1
-45$:	SUBL3	#2,R1,-(SP)		; the FAO arguments' count
-	PUSHL	R3			; the condition
-	CMPZV	#0,#3,R3,#4		; severe?
+40$:	MOVZWL	CTX_TEXT+4(R2),TEXT_DESC(FP) ; the text's descriptor
+	MOVL	CTX_TEXT(R2),TEXT_DESC+4(FP)
+	MOVZWL	REPORT(FP),FILE_DESC(FP) ; the file's
+	MOVL	REPORT+4(FP),FILE_DESC+4(FP)
+	CLRL	R6
+	CMPL	R3,#FOR$_INPCONERR	; the text that couldn't be converted
 	BNEQ	50$
-	CALLS	R1,G^LIB$STOP		; never returns
-50$:	CALLS	R1,G^LIB$SIGNAL
+	TSTB	CTX_INTERNAL(R2)
+	BNEQ	45$
+	PUSHL	REPORT+16(FP)		; at a unit, with its record number
+	PUSHAQ	TEXT_DESC(FP)
+	PUSHL	#2
+	PUSHL	#FOR$_INVTEXREC
+	ADDL2	#4,R6
+	BRB	50$
+45$:	PUSHAQ	TEXT_DESC(FP)		; in an internal file, alone
+	PUSHL	#1
+	PUSHL	#FOR$_INVTEX
+	ADDL2	#3,R6
+50$:	PUSHL	REPORT+12(FP)		; RMS's status value
+	PUSHL	REPORT+8(FP)		;  and status
+	PUSHL	16(FP)			; the user PC
+	PUSHAQ	FILE_DESC(FP)		; the file
+	PUSHL	CTX_UNIT(R2)		; the unit
+	ADDL2	#5,R6
+	MOVL	#3,R4			; the FAO arguments: three,
+	MOVL	CTX_NM_FAO(R2),R0
+	BEQL	55$
+	PUSHL	R0			;  or four
+	INCL	R6
+	INCL	R4
+55$:	PUSHL	R4			; their count
+	PUSHL	R3			; the condition
+	ADDL2	#2,R6
+	CMPZV	#0,#3,R3,#4		; severe?
+	BNEQ	60$
+	CALLS	R6,G^LIB$STOP		; never returns
+60$:	CALLS	R6,G^LIB$SIGNAL
 	CLRL	R0			; the program goes on
-90$:	RET
+	RET
+
+;
+; FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])
+; FTN$ERRSNS_W(the same)
+;
+; The system subroutine ERRSNS: the last failure saved by FTN$IO_END, each
+; value stored in the longword (or for FTN$ERRSNS_W the word, its low 16
+; bits) its argument gives the address of, unless the argument is missing
+; or 0; then nothing is saved until the next failure. The compiler chooses
+; the routine by the arguments' type (Decision 13).
+;
+	.ENTRY	FTN$ERRSNS,^M<R2,R3>
+	CLRL	R3			; longwords
+	BRB	ERRSNS
+	.ENTRY	FTN$ERRSNS_W,^M<R2,R3>
+	MOVL	#1,R3			; words
+ERRSNS:	CLRL	R2			; the argument, from 0
+10$:	CMPL	R2,#5
+	BGEQ	40$
+	CMPB	R2,(AP)			; past the arguments given
+	BGEQU	40$
+	MOVL	4(AP)[R2],R0		; its address
+	BEQL	30$			; a null argument
+	MOVL	LAST_ERROR[R2],R1
+	BLBS	R3,20$
+	MOVL	R1,(R0)
+	BRB	30$
+20$:	MOVW	R1,(R0)
+30$:	INCL	R2
+	BRB	10$
+40$:	CLRQ	LAST_ERROR		; cleared
+	CLRQ	LAST_ERROR+8
+	CLRL	LAST_ERROR+16
+	MOVL	#SS$_NORMAL,R0
+	RET
 
 	.END

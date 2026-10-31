@@ -200,9 +200,8 @@ func TestSysGet_userBuffer(t *testing.T) {
 }
 
 // TestSysGet_userBufferTooSmall confirms a record too large for a
-// caller-declared RAB$W_USZ user-buffer capacity fails with RMS$_RSZ,
-// matching SysPut's own equivalent check for an outgoing record that
-// doesn't fit a file's declared format.
+// caller-declared RAB$W_USZ user-buffer capacity is RMS$_RTB: the part
+// that fits stored, RAB$W_RSZ its length, RAB$L_STV the record's size.
 func TestSysGet_userBufferTooSmall(t *testing.T) {
 	f := newCreateFixture(t, true)
 
@@ -221,8 +220,16 @@ func TestSysGet_userBufferTooSmall(t *testing.T) {
 		t.Fatalf("SysGet: %v", err)
 	}
 
-	if r0 != rmsRecordTooBig {
-		t.Errorf("r0 = %d, want rmsRecordTooBig (%d)", r0, rmsRecordTooBig)
+	if r0 != rmsRecordTruncated {
+		t.Errorf("r0 = %d, want rmsRecordTruncated (%d)", r0, rmsRecordTruncated)
+	}
+
+	if rsz := readWord(t, f.ctx, testRabAddr+rabRSZ); rsz != uint16(len(record)-1) {
+		t.Errorf("RAB$W_RSZ = %d, want %d", rsz, len(record)-1)
+	}
+
+	if stv := readLongword(t, f.ctx, testRabAddr+rabSTV); stv != uint32(len(record)) {
+		t.Errorf("RAB$L_STV = %d, want %d", stv, len(record))
 	}
 }
 

@@ -10,7 +10,8 @@ import (
 // TestFortranIOSignals checks the I/O conditions a statement with none of
 // ERR=, END=, and IOSTAT= can't take: FTNRTL signals each as VMS's FORTRAN
 // run-time library does (testdata/for80's run 3, cases I and J), with the
-// unit, an empty file name, and the user PC, and the severe ones end the
+// unit, the file's name (empty for an internal file and for the conditions
+// found before the file is reached), and the user PC, and the severe ones end the
 // image with the condition as its status, message inhibited. What runs
 // before the statement has run; what comes after doesn't. An error, not
 // severe, is signaled after the statement's record, and the program goes
@@ -26,8 +27,8 @@ func TestFortranIOSignals(t *testing.T) {
 		{"RECIO_OPE", "WRITE (6, *) 'OUTER', INNER(6)", "%FOR-F-RECIO_OPE, recursive I/O operation\n  unit 6  file \n", "10188144", false},
 		{"NOTIMP", "WRITE (1, *) 1", "%FOR-F-NOTIMP, not implemented\n", "10188014", false},
 		{"OUTSTAOVE", "WRITE (LINE, 30) 1", "%FOR-F-OUTSTAOVE, output statement overflows record\n  unit -5  file \n", "10188214", false},
-		{"VFEVALERR", "WRITE (6, 20) 1", "%FOR-F-VFEVALERR, variable format expression value error\n  unit 6  file \n", "10188224", false},
-		{"OUTCONERR", "WRITE (6, 10) 3244", "**\n%FOR-E-OUTCONERR, output conversion error\n  unit 6  file \n", "00000001", true},
+		{"VFEVALERR", "WRITE (6, 20) 1", "%FOR-F-VFEVALERR, variable format expression value error\n  unit 6  file SYS$OUTPUT:.;\n", "10188224", false},
+		{"OUTCONERR", "WRITE (6, 10) 3244", "**\n%FOR-E-OUTCONERR, output conversion error\n  unit 6  file SYS$OUTPUT:.;\n", "00000001", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			lines := []string{
@@ -481,6 +482,66 @@ func TestFortranFloatInput(t *testing.T) {
 			"  $STATUS == \"%X00000001\"\n"
 		if got := shareRun(t, d, buf, "FIN"); got != want {
 			t.Errorf("RUN FIN printed:\n%s\nwant:\n%s", got, want)
+		}
+	})
+}
+
+// TestFortranErrsns calls the system subroutine ERRSNS (the manual's D.4.3;
+// Phase 80, subtask 12) after failures a specifier took: an input conversion
+// error in an internal file (unit -5, no RMS status), the values cleared by
+// the call, OUTCONERR into INTEGER*2 arguments with null ones between (the
+// condition's low 16 bits), and an end of file that END= took (FOR number 24,
+// RMS$_EOF, STV 0, as VMS's run gave them).
+func TestFortranErrsns(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+
+		lines := []string{
+			"      PROGRAM ERRS",
+			"      INTEGER IE, IS, IV, IU, IC, IOS, K",
+			"      INTEGER*2 JE, JU, JC",
+			"      CHARACTER*3 T",
+			"   10 FORMAT (1X, 2I5, 2(1X,Z8.8), I6, 1X, Z8.8)",
+			"      T = 'ABC'",
+			"      READ (T, '(I3)', IOSTAT=IOS) K",
+			"      CALL ERRSNS(IE, IS, IV, IU, IC)",
+			"      WRITE (6, 10) IOS, IE, IS, IV, IU, IC",
+			"      CALL ERRSNS(IE, IS, IV, IU, IC)",
+			"      WRITE (6, 10) 0, IE, IS, IV, IU, IC",
+			"      WRITE (6, '(1X,I2)', IOSTAT=IOS) 3244",
+			"      CALL ERRSNS(JE, , , JU, JC)",
+			"      WRITE (6, '(1X,3I6,1X,Z4.4)') IOS, JE, JU, JC",
+			"      READ (5, '(I3)', END=20) K",
+			"   20 CALL ERRSNS(IE, IS, IV, IU, IC)",
+			"      WRITE (6, 10) 0, IE, IS, IV, IU, IC",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]ERRS.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "ERRS")
+
+		for _, command := range []string{"FORTRAN ERRS", "MACRO ERRS", "LINK ERRS"} {
+			shareFindRun(t, d, command)
+
+			if out := buf.String(); out != "" {
+				t.Fatalf("%s said:\n%s", command, out)
+			}
+		}
+
+		c.In = strings.NewReader("")
+
+		want := "   64   64 00000000 00000000    -5 00188204\n" +
+			"    0    0 00000000 00000000     0 00000000\n" +
+			"**\n" +
+			"    63    63     6 81FA\n" +
+			"    0   24 0001827A 00000000     5 001880C4\n" +
+			"  $STATUS == \"%X00000001\"\n"
+
+		if out := shareRun(t, d, buf, "ERRS"); out != want {
+			t.Errorf("RUN ERRS printed:\n%s\nwant\n%s", out, want)
 		}
 	})
 }

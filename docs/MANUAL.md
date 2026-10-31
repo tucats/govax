@@ -4698,15 +4698,27 @@ output it prints, and programs of several files in its `modules` directory.
   error's FOR number (32 for an invalid unit, 40 for an I/O statement
   started in an item of another on the same unit); END= is taken at an end
   of file (ERR= without it), ERR= at an error. A statement with none of
-  them stops the program, as on VMS:
+  them stops the program, as on VMS, with the unit, the file's name (none
+  for an internal file, or when the error comes before the file is reached),
+  and the place the statement was called from; an input conversion error
+  shows the text it couldn't convert, and an end of file RMS's own message:
 
   ```text
-  %FOR-F-INVLOGUNI, invalid logical unit number
-    unit 1000  file
-    user PC 00000650
+  %FOR-F-INPCONERR, input conversion error
+    unit 5  file SYS$INPUT:.;
+    user PC 00000832
+  -FOR-F-INVTEXREC, invalid text is "ABC" in record number 1
   %TRACE-F-TRACEBACK, symbolic stack dump follows
   ...
   ```
+
+  An error, not severe (`OUTCONERR`), shows its message and the program goes
+  on. `CALL ERRSNS(fnum, rmssts, rmsstv, iunit, condval)` returns the last
+  error's FOR number (24 at an end of file), RMS's status and status value
+  when RMS reported it, the unit (-5 for an internal file), and the condition
+  value, then clears them, so a second call returns zeros. Each argument is
+  an INTEGER variable or array element, or null, all INTEGER\*4 or all
+  INTEGER\*2 (which get the low 16 bits), as the manual's D.4.3 says.
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
@@ -4949,6 +4961,7 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
+| `FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])`, `FTN$ERRSNS_W(...)` | The system subroutine ERRSNS: the last I/O error's FOR number, RMS status and status value, unit, and condition value, stored as longwords (or words, for `_W`) where the arguments point, a missing or zero argument passed over; then cleared |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |

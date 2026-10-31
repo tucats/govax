@@ -1536,6 +1536,56 @@ var errorParts = []struct{ letter, what, code string }{
 	{"J", "RECIO_OPE", "\tPUSHAB\tFI5\n\tPUSHL\t#6\n\tCALLS\t#2,G^FOR$WRITE_SO\n\tPUSHAB\tFI5\n\tPUSHL\t#6\n\tCALLS\t#2,G^FOR$WRITE_SO\n\tCALLS\t#0,G^FOR$IO_END\n"},
 }
 
+// errorFortran is FOR80E as FORTRAN, for govax (Phase 80, subtask 12): each
+// part the same statement with no specifier, so FTNRTL signals as FORRTL did,
+// and TestFor80FTNRTLMessages holds its messages and statuses to VMS's log of
+// run 3. Part J's second statement is a function's, called for the first
+// statement's item.
+func errorFortran() string {
+	parts := []struct{ letter, decl, body string }{
+		{"A", "", "WRITE (6, '(1X,I2)') 3244"},
+		{"B", "REAL V1\n      V1 = 3.25", "WRITE (6, '(1X,I5)') V1"},
+		{"C", "", "WRITE (6, '(1X,J3)') 1"},
+		{"D", "", "WRITE (6, '(1X,''A'')') 1"},
+		{"E", "INTEGER V2\n      CHARACTER*3 TABC\n      TABC = 'ABC'", "READ (TABC, '(I3)') V2"},
+		{"F", "INTEGER V2", "READ (5, '(I3)') V2"},
+		{"G", "INTEGER V2", "READ (5, '(I3)') V2"},
+		{"H", "CHARACTER*2 T2", "WRITE (T2, '(1X,I5)') 1"},
+		{"I", "", "WRITE (1000, '(1X,I5)') 1"},
+		{"J", "INTEGER INNER", "WRITE (6, '(1X,I5)') INNER(6)"},
+	}
+
+	var main, subs strings.Builder
+
+	main.WriteString(`C     FOR80E.FOR - written by testdata/for80/gen.go: FOR80E.MAR as
+C     FORTRAN, for govax. The part is the foreign command's text.
+      PROGRAM FOR80E
+      CHARACTER*8 PART
+      CALL LIB$GET_FOREIGN(PART)
+`)
+
+	for _, p := range parts {
+		fmt.Fprintf(&main, "      IF (PART(1:1) .EQ. '%s') CALL PART%s\n", p.letter, p.letter)
+		fmt.Fprintf(&subs, "\n      SUBROUTINE PART%s\n", p.letter)
+
+		if p.decl != "" {
+			fmt.Fprintf(&subs, "      %s\n", p.decl)
+		}
+
+		fmt.Fprintf(&subs, "      %s\n      END\n", p.body)
+	}
+
+	main.WriteString("      CALL LIB$PUT_OUTPUT('FOR80E: the statement returned')\n      END\n")
+	subs.WriteString(`
+      INTEGER FUNCTION INNER(IU)
+      WRITE (IU, '(1X,I5)') 1
+      INNER = 1
+      END
+`)
+
+	return main.String() + subs.String()
+}
+
 func errorProgram() string {
 	var parts, dispatch strings.Builder
 
@@ -2124,6 +2174,7 @@ func main() {
 		"for80i.dat": fortranInputData(),
 		"for80d.mar": dumpProgram,
 		"for80e.mar": errorProgram(),
+		"for80e.for": errorFortran(),
 		"for80t.mar": terminalProgram,
 		"for80.opt":  "SYS$SHARE:FORRTL/SHAREABLE\n",
 		"for80r.com": runProc("FOR80"),
@@ -2232,12 +2283,22 @@ DISMOUNT DUA2
 	fmt.Println(round1Cases, "cases in round 1,", round2Cases, "in round 2,", len(cases), "in round 3")
 }
 
+// ftnEnd writes the statements that end case n of for80.for or for80i.for:
+// ERRSNS's five values (Phase 80, subtask 12), then a line of the case's
+// number, its IOSTAT, and those values, the RMS status and value and the
+// condition in hexadecimal, as VMS's e= line has them.
+func ftnEnd(b *strings.Builder, n int) {
+	ftnStatement(b, "CALL ERRSNS(IE, IS, IV, IU, IC)")
+	ftnStatement(b, fmt.Sprintf("WRITE (6, '(1X,A,I6,I6,1X,Z8.8,1X,Z8.8,I6,1X,Z8.8)') '=%d', IOS, IE, IS, IV, IU, IC", n))
+}
+
 // fortranProgram is round 1's output cases to unit 6 as FORTRAN statements
 // (Decision 2): for govax, not VMS, which has no compiler. Each case is
 //
 //	PRINT *, '#n'
 //	WRITE (6, 'format', IOSTAT=IOS) items
-//	PRINT *, '=n', IOS
+//	CALL ERRSNS(IE, IS, IV, IU, IC)
+//	WRITE (6, '(...)') '=n', IOS, IE, IS, IV, IU, IC
 //
 // the format a run-time format, a character constant, so that what a
 // FORMAT statement couldn't hold (a syntax error, which the compiler would
@@ -2283,7 +2344,7 @@ C     vax/for80-vax.txt.
 		}
 
 		fmt.Fprintf(&body, "      SUBROUTINE %s\n", routine)
-		body.WriteString(`      INTEGER IOS
+		body.WriteString(`      INTEGER IOS, IE, IS, IV, IU, IC
       INTEGER*2 VW(16)
       BYTE VB(16)
       LOGICAL*4 VLU(16)
@@ -2388,7 +2449,7 @@ C     vax/for80-vax.txt.
 		}
 
 		ftnStatement(&body, write)
-		ftnStatement(&body, fmt.Sprintf("PRINT *, '=%d', IOS", n))
+		ftnEnd(&body, n)
 	}
 
 	body.WriteString("      END\n")
@@ -2493,7 +2554,8 @@ func fortranInputItem(j int, it item) (string, string) {
 //	CALL SYNC('#n')                        reads up to the case's line
 //	CALL PRE                               every slot's bytes 55, as VMS's were
 //	READ (5, 'format', IOSTAT=IOS) items
-//	PRINT *, '=n', IOS
+//	CALL ERRSNS(IE, IS, IV, IU, IC)
+//	WRITE (6, '(...)') '=n', IOS, IE, IS, IV, IU, IC
 //	CALL SHOWV(j, k) or CALL SHOWT(j, n)   what item j left: k longwords, or n characters
 //
 // Item j is in slot j, 16 bytes of COMMON /SLOTS/ seen as each type, or
@@ -2509,7 +2571,7 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       PROGRAM FOR80I
 `)
 
-	declarations := `      INTEGER IOS
+	declarations := `      INTEGER IOS, IE, IS, IV, IU, IC
       INTEGER*4 S(4,16)
       CHARACTER*64 TX(16)
       COMMON /SLOTS/ S, TX
@@ -2580,7 +2642,7 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 		}
 
 		ftnStatement(&body, read)
-		ftnStatement(&body, fmt.Sprintf("PRINT *, '=%d', IOS", n))
+		ftnEnd(&body, n)
 
 		for _, show := range shows {
 			ftnStatement(&body, show)

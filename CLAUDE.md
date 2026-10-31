@@ -498,7 +498,15 @@ never had.
   statement at `FTN$READ_SN`/`FTN$WRITE_SN`, input on FTN_LISTIN's exported pieces,
   `FTN$$LI_SKIP` and the rest, from column 2, `CTX_LI_COLUMN`; output through
   FTN_LISTOUT's fields, `FTN$$LIST_VALUE` with `CTX_NM_CAPTURE`; SYNERRNAM, TOOMANVAL,
-  and INVREFVAR naming what they found, `CTX_NM_FAO`), held to `testdata/nml80`.
+  and INVREFVAR naming what they found, `CTX_NM_FAO`), held to `testdata/nml80`;
+  subtask 12 (2026-10-31) is the error model: `FTN$IO_END`'s signal laid out as
+  FORRTL's (the file's name from a NAM on each unit's FAB, empty for INVLOGUNI,
+  RECIO_OPE, SYNERRFOR, and internal files; RMS's STS and STV, kept per stream in
+  `ftn_units.mar`; INVTEXREC or INVTEX with `CTX_TEXT`), every failure saved for
+  ERRSNS, which `sema/errsns.go` makes a call of `FTN$ERRSNS` or `FTN$ERRSNS_W`
+  (GSMATCH 1,9); RMS's `$GET` into a short user buffer is RTB (STV the record's
+  size), and a status's STV is 0 unless set; `TestFor80FTNRTLMessages`
+  (`for80e.for`) matches VMS's run 3, and the oracles compare ERRSNS's values.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -752,7 +760,10 @@ never had.
   read from SYS$INPUT, which `TestFor80InputOracle` holds to VMS's stored
   values. Round 3 (`for80c.mar`, Phase 80's subtask 9, `vax/for80c-forrtl.txt`) is
   internal files, on VMS's FORRTL over govax rather than the VAX, and `for80x.for`
-  holds FTNRTL to it and round 1 (`TestFor80InternalOracle`).
+  holds FTNRTL to it and round 1 (`TestFor80InternalOracle`). Since subtask 12
+  `for80.for` and `for80i.for` print ERRSNS's values after each case, compared
+  with VMS's `e=` lines, and `for80e.for` is run 3 as FORTRAN, whose messages
+  `TestFor80FTNRTLMessages` holds to VMS's log.
   `TestFor80RunsOnFORRTL`, `TestFor80Round3`, and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.

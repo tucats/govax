@@ -37,8 +37,8 @@ import (
 // default destination. This function honors that: if RAB$L_UBF is
 // nonzero, the record is copied there instead of RAB$L_RBF, and — since
 // the calling program also declared RAB$W_USZ as that buffer's exact
-// capacity — a record too big to fit is a real error (RMS$_RSZ) rather
-// than an overflow. The plain RAB$L_RBF path has no such capacity check:
+// capacity — a record too big to fit is truncated to it with RMS$_RTB, a
+// warning whose RAB$L_STV is the record's size, rather than an overflow. The plain RAB$L_RBF path has no such capacity check:
 // real RMS trusts the calling program to have sized that buffer itself
 // (typically from the file's own FAB$W_MRS, which the program already
 // knows), the same "trust the caller's own declared lengths" convention
@@ -200,11 +200,24 @@ func storeRecordStatus(ctx *Context, rabAddr uint32, record []byte, sts uint32) 
 		if len(record) > int(usz) {
 			// A caller that did supply a separate user buffer also said
 			// exactly how big it is (RAB$W_USZ) — unlike the plain RBF
-			// path above, this really is a capacity real RMS enforces,
-			// and a record too big for it is the same RMS$_RSZ condition
-			// SysPut already reports for an outgoing record that doesn't
-			// fit the file's own declared format.
-			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsRecordTooBig)
+			// path above, this really is a capacity real RMS enforces.
+			// A record too big for it is RMS$_RTB, a warning: the part
+			// that fits is stored, RAB$W_RSZ is that part's length, and
+			// RAB$L_STV is the whole record's size (what VMS 7.1's
+			// FORTRAN run-time library reported reading SYS$INPUT,
+			// testdata/for80's round 1).
+			whole := len(record)
+			record = record[:usz]
+
+			if _, err := storeRecordStatus(ctx, rabAddr, record, rmsRecordTruncated); err != nil {
+				return 0, err
+			}
+
+			if err := ctx.storeLongword(rabAddr+rabSTV, uint32(whole)); err != nil {
+				return 0, err
+			}
+
+			return rmsRecordTruncated, nil
 		}
 	}
 

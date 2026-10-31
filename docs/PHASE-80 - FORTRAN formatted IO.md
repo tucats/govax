@@ -9,7 +9,8 @@ editing), subtask 6 (floating editing), subtask 7 (list-directed output
 and input), subtask 8 (variable format expressions and run-time formats), and
 subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
 (LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run; subtask 11
-(NAMELIST) done the same day, held to VMS's FORRTL. Needs Phase 79 (control flow, for
+(NAMELIST) done the same day, held to VMS's FORRTL; subtask 12 (the error model)
+done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -801,6 +802,7 @@ subtasks land.
 11. **NAMELIST.** Done ("Subtask 11", below), with a probe of its own,
     `testdata/nml80`.
 12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
+    Done ("Subtask 12", below).
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
     and DUNGEON's use of them.
 14. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
@@ -1541,6 +1543,75 @@ ERR=, and END= on namelist READs, both paging modes). `TestFortranIOSignals`'s
 NOTIMP case is now a unit Phase 81 adds. MANUAL.md's chapter 14 describes namelist
 I/O, with the manual's example as FTNRTL writes it.
 
+## Subtask 12: what was built (2026-10-31)
+
+ERR=, END=, and IOSTAT= were subtask 3's, and the first line of each message
+subtask 3's and 11's. What this subtask adds, each part held to VMS's runs:
+
+**The rest of the signal** (`ftn_statement.mar`'s `FTN$IO_END`), laid out as
+FORRTL's, which round 1's run 3 and `testdata/nml80`'s 44 conditions show:
+
+- the condition with its three FAO arguments (four for a namelist condition):
+  the unit, the **file's name**, and the user PC. The name is the resultant
+  string RMS returns in a NAM on the unit's FAB at `$CREATE`, which for a
+  process-permanent file is the expanded name, `SYS$OUTPUT:.;` (govax's RMS already
+  gave it, Phase 71). It is empty for an internal file, for a unit not yet
+  connected, and for the three conditions VMS showed without one: INVLOGUNI,
+  RECIO_OPE (the outer statement had connected the unit), and SYNERRFOR (a
+  run-time format is parsed before the unit is connected). SYNERRFOR at a unit
+  already in use is shown without a name too, unconfirmed;
+- RMS's status and status value, or two zeros, which `$PUTMSG` passes over
+  (subtask 2's finding): so ENDDURREA's `-RMS-E-EOF`. Only ENDDURREA,
+  INPRECTOO, ERRDURREA, and ERRDURWRI carry them, from the stream's last
+  failure, which `ftn_units.mar` now keeps (`UB_STS`, `UB_STV`); a read of an
+  output unit is `RMS$_FAC`, as VMS's `$GET` of SYS$OUTPUT gave;
+- for INPCONERR, `FOR$_INVTEXREC` with the text and the unit's record number
+  (`UB_RECORDS`, every record read or written), or for an internal file
+  `FOR$_INVTEX` with the text alone. The text is the context's `CTX_TEXT`: a
+  formatted field as `FTN$$EDIT_FIELD` found it, or for list-directed and
+  namelist input the value's text, but for a character constant a lone
+  apostrophe and for a number too large for a shorter integer nothing, as
+  `nml80e`'s cases 28 to 31 showed (`I='A'`, `J=70000`). List-directed input's
+  texts follow namelist input's, unconfirmed.
+
+**ERRSNS** (Decision 13). `sema/errsns.go` makes `CALL ERRSNS(...)` a call of
+`FTN$ERRSNS`, or `FTN$ERRSNS_W` when the arguments are INTEGER\*2, unless the
+file has a routine of that name (and so, now, for every system routine still
+NOTIMPL); its arguments are INTEGER\*2 or \*4 variables or elements, or null,
+of one length (ERRSNSARG, ERRSNSLEN, ERRSNSCOUNT). `FTN$IO_END` saves every
+failure, taken by a specifier or signaled, OUTCONERR too, in ERRSNS's order:
+the FOR number (24 at an end of file), RMS's status and value as in the signal,
+the unit, the condition. The two routines store them and clear them. Two new
+vector entries, at 376 and 384, so GSMATCH is 1,9. Whether FORRTL saves an
+error a specifier takes wasn't probed (its handler saw each one); the oracles
+below agree with VMS's numbers either way.
+
+**RMS**, two fidelity fixes found on the way. A `$GET` record longer than the
+user buffer is `RMS$_RTB`, a warning: the part that fits stored, RSZ its length,
+STV the record's size (it was RSZ and nothing stored); VMS's run gave RTB with
+the size for records of 200 to 500 bytes. And a status's STV is 0 unless a
+service sets it (`storeStatus` had copied the status into it), as VMS's
+ERRSNS showed for RMS$_EOF and RMS$_FAC; without it `-RMS-E-EOF` came twice.
+FTNRTL's 199-byte limit moved into `FTN$$UNIT_GET`, which reports a longer
+record as RTB with its size, as VMS's FORRTL did.
+
+Tests: `TestFor80FTNRTLMessages` runs `for80e.for` (gen.go's `errorFortran`,
+run 3's ten parts as FORTRAN) and matches VMS's log line for line, but for the
+user PC's value: messages, units, files, secondary messages, statuses.
+`TestNML80Messages` now compares the unit and file lines and the secondary
+messages too. `for80.for` and `for80i.for` end each case with ERRSNS's five
+values, and `TestFor80Oracle` and `TestFor80InputOracle` hold them to VMS's
+`e=` lines (497 and 267 cases; an `rd` case's unit is 5, read from SYS$INPUT
+where VMS read an internal record); the input oracle now runs its records as a
+procedure's data lines, as FOR80R.COM did, so a long record is one record.
+`TestFortranErrsns` (both paging modes), sema's error table, and
+`TestSysGet_userBufferTooSmall`. `TestFortranIOSignals` shows file names now.
+
+Left: the user PC is where `FTN$IO_END` returns, so a failure found by an item's
+call is reported after the statement's items, where FORRTL may report at once
+(unconfirmed, as subtask 3 said); FORRTL's messages from errors that aren't
+I/O's (ERRSNS after a math library error) are Phase 83's.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1648,3 +1719,8 @@ I/O, with the manual's example as FTNRTL writes it.
   (`ftn_namelist.mar`), held to a probe of 786 cases on VMS's FORRTL,
   `testdata/nml80`, whose run over govax is FTNRTL's requirement; "Subtask 11"
   above.
+- **2026-10-31, subtask 12, done.** The error model: the file's name, RMS's
+  status, and INVTEX/INVTEXREC in FTNRTL's signals, ERRSNS in the compiler and
+  FTNRTL, and two RMS fixes ($GET's RTB, STV); FTNRTL's run 3 and namelist
+  messages match VMS's, and ERRSNS's values match VMS's in every oracle case;
+  "Subtask 12" above.

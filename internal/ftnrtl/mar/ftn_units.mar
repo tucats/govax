@@ -1,5 +1,5 @@
 	.TITLE	FTN_UNITS - FTNRTL's logical units
-	.IDENT	/V1.2/
+	.IDENT	/V1.3/
 ;
 ; A FORTRAN program reads and writes logical units: numbers its I/O
 ; statements name (WRITE (6,...)), or the default units of the
@@ -38,22 +38,45 @@
 ; made with those fields zero, and the addresses are stored in them, with
 ; $FAB_STORE and $RAB_STORE, at the first use.
 ;
+; Each stream keeps what a message and ERRSNS report of it (docs/PHASE-80 -
+; FORTRAN formatted IO.md, subtask 12): the file's name, which a NAM block
+; on the FAB receives from $CREATE (for a process-permanent file VMS's
+; resultant string is the expanded name, SYS$OUTPUT:.;, as VMS's run
+; showed); RMS's status and status value from the last operation that
+; failed, the RMS STS and STV of ERRSNS; and how many records the stream
+; has transferred, the record number of FOR$_INVTEXREC's message.
+;
 ; A stream's block, the address the other modules are given for a unit:
 ;
 ;	+0	long	1 once the stream is connected
 ;	+4	long	1 if the stream may be read
-;	+8		the FAB, then the RAB
+;	+8	long	RMS's status from the last failure (STS), or 0
+;	+12	long	and its status value (STV)
+;	+16	long	the records read and written
+;	+20		the FAB, the RAB, the NAM, and the NAM's buffer for the
+;			resultant string
 ;
 	$DEVDEF				; the device's characteristics
 	$FABDEF				; the FAB's fields
+	$NAMDEF				; the NAM's
 	$RABDEF				; the RAB's fields
 	$RMSDEF				; RMS's statuses
 	$SSDEF
 
 UB_OPEN		= 0			; the block's fields
 UB_READ		= 4
-UB_FAB		= 8
+UB_STS		= 8
+UB_STV		= 12
+UB_RECORDS	= 16
+UB_FAB		= 20
 UB_RAB		= UB_FAB+FAB$C_BLN
+UB_NAM		= UB_RAB+RAB$C_BLN
+UB_RSA		= UB_NAM+NAM$C_BLN
+RSA_SIZE	= 255			; NAM$C_MAXRSS
+
+INPUT_MAX	= 199			; the longest record read: VMS's
+					;  limit reading SYS$INPUT (testdata/
+					;  for80, round 2)
 
 FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
 FOR$_INPRECTOO	= ^X001880B4		;  their severities
@@ -75,11 +98,17 @@ INPUT_LEN	= .-INPUT_NAME
 	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
 
 OUTPUT_UNIT:	.LONG	0, 0		; not open; written only
+		.LONG	0, 0, 0		; no failure; no records
 		$FAB	FAC=PUT,RAT=FTN,RFM=VAR
 		$RAB
+		$NAM	RSS=RSA_SIZE
+		.BLKB	RSA_SIZE+1
 INPUT_UNIT:	.LONG	0, 1		; not open; read and written
+		.LONG	0, 0, 0
 		$FAB	FAC=<GET,PUT>,RAT=FTN,RFM=VAR
 		$RAB
+		$NAM	RSS=RSA_SIZE
+		.BLKB	RSA_SIZE+1
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -90,8 +119,10 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 ; reading if read (by value) is 1, for writing if 0. Returns in R0
 ; SS$_NORMAL and in R1 the stream's block, or in R0 the FOR$_ condition
 ; that the unit can't be used: INVLOGUNI for a number outside -4 to 119,
-; NOTIMP for a unit FTNRTL doesn't have yet, ERRDURREA for a read of an
-; output unit. Doesn't connect the stream.
+; NOTIMP for a unit FTNRTL doesn't have yet (R1 0 for these two), and
+; ERRDURREA for a read of an output unit (R1 its block, whose STS is then
+; RMS$_FAC, as VMS's $GET of SYS$OUTPUT reported). Doesn't connect the
+; stream.
 ;
 	.ENTRY	FTN$$UNIT_FIND,^M<>
 	MOVL	4(AP),R0		; the unit
@@ -113,6 +144,7 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 	BEQL	10$
 	CMPL	R0,#-4
 	BEQL	10$
+	CLRL	R1
 	MOVL	#FOR$_NOTIMP,R0		; a unit of Phase 81's
 	RET
 
@@ -120,18 +152,22 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 	RET
 
 20$:	BLBC	8(AP),10$		; an output unit: written,
-	MOVL	#FOR$_ERRDURREA,R0	;  never read
+	MOVL	#RMS$_FAC,UB_STS(R1)	;  never read
+	CLRL	UB_STV(R1)
+	MOVL	#FOR$_ERRDURREA,R0
 	RET
 
-80$:	MOVL	#FOR$_INVLOGUNI,R0
+80$:	CLRL	R1
+	MOVL	#FOR$_INVLOGUNI,R0
 	RET
 
 ;
 ; FTN$$UNIT_OPEN(block)
 ;
 ; Connects the stream whose block is given, if it isn't yet: $CREATE and
-; $CONNECT. Returns RMS's status in R0, SS$_NORMAL if it was connected
-; already.
+; $CONNECT, with the NAM that receives the file's name. Returns RMS's
+; status in R0, SS$_NORMAL if it was connected already; a failure's status
+; and value are kept in the block.
 ;
 	.ENTRY	FTN$$UNIT_OPEN,^M<R2,R3,R4,R5>
 	MOVL	4(AP),R2		; the block
@@ -145,13 +181,21 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 	MOVL	#INPUT_LEN,R1
 5$:	$FAB_STORE FAB=R3,FNA=(R5),FNS=R1
 	$RAB_STORE RAB=R4,FAB=(R3)
+	MOVAB	UB_NAM(R2),FAB$L_NAM(R3) ; the NAM, and its buffer
+	MOVAB	UB_RSA(R2),UB_NAM+NAM$L_RSA(R2)
 	$CREATE	FAB=R3
-	BLBC	R0,90$
+	BLBC	R0,80$
 	$CONNECT RAB=R4
-	BLBC	R0,90$
+	BLBC	R0,85$
 	MOVL	#1,UB_OPEN(R2)
 10$:	MOVL	#SS$_NORMAL,R0
-90$:	RET
+	RET
+80$:	MOVL	FAB$L_STS(R3),UB_STS(R2) ; the FAB's failure
+	MOVL	FAB$L_STV(R3),UB_STV(R2)
+	RET
+85$:	MOVL	RAB$L_STS(R4),UB_STS(R2) ; the RAB's
+	MOVL	RAB$L_STV(R4),UB_STV(R2)
+	RET
 
 ;
 ; FTN$$UNIT_PUT(block, record, length)
@@ -161,12 +205,17 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 ; address is the second argument, its length (a longword, by value) the
 ; third. Returns RMS's status in R0.
 ;
-	.ENTRY	FTN$$UNIT_PUT,^M<R2>
-	MOVL	4(AP),R2
-	MOVAB	UB_RAB(R2),R2		; the RAB
+	.ENTRY	FTN$$UNIT_PUT,^M<R2,R3>
+	MOVL	4(AP),R3
+	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	8(AP),RAB$L_RBF(R2)	; the record
 	MOVW	12(AP),RAB$W_RSZ(R2)	; and its length
 	$PUT	RAB=R2
+	BLBC	R0,10$
+	INCL	UB_RECORDS(R3)
+	RET
+10$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
+	MOVL	RAB$L_STV(R2),UB_STV(R3)
 	RET
 
 ;
@@ -177,18 +226,30 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 ; longword, by value). Returns in R0 SS$_NORMAL and in R1 the record's
 ; length, or in R0 the FOR$_ condition for the failure: ENDDURREA at the
 ; end of the file, INPRECTOO for a record longer than the buffer (RMS's
-; RTB or RSZ), ERRDURREA for any other.
+; RTB or RSZ) or than 199 bytes, ERRDURREA for any other. RMS's status
+; and value are kept in the block: for a record longer than 199 bytes that
+; the buffer held, RMS$_RTB and its size, as RMS gives for one longer than
+; the buffer, and as VMS's run reported for a record of 200.
 ;
-	.ENTRY	FTN$$UNIT_GET,^M<R2>
-	MOVL	4(AP),R2
-	MOVAB	UB_RAB(R2),R2		; the RAB
+	.ENTRY	FTN$$UNIT_GET,^M<R2,R3>
+	MOVL	4(AP),R3
+	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	8(AP),RAB$L_UBF(R2)	; the buffer
 	MOVW	12(AP),RAB$W_USZ(R2)	; and its size
 	$GET	RAB=R2
-	BLBC	R0,10$
+	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
+	CMPL	R1,#INPUT_MAX
+	BGTRU	2$
+	INCL	UB_RECORDS(R3)
 	MOVL	#SS$_NORMAL,R0
 	RET
+2$:	MOVL	#RMS$_RTB,UB_STS(R3)	; too long for FORTRAN
+	MOVL	R1,UB_STV(R3)
+	MOVL	#FOR$_INPRECTOO,R0
+	RET
+5$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
+	MOVL	RAB$L_STV(R2),UB_STV(R3)
 10$:	CMPL	R0,#RMS$_EOF
 	BNEQ	20$
 	MOVL	#FOR$_ENDDURREA,R0
@@ -200,6 +261,26 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 30$:	MOVL	#FOR$_INPRECTOO,R0
 	RET
 40$:	MOVL	#FOR$_ERRDURREA,R0
+	RET
+
+;
+; FTN$$UNIT_REPORT(block, report)
+;
+; What a message and ERRSNS say of the stream whose block is given, put in
+; the five longwords at report: the length of the file's name (0 if the
+; stream isn't connected) and its address, the status RMS gave the last
+; failure and its value, and the records transferred.
+;
+	.ENTRY	FTN$$UNIT_REPORT,^M<R2>
+	MOVL	4(AP),R1		; the block
+	MOVL	8(AP),R2		; the report
+	CLRL	(R2)
+	BLBC	UB_OPEN(R1),10$
+	MOVZBL	UB_NAM+NAM$B_RSL(R1),(R2)
+10$:	MOVAB	UB_RSA(R1),4(R2)
+	MOVL	UB_STS(R1),8(R2)
+	MOVL	UB_STV(R1),12(R2)
+	MOVL	UB_RECORDS(R1),16(R2)
 	RET
 
 ;

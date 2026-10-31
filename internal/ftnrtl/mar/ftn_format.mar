@@ -76,7 +76,7 @@
 ; at reversion, into the same buffer, and fields take their characters
 ; from the position on: past the record's end, blanks. A record longer
 ; than 199 bytes is FOR$_INPRECTOO (VMS's limit reading SYS$INPUT, round
-; 2), the end of the file FOR$_ENDDURREA. A character constant or H in an
+; 2; FTN_UNITS checks it), the end of the file FOR$_ENDDURREA. A character constant or H in an
 ; input format takes the record's characters in place of its text, in the
 ; parsed format, so a later statement using the same FORMAT writes them
 ; (8.3.9.2); a run-time format's parsed copy goes at the statement's end,
@@ -90,7 +90,6 @@
 	$SSDEF
 
 ; FORRTL's condition values, with their severities.
-FOR$_INPRECTOO	= ^X001880B4
 FOR$_ERRDURWRI	= ^X00188134
 FOR$_INSVIRMEM	= ^X0018814C
 FOR$_INFFORLOO	= ^X001881E4
@@ -169,7 +168,6 @@ CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
 CTX_RESOLVED	= CTX_VFE+4		; an operation with its expressions' values
 
 OUTPUT_MAX	= 133			; an output record's bytes, at most
-INPUT_MAX	= 199			; an input record's
 
 ;
 ; A parsed format: its size (for LIB$FREE_VM), the address of the
@@ -781,13 +779,9 @@ NEW_RECORD:
 5$:	PUSHL	#RECORD_SIZE
 	PUSHL	CTX_RECP(R2)
 	PUSHL	CTX_STREAM(R2)
-	CALLS	#3,FTN$$UNIT_GET	; FTN_UNITS
+	CALLS	#3,FTN$$UNIT_GET	; FTN_UNITS: INPRECTOO past 199 bytes
 	BLBC	R0,80$
-	CMPL	R1,#INPUT_MAX
-	BLEQ	10$
-	MOVL	#FOR$_INPRECTOO,R0
-	BRB	80$
-10$:	MOVL	R1,CTX_RECLEN(R2)
+	MOVL	R1,CTX_RECLEN(R2)
 	CLRL	CTX_POS(R2)
 	RET
 80$:	PUSHL	R0

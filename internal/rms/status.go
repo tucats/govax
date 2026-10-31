@@ -186,9 +186,14 @@ var (
 	ssDirNotEmpty       = vmsConst("SS$_DIRNOTEMPTY")
 
 	// rmsRecordTooBig is RMS$_RSZ: a SYS$PUT record was longer than the
-	// file's own declared maximum record size (fab.go's fabMRS), or a
-	// SYS$GET record was longer than the caller's supplied buffer.
+	// file's own declared maximum record size (fab.go's fabMRS).
 	rmsRecordTooBig = vmsConst("RMS$_RSZ")
+
+	// rmsRecordTruncated is RMS$_RTB, a warning: a SYS$GET record was
+	// longer than the caller's user buffer (RAB$W_USZ), so only the part
+	// that fits was stored, and RAB$L_STV holds the record's whole size
+	// (the message's "!UL byte record too large for user's buffer").
+	rmsRecordTruncated = vmsConst("RMS$_RTB")
 
 	// rmsSystemError is RMS$_SYS: RMS's catch-all "the underlying
 	// system/device reported an error" code, used when an ods2 call
@@ -305,10 +310,13 @@ func ssConst(name string) uint32 {
 	return v
 }
 
-// storeStatus writes sts into both of a control block's status fields —
-// fabSTS/fabSTV for a FAB, rabSTS/rabSTV for a RAB (fab.go/rab.go); base
-// is the block's own VAX address, stsOffset/stvOffset are whichever pair
-// applies — and returns sts unchanged as its own first result. That lets
+// storeStatus writes sts into a control block's status field and clears
+// its status value — fabSTS/fabSTV for a FAB, rabSTS/rabSTV for a RAB
+// (fab.go/rab.go); base is the block's own VAX address, stsOffset/stvOffset
+// are whichever pair applies — and returns sts unchanged as its own first
+// result. The STV is RMS's secondary information, 0 unless a service sets it
+// after (VMS's RMS$_EOF and RMS$_FAC have none, as VMS's FORTRAN run-time
+// library's ERRSNS showed, testdata/for80). That lets
 // a handler end a failing branch with a single line like
 //
 //	return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsFileNotFound)
@@ -326,7 +334,7 @@ func storeStatus(ctx *Context, base, stsOffset, stvOffset uint32, sts uint32) (u
 		return 0, err
 	}
 
-	if err := ctx.storeLongword(base+stvOffset, sts); err != nil {
+	if err := ctx.storeLongword(base+stvOffset, 0); err != nil {
 		return 0, err
 	}
 

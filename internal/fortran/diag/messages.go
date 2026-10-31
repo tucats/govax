@@ -685,6 +685,17 @@ var messages = map[string]kind{
 
 	// NOTNAMELIST is NML= naming no NAMELIST group of the unit.
 	"NOTNAMELIST": {Error, "%s is not a NAMELIST group"},
+
+	// ERRSNSARG is an argument of ERRSNS that isn't an INTEGER*2 or
+	// INTEGER*4 variable or array element, or a null argument (D.4.3).
+	"ERRSNSARG": {Error, "an argument of ERRSNS must be an INTEGER*2 or INTEGER*4 variable or array element, or null"},
+
+	// ERRSNSLEN is a call of ERRSNS whose arguments are of both lengths,
+	// which D.4 doesn't allow: all INTEGER*2 or all INTEGER*4.
+	"ERRSNSLEN": {Error, "the arguments of ERRSNS must be all INTEGER*2 or all INTEGER*4"},
+
+	// ERRSNSCOUNT is a call of ERRSNS with more than its five arguments.
+	"ERRSNSCOUNT": {Error, "the system subroutine ERRSNS takes at most 5 arguments, and is given %d"},
 }
 
 // Known reports whether ident is a message in the table, and its

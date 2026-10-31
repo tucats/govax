@@ -110,7 +110,8 @@ func TestFor80Oracle(t *testing.T) {
 
 		compared++
 
-		same := got.status == want.status && strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
+		same := got.status == want.status && got.errsns == want.errsns &&
+			strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
 		if _, known := expectedFor80Differences[n]; known {
 			if same {
 				t.Errorf("#%d now matches VMS's run: take it out of expectedFor80Differences", n)
@@ -122,8 +123,9 @@ func TestFor80Oracle(t *testing.T) {
 		}
 
 		if !same {
-			t.Errorf("#%d %s: got status %d and records\n%s\nwant status %d and records\n%s", n, want.title,
-				got.status, strings.Join(got.records, "\n"), want.status, strings.Join(want.records, "\n"))
+			t.Errorf("#%d %s: got status %d, ERRSNS %s, and records\n%s\nwant status %d, ERRSNS %s, and records\n%s",
+				n, want.title, got.status, got.errsns, strings.Join(got.records, "\n"), want.status, want.errsns,
+				strings.Join(want.records, "\n"))
 		}
 	}
 
@@ -159,16 +161,20 @@ var for80Dir = filepath.Join("..", "..", "testdata", "for80")
 
 // for80Case is one case's result: its records, as FOR80D shows them, and
 // its status (VMS's e=, govax's IOSTAT). title is VMS's line for it.
+// errsns is what ERRSNS returned after it: the FOR number, RMS's status and
+// value, the unit, and the condition, the second, third, and fifth in
+// hexadecimal, separated by blanks.
 type for80Case struct {
 	title   string
 	records []string
 	status  int
+	errsns  string
 }
 
 // for80Start and for80End match VMS's lines that begin and end a case.
 var (
 	for80Start = regexp.MustCompile(`^#(\d+) `)
-	for80End   = regexp.MustCompile(`^=(\d+) r=\S+ e=(-?\d+) `)
+	for80End   = regexp.MustCompile(`^=(\d+) r=\S+ e=(-?\d+) (\S+) (\S+) (\S+) (\S+)`)
 )
 
 // readFor80VMS reads VMS's run: each case's records and e=.
@@ -198,6 +204,7 @@ func readFor80VMS(t *testing.T) map[int]for80Case {
 		if m := for80End.FindStringSubmatch(line); m != nil && current >= 0 {
 			if n, _ := strconv.Atoi(m[1]); n == current {
 				c.status, _ = strconv.Atoi(m[2])
+				c.errsns = strings.Join(m[2:], " ")
 				cases[current] = c
 				current = -1
 			}
@@ -235,8 +242,9 @@ func splitFor80Cases(t *testing.T, records [][]byte) map[int]for80Case {
 			}
 		}
 
-		if len(fields) == 2 && current >= 0 && fields[0] == "="+strconv.Itoa(current) {
+		if len(fields) == 7 && current >= 0 && fields[0] == "="+strconv.Itoa(current) {
 			c.status, _ = strconv.Atoi(fields[1])
+			c.errsns = strings.Join(fields[2:], " ")
 			cases[current] = c
 			current = -1
 
@@ -318,8 +326,22 @@ func TestFor80InputOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c.In = strings.NewReader(string(data))
-	out := shareRun(t, d, buf, "FOR80I")
+	// The records are a command procedure's data lines, as VMS's FOR80R.COM
+	// gave them, so that a record longer than the buffer is one record (RMS$_RTB)
+	// and not a terminal's line split at the buffer's end.
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA2:[000000]FOR80IR.COM"},
+		rms.TextRecords, splitSource("$ RUN FOR80I\n"+string(data)+"$ EXIT\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	buf.Reset()
+
+	// The pad records after the last case are left unread: SKPDAT.
+	if err := d.Dispatch("@FOR80IR"); err != nil && !strings.Contains(err.Error(), "SKPDAT") {
+		t.Fatalf("@FOR80IR: %v\n%s", err, buf.String())
+	}
+
+	out := buf.String()
 
 	govax := splitFor80InputCases(out)
 
@@ -358,7 +380,8 @@ func TestFor80InputOracle(t *testing.T) {
 
 		compared++
 
-		same := got.status == want.status && strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
+		same := got.status == want.status && got.errsns == for80InputErrsns(want) &&
+			strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
 		if _, known := expectedFor80InputDifferences[n]; known {
 			if same {
 				t.Errorf("#%d now matches VMS's run: take it out of expectedFor80InputDifferences", n)
@@ -370,8 +393,9 @@ func TestFor80InputOracle(t *testing.T) {
 		}
 
 		if !same {
-			t.Errorf("#%d %s: got status %d and\n%s\nwant status %d and\n%s", n, want.title,
-				got.status, strings.Join(got.records, "\n"), want.status, strings.Join(want.records, "\n"))
+			t.Errorf("#%d %s: got status %d, ERRSNS %s, and\n%s\nwant status %d, ERRSNS %s, and\n%s", n, want.title,
+				got.status, got.errsns, strings.Join(got.records, "\n"), want.status, for80InputErrsns(want),
+				strings.Join(want.records, "\n"))
 		}
 	}
 
@@ -391,6 +415,19 @@ func TestFor80InputOracle(t *testing.T) {
 // expectedFor80InputDifferences are the cases of TestFor80InputOracle
 // known to differ from VMS's run, each with the reason.
 var expectedFor80InputDifferences = map[int]string{}
+
+// for80InputErrsns is what ERRSNS must return after VMS's input case c on
+// govax: VMS's, but a case VMS read from an internal record (an rd case,
+// unit -5) govax reads from SYS$INPUT, unit 5.
+func for80InputErrsns(c for80Case) string {
+	fields := strings.Fields(c.errsns)
+	if len(fields) == 5 && fields[3] == "-5" && strings.HasPrefix(c.title, "#") &&
+		len(strings.Fields(c.title)) > 1 && strings.Fields(c.title)[1] == "rd" {
+		fields[3] = "5"
+	}
+
+	return strings.Join(fields, " ")
+}
 
 // for80Shown matches VMS's lines showing what an item's slot holds.
 var for80Shown = regexp.MustCompile(`^ v\d+=`)
@@ -433,6 +470,7 @@ func readFor80Stored(t *testing.T, file string) map[int]for80Case {
 
 		if m := for80End.FindStringSubmatch(line); m != nil && current >= 0 {
 			c.status, _ = strconv.Atoi(m[2])
+			c.errsns = strings.Join(m[2:], " ")
 
 			continue
 		}
@@ -450,7 +488,7 @@ func readFor80Stored(t *testing.T, file string) map[int]for80Case {
 }
 
 // splitFor80InputCases reads for80i.for's output: each case's "=n status"
-// line, then its "v j value..." lines, made into VMS's forms, "vj=XXXXXXXX
+// line (with ERRSNS's five values after it, but in for80x.for's), then its "v j value..." lines, made into VMS's forms, "vj=XXXXXXXX
 // XXXXXXXX" (the longwords in hexadecimal) or "vj=|text|" (a byte that
 // doesn't print as a period).
 func splitFor80InputCases(out string) map[int]for80Case {
@@ -461,7 +499,7 @@ func splitFor80InputCases(out string) map[int]for80Case {
 
 	for _, line := range strings.Split(out, "\n") {
 		fields := strings.Fields(line)
-		if len(fields) == 2 && strings.HasPrefix(fields[0], "=") {
+		if (len(fields) == 2 || len(fields) == 7) && strings.HasPrefix(fields[0], "=") {
 			if n, err := strconv.Atoi(fields[0][1:]); err == nil {
 				if current >= 0 {
 					cases[current] = c
@@ -470,6 +508,7 @@ func splitFor80InputCases(out string) map[int]for80Case {
 				current = n
 				c = for80Case{}
 				c.status, _ = strconv.Atoi(fields[1])
+				c.errsns = strings.Join(fields[2:], " ") // ERRSNS's values, if shown
 
 				continue
 			}

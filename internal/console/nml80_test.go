@@ -117,10 +117,10 @@ func TestNML80Oracle(t *testing.T) {
 }
 
 // nml80Message matches the lines TestNML80Messages compares: a run's number,
-// its message's first line, and its $STATUS. The lines after the first (the
-// unit and file, the user PC, a secondary message) are the error model's,
-// Phase 80's subtask 12.
-var nml80Message = regexp.MustCompile(`^(%\d+|%FOR-.*|\d+)$`)
+// its message (the unit and file, and a secondary message: INVTEXREC's text
+// and record number, RMS's EOF), and its $STATUS. The user PC is each image's
+// own, and isn't compared.
+var nml80Message = regexp.MustCompile(`^(%\d+|%FOR-.*|-FOR-.*|-RMS-.*|  unit .*|\d+)$`)
 
 // nml80Messages is the compared lines of a run of NML80E.COM.
 func nml80Messages(out string) []string {

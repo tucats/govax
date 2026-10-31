@@ -160,7 +160,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.intrinsicRef(e)
 		}
 
-		if what := builtin(e.Name, true); what != "" {
+		if what := builtin(e.Name, true); what != "" && a.units[e.Name] == nil {
 			a.notImpl(e.Pos, what)
 
 			return a.bad(e.Pos)

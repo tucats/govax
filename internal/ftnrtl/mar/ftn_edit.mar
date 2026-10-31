@@ -73,6 +73,8 @@ CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context'
 CTX_SIGN	= CTX_POS+36		; byte: 0 S, 1 SP, 2 SS
 CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ)
 CTX_MISMATCH	= CTX_POS+108		; byte: 1 if the item's type doesn't suit
+CTX_TEXT	= CTX_RECP+36		; long: an input conversion error's text,
+					;  and its length (FTN_STATEMENT's message)
 
 ; A parsed format's operation (FTN_FORMAT's).
 OP_B_CODE	= 0
@@ -528,8 +530,10 @@ INTEGER_TYPE:
 ;
 ; FIELD: an input field of up to R9 characters from the position: R2 its
 ; first and R3 how many. It ends at the record's end, or before a comma,
-; and the position moves past it: w columns on, or past the comma. Uses
-; R0, R1, and R4. FTN_FLOAT's input uses it too, with R9 and R11 the same.
+; and the position moves past it: w columns on, or past the comma. The
+; field is kept in the context too, as the text FOR$_INPCONERR's message
+; shows (FOR$_INVTEX, VMS's "invalid text is "ABC""). Uses R0, R1, and
+; R4. FTN_FLOAT's input uses it too, with R9 and R11 the same.
 ;
 FTN$$EDIT_FIELD::
 FIELD:	MOVL	CTX_POS(R11),R4
@@ -548,7 +552,9 @@ FIELD:	MOVL	CTX_POS(R11),R4
 	SUBL3	R2,R1,R3		; the characters before it,
 	ADDL3	R4,R3,R0
 	ADDL3	#1,R0,CTX_POS(R11)	;  and the position past it
-20$:	RSB
+20$:	MOVL	R2,CTX_TEXT(R11)	; the field, for a message
+	MOVL	R3,CTX_TEXT+4(R11)
+	RSB
 
 ;
 ; LEADING: passes over the field's leading blanks and tabs.
