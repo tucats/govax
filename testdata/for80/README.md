@@ -22,7 +22,10 @@ holds FTNRTL to `vax/for80-vax.txt`.
 | `vax/for80-vax.txt` | Run 1 on VMS, as `FOR80D` printed it |
 | `vax/for80p-vax.txt` | Run 2 on VMS: the same cases with unit 6 a process-permanent file |
 | `vax/for80.log` | `FOR80.COM`'s log: run 3's messages, and the file's attributes |
-| `vax/for80t.log` | The terminal session (see below) |
+| `vax/for80t.log` | The terminal session, as the author pasted it (see below) |
+| `for80b.mar`, `for80br.com`, `for80b.com` | Round 2: 89 cases round 1 left open, the message table first |
+| `exchangeb.cmd`, `copyoutb.cmd` | Round 2's exchange volume |
+| `vax/for80b-vax.txt`, `vax/for80b.log` | Round 2 on VMS |
 
 ## How the program works
 
@@ -88,10 +91,27 @@ Allow a minute or two; if a case hangs, Ctrl/Y and tell me which `#n` the log or
 
 No licensed file goes on the volume, so it needs no erasing.
 
+## The VAX run, round 2
+
+Round 1 ran on 2026-10-31 (its findings are in the phase doc). It stopped at
+case #853, where `FOR$IO_END` called twice ends the image, before the message
+table. Round 2 asks what it left open, on a volume of its own:
+
+    govax console < testdata/for80/exchangeb.cmd
+
+makes `testdata/disks/for80b-exchange.dsk` (label FOR80B). On the VAX:
+
+    $ MOUNT DUA2: FOR80B
+    $ SET DEFAULT DUA2:[000000]
+    $ @FOR80B/OUTPUT=FOR80B.LOG
+    $ DISMOUNT DUA2:
+
+then `govax console < testdata/for80/copyoutb.cmd`. No terminal part this time.
+
 ## On govax
 
-`TestFor80Assembles` (`internal/console/for80_test.go`) checks that the programs
-assemble. `TestFor80RunsOnFORRTL` links them against VMS's FORRTL.EXE from a
+`TestFor80Assembles` (`internal/console/for80_test.go`) checks that the programs,
+both rounds', assemble. `TestFor80RunsOnFORRTL` links them against VMS's FORRTL.EXE from a
 local-only volume, if there is one, and checks that the program reaches its end.
 That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement: `LIB$TPARSE`
 is NOTIMPL, which stops FORRTL's namelist input, and `$GETMSG` finds none of FOR's

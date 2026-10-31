@@ -1017,8 +1017,13 @@ func clip(s string, n int) string {
 	return s
 }
 
-// program writes for80.mar.
-func program() string {
+// round1Messages is the last FOR number round 1 asked $GETMSG for, after its cases.
+// Round 2 asks for more, before its cases.
+const round1Messages = 127
+
+// program writes for80.mar or for80b.mar: the cases, the data they share beyond
+// the namelist block's, and the message table.
+func program(extraData string, lastMessage int) string {
 	var data, code, main strings.Builder
 
 	for n, c := range cases {
@@ -1041,6 +1046,10 @@ func program() string {
 		case "wi", "wil", "wia", "enc":
 			title += fmt.Sprintf(" %s %d %s%s", c.op, c.size, clip(c.format, 50), itemsTitle(c.items))
 		default:
+			if c.op == "rd5" && c.unit != 5 {
+				title += fmt.Sprintf(" unit %d", c.unit)
+			}
+
 			title += fmt.Sprintf(" %s %s |%s|%s", c.op, clip(c.format, 40), clip(c.text, 30), itemsTitle(c.items))
 		}
 
@@ -1083,7 +1092,7 @@ func program() string {
 			fmt.Fprintf(&code, "\tPUSHAB\tIN%d\n\tCALLS\t#1,G^FOR$READ_IL\n", n)
 		case "rd5":
 			input = true
-			fmt.Fprintf(&code, "\tPUSHAB\tFM%d\n\tPUSHL\t#5\n\tCALLS\t#2,G^FOR$READ_SO\n", n)
+			fmt.Fprintf(&code, "\tPUSHAB\tFM%d\n\tPUSHL\t#%d\n\tCALLS\t#2,G^FOR$READ_SO\n", n, c.unit)
 		case "rl5":
 			input = true
 			fmt.Fprintf(&code, "\tPUSHL\t#5\n\tCALLS\t#1,G^FOR$READ_SL\n")
@@ -1152,7 +1161,12 @@ func program() string {
 		fmt.Fprintf(&main, "\tCALLS\t#0,C%d\n\tPUSHL\t#%d\n\tCALLS\t#1,RESULT\n%s", n, n, shows.String())
 	}
 
-	return fmt.Sprintf(programText, data.String(), nmlData, code.String(), main.String())
+	before, after := "", "\tCALLS\t#0,MESSAGES\n"
+	if lastMessage != round1Messages {
+		before, after = after, before
+	}
+
+	return fmt.Sprintf(programText, data.String(), nmlData+extraData, lastMessage, code.String(), before, main.String(), after)
 }
 
 const programText = `	.TITLE	FOR80 - Phase 80's probe of FORRTL's formatted I/O
@@ -1365,30 +1379,30 @@ PUTH:	.WORD	^M<>
 	PUSHAB	LD
 	CALLS	#1,PUTT
 30$:	INCL	R6
-	CMPL	R6,#127
+	CMPL	R6,#%d
 	BGTR	40$
 	BRW	10$
 40$:	RET
 %s
 	.ENTRY	FOR80,^M<>
-%s	PUSHAB	ENDM
+%s%s	PUSHAB	ENDM
 	CALLS	#1,PUTT
-	CALLS	#0,MESSAGES
-	MOVL	#1,R0
+%s	MOVL	#1,R0
 	RET
 	.END	FOR80
 `
 
-// run writes for80r.com: FOR80, then its data, each case's lines under its marker.
-func runProc() string {
+// runProc writes a procedure that runs image, then its data, each case's lines
+// under its marker.
+func runProc(image string) string {
 	var b strings.Builder
 
-	b.WriteString(`$ ! FOR80R.COM - runs FOR80, with the records its unit 5 cases read.
+	fmt.Fprintf(&b, `$ ! %sR.COM - runs %s, with the records its unit 5 cases read.
 $ ! Written by testdata/for80/gen.go. Each case's lines are under a line
 $ ! holding its number, which the driver reads up to (SYNC).
-$ RUN FOR80
+$ RUN %s
 $ DECK
-`)
+`, image, image, image)
 
 	// The last cases read the input's end, and have no lines at all.
 	lastData := 0
@@ -1676,16 +1690,237 @@ $ DIRECTORY/SIZE FOR*.*
 $ EXIT
 `
 
+// round2 is the second round's table, from what round 1 showed. The cases that
+// call FOR$IO_END with no statement open aren't here: the first stopped round 1,
+// and no compiled program does it.
+func round2() string {
+	section("A record's size at SYS$INPUT: 133 was read, 200 wasn't")
+	for _, n := range []int{134, 135, 136, 140, 150, 160, 180, 199} {
+		rd5("(Q)", []string{strings.Repeat("A", n)}, iL)
+	}
+
+	section("Reading the units a WRITE refused or took")
+	for _, u := range []int{-1, -2, -3, -4} {
+		cases = append(cases, kase{op: "rd5", unit: u, format: "(I3)", lines: []string{"123"}, items: []item{iL}})
+	}
+
+	var data strings.Builder
+
+	data.WriteString(`NB_AV:	.BLKL	8
+NB_M:	.BLKL	4
+`)
+
+	section("Namelist input to an array, by the descriptor's form")
+
+	// Round 1's array gave INVARGFOR for every input. Its A0 was the first
+	// element's address, where the architecture's is the address of element 0.
+	forms := []struct {
+		name  string
+		class int
+		flags string
+		a0    string
+	}{
+		{"A0 element 0, coefficients and bounds", 4, "^XC0", "NB_AV-4"},
+		{"A0 the first element, as round 1", 4, "^XC0", "NB_AV"},
+		{"A0 element 0, coefficients only", 4, "^X40", "NB_AV-4"},
+		{"A0 element 0, bounds only", 4, "^X80", "NB_AV-4"},
+		{"A0 element 0, no flags", 4, "0", "NB_AV-4"},
+		{"class NCA", 10, "^XC0", "NB_AV-4"},
+	}
+
+	inputs := []string{" $GRP A=1,2,3 $END", " $GRP A(2)=5 $END", " $GRP A=2*5 $END", " $GRP A=3*5 $END", " $GRP A(4)=5 $END",
+		" $GRP A=1,2,3,4 $END", " $GRP A(2)=,6 $END", " $GRP A(2)=7,8 $END", " $GRP A(0)=5 $END", " $GRP A(1,1)=5 $END"}
+
+	for i, f := range forms {
+		fmt.Fprintf(&data, `NB_D%d:	.WORD	4
+	.BYTE	8,%d
+	.ADDRESS NB_AV
+	.BYTE	0,0,%s,1
+	.LONG	12
+	.ADDRESS %s
+	.LONG	3
+	.LONG	1,3
+NB_B%d:	.ADDRESS NML_GRP
+	.LONG	1
+	.ADDRESS NML_N4,NB_D%d
+`, i, f.class, f.flags, f.a0, i, i)
+
+		for _, in := range inputs {
+			nmlArrayRead(fmt.Sprintf("NB_B%d", i), f.name, in, "\tMOVL\t#1,NB_AV\n\tMOVL\t#1,NB_AV+4\n\tMOVL\t#1,NB_AV+8\n")
+		}
+	}
+
+	section("Namelist input to a two-dimensional array")
+	data.WriteString(`NB_N9:	.ASCIC	/M/
+	.ALIGN	LONG
+NB_DM:	.WORD	4
+	.BYTE	8,4
+	.ADDRESS NB_M
+	.BYTE	0,0,^XC0,2
+	.LONG	16
+	.ADDRESS NB_M-12
+	.LONG	2,2
+	.LONG	1,2,1,2
+NB_BM:	.ADDRESS NML_GRP
+	.LONG	1
+	.ADDRESS NB_N9,NB_DM
+`)
+
+	for _, in := range []string{" $GRP M=1,2,3,4 $END", " $GRP M(1,2)=5 $END", " $GRP M(2)=5 $END", " $GRP M(3,1)=5 $END"} {
+		nmlArrayRead("NB_BM", "two dimensions", in, "\tCLRL\tNB_M\n\tCLRL\tNB_M+4\n\tCLRL\tNB_M+8\n\tCLRL\tNB_M+12\n")
+	}
+
+	section("Namelist output: each type, arrays, and long names")
+
+	data.WriteString(`NB_N1:	.ASCIC	/AI/
+NB_N2:	.ASCIC	/AR/
+NB_N3:	.ASCIC	/AT/
+NB_N4:	.ASCIC	/AD/
+NB_N5:	.ASCIC	/LB/
+NB_N6:	.ASCIC	/LW/
+NB_N7:	.ASCIC	/LL/
+NB_N8:	.ASCIC	/IB/
+NB_NA:	.ASCIC	/IW/
+NB_NB:	.ASCIC	/RG/
+NB_NC:	.ASCIC	/RH/
+NB_ND:	.ASCIC	/CD/
+NB_NE:	.ASCIC	/CG/
+NB_NF:	.ASCIC	/A23456789012345678901234567890X/
+NB_NG:	.ASCIC	/A2345678/
+NB_NH:	.ASCIC	/A23456789/
+	.ALIGN	LONG
+NB_VI:	.LONG	1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+	.LONG	21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40
+NB_VR:	.F_FLOATING 1.0,1.0,2.5,2.5,2.5,3.0,4.0,5.0,6.0,7.0,8.0,8.0
+NB_VT:	.ASCII	/ONE  TWO  TWO  FOUR'/
+NB_VD:	.D_FLOATING 1.0,1.0,2.0
+NB_LB:	.BYTE	-1
+	.ALIGN	LONG
+NB_LW:	.WORD	-1
+	.ALIGN	LONG
+NB_LL:	.LONG	-1
+NB_IB:	.BYTE	-5
+	.ALIGN	LONG
+NB_IW:	.WORD	-5
+	.ALIGN	LONG
+NB_RG:	.G_FLOATING 2.5
+NB_RH:	.H_FLOATING 2.5
+NB_CD:	.D_FLOATING 1.5,-2.5
+NB_CG:	.G_FLOATING 1.5,-2.5
+NB_SC:	.LONG	1
+`)
+	nbArray := func(label, values string, length, dtype, count int) {
+		fmt.Fprintf(&data, `%s:	.WORD	%d
+	.BYTE	%d,4
+	.ADDRESS %s
+	.BYTE	0,0,^XC0,1
+	.LONG	%d
+	.ADDRESS %s-%d
+	.LONG	%d
+	.LONG	1,%d
+`, label, length, dtype, values, length*count, values, length, count, count)
+	}
+	nbScalar := func(label, value string, length, dtype int) {
+		fmt.Fprintf(&data, "%s:\t.WORD\t%d\n\t.BYTE\t%d,1\n\t.ADDRESS %s\n", label, length, dtype, value)
+	}
+
+	nbArray("NB_DAI", "NB_VI", 4, 8, 40)
+	nbArray("NB_DAR", "NB_VR", 4, 10, 12)
+	nbArray("NB_DAT", "NB_VT", 5, 14, 4)
+	nbArray("NB_DAD", "NB_VD", 8, 11, 3)
+	nbScalar("NB_DLB", "NB_LB", 1, 2)
+	nbScalar("NB_DLW", "NB_LW", 2, 3)
+	nbScalar("NB_DLL", "NB_LL", 4, 4)
+	nbScalar("NB_DIB", "NB_IB", 1, 6)
+	nbScalar("NB_DIW", "NB_IW", 2, 7)
+	nbScalar("NB_DRG", "NB_RG", 8, 27)
+	nbScalar("NB_DRH", "NB_RH", 16, 28)
+	nbScalar("NB_DCD", "NB_CD", 16, 13)
+	nbScalar("NB_DCG", "NB_CG", 16, 29)
+	nbScalar("NB_DSC", "NB_SC", 4, 8)
+
+	blocks := []struct {
+		label, title string
+		entities     [][2]string
+	}{
+		{"NB_W1", "an array of 40 different values", [][2]string{{"NB_N1", "NB_DAI"}}},
+		{"NB_W2", "an array with repeats", [][2]string{{"NB_N2", "NB_DAR"}}},
+		{"NB_W3", "a character array, repeats and an apostrophe", [][2]string{{"NB_N3", "NB_DAT"}}},
+		{"NB_W4", "a double array", [][2]string{{"NB_N4", "NB_DAD"}}},
+		{"NB_W5", "logicals, by data type", [][2]string{{"NB_N5", "NB_DLB"}, {"NB_N6", "NB_DLW"}, {"NB_N7", "NB_DLL"}}},
+		{"NB_W6", "byte and word integers", [][2]string{{"NB_N8", "NB_DIB"}, {"NB_NA", "NB_DIW"}}},
+		{"NB_W7", "G and H", [][2]string{{"NB_NB", "NB_DRG"}, {"NB_NC", "NB_DRH"}}},
+		{"NB_W8", "complex in D and G", [][2]string{{"NB_ND", "NB_DCD"}, {"NB_NE", "NB_DCG"}}},
+		{"NB_W9", "names of 8, 9, and 31 characters", [][2]string{{"NB_NG", "NB_DSC"}, {"NB_NH", "NB_DSC"}, {"NB_NF", "NB_DSC"}}},
+	}
+
+	for _, b := range blocks {
+		fmt.Fprintf(&data, "%s:\t.ADDRESS NML_GRP\n\t.LONG\t%d\n", b.label, len(b.entities))
+
+		for _, e := range b.entities {
+			fmt.Fprintf(&data, "\t.ADDRESS %s,%s\n", e[0], e[1])
+		}
+
+		cases = append(cases, kase{op: "raw", title: "namelist write: " + b.title, code: "\tPUSHAB\t" + b.label +
+			"\n\tPUSHL\t#6\n\tCALLS\t#2,G^FOR$WRITE_SN\n\tCALLS\t#0,G^FOR$IO_END\n\tMOVL\tR0,ENDR0\n"})
+	}
+
+	section("Logicals by data type, read")
+	nmlArrayRead("NB_W5", "logicals", " $GRP LB=T, LW=F, LL=T $END", "")
+
+	// The input's end, which round 1's stop never reached: these come last.
+	section("The end of SYS$INPUT")
+	rd5("(I3)", nil, iL)
+	rd5("(I3)", nil, iL)
+	rl5(nil, iL)
+
+	return data.String()
+}
+
+// nmlArrayRead reads a namelist block, then writes it, showing what was stored.
+func nmlArrayRead(block, what, line, reset string) {
+	write := "\tPUSHAB\t" + block + "\n\tPUSHL\t#6\n\tCALLS\t#2,G^FOR$WRITE_SN\n\tCALLS\t#0,G^FOR$IO_END\n"
+
+	cases = append(cases, kase{op: "raw", unit: 5, lines: []string{line}, title: what + ":" + line,
+		code: reset + "\tPUSHAB\t" + block + "\n\tPUSHL\t#5\n\tCALLS\t#2,G^FOR$READ_SN\n\tCALLS\t#0,G^FOR$IO_END\n\tMOVL\tR0,ENDR0\n",
+		show: []string{write}})
+}
+
+const round2Procedure = `$ ! FOR80B.COM - the second round of the Phase 80 probe.
+$ ! Written by testdata/for80/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @FOR80B/OUTPUT=FOR80B.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80B.MLG
+$ MACRO/NOLIST FOR80B
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80B.LLG
+$ LINK/NOMAP FOR80B,FOR80/OPTIONS
+$ MACRO/NOLIST FOR80D
+$ LINK/NOMAP FOR80D
+$ DEFINE/NOLOG FOR006 FOR80.DAT
+$ @FOR80BR
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN FOR006
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80B-VAX.TXT
+$ RUN FOR80D
+$ SHOW SYMBOL $STATUS
+$ EXIT
+`
+
 func main() {
 	table()
 
 	files := map[string]string{
-		"for80.mar":  program(),
+		"for80.mar":  program("", round1Messages),
 		"for80d.mar": dumpProgram,
 		"for80e.mar": errorProgram(),
 		"for80t.mar": terminalProgram,
 		"for80.opt":  "SYS$SHARE:FORRTL/SHAREABLE\n",
-		"for80r.com": runProc(),
+		"for80r.com": runProc("FOR80"),
 		"for80.com":  procedure,
 	}
 
@@ -1718,11 +1953,47 @@ COPY DUA2:[000000]FOR80.LOG "testdata/for80/vax/for80.log"/HOST
 DISMOUNT DUA2
 `
 
+	// Round 1 ended there; the rest is round 2, on a volume of its own.
+	round1Cases := len(cases)
+	cases, secAt = nil, map[int]string{}
+	extra := round2()
+	files["for80b.mar"] = program(extra, 255)
+	files["for80br.com"] = runProc("FOR80B")
+	files["for80b.com"] = round2Procedure
+
+	var copies2 strings.Builder
+
+	for _, name := range []string{"for80b.mar", "for80d.mar", "for80.opt", "for80br.com", "for80b.com"} {
+		fmt.Fprintf(&copies2, "COPY \"testdata/for80/%s\"/HOST DUA2:[000000]%s\n", name, strings.ToUpper(name))
+	}
+
+	files["exchangeb.cmd"] = `! EXCHANGEB.CMD - builds the Phase 80 probe's second exchange volume with govax.
+! Written by testdata/for80/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for80/exchangeb.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/for80b-exchange.dsk" /DEVICE=RD51 FOR80B
+MOUNT/WRITE DUA2 "testdata/disks/for80b-exchange.dsk"
+` + copies2.String() + `DIRECTORY DUA2:[000000]
+DISMOUNT DUA2
+`
+
+	files["copyoutb.cmd"] = `! COPYOUTB.CMD - copies the VAX's second run off its exchange volume.
+! Written by testdata/for80/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for80/copyoutb.cmd
+!
+MOUNT DUA2 "testdata/disks/for80b-exchange.dsk"
+COPY DUA2:[000000]FOR80B-VAX.TXT "testdata/for80/vax/for80b-vax.txt"/HOST
+COPY DUA2:[000000]FOR80B.LOG "testdata/for80/vax/for80b.log"/HOST
+DISMOUNT DUA2
+`
+
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println(len(cases), "cases")
+	fmt.Println(round1Cases, "cases in round 1,", len(cases), "in round 2")
 }

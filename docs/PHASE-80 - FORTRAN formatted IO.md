@@ -1,8 +1,8 @@
 # Phase 80 — FORTRAN formatted and list-directed I/O
 
 **Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
-accepted by the author the same day; subtask 2 (the probe) written and waiting
-for its VMS run. Needs Phase 79 (control flow, for
+accepted by the author the same day; subtask 2 (the probe): round 1 run on VMS,
+round 2 waiting for its run. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -630,6 +630,81 @@ OUTCONERR. Phase 72 had already found this for floating input
 The complex-input failure above was the same defect, on the input side
 (`textToInteger`): the manual's READ now gives the manual's values.
 
+## VMS's first run (round 1, 2026-10-31)
+
+OpenVMS V7.1 on simh's VAX 8600 (`testdata/for80/vax`). Run 1 reached case
+#853 of 859; run 2 (unit 6 a process-permanent file) reached the same place;
+run 3 and the terminal session ran whole. What it settles, against Part A:
+
+- **The [trial] results stand.** Over govax's LIBRTL, FORRTL gave VMS's output
+  in every case of the editing sections but those listed below, so Part A's
+  tables are now confirmed, not trial.
+- **E10.3 of -0.5555 is `-0.555E+00`:** the manual's `-0.556E+00` is wrong, as
+  REAL's nearest value is below the half. FORRTL wins (Decision 1).
+- **List-directed output: all three differences confirmed** (Part A's 1 to 3):
+  the first blank of a numeric field is the carriage control (`|           1|`,
+  12 characters), a complex value at a record's start has no blank of its own,
+  and a record holds 80 characters of text after its control byte (81 `A`s are
+  two records). By the author's answer 4, FTNRTL follows, in subtask 7. More
+  from the run: INTEGER\*2 and \*1 take 7 and 5 columns (`      7    7`);
+  logicals 2 (` T`); REAL a G field, `1000000.` but `1.0000000E+07`; REAL\*8
+  `3.400000000000000` and `1.0000000000000000E+20`; G floating
+  `3.40000000000000`, `1.000000000000000E+200`; H 33 digits after the point,
+  a four-digit exponent; complex D `(1.000000000000000,-2.500000000000000)`;
+  character values adjacent with no blank (`HELLOWORLD`, `1HELLO`); an empty
+  list writes one empty record, its control byte only.
+- **A record's size.** At a unit 6 file a formatted record is at most 133
+  bytes, control byte included: T133 writes, T134, T200, I5000, and I32767 are
+  OUTSTAOVE (66). Reading SYS$INPUT, 133 bytes read and 200 are INPRECTOO
+  (22); round 2 narrows it. FORTRAN's default RECL for formatted files is 133;
+  FTNRTL takes 133 for both directions. (FORRTL over govax wrote and read the
+  long records: govax's RMS gives it a larger size than VMS's, an open item for
+  Phase 81's units, not FTNRTL's.)
+- **`$` and the first byte, as stored** (FOR80.DAT): with `$`, a blank becomes
+  `$` and `+` becomes NUL; `0`, `1`, `$`, and others are stored unchanged.
+  Without `$` nothing changes. Part A's rule is confirmed. The terminal session
+  (`vax/for80t.log`) shows how a terminal renders them; `+` overprints the line
+  before, `1` is a form feed.
+- **Units.** WRITE to 0, 1, 99, 100, 101, and 119 creates `FORnnn.DAT`; 120,
+  1000, and -5 are INVLOGUNI (32); -1 and -2 write to SYS$OUTPUT; WRITE to 5,
+  -3, and -4 is ERRDURWRI (38) when SYS$INPUT is a procedure (RMS$_FAC). So
+  FORRTL's unit numbers run 0 to 119 and -1 to -4: Decision 10 changes to
+  match, with 100 to 119 Phase 81's like the rest. A write to unit 5 fails
+  unless SYS$INPUT can take one, so DUNGEON's writes must go to a terminal.
+- **Syntax at run time.** The table's [trial] answers hold. A lone `P`
+  (`(1X,P)`) is accepted, then INFFORLOO for want of a data descriptor; counts
+  past their limits (`I32768`, `32768I3`, `E12.4E256`, `128P`) are SYNERRFOR.
+- **Input** of O and Z that fails stores 0 in the item (the low word of an
+  INTEGER\*2's longword slot), where I leaves it: FTNRTL does the same.
+  ERRSNS's third value (RMS STV) is 0 for every error the run had.
+- **Namelist output,** with the found block: the name padded to 8 columns, to
+  16 past 8, then `= `; each value followed by a comma but the last; repeats
+  `3*1`; character values in apostrophes; complex `(1.500000,-2.500000)`.
+- **Namelist input:** scalars, character variables, `&` for `$`, a lone `$` or
+  `&` to end, lowercase, a group found after others, and values over several
+  records all work. Column 1 is skipped: a group in column 1 isn't found, and
+  `X$GRP` is. A `/` is SYNERRNAM (17); an unknown name, or text for a number,
+  is (19). Every array input was INVARGFOR (48): round 1's array descriptor
+  had A0 at the first element where the architecture's A0 is the address of
+  element 0, the likely cause; round 2 tries the forms. `?` and `=?` do nothing
+  at a non-terminal.
+- **Messages** (run 3): `%FOR-E-OUTCONERR, output conversion error`, then
+  `  unit 6  file SYS$OUTPUT:.;` and `  user PC 00000425`, the traceback after;
+  an internal file is `unit -5  file ` with nothing after; an input error adds
+  `-FOR-F-INVTEX, invalid text is "ABC"` (`INVTEXREC ... in record number 1` at
+  a unit); ENDDURREA adds `-RMS-E-EOF`. OUTCONERR's statement goes on and the
+  image ends with status 1; every F condition ends it with the condition as
+  `$STATUS`. INVLOGUNI and RECIO_OPE give no file name.
+- **Not reached:** `FOR$IO_END` called twice took an access violation inside
+  FORRTL and ended the image, so the cases after it, and the `$GETMSG` table,
+  didn't run. No compiled program does that; round 2 leaves it out.
+
+**Round 2** (`for80b.mar`, 89 cases, on its own volume): the message table
+first (FOR numbers 0 to 255), the SYS$INPUT record limit between 134 and 199,
+reads of units -1 to -4, namelist input to arrays by six descriptor forms and a
+two-dimensional array, namelist output of every type and long names, and the
+end of SYS$INPUT that round 1 didn't reach.
+
 
 ## Subtasks (provisional)
 
@@ -638,8 +713,8 @@ The complex-input failure above was the same defect, on the input side
    cases; FORRTL's trials. Done, Part A.
 2. **The probe** (`testdata/for80`, added by the survey): FORRTL on VMS,
    every case in Part A's table and its open items, and the FOR message
-   texts; VMS's run, then a second round if the first calls for one. Written;
-   waiting for VMS's run.
+   texts; VMS's run, then a second round if the first calls for one. Round 1
+   run; round 2 written, waiting for VMS's run.
 3. **FORMAT's compile-time check** and control block: `internal/fortran/format`,
    every statement form through sema and the IR, ASSIGN of a FORMAT label and
    PRINT v, implied-DO; FTNRTL's begin and end calls, statement stack, and
@@ -692,3 +767,11 @@ The complex-input failure above was the same defect, on the input side
   accepted, where VMS's limit should show. The table is plain data for Decision 2's
   `for80.for`, not written yet: nothing compiles FORMAT before subtask 3. Decision 2's
   oracle follows once VMS's output is here. No output in `vax/` yet.
+
+- **2026-10-31, subtask 2, round 1 on VMS.** The author ran `@FOR80` and
+  `FOR80T` on VMS 7.1. Findings in "VMS's first run" above: the trials confirmed,
+  the manual's E10.3 case wrong, list-directed output as FORRTL lays it out, a
+  133-byte record, units 0 to 119 and -1 to -4, namelist output's columns, and
+  the messages. `FOR$IO_END` twice ended the image early, before the message
+  table; namelist array input failed, probably on round 1's A0. Round 2,
+  `for80b.mar`, asks those and narrows the input record limit.

@@ -1,0 +1,112 @@
+$ run for80t
+plus: over the last line
+
+zero: a blank line before
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+one: a form feed before
+blank control
+dollar: no return after
+after dollar
+other: as blank
+with $
+plus with $ after plus with $
+
+zero with $
+blank control
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+one with $
+blank control
+
+a blank record first
+two records
+here
+
+blank control
+Type ABC: ABC
+You typed |ABC                 |
+$

@@ -20,7 +20,7 @@ var for80Programs = []string{"FOR80", "FOR80E", "FOR80T"}
 func copyFor80(t *testing.T, dispatch func(string) string) {
 	t.Helper()
 
-	for _, name := range []string{"for80.mar", "for80d.mar", "for80e.mar", "for80t.mar", "for80r.com"} {
+	for _, name := range []string{"for80.mar", "for80d.mar", "for80e.mar", "for80t.mar", "for80r.com", "for80b.mar"} {
 		src, err := filepath.Abs(filepath.Join(for80Dir, name))
 		if err != nil {
 			t.Fatal(err)
@@ -41,7 +41,7 @@ func TestFor80Assembles(t *testing.T) {
 	dispatch("SET DEFAULT DUA1:[000000]")
 	copyFor80(t, dispatch)
 
-	for _, name := range append([]string{"FOR80D"}, for80Programs...) {
+	for _, name := range append([]string{"FOR80D", "FOR80B"}, for80Programs...) {
 		if out := dispatch("MACRO/NOLIST " + name); out != "" {
 			t.Errorf("MACRO %s: %s", name, out)
 		}
