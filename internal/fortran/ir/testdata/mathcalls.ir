@@ -1,0 +1,93 @@
+routine MATHS main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  I2      W  $LOCAL+8    variable I2
+  cell  J2      W  $LOCAL+10   variable J2
+  cell  X       F  $LOCAL+12   variable X
+  cell  Y       F  $LOCAL+16   variable Y
+  cell  D       D  $LOCAL+20   variable D
+  cell  Q       H  $LOCAL+28   variable Q
+  cell  C       Q  $LOCAL+44   variable C
+  cell  Z       O  $LOCAL+52   variable Z
+  cell  $T1     F  $LOCAL+68   temporary
+  cell  $T2     F  $LOCAL+72   temporary
+  cell  $T3     F  $LOCAL+76   temporary
+  cell  $T4     F  $LOCAL+80   temporary
+  cell  $T5     D  $LOCAL+84   temporary
+  cell  $T6     D  $LOCAL+92   temporary
+  cell  $T7     H  $LOCAL+100  temporary
+  cell  $T8     H  $LOCAL+116  temporary
+  cell  $T9     Q  $LOCAL+132  temporary
+  cell  $T10    Q  $LOCAL+140  temporary
+  cell  $T11    O  $LOCAL+148  temporary
+  cell  $T12    L  $LOCAL+164  temporary
+  cell  $T13    W  $LOCAL+168  temporary
+  $LOCAL is 172 bytes
+  datum $K1     D 2D0
+B1:
+  ; line 15
+  call MTH$SQRT(ref X) -> $T1
+  assign $T3 = add.F(X, 1.0)
+  call MTH$SIN(ref $T3) -> $T2
+  call MTH$ATAND2(ref Y, ref X) -> $T4
+  assign X = add.F($T1, mul.F($T2, $T4))
+  ; line 16
+  call MTH$DLOG10(ref D) -> $T5
+  call MTH$DMOD(ref D, ref $K1) -> $T6
+  call MTH$CABS(ref C) -> $T4
+  assign D = add.D(add.D($T5, $T6), cvt.FD($T4))
+  ; line 17
+  call MTH$HEXP(ref $T7, ref Q)
+  assign $T8 = Q
+  branch gt.H(1Q0, $T8) B2 B3
+B2:
+  assign $T8 = 1Q0
+  jump B3
+B3:
+  assign Q = add.H($T7, $T8)
+  ; line 18
+  call MTH$CSQRT(ref C) -> $T9
+  call MTH$CEXP(ref C) -> $T10
+  assign C = sub.F(mul.F($T9, $T10), mul.F($T9+4, $T10+4))
+  assign C+4 = add.F(mul.F($T9, $T10+4), mul.F($T9+4, $T10))
+  ; line 19
+  call MTH$CDLOG(ref $T11, ref Z)
+  assign Z = $T11
+  ; line 20
+  call MTH$CABS(ref C) -> $T4
+  call MTH$CDABS(ref Z) -> $T6
+  call MTH$AINT(ref X) -> $T3
+  call MTH$ANINT(ref Y) -> $T2
+  assign X = cvt.DF(add.D(add.D(add.D(cvt.FD($T4), $T6), cvt.FD($T3)), cvt.FD($T2)))
+  ; line 21
+  call MTH$JISHFT(ref I, ref J) -> $T12
+  call MTH$IISHFT(ref I2, ref J2) -> $T13
+  assign I = add.L($T12, cvt.WL($T13))
+  ; line 22
+  call APPLY(routine MTH$SIN, routine MTH$DSQRT, routine MTH$JIABS, routine FTN$LEN, routine FTN$CHAR, routine FTN$QEXT)
+  ; line 23
+  call GUNIT()
+  ; line 24
+  return 1
+routine GUNIT subroutine
+  cell  D       G  $LOCAL+0    variable D
+  cell  Z       O  $LOCAL+8    variable Z
+  cell  $T1     G  $LOCAL+24   temporary
+  cell  $T2     G  $LOCAL+32   temporary
+  cell  $T3     G  $LOCAL+40   temporary
+  cell  $T4     O  $LOCAL+48   temporary
+  $LOCAL is 64 bytes
+  datum $K1     G 1D0
+B1:
+  ; line 31
+  call MTH$GSIN(ref D) -> $T1
+  call MTH$GATAND2(ref D, ref $K1) -> $T2
+  call MTH$CGABS(ref Z) -> $T3
+  assign D = add.G(add.G($T1, $T2), $T3)
+  ; line 32
+  call MTH$CGSQRT(ref $T4, ref Z)
+  assign Z = $T4
+  ; line 33
+  call APPLY(routine MTH$GSIN, routine FTN$GBLEQ)
+  ; line 34
+  return

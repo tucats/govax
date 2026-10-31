@@ -101,7 +101,7 @@ func TestIntrinsicRefs(t *testing.T) {
 		{false, "IBCLR(I2, 1)", "(bitclear:INTEGER IIBCLR I2 1)"},
 		{false, "IBSET(I2, 1)", "(bitset:INTEGER*2 IIBSET I2 1)"},
 		{false, "BTEST(I2, 1)", "(bittest:LOGICAL*2 BITEST I2 1)"},
-		{false, "ISHFTC(I, 1, 8)", "(circular:INTEGER JISHFTC I 1 8)"},
+		{false, "ISHFTC(I, 1, 8)", "(call:INTEGER FTN$JISHFTC I 1 8)"},
 
 		// The character functions.
 		{false, "LEN(T)", "8"},
@@ -154,8 +154,6 @@ func TestIntrinsicErrors(t *testing.T) {
 		"CMPLX(C, X)":      "BADARG: the intrinsic function CMPLX's arguments must be INTEGER or REAL, and this one is COMPLEX",
 		"SIZEOF(DA)":       "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is an assumed-size array",
 		"SIZEOF(S)":        "BADARG: the intrinsic function SIZEOF's arguments must be anything but an assumed-size array or a passed-length value, and this one is CHARACTER*(*)",
-		"SQRT(X)":          "NOTIMPL: the intrinsic function SQRT",
-		"ISHFT(I, J)":      "NOTIMPL: ISHFT by a count that isn't constant",
 		"MAX(I, 2) + I(1)": "NOTARRAY",
 	}
 

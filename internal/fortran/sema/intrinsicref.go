@@ -291,7 +291,7 @@ var operations = map[string]IntrinsicOp{
 	"ABS": AbsOp, "MAX": MaxOp, "MIN": MinOp, "DIM": DimOp, "SIGN": SignOp, "MOD": ModOp,
 	"NINT": NintOp, "ZEXT": ZextOp, "IMAG": ImagOp, "CONJG": ConjgOp,
 	"SHIFT": ShiftOp, "BITS": BitsOp, "BSET": BitSetOp, "BCLR": BitClearOp, "BTEST": BitTestOp,
-	"SHIFTC": CircularOp, "LEN": LenOp, "INDEX": IndexOp, "ICHAR": IcharOp, "CHAR": CharOp,
+	"LEN": LenOp, "INDEX": IndexOp, "ICHAR": IcharOp, "CHAR": CharOp,
 }
 
 // lexicalOps are the lexical comparisons' relational operators (section
@@ -309,14 +309,20 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 	}
 
 	ref := func(t Type, op IntrinsicOp) Expr {
-		return &IntrinsicRef{exprBase{t, e.Pos}, name, op, args}
+		return &IntrinsicRef{exprBase{t, e.Pos}, name, op, args, ""}
+	}
+
+	call := func(routine string) Expr {
+		return &IntrinsicRef{exprBase{f.result, e.Pos}, name, CallOp, args, routine}
 	}
 
 	switch f.how {
 	case "MTH":
-		a.notImpl(e.Pos, "the intrinsic function "+e.Name)
+		return call(a.routineOf(f))
 
-		return a.bad(e.Pos)
+	case "SHIFTC":
+		// No instruction does a circular shift, and MTHRTL has none.
+		return call("FTN$" + name)
 
 	case "CVT":
 		return a.convert(args[0], f.result)
@@ -345,10 +351,10 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 		return a.fold(&Unary{exprBase{f.result, e.Pos}, ast.Not, args[0]})
 
 	case "SHIFT":
+		// A count that isn't constant may shift either way: MTH$JISHFT or
+		// MTH$IISHFT decides when the program runs.
 		if _, ok := args[1].(*Const); !ok {
-			a.notImpl(args[1].Position(), "ISHFT by a count that isn't constant")
-
-			return a.bad(e.Pos)
+			return call(a.routineOf(f))
 		}
 
 	case "LEN":
@@ -433,4 +439,3 @@ func describeSize(x Expr) string {
 
 	return "CHARACTER*(*)"
 }
-

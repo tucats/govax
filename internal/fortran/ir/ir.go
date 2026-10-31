@@ -511,10 +511,14 @@ func (*NoReturn) terminator() {}
 // passed) or by value (Value, as a null argument's 0 is, or each part of
 // a complex value an OTS$ routine is given): a value of any type takes as
 // many longwords of the argument list as its width, in the order memory
-// holds them. A descriptor is passed by reference to the descriptor.
+// holds them. A descriptor is passed by reference to the descriptor. A
+// routine passed (an intrinsic function's name given as an argument) is
+// Routine, whose address is passed: the address of its entry mask, where a
+// CALLS of it begins.
 type Arg struct {
-	Ref   *Mem
-	Value Expr
+	Ref     *Mem
+	Value   Expr
+	Routine string
 }
 
 // Mem is a place in memory: a base, which is a cell, a datum, the

@@ -81,9 +81,15 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 		return &Load{r}, &Load{i}
 
 	case *sema.IntrinsicRef:
-		// CMPLX(X, Y), its parts converted already; or CONJG(Z).
-		if e.Op == sema.CmplxOp {
+		// CMPLX(X, Y), its parts converted already; CONJG(Z); or a call of
+		// MTHRTL's (CSQRT, CDEXP).
+		switch e.Op {
+		case sema.CmplxOp:
 			return l.expr(e.Args[0]), l.expr(e.Args[1])
+		case sema.CallOp:
+			r, i := parts(l.callIntrinsic(e), p)
+
+			return &Load{r}, &Load{i}
 		}
 
 		re, im := l.complexParts(e.Args[0])
@@ -195,6 +201,11 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 		l.callFunction(e, result)
 
 		return result
+
+	case *sema.IntrinsicRef:
+		if e.Op == sema.CallOp {
+			return l.callIntrinsic(e)
+		}
 	}
 
 	t := l.temp(l.typeOf(e.Type()))
@@ -204,9 +215,15 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 }
 
 // assignComplex lowers dst = e, both COMPLEX of one type. A variable, an
-// element, or a constant is moved whole, with MOVQ or MOVO; anything else is
-// computed part by part.
+// element, a constant, or the value of MTHRTL's routine is moved whole, with
+// MOVQ or MOVO; anything else is computed part by part.
 func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
+	if x, ok := e.(*sema.IntrinsicRef); ok && x.Op == sema.CallOp {
+		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
+
+		return
+	}
+
 	switch e.(type) {
 	case *sema.Var, *sema.Elem:
 		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})

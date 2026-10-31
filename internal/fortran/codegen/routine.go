@@ -216,6 +216,16 @@ func (g *routineGen) call(s *ir.Call) {
 	for i := len(s.Args) - 1; i >= 0; i-- {
 		a := s.Args[i]
 
+		// A routine's address, which LINK fixes up for a routine in a
+		// shareable image as it does a CALLS's.
+		if a.Routine != "" {
+			g.emit("PUSHAB", ir.None, "G^"+a.Routine)
+
+			count++
+
+			continue
+		}
+
 		if a.Ref != nil {
 			m := g.mem(g.fitMem(a.Ref))
 			g.emit(pushAddress(a.Ref), ir.None, m.text)

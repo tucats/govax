@@ -109,8 +109,9 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 
 	if s.External || s.Class == Intrinsic {
 		// A procedure's name where a value would be: as an argument, the
-		// procedure itself (Phase 79); anywhere else, a mistake.
-		if wholeOK {
+		// procedure itself (an intrinsic's is args', procedure; an external
+		// one's is Phase 79's); anywhere else, a mistake.
+		if wholeOK && s.External {
 			a.notImpl(n.Pos, "a procedure as an argument")
 		} else {
 			a.badUse(s, n.Pos, "be used as a variable")
@@ -415,7 +416,11 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 			// A null argument: CALL S(A,,B).
 
 		case *ast.Name:
-			args[i].Expr = a.name(x, true)
+			if s := a.unit.byName[x.Name]; s != nil && s.Class == Intrinsic && !s.broken {
+				args[i].Expr = a.procedure(x)
+			} else {
+				args[i].Expr = a.name(x, true)
+			}
 
 		case *ast.Paren:
 			args[i].Expr = a.value(x)

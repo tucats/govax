@@ -4470,7 +4470,8 @@ output it prints, and programs of several files in its `modules` directory.
   every variable keeps its value from call to call. EXTERNAL says a name is
   a routine outside the unit, even one with an intrinsic function's name
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
-  it is FORTRAN's own. Either name as an argument is reported not implemented.
+  it is FORTRAN's own. An intrinsic function's name as an argument passes its
+  routine (below); an EXTERNAL name as one is reported not implemented.
   Every variable gets its storage, and names of every type can be used in
   statements. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
@@ -4521,9 +4522,9 @@ output it prints, and programs of several files in its `modules` directory.
   dynamic string from LIB$SGET1_DD, freed by LIB$SFREE1_DD at the statement's
   end). `**` on every numeric type: an INTEGER, REAL, or COMPLEX base, an
   INTEGER, REAL, or COMPLEX exponent.
-- **Intrinsic functions** written in line, by their generic names (chosen by
-  the arguments' type, a small constant beside an INTEGER\*2 being one) or
-  their specific ones: ABS, IABS, MAX, MIN, MAX0, MIN0, MAX1, MIN1, AMAX0,
+- **Intrinsic functions,** all of Table D-3's, by their generic names (chosen
+  by the arguments' type, a small constant beside an INTEGER\*2 being one) or
+  their specific ones. Written in line: ABS, IABS, MAX, MIN, MAX0, MIN0, MAX1, MIN1, AMAX0,
   AMIN0, DIM, IDIM, SIGN, ISIGN, and MOD of INTEGERs (each of every length);
   INT, IFIX, NINT, IDNINT, IQNINT, ZEXT, REAL, FLOAT, SNGL, DBLE, DFLOAT,
   QEXT, QFLOAT and their specific names, which return the default integer
@@ -4531,10 +4532,27 @@ output it prints, and programs of several files in its `modules` directory.
   DCMPLX, AIMAG, DIMAG, DREAL, CONJG, DCONJG, DPROD; IAND, IOR, IEOR, NOT,
   ISHFT by a constant count, IBITS, IBSET, IBCLR, BTEST, and ISHFTC (by FTNRTL's
   `FTN$IISHFTC` and `FTN$JISHFTC`); LEN, INDEX, ICHAR, CHAR, LLT, LLE, LGT,
-  LGE; NWORKERS (1) and SIZEOF. The functions MTHRTL computes (SQRT, the
-  logarithms and trigonometric functions, AINT, ANINT, a REAL MOD, CABS) and
-  ISHFT by a count that isn't constant are reported not implemented yet, and
-  so is an intrinsic function's name as an argument.
+  LGE; NWORKERS (1) and SIZEOF. Called in MTHRTL, with the arguments by
+  reference: SQRT, EXP, LOG, LOG10, the trigonometric functions in radians
+  and in degrees, their inverses, and the hyperbolic functions, of every REAL
+  and (where Table D-3 has them) COMPLEX type; AINT, ANINT, and MOD of REALs;
+  CABS and CDABS; and ISHFT by a count that isn't constant (`MTH$JISHFT`,
+  `MTH$IISHFT`). The routine is the specific name's, with the format's letter
+  where the name's differs: `MTH$SQRT`, `MTH$DSQRT` (`MTH$GSQRT` under
+  `/G_FLOATING`), `MTH$HSQRT` for QSQRT, `MTH$ATAND2` for ATAN2D. A REAL\*16
+  or COMPLEX\*16 value comes back through a hidden first argument, the
+  address of the place for it.
+- **Intrinsic functions' names as arguments:** a name in an INTRINSIC
+  statement given as an actual argument passes the address of its routine,
+  which the routine called may call with CALLS: MTHRTL's for most names
+  (`MTH$SIN`, `MTH$JIABS`), and FTNRTL's for the 28 MTHRTL lacks (LEN, INDEX,
+  ICHAR, CHAR, the lexical comparisons, BTEST, IBITS, IBSET, IBCLR, ISHFTC,
+  ZEXT, SNGLQ, DBLEQ, QEXT, QEXTD, QFLOAT, NWORKERS, and the G_floating forms
+  of DBLEQ and QEXTD; the FTNRTL table below). A generic name passed is its
+  specific name of the default types: IABS is JIABS (IIABS under `/NOI4`), MAX
+  JMAX0, LOG ALOG. SIZEOF has no routine, and is an error as an argument
+  (`%FORT-E-NOTPASSABLE`). Calling a routine through a dummy argument from
+  FORTRAN is the next phase's.
 - **Statements:** assignment, of a character value to a character place cut
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
@@ -4780,6 +4798,20 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$IO_END()` | Ends the statement, writing its last record |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
+| `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
+| `FTN$CHAR(result, i)` | CHAR: the character whose code is `i`'s low byte, into the string `result`'s descriptor describes |
+| `FTN$LLT(s, t)`, `FTN$LLE`, `FTN$LGT`, `FTN$LGE` | The lexical comparisons, the shorter string padded with blanks: -1 (.TRUE.) or 0 in R0 |
+| `FTN$BITEST(i, pos)`, `FTN$BJTEST(i, pos)` | BTEST of an INTEGER\*2 or \*4: -1 or 0 in R0 |
+| `FTN$IIBITS(i, pos, len)`, `FTN$JIBITS` | IBITS, an INTEGER\*4 in R0 (IIBITS's word sign-extended) |
+| `FTN$IIBSET(i, pos)`, `FTN$JIBSET`, `FTN$IIBCLR`, `FTN$JIBCLR` | IBSET and IBCLR in R0 (IIBCLR's word sign-extended to an INTEGER\*4) |
+| `FTN$IZEXT(i)`, `FTN$JZEXT(i)` | ZEXT of the word at `i`, in R0 |
+| `FTN$SNGLQ(q)`, `FTN$DBLEQ(q)`, `FTN$GBLEQ(q)` | A REAL\*16 rounded to a REAL\*4 in R0, or a REAL\*8 in D_floating or G_floating in R0 and R1 |
+| `FTN$QEXT(result, x)`, `FTN$QEXTD`, `FTN$QEXTG`, `FTN$QFLOAT` | A REAL\*4, a REAL\*8 in D_floating or G_floating, or an INTEGER\*4 made a REAL\*16 at `result` |
+| `FTN$NWORKERS()` | 1 in R0 |
+
+Every routine but ISHFTC's is the routine of an intrinsic function MTHRTL
+hasn't, for a program that passes the function's name as an argument; a
+reference to the function is written in line.
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
 control: each record begins with a blank (a new line at the terminal),
@@ -4925,6 +4957,11 @@ FORTRAN compiler was available to check them). So far:
   `I` is 0. MOD of INTEGERs is `X - (X/Y)*Y`, which a zero Y ends with the
   divide-by-zero trap. ISHFT by a constant count is written in line, a count
   of the integer's width or more giving 0.
+- A generic intrinsic function's name passed as an argument is its specific
+  name for the default integer, or else for a REAL\*4 (`IABS` is JIABS, `INT`
+  JINT), by `/[NO]I4`. JZEXT and IZEXT passed read a word whatever they are
+  given, so a passed JZEXT given an INTEGER\*4 loses its high word; CHAR passed
+  reads a byte. SIZEOF can't be passed (`%FORT-E-NOTPASSABLE`).
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.

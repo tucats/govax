@@ -255,7 +255,14 @@ func DumpExpr(e Expr) string {
 		}
 
 		// The whole type, not its letter: which length was selected matters.
-		return "(" + e.Op.String() + ":" + e.T.String() + " " + e.Name + " " + strings.Join(args, " ") + ")"
+		name := e.Name
+		if e.Op == CallOp {
+			name = e.Routine
+		}
+
+		return "(" + e.Op.String() + ":" + e.T.String() + " " + name + " " + strings.Join(args, " ") + ")"
+	case *Procedure:
+		return "(procedure:" + e.T.String() + " " + e.Name + " " + e.Routine + ")"
 	case *Unary:
 		return "(" + e.Op.String() + ":" + e.T.letter() + " " + DumpExpr(e.X) + ")"
 	case *Binary:

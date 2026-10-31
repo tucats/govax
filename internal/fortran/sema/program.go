@@ -454,18 +454,31 @@ type (
 	}
 
 	// IntrinsicRef is a reference to an intrinsic function compiled in line
-	// (section 6.3; intrinsics.go): Name is the specific function selected
-	// (JMAX0, IIBITS), or the generic one where Table D-3 gives none; Op is
-	// what it computes; and Args are its arguments, each converted to the
-	// type the function takes (for CMPLX's two, to the result's parts'
-	// type). Its type is the type it computes in, which a Convert around it
-	// makes the result's where footnote 10 says they differ (MAX1 is the
-	// INTEGER of a REAL maximum).
+	// or called (section 6.3; intrinsics.go): Name is the specific function
+	// selected (JMAX0, IIBITS), or the generic one where Table D-3 gives
+	// none; Op is what it computes; and Args are its arguments, each
+	// converted to the type the function takes (for CMPLX's two, to the
+	// result's parts' type). Its type is the type it computes in, which a
+	// Convert around it makes the result's where footnote 10 says they
+	// differ (MAX1 is the INTEGER of a REAL maximum). Routine is the
+	// routine a CallOp calls (MTH$SQRT, FTN$JISHFTC; routines.go).
 	IntrinsicRef struct {
 		exprBase
-		Name string
-		Op   IntrinsicOp
-		Args []Expr
+		Name    string
+		Op      IntrinsicOp
+		Args    []Expr
+		Routine string
+	}
+
+	// Procedure is an intrinsic function's name given as an actual
+	// argument (sections 4.9 and 6.3.1.1): the routine passed, whose
+	// address the argument list holds, so that the routine given it can
+	// call it. Name is the name the program wrote, and Routine the routine
+	// (MTH$SIN, FTN$LEN; routines.go). Its type is the function's value's.
+	Procedure struct {
+		exprBase
+		Name    string
+		Routine string
 	}
 
 	// Substring is X(Lower:Upper), part of a CHARACTER variable or array
@@ -554,18 +567,18 @@ const (
 	BitSetOp                          // IBSET(I, POS): I with bit POS set
 	BitClearOp                        // IBCLR(I, POS): I with bit POS clear
 	BitTestOp                         // BTEST(I, POS): bit POS of I, a LOGICAL
-	CircularOp                        // ISHFTC(I, SHIFT, SIZE): FTNRTL's FTN$IISHFTC or FTN$JISHFTC
 	LenOp                             // a passed-length CHARACTER value's length
 	IndexOp                           // INDEX(C1, C2): where C2 first is in C1, or 0
 	IcharOp                           // a CHARACTER value's first character's code
 	CharOp                            // the CHARACTER*1 whose code is X
+	CallOp                            // a call of Routine, MTHRTL's or FTNRTL's, with the arguments by reference
 )
 
 // String is the operation's name in the dump.
 func (op IntrinsicOp) String() string {
 	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
-		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "circular", "len", "index",
-		"ichar", "char"}[op]
+		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "index",
+		"ichar", "char", "call"}[op]
 }
 
 // Arg is an actual argument. Expr is nil for a null argument (CALL

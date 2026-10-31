@@ -106,7 +106,11 @@ func (c *checker) block(b *Block) error {
 
 		case *Call:
 			for _, a := range s.Args {
-				if a.Ref != nil {
+				if a.Routine != "" {
+					if a.Ref != nil || a.Value != nil {
+						err = fmt.Errorf("%s passes the routine %s and a value too", StmtText(s), a.Routine)
+					}
+				} else if a.Ref != nil {
 					err = c.mem(a.Ref)
 				} else if err = c.expr(a.Value); err == nil && a.Value.Type().Size() < 4 {
 					// A value is pushed as one or more longwords.

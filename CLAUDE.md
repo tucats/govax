@@ -366,7 +366,19 @@ never had.
   functions through blocks before the statement, `divert`; the IR's `Round`,
   `Ash`, `Low`, `Field` (EXTZV), and `CharIndex` (MATCHC)); ISHFTC by
   FTNRTL's `FTN$IISHFTC`/`FTN$JISHFTC` (`ftn_intrinsics.mar`, GSMATCH 1,5);
-  MTHRTL's functions stay NOTIMPL until subtask 9.
+  MTHRTL's functions stay NOTIMPL until subtask 9, and subtask 9
+  (2026-10-31) calls them: a row of `MTH` is an `IntrinsicRef` of
+  `CallOp` with its `Routine` (`sema/routines.go`'s `routineName`, the
+  specific name with the format's letter, `MTH$GSQRT`, `MTH$HSQRT`, or
+  FTN$ for `ftnRoutines`), arguments by reference and a REAL\*16 or
+  COMPLEX\*16 value through a hidden first argument (`ir`'s
+  `callIntrinsic`); ISHFT by a count that isn't constant is MTH$JISHFT; an
+  INTRINSIC name as an argument is a `Procedure` (`passedForm`, a generic
+  name's specific row of the default types; SIZEOF NOTPASSABLE), the IR's
+  `Arg.Routine`, `PUSHAB G^routine`; FTNRTL has a routine for each of the
+  26 names MTHRTL lacks (`sema.FTNRoutines`; GSMATCH 1,6);
+  `testdata/fortran/mathfns` and `mathfnsg`, and the console's
+  `TestFortranPassedIntrinsics` (a MACRO routine calling what it's given).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1859,7 +1871,9 @@ expect adjustment as phases land):
   RAT=FTN; `ftn_listout.mar`, list-directed output, FTN$PRINT_LIST,
   FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END, with the control block's
   layout, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
-  lacks, FTN$IISHFTC and FTN$JISHFTC, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
+  each function MTHRTL lacks that a program may pass as an argument,
+  FTN$LEN to FTN$NWORKERS, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;
   `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
   as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
   assembles and links it with `internal/asm` and `internal/link` as

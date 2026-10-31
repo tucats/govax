@@ -313,11 +313,18 @@ func (l *lowerer) value(x Expr) *Mem {
 // a datum, read-only, so a routine that assigns to its dummy gets an
 // access violation, not a changed constant; any other expression, and a
 // variable or element in parentheses, is computed into a temporary and
-// that is passed. A null argument is the longword 0.
+// that is passed. A null argument is the longword 0, and an intrinsic
+// function's name its routine's address.
 func (l *lowerer) args(list []sema.Arg) []Arg {
 	args := make([]Arg, len(list))
 
 	for i, a := range list {
+		if p, ok := a.Expr.(*sema.Procedure); ok {
+			args[i].Routine = p.Routine
+
+			continue
+		}
+
 		if a.Expr != nil && a.Expr.Type().Kind == sema.Character {
 			args[i] = l.charArg(a)
 

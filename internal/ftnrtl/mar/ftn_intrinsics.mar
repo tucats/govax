@@ -2,12 +2,23 @@
 	.IDENT	/V1.0/
 ;
 ; The intrinsic functions (the 1988 Language Reference Manual, 6.3 and
-; Table D-3) that a compiled program calls rather than computing in line:
-; the ones no instruction or two does, and which MTHRTL, the VMS
-; mathematics library, hasn't.
+; Table D-3) that MTHRTL, the VMS mathematics library, hasn't: ISHFTC,
+; which a compiled program calls since no instruction or two does it, and
+; the functions a program writes in line but may also pass as an actual
+; argument (section 4.9), which the routine given one calls. Each routine
+; here is named for its function's specific name under FTN$.
 ;
 ; Each is called as a FORTRAN function is, with CALLS: its arguments by
-; reference (the argument list holds their addresses), its value in R0.
+; reference (the argument list holds their addresses), a CHARACTER one by
+; descriptor (the address of a descriptor: its length a word at 0, the
+; text's address at 4), its value in R0, or R0 and R1. A CHARACTER or
+; REAL*16 value goes through a hidden first argument instead, the
+; address of the result's descriptor or of its place.
+;
+; A routine called through an argument can't see its argument's type,
+; and a few of these functions take more than one (Table D-3): CHAR reads
+; a byte, and IZEXT and JZEXT a word, the low part of any longer value,
+; since the VAX keeps a value's low bytes first.
 ;
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -71,5 +82,249 @@ CIRCULAR:
 	EXTZV	R3,R2,R4,R3		; F rotated SHIFT places to the left
 	INSV	R3,#0,R2,R0		; back in I's field
 30$:	RSB
+
+;
+; length = FTN$LEN(string)
+;
+; LEN: a CHARACTER value's length, from its descriptor.
+;
+	.ENTRY	FTN$LEN,^M<>
+	MOVZWL	@4(AP),R0		; DSC$W_LENGTH, an unsigned word
+	RET
+
+;
+; position = FTN$INDEX(string, substring)
+;
+; INDEX: where SUBSTRING first is in STRING, counted from 1, or 0 if it
+; isn't. MATCHC leaves in R2 the bytes of STRING after the match, so the
+; match starts at LEN(STRING)+1-LEN(SUBSTRING)-R2. An empty SUBSTRING
+; matches at once, at 1.
+;
+	.ENTRY	FTN$INDEX,^M<R2,R3,R6,R7>
+	MOVL	4(AP),R6		; STRING's descriptor
+	MOVL	8(AP),R7		; SUBSTRING's
+	MATCHC	(R7),@4(R7),(R6),@4(R6)
+	BNEQ	10$			; no match
+	MOVZWL	(R6),R0
+	INCL	R0
+	MOVZWL	(R7),R1
+	SUBL2	R1,R0
+	SUBL2	R2,R0
+	RET
+10$:	CLRL	R0
+	RET
+
+;
+; code = FTN$ICHAR(string)
+;
+; ICHAR: the code of a CHARACTER value's first character, from 0 to 255.
+;
+	.ENTRY	FTN$ICHAR,^M<>
+	MOVL	4(AP),R0		; the descriptor
+	MOVZBL	@4(R0),R0		; the first byte of its text
+	RET
+
+;
+; CALL FTN$CHAR(result, code)
+;
+; CHAR: the character whose code is CODE's low byte, the first of the
+; text RESULT's descriptor describes. Table D-3's argument is from 0 to
+; 255, of any integer or LOGICAL*1 type.
+;
+	.ENTRY	FTN$CHAR,^M<>
+	MOVL	4(AP),R0		; the result's descriptor
+	MOVB	@8(AP),@4(R0)
+	RET
+
+;
+; truth = FTN$LLT(string1, string2), FTN$LLE, FTN$LGT, FTN$LGE
+;
+; The lexical comparisons (section 6.3.2.2): .TRUE. (-1) if STRING1 is
+; less than (less than or equal to, greater than, greater than or equal
+; to) STRING2 in ASCII's order, the shorter compared as though blanks
+; followed it, and .FALSE. (0) if not. CMPC5 compares unsigned bytes and
+; sets the condition codes as an unsigned comparison does, which BSBB,
+; RSB, and the branches leave as they are.
+;
+	.ENTRY	FTN$LLT,^M<R2,R3>
+	BSBB	COMPARE
+	BLSSU	TRUE
+	BRB	FALSE
+
+	.ENTRY	FTN$LLE,^M<R2,R3>
+	BSBB	COMPARE
+	BLEQU	TRUE
+	BRB	FALSE
+
+	.ENTRY	FTN$LGT,^M<R2,R3>
+	BSBB	COMPARE
+	BGTRU	TRUE
+	BRB	FALSE
+
+	.ENTRY	FTN$LGE,^M<R2,R3>
+	BSBB	COMPARE
+	BGEQU	TRUE
+FALSE:	CLRL	R0
+	RET
+TRUE:	MNEGL	#1,R0
+	RET
+
+;
+; COMPARE compares the strings the argument list's first two descriptors
+; describe, changing R0 to R3.
+;
+COMPARE:
+	MOVL	4(AP),R0
+	MOVL	8(AP),R1
+	CMPC5	(R0),@4(R0),#^A/ /,(R1),@4(R1)
+	RSB
+
+;
+; truth = FTN$BJTEST(i, pos)
+; truth = FTN$BITEST(i, pos)
+;
+; BTEST: .TRUE. (-1) if bit POS of I is set, .FALSE. (0) if it is clear.
+; BJTEST's arguments are INTEGER*4, BITEST's INTEGER*2, and BITEST's
+; LOGICAL*2 value is R0's low word. POS must be less than I's bits.
+;
+	.ENTRY	FTN$BJTEST,^M<>
+	MOVL	@8(AP),R1		; POS
+	BRB	BIT_TEST
+
+	.ENTRY	FTN$BITEST,^M<>
+	CVTWL	@8(AP),R1		; POS
+BIT_TEST:
+	CLRL	R0
+	BBC	R1,@4(AP),10$		; the bit, in I's bytes
+	MNEGL	#1,R0
+10$:	RET
+
+;
+; field = FTN$JIBITS(i, pos, len)
+; field = FTN$IIBITS(i, pos, len)
+;
+; IBITS: the LEN bits of I from bit POS, zero-extended. JIBITS's arguments
+; are INTEGER*4, IIBITS's INTEGER*2; both return an INTEGER*4, as Table
+; D-3 prints it, IIBITS's the word it computes, sign-extended (Phase 78's
+; survey, the author's answer 3). POS+LEN must be at most I's bits.
+;
+	.ENTRY	FTN$JIBITS,^M<>
+	EXTZV	@8(AP),@12(AP),@4(AP),R0
+	RET
+
+	.ENTRY	FTN$IIBITS,^M<>
+	CVTWL	@8(AP),R1		; POS
+	EXTZV	R1,@12(AP),@4(AP),R0	; LEN, a byte: the word's low byte
+	CVTWL	R0,R0			; the word, sign-extended
+	RET
+
+;
+; value = FTN$JIBSET(i, pos)
+; value = FTN$IIBSET(i, pos)
+; value = FTN$JIBCLR(i, pos)
+; value = FTN$IIBCLR(i, pos)
+;
+; IBSET and IBCLR: I with bit POS set, or clear. The J forms' arguments and
+; values are INTEGER*4. IIBSET's are INTEGER*2, its value R0's low word;
+; IIBCLR's value is an INTEGER*4, as Table D-3 prints it, the word
+; sign-extended. A POS past a word's bits changes R0's high word only, as
+; the in-line forms' mask of the word's low bits does nothing.
+;
+	.ENTRY	FTN$JIBSET,^M<>
+	MOVL	@4(AP),R0
+	BBSS	@8(AP),R0,10$
+10$:	RET
+
+	.ENTRY	FTN$IIBSET,^M<>
+	MOVZWL	@4(AP),R0
+	CVTWL	@8(AP),R1		; POS
+	BBSS	R1,R0,10$
+10$:	RET
+
+	.ENTRY	FTN$JIBCLR,^M<>
+	MOVL	@4(AP),R0
+	BBCC	@8(AP),R0,10$
+10$:	RET
+
+	.ENTRY	FTN$IIBCLR,^M<>
+	MOVZWL	@4(AP),R0
+	CVTWL	@8(AP),R1		; POS
+	BBCC	R1,R0,10$
+10$:	CVTWL	R0,R0			; the word, sign-extended
+	RET
+
+;
+; value = FTN$IZEXT(i)
+; value = FTN$JZEXT(i)
+;
+; ZEXT: I's low word, zero-extended, an INTEGER*2 (IZEXT) or INTEGER*4
+; (JZEXT). A routine reached through an argument reads a word whatever
+; it is given (this module's header).
+;
+	.ENTRY	FTN$IZEXT,^M<>
+	MOVZWL	@4(AP),R0
+	RET
+
+	.ENTRY	FTN$JZEXT,^M<>
+	MOVZWL	@4(AP),R0
+	RET
+
+;
+; value = FTN$SNGLQ(q)
+; value = FTN$DBLEQ(q)
+; value = FTN$GBLEQ(q)
+;
+; SNGLQ and DBLEQ: a REAL*16 rounded to a REAL*4, or a REAL*8, in R0 (and
+; R1): D_floating, or G_floating for DBLEQ under /G_FLOATING, GBLEQ.
+;
+	.ENTRY	FTN$SNGLQ,^M<>
+	CVTHF	@4(AP),R0
+	RET
+
+	.ENTRY	FTN$DBLEQ,^M<>
+	CVTHD	@4(AP),R0
+	RET
+
+	.ENTRY	FTN$GBLEQ,^M<>
+	CVTHG	@4(AP),R0
+	RET
+
+;
+; CALL FTN$QEXT(result, x)
+; CALL FTN$QEXTD(result, x)
+; CALL FTN$QEXTG(result, x)
+; CALL FTN$QFLOAT(result, i)
+;
+; QEXT, QEXTD, and QFLOAT: a REAL*4, a REAL*8 (D_floating, or G_floating
+; for QEXTD under /G_FLOATING, QEXTG), or an INTEGER*4 made a REAL*16,
+; exactly, at RESULT. QFLOAT is a generic name, with no specific name for
+; any argument (Table D-3); passed, it takes an INTEGER*4.
+;
+	.ENTRY	FTN$QEXT,^M<>
+	CVTFH	@8(AP),@4(AP)
+	RET
+
+	.ENTRY	FTN$QEXTD,^M<>
+	CVTDH	@8(AP),@4(AP)
+	RET
+
+	.ENTRY	FTN$QEXTG,^M<>
+	CVTGH	@8(AP),@4(AP)
+	RET
+
+	.ENTRY	FTN$QFLOAT,^M<>
+	CVTLH	@8(AP),@4(AP)
+	RET
+
+;
+; count = FTN$NWORKERS()
+;
+; NWORKERS: the processes running the routine, which is always 1: govax's
+; FORTRAN leaves out the parallel processing directives (docs/PHASE-74 -
+; FORTRAN plan.md, Decision 1).
+;
+	.ENTRY	FTN$NWORKERS,^M<>
+	MOVL	#1,R0
+	RET
 
 	.END

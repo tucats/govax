@@ -197,9 +197,12 @@ func StmtText(s Stmt) string {
 		args := make([]string, len(s.Args))
 
 		for i, a := range s.Args {
-			if a.Ref != nil {
+			switch {
+			case a.Routine != "":
+				args[i] = "routine " + a.Routine
+			case a.Ref != nil:
 				args[i] = "ref " + MemText(a.Ref)
-			} else {
+			default:
 				args[i] = "val " + ExprText(a.Value)
 			}
 		}

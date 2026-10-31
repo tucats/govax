@@ -462,6 +462,11 @@ var messages = map[string]kind{
 	// doesn't take.
 	"BADARG": {Error, "the intrinsic function %s's arguments must be %s, and this one is %s"},
 
+	// NOTPASSABLE is an intrinsic function's name given as an actual
+	// argument that has no routine to pass: SIZEOF, whose value is known
+	// only when compiling.
+	"NOTPASSABLE": {Error, "the intrinsic function %s can't be an actual argument"},
+
 	// BADTYPELESS is an octal or hexadecimal constant whose bits are a
 	// reserved operand in the floating type it is given.
 	"BADTYPELESS": {Error, "this constant's bits are a reserved operand, not a %s value"},

@@ -28,14 +28,18 @@ import (
 //
 // How each is compiled:
 //
-//	MTH      a routine of MTHRTL (Phase 78's subtask 9)
+//	MTH      a call of MTHRTL's routine (routines.go), with the arguments
+//	         by reference
 //	CVT      a conversion, as assignment converts (Table 3-1; footnote 11): a
 //	         COMPLEX value's real part, converted; and the value itself, for
 //	         INT of an integer or REAL of a REAL*4
 //	ABS, MAX, MIN, DIM, SIGN, MOD, NINT, ZEXT, IMAG, CMPLX, CONJG,
-//	SHIFT, BITS, BSET, BCLR, BTEST, SHIFTC, LEN, INDEX, ICHAR, CHAR
+//	SHIFT, BITS, BSET, BCLR, BTEST, LEN, INDEX, ICHAR, CHAR
 //	         an IntrinsicRef of that operation, which lowering writes in line
-//	         (or, for SHIFTC, as a call of FTNRTL's routine)
+//	         (but ISHFT by a count that isn't constant calls MTHRTL's
+//	         MTH$IISHFT or MTH$JISHFT)
+//	SHIFTC   a call of FTNRTL's FTN$IISHFTC or FTN$JISHFTC, since no
+//	         instruction does a circular shift and MTHRTL has none
 //	DPROD    a REAL*8 product of the two values made REAL*8, which is exact
 //	AND, OR, XOR, NOT
 //	         the operators .AND., .OR., .XOR., and .NOT., which are bit by

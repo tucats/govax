@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, 5, 6, and 7 done 2026-10-30, and 8 2026-10-31. Needs Phase 76 (declarations and
+3, 4, 5, 6, and 7 done 2026-10-30, and 8 and 9 2026-10-31. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -544,7 +544,7 @@ stops for review.
    conversions, bit functions, FTN$IISHFTC and FTN$JISHFTC, character functions,
    argument messages. Done.
 9. **MTHRTL intrinsics** by format, intrinsic names as arguments, and FTNRTL's
-   routines for the names MTHRTL lacks.
+   routines for the names MTHRTL lacks. Done.
 10. **End to end:** programs on each type, mixed arithmetic, character handling, the
     math functions, in both paging modes for a subset.
 11. **Close-out:** FORTRAN-INTERNALS.md's chapter on instruction selection, MANUAL.md's
@@ -864,3 +864,57 @@ stops for review.
     skipped them (2.3.4 allows it); SIZEOF of an adjustable array NOTIMPL (its size
     is a run-time value, Phase 79's); ISHFTC's arguments must be within Table D-3's
     limits, and FTNRTL returns I for a SIZE less than 1.
+- **2026-10-31, subtask 9:** MTHRTL's intrinsic functions, intrinsic names as
+  arguments, and FTNRTL's routines for the names MTHRTL lacks.
+  - **`sema`:** a row of `MTH` is an `IntrinsicRef` of the new `CallOp`, whose
+    `Routine` is the routine called; ISHFT by a count that isn't constant is
+    one too (MTH$JISHFT, MTH$IISHFT), and so is ISHFTC (FTNRTL's), so
+    `CircularOp` is gone. `routines.go`: `routineName` is the survey's mapping
+    from a specific name to its routine, MTH$ and the name with the format's
+    letter (a REAL\*16 row's Q is H, `IIQINT` `MTH$IIHINT`; under `/G_FLOATING`
+    a REAL\*8 or COMPLEX\*16 row's D is G, `CDSQRT` `MTH$CGSQRT`, `IIDNNT`
+    `MTH$IIGNNT`, and `DBLE` and `SNGL` are `MTH$GDBLE` and `MTH$SNGLG`; ATAN2D's
+    is ATAND2's), or FTN$ and the name for `ftnRoutines`, the 26 names the
+    survey's table lists (DBLEQ and QEXTD are GBLEQ and QEXTG under
+    `/G_FLOATING`). An INTRINSIC name as an actual argument is the new
+    `Procedure` (`procedure`): `passedForm` is a specific name's row, or a
+    generic name's specific row of the default types (an argument of the
+    default integer, else a REAL\*4, a result of the default integer if
+    INTEGER at all); SIZEOF is the new NOTPASSABLE. An EXTERNAL name as an
+    argument stays NOTIMPL (Phase 79), and an INTRINSIC name anywhere else
+    than an argument is BADUSE (it was NOTIMPL as an output item).
+    `TestIntrinsicRoutines` checks every row's routine, in both formats,
+    against VMS 7.1's MTHRTL symbol table (`vmsdef.ImageSymbols`), and the
+    FTN$ ones against `FTNRoutines`, the list FTNRTL's test checks its vector
+    against.
+  - **`ir`:** `callIntrinsic` (`lowerintrinsic.go`): the arguments by
+    reference, as any function's; a REAL\*16 or COMPLEX\*16 value through a
+    hidden first argument, the temporary's address (Decision 5), the rest in R0
+    and up. A COMPLEX value from MTHRTL is a temporary whose parts
+    `complexParts` reads, and which an assignment moves whole. `Arg.Routine` is
+    a routine's address passed.
+  - **`codegen`:** `PUSHAB G^routine` for a routine passed; the calls needed
+    nothing new.
+  - **FTNRTL:** `ftn_intrinsics.mar`'s 26 routines for passed names: LEN, INDEX
+    (MATCHC), ICHAR, CHAR (through the result's descriptor), the four lexical
+    comparisons (one CMPC5 for all, the condition codes kept by BSBB and RSB),
+    BITEST and BJTEST (BBC), IIBITS and JIBITS (EXTZV), IIBSET, JIBSET, IIBCLR,
+    JIBCLR (BBSS, BBCC in R0), IZEXT and JZEXT (MOVZWL), SNGLQ, DBLEQ, GBLEQ
+    (CVTHx into R0), QEXT, QEXTD, QEXTG, QFLOAT (CVTxH through the hidden
+    argument), NWORKERS. Vector offsets 64 to 264; GSMATCH 1,6.
+  - **Tests:** `testdata/fortran/mathfns` (F, D, H) and `mathfnsg` (G, with
+    values past D's range), in both paging modes, their outputs computed apart
+    from govax: each function to 80 decimal digits (Python's `decimal`, with
+    series of its own for the trigonometric functions and Machin's formula for
+    pi), rounded to its format's bits, and written as list-directed output
+    writes it; govax's matched in every digit. `TestFortranPassedIntrinsics`
+    (console) passes MTHRTL's and each of FTNRTL's routines to a MACRO routine
+    that calls the routine it is given, beside each function written in line, in
+    both paging modes. `mathcalls.for` golden in `ir` and `codegen`;
+    `TestIntrinsicCalls`, `TestPassedIntrinsics`, `TestIntrinsicRoutines`;
+    FTNRTL's `TestImage` has every new offset.
+  - **Unconfirmed, ours:** a generic name passed as its specific name of the
+    default types (6.3.1.1 says generic names passed are treated as specific
+    ones, and no more); the FTN$ routines' names and calling sequences, which
+    are govax's own; a passed IZEXT or JZEXT reading a word and CHAR a byte,
+    whatever they are given.

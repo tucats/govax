@@ -74,17 +74,8 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.BitsOp, sema.BitSetOp, sema.BitClearOp, sema.BitTestOp:
 		return l.bitFunction(t, e)
 
-	case sema.CircularOp:
-		result := l.temp(t)
-		args := make([]sema.Arg, len(e.Args))
-
-		for i, x := range e.Args {
-			args[i] = sema.Arg{Expr: x}
-		}
-
-		l.emit(&Call{origin: l.origin(), Routine: "FTN$" + e.Name, Args: l.args(args), Result: result})
-
-		return &Load{result}
+	case sema.CallOp:
+		return &Load{l.callIntrinsic(e)}
 
 	case sema.LenOp:
 		return l.charLen(e.Args[0])
@@ -100,6 +91,35 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	}
 
 	panic("ir: an intrinsic function semantic analysis left that lowering can't lower: " + e.Name)
+}
+
+// callIntrinsic calls the routine of an intrinsic function written as a call
+// (MTHRTL's, or FTNRTL's FTN$IISHFTC and FTN$JISHFTC), returning the
+// temporary its value went to. The arguments are by reference, as for any
+// FORTRAN function. An INTEGER, a LOGICAL, a REAL*4, a REAL*8, or a COMPLEX*8
+// value comes back in R0, or in R0 and R1; a REAL*16 or a COMPLEX*16 value is
+// too wide for the registers MTHRTL uses, and goes through a hidden first
+// argument, the address of the place for it (Phase 77's survey).
+func (l *lowerer) callIntrinsic(e *sema.IntrinsicRef) *Mem {
+	t := l.typeOf(e.T)
+	result := l.temp(t)
+
+	args := make([]sema.Arg, len(e.Args))
+	for i, x := range e.Args {
+		args[i] = sema.Arg{Expr: x}
+	}
+
+	call := &Call{origin: l.origin(), Routine: e.Routine, Args: l.args(args)}
+
+	if t == HFloat || t == Octa {
+		call.Args = append([]Arg{{Ref: result}}, call.Args...)
+	} else {
+		call.Result = result
+	}
+
+	l.emit(call)
+
+	return result
 }
 
 // divert ends the current block with a branch on cond, in the middle of a
