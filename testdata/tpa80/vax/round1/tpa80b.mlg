@@ -1,0 +1,9 @@
+                                     0004       
+%MACRO-E-UNTERMARG, Unterminated argument                                 !
+                                     0004       
+%MACRO-E-UNTERMARG, Unterminated argument                          !
+                           00000001  0006       
+%MACRO-E-ILLCHR, Illegal character                                        !
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+%MACRO-E-GENERR, Generated ERROR:  INVALID CHARACTER '>'

@@ -1,0 +1,204 @@
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+TPA80           V1.0                53496 DUA1:[000000]TPA80.OBJ;1             31-OCT-2026 13:49  VAX MACRO V5.4-3
+%LINK-E-ERRORS, compilation errors
+	in module TPA80 file DUA1:[000000]TPA80.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
+LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    2
+
+                                             +------------------------+
+                                             ! Image Section Synopsis !
+                                             +------------------------+
+
+   Cluster      Type Pages   Base Addr  Disk VBN PFC Protection and Paging      Global Sec. Name   Match     Majorid   Minorid
+   -------      ---- -----   ---------  -------- --- ---------------------      ----------------   -----     -------   -------
+
+DEFAULT_CLUSTER    0    53    00000200          0   0 READ ONLY     
+                   0     2    00006C00          0   0 READ WRITE   COPY ON REF
+                   0    51    00007000          0   0 READ ONLY     
+                   0     1    0000D600          0   0 READ WRITE   FIXUP VECTORS
+                 253    20    7FFFD800          0   0 READ WRITE   DEMAND ZERO  
+
+LIBRTL             3   264    00000000-R        2   0 READ ONLY                  LIBRTL_001       LESS/EQUAL        1        14
+                   4    15    00021000-R        0   0 READ WRITE   DEMAND ZERO   LIBRTL_002       LESS/EQUAL        1        14
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! R  - Relocatable   !
+		! P  - Protected     !
+		+--------------------+
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+
+TEXT                            00000200 00006BE0 000069E1 (      27105.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                TPA80           00000200 00006BE0 000069E1 (      27105.) BYTE  0
+
+DATA                            00006C00 00006EA3 000002A4 (        676.) QUAD  3 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                TPA80           00006C00 00006EA3 000002A4 (        676.) QUAD  3
+
+CODE                            00007000 0000CD86 00005D87 (      23943.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                TPA80           00007000 0000CD86 00005D87 (      23943.) BYTE  0
+
+_LIB$KEY0$                      0000CD88 0000CDCB 00000044 (         68.) WORD  1   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                TPA80           0000CD88 0000CDCB 00000044 (         68.) WORD  1
+
+_LIB$KEY1$                      0000CDCC 0000CE8C 000000C1 (        193.) WORD  1   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                TPA80           0000CDCC 0000CE8C 000000C1 (        193.) WORD  1
+
+_LIB$STATE$                     0000CE8D 0000D473 000005E7 (       1511.) BYTE  0   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                TPA80           0000CE8D 0000D473 000005E7 (       1511.) BYTE  0
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    4
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+ACT             000070CE-R        
+ACTLOG          00007068-R        
+ACTOFF          000070E5-R        
+ACTON           00007100-R        
+ACTSIG          00007138-R        
+ACTSKIP         0000711B-R        
+CASE            0000717E-R        
+DK              0000CD88-R        
+DT              0000CE8D-R        
+DUMP            00007327-R        
+GO              00007431-R        
+HANDLER         00007034-R        
+KT              0000CD94-R        
+LIB$PUT_OUTPUT  0000D648-RX       
+LIB$SIGNAL      0000D64C-RX       
+LIB$TABLE_PARSE 0000D650-RX       
+LIB$TPARSE      0000D654-RX       
+MAPIT           0000729E-R        
+PRINT           00007000-R        
+PRINTHEX        0000735A-R        
+RUN             00007169-R        
+SCAN            000073B1-R        
+SYS$FAOL        7FFEDF58          
+SYS$FILESCAN    7FFEE278          
+SYS$IMGSTA      7FFEDF68          
+SYS$UNWIND      7FFEE070          
+TESTQ           0000714B-R        
+TP              0000CF33-R        
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    5
+
+                                                +------------------+
+                                                ! Symbols By Value !
+                                                +------------------+
+
+Value                                   Symbols...
+-----                                   ----------
+00007000      R-PRINT          
+00007034      R-HANDLER        
+00007068      R-ACTLOG         
+000070CE      R-ACT            
+000070E5      R-ACTOFF         
+00007100      R-ACTON          
+0000711B      R-ACTSKIP        
+00007138      R-ACTSIG         
+0000714B      R-TESTQ          
+00007169      R-RUN            
+0000717E      R-CASE           
+0000729E      R-MAPIT          
+00007327      R-DUMP           
+0000735A      R-PRINTHEX       
+000073B1      R-SCAN           
+00007431      R-GO             
+0000CD88      R-DK             
+0000CD94      R-KT             
+0000CE8D      R-DT             
+0000CF33      R-TP             
+0000D648     RX-LIB$PUT_OUTPUT 
+0000D64C     RX-LIB$SIGNAL     
+0000D650     RX-LIB$TABLE_PARSE
+0000D654     RX-LIB$TPARSE     
+7FFEDF58        SYS$FAOL       
+7FFEDF68        SYS$IMGSTA     
+7FFEE070        SYS$UNWIND     
+7FFEE278        SYS$FILESCAN   
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+                                                                31-OCT-2026 13:49        Linker V11-39                    Page    6
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 0000D5FF 0000D400 (54272. bytes, 106. pages)
+Stack size:                                             20. pages
+Image binary virtual block limits:                       0.        0. (    0. blocks)
+Image name and identification:                     V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              9.
+Number of global symbols:                              329.
+Number of image sections:                                7.
+User transfer address:                            00007431
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           4.
+Image type:                                       EXECUTABLE.
+Map format:                                       FULL in file DUA1:[000000]TPA80.MAP;1
+Estimated map length:                             65. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    88	00:00:00.00	00:00:00.00
+    Pass 1:                                              1510	00:00:00.01	00:00:00.04
+    Allocation/Relocation:                                 70	00:00:00.00	00:00:00.00
+    Pass 2:                                               723	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 61	00:00:00.00	00:00:00.01
+    Symbol table output:                                    0	00:00:00.00	00:00:00.00
+Total run values:                                        2452	00:00:00.02	00:00:00.06
+
+Using a working set limited to 812 pages and 104 pages of data storage (excluding image)
+
+Total number object records read (both passes):   363
+    of which 26 were in libraries and 3 were DEBUG data records containing 414 bytes
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP/FULL TPA80

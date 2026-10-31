@@ -45,9 +45,13 @@ they must be.
 `vax/round1/`. Real MACRO refused 15 lines of `tpa80.mar`, so nothing ran, but the
 partial objects' analyses gave the psects' attributes. VMS's `$TRAN` refuses a
 bracketed `<^X...>` as its last argument (UNTERMARG), a type starting with a digit,
-`8` or `1+1` (ILLIFCOND, IFDIRSYNX), and `'<'` and `'>'` (a generated INVALID
-CHARACTER error). govax's macro takes all of these. The logs of MACRO's messages,
-`*.mlg`, may echo expansions and are for the author to audit before they're read.
+`8` or `1+1` (ILLIFCOND, IFDIRSYNX), and `'<'` and `'>'` (between them UNTERMARG,
+ILLCHR, DIRSYNX, and a generated INVALID CHARACTER '>'). govax's macro takes all of
+these. `tpa80c.mar` then held `'~'` and `' '`, which also failed, with a generated
+INVALID CHARACTER ', but its log doesn't say which line gave which message, so round 2
+asks about `'~'` alone. The author audited the logs of MACRO's messages, `*.mlg`, and
+found none of VMS's macro text in them. A new round's logs need the same audit before
+they're read.
 
 ## The VAX run
 

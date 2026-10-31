@@ -1417,8 +1417,8 @@ type's value as 256 plus its byte, and every FSCN$ code and flag.
 lines of `tpa80.mar`, so nothing ran. VMS's `$TRAN` refuses a bracketed `<^X...>` as
 its last argument (UNTERMARG), though not as its mask; a type starting with a digit,
 though the manual says any expression (ILLIFCOND, IFDIRSYNX); and `'<'` and `'>'`
-(a generated INVALID CHARACTER error). govax's macro takes all of these, a superset
-left as it is. The partial objects' analyses settled the psects: `_LIB$STATE$` byte,
+(between them UNTERMARG, ILLCHR, DIRSYNX, and a generated INVALID CHARACTER '>').
+govax's macro takes all of these, a superset left as it is. The partial objects' analyses settled the psects: `_LIB$STATE$` byte,
 `_LIB$KEY0$` and `_LIB$KEY1$` word, each PIC, SHR, EXE, RD, NOWRT, in that order, and
 the table names global; the macros now do the same. Round 2 states the refused forms
 another way.

@@ -1,0 +1,12 @@
+%MACRO-E-GENERR, Generated ERROR:  INVALID CHARACTER '
+                                     0000       
+%MACRO-E-UNTERMARG, Unterminated argument                 !
+                                     0002       
+%MACRO-E-ILLCHR, Illegal character                              !
+                                     0002       
+%MACRO-E-ILLCHR, Illegal character                      !
+%MACRO-E-GENERR, Generated ERROR:  INVALID CHARACTER '
+                                     0001       
+%MACRO-E-UNTERMARG, Unterminated argument                !
+                                     0006       
+%MACRO-E-ILLCHR, Illegal character                            !
