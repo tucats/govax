@@ -18,9 +18,9 @@ SQUARES.$T1:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SQUARES.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SQUARES.$D1:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
@@ -39,8 +39,9 @@ SQUARES.$D2:
 	MOVL	#1,SQUARES.I
 SQUARES.$1:				; DO 10's body
 ;    4           PRINT *, I, I*I
+	PUSHL	#-1
 	PUSHAB	SQUARES.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	SQUARES.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	MULL3	SQUARES.I,SQUARES.I,SQUARES.$T1

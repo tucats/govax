@@ -130,9 +130,9 @@ SHOW.$T2:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SHOW.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SHOW.$K1:
 	.ASCII	/</
 SHOW.$K2:
@@ -176,8 +176,9 @@ SHOW.$K3:
 	PUSHAQ	SHOW.$D1
 	CALLS	#1,G^LIB$SFREE1_DD
 ;   16        PRINT *, X, U, X // X
+	PUSHL	#-1
 	PUSHAB	SHOW.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	MOVW	@SHOW.X(AP),SHOW.$D2
 	MOVL	SHOW.X(AP),R0
 	MOVAB	@4(R0),SHOW.$D2+4
@@ -273,9 +274,9 @@ PAIR.$D2:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 PAIR.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;   20
@@ -283,8 +284,9 @@ PAIR.$IO1:
 	.ENTRY	PAIR,^M<>
 ;   22        CHARACTER*(*) A(2)
 ;   23        PRINT *, A, A(2)(I:)
+	PUSHL	#-1
 	PUSHAB	PAIR.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	MOVW	@PAIR.A(AP),PAIR.$D1
 	MOVL	PAIR.A(AP),R0
 	MOVAB	@4(R0),PAIR.$D1+4

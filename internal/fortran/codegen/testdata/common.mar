@@ -38,9 +38,9 @@ COMMON1.N = COMMON1.IA+4		; N
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 COMMON1.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 COMMON1.$D1:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
@@ -72,8 +72,9 @@ COMMON1.$D2:
 ;   11        N = 1
 	MOVL	#1,COMMON1.N
 ;   12        PRINT *, A, IA(1)
+	PUSHL	#-1
 	PUSHAB	COMMON1.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	COMMON1.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	COMMON1.$D2

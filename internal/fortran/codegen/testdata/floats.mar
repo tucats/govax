@@ -45,9 +45,9 @@ FLOATS.$X1:
 FLOATS.$K1:
 	.LONG	^X00004080,^X00000000	; 1D0
 FLOATS.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 FLOATS.$D1:
 	.WORD	8			; length
 	.BYTE	DSC$K_DTYPE_D,DSC$K_CLASS_S
@@ -167,8 +167,9 @@ FLOATS.$3:
 	PUSHAD	FLOATS.D
 	CALLS	#4,G^SUB
 ;   26        PRINT *, D, Q, DV, QV(1), 3.5D0
+	PUSHL	#-1
 	PUSHAB	FLOATS.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	FLOATS.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	FLOATS.$D2
@@ -232,9 +233,9 @@ SUB.$D1:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SUB.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SUB.$F1:
 	.LONG	^X99993FD9,^X999A9999	; 0.1D0
 
@@ -252,8 +253,9 @@ SUB.$F1:
 ;   39        B = A
 	CVTGH	@SUB.A(AP),@SUB.B(AP)
 ;   40        PRINT *, A
+	PUSHL	#-1
 	PUSHAB	SUB.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	MOVAG	@SUB.A(AP),SUB.$D1+4
 	PUSHAQ	SUB.$D1
 	CALLS	#1,G^FTN$IO_ITEM

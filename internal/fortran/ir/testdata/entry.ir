@@ -124,7 +124,7 @@ routine CALLER main
   cell  $T1     D  $LOCAL+12   temporary
   cell  $T2     B  $LOCAL+20   temporary
   $LOCAL is 24 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K1     L 1
   datum $K2     L 2
   datum $D1     descriptor T S 4 $T2
@@ -137,7 +137,7 @@ B1:
   ; line 51
   call H(ref X) -> J
   ; line 52
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call CG(ref $D1, ref $K1, ref $K2)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END()

@@ -11,7 +11,7 @@ routine SHORTS main
   cell  $C1     L  $LOCAL+32   DO 10's count
   $LOCAL is 36 bytes
   datum $K1     L 5
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor BU S 1 B
   datum $D2     descriptor WU S 2 L2
   datum $D3     descriptor W S 2 I2
@@ -84,7 +84,7 @@ B11:
   ; line 29
   call SUB(ref I2, ref IV-2[I4], ref BV-1[I4], ref $K1)
   ; line 30
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_ITEM(ref $D3)

@@ -616,6 +616,71 @@ var messages = map[string]kind{
 	// ALTPLACE is a CALL of a routine of the file whose alternate return
 	// specifiers aren't in the places of the routine's *s (section 6.1.1.5).
 	"ALTPLACE": {Error, "the alternate return specifiers in this call of %s aren't in the places of its dummy argument list's *s (line %d)"},
+
+	// The I/O statements' messages (chapters 7 and 8, appendix A.1;
+	// Phase 80).
+
+	// FMTSYNTAX is a FORMAT statement whose specification breaks chapter
+	// 8's rules (internal/fortran/format says what's wrong), pointing at
+	// the character that does.
+	"FMTSYNTAX": {Error, "the format is not valid: %s"},
+
+	// FMTLABEL is a FORMAT statement without a label, which nothing could
+	// use (section 8.1).
+	"FMTLABEL": {Error, "a FORMAT statement must have a label"},
+
+	// NOTFORMAT is an I/O statement's format label on a statement other
+	// than a FORMAT.
+	"NOTFORMAT": {Error, "statement label %d is on %s, not a FORMAT statement"},
+
+	// BADFORMAT is a format that is none of section 7.1.1.2's: a FORMAT
+	// statement's label, an INTEGER*4 variable a FORMAT's label was
+	// ASSIGNed to, a CHARACTER value, or an array or an array element
+	// holding a run-time format.
+	"BADFORMAT": {Error, "a format must be a FORMAT statement's label, a CHARACTER value, an array or an array element, or an INTEGER*4 variable ASSIGNed a FORMAT statement's label, and this is %s"},
+
+	// BADUNIT is a unit that is neither an INTEGER expression nor an
+	// internal file: a CHARACTER variable, array element, substring, or
+	// array (section 7.1.1.1).
+	"BADUNIT": {Error, "a unit must be an INTEGER expression or a CHARACTER variable, array, array element, or substring, and this is %s"},
+
+	// BADINPUT is an input list item that can't be read into: only a
+	// variable, an array element, a substring, a whole array, or an
+	// implied-DO list can (section 7.1.2).
+	"BADINPUT": {Error, "%s can't be read into: an input list holds variables, array elements, substrings, arrays, and implied-DO lists"},
+
+	// BADIOSTAT is an IOSTAT= that doesn't name an INTEGER variable or
+	// array element (section 7.1.1.9).
+	"BADIOSTAT": {Error, "an IOSTAT= specifier must name an INTEGER variable or array element"},
+
+	// BADCOUNT is an ENCODE or DECODE count that isn't an INTEGER
+	// expression (appendix A.1).
+	"BADCOUNT": {Error, "%s's count of characters must be an INTEGER expression"},
+
+	// CODEFORMAT is ENCODE or DECODE with a list-directed or namelist
+	// format, which they don't have (appendix A.1).
+	"CODEFORMAT": {Error, "%s needs a FORMAT statement's label or a run-time format"},
+
+	// BADBUFFER is ENCODE's or DECODE's buffer when it isn't a variable,
+	// an array, an array element, or a substring.
+	"BADBUFFER": {Error, "%s's buffer must be a variable, an array, an array element, or a substring"},
+
+	// NMLINTERNAL is namelist I/O to an internal file, which section 7.1.1.3
+	// doesn't allow.
+	"NMLINTERNAL": {Error, "namelist I/O can't use an internal file"},
+
+	// NMLTWICE is a NAMELIST group defined twice in a unit.
+	"NMLTWICE": {Error, "the NAMELIST group %s is defined already (line %d)"},
+
+	// NMLDUMMY is a dummy argument in a NAMELIST group (section 4.10).
+	"NMLDUMMY": {Error, "the dummy argument %s can't be in a NAMELIST group"},
+
+	// NMLITEM is a NAMELIST group's name that is neither a variable nor
+	// an array.
+	"NMLITEM": {Error, "a NAMELIST group holds variables and arrays, and %s is %s"},
+
+	// NOTNAMELIST is NML= naming no NAMELIST group of the unit.
+	"NOTNAMELIST": {Error, "%s is not a NAMELIST group"},
 }
 
 // Known reports whether ident is a message in the table, and its

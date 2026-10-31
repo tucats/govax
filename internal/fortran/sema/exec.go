@@ -76,33 +76,13 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return a.returnStmt(s)
 
 	case *ast.PrintStmt:
-		a.listDirected(&s.Format)
-
-		return &Print{stmtBase: stmtBase{s}, Items: a.items(s.Items)}
+		return a.printStatement(s)
 
 	case *ast.TransferStmt:
-		switch {
-		case len(s.Specs) > 0:
-			a.notImplForm(s.Specs[0].Pos, "the "+s.Specs[0].Keyword+"= specifier")
+		return a.transferStatement(s, path)
 
-			return nil
-		case s.Namelist != nil:
-			a.notImplForm(s.Namelist.Pos, "namelist-directed output")
-
-			return nil
-		case s.Rec != nil:
-			a.notImplForm(s.Rec.Position(), "direct access output")
-
-			return nil
-		case !s.Unit.Star:
-			a.notImpl(s.Unit.Pos, "a unit other than *")
-		case s.Format == nil:
-			a.notImpl(s.Pos, "unformatted output")
-		default:
-			a.listDirected(s.Format)
-		}
-
-		return &Print{stmtBase: stmtBase{s}, Write: true, Items: a.items(s.Items)}
+	case *ast.CodeStmt:
+		return a.codeStatement(s, path)
 	}
 
 	return nil
@@ -349,40 +329,4 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	}
 
 	return c
-}
-
-// listDirected reports a format other than *: formatted I/O is Phase
-// 80's.
-func (a *analyzer) listDirected(f *ast.FormatSpec) {
-	switch {
-	case f.Label != nil:
-		a.notImpl(f.Pos, "output with a FORMAT statement")
-	case f.Expr != nil:
-		a.notImpl(f.Pos, "a format given by an expression")
-	}
-}
-
-// items analyzes an output list: each item a value, a whole array
-// (section 2.2.3.5; not an assumed-size one, whose size isn't known), or
-// a character constant.
-func (a *analyzer) items(list []ast.Expr) []Expr {
-	items := make([]Expr, 0, len(list))
-
-	for _, e := range list {
-		var item Expr
-
-		if n, ok := e.(*ast.Name); ok {
-			item = a.name(n, true)
-
-			if r, ok := item.(*ArrayRef); ok && r.Sym.AssumedSize() {
-				a.report("NOSIZE", n.Pos, n.Name)
-			}
-		} else {
-			item = a.value(e)
-		}
-
-		items = append(items, item)
-	}
-
-	return items
 }

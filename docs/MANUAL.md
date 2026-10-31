@@ -1298,8 +1298,9 @@ programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
-intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; `PRINT *` and
-`WRITE (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
+intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; READ, WRITE,
+PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST, though FTNRTL runs only list-directed output so far), and reports any
+other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
@@ -1314,9 +1315,9 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, the ENCODE statement is not implemented yet
+%FORT-E-NOTIMPL, the OPEN statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
-        ENCODE (8, 10, BUF) X
+        OPEN (UNIT=1, FILE='DATA')
   ------^
 ```
 
@@ -4350,13 +4351,16 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 79, done 2026-10-31):** the compiler reads
+**Where things stand (Phase 80, in progress, 2026-10-31):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
-subprograms, and so far only list-directed output
-(section 14.2): programs written in it compile, link, and run. Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the READ
-statement is not implemented yet"); the later phases widen the language.
+subprograms, and every formatted, list-directed, and namelist I/O
+statement, with FORMAT checked as it compiles; FTNRTL runs only
+list-directed output so far, and stops a program at any other I/O
+statement with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
+`%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
+yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
 ### 14.1 A first program
@@ -4609,9 +4613,36 @@ output it prints, and programs of several files in its `modules` directory.
   without a display; PAUSE, with or without one, which writes the display
   (or `FORTRAN PAUSE`) and suspends the program at DCL's prompt: `CONTINUE`
   goes on at the next statement, `EXIT` or `STOP` end the program, and in
-  a batch job or a process with no CLI the program just goes on; `PRINT *` and `WRITE (*,*)` of values, arrays,
-  character constants, and substrings. ASSIGN of a FORMAT statement's label
-  waits for FORMAT itself.
+  a batch job or a process with no CLI the program just goes on.
+- **Input and output** (chapters 7 and 8 of the language manual): READ,
+  WRITE, PRINT, TYPE, ACCEPT, ENCODE, and DECODE, formatted (a FORMAT
+  statement's label, an INTEGER variable ASSIGNed one, or a run-time format
+  in a CHARACTER value or an array), list-directed (`*`), and namelist
+  (NAMELIST groups, `NML=`); a unit number, `*`, or an internal file (a
+  CHARACTER variable, element, substring, or array); ERR=, END=, and
+  IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
+  compile, by the rules VMS's FORTRAN run-time library applies
+  (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
+  runs only list-directed output, to the default units and units 5 and 6
+  (SYS$INPUT and SYS$OUTPUT); every other I/O statement is FOR's
+  `NOTIMP` when it runs, and so are units 0 to 4 and 7 to 119, which
+  later phases add. Unformatted, direct access, and keyed I/O, REWRITE,
+  OPEN, CLOSE, and the like, and variable format expressions (`I<N>`), are
+  `%FORT-E-NOTIMPL`.
+- **I/O errors:** a statement with ERR=, END=, or IOSTAT= gets FTNRTL's
+  status: IOSTAT's variable is set to 0, -1 at an end of file, or the
+  error's FOR number (32 for an invalid unit, 40 for an I/O statement
+  started in an item of another on the same unit); END= is taken at an end
+  of file (ERR= without it), ERR= at an error. A statement with none of
+  them stops the program, as on VMS:
+
+  ```text
+  %FOR-F-INVLOGUNI, invalid logical unit number
+    unit 1000  file
+    user PC 00000650
+  %TRACE-F-TRACEBACK, symbolic stack dump follows
+  ...
+  ```
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
@@ -4765,8 +4796,9 @@ SQUARES.$2:
 SQUARES.$3:				; DO 10's body
 ;    5  	PRINT *, I,
 ;    6  	1  I*I
+	PUSHL	#-1
 	PUSHAB	SQUARES.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	SQUARES.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	MULL3	SQUARES.I,SQUARES.I,SQUARES.$T1
@@ -4845,10 +4877,11 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
-| `FTN$PRINT_LIST(icb)` | Starts a `PRINT *` statement: `icb` is its control block (a word of size, 8; a word of flags, 0; a longword unit, -1 for `*`) |
-| `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
+| `FTN$WRITE_SL(icb, unit)` | Starts a list-directed WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `*`, -2 for TYPE) |
+| `FTN$READ_SF`, `FTN$WRITE_SF`, `FTN$READ_SL`, `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (formatted, list-directed, or namelist; a unit or an internal file), given a format too; so far each is `FOR$_NOTIMP` |
+| `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
-| `FTN$IO_END()` | Ends the statement, writing its last record |
+| `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |
@@ -4959,6 +4992,16 @@ FORTRAN compiler was available to check them). So far:
 - INCLUDE files are found relative to the including file, ten deep at
   most.
 - `FTN$STOP` and `FTN$PAUSE` write to `SYS$OUTPUT`.
+- The statements without a unit, and a unit `*`, use VMS's default units
+  -1 to -4 (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT,
+  -4 for `READ f` and `READ (*,...)`); which statement uses which isn't
+  known from VMS.
+- An I/O error is signaled when its statement ends, after the statement's
+  items (and any function they call) have run; VMS's run-time library may
+  signal it sooner.
+- A FORMAT's groups may nest 8 deep inside its own parentheses (VMS takes
+  8 and refuses 16), and a comma is optional around an H constant, as it
+  is around a character constant.
 - At `PAUSE`, DCL's `DEBUG` is govax's console `DEBUG` (as at any
   `LIB$PAUSE`), not the VMS debugger attached to the program.
 - Where one file holds both a routine and a reference to it, the

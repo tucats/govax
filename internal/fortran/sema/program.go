@@ -75,6 +75,12 @@ type Unit struct {
 	// give the unit's names, in order of place (data.go).
 	Initials []*Initial
 
+	// Formats are the unit's FORMAT statements, by label, and Namelists
+	// its NAMELIST groups, in order (io.go).
+	Formats   map[int]*Format
+	Namelists []*Namelist
+	namelists map[string]*Namelist
+
 	// GFloating is set when the unit's REAL*8 and COMPLEX*16 are in
 	// G_floating (/G_FLOATING, or the unit's OPTIONS statement), clear
 	// when they are in D_floating.
@@ -464,16 +470,6 @@ type (
 	// End is END, the unit's last statement.
 	End struct {
 		stmtBase
-	}
-
-	// Print is a list-directed output statement: PRINT *, or (with
-	// Write set) WRITE (*,*). Items are the values to write; a whole
-	// array is an *ArrayRef, and a character constant a CHARACTER
-	// *Const.
-	Print struct {
-		stmtBase
-		Write bool
-		Items []Expr
 	}
 )
 

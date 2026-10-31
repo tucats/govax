@@ -7,7 +7,7 @@ routine COMMON1 main
   cell  N       L  $LOCAL+4    variable N
   cell  IA      L  $LOCAL+0    array IA, 8 bytes
   $LOCAL is 8 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor F A 4 (1:3) A
   datum $D2     descriptor L S 4 IA
 B1:
@@ -18,7 +18,7 @@ B1:
   ; line 11
   assign N = 1
   ; line 12
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()

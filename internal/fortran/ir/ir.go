@@ -201,6 +201,7 @@ const (
 	TextCell                       // a CHARACTER temporary, for one statement's use: a concatenation's value
 	ArgCell                        // the address of a dummy argument, in a routine with ENTRY statements
 	SelectorCell                   // which entry point the routine was called by
+	FormatCell                     // where FTNRTL keeps a FORMAT statement's parsed form
 )
 
 // Cell is a place in the routine's static storage.
@@ -251,6 +252,8 @@ const (
 	TextDatum                        // a character constant's text
 	DescriptorDatum                  // a descriptor
 	ControlDatum                     // an I/O statement's control block
+	FormatDatum                      // a FORMAT statement's block
+	NamelistDatum                    // a NAMELIST group's block
 )
 
 // Datum is one item of the routine's read-only data. Two uses of the
@@ -273,6 +276,12 @@ type Datum struct {
 
 	// Control is a control block's contents.
 	Control *Control
+
+	// Format is a FORMAT statement's block.
+	Format *FormatBlock
+
+	// Namelist is a NAMELIST group's block.
+	Namelist *NamelistBlock
 }
 
 // DType is a descriptor's data type code (the OpenVMS Calling Standard's
@@ -450,20 +459,51 @@ func (d *Descriptor) Size() int {
 }
 
 // Control is an I/O statement's control block (Decision 12 of
-// docs/PHASE-74 - FORTRAN plan.md), which the statement's first FTNRTL
-// call is given. Its layout is FTNRTL's (internal/ftnrtl's
-// mar/ftn_listout.mar describes it); here it says what the statement is
-// and which unit it uses.
+// docs/PHASE-74 - FORTRAN plan.md), which the statement's begin call is
+// given first. Its layout is FTNRTL's (internal/ftnrtl's
+// mar/ftn_statement.mar describes it); here it says which of the
+// statement's optional parts it has, as ControlErr and the other flags.
+// What changes from one execution to the next (the unit, the format) are
+// the begin call's other arguments.
 type Control struct {
-	// Write is set for WRITE (*,*), clear for PRINT *.
-	Write bool
-
-	// Unit is the unit number, or DefaultUnit for *.
-	Unit int
+	Flags int
 }
 
-// DefaultUnit is the unit * names: the default output (or input) unit.
-const DefaultUnit = -1
+// The control block's flags.
+const (
+	ControlErr       = 1 << 0 // ERR= is given
+	ControlEnd       = 1 << 1 // END= is given
+	ControlIOStat    = 1 << 2 // IOSTAT= is given
+	ControlRunFormat = 1 << 3 // the format argument is a run-time format's descriptor
+)
+
+// FormatBlock is a FORMAT statement's block in the routine's read-only
+// data: where FTNRTL finds the specification's text, and Cache, a cell in
+// $LOCAL where it keeps the parsed form after the first use (Decision 4 of
+// docs/PHASE-80 - FORTRAN formatted IO.md). An I/O statement passes the
+// block's address; ASSIGN of the FORMAT's label stores it.
+type FormatBlock struct {
+	Label int
+	Text  *Datum
+	Cache *Cell
+}
+
+// NamelistBlock is a NAMELIST group's block in the routine's read-only
+// data, the layout VMS's FORTRAN run-time library takes (docs/PHASE-80,
+// "The namelist block"): the group's name, a count, and each entity's name
+// and descriptor. Names are counted strings (.ASCIC).
+type NamelistBlock struct {
+	Group    string
+	Name     *Datum
+	Entities []NamelistEntity
+}
+
+// NamelistEntity is one variable or array of a group: its name, a counted
+// string, and its descriptor.
+type NamelistEntity struct {
+	Name *Datum
+	Desc *Datum
+}
 
 // Block is a basic block: statements run one after another, then a
 // terminator that says where control goes next. Nothing jumps into the

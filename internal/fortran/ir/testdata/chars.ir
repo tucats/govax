@@ -12,7 +12,7 @@ routine CHARS main
   datum $K1     text 'ABC'
   datum $K2     text 'X'
   datum $K3     text 'Q'
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor T S 8 S
   datum $D2     descriptor T S 2 T+1
   datum $D5     descriptor T A 5 (2:4) NAMES
@@ -53,7 +53,7 @@ B6:
   jump B7
 B7:
   ; line 16
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   assign $D3+4 = addr(NAMES-10[mul.L(I, 5)])

@@ -70,9 +70,9 @@ DATAS.CI = DATAS.C			; CI
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 DATAS.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 DATAS.$D1:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
@@ -112,8 +112,9 @@ DATAS.$D4:
 ;   18        K = K + I
 	ADDL2	DATAS.I,DATAS.K
 ;   19        PRINT *, K, X, B(2), Y
+	PUSHL	#-1
 	PUSHAB	DATAS.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	DATAS.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	DATAS.$D2

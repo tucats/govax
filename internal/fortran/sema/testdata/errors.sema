@@ -8,6 +8,7 @@
   $LOCAL is 52 bytes
 6           I = 1
 13          DO 10 I = 1, 10, 1
+14            READ * A[I]
 15            IF (LOGICAL A[I]) GO TO 30
 16    10      CONTINUE
 18          CALL SUB(A[], X)
@@ -40,11 +41,6 @@
   at line 7 of ERRORS.FOR
         INTEGER J
   ------^
-
-%FORT-E-NOTIMPL, the READ statement is not implemented yet
-  at line 14 of ERRORS.FOR
-           READ *, A(I)
-  ---------^
 
 %FORT-E-NEEDSUBSCRIPT, the array A can't be used without subscripts here
   at line 17 of ERRORS.FOR

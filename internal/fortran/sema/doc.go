@@ -148,11 +148,11 @@
 //
 // The parser builds a node for every statement and form of VAX FORTRAN,
 // and this pass is where one it can't compile yet is reported, as it
-// reaches it (notimpl.go): a statement it doesn't handle (READ, VOLATILE,
-// FORMAT) is "the READ statement is not implemented yet" at the
+// reaches it (notimpl.go): a statement it doesn't handle (OPEN, REWRITE,
+// VOLATILE) is "the OPEN statement is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
 // inside a statement it does handle (a Hollerith constant in an expression,
-// an implied-DO list) is reported where the expression is analyzed. Each
+// a variable format expression) is reported where it is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
 // Some declarations can't be read yet at all: VOLATILE, RECORD, and

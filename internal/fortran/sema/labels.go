@@ -32,13 +32,16 @@ type frame struct {
 }
 
 // labelRef is a reference to a label: a jump (GO TO's in every form, an
-// arithmetic IF's), or with assign set, an ASSIGN's, which jumps nowhere
-// itself and may name a FORMAT statement too.
+// arithmetic IF's, an I/O statement's ERR= and END=); with assign set, an
+// ASSIGN's, which jumps nowhere itself and may name a FORMAT statement
+// too; or with format set, an I/O statement's format, which must be a
+// FORMAT statement's.
 type labelRef struct {
 	label  int
 	pos    diag.Position
 	path   []frame
 	assign bool
+	format bool
 }
 
 // jumps records a jump to each of labels from a statement at path.
@@ -70,9 +73,11 @@ func (a *analyzer) checkLabels() {
 		case l == nil:
 			a.report("UNDEFLBL", r.pos, r.label)
 
-		case r.assign && l.Stmt.Base().Kind == lex.Format:
-			// What PRINT v needs, with FORMAT statements (Phase 80).
-			a.notImpl(r.pos, "ASSIGN of a FORMAT statement's label")
+		case r.format && l.Stmt.Base().Kind != lex.Format:
+			a.report("NOTFORMAT", r.pos, r.label, aStatement(l.Stmt))
+
+		case r.format, r.assign && l.Stmt.Base().Kind == lex.Format:
+			// A format, or a variable that will hold one (PRINT v).
 
 		case r.assign && a.jumpTarget(l.Stmt):
 			// Where the label is matters only to the GO TO that uses it.

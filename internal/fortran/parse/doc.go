@@ -32,7 +32,7 @@
 //
 // Every statement of VAX FORTRAN has a function in the table (Phase 76),
 // whether or not the compiler can compile it yet: the parser builds its
-// node, and semantic analysis says "the READ statement is not
+// node, and semantic analysis says "the OPEN statement is not
 // implemented yet" (NOTIMPL) when it reaches one it has no meaning for.
 // The files follow the manual's chapters: decl.go the headers and the
 // declarations of types and shapes (type statements, DIMENSION,

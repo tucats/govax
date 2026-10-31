@@ -1,27 +1,15 @@
 	.TITLE	FTN_LISTOUT - FTNRTL's list-directed output
 	.IDENT	/V1.0/
 ;
-; List-directed output: PRINT * and WRITE (*,*), whose values are
-; written in formats the type of each one chooses rather than a FORMAT
+; List-directed output: PRINT *, WRITE (u,*), and TYPE *, whose values
+; are written in formats the type of each one chooses rather than a FORMAT
 ; statement's (the 1988 VAX FORTRAN Language Reference Manual, 7.3.1.2).
-; The compiler turns such a statement into a call per part:
-;
-;	PRINT *, I, X		CALLS #1,G^FTN$PRINT_LIST	(the start)
-;				CALLS #1,G^FTN$IO_ITEM		(I)
-;				CALLS #1,G^FTN$IO_ITEM		(X)
-;				CALLS #0,G^FTN$IO_END		(the end)
-;
-; The start's argument is the statement's control block, made by the
-; compiler in its read-only data:
-;
-;	+0	word	the block's size in bytes (8 here)
-;	+2	word	flags: which of UNIT=, FMT=, REC=, ERR=, END=, and
-;			IOSTAT= the statement gives (0 here: none yet)
-;	+4	long	the unit, -1 for *
-;
-; Later phases add fields after these, raising the size; a routine reads
-; only the fields the size says are there. For now every unit is the
-; default output unit, SYS$OUTPUT (FTN_UNITS).
+; FTN_STATEMENT begins and ends the statement, and calls this module's
+; three routines, each given the statement's context (whose fields
+; FTN_STATEMENT describes): FTN$$LIST_START at its begin call,
+; FTN$$LIST_ITEM for each item, and FTN$$LIST_END at its end. The record
+; is built in the context, so that a statement a function does for one of
+; the items builds its own.
 ;
 ; An item's argument is a descriptor (the VAX calling standard's): of a
 ; scalar (class S), whose data type says how it's written, or of a whole
@@ -52,10 +40,11 @@
 ; after the comma. Both are govax's choices, unconfirmed.
 ;
 ; A record is at most 80 bytes long, its first the carriage control, a
-; blank (a new line). The start begins a record with that blank; each
+; blank (a new line). FTN$$LIST_START begins a record with that blank; each
 ; value goes at the record's end, unless it doesn't fit there, when the
-; record is written and the value begins the next; the end writes the
-; last record. So a statement writes at least one record, and a value is
+; record is written and the value begins the next; FTN$$LIST_END writes
+; the last record. A record that RMS can't write is the statement's error,
+; FOR$_ERRDURWRI, and what is left of the statement writes nothing. So a statement writes at least one record, and a value is
 ; never split across records, but for a character value longer than a
 ; record, which begins a record and fills as many as it needs. The
 ; record length (80), the values following one another with no blank
@@ -113,52 +102,34 @@ DSC$K_CLASS_A	= 4			; an array
 
 RECORD_MAX	= 80			; a record's length, at most
 
-;
-; The record being built: data each program has its own copy of.
-;
-	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+; The statement's context's fields this module uses (FTN_STATEMENT's).
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
+CTX_RECLEN	= 24			; long: the bytes in the record so far
+CTX_RECORD	= 28			; the record being built
 
-RECORD_LEN:	.LONG	0		; the bytes in RECORD so far
-RECORD:		.BLKB	RECORD_MAX	; the carriage control, then the values
+FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;
-; FTN$PRINT_LIST(icb)
-; FTN$WRITE_LIST(icb)
+; FTN$$LIST_START(context)
 ;
-; Starts a list-directed output statement, PRINT * or WRITE (*,*): the
-; argument is its control block. Connects the unit, if it isn't yet,
-; and starts a record. Returns SS$_NORMAL in R0.
+; Starts a list-directed output statement's first record.
 ;
-	.ENTRY	FTN$PRINT_LIST,^M<>
-	CALLG	(AP),START_LIST
-	RET
-
-	.ENTRY	FTN$WRITE_LIST,^M<>
-	CALLG	(AP),START_LIST
+	.ENTRY	FTN$$LIST_START,^M<>
+	PUSHL	4(AP)
+	CALLS	#1,NEW_RECORD
 	RET
 
 ;
-; START_LIST(icb): both statements' start. (A routine of this module's
-; own, called with CALLS or CALLG like any other: its first word is its
-; entry mask, as .ENTRY would make, but its name isn't global.)
-;
-START_LIST:
-	.WORD	^M<>
-	CALLS	#0,FTN$$OUTPUT_OPEN	; FTN_UNITS
-	CALLS	#0,NEW_RECORD
-	MOVL	#SS$_NORMAL,R0
-	RET
-
-;
-; FTN$IO_ITEM(desc)
+; FTN$$LIST_ITEM(context, desc)
 ;
 ; Writes one output item, a scalar or a whole array, described by desc.
-; Returns SS$_NORMAL in R0.
 ;
-	.ENTRY	FTN$IO_ITEM,^M<R2,R3,R4,R5>
-	MOVL	4(AP),R5		; the descriptor
+	.ENTRY	FTN$$LIST_ITEM,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+	MOVL	8(AP),R5		; the descriptor
 	MOVZWL	DSC$W_LENGTH(R5),R2	; an element's length
 	MOVL	DSC$A_POINTER(R5),R3	; the first element
 	MOVL	#1,R4			; how many: one, for a scalar
@@ -168,104 +139,118 @@ START_LIST:
 	BEQL	90$
 	DIVL3	R2,DSC$L_ARSIZE(R5),R4	; the array's elements
 	BEQL	90$
-10$:	PUSHL	R2			; each element: its length,
+10$:	PUSHL	R6			; each element: the context,
+	PUSHL	R2			;  its length,
 	PUSHL	R3			;  its address,
 	MOVZBL	DSC$B_DTYPE(R5),-(SP)	;  and its type
-	CALLS	#3,PUT_VALUE
+	CALLS	#4,PUT_VALUE
 	ADDL2	R2,R3			; the next element
 	SOBGTR	R4,10$
-90$:	MOVL	#SS$_NORMAL,R0
-	RET
+90$:	RET
 
 ;
-; FTN$IO_END()
+; FTN$$LIST_END(context)
 ;
 ; Ends a list-directed output statement: writes the last record.
-; Returns SS$_NORMAL in R0.
 ;
-	.ENTRY	FTN$IO_END,^M<>
-	CALLS	#0,PUT_RECORD
-	CLRL	RECORD_LEN		; no record is being built
-	MOVL	#SS$_NORMAL,R0
+	.ENTRY	FTN$$LIST_END,^M<>
+	PUSHL	4(AP)
+	CALLS	#1,PUT_RECORD
 	RET
 
 ;
-; NEW_RECORD(): starts a record with its carriage control, a blank.
+; NEW_RECORD(context): starts a record with its carriage control, a blank.
 ;
 NEW_RECORD:
 	.WORD	^M<>
-	MOVB	#^A/ /,RECORD
-	MOVL	#1,RECORD_LEN
+	MOVL	4(AP),R0
+	MOVB	#^A/ /,CTX_RECORD(R0)
+	MOVL	#1,CTX_RECLEN(R0)
 	RET
 
 ;
-; PUT_RECORD(): writes the record built so far, and starts the next.
+; PUT_RECORD(context): writes the record built so far, and starts the
+; next. Nothing is written once the statement has failed; a write that
+; fails is the statement's error.
 ;
 PUT_RECORD:
-	.WORD	^M<>
-	PUSHL	RECORD_LEN
-	PUSHAB	RECORD
-	CALLS	#2,FTN$$OUTPUT_PUT	; FTN_UNITS
-	CALLS	#0,NEW_RECORD
+	.WORD	^M<R2>
+	MOVL	4(AP),R2
+	TSTL	CTX_STATUS(R2)
+	BNEQ	10$
+	PUSHL	CTX_RECLEN(R2)
+	PUSHAB	CTX_RECORD(R2)
+	PUSHL	CTX_STREAM(R2)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,10$
+	MOVL	#FOR$_ERRDURWRI,CTX_STATUS(R2)
+10$:	PUSHL	R2
+	CALLS	#1,NEW_RECORD
 	RET
 
 ;
-; PUT_FIELD(address, length): puts one value's field, length bytes at
-; address, at the record's end, after writing the record first if the
-; field doesn't fit there (and the record holds a value already).
+; PUT_FIELD(context, address, length): puts one value's field, length
+; bytes at address, at the record's end, after writing the record first if
+; the field doesn't fit there (and the record holds a value already).
 ;
 PUT_FIELD:
-	.WORD	^M<R2,R3,R4,R5>
-	ADDL3	RECORD_LEN,8(AP),R0	; the record's length with the field
+	.WORD	^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+	ADDL3	CTX_RECLEN(R6),12(AP),R0 ; the record's length with the field
 	CMPL	R0,#RECORD_MAX
 	BLEQ	10$			; it fits
-	CMPL	RECORD_LEN,#1
+	CMPL	CTX_RECLEN(R6),#1
 	BLEQ	10$			; a record of its own, then
-	CALLS	#0,PUT_RECORD
-10$:	MOVAB	RECORD,R3
-	ADDL2	RECORD_LEN,R3		; where the field goes
-	ADDL2	8(AP),RECORD_LEN
-	MOVC3	8(AP),@4(AP),(R3)	; MOVC3 changes R0 to R5
+	PUSHL	R6
+	CALLS	#1,PUT_RECORD
+10$:	MOVAB	CTX_RECORD(R6),R3
+	ADDL2	CTX_RECLEN(R6),R3	; where the field goes
+	ADDL2	12(AP),CTX_RECLEN(R6)
+	MOVC3	12(AP),@8(AP),(R3)	; MOVC3 changes R0 to R5
 	RET
 
 ;
-; PUT_TEXT(address, length): puts a character value at the record's
-; end. One that doesn't fit begins a new record, and one longer than a
-; record fills as many as it needs, the last left for what follows.
+; PUT_TEXT(context, address, length): puts a character value at the
+; record's end. One that doesn't fit begins a new record, and one longer
+; than a record fills as many as it needs, the last left for what follows.
 ;
 PUT_TEXT:
-	.WORD	^M<R2,R3,R4,R5,R6,R7>
-	MOVL	4(AP),R6		; the text not yet put
-	MOVL	8(AP),R7		; and its length
-	ADDL3	RECORD_LEN,R7,R0
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	4(AP),R8		; the context
+	MOVL	8(AP),R6		; the text not yet put
+	MOVL	12(AP),R7		; and its length
+	ADDL3	CTX_RECLEN(R8),R7,R0
 	CMPL	R0,#RECORD_MAX
 	BLEQ	10$			; it fits
-	CMPL	RECORD_LEN,#1
+	CMPL	CTX_RECLEN(R8),#1
 	BLEQ	10$			; nothing in the record yet
-	CALLS	#0,PUT_RECORD
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD
 10$:	TSTL	R7			; any text left?
 	BLEQ	90$
-	SUBL3	RECORD_LEN,#RECORD_MAX,R2 ; the record's room
+	SUBL3	CTX_RECLEN(R8),#RECORD_MAX,R2 ; the record's room
 	CMPL	R7,R2
 	BGEQ	20$
 	MOVL	R7,R2			; the rest, if less
-20$:	MOVAB	RECORD,R3
-	ADDL2	RECORD_LEN,R3
-	ADDL2	R2,RECORD_LEN
+20$:	MOVAB	CTX_RECORD(R8),R3
+	ADDL2	CTX_RECLEN(R8),R3
+	ADDL2	R2,CTX_RECLEN(R8)
 	SUBL2	R2,R7
 	PUSHL	R2			; MOVC3 changes R2; keep the count
 	MOVC3	R2,(R6),(R3)
 	ADDL2	(SP)+,R6		; past the text put
 	TSTL	R7
 	BLEQ	90$			; that was the end of it
-	CALLS	#0,PUT_RECORD		; the record is full
+	PUSHL	R8
+	CALLS	#1,PUT_RECORD		; the record is full
 	BRB	10$
 90$:	RET
 
 ;
-; PUT_VALUE(type, address, length): puts one value, of data type type
-; (a DSC$K_DTYPE_ code), length bytes at address, in its list-directed
-; format. A type FTNRTL can't write ends the image with SS$_BADPARAM.
+; PUT_VALUE(type, address, length, context): puts one value, of data
+; type type (a DSC$K_DTYPE_ code), length bytes at address, in its
+; list-directed format, in the record of the statement whose context is
+; given. A type FTNRTL can't write ends the image with SS$_BADPARAM.
 ;
 ; The routine works in a frame of its own (below FP, made by subtracting
 ; from SP): OTS$$CVT_x_T_R8 reads its arguments and writes its results at
@@ -374,7 +359,8 @@ INTEGER:
 TEXT:
 	PUSHL	12(AP)
 	PUSHL	R6
-	CALLS	#2,PUT_TEXT
+	PUSHL	16(AP)			; the context
+	CALLS	#3,PUT_TEXT
 	RET
 
 ;
@@ -444,7 +430,8 @@ COMPLEX:
 	INCL	CTEXT_LEN(FP)
 	PUSHL	CTEXT_LEN(FP)
 	PUSHAB	CTEXT(FP)
-	CALLS	#2,PUT_FIELD
+	PUSHL	16(AP)			; the context
+	CALLS	#3,PUT_FIELD
 	RET
 
 ;
@@ -558,7 +545,8 @@ E_FORM:	ADDL3	FMT_D(FP),FMT_E(FP),R10
 ;
 PUT_THE_FIELD:
 	PUSHAB	FIELD(FP)
-	CALLS	#2,PUT_FIELD
+	PUSHL	16(AP)			; the context
+	CALLS	#3,PUT_FIELD
 	RET
 
 ;

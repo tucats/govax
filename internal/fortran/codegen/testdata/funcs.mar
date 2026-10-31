@@ -48,9 +48,9 @@ FUNCS.$D3:
 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
 	.ADDRESS FUNCS.$T2
 FUNCS.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 FUNCS.$K4:
 	.LONG	5
 FUNCS.$D4:
@@ -94,8 +94,9 @@ FUNCS.$K3:
 	CALLS	#2,G^ZF
 	MOVO	FUNCS.$T5,FUNCS.Z
 ;   10        PRINT *, LEN(NAME5(2)), NAME5(3)
+	PUSHL	#-1
 	PUSHAB	FUNCS.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	FUNCS.$D4
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAL	FUNCS.$K5

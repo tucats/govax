@@ -3,7 +3,7 @@ routine SQUARES main
   cell  $C1     L  $LOCAL+4    DO 10's count
   cell  $T1     L  $LOCAL+8    temporary
   $LOCAL is 12 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor L S 4 I
   datum $D2     descriptor L S 4 $T1
 B1:
@@ -13,7 +13,7 @@ B1:
   jump B2
 B2:  ; DO 10's body
   ; line 4
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   assign $T1 = mul.L(I, I)
   call FTN$IO_ITEM(ref $D2)

@@ -49,6 +49,12 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.AttrStmt:
 			a.attributeStatement(s)
+
+		case *ast.FormatStmt:
+			a.formatStatement(s)
+
+		case *ast.NamelistStmt:
+			a.namelistStatement(s)
 		}
 	}
 }

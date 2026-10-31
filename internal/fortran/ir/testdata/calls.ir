@@ -18,7 +18,7 @@ routine CALLS main
   datum $K1     L 2
   datum $K2     L 5
   datum $K3     L 6
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K4     text 'M(1,1) IS'
   datum $D1     descriptor T S 9 $K4
   datum $D2     descriptor L S 4 M
@@ -60,7 +60,7 @@ B1:
   ; line 18
   assign OK = or.L(gt.F(Y, 10.0), eq.L(I, 0))
   ; line 19
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_ITEM(ref $D3)
@@ -139,7 +139,7 @@ routine FILL subroutine
   cell  $D2     L  $LOCAL+16   descriptor L S 4
   cell  $D3     L  $LOCAL+24   descriptor L A 4 (1:6)
   $LOCAL is 56 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
 B1:
   ; line 38
   assign $C1 = @N
@@ -156,7 +156,7 @@ B3: L10
   branch gt.L($C1, 0) B2 B4
 B4:
   ; line 41
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   assign $D1+4 = addr(@N)
   call FTN$IO_ITEM(ref $D1)
   assign $D2+4 = addr(@A-4[@N])
@@ -179,10 +179,10 @@ routine SHOW subroutine
   cell  $D4     L  $LOCAL+24   descriptor L S 4
   cell  $D5     L  $LOCAL+32   descriptor L S 4
   $LOCAL is 40 bytes
-  datum $IO1    control WRITE (*,*)
+  datum $IO1    control
 B1:
   ; line 46
-  call FTN$WRITE_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   assign $D1+4 = addr(@A)
   call FTN$IO_ITEM(ref $D1)
   assign $D2+4 = addr(@B)

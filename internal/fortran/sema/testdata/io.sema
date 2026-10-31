@@ -1,0 +1,40 @@
+== main program IO
+  IO                      program unit
+  I         INTEGER       variable         $LOCAL+0
+  J         INTEGER       variable         $LOCAL+4
+  M         INTEGER       variable         $LOCAL+8
+  K         INTEGER       array(1:10)      $LOCAL+12
+  IOS       INTEGER       variable         $LOCAL+52
+  IOS2      INTEGER*2     variable         $LOCAL+56
+  X         REAL          variable         $LOCAL+60
+  A         REAL          array(1:5)       $LOCAL+64
+  LINE      CHARACTER*20  variable         $LOCAL+84
+  PAGE      CHARACTER*20  array(1:3)       $LOCAL+104
+  FMT       CHARACTER*8   variable         $LOCAL+164
+  $LOCAL is 172 bytes
+11          ASSIGN 100 TO J
+13          PRINT 10 I X
+14          PRINT assigned J I
+15          PRINT run-time FMT X
+16          PRINT run-time '(1X,I3)' I
+17          PRINT run-time K[] I
+18          PRINT run-time K[2] I
+19          TYPE 10 I X
+20          ACCEPT 10 I X
+21          READ 10 I X
+22          READ * I (A[M], M = 1, 5, 1)
+23          READ (5,10,ERR=300,END=200,IOSTAT=IOS) I X
+24          WRITE (6,10,ERR=300,IOSTAT=IOS2) I X
+25          WRITE (*,10) ((K[M], M = 1, 10, 2) I, J = 1, 2, 1) I
+26          WRITE ((+:I I 1),*) X
+27          READ (internal LINE,10) I X
+28          WRITE (internal PAGE[],*) I
+29          WRITE (internal LINE(2:5),run-time '(I3)') I
+30          WRITE (6,NML=G)
+31          READ (5,NML=G)
+32          PRINT NML=G
+33          ENCODE (20,10,LINE) I X
+34          DECODE (12,10,K[]) I
+35          WRITE (6,*) 'DONE' (+:R X 1.0)
+37    200   CONTINUE
+38    300   END

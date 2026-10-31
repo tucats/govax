@@ -11,12 +11,8 @@ import (
 // The FTNRTL routines lowered statements call (Decision 12 of
 // docs/PHASE-74 - FORTRAN plan.md).
 const (
-	ftnStop      = "FTN$STOP"
-	ftnPause     = "FTN$PAUSE"
-	ftnPrintList = "FTN$PRINT_LIST"
-	ftnWriteList = "FTN$WRITE_LIST"
-	ftnIOItem    = "FTN$IO_ITEM"
-	ftnIOEnd     = "FTN$IO_END"
+	ftnStop  = "FTN$STOP"
+	ftnPause = "FTN$PAUSE"
 )
 
 // stmts lowers a list of statements.
@@ -56,12 +52,23 @@ func (l *lowerer) stmt(s sema.Stmt) {
 		l.computedGoto(s)
 
 	case *sema.AssignLabel:
-		l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &LabelAddr{l.labelBlock(s.Label)}})
+		if f := l.unit.Formats[s.Label]; f != nil {
+			// A FORMAT's label: its block's address, for PRINT v.
+			l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &Addr{l.formatBlock(f)}})
+		} else {
+			l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &LabelAddr{l.labelBlock(s.Label)}})
+		}
 
 	case *sema.AssignedGoto:
 		labels := s.Labels
 		if labels == nil {
-			labels = l.unit.Assigned
+			// Every label the unit ASSIGNs but FORMAT statements', which a
+			// jump can't go to.
+			for _, n := range l.unit.Assigned {
+				if l.unit.Formats[n] == nil {
+					labels = append(labels, n)
+				}
+			}
 		}
 
 		l.terminate(&IndirectJump{l.origin(), l.symbolMem(s.Var), l.labelBlocks(labels)})
@@ -101,8 +108,8 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.EntryPoint:
 		l.entryPoint(s)
 
-	case *sema.Print:
-		l.print(s)
+	case *sema.IO:
+		l.io(s)
 	}
 
 	l.flush()
@@ -363,49 +370,61 @@ func (l *lowerer) logicalIf(s *sema.If) {
 //	  branch gt.L($C1, 0) B2 B3
 //	B3: (after the loop)
 func (l *lowerer) do(d *sema.Do) {
+	l.countedLoop(loopName(d.Label, d.AST), d.Var, d.Start, d.Limit, d.Step, true, func() {
+		l.stmts(d.Body)
+		l.loopEnd(d.Label, d.EndDo)
+	})
+}
+
+// countedLoop lowers a loop of DO's kind, named name, its variable v
+// going from start to limit by step: a DO statement's, or an implied-DO
+// list's (impliedDo), whose body is lowered by body. A DO statement's
+// temporaries are given back once its count is set (release), since its
+// statement is over then; an implied-DO list's statement isn't.
+func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step sema.Expr, release bool, body func()) {
 	l.loops++
 	n := l.loops
 
-	t := l.typeOf(d.Var.Type)
-	v := l.symbolMem(d.Var)
+	t := l.typeOf(v.Type)
+	place := l.symbolMem(v)
 
-	start := l.expr(d.Start)
-	limit := l.expr(d.Limit)
-	step := l.expr(d.Step)
+	first := l.expr(start)
+	last := l.expr(limit)
+	by := l.expr(step)
 
-	name := loopName(d.Label, d.AST)
-
-	if _, ok := step.(*Const); !ok {
+	if _, ok := by.(*Const); !ok {
 		s := l.loopCell(StepCell, n, t, name)
-		l.emit(&Assign{l.origin(), s, step})
-		step = &Load{s}
+		l.emit(&Assign{l.origin(), s, by})
+		by = &Load{s}
 	}
 
 	count := l.loopCell(CountCell, n, Long, name)
-	trips := tripCount(t, start, limit, step)
+	trips := tripCount(t, first, last, by)
 
 	l.emit(&Assign{l.origin(), count, trips})
-	l.emit(&Assign{l.origin(), v, start})
-	l.release()
+	l.emit(&Assign{l.origin(), place, first})
 
-	body := l.newBlock()
-	body.Note = name + "'s body"
+	if release {
+		l.release()
+	}
+
+	pass := l.newBlock()
+	pass.Note = name + "'s body"
 	exit := l.newBlock()
 
 	switch c, ok := trips.(*Const); {
 	case !ok:
-		l.branch(&Cmp{Le, &Load{count}, LongConst(0)}, exit, body)
+		l.branch(&Cmp{Le, &Load{count}, LongConst(0)}, exit, pass)
 	case c.Int() <= 0:
 		l.jump(exit)
 	}
 
-	l.begin(body)
-	l.stmts(d.Body)
-	l.loopEnd(d.Label, d.EndDo)
+	l.begin(pass)
+	body()
 
-	l.emit(&Assign{l.origin(), v, arith(Add, t, &Load{v}, step)})
+	l.emit(&Assign{l.origin(), place, arith(Add, t, &Load{place}, by)})
 	l.emit(&Assign{l.origin(), count, arith(Sub, Long, &Load{count}, LongConst(1))})
-	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, body, exit)
+	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, pass, exit)
 	l.begin(exit)
 }
 
@@ -512,26 +531,6 @@ func (l *lowerer) stop(s *sema.Stop) {
 
 	l.emit(&Call{origin: l.origin(), Routine: ftnStop, Args: args})
 	l.terminate(&NoReturn{l.origin()})
-}
-
-// print lowers PRINT * and WRITE (*,*) to Decision 12's calls: the
-// statement's begin call with its control block, a call of FTN$IO_ITEM
-// with each item's descriptor, and FTN$IO_END, which writes the record.
-func (l *lowerer) print(s *sema.Print) {
-	routine := ftnPrintList
-	if s.Write {
-		routine = ftnWriteList
-	}
-
-	icb := l.control(Control{Write: s.Write, Unit: DefaultUnit})
-	l.emit(&Call{origin: l.origin(), Routine: routine, Args: []Arg{{Ref: icb}}})
-
-	for _, item := range s.Items {
-		desc := l.item(item)
-		l.emit(&Call{origin: l.origin(), Routine: ftnIOItem, Args: []Arg{{Ref: desc}}})
-	}
-
-	l.emit(&Call{origin: l.origin(), Routine: ftnIOEnd})
 }
 
 // item is the descriptor of an output list item. A variable, an array

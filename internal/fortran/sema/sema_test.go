@@ -275,7 +275,7 @@ func TestErrors(t *testing.T) {
 		{"DATA among the specifications", []string{"REAL X", "DATA X /1.0/", "INTEGER I", "END"}, ""},
 		{"DATA among the executables", []string{"X = 1", "DATA Y /2.0/", "END"}, ""},
 		{"a declaration after a statement function", []string{"F(X) = X", "REAL Y", "END"}, "ORDER@2:7"},
-		{"FORMAT and NAMELIST anywhere", []string{"10 FORMAT (I5)", "IMPLICIT REAL (A)", "NAMELIST /G/ A", "X = 1", "END"}, "NOTIMPL@1:7 NOTIMPL@3:7"},
+		{"FORMAT and NAMELIST anywhere", []string{"10 FORMAT (I5)", "IMPLICIT REAL (A)", "NAMELIST /G/ A", "X = 1", "END"}, ""},
 		{"COMMON after an executable", []string{"X = 1", "COMMON /C/ Y", "END"}, "LATEDECL@2:7"},
 
 		// PARAMETER and constant expressions (section 4.11, appendix A.4).
@@ -456,11 +456,35 @@ func TestErrors(t *testing.T) {
 
 		// Statements.
 		{"RETURN in a main program", []string{"RETURN", "END"}, "MAINRETURN@1:7"},
-		{"formatted PRINT", []string{"PRINT 10, X", "10 FORMAT (F8.2)", "END"}, "NOTIMPL@1:13 NOTIMPL@2:7"},
-		{"a unit number", []string{"WRITE (6,*) X", "END"}, "NOTIMPL@1:14"},
+		{"formatted PRINT", []string{"PRINT 10, X", "10 FORMAT (F8.2)", "END"}, ""},
+		{"a unit number", []string{"WRITE (6,*) X", "END"}, ""},
 		{"unformatted WRITE", []string{"WRITE (*) X", "END"}, "NOTIMPL@1:7"},
-		{"a format expression", []string{"WRITE (*,F) X", "END"}, "NOTIMPL@1:16"},
+		{"a REAL format", []string{"WRITE (*,F) X", "END"}, "BADFORMAT@1:16"},
 		{"an assumed-size array written", []string{"SUBROUTINE S(A)", "DIMENSION A(*)", "PRINT *, A", "END"}, "NOSIZE@3:16"},
+
+		// I/O statements, FORMAT, and NAMELIST (Phase 80).
+		{"a FORMAT's syntax", []string{"10 FORMAT (1X I3)", "END"}, "FMTSYNTAX@1:18"},
+		{"a FORMAT after its last parenthesis", []string{"10 FORMAT (I3) X", "END"}, "FMTSYNTAX@1:19"},
+		{"a FORMAT without a label", []string{"FORMAT (I5)", "END"}, "FMTLABEL@1:7"},
+		{"a variable format expression", []string{"10 FORMAT (I<N>)", "END"}, "NOTIMPL@1:16"},
+		{"a FORMAT ending a loop", []string{"DO 10 I = 1, 2", "10 FORMAT (I5)", "END"}, "DOTERM@2:7"},
+		{"a format label on a CONTINUE", []string{"PRINT 10, X", "10 CONTINUE", "END"}, "NOTFORMAT@1:13"},
+		{"an undefined format label", []string{"PRINT 10, X", "END"}, "UNDEFLBL@1:13"},
+		{"a REAL unit", []string{"WRITE (1.5, *) X", "END"}, "BADUNIT@1:14"},
+		{"a constant read into", []string{"PARAMETER (N = 3)", "READ *, 3, N, X + 1", "END"}, "BADINPUT@2:15 BADINPUT@2:18 BADINPUT@2:23"},
+		{"a whole array and a substring read", []string{"CHARACTER*8 S", "DIMENSION A(3)", "READ *, A, S(2:3)", "END"}, ""},
+		{"a DO variable read in its loop", []string{"DO 10 I = 1, 2", "READ *, I", "10 CONTINUE", "END"}, "DOVARSET@2:15"},
+		{"a REAL IOSTAT", []string{"READ (5, *, IOSTAT=X) I", "END"}, "BADIOSTAT@1:19"},
+		{"END= and ERR= as jumps", []string{"READ (5, *, END=10, ERR=20) I", "IF (L) THEN", "10 CONTINUE", "END IF", "20 FORMAT (I5)", "END"}, "INTOBLOCK@1:23 NOTEXEC@1:31"},
+		{"namelist to an internal file", []string{"CHARACTER*80 S", "NAMELIST /G/ X", "WRITE (S, NML=G)", "END"}, "NMLINTERNAL@3:14"},
+		{"a namelist that isn't one", []string{"READ (5, NML=Q)", "END"}, "NOTNAMELIST@1:20"},
+		{"a namelist defined twice", []string{"NAMELIST /G/ X, /G/ Y", "END"}, "NMLTWICE@1:24"},
+		{"a namelist's dummy", []string{"SUBROUTINE S(X)", "NAMELIST /G/ X", "END"}, "NMLDUMMY@2:17"},
+		{"a namelist's constant", []string{"PARAMETER (N = 3)", "NAMELIST /G/ N", "END"}, "NMLITEM@2:17"},
+		{"ENCODE with *", []string{"DIMENSION B(5)", "ENCODE (5, *, B) I", "END"}, "CODEFORMAT@2:18"},
+		{"ENCODE into a constant", []string{"10 FORMAT (I5)", "ENCODE (5, 10, 'ABC') I", "END"}, "BADBUFFER@2:22"},
+		{"ENCODE with a REAL count", []string{"10 FORMAT (I5)", "DIMENSION B(5)", "ENCODE (X, 10, B) I", "END"}, "BADCOUNT@3:15"},
+		{"a format in an INTEGER*2", []string{"INTEGER*2 K", "PRINT K, 1", "END"}, "BADFORMAT@2:13"},
 
 		// IF blocks.
 		{"ELSE with no IF", []string{"ELSE", "END"}, "NOIF@1:7"},
@@ -520,9 +544,9 @@ func TestErrors(t *testing.T) {
 		{"a label twice", []string{"10 CONTINUE", "10 CONTINUE", "END"}, "DUPLABEL@2:1"},
 		{"a jump to nowhere", []string{"GO TO 20", "END"}, "UNDEFLBL@1:13"},
 		{"a jump to a declaration", []string{"10 INTEGER I", "GO TO 10", "END"}, "NOTEXEC@2:13"},
-		{"a jump to a FORMAT", []string{"10 FORMAT (I5)", "GO TO 10", "END"}, "NOTIMPL@1:7 NOTEXEC@2:13"},
+		{"a jump to a FORMAT", []string{"10 FORMAT (I5)", "GO TO 10", "END"}, "NOTEXEC@2:13"},
 		{"a jump to ELSE", []string{"IF (L) THEN", "GO TO 10", "10 ELSE", "END IF", "END"}, "NOTEXEC@2:13"},
-		{"a jump to a statement with an error", []string{"10 READ *, X", "GO TO 10", "END"}, "NOTIMPL@1:7"},
+		{"a jump to a statement with an error", []string{"10 REWRITE (1) X", "GO TO 10", "END"}, "NOTIMPL@1:7"},
 		{"a jump into an IF block", []string{"GO TO 10", "IF (L) THEN", "10 CONTINUE", "END IF", "END"}, "INTOBLOCK@1:13"},
 		{"a jump between blocks", []string{"IF (L) THEN", "10 X = 1", "ELSE", "GO TO 10", "END IF", "END"}, "INTOBLOCK@4:13"},
 		{"a jump to END IF from an earlier block", []string{"IF (L) THEN", "GO TO 10", "ELSE", "X = 1", "10 END IF", "END"}, "INTOBLOCK@2:13"},
@@ -600,17 +624,17 @@ func TestErrors(t *testing.T) {
 		{"a CHARACTER value misused", []string{"CHARACTER*4 B", "L = B", "CALL S(B)", "END"}, "ASSIGNTYPE@2:7"},
 		{"a declaration not read yet", []string{"VOLATILE A", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
 		{"a declaration with a syntax error", []string{"INTEGER A(", "X = A(1)", "END IF", "END"}, "SYNTAX@1:17 NOIF@3:7"},
-		{"a FORMAT declares nothing", []string{"10 FORMAT (I5)", "X = 1", "Y = X(2)", "END"}, "NOTIMPL@1:7 NOTARRAY@3:11"},
+		{"a FORMAT declares nothing", []string{"10 FORMAT (I5)", "X = 1", "Y = X(2)", "END"}, "NOTARRAY@3:11"},
 		{"an incomplete unit's references", []string{"VOLATILE X", "I = F(1.0)", "END", "REAL FUNCTION F(X)", "F = X", "END"}, "NOTIMPL@1:7"},
 
 		// What the parser parses and semantic analysis doesn't compile
 		// yet (Phase 76): statements, reported where they are, and the
 		// forms inside statements, reported where analysis reaches them.
-		{"a READ statement", []string{"READ *, X", "END"}, "NOTIMPL@1:7"},
-		{"a TYPE statement", []string{"TYPE *, X", "END"}, "NOTIMPL@1:7"},
+		{"a REWRITE statement", []string{"REWRITE (1) X", "END"}, "NOTIMPL@1:7"},
+		{"an OPEN statement", []string{"OPEN (UNIT=1)", "END"}, "NOTIMPL@1:7"},
 		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
-		{"a logical IF's READ", []string{"IF (X .GT. 0) READ *, Y", "END"}, "NOTIMPL@1:21"},
-		{"PRINT of an ASSIGNed format", []string{"ASSIGN 10 TO K", "10 FORMAT (I5)", "END"}, "NOTIMPL@2:7 NOTIMPL@1:14"},
+		{"a logical IF's CLOSE", []string{"IF (X .GT. 0) CLOSE (1)", "END"}, "NOTIMPL@1:21"},
+		{"PRINT of an ASSIGNed format", []string{"ASSIGN 10 TO K", "PRINT K, 5", "10 FORMAT (I5)", "END"}, ""},
 		{"VOLATILE", []string{"VOLATILE /B/, X", "END"}, "NOTIMPL@1:7"},
 		{"an OPTIONS statement", []string{"OPTIONS /EXTEND_SOURCE", "PROGRAM P", "END"}, "NOTIMPL@1:7"},
 		{"a CHARACTER declaration", []string{"CHARACTER*10 S", "S = 'ABC'", "PRINT *, S", "END"}, ""},
@@ -629,7 +653,7 @@ func TestErrors(t *testing.T) {
 		{"a * in a FUNCTION statement", []string{"FUNCTION F(A, *)", "F = 1", "END"}, "FUNCRETURN@1:21"},
 		{"a * in a function's ENTRY", []string{"FUNCTION F(A)", "ENTRY G(*)", "F = 1", "END"}, "ENTRYRETURN@2:15"},
 		{"an alternate return to no statement", []string{"CALL T(*10)", "END"}, "UNDEFLBL@1:15"},
-		{"an alternate return to a FORMAT statement", []string{"CALL T(*10)", "10 FORMAT (I5)", "END"}, "NOTIMPL@2:7 NOTEXEC@1:15"},
+		{"an alternate return to a FORMAT statement", []string{"CALL T(*10)", "10 FORMAT (I5)", "END"}, "NOTEXEC@1:15"},
 		{"an alternate return into a block", []string{"CALL T(*10)", "IF (L) THEN", "10 CONTINUE", "END IF", "END"}, "INTOBLOCK@1:15"},
 		{"an alternate return from a shared terminal's outer loop", []string{"DO 10 I = 1, 2", "CALL T(*10)", "DO 10 J = 1, 2", "10 CONTINUE", "END"}, "SHAREDTERM@2:15"},
 		{"too few alternate returns", []string{"CALL T(*10)", "10 END", "SUBROUTINE T(*, *)", "END"}, "ARGCOUNT@1:12"},
@@ -649,8 +673,8 @@ func TestErrors(t *testing.T) {
 		{"a substring of a constant", []string{"CHARACTER*8 S", "PARAMETER (S = 'ABC')", "PRINT *, S(1:2)", "END"}, "BADUSE@3:16"},
 		{"a substring of an array", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, "NEEDSUBSCRIPT@2:16"},
 		{"a record's field", []string{"X = R.F + 1", "END"}, "NOTIMPL@1:13"},
-		{"an implied-DO list", []string{"PRINT *, (I, I = 1, 3)", "END"}, "NOTIMPL@1:16"},
-		{"WRITE with ERR=", []string{"WRITE (*, *, ERR=10) X", "10 END"}, "NOTIMPL@1:20"},
+		{"an implied-DO list", []string{"PRINT *, (I, I = 1, 3)", "END"}, ""},
+		{"WRITE with ERR=", []string{"WRITE (*, *, ERR=10) X", "10 END"}, ""},
 		{"direct access", []string{"WRITE (1'10) X", "END"}, "NOTIMPL@1:16"},
 		{"a Hollerith bound", []string{"DIMENSION A(1H1)", "END"}, "NOTIMPL@1:19"},
 		{"an octal integer", []string{"I = \"17 + 1", "DIMENSION A(\"10)", "A(8) = I", "END"}, "LATEDECL@2:7"},
@@ -810,6 +834,19 @@ func TestErrors(t *testing.T) {
 	}
 }
 
+// TestFormatContinued checks that a FORMAT statement's error points into
+// the continuation line the bad character is on.
+func TestFormatContinued(t *testing.T) {
+	_, ms := analyzeLines(t, "T.FOR",
+		"   10 FORMAT (1X,",
+		"     &I3,,F8)",
+		"      END")
+
+	if len(ms) != 1 || ms[0].Ident != "FMTSYNTAX" || ms[0].Pos.Line != 2 || ms[0].Pos.Column != 13 {
+		t.Errorf("got %v", ms)
+	}
+}
+
 // TestElementNumber checks an element's place in storage order (section
 // 2.2.3.3), for the constant subscripts EQUIVALENCE and DATA use.
 func TestElementNumber(t *testing.T) {
@@ -898,12 +935,12 @@ func expressionOf(t *testing.T, text string) (string, []diag.Message) {
 	lines := append(append([]string{}, expressionUnit...), "      PRINT *, "+text, "      END")
 	prog, ms := analyzeLines(t, "E.FOR", lines...)
 
-	p, ok := prog.Units[0].Body[0].(*Print)
-	if !ok || len(p.Items) != 1 {
+	p, ok := prog.Units[0].Body[0].(*IO)
+	if !ok || len(p.Items) != 1 || p.Items[0].Value == nil {
 		t.Fatalf("%s: no item: %s", text, Dump(prog))
 	}
 
-	return DumpExpr(p.Items[0]), ms
+	return DumpExpr(p.Items[0].Value), ms
 }
 
 // TestExpressions checks expressions' types, the conversions mixed

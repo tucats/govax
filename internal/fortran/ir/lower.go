@@ -520,7 +520,7 @@ func (l *lowerer) descriptor(d *Descriptor) *Mem {
 
 // control is the datum holding an I/O statement's control block.
 func (l *lowerer) control(c Control) *Mem {
-	key := fmt.Sprintf("control %t %d", c.Write, c.Unit)
+	key := fmt.Sprintf("control %d", c.Flags)
 
 	d := l.datum(key, func() *Datum {
 		l.controls++

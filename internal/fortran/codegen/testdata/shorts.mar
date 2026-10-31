@@ -46,9 +46,9 @@ SHORTS.$C1:
 SHORTS.$K1:
 	.LONG	5
 SHORTS.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SHORTS.$D1:
 	.WORD	1			; length
 	.BYTE	DSC$K_DTYPE_BU,DSC$K_CLASS_S
@@ -169,8 +169,9 @@ SHORTS.$10:
 	PUSHAW	SHORTS.I2
 	CALLS	#4,G^SUB
 ;   30        PRINT *, B, L2, I2, IV(I4), IV
+	PUSHL	#-1
 	PUSHAB	SHORTS.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	SHORTS.$D1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	SHORTS.$D2

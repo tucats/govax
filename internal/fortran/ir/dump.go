@@ -160,6 +160,8 @@ func cellNote(c *Cell) string {
 		return "address of " + c.Dummy
 	case SelectorCell:
 		return "the entry point used"
+	case FormatCell:
+		return "the parsed form of a FORMAT"
 	}
 
 	return "temporary"
@@ -178,11 +180,38 @@ func datumText(d *Datum) string {
 		return "descriptor " + descriptorText(d.Desc)
 	}
 
-	if d.Control.Write {
-		return "control WRITE (*,*)"
+	switch d.Kind {
+	case FormatDatum:
+		return "format " + strconv.Itoa(d.Format.Label) + " " + d.Format.Text.Name + " cache " + d.Format.Cache.Name
+
+	case NamelistDatum:
+		text := "namelist " + d.Namelist.Group + " " + d.Namelist.Name.Name
+
+		for _, e := range d.Namelist.Entities {
+			text += " " + e.Name.Name + ":" + e.Desc.Name
+		}
+
+		return text
 	}
 
-	return "control PRINT *"
+	return "control" + ControlText(d.Control.Flags)
+}
+
+// ControlText is a control block's flags as words: " ERR= IOSTAT=", or
+// "" for none.
+func ControlText(flags int) string {
+	text := ""
+
+	for _, f := range []struct {
+		bit  int
+		name string
+	}{{ControlErr, "ERR="}, {ControlEnd, "END="}, {ControlIOStat, "IOSTAT="}, {ControlRunFormat, "run-time format"}} {
+		if flags&f.bit != 0 {
+			text += " " + f.name
+		}
+	}
+
+	return text
 }
 
 // descriptorText is a descriptor's type, class, length, bounds, and

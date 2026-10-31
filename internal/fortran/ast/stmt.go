@@ -270,10 +270,13 @@ type (
 
 	// FormatStmt is FORMAT (spec) (chapter 8). Text is the specification
 	// as written, parentheses and all: FTNRTL interprets formats, and
-	// Phase 80 checks them (Decision 6).
+	// semantic analysis checks them (internal/fortran/format). Offset is
+	// where Text starts in the statement's source text, so a message can
+	// point into it.
 	FormatStmt struct {
 		StmtBase
-		Text string
+		Text   string
+		Offset int
 	}
 )
 

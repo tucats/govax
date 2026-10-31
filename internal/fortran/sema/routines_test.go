@@ -61,8 +61,8 @@ func TestIntrinsicCalls(t *testing.T) {
 			t.Fatal(ms)
 		}
 
-		p := prog.Units[0].Body[0].(*Print)
-		if got := DumpExpr(p.Items[0]); got != "(call:REAL*16 MTH$HSQRT Q)" {
+		p := prog.Units[0].Body[0].(*IO)
+		if got := DumpExpr(p.Items[0].Value); got != "(call:REAL*16 MTH$HSQRT Q)" {
 			t.Errorf("SQRT(Q) (/G_FLOATING %t): %s", g, got)
 		}
 	}

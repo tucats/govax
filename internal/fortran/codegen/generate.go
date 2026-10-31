@@ -654,6 +654,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return c.Dummy + "'s longword of the argument list, set at each entry point"
 	case ir.SelectorCell:
 		return "the entry point the routine was called by"
+	case ir.FormatCell:
+		return "the parsed form of FORMAT " + strings.TrimPrefix(c.Name, "$FC") + ", FTNRTL's"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {
@@ -730,6 +732,12 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	case ir.ControlDatum:
 		g.writeControl(w, label, d.Control)
+
+	case ir.FormatDatum:
+		g.writeFormat(w, label, d.Format)
+
+	case ir.NamelistDatum:
+		g.writeNamelist(w, label, d.Namelist)
 	}
 }
 
@@ -805,28 +813,46 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 }
 
 // The I/O control block's layout (Decision 12 of docs/PHASE-74 -
-// FORTRAN plan.md; FTNRTL reads it, mar/ftn_listout.mar): a word of
-// its size in bytes, a word of flags saying which of the statement's
-// optional parts it has (none yet), and the unit number, -1 for *.
+// FORTRAN plan.md; FTNRTL reads it, mar/ftn_statement.mar): a word of its
+// size in bytes, a word of flags saying which of the statement's optional
+// parts it has (ir.ControlErr and the others), and a longword not used
+// yet, 0.
 const controlSize = 8
 
 // writeControl writes an I/O statement's control block.
 func (g *routineGen) writeControl(w *Writer, label string, c *ir.Control) {
-	what := "PRINT *"
-	if c.Write {
-		what = "WRITE (*,*)"
+	flags := "none"
+	if c.Flags != 0 {
+		flags = strings.TrimSpace(ir.ControlText(c.Flags))
 	}
 
-	unit := strconv.Itoa(c.Unit)
-	note := "unit " + unit
+	w.Statement(label, ".WORD", strconv.Itoa(controlSize), "an I/O statement's control block: its size")
+	w.Statement("", ".WORD", fmt.Sprintf("^X%04X", c.Flags), "flags: "+flags)
+	w.Statement("", ".LONG", "0", "(not used yet)")
+}
 
-	if c.Unit == ir.DefaultUnit {
-		note = "unit *"
-	}
-
-	w.Statement(label, ".WORD", strconv.Itoa(controlSize), what+"'s control block: its size")
+// writeFormat writes a FORMAT statement's block (FTNRTL's layout,
+// mar/ftn_statement.mar): the address of the cell where FTNRTL keeps the
+// parsed form, the text's length and a word of flags (none yet), and the
+// text's address.
+func (g *routineGen) writeFormat(w *Writer, label string, f *ir.FormatBlock) {
+	w.Statement(label, ".ADDRESS", g.names.symbol(f.Cache.Name), fmt.Sprintf("FORMAT %d's block: its parsed form's cell", f.Label))
+	w.Statement("", ".WORD", strconv.Itoa(len(f.Text.Text)), "the text's length")
 	w.Statement("", ".WORD", "0", "flags")
-	w.Statement("", ".LONG", unit, note)
+	w.Statement("", ".ADDRESS", g.names.symbol(f.Text.Name), "the text")
+}
+
+// writeNamelist writes a NAMELIST group's block (FTNRTL's layout,
+// mar/ftn_statement.mar, which is VMS's): the address of the group's name,
+// a counted string, the number of entities, and for each the address of
+// its name and of its descriptor.
+func (g *routineGen) writeNamelist(w *Writer, label string, n *ir.NamelistBlock) {
+	w.Statement(label, ".ADDRESS", g.names.symbol(n.Name.Name), "NAMELIST /"+n.Group+"/'s block: its name")
+	w.Statement("", ".LONG", strconv.Itoa(len(n.Entities)), "its entities")
+
+	for _, e := range n.Entities {
+		w.Statement("", ".ADDRESS", g.names.symbol(e.Name.Name)+","+g.names.symbol(e.Desc.Name), e.Name.Text[1:])
+	}
 }
 
 // asciiPieces is a text as .ASCII operands, each short enough for a

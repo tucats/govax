@@ -47,7 +47,7 @@ routine SHOW subroutine
   $LOCAL is 60 bytes
   datum $K1     text '<'
   datum $K2     text '>'
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K3     text 'E'
 B1:
   ; line 14
@@ -61,7 +61,7 @@ B1:
   move R(20) = @($D1+4)(add.L(zext.WL(@(arg X)), 2))
   call LIB$SFREE1_DD(ref $D1)
   ; line 16
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   assign $D2 = @(arg X)
   assign $D2+4 = addr(@(@(arg X)+4))
   call FTN$IO_ITEM(ref $D2)
@@ -97,10 +97,10 @@ routine PAIR subroutine
   cell  $D1     L  $LOCAL+4    descriptor T A 0 (1:2)
   cell  $D2     L  $LOCAL+36   descriptor T S 0
   $LOCAL is 44 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
 B1:
   ; line 23
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   assign $D1 = @(arg A)
   assign $D1+4 = addr(@(@(arg A)+4))
   assign $D1+12 = mul.L(zext.WL(@(arg A)), 2)

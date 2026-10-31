@@ -29,12 +29,12 @@ func intrinsicOf(t *testing.T, opts Options, text string) (string, []diag.Messag
 	lines := append(append([]string{}, intrinsicUnit...), "      PRINT *, "+text, "      END")
 	prog, ms := analyzeOpts(t, opts, lines...)
 
-	p, ok := prog.Units[0].Body[0].(*Print)
-	if !ok || len(p.Items) != 1 {
+	p, ok := prog.Units[0].Body[0].(*IO)
+	if !ok || len(p.Items) != 1 || p.Items[0].Value == nil {
 		t.Fatalf("%s: no item: %s", text, Dump(prog))
 	}
 
-	return DumpExpr(p.Items[0]), ms
+	return DumpExpr(p.Items[0].Value), ms
 }
 
 // TestIntrinsicRefs checks the selection of each reference's row of Table

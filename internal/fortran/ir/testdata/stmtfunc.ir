@@ -16,7 +16,7 @@ routine SF main
   cell  $T6     B  $LOCAL+104  temporary
   $LOCAL is 108 bytes
   datum $K1     F 1.0
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K2     text 'ABCDEFGHIJ'
   datum $K3     text 'KL'
   datum $D1     descriptor T S 10 $T5
@@ -37,7 +37,7 @@ B1:
   assign $T3+4 = Z
   assign Z = $T3
   ; line 21
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   move $T4(10) = $K3(2)
   move $T5(5) = $K2+5(5)
   move $T5+5(5) = $T4(5)

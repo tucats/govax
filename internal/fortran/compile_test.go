@@ -66,8 +66,9 @@ func TestCompileSquares(t *testing.T) {
 		"\tMOVL\t#1,SQUARES.I",
 		"SQUARES.$1:\t\t\t\t; DO 10's body",
 		";    4  \t PRINT *, I, I*I",
+		"\tPUSHL\t#-1",
 		"\tPUSHAB\tSQUARES.$IO1",
-		"\tCALLS\t#1,G^FTN$PRINT_LIST",
+		"\tCALLS\t#2,G^FTN$WRITE_SL",
 		"\tPUSHAQ\tSQUARES.$D1",
 		"\tCALLS\t#1,G^FTN$IO_ITEM",
 		"\tMULL3\tSQUARES.I,SQUARES.I,SQUARES.$T1",
@@ -221,7 +222,7 @@ func TestCompileParseErrors(t *testing.T) {
 		Lines: []string{
 			"      PROGRAM P",
 			"      X = (1 + 2",
-			"      READ *, Y",
+			"      REWRITE (1) Y",
 			"      GO TO 10",
 		},
 	})

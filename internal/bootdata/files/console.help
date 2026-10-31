@@ -4069,9 +4069,10 @@ $FOR
     finds its routines (named FTN$...) without an options file, and RUN
     finds the image.  Both look for a file of one's own first: a logical
     name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
-    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, the
-    list-directed output of PRINT * and WRITE (*,*) (FTN$PRINT_LIST,
-    FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END), ISHFTC (FTN$IISHFTC,
+    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, the I/O
+    statements' calls (FTN$READ_SF, FTN$WRITE_SF, and the other begin
+    calls, FTN$IO_ITEM, FTN$IO_END), of which only list-directed output
+    works yet, to the default units and units 5 and 6, ISHFTC (FTN$IISHFTC,
     FTN$JISHFTC), and a routine for each intrinsic function MTHRTL
     lacks, for a program that passes the function's name as an argument
     (FTN$LEN, FTN$INDEX, ..., FTN$NWORKERS), which MACRO programs can

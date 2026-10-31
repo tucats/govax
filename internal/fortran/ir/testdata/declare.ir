@@ -9,7 +9,7 @@ routine DECLARE main
   cell  SCORES  L  $LOCAL+32   array SCORES, 12 bytes
   cell  $C1     L  $LOCAL+44   DO 10's count
   $LOCAL is 48 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor L S 4 TOTAL
   datum $D2     descriptor F S 4 AVG
 B1:
@@ -34,7 +34,7 @@ B4:
   ; line 21
   assign AVG = div.F(cvt.LF(TOTAL), 3.0)
   ; line 22
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()

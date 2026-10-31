@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/lex"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -278,17 +279,8 @@ func stmtText(list []Stmt) string {
 		return "RETURN"
 	case *End:
 		return "END"
-	case *Print:
-		text := "PRINT *"
-		if s.Write {
-			text = "WRITE (*,*)"
-		}
-
-		for _, e := range s.Items {
-			text += " " + DumpExpr(e)
-		}
-
-		return text
+	case *IO:
+		return dumpIO(s)
 	}
 
 	return fmt.Sprintf("%T", list[0])
@@ -465,4 +457,90 @@ func dumpArgs(args []Arg) string {
 	}
 
 	return "(" + strings.Join(text, ", ") + ")"
+}
+
+// dumpIO is an I/O statement's text: its verb, its control list as the
+// analysis understood it, and its items. PRINT * and WRITE (*,*) are as
+// written.
+func dumpIO(s *IO) string {
+	kind := s.AST.Base().Kind
+	text := kind.String()
+
+	var control []string
+
+	switch {
+	case s.Code:
+		control = append(control, DumpExpr(s.Count))
+	case s.Unit != nil && s.Internal:
+		control = append(control, "internal "+DumpExpr(s.Unit))
+	case s.Unit != nil:
+		control = append(control, DumpExpr(s.Unit))
+	case kind == lex.Read || kind == lex.Write:
+		if _, ok := s.AST.(*ast.TransferStmt); ok {
+			control = append(control, "*")
+		}
+	}
+
+	switch {
+	case s.Form == ListForm:
+		control = append(control, "*")
+	case s.Form == NamelistForm:
+		control = append(control, "NML="+s.Group.Name)
+	case s.Format != nil:
+		control = append(control, strconv.Itoa(s.Format.Label))
+	case s.FormatVar != nil:
+		control = append(control, "assigned "+DumpExpr(s.FormatVar))
+	case s.RunFormat != nil:
+		control = append(control, "run-time "+DumpExpr(s.RunFormat))
+	default:
+		control = append(control, "?")
+	}
+
+	if s.Code {
+		control = append(control, DumpExpr(s.Unit))
+	}
+
+	if s.Err != 0 {
+		control = append(control, "ERR="+strconv.Itoa(s.Err))
+	}
+
+	if s.End != 0 {
+		control = append(control, "END="+strconv.Itoa(s.End))
+	}
+
+	if s.IOStat != nil {
+		control = append(control, "IOSTAT="+DumpExpr(s.IOStat))
+	}
+
+	if _, ok := s.AST.(*ast.PrintStmt); ok {
+		text += " " + control[len(control)-1]
+	} else {
+		text += " (" + strings.Join(control, ",") + ")"
+	}
+
+	if items := dumpItems(s.Items); items != "" {
+		text += " " + items
+	}
+
+	return text
+}
+
+// dumpItems is an I/O list's items, separated by blanks, an implied-DO
+// list in parentheses.
+func dumpItems(items []*Item) string {
+	parts := make([]string, 0, len(items))
+
+	for _, it := range items {
+		if it.Loop == nil {
+			parts = append(parts, DumpExpr(it.Value))
+
+			continue
+		}
+
+		d := it.Loop
+		parts = append(parts, "("+dumpItems(d.Items)+", "+symName(d.Var)+" = "+DumpExpr(d.Start)+", "+
+			DumpExpr(d.Limit)+", "+DumpExpr(d.Step)+")")
+	}
+
+	return strings.Join(parts, " ")
 }

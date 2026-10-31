@@ -147,9 +147,9 @@ SUB.$T1:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SUB.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SUB.$D1:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
@@ -207,8 +207,9 @@ SUB.$D1:
 	MULL2	#3,R1
 	MOVL	#^X00004100,4(R0)[R1]	; 2.0
 ;   18        PRINT *, X, Y, SIZEOF(X)
+	PUSHL	#-1
 	PUSHAB	SUB.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	SUB.$B1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	SUB.$B2
@@ -256,9 +257,9 @@ CHARS.$B2:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 CHARS.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;   21
@@ -294,8 +295,9 @@ CHARS.$IO1:
 	MULL3	@CHARS.N(AP),#8,R4
 	MOVC5	R0,(R1)[R2],#^A/ /,#8,(R3)[R4]
 ;   27        PRINT *, A, B
+	PUSHL	#-1
 	PUSHAB	CHARS.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAQ	CHARS.$B1
 	CALLS	#1,G^FTN$IO_ITEM
 	PUSHAQ	CHARS.$B2

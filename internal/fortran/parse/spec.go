@@ -402,9 +402,12 @@ func parseDirective(p *parser) ast.Stmt {
 }
 
 // parseFormat parses FORMAT (spec) (chapter 8): its text is kept as
-// written, from the lexer's Body on, for FTNRTL and Phase 80's check.
+// written, from the lexer's Body on, for FTNRTL and semantic analysis's check (internal/fortran/format).
 func parseFormat(p *parser) ast.Stmt {
-	return &ast.FormatStmt{StmtBase: p.base(), Text: strings.TrimSpace(p.st.Source.Text[p.st.Body:])}
+	raw := p.st.Source.Text[p.st.Body:]
+	text := strings.TrimLeft(raw, " \t")
+
+	return &ast.FormatStmt{StmtBase: p.base(), Text: strings.TrimRight(text, " \t"), Offset: p.st.Body + len(raw) - len(text)}
 }
 
 // parseInclude parses an INCLUDE statement, which never reaches the

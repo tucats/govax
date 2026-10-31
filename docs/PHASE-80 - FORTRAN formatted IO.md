@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
 accepted by the author the same day; subtask 2 (the probe) done the same day, two
-rounds on VMS 7.1. Needs Phase 79 (control flow, for
+rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
+compiler, FTNRTL's statement calls) done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -766,7 +767,7 @@ subtasks land.
 3. **FORMAT's compile-time check** and control block: `internal/fortran/format`,
    every statement form through sema and the IR, ASSIGN of a FORMAT label and
    PRINT v, implied-DO; FTNRTL's begin and end calls, statement stack, and
-   units 5 and 6 in outline.
+   units 5 and 6 in outline. Done ("Subtask 3", below).
 4. **The format interpreter:** parsing, the walk, reversion, the shared
    record, positional descriptors, carriage control and `$`, and the
    conditions these raise.
@@ -790,6 +791,128 @@ subtasks land.
     and DUNGEON's use of them.
 14. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
     FTNRTL; MANUAL.md's chapter 14 and its differences).
+
+## Subtask 3: what was built (2026-10-31)
+
+**The format package** (`internal/fortran/format`, its `doc.go` the
+grammar). `Parse` turns a specification into a tree of `Item`s (code, repeat,
+w, m, d, e, n, text, a group's items, the offset where each starts) or an
+`*Error` with the offset of the bad character. Its rules are VMS's, from the
+probe's syntax cases and every other output case: `TestVMSSyntax` reads
+`vax/for80-vax.txt` and holds `Parse` to each case's SYNERRFOR or acceptance
+(over 400 formats, all agreeing). What VMS showed, beyond Part A:
+
+- a comma is needed between two descriptors but before and after `/`, `:`,
+  `$`, and a character constant, and after `kP` (`2PI3`, `2P3I3`); `I3'A'`,
+  `1X'A'I3`, `'A'1X'B'` are accepted, so Phase 76's question is settled: the
+  form is legal;
+- `+2P` is accepted (only P takes a sign), `X` alone is 1X, `P` alone 0P,
+  `T0`, `TR0`, `0X`, `I0` accepted; `E8.2E` is E8.2 (an `E` with no digits
+  after it); a character constant must hold a character (`''` is SYNERRFOR);
+  `0(I2)`, `3$`, `3:`, `3/`, `3BN`, `3T5`, `2'A'`, `0HA`, `H`, and `T`, `TL`,
+  `TR` without a count are errors;
+- groups nest 8 deep inside the format's parentheses, and 16 is refused; the
+  limit between them wasn't probed, so `MaxDepth` is 8 (unconfirmed);
+- a comma is optional around an H constant too, govax's choice (unconfirmed:
+  the probe has no H run into its neighbors).
+
+A run-time format may have anything after its last parenthesis (VMS ignores
+`(1X,I3)XYZ`) and no variable format expression; a FORMAT statement may have
+neither, `FMTSYNTAX`.
+
+**Semantic analysis** (`sema/io.go`). FORMAT and NAMELIST are read in the
+declarations walk, so a statement may use either before it appears: a FORMAT
+needs a label (`FMTLABEL`), its text is checked (`FMTSYNTAX`, the caret at the
+character, through `ast.FormatStmt.Offset`, on a continuation line too), and
+it goes in `Unit.Formats` by label; a variable format expression is NOTIMPL
+until subtask 8. A NAMELIST group (`Unit.Namelists`) is checked once the
+statements have said what its names are (`NMLDUMMY`, `NMLITEM`, `NMLTWICE`),
+each entity given a reference (`Namelist.Refs`). Every READ, WRITE, PRINT,
+TYPE, ACCEPT, ENCODE, and DECODE becomes one `IO` (replacing Phase 75's
+`Print`):
+
+- the unit: none (the statement's default unit), an INTEGER expression made
+  INTEGER\*4, or a CHARACTER place, an internal file (`BADUNIT` otherwise;
+  namelist I/O to one is `NMLINTERNAL`); ENCODE's and DECODE's buffer is a
+  place of any type (`BADBUFFER`), its count an INTEGER (`BADCOUNT`);
+- the format, in Part A's order: `*`; a label, which `checkLabels` holds to a
+  FORMAT statement (`NOTFORMAT`, `UNDEFLBL`); a NAMELIST group's name, by
+  position or `NML=` (`NOTNAMELIST`); a CHARACTER value; an array or array
+  element of any type, a run-time format; an INTEGER\*4 variable, one ASSIGNed
+  a FORMAT's label; anything else `BADFORMAT`;
+- ERR= and END= are jumps from the statement (so `INTOBLOCK` and `NOTEXEC`
+  apply), IOSTAT= an INTEGER variable or element (`BADIOSTAT`); KEY= and
+  KEYID= are NOTIMPL, as are REC=, unformatted I/O, and REWRITE (Phase 81);
+- an input list's items are places, whole arrays, and implied-DO lists
+  (`BADINPUT`; reading a DO loop's variable inside it is `DOVARSET`); an
+  implied-DO list's variable and parameters are a DO statement's
+  (`ImpliedDo`).
+
+The default units are VMS's numbers: -1 for PRINT and `WRITE (*,...)`, -2 for
+TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)` (which of each pair
+VMS uses wasn't shown; govax's choice). ASSIGN of a FORMAT's label is allowed,
+and a FORMAT can't end a DO loop (`DOTERM`).
+
+**Lowering** (`ir/lowerio.go`). A statement is its begin call, an
+`FTN$IO_ITEM` per item (an implied-DO list a loop, `countedLoop`, which
+`do` now shares; its temporaries stay busy until the statement's end), and
+`FTN$IO_END`. The begin call is named by the statement's kind, as FORRTL's
+are: `FTN$READ_SF`, `FTN$WRITE_SL`, `FTN$READ_IF`, ..., `FTN$ENCODE`,
+`FTN$DECODE`; PRINT \* is `FTN$WRITE_SL` now, so every golden file changed by
+that call. Its arguments are the control block, the unit (by value, or an
+internal file's descriptor, or for ENCODE and DECODE a text descriptor of the
+count's length at the buffer), and, but for list-directed I/O, the format: a
+FORMAT's block (`FormatBlock`: its text and a `$FCn` cell in `$LOCAL` for
+FTNRTL's parsed form, Decision 4), the address an ASSIGNed variable holds, a
+run-time format's descriptor (an element of a numeric array described to the
+array's end), or a NAMELIST group's block (`NamelistBlock`, the layout found
+by calling VMS's FORRTL). The control block (`Control`) is now its flags
+alone: ERR=, END=, IOSTAT=, and a run-time format; the unit moved to the
+begin call, since it may be any expression. With specifiers, the status is
+kept in a temporary, stored in IOSTAT's variable, and a `Sign` goes to END=
+(or ERR= without it) when negative and ERR= when positive. ASSIGN of a
+FORMAT's label stores its block's address (MOVAB); an assigned GO TO without a
+list leaves FORMAT labels out of its targets.
+
+FTNRTL must read what it needs of the begin call's descriptors (an internal
+file's, a run-time format's) at the begin call: the statement's descriptor
+cells and a concatenation's dynamic string may be reused or freed before the
+end, at an implied-DO loop's first branch.
+
+**FTNRTL in outline** (`ftn_statement.mar`, new; `ftn_units.mar` and
+`ftn_listout.mar` reworked; GSMATCH 1,8, twelve new vector entries from
+offset 280).
+
+- A context per statement (Decision 6): a `LIB$GET_VM` block on a stack,
+  pushed by the begin call, used by the item calls, popped by
+  `FTN$IO_END`, then kept on a free list; it holds the FP of the routine
+  that began it, its unit, kind, flags, first error, stream, and record. A
+  begin call first pops the contexts of routines that have gone (an FP at or
+  below its caller's). Every begin entry shares one body in its own frame,
+  each entry setting the kind and unit and branching to it.
+- The units (Decision 10, as VMS's round 2 corrected it): two streams, OUTPUT
+  (SYS$OUTPUT, written only) for -1, -2, and 6, and INPUT (SYS$INPUT, read
+  and written) for -3, -4, and 5, each `$CREATE`d at first use with RAT=FTN;
+  0 to 4 and 7 to 119 are NOTIMP until Phase 81, any other number INVLOGUNI,
+  a read of an output unit ERRDURREA. A statement begun on a unit another
+  statement is still using is RECIO_OPE.
+- The first error is recorded and the rest of the statement passes over its
+  items; `FTN$IO_END` returns 0, -1 for ENDDURREA, or the FOR number when a
+  specifier takes it, and otherwise signals with VMS's FAO arguments (the
+  unit, the file, for now always an empty name, the user PC where
+  `FTN$IO_END` returns): LIB$STOP for a severe condition, LIB$SIGNAL and on
+  for the rest. The message matches round 1's run 3 (cases I and J,
+  `TestFortranIOSignals`), but for when it comes: after the statement's items
+  have run, where FORRTL may signal at once (unconfirmed which).
+- List-directed output builds its record in the context, so a function that
+  writes another unit inside an item writes its own record first; a failed
+  `$PUT` is ERRDURWRI. Every other kind of statement is NOTIMP (FOR number 2)
+  until its subtask. `FTN$PRINT_LIST` and `FTN$WRITE_LIST` stay, for programs
+  linked before (`TestFTNRTL` still calls them).
+
+Tests: `format`'s, sema's `io.for` golden and its error table, the IR's and
+code generator's `io.for` goldens, `testdata/fortran/iostmt.for` (both paging
+modes), and `TestFortranIOSignals`.
 
 ## Progress log
 
@@ -840,3 +963,12 @@ subtasks land.
   manual. `TestFor80Messages` holds FORRTL's no-handler conditions over govax to
   VMS's log, which needed `$PUTMSG` to pass over a zero condition value after
   the first message.
+- **2026-10-31, subtask 3, done.** FORMAT's check (`internal/fortran/format`,
+  held to every output case of VMS's run), every READ, WRITE, PRINT, TYPE,
+  ACCEPT, ENCODE, and DECODE through semantic analysis, lowering, and code
+  generation, with NAMELIST, ERR=, END=, IOSTAT=, internal files, run-time and
+  ASSIGNed formats, and implied-DO lists; FTNRTL's statement stack, begin and
+  end calls, and units -4 to -1, 5, and 6, list-directed output running on
+  them and every other statement NOTIMP. What was built, and the choices
+  left unconfirmed, are in "Subtask 3" above. MANUAL.md's chapter 14 and
+  FORTRAN-INTERNALS.md follow the new calls.

@@ -1,0 +1,444 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for IO, the main program
+;   I     INTEGER           $LOCAL+0    IO.I
+;   J     INTEGER           $LOCAL+4    IO.J
+;   M     INTEGER           $LOCAL+8    IO.M
+;   K     INTEGER (10)      $LOCAL+12   IO.K
+;   IOS   INTEGER           $LOCAL+52   IO.IOS
+;   IOS2  INTEGER*2         $LOCAL+56   IO.IOS2
+;   X     REAL              $LOCAL+60   IO.X
+;   A     REAL (5)          $LOCAL+64   IO.A
+;   LINE  CHARACTER*20      $LOCAL+84   IO.LINE
+;   PAGE  CHARACTER*20 (3)  $LOCAL+104  IO.PAGE
+;   FMT   CHARACTER*8       $LOCAL+164  IO.FMT
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+IO.I:	.BLKL	1			; I
+IO.J:	.BLKL	1			; J
+IO.M:	.BLKL	1			; M
+IO.K:	.BLKL	10			; K, INTEGER (10)
+IO.IOS:	.BLKL	1			; IOS
+IO.IOS2:
+	.BLKB	2			; IOS2
+	.BLKB	2
+IO.X:	.BLKL	1			; X
+IO.A:	.BLKL	5			; A, REAL (5)
+IO.LINE:
+	.BLKL	5			; LINE
+IO.PAGE:
+	.BLKL	15			; PAGE, CHARACTER*20 (3)
+IO.FMT:	.BLKL	2			; FMT
+IO.$FC100:
+	.BLKL	1			; the parsed form of FORMAT 100, FTNRTL's
+IO.$FC10:
+	.BLKL	1			; the parsed form of FORMAT 10, FTNRTL's
+IO.$D6:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+IO.$C1:	.BLKL	1			; the implied DO (line 22)'s count
+IO.$D7:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+IO.$T1:	.BLKL	1			; temporary
+IO.$C2:	.BLKL	1			; the implied DO (line 25)'s count
+IO.$C3:	.BLKL	1			; the implied DO (line 25)'s count
+IO.$D8:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+IO.$T2:	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+IO.$F100:
+	.ADDRESS IO.$FC100		; FORMAT 100's block: its parsed form's cell
+	.WORD	12			; the text's length
+	.WORD	0			; flags
+	.ADDRESS IO.$K1			; the text
+IO.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+IO.$F10:
+	.ADDRESS IO.$FC10		; FORMAT 10's block: its parsed form's cell
+	.WORD	14			; the text's length
+	.WORD	0			; flags
+	.ADDRESS IO.$K2			; the text
+IO.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS IO.I
+IO.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS IO.X
+IO.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0008			; flags: run-time format
+	.LONG	0			; (not used yet)
+IO.$D3:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.FMT
+IO.$D4:
+	.WORD	7			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.$K3
+IO.$D5:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.ADDRESS IO.K
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	40			; the array's size in bytes
+	.ADDRESS IO.K-4			; A0, where the element with zero subscripts would be
+	.LONG	10			; multipliers
+	.LONG	1,10			; bounds
+IO.$IO3:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0007			; flags: ERR= END= IOSTAT=
+	.LONG	0			; (not used yet)
+IO.$IO4:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0005			; flags: ERR= IOSTAT=
+	.LONG	0			; (not used yet)
+IO.$D9:
+	.WORD	20			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.LINE
+IO.$D10:
+	.WORD	20			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.ADDRESS IO.PAGE
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	60			; the array's size in bytes
+	.ADDRESS IO.PAGE-20		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+IO.$D11:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.LINE+1
+IO.$D12:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.$K4
+IO.$D13:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.ADDRESS IO.A
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	20			; the array's size in bytes
+	.ADDRESS IO.A-4			; A0, where the element with zero subscripts would be
+	.LONG	5			; multipliers
+	.LONG	1,5			; bounds
+IO.$NG:	.ADDRESS IO.$K5			; NAMELIST /G/'s block: its name
+	.LONG	3			; its entities
+	.ADDRESS IO.$K6,IO.$D1		; I
+	.ADDRESS IO.$K7,IO.$D2		; X
+	.ADDRESS IO.$K8,IO.$D13		; A
+IO.$D14:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS IO.$K9
+IO.$D15:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS IO.$T2
+IO.$F1:	.LONG	^X00004080		; 1.0
+IO.$K1:	.ASCII	/('X=', F8.2)/
+IO.$K2:	.ASCII	/(I5, 2X, F8.2)/
+IO.$K3:	.ASCII	/(1X,I3)/
+IO.$K4:	.ASCII	/(I3)/
+IO.$K5:	.ASCII	<1>/G/
+IO.$K6:	.ASCII	<1>/I/
+IO.$K7:	.ASCII	<1>/X/
+IO.$K8:	.ASCII	<1>/A/
+IO.$K9:	.ASCII	/DONE/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM IO
+	.ENTRY	IO,^M<>
+;    2  C     Every form of I/O statement this phase compiles (Phase 80,
+;    3  C     subtask 3): formats of every kind, units, internal files,
+;    4  C     namelists, specifiers, implied-DO lists, ENCODE and DECODE.
+;    5        INTEGER I, J, M, K(10), IOS
+;    6        INTEGER*2 IOS2
+;    7        REAL X, A(5)
+;    8        CHARACTER*20 LINE, PAGE(3)
+;    9        CHARACTER*8 FMT
+;   10        NAMELIST /G/ I, X, A
+;   11        ASSIGN 100 TO J
+	MOVAB	IO.$F100,IO.J
+;   12     10 FORMAT (I5, 2X, F8.2)
+;   13        PRINT 10, I, X
+	PUSHAB	IO.$F10
+	PUSHL	#-1
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   14        PRINT J, I
+	PUSHL	IO.J
+	PUSHL	#-1
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   15        PRINT FMT, X
+	PUSHAQ	IO.$D3
+	PUSHL	#-1
+	PUSHAB	IO.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   16        PRINT '(1X,I3)', I
+	PUSHAQ	IO.$D4
+	PUSHL	#-1
+	PUSHAB	IO.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   17        PRINT K, I
+	PUSHAQ	IO.$D5
+	PUSHL	#-1
+	PUSHAB	IO.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   18        PRINT K(2), I
+	MOVAL	IO.K+4,R0
+	MOVAL	IO.K,R1
+	SUBL2	R1,R0
+	SUBL3	R0,#40,R0
+	CVTLW	R0,IO.$D6
+	MOVAL	IO.K+4,IO.$D6+4
+	PUSHAQ	IO.$D6
+	PUSHL	#-1
+	PUSHAB	IO.$IO2
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   19        TYPE 10, I, X
+	PUSHAB	IO.$F10
+	PUSHL	#-2
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   20        ACCEPT 10, I, X
+	PUSHAB	IO.$F10
+	PUSHL	#-3
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   21        READ 10, I, X
+	PUSHAB	IO.$F10
+	PUSHL	#-4
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   22        READ *, I, (A(M), M = 1, 5)
+	PUSHL	#-4
+	PUSHAB	IO.$IO1
+	CALLS	#2,G^FTN$READ_SL
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	#5,IO.$C1		; the implied DO (line 22)'s count
+	MOVL	#1,IO.M
+IO.$1:					; the implied DO (line 22)'s body
+	MOVL	IO.M,R0
+	MOVAL	IO.A-4[R0],IO.$D7+4
+	PUSHAQ	IO.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	IO.M
+	DECL	IO.$C1			; one pass fewer
+	BLEQ	IO.$2
+	BRW	IO.$1
+IO.$2:
+	CALLS	#0,G^FTN$IO_END
+;   23        READ (5, 10, END=200, ERR=300, IOSTAT=IOS) I, X
+	PUSHAB	IO.$F10
+	PUSHL	#5
+	PUSHAB	IO.$IO3
+	CALLS	#3,G^FTN$READ_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,IO.$T1
+	MOVL	IO.$T1,IO.IOS
+	TSTL	IO.$T1
+	BGEQ	IO.$3
+	BRW	IO.L200
+IO.$3:
+	BLEQ	IO.$4
+	BRW	IO.L300
+IO.$4:
+;   24        WRITE (6, 10, ERR=300, IOSTAT=IOS2) I, X
+	PUSHAB	IO.$F10
+	PUSHL	#6
+	PUSHAB	IO.$IO4
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	MOVL	R0,IO.$T1
+	CVTLW	IO.$T1,IO.IOS2
+	TSTL	IO.$T1
+	BEQL	IO.$5
+	BRW	IO.L300
+IO.$5:
+;   25        WRITE (*, 10) ((K(M), M = 1, 10, 2), I, J = 1, 2), I
+	PUSHAB	IO.$F10
+	PUSHL	#-1
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	#2,IO.$C2		; the implied DO (line 25)'s count
+	MOVL	#1,IO.J
+IO.$6:					; the implied DO (line 25)'s body
+	MOVL	#5,IO.$C3		; the implied DO (line 25)'s count
+	MOVL	#1,IO.M
+IO.$7:					; the implied DO (line 25)'s body
+	MOVL	IO.M,R0
+	MOVAL	IO.K-4[R0],IO.$D8+4
+	PUSHAQ	IO.$D8
+	CALLS	#1,G^FTN$IO_ITEM
+	ADDL2	#2,IO.M
+	DECL	IO.$C3			; one pass fewer
+	BLEQ	IO.$8
+	BRW	IO.$7
+IO.$8:
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	IO.J
+	DECL	IO.$C2			; one pass fewer
+	BLEQ	IO.$9
+	BRW	IO.$6
+IO.$9:
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   26        WRITE (I + 1, *) X
+	ADDL3	IO.I,#1,R0
+	PUSHL	R0
+	PUSHAB	IO.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   27        READ (LINE, 10) I, X
+	PUSHAB	IO.$F10
+	PUSHAQ	IO.$D9
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$READ_IF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   28        WRITE (PAGE, *) I
+	PUSHAQ	IO.$D10
+	PUSHAB	IO.$IO1
+	CALLS	#2,G^FTN$WRITE_IL
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   29        WRITE (LINE(2:5), '(I3)') I
+	PUSHAQ	IO.$D12
+	PUSHAQ	IO.$D11
+	PUSHAB	IO.$IO2
+	CALLS	#3,G^FTN$WRITE_IF
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   30        WRITE (6, G)
+	PUSHAB	IO.$NG
+	PUSHL	#6
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SN
+	CALLS	#0,G^FTN$IO_END
+;   31        READ (5, NML=G)
+	PUSHAB	IO.$NG
+	PUSHL	#5
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$READ_SN
+	CALLS	#0,G^FTN$IO_END
+;   32        PRINT G
+	PUSHAB	IO.$NG
+	PUSHL	#-1
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$WRITE_SN
+	CALLS	#0,G^FTN$IO_END
+;   33        ENCODE (20, 10, LINE) I, X
+	MOVW	#20,IO.$D6
+	MOVAB	IO.LINE,IO.$D6+4
+	PUSHAB	IO.$F10
+	PUSHAQ	IO.$D6
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$ENCODE
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	IO.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   34        DECODE (12, 10, K) I
+	MOVW	#12,IO.$D6
+	MOVAL	IO.K,IO.$D6+4
+	PUSHAB	IO.$F10
+	PUSHAQ	IO.$D6
+	PUSHAB	IO.$IO1
+	CALLS	#3,G^FTN$DECODE
+	PUSHAQ	IO.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   35        WRITE (6, *) 'DONE', X + 1.0
+	PUSHL	#6
+	PUSHAB	IO.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	IO.$D14
+	CALLS	#1,G^FTN$IO_ITEM
+	ADDF3	IO.X,IO.$F1,IO.$T2
+	PUSHAQ	IO.$D15
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   36    100 FORMAT ('X=', F8.2)
+;   37    200 CONTINUE
+IO.L200:
+;   38    300 END
+IO.L300:
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	IO

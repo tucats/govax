@@ -341,6 +341,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.saves()
 	a.dataStatements()
 	a.statements(body)
+	a.checkNamelists()
 	a.checkLabels()
 	a.untyped()
 	a.passedLengths()

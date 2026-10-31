@@ -22,7 +22,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
-		*ast.EntryStmt, *ast.BadStmt:
+		*ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.BadStmt:
 		return true
 
 	case *ast.AttrStmt:
@@ -30,11 +30,9 @@ func handled(s ast.Stmt) bool {
 		// 1988 manual.
 		return s.Kind == lex.Save || s.Kind == lex.External || s.Kind == lex.Intrinsic
 
-	case *ast.PrintStmt:
-		return s.Kind == lex.Print
-
 	case *ast.TransferStmt:
-		return s.Kind == lex.Write
+		// REWRITE is Phase 81's.
+		return s.Kind == lex.Read || s.Kind == lex.Write
 	}
 
 	return false

@@ -317,7 +317,8 @@ func (g *routineGen) call(s *ir.Call) {
 // letter only scales an index (addressOp).
 func pushAddress(m *ir.Mem) string {
 	switch {
-	case m.Datum != nil && m.Datum.Kind == ir.ControlDatum:
+	case m.Datum != nil && (m.Datum.Kind == ir.ControlDatum || m.Datum.Kind == ir.FormatDatum ||
+		m.Datum.Kind == ir.NamelistDatum):
 		return "PUSHAB"
 	case m.Datum != nil && m.Datum.Kind == ir.DescriptorDatum,
 		m.Cell != nil && m.Cell.Kind == ir.DescriptorCell:

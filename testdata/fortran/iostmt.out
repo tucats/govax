@@ -1,0 +1,18 @@
+PRINT           1
+WRITE (*,*)           2
+WRITE (6,*)           3
+TYPE           4
+WRITE (5,*)           5
+FORMATTED           2
+ERR= TAKEN
+READ           2
+UNIT 200          32
+UNIT 7           2
+UNIT -1          10
+UNIT -1           0
+READ (6)          39
+INTERNAL           2
+INNER
+OUTER           0END
+OUTER          40
+  $STATUS == "%X00000001"

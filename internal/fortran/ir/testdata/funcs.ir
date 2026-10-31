@@ -14,7 +14,7 @@ routine FUNCS main
   datum $D2     descriptor T S 1 $K2
   datum $D3     descriptor T S 3 $T2
   datum $K3     text 'X'
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K4     L 5
   datum $D4     descriptor L S 4 $K4
   datum $K5     L 3
@@ -34,7 +34,7 @@ B1:
   call ZF(ref $T5, ref Z)
   assign Z = $T5
   ; line 10
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D4)
   call NAME5(ref $D1, ref $K5)
   call FTN$IO_ITEM(ref $D1)

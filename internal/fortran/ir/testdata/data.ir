@@ -39,7 +39,7 @@ routine DATAS main
   init  $LOCAL+105 C(2:3) = 58 59
   init  SHARED+4 J = 03 00 00 00
   external BLKDAT
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $D1     descriptor L S 4 K
   datum $D2     descriptor F S 4 X
   datum $D3     descriptor L S 4 B+4
@@ -48,7 +48,7 @@ B1:
   ; line 18
   assign K = add.L(K, I)
   ; line 19
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_ITEM(ref $D3)

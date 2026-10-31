@@ -9,7 +9,7 @@ routine NEST main
   cell  $C2     L  $LOCAL+72   DO 20's count
   cell  $C3     L  $LOCAL+76   DO 30's count
   $LOCAL is 80 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K1     text 'ODD'
   datum $D1     descriptor T S 3 $K1
   datum $D2     descriptor L S 4 K
@@ -78,7 +78,7 @@ B15: L40
   ; line 22
   branch K B16 B17
 B16:
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()

@@ -438,7 +438,21 @@ never had.
   VMS 7.1 (FORRTL's editing, list-directed layout, records, units, namelist,
   messages; `FOR$WRITE_SN`'s block found by trial), with FOR's message texts
   in `vmsdef` (`formessages.go`); LIB$TPARSE moved in from Phase 60 as
-  subtask 10.
+  subtask 10; subtask 3 (2026-10-31) is FORMAT's check
+  (`internal/fortran/format`, held to every output case of VMS's run by
+  `TestVMSSyntax`), every READ, WRITE, PRINT, TYPE, ACCEPT, ENCODE, and
+  DECODE through the compiler (`sema/io.go`'s `IO`, replacing `Print`;
+  FORMAT and NAMELIST read in the declarations walk, `Unit.Formats` and
+  `Unit.Namelists`; `ir/lowerio.go`: a begin call by kind, `FTN$WRITE_SF`,
+  `FTN$READ_IL`, ..., `FTN$ENCODE`, with the control block's flags, the unit
+  by value or a descriptor, and the format, a FORMAT's block with its `$FCn`
+  cache cell, an ASSIGNed address, a run-time format's descriptor, or a
+  namelist block; ERR=/END=/IOSTAT= by a `Sign` on `FTN$IO_END`'s status;
+  implied-DO lists by `countedLoop`, `do`'s too), and FTNRTL in outline
+  (`ftn_statement.mar`: a context per statement on a stack, the first error
+  kept, `FTN$IO_END` returning or signaling it; `ftn_units.mar`'s two
+  streams for units -4 to -1, 5, and 6; list-directed output in the
+  context's record; every other statement FOR's NOTIMP; GSMATCH 1,8).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1830,7 +1844,11 @@ expect adjustment as phases land):
   CDEC$ directives, the statement field's end (72 or 132), the
   continuation limit, `!` comments outside character and Hollerith
   constants (`comment.go`), and INCLUDE through an `Opener`
-  (`include.go`). `codegen` is the last pass (Phase 75, subtask 6):
+  (`include.go`). `format` (Phase 80) reads a format specification into
+  a tree of `Item`s or an `*Error` at a character's offset, by VMS's
+  FORRTL's rules (`TestVMSSyntax` reads `testdata/for80`'s VMS run);
+  semantic analysis checks each FORMAT statement with it, and FTNRTL's
+  interpreter is to follow the same grammar. `codegen` is the last pass (Phase 75, subtask 6):
   `Writer` is the MACRO file's layout (columns, the 132-character
   limit, `SourceLine`/`SourceLineAt`, an included line's prefix starting
   with its depth), and `Generate` writes the routines: the `DSC$K_`
@@ -1939,10 +1957,13 @@ expect adjustment as phases land):
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
-  FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the default output unit, SYS$OUTPUT with
-  RAT=FTN; `ftn_listout.mar`, list-directed output, FTN$PRINT_LIST,
-  FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END, with the control block's
-  layout, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
+  FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the units' streams, SYS$OUTPUT
+  and SYS$INPUT with RAT=FTN (units -4 to -1, 5, and 6 so far, Phase 80);
+  `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and
+  the rest; the old FTN$PRINT_LIST and FTN$WRITE_LIST kept), FTN$IO_ITEM,
+  and FTN$IO_END, on a stack of statement contexts, with the control
+  block's layout, Phase 80; `ftn_listout.mar`, list-directed output in the
+  context's record, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
   FTN$LEN to FTN$NWORKERS, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;

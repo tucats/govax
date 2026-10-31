@@ -1,23 +1,36 @@
 	.TITLE	FTN_UNITS - FTNRTL's logical units
-	.IDENT	/V1.0/
+	.IDENT	/V1.1/
 ;
 ; A FORTRAN program reads and writes logical units: numbers its I/O
-; statements name (WRITE (6,...)), or * for the default ones (PRINT *,
-; WRITE (*,*)). Each unit is connected to a file through RMS, with a FAB
-; (the file) and a RAB (the stream of records), which this module keeps.
+; statements name (WRITE (6,...)), or the default units of the
+; statements that name none (PRINT, TYPE, ACCEPT, READ f) and of a unit
+; written * (WRITE (*,...), READ (*,...)). Each unit is connected to a
+; file through RMS, with a FAB (the file) and a RAB (the stream of
+; records), which this module keeps.
 ;
-; For now there is one unit: the default output unit, which PRINT * and
-; WRITE (*,*) both write, connected to SYS$OUTPUT. Later phases add the
-; numbered units and OPEN, CLOSE, and the logical names that choose a
-; unit's file (FOR$PRINT and the like).
+; VMS's FORTRAN run-time library numbers the default units -1 to -4:
+; -1 and -2 write SYS$OUTPUT, and -3 and -4 read SYS$INPUT (the probe,
+; testdata/for80, round 2). The compiler uses -1 for PRINT and WRITE
+; (*,...), -2 for TYPE, -3 for ACCEPT, and -4 for READ f and READ
+; (*,...). Units 5 and 6 are SYS$INPUT and SYS$OUTPUT too, and a unit
+; and the default units on the same file share one stream (one RAB), so
+; that a record written without a carriage return ($) is still the line
+; the next one continues, whichever of them writes it.
 ;
-; The unit's file is created at its first use: a $CREATE of SYS$OUTPUT,
-; which, SYS$OUTPUT being a process-permanent file, opens no new file but
-; gives this FAB indirect access to the one the process has. The FAB asks
-; for FORTRAN carriage control (RAT=FTN): each record's first byte is
-; its carriage control (' ' a new line, '0' a blank line first, '1' a
-; new page, '+' overprinting, '$' a prompt), which RMS turns into what
-; the terminal is sent, or a print file's fixed control.
+; So far there are just these two streams: OUTPUT, for -1, -2, and 6,
+; which may only be written, and INPUT, for -3, -4, and 5, which may be
+; read and, as on VMS, written too (DUNGEON writes unit 5 at a terminal).
+; The other units VMS has, 0 to 119, are FOR$_NOTIMP until Phase 81 adds
+; the rest of the table, OPEN, and CLOSE; any other number is
+; FOR$_INVLOGUNI, as on VMS.
+;
+; A stream's file is created at its first use: a $CREATE of SYS$OUTPUT
+; or SYS$INPUT, which, these being process-permanent files, opens no new
+; file but gives the FAB indirect access to the one the process has. The
+; FAB asks for FORTRAN carriage control (RAT=FTN): each record's first
+; byte is its carriage control (' ' a new line, '0' a blank line first,
+; '1' a new page, '+' overprinting, '$' a prompt), which RMS turns into
+; what the terminal is sent, or a print file's fixed control.
 ;
 ; The FAB and RAB hold addresses (the file's name, the FAB, the record),
 ; which a shareable image can't store at link time without the image
@@ -25,69 +38,131 @@
 ; made with those fields zero, and the addresses are stored in them, with
 ; $FAB_STORE and $RAB_STORE, at the first use.
 ;
+; A stream's block, the address the other modules are given for a unit:
+;
+;	+0	long	1 once the stream is connected
+;	+4	long	1 if the stream may be read
+;	+8		the FAB, then the RAB
+;
 	$FABDEF				; the FAB's fields
 	$RABDEF				; the RAB's fields
+	$SSDEF
+
+UB_OPEN		= 0			; the block's fields
+UB_READ		= 4
+UB_FAB		= 8
+UB_RAB		= UB_FAB+FAB$C_BLN
+
+FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
+FOR$_INVLOGUNI	= ^X00188104		;  their severities
+FOR$_ERRDURREA	= ^X0018813C
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 
-OUTPUT_NAME:	.ASCII	/SYS$OUTPUT/	; the default output unit's file
+OUTPUT_NAME:	.ASCII	/SYS$OUTPUT/	; the output stream's file
 OUTPUT_LEN	= .-OUTPUT_NAME
+INPUT_NAME:	.ASCII	/SYS$INPUT/	; the input stream's
+INPUT_LEN	= .-INPUT_NAME
 
 ;
-; The units' state: data each program has its own copy of (NOSHR), as
+; The streams' state: data each program has its own copy of (NOSHR), as
 ; it changes.
 ;
 	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
 
-OUTPUT_OPEN:	.LONG	0		; 1 once the unit is connected
-OUTPUT_FAB:	$FAB	FAC=PUT,RAT=FTN,RFM=VAR
-OUTPUT_RAB:	$RAB
+OUTPUT_UNIT:	.LONG	0, 0		; not open; written only
+		$FAB	FAC=PUT,RAT=FTN,RFM=VAR
+		$RAB
+INPUT_UNIT:	.LONG	0, 1		; not open; read and written
+		$FAB	FAC=<GET,PUT>,RAT=FTN,RFM=VAR
+		$RAB
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;
-; FTN$$OUTPUT_OPEN()
+; FTN$$UNIT_FIND(unit, read)
 ;
-; Connects the default output unit to SYS$OUTPUT, if it isn't yet: a
-; list-directed output statement's start calls it. An RMS error ends the
-; image with that status (LIB$STOP): FORTRAN's I/O errors are severe
-; unless the statement says otherwise, which these statements can't yet.
-; Returns SS$_NORMAL in R0.
+; Finds the stream of the unit numbered unit (a longword, by value), for
+; reading if read (by value) is 1, for writing if 0. Returns in R0
+; SS$_NORMAL and in R1 the stream's block, or in R0 the FOR$_ condition
+; that the unit can't be used: INVLOGUNI for a number outside -4 to 119,
+; NOTIMP for a unit FTNRTL doesn't have yet, ERRDURREA for a read of an
+; output unit. Doesn't connect the stream.
 ;
-	.ENTRY	FTN$$OUTPUT_OPEN,^M<>
-	BLBS	OUTPUT_OPEN,10$		; connected already
-	$FAB_STORE FAB=OUTPUT_FAB,FNA=OUTPUT_NAME,FNS=#OUTPUT_LEN
-	$RAB_STORE RAB=OUTPUT_RAB,FAB=OUTPUT_FAB
-	$CREATE	FAB=OUTPUT_FAB
-	BLBC	R0,90$
-	$CONNECT RAB=OUTPUT_RAB
-	BLBC	R0,90$
-	MOVL	#1,OUTPUT_OPEN
-10$:	MOVL	#1,R0			; SS$_NORMAL
+	.ENTRY	FTN$$UNIT_FIND,^M<>
+	MOVL	4(AP),R0		; the unit
+	CMPL	R0,#-4
+	BLSS	80$			; below -4
+	CMPL	R0,#119
+	BGTR	80$			; above 119
+	MOVAB	OUTPUT_UNIT,R1
+	CMPL	R0,#6
+	BEQL	20$
+	CMPL	R0,#-1
+	BEQL	20$
+	CMPL	R0,#-2
+	BEQL	20$
+	MOVAB	INPUT_UNIT,R1
+	CMPL	R0,#5
+	BEQL	10$
+	CMPL	R0,#-3
+	BEQL	10$
+	CMPL	R0,#-4
+	BEQL	10$
+	MOVL	#FOR$_NOTIMP,R0		; a unit of Phase 81's
 	RET
 
-90$:	PUSHL	R0			; the RMS status
-	CALLS	#1,G^LIB$STOP		; never returns
-
-;
-; FTN$$OUTPUT_PUT(record, length)
-;
-; Writes a record, its first byte the carriage control, to the default
-; output unit, which FTN$$OUTPUT_OPEN has connected: the record's
-; address is the first argument, its length (a longword, by value) the
-; second. An RMS error ends the image with its status. Returns
-; SS$_NORMAL in R0.
-;
-	.ENTRY	FTN$$OUTPUT_PUT,^M<>
-	MOVAB	OUTPUT_RAB,R0
-	MOVL	4(AP),RAB$L_RBF(R0)	; the record
-	MOVW	8(AP),RAB$W_RSZ(R0)	; and its length
-	$PUT	RAB=OUTPUT_RAB
-	BLBC	R0,90$
-	MOVL	#1,R0			; SS$_NORMAL
+10$:	MOVL	#SS$_NORMAL,R0		; an input unit: read or written
 	RET
 
-90$:	PUSHL	R0
-	CALLS	#1,G^LIB$STOP
+20$:	BLBC	8(AP),10$		; an output unit: written,
+	MOVL	#FOR$_ERRDURREA,R0	;  never read
+	RET
+
+80$:	MOVL	#FOR$_INVLOGUNI,R0
+	RET
+
+;
+; FTN$$UNIT_OPEN(block)
+;
+; Connects the stream whose block is given, if it isn't yet: $CREATE and
+; $CONNECT. Returns RMS's status in R0, SS$_NORMAL if it was connected
+; already.
+;
+	.ENTRY	FTN$$UNIT_OPEN,^M<R2,R3,R4,R5>
+	MOVL	4(AP),R2		; the block
+	BLBS	UB_OPEN(R2),10$		; connected already
+	MOVAB	UB_FAB(R2),R3		; the FAB and the RAB, in registers,
+	MOVAB	UB_RAB(R2),R4		;  which the RMS macros take as they are
+	MOVAB	OUTPUT_NAME,R5		; the file's name
+	MOVL	#OUTPUT_LEN,R1
+	BLBC	UB_READ(R2),5$
+	MOVAB	INPUT_NAME,R5
+	MOVL	#INPUT_LEN,R1
+5$:	$FAB_STORE FAB=R3,FNA=(R5),FNS=R1
+	$RAB_STORE RAB=R4,FAB=(R3)
+	$CREATE	FAB=R3
+	BLBC	R0,90$
+	$CONNECT RAB=R4
+	BLBC	R0,90$
+	MOVL	#1,UB_OPEN(R2)
+10$:	MOVL	#SS$_NORMAL,R0
+90$:	RET
+
+;
+; FTN$$UNIT_PUT(block, record, length)
+;
+; Writes a record, its first byte the carriage control, to the stream
+; whose block is given, which FTN$$UNIT_OPEN has connected: the record's
+; address is the second argument, its length (a longword, by value) the
+; third. Returns RMS's status in R0.
+;
+	.ENTRY	FTN$$UNIT_PUT,^M<R2>
+	MOVL	4(AP),R2
+	MOVAB	UB_RAB(R2),R2		; the RAB
+	MOVL	8(AP),RAB$L_RBF(R2)	; the record
+	MOVW	12(AP),RAB$W_RSZ(R2)	; and its length
+	$PUT	RAB=R2
+	RET
 
 	.END

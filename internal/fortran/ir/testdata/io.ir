@@ -1,0 +1,201 @@
+routine IO main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  M       L  $LOCAL+8    variable M
+  cell  K       L  $LOCAL+12   array K, 40 bytes
+  cell  IOS     L  $LOCAL+52   variable IOS
+  cell  IOS2    W  $LOCAL+56   variable IOS2
+  cell  X       F  $LOCAL+60   variable X
+  cell  A       F  $LOCAL+64   array A, 20 bytes
+  cell  LINE    B  $LOCAL+84   variable LINE
+  cell  PAGE    B  $LOCAL+104  array PAGE, 60 bytes
+  cell  FMT     B  $LOCAL+164  variable FMT
+  cell  $FC100  L  $LOCAL+172  the parsed form of a FORMAT
+  cell  $FC10   L  $LOCAL+176  the parsed form of a FORMAT
+  cell  $D6     L  $LOCAL+180  descriptor T S 0
+  cell  $C1     L  $LOCAL+188  the implied DO (line 22)'s count
+  cell  $D7     L  $LOCAL+192  descriptor F S 4
+  cell  $T1     L  $LOCAL+200  temporary
+  cell  $C2     L  $LOCAL+204  the implied DO (line 25)'s count
+  cell  $C3     L  $LOCAL+208  the implied DO (line 25)'s count
+  cell  $D8     L  $LOCAL+212  descriptor L S 4
+  cell  $T2     F  $LOCAL+220  temporary
+  $LOCAL is 224 bytes
+  datum $K1     text '(''X='', F8.2)'
+  datum $F100   format 100 $K1 cache $FC100
+  datum $IO1    control
+  datum $K2     text '(I5, 2X, F8.2)'
+  datum $F10    format 10 $K2 cache $FC10
+  datum $D1     descriptor L S 4 I
+  datum $D2     descriptor F S 4 X
+  datum $IO2    control run-time format
+  datum $D3     descriptor T S 8 FMT
+  datum $K3     text '(1X,I3)'
+  datum $D4     descriptor T S 7 $K3
+  datum $D5     descriptor L A 4 (1:10) K
+  datum $IO3    control ERR= END= IOSTAT=
+  datum $IO4    control ERR= IOSTAT=
+  datum $D9     descriptor T S 20 LINE
+  datum $D10    descriptor T A 20 (1:3) PAGE
+  datum $D11    descriptor T S 4 LINE+1
+  datum $K4     text '(I3)'
+  datum $D12    descriptor T S 4 $K4
+  datum $K5     text 'G'
+  datum $K6     text 'I'
+  datum $K7     text 'X'
+  datum $K8     text 'A'
+  datum $D13    descriptor F A 4 (1:5) A
+  datum $NG     namelist G $K5 $K6:$D1 $K7:$D2 $K8:$D13
+  datum $K9     text 'DONE'
+  datum $D14    descriptor T S 4 $K9
+  datum $D15    descriptor F S 4 $T2
+B1:
+  ; line 11
+  assign J = addr($F100)
+  ; line 13
+  call FTN$WRITE_SF(ref $IO1, val -1, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 14
+  call FTN$WRITE_SF(ref $IO1, val -1, val J)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 15
+  call FTN$WRITE_SF(ref $IO2, val -1, ref $D3)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 16
+  call FTN$WRITE_SF(ref $IO2, val -1, ref $D4)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 17
+  call FTN$WRITE_SF(ref $IO2, val -1, ref $D5)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 18
+  assign $D6 = cvt.LW(sub.L(40, sub.L(addr(K+4), addr(K))))
+  assign $D6+4 = addr(K+4)
+  call FTN$WRITE_SF(ref $IO2, val -1, ref $D6)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 19
+  call FTN$WRITE_SF(ref $IO1, val -2, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 20
+  call FTN$READ_SF(ref $IO1, val -3, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 21
+  call FTN$READ_SF(ref $IO1, val -4, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 22
+  call FTN$READ_SL(ref $IO1, val -4)
+  call FTN$IO_ITEM(ref $D1)
+  assign $C1 = 5
+  assign M = 1
+  jump B2
+B2:  ; the implied DO (line 22)'s body
+  assign $D7+4 = addr(A-4[M])
+  call FTN$IO_ITEM(ref $D7)
+  assign M = add.L(M, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  call FTN$IO_END()
+  ; line 23
+  call FTN$READ_SF(ref $IO3, val 5, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END() -> $T1
+  assign IOS = $T1
+  sign $T1 B10 B4 B11
+B4:
+  ; line 24
+  call FTN$WRITE_SF(ref $IO4, val 6, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END() -> $T1
+  assign IOS2 = cvt.LW($T1)
+  sign $T1 B11 B5 B11
+B5:
+  ; line 25
+  call FTN$WRITE_SF(ref $IO1, val -1, ref $F10)
+  assign $C2 = 2
+  assign J = 1
+  jump B6
+B6:  ; the implied DO (line 25)'s body
+  assign $C3 = 5
+  assign M = 1
+  jump B7
+B7:  ; the implied DO (line 25)'s body
+  assign $D8+4 = addr(K-4[M])
+  call FTN$IO_ITEM(ref $D8)
+  assign M = add.L(M, 2)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B7 B8
+B8:
+  call FTN$IO_ITEM(ref $D1)
+  assign J = add.L(J, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B6 B9
+B9:
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 26
+  call FTN$WRITE_SL(ref $IO1, val add.L(I, 1))
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 27
+  call FTN$READ_IF(ref $IO1, ref $D9, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 28
+  call FTN$WRITE_IL(ref $IO1, ref $D10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 29
+  call FTN$WRITE_IF(ref $IO2, ref $D11, ref $D12)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 30
+  call FTN$WRITE_SN(ref $IO1, val 6, ref $NG)
+  call FTN$IO_END()
+  ; line 31
+  call FTN$READ_SN(ref $IO1, val 5, ref $NG)
+  call FTN$IO_END()
+  ; line 32
+  call FTN$WRITE_SN(ref $IO1, val -1, ref $NG)
+  call FTN$IO_END()
+  ; line 33
+  assign $D6 = 20
+  assign $D6+4 = addr(LINE)
+  call FTN$ENCODE(ref $IO1, ref $D6, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 34
+  assign $D6 = 12
+  assign $D6+4 = addr(K)
+  call FTN$DECODE(ref $IO1, ref $D6, ref $F10)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 35
+  call FTN$WRITE_SL(ref $IO1, val 6)
+  call FTN$IO_ITEM(ref $D14)
+  assign $T2 = add.F(X, 1.0)
+  call FTN$IO_ITEM(ref $D15)
+  call FTN$IO_END()
+  ; line 37
+  jump B10
+B10: L200
+  ; line 38
+  jump B11
+B11: L300
+  return 1

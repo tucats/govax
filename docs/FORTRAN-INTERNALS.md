@@ -701,7 +701,7 @@ routine AVERAGE main
   cell  $C1     L  $LOCAL+20   DO 10's count
   cell  $T1     L  $LOCAL+24   temporary
   $LOCAL is 28 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K1     text 'Mean:'
   datum $D1     descriptor T S 5 $K1
   datum $K2     L 4
@@ -719,7 +719,7 @@ B2: L10  ; DO 10's body
   branch gt.L($C1, 0) B2 B3
 B3:
   ; line 5
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call MEAN(ref V, ref $K2) -> $T1
   call FTN$IO_ITEM(ref $D2)
@@ -1465,30 +1465,42 @@ and LINK, and `DEFINE FTNRTL` to it: the locator finds it first.
 `PRINT *` and `WRITE (*,*)` are list-directed: each value is written in
 a format its type chooses (the language manual's Table 7-1), not a
 FORMAT statement's. A compiled statement is a call per part, as section
-8 showed: `FTN$PRINT_LIST` (or `FTN$WRITE_LIST`) with the statement's
-control block, `FTN$IO_ITEM` with each item's descriptor, and
+8 showed: `FTN$WRITE_SL` with the statement's control block and its
+unit (-1, PRINT's), `FTN$IO_ITEM` with each item's descriptor, and
 `FTN$IO_END`. Why calls per item rather than one call with an argument
-list of every item? Because an item list can hold implied-DO loops
-(a later phase), whose number of items is known only at run time; the
-compiled code runs the loop and calls for each.
+list of every item? Because an item list can hold implied-DO loops,
+whose number of items is known only at run time; the compiled code runs
+the loop and calls for each.
 
 - **The control block** is a few longwords in the program's `$PDATA`: a
-  word of size, a word of flags (which of UNIT=, FMT=, ERR=, and the
-  rest the statement has), and the unit, -1 for `*`. Later phases add
-  fields after these and raise the size, and FTNRTL reads only what the
-  size says is there, so old programs go on working.
+  word of size, a word of flags (which of ERR=, END=, and IOSTAT= the
+  statement has, and whether its format is a run-time one), and a
+  longword not used yet. Later phases add fields after these and raise
+  the size, and FTNRTL reads only what the size says is there, so old
+  programs go on working. What changes from one execution of the
+  statement to the next, the unit and the format, are the begin call's
+  other arguments.
 - **The descriptors** are the VAX calling standard's: the item's
   length, its data type (`DSC$K_DTYPE_L`, `_LU`, `_F`, `_D`, `_FC`, `_T`,
   and the rest, one per FORTRAN type), its class
   (S for a scalar, A for a whole array), and its address. The data type
   chooses the format, so FTNRTL needs nothing else to write a value.
-- **The unit** (`ftn_units.mar`) is SYS$OUTPUT, opened at the first
-  statement with RMS's `$CREATE` and `$CONNECT`, its FAB and RAB in a
-  writable psect of FTNRTL's own. `RAT=FTN` asks RMS for FORTRAN carriage
+- **The statement** (`ftn_statement.mar`) is a context on a stack, a
+  block from `LIB$GET_VM` the begin call pushes and `FTN$IO_END` pops,
+  holding the unit, the flags, the first error, and the record being
+  built: a function called for one item may do I/O of its own, which
+  gets a context of its own. `FTN$IO_END` returns the statement's status
+  in R0, which a statement with ERR=, END=, or IOSTAT= stores and branches
+  on, or signals the FOR condition if it has none of them.
+- **The unit** (`ftn_units.mar`) is SYS$OUTPUT for PRINT, TYPE, and
+  units -1, -2, and 6, opened at the first statement with RMS's `$CREATE`
+  and `$CONNECT`, its FAB and RAB in a writable psect of FTNRTL's own; and
+  SYS$INPUT, the same way, for units -3, -4, and 5. `RAT=FTN` asks RMS for FORTRAN carriage
   control: each record's first byte is its carriage control, a blank for
   a new line. That is why every list-directed record starts with a
   blank: the blank isn't printed, but turned into the line's start.
-- **The formats** (`ftn_listout.mar`) fill an 80-byte record buffer: L2
+- **The formats** (`ftn_listout.mar`) fill the context's record, 80 bytes
+  at most: L2
   from bit 0, I5, I7, and I12 by LIBRTL's `OTS$CVT_L_TI`, a text copied,
   and REAL's `1PG15.7E2` from the decimal digits `OTS$$CVT_F_T_R8` returns
   (REAL\*8's `1PG24.16E2` from `OTS$$CVT_D_T_R8`'s, and so on), FTNRTL

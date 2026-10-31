@@ -8,11 +8,10 @@ routine SUBSET main
   cell  V       F  $LOCAL+60   array V, 40 bytes
   cell  $C1     L  $LOCAL+100  DO 10's count
   $LOCAL is 104 bytes
-  datum $IO1    control PRINT *
+  datum $IO1    control
   datum $K1     text 'BIG'
   datum $D1     descriptor T S 3 $K1
   datum $D2     descriptor F S 4 Y
-  datum $IO2    control WRITE (*,*)
   datum $K2     text 'MEDIUM'
   datum $D3     descriptor T S 6 $K2
   datum $K3     text 'SMALL'
@@ -50,7 +49,7 @@ B4:
   branch and.L(gt.F(Y, 100.0), not.L(DONE)) B5 B6
 B5:
   ; line 17
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()
@@ -60,7 +59,7 @@ B6:
   branch gt.F(Y, 10.0) B7 B8
 B7:
   ; line 19
-  call FTN$WRITE_LIST(ref $IO2)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D3)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()
@@ -68,7 +67,7 @@ B7:
   jump B9
 B8:
   ; line 21
-  call FTN$WRITE_LIST(ref $IO2)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_ITEM(ref $D4)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_ITEM(ref $D5)
@@ -93,7 +92,7 @@ B12:
   noreturn
 B13:
   ; line 27
-  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$WRITE_SL(ref $IO1, val -1)
   call FTN$IO_END()
   ; line 28
   call FTN$STOP()

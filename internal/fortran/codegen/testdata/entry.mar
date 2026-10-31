@@ -254,9 +254,9 @@ CALLER.$T2:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 CALLER.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 CALLER.$K1:
 	.LONG	1
 CALLER.$K2:
@@ -286,8 +286,9 @@ CALLER.$D1:
 	CALLS	#1,G^H
 	MOVL	R0,CALLER.J
 ;   52        PRINT *, CG(1, 2)
+	PUSHL	#-1
 	PUSHAB	CALLER.$IO1
-	CALLS	#1,G^FTN$PRINT_LIST
+	CALLS	#2,G^FTN$WRITE_SL
 	PUSHAL	CALLER.$K2
 	PUSHAL	CALLER.$K1
 	PUSHAQ	CALLER.$D1
