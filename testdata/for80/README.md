@@ -107,12 +107,14 @@ makes `testdata/disks/for80b-exchange.dsk` (label FOR80B). On the VAX:
     $ DISMOUNT DUA2:
 
 then `govax console < testdata/for80/copyoutb.cmd`. No terminal part this time.
+It ran on 2026-10-31, whole; the phase doc has its findings.
 
 ## On govax
 
 `TestFor80Assembles` (`internal/console/for80_test.go`) checks that the programs,
 both rounds', assemble. `TestFor80RunsOnFORRTL` links them against VMS's FORRTL.EXE from a
 local-only volume, if there is one, and checks that the program reaches its end.
-That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement: `LIB$TPARSE`
-is NOTIMPL, which stops FORRTL's namelist input, and `$GETMSG` finds none of FOR's
-texts. VMS's run is.
+That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement:
+`LIB$TPARSE` is NOTIMPL (Phase 80's subtask 10), which stops FORRTL's namelist
+input. VMS's run is. `TestFor80Messages` runs FOR80E's parts the same way and
+holds their messages and statuses to VMS's `vax/for80.log`.

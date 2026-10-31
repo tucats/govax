@@ -434,8 +434,11 @@ never had.
   Phase 80 (in progress) is formatted, list-directed, and namelist I/O; subtask 1
   (2026-10-31) is the survey, its doc's Part A, which runs VMS's FORRTL.EXE
   as a black box (`FOR$WRITE_SO` takes a format's text), accepted by the author the
-  same day; subtask 2 (2026-10-31) is the probe, `testdata/for80`, written and
-  waiting for its VMS run, which also found `FOR$WRITE_SN`'s namelist block.
+  same day; subtask 2 (2026-10-31) is the probe, `testdata/for80`, two rounds on
+  VMS 7.1 (FORRTL's editing, list-directed layout, records, units, namelist,
+  messages; `FOR$WRITE_SN`'s block found by trial), with FOR's message texts
+  in `vmsdef` (`formessages.go`); LIB$TPARSE moved in from Phase 60 as
+  subtask 10.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -681,8 +684,10 @@ never had.
   format as text through `FOR$WRITE_SO`; FOR's messages by `$GETMSG`),
   `for80d.mar` (the output file's records between bars), `for80e.mar`
   (conditions with no handler), `for80t.mar` (a real terminal, by hand), and the
-  procedures. VMS's run, `vax/for80-vax.txt`, is FTNRTL's requirement.
-  `TestFor80RunsOnFORRTL` needs FORRTL.EXE on a local volume, or skips.
+  procedures; round 2 is `for80b.mar`. VMS's runs, `vax/for80-vax.txt` and
+  `vax/for80b-vax.txt`, are FTNRTL's requirement. `TestFor80RunsOnFORRTL` and
+  `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
+  local volume, or skip.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.

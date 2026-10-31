@@ -1,8 +1,8 @@
 # Phase 80 — FORTRAN formatted and list-directed I/O
 
 **Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
-accepted by the author the same day; subtask 2 (the probe): round 1 run on VMS,
-round 2 waiting for its run. Needs Phase 79 (control flow, for
+accepted by the author the same day; subtask 2 (the probe) done the same day, two
+rounds on VMS 7.1. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -706,6 +706,54 @@ two-dimensional array, namelist output of every type and long names, and the
 end of SYS$INPUT that round 1 didn't reach.
 
 
+## VMS's second run (round 2, 2026-10-31)
+
+`for80b.mar` on VMS 7.1 ran whole, status 1 (`vax/for80b-vax.txt`,
+`vax/for80b.log`).
+
+- **FOR's message texts:** `$GETMSG` gave 57 of the numbers 0 to 255 (the rest
+  NOMSG), each `text!/  unit !SL  file !AS!/  user PC !XL`, three parameters,
+  or with `!+!+` in place of the unit and file for the conditions that have
+  none (NOTFORSPE, NOTIMP, INVARGFOR, ...); SYNERRNAM, TOOMANVAL, and INVREFVAR
+  take the text in error first, four; ADJARRDIM takes none. They are
+  `vmsdef`'s `forMessages` (`formessages.go`), with INVTEX and INVTEXREC (numbers
+  past 255) from round 1's run 3; so Decision 15's "our own wording" is now
+  VMS's, by the author's answer 2. `TestFor80Messages` holds FORRTL's run 3
+  over govax to VMS's log, message for message, which also found a `$PUTMSG`
+  rule: after the first message a zero condition value is passed over (FORRTL
+  leaves two zeros where an RMS status and value go); as the first it's NOMSG
+  (`corevms/message.go`).
+- **SYS$INPUT's record limit:** records of 134 to 199 bytes read; round 1's 200
+  was INPRECTOO. So the limit reading a procedure is 199; at a terminal it
+  wasn't probed. FTNRTL: 133 for writing, as round 1 showed, and a read buffer
+  of 199, INPRECTOO past it (unconfirmed for the terminal).
+- **Units -1 to -4:** READ from -1 or -2 is ERRDURREA (39, RMS$_FAC), from -3 or
+  -4 reads SYS$INPUT; WRITE was the other way round. So -1 and -2 are output
+  units (PRINT, TYPE, WRITE (\*,f)) and -3 and -4 input units (ACCEPT, READ f);
+  which of each pair is which isn't shown, and FTNRTL needn't expose them.
+- **Namelist input to arrays still fails,** INVARGFOR (48), with A0 at element
+  0 or at the first element, with coefficients, bounds, both, or neither, class
+  A or NCA, one dimension or two. Output with the same descriptors works. So
+  VMS's FORRTL wants something more for input than the block found, which
+  calling it hasn't shown. Not pursued further: FTNRTL's namelist input is its
+  own, and follows the manual's rules for arrays, marked unconfirmed.
+- **Namelist output,** every type: a name is padded to the next multiple of 8
+  past its length (3 to 8, 8 and 9 to 16, 31 to 32), then `= `; a record holds
+  80 characters, and a continuation record starts in column 3 at a value;
+  equal neighbors are a repeat (`2*1.000000    , 3*2.500000    ,`), in
+  character arrays too (`2*'TWO  '`), an apostrophe doubled (`'FOUR'''`); a
+  descriptor of data type BU writes as an integer (`-1`, so LOGICAL\*1 needs
+  another type code), WU and LU as T or F; BYTE takes 5 columns, INTEGER\*2 7;
+  G 15 digits, H 33, complex D and G as in list-directed output.
+- **The end of SYS$INPUT** is ENDDURREA (24) with RMS$_EOF, and stays so on the
+  next read.
+
+**Subtask 2 is done.** Two rounds settle what the manual left open, but for
+namelist input to arrays. The cases become `for80.for` once subtask 3 compiles
+FORMAT, held to `vax/for80-vax.txt` by Decision 2's oracle as the editing
+subtasks land.
+
+
 ## Subtasks (provisional)
 
 1. **Survey:** chapters 7 and 8, appendix A.1, D.4.3; the edit
@@ -713,8 +761,8 @@ end of SYS$INPUT that round 1 didn't reach.
    cases; FORRTL's trials. Done, Part A.
 2. **The probe** (`testdata/for80`, added by the survey): FORRTL on VMS,
    every case in Part A's table and its open items, and the FOR message
-   texts; VMS's run, then a second round if the first calls for one. Round 1
-   run; round 2 written, waiting for VMS's run.
+   texts; VMS's run, then a second round if the first calls for one. Done:
+   two rounds, and FOR's texts in `vmsdef`.
 3. **FORMAT's compile-time check** and control block: `internal/fortran/format`,
    every statement form through sema and the IR, ASSIGN of a FORMAT label and
    PRINT v, implied-DO; FTNRTL's begin and end calls, statement stack, and
@@ -785,3 +833,10 @@ end of SYS$INPUT that round 1 didn't reach.
 - **2026-10-31:** the author put LIB$TPARSE in scope for this phase (it was
   Phase 60's), since FORRTL's namelist input needs it; it is subtask 10, and
   NAMELIST to the close-out are 11 to 14.
+- **2026-10-31, subtask 2, round 2 on VMS, and done.** The author ran
+  `@FOR80B`. Findings in "VMS's second run": FOR's message texts, now
+  `vmsdef.forMessages`; the input record limit (199); units -1 to -4; namelist
+  output of every type; namelist input to arrays unexplained, left to the
+  manual. `TestFor80Messages` holds FORRTL's no-handler conditions over govax to
+  VMS's log, which needed `$PUTMSG` to pass over a zero condition value after
+  the first message.
