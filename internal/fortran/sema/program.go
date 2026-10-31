@@ -219,6 +219,10 @@ type Symbol struct {
 	// whose PARAMETER statement had an error.
 	Value *Const
 
+	// StmtFunc is a statement function's definition, once the statement
+	// walk has reached it (stmtfunc.go).
+	StmtFunc *StmtFuncDef
+
 	// defPos is where a statement function or a constant is defined;
 	// oldForm is set for a constant appendix A.4's PARAMETER defined,
 	// whose type is its value's.
@@ -555,6 +559,15 @@ type (
 		exprBase
 		Fn   *Symbol
 		Args []Arg
+	}
+
+	// StmtFuncRef is a reference to a statement function (section 6.2.1):
+	// its definition, and an actual argument of each dummy argument's type
+	// (of any length, for CHARACTER). Lowering expands it in line.
+	StmtFuncRef struct {
+		exprBase
+		Def  *StmtFuncDef
+		Args []Expr
 	}
 
 	// IntrinsicRef is a reference to an intrinsic function compiled in line

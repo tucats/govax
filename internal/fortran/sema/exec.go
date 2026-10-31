@@ -111,12 +111,12 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 // assignment analyzes v = e (sections 3.1 and 3.2): the value is
 // converted to the target's type by Table 3-1 (REAL to INTEGER or
 // LOGICAL truncates, INTEGER or LOGICAL to REAL appends .0). An
-// assignment the declarations found to define a statement function is
-// Phase 79's.
+// assignment the declarations found to define a statement function has
+// nothing to execute.
 func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	if fn, ok := a.stmtFuncs[s]; ok {
 		if fn != nil {
-			a.notImpl(s.Pos, "a statement function")
+			a.defineStmtFunction(s, fn)
 		}
 
 		return nil
@@ -129,29 +129,39 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 		return nil
 	}
 
-	// A CHARACTER value is assigned only to a CHARACTER place, of any
-	// length: it is cut or filled with blanks on the right to the place's
-	// length when the program runs (section 3.3).
+	value = a.assignedValue(s.Pos, target, value)
+	if value == nil {
+		return nil
+	}
+
+	return &Assign{stmtBase{s}, target, value}
+}
+
+// assignedValue is value as it is assigned to target, or nil after an error. A
+// CHARACTER value is assigned only to a CHARACTER place, of any length: it is
+// cut or filled with blanks on the right to the place's length when the program
+// runs (section 3.3).
+func (a *analyzer) assignedValue(pos diag.Position, target, value Expr) Expr {
 	switch tt, vt := target.Type(), value.Type(); {
 	case tt.Kind == Character && vt.Kind == Character:
-		return &Assign{stmtBase{s}, target, value}
+		return value
 
 	case vt.Kind == Character:
 		if _, ok := value.(*Const); ok {
 			a.notImpl(value.Position(), hollerith)
 		} else {
-			a.report("ASSIGNTYPE", s.Pos, article(vt.String()), placeName(target), tt.String())
+			a.report("ASSIGNTYPE", pos, article(vt.String()), placeName(target), tt.String())
 		}
 
 		return nil
 
 	case tt.Kind == Character:
-		a.report("ASSIGNTYPE", s.Pos, article(vt.String()), placeName(target), tt.String())
+		a.report("ASSIGNTYPE", pos, article(vt.String()), placeName(target), tt.String())
 
 		return nil
 	}
 
-	return &Assign{stmtBase{s}, target, a.assigned(value, target.Type())}
+	return a.assigned(value, target.Type())
 }
 
 // placeName names an assignment's target for a message: a variable's name,

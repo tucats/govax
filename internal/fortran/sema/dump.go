@@ -48,6 +48,17 @@ func Dump(p *Program) string {
 			fmt.Fprintf(&b, "  header%s\n", dumpAltPlaces(u.AltPlaces))
 		}
 
+		for _, s := range u.Symbols {
+			if d := s.StmtFunc; d != nil {
+				params := make([]string, len(d.Dummies))
+				for i, p := range d.Dummies {
+					params[i] = p.Name + " " + p.Type.String()
+				}
+
+				fmt.Fprintf(&b, "  statement function %s (%s) = %s\n", s.Name, strings.Join(params, ", "), DumpExpr(d.Value))
+			}
+		}
+
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
 
 		for _, c := range u.Commons {
@@ -332,6 +343,13 @@ func DumpExpr(e Expr) string {
 		return "(//:" + e.T.letter() + " " + strings.Join(parts, " ") + ")"
 	case *FuncRef:
 		return e.Fn.Name + dumpArgs(e.Args)
+	case *StmtFuncRef:
+		args := make([]string, len(e.Args))
+		for i, x := range e.Args {
+			args[i] = DumpExpr(x)
+		}
+
+		return "{" + e.Def.Sym.Name + " " + strings.Join(args, " ") + "}"
 	case *IntrinsicRef:
 		args := make([]string, len(e.Args))
 		for i, x := range e.Args {

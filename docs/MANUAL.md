@@ -4488,8 +4488,7 @@ output it prints, and programs of several files in its `modules` directory.
   with IMPLICIT NONE every name must be declared. The statements must
   come in the order the language sets (IMPLICIT, then the other
   declarations, then statement function definitions, then the executable
-  statements); statement function definitions are recognized, and
-  reported not implemented yet.
+  statements).
 - **Initial values:** DATA, with implied-DO lists and repeat counts
   (`DATA (B(I), I=1,10,2) /5*1/`), and values in slashes in a type statement
   (`INTEGER M(3)/1, 2*7/`). Numbers are converted to the item's type; octal
@@ -4575,8 +4574,15 @@ output it prints, and programs of several files in its `modules` directory.
   of DBLEQ and QEXTD; the FTNRTL table below). A generic name passed is its
   specific name of the default types: IABS is JIABS (IIABS under `/NOI4`), MAX
   JMAX0, LOG ALOG. SIZEOF has no routine, and is an error as an argument
-  (`%FORT-E-NOTPASSABLE`). Calling a routine through a dummy argument from
-  FORTRAN is the next phase's.
+  (`%FORT-E-NOTPASSABLE`).
+- **Statement functions:** `AREA(R) = 3.14*R*R`, of any type, CHARACTER too,
+  defined after the declarations and before the executable statements, and
+  expanded in line at each reference. A dummy argument's name gives it only its
+  type, whatever else the unit calls that name. Each actual argument must have
+  its dummy's type (`%FORT-E-STMTFUNCARG`), but for a CHARACTER value's length
+  and a constant that fits a shorter INTEGER. A definition may use only the
+  statement functions before it (`%FORT-E-STMTFUNCLATE`), and they can't be
+  called, passed, or assigned.
 - **Statements:** assignment, of a character value to a character place cut
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
@@ -4962,6 +4968,13 @@ FORTRAN compiler was available to check them). So far:
   chooses comes back in R0, 0 from a plain RETURN; a MACRO routine a FORTRAN
   program calls with specifiers does the same. The language manual doesn't
   say how VAX FORTRAN laid these out.
+- A statement function's actual argument is assigned to a temporary of its
+  dummy argument's type and length, as an assignment would, unless it is a
+  constant or a variable of that very type and length, which is used where it
+  is; so a CHARACTER one is cut or padded to the dummy's length, and the value
+  to the function's. The language manual doesn't say. A dummy argument named
+  for a `CHARACTER*(*)` name is an error (`%FORT-E-STMTFUNCLEN`), FORTRAN-77's
+  rule.
 - Changing a DO loop's control variable inside the loop is an error
   (the manual forbids it; govax checks the loop's own statements).
 - `.TRUE.` is the longword -1 and `.FALSE.` 0 (only bit 0 counts); on

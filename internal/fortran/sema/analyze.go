@@ -248,6 +248,10 @@ type analyzer struct {
 	// or nil for one with an error.
 	stmtFuncs map[ast.Stmt]*Symbol
 
+	// defining is the statement function whose definition is being
+	// analyzed, which may not use itself.
+	defining *Symbol
+
 	// entryOf are the unit's ENTRY statements' entry points (entry.go).
 	entryOf map[*ast.EntryStmt]*Entry
 

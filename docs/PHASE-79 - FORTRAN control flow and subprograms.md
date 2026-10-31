@@ -10,7 +10,8 @@ done 2026-10-31; subtask 5 (function results of every type) done
 returns) done 2026-10-31; subtask 8 (adjustable and assumed-size arrays,
 passed-length character arrays) done 2026-10-31; subtask 9 (procedure
 arguments, null arguments, Hollerith constants as arguments, %VAL, %REF,
-%DESCR, %LOC) done 2026-10-31.
+%DESCR, %LOC) done 2026-10-31; subtask 10 (statement functions) done
+2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -530,7 +531,7 @@ recommendation:
 8. **Adjustable and assumed-size arrays**, passed-length character arrays. Done.
 9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.** (With
    Hollerith constants as arguments, and answer 4.) Done.
-10. **Statement functions.**
+10. **Statement functions.** Done.
 11. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter
     on calls and control flow).
 
@@ -800,3 +801,36 @@ recommendation:
   address would be, by %LOC; a descriptor's length and address, through a CHARACTER\*(\*)
   dummy), and `testdata/fortran/modules/procs`, across files in both link orders.
   MANUAL.md's 14.2 lists them, with the differences.
+- **2026-10-31, subtask 10 (statement functions):** Decision 8 and answer 5 as
+  written, with one narrowing: sema's `StmtFuncRef` holds the definition
+  (`StmtFuncDef`: `Symbol.StmtFunc`) and the actuals, and lowering does the rest, so
+  no tree is cloned. Sema (`sema/stmtfunc.go`): the statement walk analyzes each
+  definition, with a dummy argument's symbol standing in the unit's table only
+  during its expression (`defineStmtFunction`), in none of the unit's lists, so it
+  has no storage and the unit's own name is untouched; its type is the unit's name's
+  or the implicit one, and the manual's "AVG(A, B, 3.)" stays NOTARRAY. A reference
+  (`stmtFuncRef`) checks the number (ARGCOUNT) and each actual (`actualFor`). The value
+  goes through `assignedValue`, the assignment's rule, now shared. New messages:
+  STMTFUNCARG (another type, the manual's `AVG(TEST3,TEST4,LAB2)`; ours for length:
+  REAL\*8 for REAL\*4 is one, but an INTEGER constant that fits a shorter dummy, or a
+  LOGICAL constant, isn't, as section 2.2.1.1 treats such a constant), STMTFUNCLATE (a
+  definition using a later one; itself is RECURSIVE), and STMTFUNCLEN (a dummy named for
+  a `CHARACTER*(*)` name, FORTRAN-77's rule; ours, unconfirmed: the manual doesn't say).
+  A definition with an error leaves the name `broken`, so its references are quiet. The
+  IR (`ir/lowerstmtfunc.go`): `bindDummies` lowers the actuals, then puts each dummy's
+  place in `lowerer.bound`, which `symbolMem` looks in first, so the definition's
+  expression lowers as if written out, through every path a variable takes (`expr`,
+  `chars`, `complexParts`, `complexValue`), and `defer` takes the bindings away again. A
+  place is the constant's datum or the variable itself where answer 5 says so, else a
+  temporary (`store`, `assign`'s numeric half). So a constant actual is a datum, not an
+  immediate (`NEXT(3)` is `ADDW3 SF.$K4,#1,R0`), which Phase 84 can improve; nothing in
+  the output changes. Three things keep a value a value: `Z = SWAP(Z)` computes into a
+  temporary (`assignComplex`, since the parts would otherwise be written while being
+  read), a CHARACTER value of another length is moved to a temporary of the function's
+  (`stmtFuncText`), and an argument that is a statement function's value is marked
+  `Copy` (`sema`'s `arg`), since `F(X) = X` would otherwise pass X. `LEN` of one makes
+  no expansion (`charLen`). A function reference's list takes no null argument or `*s`
+  (the parser's SYNTAX, as for any function reference). Tests: `stmtfunc.for` golden files
+  in `sema`, `ir`, and `codegen`; sema error cases for each message, and the older
+  cases now without NOTIMPL; `testdata/fortran/stmtfuncs.for` end to end in both
+  paging modes, its output checked by hand. MANUAL.md's 14.2 and 14.7 list them.

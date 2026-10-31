@@ -220,6 +220,18 @@ var messages = map[string]kind{
 	// take one.
 	"PASSEDLEN": {Error, "%s can't have the length (*): only a dummy argument, a function's own name, or a PARAMETER constant can"},
 
+	// STMTFUNCLEN is a statement function's dummy argument named for a
+	// passed-length name.
+	"STMTFUNCLEN": {Error, "the statement function's dummy argument %s can't have the length (*)"},
+
+	// STMTFUNCLATE is a reference to a statement function in a definition
+	// before its own (section 6.2.1).
+	"STMTFUNCLATE": {Error, "the statement function %s isn't defined until line %d, and a statement function can use only those defined before it"},
+
+	// STMTFUNCARG is a statement function's actual argument of another type
+	// from its dummy argument (section 6.2.1).
+	"STMTFUNCARG": {Error, "argument %d of the statement function %s is %s, but its dummy argument %s is %s"},
+
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
 	// statement (section 4.8).
 	"IMPLNONE": {Error, "a program unit with an IMPLICIT NONE statement can't have another IMPLICIT statement, and this one has the %s statement at line %d"},

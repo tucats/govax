@@ -1,0 +1,128 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for SF, the main program
+;   A     REAL (3)      $LOCAL+0   SF.A
+;   R     REAL          $LOCAL+12  SF.R
+;   H     REAL          $LOCAL+16  SF.H
+;   Z     COMPLEX       $LOCAL+20  SF.Z
+;   W     COMPLEX       $LOCAL+28  SF.W
+;   S     CHARACTER*10  $LOCAL+36  SF.S
+;   T     CHARACTER*10  $LOCAL+46  SF.T
+;   N     INTEGER*2     $LOCAL+56  SF.N
+;   Y     REAL          $LOCAL+60  SF.Y
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SF.A:	.BLKL	3			; A, REAL (3)
+SF.R:	.BLKL	1			; R
+SF.H:	.BLKL	1			; H
+SF.Z:	.BLKL	2			; Z
+SF.W:	.BLKL	2			; W
+SF.S:	.BLKB	10			; S
+SF.T:	.BLKB	10			; T
+SF.N:	.BLKB	2			; N
+	.BLKB	2
+SF.Y:	.BLKL	1			; Y
+SF.$T1:	.BLKL	1			; temporary
+SF.$T2:	.BLKL	1			; temporary
+SF.$T3:	.BLKL	2			; temporary
+SF.$T4:	.BLKB	10			; characters, for one statement
+	.BLKB	2
+SF.$T5:	.BLKB	10			; characters, for one statement
+	.BLKB	2
+SF.$T6:	.BLKL	1			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SF.$K1:	.LONG	^X00004080		; 1.0
+SF.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SF.$D1:
+	.WORD	10			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SF.$T5
+SF.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS SF.$T6
+SF.$K4:	.LONG	3
+SF.$F1:	.LONG	^X00004140		; 3.0
+SF.$F2:	.LONG	^X00004100		; 2.0
+SF.$K2:	.ASCII	/ABCDEFGHIJ/
+SF.$K3:	.ASCII	/KL/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Statement functions (section 6.2.1): dummy arguments named for other
+;    2  C     entities, every kind of actual argument, one function using another.
+;    3        PROGRAM SF
+	.ENTRY	SF,^M<R2,R3,R4,R5>
+;    4        REAL A(3), AREA, RING, R, H
+;    5        COMPLEX Z, SWAP, W
+;    6        CHARACTER*10 CSF, S, T
+;    7        CHARACTER*4 SHORT
+;    8        INTEGER*2 N, NEXT
+;    9        LOGICAL BIG
+;   10        AREA(A) = 3.0*A*A
+;   11        RING(R, H) = AREA(R) - AREA(H)
+;   12        SWAP(W) = CMPLX(AIMAG(W), REAL(W))
+;   13        CSF(S, T) = S(6:10)//T(1:5)
+;   14        SHORT(S) = S
+;   15        NEXT(N) = N + 1
+;   16        BIG(H) = H .GT. 2.0
+;   17        A(1) = 2.0
+	MOVL	#^X00004100,SF.A	; 2.0
+;   18        A(2) = AREA(A(1)) + RING(A(1), 1.0)
+	MOVF	SF.A,SF.$T1
+	MOVF	SF.A,SF.$T2
+	MULF3	SF.$F1,SF.$T2,R0
+	MULF2	SF.$T2,R0
+	MULF3	SF.$F1,SF.$K1,R1
+	MULF2	SF.$K1,R1
+	SUBF2	R1,R0
+	MULF3	SF.$F1,SF.$T1,R1
+	MULF2	SF.$T1,R1
+	ADDF3	R1,R0,SF.A+4
+;   19        Y = AREA(A(1) + 1.0)
+	ADDF3	SF.A,SF.$K1,SF.$T2
+	MULF3	SF.$F1,SF.$T2,R0
+	MULF3	R0,SF.$T2,SF.Y
+;   20        Z = SWAP(Z)
+	MOVF	SF.Z+4,SF.$T3
+	MOVF	SF.Z,SF.$T3+4
+	MOVQ	SF.$T3,SF.Z
+;   21        PRINT *, CSF('ABCDEFGHIJ', 'KL'), SHORT(S)
+	PUSHAB	SF.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	MOVC5	#2,SF.$K3,#^A/ /,#10,SF.$T4
+	MOVC3	#5,SF.$K2+5,SF.$T5
+	MOVC3	#5,SF.$T4,SF.$T5+5
+	PUSHAQ	SF.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVC3	#4,SF.S,SF.$T6
+	PUSHAQ	SF.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   22        N = NEXT(N) + NEXT(3)
+	ADDW3	SF.N,#1,R0
+	ADDW3	SF.$K4,#1,R1
+	ADDW3	R0,R1,SF.N
+;   23        IF (BIG(Y)) Y = AREA(AREA(Y))
+	CMPF	SF.Y,SF.$F2
+	BGTR	SF.$2
+	BRW	SF.$1
+SF.$2:
+	MULF3	SF.$F1,SF.Y,R0
+	MULF3	R0,SF.Y,SF.$T2
+	MULF3	SF.$F1,SF.$T2,R0
+	MULF3	R0,SF.$T2,SF.Y
+SF.$1:
+;   24        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	SF

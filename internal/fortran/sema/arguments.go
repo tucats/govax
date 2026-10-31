@@ -39,7 +39,7 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		v := a.value(x)
 
 		switch v.(type) {
-		case *Var, *Elem, *Substring:
+		case *Var, *Elem, *Substring, *StmtFuncRef:
 			return Arg{Expr: v, Copy: true}
 		}
 
@@ -56,7 +56,13 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		}
 	}
 
-	return Arg{Expr: a.value(e)}
+	v := a.value(e)
+
+	// A statement function may be only its dummy argument's name, the actual
+	// variable itself; what is passed is its value.
+	_, stmtFunc := v.(*StmtFuncRef)
+
+	return Arg{Expr: v, Copy: stmtFunc}
 }
 
 // nameArg analyzes a name standing alone as an actual argument: a procedure

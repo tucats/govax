@@ -175,9 +175,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 
 	switch s.Class {
 	case StmtFunction:
-		// A reference to a statement function, whose definition is
-		// reported NOTIMPL (Phase 79).
-		return a.bad(e.Pos)
+		return a.stmtFuncRef(s, e)
 
 	case Array:
 		return a.element(s, e)

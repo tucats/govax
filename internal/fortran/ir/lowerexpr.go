@@ -38,6 +38,11 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 
 		return &Load{result}
 
+	case *sema.StmtFuncRef:
+		defer l.bindDummies(e)()
+
+		return l.expr(e.Def.Value)
+
 	case *sema.IntrinsicRef:
 		return l.intrinsic(e)
 
@@ -190,6 +195,9 @@ func (l *lowerer) chars(e sema.Expr) Text {
 
 		return Text{result, n}
 
+	case *sema.StmtFuncRef:
+		return l.stmtFuncText(e)
+
 	case *sema.IntrinsicRef:
 		// CHAR(I), the one intrinsic function with a CHARACTER value.
 		return l.char(e)
@@ -241,6 +249,12 @@ func (l *lowerer) constOf(c *sema.Const) *Const {
 // argument, the caller's variable its argument points at, or a CHARACTER
 // dummy's text, which its descriptor points at.
 func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
+	if m := l.bound[s]; m != nil {
+		place := *m
+
+		return &place
+	}
+
 	t := l.typeOf(s.Type)
 
 	if p := l.charParam(s); p != nil {

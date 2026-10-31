@@ -324,6 +324,9 @@ func (l *lowerer) charLen(e sema.Expr) Expr {
 
 	case *sema.FuncRef:
 		return l.charLength(c.Fn)
+
+	case *sema.StmtFuncRef:
+		return LongConst(int32(c.T.Size))
 	}
 
 	return l.chars(e).Len

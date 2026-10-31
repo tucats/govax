@@ -423,7 +423,11 @@ never had.
   arguments, null arguments, Hollerith constants as arguments, and the built-ins
   (`sema/arguments.go`: `Arg.Mode` from `notAllowed`, Table 6-1; `Procedure`, `Loc`;
   `ir/lowerargs.go`: `Call.Through` for a dummy procedure, `@F(AP)` or for a
-  CHARACTER one `@4(R0)`; `Descriptor.Routine`, a ZEM descriptor; `RoutineAddr`).
+  CHARACTER one `@4(R0)`; `Descriptor.Routine`, a ZEM descriptor; `RoutineAddr`);
+  subtask 10 (2026-10-31) statement functions (`sema/stmtfunc.go`: `StmtFuncRef`,
+  `StmtFuncDef`, a dummy argument's symbol in the unit's table only during the
+  definition's expression; `ir/lowerstmtfunc.go`: each reference expanded in line,
+  `lowerer.bound` giving `symbolMem` its dummies' places).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

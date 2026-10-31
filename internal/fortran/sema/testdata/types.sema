@@ -22,6 +22,7 @@
   TV        CHARACTER*8   array(1:2)       $LOCAL+160
   SQ        REAL          statement function
   K         INTEGER       variable         $LOCAL+176
+  statement function SQ (Y REAL) = (*:R Y Y)
   $LOCAL is 180 bytes
 21          K = N
 22          END
@@ -34,8 +35,3 @@
 29          X = (REAL I)
 30          PRINT * X
 31          END
-
-%FORT-E-NOTIMPL, a statement function is not implemented yet
-  at line 20 of TYPES.FOR
-        SQ(Y) = Y*Y
-  ------^

@@ -234,27 +234,30 @@ func (l *lowerer) assign(s *sema.Assign) {
 		return
 	}
 
-	dst := l.mem(s.Target)
+	l.store(l.mem(s.Target), s.Value)
+}
 
-	if c, ok := s.Value.(*sema.Compare); ok && c.X.Type().Kind == sema.Character && dst.T == Long {
+// store lowers dst = value, for a value that isn't CHARACTER, of dst's type.
+func (l *lowerer) store(dst *Mem, value sema.Expr) {
+	if c, ok := value.(*sema.Compare); ok && c.X.Type().Kind == sema.Character && dst.T == Long {
 		l.emit(&Assign{l.origin(), dst, l.charCompare(c)})
 
 		return
 	}
 
-	if f, ok := s.Value.(*sema.FuncRef); ok && !f.T.HiddenResult() {
+	if f, ok := value.(*sema.FuncRef); ok && !f.T.HiddenResult() {
 		l.callFunction(f, dst)
 
 		return
 	}
 
-	if s.Target.Type().Kind == sema.Complex {
-		l.assignComplex(dst, s.Value)
+	if value.Type().Kind == sema.Complex {
+		l.assignComplex(dst, value)
 
 		return
 	}
 
-	l.emit(&Assign{l.origin(), dst, l.expr(s.Value)})
+	l.emit(&Assign{l.origin(), dst, l.expr(value)})
 }
 
 // blockIf lowers an IF THEN ... END IF construct: each arm's condition

@@ -1,0 +1,34 @@
+== main program SF
+  SF                      program unit
+  A         REAL          array(1:3)       $LOCAL+0
+  AREA      REAL          statement function
+  RING      REAL          statement function
+  R         REAL          variable         $LOCAL+12
+  H         REAL          variable         $LOCAL+16
+  Z         COMPLEX       variable         $LOCAL+20
+  SWAP      COMPLEX       statement function
+  W         COMPLEX       variable         $LOCAL+28
+  CSF       CHARACTER*10  statement function
+  S         CHARACTER*10  variable         $LOCAL+36
+  T         CHARACTER*10  variable         $LOCAL+46
+  SHORT     CHARACTER*4   statement function
+  N         INTEGER*2     variable         $LOCAL+56
+  NEXT      INTEGER*2     statement function
+  BIG       LOGICAL       statement function
+  Y         REAL          variable         $LOCAL+60
+  statement function AREA (A REAL) = (*:R (*:R 3.0 A) A)
+  statement function RING (R REAL, H REAL) = (-:R {AREA R} {AREA H})
+  statement function SWAP (W COMPLEX) = (cmplx:COMPLEX CMPLX (imag:REAL AIMAG W) (REAL W))
+  statement function CSF (S CHARACTER*10, T CHARACTER*10) = (//:C S(6:10) T(1:5))
+  statement function SHORT (S CHARACTER*10) = S
+  statement function NEXT (N INTEGER*2) = (+:I N 1)
+  statement function BIG (H REAL) = (.GT.:R H 2.0)
+  $LOCAL is 64 bytes
+17          A[1] = 2.0
+18          A[2] = (+:R {AREA A[1]} {RING A[1] 1.0})
+19          Y = {AREA (+:R A[1] 1.0)}
+20          Z = {SWAP Z}
+21          PRINT * {CSF 'ABCDEFGHIJ' 'KL'} {SHORT S}
+22          N = (+:I {NEXT N} {NEXT 3})
+23          IF {BIG Y} Y = {AREA {AREA Y}}
+24          END

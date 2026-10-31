@@ -63,9 +63,8 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 // is an assignment to an element of an array AVG (NOTARRAY), as F(X) =
 // ... is after the first executable statement.
 //
-// The statement function's code, and its references', are Phase 79's: a
-// definition is NOTIMPL where the statement walk reaches it, and a
-// reference an expression with an error.
+// Its expression is analyzed where the statement walk reaches it, when every
+// declaration is known (stmtfunc.go).
 func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 	ap, ok := s.Target.(*ast.Apply)
 	if !ok || a.group > stmtFuncGroup {

@@ -1,0 +1,58 @@
+routine SF main
+  cell  A       F  $LOCAL+0    array A, 12 bytes
+  cell  R       F  $LOCAL+12   variable R
+  cell  H       F  $LOCAL+16   variable H
+  cell  Z       Q  $LOCAL+20   variable Z
+  cell  W       Q  $LOCAL+28   variable W
+  cell  S       B  $LOCAL+36   variable S
+  cell  T       B  $LOCAL+46   variable T
+  cell  N       W  $LOCAL+56   variable N
+  cell  Y       F  $LOCAL+60   variable Y
+  cell  $T1     F  $LOCAL+64   temporary
+  cell  $T2     F  $LOCAL+68   temporary
+  cell  $T3     Q  $LOCAL+72   temporary
+  cell  $T4     B  $LOCAL+80   temporary
+  cell  $T5     B  $LOCAL+92   temporary
+  cell  $T6     B  $LOCAL+104  temporary
+  $LOCAL is 108 bytes
+  datum $K1     F 1.0
+  datum $IO1    control PRINT *
+  datum $K2     text 'ABCDEFGHIJ'
+  datum $K3     text 'KL'
+  datum $D1     descriptor T S 10 $T5
+  datum $D2     descriptor T S 4 $T6
+  datum $K4     W 3
+B1:
+  ; line 17
+  assign A = 2.0
+  ; line 18
+  assign $T1 = A
+  assign $T2 = A
+  assign A+4 = add.F(mul.F(mul.F(3.0, $T1), $T1), sub.F(mul.F(mul.F(3.0, $T2), $T2), mul.F(mul.F(3.0, $K1), $K1)))
+  ; line 19
+  assign $T2 = add.F(A, 1.0)
+  assign Y = mul.F(mul.F(3.0, $T2), $T2)
+  ; line 20
+  assign $T3 = Z+4
+  assign $T3+4 = Z
+  assign Z = $T3
+  ; line 21
+  call FTN$PRINT_LIST(ref $IO1)
+  move $T4(10) = $K3(2)
+  move $T5(5) = $K2+5(5)
+  move $T5+5(5) = $T4(5)
+  call FTN$IO_ITEM(ref $D1)
+  move $T6(4) = S(10)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 22
+  assign N = add.W(add.W(N, 1), add.W($K4, 1))
+  ; line 23
+  branch gt.F(Y, 2.0) B2 B3
+B2:
+  assign $T2 = mul.F(mul.F(3.0, Y), Y)
+  assign Y = mul.F(mul.F(3.0, $T2), $T2)
+  jump B3
+B3:
+  ; line 24
+  return 1

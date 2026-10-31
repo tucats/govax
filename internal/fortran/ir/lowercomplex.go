@@ -80,6 +80,11 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 
 		return &Load{r}, &Load{i}
 
+	case *sema.StmtFuncRef:
+		defer l.bindDummies(e)()
+
+		return l.complexParts(e.Def.Value)
+
 	case *sema.IntrinsicRef:
 		// CMPLX(X, Y), its parts converted already; CONJG(Z); or a call of
 		// MTHRTL's (CSQRT, CDEXP).
@@ -202,6 +207,11 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 
 		return result
 
+	case *sema.StmtFuncRef:
+		defer l.bindDummies(e)()
+
+		return l.complexValue(e.Def.Value)
+
 	case *sema.IntrinsicRef:
 		if e.Op == sema.CallOp {
 			return l.callIntrinsic(e)
@@ -225,7 +235,9 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	}
 
 	switch e.(type) {
-	case *sema.Var, *sema.Elem, *sema.FuncRef:
+	case *sema.Var, *sema.Elem, *sema.FuncRef, *sema.StmtFuncRef:
+		// A statement function's value is computed apart from dst, which may
+		// be its actual argument, and so what its parts are read from.
 		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
 
 	case *sema.Const:

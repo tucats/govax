@@ -30,6 +30,10 @@ type lowerer struct {
 	cells  map[*sema.Symbol]*Cell
 	params map[*sema.Symbol]*Param
 
+	// bound holds the places of the statement functions' dummy arguments,
+	// while a reference is being expanded (lowerstmtfunc.go).
+	bound map[*sema.Symbol]*Mem
+
 	// cur is the block statements are being added to, or nil when the
 	// code being lowered can't be reached (after a GO TO, a STOP, a
 	// RETURN), until a block starts.
@@ -90,6 +94,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 		r:        r,
 		cells:    map[*sema.Symbol]*Cell{},
 		params:   map[*sema.Symbol]*Param{},
+		bound:    map[*sema.Symbol]*Mem{},
 		labels:   map[int]*Block{},
 		free:     map[Type][]*Cell{},
 		freeDesc: map[string][]*Cell{},
