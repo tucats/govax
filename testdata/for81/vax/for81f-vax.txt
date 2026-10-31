@@ -1,0 +1,979 @@
+$ SET NOVERIFY
+##### IOSTAT: code 22
+#0 IOSTAT mechanism 3, an error, no ERR=
+=OPEN r=0018812C
+ asv=12340025
+#1 IOSTAT mechanism 3, success
+=OPEN r=00000001
+ asv=12340000
+#2 IOSTAT mechanism 5, an error, no ERR=
+=OPEN r=0018812C
+ asv=00000025
+#3 IOSTAT mechanism 5, success
+=OPEN r=00000001
+ asv=00000000
+#4 IOSTAT with RMS's failure
+=OPEN r=001880EC
+ asv=0000001D
+=OPEN r=00188154
+ asv=0000002A
+=OPEN r=0018815C
+ asv=0000002B
+#5 IOSTAT on CLOSE and INQUIRE
+=CLOSE r=00188104
+ asv=00000020
+=CLOSE r=00000001
+ asv=00000000
+=INQUIRE r=00000001
+ asv=00000000
+=INQUIRE r=00000001
+ asv=00000000
+=INQUIRE r=00000001
+ asv=00000000
+##### ASSOCIATEVARIABLE: which code
+#6 code 0 mechanism 5 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#7 code 0 mechanism 3 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#8 code 0 mechanism 4 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#9 code 17 mechanism 5 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=00000004
+=IO_END r=00000000
+  0000: 00000000
+ asv=00000002
+=FIND r=00000000
+ asv=00000002
+#10 code 17 mechanism 3 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFF0004
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFF0002
+=FIND r=00000000
+ asv=FFFF0002
+#11 code 17 mechanism 4 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFF0004
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFF0002
+=FIND r=00000000
+ asv=FFFF0002
+#12 code 25 mechanism 5 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#13 code 25 mechanism 3 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#14 code 25 mechanism 4 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#15 code 28 mechanism 5 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#16 code 28 mechanism 3 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#17 code 28 mechanism 4 on a direct unit
+=OPEN r=00000001
+ asv=12345678
+=IO_END r=00000000
+ asv=FFFFFFFF
+=IO_END r=00000000
+  0000: 00000000
+ asv=FFFFFFFF
+=FIND r=00000000
+ asv=FFFFFFFF
+#18 code 0 and 17 and 25 and 28 all, on a direct relative unit
+=OPEN r=00000001
+=IO_END r=00000000
+=code 0 r=12345678
+=code 17 r=00000004
+=code 25 r=12345678
+=code 28 r=12345678
+##### ACCESS='APPEND': value 3
+#19 make the files
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+#20 APPEND no STATUS, VAR
+=OPEN r=00188174
+ no rab: 00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=4 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=4
+  0000: 2054574F
+ rec 3: r=0001827A n=0
+#21 APPEND OLD, VAR
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 fop=00000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=133 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AV.DAT;1                                           |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |NO                                                              |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000085
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |VARIABLE                                                        |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 204F4E452020202020202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=22
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#22 APPEND UNKNOWN, VAR
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 fop=02000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=133 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AV.DAT;1                                           |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |NO                                                              |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000085
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |VARIABLE                                                        |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 204F4E452020202020202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=22
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#23 APPEND NEW
+=OPEN r=00188174
+ no rab: 00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=22
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#24 APPEND SCRATCH
+=OPEN r=00188174
+ no rab: 00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=22
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#25 APPEND OLD, missing
+=OPEN r=001880EC
+ no rab: 00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AN1.DAT: r=00018292
+#26 APPEND UNKNOWN, missing
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=0 deq=0 fop=02000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=133 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AN2.DAT;1                                          |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |NO                                                              |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000085
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |VARIABLE                                                        |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AN2.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=28
+ rec 1: r=00010001 n=9
+  0000: 20415050454E444544
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#27 APPEND OLD, FIX
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=01 rat=01 mrs=8 mrn=0 alq=3 deq=0 fop=00000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AF.DAT;1                                           |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |YES                                                             |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000008
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |FIXED                                                           |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=c 00188214 n=9 a=00000003 0000000A
+=u
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 204F4E452020202020202020
+=c 00188214 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+ stat AF.DAT: org=00 rfm=01 rat=01 mrs=8 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=8
+ rec 1: r=00010001 n=8
+  0000: 204F4E4520202020
+ rec 2: r=0001827A n=0
+#28 APPEND OLD, relative
+=OPEN r=00000001
+ fab fac=1F shr=00 org=10 rfm=01 rat=01 mrs=8 mrn=2147483647 alq=3 deq=0 fop=00000020 bks=1 bls=0 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AR.DAT;1                                           |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |YES                                                             |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000008
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |RELATIVE                                                        |
+ q45 r=00000001 |FIXED                                                           |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=c 00188214 n=9 a=00000003 0000000A
+=u
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 00188214 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+ stat AR.DAT: org=10 rfm=01 rat=01 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 204F4E4520202020
+ rec 2: r=0001827A n=0
+#29 APPEND readonly
+=OPEN r=00188174
+ no rab: 00000000
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=00000000
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=00000000
+ q34 r=00000001 |                                                                |
+ q35 r=00000001 |UNKNOWN                                                         |
+ q36 r=00000001 |UNKNOWN                                                         |
+ q37 r=00000001 |UNKNOWN                                                         |
+ q38 r=00000001 |UNKNOWN                                                         |
+ q39 r=00000001 |UNKNOWN                                                         |
+ q40 r=00000001 |UNKNOWN                                                         |
+ q41 r=00000001 v=00000000
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |UNKNOWN                                                         |
+ q45 r=00000001 |UNKNOWN                                                         |
+ q46 r=00000001 |UNKNOWN                                                         |
+ q47 r=00000001 |UNKNOWN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+=IO_END r=00000000
+=BACKSPACE r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 20415050454E444544202020
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AV.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=13 hbk=3 ebk=1 ffb=22
+ rec 1: r=00010001 n=4
+  0000: 204F4E45
+ rec 2: r=00010001 n=13
+  0000: 20414654455220524557494E44
+ rec 3: r=0001827A n=0
+#30 APPEND OLD, unformatted
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=2044 ksz=0
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat AU.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=24
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 3: r=0001827A n=0
+#31 APPEND text
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 fop=00000020 bks=0 bls=512 fsz=0
+ rab rop=00010702 rac=0 mbc=0 mbf=0 rsz=0 usz=133 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]AV.DAT;1                                           |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |NO                                                              |
+ q38 r=00000001 |FORMATTED                                                       |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000085
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |ZERO                                                            |
+ q44 r=00000001 |SEQUENTIAL                                                      |
+ q45 r=00000001 |VARIABLE                                                        |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |FORTRAN                                                         |
+ q48 r=00000001 |UNKNOWN                                                         |
+#32 ACCESS=4, KEYED, on an existing sequential file
+=OPEN r=0018819C
+ no rab: 00000000
+##### relative files read in sequence
+#33 unformatted: every statement in sequence
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+ fab fac=1F shr=00 org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 fop=00000420 bks=1 bls=0 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]RS1.DAT;1                                          |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |YES                                                             |
+ q38 r=00000001 |UNFORMATTED                                                     |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000002
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |RELATIVE                                                        |
+ q45 r=00000001 |FIXED                                                           |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |NONE                                                            |
+ q48 r=00000001 |NATIVE                                                          |
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=DELETE r=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+ q29 r=00000001 v=12345678
+ q30 r=00000001 v=FFFFFFFF
+ q31 r=00000001 v=FFFFFFFF
+ q32 r=00000001 v=0000000A
+ q33 r=00000001 v=FFFFFFFF
+ q34 r=00000001 |DUA2:[000000]RS1.DAT;1                                          |
+ q35 r=00000001 |SEQUENTIAL                                                      |
+ q36 r=00000001 |YES                                                             |
+ q37 r=00000001 |YES                                                             |
+ q38 r=00000001 |UNFORMATTED                                                     |
+ q39 r=00000001 |YES                                                             |
+ q40 r=00000001 |YES                                                             |
+ q41 r=00000001 v=00000002
+ q42 r=00000001 v=00000000
+ q43 r=00000001 |UNKNOWN                                                         |
+ q44 r=00000001 |RELATIVE                                                        |
+ q45 r=00000001 |FIXED                                                           |
+ q46 r=00000001 |NO                                                              |
+ q47 r=00000001 |NONE                                                            |
+ q48 r=00000001 |NATIVE                                                          |
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=IO_END r=00000000
+=c 001881AC n=9 a=00000003 0000000A
+=u
+=c 001880BC n=11 a=00000003 0000000A
+=u
+=c 0018810C n=9 a=00000003 0000000A
+=u
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+ stat RS1.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=0001827A n=0
+#34 writes from the start, and after a rewind
+=OPEN r=00000001
+ fab fac=1F shr=00 org=10 rfm=01 rat=00 mrs=8 mrn=0 alq=3 deq=0 fop=02000420 bks=1 bls=0 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+=IO_END r=00000000
+=IO_END r=00000000
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=IO_END r=00000000
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=IO_END r=00000000
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat RS2.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 0001020304050607
+ rec 2: r=00010001 n=8
+  0000: 0001020304050607
+ rec 3: r=00010001 n=8
+  0000: 0001020304050607
+ rec 4: r=00010001 n=8
+  0000: 0001020304050607
+ rec 5: r=00010001 n=8
+  0000: 0001020304050607
+ rec 6: r=0001827A n=0
+#35 formatted, in sequence
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=IO_END r=00000000
+=c 001880A4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001881BC n=9 a=00000003 0000000A
+=u
+=c 001881BC n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001881B4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+ stat RS3.DAT: org=10 rfm=01 rat=01 mrs=8 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=8
+  0000: 4F4E452020202020
+ rec 2: r=00010001 n=8
+  0000: 54574F2020202020
+ rec 3: r=00010001 n=8
+  0000: 5448524545202020
+ rec 4: r=0001827A n=0
+#36 direct over a deleted record; DELETE_D of a missing one, of 0, past MAXREC
+=OPEN r=00000001
+=IO_END r=00000000
+=DELETE_D r=00000000
+=c 00188124 n=9 a=00000003 0000000A
+=u
+=c 00188124 n=9 a=00000003 0000000A
+=u
+=c 001880CC n=9 a=00000003 0000000A
+=u
+=c 001880CC n=9 a=00000003 0000000A
+=u
+=c 001881AC n=9 a=00000003 0000000A
+=u
+=c 00188124 n=9 a=00000003 0000000A
+=u
+=c 001881BC n=9 a=00000003 0000000A
+=u
+=c 00188124 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+ stat RS4.DAT: org=10 rfm=01 rat=00 mrs=8 mrn=9 alq=3 deq=0 bks=1 fop=00000000 lrl=8 hbk=3 ebk=4 ffb=0
+ rec 1: r=0001827A n=0
+##### the keyed statements' conditions
+#37 FOR$READ_KU on a sequential file
+=OPEN r=00000001
+=c 001880D4 n=9 a=00000003 0000000A
+=u
+#38 FOR$READ_KU on a unit not open
+=c 001880EC n=9 a=00000003 00000012
+=u
+#39 FOR$READ_KF on a sequential file
+=OPEN r=00000001
+=c 001880D4 n=9 a=00000003 0000000A
+=u
+#40 FOR$READ_KF on a unit not open
+=c 001880EC n=9 a=00000003 00000012
+=u
+#41 FOR$READ_KO on a sequential file
+=OPEN r=00000001
+=c 001880D4 n=9 a=00000003 0000000A
+=u
+#42 FOR$READ_KO on a unit not open
+=c 001881F4 n=9 a=00000003 00000012
+=u
+#43 an existing indexed file: none here
+=OPEN r=0018819C
+##### CONVERT: code 27, and question 48
+#44 value 0
+=OPEN r=00000001
+ q48 r=00000001 |NATIVE                                                          |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G16.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#45 value 1
+=OPEN r=00000001
+ q48 r=00000001 |LITTLE_ENDIAN                                                   |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G17.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#46 value 2
+=OPEN r=00000001
+ q48 r=00000001 |BIG_ENDIAN                                                      |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G18.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#47 value 3
+=OPEN r=00000001
+ q48 r=00000001 |CRAY                                                            |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G19.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#48 value 4
+=OPEN r=00000001
+ q48 r=00000001 |IBM                                                             |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G20.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#49 value 5
+=OPEN r=00000001
+ q48 r=00000001 |VAXD                                                            |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G21.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#50 value 6
+=OPEN r=00000001
+ q48 r=00000001 |VAXG                                                            |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G22.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#51 value 7
+=OPEN r=00000001
+ q48 r=00000001 |FDX                                                             |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G23.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#52 value 8
+=OPEN r=00000001
+ q48 r=00000001 |FGX                                                             |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G24.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#53 value 9
+=OPEN r=00000001
+ q48 r=00000001 |NATIVE                                                          |
+=IO_END r=00000000
+=CLOSE r=00000001
+ stat G25.DAT: org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=10 hbk=3 ebk=1 ffb=12
+ rec 1: r=00010001 n=10
+  0000: 03000001020304050607
+ rec 2: r=0001827A n=0
+#54 text NATIVE
+=OPEN r=00000001
+ q48 r=00000001 |NATIVE                                                          |
+#55 text VAXD
+=OPEN r=00000001
+ q48 r=00000001 |VAXD                                                            |
+#56 text VAXG
+=OPEN r=00000001
+ q48 r=00000001 |VAXG                                                            |
+#57 text BIG_ENDIAN
+=OPEN r=00000001
+ q48 r=00000001 |BIG_ENDIAN                                                      |
+#58 text LITTLE_ENDIAN
+=OPEN r=00000001
+ q48 r=00000001 |LITTLE_ENDIAN                                                   |
+#59 text CRAY
+=OPEN r=00000001
+ q48 r=00000001 |CRAY                                                            |
+#60 text FDX
+=OPEN r=00000001
+ q48 r=00000001 |FDX                                                             |
+#61 text FGX
+=OPEN r=00000001
+ q48 r=00000001 |FGX                                                             |
+#62 text IBM
+=OPEN r=00000001
+ q48 r=00000001 |IBM                                                             |
+#63 text NONE
+=OPEN r=0018816C
+ q48 r=00000001 |UNKNOWN                                                         |
+#64 text OTHER
+=OPEN r=0018816C
+ q48 r=00000001 |UNKNOWN                                                         |
+#65 formatted
+=OPEN r=00000001
+ q48 r=00000001 |UNKNOWN                                                         |
+##### records past what's allowed
+#66 formatted: RECL 8, written long, read long
+=OPEN r=00000001
+=IO_END r=00000000
+=c 00188214 n=9 a=00000003 0000000A
+=u
+=REWIND r=00000000
+=IO_END r=00000000
+  0000: 3132333435363738
+=c 001880C4 n=9 a=00000003 0000000A
+=u
+=CLOSE r=00000001
+=OPEN r=00000001
+=IO_END r=00000000
+  0000: 31323334
+=CLOSE r=00000001
+ stat LONG1.DAT: org=00 rfm=02 rat=01 mrs=0 mrn=0 alq=3 deq=0 bks=0 fop=00000000 lrl=8 hbk=3 ebk=1 ffb=10
+ rec 1: r=00010001 n=8
+  0000: 3132333435363738
+ rec 2: r=0001827A n=0
+#67 an unformatted variable file read with too small a RECL
+=OPEN r=00000001
+=IO_END r=00000000
+=CLOSE r=00000001
+=OPEN r=00000001
+ fab fac=1F shr=00 org=00 rfm=02 rat=00 mrs=0 mrn=0 alq=3 deq=0 fop=00000420 bks=0 bls=512 fsz=0
+ rab rop=00010602 rac=0 mbc=0 mbf=0 rsz=0 usz=16 ksz=0
+=IO_END r=00000000
+  0000: 00010203
+=CLOSE r=00000001
+##### last, since a wait could hang: record locks
+#68 relative: a record held by another unit
+=OPEN r=00000001
+=IO_END r=00000000
+=IO_END r=00000000
+=OPEN r=00000001
+ fab fac=1F shr=0F org=10 rfm=01 rat=00 mrs=8 mrn=2147483647 alq=3 deq=0 fop=00000420 bks=1 bls=0 fsz=0
+ rab rop=00010612 rac=1 mbc=0 mbf=0 rsz=0 usz=8 ksz=0
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+=c 001881A4 n=9 a=00000003 0000000A
+=u
+=UNLOCK r=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+=UNLOCK r=00000000
+=IO_END r=00000000
+  0000: 0001020304050607
+=IO_END r=00000000
+  0000: 0001020304050607
+##### the end of the cases

@@ -784,7 +784,9 @@ never had.
   what FORRTL gives RMS), `for81r.mar` (60 cases on RMS: relative files, keyed FIX
   files, FOP's bits, block dumps in hex), `for81.com`, `exchange.cmd`, `copyout.cmd`.
   Round 2 is `for81c.mar`, `for81d.mar`, `for81x.mar`, `for81c.com`, `exchangec.cmd`, and
-  `copyoutc.cmd`. `vax/` is VMS V7.1's run; `vax/for81-blocks.txt` the blocks of VMS-made files.
+  `copyoutc.cmd`; `for81f.com` and `exchangef.cmd` ran `for81c.mar` again. `vax/` is VMS V7.1's
+  runs (`for81-vax.txt` and `for81c-vax.txt` cut where the probe ran away; `for81f-vax.txt` is
+  round 2's FORRTL whole); `vax/for81-blocks.txt` and `for81c-blocks.txt` the blocks of VMS-made files.
 - `testdata/nml80/` — Phase 80's probe of NAMELIST I/O (subtask 11; README.md):
   `gen.go` writes `nml80.mar` (786 cases on VMS's FORRTL: each READ's FOR number and
   the group written back), `nml80f.for` (the same cases as FORTRAN, for FTNRTL),

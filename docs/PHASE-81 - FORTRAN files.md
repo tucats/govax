@@ -2,7 +2,7 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
-rounds 1 and 2 run on VMS, round 2's FORRTL program to run again. Planned 2026-10-29. Needs Phase 80 (formatting and the
+subtask 2, the probe, done the same day (three VMS runs). Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -594,7 +594,8 @@ and 28 to FOR$CLOSE alone.
 
 | Code | Keyword | Values and what was seen |
 | ---- | ------- | ------------------------ |
-| 0, 17, 25, 28 | not known | accepted, no visible effect on a sequential unit; ASSOCIATEVARIABLE should be one, round 2's question |
+| 0, 25, 28 | not known | accepted, no effect seen by any value or mechanism, on sequential, direct, or relative units; FTNRTL needs none of them |
+| 17 | ASSOCIATEVARIABLE | where to store, a word by mechanism 3 or 4, a longword by 5; untouched at OPEN, then the next record after each direct statement and FIND |
 | 1 | UNIT | -1 and 120 are INVLOGUNI; missing, unit 0 |
 | 2 | DISPOSE | 1 KEEP, 2 DELETE (FOP DLT), 3 PRINT (SPL), 4 SUBMIT (SCF), 5 PRINT/DELETE (SPL, DLT), 6 SUBMIT/DELETE (SCF, DLT), at `$CLOSE` |
 | 3 | ERR= | not 0: a condition returns in R0 and isn't signaled |
@@ -609,7 +610,7 @@ and 28 to FOR$CLOSE alone.
 | 12 | NOSPANBLOCKS | RAT BLK |
 | 13 | SHARED | SHR 0F |
 | 14 | FILE, NAME | a descriptor; the unit's default name stays the DNA |
-| 15 | STATUS, TYPE | 1 OLD (`$OPEN`), 2 NEW (`$CREATE`), 3 SCRATCH (`$CREATE`, FOP TMD), 4 UNKNOWN (`$CREATE`, FOP CIF); none is as NEW, so the compiler must pass the LRM's default |
+| 15 | STATUS, TYPE | 1 OLD (`$OPEN`), 2 NEW (`$CREATE`), 3 SCRATCH (`$CREATE`, FOP TMD), 4 UNKNOWN (`$CREATE`, FOP CIF); none is as NEW, so the compiler passes the default: 'UNKNOWN', or 'NEW' under `/NOF77` (the LRM's 9.1.25) |
 | 16 | MAXREC | FAB's MRN |
 | 18 | BLOCKSIZE | in bytes: RAB's MBC, rounded up to blocks |
 | 19 | ORGANIZATION | 1 SEQUENTIAL, 2 RELATIVE (ORG 10, FIX), 3 INDEXED (ORG 20) |
@@ -619,7 +620,7 @@ and 28 to FOR$CLOSE alone.
 | 23 | KEY | an address, followed only with ORGANIZATION='INDEXED'; INCOPECLO otherwise |
 | 24 | BLANK | 1 ZERO, 2 NULL (INQUIRE's answers, #500 and #501); none is ZERO, so the compiler must pass the LRM's NULL |
 | 26 | DEFAULTFILE | a descriptor; replaces the unit's default name |
-| 27 | CONVERT, by question 48's NATIVE and the 2005 manual | 0 to 9, over 9 INVARGFOR; round 2's question |
+| 27 | CONVERT | 0 NATIVE, 1 LITTLE_ENDIAN, 2 BIG_ENDIAN, 3 CRAY, 4 IBM, 5 VAXD, 6 VAXG, 7 FDX, 8 FGX, 9 NATIVE again; a text of those, else KEYVALERR; over 9 INVARGFOR |
 
 FOR$OPEN also returns the condition value (INCRECLEN's 0018812C, FOR number 37, what
 IOSTAT stores). On success OPEN, CLOSE, and INQUIRE return 1, and REWIND, BACKSPACE, ENDFILE,
@@ -640,7 +641,7 @@ a text's place is a descriptor's address by mechanism 4.
 | 35 | ACCESS | 45 | RECORDTYPE |
 | 36 | SEQUENTIAL | 46 | KEYED |
 | 37 | DIRECT | 47 | CARRIAGECONTROL |
-| 38 | FORM | 48 | CONVERT: NATIVE on an unformatted unit, else UNKNOWN |
+| 38 | FORM | 48 | CONVERT: on an unformatted unit its name, else UNKNOWN |
 
 The other entries take the unit by value: `FOR$REWIND(u)`, `FOR$BACKSPACE(u)`,
 `FOR$ENDFILE(u)`, `FOR$UNLOCK(u)`, `FOR$DELETE(u)`, and `FOR$FIND(u, rec)`,
@@ -843,15 +844,62 @@ again on its own volume (`exchangef.cmd`, `@FOR81F`), for `vax/for81f-vax.txt`.
 went, PRINT stayed (nothing queued), an implicit unit stayed (`FOR015.DAT`), and each file
 holds its records. Decision 12 stands.
 
+## Round 2's FORRTL program on VMS (2026-10-31)
+
+`FOR81C` ran whole, on a volume of its own (`vax/for81f-vax.txt`). With it subtask 2 is done.
+
+- **IOSTAT:** a word by mechanism 3, a longword by 5. It stores 0 on success and the FOR number
+  on failure (FILNOTFOU 29, NO_SUCDEV 42, FILNAMSPE 43, INVLOGUNI 32), and no signal follows.
+  CLOSE takes it too. INQUIRE always stores 0, for a bad unit or name as well.
+- **ASSOCIATEVARIABLE is code 17** (the table above): after a write of record 3 it holds 4, a
+  read of 1 holds 2, FIND of 2 holds 2. On a relative unit too.
+- **APPEND (value 3):** STATUS 'OLD' or 'UNKNOWN' only; no STATUS, NEW, SCRATCH, or READONLY is
+  INCOPECLO, and a missing file with OLD FILNOTFOU. ROP gains EOF (00010702) and FOP has no
+  NEF (00000020). ACCESS answers SEQUENTIAL, so INQUIRE doesn't show APPEND. Writes go to the
+  end, on VAR, FIX, relative, and unformatted files. BACKSPACE straight after opening an
+  existing file and writing is BACERR; on a file UNKNOWN just created it works. REWIND then a
+  read works, and a write there cuts the file, as on any sequential unit.
+- **ACCESS=KEYED** on a sequential file is INCFILORG, and ORGANIZATION='INDEXED' on one too.
+- **Relative files in sequence:** a read passes over what isn't there, and then ENDDURREA. A
+  write goes after the last record reached, and is ERRDURWRI's RMS REX if there's one there.
+  DELETE takes the current record (status 0); a second DELERR. REWRITE needs a current record,
+  NO_CURREC at the end. **REWIND is REWERR, BACKSPACE BACERR, and ENDFILE ENDFILERR on a
+  relative unit**, though RMS's own `$REWIND` works, so these are FORRTL's rule.
+- **Direct on a relative file:** DELETE_D of a missing record ATTACCNON, of 0 or past MAXREC
+  RECNUMOUT; FIND of a deleted record ATTACCNON, and then DELETE DELERR; REWRITE with no
+  current record NO_CURREC.
+- **The keyed statements:** OPEDEFREQ on a sequential unit. On a unit not open they do READ's
+  implicit open, FILNOTFOU if there's no file.
+- **Record locks:** a read of a record another unit holds is FOR$_SPERECLOC, at once, not a
+  wait. FORRTL holds a read record until the unit's next operation or UNLOCK.
+- **CONVERT:** the names in the table. The bytes of text are unchanged by any of them, which is
+  all the probe wrote. FORM='FORMATTED' answers UNKNOWN.
+- **Records:** a formatted write past RECL is OUTSTAOVE and writes nothing. A read with a RECL
+  smaller than the record takes what it asks for, with no error.
+
+**Where the Decisions stand.** 1 to 3, 5, 6, 11, 12, and 14 stand, settled by the runs above. 4
+stands, with FORRTL's own codes (the tables above), so a keyword is one table from the compiler
+to FTNRTL. 7, 8, and 9 are specified by the runs. **10 is withdrawn:** DISPOSE='PRINT' and
+'SUBMIT' set FOP, and RMS keeps the file and returns success, as VMS's does when nothing is
+queued; DELETE with them keeps it too. 13 stands for ORGANIZATION='INDEXED' and an existing
+indexed file; ACCESS='KEYED' on anything else is VMS's INCFILORG or INCOPECLO.
+
+**A question for the author: CONVERT.** It isn't in the 1988 LRM, and it is in the 2005 manual
+and in VMS 7.1's FORRTL. (a) Take the keyword and answer INQUIRE, with NATIVE working and any
+other name FOR$_NOTIMP when the OPEN is done. (b) All of it, converting unformatted data for
+each format: real work (FDX, FGX, IBM, CRAY floating), and a phase of its own. (c) Leave it
+out, as in the 1988 manual. **Recommended: (a).**
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (this Part A).
-2. **The probe**, `testdata/for81`: the RMS program and the FORRTL
-   program (with FOR$OPEN if question 2 finds it), and VMS's runs.
+2. **The probe**, `testdata/for81`: done, the rounds above.
 3. **RMS and ods2 groundwork:** odd FIX records, a FIX file's short last
    record, the organization nibble, FOP DLT/TMD/TMP/SCF/SPL, MRN and
-   BKS, the keyed `$PUT` on FIX sequential files, and SET DEBUG RMS's new
-   fields.
+   BKS, the keyed `$PUT` on FIX sequential files, `$PARSE` with no NAM,
+   CIF's status, `$READ`, `$WRITE`, `$DISCONNECT`, ALQ returned, a name's
+   versions past one directory record, and `TestFor81RMSOracle` holding
+   `for81r.mar`'s FIX and FOP cases to VMS's run.
 4. **OPEN and CLOSE** on sequential files, the unit table (Phase 80's
    streams folded in), default names, the exit handler.
 5. **INQUIRE.**
@@ -903,3 +951,7 @@ holds its records. Decision 12 stands.
 - **2026-10-31, round 2's run.** The section "Round 2 on VMS": deleted cells, BKS, how a
   relative file grows, locks, image exit. `FOR81C` ran away by the probe's mistake again, so
   it is to run once more, with a guard (`for81f.com`).
+- **2026-10-31, subtask 2 done.** `FOR81C`'s rerun: ASSOCIATEVARIABLE is code 17, IOSTAT's forms,
+  APPEND, relative files in sequence, the keyed statements, locks, and CONVERT (the section
+  "Round 2's FORRTL program on VMS"). One question to the author, on CONVERT. Also from these
+  runs: `$CREATE` keeps FAB$W_DEQ, and `SET DEBUG RMS` shows more of a FAB and RAB.

@@ -121,3 +121,5 @@ before the attach, then:
 
 then `govax console < testdata/for81/copyoutf.cmd`. If the handler loops, the program says so
 and ends rather than running out of stack.
+
+It ran on 2026-10-31, whole: `vax/for81f-vax.txt` and `vax/for81f.log`.
