@@ -390,7 +390,12 @@ never had.
   (2026-10-31) the computed and assigned GO TO, ASSIGN, and the
   arithmetic IF (`sema/jumps.go`; the IR's `Switch`, `Sign`, and
   `IndirectJump` terminators and `LabelAddr`; codegen's CASEL table,
-  TST and branches, `JMP @v`).
+  TST and branches, `JMP @v`); subtask 3 (2026-10-31) DO in every form
+  (`sema/stmt.go`'s `endDo`: a loop without a label ends at END DO, a
+  labeled one may end at an END DO with its label, never shared; NOENDDO,
+  NOLOOP, ENDDOLABEL, SHAREDENDDO), DO WHILE (`sema.DoWhile`, the IR's
+  `doWhile`: a test at the top), and the extended range run end to end
+  (`testdata/fortran/loops.for`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

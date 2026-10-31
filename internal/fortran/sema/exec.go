@@ -280,7 +280,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 // loop the statement is in (DOVARSET), which section 5.3.1 forbids.
 func (a *analyzer) checkLoopVariable(s *Symbol, pos diag.Position) {
 	for _, c := range a.open {
-		if c.isDo() && c.do.Var == s {
+		if c.do != nil && c.do.Var == s {
 			a.report("DOVARSET", pos, s.Name, c.line())
 
 			return

@@ -1,0 +1,146 @@
+	.TITLE	TEST
+
+; Storage map for LOOPS, the main program
+;   I     INTEGER  $LOCAL+0   LOOPS.I
+;   J     INTEGER  $LOCAL+4   LOOPS.J
+;   K     INTEGER  $LOCAL+8   LOOPS.K
+;   N     INTEGER  $LOCAL+12  LOOPS.N
+;   MORE  LOGICAL  $LOCAL+16  LOOPS.MORE
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+LOOPS.I:
+	.BLKL	1			; I
+LOOPS.J:
+	.BLKL	1			; J
+LOOPS.K:
+	.BLKL	1			; K
+LOOPS.N:
+	.BLKL	1			; N
+LOOPS.MORE:
+	.BLKL	1			; MORE
+LOOPS.$C1:
+	.BLKL	1			; DO (line 7)'s count
+LOOPS.$C2:
+	.BLKL	1			; DO (line 8)'s count
+LOOPS.$C3:
+	.BLKL	1			; DO 20's count
+LOOPS.$C4:
+	.BLKL	1			; DO 40's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Phase 79, subtask 3: DO loops without labels, DO WHILE, END DO,
+;    2  C     and a jump out of a loop and back into it (the extended range).
+;    3        PROGRAM LOOPS
+	.ENTRY	LOOPS,^M<>
+;    4        INTEGER I, J, K, N
+;    5        LOGICAL MORE
+;    6        N = 0
+	CLRL	LOOPS.N
+;    7        DO I = 1, 3
+	MOVL	#3,LOOPS.$C1		; DO (line 7)'s count
+	MOVL	#1,LOOPS.I
+LOOPS.$1:				; DO (line 7)'s body
+;    8           DO J = I, 3
+	SUBL3	LOOPS.I,#3,R0		; DO (line 8)'s count
+	ADDL3	R0,#1,LOOPS.$C2
+	MOVL	LOOPS.I,LOOPS.J
+	TSTL	LOOPS.$C2
+	BGTR	LOOPS.$3
+	BRW	LOOPS.$2
+LOOPS.$3:
+LOOPS.$4:				; DO (line 8)'s body
+;    9              N = N + J
+	ADDL2	LOOPS.J,LOOPS.N
+;   10           END DO
+	INCL	LOOPS.J
+	DECL	LOOPS.$C2		; one pass fewer
+	BLEQ	LOOPS.$5
+	BRW	LOOPS.$4
+LOOPS.$5:
+LOOPS.$2:
+;   11        END DO
+	INCL	LOOPS.I
+	DECL	LOOPS.$C1		; one pass fewer
+	BLEQ	LOOPS.$6
+	BRW	LOOPS.$1
+LOOPS.$6:
+;   12        K = 1
+	MOVL	#1,LOOPS.K
+;   13        DO WHILE (K .LT. 100)
+LOOPS.$7:				; DO (line 13)'s test
+	CMPL	LOOPS.K,#100
+	BLSS	LOOPS.$9
+	BRW	LOOPS.$8
+LOOPS.$9:
+;   14           K = K * 2
+	MULL2	#2,LOOPS.K
+;   15        END DO
+	BRW	LOOPS.$7
+LOOPS.$8:
+;   16        DO 10 WHILE (K .GT. 0)
+LOOPS.$10:				; DO 10's test
+	TSTL	LOOPS.K
+	BGTR	LOOPS.$12
+	BRW	LOOPS.$11
+LOOPS.$12:
+;   17           K = K - 30
+	SUBL2	#30,LOOPS.K
+;   18     10 CONTINUE
+LOOPS.L10:
+	BRW	LOOPS.$10
+LOOPS.$11:
+;   19        DO 20, I = 1, N
+	MOVL	LOOPS.N,LOOPS.$C3	; DO 20's count
+	MOVL	#1,LOOPS.I
+	TSTL	LOOPS.$C3
+	BGTR	LOOPS.$14
+	BRW	LOOPS.$13
+LOOPS.$14:
+LOOPS.$15:				; DO 20's body
+;   20           IF (I .GT. 2) GO TO 20
+	CMPL	LOOPS.I,#2
+	BLEQ	LOOPS.$16
+	BRW	LOOPS.L20
+LOOPS.$16:
+;   21           MORE = I .EQ. 1
+	CLRL	R0
+	CMPL	LOOPS.I,#1
+	BNEQ	LOOPS.$17
+	MNEGL	#1,R0
+LOOPS.$17:
+	MOVL	R0,LOOPS.MORE
+;   22     20 END DO
+LOOPS.L20:
+	INCL	LOOPS.I
+	DECL	LOOPS.$C3		; one pass fewer
+	BLEQ	LOOPS.$18
+	BRW	LOOPS.$15
+LOOPS.$18:
+LOOPS.$13:
+;   23        DO 40 I = 1, 2
+	MOVL	#2,LOOPS.$C4		; DO 40's count
+	MOVL	#1,LOOPS.I
+LOOPS.$19:				; DO 40's body
+;   24           GO TO 30
+	BRW	LOOPS.L30
+;   25     25    N = N + 1
+LOOPS.L25:
+	INCL	LOOPS.N
+;   26     40 CONTINUE
+LOOPS.L40:
+	INCL	LOOPS.I
+	DECL	LOOPS.$C4		; one pass fewer
+	BLEQ	LOOPS.$20
+	BRW	LOOPS.$19
+LOOPS.$20:
+;   27        STOP
+	CALLS	#0,G^FTN$STOP
+;   28     30 N = N - 1
+LOOPS.L30:
+	DECL	LOOPS.N
+;   29        GO TO 25
+	BRW	LOOPS.L25
+;   30        END
+
+	.END	LOOPS

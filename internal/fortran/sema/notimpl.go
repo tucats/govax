@@ -21,17 +21,13 @@ func handled(s ast.Stmt) bool {
 		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
-		*ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
+		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
 		return true
 
 	case *ast.AttrStmt:
 		// VOLATILE is Phase 82's, and AUTOMATIC and STATIC aren't in the
 		// 1988 manual.
 		return s.Kind == lex.Save || s.Kind == lex.External || s.Kind == lex.Intrinsic
-
-	case *ast.DoStmt:
-		// A loop without a label, which END DO ends, is Phase 79's.
-		return s.Target.Label != 0
 
 	case *ast.StopStmt:
 		return s.Kind == lex.Stop
@@ -52,8 +48,6 @@ func statementWhat(s ast.Stmt) string {
 	switch k := s.Base().Kind; {
 	case k == lex.Directive:
 		return "a CDEC$ directive"
-	case k == lex.Do:
-		return "a DO loop without a statement label"
 	default:
 		return "the " + k.String() + " statement"
 	}

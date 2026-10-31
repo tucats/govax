@@ -2,8 +2,10 @@ package sema
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
 
@@ -17,9 +19,10 @@ import (
 // open at the current statement (open), innermost last. A statement goes
 // into the innermost one's current block. IF THEN pushes an IF; ELSE IF
 // and ELSE start a new arm of the innermost IF; END IF pops it. DO
-// pushes a loop, which the statement with its label pops (with every
-// other loop on top of the stack that ends there too: nested loops may
-// share a terminal statement, section 5.3.1.2). Anything else that
+// and DO WHILE push a loop, which the statement with its label pops (with
+// every other loop on top of the stack that ends there too: nested loops
+// may share a terminal statement, section 5.3.1.2), or for a loop without
+// a label, END DO (section 5.4). Anything else that
 // would close a construct is an error of nesting: an END IF with a DO
 // loop still open inside its block, a DO's terminal statement inside an
 // IF block that started inside the loop (DONEST).
@@ -37,25 +40,57 @@ type construct struct {
 	elseAt  ast.Stmt
 	ifStart ast.Stmt
 
-	// For a DO loop: the loop and the label of its terminal statement.
+	// For a DO loop: the loop (do for DO, while for DO WHILE) and the
+	// label of its terminal statement, 0 for a loop END DO ends.
 	// reported is set once a message has been given about the loop's
 	// nesting or its terminal statement, after which it closes quietly at
 	// the end of the unit.
 	do       *Do
+	while    *DoWhile
 	label    int
 	reported bool
 }
 
-// isDo reports whether c is a DO loop.
-func (c *construct) isDo() bool { return c.do != nil }
+// isDo reports whether c is a DO or DO WHILE loop.
+func (c *construct) isDo() bool { return c.do != nil || c.while != nil }
 
 // line is the line the construct starts on, for messages.
 func (c *construct) line() int {
-	if c.isDo() {
+	switch {
+	case c.do != nil:
 		return c.do.AST.Position().Line
+	case c.while != nil:
+		return c.while.AST.Position().Line
 	}
 
 	return c.ifStart.Position().Line
+}
+
+// loopStart is where a loop's DO statement is.
+func (c *construct) loopStart() diag.Position {
+	if c.do != nil {
+		return c.do.AST.Position()
+	}
+
+	return c.while.AST.Position()
+}
+
+// body is a loop's list of statements.
+func (c *construct) body() *[]Stmt {
+	if c.do != nil {
+		return &c.do.Body
+	}
+
+	return &c.while.Body
+}
+
+// endDo records the END DO statement s that ends a loop.
+func (c *construct) endDo(s ast.Stmt) {
+	if c.do != nil {
+		c.do.EndDo = s
+	} else {
+		c.while.EndDo = s
+	}
 }
 
 // what names the construct for DONEST.
@@ -157,6 +192,12 @@ func (a *analyzer) statement(s ast.Stmt) {
 	case *ast.DoStmt:
 		a.doStatement(s)
 
+	case *ast.DoWhileStmt:
+		a.doWhile(s)
+
+	case *ast.EndDoStmt:
+		a.endDo(s, label)
+
 	case *ast.EndStmt:
 		a.closeAll()
 		a.add(&End{stmtBase{s}})
@@ -196,6 +237,18 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 	case lex.End:
 		a.closeAll()
 
+	case lex.Do, lex.DoWhile:
+		// A loop without a label is still opened, quietly, so its END DO
+		// isn't reported as well.
+		if !labeledDo(s) {
+			a.push(&construct{while: &DoWhile{stmtBase: stmtBase{s}}, reported: true})
+		}
+
+	case lex.EndDo:
+		if c := a.quietMatchLoop(); c != nil {
+			a.pop()
+		}
+
 	default:
 		if label := s.Base().Label; label != 0 {
 			a.endLoops(label, s)
@@ -203,23 +256,33 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 	}
 }
 
+// labeledDo reports whether the DO or DO WHILE statement s, which the
+// parser rejected, names a terminal statement's label: whether a digit
+// follows DO.
+func labeledDo(s ast.Stmt) bool {
+	text := strings.ToUpper(strings.Join(strings.Fields(s.Base().Source.Text), ""))
+	text = strings.TrimPrefix(text, "DO")
+
+	return text != "" && text[0] >= '0' && text[0] <= '9'
+}
+
 // forbiddenTerminal says what s is if it may not be a DO loop's terminal
 // statement (section 5.3.1: an unconditional or assigned GO TO, an
 // arithmetic IF, a block IF statement, END, RETURN,
-// DO; and any non-executable statement, since the terminal statement's
-// label is an executable statement's), or "" if it may.
+// DO and DO WHILE; and any non-executable statement, since the terminal
+// statement's label is an executable statement's), or "" if it may.
 func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
-		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
+		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt:
 		return aStatement(s)
 	}
 
-	// A statement not compiled yet is reported already; but a DO WHILE,
-	// and anything not executable, still mustn't end a labeled loop.
-	if k := s.Base().Kind; !handled(s) && (k == lex.DoWhile || !k.Executable()) {
+	// A statement not compiled yet is reported already; but anything not
+	// executable still mustn't end a labeled loop.
+	if k := s.Base().Kind; !handled(s) && !k.Executable() {
 		return aStatement(s)
 	}
 
@@ -267,7 +330,7 @@ func (a *analyzer) add(st Stmt) {
 	case c == nil:
 		a.unit.Body = append(a.unit.Body, st)
 	case c.isDo():
-		c.do.Body = append(c.do.Body, st)
+		*c.body() = append(*c.body(), st)
 	case c.arm != nil:
 		c.arm.Body = append(c.arm.Body, st)
 	}
@@ -313,12 +376,15 @@ func (a *analyzer) quietMatchIf() *construct {
 
 // closeAll closes every open construct at the end of the unit: an IF
 // block has no END IF (NOENDIF), and a DO loop's terminal statement
-// never came (NODO), unless its loop has been reported already.
+// never came (NODO), or its END DO (NOENDDO), unless its loop has been
+// reported already.
 func (a *analyzer) closeAll() {
 	for _, c := range a.open {
 		switch {
+		case c.isDo() && !c.reported && c.label == 0:
+			a.report("NOENDDO", c.loopStart())
 		case c.isDo() && !c.reported:
-			a.report("NODO", c.do.AST.Position(), c.label)
+			a.report("NODO", c.loopStart(), c.label)
 		case !c.isDo():
 			a.report("NOENDIF", c.ifStart.Position())
 		}
@@ -409,15 +475,106 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 
 	a.add(d)
 
-	// The terminal statement must follow the DO statement (5.3.1); a
-	// label already defined is behind it.
-	if a.unit.Labels[d.Label] != nil {
-		a.report("NODO", s.Pos, d.Label)
-
+	if a.labelBehind(s, d.Label) {
 		return
 	}
 
 	a.push(&construct{do: d, label: d.Label})
+}
+
+// doWhile analyzes DO s WHILE (e) (section 5.3.2) and opens its loop.
+func (a *analyzer) doWhile(s *ast.DoWhileStmt) {
+	d := &DoWhile{stmtBase: stmtBase{s}, Label: s.Target.Label, Cond: a.condition(s.Cond)}
+	a.add(d)
+
+	if a.labelBehind(s, d.Label) {
+		return
+	}
+
+	a.push(&construct{while: d, label: d.Label})
+}
+
+// labelBehind reports (NODO) a loop's terminal label that is already
+// defined: the terminal statement must follow the DO statement (5.3.1),
+// and a label already defined is behind it. Such a loop isn't opened.
+func (a *analyzer) labelBehind(s ast.Stmt, label int) bool {
+	if label == 0 || a.unit.Labels[label] == nil {
+		return false
+	}
+
+	a.report("NODO", s.Position(), label)
+
+	return true
+}
+
+// endDo analyzes END DO (section 5.4), labeled label or 0. It ends the
+// innermost DO loop, which must be one without a label or one whose
+// terminal statement has END DO's label; an IF block opened inside the
+// loop that hasn't ended is DONEST, as for END IF. Nested loops may
+// share a labeled terminal statement, but not an END DO (5.3.1.2), so
+// END DO ends just one loop: any other that ends at its label is
+// SHAREDENDDO.
+func (a *analyzer) endDo(s *ast.EndDoStmt, label int) {
+	i := len(a.open) - 1
+	for i >= 0 && !a.open[i].isDo() {
+		i--
+	}
+
+	if i < 0 {
+		a.report("NOLOOP", s.Pos)
+
+		return
+	}
+
+	for len(a.open)-1 > i {
+		c := a.top()
+		a.report("DONEST", s.Pos, c.what(), c.line(), "this END DO statement")
+		a.pop()
+	}
+
+	c := a.top()
+	if c.label != 0 && c.label != label {
+		if !c.reported {
+			a.report("ENDDOLABEL", s.Pos, c.line(), c.label)
+			c.reported = true
+		}
+
+		return
+	}
+
+	c.endDo(s)
+	a.pop()
+
+	if label == 0 {
+		return
+	}
+
+	for _, o := range a.open {
+		if o.isDo() && o.label == label && !o.reported {
+			a.report("SHAREDENDDO", s.Pos, o.line())
+			o.reported = true
+		}
+	}
+
+	a.endLoops(label, s)
+}
+
+// quietMatchLoop is endDo's matching without messages, for an END DO
+// with an error already reported: the innermost loop, once the IF blocks
+// inside it are closed.
+func (a *analyzer) quietMatchLoop() *construct {
+	i := len(a.open) - 1
+	for i >= 0 && !a.open[i].isDo() {
+		i--
+	}
+
+	if i < 0 {
+		return nil
+	}
+
+	a.open = a.open[:i+1]
+
+	return a.top()
 }
 
 // doVariable analyzes a DO statement's control variable, which must be

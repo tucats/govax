@@ -143,13 +143,36 @@ func dumpStmts(b *strings.Builder, list []Stmt, depth int) {
 			}
 
 		case *Do:
-			line(b, s.AST, depth, fmt.Sprintf("DO %d %s = %s, %s, %s", s.Label, symName(s.Var),
+			line(b, s.AST, depth, fmt.Sprintf("DO %s%s = %s, %s, %s", loopLabel(s.Label), symName(s.Var),
 				DumpExpr(s.Start), DumpExpr(s.Limit), DumpExpr(s.Step)))
 			dumpStmts(b, s.Body, depth+1)
+			dumpEndDo(b, s.EndDo, depth)
+
+		case *DoWhile:
+			line(b, s.AST, depth, "DO "+loopLabel(s.Label)+"WHILE "+DumpExpr(s.Cond))
+			dumpStmts(b, s.Body, depth+1)
+			dumpEndDo(b, s.EndDo, depth)
 
 		default:
 			line(b, s.Source(), depth, stmtText([]Stmt{s}))
 		}
+	}
+}
+
+// loopLabel is a DO statement's terminal label and a blank, or nothing
+// for a loop END DO ends.
+func loopLabel(label int) string {
+	if label == 0 {
+		return ""
+	}
+
+	return strconv.Itoa(label) + " "
+}
+
+// dumpEndDo writes the END DO line that ends a loop, if one does.
+func dumpEndDo(b *strings.Builder, s ast.Stmt, depth int) {
+	if s != nil {
+		line(b, s, depth, "END DO")
 	}
 }
 

@@ -369,12 +369,28 @@ type (
 	// statements up to and including the one labeled Label (or a
 	// nested DO loop ending there too). Start, Limit, and Step have
 	// Var's type; Step is the constant 1 when the statement has none.
+	// A loop without a label (Label 0) ends at EndDo; so may a labeled
+	// one, an END DO with its label (section 5.4).
 	Do struct {
 		stmtBase
 		Label              int
 		Var                *Symbol
 		Start, Limit, Step Expr
 		Body               []Stmt
+
+		// EndDo is the END DO statement that ends the loop, or nil.
+		EndDo ast.Stmt
+	}
+
+	// DoWhile is DO Label WHILE (Cond) (section 5.3.2): Body runs while
+	// the LOGICAL Cond, tested before each pass, is true. Its body and
+	// end are a Do's.
+	DoWhile struct {
+		stmtBase
+		Label int
+		Cond  Expr
+		Body  []Stmt
+		EndDo ast.Stmt
 	}
 
 	// Continue is CONTINUE.

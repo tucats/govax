@@ -3,7 +3,8 @@
 **Status:** in progress: subtask 1 (the survey, Part A) done
 2026-10-31, its decisions and recommendations accepted by the author the
 same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
-done 2026-10-31.
+done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
+extended range) done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -514,7 +515,7 @@ recommendation:
 3. **DO in every form**, DO WHILE, END DO, extended range. (Labeled DO
    of every INTEGER and REAL type is done already; this is the loops
    without labels, DO WHILE, END DO's messages, and the extended range
-   run end to end.)
+   run end to end.) Done.
 4. **STOP, PAUSE, RETURN, END.** (FTN$PAUSE in FTNRTL; RETURN i's R0
    comes with subtask 7.)
 5. **Function results of every type**, CHARACTER and COMPLEX functions.
@@ -569,3 +570,30 @@ recommendation:
   NOTEXEC, DOVARSET, INTOBLOCK from each kind of list, CHARNUMBER, DOTERM);
   `testdata/fortran/jumps.for` end to end, in both paging modes. MANUAL.md's
   14.2 and 6.5 list the statements.
+- **2026-10-31, subtask 3 (DO in every form, DO WHILE, END DO, the
+  extended range):** sema (`sema/stmt.go`): a loop without a label opens
+  with label 0 and closes at END DO (`endDo`), which ends the innermost
+  loop: one without a label, or a labeled one whose label the END DO has
+  (5.4's optional form, which `Do.EndDo` records); an IF block opened
+  inside the loop and not ended is DONEST, as for END IF. New messages:
+  NOENDDO (the unit's END reaches a loop without a label), NOLOOP (END DO
+  with no loop open), ENDDOLABEL (END DO inside a loop that ends at a
+  label it doesn't have), and SHAREDENDDO (a second loop ending at a
+  labeled END DO: 5.3.1.2 lets nested loops share a labeled terminal
+  statement, not an END DO). `DoWhile` is a loop of its own (`construct`'s
+  `while`; its condition through `condition`, LOGICAL or INTEGER as an
+  IF's); DO WHILE joins DOTERM's list. A DO or DO WHILE the parser
+  rejected still opens a quiet loop when no label follows DO
+  (`labeledDo`), so its END DO isn't reported too. The IR: `doWhile` (a
+  test block at the top, the body, a jump back), and both loops' ends in
+  `loopEnd` (the END DO's line, and a labeled END DO's label block where
+  the next pass starts, so a jump to it goes on to the next pass); a
+  loop's notes and its cells' `Loop` are its name, "DO 10" or "DO (line
+  12)" (`loopName`). Nothing new in codegen. Tests: `loops.for` golden
+  files in `sema`, `ir`, and `codegen`; sema error cases for each message,
+  the shared terminal of a DO and a DO WHILE, a jump to END DO, and the
+  rejected statements; `testdata/fortran/loops.for` end to end in both
+  paging modes, with the manual's examples (NUMBER 41 after `DO NUMBER =
+  5,40,4`, J -4 after `DO J = 50,-2,-2`, the LINE scan) and the extended
+  range, out and back in, of a labeled loop and of one without a label.
+  MANUAL.md's 14.2 and 6.5 list the loops.

@@ -205,7 +205,7 @@ func (g *routineGen) assign(s *ir.Assign) {
 	if c := s.Dst.Cell; c != nil && s.Dst.Index == nil {
 		switch c.Kind {
 		case ir.CountCell:
-			g.note = fmt.Sprintf("DO %d's count", c.Loop)
+			g.note = c.Loop + "'s count"
 
 			if op, ok := s.Src.(*ir.Op); ok && op.Op == ir.Sub {
 				if ld, ok := op.X.(*ir.Load); ok && ld.Mem.Cell == c {
@@ -214,7 +214,7 @@ func (g *routineGen) assign(s *ir.Assign) {
 			}
 
 		case ir.StepCell:
-			g.note = fmt.Sprintf("DO %d's step", c.Loop)
+			g.note = c.Loop + "'s step"
 		}
 	}
 

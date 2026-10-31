@@ -570,9 +570,9 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 	case ir.ResultCell:
 		return c.Sym.Name + ", the function's value"
 	case ir.CountCell:
-		return fmt.Sprintf("DO %d's count", c.Loop)
+		return c.Loop + "'s count"
 	case ir.StepCell:
-		return fmt.Sprintf("DO %d's step", c.Loop)
+		return c.Loop + "'s step"
 	case ir.TextCell:
 		return "characters, for one statement"
 	}

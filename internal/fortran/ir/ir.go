@@ -184,9 +184,9 @@ type Cell struct {
 	// nil for the compiler's cells.
 	Sym *sema.Symbol
 
-	// Loop is a count's or step's DO loop: the label of its terminal
-	// statement.
-	Loop int
+	// Loop names a count's or step's DO loop: "DO 10" for the loop
+	// ending at label 10, "DO (line 12)" for one END DO ends.
+	Loop string
 
 	// Desc is a descriptor cell's contents: what it describes, with
 	// Target nil, since the address it holds is stored there when the

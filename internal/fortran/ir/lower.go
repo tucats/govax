@@ -409,17 +409,16 @@ func (l *lowerer) release() {
 	l.busy = l.busy[:0]
 }
 
-// loopCell is a DO loop's count ($Cn) or step ($Sn), loop n, whose
-// terminal statement has the label label. Each loop has its own: they
-// live as long as the loop does.
-func (l *lowerer) loopCell(kind CellKind, n int, t Type, label int) *Mem {
+// loopCell is a DO loop's count ($Cn) or step ($Sn), loop n, named name
+// (loopName). Each loop has its own: they live as long as the loop does.
+func (l *lowerer) loopCell(kind CellKind, n int, t Type, name string) *Mem {
 	prefix := "$C"
 	if kind == StepCell {
 		prefix = "$S"
 	}
 
 	c := l.newCell(prefix+strconv.Itoa(n), kind, t, t.Size())
-	c.Loop = label
+	c.Loop = name
 
 	return &Mem{Cell: c, T: t}
 }

@@ -489,6 +489,22 @@ var messages = map[string]kind{
 	// NODO is a DO loop whose terminal statement never comes after it.
 	"NODO": {Error, "no statement after this DO statement has the label %d"},
 
+	// NOENDDO is a DO or DO WHILE loop without a label, which the unit's
+	// END reaches before its END DO (section 5.4).
+	"NOENDDO": {Error, "this DO loop has no END DO statement"},
+
+	// NOLOOP is END DO with no DO loop open to end.
+	"NOLOOP": {Error, "this END DO statement is not in a DO loop"},
+
+	// ENDDOLABEL is END DO in a loop that ends at a label of its own,
+	// which an END DO can end only if it has that label (section 5.4).
+	"ENDDOLABEL": {Error, "the DO loop at line %d ends at statement label %d, so this END DO statement can't end it"},
+
+	// SHAREDENDDO is an END DO that more than one loop ends at: nested
+	// loops may share a labeled terminal statement, but not an END DO
+	// (section 5.3.1.2).
+	"SHAREDENDDO": {Error, "the DO loop at line %d ends at this END DO statement too, and DO loops can't share an END DO"},
+
 	// DOTERM is a statement that may not end a DO loop (section 5.3.1).
 	"DOTERM": {Error, "a DO loop can't end with %s"},
 

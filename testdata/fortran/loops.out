@@ -1,0 +1,15 @@
+Passes           9, NUMBER          41
+Passes          27, J          -4
+Triangle          10, I           5, J           5
+No passes: K           7, I           5
+REAL loop passes           4, 10X          25
+Powers of 3: K         243
+Still         243
+First nonblank at           5: TEXT
+Multiples of 3 add to          18
+Twos: K           6
+First square past 50:           8
+Shared terminal: N           6
+Extended range: N          36
+Back into a loop without a label: N         202
+  $STATUS == "%X00000001"

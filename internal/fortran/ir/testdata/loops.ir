@@ -1,0 +1,102 @@
+routine LOOPS main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  K       L  $LOCAL+8    variable K
+  cell  N       L  $LOCAL+12   variable N
+  cell  MORE    L  $LOCAL+16   variable MORE
+  cell  $C1     L  $LOCAL+20   DO (line 7)'s count
+  cell  $C2     L  $LOCAL+24   DO (line 8)'s count
+  cell  $C3     L  $LOCAL+28   DO 20's count
+  cell  $C4     L  $LOCAL+32   DO 40's count
+  $LOCAL is 36 bytes
+B1:
+  ; line 6
+  assign N = 0
+  ; line 7
+  assign $C1 = 3
+  assign I = 1
+  jump B2
+B2:  ; DO (line 7)'s body
+  ; line 8
+  assign $C2 = add.L(sub.L(3, I), 1)
+  assign J = I
+  branch le.L($C2, 0) B4 B3
+B3:  ; DO (line 8)'s body
+  ; line 9
+  assign N = add.L(N, J)
+  ; line 10
+  assign J = add.L(J, 1)
+  assign $C2 = sub.L($C2, 1)
+  branch gt.L($C2, 0) B3 B4
+B4:
+  ; line 11
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B5
+B5:
+  ; line 12
+  assign K = 1
+  ; line 13
+  jump B6
+B6:  ; DO (line 13)'s test
+  branch lt.L(K, 100) B7 B8
+B7:  ; DO (line 13)'s body
+  ; line 14
+  assign K = mul.L(K, 2)
+  ; line 15
+  jump B6
+B8:
+  ; line 16
+  jump B9
+B9:  ; DO 10's test
+  branch gt.L(K, 0) B10 B12
+B10:  ; DO 10's body
+  ; line 17
+  assign K = sub.L(K, 30)
+  ; line 18
+  jump B11
+B11: L10
+  jump B9
+B12:
+  ; line 19
+  assign $C3 = N
+  assign I = 1
+  branch le.L($C3, 0) B16 B13
+B13:  ; DO 20's body
+  ; line 20
+  branch gt.L(I, 2) B15 B14
+B14:
+  ; line 21
+  assign MORE = eq.L(I, 1)
+  ; line 22
+  jump B15
+B15: L20
+  assign I = add.L(I, 1)
+  assign $C3 = sub.L($C3, 1)
+  branch gt.L($C3, 0) B13 B16
+B16:
+  ; line 23
+  assign $C4 = 2
+  assign I = 1
+  jump B17
+B17:  ; DO 40's body
+  ; line 24
+  jump B21
+B18: L25
+  ; line 25
+  assign N = add.L(N, 1)
+  ; line 26
+  jump B19
+B19: L40
+  assign I = add.L(I, 1)
+  assign $C4 = sub.L($C4, 1)
+  branch gt.L($C4, 0) B17 B20
+B20:
+  ; line 27
+  call FTN$STOP()
+  noreturn
+B21: L30
+  ; line 28
+  assign N = sub.L(N, 1)
+  ; line 29
+  jump B18

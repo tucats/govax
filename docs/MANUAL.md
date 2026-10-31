@@ -1298,7 +1298,7 @@ programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
-intrinsic function; IF, DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP; `PRINT *` and
+intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP; `PRINT *` and
 `WRITE (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4558,7 +4558,12 @@ output it prints, and programs of several files in its `modules` directory.
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
   ELSE; DO with a label, ending at CONTINUE or another statement, with
-  any step, and a REAL control variable too; GO TO in every form: the
+  any step, and a REAL control variable too; DO without a label, ended by
+  END DO (`DO I = 1, N` ... `END DO`), and a labeled END DO as a labeled
+  loop's terminal statement (`20 END DO`), which nested loops may not
+  share (`%FORT-E-SHAREDENDDO`); DO WHILE (`DO WHILE (K .LT. 100)` or
+  `DO 10 WHILE (...)`), its condition tested before every pass; a jump out
+  of a loop and back into it (the extended range); GO TO in every form: the
   unconditional GO TO, the computed GO TO (`GO TO (10, 20, 30), K`, which
   goes on to the next statement when K is out of range; a REAL index is
   truncated), and the assigned GO TO (`GO TO K` or `GO TO K, (10, 20)`,

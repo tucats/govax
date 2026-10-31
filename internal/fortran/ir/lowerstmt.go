@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"strconv"
 
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
 
@@ -76,6 +77,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 
 	case *sema.Do:
 		l.do(s)
+
+	case *sema.DoWhile:
+		l.doWhile(s)
 
 	case *sema.Continue:
 		// Nothing to do: CONTINUE is there for its label.
@@ -309,13 +313,15 @@ func (l *lowerer) do(d *sema.Do) {
 	limit := l.expr(d.Limit)
 	step := l.expr(d.Step)
 
+	name := loopName(d.Label, d.AST)
+
 	if _, ok := step.(*Const); !ok {
-		s := l.loopCell(StepCell, n, t, d.Label)
+		s := l.loopCell(StepCell, n, t, name)
 		l.emit(&Assign{l.origin(), s, step})
 		step = &Load{s}
 	}
 
-	count := l.loopCell(CountCell, n, Long, d.Label)
+	count := l.loopCell(CountCell, n, Long, name)
 	trips := tripCount(t, start, limit, step)
 
 	l.emit(&Assign{l.origin(), count, trips})
@@ -323,7 +329,7 @@ func (l *lowerer) do(d *sema.Do) {
 	l.release()
 
 	body := l.newBlock()
-	body.Note = "DO " + strconv.Itoa(d.Label) + "'s body"
+	body.Note = name + "'s body"
 	exit := l.newBlock()
 
 	switch c, ok := trips.(*Const); {
@@ -335,16 +341,69 @@ func (l *lowerer) do(d *sema.Do) {
 
 	l.begin(body)
 	l.stmts(d.Body)
-
-	// The step is the terminal statement's code, after its own.
-	if label := l.unit.Labels[d.Label]; label != nil {
-		l.from = label.Stmt
-	}
+	l.loopEnd(d.Label, d.EndDo)
 
 	l.emit(&Assign{l.origin(), v, arith(Add, t, &Load{v}, step)})
 	l.emit(&Assign{l.origin(), count, arith(Sub, Long, &Load{count}, LongConst(1))})
 	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, body, exit)
 	l.begin(exit)
+}
+
+// doWhile lowers DO WHILE (e) (section 5.3.2): the test at the top, before
+// every pass, the first included, and a jump back to it after the body.
+//
+//	B1: branch <e> B2 B3
+//	B2: (the body, ending with the terminal statement)
+//	  jump B1
+//	B3: (after the loop)
+func (l *lowerer) doWhile(d *sema.DoWhile) {
+	name := loopName(d.Label, d.AST)
+
+	test := l.newBlock()
+	test.Note = name + "'s test"
+	body := l.newBlock()
+	body.Note = name + "'s body"
+	exit := l.newBlock()
+
+	l.begin(test)
+	l.branch(l.cond(d.Cond), body, exit)
+	l.release()
+
+	l.begin(body)
+	l.stmts(d.Body)
+	l.loopEnd(d.Label, d.EndDo)
+	l.jump(test)
+	l.begin(exit)
+}
+
+// loopEnd starts the code that ends a pass through a loop, whose
+// terminal statement has the label label or is the END DO statement
+// endDo: that statement is where the code comes from, and a labeled END
+// DO's label is where it starts, since a jump to END DO goes on to the
+// next pass.
+func (l *lowerer) loopEnd(label int, endDo ast.Stmt) {
+	switch {
+	case endDo != nil:
+		l.from = endDo
+
+		if n := endDo.Base().Label; n != 0 {
+			l.startLabel(n)
+		}
+
+	case l.unit.Labels[label] != nil:
+		// The terminal statement's own code is already in the body.
+		l.from = l.unit.Labels[label].Stmt
+	}
+}
+
+// loopName names a loop for the notes on its blocks and cells: "DO 10"
+// for the loop ending at label 10, "DO (line 12)" for one END DO ends.
+func loopName(label int, s ast.Stmt) string {
+	if label != 0 {
+		return "DO " + strconv.Itoa(label)
+	}
+
+	return "DO (line " + strconv.Itoa(s.Position().Line) + ")"
 }
 
 // tripCount is a DO loop's iteration count, a Long: (e2 - e1 + e3)/e3,

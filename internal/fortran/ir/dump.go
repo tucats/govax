@@ -133,9 +133,9 @@ func cellNote(c *Cell) string {
 	case ResultCell:
 		return "result " + c.Sym.Name
 	case CountCell:
-		return fmt.Sprintf("DO %d's count", c.Loop)
+		return c.Loop + "'s count"
 	case StepCell:
-		return fmt.Sprintf("DO %d's step", c.Loop)
+		return c.Loop + "'s step"
 	case DescriptorCell:
 		return "descriptor " + descriptorText(c.Desc)
 	}
