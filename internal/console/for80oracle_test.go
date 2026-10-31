@@ -400,7 +400,14 @@ var for80Shown = regexp.MustCompile(`^ v\d+=`)
 func readFor80VMSInput(t *testing.T) map[int]for80Case {
 	t.Helper()
 
-	text, err := os.ReadFile(filepath.Join(for80Dir, "vax", "for80-vax.txt"))
+	return readFor80Stored(t, "for80-vax.txt")
+}
+
+// readFor80Stored reads the run in file of testdata/for80/vax that way.
+func readFor80Stored(t *testing.T, file string) map[int]for80Case {
+	t.Helper()
+
+	text, err := os.ReadFile(filepath.Join(for80Dir, "vax", file))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,3 +527,114 @@ func splitFor80InputCases(out string) map[int]for80Case {
 
 	return cases
 }
+
+// TestFor80InternalOracle holds FTNRTL's internal files, ENCODE, and DECODE to
+// VMS's FORTRAN run-time library: testdata/for80's for80x.for is those cases of
+// rounds 1 and 3, compiled, each on a CHARACTER place of the case's size. Each
+// prints its IOSTAT, what its input items left, and what an output statement
+// left in the file, bytes it didn't reach still U, which must be VMS's e= and v
+// lines. Round 1's run is VMS's; round 3's, vax/for80c-forrtl.txt, is VMS's
+// FORRTL.EXE over govax (TestFor80Round3). Its cases are numbered from 2000
+// here.
+func TestFor80InternalOracle(t *testing.T) {
+	vms := readFor80Stored(t, "for80-vax.txt")
+	for n, c := range readFor80Stored(t, "for80c-forrtl.txt") {
+		vms[n+2000] = c
+	}
+
+	d, c, buf := shareFindConsole(t, false)
+
+	shareFindRun(t, d, "DISMOUNT DUA2")
+
+	volume := filepath.Join(t.TempDir(), "for80x.dsk")
+	if err := c.cmd().InitializeContainer(volume, 20000, "FOR80X", 0, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().Mount("DUA2:", volume, true); err != nil {
+		t.Fatal(err)
+	}
+
+	shareFindRun(t, d, "SET DEFAULT DUA2:[000000]")
+	buf.Reset()
+
+	source, err := os.ReadFile(filepath.Join(for80Dir, "for80x.for"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA2:[000000]FOR80X.FOR"},
+		rms.TextRecords, splitSource(string(source))); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{"FORTRAN FOR80X", "MACRO FOR80X", "LINK FOR80X"} {
+		if err := d.Dispatch(command); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, buf.String())
+		}
+
+		if out := buf.String(); out != "" {
+			t.Fatalf("%s said:\n%s", command, out)
+		}
+	}
+
+	out := shareRun(t, d, buf, "FOR80X")
+	govax := splitFor80InputCases(out)
+
+	if len(govax) < 300 {
+		t.Fatalf("only %d cases ran:\n%s", len(govax), out[max(0, len(out)-2000):])
+	}
+
+	numbers := make([]int, 0, len(govax))
+	for n := range govax {
+		numbers = append(numbers, n)
+	}
+
+	sort.Ints(numbers)
+
+	stale := map[int]bool{}
+	for n := range expectedFor80InternalDifferences {
+		stale[n] = true
+	}
+
+	for _, n := range numbers {
+		got := govax[n]
+
+		// IOSTAT's -1 at an end of file is FOR$_ENDDURREA, the run's e=.
+		if got.status == -1 {
+			got.status = 24
+		}
+
+		want, ok := vms[n]
+		if !ok {
+			t.Errorf("#%d: no case in the run", n)
+
+			continue
+		}
+
+		same := got.status == want.status && strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
+		if _, known := expectedFor80InternalDifferences[n]; known {
+			if same {
+				t.Errorf("#%d now matches: take it out of expectedFor80InternalDifferences", n)
+			}
+
+			delete(stale, n)
+
+			continue
+		}
+
+		if !same {
+			t.Errorf("%s\n  e=%d, want %d\n  got  %q\n  want %q", want.title, got.status, want.status, got.records, want.records)
+		}
+	}
+
+	for n := range stale {
+		t.Errorf("#%d is in expectedFor80InternalDifferences but wasn't compared", n)
+	}
+
+	t.Logf("%d cases compared", len(numbers))
+}
+
+// expectedFor80InternalDifferences are the cases of TestFor80InternalOracle
+// known to differ from the run, with why.
+var expectedFor80InternalDifferences = map[int]string{}

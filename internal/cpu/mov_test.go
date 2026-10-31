@@ -210,3 +210,30 @@ func TestEmulMnegWordAndLong(t *testing.T) {
 		t.Error("MNEGL overflow: V = false, want true")
 	}
 }
+
+// TestMovzImmediate: MOVZ of an immediate zero-extends it, however its high
+// bit is set, as MOVZ of a register or memory does.
+func TestMovzImmediate(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		opcode byte
+		bytes  []byte
+		want   uint32
+	}{
+		{"MOVZWL", 0x3C, []byte{0x8F, 0xFF, 0xFF}, 0x0000FFFF},
+		{"MOVZBL", 0x9A, []byte{0x8F, 0x80}, 0x00000080},
+		{"MOVZBW", 0x9B, []byte{0x8F, 0xFF}, 0xAAAA00FF},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cpu, mem := fixture()
+			e := NewEngine(cpu, mem)
+			cpu.SetGPR(registers.R2, 0xAAAAAAAA)
+
+			stepInstruction(t, e, append(append([]byte{tc.opcode}, tc.bytes...), regMode(registers.R2))...)
+
+			if got := cpu.GPR(registers.R2); got != tc.want {
+				t.Errorf("R2 = %#x, want %#x", got, tc.want)
+			}
+		})
+	}
+}

@@ -97,6 +97,8 @@ CTX_RECLEN	= 24			; long: the record's length
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
 CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
+					;  own buffer, or an internal file's place)
 CTX_LI_BUFFER	= CTX_POS+112		; long: the value's text
 CTX_LI_SIZE	= CTX_LI_BUFFER+4	; long: the bytes it holds
 CTX_LI_LENGTH	= CTX_LI_SIZE+4		; long: the text's length
@@ -215,7 +217,7 @@ NEXT_VALUE:
 	MOVL	CTX_POS(R6),R0
 	CMPL	R0,CTX_RECLEN(R6)
 	BGEQ	90$			; r*, at the record's end: nulls
-	MOVZBL	CTX_RECORD(R6)[R0],R1
+	MOVZBL	@CTX_RECP(R6)[R0],R1
 	JSB	IS_SEPARATOR
 	BLBS	R0,90$			; r*, then a separator: nulls
 	CMPB	R1,#^A/'/
@@ -246,7 +248,7 @@ SKIP_BLANKS:
 	BEQL	10$
 	CLRL	R0
 	RSB
-20$:	MOVZBL	CTX_RECORD(R6)[R1],R1
+20$:	MOVZBL	@CTX_RECP(R6)[R1],R1
 	CMPB	R1,#^A/ /
 	BEQL	30$
 	CMPB	R1,#9			; a tab
@@ -284,7 +286,7 @@ REPEAT_COUNT:
 	CLRL	R3			; their value
 10$:	CMPL	R2,CTX_RECLEN(R6)
 	BGEQ	90$			; digits alone
-	MOVZBL	CTX_RECORD(R6)[R2],R1
+	MOVZBL	@CTX_RECP(R6)[R2],R1
 	SUBL3	#^A/0/,R1,R0
 	CMPL	R0,#9
 	BGTRU	20$			; not a digit (below 0 is large, unsigned)
@@ -336,14 +338,14 @@ READ_TEXT:
 	TSTL	CTX_STATUS(R6)
 	BEQL	10$
 	RSB
-20$:	MOVZBL	CTX_RECORD(R6)[R2],R1
+20$:	MOVZBL	@CTX_RECP(R6)[R2],R1
 	INCL	R2
 	MOVL	R2,CTX_POS(R6)
 	CMPB	R1,#^A/'/
 	BNEQ	30$
 	CMPL	R2,CTX_RECLEN(R6)	; two together are one of them
 	BGEQ	90$
-	CMPB	CTX_RECORD(R6)[R2],#^A/'/
+	CMPB	@CTX_RECP(R6)[R2],#^A/'/
 	BNEQ	90$
 	INCL	CTX_POS(R6)
 30$:	JSB	ADD_CHAR
@@ -358,7 +360,7 @@ READ_WORD:
 10$:	MOVL	CTX_POS(R6),R2
 	CMPL	R2,CTX_RECLEN(R6)
 	BGEQ	90$
-	MOVZBL	CTX_RECORD(R6)[R2],R1
+	MOVZBL	@CTX_RECP(R6)[R2],R1
 	JSB	IS_SEPARATOR
 	BLBS	R0,90$
 	JSB	ADD_CHAR
@@ -408,7 +410,7 @@ READ_PART:
 10$:	MOVL	CTX_POS(R6),R2
 	CMPL	R2,CTX_RECLEN(R6)
 	BGEQ	80$
-	MOVZBL	CTX_RECORD(R6)[R2],R1
+	MOVZBL	@CTX_RECP(R6)[R2],R1
 	CMPB	R1,#^A/)/
 	BEQL	80$
 	JSB	IS_SEPARATOR

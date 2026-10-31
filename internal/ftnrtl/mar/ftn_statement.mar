@@ -21,7 +21,7 @@
 ;			  given; bit 3 the format is a run-time format
 ;		+4  long  not used yet
 ;	8(AP)	the unit, by value; for an internal file, its descriptor;
-;		for ENCODE and DECODE, a descriptor of the buffer's text
+;		for ENCODE and DECODE, the buffer's address
 ;	12(AP)	the format, but for a list-directed statement: a FORMAT
 ;		statement's block (+0 the address of a longword where the
 ;		parsed form is kept, +4 the text's length, a word, +6 a word
@@ -32,6 +32,7 @@
 ;		(+0 the address of the group's name, a counted string, +4
 ;		the number of entities, then for each the address of its
 ;		name and of its descriptor)
+;	16(AP)	for ENCODE and DECODE, the count of characters, by value
 ;
 ; FTN$IO_ITEM's argument is an item's descriptor; FTN$IO_END returns the
 ; statement's status in R0: 0 for success, -1 at an end of file, or the
@@ -66,9 +67,9 @@
 ; goes on, and FTN$IO_END reports it if nothing stopped the statement.
 ;
 ; So far formatted input and output (FTN_FORMAT) and list-directed
-; output (FTN_LISTOUT) and input (FTN_LISTIN) to the units FTN_UNITS has
-; are done; every other kind of statement is FOR$_NOTIMP, until the later
-; subtasks of Phase 80 bring namelists and internal files.
+; output (FTN_LISTOUT) and input (FTN_LISTIN), to the units FTN_UNITS has
+; and to internal files (FTN_INTERNAL), are done; a namelist statement is
+; FOR$_NOTIMP, until a later subtask of Phase 80.
 ;
 	$SSDEF
 
@@ -87,7 +88,7 @@ FLAG_END	= 2
 FLAG_IOSTAT	= 4
 
 ; A statement's context. FTN_LISTOUT, FTN_LISTIN, and FTN_FORMAT use
-; CTX_STREAM, CTX_RECLEN, CTX_RECORD, and CTX_STATUS too, and define them
+; CTX_STREAM, CTX_RECLEN, CTX_RECP, and CTX_STATUS too, and define them
 ; the same; FTN_FORMAT's own fields follow the record, then FTN_LISTIN's,
 ; to CTX_SIZE.
 CTX_NEXT	= 0			; long: the statement below it, or 0
@@ -95,6 +96,8 @@ CTX_FP		= 4			; long: the FP of the routine that began it
 CTX_UNIT	= 8			; long: the unit, -5 for an internal file
 CTX_FLAGS	= 12			; word: the control block's flags
 CTX_KIND	= 14			; byte: the statement's kind, K_...
+CTX_INTERNAL	= 15			; byte: 0 a unit, 1 an internal file, 2 ENCODE
+					;  or DECODE (FTN_INTERNAL)
 CTX_STATUS	= 16			; long: the first error's condition, or 0
 CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
 CTX_RECLEN	= 24			; long: the bytes in the record so far
@@ -108,23 +111,24 @@ CTX_LI_SIZE	= CTX_LI_BUFFER+4	;  long: and its size, which last as long
 					;  as the context does: 0 in a new one
 CTX_AP		= CTX_LI_SIZE+24	; long: the AP of the routine that began it
 					;  (after FTN_LISTIN's other fields)
-CTX_SIZE	= CTX_AP+4+4+12		; with FTN_FORMAT's expressions' routine
-					;  and its copy of an operation
+CTX_RECP	= CTX_AP+4+4+12		; long: where the record is, CTX_RECORD or
+					;  an internal file (after FTN_FORMAT's
+					;  expressions' routine and copy of an
+					;  operation)
+CTX_SIZE	= CTX_RECP+4+4+4	; with FTN_INTERNAL's next record and count
 
-; The kinds of statement: a READ's is even, a WRITE's odd, and those
-; from K_READ_IF on have no unit.
+; The kinds of statement: a READ's is even, a WRITE's odd. An internal
+; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
+; takes off into CTX_INTERNAL, so that the other modules see the form and
+; direction alone.
 K_READ_SF	= 0
 K_WRITE_SF	= 1
 K_READ_SL	= 2
 K_WRITE_SL	= 3
 K_READ_SN	= 4
 K_WRITE_SN	= 5
-K_READ_IF	= 6
-K_WRITE_IF	= 7
-K_READ_IL	= 8
-K_WRITE_IL	= 9
-K_DECODE	= 10
-K_ENCODE	= 11
+K_INTERNAL	= 1@4
+K_CODE		= 2@4
 
 INTERNAL_UNIT	= -5			; an internal file's unit, as VMS's
 
@@ -165,22 +169,22 @@ BEGIN_MASK	= ^M<R2,R3,R4,R5,R6,R7>
 	MOVL	#K_WRITE_SN,R6
 	BRW	SEQUENTIAL
 	.ENTRY	FTN$READ_IF,BEGIN_MASK
-	MOVL	#K_READ_IF,R6
+	MOVL	#K_READ_SF+K_INTERNAL,R6
 	BRW	INTERNAL
 	.ENTRY	FTN$WRITE_IF,BEGIN_MASK
-	MOVL	#K_WRITE_IF,R6
+	MOVL	#K_WRITE_SF+K_INTERNAL,R6
 	BRW	INTERNAL
 	.ENTRY	FTN$READ_IL,BEGIN_MASK
-	MOVL	#K_READ_IL,R6
+	MOVL	#K_READ_SL+K_INTERNAL,R6
 	BRW	INTERNAL
 	.ENTRY	FTN$WRITE_IL,BEGIN_MASK
-	MOVL	#K_WRITE_IL,R6
+	MOVL	#K_WRITE_SL+K_INTERNAL,R6
 	BRW	INTERNAL
 	.ENTRY	FTN$DECODE,BEGIN_MASK
-	MOVL	#K_DECODE,R6
+	MOVL	#K_READ_SF+K_CODE,R6
 	BRW	INTERNAL
 	.ENTRY	FTN$ENCODE,BEGIN_MASK
-	MOVL	#K_ENCODE,R6
+	MOVL	#K_WRITE_SF+K_CODE,R6
 	BRW	INTERNAL
 
 ;
@@ -252,21 +256,29 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CMPW	ICB_W_SIZE(R0),#ICB_W_FLAGS+2
 	BLSSU	35$			; too small to have flags
 	MOVW	ICB_W_FLAGS(R0),CTX_FLAGS(R3)
-35$:	MOVB	R6,CTX_KIND(R3)
+35$:	EXTZV	#4,#2,R6,R0		; a form of internal file, or 0
+	MOVB	R0,CTX_INTERNAL(R3)
+	BICL2	#^C15,R6		; the kind, as a unit's
+	MOVB	R6,CTX_KIND(R3)
 	CLRL	CTX_STATUS(R3)
 	CLRL	CTX_WARNING(R3)
 	CLRL	CTX_FREEFMT(R3)
 	CLRL	CTX_STREAM(R3)
 	CLRL	CTX_RECLEN(R3)
+	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
 	MOVL	R3,STMT_TOP
 	;
 	; A unit: its stream (FTN$$UNIT_FIND, given the unit and 1 to read),
 	; and no other statement in progress on it.
 	;
-	CMPL	R6,#K_READ_IF
-	BGEQ	60$			; an internal file
-	BICL3	#^C1,R6,R0		; 1 for a WRITE
+	TSTB	CTX_INTERNAL(R3)
+	BEQL	36$
+	PUSHL	AP			; an internal file: its records
+	PUSHL	R3
+	CALLS	#2,FTN$$INT_START	; FTN_INTERNAL
+	BRB	75$
+36$:	BICL3	#^C1,R6,R0		; 1 for a WRITE
 	XORL2	#1,R0			; 1 for a READ
 	PUSHL	R0
 	PUSHL	R7
@@ -276,8 +288,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 37$:	MOVL	R1,CTX_STREAM(R3)
 	MOVL	CTX_NEXT(R3),R1		; the statements below
 40$:	BEQL	60$
-	CMPB	CTX_KIND(R1),#K_READ_IF
-	BGEQU	45$			; an internal file's
+	TSTB	CTX_INTERNAL(R1)
+	BNEQ	45$			; an internal file's
 	CMPL	CTX_UNIT(R1),R7
 	BNEQ	45$
 	MOVL	#FOR$_RECIO_OPE,R0

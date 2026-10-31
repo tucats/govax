@@ -135,12 +135,15 @@ FLAG_RUNFMT	= 8
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags
 CTX_KIND	= 14			; byte: the statement's kind; odd for a WRITE
+CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
 CTX_STATUS	= 16			; long: the first error's condition, or 0
 CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
 CTX_RECLEN	= 24			; long: the record's length so far
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
 CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
+					;  own buffer, or an internal file's place)
 CTX_RECMAX	= CTX_POS+4		; long: the most bytes an output record holds
 CTX_FORMAT	= CTX_RECMAX+4		; long: the parsed format
 CTX_FREEFMT	= CTX_FORMAT+4		; long: the same, if it goes at the end; or 0
@@ -274,7 +277,10 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	4(AP),R6		; the context
 	CLRL	CTX_POS(R6)		; the walk's and the record's state
 	CLRL	CTX_RECLEN(R6)
+	TSTB	CTX_INTERNAL(R6)
+	BNEQ	10$			; an internal file's limit is its record's
 	MOVL	#OUTPUT_MAX,CTX_RECMAX(R6)
+10$:
 	CLRL	CTX_COUNT(R6)
 	CLRL	CTX_DEPTH(R6)
 	CLRL	CTX_SCALE(R6)
@@ -410,7 +416,11 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CALLS	#2,WALK
 	BLBC	CTX_KIND(R2),40$	; a READ: nothing to write
 	PUSHL	R2
+	TSTB	CTX_INTERNAL(R2)
+	BNEQ	30$
 	CALLS	#1,FTN$$FMT_WRITE
+	BRB	40$
+30$:	CALLS	#1,FTN$$INT_END		; FTN_INTERNAL: the last record filled
 40$:	TSTB	CTX_MISMATCH(R2)
 	BEQL	50$
 	PUSHL	#FOR$_FORVARMIS
@@ -726,19 +736,24 @@ NEW_RECORD:
 	MOVL	4(AP),R2
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$
-	TSTB	CTX_DOLLAR(R2)
+	TSTB	CTX_INTERNAL(R2)
+	BEQL	5$
+	PUSHL	R2			; an internal file's next record
+	CALLS	#1,FTN$$INT_NEXT	; FTN_INTERNAL
+	RET
+5$:	TSTB	CTX_DOLLAR(R2)
 	BEQL	20$
 	TSTL	CTX_RECLEN(R2)
 	BEQL	20$
-	CMPB	CTX_RECORD(R2),#^A/ /
+	CMPB	@CTX_RECP(R2),#^A/ /
 	BNEQ	10$
-	MOVB	#^A/$/,CTX_RECORD(R2)	; a blank: no carriage return after
+	MOVB	#^A/$/,@CTX_RECP(R2)	; a blank: no carriage return after
 	BRB	20$
-10$:	CMPB	CTX_RECORD(R2),#^A/+/
+10$:	CMPB	@CTX_RECP(R2),#^A/+/
 	BNEQ	20$
-	CLRB	CTX_RECORD(R2)		; a +: nothing before or after
+	CLRB	@CTX_RECP(R2)		; a +: nothing before or after
 20$:	PUSHL	CTX_RECLEN(R2)
-	PUSHAB	CTX_RECORD(R2)
+	PUSHL	CTX_RECP(R2)
 	PUSHL	CTX_STREAM(R2)
 	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
 	BLBS	R0,30$
@@ -758,8 +773,13 @@ NEW_RECORD:
 	MOVL	4(AP),R2
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$
-	PUSHL	#RECORD_SIZE
-	PUSHAB	CTX_RECORD(R2)
+	TSTB	CTX_INTERNAL(R2)
+	BEQL	5$
+	PUSHL	R2			; an internal file's next record
+	CALLS	#1,FTN$$INT_READ	; FTN_INTERNAL
+	RET
+5$:	PUSHL	#RECORD_SIZE
+	PUSHL	CTX_RECP(R2)
 	PUSHL	CTX_STREAM(R2)
 	CALLS	#3,FTN$$UNIT_GET	; FTN_UNITS
 	BLBC	R0,80$
@@ -778,15 +798,17 @@ NEW_RECORD:
 ;
 ; FTN$$FMT_PUT(context, address, length): puts length bytes from address
 ; (blanks, if address is 0) in the output record at the position, and
-; moves it past them; length 0 makes the record reach the position. Bytes skipped before them become blanks; a byte
-; before the first column is lost, one past the record's limit is
-; FOR$_OUTSTAOVE.
+; moves it past them; length 0 makes the record reach the position. Bytes
+; skipped before them become blanks; a byte before the first column is
+; lost. If any would be past the record's limit, none is written and the
+; statement fails with FOR$_OUTSTAOVE, which shows in an internal file: ('
+; I=',I5,' F=',F7.3) in 10 bytes leaves ' I=   42' and 2 bytes as they were.
 ;
 	.ENTRY	FTN$$FMT_PUT,^M<R2,R3,R4,R5,R6>
 	MOVL	4(AP),R6		; the context
 	MOVL	8(AP),R2		; the bytes
 	MOVL	12(AP),R3		; how many
-	BNEQ	10$
+	BNEQ	7$
 	;
 	; No bytes: a field of width 0 (I0, which VMS's library writes as
 	; no asterisks) still ends the record at its column, as if blanks
@@ -798,28 +820,29 @@ NEW_RECORD:
 	MOVL	CTX_RECLEN(R6),R5
 5$:	CMPL	R5,R4
 	BGEQ	90$
-	MOVB	#^A/ /,CTX_RECORD(R6)[R5]
+	MOVB	#^A/ /,@CTX_RECP(R6)[R5]
 	INCL	R5
 	MOVL	R5,CTX_RECLEN(R6)
 	BRB	5$
+7$:	ADDL3	CTX_POS(R6),R3,R4	; all of them fit, or none is written
+	CMPL	R4,CTX_RECMAX(R6)
+	BGTR	80$
 10$:	DECL	R3
 	BLSS	90$
 	MOVL	CTX_POS(R6),R4
 	INCL	CTX_POS(R6)
 	TSTL	R4
 	BLSS	40$			; before the first column
-	CMPL	R4,CTX_RECMAX(R6)
-	BGEQ	80$
 	MOVL	CTX_RECLEN(R6),R5	; blanks up to the position
 20$:	CMPL	R5,R4
 	BGEQ	30$
-	MOVB	#^A/ /,CTX_RECORD(R6)[R5]
+	MOVB	#^A/ /,@CTX_RECP(R6)[R5]
 	INCL	R5
 	BRB	20$
-30$:	MOVB	#^A/ /,CTX_RECORD(R6)[R4]
+30$:	MOVB	#^A/ /,@CTX_RECP(R6)[R4]
 	TSTL	R2
 	BEQL	35$
-	MOVB	(R2),CTX_RECORD(R6)[R4]
+	MOVB	(R2),@CTX_RECP(R6)[R4]
 35$:	INCL	R4
 	CMPL	R4,CTX_RECLEN(R6)
 	BLEQ	40$
@@ -852,7 +875,7 @@ GET_CHARS:
 	BLSS	20$
 	CMPL	R4,CTX_RECLEN(R5)
 	BGEQ	20$
-	MOVB	CTX_RECORD(R5)[R4],(R2)
+	MOVB	@CTX_RECP(R5)[R4],(R2)
 20$:	INCL	R2
 	BRB	10$
 90$:	RET

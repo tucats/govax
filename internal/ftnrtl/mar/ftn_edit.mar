@@ -67,6 +67,9 @@ CTX_RECLEN	= 24			; long: the record's length
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
 CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECMAX	= CTX_POS+4		; long: the most bytes it holds
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
+					;  own buffer, or an internal file's place)
 CTX_SIGN	= CTX_POS+36		; byte: 0 S, 1 SP, 2 SS
 CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ)
 CTX_MISMATCH	= CTX_POS+108		; byte: 1 if the item's type doesn't suit
@@ -97,8 +100,21 @@ C_L		= 7
 	MOVL	4(AP),R11
 	MOVL	8(AP),R10
 	JSB	WIDTH
-	BLBS	CTX_KIND(R11),10$
+	BLBS	CTX_KIND(R11),5$
 	BRW	INPUT
+	;
+	; Output: a field past the record's end is written not at all, though
+	; the rest of this module puts it a piece at a time. FTN$$FMT_PUT says
+	; so.
+	;
+5$:	ADDL3	CTX_POS(R11),R9,R0
+	CMPL	R0,CTX_RECMAX(R11)
+	BLEQ	10$
+	PUSHL	R9
+	CLRL	-(SP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	RET
 10$:	CASEB	OP_B_CODE(R10),#C_I,#<C_L-C_I>
 20$:	.WORD	OUT_I-20$		; I
 	.WORD	OUT_O-20$		; O
@@ -519,7 +535,7 @@ FTN$$EDIT_FIELD::
 FIELD:	MOVL	CTX_POS(R11),R4
 	BGEQ	5$
 	CLRL	R4			; T0's column: the first
-5$:	MOVAB	CTX_RECORD(R11)[R4],R2
+5$:	MOVAB	@CTX_RECP(R11)[R4],R2
 	SUBL3	R4,CTX_RECLEN(R11),R3	; what is left of the record
 	BGEQ	10$
 	CLRL	R3

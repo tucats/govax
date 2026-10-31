@@ -111,6 +111,21 @@ makes `testdata/disks/for80b-exchange.dsk` (label FOR80B). On the VAX:
 then `govax console < testdata/for80/copyoutb.cmd`. No terminal part this time.
 It ran on 2026-10-31, whole; the phase doc has its findings.
 
+## Round 3
+
+`for80c.mar` (133 cases, Phase 80's subtask 9) is what the first two rounds left
+open of internal files, ENCODE, and DECODE: positions and overflow, how a record
+ends, long records, list-directed output and input, and the count's limits. A case
+on a file longer than 100 bytes shows its last 100, as unit 6 holds 133. It has run
+on VMS's FORRTL.EXE over govax, not on the VAX: `TestFor80Round3` runs it and holds
+it to `vax/for80c-forrtl.txt` (`FOR80C_WRITE=1` rewrites that). To run it on VMS,
+`govax console < testdata/for80/exchangec.cmd`, then `@FOR80C/OUTPUT=FOR80C.LOG`.
+
+`TestFor80InternalOracle` compiles `for80x.for`: the internal file, ENCODE, and
+DECODE cases of rounds 1 and 3 as FORTRAN, round 3's numbered from 2000, each on a
+place of the case's size, and holds its IOSTAT, its stored values, and the file's
+bytes to those runs.
+
 ## On govax
 
 `TestFor80Assembles` (`internal/console/for80_test.go`) checks that the programs,

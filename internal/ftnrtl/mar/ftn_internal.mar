@@ -1,0 +1,170 @@
+	.TITLE	FTN_INTERNAL - FTNRTL's internal files, ENCODE, and DECODE
+	.IDENT	/V1.0/
+;
+; An internal file is a CHARACTER place a statement reads or writes as a
+; file (the 1988 VAX FORTRAN Language Reference Manual, 7.2.4, 7.3.4): a
+; scalar, an array element, or a substring is one record, and a whole
+; array holds a record per element, in order. ENCODE and DECODE (A.1) are
+; older forms of the same thing, one record of a count of characters at
+; the address of a variable of any type.
+;
+; A statement's other modules find the record through CTX_RECP. For a
+; unit that is the context's own buffer; here it is the place itself, so
+; nothing is copied, an item's field lands in the file as it is edited,
+; and a statement that fails leaves what it had written, as VMS's FORRTL
+; does. A record's limit (CTX_RECMAX) is its own length, whatever that
+; is: a unit's 133 and list-directed output's 81 don't apply.
+;
+; How a record ends is where the forms differ, by VMS's FORRTL (the probe,
+; testdata/for80, rounds 1 and 3):
+;
+;	an output record	blanks fill what wasn't written, when the
+;				next record starts and at the statement's end
+;	WRITE past the last	FOR$_MORONEREC, the last record filled first
+;	ENCODE's second record	FOR$_MORONEREC, its one record not filled
+;	READ past the last	FOR$_ENDDURREA, so END= takes it
+;	DECODE's second record	FOR$_MORONEREC
+;
+; Records past those the statement used are left as they were: the file
+; isn't blanked. A $ changes nothing here, since no first byte is ever
+; carriage control, and a negative ENCODE or DECODE count is 0.
+;
+; The context's fields (FTN_STATEMENT's); CTX_INTERNAL is nonzero in every
+; statement this module serves.
+;
+CTX_KIND	= 14			; byte: odd for a WRITE
+CTX_INTERNAL	= 15			; byte: 0 a unit, 1 an internal file,
+INT_CODE	= 2			;  2 ENCODE or DECODE
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_RECLEN	= 24			; long: the bytes in the record so far
+CTX_RECORD	= 28			; the context's own record buffer
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECMAX	= CTX_POS+4		; long: the most bytes a record holds
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address
+CTX_IN_NEXT	= CTX_RECP+4		; long: the next record's address
+CTX_IN_LEFT	= CTX_IN_NEXT+4		; long: how many records are left after it
+
+; The descriptor's fields and codes (the VAX calling standard's).
+DSC$W_LENGTH	= 0
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12
+DSC$K_CLASS_A	= 4
+
+FOR$_ENDDURREA	= ^X001880C4		; FORRTL's condition values, with
+FOR$_MORONEREC	= ^X001880DC		;  their severities
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$INT_START(context, begin's AP)
+;
+; Finds the statement's records: from the descriptor that is the begin
+; call's second argument, or for ENCODE and DECODE the buffer's address
+; that is its second and the count that is its fourth. An output statement
+; has its first record now; an input statement's first read takes it.
+;
+	.ENTRY	FTN$$INT_START,^M<R2,R3,R4>
+	MOVL	4(AP),R2		; the context
+	MOVL	8(AP),R3		; the begin call's arguments
+	CMPB	CTX_INTERNAL(R2),#INT_CODE
+	BNEQ	10$
+	MOVL	8(R3),R0		; the buffer
+	MOVL	16(R3),R4		; the count: negative is 0
+	BGEQ	5$
+	CLRL	R4
+5$:	MOVL	#1,R1			; one record
+	BRB	30$
+10$:	MOVL	8(R3),R3		; the descriptor
+	MOVL	DSC$A_POINTER(R3),R0	; the first record
+	MOVZWL	DSC$W_LENGTH(R3),R4	; a record's length
+	MOVL	#1,R1			; one record, unless it is an array
+	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_A
+	BNEQ	30$
+	TSTL	R4
+	BEQL	30$
+	DIVL3	R4,DSC$L_ARSIZE(R3),R1	; its elements
+30$:	MOVL	R0,CTX_RECP(R2)
+	MOVL	R0,CTX_IN_NEXT(R2)
+	MOVL	R1,CTX_IN_LEFT(R2)
+	MOVL	R4,CTX_RECMAX(R2)
+	CLRL	CTX_RECLEN(R2)
+	CLRL	CTX_POS(R2)
+	BLBC	CTX_KIND(R2),90$	; a READ: its first read takes one
+	ADDL2	R4,CTX_IN_NEXT(R2)	; a WRITE's record is the first
+	DECL	CTX_IN_LEFT(R2)
+90$:	RET
+
+;
+; FTN$$INT_NEXT(context)
+;
+; Ends an output statement's record with another to come (/, reversion,
+; list-directed output that won't fit): fills it, and moves to the next.
+;
+	.ENTRY	FTN$$INT_NEXT,^M<R2>
+	MOVL	4(AP),R2
+	CMPB	CTX_INTERNAL(R2),#INT_CODE
+	BEQL	80$			; ENCODE has one record, not filled
+	PUSHL	R2
+	CALLS	#1,FTN$$INT_END
+	TSTL	CTX_IN_LEFT(R2)
+	BEQL	80$			; that was the last
+	DECL	CTX_IN_LEFT(R2)
+	MOVL	CTX_IN_NEXT(R2),CTX_RECP(R2)
+	ADDL2	CTX_RECMAX(R2),CTX_IN_NEXT(R2)
+	CLRL	CTX_RECLEN(R2)
+	CLRL	CTX_POS(R2)
+	RET
+80$:	MOVL	#FOR$_MORONEREC,CTX_STATUS(R2)
+	RET
+
+;
+; FTN$$INT_END(context)
+;
+; Fills the output record from where it ends with blanks, in pieces, as
+; MOVC5 counts in words. Nothing changes once the statement has failed.
+;
+	.ENTRY	FTN$$INT_END,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$
+	SUBL3	CTX_RECLEN(R6),CTX_RECMAX(R6),R7 ; the bytes to fill (MOVC5
+	ADDL3	CTX_RECLEN(R6),CTX_RECP(R6),R3	;  changes R0 to R5)
+10$:	TSTL	R7
+	BLEQ	90$
+	MOVZWL	#65535,R4
+	CMPL	R7,R4
+	BGEQ	20$
+	MOVL	R7,R4
+20$:	SUBL2	R4,R7
+	MOVC5	#0,(SP),#^A/ /,R4,(R3)	; leaves R3 past what it filled
+	BRB	10$
+90$:	RET
+
+;
+; FTN$$INT_READ(context)
+;
+; Makes the next record the input statement's, or fails the statement if
+; there is none. Input takes its characters from the place itself.
+;
+	.ENTRY	FTN$$INT_READ,^M<>
+	MOVL	4(AP),R1
+	TSTL	CTX_IN_LEFT(R1)
+	BEQL	50$
+	DECL	CTX_IN_LEFT(R1)
+	MOVL	CTX_IN_NEXT(R1),CTX_RECP(R1)
+	ADDL2	CTX_RECMAX(R1),CTX_IN_NEXT(R1)
+	MOVL	CTX_RECMAX(R1),CTX_RECLEN(R1)
+	CLRL	CTX_POS(R1)
+	RET
+50$:	MOVL	#FOR$_ENDDURREA,R0
+	CMPB	CTX_INTERNAL(R1),#INT_CODE
+	BNEQ	60$
+	MOVL	#FOR$_MORONEREC,R0
+60$:	TSTL	CTX_STATUS(R1)
+	BNEQ	90$
+	MOVL	R0,CTX_STATUS(R1)
+90$:	RET
+
+	.END

@@ -52,6 +52,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -112,7 +113,9 @@ func iT(n int) item { return item{"t", fmt.Sprint(n)} }
 //	wi    FOR$WRITE_IO(internal record of size bytes, format)
 //	wil   FOR$WRITE_IL(internal record of size bytes)
 //	wia   FOR$WRITE_IO to an array of 3 records of size bytes
+//	wial  FOR$WRITE_IL to an array of 3 records of size bytes
 //	ria   FOR$READ_IO from an array of text's records of size bytes
+//	rial  FOR$READ_IL from an array of text's records of size bytes
 //	enc   FOR$ENCODE_MO(size, format, buffer)
 //	dec   FOR$DECODE_MO(size, format, text)
 //	raw   code and data as given
@@ -164,8 +167,14 @@ func wil(size int, items ...item) { cases = append(cases, kase{op: "wil", size: 
 func wia(size int, format string, items ...item) {
 	cases = append(cases, kase{op: "wia", size: size, format: format, items: items})
 }
+func wial(size int, items ...item) {
+	cases = append(cases, kase{op: "wial", size: size, items: items})
+}
 func ria(size int, text, format string, items ...item) {
 	cases = append(cases, kase{op: "ria", size: size, text: text, format: format, items: items})
+}
+func rial(size int, text string, items ...item) {
+	cases = append(cases, kase{op: "rial", size: size, text: text, items: items})
 }
 func enc(size int, format string, items ...item) {
 	cases = append(cases, kase{op: "enc", size: size, format: format, items: items})
@@ -1044,7 +1053,7 @@ func program(extraData string, lastMessage int) string {
 			}
 
 			title += " " + c.op + " " + clip(c.format, 60) + itemsTitle(c.items)
-		case "wi", "wil", "wia", "enc":
+		case "wi", "wil", "wia", "wial", "enc":
 			title += fmt.Sprintf(" %s %d %s%s", c.op, c.size, clip(c.format, 50), itemsTitle(c.items))
 		default:
 			if c.op == "rd5" && c.unit != 5 {
@@ -1097,32 +1106,43 @@ func program(extraData string, lastMessage int) string {
 		case "rl5":
 			input = true
 			fmt.Fprintf(&code, "\tPUSHL\t#5\n\tCALLS\t#1,G^FOR$READ_SL\n")
-		case "wi", "wil", "wia":
+		case "wi", "wil", "wia", "wial":
 			fmt.Fprintf(&data, "\t.ALIGN\tLONG\nIO%d:\t.WORD\t%d\n", n, c.size)
 
-			if c.op == "wia" {
+			if c.op == "wia" || c.op == "wial" {
 				fmt.Fprintf(&data, "\t.BYTE\t14,4\n\t.ADDRESS\tTEXTS\n\t.BYTE\t0,0,^XC0,1\n\t.LONG\t%d\n\t.ADDRESS\tTEXTS\n\t.LONG\t3\n\t.LONG\t1,3\n", 3*c.size)
 			} else {
 				fmt.Fprintf(&data, "\t.BYTE\t14,1\n\t.ADDRESS\tTEXTS\n")
 			}
 
-			if c.op == "wil" {
+			if c.op == "wil" || c.op == "wial" {
 				fmt.Fprintf(&code, "\tPUSHAB\tIO%d\n\tCALLS\t#1,G^FOR$WRITE_IL\n", n)
 			} else {
 				fmt.Fprintf(&code, "\tPUSHAB\tFM%d\n\tPUSHAB\tIO%d\n\tCALLS\t#2,G^FOR$WRITE_IO\n", n, n)
 			}
 
 			length := c.size
-			if c.op == "wia" {
+			if c.op == "wia" || c.op == "wial" {
 				length *= 3
 			}
 
-			fmt.Fprintf(&shows, "\tPUSHL\t#%d\n\tPUSHAB\tTEXTS\n\tPUSHL\t#99\n\tCALLS\t#3,SHOWT\n", length)
-		case "ria":
+			start, shown := shownBytes(length)
+			at := "TEXTS"
+			if start > 0 {
+				at = fmt.Sprintf("TEXTS+%d", start)
+			}
+
+			fmt.Fprintf(&shows, "\tPUSHL\t#%d\n\tPUSHAB\t%s\n\tPUSHL\t#99\n\tCALLS\t#3,SHOWT\n", shown, at)
+		case "ria", "rial":
 			input = true
 			fmt.Fprintf(&data, "IB%d:\t.ASCII\t%s\n\t.ALIGN\tLONG\nIO%d:\t.WORD\t%d\n\t.BYTE\t14,4\n\t.ADDRESS\tIB%d\n\t.BYTE\t0,0,^XC0,1\n\t.LONG\t%d\n\t.ADDRESS\tIB%d\n\t.LONG\t%d\n\t.LONG\t1,%d\n",
 				n, ascii(c.text), n, c.size, n, len(c.text), n, len(c.text)/c.size, len(c.text)/c.size)
-			fmt.Fprintf(&code, "\tPUSHAB\tFM%d\n\tPUSHAB\tIO%d\n\tCALLS\t#2,G^FOR$READ_IO\n", n, n)
+
+			if c.op == "rial" {
+				fmt.Fprintf(&code, "\tPUSHAB\tIO%d\n\tCALLS\t#1,G^FOR$READ_IL\n", n)
+			} else {
+				fmt.Fprintf(&code, "\tPUSHAB\tFM%d\n\tPUSHAB\tIO%d\n\tCALLS\t#2,G^FOR$READ_IO\n", n, n)
+			}
 		case "enc":
 			fmt.Fprintf(&code, "\tPUSHAB\tTEXTS\n\tPUSHAB\tFM%d\n\tPUSHL\t#%d\n\tCALLS\t#3,G^FOR$ENCODE_MO\n", n, c.size)
 
@@ -1887,6 +1907,188 @@ func nmlArrayRead(block, what, line, reset string) {
 		show: []string{write}})
 }
 
+// round3 is what rounds 1 and 2 left open of internal files, ENCODE, and
+// DECODE (Phase 80's subtask 9): how a record ends, overflow, list-directed
+// records, the count's limits.
+func round3() {
+	section("Internal files: $, and positions in a record")
+	wi(10, "(' ABC',$)")
+	wi(10, "('+ABC',$)")
+	wi(10, "(T5,'A')")
+	wi(10, "(T10,'A')")
+	wi(10, "(T11,'A')")
+	wi(10, "(11X,'A')")
+	wi(10, "(20X)")
+	wi(10, "(5X)")
+	wi(10, "('ABC',TL2,'X')")
+	wi(10, "('ABCDEFGHIJKL')")
+	wi(10, "(5HABCDE,5HFGHIJ,1HK)")
+	wi(3, "(I5)", I(42))
+	wi(3, "(F20.3)", F("2.5"))
+	wi(4, "(I2,I3)", I(1), I(2))
+	wi(10, "(I0)", I(1))
+	wi(10, "(1X,I1)", I(42))
+
+	section("Internal files: where a record ends")
+	wi(10, "(' A',/)")
+	wia(5, "(A,/)", T("ONE"))
+	wia(5, "(/)")
+	wia(5, "(//)")
+	wia(5, "(///)")
+	wia(5, "(A)", T("ONE"), T("TWO"))
+	wia(5, "(A)", T("ONE"), T("TWO"), T("THREE"))
+	wia(5, "(A)", T("ONE"), T("TWO"), T("THREE"), T("FOUR"))
+	wia(5, "(' ABC',$,/,' DEF')")
+	enc(12, "(I4,/)", I(1))
+	enc(12, "(/)")
+	enc(12, "(I4,$)", I(1))
+	enc(12, "(I4,:)", I(1))
+	enc(5, "()")
+	enc(12, "(' ABC',$)")
+
+	section("Internal files: a long record")
+	wi(300, "(T290,'A')")
+	wi(300, "(T300,'A')")
+	wi(300, "(T301,'A')")
+	wi(150, "(150A)", T("A"), T("B"))
+	wi(60, "(I50)", I(1))
+	wi(300, "(I250)", I(1))
+	ria(300, strings.Repeat("A", 100)+strings.Repeat("B", 100)+strings.Repeat("C", 100), "(T290,A5,Q)", iT(5), iL)
+	ria(300, strings.Repeat("A", 100)+strings.Repeat("B", 100)+strings.Repeat("C", 100), "(T250,A5)", iT(5))
+	rial(300, strings.Repeat(" ", 100)+strings.Repeat(" ", 100)+strings.Repeat(" ", 96)+"1234", iL)
+
+	section("Internal files: list-directed output")
+	wil(12, I(1))
+	wil(11, I(1))
+	wil(13, I(1), I(2))
+	wil(23, I(1), I(2))
+	wil(24, I(1), I(2))
+	wil(25, I(1), I(2))
+	wil(10, T("ABC"))
+	wil(4, T("ABC"))
+	wil(3, T("ABC"))
+	wil(2, T("ABC"))
+	wil(1, T("ABC"))
+	wil(10, T("ABCDEFGHIJKLMNOPQRSTUVWXY"))
+	wil(10, T("ABC"), T("DEFGHIJ"))
+	wil(10, T("ABC"), T("DEFGHIJKL"))
+	wil(10)
+	wil(1)
+	wil(20, F("2.5"))
+	wil(15, F("2.5"))
+	wil(14, F("2.5"))
+	wil(40, FC("1.5", "-2.5"))
+	wil(20, FC("1.5", "-2.5"))
+	wil(10, FC("1.5", "-2.5"))
+	wil(99, I(1), I(2), I(3), I(4), I(5), I(6), I(7), I(8))
+	wil(99, T(strings.Repeat("A", 90)))
+	wil(90, T(strings.Repeat("A", 80)), T("B"))
+
+	section("Internal arrays: list-directed output")
+	wial(13, I(1), I(2))
+	wial(13, I(1), I(2), I(3))
+	wial(13, I(1), I(2), I(3), I(4))
+	wial(10, I(1))
+	wial(10, T("ABC"), T("DEF"))
+	wial(10, T("ABCDEFGHIJKLMNOPQRSTUVWXY"))
+	wial(10, T("ABCDEFGHIJKLMNOPQRSTUVWXYZ01234567"))
+	wial(30, I(1), I(2), I(3), I(4), I(5), I(6), I(7))
+	wial(33, I(1), I(2), I(3), I(4), I(5), I(6), I(7), I(8), I(9), I(10))
+	wial(2, T("ABC"))
+	wial(1, T("ABC"))
+	wial(10, T(""), T("ABCDEFGHIJKL"))
+	wial(10, T("A"), I(1))
+	wial(13, T("A"), I(1), I(2))
+	wial(13, FC("1.5", "-2.5"))
+	wial(20, FC("1.5", "-2.5"), FC("3.5", "4.5"))
+	wial(25, FC("1.5", "-2.5"), FC("3.5", "4.5"))
+	wial(30, FC("1.5", "-2.5"), FC("3.5", "4.5"))
+	wial(15, I(1), FC("1.5", "-2.5"))
+	wial(25, I(1), FC("1.5", "-2.5"))
+	wial(35, I(1), FC("1.5", "-2.5"))
+	wial(40, FC("1.5", "-2.5"), I(1), I(2))
+
+	section("A unit: complex values at a record's end")
+	list(FC("1.5", "-2.5"), FC("1.5", "-2.5"), FC("1.5", "-2.5"), FC("1.5", "-2.5"))
+	list(I(1), FC("1.5", "-2.5"), FC("1.5", "-2.5"), FC("1.5", "-2.5"))
+	list(I(1), I(2), I(3), I(4), FC("1.5", "-2.5"), FC("1.5", "-2.5"))
+	list(I(1), I(2), I(3), I(4), I(5), FC("1.5", "-2.5"))
+
+	section("Internal files: list-directed input")
+	ril("", iL)
+	ril("   ", iL)
+	ril("1", iL, iL)
+	ril("1 ", iL, iL)
+	ril("1,", iL, iL)
+	ril("1 2 3 4", iL)
+	ril("/", iL)
+	ril("'ABC", iT(3))
+	ril("2*5", iL, iL, iL)
+	ril("2*", iL, iL)
+	rial(3, "1 2 3 4 5 ", iL, iL, iL)
+	rial(3, "1 2 3 ", iL, iL, iL, iL)
+	rial(3, "1,,2,,3,", iL, iL, iL, iL)
+	rial(3, "'ABCDEF' ", iT(6))
+	rial(3, "'ABCDEF", iT(6))
+	rial(3, "1/ 2 3 ", iL, iL, iL)
+
+	section("Internal files: formatted input")
+	rd("(I3)", "1 2", iL)
+	rd("(BN,I3)", "1 2", iL)
+	rd("(BZ,I3)", "1 2", iL)
+	rd("(I5)", "12", iL)
+	rd("(A5)", "12", iT(5))
+	rd("(I3)", "123", iL, iL)
+	rd("(I3,/)", "123", iL)
+	rd("(/)", "123")
+	rd("(/,I3)", "123", iL)
+	rd("(Q,I2)", "123", iL, iL)
+	rd("(I3)", "")
+	rd("(T10,I3)", "123", iL)
+	ria(3, "123456", "(/,I3)", iL)
+	ria(3, "123456", "(//,I3)", iL)
+	ria(3, "123456", "(I3,/)", iL)
+	ria(3, "123456", "(I3,//)", iL)
+	ria(3, "123", "(I3,/)", iL)
+
+	section("DECODE and its count")
+	dec(12, "123456789012", "(I4,/)", iL)
+	dec(12, "123456789012", "(/)")
+	dec(-1, "1234", "(I4)", iL)
+	dec(-1, "1234", "(A4)", iT(4))
+	dec(40000, "1234", "(I4)", iL)
+	dec(70000, "1234", "(I4)", iL)
+	dec(4, "1234", "(I2,Q)", iL, iL)
+	dec(4, "1234", "(A)", iT(8))
+	dec(4, "1234", "(T3,I2)", iL)
+}
+
+// round3Procedure runs round 3, on VMS or over VMS's FORRTL on govax.
+const round3Procedure = `$ ! FOR80C.COM - the third round of the Phase 80 probe.
+$ ! Written by testdata/for80/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @FOR80C/OUTPUT=FOR80C.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80C.MLG
+$ MACRO/NOLIST FOR80C
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80C.LLG
+$ LINK/NOMAP FOR80C,FOR80/OPTIONS
+$ MACRO/NOLIST FOR80D
+$ LINK/NOMAP FOR80D
+$ DEFINE/NOLOG FOR006 FOR80.DAT
+$ RUN FOR80C
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN FOR006
+$ DEFINE/USER_MODE SYS$OUTPUT FOR80C-VAX.TXT
+$ RUN FOR80D
+$ SHOW SYMBOL $STATUS
+$ EXIT
+`
+
 const round2Procedure = `$ ! FOR80B.COM - the second round of the Phase 80 probe.
 $ ! Written by testdata/for80/gen.go. Run it with the exchange volume's
 $ ! [000000] as the default directory:
@@ -1959,6 +2161,7 @@ DISMOUNT DUA2
 
 	// Round 1 ended there; the rest is round 2, on a volume of its own.
 	round1Cases := len(cases)
+	round1 := cases
 	cases, secAt = nil, map[int]string{}
 	extra := round2()
 	files["for80b.mar"] = program(extra, 255)
@@ -1993,13 +2196,40 @@ COPY DUA2:[000000]FOR80B.LOG "testdata/for80/vax/for80b.log"/HOST
 DISMOUNT DUA2
 `
 
+	round2Cases := len(cases)
+
+	// Round 3, what the first two left open of internal files.
+	cases, secAt = nil, map[int]string{}
+	round3()
+	files["for80x.for"] = fortranInternalProgram(round1, cases)
+	files["for80c.mar"] = program("", 0)
+	files["for80c.com"] = round3Procedure
+
+	var copies3 strings.Builder
+
+	for _, name := range []string{"for80c.mar", "for80d.mar", "for80.opt", "for80c.com"} {
+		fmt.Fprintf(&copies3, "COPY \"testdata/for80/%s\"/HOST DUA2:[000000]%s\n", name, strings.ToUpper(name))
+	}
+
+	files["exchangec.cmd"] = `! EXCHANGEC.CMD - builds an exchange volume for the Phase 80 probe's third round,
+! which has run only on VMS's FORRTL.EXE over govax. Written by
+! testdata/for80/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for80/exchangec.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/for80c-exchange.dsk" /DEVICE=RD51 FOR80C
+MOUNT/WRITE DUA2 "testdata/disks/for80c-exchange.dsk"
+` + copies3.String() + `DIRECTORY DUA2:[000000]
+DISMOUNT DUA2
+`
+
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println(round1Cases, "cases in round 1,", len(cases), "in round 2")
+	fmt.Println(round1Cases, "cases in round 1,", round2Cases, "in round 2,", len(cases), "in round 3")
 }
 
 // fortranProgram is round 1's output cases to unit 6 as FORTRAN statements
@@ -2205,6 +2435,55 @@ func dThenG() []int {
 	return append(d, g...)
 }
 
+// shownBytes says which of a file's length bytes a case shows, an offset and a
+// count: the last 100, since unit 6 holds 133 bytes in a record, and what a long
+// record's statement did is at its end.
+func shownBytes(length int) (start, shown int) {
+	if length > 100 {
+		return length - 100, 100
+	}
+
+	return 0, length
+}
+
+// fortranInputItem is input item j of a case as FORTRAN: where it goes, in slot
+// j of the COMMON block, or for a CHARACTER item the first n characters of
+// TX(j+1); and the call that shows what it left.
+func fortranInputItem(j int, it item) (string, string) {
+	k := j + 1
+
+	var ref string
+
+	switch it.kind {
+	case "l":
+		ref = fmt.Sprintf("S(1,%d)", k)
+	case "w":
+		ref = fmt.Sprintf("VW(1,%d)", k)
+	case "b":
+		ref = fmt.Sprintf("VB(1,%d)", k)
+	case "lu":
+		ref = fmt.Sprintf("VLU(1,%d)", k)
+	case "wu":
+		ref = fmt.Sprintf("VWU(1,%d)", k)
+	case "f":
+		ref = fmt.Sprintf("VF(1,%d)", k)
+	case "d", "g":
+		ref = fmt.Sprintf("VD(1,%d)", k)
+	case "h":
+		ref = fmt.Sprintf("VH(%d)", k)
+	case "fc":
+		ref = fmt.Sprintf("VFC(1,%d)", k)
+	case "dc", "gc":
+		ref = fmt.Sprintf("VDC(%d)", k)
+	case "t":
+		return fmt.Sprintf("TX(%d)(1:%s)", k, it.val), fmt.Sprintf("CALL SHOWT(%d, %s)", j, it.val)
+	default:
+		log.Fatalf("input item kind %q", it.kind)
+	}
+
+	return ref, fmt.Sprintf("CALL SHOWV(%d, %d)", j, slotShow(it.kind))
+}
+
 // fortranInputProgram is round 1's formatted and list-directed input
 // cases as FORTRAN
 // statements (Decision 2), for govax, read from SYS$INPUT: for80i.dat,
@@ -2283,39 +2562,9 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 		var items, shows []string
 
 		for j, it := range c.items {
-			k := j + 1
-
-			switch it.kind {
-			case "l":
-				items = append(items, fmt.Sprintf("S(1,%d)", k))
-			case "w":
-				items = append(items, fmt.Sprintf("VW(1,%d)", k))
-			case "b":
-				items = append(items, fmt.Sprintf("VB(1,%d)", k))
-			case "lu":
-				items = append(items, fmt.Sprintf("VLU(1,%d)", k))
-			case "wu":
-				items = append(items, fmt.Sprintf("VWU(1,%d)", k))
-			case "f":
-				items = append(items, fmt.Sprintf("VF(1,%d)", k))
-			case "d", "g":
-				items = append(items, fmt.Sprintf("VD(1,%d)", k))
-			case "h":
-				items = append(items, fmt.Sprintf("VH(%d)", k))
-			case "fc":
-				items = append(items, fmt.Sprintf("VFC(1,%d)", k))
-			case "dc", "gc":
-				items = append(items, fmt.Sprintf("VDC(%d)", k))
-			case "t":
-				items = append(items, fmt.Sprintf("TX(%d)(1:%s)", k, it.val))
-				shows = append(shows, fmt.Sprintf("CALL SHOWT(%d, %s)", j, it.val))
-
-				continue
-			default:
-				log.Fatalf("input item kind %q", it.kind)
-			}
-
-			shows = append(shows, fmt.Sprintf("CALL SHOWV(%d, %d)", j, slotShow(it.kind)))
+			item, show := fortranInputItem(j, it)
+			items = append(items, item)
+			shows = append(shows, show)
 		}
 
 		ftnStatement(&body, fmt.Sprintf("CALL SYNC('#%d')", n))
@@ -2373,6 +2622,285 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       CHARACTER*64 TX(16)
       COMMON /SLOTS/ S, TX
       PRINT *, 'v', J, '|' // TX(J+1)(1:N) // '|'
+      END
+`)
+
+	return b.String()
+}
+
+// round3Numbers is what fortranInternalProgram adds to a round 3 case's number,
+// to tell it from round 1's in one program.
+const round3Numbers = 2000
+
+// internalCase reports whether c is a statement on an internal file or ENCODE
+// or DECODE that FORTRAN can state.
+func internalCase(c kase) bool {
+	switch c.op {
+	case "wi", "wil", "wia", "wial", "enc":
+	case "rd", "ril", "ria", "rial", "dec":
+	default:
+		return false
+	}
+
+	return c.format != "" || c.op == "wil" || c.op == "wial" || c.op == "ril" || c.op == "rial"
+}
+
+// fortranInternalProgram is the internal file, ENCODE, and DECODE cases of
+// rounds 1 and 3 as FORTRAN statements, for govax: each statement as VMS's ran
+// it, on a CHARACTER place of the case's size. Each case is
+//
+//	CALL PRE                               every slot and the buffer's bytes 55
+//	IN(1:len) = 'text'                     an input case's record or records
+//	N = len
+//	READ (IN(1:N), 'format', IOSTAT=IOS) items
+//	PRINT *, '=n', IOS
+//	CALL SHOWV(j, k), CALL SHOWT(j, n)     what an input item left
+//	CALL SHOWB(n)                          what an output case left in the file
+//
+// Arrays are declared by size and count, each EQUIVALENCEd to the buffer the
+// statement uses. TestFor80InternalOracle holds each case to the run's e= and v
+// lines; round 3's cases are numbered from round3Numbers.
+func fortranInternalProgram(round1, round3 []kase) string {
+	type numbered struct {
+		n int
+		c kase
+	}
+
+	var all []numbered
+
+	for pass, list := range [][]kase{round1, round3} {
+		for n, c := range list {
+			if internalCase(c) {
+				all = append(all, numbered{n + pass*round3Numbers, c})
+			}
+		}
+	}
+
+	// Those without G_floating items first, as in the other programs.
+	sort.SliceStable(all, func(i, j int) bool { return !hasGItem(all[i].c) && hasGItem(all[j].c) })
+
+	// Every array a case uses: output arrays have 3 records.
+	arrayName := func(c kase) string {
+		switch c.op {
+		case "wia", "wial":
+			return fmt.Sprintf("W%d", c.size)
+		case "ria", "rial":
+			return fmt.Sprintf("R%dX%d", c.size, len(c.text)/c.size)
+		}
+
+		return ""
+	}
+
+	var decl, equiv strings.Builder
+
+	declared := map[string]bool{}
+
+	for _, a := range all {
+		name := arrayName(a.c)
+		if name == "" || declared[name] {
+			continue
+		}
+
+		declared[name] = true
+
+		count, buffer := 3, "BUF"
+		if a.c.op == "ria" || a.c.op == "rial" {
+			count, buffer = len(a.c.text)/a.c.size, "IN"
+		}
+
+		fmt.Fprintf(&decl, "      CHARACTER*%d %s(%d)\n", a.c.size, name, count)
+		fmt.Fprintf(&equiv, "      EQUIVALENCE (%s, %s)\n", buffer, name)
+	}
+
+	declarations := `      INTEGER IOS, N, NZERO
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      CHARACTER*2048 BUF, IN
+      COMMON /FILES/ BUF, IN
+      INTEGER*2 VW(8,16)
+      BYTE VB(16,16)
+      LOGICAL*4 VLU(4,16)
+      LOGICAL*2 VWU(8,16)
+      INTEGER*4 VLUI(16), VWUI2(16)
+      REAL VF(4,16)
+      DOUBLE PRECISION VD(2,16)
+      REAL*16 VH(16)
+      COMPLEX VFC(2,16)
+      COMPLEX*16 VDC(16)
+      EQUIVALENCE (S, VW, VB, VLU, VWU, VF, VD, VH, VFC, VDC)
+` + decl.String() + equiv.String() + `      DATA NZERO /0/
+`
+
+	var b, body strings.Builder
+
+	b.WriteString(`C     FOR80X.FOR - written by testdata/for80/gen.go: the internal file,
+C     ENCODE, and DECODE cases of rounds 1 and 3, for govax.
+C     TestFor80InternalOracle holds them to vax/for80-vax.txt and
+C     vax/for80c-forrtl.txt.
+      PROGRAM FOR80X
+`)
+
+	routines, perRoutine := 0, 0
+	gRoutine := false
+
+	for _, a := range all {
+		n, c := a.n, a.c
+		gUnit := hasGItem(c)
+
+		if routines == 0 || perRoutine == 40 || gUnit && !gRoutine {
+			if routines > 0 {
+				body.WriteString("      END\n")
+			}
+
+			gRoutine = gUnit
+			routines++
+			perRoutine = 0
+
+			fmt.Fprintf(&b, "      CALL R%d\n", routines)
+			body.WriteString("\n")
+
+			if gUnit {
+				body.WriteString("      OPTIONS /G_FLOATING\n")
+			}
+
+			fmt.Fprintf(&body, "      SUBROUTINE R%d\n%s", routines, declarations)
+		}
+
+		perRoutine++
+
+		ftnStatement(&body, "CALL PRE")
+
+		var items, shows []string
+
+		output := c.op == "wi" || c.op == "wil" || c.op == "wia" || c.op == "wial" || c.op == "enc"
+
+		for j, it := range c.items {
+			k := j + 1
+
+			switch {
+			case output && it.kind == "l":
+				items = append(items, ftnInteger(it.val))
+			case output && it.kind == "t" && it.val == "":
+				items = append(items, "IN(1:NZERO)")
+			case output && it.kind == "t":
+				items = append(items, ftnText(it.val))
+			case output && it.kind == "f":
+				ftnStatement(&body, fmt.Sprintf("VF(1,%d) = %s", k, ftnReal(it.val, "E")))
+				items = append(items, fmt.Sprintf("VF(1,%d)", k))
+			case output && it.kind == "fc":
+				parts := strings.SplitN(it.val, ",", 2)
+				ftnStatement(&body, fmt.Sprintf("VFC(1,%d) = (%s,%s)", k, ftnReal(parts[0], "E"), ftnReal(parts[1], "E")))
+				items = append(items, fmt.Sprintf("VFC(1,%d)", k))
+			case output:
+				log.Fatalf("output item kind %q", it.kind)
+			default:
+				item, show := fortranInputItem(j, it)
+				items = append(items, item)
+				shows = append(shows, show)
+			}
+		}
+
+		format := ftnText(c.format)
+
+		var head string
+
+		switch c.op {
+		case "wi":
+			head = fmt.Sprintf("WRITE (BUF(1:%d), %s, IOSTAT=IOS)", c.size, format)
+		case "wil":
+			head = fmt.Sprintf("WRITE (BUF(1:%d), *, IOSTAT=IOS)", c.size)
+		case "wia":
+			head = fmt.Sprintf("WRITE (%s, %s, IOSTAT=IOS)", arrayName(c), format)
+		case "wial":
+			head = fmt.Sprintf("WRITE (%s, *, IOSTAT=IOS)", arrayName(c))
+		case "enc":
+			head = fmt.Sprintf("ENCODE (%d, %s, BUF, IOSTAT=IOS)", c.size, format)
+		default:
+			if c.text != "" {
+				ftnStatement(&body, fmt.Sprintf("IN(1:%d) = %s", len(c.text), ftnText(c.text)))
+			}
+
+			ftnStatement(&body, fmt.Sprintf("N = %d", len(c.text)))
+
+			switch c.op {
+			case "rd":
+				head = fmt.Sprintf("READ (IN(1:N), %s, IOSTAT=IOS)", format)
+			case "ril":
+				head = "READ (IN(1:N), *, IOSTAT=IOS)"
+			case "ria":
+				head = fmt.Sprintf("READ (%s, %s, IOSTAT=IOS)", arrayName(c), format)
+			case "rial":
+				head = fmt.Sprintf("READ (%s, *, IOSTAT=IOS)", arrayName(c))
+			case "dec":
+				head = fmt.Sprintf("DECODE (%d, %s, IN, IOSTAT=IOS)", c.size, format)
+			}
+		}
+
+		if len(items) > 0 {
+			head += " " + strings.Join(items, ", ")
+		}
+
+		ftnStatement(&body, head)
+		ftnStatement(&body, fmt.Sprintf("PRINT *, '=%d', IOS", n))
+
+		for _, show := range shows {
+			ftnStatement(&body, show)
+		}
+
+		if output {
+			length := c.size
+
+			switch {
+			case c.op == "wia" || c.op == "wial":
+				length *= 3
+			case c.op == "enc" && length < 1:
+				length = 4
+			}
+
+			start, shown := shownBytes(length)
+			ftnStatement(&body, fmt.Sprintf("CALL SHOWB(%d, %d)", start+1, start+shown))
+		}
+	}
+
+	body.WriteString("      END\n")
+	b.WriteString("      END\n")
+	b.WriteString(body.String())
+	b.WriteString(`
+      SUBROUTINE PRE
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      CHARACTER*2048 BUF, IN
+      COMMON /FILES/ BUF, IN
+      DO 10 J = 1, 16
+      DO 5 K = 1, 4
+    5 S(K,J) = 1431655765
+   10 TX(J) = 'UUUUUUUUUUUUUUUU' // 'UUUUUUUUUUUUUUUU' //
+     &        'UUUUUUUUUUUUUUUU' // 'UUUUUUUUUUUUUUUU'
+      DO 20 J = 1, 2048
+      BUF(J:J) = 'U'
+   20 IN(J:J) = 'U'
+      END
+
+      SUBROUTINE SHOWV(J, N)
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      PRINT *, 'v', J, (S(K,J+1), K = 1, N)
+      END
+
+      SUBROUTINE SHOWT(J, N)
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      PRINT *, 'v', J, '|' // TX(J+1)(1:N) // '|'
+      END
+
+      SUBROUTINE SHOWB(M, N)
+      CHARACTER*2048 BUF, IN
+      COMMON /FILES/ BUF, IN
+      WRITE (6, '(1X,A,1X,I3,A)') 'v', 99, '|' // BUF(M:N) // '|'
       END
 `)
 

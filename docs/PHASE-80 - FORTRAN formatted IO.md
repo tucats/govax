@@ -6,8 +6,8 @@ rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
 compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
 interpreter) done the same day; subtask 5 (integer, logical, and character
 editing), subtask 6 (floating editing), subtask 7 (list-directed output
-and input), and subtask 8 (variable format expressions and run-time formats)
-done the same day. Needs Phase 79 (control flow, for
+and input), subtask 8 (variable format expressions and run-time formats), and
+subtask 9 (internal files, ENCODE, DECODE) done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -664,7 +664,8 @@ run 3 and the terminal session ran whole. What it settles, against Part A:
   (22); round 2 narrows it. FORTRAN's default RECL for formatted files is 133;
   FTNRTL takes 133 for both directions. (FORRTL over govax wrote and read the
   long records: govax's RMS gives it a larger size than VMS's, an open item for
-  Phase 81's units, not FTNRTL's.)
+  Phase 81's units, not FTNRTL's. Subtask 9 corrected this: it was the CPU's
+  immediates, not RMS, and FORRTL now keeps 133 for writing over govax.)
 - **`$` and the first byte, as stored** (FOR80.DAT): with `$`, a blank becomes
   `$` and `+` becomes NUL; `0`, `1`, `$`, and others are stored unchanged.
   Without `$` nothing changes. Part A's rule is confirmed. The terminal session
@@ -785,7 +786,8 @@ subtasks land.
    and input. Done ("Subtask 7", below).
 8. **Variable format expressions and run-time formats.** Done ("Subtask 8",
    below).
-9. **Internal files, ENCODE, DECODE.**
+9. **Internal files, ENCODE, DECODE.** Done ("Subtask 9", below), with round 3
+   of the probe.
 10. **LIB$TPARSE,** brought in from Phase 60 by the author (2026-10-31):
     VMS's FORRTL needs it for namelist input, so a program linked against
     VMS's FORRTL, as DUNGEON-era images may be, needs it from govax. The
@@ -1279,6 +1281,76 @@ string, ASSIGN, the ranges) and `runformat.for`, both in both paging modes;
 `TestFortranVFEInput`; `TestFortranIOSignals`'s VFEVALERR; sema's error table; and
 `vfe.for` goldens for the parser, sema, the IR, and the code generator.
 
+## Subtask 9: what was built (2026-10-31)
+
+`WRITE (BUFFER, 100) X, Y` and `ENCODE (12, 100, BUFFER) X, Y` now both run, on
+one path. The author asked for the first form to be there alongside the second;
+the compiler had read it since subtask 3, and FTNRTL answered NOTIMP.
+
+**Round 3 of the probe** (`for80c.mar`, 133 cases, `gen.go`'s `round3`): rounds 1
+and 2 left overflow, list-directed records, and the count's limits open. It ran on
+VMS's FORRTL.EXE **over govax**, not on the simh VAX (`TestFor80Round3`, which
+needs FORRTL.EXE on a local volume; `vax/for80c-forrtl.txt`), since FORRTL's
+behavior is its own code's and round 1's editing cases gave VMS's output that way.
+`for80c.com` and `exchangec.cmd` are there to run it on VMS if that is ever wanted.
+What it settled, with round 1:
+
+| Question | FORRTL's answer |
+| --- | --- |
+| A record's limit | Its own length, in every form: past 133 and 256, and list-directed output isn't held to 81 (8 INTEGERs share a 99-byte record) |
+| Something too long | Nothing of it is written, and FOR$\_OUTSTAOVE (66): a constant, a field, T past the end. What came before stays, the rest of the file as it was: `(' I=',I5,' F=',F7.3)` in 10 bytes leaves ` I=   42` and 2 untouched |
+| The end of a record | Filled with blanks, at `/`, reversion, and the statement's end; records not reached stay as they were (`ONE  UUUUUUUUUU`) |
+| WRITE past the last record | FOR$\_MORONEREC (27), the last filled first |
+| ENCODE's second record | FOR$\_MORONEREC, its one record **not** filled |
+| READ past the last record | FOR$\_ENDDURREA (24), so END= takes it; list-directed too |
+| DECODE's second record | FOR$\_MORONEREC. A short DECODE reads blanks past the count, no error |
+| `$` | Nothing: no byte of an internal record is carriage control |
+| BLANK | As a unit with no OPEN: blanks are zeros (`1 2` in I3 is 102) |
+| ENCODE's and DECODE's count | A longword: negative is 0 (ENCODE fails with OUTSTAOVE, DECODE reads blanks), and 40000 and 70000 work, past a descriptor's word |
+| A list-directed field too long for any record | FOR$\_OUTSTAOVE, the file untouched |
+| One that won't fit after others | The record ends and it takes the next (MORONEREC if none) |
+| A list-directed text that won't fit | Ends the record **even if that holds nothing**, so a long value's first record is blank: 25 characters in 3 records of 10 are `          `, ` ABCDEFGHI`, ` JKLMNOPQR`, MORONEREC. A unit has no such blank record (round 1's #509). A 1-byte record is OUTSTAOVE |
+| A complex value | Goes whole to the next record if one holds it; split after its comma only if none can, the rest after a blank (` (1.500000,`, ` -2.500000)`) |
+
+**The design.** An internal record is the caller's memory, not a copy.
+Every module now reaches the record through a pointer, `CTX_RECP`
+(`@CTX_RECP(R6)[R4]`, the VAX's displacement deferred indexed mode), the context's
+own buffer for a unit and the place itself here. That is what makes a failed
+statement leave VMS's bytes, and it means no record length needs a buffer.
+`ftn_internal.mar` is the rest: `FTN$$INT_START` finds the records, `FTN$$INT_NEXT`
+and `FTN$$INT_END` end an output record, `FTN$$INT_READ` takes the next input one.
+`FTN$$FMT_WRITE`, `FTN$$FMT_READ`, and FTN_LISTOUT's `PUT_RECORD` send an internal
+statement there. A begin call splits its kind: `CTX_KIND` is a unit's form and
+direction, so FTN$IO_ITEM and FTN$IO_END need no new cases, and `CTX_INTERNAL` says
+which file it is. `FTN$$FMT_PUT` and FTN_EDIT now refuse a field before writing any
+of it. No new vector entries, so GSMATCH stays 1,8.
+
+**The compiler.** ENCODE and DECODE pass the buffer's address and, as a fourth
+argument, the count by value (`lowerer.bufferAddress`), replacing a descriptor whose
+length was a word: the probe's 40000 needs it. These entries answered NOTIMP until
+now, so no linked program has the old form.
+
+**A CPU bug this found.** `MOVZWL #65535,R4` left -1: a byte or word immediate was
+sign-extended at decode, where `Operand.Load` zero-extends every other kind of
+operand (`docs/DEVIATIONS-RESOLVED.md`). Fixed, with `TestMovzImmediate`. It also
+explains an old puzzle: FORRTL over govax wrote records past 133 bytes, which round
+1 blamed on govax's RMS. With the fix FORRTL's OUTSTAOVE comes at 133 as on VMS, and
+the fix moved no VMS oracle.
+
+**Not settled.** A list-directed internal record of 1 byte given a value of no
+characters, and what follows a split complex value on the same record, follow the
+rules above rather than a case. An assumed-size array can't be a file (sema's
+existing message).
+
+Tests: `TestFor80InternalOracle` runs `for80x.for` (gen.go: every internal file,
+ENCODE, and DECODE case of rounds 1 and 3 that FORTRAN can state, 348, each on a
+place of the case's size) and holds its IOSTAT, stored values, and file bytes to the
+runs, with no differences listed. `testdata/fortran/internal.for`, in both paging
+modes: both forms side by side, appendix A.1's examples, numeric buffers, an array,
+an element, a substring of computed length, dummies, END=, ERR=, a record of 300
+bytes, and a file used inside a unit's statement. `TestFortranIOSignals`' OUTSTAOVE
+has VMS's `unit -5  file `.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1364,3 +1436,9 @@ string, ASSIGN, the ranges) and `runformat.for`, both in both paging modes;
 - **2026-10-31, subtask 8, done.** Variable format expressions, a routine per
   FORMAT that FTNRTL calls with the program's AP, and run-time formats held to
   section 8.7 by a program of their own; "Subtask 8" above. No new vector entries.
+- **2026-10-31, subtask 9, done.** Internal files, ENCODE, and DECODE, the record
+  the caller's memory through `CTX_RECP` (`ftn_internal.mar`), held to round 3 of
+  the probe, run on VMS's FORRTL over govax, and round 1: "Subtask 9" above. The
+  author asked that READ and WRITE on a string variable work beside ENCODE and
+  DECODE; they share the path. Found and fixed a CPU bug in byte and word
+  immediates, which was also why FORRTL over govax passed 133 bytes.

@@ -24,11 +24,13 @@ import (
 //
 // The begin call's arguments are the control block (its flags: which of
 // ERR=, END=, and IOSTAT= the statement has, and whether its format is a
-// run-time one), the unit (a number, by value; an internal file's or
-// ENCODE's buffer's descriptor), and the format (a FORMAT statement's
-// block, the address an ASSIGNed variable holds, a run-time format's
-// descriptor, or a NAMELIST group's block); a list-directed statement has
-// no format argument.
+// run-time one), the unit (a number, by value; an internal file's
+// descriptor; ENCODE's or DECODE's buffer's address), and the format (a
+// FORMAT statement's block, the address an ASSIGNed variable holds, a
+// run-time format's descriptor, or a NAMELIST group's block); a
+// list-directed statement has no format argument. ENCODE and DECODE have a
+// fourth, the count of characters, by value: a longword, since VMS's take
+// counts past a descriptor's word.
 //
 // FTN$IO_END's status is 0 for success, negative at an end of file, and
 // positive (the FOR number) for an error. A statement with none of ERR=,
@@ -66,6 +68,10 @@ func (l *lowerer) io(s *sema.IO) {
 
 	if s.Form != sema.ListForm {
 		args = append(args, l.ioFormat(s))
+	}
+
+	if s.Code {
+		args = append(args, Arg{Value: l.expr(s.Count)})
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
@@ -151,13 +157,12 @@ func beginRoutine(s *sema.IO) string {
 }
 
 // ioUnit is the begin call's unit argument: a unit's number by value (a
-// default unit's from sema), or an internal file's descriptor, or
-// ENCODE's or DECODE's buffer's, a text of Count characters at the
-// buffer's address.
+// default unit's from sema), an internal file's descriptor, or ENCODE's
+// or DECODE's buffer's address.
 func (l *lowerer) ioUnit(s *sema.IO) Arg {
 	switch {
 	case s.Code:
-		return Arg{Ref: l.bufferDescriptor(s)}
+		return Arg{Value: l.bufferAddress(s.Unit)}
 	case s.Internal:
 		return Arg{Ref: l.item(s.Unit)}
 	case s.Unit == nil:
@@ -167,31 +172,21 @@ func (l *lowerer) ioUnit(s *sema.IO) Arg {
 	return Arg{Value: l.expr(s.Unit)}
 }
 
-// bufferDescriptor is a descriptor of ENCODE's or DECODE's record: text
-// whose length is the count, at the buffer's address, whatever the
-// buffer's type (appendix A.1).
-func (l *lowerer) bufferDescriptor(s *sema.IO) *Mem {
-	var at *Mem
-
-	switch b := s.Unit.(type) {
+// bufferAddress is the address of ENCODE's or DECODE's buffer, whatever
+// its type (appendix A.1).
+func (l *lowerer) bufferAddress(e sema.Expr) Expr {
+	switch b := e.(type) {
 	case *sema.ArrayRef:
-		at = l.symbolMem(b.Sym)
+		return &Addr{l.symbolMem(b.Sym)}
 	case *sema.Substring:
-		at = l.chars(b).Mem
-	default:
-		if b.Type().Kind == sema.Character {
-			at = l.chars(b).Mem
-		} else {
-			at = l.mem(b)
-		}
+		return &Addr{l.chars(b).Mem}
 	}
 
-	d := &Descriptor{DType: DTypeT, Class: ClassS}
-	c := l.descriptorCell(d)
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, T: Word}, arith(Cvt, Word, l.expr(s.Count), nil)})
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{at}})
+	if e.Type().Kind == sema.Character {
+		return &Addr{l.chars(e).Mem}
+	}
 
-	return &Mem{Cell: c, T: Long}
+	return &Addr{l.mem(e)}
 }
 
 // ioFormat is the begin call's format argument.

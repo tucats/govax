@@ -165,8 +165,8 @@ FRAME_SIZE	= 96
 OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	CMPL	R0,CTX_RECMAX(R11)
 	BLEQ	5$
-	PUSHL	R9			; no room: FTN$$FMT_PUT says so, with
-	CLRL	-(SP)			;  the columns that do fit
+	PUSHL	R9			; no room: FTN$$FMT_PUT says so
+	CLRL	-(SP)
 	PUSHL	R11
 	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
 	RET

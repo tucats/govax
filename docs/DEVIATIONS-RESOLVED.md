@@ -1921,6 +1921,20 @@ widened."
   parenthesis in an expression is VAX_ILLEXPR; the console dialect keeps
   eVAX's parentheses. `TestMACRODialectParenthesisIsIllegalExpression`.
 
+### [Phase 80] Byte and word immediates were sign-extended
+
+- **Where**: `internal/cpu/operand.go`'s immediate decoding.
+- **What**: a byte or word immediate operand's `Value` was sign-extended at
+  decode, where `Operand.Load` zero-extends every other kind of operand and the
+  handlers extend for themselves. So `MOVZWL #^XFFFF,R0` left -1, not 65535, and
+  `MOVZBL #^XFF,R0` likewise. Short literals, and longwords, weren't affected.
+  FTNRTL's first `MOVZWL #65535,R4` found it (MOVC5 then filled 65535 bytes). VMS's
+  FORRTL over govax had been passing its 133-byte output limit because of it, which
+  `docs/PHASE-80 - FORTRAN formatted IO.md`'s round 1 put down to govax's RMS.
+- **Status**: fixed in Go (2026-10-31, Phase 80 subtask 9): the raw bits, zero-extended.
+  `TestMovzImmediate`, `TestDecodeOperandPCImmediateZeroExtends`. Every oracle still
+  holds.
+
 ### [Phase 35] Quadword and octaword immediates were sign-extended
 
 - **Where**: `internal/asm/operand.go`'s `immediateValue` (Phase 28's

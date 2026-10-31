@@ -435,9 +435,11 @@ func TestDecodeOperandPCImmediate(t *testing.T) {
 	}
 }
 
-func TestDecodeOperandPCImmediateSignExtends(t *testing.T) {
+// A byte or word immediate is zero-extended as every other operand's Load
+// is: an instruction that wants the sign extends it itself.
+func TestDecodeOperandPCImmediateZeroExtends(t *testing.T) {
 	cpu, mem := fixture()
-	putBytes(t, cpu, mem, base, 0x8F, 0xFF) // one-byte immediate, value -1
+	putBytes(t, cpu, mem, base, 0x8F, 0xFF) // one-byte immediate, bits FF
 
 	pc := uint32(base)
 
@@ -446,8 +448,8 @@ func TestDecodeOperandPCImmediateSignExtends(t *testing.T) {
 		t.Fatalf("decodeOperand: %v", err)
 	}
 
-	if uint32(op.Value) != 0xFFFFFFFF {
-		t.Errorf("Value = %#x, want 0xFFFFFFFF (sign-extended -1)", uint32(op.Value))
+	if uint32(op.Value) != 0xFF {
+		t.Errorf("Value = %#x, want 0xFF", uint32(op.Value))
 	}
 }
 

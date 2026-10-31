@@ -11,7 +11,7 @@ UNIT 7           2
 UNIT -1          10
 UNIT -1           0
 READ (6)          39
-INTERNAL           2
+INTERNAL           0
 INNER
 OUTER           0END
 OUTER          40

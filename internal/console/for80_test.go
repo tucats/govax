@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/rms"
 )
 
 // The Phase 80 probe (docs/PHASE-80 - FORTRAN formatted IO.md, subtask 2):
@@ -20,7 +22,7 @@ var for80Programs = []string{"FOR80", "FOR80E", "FOR80T"}
 func copyFor80(t *testing.T, dispatch func(string) string) {
 	t.Helper()
 
-	for _, name := range []string{"for80.mar", "for80d.mar", "for80e.mar", "for80t.mar", "for80r.com", "for80b.mar"} {
+	for _, name := range []string{"for80.mar", "for80d.mar", "for80e.mar", "for80t.mar", "for80r.com", "for80b.mar", "for80c.mar"} {
 		src, err := filepath.Abs(filepath.Join(for80Dir, name))
 		if err != nil {
 			t.Fatal(err)
@@ -41,7 +43,7 @@ func TestFor80Assembles(t *testing.T) {
 	dispatch("SET DEFAULT DUA1:[000000]")
 	copyFor80(t, dispatch)
 
-	for _, name := range append([]string{"FOR80D", "FOR80B"}, for80Programs...) {
+	for _, name := range append([]string{"FOR80D", "FOR80B", "FOR80C"}, for80Programs...) {
 		if out := dispatch("MACRO/NOLIST " + name); out != "" {
 			t.Errorf("MACRO %s: %s", name, out)
 		}
@@ -195,5 +197,91 @@ func TestFor80Messages(t *testing.T) {
 
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("run 3:\ngovax:\n%s\nVMS:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestFor80Round3 runs round 3 of the probe, what rounds 1 and 2 left open of
+// internal files, ENCODE, and DECODE, on VMS's FORRTL.EXE over govax, and holds
+// it to vax/for80c-forrtl.txt, that run's output, which TestFor80InternalOracle
+// holds FTNRTL to. (FORRTL gave VMS's output over govax in every case of round
+// 1's editing sections.) With FOR80C_WRITE set it rewrites the file.
+func TestFor80Round3(t *testing.T) {
+	disk, file := findFORRTL(t)
+	c, dispatch := wsDispatcher(t)
+	dsk := filepath.Join(t.TempDir(), "for80.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD51 FOR80`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch(`MOUNT/NOWRITE DUA5 "` + disk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+	dispatch("DEFINE/NOLOG FORRTL DUA5:" + file)
+
+	for _, name := range []string{"for80c.mar", "for80d.mar"} {
+		path, err := filepath.Abs(filepath.Join(for80Dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dispatch(`COPY "` + path + `"/HOST ` + strings.ToUpper(name))
+	}
+
+	opt := filepath.Join(t.TempDir(), "for80.opt")
+	if err := os.WriteFile(opt, []byte("FORRTL/SHAREABLE\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	dispatch(`COPY "` + opt + `"/HOST FOR80.OPT`)
+
+	if out := dispatch("MACRO/NOLIST FOR80C"); out != "" {
+		t.Fatalf("MACRO FOR80C: %s", out)
+	}
+
+	if out := dispatch("LINK/NOMAP FOR80C,FOR80/OPTIONS"); out != "" {
+		t.Fatalf("LINK FOR80C: %s", out)
+	}
+
+	dispatch("MACRO/NOLIST FOR80D")
+	dispatch("LINK/NOMAP FOR80D")
+	dispatch("DEFINE/NOLOG FOR006 FOR80.DAT")
+
+	if out := dispatch("RUN FOR80C"); out != "" {
+		t.Errorf("RUN FOR80C said: %s", out)
+	}
+
+	dispatch("DEASSIGN FOR006")
+	dispatch("DEFINE/USER_MODE SYS$OUTPUT FOR80C.TXT")
+
+	if out := dispatch("RUN FOR80D"); out != "" {
+		t.Errorf("RUN FOR80D said: %s", out)
+	}
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]FOR80C.TXT"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var run strings.Builder
+
+	for _, record := range records {
+		run.Write(record)
+		run.WriteByte('\n')
+	}
+
+	got := run.String()
+
+	path := filepath.Join(for80Dir, "vax", "for80c-forrtl.txt")
+	if os.Getenv("FOR80C_WRITE") != "" {
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != string(want) {
+		t.Errorf("FORRTL's run differs from %s:\n%s", path, got)
 	}
 }

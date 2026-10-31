@@ -111,8 +111,14 @@ CTX_STATUS	= 16			; long: the first error's condition, or 0
 CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
 CTX_RECLEN	= 24			; long: the bytes in the record so far
 CTX_RECORD	= 28			; the record being built
+RECORD_SIZE	= 256
+CTX_RECMAX	= CTX_RECORD+RECORD_SIZE+4 ; long: the most bytes a record holds
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
+					;  own buffer, or an internal file's place)
+CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
 
-FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
+FOR$_ERRDURWRI	= ^X00188134		; FORRTL's conditions: a write failed,
+FOR$_OUTSTAOVE	= ^X00188214		;  a value too long for a record
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -125,7 +131,10 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 	.ENTRY	FTN$$LIST_START,^M<>
 	MOVL	4(AP),R0
 	CLRL	CTX_RECLEN(R0)
-	RET
+	TSTB	CTX_INTERNAL(R0)
+	BNEQ	10$			; an internal file's limit is its record's
+	MOVL	#RECORD_MAX,CTX_RECMAX(R0)
+10$:	RET
 
 ;
 ; FTN$$LIST_ITEM(context, desc)
@@ -149,6 +158,8 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 	PUSHL	R3			;  its address,
 	MOVZBL	DSC$B_DTYPE(R5),-(SP)	;  and its type
 	CALLS	#4,PUT_VALUE
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$			; it failed: no more
 	ADDL2	R2,R3			; the next element
 	SOBGTR	R4,10$
 90$:	RET
@@ -159,8 +170,13 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 ; Ends a list-directed output statement: writes the last record.
 ;
 	.ENTRY	FTN$$LIST_END,^M<>
-	PUSHL	4(AP)
+	MOVL	4(AP),R0
+	PUSHL	R0
+	TSTB	CTX_INTERNAL(R0)
+	BNEQ	10$
 	CALLS	#1,PUT_RECORD
+	RET
+10$:	CALLS	#1,FTN$$INT_END		; FTN_INTERNAL: the last record filled
 	RET
 
 ;
@@ -173,8 +189,13 @@ PUT_RECORD:
 	MOVL	4(AP),R2
 	TSTL	CTX_STATUS(R2)
 	BNEQ	10$
-	PUSHL	CTX_RECLEN(R2)
-	PUSHAB	CTX_RECORD(R2)
+	TSTB	CTX_INTERNAL(R2)
+	BEQL	5$
+	PUSHL	R2			; an internal file's next record
+	CALLS	#1,FTN$$INT_NEXT	; FTN_INTERNAL
+	RET
+5$:	PUSHL	CTX_RECLEN(R2)
+	PUSHL	CTX_RECP(R2)
 	PUSHL	CTX_STREAM(R2)
 	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
 	BLBS	R0,10$
@@ -185,54 +206,88 @@ PUT_RECORD:
 ;
 ; PUT_FIELD(context, address, length): puts one value's field, length
 ; bytes at address, at the record's end, after writing the record first if
-; the field doesn't fit there (and the record holds a value already).
+; the field doesn't fit there (and the record holds a value already). A
+; field too long for any record of an internal file is FOR$_OUTSTAOVE, the
+; file left as it is; a unit's goes in a record of its own.
 ;
 PUT_FIELD:
 	.WORD	^M<R2,R3,R4,R5,R6>
 	MOVL	4(AP),R6		; the context
-	ADDL3	CTX_RECLEN(R6),12(AP),R0 ; the record's length with the field
-	CMPL	R0,#RECORD_MAX
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$
+	TSTB	CTX_INTERNAL(R6)
+	BEQL	5$
+	CMPL	12(AP),CTX_RECMAX(R6)
+	BLEQ	5$
+	MOVL	#FOR$_OUTSTAOVE,CTX_STATUS(R6)
+	RET
+5$:	ADDL3	CTX_RECLEN(R6),12(AP),R0 ; the record's length with the field
+	CMPL	R0,CTX_RECMAX(R6)
 	BLEQ	10$			; it fits
 	CMPL	CTX_RECLEN(R6),#1
 	BLEQ	10$			; a record of its own, then
 	PUSHL	R6
 	CALLS	#1,PUT_RECORD
-10$:	MOVAB	CTX_RECORD(R6),R3
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$			; there is no next record
+10$:	MOVL	CTX_RECP(R6),R3
 	ADDL2	CTX_RECLEN(R6),R3	; where the field goes
 	ADDL2	12(AP),CTX_RECLEN(R6)
 	MOVC3	12(AP),@8(AP),(R3)	; MOVC3 changes R0 to R5
-	RET
+90$:	RET
 
 ;
 ; PUT_TEXT(context, address, length): puts a character value at the
 ; record's end. One that doesn't fit begins a new record, and one longer
 ; than a record fills as many as it needs, the last left for what follows.
 ; A record it starts gets its carriage control first, a blank, even for a
-; value of no characters.
+; value of no characters. On an internal file a value that doesn't fit ends
+; the record it would start in even if that holds nothing, so a long value's
+; first record is blank (VMS's FORRTL, testdata/for80's round 3), and a
+; record of 1 byte, with no room for a character, is FOR$_OUTSTAOVE.
 ;
 PUT_TEXT:
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
 	MOVL	4(AP),R8		; the context
 	MOVL	8(AP),R6		; the text not yet put
 	MOVL	12(AP),R7		; and its length
-	ADDL3	CTX_RECLEN(R8),R7,R0
-	CMPL	R0,#RECORD_MAX
+	TSTB	CTX_INTERNAL(R8)
+	BEQL	4$
+	TSTL	CTX_RECMAX(R8)		; an internal file's: is there room?
+	BLEQ	1$
+	TSTL	R7
+	BEQL	10$
+	CMPL	CTX_RECMAX(R8),#1
+	BGTR	2$
+1$:	MOVL	#FOR$_OUTSTAOVE,CTX_STATUS(R8)
+	RET
+2$:	MOVL	CTX_RECLEN(R8),R0	; the record's length with its control
+	BNEQ	3$			;  byte, even if it is yet to come
+	INCL	R0
+3$:	ADDL2	R7,R0
+	CMPL	R0,CTX_RECMAX(R8)
+	BLEQ	10$			; it fits
+	BRB	6$			; it doesn't, whatever the record holds
+4$:	ADDL3	CTX_RECLEN(R8),R7,R0
+	CMPL	R0,CTX_RECMAX(R8)
 	BLEQ	10$			; it fits
 	CMPL	CTX_RECLEN(R8),#1
 	BLEQ	10$			; nothing in the record yet
-	PUSHL	R8
+6$:	PUSHL	R8
 	CALLS	#1,PUT_RECORD
+	TSTL	CTX_STATUS(R8)
+	BNEQ	90$			; there is no next record
 10$:	TSTL	CTX_RECLEN(R8)
 	BNEQ	15$
-	MOVB	#^A/ /,CTX_RECORD(R8)	; a new record's carriage control
+	MOVB	#^A/ /,@CTX_RECP(R8)	; a new record's carriage control
 	MOVL	#1,CTX_RECLEN(R8)
 15$:	TSTL	R7			; any text left?
 	BLEQ	90$
-	SUBL3	CTX_RECLEN(R8),#RECORD_MAX,R2 ; the record's room
+	SUBL3	CTX_RECLEN(R8),CTX_RECMAX(R8),R2 ; the record's room
 	CMPL	R7,R2
 	BGEQ	20$
 	MOVL	R7,R2			; the rest, if less
-20$:	MOVAB	CTX_RECORD(R8),R3
+20$:	MOVL	CTX_RECP(R8),R3
 	ADDL2	CTX_RECLEN(R8),R3
 	ADDL2	R2,CTX_RECLEN(R8)
 	SUBL2	R2,R7
@@ -243,7 +298,8 @@ PUT_TEXT:
 	BLEQ	90$			; that was the end of it
 	PUSHL	R8
 	CALLS	#1,PUT_RECORD		; the record is full
-	BRB	10$
+	TSTL	CTX_STATUS(R8)
+	BEQL	10$
 90$:	RET
 
 ;
@@ -428,7 +484,31 @@ COMPLEX:
 	MOVL	CTEXT_LEN(FP),R0
 	MOVB	#^A/)/,CTEXT(FP)[R0]
 	INCL	CTEXT_LEN(FP)
-	PUSHL	CTEXT_LEN(FP)
+	MOVL	16(AP),R0		; the context
+	TSTB	CTX_INTERNAL(R0)
+	BEQL	80$
+	CMPL	CTEXT_LEN(FP),CTX_RECMAX(R0)
+	BLEQ	80$
+	;
+	; Too long for any record of an internal file: split after its comma,
+	; the rest with the blank a record starts with where the comma was.
+	;
+	LOCC	#^A/,/,CTEXT_LEN(FP),CTEXT(FP)
+	MOVL	R1,R7			; the comma
+	SUBL3	R0,CTEXT_LEN(FP),R3	; the bytes before it
+	INCL	R3
+	PUSHL	R3			; them and the comma
+	PUSHAB	CTEXT(FP)
+	PUSHL	16(AP)
+	CALLS	#3,PUT_FIELD
+	MOVB	#^A/ /,(R7)
+	DECL	R3
+	SUBL3	R3,CTEXT_LEN(FP),-(SP)	; the rest, from the comma's place
+	PUSHL	R7
+	PUSHL	16(AP)
+	CALLS	#3,PUT_FIELD
+	RET
+80$:	PUSHL	CTEXT_LEN(FP)
 	PUSHAB	CTEXT(FP)
 	PUSHL	16(AP)			; the context
 	CALLS	#3,PUT_FIELD

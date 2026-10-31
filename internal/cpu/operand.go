@@ -333,7 +333,10 @@ func decodeImmediate(cpu *registers.CPU, mem *vm.Memory, pc *uint32, size int, d
 			return err
 		}
 
-		raw = uint64(uint32(signExtend32(v, size)))
+		// Zero-extended, as Load returns every other operand: an
+		// instruction that wants the sign (CVTWL) extends it itself, and
+		// MOVZWL #^XFFFF,R0 must leave 65535.
+		raw = uint64(v)
 	}
 
 	*pc += uint32(size)

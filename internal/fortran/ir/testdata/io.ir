@@ -174,16 +174,12 @@ B9:
   call FTN$WRITE_SN(ref $IO1, val -1, ref $NG)
   call FTN$IO_END()
   ; line 33
-  assign $D6 = 20
-  assign $D6+4 = addr(LINE)
-  call FTN$ENCODE(ref $IO1, ref $D6, ref $F10)
+  call FTN$ENCODE(ref $IO1, val addr(LINE), ref $F10, val 20)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_ITEM(ref $D2)
   call FTN$IO_END()
   ; line 34
-  assign $D6 = 12
-  assign $D6+4 = addr(K)
-  call FTN$DECODE(ref $IO1, ref $D6, ref $F10)
+  call FTN$DECODE(ref $IO1, val addr(K), ref $F10, val 12)
   call FTN$IO_ITEM(ref $D1)
   call FTN$IO_END()
   ; line 35

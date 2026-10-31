@@ -1670,6 +1670,35 @@ rounds at a different digit. Input is shorter still: the field goes to
 `OTS$CVT_T_x` with d, the scale factor, and BN's flag, and the routine's
 rules, an exponent overriding the scale factor among them, are FORTRAN's.
 
+### Internal files: the record is the variable
+
+`WRITE (STR, 100) X` looks like the same statement as `WRITE (6, 100) X`, and to the
+format interpreter and every editing routine it is. The difference is where a record
+goes, so that is the only thing that changes. Each routine reaches the record through
+a pointer in the statement's context:
+
+```
+	MOVB	(R2),@CTX_RECP(R6)[R4]	; byte R4 of the record
+```
+
+`@CTX_RECP(R6)[R4]` reads as: the longword at `CTX_RECP(R6)` is an address, and R4
+indexes from it. For a unit that address is the context's own 256-byte buffer, which
+goes to RMS when the record ends. For an internal file it is the variable. Nothing
+is copied, so a record can be any length, and a statement that fails leaves in the
+variable exactly what it had written, which is also what VMS's library does.
+
+What's left is what a record's end means (`ftn_internal.mar`). Output fills the rest
+with blanks and moves on by the record's length; an array is simply those records one
+after another in memory. Running out differs by form, by VMS's library: a READ gets
+an end of file, so END= works, while a WRITE, ENCODE, and DECODE get an error, and
+ENCODE's isn't filled first. Those aren't rules you could derive; they are what a probe
+of the real library shows, and `for80x.for` holds each to it.
+
+ENCODE and DECODE are the same machinery with a count: one record of that many
+characters, at the address of a variable of any type. Their fourth argument is the
+count as a longword rather than a descriptor's length, because the real library takes
+counts a descriptor's word can't hold.
+
 ## 14. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
