@@ -386,7 +386,7 @@ never had.
   Phase 79 (in progress) is control flow and subprograms; subtask 1
   (2026-10-31) is the survey, its doc's Part A (what earlier phases
   already compile, where each NOTIMPL is, ten decisions and five
-  questions), awaiting the author's review.
+  questions), accepted by the author the same day.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

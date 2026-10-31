@@ -1,7 +1,8 @@
 # Phase 79 — FORTRAN control flow and subprograms
 
 **Status:** in progress: subtask 1 (the survey, Part A) done
-2026-10-31, its decisions and questions awaiting the author's review.
+2026-10-31, its decisions and recommendations accepted by the author the
+same day.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -420,7 +421,7 @@ return's dispatch for typed entries.
 
 ## Decisions
 
-Each is the survey's proposal, for the author's review.
+Each is the survey's, accepted by the author (2026-10-31).
 
 1. **Assigned GO TO is `JMP @v`** with or without a list, which only
    names the targets for the checks and the IR (5.6.3); the design note
@@ -485,6 +486,23 @@ Each is the survey's proposal, for the author's review.
    length, which is used where it is; e is then evaluated and converted
    to the function's type as an assignment would (FORTRAN-77's rule;
    the 1988 manual doesn't say). **Recommended** (unconfirmed).
+
+## The author's answers (2026-10-31)
+
+The author accepted Part A's decisions and each question's
+recommendation:
+
+1. **ASSIGN stores the label's address** (`MOVAB s,v`), and GO TO v is
+   `JMP @v`; an INTEGER\*2 variable is an error.
+2. **Alternate return specifiers are left out of the argument list;**
+   ARGCOUNT still counts them.
+3. **PAUSE is FTN$PAUSE:** the display to SYS$OUTPUT, then LIB$PAUSE.
+4. **A character constant for a numeric dummy** goes by reference when
+   the called unit is in the same file and its dummy is numeric, by
+   descriptor otherwise; a difference listed in MANUAL.md.
+5. **Statement function arguments** are assigned to temporaries of the
+   dummies' types (but for constants and variables of the same type and
+   length), and the result converted to the function's type.
 
 ## Subtasks (provisional)
 
