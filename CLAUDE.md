@@ -433,7 +433,9 @@ never had.
   FORTRAN-INTERNALS.md's section 12 on control flow and subprograms.
   Phase 80 (in progress) is formatted, list-directed, and namelist I/O; subtask 1
   (2026-10-31) is the survey, its doc's Part A, which runs VMS's FORRTL.EXE
-  as a black box (`FOR$WRITE_SO` takes a format's text), awaiting the author's review.
+  as a black box (`FOR$WRITE_SO` takes a format's text), accepted by the author the
+  same day; subtask 2 (2026-10-31) is the probe, `testdata/for80`, written and
+  waiting for its VMS run, which also found `FOR$WRITE_SN`'s namelist block.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -674,6 +676,13 @@ never had.
   `exchange.cmd`, and `copyout.cmd` (DUA2 on govax, since a startup procedure may
   mount DUA1). `TestMTH77Oracle` holds govax to VMS V7.1's `vax/mth77-vax.txt`, results
   by value to within a few last bits, but for `expectedMTH77Differences`.
+- `testdata/for80/` — Phase 80's probe of FORRTL's formatted I/O (README.md):
+  `gen.go` writes `for80.mar` (859 cases calling `FOR$` statement routines, a
+  format as text through `FOR$WRITE_SO`; FOR's messages by `$GETMSG`),
+  `for80d.mar` (the output file's records between bars), `for80e.mar`
+  (conditions with no handler), `for80t.mar` (a real terminal, by hand), and the
+  procedures. VMS's run, `vax/for80-vax.txt`, is FTNRTL's requirement.
+  `TestFor80RunsOnFORRTL` needs FORRTL.EXE on a local volume, or skips.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.

@@ -1,0 +1,71 @@
+	.TITLE	FOR80T - carriage control at a terminal
+; Written by testdata/for80/gen.go. Run by hand, with a log of the console: what
+; matters is where the terminal's lines fall, which only a real terminal shows.
+	.PSECT	D,NOEXE,WRT,LONG
+ANS:	.BLKB	20
+AD:	.WORD	20
+	.BYTE	14,1
+	.ADDRESS ANS
+F1:	.ASCIZ	~(' blank control')~
+F2:	.ASCIZ	~('+plus: over the last line')~
+F3:	.ASCIZ	~('0zero: a blank line before')~
+F4:	.ASCIZ	~('1one: a form feed before')~
+F5:	.ASCIZ	~('$dollar: no return after')~
+F6:	.ASCIZ	~(' after dollar')~
+F7:	.ASCIZ	~('Xother: as blank')~
+F8:	.ASCIZ	~(' with $',$)~
+F9:	.ASCIZ	~(' after $')~
+F10:	.ASCIZ	~('+plus with $',$)~
+F11:	.ASCIZ	~('+ after plus with $')~
+F12:	.ASCIZ	~('0zero with $',$)~
+F13:	.ASCIZ	~('1one with $',$)~
+F14:	.ASCIZ	~(' Type ABC: ',$)~
+F15:	.ASCIZ	~(A)~
+F16:	.ASCIZ	~(' You typed |',A,'|')~
+F17:	.ASCIZ	~(/,' a blank record first')~
+F18:	.ASCIZ	~(' two records',/,' here')~
+F19:	.ASCIZ	~()~
+	.PSECT	C,EXE,NOWRT
+	.MACRO	PR	FM
+	PUSHAB	FM
+	PUSHL	#6
+	CALLS	#2,G^FOR$WRITE_SO
+	CALLS	#0,G^FOR$IO_END
+	.ENDM	PR
+	.ENTRY	FOR80T,^M<>
+	PR	F1
+	PR	F2
+	PR	F3
+	PR	F4
+	PR	F1
+	PR	F5
+	PR	F6
+	PR	F7
+	PR	F8
+	PR	F9
+	PR	F10
+	PR	F11
+	PR	F12
+	PR	F1
+	PR	F13
+	PR	F1
+	PR	F17
+	PR	F18
+	PR	F19
+	PR	F1
+	PR	F14
+	PUSHAB	F15
+	PUSHL	#5
+	CALLS	#2,G^FOR$READ_SO
+	PUSHAB	AD
+	CALLS	#1,G^FOR$IO_T_DS
+	CALLS	#0,G^FOR$IO_END
+	PUSHAB	F16
+	PUSHL	#6
+	CALLS	#2,G^FOR$WRITE_SO
+	PUSHAB	AD
+	CALLS	#1,G^FOR$IO_T_DS
+	CALLS	#0,G^FOR$IO_END
+	MOVL	#1,R0
+	RET
+	.END	FOR80T

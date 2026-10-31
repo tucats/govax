@@ -1,0 +1,54 @@
+	.TITLE	FOR80D - prints FOR80.DAT's records between bars
+; Written by testdata/for80/gen.go. A record's bytes as stored: a first byte
+; that carriage control would use shows here, and trailing blanks. A byte that
+; doesn't print shows as a period, and a record past 300 bytes shows its first
+; 300 and its length.
+	$RMSDEF
+	.PSECT	D,NOEXE,WRT,LONG
+FAB:	$FAB	FNM=<FOR80.DAT>,FAC=<GET>
+RAB:	$RAB	FAB=FAB,UBF=REC,USZ=32767
+REC:	.BLKB	32767
+BF:	.BLKB	400
+BD:	.WORD	400
+	.BYTE	14,1
+	.ADDRESS BF
+LD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BF
+CS:	.ASCID	"|!AF|"
+CL:	.ASCID	"|!AF|..!UL"
+CE:	.ASCID	"$GET error !XL"
+ERRS:	.LONG	20
+	.PSECT	C,EXE,NOWRT
+	.ENTRY	FOR80D,^M<R2>
+	$OPEN	FAB=FAB
+	BLBS	R0,5$
+	BRW	90$
+5$:	$CONNECT RAB=RAB
+	BLBS	R0,10$
+	BRW	90$
+10$:	$GET	RAB=RAB
+	BLBS	R0,15$
+	BRW	80$
+15$:	MOVZWL	RAB+RAB$W_RSZ,R2
+	CMPL	R2,#300
+	BLEQ	20$
+	$FAO_S	CTRSTR=CL,OUTLEN=LD,OUTBUF=BD,P1=#300,P2=#REC,P3=R2
+	BRB	30$
+20$:	$FAO_S	CTRSTR=CS,OUTLEN=LD,OUTBUF=BD,P1=R2,P2=#REC
+30$:	PUSHAB	LD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	BRW	10$
+80$:	CMPL	R0,#RMS$_EOF
+	BEQL	85$
+	MOVL	R0,R2
+	$FAO_S	CTRSTR=CE,OUTLEN=LD,OUTBUF=BD,P1=R2
+	PUSHAB	LD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	SOBGTR	ERRS,70$
+	BRB	85$
+70$:	BRW	10$
+85$:	$CLOSE	FAB=FAB
+	MOVL	#1,R0
+90$:	RET
+	.END	FOR80D

@@ -1,7 +1,8 @@
 # Phase 80 — FORTRAN formatted and list-directed I/O
 
 **Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
-awaiting the author's review. Needs Phase 79 (control flow, for
+accepted by the author the same day; subtask 2 (the probe) written and waiting
+for its VMS run. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -103,8 +104,8 @@ from the local system disk (2026-10-31, scratch programs not kept):
 | `FOR$WRITE_IO`, `FOR$ENCODE_MO` | as READ_IO; count by value, format's address, buffer's address | reached the format: the one trial's format was 21 bytes for a 20-byte record, and each gave OUTSTAOVE, so no output was seen yet |
 | `FOR$IO_L_V`, `_F_R`, `_D_R`, `_FC_R`, `_DC_R`, `_LU_V`, `_LU_R`, `_WU_R`, `_T_DS`, `_L_R` | a value, a reference, or a descriptor | work |
 | `FOR$IO_END` | none | works |
-| `FOR$READ_IL`/`WRITE_IL`, `FOR$DECODE_MO`, `FOR$ERRSNS` | not tried | expected |
-| `FOR$READ_SN`/`WRITE_SN` | a namelist block whose layout isn't known | not tried (question 3) |
+| `FOR$READ_IL`/`WRITE_IL`, `FOR$DECODE_MO`, `FOR$ERRSNS` | internal record's descriptor; as ENCODE; five addresses | work (`testdata/for80`) |
+| `FOR$READ_SN`/`WRITE_SN` | unit by value; a namelist block, found by trial (the author's answers, below) | WRITE works; READ needs `LIB$TPARSE`, which govax lacks |
 
 The `_SO` entries are the key: an "object-time" format is plain text, so a
 MACRO program can put any format to FORRTL, without knowing how a compiler
@@ -118,8 +119,8 @@ are FORRTL's logic over govax's support, and are marked **[trial]** until a
 VMS run confirms them (subtask 2). One thing visibly went wrong under govax:
 list-directed integers came out as a blank field with OUTCONERR, though
 `OTS$CVT_L_TI` is called with the documented arguments, and `(1X,I)` of the
-same value works. Cause not found; it may be a defect in govax's LIBRTL, and
-a VMS run will tell (Part A, "Open items").
+same value works. (Since explained, and fixed: "List-directed integers
+explained", after the questions.)
 
 ## Where the compiler stands
 
@@ -224,7 +225,8 @@ gives 4, 6.3, (3.4,4.2), (3.0,2.0), .TRUE., .FALSE., J unchanged, K=14,
 S=14.6, T=14.6D0, C=`ABC,DEF/GHI'JK`, and A and B unchanged. (Under govax,
 FORRTL stopped this one with INPCONERR, 64, at the first complex item, after
 reading I and R. Whether FORRTL or the trial's argument to `FOR$IO_FC_R` is
-at fault is the probe's to say.)
+at fault is the probe's to say. Since the descriptor fix below it gives the
+manual's values over govax.)
 
 **List-directed output (7.3.1.2):** Table 7-1, Phase 78's. "Each output
 record begins with a space", one or more complete records per statement, a
@@ -432,7 +434,7 @@ alone, then the long value's records).
 
 **Open items, each a probe case:**
 
-- list-directed integers under govax (above): blank fields, OUTCONERR;
+- ~~list-directed integers under govax~~: govax's defect, fixed (below);
 - what a list-directed record's limit is at a non-terminal, and the formatted
   output limit (OUTSTAOVE at a record of more than the unit's size);
 - exponents past 99 (E+nnn), needing G or H values, which F and D can't reach;
@@ -551,6 +553,8 @@ Proposed, for the author's review.
 
 ## Questions for the author
 
+The author's answers follow the questions.
+
 1. **The VMS run.** The trials ran FORRTL on *govax*, and one result is
    visibly affected by govax's LIBRTL. I'd build `testdata/for80`'s exchange
    volume and you'd run it on the simh VAX, as with earlier probes. It would be
@@ -578,6 +582,54 @@ Proposed, for the author's review.
    them, in the subtask that reworks list-directed output,** once VMS's run
    confirms it, since the trial could be govax-affected.
 
+**The author's answers (2026-10-31):**
+
+1. They will run the probe on the simh VAX: subtask 2, as recommended.
+2. Reusing FORRTL's message texts is fine: **(a)**, VMS's texts and FAO counts
+   go in `vmsdef`, which revises Decision 15's "our own wording".
+3. Use the probe to find `FOR$WRITE_SN`'s block: **(a)**. Found the same day,
+   before the VMS run; see below.
+4. "As close to FORRTL as practical": FTNRTL's list-directed output follows
+   FORRTL, with differences 1 to 3 applied once VMS's run confirms them. This
+   is now the phase's general rule, wider than list-directed output.
+
+**The namelist block, found by calling it.** A guard block of distinct bad
+addresses shows which longword `FOR$WRITE_SN` follows: its access violation
+names the address. No disassembly was involved. The second argument is:
+
+```
+        .ADDRESS  group's name, .ASCIC
+        .LONG     n, the number of entries
+        n times:
+        .ADDRESS  entity's name, .ASCIC
+        .ADDRESS  entity's descriptor: class S, or class A for an array
+```
+
+So a compiled namelist block is exactly this, and FTNRTL's can be too. Output
+on govax for L, F, T, and an array, [trial] until VMS's run:
+
+```
+ $GRP
+ VAL     =          42,
+ R       =   2.500000    ,
+ T       = 'HELLO',
+ A       = 3*1
+ $END
+```
+
+The name is padded to 8 columns, repeats are `r*value`, and the last entity
+has no comma. `FOR$READ_SN` takes the same block; under govax it stops at a
+`GOVAX-E-NOTIMPL` stub, so input waits for VMS's run.
+
+**List-directed integers explained.** It was a defect in govax's LIBRTL, not in
+FORRTL. For a list-directed value FORRTL passes `OTS$CVT_L_TI` a descriptor with
+only its length and pointer set, the type and class being whatever the stack
+held, and govax refused the class with `OTS$_INVSTRDES`, which FORRTL reports as
+OUTCONERR. Phase 72 had already found this for floating input
+(`readAnyString`); `otscvt.go`'s `readOTSOutput` is the same rule for output.
+The complex-input failure above was the same defect, on the input side
+(`textToInteger`): the manual's READ now gives the manual's values.
+
 
 ## Subtasks (provisional)
 
@@ -586,7 +638,8 @@ Proposed, for the author's review.
    cases; FORRTL's trials. Done, Part A.
 2. **The probe** (`testdata/for80`, added by the survey): FORRTL on VMS,
    every case in Part A's table and its open items, and the FOR message
-   texts; VMS's run, then a second round if the first calls for one.
+   texts; VMS's run, then a second round if the first calls for one. Written;
+   waiting for VMS's run.
 3. **FORMAT's compile-time check** and control block: `internal/fortran/format`,
    every statement form through sema and the IR, ASSIGN of a FORMAT label and
    PRINT v, implied-DO; FTNRTL's begin and end calls, statement stack, and
@@ -624,3 +677,18 @@ Proposed, for the author's review.
   mounts as DUA1 (TR.MAR, TR.OPT, TR.OBJ, TR.EXE in `[000000]`). They were
   deleted the same hour, and later trials used DUA2 on a scratch volume, the
   lesson `testdata/mth77` already records: a probe's script uses DUA2.
+- **2026-10-31, subtask 2, the probe written.** The author accepted the survey
+  (their answers follow Part A's questions). `testdata/for80/gen.go` writes
+  `for80.mar`, 859 cases by subject and FOR's message texts by `$GETMSG`;
+  `for80d.mar`, which prints the output file's records between bars so that first
+  bytes and trailing blanks show; `for80e.mar`, ten conditions with no handler;
+  `for80t.mar`, carriage control at a real terminal; and the procedures. Writing
+  it found two things, recorded above: the namelist block, by a guard block's
+  access violations, and the defect behind list-directed integers (fixed,
+  `readOTSOutput`, with `TestOTSIntegerToText` and `TestOTSTextToIntegerAnyClass`).
+  Over govax's LIBRTL the program runs to its end (`TestFor80RunsOnFORRTL`), but
+  `LIB$TPARSE` is NOTIMPL, stopping FORRTL's namelist input, which FTNRTL doesn't
+  need; `$GETMSG` has no FOR texts; and a `(1X,I32767)` record of 32,768 bytes is
+  accepted, where VMS's limit should show. The table is plain data for Decision 2's
+  `for80.for`, not written yet: nothing compiles FORMAT before subtask 3. Decision 2's
+  oracle follows once VMS's output is here. No output in `vax/` yet.

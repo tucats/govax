@@ -82,11 +82,44 @@ func TestOTSIntegerToText(t *testing.T) {
 		t.Errorf("an octaword: %#x %q", sts, otsText(t, env, 32))
 	}
 
+	// A descriptor with only its length and pointer set, as FORRTL passes
+	// for a list-directed value: the type and class are whatever was there.
+	putDescriptor(t, env, otsDescAddr, otsTextAddr, string(make([]byte, 6)))
+	putLongword(t, env, otsDescAddr, 0x27FC0006)
+	putLongword(t, env, otsValueAddr, 42)
+
+	if sts := call(t, env, "OTS$CVT_L_TI", otsValueAddr, otsDescAddr); sts != ssNormal || otsText(t, env, 6) != "    42" {
+		t.Errorf("L_TI into an unknown class: %#x %q", sts, otsText(t, env, 6))
+	}
+
+	if sts := call(t, env, "OTS$CVT_L_TL", otsValueAddr, otsDescAddr); sts != ssNormal || otsText(t, env, 6) != "     F" {
+		t.Errorf("L_TL into an unknown class: %#x %q", sts, otsText(t, env, 6))
+	}
+
 	// No room for L_TL's letter.
 	putDescriptor(t, env, otsDescAddr, otsTextAddr, "")
 
 	if sts := call(t, env, "OTS$CVT_L_TL", otsValueAddr, otsDescAddr); sts != otsOutConErr {
 		t.Errorf("L_TL into an empty string = %#x, want OTS$_OUTCONERR", sts)
+	}
+}
+
+// TestOTSTextToIntegerAnyClass: FORRTL's input descriptors, like its output
+// ones, may have only their length and pointer set.
+func TestOTSTextToIntegerAnyClass(t *testing.T) {
+	env := fixture(t)
+
+	putDescriptor(t, env, otsDescAddr, otsTextAddr, "  42")
+	putLongword(t, env, otsDescAddr, 0x27FC0004)
+
+	sts := call(t, env, "OTS$CVT_TI_L", otsDescAddr, otsValueAddr)
+	got, err := env.Memory().LoadLongword(env.CPU(), otsValueAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if sts != ssNormal || got != 42 {
+		t.Errorf("TI_L from an unknown class: %#x %d", sts, got)
 	}
 }
 

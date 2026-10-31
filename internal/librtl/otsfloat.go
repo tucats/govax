@@ -112,7 +112,7 @@ func cnvout(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32,
 		return memoryFault(env, err)
 	}
 
-	d, err := readDescriptor(env, arg(argv, 1))
+	d, err := readOTSOutput(env, arg(argv, 1))
 	if err != nil {
 		return otsStringFailure(env, err)
 	}

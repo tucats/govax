@@ -1,0 +1,3 @@
+# The objects and images a run leaves are not kept; vax/ holds VMS's output.
+*.obj
+*.exe

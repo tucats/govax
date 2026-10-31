@@ -128,7 +128,7 @@ func otsCvtLTL(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	d, err := readDescriptor(env, arg(argv, 1))
+	d, err := readOTSOutput(env, arg(argv, 1))
 	if err != nil {
 		return otsStringFailure(env, err)
 	}
@@ -263,9 +263,12 @@ func reverse(b []byte) []byte {
 // storeRightJustified writes text at the right of the fixed-length
 // string the descriptor at addr describes, blanks before it, or fills
 // the string with asterisks and returns OTS$_OUTCONERR when text is
-// longer.
+// longer. A class readDescriptor doesn't know is a fixed string of its
+// length and pointer alone, as readAnyString reads one: VMS's FORRTL
+// sets only those two fields of the descriptors it passes for a
+// list-directed value, leaving the rest as the stack had it.
 func storeRightJustified(env *corevms.Environment, addr uint32, text string) (uint32, error) {
-	d, err := readDescriptor(env, addr)
+	d, err := readOTSOutput(env, addr)
 	if err != nil {
 		return otsStringFailure(env, err)
 	}
@@ -277,11 +280,45 @@ func storeRightJustified(env *corevms.Environment, addr uint32, text string) (ui
 		text, sts = strings.Repeat("*", width), otsOutConErr
 	}
 
-	if _, _, err := writeString(env, addr, strings.Repeat(" ", width-len(text))+text); err != nil {
+	padded := strings.Repeat(" ", width-len(text)) + text
+
+	if d.class == dscClassUnknown {
+		for i := range len(padded) {
+			if err := env.Memory().StoreByte(env.CPU(), d.text+uint32(i), padded[i]); err != nil {
+				return memoryFault(env, writing(err))
+			}
+		}
+
+		return sts, nil
+	}
+
+	if _, _, err := writeString(env, addr, padded); err != nil {
 		return otsStringFailure(env, err)
 	}
 
 	return sts, nil
+}
+
+// dscClassUnknown marks a stringDesc whose class readDescriptor refused.
+const dscClassUnknown = 255
+
+// readOTSOutput is readDescriptor for a conversion's output string: a
+// class it doesn't know comes back as dscClassUnknown, with the
+// descriptor's length and pointer.
+func readOTSOutput(env *corevms.Environment, addr uint32) (stringDesc, error) {
+	d, err := readDescriptor(env, addr)
+	if !errors.Is(err, errInvStrDes) {
+		return d, err
+	}
+
+	length, err := env.Memory().LoadWord(env.CPU(), addr)
+	if err != nil {
+		return d, err
+	}
+
+	d.length, d.limit, d.class = uint32(length), uint32(length), dscClassUnknown
+
+	return d, nil
 }
 
 // otsStringFailure is stringFailure with OTS$'s status for a bad
@@ -378,7 +415,7 @@ func strictSize(argv []uint32, i int) (size int, ok bool) {
 func textToInteger(env *corevms.Environment, argv []uint32, size int, sizeOK, signed bool,
 	parse func(text string, flags uint32) (*big.Int, error),
 ) (uint32, error) {
-	text, err := readString(env, arg(argv, 0))
+	text, err := readAnyString(env, arg(argv, 0))
 	if err != nil {
 		return otsStringFailure(env, err)
 	}
