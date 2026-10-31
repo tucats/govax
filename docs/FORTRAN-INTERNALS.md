@@ -1498,9 +1498,12 @@ the loop and calls for each.
   SYS$INPUT, the same way, for units -3, -4, and 5. `RAT=FTN` asks RMS for FORTRAN carriage
   control: each record's first byte is its carriage control, a blank for
   a new line. That is why every list-directed record starts with a
-  blank: the blank isn't printed, but turned into the line's start.
-- **The formats** (`ftn_listout.mar`) fill the context's record, 80 bytes
-  at most: L2
+  blank: the blank isn't printed, but turned into the line's start. A
+  number's field begins with a blank anyway, and at a record's start that
+  blank serves; a text gets one of its own. It looks odd in the source and
+  is what VMS's library does, which the probe in `testdata/for80` showed.
+- **The formats** (`ftn_listout.mar`) fill the context's record, 81 bytes
+  at most, the carriage control and 80 of text: L2
   from bit 0, I5, I7, and I12 by LIBRTL's `OTS$CVT_L_TI`, a text copied,
   and REAL's `1PG15.7E2` from the decimal digits `OTS$$CVT_F_T_R8` returns
   (REAL\*8's `1PG24.16E2` from `OTS$$CVT_D_T_R8`'s, and so on), FTNRTL
@@ -1512,6 +1515,32 @@ the loop and calls for each.
 FTNRTL calls LIBRTL for the conversions as any VAX program would, through
 LIBRTL's transfer vector; a run-time library built on another is the
 normal arrangement on VMS.
+
+### List-directed input
+
+A list-directed READ has no format to say what comes next, so the input says
+it, and `ftn_listin.mar` is a small tokenizer. Two things shape it.
+
+- **Records don't matter, but only one is read ahead.** The end of a record is
+  a blank, so a value may be on any later record; but a statement must not read
+  a record it doesn't need, or the next statement's input is lost. So the
+  separator after a value isn't consumed when the value is read: the next item
+  looks for it (`CTX_LI_AFTER` says that a comma it finds belongs to the last
+  value, where any other comma is a null value), and the last item never reads
+  on.
+- **A value is converted per item, not per value.** `3*14.6` read into an
+  INTEGER, a REAL, and a REAL\*8 is 14, the nearest F_floating value to 14.6,
+  and the nearest D_floating one, which aren't conversions of each other. So
+  the value's text is kept (in a buffer that grows, since a character constant
+  may run across any number of records) and `STORE` converts it for each item,
+  into a place in its own frame, so that a value that fails reaches nothing:
+  a failed list-directed item keeps its value, where a failed formatted one is
+  zeros. An integer goes through D_floating too (`OTS$CVT_T_D`, then `CVTDL`),
+  which holds any longword exactly, and is why `1.5E3` is 1500.
+
+The two conditions come from VMS's run: what can't start a number is a syntax
+error, `FOR$_LISIO_SYN`, and anything that could but doesn't convert is
+`FOR$_INPCONERR`. `TestFor80InputOracle` holds the module to 55 cases of VMS's.
 
 ### The format interpreter
 

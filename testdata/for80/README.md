@@ -20,7 +20,7 @@ holds FTNRTL to `vax/for80-vax.txt`.
 | `for80.com` | Builds and runs everything |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
 | `for80.for` | The output cases to unit 6 as FORTRAN statements, for govax (Decision 2) |
-| `for80i.for`, `for80i.dat` | The formatted input cases as FORTRAN READs from SYS$INPUT, and their records, each case's under its number, for govax |
+| `for80i.for`, `for80i.dat` | The formatted and list-directed input cases as FORTRAN READs from SYS$INPUT, and their records, each case's under its number, for govax |
 | `vax/for80-vax.txt` | Run 1 on VMS, as `FOR80D` printed it |
 | `vax/for80p-vax.txt` | Run 2 on VMS: the same cases with unit 6 a process-permanent file |
 | `vax/for80.log` | `FOR80.COM`'s log: run 3's messages, and the file's attributes |
@@ -131,9 +131,9 @@ and IOSTAT with `vax/for80-vax.txt`'s records and e=. A case whose IOSTAT is 2,
 NOTIMP, uses an edit FTNRTL doesn't have yet, and waits for its subtask.
 
 `TestFor80InputOracle` (the same file, Phase 80's subtask 5) does the same for
-input: `for80i.for` is round 1's formatted input cases (`rd`, from an internal
-record, and `rd5`, from SYS$INPUT; those with G-floating items come last, in
-subroutines with `OPTIONS /G_FLOATING`, as `for80.for`'s do), each a READ from unit 5 with a run-time format, its
+input: `for80i.for` is round 1's formatted and list-directed input cases (`rd`, from an internal
+record, and `rd5` and `rl5`, from SYS$INPUT; those with G-floating items come last, in
+subroutines with `OPTIONS /G_FLOATING`, as `for80.for`'s do), each a READ from unit 5 with a run-time format or `*`, its
 items in 16-byte slots of a COMMON block whose bytes are first set to 55s as
 VMS's were. `for80i.dat` holds each case's records under a `#n` line, then three
 `/` lines as `FOR80R.COM` had, and the test types it at the program. Each case

@@ -14,17 +14,17 @@ OHELLO O
 AABCDEFG
 BCDEFGHH
 ANN BOBBCY  |
-           1 ANN |
-           2 BOBB|
-           3 CY  |
- T T T T F T
- F T T
+          1 ANN |
+          2 BOBB|
+          3 CY  |
+T T T T F T
+F T T
 ANN  is before B
 BOBB is a B
 CY   is C or after
 Not L:           3
 Code 200 is after Z
 and not before
-  1145258561
+ 1145258561
 [>SHIFTED  ]
   $STATUS == "%X00000001"

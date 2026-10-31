@@ -313,21 +313,33 @@ T3:	.ASCII	/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUV
 	.END	START
 `
 
-// ftnListerRecords is what FTNLIST writes, each record's carriage control
-// (a blank) first.
+// ftnListerRecords is what FTNLIST writes, each record's first byte its
+// carriage control (a blank): a numeric or logical field's own first blank,
+// or for a character value one of its own. A statement with no items writes a
+// record of no bytes.
 var ftnListerRecords = []string{
-	"           42          -7           0  2147483647 -2147483648",
-	"  T F TTEXTIT'S          42",
-	"    3.400000       1234567.      0.2500000      9.7656250E-04  0.0000000E+00",
-	"   -3.400000       9999999.      1.0000000E+07  0.1000000      9.9990003E-02",
-	"   9.9999997E+37",
-	"  -7.8886091E-31   123.4560       99999.99    ",
-	"            1          -2           3   1.500000     -0.5000000    ",
-	"           42",
-	" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456",
-	" 789ABCDEFGHIJKLMNOPQRTEXT",
-	" ",
+	"          42          -7           0  2147483647 -2147483648",
+	" T F TTEXTIT'S          42",
+	"   3.400000       1234567.      0.2500000      9.7656250E-04  0.0000000E+00",
+	"  -3.400000       9999999.      1.0000000E+07  0.1000000      9.9990003E-02",
+	"  9.9999997E+37",
+	" -7.8886091E-31   123.4560       99999.99    ",
+	"           1          -2           3   1.500000     -0.5000000    ",
+	"          42",
+	" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ01234567",
+	" 89ABCDEFGHIJKLMNOPQRTEXT",
+	"",
 	" TEXT",
+}
+
+// ftnListerLine is a record of ftnListerRecords as a line shows it, without
+// its carriage control.
+func ftnListerLine(r string) string {
+	if r == "" {
+		return r
+	}
+
+	return r[1:]
 }
 
 // TestFTNRTLListOutput runs FTNLIST at the terminal, where the carriage
@@ -356,7 +368,7 @@ func TestFTNRTLListOutput(t *testing.T) {
 
 		var want strings.Builder
 		for _, r := range ftnListerRecords {
-			want.WriteString(r[1:] + "\n")
+			want.WriteString(ftnListerLine(r) + "\n")
 		}
 
 		want.WriteString("  $STATUS == \"%X00000001\"\n")
@@ -387,7 +399,7 @@ func TestFTNRTLListOutput(t *testing.T) {
 
 		var wantLog []string
 		for _, r := range ftnListerRecords {
-			wantLog = append(wantLog, r[1:])
+			wantLog = append(wantLog, ftnListerLine(r))
 		}
 
 		if strings.Join(got, "\n") != strings.Join(wantLog, "\n") {

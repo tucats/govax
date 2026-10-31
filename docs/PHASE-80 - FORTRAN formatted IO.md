@@ -5,7 +5,8 @@ accepted by the author the same day; subtask 2 (the probe) done the same day, tw
 rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
 compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
 interpreter) done the same day; subtask 5 (integer, logical, and character
-editing) done the same day. Needs Phase 79 (control flow, for
+editing), subtask 6 (floating editing), and subtask 7 (list-directed output
+and input) done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -780,7 +781,7 @@ subtasks land.
 6. **Floating editing:** F, E, D, G, P, S, complex, both directions. Done
    ("Subtask 6", below).
 7. **List-directed:** output on the shared record (Part A's three differences),
-   and input.
+   and input. Done ("Subtask 7", below).
 8. **Variable format expressions and run-time formats.**
 9. **Internal files, ENCODE, DECODE.**
 10. **LIB$TPARSE,** brought in from Phase 60 by the author (2026-10-31):
@@ -1140,6 +1141,69 @@ by hand from the rules, and `formats.for`'s last statement, F now; `TestFortranF
 (both modes). `TestFTNRTL`'s build deletes each source once assembled, its 400-block
 volume having filled.
 
+## Subtask 7: what was built (2026-10-31)
+
+**List-directed output** (`ftn_listout.mar`) now lays records out as VMS's run
+does, by Part A's three differences, as the author's answer 4 said it should: a
+record starts with nothing in it, and holds 81 bytes. A numeric, logical, or
+complex field begins with a blank, which at a record's start is the carriage
+control; a character value that starts a record is given a blank first
+(`PUT_TEXT`), even one of no characters. So a terminal shows such a line one
+column to the left of what it did. One correction to "VMS's first run": a
+statement with no items writes a record of no bytes (case 512's `||`), not a
+control byte alone; `ftncc.go` already shows that as an empty line.
+
+**List-directed input** (`ftn_listin.mar`, new; `FTN$READ_SL` is no longer
+NOTIMP). The module's introduction has the rules, and FORTRAN-INTERNALS.md why
+it's built as it is. `ftn_format.mar`'s record reader is global now,
+`FTN$$FMT_READ`, for its 199-byte limit and end-of-file handling. No new vector
+entries, so GSMATCH stays 1,8. What VMS's run settled beyond the manual:
+
+- **Numbers go further than the manual says:** 1.5 to an INTEGER is 1 (14.6 is
+  14, truncated); a number alone to a COMPLEX is the real part, with an imaginary
+  part of 0, where the manual requires parentheses; a number to a LOGICAL stores
+  the number. `TX` to a LOGICAL is true, as the manual says.
+- **Two conditions:** what can't start a number (`ABC`, `X`, `"ABC"`, `"17`) is
+  LISIO_SYN (59); a value of the wrong kind (`'A'` to an INTEGER, `7` to a
+  CHARACTER), digits that don't make a number (`3HABC`), a part missing from a
+  complex value, or a value too large for its item is INPCONERR (64).
+- **A failed item keeps its value,** where a failed formatted one is zeros, so
+  the conversion is done apart and only a good result stored.
+- **`0*7` stores the 7, then is LISIO_SYN** (case 777), which `FTN$$LISTIN_ITEM`
+  does; `3*7` with two items leaves the rest unused, with no error.
+- **The separator rules:** `1,` then `2,` on the next record are two values with
+  no null; `,2,` starts with a null; `2*` at a record's end is two nulls.
+- **A repeated value converts afresh:** `3*14.6` gives REAL\*8's 14.6, not a
+  REAL's widened, so the value's text is kept. A character constant may run
+  across any number of records, so it is kept in a heap buffer that doubles as
+  needed, and lasts as long as its context does (`CTX_LI_BUFFER`).
+
+Unconfirmed, in the module's introduction: T to an INTEGER (LISIO_SYN), T to a
+BYTE (taken, as BYTE and LOGICAL\*1 share a data type), a complex value to a real
+(INPCONERR), the end of the file inside a character constant (ENDDURREA), text
+after a constant's closing apostrophe (left for the next item). A complex value
+in output is never split across records, though the manual allows one split
+after the comma; no case of VMS's needed it.
+
+**The oracles compare these too.** `gen.go` writes the list-directed output cases
+(`list`) into `for80.for` and the input cases (`rl5`) into `for80i.for`, and
+`TestFor80Oracle` now compares 497 cases and `TestFor80InputOracle` 267, with no
+new differences. Not compared: #506, a character item of no characters, which
+FORTRAN can't state (`PUT_TEXT` has it from the rule), and the last `rl5`, which
+VMS's run never reached.
+
+**What moved.** 35 of `testdata/fortran`'s expected outputs, the modules' five,
+and the tests' own strings moved a column. The 35 were taken from a run, against
+the harness's rule of writing by hand, after a script compared old and new line by
+line and found each line the same or one leading blank shorter; the rest were
+edited by that rule. `iostmt`, which had shown a list-directed READ's NOTIMP, now
+takes END=, and lost that line by hand.
+
+Tests: both oracles; `TestFortranListInput` (both paging modes): repeat counts over
+an array, nulls, an implied-DO list, ACCEPT, complex and character values, a
+constant across four records (growing the buffer), a READ of a real into an
+INTEGER, END=, IOSTAT's -1, and LISIO_SYN signaled.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1217,3 +1281,8 @@ volume having filled.
   statement's end. `gen.go` now states the G_floating cases in units with
   `OPTIONS /G_FLOATING`, so both oracles compare every case: 467 output and 212
   input, none waiting, with four listed differences beyond the lone P.
+- **2026-10-31, subtask 7, done.** List-directed output in VMS's layout (Part A's
+  three differences), which moved a column in most of `testdata/fortran`'s outputs
+  and MANUAL.md's examples, and list-directed input (`ftn_listin.mar`); "Subtask
+  7" above. The oracles now take these cases, 497 output and 267 input, with no
+  new differences.

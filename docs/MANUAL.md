@@ -1299,7 +1299,7 @@ declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
 intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; READ, WRITE,
-PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST, though FTNRTL runs only list-directed output so far), and reports any
+PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST, though FTNRTL doesn't run namelist statements or internal files yet), and reports any
 other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4358,7 +4358,7 @@ intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
 input and output, with every edit descriptor but a variable format
-expression, and list-directed output, and stops a program at any other I/O
+expression, and list-directed input and output, and stops a program at any other I/O
 statement with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
@@ -4445,7 +4445,7 @@ VAX> MACRO SHOW
 VAX> MACRO START
 VAX> LINK STORE,SHOW,START
 VAX> RUN STORE
-           7   2.500000       2.500000       2.500000
+          7   2.500000       2.500000       2.500000
 ```
 
 More programs are in govax's `testdata/fortran` directory, each with the
@@ -4624,7 +4624,7 @@ output it prints, and programs of several files in its `modules` directory.
   IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
   compile, by the rules VMS's FORTRAN run-time library applies
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
-  runs formatted input and output and list-directed output, to the
+  runs formatted and list-directed input and output, to the
   default units and units 5 and 6 (SYS$INPUT and SYS$OUTPUT). A format's
   text, H constants, X, T, TL, TR, slashes, groups, reversion, the colon,
   and the dollar sign work as section 8 of the language manual says, as do
@@ -4898,11 +4898,11 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
-| `FTN$WRITE_SL(icb, unit)` | Starts a list-directed WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `*`, -2 for TYPE) |
+| `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address) or, with the control block's bit 3, a run-time format's descriptor |
-| `FTN$READ_SL`, `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (list-directed input, namelist, an internal file), given a format too; so far each is `FOR$_NOTIMP` |
+| `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (namelist, an internal file), given a format too; so far each is `FOR$_NOTIMP` |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
-| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
+| `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
@@ -4923,7 +4923,10 @@ reference to the function is written in line.
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
 control: each record begins with a blank (a new line at the terminal),
-and holds at most 80 bytes. Each value is in its type's format (the
+and holds at most 80 bytes after it. A number's field begins with a blank of its
+own, which at a record's start is that carriage control; a text has none, so
+one that starts a record gets a blank first. These layouts are those of VMS's
+FORTRAN run-time library, checked against it. Each value is in its type's format (the
 *Language Reference Manual*'s Table 7-1): a LOGICAL\*2 or \*4 as ` T` or
 ` F` (L2), a LOGICAL\*1 or BYTE as an integer in 5 columns (I5), an
 INTEGER\*2 in 7 columns (I7), an INTEGER\*4 in 12 (I12), a REAL as
@@ -4937,8 +4940,8 @@ digits, and an exponent of 2, 3, or 4 digits:
 
 ```text
       PRINT *, 42, .TRUE., 'IT''S', 3.4, 0.25, 1234567.0, 1.0E-5, 0.0
-          42 TIT'S   3.400000      0.2500000       1234567.      9.9999997E-06
-  0.0000000E+00
+         42 TIT'S   3.400000      0.2500000       1234567.      9.9999997E-06
+ 0.0000000E+00
 ```
 
 (1.0E-5 shows as `9.9999997E-06` because the F_floating value nearest
@@ -4946,10 +4949,10 @@ it is just below it.) The same at REAL\*8:
 
 ```text
       PRINT *, 1D0/3D0, 1D16, 0D0
-  0.3333333333333333      1.0000000000000000E+16  0.0000000000000000E+00
+ 0.3333333333333333      1.0000000000000000E+16  0.0000000000000000E+00
 ```
  A value that doesn't fit in what's left of the
-record starts the next one: the first record above, at 79 bytes, had no
+record starts the next one: the first record above, at 78 bytes, had no
 room for the last REAL. Only a text longer
 than a record is split, filling as many records as it needs. With
 `SYS$OUTPUT` a print file, such as a command procedure's `/OUTPUT=`
@@ -4958,13 +4961,25 @@ log, each record's carriage control becomes the record's print control
 terminal shows it, rather than a character of the record.
 
 A COMPLEX value has no blanks inside it (the manual's 7.3.1.2), so each part's
-field is written without its blanks; govax puts one blank before the value, as
+field is written without its blanks, with one blank before the value, as
 every other number's field begins with one:
 
 ```text
       PRINT *, (1.0, -1.5), (0.0, 0.08)
- (1.000000,-1.500000) (0.0000000E+00,7.9999998E-02)
+(1.000000,-1.500000) (0.0000000E+00,7.9999998E-02)
 ```
+
+A list-directed READ or ACCEPT takes values separated by blanks, tabs, record
+ends, and at most one comma between two. A comma with no value before it is a
+null value, which leaves its item as it was; a slash ends the statement, leaving
+the rest; `3*5` is three values and `3*` three nulls. A number goes to any
+numeric item, truncated for an integer (14.6 is 14); `T`, `F`, `.T`, or `.F`, in
+either case with anything after them, goes to a logical, as does a number;
+`(re,im)` goes to a COMPLEX, as does a number alone, the real part; `'text'`
+goes to a CHARACTER item, cut off or padded with blanks, and may run across
+records. What can't start a value (`ABC`) is `%FOR-F-LISIO_SYN`; a value of the
+wrong kind for its item, or a number too large for it, is `%FOR-F-INPCONERR`.
+Either way the item keeps its value.
 
 ```text
 VAX> TYPE STOPPER.MAR
@@ -5163,11 +5178,15 @@ FORTRAN compiler was available to check them). So far:
   assumed-size one by its first element's class S descriptor (a routine reads
   only the length and the address of either). A concatenation longer than
   65535 characters isn't reported.
-- List-directed output's records are 80 bytes long, carriage control
-  included; values follow one another with no blanks between them but
+- List-directed output's records hold 80 bytes after their carriage
+  control; values follow one another with no blanks between them but
   their fields' own; a text that doesn't fit begins a new record; zero
-  is written with an exponent (` 0.0000000E+00`). `PRINT *` and `WRITE
-  (*,*)` both write `SYS$OUTPUT`.
+  is written with an exponent (`0.0000000E+00`). `PRINT *` and `WRITE
+  (*,*)` both write `SYS$OUTPUT`. All of this is VMS's library's.
+- List-directed input takes what the language manual refuses, as VMS's
+  library does: a number alone for a COMPLEX item, and a number for a
+  LOGICAL item (`1` stores 1). `0*7` stores the 7, then is
+  `%FOR-F-LISIO_SYN`.
 
 ---
 

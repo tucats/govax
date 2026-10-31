@@ -225,7 +225,7 @@ func TestFortranBlockDataLibrary(t *testing.T) {
 		}
 
 		got := shareRun(t, d, buf, "BDMAIN")
-		want := "           7   2.500000               0\n"
+		want := "          7   2.500000               0\n"
 
 		if !strings.HasPrefix(got, want) {
 			t.Errorf("RUN BDMAIN printed:\n%s\nwant it to start:\n%s", got, want)
@@ -285,7 +285,7 @@ func TestFortranTwoModulesInitialize(t *testing.T) {
 	}
 
 	got := shareRun(t, d, buf, "TWOMAIN")
-	if want := "           2\n"; !strings.HasPrefix(got, want) {
+	if want := "          2\n"; !strings.HasPrefix(got, want) {
 		t.Errorf("RUN TWOMAIN printed:\n%s\nwant it to start:\n%s", got, want)
 	}
 }

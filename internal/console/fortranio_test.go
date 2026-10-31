@@ -194,11 +194,107 @@ func TestFortranIntegerInput(t *testing.T) {
 
 		c.In = strings.NewReader("1 21 2\n1,-2,,\n   17,FF,12\n T.F.TRUE\n 40000\n")
 
-		want := "         102          12\n           1          -2           0\n" +
-			"          15         255          12\n T F T\n      0          64\n" +
+		want := "        102          12\n          1          -2           0\n" +
+			"         15         255          12\nT F T\n     0          64\n" +
 			"  $STATUS == \"%X00000001\"\n"
 		if got := shareRun(t, d, buf, "IIN"); got != want {
 			t.Errorf("RUN IIN printed:\n%s\nwant:\n%s", got, want)
+		}
+	})
+}
+
+// TestFortranListInput reads list-directed input from the terminal, by each
+// statement that can: a repeat count across a whole array, a null value, an
+// implied-DO list, complex values (a number alone is the real part), character
+// values cut off and padded, a logical, a character constant longer than the
+// context's record that runs across four records, the end of the file, which
+// END= and IOSTAT= take, and a value that can't be one, signaled.
+func TestFortranListInput(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+
+		lines := []string{
+			"      PROGRAM LIN",
+			"      INTEGER I(4), J, IOS",
+			"      REAL R(3)",
+			"      COMPLEX C(2)",
+			"      CHARACTER*5 T(2)",
+			"      CHARACTER*600 LONG",
+			"      LOGICAL L",
+			"      R(2) = 9.0",
+			"      READ *, I",
+			"      PRINT *, I",
+			"      READ (5,*) (R(J), J = 1, 3)",
+			"      PRINT *, R",
+			"      ACCEPT *, C",
+			"      PRINT *, C",
+			"      READ (*,*) T, L",
+			"      PRINT *, T, L",
+			"      READ *, LONG",
+			"      PRINT *, LONG(1:1), LONG(190:191), LONG(600:600)",
+			"      READ (5,*) J",
+			"      PRINT *, J",
+			"      READ (5,*,END=10) J",
+			"      PRINT *, 'NOT HERE'",
+			"   10 READ (5,*,IOSTAT=IOS) J",
+			"      PRINT *, 'IOS', IOS",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]LIN.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "LIN")
+
+		for _, command := range []string{"FORTRAN LIN", "MACRO LIN", "LINK LIN"} {
+			shareFindRun(t, d, command)
+
+			if out := buf.String(); out != "" {
+				t.Fatalf("%s said:\n%s", command, out)
+			}
+		}
+
+		c.In = strings.NewReader("1 2*7\n 9 THE REST IS LOST\n1.5,,2.5\n(1,2)\n 2.5\n'AB' 'CDEFGH' .T\n'" +
+			strings.Repeat("A", 190) + "\n" + strings.Repeat("B", 190) + "\n" + strings.Repeat("C", 190) + "\n" +
+			strings.Repeat("D", 190) + "'\n1.5E1\n")
+
+		want := "          1           7           7           9\n" +
+			"  1.500000       9.000000       2.500000    \n" +
+			"(1.000000,2.000000) (2.500000,0.0000000E+00)\n" +
+			"AB   CDEFG T\n" +
+			"AABD\n" +
+			"         15\n" +
+			"IOS          -1\n" +
+			"  $STATUS == \"%X00000001\"\n"
+		if got := shareRun(t, d, buf, "LIN"); got != want {
+			t.Errorf("RUN LIN printed:\n%s\nwant:\n%s", got, want)
+		}
+
+		lines = []string{
+			"      PROGRAM LBAD",
+			"      READ *, J",
+			"      PRINT *, 'NOT HERE'",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]LBAD.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "LBAD")
+
+		for _, command := range []string{"FORTRAN LBAD", "MACRO LBAD", "LINK LBAD"} {
+			shareFindRun(t, d, command)
+		}
+
+		buf.Reset()
+
+		c.In = strings.NewReader("ABC\n")
+
+		got := shareRun(t, d, buf, "LBAD")
+		if !strings.Contains(got, "%FOR-F-LISIO_SYN, ") || strings.Contains(got, "NOT HERE") {
+			t.Errorf("RUN LBAD printed:\n%s", got)
 		}
 	})
 }

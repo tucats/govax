@@ -32,32 +32,35 @@
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
 ;
 ; A complex value is written "with no embedded spaces" (7.3.1.2): each
-; part's G field without its leading and trailing blanks, so (1.0,2.0) is
-; " (1.000000,2.000000)". The blank before it is govax's, so that it
-; begins with a blank as every other numeric format's field does, and is
-; kept apart from the value before it. Its field is put as any other
-; value's, never split across records, though the manual allows a split
-; after the comma. Both are govax's choices, unconfirmed.
+; part's G field without its leading and trailing blanks, with one blank
+; before it, so (1.0,2.0) is " (1.000000,2.000000)". Its field is put as
+; any other value's, never split across records, though the manual allows
+; a split after the comma (govax's choice, unconfirmed: no case of VMS's
+; run needed one).
 ;
-; A record is at most 80 bytes long, its first the carriage control, a
-; blank (a new line). FTN$$LIST_START begins a record with that blank; each
-; value goes at the record's end, unless it doesn't fit there, when the
-; record is written and the value begins the next; FTN$$LIST_END writes
-; the last record. A record that RMS can't write is the statement's error,
-; FOR$_ERRDURWRI, and what is left of the statement writes nothing. So a statement writes at least one record, and a value is
-; never split across records, but for a character value longer than a
-; record, which begins a record and fills as many as it needs. The
-; record length (80), the values following one another with no blank
-; between them beyond their fields' own, and a character value's start
-; on a fresh record are govax's choices, unconfirmed.
+; The records are as VMS's FORTRAN run-time library lays them out (the
+; probe, testdata/for80, round 1). A record is at most 81 bytes long, 80
+; of text after its first, the carriage control. Every numeric, logical,
+; and complex field begins with a blank, and a field that starts a record
+; has that blank as its carriage control, so a record of integers is
+; simply their I12 fields. A character value has no such blank, so one
+; that starts a record gets a blank of its own: " HELLO", and after an
+; integer "           1HELLO", and character values follow one another
+; with nothing between them. Each value goes at the record's end, unless
+; it doesn't fit there, when the record is written and the value begins
+; the next; a character value longer than a record then fills as many as
+; it needs, the last left for what follows. FTN$$LIST_END writes the last
+; record, so a statement writes at least one: with no items at all, a
+; record of no bytes. A record that RMS can't write is the statement's
+; error, FOR$_ERRDURWRI, and what is left of the statement writes nothing.
 ;
 ; G editing (8.3.6.4, Table 8-2), Gw.dEe, writes a value whose magnitude,
 ; rounded to d significant digits, is from 0.1 up to 10**d in F form, in
 ; the field's first w-(e+2) columns with d significant digits, followed
 ; by e+2 blanks; any other in E form, where the scale factor 1P (8.3.7)
 ; puts one digit before the point and d after it, and the exponent has e
-; digits after its sign. Zero is below 0.1, so it is E form too (govax's
-; reading, unconfirmed). For REAL*4's 1PG15.7E2:
+; digits after its sign. Zero is below 0.1, so it is E form too. For
+; REAL*4's 1PG15.7E2:
 ;
 ;	3.4		"   3.400000    "	F form: 1 digit, then 6
 ;	1234567.0	"   1234567.    "	F form: 7 digits, then none
@@ -100,7 +103,8 @@ DSC$K_DTYPE_GC	= 29			; G_floating complex
 DSC$K_CLASS_S	= 1			; a scalar or fixed-length string
 DSC$K_CLASS_A	= 4			; an array
 
-RECORD_MAX	= 80			; a record's length, at most
+RECORD_MAX	= 81			; a record's length, at most, its control byte
+					;  and 80 of text
 
 ; The statement's context's fields this module uses (FTN_STATEMENT's).
 CTX_STATUS	= 16			; long: the first error's condition, or 0
@@ -115,11 +119,12 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 ;
 ; FTN$$LIST_START(context)
 ;
-; Starts a list-directed output statement's first record.
+; Starts a list-directed output statement's first record, with nothing
+; in it.
 ;
 	.ENTRY	FTN$$LIST_START,^M<>
-	PUSHL	4(AP)
-	CALLS	#1,NEW_RECORD
+	MOVL	4(AP),R0
+	CLRL	CTX_RECLEN(R0)
 	RET
 
 ;
@@ -159,16 +164,6 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition: a write failed
 	RET
 
 ;
-; NEW_RECORD(context): starts a record with its carriage control, a blank.
-;
-NEW_RECORD:
-	.WORD	^M<>
-	MOVL	4(AP),R0
-	MOVB	#^A/ /,CTX_RECORD(R0)
-	MOVL	#1,CTX_RECLEN(R0)
-	RET
-
-;
 ; PUT_RECORD(context): writes the record built so far, and starts the
 ; next. Nothing is written once the statement has failed; a write that
 ; fails is the statement's error.
@@ -184,8 +179,7 @@ PUT_RECORD:
 	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
 	BLBS	R0,10$
 	MOVL	#FOR$_ERRDURWRI,CTX_STATUS(R2)
-10$:	PUSHL	R2
-	CALLS	#1,NEW_RECORD
+10$:	CLRL	CTX_RECLEN(R2)
 	RET
 
 ;
@@ -213,6 +207,8 @@ PUT_FIELD:
 ; PUT_TEXT(context, address, length): puts a character value at the
 ; record's end. One that doesn't fit begins a new record, and one longer
 ; than a record fills as many as it needs, the last left for what follows.
+; A record it starts gets its carriage control first, a blank, even for a
+; value of no characters.
 ;
 PUT_TEXT:
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
@@ -226,7 +222,11 @@ PUT_TEXT:
 	BLEQ	10$			; nothing in the record yet
 	PUSHL	R8
 	CALLS	#1,PUT_RECORD
-10$:	TSTL	R7			; any text left?
+10$:	TSTL	CTX_RECLEN(R8)
+	BNEQ	15$
+	MOVB	#^A/ /,CTX_RECORD(R8)	; a new record's carriage control
+	MOVL	#1,CTX_RECLEN(R8)
+15$:	TSTL	R7			; any text left?
 	BLEQ	90$
 	SUBL3	CTX_RECLEN(R8),#RECORD_MAX,R2 ; the record's room
 	CMPL	R7,R2

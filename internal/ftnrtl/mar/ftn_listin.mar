@@ -1,0 +1,705 @@
+	.TITLE	FTN_LISTIN - FTNRTL's list-directed input
+	.IDENT	/V1.0/
+;
+; List-directed input: READ (u,*), READ *, and ACCEPT *, where the input
+; says what each value is and the item says what it becomes (the 1988
+; VAX FORTRAN Language Reference Manual, 7.2.1.2). FTN_STATEMENT begins and
+; ends the statement, and calls this module's two routines, each given the
+; statement's context: FTN$$LISTIN_START at its begin call, and
+; FTN$$LISTIN_ITEM for each item. Its rules are the manual's, and where the
+; manual is silent or differs VMS's FORTRAN run-time library's (the probe,
+; testdata/for80's "List-directed input" section, which TestFor80InputOracle
+; holds this module to).
+;
+; The input is a stream of values and separators, and records don't matter
+; to it: a record's end is a blank. The separators are any number of blanks
+; and tabs, with at most one comma among them, so a value followed by
+; "  ,  " or by the end of the record and a comma on the next is followed by
+; one separator. A comma with no value before it is a null value, which
+; leaves its item as it was: ",2," gives a null and a 2, and "1,,3" a 1, a
+; null, and a 3. So a comma right after a value belongs to that value, which
+; CTX_LI_AFTER remembers, and any other is a null. A slash ends the statement:
+; the items left stay as they were, and the rest of its record is not read.
+;
+; A value may have a repeat count, r*c, the same value for r items, or
+; r*, r null values. VMS's 0*7 stores the 7 in one item, then is
+; FOR$_LISIO_SYN. A repeat count larger than the list simply goes unused,
+; and what's left of the record is lost at the statement's end.
+;
+; The forms of a value (NEXT_VALUE reads one, whatever its items are to
+; be, and keeps its text in a buffer, since a repeated value is converted
+; afresh for each item: 3*14.6 is 14 to an INTEGER, 14.6 to a REAL, and
+; 14.6D0's exact digits to a REAL*8):
+;
+;	'text'		V_TEXT. '' is an apostrophe. It may run across
+;			records, which add nothing to it: 'AB and CD' on the
+;			next record are 'ABCD', blanks in either kept.
+;	(re,im)		V_COMPLEX. Blanks and record ends may surround each
+;			part. An empty part is FOR$_INPCONERR.
+;	anything else	V_WORD: up to the next blank, tab, comma, slash, or
+;			record's end.
+;
+; What each item takes (STORE):
+;
+;	an integer	a V_WORD that is a number, any number: 14.6 is 14 and
+;			1.5E3 is 1500, truncated. Past the item's size,
+;			FOR$_INPCONERR.
+;	a logical	a V_WORD starting T, F, .T, or .F, either case, the
+;			rest passed over: -1 or 0. Or a number, as an integer
+;			(VMS's 1 stores 1).
+;	a floating item	a V_WORD that is a number, by OTS$CVT_T_x.
+;	a complex item	a V_COMPLEX, or a V_WORD that is a number, the real
+;			part, with an imaginary part of 0 (the manual says no;
+;			VMS's run says yes).
+;	a character	a V_TEXT, padded with blanks or cut off.
+;
+; Any other pairing fails, but for two conditions, by VMS's: a V_WORD that
+; can't start a number (a digit, a sign, or a period) is FOR$_LISIO_SYN
+; (ABC to anything, "ABC" with quotation marks), and everything else,
+; a V_TEXT to a number, a number to a character item, or digits that don't
+; make a number (3HABC), is FOR$_INPCONERR. A failed item keeps its value,
+; where a formatted one is set to zeros. Hexadecimal, octal, and Hollerith
+; constants aren't numbers here, as the manual says.
+;
+; Unconfirmed (no case in the probe): T to an INTEGER is FOR$_LISIO_SYN, as
+; ABC is; a BYTE takes T and F, as a LOGICAL*1 does, the two sharing a data
+; type; a V_COMPLEX to a real is FOR$_INPCONERR, as a V_TEXT is; a number
+; whose value doesn't fit a longword is FOR$_INPCONERR; a V_TEXT that the end
+; of the file cuts off is FOR$_ENDDURREA; text right after a V_TEXT's
+; closing apostrophe, 'AB'X, is left for the next item.
+;
+	$SSDEF
+
+FOR$_INVARGFOR	= ^X00188184		; FORRTL's condition values, with
+FOR$_LISIO_SYN	= ^X001881DC		;  their severities
+FOR$_INPCONERR	= ^X00188204
+FOR$_INSVIRMEM	= ^X0018814C
+
+; The descriptor's fields and codes (the VAX calling standard's).
+DSC$W_LENGTH	= 0
+DSC$B_DTYPE	= 2
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12
+DSC$K_DTYPE_BU	= 2
+DSC$K_DTYPE_T	= 14
+DSC$K_DTYPE_G	= 27
+DSC$K_DTYPE_H	= 28
+DSC$K_DTYPE_GC	= 29
+DSC$K_CLASS_S	= 1
+DSC$K_CLASS_A	= 4
+
+; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's, then
+; this module's. The buffer and its size outlast a statement, going with the
+; context to be used again; FTN_STATEMENT clears them in a new one.
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_RECLEN	= 24			; long: the record's length
+CTX_RECORD	= 28			; the record
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_LI_BUFFER	= CTX_POS+112		; long: the value's text
+CTX_LI_SIZE	= CTX_LI_BUFFER+4	; long: the bytes it holds
+CTX_LI_LENGTH	= CTX_LI_SIZE+4		; long: the text's length
+CTX_LI_PART	= CTX_LI_LENGTH+4	; long: a V_COMPLEX's real part's, the
+					;  imaginary part's text following it
+CTX_LI_REPEAT	= CTX_LI_PART+4		; long: the items the value has left
+CTX_LI_KIND	= CTX_LI_REPEAT+4	; byte: the value's form, V_...
+CTX_LI_AFTER	= CTX_LI_KIND+1		; byte: 1 if a comma is the last value's
+CTX_LI_SLASH	= CTX_LI_AFTER+1	; byte: 1 once a slash ended the statement
+CTX_LI_ZERO	= CTX_LI_SLASH+1	; byte: 1 if the repeat count was 0
+
+V_NULL		= 0			; the forms of a value
+V_WORD		= 1
+V_TEXT		= 2
+V_COMPLEX	= 3
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$LISTIN_START(context)
+;
+; Starts a list-directed input statement: reads its first record, as
+; every READ does, even one with no items.
+;
+	.ENTRY	FTN$$LISTIN_START,^M<>
+	MOVL	4(AP),R0
+	CLRL	CTX_LI_REPEAT(R0)
+	CLRL	CTX_LI_KIND(R0)		; and CTX_LI_AFTER, SLASH, and ZERO
+	PUSHL	R0
+	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
+	RET
+
+;
+; FTN$$LISTIN_ITEM(context, desc)
+;
+; Reads one input item, a scalar or a whole array, described by desc: each
+; element takes what is left of the last value's repeat count, or the next
+; value. After the statement's error, or a slash, it does nothing.
+;
+	.ENTRY	FTN$$LISTIN_ITEM,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+	MOVL	8(AP),R5		; the descriptor
+	MOVZWL	DSC$W_LENGTH(R5),R2	; an element's length
+	MOVL	DSC$A_POINTER(R5),R3	; the first element
+	MOVL	#1,R4			; how many: one, for a scalar
+	CMPB	DSC$B_CLASS(R5),#DSC$K_CLASS_A
+	BNEQ	10$
+	TSTL	R2			; an array of no bytes: nothing
+	BEQL	90$
+	DIVL3	R2,DSC$L_ARSIZE(R5),R4	; the array's elements
+	BEQL	90$
+10$:	TSTB	CTX_LI_SLASH(R6)
+	BNEQ	90$
+	TSTL	CTX_LI_REPEAT(R6)
+	BNEQ	20$
+	PUSHL	R6
+	CALLS	#1,NEXT_VALUE
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$
+	TSTB	CTX_LI_SLASH(R6)
+	BNEQ	90$
+20$:	DECL	CTX_LI_REPEAT(R6)
+	CMPB	CTX_LI_KIND(R6),#V_NULL
+	BEQL	30$			; a null: the item stays as it was
+	PUSHL	R2			; the length,
+	PUSHL	R3			;  the address,
+	MOVZBL	DSC$B_DTYPE(R5),-(SP)	;  the type,
+	PUSHL	R6			;  and the context
+	CALLS	#4,STORE
+	TSTL	CTX_STATUS(R6)
+	BNEQ	90$
+30$:	TSTB	CTX_LI_ZERO(R6)
+	BEQL	40$
+	PUSHL	#FOR$_LISIO_SYN		; 0*: after the store, as VMS's
+	PUSHL	R6
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+	BRB	90$
+40$:	ADDL2	R2,R3			; the next element
+	SOBGTR	R4,10$
+90$:	RET
+
+;
+; NEXT_VALUE(context): reads the next value, as the introduction says, into
+; CTX_LI_KIND and the buffer, its repeat count in CTX_LI_REPEAT; or sets
+; CTX_LI_SLASH, or the statement's error. A subroutine of the module's own
+; has R6 the context.
+;
+NEXT_VALUE:
+	.WORD	^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6
+	CLRL	CTX_LI_LENGTH(R6)
+	CLRL	CTX_LI_PART(R6)
+	MOVB	#V_NULL,CTX_LI_KIND(R6)
+	CLRB	CTX_LI_ZERO(R6)
+	MOVL	#1,CTX_LI_REPEAT(R6)
+	JSB	SKIP_BLANKS
+	BLBC	R0,90$
+	TSTB	CTX_LI_AFTER(R6)	; a comma that ends the last value?
+	BEQL	10$
+	CMPB	R1,#^A/,/
+	BNEQ	10$
+	CLRB	CTX_LI_AFTER(R6)
+	INCL	CTX_POS(R6)
+	JSB	SKIP_BLANKS
+	BLBC	R0,90$
+10$:	CMPB	R1,#^A/,/
+	BNEQ	20$
+	INCL	CTX_POS(R6)		; a null, the comma its own
+	RET
+20$:	CMPB	R1,#^A./.
+	BNEQ	30$
+	MOVB	#1,CTX_LI_SLASH(R6)	; the end of the statement
+	RET
+30$:	MOVB	#1,CTX_LI_AFTER(R6)
+	JSB	REPEAT_COUNT
+	MOVL	CTX_POS(R6),R0
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	90$			; r*, at the record's end: nulls
+	MOVZBL	CTX_RECORD(R6)[R0],R1
+	JSB	IS_SEPARATOR
+	BLBS	R0,90$			; r*, then a separator: nulls
+	CMPB	R1,#^A/'/
+	BNEQ	40$
+	JSB	READ_TEXT
+	RET
+40$:	CMPB	R1,#^A/(/
+	BNEQ	50$
+	JSB	READ_COMPLEX
+	RET
+50$:	JSB	READ_WORD
+90$:	RET
+
+;
+; The subroutines of NEXT_VALUE (JSB, RSB; R6 the context).
+;
+; SKIP_BLANKS: passes over blanks, tabs, and records' ends, to the next
+; byte. R0's low bit is set with the byte in R1, or clear if the next
+; record couldn't be read (the statement's error). Changes R0 and R1.
+;
+SKIP_BLANKS:
+10$:	MOVL	CTX_POS(R6),R1
+	CMPL	R1,CTX_RECLEN(R6)
+	BLSS	20$
+	PUSHL	R6
+	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
+	TSTL	CTX_STATUS(R6)
+	BEQL	10$
+	CLRL	R0
+	RSB
+20$:	MOVZBL	CTX_RECORD(R6)[R1],R1
+	CMPB	R1,#^A/ /
+	BEQL	30$
+	CMPB	R1,#9			; a tab
+	BNEQ	40$
+30$:	INCL	CTX_POS(R6)
+	BRB	10$
+40$:	MOVL	#1,R0
+	RSB
+
+;
+; IS_SEPARATOR: R0's low bit is set if the byte in R1 ends a value.
+;
+IS_SEPARATOR:
+	CMPB	R1,#^A/ /
+	BEQL	10$
+	CMPB	R1,#9
+	BEQL	10$
+	CMPB	R1,#^A/,/
+	BEQL	10$
+	CMPB	R1,#^A./.
+	BEQL	10$
+	CLRL	R0
+	RSB
+10$:	MOVL	#1,R0
+	RSB
+
+;
+; REPEAT_COUNT: if digits and a * come next, passes over them and sets
+; CTX_LI_REPEAT to their value (CTX_LI_ZERO, and 1, for 0). A count too large
+; for a longword is the largest there is, as no list is that long; the same
+; digits with no * are a number, for the item to judge. Changes R0 to R3.
+;
+REPEAT_COUNT:
+	MOVL	CTX_POS(R6),R2		; the digits' next
+	CLRL	R3			; their value
+10$:	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	90$			; digits alone
+	MOVZBL	CTX_RECORD(R6)[R2],R1
+	SUBL3	#^A/0/,R1,R0
+	CMPL	R0,#9
+	BGTRU	20$			; not a digit (below 0 is large, unsigned)
+	MULL2	#10,R3
+	BVS	15$
+	ADDL2	R0,R3
+	BVC	17$
+15$:	MOVL	#^X7FFFFFFF,R3
+17$:	INCL	R2
+	BRB	10$
+20$:	CMPB	R1,#^A/*/
+	BNEQ	90$
+	CMPL	R2,CTX_POS(R6)
+	BEQL	90$			; no digits: not a count
+	ADDL3	#1,R2,CTX_POS(R6)
+	TSTL	R3
+	BNEQ	30$
+	MOVB	#1,CTX_LI_ZERO(R6)
+	MOVL	#1,R3
+30$:	MOVL	R3,CTX_LI_REPEAT(R6)
+90$:	RSB
+
+;
+; ADD_CHAR: adds the byte in R1 to the value's text. Changes R0 and R1.
+;
+ADD_CHAR:
+	CMPL	CTX_LI_LENGTH(R6),CTX_LI_SIZE(R6)
+	BLSS	10$
+	PUSHL	R1			; CALLS changes R0 and R1
+	PUSHL	R6
+	CALLS	#1,GROW
+	MOVL	(SP)+,R1
+10$:	ADDL3	CTX_LI_BUFFER(R6),CTX_LI_LENGTH(R6),R0
+	MOVB	R1,(R0)
+	INCL	CTX_LI_LENGTH(R6)
+	RSB
+
+;
+; READ_TEXT: a character constant, its opening apostrophe next.
+;
+READ_TEXT:
+	MOVB	#V_TEXT,CTX_LI_KIND(R6)
+	INCL	CTX_POS(R6)
+10$:	MOVL	CTX_POS(R6),R2
+	CMPL	R2,CTX_RECLEN(R6)
+	BLSS	20$
+	PUSHL	R6			; the next record goes on it
+	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
+	TSTL	CTX_STATUS(R6)
+	BEQL	10$
+	RSB
+20$:	MOVZBL	CTX_RECORD(R6)[R2],R1
+	INCL	R2
+	MOVL	R2,CTX_POS(R6)
+	CMPB	R1,#^A/'/
+	BNEQ	30$
+	CMPL	R2,CTX_RECLEN(R6)	; two together are one of them
+	BGEQ	90$
+	CMPB	CTX_RECORD(R6)[R2],#^A/'/
+	BNEQ	90$
+	INCL	CTX_POS(R6)
+30$:	JSB	ADD_CHAR
+	BRB	10$
+90$:	RSB
+
+;
+; READ_WORD: the bytes up to the next separator or the record's end.
+;
+READ_WORD:
+	MOVB	#V_WORD,CTX_LI_KIND(R6)
+10$:	MOVL	CTX_POS(R6),R2
+	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	90$
+	MOVZBL	CTX_RECORD(R6)[R2],R1
+	JSB	IS_SEPARATOR
+	BLBS	R0,90$
+	JSB	ADD_CHAR
+	INCL	CTX_POS(R6)
+	BRB	10$
+90$:	RSB
+
+;
+; READ_COMPLEX: (re,im), its parenthesis next. Each part's text goes in the
+; buffer, the real part's length in CTX_LI_PART.
+;
+READ_COMPLEX:
+	MOVB	#V_COMPLEX,CTX_LI_KIND(R6)
+	INCL	CTX_POS(R6)
+	JSB	READ_PART
+	BLBC	R0,90$
+	MOVL	CTX_LI_LENGTH(R6),CTX_LI_PART(R6)
+	BEQL	80$			; no real part
+	JSB	SKIP_BLANKS
+	BLBC	R0,90$
+	CMPB	R1,#^A/,/
+	BNEQ	80$
+	INCL	CTX_POS(R6)
+	JSB	READ_PART
+	BLBC	R0,90$
+	CMPL	CTX_LI_LENGTH(R6),CTX_LI_PART(R6)
+	BEQL	80$			; no imaginary part
+	JSB	SKIP_BLANKS
+	BLBC	R0,90$
+	CMPB	R1,#^A/)/
+	BNEQ	80$
+	INCL	CTX_POS(R6)
+	RSB
+80$:	PUSHL	#FOR$_INPCONERR
+	PUSHL	R6
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+90$:	RSB
+
+;
+; READ_PART: a complex value's part, added to the text: blanks and records'
+; ends, then the bytes up to a separator, a parenthesis, or the record's
+; end. R0's low bit is clear if a record couldn't be read.
+;
+READ_PART:
+	JSB	SKIP_BLANKS
+	BLBC	R0,90$
+10$:	MOVL	CTX_POS(R6),R2
+	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	80$
+	MOVZBL	CTX_RECORD(R6)[R2],R1
+	CMPB	R1,#^A/)/
+	BEQL	80$
+	JSB	IS_SEPARATOR
+	BLBS	R0,80$
+	JSB	ADD_CHAR
+	INCL	CTX_POS(R6)
+	BRB	10$
+80$:	MOVL	#1,R0
+90$:	RSB
+
+;
+; GROW(context): the text buffer twice as large (at first 256 bytes), with
+; what it holds. No memory ends the image, as a context's lack does.
+;
+GROW:	.WORD	^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MULL3	#2,CTX_LI_SIZE(R6),R7
+	BNEQ	10$
+	MOVL	#256,R7
+10$:	CLRL	-(SP)			; the block's address goes here
+	PUSHL	R7			; the size
+	PUSHAL	4(SP)			; LIB$GET_VM's second argument
+	PUSHAL	4(SP)			;  and its first
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,20$
+	PUSHL	#FOR$_INSVIRMEM
+	CALLS	#1,G^LIB$STOP
+20$:	MOVC3	CTX_LI_LENGTH(R6),@CTX_LI_BUFFER(R6),@4(SP)
+	TSTL	CTX_LI_SIZE(R6)
+	BEQL	30$
+	PUSHAL	CTX_LI_BUFFER(R6)	; the old block's address
+	PUSHAL	CTX_LI_SIZE(R6)		;  and its size
+	CALLS	#2,G^LIB$FREE_VM
+30$:	MOVL	R7,CTX_LI_SIZE(R6)
+	MOVL	4(SP),CTX_LI_BUFFER(R6)
+	RET
+
+;
+; STORE(context, type, address, length): gives one item of data type type
+; (a DSC$K_DTYPE_ code), length bytes at address, the current value, as the
+; introduction says, or fails the statement and leaves the item alone.
+;
+; The routine's frame, below FP, holds the converted value, so that nothing
+; reaches the item unless all of it is good.
+;
+VALUE		= -16			; 16 bytes: a REAL*16's, or a COMPLEX*16's
+
+STORE:	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
+	SUBL2	#16,SP
+	MOVL	4(AP),R6		; the context
+	MOVL	CTX_LI_BUFFER(R6),R7	; the value's text
+	MOVL	CTX_LI_LENGTH(R6),R8	;  and its length
+	CMPB	8(AP),#DSC$K_DTYPE_G	; G and H are past the table
+	BNEQ	1$
+	BRW	REAL_G
+1$:	CMPB	8(AP),#DSC$K_DTYPE_H
+	BNEQ	2$
+	BRW	REAL_H
+2$:	CMPB	8(AP),#DSC$K_DTYPE_GC
+	BNEQ	3$
+	BRW	COMPLEX_G
+3$:	CASEB	8(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+10$:	.WORD	IN_LOGICAL-10$		; 2: BU
+	.WORD	IN_LOGICAL-10$		; 3: WU
+	.WORD	IN_LOGICAL-10$		; 4: LU
+	.WORD	BAD_TYPE-10$		; 5
+	.WORD	IN_INTEGER-10$		; 6: B
+	.WORD	IN_INTEGER-10$		; 7: W
+	.WORD	IN_INTEGER-10$		; 8: L
+	.WORD	BAD_TYPE-10$		; 9
+	.WORD	REAL_F-10$		; 10: F
+	.WORD	REAL_D-10$		; 11: D
+	.WORD	COMPLEX_F-10$		; 12: FC
+	.WORD	COMPLEX_D-10$		; 13: DC
+	.WORD	IN_TEXT-10$		; 14: T
+BAD_TYPE:
+	PUSHL	#FOR$_INVARGFOR
+	BRW	FAILED
+
+CANT_CONVERT:
+	PUSHL	#FOR$_INPCONERR
+	BRW	FAILED
+
+;
+; NOT_A_NUMBER: a V_WORD that isn't what the item takes: FOR$_INPCONERR if it
+; could start a number, otherwise FOR$_LISIO_SYN.
+;
+NOT_A_NUMBER:
+	BSBW	NUMERIC
+	BLBS	R0,CANT_CONVERT
+	PUSHL	#FOR$_LISIO_SYN
+	BRW	FAILED
+
+IN_TEXT:
+	CMPB	CTX_LI_KIND(R6),#V_TEXT
+	BEQL	10$
+	CMPB	CTX_LI_KIND(R6),#V_WORD
+	BEQL	NOT_A_NUMBER
+	BRB	CANT_CONVERT
+10$:	MOVC5	R8,(R7),#^A/ /,16(AP),@12(AP)
+	RET
+
+;
+; A logical: T or F, or on as an integer.
+;
+IN_LOGICAL:
+	CMPB	CTX_LI_KIND(R6),#V_WORD
+	BNEQ	CANT_CONVERT
+	MOVZBL	(R7),R0			; the first letter, or after a period
+	CMPB	R0,#^A/./
+	BNEQ	10$
+	CMPL	R8,#1
+	BLEQ	IN_INTEGER
+	MOVZBL	1(R7),R0
+10$:	BICB2	#^X20,R0		; either case
+	CLRL	R2
+	CMPB	R0,#^A/F/
+	BEQL	PUT_INTEGER
+	MNEGL	#1,R2
+	CMPB	R0,#^A/T/
+	BEQL	PUT_INTEGER
+	;
+	; A number, by way of D_floating, which holds any longword exactly;
+	; CVTDL truncates, and sets V for what a longword can't hold.
+	;
+IN_INTEGER:
+	CMPB	CTX_LI_KIND(R6),#V_WORD
+	BNEQ	NOT_INTEGER
+	BSBW	NUMERIC
+	BLBS	R0,10$
+	BRW	NOT_A_NUMBER
+10$:	PUSHAB	VALUE(FP)		; the result,
+	PUSHL	R8			;  the text's length,
+	PUSHL	R7			;  and its address,
+	PUSHL	#1			;  as a D_floating value
+	CALLS	#4,CONVERT
+	BLBC	R0,NOT_INTEGER
+	CVTDL	VALUE(FP),R2
+	BVS	NOT_INTEGER
+	;
+	; R2, stored by the item's length, if it fits.
+	;
+PUT_INTEGER:
+	CMPL	16(AP),#1
+	BNEQ	20$
+	CVTLB	R2,R3
+	BVS	NOT_INTEGER
+	MOVB	R3,@12(AP)
+	RET
+20$:	CMPL	16(AP),#2
+	BNEQ	30$
+	CVTLW	R2,R3
+	BVS	NOT_INTEGER
+	MOVW	R3,@12(AP)
+	RET
+30$:	MOVL	R2,@12(AP)
+	RET
+NOT_INTEGER:
+	BRW	CANT_CONVERT
+
+;
+; The floating types: R2 is which of OTS$CVT_T_F, D, G, or H (CONVERT).
+;
+REAL_F:	CLRL	R2
+	BRB	REAL
+REAL_D:	MOVL	#1,R2
+	BRB	REAL
+REAL_G:	MOVL	#2,R2
+	BRB	REAL
+REAL_H:	MOVL	#3,R2
+REAL:	CMPB	CTX_LI_KIND(R6),#V_WORD
+	BEQL	10$
+	BRW	CANT_CONVERT
+10$:	BSBW	NUMERIC
+	BLBS	R0,20$
+	BRW	NOT_A_NUMBER
+20$:	PUSHAB	VALUE(FP)
+	PUSHL	R8
+	PUSHL	R7
+	PUSHL	R2
+	CALLS	#4,CONVERT
+	BLBS	R0,30$
+	BRW	CANT_CONVERT
+30$:	MOVC3	16(AP),VALUE(FP),@12(AP)
+	RET
+
+;
+; The complex types: a V_COMPLEX's parts, or a number with an imaginary part
+; of 0. R3 is a part's length.
+;
+COMPLEX_F:
+	CLRL	R2
+	BRB	COMPLEX
+COMPLEX_D:
+	MOVL	#1,R2
+	BRB	COMPLEX
+COMPLEX_G:
+	MOVL	#2,R2
+COMPLEX:
+	DIVL3	#2,16(AP),R3
+	CMPB	CTX_LI_KIND(R6),#V_COMPLEX
+	BEQL	20$
+	CMPB	CTX_LI_KIND(R6),#V_WORD
+	BEQL	5$
+	BRW	CANT_CONVERT
+5$:	BSBW	NUMERIC
+	BLBS	R0,10$
+	BRW	NOT_A_NUMBER
+10$:	PUSHAB	VALUE(FP)
+	PUSHL	R8
+	PUSHL	R7
+	PUSHL	R2
+	CALLS	#4,CONVERT
+	BLBS	R0,15$
+	BRW	CANT_CONVERT
+15$:	MOVAB	VALUE(FP)[R3],R0	; an imaginary part of 0
+	CLRQ	(R0)
+	BRB	40$
+20$:	PUSHAB	VALUE(FP)		; the real part
+	PUSHL	CTX_LI_PART(R6)
+	PUSHL	R7
+	PUSHL	R2
+	CALLS	#4,CONVERT
+	BLBS	R0,25$
+	BRW	CANT_CONVERT
+25$:	PUSHAB	VALUE(FP)[R3]		; and the imaginary part
+	SUBL3	CTX_LI_PART(R6),R8,-(SP)
+	ADDL3	CTX_LI_PART(R6),R7,-(SP)
+	PUSHL	R2
+	CALLS	#4,CONVERT
+	BLBS	R0,40$
+	BRW	CANT_CONVERT
+40$:	MOVC3	16(AP),VALUE(FP),@12(AP)
+	RET
+
+;
+; FAILED: the statement's error, the condition on the stack.
+;
+FAILED:	PUSHL	R6
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+	RET
+
+;
+; NUMERIC, a subroutine of STORE (BSBW, RSB): R0's low bit is set if the
+; V_WORD at R7 starts as a number does: a digit, a sign, or a period.
+;
+NUMERIC:
+	MOVZBL	(R7),R1
+	MOVL	#1,R0
+	CMPB	R1,#^A/+/
+	BEQL	90$
+	CMPB	R1,#^A/-/
+	BEQL	90$
+	CMPB	R1,#^A/./
+	BEQL	90$
+	SUBL2	#^A/0/,R1
+	CMPL	R1,#9
+	BLEQU	90$
+	CLRL	R0
+90$:	RSB
+
+;
+; CONVERT(which, text, length, result): the text as a floating value, by
+; OTS$CVT_T_F (which 0), D (1), G (2), or H (3), with no scale factor and no
+; digits assumed in a fraction. Returns its status in R0.
+;
+CONVERT:
+	.WORD	^M<>
+	SUBL2	#8,SP			; a descriptor of the text
+	MOVW	12(AP),DSC$W_LENGTH(SP)
+	MOVB	#DSC$K_DTYPE_T,DSC$B_DTYPE(SP)
+	MOVB	#DSC$K_CLASS_S,DSC$B_CLASS(SP)
+	MOVL	8(AP),DSC$A_POINTER(SP)
+	MOVL	SP,R1
+	CLRL	-(SP)			; the flags,
+	CLRL	-(SP)			;  the scale factor,
+	CLRL	-(SP)			;  the digits in the fraction,
+	PUSHL	16(AP)			;  the result,
+	PUSHL	R1			;  and the text
+	CASEL	4(AP),#0,#3
+10$:	.WORD	20$-10$
+	.WORD	30$-10$
+	.WORD	40$-10$
+	.WORD	50$-10$
+20$:	CALLS	#5,G^OTS$CVT_T_F
+	RET
+30$:	CALLS	#5,G^OTS$CVT_T_D
+	RET
+40$:	CALLS	#5,G^OTS$CVT_T_G
+	RET
+50$:	CALLS	#5,G^OTS$CVT_T_H
+	RET
+
+	.END

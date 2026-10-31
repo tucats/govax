@@ -64,9 +64,9 @@
 ; goes on, and FTN$IO_END reports it if nothing stopped the statement.
 ;
 ; So far formatted input and output (FTN_FORMAT) and list-directed
-; output (FTN_LISTOUT) to the units FTN_UNITS has are done; every other
-; kind of statement is FOR$_NOTIMP, until the later subtasks of Phase 80
-; bring list-directed input, namelists, and internal files.
+; output (FTN_LISTOUT) and input (FTN_LISTIN) to the units FTN_UNITS has
+; are done; every other kind of statement is FOR$_NOTIMP, until the later
+; subtasks of Phase 80 bring namelists and internal files.
 ;
 	$SSDEF
 
@@ -84,9 +84,10 @@ FLAG_ERR	= 1
 FLAG_END	= 2
 FLAG_IOSTAT	= 4
 
-; A statement's context. FTN_LISTOUT and FTN_FORMAT use CTX_STREAM,
-; CTX_RECLEN, CTX_RECORD, and CTX_STATUS too, and define them the same;
-; FTN_FORMAT's own fields follow the record, to CTX_SIZE.
+; A statement's context. FTN_LISTOUT, FTN_LISTIN, and FTN_FORMAT use
+; CTX_STREAM, CTX_RECLEN, CTX_RECORD, and CTX_STATUS too, and define them
+; the same; FTN_FORMAT's own fields follow the record, then FTN_LISTIN's,
+; to CTX_SIZE.
 CTX_NEXT	= 0			; long: the statement below it, or 0
 CTX_FP		= 4			; long: the FP of the routine that began it
 CTX_UNIT	= 8			; long: the unit, -5 for an internal file
@@ -100,7 +101,10 @@ RECORD_SIZE	= 256
 CTX_FREEFMT	= CTX_RECORD+RECORD_SIZE+12 ; long: FTN_FORMAT's run-time format
 CTX_WARNING	= CTX_RECORD+RECORD_SIZE+104 ; long: FTN_FORMAT's error the
 					;  statement went on after, or 0
-CTX_SIZE	= CTX_RECORD+RECORD_SIZE+112 ; with FTN_FORMAT's fields
+CTX_LI_BUFFER	= CTX_RECORD+RECORD_SIZE+112 ; long: FTN_LISTIN's text buffer,
+CTX_LI_SIZE	= CTX_LI_BUFFER+4	;  long: and its size, which last as long
+					;  as the context does: 0 in a new one
+CTX_SIZE	= CTX_LI_SIZE+24	; with FTN_LISTIN's other fields
 
 ; The kinds of statement: a READ's is even, a WRITE's odd, and those
 ; from K_READ_IF on have no unit.
@@ -230,6 +234,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#1,G^LIB$STOP
 27$:	MOVL	4(SP),R3
 	ADDL2	#8,SP
+	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
+	CLRL	CTX_LI_SIZE(R3)
 	;
 	; Fill it in and push it.
 	;
@@ -276,14 +282,10 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	; Start the statement, if it is of a kind FTNRTL does yet.
 	;
 60$:	CMPL	R6,#K_WRITE_SL
-	BLEQ	70$			; formatted, or list-directed output
+	BLEQ	70$			; formatted, or list-directed
 	MOVL	#FOR$_NOTIMP,R0
 	BRB	FAIL
-70$:	CMPL	R6,#K_READ_SL
-	BNEQ	71$
-	MOVL	#FOR$_NOTIMP,R0		; list-directed input: not yet
-	BRB	FAIL
-71$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
+70$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
 	CALLS	#1,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,75$
 	MOVL	#FOR$_ERRDURWRI,R0
@@ -292,6 +294,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	BRB	FAIL
 75$:	CMPL	R6,#K_WRITE_SL
 	BEQL	80$
+	CMPL	R6,#K_READ_SL
+	BEQL	85$
 	PUSHL	12(AP)			; formatted: the format
 	PUSHL	R3
 	CALLS	#2,FTN$$FMT_START	; FTN_FORMAT
@@ -299,6 +303,10 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	RET
 80$:	PUSHL	R3
 	CALLS	#1,FTN$$LIST_START	; FTN_LISTOUT
+	MOVL	#SS$_NORMAL,R0
+	RET
+85$:	PUSHL	R3
+	CALLS	#1,FTN$$LISTIN_START	; FTN_LISTIN
 	MOVL	#SS$_NORMAL,R0
 	RET
 
@@ -330,7 +338,11 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	BGTRU	10$
 	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
 	BRB	90$
-10$:	CMPB	CTX_KIND(R2),#K_WRITE_SL
+10$:	CMPB	CTX_KIND(R2),#K_READ_SL
+	BNEQ	20$
+	CALLS	#2,FTN$$LISTIN_ITEM	; FTN_LISTIN
+	BRB	90$
+20$:	CMPB	CTX_KIND(R2),#K_WRITE_SL
 	BNEQ	90$
 	CALLS	#2,FTN$$LIST_ITEM	; FTN_LISTOUT
 90$:	MOVL	#SS$_NORMAL,R0

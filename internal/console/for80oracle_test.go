@@ -262,9 +262,9 @@ func splitFor80Cases(t *testing.T, records [][]byte) map[int]for80Case {
 	return cases
 }
 
-// TestFor80InputOracle holds FTNRTL's formatted input to VMS's FORTRAN
+// TestFor80InputOracle holds FTNRTL's formatted and list-directed input to VMS's FORTRAN
 // run-time library, as TestFor80Oracle holds its output: testdata/for80's
-// for80i.for is the probe's formatted input cases as FORTRAN READs from
+// for80i.for is the probe's formatted and list-directed input cases as FORTRAN READs from
 // SYS$INPUT, and for80i.dat their records, each case's under a line "#n"
 // (both written by gen.go). Each case prints its IOSTAT and what each
 // item's slot holds, which must be VMS's e= and v lines.

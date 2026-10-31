@@ -19,6 +19,7 @@ C     descriptor for its item (INFFORLOO, 60), which ERR= takes.
       WRITE (6, '(1X,''A'')', ERR=20) 7
       PRINT *, 'NOT HERE'
    20 PRINT *, 'ERR= TAKEN'
+C     A list-directed READ with nothing left to read, which END= takes.
       READ (5, *, IOSTAT=IOS, END=30) I
       PRINT *, 'READ', IOS
    30 CONTINUE

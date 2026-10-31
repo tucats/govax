@@ -2054,18 +2054,18 @@ C     vax/for80-vax.txt.
 
 		fmt.Fprintf(&body, "      SUBROUTINE %s\n", routine)
 		body.WriteString(`      INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
 `)
 	}
 
@@ -2074,7 +2074,7 @@ C     vax/for80-vax.txt.
 
 	for _, n := range dThenG() {
 		c := cases[n]
-		if c.op != "out" || c.unit != 6 || c.format == "" {
+		if c.unit != 6 || (c.op != "list" && (c.op != "out" || c.format == "")) {
 			continue
 		}
 
@@ -2149,6 +2149,10 @@ C     vax/for80-vax.txt.
 		}
 
 		write := "WRITE (6, " + ftnText(c.format) + ", IOSTAT=IOS)"
+		if c.op == "list" {
+			write = "WRITE (6, *, IOSTAT=IOS)"
+		}
+
 		if len(items) > 0 {
 			write += " " + strings.Join(items, ", ")
 		}
@@ -2165,12 +2169,12 @@ C     vax/for80-vax.txt.
 }
 
 // fortranInputCase reports whether round 1's case c is one of for80i.for's:
-// formatted input from an internal record (rd) or from SYS$INPUT's lines
-// (rd5). A record read in place of an internal one is the same to the
+// formatted input from an internal record (rd), or formatted or
+// list-directed input from SYS$INPUT's lines (rd5, rl5). A record read in place of an internal one is the same to the
 // format but at its end, so the cases whose internal record ran out
 // (FOR$_ENDDURREA, 24) are left out by the test, which knows VMS's results.
 func fortranInputCase(c kase) bool {
-	return c.op == "rd" || c.op == "rd5" && len(c.lines) > 0
+	return c.op == "rd" || (c.op == "rd5" || c.op == "rl5") && len(c.lines) > 0
 }
 
 // hasGItem reports whether a case has a G_floating item, so that FORTRAN
@@ -2201,7 +2205,8 @@ func dThenG() []int {
 	return append(d, g...)
 }
 
-// fortranInputProgram is round 1's formatted input cases as FORTRAN
+// fortranInputProgram is round 1's formatted and list-directed input
+// cases as FORTRAN
 // statements (Decision 2), for govax, read from SYS$INPUT: for80i.dat,
 // written beside it, holds each case's records under a line "#n", then
 // three lines "/", as VMS's FOR80R.COM did. Each case is
@@ -2220,7 +2225,7 @@ func fortranInputProgram() string {
 	var b, body strings.Builder
 
 	b.WriteString(`C     FOR80I.FOR - written by testdata/for80/gen.go: round 1's
-C     formatted input cases, from SYS$INPUT, for govax.
+C     formatted and list-directed input cases, from SYS$INPUT, for govax.
 C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       PROGRAM FOR80I
 `)
@@ -2317,6 +2322,10 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 		ftnStatement(&body, "CALL PRE")
 
 		read := "READ (5, " + ftnText(c.format) + ", IOSTAT=IOS)"
+		if c.op == "rl5" {
+			read = "READ (5, *, IOSTAT=IOS)"
+		}
+
 		if len(items) > 0 {
 			read += " " + strings.Join(items, ", ")
 		}

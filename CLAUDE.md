@@ -472,7 +472,11 @@ never had.
   `OTS$$CVT_x_T_R8`, one `LAYOUT` for every form, input by `OTS$CVT_T_x`),
   P, S, SP, SS, complex values, and FORVARMIS at the statement's end, after
   its records (`FTN$$FMT_END`); both oracles now compare every case, G_floating
-  ones in units with `OPTIONS /G_FLOATING`.
+  ones in units with `OPTIONS /G_FLOATING`;
+  subtask 7 (2026-10-31) is list-directed I/O: output in VMS's layout (a record of
+  81 bytes, a number's first blank its carriage control) and input
+  (`ftn_listin.mar`: each value's text kept and converted per item, a failed item
+  left alone), which both oracles now compare.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -720,9 +724,9 @@ never had.
   (conditions with no handler), `for80t.mar` (a real terminal, by hand), and the
   procedures; round 2 is `for80b.mar`. VMS's runs, `vax/for80-vax.txt` and
   `vax/for80b-vax.txt`, are FTNRTL's requirement: `gen.go` also writes
-  `for80.for`, the output cases as FORTRAN, which `TestFor80Oracle` runs with
+  `for80.for`, the output cases, list-directed too, as FORTRAN, which `TestFor80Oracle` runs with
   SYS$OUTPUT a file and holds to VMS's records and e= (NOTIMP cases wait for
-  their subtask), and `for80i.for` and `for80i.dat`, the formatted input cases
+  their subtask), and `for80i.for` and `for80i.dat`, the formatted and list-directed input cases
   read from SYS$INPUT, which `TestFor80InputOracle` holds to VMS's stored
   values. `TestFor80RunsOnFORRTL` and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
@@ -1991,7 +1995,7 @@ expect adjustment as phases land):
   and FTN$IO_END, on a stack of statement contexts, with the control
   block's layout, Phase 80; `ftn_format.mar`, the format interpreter,
   Phase 80; `ftn_listout.mar`, list-directed output in the
-  context's record, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
+  context's record, Phase 75; `ftn_listin.mar`, list-directed input, Phase 80; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
   FTN$LEN to FTN$NWORKERS, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;

@@ -19,18 +19,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S1
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#0'
       WRITE (6, '(1X,I3)', IOSTAT=IOS) 284
       PRINT *, '=0', IOS
@@ -169,18 +169,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S2
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#40'
       VD(1) = 3.25D0
       WRITE (6, '(1X,I5)', IOSTAT=IOS) VD(1)
@@ -341,18 +341,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S3
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#81'
       VF(1) = 0.5555
       WRITE (6, '(1X,E9.3)', IOSTAT=IOS) VF(1)
@@ -516,18 +516,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S4
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#134'
       VF(1) = 270.139
       WRITE (6, '(1X,-3PE12.3)', IOSTAT=IOS) VF(1)
@@ -703,18 +703,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S5
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#174'
       VF(1) = 1.0
       VF(2) = 1.0
@@ -864,18 +864,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S6
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#215'
       VWUI(1) = 1
       WRITE (6, '(1X,O)', IOSTAT=IOS) VWU(1)
@@ -1032,18 +1032,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S7
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#260'
       WRITE (6, '(1X,F)', IOSTAT=IOS) 'HELLO'
       PRINT *, '=260', IOS
@@ -1200,18 +1200,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S8
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#304'
       WRITE (6, '('' A''''B'')', IOSTAT=IOS)
       PRINT *, '=304', IOS
@@ -1336,18 +1336,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S9
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#344'
       WRITE (6, '(1X,F.2)', IOSTAT=IOS) 1, 2
       PRINT *, '=344', IOS
@@ -1472,18 +1472,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S10
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#384'
       WRITE (6, '(1X,I3/I3)', IOSTAT=IOS) 1, 2
       PRINT *, '=384', IOS
@@ -1618,18 +1618,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S11
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#425'
       WRITE (6, '('' K='',I2,:)', IOSTAT=IOS) 4, 5
       PRINT *, '=425', IOS
@@ -1754,18 +1754,18 @@ C     vax/for80-vax.txt.
 
       SUBROUTINE S12
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#465'
       WRITE (6, '(1X,133A1)', IOSTAT=IOS) 'A'
       PRINT *, '=465', IOS
@@ -1775,23 +1775,164 @@ C     vax/for80-vax.txt.
       PRINT *, '#467'
       WRITE (6, '(1X,I5000)', IOSTAT=IOS) 1
       PRINT *, '=467', IOS
+      PRINT *, '#482'
+      WRITE (6, *, IOSTAT=IOS) 1
+      PRINT *, '=482', IOS
+      PRINT *, '#483'
+      WRITE (6, *, IOSTAT=IOS) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+      PRINT *, '=483', IOS
+      PRINT *, '#484'
+      WRITE (6, *, IOSTAT=IOS) -2147483647, 2147483647
+      PRINT *, '=484', IOS
+      PRINT *, '#485'
+      VW(1) = 7
+      VB(2) = 7
+      VLUI(3) = 1
+      VWUI(4) = 1
+      VLUI(5) = 0
+      WRITE (6, *, IOSTAT=IOS) VW(1), VB(2), VLU(3), VWU(4), VLU(5)
+      PRINT *, '=485', IOS
+      PRINT *, '#486'
+      VF(1) = 3.4
+      WRITE (6, *, IOSTAT=IOS) VF(1)
+      PRINT *, '=486', IOS
+      PRINT *, '#487'
+      VF(1) = 3.4
+      VF(2) = 3.4
+      VF(3) = 3.4
+      VF(4) = 3.4
+      VF(5) = 3.4
+      WRITE (6, *, IOSTAT=IOS) VF(1), VF(2), VF(3), VF(4), VF(5)
+      PRINT *, '=487', IOS
+      PRINT *, '#488'
+      VF(1) = 3.4
+      VF(2) = 3.4
+      VF(3) = 3.4
+      VF(4) = 3.4
+      VF(5) = 3.4
+      VF(6) = 3.4
+      WRITE (6, *, IOSTAT=IOS) VF(1), VF(2), VF(3), VF(4), VF(5), VF(6)
+      PRINT *, '=488', IOS
+      PRINT *, '#489'
+      VF(1) = 0.0
+      VF(2) = 1.0E20
+      VF(3) = -1.0E-20
+      VF(4) = 0.1
+      VF(5) = 1.0E6
+      VF(6) = 1.0E7
+      WRITE (6, *, IOSTAT=IOS) VF(1), VF(2), VF(3), VF(4), VF(5), VF(6)
+      PRINT *, '=489', IOS
+      PRINT *, '#490'
+      VD(1) = 3.4D0
+      WRITE (6, *, IOSTAT=IOS) VD(1)
+      PRINT *, '=490', IOS
+      PRINT *, '#491'
+      VD(1) = 3.4D0
+      VD(2) = 3.4D0
+      VD(3) = 3.4D0
+      VD(4) = 3.4D0
+      WRITE (6, *, IOSTAT=IOS) VD(1), VD(2), VD(3), VD(4)
+      PRINT *, '=491', IOS
+      PRINT *, '#492'
+      VD(1) = 0.0D0
+      VD(2) = 1.0D20
+      VD(3) = -1.0D-20
+      WRITE (6, *, IOSTAT=IOS) VD(1), VD(2), VD(3)
+      PRINT *, '=492', IOS
+      PRINT *, '#494'
+      VH(1) = 3.4Q0
+      VH(2) = 1.0Q2000
+      WRITE (6, *, IOSTAT=IOS) VH(1), VH(2)
+      PRINT *, '=494', IOS
+      PRINT *, '#495'
+      VFC(1) = (1.0,2.0)
+      WRITE (6, *, IOSTAT=IOS) VFC(1)
+      PRINT *, '=495', IOS
+      PRINT *, '#496'
+      VFC(1) = (1.0,2.0)
+      VFC(2) = (3.0,4.0)
+      WRITE (6, *, IOSTAT=IOS) VFC(1), VFC(2)
+      PRINT *, '=496', IOS
+      PRINT *, '#497'
+      VFC(1) = (1.0,2.0)
+      VFC(2) = (3.0,4.0)
+      VFC(3) = (5.0,6.0)
+      VFC(4) = (7.0,8.0)
+      VFC(5) = (9.0,1.0)
+      WRITE (6, *, IOSTAT=IOS) VFC(1), VFC(2), VFC(3), VFC(4), VFC(5)
+      PRINT *, '=497', IOS
+      PRINT *, '#498'
+      VDC(1) = (1.0D0,-2.5D0)
+      WRITE (6, *, IOSTAT=IOS) VDC(1)
+      PRINT *, '=498', IOS
+      PRINT *, '#499'
+      VDC(1) = (1.0D0,-2.5D0)
+      VDC(2) = (1.0D0,-2.5D0)
+      VDC(3) = (1.0D0,-2.5D0)
+      WRITE (6, *, IOSTAT=IOS) VDC(1), VDC(2), VDC(3)
+      PRINT *, '=499', IOS
+      PRINT *, '#501'
+      WRITE (6, *, IOSTAT=IOS) 'HELLO'
+      PRINT *, '=501', IOS
+      PRINT *, '#502'
+      WRITE (6, *, IOSTAT=IOS) 'HELLO', 'WORLD'
+      PRINT *, '=502', IOS
+      PRINT *, '#503'
+      WRITE (6, *, IOSTAT=IOS) 1, 'HELLO', 2
+      PRINT *, '=503', IOS
+      PRINT *, '#504'
+      WRITE (6, *, IOSTAT=IOS) 'HELLO', 1
+      PRINT *, '=504', IOS
+      PRINT *, '#505'
+      VF(2) = 1.0
+      VLUI(4) = 1
+      VD(5) = 1.0D0
+      WRITE (6, *, IOSTAT=IOS) 1, VF(2), 'A', VLU(4), VD(5)
+      PRINT *, '=505', IOS
+      PRINT *, '#507'
+      WRITE (6, *, IOSTAT=IOS) 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+     &AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+      PRINT *, '=507', IOS
+      PRINT *, '#508'
+      WRITE (6, *, IOSTAT=IOS) 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+     &AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+      PRINT *, '=508', IOS
+      PRINT *, '#509'
+      WRITE (6, *, IOSTAT=IOS) 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+     &AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+      PRINT *, '=509', IOS
+      PRINT *, '#510'
+      WRITE (6, *, IOSTAT=IOS) 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+     &AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+      PRINT *, '=510', IOS
+      PRINT *, '#511'
+      VLUI(3) = 1
+      VLUI(4) = 1
+      VLUI(5) = 1
+      WRITE (6, *, IOSTAT=IOS) 'AB', 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+     &CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+     &', VLU(3), VLU(4), VLU(5), -3
+      PRINT *, '=511', IOS
+      PRINT *, '#512'
+      WRITE (6, *, IOSTAT=IOS)
+      PRINT *, '=512', IOS
       END
 
       OPTIONS /G_FLOATING
       SUBROUTINE S13
       INTEGER IOS
-      INTEGER*2 VW(4)
-      BYTE VB(4)
-      LOGICAL*4 VLU(4)
-      INTEGER*4 VLUI(4)
-      LOGICAL*2 VWU(4)
-      INTEGER*2 VWUI(4)
+      INTEGER*2 VW(16)
+      BYTE VB(16)
+      LOGICAL*4 VLU(16)
+      INTEGER*4 VLUI(16)
+      LOGICAL*2 VWU(16)
+      INTEGER*2 VWUI(16)
       EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
-      REAL VF(4)
-      DOUBLE PRECISION VD(4)
-      REAL*16 VH(4)
-      COMPLEX VFC(4)
-      COMPLEX*16 VDC(4)
+      REAL VF(16)
+      DOUBLE PRECISION VD(16)
+      REAL*16 VH(16)
+      COMPLEX VFC(16)
+      COMPLEX*16 VDC(16)
       PRINT *, '#67'
       VD(1) = 0.1D0
       WRITE (6, '(1X,F30.25)', IOSTAT=IOS) VD(1)
@@ -1888,4 +2029,13 @@ C     vax/for80-vax.txt.
       VDC(1) = (1.5D0,-2.5D0)
       WRITE (6, '(1X,2F12.5)', IOSTAT=IOS) VDC(1)
       PRINT *, '=296', IOS
+      PRINT *, '#493'
+      VD(1) = 3.4D0
+      VD(2) = 1.0D200
+      WRITE (6, *, IOSTAT=IOS) VD(1), VD(2)
+      PRINT *, '=493', IOS
+      PRINT *, '#500'
+      VDC(1) = (1.0D0,-2.5D0)
+      WRITE (6, *, IOSTAT=IOS) VDC(1)
+      PRINT *, '=500', IOS
       END

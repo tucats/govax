@@ -277,7 +277,7 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVAB	FMT_OPS(R0),CTX_OP(R6)	; the walk starts at the first
 	BLBS	CTX_KIND(R6),40$	; a WRITE
 	PUSHL	R6			; a READ: its first record
-	CALLS	#1,READ_RECORD
+	CALLS	#1,FTN$$FMT_READ
 	MOVL	CTX_STATUS(R6),R0
 	BNEQ	90$
 40$:	MOVL	#SS$_NORMAL,R0
@@ -553,7 +553,7 @@ NEW_RECORD:
 	BLBC	CTX_KIND(R0),10$
 	CALLS	#1,FTN$$FMT_WRITE
 	RET
-10$:	CALLS	#1,READ_RECORD
+10$:	CALLS	#1,FTN$$FMT_READ
 	RET
 
 ;
@@ -591,10 +591,10 @@ NEW_RECORD:
 90$:	RET
 
 ;
-; READ_RECORD(context): reads the next record into the context's.
+; FTN$$FMT_READ(context): reads the next record into the context's,
+; its position at the start. A failure is the statement's error.
 ;
-READ_RECORD:
-	.WORD	^M<R2>
+	.ENTRY	FTN$$FMT_READ,^M<R2>
 	MOVL	4(AP),R2
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$

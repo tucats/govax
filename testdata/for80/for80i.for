@@ -1,5 +1,5 @@
 C     FOR80I.FOR - written by testdata/for80/gen.go: round 1's
-C     formatted input cases, from SYS$INPUT, for govax.
+C     formatted and list-directed input cases, from SYS$INPUT, for govax.
 C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       PROGRAM FOR80I
       CALL R1
@@ -9,6 +9,7 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       CALL R5
       CALL R6
       CALL R7
+      CALL R8
       END
 
       SUBROUTINE R1
@@ -1216,10 +1217,354 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       CALL SHOWV(3, 1)
       CALL SHOWV(4, 1)
       CALL SHOWV(5, 1)
+      CALL SYNC('#765')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), VF(1,2), VFC(1,3), VFC(1,4), VLU(1
+     &,5), VLU(1,6), S(1,7), S(1,8), VF(1,9), VD(1,10), TX(11)(1:14), VF
+     &(1,12), VF(1,13)
+      PRINT *, '=765', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 2)
+      CALL SHOWV(3, 2)
+      CALL SHOWV(4, 1)
+      CALL SHOWV(5, 1)
+      CALL SHOWV(6, 1)
+      CALL SHOWV(7, 1)
+      CALL SHOWV(8, 1)
+      CALL SHOWV(9, 2)
+      CALL SHOWT(10, 14)
+      CALL SHOWV(11, 1)
+      CALL SHOWV(12, 1)
+      CALL SYNC('#766')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=766', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#767')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=767', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#768')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=768', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#769')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=769', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#770')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=770', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#771')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=771', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#772')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=772', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#773')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=773', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#774')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=774', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#775')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2)
+      PRINT *, '=775', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SYNC('#776')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2), S(1,3)
+      PRINT *, '=776', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SYNC('#777')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=777', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#778')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1), S(1,2)
+      PRINT *, '=778', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SYNC('#779')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=779', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#780')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VF(1,1)
+      PRINT *, '=780', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#781')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VD(1,1)
+      PRINT *, '=781', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#782')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VF(1,1), VF(1,2), VF(1,3), VF(1,4)
+      PRINT *, '=782', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SHOWV(3, 1)
+      CALL SYNC('#783')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=783', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#784')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VF(1,1)
+      PRINT *, '=784', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#785')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=785', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#786')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=786', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#787')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=787', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#788')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=788', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#789')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=789', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#790')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=790', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#791')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=791', IOS
+      CALL SHOWV(0, 2)
+      END
+
+      SUBROUTINE R7
+      INTEGER IOS
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      INTEGER*2 VW(8,16)
+      BYTE VB(16,16)
+      LOGICAL*4 VLU(4,16)
+      LOGICAL*2 VWU(8,16)
+      REAL VF(4,16)
+      DOUBLE PRECISION VD(2,16)
+      REAL*16 VH(16)
+      COMPLEX VFC(2,16)
+      COMPLEX*16 VDC(16)
+      EQUIVALENCE (S, VW, VB, VLU, VWU, VF, VD, VH, VFC, VDC)
+      CALL SYNC('#792')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VDC(1)
+      PRINT *, '=792', IOS
+      CALL SHOWV(0, 4)
+      CALL SYNC('#793')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1)
+      PRINT *, '=793', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#794')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VFC(1,1), VFC(1,2)
+      PRINT *, '=794', IOS
+      CALL SHOWV(0, 2)
+      CALL SHOWV(1, 2)
+      CALL SYNC('#795')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VLU(1,1), VLU(1,2), VLU(1,3), VLU(1,4), VL
+     &U(1,5), VLU(1,6), VLU(1,7), VLU(1,8)
+      PRINT *, '=795', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SHOWV(3, 1)
+      CALL SHOWV(4, 1)
+      CALL SHOWV(5, 1)
+      CALL SHOWV(6, 1)
+      CALL SHOWV(7, 1)
+      CALL SYNC('#796')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VLU(1,1), VLU(1,2), VLU(1,3), VLU(1,4), VL
+     &U(1,5)
+      PRINT *, '=796', IOS
+      CALL SHOWV(0, 1)
+      CALL SHOWV(1, 1)
+      CALL SHOWV(2, 1)
+      CALL SHOWV(3, 1)
+      CALL SHOWV(4, 1)
+      CALL SYNC('#797')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VLU(1,1)
+      PRINT *, '=797', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#798')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VLU(1,1)
+      PRINT *, '=798', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#799')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:5)
+      PRINT *, '=799', IOS
+      CALL SHOWT(0, 5)
+      CALL SYNC('#800')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:5)
+      PRINT *, '=800', IOS
+      CALL SHOWT(0, 5)
+      CALL SYNC('#801')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:3)
+      PRINT *, '=801', IOS
+      CALL SHOWT(0, 3)
+      CALL SYNC('#802')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:4)
+      PRINT *, '=802', IOS
+      CALL SHOWT(0, 4)
+      CALL SYNC('#803')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:6)
+      PRINT *, '=803', IOS
+      CALL SHOWT(0, 6)
+      CALL SYNC('#804')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:3)
+      PRINT *, '=804', IOS
+      CALL SHOWT(0, 3)
+      CALL SYNC('#805')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:3)
+      PRINT *, '=805', IOS
+      CALL SHOWT(0, 3)
+      CALL SYNC('#806')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:3)
+      PRINT *, '=806', IOS
+      CALL SHOWT(0, 3)
+      CALL SYNC('#807')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) TX(1)(1:2), TX(2)(1:2)
+      PRINT *, '=807', IOS
+      CALL SHOWT(0, 2)
+      CALL SHOWT(1, 2)
+      CALL SYNC('#808')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=808', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#809')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=809', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#810')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=810', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#811')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=811', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#812')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=812', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#813')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=813', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#814')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=814', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#815')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VW(1,1)
+      PRINT *, '=815', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#816')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VW(1,1)
+      PRINT *, '=816', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#817')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VB(1,1)
+      PRINT *, '=817', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#818')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) VB(1,1)
+      PRINT *, '=818', IOS
+      CALL SHOWV(0, 1)
+      CALL SYNC('#819')
+      CALL PRE
+      READ (5, *, IOSTAT=IOS) S(1,1)
+      PRINT *, '=819', IOS
+      CALL SHOWV(0, 1)
       END
 
       OPTIONS /G_FLOATING
-      SUBROUTINE R7
+      SUBROUTINE R8
       INTEGER IOS
       INTEGER*4 S(4,16)
       CHARACTER*64 TX(16)

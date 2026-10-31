@@ -6,6 +6,7 @@
 //	$ MACRO FTN_CONTROL
 //	$ MACRO FTN_UNITS
 //	$ MACRO FTN_LISTOUT
+//	$ MACRO FTN_LISTIN
 //	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 //
 // The options file names the modules; each comes from mar/<name>.mar.
