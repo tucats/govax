@@ -70,7 +70,6 @@ var (
 	ssROPRAND = vmsdef.Symbols["SS$_ROPRAND"]
 	ssACCVIO  = vmsdef.Symbols["SS$_ACCVIO"]
 	ssFLTOVF  = vmsdef.Symbols["SS$_FLTOVF_F"]
-	ssFLTDIV  = vmsdef.Symbols["SS$_FLTDIV_F"]
 	ssFLTUND  = vmsdef.Symbols["SS$_FLTUND_F"]
 	ssINTOVF  = vmsdef.Symbols["SS$_INTOVF"]
 	ssINTDIV  = vmsdef.Symbols["SS$_INTDIV"]

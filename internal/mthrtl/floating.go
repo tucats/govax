@@ -140,8 +140,8 @@ func productEntry(out vaxfloat.Format) corevms.ShimFunc {
 // handlers run after it ends. So an element that's out of range is stored as a
 // scalar routine leaves it (0.0 for an underflow, else the reserved operand), the
 // loop goes on, and the first such element's condition is signaled at the end,
-// once. A reserved operand is a fault, and ends the loop where it is. How VMS
-// goes on is for the probe (subtask 10).
+// once. A reserved operand is a fault, and ends the loop where it is. VMS 7.1
+// signals in the middle of its loop, and R0 is 0 after it (testdata/mth77).
 func convertArrayEntry(in, out vaxfloat.Format) corevms.ShimFunc {
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
 		count := int32(1)

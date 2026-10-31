@@ -161,7 +161,7 @@ func modulusEntry(f vaxfloat.Format) corevms.ShimFunc {
 
 // imaginaryArgs is the loader of a complex number's imaginary part in format f.
 // MTH$AIMAG and MTH$REAL read only the part they return, so a reserved operand in
-// the other doesn't fault. Unconfirmed (the probe, subtask 10).
+// the other doesn't fault, as on VMS 7.1 (testdata/mth77).
 func imaginaryArgs(f vaxfloat.Format) loader {
 	return func(env *corevms.Environment, addr uint32) (vaxfloat.Value, error) {
 		return loadArg(env, f, addr+uint32(f.Size()))

@@ -127,7 +127,8 @@ func floatArgs(f vaxfloat.Format) loader {
 //
 // A handler that continues from the routine's condition can correct only R0 and
 // R1, not a result in memory, so what's there is what the condition leaves: the
-// reserved operand, or 0.0 for an underflow. Unconfirmed (the probe, subtask 10).
+// reserved operand, or 0.0 for an underflow, as on VMS 7.1 (testdata/mth77), which goes
+// on to store a corrected value there too, as a Go routine that has ended can't.
 func callWithArguments(load loader, out vaxfloat.Format, count int, compute func(args []vaxfloat.Value) (vaxfloat.Value, error)) corevms.ShimFunc {
 	first := 0
 	if out == vaxfloat.H {
@@ -339,8 +340,7 @@ func evaluatePair(env *corevms.Environment, fn pairFunction, f vaxfloat.Format, 
 // write the two results to. Nothing comes back in registers.
 //
 // Each result is in memory before the condition is signaled, so a handler that
-// continues leaves the caller with 0.0 and the good second result. Unconfirmed
-// (the probe, subtask 10).
+// continues leaves the caller with 0.0 and the good second result.
 func callPairEntry(f vaxfloat.Format, fn pairFunction) corevms.ShimFunc {
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
 		x, err := loadArg(env, f, arg(argv, 0))
@@ -377,8 +377,7 @@ func callPairEntry(f vaxfloat.Format, fn pairFunction) corevms.ShimFunc {
 // A signal's dispatch doesn't take the routine's regs back (JSBShim), so before
 // a condition the results go straight in the CPU's registers. For an F pair the
 // second result is in R1, which the mechanism array holds and a handler could
-// change; the result a continuing handler leaves is, as in callPairEntry,
-// unconfirmed.
+// change.
 func jsbPairEntry(f vaxfloat.Format, fn pairFunction) corevms.JSBShimFunc {
 	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
 		x, err := loadRegisters(f, regs[:], 0)

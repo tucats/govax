@@ -1,12 +1,6 @@
 # Phase 77 — MTHRTL: VMS's mathematics library, emulated
 
-**Status:** in progress (subtask 1, the survey and capture, 2026-10-30,
-its Decision 3 accepted by the author the same day; subtasks 2, the package
-and its registration, 3, the engine, square root, exponentials, and
-logarithms, 4, the trigonometric functions and their inverses, 5, the
-hyperbolic functions and ATAN2, 6, Table 1-1's routines, 7, the complex
-functions and parts, 8, the OTS$ powers, multiplication, and division, and 9,
-MTH$RANDOM and the conditions' audit, 10, the probe and VMS's answers, the same day).
+**Status:** done 2026-10-30 (subtasks 1 to 11).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -353,7 +347,7 @@ and what still differs is the oracle's list, below.
    to agree (`sema/constant.go`'s `power`, `complexArith`). Done.
 9. **MTH$RANDOM and the remaining conditions.** Done.
 10. **Tests from MACRO** programs, and the VMS probe. Done.
-11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
+11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP. Done.
 
 ## Progress log
 
@@ -743,7 +737,7 @@ and what still differs is the oracle's list, below.
   - **Integer powers.** The manual's tables read as 1.0 over the product, which the survey and
     subtask 8 followed, but VMS has `2.0 ** (-127)` in F_floating, and `0.5 ** (-100000)` is
     `MTH$_FLOOVEMAT`. Taking the reciprocal first fixes those and is 3 to 15 last bits off on the
-    sweep, and a study of the bits (`F` all of 7, `D` and `G` most) favors the product of each
+    sweep, and a study of the bits (right on `F` 7 of 7, `D` 6 of 9, `G` 6 of 7, `H` 4 of 9) favors the product of each
     square's reciprocal, now `vaxfloat.PowerBySquaring`'s order. FORTRAN's folding shares it, so
     `PARAMETER (X = 2.0 ** (-127))` compiles again and `3.0 ** (-5)` has VMS's bits. No order tried
     matches every bit. The real and complex forms both use it.
@@ -768,8 +762,7 @@ and what still differs is the oracle's list, below.
   (but `DTAND`, below), `TAN` and `SIN` of a huge argument (a value, no `SIGLOSMAT`), the limits of
   `EXP`, `CSIN`, and `CCOS` (EXP's, not `COSH`'s), `MTH$GEXP`'s underflow at the format's limit rather
   than the manual's, `ANINT` just below 0.5, `ATAN2`'s quiet underflow and its pi at (0, -1), `REAL` and
-  `AIMAG`, `SINCOSD`'s results after a continue, `IMOD(-32768, -1)`, `(-2) ** 3`, and the 8 F, D, and
-  G conditions continued. And the 43 JSB entries no manual gives take their arguments in R0 up,
+  `AIMAG`, `SINCOSD`'s results after a continue, `IMOD(-32768, -1)`, and `(-2) ** 3`. And the 43 JSB entries no manual gives take their arguments in R0 up,
   one after the other, with results from R0, as section 1.2 has it for one argument: all are written
   (`jsbBinaryEntry`, `jsbComplexEntry`, `jsbModulusEntry`, `jsbSignEntry`), and only `MTH$$REDUCE_`
   stays a stub. The oracle looks only at their result registers, VMS's others being its scratch.
@@ -777,3 +770,9 @@ and what still differs is the oracle's list, below.
   What's left is the "What still differs" list above. Breaking the code showed the checks can tell:
   15 changes, each failing the oracle, and most unit tests too (the ones without, the JSB entries'
   table lines, `errNoAngle`, and `POWCx`'s overflow, the oracle holds alone). The full suite passes.
+- **2026-10-30:** Subtask 11, the close-out. MANUAL.md's Appendix B has "The mathematics library",
+  with an example that `TestManualExample` runs (`internal/mthrtl/manual_test.go`), its section 14.7
+  has the powers' order, and Appendix C the difference left. HELP has the setting and names MTHRTL
+  among the images govax stands for; it has no topic on routines, as the manual's appendix is where
+  they're listed. The code's "unconfirmed" comments now say what VMS 7.1 answered. Done with `MTH$$REDUCE_` left as stubs, which no program outside the library
+  should call, and the "What still differs" list above.

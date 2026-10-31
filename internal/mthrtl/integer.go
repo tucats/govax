@@ -187,11 +187,7 @@ func integerSign(w width, args []int64) int64 {
 }
 
 // integerRemainderEntry makes MTH$IMOD and MTH$JMOD, whose result has the
-// dividend's sign, as Go's % does. Only divide by zero is in their footnote, an
-// integer exception every VAX takes, whose handler continuing gets the dividend
-// in R0. A remainder of -1 from the largest negative number is 0: no footnote says
-// otherwise, though VMS's mask sets IV. Both are unconfirmed (the probe, subtask
-// 10).
+// dividend's sign, as Go's % does.
 func integerRemainderEntry(w width) corevms.ShimFunc {
 	return func(env *corevms.Environment, argv []uint32) (uint32, error) {
 		args, err := loadIntegers(env, w, argv, 2)

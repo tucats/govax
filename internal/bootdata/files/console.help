@@ -1140,7 +1140,7 @@ $RUN ,/DEB
     the process's P0 space before the program runs.  An image is found
     by these rules, in order:
 
-        1. An image govax stands for (LIBRTL, LIBRTL2, the system's
+        1. An image govax stands for (LIBRTL, LIBRTL2, MTHRTL, the system's
            run-time libraries, ...) is govax's own routines, unless a
            logical name of the image's own name is defined: DEFINE
            LIBRTL DUA1:[X]LIBRTL.EXE asks for that file instead.

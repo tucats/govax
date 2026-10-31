@@ -61,7 +61,8 @@ programs to run as they would under VMS:
   sharing between processes, and record locks.
 - **The run-time library.** About 170 `LIB$` routines (strings,
   descriptors, conversions, dates and times, memory zones, condition
-  handling, file searches, the CLI routines, `LIB$SPAWN`), written in Go
+  handling, file searches, the CLI routines, `LIB$SPAWN`), and the whole
+  mathematics library, `MTH$` and its `OTS$` powers, written in Go
   and reached from VAX code exactly as the real LIBRTL is reached.
 - **Processes.** Several VMS processes run at once, scheduled by VMS's
   priority rules: subprocesses, detached processes, mailboxes between
@@ -2772,7 +2773,7 @@ and point `vax.library` at it, or keep them on a volume and define
 | File | Used by | Without it |
 | --- | --- | --- |
 | the system macro library (STARLET's `.MLB`) | `MACRO`: every system macro | govax's own STARLET (above) |
-| the system object library, `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of its symbols; routines it holds as code (`BAS$`, `MTH$`, ...) are missing |
+| the system object library, `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of its symbols; routines it holds as code (`BAS$`, ...) are missing |
 | `IMAGELIB.OLB` | `LINK`: which shareable image defines each routine | govax's tables of LIBRTL's routines |
 | `LIBRTL.EXE` and other shareable images | `LINK`: routine offsets | govax's tables |
 
@@ -3214,7 +3215,7 @@ When `RUN` starts an image, govax does what VMS's image activator does:
    demand-zero, the user stack), transfer addresses, and the list of
    shareable images it was linked against.
 2. **Finds each shareable image**, and the ones they use in turn:
-   1. A shareable image govax provides itself (LIBRTL, LIBRTL2, the C
+   1. A shareable image govax provides itself (LIBRTL, LIBRTL2, MTHRTL, the C
       run-time library, and the other system images) is govax's own
       routines, unless you've defined a logical name of the image's name
       (`DEFINE LIBRTL DUA1:[X]LIBRTL.EXE`), which asks for that file
@@ -4819,8 +4820,8 @@ FORTRAN compiler was available to check them). So far:
 - In a constant expression, a COMPLEX product's or quotient's parts are
   each computed exactly and rounded once; a REAL or COMPLEX base's power
   is repeated squaring, rounded at each product, and for a negative
-  exponent 1.0 over that product, as the `OTS$` routines' are, so
-  `2.0 ** (-127)` is out of range though its value would fit. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
+  exponent the product of the squares' reciprocals, as the `OTS$` routines'
+  are, so `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need
   arguments of one kind. Zero to a power of zero or less is an error.
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
@@ -4911,6 +4912,71 @@ there too, and the JSB entry points of the string routines. govax also
 provides part of the C run-time library (`DECC$`) for the microkernel's
 use.
 
+#### The mathematics library
+
+MTHRTL's 404 names all resolve, so any program can call them, whatever it's
+written in: every `MTH$` routine in the VMS manual in F, D, G, and H, the complex
+functions in F, D, and G, `MTH$RANDOM`, the JSB entries, and the `OTS$` powers and
+complex multiplication and division. Only `MTH$$REDUCE_`, internal to VMS's library,
+signals `GOVAX-E-NOTIMPL`. An `MTH$` routine takes its arguments by reference, an
+`OTS$` routine by value. An F result comes back in R0, a D or G one in R0 and R1,
+and an H or a D or G complex one through a first argument (`OTS$`: R0 to R3):
+
+```text
+	.TITLE	ROOT
+	.PSECT	DATA,WRT,NOEXE,LONG
+TWO:	.FLOAT	2.0
+BAD:	.FLOAT	-1.0
+SEED:	.LONG	1
+CTL:	.ASCID	/square root !XL, random !XL/
+BUF:	.BLKB	80
+OUT:	.LONG	80
+	.ADDRESS BUF
+LEN:	.BLKL	1
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	START,^M<R2>
+	PUSHAF	TWO
+	CALLS	#1,G^MTH$SQRT		; the argument by reference, the result in R0
+	MOVL	R0,R2
+	PUSHAL	SEED
+	CALLS	#1,G^MTH$RANDOM
+	$FAO_S	CTRSTR=CTL,OUTLEN=LEN,OUTBUF=OUT,P1=R2,P2=R0
+	MOVL	LEN,OUT
+	PUSHAQ	OUT
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	PUSHAF	BAD
+	CALLS	#1,G^MTH$SQRT		; no handler: a severe condition ends the image
+	RET
+	.END	START
+```
+
+```text
+square root 04F340B5, random 80003886
+%MTH-F-SQUROONEG, square root of negative value
+  user PC 00000461
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+ROOT            START                                      00000061  00000461
+```
+
+Every format is computed in arbitrary precision with guard bits and rounded once, so
+a result is the same on every host, and within a last bit or so of the true value. VMS
+7.1's are often a last bit or two away from that, and more in complex logarithms and
+powers, so a program comparing results exactly with a VAX's will see differences there.
+What the routines return and signal otherwise was checked against VMS 7.1.
+
+`MTH$RANDOM` follows the manual, `SEED = (69069 * SEED + 1)` modulo 2^32, with the new
+seed's high 24 bits as the result, so a seed repeats its sequence. Setting
+`vax.runtime.random` makes each new seed come from the host's cryptographic generator
+instead, for numbers that can't be predicted or repeated.
+
+A handler can return `SS$_CONTINUE` from one of the library's conditions, and may correct
+the result in the mechanism array's R0 and R1, as the manual says. One difference: VMS's
+routine goes on from there, and some then fault on the reserved operand they were given, or
+store the corrected value in an H result. govax's return to the caller with what the signal
+left.
+
 ### Appendix C: Where govax differs from VMS
 
 The main differences, gathered from the rest of the manual:
@@ -4925,6 +4991,9 @@ The main differences, gathered from the rest of the manual:
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).
 - Some LIBRTL routines aren't implemented yet (Appendix B).
+- A handler that continues from a condition of the mathematics library gets
+  what the first signal left, where VMS's routine may go on, and signal again
+  (Appendix B).
 - With paging on: no swapping, no paging waits, a smaller minimum working
   set (section 13.5).
 - BACKUP works with save sets of files only: no image, physical, or

@@ -25,8 +25,8 @@ import (
 // handler that knows better stores a corrected value in the mechanism array.
 // A result in memory or in R2:R3 can't be corrected that way.
 //
-// The argument list's shape, and the user PC, are the manual's; the VMS
-// probe (subtask 10) is to confirm them.
+// The argument list's shape, and the user PC, are the manual's, and VMS 7.1's
+// (testdata/mth77).
 
 // reservedR0 is the reserved operand's first longword, in any format: the
 // sign bit set (bit 15 of the first word) and everything else clear. The

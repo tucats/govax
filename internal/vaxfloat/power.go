@@ -59,8 +59,8 @@ func PowerBySquaring[T any](base, one T, n int64, mul, div func(a, b T) (T, erro
 }
 
 // ComplexMul returns (a, b) * (c, d) in format f: (ac - bd, ad + bc), each part
-// computed exactly and rounded once. The VAX has no complex instructions, and how
-// VMS's code rounds a product's parts isn't documented, so this is unconfirmed. A
+// computed exactly and rounded once. The VAX has no complex instructions, and VMS's
+// code may differ in a part's last bits (testdata/mth77). A
 // part too small for f is 0.0. Its only error is ErrOverflow.
 func ComplexMul(f Format, a, b, c, d Value) (Value, Value, error) {
 	return roundParts(f,

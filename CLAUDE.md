@@ -307,7 +307,7 @@ never had.
   8 (2026-10-30) programs end to end, `testdata/fortran/modules` several
   files linked in several orders, and subtask 9 (2026-10-30) the
   close-out, FORTRAN-INTERNALS.md's section 8 on declarations and storage.
-  Phase 77 (in progress) is MTHRTL: subtask 1 (2026-10-30) is the survey
+  Phase 77 (done 2026-10-30) is MTHRTL: subtask 1 (2026-10-30) is the survey
   in its phase doc, and VMS 7.1's MTHRTL.EXE symbol table in `vmsdef`
   (404 names, the `OTS$` powers among them), so LINK finds them; subtask 2
   (2026-10-30) is `internal/mthrtl`, a stub for each of the 402 entries,
@@ -325,7 +325,7 @@ never had.
   is `MTH$RANDOM`, with `vax.runtime.random`, and an audit of each manual
   page's conditions; subtask 10 (2026-10-30) is the probe, `testdata/mth77`, and VMS
   7.1's answers, with all but the internal `MTH$$REDUCE_` of the JSB entries no
-  manual gives.
+  manual gives; subtask 11 (2026-10-30) the close-out, MANUAL.md's Appendix B.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

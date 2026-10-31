@@ -27,9 +27,9 @@
 //     routine may change. (OTS$POWHH_R3 and its kind are CALL entries,
 //     named for returning a result in R0:R3.)
 //
-// An entry that has no routine yet has a stub all the same, so a program
-// runs up to its first call of it, which signals GOVAX-E-NOTIMPL with the
-// routine's name.
+// Every entry has its routine but MTH$$REDUCE_, internal to VMS's library, whose
+// stubs signal GOVAX-E-NOTIMPL with the routine's name. testdata/mth77 holds the
+// rest to VMS 7.1's answers.
 //
 // # Files
 //
