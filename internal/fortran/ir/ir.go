@@ -123,6 +123,10 @@ type Routine struct {
 	// statements, the header's first; nil otherwise (lowerentry.go).
 	Entries []*Entry
 
+	// VFEs are the routines of the FORMAT statements used here that have
+	// variable format expressions (lowervfe.go).
+	VFEs []*VFERoutine
+
 	// Selector, in a function whose entry points return values of different
 	// types, is the cell where each entry point leaves its Number, for the
 	// return to go by; nil otherwise.
@@ -486,6 +490,22 @@ type FormatBlock struct {
 	Label int
 	Text  *Datum
 	Cache *Cell
+
+	// VFE is the routine that evaluates its variable format expressions,
+	// or nil if it has none.
+	VFE *VFERoutine
+}
+
+// VFERoutine is the routine FTNRTL calls for a FORMAT statement's variable
+// format expressions (Decision 5 of docs/PHASE-80 - FORTRAN formatted IO.md):
+// F(n, ap) returns the nth expression's value in R0, ap being the AP of the
+// routine doing the I/O. Its code is one block (or more) per expression, each
+// ending in a Return, among the routine's blocks, and shares the routine's
+// cells and registers; it is written after the routine's entry points.
+type VFERoutine struct {
+	Name  string
+	Label int
+	Cases []*Block
 }
 
 // NamelistBlock is a NAMELIST group's block in the routine's read-only
@@ -642,9 +662,12 @@ type (
 	// subroutines): SS$_NORMAL from a main program, a function's value
 	// from a function, the alternate return's number from a subroutine
 	// that has them.
+	//
+	// VFE marks the return of a variable format expression's value.
 	Return struct {
 		origin
 		Value Expr
+		VFE   bool
 	}
 
 	// NoReturn ends a block that never goes on, as after a call of

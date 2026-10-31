@@ -68,6 +68,14 @@ func Check(r *Routine) error {
 		}
 	}
 
+	for _, v := range r.VFEs {
+		for _, b := range v.Cases {
+			if !blocks[b] {
+				return fmt.Errorf("%s: %s has an expression at a block not laid out", r.Name, v.Name)
+			}
+		}
+	}
+
 	c := checker{r: r, blocks: blocks, cells: cells, data: data}
 
 	for _, b := range r.Blocks {

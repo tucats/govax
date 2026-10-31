@@ -20,8 +20,23 @@
 ; time and the parsed copy freed at the statement's end (Decision 4). The
 ; grammar is internal/fortran/format's, which the compiler checks FORMAT
 ; statements with, and both are held to what VMS's FORTRAN run-time
-; library accepts: a format it refuses is FOR$_SYNERRFOR. A variable
-; format expression, <n>, is refused here for now (subtask 8).
+; library accepts: a format it refuses is FOR$_SYNERRFOR.
+;
+; A FORMAT statement may have variable format expressions, I<J+1> (8.3.2),
+; which a run-time format may not. The compiler writes a routine that
+; computes them, and gives this module the text with each expression's
+; number in its place, I<1>. So PARSE has only to note in the operation
+; which of its numbers is really an expression's number (F_VR and the
+; rest), and RESOLVE, which the walk calls each time it reaches such an
+; operation, calls the routine and fills a copy of the operation in the
+; context with the values: they are the program's, may change between
+; items, and can't go in the parsed format, which nested statements may be
+; using. A repeat count is computed when the walk reaches its descriptor or
+; group, and a width, d, m, and e for each item the descriptor serves
+; (unconfirmed: "each time it is encountered" settles nothing for 3I<K>,
+; and VMS's library can be asked only about run-time formats, which have
+; none). A value its use can't take, what a number in that place couldn't
+; be (<0>I3, I<-1>), is FOR$_VFEVALERR.
 ;
 ; Then the walk (WALK). The format is read from left to right as items
 ; arrive: each item takes the next data descriptor (I, O, Z, F, E, D, G,
@@ -82,6 +97,7 @@ FOR$_INFFORLOO	= ^X001881E4
 FOR$_FORVARMIS	= ^X001881EC
 FOR$_SYNERRFOR	= ^X001881F4
 FOR$_OUTSTAOVE	= ^X00188214
+FOR$_VFEVALERR	= ^X00188224
 
 ; The descriptor's fields and codes (the VAX calling standard's).
 DSC$W_LENGTH	= 0
@@ -105,10 +121,13 @@ DSC$K_CLASS_A	= 4
 
 ; A FORMAT statement's block, made by the compiler: the address of the
 ; longword where the parsed format is kept, the text's length and a word
-; of flags, and the text's address.
+; of flags, the text's address, and if flag bit 0 says it has variable
+; format expressions, their routine's address.
 FB_A_CELL	= 0
 FB_W_LENGTH	= 4
+FB_W_FLAGS	= 6
 FB_A_TEXT	= 8
+FB_A_VFE	= 12			; with flag bit 0: the expressions' routine
 
 ; The control block's flag for a run-time format (FTN_STATEMENT's).
 FLAG_RUNFMT	= 8
@@ -141,7 +160,10 @@ CTX_WARNING	= CTX_GROUPS+<MAX_DEPTH*8> ; long: an error the statement goes on
 					;  after (FTN$$FMT_WARN), or 0
 CTX_MISMATCH	= CTX_WARNING+4		; byte: 1 if an item wasn't of a type its
 					;  descriptor takes (FTN_EDIT, FTN_FLOAT)
-CTX_SIZE	= CTX_WARNING+8
+CTX_AP		= CTX_WARNING+36		; long: the AP of the routine that began it
+						;  (FTN_LISTIN's fields come between)
+CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
+CTX_RESOLVED	= CTX_VFE+4		; an operation with its expressions' values
 
 OUTPUT_MAX	= 133			; an output record's bytes, at most
 INPUT_MAX	= 199			; an input record's
@@ -157,7 +179,8 @@ INPUT_MAX	= 199			; an input record's
 ;	+4  long  the count of X, T, TL, TR, and P (signed); a character
 ;		  constant's text's address; a group's: the address of its
 ;		  end; a group end's: the address of its group
-;	+8  word  w, a data descriptor's width
+;	+8  word  w, a data descriptor's width; for P with an expression
+;		  and a minus sign before it, 1
 ;	+10 byte  m or d
 ;	+11 byte  e
 ;
@@ -179,6 +202,21 @@ OP_SIZE		= 12
 F_W		= 1			; the flags: w given,
 F_D		= 2			;  m or d given,
 F_E		= 4			;  e given
+F_VR		= 8			; the repeat count,
+F_VW		= 16			;  w,
+F_VD		= 32			;  m or d,
+F_VE		= 64			;  e,
+F_VN		= 128			;  or the count is an expression's number
+F_VFE		= F_VR+F_VW+F_VD+F_VE+F_VN
+V_R		= 3			; their bits, for BBC
+V_W		= 4
+V_D		= 5
+V_E		= 6
+V_N		= 7
+
+; What NUMBER returns in R0 for an expression's number. Its low bit is set,
+; so a test for "a number was there" takes it as one.
+AN_EXPR		= 3
 
 ; The codes. The data descriptors come first, I to Q, so that a code is
 ; a data descriptor's if it is at most C_Q; the order is the format
@@ -212,6 +250,9 @@ C_ENDGROUP	= 25			; ) : its end
 C_END		= 26			; the format's last parenthesis
 
 MAX_WIDTH	= 32767			; the largest repeat count, width, or count
+MAX_DIGITS	= 255			; the largest m, d, or e
+MIN_SCALE	= -128			; a scale factor's limits
+MAX_SCALE	= 127
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 
@@ -242,6 +283,7 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CLRB	CTX_DOLLAR(R6)
 	CLRB	CTX_USED(R6)
 	CLRB	CTX_MISMATCH(R6)
+	CLRL	CTX_VFE(R6)
 	MOVL	8(AP),R2		; the format
 	BITW	#FLAG_RUNFMT,CTX_FLAGS(R6)
 	BNEQ	20$
@@ -249,13 +291,16 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	; A FORMAT statement's: parsed already, or parsed now and kept in its
 	; cell.
 	;
-	MOVL	FB_A_CELL(R2),R3
+	BLBC	FB_W_FLAGS(R2),15$
+	MOVL	FB_A_VFE(R2),CTX_VFE(R6)
+15$:	MOVL	FB_A_CELL(R2),R3
 	MOVL	(R3),R0
 	BNEQ	30$
+	BICL3	#^C1,FB_W_FLAGS(R2),-(SP) ; whether it may have expressions,
 	PUSHL	R3			; where the parsed format goes,
 	MOVZWL	FB_W_LENGTH(R2),-(SP)	;  the text's length,
 	PUSHL	FB_A_TEXT(R2)		;  and its address
-	CALLS	#3,PARSE
+	CALLS	#4,PARSE
 	BLBC	R0,90$
 	MOVL	(R3),R0
 	BRB	30$
@@ -267,10 +312,11 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CMPB	DSC$B_CLASS(R2),#DSC$K_CLASS_A
 	BNEQ	25$
 	MOVL	DSC$L_ARSIZE(R2),R1
-25$:	PUSHAL	CTX_FREEFMT(R6)
+25$:	CLRL	-(SP)			; a run-time format has no expressions
+	PUSHAL	CTX_FREEFMT(R6)
 	PUSHL	R1
 	PUSHL	DSC$A_POINTER(R2)
-	CALLS	#3,PARSE
+	CALLS	#4,PARSE
 	BLBC	R0,90$
 	MOVL	CTX_FREEFMT(R6),R0
 30$:	MOVL	R0,CTX_FORMAT(R6)
@@ -419,7 +465,9 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 ; Walks the format to the next data descriptor, doing the others on the
 ; way, and returns its operation in R0. With end 1 (the statement's end),
 ; stops at a data descriptor, a colon, or the format's end instead, and
-; returns 0. Returns 0 too when the statement fails on the way.
+; returns 0. Returns 0 too when the statement fails on the way. R2 is the
+; operation; R5 is where its numbers are, the same operation or, if it has
+; expressions, RESOLVE's copy.
 ;
 WALK:	.WORD	^M<R2,R3,R4,R5,R6>
 	MOVL	4(AP),R6		; the context
@@ -430,12 +478,27 @@ LOOP:	TSTL	CTX_STATUS(R6)
 	BLBS	8(AP),STOP
 	DECL	CTX_COUNT(R6)
 	MOVL	CTX_CUR(R6),R0
-	RET
+	BITB	#F_VFE,OP_B_FLAGS(R0)
+	BEQL	5$
+	CLRL	-(SP)			; the same descriptor: not its repeat count
+	PUSHL	R0
+	PUSHL	R6
+	CALLS	#3,RESOLVE		; 0 if it failed, as this routine returns
+5$:	RET
 10$:	MOVL	CTX_OP(R6),R2		; the next operation
+	MOVL	R2,R5
 	ADDL3	#OP_SIZE,R2,CTX_OP(R6)	; and the one after it
 	CMPB	OP_B_CODE(R2),#C_Q
 	BLEQU	DATA
-	CASEB	OP_B_CODE(R2),#C_TEXT,#<C_END-C_TEXT>
+	BITB	#F_VFE,OP_B_FLAGS(R2)
+	BEQL	15$
+	PUSHL	#1
+	PUSHL	R2
+	PUSHL	R6
+	CALLS	#3,RESOLVE
+	MOVL	R0,R5
+	BEQL	STOP
+15$:	CASEB	OP_B_CODE(R2),#C_TEXT,#<C_END-C_TEXT>
 20$:	.WORD	TEXT-20$		; 'text', nH
 	.WORD	DO_X-20$		; nX
 	.WORD	DO_T-20$		; Tn
@@ -458,11 +521,19 @@ STOP:	CLRL	R0
 
 DATA:	BLBS	8(AP),STOP		; the end: stop at it
 	MOVL	R2,CTX_CUR(R6)
-	MOVZWL	OP_W_REPEAT(R2),R0
+	BITB	#F_VFE,OP_B_FLAGS(R2)
+	BEQL	10$
+	PUSHL	#1
+	PUSHL	R2
+	PUSHL	R6
+	CALLS	#3,RESOLVE
+	MOVL	R0,R5
+	BEQL	STOP
+10$:	MOVZWL	OP_W_REPEAT(R5),R0
 	DECL	R0
 	MOVL	R0,CTX_COUNT(R6)	; the items it takes after this one
 	MOVB	#1,CTX_USED(R6)
-	MOVL	R2,R0
+	MOVL	R5,R0
 	RET
 
 TEXT:	MOVZWL	OP_W_REPEAT(R2),-(SP)	; the length
@@ -474,15 +545,15 @@ TEXT:	MOVZWL	OP_W_REPEAT(R2),-(SP)	; the length
 10$:	CALLS	#3,GET_CHARS		; input: the record's characters,
 	BRW	LOOP			;  in its place
 
-DO_X:	ADDL2	OP_L_N(R2),CTX_POS(R6)
+DO_X:	ADDL2	OP_L_N(R5),CTX_POS(R6)
 	BRW	LOOP
-DO_T:	SUBL3	#1,OP_L_N(R2),CTX_POS(R6)
+DO_T:	SUBL3	#1,OP_L_N(R5),CTX_POS(R6)
 	BRW	LOOP
-DO_TL:	SUBL2	OP_L_N(R2),CTX_POS(R6)
+DO_TL:	SUBL2	OP_L_N(R5),CTX_POS(R6)
 	BGEQ	10$
 	CLRL	CTX_POS(R6)		; no further than the first column
 10$:	BRW	LOOP
-DO_P:	MOVL	OP_L_N(R2),CTX_SCALE(R6)
+DO_P:	MOVL	OP_L_N(R5),CTX_SCALE(R6)
 	BRW	LOOP
 DO_S:	CLRB	CTX_SIGN(R6)
 	BRW	LOOP
@@ -508,8 +579,8 @@ DOLLAR:	MOVB	#1,CTX_DOLLAR(R6)
 
 GROUP:	MOVL	CTX_DEPTH(R6),R3	; a group's start: its place and count
 	MOVAQ	CTX_GROUPS(R6)[R3],R4	;  on the stack of groups
-	MOVL	R2,(R4)
-	MOVZWL	OP_W_REPEAT(R2),4(R4)
+	MOVL	R2,(R4)			; (the operation itself, not a copy)
+	MOVZWL	OP_W_REPEAT(R5),4(R4)
 	INCL	CTX_DEPTH(R6)
 	BRW	LOOP
 
@@ -541,6 +612,95 @@ AT_END:	BLBC	8(AP),5$
 	MOVL	CTX_FORMAT(R6),R0
 	MOVL	FMT_A_REVERT(R0),CTX_OP(R6)
 	BRW	LOOP
+
+;
+; RESOLVE(context, op, with_repeat)
+;
+; Copies operation op to the context and puts the values of its variable
+; format expressions in the copy, in the order they were written: the
+; repeat count (only if with_repeat is 1), w, m or d, e, and X's, T's, TL's,
+; TR's, and P's count. Returns the copy's address, or 0 with the statement
+; failed if a value is out of range for its use. The routine may do what
+; a function called by a program does, I/O on another unit included.
+;
+RESOLVE:
+	.WORD	^M<R2,R3,R4>
+	MOVL	4(AP),R2		; the context
+	MOVL	8(AP),R3		; the operation
+	MOVAB	CTX_RESOLVED(R2),R4	; its copy
+	MOVQ	(R3),(R4)
+	MOVL	8(R3),8(R4)
+	BLBC	12(AP),10$
+	BBC	#V_R,OP_B_FLAGS(R3),10$
+	MOVZWL	OP_W_REPEAT(R3),R0
+	JSB	EXPRESSION
+	CMPL	R0,#1
+	BLSS	25$
+	CMPL	R0,#MAX_WIDTH
+	BGTR	25$
+	MOVW	R0,OP_W_REPEAT(R4)
+10$:	BBC	#V_W,OP_B_FLAGS(R3),20$
+	MOVZWL	OP_W_W(R3),R0
+	JSB	EXPRESSION
+	TSTL	R0
+	BLSS	25$
+	CMPL	R0,#MAX_WIDTH
+	BGTR	25$
+	MOVW	R0,OP_W_W(R4)
+20$:	BBC	#V_D,OP_B_FLAGS(R3),30$
+	MOVZBL	OP_B_D(R3),R0
+	JSB	EXPRESSION
+	TSTL	R0
+	BLSS	25$
+	CMPL	R0,#MAX_DIGITS
+	BGTR	25$
+	MOVB	R0,OP_B_D(R4)
+	BRB	30$
+25$:
+	PUSHL	#FOR$_VFEVALERR
+	PUSHL	R2
+	CALLS	#2,FTN$$FMT_FAIL
+	CLRL	R0
+	RET
+30$:	BBC	#V_E,OP_B_FLAGS(R3),40$
+	MOVZBL	OP_B_E(R3),R0
+	JSB	EXPRESSION
+	CMPL	R0,#1
+	BLSS	25$
+	CMPL	R0,#MAX_DIGITS
+	BGTR	25$
+	MOVB	R0,OP_B_E(R4)
+40$:	BBC	#V_N,OP_B_FLAGS(R3),90$
+	MOVL	OP_L_N(R3),R0
+	JSB	EXPRESSION
+	CMPB	OP_B_CODE(R3),#C_P
+	BNEQ	50$
+	TSTW	OP_W_W(R3)		; -<K>P
+	BEQL	45$
+	MNEGL	R0,R0
+45$:	CMPL	R0,#MIN_SCALE
+	BLSS	25$
+	CMPL	R0,#MAX_SCALE
+	BGTR	25$
+	BRB	60$
+50$:	TSTL	R0
+	BLSS	25$
+	CMPL	R0,#MAX_WIDTH
+	BGTR	25$
+60$:	MOVL	R0,OP_L_N(R4)
+90$:	MOVL	R4,R0
+	RET
+
+;
+; EXPRESSION: R0 the value of the expression numbered R0, R2 the context.
+; The routine is given the number and the AP of the routine doing the I/O,
+; through which it reaches its dummy arguments.
+;
+EXPRESSION:
+	PUSHL	CTX_AP(R2)
+	PUSHL	R0
+	CALLS	#2,@CTX_VFE(R2)
+	RSB
 
 ;
 ; NEW_RECORD(context): ends the record: writes an output statement's,
@@ -811,11 +971,12 @@ EDIT_Q:	MOVL	4(AP),R1		; the context
 90$:	RET
 
 ;
-; PARSE(text, length, result)
+; PARSE(text, length, result, expressions)
 ;
 ; Parses the format whose text, length bytes, is at text into a parsed
 ; format, made with LIB$GET_VM, and stores its address in the longword
-; at result. Returns in R0 SS$_NORMAL, FOR$_SYNERRFOR if the format is
+; at result. expressions is 1 if it may have <n>, a variable format
+; expression's number; a run-time format may not. Returns in R0 SS$_NORMAL, FOR$_SYNERRFOR if the format is
 ; wrong (and nothing is stored), or FOR$_INSVIRMEM.
 ;
 ; The block has room for an operation per character of the text, more
@@ -970,12 +1131,14 @@ DO_PARSE_P:				; kP: P alone is 0P
 	TSTL	R2
 	BNEQ	10$
 	CLRL	R4
-10$:	TSTL	R3
+10$:	CMPL	R2,#AN_EXPR
+	BEQL	40$
+	TSTL	R3
 	BGEQ	20$
 	MNEGL	R4,R4
-20$:	CMPL	R4,#-128
+20$:	CMPL	R4,#MIN_SCALE
 	BLSS	30$
-	CMPL	R4,#127
+	CMPL	R4,#MAX_SCALE
 	BGTR	30$
 	MOVL	#C_P,R0
 	JSB	EMIT
@@ -983,6 +1146,15 @@ DO_PARSE_P:				; kP: P alone is 0P
 	CLRL	R5			; no comma needed after it
 	BRW	LIST
 30$:	BRW	SYNTAX
+40$:	MOVL	#C_P,R0			; <k>P, perhaps with a sign
+	JSB	EMIT
+	MOVL	R4,OP_L_N(R1)
+	BISB2	#F_VN,OP_B_FLAGS(R1)
+	TSTL	R3
+	BGEQ	50$
+	MOVW	#1,OP_W_W(R1)
+50$:	CLRL	R5
+	BRW	LIST
 
 DO_PARSE_X:				; nX: X alone is 1X
 	INCL	R6
@@ -992,12 +1164,15 @@ DO_PARSE_X:				; nX: X alone is 1X
 10$:	MOVL	#C_X,R0
 	JSB	EMIT
 	MOVL	R4,OP_L_N(R1)
-	MOVL	#1,R5
+	CMPL	R2,#AN_EXPR
+	BNEQ	20$
+	BISB2	#F_VN,OP_B_FLAGS(R1)
+20$:	MOVL	#1,R5
 	BRW	LIST
 
 DO_PARSE_H:				; nH and n characters
-	TSTL	R2
-	BEQL	20$
+	CMPL	R2,#1			; a number, never an expression
+	BNEQ	20$
 	TSTL	R4
 	BEQL	20$
 	INCL	R6			; past the H
@@ -1026,7 +1201,10 @@ DO_PARSE_GROUP:				; r( : a group, at most 8 deep
 	MOVL	#C_GROUP,R0
 	JSB	EMIT
 	MOVW	R4,OP_W_REPEAT(R1)
-	TSTL	R11
+	CMPL	R2,#AN_EXPR
+	BNEQ	5$
+	BISB2	#F_VR,OP_B_FLAGS(R1)
+5$:	TSTL	R11
 	BNEQ	10$
 	MOVL	R1,FMT_A_REVERT(R10)	; the format's own level: reversion's
 10$:	PUSHL	R1			; until its end
@@ -1092,11 +1270,15 @@ COLUMN:	TSTL	R2
 	BLBC	R0,10$
 	CMPL	R1,#MAX_WIDTH
 	BGTR	10$
+	MOVL	R0,R2			; AN_EXPR, or not
 	MOVL	R1,R4
 	MOVL	R3,R0
 	JSB	EMIT
 	MOVL	R4,OP_L_N(R1)
-	MOVL	#1,R5
+	CMPL	R2,#AN_EXPR
+	BNEQ	5$
+	BISB2	#F_VN,OP_B_FLAGS(R1)
+5$:	MOVL	#1,R5
 	BRW	LIST
 10$:	BRW	SYNTAX
 
@@ -1129,7 +1311,10 @@ DATA_ITEM:
 	JSB	EMIT
 	MOVW	R4,OP_W_REPEAT(R1)
 	MOVL	R1,R3			; R3: the operation
-	MOVL	#1,R5
+	CMPL	R2,#AN_EXPR
+	BNEQ	8$
+	BISB2	#F_VR,OP_B_FLAGS(R3)
+8$:	MOVL	#1,R5
 	JSB	NUMBER			; w
 	BLBS	R0,10$
 	BRW	LIST
@@ -1138,7 +1323,10 @@ DATA_ITEM:
 	BRW	SYNTAX
 15$:	MOVW	R1,OP_W_W(R3)
 	BISB2	#F_W,OP_B_FLAGS(R3)
-	CMPB	OP_B_CODE(R3),#C_L
+	CMPL	R0,#AN_EXPR
+	BNEQ	17$
+	BISB2	#F_VW,OP_B_FLAGS(R3)
+17$:	CMPB	OP_B_CODE(R3),#C_L
 	BGEQU	90$			; L and A: nothing more
 	CMPB	OP_B_CODE(R3),#C_Z
 	BGTRU	20$
@@ -1146,17 +1334,13 @@ DATA_ITEM:
 	CMPB	R0,#^A/./
 	BNEQ	90$
 	INCL	R6
-	JSB	DIGITS
-	MOVB	R1,OP_B_D(R3)
-	BISB2	#F_D,OP_B_FLAGS(R3)
+	JSB	FIELD_D
 	BRB	90$
 20$:	JSB	NEXTCH			; F, E, D, G: .d
 	CMPB	R0,#^A/./
 	BNEQ	80$
 	INCL	R6
-	JSB	DIGITS
-	MOVB	R1,OP_B_D(R3)
-	BISB2	#F_D,OP_B_FLAGS(R3)
+	JSB	FIELD_D
 	CMPB	OP_B_CODE(R3),#C_E
 	BEQL	30$
 	CMPB	OP_B_CODE(R3),#C_G
@@ -1169,10 +1353,13 @@ DATA_ITEM:
 	BLBC	R0,90$
 	TSTL	R1
 	BEQL	80$
-	CMPL	R1,#255
+	CMPL	R1,#MAX_DIGITS
 	BGTR	80$
 	MOVB	R1,OP_B_E(R3)
 	BISB2	#F_E,OP_B_FLAGS(R3)
+	CMPL	R0,#AN_EXPR
+	BNEQ	90$
+	BISB2	#F_VE,OP_B_FLAGS(R3)
 90$:	BRW	LIST
 80$:	BRW	SYNTAX
 
@@ -1215,14 +1402,27 @@ NEXTCH:	CMPL	R6,R7
 ;
 ; NUMBER: an unsigned number at R6, its digits perhaps with blanks among
 ; them: R0 1 and R1 its value, held at MAX_WIDTH+1 if larger (which every
-; limit refuses), or R0 0 if there is none. A variable format expression
-; isn't allowed yet: a syntax error.
+; limit refuses), or R0 0 if there is none. <n>, a variable format
+; expression's number as the compiler writes it, is R0 AN_EXPR and R1 n,
+; or a syntax error if this format may have none.
 ;
 NUMBER:	CLRL	R1
 	JSB	NEXTCH
 	CMPB	R0,#^A/</
 	BNEQ	5$
+	TSTL	16(AP)			; PARSE's expressions argument
+	BNEQ	2$
 	BRW	SYNTAX
+2$:	INCL	R6
+3$:	MOVZBL	(R6)+,R0
+	CMPB	R0,#^A/>/
+	BEQL	4$
+	SUBL2	#^A/0/,R0
+	MULL2	#10,R1
+	ADDL2	R0,R1
+	BRB	3$
+4$:	MOVL	#AN_EXPR,R0
+	RSB
 5$:	CMPB	R0,#^A/0/
 	BLSSU	30$
 	CMPB	R0,#^A/9/
@@ -1251,10 +1451,22 @@ NUMBER:	CLRL	R1
 ;
 DIGITS:	JSB	NUMBER
 	BLBC	R0,10$
-	CMPL	R1,#255
+	CMPL	R1,#MAX_DIGITS
 	BGTR	10$
 	RSB
 10$:	BRW	SYNTAX
+
+;
+; FIELD_D: m or d, by DIGITS, into the operation at R3.
+;
+FIELD_D:
+	JSB	DIGITS
+	MOVB	R1,OP_B_D(R3)
+	BISB2	#F_D,OP_B_FLAGS(R3)
+	CMPL	R0,#AN_EXPR
+	BNEQ	10$
+	BISB2	#F_VD,OP_B_FLAGS(R3)
+10$:	RSB
 
 ;
 ; REPEAT: the repeat count of a data descriptor or group, from R2 (1 if

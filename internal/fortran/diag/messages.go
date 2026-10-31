@@ -625,6 +625,10 @@ var messages = map[string]kind{
 	// the character that does.
 	"FMTSYNTAX": {Error, "the format is not valid: %s"},
 
+	// BADVFE is a variable format expression that isn't a number (section
+	// 8.3.2).
+	"BADVFE": {Error, "a variable format expression must be a number, not %s"},
+
 	// FMTLABEL is a FORMAT statement without a label, which nothing could
 	// use (section 8.1).
 	"FMTLABEL": {Error, "a FORMAT statement must have a label"},

@@ -85,6 +85,25 @@ func Lex(statements []*source.Statement, messages *diag.List) []*Statement {
 	return out
 }
 
+// Expression lexes the text of src from offset from to offset to as an
+// expression's tokens, with offsets into the statement's text as a token's
+// always are. A FORMAT statement has no tokens, but a variable format
+// expression inside it (section 8.3.2) is an expression like any other.
+func Expression(src *source.Statement, from, to int, messages *diag.List) []Token {
+	sq, problems := squeeze(src.Text[from:to])
+	for _, p := range problems {
+		messages.Report(p.ident, src.Position(from+p.offset), p.args...)
+	}
+
+	for i := range sq.at {
+		sq.at[i] += from
+	}
+
+	l := &lexer{messages: messages, src: src, sq: sq}
+
+	return l.tokenize(0, len(sq.text), modeNone)
+}
+
 // lexer is Lex's state for one statement.
 type lexer struct {
 	messages *diag.List

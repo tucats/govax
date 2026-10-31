@@ -136,6 +136,11 @@ const (
 	maxDigits = 255   // m, d, and e
 	minScale  = -128  // kP
 	maxScale  = 127
+
+	// maxVFEs is how many variable format expressions a FORMAT may have:
+	// FTNRTL's parsed format keeps an expression's number where the value
+	// goes, and m, d, and e are bytes.
+	maxVFEs = 255
 )
 
 // MaxDepth is how deeply groups may nest inside the format's own
@@ -634,6 +639,10 @@ func (p *parser) vfe() Value {
 	text := p.text[start+1 : start+end]
 	if strings.TrimSpace(text) == "" {
 		p.fail(start, "the variable format expression is empty")
+	}
+
+	if len(p.vfes) == maxVFEs {
+		p.fail(start, "a format can have at most %d variable format expressions", maxVFEs)
 	}
 
 	p.vfes = append(p.vfes, VFE{Text: text, Offset: start + 1})

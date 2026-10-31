@@ -5,8 +5,9 @@ accepted by the author the same day; subtask 2 (the probe) done the same day, tw
 rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
 compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
 interpreter) done the same day; subtask 5 (integer, logical, and character
-editing), subtask 6 (floating editing), and subtask 7 (list-directed output
-and input) done the same day. Needs Phase 79 (control flow, for
+editing), subtask 6 (floating editing), subtask 7 (list-directed output
+and input), and subtask 8 (variable format expressions and run-time formats)
+done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -782,7 +783,8 @@ subtasks land.
    ("Subtask 6", below).
 7. **List-directed:** output on the shared record (Part A's three differences),
    and input. Done ("Subtask 7", below).
-8. **Variable format expressions and run-time formats.**
+8. **Variable format expressions and run-time formats.** Done ("Subtask 8",
+   below).
 9. **Internal files, ENCODE, DECODE.**
 10. **LIB$TPARSE,** brought in from Phase 60 by the author (2026-10-31):
     VMS's FORRTL needs it for namelist input, so a program linked against
@@ -1204,6 +1206,79 @@ an array, nulls, an implied-DO list, ACCEPT, complex and character values, a
 constant across four records (growing the buffer), a READ of a real into an
 INTEGER, END=, IOSTAT's -1, and LISIO_SYN signaled.
 
+## Subtask 8: what was built (2026-10-31)
+
+**Variable format expressions** run as Decision 5 planned: one routine per
+FORMAT, `F(n, ap)`. The expression's text goes through the compiler's front end
+like any other (the manual's section 8.3.2 allows function calls and dummy
+arguments), and FTNRTL sees only its number.
+
+- **Parsing** (`parse/spec.go`'s `parseFormat`). `format.Parse` finds each
+  `<expr>`; `lex.Expression` lexes that piece of the statement, its tokens'
+  offsets still the statement's, and the parser's own `expr` reads them, into
+  `ast.FormatStmt.VFEs`. So a message points into the format. A format that isn't
+  valid has none, and semantic analysis reports the format.
+- **Semantic analysis** (`sema/io.go`). The FORMAT is still read in the
+  declarations walk, but `formatExpressions` analyzes its expressions in the
+  statements walk, when the names are known. Each becomes an INTEGER\*4, a REAL's
+  or COMPLEX's by conversion; a CHARACTER or LOGICAL is the new `BADVFE`.
+  `Format.Encoded` is the text with each `<expr>` made `<n>`, and that is the text
+  in the image. A format may have 255 at most (`maxVFEs`): FTNRTL keeps the number
+  where the value goes, and m, d, and e are bytes.
+- **Lowering** (`ir/lowervfe.go`). A FORMAT used by a statement gets a
+  `VFERoutine`, whose cases are blocks after everything else in the routine, each
+  ending in a `Return`. Those blocks run in the middle of an I/O statement, so
+  they must share no temporary with a statement: `layOutVFEs` empties the pools
+  first. A value is computed before a concatenation's dynamic string goes. A FORMAT
+  nothing uses gets no routine.
+- **Code generation** (`writeVFE`). The routine starts after the routine's
+  entry points, with the routine's one mask and a local label (`.WORD`, not
+  `.ENTRY`, whose name would be global): `MOVL 4(AP),R0`, `MOVL 8(AP),AP`, and a
+  `CASEL`. A FORMAT's block gets flag bit 0 and the routine's address at +12;
+  without expressions it stays as it was, so no other golden file changed.
+- **FTNRTL** (`ftn_format.mar`; no new vector entries, so GSMATCH stays 1,8). A
+  begin call keeps its caller's AP (`CTX_AP`). `PARSE` has a fourth argument saying
+  whether `<n>` is allowed, so a run-time format's is still SYNERRFOR, and
+  `NUMBER` returns `AN_EXPR`, whose low bit is set, so every "was a number there"
+  test passes; each caller then sets the operation's `F_VR`, `F_VW`, `F_VD`, `F_VE`,
+  or `F_VN`. `RESOLVE` fills a copy of the operation in the context with the values
+  and the walk uses the copy (R5), so `FTN_EDIT` and `FTN_FLOAT` are unchanged and
+  the parsed format, which nested statements may be using, is never written.
+
+**When each is computed.** The walk moves only when an item arrives, so
+`(I2,<K>I3)` can read K and then the items it counts. A repeat count is computed
+when the walk reaches its descriptor or group (at reversion too), and a width, m,
+d, and e for each item a descriptor serves, so `3I<NEXT()>` calls NEXT three times;
+the manual's "each time they are encountered" doesn't settle the second, and VMS
+can't be asked, since `FOR$WRITE_SO` takes only run-time formats, which have none
+(unconfirmed). Nothing is computed for a descriptor the list has run out before.
+
+**Ranges.** A value is held to what a number there could be: a repeat count 1 to
+32767, a width and X's, T's, TL's, and TR's counts 0 to 32767, m and d 0 to 255, e
+1 to 255, P -128 to 127 (after a sign before it, `-<K>P`). Past them is
+`FOR$_VFEVALERR` (68), as the manual requires "an error" and FOR's table has the
+message. That a 0 repeat count is an error is from `0(I2)`'s SYNERRFOR on VMS, not
+from a run of VFEVALERR (unconfirmed). `I<0>` does what `I0` does.
+
+An ASSIGNed FORMAT passed to another routine and used there would run the
+expressions with that routine's AP. The manual has no such use, and nothing
+checks for it.
+
+**Run-time formats** needed no new code: every form in section 8.7 ran on what
+subtasks 3 and 4 built. `runformat.for` now holds them: the manual's example, a
+numeric array and its element, a character array and its concatenation, a
+substring, a function's value, a constant with text after its parenthesis, a dummy,
+a variable changed between uses, lower case, and one found wrong when used.
+`TestFortranVFEInput` shows that H read into one isn't kept. Numeric scalar *field*
+references wait for RECORD (a later phase).
+
+Tests: `testdata/fortran/vfe.for` (the manual's example, every kind of number,
+when each is computed, temporaries, a function doing I/O, dummy arguments through
+AP, an adjustable array's bound, a statement function, ENTRY's cells, a dynamic
+string, ASSIGN, the ranges) and `runformat.for`, both in both paging modes;
+`TestFortranVFEInput`; `TestFortranIOSignals`'s VFEVALERR; sema's error table; and
+`vfe.for` goldens for the parser, sema, the IR, and the code generator.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1286,3 +1361,6 @@ INTEGER, END=, IOSTAT's -1, and LISIO_SYN signaled.
   and MANUAL.md's examples, and list-directed input (`ftn_listin.mar`); "Subtask
   7" above. The oracles now take these cases, 497 output and 267 input, with no
   new differences.
+- **2026-10-31, subtask 8, done.** Variable format expressions, a routine per
+  FORMAT that FTNRTL calls with the program's AP, and run-time formats held to
+  section 8.7 by a program of their own; "Subtask 8" above. No new vector entries.

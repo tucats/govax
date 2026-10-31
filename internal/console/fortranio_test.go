@@ -25,6 +25,7 @@ func TestFortranIOSignals(t *testing.T) {
 		{"INVLOGUNI", "WRITE (1000, *) 1", "%FOR-F-INVLOGUNI, invalid logical unit number\n  unit 1000  file \n", "10188104", false},
 		{"RECIO_OPE", "WRITE (6, *) 'OUTER', INNER(6)", "%FOR-F-RECIO_OPE, recursive I/O operation\n  unit 6  file \n", "10188144", false},
 		{"NOTIMP", "WRITE (LINE, *) 1", "%FOR-F-NOTIMP, not implemented\n", "10188014", false},
+		{"VFEVALERR", "WRITE (6, 20) 1", "%FOR-F-VFEVALERR, variable format expression value error\n  unit 6  file \n", "10188224", false},
 		{"OUTCONERR", "WRITE (6, 10) 3244", "**\n%FOR-E-OUTCONERR, output conversion error\n  unit 6  file \n", "00000001", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -32,6 +33,7 @@ func TestFortranIOSignals(t *testing.T) {
 				"      PROGRAM SIGNAL",
 				"      CHARACTER*8 LINE",
 				"   10 FORMAT (1X, I2)",
+				"   20 FORMAT (1X, I<-1>)",
 				"      PRINT *, 'BEFORE'",
 				"      " + tc.statement,
 				"      PRINT *, 'AFTER'",
@@ -140,6 +142,54 @@ func TestFortranFormattedInput(t *testing.T) {
 			"  $STATUS == \"%X00000001\"\n"
 		if got := shareRun(t, d, buf, "FIN"); got != want {
 			t.Errorf("RUN FIN printed:\n%s\nwant:\n%s", got, want)
+		}
+	})
+}
+
+// TestFortranVFEInput reads with variable format expressions (Phase 80,
+// subtask 8): each is computed when the scan reaches it, so an item read
+// earlier in the list can say how later ones are read (section 8.3.2). And a
+// run-time format's H, read into, isn't copied back (section 8.7).
+func TestFortranVFEInput(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+
+		lines := []string{
+			"      PROGRAM VIN",
+			"      INTEGER V(3)",
+			"      CHARACTER*12 S",
+			"   10 FORMAT (I2, <K>I3)",
+			"   20 FORMAT (I1, F<K>.1)",
+			"      READ (5,10) K, (V(I), I = 1, K)",
+			"      WRITE (6,'(1X,4I3)') K, V",
+			"      READ (5,20) K, X",
+			"      WRITE (6,'(1X,I2,F6.2)') K, X",
+			"      S = '(6H ABCDE)'",
+			"      READ (5,S)",
+			"      WRITE (6,'(1X,A)') S",
+			"      WRITE (6,S)",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]VIN.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "VIN")
+
+		for _, command := range []string{"FORTRAN VIN", "MACRO VIN", "LINK VIN"} {
+			shareFindRun(t, d, command)
+
+			if out := buf.String(); out != "" {
+				t.Fatalf("%s said:\n%s", command, out)
+			}
+		}
+
+		c.In = strings.NewReader(" 3  1  2  3\n3123\nVWXYZQ\n")
+
+		want := "  3  1  2  3\n 3 12.30\n(6H ABCDE)  \nABCDE\n  $STATUS == \"%X00000001\"\n"
+		if got := shareRun(t, d, buf, "VIN"); got != want {
+			t.Errorf("RUN VIN printed:\n%s\nwant:\n%s", got, want)
 		}
 	})
 }

@@ -278,9 +278,9 @@ func (l *lowerer) formatBlock(f *sema.Format) *Mem {
 	d := l.datum("format "+strconv.Itoa(f.Label), func() *Datum {
 		label := strconv.Itoa(f.Label)
 		cache := l.newCell("$FC"+label, FormatCell, Long, 4)
-		text := l.text(f.Text).Datum
+		text := l.text(f.Encoded).Datum
 
-		return &Datum{Name: "$F" + label, Kind: FormatDatum, Format: &FormatBlock{Label: f.Label, Text: text, Cache: cache}}
+		return &Datum{Name: "$F" + label, Kind: FormatDatum, Format: &FormatBlock{Label: f.Label, Text: text, Cache: cache, VFE: l.vfeRoutine(f)}}
 	})
 
 	return &Mem{Datum: d, T: Byte}

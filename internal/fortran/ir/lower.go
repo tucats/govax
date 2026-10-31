@@ -79,6 +79,10 @@ type lowerer struct {
 
 	returns []*returnBlock
 
+	// vfes are the FORMAT statements with variable format expressions that
+	// statements used, each with its routine.
+	vfes []formatVFE
+
 	// The numbers of the compiler's names: temporaries ($T), constants
 	// and texts ($K), descriptors ($D), control blocks ($IO), and DO
 	// loops (the $C and $S cells).
@@ -178,6 +182,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 
 	l.layOutReturns()
 	l.layOutEntryBounds()
+	l.layOutVFEs()
 
 	if l.made != len(r.Blocks) {
 		panic(fmt.Sprintf("ir: %s: %d blocks made, %d laid out", r.Name, l.made, len(r.Blocks)))

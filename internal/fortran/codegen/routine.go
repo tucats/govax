@@ -103,6 +103,12 @@ func (g *routineGen) findTargets() {
 		}
 	}
 
+	for _, v := range g.r.VFEs {
+		for _, b := range v.Cases {
+			g.targets[b] = true
+		}
+	}
+
 	for i, b := range g.r.Blocks {
 		var next *ir.Block
 		if i+1 < len(g.r.Blocks) {
@@ -354,10 +360,12 @@ func (g *routineGen) terminator(t ir.Terminator, next *ir.Block) {
 
 	case *ir.Return:
 		if t.Value != nil {
-			switch g.r.Kind {
-			case ir.Main:
+			switch {
+			case t.VFE:
+				g.note = "the expression's value"
+			case g.r.Kind == ir.Main:
 				g.note = "SS$_NORMAL"
-			case ir.Subroutine:
+			case g.r.Kind == ir.Subroutine:
 				g.note = "the alternate return's number"
 			default:
 				g.note = "the function's value"

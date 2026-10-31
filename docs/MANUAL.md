@@ -4357,8 +4357,8 @@ and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
-input and output, with every edit descriptor but a variable format
-expression, and list-directed input and output, and stops a program at any other I/O
+input and output, with every edit descriptor and variable format
+expressions, and list-directed input and output, and stops a program at any other I/O
 statement with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
@@ -4648,8 +4648,17 @@ output it prints, and programs of several files in its `modules` directory.
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
   199 characters is `INPRECTOO` (22). Unformatted, direct access, and keyed I/O, REWRITE,
-  OPEN, CLOSE, and the like, and variable format expressions (`I<N>`), are
-  `%FORT-E-NOTIMPL`.
+  OPEN, CLOSE, and the like, are `%FORT-E-NOTIMPL`.
+- **Variable format expressions:** `FORMAT (<N>F10.<N-1>)` computes a
+  number from the program's values when the format's scan reaches it. Any
+  number in a FORMAT statement may be one, but H's count; it may be any
+  expression that gives a number, function calls and dummy arguments
+  included, a REAL's value truncated; a CHARACTER or LOGICAL one is
+  `%FORT-E-BADVFE`. A repeat count is computed when the scan reaches it, a
+  width, m, d, and e for each item, so an item read earlier in a list can say
+  how later ones are read: `FORMAT (I2,<K>I3)`. A value a number there
+  couldn't have is `VFEVALERR` (68). A run-time format can't have one:
+  `SYNERRFOR` (62).
 - **I/O errors:** a statement with ERR=, END=, or IOSTAT= gets FTNRTL's
   status: IOSTAT's variable is set to 0, -1 at an end of file, or the
   error's FOR number (32 for an invalid unit, 40 for an I/O statement
@@ -4899,7 +4908,7 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
-| `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address) or, with the control block's bit 3, a run-time format's descriptor |
+| `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (namelist, an internal file), given a format too; so far each is `FOR$_NOTIMP` |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |

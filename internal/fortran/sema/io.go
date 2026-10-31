@@ -2,6 +2,8 @@ package sema
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
@@ -13,8 +15,8 @@ import (
 // use: FORMAT (chapter 8) and NAMELIST (section 4.10). Every form of
 // formatted, list-directed, and namelist READ, WRITE, PRINT, TYPE, and
 // ACCEPT is analyzed into an IO, and ENCODE and DECODE too; what is left
-// for later phases is unformatted, direct access, and keyed I/O, REWRITE,
-// and variable format expressions (NOTIMPL).
+// for later phases is unformatted, direct access, and keyed I/O, and REWRITE
+// (NOTIMPL).
 
 // The default units, which the statements without a unit and the units
 // written * use. VMS's FORTRAN run-time library numbers them -1 to -4,
@@ -40,11 +42,17 @@ const (
 
 // Format is a FORMAT statement: its label, its specification's text,
 // and the specification read by internal/fortran/format.
+//
+// VFEs are its variable format expressions (section 8.3.2), each an
+// INTEGER*4 value, and Encoded is the text FTNRTL gets: Text, with each
+// <expr> made <n>, its number in VFEs from 1.
 type Format struct {
-	Label  int
-	Text   string
-	Parsed *format.Format
-	AST    *ast.FormatStmt
+	Label   int
+	Text    string
+	Encoded string
+	Parsed  *format.Format
+	VFEs    []Expr
+	AST     *ast.FormatStmt
 }
 
 // Namelist is a NAMELIST group: its name and the variables and arrays it
@@ -133,17 +141,54 @@ func (a *analyzer) formatStatement(s *ast.FormatStmt) {
 		return
 	}
 
-	if len(f.VFEs) > 0 {
-		a.notImplForm(s.Source.Position(s.Offset+f.VFEs[0].Offset-1), "a variable format expression")
-
-		return
-	}
-
 	if a.unit.Formats == nil {
 		a.unit.Formats = map[int]*Format{}
 	}
 
-	a.unit.Formats[s.Label] = &Format{Label: s.Label, Text: s.Text, Parsed: f, AST: s}
+	a.unit.Formats[s.Label] = &Format{Label: s.Label, Text: s.Text, Encoded: encodeVFEs(s.Text, f), Parsed: f, AST: s}
+}
+
+// encodeVFEs is a format's text with each variable format expression
+// replaced by its number: FTNRTL has no use for the expression's text, and
+// calls the routine the compiler writes with the number.
+func encodeVFEs(text string, f *format.Format) string {
+	var b strings.Builder
+
+	at := 0
+
+	for i, v := range f.VFEs {
+		b.WriteString(text[at:v.Offset])
+		b.WriteString(strconv.Itoa(i + 1))
+		at = v.Offset + len(v.Text)
+	}
+
+	b.WriteString(text[at:])
+
+	return b.String()
+}
+
+// formatExpressions analyzes a FORMAT statement's variable format
+// expressions, in the statements walk, when the declarations have said what
+// each name is. Any expression may be one, but a CHARACTER, LOGICAL, or
+// array value isn't a number; a REAL or COMPLEX one is converted to an
+// integer (section 8.3.2).
+func (a *analyzer) formatExpressions(s *ast.FormatStmt) {
+	f := a.unit.Formats[s.Label]
+	if f == nil || f.AST != s {
+		return
+	}
+
+	for _, x := range s.VFEs {
+		v := a.value(x)
+
+		switch v.Type().Kind {
+		case Integer, Real, Complex, Invalid:
+		default:
+			a.report("BADVFE", x.Position(), article(v.Type().String()))
+		}
+
+		f.VFEs = append(f.VFEs, a.convert(v, IntegerType))
+	}
 }
 
 // namelistStatement reads a NAMELIST statement's groups (section 4.10).

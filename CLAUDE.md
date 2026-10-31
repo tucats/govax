@@ -476,7 +476,13 @@ never had.
   subtask 7 (2026-10-31) is list-directed I/O: output in VMS's layout (a record of
   81 bytes, a number's first blank its carriage control) and input
   (`ftn_listin.mar`: each value's text kept and converted per item, a failed item
-  left alone), which both oracles now compare.
+  left alone), which both oracles now compare;
+  subtask 8 (2026-10-31) is variable format expressions: `lex.Expression` and the
+  parser's own `expr` read each `<expr>` (`ast.FormatStmt.VFEs`), `Format.Encoded`
+  is the text with each `<n>`, `ir/lowervfe.go`'s `VFERoutine` is one routine per
+  FORMAT, F(n, ap), on temporaries of its own, and FTNRTL's `RESOLVE` fills a copy of
+  an operation in the context each time the walk reaches it (`VFEVALERR` out of
+  range); and run-time formats held to section 8.7 (`testdata/fortran/runformat.for`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

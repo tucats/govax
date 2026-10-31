@@ -1548,8 +1548,8 @@ A formatted statement, `WRITE (6,10) I, X`, is the same calls with a
 different begin call, `FTN$WRITE_SF`, whose third argument is the format:
 the FORMAT statement's block, which the compiler puts in `$PDATA` (the
 text's address and length, and the address of a longword cell in
-`$LOCAL`), or a run-time format's descriptor. `ftn_format.mar` does the
-rest, in two steps a compiler writer will recognize.
+`$LOCAL`, and the routine for any variable format expressions), or a
+run-time format's descriptor. `ftn_format.mar` does the rest, in two steps a compiler writer will recognize.
 
 - **Parsing, once.** Reading `(1X,I5,2(F8.2,A))` character by character
   for every item would be slow, so the text is first turned into a list of
@@ -1581,6 +1581,46 @@ can move on without making the record longer. VMS's FORTRAN library was
 the model for what the manual leaves open: a record's 133-column limit, a
 `T0` that loses what is written there, a `$` changing the first byte to
 `$` (a prompt) when the record is written.
+
+### Variable format expressions: FTNRTL calls back
+
+`FORMAT (I<J+1>)` is the one place a run-time library needs the program's
+code in the middle of its own work. The width isn't a number the compiler
+knows, and it is computed again each time the scan reaches it, so it has to be
+code; and J may be a dummy argument, reached through the AP of a routine that is
+now some frames up the stack. The compiler turns each FORMAT with such
+expressions into a text and a routine:
+
+```
+$K1:  .ASCII  /(I<1>)/           the text: <J+1> is now expression 1
+
+VFE.$V10:                        FTNRTL calls F(n, ap)
+      .WORD   ^M<R2>             the routine's own mask
+      MOVL    4(AP),R0           which expression
+      MOVL    8(AP),AP           the AP of the routine doing the I/O
+      CASEL   R0,#1,#0
+VFE.$12:
+      .WORD   VFE.$5-VFE.$12
+      RET
+VFE.$5:                          (among the routine's blocks)
+      ADDL3   #1,@VFE.J(AP),R0
+      RET
+```
+
+Loading AP is safe because `RET` restores the caller's from the frame, and it
+is enough because everything else compiled code uses is static: nothing but a
+dummy argument depends on which frame is running. Each begin call keeps its
+caller's AP in the statement's context (it is in the begin call's own frame) for
+just this. The code is lowered like any statement, with one precaution: it runs
+between an I/O statement's calls, when that statement's temporaries, implied-DO
+counts, and descriptors are all live, so its temporaries come from a pool of
+their own (`ir/lowervfe.go`).
+
+FTNRTL's parser reads `<1>` where a number could be and notes in the operation
+which of its numbers is an expression's. The walk calls `RESOLVE` on such an
+operation, which copies it into the statement's context and fills the copy in. The
+parsed form is left alone, since a statement nested in this one may be using the
+same FORMAT, and the editing code, handed the copy, never knows.
 
 ### Editing a value
 

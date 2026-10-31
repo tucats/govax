@@ -1,0 +1,10 @@
+== SUBROUTINE VFE
+3           SUBROUTINE VFE(N, S)
+4           CHARACTER*(*) S
+5     10    FORMAT (1X, <N>(I<F(N)>.<N-1>), E12.4E<X>, -<N>P) <N> <F(N)> <(- N 1)> <X> <N>
+6     20    FORMAT (I<LEN(S//'A')>, T<N>) <LEN((// S 'A'))> <N>
+7           WRITE (6, 10) (do I; I = 1, N) X
+8           WRITE (6, 20) N
+9           ASSIGN 10 TO K
+10          WRITE (6, K) 1
+11          END

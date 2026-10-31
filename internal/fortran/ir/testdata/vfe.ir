@@ -1,0 +1,68 @@
+routine VFE subroutine
+  param N       L  argument 1
+  param S       B  argument 2
+  vfe   $V10 B4 B5 B6 B7 B8
+  vfe   $V20 B9 B10
+  cell  X       F  $LOCAL+0    variable X
+  cell  I       L  $LOCAL+4    variable I
+  cell  K       L  $LOCAL+8    variable K
+  cell  $FC10   L  $LOCAL+12   the parsed form of a FORMAT
+  cell  $C1     L  $LOCAL+16   the implied DO (line 7)'s count
+  cell  $FC20   L  $LOCAL+20   the parsed form of a FORMAT
+  cell  $D3     L  $LOCAL+24   descriptor L S 4
+  cell  $T1     F  $LOCAL+32   temporary
+  $LOCAL is 36 bytes
+  datum $IO1    control
+  datum $K1     text '(1X, <1>(I<2>.<3>), E12.4E<4>, -<5>P)'
+  datum $F10    format 10 $K1 cache $FC10 expressions $V10
+  datum $D1     descriptor L S 4 I
+  datum $D2     descriptor F S 4 X
+  datum $K2     text '(I<1>, T<2>)'
+  datum $F20    format 20 $K2 cache $FC20 expressions $V20
+  datum $K3     L 1
+  datum $D4     descriptor L S 4 $K3
+  datum $K4     text 'A'
+B1:
+  ; line 7
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $F10)
+  assign $C1 = @N
+  assign I = 1
+  branch le.L($C1, 0) B3 B2
+B2:  ; the implied DO (line 7)'s body
+  call FTN$IO_ITEM(ref $D1)
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 8
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $F20)
+  assign $D3+4 = addr(@N)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 9
+  assign K = addr($F10)
+  ; line 10
+  call FTN$WRITE_SF(ref $IO1, val 6, val K)
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_END()
+  ; line 11
+  return
+B4:  ; FORMAT 10's expression 1
+  ; line 5
+  return @N
+B5:  ; FORMAT 10's expression 2
+  call F(ref @N) -> $T1
+  return cvt.FL($T1)
+B6:  ; FORMAT 10's expression 3
+  return sub.L(@N, 1)
+B7:  ; FORMAT 10's expression 4
+  return cvt.FL(X)
+B8:  ; FORMAT 10's expression 5
+  return @N
+B9:  ; FORMAT 20's expression 1
+  ; line 6
+  return add.L(zext.WL(@(arg S)), 1)
+B10:  ; FORMAT 20's expression 2
+  return @N

@@ -362,6 +362,31 @@ func (g *routineGen) write(w *Writer) {
 	for _, e := range r.Entries[min(1, len(r.Entries)):] {
 		g.writeEntry(w, e)
 	}
+
+	for _, v := range r.VFEs {
+		g.writeVFE(w, v)
+	}
+}
+
+// writeVFE writes the start of a FORMAT's routine for its variable format
+// expressions, whose code is among the routine's blocks (ir/lowervfe.go). It
+// saves the registers the one body uses, as an entry point does. Its label
+// isn't global, as .ENTRY's would be: only the FORMAT's block names it.
+func (g *routineGen) writeVFE(w *Writer, v *ir.VFERoutine) {
+	w.Blank()
+	w.Statement(g.names.symbol(v.Name), ".WORD", g.entryMask(), fmt.Sprintf("FORMAT %d's variable format expressions", v.Label))
+	w.Statement("", "MOVL", "4(AP),R0", "which expression FTNRTL wants")
+	w.Statement("", "MOVL", "8(AP),AP", "the AP of the routine doing the I/O, for its dummy arguments")
+	w.Statement("", "CASEL", "R0,#1,#"+strconv.Itoa(len(v.Cases)-1), "")
+
+	table := g.newLabel()
+	w.LabelComment(table, "")
+
+	for _, b := range v.Cases {
+		w.Statement("", ".WORD", g.blockLabel(b)+"-"+table, "")
+	}
+
+	w.Statement("", "RET", "", "")
 }
 
 // writeEntry writes an ENTRY statement's entry point, after the routine's
@@ -833,13 +858,23 @@ func (g *routineGen) writeControl(w *Writer, label string, c *ir.Control) {
 
 // writeFormat writes a FORMAT statement's block (FTNRTL's layout,
 // mar/ftn_statement.mar): the address of the cell where FTNRTL keeps the
-// parsed form, the text's length and a word of flags (none yet), and the
-// text's address.
+// parsed form, the text's length and a word of flags, and the text's address;
+// and with flag bit 0, the address of the routine for its variable format
+// expressions.
 func (g *routineGen) writeFormat(w *Writer, label string, f *ir.FormatBlock) {
 	w.Statement(label, ".ADDRESS", g.names.symbol(f.Cache.Name), fmt.Sprintf("FORMAT %d's block: its parsed form's cell", f.Label))
 	w.Statement("", ".WORD", strconv.Itoa(len(f.Text.Text)), "the text's length")
-	w.Statement("", ".WORD", "0", "flags")
+
+	if f.VFE == nil {
+		w.Statement("", ".WORD", "0", "flags")
+		w.Statement("", ".ADDRESS", g.names.symbol(f.Text.Name), "the text")
+
+		return
+	}
+
+	w.Statement("", ".WORD", "1", "flags: it has variable format expressions")
 	w.Statement("", ".ADDRESS", g.names.symbol(f.Text.Name), "the text")
+	w.Statement("", ".ADDRESS", g.names.symbol(f.VFE.Name), "their routine")
 }
 
 // writeNamelist writes a NAMELIST group's block (FTNRTL's layout,

@@ -1,0 +1,174 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for VFE, a subroutine
+;   N     INTEGER        argument 1  @VFE.N(AP)
+;   S     CHARACTER*(*)  argument 2  @VFE.S(AP)
+;   X     REAL           $LOCAL+0    VFE.X
+;   I     INTEGER        $LOCAL+4    VFE.I
+;   K     INTEGER        $LOCAL+8    VFE.K
+;
+VFE.N = 4				; N is argument 1
+VFE.S = 8				; S is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+VFE.X:	.BLKL	1			; X
+VFE.I:	.BLKL	1			; I
+VFE.K:	.BLKL	1			; K
+VFE.$FC10:
+	.BLKL	1			; the parsed form of FORMAT 10, FTNRTL's
+VFE.$C1:
+	.BLKL	1			; the implied DO (line 7)'s count
+VFE.$FC20:
+	.BLKL	1			; the parsed form of FORMAT 20, FTNRTL's
+VFE.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+VFE.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+VFE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+VFE.$F10:
+	.ADDRESS VFE.$FC10		; FORMAT 10's block: its parsed form's cell
+	.WORD	37			; the text's length
+	.WORD	1			; flags: it has variable format expressions
+	.ADDRESS VFE.$K1		; the text
+	.ADDRESS VFE.$V10		; their routine
+VFE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS VFE.I
+VFE.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS VFE.X
+VFE.$F20:
+	.ADDRESS VFE.$FC20		; FORMAT 20's block: its parsed form's cell
+	.WORD	12			; the text's length
+	.WORD	1			; flags: it has variable format expressions
+	.ADDRESS VFE.$K2		; the text
+	.ADDRESS VFE.$V20		; their routine
+VFE.$K3:
+	.LONG	1
+VFE.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS VFE.$K3
+VFE.$K1:
+	.ASCII	/(1X, <1>(I<2>.<3>), E12.4E<4>, -<5>P)/
+VFE.$K2:
+	.ASCII	/(I<1>, T<2>)/
+VFE.$K4:
+	.ASCII	/A/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Variable format expressions: a FORMAT's routine, with a dummy argument,
+;    2  C     a call, a conversion, and a value computed before a dynamic string goes.
+;    3        SUBROUTINE VFE(N, S)
+	.ENTRY	VFE,^M<>
+;    4        CHARACTER*(*) S
+;    5     10 FORMAT (1X, <N>(I<F(N)>.<N-1>), E12.4E<X>, -<N>P)
+;    6     20 FORMAT (I<LEN(S//'A')>, T<N>)
+;    7        WRITE (6, 10) (I, I = 1, N), X
+	PUSHAB	VFE.$F10
+	PUSHL	#6
+	PUSHAB	VFE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	@VFE.N(AP),VFE.$C1	; the implied DO (line 7)'s count
+	MOVL	#1,VFE.I
+	TSTL	VFE.$C1
+	BGTR	VFE.$2
+	BRW	VFE.$1
+VFE.$2:
+VFE.$3:					; the implied DO (line 7)'s body
+	PUSHAQ	VFE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	INCL	VFE.I
+	DECL	VFE.$C1			; one pass fewer
+	BLEQ	VFE.$4
+	BRW	VFE.$3
+VFE.$4:
+VFE.$1:
+	PUSHAQ	VFE.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;    8        WRITE (6, 20) N
+	PUSHAB	VFE.$F20
+	PUSHL	#6
+	PUSHAB	VFE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVAL	@VFE.N(AP),VFE.$D3+4
+	PUSHAQ	VFE.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;    9        ASSIGN 10 TO K
+	MOVAB	VFE.$F10,VFE.K
+;   10        WRITE (6, K) 1
+	PUSHL	VFE.K
+	PUSHL	#6
+	PUSHAB	VFE.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	PUSHAQ	VFE.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   11        END
+	RET
+VFE.$5:					; FORMAT 10's expression 1
+	MOVL	@VFE.N(AP),R0		; the expression's value
+	RET
+VFE.$6:					; FORMAT 10's expression 2
+	PUSHAL	@VFE.N(AP)
+	CALLS	#1,G^F
+	MOVF	R0,VFE.$T1
+	CVTFL	VFE.$T1,R0		; the expression's value
+	RET
+VFE.$7:					; FORMAT 10's expression 3
+	SUBL3	#1,@VFE.N(AP),R0	; the expression's value
+	RET
+VFE.$8:					; FORMAT 10's expression 4
+	CVTFL	VFE.X,R0		; the expression's value
+	RET
+VFE.$9:					; FORMAT 10's expression 5
+	MOVL	@VFE.N(AP),R0		; the expression's value
+	RET
+VFE.$10:				; FORMAT 20's expression 1
+	MOVZWL	@VFE.S(AP),R0		; the expression's value
+	INCL	R0
+	RET
+VFE.$11:				; FORMAT 20's expression 2
+	MOVL	@VFE.N(AP),R0		; the expression's value
+	RET
+
+VFE.$V10:
+	.WORD	^M<>			; FORMAT 10's variable format expressions
+	MOVL	4(AP),R0		; which expression FTNRTL wants
+	MOVL	8(AP),AP		; the AP of the routine doing the I/O, for its dummy arguments
+	CASEL	R0,#1,#4
+VFE.$12:
+	.WORD	VFE.$5-VFE.$12
+	.WORD	VFE.$6-VFE.$12
+	.WORD	VFE.$7-VFE.$12
+	.WORD	VFE.$8-VFE.$12
+	.WORD	VFE.$9-VFE.$12
+	RET
+
+VFE.$V20:
+	.WORD	^M<>			; FORMAT 20's variable format expressions
+	MOVL	4(AP),R0		; which expression FTNRTL wants
+	MOVL	8(AP),AP		; the AP of the routine doing the I/O, for its dummy arguments
+	CASEL	R0,#1,#1
+VFE.$13:
+	.WORD	VFE.$10-VFE.$13
+	.WORD	VFE.$11-VFE.$13
+	RET
+
+	.END

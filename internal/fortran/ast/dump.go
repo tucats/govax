@@ -333,7 +333,12 @@ func dumpSpec(s Stmt) (string, bool) {
 		return text, true
 
 	case *FormatStmt:
-		return "FORMAT " + s.Text, true
+		text := "FORMAT " + s.Text
+		for _, v := range s.VFEs {
+			text += " <" + DumpExpr(v) + ">"
+		}
+
+		return text, true
 	}
 
 	return "", false

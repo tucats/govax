@@ -73,6 +73,16 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 		b.WriteString("\n")
 	}
 
+	for _, v := range r.VFEs {
+		fmt.Fprintf(b, "  vfe   %s", v.Name)
+
+		for _, c := range v.Cases {
+			fmt.Fprintf(b, " %s", c.Name)
+		}
+
+		b.WriteString("\n")
+	}
+
 	for _, c := range r.Cells {
 		section := "$LOCAL"
 		if c.Common != nil {
@@ -182,7 +192,12 @@ func datumText(d *Datum) string {
 
 	switch d.Kind {
 	case FormatDatum:
-		return "format " + strconv.Itoa(d.Format.Label) + " " + d.Format.Text.Name + " cache " + d.Format.Cache.Name
+		text := "format " + strconv.Itoa(d.Format.Label) + " " + d.Format.Text.Name + " cache " + d.Format.Cache.Name
+		if v := d.Format.VFE; v != nil {
+			text += " expressions " + v.Name
+		}
+
+		return text
 
 	case NamelistDatum:
 		text := "namelist " + d.Namelist.Group + " " + d.Namelist.Name.Name

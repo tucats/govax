@@ -25,7 +25,9 @@
 ;	12(AP)	the format, but for a list-directed statement: a FORMAT
 ;		statement's block (+0 the address of a longword where the
 ;		parsed form is kept, +4 the text's length, a word, +6 a word
-;		of flags, +8 the text's address); or with flag bit 3 a
+;		of flags, +8 the text's address, and with flag bit 0 of those
+;		+12 the routine for its variable format expressions, which
+;		FTN_FORMAT calls with F(n, the caller's AP)); or with flag bit 3 a
 ;		run-time format's descriptor; or a NAMELIST group's block
 ;		(+0 the address of the group's name, a counted string, +4
 ;		the number of entities, then for each the address of its
@@ -104,7 +106,10 @@ CTX_WARNING	= CTX_RECORD+RECORD_SIZE+104 ; long: FTN_FORMAT's error the
 CTX_LI_BUFFER	= CTX_RECORD+RECORD_SIZE+112 ; long: FTN_LISTIN's text buffer,
 CTX_LI_SIZE	= CTX_LI_BUFFER+4	;  long: and its size, which last as long
 					;  as the context does: 0 in a new one
-CTX_SIZE	= CTX_LI_SIZE+24	; with FTN_LISTIN's other fields
+CTX_AP		= CTX_LI_SIZE+24	; long: the AP of the routine that began it
+					;  (after FTN_LISTIN's other fields)
+CTX_SIZE	= CTX_AP+4+4+12		; with FTN_FORMAT's expressions' routine
+					;  and its copy of an operation
 
 ; The kinds of statement: a READ's is even, a WRITE's odd, and those
 ; from K_READ_IF on have no unit.
@@ -240,6 +245,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	; Fill it in and push it.
 	;
 30$:	MOVL	R2,CTX_FP(R3)
+	MOVL	8(FP),CTX_AP(R3)	; the caller's AP, saved in this frame
 	MOVL	R7,CTX_UNIT(R3)
 	CLRW	CTX_FLAGS(R3)
 	MOVL	4(AP),R0		; the control block

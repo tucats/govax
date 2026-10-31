@@ -466,7 +466,6 @@ func TestErrors(t *testing.T) {
 		{"a FORMAT's syntax", []string{"10 FORMAT (1X I3)", "END"}, "FMTSYNTAX@1:18"},
 		{"a FORMAT after its last parenthesis", []string{"10 FORMAT (I3) X", "END"}, "FMTSYNTAX@1:19"},
 		{"a FORMAT without a label", []string{"FORMAT (I5)", "END"}, "FMTLABEL@1:7"},
-		{"a variable format expression", []string{"10 FORMAT (I<N>)", "END"}, "NOTIMPL@1:16"},
 		{"a FORMAT ending a loop", []string{"DO 10 I = 1, 2", "10 FORMAT (I5)", "END"}, "DOTERM@2:7"},
 		{"a format label on a CONTINUE", []string{"PRINT 10, X", "10 CONTINUE", "END"}, "NOTFORMAT@1:13"},
 		{"an undefined format label", []string{"PRINT 10, X", "END"}, "UNDEFLBL@1:13"},
@@ -484,6 +483,12 @@ func TestErrors(t *testing.T) {
 		{"ENCODE with *", []string{"DIMENSION B(5)", "ENCODE (5, *, B) I", "END"}, "CODEFORMAT@2:18"},
 		{"ENCODE into a constant", []string{"10 FORMAT (I5)", "ENCODE (5, 10, 'ABC') I", "END"}, "BADBUFFER@2:22"},
 		{"ENCODE with a REAL count", []string{"10 FORMAT (I5)", "DIMENSION B(5)", "ENCODE (X, 10, B) I", "END"}, "BADCOUNT@3:15"},
+		{"a CHARACTER format expression", []string{"CHARACTER*2 S", "10 FORMAT (I<S>)", "PRINT 10, 1", "END"}, "BADVFE@2:17"},
+		{"a LOGICAL format expression", []string{"LOGICAL L", "10 FORMAT (I<L>)", "PRINT 10, 1", "END"}, "BADVFE@2:17"},
+		{"an array as a format expression", []string{"DIMENSION A(2)", "10 FORMAT (I<A>)", "PRINT 10, 1", "END"}, "NEEDSUBSCRIPT@2:17"},
+		{"a format expression with an error", []string{"10 FORMAT (I<J+>)", "END"}, "SYNTAX@1:21"},
+		{"a format expression as H's count", []string{"10 FORMAT (<N>HA)", "END"}, "FMTSYNTAX@1:15"},
+		{"format expressions that are fine", []string{"10 FORMAT (<N>(I<J+1>.<K>), F<X>.<F(Y)>, <M>X, T<M>, -<M>P)", "PRINT 10, 1", "END"}, ""},
 		{"a format in an INTEGER*2", []string{"INTEGER*2 K", "PRINT K, 1", "END"}, "BADFORMAT@2:13"},
 
 		// IF blocks.

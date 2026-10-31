@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/format"
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
 )
@@ -402,12 +403,30 @@ func parseDirective(p *parser) ast.Stmt {
 }
 
 // parseFormat parses FORMAT (spec) (chapter 8): its text is kept as
-// written, from the lexer's Body on, for FTNRTL and semantic analysis's check (internal/fortran/format).
+// written, from the lexer's Body on, for FTNRTL and semantic analysis's check
+// (internal/fortran/format). The only part that is FORTRAN is a variable
+// format expression, <expr> (section 8.3.2), which the format package finds
+// and this function reads with the expression parser, on tokens of its own.
 func parseFormat(p *parser) ast.Stmt {
 	raw := p.st.Source.Text[p.st.Body:]
 	text := strings.TrimLeft(raw, " \t")
 
-	return &ast.FormatStmt{StmtBase: p.base(), Text: strings.TrimRight(text, " \t"), Offset: p.st.Body + len(raw) - len(text)}
+	s := &ast.FormatStmt{StmtBase: p.base(), Text: strings.TrimRight(text, " \t"), Offset: p.st.Body + len(raw) - len(text)}
+
+	f, err := format.Parse(s.Text, format.Options{})
+	if err != nil {
+		return s
+	}
+
+	for _, v := range f.VFEs {
+		from := s.Offset + v.Offset
+
+		x := &parser{messages: p.messages, st: p.st, tokens: lex.Expression(p.st.Source, from, from+len(v.Text), p.messages)}
+		s.VFEs = append(s.VFEs, x.expr())
+		x.end()
+	}
+
+	return s
 }
 
 // parseInclude parses an INCLUDE statement, which never reaches the

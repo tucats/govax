@@ -272,11 +272,14 @@ type (
 	// as written, parentheses and all: FTNRTL interprets formats, and
 	// semantic analysis checks them (internal/fortran/format). Offset is
 	// where Text starts in the statement's source text, so a message can
-	// point into it.
+	// point into it. VFEs are its variable format expressions, parsed, in
+	// the order they come in the text (section 8.3.2); the parser leaves a
+	// format that isn't valid with none, for semantic analysis to report.
 	FormatStmt struct {
 		StmtBase
 		Text   string
 		Offset int
+		VFEs   []Expr
 	}
 )
 

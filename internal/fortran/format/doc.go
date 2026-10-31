@@ -47,7 +47,8 @@
 // nH needs n from 1. In a FORMAT statement each number may instead be a
 // variable format expression, <expr> (section 8.3.2), but for H's count:
 // the expression is kept as text, with its offset, for the compiler to
-// read (Format.VFEs). A run-time format may not have one.
+// read (Format.VFEs), at most 255 to a format. A run-time format may not
+// have one.
 //
 // # What comes out
 //
