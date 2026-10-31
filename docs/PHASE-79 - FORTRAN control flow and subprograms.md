@@ -508,9 +508,9 @@ recommendation:
 ## Subtasks (provisional)
 
 1. **Survey:** chapters 5 and 6, the calling standard's argument list,
-   Table 6-1.
+   Table 6-1. Done.
 2. **GO TO in every form, ASSIGN, arithmetic IF.** (The IR's Switch and
-   indirect jump; ASSIGN of a FORMAT label stays NOTIMPL, Decision 9.)
+   indirect jump; ASSIGN of a FORMAT label stays NOTIMPL, Decision 9.) Done.
 3. **DO in every form**, DO WHILE, END DO, extended range. (Labeled DO
    of every INTEGER and REAL type is done already; this is the loops
    without labels, DO WHILE, END DO's messages, and the extended range
