@@ -84,7 +84,9 @@ line by line, so that someone debugging a program sees both.
 
 The clean-room rules (CLAUDE.md) apply as before. The compiler and FTNRTL
 are written from the manuals above. VMS's FORRTL.EXE is not studied as a
-model: FTNRTL is our own design. The system definitions a FORTRAN
+model: FTNRTL is our own design. (*Narrowed 2026-10-31, by the author, in `PHASE-80`'s
+survey:* a program may call FORRTL.EXE to set or check requirements, a
+pseudo-clean-room process. Its behavior may be studied, its code not.) The system definitions a FORTRAN
 program INCLUDEs come from govax's own `vmsdef` tables (Decision 17),
 never from VMS's FORSYSDEF.TLB.
 

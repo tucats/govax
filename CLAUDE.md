@@ -431,6 +431,9 @@ never had.
   the programs end to end (`testdata/fortran/flow.for`, `callback.for`, a FORTRAN
   routine as a handler, an AST routine, and LIB$CALLG's), and the close-out,
   FORTRAN-INTERNALS.md's section 12 on control flow and subprograms.
+  Phase 80 (in progress) is formatted, list-directed, and namelist I/O; subtask 1
+  (2026-10-31) is the survey, its doc's Part A, which runs VMS's FORRTL.EXE
+  as a black box (`FOR$WRITE_SO` takes a format's text), awaiting the author's review.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -719,6 +722,9 @@ never had.
   second place to look when the 5.0 System Services manual falls short,
   on the same terms. Entries are headed by their descriptive names ("Get
   Message — ..."), so search for those or the service's arguments.
+  A third (2026-10-31, `PHASE-80`'s survey): a program may call VMS's
+  FORRTL.EXE to set or check FTNRTL's requirements, its behavior studied and
+  its code neither copied nor disassembled.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build
