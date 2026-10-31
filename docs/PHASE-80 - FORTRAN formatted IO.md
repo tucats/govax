@@ -729,11 +729,18 @@ end of SYS$INPUT that round 1 didn't reach.
    and input.
 8. **Variable format expressions and run-time formats.**
 9. **Internal files, ENCODE, DECODE.**
-10. **NAMELIST.**
-11. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
-12. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
+10. **LIB$TPARSE,** brought in from Phase 60 by the author (2026-10-31):
+    VMS's FORRTL needs it for namelist input, so a program linked against
+    VMS's FORRTL, as DUNGEON-era images may be, needs it from govax. The
+    routine, TABLE_PARSE, and govax's own `$INIT_STATE`/`$STATE`/`$TRAN`/
+    `$END_STATE` macros, from the LIB$ manual (LIB-411 to LIB-452), clean room,
+    with a probe of its own on VMS. Phase 60's trees stay there. FTNRTL's
+    namelist input is its own code either way.
+11. **NAMELIST.**
+12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
+13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
     and DUNGEON's use of them.
-13. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
+14. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter on
     FTNRTL; MANUAL.md's chapter 14 and its differences).
 
 ## Progress log
@@ -775,3 +782,6 @@ end of SYS$INPUT that round 1 didn't reach.
   the messages. `FOR$IO_END` twice ended the image early, before the message
   table; namelist array input failed, probably on round 1's A0. Round 2,
   `for80b.mar`, asks those and narrows the input record limit.
+- **2026-10-31:** the author put LIB$TPARSE in scope for this phase (it was
+  Phase 60's), since FORRTL's namelist input needs it; it is subtask 10, and
+  NAMELIST to the close-out are 11 to 14.

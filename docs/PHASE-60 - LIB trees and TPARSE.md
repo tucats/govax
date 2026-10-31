@@ -1,7 +1,9 @@
 # Phase 60 — LIB$ balanced trees and table-driven parsing
 
 **Status:** planned (2026-10-12). Needs Phases 53, 54, and 58
-(callbacks). Part of the LIB$ program laid out in
+(callbacks). **TPARSE and TABLE_PARSE moved to Phase 80** (2026-10-31, the
+author's direction: VMS's FORRTL needs LIB$TPARSE for namelist input; Phase
+80's subtask 10); this phase keeps the trees. Part of the LIB$ program laid out in
 `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
