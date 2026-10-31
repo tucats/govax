@@ -260,6 +260,12 @@ func MemText(m *Mem) string {
 func ExprText(e Expr) string {
 	switch e := e.(type) {
 	case *Const:
+		if e.T == Quad || e.T == Octa {
+			re, im := e.Parts()
+
+			return "(" + floatText(re) + ", " + floatText(im) + ")"
+		}
+
 		if e.T.Floating() {
 			return floatText(e)
 		}

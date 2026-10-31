@@ -39,17 +39,19 @@ const (
 	Double      // D_floating: REAL*8; the D of ADDD3
 	GFloat      // G_floating: REAL*8 under /G_FLOATING; the G of ADDG3
 	HFloat      // H_floating: REAL*16; the H of ADDH3
+	Quad        // a quadword moved whole: COMPLEX*8; the Q of MOVQ
+	Octa        // an octaword moved whole: COMPLEX*16; the O of MOVO
 )
 
 // String is the type's letter, the suffix of the VAX instructions that
-// work on it: L, F, B, W, D, G, H.
+// work on it: L, F, B, W, D, G, H, Q, O.
 func (t Type) String() string {
-	return [...]string{"", "L", "F", "B", "W", "D", "G", "H"}[t]
+	return [...]string{"", "L", "F", "B", "W", "D", "G", "H", "Q", "O"}[t]
 }
 
 // Size is the type's size in bytes.
 func (t Type) Size() int {
-	return [...]int{0, 4, 4, 1, 2, 8, 8, 16}[t]
+	return [...]int{0, 4, 4, 1, 2, 8, 8, 16, 8, 16}[t]
 }
 
 // Integer reports whether t is an integer type: Byte, Word, or Long.
@@ -78,8 +80,8 @@ func (t Type) Format() vaxfloat.Format {
 }
 
 // Width is how many registers a value of type t takes: one for a longword
-// or less, two for a D or G value (Rn and Rn+1, the low-addressed half in
-// Rn), four for an H value.
+// or less, two for a D, G, or Quad value (Rn and Rn+1, the low-addressed
+// half in Rn), four for an H or Octa value.
 func (t Type) Width() int {
 	return max(t.Size()/4, 1)
 }
@@ -92,7 +94,8 @@ type Routine struct {
 
 	Kind Kind
 
-	// Result is a function's type, whose value Return leaves in R0.
+	// Result is a function's type, whose value Return leaves in R0 (and the
+	// registers after it, for a value wider than a longword).
 	Result Type
 
 	// Params are the dummy arguments, in order.
@@ -238,13 +241,16 @@ const (
 	DTypeL  DType = 8  // a longword integer: INTEGER*4
 	DTypeF  DType = 10 // F_floating: REAL*4
 	DTypeD  DType = 11 // D_floating: REAL*8
+	DTypeFC DType = 12 // F_floating complex: COMPLEX*8
+	DTypeDC DType = 13 // D_floating complex: COMPLEX*16
 	DTypeT  DType = 14 // text: a character string
 	DTypeG  DType = 27 // G_floating: REAL*8 under /G_FLOATING
 	DTypeH  DType = 28 // H_floating: REAL*16
+	DTypeGC DType = 29 // G_floating complex: COMPLEX*16 under /G_FLOATING
 )
 
 // String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, D,
-// G, H, T.
+// FC, DC, G, H, GC, T.
 func (d DType) String() string {
 	switch d {
 	case DTypeBU:
@@ -265,6 +271,12 @@ func (d DType) String() string {
 		return "G"
 	case DTypeH:
 		return "H"
+	case DTypeFC:
+		return "FC"
+	case DTypeDC:
+		return "DC"
+	case DTypeGC:
+		return "GC"
 	case DTypeT:
 		return "T"
 	}
@@ -424,8 +436,9 @@ type (
 	}
 
 	// Call is a call of an external routine, by CALLS: the arguments
-	// pushed last to first, then their count. A function's value (in
-	// R0) goes to Result; nil for a subroutine.
+	// pushed last to first, then their count in longwords. A function's
+	// value goes to Result, from R0 up by its type's width (R0:R3 for an
+	// Octa, an OTS$..._R3 routine's); nil for a subroutine.
 	Call struct {
 		origin
 		Routine string
@@ -475,8 +488,10 @@ func (*Return) terminator()   {}
 func (*NoReturn) terminator() {}
 
 // Arg is an actual argument: by reference (Ref, whose address is
-// passed) or by value (Value, a longword, as a null argument's 0 is).
-// A descriptor is passed by reference to the descriptor.
+// passed) or by value (Value, as a null argument's 0 is, or each part of
+// a complex value an OTS$ routine is given): a value of any type takes as
+// many longwords of the argument list as its width, in the order memory
+// holds them. A descriptor is passed by reference to the descriptor.
 type Arg struct {
 	Ref   *Mem
 	Value Expr
@@ -542,10 +557,13 @@ type (
 	// Const is a constant: Bits is its value as memory holds it, read
 	// as a little-endian number (a Long's two's complement, an F_floating
 	// longword's bits, 1.0 being ^X00004080, a D_floating quadword's), and
-	// High the bytes of an H_floating value past its first eight.
+	// High the bytes of an H_floating value past its first eight. A
+	// complex constant is a Quad or an Octa, its real part first, and Part
+	// is its parts' type (Float, Double, or GFloat).
 	Const struct {
 		T          Type
 		Bits, High uint64
+		Part       Type
 	}
 
 	// Load is the value at Mem.
@@ -631,6 +649,26 @@ func RealConst(t Type, v vaxfloat.Value) *Const {
 	return &Const{T: t, Bits: b.Lo, High: b.Hi}
 }
 
+// ComplexConst is the complex constant whose parts are the constants re and
+// im, both of one floating type: a Quad for two F_floating parts, an Octa
+// for two D or G ones.
+func ComplexConst(re, im *Const) *Const {
+	if re.T == Float {
+		return &Const{T: Quad, Bits: re.Bits&0xFFFFFFFF | im.Bits<<32, Part: Float}
+	}
+
+	return &Const{T: Octa, Bits: re.Bits, High: im.Bits, Part: re.T}
+}
+
+// Parts are a complex constant's real and imaginary parts.
+func (c *Const) Parts() (re, im *Const) {
+	if c.T == Quad {
+		return &Const{T: c.Part, Bits: c.Bits & 0xFFFFFFFF}, &Const{T: c.Part, Bits: c.Bits >> 32}
+	}
+
+	return &Const{T: c.Part, Bits: c.Bits}, &Const{T: c.Part, Bits: c.High}
+}
+
 // Int is an integer constant's value, a Byte's or Word's sign-extended.
 func (c *Const) Int() int32 {
 	switch c.T {
@@ -650,8 +688,9 @@ func (c *Const) Real() vaxfloat.Value {
 	return v
 }
 
-// Longwords are a floating constant's bits as the longwords memory holds,
-// the lowest-addressed first: one for F, two for D or G, four for H.
+// Longwords are a floating or complex constant's bits as the longwords
+// memory holds, the lowest-addressed first: one for F, two for D, G, or a
+// Quad, four for H or an Octa.
 func (c *Const) Longwords() []uint32 {
 	n := c.T.Width()
 	words := make([]uint32, n)
@@ -668,8 +707,12 @@ func (c *Const) Longwords() []uint32 {
 	return words
 }
 
-// IsZero reports whether the constant is zero (0, or 0.0).
+// IsZero reports whether the constant is zero (0, 0.0, or (0.0, 0.0)).
 func (c *Const) IsZero() bool {
+	if c.T == Quad || c.T == Octa {
+		return c.Bits == 0 && c.High == 0
+	}
+
 	if c.T.Floating() {
 		return c.Real().IsZero()
 	}

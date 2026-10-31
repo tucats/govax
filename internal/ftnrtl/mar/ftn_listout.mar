@@ -37,7 +37,19 @@
 ;	REAL*8		(DSC$K_DTYPE_D)		1PG24.16E2
 ;	REAL*8		(DSC$K_DTYPE_G)		1PG24.15E3	with /G_FLOATING
 ;	REAL*16		(DSC$K_DTYPE_H)		1PG43.33E4
+;	COMPLEX*8	(DSC$K_DTYPE_FC)	'(',1PG14.7E2,',',1PG14.7E2,')'
+;	COMPLEX*16	(DSC$K_DTYPE_DC)	'(',1PG23.16E2,',',1PG23.16E2,')'
+;	COMPLEX*16	(DSC$K_DTYPE_GC)	'(',1PG23.15E3,',',1PG23.15E3,')'
+;						with /G_FLOATING
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
+;
+; A complex value is written "with no embedded spaces" (7.3.1.2): each
+; part's G field without its leading and trailing blanks, so (1.0,2.0) is
+; " (1.000000,2.000000)". The blank before it is govax's, so that it
+; begins with a blank as every other numeric format's field does, and is
+; kept apart from the value before it. Its field is put as any other
+; value's, never split across records, though the manual allows a split
+; after the comma. Both are govax's choices, unconfirmed.
 ;
 ; A record is at most 80 bytes long, its first the carriage control, a
 ; blank (a new line). The start begins a record with that blank; each
@@ -90,9 +102,12 @@ DSC$K_DTYPE_W	= 7			; word integer
 DSC$K_DTYPE_L	= 8			; longword integer
 DSC$K_DTYPE_F	= 10			; F_floating
 DSC$K_DTYPE_D	= 11			; D_floating
+DSC$K_DTYPE_FC	= 12			; F_floating complex
+DSC$K_DTYPE_DC	= 13			; D_floating complex
 DSC$K_DTYPE_T	= 14			; text
 DSC$K_DTYPE_G	= 27			; G_floating
 DSC$K_DTYPE_H	= 28			; H_floating
+DSC$K_DTYPE_GC	= 29			; G_floating complex
 DSC$K_CLASS_S	= 1			; a scalar or fixed-length string
 DSC$K_CLASS_A	= 4			; an array
 
@@ -273,7 +288,9 @@ FMT_D		= -140			;  its significant digits, d,
 FMT_E		= -144			;  its exponent's digits, e,
 FMT_KIND	= -148			;  and which OTS$$CVT_x_T_R8: 0 F,
 					;  1 D, 2 G, 3 H
-FRAME_SIZE	= 148
+CTEXT		= -200			; a complex value's text, 52 bytes
+CTEXT_LEN	= -204			;  and its length so far
+FRAME_SIZE	= 204
 
 PUT_VALUE:
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
@@ -285,7 +302,10 @@ PUT_VALUE:
 1$:	CMPB	4(AP),#DSC$K_DTYPE_H
 	BNEQ	2$
 	BRW	REAL_H
-2$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+2$:	CMPB	4(AP),#DSC$K_DTYPE_GC
+	BNEQ	3$
+	BRW	COMPLEX_G
+3$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
 10$:	.WORD	BYTE_I5-10$		; 2: BU
 	.WORD	LOGICAL-10$		; 3: WU
 	.WORD	LOGICAL-10$		; 4: LU
@@ -296,8 +316,8 @@ PUT_VALUE:
 	.WORD	BAD_TYPE-10$		; 9
 	.WORD	REAL_F-10$		; 10: F
 	.WORD	REAL_D-10$		; 11: D
-	.WORD	BAD_TYPE-10$		; 12
-	.WORD	BAD_TYPE-10$		; 13
+	.WORD	COMPLEX_F-10$		; 12: FC
+	.WORD	COMPLEX_D-10$		; 13: DC
 	.WORD	TEXT-10$		; 14: T
 BAD_TYPE:
 	PUSHL	#SS$_BADPARAM
@@ -361,7 +381,8 @@ TEXT:
 ; The floating types, G editing as the module's introduction describes:
 ; each type's format sets the field's width (FMT_W), its significant
 ; digits (FMT_D), its exponent's digits (FMT_E), and which routine gives
-; its digits (FMT_KIND), and goes on at REAL.
+; its digits (FMT_KIND), and goes on at REAL, which has FORMAT_REAL make
+; the field.
 ;
 REAL_F:	MOVL	#15,FMT_W(FP)		; 1PG15.7E2
 	MOVL	#7,FMT_D(FP)
@@ -382,7 +403,72 @@ REAL_H:	MOVL	#43,FMT_W(FP)		; 1PG43.33E4
 	MOVL	#33,FMT_D(FP)
 	MOVL	#4,FMT_E(FP)
 	MOVL	#3,FMT_KIND(FP)
-REAL:	MOVC5	#0,(SP),#^A/ /,FMT_W(FP),FIELD(FP) ; w blanks
+REAL:	BSBW	FORMAT_REAL
+	PUSHL	FMT_W(FP)
+	BRW	PUT_THE_FIELD
+
+;
+; The complex types: each part's G field, as REAL's, with its blanks taken
+; out (PART), between " (", ",", and ")" in CTEXT, and that put as one
+; field. The parts' length is half the value's, 12(AP).
+;
+COMPLEX_F:
+	MOVL	#14,FMT_W(FP)		; 1PG14.7E2
+	MOVL	#7,FMT_D(FP)
+	MOVL	#2,FMT_E(FP)
+	CLRL	FMT_KIND(FP)
+	BRB	COMPLEX
+COMPLEX_D:
+	MOVL	#23,FMT_W(FP)		; 1PG23.16E2
+	MOVL	#16,FMT_D(FP)
+	MOVL	#2,FMT_E(FP)
+	MOVL	#1,FMT_KIND(FP)
+	BRB	COMPLEX
+COMPLEX_G:
+	MOVL	#23,FMT_W(FP)		; 1PG23.15E3
+	MOVL	#15,FMT_D(FP)
+	MOVL	#3,FMT_E(FP)
+	MOVL	#2,FMT_KIND(FP)
+COMPLEX:
+	MOVW	#^A/ (/,CTEXT(FP)
+	MOVL	#2,CTEXT_LEN(FP)
+	BSBW	PART			; the real part
+	MOVL	CTEXT_LEN(FP),R0
+	MOVB	#^A/,/,CTEXT(FP)[R0]
+	INCL	CTEXT_LEN(FP)
+	DIVL3	#2,12(AP),R0		; a part's length
+	ADDL2	R0,R6			; the imaginary part
+	BSBW	PART
+	MOVL	CTEXT_LEN(FP),R0
+	MOVB	#^A/)/,CTEXT(FP)[R0]
+	INCL	CTEXT_LEN(FP)
+	PUSHL	CTEXT_LEN(FP)
+	PUSHAB	CTEXT(FP)
+	CALLS	#2,PUT_FIELD
+	RET
+
+;
+; PART, a subroutine of PUT_VALUE: the part at R6 in its G field, then
+; the field's characters, from its first that isn't a blank to the blank
+; after them (a G field has none between), added to CTEXT.
+;
+PART:	BSBW	FORMAT_REAL
+	SKPC	#^A/ /,FMT_W(FP),FIELD(FP) ; R0: the bytes from the first
+	MOVQ	R0,R2			;  that isn't a blank, R1: its address
+	LOCC	#^A/ /,R2,(R3)		; R0: the bytes from the blank after
+	SUBL3	R0,R2,R0		; the characters' length
+	MOVL	CTEXT_LEN(FP),R1
+	ADDL2	R0,CTEXT_LEN(FP)
+	MOVC3	R0,(R3),CTEXT(FP)[R1]
+	RSB
+
+;
+; FORMAT_REAL, a subroutine of PUT_VALUE (BSBW, RSB, in its frame): the
+; value at R6 in FIELD(FP), G edited in the format FMT_W(FP) to
+; FMT_KIND(FP) say, FMT_W(FP) bytes long. Changes R0 to R5 and R7 to R10.
+;
+FORMAT_REAL:
+	MOVC5	#0,(SP),#^A/ /,FMT_W(FP),FIELD(FP) ; w blanks
 	;
 	; The digits rounded to d significant ones tell which form: F, for
 	; a magnitude from 0.1 (0.1 x 10**0) to under 10**d (0.1 x
@@ -425,8 +511,7 @@ F_FORM:	SUBL3	R8,FMT_D(FP),R9		; the digits after the point
 	BGEQ	40$
 	DECL	R10
 	MOVB	#^A/-/,FIELD(FP)[R10]
-40$:	PUSHL	FMT_W(FP)
-	BRW	PUT_THE_FIELD
+40$:	RSB
 	;
 	; E form: the digits again, rounded to d+1 significant ones this
 	; time, then "sd.ddd...Esxx" right-justified in the w columns: the
@@ -465,10 +550,12 @@ E_FORM:	ADDL3	FMT_D(FP),FMT_E(FP),R10
 	ADDB3	#^A/0/,R1,FIELD(FP)[R10]
 	DECL	R10
 	SOBGTR	R9,30$
-	PUSHL	FMT_W(FP)
-	;
-	; Every format but A ends here, the field's length on the stack.
-	;
+	RSB
+
+;
+; Every format but A and complex ends here, the field's length on the
+; stack.
+;
 PUT_THE_FIELD:
 	PUSHAB	FIELD(FP)
 	CALLS	#2,PUT_FIELD

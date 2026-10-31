@@ -81,11 +81,11 @@ func (t Type) String() string {
 }
 
 // Compiled reports whether expressions of the type are compiled yet:
-// INTEGER and LOGICAL of every length, and REAL of every length. COMPLEX
-// and CHARACTER are later subtasks' of Phase 78.
+// INTEGER, LOGICAL, REAL, and COMPLEX of every length. CHARACTER is a later
+// subtask's of Phase 78.
 func (t Type) Compiled() bool {
 	switch t.Kind {
-	case Integer, Logical, Real:
+	case Integer, Logical, Real, Complex:
 		return true
 	}
 
@@ -93,8 +93,9 @@ func (t Type) Compiled() bool {
 }
 
 // returned reports whether a function of the type can be compiled yet: a
-// type Compiled says whose value comes back in registers, R0 or R0 and R1.
-// A REAL*16 function's value comes back through a hidden first argument
+// type Compiled says whose value comes back in registers, R0 or R0 and R1
+// (a COMPLEX*8's real part in R0, its imaginary part in R1). A REAL*16 or
+// COMPLEX*16 function's value comes back through a hidden first argument
 // (Decision 11 of docs/PHASE-74 - FORTRAN plan.md), which is Phase 79's.
 func (t Type) returned() bool {
 	return t.Compiled() && t.Size <= 8

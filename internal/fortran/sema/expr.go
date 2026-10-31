@@ -71,8 +71,9 @@ func (a *analyzer) value(e ast.Expr) Expr {
 }
 
 // folded is the value of e if it is a constant expression (constant.go),
-// for a form this phase compiles only as one: **, the intrinsic
-// functions, character operations, REAL*8 and COMPLEX constants. ok is
+// for a form this phase compiles only as one (**, the intrinsic
+// functions, character operations), and for a numeric or COMPLEX
+// constant, whose value it is. ok is
 // false if e isn't constant, for the caller to report the form as it
 // would. A constant of a type the code generator doesn't handle yet is
 // NOTIMPL (Phase 78's); a CHARACTER one is a value wherever a character
@@ -467,7 +468,7 @@ func (a *analyzer) mixedType(x, y Expr) Type {
 
 // compare analyzes a relational expression (section 2.3.3): its operands
 // are converted to the higher-ranked one's type, and its value is
-// LOGICAL.
+// LOGICAL. COMPLEX operands take only .EQ. and .NE.
 func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 	if x.Type().Kind == Character && y.Type().Kind == Character {
 		cx, okx := x.(*Const)
@@ -486,6 +487,13 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 
 	x, y = a.arithmetic(x), a.arithmetic(y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	// COMPLEX values are only equal or not: they have no order.
+	if t.Kind == Complex && e.Op != ast.EQ && e.Op != ast.NE {
+		a.report("BADOPERAND", e.Pos, e.Op.String(), t.String())
+
 		return a.bad(e.Pos)
 	}
 

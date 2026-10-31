@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-and 3 done 2026-10-30. Needs Phase 76 (declarations and
+3, and 4 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -534,7 +534,7 @@ stops for review.
 3. **Floating:** D, G, and H, 128-bit constants, register runs, wide spills,
    `/[NO]G_FLOATING`, Table 3-1's real cells. Done.
 4. **COMPLEX:** splitting in lowering, by-value arguments and wide results, products
-   and OTS$DIVC, the folding change.
+   and OTS$DIVC, the folding change. Done.
 5. **CHARACTER values:** places, substrings, array elements, assignment, comparison,
    the unsigned branches.
 6. **CHARACTER arguments and concatenation:** descriptors at run time, passed-length
@@ -637,3 +637,46 @@ stops for review.
   - **Unconfirmed, ours:** zero in E form at every width (`0.0000000000000000E+00`),
     as subtask 1 chose for REAL\*4; an exponent written with all of the format's
     e digits (`E-0018`), Ew.dEe's form.
+- **2026-10-30, subtask 4:** COMPLEX\*8 and COMPLEX\*16.
+  - **`sema`:** `Compiled` admits COMPLEX, so COMPLEX names, constants, PARAMETERs,
+    and IMPLICIT COMPLEX compile; a COMPLEX operand of `.LT.`, `.LE.`, `.GT.`, or
+    `.GE.` is BADOPERAND, as it already was in a constant expression (the survey
+    proposed a new message; BADOPERAND says the same). Folding a COMPLEX\*8 product
+    is `vaxfloat.ComplexMulSteps` (the author's answer 1): `complexArith` is the
+    operators', `complexOTS` the exact form, which the powers keep, since
+    OTS$POWCJ multiplies exactly in F_floating too.
+  - **`ir`:** Decision 1 in `lowercomplex.go`: `complexParts` gives a complex
+    expression's two trees; `parts` makes a value's place into its parts' (an
+    element's index doubled, the imaginary part a part's size on); sums,
+    differences, and negation part by part; F products in line, each operand part
+    used twice made `reusable`; D and G products and every quotient by
+    `complexCall` (OTS$MULCD_R3, MULCG_R3, DIVC, DIVCD_R3, DIVCG_R3); conversion
+    either way by Table 3-1; `.EQ.` as the `and` of the parts' comparisons, `.NE.`
+    as the `or`. The whole value is a new type, `Quad` or `Octa`, only moved,
+    passed, or returned (Decision 5: `Arg.Value` of any width, `Call.Result` from R0
+    up); a constant is a `Const` of one with its `Part` type. `assignParts` stores
+    the real part through a temporary when the imaginary part's tree reads memory
+    that might be the real part's place (`C = C*D`), and straight otherwise.
+    `arith` drops a floating `+ 0.0`, which a real operand's imaginary part would
+    otherwise add. DSC\$K_DTYPE_FC, DC, and GC.
+  - **`codegen`:** a value argument pushed with MOVQ or MOVO for 8 or 16 bytes, the
+    CALLS count in longwords; a result's registers marked used, so a routine that
+    calls an `_R3` routine saves R2 and R3 in its entry mask; MOVAQ, MOVAO, PUSHAQ,
+    PUSHAO for whole complex values; complex constants from their data.
+  - **FTNRTL:** Table 7-1's complex formats, each part's G field (FORMAT_REAL, now
+    a subroutine REAL and the complex types share) without its blanks, between
+    " (", ",", and ")", put as one field. No new vector entry: GSMATCH stays 1,4.
+  - **Tests:** `testdata/fortran/complex` (COMPLEX\*16 in D) and `complexg` (in G,
+    by OPTIONS, with a product past D's range), in both paging modes, their outputs
+    worked with exact rational arithmetic rounded to each format, the F products by
+    steps, not copied from a run; `complexes.for` golden in `ir` and `codegen`;
+    `TestComplexMulSteps`; sema cases for the folding and BADOPERAND.
+  - **Beyond the survey:** a COMPLEX\*8 FUNCTION needs nothing that isn't here (its
+    value in R0 and R1, MOVQ), so it compiles, as subtask 3's REAL\*8 functions do;
+    COMPLEX\*16 functions, whose value comes back through a hidden argument, stay
+    Phase 79's.
+  - **Unconfirmed, ours:** the blank before a complex value's field (every other
+    numeric field begins with one, and it keeps the value apart from the one
+    before); a complex value never split across records, though the manual allows
+    a split after the comma. Efficiency is Phase 84's: an element's index is
+    computed once per part, and a dummy's offset makes an index of its own.

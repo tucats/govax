@@ -14,8 +14,17 @@ import (
 // temporary, which the expression loads. So the code generator never
 // holds a value in a register across a CALLS, which may change R0 to
 // R5 (a routine saves only the registers it uses of R2 to R11, and
-// returns its value in R0).
+// returns its value in R0). A COMPLEX value is lowered whole only to be
+// moved or passed: a load of the place holding it (lowercomplex.go).
 func (l *lowerer) expr(e sema.Expr) Expr {
+	if e.Type().Kind == sema.Complex {
+		if c, ok := e.(*sema.Const); ok {
+			return l.constOf(c)
+		}
+
+		return &Load{l.complexValue(e)}
+	}
+
 	switch e := e.(type) {
 	case *sema.Const:
 		return l.constOf(e)
@@ -51,12 +60,24 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		return arith(operators[e.Op], t, x, y)
 
 	case *sema.Compare:
+		if e.X.Type().Kind == sema.Complex {
+			return l.complexCompare(e)
+		}
+
 		x := l.expr(e.X)
 		y := l.expr(e.Y)
 
 		return &Cmp{operators[e.Op], x, y}
 
 	case *sema.Convert:
+		// A COMPLEX value converted to anything else is its real part,
+		// converted (Table 3-1).
+		if e.X.Type().Kind == sema.Complex {
+			re, _ := l.complexParts(e.X)
+
+			return convertTo(l.typeOf(e.T), re)
+		}
+
 		// An INTEGER and a LOGICAL of one size are the same bits: converting
 		// between them does nothing.
 		x := l.expr(e.X)
@@ -78,10 +99,16 @@ var operators = map[ast.Op]Operator{
 }
 
 // constOf is a constant's IR form: an INTEGER's or a LOGICAL's bits in its
-// own size (a LOGICAL's -1 or 0), or a REAL's bits in its format.
+// own size (a LOGICAL's -1 or 0), a REAL's bits in its format, or a
+// COMPLEX's two parts' bits.
 func (l *lowerer) constOf(c *sema.Const) *Const {
-	if c.T.Kind == sema.Real {
+	switch c.T.Kind {
+	case sema.Real:
 		return RealConst(l.typeOf(c.T), c.Real)
+	case sema.Complex:
+		p := l.partOf(c.T)
+
+		return ComplexConst(RealConst(p, c.Real), RealConst(p, c.Imag))
 	}
 
 	return IntConst(l.typeOf(c.T), c.Int)
@@ -211,7 +238,8 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 //     by zero, or give a reserved operand is left for run time;
 //   - a Long addition or subtraction collects its constants into one
 //     (I-1+1 is I), and adding or multiplying by nothing goes, which
-//     keeps DO loops' counts and array subscripts short.
+//     keeps DO loops' counts and array subscripts short;
+//   - adding or subtracting a floating 0.0 goes too.
 //
 // A nil x (in an addition being built up) is nothing: arith(Add, t,
 // nil, y) is y.
@@ -232,6 +260,20 @@ func arith(op Operator, t Type, x, y Expr) Expr {
 	case okx && oky:
 		if c := foldBinary(op, t, cx, cy); c != nil {
 			return c
+		}
+	}
+
+	// A floating value plus or minus 0.0 is itself, exactly: the VAX has no
+	// negative zero. A real number converted to COMPLEX has an imaginary
+	// part of 0.0, which (X, 0.0) + (Y, Z) would otherwise add.
+	if t.Floating() && (op == Add || op == Sub) {
+		switch {
+		case oky && cy.IsZero():
+			return x
+		case okx && cx.IsZero() && op == Add:
+			return y
+		case okx && cx.IsZero():
+			return &Op{Neg, t, y, nil}
 		}
 	}
 

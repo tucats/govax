@@ -86,9 +86,12 @@ var definitions = []struct {
 	{"DSC$K_DTYPE_L", int(ir.DTypeL), "longword integer"},
 	{"DSC$K_DTYPE_F", int(ir.DTypeF), "F_floating"},
 	{"DSC$K_DTYPE_D", int(ir.DTypeD), "D_floating"},
+	{"DSC$K_DTYPE_FC", int(ir.DTypeFC), "F_floating complex"},
+	{"DSC$K_DTYPE_DC", int(ir.DTypeDC), "D_floating complex"},
 	{"DSC$K_DTYPE_T", int(ir.DTypeT), "text"},
 	{"DSC$K_DTYPE_G", int(ir.DTypeG), "G_floating"},
 	{"DSC$K_DTYPE_H", int(ir.DTypeH), "H_floating"},
+	{"DSC$K_DTYPE_GC", int(ir.DTypeGC), "G_floating complex"},
 	{"DSC$K_CLASS_S", int(ir.ClassS), "scalar or fixed-length string"},
 	{"DSC$K_CLASS_A", int(ir.ClassA), "array"},
 }
@@ -603,7 +606,7 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	switch d.Kind {
 	case ir.ConstantDatum:
-		if d.Value.T.Floating() {
+		if !d.Value.T.Integer() {
 			words := d.Value.Longwords()
 			longs := make([]string, len(words))
 

@@ -68,6 +68,44 @@ func ComplexMul(f Format, a, b, c, d Value) (Value, Value, error) {
 		AddExact(MulExact(a, d), MulExact(b, c)))
 }
 
+// ComplexMulSteps returns (a, b) * (c, d) in format f as four multiplications,
+// a subtraction, and an addition do it, each rounded to f: (ac - bd, ad + bc),
+// with ac, bd, ad, and bc each rounded before they are combined. It is what a
+// compiler's in-line code computes where it has no routine to call (FORTRAN's
+// COMPLEX*8 product), so that a constant it folds has the value the code would
+// compute. A product too small for f is 0.0, as on a VAX with floating
+// underflow faults disabled. Its only error is ErrOverflow.
+func ComplexMulSteps(f Format, a, b, c, d Value) (Value, Value, error) {
+	step := func(op func(Format, Value, Value) (Value, error), x, y Value) (Value, error) {
+		v, err := op(f, x, y)
+		if errors.Is(err, ErrUnderflow) {
+			return Value{}, nil
+		}
+
+		return v, err
+	}
+
+	var products [4]Value
+
+	for i, pair := range [4][2]Value{{a, c}, {b, d}, {a, d}, {b, c}} {
+		p, err := step(Mul, pair[0], pair[1])
+		if err != nil {
+			return Value{}, Value{}, err
+		}
+
+		products[i] = p
+	}
+
+	re, err := step(Sub, products[0], products[1])
+	if err != nil {
+		return Value{}, Value{}, err
+	}
+
+	im, err := step(Add, products[2], products[3])
+
+	return re, im, err
+}
+
 // ComplexDiv returns (a, b) / (c, d) in format f: the OTS$ manual's
 // ((ac + bd) / (c^2 + d^2), (bc - ad) / (c^2 + d^2)), each part computed exactly
 // and rounded once, a part too small for f being 0.0. Its errors are ErrOverflow,

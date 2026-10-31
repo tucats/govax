@@ -540,15 +540,16 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 			g.emit("CLR"+t.String(), t, d.text)
 		case t == ir.Float:
 			// The constant's bits, moved as a longword: MACRO would read
-			// #n in MOVF as a floating value to convert.
+			// #n in MOVF as a floating value to convert. (A Quad, a
+			// COMPLEX*8 constant, comes from its datum, below.)
 			if g.note == "" {
 				g.note = ir.ExprText(s)
 			}
 
 			g.emit("MOVL", ir.Long, fmt.Sprintf("#^X%08X", uint32(s.Bits)), d.text)
-		case t.Floating():
-			// A D, G, or H constant from its datum, which holds the
-			// compiler's bits (constant).
+		case !t.Integer():
+			// A D, G, or H constant, or a complex one, from its datum,
+			// which holds the compiler's bits (constant).
 			if g.note == "" {
 				g.note = ir.ExprText(s)
 			}
@@ -585,19 +586,20 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 // addressOp is MOVA or PUSHA with the letter for the place m: an index
 // register is multiplied by the size the letter says, so an element's address
 // takes its own type's letter (MOVAW A[R0],R1 for a word's, MOVAD for a
-// D_floating one's, which scales by 8). Only a place with an index cares; a
+// D_floating one's, which scales by 8; MOVAQ and MOVAO for a whole
+// COMPLEX*8's and COMPLEX*16's). Only a place with an index cares; a
 // longword's and an F_floating value's are both L.
 func addressOp(op string, m *ir.Mem) string {
 	switch m.T {
-	case ir.Byte, ir.Word, ir.Double, ir.GFloat, ir.HFloat:
+	case ir.Byte, ir.Word, ir.Double, ir.GFloat, ir.HFloat, ir.Quad, ir.Octa:
 		return op + m.T.String()
 	}
 
 	return op + "L"
 }
 
-// move writes MOVL, MOVF, MOVD, or the like from src to dst, unless they
-// are the same.
+// move writes MOVL, MOVF, MOVD, or the like from src to dst (MOVQ or MOVO for
+// a complex value as a whole), unless they are the same.
 func (g *routineGen) move(t ir.Type, src, dst string) {
 	if src == dst {
 		g.note = ""
@@ -610,11 +612,12 @@ func (g *routineGen) move(t ir.Type, src, dst string) {
 
 // constant is the operand for a constant: #n for an integer (MACRO makes
 // it a short literal, S^#n, from 0 to 63, and an immediate, I^#n,
-// otherwise); for a floating value, its longwords in $PDATA, since MACRO
-// would take #n in a floating instruction for a floating value of its own
-// to convert (Decision 16 has the compiler's bits used, never MACRO's).
+// otherwise); for a floating or complex value, its longwords in $PDATA,
+// since MACRO would take #n in a floating instruction for a floating value
+// of its own to convert (Decision 16 has the compiler's bits used, never
+// MACRO's).
 func (g *routineGen) constant(c *ir.Const) string {
-	if !c.T.Floating() {
+	if c.T.Integer() {
 		return "#" + strconv.Itoa(int(c.Int()))
 	}
 

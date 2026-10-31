@@ -1,0 +1,92 @@
+routine CPLX main
+  cell  C       Q  $LOCAL+0    variable C
+  cell  D       Q  $LOCAL+8    variable D
+  cell  A       Q  $LOCAL+16   array A, 32 bytes
+  cell  Z       O  $LOCAL+48   variable Z
+  cell  W       O  $LOCAL+64   variable W
+  cell  X       F  $LOCAL+80   variable X
+  cell  I       L  $LOCAL+84   variable I
+  cell  $T1     F  $LOCAL+88   temporary
+  cell  $T2     Q  $LOCAL+92   temporary
+  cell  $T3     D  $LOCAL+100  temporary
+  cell  $T4     O  $LOCAL+108  temporary
+  cell  $T5     Q  $LOCAL+124  temporary
+  $LOCAL is 132 bytes
+B1:
+  ; line 6
+  assign C = (1.0, 2.0)
+  ; line 7
+  assign D = C
+  ; line 8
+  assign $T1 = sub.F(mul.F(C, D), mul.F(C+4, D+4))
+  assign C+4 = add.F(mul.F(C, D+4), mul.F(C+4, D))
+  assign C = $T1
+  ; line 9
+  assign $T1 = add.F(C, X)
+  assign A-4[mul.L(I, 2)] = C+4
+  assign A-8[mul.L(I, 2)] = $T1
+  ; line 10
+  call OTS$DIVC(val A-8[mul.L(I, 2)], val A-4[mul.L(I, 2)], val D, val D+4) -> $T2
+  assign A[mul.L(I, 2)] = $T2
+  assign A+4[mul.L(I, 2)] = $T2+4
+  ; line 11
+  assign $T3 = cvt.FD(C)
+  assign Z+8 = cvt.FD(C+4)
+  assign Z = $T3
+  ; line 12
+  call OTS$MULCD_R3(val Z, val Z+8, val Z, val Z+8) -> $T4
+  assign W = $T4
+  assign W+8 = $T4+8
+  ; line 13
+  call OTS$DIVCD_R3(val W, val W+8, val Z, val Z+8) -> $T4
+  assign W = sub.D($T4, 1D0)
+  assign W+8 = $T4+8
+  ; line 14
+  assign X = C
+  ; line 15
+  branch and.L(eq.F(C, D), eq.F(C+4, D+4)) B2 B3
+B2:
+  assign X = 1.0
+  jump B3
+B3:
+  ; line 16
+  branch or.L(ne.F(C, 0.0), ne.F(C+4, 1.0)) B4 B5
+B4:
+  assign X = 2.0
+  jump B5
+B5:
+  ; line 17
+  assign $T2 = sub.F(mul.F(C, D), mul.F(C+4, D+4))
+  assign $T2+4 = add.F(mul.F(C, D+4), mul.F(C+4, D))
+  assign $T5 = C
+  call S(ref C, ref $T2, ref A-8[I], ref $T5)
+  ; line 18
+  assign $T5 = neg.F(C)
+  assign $T5+4 = neg.F(C+4)
+  call CF(ref $T5) -> D
+  ; line 19
+  return 1
+routine CF function Q
+  param V       Q  argument 1
+  cell  CF      Q  $LOCAL+0    result CF
+  cell  N       L  $LOCAL+8    variable N
+  cell  $T1     F  $LOCAL+12   temporary
+  $LOCAL is 16 bytes
+B1:
+  ; line 22
+  assign $T1 = sub.F(mul.F(@V+8, @V-8[mul.L(N, 2)]), mul.F(@V+12, @V-4[mul.L(N, 2)]))
+  assign CF+4 = add.F(mul.F(@V+8, @V-4[mul.L(N, 2)]), mul.F(@V+12, @V-8[mul.L(N, 2)]))
+  assign CF = $T1
+  ; line 23
+  return CF
+routine GS subroutine
+  param Z       O  argument 1
+  cell  $T1     O  $LOCAL+0    temporary
+  $LOCAL is 16 bytes
+B1:
+  ; line 27
+  call OTS$MULCG_R3(val @Z, val @Z+8, val @Z, val @Z+8) -> $T1
+  assign @Z = $T1
+  assign @Z+8 = $T1+8
+  ; line 28
+  return

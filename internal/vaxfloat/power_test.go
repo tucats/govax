@@ -146,3 +146,46 @@ func TestComplexArithmetic(t *testing.T) {
 		t.Errorf("tiny * tiny = (%v, %v), %v, want parts of 0.0", re, im, err)
 	}
 }
+
+// TestComplexMulSteps checks the in-line product: each product rounded before
+// the sum, where ComplexMul rounds the exact sum once. With a = c = 1+2^-23 and
+// b = d = 1, ac is 1+2^-22+2^-46, which F_floating rounds to 1+2^-22, so the
+// real part is 2^-22 by steps; exactly it is 2^-22+2^-46, which needs 25 bits,
+// and rounds (half away from zero) to 2^-22+2^-45.
+func TestComplexMulSteps(t *testing.T) {
+	one := FromInt(1)
+	a := FromBig(new(big.Float).SetMantExp(bigOf(1+1.0/(1<<23)), 0))
+	lsb := FromBig(new(big.Float).SetMantExp(bigOf(1), -22))
+	exact := AddExact(lsb, FromBig(new(big.Float).SetMantExp(bigOf(1), -45)))
+
+	re, im, err := ComplexMulSteps(F, a, one, a, one)
+	if err != nil || re.Cmp(lsb) != 0 {
+		t.Errorf("by steps: real part %v, %v; want 2^-22", re, err)
+	}
+
+	if want, _ := Add(F, a, a); im.Cmp(want) != 0 {
+		t.Errorf("by steps: imaginary part %v, want %v", im, want)
+	}
+
+	if re, _, _ := ComplexMul(F, a, one, a, one); re.Cmp(exact) != 0 {
+		t.Errorf("exact: real part %v, want 2^-22+2^-45", re)
+	}
+
+	v := func(i int64) Value { return FromInt(i) }
+
+	if re, im, err := ComplexMulSteps(F, v(8), v(4), v(2), v(3)); err != nil || re.Cmp(v(4)) != 0 || im.Cmp(v(32)) != 0 {
+		t.Errorf("(8, 4) * (2, 3) = (%v, %v), %v", re, im, err)
+	}
+
+	huge := FromBig(bigOf(1e38))
+
+	if _, _, err := ComplexMulSteps(F, huge, v(0), huge, v(0)); !errors.Is(err, ErrOverflow) {
+		t.Errorf("huge * huge: %v", err)
+	}
+
+	tiny := FromBig(bigOf(1e-30))
+
+	if re, im, err := ComplexMulSteps(F, tiny, v(0), tiny, tiny); err != nil || !re.IsZero() || !im.IsZero() {
+		t.Errorf("tiny * tiny = (%v, %v), %v, want parts of 0.0", re, im, err)
+	}
+}

@@ -54,6 +54,15 @@
 // its value in a temporary, so no value is ever held in a register
 // across a CALLS.
 //
+// A COMPLEX expression is split into two trees, one for its real part
+// and one for its imaginary part, over F, D, or G operations
+// (lowercomplex.go), so the code generator has no complex arithmetic. A
+// complex value as a whole is a Quad or an Octa, which is only moved
+// (MOVQ, MOVO), passed, or returned; a part is a Mem of its own, the
+// imaginary part 4 or 8 bytes past the real one. The products and
+// quotients VAX FORTRAN computes in the OTS$ routines are Calls whose
+// arguments are the parts by value.
+//
 // # Storage
 //
 // FORTRAN's variables are static (Decision 10): each routine's live in

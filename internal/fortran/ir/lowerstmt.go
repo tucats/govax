@@ -100,6 +100,12 @@ func (l *lowerer) assign(s *sema.Assign) {
 		return
 	}
 
+	if s.Target.Type().Kind == sema.Complex {
+		l.assignComplex(dst, s.Value)
+
+		return
+	}
+
 	l.emit(&Assign{l.origin(), dst, l.expr(s.Value)})
 }
 

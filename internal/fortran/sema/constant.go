@@ -653,11 +653,26 @@ func realArith(op ast.Op, f vaxfloat.Format, x, y vaxfloat.Value) (vaxfloat.Valu
 	return v, err
 }
 
-// complexArith is (a, b) op (c, d) in format f. A product or quotient is
-// vaxfloat's, the same code the OTS$ routines use, so a constant has the
-// value the same expression computes at run time; Phase 78's code for a
-// product it writes in line must round as it does.
+// complexArith is (a, b) op (c, d) in format f, as the code for the operator
+// computes it, so that a constant has the value the same expression would have
+// at run time. A D or G product, and every quotient, is an OTS$ routine's
+// (OTS$MULCD_R3, OTS$DIVC, ...), vaxfloat's exact parts each rounded once,
+// the same code the routines use. An F product has no routine: the compiler
+// writes it in line, each product and sum rounded (vaxfloat.ComplexMulSteps;
+// the author's answer 1 in Phase 78's survey).
 func complexArith(op ast.Op, f vaxfloat.Format, a, b, c, d vaxfloat.Value) (vaxfloat.Value, vaxfloat.Value, error) {
+	if op == ast.Mul && f == vaxfloat.F {
+		return vaxfloat.ComplexMulSteps(f, a, b, c, d)
+	}
+
+	return complexOTS(op, f, a, b, c, d)
+}
+
+// complexOTS is (a, b) op (c, d) in format f as the OTS$ routines compute it:
+// a product or quotient's exact parts each rounded once, and a sum or
+// difference part by part. The powers use it for every format, since
+// OTS$POWCJ multiplies so, in F_floating too.
+func complexOTS(op ast.Op, f vaxfloat.Format, a, b, c, d vaxfloat.Value) (vaxfloat.Value, vaxfloat.Value, error) {
 	switch op {
 	case ast.Mul:
 		return vaxfloat.ComplexMul(f, a, b, c, d)
@@ -750,7 +765,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 			if t.Kind == Real {
 				r.Real, err = realArith(op, f, p.Real, q.Real)
 			} else {
-				r.Real, r.Imag, err = complexArith(op, f, p.Real, p.Imag, q.Real, q.Imag)
+				r.Real, r.Imag, err = complexOTS(op, f, p.Real, p.Imag, q.Real, q.Imag)
 			}
 
 			return r, err

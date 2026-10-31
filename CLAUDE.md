@@ -332,7 +332,13 @@ never had.
   subtask 3 (2026-10-30) REAL\*8 in D and G (`/[NO]G_FLOATING`, a unit's
   format, `sema`'s `analyzer.format`) and REAL\*16: the IR's `Double`,
   `GFloat`, `HFloat`, registers R0–R11 in runs of a value's width, and
-  FTNRTL's G editing at every width.
+  FTNRTL's G editing at every width, and subtask 4 (2026-10-30)
+  COMPLEX\*8 and COMPLEX\*16: each expression split into its parts'
+  trees in lowering (`ir/lowercomplex.go`), the whole value an IR `Quad`
+  or `Octa` that only moves, F products in line (folded by
+  `vaxfloat.ComplexMulSteps`), D and G products and every quotient by
+  the OTS$ routines with the parts by value, and FTNRTL's complex
+  output.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

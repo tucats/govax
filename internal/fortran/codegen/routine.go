@@ -204,8 +204,13 @@ func (g *routineGen) assign(s *ir.Assign) {
 
 // call writes a CALLS: each argument pushed, from the last to the first
 // (the calling standard's order, so the first is at 4(AP)), then the
-// call, then a function's value stored from R0.
+// call, then a function's value stored from R0. A value wider than a
+// longword is pushed whole, MOVQ or MOVO to -(SP), which leaves its
+// longwords in memory's order, the first at the lowest address; the count
+// CALLS gives is in longwords.
 func (g *routineGen) call(s *ir.Call) {
+	count := 0
+
 	for i := len(s.Args) - 1; i >= 0; i-- {
 		a := s.Args[i]
 
@@ -213,21 +218,39 @@ func (g *routineGen) call(s *ir.Call) {
 			m := g.mem(g.fitMem(a.Ref))
 			g.emit(pushAddress(a.Ref), ir.None, m.text)
 			g.free(m)
-		} else {
-			v := g.eval(g.fit(a.Value))
-			g.emit("PUSHL", ir.None, v.text)
-			g.free(v)
+
+			count++
+
+			continue
 		}
+
+		v := g.eval(g.fit(a.Value))
+
+		switch t := a.Value.Type(); t.Size() {
+		case 8:
+			g.emit("MOVQ", ir.None, v.text, "-(SP)")
+		case 16:
+			g.emit("MOVO", ir.None, v.text, "-(SP)")
+		default:
+			g.emit("PUSHL", ir.None, v.text)
+		}
+
+		g.free(v)
+
+		count += a.Value.Type().Width()
 	}
 
-	g.emit("CALLS", ir.None, "#"+strconv.Itoa(len(s.Args)), "G^"+s.Routine)
+	g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), "G^"+s.Routine)
 
 	if s.Result != nil {
-		// The value is in R0 (R0 and R1 for a D or G value), which nothing
-		// may use until it is stored.
+		// The value is in R0 (R0 and R1 for a D, G, or COMPLEX*8 value, R0
+		// to R3 for an OTS$..._R3 routine's), which nothing may use until it
+		// is stored. A routine that returns a value in R2 and R3 doesn't
+		// keep them for its caller, so this routine's entry mask must save
+		// them for its own.
 		w := s.Result.T.Width()
 		for i := range w {
-			g.inUse[i] = true
+			g.inUse[i], g.used[i] = true, true
 		}
 
 		d := g.mem(g.fitMem(s.Result))

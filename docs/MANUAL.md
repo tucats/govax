@@ -4447,8 +4447,8 @@ output it prints, and programs of several files in its `modules` directory.
 ### 14.2 What the compiler accepts so far
 
 - **Program units:** a main program, with or without a PROGRAM statement;
-  SUBROUTINE; FUNCTION, typed INTEGER, LOGICAL, REAL, or REAL\*8 (not
-  yet REAL\*16, COMPLEX, or CHARACTER), or by its name's first letter; BLOCK DATA, named or not, which holds declarations
+  SUBROUTINE; FUNCTION, typed INTEGER, LOGICAL, REAL, REAL\*8, or COMPLEX
+  (not yet REAL\*16, COMPLEX\*16, or CHARACTER), or by its name's first letter; BLOCK DATA, named or not, which holds declarations
   and initial values for named common blocks; END. A file may hold several
   units.
 - **Declarations:** type statements of every type and length (BYTE;
@@ -4472,7 +4472,7 @@ output it prints, and programs of several files in its `modules` directory.
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
   it is FORTRAN's own. Either name as an argument is reported not implemented.
   Every variable gets its storage,
-  but only INTEGER, LOGICAL, and REAL names can be used in
+  but only INTEGER, LOGICAL, REAL, and COMPLEX names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
@@ -4497,16 +4497,19 @@ output it prints, and programs of several files in its `modules` directory.
   `//`, the relational and logical operators, and MIN, MAX, ABS, MOD,
   ICHAR, NINT, DIM, DPROD, CMPLX, CONJG, IMAG, IAND, IOR, IEOR, NOT,
   ISHFT, LGE, LGT, LLE, LLT, and CHAR of constants. A constant's name may
-  be used in declarations and statements; a COMPLEX one is reported not
-  implemented where a statement uses it.
-- **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
-  `+ - * /` and unary minus, on INTEGER and REAL of every length (REAL\*4
-  F_floating, REAL\*8 D_floating or with `/G_FLOATING` G_floating, REAL\*16
-  H_floating), mixed by the usual conversions (INTEGER division truncates;
-  two INTEGER\*2s are computed in a word, and a word that overflows wraps; a
-  REAL\*4 beside a REAL\*8 is widened exactly, and a REAL\*8 assigned to a
-  REAL\*4 rounded); the relational operators
-  (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`, `.EQV.`, `.NEQV.`,
+  be used in declarations and statements.
+- **Expressions:** INTEGER, REAL, COMPLEX, LOGICAL, and character constants;
+  `+ - * /` and unary minus, on INTEGER, REAL, and COMPLEX of every length
+  (REAL\*4 F_floating, REAL\*8 D_floating or with `/G_FLOATING` G_floating,
+  REAL\*16 H_floating; COMPLEX\*8 a pair of F_floating values, COMPLEX\*16 of
+  D_floating or G_floating ones), mixed by the usual conversions (INTEGER
+  division truncates; two INTEGER\*2s are computed in a word, and a word that
+  overflows wraps; a REAL\*4 beside a REAL\*8 is widened exactly, and a
+  REAL\*8 assigned to a REAL\*4 rounded; a number beside a COMPLEX is its real
+  part, with an imaginary part of 0.0, and a COMPLEX assigned to a number gives
+  its real part; a COMPLEX\*8 beside a REAL\*8 is a COMPLEX\*16); the
+  relational operators (`.EQ.` and the rest, and only `.EQ.` and `.NE.` on
+  COMPLEX values, which are equal if both parts are); `.NOT.`, `.AND.`, `.OR.`, `.EQV.`, `.NEQV.`,
   `.XOR.`, on LOGICALs of every length or bit by bit on INTEGERs; array
   elements and
   function references. The other operators and the intrinsic functions
@@ -4742,7 +4745,7 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PRINT_LIST(icb)` | Starts a `PRINT *` statement: `icb` is its control block (a word of size, 8; a word of flags, 0; a longword unit, -1 for `*`) |
 | `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
-| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), or text (`T`) |
+| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record |
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
@@ -4752,7 +4755,9 @@ and holds at most 80 bytes. Each value is in its type's format (the
 ` F` (L2), a LOGICAL\*1 or BYTE as an integer in 5 columns (I5), an
 INTEGER\*2 in 7 columns (I7), an INTEGER\*4 in 12 (I12), a REAL as
 `1PG15.7E2`, a REAL\*8 as `1PG24.16E2` (`1PG24.15E3` in G_floating), a
-REAL\*16 as `1PG43.33E4`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
+REAL\*16 as `1PG43.33E4`, a COMPLEX as its two parts in `1PG14.7E2`
+(`1PG23.16E2` for COMPLEX\*16, `1PG23.15E3` in G_floating) between `(`, `,`,
+and `)`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
 up to 10\*\*7 in fixed-point form, followed by 4 blanks; any other, zero
 included, with an exponent. The wider formats are the same with their own
 digits, and an exponent of 2, 3, or 4 digits:
@@ -4778,6 +4783,15 @@ than a record is split, filling as many records as it needs. With
 log, each record's carriage control becomes the record's print control
 (a line, a blank line first, a new page, overprinting, a prompt), as a
 terminal shows it, rather than a character of the record.
+
+A COMPLEX value has no blanks inside it (the manual's 7.3.1.2), so each part's
+field is written without its blanks; govax puts one blank before the value, as
+every other number's field begins with one:
+
+```text
+      PRINT *, (1.0, -1.5), (0.0, 0.08)
+ (1.000000,-1.500000) (0.0000000E+00,7.9999998E-02)
+```
 
 ```text
 VAX> TYPE STOPPER.MAR
@@ -4836,8 +4850,15 @@ FORTRAN compiler was available to check them). So far:
   LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
   do on INTEGERs.
 - A name only declared, never used, is a variable, and gets storage.
-- In a constant expression, a COMPLEX product's or quotient's parts are
-  each computed exactly and rounded once; a REAL or COMPLEX base's power
+- A COMPLEX\*8 product is computed in line, as
+  `(ac - bd, ad + bc)` with each product and sum rounded to F_floating, since
+  MTHRTL has no routine for it; a COMPLEX\*16 product calls `OTS$MULCD_R3`
+  (or `OTS$MULCG_R3`), and every COMPLEX quotient `OTS$DIVC`, `OTS$DIVCD_R3`,
+  or `OTS$DIVCG_R3`, whose parts are each computed exactly and rounded once.
+  A constant expression's product or quotient is computed the same way, so it
+  has the value the program would compute; a COMPLEX\*8 product can differ
+  from the exactly rounded one in a part's last bit.
+- In a constant expression, a REAL or COMPLEX base's power
   is repeated squaring, rounded at each product, and for a negative
   exponent the product of the squares' reciprocals, as the `OTS$` routines'
   are, so `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need

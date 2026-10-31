@@ -148,9 +148,14 @@ func lowerUnit(u *sema.Unit) *Routine {
 // typeOf is the machine type of a FORTRAN type: an INTEGER or LOGICAL is a
 // byte, a word, or a longword by its size; a REAL*4 F_floating, a REAL*8
 // D_floating, or G_floating if the unit says so (/G_FLOATING), and a
-// REAL*16 H_floating.
+// REAL*16 H_floating. A COMPLEX value as a whole is a Quad or an Octa, which
+// only moves; its parts have the type partOf says.
 func (l *lowerer) typeOf(t sema.Type) Type {
 	switch {
+	case t.Kind == sema.Complex && t.Size == 8:
+		return Quad
+	case t.Kind == sema.Complex:
+		return Octa
 	case t.Kind == sema.Real && t.Size == 8 && l.unit.GFloating:
 		return GFloat
 	case t.Kind == sema.Real && t.Size == 8:
@@ -193,6 +198,15 @@ func (l *lowerer) dtypeOf(t sema.Type) DType {
 		}
 
 		return DTypeF
+	case sema.Complex:
+		switch l.partOf(t) {
+		case Double:
+			return DTypeDC
+		case GFloat:
+			return DTypeGC
+		}
+
+		return DTypeFC
 	case sema.Character:
 		return DTypeT
 	}
