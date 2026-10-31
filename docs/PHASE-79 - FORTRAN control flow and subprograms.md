@@ -4,7 +4,8 @@
 2026-10-31, its decisions and recommendations accepted by the author the
 same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
 done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
-extended range) done 2026-10-31.
+extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
+done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -517,7 +518,7 @@ recommendation:
    without labels, DO WHILE, END DO's messages, and the extended range
    run end to end.) Done.
 4. **STOP, PAUSE, RETURN, END.** (FTN$PAUSE in FTNRTL; RETURN i's R0
-   comes with subtask 7.)
+   comes with subtask 7.) Done.
 5. **Function results of every type**, CHARACTER and COMPLEX functions.
 6. **ENTRY.**
 7. **Alternate returns.**
@@ -597,3 +598,25 @@ recommendation:
   5,40,4`, J -4 after `DO J = 50,-2,-2`, the LINE scan) and the extended
   range, out and back in, of a labeled loop and of one without a label.
   MANUAL.md's 14.2 and 6.5 list the loops.
+- **2026-10-31, subtask 4 (STOP, PAUSE, RETURN, END):** PAUSE is the
+  parser's `StopStmt` already, so sema's `Stop` gets `Pause`, and a display
+  is STOP's, digits as written (`PAUSE 00123`). The IR's `stop` calls
+  `FTN$PAUSE` and goes on to the next statement, where FTN$STOP's call ends
+  the block. FTNRTL: `FTN$PAUSE([display])` in `ftn_control.mar`, the
+  vector's entry at 272, GSMATCH 1,7, as question 3 settled: the display,
+  or "FORTRAN PAUSE", to SYS$OUTPUT, then LIB$PAUSE, going on whatever it
+  returns. STOP, RETURN, and END needed no new code, and now have tests;
+  RETURN i stays NOTIMPL until subtask 7. Running two pauses found a bug
+  in LIB$PAUSE's status (`dclshell/dclpause.go`): CONTINUE at one pause and
+  EXIT or STOP at a later one left `pauseContinued` set, so `$STATUS`
+  didn't become SS$_NORMAL. Now they clear it (unconfirmed: the lib57
+  probe's images pause once). Unchanged: at level 0, a program continued
+  at its last pause leaves `$STATUS` as it was, whatever it returns, VMS
+  V7.1's rule for an image that called LIB$PAUSE. Tests: `control.for`
+  golden files in `sema`, `ir`, and `codegen`, with PAUSE and STOP as loops'
+  terminal statements; `TestFortranPause` in both paging modes (CONTINUE, a
+  command at the pause, EXIT at the second pause, STOP at the first, end of
+  input); `testdata/fortran/stops.for` and `stopdo.for` end to end. A
+  terminal STOP leaves the loop's step code after it, unreachable; Phase
+  84's flow analysis can drop it. MANUAL.md's 14.2 and FTNRTL table
+  list PAUSE, and its differences DEBUG at a pause.

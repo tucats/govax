@@ -60,7 +60,10 @@ func (c *Interpreter) pauseProcessOne() (uint32, error) {
 		return ssNormal, nil
 	}
 
-	// EXIT or STOP: $STATUS is SS$_NORMAL (VMS V7.1, I2, I3, I6).
+	// EXIT or STOP: $STATUS is SS$_NORMAL (VMS V7.1, I2, I3, I6), even
+	// if an earlier pause in the image was continued (unconfirmed: the
+	// probe's images pause once).
+	c.pauseContinued = false
 	c.RTL.Process.ExitStatus = ssNormal
 
 	return ssControlY, corevms.ErrExit

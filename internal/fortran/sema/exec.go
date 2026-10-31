@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // The executable statements other than the block statements (stmt.go).
@@ -58,13 +59,14 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 		return &Continue{stmtBase{s}}
 
 	case *ast.StopStmt:
-		st := &Stop{stmtBase: stmtBase{s}}
+		st := &Stop{stmtBase: stmtBase{s}, Pause: s.Kind == lex.Pause}
 
 		switch d := s.Display.(type) {
 		case *ast.CharConst:
 			st.Display, st.HasDisplay = d.Value, true
 		case *ast.IntConst:
-			// STOP n displays its digits as written (section 5.10).
+			// STOP n and PAUSE n display their digits as written
+			// (sections 5.10 and 5.8).
 			st.Display, st.HasDisplay = d.Text, true
 		}
 

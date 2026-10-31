@@ -1,0 +1,29 @@
+== main program CONTROL
+  CONTROL                 program unit
+  N         INTEGER       variable         $LOCAL+0
+  BUMP                    subroutine
+  I         INTEGER       variable         $LOCAL+4
+  $LOCAL is 8 bytes
+5           N = 0
+6           PAUSE
+7           PAUSE 'CHECK THE TAPE'
+8           PAUSE '00123'
+9           CALL BUMP(N)
+10          IF (.GT.:I N 0) PAUSE 'N IS POSITIVE'
+11          DO 20 I = 1, 2, 1
+12    20      PAUSE 'IN THE LOOP'
+13          DO 30 I = 1, 2, 1
+14            N = (+:I N I)
+15    30      STOP 'LOOP END'
+16          IF (.GT.:I N 5) STOP 'TOO BIG'
+17          IF (.LT.:I N 0) STOP '98'
+18          STOP
+19          END
+== SUBROUTINE BUMP
+  BUMP                    program unit
+  K         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+23          K = (+:I K 1)
+24          IF (.GT.:I K 10) RETURN
+25          K = (+:I K 1)
+26          END

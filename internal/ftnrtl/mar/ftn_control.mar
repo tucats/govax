@@ -1,9 +1,9 @@
-	.TITLE	FTN_CONTROL - FTNRTL's version and STOP
+	.TITLE	FTN_CONTROL - FTNRTL's version, STOP, and PAUSE
 	.IDENT	/V1.0/
 ;
 ; The routines of FTNRTL that control a program as a whole: FTN$VERSION,
-; which says which FTNRTL a program is running with, and FTN$STOP, which
-; is FORTRAN's STOP statement.
+; which says which FTNRTL a program is running with, FTN$STOP, which is
+; FORTRAN's STOP statement, and FTN$PAUSE, its PAUSE statement.
 ;
 ; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
 ; VAX calling standard: AP points at the argument list, whose first byte
@@ -35,6 +35,9 @@ VERSION_LEN	= .-VERSION_TEXT
 
 STOP_TEXT:	.ASCII	/FORTRAN STOP/	; STOP's message with no display
 STOP_LEN	= .-STOP_TEXT
+
+PAUSE_TEXT:	.ASCII	/FORTRAN PAUSE/	; PAUSE's message with no display
+PAUSE_LEN	= .-PAUSE_TEXT
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -93,5 +96,33 @@ STOP_LEN	= .-STOP_TEXT
 	PUSHL	SP			; the descriptor's address
 20$:	CALLS	#1,G^LIB$PUT_OUTPUT	; write the line to SYS$OUTPUT
 	$EXIT_S	#SS$_NORMAL		; end the image
+
+;
+; FTN$PAUSE([display])
+;
+; FORTRAN's PAUSE statement (the 1988 Language Reference Manual, 5.8):
+; writes the display, as FTN$STOP does, or "FORTRAN PAUSE" without one,
+; to SYS$OUTPUT, then suspends the program with LIB$PAUSE, which gives
+; DCL the terminal: DCL's CONTINUE makes LIB$PAUSE return, and the
+; program goes on at its next statement; EXIT or STOP end the image
+; there and then, and LIB$PAUSE never returns. In a batch job LIB$PAUSE
+; returns at once, so the program goes on, as the manual says it does
+; there; a process with no CLI gets LIB$_NOCLI, and goes on too. Which
+; status LIB$PAUSE returns doesn't matter: FTN$PAUSE goes on whatever it
+; is, and returns nothing a program looks at (docs/PHASE-79, question 3).
+;
+	.ENTRY	FTN$PAUSE,^M<>
+	TSTB	(AP)			; a display?
+	BEQL	10$			; no
+	MOVL	4(AP),R0		; its descriptor, or 0 if omitted
+	BEQL	10$
+	PUSHL	R0			; LIB$PUT_OUTPUT's one argument
+	BRB	20$
+10$:	PUSHAB	PAUSE_TEXT		; the message's descriptor, on the
+	PUSHL	#<DSC$K_CLASS_S@24>!<DSC$K_DTYPE_T@16>!PAUSE_LEN ; stack as
+	PUSHL	SP			; FTN$STOP makes its own
+20$:	CALLS	#1,G^LIB$PUT_OUTPUT	; write the line to SYS$OUTPUT
+	CALLS	#0,G^LIB$PAUSE		; wait for DCL's CONTINUE
+	RET				; the descriptor goes with the frame
 
 	.END

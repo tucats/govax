@@ -498,7 +498,7 @@ func TestErrors(t *testing.T) {
 		// forms inside statements, reported where analysis reaches them.
 		{"a READ statement", []string{"READ *, X", "END"}, "NOTIMPL@1:7"},
 		{"a TYPE statement", []string{"TYPE *, X", "END"}, "NOTIMPL@1:7"},
-		{"PAUSE", []string{"PAUSE", "END"}, "NOTIMPL@1:7"},
+		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
 		{"a logical IF's READ", []string{"IF (X .GT. 0) READ *, Y", "END"}, "NOTIMPL@1:21"},
 		{"PRINT of an ASSIGNed format", []string{"ASSIGN 10 TO K", "10 FORMAT (I5)", "END"}, "NOTIMPL@2:7 NOTIMPL@1:14"},
 		{"VOLATILE", []string{"VOLATILE /B/, X", "END"}, "NOTIMPL@1:7"},

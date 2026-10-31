@@ -12,6 +12,7 @@ import (
 // docs/PHASE-74 - FORTRAN plan.md).
 const (
 	ftnStop      = "FTN$STOP"
+	ftnPause     = "FTN$PAUSE"
 	ftnPrintList = "FTN$PRINT_LIST"
 	ftnWriteList = "FTN$WRITE_LIST"
 	ftnIOItem    = "FTN$IO_ITEM"
@@ -433,13 +434,21 @@ func tripCount(t Type, e1, e2, e3 Expr) Expr {
 	return arith(Cvt, Long, arith(Div, t, arith(Add, t, arith(Sub, t, e2, e1), e3), e3), nil)
 }
 
-// stop lowers STOP: a call of FTN$STOP, with the display's descriptor if
-// there is one, from which nothing returns.
+// stop lowers STOP and PAUSE: a call of FTN$STOP or FTN$PAUSE, with the
+// display's descriptor if there is one. Nothing returns from FTN$STOP;
+// FTN$PAUSE returns when the program is to go on (DCL's CONTINUE), and
+// the next statement follows.
 func (l *lowerer) stop(s *sema.Stop) {
 	var args []Arg
 
 	if s.HasDisplay {
 		args = []Arg{{Ref: l.textDescriptor(s.Display)}}
+	}
+
+	if s.Pause {
+		l.emit(&Call{origin: l.origin(), Routine: ftnPause, Args: args})
+
+		return
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: ftnStop, Args: args})

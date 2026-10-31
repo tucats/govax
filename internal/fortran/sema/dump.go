@@ -229,11 +229,16 @@ func stmtText(list []Stmt) string {
 	case *Continue:
 		return "CONTINUE"
 	case *Stop:
-		if !s.HasDisplay {
-			return "STOP"
+		verb := "STOP"
+		if s.Pause {
+			verb = "PAUSE"
 		}
 
-		return "STOP " + quote(s.Display)
+		if !s.HasDisplay {
+			return verb
+		}
+
+		return verb + " " + quote(s.Display)
 	case *Return:
 		return "RETURN"
 	case *End:

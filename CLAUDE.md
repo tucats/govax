@@ -395,7 +395,10 @@ never had.
   labeled one may end at an END DO with its label, never shared; NOENDDO,
   NOLOOP, ENDDOLABEL, SHAREDENDDO), DO WHILE (`sema.DoWhile`, the IR's
   `doWhile`: a test at the top), and the extended range run end to end
-  (`testdata/fortran/loops.for`).
+  (`testdata/fortran/loops.for`); subtask 4 (2026-10-31) STOP, PAUSE,
+  RETURN, and END: PAUSE is `sema.Stop` with `Pause` set, a call of
+  FTNRTL's `FTN$PAUSE` (`ftn_control.mar`, GSMATCH 1,7: the display, then
+  LIB$PAUSE), run by `TestFortranPause`; RETURN i waits for subtask 7.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1883,8 +1886,8 @@ expect adjustment as phases land):
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
-  entries at fixed offsets; `ftn_control.mar`, FTN$VERSION and
-  FTN$STOP; `ftn_units.mar`, the default output unit, SYS$OUTPUT with
+  entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
+  FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the default output unit, SYS$OUTPUT with
   RAT=FTN; `ftn_listout.mar`, list-directed output, FTN$PRINT_LIST,
   FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END, with the control block's
   layout, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL

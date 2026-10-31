@@ -1298,7 +1298,7 @@ programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
-intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP; `PRINT *` and
+intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; `PRINT *` and
 `WRITE (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4571,7 +4571,10 @@ output it prints, and programs of several files in its `modules` directory.
   statement's address, so K must be INTEGER\*4 (an INTEGER\*2 can't hold
   one: `%FORT-E-ASSIGNVAR`); the arithmetic IF (`IF (X - Y) 10, 20, 30`) of
   an INTEGER or REAL value of any length; CALL; RETURN; STOP, with or
-  without a display; `PRINT *` and `WRITE (*,*)` of values, arrays,
+  without a display; PAUSE, with or without one, which writes the display
+  (or `FORTRAN PAUSE`) and suspends the program at DCL's prompt: `CONTINUE`
+  goes on at the next statement, `EXIT` or `STOP` end the program, and in
+  a batch job or a process with no CLI the program just goes on; `PRINT *` and `WRITE (*,*)` of values, arrays,
   character constants, and substrings. ASSIGN of a FORMAT statement's label
   waits for FORMAT itself.
 - **Arguments** are passed by reference: a routine that assigns to its
@@ -4806,6 +4809,7 @@ So far it has these routines, which MACRO programs can call too:
 | --- | --- |
 | `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
+| `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$PRINT_LIST(icb)` | Starts a `PRINT *` statement: `icb` is its control block (a word of size, 8; a word of flags, 0; a longword unit, -1 for `*`) |
 | `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
 | `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
@@ -4919,7 +4923,9 @@ FORTRAN compiler was available to check them). So far:
 - `CPAR$` lines (parallel directives) are comments.
 - INCLUDE files are found relative to the including file, ten deep at
   most.
-- `FTN$STOP` writes to `SYS$OUTPUT`.
+- `FTN$STOP` and `FTN$PAUSE` write to `SYS$OUTPUT`.
+- At `PAUSE`, DCL's `DEBUG` is govax's console `DEBUG` (as at any
+  `LIB$PAUSE`), not the VMS debugger attached to the program.
 - Where one file holds both a routine and a reference to it, the
   compiler checks them against each other: a FUNCTION's type, a
   SUBROUTINE called and not referenced as a function, and the number of

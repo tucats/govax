@@ -398,11 +398,13 @@ type (
 		stmtBase
 	}
 
-	// Stop is STOP, with the text it displays if it has one.
+	// Stop is STOP, or PAUSE when Pause is set, with the text it
+	// displays if it has one.
 	Stop struct {
 		stmtBase
 		Display    string
 		HasDisplay bool
+		Pause      bool
 	}
 
 	// Return is RETURN in a subprogram.

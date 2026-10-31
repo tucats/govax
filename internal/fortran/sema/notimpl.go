@@ -21,16 +21,14 @@ func handled(s ast.Stmt) bool {
 		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
-		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
+		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
+		*ast.BadStmt:
 		return true
 
 	case *ast.AttrStmt:
 		// VOLATILE is Phase 82's, and AUTOMATIC and STATIC aren't in the
 		// 1988 manual.
 		return s.Kind == lex.Save || s.Kind == lex.External || s.Kind == lex.Intrinsic
-
-	case *ast.StopStmt:
-		return s.Kind == lex.Stop
 
 	case *ast.PrintStmt:
 		return s.Kind == lex.Print
