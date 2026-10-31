@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, 5, 6, and 7 done 2026-10-30, and 8 and 9 2026-10-31. Needs Phase 76 (declarations and
+3, 4, 5, 6, and 7 done 2026-10-30, and 8, 9, and 10 2026-10-31. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -546,7 +546,7 @@ stops for review.
 9. **MTHRTL intrinsics** by format, intrinsic names as arguments, and FTNRTL's
    routines for the names MTHRTL lacks. Done.
 10. **End to end:** programs on each type, mixed arithmetic, character handling, the
-    math functions, in both paging modes for a subset.
+    math functions, in both paging modes for a subset. Done.
 11. **Close-out:** FORTRAN-INTERNALS.md's chapter on instruction selection, MANUAL.md's
     chapter 14 and differences, HELP.
 
@@ -918,3 +918,30 @@ stops for review.
     ones, and no more); the FTN$ routines' names and calling sequences, which
     are govax's own; a passed IZEXT or JZEXT reading a word and CHAR a byte,
     whatever they are given.
+- **2026-10-31, subtask 10:** end to end. Each type's programs came with its
+  subtask (`lengths`, `reals`, `realsg`, `complex`, `complexg`, `chars`, `strings`,
+  `powers`, `intrinsics`, `mathfns`, `mathfnsg`); this one adds programs that use them
+  together, as a program would.
+  - **Tests:** four programs in `testdata/fortran`, each run in both paging modes
+    (`fortranPagingPrograms`), their outputs worked by hand line by line (the REAL\*16
+    polynomial and pi simulated at 113 bits, a REAL\*4 constant's value at 24):
+    `mixed.for` (a value through every type and back by Table 3-1; operations between
+    every rank, LOGICAL as integer, COMPLEX\*8 with REAL\*8; a REAL\*4 constant's digits
+    kept in a REAL\*8 expression; REAL subscripts and DO limits; mixed types in
+    conditions; one polynomial in REAL\*8, REAL\*16, and COMPLEX), and `mixedg.for`, the
+    same in G_floating; `text.for` (words split by INDEX and sorted by LLT, reversing,
+    palindromes, case and a cipher through ICHAR and CHAR, letters counted, a number's
+    digits, a centered title, a sentence of substrings cut to its target);
+    `numeric.for` (Newton's method, a quadratic's roots by CSQRT, Simpson's rule, pi in
+    F, D, and H, degrees and logarithms, statistics, compound interest, elimination,
+    Euclid), whose results depending on rounding along the way are checked against
+    tolerances or rounded, so that what it prints is the mathematics'. A scratch probe
+    of further mixed forms (complex and REAL\*16 arrays computed from BYTE and
+    INTEGER\*2 elements, COMPLEX\*16 with REAL\*16, a COMPLEX power and quotient in one
+    statement, concatenation in a condition, the generic functions on mixed results)
+    printed what hand computation gave, so no code changed.
+  - **Not compiled yet, as planned:** a REAL\*16 FUNCTION (Phase 79, Decision 10) and
+    adjustable arrays (Phase 79), so `mixed.for` has a subroutine and an assumed-size
+    array instead; a main program's name used as another unit's dummy argument is
+    BADUSE, by sema's rule that a unit's name names nothing else in the file
+    (`text.for`'s CENTER takes STR), which F77's 18.1.2 may allow (unconfirmed).

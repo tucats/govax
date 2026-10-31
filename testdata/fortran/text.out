@@ -1,0 +1,14 @@
+           9 WORDS
+BROWNDOG  FOX  JUMPSLAZY 
+OVER QUICKTHE  THE  
+LEVEL     | T T F
+ T T F
+fox jumps |
+ABC DEF   |
+XYZ ABC   |
+MOST: O           4
+[-30215      ]
+[0           ]
+[         CHAPTER ONE          ]
+DOG FOX JUMPS OVER THE LAZY FO|
+  $STATUS == "%X00000001"
