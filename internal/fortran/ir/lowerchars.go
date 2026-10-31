@@ -226,12 +226,17 @@ func (l *lowerer) charArg(a sema.Arg) Arg {
 // arrayDescriptor is a class A descriptor of the whole array s, for an
 // output list or an argument. A passed-length array's element length, size,
 // and A0 are known only when the program runs, so the statement stores them,
-// with the address, in a descriptor cell.
+// with the address, in a descriptor cell. An adjustable array has a descriptor
+// cell of its own, which its entry points fill in (lowerbounds.go).
 func (l *lowerer) arrayDescriptor(s *sema.Symbol) *Mem {
+	if c := l.adjustable[s]; c != nil {
+		return &Mem{Cell: c, T: Long}
+	}
+
 	d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassA, Length: s.Type.Size}
 
 	for _, dim := range s.Dims {
-		d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper})
+		d.Dims = append(d.Dims, Bound{Lower: dim.Lower, Upper: dim.Upper})
 	}
 
 	m := l.symbolMem(s)

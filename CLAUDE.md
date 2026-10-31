@@ -414,7 +414,12 @@ never had.
   `sema/altreturn.go` (a `*` is a place in `AltPlaces`, not a dummy, and a
   specifier has no longword in the argument list; `Call.AltReturns`,
   `Return.Alt`), and the IR's `Switch` on `CallValue`, the R0 a call just left
-  (`lowerer.call`): RETURN i leaves i there, a plain RETURN 0.
+  (`lowerer.call`): RETURN i leaves i there, a plain RETURN 0; subtask 8
+  (2026-10-31) adjustable arrays (`ir/lowerbounds.go`): each is a class A
+  descriptor in a cell (`$B1`), filled in by each entry point whose list
+  defines the array (`Dim.LowerValue`, `UpperValue`, `Symbol.BoundDummies`; an
+  ENTRY's code in a block after the routine's statements), an element reached
+  through its A0 (`Mem.Ptr`) with its extents.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

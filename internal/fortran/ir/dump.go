@@ -194,6 +194,9 @@ func descriptorText(d *Descriptor) string {
 		bounds := make([]string, len(d.Dims))
 		for i, b := range d.Dims {
 			bounds[i] = fmt.Sprintf("%d:%d", b.Lower, b.Upper)
+			if b.Set {
+				bounds[i] = "?"
+			}
 		}
 
 		text += " (" + strings.Join(bounds, ",") + ")"

@@ -482,7 +482,8 @@ func (g *routineGen) writeMap(w *Writer) {
 }
 
 // typeText is a variable's type, with an array's bounds: INTEGER,
-// REAL (0:9), INTEGER (2,3), INTEGER (*).
+// REAL (0:9), INTEGER (2,3), INTEGER (*), or for bounds computed when the
+// program runs REAL (?,3), REAL (?:?).
 func typeText(s *sema.Symbol) string {
 	text := s.Type.String()
 
@@ -493,15 +494,23 @@ func typeText(s *sema.Symbol) string {
 	bounds := make([]string, len(s.Dims))
 
 	for i, d := range s.Dims {
+		lower, upper := strconv.Itoa(d.Lower), strconv.Itoa(d.Upper)
+
+		if d.LowerExpr != nil {
+			lower = "?"
+		}
+
 		switch {
-		case d.Assumed && d.Lower == 1:
-			bounds[i] = "*"
 		case d.Assumed:
-			bounds[i] = strconv.Itoa(d.Lower) + ":*"
-		case d.Lower == 1:
-			bounds[i] = strconv.Itoa(d.Upper)
-		default:
-			bounds[i] = strconv.Itoa(d.Lower) + ":" + strconv.Itoa(d.Upper)
+			upper = "*"
+		case d.UpperExpr != nil:
+			upper = "?"
+		}
+
+		if lower == "1" {
+			bounds[i] = upper
+		} else {
+			bounds[i] = lower + ":" + upper
 		}
 	}
 
@@ -572,7 +581,12 @@ func (g *routineGen) writeLocal(w *Writer) {
 			writeInitials(w, list, c.Offset, c.Offset+c.Size)
 		} else if c.Kind == ir.DescriptorCell {
 			w.Label(label)
-			writeDescriptor(w, c.Desc, "0", "0", "set when the descriptor is used")
+			note := "set when the descriptor is used"
+			if c.Dummy != "" {
+				note = c.Dummy + "'s bounds: set at each entry point"
+			}
+
+			writeDescriptor(w, c.Desc, "0", "0", note)
 		} else {
 			count, unit := c.Size/4, ".BLKL"
 			if c.Size%4 != 0 {
@@ -772,6 +786,10 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 
 	for i, b := range d.Dims {
 		multipliers[i] = strconv.Itoa(b.Upper - b.Lower + 1)
+		if b.Set {
+			multipliers[i] = "0"
+		}
+
 		bounds = append(bounds, strconv.Itoa(b.Lower), strconv.Itoa(b.Upper))
 	}
 

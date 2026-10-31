@@ -50,9 +50,6 @@ const maxArrayBytes = 1<<31 - 1
 type adjustableArray struct {
 	sym *Symbol
 
-	// pos is the first bound that isn't constant.
-	pos diag.Position
-
 	// names are the names in those bounds, as they are written.
 	names []*ast.Name
 }
@@ -181,10 +178,6 @@ func (a *analyzer) bound(adj *adjustableArray, e ast.Expr) (int, ast.Expr, bool)
 		return 0, nil, false
 	}
 
-	if before == 0 {
-		adj.pos = e.Position()
-	}
-
 	return 0, e, true
 }
 
@@ -275,10 +268,8 @@ func (a *analyzer) checkBoundType(s *Symbol, t Type, ok bool, pos diag.Position)
 
 // checkArrays checks what depends on every declaration, once they have
 // been read: each array's size, whose element type may be declared after
-// its dimensions, and the names in each adjustable array's bounds. An
-// adjustable array with nothing wrong is NOTIMPL, at its first bound that
-// isn't constant: its code is Phase 79's. It stays an array whose uses are
-// checked.
+// its dimensions, and the names in each adjustable array's bounds, which
+// are then analyzed, since now each name's type is known.
 func (a *analyzer) checkArrays() {
 	for _, s := range a.unit.Symbols {
 		if s.Class == Array && !s.broken && tooLarge(s) {
@@ -296,9 +287,32 @@ func (a *analyzer) checkArrays() {
 		}
 
 		if ok {
-			a.notImplForm(adj.pos, "an adjustable array")
+			a.boundValues(adj)
 		} else {
 			adj.sym.broken = true
+		}
+	}
+}
+
+// boundValues analyzes an adjustable array's bounds into expressions of type
+// INTEGER (section 2.2.3.1: a bound's value is converted to INTEGER), and notes
+// the dummy arguments they use.
+func (a *analyzer) boundValues(adj *adjustableArray) {
+	dims := adj.sym.Dims
+
+	for i := range dims {
+		if e := dims[i].LowerExpr; e != nil {
+			dims[i].LowerValue = a.convert(a.value(e), IntegerType)
+		}
+
+		if e := dims[i].UpperExpr; e != nil {
+			dims[i].UpperValue = a.convert(a.value(e), IntegerType)
+		}
+	}
+
+	for _, n := range adj.names {
+		if s := a.unit.byName[n.Name]; s.Dummy != 0 {
+			adj.sym.BoundDummies = append(adj.sym.BoundDummies, s)
 		}
 	}
 }

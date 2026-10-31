@@ -259,6 +259,10 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 		return l.symbolMem(e.Sym)
 
 	case *sema.Elem:
+		if c := l.adjustable[e.Sym]; c != nil {
+			return l.adjustableElement(e, c)
+		}
+
 		m := l.symbolMem(e.Sym)
 
 		var index Expr

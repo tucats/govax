@@ -77,6 +77,9 @@ func (l *lowerer) intrinsic(e *sema.IntrinsicRef) Expr {
 	case sema.CallOp:
 		return &Load{l.callIntrinsic(e)}
 
+	case sema.ArraySizeOp:
+		return l.arraySize(e.Args[0].(*sema.ArrayRef).Sym)
+
 	case sema.LenOp:
 		return l.charLen(e.Args[0])
 

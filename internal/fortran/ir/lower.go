@@ -67,6 +67,12 @@ type lowerer struct {
 	// returns the blocks that return a value of each type in a function whose
 	// entry points' types differ (lowerentry.go).
 	entries map[*sema.Entry]*Entry
+
+	// adjustable is each adjustable array's descriptor cell, and
+	// adjustableOrder the arrays in the unit's order (lowerbounds.go).
+	adjustable      map[*sema.Symbol]*Cell
+	adjustableOrder []*sema.Symbol
+
 	returns []*returnBlock
 
 	// The numbers of the compiler's names: temporaries ($T), constants
@@ -152,7 +158,10 @@ func lowerUnit(u *sema.Unit) *Routine {
 		l.prepareEntries(hidden)
 	}
 
+	l.prepareBounds()
+
 	l.begin(l.newBlock())
+	l.computeBounds(u.Params)
 	l.stmts(u.Body)
 
 	if l.cur != nil {
@@ -163,6 +172,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 	}
 
 	l.layOutReturns()
+	l.layOutEntryBounds()
 
 	if l.made != len(r.Blocks) {
 		panic(fmt.Sprintf("ir: %s: %d blocks made, %d laid out", r.Name, l.made, len(r.Blocks)))

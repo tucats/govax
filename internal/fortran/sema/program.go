@@ -186,6 +186,10 @@ type Symbol struct {
 	// point or a dummy argument, while the statement walk hasn't reached it.
 	laterEntry *ast.EntryStmt
 
+	// BoundDummies are the dummy arguments in an adjustable array's bounds:
+	// an entry point can compute the bounds only if its list has them all.
+	BoundDummies []*Symbol
+
 	// Offset is the name's place, in bytes, in its common block if it is
 	// in one, or else in the unit's $LOCAL storage; or -1 if it has none
 	// (a dummy argument, a routine).
@@ -237,6 +241,10 @@ type Dim struct {
 	Lower, Upper         int
 	Assumed              bool
 	LowerExpr, UpperExpr ast.Expr
+
+	// LowerValue and UpperValue are those bounds analyzed and converted to
+	// INTEGER, which lowering computes when the subprogram is entered.
+	LowerValue, UpperValue Expr
 }
 
 // known reports whether the dimension's bounds are both known now.
@@ -248,6 +256,18 @@ func (d Dim) known() bool {
 // 2.2.3.1), if both its bounds are known.
 func (d Dim) Extent() int {
 	return d.Upper - d.Lower + 1
+}
+
+// Adjustable reports whether s is an adjustable array: a dummy array with a
+// bound that isn't constant (section 6.1.1.1).
+func (s *Symbol) Adjustable() bool {
+	for _, d := range s.Dims {
+		if d.LowerExpr != nil || d.UpperExpr != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // AssumedSize reports whether s is an assumed-size array, whose last
@@ -652,6 +672,7 @@ const (
 	BitClearOp                        // IBCLR(I, POS): I with bit POS clear
 	BitTestOp                         // BTEST(I, POS): bit POS of I, a LOGICAL
 	LenOp                             // a passed-length CHARACTER value's length
+	ArraySizeOp                       // SIZEOF of an adjustable array
 	IndexOp                           // INDEX(C1, C2): where C2 first is in C1, or 0
 	IcharOp                           // a CHARACTER value's first character's code
 	CharOp                            // the CHARACTER*1 whose code is X
@@ -661,7 +682,7 @@ const (
 // String is the operation's name in the dump.
 func (op IntrinsicOp) String() string {
 	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
-		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "index",
+		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "len", "arraysize", "index",
 		"ichar", "char", "call"}[op]
 }
 

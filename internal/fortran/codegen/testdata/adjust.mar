@@ -1,0 +1,375 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_DC = 13			; D_floating complex
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Common block /SHAPE/, 4 bytes, the most any unit in this file declares
+	.PSECT	SHAPE,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+SHAPE.$BASE:
+	.BLKB	4
+
+; Storage map for SUM, a REAL function
+;   A     REAL (?,?)  argument 1  @SUM.A(AP)
+;   M     INTEGER     argument 2  @SUM.M(AP)
+;   N     INTEGER     argument 3  @SUM.N(AP)
+;   SUM   REAL        $LOCAL+0    SUM.SUM
+;   J     INTEGER     $LOCAL+4    SUM.J
+;   I     INTEGER     $LOCAL+8    SUM.I
+;
+SUM.A = 4				; A is argument 1
+SUM.M = 8				; M is argument 2
+SUM.N = 12				; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUM.SUM:
+	.BLKL	1			; SUM, the function's value
+SUM.J:	.BLKL	1			; J
+SUM.I:	.BLKL	1			; I
+SUM.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+SUM.$C1:
+	.BLKL	1			; DO 10's count
+SUM.$C2:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Adjustable arrays: bounds computed at each entry, into a descriptor
+;    2  C     cell; an element reached through its A0.
+;    3        FUNCTION SUM(A, M, N)
+	.ENTRY	SUM,^M<>
+	MOVAL	@SUM.A(AP),SUM.$B1+4
+	MOVL	@SUM.M(AP),SUM.$B1+32
+	MOVL	SUM.$B1+32,SUM.$B1+20
+	MOVL	@SUM.N(AP),SUM.$B1+40
+	MOVL	SUM.$B1+40,SUM.$B1+24
+	MNEGL	SUM.$B1+20,R0
+	DECL	R0
+	MOVAL	@SUM.A(AP)[R0],SUM.$B1+16
+	MULL3	#4,SUM.$B1+20,R0
+	MULL3	R0,SUM.$B1+24,SUM.$B1+12
+;    4        DIMENSION A(M, N)
+;    5        SUM = 0.0
+	CLRF	SUM.SUM
+;    6        DO 10 J = 1, N
+	MOVL	@SUM.N(AP),SUM.$C1	; DO 10's count
+	MOVL	#1,SUM.J
+	TSTL	SUM.$C1
+	BGTR	SUM.$2
+	BRW	SUM.$1
+SUM.$2:
+SUM.$3:					; DO 10's body
+;    7        DO 10 I = 1, M
+	MOVL	@SUM.M(AP),SUM.$C2	; DO 10's count
+	MOVL	#1,SUM.I
+	TSTL	SUM.$C2
+	BGTR	SUM.$5
+	BRW	SUM.$4
+SUM.$5:
+;    8  10    SUM = SUM + A(I, J)
+SUM.L10:				; DO 10's body
+	MOVL	SUM.$B1+16,R0
+	MULL3	SUM.J,SUM.$B1+20,R1
+	ADDL2	SUM.I,R1
+	ADDF2	(R0)[R1],SUM.SUM
+	INCL	SUM.I
+	DECL	SUM.$C2			; one pass fewer
+	BLEQ	SUM.$6
+	BRW	SUM.L10
+SUM.$6:
+SUM.$4:
+	INCL	SUM.J
+	DECL	SUM.$C1			; one pass fewer
+	BLEQ	SUM.$7
+	BRW	SUM.$3
+SUM.$7:
+SUM.$1:
+;    9        END
+	MOVF	SUM.SUM,R0		; the function's value
+	RET
+
+; Storage map for SUB, a subroutine
+;   X     REAL (?:?,?)  argument 1  @SUB.X(AP)
+;   I     INTEGER       argument 2  @SUB.I(AP)
+;   J     INTEGER       argument 3  @SUB.J(AP)
+;   Y     REAL (2,0:?)  argument 4  @SUB.Y(AP)
+;   Z     REAL (3,?,*)  argument 5  @SUB.Z(AP)
+;   K     INTEGER       SHAPE+0     SUB.K
+;
+SUB.X = 4				; X is argument 1
+SUB.I = 8				; I is argument 2
+SUB.J = 12				; J is argument 3
+SUB.Y = 16				; Y is argument 4
+SUB.Z = 20				; Z is argument 5
+SUB.K = SHAPE.$BASE			; K, in /SHAPE/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUB.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; X's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	0,0,1,0			; bounds
+SUB.$B2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; Y's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	2,0			; multipliers
+	.LONG	1,2,0,0			; bounds
+SUB.$B3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; Z's bounds: set at each entry point
+	.BYTE	0,0,^XE0,3		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	3,0,0			; multipliers
+	.LONG	1,3,1,0,1,0		; bounds
+SUB.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SUB.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SUB.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SUB.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   10
+;   11  C     Both bounds computed, a constant dimension, and a bound in COMMON.
+;   12        SUBROUTINE SUB(X, I, J, Y, Z)
+	.ENTRY	SUB,^M<R2>
+	MOVAL	@SUB.X(AP),SUB.$B1+4
+	DIVL3	#2,@SUB.I(AP),R0
+	MNEGL	R0,SUB.$B1+28
+	DIVL3	#2,@SUB.I(AP),SUB.$B1+32
+	SUBL3	SUB.$B1+28,SUB.$B1+32,R0
+	ADDL3	R0,#1,SUB.$B1+20
+	MOVL	@SUB.J(AP),SUB.$B1+40
+	MOVL	SUB.$B1+40,SUB.$B1+24
+	ADDL3	SUB.$B1+20,SUB.$B1+28,R0
+	MNEGL	R0,R0
+	MOVAL	@SUB.X(AP)[R0],SUB.$B1+16
+	MULL3	#4,SUB.$B1+20,R0
+	MULL3	R0,SUB.$B1+24,SUB.$B1+12
+	MOVAL	@SUB.Y(AP),SUB.$B2+4
+	MOVL	SUB.K,SUB.$B2+40
+	ADDL3	SUB.$B2+40,#1,SUB.$B2+24
+	MOVL	#-1,R0
+	MOVAL	@SUB.Y(AP)[R0],SUB.$B2+16
+	MULL3	#8,SUB.$B2+24,SUB.$B2+12
+	MOVAL	@SUB.Z(AP),SUB.$B3+4
+	MOVL	SUB.K,SUB.$B3+44
+	MOVL	SUB.$B3+44,SUB.$B3+24
+	ADDL3	SUB.$B3+24,#1,R0
+	MULL2	#3,R0
+	MNEGL	R0,R0
+	DECL	R0
+	MOVAL	@SUB.Z(AP)[R0],SUB.$B3+16
+;   13        COMMON /SHAPE/ K
+;   14        DIMENSION X(-I/2:I/2, J), Y(2, 0:K), Z(3, K, *)
+;   15        X(I/2, J) = 999
+	MOVL	SUB.$B1+16,R0
+	MULL3	@SUB.J(AP),SUB.$B1+20,R1
+	DIVL3	#2,@SUB.I(AP),R2
+	ADDL2	R2,R1
+	MOVL	#^XC0004579,(R0)[R1]	; 999.0
+;   16        Y(1, I + 1) = 1.0
+	MOVL	SUB.$B2+16,R0
+	ADDL3	@SUB.I(AP),#1,R1
+	MULL2	#2,R1
+	MOVL	#^X00004080,4(R0)[R1]	; 1.0
+;   17        Z(1, 2, J) = 2.0
+	MOVL	SUB.$B3+16,R0
+	MULL3	@SUB.J(AP),SUB.$B3+24,R1
+	ADDL2	#2,R1
+	MULL2	#3,R1
+	MOVL	#^X00004100,4(R0)[R1]	; 2.0
+;   18        PRINT *, X, Y, SIZEOF(X)
+	PUSHAB	SUB.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	SUB.$B1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	SUB.$B2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	SUB.$B1+12,SUB.$T1
+	PUSHAQ	SUB.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   19        CALL OTHER(X, Y(1, 1))
+	MOVL	SUB.$B2+16,R0
+	PUSHAL	12(R0)
+	PUSHAL	@SUB.X(AP)
+	CALLS	#2,G^OTHER
+;   20        END
+	RET
+
+; Storage map for CHARS, a subroutine
+;   A     CHARACTER*8 (?)      argument 1  @CHARS.A(AP)
+;   B     CHARACTER*(*) (0:?)  argument 2  @CHARS.B(AP)
+;   N     INTEGER              argument 3  @CHARS.N(AP)
+;
+CHARS.A = 4				; A is argument 1
+CHARS.B = 8				; B is argument 2
+CHARS.N = 12				; N is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CHARS.$B1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+CHARS.$B2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; B's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	0,0			; bounds
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CHARS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   21
+;   22  C     CHARACTER arrays, of a declared length and of a passed one.
+;   23        SUBROUTINE CHARS(A, B, N)
+	.ENTRY	CHARS,^M<R2,R3,R4,R5>
+	MOVL	CHARS.A(AP),R0
+	MOVAB	@4(R0),CHARS.$B1+4
+	MOVL	@CHARS.N(AP),CHARS.$B1+28
+	MOVL	CHARS.$B1+28,CHARS.$B1+20
+	MOVL	CHARS.A(AP),R0
+	MOVL	4(R0),R0
+	MOVAB	-8(R0),CHARS.$B1+16
+	MULL3	#8,CHARS.$B1+20,CHARS.$B1+12
+	MOVW	@CHARS.B(AP),CHARS.$B2
+	MOVL	CHARS.B(AP),R0
+	MOVAB	@4(R0),CHARS.$B2+4
+	MOVL	@CHARS.N(AP),CHARS.$B2+28
+	ADDL3	CHARS.$B2+28,#1,CHARS.$B2+20
+	MOVL	CHARS.B(AP),R0
+	MOVAB	@4(R0),CHARS.$B2+16
+	MOVZWL	@CHARS.B(AP),R0
+	MULL3	R0,CHARS.$B2+20,CHARS.$B2+12
+;   24        CHARACTER*8 A(N)
+;   25        CHARACTER*(*) B(0:N)
+;   26        A(N) = B(N - 1)
+	MOVZWL	@CHARS.B(AP),R0
+	MOVL	CHARS.$B2+16,R1
+	SUBL3	#1,@CHARS.N(AP),R2
+	MOVZWL	@CHARS.B(AP),R3
+	MULL2	R3,R2
+	MOVL	CHARS.$B1+16,R3
+	MULL3	@CHARS.N(AP),#8,R4
+	MOVC5	R0,(R1)[R2],#^A/ /,#8,(R3)[R4]
+;   27        PRINT *, A, B
+	PUSHAB	CHARS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	CHARS.$B1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	CHARS.$B2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   28        END
+	RET
+
+; Storage map for E, a subroutine
+;   A     COMPLEX*16 (?)  an argument  @E.$A1
+;   N     INTEGER         an argument  @E.$A2
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+E.$A1:	.BLKL	1			; A's longword of the argument list, set at each entry point
+E.$A2:	.BLKL	1			; N's longword of the argument list, set at each entry point
+E.$B1:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_DC,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+E.$F1:	.LONG	^X00000000,^X00000000,^X00004080,^X00000000 ; (0D0, 1D0)
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   29
+;   30  C     An ENTRY's bounds are computed at its entry point, not by falling into
+;   31  C     it; an entry point that doesn't name N doesn't compute them.
+;   32        SUBROUTINE E(A, N)
+	.ENTRY	E,^M<>
+	MOVL	4(AP),E.$A1		; A is argument 1
+	MOVL	8(AP),E.$A2		; N is argument 2
+	MOVAO	@E.$A1,E.$B1+4
+	MOVL	@E.$A2,E.$B1+28
+	MOVL	E.$B1+28,E.$B1+20
+	MOVL	#-1,R0
+	MOVAO	@E.$A1[R0],E.$B1+16
+	MULL3	#16,E.$B1+20,E.$B1+12
+;   33        COMPLEX*16 A(N)
+;   34        N = 1
+	MOVL	#1,@E.$A2
+;   35        ENTRY E1(N, A)
+E.$1:					; ENTRY E1
+;   36        A(N) = (0.0D0, 1.0D0)
+	MOVL	E.$B1+16,R0
+	MOVL	@E.$A2,R1
+	MOVO	E.$F1,(R0)[R1]		; (0D0, 1D0)
+;   37        RETURN
+	RET
+;   38        ENTRY E2(A)
+E.$2:					; ENTRY E2
+;   39        END
+	RET
+E.$3:					; E1's adjustable arrays' bounds
+	MOVAO	@E.$A1,E.$B1+4
+	MOVL	@E.$A2,E.$B1+28
+	MOVL	E.$B1+28,E.$B1+20
+	MOVL	#-1,R0
+	MOVAO	@E.$A1[R0],E.$B1+16
+	MULL3	#16,E.$B1+20,E.$B1+12
+	BRW	E.$1
+
+	.ENTRY	E1,^M<>
+	MOVL	4(AP),E.$A2		; N is argument 1
+	MOVL	8(AP),E.$A1		; A is argument 2
+	BRW	E.$3
+
+	.ENTRY	E2,^M<>
+	MOVL	4(AP),E.$A1		; A is argument 1
+	BRW	E.$2
+
+	.END

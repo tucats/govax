@@ -204,14 +204,14 @@ func TestErrors(t *testing.T) {
 		{"a REAL bound is converted", []string{"DIMENSION A(2.5)", "A(2) = 1", "END"}, ""},
 		{"a LOGICAL bound", []string{"DIMENSION A(.TRUE.)", "END"}, "BADBOUND@1:19"},
 		{"a CHARACTER bound", []string{"DIMENSION A('X')", "END"}, "BADBOUND@1:19"},
-		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "END"}, "NOTIMPL@2:19"},
-		{"an adjustable lower bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N:5)", "END"}, "NOTIMPL@2:19"},
-		{"both bounds, and an expression", []string{"SUBROUTINE S(X, I, J)", "DIMENSION X(-I/2:I/2, J)", "END"}, "NOTIMPL@2:19"},
-		{"adjustable and assumed-size", []string{"SUBROUTINE S(A, N)", "DIMENSION A(1:N, 1:*)", "END"}, "NOTIMPL@2:21"},
-		{"adjustable arrays in a type statement", []string{"SUBROUTINE S(A, N)", "REAL A(N)", "END"}, "NOTIMPL@2:14"},
-		{"a REAL dummy in a bound", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "END"}, "NOTIMPL@2:19"},
-		{"a bound's name declared after, with its type", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "INTEGER N", "END"}, "NOTIMPL@2:19"},
-		{"a bound's type changed", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "INTEGER X", "END"}, "BOUNDTYPE@3:15 NOTIMPL@2:19"},
+		{"an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "END"}, ""},
+		{"an adjustable lower bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N:5)", "END"}, ""},
+		{"both bounds, and an expression", []string{"SUBROUTINE S(X, I, J)", "DIMENSION X(-I/2:I/2, J)", "END"}, ""},
+		{"adjustable and assumed-size", []string{"SUBROUTINE S(A, N)", "DIMENSION A(1:N, 1:*)", "END"}, ""},
+		{"adjustable arrays in a type statement", []string{"SUBROUTINE S(A, N)", "REAL A(N)", "END"}, ""},
+		{"a REAL dummy in a bound", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "END"}, ""},
+		{"a bound's name declared after, with its type", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "INTEGER N", "END"}, ""},
+		{"a bound's type changed", []string{"SUBROUTINE S(A, X)", "DIMENSION A(X)", "INTEGER X", "END"}, "BOUNDTYPE@3:15"},
 		{"a bound's name not a dummy", []string{"SUBROUTINE S(A)", "DIMENSION A(N)", "END"}, "BOUNDVAR@2:19"},
 		{"a bound's name an array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N), N(3)", "END"}, "BOUNDREF@2:19"},
 		{"a bound's name its own array", []string{"SUBROUTINE S(A)", "DIMENSION A(A)", "END"}, "BOUNDREF@2:19"},
@@ -221,12 +221,17 @@ func TestErrors(t *testing.T) {
 		{"an array element in a bound", []string{"SUBROUTINE S(A, N)", "DIMENSION N(3), A(N(1))", "END"}, "BOUNDREF@2:25"},
 		{"a comparison in a bound", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N .GT. 1)", "END"}, "BADBOUND@2:21"},
 		{"a real power, not constant, no name", []string{"SUBROUTINE S(A)", "DIMENSION A(2.0 ** 0.5)", "END"}, "BADBOUND@2:23"},
-		{"an adjustable array's subscripts counted", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A(1, 2) = 0", "END"}, "NOTIMPL@2:19 SUBSCRIPTS@3:7"},
-		{"a bound's name in COMMON", []string{"SUBROUTINE S(A)", "COMMON N", "DIMENSION A(N)", "END"}, "NOTIMPL@3:19"},
-		{"a bound's name in COMMON after it", []string{"SUBROUTINE S(A)", "DIMENSION A(N)", "COMMON N", "END"}, "NOTIMPL@2:19"},
-		{"a bound's name EQUIVALENCE puts in COMMON", []string{"SUBROUTINE S(A)", "COMMON K", "DIMENSION A(N)", "EQUIVALENCE (N, K)", "END"}, "NOTIMPL@3:19"},
+		{"an adjustable array's subscripts counted", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "A(1, 2) = 0", "END"}, "SUBSCRIPTS@3:7"},
+		{"a bound's name with no type", []string{"SUBROUTINE S(A, N)", "IMPLICIT NONE", "REAL A", "DIMENSION A(N)", "END"}, "NOTYPE@1:23"},
+		{"SIZEOF of an adjustable array", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "I = SIZEOF(A)", "END"}, ""},
+		{"SIZEOF of a passed-length adjustable array", []string{"SUBROUTINE S(A, N)", "CHARACTER*(*) A(N)", "I = SIZEOF(A)", "END"}, "BADARG@3:18"},
+		{"an adjustable array written", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N)", "PRINT *, A", "END"}, ""},
+		{"adjustable with an assumed size, written", []string{"SUBROUTINE S(A, N)", "DIMENSION A(N, *)", "PRINT *, A", "END"}, "NOSIZE@3:16"},
+		{"a bound's name in COMMON", []string{"SUBROUTINE S(A)", "COMMON N", "DIMENSION A(N)", "END"}, ""},
+		{"a bound's name in COMMON after it", []string{"SUBROUTINE S(A)", "DIMENSION A(N)", "COMMON N", "END"}, ""},
+		{"a bound's name EQUIVALENCE puts in COMMON", []string{"SUBROUTINE S(A)", "COMMON K", "DIMENSION A(N)", "EQUIVALENCE (N, K)", "END"}, ""},
 		{"a bound's array in COMMON", []string{"SUBROUTINE S(A)", "COMMON N(2)", "DIMENSION A(N)", "END"}, "BOUNDREF@3:19"},
-		{"an ENTRY's dummies in bounds", []string{"SUBROUTINE S", "DIMENSION A(N), B(*)", "RETURN", "ENTRY E(A, B, N)", "END"}, "NOTIMPL@2:19"},
+		{"an ENTRY's dummies in bounds", []string{"SUBROUTINE S", "DIMENSION A(N), B(*)", "RETURN", "ENTRY E(A, B, N)", "END"}, ""},
 		{"seven dimensions", []string{"DIMENSION A(2,2,2,2,2,2,2)", "A(1,1,1,1,1,1,1) = 1", "END"}, ""},
 		{"eight dimensions", []string{"DIMENSION A(2,2,2,2,2,2,2,2)", "END"}, "TOOMANYDIMS@1:17"},
 		{"too large an array", []string{"DIMENSION A(1000000000)", "END"}, "ARRAYSIZE@1:17"},
@@ -749,8 +754,7 @@ func TestElementNumber(t *testing.T) {
 		"      DIMENSION BOS(3,3,3), V(0:9), W(-2:2,5:6), D(2:3,0:*), E(N)",
 		"      END")
 
-	// E's NOTIMPL is expected: the rest has no messages.
-	if len(ms) != 1 || ms[0].Ident != "NOTIMPL" {
+	if len(ms) != 0 {
 		t.Fatalf("messages: %v", ms)
 	}
 

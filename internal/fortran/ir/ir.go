@@ -232,7 +232,8 @@ type Cell struct {
 	// ending at label 10, "DO (line 12)" for one END DO ends.
 	Loop string
 
-	// Dummy names an ArgCell's dummy argument.
+	// Dummy names an ArgCell's dummy argument, or the adjustable array a
+	// descriptor cell ($B1) holds the bounds of.
 	Dummy string
 
 	// Desc is a descriptor cell's contents: what it describes, with
@@ -397,6 +398,11 @@ const (
 // Bound is one dimension of an array: its lower and upper bounds.
 type Bound struct {
 	Lower, Upper int
+
+	// Set is true for a dimension whose extent isn't known when compiling,
+	// an adjustable or assumed-size array's in a descriptor the entry points
+	// fill in; Lower or Upper is then 0 if it isn't known either.
+	Set bool
 }
 
 // Elements is how many elements an array descriptor's array has.
@@ -404,10 +410,27 @@ func (d *Descriptor) Elements() int {
 	n := 1
 
 	for _, b := range d.Dims {
+		if b.Set {
+			return 0
+		}
+
 		n *= b.Upper - b.Lower + 1
 	}
 
 	return n
+}
+
+// MultiplierOffset is the place of dimension i's multiplier, from 0, in a class
+// A descriptor: the longwords after its first five (DSC$L_Mi).
+func (d *Descriptor) MultiplierOffset(i int) int {
+	return 20 + 4*i
+}
+
+// LowerOffset is the place of dimension i's lower bound in a class A descriptor,
+// after the multipliers (DSC$L_Li). Its upper bound (DSC$L_Ui) is the next
+// longword.
+func (d *Descriptor) LowerOffset(i int) int {
+	return 20 + 4*len(d.Dims) + 8*i
 }
 
 // Size is the descriptor's own size in bytes: two longwords for class S;

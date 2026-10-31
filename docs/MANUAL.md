@@ -4465,9 +4465,13 @@ output it prints, and programs of several files in its `modules` directory.
   DIMENSION and VIRTUAL, of variables and arrays of up to seven dimensions
   with constant bounds (a lower bound with a colon, `V(0:9)`; a bound may
   be a constant expression, and a REAL one is truncated); a dummy array's
-  last upper bound may be `*`, as in `A(3,*)`. An adjustable array,
-  `A(M,N)` with bounds from dummy arguments or variables in common blocks,
-  is checked, then reported not implemented.
+  last upper bound may be `*`, as in `A(3,*)`. A dummy array may be
+  adjustable, `A(M,N)` or `X(-I/2:I/2,J)`, with bounds from dummy arguments
+  or variables in common blocks, computed once each time the subprogram is
+  entered, and may have an assumed size too, `A(1:N,1:*)`, and a passed
+  length, `CHARACTER*(*) A(N)`. An entry point computes the bounds of the
+  arrays its own list defines: those in its list whose bounds use only its
+  other dummy arguments and common variables.
   COMMON, blank and named: units that declare a block of one name share its
   storage, each with names of its own, laid out in order with no gaps, and
   the block is as long as the longest declaration. EQUIVALENCE, with arrays,

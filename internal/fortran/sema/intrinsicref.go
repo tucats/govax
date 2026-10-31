@@ -412,10 +412,11 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 		switch {
 		case r.Sym.AssumedSize():
 			size = 0
-		case r.Sym.Elements() == 0:
-			a.notImpl(e.Pos, "SIZEOF of an adjustable array")
-
-			return a.bad(e.Pos)
+		case r.Sym.Adjustable() && r.Sym.Type.Size != 0:
+			// Known only when the program runs, once the bounds are.
+			return &IntrinsicRef{exprBase: exprBase{IntegerType, e.Pos}, Op: ArraySizeOp, Args: []Expr{x}}
+		case r.Sym.Adjustable():
+			size = 0
 		default:
 			size = r.Sym.Size()
 		}
@@ -431,9 +432,9 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 }
 
 // describeSize is what SIZEOF's argument is, when it has no size: an
-// assumed-size array, or a CHARACTER value of a length not known.
+// assumed-size array, or a CHARACTER value or array of a length not known.
 func describeSize(x Expr) string {
-	if _, ok := x.(*ArrayRef); ok {
+	if r, ok := x.(*ArrayRef); ok && r.Sym.AssumedSize() {
 		return "an assumed-size array"
 	}
 

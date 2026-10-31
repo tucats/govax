@@ -33,13 +33,3 @@
   K         INTEGER       variable         argument 5
   $LOCAL is 0 bytes
 22          END
-
-%FORT-E-NOTIMPL, an adjustable array is not implemented yet
-  at line 21 of ARRAYS.FOR
-        DIMENSION X(-I/2:I/2, J), Y(K:*)
-  ------------------^
-
-%FORT-E-NOTIMPL, an adjustable array is not implemented yet
-  at line 21 of ARRAYS.FOR
-        DIMENSION X(-I/2:I/2, J), Y(K:*)
-  ----------------------------------^

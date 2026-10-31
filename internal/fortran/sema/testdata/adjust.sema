@@ -1,0 +1,54 @@
+== FUNCTION SUM
+  SUM       REAL          result           $LOCAL+0
+  A         REAL          array(1:M, 1:N)  argument 1
+  M         INTEGER       variable         argument 2
+  N         INTEGER       variable         argument 3
+  J         INTEGER       variable         $LOCAL+4
+  I         INTEGER       variable         $LOCAL+8
+  $LOCAL is 12 bytes
+5           SUM = 0.0
+6           DO 10 J = 1, N, 1
+7             DO 10 I = 1, M, 1
+8     10        SUM = (+:R SUM A[I, J])
+9           END
+== SUBROUTINE SUB
+  SUB                     program unit
+  X         REAL          array((- (/ I 2)):(/ I 2), 1:J) argument 1
+  I         INTEGER       variable         argument 2
+  J         INTEGER       variable         argument 3
+  Y         REAL          array(1:2, 0:K)  argument 4
+  Z         REAL          array(1:3, 1:K, 1:*) argument 5
+  K         INTEGER       variable         SHAPE+0
+  OTHER                   subroutine
+  $LOCAL is 0 bytes
+  /SHAPE/ is 4 bytes
+15          X[(/:I I 2), J] = 999.0
+16          Y[1, (+:I I 1)] = 1.0
+17          Z[1, 2, J] = 2.0
+18          PRINT * X[] Y[] (arraysize:INTEGER  X[])
+19          CALL OTHER(X[], Y[1, 1])
+20          END
+== SUBROUTINE CHARS
+  CHARS                   program unit
+  A         CHARACTER*8   array(1:N)       argument 1
+  B         CHARACTER*(*) array(0:N)       argument 2
+  N         INTEGER       variable         argument 3
+  $LOCAL is 0 bytes
+26          A[N] = B[(-:I N 1)]
+27          PRINT * A[] B[]
+28          END
+== SUBROUTINE E
+  E                       program unit
+  A         COMPLEX*16    array(1:N)       argument 1
+  N         INTEGER       variable         argument 2
+  E1                      program unit
+  E2                      program unit
+  entry E1 (N, A)
+  entry E2 (A)
+  $LOCAL is 0 bytes
+34          N = 1
+35          ENTRY E1
+36          A[N] = (0.0D0, 1.0D0)
+37          RETURN
+38          ENTRY E2
+39          END

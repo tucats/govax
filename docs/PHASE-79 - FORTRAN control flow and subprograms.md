@@ -7,7 +7,8 @@ done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
 extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
 done 2026-10-31; subtask 5 (function results of every type) done
 2026-10-31; subtask 6 (ENTRY) done 2026-10-31; subtask 7 (alternate
-returns) done 2026-10-31.
+returns) done 2026-10-31; subtask 8 (adjustable and assumed-size arrays,
+passed-length character arrays) done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -524,7 +525,7 @@ recommendation:
 5. **Function results of every type**, CHARACTER and COMPLEX functions. Done.
 6. **ENTRY.** Done.
 7. **Alternate returns.** Done.
-8. **Adjustable and assumed-size arrays**, passed-length character arrays.
+8. **Adjustable and assumed-size arrays**, passed-length character arrays. Done.
 9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.**
 10. **Statement functions.**
 11. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter
@@ -721,3 +722,35 @@ recommendation:
   both paging modes (the manual's CHECK, with its `Z` computed and its third list
   argument reached past the `*`s), and `testdata/fortran/modules/altreturns`, linked in
   both orders. MANUAL.md's 14.2 lists them, with the differences.
+- **2026-10-31, subtask 8 (adjustable and assumed-size arrays, passed-length
+  character arrays):** Decision 5, with one change to the survey's cells: an
+  adjustable array's static cells are one class A descriptor (`$B1`), not
+  separate lower bound, multiplier, offset, and size cells, since a whole array
+  written or passed needs that descriptor anyway and it holds all an element's
+  address needs. An element is at A0 plus the subscripts multiplied out from the
+  last by the descriptor's extents (`ir/lowerbounds.go`; its comment works
+  `X(-I/2:I/2,J)` through), one multiplication a dimension, so `Mem.Ptr` is A0
+  and the first element's offset, the survey's "offset" cell, is built into A0. A
+  dimension with constant bounds uses its constants, and they start in the cell;
+  only what isn't constant is stored (`Bound.Set`). Sema: `checkArrays` analyzes
+  each bound once every name's type is known (`boundValues`: `Dim.LowerValue`,
+  `UpperValue`, converted to INTEGER) and notes the dummies in them
+  (`Symbol.BoundDummies`). Each entry point computes the arrays its own list
+  defines, per section 6.1.1.1: the array and every dummy in its bounds in the
+  list (`defines`). The header's code is in its first block; an ENTRY's goes in a
+  block after the routine's statements, which `Entry.First` names and which goes on
+  to the statements, since falling into an ENTRY statement isn't entering. Any
+  other array's cell keeps what it held, section 6.1.1.1's "undefined".
+  A passed-length array stores its element length too, and an assumed-size one
+  (`A(1:N,1:*)`) no size: it is never used as a descriptor, as sema refuses such
+  an array in an I/O list (NOSIZE) and `charArg` passes it by its first element.
+  SIZEOF of an adjustable array is the descriptor's size, `ArraySizeOp`, not a
+  constant; of a passed-length one, BADARG, whose wording now says CHARACTER\*(\*)
+  and not "assumed-size" for one that isn't. The storage map shows a computed bound
+  as `?`. Plain assumed-size and passed-length arrays needed nothing new, and have
+  tests now. Unchanged and ours, unconfirmed: extents aren't checked at run
+  time, so a negative one (`A(N)` with N -1) gives a nonsense size, as the manual
+  makes it the program's mistake; N 0 is an array with no elements. Tests: `adjust.for` golden
+  files in `sema`, `ir`, and `codegen`; sema cases; `testdata/fortran/adjust.for` end
+  to end in both paging modes, its output worked out by hand. MANUAL.md's 14.2 lists
+  them.

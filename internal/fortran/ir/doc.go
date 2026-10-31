@@ -149,6 +149,10 @@
 // The count is computed before K is set, as section 5.3.1.1 orders, and
 // a count of zero or less skips the body.
 //
+// An adjustable array has a class A descriptor in a cell ($B1), which its
+// entry points fill in (lowerbounds.go): an element's place is through the
+// descriptor's A0, with an index made of the subscripts and its extents.
+//
 // Every statement remembers the FORTRAN statement it came from, so the
 // code generator can write each source line, as a comment, just before
 // the instructions it became; the dump shows that as "; line n".
