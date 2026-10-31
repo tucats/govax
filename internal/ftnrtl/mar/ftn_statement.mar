@@ -60,16 +60,17 @@
 ; rest of the statement does nothing but end: its items are passed over,
 ; and FTN$IO_END returns or signals the error.
 ;
-; So far only list-directed output to the units FTN_UNITS has is done
-; (FTN_LISTOUT); every other kind of statement is FOR$_NOTIMP, until the
-; later subtasks of Phase 80 bring the format interpreter, input,
-; namelists, and internal files.
+; So far formatted input and output (FTN_FORMAT) and list-directed
+; output (FTN_LISTOUT) to the units FTN_UNITS has are done; every other
+; kind of statement is FOR$_NOTIMP, until the later subtasks of Phase 80
+; bring list-directed input, namelists, and internal files.
 ;
 	$SSDEF
 
 FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
 FOR$_ENDDURREA	= ^X001880C4		;  their severities
 FOR$_ERRDURWRI	= ^X00188134
+FOR$_ERRDURREA	= ^X0018813C
 FOR$_RECIO_OPE	= ^X00188144
 FOR$_INSVIRMEM	= ^X0018814C
 
@@ -80,8 +81,9 @@ FLAG_ERR	= 1
 FLAG_END	= 2
 FLAG_IOSTAT	= 4
 
-; A statement's context. FTN_LISTOUT uses CTX_STREAM, CTX_RECLEN,
-; CTX_RECORD, and CTX_STATUS too, and defines them the same.
+; A statement's context. FTN_LISTOUT and FTN_FORMAT use CTX_STREAM,
+; CTX_RECLEN, CTX_RECORD, and CTX_STATUS too, and define them the same;
+; FTN_FORMAT's own fields follow the record, to CTX_SIZE.
 CTX_NEXT	= 0			; long: the statement below it, or 0
 CTX_FP		= 4			; long: the FP of the routine that began it
 CTX_UNIT	= 8			; long: the unit, -5 for an internal file
@@ -92,7 +94,8 @@ CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
 CTX_RECLEN	= 24			; long: the bytes in the record so far
 CTX_RECORD	= 28			; the record being built
 RECORD_SIZE	= 256
-CTX_SIZE	= CTX_RECORD+RECORD_SIZE
+CTX_FREEFMT	= CTX_RECORD+RECORD_SIZE+12 ; long: FTN_FORMAT's run-time format
+CTX_SIZE	= CTX_RECORD+RECORD_SIZE+104 ; with FTN_FORMAT's fields
 
 ; The kinds of statement: a READ's is even, a WRITE's odd, and those
 ; from K_READ_IF on have no unit.
@@ -198,6 +201,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
 	BGTRU	20$			; a routine further out: still running
 	MOVL	CTX_NEXT(R3),STMT_TOP	; gone: its context is free again
+	PUSHL	R3			;  (and its run-time format's
+	CALLS	#1,FTN$$FMT_FREE	;  parsed copy, if it had one)
 	MOVL	FREE_LIST,CTX_NEXT(R3)
 	MOVL	R3,FREE_LIST
 	BRB	10$
@@ -232,6 +237,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVW	ICB_W_FLAGS(R0),CTX_FLAGS(R3)
 35$:	MOVB	R6,CTX_KIND(R3)
 	CLRL	CTX_STATUS(R3)
+	CLRL	CTX_FREEFMT(R3)
 	CLRL	CTX_STREAM(R3)
 	CLRL	CTX_RECLEN(R3)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
@@ -247,8 +253,9 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
-	BLBC	R0,FAIL
-	MOVL	R1,CTX_STREAM(R3)
+	BLBS	R0,37$
+	BRW	FAIL
+37$:	MOVL	R1,CTX_STREAM(R3)
 	MOVL	CTX_NEXT(R3),R1		; the statements below
 40$:	BEQL	60$
 	CMPB	CTX_KIND(R1),#K_READ_IF
@@ -263,15 +270,28 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	; Start the statement, if it is of a kind FTNRTL does yet.
 	;
 60$:	CMPL	R6,#K_WRITE_SL
-	BEQL	70$
+	BLEQ	70$			; formatted, or list-directed output
 	MOVL	#FOR$_NOTIMP,R0
 	BRB	FAIL
-70$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
+70$:	CMPL	R6,#K_READ_SL
+	BNEQ	71$
+	MOVL	#FOR$_NOTIMP,R0		; list-directed input: not yet
+	BRB	FAIL
+71$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
 	CALLS	#1,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,75$
 	MOVL	#FOR$_ERRDURWRI,R0
+	BLBS	R6,FAIL
+	MOVL	#FOR$_ERRDURREA,R0
 	BRB	FAIL
-75$:	PUSHL	R3
+75$:	CMPL	R6,#K_WRITE_SL
+	BEQL	80$
+	PUSHL	12(AP)			; formatted: the format
+	PUSHL	R3
+	CALLS	#2,FTN$$FMT_START	; FTN_FORMAT
+	BLBC	R0,FAIL
+	RET
+80$:	PUSHL	R3
 	CALLS	#1,FTN$$LIST_START	; FTN_LISTOUT
 	MOVL	#SS$_NORMAL,R0
 	RET
@@ -298,10 +318,14 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	BEQL	90$			; no statement: nothing to do
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$			; it has failed
-	CMPB	CTX_KIND(R2),#K_WRITE_SL
-	BNEQ	90$
 	PUSHL	4(AP)
 	PUSHL	R2
+	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	BGTRU	10$
+	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
+	BRB	90$
+10$:	CMPB	CTX_KIND(R2),#K_WRITE_SL
+	BNEQ	90$
 	CALLS	#2,FTN$$LIST_ITEM	; FTN_LISTOUT
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
@@ -318,7 +342,12 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	BNEQ	5$
 	CLRL	R0			; no statement
 	RET
-5$:	TSTL	CTX_STATUS(R2)
+5$:	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	BGTRU	7$
+	PUSHL	R2			; formatted: the end of the walk, the
+	CALLS	#1,FTN$$FMT_END		;  last record, after no failure
+	BRB	10$
+7$:	TSTL	CTX_STATUS(R2)
 	BNEQ	10$
 	CMPB	CTX_KIND(R2),#K_WRITE_SL
 	BNEQ	10$

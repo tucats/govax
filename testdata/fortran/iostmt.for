@@ -12,7 +12,7 @@ C     another's item, on another unit (not on the same one).
       WRITE (6,*) 'WRITE (6,*)', 3
       TYPE *, 'TYPE', 4
       WRITE (5,*) 'WRITE (5,*)', 5
-C     Formatted I/O is the next subtask's: NOTIMP, FOR number 2.
+C     Integer editing (I5) is subtask 5's: NOTIMP, FOR number 2.
       WRITE (6, 10, IOSTAT=IOS) 6
       PRINT *, 'FORMATTED', IOS
       WRITE (6, 10, ERR=20) 7

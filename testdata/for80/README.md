@@ -19,6 +19,7 @@ holds FTNRTL to `vax/for80-vax.txt`.
 | `for80r.com` | Runs `FOR80`, with the records its unit 5 cases read |
 | `for80.com` | Builds and runs everything |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
+| `for80.for` | The output cases to unit 6 as FORTRAN statements, for govax (Decision 2) |
 | `vax/for80-vax.txt` | Run 1 on VMS, as `FOR80D` printed it |
 | `vax/for80p-vax.txt` | Run 2 on VMS: the same cases with unit 6 a process-permanent file |
 | `vax/for80.log` | `FOR80.COM`'s log: run 3's messages, and the file's attributes |
@@ -118,3 +119,12 @@ That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement:
 `LIB$TPARSE` is NOTIMPL (Phase 80's subtask 10), which stops FORRTL's namelist
 input. VMS's run is. `TestFor80Messages` runs FOR80E's parts the same way and
 holds their messages and statuses to VMS's `vax/for80.log`.
+
+`TestFor80Oracle` (`internal/console/for80oracle_test.go`, Phase 80's subtask 4)
+holds FTNRTL to VMS's run: `for80.for` is round 1's output cases to unit 6, each
+a run-time format in a character constant (so a format the compiler would refuse
+reaches FTNRTL's parser, as it reached FORRTL's), between a `#n` line and a `=n`
+line with its IOSTAT. The test runs it with SYS$OUTPUT a file, so its records
+keep their first bytes as VMS's FOR006 file did, and matches each case's records
+and IOSTAT with `vax/for80-vax.txt`'s records and e=. A case whose IOSTAT is 2,
+NOTIMP, uses an edit FTNRTL doesn't have yet, and waits for its subtask.

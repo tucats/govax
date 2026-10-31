@@ -3,7 +3,8 @@
 **Status:** in progress: subtask 1 (the survey, Part A) done 2026-10-31,
 accepted by the author the same day; subtask 2 (the probe) done the same day, two
 rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
-compiler, FTNRTL's statement calls) done the same day. Needs Phase 79 (control flow, for
+compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
+interpreter) done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -770,7 +771,8 @@ subtasks land.
    units 5 and 6 in outline. Done ("Subtask 3", below).
 4. **The format interpreter:** parsing, the walk, reversion, the shared
    record, positional descriptors, carriage control and `$`, and the
-   conditions these raise.
+   conditions these raise. Done ("Subtask 4", below), with A and Q, run-time
+   formats but for VFEs, and Decision 2's oracle.
 5. **Integer, logical, and character editing,** both directions, with BN and BZ,
    short fields, and the default widths.
 6. **Floating editing:** F, E, D, G, P, S, complex, both directions.
@@ -914,6 +916,81 @@ Tests: `format`'s, sema's `io.for` golden and its error table, the IR's and
 code generator's `io.for` goldens, `testdata/fortran/iostmt.for` (both paging
 modes), and `TestFortranIOSignals`.
 
+## Subtask 4: what was built (2026-10-31)
+
+**FTNRTL's format interpreter** (`ftn_format.mar`, new; `ftn_statement.mar` and
+`ftn_units.mar` call it). No new vector entries, so GSMATCH stays 1,8.
+
+- **Parsing.** `PARSE` turns a format's text into a `LIB$GET_VM` block of
+  12-byte operations (code, flags, repeat, a longword count or address, w, d or
+  m, e), the character constants' text after them, and the address reversion
+  goes to: the last group at the format's own level, or the first operation. It
+  is `internal/fortran/format`'s grammar in MACRO: the same separator rules,
+  limits, and errors, a group's operation pushed on the stack until its `)`. A
+  FORMAT statement's block is parsed at its first use and the address kept in
+  its `$FCn` cell (Decision 4); a run-time format (flag bit 3: a descriptor, a
+  class A one's whole array) is parsed at its begin call and freed by
+  `FTN$IO_END`, or by the next begin call if a signal unwound its statement. A
+  format FORRTL would refuse is SYNERRFOR (62). A variable format expression is
+  SYNERRFOR here until subtask 8; the compiler refuses one in a FORMAT
+  statement anyway (NOTIMPL).
+- **The walk** (`WALK`): the next operation, the current data descriptor's
+  repeats left, and a stack of open groups with their counts, all in the
+  context, since one parsed FORMAT may serve statements nested in each other.
+  An item walks to the next data descriptor (I to A, and Q, which on output
+  takes an item and writes nothing: VMS's case 432), doing the others on the
+  way; the end call walks to a data descriptor, a colon, or the last `)`. At the
+  last `)` with an item waiting, the record ends and the walk reverts, the
+  state of P, S, SP, SS, BN, and BZ kept (stored now, used by subtasks 5 and 6);
+  if no item has taken a data descriptor since the start or the last reversion,
+  INFFORLOO (60). VMS's cases 412 and 423 settle that the end call's walk does
+  text and slashes it meets.
+- **The record**, built a byte per column with a position apart from its length:
+  X and TR move on, TL stops at column 1, T goes to a column, a byte skipped is
+  a blank, and the record ends at its last byte written (`5X` at the end adds
+  nothing). T0 is the column before the first: a byte written there is lost
+  (VMS's case 313, `(' ',T0,'A')`, writes one blank). A byte past column 133,
+  or a field that won't fit, is OUTSTAOVE (66); VMS's cases 457 and 458 put the
+  limit between 133 and 134. `$` marks the record being built, and when it is
+  written a blank first byte becomes `$` and a `+` NUL; the mark goes with the
+  record (cases 449 to 452). Every statement writes its last record, empty if
+  nothing went in it (`()` and `(:,' A')` write one).
+- **Input** reads a record at the begin call, another at each `/` and at
+  reversion, through the new `FTN$$UNIT_GET` (`$GET` into the context's
+  256-byte buffer): RMS$_EOF is ENDDURREA (24, so -1 for IOSTAT), RTB or RSZ
+  INPRECTOO (22), a record of 200 bytes or more INPRECTOO too (round 2's
+  limit), any other failure ERRDURREA (39). Fields past the record's end read
+  blanks. A character constant or H reads its length of the record into the
+  parsed format's text (8.3.9.2): a FORMAT's stays, a run-time format's goes
+  with its copy.
+- **A and Q,** brought forward from subtask 5 so that the walk had a data
+  descriptor to drive: A both ways by Table 8-3's rule on any item's bytes
+  (VMS's cases 187 to 200, 691, 692, 694, 695); Q's count of characters left,
+  stored by the item's length (a byte, a word for 2 or 3, else a longword), and
+  for an item that isn't an integer or logical FORVARMIS (61) after the store,
+  as VMS's cases 699 and 700 show. Every other data descriptor is NOTIMP (2)
+  until its subtask. A complex item is two items, its parts.
+- **After an error** nothing more is written: no record at the end call, as
+  VMS's unwound cases show none. What FORRTL writes when IOSTAT= or ERR= takes
+  the error isn't known (the probe's handler unwound instead); unconfirmed.
+
+**Decision 2's oracle.** `gen.go` now also writes `for80.for`: round 1's output
+cases to unit 6 (all but the empty format and the G_floating items), each a
+WRITE with a run-time format in a character constant and IOSTAT=, between `#n`
+and `=n IOS` lines in subroutines of 40 cases. `TestFor80Oracle` compiles and
+runs it with SYS$OUTPUT defined, for the image alone, as a file, so its records
+keep their first bytes as VMS's FOR006 file did, and holds each case's records
+(bytes that don't print as periods, as FOR80D showed them) and IOSTAT to VMS's
+records and e=. A case returning NOTIMP is passed over until its subtask: 145
+cases compare and match, 298 wait (mostly I and F), and no difference is
+expected. The syntax section's SYNERRFOR cases are among those compared, so
+FTNRTL's parser is held to VMS's as the compiler's is.
+
+Tests: `TestFor80Oracle`, `testdata/fortran/formats.for` (both paging modes),
+`TestFortranFormattedInput` (both modes; the terminal's input through T, TL, TR,
+A, Q, H read into a FORMAT, `/`, reversion, a run-time format, INPRECTOO, END=,
+IOSTAT's -1).
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -972,3 +1049,10 @@ modes), and `TestFortranIOSignals`.
   them and every other statement NOTIMP. What was built, and the choices
   left unconfirmed, are in "Subtask 3" above. MANUAL.md's chapter 14 and
   FORTRAN-INTERNALS.md follow the new calls.
+- **2026-10-31, subtask 4, done.** The format interpreter in FTNRTL
+  (`ftn_format.mar`): the parser, the walk with groups and reversion, the record
+  with its positions, `$`, and its limits, input records from SYS$INPUT, and A
+  and Q, with run-time formats; "Subtask 4" above. Decision 2's oracle,
+  `TestFor80Oracle`, runs `for80.for` (now written by `gen.go`) and matches VMS's
+  run in all 145 cases FTNRTL can do so far. One defect found by it on the way:
+  Q parsed with no repeat count served every item after it.

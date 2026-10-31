@@ -15,6 +15,7 @@
 //	for80e.mar   conditions with no handler, to show VMS's messages and dumps
 //	for80t.mar   carriage control at a real terminal (run by hand)
 //	for80.opt    the link options
+//	for80.for    the output cases as FORTRAN statements, for govax (Decision 2)
 //	for80r.com   runs FOR80, with the data its unit 5 cases read
 //	for80.com    builds and runs everything
 //	exchange.cmd, copyout.cmd
@@ -1916,6 +1917,7 @@ func main() {
 
 	files := map[string]string{
 		"for80.mar":  program("", round1Messages),
+		"for80.for":  fortranProgram(),
 		"for80d.mar": dumpProgram,
 		"for80e.mar": errorProgram(),
 		"for80t.mar": terminalProgram,
@@ -1996,4 +1998,195 @@ DISMOUNT DUA2
 	}
 
 	fmt.Println(round1Cases, "cases in round 1,", len(cases), "in round 2")
+}
+
+// fortranProgram is round 1's output cases to unit 6 as FORTRAN statements
+// (Decision 2): for govax, not VMS, which has no compiler. Each case is
+//
+//	PRINT *, '#n'
+//	WRITE (6, 'format', IOSTAT=IOS) items
+//	PRINT *, '=n', IOS
+//
+// the format a run-time format, a character constant, so that what a
+// FORMAT statement couldn't hold (a syntax error, which the compiler would
+// refuse) reaches FTNRTL's parser as it reached FORRTL's. Items of a type
+// other than INTEGER*4 and CHARACTER are set in variables of their type
+// first. The cases a FORTRAN program can't state are left out: an empty
+// format (a character constant holds a character) and G_floating items (a
+// program is compiled in D or in G). TestFor80Oracle runs it with
+// SYS$OUTPUT a file, and holds each case's records and IOSTAT to VMS's run:
+// its records, and its e=, FOR$ERRSNS's number.
+func fortranProgram() string {
+	var b strings.Builder
+
+	b.WriteString(`C     FOR80.FOR - written by testdata/for80/gen.go: round 1's output
+C     cases to unit 6, for govax. TestFor80Oracle holds its records to
+C     vax/for80-vax.txt.
+      PROGRAM FOR80
+`)
+
+	var units []string
+
+	unit := func() {
+		units = append(units, fmt.Sprintf("S%d", len(units)+1))
+		fmt.Fprintf(&b, "      CALL %s\n", units[len(units)-1])
+	}
+
+	var body strings.Builder
+
+	routine := ""
+	openRoutine := func() {
+		if routine != "" {
+			body.WriteString("      END\n")
+		}
+
+		unit()
+		routine = units[len(units)-1]
+		fmt.Fprintf(&body, "\n      SUBROUTINE %s\n", routine)
+		body.WriteString(`      INTEGER IOS
+      INTEGER*2 VW(4)
+      BYTE VB(4)
+      LOGICAL*4 VLU(4)
+      INTEGER*4 VLUI(4)
+      LOGICAL*2 VWU(4)
+      INTEGER*2 VWUI(4)
+      EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
+      REAL VF(4)
+      DOUBLE PRECISION VD(4)
+      REAL*16 VH(4)
+      COMPLEX VFC(4)
+      COMPLEX*16 VDC(4)
+`)
+	}
+
+	perRoutine := 0
+
+	for n, c := range cases {
+		if c.op != "out" || c.unit != 6 || c.format == "" {
+			continue
+		}
+
+		var sets, items []string
+
+		ok := true
+
+		for i, it := range c.items {
+			k := i + 1
+
+			switch it.kind {
+			case "l", "L":
+				items = append(items, ftnInteger(it.val))
+			case "w", "b":
+				v := map[string]string{"w": "VW", "b": "VB"}[it.kind]
+				sets = append(sets, fmt.Sprintf("%s(%d) = %s", v, k, ftnInteger(it.val)))
+				items = append(items, fmt.Sprintf("%s(%d)", v, k))
+			case "lu", "wu":
+				v := map[string]string{"lu": "VLU", "wu": "VWU"}[it.kind]
+				sets = append(sets, fmt.Sprintf("%sI(%d) = %s", v, k, ftnInteger(it.val)))
+				items = append(items, fmt.Sprintf("%s(%d)", v, k))
+			case "f":
+				sets = append(sets, fmt.Sprintf("VF(%d) = %s", k, ftnReal(it.val, "E")))
+				items = append(items, fmt.Sprintf("VF(%d)", k))
+			case "d":
+				sets = append(sets, fmt.Sprintf("VD(%d) = %s", k, ftnReal(it.val, "D")))
+				items = append(items, fmt.Sprintf("VD(%d)", k))
+			case "h":
+				sets = append(sets, fmt.Sprintf("VH(%d) = %s", k, ftnReal(it.val, "Q")))
+				items = append(items, fmt.Sprintf("VH(%d)", k))
+			case "fc", "dc":
+				e := map[string]string{"fc": "E", "dc": "D"}[it.kind]
+				v := map[string]string{"fc": "VFC", "dc": "VDC"}[it.kind]
+				parts := strings.SplitN(it.val, ",", 2)
+				sets = append(sets, fmt.Sprintf("%s(%d) = (%s,%s)", v, k, ftnReal(parts[0], e), ftnReal(parts[1], e)))
+				items = append(items, fmt.Sprintf("%s(%d)", v, k))
+			case "t":
+				if it.val == "" {
+					ok = false
+				}
+
+				items = append(items, ftnText(it.val))
+			default:
+				ok = false
+			}
+		}
+
+		if !ok {
+			continue
+		}
+
+		if routine == "" || perRoutine == 40 {
+			openRoutine()
+
+			perRoutine = 0
+		}
+
+		perRoutine++
+
+		ftnStatement(&body, fmt.Sprintf("PRINT *, '#%d'", n))
+
+		for _, set := range sets {
+			ftnStatement(&body, set)
+		}
+
+		write := "WRITE (6, " + ftnText(c.format) + ", IOSTAT=IOS)"
+		if len(items) > 0 {
+			write += " " + strings.Join(items, ", ")
+		}
+
+		ftnStatement(&body, write)
+		ftnStatement(&body, fmt.Sprintf("PRINT *, '=%d', IOS", n))
+	}
+
+	body.WriteString("      END\n")
+	b.WriteString("      END\n")
+	b.WriteString(body.String())
+
+	return b.String()
+}
+
+// ftnStatement writes a FORTRAN statement in fixed form, its text in
+// columns 7 to 72 and continued on as many lines as it needs, each full
+// line exactly 66 columns, so that a character constant split between
+// lines keeps every character.
+func ftnStatement(b *strings.Builder, text string) {
+	const width = 66
+
+	b.WriteString("      " + text[:min(len(text), width)] + "\n")
+
+	for text = text[min(len(text), width):]; text != ""; text = text[min(len(text), width):] {
+		b.WriteString("     &" + text[:min(len(text), width)] + "\n")
+	}
+}
+
+// ftnText is text as a FORTRAN character constant.
+func ftnText(text string) string { return "'" + strings.ReplaceAll(text, "'", "''") + "'" }
+
+// ftnInteger is an integer as a FORTRAN expression: the most negative
+// longword has no constant of its own.
+func ftnInteger(v string) string {
+	if v == "-2147483648" {
+		return "(-2147483647-1)"
+	}
+
+	return v
+}
+
+// ftnReal is a real constant written as FORTRAN's of the type whose
+// exponent letter is e: E, D, or Q.
+func ftnReal(v, e string) string {
+	v = strings.TrimPrefix(v, "+")
+
+	if i := strings.IndexAny(v, "EeDdQq"); i >= 0 {
+		return v[:i] + e + v[i+1:]
+	}
+
+	if !strings.Contains(v, ".") {
+		v += "."
+	}
+
+	if e == "E" {
+		return v
+	}
+
+	return v + e + "0"
 }

@@ -1,0 +1,1296 @@
+	.TITLE	FTN_FORMAT - FTNRTL's format interpreter
+	.IDENT	/V1.0/
+;
+; Formatted I/O: READ and WRITE with a format, PRINT f, TYPE f, ACCEPT
+; f (the 1988 VAX FORTRAN Language Reference Manual, chapter 8; docs/
+; PHASE-80 - FORTRAN formatted IO.md). FTN_STATEMENT begins and ends the
+; statement and calls this module's routines, each given the statement's
+; context: FTN$$FMT_START at its begin call, FTN$$FMT_ITEM for each item,
+; and FTN$$FMT_END at its end.
+;
+; A format is text, (1X,I5,2(F8.2,A)) say, which the program keeps as it
+; was written. Interpreting the text afresh for every item would be slow,
+; so FTN$$FMT_START first parses it (PARSE, below) into a parsed format:
+; a heap block (LIB$GET_VM) holding a list of operations, one per edit
+; descriptor, with the descriptor's numbers already read, and the text of
+; its character constants. A FORMAT statement's block, which the compiler
+; makes, has a longword where the parsed format's address is kept, so it
+; is parsed only once; a run-time format (a character value, or an array
+; holding the text) may change between statements, so it is parsed each
+; time and the parsed copy freed at the statement's end (Decision 4). The
+; grammar is internal/fortran/format's, which the compiler checks FORMAT
+; statements with, and both are held to what VMS's FORTRAN run-time
+; library accepts: a format it refuses is FOR$_SYNERRFOR. A variable
+; format expression, <n>, is refused here for now (subtask 8).
+;
+; Then the walk (WALK). The format is read from left to right as items
+; arrive: each item takes the next data descriptor (I, O, Z, F, E, D, G,
+; L, A, Q), and the descriptors on the way to it, those that take no item
+; (text, X, T, TL, TR, /, P, S, SP, SS, BN, BZ, $, :), are done on the way.
+; A data descriptor with a repeat count (3I5) serves that many items; a
+; group, r(...), is done r times. When an item arrives and the walk is at
+; the format's last parenthesis, the record ends and the format starts
+; again (reversion, 8.8): at the last group at the format's own level,
+; with that group's repeat count, or at the start if there is no such
+; group. A format that reaches its end without giving any item a data
+; descriptor would loop for ever: FOR$_INFFORLOO. At the statement's end
+; the walk goes on, doing what it meets, until a data descriptor, a colon,
+; or the last parenthesis; the colon (8.3.11) is how a format stops early
+; when the list is used up. The state P, S, SP, SS, BN, and BZ set lasts
+; to the statement's end, through reversion.
+;
+; The record. Output is built in the context's record, one byte per
+; column: column 1 is the record's first byte, the carriage control a
+; terminal or printer takes it as (8.4: a blank for a new line, 0 a blank
+; line first, 1 a new page, + overprinting). The position (CTX_POS) is
+; where the next byte goes: X, TR, TL, and T move it without writing, so
+; a record ends where its last byte was written, never at a position
+; moved to (('K=',I6,5X) is 9 bytes, not 14), and bytes skipped before
+; one written are blanks. TL stops at the first column. T0 is the column
+; before the first, where a byte written is lost, as VMS's is. A record
+; ends at /, at reversion, and at the statement's end, and is written
+; then; a statement writes at least one, empty if nothing was put in it.
+; A unit's record holds 133 bytes (VMS's limit, the probe's round 1): a
+; byte written past them is FOR$_OUTSTAOVE, as is a field that doesn't
+; fit. A $ in the format (8.3.12.2) marks the record being built: when it
+; is written, a blank first byte becomes $ (a prompt: no carriage return
+; after it) and a + becomes NUL (no new line before or after it), as
+; VMS's run-time library stores them.
+;
+; Input reads a record at the statement's start, another at each / and
+; at reversion, into the same buffer, and fields take their characters
+; from the position on: past the record's end, blanks. A record longer
+; than 199 bytes is FOR$_INPRECTOO (VMS's limit reading SYS$INPUT, round
+; 2), the end of the file FOR$_ENDDURREA. A character constant or H in an
+; input format takes the record's characters in place of its text, in the
+; parsed format, so a later statement using the same FORMAT writes them
+; (8.3.9.2); a run-time format's parsed copy goes at the statement's end,
+; and with it what was read (8.7).
+;
+; So far the data descriptors that edit a value are A (8.3.10) and Q
+; (8.3.13); the others are FOR$_NOTIMP until the subtasks that bring
+; integer, logical, and floating editing.
+;
+	$SSDEF
+
+; FORRTL's condition values, with their severities.
+FOR$_NOTIMP	= ^X00188014
+FOR$_INPRECTOO	= ^X001880B4
+FOR$_ERRDURWRI	= ^X00188134
+FOR$_INSVIRMEM	= ^X0018814C
+FOR$_INFFORLOO	= ^X001881E4
+FOR$_FORVARMIS	= ^X001881EC
+FOR$_SYNERRFOR	= ^X001881F4
+FOR$_OUTSTAOVE	= ^X00188214
+
+; The descriptor's fields and codes (the VAX calling standard's).
+DSC$W_LENGTH	= 0
+DSC$B_DTYPE	= 2
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12
+DSC$K_DTYPE_BU	= 2
+DSC$K_DTYPE_WU	= 3
+DSC$K_DTYPE_LU	= 4
+DSC$K_DTYPE_B	= 6
+DSC$K_DTYPE_W	= 7
+DSC$K_DTYPE_L	= 8
+DSC$K_DTYPE_F	= 10
+DSC$K_DTYPE_D	= 11
+DSC$K_DTYPE_FC	= 12
+DSC$K_DTYPE_DC	= 13
+DSC$K_DTYPE_G	= 27
+DSC$K_DTYPE_GC	= 29
+DSC$K_CLASS_A	= 4
+
+; A FORMAT statement's block, made by the compiler: the address of the
+; longword where the parsed format is kept, the text's length and a word
+; of flags, and the text's address.
+FB_A_CELL	= 0
+FB_W_LENGTH	= 4
+FB_A_TEXT	= 8
+
+; The control block's flag for a run-time format (FTN_STATEMENT's).
+FLAG_RUNFMT	= 8
+
+; The statement's context: FTN_STATEMENT's fields, then this module's.
+CTX_FLAGS	= 12			; word: the control block's flags
+CTX_KIND	= 14			; byte: the statement's kind; odd for a WRITE
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
+CTX_RECLEN	= 24			; long: the record's length so far
+CTX_RECORD	= 28			; the record
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECMAX	= CTX_POS+4		; long: the most bytes an output record holds
+CTX_FORMAT	= CTX_RECMAX+4		; long: the parsed format
+CTX_FREEFMT	= CTX_FORMAT+4		; long: the same, if it goes at the end; or 0
+CTX_OP		= CTX_FREEFMT+4		; long: the operation the walk does next
+CTX_CUR		= CTX_OP+4		; long: the data operation being repeated
+CTX_COUNT	= CTX_CUR+4		; long: how many more items it takes
+CTX_DEPTH	= CTX_COUNT+4		; long: the groups being done
+CTX_SCALE	= CTX_DEPTH+4		; long: the scale factor, P's
+CTX_SIGN	= CTX_SCALE+4		; byte: 0 S, 1 SP, 2 SS
+CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ), 0 if not
+CTX_DOLLAR	= CTX_BLANK+1		; byte: 1 if a $ marked the record
+CTX_USED	= CTX_DOLLAR+1		; byte: 1 once an item took a data descriptor
+CTX_GROUPS	= CTX_USED+1		; each group being done: its operation's
+					;  address, and how many more times
+MAX_DEPTH	= 8			; groups nest 8 deep (internal/fortran/format)
+CTX_SIZE	= CTX_GROUPS+<MAX_DEPTH*8>
+
+OUTPUT_MAX	= 133			; an output record's bytes, at most
+INPUT_MAX	= 199			; an input record's
+
+;
+; A parsed format: its size (for LIB$FREE_VM), the address of the
+; operation reversion goes to, and the operations, OP_SIZE bytes each:
+;
+;	+0  byte  the code, C_...
+;	+1  byte  flags: which of w, m or d, and e were given
+;	+2  word  a data descriptor's or a group's repeat count; a
+;		  character constant's length
+;	+4  long  the count of X, T, TL, TR, and P (signed); a character
+;		  constant's text's address; a group's: the address of its
+;		  end; a group end's: the address of its group
+;	+8  word  w, a data descriptor's width
+;	+10 byte  m or d
+;	+11 byte  e
+;
+; The character constants' text follows the operations.
+;
+FMT_L_SIZE	= 0
+FMT_A_REVERT	= 4
+FMT_OPS		= 8
+
+OP_B_CODE	= 0
+OP_B_FLAGS	= 1
+OP_W_REPEAT	= 2
+OP_L_N		= 4
+OP_W_W		= 8
+OP_B_D		= 10
+OP_B_E		= 11
+OP_SIZE		= 12
+
+F_W		= 1			; the flags: w given,
+F_D		= 2			;  m or d given,
+F_E		= 4			;  e given
+
+; The codes. The data descriptors come first, I to Q, so that a code is
+; a data descriptor's if it is at most C_Q; the order is the format
+; package's.
+C_I		= 0
+C_O		= 1
+C_Z		= 2
+C_F		= 3
+C_E		= 4
+C_D		= 5
+C_G		= 6
+C_L		= 7
+C_A		= 8
+C_Q		= 9
+C_TEXT		= 10			; 'text' or nH text
+C_X		= 11
+C_T		= 12
+C_TL		= 13
+C_TR		= 14
+C_P		= 15
+C_S		= 16
+C_SP		= 17
+C_SS		= 18
+C_BN		= 19
+C_BZ		= 20
+C_SLASH		= 21
+C_COLON		= 22
+C_DOLLAR	= 23
+C_GROUP		= 24			; r( : a group's start
+C_ENDGROUP	= 25			; ) : its end
+C_END		= 26			; the format's last parenthesis
+
+MAX_WIDTH	= 32767			; the largest repeat count, width, or count
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$FMT_START(context, format)
+;
+; Starts a formatted statement: finds its parsed format (parsing the
+; text if need be), starts the walk at its beginning, and for input reads
+; the first record. format is the begin call's third argument: a FORMAT
+; statement's block, or with the control block's flag FLAG_RUNFMT a
+; run-time format's descriptor. Returns SS$_NORMAL in R0, or the FOR$_
+; condition that stops the statement.
+;
+	.ENTRY	FTN$$FMT_START,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+	CLRL	CTX_POS(R6)		; the walk's and the record's state
+	CLRL	CTX_RECLEN(R6)
+	MOVL	#OUTPUT_MAX,CTX_RECMAX(R6)
+	CLRL	CTX_COUNT(R6)
+	CLRL	CTX_DEPTH(R6)
+	CLRL	CTX_SCALE(R6)
+	CLRB	CTX_SIGN(R6)
+	MOVB	#1,CTX_BLANK(R6)	; a unit with no OPEN: BLANK='ZERO' (8.3)
+	CLRB	CTX_DOLLAR(R6)
+	CLRB	CTX_USED(R6)
+	MOVL	8(AP),R2		; the format
+	BITW	#FLAG_RUNFMT,CTX_FLAGS(R6)
+	BNEQ	20$
+	;
+	; A FORMAT statement's: parsed already, or parsed now and kept in its
+	; cell.
+	;
+	MOVL	FB_A_CELL(R2),R3
+	MOVL	(R3),R0
+	BNEQ	30$
+	PUSHL	R3			; where the parsed format goes,
+	MOVZWL	FB_W_LENGTH(R2),-(SP)	;  the text's length,
+	PUSHL	FB_A_TEXT(R2)		;  and its address
+	CALLS	#3,PARSE
+	BLBC	R0,90$
+	MOVL	(R3),R0
+	BRB	30$
+	;
+	; A run-time format's: its descriptor's text (a whole array's, for an
+	; array), parsed into a block that goes at the statement's end.
+	;
+20$:	MOVZWL	DSC$W_LENGTH(R2),R1
+	CMPB	DSC$B_CLASS(R2),#DSC$K_CLASS_A
+	BNEQ	25$
+	MOVL	DSC$L_ARSIZE(R2),R1
+25$:	PUSHAL	CTX_FREEFMT(R6)
+	PUSHL	R1
+	PUSHL	DSC$A_POINTER(R2)
+	CALLS	#3,PARSE
+	BLBC	R0,90$
+	MOVL	CTX_FREEFMT(R6),R0
+30$:	MOVL	R0,CTX_FORMAT(R6)
+	MOVAB	FMT_OPS(R0),CTX_OP(R6)	; the walk starts at the first
+	BLBS	CTX_KIND(R6),40$	; a WRITE
+	PUSHL	R6			; a READ: its first record
+	CALLS	#1,READ_RECORD
+	MOVL	CTX_STATUS(R6),R0
+	BNEQ	90$
+40$:	MOVL	#SS$_NORMAL,R0
+90$:	RET
+
+;
+; FTN$$FMT_ITEM(context, desc)
+;
+; One item of a formatted statement, described by desc: a scalar (class
+; S) or a whole array (class A), whose elements are items one after
+; another. A complex value is two items, its real and imaginary parts
+; (8.3.8), each taking a data descriptor of its own. Each takes the
+; format's next data descriptor, which edits it (EDIT). Does nothing once
+; the statement has failed.
+;
+	.ENTRY	FTN$$FMT_ITEM,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	4(AP),R2		; the context
+	MOVL	8(AP),R3		; the descriptor
+	MOVZWL	DSC$W_LENGTH(R3),R4	; an element's length
+	MOVL	DSC$A_POINTER(R3),R5	; the first element
+	MOVZBL	DSC$B_DTYPE(R3),R6	; its type
+	MOVL	#1,R7			; how many: one, for a scalar
+	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_A
+	BNEQ	10$
+	TSTL	R4			; an array of no bytes: nothing
+	BEQL	90$
+	DIVL3	R4,DSC$L_ARSIZE(R3),R7	; the array's elements
+	BEQL	90$
+	;
+	; A complex type: its parts, each half its length, of the matching
+	; real type.
+	;
+10$:	MOVL	#DSC$K_DTYPE_F,R8
+	CMPL	R6,#DSC$K_DTYPE_FC
+	BEQL	15$
+	MOVL	#DSC$K_DTYPE_D,R8
+	CMPL	R6,#DSC$K_DTYPE_DC
+	BEQL	15$
+	MOVL	#DSC$K_DTYPE_G,R8
+	CMPL	R6,#DSC$K_DTYPE_GC
+	BNEQ	20$
+15$:	MOVL	R8,R6
+	DIVL2	#2,R4
+	MULL2	#2,R7
+	;
+	; Each one: the next data descriptor, then its edit.
+	;
+20$:	TSTL	CTX_STATUS(R2)
+	BNEQ	90$
+	CLRL	-(SP)			; not the statement's end
+	PUSHL	R2
+	CALLS	#2,WALK
+	TSTL	R0
+	BEQL	90$			; stopped by an error
+	PUSHL	R6			; the type,
+	PUSHL	R4			;  the length,
+	PUSHL	R5			;  the address,
+	PUSHL	R0			;  the operation,
+	PUSHL	R2			;  and the context
+	CALLS	#5,EDIT
+	ADDL2	R4,R5			; the next
+	SOBGTR	R7,20$
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$FMT_END(context)
+;
+; Ends a formatted statement: walks on to a data descriptor, a colon, or
+; the format's end, and writes an output statement's last record; then
+; lets a run-time format's parsed copy go. Its record isn't written once
+; the statement has failed.
+;
+	.ENTRY	FTN$$FMT_END,^M<R2>
+	MOVL	4(AP),R2
+	TSTL	CTX_STATUS(R2)
+	BNEQ	50$
+	PUSHL	#1			; the statement's end
+	PUSHL	R2
+	CALLS	#2,WALK
+	BLBC	CTX_KIND(R2),50$	; a READ: nothing to write
+	PUSHL	R2
+	CALLS	#1,WRITE_RECORD
+50$:	PUSHL	R2
+	CALLS	#1,FTN$$FMT_FREE
+	RET
+
+;
+; FTN$$FMT_FREE(context)
+;
+; Frees the context's run-time format's parsed copy, if it has one.
+;
+	.ENTRY	FTN$$FMT_FREE,^M<R2>
+	MOVL	4(AP),R2
+	TSTL	CTX_FREEFMT(R2)
+	BEQL	90$
+	MOVL	CTX_FREEFMT(R2),R0
+	PUSHAL	CTX_FREEFMT(R2)		; LIB$FREE_VM's second argument: the
+	PUSHAL	FMT_L_SIZE(R0)		;  block's address; its first, its size
+	CALLS	#2,G^LIB$FREE_VM
+	CLRL	CTX_FREEFMT(R2)
+90$:	RET
+
+;
+; FAIL(context, condition): records the statement's error, unless it has
+; one already.
+;
+FAIL:	.WORD	^M<>
+	MOVL	4(AP),R0
+	TSTL	CTX_STATUS(R0)
+	BNEQ	10$
+	MOVL	8(AP),CTX_STATUS(R0)
+10$:	RET
+
+;
+; WALK(context, end)
+;
+; Walks the format to the next data descriptor, doing the others on the
+; way, and returns its operation in R0. With end 1 (the statement's end),
+; stops at a data descriptor, a colon, or the format's end instead, and
+; returns 0. Returns 0 too when the statement fails on the way.
+;
+WALK:	.WORD	^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+LOOP:	TSTL	CTX_STATUS(R6)
+	BNEQ	STOP
+	TSTL	CTX_COUNT(R6)		; a data descriptor's repeats first
+	BLEQ	10$
+	BLBS	8(AP),STOP
+	DECL	CTX_COUNT(R6)
+	MOVL	CTX_CUR(R6),R0
+	RET
+10$:	MOVL	CTX_OP(R6),R2		; the next operation
+	ADDL3	#OP_SIZE,R2,CTX_OP(R6)	; and the one after it
+	CMPB	OP_B_CODE(R2),#C_Q
+	BLEQU	DATA
+	CASEB	OP_B_CODE(R2),#C_TEXT,#<C_END-C_TEXT>
+20$:	.WORD	TEXT-20$		; 'text', nH
+	.WORD	DO_X-20$		; nX
+	.WORD	DO_T-20$		; Tn
+	.WORD	DO_TL-20$		; TLn
+	.WORD	DO_X-20$		; TRn, which is nX
+	.WORD	DO_P-20$		; kP
+	.WORD	DO_S-20$		; S
+	.WORD	DO_SP-20$		; SP
+	.WORD	DO_SS-20$		; SS
+	.WORD	DO_BN-20$		; BN
+	.WORD	DO_BZ-20$		; BZ
+	.WORD	SLASH-20$		; /
+	.WORD	COLON-20$		; :
+	.WORD	DOLLAR-20$		; $
+	.WORD	GROUP-20$		; r(
+	.WORD	ENDGROUP-20$		; )
+	.WORD	AT_END-20$		; the last )
+STOP:	CLRL	R0
+	RET
+
+DATA:	BLBS	8(AP),STOP		; the end: stop at it
+	MOVL	R2,CTX_CUR(R6)
+	MOVZWL	OP_W_REPEAT(R2),R0
+	DECL	R0
+	MOVL	R0,CTX_COUNT(R6)	; the items it takes after this one
+	MOVB	#1,CTX_USED(R6)
+	MOVL	R2,R0
+	RET
+
+TEXT:	MOVZWL	OP_W_REPEAT(R2),-(SP)	; the length
+	PUSHL	OP_L_N(R2)		; the text
+	PUSHL	R6
+	BLBC	CTX_KIND(R6),10$
+	CALLS	#3,PUT_CHARS		; output: the text
+	BRW	LOOP
+10$:	CALLS	#3,GET_CHARS		; input: the record's characters,
+	BRW	LOOP			;  in its place
+
+DO_X:	ADDL2	OP_L_N(R2),CTX_POS(R6)
+	BRW	LOOP
+DO_T:	SUBL3	#1,OP_L_N(R2),CTX_POS(R6)
+	BRW	LOOP
+DO_TL:	SUBL2	OP_L_N(R2),CTX_POS(R6)
+	BGEQ	10$
+	CLRL	CTX_POS(R6)		; no further than the first column
+10$:	BRW	LOOP
+DO_P:	MOVL	OP_L_N(R2),CTX_SCALE(R6)
+	BRW	LOOP
+DO_S:	CLRB	CTX_SIGN(R6)
+	BRW	LOOP
+DO_SP:	MOVB	#1,CTX_SIGN(R6)
+	BRW	LOOP
+DO_SS:	MOVB	#2,CTX_SIGN(R6)
+	BRW	LOOP
+DO_BN:	CLRB	CTX_BLANK(R6)
+	BRW	LOOP
+DO_BZ:	MOVB	#1,CTX_BLANK(R6)
+	BRW	LOOP
+
+SLASH:	PUSHL	R6			; the record ends
+	CALLS	#1,NEW_RECORD
+	BRW	LOOP
+
+COLON:	BLBC	8(AP),10$		; the end, if there are no more items
+	BRW	STOP
+10$:	BRW	LOOP
+
+DOLLAR:	MOVB	#1,CTX_DOLLAR(R6)
+	BRW	LOOP
+
+GROUP:	MOVL	CTX_DEPTH(R6),R3	; a group's start: its place and count
+	MOVAQ	CTX_GROUPS(R6)[R3],R4	;  on the stack of groups
+	MOVL	R2,(R4)
+	MOVZWL	OP_W_REPEAT(R2),4(R4)
+	INCL	CTX_DEPTH(R6)
+	BRW	LOOP
+
+ENDGROUP:
+	SUBL3	#1,CTX_DEPTH(R6),R3	; a group's end: again, from its start,
+	MOVAQ	CTX_GROUPS(R6)[R3],R4	;  or done with it
+	DECL	4(R4)
+	BLEQ	10$
+	ADDL3	#OP_SIZE,(R4),CTX_OP(R6)
+	BRW	LOOP
+10$:	DECL	CTX_DEPTH(R6)
+	BRW	LOOP
+
+;
+; The format's end, with an item waiting: reversion, unless no item has
+; taken a data descriptor since the format started or last reverted.
+;
+AT_END:	BLBC	8(AP),5$
+	BRW	STOP
+5$:	TSTB	CTX_USED(R6)
+	BNEQ	10$
+	PUSHL	#FOR$_INFFORLOO
+	PUSHL	R6
+	CALLS	#2,FAIL
+	BRW	STOP
+10$:	CLRB	CTX_USED(R6)
+	PUSHL	R6
+	CALLS	#1,NEW_RECORD
+	MOVL	CTX_FORMAT(R6),R0
+	MOVL	FMT_A_REVERT(R0),CTX_OP(R6)
+	BRW	LOOP
+
+;
+; NEW_RECORD(context): ends the record: writes an output statement's,
+; reads an input statement's next.
+;
+NEW_RECORD:
+	.WORD	^M<>
+	PUSHL	4(AP)
+	MOVL	4(AP),R0
+	BLBC	CTX_KIND(R0),10$
+	CALLS	#1,WRITE_RECORD
+	RET
+10$:	CALLS	#1,READ_RECORD
+	RET
+
+;
+; WRITE_RECORD(context): writes the record built so far, with the
+; rewrite of its first byte a $ asked for, and starts the next. Nothing
+; is written once the statement has failed; a write that fails is its
+; error.
+;
+WRITE_RECORD:
+	.WORD	^M<R2>
+	MOVL	4(AP),R2
+	TSTL	CTX_STATUS(R2)
+	BNEQ	90$
+	TSTB	CTX_DOLLAR(R2)
+	BEQL	20$
+	TSTL	CTX_RECLEN(R2)
+	BEQL	20$
+	CMPB	CTX_RECORD(R2),#^A/ /
+	BNEQ	10$
+	MOVB	#^A/$/,CTX_RECORD(R2)	; a blank: no carriage return after
+	BRB	20$
+10$:	CMPB	CTX_RECORD(R2),#^A/+/
+	BNEQ	20$
+	CLRB	CTX_RECORD(R2)		; a +: nothing before or after
+20$:	PUSHL	CTX_RECLEN(R2)
+	PUSHAB	CTX_RECORD(R2)
+	PUSHL	CTX_STREAM(R2)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,30$
+	PUSHL	#FOR$_ERRDURWRI
+	PUSHL	R2
+	CALLS	#2,FAIL
+30$:	CLRL	CTX_RECLEN(R2)
+	CLRL	CTX_POS(R2)
+	CLRB	CTX_DOLLAR(R2)
+90$:	RET
+
+;
+; READ_RECORD(context): reads the next record into the context's.
+;
+READ_RECORD:
+	.WORD	^M<R2>
+	MOVL	4(AP),R2
+	TSTL	CTX_STATUS(R2)
+	BNEQ	90$
+	PUSHL	#RECORD_SIZE
+	PUSHAB	CTX_RECORD(R2)
+	PUSHL	CTX_STREAM(R2)
+	CALLS	#3,FTN$$UNIT_GET	; FTN_UNITS
+	BLBC	R0,80$
+	CMPL	R1,#INPUT_MAX
+	BLEQ	10$
+	MOVL	#FOR$_INPRECTOO,R0
+	BRB	80$
+10$:	MOVL	R1,CTX_RECLEN(R2)
+	CLRL	CTX_POS(R2)
+	RET
+80$:	PUSHL	R0
+	PUSHL	R2
+	CALLS	#2,FAIL
+90$:	RET
+
+;
+; PUT_CHARS(context, address, length): puts length bytes from address
+; (blanks, if address is 0) in the output record at the position, and
+; moves it past them. Bytes skipped before them become blanks; a byte
+; before the first column is lost, one past the record's limit is
+; FOR$_OUTSTAOVE.
+;
+PUT_CHARS:
+	.WORD	^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the context
+	MOVL	8(AP),R2		; the bytes
+	MOVL	12(AP),R3		; how many
+10$:	DECL	R3
+	BLSS	90$
+	MOVL	CTX_POS(R6),R4
+	INCL	CTX_POS(R6)
+	TSTL	R4
+	BLSS	40$			; before the first column
+	CMPL	R4,CTX_RECMAX(R6)
+	BGEQ	80$
+	MOVL	CTX_RECLEN(R6),R5	; blanks up to the position
+20$:	CMPL	R5,R4
+	BGEQ	30$
+	MOVB	#^A/ /,CTX_RECORD(R6)[R5]
+	INCL	R5
+	BRB	20$
+30$:	MOVB	#^A/ /,CTX_RECORD(R6)[R4]
+	TSTL	R2
+	BEQL	35$
+	MOVB	(R2),CTX_RECORD(R6)[R4]
+35$:	INCL	R4
+	CMPL	R4,CTX_RECLEN(R6)
+	BLEQ	40$
+	MOVL	R4,CTX_RECLEN(R6)	; the record is longer
+40$:	TSTL	R2
+	BEQL	10$
+	INCL	R2
+	BRB	10$
+80$:	PUSHL	#FOR$_OUTSTAOVE
+	PUSHL	R6
+	CALLS	#2,FAIL
+90$:	RET
+
+;
+; GET_CHARS(context, address, length): copies length characters of the
+; input record from the position to address, blanks past the record's
+; end, and moves the position past them.
+;
+GET_CHARS:
+	.WORD	^M<R2,R3,R4,R5>
+	MOVL	4(AP),R5		; the context
+	MOVL	8(AP),R2		; where they go
+	MOVL	12(AP),R3		; how many
+10$:	DECL	R3
+	BLSS	90$
+	MOVL	CTX_POS(R5),R4
+	INCL	CTX_POS(R5)
+	MOVB	#^A/ /,(R2)
+	TSTL	R4
+	BLSS	20$
+	CMPL	R4,CTX_RECLEN(R5)
+	BGEQ	20$
+	MOVB	CTX_RECORD(R5)[R4],(R2)
+20$:	INCL	R2
+	BRB	10$
+90$:	RET
+
+;
+; EDIT(context, op, address, length, type): edits one item, of type and
+; length at address, by the data descriptor op.
+;
+EDIT:	.WORD	^M<R2,R3,R4,R5>
+	MOVL	8(AP),R0
+	CASEB	OP_B_CODE(R0),#C_I,#<C_Q-C_I>
+10$:	.WORD	NOT_YET-10$		; I
+	.WORD	NOT_YET-10$		; O
+	.WORD	NOT_YET-10$		; Z
+	.WORD	NOT_YET-10$		; F
+	.WORD	NOT_YET-10$		; E
+	.WORD	NOT_YET-10$		; D
+	.WORD	NOT_YET-10$		; G
+	.WORD	NOT_YET-10$		; L
+	.WORD	EDIT_A-10$		; A
+	.WORD	EDIT_Q-10$		; Q
+NOT_YET:
+	PUSHL	#FOR$_NOTIMP
+	PUSHL	4(AP)
+	CALLS	#2,FAIL
+	RET
+
+;
+; A (8.3.10): characters, of an item of any type, its bytes as they are
+; stored. Aw writes the item's first w bytes, or if w is longer, blanks
+; and then the whole item; it reads w characters into the item, the
+; last of them if w is longer, followed by blanks if w is shorter. A
+; alone is A of the item's length.
+;
+EDIT_A:	MOVL	4(AP),R1		; the context
+	MOVZWL	OP_W_W(R0),R2		; w,
+	BBS	#0,OP_B_FLAGS(R0),10$	;  if given (F_W)
+	MOVL	16(AP),R2		;  else the item's length
+10$:	SUBL3	16(AP),R2,R3		; w less the length
+	BLBC	CTX_KIND(R1),50$
+	;
+	; Output: no further than the record's end.
+	;
+	ADDL3	CTX_POS(R1),R2,R0
+	CMPL	R0,CTX_RECMAX(R1)
+	BLEQ	20$
+	PUSHL	#FOR$_OUTSTAOVE
+	PUSHL	R1
+	CALLS	#2,FAIL
+	RET
+20$:	TSTL	R3
+	BLEQ	30$
+	PUSHL	R3			; the blanks before
+	CLRL	-(SP)
+	PUSHL	R1
+	CALLS	#3,PUT_CHARS
+	MOVL	16(AP),R2		; then the whole item
+30$:	PUSHL	R2
+	PUSHL	12(AP)
+	PUSHL	4(AP)
+	CALLS	#3,PUT_CHARS
+	RET
+	;
+	; Input.
+	;
+50$:	TSTL	R3
+	BLSS	60$
+	ADDL2	R3,CTX_POS(R1)		; the field's last characters
+	PUSHL	16(AP)
+	PUSHL	12(AP)
+	PUSHL	R1
+	CALLS	#3,GET_CHARS
+	RET
+60$:	PUSHL	R2			; the field, then blanks
+	PUSHL	12(AP)
+	PUSHL	R1
+	CALLS	#3,GET_CHARS
+	ADDL3	12(AP),R2,R1
+	MNEGL	R3,R0
+	MOVC5	#0,(R1),#^A/ /,R0,(R1)
+	RET
+
+;
+; Q (8.3.13): on input, the number of characters left in the record,
+; stored as an integer of the item's length; an item that isn't an
+; integer or a logical gets it too (in its first byte, word, or
+; longword, by its length), and then the statement fails with FOR$_FORVARMIS, as VMS's
+; does. On output, Q takes the item and writes nothing.
+;
+EDIT_Q:	MOVL	4(AP),R1		; the context
+	BLBS	CTX_KIND(R1),90$	; output: nothing
+	SUBL3	CTX_POS(R1),CTX_RECLEN(R1),R0
+	BGEQ	10$
+	CLRL	R0			; past the end: none
+10$:	MOVL	12(AP),R2		; the item
+	CMPL	16(AP),#1
+	BNEQ	20$
+	MOVB	R0,(R2)
+	BRB	40$
+20$:	CMPL	16(AP),#3
+	BGTR	30$
+	MOVW	R0,(R2)
+	BRB	40$
+30$:	MOVL	R0,(R2)
+40$:	MOVL	20(AP),R0		; its type
+	CMPL	R0,#DSC$K_DTYPE_BU
+	BLSS	50$
+	CMPL	R0,#DSC$K_DTYPE_LU
+	BLEQ	90$			; BU, WU, LU
+	CMPL	R0,#DSC$K_DTYPE_B
+	BLSS	50$
+	CMPL	R0,#DSC$K_DTYPE_L
+	BLEQ	90$			; B, W, L
+50$:	PUSHL	#FOR$_FORVARMIS
+	PUSHL	R1
+	CALLS	#2,FAIL
+90$:	RET
+
+;
+; PARSE(text, length, result)
+;
+; Parses the format whose text, length bytes, is at text into a parsed
+; format, made with LIB$GET_VM, and stores its address in the longword
+; at result. Returns in R0 SS$_NORMAL, FOR$_SYNERRFOR if the format is
+; wrong (and nothing is stored), or FOR$_INSVIRMEM.
+;
+; The block has room for an operation per character of the text, more
+; than there can be (each operation is made from at least one character,
+; and the first parenthesis makes none), and for all of the text.
+;
+; The registers, through the parse:
+;
+;	R5	1 if the item just read needs a comma (or one of the items
+;		that need none) before the next: (1X I3) is wrong, (1X'A')
+;		isn't
+;	R6	the next character of the text, R7 the text's end
+;	R8	where the next operation goes, R9 the next text
+;	R10	the block, R11 how many groups are open
+;
+; An open group's operation's address is pushed on the stack, and popped
+; at its end. A syntax error from anywhere (a JSB subroutine included)
+; goes to SYNTAX, whose RET puts the stack right.
+;
+PARSE:	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	4(AP),R6
+	ADDL3	8(AP),R6,R7
+	MULL3	#OP_SIZE+1,8(AP),R0	; the block's size
+	ADDL2	#FMT_OPS+OP_SIZE+4,R0
+	CLRL	-(SP)			; LIB$GET_VM's block address
+	PUSHL	R0			;  and size
+	PUSHAL	4(SP)
+	PUSHAL	4(SP)
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,5$
+	MOVL	#FOR$_INSVIRMEM,R0
+	RET
+5$:	MOVL	4(SP),R10
+	MOVL	(SP),FMT_L_SIZE(R10)
+	ADDL2	#8,SP
+	MOVAB	FMT_OPS(R10),R8
+	MOVL	R8,FMT_A_REVERT(R10)	; the start, unless a group follows
+	MULL3	#OP_SIZE,8(AP),R9
+	ADDL2	#OP_SIZE,R9
+	ADDL2	R8,R9			; the text, after the operations
+	CLRL	R11
+	CLRL	R5
+	JSB	NEXTCH			; first, the opening parenthesis
+	CMPB	R0,#^A/(/
+	BEQL	LIST1
+	BRW	SYNTAX
+LIST1:	INCL	R6
+
+;
+; LIST: the next thing in the list of a group, or of the format itself.
+;
+LIST:	JSB	NEXTCH
+	TSTB	R0
+	BNEQ	10$
+	BRW	SYNTAX			; no closing parenthesis
+10$:	CMPB	R0,#^A/)/
+	BNEQ	20$
+	BRW	CLOSE
+20$:	CMPB	R0,#^A/,/
+	BNEQ	30$
+	INCL	R6
+	CLRL	R5
+	BRB	LIST
+30$:	MOVL	#C_SLASH,R1
+	CMPB	R0,#^A\/\
+	BEQL	35$
+	MOVL	#C_COLON,R1
+	CMPB	R0,#^A/:/
+	BEQL	35$
+	MOVL	#C_DOLLAR,R1
+	CMPB	R0,#^A/$/
+	BNEQ	40$
+35$:	INCL	R6			; /, :, $: no comma needed
+	MOVL	R1,R0
+	JSB	EMIT
+	CLRL	R5
+	BRB	LIST
+40$:	CMPB	R0,#^A/'/
+	BNEQ	50$
+	JSB	QUOTED			; 'text'
+	CLRL	R5
+	BRB	LIST
+50$:	TSTL	R5			; anything else, after a comma
+	BEQL	ITEM			;  or an item that needs none,
+	JSB	AT_H			;  or an H constant
+	BLBS	R0,ITEM
+	BRW	SYNTAX
+
+;
+; CLOSE: a closing parenthesis, of a group or of the format.
+;
+CLOSE:	INCL	R6
+	TSTL	R11
+	BEQL	10$
+	MOVL	(SP)+,R2		; the group's operation
+	MOVL	#C_ENDGROUP,R0
+	JSB	EMIT
+	MOVL	R2,OP_L_N(R1)		; the end knows the group,
+	MOVL	R1,OP_L_N(R2)		;  and the group its end
+	DECL	R11
+	MOVL	#1,R5			; a comma before the next
+	BRW	LIST
+10$:	MOVL	#C_END,R0		; the format's end: anything after it
+	JSB	EMIT			;  is ignored, as VMS ignores it
+	MOVL	12(AP),R0
+	MOVL	R10,(R0)
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; ITEM: an edit descriptor or a group, at R6: perhaps a sign (P's
+; alone), perhaps a number (a repeat count, or the count of X, H, or P),
+; and the descriptor's letters.
+;
+ITEM:	CLRL	R3			; the sign
+	JSB	NEXTCH
+	CMPB	R0,#^A/+/
+	BNEQ	2$
+	MOVL	#1,R3
+	BRB	3$
+2$:	CMPB	R0,#^A/-/
+	BNEQ	4$
+	MNEGL	#1,R3
+3$:	INCL	R6
+4$:	JSB	NUMBER
+	MOVL	R0,R2			; R2: 1 if there is a count,
+	MOVL	R1,R4			; R4: the count
+	JSB	NEXTCH
+	TSTB	R0
+	BEQL	9$			; no closing parenthesis
+	TSTL	R3
+	BEQL	5$
+	CMPB	R0,#^A/P/		; only P may have a sign
+	BNEQ	9$
+5$:	CMPB	R0,#^A/P/
+	BEQL	DO_PARSE_P
+	CMPB	R0,#^A/X/
+	BEQL	DO_PARSE_X
+	CMPB	R0,#^A/H/
+	BNEQ	6$
+	BRW	DO_PARSE_H
+6$:	CMPB	R0,#^A/(/
+	BNEQ	7$
+	BRW	DO_PARSE_GROUP
+7$:	CMPB	R0,#^A/'/		; a character constant with a count
+	BEQL	9$
+	BRW	LETTERS
+9$:	BRW	SYNTAX
+
+DO_PARSE_P:				; kP: P alone is 0P
+	INCL	R6
+	TSTL	R2
+	BNEQ	10$
+	CLRL	R4
+10$:	TSTL	R3
+	BGEQ	20$
+	MNEGL	R4,R4
+20$:	CMPL	R4,#-128
+	BLSS	30$
+	CMPL	R4,#127
+	BGTR	30$
+	MOVL	#C_P,R0
+	JSB	EMIT
+	MOVL	R4,OP_L_N(R1)
+	CLRL	R5			; no comma needed after it
+	BRW	LIST
+30$:	BRW	SYNTAX
+
+DO_PARSE_X:				; nX: X alone is 1X
+	INCL	R6
+	TSTL	R2
+	BNEQ	10$
+	MOVL	#1,R4
+10$:	MOVL	#C_X,R0
+	JSB	EMIT
+	MOVL	R4,OP_L_N(R1)
+	MOVL	#1,R5
+	BRW	LIST
+
+DO_PARSE_H:				; nH and n characters
+	TSTL	R2
+	BEQL	20$
+	TSTL	R4
+	BEQL	20$
+	INCL	R6			; past the H
+	SUBL3	R6,R7,R0
+	CMPL	R0,R4
+	BLSS	20$			; the text ends before them
+	PUSHL	R9			; where its text goes,
+	PUSHL	R4			;  and its length
+	MOVC3	R4,(R6),(R9)		; MOVC3 changes R0 to R5
+	MOVL	R1,R6			; past the text, in both
+	MOVL	R3,R9
+	MOVL	#C_TEXT,R0
+	JSB	EMIT
+	MOVL	(SP)+,R2
+	MOVW	R2,OP_W_REPEAT(R1)
+	MOVL	(SP)+,OP_L_N(R1)
+	CLRL	R5			; no comma needed after it
+	BRW	LIST
+20$:	BRW	SYNTAX
+
+DO_PARSE_GROUP:				; r( : a group, at most 8 deep
+	CMPL	R11,#MAX_DEPTH
+	BGEQ	20$
+	INCL	R6
+	JSB	REPEAT
+	MOVL	#C_GROUP,R0
+	JSB	EMIT
+	MOVW	R4,OP_W_REPEAT(R1)
+	TSTL	R11
+	BNEQ	10$
+	MOVL	R1,FMT_A_REVERT(R10)	; the format's own level: reversion's
+10$:	PUSHL	R1			; until its end
+	INCL	R11
+	CLRL	R5
+	BRW	LIST
+20$:	BRW	SYNTAX
+
+;
+; LETTERS: a descriptor's letters: one (I, O, Z, F, E, D, G, L, A, Q), or
+; T, TL, TR, S, SP, SS, BN, BZ, each read as the longest it can be.
+;
+LETTERS:
+	INCL	R6
+	MOVL	R0,R1			; the letter
+	MOVAB	SINGLE,R3		; the one-letter descriptors' table
+	CLRL	R0
+10$:	CMPB	R1,(R3)[R0]
+	BNEQ	15$
+	BRW	DATA_ITEM		; R0 is its code
+15$:	AOBLSS	#C_Q+1,R0,10$
+	JSB	NEXTCH			; the second letter, perhaps
+	CMPB	R1,#^A/T/
+	BNEQ	30$
+	MOVL	#C_TL,R3
+	CMPB	R0,#^A/L/
+	BEQL	25$
+	MOVL	#C_TR,R3
+	CMPB	R0,#^A/R/
+	BEQL	25$
+	MOVL	#C_T,R3
+	BRB	COLUMN
+25$:	INCL	R6
+	BRB	COLUMN
+30$:	CMPB	R1,#^A/S/
+	BNEQ	40$
+	MOVL	#C_SP,R3
+	CMPB	R0,#^A/P/
+	BEQL	35$
+	MOVL	#C_SS,R3
+	CMPB	R0,#^A/S/
+	BEQL	35$
+	MOVL	#C_S,R3
+	BRB	ALONE
+35$:	INCL	R6
+	BRB	ALONE
+40$:	CMPB	R1,#^A/B/
+	BNEQ	50$
+	MOVL	#C_BN,R3
+	CMPB	R0,#^A/N/
+	BEQL	35$
+	MOVL	#C_BZ,R3
+	CMPB	R0,#^A/Z/
+	BEQL	35$
+50$:	BRW	SYNTAX
+
+;
+; T, TL, TR: no repeat count, and a column count from 0 to 32767.
+;
+COLUMN:	TSTL	R2
+	BNEQ	10$
+	JSB	NUMBER
+	BLBC	R0,10$
+	CMPL	R1,#MAX_WIDTH
+	BGTR	10$
+	MOVL	R1,R4
+	MOVL	R3,R0
+	JSB	EMIT
+	MOVL	R4,OP_L_N(R1)
+	MOVL	#1,R5
+	BRW	LIST
+10$:	BRW	SYNTAX
+
+;
+; Q, S, SP, SS, BN, BZ: no repeat count, and nothing after.
+;
+ALONE:	TSTL	R2
+	BNEQ	10$
+	MOVL	R3,R0
+	JSB	EMIT
+	MOVW	#1,OP_W_REPEAT(R1)	; Q takes one item
+	MOVL	#1,R5
+	BRW	LIST
+10$:	BRW	SYNTAX
+
+;
+; A data descriptor, its code in R0: its repeat count, then its fields:
+; w, then .m for I, O, and Z, .d for the others but L and A, and Ee for E
+; and G. The fields may be left out together (I alone: a default width),
+; and E and G's exponent alone; F, E, D, and G with a width need .d too.
+;
+DATA_ITEM:
+	CMPL	R0,#C_Q
+	BNEQ	5$
+	MOVL	R0,R3			; Q has neither a count nor fields
+	BRB	ALONE
+5$:	PUSHL	R0
+	JSB	REPEAT
+	MOVL	(SP)+,R0
+	JSB	EMIT
+	MOVW	R4,OP_W_REPEAT(R1)
+	MOVL	R1,R3			; R3: the operation
+	MOVL	#1,R5
+	JSB	NUMBER			; w
+	BLBS	R0,10$
+	BRW	LIST
+10$:	CMPL	R1,#MAX_WIDTH
+	BLEQ	15$
+	BRW	SYNTAX
+15$:	MOVW	R1,OP_W_W(R3)
+	BISB2	#F_W,OP_B_FLAGS(R3)
+	CMPB	OP_B_CODE(R3),#C_L
+	BGEQU	90$			; L and A: nothing more
+	CMPB	OP_B_CODE(R3),#C_Z
+	BGTRU	20$
+	JSB	NEXTCH			; I, O, Z: .m, perhaps
+	CMPB	R0,#^A/./
+	BNEQ	90$
+	INCL	R6
+	JSB	DIGITS
+	MOVB	R1,OP_B_D(R3)
+	BISB2	#F_D,OP_B_FLAGS(R3)
+	BRB	90$
+20$:	JSB	NEXTCH			; F, E, D, G: .d
+	CMPB	R0,#^A/./
+	BNEQ	80$
+	INCL	R6
+	JSB	DIGITS
+	MOVB	R1,OP_B_D(R3)
+	BISB2	#F_D,OP_B_FLAGS(R3)
+	CMPB	OP_B_CODE(R3),#C_E
+	BEQL	30$
+	CMPB	OP_B_CODE(R3),#C_G
+	BNEQ	90$
+30$:	JSB	NEXTCH			; E, G: Ee, perhaps
+	CMPB	R0,#^A/E/
+	BNEQ	90$
+	INCL	R6
+	JSB	NUMBER			; E with no digits: no exponent field
+	BLBC	R0,90$
+	TSTL	R1
+	BEQL	80$
+	CMPL	R1,#255
+	BGTR	80$
+	MOVB	R1,OP_B_E(R3)
+	BISB2	#F_E,OP_B_FLAGS(R3)
+90$:	BRW	LIST
+80$:	BRW	SYNTAX
+
+;
+; SYNTAX: the format is wrong. The block goes, and the stack with the
+; frame.
+;
+SYNTAX:	PUSHL	R10			; a longword holding the block's address
+	MOVL	SP,R0
+	PUSHL	R0			; LIB$FREE_VM's second argument,
+	PUSHAL	FMT_L_SIZE(R10)		;  and its first, the size
+	CALLS	#2,G^LIB$FREE_VM
+	MOVL	#FOR$_SYNERRFOR,R0
+	RET
+
+;
+; The JSB subroutines of PARSE.
+;
+; NEXTCH: the next character at or after R6 that isn't a blank or a tab,
+; in R0, made a capital; R6 is left at it. R0 is 0 at the text's end.
+;
+NEXTCH:	CMPL	R6,R7
+	BGEQU	20$
+	MOVZBL	(R6),R0
+	CMPB	R0,#^A/ /
+	BEQL	10$
+	CMPB	R0,#9
+	BEQL	10$
+	CMPB	R0,#^A/a/
+	BLSSU	5$
+	CMPB	R0,#^A/z/
+	BGTRU	5$
+	SUBB2	#^A/a/-^A/A/,R0
+5$:	RSB
+10$:	INCL	R6
+	BRB	NEXTCH
+20$:	CLRL	R0
+	RSB
+
+;
+; NUMBER: an unsigned number at R6, its digits perhaps with blanks among
+; them: R0 1 and R1 its value, held at MAX_WIDTH+1 if larger (which every
+; limit refuses), or R0 0 if there is none. A variable format expression
+; isn't allowed yet: a syntax error.
+;
+NUMBER:	CLRL	R1
+	JSB	NEXTCH
+	CMPB	R0,#^A/</
+	BNEQ	5$
+	BRW	SYNTAX
+5$:	CMPB	R0,#^A/0/
+	BLSSU	30$
+	CMPB	R0,#^A/9/
+	BGTRU	30$
+10$:	SUBL2	#^A/0/,R0		; the digit's value
+	CMPL	R1,#MAX_WIDTH
+	BGTR	15$			; held
+	MULL2	#10,R1
+	ADDL2	R0,R1
+15$:	INCL	R6
+	JSB	NEXTCH
+	CMPB	R0,#^A/0/
+	BLSSU	20$
+	CMPB	R0,#^A/9/
+	BLEQU	10$
+20$:	CMPL	R1,#MAX_WIDTH+1
+	BLEQ	25$
+	MOVL	#MAX_WIDTH+1,R1
+25$:	MOVL	#1,R0
+	RSB
+30$:	CLRL	R0
+	RSB
+
+;
+; DIGITS: m or d, a number from 0 to 255 that must be there, in R1.
+;
+DIGITS:	JSB	NUMBER
+	BLBC	R0,10$
+	CMPL	R1,#255
+	BGTR	10$
+	RSB
+10$:	BRW	SYNTAX
+
+;
+; REPEAT: the repeat count of a data descriptor or group, from R2 (1 if
+; a number was read) and R4 (the number), into R4: 1 if there was none;
+; 0 and more than 32767 are errors.
+;
+REPEAT:	TSTL	R2
+	BNEQ	10$
+	MOVL	#1,R4
+	RSB
+10$:	TSTL	R4
+	BEQL	20$
+	CMPL	R4,#MAX_WIDTH
+	BGTR	20$
+	RSB
+20$:	BRW	SYNTAX
+
+;
+; AT_H: R0 1 if an H constant starts at R6 (digits, then H), else 0.
+; R6 is left where it was.
+;
+AT_H:	PUSHL	R6
+	JSB	NUMBER
+	BLBC	R0,10$
+	JSB	NEXTCH
+	CMPB	R0,#^A/H/
+	BNEQ	10$
+	MOVL	#1,R0
+	BRB	20$
+10$:	CLRL	R0
+20$:	MOVL	(SP)+,R6
+	RSB
+
+;
+; QUOTED: a character constant, from its opening apostrophe at R6: its
+; text, each doubled apostrophe made one, an operation C_TEXT. It must
+; hold a character.
+;
+QUOTED:	INCL	R6
+	MOVL	R9,R2			; where its text starts
+10$:	CMPL	R6,R7
+	BGEQU	40$			; no closing apostrophe
+	MOVB	(R6)+,R0
+	CMPB	R0,#^A/'/
+	BEQL	20$
+15$:	MOVB	R0,(R9)+
+	BRB	10$
+20$:	CMPL	R6,R7
+	BGEQU	30$
+	CMPB	(R6),#^A/'/
+	BNEQ	30$
+	INCL	R6			; a doubled apostrophe
+	BRB	15$
+30$:	SUBL3	R2,R9,R3		; its length
+	BEQL	40$
+	MOVL	#C_TEXT,R0
+	JSB	EMIT
+	MOVW	R3,OP_W_REPEAT(R1)
+	MOVL	R2,OP_L_N(R1)
+	RSB
+40$:	BRW	SYNTAX
+
+;
+; EMIT: a new operation, its code in R0, the rest zeros; its address in
+; R1.
+;
+EMIT:	MOVL	R8,R1
+	CLRQ	(R1)
+	CLRL	8(R1)
+	MOVB	R0,OP_B_CODE(R1)
+	ADDL2	#OP_SIZE,R8
+	RSB
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+SINGLE:	.ASCII	/IOZFEDGLAQ/		; the one-letter descriptors, by code
+
+	.END

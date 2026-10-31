@@ -1,5 +1,5 @@
 	.TITLE	FTN_UNITS - FTNRTL's logical units
-	.IDENT	/V1.1/
+	.IDENT	/V1.2/
 ;
 ; A FORTRAN program reads and writes logical units: numbers its I/O
 ; statements name (WRITE (6,...)), or the default units of the
@@ -46,6 +46,7 @@
 ;
 	$FABDEF				; the FAB's fields
 	$RABDEF				; the RAB's fields
+	$RMSDEF				; RMS's statuses
 	$SSDEF
 
 UB_OPEN		= 0			; the block's fields
@@ -54,7 +55,9 @@ UB_FAB		= 8
 UB_RAB		= UB_FAB+FAB$C_BLN
 
 FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
-FOR$_INVLOGUNI	= ^X00188104		;  their severities
+FOR$_INPRECTOO	= ^X001880B4		;  their severities
+FOR$_ENDDURREA	= ^X001880C4
+FOR$_INVLOGUNI	= ^X00188104
 FOR$_ERRDURREA	= ^X0018813C
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
@@ -163,6 +166,39 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 	MOVL	8(AP),RAB$L_RBF(R2)	; the record
 	MOVW	12(AP),RAB$W_RSZ(R2)	; and its length
 	$PUT	RAB=R2
+	RET
+
+;
+; FTN$$UNIT_GET(block, buffer, size)
+;
+; Reads the next record of the stream whose block is given, which
+; FTN$$UNIT_OPEN has connected, into buffer, which holds size bytes (a
+; longword, by value). Returns in R0 SS$_NORMAL and in R1 the record's
+; length, or in R0 the FOR$_ condition for the failure: ENDDURREA at the
+; end of the file, INPRECTOO for a record longer than the buffer (RMS's
+; RTB or RSZ), ERRDURREA for any other.
+;
+	.ENTRY	FTN$$UNIT_GET,^M<R2>
+	MOVL	4(AP),R2
+	MOVAB	UB_RAB(R2),R2		; the RAB
+	MOVL	8(AP),RAB$L_UBF(R2)	; the buffer
+	MOVW	12(AP),RAB$W_USZ(R2)	; and its size
+	$GET	RAB=R2
+	BLBC	R0,10$
+	MOVZWL	RAB$W_RSZ(R2),R1
+	MOVL	#SS$_NORMAL,R0
+	RET
+10$:	CMPL	R0,#RMS$_EOF
+	BNEQ	20$
+	MOVL	#FOR$_ENDDURREA,R0
+	RET
+20$:	CMPL	R0,#RMS$_RTB
+	BEQL	30$
+	CMPL	R0,#RMS$_RSZ
+	BNEQ	40$
+30$:	MOVL	#FOR$_INPRECTOO,R0
+	RET
+40$:	MOVL	#FOR$_ERRDURREA,R0
 	RET
 
 	.END

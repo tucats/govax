@@ -1,0 +1,253 @@
+package console
+
+import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/tucats/govax/internal/rms"
+)
+
+// TestFor80Oracle holds FTNRTL to VMS's FORTRAN run-time library
+// (docs/PHASE-80 - FORTRAN formatted IO.md, Decision 2): testdata/for80's
+// for80.for is the probe's output cases to unit 6 as FORTRAN statements,
+// each between a line "#n" and a line "=n" with its IOSTAT, and VMS's run
+// of the same cases through FORRTL is vax/for80-vax.txt, each case's
+// records as FOR80D printed them (between bars, a byte that doesn't print
+// as a period) and its e=, FOR$ERRSNS's number of the error. The program
+// runs with SYS$OUTPUT a file, so that its records keep their first bytes,
+// as VMS's unit 6 file kept them, and each case's records and IOSTAT must
+// be VMS's records and e=.
+//
+// A case whose IOSTAT is 2, FOR$_NOTIMP, uses an edit FTNRTL doesn't have
+// yet, and is passed over until the subtask that brings it; the test logs
+// how many were compared. expectedFor80Differences lists the cases that
+// are known to differ, with the reason.
+func TestFor80Oracle(t *testing.T) {
+	vms := readFor80VMS(t)
+
+	d, c, buf := shareFindConsole(t, false)
+
+	// The program and its MACRO file are larger than the shared volumes
+	// hold: a volume of its own on DUA2.
+	shareFindRun(t, d, "DISMOUNT DUA2")
+
+	volume := filepath.Join(t.TempDir(), "for80.dsk")
+	if err := c.cmd().InitializeContainer(volume, 20000, "FOR80", 0, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().Mount("DUA2:", volume, true); err != nil {
+		t.Fatal(err)
+	}
+
+	shareFindRun(t, d, "SET DEFAULT DUA2:[000000]")
+	buf.Reset()
+
+	source, err := os.ReadFile(filepath.Join(for80Dir, "for80.for"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA2:[000000]FOR80.FOR"},
+		rms.TextRecords, splitSource(string(source))); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{"FORTRAN FOR80", "MACRO FOR80", "LINK FOR80"} {
+		shareFindRun(t, d, command)
+
+		if out := buf.String(); out != "" {
+			t.Fatalf("%s said:\n%s", command, out)
+		}
+	}
+
+	shareFindRun(t, d, "DEFINE/USER_MODE SYS$OUTPUT FOR80.DAT")
+
+	if out := shareRun(t, d, buf, "FOR80"); out != "  $STATUS == \"%X00000001\"\n" {
+		t.Fatalf("RUN FOR80 printed:\n%s", out)
+	}
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA2:[000000]FOR80.DAT"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	govax := splitFor80Cases(t, records)
+
+	compared, notYet := 0, 0
+	stale := map[int]bool{}
+
+	for n := range expectedFor80Differences {
+		stale[n] = true
+	}
+
+	numbers := make([]int, 0, len(govax))
+	for n := range govax {
+		numbers = append(numbers, n)
+	}
+
+	sort.Ints(numbers)
+
+	for _, n := range numbers {
+		got := govax[n]
+		if got.status == 2 {
+			notYet++
+
+			continue
+		}
+
+		want, ok := vms[n]
+		if !ok {
+			t.Errorf("#%d: no case in VMS's run", n)
+
+			continue
+		}
+
+		compared++
+
+		same := got.status == want.status && strings.Join(got.records, "\n") == strings.Join(want.records, "\n")
+		if _, known := expectedFor80Differences[n]; known {
+			if same {
+				t.Errorf("#%d now matches VMS's run: take it out of expectedFor80Differences", n)
+			}
+
+			delete(stale, n)
+
+			continue
+		}
+
+		if !same {
+			t.Errorf("#%d %s: got status %d and records\n%s\nwant status %d and records\n%s", n, want.title,
+				got.status, strings.Join(got.records, "\n"), want.status, strings.Join(want.records, "\n"))
+		}
+	}
+
+	for n := range stale {
+		if govax[n].status != 2 {
+			t.Errorf("#%d is in expectedFor80Differences but wasn't compared", n)
+		}
+	}
+
+	t.Logf("%d cases compared with VMS's run, %d not yet (NOTIMP)", compared, notYet)
+
+	if compared == 0 {
+		t.Error("no case was compared")
+	}
+}
+
+// expectedFor80Differences are the cases of TestFor80Oracle known to
+// differ from VMS's run, each with the reason.
+var expectedFor80Differences = map[int]string{}
+
+// for80Dir is the probe's directory.
+var for80Dir = filepath.Join("..", "..", "testdata", "for80")
+
+// for80Case is one case's result: its records, as FOR80D shows them, and
+// its status (VMS's e=, govax's IOSTAT). title is VMS's line for it.
+type for80Case struct {
+	title   string
+	records []string
+	status  int
+}
+
+// for80Start and for80End match VMS's lines that begin and end a case.
+var (
+	for80Start = regexp.MustCompile(`^#(\d+) `)
+	for80End   = regexp.MustCompile(`^=(\d+) r=\S+ e=(-?\d+) `)
+)
+
+// readFor80VMS reads VMS's run: each case's records and e=.
+func readFor80VMS(t *testing.T) map[int]for80Case {
+	t.Helper()
+
+	text, err := os.ReadFile(filepath.Join(for80Dir, "vax", "for80-vax.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := map[int]for80Case{}
+	current := -1
+
+	var c for80Case
+
+	for _, line := range strings.Split(strings.TrimRight(string(text), "\n"), "\n") {
+		line = strings.TrimSuffix(strings.TrimPrefix(line, "|"), "|")
+
+		if m := for80Start.FindStringSubmatch(line); m != nil {
+			current, _ = strconv.Atoi(m[1])
+			c = for80Case{title: line}
+
+			continue
+		}
+
+		if m := for80End.FindStringSubmatch(line); m != nil && current >= 0 {
+			if n, _ := strconv.Atoi(m[1]); n == current {
+				c.status, _ = strconv.Atoi(m[2])
+				cases[current] = c
+				current = -1
+			}
+
+			continue
+		}
+
+		if current >= 0 {
+			c.records = append(c.records, line)
+		}
+	}
+
+	return cases
+}
+
+// splitFor80Cases splits govax's records into cases, at the lines "#n"
+// and "=n status" the program writes around each one. A record shows as
+// FOR80D showed VMS's: a byte that doesn't print as a period.
+func splitFor80Cases(t *testing.T, records [][]byte) map[int]for80Case {
+	t.Helper()
+
+	cases := map[int]for80Case{}
+	current := -1
+
+	var c for80Case
+
+	for _, record := range records {
+		fields := strings.Fields(string(record))
+
+		if len(fields) == 1 && strings.HasPrefix(fields[0], "#") {
+			if n, err := strconv.Atoi(fields[0][1:]); err == nil {
+				current, c = n, for80Case{}
+
+				continue
+			}
+		}
+
+		if len(fields) == 2 && current >= 0 && fields[0] == "="+strconv.Itoa(current) {
+			c.status, _ = strconv.Atoi(fields[1])
+			cases[current] = c
+			current = -1
+
+			continue
+		}
+
+		if current >= 0 {
+			shown := []byte(string(record))
+			for i, b := range shown {
+				if b < ' ' || b > '~' {
+					shown[i] = '.'
+				}
+			}
+
+			c.records = append(c.records, string(shown))
+		}
+	}
+
+	if current >= 0 {
+		t.Errorf("case #%d has no end", current)
+	}
+
+	return cases
+}

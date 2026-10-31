@@ -4356,9 +4356,10 @@ every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
-statement, with FORMAT checked as it compiles; FTNRTL runs only
-list-directed output so far, and stops a program at any other I/O
-statement with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
+statement, with FORMAT checked as it compiles; FTNRTL runs formatted
+input and output, with the A and Q edit descriptors so far, and
+list-directed output, and stops a program at any other I/O statement or
+edit descriptor with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -4623,10 +4624,18 @@ output it prints, and programs of several files in its `modules` directory.
   IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
   compile, by the rules VMS's FORTRAN run-time library applies
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
-  runs only list-directed output, to the default units and units 5 and 6
-  (SYS$INPUT and SYS$OUTPUT); every other I/O statement is FOR's
-  `NOTIMP` when it runs, and so are units 0 to 4 and 7 to 119, which
-  later phases add. Unformatted, direct access, and keyed I/O, REWRITE,
+  runs formatted input and output and list-directed output, to the
+  default units and units 5 and 6 (SYS$INPUT and SYS$OUTPUT). A format's
+  text, H constants, X, T, TL, TR, slashes, groups, reversion, the colon,
+  and the dollar sign work as section 8 of the language manual says, as do
+  A and Q; the other data edit descriptors (I, O, Z, F, E, D, G, L) are
+  FOR's `NOTIMP` when a value reaches one, as is every other I/O
+  statement, and so are units 0 to 4 and 7 to 119, which later phases
+  add. A run-time format is checked when it is used: one VMS's FORTRAN
+  run-time library would refuse is `SYNERRFOR` (62). A format that runs
+  out of data edit descriptors with items left is `INFFORLOO` (60), and a
+  record past column 133 `OUTSTAOVE` (66); reading, a record longer than
+  199 characters is `INPRECTOO` (22). Unformatted, direct access, and keyed I/O, REWRITE,
   OPEN, CLOSE, and the like, and variable format expressions (`I<N>`), are
   `%FORT-E-NOTIMPL`.
 - **I/O errors:** a statement with ERR=, END=, or IOSTAT= gets FTNRTL's
@@ -4878,7 +4887,8 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$WRITE_SL(icb, unit)` | Starts a list-directed WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `*`, -2 for TYPE) |
-| `FTN$READ_SF`, `FTN$WRITE_SF`, `FTN$READ_SL`, `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (formatted, list-directed, or namelist; a unit or an internal file), given a format too; so far each is `FOR$_NOTIMP` |
+| `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address) or, with the control block's bit 3, a run-time format's descriptor |
+| `FTN$READ_SL`, `FTN$READ_SN`, `FTN$WRITE_SN`, `FTN$READ_IF`, `FTN$WRITE_IF`, `FTN$READ_IL`, `FTN$WRITE_IL`, `FTN$DECODE`, `FTN$ENCODE` | Start the other I/O statements (list-directed input, namelist, an internal file), given a format too; so far each is `FOR$_NOTIMP` |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |

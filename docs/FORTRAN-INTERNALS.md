@@ -1513,6 +1513,46 @@ FTNRTL calls LIBRTL for the conversions as any VAX program would, through
 LIBRTL's transfer vector; a run-time library built on another is the
 normal arrangement on VMS.
 
+### The format interpreter
+
+A formatted statement, `WRITE (6,10) I, X`, is the same calls with a
+different begin call, `FTN$WRITE_SF`, whose third argument is the format:
+the FORMAT statement's block, which the compiler puts in `$PDATA` (the
+text's address and length, and the address of a longword cell in
+`$LOCAL`), or a run-time format's descriptor. `ftn_format.mar` does the
+rest, in two steps a compiler writer will recognize.
+
+- **Parsing, once.** Reading `(1X,I5,2(F8.2,A))` character by character
+  for every item would be slow, so the text is first turned into a list of
+  fixed-size operations, one per edit descriptor, its numbers already
+  read: a small compiler of its own, a recursive-descent parser written
+  as a loop with the open groups' operations on the stack. It is the
+  grammar of `internal/fortran/format`, the compiler's check of a FORMAT
+  statement, written a second time in MACRO, and both are held to the
+  formats VMS's run-time library accepted and refused. The parsed list goes
+  in a `LIB$GET_VM` block whose address is kept in the FORMAT's cell, so a
+  FORMAT is parsed the first time it is used and never again; a run-time
+  format's text can change, so it is parsed for each statement and freed at
+  its end. The cell is in `$LOCAL`, not `$PDATA`, because it is written.
+- **Walking, item by item.** The statement's context holds where the walk
+  is: the next operation, how many repeats the current data descriptor has
+  left, and a stack of the groups being done with their counts. Each
+  `FTN$IO_ITEM` walks forward to the next data descriptor, doing the
+  others it passes (text into the record, X and T moving the position, a
+  slash ending the record), and edits the item with it. At the format's
+  last parenthesis with items still to come, the record ends and the walk
+  starts again at the last group at the outer level, *reversion*. The end
+  call walks on to the next data descriptor or colon and writes the last
+  record. A format whose walk finds no data descriptor at all would loop
+  for ever, and is stopped with `FOR$_INFFORLOO`.
+
+The record is built a byte per column, with a position separate from its
+length, so that `T` and `TL` can go back over what was written and `X`
+can move on without making the record longer. VMS's FORTRAN library was
+the model for what the manual leaves open: a record's 133-column limit, a
+`T0` that loses what is written there, a `$` changing the first byte to
+`$` (a prompt) when the record is written.
+
 ## 14. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole

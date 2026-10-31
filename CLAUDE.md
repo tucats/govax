@@ -452,7 +452,15 @@ never had.
   (`ftn_statement.mar`: a context per statement on a stack, the first error
   kept, `FTN$IO_END` returning or signaling it; `ftn_units.mar`'s two
   streams for units -4 to -1, 5, and 6; list-directed output in the
-  context's record; every other statement FOR's NOTIMP; GSMATCH 1,8).
+  context's record; every other statement FOR's NOTIMP; GSMATCH 1,8);
+  subtask 4 (2026-10-31) is FTNRTL's format interpreter (`ftn_format.mar`:
+  the format parsed into a heap block of operations, a FORMAT's kept in its
+  `$FCn` cell, a run-time format's freed at the end; the walk with groups,
+  reversion, and INFFORLOO; the record a byte per column, X/T/TL/TR, `/`,
+  `:`, `$`, OUTSTAOVE past 133; input records by `FTN$$UNIT_GET`,
+  INPRECTOO past 199; A and Q; every other edit NOTIMP until its subtask),
+  and Decision 2's oracle, `TestFor80Oracle` (`for80.for`, written by
+  `gen.go`, against VMS's run).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -699,7 +707,10 @@ never had.
   `for80d.mar` (the output file's records between bars), `for80e.mar`
   (conditions with no handler), `for80t.mar` (a real terminal, by hand), and the
   procedures; round 2 is `for80b.mar`. VMS's runs, `vax/for80-vax.txt` and
-  `vax/for80b-vax.txt`, are FTNRTL's requirement. `TestFor80RunsOnFORRTL` and
+  `vax/for80b-vax.txt`, are FTNRTL's requirement: `gen.go` also writes
+  `for80.for`, the output cases as FORTRAN, which `TestFor80Oracle` runs with
+  SYS$OUTPUT a file and holds to VMS's records and e= (NOTIMP cases wait for
+  their subtask). `TestFor80RunsOnFORRTL` and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
@@ -1962,7 +1973,8 @@ expect adjustment as phases land):
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and
   the rest; the old FTN$PRINT_LIST and FTN$WRITE_LIST kept), FTN$IO_ITEM,
   and FTN$IO_END, on a stack of statement contexts, with the control
-  block's layout, Phase 80; `ftn_listout.mar`, list-directed output in the
+  block's layout, Phase 80; `ftn_format.mar`, the format interpreter,
+  Phase 80; `ftn_listout.mar`, list-directed output in the
   context's record, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
