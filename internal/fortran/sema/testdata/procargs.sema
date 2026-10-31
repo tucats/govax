@@ -1,0 +1,79 @@
+== main program PROCS
+  PROCS                   program unit
+  SUBA      REAL          external procedure
+  FUNB      REAL          external procedure
+  SIN       REAL          intrinsic function
+  CHF       CHARACTER*6   external procedure
+  D         REAL*8        variable         $LOCAL+0
+  A         REAL          array(1:3)       $LOCAL+8
+  S         CHARACTER*4   variable         $LOCAL+20
+  PASS                    subroutine
+  NULLS                   subroutine
+  X         REAL          variable         $LOCAL+24
+  HOLL                    subroutine
+  OUT                     subroutine
+  I         INTEGER       variable         $LOCAL+28
+  $LOCAL is 32 bytes
+11          CALL PASS((procedure:REAL SUBA SUBA), (procedure:REAL FUNB FUNB), (procedure:REAL SIN MTH$SIN), (procedure:CHARACTER*6 CHF CHF))
+12          CALL NULLS(, X, )
+13          CALL HOLL((%REF 'ABCD'))
+14          CALL OUT((%VAL I), (%VAL X), (%REF D), (%DESCR D), (%REF S), (%DESCR A[]))
+15          CALL OUT((%REF (procedure:REAL SUBA SUBA)), (%DESCR (procedure:REAL SUBA SUBA)), (%REF (procedure:CHARACTER*6 CHF CHF)), (%DESCR (procedure:CHARACTER*6 CHF CHF)))
+16          I = (+:I (+:I (+:I (+:I (%LOC X) (%LOC A[])) (%LOC A[2])) (%LOC (procedure:REAL SUBA SUBA))) (%LOC S(2:3)))
+17          END
+== SUBROUTINE PASS
+  PASS                    program unit
+  SUB                     subroutine       argument 1
+  F         REAL          function         argument 2
+  G         REAL          function         argument 3
+  CH        CHARACTER*(*) function         argument 4
+  T         CHARACTER*12  variable         $LOCAL+0
+  X         REAL          variable         $LOCAL+12
+  AGAIN                   subroutine
+  I         INTEGER       variable         $LOCAL+16
+  $LOCAL is 20 bytes
+24          CALL SUB(1) or to (10)
+25          X = (+:R F(1.0) G(2.0))
+26          T = CH(3)
+27          CALL AGAIN((procedure:REAL SUB dummy), (procedure:REAL F dummy), (procedure:REAL G dummy), (procedure:CHARACTER*(*) CH dummy))
+28          I = (len:INTEGER LEN CH(3))
+29    10    RETURN
+30          END
+== SUBROUTINE NULLS
+  NULLS                   program unit
+  A         REAL          variable         argument 1
+  B         REAL          variable         argument 2
+  C         REAL          variable         argument 3
+  $LOCAL is 0 bytes
+33          IF (.EQ.:I (%LOC A) 0) B = 1.0
+34          END
+== SUBROUTINE HOLL
+  HOLL                    program unit
+  X         REAL          variable         argument 1
+  Y         REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+37          Y = X
+38          END
+== SUBROUTINE CONST
+  CONST                   program unit
+  NUMBER                  subroutine
+  TEXT                    subroutine
+  $LOCAL is 0 bytes
+41          CALL NUMBER((%REF 'ABCD'))
+42          CALL NUMBER((%DESCR 'ABCD'))
+43          CALL TEXT('ABCD')
+44          END
+== SUBROUTINE NUMBER
+  NUMBER                  program unit
+  X         REAL          variable         argument 1
+  Y         REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+47          Y = X
+48          END
+== SUBROUTINE TEXT
+  TEXT                    program unit
+  X         CHARACTER*(*) variable         argument 1
+  Y         REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+52          Y = (REAL (len:INTEGER LEN X))
+53          END

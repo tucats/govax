@@ -24,6 +24,7 @@ routine MATHS main
   cell  $T13    W  $LOCAL+168  temporary
   $LOCAL is 172 bytes
   datum $K1     D 2D0
+  datum $D1     descriptor ZEM S 1 routine FTN$CHAR
 B1:
   ; line 15
   call MTH$SQRT(ref X) -> $T1
@@ -64,7 +65,7 @@ B3:
   call MTH$IISHFT(ref I2, ref J2) -> $T13
   assign I = add.L($T12, cvt.WL($T13))
   ; line 22
-  call APPLY(routine MTH$SIN, routine MTH$DSQRT, routine MTH$JIABS, routine FTN$LEN, routine FTN$CHAR, routine FTN$QEXT)
+  call APPLY(routine MTH$SIN, routine MTH$DSQRT, routine MTH$JIABS, routine FTN$LEN, ref $D1, routine FTN$QEXT)
   ; line 23
   call GUNIT()
   ; line 24

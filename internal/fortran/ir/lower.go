@@ -498,7 +498,11 @@ func (l *lowerer) text(s string) *Mem {
 // descriptor is a datum holding the descriptor d, whose Target's address
 // the linker knows.
 func (l *lowerer) descriptor(d *Descriptor) *Mem {
-	key := "desc " + descriptorKey(d) + " " + memKey(d.Target)
+	key := "desc " + descriptorKey(d) + " routine " + d.Routine
+
+	if d.Target != nil {
+		key = "desc " + descriptorKey(d) + " " + memKey(d.Target)
+	}
 
 	datum := l.datum(key, func() *Datum {
 		l.descs++

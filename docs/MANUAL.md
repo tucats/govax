@@ -4481,8 +4481,7 @@ output it prints, and programs of several files in its `modules` directory.
   every variable keeps its value from call to call. EXTERNAL says a name is
   a routine outside the unit, even one with an intrinsic function's name
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
-  it is FORTRAN's own. An intrinsic function's name as an argument passes its
-  routine (below); an EXTERNAL name as one is reported not implemented.
+  it is FORTRAN's own. Either name as an argument passes the routine (below).
   Every variable gets its storage, and names of every type can be used in
   statements. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
@@ -4500,6 +4499,20 @@ output it prints, and programs of several files in its `modules` directory.
   common block may be initialized from any unit, but not blank common, dummy
   arguments, or a byte twice in one file. Two separately compiled modules
   initializing one byte of a block get whatever LINK leaves, the last one's.
+- **Arguments:** a CALL or a function reference passes a number by reference
+  and a CHARACTER value by descriptor. An argument may be left out, `CALL
+  S(A, , B)`, which passes a longword 0. A name in an EXTERNAL or INTRINSIC
+  statement passes the routine, which the routine given it calls through its
+  dummy argument, `CALL P(X)` or `Y = F(X)`, of any type, with alternate returns,
+  and passes on, in an EXTERNAL statement or after a call of it; a CHARACTER
+  function goes with the length the passing unit declares, so a dummy declared
+  `CHARACTER*(*) F` is that long. A Hollerith constant, `4HABCD`, passes its bytes
+  by reference, for a numeric dummy argument. `%VAL(X)` passes a value as a
+  longword (an integer or logical one shorter than that sign-extended, or a
+  REAL\*4), `%REF(X)` by reference (a CHARACTER value's text), `%DESCR(X)` by
+  descriptor, as Table 6-1 of the language manual allows, for routines not written
+  in FORTRAN; `%LOC(X)` is the INTEGER\*4 address of a variable, array, element,
+  substring, or procedure, in any expression, and 0 for a null argument.
 - **Constants:** PARAMETER in both forms: `PARAMETER (N=10)`, where N has
   its declared or implicit type and the value is converted to it, and
   `PARAMETER N=10`, where N has its value's type. A value is a constant
@@ -5052,10 +5065,19 @@ FORTRAN compiler was available to check them). So far:
   length when compiling, but for a constant bound less than 1 or a first
   position after the last.
 - A character constant passed as an argument is passed by descriptor. VAX
-  FORTRAN passes one given to a numeric dummy argument as a Hollerith
-  constant, which govax doesn't do yet: when the file holds the routine and
-  its dummy argument is numeric, the compiler says so (not implemented); when
-  it doesn't, the routine is given the descriptor.
+  FORTRAN's compiler and linker together pass one given to a numeric dummy
+  argument as a Hollerith constant, wherever the routine is. govax's LINK can't,
+  so that happens only when the file holds the routine; otherwise a routine with
+  a numeric dummy argument is given the descriptor (`%REF('ABCD')` says which is
+  meant). The file's routine is also checked: a Hollerith constant can't go to
+  its CHARACTER dummy argument (`%FORT-E-HOLLCHAR`).
+- A procedure's `%DESCR`, and a CHARACTER function passed by default, is a class
+  S descriptor of data type `DSC$K_DTYPE_ZEM`, its length the function's, or 0 for
+  any other procedure; the manuals don't give these. An EXTERNAL name that a
+  type statement or IMPLICIT makes CHARACTER is taken for a CHARACTER function,
+  even if it is a subroutine, by caller and dummy alike.
+- `%DESCR` of an assumed-size array describes its first element, as passing a
+  CHARACTER one does.
 - A CHARACTER array passed whole is described by a class A descriptor, and an
   assumed-size one by its first element's class S descriptor (a routine reads
   only the length and the address of either). A concatenation longer than

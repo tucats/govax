@@ -283,23 +283,24 @@ type DType int
 
 // The data types in use.
 const (
-	DTypeBU DType = 2  // a byte logical (unsigned): BYTE, LOGICAL*1
-	DTypeWU DType = 3  // a word logical (unsigned): LOGICAL*2
-	DTypeLU DType = 4  // a longword logical (unsigned): LOGICAL*4
-	DTypeW  DType = 7  // a word integer: INTEGER*2
-	DTypeL  DType = 8  // a longword integer: INTEGER*4
-	DTypeF  DType = 10 // F_floating: REAL*4
-	DTypeD  DType = 11 // D_floating: REAL*8
-	DTypeFC DType = 12 // F_floating complex: COMPLEX*8
-	DTypeDC DType = 13 // D_floating complex: COMPLEX*16
-	DTypeT  DType = 14 // text: a character string
-	DTypeG  DType = 27 // G_floating: REAL*8 under /G_FLOATING
-	DTypeH  DType = 28 // H_floating: REAL*16
-	DTypeGC DType = 29 // G_floating complex: COMPLEX*16 under /G_FLOATING
+	DTypeBU  DType = 2  // a byte logical (unsigned): BYTE, LOGICAL*1
+	DTypeWU  DType = 3  // a word logical (unsigned): LOGICAL*2
+	DTypeLU  DType = 4  // a longword logical (unsigned): LOGICAL*4
+	DTypeW   DType = 7  // a word integer: INTEGER*2
+	DTypeL   DType = 8  // a longword integer: INTEGER*4
+	DTypeF   DType = 10 // F_floating: REAL*4
+	DTypeD   DType = 11 // D_floating: REAL*8
+	DTypeFC  DType = 12 // F_floating complex: COMPLEX*8
+	DTypeDC  DType = 13 // D_floating complex: COMPLEX*16
+	DTypeT   DType = 14 // text: a character string
+	DTypeZEM DType = 23 // a procedure's entry mask
+	DTypeG   DType = 27 // G_floating: REAL*8 under /G_FLOATING
+	DTypeH   DType = 28 // H_floating: REAL*16
+	DTypeGC  DType = 29 // G_floating complex: COMPLEX*16 under /G_FLOATING
 )
 
 // String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, D,
-// FC, DC, G, H, GC, T.
+// FC, DC, G, H, GC, T, ZEM.
 func (d DType) String() string {
 	switch d {
 	case DTypeBU:
@@ -328,6 +329,8 @@ func (d DType) String() string {
 		return "GC"
 	case DTypeT:
 		return "T"
+	case DTypeZEM:
+		return "ZEM"
 	}
 
 	return "?"
@@ -379,8 +382,10 @@ type Descriptor struct {
 	Length int
 
 	// Target is what the descriptor describes, when that has an address
-	// the linker knows; nil in a descriptor cell.
-	Target *Mem
+	// the linker knows; nil in a descriptor cell. Routine is the same for a
+	// descriptor of a routine.
+	Target  *Mem
+	Routine string
 
 	// Dims are an array's bounds.
 	Dims []Bound
@@ -529,9 +534,14 @@ type (
 	// pushed last to first, then their count in longwords. A function's
 	// value goes to Result, from R0 up by its type's width (R0:R3 for an
 	// Octa, an OTS$..._R3 routine's); nil for a subroutine.
+	//
+	// A dummy procedure has no name to call: Routine is "" and Through is
+	// the place the routine is, as CALLS's operand reaches it (@F(AP), its
+	// entry mask being what the argument list's longword points at).
 	Call struct {
 		origin
 		Routine string
+		Through *Mem
 		Args    []Arg
 		Result  *Mem
 	}
@@ -731,6 +741,12 @@ type (
 		Block *Block
 	}
 
+	// RoutineAddr is the address of the routine Name, a Long: %LOC of a
+	// procedure.
+	RoutineAddr struct {
+		Name string
+	}
+
 	// CallValue is the Long a Call just left in R0, which nothing has
 	// changed since: a subroutine's alternate return number (section 5.9),
 	// in the Switch that follows the Call.
@@ -806,7 +822,9 @@ func (*ArgPointer) Type() Type { return Long }
 
 // Type is Long: an address.
 func (*LabelAddr) Type() Type { return Long }
-func (*CallValue) Type() Type { return Long }
+
+func (*RoutineAddr) Type() Type { return Long }
+func (*CallValue) Type() Type   { return Long }
 
 // Type is the operation's type.
 func (o *Op) Type() Type { return o.T }
@@ -823,17 +841,18 @@ func (*Field) Type() Type { return Long }
 // Type is Long: a position.
 func (*CharIndex) Type() Type { return Long }
 
-func (*Const) exprNode()      {}
-func (*Load) exprNode()       {}
-func (*Addr) exprNode()       {}
-func (*LabelAddr) exprNode()  {}
-func (*CallValue) exprNode()  {}
-func (*ArgPointer) exprNode() {}
-func (*Op) exprNode()         {}
-func (*Cmp) exprNode()        {}
-func (*CharCmp) exprNode()    {}
-func (*Field) exprNode()      {}
-func (*CharIndex) exprNode()  {}
+func (*Const) exprNode()       {}
+func (*Load) exprNode()        {}
+func (*Addr) exprNode()        {}
+func (*LabelAddr) exprNode()   {}
+func (*RoutineAddr) exprNode() {}
+func (*CallValue) exprNode()   {}
+func (*ArgPointer) exprNode()  {}
+func (*Op) exprNode()          {}
+func (*Cmp) exprNode()         {}
+func (*CharCmp) exprNode()     {}
+func (*Field) exprNode()       {}
+func (*CharIndex) exprNode()   {}
 
 // LongConst is the Long constant n.
 func LongConst(n int32) *Const {

@@ -583,6 +583,20 @@ var messages = map[string]kind{
 	// doesn't agree with.
 	"FUNCTYPE": {Error, "the function %s is %s (line %d), but is used here as %s"},
 
+	// BUILTINPLACE is %VAL, %REF, or %DESCR anywhere but around an actual
+	// argument of a CALL or a function reference (section 6.1.2.1).
+	"BUILTINPLACE": {Error, "%%%s can only say how an actual argument of a CALL or a function reference is passed"},
+
+	// BUILTINARG is a cell of Table 6-1 that says No.
+	"BUILTINARG": {Error, "%%%s can't pass %s"},
+
+	// LOCARG is %LOC of what has no address to give (section 6.1.2.2).
+	"LOCARG": {Error, "%%LOC needs a variable, an array, an array element, a substring, or a procedure"},
+
+	// HOLLCHAR is a Hollerith constant passed to a CHARACTER dummy argument
+	// of a routine of the file (section 6.1.1.4).
+	"HOLLCHAR": {Error, "a Hollerith constant can't be passed to %s's CHARACTER dummy argument %s (line %d)"},
+
 	// ARGCOUNT is a reference to a routine of the file with a different
 	// number of arguments from its dummy arguments.
 	"ARGCOUNT": {Error, "%s takes %s (line %d), but is given %d here"},

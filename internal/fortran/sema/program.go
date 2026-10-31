@@ -574,15 +574,26 @@ type (
 		Routine string
 	}
 
-	// Procedure is an intrinsic function's name given as an actual
-	// argument (sections 4.9 and 6.3.1.1): the routine passed, whose
-	// address the argument list holds, so that the routine given it can
-	// call it. Name is the name the program wrote, and Routine the routine
-	// (MTH$SIN, FTN$LEN; routines.go). Its type is the function's value's.
+	// Procedure is a procedure's name given as an actual argument (sections
+	// 4.7, 4.9, 6.1, and 6.3.1.1): the routine passed, so that the routine
+	// given it can call it. Name is the name the program wrote, and Routine
+	// the routine (MTH$SIN, FTN$LEN, SUB; routines.go). A procedure that is a
+	// dummy argument itself has no routine to name, and is Dummy, passed on.
+	// Its type is the function's value's, or for a name that may be a
+	// subroutine what its first letter says. A CHARACTER one goes by
+	// descriptor, and any other by its address (Table 6-1).
 	Procedure struct {
 		exprBase
 		Name    string
 		Routine string
+		Dummy   *Symbol
+	}
+
+	// Loc is %LOC(X), the address of a variable, an array, an array element,
+	// a substring, or a procedure, an INTEGER*4 (section 6.1.2.2).
+	Loc struct {
+		exprBase
+		X Expr
 	}
 
 	// Substring is X(Lower:Upper), part of a CHARACTER variable or array
@@ -691,9 +702,31 @@ func (op IntrinsicOp) String() string {
 // (X), which is passed as a copy of its value, so the subprogram can't
 // change X itself (section 5.1). Any other expression that isn't a
 // variable, an array element, or a whole array is passed as a copy too.
+// Mode is how the argument goes, when that isn't its type's default (Table
+// 6-1). Hollerith is set for a Hollerith constant, whose Expr is a CHARACTER
+// constant holding its text and whose Mode is ByRef.
 type Arg struct {
-	Expr Expr
-	Copy bool
+	Expr      Expr
+	Copy      bool
+	Mode      ArgMode
+	Hollerith bool
+}
+
+// ArgMode is how an actual argument is passed.
+type ArgMode int
+
+// The modes. A CHARACTER value's default is by descriptor, and any other's
+// by reference.
+const (
+	ByDefault    ArgMode = iota
+	ByValue              // %VAL: the value itself, as a longword
+	ByRef                // %REF: its address, even a CHARACTER value's
+	ByDescriptor         // %DESCR: a descriptor's address, even a number's
+)
+
+// String is the mode's built-in function's name, for the dump.
+func (m ArgMode) String() string {
+	return [...]string{"", "%VAL", "%REF", "%DESCR"}[m]
 }
 
 // Truth is a LOGICAL constant's truth: its bit 0 (appendix C.4).

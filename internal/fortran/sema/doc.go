@@ -151,7 +151,7 @@
 // reaches it (notimpl.go): a statement it doesn't handle (READ, VOLATILE,
 // FORMAT) is "the READ statement is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
-// inside a statement it does handle (a Hollerith constant, a substring,
+// inside a statement it does handle (a Hollerith constant in an expression,
 // an implied-DO list) is reported where the expression is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //

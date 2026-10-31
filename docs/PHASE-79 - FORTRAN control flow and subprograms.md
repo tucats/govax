@@ -8,7 +8,9 @@ extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
 done 2026-10-31; subtask 5 (function results of every type) done
 2026-10-31; subtask 6 (ENTRY) done 2026-10-31; subtask 7 (alternate
 returns) done 2026-10-31; subtask 8 (adjustable and assumed-size arrays,
-passed-length character arrays) done 2026-10-31.
+passed-length character arrays) done 2026-10-31; subtask 9 (procedure
+arguments, null arguments, Hollerith constants as arguments, %VAL, %REF,
+%DESCR, %LOC) done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -526,7 +528,8 @@ recommendation:
 6. **ENTRY.** Done.
 7. **Alternate returns.** Done.
 8. **Adjustable and assumed-size arrays**, passed-length character arrays. Done.
-9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.**
+9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.** (With
+   Hollerith constants as arguments, and answer 4.) Done.
 10. **Statement functions.**
 11. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter
     on calls and control flow).
@@ -754,3 +757,46 @@ recommendation:
   files in `sema`, `ir`, and `codegen`; sema cases; `testdata/fortran/adjust.for` end
   to end in both paging modes, its output worked out by hand. MANUAL.md's 14.2 lists
   them.
+- **2026-10-31, subtask 9 (procedure arguments, null arguments, Hollerith
+  constants as arguments, %VAL, %REF, %DESCR, %LOC):** Decisions 6 and 7 and answer
+  4 as written. Sema (`sema/arguments.go`): `arg` is one actual argument, which
+  `Arg.Mode` says how to pass when that isn't its type's default. A name in an
+  EXTERNAL statement is a `Procedure` (as Phase 78's intrinsics are), and a dummy
+  procedure passed on one with `Dummy` set: `Symbol.DummyProcedure`, a dummy in an
+  EXTERNAL statement or already called, takes its `Class` from its use as any routine
+  does, Subroutine or Function, so a dummy both called and referenced is BADUSE. Its
+  name is the unit's own, so `checkReferences` looks for no routine of that name.
+  `notAllowed` is Table 6-1, a "no" cell BUILTINARG; BUILTINPLACE is %VAL, %REF, or
+  %DESCR anywhere but an argument list, an intrinsic function's among them, or
+  inside another; %LOC is `Loc`, an expression, any other operand LOCARG. A
+  PARAMETER with %LOC is "not a constant", no longer NOTIMPL. A Hollerith constant
+  is a CHARACTER `Const` with `Hollerith` set, `ByRef`; `constantArguments` makes a
+  character constant given to a numeric dummy of a routine in the file the same
+  (answer 4), unless %DESCR said otherwise, and reports HOLLCHAR for a Hollerith
+  constant given to a CHARACTER dummy. Elsewhere in expressions a Hollerith constant
+  stays NOTIMPL, Phase 82's. An EXTERNAL name no reference makes a function needs no
+  type under IMPLICIT NONE. The IR (`ir/lowerargs.go`, with `args` and `callFunction`
+  moved there): `Call.Through` is the place a dummy procedure is, `@F(AP)`, and for
+  a CHARACTER one `@4(R0)`, the address its descriptor holds, the same place a
+  CHARACTER dummy's text is (`dummyText`), so codegen needed only `CALLS #n,m`;
+  through ENTRY's cells, `@SUB.$A1`. A CHARACTER procedure's descriptor
+  (`Descriptor.Routine`, DTYPE ZEM, class S, Decision 6) is a datum,
+  `.ADDRESS F`, and `RoutineAddr` is %LOC's `MOVAB G^F`. A CHARACTER\*(\*) dummy
+  function's value goes in a dynamic string of its descriptor's length (`chars`).
+  **Changed from Phase 78:** an intrinsic CHARACTER function's name, CHAR's, now goes
+  by descriptor as Table 6-1 says, not by address, or a FORTRAN dummy couldn't call
+  it; `TestFortranPassedIntrinsics`'s MACRO routine has a `CHCALL` for it. Ours,
+  unconfirmed: a numeric procedure's %DESCR is ZEM with the length 0; an EXTERNAL
+  name typed CHARACTER is taken for a CHARACTER function by caller and dummy alike,
+  even if it is a subroutine (only IMPLICIT could make one so); %DESCR of an
+  assumed-size number array is its first element's class S descriptor, as `charArg`
+  does for CHARACTER; %LOC of a CHARACTER value is its text's address; a dummy passed
+  on before any call and without EXTERNAL is a variable, passed the same longword, and
+  a later call of it an error; a procedure's arguments and type aren't checked
+  against the file's routine when it is only passed. Null arguments needed nothing
+  but tests. Tests: `procargs.for` golden files in `sema`, `ir`, and `codegen`; sema
+  error cases for each message and each "no" cell; `testdata/fortran/procs.for` end to
+  end in both paging modes, the routines reading each form back (%VAL's value where an
+  address would be, by %LOC; a descriptor's length and address, through a CHARACTER\*(\*)
+  dummy), and `testdata/fortran/modules/procs`, across files in both link orders.
+  MANUAL.md's 14.2 lists them, with the differences.

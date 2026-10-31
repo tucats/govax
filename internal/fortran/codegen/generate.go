@@ -89,6 +89,7 @@ var definitions = []struct {
 	{"DSC$K_DTYPE_FC", int(ir.DTypeFC), "F_floating complex"},
 	{"DSC$K_DTYPE_DC", int(ir.DTypeDC), "D_floating complex"},
 	{"DSC$K_DTYPE_T", int(ir.DTypeT), "text"},
+	{"DSC$K_DTYPE_ZEM", int(ir.DTypeZEM), "procedure entry mask"},
 	{"DSC$K_DTYPE_G", int(ir.DTypeG), "G_floating"},
 	{"DSC$K_DTYPE_H", int(ir.DTypeH), "H_floating"},
 	{"DSC$K_DTYPE_GC", int(ir.DTypeGC), "G_floating complex"},
@@ -711,6 +712,12 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	case ir.DescriptorDatum:
 		w.Label(label)
+
+		if d.Desc.Routine != "" {
+			writeDescriptor(w, d.Desc, d.Desc.Routine, "", "")
+
+			return
+		}
 
 		pointer := g.target(d.Desc.Target, 0)
 		a0 := ""

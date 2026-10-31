@@ -117,7 +117,15 @@ func (c *checker) block(b *Block) error {
 			}
 
 		case *Call:
+			if s.Through != nil {
+				err = c.mem(s.Through)
+			}
+
 			for _, a := range s.Args {
+				if err != nil {
+					break
+				}
+
 				if a.Routine != "" {
 					if a.Ref != nil || a.Value != nil {
 						err = fmt.Errorf("%s passes the routine %s and a value too", StmtText(s), a.Routine)
@@ -327,6 +335,9 @@ func (c *checker) expr(e Expr) error {
 
 	case *LabelAddr:
 		return c.target(e.Block)
+
+	case *RoutineAddr:
+		return nil
 
 	case *Op:
 		if err := c.expr(e.X); err != nil {

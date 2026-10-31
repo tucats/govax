@@ -1,4 +1,8 @@
 	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_ZEM = 23			; procedure entry mask
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
 
 ; Storage map for MATHS, the main program
 ;   I     INTEGER     $LOCAL+0   MATHS.I
@@ -65,6 +69,10 @@ MATHS.$T13:
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 MATHS.$K1:
 	.LONG	^X00004100,^X00000000	; 2D0
+MATHS.$D1:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_ZEM,DSC$K_CLASS_S
+	.ADDRESS FTN$CHAR
 MATHS.$F1:
 	.LONG	^X00004080		; 1.0
 MATHS.$F2:
@@ -177,7 +185,7 @@ MATHS.$1:
 	ADDL3	MATHS.$T12,R0,MATHS.I
 ;   22        CALL APPLY(SIN, DSQRT, IABS, LEN, CHAR, QEXT)
 	PUSHAB	G^FTN$QEXT
-	PUSHAB	G^FTN$CHAR
+	PUSHAQ	MATHS.$D1
 	PUSHAB	G^FTN$LEN
 	PUSHAB	G^MTH$JIABS
 	PUSHAB	G^MTH$DSQRT

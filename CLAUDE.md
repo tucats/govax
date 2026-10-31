@@ -419,7 +419,11 @@ never had.
   descriptor in a cell (`$B1`), filled in by each entry point whose list
   defines the array (`Dim.LowerValue`, `UpperValue`, `Symbol.BoundDummies`; an
   ENTRY's code in a block after the routine's statements), an element reached
-  through its A0 (`Mem.Ptr`) with its extents.
+  through its A0 (`Mem.Ptr`) with its extents; subtask 9 (2026-10-31) procedure
+  arguments, null arguments, Hollerith constants as arguments, and the built-ins
+  (`sema/arguments.go`: `Arg.Mode` from `notAllowed`, Table 6-1; `Procedure`, `Loc`;
+  `ir/lowerargs.go`: `Call.Through` for a dummy procedure, `@F(AP)` or for a
+  CHARACTER one `@4(R0)`; `Descriptor.Routine`, a ZEM descriptor; `RoutineAddr`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

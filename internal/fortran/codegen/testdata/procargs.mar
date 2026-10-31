@@ -1,0 +1,377 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_D = 11			; D_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_DTYPE_ZEM = 23			; procedure entry mask
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_D = 2			; dynamic string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for PROCS, the main program
+;   D     REAL*8       $LOCAL+0   PROCS.D
+;   N     INTEGER*2    $LOCAL+8   PROCS.N
+;   A     REAL (3)     $LOCAL+12  PROCS.A
+;   S     CHARACTER*4  $LOCAL+24  PROCS.S
+;   X     REAL         $LOCAL+28  PROCS.X
+;   I     INTEGER      $LOCAL+32  PROCS.I
+;
+	.EXTRN	SUBA,FUNB,CHF		; named in an EXTERNAL statement
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+PROCS.D:
+	.BLKL	2			; D
+PROCS.N:
+	.BLKB	2			; N
+	.BLKB	2
+PROCS.A:
+	.BLKL	3			; A, REAL (3)
+PROCS.S:
+	.BLKL	1			; S
+PROCS.X:
+	.BLKL	1			; X
+PROCS.I:
+	.BLKL	1			; I
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+PROCS.$D1:
+	.WORD	6			; length
+	.BYTE	DSC$K_DTYPE_ZEM,DSC$K_CLASS_S
+	.ADDRESS CHF
+PROCS.$D2:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_D,DSC$K_CLASS_S
+	.ADDRESS PROCS.D
+PROCS.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.ADDRESS PROCS.A
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS PROCS.A-4		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+PROCS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS PROCS.I
+PROCS.$D5:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_ZEM,DSC$K_CLASS_S
+	.ADDRESS SUBA
+PROCS.$F1:
+	.LONG	^X000040C0		; 1.5
+PROCS.$K1:
+	.ASCII	/ABCD/
+PROCS.$K2:
+	.ASCII	/AB/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Procedures as arguments, dummy procedures, null arguments, Hollerith
+;    2  C     constants, and the built-in functions (sections 6.1.1, 6.1.2).
+;    3        PROGRAM PROCS
+	.ENTRY	PROCS,^M<>
+;    4        EXTERNAL SUBA, FUNB
+;    5        INTRINSIC SIN
+;    6        CHARACTER*6 CHF
+;    7        EXTERNAL CHF
+;    8        REAL*8 D
+;    9        INTEGER*2 N
+;   10        DIMENSION A(3)
+;   11        CHARACTER*4 S
+;   12        CALL PASS(SUBA, FUNB, SIN, CHF)
+	PUSHAQ	PROCS.$D1
+	PUSHAB	G^MTH$SIN
+	PUSHAB	G^FUNB
+	PUSHAB	G^SUBA
+	CALLS	#4,G^PASS
+;   13        CALL NULLS(, X, )
+	PUSHL	#0
+	PUSHAL	PROCS.X
+	PUSHL	#0
+	CALLS	#3,G^NULLS
+;   14        CALL HOLL(4HABCD)
+	PUSHAB	PROCS.$K1
+	CALLS	#1,G^HOLL
+;   15        CALL OUT(%VAL(I), %VAL(N), %VAL(X), %VAL(1.5), %REF(D), %DESCR(D))
+	PUSHAQ	PROCS.$D2
+	PUSHAD	PROCS.D
+	PUSHL	PROCS.$F1
+	PUSHL	PROCS.X
+	CVTWL	PROCS.N,R0
+	PUSHL	R0
+	PUSHL	PROCS.I
+	CALLS	#6,G^OUT
+;   16        CALL OUT(%REF(S), %DESCR(A), %DESCR(I), %REF('AB'), %REF(S(2:3)))
+	PUSHAB	PROCS.S+1
+	PUSHAB	PROCS.$K2
+	PUSHAQ	PROCS.$D4
+	PUSHAQ	PROCS.$D3
+	PUSHAB	PROCS.S
+	CALLS	#5,G^OUT
+;   17        CALL OUT(%REF(SUBA), %DESCR(SUBA), %REF(CHF), %DESCR(CHF))
+	PUSHAQ	PROCS.$D1
+	PUSHAB	G^CHF
+	PUSHAQ	PROCS.$D5
+	PUSHAB	G^SUBA
+	CALLS	#4,G^OUT
+;   18        I = %LOC(X) + %LOC(A) + %LOC(A(2)) + %LOC(SUBA) + %LOC(S(2:3))
+	MOVAL	PROCS.X,R0
+	MOVAL	PROCS.A,R1
+	ADDL2	R1,R0
+	MOVAL	PROCS.A+4,R1
+	ADDL2	R1,R0
+	MOVAB	G^SUBA,R1
+	ADDL2	R1,R0
+	MOVAB	PROCS.S+1,R1
+	ADDL3	R0,R1,PROCS.I
+;   19        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for PASS, a subroutine
+;   SUB   REAL           argument 1  @PASS.SUB(AP)
+;   F     REAL           argument 2  @PASS.F(AP)
+;   G     REAL           argument 3  @PASS.G(AP)
+;   CH    CHARACTER*(*)  argument 4  @PASS.CH(AP)
+;   T     CHARACTER*12   $LOCAL+0    PASS.T
+;   X     REAL           $LOCAL+12   PASS.X
+;   I     INTEGER        $LOCAL+16   PASS.I
+;
+PASS.SUB = 4				; SUB is argument 1
+PASS.F = 8				; F is argument 2
+PASS.G = 12				; G is argument 3
+PASS.CH = 16				; CH is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+PASS.T:	.BLKL	3			; T
+PASS.X:	.BLKL	1			; X
+PASS.I:	.BLKL	1			; I
+PASS.$T1:
+	.BLKL	1			; temporary
+PASS.$T2:
+	.BLKL	1			; temporary
+PASS.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+PASS.$T3:
+	.BLKB	2			; temporary
+	.BLKB	2
+PASS.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+PASS.$D3:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_ZEM,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+PASS.$K1:
+	.LONG	1
+PASS.$K2:
+	.LONG	^X00004080		; 1.0
+PASS.$K3:
+	.LONG	^X00004100		; 2.0
+PASS.$K4:
+	.LONG	3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   20
+;   21        SUBROUTINE PASS(SUB, F, G, CH)
+	.ENTRY	PASS,^M<R2,R3,R4,R5>
+;   22        EXTERNAL SUB, G
+;   23        CHARACTER*(*) CH
+;   24        EXTERNAL CH
+;   25        CHARACTER*12 T
+;   26        CALL SUB(1, *10)
+	PUSHAL	PASS.$K1
+	CALLS	#1,@PASS.SUB(AP)
+	CASEL	R0,#1,#0		; the alternate return's number
+PASS.$1:
+	.WORD	PASS.L10-PASS.$1
+;   27        X = F(1.0) + G(2.0)
+	PUSHAL	PASS.$K2
+	CALLS	#1,@PASS.F(AP)
+	MOVF	R0,PASS.$T1
+	PUSHAL	PASS.$K3
+	CALLS	#1,@PASS.G(AP)
+	MOVF	R0,PASS.$T2
+	ADDF3	PASS.$T1,PASS.$T2,PASS.X
+;   28        T = CH(3)
+	MOVW	@PASS.CH(AP),PASS.$T3
+	PUSHAQ	PASS.$D1
+	PUSHAW	PASS.$T3
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVW	@PASS.CH(AP),PASS.$D2
+	MOVAB	@PASS.$D1+4,PASS.$D2+4
+	PUSHAL	PASS.$K4
+	PUSHAQ	PASS.$D2
+	MOVL	PASS.CH(AP),R0
+	CALLS	#2,@4(R0)
+	MOVZWL	@PASS.CH(AP),R0
+	MOVC5	R0,@PASS.$D1+4,#^A/ /,#12,PASS.T
+	PUSHAQ	PASS.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;   29        CALL AGAIN(SUB, F, G, CH)
+	PUSHL	PASS.CH(AP)
+	PUSHL	PASS.G(AP)
+	PUSHL	PASS.F(AP)
+	PUSHL	PASS.SUB(AP)
+	CALLS	#4,G^AGAIN
+;   30        CALL AGAIN(%DESCR(SUB), %REF(CH), %DESCR(CH))
+	MOVL	PASS.SUB(AP),PASS.$D3+4
+	PUSHL	PASS.CH(AP)
+	MOVL	PASS.CH(AP),R0
+	PUSHL	4(R0)
+	PUSHAQ	PASS.$D3
+	CALLS	#3,G^AGAIN
+;   31        I = %LOC(SUB) + %LOC(CH)
+	MOVL	PASS.CH(AP),R0
+	ADDL3	PASS.SUB(AP),4(R0),PASS.I
+;   32        I = LEN(CH(3))
+	MOVZWL	@PASS.CH(AP),PASS.I
+;   33  10    RETURN
+PASS.L10:
+	RET
+;   34        END
+
+; Storage map for ENTRIES, a subroutine
+;   A     REAL  an argument  @ENTRIES.$A1
+;   P     REAL  an argument  @ENTRIES.$A2
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ENTRIES.$A1:
+	.BLKL	1			; A's longword of the argument list, set at each entry point
+ENTRIES.$A2:
+	.BLKL	1			; P's longword of the argument list, set at each entry point
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   35
+;   36        SUBROUTINE ENTRIES(A)
+	.ENTRY	ENTRIES,^M<>
+	MOVL	4(AP),ENTRIES.$A1	; A is argument 1
+;   37        ENTRY THROUGH(P)
+ENTRIES.$1:				; ENTRY THROUGH
+;   38        CALL P
+	CALLS	#0,@ENTRIES.$A2
+;   39        END
+	RET
+
+	.ENTRY	THROUGH,^M<>
+	MOVL	4(AP),ENTRIES.$A2	; P is argument 1
+	BRW	ENTRIES.$1
+
+; Storage map for NULLS, a subroutine
+;   A     REAL  argument 1  @NULLS.A(AP)
+;   B     REAL  argument 2  @NULLS.B(AP)
+;   C     REAL  argument 3  @NULLS.C(AP)
+;
+NULLS.A = 4				; A is argument 1
+NULLS.B = 8				; B is argument 2
+NULLS.C = 12				; C is argument 3
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   40
+;   41        SUBROUTINE NULLS(A, B, C)
+	.ENTRY	NULLS,^M<>
+;   42        IF (%LOC(A) .EQ. 0) B = 1.0
+	MOVAL	@NULLS.A(AP),R0
+	BEQL	NULLS.$2
+	BRW	NULLS.$1
+NULLS.$2:
+	MOVL	#^X00004080,@NULLS.B(AP) ; 1.0
+NULLS.$1:
+;   43        END
+	RET
+
+; Storage map for HOLL, a subroutine
+;   X     REAL  argument 1  @HOLL.X(AP)
+;   Y     REAL  $LOCAL+0    HOLL.Y
+;
+HOLL.X = 4				; X is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+HOLL.Y:	.BLKL	1			; Y
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   44
+;   45        SUBROUTINE HOLL(X)
+	.ENTRY	HOLL,^M<>
+;   46        Y = X
+	MOVF	@HOLL.X(AP),HOLL.Y
+;   47        END
+	RET
+
+; Storage map for CONST, a subroutine
+;   (no variables)
+;
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CONST.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CONST.$K1
+CONST.$K1:
+	.ASCII	/ABCD/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   48
+;   49        SUBROUTINE CONST
+	.ENTRY	CONST,^M<>
+;   50        CALL NUMBER('ABCD')
+	PUSHAB	CONST.$K1
+	CALLS	#1,G^NUMBER
+;   51        CALL NUMBER(%DESCR('ABCD'))
+	PUSHAQ	CONST.$D1
+	CALLS	#1,G^NUMBER
+;   52        CALL TEXT('ABCD')
+	PUSHAQ	CONST.$D1
+	CALLS	#1,G^TEXT
+;   53        END
+	RET
+
+; Storage map for NUMBER, a subroutine
+;   X     REAL  argument 1  @NUMBER.X(AP)
+;   Y     REAL  $LOCAL+0    NUMBER.Y
+;
+NUMBER.X = 4				; X is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+NUMBER.Y:
+	.BLKL	1			; Y
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   54
+;   55        SUBROUTINE NUMBER(X)
+	.ENTRY	NUMBER,^M<>
+;   56        Y = X
+	MOVF	@NUMBER.X(AP),NUMBER.Y
+;   57        END
+	RET
+
+; Storage map for TEXT, a subroutine
+;   X     CHARACTER*(*)  argument 1  @TEXT.X(AP)
+;   Y     REAL           $LOCAL+0    TEXT.Y
+;
+TEXT.X = 4				; X is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+TEXT.Y:	.BLKL	1			; Y
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   58
+;   59        SUBROUTINE TEXT(X)
+	.ENTRY	TEXT,^M<>
+;   60        CHARACTER*(*) X
+;   61        Y = LEN(X)
+	MOVZWL	@TEXT.X(AP),R0
+	CVTLF	R0,TEXT.Y
+;   62        END
+	RET
+
+	.END	PROCS

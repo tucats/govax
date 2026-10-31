@@ -153,6 +153,12 @@
 // entry points fill in (lowerbounds.go): an element's place is through the
 // descriptor's A0, with an index made of the subscripts and its extents.
 //
+// An actual argument is lowered by lowerargs.go: by reference or by descriptor
+// by its type, or as %VAL, %REF, or %DESCR says (Table 6-1). A procedure is its
+// entry mask's address, or a CHARACTER function a descriptor of that address and
+// its length, and a call of a dummy procedure goes through a place (Call.Through)
+// rather than a name.
+//
 // Every statement remembers the FORTRAN statement it came from, so the
 // code generator can write each source line, as a comment, just before
 // the instructions it became; the dump shows that as "; line n".

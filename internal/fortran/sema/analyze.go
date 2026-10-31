@@ -531,8 +531,10 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 		for _, s := range u.Symbols {
 			// A unit's own name (a DUPUNIT's among them) is reported
 			// already if it is wrong.
+			// A dummy procedure's name is the unit's own, whatever routine
+			// it stands for when the program runs.
 			fu := units[s.Name]
-			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.broken {
+			if fu == nil || fu.unit == u || fu.unit == nil || s.Class == UnitName || s.Result || s.broken || s.DummyProcedure() {
 				continue
 			}
 
@@ -590,7 +592,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 	for _, u := range prog.Units {
 		for _, r := range u.calls {
 			fu := units[r.sym.Name]
-			if fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || fu.kind == ast.BlockDataUnit || u.incomplete || fu.unit.incomplete {
+			if r.sym.Dummy != 0 || fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || fu.kind == ast.BlockDataUnit || u.incomplete || fu.unit.incomplete {
 				continue
 			}
 
@@ -609,16 +611,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				continue
 			}
 
-			// A character constant passed to a numeric dummy argument is a
-			// Hollerith constant (section 6.1.1.4), Phase 82's. Without the
-			// routine in the file, it is passed by descriptor, as one passed
-			// to a CHARACTER dummy must be.
-			for i, arg := range r.args {
-				c, ok := arg.Expr.(*Const)
-				if p := fu.params()[i]; ok && c.T.Kind == Character && p != nil && p.Type.Kind != Character {
-					messages.Report("NOTIMPL", c.Pos, hollerith)
-				}
-			}
+			constantArguments(r, fu, messages)
 		}
 	}
 }

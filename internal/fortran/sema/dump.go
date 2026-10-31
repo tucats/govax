@@ -346,7 +346,13 @@ func DumpExpr(e Expr) string {
 
 		return "(" + e.Op.String() + ":" + e.T.String() + " " + name + " " + strings.Join(args, " ") + ")"
 	case *Procedure:
+		if e.Dummy != nil {
+			return "(procedure:" + e.T.String() + " " + e.Name + " dummy)"
+		}
+
 		return "(procedure:" + e.T.String() + " " + e.Name + " " + e.Routine + ")"
+	case *Loc:
+		return "(%LOC " + DumpExpr(e.X) + ")"
 	case *Unary:
 		return "(" + e.Op.String() + ":" + e.T.letter() + " " + DumpExpr(e.X) + ")"
 	case *Binary:
@@ -431,6 +437,10 @@ func dumpArgs(args []Arg) string {
 
 	for i, arg := range args {
 		text[i] = DumpExpr(arg.Expr)
+		if arg.Mode != ByDefault {
+			text[i] = "(" + arg.Mode.String() + " " + text[i] + ")"
+		}
+
 		if arg.Copy {
 			text[i] = "(copy " + text[i] + ")"
 		}

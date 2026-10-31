@@ -16,7 +16,8 @@ import (
 
 // hollerith is NOTIMPL's subject for a character constant where a
 // number is wanted: VAX FORTRAN takes it for a Hollerith constant there
-// (section 2.2.1.6), which is Phase 82's.
+// (section 2.2.1.6), which is Phase 82's. As an actual argument it is this
+// phase's (arguments.go).
 const hollerith = "a character constant in a numeric context (a Hollerith constant)"
 
 // bad is an expression whose error has been reported.
@@ -59,6 +60,9 @@ func (a *analyzer) value(e ast.Expr) Expr {
 
 	case *ast.Substring:
 		return a.substring(e)
+
+	case *ast.BuiltinArg:
+		return a.builtinValue(e)
 	}
 
 	if c, ok := e.(*ast.ComplexConst); ok {
@@ -108,14 +112,9 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 	}
 
 	if s.External || s.Class == Intrinsic {
-		// A procedure's name where a value would be: as an argument, the
-		// procedure itself (an intrinsic's is args', procedure; an external
-		// one's is Phase 79's); anywhere else, a mistake.
-		if wholeOK && s.External {
-			a.notImpl(n.Pos, "a procedure as an argument")
-		} else {
-			a.badUse(s, n.Pos, "be used as a variable")
-		}
+		// A procedure's name where a value would be: as an actual argument
+		// it is the procedure itself (arg), and anywhere else, a mistake.
+		a.badUse(s, n.Pos, "be used as a variable")
 
 		return a.bad(n.Pos)
 	}
@@ -184,13 +183,8 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		return a.element(s, e)
 
 	case Unclassified, External:
-		if s.Dummy != 0 {
-			// A dummy argument used as a function is a dummy procedure.
-			a.notImpl(e.Pos, "a dummy procedure")
-
-			return a.bad(e.Pos)
-		}
-
+		// A dummy argument used as a function is a dummy procedure: the
+		// same Class, reached through its argument (Symbol.DummyProcedure).
 		s.Class = Function
 
 		fallthrough
@@ -390,44 +384,6 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 	}
 
 	return &Elem{exprBase{s.Type, e.Pos}, s, subs}
-}
-
-// args analyzes a list of actual arguments (section 5.1, 6.1): a
-// variable, an array element, or a whole array is passed as itself; a
-// parenthesized one, or any other expression, as a copy. A CHARACTER value,
-// a constant's among them, is passed by descriptor (Table 6-1); a character
-// constant passed to a numeric dummy would be a Hollerith constant (section
-// 6.1.1.4), Phase 82's, which checkReferences finds when the file has the
-// routine.
-func (a *analyzer) args(list []ast.Expr) []Arg {
-	args := make([]Arg, len(list))
-
-	for i, e := range list {
-		switch x := e.(type) {
-		case nil:
-			// A null argument: CALL S(A,,B).
-
-		case *ast.Name:
-			if s := a.unit.byName[x.Name]; s != nil && s.Class == Intrinsic && !s.broken {
-				args[i].Expr = a.procedure(x)
-			} else {
-				args[i].Expr = a.name(x, true)
-			}
-
-		case *ast.Paren:
-			args[i].Expr = a.value(x)
-
-			switch args[i].Expr.(type) {
-			case *Var, *Elem, *Substring:
-				args[i].Copy = true
-			}
-
-		default:
-			args[i].Expr = a.value(x)
-		}
-	}
-
-	return args
 }
 
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as

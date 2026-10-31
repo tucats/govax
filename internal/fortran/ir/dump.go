@@ -206,6 +206,10 @@ func descriptorText(d *Descriptor) string {
 		text += " " + MemText(d.Target)
 	}
 
+	if d.Routine != "" {
+		text += " routine " + d.Routine
+	}
+
 	return text
 }
 
@@ -232,7 +236,12 @@ func StmtText(s Stmt) string {
 			}
 		}
 
-		text := "call " + s.Routine + "(" + strings.Join(args, ", ") + ")"
+		routine := s.Routine
+		if s.Through != nil {
+			routine = "through " + MemText(s.Through)
+		}
+
+		text := "call " + routine + "(" + strings.Join(args, ", ") + ")"
 		if s.Result != nil {
 			text += " -> " + MemText(s.Result)
 		}
@@ -338,6 +347,9 @@ func ExprText(e Expr) string {
 
 	case *LabelAddr:
 		return "label(" + e.Block.Name + ")"
+
+	case *RoutineAddr:
+		return "routine(" + e.Name + ")"
 
 	case *CallValue:
 		return "R0"

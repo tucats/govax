@@ -12,11 +12,13 @@ import (
 // MTHRTL's routines and each of FTNRTL's for the names MTHRTL lacks to a
 // MACRO routine that calls the routine it is given, and prints each value
 // beside the function's value written in line, which must agree. Calling
-// through a FORTRAN dummy argument is Phase 79's.
+// through a FORTRAN dummy argument is testdata/fortran/procs.for's.
 
 // ftnForward is the MACRO routine: each entry, one per FORTRAN type of
 // value, calls its first argument with the rest of its arguments, as they
 // are (their addresses), and returns what that returns in R0 and R1.
+// CHCALL does what they do for a CHARACTER function, which goes by a
+// descriptor holding its address (Table 6-1).
 // SCALL, a subroutine, calls a function whose value goes through a hidden
 // first argument.
 const ftnForward = `	.TITLE	CALLF
@@ -44,6 +46,16 @@ FORWARD:
 10$:	PUSHL	4(AP)[R2]		; the last first
 	SOBGTR	R2,10$
 20$:	CALLS	R1,@4(AP)
+	RET
+	.ENTRY	CHCALL,^M<R2>		; a CHARACTER function: by descriptor
+	MOVZBL	(AP),R1
+	DECL	R1
+	MOVL	R1,R2
+	BEQL	40$
+30$:	PUSHL	4(AP)[R2]
+	SOBGTR	R2,30$
+40$:	MOVL	4(AP),R0
+	CALLS	R1,@4(R0)
 	RET
 	.END
 `
@@ -85,7 +97,7 @@ C     FTNRTL's: the character functions
      1  ICALL(INDEX, S, 'CD')
       PRINT *, INDEX(S, 'X'), ICALL(INDEX, S, 'X'), ICHAR(S),
      1  ICALL(ICHAR, S)
-      CALL SCALL(CHAR, T, 73)
+      CALL CHCALL(CHAR, T, 73)
       PRINT *, CHAR(72), T
       PRINT *, LLT(S, 'ABD'), LCALL(LLT, S, 'ABD'), LLE(S, 'ABC'),
      1  LCALL(LLE, S, 'ABC')

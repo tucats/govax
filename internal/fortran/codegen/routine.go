@@ -281,7 +281,13 @@ func (g *routineGen) call(s *ir.Call) {
 		count += a.Value.Type().Width()
 	}
 
-	g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), "G^"+s.Routine)
+	if s.Through != nil {
+		m := g.mem(g.fitMem(s.Through))
+		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), m.text)
+		g.free(m)
+	} else {
+		g.emit("CALLS", ir.None, "#"+strconv.Itoa(count), "G^"+s.Routine)
+	}
 
 	if s.Result != nil {
 		// The value is in R0 (R0 and R1 for a D, G, or COMPLEX*8 value, R0

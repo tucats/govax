@@ -41,6 +41,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.IntrinsicRef:
 		return l.intrinsic(e)
 
+	case *sema.Loc:
+		return l.loc(e)
+
 	case *sema.Unary:
 		op := Neg
 		if e.Op == ast.Not {
@@ -171,11 +174,21 @@ func (l *lowerer) chars(e sema.Expr) Text {
 
 	case *sema.FuncRef:
 		// The value is as long as this unit declares the function, in a
-		// temporary of that length.
-		result := l.textTemp(e.T.Size)
+		// temporary of that length; a dummy procedure declared CHARACTER*(*)
+		// is as long as the unit that passed it says, which only its
+		// descriptor knows, in a dynamic string.
+		n := l.charLength(e.Fn)
+
+		var result *Mem
+		if e.T.Size > 0 {
+			result = l.textTemp(e.T.Size)
+		} else {
+			result = l.dynamicText(n)
+		}
+
 		l.callFunction(e, result)
 
-		return Text{result, LongConst(int32(e.T.Size))}
+		return Text{result, n}
 
 	case *sema.IntrinsicRef:
 		// CHAR(I), the one intrinsic function with a CHARACTER value.
@@ -317,77 +330,6 @@ func (l *lowerer) value(x Expr) *Mem {
 	l.emit(&Assign{l.origin(), t, x})
 
 	return t
-}
-
-// args lowers a call's actual arguments (sections 5.1, 6.1.2.1): each
-// by reference, but a CHARACTER value by descriptor (charArg). A variable, an array element, or a whole array is
-// passed itself, so the routine can change it; a constant is passed in
-// a datum, read-only, so a routine that assigns to its dummy gets an
-// access violation, not a changed constant; any other expression, and a
-// variable or element in parentheses, is computed into a temporary and
-// that is passed. A null argument is the longword 0, and an intrinsic
-// function's name its routine's address.
-func (l *lowerer) args(list []sema.Arg) []Arg {
-	args := make([]Arg, len(list))
-
-	for i, a := range list {
-		if p, ok := a.Expr.(*sema.Procedure); ok {
-			args[i].Routine = p.Routine
-
-			continue
-		}
-
-		if a.Expr != nil && a.Expr.Type().Kind == sema.Character {
-			args[i] = l.charArg(a)
-
-			continue
-		}
-
-		switch e := a.Expr.(type) {
-		case nil:
-			args[i].Value = LongConst(0)
-
-		case *sema.Var, *sema.Elem:
-			if a.Copy {
-				args[i].Ref = l.value(l.expr(e))
-			} else {
-				args[i].Ref = l.mem(e)
-			}
-
-		case *sema.ArrayRef:
-			args[i].Ref = l.symbolMem(e.Sym)
-
-		case *sema.Const:
-			args[i].Ref = l.constant(l.constOf(e))
-
-		default:
-			args[i].Ref = l.value(l.expr(e))
-		}
-	}
-
-	return args
-}
-
-// callFunction calls the function f refers to, its value going to result:
-// from R0 after the call, or, for a value that goes through a hidden first
-// argument, where the argument says (the address of result, or for a
-// CHARACTER value a descriptor of it).
-func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
-	args := l.args(f.Args)
-
-	switch {
-	case f.T.Kind == sema.Character:
-		d := &Descriptor{DType: DTypeT, Class: ClassS}
-		place := Text{result, LongConst(int32(f.T.Size))}
-		args = append([]Arg{{Ref: l.describeText(d, place)}}, args...)
-		result = nil
-
-	case f.T.HiddenResult():
-		args = append([]Arg{{Ref: result}}, args...)
-		result = nil
-	}
-
-	l.emit(&Call{origin: l.origin(), Routine: f.Fn.Name, Args: args, Result: result})
 }
 
 // arith is the operation op on x and y (y nil for Neg, Not, and Cvt) in

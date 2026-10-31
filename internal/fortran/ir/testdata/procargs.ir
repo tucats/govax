@@ -1,0 +1,154 @@
+routine PROCS main
+  cell  D       D  $LOCAL+0    variable D
+  cell  N       W  $LOCAL+8    variable N
+  cell  A       F  $LOCAL+12   array A, 12 bytes
+  cell  S       B  $LOCAL+24   variable S
+  cell  X       F  $LOCAL+28   variable X
+  cell  I       L  $LOCAL+32   variable I
+  $LOCAL is 36 bytes
+  external SUBA
+  external FUNB
+  external CHF
+  datum $D1     descriptor ZEM S 6 routine CHF
+  datum $K1     text 'ABCD'
+  datum $D2     descriptor D S 8 D
+  datum $D3     descriptor F A 4 (1:3) A
+  datum $D4     descriptor L S 4 I
+  datum $K2     text 'AB'
+  datum $D5     descriptor ZEM S 0 routine SUBA
+B1:
+  ; line 12
+  call PASS(routine SUBA, routine FUNB, routine MTH$SIN, ref $D1)
+  ; line 13
+  call NULLS(val 0, ref X, val 0)
+  ; line 14
+  call HOLL(ref $K1)
+  ; line 15
+  call OUT(val I, val cvt.WL(N), val X, val 1.5, ref D, ref $D2)
+  ; line 16
+  call OUT(ref S, ref $D3, ref $D4, ref $K2, ref S+1)
+  ; line 17
+  call OUT(routine SUBA, ref $D5, routine CHF, ref $D1)
+  ; line 18
+  assign I = add.L(add.L(add.L(add.L(addr(X), addr(A)), addr(A+4)), routine(SUBA)), addr(S+1))
+  ; line 19
+  return 1
+routine PASS subroutine
+  param SUB     F  argument 1
+  param F       F  argument 2
+  param G       F  argument 3
+  param CH      B  argument 4
+  cell  T       B  $LOCAL+0    variable T
+  cell  X       F  $LOCAL+12   variable X
+  cell  I       L  $LOCAL+16   variable I
+  cell  $T1     F  $LOCAL+20   temporary
+  cell  $T2     F  $LOCAL+24   temporary
+  cell  $D1     L  $LOCAL+28   descriptor T D 0
+  cell  $T3     W  $LOCAL+36   temporary
+  cell  $D2     L  $LOCAL+40   descriptor T S 0
+  cell  $D3     L  $LOCAL+48   descriptor ZEM S 0
+  $LOCAL is 56 bytes
+  datum $K1     L 1
+  datum $K2     F 1.0
+  datum $K3     F 2.0
+  datum $K4     L 3
+B1:
+  ; line 26
+  call through @SUB(ref $K1)
+  switch R0 [B3] B2
+B2:
+  ; line 27
+  call through @F(ref $K2) -> $T1
+  call through @G(ref $K3) -> $T2
+  assign X = add.F($T1, $T2)
+  ; line 28
+  assign $T3 = @(arg CH)
+  call LIB$SGET1_DD(ref $T3, ref $D1)
+  assign $D2 = @(arg CH)
+  assign $D2+4 = addr(@($D1+4))
+  call through @(@(arg CH)+4)(ref $D2, ref $K4)
+  move T(12) = @($D1+4)(zext.WL(@(arg CH)))
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 29
+  call AGAIN(val arg SUB, val arg F, val arg G, val arg CH)
+  ; line 30
+  assign $D3+4 = arg SUB
+  call AGAIN(ref $D3, val @(arg CH)+4, val arg CH)
+  ; line 31
+  assign I = add.L(arg SUB, @(arg CH)+4)
+  ; line 32
+  assign I = zext.WL(@(arg CH))
+  ; line 33
+  jump B3
+B3: L10
+  return
+routine ENTRIES subroutine
+  param A       F  through $A1
+  param P       F  through $A2
+  entry 1 ENTRIES A=1
+  entry 2 THROUGH P=1 at B2
+  cell  $A1     L  $LOCAL+0    address of A
+  cell  $A2     L  $LOCAL+4    address of P
+  $LOCAL is 8 bytes
+B1:
+  ; line 37
+  jump B2
+B2:  ; ENTRY THROUGH
+  ; line 38
+  call through @P()
+  ; line 39
+  return
+routine NULLS subroutine
+  param A       F  argument 1
+  param B       F  argument 2
+  param C       F  argument 3
+  $LOCAL is 0 bytes
+B1:
+  ; line 42
+  branch eq.L(addr(@A), 0) B2 B3
+B2:
+  assign @B = 1.0
+  jump B3
+B3:
+  ; line 43
+  return
+routine HOLL subroutine
+  param X       F  argument 1
+  cell  Y       F  $LOCAL+0    variable Y
+  $LOCAL is 4 bytes
+B1:
+  ; line 46
+  assign Y = @X
+  ; line 47
+  return
+routine CONST subroutine
+  $LOCAL is 0 bytes
+  datum $K1     text 'ABCD'
+  datum $D1     descriptor T S 4 $K1
+B1:
+  ; line 50
+  call NUMBER(ref $K1)
+  ; line 51
+  call NUMBER(ref $D1)
+  ; line 52
+  call TEXT(ref $D1)
+  ; line 53
+  return
+routine NUMBER subroutine
+  param X       F  argument 1
+  cell  Y       F  $LOCAL+0    variable Y
+  $LOCAL is 4 bytes
+B1:
+  ; line 56
+  assign Y = @X
+  ; line 57
+  return
+routine TEXT subroutine
+  param X       B  argument 1
+  cell  Y       F  $LOCAL+0    variable Y
+  $LOCAL is 4 bytes
+B1:
+  ; line 61
+  assign Y = cvt.LF(zext.WL(@(arg X)))
+  ; line 62
+  return

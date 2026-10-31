@@ -15,7 +15,7 @@ import (
 //
 // EXTERNAL says a name is a routine outside the unit, even if it is also an
 // intrinsic function's name, and INTRINSIC that it is FORTRAN's own. Their
-// uses as procedure arguments are Phase 79's. An EXTERNAL name's other use is
+// uses as procedure arguments are arguments.go's. An EXTERNAL name's other use is
 // BLOCK DATA's (section 4.1): naming a block data subprogram makes LINK find it
 // in a library, since the object module refers to it even if no code calls it.
 

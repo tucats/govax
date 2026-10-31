@@ -306,12 +306,7 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 
 	switch sym.Class {
 	case Unclassified, External:
-		if sym.Dummy != 0 {
-			a.notImpl(s.NamePos, "a dummy procedure")
-
-			return nil
-		}
-
+		// A dummy argument called is a dummy procedure.
 		sym.Class = Subroutine
 
 	case Subroutine:

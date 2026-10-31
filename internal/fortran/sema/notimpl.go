@@ -62,7 +62,7 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 // compile yet, as a NOTIMPL message does ("a Hollerith constant"), or ""
 // for a form it compiles.
 func formWhat(e ast.Expr) string {
-	switch e := e.(type) {
+	switch e.(type) {
 	case *ast.HollerithConst:
 		return "a Hollerith constant"
 	case *ast.TypelessConst:
@@ -71,8 +71,6 @@ func formWhat(e ast.Expr) string {
 		return "a COMPLEX constant"
 	case *ast.FieldRef:
 		return "a record's field"
-	case *ast.BuiltinArg:
-		return "%" + e.Func
 	case *ast.ImpliedDo:
 		return "an implied-DO list"
 	case *ast.KeyList:

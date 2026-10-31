@@ -125,7 +125,7 @@ func need(e ir.Expr) int {
 	case *ir.Field:
 		return fieldNeed(e)
 
-	case *ir.LabelAddr:
+	case *ir.LabelAddr, *ir.RoutineAddr:
 		// Its value, made by MOVAB.
 		return 1
 	}
@@ -559,6 +559,12 @@ func (g *routineGen) eval(e ir.Expr) operand {
 	case *ir.LabelAddr:
 		r := g.alloc(ir.Long)
 		g.emit("MOVAB", ir.Long, g.blockLabel(e.Block), register(r))
+
+		return inRegister(r, ir.Long)
+
+	case *ir.RoutineAddr:
+		r := g.alloc(ir.Long)
+		g.emit("MOVAB", ir.Long, "G^"+e.Name, register(r))
 
 		return inRegister(r, ir.Long)
 
