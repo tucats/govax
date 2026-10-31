@@ -73,3 +73,32 @@ unit, which is last for that reason.
        govax console < testdata/for81/copyout.cmd
 
 No licensed file goes on the volume, so it needs no erasing.
+
+## Round 1's results
+
+| File | What it holds |
+| ---- | ------------- |
+| `vax/for81-vax.txt` | Cases #0 to #579 of `FOR81`. #580 ran away (the phase doc), so it is cut there |
+| `vax/for81r-vax.txt` | `FOR81R`, whole |
+| `vax/for81.log` | `FOR81.COM`'s log |
+| `vax/for81-blocks.txt` | VMS-made files' blocks, by govax's DUMP/BLOCK on the exchange volume, all-zero lines left out (the programs' own dumps failed with RMS$_UPI) |
+
+## Round 2
+
+`for81c.mar` (72 cases on FORRTL), `for81d.mar` (28 on RMS), and `for81x.mar` (units left
+open at image exit) ask what round 1 left open; the phase doc lists it. On its own volume:
+
+    govax console < testdata/for81/exchangec.cmd
+
+makes `testdata/disks/for81c-exchange.dsk` (RD54 size, label FOR81C). At `sim>`, `SET RQ2 RD54`
+before the attach. On the VAX:
+
+    $ MOUNT DUA2: FOR81C
+    $ SET DEFAULT DUA2:[000000]
+    $ @FOR81C/OUTPUT=FOR81C.LOG
+    $ DISMOUNT DUA2:
+
+then `govax console < testdata/for81/copyoutc.cmd`. A hang is likeliest in `FOR81C`'s last case, a
+record held by another unit: Ctrl/Y, and say so. The volume's own files are still wanted after
+that, so please don't erase it. `SYS$BATCH` has 12 of round 1's jobs pending, each `$ EXIT` or an
+empty file: `DELETE/ENTRY` or leave them, as the queue is stopped.

@@ -2,7 +2,7 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
-written and waiting for its VMS run. Planned 2026-10-29. Needs Phase 80 (formatting and the
+round 1 run on VMS, round 2 waiting for its run. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -585,20 +585,20 @@ Each keyword is a longword, and some are followed by a value argument:
 | 4 | the next argument itself: a value, or an address to store to or a descriptor's |
 | 5 | a longword, at the next argument's address |
 | 7 | a descriptor, at the next argument's address |
-| 8 | seen to store a word, otherwise not understood |
+| 8 | seen to store a word, otherwise not understood; 9 looks like it |
 | 10 | a byte, at the next argument's address |
-| 6, 9, over 10 | FOR$_INVARGFOR |
+| 6, over 10 | FOR$_INVARGFOR |
 
 FOR$OPEN and FOR$CLOSE share these codes; 29 and up are INVARGFOR to them, and 27
 and 28 to FOR$CLOSE alone.
 
 | Code | Keyword | Values and what was seen |
 | ---- | ------- | ------------------------ |
-| 0, 17, 25, 28 | not known | accepted, no visible effect; each is a probe case |
+| 0, 17, 25, 28 | not known | accepted, no visible effect on a sequential unit; ASSOCIATEVARIABLE should be one, round 2's question |
 | 1 | UNIT | -1 and 120 are INVLOGUNI; missing, unit 0 |
 | 2 | DISPOSE | 1 KEEP, 2 DELETE (FOP DLT), 3 PRINT (SPL), 4 SUBMIT (SCF), 5 PRINT/DELETE (SPL, DLT), 6 SUBMIT/DELETE (SCF, DLT), at `$CLOSE` |
 | 3 | ERR= | not 0: a condition returns in R0 and isn't signaled |
-| 4 | ACCESS | 1 DIRECT (FIX, unformatted, RAC KEY, ROP 00010612, record 1), 2 SEQUENTIAL, 3 KEYED (INCOPECLO unless indexed), 4 APPEND |
+| 4 | ACCESS | 1 DIRECT (FIX, unformatted, RAC KEY, ROP 00010612), 2 SEQUENTIAL, 3 APPEND (INCOPECLO with 'NEW'), 4 KEYED (as DIRECT, without UIF, on a new file), by comparing the values with the texts |
 | 5 | FORM | 1 FORMATTED (RAT FTN), 2 UNFORMATTED (RAT 0) |
 | 6 | RECL | MRS, times 4 if unformatted |
 | 7 | CARRIAGECONTROL | 1 FORTRAN, 2 LIST (RAT CR), 3 NONE (RAT 0) |
@@ -615,15 +615,14 @@ and 28 to FOR$CLOSE alone.
 | 19 | ORGANIZATION | 1 SEQUENTIAL, 2 RELATIVE (ORG 10, FIX), 3 INDEXED (ORG 20) |
 | 20 | RECORDTYPE | 1 FIXED, 2 VARIABLE, 3 SEGMENTED (INCOPECLO if formatted), 4 STREAM, 5 STREAM_CR, 6 STREAM_LF |
 | 21 | USEROPEN | the routine's address |
-| 22 | ASSOCIATEVARIABLE | where to store; 0 stored at the open, even for a sequential unit, which the LRM says ignores it |
+| 22 | IOSTAT | where to store: 0 on success, the FOR number on failure, by the mechanism's width; it stops the signal as ERR= does. Found after round 1 (over govax) |
 | 23 | KEY | an address, followed only with ORGANIZATION='INDEXED'; INCOPECLO otherwise |
-| 24 | BLANK | 1 NULL, 2 ZERO |
+| 24 | BLANK | 1 ZERO, 2 NULL (INQUIRE's answers, #500 and #501); none is ZERO, so the compiler must pass the LRM's NULL |
 | 26 | DEFAULTFILE | a descriptor; replaces the unit's default name |
-| 27 | not known | 0 to 9, no visible effect, over 9 INVARGFOR; a probe case |
+| 27 | CONVERT, by question 48's NATIVE and the 2005 manual | 0 to 9, over 9 INVARGFOR; round 2's question |
 
-IOSTAT= isn't among them. FOR$OPEN returns a condition value, whose FOR number
-(INCRECLEN's 0018812C is 37) a compiled program must turn into IOSTAT's value itself.
-On success OPEN, CLOSE, and INQUIRE return 1, and REWIND, BACKSPACE, ENDFILE,
+FOR$OPEN also returns the condition value (INCRECLEN's 0018812C, FOR number 37, what
+IOSTAT stores). On success OPEN, CLOSE, and INQUIRE return 1, and REWIND, BACKSPACE, ENDFILE,
 UNLOCK, and FOR$IO_END 0.
 
 FOR$INQUIRE takes the same input codes (1 UNIT, 3 ERR=, 14 FILE, 26 DEFAULTFILE), and
@@ -632,7 +631,7 @@ a text's place is a descriptor's address by mechanism 4.
 
 | Code | Question | Code | Question |
 | ---- | -------- | ---- | -------- |
-| 29 | not known: stores nothing | 39 | FORMATTED |
+| 29 | not known: stores nothing, unit or file | 39 | FORMATTED |
 | 30 | EXIST (true for an unopened unit) | 40 | UNFORMATTED |
 | 31 | OPENED | 41 | RECL, in bytes for a formatted unit |
 | 32 | NUMBER | 42 | NEXTREC |
@@ -641,7 +640,7 @@ a text's place is a descriptor's address by mechanism 4.
 | 35 | ACCESS | 45 | RECORDTYPE |
 | 36 | SEQUENTIAL | 46 | KEYED |
 | 37 | DIRECT | 47 | CARRIAGECONTROL |
-| 38 | FORM | 48 | not known: UNKNOWN every time so far |
+| 38 | FORM | 48 | CONVERT: NATIVE on an unformatted unit, else UNKNOWN |
 
 The other entries take the unit by value: `FOR$REWIND(u)`, `FOR$BACKSPACE(u)`,
 `FOR$ENDFILE(u)`, `FOR$UNLOCK(u)`, `FOR$DELETE(u)`, and `FOR$FIND(u, rec)`,
@@ -652,10 +651,8 @@ what FORRTL gives `$CREATE`, the probe logs it, which on VMS is as good as the t
 
 What this changes:
 
-- **Decision 10** needs another look when VMS has run: FORRTL only sets FOP's SPL
-  and SCF, and leaves printing and submitting to RMS, so what happens without a queue
-  is RMS's to say. FOR$_IGNORED and IGNNOTDEL may come from elsewhere.
-- **Decision 11:** SCRATCH is FOP TMD, as proposed if the trial showed it.
+- **Decision 10 is withdrawn** by round 1: see below.
+- **Decision 11:** SCRATCH is FOP TMD, as VMS's run confirms.
 - **Decision 4:** FTNRTL's interface stays our own, but keywords as a code and a value
   are FORRTL's shape too, and its codes can be ours, which keeps the probe's tables
   directly usable.
@@ -674,6 +671,144 @@ Found in RMS and ods2 along the way, for subtask 3:
   versions: "directory entries need 516 bytes, more than fit in one 512-byte block"),
   where VMS goes on in another record. A program that opens STATUS='NEW' in a loop would
   meet it.
+
+## Round 1 on VMS (2026-10-31)
+
+VMS 7.1 ran `FOR81R` whole and `FOR81` to case #580 of 583. That case was the probe's
+mistake: `FOR$IO_END` with no statement active faults, and the handler's unwind faulted
+again until the stack ran out. `vax/for81-vax.txt` is cut at that case (the image wrote
+1.18 million lines of the same two). The block dumps failed too (`FB3` asked to share
+writes with block I/O, RMS$_UPI), but the files are on the exchange volume, so
+`vax/for81-blocks.txt` is their blocks through govax's DUMP, all-zero lines left out.
+
+**Relative files [VMS's bytes].**
+
+- **The prologue, VBN 1:** the longword at 68 is the first data VBN (2), at 6C MRN
+  (7FFFFFFF for 0), at 70 the end of file VBN, the word at 74 the version (1), and the word
+  at 1FE the sum of the block's other words.
+- **A cell:** a control byte (08, a record is there; a cell never used is all 00), then
+  for FIX the record, for VAR a word's length and MRS bytes, for VFC a word's length (with
+  FSZ in it), FSZ bytes, and MRS bytes. A cell's unused bytes are 0.
+- **Buckets:** cells don't cross a bucket, and a record's place is by whole buckets from
+  VBN 2 (cells per bucket, 512 times BKS over the cell's size). BKS 0 is chosen as the
+  smallest that holds a cell (MRS 10 is 1, 512 is 2).
+- **`$CREATE`:** ALQ comes back 3 (a cluster), and the end of file is the block after the
+  last, FFB 0, always. A FIX or VAR MRS of 0, or over the limit, is RMS$_MRS; RFM STM RMS$_RFM.
+- **Statuses:** a missing record's `$GET` RNF (by key) or skipped (in sequence), then EOF;
+  `$PUT` over one REX, with UIF an update; past MRN RMS$_MRN; key 0 KEY; a wrong size RSZ;
+  `$UPDATE` or `$DELETE` with no current record CUR; `$TRUNCATE` FAC; `$FREE` with nothing
+  held RNL.
+- **Sequential `$PUT`** goes to the next record after the last one reached, REX if it's there.
+- **RFA:** the record number, then 0.
+- `$OPEN` writes MRN only for a relative file, and DEQ only if the file's isn't 0.
+
+**Sequential files [VMS's run].**
+
+- **FIX records pad to a word,** as the guide says: MRS 5 at offsets 0, 6, 12, MRS 513 at
+  VBN 2, offset 2. Decision 9 stands.
+- **Keyed `$PUT`** (Decision 7): RAC KEY on a FIX file. An existing record without UIF is NEF,
+  with UIF replaced; past the end the file grows, the gap zeros, which then read as records.
+  Key 0 KEY, a wrong size RSZ. `$GET` past the end EOF. On VAR RMS$_RAC.
+- `$DELETE` IOP, `$TRUNCATE` of FAC-less FAC, as govax's. `$CREATE`'s ALQ comes back rounded to
+  the cluster if asked, else 0. FOP CIF returns RMS$_CREATED, 00010619, if it made the file,
+  and a found file's attributes in the FAB.
+- FOP TMP and TMD leave no entry, and NAM's result name has no version (`P37.DAT;`). DLT
+  goes at `$CLOSE`, from either call.
+- **`$PARSE` with no NAM is RMS$_NORMAL,** or a bad name's own status (FORRTL's first call
+  depends on it); govax says RMS$_NAM.
+- **SPL and SCF with no queue running:** `$CLOSE` is NORMAL and the file stays, **even with DLT**.
+  SCF queued a job (`SHOW QUEUE`: SYS$BATCH is stopped), SPL nothing, with no SYS$PRINT here.
+
+**OPEN [VMS's run].**
+
+- **Defaults:** a formatted unit's record is 133 (USZ, INQUIRE's RECL 85 hex). An unformatted
+  segmented one's USZ is 2044, RECL 1FE; with RECL=n, 4n+2. VARIABLE 4n, FIXED 4n with MRS 4n,
+  formatted FIXED MRS n. MRS is 0 for VAR at OPEN, whatever RECL says.
+- **Limits:** a formatted RECL over 65535 or negative is INCRECLEN, FIXED 0 too, FIXED past
+  32767 OPEFAI (RMS's MRS). Unformatted over 16383 INCRECLEN. Direct, as FIXED by its units.
+  BUFFERCOUNT 0 to 127, else KEYVALERR; BLOCKSIZE 0 to 65024 or so (MBC, blocks up), else
+  KEYVALERR; with a relative file also BLS, BKS. EXTENDSIZE to 65535, then KEYVALERR, -1 as 1.
+  INITIALSIZE -1 as 1, and any non-0 sets FOP CBT (00200000).
+- **Combinations:** direct needs RECL (INCRECLEN) and FIXED (INCOPECLO for VARIABLE,
+  SEGMENTED); SEGMENTED is unformatted only; relative needs RECL, is FIXED by default, and
+  may be VARIABLE, not STREAM; indexed with no KEY is INVKEYSPE; READONLY is INCOPECLO with NEW
+  or SCRATCH, and with UNKNOWN opens only (FILNOTFOU if missing); SCRATCH with any DISPOSE but
+  DELETE is INCOPECLO, and a FILE name is taken; READONLY with DELETE is INCOPECLO at OPEN or
+  CLOSE. CC by FORM (FORTRAN/NONE), an explicit one kept even for unformatted, and an
+  unformatted STREAM gets CR. KEY without indexed is INCOPECLO.
+- **Texts:** any case, trailing blanks, not leading; unknown KEYVALERR.
+- **Existing files (STATUS 'OLD'):** the file's RFM, RAT, and MRS win; FORM is taken from the
+  keyword, default formatted, for a file with no carriage control too. RECL other than the
+  file's in the same units, INCRECLEN (even FIX 20 unformatted, MRS 80, given 20 and no FORM:
+  it is a formatted question); RECORDTYPE different, INCRECTYP; SEGMENTED formatted INCOPECLO;
+  another organization INCFILORG.
+- **NEW over a file:** a new version. **UNKNOWN:** CIF. **No STATUS:** as NEW. **Two opens of
+  a file unshared:** OPEFAI. **SHARED:** SHR 0F, both fine. **READONLY:** FAC 0, SHR 0.
+- **A connected unit:** the same file, or no name, changes **BLANK alone** and nothing else
+  (not FORM, RECL, DISPOSE, STATUS), silently. Another file closes the first by its
+  disposition, and if the new one fails, the unit is left closed.
+- **USEROPEN:** three arguments by reference, FAB, RAB, unit, called with the names set, a
+  NAM, and XABs FHC then SUM; `$CREATE` or `$OPEN` and `$CONNECT` are the routine's. Its status
+  fails the OPEN. Modes 2 and 3 of the probe show what follows.
+
+**CLOSE:** DISPOSE overrides OPEN's either way. Numbers and texts alike. INCOPECLO for SCRATCH
+keep or print, and READONLY delete; a bad value KEYVALERR or INVARGFOR, **the unit left open**.
+A unit not open, or twice: success, no call of RMS. An invalid one INVLOGUNI. **PRINT and
+SUBMIT say nothing:** the file stays, status 1, so **Decision 10 goes**: FTNRTL sets FOP, and
+RMS does as VMS's with no queue, keeping the file. FOR$_IGNORED and IGNNOTDEL weren't seen.
+
+**INQUIRE:** always status 1, for a bad name or unit too (EXIST false). An unopened unit: EXIST
+true, NUMBER its number, text UNKNOWN, NAME blank, numbers 0; invalid: EXIST false, NUMBER 0. By
+file: found closed, EXIST and NAMED true, full NAME, NUMBER 0, its ORG and RT and CC and RECL,
+SEQUENTIAL YES, DIRECT YES if FIX, ACCESS and FORM and BLANK UNKNOWN. Missing: EXIST false,
+NAMED true, the parsed name. A wildcard or bad name: NAME as given, all false. An open file by
+name answers as its unit. DIRECT is YES only for FIX or relative; KEYED NO. FORMATTED and
+UNFORMATTED YES always when known. BLANK UNKNOWN when unformatted. NEXTREC 1 on opening direct.
+Unit 5's name is `SYS$INPUT:.;`, unit 6's `SYS$OUTPUT:.;`; SCRATCH's `DUA2:[000000]FOR010.DAT;`,
+NAMED false. RECL in longwords when unformatted, in bytes when formatted.
+
+**Default names:** as the survey's trial, with USEROPEN: FNA FORnnn, DNA FORnnn.DAT for 0 to 119;
+unit 5, 6 SYS$INPUT:, SYS$OUTPUT:. Units -3 and -4, written to, ERRDURWRI. NAMED.DAT by a FOR011
+logical name.
+
+**Unformatted records [VMS's bytes].** A control word first, 03 only, 01 first, 00 middle, 02
+last, for SEGMENTED: segments of USZ with its word, so 2042 bytes of data by default, a zero
+record just 0300. VARIABLE and FIXED no word, and over the size OUTSTAOVE; a short FIXED record
+is padded (`vax/for81-blocks.txt`'s DIR1.DAT). Reads: fewer items is fine, more than the record INPSTAREQ, past the end
+ENDDURREA. A segmented read of unsegmented data SEGRECFOR. STREAM keeps text with its CR
+ending. Formatted against unformatted MIXFILACC. BACKSPACE steps a whole logical record.
+
+**REWIND, BACKSPACE, ENDFILE:** REWIND and BACKSPACE of an unopened unit succeed without opening
+it; ENDFILE opens it. Direct unit: REWERR, BACERR, ENDFILERR. Readonly: ENDFILE ENDFILERR. A write
+after a read cuts the file there. ENDFILE writes `1A` records, read as ENDDURREA, and reading
+goes on past them. BACKSPACE at the start does nothing; BACKSPACE of unit 6 works.
+
+**Direct access:** OPEDEFREQ on a sequential unit, even FIX. Rec 0 is RECNUMOUT; rec -1 is
+ERRDURREA reading and ERRDURWRI writing (RMS's); missing past the end ATTACCNON; a gap reads as zeros;
+past MAXREC RECNUMOUT. Formatted pads with blanks, OUTSTAOVE over. A sequential statement
+on a direct unit MIXFILACC. Direct on a VAR file INCRECTYP. Readonly write WRIREAFIL. FIND
+sets NEXTREC, past the end ATTACCNON. NEXTREC is the record after the last. DEFINE FILE:
+`FOR$DEF_FILE_W(u, m, n, asv)` (word), `FOR$DEF_FILE` (longword); FIX, MRS 2n, MRN m, RECL
+in INQUIRE n/2; no file until the first I/O; its variable updates after each; on an open unit
+UNIALROPE; twice DUPFILSPE; OPEN after one DUPFILSPE; m 0 or -1, n 0: accepted; n too big
+(40000) INCRECTYP at define.
+
+**Relative files through FORRTL:** direct as the RMS rules: a write over a record replaces it;
+DELETE_D then a read ATTACCNON. REWRITE after a read, any VAR length, DELETE of the current. A
+formatted file read as unformatted is MIXFILACC (the mistake that spoiled #572; round 2 repeats it).
+Files' keywords: other organization INCFILORG, RECL INCRECLEN, type INCRECTYP.
+
+**DELETE, REWRITE, UNLOCK:** on a sequential file DELERR, REWRITE after a read fine by a FIX or
+same-length VAR file, else REWRITERR; a formatted short rewrite pads. UNLOCK fine. On a unit
+not open: DELERR, UNLERR, and NO_CURREC.
+
+**What needs round 2** (`for81c.mar`, 72 cases, and `for81d.mar`, 28): the true
+ASSOCIATEVARIABLE code, by direct writes on each of codes 0, 17, 25, 28; IOSTAT by each width and
+on CLOSE and INQUIRE; APPEND, which every "append" case above missed by using the value for
+KEYED; relative files read in sequence, with the right FORM; a deleted cell left deleted, whose
+control byte no file above shows; how a relative file grows (ALQ, DEQ, BKS, EOF) and BKS chosen by
+MRS; record locks; CONVERT's values; the keyed statements' conditions; and what the exit handler
+does with each disposition (`for81x.mar`).
 
 ## Subtasks (provisional, revised by the survey)
 
@@ -727,3 +862,8 @@ Found in RMS and ods2 along the way, for subtask 3:
   it. `FOR81.COM` runs whole on govax over VMS's FORRTL.EXE, one output file, though
   many answers there are govax's gaps until VMS's run says what they should be.
   Waiting for that run.
+- **2026-10-31, round 1's run, and round 2 written.** VMS 7.1's answers are the section
+  "Round 1 on VMS". They correct the keyword table (BLANK's and ACCESS's values, code 22 is
+  IOSTAT, code 27 and question 48 CONVERT) and withdraw Decision 10. `vax/` holds the run, and
+  `vax/for81-blocks.txt` the files' blocks, read from the exchange volume. Round 2,
+  `for81c.mar`, `for81d.mar`, and `for81x.mar`, runs whole on govax, waiting for VMS's run.

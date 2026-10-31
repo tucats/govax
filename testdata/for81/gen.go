@@ -2533,13 +2533,669 @@ $ DUMP/BLOCK=COUNT:1 REL1.DAT
 $ EXIT
 `
 
+// round2 is FORRTL's cases that round 1 left open (the phase doc's "Round 1").
+func round2() *prog {
+	p := newProg("FOR81C")
+
+	names := 0
+	fresh := func() string {
+		names++
+		return fmt.Sprintf("G%d.DAT", names)
+	}
+
+	p.section("IOSTAT: code 22")
+
+	for _, m := range []int{mWordRef, mLongRef, mByteRef} {
+		m := m
+		p.kase(fmt.Sprintf("IOSTAT mechanism %d, an error, no ERR=", m), func() {
+			p.emit("MOVL\t#^X12345678,ASVL")
+			p.openS(10, ref(22, m, "ASVL"), imm(kRecType, 1))
+			p.asv()
+		})
+		name := fresh()
+		p.kase(fmt.Sprintf("IOSTAT mechanism %d, success", m), func() {
+			p.emit("MOVL\t#^X12345678,ASVL")
+			p.openS(10, file(p, name), ref(22, m, "ASVL"))
+			p.asv()
+		})
+	}
+	p.kase("IOSTAT with RMS's failure", func() {
+		p.openS(10, file(p, "MISSING.DAT"), imm(kStatus, 1), ref(22, mLongRef, "ASVL"))
+		p.asv()
+		p.openS(10, file(p, "NOSUCH:[X]Y.DAT"), ref(22, mLongRef, "ASVL"))
+		p.asv()
+		p.openS(10, file(p, "A[B"), ref(22, mLongRef, "ASVL"))
+		p.asv()
+	})
+	p.kase("IOSTAT on CLOSE and INQUIRE", func() {
+		p.closeS(120, ref(22, mLongRef, "ASVL"))
+		p.asv()
+		p.closeS(19, ref(22, mLongRef, "ASVL"))
+		p.asv()
+		p.call("FOR$INQUIRE", true, unit(19)[0], "#^X0516", "&ASVL")
+		p.asv()
+		p.call("FOR$INQUIRE", true, unit(120)[0], "#^X0516", "&ASVL")
+		p.asv()
+		p.call("FOR$INQUIRE", true, "#^X070E", "&"+p.text("A[B"), "#^X0516", "&ASVL")
+		p.asv()
+	})
+
+	p.section("ASSOCIATEVARIABLE: which code")
+
+	for _, c := range []int{0, 17, 25, 28} {
+		for _, m := range []int{mLongRef, mWordRef, mLongVal} {
+			c, m := c, m
+			name := fresh()
+			p.kase(fmt.Sprintf("code %d mechanism %d on a direct unit", c, m), func() {
+				p.emit("MOVL\t#^X12345678,ASVL")
+				p.open(10, file(p, name), imm(kAccess, 1), imm(kRecl, 1), ref(c, m, "ASVL"))
+				p.asv()
+				p.wrDU(10, 3, 4)
+				p.asv()
+				p.rdDU(10, 1, 4)
+				p.asv()
+				p.call("FOR$FIND", true, "#10", "#2")
+				p.asv()
+			})
+		}
+	}
+	p.kase("code 0 and 17 and 25 and 28 all, on a direct relative unit", func() {
+		p.emit("MOVL\t#^X12345678,VAL")
+		p.emit("MOVL\t#^X12345678,VAL+4")
+		p.emit("MOVL\t#^X12345678,IQL")
+		p.emit("MOVL\t#^X12345678,IQL+4")
+		p.open(10, file(p, fresh()), imm(kOrg, 2), imm(kAccess, 1), imm(kRecl, 1),
+			ref(0, mLongRef, "VAL"), ref(17, mLongRef, "VAL+4"), ref(25, mLongRef, "IQL"), ref(28, mLongRef, "IQL+4"))
+		p.wrDU(10, 3, 4)
+		p.emit("PUSHL\tVAL\n\tPUSHAB\t%s\n\tCALLS\t#2,L^SHOW", p.text("code 0"))
+		p.emit("PUSHL\tVAL+4\n\tPUSHAB\t%s\n\tCALLS\t#2,L^SHOW", p.text("code 17"))
+		p.emit("PUSHL\tIQL\n\tPUSHAB\t%s\n\tCALLS\t#2,L^SHOW", p.text("code 25"))
+		p.emit("PUSHL\tIQL+4\n\tPUSHAB\t%s\n\tCALLS\t#2,L^SHOW", p.text("code 28"))
+	})
+
+	p.section("ACCESS='APPEND': value 3")
+
+	p.kase("make the files", func() {
+		p.open(11, file(p, "AV.DAT"), imm(kStatus, 4))
+		p.wrF(11, " ONE")
+		p.wrF(11, " TWO")
+		p.closeU(11)
+		p.open(11, file(p, "AF.DAT"), imm(kStatus, 4), imm(kRecType, 1), imm(kRecl, 8))
+		p.wrF(11, " ONE")
+		p.closeU(11)
+		p.open(11, file(p, "AU.DAT"), imm(kStatus, 4), imm(kForm, 2))
+		p.wrU(11, 8)
+		p.closeU(11)
+		p.open(11, file(p, "AR.DAT"), imm(kStatus, 4), imm(kOrg, 2), imm(kRecl, 8))
+		p.wrF(11, " ONE")
+		p.closeU(11)
+	})
+	app := func(title, name string, kws ...kw) {
+		p.kase("APPEND "+title, func() {
+			p.open(10, append([]kw{file(p, name), imm(kAccess, 3)}, kws...)...)
+			p.fab(10)
+			p.inq(10)
+			p.wrF(10, " APPENDED")
+			p.unitCall("FOR$BACKSPACE", 10)
+			p.rdF(10, 12)
+			p.unitCall("FOR$REWIND", 10)
+			p.rdF(10, 12)
+			p.wrF(10, " AFTER REWIND")
+			p.closeU(10)
+			p.stat(name, 1)
+		})
+	}
+	app("no STATUS, VAR", "AV.DAT")
+	app("OLD, VAR", "AV.DAT", imm(kStatus, 1))
+	app("UNKNOWN, VAR", "AV.DAT", imm(kStatus, 4))
+	app("NEW", "AV.DAT", imm(kStatus, 2))
+	app("SCRATCH", "AV.DAT", imm(kStatus, 3))
+	app("OLD, missing", "AN1.DAT", imm(kStatus, 1))
+	app("UNKNOWN, missing", "AN2.DAT", imm(kStatus, 4))
+	app("OLD, FIX", "AF.DAT", imm(kStatus, 1))
+	app("OLD, relative", "AR.DAT", imm(kStatus, 1), imm(kOrg, 2))
+	app("readonly", "AV.DAT", imm(kStatus, 1), imm(kReadOnly, 1))
+	p.kase("APPEND OLD, unformatted", func() {
+		p.open(10, file(p, "AU.DAT"), imm(kAccess, 3), imm(kStatus, 1), imm(kForm, 2))
+		p.fab(10)
+		p.wrU(10, 8)
+		p.closeU(10)
+		p.stat("AU.DAT", 1)
+	})
+	p.kase("APPEND text", func() {
+		p.open(10, file(p, "AV.DAT"), text(p, kAccess, "APPEND"), imm(kStatus, 1))
+		p.fab(10)
+		p.inq(10)
+	})
+	p.kase("ACCESS=4, KEYED, on an existing sequential file", func() {
+		p.open(10, file(p, "AV.DAT"), imm(kAccess, 4), imm(kStatus, 1))
+		p.fab(10)
+	})
+
+	p.section("relative files read in sequence")
+
+	p.kase("unformatted: every statement in sequence", func() {
+		p.open(10, file(p, "RS1.DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kAccess, 1), imm(kStatus, 4))
+		p.wrDU(10, 1, 8)
+		p.wrDU(10, 2, 8)
+		p.wrDU(10, 5, 8)
+		p.closeU(10)
+		p.open(10, file(p, "RS1.DAT"), imm(kOrg, 2), imm(kStatus, 1), imm(kForm, 2))
+		p.fab(10)
+		p.inq(10)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.call("FOR$DELETE", true, "#10")
+		p.rdU(10, 8)
+		p.inq(10)
+		p.rdU(10, 8)
+		p.unitCall("FOR$REWIND", 10)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.wrU(10, 8)
+		p.rwU(10, 8)
+		p.unitCall("FOR$BACKSPACE", 10)
+		p.unitCall("FOR$ENDFILE", 10)
+		p.unitCall("FOR$REWIND", 10)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.rdU(10, 8)
+		p.closeU(10)
+		p.stat("RS1.DAT", 1)
+	})
+	p.kase("writes from the start, and after a rewind", func() {
+		p.open(10, file(p, "RS2.DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kForm, 2), imm(kStatus, 4))
+		p.fab(10)
+		p.wrU(10, 8)
+		p.wrU(10, 8)
+		p.unitCall("FOR$REWIND", 10)
+		p.wrU(10, 8)
+		p.rdU(10, 8)
+		p.unitCall("FOR$REWIND", 10)
+		p.rdU(10, 8)
+		p.wrU(10, 8)
+		p.wrU(10, 8)
+		p.closeU(10)
+		p.stat("RS2.DAT", 1)
+	})
+	p.kase("formatted, in sequence", func() {
+		p.open(10, file(p, "RS3.DAT"), imm(kOrg, 2), imm(kRecl, 8), imm(kStatus, 4))
+		p.wrF(10, "ONE")
+		p.wrF(10, "TWO")
+		p.wrF(10, "THREE")
+		p.unitCall("FOR$REWIND", 10)
+		p.rdF(10, 8)
+		p.call("FOR$DELETE", true, "#10")
+		p.call("FOR$DELETE", true, "#10")
+		p.rdF(10, 8)
+		p.rwF(10, "REPLACED")
+		p.rdF(10, 8)
+		p.rdF(10, 8)
+		p.closeU(10)
+		p.stat("RS3.DAT", 1)
+	})
+	p.kase("direct over a deleted record; DELETE_D of a missing one, of 0, past MAXREC", func() {
+		p.open(10, file(p, "RS4.DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kAccess, 1), imm(kMaxRec, 9), imm(kStatus, 4))
+		p.wrDU(10, 2, 8)
+		p.call("FOR$DELETE_D", true, "#10", "#2")
+		p.call("FOR$DELETE_D", true, "#10", "#2")
+		p.call("FOR$DELETE_D", true, "#10", "#7")
+		p.call("FOR$DELETE_D", true, "#10", "#0")
+		p.call("FOR$DELETE_D", true, "#10", "#10")
+		p.rwU(10, 8)
+		p.call("FOR$FIND", true, "#10", "#2")
+		p.call("FOR$DELETE", true, "#10")
+		p.call("FOR$FIND", true, "#10", "#7")
+		p.closeU(10)
+		p.stat("RS4.DAT", 1)
+	})
+
+	p.section("the keyed statements' conditions")
+
+	for _, r := range []string{"FOR$READ_KU", "FOR$READ_KF", "FOR$READ_KO"} {
+		r := r
+		p.kase(r+" on a sequential file", func() {
+			p.open(10, file(p, "AV.DAT"), imm(kStatus, 1))
+			p.call(r, true, "#10", "&"+p.text("KEY"), "#0", "#0")
+		})
+		p.kase(r+" on a unit not open", func() {
+			p.call(r, true, "#18", "&"+p.text("KEY"), "#0", "#0")
+		})
+	}
+	p.kase("indexed, a bad key address", func() {
+		p.open(10, file(p, "IDX1.DAT"), imm(kOrg, 3), imm(kRecl, 10), imm(kStatus, 2), imm(kKey, 1))
+	})
+	p.kase("an existing indexed file: none here", func() {
+		p.open(10, file(p, "AV.DAT"), imm(kOrg, 3), imm(kStatus, 1))
+	})
+
+	p.section("CONVERT: code 27, and question 48")
+
+	for v := 0; v <= 9; v++ {
+		v := v
+		name := fresh()
+		p.kase(fmt.Sprintf("value %d", v), func() {
+			p.open(10, file(p, name), imm(kForm, 2), imm(27, v), imm(kStatus, 4))
+			p.emit("PUSHL\t#0\n\tPUSHL\t#^X000A0101\n\tPUSHL\t#48\n\tCALLS\t#3,L^INQ1")
+			p.wrU(10, 8)
+			p.closeU(10)
+			p.stat(name, 1)
+		})
+	}
+	for _, t := range []string{"NATIVE", "VAXD", "VAXG", "BIG_ENDIAN", "LITTLE_ENDIAN", "CRAY", "FDX", "FGX", "IBM", "NONE", "OTHER"} {
+		t := t
+		name := fresh()
+		p.kase("text "+t, func() {
+			p.open(10, file(p, name), imm(kForm, 2), text(p, 27, t), imm(kStatus, 4))
+			p.emit("PUSHL\t#0\n\tPUSHL\t#^X000A0101\n\tPUSHL\t#48\n\tCALLS\t#3,L^INQ1")
+		})
+	}
+	p.kase("formatted", func() {
+		p.open(10, file(p, fresh()), imm(27, 3), imm(kStatus, 4))
+		p.emit("PUSHL\t#0\n\tPUSHL\t#^X000A0101\n\tPUSHL\t#48\n\tCALLS\t#3,L^INQ1")
+	})
+
+	p.section("records past what's allowed")
+
+	p.kase("formatted: RECL 8, written long, read long", func() {
+		p.open(10, file(p, "LONG1.DAT"), imm(kRecl, 8), imm(kStatus, 4))
+		p.wrF(10, "12345678")
+		p.wrF(10, "123456789")
+		p.unitCall("FOR$REWIND", 10)
+		p.rdF(10, 8)
+		p.rdF(10, 8)
+		p.closeU(10)
+		p.open(10, file(p, "LONG1.DAT"), imm(kRecl, 4), imm(kStatus, 1))
+		p.rdF(10, 4)
+		p.closeU(10)
+		p.stat("LONG1.DAT", 1)
+	})
+	p.kase("an unformatted variable file read with too small a RECL", func() {
+		p.open(10, file(p, "LONG2.DAT"), imm(kForm, 2), imm(kRecType, 2), imm(kRecl, 4), imm(kStatus, 4))
+		p.wrU(10, 16)
+		p.closeU(10)
+		p.open(10, file(p, "LONG2.DAT"), imm(kForm, 2), imm(kRecType, 2), imm(kRecl, 1), imm(kStatus, 1))
+		p.fab(10)
+		p.rdU(10, 4)
+		p.closeU(10)
+	})
+
+	p.section("last, since a wait could hang: record locks")
+
+	p.kase("relative: a record held by another unit", func() {
+		p.open(10, file(p, "LK1.DAT"), imm(kOrg, 2), imm(kRecl, 2), imm(kAccess, 1), imm(kStatus, 4), imm(kShared, 1))
+		p.wrDU(10, 1, 8)
+		p.wrDU(10, 2, 8)
+		p.open(11, file(p, "LK1.DAT"), imm(kOrg, 2), imm(kAccess, 1), imm(kStatus, 1), imm(kShared, 1))
+		p.fab(11)
+		p.rdDU(10, 1, 8)
+		p.rdDU(11, 2, 8)
+		p.rdDU(10, 2, 8)
+		p.call("FOR$UNLOCK", true, "#11")
+		p.rdDU(10, 2, 8)
+		p.call("FOR$UNLOCK", true, "#10")
+		p.rdDU(11, 1, 8)
+		p.rdDU(11, 1, 8)
+	})
+
+	return p
+}
+
+// exitProg leaves units open at image exit, for what the exit handler does.
+const exitProg = `	.TITLE	FOR81X - units left open at image exit
+; Written by testdata/for81/gen.go.
+	.PSECT	D,NOEXE,WRT,LONG
+N1:	.ASCID	~XKEEP.DAT~
+N2:	.ASCID	~XDEL.DAT~
+N3:	.ASCID	~XSCR.DAT~
+N4:	.ASCID	~XPRT.DAT~
+N5:	.ASCID	~XSEG.DAT~
+T1:	.ASCID	~ TEXT~
+FMT:	.ASCIZ	~(A)~
+	.ALIGN	LONG
+BD:	.WORD	8
+	.BYTE	14,1
+	.ADDRESS BB
+BB:	.ASCII	/ABCDEFGH/
+	.PSECT	C,EXE,NOWRT,LONG
+	.ENTRY	WRT,^M<>
+	PUSHAB	FMT
+	PUSHL	4(AP)
+	CALLS	#2,G^FOR$WRITE_SO
+	PUSHAB	T1
+	CALLS	#1,G^FOR$IO_T_DS
+	CALLS	#0,G^FOR$IO_END
+	RET
+	.ENTRY	MAIN,^M<>
+	PUSHAB	N1
+	PUSHL	#^X070E
+	PUSHL	#^X000A0101
+	CALLS	#3,G^FOR$OPEN
+	PUSHL	#10
+	CALLS	#1,WRT
+	PUSHL	#^X00020202
+	PUSHAB	N2
+	PUSHL	#^X070E
+	PUSHL	#^X000B0101
+	CALLS	#4,G^FOR$OPEN
+	PUSHL	#11
+	CALLS	#1,WRT
+	PUSHL	#^X0003020F
+	PUSHAB	N3
+	PUSHL	#^X070E
+	PUSHL	#^X000C0101
+	CALLS	#4,G^FOR$OPEN
+	PUSHL	#12
+	CALLS	#1,WRT
+	PUSHL	#^X00030202
+	PUSHAB	N4
+	PUSHL	#^X070E
+	PUSHL	#^X000D0101
+	CALLS	#4,G^FOR$OPEN
+	PUSHL	#13
+	CALLS	#1,WRT
+	PUSHL	#^X00020205
+	PUSHAB	N5
+	PUSHL	#^X070E
+	PUSHL	#^X000E0101
+	CALLS	#4,G^FOR$OPEN
+	PUSHL	#14
+	CALLS	#1,G^FOR$WRITE_SU
+	PUSHAB	BD
+	CALLS	#1,G^FOR$IO_T_DS
+	CALLS	#0,G^FOR$IO_END
+	PUSHL	#15
+	CALLS	#1,WRT
+	MOVL	#1,R0
+	RET
+	.END	MAIN
+`
+
+// rms2 is RMS's cases that round 1 left open.
+func rms2() *prog {
+	p := newProg("FOR81D")
+
+	reset := func(file string) {
+		p.emit("CALLS\t#0,L^RRESET")
+		p.emit("MOVAB\t%s,R0", p.text(file))
+		p.emit("MOVB\t(R0),FB+FAB$B_FNS")
+		p.emit("MOVL\t4(R0),FB+FAB$L_FNA")
+	}
+	svc := func(macro, block, target string) {
+		p.emit("%s\t%s=%s", macro, block, target)
+		p.shownow(macro)
+	}
+	create := func(file, rfm string, mrs, mrn, bks, alq, deq int) {
+		reset(file)
+		p.emit("MOVB\t#FAB$C_REL,FB+FAB$B_ORG")
+		p.emit("MOVB\t#%s,FB+FAB$B_RFM", rfm)
+		p.emit("MOVW\t#%d,FB+FAB$W_MRS", mrs)
+		p.emit("MOVL\t#%d,FB+FAB$L_MRN", mrn)
+		p.emit("MOVB\t#%d,FB+FAB$B_BKS", bks)
+		p.emit("MOVL\t#%d,FB+FAB$L_ALQ", alq)
+		p.emit("MOVW\t#%d,FB+FAB$W_DEQ", deq)
+		svc("$CREATE", "FAB", "FB")
+		p.emit("CALLS\t#0,L^SHOWF")
+		svc("$CONNECT", "RAB", "RB")
+	}
+	closef := func() { svc("$CLOSE", "FAB", "FB") }
+	key := func(rec int) {
+		p.emit("MOVL\t#%d,RKEY", rec)
+		p.emit("MOVB\t#RAB$C_KEY,RB+RAB$B_RAC")
+	}
+	put := func(rec, n int) {
+		p.emit("MOVW\t#%d,RB+RAB$W_RSZ", n)
+		p.emit("MOVAB\tBIGB,RB+RAB$L_RBF")
+		p.emit("CLRL\tRB+RAB$L_ROP")
+		key(rec)
+		svc("$PUT", "RAB", "RB")
+		p.emit("CALLS\t#0,L^SHOWR")
+	}
+	get := func(rec int) {
+		p.emit("CLRL\tRB+RAB$L_ROP")
+		if rec > 0 {
+			key(rec)
+		} else {
+			p.emit("MOVB\t#RAB$C_SEQ,RB+RAB$B_RAC")
+		}
+		p.emit("MOVW\t#512,RB+RAB$W_USZ")
+		p.emit("MOVAB\tRDB,RB+RAB$L_UBF")
+		svc("$GET", "RAB", "RB")
+		p.emit("CALLS\t#0,L^SHOWG")
+	}
+	del := func() { svc("$DELETE", "RAB", "RB"); p.emit("CALLS\t#0,L^SHOWR") }
+	update := func(n int) {
+		p.emit("MOVW\t#%d,RB+RAB$W_RSZ", n)
+		p.emit("MOVAB\tBIGB,RB+RAB$L_RBF")
+		svc("$UPDATE", "RAB", "RB")
+		p.emit("CALLS\t#0,L^SHOWR")
+	}
+
+	p.section("deleted cells, left deleted")
+
+	p.kase("delete the middle, FIX", func() {
+		create("D1.DAT", "FAB$C_FIX", 10, 0, 0, 0, 0)
+		put(1, 10)
+		put(2, 10)
+		put(3, 10)
+		get(2)
+		del()
+		closef()
+		p.stat("D1.DAT", 1)
+	})
+	p.kase("delete the last, FIX", func() {
+		create("D2.DAT", "FAB$C_FIX", 10, 0, 0, 0, 0)
+		put(1, 10)
+		put(2, 10)
+		get(2)
+		del()
+		get(-1)
+		closef()
+		p.stat("D2.DAT", 1)
+	})
+	p.kase("delete them all, VAR, and read", func() {
+		create("D3.DAT", "FAB$C_VAR", 10, 0, 0, 0, 0)
+		put(1, 5)
+		put(2, 10)
+		get(1)
+		del()
+		get(2)
+		del()
+		p.emit("MOVB\t#RAB$C_SEQ,RB+RAB$B_RAC")
+		svc("$REWIND", "RAB", "RB")
+		get(-1)
+		closef()
+		p.stat("D3.DAT", 1)
+	})
+	p.kase("put into a deleted cell, a shorter VAR, an update to shorter and longer", func() {
+		create("D4.DAT", "FAB$C_VAR", 20, 0, 0, 0, 0)
+		put(1, 10)
+		get(1)
+		del()
+		put(1, 3)
+		put(2, 20)
+		get(2)
+		update(5)
+		get(2)
+		update(20)
+		get(2)
+		update(21)
+		closef()
+		p.stat("D4.DAT", 1)
+	})
+
+	p.section("how a relative file grows")
+
+	grow := func(title, file string, mrs, bks, alq, deq int, recs ...int) {
+		p.kase(title, func() {
+			create(file, "FAB$C_FIX", mrs, 0, bks, alq, deq)
+			for _, r := range recs {
+				put(r, mrs)
+				p.emit("CALLS\t#0,L^SHOWF")
+			}
+			closef()
+			p.stat(file, 0)
+		})
+	}
+	grow("a block at a time", "E1.DAT", 100, 0, 0, 0, 1, 6, 11, 16, 21, 26, 31)
+	grow("ALQ 2", "E2.DAT", 100, 0, 2, 0, 1)
+	grow("ALQ 1", "E3.DAT", 100, 0, 1, 0, 1, 6)
+	grow("ALQ 20", "E4.DAT", 100, 0, 20, 0, 1, 500)
+	grow("DEQ 50", "E5.DAT", 100, 0, 0, 50, 1, 100, 1000)
+	grow("BKS 4", "E6.DAT", 100, 4, 0, 0, 1, 21, 41)
+	grow("BKS 32", "E7.DAT", 100, 32, 0, 0, 1)
+	grow("BKS 63", "E8.DAT", 100, 63, 0, 0, 1)
+	grow("BKS 64", "E9.DAT", 100, 64, 0, 0, 1)
+	grow("MRS 16000 BKS 0", "E10.DAT", 16000, 0, 0, 0, 1)
+	grow("MRS 32255", "E11.DAT", 32255, 0, 0, 0, 1)
+	grow("MRS 32256", "E12.DAT", 32256, 0, 0, 0, 1)
+	grow("MRS 16000 BKS 1", "E13.DAT", 16000, 1, 0, 0, 1)
+	for _, m := range []int{510, 511, 512, 1022, 1023, 1024} {
+		grow(fmt.Sprintf("MRS %d: the bucket size chosen", m), fmt.Sprintf("B%d.DAT", m), m, 0, 0, 0, 1, 2)
+	}
+	p.kase("VAR MRS 510, 509: the bucket size chosen", func() {
+		create("B1.DAT", "FAB$C_VAR", 510, 0, 0, 0, 0)
+		put(1, 510)
+		closef()
+		create("B2.DAT", "FAB$C_VAR", 509, 0, 0, 0, 0)
+		put(1, 509)
+		closef()
+		p.stat("B1.DAT", 0)
+		p.stat("B2.DAT", 0)
+	})
+
+	p.section("two streams on a relative file")
+
+	p.kase("a locked record", func() {
+		reset("L1.DAT")
+		p.emit("MOVB\t#FAB$C_REL,FB+FAB$B_ORG")
+		p.emit("MOVB\t#FAB$C_FIX,FB+FAB$B_RFM")
+		p.emit("MOVW\t#10,FB+FAB$W_MRS")
+		p.emit("MOVB\t#FAB$M_SHRPUT!FAB$M_SHRGET!FAB$M_SHRDEL!FAB$M_SHRUPD,FB+FAB$B_SHR")
+		svc("$CREATE", "FAB", "FB")
+		svc("$CONNECT", "RAB", "RB")
+		put(1, 10)
+		put(2, 10)
+		svc("$OPEN", "FAB", "FB4")
+		svc("$CONNECT", "RAB", "RB4")
+		get(1)
+		p.emit("MOVL\t#1,RKEY")
+		p.emit("MOVW\t#512,RB4+RAB$W_USZ")
+		p.emit("MOVAB\tRDB,RB4+RAB$L_UBF")
+		svc("$GET", "RAB", "RB4")
+		p.emit("MOVL\t#RAB$M_NLK,RB4+RAB$L_ROP")
+		svc("$GET", "RAB", "RB4")
+		p.emit("MOVL\t#RAB$M_RRL,RB4+RAB$L_ROP")
+		svc("$GET", "RAB", "RB4")
+		p.emit("MOVL\t#RAB$M_NXR,RB4+RAB$L_ROP")
+		svc("$GET", "RAB", "RB4")
+		svc("$RELEASE", "RAB", "RB")
+		p.emit("CLRL\tRB4+RAB$L_ROP")
+		svc("$GET", "RAB", "RB4")
+		svc("$FREE", "RAB", "RB4")
+		svc("$CLOSE", "FAB", "FB4")
+		closef()
+	})
+
+	p.section("the attributes $OPEN gives back, fresh each time")
+
+	for _, n := range []string{"D1.DAT", "E5.DAT", "E7.DAT"} {
+		n := n
+		p.kase("$OPEN "+n, func() {
+			reset(n)
+			svc("$OPEN", "FAB", "FB")
+			p.emit("CALLS\t#0,L^SHOWF")
+			closef()
+		})
+	}
+
+	return p
+}
+
+// write2 is write for round 2: its block dumps work, its file statistics start
+// clean, and it has a second FAB and RAB.
+func (p *prog) write2(title, extra string) string {
+	return strings.NewReplacer(
+		"FB3:\t$FAB\tFAC=<BIO,GET>,SHR=<GET,PUT,UPD,DEL>", "FB3:\t$FAB\tFAC=<BIO,GET>,SHR=<GET>",
+		"\tMOVB\t(R2),FB2+FAB$B_FNS\n", "\tCLRL\tFB2+FAB$L_MRN\n\tCLRW\tFB2+FAB$W_DEQ\n\tMOVB\t(R2),FB2+FAB$B_FNS\n",
+		"FBT:\t.BLKB\tFAB$C_BLN", "FB4:\t$FAB\tFAC=<GET,PUT,UPD,DEL>,SHR=<GET,PUT,UPD,DEL>,FNM=<L1.DAT>\n\t.ALIGN\tLONG\nRB4:\t$RAB\tFAB=FB4,KBF=RKEY,KSZ=4,RAC=KEY\n\t.ALIGN\tLONG\nFBT:\t.BLKB\tFAB$C_BLN",
+	).Replace(p.write(title, extra))
+}
+
+const comC = `$ ! FOR81C.COM - round 2 of the Phase 81 probe.
+$ ! Written by testdata/for81/gen.go. Run it with the exchange volume's [000000]
+$ ! as the default directory:
+$ !
+$ !     @FOR81C/OUTPUT=FOR81C.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ MACRO/NOLIST FOR81C
+$ LINK/NOMAP FOR81C,FOR81/OPTIONS
+$ MACRO/NOLIST FOR81D
+$ LINK/NOMAP FOR81D
+$ MACRO/NOLIST FOR81X
+$ LINK/NOMAP FOR81X,FOR81/OPTIONS
+$ DEFINE/USER_MODE SYS$OUTPUT FOR81D-VAX.TXT
+$ RUN FOR81D
+$ SHOW SYMBOL $STATUS
+$ @FOR81E/OUTPUT=FOR81C-VAX.TXT
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! Units left open at image exit.
+$ RUN FOR81X
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY/SIZE=ALL X*.DAT,FOR015.DAT
+$ TYPE XKEEP.DAT
+$ DUMP/RECORD XSEG.DAT
+$ DUMP/RECORD FOR015.DAT
+$ EXIT
+`
+
 func main() {
 	f := forrtl()
 	r := rmsCases()
+	c := round2()
+	d := rms2()
 
 	files := map[string]string{
 		"for81.mar":  f.write("Phase 81's probe of FORRTL's file statements", forrtlCode),
 		"for81r.mar": r.write("Phase 81's probe of RMS's relative and fixed-length files", rmsCode),
+		"for81c.mar": c.write2("round 2 of Phase 81's probe, FORRTL", forrtlCode),
+		"for81d.mar": d.write2("round 2 of Phase 81's probe, RMS", rmsCode),
+		"for81x.mar": exitProg,
+		"for81c.com": comC,
+		"for81e.com": "$ SET NOVERIFY\n$ RUN FOR81C\n$ EXIT $STATUS\n",
+		"exchangec.cmd": `! EXCHANGEC.CMD - builds round 2's exchange volume with govax.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/exchangec.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/for81c-exchange.dsk" /DEVICE=RD54 FOR81C
+MOUNT/WRITE DUA2 "testdata/disks/for81c-exchange.dsk"
+COPY "testdata/for81/for81c.mar"/HOST DUA2:[000000]FOR81C.MAR
+COPY "testdata/for81/for81d.mar"/HOST DUA2:[000000]FOR81D.MAR
+COPY "testdata/for81/for81x.mar"/HOST DUA2:[000000]FOR81X.MAR
+COPY "testdata/for81/for81.opt"/HOST DUA2:[000000]FOR81.OPT
+COPY "testdata/for81/for81c.com"/HOST DUA2:[000000]FOR81C.COM
+COPY "testdata/for81/for81e.com"/HOST DUA2:[000000]FOR81E.COM
+DIRECTORY DUA2:[000000]
+DISMOUNT DUA2
+`,
+		"copyoutc.cmd": `! COPYOUTC.CMD - copies round 2's output off the exchange volume.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/copyoutc.cmd
+!
+MOUNT DUA2 "testdata/disks/for81c-exchange.dsk"
+COPY DUA2:[000000]FOR81C-VAX.TXT "testdata/for81/vax/for81c-vax.txt"/HOST
+COPY DUA2:[000000]FOR81D-VAX.TXT "testdata/for81/vax/for81d-vax.txt"/HOST
+COPY DUA2:[000000]FOR81C.LOG "testdata/for81/vax/for81c.log"/HOST
+DISMOUNT DUA2
+`,
 		"for81.opt":  "SYS$SHARE:FORRTL/SHAREABLE\n",
 		"for81.com":  com,
 		"for81b.com": "$ SET NOVERIFY\n$ RUN FOR81\n$ EXIT $STATUS\n",
@@ -2577,5 +3233,5 @@ DISMOUNT DUA2
 		}
 	}
 
-	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases\n", f.n, r.n)
+	fmt.Printf("for81.mar: %d cases; for81r.mar: %d cases; for81c.mar: %d cases; for81d.mar: %d cases\n", f.n, r.n, c.n, d.n)
 }
