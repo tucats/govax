@@ -366,10 +366,19 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
+	// FAB$W_DEQ is the file's default extension quantity, kept in its
+	// header (the RMS manual, FAB$W_DEQ); an XABALL's DEQ, applied later
+	// with the XABs, takes its place.
+	deq, err := ctx.loadWord(fabAddr + fabOffset("DEQ"))
+	if err != nil {
+		return 0, found, false, 0, err
+	}
+
 	recAttr := ondisk.RecAttr{
 		Format:        format,
 		Attributes:    rat,
 		MaxRecordSize: mrs,
+		DefaultExtend: deq,
 	}
 
 	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS

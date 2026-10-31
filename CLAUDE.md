@@ -777,6 +777,12 @@ never had.
   `TestFor80RunsOnFORRTL`, `TestFor80Round3`, and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.
+- `testdata/for81/` — Phase 81's probe of FORRTL's file statements and RMS's files
+  (README.md): `gen.go` writes `for81.mar` (583 cases calling `FOR$OPEN`, `FOR$CLOSE`,
+  `FOR$INQUIRE`, whose keyword lists the phase doc's Part A has, and the other file
+  statements; each statement its own frame under a handler; a USEROPEN routine logs
+  what FORRTL gives RMS), `for81r.mar` (60 cases on RMS: relative files, keyed FIX
+  files, FOP's bits, block dumps in hex), `for81.com`, `exchange.cmd`, `copyout.cmd`.
 - `testdata/nml80/` — Phase 80's probe of NAMELIST I/O (subtask 11; README.md):
   `gen.go` writes `nml80.mar` (786 cases on VMS's FORRTL: each READ's FOR number and
   the group written back), `nml80f.for` (the same cases as FORTRAN, for FTNRTL),

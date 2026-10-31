@@ -1,7 +1,8 @@
 # Phase 81 — FORTRAN files
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
-accepted by the author the same day (Part A's answers). Planned 2026-10-29. Needs Phase 80 (formatting and the
+accepted by the author the same day (Part A's answers); subtask 2, the probe,
+written and waiting for its VMS run. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -564,6 +565,116 @@ Proposed, for the author's review.
 So Decisions 1 to 14 stand as proposed, Decision 1 with FORRTL first, the
 1988 LRM next, and the 2005 manual after them.
 
+## FOR$OPEN's arguments, found by calling them (2026-10-31)
+
+Answer 2's trial, over govax with `SET DEBUG RMS`; no disassembly was involved. The
+argument list is a list of keywords processed in order, the last of a code winning.
+Each keyword is a longword, and some are followed by a value argument:
+
+| Bits | Holds |
+| ---- | ----- |
+| 0-7 | the keyword's code |
+| 8-15 | the mechanism |
+| 16-31 | the value, for the immediate mechanisms |
+
+| Mechanism | The value |
+| --------- | --------- |
+| 0 | 1: the keyword alone |
+| 1, 2 | the high word, signed |
+| 3 | a word, at the next argument's address (an output's width: a word) |
+| 4 | the next argument itself: a value, or an address to store to or a descriptor's |
+| 5 | a longword, at the next argument's address |
+| 7 | a descriptor, at the next argument's address |
+| 8 | seen to store a word, otherwise not understood |
+| 10 | a byte, at the next argument's address |
+| 6, 9, over 10 | FOR$_INVARGFOR |
+
+FOR$OPEN and FOR$CLOSE share these codes; 29 and up are INVARGFOR to them, and 27
+and 28 to FOR$CLOSE alone.
+
+| Code | Keyword | Values and what was seen |
+| ---- | ------- | ------------------------ |
+| 0, 17, 25, 28 | not known | accepted, no visible effect; each is a probe case |
+| 1 | UNIT | -1 and 120 are INVLOGUNI; missing, unit 0 |
+| 2 | DISPOSE | 1 KEEP, 2 DELETE (FOP DLT), 3 PRINT (SPL), 4 SUBMIT (SCF), 5 PRINT/DELETE (SPL, DLT), 6 SUBMIT/DELETE (SCF, DLT), at `$CLOSE` |
+| 3 | ERR= | not 0: a condition returns in R0 and isn't signaled |
+| 4 | ACCESS | 1 DIRECT (FIX, unformatted, RAC KEY, ROP 00010612, record 1), 2 SEQUENTIAL, 3 KEYED (INCOPECLO unless indexed), 4 APPEND |
+| 5 | FORM | 1 FORMATTED (RAT FTN), 2 UNFORMATTED (RAT 0) |
+| 6 | RECL | MRS, times 4 if unformatted |
+| 7 | CARRIAGECONTROL | 1 FORTRAN, 2 LIST (RAT CR), 3 NONE (RAT 0) |
+| 8 | READONLY | bit 0: FAC 0, and INCOPECLO with STATUS 'NEW' |
+| 9 | BUFFERCOUNT | RAB's MBF; an address-sized value is KEYVALERR |
+| 10 | INITIALSIZE | FAB's ALQ |
+| 11 | EXTENDSIZE | FAB's DEQ |
+| 12 | NOSPANBLOCKS | RAT BLK |
+| 13 | SHARED | SHR 0F |
+| 14 | FILE, NAME | a descriptor; the unit's default name stays the DNA |
+| 15 | STATUS, TYPE | 1 OLD (`$OPEN`), 2 NEW (`$CREATE`), 3 SCRATCH (`$CREATE`, FOP TMD), 4 UNKNOWN (`$CREATE`, FOP CIF); none is as NEW, so the compiler must pass the LRM's default |
+| 16 | MAXREC | FAB's MRN |
+| 18 | BLOCKSIZE | in bytes: RAB's MBC, rounded up to blocks |
+| 19 | ORGANIZATION | 1 SEQUENTIAL, 2 RELATIVE (ORG 10, FIX), 3 INDEXED (ORG 20) |
+| 20 | RECORDTYPE | 1 FIXED, 2 VARIABLE, 3 SEGMENTED (INCOPECLO if formatted), 4 STREAM, 5 STREAM_CR, 6 STREAM_LF |
+| 21 | USEROPEN | the routine's address |
+| 22 | ASSOCIATEVARIABLE | where to store; 0 stored at the open, even for a sequential unit, which the LRM says ignores it |
+| 23 | KEY | an address, followed only with ORGANIZATION='INDEXED'; INCOPECLO otherwise |
+| 24 | BLANK | 1 NULL, 2 ZERO |
+| 26 | DEFAULTFILE | a descriptor; replaces the unit's default name |
+| 27 | not known | 0 to 9, no visible effect, over 9 INVARGFOR; a probe case |
+
+IOSTAT= isn't among them. FOR$OPEN returns a condition value, whose FOR number
+(INCRECLEN's 0018812C is 37) a compiled program must turn into IOSTAT's value itself.
+On success OPEN, CLOSE, and INQUIRE return 1, and REWIND, BACKSPACE, ENDFILE,
+UNLOCK, and FOR$IO_END 0.
+
+FOR$INQUIRE takes the same input codes (1 UNIT, 3 ERR=, 14 FILE, 26 DEFAULTFILE), and
+its questions are these. A number or logical goes where mechanism 3, 5, or 10 says;
+a text's place is a descriptor's address by mechanism 4.
+
+| Code | Question | Code | Question |
+| ---- | -------- | ---- | -------- |
+| 29 | not known: stores nothing | 39 | FORMATTED |
+| 30 | EXIST (true for an unopened unit) | 40 | UNFORMATTED |
+| 31 | OPENED | 41 | RECL, in bytes for a formatted unit |
+| 32 | NUMBER | 42 | NEXTREC |
+| 33 | NAMED | 43 | BLANK |
+| 34 | NAME | 44 | ORGANIZATION |
+| 35 | ACCESS | 45 | RECORDTYPE |
+| 36 | SEQUENTIAL | 46 | KEYED |
+| 37 | DIRECT | 47 | CARRIAGECONTROL |
+| 38 | FORM | 48 | not known: UNKNOWN every time so far |
+
+The other entries take the unit by value: `FOR$REWIND(u)`, `FOR$BACKSPACE(u)`,
+`FOR$ENDFILE(u)`, `FOR$UNLOCK(u)`, `FOR$DELETE(u)`, and `FOR$FIND(u, rec)`,
+`FOR$DELETE_D(u, rec)`, `FOR$WRITE_DU(u, rec)`, `FOR$READ_DU(u, rec)`. A USEROPEN
+routine gets three arguments, by reference: the FAB, the RAB, and the unit. The FAB
+holds the names and an XAB chain of an XABFHC and an XABSUM, with a NAM; since that is
+what FORRTL gives `$CREATE`, the probe logs it, which on VMS is as good as the trace.
+
+What this changes:
+
+- **Decision 10** needs another look when VMS has run: FORRTL only sets FOP's SPL
+  and SCF, and leaves printing and submitting to RMS, so what happens without a queue
+  is RMS's to say. FOR$_IGNORED and IGNNOTDEL may come from elsewhere.
+- **Decision 11:** SCRATCH is FOP TMD, as proposed if the trial showed it.
+- **Decision 4:** FTNRTL's interface stays our own, but keywords as a code and a value
+  are FORRTL's shape too, and its codes can be ours, which keeps the probe's tables
+  directly usable.
+
+Found in RMS and ods2 along the way, for subtask 3:
+
+- `$CREATE` ignored FAB$W_DEQ, and wrote the file's 0 back over it, so EXTENDSIZE
+  looked lost. It is now kept in the header (`rms/create.go`), and the console's tests
+  pass with it. `SET DEBUG RMS` now also shows FOP, the sizes, MRN, NAM, the XAB chain's
+  types, and the RAB's MBC and MBF.
+- RMS has no `$READ`, `$WRITE`, or `$DISCONNECT`: a program calling one gets a reserved
+  operand fault. The probe's block dumps need `$READ` to run on govax.
+- `FAB$V_TMP` leaves a directory entry on govax, which it shouldn't (the probe's
+  `TMPF.DAT`), and `$CREATE` returns no allocation in FAB$L_ALQ.
+- **`ods2` refuses a name whose versions overflow its directory record** (about 60
+  versions: "directory entries need 516 bytes, more than fit in one 512-byte block"),
+  where VMS goes on in another record. A program that opens STATUS='NEW' in a loop would
+  meet it.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (this Part A).
@@ -609,3 +720,10 @@ So Decisions 1 to 14 stand as proposed, Decision 1 with FORRTL first, the
   rounds as needed, `FOR$OPEN`'s arguments found by trial without a time
   bound, volume files only (host files by COPY), and the 2005 HP manual as
   a secondary source.
+- **2026-10-31, subtask 2, the probe, round 1 written.** `FOR$OPEN`, `FOR$CLOSE`,
+  and `FOR$INQUIRE`'s keywords found by calling them over govax (the section above).
+  `testdata/for81`: `for81.mar`, 583 cases on FORRTL, and `for81r.mar`, 60 on RMS,
+  from `gen.go`, each statement in its own frame so that a severe condition costs only
+  it. `FOR81.COM` runs whole on govax over VMS's FORRTL.EXE, one output file, though
+  many answers there are govax's gaps until VMS's run says what they should be.
+  Waiting for that run.
