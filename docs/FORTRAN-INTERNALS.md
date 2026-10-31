@@ -7,18 +7,20 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 78) the compiler parses every statement of the
+So far (Phases 74 to 79) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
-subroutines, and functions; every expression in every type (BYTE,
-LOGICAL and INTEGER of every length, REAL\*4, \*8 in D or G, and \*16,
-COMPLEX\*8 and \*16, CHARACTER), with every intrinsic function;
-assignment; IF, block IF, DO, GO TO, CALL, RETURN, and STOP; and
-`PRINT *` and `WRITE (*,*)`. The tour follows one small program through
-every pass (section 1), then takes the passes in order, with a second
-program for declarations and storage (section 8) and a third for the
-types and how each chooses its instructions (section 11), then FTNRTL,
-then how the compiler is tested.
+subroutines, and functions of every type, with ENTRY, alternate returns,
+adjustable arrays, procedures as arguments, the built-in functions, and
+statement functions; every expression in every type (BYTE, LOGICAL and
+INTEGER of every length, REAL\*4, \*8 in D or G, and \*16, COMPLEX\*8 and
+\*16, CHARACTER), with every intrinsic function; assignment; every IF, DO,
+and GO TO, CALL, RETURN, STOP, and PAUSE; and `PRINT *` and `WRITE (*,*)`.
+The tour follows one small program through every pass (section 1), then
+takes the passes in order, with a second program for declarations and
+storage (section 8), a third for the types and how each chooses its
+instructions (section 11), and a fourth for control flow and subprograms
+(section 12), then FTNRTL, then how the compiler is tested.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -1152,7 +1154,254 @@ by F's size. Multiplying by 0.0 and 1.0 and widening a value only to
 round it back are left for Phase 84's optimizer: the point now is code
 that is right in every type.
 
-## 12. FTNRTL: the run-time library (`internal/ftnrtl`)
+## 12. Control flow and subprograms
+
+Phase 79 gave the compiler the rest of the language's chapters 5 and 6:
+every way of going somewhere in a unit, and every way of going to another
+one. Most of it is a small amount of machinery, because two old decisions
+carry the weight. FORTRAN's storage is static and it has no recursion, so
+anything a routine must remember between its statements can sit in a cell
+of `$LOCAL`; and the VAX has an instruction, or an addressing mode, for
+nearly each thing a jump or a call needs. This section follows one
+routine through them:
+
+```
+      SUBROUTINE SCALE(F, A, N, K, *)
+      EXTERNAL F
+      INTEGER N, K, I
+      REAL A(N), F, DBL, X
+      DBL(X) = 2.0*X
+      GO TO (10, 20), K
+      RETURN 1
+10    DO I = 1, N
+        A(I) = F(A(I))
+      END DO
+      RETURN
+20    DO WHILE (N .GT. 0)
+        A(N) = DBL(A(N))
+        N = N - 1
+      END DO
+      RETURN
+      ENTRY RESET(A, N)
+      A(N) = 0.0
+      END
+```
+
+It has a dummy procedure, an alternate return, an adjustable array, a
+statement function, a computed GO TO, both newer loops, and a second entry
+point. The code below is the compiler's own, with lines left out where the
+section says so.
+
+### Jumps: what a block can end in
+
+Section 9's basic blocks end in a terminator, and the jumps of chapter 5
+are three more kinds of it beside `Jump`, `Branch`, and `Return`:
+
+| FORTRAN | The IR's terminator | The VAX |
+|---|---|---|
+| `GO TO (10, 20), K` | `Switch` | `CASEL` and a table of words |
+| `IF (X) 10, 20, 30` | `Sign` | `TSTF` and branches on N and Z |
+| `GO TO V` | `IndirectJump` | `JMP @V` |
+
+CASEL is the computed GO TO's rule as an instruction. It subtracts its
+second operand from its first, compares that, unsigned, with its third,
+and if it is in range adds the word at that place in the table after it
+to the PC; otherwise it goes on past the table. So the language's "anything
+else goes on to the next statement" costs nothing:
+
+```
+;    6        GO TO (10, 20), K
+	CASEL	@SCALE.$A4,#1,#1
+SCALE.$1:
+	.WORD	SCALE.L10-SCALE.$1
+	.WORD	SCALE.L20-SCALE.$1
+;    7        RETURN 1
+```
+
+A word reaches 32K bytes either way, as far as the `BRW` every long branch
+uses. An `IndirectJump` keeps the blocks it may reach (its label list, or
+every label the unit ASSIGNs), though the instruction doesn't use them: a
+jump's targets are what the flow analysis of Phase 84 will need to see, and
+sema checks them as it checks any jump's. ASSIGN is `MOVAB L10,V`, an
+address, which is why V must be a longword; `LabelAddr` is the IR's
+expression for it.
+
+**A loop has two shapes.** A DO's count is computed once, before the
+variable is set; its end decrements the count. A DO WHILE tests at the top
+every time, so it has a block for the test:
+
+```
+;   12  20    DO WHILE (N .GT. 0)
+SCALE.L20:
+SCALE.$6:				; DO (line 12)'s test
+	TSTL	@SCALE.$A3
+	BGTR	SCALE.$8
+	BRW	SCALE.$7
+SCALE.$8:
+```
+
+The count and step are cells too (`$C1`, `$S1`), not registers, and that
+is the whole implementation of the "extended range": a jump out of a loop
+and back into it finds them where they were. No message is possible for an
+illegal jump in, since only running the program can tell.
+
+### What a routine owes the rest of VMS
+
+A FORTRAN routine is an ordinary procedure of the calling standard: an
+entry mask saving the registers from R2 up that it uses, its arguments
+through AP, RET at the end, a value in R0. Nothing else makes it one of
+FORTRAN's. So a routine can be a condition handler, an AST routine, or what
+`LIB$CALLG` calls; `testdata/fortran/callback.for` makes one of each, a
+handler's value in R0 saying to continue, and an AST routine reading its
+parameter, which the system passes by value, with `%LOC`.
+
+A value of up to 8 bytes comes back in R0 or R0 and R1, COMPLEX\*8
+included (the standard says two 32-bit values can't, but MTHRTL's F complex
+functions do it, and a FORTRAN function and MTHRTL's must be
+interchangeable as arguments). CHARACTER, REAL\*16, and COMPLEX\*16 go
+through a hidden first argument, which moves the others along one, the
+address of the caller's temporary or for CHARACTER a descriptor of it.
+Inside such a function its name is an `ir.Param`, argument 1, so the
+function's name needs no new code: it is reached as a dummy is. And that
+is how a `CHARACTER*(*)` function learns its length: the descriptor is the
+caller's. The caller never passes the assignment's target as the hidden
+argument, since in `H = F(H)` the function would overwrite its own argument
+as it wrote its name.
+
+**Alternate returns** are a question the manuals leave to the compiler:
+what do `*10` and `*20` put in the argument list? Ours is nothing: `CALL
+CHECK(A, B, *10, *20, C)` is `CALLS #3`. The routine doesn't need the labels,
+only their number, so it leaves the number in R0 and the caller chooses:
+
+```
+;    7        RETURN 1
+	MOVL	#1,R0			; the alternate return's number
+	RET
+```
+
+and in the caller, after the CALLS, a `Switch` on `CallValue`, the IR's name
+for the R0 a call just left: `CASEL R0,#1,#1` over the labels, which falls
+through for 0 or anything out of range, exactly what section 5.9 asks. A plain
+RETURN, in a subroutine with a `*` in any list, is `CLRL R0`.
+
+**Dummy procedures** cost one addressing mode. The calling standard's
+procedure value on the VAX is the entry mask's address, and CALLS takes the
+address of the mask as an operand, so a procedure that is argument 1 is
+`CALLS #1,@4(AP)`: the argument longword is the address. A name in an
+EXTERNAL statement is passed with `PUSHAB G^F`. A CHARACTER function travels
+by a descriptor (Table 6-1) holding that address and the length the passing
+unit declares, so a dummy declared `CHARACTER*(*)` has somewhere to find it.
+
+**%VAL, %REF, and %DESCR** change only what goes in a longword of the list:
+`Arg.Mode` from sema, Table 6-1 as a function (`notAllowed`), a No an error.
+`%LOC` isn't that kind of thing at all: it is an INTEGER\*4 expression.
+
+### ENTRY: one body, several doors
+
+An entry point can give its arguments in any order, so a dummy can't be
+reached at a fixed `n(AP)`: A is argument 2 of SCALE and argument 1 of
+RESET. Each dummy therefore goes through a cell, and each `.ENTRY` copies the
+addresses it was given there before going to its statements:
+
+```
+	.ENTRY	SCALE,^M<R2>
+	MOVL	4(AP),SCALE.$A1		; F is argument 1
+	MOVL	8(AP),SCALE.$A2		; A is argument 2
+	MOVL	12(AP),SCALE.$A3	; N is argument 3
+	MOVL	16(AP),SCALE.$A4	; K is argument 4
+```
+
+```
+	.ENTRY	RESET,^M<R2>
+	MOVL	4(AP),SCALE.$A2		; A is argument 1
+	MOVL	8(AP),SCALE.$A3		; N is argument 2
+	BRW	SCALE.$10
+```
+
+From there `@SCALE.$A3` is N, whichever door came in, and the body needs
+only `argumentPlace` to change. That is why the static storage matters: a
+recursive language couldn't keep these in one place. A unit with no ENTRY
+keeps `@n(AP)`, so nothing is paid for what isn't used. Every entry point
+has one mask, since the body is one; the mask is computed after the whole
+routine is generated.
+
+In a function the entry names are one result place, as EQUIVALENCE would
+lay them out; if their machine types differ the code remembers which door
+it came in by (a cell, `$E`, set at each entry) and a return is a `Switch` on
+it.
+
+### Adjustable arrays: a descriptor filled in at the door
+
+`REAL A(N)`'s size is known only on entry, and the manual says a later change
+to N changes nothing. So the bounds are computed once, into a class A
+descriptor in `$LOCAL`, `$B1`, which holds everything an element's address
+needs, and which a whole array passed or printed needs anyway:
+
+```
+	MOVAL	@SCALE.$A2,SCALE.$B1+4		; the address
+	MOVL	@SCALE.$A3,SCALE.$B1+28		; the upper bound, N
+	MOVL	SCALE.$B1+28,SCALE.$B1+20	; so the extent
+	MOVL	#-1,R0
+	MOVAL	@SCALE.$A2[R0],SCALE.$B1+16	; A0, where A(0) would be
+	MULL3	#4,SCALE.$B1+20,SCALE.$B1+12	; the size in bytes
+```
+
+(The comments are the tour's.) Line 14 of the routine really does change N,
+and the descriptor doesn't care. An element is at A0 plus the subscripts
+multiplied out by the extents, A0 being a `Mem.Ptr`, an address computed at
+run time:
+
+```
+	MOVL	SCALE.$B1+16,R0
+	MOVL	@SCALE.$A3,R1
+	MOVF	(R0)[R1],SCALE.$T1
+```
+
+Each entry point computes the arrays its own list defines: the array and
+every dummy in its bounds must be in that list (section 6.1.1.1). RESET's
+does, in a block after the routine's statements, which then goes on to the
+ENTRY's; putting it there is what keeps code that falls into an ENTRY
+statement from running it, since falling in isn't entering.
+
+### Statement functions: a reference is its definition
+
+`DBL(X) = 2.0*X` makes no routine. Each reference is expanded where it
+stands, so the compiler has only to answer what X means while the definition's
+expression is lowered. The dummy argument's name belongs to the definition:
+X may be an array elsewhere in the unit and gives this X only its type. So
+sema makes X a symbol of its own, in none of the unit's lists, standing in the
+unit's table only while the expression is analyzed (`sema/stmtfunc.go`).
+
+Lowering (`ir/lowerstmtfunc.go`) then gives each such symbol a place in
+`lowerer.bound`, where `symbolMem` looks first, and lowers the same expression
+once per reference. Every path a variable can take, arithmetic, CHARACTER,
+COMPLEX, an argument, works unchanged, and no tree is copied. The place is the
+actual argument's own if it is a constant or a variable of the dummy's type
+and length; anything else, like `A(N)` here, is computed into a temporary of
+the dummy's type first, as an assignment to it would be:
+
+```
+;   13          A(N) = DBL(A(N))
+	MOVL	SCALE.$B1+16,R0
+	MOVL	@SCALE.$A3,R1
+	MOVF	(R0)[R1],SCALE.$T1
+	MOVL	SCALE.$B1+16,R0
+	MOVL	@SCALE.$A3,R1
+	MULF3	SCALE.$F1,SCALE.$T1,(R0)[R1]
+```
+
+Since a reference is lowered like any expression, the temporaries live to the
+statement's end, and the tree it returns can read them. Actual arguments are
+lowered before their dummies are bound, so `DBL(DBL(X))` binds this X once at
+a time, and a definition can use only those before it, so nothing can be
+bound twice at once. Three things need care because the actual may be the very
+variable being assigned or passed: `Z = SWAP(Z)` for a COMPLEX Z computes into a
+temporary (its parts would otherwise be written as they're read); a CHARACTER
+value of another length goes to a temporary of the function's length; and an
+argument that is a statement function's value is passed as a copy, since `F(X) =
+X` would otherwise hand the routine X itself.
+
+## 13. FTNRTL: the run-time library (`internal/ftnrtl`)
 
 Compiled code does arithmetic and branches itself; for I/O, STOP, and
 the like it calls FTNRTL. FTNRTL is written in MACRO-32 (Decision 13),
@@ -1252,7 +1501,7 @@ FTNRTL calls LIBRTL for the conversions as any VAX program would, through
 LIBRTL's transfer vector; a run-time library built on another is the
 normal arrangement on VMS.
 
-## 13. Testing a compiler
+## 14. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.

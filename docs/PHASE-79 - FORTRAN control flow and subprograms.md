@@ -1,16 +1,13 @@
 # Phase 79 — FORTRAN control flow and subprograms
 
-**Status:** in progress: subtask 1 (the survey, Part A) done
-2026-10-31, its decisions and recommendations accepted by the author the
-same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
-done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
-extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
-done 2026-10-31; subtask 5 (function results of every type) done
-2026-10-31; subtask 6 (ENTRY) done 2026-10-31; subtask 7 (alternate
-returns) done 2026-10-31; subtask 8 (adjustable and assumed-size arrays,
-passed-length character arrays) done 2026-10-31; subtask 9 (procedure
-arguments, null arguments, Hollerith constants as arguments, %VAL, %REF,
-%DESCR, %LOC) done 2026-10-31; subtask 10 (statement functions) done
+**Status:** done 2026-10-31: subtask 1 (the survey, Part A, its decisions
+and recommendations accepted by the author the same day), and subtasks 2 (GO
+TO in every form, ASSIGN, the arithmetic IF), 3 (DO in every form, DO WHILE,
+END DO, the extended range), 4 (STOP, PAUSE, RETURN, END), 5 (function
+results of every type), 6 (ENTRY), 7 (alternate returns), 8 (adjustable and
+assumed-size arrays, passed-length character arrays), 9 (procedure arguments,
+null arguments, Hollerith constants as arguments, %VAL, %REF, %DESCR, %LOC),
+10 (statement functions), and 11 (end to end, and the close-out), all
 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
@@ -533,7 +530,7 @@ recommendation:
    Hollerith constants as arguments, and answer 4.) Done.
 10. **Statement functions.** Done.
 11. **End to end**, then **close-out** (FORTRAN-INTERNALS.md's chapter
-    on calls and control flow).
+    on calls and control flow). Done.
 
 ## Progress log
 
@@ -834,3 +831,37 @@ recommendation:
   in `sema`, `ir`, and `codegen`; sema error cases for each message, and the older
   cases now without NOTIMPL; `testdata/fortran/stmtfuncs.for` end to end in both
   paging modes, its output checked by hand. MANUAL.md's 14.2 and 14.7 list them.
+- **2026-10-31, subtask 11 (end to end, and the close-out):**
+  - **End to end:** `testdata/fortran/flow.for` puts the chapters together (README.md
+    lists its parts), with the manual's hyperbolic functions, which `entries.for` had
+    to write out without statement functions, as the manual has them. Its output was
+    worked out by hand before the first run, and it matched, so no code changed.
+    Answers that aren't exact go through a statement function rounding to three places.
+    `testdata/fortran/callback.for` is the Goal's third part, the calling standard as
+    VMS sees it: a condition handler LIB$ESTABLISH names, reading its signal array and
+    continuing by its value in R0; an AST routine SYS$DCLAST names, its by-value
+    parameter read by `%LOC`; a function and a subroutine LIB$CALLG calls. Nothing
+    new was needed there either, so Phase 83 has this much. `stmtfuncs.for` gained
+    `WIDE`: REAL\*16 and COMPLEX\*16 statement functions, and a CHARACTER dummy given a
+    passed-length value, a concatenation (a dynamic string), and a function's value.
+    All three run in both paging modes. No NOTIMPL is left for a form of chapter 5 or 6
+    but ASSIGN of a FORMAT label (Decision 9, Phase 80's).
+  - **FORTRAN-INTERNALS.md:** a new section 12, "Control flow and subprograms",
+    follows a fourth program, SCALE, through the terminators, the calling
+    standard, alternate returns, dummy procedures, ENTRY's cells, the adjustable array's
+    descriptor, and statement functions; the MACRO is the compiler's own. FTNRTL and
+    testing are now sections 13 and 14.
+  - **MANUAL.md:** "Where things stand" is this phase's; 14.2 says a routine can be a
+    handler or an AST routine, and no longer that calling through a dummy argument is
+    still to come.
+  - **Left for later phases:** ASSIGN of a FORMAT label and PRINT v (Phase 80); a
+    Hollerith constant other than as an argument (Phase 82); a statement function's
+    constant actual as an immediate, and a terminal STOP's unreachable step code (Phase
+    84); `/NOF77`'s one-trip loops (Phase 85).
+  - **Unconfirmed, for lack of a VAX FORTRAN compiler to ask,** and each in this log:
+    the argument list without alternate return specifiers (answer 2; MANUAL.md 14.7);
+    RETURN i allowed with no `*`s; the ZEM DTYPE of a procedure's descriptor (Decision 6);
+    an EXTERNAL statement unable to name the unit's own entry point; statement function
+    dummies with no passed length, and how strictly actuals must agree; `LEN` of a
+    function reference making no call; STOP n's exit status, SS$_NORMAL; a longword DO's
+    count near the type's limit (Decision 10).

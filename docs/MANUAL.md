@@ -4350,10 +4350,11 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 78, done 2026-10-31):** the compiler reads
+**Where things stand (Phase 79, done 2026-10-31):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
-intrinsic function, and compiles a subset of the executable statements
+intrinsic function, all of the language's control statements and
+subprograms, and so far only list-directed output
 (section 14.2): programs written in it compile, link, and run. Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the READ
 statement is not implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -4511,7 +4512,9 @@ output it prints, and programs of several files in its `modules` directory.
   REAL\*4), `%REF(X)` by reference (a CHARACTER value's text), `%DESCR(X)` by
   descriptor, as Table 6-1 of the language manual allows, for routines not written
   in FORTRAN; `%LOC(X)` is the INTEGER\*4 address of a variable, array, element,
-  substring, or procedure, in any expression, and 0 for a null argument.
+  substring, or procedure, in any expression, and 0 for a null argument. A FORTRAN
+  routine is an ordinary procedure of the VAX calling standard, so it can also be
+  a condition handler, an AST routine, or what `LIB$CALLG` calls.
 - **Constants:** PARAMETER in both forms: `PARAMETER (N=10)`, where N has
   its declared or implicit type and the value is converted to it, and
   `PARAMETER N=10`, where N has its value's type. A value is a constant

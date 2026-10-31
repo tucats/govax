@@ -390,8 +390,7 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 // sizeOf is SIZEOF(X): the bytes X takes, a constant INTEGER*4. X may be
 // anything (a whole array among them) but an assumed-size array or a
 // CHARACTER value whose length is passed, or otherwise known only when the
-// program runs (Table D-3); an adjustable array's size is a run-time value,
-// Phase 79's.
+// program runs (Table D-3); an adjustable array's size is a run-time value.
 func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 	var x Expr
 

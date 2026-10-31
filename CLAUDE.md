@@ -383,7 +383,7 @@ never had.
   (`testdata/fortran/mixed`, `mixedg`, `text`, `numeric`), and subtask 11
   (2026-10-31) the close-out, FORTRAN-INTERNALS.md's section 11 on every
   type and its instructions.
-  Phase 79 (in progress) is control flow and subprograms; subtask 1
+  Phase 79 (done 2026-10-31) is control flow and subprograms; subtask 1
   (2026-10-31) is the survey, its doc's Part A (what earlier phases
   already compile, where each NOTIMPL is, ten decisions and five
   questions), accepted by the author the same day; subtask 2
@@ -427,7 +427,10 @@ never had.
   subtask 10 (2026-10-31) statement functions (`sema/stmtfunc.go`: `StmtFuncRef`,
   `StmtFuncDef`, a dummy argument's symbol in the unit's table only during the
   definition's expression; `ir/lowerstmtfunc.go`: each reference expanded in line,
-  `lowerer.bound` giving `symbolMem` its dummies' places).
+  `lowerer.bound` giving `symbolMem` its dummies' places); subtask 11 (2026-10-31)
+  the programs end to end (`testdata/fortran/flow.for`, `callback.for`, a FORTRAN
+  routine as a handler, an AST routine, and LIB$CALLG's), and the close-out,
+  FORTRAN-INTERNALS.md's section 12 on control flow and subprograms.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

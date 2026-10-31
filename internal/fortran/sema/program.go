@@ -239,7 +239,7 @@ type Symbol struct {
 // assumed-size dummy array's last dimension, written *, whose upper bound
 // is unknown. LowerExpr and UpperExpr are an adjustable array's bounds
 // that aren't constant, which are computed when the subprogram is entered
-// (section 6.1.1.1, Phase 79's code); nil for a constant bound, which is
+// (section 6.1.1.1); nil for a constant bound, which is
 // Lower or Upper.
 type Dim struct {
 	Lower, Upper         int

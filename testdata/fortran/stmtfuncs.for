@@ -7,7 +7,7 @@ C     constants, variables, elements, expressions, and CHARACTER values of other
 C     lengths, cut or padded to the dummy's; the value converted to the
 C     function's type and length; a value that goes through a dummy procedure
 C     and into a routine that changes its argument. Z = SWAP(Z) reads Z's parts
-C     after neither is written.
+C     after neither is written. WIDE has the wider values.
       PROGRAM STMTFN
       EXTERNAL BUMP
       REAL GRADE, TEST1, TEST2, XLAB, R, H, M(3), X, SINH, Y, COMMONV
@@ -115,6 +115,39 @@ C     In the conditions of statements
 20    CONTINUE
       L = BIG(M(1)) .OR. BIG(M(3))
       PRINT *, L
+      CALL WIDE('PASSED')
+      END
+
+C     Wider values, a value through a hidden argument in the expression, and a
+C     CHARACTER dummy given a passed-length value, a concatenation, and a function's
+C     value; a comparison of CHARACTER values as a LOGICAL value, in a condition.
+      SUBROUTINE WIDE(T)
+      CHARACTER*(*) T
+      CHARACTER*3 S, F3, CF
+      LOGICAL SAME
+      REAL*16 Q, QF
+      COMPLEX*16 Z, ZF, ZNEG
+      QF(Q) = QSQRT(Q) + 1.0Q0
+      ZF(Z) = ZNEG(Z) * (0.0D0, 1.0D0)
+      F3(S) = S
+      SAME(S) = S .EQ. 'PAS'
+      PRINT *, QF(16.0Q0)
+      PRINT *, ZF((1.0D0, 2.0D0))
+      PRINT *, '[', F3(T), ']'
+      PRINT *, '[', F3('A' // T), ']'
+      PRINT *, '[', F3(CF('Z')), ']'
+      IF (SAME(T)) PRINT *, 'SAME'
+      IF (.NOT. SAME(F3('X'))) PRINT *, 'DIFFERENT'
+      END
+
+      COMPLEX*16 FUNCTION ZNEG(Z)
+      COMPLEX*16 Z
+      ZNEG = -Z
+      END
+
+      CHARACTER*3 FUNCTION CF(C)
+      CHARACTER C
+      CF = C // C // C
       END
 
       FUNCTION BUMP(V)
