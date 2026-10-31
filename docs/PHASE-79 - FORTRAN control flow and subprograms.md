@@ -6,7 +6,7 @@ same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
 done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
 extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
 done 2026-10-31; subtask 5 (function results of every type) done
-2026-10-31.
+2026-10-31; subtask 6 (ENTRY) done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -521,7 +521,7 @@ recommendation:
 4. **STOP, PAUSE, RETURN, END.** (FTN$PAUSE in FTNRTL; RETURN i's R0
    comes with subtask 7.) Done.
 5. **Function results of every type**, CHARACTER and COMPLEX functions. Done.
-6. **ENTRY.**
+6. **ENTRY.** Done.
 7. **Alternate returns.**
 8. **Adjustable and assumed-size arrays**, passed-length character arrays.
 9. **Procedure arguments, null arguments, %VAL/%REF/%DESCR/%LOC.**
@@ -653,3 +653,41 @@ recommendation:
   `testdata/fortran/funcs.for` and `funcsg.for` end to end in both paging
   modes, REPEAT at two lengths in two units as the manual has it. MANUAL.md's
   14.2 lists the functions.
+- **2026-10-31, subtask 6 (ENTRY):** Decision 4 as written. Sema
+  (`sema/entry.go`): `entries` reads the ENTRY statements after the header and
+  before the declarations, since a dummy's or an entry name's declaration may
+  come before its ENTRY; each is an `Entry` (`Unit.Entries`) and, in the body,
+  an `EntryPoint`. A dummy in several lists is one symbol, so `Symbol.Dummy` is
+  now its place among `Unit.Dummies`, every dummy of the unit once; `Unit.Params`
+  stays the header's. In a function an entry name is a `Result` name, and
+  `placeResults` puts them all at `$LOCAL+0`, as long as the longest, marked
+  `Equivalenced` so the code generator and `Check` allow the overlap; in a
+  subroutine it is a `UnitName`, so calling it inside its unit is RECURSIVE, as
+  for the unit's own name. New messages: ENTRYUNIT (a main program), ENTRYBLOCK,
+  ENTRYRETURN (`*` in a function's ENTRY), ENTRYLATE (a dummy or entry name in an
+  executable statement before the ENTRY that first names it, found in `lookup`
+  through `Symbol.laterEntry` during the statement walk), and ENTRYTYPE (6.2.4.1's
+  groups, and CHARACTER's one length, `checkEntryTypes`); DUPUNIT now covers entry
+  points, which `unitNames` collects with the units, so FUNCTYPE and ARGCOUNT check
+  references from other units against the entry point's own type and list
+  (`fileUnit.params`, `result`). A `*` in a subroutine's ENTRY stays NOTIMPL until
+  subtask 7. The IR (`ir/lowerentry.go`): `Routine.Entries`, the header's first;
+  each dummy, and a hidden argument, has an `ArgCell` (`$A1`, ...; `Param.Through`)
+  only in a unit with ENTRY statements, so other units' code doesn't change. Each
+  ENTRY begins a block, which code above it falls into. If a function's names
+  have different machine types there is a `SelectorCell` (`$E`), and a return is a
+  `Switch` on it to blocks after the END, one a type, each a `Return` of that
+  name; names of one type return as without ENTRY. Codegen: `argumentPlace` is the
+  one change to how a dummy is reached (`@SUB.$A1` for `@SUB.A(AP)`, and
+  `PUSHL SUB.$A1` for passing a descriptor on); `writeEntry` writes each other
+  `.ENTRY` after the routine's code, with the one mask, then its copies and a
+  `BRW`; the header's `.ENTRY` copies too. Ours, unconfirmed: an entry point
+  whose list omits a dummy leaves its cell as it was, which section 6.2.4 calls
+  undefined; an EXTERNAL statement can't name an entry point in its own unit (the
+  manual's rule is about passing one, and other units can; passing is subtask 9).
+  The manual's hyperbolic example uses statement functions (subtask 10), so
+  `entries.for` writes them out. Tests: `entry.for` golden files in `sema`, `ir`,
+  and `codegen`; sema error cases for each message; `testdata/fortran/entries.for`
+  end to end in both paging modes, and `testdata/fortran/modules/entries`, entry
+  points called from another file, linked in both orders. MANUAL.md's 14.2 and
+  the README list them.

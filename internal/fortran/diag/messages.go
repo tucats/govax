@@ -146,15 +146,35 @@ var messages = map[string]kind{
 
 	// Program units.
 
-	// DUPUNIT is a second program unit with a name the file has already
-	// given one.
-	"DUPUNIT": {Error, "there is already a program unit named %s, at line %d"},
+	// DUPUNIT is a second program unit or entry point with a name the file
+	// has already given one.
+	"DUPUNIT": {Error, "there is already a program unit or entry point named %s, at line %d"},
 
 	// TWOMAINS is a second main program in a file.
 	"TWOMAINS": {Error, "a file can hold only one main program, and there is one at line %d"},
 
 	// DUPDUMMY is a name twice among a subprogram's dummy arguments.
 	"DUPDUMMY": {Error, "%s is already a dummy argument of this %s"},
+
+	// ENTRYUNIT is an ENTRY statement in a main program (section 6.2.4).
+	"ENTRYUNIT": {Error, "an ENTRY statement can only be in a FUNCTION or SUBROUTINE subprogram"},
+
+	// ENTRYBLOCK is an ENTRY statement inside a block IF or a DO loop
+	// (section 6.2.4).
+	"ENTRYBLOCK": {Error, "an ENTRY statement can't be inside a block, and this one is inside the %s at line %d"},
+
+	// ENTRYRETURN is a * among the dummy arguments of a function's ENTRY
+	// statement (section 6.2.4).
+	"ENTRYRETURN": {Error, "alternate returns can only be in a subroutine's ENTRY statements"},
+
+	// ENTRYLATE is an entry point's name or a dummy argument used in an
+	// executable statement before the ENTRY statement that first names it
+	// (section 6.2.4).
+	"ENTRYLATE": {Error, "%s can't be used before the ENTRY statement that names it, at line %d"},
+
+	// ENTRYTYPE is a function's entry point of a type that can't share its
+	// value's place with the function's (section 6.2.4.1).
+	"ENTRYTYPE": {Error, "the entry point %s, %s, can't go with the function %s, %s: they must all be up to 8 bytes long and not CHARACTER, or all REAL*16 and COMPLEX*16, or all CHARACTER of one length"},
 
 	// Declarations.
 

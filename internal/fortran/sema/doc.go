@@ -171,6 +171,11 @@
 // them, which the code generator writes in the MACRO file (data.go). A
 // BLOCK DATA unit is a unit with only these and its declarations.
 //
+// An ENTRY statement (entry.go) makes an Entry, with a dummy list of its own.
+// Its names are entered before the unit's declarations, and it stands in the
+// body as an EntryPoint, where its code begins. A function's entry points'
+// names are Result names, sharing one place.
+//
 // # The dump
 //
 // Dump writes the result for the golden tests in testdata: each unit's

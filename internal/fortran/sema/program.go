@@ -30,8 +30,17 @@ type Unit struct {
 	// appearance, which is the order their storage is laid out in.
 	Symbols []*Symbol
 
-	// Params are the dummy arguments, in order.
+	// Params are the dummy arguments of the unit's header statement, in
+	// order.
 	Params []*Symbol
+
+	// Dummies are every dummy argument of the unit: Params, then those only
+	// ENTRY statements name, each once, in order of first appearance.
+	Dummies []*Symbol
+
+	// Entries are the entry points the unit's ENTRY statements make, in
+	// order (entry.go).
+	Entries []*Entry
 
 	// Result is a function's own name, the variable whose last value is
 	// the function's value; nil in a main program or subroutine.
@@ -158,14 +167,19 @@ type Symbol struct {
 	Dims   []Dim
 	DimPos diag.Position
 
-	// Dummy is the name's position among the dummy arguments, 1 for the
+	// Dummy is the name's position among the unit's Dummies, 1 for the
 	// first, or 0 if it isn't one. A dummy argument has no storage of
-	// its own: its address is the argument list's longword Dummy, at
-	// 4*Dummy(AP).
+	// its own: in a unit without ENTRY statements, its address is the
+	// argument list's longword Dummy, at 4*Dummy(AP).
 	Dummy int
 
-	// Result is set for a function's own name within the function.
+	// Result is set for a function's own name within the function, and for
+	// its entry points' names.
 	Result bool
+
+	// laterEntry is the ENTRY statement that first names the name, an entry
+	// point or a dummy argument, while the statement walk hasn't reached it.
+	laterEntry *ast.EntryStmt
 
 	// Offset is the name's place, in bytes, in its common block if it is
 	// in one, or else in the unit's $LOCAL storage; or -1 if it has none

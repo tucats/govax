@@ -460,7 +460,7 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	case m.Ptr != nil:
 		return g.pointerMem(m)
 	case m.Param != nil:
-		base = "@" + g.names.symbol(m.Param.Name) + "(AP)"
+		base = "@" + g.argumentPlace(m.Param)
 	case m.Cell != nil:
 		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset)
 	default:
@@ -513,6 +513,17 @@ func (g *routineGen) pointerMem(m *ir.Mem) operand {
 	return operand{text: base + "[" + register(i) + "]", regs: []int{r, i}}
 }
 
+// argumentPlace is where the address of the dummy argument p is: the argument
+// list's longword, SUB.A(AP), or in a routine with ENTRY statements the cell
+// its entry points copy it to, SUB.$A1.
+func (g *routineGen) argumentPlace(p *ir.Param) string {
+	if p.Through != nil {
+		return g.names.symbol(p.Through.Name)
+	}
+
+	return g.names.symbol(p.Name) + "(AP)"
+}
+
 // intoRegister computes e into a register and returns it.
 func (g *routineGen) intoRegister(e ir.Expr) int {
 	v := g.eval(e)
@@ -540,7 +551,7 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.ArgPointer:
 		// The argument list's longword itself: SUB.A(AP).
-		return operand{text: g.names.symbol(e.Param.Name) + "(AP)"}
+		return operand{text: g.argumentPlace(e.Param)}
 
 	case *ir.LabelAddr:
 		r := g.alloc(ir.Long)

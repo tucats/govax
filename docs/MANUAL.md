@@ -4451,7 +4451,10 @@ output it prints, and programs of several files in its `modules` directory.
   SUBROUTINE; FUNCTION of any type, typed in its statement, by a type
   statement, or by its name's first letter, a CHARACTER one of a fixed
   length or `CHARACTER*(*)`, taking its length from the unit that references
-  it; BLOCK DATA, named or not, which holds declarations
+  it; ENTRY in a SUBROUTINE or FUNCTION, each entry point with a dummy
+  argument list of its own (a function's of any types that can share a
+  value, section 6.2.4.1 of the language manual), but not yet with `*`
+  alternate returns; BLOCK DATA, named or not, which holds declarations
   and initial values for named common blocks; END. A file may hold several
   units.
 - **Declarations:** type statements of every type and length (BYTE;

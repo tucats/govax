@@ -89,7 +89,10 @@ func (l *lowerer) stmt(s sema.Stmt) {
 		l.stop(s)
 
 	case *sema.Return, *sema.End:
-		l.terminate(&Return{origin: l.origin(), Value: l.returnValue()})
+		l.returnFromRoutine()
+
+	case *sema.EntryPoint:
+		l.entryPoint(s)
 
 	case *sema.Print:
 		l.print(s)

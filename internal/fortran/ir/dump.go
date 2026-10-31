@@ -52,7 +52,25 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 	b.WriteString("\n")
 
 	for _, p := range r.Params {
-		fmt.Fprintf(b, "  param %-7s %-2s argument %d\n", p.Name, p.T, p.Index)
+		if p.Through != nil {
+			fmt.Fprintf(b, "  param %-7s %-2s through %s\n", p.Name, p.T, p.Through.Name)
+		} else {
+			fmt.Fprintf(b, "  param %-7s %-2s argument %d\n", p.Name, p.T, p.Index)
+		}
+	}
+
+	for _, e := range r.Entries {
+		fmt.Fprintf(b, "  entry %d %s", e.Number, e.Name)
+
+		for _, a := range e.Args {
+			fmt.Fprintf(b, " %s=%d", a.Param.Name, a.Index)
+		}
+
+		if e.First != nil {
+			fmt.Fprintf(b, " at %s", e.First.Name)
+		}
+
+		b.WriteString("\n")
 	}
 
 	for _, c := range r.Cells {
@@ -138,6 +156,10 @@ func cellNote(c *Cell) string {
 		return c.Loop + "'s step"
 	case DescriptorCell:
 		return "descriptor " + descriptorText(c.Desc)
+	case ArgCell:
+		return "address of " + c.Dummy
+	case SelectorCell:
+		return "the entry point used"
 	}
 
 	return "temporary"

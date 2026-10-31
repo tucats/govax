@@ -98,7 +98,10 @@
 //
 // A dummy argument has no storage of its own: its argument list longword
 // holds the address of the caller's variable. A Mem (a place in memory)
-// can be based on one (Param), as on a cell or a datum.
+// can be based on one (Param), as on a cell or a datum. In a unit with ENTRY
+// statements, where the longword's place depends on how the routine was
+// called, each entry point copies it to a cell, and the Param goes through
+// that (lowerentry.go).
 //
 // # An example
 //

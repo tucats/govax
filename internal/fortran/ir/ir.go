@@ -119,6 +119,15 @@ type Routine struct {
 	// descriptors, and I/O control blocks.
 	Data []*Datum
 
+	// Entries are a routine's entry points when its unit has ENTRY
+	// statements, the header's first; nil otherwise (lowerentry.go).
+	Entries []*Entry
+
+	// Selector, in a function whose entry points return values of different
+	// types, is the cell where each entry point leaves its Number, for the
+	// return to go by; nil otherwise.
+	Selector *Cell
+
 	// Blocks are the routine's code, in the order the code generator
 	// lays them out; the first is the entry. A block data subprogram has
 	// none: it has only storage and initial values.
@@ -139,12 +148,42 @@ type Routine struct {
 
 // Param is a dummy argument. Its value isn't the routine's: the
 // argument list's longword Index (at 4*Index(AP)) holds the address of
-// the caller's variable, array, or copy.
+// the caller's variable, array, or copy. In a routine with entry points,
+// where that longword's place depends on the entry point, Through is the
+// cell each entry point copies it to, and Index means nothing.
 type Param struct {
-	Name  string
+	Name    string
+	Index   int
+	T       Type
+	Sym     *sema.Symbol
+	Through *Cell
+}
+
+// Entry is one of a routine's entry points: where a call by its name comes
+// in. What it does is copy its argument list's addresses into the routine's
+// cells (Args), say which entry point it is if the routine asks (Number), and
+// go to First.
+type Entry struct {
+	Name string
+
+	// Number is the entry point's place in Routine.Entries, from 1.
+	Number int
+
+	// Args are its argument list's longwords, a function's hidden argument
+	// first if it has one.
+	Args []EntryArg
+
+	// First is the block its code starts at, and Source its ENTRY statement;
+	// nil for the header's entry point, which comes before the first block.
+	First  *Block
+	Source ast.Stmt
+}
+
+// EntryArg is one longword of an entry point's argument list: longword Index
+// (at 4*Index(AP)) holds Param's address.
+type EntryArg struct {
 	Index int
-	T     Type
-	Sym   *sema.Symbol
+	Param *Param
 }
 
 // CellKind is what a cell holds.
@@ -160,6 +199,8 @@ const (
 	TempCell                       // a temporary, for one statement's use
 	DescriptorCell                 // a descriptor whose addresses are set at run time
 	TextCell                       // a CHARACTER temporary, for one statement's use: a concatenation's value
+	ArgCell                        // the address of a dummy argument, in a routine with ENTRY statements
+	SelectorCell                   // which entry point the routine was called by
 )
 
 // Cell is a place in the routine's static storage.
@@ -190,6 +231,9 @@ type Cell struct {
 	// Loop names a count's or step's DO loop: "DO 10" for the loop
 	// ending at label 10, "DO (line 12)" for one END DO ends.
 	Loop string
+
+	// Dummy names an ArgCell's dummy argument.
+	Dummy string
 
 	// Desc is a descriptor cell's contents: what it describes, with
 	// Target nil, since the address it holds is stored there when the
@@ -406,7 +450,7 @@ type Block struct {
 	Label int
 
 	// Note says what the block is, when that isn't plain: "DO 10's
-	// body".
+	// body", "ENTRY SINH".
 	Note string
 
 	Stmts []Stmt

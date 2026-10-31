@@ -105,9 +105,13 @@ func (c *construct) what() string {
 // statements is the second walk over a unit's statements, building its
 // structured body.
 func (a *analyzer) statements(body []ast.Stmt) {
+	a.walking = true
+
 	for _, s := range body {
 		a.statement(s)
 	}
+
+	a.walking = false
 
 	// A unit whose END the parser didn't find (NOEND) still has its open
 	// constructs reported.
@@ -188,6 +192,9 @@ func (a *analyzer) statement(s ast.Stmt) {
 
 			a.pop()
 		}
+
+	case *ast.EntryStmt:
+		a.entryPoint(s)
 
 	case *ast.DoStmt:
 		a.doStatement(s)
@@ -276,7 +283,7 @@ func forbiddenTerminal(s ast.Stmt) string {
 	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt, *ast.DoWhileStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
-		*ast.CommonStmt, *ast.EquivalenceStmt:
+		*ast.CommonStmt, *ast.EquivalenceStmt, *ast.EntryStmt:
 		return aStatement(s)
 	}
 

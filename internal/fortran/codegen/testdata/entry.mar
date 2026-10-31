@@ -1,0 +1,302 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for SUB, a subroutine
+;   A     REAL           an argument  @SUB.$A1
+;   B     REAL           an argument  @SUB.$A2
+;   I     INTEGER        an argument  @SUB.$A3
+;   V     REAL (*)       an argument  @SUB.$A4
+;   S     CHARACTER*(*)  an argument  @SUB.$A5
+;   C     REAL           $LOCAL+0     SUB.C
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUB.C:	.BLKL	1			; C
+SUB.$A1:
+	.BLKL	1			; A's longword of the argument list, set at each entry point
+SUB.$A2:
+	.BLKL	1			; B's longword of the argument list, set at each entry point
+SUB.$A3:
+	.BLKL	1			; I's longword of the argument list, set at each entry point
+SUB.$A4:
+	.BLKL	1			; V's longword of the argument list, set at each entry point
+SUB.$A5:
+	.BLKL	1			; S's longword of the argument list, set at each entry point
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SUB.$F1:
+	.LONG	^X00004080		; 1.0
+SUB.$K1:
+	.ASCII	/X/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     ENTRY statements: a subroutine's dummies in two orders, one only an
+;    2  C     ENTRY names, an array and a passed length through their cells; a
+;    3  C     function whose entry points' values are of two types; a CHARACTER
+;    4  C     function, whose hidden argument moves every list along.
+;    5        SUBROUTINE SUB(A, B)
+	.ENTRY	SUB,^M<R2,R3,R4,R5>
+	MOVL	4(AP),SUB.$A1		; A is argument 1
+	MOVL	8(AP),SUB.$A2		; B is argument 2
+;    6        REAL A, B, V(*), C
+;    7        CHARACTER*(*) S
+;    8        A = B
+	MOVF	@SUB.$A2,@SUB.$A1
+;    9        ENTRY BUS(B, A)
+SUB.$1:					; ENTRY BUS
+;   10        B = A + 1.0
+	ADDF3	@SUB.$A1,SUB.$F1,@SUB.$A2
+;   11        RETURN
+	RET
+;   12        ENTRY ARR(I, V)
+SUB.$2:					; ENTRY ARR
+;   13        V(I) = 2.0
+	SUBL3	#1,@SUB.$A3,R0
+	MOVL	#^X00004100,@SUB.$A4[R0] ; 2.0
+;   14        C = V(I + 1)
+	MOVL	@SUB.$A3,R0
+	MOVF	@SUB.$A4[R0],SUB.C
+;   15        ENTRY TXT(S)
+SUB.$3:					; ENTRY TXT
+;   16        S(1:1) = 'X'
+	MOVL	SUB.$A5,R0
+	MOVC3	#1,SUB.$K1,@4(R0)
+;   17        I = LEN(S)
+	MOVZWL	@SUB.$A5,@SUB.$A3
+;   18        END
+	RET
+
+	.ENTRY	BUS,^M<R2,R3,R4,R5>
+	MOVL	4(AP),SUB.$A2		; B is argument 1
+	MOVL	8(AP),SUB.$A1		; A is argument 2
+	BRW	SUB.$1
+
+	.ENTRY	ARR,^M<R2,R3,R4,R5>
+	MOVL	4(AP),SUB.$A3		; I is argument 1
+	MOVL	8(AP),SUB.$A4		; V is argument 2
+	BRW	SUB.$2
+
+	.ENTRY	TXT,^M<R2,R3,R4,R5>
+	MOVL	4(AP),SUB.$A5		; S is argument 1
+	BRW	SUB.$3
+
+; Storage map for F, a REAL function
+;   X     REAL     an argument  @F.$A1
+;   F     REAL     $LOCAL+0     F.F
+;   H     INTEGER  $LOCAL+0     F.H
+;   G     REAL*8   $LOCAL+0     F.G
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F.F:	.BLKB	8			; F, the function's value
+F.H = F.F				; H, the function's value
+F.G = F.F				; G, the function's value
+F.$A1:	.BLKL	1			; X's longword of the argument list, set at each entry point
+F.$E:	.BLKL	1			; the entry point the routine was called by
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+F.$F1:	.LONG	^X00004100,^X00000000	; 2D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   19
+;   20        REAL FUNCTION F(X)
+	.ENTRY	F,^M<>
+	MOVL	#1,F.$E			; this entry point's number
+	MOVL	4(AP),F.$A1		; X is argument 1
+;   21        REAL*8 G
+;   22        INTEGER H
+;   23        F = X
+	MOVF	@F.$A1,F.F
+;   24        IF (X .GT. 0.0) RETURN
+	TSTF	@F.$A1
+	BGTR	F.$2
+	BRW	F.$1
+F.$2:
+	CASEL	F.$E,#1,#2
+F.$3:
+	.WORD	F.$4-F.$3
+	.WORD	F.$5-F.$3
+	.WORD	F.$6-F.$3
+	BRW	F.$4
+F.$1:
+;   25        ENTRY H(X)
+F.$7:					; ENTRY H
+;   26        H = 1
+	MOVL	#1,F.H
+;   27        RETURN
+	CASEL	F.$E,#1,#2
+F.$8:
+	.WORD	F.$4-F.$8
+	.WORD	F.$5-F.$8
+	.WORD	F.$6-F.$8
+	BRW	F.$4
+;   28        ENTRY G
+F.$9:					; ENTRY G
+;   29        G = 2.0D0
+	MOVD	F.$F1,F.G		; 2D0
+;   30        END
+	CASEL	F.$E,#1,#2
+F.$10:
+	.WORD	F.$4-F.$10
+	.WORD	F.$5-F.$10
+	.WORD	F.$6-F.$10
+F.$4:					; returns the value as F
+	MOVF	F.F,R0			; the function's value
+	RET
+F.$5:					; returns the value as L
+	MOVL	F.H,R0			; the function's value
+	RET
+F.$6:					; returns the value as D
+	MOVD	F.G,R0			; the function's value
+	RET
+
+	.ENTRY	H,^M<>
+	MOVL	#2,F.$E			; this entry point's number
+	MOVL	4(AP),F.$A1		; X is argument 1
+	BRW	F.$7
+
+	.ENTRY	G,^M<>
+	MOVL	#3,F.$E			; this entry point's number
+	BRW	F.$9
+
+; Storage map for P, a REAL function
+;   X     REAL  an argument  @P.$A1
+;   Y     REAL  an argument  @P.$A2
+;   P     REAL  $LOCAL+0     P.P
+;   Q     REAL  $LOCAL+0     P.Q
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+P.P:	.BLKB	4			; P, the function's value
+P.Q = P.P				; Q, the function's value
+P.$A1:	.BLKL	1			; X's longword of the argument list, set at each entry point
+P.$A2:	.BLKL	1			; Y's longword of the argument list, set at each entry point
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   31
+;   32        REAL FUNCTION P(X)
+	.ENTRY	P,^M<>
+	MOVL	4(AP),P.$A1		; X is argument 1
+;   33        ENTRY Q(Y, X)
+P.$1:					; ENTRY Q
+;   34        Q = X
+	MOVF	@P.$A1,P.Q
+;   35        END
+	MOVF	P.P,R0			; the function's value
+	RET
+
+	.ENTRY	Q,^M<>
+	MOVL	4(AP),P.$A2		; Y is argument 1
+	MOVL	8(AP),P.$A1		; X is argument 2
+	BRW	P.$1
+
+; Storage map for CF, a CHARACTER*4 function
+;   CF    CHARACTER*4  a hidden argument  @CF.$A1
+;   N     INTEGER      an argument        @CF.$A2
+;   M     INTEGER      an argument        @CF.$A3
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CF.$A1:	.BLKL	1			; CF's longword of the argument list, set at each entry point
+CF.$A2:	.BLKL	1			; N's longword of the argument list, set at each entry point
+CF.$A3:	.BLKL	1			; M's longword of the argument list, set at each entry point
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CF.$K1:	.ASCII	/AB/
+CF.$K2:	.ASCII	/CD/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   36
+;   37        CHARACTER*4 FUNCTION CF(N)
+	.ENTRY	CF,^M<R2,R3,R4,R5>
+	MOVL	4(AP),CF.$A1		; CF is argument 1
+	MOVL	8(AP),CF.$A2		; N is argument 2
+;   38        CHARACTER*4 CG
+;   39        CF = 'AB'
+	MOVL	CF.$A1,R0
+	MOVC5	#2,CF.$K1,#^A/ /,#4,@4(R0)
+;   40        RETURN
+	RET
+;   41        ENTRY CG(M, N)
+CF.$1:					; ENTRY CG
+;   42        CG = 'CD'
+	MOVL	CF.$A1,R0
+	MOVC5	#2,CF.$K2,#^A/ /,#4,@4(R0)
+;   43        END
+	RET
+
+	.ENTRY	CG,^M<R2,R3,R4,R5>
+	MOVL	4(AP),CF.$A1		; CF is argument 1
+	MOVL	8(AP),CF.$A3		; M is argument 2
+	MOVL	12(AP),CF.$A2		; N is argument 3
+	BRW	CF.$1
+
+; Storage map for CALLER, the main program
+;   X     REAL     $LOCAL+0  CALLER.X
+;   Y     REAL     $LOCAL+4  CALLER.Y
+;   J     INTEGER  $LOCAL+8  CALLER.J
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CALLER.X:
+	.BLKL	1			; X
+CALLER.Y:
+	.BLKL	1			; Y
+CALLER.J:
+	.BLKL	1			; J
+CALLER.$T1:
+	.BLKL	2			; temporary
+CALLER.$T2:
+	.BLKL	1			; characters, for one statement
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CALLER.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+CALLER.$K1:
+	.LONG	1
+CALLER.$K2:
+	.LONG	2
+CALLER.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CALLER.$T2
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   44
+;   45        PROGRAM CALLER
+	.ENTRY	CALLER,^M<>
+;   46        REAL*8 G
+;   47        INTEGER H
+;   48        CHARACTER*4 CG
+;   49        CALL BUS(X, Y)
+	PUSHAL	CALLER.Y
+	PUSHAL	CALLER.X
+	CALLS	#2,G^BUS
+;   50        Y = G()
+	CALLS	#0,G^G
+	MOVD	R0,CALLER.$T1
+	CVTDF	CALLER.$T1,CALLER.Y
+;   51        J = H(X)
+	PUSHAL	CALLER.X
+	CALLS	#1,G^H
+	MOVL	R0,CALLER.J
+;   52        PRINT *, CG(1, 2)
+	PUSHAB	CALLER.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAL	CALLER.$K2
+	PUSHAL	CALLER.$K1
+	PUSHAQ	CALLER.$D1
+	CALLS	#3,G^CG
+	PUSHAQ	CALLER.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   53        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	CALLER

@@ -404,7 +404,13 @@ never had.
   (`sema.Type.HiddenResult`), the function's name an `ir.Param` so a
   CHARACTER one is reached through its descriptor as a passed-length
   dummy is, the caller passing a temporary (or a descriptor of one) and
-  never the assignment's target.
+  never the assignment's target; subtask 6 (2026-10-31) ENTRY: `sema/entry.go`
+  (`Unit.Entries`, `EntryPoint`; `Unit.Dummies` is every dummy once), and
+  `ir/lowerentry.go`: in a unit with ENTRY statements each dummy goes through a
+  cell (`Param.Through`, `$A1`) each entry point copies its address to, a
+  function's names share one place, and if their types differ a return is a
+  `Switch` on `$E`; `codegen`'s `writeEntry` writes the other `.ENTRY`s after
+  the routine's code.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

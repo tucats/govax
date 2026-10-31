@@ -1,0 +1,145 @@
+routine SUB subroutine
+  param A       F  through $A1
+  param B       F  through $A2
+  param I       L  through $A3
+  param V       F  through $A4
+  param S       B  through $A5
+  entry 1 SUB A=1 B=2
+  entry 2 BUS B=1 A=2 at B2
+  entry 3 ARR I=1 V=2 at B3
+  entry 4 TXT S=1 at B4
+  cell  C       F  $LOCAL+0    variable C
+  cell  $A1     L  $LOCAL+4    address of A
+  cell  $A2     L  $LOCAL+8    address of B
+  cell  $A3     L  $LOCAL+12   address of I
+  cell  $A4     L  $LOCAL+16   address of V
+  cell  $A5     L  $LOCAL+20   address of S
+  $LOCAL is 24 bytes
+  datum $K1     text 'X'
+B1:
+  ; line 8
+  assign @A = @B
+  ; line 9
+  jump B2
+B2:  ; ENTRY BUS
+  ; line 10
+  assign @B = add.F(@A, 1.0)
+  ; line 11
+  return
+B3:  ; ENTRY ARR
+  ; line 13
+  assign @V-4[@I] = 2.0
+  ; line 14
+  assign C = @V[@I]
+  ; line 15
+  jump B4
+B4:  ; ENTRY TXT
+  ; line 16
+  move @(@(arg S)+4)(1) = $K1(1)
+  ; line 17
+  assign @I = zext.WL(@(arg S))
+  ; line 18
+  return
+routine F function F
+  param X       F  through $A1
+  entry 1 F X=1
+  entry 2 H X=1 at B4
+  entry 3 G at B5
+  cell  F       F  $LOCAL+0    result F
+  cell  H       L  $LOCAL+0    result H
+  cell  G       D  $LOCAL+0    result G
+  cell  $A1     L  $LOCAL+8    address of X
+  cell  $E      L  $LOCAL+12   the entry point used
+  $LOCAL is 16 bytes
+B1:
+  ; line 23
+  assign F = @X
+  ; line 24
+  branch gt.F(@X, 0.0) B2 B3
+B2:
+  switch $E [B6 B7 B8] B6
+B3:
+  ; line 25
+  jump B4
+B4:  ; ENTRY H
+  ; line 26
+  assign H = 1
+  ; line 27
+  switch $E [B6 B7 B8] B6
+B5:  ; ENTRY G
+  ; line 29
+  assign G = 2D0
+  ; line 30
+  switch $E [B6 B7 B8] B6
+B6:  ; returns the value as F
+  return F
+B7:  ; returns the value as L
+  return H
+B8:  ; returns the value as D
+  return G
+routine P function F
+  param X       F  through $A1
+  param Y       F  through $A2
+  entry 1 P X=1
+  entry 2 Q Y=1 X=2 at B2
+  cell  P       F  $LOCAL+0    result P
+  cell  Q       F  $LOCAL+0    result Q
+  cell  $A1     L  $LOCAL+4    address of X
+  cell  $A2     L  $LOCAL+8    address of Y
+  $LOCAL is 12 bytes
+B1:
+  ; line 33
+  jump B2
+B2:  ; ENTRY Q
+  ; line 34
+  assign Q = @X
+  ; line 35
+  return P
+routine CF function
+  param CF      B  through $A1
+  param N       L  through $A2
+  param M       L  through $A3
+  entry 1 CF CF=1 N=2
+  entry 2 CG CF=1 M=2 N=3 at B2
+  cell  $A1     L  $LOCAL+0    address of CF
+  cell  $A2     L  $LOCAL+4    address of N
+  cell  $A3     L  $LOCAL+8    address of M
+  $LOCAL is 12 bytes
+  datum $K1     text 'AB'
+  datum $K2     text 'CD'
+B1:
+  ; line 39
+  move @(@(arg CF)+4)(4) = $K1(2)
+  ; line 40
+  return
+B2:  ; ENTRY CG
+  ; line 42
+  move @(@(arg CF)+4)(4) = $K2(2)
+  ; line 43
+  return
+routine CALLER main
+  cell  X       F  $LOCAL+0    variable X
+  cell  Y       F  $LOCAL+4    variable Y
+  cell  J       L  $LOCAL+8    variable J
+  cell  $T1     D  $LOCAL+12   temporary
+  cell  $T2     B  $LOCAL+20   temporary
+  $LOCAL is 24 bytes
+  datum $IO1    control PRINT *
+  datum $K1     L 1
+  datum $K2     L 2
+  datum $D1     descriptor T S 4 $T2
+B1:
+  ; line 49
+  call BUS(ref X, ref Y)
+  ; line 50
+  call G() -> $T1
+  assign Y = cvt.DF($T1)
+  ; line 51
+  call H(ref X) -> J
+  ; line 52
+  call FTN$PRINT_LIST(ref $IO1)
+  call CG(ref $D1, ref $K1, ref $K2)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 53
+  return 1

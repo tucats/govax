@@ -97,6 +97,12 @@ func (g *routineGen) generate() {
 // terminator names its next block only to say that control goes on
 // there, which takes no instruction.
 func (g *routineGen) findTargets() {
+	for _, e := range g.r.Entries {
+		if e.First != nil {
+			g.targets[e.First] = true
+		}
+	}
+
 	for i, b := range g.r.Blocks {
 		var next *ir.Block
 		if i+1 < len(g.r.Blocks) {
@@ -141,6 +147,12 @@ func (g *routineGen) findTargets() {
 // the statement, for someone reading the file or debugging); a block
 // other blocks branch to gets a compiler label.
 func (g *routineGen) block(b *ir.Block, next *ir.Block) {
+	for _, e := range g.r.Entries {
+		if e.First == b {
+			g.src.through(g.out, e.Source)
+		}
+	}
+
 	switch {
 	case b.Label != 0:
 		if l := g.r.Unit.Labels[b.Label]; l != nil {

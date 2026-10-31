@@ -35,6 +35,15 @@ func Dump(p *Program) string {
 			b.WriteString(strings.TrimRight("  "+dumpSymbol(s), " ") + "\n")
 		}
 
+		for _, e := range u.Entries {
+			params := make([]string, len(e.Params))
+			for i, s := range e.Params {
+				params[i] = s.Name
+			}
+
+			fmt.Fprintf(&b, "  entry %s (%s)\n", e.Sym.Name, strings.Join(params, ", "))
+		}
+
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
 
 		for _, c := range u.Commons {
@@ -239,6 +248,8 @@ func stmtText(list []Stmt) string {
 		}
 
 		return verb + " " + quote(s.Display)
+	case *EntryPoint:
+		return "ENTRY " + s.Entry.Sym.Name
 	case *Return:
 		return "RETURN"
 	case *End:

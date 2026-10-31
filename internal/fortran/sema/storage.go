@@ -21,6 +21,13 @@ package sema
 func (a *analyzer) layout() {
 	offset := 0
 
+	// A function with ENTRY statements has one place for all its names'
+	// values, unless they go through a hidden argument.
+	shared := len(a.unit.Entries) > 0 && a.unit.Result != nil && !a.unit.Result.Type.HiddenResult()
+	if shared {
+		offset = a.placeResults()
+	}
+
 	for _, s := range a.unit.Symbols {
 		if s.Class == Unclassified {
 			s.Class = Variable
@@ -30,7 +37,7 @@ func (a *analyzer) layout() {
 			continue
 		}
 
-		if s.Result && s.Type.HiddenResult() {
+		if s.Result && (shared || s.Type.HiddenResult()) {
 			continue
 		}
 

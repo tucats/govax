@@ -110,6 +110,10 @@
 // count), T.$2 (a label of the compiler's own). MACRO allows a period
 // in a symbol and FORTRAN names can't hold one, so these never collide.
 //
+// A routine with ENTRY statements has one more .ENTRY for each, after its
+// code, each copying its arguments' addresses to the cells the body uses
+// and branching to its statement (writeEntry).
+//
 // The tests compare golden files (testdata/*.mar, rewritten with
 // -update) and assemble every file they generate with govax's MACRO,
 // which must say nothing; the console's TestFortranCodeRuns links a

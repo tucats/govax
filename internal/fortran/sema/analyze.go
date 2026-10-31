@@ -52,6 +52,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			messages:       messages,
 			units:          units,
 			stmtFuncs:      map[ast.Stmt]*Symbol{},
+			entryOf:        map[*ast.EntryStmt]*Entry{},
 			implicit:       defaultImplicit(defaultInt),
 			rejected:       map[ast.Stmt]bool{},
 			boundVars:      map[*Symbol]diag.Position{},
@@ -129,10 +130,32 @@ type fileUnit struct {
 	kind ast.UnitKind
 	pos  diag.Position
 	unit *Unit // after analysis; nil until then, or if it was left out
+
+	// entry is the entry point this name is, if it is an ENTRY statement's
+	// in unit, not a unit's own.
+	entry *Entry
 }
 
-// unitNames collects the file's units by name, reporting two units with
-// one name (DUPUNIT) and a second main program (TWOMAINS).
+// params are the routine's dummy arguments.
+func (fu *fileUnit) params() []*Symbol {
+	if fu.entry != nil {
+		return fu.entry.Params
+	}
+
+	return fu.unit.Params
+}
+
+// result is the function's name, whose type is the type of its value.
+func (fu *fileUnit) result() *Symbol {
+	if fu.entry != nil {
+		return fu.entry.Sym
+	}
+
+	return fu.unit.Result
+}
+
+// unitNames collects the file's units and entry points by name, reporting
+// two with one name (DUPUNIT) and a second main program (TWOMAINS).
 func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]*fileUnit {
 	units := map[string]*fileUnit{}
 
@@ -160,6 +183,28 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 		}
 
 		units[name] = &fileUnit{kind: kind, pos: au.Position()}
+	}
+
+	for _, au := range file.Units {
+		kind := au.Kind()
+		if kind != ast.FunctionUnit && kind != ast.SubroutineUnit {
+			continue
+		}
+
+		for _, st := range au.Body {
+			s, ok := st.(*ast.EntryStmt)
+			if !ok {
+				continue
+			}
+
+			if first, ok := units[s.Name]; ok {
+				messages.Report("DUPUNIT", s.Pos, s.Name, first.pos.Line)
+
+				continue
+			}
+
+			units[s.Name] = &fileUnit{kind: kind, pos: s.Pos}
+		}
 	}
 
 	return units
@@ -192,6 +237,13 @@ type analyzer struct {
 	// definitions (statementFunction), each with its function's symbol,
 	// or nil for one with an error.
 	stmtFuncs map[ast.Stmt]*Symbol
+
+	// entryOf are the unit's ENTRY statements' entry points (entry.go).
+	entryOf map[*ast.EntryStmt]*Entry
+
+	// walking is set during the statement walk, when using a name is using
+	// it in a statement (usedBeforeEntry).
+	walking bool
 
 	// adjustable are the arrays declared with bounds that aren't
 	// constant, and boundVars the names used in those bounds, each with
@@ -255,6 +307,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// names their types too.
 	a.implicits(body)
 	a.header(au)
+	a.entries(body)
 
 	// Declarations first, then the executable statements, so that every
 	// statement sees every declaration: a name is an array whatever
@@ -262,6 +315,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
 	a.declarations(body)
+	a.checkEntryTypes()
 	a.layoutCommon()
 	a.equivalences()
 	a.checkArrays()
@@ -336,9 +390,15 @@ func (a *analyzer) params(params []*ast.Name) {
 			a.report("DUPDUMMY", p.Pos, p.Name, a.unit.Kind.String())
 		default:
 			a.unit.Params = append(a.unit.Params, s)
-			s.Dummy = len(a.unit.Params)
+			a.addDummy(s)
 		}
 	}
+}
+
+// addDummy makes s a dummy argument of the unit.
+func (a *analyzer) addDummy(s *Symbol) {
+	a.unit.Dummies = append(a.unit.Dummies, s)
+	s.Dummy = len(a.unit.Dummies)
 }
 
 // lookup returns the symbol named name, entering it, with its implicit
@@ -346,6 +406,10 @@ func (a *analyzer) params(params []*ast.Name) {
 // used, which is its first appearance if it is new.
 func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 	if s := a.unit.byName[name]; s != nil {
+		if a.walking {
+			a.usedBeforeEntry(s, pos)
+		}
+
 		return s
 	}
 
@@ -417,6 +481,7 @@ var structural = map[string]bool{
 	"NODO": true, "DOTERM": true, "DONEST": true,
 	"DUPLABEL": true, "UNDEFLBL": true, "NOTEXEC": true,
 	"INTOBLOCK": true, "SHAREDTERM": true,
+	"ENTRYUNIT": true, "ENTRYBLOCK": true, "ENTRYRETURN": true, "ENTRYLATE": true,
 }
 
 // incompleteDeclarations reports whether a unit's body holds a
@@ -477,12 +542,12 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			case s.Class == Function && target.Kind == ast.FunctionUnit:
 				// A CHARACTER*(*) function has whatever length the unit
 				// referencing it declares (section 6.2.2.2).
-				t := target.Result.Type
+				t := fu.result().Type
 				if t == (Type{Character, 0}) && s.Type.Kind == Character {
 					continue
 				}
 
-				if t != s.Type && !target.Result.broken {
+				if t != s.Type && !fu.result().broken {
 					messages.Report("FUNCTYPE", s.Pos, s.Name, t.String(), fu.pos.Line, s.Type.String())
 				}
 
@@ -518,7 +583,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				continue
 			}
 
-			if n := len(fu.unit.Params); n != len(r.args) {
+			if n := len(fu.params()); n != len(r.args) {
 				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, len(r.args))
 
 				continue
@@ -530,7 +595,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			// to a CHARACTER dummy must be.
 			for i, arg := range r.args {
 				c, ok := arg.Expr.(*Const)
-				if p := fu.unit.Params[i]; ok && c.T.Kind == Character && p != nil && p.Type.Kind != Character {
+				if p := fu.params()[i]; ok && c.T.Kind == Character && p != nil && p.Type.Kind != Character {
 					messages.Report("NOTIMPL", c.Pos, hollerith)
 				}
 			}

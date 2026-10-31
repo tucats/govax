@@ -56,6 +56,18 @@ func Check(r *Routine) error {
 		data[d] = true
 	}
 
+	for _, e := range r.Entries {
+		if e.First != nil && !blocks[e.First] {
+			return fmt.Errorf("%s: entry point %s starts at a block not laid out", r.Name, e.Name)
+		}
+
+		for _, a := range e.Args {
+			if !cells[a.Param.Through] {
+				return fmt.Errorf("%s: entry point %s's argument %s has no cell of the routine's", r.Name, e.Name, a.Param.Name)
+			}
+		}
+	}
+
 	c := checker{r: r, blocks: blocks, cells: cells, data: data}
 
 	for _, b := range r.Blocks {

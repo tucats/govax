@@ -63,6 +63,12 @@ type lowerer struct {
 	// constant, text, descriptor, and control block is made once.
 	data map[string]*Datum
 
+	// entries are the routine's entry points by ENTRY statement, and
+	// returns the blocks that return a value of each type in a function whose
+	// entry points' types differ (lowerentry.go).
+	entries map[*sema.Entry]*Entry
+	returns []*returnBlock
+
 	// The numbers of the compiler's names: temporaries ($T), constants
 	// and texts ($K), descriptors ($D), control blocks ($IO), and DO
 	// loops (the $C and $S cells).
@@ -108,7 +114,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 		r.Kind = Main
 	}
 
-	for _, s := range u.Params {
+	for _, s := range u.Dummies {
 		p := &Param{Name: s.Name, Index: s.Dummy + hidden, T: l.typeOf(s.Type), Sym: s}
 		r.Params = append(r.Params, p)
 		l.params[s] = p
@@ -142,6 +148,10 @@ func lowerUnit(u *sema.Unit) *Routine {
 		return r
 	}
 
+	if len(u.Entries) > 0 {
+		l.prepareEntries(hidden)
+	}
+
 	l.begin(l.newBlock())
 	l.stmts(u.Body)
 
@@ -149,8 +159,10 @@ func lowerUnit(u *sema.Unit) *Routine {
 		// Only a unit whose END semantic analysis didn't find (an error)
 		// can end without a terminator; but lowering never leaves a
 		// block open.
-		l.terminate(&Return{origin: l.origin(), Value: l.returnValue()})
+		l.returnFromRoutine()
 	}
+
+	l.layOutReturns()
 
 	if l.made != len(r.Blocks) {
 		panic(fmt.Sprintf("ir: %s: %d blocks made, %d laid out", r.Name, l.made, len(r.Blocks)))

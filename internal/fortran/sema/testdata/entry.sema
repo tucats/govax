@@ -1,0 +1,79 @@
+== SUBROUTINE SUB
+  SUB                     program unit
+  A         REAL          variable         argument 1
+  B         REAL          variable         argument 2
+  BUS                     program unit
+  ARR                     program unit
+  TXT                     program unit
+  I         INTEGER       variable         argument 3
+  V         REAL          array(1:*)       argument 4
+  S         CHARACTER*(*) variable         argument 5
+  C         REAL          variable         $LOCAL+0
+  entry BUS (B, A)
+  entry ARR (I, V)
+  entry TXT (S)
+  $LOCAL is 4 bytes
+8           A = B
+9           ENTRY BUS
+10          B = (+:R A 1.0)
+11          RETURN
+12          ENTRY ARR
+13          V[I] = 2.0
+14          C = V[(+:I I 1)]
+15          ENTRY TXT
+16          S(1:1) = 'X'
+17          I = (len:INTEGER LEN S)
+18          END
+== FUNCTION F
+  F         REAL          result           $LOCAL+0
+  X         REAL          variable         argument 1
+  H         INTEGER       result           $LOCAL+0
+  G         REAL*8        result           $LOCAL+0
+  entry H (X)
+  entry G ()
+  $LOCAL is 8 bytes
+23          F = X
+24          IF (.GT.:R X 0.0) RETURN
+25          ENTRY H
+26          H = 1
+27          RETURN
+28          ENTRY G
+29          G = 2.0D0
+30          END
+== FUNCTION P
+  P         REAL          result           $LOCAL+0
+  X         REAL          variable         argument 1
+  Q         REAL          result           $LOCAL+0
+  Y         REAL          variable         argument 2
+  entry Q (Y, X)
+  $LOCAL is 4 bytes
+33          ENTRY Q
+34          Q = X
+35          END
+== FUNCTION CF
+  CF        CHARACTER*4   result
+  N         INTEGER       variable         argument 1
+  CG        CHARACTER*4   result
+  M         INTEGER       variable         argument 2
+  entry CG (M, N)
+  $LOCAL is 0 bytes
+39          CF = 'AB'
+40          RETURN
+41          ENTRY CG
+42          CG = 'CD'
+43          END
+== main program CALLER
+  CALLER                  program unit
+  G         REAL*8        function
+  H         INTEGER       function
+  CG        CHARACTER*4   function
+  BUS                     subroutine
+  X         REAL          variable         $LOCAL+0
+  Y         REAL          variable         $LOCAL+4
+  J         INTEGER       variable         $LOCAL+8
+  $LOCAL is 12 bytes
+49          CALL BUS(X, Y)
+50          Y = (REAL G())
+51          J = H(X)
+52          PRINT * CG(1, 2)
+53          END

@@ -308,8 +308,10 @@ func (g *routineGen) write(w *Writer) {
 	g.writeMap(w)
 
 	for _, p := range r.Params {
-		w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
-			g.paramNote(p))
+		if p.Through == nil {
+			w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
+				g.paramNote(p))
+		}
 	}
 
 	g.writeCommonNames(w)
@@ -349,7 +351,44 @@ func (g *routineGen) write(w *Writer) {
 	w.Statement("", ".PSECT", codePsect, "")
 	w.Append(&g.pre)
 	w.Statement("", ".ENTRY", r.Name+","+g.entryMask(), "")
+
+	if len(r.Entries) > 0 {
+		g.writeEntryArgs(w, r.Entries[0])
+	}
+
 	w.Append(&g.code)
+
+	for _, e := range r.Entries[min(1, len(r.Entries)):] {
+		g.writeEntry(w, e)
+	}
+}
+
+// writeEntry writes an ENTRY statement's entry point, after the routine's
+// code: every entry point saves the registers the one body uses, then copies
+// its arguments' addresses to where the body looks for them, and goes to the
+// first executable statement after its ENTRY statement.
+//
+//	.ENTRY  SINH,^M<R2>
+//	MOVL    4(AP),TANH.$A1          ; X is argument 1
+//	BRW     TANH.$2
+func (g *routineGen) writeEntry(w *Writer, e *ir.Entry) {
+	w.Blank()
+	w.Statement("", ".ENTRY", e.Name+","+g.entryMask(), "")
+	g.writeEntryArgs(w, e)
+	w.Statement("", "BRW", g.blockLabel(e.First), "")
+}
+
+// writeEntryArgs writes what starts an entry point's code: its number, if the
+// routine's return goes by it, and its arguments' addresses copied to cells.
+func (g *routineGen) writeEntryArgs(w *Writer, e *ir.Entry) {
+	if c := g.r.Selector; c != nil {
+		w.Statement("", "MOVL", "#"+strconv.Itoa(e.Number)+","+g.names.symbol(c.Name), "this entry point's number")
+	}
+
+	for _, a := range e.Args {
+		w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+g.names.symbol(a.Param.Through.Name),
+			fmt.Sprintf("%s is argument %d", a.Param.Name, a.Index))
+	}
 }
 
 // paramNote says which argument a symbol's offset is the place of, for its
@@ -395,7 +434,14 @@ func (g *routineGen) writeMap(w *Writer) {
 			where = "hidden argument " + strconv.Itoa(p.Index)
 		}
 
-		rows = append(rows, row{p.Name, typeText(p.Sym), where, "@" + g.names.symbol(p.Name) + "(AP)"})
+		if p.Through != nil {
+			where = "an argument"
+			if p.Sym.Result {
+				where = "a hidden argument"
+			}
+		}
+
+		rows = append(rows, row{p.Name, typeText(p.Sym), where, "@" + g.argumentPlace(p)})
 	}
 
 	for _, c := range g.r.Cells {
@@ -589,6 +635,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return c.Loop + "'s step"
 	case ir.TextCell:
 		return "characters, for one statement"
+	case ir.ArgCell:
+		return c.Dummy + "'s longword of the argument list, set at each entry point"
+	case ir.SelectorCell:
+		return "the entry point the routine was called by"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {
