@@ -156,7 +156,7 @@ one statement at a time; `ftn_units.mar` is one unit, SYS$OUTPUT, with
 LIB$STOP on any RMS error; `FTN$IO_ITEM` knows only output.
 
 **VMS's side, already done:** RMS's FTN carriage control (`rms/ftncc.go`,
-which subtask 11 only uses), the terminal's input entry takes PUT (Phase
+which the terminal statements' subtask only uses), the terminal's input entry takes PUT (Phase
 72), `OTS$CVT_T_x`, `OTS$CVT_Tx_L`, `OTS$CVT_L_Tx`, `OTS$$CVT_x_T_R8`, and the
 FOR$\_ condition values (`vmsdef.LibrarySymbols`). There are no FOR
 message texts: today the condition prints `%NONAME-F-NOMSG`.
