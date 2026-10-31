@@ -401,6 +401,12 @@ var messages = map[string]kind{
 	"SUBRANGE": {Error, "the substring (%d:%d) isn't within %s's %d characters"},
 	"SUBBOUND": {Error, "the substring's bound %d isn't within %s's %d characters"},
 
+	// SUBLOW and SUBORDER are a substring of a passed-length dummy argument
+	// whose constant bounds can't be right whatever its length is: a bound
+	// less than 1, or a first character after the last.
+	"SUBLOW":   {Error, "the substring's bound %d is less than 1"},
+	"SUBORDER": {Error, "the substring (%d:%d) ends before it begins"},
+
 	// NOTLOGICAL is an IF's condition that is neither LOGICAL nor
 	// INTEGER.
 	"NOTLOGICAL": {Error, "a condition must be LOGICAL or INTEGER, and this one is %s"},

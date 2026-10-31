@@ -1,0 +1,114 @@
+routine STRS main
+  cell  S       B  $LOCAL+0    variable S
+  cell  LIST    B  $LOCAL+8    array LIST, 12 bytes
+  cell  I       L  $LOCAL+20   variable I
+  cell  $D3     L  $LOCAL+24   descriptor T S 4
+  cell  $D4     L  $LOCAL+32   descriptor T S 4
+  cell  $T1     B  $LOCAL+40   temporary
+  cell  $T2     B  $LOCAL+48   temporary
+  $LOCAL is 64 bytes
+  datum $K1     text 'ABCDEFGH'
+  datum $D1     descriptor T S 8 S
+  datum $K2     text 'LITERAL'
+  datum $D2     descriptor T S 7 $K2
+  datum $D5     descriptor T S 8 $T1
+  datum $D6     descriptor T A 4 (1:3) LIST
+B1:
+  ; line 3
+  move S(8) = $K1(8)
+  ; line 4
+  assign I = 2
+  ; line 5
+  assign $D3+4 = addr(S-1[I])
+  assign $D4+4 = addr(LIST-4[mul.L(I, 4)])
+  move $T1(8) = S(8)
+  call SHOW(ref $D1, ref $D2, ref $D3, ref $D4, ref $D5)
+  ; line 6
+  move $T2(7) = S+1(7)
+  move $T2+7(I) = S(I)
+  move S(8) = $T2(add.L(I, 7))
+  ; line 7
+  call PAIR(ref $D6)
+  ; line 8
+  return 1
+routine SHOW subroutine
+  param X       B  argument 1
+  param Y       B  argument 2
+  param Z       B  argument 3
+  param U       B  argument 4
+  param V       B  argument 5
+  cell  R       B  $LOCAL+0    variable R
+  cell  $D1     L  $LOCAL+20   descriptor T D 0
+  cell  $T1     W  $LOCAL+28   temporary
+  cell  $D2     L  $LOCAL+32   descriptor T S 0
+  cell  $D3     L  $LOCAL+40   descriptor T S 3
+  cell  $D4     L  $LOCAL+48   descriptor T S 0
+  cell  $T2     L  $LOCAL+56   temporary
+  $LOCAL is 60 bytes
+  datum $K1     text '<'
+  datum $K2     text '>'
+  datum $IO1    control PRINT *
+  datum $K3     text 'E'
+B1:
+  ; line 14
+  move @(@(arg X)+4)+1(sub.L(zext.WL(@(arg X)), 1)) = @(@(arg Y)+4)(zext.WL(@(arg Y)))
+  ; line 15
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg X)), 2))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(1) = $K1(1)
+  move @($D1+4)+1(zext.WL(@(arg X))) = @(@(arg X)+4)(zext.WL(@(arg X)))
+  move @($D1+4)+1[zext.WL(@(arg X))](1) = $K2(1)
+  move R(20) = @($D1+4)(add.L(zext.WL(@(arg X)), 2))
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 16
+  call FTN$PRINT_LIST(ref $IO1)
+  assign $D2 = @(arg X)
+  assign $D2+4 = addr(@(@(arg X)+4))
+  call FTN$IO_ITEM(ref $D2)
+  assign $D3+4 = addr(@(@(arg U)+4))
+  call FTN$IO_ITEM(ref $D3)
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg X)), zext.WL(@(arg X))))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(zext.WL(@(arg X))) = @(@(arg X)+4)(zext.WL(@(arg X)))
+  move @($D1+4)[zext.WL(@(arg X))](zext.WL(@(arg X))) = @(@(arg X)+4)(zext.WL(@(arg X)))
+  assign $D4 = cvt.LW(add.L(zext.WL(@(arg X)), zext.WL(@(arg X))))
+  assign $D4+4 = addr(@($D1+4))
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_END()
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 17
+  call PAIR(val arg X)
+  ; line 18
+  assign $T1 = cvt.LW(add.L(zext.WL(@(arg Z)), 1))
+  call LIB$SGET1_DD(ref $T1, ref $D1)
+  move @($D1+4)(zext.WL(@(arg Z))) = @(@(arg Z)+4)(zext.WL(@(arg Z)))
+  move @($D1+4)[zext.WL(@(arg Z))](1) = $K3(1)
+  assign $T2 = eq.T(@($D1+4)(add.L(zext.WL(@(arg Z)), 1)), @(@(arg U)+4)(3))
+  call LIB$SFREE1_DD(ref $D1)
+  branch $T2 B2 B3
+B2:
+  return
+B3:
+  ; line 19
+  return
+routine PAIR subroutine
+  param A       B  argument 1
+  cell  I       L  $LOCAL+0    variable I
+  cell  $D1     L  $LOCAL+4    descriptor T A 0 (1:2)
+  cell  $D2     L  $LOCAL+36   descriptor T S 0
+  $LOCAL is 44 bytes
+  datum $IO1    control PRINT *
+B1:
+  ; line 23
+  call FTN$PRINT_LIST(ref $IO1)
+  assign $D1 = @(arg A)
+  assign $D1+4 = addr(@(@(arg A)+4))
+  assign $D1+12 = mul.L(zext.WL(@(arg A)), 2)
+  assign $D1+16 = addr(@(@(arg A)+4)[mul.L(-1, zext.WL(@(arg A)))])
+  call FTN$IO_ITEM(ref $D1)
+  assign $D2 = cvt.LW(add.L(sub.L(zext.WL(@(arg A)), I), 1))
+  assign $D2+4 = addr(@(@(arg A)+4)-1[add.L(zext.WL(@(arg A)), I)])
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 24
+  return

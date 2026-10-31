@@ -344,7 +344,15 @@ never had.
   compared by `CharCmp`, which stands only where no register is held
   (a branch's condition, an Assign's whole value; `ir`'s `cond`), written
   as MOVC3/MOVC5 and CMPC3/CMPC5 with the unsigned branches
-  (`codegen/chars.go`); CHARACTER dummies and arguments are subtask 6's.
+  (`codegen/chars.go`), and subtask 6 (2026-10-30) CHARACTER arguments
+  and concatenation (`ir/lowerchars.go`): every character argument by
+  descriptor (a whole array's class A), a CHARACTER dummy's text reached
+  through its descriptor (`ir.Mem.Ptr`, an address computed at run time;
+  `ArgPointer`, the argument list's longword; codegen's deferred `@4(R0)`,
+  `direct`), a passed-length one's length MOVZWL (`Zext`), and passed on
+  with its own descriptor; `sema.Concat`'s parts moved into a static
+  `TextCell` as long as the value can be, or a class D dynamic string from
+  LIB$SGET1_DD, freed at the statement's end (`lowerer.after`, `flush`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

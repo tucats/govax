@@ -76,6 +76,12 @@
 // blanks. Both leave R0 to R5 or R0 to R3 changed, which the entry mask
 // saves.
 //
+// A place at an address computed when the program runs (a CHARACTER dummy's
+// text, at the address in its descriptor) is reached through that address
+// in memory when it can be, by a deferred mode (@4(R0), the place whose
+// address is 4 bytes past R0's), and otherwise with the address in a
+// register (3(R2)[R3]).
+//
 // A block the one before falls into needs no branch at all. Phase 84's
 // optimizer can shorten what this writes; the point here is code that
 // is always right. One small thing is done now: a TST of the value the

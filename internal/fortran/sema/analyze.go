@@ -223,7 +223,7 @@ type analyzer struct {
 // the routine if the file defines it.
 type routineRef struct {
 	sym  *Symbol
-	args int
+	args []Arg
 	pos  diag.Position
 }
 
@@ -512,8 +512,21 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 				continue
 			}
 
-			if n := len(fu.unit.Params); n != r.args {
-				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, r.args)
+			if n := len(fu.unit.Params); n != len(r.args) {
+				messages.Report("ARGCOUNT", r.pos, r.sym.Name, count(n, "dummy argument"), fu.pos.Line, len(r.args))
+
+				continue
+			}
+
+			// A character constant passed to a numeric dummy argument is a
+			// Hollerith constant (section 6.1.1.4), Phase 82's. Without the
+			// routine in the file, it is passed by descriptor, as one passed
+			// to a CHARACTER dummy must be.
+			for i, arg := range r.args {
+				c, ok := arg.Expr.(*Const)
+				if p := fu.unit.Params[i]; ok && c.T.Kind == Character && p != nil && p.Type.Kind != Character {
+					messages.Report("NOTIMPL", c.Pos, hollerith)
+				}
 			}
 		}
 	}

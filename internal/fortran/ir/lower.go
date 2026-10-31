@@ -51,7 +51,13 @@ type lowerer struct {
 	// given back at its end.
 	free     map[Type][]*Cell
 	freeDesc map[string][]*Cell
+	freeText map[int][]*Cell
 	busy     []*Cell
+
+	// after are statements to be done at the end of the statement being
+	// lowered, before its block's terminator if it has one: the freeing
+	// of its dynamic strings.
+	after []Stmt
 
 	// data are the routine's data by their contents, so that each
 	// constant, text, descriptor, and control block is made once.
@@ -75,6 +81,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 		labels:   map[int]*Block{},
 		free:     map[Type][]*Cell{},
 		freeDesc: map[string][]*Cell{},
+		freeText: map[int][]*Cell{},
 		data:     map[string]*Datum{},
 	}
 
@@ -285,15 +292,29 @@ func (l *lowerer) emit(s Stmt) {
 	l.cur.Stmts = append(l.cur.Stmts, s)
 }
 
-// terminate ends the current block with t. Until another block begins,
-// what follows can't be reached.
+// terminate ends the current block with t, after the statements to be done
+// at the statement's end. Until another block begins, what follows can't be
+// reached.
 func (l *lowerer) terminate(t Terminator) {
+	l.flush()
+
 	if l.cur == nil {
 		l.begin(l.newBlock())
 	}
 
 	l.cur.End = t
 	l.cur = nil
+}
+
+// flush adds the statements to be done at the end of the statement being
+// lowered (after) to the current block.
+func (l *lowerer) flush() {
+	list := l.after
+	l.after = nil
+
+	for _, s := range list {
+		l.emit(s)
+	}
 }
 
 // jump ends the current block, if there is one, with a jump to b.
@@ -374,10 +395,13 @@ func (l *lowerer) descriptorCell(d *Descriptor) *Cell {
 // just lowered used, for the next statement to use again.
 func (l *lowerer) release() {
 	for _, c := range l.busy {
-		if c.Kind == DescriptorCell {
+		switch c.Kind {
+		case DescriptorCell:
 			key := descriptorKey(c.Desc)
 			l.freeDesc[key] = append(l.freeDesc[key], c)
-		} else {
+		case TextCell:
+			l.freeText[c.Size] = append(l.freeText[c.Size], c)
+		default:
 			l.free[c.T] = append(l.free[c.T], c)
 		}
 	}

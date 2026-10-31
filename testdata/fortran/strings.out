@@ -1,0 +1,39 @@
+[ABCDEFGH]
+[LITERAL]
+[CDE]
+[BCDE]
+[TWO ]
+[ABC]
+[ABC]
+[AB-XYZ      ]
+[XYZXYZ]
+[AB+GH]
+XYZ.FGH|
+BCDEFGHA
+ABCDBCDE
+******
+A###EF
+ONE ????SIX |
+ABCDEF
+ONE TWO |
+TWO NE|
+>WO SIX |
+SIX WO|
+ONE >IX |
+ONE >WO |
+>WO NE|
+ONE >W|
+[E ]
+[MIDDLE]
+[IDDLE]
+[<MIDDLE>            ]
+<MIDDLE>|
+[MIDDLEMIDDLE]
+MIDDLE seen
+[AB]
+[B]
+[<AB>                ]
+<AB>|
+[ABAB]
+not MIDDLE
+  $STATUS == "%X00000001"

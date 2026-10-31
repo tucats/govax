@@ -118,10 +118,6 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		return a.bad(n.Pos)
 	}
 
-	if (s.Class == Unclassified || s.Class == Variable || s.Class == Array) && a.characterDummy(s, n.Pos) {
-		return a.bad(n.Pos)
-	}
-
 	switch s.Class {
 	case Unclassified:
 		s.Class = Variable
@@ -179,10 +175,6 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 
 	case Array:
-		if a.characterDummy(s, e.Pos) {
-			return a.bad(e.Pos)
-		}
-
 		return a.element(s, e)
 
 	case Unclassified, External:
@@ -207,7 +199,7 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		}
 
 		args := a.args(e.Args)
-		a.unit.calls = append(a.unit.calls, routineRef{s, len(args), e.Pos})
+		a.unit.calls = append(a.unit.calls, routineRef{s, args, e.Pos})
 
 		return &FuncRef{exprBase{s.Type, e.Pos}, s, args}
 
@@ -230,23 +222,6 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 	}
 
 	return a.bad(e.Pos)
-}
-
-// characterDummy reports, once, a CHARACTER dummy argument used in an
-// expression (NOTIMPL): its value comes by descriptor (Decision 11 of
-// docs/PHASE-74 - FORTRAN plan.md), which is a later subtask of Phase 78's.
-// It makes the name broken, so its other uses are quiet, and reports
-// whether it did.
-func (a *analyzer) characterDummy(s *Symbol, pos diag.Position) bool {
-	if s.Type.Kind != Character || s.Dummy == 0 {
-		return false
-	}
-
-	a.notImplForm(pos, "a CHARACTER dummy argument")
-
-	s.broken = true
-
-	return true
 }
 
 // substring analyzes X(Lower:Upper) (section 2.2.4): X a CHARACTER variable
@@ -315,6 +290,10 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		return a.bad(e.Pos)
 	}
 
+	if t.Size == 0 {
+		return a.passedSubstring(e, x, lower, upper)
+	}
+
 	first, firstKnown := constantInt(lower)
 	last, lastKnown := t.Size, true
 
@@ -341,6 +320,41 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 		a.report("SUBBOUND", e.Pos, last, name, t.Size)
 
 		return a.bad(e.Pos)
+	}
+
+	return &Substring{exprBase{Type{Character, 0}, e.Pos}, x, lower, upper}
+}
+
+// passedSubstring is a substring of a passed-length dummy argument, whose
+// length is known only when the program runs: a constant bound can be
+// checked only against 1 (SUBLOW), and two against each other (SUBORDER).
+// Two constant bounds give the substring a constant length.
+func (a *analyzer) passedSubstring(e *ast.Substring, x, lower, upper Expr) Expr {
+	first, firstKnown := constantInt(lower)
+	last, lastKnown := 0, false
+
+	if upper != nil {
+		last, lastKnown = constantInt(upper)
+	}
+
+	switch {
+	case firstKnown && first < 1:
+		a.report("SUBLOW", e.Pos, first)
+
+		return a.bad(e.Pos)
+
+	case lastKnown && last < 1:
+		a.report("SUBLOW", e.Pos, last)
+
+		return a.bad(e.Pos)
+
+	case firstKnown && lastKnown && first > last:
+		a.report("SUBORDER", e.Pos, first, last)
+
+		return a.bad(e.Pos)
+
+	case firstKnown && lastKnown:
+		return &Substring{exprBase{Type{Character, last - first + 1}, e.Pos}, x, lower, upper}
 	}
 
 	return &Substring{exprBase{Type{Character, 0}, e.Pos}, x, lower, upper}
@@ -382,9 +396,11 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 
 // args analyzes a list of actual arguments (section 5.1, 6.1): a
 // variable, an array element, or a whole array is passed as itself; a
-// parenthesized one, or any other expression, as a copy. A character
-// constant passed to a numeric dummy is a Hollerith constant (section
-// 6.1.1.4), Phase 82's.
+// parenthesized one, or any other expression, as a copy. A CHARACTER value,
+// a constant's among them, is passed by descriptor (Table 6-1); a character
+// constant passed to a numeric dummy would be a Hollerith constant (section
+// 6.1.1.4), Phase 82's, which checkReferences finds when the file has the
+// routine.
 func (a *analyzer) args(list []ast.Expr) []Arg {
 	args := make([]Arg, len(list))
 
@@ -396,33 +412,16 @@ func (a *analyzer) args(list []ast.Expr) []Arg {
 		case *ast.Name:
 			args[i].Expr = a.name(x, true)
 
-		case *ast.CharConst:
-			a.notImpl(x.Pos, "a character constant as an argument")
-
-			args[i].Expr = a.bad(x.Pos)
-
 		case *ast.Paren:
 			args[i].Expr = a.value(x)
 
 			switch args[i].Expr.(type) {
-			case *Var, *Elem:
+			case *Var, *Elem, *Substring:
 				args[i].Copy = true
 			}
 
 		default:
 			args[i].Expr = a.value(x)
-		}
-
-		if c, ok := args[i].Expr.(*Const); ok && c.T.Kind == Character {
-			a.notImpl(c.Pos, "a character constant as an argument")
-
-			args[i].Expr = a.bad(c.Pos)
-		} else if x := args[i].Expr; x != nil && x.Type().Kind == Character {
-			// A character argument is passed by descriptor (Decision 11),
-			// a later subtask's.
-			a.notImpl(x.Position(), "a character value as an argument")
-
-			args[i].Expr = a.bad(x.Position())
 		}
 	}
 
@@ -525,9 +524,7 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return a.bad(e.Pos)
 
 	case ast.Concat:
-		a.notImpl(e.Pos, "character concatenation (//)")
-
-		return a.bad(e.Pos)
+		return a.concat(e)
 	}
 
 	x, y := a.value(e.X), a.value(e.Y)
@@ -551,6 +548,68 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 	}
 
 	return a.fold(&Binary{exprBase{t, e.Pos}, e.Op, a.convert(x, t), a.convert(y, t)})
+}
+
+// concat analyzes X // Y (section 2.3.2): two CHARACTER values, joined.
+// Parentheses change nothing, so a concatenation's parts are its operands'
+// (A // (B // C) has the parts A, B, and C), and constants side by side are
+// one. Its length is its parts' lengths' sum, unknown when one of theirs is.
+func (a *analyzer) concat(e *ast.Binary) Expr {
+	x, y := a.value(e.X), a.value(e.Y)
+	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
+		return a.bad(e.Pos)
+	}
+
+	var parts []Expr
+
+	for _, o := range []Expr{x, y} {
+		if o.Type().Kind != Character {
+			a.report("BADOPERAND", e.Pos, "//", o.Type().String())
+
+			return a.bad(e.Pos)
+		}
+
+		list := []Expr{o}
+		if c, ok := o.(*Concat); ok {
+			list = c.Parts
+		}
+
+		for _, p := range list {
+			k, ok := p.(*Const)
+			if prev, prevOK := lastConst(parts); ok && prevOK {
+				parts[len(parts)-1] = charConst(prev.Text+k.Text, prev.Pos)
+
+				continue
+			}
+
+			parts = append(parts, p)
+		}
+	}
+
+	size := 0
+
+	for _, p := range parts {
+		if p.Type().Size == 0 {
+			size = 0
+
+			break
+		}
+
+		size += p.Type().Size
+	}
+
+	return &Concat{exprBase{Type{Character, size}, e.Pos}, parts}
+}
+
+// lastConst is the last of parts if it is a constant.
+func lastConst(parts []Expr) (*Const, bool) {
+	if len(parts) == 0 {
+		return nil, false
+	}
+
+	c, ok := parts[len(parts)-1].(*Const)
+
+	return c, ok
 }
 
 // mixedType is the type an arithmetic operation or comparison on x and y is

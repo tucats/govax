@@ -109,7 +109,19 @@ func (l *lowerer) cond(e sema.Expr) Expr {
 	switch e := e.(type) {
 	case *sema.Compare:
 		if e.X.Type().Kind == sema.Character {
-			return l.charCompare(e)
+			// A comparison of a dynamic string is computed before the
+			// branch, so that the string can be freed before it (after).
+			n := len(l.after)
+			c := l.charCompare(e)
+
+			if len(l.after) == n {
+				return c
+			}
+
+			t := l.temp(Long)
+			l.emit(&Assign{l.origin(), t, c})
+
+			return &Load{t}
 		}
 
 	case *sema.Unary:
@@ -132,16 +144,23 @@ func (l *lowerer) charCompare(e *sema.Compare) *CharCmp {
 }
 
 // chars is where a CHARACTER value is, and its length: a constant's text, a
-// variable, an array element, or a substring of either. S(I:J) is S's place
-// I-1 bytes on, the constant part of that in the offset and the rest added
-// to the index, and J-I+1 characters long (S's length if J is left out).
+// variable, an array element, a substring of either, or a concatenation's
+// temporary (concat). S(I:J) is S's place I-1 bytes on, the constant part of
+// that in the offset and the rest added to the index, and J-I+1 characters
+// long (S's length if J is left out).
 func (l *lowerer) chars(e sema.Expr) Text {
 	switch e := e.(type) {
 	case *sema.Const:
 		return Text{l.text(e.Text), LongConst(int32(len(e.Text)))}
 
-	case *sema.Var, *sema.Elem:
-		return Text{l.mem(e), LongConst(int32(e.Type().Size))}
+	case *sema.Var:
+		return Text{l.mem(e), l.charLength(e.Sym)}
+
+	case *sema.Elem:
+		return Text{l.mem(e), l.charLength(e.Sym)}
+
+	case *sema.Concat:
+		return l.concat(e)
 
 	case *sema.Substring:
 		t := l.chars(e.X)
@@ -187,9 +206,14 @@ func (l *lowerer) constOf(c *sema.Const) *Const {
 }
 
 // symbolMem is where a variable or array is: its cell, or, for a dummy
-// argument, the caller's variable its argument points at.
+// argument, the caller's variable its argument points at, or a CHARACTER
+// dummy's text, which its descriptor points at.
 func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 	t := l.typeOf(s.Type)
+
+	if p := l.charParam(s); p != nil {
+		return dummyText(p)
+	}
 
 	if p := l.params[s]; p != nil {
 		return &Mem{Param: p, T: t}
@@ -236,8 +260,17 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 
 		// A CHARACTER element's place is a Byte place, whose index the VAX
 		// doesn't multiply by the element's length: it is multiplied here.
-		if e.Sym.Type.Kind == sema.Character && index != nil {
-			index = arith(Mul, Long, index, LongConst(int32(e.Sym.Type.Size)))
+		// A passed-length array's length is known only when the program
+		// runs, so its first element's offset is part of the index too.
+		if e.Sym.Type.Kind == sema.Character {
+			if e.Sym.Type.Size == 0 && first != 0 {
+				index = arith(Add, Long, index, LongConst(int32(first)))
+				first = 0
+			}
+
+			if index != nil {
+				index = arith(Mul, Long, index, l.charLength(e.Sym))
+			}
 		}
 
 		m.Offset = first * e.Sym.Type.Size
@@ -264,7 +297,7 @@ func (l *lowerer) value(x Expr) *Mem {
 }
 
 // args lowers a call's actual arguments (sections 5.1, 6.1.2.1): each
-// by reference. A variable, an array element, or a whole array is
+// by reference, but a CHARACTER value by descriptor (charArg). A variable, an array element, or a whole array is
 // passed itself, so the routine can change it; a constant is passed in
 // a datum, read-only, so a routine that assigns to its dummy gets an
 // access violation, not a changed constant; any other expression, and a
@@ -274,6 +307,12 @@ func (l *lowerer) args(list []sema.Arg) []Arg {
 	args := make([]Arg, len(list))
 
 	for i, a := range list {
+		if a.Expr != nil && a.Expr.Type().Kind == sema.Character {
+			args[i] = l.charArg(a)
+
+			continue
+		}
+
 		switch e := a.Expr.(type) {
 		case nil:
 			args[i].Value = LongConst(0)
@@ -344,6 +383,12 @@ func arith(op Operator, t Type, x, y Expr) Expr {
 	// A floating value plus or minus 0.0 is itself, exactly: the VAX has no
 	// negative zero. A real number converted to COMPLEX has an imaginary
 	// part of 0.0, which (X, 0.0) + (Y, Z) would otherwise add.
+	// A word made a longword without its sign, then a word again, is the
+	// word: a passed length stored into a descriptor's length.
+	if z, ok := x.(*Op); ok && op == Cvt && z.Op == Zext && z.X.Type() == t {
+		return z.X
+	}
+
 	if t.Floating() && (op == Add || op == Sub) {
 		switch {
 		case oky && cy.IsZero():
@@ -482,6 +527,10 @@ func foldUnary(op Operator, t Type, x *Const) *Const {
 	case op == Cvt && x.T.Integer():
 		// A shorter type's value is the longer one's low bits.
 		return IntConst(t, x.Int())
+
+	case op == Zext:
+		// The bits as memory holds them, read as an unsigned number.
+		return IntConst(t, int32(uint32(x.Bits)))
 
 	case op == Cvt:
 		// CVTFL truncates; a value out of the type's range is left

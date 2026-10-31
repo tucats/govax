@@ -465,6 +465,17 @@ type (
 		Lower, Upper Expr
 	}
 
+	// Concat is Parts[0] // Parts[1] // ... (section 2.3.2): CHARACTER
+	// values joined left to right, a nested concatenation's parts among
+	// them, since parentheses change nothing. No part is a constant next to
+	// another constant: those are joined already. Its type is CHARACTER of
+	// the parts' lengths' sum, or of the size 0 when a part's length is
+	// known only when the program runs.
+	Concat struct {
+		exprBase
+		Parts []Expr
+	}
+
 	// Unary is -X (Op ast.Sub) or .NOT. X (Op ast.Not). A unary plus is
 	// dropped.
 	Unary struct {

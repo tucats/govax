@@ -72,6 +72,7 @@ func (l *lowerer) stmt(s sema.Stmt) {
 		l.print(s)
 	}
 
+	l.flush()
 	l.release()
 }
 
@@ -336,8 +337,9 @@ func (l *lowerer) print(s *sema.Print) {
 
 // item is the descriptor of an output list item. A variable, an array
 // element, or a whole array is described where it is; a character
-// constant by its text; a numeric constant by a datum holding it; any
-// other value is computed into a temporary, which is described.
+// constant by its text; any other CHARACTER value where chars finds it; a
+// numeric constant by a datum holding it; any other value is computed
+// into a temporary, which is described.
 func (l *lowerer) item(e sema.Expr) *Mem {
 	t := e.Type()
 	d := &Descriptor{DType: l.dtypeOf(t), Class: ClassS, Length: t.Size}
@@ -350,20 +352,17 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 
 		return l.describe(d, l.constant(l.constOf(e)))
 
-	case *sema.Substring:
-		return l.describeText(d, l.chars(e))
+	case *sema.ArrayRef:
+		return l.arrayDescriptor(e.Sym)
 
 	case *sema.Var, *sema.Elem:
-		return l.describe(d, l.mem(e))
-
-	case *sema.ArrayRef:
-		d.Class = ClassA
-
-		for _, dim := range e.Sym.Dims {
-			d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper})
+		if t.Kind != sema.Character {
+			return l.describe(d, l.mem(e))
 		}
+	}
 
-		return l.describe(d, l.symbolMem(e.Sym))
+	if t.Kind == sema.Character {
+		return l.describeText(d, l.chars(e))
 	}
 
 	return l.describe(d, l.value(l.expr(e)))
@@ -398,7 +397,7 @@ func (l *lowerer) textDescriptor(s string) *Mem {
 // A0: the address of the element whose subscripts are all zero, which
 // is m's less the offset of the first element from it).
 func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
-	if m.Param == nil && m.Index == nil {
+	if m.Param == nil && m.Ptr == nil && m.Index == nil {
 		d.Target = m
 
 		return l.descriptor(d)

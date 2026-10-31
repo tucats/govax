@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, and 5 done 2026-10-30. Needs Phase 76 (declarations and
+3, 4, 5, and 6 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -538,7 +538,7 @@ stops for review.
 5. **CHARACTER values:** places, substrings, array elements, assignment, comparison,
    the unsigned branches. Done.
 6. **CHARACTER arguments and concatenation:** descriptors at run time, passed-length
-   dummies, static temporaries, LIB$SGET1_DD.
+   dummies, static temporaries, LIB$SGET1_DD. Done.
 7. **Exponentiation:** the table above, in-line small powers in OTS$'s order.
 8. **In-line intrinsics:** the table, generic selection, footnotes 10 and 11,
    conversions, bit functions, FTN$IISHFTC and FTN$JISHFTC, character functions,
@@ -721,3 +721,55 @@ stops for review.
     unsigned word MOVC5 reads (MANUAL.md's differences); a comparison computed
     before its statement when it isn't a branch's condition, so `L = I .GT. 0
     .AND. S(I:I) .EQ. 'X'` compares even when I is 0 (2.3.4 allows either).
+- **2026-10-30, subtask 6:** CHARACTER arguments and concatenation.
+  - **`sema`:** a CHARACTER dummy compiles (`characterDummy` is gone), and so does
+    any character value as an argument, a constant's among them. A character
+    constant given to a numeric dummy of a routine in the file is a Hollerith
+    constant, NOTIMPL (`checkReferences`, whose `routineRef` now keeps the
+    arguments); one given to a routine outside the file is passed by descriptor.
+    A parenthesized substring is a copy, as a variable is. `//` is `Concat`: its
+    parts flattened (parentheses change nothing), constants side by side joined,
+    its length their sum or 0 when one isn't known; a non-CHARACTER operand is
+    BADOPERAND, as in a constant expression. A substring of a passed-length dummy
+    (`passedSubstring`) checks constant bounds only against 1 (SUBLOW) and each
+    other (SUBORDER).
+  - **`ir`:** `lowerchars.go`. A `Mem` may be at an address computed at run time
+    (`Ptr`), and `ArgPointer` is the argument list's longword itself, so a
+    CHARACTER dummy's text is `@(@(arg X)+4)`, the address its descriptor holds,
+    and a passed-length one's length `zext.WL(@(arg X))` (the new `Zext`,
+    MOVZWL: a length is an unsigned word). A passed-length array's element's index
+    is its element number times that length. Every character argument is a
+    descriptor (`charArg`): a constant's text, a place's (`describeText`), a
+    parenthesized one's copy; a passed-length dummy, or a whole array that is one,
+    passed on with its own; a whole array a class A descriptor (`arrayDescriptor`,
+    whose length, size, and A0 a passed-length array stores at run time), an
+    assumed-size one its first element's class S. A concatenation's parts are
+    CharMoves into a temporary one after another (`build`): a `TextCell` of the
+    value's most characters (`maxLength`; a substring with a bound that isn't
+    constant can have its variable's), pooled by size, or, when that isn't known, a
+    class D descriptor cell given its text by LIB$SGET1_DD and freed by
+    LIB$SFREE1_DD. The free is one of `lowerer.after`'s statements, added at the
+    statement's end or before the terminator that ends its block (`flush`), and a
+    character comparison of a dynamic string in a branch's condition is computed
+    first so it can be freed before the branch (`cond`). An output item of any
+    CHARACTER value goes through `describeText`. `cvt.LW(zext.WL(x))` is `x`.
+  - **`codegen`:** `pointerMem`: a place at a computed address through it in
+    memory by a deferred mode when it has no offset or index (`direct`:
+    `@4(R0)`, `@PROG.$D1+4`), and otherwise with the address in a register,
+    `1(R3)`, `(R2)[R3]`; `memNeed`, `memHeld`, and `fitMem` count and spill the
+    address as they do an index. `ArgPointer` is `SUB.X(AP)`; `Zext` is MOVZWL. A
+    CharMove whose two lengths are one expression is a MOVC3 with the length
+    computed once. DSC$K_CLASS_D.
+  - **FTNRTL:** nothing new.
+  - **Tests:** `testdata/fortran/strings`, in both paging modes, its output worked
+    by hand; `strings.for` golden in `ir` and `codegen`; sema cases for the
+    messages and for what is no longer NOTIMPL.
+  - **Unconfirmed, ours:** a whole CHARACTER array passed by a class A descriptor and
+    an assumed-size one by its first element's class S (the *VAX FORTRAN User
+    Manual*, which would say, isn't at hand; a routine reads only the length and
+    the address of either); a declared-length dummy passed on with a new
+    descriptor of its declared length; a character constant passed to a routine
+    outside the file always by descriptor (VAX FORTRAN's compiler and linker make
+    it a Hollerith constant for a numeric dummy, 6.1.1.4); a concatenation longer
+    than 65535 characters not reported. LEN, which section 6.1.1.3's example uses
+    with a passed-length dummy, is subtask 8's; `strings.for` gets along without it.

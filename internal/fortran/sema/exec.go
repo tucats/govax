@@ -245,9 +245,6 @@ func (a *analyzer) target(e ast.Expr) Expr {
 			a.report("NOTARRAY", e.Pos, e.Name)
 
 			return nil
-
-		case a.characterDummy(s, e.Pos):
-			return nil
 		}
 
 		t = a.element(s, e)
@@ -329,7 +326,7 @@ func (a *analyzer) call(s *ast.CallStmt) Stmt {
 	}
 
 	args := a.args(s.Args)
-	a.unit.calls = append(a.unit.calls, routineRef{sym, len(args), s.NamePos})
+	a.unit.calls = append(a.unit.calls, routineRef{sym, args, s.NamePos})
 
 	return &Call{stmtBase{s}, sym, args}
 }

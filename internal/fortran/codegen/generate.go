@@ -93,6 +93,7 @@ var definitions = []struct {
 	{"DSC$K_DTYPE_H", int(ir.DTypeH), "H_floating"},
 	{"DSC$K_DTYPE_GC", int(ir.DTypeGC), "G_floating complex"},
 	{"DSC$K_CLASS_S", int(ir.ClassS), "scalar or fixed-length string"},
+	{"DSC$K_CLASS_D", int(ir.ClassD), "dynamic string"},
 	{"DSC$K_CLASS_A", int(ir.ClassA), "array"},
 }
 
@@ -572,6 +573,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return fmt.Sprintf("DO %d's count", c.Loop)
 	case ir.StepCell:
 		return fmt.Sprintf("DO %d's step", c.Loop)
+	case ir.TextCell:
+		return "characters, for one statement"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {

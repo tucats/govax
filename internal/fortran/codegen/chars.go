@@ -29,8 +29,9 @@ var unsigned = map[ir.Operator]string{
 
 // textOperands computes the length and address operands of the character
 // values given, in order: each value's length, then its address. Each is
-// fitted to the register budget alone; together they hold at most one
-// register each, so the pool always has room for the next.
+// fitted to the register budget alone; together they hold at most three
+// registers each (a length's, and an address's base and index), so the pool
+// always has room for the next.
 func (g *routineGen) textOperands(texts ...ir.Text) []operand {
 	g.holdingNothing()
 
@@ -71,15 +72,28 @@ func constantLength(e ir.Expr) (int, bool) {
 }
 
 // charMove writes Dst = Src: MOVC3 when both lengths are constants and the
-// source is at least as long as the destination (a longer one is cut), and
-// MOVC5 otherwise, which fills with blanks a destination longer than its
-// source.
+// source is at least as long as the destination (a longer one is cut), or
+// when they are the same expression (a concatenation's part moved into its
+// temporary), and MOVC5 otherwise, which fills with blanks a destination
+// longer than its source.
 //
 //	MOVC3   #8,PROG.T,PROG.S
 //	MOVC5   #3,PROG.$K1,#^A/ /,#8,PROG.S
 func (g *routineGen) charMove(s *ir.CharMove) {
 	srcLen, srcOK := constantLength(s.Src.Len)
 	dstLen, dstOK := constantLength(s.Dst.Len)
+	same := ir.ExprText(s.Src.Len) == ir.ExprText(s.Dst.Len)
+
+	if same && !srcOK {
+		// One length, computed once.
+		ops := g.textOperands(s.Src)
+		d := g.mem(g.fitMem(s.Dst.Mem))
+		g.emit("MOVC3", ir.None, ops[0].text, ops[1].text, d.text)
+		g.free(append(ops, d)...)
+		g.changes(5)
+
+		return
+	}
 
 	ops := g.textOperands(s.Src, s.Dst)
 

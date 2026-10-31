@@ -163,8 +163,18 @@ func (c *checker) mem(m *Mem) error {
 		return fmt.Errorf("cell %s isn't the routine's", m.Cell.Name)
 	case m.Datum != nil && !c.data[m.Datum]:
 		return fmt.Errorf("datum %s isn't the routine's", m.Datum.Name)
-	case m.Cell == nil && m.Datum == nil && m.Param == nil:
+	case m.Cell == nil && m.Datum == nil && m.Param == nil && m.Ptr == nil:
 		return fmt.Errorf("a place with no base")
+	}
+
+	if m.Ptr != nil {
+		if m.Ptr.Type() != Long {
+			return fmt.Errorf("an address of type %s", m.Ptr.Type())
+		}
+
+		if err := c.expr(m.Ptr); err != nil {
+			return err
+		}
 	}
 
 	if m.Index != nil {
@@ -242,7 +252,7 @@ func (c *checker) expr(e Expr) error {
 			return err
 		}
 
-		if e.Op != Cvt && e.X.Type() != e.T {
+		if e.Op != Cvt && e.Op != Zext && e.X.Type() != e.T {
 			return fmt.Errorf("%s has a %s operand", ExprText(e), e.X.Type())
 		}
 

@@ -72,6 +72,14 @@
 // Not), or as the whole value of an Assign; anywhere else lowering computes
 // it into a temporary first, as it does a call.
 //
+// A CHARACTER argument is passed by descriptor, so a CHARACTER dummy's text
+// is a Mem whose Ptr is the address its descriptor holds, and a passed-length
+// dummy's length the descriptor's first word, made a longword by Zext. A
+// concatenation's parts are CharMoves into a temporary (lowerchars.go): a
+// TextCell as long as the value can be, or a dynamic string LIB$SGET1_DD
+// allocates and LIB$SFREE1_DD frees at the statement's end, before any
+// branch that ends its block.
+//
 // # Storage
 //
 // FORTRAN's variables are static (Decision 10): each routine's live in

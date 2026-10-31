@@ -235,7 +235,10 @@ func TerminatorText(t Terminator) string {
 	return fmt.Sprintf("%T", t)
 }
 
-// MemText is a place as the dump writes it: I, $T1, TABLE-4[I], @N.
+// MemText is a place as the dump writes it: I, $T1, TABLE-4[I], @N, and
+// for a place at an address computed, @(the address): @(arg S) is the
+// descriptor a CHARACTER dummy S's argument points at, and @(@(arg S)+4) its
+// text.
 func MemText(m *Mem) string {
 	var text string
 
@@ -246,6 +249,8 @@ func MemText(m *Mem) string {
 		text = m.Datum.Name
 	case m.Param != nil:
 		text = "@" + m.Param.Name
+	case m.Ptr != nil:
+		text = "@(" + ExprText(m.Ptr) + ")"
 	}
 
 	if m.Offset != 0 {
@@ -287,9 +292,12 @@ func ExprText(e Expr) string {
 	case *Addr:
 		return "addr(" + MemText(e.Mem) + ")"
 
+	case *ArgPointer:
+		return "arg " + e.Param.Name
+
 	case *Op:
-		if e.Op == Cvt {
-			return "cvt." + e.X.Type().String() + e.T.String() + "(" + ExprText(e.X) + ")"
+		if e.Op == Cvt || e.Op == Zext {
+			return e.Op.String() + "." + e.X.Type().String() + e.T.String() + "(" + ExprText(e.X) + ")"
 		}
 
 		text := e.Op.String() + "." + e.T.String() + "(" + ExprText(e.X)

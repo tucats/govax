@@ -4472,8 +4472,7 @@ output it prints, and programs of several files in its `modules` directory.
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
   it is FORTRAN's own. Either name as an argument is reported not implemented.
   Every variable gets its storage, and names of every type can be used in
-  statements, but for a CHARACTER dummy argument, which is reported not
-  implemented where a statement first uses it. Undeclared names have the implicit
+  statements. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
   with IMPLICIT NONE every name must be declared. The statements must
   come in the order the language sets (IMPLICIT, then the other
@@ -4515,9 +4514,13 @@ output it prints, and programs of several files in its `modules` directory.
   `S(2:5)`, `S(I:)`, `NAMES(K)(:J)`, whose bounds may be expressions (a
   constant bound must be within the variable); a character value compared
   with another, in ASCII's order (the codes as unsigned bytes, so 200 is
-  after `Z`), the shorter as though filled with blanks; but a character value
-  can't be passed as an argument yet. The other operators and the intrinsic
-  functions above work so far only on constants, computed when compiling.
+  after `Z`), the shorter as though filled with blanks; concatenation, `//`,
+  whose value is built in a temporary before it is used, so `S = S(2:) //
+  S(1:1)` is right (a temporary as long as the value can be, or, when that
+  isn't known when compiling, as with a passed-length dummy argument, a
+  dynamic string from LIB$SGET1_DD, freed by LIB$SFREE1_DD at the statement's
+  end). The other operators and the intrinsic functions above work so far only
+  on constants, computed when compiling.
 - **Statements:** assignment, of a character value to a character place cut
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
@@ -4527,7 +4530,15 @@ output it prints, and programs of several files in its `modules` directory.
   of values, arrays, character constants, and substrings.
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
-  variable in parentheses `(K)`, passes a copy.
+  variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
+  variable, element, substring, constant, or expression) is passed by
+  descriptor, class S, as the VAX calling standard says; a whole CHARACTER
+  array by a class A descriptor, but an assumed-size one by its first
+  element's. A CHARACTER dummy argument declared `CHARACTER*(*)` has its
+  actual argument's length, each time the routine is called, and is passed on
+  with the descriptor it came with; one declared with a length has that
+  length, which must be no more than the actual argument's. A passed-length
+  array's elements have the length of the actual argument's.
 
 ### 14.3 The FORTRAN command
 
@@ -4912,6 +4923,18 @@ FORTRAN compiler was available to check them). So far:
   variable's end reaches the bytes after it, and one whose last position is
   before its first moves or compares the characters an unsigned word of its
   length says, so `S(5:4)` is empty but `S(5:3)` is 65535 characters long.
+  Nor is a substring of a passed-length dummy argument checked against its
+  length when compiling, but for a constant bound less than 1 or a first
+  position after the last.
+- A character constant passed as an argument is passed by descriptor. VAX
+  FORTRAN passes one given to a numeric dummy argument as a Hollerith
+  constant, which govax doesn't do yet: when the file holds the routine and
+  its dummy argument is numeric, the compiler says so (not implemented); when
+  it doesn't, the routine is given the descriptor.
+- A CHARACTER array passed whole is described by a class A descriptor, and an
+  assumed-size one by its first element's class S descriptor (a routine reads
+  only the length and the address of either). A concatenation longer than
+  65535 characters isn't reported.
 - List-directed output's records are 80 bytes long, carriage control
   included; values follow one another with no blanks between them but
   their fields' own; a text that doesn't fit begins a new record; zero

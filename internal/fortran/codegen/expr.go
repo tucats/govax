@@ -152,20 +152,79 @@ func held(e ir.Expr) int {
 	case *ir.Cmp, *ir.CharCmp, *ir.Addr:
 		return 1
 	case *ir.Load:
-		return min(memNeed(e.Mem), 1)
+		return memHeld(e.Mem)
 	}
 
 	return 0
 }
 
 // memNeed is what reaching a place takes: a register for its index, if
-// it has one, which may take more to compute.
+// it has one, which may take more to compute; and for a place at an address
+// computed (Ptr), what computing the address takes, and a register to hold
+// it, unless the address is itself in memory and the place can be reached
+// through it (direct). The address is computed first, then the index.
 func memNeed(m *ir.Mem) int {
-	if x := index(m); x != nil {
-		return max(need(x), 1)
+	n, ptr := 0, 0
+
+	if m.Ptr != nil {
+		n, ptr = need(m.Ptr), 1
+
+		if direct(m) {
+			ptr = held(m.Ptr)
+		} else {
+			n = max(n, 1)
+		}
 	}
 
-	return 0
+	if x := index(m); x != nil {
+		n = max(n, ptr+max(need(x), 1))
+	}
+
+	return n
+}
+
+// memHeld is how many registers the operand for the place m holds: its
+// index's, and its address's when that is in a register.
+func memHeld(m *ir.Mem) int {
+	n := 0
+
+	if index(m) != nil {
+		n++
+	}
+
+	switch {
+	case m.Ptr == nil:
+	case direct(m):
+		n += held(m.Ptr)
+	default:
+		n++
+	}
+
+	return n
+}
+
+// direct reports whether the place m, at the address m.Ptr computes, is
+// reached through that address where it is, by the VAX's deferred modes:
+// @SUB.A(AP), the place whose address is in the argument list; @4(R0), the
+// one whose address is in the longword 4 bytes past R0's. Those take no
+// offset and no index, and the address must be a place of its own that
+// isn't already deferred.
+func direct(m *ir.Mem) bool {
+	return m.Ptr != nil && m.Offset == 0 && index(m) == nil && deferrable(m.Ptr)
+}
+
+// deferrable reports whether e's operand is a place in memory a deferred
+// mode can reach through: an argument list's longword, or a load from a
+// place with no index that isn't itself reached by a deferred mode.
+func deferrable(e ir.Expr) bool {
+	switch e := e.(type) {
+	case *ir.ArgPointer:
+		return true
+	case *ir.Load:
+		return index(e.Mem) == nil && e.Mem.Param == nil && !direct(e.Mem)
+	}
+
+	return false
 }
 
 // index is the index register's value for the place m, or nil if it
@@ -235,12 +294,12 @@ func opOperands(e *ir.Op) (ir.Expr, ir.Expr) {
 func (g *routineGen) fit(e ir.Expr) ir.Expr {
 	switch e := e.(type) {
 	case *ir.Load:
-		if e.Mem.Index != nil {
+		if e.Mem.Index != nil || e.Mem.Ptr != nil {
 			return &ir.Load{Mem: g.fitMem(e.Mem)}
 		}
 
 	case *ir.Addr:
-		if e.Mem.Index != nil {
+		if e.Mem.Index != nil || e.Mem.Ptr != nil {
 			return &ir.Addr{Mem: g.fitMem(e.Mem)}
 		}
 
@@ -277,17 +336,28 @@ func (g *routineGen) fit(e ir.Expr) ir.Expr {
 	return e
 }
 
-// fitMem is m with its index fitted to the budget.
+// fitMem is m with its index and its address fitted to the budget.
 func (g *routineGen) fitMem(m *ir.Mem) *ir.Mem {
-	if m.Index == nil {
+	if m.Index == nil && m.Ptr == nil {
 		return m
 	}
 
 	fitted := *m
-	fitted.Index = g.fit(m.Index)
+
+	if m.Index != nil {
+		fitted.Index = g.fit(m.Index)
+	}
+
+	if m.Ptr != nil {
+		fitted.Ptr = g.fit(m.Ptr)
+	}
 
 	for memNeed(&fitted) > budget {
-		fitted.Index = g.spill(fitted.Index)
+		if fitted.Index != nil && (fitted.Ptr == nil || need(fitted.Index) >= need(fitted.Ptr)) {
+			fitted.Index = g.spill(fitted.Index)
+		} else {
+			fitted.Ptr = g.spill(fitted.Ptr)
+		}
 	}
 
 	return &fitted
@@ -345,6 +415,8 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	var base string
 
 	switch {
+	case m.Ptr != nil:
+		return g.pointerMem(m)
 	case m.Param != nil:
 		base = "@" + g.names.symbol(m.Param.Name) + "(AP)"
 	case m.Cell != nil:
@@ -361,6 +433,42 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	r := g.intoRegister(x)
 
 	return operand{text: base + "[" + register(r) + "]", regs: []int{r}}
+}
+
+// pointerMem is the operand for a place at the address m.Ptr computes:
+// through that address where it is, when direct (@4(R0)); otherwise the
+// address in a register, the offset a displacement from it and the index an
+// index register (3(R0)[R1]).
+func (g *routineGen) pointerMem(m *ir.Mem) operand {
+	p := g.eval(m.Ptr)
+
+	if direct(m) {
+		return operand{text: "@" + p.text, regs: p.regs}
+	}
+
+	var r int
+
+	if p.isRegister() {
+		r = p.regs[0]
+	} else {
+		g.free(p)
+		r = g.alloc(ir.Long)
+		g.move(ir.Long, p.text, register(r))
+	}
+
+	base := "(" + register(r) + ")"
+	if m.Offset != 0 {
+		base = strconv.Itoa(m.Offset) + base
+	}
+
+	x := index(m)
+	if x == nil {
+		return operand{text: base, regs: []int{r}}
+	}
+
+	i := g.intoRegister(x)
+
+	return operand{text: base + "[" + register(i) + "]", regs: []int{r, i}}
 }
 
 // intoRegister computes e into a register and returns it.
@@ -387,6 +495,10 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.Load:
 		return g.mem(e.Mem)
+
+	case *ir.ArgPointer:
+		// The argument list's longword itself: SUB.A(AP).
+		return operand{text: g.names.symbol(e.Param.Name) + "(AP)"}
 
 	case *ir.Addr:
 		m := g.mem(e.Mem)
@@ -466,6 +578,9 @@ func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
 		// CVTFL truncates, as an assignment of a REAL to an INTEGER must
 		// (Table 3-1 of the language manual).
 		g.emit("CVT"+e.X.Type().String()+t, e.T, x.text, dst)
+	case ir.Zext:
+		// MOVZWL: the word's bits, the longword's high bits clear.
+		g.emit("MOVZ"+e.X.Type().String()+t, e.T, x.text, dst)
 	}
 }
 

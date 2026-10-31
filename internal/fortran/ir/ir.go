@@ -156,6 +156,7 @@ const (
 	StepCell                       // a DO loop's step, when it isn't a constant
 	TempCell                       // a temporary, for one statement's use
 	DescriptorCell                 // a descriptor whose addresses are set at run time
+	TextCell                       // a CHARACTER temporary, for one statement's use: a concatenation's value
 )
 
 // Cell is a place in the routine's static storage.
@@ -291,14 +292,17 @@ type Class int
 // The classes the subset uses.
 const (
 	ClassS Class = 1 // a scalar or a fixed-length string
+	ClassD Class = 2 // a dynamic string, whose text LIB$SGET1_DD allocates
 	ClassA Class = 4 // an array
 )
 
-// String is the class's name after DSC$K_CLASS_: S, A.
+// String is the class's name after DSC$K_CLASS_: S, D, A.
 func (c Class) String() string {
 	switch c {
 	case ClassS:
 		return "S"
+	case ClassD:
+		return "D"
 	case ClassA:
 		return "A"
 	}
@@ -334,9 +338,12 @@ type Descriptor struct {
 	Dims []Bound
 }
 
-// The places, in a descriptor, of the addresses lowering stores.
+// The places, in a descriptor, of the fields lowering stores: the length
+// (a word, DSC$W_LENGTH, at the descriptor's start), the address, and in an
+// array's, its size and A0.
 const (
 	PointerOffset = 4  // DSC$A_POINTER
+	ArsizeOffset  = 12 // DSC$L_ARSIZE, in a class A descriptor
 	A0Offset      = 16 // DSC$A_A0, in a class A descriptor
 )
 
@@ -510,16 +517,22 @@ type Arg struct {
 	Value Expr
 }
 
-// Mem is a place in memory: a base, which is a cell, a datum, or the
-// variable a dummy argument's address points at; a constant byte offset
-// from it; and an optional index, a Long expression multiplied by the
-// type's size. That is the VAX's indexed addressing mode, base[Rx]:
-// TABLE(I), with TABLE(1:10), is TABLE-4[I], the element at TABLE's
-// address less 4 plus 4 times I.
+// Mem is a place in memory: a base, which is a cell, a datum, the
+// variable a dummy argument's address points at, or the address Ptr's value
+// is; a constant byte offset from it; and an optional index, a Long
+// expression multiplied by the type's size. That is the VAX's indexed
+// addressing mode, base[Rx]: TABLE(I), with TABLE(1:10), is TABLE-4[I], the
+// element at TABLE's address less 4 plus 4 times I.
+//
+// Ptr is a place reached through an address computed at run time: a
+// CHARACTER dummy argument's text, whose address is in the descriptor its
+// argument points at (the descriptor's DSC$A_POINTER), or a dynamic
+// string's.
 type Mem struct {
 	Cell  *Cell
 	Datum *Datum
 	Param *Param
+	Ptr   Expr
 
 	Offset int
 	Index  Expr
@@ -567,12 +580,13 @@ const (
 	Le
 	Gt
 	Ge
+	Zext // conversion of an unsigned integer to a longer one: MOVZWL
 )
 
 // String is the operator's name in the dump.
 func (o Operator) String() string {
 	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "xor", "not", "cvt",
-		"eq", "ne", "lt", "le", "gt", "ge"}[o]
+		"eq", "ne", "lt", "le", "gt", "ge", "zext"}[o]
 }
 
 // The expressions.
@@ -599,9 +613,16 @@ type (
 		Mem *Mem
 	}
 
+	// ArgPointer is the address the argument list holds for Param, a Long:
+	// the longword at 4*Index(AP) itself, not what it points at. A
+	// CHARACTER dummy's is its descriptor's address.
+	ArgPointer struct {
+		Param *Param
+	}
+
 	// Op is an arithmetic, logical, or conversion operation, computed in
-	// type T; Y is nil for Neg, Not, and Cvt. A Cvt's X has the type
-	// being converted from.
+	// type T; Y is nil for Neg, Not, Cvt, and Zext. A Cvt's or Zext's X has
+	// the type being converted from.
 	Op struct {
 		Op   Operator
 		T    Type
@@ -637,6 +658,9 @@ func (l *Load) Type() Type { return l.Mem.T }
 // Type is Long: an address is a longword.
 func (*Addr) Type() Type { return Long }
 
+// Type is Long: an address is a longword.
+func (*ArgPointer) Type() Type { return Long }
+
 // Type is the operation's type.
 func (o *Op) Type() Type { return o.T }
 
@@ -646,12 +670,13 @@ func (*Cmp) Type() Type { return Long }
 // Type is Long: a comparison's value is a LOGICAL.
 func (*CharCmp) Type() Type { return Long }
 
-func (*Const) exprNode()   {}
-func (*Load) exprNode()    {}
-func (*Addr) exprNode()    {}
-func (*Op) exprNode()      {}
-func (*Cmp) exprNode()     {}
-func (*CharCmp) exprNode() {}
+func (*Const) exprNode()      {}
+func (*Load) exprNode()       {}
+func (*Addr) exprNode()       {}
+func (*ArgPointer) exprNode() {}
+func (*Op) exprNode()         {}
+func (*Cmp) exprNode()        {}
+func (*CharCmp) exprNode()    {}
 
 // LongConst is the Long constant n.
 func LongConst(n int32) *Const {

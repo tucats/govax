@@ -239,6 +239,13 @@ func DumpExpr(e Expr) string {
 		return e.Sym.Name + "[]"
 	case *Substring:
 		return DumpExpr(e.X) + "(" + DumpExpr(e.Lower) + ":" + DumpExpr(e.Upper) + ")"
+	case *Concat:
+		parts := make([]string, len(e.Parts))
+		for i, x := range e.Parts {
+			parts[i] = DumpExpr(x)
+		}
+
+		return "(//:" + e.T.letter() + " " + strings.Join(parts, " ") + ")"
 	case *FuncRef:
 		return e.Fn.Name + dumpArgs(e.Args)
 	case *Unary:

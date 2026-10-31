@@ -1,0 +1,315 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_D = 2			; dynamic string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for STRS, the main program
+;   S     CHARACTER*8      $LOCAL+0   STRS.S
+;   LIST  CHARACTER*4 (3)  $LOCAL+8   STRS.LIST
+;   I     INTEGER          $LOCAL+20  STRS.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+STRS.S:	.BLKL	2			; S
+STRS.LIST:
+	.BLKL	3			; LIST, CHARACTER*4 (3)
+STRS.I:	.BLKL	1			; I
+STRS.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+STRS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+STRS.$T1:
+	.BLKL	2			; characters, for one statement
+STRS.$T2:
+	.BLKB	15			; characters, for one statement
+	.BLKB	1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+STRS.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS STRS.S
+STRS.$D2:
+	.WORD	7			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS STRS.$K2
+STRS.$D5:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS STRS.$T1
+STRS.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.ADDRESS STRS.LIST
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS STRS.LIST-4		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+STRS.$K1:
+	.ASCII	/ABCDEFGH/
+STRS.$K2:
+	.ASCII	/LITERAL/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM STRS
+	.ENTRY	STRS,^M<R2,R3,R4,R5>
+;    2        CHARACTER*8 S, LIST(3)*4
+;    3        S = 'ABCDEFGH'
+	MOVC3	#8,STRS.$K1,STRS.S
+;    4        I = 2
+	MOVL	#2,STRS.I
+;    5        CALL SHOW(S, 'LITERAL', S(I:I+3), LIST(I), (S))
+	MOVL	STRS.I,R0
+	MOVAB	STRS.S-1[R0],STRS.$D3+4
+	MULL3	STRS.I,#4,R0
+	MOVAB	STRS.LIST-4[R0],STRS.$D4+4
+	MOVC3	#8,STRS.S,STRS.$T1
+	PUSHAQ	STRS.$D5
+	PUSHAQ	STRS.$D4
+	PUSHAQ	STRS.$D3
+	PUSHAQ	STRS.$D2
+	PUSHAQ	STRS.$D1
+	CALLS	#5,G^SHOW
+;    6        S = S(2:) // S(:I)
+	MOVC3	#7,STRS.S+1,STRS.$T2
+	MOVC3	STRS.I,STRS.S,STRS.$T2+7
+	ADDL3	STRS.I,#7,R0
+	MOVC5	R0,STRS.$T2,#^A/ /,#8,STRS.S
+;    7        CALL PAIR(LIST)
+	PUSHAQ	STRS.$D6
+	CALLS	#1,G^PAIR
+;    8        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for SHOW, a subroutine
+;   X     CHARACTER*(*)  argument 1  @SHOW.X(AP)
+;   Y     CHARACTER*(*)  argument 2  @SHOW.Y(AP)
+;   Z     CHARACTER*(*)  argument 3  @SHOW.Z(AP)
+;   U     CHARACTER*3    argument 4  @SHOW.U(AP)
+;   V     CHARACTER*(*)  argument 5  @SHOW.V(AP)
+;   R     CHARACTER*20   $LOCAL+0    SHOW.R
+;
+SHOW.X = 4				; X is argument 1
+SHOW.Y = 8				; Y is argument 2
+SHOW.Z = 12				; Z is argument 3
+SHOW.U = 16				; U is argument 4
+SHOW.V = 20				; V is argument 5
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SHOW.R:	.BLKL	5			; R
+SHOW.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_D
+	.LONG	0			; set when the descriptor is used
+SHOW.$T1:
+	.BLKB	2			; temporary
+	.BLKB	2
+SHOW.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$D4:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+SHOW.$T2:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SHOW.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SHOW.$K1:
+	.ASCII	/</
+SHOW.$K2:
+	.ASCII	/>/
+SHOW.$K3:
+	.ASCII	/E/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    9
+;   10        SUBROUTINE SHOW(X, Y, Z, U, V)
+	.ENTRY	SHOW,^M<R2,R3,R4,R5>
+;   11        CHARACTER*(*) X, Y, Z, V
+;   12        CHARACTER*3 U
+;   13        CHARACTER*20 R
+;   14        X(2:) = Y
+	MOVZWL	@SHOW.Y(AP),R0
+	MOVL	SHOW.Y(AP),R1
+	MOVZWL	@SHOW.X(AP),R2
+	DECL	R2
+	MOVL	SHOW.X(AP),R3
+	MOVL	4(R3),R3
+	MOVC5	R0,@4(R1),#^A/ /,R2,1(R3)
+;   15        R = '<' // X // '>'
+	MOVZWL	@SHOW.X(AP),R0
+	ADDL2	#2,R0
+	CVTLW	R0,SHOW.$T1
+	PUSHAQ	SHOW.$D1
+	PUSHAW	SHOW.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVC3	#1,SHOW.$K1,@SHOW.$D1+4
+	MOVZWL	@SHOW.X(AP),R0
+	MOVL	SHOW.X(AP),R1
+	MOVL	SHOW.$D1+4,R2
+	MOVC3	R0,@4(R1),1(R2)
+	MOVL	SHOW.$D1+4,R0
+	MOVZWL	@SHOW.X(AP),R1
+	MOVC3	#1,SHOW.$K2,1(R0)[R1]
+	MOVZWL	@SHOW.X(AP),R0
+	ADDL2	#2,R0
+	MOVC5	R0,@SHOW.$D1+4,#^A/ /,#20,SHOW.R
+	PUSHAQ	SHOW.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;   16        PRINT *, X, U, X // X
+	PUSHAB	SHOW.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	MOVW	@SHOW.X(AP),SHOW.$D2
+	MOVL	SHOW.X(AP),R0
+	MOVAB	@4(R0),SHOW.$D2+4
+	PUSHAQ	SHOW.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	SHOW.U(AP),R0
+	MOVAB	@4(R0),SHOW.$D3+4
+	PUSHAQ	SHOW.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVZWL	@SHOW.X(AP),R0
+	MOVZWL	@SHOW.X(AP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,SHOW.$T1
+	PUSHAQ	SHOW.$D1
+	PUSHAW	SHOW.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@SHOW.X(AP),R0
+	MOVL	SHOW.X(AP),R1
+	MOVC3	R0,@4(R1),@SHOW.$D1+4
+	MOVZWL	@SHOW.X(AP),R0
+	MOVL	SHOW.X(AP),R1
+	MOVL	SHOW.$D1+4,R2
+	MOVZWL	@SHOW.X(AP),R3
+	MOVC3	R0,@4(R1),(R2)[R3]
+	MOVZWL	@SHOW.X(AP),R0
+	MOVZWL	@SHOW.X(AP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,SHOW.$D4
+	MOVAB	@SHOW.$D1+4,SHOW.$D4+4
+	PUSHAQ	SHOW.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+	PUSHAQ	SHOW.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+;   17        CALL PAIR(X)
+	PUSHL	SHOW.X(AP)
+	CALLS	#1,G^PAIR
+;   18        IF (Z // 'E' .EQ. U) RETURN
+	MOVZWL	@SHOW.Z(AP),R0
+	INCL	R0
+	CVTLW	R0,SHOW.$T1
+	PUSHAQ	SHOW.$D1
+	PUSHAW	SHOW.$T1
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@SHOW.Z(AP),R0
+	MOVL	SHOW.Z(AP),R1
+	MOVC3	R0,@4(R1),@SHOW.$D1+4
+	MOVL	SHOW.$D1+4,R0
+	MOVZWL	@SHOW.Z(AP),R1
+	MOVC3	#1,SHOW.$K3,(R0)[R1]
+	MOVZWL	@SHOW.Z(AP),R0
+	INCL	R0
+	MOVL	SHOW.U(AP),R1
+	CMPC5	R0,@SHOW.$D1+4,#^A/ /,#3,@4(R1)
+	BNEQ	SHOW.$1
+	MNEGL	#1,R0
+	BRB	SHOW.$2
+SHOW.$1:
+	CLRL	R0
+SHOW.$2:
+	MOVL	R0,SHOW.$T2
+	PUSHAQ	SHOW.$D1
+	CALLS	#1,G^LIB$SFREE1_DD
+	BLBS	SHOW.$T2,SHOW.$4
+	BRW	SHOW.$3
+SHOW.$4:
+	RET
+SHOW.$3:
+;   19        END
+	RET
+
+; Storage map for PAIR, a subroutine
+;   A     CHARACTER*(*) (2)  argument 1  @PAIR.A(AP)
+;   I     INTEGER            $LOCAL+0    PAIR.I
+;
+PAIR.A = 4				; A is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+PAIR.I:	.BLKL	1			; I
+PAIR.$D1:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	2			; multipliers
+	.LONG	1,2			; bounds
+PAIR.$D2:
+	.WORD	0			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+PAIR.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   20
+;   21        SUBROUTINE PAIR(A)
+	.ENTRY	PAIR,^M<>
+;   22        CHARACTER*(*) A(2)
+;   23        PRINT *, A, A(2)(I:)
+	PUSHAB	PAIR.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	MOVW	@PAIR.A(AP),PAIR.$D1
+	MOVL	PAIR.A(AP),R0
+	MOVAB	@4(R0),PAIR.$D1+4
+	MOVZWL	@PAIR.A(AP),R0
+	MULL3	R0,#2,PAIR.$D1+12
+	MOVL	PAIR.A(AP),R0
+	MOVL	4(R0),R0
+	MOVZWL	@PAIR.A(AP),R1
+	MULL2	#-1,R1
+	MOVAB	(R0)[R1],PAIR.$D1+16
+	PUSHAQ	PAIR.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVZWL	@PAIR.A(AP),R0
+	SUBL2	PAIR.I,R0
+	INCL	R0
+	CVTLW	R0,PAIR.$D2
+	MOVL	PAIR.A(AP),R0
+	MOVL	4(R0),R0
+	MOVZWL	@PAIR.A(AP),R1
+	ADDL2	PAIR.I,R1
+	MOVAB	-1(R0)[R1],PAIR.$D2+4
+	PUSHAQ	PAIR.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   24        END
+	RET
+
+	.END	STRS
