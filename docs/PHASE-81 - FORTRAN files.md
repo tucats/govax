@@ -2,7 +2,7 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
-round 1 run on VMS, round 2 waiting for its run. Planned 2026-10-29. Needs Phase 80 (formatting and the
+rounds 1 and 2 run on VMS, round 2's FORRTL program to run again. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -810,6 +810,39 @@ control byte no file above shows; how a relative file grows (ALQ, DEQ, BKS, EOF)
 MRS; record locks; CONVERT's values; the keyed statements' conditions; and what the exit handler
 does with each disposition (`for81x.mar`).
 
+## Round 2 on VMS (2026-10-31)
+
+`FOR81D` (RMS) and `FOR81X` (image exit) ran whole. `FOR81C` ran away at its case #5: IOSTAT
+by mechanism 10 follows the place's contents as an address, and unwinding that fault out of
+FOR$OPEN leaves every later OPEN faulting in FORRTL's own frames, the same runaway as round
+1's. `vax/for81c-vax.txt` is cut there; it shows IOSTAT by a word and by a longword, 37 on
+INCRECLEN and 0 on success, and no signal with it. The program, without that case or the bad
+KEY address, and with a guard that ends the image if the handler goes round 200 times, runs
+again on its own volume (`exchangef.cmd`, `@FOR81F`), for `vax/for81f-vax.txt`.
+
+**Relative files [VMS's bytes, `vax/for81c-blocks.txt`].**
+
+- **A deleted cell's control byte is 0C** (the 04 bit added to 08), its record, and a VAR
+  cell's length, left in place. `$GET` by key then RNF, in sequence passes over it, and
+  `$PUT` into it needs no UIF, as into an empty cell. RSZ past MRS on `$UPDATE`, RSZ.
+- **BKS 0 is chosen** as the fewest blocks that hold a cell: FIX MRS 511 (a cell of 512) is 1,
+  512 is 2, 1023 is 2, 1024 is 3; VAR 509 (a cell of 512) is 1, 510 is 2; MRS 16000 is 32; 32255
+  is 63. A cell past 63 blocks, or BKS too small or past 63, is RMS$_BKS, with an ALQ of 1 left
+  in the FAB and the FAB's IFI 0, so the calls after it get IFI and ISI.
+- **The file's allocation** is what the highest bucket written needs, rounded up to the
+  cluster (3 here), never less than ALQ, rounded up too: `$CREATE`'s ALQ 1 or 2 comes back 3,
+  20 comes back 21. A record 500 with MRS 100 ends at VBN 101, allocated 102; DEQ didn't
+  add to it (record 1000: VBN 201, allocated 201). With BKS 63, one bucket to VBN 64, allocated 66.
+- **The end of file** is always the block after the allocation, FFB 0, in the header and
+  in the prologue's longword at 70: 202 for 201.
+- **Locks, two streams with SHR on:** a `$GET` of a held record RLK, with NLK or NXR too; RRL
+  reads it, RMS$_OK_RRL. `$RELEASE` frees it. No waits happened, with WAT not asked for.
+- `$OPEN` gives back ORG, RFM, RAT, MRS, MRN, ALQ, DEQ, BKS.
+
+**Image exit:** FORRTL closes every unit by its disposition: KEEP stayed, DELETE and SCRATCH
+went, PRINT stayed (nothing queued), an implicit unit stayed (`FOR015.DAT`), and each file
+holds its records. Decision 12 stands.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (this Part A).
@@ -867,3 +900,6 @@ does with each disposition (`for81x.mar`).
   IOSTAT, code 27 and question 48 CONVERT) and withdraw Decision 10. `vax/` holds the run, and
   `vax/for81-blocks.txt` the files' blocks, read from the exchange volume. Round 2,
   `for81c.mar`, `for81d.mar`, and `for81x.mar`, runs whole on govax, waiting for VMS's run.
+- **2026-10-31, round 2's run.** The section "Round 2 on VMS": deleted cells, BKS, how a
+  relative file grows, locks, image exit. `FOR81C` ran away by the probe's mistake again, so
+  it is to run once more, with a guard (`for81f.com`).

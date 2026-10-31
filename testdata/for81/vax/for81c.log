@@ -1,0 +1,41 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ MACRO/NOLIST FOR81C
+$ LINK/NOMAP FOR81C,FOR81/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ MACRO/NOLIST FOR81D
+$ LINK/NOMAP FOR81D
+$ MACRO/NOLIST FOR81X
+$ LINK/NOMAP FOR81X,FOR81/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ DEFINE/USER_MODE SYS$OUTPUT FOR81D-VAX.TXT
+$ RUN FOR81D
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ @FOR81E/OUTPUT=FOR81C-VAX.TXT
+  $STATUS == "%X1000000C"
+  $STATUS == "%X00000001"
+
+Directory DUA2:[000000]
+
+XKEEP.DAT;1                1/3      
+XPRT.DAT;1                 1/3      
+XSEG.DAT;1                 1/3      
+FOR015.DAT;1               1/3      
+
+Total of 4 files, 4/12 blocks.
+TEXT
+
+Dump of file DUA2:[000000]XSEG.DAT;1 on 31-OCT-2026 19:34:52.67
+File ID (56,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 10 (000A) bytes, RFA(0001,0000,0000)
+
+                                                  4847 46454443 42410003 ..ABCDEFGH...................... 000000
+
+Dump of file DUA2:[000000]FOR015.DAT;1 on 31-OCT-2026 19:34:52.68
+File ID (57,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 5 (0005) bytes, RFA(0001,0000,0000)
+
+                                                             54 58455420  TEXT........................... 000000

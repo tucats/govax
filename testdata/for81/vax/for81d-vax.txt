@@ -1,0 +1,381 @@
+##### deleted cells, left deleted
+#0 delete the middle, FIX
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=10 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=3,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=10 rfa=2,0 stv=00000000 bkt=0
+  0000: 00010203040506070809
+=$DELETE r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+ stat D1.DAT: org=10 rfm=01 rat=00 mrs=10 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=10 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=10
+  0000: 00010203040506070809
+ rec 2: r=00010001 n=10
+  0000: 00010203040506070809
+ rec 3: r=0001827A n=0
+#1 delete the last, FIX
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=10 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=10 rfa=2,0 stv=00000000 bkt=0
+  0000: 00010203040506070809
+=$DELETE r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=0001827A
+ got n=0 rfa=0,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+ stat D2.DAT: org=10 rfm=01 rat=00 mrs=10 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=10 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=10
+  0000: 00010203040506070809
+ rec 2: r=0001827A n=0
+#2 delete them all, VAR, and read
+=$CREATE r=00010001
+ fab now org=10 rfm=02 rat=00 mrs=10 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=5 rfa=1,0 stv=00000000 bkt=0
+  0000: 0001020304
+=$DELETE r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=10 rfa=2,0 stv=00000000 bkt=0
+  0000: 00010203040506070809
+=$DELETE r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$REWIND r=00010001
+=$GET r=0001827A
+ got n=0 rfa=0,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+ stat D3.DAT: org=10 rfm=02 rat=00 mrs=10 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=10 hbk=3 ebk=4 ffb=0
+ rec 1: r=0001827A n=0
+#3 put into a deleted cell, a shorter VAR, an update to shorter and longer
+=$CREATE r=00010001
+ fab now org=10 rfm=02 rat=00 mrs=20 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=10 rfa=1,0 stv=00000000 bkt=0
+  0000: 00010203040506070809
+=$DELETE r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=20 rfa=2,0 stv=00000000 bkt=0
+  0000: 000102030405060708090A0B0C0D0E0F10111213
+=$UPDATE r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=5 rfa=2,0 stv=00000000 bkt=0
+  0000: 0001020304
+=$UPDATE r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$GET r=00010001
+ got n=20 rfa=2,0 stv=00000000 bkt=0
+  0000: 000102030405060708090A0B0C0D0E0F10111213
+=$UPDATE r=000186A4
+ rfa=0,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+ stat D4.DAT: org=10 rfm=02 rat=00 mrs=20 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=20 hbk=3 ebk=4 ffb=0
+ rec 1: r=00010001 n=3
+  0000: 000102
+ rec 2: r=00010001 n=20
+  0000: 000102030405060708090A0B0C0D0E0F10111213
+ rec 3: r=0001827A n=0
+##### how a relative file grows
+#4 a block at a time
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=6,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=11,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=16,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=21,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=26,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=31,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E1.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=9 deq=0 bks=1 fop=00000000 lrl=100 hbk=9 ebk=10 ffb=0
+#5 ALQ 2
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E2.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=100 hbk=3 ebk=4 ffb=0
+#6 ALQ 1
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=6,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E3.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=100 hbk=3 ebk=4 ffb=0
+#7 ALQ 20
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=21 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=21 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=500,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=21 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E4.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=102 deq=0 bks=1 fop=00000000 lrl=100 hbk=102 ebk=103 ffb=0
+#8 DEQ 50
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=50 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=50 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=100,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=50 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=1000,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=50 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E5.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=201 deq=50 bks=1 fop=00000000 lrl=100 hbk=201 ebk=202 ffb=0
+#9 BKS 4
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=4 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=4 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=21,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=4 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=41,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=4 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E6.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=15 deq=0 bks=4 fop=00000000 lrl=100 hbk=15 ebk=16 ffb=0
+#10 BKS 32
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=32 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=32 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E7.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=33 deq=0 bks=32 fop=00000000 lrl=100 hbk=33 ebk=34 ffb=0
+#11 BKS 63
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=63 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=3 deq=0 bks=63 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E8.DAT: org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=66 deq=0 bks=63 fop=00000000 lrl=100 hbk=66 ebk=67 ffb=0
+#12 BKS 64
+=$CREATE r=0001841C
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=1 deq=0 bks=64 fop=00000000 stv=00000000
+=$CONNECT r=00018564
+=$PUT r=00018584
+ rfa=0,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=0 alq=1 deq=0 bks=64 fop=00000000 stv=00000000
+=$CLOSE r=00018564
+ stat E9.DAT: r=00018292
+#13 MRS 16000 BKS 0
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=16000 mrn=0 alq=3 deq=0 bks=32 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=16000 mrn=0 alq=3 deq=0 bks=32 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E10.DAT: org=10 rfm=01 rat=00 mrs=16000 mrn=2147483647 alq=33 deq=0 bks=32 fop=00000000 lrl=16000 hbk=33 ebk=34 ffb=0
+#14 MRS 32255
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=32255 mrn=0 alq=3 deq=0 bks=63 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=32255 mrn=0 alq=3 deq=0 bks=63 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat E11.DAT: org=10 rfm=01 rat=00 mrs=32255 mrn=2147483647 alq=66 deq=0 bks=63 fop=00000000 lrl=32255 hbk=66 ebk=67 ffb=0
+#15 MRS 32256
+=$CREATE r=0001841C
+ fab now org=10 rfm=01 rat=00 mrs=32256 mrn=0 alq=1 deq=0 bks=0 fop=00000000 stv=00000000
+=$CONNECT r=00018564
+=$PUT r=00018584
+ rfa=0,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=32256 mrn=0 alq=1 deq=0 bks=0 fop=00000000 stv=00000000
+=$CLOSE r=00018564
+ stat E12.DAT: r=00018292
+#16 MRS 16000 BKS 1
+=$CREATE r=0001841C
+ fab now org=10 rfm=01 rat=00 mrs=16000 mrn=0 alq=1 deq=0 bks=1 fop=00000000 stv=00000000
+=$CONNECT r=00018564
+=$PUT r=00018584
+ rfa=0,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=16000 mrn=0 alq=1 deq=0 bks=1 fop=00000000 stv=00000000
+=$CLOSE r=00018564
+ stat E13.DAT: r=00018292
+#17 MRS 510: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=510 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=510 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=510 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B510.DAT: org=10 rfm=01 rat=00 mrs=510 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=510 hbk=3 ebk=4 ffb=0
+#18 MRS 511: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=511 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=511 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=511 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B511.DAT: org=10 rfm=01 rat=00 mrs=511 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=511 hbk=3 ebk=4 ffb=0
+#19 MRS 512: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=512 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=512 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=512 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B512.DAT: org=10 rfm=01 rat=00 mrs=512 mrn=2147483647 alq=9 deq=0 bks=2 fop=00000000 lrl=512 hbk=9 ebk=10 ffb=0
+#20 MRS 1022: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=1022 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1022 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1022 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B1022.DAT: org=10 rfm=01 rat=00 mrs=1022 mrn=2147483647 alq=9 deq=0 bks=2 fop=00000000 lrl=1022 hbk=9 ebk=10 ffb=0
+#21 MRS 1023: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=1023 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1023 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1023 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B1023.DAT: org=10 rfm=01 rat=00 mrs=1023 mrn=2147483647 alq=9 deq=0 bks=2 fop=00000000 lrl=1023 hbk=9 ebk=10 ffb=0
+#22 MRS 1024: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=1024 mrn=0 alq=3 deq=0 bks=3 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1024 mrn=0 alq=3 deq=0 bks=3 fop=00000000 stv=000000A0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+ fab now org=10 rfm=01 rat=00 mrs=1024 mrn=0 alq=3 deq=0 bks=3 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+ stat B1024.DAT: org=10 rfm=01 rat=00 mrs=1024 mrn=2147483647 alq=9 deq=0 bks=3 fop=00000000 lrl=1024 hbk=9 ebk=10 ffb=0
+#23 VAR MRS 510, 509: the bucket size chosen
+=$CREATE r=00010001
+ fab now org=10 rfm=02 rat=00 mrs=510 mrn=0 alq=3 deq=0 bks=2 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+=$CREATE r=00010001
+ fab now org=10 rfm=02 rat=00 mrs=509 mrn=0 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$CLOSE r=00010001
+ stat B1.DAT: org=10 rfm=02 rat=00 mrs=510 mrn=2147483647 alq=3 deq=0 bks=2 fop=00000000 lrl=510 hbk=3 ebk=4 ffb=0
+ stat B2.DAT: org=10 rfm=02 rat=00 mrs=509 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 lrl=509 hbk=3 ebk=4 ffb=0
+##### two streams on a relative file
+#24 a locked record
+=$CREATE r=00010001
+=$CONNECT r=00010001
+=$PUT r=00010001
+ rfa=1,0 stv=00000000 bkt=0
+=$PUT r=00010001
+ rfa=2,0 stv=00000000 bkt=0
+=$OPEN r=00010001
+=$CONNECT r=00010001
+=$GET r=00010001
+ got n=10 rfa=1,0 stv=00000000 bkt=0
+  0000: 00010203040506070809
+=$GET r=000182AA
+=$GET r=000182AA
+=$GET r=00018029
+=$GET r=000182AA
+=$RELEASE r=00010001
+=$GET r=00010001
+=$FREE r=00010001
+=$CLOSE r=00010001
+=$CLOSE r=00010001
+##### the attributes $OPEN gives back, fresh each time
+#25 $OPEN D1.DAT
+=$OPEN r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=10 mrn=2147483647 alq=3 deq=0 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+#26 $OPEN E5.DAT
+=$OPEN r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=201 deq=50 bks=1 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+#27 $OPEN E7.DAT
+=$OPEN r=00010001
+ fab now org=10 rfm=01 rat=00 mrs=100 mrn=2147483647 alq=33 deq=0 bks=32 fop=00000000 stv=000000A0
+=$CLOSE r=00010001
+##### the end of the cases

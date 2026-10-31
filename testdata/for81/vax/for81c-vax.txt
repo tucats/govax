@@ -1,0 +1,21 @@
+$ SET NOVERIFY
+##### IOSTAT: code 22
+#0 IOSTAT mechanism 3, an error, no ERR=
+=OPEN r=0018812C
+ asv=12340025
+#1 IOSTAT mechanism 3, success
+=OPEN r=00000001
+ asv=12340000
+#2 IOSTAT mechanism 5, an error, no ERR=
+=OPEN r=0018812C
+ asv=00000025
+#3 IOSTAT mechanism 5, success
+=OPEN r=00000001
+ asv=00000000
+#4 IOSTAT mechanism 10, an error, no ERR=
+=c 0000000C n=5 a=00000005 12345678
+=u
+ asv=12345678
+#5 IOSTAT mechanism 10, success
+=c 0000000C n=5 a=00000005 12345678
+=u

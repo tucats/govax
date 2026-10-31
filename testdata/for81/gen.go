@@ -2545,7 +2545,9 @@ func round2() *prog {
 
 	p.section("IOSTAT: code 22")
 
-	for _, m := range []int{mWordRef, mLongRef, mByteRef} {
+	// Not mechanism 10: on a VAX it follows the place's contents as an address, and
+	// unwinding that fault out of FOR$OPEN leaves every later OPEN faulting.
+	for _, m := range []int{mWordRef, mLongRef} {
 		m := m
 		p.kase(fmt.Sprintf("IOSTAT mechanism %d, an error, no ERR=", m), func() {
 			p.emit("MOVL\t#^X12345678,ASVL")
@@ -2764,9 +2766,6 @@ func round2() *prog {
 			p.call(r, true, "#18", "&"+p.text("KEY"), "#0", "#0")
 		})
 	}
-	p.kase("indexed, a bad key address", func() {
-		p.open(10, file(p, "IDX1.DAT"), imm(kOrg, 3), imm(kRecl, 10), imm(kStatus, 2), imm(kKey, 1))
-	})
 	p.kase("an existing indexed file: none here", func() {
 		p.open(10, file(p, "AV.DAT"), imm(kOrg, 3), imm(kStatus, 1))
 	})
@@ -3120,9 +3119,28 @@ func (p *prog) write2(title, extra string) string {
 	return strings.NewReplacer(
 		"FB3:\t$FAB\tFAC=<BIO,GET>,SHR=<GET,PUT,UPD,DEL>", "FB3:\t$FAB\tFAC=<BIO,GET>,SHR=<GET>",
 		"\tMOVB\t(R2),FB2+FAB$B_FNS\n", "\tCLRL\tFB2+FAB$L_MRN\n\tCLRW\tFB2+FAB$W_DEQ\n\tMOVB\t(R2),FB2+FAB$B_FNS\n",
-		"FBT:\t.BLKB\tFAB$C_BLN", "FB4:\t$FAB\tFAC=<GET,PUT,UPD,DEL>,SHR=<GET,PUT,UPD,DEL>,FNM=<L1.DAT>\n\t.ALIGN\tLONG\nRB4:\t$RAB\tFAB=FB4,KBF=RKEY,KSZ=4,RAC=KEY\n\t.ALIGN\tLONG\nFBT:\t.BLKB\tFAB$C_BLN",
+		"40$:\tPUSHAB\tMUNW\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n",
+		"40$:\tPUSHAB\tMUNW\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n\tINCL\tUNWN\n\tCMPL\tUNWN,#200\n\tBLSS\t41$\n\tPUSHAB\tMRUN\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n\t$EXIT_S\t#1\n41$:",
+		"\t.ENTRY\tCLEAN,^M<R2>\n", "\t.ENTRY\tCLEAN,^M<R2>\n\tCLRL\tUNWN\n",
+		"FBT:\t.BLKB\tFAB$C_BLN", "UNWN:\t.LONG\t0\nMRUN:\t.ASCID\t~##### the handler looped: the program ends here~\n\t.ALIGN\tLONG\nFB4:\t$FAB\tFAC=<GET,PUT,UPD,DEL>,SHR=<GET,PUT,UPD,DEL>,FNM=<L1.DAT>\n\t.ALIGN\tLONG\nRB4:\t$RAB\tFAB=FB4,KBF=RKEY,KSZ=4,RAC=KEY\n\t.ALIGN\tLONG\nFBT:\t.BLKB\tFAB$C_BLN",
 	).Replace(p.write(title, extra))
 }
+
+const comF = `$ ! FOR81F.COM - round 2's FORRTL program again, after its first run ran away.
+$ ! Written by testdata/for81/gen.go. Run it with the exchange volume's [000000]
+$ ! as the default directory:
+$ !
+$ !     @FOR81F/OUTPUT=FOR81F.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ MACRO/NOLIST FOR81C
+$ LINK/NOMAP FOR81C,FOR81/OPTIONS
+$ @FOR81E/OUTPUT=FOR81F-VAX.TXT
+$ SHOW SYMBOL $STATUS
+$ EXIT
+`
 
 const comC = `$ ! FOR81C.COM - round 2 of the Phase 81 probe.
 $ ! Written by testdata/for81/gen.go. Run it with the exchange volume's [000000]
@@ -3168,6 +3186,31 @@ func main() {
 		"for81d.mar": d.write2("round 2 of Phase 81's probe, RMS", rmsCode),
 		"for81x.mar": exitProg,
 		"for81c.com": comC,
+		"for81f.com": comF,
+		"exchangef.cmd": `! EXCHANGEF.CMD - builds the volume for round 2's FORRTL program, run again.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/exchangef.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/for81f-exchange.dsk" /DEVICE=RD54 FOR81F
+MOUNT/WRITE DUA2 "testdata/disks/for81f-exchange.dsk"
+COPY "testdata/for81/for81c.mar"/HOST DUA2:[000000]FOR81C.MAR
+COPY "testdata/for81/for81.opt"/HOST DUA2:[000000]FOR81.OPT
+COPY "testdata/for81/for81f.com"/HOST DUA2:[000000]FOR81F.COM
+COPY "testdata/for81/for81e.com"/HOST DUA2:[000000]FOR81E.COM
+DIRECTORY DUA2:[000000]
+DISMOUNT DUA2
+`,
+		"copyoutf.cmd": `! COPYOUTF.CMD - copies the rerun's output off its exchange volume.
+! Written by testdata/for81/gen.go. Run from the repository root:
+!
+!     govax console < testdata/for81/copyoutf.cmd
+!
+MOUNT DUA2 "testdata/disks/for81f-exchange.dsk"
+COPY DUA2:[000000]FOR81F-VAX.TXT "testdata/for81/vax/for81f-vax.txt"/HOST
+COPY DUA2:[000000]FOR81F.LOG "testdata/for81/vax/for81f.log"/HOST
+DISMOUNT DUA2
+`,
 		"for81e.com": "$ SET NOVERIFY\n$ RUN FOR81C\n$ EXIT $STATUS\n",
 		"exchangec.cmd": `! EXCHANGEC.CMD - builds round 2's exchange volume with govax.
 ! Written by testdata/for81/gen.go. Run from the repository root:

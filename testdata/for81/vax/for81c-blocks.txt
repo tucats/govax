@@ -1,0 +1,768 @@
+ 
+
+Dump of file DUA2:[000000]D1.DAT;1
+File ID (25,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 08070605 04030201 00080908 07060504 03020100 0C090807 06050403 02010008 ................................ 000000
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000009 ................................ 000020
+Virtual block number 3 (00000003), 512 (0200) bytes
+
+Dump of file DUA2:[000000]D2.DAT;1
+File ID (26,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 00000000 00000000 00000908 07060504 03020100 0C090807 06050403 02010008 ................................ 000000
+Virtual block number 3 (00000003), 512 (0200) bytes
+
+Dump of file DUA2:[000000]D3.DAT;1
+File ID (27,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 00000000 00000908 07060504 03020100 000A0C00 00000000 04030201 0000050C ................................ 000000
+Virtual block number 3 (00000003), 512 (0200) bytes
+
+Dump of file DUA2:[000000]D4.DAT;1
+File ID (28,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 05040302 01000014 08000000 00000000 00000009 08070605 04030201 00000308 ................................ 000000
+ 00000000 00000000 00000000 00000000 00001312 11100F0E 0D0C0B0A 09080706 ................................ 000020
+Virtual block number 3 (00000003), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E1.DAT;1
+File ID (29,1,0)   End of file block 10 / Allocated 9
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 0000000A 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 800B0000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 4 (00000004), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 5 (00000005), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 6 (00000006), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 7 (00000007), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 8 (00000008), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 9 (00000009), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E2.DAT;1
+File ID (30,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E3.DAT;1
+File ID (31,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+
+Dump of file DUA2:[000000]E4.DAT;1
+File ID (32,1,0)   End of file block 103 / Allocated 102
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000067 7FFFFFFF 00000002 00000000 00000000 ................g............... 000060
+ 80680000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ..............................h. 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+Virtual block number 4 (00000004), 512 (0200) bytes
+Virtual block number 5 (00000005), 512 (0200) bytes
+Virtual block number 6 (00000006), 512 (0200) bytes
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+Virtual block number 10 (0000000A), 512 (0200) bytes
+Virtual block number 11 (0000000B), 512 (0200) bytes
+Virtual block number 12 (0000000C), 512 (0200) bytes
+Virtual block number 13 (0000000D), 512 (0200) bytes
+Virtual block number 14 (0000000E), 512 (0200) bytes
+Virtual block number 15 (0000000F), 512 (0200) bytes
+Virtual block number 16 (00000010), 512 (0200) bytes
+Virtual block number 17 (00000011), 512 (0200) bytes
+Virtual block number 18 (00000012), 512 (0200) bytes
+Virtual block number 19 (00000013), 512 (0200) bytes
+Virtual block number 20 (00000014), 512 (0200) bytes
+Virtual block number 21 (00000015), 512 (0200) bytes
+Virtual block number 22 (00000016), 512 (0200) bytes
+Virtual block number 23 (00000017), 512 (0200) bytes
+Virtual block number 24 (00000018), 512 (0200) bytes
+Virtual block number 25 (00000019), 512 (0200) bytes
+Virtual block number 26 (0000001A), 512 (0200) bytes
+Virtual block number 27 (0000001B), 512 (0200) bytes
+Virtual block number 28 (0000001C), 512 (0200) bytes
+Virtual block number 29 (0000001D), 512 (0200) bytes
+Virtual block number 30 (0000001E), 512 (0200) bytes
+Virtual block number 31 (0000001F), 512 (0200) bytes
+Virtual block number 32 (00000020), 512 (0200) bytes
+Virtual block number 33 (00000021), 512 (0200) bytes
+Virtual block number 34 (00000022), 512 (0200) bytes
+Virtual block number 35 (00000023), 512 (0200) bytes
+Virtual block number 36 (00000024), 512 (0200) bytes
+Virtual block number 37 (00000025), 512 (0200) bytes
+Virtual block number 38 (00000026), 512 (0200) bytes
+Virtual block number 39 (00000027), 512 (0200) bytes
+Virtual block number 40 (00000028), 512 (0200) bytes
+Virtual block number 41 (00000029), 512 (0200) bytes
+Virtual block number 42 (0000002A), 512 (0200) bytes
+Virtual block number 43 (0000002B), 512 (0200) bytes
+Virtual block number 44 (0000002C), 512 (0200) bytes
+Virtual block number 45 (0000002D), 512 (0200) bytes
+Virtual block number 46 (0000002E), 512 (0200) bytes
+Virtual block number 47 (0000002F), 512 (0200) bytes
+Virtual block number 48 (00000030), 512 (0200) bytes
+Virtual block number 49 (00000031), 512 (0200) bytes
+Virtual block number 50 (00000032), 512 (0200) bytes
+Virtual block number 51 (00000033), 512 (0200) bytes
+Virtual block number 52 (00000034), 512 (0200) bytes
+Virtual block number 53 (00000035), 512 (0200) bytes
+Virtual block number 54 (00000036), 512 (0200) bytes
+Virtual block number 55 (00000037), 512 (0200) bytes
+Virtual block number 56 (00000038), 512 (0200) bytes
+Virtual block number 57 (00000039), 512 (0200) bytes
+Virtual block number 58 (0000003A), 512 (0200) bytes
+Virtual block number 59 (0000003B), 512 (0200) bytes
+Virtual block number 60 (0000003C), 512 (0200) bytes
+Virtual block number 61 (0000003D), 512 (0200) bytes
+Virtual block number 62 (0000003E), 512 (0200) bytes
+Virtual block number 63 (0000003F), 512 (0200) bytes
+Virtual block number 64 (00000040), 512 (0200) bytes
+Virtual block number 65 (00000041), 512 (0200) bytes
+Virtual block number 66 (00000042), 512 (0200) bytes
+Virtual block number 67 (00000043), 512 (0200) bytes
+Virtual block number 68 (00000044), 512 (0200) bytes
+Virtual block number 69 (00000045), 512 (0200) bytes
+Virtual block number 70 (00000046), 512 (0200) bytes
+Virtual block number 71 (00000047), 512 (0200) bytes
+Virtual block number 72 (00000048), 512 (0200) bytes
+Virtual block number 73 (00000049), 512 (0200) bytes
+Virtual block number 74 (0000004A), 512 (0200) bytes
+Virtual block number 75 (0000004B), 512 (0200) bytes
+Virtual block number 76 (0000004C), 512 (0200) bytes
+Virtual block number 77 (0000004D), 512 (0200) bytes
+Virtual block number 78 (0000004E), 512 (0200) bytes
+Virtual block number 79 (0000004F), 512 (0200) bytes
+Virtual block number 80 (00000050), 512 (0200) bytes
+Virtual block number 81 (00000051), 512 (0200) bytes
+Virtual block number 82 (00000052), 512 (0200) bytes
+Virtual block number 83 (00000053), 512 (0200) bytes
+Virtual block number 84 (00000054), 512 (0200) bytes
+Virtual block number 85 (00000055), 512 (0200) bytes
+Virtual block number 86 (00000056), 512 (0200) bytes
+Virtual block number 87 (00000057), 512 (0200) bytes
+Virtual block number 88 (00000058), 512 (0200) bytes
+Virtual block number 89 (00000059), 512 (0200) bytes
+Virtual block number 90 (0000005A), 512 (0200) bytes
+Virtual block number 91 (0000005B), 512 (0200) bytes
+Virtual block number 92 (0000005C), 512 (0200) bytes
+Virtual block number 93 (0000005D), 512 (0200) bytes
+Virtual block number 94 (0000005E), 512 (0200) bytes
+Virtual block number 95 (0000005F), 512 (0200) bytes
+Virtual block number 96 (00000060), 512 (0200) bytes
+Virtual block number 97 (00000061), 512 (0200) bytes
+Virtual block number 98 (00000062), 512 (0200) bytes
+Virtual block number 99 (00000063), 512 (0200) bytes
+Virtual block number 100 (00000064), 512 (0200) bytes
+Virtual block number 101 (00000065), 512 (0200) bytes
+ 0A090807 06050403 02010008 00000000 00000000 00000000 00000000 00000000 ................................ 000180
+ 2A292827 26252423 2221201F 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B ..................... !"#$%&'()* 0001A0
+ 4A494847 46454443 4241403F 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B +,-./0123456789:;<=>?@ABCDEFGHIJ 0001C0
+ 00000000 00000063 6261605F 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B KLMNOPQRSTUVWXYZ[\]^_`abc....... 0001E0
+Virtual block number 102 (00000066), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E5.DAT;1
+File ID (33,1,0)   End of file block 202 / Allocated 201
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 000000CA 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80CB0000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+Virtual block number 4 (00000004), 512 (0200) bytes
+Virtual block number 5 (00000005), 512 (0200) bytes
+Virtual block number 6 (00000006), 512 (0200) bytes
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+Virtual block number 10 (0000000A), 512 (0200) bytes
+Virtual block number 11 (0000000B), 512 (0200) bytes
+Virtual block number 12 (0000000C), 512 (0200) bytes
+Virtual block number 13 (0000000D), 512 (0200) bytes
+Virtual block number 14 (0000000E), 512 (0200) bytes
+Virtual block number 15 (0000000F), 512 (0200) bytes
+Virtual block number 16 (00000010), 512 (0200) bytes
+Virtual block number 17 (00000011), 512 (0200) bytes
+Virtual block number 18 (00000012), 512 (0200) bytes
+Virtual block number 19 (00000013), 512 (0200) bytes
+Virtual block number 20 (00000014), 512 (0200) bytes
+Virtual block number 21 (00000015), 512 (0200) bytes
+ 0A090807 06050403 02010008 00000000 00000000 00000000 00000000 00000000 ................................ 000180
+ 2A292827 26252423 2221201F 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B ..................... !"#$%&'()* 0001A0
+ 4A494847 46454443 4241403F 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B +,-./0123456789:;<=>?@ABCDEFGHIJ 0001C0
+ 00000000 00000063 6261605F 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B KLMNOPQRSTUVWXYZ[\]^_`abc....... 0001E0
+Virtual block number 22 (00000016), 512 (0200) bytes
+Virtual block number 23 (00000017), 512 (0200) bytes
+Virtual block number 24 (00000018), 512 (0200) bytes
+Virtual block number 25 (00000019), 512 (0200) bytes
+Virtual block number 26 (0000001A), 512 (0200) bytes
+Virtual block number 27 (0000001B), 512 (0200) bytes
+Virtual block number 28 (0000001C), 512 (0200) bytes
+Virtual block number 29 (0000001D), 512 (0200) bytes
+Virtual block number 30 (0000001E), 512 (0200) bytes
+Virtual block number 31 (0000001F), 512 (0200) bytes
+Virtual block number 32 (00000020), 512 (0200) bytes
+Virtual block number 33 (00000021), 512 (0200) bytes
+Virtual block number 34 (00000022), 512 (0200) bytes
+Virtual block number 35 (00000023), 512 (0200) bytes
+Virtual block number 36 (00000024), 512 (0200) bytes
+Virtual block number 37 (00000025), 512 (0200) bytes
+Virtual block number 38 (00000026), 512 (0200) bytes
+Virtual block number 39 (00000027), 512 (0200) bytes
+Virtual block number 40 (00000028), 512 (0200) bytes
+Virtual block number 41 (00000029), 512 (0200) bytes
+Virtual block number 42 (0000002A), 512 (0200) bytes
+Virtual block number 43 (0000002B), 512 (0200) bytes
+Virtual block number 44 (0000002C), 512 (0200) bytes
+Virtual block number 45 (0000002D), 512 (0200) bytes
+Virtual block number 46 (0000002E), 512 (0200) bytes
+Virtual block number 47 (0000002F), 512 (0200) bytes
+Virtual block number 48 (00000030), 512 (0200) bytes
+Virtual block number 49 (00000031), 512 (0200) bytes
+Virtual block number 50 (00000032), 512 (0200) bytes
+Virtual block number 51 (00000033), 512 (0200) bytes
+Virtual block number 52 (00000034), 512 (0200) bytes
+Virtual block number 53 (00000035), 512 (0200) bytes
+Virtual block number 54 (00000036), 512 (0200) bytes
+Virtual block number 55 (00000037), 512 (0200) bytes
+Virtual block number 56 (00000038), 512 (0200) bytes
+Virtual block number 57 (00000039), 512 (0200) bytes
+Virtual block number 58 (0000003A), 512 (0200) bytes
+Virtual block number 59 (0000003B), 512 (0200) bytes
+Virtual block number 60 (0000003C), 512 (0200) bytes
+Virtual block number 61 (0000003D), 512 (0200) bytes
+Virtual block number 62 (0000003E), 512 (0200) bytes
+Virtual block number 63 (0000003F), 512 (0200) bytes
+Virtual block number 64 (00000040), 512 (0200) bytes
+Virtual block number 65 (00000041), 512 (0200) bytes
+Virtual block number 66 (00000042), 512 (0200) bytes
+Virtual block number 67 (00000043), 512 (0200) bytes
+Virtual block number 68 (00000044), 512 (0200) bytes
+Virtual block number 69 (00000045), 512 (0200) bytes
+Virtual block number 70 (00000046), 512 (0200) bytes
+Virtual block number 71 (00000047), 512 (0200) bytes
+Virtual block number 72 (00000048), 512 (0200) bytes
+Virtual block number 73 (00000049), 512 (0200) bytes
+Virtual block number 74 (0000004A), 512 (0200) bytes
+Virtual block number 75 (0000004B), 512 (0200) bytes
+Virtual block number 76 (0000004C), 512 (0200) bytes
+Virtual block number 77 (0000004D), 512 (0200) bytes
+Virtual block number 78 (0000004E), 512 (0200) bytes
+Virtual block number 79 (0000004F), 512 (0200) bytes
+Virtual block number 80 (00000050), 512 (0200) bytes
+Virtual block number 81 (00000051), 512 (0200) bytes
+Virtual block number 82 (00000052), 512 (0200) bytes
+Virtual block number 83 (00000053), 512 (0200) bytes
+Virtual block number 84 (00000054), 512 (0200) bytes
+Virtual block number 85 (00000055), 512 (0200) bytes
+Virtual block number 86 (00000056), 512 (0200) bytes
+Virtual block number 87 (00000057), 512 (0200) bytes
+Virtual block number 88 (00000058), 512 (0200) bytes
+Virtual block number 89 (00000059), 512 (0200) bytes
+Virtual block number 90 (0000005A), 512 (0200) bytes
+Virtual block number 91 (0000005B), 512 (0200) bytes
+Virtual block number 92 (0000005C), 512 (0200) bytes
+Virtual block number 93 (0000005D), 512 (0200) bytes
+Virtual block number 94 (0000005E), 512 (0200) bytes
+Virtual block number 95 (0000005F), 512 (0200) bytes
+Virtual block number 96 (00000060), 512 (0200) bytes
+Virtual block number 97 (00000061), 512 (0200) bytes
+Virtual block number 98 (00000062), 512 (0200) bytes
+Virtual block number 99 (00000063), 512 (0200) bytes
+Virtual block number 100 (00000064), 512 (0200) bytes
+Virtual block number 101 (00000065), 512 (0200) bytes
+Virtual block number 102 (00000066), 512 (0200) bytes
+Virtual block number 103 (00000067), 512 (0200) bytes
+Virtual block number 104 (00000068), 512 (0200) bytes
+Virtual block number 105 (00000069), 512 (0200) bytes
+Virtual block number 106 (0000006A), 512 (0200) bytes
+Virtual block number 107 (0000006B), 512 (0200) bytes
+Virtual block number 108 (0000006C), 512 (0200) bytes
+Virtual block number 109 (0000006D), 512 (0200) bytes
+Virtual block number 110 (0000006E), 512 (0200) bytes
+Virtual block number 111 (0000006F), 512 (0200) bytes
+Virtual block number 112 (00000070), 512 (0200) bytes
+Virtual block number 113 (00000071), 512 (0200) bytes
+Virtual block number 114 (00000072), 512 (0200) bytes
+Virtual block number 115 (00000073), 512 (0200) bytes
+Virtual block number 116 (00000074), 512 (0200) bytes
+Virtual block number 117 (00000075), 512 (0200) bytes
+Virtual block number 118 (00000076), 512 (0200) bytes
+Virtual block number 119 (00000077), 512 (0200) bytes
+Virtual block number 120 (00000078), 512 (0200) bytes
+Virtual block number 121 (00000079), 512 (0200) bytes
+Virtual block number 122 (0000007A), 512 (0200) bytes
+Virtual block number 123 (0000007B), 512 (0200) bytes
+Virtual block number 124 (0000007C), 512 (0200) bytes
+Virtual block number 125 (0000007D), 512 (0200) bytes
+Virtual block number 126 (0000007E), 512 (0200) bytes
+Virtual block number 127 (0000007F), 512 (0200) bytes
+Virtual block number 128 (00000080), 512 (0200) bytes
+Virtual block number 129 (00000081), 512 (0200) bytes
+Virtual block number 130 (00000082), 512 (0200) bytes
+Virtual block number 131 (00000083), 512 (0200) bytes
+Virtual block number 132 (00000084), 512 (0200) bytes
+Virtual block number 133 (00000085), 512 (0200) bytes
+Virtual block number 134 (00000086), 512 (0200) bytes
+Virtual block number 135 (00000087), 512 (0200) bytes
+Virtual block number 136 (00000088), 512 (0200) bytes
+Virtual block number 137 (00000089), 512 (0200) bytes
+Virtual block number 138 (0000008A), 512 (0200) bytes
+Virtual block number 139 (0000008B), 512 (0200) bytes
+Virtual block number 140 (0000008C), 512 (0200) bytes
+Virtual block number 141 (0000008D), 512 (0200) bytes
+Virtual block number 142 (0000008E), 512 (0200) bytes
+Virtual block number 143 (0000008F), 512 (0200) bytes
+Virtual block number 144 (00000090), 512 (0200) bytes
+Virtual block number 145 (00000091), 512 (0200) bytes
+Virtual block number 146 (00000092), 512 (0200) bytes
+Virtual block number 147 (00000093), 512 (0200) bytes
+Virtual block number 148 (00000094), 512 (0200) bytes
+Virtual block number 149 (00000095), 512 (0200) bytes
+Virtual block number 150 (00000096), 512 (0200) bytes
+Virtual block number 151 (00000097), 512 (0200) bytes
+Virtual block number 152 (00000098), 512 (0200) bytes
+Virtual block number 153 (00000099), 512 (0200) bytes
+Virtual block number 154 (0000009A), 512 (0200) bytes
+Virtual block number 155 (0000009B), 512 (0200) bytes
+Virtual block number 156 (0000009C), 512 (0200) bytes
+Virtual block number 157 (0000009D), 512 (0200) bytes
+Virtual block number 158 (0000009E), 512 (0200) bytes
+Virtual block number 159 (0000009F), 512 (0200) bytes
+Virtual block number 160 (000000A0), 512 (0200) bytes
+Virtual block number 161 (000000A1), 512 (0200) bytes
+Virtual block number 162 (000000A2), 512 (0200) bytes
+Virtual block number 163 (000000A3), 512 (0200) bytes
+Virtual block number 164 (000000A4), 512 (0200) bytes
+Virtual block number 165 (000000A5), 512 (0200) bytes
+Virtual block number 166 (000000A6), 512 (0200) bytes
+Virtual block number 167 (000000A7), 512 (0200) bytes
+Virtual block number 168 (000000A8), 512 (0200) bytes
+Virtual block number 169 (000000A9), 512 (0200) bytes
+Virtual block number 170 (000000AA), 512 (0200) bytes
+Virtual block number 171 (000000AB), 512 (0200) bytes
+Virtual block number 172 (000000AC), 512 (0200) bytes
+Virtual block number 173 (000000AD), 512 (0200) bytes
+Virtual block number 174 (000000AE), 512 (0200) bytes
+Virtual block number 175 (000000AF), 512 (0200) bytes
+Virtual block number 176 (000000B0), 512 (0200) bytes
+Virtual block number 177 (000000B1), 512 (0200) bytes
+Virtual block number 178 (000000B2), 512 (0200) bytes
+Virtual block number 179 (000000B3), 512 (0200) bytes
+Virtual block number 180 (000000B4), 512 (0200) bytes
+Virtual block number 181 (000000B5), 512 (0200) bytes
+Virtual block number 182 (000000B6), 512 (0200) bytes
+Virtual block number 183 (000000B7), 512 (0200) bytes
+Virtual block number 184 (000000B8), 512 (0200) bytes
+Virtual block number 185 (000000B9), 512 (0200) bytes
+Virtual block number 186 (000000BA), 512 (0200) bytes
+Virtual block number 187 (000000BB), 512 (0200) bytes
+Virtual block number 188 (000000BC), 512 (0200) bytes
+Virtual block number 189 (000000BD), 512 (0200) bytes
+Virtual block number 190 (000000BE), 512 (0200) bytes
+Virtual block number 191 (000000BF), 512 (0200) bytes
+Virtual block number 192 (000000C0), 512 (0200) bytes
+Virtual block number 193 (000000C1), 512 (0200) bytes
+Virtual block number 194 (000000C2), 512 (0200) bytes
+Virtual block number 195 (000000C3), 512 (0200) bytes
+Virtual block number 196 (000000C4), 512 (0200) bytes
+Virtual block number 197 (000000C5), 512 (0200) bytes
+Virtual block number 198 (000000C6), 512 (0200) bytes
+Virtual block number 199 (000000C7), 512 (0200) bytes
+Virtual block number 200 (000000C8), 512 (0200) bytes
+Virtual block number 201 (000000C9), 512 (0200) bytes
+ 0A090807 06050403 02010008 00000000 00000000 00000000 00000000 00000000 ................................ 000180
+ 2A292827 26252423 2221201F 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B ..................... !"#$%&'()* 0001A0
+ 4A494847 46454443 4241403F 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B +,-./0123456789:;<=>?@ABCDEFGHIJ 0001C0
+ 00000000 00000063 6261605F 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B KLMNOPQRSTUVWXYZ[\]^_`abc....... 0001E0
+
+Dump of file DUA2:[000000]E6.DAT;1
+File ID (34,1,0)   End of file block 16 / Allocated 15
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000010 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80110000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+Virtual block number 4 (00000004), 512 (0200) bytes
+Virtual block number 5 (00000005), 512 (0200) bytes
+Virtual block number 6 (00000006), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+Virtual block number 10 (0000000A), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 11 (0000000B), 512 (0200) bytes
+Virtual block number 12 (0000000C), 512 (0200) bytes
+Virtual block number 13 (0000000D), 512 (0200) bytes
+Virtual block number 14 (0000000E), 512 (0200) bytes
+Virtual block number 15 (0000000F), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E7.DAT;1
+File ID (35,1,0)   End of file block 34 / Allocated 33
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000022 7FFFFFFF 00000002 00000000 00000000 ................"............... 000060
+ 80230000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ..............................#. 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+Virtual block number 4 (00000004), 512 (0200) bytes
+Virtual block number 5 (00000005), 512 (0200) bytes
+Virtual block number 6 (00000006), 512 (0200) bytes
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+Virtual block number 10 (0000000A), 512 (0200) bytes
+Virtual block number 11 (0000000B), 512 (0200) bytes
+Virtual block number 12 (0000000C), 512 (0200) bytes
+Virtual block number 13 (0000000D), 512 (0200) bytes
+Virtual block number 14 (0000000E), 512 (0200) bytes
+Virtual block number 15 (0000000F), 512 (0200) bytes
+Virtual block number 16 (00000010), 512 (0200) bytes
+Virtual block number 17 (00000011), 512 (0200) bytes
+Virtual block number 18 (00000012), 512 (0200) bytes
+Virtual block number 19 (00000013), 512 (0200) bytes
+Virtual block number 20 (00000014), 512 (0200) bytes
+Virtual block number 21 (00000015), 512 (0200) bytes
+Virtual block number 22 (00000016), 512 (0200) bytes
+Virtual block number 23 (00000017), 512 (0200) bytes
+Virtual block number 24 (00000018), 512 (0200) bytes
+Virtual block number 25 (00000019), 512 (0200) bytes
+Virtual block number 26 (0000001A), 512 (0200) bytes
+Virtual block number 27 (0000001B), 512 (0200) bytes
+Virtual block number 28 (0000001C), 512 (0200) bytes
+Virtual block number 29 (0000001D), 512 (0200) bytes
+Virtual block number 30 (0000001E), 512 (0200) bytes
+Virtual block number 31 (0000001F), 512 (0200) bytes
+Virtual block number 32 (00000020), 512 (0200) bytes
+Virtual block number 33 (00000021), 512 (0200) bytes
+
+Dump of file DUA2:[000000]E8.DAT;1
+File ID (36,1,0)   End of file block 67 / Allocated 66
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000043 7FFFFFFF 00000002 00000000 00000000 ................C............... 000060
+ 80440000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ..............................D. 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000063 6261605F _`abc........................... 000060
+Virtual block number 3 (00000003), 512 (0200) bytes
+Virtual block number 4 (00000004), 512 (0200) bytes
+Virtual block number 5 (00000005), 512 (0200) bytes
+Virtual block number 6 (00000006), 512 (0200) bytes
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+Virtual block number 10 (0000000A), 512 (0200) bytes
+Virtual block number 11 (0000000B), 512 (0200) bytes
+Virtual block number 12 (0000000C), 512 (0200) bytes
+Virtual block number 13 (0000000D), 512 (0200) bytes
+Virtual block number 14 (0000000E), 512 (0200) bytes
+Virtual block number 15 (0000000F), 512 (0200) bytes
+Virtual block number 16 (00000010), 512 (0200) bytes
+Virtual block number 17 (00000011), 512 (0200) bytes
+Virtual block number 18 (00000012), 512 (0200) bytes
+Virtual block number 19 (00000013), 512 (0200) bytes
+Virtual block number 20 (00000014), 512 (0200) bytes
+Virtual block number 21 (00000015), 512 (0200) bytes
+Virtual block number 22 (00000016), 512 (0200) bytes
+Virtual block number 23 (00000017), 512 (0200) bytes
+Virtual block number 24 (00000018), 512 (0200) bytes
+Virtual block number 25 (00000019), 512 (0200) bytes
+Virtual block number 26 (0000001A), 512 (0200) bytes
+Virtual block number 27 (0000001B), 512 (0200) bytes
+Virtual block number 28 (0000001C), 512 (0200) bytes
+Virtual block number 29 (0000001D), 512 (0200) bytes
+Virtual block number 30 (0000001E), 512 (0200) bytes
+Virtual block number 31 (0000001F), 512 (0200) bytes
+Virtual block number 32 (00000020), 512 (0200) bytes
+Virtual block number 33 (00000021), 512 (0200) bytes
+Virtual block number 34 (00000022), 512 (0200) bytes
+Virtual block number 35 (00000023), 512 (0200) bytes
+Virtual block number 36 (00000024), 512 (0200) bytes
+Virtual block number 37 (00000025), 512 (0200) bytes
+Virtual block number 38 (00000026), 512 (0200) bytes
+Virtual block number 39 (00000027), 512 (0200) bytes
+Virtual block number 40 (00000028), 512 (0200) bytes
+Virtual block number 41 (00000029), 512 (0200) bytes
+Virtual block number 42 (0000002A), 512 (0200) bytes
+Virtual block number 43 (0000002B), 512 (0200) bytes
+Virtual block number 44 (0000002C), 512 (0200) bytes
+Virtual block number 45 (0000002D), 512 (0200) bytes
+Virtual block number 46 (0000002E), 512 (0200) bytes
+Virtual block number 47 (0000002F), 512 (0200) bytes
+Virtual block number 48 (00000030), 512 (0200) bytes
+Virtual block number 49 (00000031), 512 (0200) bytes
+Virtual block number 50 (00000032), 512 (0200) bytes
+Virtual block number 51 (00000033), 512 (0200) bytes
+Virtual block number 52 (00000034), 512 (0200) bytes
+Virtual block number 53 (00000035), 512 (0200) bytes
+Virtual block number 54 (00000036), 512 (0200) bytes
+Virtual block number 55 (00000037), 512 (0200) bytes
+Virtual block number 56 (00000038), 512 (0200) bytes
+Virtual block number 57 (00000039), 512 (0200) bytes
+Virtual block number 58 (0000003A), 512 (0200) bytes
+Virtual block number 59 (0000003B), 512 (0200) bytes
+Virtual block number 60 (0000003C), 512 (0200) bytes
+Virtual block number 61 (0000003D), 512 (0200) bytes
+Virtual block number 62 (0000003E), 512 (0200) bytes
+Virtual block number 63 (0000003F), 512 (0200) bytes
+Virtual block number 64 (00000040), 512 (0200) bytes
+Virtual block number 65 (00000041), 512 (0200) bytes
+Virtual block number 66 (00000042), 512 (0200) bytes
+
+Dump of file DUA2:[000000]B510.DAT;1
+File ID (39,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ 00FDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ 00FDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+
+Dump of file DUA2:[000000]B511.DAT;1
+File ID (40,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+
+Dump of file DUA2:[000000]B512.DAT;1
+File ID (41,1,0)   End of file block 10 / Allocated 9
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 0000000A 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 800B0000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000FF ................................ 000000
+Virtual block number 4 (00000004), 512 (0200) bytes
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 02010008 ................................ 000000
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000020
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000040
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000060
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000080
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0000A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0000C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0000E0
+ 1E1D1C1B 1A191817 16151413 1211100F 0E0D0C0B 0A090807 06050403 020100FF ................................ 000100
+ 3E3D3C3B 3A393837 36353433 3231302F 2E2D2C2B 2A292827 26252423 2221201F . !"#$%&'()*+,-./0123456789:;<=> 000120
+ 5E5D5C5B 5A595857 56555453 5251504F 4E4D4C4B 4A494847 46454443 4241403F ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ 000140
+ 7E7D7C7B 7A797877 76757473 7271706F 6E6D6C6B 6A696867 66656463 6261605F _`abcdefghijklmnopqrstuvwxyz{|}~ 000160
+ 9E9D9C9B 9A999897 96959493 9291908F 8E8D8C8B 8A898887 86858483 8281807F ................................ 000180
+ BEBDBCBB BAB9B8B7 B6B5B4B3 B2B1B0AF AEADACAB AAA9A8A7 A6A5A4A3 A2A1A09F ................................ 0001A0
+ DEDDDCDB DAD9D8D7 D6D5D4D3 D2D1D0CF CECDCCCB CAC9C8C7 C6C5C4C3 C2C1C0BF ................................ 0001C0
+ FEFDFCFB FAF9F8F7 F6F5F4F3 F2F1F0EF EEEDECEB EAE9E8E7 E6E5E4E3 E2E1E0DF ................................ 0001E0
+Virtual block number 5 (00000005), 512 (0200) bytes
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000FF ................................ 000000
+Virtual block number 6 (00000006), 512 (0200) bytes
+Virtual block number 7 (00000007), 512 (0200) bytes
+Virtual block number 8 (00000008), 512 (0200) bytes
+Virtual block number 9 (00000009), 512 (0200) bytes
+
+Dump of file DUA2:[000000]B1.DAT;1
+File ID (45,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1C1B1A19 18171615 14131211 100F0E0D 0C0B0A09 08070605 04030201 0001FE08 ................................ 000000
+ 3C3B3A39 38373635 34333231 302F2E2D 2C2B2A29 28272625 24232221 201F1E1D ... !"#$%&'()*+,-./0123456789:;< 000020
+ 5C5B5A59 58575655 54535251 504F4E4D 4C4B4A49 48474645 44434241 403F3E3D =>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\ 000040
+ 7C7B7A79 78777675 74737271 706F6E6D 6C6B6A69 68676665 64636261 605F5E5D ]^_`abcdefghijklmnopqrstuvwxyz{| 000060
+ 9C9B9A99 98979695 94939291 908F8E8D 8C8B8A89 88878685 84838281 807F7E7D }~.............................. 000080
+ BCBBBAB9 B8B7B6B5 B4B3B2B1 B0AFAEAD ACABAAA9 A8A7A6A5 A4A3A2A1 A09F9E9D ................................ 0000A0
+ DCDBDAD9 D8D7D6D5 D4D3D2D1 D0CFCECD CCCBCAC9 C8C7C6C5 C4C3C2C1 C0BFBEBD ................................ 0000C0
+ FCFBFAF9 F8F7F6F5 F4F3F2F1 F0EFEEED ECEBEAE9 E8E7E6E5 E4E3E2E1 E0DFDEDD ................................ 0000E0
+ 1C1B1A19 18171615 14131211 100F0E0D 0C0B0A09 08070605 04030201 00FFFEFD ................................ 000100
+ 3C3B3A39 38373635 34333231 302F2E2D 2C2B2A29 28272625 24232221 201F1E1D ... !"#$%&'()*+,-./0123456789:;< 000120
+ 5C5B5A59 58575655 54535251 504F4E4D 4C4B4A49 48474645 44434241 403F3E3D =>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\ 000140
+ 7C7B7A79 78777675 74737271 706F6E6D 6C6B6A69 68676665 64636261 605F5E5D ]^_`abcdefghijklmnopqrstuvwxyz{| 000160
+ 9C9B9A99 98979695 94939291 908F8E8D 8C8B8A89 88878685 84838281 807F7E7D }~.............................. 000180
+ BCBBBAB9 B8B7B6B5 B4B3B2B1 B0AFAEAD ACABAAA9 A8A7A6A5 A4A3A2A1 A09F9E9D ................................ 0001A0
+ DCDBDAD9 D8D7D6D5 D4D3D2D1 D0CFCECD CCCBCAC9 C8C7C6C5 C4C3C2C1 C0BFBEBD ................................ 0001C0
+ FCFBFAF9 F8F7F6F5 F4F3F2F1 F0EFEEED ECEBEAE9 E8E7E6E5 E4E3E2E1 E0DFDEDD ................................ 0001E0
+Virtual block number 3 (00000003), 512 (0200) bytes
+ 00000000 00000000 00000000 00000000 00000000 00000000 00000000 000000FD ................................ 000000
+
+Dump of file DUA2:[000000]B2.DAT;1
+File ID (46,1,0)   End of file block 4 / Allocated 3
+Virtual block number 1 (00000001), 512 (0200) bytes
+ 00000000 00000000 00000001 00000004 7FFFFFFF 00000002 00000000 00000000 ................................ 000060
+ 80050000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ................................ 0001E0
+Virtual block number 2 (00000002), 512 (0200) bytes
+ 1C1B1A19 18171615 14131211 100F0E0D 0C0B0A09 08070605 04030201 0001FD08 ................................ 000000
+ 3C3B3A39 38373635 34333231 302F2E2D 2C2B2A29 28272625 24232221 201F1E1D ... !"#$%&'()*+,-./0123456789:;< 000020
+ 5C5B5A59 58575655 54535251 504F4E4D 4C4B4A49 48474645 44434241 403F3E3D =>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\ 000040
+ 7C7B7A79 78777675 74737271 706F6E6D 6C6B6A69 68676665 64636261 605F5E5D ]^_`abcdefghijklmnopqrstuvwxyz{| 000060
+ 9C9B9A99 98979695 94939291 908F8E8D 8C8B8A89 88878685 84838281 807F7E7D }~.............................. 000080
+ BCBBBAB9 B8B7B6B5 B4B3B2B1 B0AFAEAD ACABAAA9 A8A7A6A5 A4A3A2A1 A09F9E9D ................................ 0000A0
+ DCDBDAD9 D8D7D6D5 D4D3D2D1 D0CFCECD CCCBCAC9 C8C7C6C5 C4C3C2C1 C0BFBEBD ................................ 0000C0
+ FCFBFAF9 F8F7F6F5 F4F3F2F1 F0EFEEED ECEBEAE9 E8E7E6E5 E4E3E2E1 E0DFDEDD ................................ 0000E0
+ 1C1B1A19 18171615 14131211 100F0E0D 0C0B0A09 08070605 04030201 00FFFEFD ................................ 000100
+ 3C3B3A39 38373635 34333231 302F2E2D 2C2B2A29 28272625 24232221 201F1E1D ... !"#$%&'()*+,-./0123456789:;< 000120
+ 5C5B5A59 58575655 54535251 504F4E4D 4C4B4A49 48474645 44434241 403F3E3D =>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\ 000140
+ 7C7B7A79 78777675 74737271 706F6E6D 6C6B6A69 68676665 64636261 605F5E5D ]^_`abcdefghijklmnopqrstuvwxyz{| 000160
+ 9C9B9A99 98979695 94939291 908F8E8D 8C8B8A89 88878685 84838281 807F7E7D }~.............................. 000180
+ BCBBBAB9 B8B7B6B5 B4B3B2B1 B0AFAEAD ACABAAA9 A8A7A6A5 A4A3A2A1 A09F9E9D ................................ 0001A0
+ DCDBDAD9 D8D7D6D5 D4D3D2D1 D0CFCECD CCCBCAC9 C8C7C6C5 C4C3C2C1 C0BFBEBD ................................ 0001C0
+ FCFBFAF9 F8F7F6F5 F4F3F2F1 F0EFEEED ECEBEAE9 E8E7E6E5 E4E3E2E1 E0DFDEDD ................................ 0001E0
+Virtual block number 3 (00000003), 512 (0200) bytes

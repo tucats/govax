@@ -102,3 +102,22 @@ then `govax console < testdata/for81/copyoutc.cmd`. A hang is likeliest in `FOR8
 record held by another unit: Ctrl/Y, and say so. The volume's own files are still wanted after
 that, so please don't erase it. `SYS$BATCH` has 12 of round 1's jobs pending, each `$ EXIT` or an
 empty file: `DELETE/ENTRY` or leave them, as the queue is stopped.
+
+`vax/for81d-vax.txt` and `vax/for81c.log` are that run, and `vax/for81c-blocks.txt` the files'
+blocks from its volume. `vax/for81c-vax.txt` is `FOR81C` to where it ran away, at a case since
+removed, with another; `for81c.mar` now has 69 cases and a guard.
+
+## Round 2's FORRTL program, again
+
+    govax console < testdata/for81/exchangef.cmd
+
+makes `testdata/disks/for81f-exchange.dsk` (RD54 size, label FOR81F). `SET RQ2 RD54` at `sim>`
+before the attach, then:
+
+    $ MOUNT DUA2: FOR81F
+    $ SET DEFAULT DUA2:[000000]
+    $ @FOR81F/OUTPUT=FOR81F.LOG
+    $ DISMOUNT DUA2:
+
+then `govax console < testdata/for81/copyoutf.cmd`. If the handler loops, the program says so
+and ends rather than running out of stack.
