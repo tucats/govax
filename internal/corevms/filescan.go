@@ -246,7 +246,7 @@ func scanFileName(text string, i int, parts *FileSpecParts) int {
 
 	parts.Name = FileSpecPart{i, j, j > i}
 
-	end := j
+	var end int
 
 	if j < len(text) && text[j] == '.' {
 		end = nameChars(j + 1)

@@ -1439,7 +1439,7 @@ empty `$ABS$` psect.
 
 **One oddity, not explained:** in `tpa80b.mar`, VMS stored `'A*'` as the two characters
 `A*`, though in `tpa80.mar` it stored `'K*'` and `'A*'` as one, as the manual says. That
-module's earlier lines have the odd characters (`'%'`, `'\\'`, and the like), which may be
+module's earlier lines have the odd characters (`'%'`, `'\'`, and the like), which may be
 why. govax always stores one.
 
 **Still unconfirmed,** the probe having no case: `$FILESCAN`'s auxiliary buffer with a
