@@ -18,6 +18,7 @@ import (
 //
 //	FORTRAN source[,...][/HOST] [/MACRO[=file] | /NOMACRO]
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
+//	        [/[NO]G_FLOATING]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -64,6 +65,9 @@ type FortranOptions struct {
 
 	// NoI4 is /NOI4 (fortran.Options).
 	NoI4 bool
+
+	// GFloating is /G_FLOATING (fortran.Options).
+	GFloating bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -158,6 +162,7 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
 		NoI4:          opts.NoI4,
+		GFloating:     opts.GFloating,
 		Continuations: continuations,
 		Includes:      fortranIncludes{c},
 		Version:       BuildVersion,

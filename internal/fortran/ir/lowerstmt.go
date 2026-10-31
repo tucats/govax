@@ -209,7 +209,7 @@ func (l *lowerer) do(d *sema.Do) {
 	l.loops++
 	n := l.loops
 
-	t := typeOf(d.Var.Type)
+	t := l.typeOf(d.Var.Type)
 	v := l.symbolMem(d.Var)
 
 	start := l.expr(d.Start)
@@ -320,7 +320,7 @@ func (l *lowerer) print(s *sema.Print) {
 // other value is computed into a temporary, which is described.
 func (l *lowerer) item(e sema.Expr) *Mem {
 	t := e.Type()
-	d := &Descriptor{DType: dtypeOf(t), Class: ClassS, Length: t.Size}
+	d := &Descriptor{DType: l.dtypeOf(t), Class: ClassS, Length: t.Size}
 
 	switch e := e.(type) {
 	case *sema.Const:
@@ -328,7 +328,7 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 			return l.textDescriptor(e.Text)
 		}
 
-		return l.describe(d, l.constant(constOf(e)))
+		return l.describe(d, l.constant(l.constOf(e)))
 
 	case *sema.Var, *sema.Elem:
 		return l.describe(d, l.mem(e))

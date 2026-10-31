@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
-**Status:** in progress: subtasks 1 (the survey, accepted by the author) and
-2 done 2026-10-30. Needs Phase 76 (declarations and
+**Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
+and 3 done 2026-10-30. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -532,7 +532,7 @@ stops for review.
    sema, conversions, every operator, `.EQV.`, `.NEQV.`, `.XOR.`, indexes scaled by
    type, BIT tests, `/[NO]I4` and OPTIONS's. Done.
 3. **Floating:** D, G, and H, 128-bit constants, register runs, wide spills,
-   `/[NO]G_FLOATING`, Table 3-1's real cells.
+   `/[NO]G_FLOATING`, Table 3-1's real cells. Done.
 4. **COMPLEX:** splitting in lowering, by-value arguments and wide results, products
    and OTS$DIVC, the folding change.
 5. **CHARACTER values:** places, substrings, array elements, assignment, comparison,
@@ -595,3 +595,45 @@ stops for review.
   - **Unconfirmed, ours:** two LOGICAL*1s in arithmetic are an INTEGER*2; INTRANGE
     for a constant past a short variable's unsigned range; `.TRUE.` and comparisons
     remain LOGICAL*4 under `/NOI4`, which only SIZEOF could show.
+- **2026-10-30, subtask 3:** REAL\*8 in D and G, and REAL\*16.
+  - **`sema`:** a REAL\*8's format is the unit's (`analyzer.format`, in place of
+    `Type.format`): D, or G with `/G_FLOATING` or the unit's OPTIONS
+    `/G_FLOATING` (`/NOG_FLOATING` undoes it); `Unit.GFloating` tells lowering.
+    Constants round, fold, and range-check in it (`realRange` names G's range,
+    0.56E-308 to 0.9E308), and initial values' bytes are packed in it.
+    `Compiled` admits every REAL; `returned` keeps a REAL\*16 function, defined
+    or referenced, NOTIMPL (its hidden argument is Phase 79's).
+  - **`ir`:** `Double`, `GFloat`, `HFloat`, with `Floating`, `Format`, and
+    `Width` (registers: 1, 2, or 4); `Const.High` holds an H value's upper eight
+    bytes, `RealConst` packs by type and `Longwords` unpacks for the data; folding
+    by format, conversions between floating types rounding only when narrowing;
+    `typeOf`, `dtypeOf`, and `constOf` are the lowerer's, since they ask the
+    unit; DSC$K_DTYPE_D, G, and H; the dump writes D and Q exponents.
+  - **`codegen`:** Decision 3: R0 to R11, `alloc` taking the lowest run of a
+    type's width, `inRegister` holding the run. `need` counts widths:
+    `pairNeed` is the harder operand first, then what its value holds (`held`)
+    beside the other's need, which for longwords is the old rule exactly, so no
+    golden file of an earlier subtask changed. Spill cells are the value's size,
+    at least a longword, and reused by size. A D, G, or H constant is a datum of
+    its longwords moved with MOVx; MOVA and PUSHA take D, G, and H for an
+    element's scale. A function's D or G value comes back in R0 and R1.
+  - **FTNRTL:** Table 7-1's 1PG24.16E2, 1PG24.15E3, and 1PG43.33E4: one G
+    editing routine, parameterized by width, digits, and exponent digits, with
+    `DIGITS_OF` calling `OTS$$CVT_F_`, `D_`, `G_`, or `H_T_R8`. The vector has no
+    new entry, so GSMATCH stays 1,4.
+  - **The command:** `/[NO]G_FLOATING`, `govax fortran --g-floating`, HELP, and
+    MANUAL.md.
+  - **Tests:** `testdata/fortran/reals` (D) and `realsg` (the same in G, by
+    OPTIONS, with a value past D's range), in both paging modes, their outputs
+    checked against exact rational arithmetic rounded to each format's bits, not
+    copied from a run; `floats.for` golden in `ir` and `codegen`; `TestGFloating`.
+    A program of nested indexed H and D expressions (not kept) spilled and gave
+    the values worked by hand.
+  - **Beyond the survey:** a REAL\*8 FUNCTION, like subtask 2's word functions,
+    needs nothing that isn't here (MOVD into R0 and R1, and MOVD from them at the
+    call), so it compiles; REAL\*16 functions stay Phase 79's. A REAL\*8 or
+    REAL\*16 DO variable compiles too: `tripCount`'s floating path is by type
+    now.
+  - **Unconfirmed, ours:** zero in E form at every width (`0.0000000000000000E+00`),
+    as subtask 1 chose for REAL\*4; an exponent written with all of the format's
+    e digits (`E-0018`), Ew.dEe's form.

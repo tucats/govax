@@ -81,17 +81,23 @@ func (t Type) String() string {
 }
 
 // Compiled reports whether expressions of the type are compiled yet:
-// INTEGER and LOGICAL of every length, and REAL*4. The other types are
-// later subtasks' of Phase 78.
+// INTEGER and LOGICAL of every length, and REAL of every length. COMPLEX
+// and CHARACTER are later subtasks' of Phase 78.
 func (t Type) Compiled() bool {
 	switch t.Kind {
-	case Integer, Logical:
+	case Integer, Logical, Real:
 		return true
-	case Real:
-		return t.Size == 4
 	}
 
 	return false
+}
+
+// returned reports whether a function of the type can be compiled yet: a
+// type Compiled says whose value comes back in registers, R0 or R0 and R1.
+// A REAL*16 function's value comes back through a hidden first argument
+// (Decision 11 of docs/PHASE-74 - FORTRAN plan.md), which is Phase 79's.
+func (t Type) returned() bool {
+	return t.Compiled() && t.Size <= 8
 }
 
 // Align is the boundary a variable of the type is placed on in $LOCAL:
@@ -240,12 +246,18 @@ func (t Type) part() Type {
 }
 
 // format is the VAX floating format of a REAL type, or of a COMPLEX
-// type's parts (Decision 16 of docs/PHASE-74 - FORTRAN plan.md): REAL*4 is
-// F_floating, REAL*8 D_floating (G_floating, with /G_FLOATING, is Phase
-// 78's), REAL*16 H_floating.
-func (t Type) format() vaxfloat.Format {
+// type's parts, in the unit being analyzed (Decision 16 of docs/PHASE-74 -
+// FORTRAN plan.md): REAL*4 is F_floating, REAL*8 D_floating, or G_floating
+// with /G_FLOATING (section 1.4.3: the command's qualifier, or the unit's
+// OPTIONS statement), REAL*16 H_floating. A unit has one format for REAL*8,
+// so D and G never meet in an expression.
+func (a *analyzer) format(t Type) vaxfloat.Format {
 	switch t.part().Size {
 	case 8:
+		if a.gFloating {
+			return vaxfloat.G
+		}
+
 		return vaxfloat.D
 	case 16:
 		return vaxfloat.H
@@ -264,10 +276,14 @@ func (t Type) intRange() (lo, hi int64) {
 	return minInt, maxInt
 }
 
-// realRange is a REAL type's range, as REALRANGE says it: F_floating and
-// D_floating have one exponent range, H_floating a far wider one.
-func (t Type) realRange() string {
-	if t.format() == vaxfloat.H {
+// realRange is a floating format's range, as REALRANGE says it (Table 2-1's
+// note): F_floating and D_floating have one exponent range, G_floating a
+// wider one, and H_floating a wider one still.
+func realRange(f vaxfloat.Format) string {
+	switch f {
+	case vaxfloat.G:
+		return "0.56E-308 to 0.9E308"
+	case vaxfloat.H:
 		return "0.84E-4932 to 0.59E4932"
 	}
 

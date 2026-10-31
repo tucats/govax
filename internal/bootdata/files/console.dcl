@@ -787,7 +787,8 @@ grammar console
     ! CONTINUATIONS is /CONTINUATIONS=n, the most continuation lines a
     ! statement may have (0 to 99; 19 when not given). I4 is /[NO]I4:
     ! INTEGER and LOGICAL with no length are 4 bytes, or with /NOI4 2.
-    ! Later phases add
+    ! G_FLOATING is /[NO]G_FLOATING: REAL*8 is D_floating, or with
+    ! /G_FLOATING G_floating. Later phases add
     ! the rest of the compiler's qualifiers.
     !
     verb fortran/id=1370
@@ -804,6 +805,7 @@ grammar console
         qualifier   extend_source/id=1374
         qualifier   d_lines/id=1375
         qualifier   i4/id=1377
+        qualifier   g_floating/id=1378
         qualifier   continuations/id=1376       -
                     /type=$integer
 

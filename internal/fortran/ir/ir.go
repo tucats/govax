@@ -31,27 +31,57 @@ type Type int
 
 // The types. None is a subroutine's (absent) result.
 const (
-	None  Type = iota
-	Long       // a longword: INTEGER*4, LOGICAL*4; the L of ADDL3
-	Float      // F_floating: REAL*4; the F of ADDF3
-	Byte       // a byte: BYTE, LOGICAL*1; the B of BISB3
-	Word       // a word: INTEGER*2, LOGICAL*2; the W of ADDW3
+	None   Type = iota
+	Long        // a longword: INTEGER*4, LOGICAL*4; the L of ADDL3
+	Float       // F_floating: REAL*4; the F of ADDF3
+	Byte        // a byte: BYTE, LOGICAL*1; the B of BISB3
+	Word        // a word: INTEGER*2, LOGICAL*2; the W of ADDW3
+	Double      // D_floating: REAL*8; the D of ADDD3
+	GFloat      // G_floating: REAL*8 under /G_FLOATING; the G of ADDG3
+	HFloat      // H_floating: REAL*16; the H of ADDH3
 )
 
 // String is the type's letter, the suffix of the VAX instructions that
-// work on it: L, F, B, W.
+// work on it: L, F, B, W, D, G, H.
 func (t Type) String() string {
-	return [...]string{"", "L", "F", "B", "W"}[t]
+	return [...]string{"", "L", "F", "B", "W", "D", "G", "H"}[t]
 }
 
 // Size is the type's size in bytes.
 func (t Type) Size() int {
-	return [...]int{0, 4, 4, 1, 2}[t]
+	return [...]int{0, 4, 4, 1, 2, 8, 8, 16}[t]
 }
 
 // Integer reports whether t is an integer type: Byte, Word, or Long.
 func (t Type) Integer() bool {
 	return t == Byte || t == Word || t == Long
+}
+
+// Floating reports whether t is a floating type: Float, Double, GFloat, or
+// HFloat.
+func (t Type) Floating() bool {
+	return t == Float || t == Double || t == GFloat || t == HFloat
+}
+
+// Format is a floating type's VAX format.
+func (t Type) Format() vaxfloat.Format {
+	switch t {
+	case Double:
+		return vaxfloat.D
+	case GFloat:
+		return vaxfloat.G
+	case HFloat:
+		return vaxfloat.H
+	}
+
+	return vaxfloat.F
+}
+
+// Width is how many registers a value of type t takes: one for a longword
+// or less, two for a D or G value (Rn and Rn+1, the low-addressed half in
+// Rn), four for an H value.
+func (t Type) Width() int {
+	return max(t.Size()/4, 1)
 }
 
 // Routine is one program unit, lowered: its storage, its read-only data,
@@ -207,10 +237,14 @@ const (
 	DTypeW  DType = 7  // a word integer: INTEGER*2
 	DTypeL  DType = 8  // a longword integer: INTEGER*4
 	DTypeF  DType = 10 // F_floating: REAL*4
+	DTypeD  DType = 11 // D_floating: REAL*8
 	DTypeT  DType = 14 // text: a character string
+	DTypeG  DType = 27 // G_floating: REAL*8 under /G_FLOATING
+	DTypeH  DType = 28 // H_floating: REAL*16
 )
 
-// String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, T.
+// String is the code's name after DSC$K_DTYPE_: BU, WU, LU, W, L, F, D,
+// G, H, T.
 func (d DType) String() string {
 	switch d {
 	case DTypeBU:
@@ -225,6 +259,12 @@ func (d DType) String() string {
 		return "L"
 	case DTypeF:
 		return "F"
+	case DTypeD:
+		return "D"
+	case DTypeG:
+		return "G"
+	case DTypeH:
+		return "H"
 	case DTypeT:
 		return "T"
 	}
@@ -482,7 +522,7 @@ const (
 	Or
 	Xor
 	Not
-	Cvt // conversion to the Op's type: CVTLF, or CVTFL (which truncates)
+	Cvt // conversion to the Op's type: CVTLF, CVTFD, CVTDF (which rounds), or CVTFL (which truncates)
 	Eq
 	Ne
 	Lt
@@ -501,10 +541,11 @@ func (o Operator) String() string {
 type (
 	// Const is a constant: Bits is its value as memory holds it, read
 	// as a little-endian number (a Long's two's complement, an F_floating
-	// longword's bits, 1.0 being ^X00004080).
+	// longword's bits, 1.0 being ^X00004080, a D_floating quadword's), and
+	// High the bytes of an H_floating value past its first eight.
 	Const struct {
-		T    Type
-		Bits uint64
+		T          Type
+		Bits, High uint64
 	}
 
 	// Load is the value at Mem.
@@ -579,9 +620,15 @@ func IntConst(t Type, n int32) *Const {
 // FloatConst is the F_floating constant v, which must already be one
 // (rounded to F_floating's precision and range).
 func FloatConst(v vaxfloat.Value) *Const {
-	b, _ := vaxfloat.Pack(vaxfloat.F, v)
+	return RealConst(Float, v)
+}
 
-	return &Const{T: Float, Bits: b.Lo}
+// RealConst is the constant v of the floating type t, which v must already
+// be (rounded to t's precision and range).
+func RealConst(t Type, v vaxfloat.Value) *Const {
+	b, _ := vaxfloat.Pack(t.Format(), v)
+
+	return &Const{T: t, Bits: b.Lo, High: b.Hi}
 }
 
 // Int is an integer constant's value, a Byte's or Word's sign-extended.
@@ -596,16 +643,34 @@ func (c *Const) Int() int32 {
 	return int32(uint32(c.Bits))
 }
 
-// Real is a Float constant's value.
+// Real is a floating constant's value.
 func (c *Const) Real() vaxfloat.Value {
-	v, _ := vaxfloat.Unpack(vaxfloat.F, vaxfloat.Bits{Lo: c.Bits})
+	v, _ := vaxfloat.Unpack(c.T.Format(), vaxfloat.Bits{Lo: c.Bits, Hi: c.High})
 
 	return v
 }
 
+// Longwords are a floating constant's bits as the longwords memory holds,
+// the lowest-addressed first: one for F, two for D or G, four for H.
+func (c *Const) Longwords() []uint32 {
+	n := c.T.Width()
+	words := make([]uint32, n)
+
+	for i := range words {
+		b := c.Bits
+		if i >= 2 {
+			b = c.High
+		}
+
+		words[i] = uint32(b >> (32 * (i % 2)))
+	}
+
+	return words
+}
+
 // IsZero reports whether the constant is zero (0, or 0.0).
 func (c *Const) IsZero() bool {
-	if c.T == Float {
+	if c.T.Floating() {
 		return c.Real().IsZero()
 	}
 

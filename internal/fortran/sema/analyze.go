@@ -16,6 +16,10 @@ type Options struct {
 	// NoI4 is /NOI4: INTEGER and LOGICAL with no length are 2 bytes, and an
 	// integer constant in a word's range is an INTEGER*2 (Table 2-1).
 	NoI4 bool
+
+	// GFloating is /G_FLOATING: REAL*8 and COMPLEX*16 are in G_floating,
+	// not D_floating (Decision 16 of docs/PHASE-74 - FORTRAN plan.md).
+	GFloating bool
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -53,6 +57,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			boundVars:      map[*Symbol]diag.Position{},
 			defaultInt:     defaultInt,
 			defaultLogical: defaultLogical,
+			gFloating:      unitOpts.GFloating,
 		}
 
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
@@ -81,6 +86,10 @@ func prologue(list []ast.Stmt, opts Options, messages *diag.List) Options {
 					opts.NoI4 = false
 				case "NOI4":
 					opts.NoI4 = true
+				case "G_FLOATING":
+					opts.GFloating = true
+				case "NOG_FLOATING":
+					opts.GFloating = false
 				default:
 					messages.Report("NOTIMPL", s.Position(), "the OPTIONS statement's /"+q.Name)
 				}
@@ -166,6 +175,9 @@ type analyzer struct {
 	// no length mean in this unit: 4 bytes, or with /NOI4 2.
 	defaultInt, defaultLogical Type
 
+	// gFloating is set when the unit's REAL*8 is G_floating (format).
+	gFloating bool
+
 	// implicit are the unit's letters' types (implicit.go), and
 	// rejected the IMPLICIT statements left out of them.
 	implicit *implicitRules
@@ -223,6 +235,8 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 		Name:   name,
 		Labels: map[int]*Label{},
 		byName: map[string]*Symbol{},
+
+		GFloating: a.gFloating,
 	}
 	a.unit = u
 

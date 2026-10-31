@@ -18,13 +18,13 @@ import (
 func (l *lowerer) expr(e sema.Expr) Expr {
 	switch e := e.(type) {
 	case *sema.Const:
-		return constOf(e)
+		return l.constOf(e)
 
 	case *sema.Var, *sema.Elem:
 		return &Load{l.mem(e)}
 
 	case *sema.FuncRef:
-		result := l.temp(typeOf(e.T))
+		result := l.temp(l.typeOf(e.T))
 		l.callFunction(e, result)
 
 		return &Load{result}
@@ -35,12 +35,12 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 			op = Not
 		}
 
-		return arith(op, typeOf(e.T), l.expr(e.X), nil)
+		return arith(op, l.typeOf(e.T), l.expr(e.X), nil)
 
 	case *sema.Binary:
 		x := l.expr(e.X)
 		y := l.expr(e.Y)
-		t := typeOf(e.T)
+		t := l.typeOf(e.T)
 
 		// .EQV. is the opposite of .NEQV., bit by bit: the VAX has XOR
 		// but no instruction for its complement.
@@ -60,7 +60,7 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 		// An INTEGER and a LOGICAL of one size are the same bits: converting
 		// between them does nothing.
 		x := l.expr(e.X)
-		if t := typeOf(e.T); t != x.Type() {
+		if t := l.typeOf(e.T); t != x.Type() {
 			return arith(Cvt, t, x, nil)
 		}
 
@@ -78,19 +78,19 @@ var operators = map[ast.Op]Operator{
 }
 
 // constOf is a constant's IR form: an INTEGER's or a LOGICAL's bits in its
-// own size (a LOGICAL's -1 or 0), or a REAL's F_floating bits.
-func constOf(c *sema.Const) *Const {
+// own size (a LOGICAL's -1 or 0), or a REAL's bits in its format.
+func (l *lowerer) constOf(c *sema.Const) *Const {
 	if c.T.Kind == sema.Real {
-		return FloatConst(c.Real)
+		return RealConst(l.typeOf(c.T), c.Real)
 	}
 
-	return IntConst(typeOf(c.T), c.Int)
+	return IntConst(l.typeOf(c.T), c.Int)
 }
 
 // symbolMem is where a variable or array is: its cell, or, for a dummy
 // argument, the caller's variable its argument points at.
 func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
-	t := typeOf(s.Type)
+	t := l.typeOf(s.Type)
 
 	if p := l.params[s]; p != nil {
 		return &Mem{Param: p, T: t}
@@ -184,7 +184,7 @@ func (l *lowerer) args(list []sema.Arg) []Arg {
 			args[i].Ref = l.symbolMem(e.Sym)
 
 		case *sema.Const:
-			args[i].Ref = l.constant(constOf(e))
+			args[i].Ref = l.constant(l.constOf(e))
 
 		default:
 			args[i].Ref = l.value(l.expr(e))
@@ -206,8 +206,8 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 //
 //   - an operation on constants is done now, an integer one in its type's
 //     bits as the VAX's instructions do it (wrapping around on overflow,
-//     which the code doesn't detect), a Float one with package vaxfloat, which
-//     rounds as the VAX does; an operation that would overflow, divide
+//     which the code doesn't detect), a floating one with package vaxfloat,
+//     which rounds as the VAX does; an operation that would overflow, divide
 //     by zero, or give a reserved operand is left for run time;
 //   - a Long addition or subtraction collects its constants into one
 //     (I-1+1 is I), and adding or multiplying by nothing goes, which
@@ -334,13 +334,24 @@ func foldUnary(op Operator, t Type, x *Const) *Const {
 		return IntConst(t, -x.Int())
 
 	case op == Neg:
-		return FloatConst(x.Real().Neg())
+		return RealConst(t, x.Real().Neg())
 
-	case op == Cvt && t == Float:
-		// CVTLF: exact up to 2**24, rounded beyond.
-		v, _ := vaxfloat.Round(vaxfloat.F, vaxfloat.FromInt(int64(x.Int())))
+	case op == Cvt && t.Floating():
+		// CVTLF: exact up to 2**24, rounded beyond; CVTLD and the wider ones
+		// always exact. CVTFD and the other widenings are exact, CVTDF and
+		// the other narrowings round (Table 3-1). A narrowing that would
+		// overflow (an H value past D's range) is left for the CPU.
+		v := vaxfloat.FromInt(int64(x.Int()))
+		if x.T.Floating() {
+			v = x.Real()
+		}
 
-		return FloatConst(v)
+		r, err := vaxfloat.Round(t.Format(), v)
+		if err != nil && !errors.Is(err, vaxfloat.ErrUnderflow) {
+			return nil
+		}
+
+		return RealConst(t, r)
 
 	case op == Cvt && x.T.Integer():
 		// A shorter type's value is the longer one's low bits.
@@ -410,15 +421,17 @@ func foldBinary(op Operator, t Type, x, y *Const) *Const {
 		err error
 	)
 
+	f := t.Format()
+
 	switch op {
 	case Add:
-		v, err = vaxfloat.Add(vaxfloat.F, x.Real(), y.Real())
+		v, err = vaxfloat.Add(f, x.Real(), y.Real())
 	case Sub:
-		v, err = vaxfloat.Sub(vaxfloat.F, x.Real(), y.Real())
+		v, err = vaxfloat.Sub(f, x.Real(), y.Real())
 	case Mul:
-		v, err = vaxfloat.Mul(vaxfloat.F, x.Real(), y.Real())
+		v, err = vaxfloat.Mul(f, x.Real(), y.Real())
 	case Div:
-		v, err = vaxfloat.Div(vaxfloat.F, x.Real(), y.Real())
+		v, err = vaxfloat.Div(f, x.Real(), y.Real())
 	default:
 		return nil
 	}
@@ -427,5 +440,5 @@ func foldBinary(op Operator, t Type, x, y *Const) *Const {
 		return nil
 	}
 
-	return FloatConst(v)
+	return RealConst(t, v)
 }

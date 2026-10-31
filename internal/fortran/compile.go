@@ -33,6 +33,9 @@ type Options struct {
 	// NoI4 is /NOI4: INTEGER and LOGICAL with no length are 2 bytes.
 	NoI4 bool
 
+	// GFloating is /G_FLOATING: REAL*8 is G_floating, not D_floating.
+	GFloating bool
+
 	// Includes reads the files INCLUDE statements name; nil means a
 	// program can include nothing.
 	Includes source.Opener
@@ -109,7 +112,7 @@ func Compile(opts Options, file File) Result {
 	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
 		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		prog := sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4}, &messages)
+		prog := sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating}, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)

@@ -223,10 +223,18 @@ func (g *routineGen) call(s *ir.Call) {
 	g.emit("CALLS", ir.None, "#"+strconv.Itoa(len(s.Args)), "G^"+s.Routine)
 
 	if s.Result != nil {
-		// The value is in R0, which nothing may use until it is stored.
-		g.inUse[0] = true
+		// The value is in R0 (R0 and R1 for a D or G value), which nothing
+		// may use until it is stored.
+		w := s.Result.T.Width()
+		for i := range w {
+			g.inUse[i] = true
+		}
+
 		d := g.mem(g.fitMem(s.Result))
-		g.inUse[0] = false
+
+		for i := range w {
+			g.inUse[i] = false
+		}
 
 		g.move(s.Result.T, "R0", d.text)
 		g.free(d)

@@ -202,7 +202,7 @@ func constAbs(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 		t := x.T.part()
 		sum := vaxfloat.AddExact(vaxfloat.MulExact(x.Real, x.Real), vaxfloat.MulExact(x.Imag, x.Imag))
 
-		v, err := vaxfloat.Sqrt(t.format(), sum)
+		v, err := vaxfloat.Sqrt(ev.a.format(t), sum)
 		if err != nil {
 			return nil, ev.realRange(e.Pos, valueText, t)
 		}
@@ -247,7 +247,7 @@ func constMod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	whole := new(big.Int).Quo(q.Num(), q.Denom()) // truncated toward zero
 	rem := new(big.Rat).Sub(x.Real.Rat(), new(big.Rat).Mul(new(big.Rat).SetInt(whole), y.Real.Rat()))
 
-	v, rerr := round(x.T.format(), vaxfloat.FromRat(rem))
+	v, rerr := round(ev.a.format(x.T), vaxfloat.FromRat(rem))
 	if rerr != nil {
 		return nil, ev.realRange(e.Pos, valueText, x.T)
 	}
@@ -308,7 +308,7 @@ func constDprod(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 
 	t := Type{Real, 8}
 
-	v, err := round(t.format(), vaxfloat.MulExact(args[0].Real, args[1].Real))
+	v, err := round(ev.a.format(t), vaxfloat.MulExact(args[0].Real, args[1].Real))
 	if err != nil {
 		return nil, ev.realRange(e.Pos, valueText, t)
 	}

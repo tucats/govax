@@ -85,7 +85,10 @@ var definitions = []struct {
 	{"DSC$K_DTYPE_W", int(ir.DTypeW), "word integer"},
 	{"DSC$K_DTYPE_L", int(ir.DTypeL), "longword integer"},
 	{"DSC$K_DTYPE_F", int(ir.DTypeF), "F_floating"},
+	{"DSC$K_DTYPE_D", int(ir.DTypeD), "D_floating"},
 	{"DSC$K_DTYPE_T", int(ir.DTypeT), "text"},
+	{"DSC$K_DTYPE_G", int(ir.DTypeG), "G_floating"},
+	{"DSC$K_DTYPE_H", int(ir.DTypeH), "H_floating"},
 	{"DSC$K_CLASS_S", int(ir.ClassS), "scalar or fixed-length string"},
 	{"DSC$K_CLASS_A", int(ir.ClassA), "array"},
 }
@@ -600,8 +603,15 @@ func (g *routineGen) writeDatum(w *Writer, d *ir.Datum) {
 
 	switch d.Kind {
 	case ir.ConstantDatum:
-		if d.Value.T == ir.Float {
-			w.Statement(label, ".LONG", fmt.Sprintf("^X%08X", uint32(d.Value.Bits)), ir.ExprText(d.Value))
+		if d.Value.T.Floating() {
+			words := d.Value.Longwords()
+			longs := make([]string, len(words))
+
+			for i, l := range words {
+				longs[i] = fmt.Sprintf("^X%08X", l)
+			}
+
+			w.Statement(label, ".LONG", strings.Join(longs, ","), ir.ExprText(d.Value))
 		} else {
 			w.Statement(label, ".LONG", strconv.Itoa(int(d.Value.Int())), "")
 		}

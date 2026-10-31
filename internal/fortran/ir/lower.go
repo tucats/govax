@@ -67,18 +67,6 @@ type lowerer struct {
 func lowerUnit(u *sema.Unit) *Routine {
 	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize, Initials: u.Initials}
 
-	switch u.Kind {
-	case ast.FunctionUnit:
-		r.Kind = Function
-		r.Result = typeOf(u.Result.Type)
-	case ast.SubroutineUnit:
-		r.Kind = Subroutine
-	case ast.BlockDataUnit:
-		r.Kind = BlockData
-	default:
-		r.Kind = Main
-	}
-
 	l := &lowerer{
 		unit:     u,
 		r:        r,
@@ -90,8 +78,20 @@ func lowerUnit(u *sema.Unit) *Routine {
 		data:     map[string]*Datum{},
 	}
 
+	switch u.Kind {
+	case ast.FunctionUnit:
+		r.Kind = Function
+		r.Result = l.typeOf(u.Result.Type)
+	case ast.SubroutineUnit:
+		r.Kind = Subroutine
+	case ast.BlockDataUnit:
+		r.Kind = BlockData
+	default:
+		r.Kind = Main
+	}
+
 	for _, s := range u.Params {
-		p := &Param{Name: s.Name, Index: s.Dummy, T: typeOf(s.Type), Sym: s}
+		p := &Param{Name: s.Name, Index: s.Dummy, T: l.typeOf(s.Type), Sym: s}
 		r.Params = append(r.Params, p)
 		l.params[s] = p
 	}
@@ -107,7 +107,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 			continue
 		}
 
-		c := &Cell{Name: s.Name, Kind: VariableCell, T: typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Common: s.Common, Sym: s}
+		c := &Cell{Name: s.Name, Kind: VariableCell, T: l.typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Common: s.Common, Sym: s}
 
 		switch {
 		case s.Result:
@@ -146,9 +146,17 @@ func lowerUnit(u *sema.Unit) *Routine {
 }
 
 // typeOf is the machine type of a FORTRAN type: an INTEGER or LOGICAL is a
-// byte, a word, or a longword by its size, and a REAL F_floating.
-func typeOf(t sema.Type) Type {
+// byte, a word, or a longword by its size; a REAL*4 F_floating, a REAL*8
+// D_floating, or G_floating if the unit says so (/G_FLOATING), and a
+// REAL*16 H_floating.
+func (l *lowerer) typeOf(t sema.Type) Type {
 	switch {
+	case t.Kind == sema.Real && t.Size == 8 && l.unit.GFloating:
+		return GFloat
+	case t.Kind == sema.Real && t.Size == 8:
+		return Double
+	case t.Kind == sema.Real && t.Size == 16:
+		return HFloat
 	case t.Kind == sema.Real:
 		return Float
 	case t.Kind != sema.Integer && t.Kind != sema.Logical:
@@ -163,7 +171,7 @@ func typeOf(t sema.Type) Type {
 }
 
 // dtypeOf is a FORTRAN type's descriptor data type.
-func dtypeOf(t sema.Type) DType {
+func (l *lowerer) dtypeOf(t sema.Type) DType {
 	switch t.Kind {
 	case sema.Logical:
 		switch t.Size {
@@ -175,6 +183,15 @@ func dtypeOf(t sema.Type) DType {
 
 		return DTypeLU
 	case sema.Real:
+		switch l.typeOf(t) {
+		case Double:
+			return DTypeD
+		case GFloat:
+			return DTypeG
+		case HFloat:
+			return DTypeH
+		}
+
 		return DTypeF
 	case sema.Character:
 		return DTypeT
@@ -383,7 +400,7 @@ func (l *lowerer) datum(key string, build func() *Datum) *Datum {
 // constant is a datum holding the constant c, for passing it by
 // reference.
 func (l *lowerer) constant(c *Const) *Mem {
-	key := fmt.Sprintf("K %s %x", c.T, c.Bits)
+	key := fmt.Sprintf("K %s %x %x", c.T, c.High, c.Bits)
 
 	d := l.datum(key, func() *Datum {
 		l.konsts++

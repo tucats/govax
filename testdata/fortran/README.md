@@ -30,6 +30,8 @@ to check against. To add a program, add both files; this directory's
 | `tables.for` | Tables set by DATA and put to use: days in the months, a binary search, an interpolation, tax brackets in a common block from a BLOCK DATA, a matrix product of matrices given by rows and by columns |
 | `store.for` | The internals tour's program for storage (section 8): PARAMETER in a bound, COMMON from a BLOCK DATA, EQUIVALENCE, DATA and initial values |
 | `lengths.for` | INTEGER and LOGICAL of every length: unsigned constants in short variables, word arithmetic wrapping, a small constant beside a word, mixed lengths, the logical operators bit by bit, conversions, short conditions, a word DO variable and function, short arguments with subscripts, OPTIONS /NOI4 for one unit |
+| `reals.for` | REAL\*8 in D_floating and REAL\*16: a REAL\*8 constant's digits and a REAL\*4's widened, rounding back to REAL\*4, mixed types, G editing's two forms at each width, a REAL\*8 DO variable, truncation to an integer, a REAL\*8 function, a REAL\*8 array changed by a subroutine, expressions that spill |
+| `realsg.for` | `reals.for` in G_floating, each unit's OPTIONS /G_FLOATING saying so: 15 digits and three-digit exponents, and a value past D_floating's range |
 | `grades.for` | Block IF with ELSE IF and ELSE, a nested block IF, GO TO from a block to the loop's end, LOGICAL output, STOP with a display |
 
 ## Programs of several files

@@ -236,7 +236,7 @@ func (ev *evaluator) real(e *ast.RealConst) (*Const, *constErr) {
 		return nil, ev.realRange(e.Pos, e.Text, t)
 	}
 
-	v, err := vaxfloat.Round(t.format(), exact)
+	v, err := vaxfloat.Round(ev.a.format(t), exact)
 	if err != nil {
 		return nil, ev.realRange(e.Pos, e.Text, t)
 	}
@@ -326,7 +326,7 @@ func (ev *evaluator) typelessAs(e *ast.TypelessConst, t Type) (*Const, *constErr
 		c.Int = truncate(int32(uint32(lo)), t.Size)
 
 	case Real:
-		f := t.format()
+		f := ev.a.format(t)
 		if f == vaxfloat.F {
 			lo &= 0xFFFFFFFF
 		}
@@ -339,7 +339,7 @@ func (ev *evaluator) typelessAs(e *ast.TypelessConst, t Type) (*Const, *constErr
 		c.Real = r
 
 	case Complex:
-		f, reBits, imBits := t.format(), vaxfloat.Bits{Lo: lo}, vaxfloat.Bits{Lo: hi}
+		f, reBits, imBits := ev.a.format(t), vaxfloat.Bits{Lo: lo}, vaxfloat.Bits{Lo: hi}
 		if f == vaxfloat.F {
 			reBits, imBits = vaxfloat.Bits{Lo: lo & 0xFFFFFFFF}, vaxfloat.Bits{Lo: lo >> 32}
 		}
@@ -587,7 +587,7 @@ func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const,
 		c.Int = int32(v)
 
 	case Real:
-		v, err := realArith(op, t.format(), x.Real, y.Real)
+		v, err := realArith(op, ev.a.format(t), x.Real, y.Real)
 		if err != nil {
 			return nil, ev.floatError(err, pos, t)
 		}
@@ -595,7 +595,7 @@ func (ev *evaluator) operate(op ast.Op, x, y *Const, pos diag.Position) (*Const,
 		c.Real = v
 
 	case Complex:
-		re, im, err := complexArith(op, t.format(), x.Real, x.Imag, y.Real, y.Imag)
+		re, im, err := complexArith(op, ev.a.format(t), x.Real, x.Imag, y.Real, y.Imag)
 		if err != nil {
 			return nil, ev.floatError(err, pos, t)
 		}
@@ -734,7 +734,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	}
 
 	t := x.T
-	f := t.format()
+	f := ev.a.format(t)
 	zero := x.Real.IsZero() && x.Imag.IsZero()
 
 	if zero && n <= 0 {
@@ -977,7 +977,7 @@ func (ev *evaluator) convert(c *Const, t Type, pos diag.Position) (*Const, *cons
 
 		var err, err2 error
 
-		f := t.format()
+		f := ev.a.format(t)
 		r.Real, err = round(f, re)
 		r.Imag, err2 = round(f, im)
 

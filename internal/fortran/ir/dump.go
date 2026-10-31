@@ -260,7 +260,7 @@ func MemText(m *Mem) string {
 func ExprText(e Expr) string {
 	switch e := e.(type) {
 	case *Const:
-		if e.T == Float {
+		if e.T.Floating() {
 			return floatText(e)
 		}
 
@@ -291,13 +291,29 @@ func ExprText(e Expr) string {
 	return fmt.Sprintf("%T", e)
 }
 
-// floatText is an F_floating constant with the fewest digits that give
-// its value again, always with a period or an exponent (1.0, not 1).
+// floatText is a floating constant with the fewest digits that give its
+// value again, as FORTRAN writes it: an F_floating one always with a period
+// or an exponent (1.0, not 1), a D or G one with a D exponent (0.1D0,
+// 1.5D-10), and an H one with a Q exponent.
 func floatText(c *Const) string {
-	text := strings.ToUpper(strconv.FormatFloat(c.Real().Float64(), 'g', -1, 32))
-	if !strings.ContainsAny(text, ".E") {
-		text += ".0"
+	if c.T == Float {
+		text := strings.ToUpper(strconv.FormatFloat(c.Real().Float64(), 'g', -1, 32))
+		if !strings.ContainsAny(text, ".E") {
+			text += ".0"
+		}
+
+		return text
 	}
 
-	return text
+	letter := "D"
+	if c.T == HFloat {
+		letter = "Q"
+	}
+
+	text := strings.ToUpper(c.Real().Text('g', -1))
+	if i := strings.IndexByte(text, 'E'); i >= 0 {
+		return text[:i] + letter + strings.TrimPrefix(text[i+1:], "+")
+	}
+
+	return text + letter + "0"
 }

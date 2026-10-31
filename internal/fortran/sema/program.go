@@ -56,6 +56,11 @@ type Unit struct {
 	// give the unit's names, in order of place (data.go).
 	Initials []*Initial
 
+	// GFloating is set when the unit's REAL*8 and COMPLEX*16 are in
+	// G_floating (/G_FLOATING, or the unit's OPTIONS statement), clear
+	// when they are in D_floating.
+	GFloating bool
+
 	byName map[string]*Symbol
 
 	// calls are the unit's references to routines, which Analyze checks

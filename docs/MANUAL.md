@@ -1287,6 +1287,7 @@ These commands are described fully in their own sections:
 ```text
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
+    /[NO]G_FLOATING
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -1295,8 +1296,8 @@ compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
 plan.md`); so far it compiles a first subset of the language (main
 programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
-EQUIVALENCE, DATA, SAVE, EXTERNAL; INTEGER, REAL, and LOGICAL
-expressions; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and `WRITE
+EQUIVALENCE, DATA, SAVE, EXTERNAL; INTEGER, LOGICAL, and REAL
+expressions of every length; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and `WRITE
 (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -1304,8 +1305,9 @@ with the type `MAR`, beside the source, unless `/MACRO=` names another;
 `/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
 run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
-19 by default), and `/NOI4` makes INTEGER and LOGICAL with no length 2
-bytes rather than 4. `INCLUDE 'file'` reads a file (type `.FOR` by default)
+19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
+bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
+than D_floating. `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory. The compiler's messages show the line
 and column:
@@ -4445,8 +4447,8 @@ output it prints, and programs of several files in its `modules` directory.
 ### 14.2 What the compiler accepts so far
 
 - **Program units:** a main program, with or without a PROGRAM statement;
-  SUBROUTINE; FUNCTION, typed INTEGER, REAL, or LOGICAL, or by its
-  name's first letter; BLOCK DATA, named or not, which holds declarations
+  SUBROUTINE; FUNCTION, typed INTEGER, LOGICAL, REAL, or REAL\*8 (not
+  yet REAL\*16, COMPLEX, or CHARACTER), or by its name's first letter; BLOCK DATA, named or not, which holds declarations
   and initial values for named common blocks; END. A file may hold several
   units.
 - **Declarations:** type statements of every type and length (BYTE;
@@ -4470,7 +4472,7 @@ output it prints, and programs of several files in its `modules` directory.
   (and naming a BLOCK DATA makes LINK find it in a library); INTRINSIC says
   it is FORTRAN's own. Either name as an argument is reported not implemented.
   Every variable gets its storage,
-  but only INTEGER, LOGICAL, and REAL\*4 names can be used in
+  but only INTEGER, LOGICAL, and REAL names can be used in
   statements yet; a name of another type is reported not implemented
   where a statement first uses it. Undeclared names have the implicit
   types: I to N INTEGER, the rest REAL, unless IMPLICIT says otherwise;
@@ -4495,13 +4497,15 @@ output it prints, and programs of several files in its `modules` directory.
   `//`, the relational and logical operators, and MIN, MAX, ABS, MOD,
   ICHAR, NINT, DIM, DPROD, CMPLX, CONJG, IMAG, IAND, IOR, IEOR, NOT,
   ISHFT, LGE, LGT, LLE, LLT, and CHAR of constants. A constant's name may
-  be used in declarations and statements; one that isn't INTEGER, REAL\*4,
-  LOGICAL, or CHARACTER is reported not implemented where a
-  statement uses it.
+  be used in declarations and statements; a COMPLEX one is reported not
+  implemented where a statement uses it.
 - **Expressions:** INTEGER, REAL, LOGICAL, and character constants;
-  `+ - * /` and unary minus, on INTEGER and REAL\*4, mixed by the usual
-  conversions (INTEGER division truncates; two INTEGER\*2s are computed in
-  a word, and a word that overflows wraps); the relational operators
+  `+ - * /` and unary minus, on INTEGER and REAL of every length (REAL\*4
+  F_floating, REAL\*8 D_floating or with `/G_FLOATING` G_floating, REAL\*16
+  H_floating), mixed by the usual conversions (INTEGER division truncates;
+  two INTEGER\*2s are computed in a word, and a word that overflows wraps; a
+  REAL\*4 beside a REAL\*8 is widened exactly, and a REAL\*8 assigned to a
+  REAL\*4 rounded); the relational operators
   (`.EQ.` and the rest); `.NOT.`, `.AND.`, `.OR.`, `.EQV.`, `.NEQV.`,
   `.XOR.`, on LOGICALs of every length or bit by bit on INTEGERs; array
   elements and
@@ -4520,7 +4524,9 @@ output it prints, and programs of several files in its `modules` directory.
 
 The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, `/MACRO` and `/NOMACRO`,
-`/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, and `/[NO]I4`. From the
+`/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`, and
+`/[NO]G_FLOATING`. An `OPTIONS` statement before a unit may give `/I4`,
+`/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
 host shell, `govax fortran` runs it.
 
 ### 14.4 Source lines
@@ -4736,7 +4742,7 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PRINT_LIST(icb)` | Starts a `PRINT *` statement: `icb` is its control block (a word of size, 8; a word of flags, 0; a longword unit, -1 for `*`) |
 | `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
-| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `LOGICAL*4` (`DSC$K_DTYPE_LU`), `INTEGER*4` (`L`), `REAL*4` (`F`), or text (`T`) |
+| `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record |
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
@@ -4745,9 +4751,11 @@ and holds at most 80 bytes. Each value is in its type's format (the
 *Language Reference Manual*'s Table 7-1): a LOGICAL\*2 or \*4 as ` T` or
 ` F` (L2), a LOGICAL\*1 or BYTE as an integer in 5 columns (I5), an
 INTEGER\*2 in 7 columns (I7), an INTEGER\*4 in 12 (I12), a REAL as
-`1PG15.7E2`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
+`1PG15.7E2`, a REAL\*8 as `1PG24.16E2` (`1PG24.15E3` in G_floating), a
+REAL\*16 as `1PG43.33E4`, and text as itself. `1PG15.7E2` shows 7 significant digits: a magnitude from 0.1
 up to 10\*\*7 in fixed-point form, followed by 4 blanks; any other, zero
-included, with an exponent:
+included, with an exponent. The wider formats are the same with their own
+digits, and an exponent of 2, 3, or 4 digits:
 
 ```text
       PRINT *, 42, .TRUE., 'IT''S', 3.4, 0.25, 1234567.0, 1.0E-5, 0.0
@@ -4756,7 +4764,13 @@ included, with an exponent:
 ```
 
 (1.0E-5 shows as `9.9999997E-06` because the F_floating value nearest
-it is just below it.) A value that doesn't fit in what's left of the
+it is just below it.) The same at REAL\*8:
+
+```text
+      PRINT *, 1D0/3D0, 1D16, 0D0
+  0.3333333333333333      1.0000000000000000E+16  0.0000000000000000E+00
+```
+ A value that doesn't fit in what's left of the
 record starts the next one: the first record above, at 79 bytes, had no
 room for the last REAL. Only a text longer
 than a record is split, filling as many records as it needs. With
@@ -4856,6 +4870,9 @@ FORTRAN compiler was available to check them). So far:
   number, and INTEGER and LOGICAL constants initialize each other's items, as
   assignment converts them. A REAL literal for a `REAL*8` item is rounded from
   its exact value: `DATA D /0.1/` is 0.1 in D_floating.
+- A REAL literal in a REAL\*8 expression or assigned to a REAL\*8 keeps its
+  exact value, as the manual's 2.3.1.2 says of a literal in a higher-precision
+  expression: `D = 0.1` is 0.1D0, not the REAL\*4 value widened.
 - `FUNCTION F*8(X)`, a length with no type keyword, gives the length to
   the type F has from its first letter (here `REAL*8`).
 - Integer overflow isn't detected (the result wraps, as with VAX

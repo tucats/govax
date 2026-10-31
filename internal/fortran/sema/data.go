@@ -644,7 +644,7 @@ func (a *analyzer) initialBytes(v *dataValue, t Type) ([]byte, bool) {
 		return nil, false
 	}
 
-	return constBytes(c), true
+	return a.constBytes(c), true
 }
 
 // littleEndian is v's low size bytes, lowest first: extended on the left with
@@ -662,7 +662,7 @@ func littleEndian(v *big.Int, size int) []byte {
 }
 
 // constBytes is a constant's bytes as the VAX holds it in memory.
-func constBytes(c *Const) []byte {
+func (a *analyzer) constBytes(c *Const) []byte {
 	switch c.T.Kind {
 	case Integer, Logical:
 		b := make([]byte, c.T.Size)
@@ -674,10 +674,10 @@ func constBytes(c *Const) []byte {
 		return b
 
 	case Real:
-		return floatBytes(c.T.format(), c.Real)
+		return floatBytes(a.format(c.T), c.Real)
 
 	case Complex:
-		return append(floatBytes(c.T.format(), c.Real), floatBytes(c.T.format(), c.Imag)...)
+		return append(floatBytes(a.format(c.T), c.Real), floatBytes(a.format(c.T), c.Imag)...)
 	}
 
 	return []byte(c.Text)

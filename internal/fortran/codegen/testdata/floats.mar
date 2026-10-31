@@ -1,0 +1,264 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_D = 11			; D_floating
+DSC$K_DTYPE_G = 27			; G_floating
+DSC$K_DTYPE_H = 28			; H_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for FLOATS, the main program
+;   D     REAL*8       $LOCAL+0   FLOATS.D
+;   E     REAL*8       $LOCAL+8   FLOATS.E
+;   DV    REAL*8 (3)   $LOCAL+16  FLOATS.DV
+;   Q     REAL*16      $LOCAL+40  FLOATS.Q
+;   QV    REAL*16 (2)  $LOCAL+56  FLOATS.QV
+;   I2    INTEGER*2    $LOCAL+88  FLOATS.I2
+;   X     REAL         $LOCAL+92  FLOATS.X
+;   I     INTEGER      $LOCAL+96  FLOATS.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FLOATS.D:
+	.BLKL	2			; D
+FLOATS.E:
+	.BLKL	2			; E
+FLOATS.DV:
+	.BLKL	6			; DV, REAL*8 (3)
+FLOATS.Q:
+	.BLKL	4			; Q
+FLOATS.QV:
+	.BLKL	8			; QV, REAL*16 (2)
+FLOATS.I2:
+	.BLKB	2			; I2
+	.BLKB	2
+FLOATS.X:
+	.BLKL	1			; X
+FLOATS.I:
+	.BLKL	1			; I
+FLOATS.$C1:
+	.BLKL	1			; DO 10's count
+FLOATS.$X1:
+	.BLKL	4			; a part of an expression, set aside
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FLOATS.$K1:
+	.LONG	^X00004080,^X00000000	; 1D0
+FLOATS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+FLOATS.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_D,DSC$K_CLASS_S
+	.ADDRESS FLOATS.D
+FLOATS.$D2:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_H,DSC$K_CLASS_S
+	.ADDRESS FLOATS.Q
+FLOATS.$D3:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_D,DSC$K_CLASS_A
+	.ADDRESS FLOATS.DV
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	24			; the array's size in bytes
+	.ADDRESS FLOATS.DV-8		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+FLOATS.$D4:
+	.WORD	16			; length
+	.BYTE	DSC$K_DTYPE_H,DSC$K_CLASS_S
+	.ADDRESS FLOATS.QV
+FLOATS.$K2:
+	.LONG	^X00004160,^X00000000	; 3.5D0
+FLOATS.$D5:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_D,DSC$K_CLASS_S
+	.ADDRESS FLOATS.$K2
+FLOATS.$F1:
+	.LONG	^XCCCC3ECC,^XCCCDCCCC	; 0.1D0
+FLOATS.$F2:
+	.LONG	^X00004100		; 2.0
+FLOATS.$F3:
+	.LONG	^X00004001,^X00000000,^X00000000,^X00000000 ; 1Q0
+FLOATS.$F4:
+	.LONG	^X00004120,^X00000000	; 2.5D0
+FLOATS.$F5:
+	.LONG	^X00004000,^X00000000	; 0.5D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     The floating types' instructions (Phase 78, subtask 3).
+;    2        PROGRAM FLOATS
+	.ENTRY	FLOATS,^M<R2,R3>
+;    3        DOUBLE PRECISION D, E, DV(3), DF
+;    4        REAL*16 Q, QV(2)
+;    5        INTEGER*2 I2
+;    6        D = 0.1D0
+	MOVD	FLOATS.$F1,FLOATS.D	; 0.1D0
+;    7        E = 0.1
+	MOVD	FLOATS.$F1,FLOATS.E	; 0.1D0
+;    8        X = D
+	CVTDF	FLOATS.D,FLOATS.X
+;    9        D = X
+	CVTFD	FLOATS.X,FLOATS.D
+;   10        D = D + X*2
+	MULF3	FLOATS.X,FLOATS.$F2,R0
+	CVTFD	R0,R0
+	ADDD2	R0,FLOATS.D
+;   11        E = (D + E)*(D - E)/(E + 1D0)
+	ADDD3	FLOATS.D,FLOATS.E,R0
+	SUBD3	FLOATS.E,FLOATS.D,R2
+	MULD2	R2,R0
+	ADDD3	FLOATS.E,FLOATS.$K1,R2
+	DIVD3	R2,R0,FLOATS.E
+;   12        Q = D
+	CVTDH	FLOATS.D,FLOATS.Q
+;   13        Q = Q*Q + 1Q0
+	MULH3	FLOATS.Q,FLOATS.Q,R0
+	ADDH3	R0,FLOATS.$F3,FLOATS.Q
+;   14        Q = (Q + Q)*(Q - Q)
+	ADDH3	FLOATS.Q,FLOATS.Q,FLOATS.$X1
+	SUBH3	FLOATS.Q,FLOATS.Q,R0
+	MULH3	FLOATS.$X1,R0,FLOATS.Q
+;   15        Q = (Q + QV(I))*(Q - QV(I+1))
+	MOVL	FLOATS.I,R0
+	ADDH3	FLOATS.Q,FLOATS.QV-16[R0],FLOATS.$X1
+	MOVL	FLOATS.I,R0
+	SUBH3	FLOATS.QV[R0],FLOATS.Q,R0
+	MULH3	FLOATS.$X1,R0,FLOATS.Q
+;   16        D = Q
+	CVTHD	FLOATS.Q,FLOATS.D
+;   17        I = D
+	CVTDL	FLOATS.D,FLOATS.I
+;   18        I2 = Q
+	CVTHW	FLOATS.Q,FLOATS.I2
+;   19        D = I2
+	CVTWD	FLOATS.I2,FLOATS.D
+;   20        DV(I) = -DV(I+1)
+	MOVL	FLOATS.I,R0
+	MOVL	FLOATS.I,R1
+	MNEGD	FLOATS.DV[R0],FLOATS.DV-8[R1]
+;   21        QV(I) = 0
+	MOVL	FLOATS.I,R0
+	CLRH	FLOATS.QV-16[R0]
+;   22        IF (D .LT. E) D = 2.5D0
+	CMPD	FLOATS.D,FLOATS.E
+	BLSS	FLOATS.$2
+	BRW	FLOATS.$1
+FLOATS.$2:
+	MOVD	FLOATS.$F4,FLOATS.D	; 2.5D0
+FLOATS.$1:
+;   23        IF (Q .EQ. 0) Q = 1
+	TSTH	FLOATS.Q
+	BEQL	FLOATS.$4
+	BRW	FLOATS.$3
+FLOATS.$4:
+	MOVH	FLOATS.$F3,FLOATS.Q	; 1Q0
+FLOATS.$3:
+;   24        D = DF(D)
+	PUSHAD	FLOATS.D
+	CALLS	#1,G^DF
+	MOVD	R0,FLOATS.D
+;   25        CALL SUB(D, Q, 1D0, DV(I))
+	MOVL	FLOATS.I,R0
+	PUSHAD	FLOATS.DV-8[R0]
+	PUSHAD	FLOATS.$K1
+	PUSHAH	FLOATS.Q
+	PUSHAD	FLOATS.D
+	CALLS	#4,G^SUB
+;   26        PRINT *, D, Q, DV, QV(1), 3.5D0
+	PUSHAB	FLOATS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	FLOATS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FLOATS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FLOATS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FLOATS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	FLOATS.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   27        DO 10 D = 1, 2, 0.5D0
+	MOVL	#3,FLOATS.$C1		; DO 10's count
+	MOVD	FLOATS.$K1,FLOATS.D	; 1D0
+;   28     10 CONTINUE
+FLOATS.L10:				; DO 10's body
+	ADDD2	FLOATS.$F5,FLOATS.D
+	DECL	FLOATS.$C1		; one pass fewer
+	BLEQ	FLOATS.$5
+	BRW	FLOATS.L10
+FLOATS.$5:
+;   29        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for DF, a REAL*8 function
+;   A     REAL*8  argument 1  @DF.A(AP)
+;   DF    REAL*8  $LOCAL+0    DF.DF
+;
+DF.A = 4				; A is argument 1
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DF.DF:	.BLKL	2			; DF, the function's value
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   30        DOUBLE PRECISION FUNCTION DF(A)
+	.ENTRY	DF,^M<>
+;   31        DOUBLE PRECISION A
+;   32        DF = A*A
+	MULD3	@DF.A(AP),@DF.A(AP),DF.DF
+;   33        END
+	MOVD	DF.DF,R0		; the function's value
+	RET
+
+; Storage map for SUB, a subroutine
+;   A     REAL*8      argument 1  @SUB.A(AP)
+;   B     REAL*16     argument 2  @SUB.B(AP)
+;   C     REAL*8      argument 3  @SUB.C(AP)
+;   V     REAL*8 (*)  argument 4  @SUB.V(AP)
+;
+SUB.A = 4				; A is argument 1
+SUB.B = 8				; B is argument 2
+SUB.C = 12				; C is argument 3
+SUB.V = 16				; V is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUB.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_G,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SUB.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+SUB.$F1:
+	.LONG	^X99993FD9,^X999A9999	; 0.1D0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   34        OPTIONS /G_FLOATING
+;   35        SUBROUTINE SUB(A, B, C, V)
+	.ENTRY	SUB,^M<R2>
+;   36        REAL*8 A, C, V(*)
+;   37        REAL*16 B
+;   38        A = A + C*0.1D0 + V(2)
+	MULG3	@SUB.C(AP),SUB.$F1,R0
+	ADDG2	@SUB.A(AP),R0
+	MOVL	#1,R2
+	ADDG3	R0,@SUB.V(AP)[R2],@SUB.A(AP)
+;   39        B = A
+	CVTGH	@SUB.A(AP),@SUB.B(AP)
+;   40        PRINT *, A
+	PUSHAB	SUB.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	MOVAG	@SUB.A(AP),SUB.$D1+4
+	PUSHAQ	SUB.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   41        END
+	RET
+
+	.END	FLOATS

@@ -36,7 +36,7 @@ func (a *analyzer) intRangeError(pos diag.Position, what string, t Type) {
 // realRangeError reports what, of REAL or COMPLEX type t, as out of the
 // range of t's format (REALRANGE).
 func (a *analyzer) realRangeError(pos diag.Position, what string, t Type) {
-	a.report("REALRANGE", pos, what, t.part().String(), t.realRange())
+	a.report("REALRANGE", pos, what, t.part().String(), realRange(a.format(t)))
 }
 
 // constantType is the type of an integer constant whose value is v (never

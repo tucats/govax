@@ -328,7 +328,11 @@ never had.
   manual gives; subtask 11 (2026-10-30) the close-out, MANUAL.md's Appendix B.
   Phase 78 is every expression in every type; subtask 1 (2026-10-30)
   is the survey, its doc's Part A, accepted by the author, and subtask 2
-  (2026-10-30) every length of INTEGER and LOGICAL, with `/[NO]I4`.
+  (2026-10-30) every length of INTEGER and LOGICAL, with `/[NO]I4`, and
+  subtask 3 (2026-10-30) REAL\*8 in D and G (`/[NO]G_FLOATING`, a unit's
+  format, `sema`'s `analyzer.format`) and REAL\*16: the IR's `Double`,
+  `GFloat`, `HFloat`, registers R0–R11 in runs of a value's width, and
+  FTNRTL's G editing at every width.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

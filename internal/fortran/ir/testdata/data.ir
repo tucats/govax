@@ -4,7 +4,7 @@ routine DATAS main
   cell  K       L  $LOCAL+68   variable K
   cell  X       F  $LOCAL+72   variable X
   cell  R       F  $LOCAL+76   array R, 8 bytes
-  cell  D       F  $LOCAL+84   variable D
+  cell  D       D  $LOCAL+84   variable D
   cell  W       W  $LOCAL+92   variable W
   cell  L       B  $LOCAL+94   variable L
   cell  STARS   L  $LOCAL+95   variable STARS
@@ -60,7 +60,7 @@ routine BLKDAT block data
   cell  I       L  SHARED+0    variable I
   cell  J       L  SHARED+4    variable J
   cell  Y       F  SHARED+8    variable Y
-  cell  DBL     F  OTHER+0    array DBL, 16 bytes
+  cell  DBL     D  OTHER+0    array DBL, 16 bytes
   $LOCAL is 0 bytes
   init  OTHER+0 DBL(1) = 00 00 00 00 00 00 00 00
   init  OTHER+8 DBL(2) = 00 00 00 00 00 00 00 00

@@ -4074,13 +4074,14 @@ $FOR
     bytes, each starting with a blank (its carriage control), each value
     in its type's format: LOGICAL as T or F but for LOGICAL*1 and BYTE,
     an integer in 5 columns, INTEGER*2 in 7 columns, INTEGER*4 in 12, REAL
-    with 7 significant digits.
+    with 7 significant digits, REAL*8 with 16 (15 with /G_FLOATING), and
+    REAL*16 with 33.
 
     Syntax:
 
         FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
-                [/CONTINUATIONS=<n>] [/[NO]I4]
+                [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
 
     Parameter:
 
@@ -4128,6 +4129,16 @@ $FOR
                         an integer constant from -32768 to 32767 is an
                         INTEGER*2.  The default is /I4.  A unit's OPTIONS
                         statement overrides this for that unit.
+
+        /G_FLOATING     REAL*8 (DOUBLE PRECISION) values are G_floating:
+        /NOG_FLOATING   53 bits of precision, about 15 decimal digits, and
+                        a range of about 0.56E-308 to 0.9E308.  With
+                        /NOG_FLOATING they are D_floating: 56 bits, about
+                        16 digits, and REAL's range, about 0.29E-38 to
+                        1.7E38.  The default is /NOG_FLOATING.  A unit's
+                        OPTIONS statement overrides this for that unit;
+                        the units of a program must agree, since a value
+                        passed from one format to the other is misread.
 
     The compiler reports each problem it finds with the line it is on:
 

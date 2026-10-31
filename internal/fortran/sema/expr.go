@@ -208,6 +208,14 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.bad(e.Pos)
 		}
 
+		if t := s.Type; t.Kind != Invalid && !t.returned() {
+			a.notImplForm(e.Pos, article(t.String()+" function"))
+
+			s.broken = true
+
+			return a.bad(e.Pos)
+		}
+
 		args := a.args(e.Args)
 		a.unit.calls = append(a.unit.calls, routineRef{s, len(args), e.Pos})
 

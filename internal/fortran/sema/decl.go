@@ -310,7 +310,7 @@ func (a *analyzer) functionType(spec ast.TypeSpec, s *Symbol) (Type, bool) {
 // gave it.
 func (a *analyzer) functionResult() {
 	r := a.unit.Result
-	if r == nil || r.broken || r.Type.Kind == Invalid || r.Type.Compiled() {
+	if r == nil || r.broken || r.Type.Kind == Invalid || r.Type.returned() {
 		return
 	}
 

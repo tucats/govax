@@ -25,11 +25,13 @@
 // is one of its operands the two-operand form does (I = I + J is ADDL2
 // T.J,T.I), or INCL and DECL for adding and subtracting 1.
 //
-// Registers. Interior values go in R0 to R5, the lowest free one first
-// (expr.go). The order operands are computed in decides how many
+// Registers. Interior values go in R0 to R11, the lowest free one first
+// (expr.go); a D or G value takes two in a row and an H value four, which
+// an instruction names by the first (MULD3 R0,R2,R4 is R0:R1 times R2:R3
+// into R4:R5). The order operands are computed in decides how many
 // registers a tree needs, and the rule for the least is Sethi and
 // Ullman's: compute first the operand that needs more, since its value
-// is then held while the other is computed (need counts them). An
+// is then held while the other is computed (need counts them, by width). An
 // expression needing more than a budget has its biggest parts computed
 // first into spill cells, $X1 and on, in the routine's storage (fit), so
 // the registers never run out. The calling standard lets a routine use
@@ -46,9 +48,10 @@
 // and for a dummy, whose @n(AP) has no room for one, part of the index.
 //
 // Constants. An integer is an immediate operand, #n, which MACRO makes a
-// short literal when it fits. A REAL constant is a longword of its
-// F_floating bits in $PDATA, since MACRO would read #n in a floating
-// instruction as a floating value to convert itself, and Decision 16
+// short literal when it fits. A REAL constant is its bits in $PDATA (a
+// longword for REAL*4, two for REAL*8, four for REAL*16), since MACRO
+// would read #n in a floating instruction as a floating value to convert
+// itself, and Decision 16
 // has the compiler's own bits used: folded with package vaxfloat, they
 // round as the CPU does.
 //

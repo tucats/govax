@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/lex"
 	"github.com/tucats/govax/internal/fortran/parse"
 	"github.com/tucats/govax/internal/fortran/source"
+	"github.com/tucats/govax/internal/vaxfloat"
 )
 
 // update rewrites the golden files from what semantic analysis
@@ -106,7 +107,7 @@ func TestErrors(t *testing.T) {
 		{"every type and length", []string{"BYTE B", "LOGICAL*1 L1", "LOGICAL*2 L2", "LOGICAL*4 L4",
 			"INTEGER*2 I2", "INTEGER*4 I4", "REAL*4 R4", "REAL*8 R8", "REAL*16 R16", "DOUBLE PRECISION D",
 			"COMPLEX*8 X8", "COMPLEX*16 X16", "DOUBLE COMPLEX DX", "CHARACTER C", "CHARACTER*65535 C2", "END"}, ""},
-		{"a length not compiled yet, used", []string{"REAL*8 I", "I = 1", "X = I", "END"}, "NOTIMPL@2:7"},
+		{"a type not compiled yet, used", []string{"COMPLEX I", "I = 1", "X = I", "END"}, "NOTIMPL@2:7"},
 		{"a BYTE holds 255", []string{"BYTE B", "B = 255", "END"}, ""},
 		{"a BYTE doesn't hold 256", []string{"BYTE B", "B = 256", "END"}, "INTRANGE@2:11"},
 		{"a BYTE doesn't hold -129", []string{"BYTE B", "B = -129", "END"}, "INTRANGE@2:11"},
@@ -173,7 +174,7 @@ func TestErrors(t *testing.T) {
 		{"IMPLICIT types names", []string{"IMPLICIT INTEGER (A-C), LOGICAL (L)", "A = 1.5", "IF (L) STOP", "END"}, ""},
 		{"IMPLICIT types a dummy", []string{"SUBROUTINE S(D)", "IMPLICIT LOGICAL (D)", "IF (D) RETURN", "END"}, ""},
 		{"IMPLICIT and a type statement", []string{"IMPLICIT LOGICAL (X)", "REAL X", "X = 1.5", "END"}, ""},
-		{"IMPLICIT of a type not compiled", []string{"IMPLICIT DOUBLE PRECISION (D)", "D = 1", "END"}, "NOTIMPL@2:7"},
+		{"IMPLICIT of a type not compiled", []string{"IMPLICIT COMPLEX (D)", "D = 1", "END"}, "NOTIMPL@2:7"},
 		{"IMPLICIT CHARACTER", []string{"IMPLICIT CHARACTER*8 (T-V)", "PRINT *, T", "END"}, "NOTIMPL@2:16"},
 		{"IMPLICIT with a bad length", []string{"IMPLICIT INTEGER*3 (A)", "END"}, "BADLENGTH@1:16"},
 		{"a letter typed twice", []string{"IMPLICIT INTEGER (A-C), REAL (B)", "END"}, "DUPIMPLICIT@1:37"},
@@ -205,7 +206,7 @@ func TestErrors(t *testing.T) {
 		{"constants in declarations", []string{"PARAMETER (N = 10, L = N * 2)", "DIMENSION A(N), B(-N:L)", "CHARACTER*(L) C", "END"}, ""},
 		{"constants in expressions", []string{"PARAMETER (N = 10, PI = 3.1415927)", "X = PI * N", "PRINT *, N, 2 ** N, MAX(N, 3)", "END"}, ""},
 		{"a CHARACTER constant printed", []string{"CHARACTER*(*) T", "PARAMETER (T = 'HI')", "PRINT *, T, T // '!'", "END"}, ""},
-		{"a REAL*8 constant used", []string{"DOUBLE PRECISION D", "PARAMETER (D = 1D0)", "X = D", "Y = D", "END"}, "NOTIMPL@3:11"},
+		{"a COMPLEX constant used", []string{"COMPLEX D", "PARAMETER (D = (1.0, 2.0))", "X = D", "Y = D", "END"}, "NOTIMPL@3:11"},
 		{"a COMPLEX constant expression used", []string{"X = CMPLX(1.0, 2.0)", "END"}, "NOTIMPL@1:11"},
 		{"a constant defined twice", []string{"PARAMETER (N = 1)", "PARAMETER (N = 2)", "END"}, "DUPPARAM@2:18"},
 		{"a constant assigned", []string{"PARAMETER (N = 1)", "N = 2", "END"}, "BADUSE@2:7"},
@@ -297,7 +298,7 @@ func TestErrors(t *testing.T) {
 		{"an overflow folded", []string{"I = 2147483647 + 1", "END"}, "INTRANGE@1:22"},
 		{"a REAL too big", []string{"X = 1E39", "END"}, "REALRANGE@1:11"},
 		{"a REAL too small", []string{"X = 1E-39", "END"}, "REALRANGE@1:11"},
-		{"a REAL*8 constant", []string{"X = 1D0", "END"}, "NOTIMPL@1:11"},
+		{"a COMPLEX constant", []string{"X = (1.0, 2.0)", "END"}, "NOTIMPL@1:11"},
 		{"a REAL product too big", []string{"X = 1E38 * 10", "END"}, "REALRANGE@1:16"},
 		{"a REAL quotient too small", []string{"X = 1E-38 / 1E10", "END"}, ""},
 		{"divide by zero", []string{"I = 1 / 0", "END"}, "DIVZERO@1:13"},
@@ -422,7 +423,7 @@ func TestErrors(t *testing.T) {
 		// messages, and a unit with a declaration this phase can't read
 		// gets only the messages about its structure.
 		{"a bound with an error", []string{"DIMENSION A(N)", "A(1) = 2", "X = A(2) + A", "END"}, "ADJNOTDUMMY@1:19"},
-		{"a type not compiled yet", []string{"REAL*8 B", "L = B + 1", "CALL S(B)", "END"}, "NOTIMPL@2:11"},
+		{"a type not compiled yet", []string{"COMPLEX B", "L = B + 1", "CALL S(B)", "END"}, "NOTIMPL@2:11"},
 		{"a declaration not read yet", []string{"VOLATILE A", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
 		{"a declaration with a syntax error", []string{"INTEGER A(", "X = A(1)", "END IF", "END"}, "SYNTAX@1:17 NOIF@3:7"},
 		{"a FORMAT declares nothing", []string{"10 FORMAT (I5)", "X = 1", "Y = X(2)", "END"}, "NOTIMPL@1:7 NOTARRAY@3:11"},
@@ -439,14 +440,14 @@ func TestErrors(t *testing.T) {
 		{"a DO loop without a label", []string{"DO I = 1, 10", "END DO", "END"}, "NOTIMPL@1:7 NOTIMPL@2:7"},
 		{"the computed GO TO", []string{"GO TO (10, 20), I", "10 CONTINUE", "20 END"}, "NOTIMPL@1:7"},
 		{"VOLATILE", []string{"VOLATILE /B/, X", "END"}, "NOTIMPL@1:7"},
-		{"an OPTIONS statement", []string{"OPTIONS /G_FLOATING", "PROGRAM P", "END"}, "NOTIMPL@1:7"},
+		{"an OPTIONS statement", []string{"OPTIONS /EXTEND_SOURCE", "PROGRAM P", "END"}, "NOTIMPL@1:7"},
 		{"a CHARACTER declaration", []string{"CHARACTER*10 S", "S = 'ABC'", "PRINT *, S", "END"}, "NOTIMPL@2:7"},
-		{"a DOUBLE PRECISION function", []string{"DOUBLE PRECISION FUNCTION D(X)", "D = X", "END"}, "NOTIMPL@1:7"},
+		{"a REAL*16 function", []string{"REAL*16 FUNCTION D(X)", "D = X", "END"}, "NOTIMPL@1:7"},
 		{"two names of a type not compiled", []string{"COMPLEX A, B", "A = B", "END"}, "NOTIMPL@2:7 NOTIMPL@2:11"},
-		{"a length after an untyped function", []string{"FUNCTION F*8(X)", "F = X", "END"}, "NOTIMPL@1:7"},
+		{"a length after an untyped function", []string{"FUNCTION F*16(X)", "F = X", "END"}, "NOTIMPL@1:7"},
 		{"a length after an untyped INTEGER function", []string{"FUNCTION IF*4(X)", "IF = X", "END"}, ""},
 		{"a bad length after an untyped function", []string{"FUNCTION IF*8(X)", "IF = X", "END"}, "BADLENGTH@1:18"},
-		{"a function typed by a type statement", []string{"FUNCTION F(X)", "REAL*8 F", "F = X", "END"}, "NOTIMPL@1:7"},
+		{"a function typed by a type statement", []string{"FUNCTION F(X)", "REAL*16 F", "F = X", "END"}, "NOTIMPL@1:7"},
 		{"a word function", []string{"FUNCTION F(X)", "INTEGER*2 F", "F = X", "END"}, ""},
 		{"OPTIONS /I4 and /NOI4", []string{"OPTIONS /I4/NOI4", "PROGRAM P", "END"}, ""},
 		{"an alternate return's dummy", []string{"SUBROUTINE S(A, *)", "CALL T(*10)", "10 END"}, "NOTIMPL@1:23 NOTIMPL@2:14"},
@@ -1105,5 +1106,79 @@ func TestNoI4(t *testing.T) {
 
 	if got := exprType(t, Options{}, "      OPTIONS /NOI4", "      X = I", "      END"); got != "INTEGER*2" {
 		t.Errorf("OPTIONS /NOI4: %s", got)
+	}
+}
+
+// analyzeOpts is analyzeLines with options.
+func analyzeOpts(t *testing.T, opts Options, lines ...string) (*Program, []diag.Message) {
+	t.Helper()
+
+	var messages diag.List
+
+	program := source.Read(source.Form{}, &source.File{Spec: "T.FOR", Lines: lines}, nil, &messages)
+	file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+	prog := Analyze(file, "T$MAIN", opts, &messages)
+
+	return prog, messages.Messages()
+}
+
+// TestGFloating checks /G_FLOATING and OPTIONS's: a unit's REAL*8 is in
+// G_floating, its constants rounded to G's 53 bits and checked against G's
+// range, and the next unit's format is its own.
+func TestGFloating(t *testing.T) {
+	g := Options{GFloating: true}
+
+	// 0.1 in D_floating and G_floating: D's 56 bits, G's 53, each rounded
+	// (Table 2-1's formats).
+	exact, _ := vaxfloat.Parse("0.1")
+	tenthD, _ := vaxfloat.Round(vaxfloat.D, exact)
+	tenthG, _ := vaxfloat.Round(vaxfloat.G, exact)
+
+	value := func(opts Options, lines ...string) vaxfloat.Value {
+		t.Helper()
+
+		prog, messages := analyzeOpts(t, opts, lines...)
+		if len(messages) > 0 {
+			t.Fatalf("%v: %v", lines, messages)
+		}
+
+		u := prog.Units[0]
+
+		return u.Body[len(u.Body)-2].(*Assign).Value.(*Const).Real
+	}
+
+	cases := []struct {
+		name  string
+		opts  Options
+		lines []string
+		want  vaxfloat.Value
+	}{
+		{"D_floating", Options{}, nil, tenthD},
+		{"/G_FLOATING", g, nil, tenthG},
+		{"OPTIONS /G_FLOATING", Options{}, []string{"      OPTIONS /G_FLOATING"}, tenthG},
+		{"OPTIONS /NOG_FLOATING", g, []string{"      OPTIONS /NOG_FLOATING"}, tenthD},
+	}
+
+	for _, c := range cases {
+		lines := append(c.lines, "      DOUBLE PRECISION D", "      D = 0.1D0", "      END")
+		if got := value(c.opts, lines...); got.Cmp(c.want) != 0 {
+			t.Errorf("%s: 0.1D0 is %s, want %s", c.name, got, c.want)
+		}
+	}
+
+	// G's range is wider than D's.
+	if _, messages := analyzeOpts(t, Options{}, "      DOUBLE PRECISION D", "      D = 1D300", "      END"); len(messages) != 1 || messages[0].Ident != "REALRANGE" {
+		t.Errorf("1D300 in D_floating: %v", messages)
+	}
+
+	if _, messages := analyzeOpts(t, g, "      DOUBLE PRECISION D", "      D = 1D300", "      END"); len(messages) != 0 {
+		t.Errorf("1D300 in G_floating: %v", messages)
+	}
+
+	// Each unit has its own format: OPTIONS lasts to its unit's end.
+	prog, messages := analyzeOpts(t, Options{}, "      OPTIONS /G_FLOATING", "      SUBROUTINE A", "      END",
+		"      SUBROUTINE B", "      END")
+	if len(messages) > 0 || !prog.Units[0].GFloating || prog.Units[1].GFloating {
+		t.Errorf("OPTIONS for one unit: %v, %t %t", messages, prog.Units[0].GFloating, prog.Units[1].GFloating)
 	}
 }

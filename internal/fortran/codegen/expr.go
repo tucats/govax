@@ -8,16 +8,19 @@ import (
 	"github.com/tucats/govax/internal/fortran/ir"
 )
 
-// numRegisters is how many registers expressions use: R0 to R5. R6 to
-// R11 are left for later phases (the character instructions, the
-// optimizer), and AP, FP, SP, and PC are the calling standard's.
-const numRegisters = 6
+// numRegisters is how many registers expressions use: R0 to R11 (Decision
+// 3 of docs/PHASE-78 - FORTRAN expressions and types.md). AP, FP, SP, and
+// PC are the calling standard's. A routine saves the ones from R2 up that
+// it uses, in its entry mask, so a register costs nothing until it is used.
+const numRegisters = 12
 
 // budget is the most registers an expression may need, as need counts
 // them. An expression that needs more has parts computed into spill
-// cells first (fit). Four leaves room for what a statement holds besides:
-// the two operands of the operation that stores into an array element,
-// while the element's index is computed, or a function's value in R0.
+// cells first (fit). Four is an H_floating value's registers; it leaves
+// room for what a statement holds besides: the two operands of the
+// operation that stores into an array element, while the element's index
+// is computed, or a function's value in R0. The pool is three times the
+// budget so that a value's consecutive registers can always be found.
 const budget = 4
 
 // operand is an instruction's operand as MACRO writes it (SQUARES.I,
@@ -33,29 +36,47 @@ func register(n int) string {
 	return "R" + strconv.Itoa(n)
 }
 
-// inRegister is the operand that is register n.
-func inRegister(n int) operand {
-	return operand{text: register(n), regs: []int{n}}
+// inRegister is the operand that is a value of type t in register n: Rn
+// alone, or for a D, G, or H value Rn and the registers after it, which
+// an instruction names by the first (MOVD R2,X moves R2 and R3).
+func inRegister(n int, t ir.Type) operand {
+	regs := make([]int, t.Width())
+	for i := range regs {
+		regs[i] = n + i
+	}
+
+	return operand{text: register(n), regs: regs}
 }
 
-// isRegister reports whether o is a register by itself, not a place
-// in memory a register indexes.
+// isRegister reports whether o is a register (or a run of them) by
+// itself, not a place in memory a register indexes.
 func (o operand) isRegister() bool {
-	return len(o.regs) == 1 && o.text == register(o.regs[0])
+	return len(o.regs) > 0 && o.text == register(o.regs[0])
 }
 
-// alloc takes the lowest free register.
-func (g *routineGen) alloc() int {
-	for i := range g.inUse {
-		if !g.inUse[i] {
-			g.inUse[i], g.used[i] = true, true
+// alloc takes the lowest run of free registers that holds a value of type
+// t: one register, or two or four in a row for a D, G, or H value.
+func (g *routineGen) alloc(t ir.Type) int {
+	w := t.Width()
+
+	for i := 0; i+w <= numRegisters; i++ {
+		free := true
+
+		for j := i; j < i+w; j++ {
+			free = free && !g.inUse[j]
+		}
+
+		if free {
+			for j := i; j < i+w; j++ {
+				g.inUse[j], g.used[j] = true, true
+			}
 
 			return i
 		}
 	}
 
-	// fit keeps every expression within the registers, so this is a
-	// mistake of the code generator's.
+	// fit keeps every expression within the budget, which the pool is
+	// three times, so this is a mistake of the code generator's.
 	panic(fmt.Sprintf("codegen: %s: out of registers", g.r.Name))
 }
 
@@ -70,11 +91,12 @@ func (g *routineGen) free(ops ...operand) {
 
 // need is how many registers computing e takes, by Sethi and Ullman's
 // rule: an operand in memory or a constant needs none, since VAX
-// instructions take them in place; an operation needs a register for
-// its value, and if both its operands need registers, as many as the
-// harder one, or one more when they need as many each (the first's
-// value is held while the second is computed). Computing the harder
-// operand first is what makes that the least.
+// instructions take them in place; an operation needs registers for
+// its value (one, or a D, G, or H value's two or four), and if both its
+// operands need registers, as many as the harder one, or more when what
+// the first leaves held while the second is computed adds to the second's
+// (pairNeed). Computing the harder operand first is what makes that the
+// least.
 func need(e ir.Expr) int {
 	switch e := e.(type) {
 	case *ir.Load:
@@ -86,28 +108,49 @@ func need(e ir.Expr) int {
 	case *ir.Op:
 		x, y := opOperands(e)
 		if y == nil {
-			return max(need(x), 1)
+			return max(need(x), e.T.Width())
 		}
 
-		return pairNeed(need(x), need(y))
+		return pairNeed(x, y, e.T.Width())
 
 	case *ir.Cmp:
 		// One more, for the value -1 or 0, while the operands are held.
-		return pairNeed(need(e.X), need(e.Y)) + 1
+		return pairNeed(e.X, e.Y, 1) + 1
 	}
 
 	return 0
 }
 
-// pairNeed is what an operation on two operands needing a and b
-// registers needs.
-func pairNeed(a, b int) int {
-	n := max(a, b)
-	if a == b {
-		n++
+// pairNeed is what an operation on x and y needs, its value taking w
+// registers: the operand needing more is computed first (operands' order),
+// and while the other is computed, what the first's value holds (held) is
+// in use too. For longwords that is Sethi and Ullman's own rule: as many
+// as the harder operand needs, or one more when they need as many each.
+func pairNeed(x, y ir.Expr, w int) int {
+	a, b := need(x), need(y)
+
+	n := max(a, held(x)+b)
+	if b > a {
+		n = max(b, held(y)+a)
 	}
 
-	return max(n, 1)
+	return max(n, w)
+}
+
+// held is how many registers e's value holds once it is computed: an
+// operation's value, its width; a comparison's or an address's, one; a
+// place in memory, its index register if it has one; a constant, none.
+func held(e ir.Expr) int {
+	switch e := e.(type) {
+	case *ir.Op:
+		return e.T.Width()
+	case *ir.Cmp, *ir.Addr:
+		return 1
+	case *ir.Load:
+		return min(memNeed(e.Mem), 1)
+	}
+
+	return 0
 }
 
 // memNeed is what reaching a place takes: a register for its index, if
@@ -245,18 +288,29 @@ func (g *routineGen) fitMem(m *ir.Mem) *ir.Mem {
 	return &fitted
 }
 
-// spill computes e into a spill cell, and returns the load of it.
+// spill computes e into a spill cell, and returns the load of it. A cell
+// is the size of the value's type, but at least a longword, so the cells
+// after it stay aligned; one the statement isn't using is used again.
 func (g *routineGen) spill(e ir.Expr) ir.Expr {
 	var c *ir.Cell
 
-	if n := len(g.spillFree); n > 0 {
-		c, g.spillFree = g.spillFree[n-1], g.spillFree[:n-1]
-	} else {
+	size := max(e.Type().Size(), 4)
+
+	for i, free := range g.spillFree {
+		if free.Size == size {
+			c = free
+			g.spillFree = append(g.spillFree[:i], g.spillFree[i+1:]...)
+
+			break
+		}
+	}
+
+	if c == nil {
 		c = &ir.Cell{
 			Name:   "$X" + strconv.Itoa(len(g.spills)+1),
 			Kind:   ir.TempCell,
-			T:      ir.Long,
-			Size:   4,
+			T:      e.Type(),
+			Size:   size,
 			Offset: g.localSize(),
 		}
 		g.spills = append(g.spills, c)
@@ -271,7 +325,13 @@ func (g *routineGen) spill(e ir.Expr) ir.Expr {
 // localSize is the size of the routine's $LOCAL storage, the spill
 // cells included.
 func (g *routineGen) localSize() int {
-	return g.r.LocalSize + 4*len(g.spills)
+	size := g.r.LocalSize
+
+	for _, c := range g.spills {
+		size += c.Size
+	}
+
+	return size
 }
 
 // mem is the operand for the place m, its index computed into a
@@ -306,7 +366,7 @@ func (g *routineGen) intoRegister(e ir.Expr) int {
 	}
 
 	g.free(v)
-	r := g.alloc()
+	r := g.alloc(e.Type())
 	g.move(e.Type(), v.text, register(r))
 
 	return r
@@ -327,19 +387,19 @@ func (g *routineGen) eval(e ir.Expr) operand {
 		m := g.mem(e.Mem)
 		g.free(m)
 
-		r := g.alloc()
+		r := g.alloc(ir.Long)
 		g.emit(addressOp("MOVA", e.Mem), ir.Long, m.text, register(r))
 
-		return inRegister(r)
+		return inRegister(r, ir.Long)
 
 	case *ir.Op:
 		x, y := g.operands(e)
 		g.free(x, y)
 
-		r := g.alloc()
+		r := g.alloc(e.T)
 		g.operate(e, x, y, register(r))
 
-		return inRegister(r)
+		return inRegister(r, e.T)
 
 	case *ir.Cmp:
 		return g.comparison(e)
@@ -452,7 +512,7 @@ func (g *routineGen) arithmetic(op string, t ir.Type, x, y operand, dst string, 
 //	unit.$5:
 func (g *routineGen) comparison(e *ir.Cmp) operand {
 	c := g.compareOperands(e)
-	r := g.alloc()
+	r := g.alloc(ir.Long)
 	g.emit("CLRL", ir.Long, register(r))
 
 	cc := g.compare(c)
@@ -462,7 +522,7 @@ func (g *routineGen) comparison(e *ir.Cmp) operand {
 	g.emit("MNEGL", ir.Long, "#1", register(r))
 	g.label(skip, "")
 
-	return inRegister(r)
+	return inRegister(r, ir.Long)
 }
 
 // store writes the code for dst = src.
@@ -486,6 +546,14 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 			}
 
 			g.emit("MOVL", ir.Long, fmt.Sprintf("#^X%08X", uint32(s.Bits)), d.text)
+		case t.Floating():
+			// A D, G, or H constant from its datum, which holds the
+			// compiler's bits (constant).
+			if g.note == "" {
+				g.note = ir.ExprText(s)
+			}
+
+			g.emit("MOV"+t.String(), t, g.constant(s), d.text)
 		default:
 			g.emit("MOV"+t.String(), t, g.constant(s), d.text)
 		}
@@ -516,18 +584,20 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 
 // addressOp is MOVA or PUSHA with the letter for the place m: an index
 // register is multiplied by the size the letter says, so an element's address
-// takes its own type's letter (MOVAW A[R0],R1 for a word's). Only a place with
-// an index cares, and a byte's or word's is the one that isn't L.
+// takes its own type's letter (MOVAW A[R0],R1 for a word's, MOVAD for a
+// D_floating one's, which scales by 8). Only a place with an index cares; a
+// longword's and an F_floating value's are both L.
 func addressOp(op string, m *ir.Mem) string {
 	switch m.T {
-	case ir.Byte, ir.Word:
+	case ir.Byte, ir.Word, ir.Double, ir.GFloat, ir.HFloat:
 		return op + m.T.String()
 	}
 
 	return op + "L"
 }
 
-// move writes MOVL or MOVF from src to dst, unless they are the same.
+// move writes MOVL, MOVF, MOVD, or the like from src to dst, unless they
+// are the same.
 func (g *routineGen) move(t ir.Type, src, dst string) {
 	if src == dst {
 		g.note = ""
@@ -538,19 +608,18 @@ func (g *routineGen) move(t ir.Type, src, dst string) {
 	g.emit("MOV"+t.String(), t, src, dst)
 }
 
-// constant is the operand for a constant: #n for a longword (MACRO makes
+// constant is the operand for a constant: #n for an integer (MACRO makes
 // it a short literal, S^#n, from 0 to 63, and an immediate, I^#n,
-// otherwise); for an F_floating value, a longword in $PDATA holding its
-// bits, since MACRO would take #n in a floating instruction for a
-// floating value of its own to convert (Decision 16 has the compiler's
-// bits used, never MACRO's).
+// otherwise); for a floating value, its longwords in $PDATA, since MACRO
+// would take #n in a floating instruction for a floating value of its own
+// to convert (Decision 16 has the compiler's bits used, never MACRO's).
 func (g *routineGen) constant(c *ir.Const) string {
-	if c.T != ir.Float {
+	if !c.T.Floating() {
 		return "#" + strconv.Itoa(int(c.Int()))
 	}
 
 	for _, d := range append(append([]*ir.Datum(nil), g.r.Data...), g.extra...) {
-		if d.Kind == ir.ConstantDatum && d.Value.T == ir.Float && d.Value.Bits == c.Bits {
+		if d.Kind == ir.ConstantDatum && *d.Value == *c {
 			return g.names.symbol(d.Name)
 		}
 	}

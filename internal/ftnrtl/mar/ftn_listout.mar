@@ -34,6 +34,9 @@
 ;	INTEGER*2	(DSC$K_DTYPE_W)		I7		"     42"
 ;	INTEGER*4	(DSC$K_DTYPE_L)		I12		"          42"
 ;	REAL*4		(DSC$K_DTYPE_F)		1PG15.7E2	"   3.400000    "
+;	REAL*8		(DSC$K_DTYPE_D)		1PG24.16E2
+;	REAL*8		(DSC$K_DTYPE_G)		1PG24.15E3	with /G_FLOATING
+;	REAL*16		(DSC$K_DTYPE_H)		1PG43.33E4
 ;	CHARACTER	(DSC$K_DTYPE_T)		An		the text itself
 ;
 ; A record is at most 80 bytes long, its first the carriage control, a
@@ -47,12 +50,13 @@
 ; between them beyond their fields' own, and a character value's start
 ; on a fresh record are govax's choices, unconfirmed.
 ;
-; G editing (8.3.6.4, Table 8-2) writes a value whose magnitude, rounded
-; to 7 significant digits, is from 0.1 up to 10**7 in F form, in the
-; field's first 11 columns with 7 significant digits, followed by 4
-; blanks; any other in E form, where the scale factor 1P (8.3.7) puts
-; one digit before the point and 7 after it. Zero is below 0.1, so it is
-; E form too (govax's reading, unconfirmed):
+; G editing (8.3.6.4, Table 8-2), Gw.dEe, writes a value whose magnitude,
+; rounded to d significant digits, is from 0.1 up to 10**d in F form, in
+; the field's first w-(e+2) columns with d significant digits, followed
+; by e+2 blanks; any other in E form, where the scale factor 1P (8.3.7)
+; puts one digit before the point and d after it, and the exponent has e
+; digits after its sign. Zero is below 0.1, so it is E form too (govax's
+; reading, unconfirmed). For REAL*4's 1PG15.7E2:
 ;
 ;	3.4		"   3.400000    "	F form: 1 digit, then 6
 ;	1234567.0	"   1234567.    "	F form: 7 digits, then none
@@ -62,8 +66,11 @@
 ;						nearest 10**-5 is below it
 ;	0.0		"  0.0000000E+00"	E form
 ;
-; The digits come from LIBRTL's OTS$$CVT_F_T_R8, the routine VMS's own
-; FORTRAN run-time library uses, which writes a value's decimal digits,
+; and the other types' are the same with their own widths and digits:
+; 0.1D0 is "  0.1000000000000000    " as a REAL*8 in D_floating.
+;
+; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
+; forms), the routines VMS's own FORTRAN run-time library uses, which writes a value's decimal digits,
 ; rounded to as many significant digits as asked, into its caller's
 ; frame (internal/librtl/otscvtfor.go has its interface).
 ;
@@ -82,7 +89,10 @@ DSC$K_DTYPE_LU	= 4			; longword logical
 DSC$K_DTYPE_W	= 7			; word integer
 DSC$K_DTYPE_L	= 8			; longword integer
 DSC$K_DTYPE_F	= 10			; F_floating
+DSC$K_DTYPE_D	= 11			; D_floating
 DSC$K_DTYPE_T	= 14			; text
+DSC$K_DTYPE_G	= 27			; G_floating
+DSC$K_DTYPE_H	= 28			; H_floating
 DSC$K_CLASS_S	= 1			; a scalar or fixed-length string
 DSC$K_CLASS_A	= 4			; an array
 
@@ -243,8 +253,9 @@ PUT_TEXT:
 ; format. A type FTNRTL can't write ends the image with SS$_BADPARAM.
 ;
 ; The routine works in a frame of its own (below FP, made by subtracting
-; from SP): OTS$$CVT_F_T_R8 reads its arguments and writes its results at
-; fixed offsets from the FP it is given, these:
+; from SP): OTS$$CVT_x_T_R8 reads its arguments and writes its results at
+; fixed offsets from the FP it is given, the first seven of these; the
+; rest are this routine's own.
 ;
 CVT_KIND	= -9			; byte: 0 for E editing's rounding
 CVT_SIGNIF	= -16			; the significant digits to round to
@@ -253,17 +264,28 @@ CVT_SIGN	= -24			; out: 1, -1, or 0 for zero
 CVT_EXPONENT	= -28			; out: the value is 0.ddd x 10**this
 CVT_FIRST	= -32			; out: the first digit's offset
 CVT_FDIGITS	= -36			; F editing's digits (not used here)
-DIGITS		= -52			; the digit buffer, 16 bytes
-DIGITS_LEN	= 16
-FIELD		= -68			; the field being formatted, 16 bytes
-FIELD_DESC	= -76			; a descriptor of FIELD
-FRAME_SIZE	= 76
+DIGITS		= -76			; the digit buffer, 40 bytes: a guard
+DIGITS_LEN	= 40			;  digit and REAL*16's 34 digits
+FIELD		= -124			; the field being formatted, 48 bytes
+FIELD_DESC	= -132			; a descriptor of FIELD
+FMT_W		= -136			; a floating format's width, w,
+FMT_D		= -140			;  its significant digits, d,
+FMT_E		= -144			;  its exponent's digits, e,
+FMT_KIND	= -148			;  and which OTS$$CVT_x_T_R8: 0 F,
+					;  1 D, 2 G, 3 H
+FRAME_SIZE	= 148
 
 PUT_VALUE:
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
 	SUBL2	#FRAME_SIZE,SP		; the frame's local storage
 	MOVL	8(AP),R6		; the value
-	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
+	CMPB	4(AP),#DSC$K_DTYPE_G	; G and H are past the table
+	BNEQ	1$
+	BRW	REAL_G
+1$:	CMPB	4(AP),#DSC$K_DTYPE_H
+	BNEQ	2$
+	BRW	REAL_H
+2$:	CASEB	4(AP),#DSC$K_DTYPE_BU,#<DSC$K_DTYPE_T-DSC$K_DTYPE_BU>
 10$:	.WORD	BYTE_I5-10$		; 2: BU
 	.WORD	LOGICAL-10$		; 3: WU
 	.WORD	LOGICAL-10$		; 4: LU
@@ -272,8 +294,8 @@ PUT_VALUE:
 	.WORD	WORD_I7-10$		; 7: W
 	.WORD	LONG_I12-10$		; 8: L
 	.WORD	BAD_TYPE-10$		; 9
-	.WORD	REAL-10$		; 10: F
-	.WORD	BAD_TYPE-10$		; 11
+	.WORD	REAL_F-10$		; 10: F
+	.WORD	REAL_D-10$		; 11: D
 	.WORD	BAD_TYPE-10$		; 12
 	.WORD	BAD_TYPE-10$		; 13
 	.WORD	TEXT-10$		; 14: T
@@ -336,34 +358,58 @@ TEXT:
 	RET
 
 ;
-; 1PG15.7E2, as the module's introduction describes.
+; The floating types, G editing as the module's introduction describes:
+; each type's format sets the field's width (FMT_W), its significant
+; digits (FMT_D), its exponent's digits (FMT_E), and which routine gives
+; its digits (FMT_KIND), and goes on at REAL.
 ;
-REAL:
-	MOVC5	#0,(SP),#^A/ /,#15,FIELD(FP) ; 15 blanks
-	TSTF	(R6)
-	BNEQ	10$
-	MOVC5	#0,(SP),#^A/0/,#DIGITS_LEN,DIGITS(FP) ; zero: all zeros,
-	CLRL	R7			;  the first at offset 0,
-	MOVL	#1,R8			;  0.0 x 10**1, E+00 in E form,
-	CLRL	CVT_SIGN(FP)		;  and no sign
-	BRB	E_FORM
+REAL_F:	MOVL	#15,FMT_W(FP)		; 1PG15.7E2
+	MOVL	#7,FMT_D(FP)
+	MOVL	#2,FMT_E(FP)
+	CLRL	FMT_KIND(FP)
+	BRB	REAL
+REAL_D:	MOVL	#24,FMT_W(FP)		; 1PG24.16E2
+	MOVL	#16,FMT_D(FP)
+	MOVL	#2,FMT_E(FP)
+	MOVL	#1,FMT_KIND(FP)
+	BRB	REAL
+REAL_G:	MOVL	#24,FMT_W(FP)		; 1PG24.15E3
+	MOVL	#15,FMT_D(FP)
+	MOVL	#3,FMT_E(FP)
+	MOVL	#2,FMT_KIND(FP)
+	BRB	REAL
+REAL_H:	MOVL	#43,FMT_W(FP)		; 1PG43.33E4
+	MOVL	#33,FMT_D(FP)
+	MOVL	#4,FMT_E(FP)
+	MOVL	#3,FMT_KIND(FP)
+REAL:	MOVC5	#0,(SP),#^A/ /,FMT_W(FP),FIELD(FP) ; w blanks
 	;
-	; The digits rounded to 7 significant ones tell which form: F, for
-	; a magnitude from 0.1 (0.1 x 10**0) to under 10**7 (0.1 x 10**8).
+	; The digits rounded to d significant ones tell which form: F, for
+	; a magnitude from 0.1 (0.1 x 10**0) to under 10**d (0.1 x
+	; 10**(d+1)). Zero's sign is 0, and its digits are all zeros: E form,
+	; the first digit at offset 0, 0.0 x 10**1, so E+00.
 	;
-10$:	MOVL	#7,R0
+	MOVL	FMT_D(FP),R0
 	BSBW	DIGITS_OF
-	CMPL	R8,#7
-	BGTRU	E_DIGITS		; an exponent below 0 or above 7
+	TSTL	CVT_SIGN(FP)
+	BNEQ	10$
+	CLRL	R7
+	MOVL	#1,R8
+	BRW	E_FORM
+10$:	CMPL	R8,FMT_D(FP)
+	BLEQU	F_FORM			; an exponent from 0 to d
+	BRW	E_DIGITS
 	;
-	; F form in the field's first 11 columns, right-justified: the 7
-	; digits, R8 of them before the point (or a 0, for none), the rest
+	; F form in the field's first w-(e+2) columns, right-justified: the
+	; d digits, R8 of them before the point (or a 0, for none), the rest
 	; after it, and a minus sign before them all for a negative value.
 	; R10 is the column of the leftmost character written so far (MOVC3
 	; changes R0 to R5, so nothing it needs after is kept in those).
 	;
-	SUBL3	R8,#7,R9		; the digits after the point
-	SUBL3	R9,#11,R10		; where they start
+F_FORM:	SUBL3	R8,FMT_D(FP),R9		; the digits after the point
+	ADDL3	#2,FMT_E(FP),R10
+	SUBL3	R10,FMT_W(FP),R10	; the F form's last column, plus 1
+	SUBL2	R9,R10			; where the digits after the point start
 	ADDL3	R7,R8,R0		; the first of them in the buffer
 	MOVC3	R9,DIGITS(FP)[R0],FIELD(FP)[R10]
 	DECL	R10
@@ -379,37 +425,47 @@ REAL:
 	BGEQ	40$
 	DECL	R10
 	MOVB	#^A/-/,FIELD(FP)[R10]
-40$:	PUSHL	#15
-	BRB	PUT_THE_FIELD
+40$:	PUSHL	FMT_W(FP)
+	BRW	PUT_THE_FIELD
 	;
-	; E form: the digits again, rounded to 8 significant ones this
-	; time, then "sd.dddddddEsxx" right-justified in the 15 columns: the
-	; first digit before the point, 7 after it, and the exponent one
-	; less than OTS$'s, since the point is after the first digit rather
-	; than before it.
+	; E form: the digits again, rounded to d+1 significant ones this
+	; time, then "sd.ddd...Esxx" right-justified in the w columns: the
+	; first digit before the point, d after it, and the exponent, e
+	; digits, one less than OTS$'s, since the point is after the first
+	; digit rather than before it. R10 is the first digit's column,
+	; w-(d+e+4).
 	;
 E_DIGITS:
-	MOVL	#8,R0
+	ADDL3	#1,FMT_D(FP),R0
 	BSBW	DIGITS_OF
-E_FORM:
-	MOVB	DIGITS(FP)[R7],FIELD+2(FP)
-	MOVB	#^A/./,FIELD+3(FP)
+E_FORM:	ADDL3	FMT_D(FP),FMT_E(FP),R10
+	SUBL3	R10,FMT_W(FP),R10
+	SUBL2	#4,R10
+	MOVB	DIGITS(FP)[R7],FIELD(FP)[R10]
+	MOVB	#^A/./,FIELD+1(FP)[R10]
 	INCL	R7
-	MOVC3	#7,DIGITS(FP)[R7],FIELD+4(FP)
+	ADDL3	#2,R10,R9
+	MOVC3	FMT_D(FP),DIGITS(FP)[R7],FIELD(FP)[R9]
 	TSTL	CVT_SIGN(FP)
 	BGEQ	10$
-	MOVB	#^A/-/,FIELD+1(FP)
-10$:	MOVB	#^A/E/,FIELD+11(FP)
-	MOVB	#^A/+/,FIELD+12(FP)
+	MOVB	#^A/-/,FIELD-1(FP)[R10]
+10$:	SUBL3	FMT_E(FP),FMT_W(FP),R10
+	SUBL2	#2,R10			; the E's column
+	MOVB	#^A/E/,FIELD(FP)[R10]
+	MOVB	#^A/+/,FIELD+1(FP)[R10]
 	DECL	R8			; the exponent shown
 	BGEQ	20$
-	MOVB	#^A/-/,FIELD+12(FP)
+	MOVB	#^A/-/,FIELD+1(FP)[R10]
 	MNEGL	R8,R8
-20$:	CLRL	R9			; R8:R9 as a quadword, for EDIV
-	EDIV	#10,R8,R0,R1		; tens in R0, units in R1
-	ADDB3	#^A/0/,R0,FIELD+13(FP)
-	ADDB3	#^A/0/,R1,FIELD+14(FP)
-	PUSHL	#15
+20$:	SUBL3	#1,FMT_W(FP),R10	; the last column
+	MOVL	FMT_E(FP),R9		; the exponent's digits, the last first
+30$:	MOVL	R8,R2			; R2:R3 as a quadword, for EDIV
+	CLRL	R3
+	EDIV	#10,R2,R8,R1		; the rest in R8, this digit in R1
+	ADDB3	#^A/0/,R1,FIELD(FP)[R10]
+	DECL	R10
+	SOBGTR	R9,30$
+	PUSHL	FMT_W(FP)
 	;
 	; Every format but A ends here, the field's length on the stack.
 	;
@@ -420,10 +476,11 @@ PUT_THE_FIELD:
 
 ;
 ; DIGITS_OF, a subroutine of PUT_VALUE (BSBW, RSB, in its frame): the
-; value at R6 in the digit buffer, rounded to R0 significant digits. On
-; return R7 is the first digit's offset in the buffer and R8 the
-; decimal exponent; CVT_SIGN(FP) is the sign. OTS$$CVT_F_T_R8 may
-; change R0 to R6, so the value's address is put back in R6 after it.
+; value at R6 in the digit buffer, rounded to R0 significant digits, by
+; the routine for its format, FMT_KIND(FP). On return R7 is the first
+; digit's offset in the buffer and R8 the decimal exponent; CVT_SIGN(FP)
+; is the sign. OTS$$CVT_x_T_R8 may change R0 to R6, so the value's
+; address is put back in R6 after it.
 ;
 DIGITS_OF:
 	CLRB	CVT_KIND(FP)		; E editing's rounding
@@ -435,8 +492,19 @@ DIGITS_OF:
 	MOVL	R6,R0			; the value
 	MOVL	FP,R1			; the frame
 	MOVL	#DIGITS_LEN,R2		; the buffer's size
-	JSB	G^OTS$$CVT_F_T_R8
-	MOVL	(SP)+,R6
+	CASEL	FMT_KIND(FP),#0,#3
+10$:	.WORD	20$-10$			; 0: F
+	.WORD	30$-10$			; 1: D
+	.WORD	40$-10$			; 2: G
+	.WORD	50$-10$			; 3: H
+20$:	JSB	G^OTS$$CVT_F_T_R8
+	BRB	90$
+30$:	JSB	G^OTS$$CVT_D_T_R8
+	BRB	90$
+40$:	JSB	G^OTS$$CVT_G_T_R8
+	BRB	90$
+50$:	JSB	G^OTS$$CVT_H_T_R8
+90$:	MOVL	(SP)+,R6
 	MOVL	CVT_FIRST(FP),R7
 	MOVL	CVT_EXPONENT(FP),R8
 	RSB

@@ -62,6 +62,7 @@ type fortranFlags struct {
 	extendSource bool   // --extend-source
 	dLines       bool   // --d-lines
 	noI4         bool   // --no-i4
+	gFloating    bool   // --g-floating
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -310,6 +311,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.noI4 = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "g-floating",
+		Description: "REAL*8 is G_floating, not D_floating",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.gFloating = true
 
 			return nil
 		},
@@ -790,6 +801,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.noI4 {
 		command += "/NOI4"
+	}
+
+	if f.gFloating {
+		command += "/G_FLOATING"
 	}
 
 	if f.continuationsGiven {
