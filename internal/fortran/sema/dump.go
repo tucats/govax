@@ -248,6 +248,14 @@ func DumpExpr(e Expr) string {
 		return "(//:" + e.T.letter() + " " + strings.Join(parts, " ") + ")"
 	case *FuncRef:
 		return e.Fn.Name + dumpArgs(e.Args)
+	case *IntrinsicRef:
+		args := make([]string, len(e.Args))
+		for i, x := range e.Args {
+			args[i] = DumpExpr(x)
+		}
+
+		// The whole type, not its letter: which length was selected matters.
+		return "(" + e.Op.String() + ":" + e.T.String() + " " + e.Name + " " + strings.Join(args, " ") + ")"
 	case *Unary:
 		return "(" + e.Op.String() + ":" + e.T.letter() + " " + DumpExpr(e.X) + ")"
 	case *Binary:

@@ -1,7 +1,7 @@
 # Phase 78 — FORTRAN expressions and data types
 
 **Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, 5, 6, and 7 done 2026-10-30. Needs Phase 76 (declarations and
+3, 4, 5, 6, and 7 done 2026-10-30, and 8 2026-10-31. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -542,7 +542,7 @@ stops for review.
 7. **Exponentiation:** the table above, in-line small powers in OTS$'s order. Done.
 8. **In-line intrinsics:** the table, generic selection, footnotes 10 and 11,
    conversions, bit functions, FTN$IISHFTC and FTN$JISHFTC, character functions,
-   argument messages.
+   argument messages. Done.
 9. **MTHRTL intrinsics** by format, intrinsic names as arguments, and FTNRTL's
    routines for the names MTHRTL lacks.
 10. **End to end:** programs on each type, mixed arithmetic, character handling, the
@@ -807,3 +807,60 @@ stops for review.
     element, or constant is computed before its statement, so in `IF (I .NE. 0
     .AND. (10/I)**2 .GT. 1)` the quotient is computed even when I is 0 (2.3.4
     allows it, as subtask 5 noted for comparisons).
+- **2026-10-31, subtask 8:** the intrinsic functions written in line.
+  - **`sema`:** Decision 7's table is `intrinsics.go`'s `intrinsicTable`, Table D-3
+    a row per line (generic name, specific name, argument count, argument and result
+    types, how it compiles), read at start-up into `intrinsicForms`; the 219 names
+    are its names now (`TestIntrinsicTable`, which also checks that each of
+    `constFuncs`'s names is the table's, with the same argument count).
+    `intrinsicref.go` analyzes a reference: the count (INTRINARGS), the arguments,
+    and the row (`selectForm`): a generic name's rows by the arguments' type
+    (`argumentType`: one kind, but for CMPLX's two; the highest type, a constant that
+    fits a word beside an INTEGER\*2 being one, as `mixedType` has it, so the bit
+    functions follow D.5.2's "if either I or J or both were INTEGER\*4"); of two rows
+    differing only in an INTEGER result, the default integer's (footnote 10); an
+    INTEGER constant that fits a word is taken by a specific name's INTEGER\*2
+    argument (`IIABS(5)`); BADARG otherwise. What a row becomes: a `Convert` for the
+    conversions (footnote 11's unconverted values among them; INT of an integer has
+    rows to both lengths, so footnote 10 applies to it too), the operators for IAND,
+    IOR, IEOR, NOT, DPROD, and the lexical comparisons, a constant for LEN of a known
+    length, NWORKERS, SIZEOF, and INDEX of constants, and otherwise a new expression,
+    `IntrinsicRef`, of an `IntrinsicOp`, computed in the arguments' type and
+    converted to the result's (MAX1). The functions MTHRTL computes stay NOTIMPL
+    (subtask 9), and so does ISHFT by a count that isn't constant, MTH$JISHFT's.
+    `constNint` returns the default integer, as footnote 10 says.
+  - **`ir`:** `lowerintrinsic.go`. ABS, MAX, MIN, DIM, and SIGN branch (Decision 6):
+    their value goes in a temporary, through blocks of their own before the
+    statement; `divert` ends a block mid-statement without the statement's end's
+    frees (`after`), which wait for its end. SIGN with a constant second argument
+    is decided when compiling. MOD of INTEGERs is `X-(X/Y)*Y`; NINT is a new
+    operator, `Round` (CVTRxL); ZEXT is `Zext`; ISHFT by a constant is `Ash` (ASHL,
+    another new operator) to the left and a `Field` (EXTZV, a new expression) to the
+    right, an INTEGER\*2's done in a longword (MOVZWL) and its low word taken by
+    `Low` (a third operator: MOVW, unchecked); IBITS and BTEST are `Field`s, IBSET
+    and IBCLR an `Ash` mask with OR and AND; ISHFTC calls FTNRTL; ICHAR is MOVZBL of
+    the first byte, CHAR a byte temporary; INDEX is a new expression, `CharIndex`
+    (MATCHC), which may only be an Assign's whole value, as CharCmp may, its value
+    computed from a base (the first string's length plus 1, less the second's)
+    computed before it, less MATCHC's R2. CMPLX and CONJG are complex parts.
+    `Check` knows the new forms.
+  - **`codegen`:** CVTRxL, ASHL, MOVW for `Low` (nothing when it is the same
+    register), EXTZV (`field`, a constant base in a register, since a literal can't
+    be one), MATCHC (`charIndex`). An operand an instruction reads as another type
+    than its own (`Low`'s, ASHL's count, EXTZV's base and size) is put in a register
+    if an index reaches it (`unindexed`), since the index would be scaled by the
+    wrong size.
+  - **FTNRTL:** `ftn_intrinsics.mar`, FTN$JISHFTC and FTN$IISHFTC (the field written
+    twice side by side in a quadword, then SIZE bits of it from SIZE-SHIFT, put
+    back by INSV); vector offsets 48 and 56; GSMATCH 1,5.
+  - **Tests:** `testdata/fortran/intrinsics`, in both paging modes, its output
+    worked by hand; `intrinsics.for` golden in `ir` and `codegen`;
+    `TestIntrinsicRefs`, `TestIntrinsicErrors`, `TestIntrinsicTable`.
+  - **Unconfirmed, ours:** a generic's arguments of one kind (but CMPLX's), and a
+    specific name's of its own type but for a constant that fits; LOGICAL arguments
+    only where Table D-3 lists them; IZEXT's third argument type INTEGER\*2 (the OCR
+    prints LOGICAL\*2 twice); the branching functions computed before their
+    statement, so their arguments are evaluated even where `.AND.` would have
+    skipped them (2.3.4 allows it); SIZEOF of an adjustable array NOTIMPL (its size
+    is a run-time value, Phase 79's); ISHFTC's arguments must be within Table D-3's
+    limits, and FTNRTL returns I for a SIZE less than 1.

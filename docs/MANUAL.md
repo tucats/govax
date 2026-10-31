@@ -4520,8 +4520,21 @@ output it prints, and programs of several files in its `modules` directory.
   isn't known when compiling, as with a passed-length dummy argument, a
   dynamic string from LIB$SGET1_DD, freed by LIB$SFREE1_DD at the statement's
   end). `**` on every numeric type: an INTEGER, REAL, or COMPLEX base, an
-  INTEGER, REAL, or COMPLEX exponent. The intrinsic functions above work so far
-  only on constants, computed when compiling.
+  INTEGER, REAL, or COMPLEX exponent.
+- **Intrinsic functions** written in line, by their generic names (chosen by
+  the arguments' type, a small constant beside an INTEGER\*2 being one) or
+  their specific ones: ABS, IABS, MAX, MIN, MAX0, MIN0, MAX1, MIN1, AMAX0,
+  AMIN0, DIM, IDIM, SIGN, ISIGN, and MOD of INTEGERs (each of every length);
+  INT, IFIX, NINT, IDNINT, IQNINT, ZEXT, REAL, FLOAT, SNGL, DBLE, DFLOAT,
+  QEXT, QFLOAT and their specific names, which return the default integer
+  (INTEGER\*2 under `/NOI4`) where Table D-3's footnote 10 says so; CMPLX,
+  DCMPLX, AIMAG, DIMAG, DREAL, CONJG, DCONJG, DPROD; IAND, IOR, IEOR, NOT,
+  ISHFT by a constant count, IBITS, IBSET, IBCLR, BTEST, and ISHFTC (by FTNRTL's
+  `FTN$IISHFTC` and `FTN$JISHFTC`); LEN, INDEX, ICHAR, CHAR, LLT, LLE, LGT,
+  LGE; NWORKERS (1) and SIZEOF. The functions MTHRTL computes (SQRT, the
+  logarithms and trigonometric functions, AINT, ANINT, a REAL MOD, CABS) and
+  ISHFT by a count that isn't constant are reported not implemented yet, and
+  so is an intrinsic function's name as an argument.
 - **Statements:** assignment, of a character value to a character place cut
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
@@ -4765,6 +4778,8 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$WRITE_LIST(icb)` | Starts a `WRITE (*,*)` statement, the same way |
 | `FTN$IO_ITEM(desc)` | Writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record |
+| `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
+| `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
 control: each record begins with a blank (a new line at the terminal),
@@ -4837,6 +4852,7 @@ VAX> MACRO FTN_VECTOR
 VAX> MACRO FTN_CONTROL
 VAX> MACRO FTN_UNITS
 VAX> MACRO FTN_LISTOUT
+VAX> MACRO FTN_INTRINSICS
 VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
 ```
@@ -4893,6 +4909,22 @@ FORTRAN compiler was available to check them). So far:
   less is an error in a constant expression, and `MTH$_UNDEXP` when the
   program runs. MIN, MAX, MOD, DIM, IAND, IOR, and IEOR need arguments of
   one kind.
+- An intrinsic function's arguments must be of one kind (but CMPLX's two),
+  and a generic name selects by the highest of their types, as in a mixed
+  operation: `MAX(I2, 5)` is IMAX0, an INTEGER\*2, since the constant fits a
+  word, and `MAX(I2, J)` with J an INTEGER\*4 is JMAX0. A specific name for
+  INTEGER\*2 arguments takes an INTEGER constant that fits one (`IIABS(5)`), but
+  no other argument of another type. LOGICAL arguments are taken only where
+  Table D-3 lists them (ZEXT, CHAR).
+- IIBITS, IIBCLR, and IISHFTC return an INTEGER\*4, as Table D-3 prints them,
+  computing in a word and sign-extending it: with `I2` at -1, `IBCLR(I2, 0)` is
+  the INTEGER\*4 -2. IIBSET returns an INTEGER\*2, and BITEST a LOGICAL\*2.
+- The intrinsic functions that choose a value (ABS, MAX, MIN, DIM, SIGN) are
+  computed before the statement that uses them, as a function's call is, so in
+  `IF (I .NE. 0 .AND. MAX(10/I, 1) .GT. 2)` the quotient is computed even when
+  `I` is 0. MOD of INTEGERs is `X - (X/Y)*Y`, which a zero Y ends with the
+  divide-by-zero trap. ISHFT by a constant count is written in line, a count
+  of the integer's width or more giving 0.
 - Variables are placed in `$LOCAL` at their natural alignment, at most
   a longword's: a `LOGICAL*1` or a CHARACTER variable anywhere, an
   `INTEGER*2` on a word, the rest on a longword.

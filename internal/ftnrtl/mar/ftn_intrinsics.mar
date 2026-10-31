@@ -1,0 +1,75 @@
+	.TITLE	FTN_INTRINSICS - FTNRTL's intrinsic functions
+	.IDENT	/V1.0/
+;
+; The intrinsic functions (the 1988 Language Reference Manual, 6.3 and
+; Table D-3) that a compiled program calls rather than computing in line:
+; the ones no instruction or two does, and which MTHRTL, the VMS
+; mathematics library, hasn't.
+;
+; Each is called as a FORTRAN function is, with CALLS: its arguments by
+; reference (the argument list holds their addresses), its value in R0.
+;
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; value = FTN$JISHFTC(i, shift, size)
+; value = FTN$IISHFTC(i, shift, size)
+;
+; ISHFTC, the circular shift (Table D-3 and section D.5.2): the rightmost
+; SIZE bits of I shifted SHIFT places to the left (-SHIFT to the right),
+; the bits shifted out at one end coming back in at the other; I's other
+; bits are as they were. JISHFTC's arguments are INTEGER*4, IISHFTC's
+; INTEGER*2; both return an INTEGER*4, as Table D-3 prints it, IISHFTC's
+; the word it computes, sign-extended (Phase 78's survey, the author's
+; answer 3). SIZE must be from 1 to the integer's bits, and SHIFT's
+; magnitude at most SIZE; I is returned as it is for a SIZE less than 1.
+;
+	.ENTRY	FTN$JISHFTC,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	@4(AP),R0		; I
+	MOVL	@8(AP),R1		; SHIFT
+	MOVL	@12(AP),R2		; SIZE
+	BSBB	CIRCULAR
+	RET
+
+	.ENTRY	FTN$IISHFTC,^M<R2,R3,R4,R5,R6,R7>
+	MOVZWL	@4(AP),R0		; I, a word, the longword's high bits clear
+	CVTWL	@8(AP),R1		; SHIFT
+	CVTWL	@12(AP),R2		; SIZE
+	BSBB	CIRCULAR
+	CVTWL	R0,R0			; the word, sign-extended
+	RET
+
+;
+; CIRCULAR shifts the low R2 bits of R0 R1 places to the left, circularly,
+; changing R1 and R3 to R7.
+;
+; A shift to the right is the shift of SIZE less that to the left, and a
+; shift of SIZE none. The field F is written twice side by side in the
+; quadword R4:R5, F above F; SIZE bits of that, from bit SIZE-SHIFT, are F
+; rotated SHIFT places to the left, which INSV puts back in R0's field.
+; EXTZV takes a field from a register and the one after it when the field
+; doesn't end in the first, as long as it starts in the first: SIZE-SHIFT
+; is from 1 to 31, since a shift of none has returned already.
+;
+CIRCULAR:
+	TSTL	R2			; a size of 1 or more?
+	BLEQ	30$			; no: I as it is
+	TSTL	R1			; a shift to the right
+	BGEQ	10$
+	ADDL2	R2,R1			; is one of SIZE less to the left
+10$:	CMPL	R1,R2			; a shift of SIZE
+	BLSS	20$
+	SUBL2	R2,R1			; is none
+20$:	TSTL	R1
+	BEQL	30$			; no shift: I as it is
+	EXTZV	#0,R2,R0,R4		; F, its high bits clear
+	CLRL	R5
+	ASHQ	R2,R4,R6		; F shifted left SIZE places
+	BISL2	R6,R4			; F twice, side by side, in R4:R5
+	BISL2	R7,R5
+	SUBL3	R1,R2,R3		; SIZE-SHIFT
+	EXTZV	R3,R2,R4,R3		; F rotated SHIFT places to the left
+	INSV	R3,#0,R2,R0		; back in I's field
+30$:	RSB
+
+	.END

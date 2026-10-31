@@ -1,0 +1,126 @@
+routine INTRINS main
+  cell  I       L  $LOCAL+0    variable I
+  cell  J       L  $LOCAL+4    variable J
+  cell  K       L  $LOCAL+8    variable K
+  cell  N       L  $LOCAL+12   array N, 12 bytes
+  cell  I2      W  $LOCAL+24   variable I2
+  cell  J2      W  $LOCAL+26   variable J2
+  cell  L       L  $LOCAL+28   variable L
+  cell  L2      W  $LOCAL+32   variable L2
+  cell  X       F  $LOCAL+36   variable X
+  cell  Y       F  $LOCAL+40   variable Y
+  cell  D       D  $LOCAL+44   variable D
+  cell  C       Q  $LOCAL+52   variable C
+  cell  S       B  $LOCAL+60   variable S
+  cell  T       B  $LOCAL+68   variable T
+  cell  $T1     L  $LOCAL+72   temporary
+  cell  $T2     L  $LOCAL+76   temporary
+  cell  $T3     W  $LOCAL+80   temporary
+  cell  $T4     F  $LOCAL+84   temporary
+  cell  $T5     F  $LOCAL+88   temporary
+  cell  $T6     L  $LOCAL+92   temporary
+  cell  $T7     B  $LOCAL+96   temporary
+  cell  $T8     B  $LOCAL+100  temporary
+  $LOCAL is 108 bytes
+  datum $K1     L 3
+  datum $K2     L 8
+  datum $K3     text 'AB'
+  datum $K4     text 'M'
+B1:
+  ; line 15
+  assign $T1 = I
+  branch lt.L($T1, 0) B2 B3
+B2:
+  assign $T1 = neg.L($T1)
+  jump B3
+B3:
+  assign $T2 = I
+  branch gt.L(J, $T2) B4 B5
+B4:
+  assign $T2 = J
+  jump B5
+B5:
+  branch gt.L(N-4[K], $T2) B6 B7
+B6:
+  assign $T2 = N-4[K]
+  jump B7
+B7:
+  assign $T3 = J2
+  branch lt.W(5, $T3) B8 B9
+B8:
+  assign $T3 = 5
+  jump B9
+B9:
+  assign I = sub.L(add.L($T1, $T2), cvt.WL($T3))
+  ; line 16
+  assign $T4 = X
+  branch lt.F(Y, 0.0) B11 B10
+B10:
+  branch lt.F($T4, 0.0) B12 B13
+B11:
+  branch gt.F($T4, 0.0) B12 B13
+B12:
+  assign $T4 = neg.F($T4)
+  jump B13
+B13:
+  assign $T5 = 0.0
+  branch gt.F(X, 1.0) B14 B15
+B14:
+  assign $T5 = sub.F(X, 1.0)
+  jump B15
+B15:
+  assign $T2 = I
+  branch gt.L(J, $T2) B16 B17
+B16:
+  assign $T2 = J
+  jump B17
+B17:
+  assign X = add.F(add.F($T4, $T5), cvt.LF($T2))
+  ; line 17
+  assign I = add.L(add.L(add.L(sub.L(I, mul.L(div.L(I, J), J)), cvt.FL(X)), round.DL(D)), cvt.WL(I2))
+  ; line 18
+  assign $T3 = I2
+  branch lt.W($T3, 0) B18 B19
+B18:
+  assign $T3 = neg.W($T3)
+  jump B19
+B19:
+  assign I2 = add.W(add.W(cvt.LW(round.FL(X)), I2), $T3)
+  ; line 19
+  assign X = cvt.DF(add.D(cvt.FD(add.F(C+4, C)), mul.D(cvt.FD(X), cvt.FD(Y))))
+  ; line 20
+  assign $T5 = add.F(X, C)
+  assign C+4 = add.F(cvt.LF(I), neg.F(C+4))
+  assign C = $T5
+  ; line 21
+  assign I = add.L(add.L(add.L(and.L(I, 255), or.L(I, J)), xor.L(I, -1)), not.L(J))
+  ; line 22
+  assign I2 = add.W(add.W(low.LW(ash.L(zext.WL(I2), 3)), low.LW(field(zext.WL(I2), 3, 13))), or.W(I2, 16))
+  ; line 23
+  assign I = add.L(add.L(add.L(ash.L(I, 5), field(I, 5, 27)), field(I, J, 4)), cvt.WL(low.LW(field(zext.WL(I2), 2, 3))))
+  ; line 24
+  call FTN$JISHFTC(ref I, ref $K1, ref $K2) -> $T2
+  assign I = add.L(add.L(and.L(I, not.L(ash.L(1, J))), cvt.WL(and.W(I2, not.W(low.LW(ash.L(1, cvt.WL(J2))))))), $T2)
+  ; line 25
+  assign L = neg.L(field(I, 3, 1))
+  ; line 26
+  assign L2 = low.LW(neg.L(field(zext.WL(I2), cvt.WL(J2), 1)))
+  ; line 27
+  assign $T2 = index(S(8), $K3(2), 7)
+  assign $T1 = sub.L(sub.L(9, I), sub.L(K, J))
+  assign $T6 = index(S-1[I](sub.L(9, I)), S-1[J](add.L(sub.L(K, J), 1)), $T1)
+  assign I = add.L(add.L(add.L($T2, zext.BL(S-1[I])), $T6), 8)
+  ; line 28
+  assign $T7 = low.LB(I)
+  move T(1) = $T7(1)
+  ; line 29
+  assign $T7 = low.LB(J)
+  move $T8(1) = $T7(1)
+  move $T8+1(7) = S+1(7)
+  move S(8) = $T8(8)
+  ; line 30
+  assign $T6 = lt.T(S(8), $K4(1))
+  assign $T1 = ge.T(S-1[I](add.L(sub.L(J, I), 1)), T(1))
+  assign L = and.L($T6, $T1)
+  ; line 31
+  return 1

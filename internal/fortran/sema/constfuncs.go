@@ -282,19 +282,23 @@ func constIchar(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) 
 }
 
 // constNint is NINT(r): a REAL rounded to the nearest INTEGER, halves
-// away from zero.
+// away from zero, of the unit's default integer type (footnote 10 of Table
+// D-3).
 func constNint(ev *evaluator, e *ast.Apply, args []*Const) (*Const, *constErr) {
 	x := args[0]
 	if x.T.Kind != Real {
 		return nil, ev.badArg(e, "REAL", x)
 	}
 
+	t := ev.a.defaultInt
+	lo, hi := t.intRange()
+
 	i := x.Real.Int(true)
-	if !i.IsInt64() || i.Int64() < minInt || i.Int64() > maxInt {
-		return nil, ev.intRange(e.Pos, valueText, IntegerType)
+	if !i.IsInt64() || i.Int64() < lo || i.Int64() > hi {
+		return nil, ev.intRange(e.Pos, valueText, t)
 	}
 
-	return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: int32(i.Int64())}, nil
+	return &Const{exprBase: exprBase{t, e.Pos}, Int: int32(i.Int64())}, nil
 }
 
 // constDprod is DPROD(x, y): the REAL*8 product of two REAL*4 values,

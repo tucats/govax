@@ -154,3 +154,40 @@ func (g *routineGen) charComparison(e *ir.CharCmp) operand {
 
 	return inRegister(r, ir.Long)
 }
+
+// charIndex writes INDEX(X, Y), a CharIndex: MATCHC searches X for Y, and
+// leaves Z set and in R2 the bytes of X after the match if it finds it. The
+// register is taken after the MATCHC, as charComparison's is, and the value
+// is the base (X's length plus 1, less Y's: a constant or a temporary) less
+// R2, or 0.
+//
+//	MATCHC  #2,PROG.$K1,#10,PROG.S
+//	BNEQ    unit.$5
+//	SUBL3   R2,#9,R0
+//	BRB     unit.$6
+//	unit.$5:
+//	CLRL    R0
+//	unit.$6:
+func (g *routineGen) charIndex(e *ir.CharIndex) operand {
+	ops := g.textOperands(e.Y, e.X)
+	g.emit("MATCHC", ir.None, ops[0].text, ops[1].text, ops[2].text, ops[3].text)
+	g.free(ops...)
+	g.changes(3)
+
+	r := g.alloc(ir.Long)
+	if r == 2 {
+		panic(fmt.Sprintf("codegen: %s: MATCHC's R2 taken for INDEX's value", g.r.Name))
+	}
+
+	base := g.eval(e.Base)
+	no, done := g.newLabel(), g.newLabel()
+	g.emit("BNEQ", ir.None, no)
+	g.emit("SUBL3", ir.Long, "R2", base.text, register(r))
+	g.emit("BRB", ir.None, done)
+	g.label(no, "")
+	g.emit("CLRL", ir.Long, register(r))
+	g.label(done, "")
+	g.free(base)
+
+	return inRegister(r, ir.Long)
+}

@@ -357,7 +357,16 @@ never had.
   a `**`'s operands the types of the OTS$ routine that computes it, and
   `ir/lowerpower.go` calls it by value or, for an INTEGER or REAL base
   and a constant exponent from 1 to 8, multiplies it out in
-  `vaxfloat.PowerBySquaring`'s order; a COMPLEX power is always called.
+  `vaxfloat.PowerBySquaring`'s order; a COMPLEX power is always called, and
+  subtask 8 (2026-10-31) the intrinsic functions written in line: Table
+  D-3 as a table (`sema/intrinsics.go`, a row per line), a reference's row
+  selected by its arguments' type and footnote 10's default integer
+  (`sema/intrinsicref.go`), becoming a conversion, an operator, a constant,
+  or an `IntrinsicRef`; lowered by `ir/lowerintrinsic.go` (the choosing
+  functions through blocks before the statement, `divert`; the IR's `Round`,
+  `Ash`, `Low`, `Field` (EXTZV), and `CharIndex` (MATCHC)); ISHFTC by
+  FTNRTL's `FTN$IISHFTC`/`FTN$JISHFTC` (`ftn_intrinsics.mar`, GSMATCH 1,5);
+  MTHRTL's functions stay NOTIMPL until subtask 9.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1849,7 +1858,8 @@ expect adjustment as phases land):
   FTN$STOP; `ftn_units.mar`, the default output unit, SYS$OUTPUT with
   RAT=FTN; `ftn_listout.mar`, list-directed output, FTN$PRINT_LIST,
   FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END, with the control block's
-  layout, Phase 75), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  layout, Phase 75; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
+  lacks, FTN$IISHFTC and FTN$JISHFTC, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;
   `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
   as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
   assembles and links it with `internal/asm` and `internal/link` as

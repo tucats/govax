@@ -453,6 +453,21 @@ type (
 		Args []Arg
 	}
 
+	// IntrinsicRef is a reference to an intrinsic function compiled in line
+	// (section 6.3; intrinsics.go): Name is the specific function selected
+	// (JMAX0, IIBITS), or the generic one where Table D-3 gives none; Op is
+	// what it computes; and Args are its arguments, each converted to the
+	// type the function takes (for CMPLX's two, to the result's parts'
+	// type). Its type is the type it computes in, which a Convert around it
+	// makes the result's where footnote 10 says they differ (MAX1 is the
+	// INTEGER of a REAL maximum).
+	IntrinsicRef struct {
+		exprBase
+		Name string
+		Op   IntrinsicOp
+		Args []Expr
+	}
+
 	// Substring is X(Lower:Upper), part of a CHARACTER variable or array
 	// element (section 2.2.4): X is a *Var or an *Elem, and Lower and Upper
 	// INTEGER positions in it, counted from 1; Upper is nil for X's last
@@ -515,6 +530,43 @@ type (
 		exprBase
 	}
 )
+
+// IntrinsicOp is what an IntrinsicRef computes. Those the language's operators
+// can say (IAND is .AND. on INTEGERs, DPROD a product, LLT a comparison)
+// and the conversions are those expressions instead.
+type IntrinsicOp int
+
+// The operations. Each says what its arguments are, by position.
+const (
+	AbsOp      IntrinsicOp = iota + 1 // |X|, of an INTEGER or REAL X
+	MaxOp                             // the largest of the arguments
+	MinOp                             // the smallest
+	DimOp                             // X-Y if X is greater, else 0
+	SignOp                            // |X| with Y's sign (+ for a Y of 0)
+	ModOp                             // X - (X/Y)*Y, of INTEGERs
+	NintOp                            // a REAL rounded to the nearest INTEGER, halves away from 0
+	ZextOp                            // an INTEGER or LOGICAL made longer with zeros, not its sign
+	ImagOp                            // a COMPLEX value's imaginary part
+	CmplxOp                           // the COMPLEX value (X, Y)
+	ConjgOp                           // a COMPLEX value with its imaginary part negated
+	ShiftOp                           // ISHFT(I, N): I's bits shifted left N places, right -N; N constant
+	BitsOp                            // IBITS(I, POS, LEN): LEN bits of I from bit POS
+	BitSetOp                          // IBSET(I, POS): I with bit POS set
+	BitClearOp                        // IBCLR(I, POS): I with bit POS clear
+	BitTestOp                         // BTEST(I, POS): bit POS of I, a LOGICAL
+	CircularOp                        // ISHFTC(I, SHIFT, SIZE): FTNRTL's FTN$IISHFTC or FTN$JISHFTC
+	LenOp                             // a passed-length CHARACTER value's length
+	IndexOp                           // INDEX(C1, C2): where C2 first is in C1, or 0
+	IcharOp                           // a CHARACTER value's first character's code
+	CharOp                            // the CHARACTER*1 whose code is X
+)
+
+// String is the operation's name in the dump.
+func (op IntrinsicOp) String() string {
+	return [...]string{"?", "abs", "max", "min", "dim", "sign", "mod", "nint", "zext", "imag", "cmplx",
+		"conjg", "shift", "bits", "bitset", "bitclear", "bittest", "circular", "len", "index",
+		"ichar", "char"}[op]
+}
 
 // Arg is an actual argument. Expr is nil for a null argument (CALL
 // S(A,,B)). Copy is set for a parenthesized variable or array element,

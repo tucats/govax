@@ -145,7 +145,7 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 // apply analyzes Name(args): an array element if Name is an array, and
 // otherwise a reference to an external function of Name's type. A name
 // the unit hasn't classified that names one of FORTRAN's intrinsic
-// functions is that function, Phase 78's.
+// functions is that function (intrinsicRef).
 func (a *analyzer) apply(e *ast.Apply) Expr {
 	s := a.unit.byName[e.Name]
 
@@ -154,6 +154,10 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			if v, ok := a.folded(e); ok {
 				return v
 			}
+		}
+
+		if intrinsics[e.Name] {
+			return a.intrinsicRef(e)
 		}
 
 		if what := builtin(e.Name, true); what != "" {

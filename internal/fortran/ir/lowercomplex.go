@@ -80,6 +80,16 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 
 		return &Load{r}, &Load{i}
 
+	case *sema.IntrinsicRef:
+		// CMPLX(X, Y), its parts converted already; or CONJG(Z).
+		if e.Op == sema.CmplxOp {
+			return l.expr(e.Args[0]), l.expr(e.Args[1])
+		}
+
+		re, im := l.complexParts(e.Args[0])
+
+		return re, arith(Neg, p, im, nil)
+
 	case *sema.Unary:
 		// Negation: a COMPLEX has no .NOT.
 		re, im := l.complexParts(e.X)
@@ -248,6 +258,9 @@ func readsMemory(e Expr) bool {
 
 	case *Cmp:
 		return readsMemory(e.X) || readsMemory(e.Y)
+
+	case *Field:
+		return readsMemory(e.X) || readsMemory(e.Pos) || readsMemory(e.Size)
 	}
 
 	return false

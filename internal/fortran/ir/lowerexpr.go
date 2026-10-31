@@ -38,6 +38,9 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 
 		return &Load{result}
 
+	case *sema.IntrinsicRef:
+		return l.intrinsic(e)
+
 	case *sema.Unary:
 		op := Neg
 		if e.Op == ast.Not {
@@ -165,6 +168,10 @@ func (l *lowerer) chars(e sema.Expr) Text {
 
 	case *sema.Concat:
 		return l.concat(e)
+
+	case *sema.IntrinsicRef:
+		// CHAR(I), the one intrinsic function with a CHARACTER value.
+		return l.char(e)
 
 	case *sema.Substring:
 		t := l.chars(e.X)
@@ -536,6 +543,20 @@ func foldUnary(op Operator, t Type, x *Const) *Const {
 		// The bits as memory holds them, read as an unsigned number.
 		return IntConst(t, int32(uint32(x.Bits)))
 
+	case op == Low:
+		// A shorter type's value is the longer one's low bits.
+		return IntConst(t, x.Int())
+
+	case op == Round:
+		// CVTRFL rounds halves away from zero; a value out of a Long's range
+		// is left for the CPU, which sets V.
+		i := x.Real().Int(true)
+		if !i.IsInt64() || i.Int64() < math.MinInt32 || i.Int64() > math.MaxInt32 {
+			return nil
+		}
+
+		return LongConst(int32(i.Int64()))
+
 	case op == Cvt:
 		// CVTFL truncates; a value out of the type's range is left
 		// for the CPU, which sets V.
@@ -590,6 +611,8 @@ func foldBinary(op Operator, t Type, x, y *Const) *Const {
 			return IntConst(t, a|b)
 		case Xor:
 			return IntConst(t, a^b)
+		case Ash:
+			return LongConst(shiftArithmetic(a, b))
 		}
 
 		return nil
@@ -620,4 +643,39 @@ func foldBinary(op Operator, t Type, x, y *Const) *Const {
 	}
 
 	return RealConst(t, v)
+}
+
+// shiftArithmetic is ASHL's value: x shifted left n places, or right -n
+// places with its sign copied in from the left; n is the count's low byte, a
+// signed number, so a shift of 32 or more leaves 0 to the left and the sign
+// to the right.
+func shiftArithmetic(x, n int32) int32 {
+	n = int32(int8(n))
+
+	switch {
+	case n >= 32:
+		return 0
+	case n >= 0:
+		return x << uint(n)
+	case n <= -32:
+		return x >> 31
+	}
+
+	return x >> uint(-n)
+}
+
+// field is the bit field of x (a Long) size bits from bit pos, as an unsigned
+// Long (Field), folded when all three are constants.
+func field(x, pos, size Expr) Expr {
+	cx, okx := x.(*Const)
+	cp, okp := pos.(*Const)
+	cs, oks := size.(*Const)
+
+	if okx && okp && oks && cp.Int() >= 0 && cs.Int() >= 0 && cp.Int()+cs.Int() <= 32 {
+		bits := uint64(uint32(cx.Int())) >> uint(cp.Int())
+
+		return LongConst(int32(uint32(bits & (1<<uint(cs.Int()) - 1))))
+	}
+
+	return &Field{x, pos, size}
 }

@@ -83,10 +83,14 @@ func (c *checker) block(b *Block) error {
 		switch s := s.(type) {
 		case *Assign:
 			if err = c.mem(s.Dst); err == nil {
-				// A character comparison may be the whole value assigned.
-				if cmp, ok := s.Src.(*CharCmp); ok {
-					err = c.charCompare(cmp)
-				} else {
+				// A character comparison or index may be the whole value
+				// assigned.
+				switch src := s.Src.(type) {
+				case *CharCmp:
+					err = c.charCompare(src)
+				case *CharIndex:
+					err = c.charIndex(src)
+				default:
 					err = c.expr(s.Src)
 				}
 			}
@@ -222,6 +226,26 @@ func (c *checker) charCompare(e *CharCmp) error {
 	return c.text(e.Y)
 }
 
+// charIndex checks a character index's two places, and that its base holds
+// no register across MATCHC: a constant, or a load of a temporary.
+func (c *checker) charIndex(e *CharIndex) error {
+	if err := c.charCompare(&CharCmp{X: e.X, Y: e.Y}); err != nil {
+		return err
+	}
+
+	switch b := e.Base.(type) {
+	case *Const:
+	case *Load:
+		if b.Mem.Cell == nil || b.Mem.Cell.Kind != TempCell || b.Mem.Index != nil {
+			return fmt.Errorf("%s has a base that isn't a temporary", ExprText(e))
+		}
+	default:
+		return fmt.Errorf("%s has a base that must be computed", ExprText(e))
+	}
+
+	return c.expr(e.Base)
+}
+
 // text checks a CHARACTER value's place: a Byte place and a Long length.
 func (c *checker) text(t Text) error {
 	if t.Mem.T != Byte {
@@ -253,7 +277,7 @@ func (c *checker) expr(e Expr) error {
 			return err
 		}
 
-		if e.Op != Cvt && e.Op != Zext && e.X.Type() != e.T {
+		if e.Op != Cvt && e.Op != Zext && e.Op != Round && e.Op != Low && e.X.Type() != e.T {
 			return fmt.Errorf("%s has a %s operand", ExprText(e), e.X.Type())
 		}
 
@@ -280,8 +304,22 @@ func (c *checker) expr(e Expr) error {
 			return fmt.Errorf("%s compares a %s with a %s", ExprText(e), e.X.Type(), e.Y.Type())
 		}
 
+	case *Field:
+		for _, x := range []Expr{e.X, e.Pos, e.Size} {
+			if err := c.expr(x); err != nil {
+				return err
+			}
+
+			if x.Type() != Long {
+				return fmt.Errorf("%s has a %s operand", ExprText(e), x.Type())
+			}
+		}
+
 	case *CharCmp:
 		return fmt.Errorf("%s is inside an expression, where it would hold registers across CMPC", ExprText(e))
+
+	case *CharIndex:
+		return fmt.Errorf("%s is inside an expression, where it would hold registers across MATCHC", ExprText(e))
 	}
 
 	return nil

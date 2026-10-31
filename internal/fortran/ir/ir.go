@@ -561,8 +561,8 @@ type Expr interface {
 // Operator is an operation in an Op or a Cmp.
 type Operator int
 
-// The operators. Neg, Not, and Cvt have one operand; the comparisons
-// are Cmp's.
+// The operators. Neg, Not, Cvt, Zext, Round, and Low have one operand; the
+// comparisons are Cmp's.
 const (
 	Add Operator = iota
 	Sub
@@ -580,13 +580,16 @@ const (
 	Le
 	Gt
 	Ge
-	Zext // conversion of an unsigned integer to a longer one: MOVZWL
+	Zext  // conversion of an unsigned integer to a longer one: MOVZWL
+	Round // a floating value rounded to the nearest Long, halves away from zero: CVTRFL
+	Ash   // X shifted left Y places (right -Y), Longs, the sign copied in from the left: ASHL
+	Low   // an integer's low bits, as a shorter type, with no check that it fits: MOVW of a Long
 )
 
 // String is the operator's name in the dump.
 func (o Operator) String() string {
 	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "xor", "not", "cvt",
-		"eq", "ne", "lt", "le", "gt", "ge", "zext"}[o]
+		"eq", "ne", "lt", "le", "gt", "ge", "zext", "round", "ash", "low"}[o]
 }
 
 // The expressions.
@@ -621,8 +624,9 @@ type (
 	}
 
 	// Op is an arithmetic, logical, or conversion operation, computed in
-	// type T; Y is nil for Neg, Not, Cvt, and Zext. A Cvt's or Zext's X has
-	// the type being converted from.
+	// type T; Y is nil for Neg, Not, Cvt, Zext, Round, and Low. A Cvt's,
+	// Zext's, Round's, or Low's X has the type being converted from. An Ash's
+	// Y is its count, a Long.
 	Op struct {
 		Op   Operator
 		T    Type
@@ -635,6 +639,25 @@ type (
 	Cmp struct {
 		Op   Operator
 		X, Y Expr
+	}
+
+	// Field is the bit field of X, a Long, Size bits from bit Pos (bit 0 the
+	// lowest), as an unsigned Long: EXTZV. Pos and Size are Longs, Pos from 0
+	// to 31 and Size from 0 to 32 with Pos+Size at most 32.
+	Field struct {
+		X, Pos, Size Expr
+	}
+
+	// CharIndex is where the CHARACTER value Y first is in X, counted from
+	// 1, or 0 if it isn't there (the INDEX intrinsic function): MATCHC,
+	// which leaves R0 to R3 changed and says where it stopped as the bytes of
+	// X after the match, R2. So it is only ever the whole of an Assign's Src,
+	// as a CharCmp may be, and its value is Base less R2: Base is X's length
+	// plus 1 less Y's, a constant or a Load of a temporary computed before
+	// it, which needs no register.
+	CharIndex struct {
+		X, Y Text
+		Base Expr
 	}
 
 	// CharCmp is a comparison of two CHARACTER values (section 2.3.3), in
@@ -670,6 +693,12 @@ func (*Cmp) Type() Type { return Long }
 // Type is Long: a comparison's value is a LOGICAL.
 func (*CharCmp) Type() Type { return Long }
 
+// Type is Long: the field's value, zero-extended.
+func (*Field) Type() Type { return Long }
+
+// Type is Long: a position.
+func (*CharIndex) Type() Type { return Long }
+
 func (*Const) exprNode()      {}
 func (*Load) exprNode()       {}
 func (*Addr) exprNode()       {}
@@ -677,6 +706,8 @@ func (*ArgPointer) exprNode() {}
 func (*Op) exprNode()         {}
 func (*Cmp) exprNode()        {}
 func (*CharCmp) exprNode()    {}
+func (*Field) exprNode()      {}
+func (*CharIndex) exprNode()  {}
 
 // LongConst is the Long constant n.
 func LongConst(n int32) *Const {

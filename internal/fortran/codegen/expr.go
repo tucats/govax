@@ -117,13 +117,35 @@ func need(e ir.Expr) int {
 		// One more, for the value -1 or 0, while the operands are held.
 		return pairNeed(e.X, e.Y, 1) + 1
 
-	case *ir.CharCmp:
+	case *ir.CharCmp, *ir.CharIndex:
 		// Its value; its operands are computed when nothing else is held
-		// (charCompare).
+		// (charCompare, charIndex).
 		return 1
+
+	case *ir.Field:
+		return fieldNeed(e)
 	}
 
 	return 0
+}
+
+// fieldNeed is what a Field needs: its base, position, and size are computed
+// in that order, each while the ones before it are held, the base in a
+// register if it is a constant (EXTZV takes no literal base); then its value.
+func fieldNeed(e *ir.Field) int {
+	n, holding := 0, 0
+
+	for i, x := range []ir.Expr{e.X, e.Pos, e.Size} {
+		n = max(n, holding+need(x))
+		holding += held(x)
+
+		if _, ok := x.(*ir.Const); ok && i == 0 {
+			holding++
+			n = max(n, holding)
+		}
+	}
+
+	return max(n, 1)
 }
 
 // pairNeed is what an operation on x and y needs, its value taking w
@@ -149,7 +171,7 @@ func held(e ir.Expr) int {
 	switch e := e.(type) {
 	case *ir.Op:
 		return e.T.Width()
-	case *ir.Cmp, *ir.CharCmp, *ir.Addr:
+	case *ir.Cmp, *ir.CharCmp, *ir.CharIndex, *ir.Field, *ir.Addr:
 		return 1
 	case *ir.Load:
 		return memHeld(e.Mem)
@@ -314,6 +336,22 @@ func (g *routineGen) fit(e ir.Expr) ir.Expr {
 				n.X = g.spill(n.X)
 			} else {
 				n.Y = g.spill(n.Y)
+			}
+		}
+
+		return n
+
+	case *ir.Field:
+		n := &ir.Field{X: g.fit(e.X), Pos: g.fit(e.Pos), Size: g.fit(e.Size)}
+
+		for need(n) > budget {
+			switch a, b, c := need(n.X), need(n.Pos), need(n.Size); {
+			case a >= b && a >= c:
+				n.X = g.spill(n.X)
+			case b >= c:
+				n.Pos = g.spill(n.Pos)
+			default:
+				n.Size = g.spill(n.Size)
 			}
 		}
 
@@ -523,6 +561,12 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.CharCmp:
 		return g.charComparison(e)
+
+	case *ir.CharIndex:
+		return g.charIndex(e)
+
+	case *ir.Field:
+		return g.field(e)
 	}
 
 	panic(fmt.Sprintf("codegen: an expression of type %T", e))
@@ -534,18 +578,73 @@ func (g *routineGen) operands(e *ir.Op) (operand, operand) {
 	x, y := opOperands(e)
 
 	if y == nil {
+		if e.Op == ir.Low {
+			// MOVW of a longword reads its low word, but would scale an
+			// index by a word's size.
+			return g.unindexed(g.eval(x), x.Type()), operand{}
+		}
+
 		return g.eval(x), operand{}
 	}
 
-	if need(y) > need(x) {
-		vy := g.eval(y)
+	var vx, vy operand
 
-		return g.eval(x), vy
+	if need(y) > need(x) {
+		vy = g.eval(y)
+		vx = g.eval(x)
+	} else {
+		vx = g.eval(x)
+		vy = g.eval(y)
 	}
 
-	vx := g.eval(x)
+	if e.Op == ir.Ash {
+		// ASHL's count is a byte, which an index would scale by 1.
+		vy = g.unindexed(vy, ir.Long)
+	}
 
-	return vx, g.eval(y)
+	return vx, vy
+}
+
+// unindexed is o, a value of type t, in a register if it is a place an index
+// register reaches: for an instruction that reads the place as another type
+// than t, whose size would scale the index wrongly.
+func (g *routineGen) unindexed(o operand, t ir.Type) operand {
+	if !strings.Contains(o.text, "[") {
+		return o
+	}
+
+	g.free(o)
+	r := g.alloc(t)
+	g.move(t, o.text, register(r))
+
+	return inRegister(r, t)
+}
+
+// field writes EXTZV pos,size,base,Rn: the bit field, zero-extended. The base
+// is a register, or a place in memory with no index (EXTZV's base is a byte
+// address, which an index would scale by 1); a constant is put in a register
+// first, since a literal can't be a field's base. The size is a byte, read
+// from a place with no index too.
+//
+//	EXTZV   #3,#4,PROG.I,R0
+func (g *routineGen) field(e *ir.Field) operand {
+	x := g.eval(e.X)
+	if _, ok := e.X.(*ir.Const); ok {
+		r := g.alloc(ir.Long)
+		g.move(ir.Long, x.text, register(r))
+		x = inRegister(r, ir.Long)
+	} else {
+		x = g.unindexed(x, ir.Long)
+	}
+
+	pos := g.eval(e.Pos)
+	size := g.unindexed(g.eval(e.Size), ir.Long)
+
+	g.free(x, pos, size)
+	r := g.alloc(ir.Long)
+	g.emit("EXTZV", ir.Long, pos.text, size.text, x.text, register(r))
+
+	return inRegister(r, ir.Long)
 }
 
 // operate writes the instruction for e, whose operands are x and y (y
@@ -581,6 +680,17 @@ func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
 	case ir.Zext:
 		// MOVZWL: the word's bits, the longword's high bits clear.
 		g.emit("MOVZ"+e.X.Type().String()+t, e.T, x.text, dst)
+	case ir.Round:
+		// CVTRFL: rounded, halves away from zero, where CVTFL truncates.
+		g.emit("CVTR"+e.X.Type().String()+t, e.T, x.text, dst)
+	case ir.Ash:
+		// ASHL count,source,result.
+		g.emit("ASHL", e.T, y.text, x.text, dst)
+	case ir.Low:
+		// MOVW of a longword: its low word, unchecked; nothing at all when
+		// the longword is in the register the word goes to, since a word in
+		// a register is its low word.
+		g.move(e.T, x.text, dst)
 	}
 }
 

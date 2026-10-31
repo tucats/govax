@@ -296,7 +296,7 @@ func ExprText(e Expr) string {
 		return "arg " + e.Param.Name
 
 	case *Op:
-		if e.Op == Cvt || e.Op == Zext {
+		if e.Op == Cvt || e.Op == Zext || e.Op == Round || e.Op == Low {
 			return e.Op.String() + "." + e.X.Type().String() + e.T.String() + "(" + ExprText(e.X) + ")"
 		}
 
@@ -312,6 +312,12 @@ func ExprText(e Expr) string {
 
 	case *CharCmp:
 		return e.Op.String() + ".T(" + TextText(e.X) + ", " + TextText(e.Y) + ")"
+
+	case *Field:
+		return "field(" + ExprText(e.X) + ", " + ExprText(e.Pos) + ", " + ExprText(e.Size) + ")"
+
+	case *CharIndex:
+		return "index(" + TextText(e.X) + ", " + TextText(e.Y) + ", " + ExprText(e.Base) + ")"
 	}
 
 	return fmt.Sprintf("%T", e)
