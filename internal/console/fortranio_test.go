@@ -202,3 +202,71 @@ func TestFortranIntegerInput(t *testing.T) {
 		}
 	})
 }
+
+// TestFortranFloatInput reads F, E, and D fields from the terminal: the
+// digits after the point a field with no point has, BN and BZ, the scale
+// factor, which an exponent overrides, fields a comma ends, an exponent in
+// a REAL*8, a complex value's two fields, text that isn't a number
+// (INPCONERR, 64, the item zeros), and F of an INTEGER, which stores the
+// F_floating value's bytes and fails with FORVARMIS (61).
+func TestFortranFloatInput(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+
+		lines := []string{
+			"      PROGRAM FIN",
+			"      REAL X, Y, Z",
+			"      REAL*8 V",
+			"      COMPLEX W",
+			"      INTEGER I, IOS",
+			"   10 FORMAT (2F8.2)",
+			"   20 FORMAT (BN, F8.2, BZ, F8.2)",
+			"   30 FORMAT (3PE10.5, E10.5)",
+			"   40 FORMAT (3F5.2)",
+			"   50 FORMAT (D15.3)",
+			"   60 FORMAT (2F5.1)",
+			"      READ (5,10) X, Y",
+			"      WRITE (6,'(1X,2F10.3)') X, Y",
+			"      READ (5,20) X, Y",
+			"      WRITE (6,'(1X,2F10.3)') X, Y",
+			"      READ (5,30) X, Y",
+			"      WRITE (6,'(1X,2E13.5)') X, Y",
+			"      READ (5,40) X, Y, Z",
+			"      WRITE (6,'(1X,3F6.2)') X, Y, Z",
+			"      READ (5,50) V",
+			"      WRITE (6,'(1X,F13.3)') V",
+			"      READ (5,60) W",
+			"      WRITE (6,'(1X,2F6.1)') W",
+			"      X = 7.0",
+			"      READ (5,'(F5.2)',IOSTAT=IOS) X",
+			"      WRITE (6,'(1X,F5.2,I4)') X, IOS",
+			"      READ (5,'(F4.1)',IOSTAT=IOS) I",
+			"      WRITE (6,'(1X,I6,I4)') I, IOS",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]FIN.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "FIN")
+
+		for _, command := range []string{"FORTRAN FIN", "MACRO FIN", "LINK FIN"} {
+			shareFindRun(t, d, command)
+
+			if out := buf.String(); out != "" {
+				t.Fatalf("%s said:\n%s", command, out)
+			}
+		}
+
+		c.In = strings.NewReader("    1234   12.34\n  1 2  3  1 2  3\n   37.614  37.614E2\n1,5,,\n" +
+			"367.4981763D+04\n  1.5  2.5\nABC\n12.5\n")
+
+		want := "    12.340    12.340\n     1.230  1020.030\n  0.37614E-01  0.37614E+04\n" +
+			"  0.01  0.05  0.00\n  3674981.763\n   1.5   2.5\n 0.00  64\n 16968  61\n" +
+			"  $STATUS == \"%X00000001\"\n"
+		if got := shareRun(t, d, buf, "FIN"); got != want {
+			t.Errorf("RUN FIN printed:\n%s\nwant:\n%s", got, want)
+		}
+	})
+}

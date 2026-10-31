@@ -3,7 +3,8 @@ C     Integer and logical editing, Phase 80's subtask 5: I, O, Z, and L
 C     with widths, minimum digits, signs, and the default widths of
 C     Table 8-4; a field too narrow is asterisks, and IOSTAT gets
 C     OUTCONERR (63) while the statement goes on; I of a REAL edits its
-C     bits and fails with FORVARMIS (61) after writing the record.
+C     bits and fails with FORVARMIS (61) at the statement's end, its
+C     record written.
       INTEGER I, IOS
       INTEGER*2 K
       BYTE B

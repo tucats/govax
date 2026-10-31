@@ -2013,9 +2013,10 @@ DISMOUNT DUA2
 // FORMAT statement couldn't hold (a syntax error, which the compiler would
 // refuse) reaches FTNRTL's parser as it reached FORRTL's. Items of a type
 // other than INTEGER*4 and CHARACTER are set in variables of their type
-// first. The cases a FORTRAN program can't state are left out: an empty
-// format (a character constant holds a character) and G_floating items (a
-// program is compiled in D or in G). TestFor80Oracle runs it with
+// first. A case of G_floating items goes in a subroutine of its own with
+// OPTIONS /G_FLOATING, where DOUBLE PRECISION is G_floating, after all the
+// others. The case a FORTRAN program can't state is left out: an empty
+// format (a character constant holds a character). TestFor80Oracle runs it with
 // SYS$OUTPUT a file, and holds each case's records and IOSTAT to VMS's run:
 // its records, and its e=, FOR$ERRSNS's number.
 func fortranProgram() string {
@@ -2037,14 +2038,21 @@ C     vax/for80-vax.txt.
 	var body strings.Builder
 
 	routine := ""
-	openRoutine := func() {
+	openRoutine := func(gUnit bool) {
 		if routine != "" {
 			body.WriteString("      END\n")
 		}
 
 		unit()
 		routine = units[len(units)-1]
-		fmt.Fprintf(&body, "\n      SUBROUTINE %s\n", routine)
+
+		body.WriteString("\n")
+
+		if gUnit {
+			body.WriteString("      OPTIONS /G_FLOATING\n")
+		}
+
+		fmt.Fprintf(&body, "      SUBROUTINE %s\n", routine)
 		body.WriteString(`      INTEGER IOS
       INTEGER*2 VW(4)
       BYTE VB(4)
@@ -2062,10 +2070,18 @@ C     vax/for80-vax.txt.
 	}
 
 	perRoutine := 0
+	gRoutine := false
 
-	for n, c := range cases {
+	for _, n := range dThenG() {
+		c := cases[n]
 		if c.op != "out" || c.unit != 6 || c.format == "" {
 			continue
+		}
+
+		gUnit := hasGItem(c)
+		if gUnit && !gRoutine {
+			gRoutine = true
+			perRoutine = 40 // a new subroutine for the G cases
 		}
 
 		var sets, items []string
@@ -2089,15 +2105,17 @@ C     vax/for80-vax.txt.
 			case "f":
 				sets = append(sets, fmt.Sprintf("VF(%d) = %s", k, ftnReal(it.val, "E")))
 				items = append(items, fmt.Sprintf("VF(%d)", k))
-			case "d":
+			case "d", "g":
+				ok = ok && (it.kind == "g") == gUnit
 				sets = append(sets, fmt.Sprintf("VD(%d) = %s", k, ftnReal(it.val, "D")))
 				items = append(items, fmt.Sprintf("VD(%d)", k))
 			case "h":
 				sets = append(sets, fmt.Sprintf("VH(%d) = %s", k, ftnReal(it.val, "Q")))
 				items = append(items, fmt.Sprintf("VH(%d)", k))
-			case "fc", "dc":
-				e := map[string]string{"fc": "E", "dc": "D"}[it.kind]
-				v := map[string]string{"fc": "VFC", "dc": "VDC"}[it.kind]
+			case "fc", "dc", "gc":
+				ok = ok && (it.kind != "dc" || !gUnit)
+				e := map[string]string{"fc": "E", "dc": "D", "gc": "D"}[it.kind]
+				v := map[string]string{"fc": "VFC", "dc": "VDC", "gc": "VDC"}[it.kind]
 				parts := strings.SplitN(it.val, ",", 2)
 				sets = append(sets, fmt.Sprintf("%s(%d) = (%s,%s)", v, k, ftnReal(parts[0], e), ftnReal(parts[1], e)))
 				items = append(items, fmt.Sprintf("%s(%d)", v, k))
@@ -2117,7 +2135,7 @@ C     vax/for80-vax.txt.
 		}
 
 		if routine == "" || perRoutine == 40 {
-			openRoutine()
+			openRoutine(gUnit)
 
 			perRoutine = 0
 		}
@@ -2148,22 +2166,39 @@ C     vax/for80-vax.txt.
 
 // fortranInputCase reports whether round 1's case c is one of for80i.for's:
 // formatted input from an internal record (rd) or from SYS$INPUT's lines
-// (rd5), its items of types a program compiled in D can have. A record
-// read in place of an internal one is the same to the format but at its
-// end, so the cases whose internal record ran out (FOR$_ENDDURREA, 24)
-// are left out by the test, which knows VMS's results.
+// (rd5). A record read in place of an internal one is the same to the
+// format but at its end, so the cases whose internal record ran out
+// (FOR$_ENDDURREA, 24) are left out by the test, which knows VMS's results.
 func fortranInputCase(c kase) bool {
-	if c.op != "rd" && (c.op != "rd5" || len(c.lines) == 0) {
-		return false
-	}
+	return c.op == "rd" || c.op == "rd5" && len(c.lines) > 0
+}
 
+// hasGItem reports whether a case has a G_floating item, so that FORTRAN
+// must state it in a unit compiled in G.
+func hasGItem(c kase) bool {
 	for _, it := range c.items {
 		if it.kind == "g" || it.kind == "gc" {
-			return false
+			return true
 		}
 	}
 
-	return true
+	return false
+}
+
+// dThenG is the cases' numbers in the order for80.for and for80i.for take
+// them: those without G_floating items, then those with.
+func dThenG() []int {
+	var d, g []int
+
+	for n, c := range cases {
+		if hasGItem(c) {
+			g = append(g, n)
+		} else {
+			d = append(d, n)
+		}
+	}
+
+	return append(d, g...)
 }
 
 // fortranInputProgram is round 1's formatted input cases as FORTRAN
@@ -2207,10 +2242,18 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 `
 	routines := 0
 	perRoutine := 0
+	gRoutine := false
 
-	for n, c := range cases {
+	for _, n := range dThenG() {
+		c := cases[n]
 		if !fortranInputCase(c) {
 			continue
+		}
+
+		gUnit := hasGItem(c)
+		if gUnit && !gRoutine {
+			gRoutine = true
+			perRoutine = 40 // a new subroutine for the G cases
 		}
 
 		if routines == 0 || perRoutine == 40 {
@@ -2221,7 +2264,13 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 			routines++
 			perRoutine = 0
 			fmt.Fprintf(&b, "      CALL R%d\n", routines)
-			fmt.Fprintf(&body, "\n      SUBROUTINE R%d\n%s", routines, declarations)
+			body.WriteString("\n")
+
+			if gUnit {
+				body.WriteString("      OPTIONS /G_FLOATING\n")
+			}
+
+			fmt.Fprintf(&body, "      SUBROUTINE R%d\n%s", routines, declarations)
 		}
 
 		perRoutine++
@@ -2244,13 +2293,13 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 				items = append(items, fmt.Sprintf("VWU(1,%d)", k))
 			case "f":
 				items = append(items, fmt.Sprintf("VF(1,%d)", k))
-			case "d":
+			case "d", "g":
 				items = append(items, fmt.Sprintf("VD(1,%d)", k))
 			case "h":
 				items = append(items, fmt.Sprintf("VH(%d)", k))
 			case "fc":
 				items = append(items, fmt.Sprintf("VFC(1,%d)", k))
-			case "dc":
+			case "dc", "gc":
 				items = append(items, fmt.Sprintf("VDC(%d)", k))
 			case "t":
 				items = append(items, fmt.Sprintf("TX(%d)(1:%s)", k, it.val))
@@ -2327,7 +2376,8 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
 func fortranInputData() string {
 	var b strings.Builder
 
-	for n, c := range cases {
+	for _, n := range dThenG() {
+		c := cases[n]
 		if !fortranInputCase(c) {
 			continue
 		}

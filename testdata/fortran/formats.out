@@ -21,5 +21,6 @@ INFFORLOO TAKEN BY ERR=
 OUTSTAOVE          66
                                                                                                                                    X
 T133           0
-NOTIMP           2
+F5.1 IS  5.0
+F5.1           0
   $STATUS == "%X00000001"

@@ -465,9 +465,14 @@ never had.
   global `FTN$$FMT_PUT`, `_WRITE`, `_FAIL`, and `_WARN`): input fields ended
   by a comma or the record's end, BN and BZ, Table 8-4's widths as VMS's
   run gave them, OUTCONERR an error the statement goes on after
-  (`CTX_WARNING`), FORVARMIS after the whole item (`CTX_MISMATCH`); and the
+  (`CTX_WARNING`), FORVARMIS (`CTX_MISMATCH`); and the
   input oracle, `TestFor80InputOracle` (`for80i.for` and `for80i.dat`, the
-  probe's input cases read from SYS$INPUT).
+  probe's input cases read from SYS$INPUT); subtask 6 (2026-10-31) is F, E,
+  D, and G both ways (`ftn_float.mar`'s `FTN$$EDIT_FLOAT`: digits from
+  `OTS$$CVT_x_T_R8`, one `LAYOUT` for every form, input by `OTS$CVT_T_x`),
+  P, S, SP, SS, complex values, and FORVARMIS at the statement's end, after
+  its records (`FTN$$FMT_END`); both oracles now compare every case, G_floating
+  ones in units with `OPTIONS /G_FLOATING`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1979,7 +1984,8 @@ expect adjustment as phases land):
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the units' streams, SYS$OUTPUT
   and SYS$INPUT with RAT=FTN (units -4 to -1, 5, and 6 so far, Phase 80);
-  `ftn_edit.mar`, I, O, Z, and L editing, Phase 80;
+  `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
+  editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and
   the rest; the old FTN$PRINT_LIST and FTN$WRITE_LIST kept), FTN$IO_ITEM,
   and FTN$IO_END, on a stack of statement contexts, with the control

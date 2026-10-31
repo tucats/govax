@@ -37,11 +37,10 @@
 ;
 ; Types. I and L are for integers and logicals. An item of another type
 ; is edited by its first bytes as if it were one (I5 of REAL 3.25 writes
-; 16720, its first longword), and when the whole item is done (both parts
-; of a complex value) the statement fails with FOR$_FORVARMIS; an output
-; statement's record is written first, so the fields show, as VMS's do. A character item shorter than a longword
-; under I is asterisks and FOR$_OUTCONERR instead (VMS's). O and Z take
-; any type.
+; 16720, its first longword), and the statement goes on, failing with
+; FOR$_FORVARMIS at its end, its records written, as VMS's does. A character
+; item shorter than a longword under I is asterisks and FOR$_OUTCONERR
+; instead (VMS's). O and Z take any type.
 ;
 ; Default widths (8.3.10, Table 8-4, as VMS's run gave them): I, O, and Z
 ; take 7 columns for an item of 1 or 2 bytes, 12 for 4; O and Z 23 for 8
@@ -289,8 +288,7 @@ STARS:	TSTL	R9
 
 ;
 ; MISMATCH: after an output field, with R8 0 if the item isn't an integer
-; or a logical: FTN_FORMAT writes the record and fails the statement once
-; the whole item is edited (CTX_MISMATCH).
+; or a logical: FTN_FORMAT fails the statement at its end (CTX_MISMATCH).
 ;
 MISMATCH:
 	BLBS	R8,10$
@@ -361,8 +359,8 @@ IN_I:	JSB	FIELD
 38$:	MOVL	R5,(R1)
 
 ;
-; TYPED: after an item is stored by I or L, the statement fails, once the
-; item is done, if it isn't an integer or a logical.
+; TYPED: after an item is stored by I or L, the statement fails, at its
+; end, if it isn't an integer or a logical.
 ;
 TYPED:	JSB	INTEGER_TYPE
 	BLBS	R0,10$
@@ -515,8 +513,9 @@ INTEGER_TYPE:
 ; FIELD: an input field of up to R9 characters from the position: R2 its
 ; first and R3 how many. It ends at the record's end, or before a comma,
 ; and the position moves past it: w columns on, or past the comma. Uses
-; R0, R1, and R4.
+; R0, R1, and R4. FTN_FLOAT's input uses it too, with R9 and R11 the same.
 ;
+FTN$$EDIT_FIELD::
 FIELD:	MOVL	CTX_POS(R11),R4
 	BGEQ	5$
 	CLRL	R4			; T0's column: the first

@@ -14,6 +14,7 @@ C     vax/for80-vax.txt.
       CALL S10
       CALL S11
       CALL S12
+      CALL S13
       END
 
       SUBROUTINE S1
@@ -1774,4 +1775,117 @@ C     vax/for80-vax.txt.
       PRINT *, '#467'
       WRITE (6, '(1X,I5000)', IOSTAT=IOS) 1
       PRINT *, '=467', IOS
+      END
+
+      OPTIONS /G_FLOATING
+      SUBROUTINE S13
+      INTEGER IOS
+      INTEGER*2 VW(4)
+      BYTE VB(4)
+      LOGICAL*4 VLU(4)
+      INTEGER*4 VLUI(4)
+      LOGICAL*2 VWU(4)
+      INTEGER*2 VWUI(4)
+      EQUIVALENCE (VLU, VLUI), (VWU, VWUI)
+      REAL VF(4)
+      DOUBLE PRECISION VD(4)
+      REAL*16 VH(4)
+      COMPLEX VFC(4)
+      COMPLEX*16 VDC(4)
+      PRINT *, '#67'
+      VD(1) = 0.1D0
+      WRITE (6, '(1X,F30.25)', IOSTAT=IOS) VD(1)
+      PRINT *, '=67', IOS
+      PRINT *, '#101'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,E14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=101', IOS
+      PRINT *, '#102'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,E14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=102', IOS
+      PRINT *, '#105'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,D14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=105', IOS
+      PRINT *, '#106'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,D14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=106', IOS
+      PRINT *, '#109'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,E14.4E3)', IOSTAT=IOS) VD(1)
+      PRINT *, '=109', IOS
+      PRINT *, '#110'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,E14.4E3)', IOSTAT=IOS) VD(1)
+      PRINT *, '=110', IOS
+      PRINT *, '#113'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,E14.4E2)', IOSTAT=IOS) VD(1)
+      PRINT *, '=113', IOS
+      PRINT *, '#114'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,E14.4E2)', IOSTAT=IOS) VD(1)
+      PRINT *, '=114', IOS
+      PRINT *, '#117'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,G14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=117', IOS
+      PRINT *, '#118'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,G14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=118', IOS
+      PRINT *, '#121'
+      VD(1) = 1.0D100
+      WRITE (6, '(1X,E14.4E4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=121', IOS
+      PRINT *, '#122'
+      VD(1) = 1.0D-100
+      WRITE (6, '(1X,E14.4E4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=122', IOS
+      PRINT *, '#126'
+      VD(1) = 1.0D30
+      WRITE (6, '(1X,D14.4)', IOSTAT=IOS) VD(1)
+      PRINT *, '=126', IOS
+      PRINT *, '#208'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,I)', IOSTAT=IOS) VD(1)
+      PRINT *, '=208', IOS
+      PRINT *, '#218'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,O)', IOSTAT=IOS) VD(1)
+      PRINT *, '=218', IOS
+      PRINT *, '#228'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,Z)', IOSTAT=IOS) VD(1)
+      PRINT *, '=228', IOS
+      PRINT *, '#238'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,L)', IOSTAT=IOS) VD(1)
+      PRINT *, '=238', IOS
+      PRINT *, '#248'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,A)', IOSTAT=IOS) VD(1)
+      PRINT *, '=248', IOS
+      PRINT *, '#258'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,F)', IOSTAT=IOS) VD(1)
+      PRINT *, '=258', IOS
+      PRINT *, '#268'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,E)', IOSTAT=IOS) VD(1)
+      PRINT *, '=268', IOS
+      PRINT *, '#278'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,G)', IOSTAT=IOS) VD(1)
+      PRINT *, '=278', IOS
+      PRINT *, '#288'
+      VD(1) = 3.25D0
+      WRITE (6, '(1X,D)', IOSTAT=IOS) VD(1)
+      PRINT *, '=288', IOS
+      PRINT *, '#296'
+      VDC(1) = (1.5D0,-2.5D0)
+      WRITE (6, '(1X,2F12.5)', IOSTAT=IOS) VDC(1)
+      PRINT *, '=296', IOS
       END

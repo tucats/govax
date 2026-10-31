@@ -1,0 +1,569 @@
+	.TITLE	FTN_FLOAT - FTNRTL's floating editing
+	.IDENT	/V1.0/
+;
+; The F, E, D, and G edit descriptors (the 1988 VAX FORTRAN Language
+; Reference Manual, 8.3.6 and 8.3.7; docs/PHASE-80 - FORTRAN formatted
+; IO.md, subtask 6), both ways, with the scale factor and the signs.
+; FTN_FORMAT's walk calls FTN$$EDIT_FLOAT with the statement's context,
+; the descriptor's parsed operation, and the item; a complex value comes
+; as two items, its parts. Where the manual leaves a rule open, VMS's own
+; run-time library, run by the probe in testdata/for80, settles it
+; (Decision 1); those rules are marked "VMS's" below.
+;
+; Output. The field is built whole, right-justified in w columns, and put
+; in the record at once. A value that won't fit is w asterisks and
+; FOR$_OUTCONERR, after which the statement goes on.
+;
+;   Fw.d	the value times 10**n (n the scale factor, P's) with d
+;		digits after the point, rounded half up on the value's exact
+;		digits. With no digit before the point a 0 goes there if there
+;		is room, and must if d is 0 (VMS's: F2.1 of 0.5 is ".5", F1.0
+;		of 0.0 is "*"). A value that shows only zeros has no minus
+;		sign (VMS's: F6.1 of -0.01 is "   0.0").
+;
+;   Ew.dEe	the digits, then the exponent. With n 0 they are 0.ddd, d
+;   Dw.d	significant digits; with n below 0, n zeros after the point
+;		and d+n digits; with n above 0, n digits before the point and
+;		d-n+1 after it. The exponent shown is less by n. VMS's run
+;		gives n's range as -d < n < d+2; outside it, or with d 0 and n
+;		0, the field is asterisks. The exponent is E or D, its sign,
+;		and e digits (asterisks if it needs more); with no Ee it is
+;		E+nn, or +nnn past 99, or asterisks past 999 (VMS's).
+;
+;   Gw.dEe	the digits rounded to d significant ones choose the form
+;		(so 999.6 under G13.3 is E form): a magnitude from 0.1 to
+;		under 10**d is F form with d significant digits and no scale
+;		factor, in the first w-(e+2) columns, with e+2 blanks after
+;		them (4 with no Ee); any other, zero among them (VMS's), is
+;		E form with the scale factor. G with d 0 is asterisks (VMS's).
+;
+; The sign is a minus for a negative value, a plus too after SP, and
+; nothing else takes room.
+;
+; The digits come from LIBRTL's OTS$$CVT_F_T_R8 (and its D, G, and H
+; forms), which writes a value's exact decimal digits, rounded where it's
+; asked, into its caller's frame (internal/librtl/otscvtfor.go has its
+; interface; FTN_LISTOUT uses it too).
+;
+; Input. A field is what FTN_EDIT's FIELD finds (up to w characters, ended
+; by the record's end or a comma), and OTS$CVT_T_F (and its D, G, and H
+; forms) reads it: a sign, digits with or without a point (with none, the
+; last d are the fraction), an exponent with E, D, Q, or its sign alone,
+; and blanks as zeros (BZ) or nothing (BN). The scale factor applies only
+; without an exponent (8.3.7). A value too large for the item, or text
+; that isn't a number, is FOR$_INPCONERR, a severe error, and the item is
+; set to zeros; one too small is 0 (VMS's).
+;
+; Types. An item that isn't floating is edited as an F_floating value made
+; of its first bytes, and its value's field is written or its value stored
+; in those bytes; the statement goes on, and at its end fails with
+; FOR$_FORVARMIS. But a field of asterisks is FOR$_OUTCONERR alone (VMS's
+; F8.2 of 'HI'). VMS's reads 4 bytes whatever the item's length, so a shorter
+; item's value there depends on what follows it; here it is followed by
+; zeros.
+;
+; Default widths (8.3.10, Table 8-4, as VMS's run gave them): w 15, d 7 for
+; a REAL*4 or an item that isn't floating; w 25, d 16 for a REAL*8 of
+; either format; w 42, d 33, and e 3 for a REAL*16.
+;
+
+; FORRTL's condition values, with their severities.
+FOR$_OUTCONERR	= ^X001881FA
+FOR$_INPCONERR	= ^X00188204
+
+; The descriptor's data types and class.
+DSC$K_DTYPE_F	= 10
+DSC$K_DTYPE_D	= 11
+DSC$K_DTYPE_T	= 14
+DSC$K_DTYPE_G	= 27
+DSC$K_DTYPE_H	= 28
+DSC$K_CLASS_S	= 1
+
+; OTS$CVT_T_x's flags.
+OTS_IGNORE_BLANKS = 1
+OTS_IGNORE_TABS	= 16
+
+; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
+CTX_KIND	= 14			; byte: odd for a WRITE
+CTX_RECORD	= 28			; the record
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_RECMAX	= CTX_POS+4		; long: the most bytes it holds
+CTX_SCALE	= CTX_POS+32		; long: the scale factor, P's
+CTX_SIGN	= CTX_SCALE+4		; byte: 0 S, 1 SP, 2 SS
+CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ)
+CTX_MISMATCH	= CTX_POS+108		; byte: 1 if the item's type doesn't suit
+
+; A parsed format's operation (FTN_FORMAT's).
+OP_B_CODE	= 0
+OP_B_FLAGS	= 1
+OP_W_W		= 8
+OP_B_D		= 10
+OP_B_E		= 11
+F_W		= 1			; flags: w given,
+F_E		= 4			;  e given
+C_F		= 3			; the codes
+C_E		= 4
+C_D		= 5
+C_G		= 6
+
+;
+; The routine's frame, below FP: OTS$$CVT_x_T_R8 reads its arguments and
+; writes its results at fixed offsets from the FP it is given, the first
+; seven of these; the rest are this routine's own. The digit buffer and
+; the field, whose sizes depend on the descriptor, are below them.
+;
+CVT_KIND	= -9			; byte: 0 for E's rounding, 2 for F's
+CVT_SIGNIF	= -16			; E: the significant digits to round to
+CVT_BUFFER	= -20			; the digit buffer's address
+CVT_SIGN	= -24			; out: 1, -1, or 0 for zero
+CVT_EXPONENT	= -28			; out: the value is 0.ddd x 10**this
+CVT_FIRST	= -32			; out: the first digit's offset
+CVT_FDIGITS	= -36			; F: the digits after the point to round to
+VALUE		= -52			; 16 bytes: an item's value, in or out
+L_KIND		= -56			; which format: 0 F, 1 D, 2 G, 3 H
+L_REAL		= -60			; 1 if the item is floating, else 0
+L_SIZE		= -64			; the digit buffer's size
+L_FIELD		= -68			; the field's address
+L_E		= -72			; e, or 0 if there is none
+L_SHIFT		= -76			; how many digits from the first are
+					;  before the point (negative: zeros
+					;  come first)
+L_INT		= -80			; the columns of digits before the point
+L_FRAC		= -84			; the columns of digits after it
+L_TAIL		= -88			; the field's last columns, an exponent
+					;  or G's blanks
+L_DESC		= -96			; a descriptor of an input field
+FRAME_SIZE	= 96
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$EDIT_FLOAT(context, op, address, length, type)
+;
+; Edits one item, of type and length bytes at address, by op, an F, E, D,
+; or G operation: writes its field into the output record, or reads one
+; from the input record into it. Through the routine R11 is the context,
+; R10 the operation, R9 the field's width, R8 d, R7 the scale factor, and
+; R6 the value (OTS$$CVT_x_T_R8 may change R0 to R6, so DIGITS puts it back).
+;
+	.ENTRY	FTN$$EDIT_FLOAT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SUBL2	#FRAME_SIZE,SP
+	MOVL	4(AP),R11
+	MOVL	8(AP),R10
+	BSBW	ITEM_FORMAT
+	BSBW	FIELD_SIZES
+	MOVL	CTX_SCALE(R11),R7
+	BLBS	CTX_KIND(R11),OUTPUT
+	BRW	INPUT
+
+;
+; Output: the digit buffer and the field on the stack, big enough for any
+; digit a field of w columns shows and the one that rounds it, a field past
+; the record's end having failed first.
+;
+OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
+	CMPL	R0,CTX_RECMAX(R11)
+	BLEQ	5$
+	PUSHL	R9			; no room: FTN$$FMT_PUT says so, with
+	CLRL	-(SP)			;  the columns that do fit
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	RET
+5$:	MOVL	R7,R0
+	BGEQ	10$
+	MNEGL	R0,R0
+10$:	ADDL2	R9,R0
+	ADDL2	R8,R0
+	ADDL2	#8,R0
+	MOVL	R0,L_SIZE(FP)
+	ADDL2	R9,R0			; the field after it
+	ADDL2	#3,R0
+	BICL2	#3,R0
+	SUBL2	R0,SP
+	MOVL	SP,CVT_BUFFER(FP)
+	ADDL3	SP,L_SIZE(FP),L_FIELD(FP)
+	MOVC5	#0,(SP),#^A/ /,R9,@L_FIELD(FP)	; w blanks
+	;
+	; The value: the item, or an item that isn't floating's first bytes.
+	;
+	MOVL	12(AP),R6
+	BLBS	L_REAL(FP),30$
+	CLRL	VALUE(FP)
+	MOVL	16(AP),R0
+	CMPL	R0,#4
+	BLEQ	20$
+	MOVL	#4,R0
+20$:	MOVC3	R0,@12(AP),VALUE(FP)
+	MOVAB	VALUE(FP),R6
+30$:	CASEB	OP_B_CODE(R10),#C_F,#<C_G-C_F>
+40$:	.WORD	OUT_F-40$
+	.WORD	OUT_E-40$
+	.WORD	OUT_E-40$		; D is E, with its own letter
+	.WORD	OUT_G-40$
+	RET
+
+;
+; F: rounded at d+n digits after the point. Zero's digits have no exponent,
+; and n doesn't move them.
+;
+OUT_F:	MOVB	#2,CVT_KIND(FP)
+	ADDL3	R8,R7,CVT_FDIGITS(FP)
+	BSBW	DIGITS
+	ADDL2	R7,R0
+	TSTL	CVT_SIGN(FP)
+	BNEQ	10$
+	CLRL	R0
+10$:	MOVL	R0,L_SHIFT(FP)
+	BGEQ	20$
+	CLRL	R0			; no digit before the point
+20$:	MOVL	R0,L_INT(FP)
+	MOVL	R8,L_FRAC(FP)
+	CLRL	L_TAIL(FP)
+	BRW	LAYOUT
+
+;
+; E and D: the digits by the scale factor, then the exponent.
+;
+OUT_E:	MOVL	R7,L_SHIFT(FP)
+	BGTR	20$
+	ADDL3	R8,R7,R0		; n at most 0: d+n significant digits,
+	BGTR	10$			;  which must be some
+	BRW	STARS
+10$:	CLRL	L_INT(FP)
+	MOVL	R8,L_FRAC(FP)
+	BRB	40$
+20$:	ADDL3	#1,R8,R0		; n above 0: d+1 significant digits,
+	CMPL	R7,R0			;  n of them before the point
+	BLEQ	30$
+	BRW	STARS
+30$:	MOVL	R7,L_INT(FP)
+	SUBL3	R7,R0,L_FRAC(FP)
+40$:	MOVL	R0,CVT_SIGNIF(FP)
+	CLRB	CVT_KIND(FP)
+	BSBW	DIGITS
+	SUBL2	R7,R0			; the exponent shown
+	TSTL	CVT_SIGN(FP)
+	BNEQ	50$
+	CLRL	R0			; zero's is 0
+50$:	BSBW	EXPONENT
+	BRW	LAYOUT
+
+;
+; G: the digits rounded to d significant ones choose the form. In F form
+; the exponent's columns are blanks, and the scale factor isn't used.
+;
+OUT_G:	TSTL	R8
+	BNEQ	10$
+	BRW	STARS
+10$:	CLRB	CVT_KIND(FP)
+	MOVL	R8,CVT_SIGNIF(FP)
+	BSBW	DIGITS
+	TSTL	CVT_SIGN(FP)
+	BEQL	OUT_E
+	TSTL	R0
+	BLSS	OUT_E
+	CMPL	R0,R8
+	BGTR	OUT_E
+	MOVL	R0,L_SHIFT(FP)
+	MOVL	R0,L_INT(FP)
+	SUBL3	R0,R8,L_FRAC(FP)
+	ADDL3	#2,L_E(FP),L_TAIL(FP)
+	TSTL	L_E(FP)
+	BNEQ	LAYOUT
+	MOVL	#4,L_TAIL(FP)
+	; and on
+
+;
+; LAYOUT: the number, right-justified before the field's last L_TAIL(FP)
+; columns: its sign, a 0 if it has no digit before the point and there is
+; room, L_INT(FP) digits, the point, and L_FRAC(FP) digits. R2 is the next
+; column's address, R3 how many digits are left, R4 the next digit's
+; place from the point, and R5 the sign's character or 0.
+;
+LAYOUT:	SUBL3	L_TAIL(FP),R9,R6	; the columns the number has
+	BGEQ	5$
+	BRW	STARS
+5$:	ADDL3	L_INT(FP),L_FRAC(FP),R3	; the columns it needs
+	INCL	R3
+	CMPL	R3,R6
+	BLEQ	10$
+	BRW	STARS
+	;
+	; A minus sign, unless every digit shown is 0; a plus sign after SP.
+	;
+10$:	CLRL	R5
+	TSTL	CVT_SIGN(FP)
+	BGEQ	20$
+	ADDL3	L_INT(FP),L_FRAC(FP),R2
+	MNEGL	L_INT(FP),R4
+15$:	DECL	R2
+	BLSS	20$
+	BSBW	SHOWN
+	INCL	R4
+	CMPB	R0,#^A/0/
+	BEQL	15$
+	MOVL	#^A/-/,R5
+20$:	TSTL	R5
+	BNEQ	25$
+	CMPB	CTX_SIGN(R11),#1
+	BNEQ	30$
+	MOVL	#^A/+/,R5
+25$:	INCL	R3
+	CMPL	R3,R6
+	BLEQ	30$
+	BRW	STARS
+	;
+	; The 0 before the point, if it is wanted and fits: R1 1 if so.
+	;
+30$:	CLRL	R1
+	TSTL	L_INT(FP)
+	BNEQ	40$
+	CMPL	R3,R6
+	BGEQ	35$
+	MOVL	#1,R1
+	INCL	R3
+	BRB	40$
+35$:	TSTL	L_FRAC(FP)		; no room, but it can't be left out
+	BNEQ	40$			;  when it is the only digit
+	BRW	STARS
+	;
+	; The columns, from the first.
+	;
+40$:	SUBL3	R3,R6,R2
+	ADDL2	L_FIELD(FP),R2
+	TSTL	R5
+	BEQL	45$
+	MOVB	R5,(R2)+
+45$:	BLBC	R1,50$
+	MOVB	#^A/0/,(R2)+
+50$:	MNEGL	L_INT(FP),R4
+	MOVL	L_INT(FP),R3
+55$:	DECL	R3
+	BLSS	60$
+	BSBW	SHOWN
+	MOVB	R0,(R2)+
+	INCL	R4
+	BRB	55$
+60$:	MOVB	#^A/./,(R2)+
+	CLRL	R4
+	MOVL	L_FRAC(FP),R3
+65$:	DECL	R3
+	BLSS	70$
+	BSBW	SHOWN
+	MOVB	R0,(R2)+
+	INCL	R4
+	BRB	65$
+	;
+	; The field goes in the record. An item that isn't floating fails the
+	; statement at its end.
+	;
+70$:	PUSHL	R9
+	PUSHL	L_FIELD(FP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	BLBS	L_REAL(FP),80$
+	MOVB	#1,CTX_MISMATCH(R11)
+80$:	RET
+
+;
+; STARS: a field of w asterisks, and FOR$_OUTCONERR; the statement goes on.
+;
+STARS:	MOVC5	#0,(SP),#^A/*/,R9,@L_FIELD(FP)
+	PUSHL	R9
+	PUSHL	L_FIELD(FP)
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+	PUSHL	#FOR$_OUTCONERR
+	PUSHL	R11
+	CALLS	#2,FTN$$FMT_WARN	; FTN_FORMAT
+	RET
+
+;
+; Input: the field, read by the routine for the item's format into VALUE,
+; then copied to the item, a part of it if the item isn't floating.
+;
+INPUT:	JSB	FTN$$EDIT_FIELD		; FTN_EDIT: R2 and R3
+	MOVW	R3,L_DESC(FP)
+	MOVB	#DSC$K_DTYPE_T,L_DESC+2(FP)
+	MOVB	#DSC$K_CLASS_S,L_DESC+3(FP)
+	MOVL	R2,L_DESC+4(FP)
+	MOVL	#OTS_IGNORE_TABS,R0
+	TSTB	CTX_BLANK(R11)
+	BNEQ	10$
+	BISL2	#OTS_IGNORE_BLANKS,R0
+10$:	PUSHL	R0			; the flags,
+	PUSHL	R7			;  the scale factor,
+	PUSHL	R8			;  the digits in the fraction,
+	PUSHAB	VALUE(FP)		;  the result,
+	PUSHAQ	L_DESC(FP)		;  and the text
+	CASEL	L_KIND(FP),#0,#3
+20$:	.WORD	21$-20$
+	.WORD	22$-20$
+	.WORD	23$-20$
+	.WORD	24$-20$
+21$:	CALLS	#5,G^OTS$CVT_T_F
+	BRB	30$
+22$:	CALLS	#5,G^OTS$CVT_T_D
+	BRB	30$
+23$:	CALLS	#5,G^OTS$CVT_T_G
+	BRB	30$
+24$:	CALLS	#5,G^OTS$CVT_T_H
+30$:	BLBS	R0,40$
+	MOVC5	#0,(SP),#0,16(AP),@12(AP) ; it can't be read: zeros, and it fails
+	PUSHL	#FOR$_INPCONERR
+	PUSHL	R11
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+	RET
+40$:	MOVL	16(AP),R0
+	BLBS	L_REAL(FP),50$
+	MOVB	#1,CTX_MISMATCH(R11)
+	CMPL	R0,#4
+	BLEQ	50$
+	MOVL	#4,R0
+50$:	MOVC3	R0,VALUE(FP),@12(AP)
+	RET
+
+;
+; The subroutines (BSBW, RSB, in the routine's frame).
+;
+; ITEM_FORMAT: L_KIND(FP) and L_REAL(FP), by the item's type. An item that
+; isn't floating is taken as F_floating.
+;
+ITEM_FORMAT:
+	MOVL	#1,L_REAL(FP)
+	CLRL	L_KIND(FP)
+	CMPB	20(AP),#DSC$K_DTYPE_F
+	BEQL	90$
+	MOVL	#1,L_KIND(FP)
+	CMPB	20(AP),#DSC$K_DTYPE_D
+	BEQL	90$
+	MOVL	#2,L_KIND(FP)
+	CMPB	20(AP),#DSC$K_DTYPE_G
+	BEQL	90$
+	MOVL	#3,L_KIND(FP)
+	CMPB	20(AP),#DSC$K_DTYPE_H
+	BEQL	90$
+	CLRL	L_KIND(FP)
+	CLRL	L_REAL(FP)
+90$:	RSB
+
+;
+; FIELD_SIZES: R9 w, R8 d, and L_E(FP) e, as given or by the item's
+; format's defaults.
+;
+FIELD_SIZES:
+	MOVZWL	OP_W_W(R10),R9
+	MOVZBL	OP_B_D(R10),R8
+	CLRL	L_E(FP)
+	BBC	#2,OP_B_FLAGS(R10),10$	; F_E
+	MOVZBL	OP_B_E(R10),L_E(FP)
+10$:	BBS	#0,OP_B_FLAGS(R10),90$	; F_W: given
+	MOVL	#15,R9
+	MOVL	#7,R8
+	TSTL	L_KIND(FP)
+	BEQL	90$
+	MOVL	#25,R9
+	MOVL	#16,R8
+	CMPL	L_KIND(FP),#3
+	BNEQ	90$
+	MOVL	#42,R9
+	MOVL	#33,R8
+	MOVL	#3,L_E(FP)
+90$:	RSB
+
+;
+; DIGITS: the value's digits in the buffer, rounded as CVT_KIND(FP) and
+; its count say. Returns the decimal exponent in R0 (0 for zero, whose
+; CVT_SIGN(FP) is 0). Changes R0 to R5.
+;
+DIGITS:	CLRL	CVT_SIGN(FP)
+	CLRL	CVT_EXPONENT(FP)
+	MOVL	R6,-(SP)		; keep the value's address
+	MOVL	R6,R0			; the value
+	MOVL	FP,R1			; the frame
+	MOVL	L_SIZE(FP),R2		; the buffer's size
+	CASEL	L_KIND(FP),#0,#3
+10$:	.WORD	20$-10$
+	.WORD	30$-10$
+	.WORD	40$-10$
+	.WORD	50$-10$
+20$:	JSB	G^OTS$$CVT_F_T_R8
+	BRB	90$
+30$:	JSB	G^OTS$$CVT_D_T_R8
+	BRB	90$
+40$:	JSB	G^OTS$$CVT_G_T_R8
+	BRB	90$
+50$:	JSB	G^OTS$$CVT_H_T_R8
+90$:	MOVL	(SP)+,R6
+	MOVL	CVT_EXPONENT(FP),R0
+	RSB
+
+;
+; SHOWN: R0 the character shown R4 places from the point (negative: before
+; it): the digit there, or a 0 before the first digit or past the buffer.
+; Uses R1.
+;
+SHOWN:	ADDL3	L_SHIFT(FP),R4,R1
+	ADDL2	CVT_FIRST(FP),R1
+	MOVL	#^A/0/,R0
+	CMPL	R1,CVT_FIRST(FP)
+	BLSS	10$
+	CMPL	R1,L_SIZE(FP)
+	BGEQ	10$
+	ADDL2	CVT_BUFFER(FP),R1
+	MOVZBL	(R1),R0
+10$:	RSB
+
+;
+; EXPONENT: R0's value written in the field's last columns, with L_TAIL(FP)
+; set to how many: its letter, its sign, and e digits; with no e, the
+; letter, the sign, and 2 digits, or past 99 the sign and 3. A value that
+; takes more digits, or a field too narrow, is asterisks. R5 is the last
+; column's address, and R2 and R3 the quadword EDIV divides. Changes R0 to
+; R5.
+;
+EXPONENT:
+	MOVL	#^A/+/,R4		; its sign
+	TSTL	R0
+	BGEQ	10$
+	MNEGL	R0,R0
+	MOVL	#^A/-/,R4
+10$:	MOVL	L_E(FP),R1		; e digits and a letter, if e is given
+	BNEQ	15$
+	MOVL	#2,R1
+	CMPL	R0,#99
+	BLEQ	15$
+	CMPL	R0,#999
+	BLEQ	12$
+	BRW	STARS
+12$:	CLRL	L_TAIL(FP)		; the sign and 3 digits: no letter
+	MOVL	#3,R1
+	BRB	17$
+15$:	ADDL3	#2,R1,L_TAIL(FP)
+	BRB	18$
+17$:	MOVL	#4,L_TAIL(FP)
+18$:	CMPL	L_TAIL(FP),R9
+	BLEQ	20$
+	BRW	STARS
+20$:	ADDL3	L_FIELD(FP),R9,R5	; the digits, the last first
+25$:	MOVL	R0,R2
+	CLRL	R3
+	EDIV	#10,R2,R0,R2
+	ADDB3	#^A/0/,R2,-(R5)
+	SOBGTR	R1,25$
+	TSTL	R0			; digits left over: it doesn't fit
+	BEQL	30$
+	BRW	STARS
+30$:	MOVB	R4,-(R5)		; the sign
+	SUBL3	L_TAIL(FP),R9,R0	; a letter, if there are columns for one
+	ADDL2	L_FIELD(FP),R0
+	CMPL	R5,R0
+	BEQL	90$
+	MOVB	#^A/E/,-(R5)
+	CMPB	OP_B_CODE(R10),#C_D
+	BNEQ	90$
+	MOVB	#^A/D/,(R5)
+90$:	RSB
+
+	.END

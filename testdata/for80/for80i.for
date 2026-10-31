@@ -8,6 +8,7 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       CALL R4
       CALL R5
       CALL R6
+      CALL R7
       END
 
       SUBROUTINE R1
@@ -1215,6 +1216,34 @@ C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
       CALL SHOWV(3, 1)
       CALL SHOWV(4, 1)
       CALL SHOWV(5, 1)
+      END
+
+      OPTIONS /G_FLOATING
+      SUBROUTINE R7
+      INTEGER IOS
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      INTEGER*2 VW(8,16)
+      BYTE VB(16,16)
+      LOGICAL*4 VLU(4,16)
+      LOGICAL*2 VWU(8,16)
+      REAL VF(4,16)
+      DOUBLE PRECISION VD(2,16)
+      REAL*16 VH(16)
+      COMPLEX VFC(2,16)
+      COMPLEX*16 VDC(16)
+      EQUIVALENCE (S, VW, VB, VLU, VWU, VF, VD, VH, VFC, VDC)
+      CALL SYNC('#660')
+      CALL PRE
+      READ (5, '(F8.5)', IOSTAT=IOS) VD(1,1)
+      PRINT *, '=660', IOS
+      CALL SHOWV(0, 2)
+      CALL SYNC('#667')
+      CALL PRE
+      READ (5, '(E9.3)', IOSTAT=IOS) VD(1,1)
+      PRINT *, '=667', IOS
+      CALL SHOWV(0, 2)
       END
 
       SUBROUTINE SYNC(M)

@@ -132,8 +132,8 @@ NOTIMP, uses an edit FTNRTL doesn't have yet, and waits for its subtask.
 
 `TestFor80InputOracle` (the same file, Phase 80's subtask 5) does the same for
 input: `for80i.for` is round 1's formatted input cases (`rd`, from an internal
-record, and `rd5`, from SYS$INPUT; not those with G-floating items, as a program
-is compiled in D or in G), each a READ from unit 5 with a run-time format, its
+record, and `rd5`, from SYS$INPUT; those with G-floating items come last, in
+subroutines with `OPTIONS /G_FLOATING`, as `for80.for`'s do), each a READ from unit 5 with a run-time format, its
 items in 16-byte slots of a COMMON block whose bytes are first set to 55s as
 VMS's were. `for80i.dat` holds each case's records under a `#n` line, then three
 `/` lines as `FOR80R.COM` had, and the test types it at the program. Each case

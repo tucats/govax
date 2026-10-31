@@ -1573,10 +1573,33 @@ for any length.
 Two kinds of error matter here. A value too wide for its field is written
 as asterisks, and the statement goes on: the condition, `OUTCONERR`, is
 kept apart from the error that stops a statement (`CTX_WARNING`), and
-reported at its end. An item of the wrong type for I or L is edited by its
-bytes anyway and fails the statement only when the whole item is done, so
-both parts of a complex value show (`CTX_MISMATCH`); the record is written
-first. Both rules are VMS's library's, found by the probe.
+reported at its end. An item of the wrong type is edited by its bytes
+anyway, and the statement goes on, failing only at its end, after its records
+(`CTX_MISMATCH`). Both rules are VMS's library's, found by the probe.
+
+The floating descriptors, F, E, D, and G, are `ftn_float.mar`'s. Writing a
+real number correctly is the hard part of a run-time library, and FTNRTL
+doesn't do it: LIBRTL's `OTS$$CVT_x_T_R8` gives the value's exact decimal
+digits in a buffer in the caller's frame, rounded half up at the place
+asked for. The module's own work is the layout, and one routine, `LAYOUT`,
+serves every form: it is told how many digits go before the point, how many
+after, how far the first digit is from the point (`L_SHIFT`, so that a
+negative scale factor's or a small value's leading zeros need no case of
+their own), and how many columns the exponent or G's blanks hold at the
+field's end. Each descriptor just works out those numbers:
+
+    F8.2 of 25.0 with 2P    shift 4    4 digits . 2 digits    2500.00
+    E12.3 of 270.139        shift 0    0 digits . 3 digits    0.270E+03
+    1PE12.3                 shift 1    1 digit  . 3 digits    2.701E+02
+    -1PE12.2                shift -1   0 digits . 2 digits    0.03E+04
+    G13.6 of 12.3456789     shift 2    2 digits . 4 digits    12.3457, 4 blanks
+
+G is the instructive one: the form depends on the value *after* rounding
+(999.6 under G13.3 rounds up to 1000, so it takes E form), so it asks for
+the digits first, looks at the exponent, and for E form asks again, since E
+rounds at a different digit. Input is shorter still: the field goes to
+`OTS$CVT_T_x` with d, the scale factor, and BN's flag, and the routine's
+rules, an exponent overriding the scale factor among them, are FORTRAN's.
 
 ## 14. Testing a compiler
 

@@ -777,7 +777,8 @@ subtasks land.
 5. **Integer, logical, and character editing,** both directions, with BN and BZ,
    short fields, and the default widths. Done ("Subtask 5", below), with an
    input oracle.
-6. **Floating editing:** F, E, D, G, P, S, complex, both directions.
+6. **Floating editing:** F, E, D, G, P, S, complex, both directions. Done
+   ("Subtask 6", below).
 7. **List-directed:** output on the shared record (Part A's three differences),
    and input.
 8. **Variable format expressions and run-time formats.**
@@ -1065,6 +1066,80 @@ Tests: both oracles, `testdata/fortran/intedit.for` (both paging modes),
 `TestFortranIOSignals`' OUTCONERR, signaled with the program going on; `iostmt.for`
 and `formats.for` now take INFFORLOO and F as their failing cases.
 
+## Subtask 6: what was built (2026-10-31)
+
+**FTNRTL's F, E, D, and G** (`ftn_float.mar`, new: `FTN$$EDIT_FLOAT`, which
+`ftn_format.mar`'s EDIT calls for those four). No new vector entries, so GSMATCH
+stays 1,8. The digits are LIBRTL's: `OTS$$CVT_x_T_R8`, as `ftn_listout.mar`
+uses it, kind 2 rounding at d+n digits after the point for F and kind 0 at a
+number of significant digits for E, D, and G. A field is built whole on the
+stack, with the digit buffer (w + d + |n| + 8 bytes, room for any digit w
+columns show and the one that rounds it), and put at once. One routine, `LAYOUT`,
+places every form from how many digits go before and after the point, how far
+the first digit is from the point (`L_SHIFT`), and the columns at the field's
+end. The rules, all VMS's where the manual is silent:
+
+- **F.** Half up on the exact digits. No digit before the point: a 0 if there
+  is room, and it must have room if d is 0 (F2.1 of 0.5 is `.5`, F1.0 of 0.0
+  `*`). A negative value showing only zeros has no minus sign (F6.1 of -0.01).
+  A zero has no exponent, so P doesn't move its digits.
+- **E and D.** -d < n < d+2, else asterisks, so E8.0 of 1.0 is asterisks. n at
+  most 0: d+n significant digits and -n zeros after the point, the 0 before it
+  dropped if need be (E8.3 `.555E+00`). n above 0: d+1 significant, n before
+  the point. Exponent less n; zero's 0. With Ee: its letter, its sign, e digits,
+  or asterisks if more are needed. Without: `E+nn`, `+nnn` past 99, asterisks
+  past 999. D's letter is D.
+- **G.** d 0 is asterisks. The digits rounded to d significant ones choose the
+  form, so the test comes after rounding (0.09999999 under G13.6 is F form
+  `0.100000`, 999.6 under G13.3 E form). F form: no scale factor, e+2 blanks
+  after it (4 with no Ee), fitting w less those or asterisks. Any other, zero
+  included, is E form with P, the digits asked for again.
+- **Signs.** A plus after SP on what isn't shown negative, for all four.
+- **Default widths** by the item's type, Table 8-4 as VMS's run gave them: 15.7
+  for REAL\*4 and an item that isn't floating, 25.16 for REAL\*8 in either
+  format, 42.33 with e 3 for REAL\*16.
+- **Input.** `OTS$CVT_T_x` reads FTN_EDIT's field (`FTN$$EDIT_FIELD`, now
+  global) with d, n, and BN's flag: an exponent by E, D, Q, or a sign, or `1E`
+  with none (VMS's 0.01 under F5.2), the scale factor only without an exponent,
+  `.` and `+` zero, an overflow INPCONERR with the item zeros, an underflow 0.
+  An item that isn't floating takes an F_floating value's first bytes (4 at
+  most, so a word gets half), then FORVARMIS.
+- **An item that isn't floating, on output,** is F_floating from its first
+  4 bytes, then FORVARMIS; a field of asterisks is OUTCONERR alone (VMS's F8.2
+  of `'HI'`, F8.255 of 1).
+
+**FORVARMIS moved to the statement's end,** correcting subtask 5. VMS's
+`(1X,E8.2E)` and `(1X,+2PF8.2)` of two integers write both records before it
+(cases 346 and 354), so the statement goes on, and `FTN$$FMT_END` fails it after
+writing its last record; one item's rule was only the case of one item. So
+`CTX_MISMATCH` lasts the statement, cleared at its start. An error that stops
+the statement first (INPCONERR after a mismatch) is what's reported: unconfirmed,
+as no case has both, and a READ's going on after a mismatch is by analogy.
+
+**Both oracles now compare every case.** A case with a G_floating item is written
+last, in subroutines with `OPTIONS /G_FLOATING` (`gen.go`'s `dThenG`), so
+VMS's G_floating cases, exponents past 99 among them, run through FTNRTL too.
+`TestFor80Oracle` compares 467 cases and `TestFor80InputOracle` 212 (those whose
+internal record ran out on VMS aren't), with none waiting. Listed differences:
+
+- **#68,** F45.40 of REAL\*16 0.1: govax's digits are the value's exact ones,
+  and VMS's differ past the format's 34 digits of precision.
+- **#263, #273, #283,** E, G, D of a BYTE: VMS's reads 4 bytes whatever the item's
+  length, so what follows a byte shows in its value. FTNRTL takes zeros there,
+  rather than read past the item. (VMS's `HI` and its integers happen to have
+  zeros there.)
+- **#351,** the lone P, from subtask 5.
+
+Unconfirmed: a reserved operand, a REAL's or an integer's bits taken as one
+(LIBRTL signals SS$_ROPRAND; no case has one); zero with n above 1 (`0000.E+00`
+here); SP on a negative value showing only zeros (a plus here); a default-width
+F of digits with no point, d 7 in the fraction.
+
+Tests: both oracles; `testdata/fortran/floatedit.for` (both paging modes), written
+by hand from the rules, and `formats.for`'s last statement, F now; `TestFortranFloatInput`
+(both modes). `TestFTNRTL`'s build deletes each source once assembled, its 400-block
+volume having filled.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1136,3 +1211,9 @@ and `formats.for` now take INFFORLOO and F as their failing cases.
   item; "Subtask 5" above. A new input oracle, `TestFor80InputOracle`
   (`for80i.for`, `for80i.dat`), matches VMS's run in all 152 cases it compares;
   the output oracle now compares 278, all matching but case 351, a lone P.
+- **2026-10-31, subtask 6, done.** F, E, D, and G both ways in FTNRTL
+  (`ftn_float.mar`), with P, S, SP, SS, and complex values, on LIBRTL's digit and
+  text routines; "Subtask 6" above. VMS's two-item cases moved FORVARMIS to the
+  statement's end. `gen.go` now states the G_floating cases in units with
+  `OPTIONS /G_FLOATING`, so both oracles compare every case: 467 output and 212
+  input, none waiting, with four listed differences beyond the lone P.

@@ -172,6 +172,7 @@ func ftnrtlBuild(t *testing.T, d *Dispatcher, c *Console) {
 		name := strings.ToUpper(e.Name())
 		copyIn(path.Join(ftnrtl.SourceDir, e.Name()), name)
 		shareFindRun(t, d, "MACRO "+strings.TrimSuffix(name, ".MAR"))
+		shareFindRun(t, d, "DELETE "+name+";*") // the volume is small
 	}
 
 	if err := d.Dispatch("LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS"); err != nil && !vmserrors.MessageInhibited(err) {

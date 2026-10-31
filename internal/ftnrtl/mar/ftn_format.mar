@@ -70,13 +70,11 @@
 ; The data descriptors that edit a value: A (8.3.10) and Q (8.3.13) are
 ; here; I, O, Z, and L are FTN_EDIT's (FTN$$EDIT_INT), which also uses
 ; this module's FTN$$FMT_PUT, FTN$$FMT_WRITE, FTN$$FMT_FAIL, and
-; FTN$$FMT_WARN; F, E, D, and G are FOR$_NOTIMP until the subtask that
-; brings floating editing.
+; FTN$$FMT_WARN; F, E, D, and G are FTN_FLOAT's (FTN$$EDIT_FLOAT).
 ;
 	$SSDEF
 
 ; FORRTL's condition values, with their severities.
-FOR$_NOTIMP	= ^X00188014
 FOR$_INPRECTOO	= ^X001880B4
 FOR$_ERRDURWRI	= ^X00188134
 FOR$_INSVIRMEM	= ^X0018814C
@@ -141,8 +139,8 @@ CTX_GROUPS	= CTX_USED+1		; each group being done: its operation's
 MAX_DEPTH	= 8			; groups nest 8 deep (internal/fortran/format)
 CTX_WARNING	= CTX_GROUPS+<MAX_DEPTH*8> ; long: an error the statement goes on
 					;  after (FTN$$FMT_WARN), or 0
-CTX_MISMATCH	= CTX_WARNING+4		; byte: 1 if the item being edited isn't of
-					;  a type its descriptor takes (FTN_EDIT)
+CTX_MISMATCH	= CTX_WARNING+4		; byte: 1 if an item wasn't of a type its
+					;  descriptor takes (FTN_EDIT, FTN_FLOAT)
 CTX_SIZE	= CTX_WARNING+8
 
 OUTPUT_MAX	= 133			; an output record's bytes, at most
@@ -243,6 +241,7 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVB	#1,CTX_BLANK(R6)	; a unit with no OPEN: BLANK='ZERO' (8.3)
 	CLRB	CTX_DOLLAR(R6)
 	CLRB	CTX_USED(R6)
+	CLRB	CTX_MISMATCH(R6)
 	MOVL	8(AP),R2		; the format
 	BITW	#FLAG_RUNFMT,CTX_FLAGS(R6)
 	BNEQ	20$
@@ -292,9 +291,9 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 ; another. A complex value is two items, its real and imaginary parts
 ; (8.3.8), each taking a data descriptor of its own. Each takes the
 ; format's next data descriptor, which edits it (EDIT). An item of a type
-; its descriptor doesn't take is edited whole and then fails the
-; statement with FOR$_FORVARMIS (CTX_MISMATCH). Does nothing once the
-; statement has failed.
+; its descriptor doesn't take is edited all the same, and the statement
+; goes on, failing with FOR$_FORVARMIS at its end (CTX_MISMATCH, FTN$$FMT_END).
+; Does nothing once the statement has failed.
 ;
 	.ENTRY	FTN$$FMT_ITEM,^M<R2,R3,R4,R5,R6,R7,R8,R9>
 	MOVL	4(AP),R2		; the context
@@ -321,14 +320,13 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	BEQL	15$
 	MOVL	#DSC$K_DTYPE_G,R8
 	CMPL	R6,#DSC$K_DTYPE_GC
-	BNEQ	20$
+	BNEQ	30$
 15$:	MOVL	R8,R6
 	DIVL2	#2,R4
 	MULL2	#2,R7
 	;
 	; Each one: the next data descriptor, then its edit.
 	;
-20$:	CLRB	CTX_MISMATCH(R2)
 30$:	TSTL	CTX_STATUS(R2)
 	BNEQ	90$
 	CLRL	-(SP)			; not the statement's end
@@ -344,22 +342,6 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CALLS	#5,EDIT
 	ADDL2	R4,R5			; the next
 	SOBGTR	R7,30$
-	;
-	; An item of a type its descriptors don't take (I of a REAL, say)
-	; has been edited whole, both parts of a complex value; then an
-	; output statement's record is written, and the statement fails, as
-	; VMS's does.
-	;
-	TSTB	CTX_MISMATCH(R2)
-	BEQL	90$
-	TSTL	CTX_STATUS(R2)
-	BNEQ	90$
-	BLBC	CTX_KIND(R2),80$
-	PUSHL	R2
-	CALLS	#1,FTN$$FMT_WRITE
-80$:	PUSHL	#FOR$_FORVARMIS
-	PUSHL	R2
-	CALLS	#2,FTN$$FMT_FAIL
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
 
@@ -369,7 +351,9 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 ; Ends a formatted statement: walks on to a data descriptor, a colon, or
 ; the format's end, and writes an output statement's last record; then
 ; lets a run-time format's parsed copy go. Its record isn't written once
-; the statement has failed.
+; the statement has failed. An item of a type its descriptor didn't take
+; (I of a REAL, say) fails it here, after the records are written: VMS's
+; (1X,F8.2) of two integers writes both records before FOR$_FORVARMIS.
 ;
 	.ENTRY	FTN$$FMT_END,^M<R2>
 	MOVL	4(AP),R2
@@ -378,9 +362,14 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	PUSHL	#1			; the statement's end
 	PUSHL	R2
 	CALLS	#2,WALK
-	BLBC	CTX_KIND(R2),50$	; a READ: nothing to write
+	BLBC	CTX_KIND(R2),40$	; a READ: nothing to write
 	PUSHL	R2
 	CALLS	#1,FTN$$FMT_WRITE
+40$:	TSTB	CTX_MISMATCH(R2)
+	BEQL	50$
+	PUSHL	#FOR$_FORVARMIS
+	PUSHL	R2
+	CALLS	#2,FTN$$FMT_FAIL
 50$:	PUSHL	R2
 	CALLS	#1,FTN$$FMT_FREE
 	RET
@@ -718,20 +707,18 @@ EDIT:	.WORD	^M<R2,R3,R4,R5>
 10$:	.WORD	EDIT_INT-10$		; I
 	.WORD	EDIT_INT-10$		; O
 	.WORD	EDIT_INT-10$		; Z
-	.WORD	NOT_YET-10$		; F
-	.WORD	NOT_YET-10$		; E
-	.WORD	NOT_YET-10$		; D
-	.WORD	NOT_YET-10$		; G
+	.WORD	EDIT_FLOAT-10$		; F
+	.WORD	EDIT_FLOAT-10$		; E
+	.WORD	EDIT_FLOAT-10$		; D
+	.WORD	EDIT_FLOAT-10$		; G
 	.WORD	EDIT_INT-10$		; L
 	.WORD	EDIT_A-10$		; A
 	.WORD	EDIT_Q-10$		; Q
 EDIT_INT:
 	CALLG	(AP),FTN$$EDIT_INT	; FTN_EDIT
 	RET
-NOT_YET:
-	PUSHL	#FOR$_NOTIMP
-	PUSHL	4(AP)
-	CALLS	#2,FTN$$FMT_FAIL
+EDIT_FLOAT:
+	CALLG	(AP),FTN$$EDIT_FLOAT	; FTN_FLOAT
 	RET
 
 ;

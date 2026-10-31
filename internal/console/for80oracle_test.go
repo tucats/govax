@@ -143,6 +143,12 @@ func TestFor80Oracle(t *testing.T) {
 // expectedFor80Differences are the cases of TestFor80Oracle known to
 // differ from VMS's run, each with the reason.
 var expectedFor80Differences = map[int]string{
+	68: "(1X,F45.40) of REAL*16 0.1: govax shows the value's exact digits; VMS's differ from the 38th on, past " +
+		"the format's precision, where its digit routine isn't exact.",
+	263: "(1X,E) of BYTE 42: VMS's library reads 4 bytes, so its value holds what follows the byte; " +
+		"FTNRTL takes zeros there.",
+	273: "(1X,G) of BYTE 42: as #263.",
+	283: "(1X,D) of BYTE 42: as #263.",
 	351: "(1X,P,I3): VMS's library finds no data descriptor (INFFORLOO) and writes nothing, where FTNRTL " +
 		"takes P alone as 0P and edits I3; VMS's (1X,P) is INFFORLOO too, so perhaps a P with no count " +
 		"ends its format, but one case can't say",
