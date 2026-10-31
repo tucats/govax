@@ -373,7 +373,7 @@ Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
 govax run [--debug | --no-debug] IMAGE [text...]
 
 govax fortran [--macro FILE | --no-macro] [--extend-source] [--d-lines]
-              SOURCE...
+              [--continuations N] [--no-i4] [--g-floating] SOURCE...
 
 govax macro [--object FILE | --no-object] [--list | --list-file FILE]
             [--show OPTS] [--no-show OPTS] [--cross-reference]
@@ -1293,12 +1293,13 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
 source files, which MACRO assembles and LINK links. govax's FORTRAN
 compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
-plan.md`); so far it compiles a first subset of the language (main
+plan.md`); so far it compiles a subset of the language (main
 programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
-EQUIVALENCE, DATA, SAVE, EXTERNAL; INTEGER, LOGICAL, and REAL
-expressions of every length; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and `WRITE
-(*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
+EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
+and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
+intrinsic function; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and
+`WRITE (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
@@ -4349,11 +4350,11 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 76, done 2026-10-30):** the compiler reads
+**Where things stand (Phase 78, done 2026-10-31):** the compiler reads
 every statement of the language and gives every declaration its meaning
-and its storage, and compiles a first subset of the executable statements
-and expressions (section 14.2): programs written in it compile, link, and
-run. Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the READ
+and its storage, compiles every expression in every type with every
+intrinsic function, and compiles a subset of the executable statements
+(section 14.2): programs written in it compile, link, and run. Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the READ
 statement is not implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
@@ -4916,6 +4917,10 @@ FORTRAN compiler was available to check them). So far:
   LOGICAL values `.AND.`, `.OR.`, and `.NOT.` work bit by bit, as they
   do on INTEGERs.
 - A name only declared, never used, is a variable, and gets storage.
+- A program unit's name names nothing else in its file: with a main
+  program called TEXT, TEXT can't be a variable or dummy argument of
+  another unit in the file (`%FORT-E-BADUSE`), which FORTRAN-77 seems to
+  allow in a unit that doesn't refer to the program.
 - A COMPLEX\*8 product is computed in line, as
   `(ac - bd, ad + bc)` with each product and sum rounded to F_floating, since
   MTHRTL has no routine for it; a COMPLEX\*16 product calls `OTS$MULCD_R3`

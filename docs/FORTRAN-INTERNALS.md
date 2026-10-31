@@ -7,15 +7,18 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 76) the compiler parses every statement of the
+So far (Phases 74 to 78) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
-every pass is in place to compile a first subset of the executable
-statements: main programs, subroutines, and functions; INTEGER, REAL,
-and LOGICAL scalars and arrays; assignment and expressions; IF, block
-IF, DO, GO TO, CALL, RETURN, and STOP; and `PRINT *` and `WRITE (*,*)`.
-The tour follows one small program through every pass (section 1), then
-takes the passes in order, with a second program for declarations and
-storage (section 8), then FTNRTL, then how the compiler is tested.
+compiles a subset of the executable statements: main programs,
+subroutines, and functions; every expression in every type (BYTE,
+LOGICAL and INTEGER of every length, REAL\*4, \*8 in D or G, and \*16,
+COMPLEX\*8 and \*16, CHARACTER), with every intrinsic function;
+assignment; IF, block IF, DO, GO TO, CALL, RETURN, and STOP; and
+`PRINT *` and `WRITE (*,*)`. The tour follows one small program through
+every pass (section 1), then takes the passes in order, with a second
+program for declarations and storage (section 8) and a third for the
+types and how each chooses its instructions (section 11), then FTNRTL,
+then how the compiler is tested.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -31,10 +34,10 @@ produced and handing on something a step closer to machine code:
      |             comments, INCLUDE                     (Phase 74)
  lex ------------- each statement's kind, and its tokens (Phases 75-76)
  parse ----------- tokens into a syntax tree             (Phases 75-76)
- sema ------------ names, types, blocks, labels, storage (Phases 75-76)
- ir -------------- the tree lowered to basic blocks      (Phase 75)
+ sema ------------ names, types, blocks, labels, storage (Phases 75-78)
+ ir -------------- the tree lowered to basic blocks      (Phases 75, 78)
  opt ------------- optional improvements                 (Phase 84)
- codegen --------- VAX instructions, as MACRO-32 text    (Phases 74-76)
+ codegen --------- VAX instructions, as MACRO-32 text    (Phases 74-78)
      |
  AVERAGE.MAR --MACRO--> AVERAGE.OBJ --LINK (FTNRTL)--> AVERAGE.EXE
 ```
@@ -788,20 +791,21 @@ the assignment's target, and only values inside a tree need registers
 (`expr.go`). When the target is also an operand the two-operand form
 does (`ADDF2`), and `INCL` and `DECL` add and subtract 1.
 
-- **Registers.** Interior values go in R0 to R5, by Sethi and Ullman's
-  order: of an operation's two operands, compute first the one needing
+- **Registers.** Interior values go in registers from R0 up, by Sethi and
+  Ullman's order: of an operation's two operands, compute first the one needing
   more registers, so as few as possible are held at once. An expression
   needing more than a budget has parts computed first into spill cells
   (`$X1`), so registers never run out. The calling standard lets a
   routine use R0 and R1 freely, but it must preserve R2 to R11, so a
   routine using any of those names them in its entry mask, and `CALLS`
-  saves them.
+  saves them. (Section 11 has values that take two or four registers.)
 - **Places.** A variable is its symbol (`MEAN.I`), a dummy argument
   `@n(AP)`, an element indexed mode. A dummy array has no room in
   `@n(AP)` for its offset, so the offset goes into the index instead:
   `SUBL3 #1,MEAN.I,R0` then `@MEAN.A(AP)[R0]`.
 - **Constants.** An integer is an immediate operand, `#n`. A REAL
-  constant is a longword of its F_floating bits in `$PDATA` (`$F1`),
+  constant is its bits in `$PDATA` (`$F1`; a longword for F_floating,
+  more for the others, section 11),
   since MACRO reads `#n` in a floating instruction as a value to convert
   itself, and the compiler's own bits, folded by `vaxfloat`, are the ones
   wanted (Decision 16).
@@ -879,7 +883,276 @@ characters becomes a numbered one, `.$Nn`, listed in the storage map.
 
 The manual's section 14.5 shows a whole MACRO file.
 
-## 11. FTNRTL: the run-time library (`internal/ftnrtl`)
+## 11. Every type and its instructions
+
+The first compiled subset had two types, INTEGER and REAL, and Phase 78
+gave the code generator the rest. It needed less new code than one might
+expect, because the VAX names its instructions by an operation and a
+type: `ADDL3` adds longwords, `ADDW3` words, `ADDF3` F_floating values,
+`ADDD3` D_floating, `ADDH3` H_floating. A compiler that knows a value's
+type knows its instruction's last letters. What took the work was the
+places where the VAX doesn't follow that pattern, and the three kinds of
+value that aren't one machine value at all: COMPLEX, CHARACTER, and the
+results of functions too wide for R0. This section follows a third
+program through them:
+
+```
+      SUBROUTINE AREA(R, C, S, A)
+      REAL*8 R, A
+      COMPLEX C
+      CHARACTER*(*) S
+      A = 4*DATAN(1D0)*R**2
+      C = C*(0.0, 1.0) + R
+      IF (S .LT. 'M') S = 'SMALL'
+      END
+```
+
+### The IR's types
+
+Each IR type is a VAX data type, named by its instructions' letter:
+
+| FORTRAN | IR type | Bytes | Registers |
+| --- | --- | ---: | ---: |
+| BYTE, LOGICAL\*1 | `B` | 1 | 1 |
+| INTEGER\*2, LOGICAL\*2 | `W` | 2 | 1 |
+| INTEGER\*4, LOGICAL\*4 | `L` | 4 | 1 |
+| REAL\*4 | `F` | 4 | 1 |
+| REAL\*8 | `D`, or `G` under `/G_FLOATING` | 8 | 2 |
+| REAL\*16 | `H` | 16 | 4 |
+| COMPLEX\*8 | `Q`, two `F` parts | 8 | 2 |
+| COMPLEX\*16 | `O`, two `D` or `G` parts | 16 | 4 |
+| CHARACTER\*n | a `B` place and a length | n | none |
+
+LOGICAL and INTEGER of one length are one IR type. What differs between
+them (a LOGICAL is tested by bit 0, and its descriptor says LU, not L)
+is settled in sema and lowering, so the code generator never asks. A
+REAL\*8 is D or G by the unit (`/G_FLOATING`, or an OPTIONS statement
+before the unit), and sema decides which; a unit never has both, which
+is as well, since the VAX has no instruction that converts one to the
+other.
+
+### An instruction from its letter
+
+`operate` (`codegen/expr.go`) writes every arithmetic operation as an
+opcode stem and the type's letter: `ADD`, `SUB`, `MUL`, `DIV`, `MNEG`, `BIS`
+(`.OR.`), `XOR`, `MCOM` (`.NOT.`), and `BIC` for `.AND.`, which the VAX
+has only as "clear the bits the mask has set", so `X .AND. Y` is
+`BICL3` of Y's complement. A conversion is `CVT` and both types' letters,
+`CVTWL`, `CVTFD`, `CVTDF` (which rounds), `CVTFL` (which truncates, as an
+assignment of a REAL to an INTEGER must); NINT is `CVTRFL`, which rounds;
+ZEXT is `MOVZWL`. Only the integers have `INC` and `DEC`.
+
+Where the pattern breaks, each place was found by a program that went
+wrong, or by reading the architecture manual:
+
+- **Indexed mode scales by the instruction's type.** `A[R0]` is A's
+  address plus R0 times the size of what the *instruction* works on. A
+  `MOVAL` of a D_floating element would scale by 4, so an element's
+  address is taken with its own letter (`MOVAD`, `PUSHAD`, `MOVAQ` for a
+  COMPLEX\*8 element; `addressOp`). An operand an instruction reads as
+  another type than its own (a count for `ASHL`, a word for `EXTZV`'s
+  position) is first put in a register if it is indexed (`unindexed`).
+- **`BLBC` and `BLBS` read a longword.** Testing a LOGICAL\*1 in memory
+  by its bit 0 that way reads three bytes past it, which may not exist,
+  so a byte or word in memory is tested with `BITB #1` or `BITW #1` and
+  a `BEQL` or `BNEQ` (`cond.go`).
+- **Floating constants are data.** MACRO reads `#1.5` in a floating
+  instruction as a number to convert itself; the compiler wants its own
+  bits, folded by `vaxfloat` as the CPU would round (Decision 16), so a
+  D, G, or H constant is a datum in `$PDATA` (`AREA.$F1` below, 4D0), and
+  an F constant stored is `MOVL #^X...` of its bits.
+- **Character comparisons are unsigned.** `CMPC3` and `CMPC5` set the
+  condition codes as an unsigned comparison of the bytes, so their
+  branches are `BLSSU`, `BGTRU`, and the rest, where every other
+  comparison here is signed.
+
+### Registers in runs
+
+A D_floating value in registers occupies two, R0 and R1 say, and an
+instruction names only the first: `MULD3 R0,R2,R4` multiplies R0:R1 by
+R2:R3 into R4:R5. An H value takes four. So each value takes a run of its
+type's width (`ir.Type.Width`), `alloc` finds the lowest free run, and
+Sethi and Ullman's count (`need`) counts registers rather than values.
+The pool is R0 to R11, of which an expression may hold at most four
+(`budget`) before its biggest parts are computed into spill cells of
+their own type (`fit`, `spill`). The pool is so much larger than the
+budget so that a run of four can always be found, however the
+registers held are scattered.
+
+Some instructions use registers the allocator never handed out: `MOVC5`
+leaves R0 to R5 changed, `CMPC5` and `MATCHC` R0 to R3, and an
+`OTS$..._R3` routine returns its value in R0 to R3. None of these is
+ever in the middle of an expression (the next sections say how), so
+nothing the allocator holds can be lost; but the caller's R2 to R5 are
+lost unless the routine's entry mask saves them, so they are marked used:
+AREA's `.ENTRY AREA,^M<R2,R3,R4,R5>` is for its `MOVC5`.
+
+### Mixed types
+
+Sema converts by rank (the language manual's 2.3.1.2: integer below
+real below complex, and the longer above the shorter within each), so
+by the time an expression reaches the IR, every operation's operands
+have its type and every conversion is an explicit `cvt`. Two rules come
+from the manual's text, not its table. An integer constant from -32768
+to 32767 beside an INTEGER\*2 is a word (2.2.1.1), so `I2*1000` is a
+`MULW3` and wraps where a longword wouldn't. And a REAL\*4 literal in a
+REAL\*8 expression "retains additional precision": sema's constants keep a
+literal's exact value, so `D + 0.1` adds 0.1D0, not the F_floating 0.1
+widened.
+
+### COMPLEX: two real expressions
+
+A complex operation is not one instruction: a product is four
+multiplications and two additions. Rather than teach the code generator
+complex arithmetic, lowering splits each complex expression into its real
+part's tree and its imaginary part's (`ir/lowercomplex.go`, Decision 1),
+over F, D, or G operations. AREA's line 6, lowered:
+
+```
+  ; line 6
+  assign $T2 = cvt.DF(add.D(cvt.FD(sub.F(mul.F(@C, 0.0), mul.F(@C+4, 1.0))), @R))
+  assign @C+4 = cvt.DF(cvt.FD(add.F(mul.F(@C, 1.0), mul.F(@C+4, 0.0))))
+  assign @C = $T2
+```
+
+`C*(0.0, 1.0)` is `(ac - bd, ad + bc)` written out, with `@C` the real part
+and `@C+4` the imaginary one. Adding R, a REAL\*8, makes the sum a
+COMPLEX\*16 (a REAL\*8 beside a COMPLEX\*8 isn't rounded), so each part is
+widened, summed, and rounded back to the target's F_floating. The real
+part goes to a temporary first, because the imaginary part's tree still
+reads `@C`: storing the real part straight into C would change what the
+second tree computes. A complex value moved or passed whole is one `MOVQ`
+or `MOVO`.
+
+Two operations aren't written out. A COMPLEX\*16 product calls
+`OTS$MULCD_R3` (or `OTS$MULCG_R3`), and every quotient `OTS$DIVC` or
+its D and G forms, which compute each part exactly and round once; the
+compiler's constant folding computes the same way (`vaxfloat`), so a
+folded expression has the value the program would compute. COMPLEX\*8 has
+no such routine, so its product is in line, in F's own rounded steps, and
+folding does those steps too (`vaxfloat.ComplexMulSteps`). Such a routine
+takes its arguments by value, which the IR's `Arg.Value` does for any
+type (`MOVQ x,-(SP)`, two longwords of the argument list), and returns
+a value in R0 up, as wide as it is.
+
+### CHARACTER: statements, not expressions
+
+A character value isn't in registers at all: it is a place and a
+length (`ir.Text`), and the instructions that work on it, `MOVC3`,
+`MOVC5`, `CMPC3`, `CMPC5`, and `MATCHC`, take both and use R0 to R5 for
+their own work. So character operations are the IR's statements, not its
+expressions (Decision 2): `CharMove` is an assignment, `CharCmp` a
+comparison that may only be a branch's condition or the whole of an
+assignment's value, and every operand they need is computed before the
+instruction runs. No register is held across them, and so none can be
+lost.
+
+A CHARACTER dummy argument's text is two steps from the argument list,
+since a character argument is passed by descriptor: the longword at
+`n(AP)` points at the descriptor, whose first word is the length and
+whose second longword the text's address. AREA's line 7:
+
+```
+;    7        IF (S .LT. 'M') S = 'SMALL'
+	MOVZWL	@AREA.S(AP),R0                  ; S's length
+	MOVL	AREA.S(AP),R1                   ; its descriptor's address
+	CMPC5	R0,@4(R1),#^A/ /,#1,AREA.$K2    ; S against 'M', blank-padded
+	BLSSU	AREA.$2
+	BRW	AREA.$1
+AREA.$2:
+	MOVZWL	@AREA.S(AP),R0
+	MOVL	AREA.S(AP),R1
+	MOVC5	#5,AREA.$K3,#^A/ /,R0,@4(R1)    ; 'SMALL', blank-filled
+AREA.$1:
+```
+
+`@4(R1)` is the deferred mode: the operand at the address held 4 bytes
+past R1, which is the text. `CMPC5` and `MOVC5` give the language's rules
+for free: a comparison of different lengths as though the shorter were
+filled with blanks, and an assignment cut or filled with blanks to the
+target's length. They also move correctly when the source and target
+overlap, so `S(2:) = S` needs nothing special.
+
+A concatenation (`ir/lowerchars.go`, Decision 8) is always built in a
+temporary, part by part, before it is used, since a dummy argument or
+EQUIVALENCE can hide an overlap with its target. The temporary is a cell
+as long as the value can be, or, when one part is a passed-length dummy
+whose length isn't known until the program runs, a dynamic string from
+LIBRTL's `LIB$SGET1_DD`, freed by `LIB$SFREE1_DD` at the statement's end.
+
+### Powers and the intrinsic functions
+
+`X**N` for an INTEGER or REAL X and a constant N from 1 to 8 is
+multiplied out in line; anything else calls an `OTS$POW` routine
+(`ir/lowerpower.go`). The in-line products are made in the same order as
+the routine's (`vaxfloat.PowerBySquaring`: repeated squaring, the result
+multiplied by the squares the exponent's bits select), so `X**7` has the
+same value whichever way it is computed, and the same as when it is
+folded. AREA's `R**2` is the one `MULD3 @AREA.R(AP),@AREA.R(AP),R2`.
+
+The intrinsic functions are a table (`sema/intrinsics.go`), one row for
+each line of the manual's Table D-3: the generic name, the specific name,
+the argument count, the arguments' and result's types, and how it
+compiles. A reference picks its row by its arguments' type (a generic
+name) or by its name (a specific one), and becomes one of three things:
+
+- **an operator or a conversion,** when an instruction or two does it:
+  IAND is `.AND.`, REAL is a `cvt`, NINT a `round`, IBITS an `EXTZV`,
+  INDEX a `MATCHC`. The functions that choose (ABS, MAX, MIN, DIM, SIGN)
+  branch, so they are lowered as calls are: before the statement, through
+  blocks of their own, their value in a temporary.
+- **a call of MTHRTL,** for SQRT, EXP, SIN, and the rest: the specific
+  name's routine with the unit's format's letter (`MTH$DATAN` for DATAN,
+  `MTH$GATAN` under `/G_FLOATING`, `MTH$HATAN` for QATAN), the arguments
+  by reference. AREA's DATAN is the first three instructions below. A
+  REAL\*16 or COMPLEX\*16 result is too wide for R0 to R3 as the calling
+  standard uses them, so it comes back through a hidden first argument,
+  the address of a temporary.
+- **a call of FTNRTL,** for ISHFTC, which no instruction does.
+
+An intrinsic function's name passed as an argument is its routine's
+address, `PUSHAB G^MTH$SIN`; FTNRTL has a routine for each name MTHRTL
+lacks (LEN, INDEX, the lexical comparisons, the bit functions, ...), so
+that every name but SIZEOF can be passed.
+
+### AREA, compiled
+
+```
+	.ENTRY	AREA,^M<R2,R3,R4,R5>
+;    5        A = 4*DATAN(1D0)*R**2
+	PUSHAD	AREA.$K1                ; 1D0, by reference
+	CALLS	#1,G^MTH$DATAN
+	MOVD	R0,AREA.$T1             ; the result, in R0:R1
+	MULD3	AREA.$F1,AREA.$T1,R0    ; 4D0 times it, into R0:R1
+	MULD3	@AREA.R(AP),@AREA.R(AP),R2  ; R**2, into R2:R3
+	MULD3	R0,R2,@AREA.A(AP)
+;    6        C = C*(0.0, 1.0) + R
+	MULF3	@AREA.C(AP),AREA.$F2,R0     ; the real part's tree
+	MOVL	#1,R1
+	MULF3	@AREA.C(AP)[R1],AREA.$F3,R1
+	SUBF2	R1,R0
+	CVTFD	R0,R0
+	ADDD2	@AREA.R(AP),R0
+	CVTDF	R0,AREA.$T2
+	MULF3	@AREA.C(AP),AREA.$F3,R0     ; the imaginary part's
+	MOVL	#1,R1
+	MULF3	@AREA.C(AP)[R1],AREA.$F2,R1
+	ADDF2	R1,R0
+	CVTFD	R0,R0
+	MOVL	#1,R2
+	CVTDF	R0,@AREA.C(AP)[R2]
+	MOVF	AREA.$T2,@AREA.C(AP)
+```
+
+(The comments here and in line 7's code above are the tour's; the file
+has the source lines.) The
+imaginary part of the dummy C is `@AREA.C(AP)[R1]` with R1 holding 1:
+`@n(AP)` has no room for an offset, so the 4 bytes go in an index scaled
+by F's size. Multiplying by 0.0 and 1.0 and widening a value only to
+round it back are left for Phase 84's optimizer: the point now is code
+that is right in every type.
+
+## 12. FTNRTL: the run-time library (`internal/ftnrtl`)
 
 Compiled code does arithmetic and branches itself; for I/O, STOP, and
 the like it calls FTNRTL. FTNRTL is written in MACRO-32 (Decision 13),
@@ -956,7 +1229,8 @@ compiled code runs the loop and calls for each.
   fields after these and raise the size, and FTNRTL reads only what the
   size says is there, so old programs go on working.
 - **The descriptors** are the VAX calling standard's: the item's
-  length, its data type (`DSC$K_DTYPE_L`, `_LU`, `_F`, `_T`), its class
+  length, its data type (`DSC$K_DTYPE_L`, `_LU`, `_F`, `_D`, `_FC`, `_T`,
+  and the rest, one per FORTRAN type), its class
   (S for a scalar, A for a whole array), and its address. The data type
   chooses the format, so FTNRTL needs nothing else to write a value.
 - **The unit** (`ftn_units.mar`) is SYS$OUTPUT, opened at the first
@@ -966,9 +1240,11 @@ compiled code runs the loop and calls for each.
   a new line. That is why every list-directed record starts with a
   blank: the blank isn't printed, but turned into the line's start.
 - **The formats** (`ftn_listout.mar`) fill an 80-byte record buffer: L2
-  from bit 0, I12 by LIBRTL's `OTS$CVT_L_TI`, a text copied, and REAL's
-  `1PG15.7E2` from the decimal digits `OTS$$CVT_F_T_R8` returns, FTNRTL
-  choosing the fixed or exponent form by the rounded value's magnitude.
+  from bit 0, I5, I7, and I12 by LIBRTL's `OTS$CVT_L_TI`, a text copied,
+  and REAL's `1PG15.7E2` from the decimal digits `OTS$$CVT_F_T_R8` returns
+  (REAL\*8's `1PG24.16E2` from `OTS$$CVT_D_T_R8`'s, and so on), FTNRTL
+  choosing the fixed or exponent form by the rounded value's magnitude; a
+  COMPLEX value is its parts' fields without their blanks, in parentheses.
   A value that won't fit what's left of the record writes the record
   (`$PUT`) and starts the next; the end call writes the last one.
 
@@ -976,7 +1252,7 @@ FTNRTL calls LIBRTL for the conversions as any VAX program would, through
 LIBRTL's transfer vector; a run-time library built on another is the
 normal arrangement on VMS.
 
-## 12. Testing a compiler
+## 13. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.
@@ -1000,7 +1276,11 @@ pipeline is tested end to end on govax.
   harness: each `testdata/fortran/name.for` is compiled, assembled,
   linked against FTNRTL, and run, and its output compared with
   `name.out`, written by hand from the language's rules (there is no VAX
-  FORTRAN to check against). FTNRTL's routines are tested from MACRO
+  FORTRAN to check against); the math functions' values were computed
+  apart from govax, to 80 digits, and rounded to each format's bits. A
+  program whose results depend on rounding along the way (`numeric.for`'s
+  Newton's method, Simpson's rule) checks them against a tolerance or
+  prints them rounded, so that its output is the mathematics'. FTNRTL's routines are tested from MACRO
   callers (`TestFTNRTL`, `TestFTNRTLListOutput`), in both of RUN's
   paging modes.
 - **Programs of several files.** `TestFortranModules` compiles and

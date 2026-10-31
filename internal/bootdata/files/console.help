@@ -4025,14 +4025,16 @@ $FOR
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
     FORTRAN plan.md).  So far it reads every statement of the language,
-    and compiles a subset: main programs, subroutines, INTEGER, REAL,
-    and LOGICAL functions, and BLOCK DATA; declarations of every type,
-    IMPLICIT, PARAMETER, arrays, COMMON, EQUIVALENCE, DATA, SAVE,
-    EXTERNAL, and INTRINSIC; assignment and expressions in INTEGER,
-    REAL, and LOGICAL; IF, block IF, DO, GO TO, CALL, RETURN, and STOP;
-    PRINT * and WRITE (*,*).  Any other statement, or a statement using
-    a name of another type, draws %FORT-E-NOTIMPL.  Such programs
-    compile, link, and run:
+    and compiles a subset: main programs, subroutines, functions (but
+    REAL*16, COMPLEX*16, and CHARACTER ones), and BLOCK DATA;
+    declarations of every type, IMPLICIT, PARAMETER, arrays, COMMON,
+    EQUIVALENCE, DATA, SAVE, EXTERNAL, and INTRINSIC; assignment and
+    expressions in every type and length (BYTE, LOGICAL, INTEGER, REAL
+    in F, D or G, and H, COMPLEX, and CHARACTER, with substrings and
+    concatenation), and every intrinsic function, in line or by MTHRTL;
+    IF, block IF, DO, GO TO, CALL, RETURN, and STOP; PRINT * and
+    WRITE (*,*).  Any other statement draws %FORT-E-NOTIMPL.  Such
+    programs compile, link, and run:
 
         FORTRAN AVERAGE
         MACRO AVERAGE
@@ -4067,15 +4069,19 @@ $FOR
     finds its routines (named FTN$...) without an options file, and RUN
     finds the image.  Both look for a file of one's own first: a logical
     name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
-    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, and the
+    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, the
     list-directed output of PRINT * and WRITE (*,*) (FTN$PRINT_LIST,
-    FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END), which MACRO programs can
+    FTN$WRITE_LIST, FTN$IO_ITEM, FTN$IO_END), ISHFTC (FTN$IISHFTC,
+    FTN$JISHFTC), and a routine for each intrinsic function MTHRTL
+    lacks, for a program that passes the function's name as an argument
+    (FTN$LEN, FTN$INDEX, ..., FTN$NWORKERS), which MACRO programs can
     call too.  List-directed output goes to SYS$OUTPUT in records of 80
     bytes, each starting with a blank (its carriage control), each value
     in its type's format: LOGICAL as T or F but for LOGICAL*1 and BYTE,
     an integer in 5 columns, INTEGER*2 in 7 columns, INTEGER*4 in 12, REAL
-    with 7 significant digits, REAL*8 with 16 (15 with /G_FLOATING), and
-    REAL*16 with 33.
+    with 7 significant digits, REAL*8 with 16 (15 with /G_FLOATING),
+    REAL*16 with 33, COMPLEX as its two parts in parentheses, as
+    (1.000000,-2.500000), and CHARACTER as its text.
 
     Syntax:
 
@@ -4154,8 +4160,8 @@ $FOR
     it happens and the others are still compiled.
 
     From the host shell, "govax fortran <source>..." runs this command,
-    with --macro <file> or --no-macro, --extend-source, --d-lines, and
-    --continuations <n>.
+    with --macro <file> or --no-macro, --extend-source, --d-lines,
+    --continuations <n>, --no-i4, and --g-floating.
 
     Examples:
 

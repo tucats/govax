@@ -326,7 +326,7 @@ never had.
   page's conditions; subtask 10 (2026-10-30) is the probe, `testdata/mth77`, and VMS
   7.1's answers, with all but the internal `MTH$$REDUCE_` of the JSB entries no
   manual gives; subtask 11 (2026-10-30) the close-out, MANUAL.md's Appendix B.
-  Phase 78 is every expression in every type; subtask 1 (2026-10-30)
+  Phase 78 (done 2026-10-31) is every expression in every type; subtask 1 (2026-10-30)
   is the survey, its doc's Part A, accepted by the author, and subtask 2
   (2026-10-30) every length of INTEGER and LOGICAL, with `/[NO]I4`, and
   subtask 3 (2026-10-30) REAL\*8 in D and G (`/[NO]G_FLOATING`, a unit's
@@ -378,7 +378,11 @@ never had.
   `Arg.Routine`, `PUSHAB G^routine`; FTNRTL has a routine for each of the
   26 names MTHRTL lacks (`sema.FTNRoutines`; GSMATCH 1,6);
   `testdata/fortran/mathfns` and `mathfnsg`, and the console's
-  `TestFortranPassedIntrinsics` (a MACRO routine calling what it's given).
+  `TestFortranPassedIntrinsics` (a MACRO routine calling what it's given),
+  and subtask 10 (2026-10-31) the programs end to end
+  (`testdata/fortran/mixed`, `mixedg`, `text`, `numeric`), and subtask 11
+  (2026-10-31) the close-out, FORTRAN-INTERNALS.md's section 11 on every
+  type and its instructions.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

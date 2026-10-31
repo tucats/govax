@@ -1,7 +1,8 @@
 # Phase 78 — FORTRAN expressions and data types
 
-**Status:** in progress: subtasks 1 (the survey, accepted by the author), 2,
-3, 4, 5, 6, and 7 done 2026-10-30, and 8, 9, and 10 2026-10-31. Needs Phase 76 (declarations and
+**Status:** done 2026-10-31: subtasks 1 (the survey, accepted by the
+author), 2, 3, 4, 5, 6, and 7 done 2026-10-30, and 8, 9, 10, and 11
+2026-10-31. Needs Phase 76 (declarations and
 storage) and Phase 77 (MTHRTL). Part of the FORTRAN program laid out in
 `PHASE-74 - FORTRAN plan.md` (Decisions 8, 11, 14, and 16).
 
@@ -548,7 +549,7 @@ stops for review.
 10. **End to end:** programs on each type, mixed arithmetic, character handling, the
     math functions, in both paging modes for a subset. Done.
 11. **Close-out:** FORTRAN-INTERNALS.md's chapter on instruction selection, MANUAL.md's
-    chapter 14 and differences, HELP.
+    chapter 14 and differences, HELP. Done.
 
 ## Progress log
 
@@ -945,3 +946,38 @@ stops for review.
     array instead; a main program's name used as another unit's dummy argument is
     BADUSE, by sema's rule that a unit's name names nothing else in the file
     (`text.for`'s CENTER takes STR), which F77's 18.1.2 may allow (unconfirmed).
+- **2026-10-31, subtask 11:** the close-out.
+  - **FORTRAN-INTERNALS.md:** a new section 11, "Every type and its
+    instructions", follows a third program, AREA (a REAL\*8 function call, a
+    power in line, a COMPLEX\*8 product with a REAL\*8 sum, a passed-length
+    CHARACTER comparison and assignment), through the IR's types, an
+    instruction chosen by its type's letter and the places that pattern
+    breaks (indexed mode's scale, BLBC's longword, floating constants as data,
+    unsigned character branches), register runs, mixed types, COMPLEX split in
+    lowering, CHARACTER as statements, powers, and the intrinsic table; its
+    IR and MACRO are the compiler's own output. FTNRTL and testing are now
+    sections 12 and 13; the introduction, the pass diagram, section 10's
+    registers and constants, FTNRTL's descriptors and formats, and the
+    testing section's outputs are brought up to date.
+  - **MANUAL.md:** chapter 14's "where things stand", section 6.5's summary of
+    the subset, the command line's `govax fortran` synopsis (`--continuations`,
+    `--no-i4`, `--g-floating`), and a difference: a unit's name names nothing
+    else in its file. Section 14.2 and the other differences were written with
+    each subtask.
+  - **HELP FORTRAN:** the subset (every type and the intrinsic functions),
+    FTNRTL's routines and COMPLEX and CHARACTER output, and the host shell's
+    `--no-i4` and `--g-floating`.
+
+## Where things stand
+
+Every expression in every type compiles: BYTE, LOGICAL and INTEGER of each
+length, REAL\*4, REAL\*8 in D or G, REAL\*16, COMPLEX\*8 and \*16, and
+CHARACTER with substrings, concatenation, and passed-length dummies; every
+operator, `**`, and every intrinsic function of Table D-3, in line, by MTHRTL,
+or by FTNRTL, and passed as arguments; and each type's list-directed output.
+Left for later phases, as planned: FUNCTION statements of REAL\*16,
+COMPLEX\*16, and CHARACTER types and calls through dummy procedures (Phase
+79, with adjustable arrays and statement functions), Hollerith arguments
+(Phase 79), `/CHECK` (Phase 85), and the optimizer's clean-ups of what this
+phase writes, such as multiplying by 0.0 and 1.0 or widening a value only to
+round it back (Phase 84).
