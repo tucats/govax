@@ -231,11 +231,27 @@ func TerminatorText(t Terminator) string {
 		}
 
 		return "return " + ExprText(t.Value)
+	case *Switch:
+		return "switch " + ExprText(t.Index) + " [" + blockNames(t.Targets) + "] " + t.Else.Name
+	case *Sign:
+		return "sign " + ExprText(t.Value) + " " + t.Neg.Name + " " + t.Zero.Name + " " + t.Pos.Name
+	case *IndirectJump:
+		return "jump @" + MemText(t.Through) + " [" + blockNames(t.Targets) + "]"
 	case *NoReturn:
 		return "noreturn"
 	}
 
 	return fmt.Sprintf("%T", t)
+}
+
+// blockNames is the names of blocks, separated by blanks.
+func blockNames(list []*Block) string {
+	names := make([]string, len(list))
+	for i, b := range list {
+		names[i] = b.Name
+	}
+
+	return strings.Join(names, " ")
 }
 
 // MemText is a place as the dump writes it: I, $T1, TABLE-4[I], @N, and
@@ -294,6 +310,9 @@ func ExprText(e Expr) string {
 
 	case *Addr:
 		return "addr(" + MemText(e.Mem) + ")"
+
+	case *LabelAddr:
+		return "label(" + e.Block.Name + ")"
 
 	case *ArgPointer:
 		return "arg " + e.Param.Name

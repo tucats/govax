@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1 (the survey, Part A) done
 2026-10-31, its decisions and recommendations accepted by the author the
-same day.
+same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
+done 2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -543,3 +544,28 @@ recommendation:
   alternate return specifiers' places in the argument list, PAUSE through
   LIB$PAUSE, character constants for numeric dummies, and statement
   functions' argument association.
+- **2026-10-31, subtask 2 (GO TO in every form, ASSIGN, the arithmetic
+  IF):** sema (`sema/jumps.go`): `ComputedGoto` (the index any arithmetic
+  value, converted to INTEGER\*4), `AssignLabel` and `AssignedGoto` (the
+  variable an INTEGER\*4 scalar, ASSIGNVAR otherwise; the unit's
+  `Assigned` labels, where a GO TO v without a list may go), and `ArithIf`
+  (INTEGER or REAL of any length, ARITHIF otherwise). Every label of a
+  list is a jump checked as GO TO's is (`labels.go`'s `jumps`); an
+  ASSIGN's is a reference of its own (`labelRef.assign`), which may name a
+  FORMAT statement (NOTIMPL until Phase 80, Decision 9) and isn't checked
+  for blocks, since only the GO TO jumps; an assigned GO TO without a list
+  is checked nowhere. The arithmetic IF joins DOTERM's list. The IR has
+  three terminators, `Switch` (CASEL), `Sign` (a TST and its branches; two
+  or three targets may be one block), and `IndirectJump` (`JMP @v`, with
+  the blocks it may reach), and `LabelAddr`, which ASSIGN stores; a
+  constant index or value is a plain jump. Codegen (`routine.go`'s
+  `caseTable`, `sign`, `indirectJump`): CASEL with a `.WORD` table of
+  distances from it; a TST left out when the value's instruction set the
+  codes (`IF (X - 1.0)` is SUBF3 then the branches), the case whose
+  target comes next written as nothing; `JMP @K`, or for a dummy, whose
+  `@n(AP)` can't be deferred again, `MOVL` to a register and `JMP (R0)`;
+  `MOVAB label,v`. Tests: `jumps.for` golden files in `sema`, `ir`, and
+  `codegen`; sema error cases (ARITHIF, ASSIGNVAR, NEEDSUBSCRIPT, UNDEFLBL,
+  NOTEXEC, DOVARSET, INTOBLOCK from each kind of list, CHARNUMBER, DOTERM);
+  `testdata/fortran/jumps.for` end to end, in both paging modes. MANUAL.md's
+  14.2 and 6.5 list the statements.

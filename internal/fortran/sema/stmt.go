@@ -204,22 +204,22 @@ func (a *analyzer) brokenStatement(kind lex.Kind, s ast.Stmt) {
 }
 
 // forbiddenTerminal says what s is if it may not be a DO loop's terminal
-// statement (section 5.3.1: a GO TO, a block IF statement, END, RETURN,
+// statement (section 5.3.1: an unconditional or assigned GO TO, an
+// arithmetic IF, a block IF statement, END, RETURN,
 // DO; and any non-executable statement, since the terminal statement's
 // label is an executable statement's), or "" if it may.
 func forbiddenTerminal(s ast.Stmt) string {
 	switch s.(type) {
-	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
+	case *ast.GotoStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt,
 		*ast.EndIfStmt, *ast.EndStmt, *ast.ReturnStmt, *ast.DoStmt,
 		*ast.TypeStmt, *ast.DimensionStmt, *ast.ImplicitStmt, *ast.ParameterStmt, *ast.DataStmt, *ast.AttrStmt,
 		*ast.CommonStmt, *ast.EquivalenceStmt:
 		return aStatement(s)
 	}
 
-	// A statement not compiled yet is reported already; but an
-	// arithmetic IF, a DO WHILE, and anything not executable still
-	// mustn't end a labeled loop.
-	if k := s.Base().Kind; !handled(s) && (k == lex.ArithmeticIf || k == lex.DoWhile || !k.Executable()) {
+	// A statement not compiled yet is reported already; but a DO WHILE,
+	// and anything not executable, still mustn't end a labeled loop.
+	if k := s.Base().Kind; !handled(s) && (k == lex.DoWhile || !k.Executable()) {
 		return aStatement(s)
 	}
 

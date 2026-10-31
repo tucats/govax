@@ -25,6 +25,18 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 
 		return &Goto{stmtBase{s}, s.Target.Label}
 
+	case *ast.ComputedGotoStmt:
+		return a.computedGoto(s, path)
+
+	case *ast.AssignLabelStmt:
+		return a.assignLabel(s)
+
+	case *ast.AssignedGotoStmt:
+		return a.assignedGoto(s, path)
+
+	case *ast.ArithIfStmt:
+		return a.arithIf(s, path)
+
 	case *ast.IfStmt:
 		if !handled(s.Then) {
 			a.notImplForm(s.Then.Position(), statementWhat(s.Then))

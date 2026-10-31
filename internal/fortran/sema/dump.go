@@ -191,6 +191,18 @@ func stmtText(list []Stmt) string {
 		return "CALL " + s.Sub.Name + dumpArgs(s.Args)
 	case *Goto:
 		return "GO TO " + strconv.Itoa(s.Label)
+	case *ComputedGoto:
+		return "GO TO (" + labelList(s.Labels) + ") " + DumpExpr(s.Index)
+	case *AssignLabel:
+		return "ASSIGN " + strconv.Itoa(s.Label) + " TO " + s.Var.Name
+	case *AssignedGoto:
+		if s.Labels == nil {
+			return "GO TO " + s.Var.Name
+		}
+
+		return "GO TO " + s.Var.Name + " (" + labelList(s.Labels) + ")"
+	case *ArithIf:
+		return "IF (" + DumpExpr(s.Cond) + ") " + labelList(s.Labels[:])
 	case *Continue:
 		return "CONTINUE"
 	case *Stop:
@@ -217,6 +229,16 @@ func stmtText(list []Stmt) string {
 	}
 
 	return fmt.Sprintf("%T", list[0])
+}
+
+// labelList is labels separated by commas: 10, 20, 30.
+func labelList(labels []int) string {
+	text := make([]string, len(labels))
+	for i, l := range labels {
+		text[i] = strconv.Itoa(l)
+	}
+
+	return strings.Join(text, ", ")
 }
 
 // DumpExpr is an expression in the dump's form.

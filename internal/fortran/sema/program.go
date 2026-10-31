@@ -44,6 +44,11 @@ type Unit struct {
 	// Labels are the statement labels defined in the unit.
 	Labels map[int]*Label
 
+	// Assigned are the labels the unit's ASSIGN statements give, each
+	// once, in the order they first appear: where an assigned GO TO
+	// without a list may go.
+	Assigned []int
+
 	// LocalSize is the size of the unit's static storage, its
 	// contribution to $LOCAL, in bytes.
 	LocalSize int
@@ -306,6 +311,42 @@ type (
 	Goto struct {
 		stmtBase
 		Label int
+	}
+
+	// ComputedGoto is GO TO (Labels) Index (section 5.6.2): to the
+	// Index-th label, Index an INTEGER*4; past the statement when Index
+	// is below 1 or past the last.
+	ComputedGoto struct {
+		stmtBase
+		Labels []int
+		Index  Expr
+	}
+
+	// AssignLabel is ASSIGN Label TO Var (section 3.5): Var, an INTEGER*4
+	// variable, gets the address of the statement labeled Label.
+	AssignLabel struct {
+		stmtBase
+		Label int
+		Var   *Symbol
+	}
+
+	// AssignedGoto is GO TO Var [(Labels)] (section 5.6.3): to the
+	// statement whose address the last ASSIGN put in Var. Labels, the
+	// list, says only where that may be (nil without one: any label in
+	// the unit's Assigned).
+	AssignedGoto struct {
+		stmtBase
+		Var    *Symbol
+		Labels []int
+	}
+
+	// ArithIf is the arithmetic IF, IF (Cond) Labels (section 5.7.1): to
+	// the first label if Cond is negative, the second if it is zero, the
+	// third if it is positive. Cond is an INTEGER or REAL value.
+	ArithIf struct {
+		stmtBase
+		Cond   Expr
+		Labels [3]int
 	}
 
 	// If is a block IF construct (Block set: IF THEN, its ELSE IFs, its

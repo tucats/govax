@@ -3,6 +3,7 @@ package sema
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // Statement labels: each is defined once, and a jump may go only to an
@@ -30,11 +31,21 @@ type frame struct {
 	do  bool
 }
 
-// labelRef is a jump to a label: GO TO's, so far.
+// labelRef is a reference to a label: a jump (GO TO's in every form, an
+// arithmetic IF's), or with assign set, an ASSIGN's, which jumps nowhere
+// itself and may name a FORMAT statement too.
 type labelRef struct {
-	label int
-	pos   diag.Position
-	path  []frame
+	label  int
+	pos    diag.Position
+	path   []frame
+	assign bool
+}
+
+// jumps records a jump to each of labels from a statement at path.
+func (a *analyzer) jumps(labels []ast.LabelRef, path []frame) {
+	for _, l := range labels {
+		a.refs = append(a.refs, labelRef{label: l.Label, pos: l.Pos, path: path})
+	}
 }
 
 // defineLabel records label, on statement s at path, unless it is
@@ -58,6 +69,13 @@ func (a *analyzer) checkLabels() {
 		switch {
 		case l == nil:
 			a.report("UNDEFLBL", r.pos, r.label)
+
+		case r.assign && l.Stmt.Base().Kind == lex.Format:
+			// What PRINT v needs, with FORMAT statements (Phase 80).
+			a.notImpl(r.pos, "ASSIGN of a FORMAT statement's label")
+
+		case r.assign && a.jumpTarget(l.Stmt):
+			// Where the label is matters only to the GO TO that uses it.
 
 		case !a.jumpTarget(l.Stmt):
 			a.report("NOTEXEC", r.pos, r.label, aStatement(l.Stmt))

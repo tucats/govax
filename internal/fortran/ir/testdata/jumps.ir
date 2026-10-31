@@ -1,0 +1,66 @@
+routine JUMPS main
+  cell  K       L  $LOCAL+0    variable K
+  cell  L       L  $LOCAL+4    array L, 12 bytes
+  cell  N2      W  $LOCAL+16   variable N2
+  cell  X       F  $LOCAL+20   variable X
+  $LOCAL is 24 bytes
+B1:
+  ; line 7
+  assign K = label(B4)
+  ; line 8
+  jump @K [B4 B11]
+B2: L10
+  ; line 9
+  switch L+4 [B4 B6 B8] B3
+B3:
+  ; line 10
+  jump B4
+B4: L20
+  switch cvt.WL(add.W(N2, 1)) [B6 B8] B5
+B5:
+  ; line 11
+  jump B6
+B6: L30
+  switch cvt.FL(X) [B8] B7
+B7:
+  ; line 12
+  sign sub.F(X, 1.0) B8 B8 B9
+B8: L40
+  ; line 13
+  sign N2 B9 B10 B9
+B9: L50
+  ; line 14
+  sign L B10 B11 B15
+B10: L60
+  ; line 15
+  assign K = label(B11)
+  ; line 16
+  jump @K [B11 B15]
+B11: L70
+  ; line 17
+  branch gt.F(X, 0.0) B12 B14
+B12:
+  switch cvt.WL(N2) [B15 B2] B13
+B13:
+  jump B14
+B14:
+  ; line 18
+  call SUB(ref K)
+  ; line 19
+  jump B15
+B15: L80
+  jump B16
+B16: L90
+  ; line 21
+  return 1
+routine SUB subroutine
+  param K       L  argument 1
+  $LOCAL is 0 bytes
+B1:
+  ; line 25
+  assign @K = label(B2)
+  ; line 26
+  jump @@K [B2]
+B2: L10
+  ; line 27
+  return

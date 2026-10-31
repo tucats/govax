@@ -115,6 +115,23 @@ func (g *routineGen) findTargets() {
 					g.targets[to] = true
 				}
 			}
+
+		case *ir.Switch:
+			// The table names every target, even the next block.
+			for _, to := range t.Targets {
+				g.targets[to] = true
+			}
+
+			if t.Else != next {
+				g.targets[t.Else] = true
+			}
+
+		case *ir.Sign:
+			for _, to := range []*ir.Block{t.Neg, t.Zero, t.Pos} {
+				if to != next {
+					g.targets[to] = true
+				}
+			}
 		}
 	}
 }
@@ -331,9 +348,129 @@ func (g *routineGen) terminator(t ir.Terminator, next *ir.Block) {
 
 		g.emit("RET", ir.None)
 
+	case *ir.Switch:
+		g.caseTable(t, next)
+
+	case *ir.Sign:
+		g.sign(t, next)
+
+	case *ir.IndirectJump:
+		g.indirectJump(t)
+
 	case *ir.NoReturn:
 		// Nothing: the call before it doesn't return.
 	}
+}
+
+// caseTable writes a computed GO TO: CASEL, which takes its index less
+// the base (1) and, if that is no more than the limit (one less than the
+// number of targets), adds the table's word at that position to the
+// table's own address and goes there; otherwise it goes on past the
+// table. Each word is a target's distance from the table, which MACRO
+// computes, and which reaches as far as BRW does.
+//
+//	CASEL   SUB.K,#1,#2
+//	SUB.$3:                       (the table)
+//	.WORD   SUB.L10-SUB.$3
+//	.WORD   SUB.L20-SUB.$3
+//	.WORD   SUB.L30-SUB.$3
+//	(out of range: on to Else)
+func (g *routineGen) caseTable(t *ir.Switch, next *ir.Block) {
+	index := g.eval(g.fit(t.Index))
+	g.free(index)
+
+	g.emit("CASEL", ir.None, index.text, "#1", "#"+strconv.Itoa(len(t.Targets)-1))
+
+	table := g.newLabel()
+	g.label(table, "")
+
+	for _, to := range t.Targets {
+		g.emit(".WORD", ir.None, g.blockLabel(to)+"-"+table)
+	}
+
+	if t.Else != next {
+		g.emit("BRW", ir.None, g.blockLabel(t.Else))
+	}
+}
+
+// sign writes an arithmetic IF: a TST of the value (or none, if the
+// instruction that computed it set the condition codes), then a branch for
+// each of the three cases but one, which the code falls into or reaches by
+// BRW. Cases that go to the same place are one branch: IF (X) 10,10,20
+// is BLEQ to 10 (around a BRW, as every branch is) and BRW to 20.
+func (g *routineGen) sign(t *ir.Sign, next *ir.Block) {
+	if t.Neg == t.Zero && t.Zero == t.Pos {
+		if t.Neg != next {
+			g.emit("BRW", ir.None, g.blockLabel(t.Neg))
+		}
+
+		return
+	}
+
+	// The cases, by the condition that goes to each: two when two
+	// targets are the same, else three.
+	type branch struct {
+		op ir.Operator
+		to *ir.Block
+	}
+
+	var cases []branch
+
+	switch {
+	case t.Neg == t.Zero:
+		cases = []branch{{ir.Le, t.Neg}, {ir.Gt, t.Pos}}
+	case t.Zero == t.Pos:
+		cases = []branch{{ir.Lt, t.Neg}, {ir.Ge, t.Zero}}
+	case t.Neg == t.Pos:
+		cases = []branch{{ir.Eq, t.Zero}, {ir.Ne, t.Neg}}
+	default:
+		cases = []branch{{ir.Lt, t.Neg}, {ir.Eq, t.Zero}, {ir.Gt, t.Pos}}
+	}
+
+	// The case whose target comes next needs no instruction; without one,
+	// the last case is a BRW alone, the others having been tested.
+	last := len(cases) - 1
+
+	for i, c := range cases {
+		if c.to == next {
+			cases[i], cases[last] = cases[last], cases[i]
+
+			break
+		}
+	}
+
+	v := g.fit(t.Value)
+	g.compare(comparing{op: ir.Eq, t: v.Type(), x: g.eval(v), test: true})
+
+	for _, c := range cases[:last] {
+		g.around("B"+opposite[conditions[c.op]], nil, g.blockLabel(c.to))
+	}
+
+	if cases[last].to != next {
+		g.emit("BRW", ir.None, g.blockLabel(cases[last].to))
+	}
+}
+
+// indirectJump writes an assigned GO TO: JMP to the address the variable
+// holds, through it by deferred mode (JMP @SUB.K). A variable that is
+// itself reached by deferred or indexed mode (a dummy argument, @n(AP))
+// can't be deferred again, so its value goes to a register first.
+func (g *routineGen) indirectJump(t *ir.IndirectJump) {
+	v := g.eval(g.fit(&ir.Load{Mem: t.Through}))
+
+	if v.isRegister() || strings.ContainsAny(v.text, "@[") {
+		g.free(v)
+
+		r := g.alloc(ir.Long)
+		g.move(ir.Long, v.text, register(r))
+		g.emit("JMP", ir.None, "("+register(r)+")")
+		g.free(inRegister(r, ir.Long))
+
+		return
+	}
+
+	g.emit("JMP", ir.None, "@"+v.text)
+	g.free(v)
 }
 
 // endStatement ends an IR statement's code: its registers and spill

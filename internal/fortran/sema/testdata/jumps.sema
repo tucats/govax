@@ -1,0 +1,31 @@
+== main program JUMPS
+  JUMPS                   program unit
+  K         INTEGER       variable         $LOCAL+0
+  L         INTEGER       array(1:3)       $LOCAL+4
+  N2        INTEGER*2     variable         $LOCAL+16
+  X         REAL          variable         $LOCAL+20
+  SUB                     subroutine
+  $LOCAL is 24 bytes
+7           ASSIGN 20 TO K
+8           GO TO K
+9     10    GO TO (20, 30, 40) L[2]
+10    20    GO TO (30, 40) (INTEGER (+:I N2 1))
+11    30    GO TO (40) (INTEGER X)
+12          IF ((-:R X 1.0)) 40, 40, 50
+13    40    IF (N2) 50, 60, 50
+14    50    IF (L[1]) 60, 70, 80
+15    60    ASSIGN 70 TO K
+16          GO TO K (70, 80)
+17    70    IF (.GT.:R X 0.0) GO TO (80, 10) (INTEGER N2)
+18          CALL SUB(K)
+19    80    IF (2) 10, 20, 90
+20    90    GO TO (10, 20) 3
+21          END
+== SUBROUTINE SUB
+  SUB                     program unit
+  K         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+25          ASSIGN 10 TO K
+26          GO TO K
+27    10    RETURN
+28          END

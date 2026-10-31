@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"cmp"
 	"strconv"
 
 	"github.com/tucats/govax/internal/fortran/sema"
@@ -49,6 +50,23 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.Goto:
 		l.terminate(&Jump{l.origin(), l.labelBlock(s.Label)})
 
+	case *sema.ComputedGoto:
+		l.computedGoto(s)
+
+	case *sema.AssignLabel:
+		l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &LabelAddr{l.labelBlock(s.Label)}})
+
+	case *sema.AssignedGoto:
+		labels := s.Labels
+		if labels == nil {
+			labels = l.unit.Assigned
+		}
+
+		l.terminate(&IndirectJump{l.origin(), l.symbolMem(s.Var), l.labelBlocks(labels)})
+
+	case *sema.ArithIf:
+		l.arithIf(s)
+
 	case *sema.If:
 		if s.Block {
 			l.blockIf(s)
@@ -74,6 +92,60 @@ func (l *lowerer) stmt(s sema.Stmt) {
 
 	l.flush()
 	l.release()
+}
+
+// labelBlocks are the blocks that start at labels.
+func (l *lowerer) labelBlocks(labels []int) []*Block {
+	blocks := make([]*Block, len(labels))
+	for i, n := range labels {
+		blocks[i] = l.labelBlock(n)
+	}
+
+	return blocks
+}
+
+// computedGoto lowers GO TO (s1, ..., sn) e to a Switch on e, which goes
+// on to the next statement when e is out of range. A constant e is a
+// jump, or nothing at all.
+//
+//	  switch <e> [L10 L20 L30] B2
+//	B2: (the next statement)
+func (l *lowerer) computedGoto(s *sema.ComputedGoto) {
+	index := l.expr(s.Index)
+
+	if c, ok := index.(*Const); ok {
+		if n := int(c.Int()); n >= 1 && n <= len(s.Labels) {
+			l.terminate(&Jump{l.origin(), l.labelBlock(s.Labels[n-1])})
+		}
+
+		return
+	}
+
+	next := l.newBlock()
+	l.terminate(&Switch{l.origin(), index, l.labelBlocks(s.Labels), next})
+	l.begin(next)
+}
+
+// arithIf lowers IF (e) s1, s2, s3 to a Sign of e. A constant e is a
+// jump to its label.
+func (l *lowerer) arithIf(s *sema.ArithIf) {
+	value := l.expr(s.Cond)
+	neg, zero, pos := l.labelBlock(s.Labels[0]), l.labelBlock(s.Labels[1]), l.labelBlock(s.Labels[2])
+
+	if c, ok := value.(*Const); ok {
+		sign := c.Real().Sign()
+		if c.T.Integer() {
+			sign = cmp.Compare(c.Int(), 0)
+		}
+
+		to := [3]*Block{neg, zero, pos}[sign+1]
+
+		l.terminate(&Jump{l.origin(), to})
+
+		return
+	}
+
+	l.terminate(&Sign{l.origin(), value, neg, zero, pos})
 }
 
 // returnValue is what the routine returns in R0: a function's value, the

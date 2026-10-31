@@ -147,9 +147,46 @@ func (c *checker) block(b *Block) error {
 		}
 
 		return c.condition(t.Cond)
+	case *Switch:
+		if t.Index.Type() != Long {
+			return fmt.Errorf("a switch on a %s", t.Index.Type())
+		}
+
+		if err := c.targets(append([]*Block{t.Else}, t.Targets...)); err != nil {
+			return err
+		}
+
+		return c.expr(t.Index)
+	case *Sign:
+		if err := c.targets([]*Block{t.Neg, t.Zero, t.Pos}); err != nil {
+			return err
+		}
+
+		return c.expr(t.Value)
+	case *IndirectJump:
+		if t.Through.T != Long {
+			return fmt.Errorf("a jump through a %s", t.Through.T)
+		}
+
+		if err := c.targets(t.Targets); err != nil {
+			return err
+		}
+
+		return c.mem(t.Through)
 	case *Return:
 		if t.Value != nil {
 			return c.expr(t.Value)
+		}
+	}
+
+	return nil
+}
+
+// targets checks each of a terminator's targets.
+func (c *checker) targets(list []*Block) error {
+	for _, b := range list {
+		if err := c.target(b); err != nil {
+			return err
 		}
 	}
 
@@ -275,6 +312,9 @@ func (c *checker) expr(e Expr) error {
 
 	case *Addr:
 		return c.mem(e.Mem)
+
+	case *LabelAddr:
+		return c.target(e.Block)
 
 	case *Op:
 		if err := c.expr(e.X); err != nil {

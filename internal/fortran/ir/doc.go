@@ -32,7 +32,10 @@
 // A Routine's code is a list of basic blocks (Block). A block is a run
 // of statements that always execute together, one after another, ended
 // by a terminator that says where control goes: a Jump, a Branch on a
-// condition, a Return, or NoReturn (after STOP). Nothing jumps into the
+// condition, a Switch on an index (the computed GO TO), a Sign of a value
+// (the arithmetic IF), an IndirectJump through a variable an ASSIGN set
+// (the assigned GO TO, which lists the blocks it may reach), a Return, or
+// NoReturn (after STOP). Nothing jumps into the
 // middle of a block. That is the usual shape of a compiler's middle: it
 // is what makes control flow something a pass can see (which blocks can
 // follow which), and it is what an optimizer (Phase 84) works on.

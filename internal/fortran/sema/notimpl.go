@@ -18,7 +18,8 @@ import (
 func handled(s ast.Stmt) bool {
 	switch s := s.(type) {
 	case *ast.TypeStmt, *ast.DimensionStmt, *ast.CommonStmt, *ast.EquivalenceStmt, *ast.ImplicitStmt, *ast.ParameterStmt,
-		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt,
+		*ast.DataStmt, *ast.AssignStmt, *ast.CallStmt, *ast.GotoStmt, *ast.ComputedGotoStmt,
+		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.ContinueStmt, *ast.ReturnStmt, *ast.EndStmt, *ast.BadStmt:
 		return true

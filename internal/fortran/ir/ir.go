@@ -419,7 +419,8 @@ type Stmt interface {
 	stmtNode()
 }
 
-// Terminator ends a block: a Jump, a Branch, a Return, or a NoReturn.
+// Terminator ends a block: a Jump, a Branch, a Switch, a Sign, an
+// IndirectJump, a Return, or a NoReturn.
 type Terminator interface {
 	Source() ast.Stmt
 	terminator()
@@ -487,6 +488,36 @@ type (
 		True, False *Block
 	}
 
+	// Switch goes to Targets[Index-1] when Index, a Long, is from 1 to
+	// the number of targets, and to Else otherwise: the computed GO TO
+	// (section 5.6.2 of the language manual), which is CASEL.
+	Switch struct {
+		origin
+		Index   Expr
+		Targets []*Block
+		Else    *Block
+	}
+
+	// Sign goes to Neg, Zero, or Pos as Value, an integer or floating
+	// value, is negative, zero, or positive: the arithmetic IF (section
+	// 5.7.1), a TST and its branches. Two or three of the targets may be
+	// the same block.
+	Sign struct {
+		origin
+		Value          Expr
+		Neg, Zero, Pos *Block
+	}
+
+	// IndirectJump goes to the address the Long at Through holds, which
+	// an ASSIGN put there (a LabelAddr): the assigned GO TO (section
+	// 5.6.3), JMP @Through. Targets are the blocks it may go to, which
+	// the jump itself doesn't need, but which say where control goes.
+	IndirectJump struct {
+		origin
+		Through *Mem
+		Targets []*Block
+	}
+
 	// Return returns from the routine, with Value in R0 (nil for a
 	// subroutine): SS$_NORMAL from a main program, a function's value
 	// from a function.
@@ -502,10 +533,13 @@ type (
 	}
 )
 
-func (*Jump) terminator()     {}
-func (*Branch) terminator()   {}
-func (*Return) terminator()   {}
-func (*NoReturn) terminator() {}
+func (*Jump) terminator()         {}
+func (*Branch) terminator()       {}
+func (*Switch) terminator()       {}
+func (*Sign) terminator()         {}
+func (*IndirectJump) terminator() {}
+func (*Return) terminator()       {}
+func (*NoReturn) terminator()     {}
 
 // Arg is an actual argument: by reference (Ref, whose address is
 // passed) or by value (Value, as a null argument's 0 is, or each part of
@@ -620,6 +654,12 @@ type (
 		Mem *Mem
 	}
 
+	// LabelAddr is the address of Block's first instruction, a Long: what
+	// ASSIGN stores for an assigned GO TO to jump to (section 3.5).
+	LabelAddr struct {
+		Block *Block
+	}
+
 	// ArgPointer is the address the argument list holds for Param, a Long:
 	// the longword at 4*Index(AP) itself, not what it points at. A
 	// CHARACTER dummy's is its descriptor's address.
@@ -688,6 +728,9 @@ func (*Addr) Type() Type { return Long }
 // Type is Long: an address is a longword.
 func (*ArgPointer) Type() Type { return Long }
 
+// Type is Long: an address.
+func (*LabelAddr) Type() Type { return Long }
+
 // Type is the operation's type.
 func (o *Op) Type() Type { return o.T }
 
@@ -706,6 +749,7 @@ func (*CharIndex) Type() Type { return Long }
 func (*Const) exprNode()      {}
 func (*Load) exprNode()       {}
 func (*Addr) exprNode()       {}
+func (*LabelAddr) exprNode()  {}
 func (*ArgPointer) exprNode() {}
 func (*Op) exprNode()         {}
 func (*Cmp) exprNode()        {}

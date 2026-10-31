@@ -1298,7 +1298,7 @@ programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
-intrinsic function; IF, DO, GO TO, CALL, RETURN, STOP; `PRINT *` and
+intrinsic function; IF, DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP; `PRINT *` and
 `WRITE (*,*)`), and reports any other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4558,9 +4558,17 @@ output it prints, and programs of several files in its `modules` directory.
   or filled with blanks on the right to the place's length, and right even
   when the two overlap (`S(2:) = S` moves S one place on); logical IF; block IF with ELSE IF and
   ELSE; DO with a label, ending at CONTINUE or another statement, with
-  any step, and a REAL control variable too; unconditional GO TO; CALL;
-  RETURN; STOP, with or without a display; `PRINT *` and `WRITE (*,*)`
-  of values, arrays, character constants, and substrings.
+  any step, and a REAL control variable too; GO TO in every form: the
+  unconditional GO TO, the computed GO TO (`GO TO (10, 20, 30), K`, which
+  goes on to the next statement when K is out of range; a REAL index is
+  truncated), and the assigned GO TO (`GO TO K` or `GO TO K, (10, 20)`,
+  the list naming where it may go) after `ASSIGN 10 TO K`, which stores the
+  statement's address, so K must be INTEGER\*4 (an INTEGER\*2 can't hold
+  one: `%FORT-E-ASSIGNVAR`); the arithmetic IF (`IF (X - Y) 10, 20, 30`) of
+  an INTEGER or REAL value of any length; CALL; RETURN; STOP, with or
+  without a display; `PRINT *` and `WRITE (*,*)` of values, arrays,
+  character constants, and substrings. ASSIGN of a FORMAT statement's label
+  waits for FORMAT itself.
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a

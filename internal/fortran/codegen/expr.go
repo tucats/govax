@@ -124,6 +124,10 @@ func need(e ir.Expr) int {
 
 	case *ir.Field:
 		return fieldNeed(e)
+
+	case *ir.LabelAddr:
+		// Its value, made by MOVAB.
+		return 1
 	}
 
 	return 0
@@ -538,6 +542,12 @@ func (g *routineGen) eval(e ir.Expr) operand {
 		// The argument list's longword itself: SUB.A(AP).
 		return operand{text: g.names.symbol(e.Param.Name) + "(AP)"}
 
+	case *ir.LabelAddr:
+		r := g.alloc(ir.Long)
+		g.emit("MOVAB", ir.Long, g.blockLabel(e.Block), register(r))
+
+		return inRegister(r, ir.Long)
+
 	case *ir.Addr:
 		m := g.mem(e.Mem)
 		g.free(m)
@@ -799,6 +809,12 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 		d := g.mem(dst)
 		g.emit(addressOp("MOVA", s.Mem), ir.Long, a.text, d.text)
 		g.free(a, d)
+
+	case *ir.LabelAddr:
+		// ASSIGN: the statement's address, straight into the variable.
+		d := g.mem(dst)
+		g.emit("MOVAB", ir.Long, g.blockLabel(s.Block), d.text)
+		g.free(d)
 
 	case *ir.Op:
 		// The operands, then the place, then the operation straight into

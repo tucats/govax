@@ -507,6 +507,15 @@ var messages = map[string]kind{
 
 	// Labels.
 
+	// ASSIGNVAR is the variable of an ASSIGN or an assigned GO TO that
+	// isn't INTEGER*4: it holds a statement's address (section 3.5; the
+	// author's answer 1 in docs/PHASE-79).
+	"ASSIGNVAR": {Error, "%s is %s, but a statement label is ASSIGNed only to an INTEGER*4 variable"},
+
+	// ARITHIF is an arithmetic IF whose expression isn't INTEGER or REAL
+	// (section 5.7.1).
+	"ARITHIF": {Error, "an arithmetic IF's expression must be INTEGER or REAL, and this one is %s"},
+
 	// DUPLABEL is a statement label defined twice in a unit.
 	"DUPLABEL": {Error, "statement label %d is already on the statement at line %d"},
 
