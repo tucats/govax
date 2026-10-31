@@ -304,21 +304,6 @@ func (a *analyzer) functionType(spec ast.TypeSpec, s *Symbol) (Type, bool) {
 	return a.typeOf(spec, spec.Len, spec.Pos)
 }
 
-// functionResult reports a function whose type this phase doesn't
-// compile (NOTIMPL), at its FUNCTION statement, once its declarations
-// are read: the type its header, a type statement, or its first letter
-// gave it.
-func (a *analyzer) functionResult() {
-	r := a.unit.Result
-	if r == nil || r.broken || r.Type.Kind == Invalid || r.Type.returned() {
-		return
-	}
-
-	a.notImplForm(a.unit.AST.Header.Position(), article(r.Type.String()+" function"))
-
-	r.broken = true
-}
-
 // article is text with "a" or "an" before it: "an INTEGER*2 function".
 func article(text string) string {
 	switch text[0] {

@@ -154,11 +154,16 @@ func (l *lowerer) arithIf(s *sema.ArithIf) {
 }
 
 // returnValue is what the routine returns in R0: a function's value, the
-// last one assigned to its name; SS$_NORMAL (1) from a main program, for
-// the image's exit status; nothing from a subroutine.
+// last one assigned to its name, unless assigning it put it where the
+// caller wanted it (a hidden argument); SS$_NORMAL (1) from a main program,
+// for the image's exit status; nothing from a subroutine.
 func (l *lowerer) returnValue() Expr {
 	switch l.r.Kind {
 	case Function:
+		if l.r.Result == None {
+			return nil
+		}
+
 		return &Load{l.symbolMem(l.unit.Result)}
 	case Main:
 		return LongConst(1)
@@ -168,7 +173,9 @@ func (l *lowerer) returnValue() Expr {
 }
 
 // assign lowers Target = Value. J = F(X), a function's value stored as
-// it is, has the call put the value straight into J. A CHARACTER value is
+// it is, has the call put the value straight into J, but for a value that
+// goes through a hidden argument: the function writes that place as it runs,
+// and in H = F(H) would change its own argument. A CHARACTER value is
 // moved (CharMove), and a character comparison's value stored as it is
 // computed.
 func (l *lowerer) assign(s *sema.Assign) {
@@ -186,7 +193,7 @@ func (l *lowerer) assign(s *sema.Assign) {
 		return
 	}
 
-	if f, ok := s.Value.(*sema.FuncRef); ok {
+	if f, ok := s.Value.(*sema.FuncRef); ok && !f.T.HiddenResult() {
 		l.callFunction(f, dst)
 
 		return

@@ -266,7 +266,6 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.equivalences()
 	a.checkArrays()
 	a.checkCommonSizes()
-	a.functionResult()
 	a.saves()
 	a.dataStatements()
 	a.statements(body)
@@ -476,7 +475,14 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 
 			switch {
 			case s.Class == Function && target.Kind == ast.FunctionUnit:
-				if t := target.Result.Type; t != s.Type && !target.Result.broken {
+				// A CHARACTER*(*) function has whatever length the unit
+				// referencing it declares (section 6.2.2.2).
+				t := target.Result.Type
+				if t == (Type{Character, 0}) && s.Type.Kind == Character {
+					continue
+				}
+
+				if t != s.Type && !target.Result.broken {
 					messages.Report("FUNCTYPE", s.Pos, s.Name, t.String(), fu.pos.Line, s.Type.String())
 				}
 

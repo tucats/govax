@@ -1,0 +1,44 @@
+== main program FUNCS
+  FUNCS                   program unit
+  NAME5     CHARACTER*5   function
+  S         CHARACTER*5   variable         $LOCAL+0
+  REPEAT    CHARACTER*3   function
+  QF        REAL*16       function
+  Q         REAL*16       variable         $LOCAL+8
+  ZF        COMPLEX*16    function
+  Z         COMPLEX*16    variable         $LOCAL+24
+  $LOCAL is 40 bytes
+6           S = NAME5(1)
+7           S = (//:C REPEAT('A') 'X')
+8           Q = QF(Q)
+9           Z = ZF(Z)
+10          PRINT * 5 NAME5(3)
+11          END
+== FUNCTION NAME5
+  NAME5     CHARACTER*5   result
+  I         INTEGER       variable         argument 1
+  $LOCAL is 0 bytes
+14          NAME5 = 'ABCDE'
+15          NAME5(I:I) = '-'
+16          END
+== FUNCTION REPEAT
+  REPEAT    CHARACTER*(*) result
+  CARG      CHARACTER*1   variable         argument 1
+  I         INTEGER       variable         $LOCAL+0
+  $LOCAL is 4 bytes
+20          DO 10 I = 1, (len:INTEGER LEN REPEAT), 1
+21    10      REPEAT(I:I) = CARG
+22          END
+== FUNCTION QF
+  QF        REAL*16       result
+  X         REAL*16       variable         argument 1
+  $LOCAL is 0 bytes
+26          QF = (+:R X 1.0Q0)
+27          END
+== FUNCTION ZF
+  ZF        COMPLEX*16    result
+  X         COMPLEX*16    variable         argument 1
+  $LOCAL is 0 bytes
+31          ZF = (*:X X X)
+32          RETURN
+33          END

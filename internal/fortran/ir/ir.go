@@ -95,10 +95,13 @@ type Routine struct {
 	Kind Kind
 
 	// Result is a function's type, whose value Return leaves in R0 (and the
-	// registers after it, for a value wider than a longword).
+	// registers after it, for a value wider than a longword); None for a
+	// function whose value goes through a hidden first argument.
 	Result Type
 
-	// Params are the dummy arguments, in order.
+	// Params are the dummy arguments, in order, after a function's hidden
+	// argument if it has one: the function's name, the place of its value
+	// or, for a CHARACTER function, the descriptor of that place.
 	Params []*Param
 
 	// Cells are the routine's static storage, its contribution to the

@@ -184,13 +184,17 @@ var messages = map[string]kind{
 	// NUMLENGTH is an expression or (*) as a numeric type's length.
 	"NUMLENGTH": {Error, "a length in parentheses is a CHARACTER length, and this function is %s"},
 
+	// TWOLENGTHS is a CHARACTER function with a length after CHARACTER and
+	// another after its name (section 6.2.2.2).
+	"TWOLENGTHS": {Error, "the CHARACTER function %s has its length already"},
+
 	// BADCHARLEN is a CHARACTER length that isn't an integer constant
 	// expression from 1 to 65535 (section 4.4.2).
 	"BADCHARLEN": {Error, "a CHARACTER length must be an integer constant expression from 1 to 65535, or (*)"},
 
 	// PASSEDLEN is a passed length, CHARACTER*(*), on a name that can't
 	// take one.
-	"PASSEDLEN": {Error, "%s can't have the length (*): only a dummy argument, a function, or a PARAMETER constant can"},
+	"PASSEDLEN": {Error, "%s can't have the length (*): only a dummy argument, a function's own name, or a PARAMETER constant can"},
 
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
 	// statement (section 4.8).

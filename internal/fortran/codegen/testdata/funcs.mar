@@ -1,0 +1,232 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for FUNCS, the main program
+;   S     CHARACTER*5  $LOCAL+0   FUNCS.S
+;   Q     REAL*16      $LOCAL+8   FUNCS.Q
+;   Z     COMPLEX*16   $LOCAL+24  FUNCS.Z
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+FUNCS.S:
+	.BLKB	5			; S
+	.BLKB	3
+FUNCS.Q:
+	.BLKL	4			; Q
+FUNCS.Z:
+	.BLKL	4			; Z
+FUNCS.$T1:
+	.BLKB	5			; characters, for one statement
+	.BLKB	3
+FUNCS.$T2:
+	.BLKB	3			; characters, for one statement
+	.BLKB	1
+FUNCS.$T3:
+	.BLKL	1			; characters, for one statement
+FUNCS.$T4:
+	.BLKL	4			; temporary
+FUNCS.$T5:
+	.BLKL	4			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+FUNCS.$K1:
+	.LONG	1
+FUNCS.$D1:
+	.WORD	5			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FUNCS.$T1
+FUNCS.$D2:
+	.WORD	1			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FUNCS.$K2
+FUNCS.$D3:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS FUNCS.$T2
+FUNCS.$IO1:
+	.WORD	8			; PRINT *'s control block: its size
+	.WORD	0			; flags
+	.LONG	-1			; unit *
+FUNCS.$K4:
+	.LONG	5
+FUNCS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS FUNCS.$K4
+FUNCS.$K5:
+	.LONG	3
+FUNCS.$K2:
+	.ASCII	/A/
+FUNCS.$K3:
+	.ASCII	/X/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM FUNCS
+	.ENTRY	FUNCS,^M<R2,R3,R4,R5>
+;    2        CHARACTER*5 NAME5, S
+;    3        CHARACTER*3 REPEAT
+;    4        REAL*16 QF, Q
+;    5        COMPLEX*16 ZF, Z
+;    6        S = NAME5(1)
+	PUSHAL	FUNCS.$K1
+	PUSHAQ	FUNCS.$D1
+	CALLS	#2,G^NAME5
+	MOVC3	#5,FUNCS.$T1,FUNCS.S
+;    7        S = REPEAT('A') // 'X'
+	PUSHAQ	FUNCS.$D2
+	PUSHAQ	FUNCS.$D3
+	CALLS	#2,G^REPEAT
+	MOVC3	#3,FUNCS.$T2,FUNCS.$T3
+	MOVC3	#1,FUNCS.$K3,FUNCS.$T3+3
+	MOVC5	#4,FUNCS.$T3,#^A/ /,#5,FUNCS.S
+;    8        Q = QF(Q)
+	PUSHAH	FUNCS.Q
+	PUSHAH	FUNCS.$T4
+	CALLS	#2,G^QF
+	MOVH	FUNCS.$T4,FUNCS.Q
+;    9        Z = ZF(Z)
+	PUSHAO	FUNCS.Z
+	PUSHAO	FUNCS.$T5
+	CALLS	#2,G^ZF
+	MOVO	FUNCS.$T5,FUNCS.Z
+;   10        PRINT *, LEN(NAME5(2)), NAME5(3)
+	PUSHAB	FUNCS.$IO1
+	CALLS	#1,G^FTN$PRINT_LIST
+	PUSHAQ	FUNCS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAL	FUNCS.$K5
+	PUSHAQ	FUNCS.$D1
+	CALLS	#2,G^NAME5
+	PUSHAQ	FUNCS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   11        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for NAME5, a CHARACTER*5 function
+;   NAME5  CHARACTER*5  hidden argument 1  @NAME5.NAME5(AP)
+;   I      INTEGER      argument 2         @NAME5.I(AP)
+;
+NAME5.NAME5 = 4				; NAME5's value goes through hidden argument 1
+NAME5.I = 8				; I is argument 2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+NAME5.$K1:
+	.ASCII	/ABCDE/
+NAME5.$K2:
+	.ASCII	/-/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   12
+;   13        CHARACTER*5 FUNCTION NAME5(I)
+	.ENTRY	NAME5,^M<R2,R3,R4,R5>
+;   14        NAME5 = 'ABCDE'
+	MOVL	NAME5.NAME5(AP),R0
+	MOVC3	#5,NAME5.$K1,@4(R0)
+;   15        NAME5(I:I) = '-'
+	MOVL	NAME5.NAME5(AP),R0
+	MOVL	4(R0),R0
+	MOVL	@NAME5.I(AP),R1
+	MOVC3	#1,NAME5.$K2,-1(R0)[R1]
+;   16        END
+	RET
+
+; Storage map for REPEAT, a CHARACTER*(*) function
+;   REPEAT  CHARACTER*(*)  hidden argument 1  @REPEAT.REPEAT(AP)
+;   CARG    CHARACTER*1    argument 2         @REPEAT.CARG(AP)
+;   I       INTEGER        $LOCAL+0           REPEAT.I
+;
+REPEAT.REPEAT = 4			; REPEAT's value goes through hidden argument 1
+REPEAT.CARG = 8				; CARG is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+REPEAT.I:
+	.BLKL	1			; I
+REPEAT.$C1:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   17
+;   18        CHARACTER*(*) FUNCTION REPEAT(CARG)
+	.ENTRY	REPEAT,^M<R2,R3,R4,R5>
+;   19        CHARACTER*1 CARG
+;   20        DO 10 I = 1, LEN(REPEAT)
+	MOVZWL	@REPEAT.REPEAT(AP),REPEAT.$C1 ; DO 10's count
+	MOVL	#1,REPEAT.I
+	TSTL	REPEAT.$C1
+	BGTR	REPEAT.$2
+	BRW	REPEAT.$1
+REPEAT.$2:
+;   21  10    REPEAT(I:I) = CARG
+REPEAT.L10:				; DO 10's body
+	MOVL	REPEAT.CARG(AP),R0
+	MOVL	REPEAT.REPEAT(AP),R1
+	MOVL	4(R1),R1
+	MOVL	REPEAT.I,R2
+	MOVC3	#1,@4(R0),-1(R1)[R2]
+	INCL	REPEAT.I
+	DECL	REPEAT.$C1		; one pass fewer
+	BLEQ	REPEAT.$3
+	BRW	REPEAT.L10
+REPEAT.$3:
+REPEAT.$1:
+;   22        END
+	RET
+
+; Storage map for QF, a REAL*16 function
+;   QF    REAL*16  hidden argument 1  @QF.QF(AP)
+;   X     REAL*16  argument 2         @QF.X(AP)
+;
+QF.QF = 4				; QF's value goes through hidden argument 1
+QF.X = 8				; X is argument 2
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+QF.$F1:	.LONG	^X00004001,^X00000000,^X00000000,^X00000000 ; 1Q0
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   23
+;   24        REAL*16 FUNCTION QF(X)
+	.ENTRY	QF,^M<>
+;   25        REAL*16 X
+;   26        QF = X + 1
+	ADDH3	@QF.X(AP),QF.$F1,@QF.QF(AP)
+;   27        END
+	RET
+
+; Storage map for ZF, a COMPLEX*16 function
+;   ZF    COMPLEX*16  hidden argument 1  @ZF.ZF(AP)
+;   X     COMPLEX*16  argument 2         @ZF.X(AP)
+;
+ZF.ZF = 4				; ZF's value goes through hidden argument 1
+ZF.X = 8				; X is argument 2
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ZF.$T1:	.BLKL	4			; temporary
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   28
+;   29        COMPLEX*16 FUNCTION ZF(X)
+	.ENTRY	ZF,^M<R2,R3>
+;   30        COMPLEX*16 X
+;   31        ZF = X * X
+	MOVL	#1,R0
+	MOVQ	@ZF.X(AP)[R0],-(SP)
+	MOVQ	@ZF.X(AP),-(SP)
+	MOVL	#1,R0
+	MOVQ	@ZF.X(AP)[R0],-(SP)
+	MOVQ	@ZF.X(AP),-(SP)
+	CALLS	#8,G^OTS$MULCD_R3
+	MOVO	R0,ZF.$T1
+	MOVD	ZF.$T1,@ZF.ZF(AP)
+	MOVL	#1,R0
+	MOVD	ZF.$T1+8,@ZF.ZF(AP)[R0]
+;   32        RETURN
+	RET
+;   33        END
+
+	.END	FUNCS

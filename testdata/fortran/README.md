@@ -63,3 +63,5 @@ for the directory, every time.
 | ------- | ----------------- |
 | `modules/store` | The manual's example of a program of several files (14.1): one block seen from two files, its values from a BLOCK DATA in a third |
 | `modules/ledger` | Four files sharing common blocks, blank and named: one block's layout from an INCLUDE file, another's declared at three lengths and in another file lengthened by EQUIVALENCE, its values from a BLOCK DATA in a file of its own that EXTERNAL names; the modules linked in three orders, so that the main program's short declaration, the module with the values, or another view of the block comes first |
+| `funcs.for` | Functions whose values go through a hidden first argument: CHARACTER of a fixed length, the default length, a length after the name, and passed-length (the manual's REPEAT, at two lengths in two units), in every kind of expression and with the name passed on; REAL\*16 and COMPLEX\*16 typed every way; `H = F(H)` where the function writes its name before reading its argument |
+| `funcsg.for` | `funcs.for`'s COMPLEX\*16 functions in G_floating, each unit's OPTIONS /G_FLOATING saying so, a value past D_floating's range |

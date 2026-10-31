@@ -309,7 +309,7 @@ func (g *routineGen) write(w *Writer) {
 
 	for _, p := range r.Params {
 		w.Assignment(g.names.symbol(p.Name), strconv.Itoa(4*p.Index),
-			fmt.Sprintf("%s is argument %d", p.Name, p.Index))
+			g.paramNote(p))
 	}
 
 	g.writeCommonNames(w)
@@ -352,6 +352,16 @@ func (g *routineGen) write(w *Writer) {
 	w.Append(&g.code)
 }
 
+// paramNote says which argument a symbol's offset is the place of, for its
+// comment.
+func (g *routineGen) paramNote(p *ir.Param) string {
+	if p.Sym.Result {
+		return fmt.Sprintf("%s's value goes through hidden argument %d", p.Name, p.Index)
+	}
+
+	return fmt.Sprintf("%s is argument %d", p.Name, p.Index)
+}
+
 // what a routine is, for its storage map's heading.
 func (g *routineGen) what() string {
 	switch g.r.Kind {
@@ -380,8 +390,12 @@ func (g *routineGen) writeMap(w *Writer) {
 	var rows []row
 
 	for _, p := range g.r.Params {
-		rows = append(rows, row{p.Name, typeText(p.Sym),
-			"argument " + strconv.Itoa(p.Index), "@" + g.names.symbol(p.Name) + "(AP)"})
+		where := "argument " + strconv.Itoa(p.Index)
+		if p.Sym.Result {
+			where = "hidden argument " + strconv.Itoa(p.Index)
+		}
+
+		rows = append(rows, row{p.Name, typeText(p.Sym), where, "@" + g.names.symbol(p.Name) + "(AP)"})
 	}
 
 	for _, c := range g.r.Cells {

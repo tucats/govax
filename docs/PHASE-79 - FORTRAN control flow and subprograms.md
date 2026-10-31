@@ -5,7 +5,8 @@
 same day; subtask 2 (GO TO in every form, ASSIGN, the arithmetic IF)
 done 2026-10-31; subtask 3 (DO in every form, DO WHILE, END DO, the
 extended range) done 2026-10-31; subtask 4 (STOP, PAUSE, RETURN, END)
-done 2026-10-31.
+done 2026-10-31; subtask 5 (function results of every type) done
+2026-10-31.
 Needs Phase 78 (expressions in every type). Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md` (Decisions 8, 10, and 11).
 
@@ -519,7 +520,7 @@ recommendation:
    run end to end.) Done.
 4. **STOP, PAUSE, RETURN, END.** (FTN$PAUSE in FTNRTL; RETURN i's R0
    comes with subtask 7.) Done.
-5. **Function results of every type**, CHARACTER and COMPLEX functions.
+5. **Function results of every type**, CHARACTER and COMPLEX functions. Done.
 6. **ENTRY.**
 7. **Alternate returns.**
 8. **Adjustable and assumed-size arrays**, passed-length character arrays.
@@ -620,3 +621,35 @@ recommendation:
   terminal STOP leaves the loop's step code after it, unreachable; Phase
   84's flow analysis can drop it. MANUAL.md's 14.2 and FTNRTL table
   list PAUSE, and its differences DEBUG at a pause.
+- **2026-10-31, subtask 5 (function results of every type):** a CHARACTER,
+  REAL\*16, or COMPLEX\*16 function's value goes through a hidden first
+  argument (Decision 3; `sema.Type.HiddenResult`, which replaces `returned`
+  and its NOTIMPLs). Inside the function, the name has no `$LOCAL` place
+  (`layout`): it is an `ir.Param`, argument 1, its `Sym` the result, and the
+  dummy arguments follow it, so everything dummies already do serves it: a
+  CHARACTER name's text is through its descriptor, `LEN` of a CHARACTER\*(\*)
+  function is the descriptor's length, a substring or a CALL's argument of
+  the name works, and a passed-length name is passed on with the descriptor
+  it came with. `Routine.Result` is None for such a function, and its Return
+  sets no register. The caller (`callFunction`) passes the address of a
+  temporary, or for CHARACTER a class S descriptor of a text temporary of
+  the length the unit declares (`chars`' `FuncRef`), then uses that
+  temporary. `H = F(H)` must not pass H itself, since the function writes
+  its name as it runs and could change its own argument, so `assign` calls
+  straight into the target only for a value in registers;
+  `assignComplex` moves a COMPLEX\*16 function's value whole. `LEN(F(X))`
+  makes no call (`charLen`), as `LEN` of a concatenation builds nothing:
+  FORTRAN-77's rule, and ours, unconfirmed for VAX FORTRAN. Sema:
+  FUNCTYPE lets a CHARACTER\*(\*) function be referenced at any CHARACTER
+  length (6.2.2.2); a new message, TWOLENGTHS, in the parser, for a length
+  both after CHARACTER and after the name, which 6.2.2.2 forbids; and
+  PASSEDLEN now covers a function referenced under the name `CHARACTER*(*)
+  F` that isn't a dummy, since it takes its length from the unit referencing
+  it and this unit gives none (ours, unconfirmed: the manual doesn't speak of
+  it; a dummy function is subtask 9's). The storage map and the symbols'
+  comments say "hidden argument". The manual's REPEAT example declares `CARL`
+  and uses `CARG`, a misprint; `funcs.for` declares `CARG`. Tests: `funcs.for`
+  golden files in `sema`, `ir`, and `codegen`; sema error cases;
+  `testdata/fortran/funcs.for` and `funcsg.for` end to end in both paging
+  modes, REPEAT at two lengths in two units as the manual has it. MANUAL.md's
+  14.2 lists the functions.

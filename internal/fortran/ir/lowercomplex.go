@@ -215,8 +215,8 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 }
 
 // assignComplex lowers dst = e, both COMPLEX of one type. A variable, an
-// element, a constant, or the value of MTHRTL's routine is moved whole, with
-// MOVQ or MOVO; anything else is computed part by part.
+// element, a constant, a function's value, or the value of MTHRTL's routine
+// is moved whole, with MOVQ or MOVO; anything else is computed part by part.
 func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	if x, ok := e.(*sema.IntrinsicRef); ok && x.Op == sema.CallOp {
 		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
@@ -225,7 +225,7 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	}
 
 	switch e.(type) {
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FuncRef:
 		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
 
 	case *sema.Const:

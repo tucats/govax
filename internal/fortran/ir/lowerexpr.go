@@ -169,6 +169,14 @@ func (l *lowerer) chars(e sema.Expr) Text {
 	case *sema.Concat:
 		return l.concat(e)
 
+	case *sema.FuncRef:
+		// The value is as long as this unit declares the function, in a
+		// temporary of that length.
+		result := l.textTemp(e.T.Size)
+		l.callFunction(e, result)
+
+		return Text{result, LongConst(int32(e.T.Size))}
+
 	case *sema.IntrinsicRef:
 		// CHAR(I), the one intrinsic function with a CHARACTER value.
 		return l.char(e)
@@ -356,10 +364,25 @@ func (l *lowerer) args(list []sema.Arg) []Arg {
 	return args
 }
 
-// callFunction calls the function f refers to, its value going to
-// result.
+// callFunction calls the function f refers to, its value going to result:
+// from R0 after the call, or, for a value that goes through a hidden first
+// argument, where the argument says (the address of result, or for a
+// CHARACTER value a descriptor of it).
 func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 	args := l.args(f.Args)
+
+	switch {
+	case f.T.Kind == sema.Character:
+		d := &Descriptor{DType: DTypeT, Class: ClassS}
+		place := Text{result, LongConst(int32(f.T.Size))}
+		args = append([]Arg{{Ref: l.describeText(d, place)}}, args...)
+		result = nil
+
+	case f.T.HiddenResult():
+		args = append([]Arg{{Ref: result}}, args...)
+		result = nil
+	}
+
 	l.emit(&Call{origin: l.origin(), Routine: f.Fn.Name, Args: args, Result: result})
 }
 

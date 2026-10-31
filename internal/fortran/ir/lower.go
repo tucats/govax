@@ -85,10 +85,21 @@ func lowerUnit(u *sema.Unit) *Routine {
 		data:     map[string]*Datum{},
 	}
 
+	// A hidden argument moves the dummy arguments along by one.
+	hidden := 0
+
 	switch u.Kind {
 	case ast.FunctionUnit:
 		r.Kind = Function
-		r.Result = l.typeOf(u.Result.Type)
+
+		if u.Result.Type.HiddenResult() {
+			hidden = 1
+			p := &Param{Name: u.Result.Name, Index: 1, T: l.typeOf(u.Result.Type), Sym: u.Result}
+			r.Params = append(r.Params, p)
+			l.params[u.Result] = p
+		} else {
+			r.Result = l.typeOf(u.Result.Type)
+		}
 	case ast.SubroutineUnit:
 		r.Kind = Subroutine
 	case ast.BlockDataUnit:
@@ -98,7 +109,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 	}
 
 	for _, s := range u.Params {
-		p := &Param{Name: s.Name, Index: s.Dummy, T: l.typeOf(s.Type), Sym: s}
+		p := &Param{Name: s.Name, Index: s.Dummy + hidden, T: l.typeOf(s.Type), Sym: s}
 		r.Params = append(r.Params, p)
 		l.params[s] = p
 	}

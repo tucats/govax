@@ -4448,14 +4448,17 @@ output it prints, and programs of several files in its `modules` directory.
 ### 14.2 What the compiler accepts so far
 
 - **Program units:** a main program, with or without a PROGRAM statement;
-  SUBROUTINE; FUNCTION, typed INTEGER, LOGICAL, REAL, REAL\*8, or COMPLEX
-  (not yet REAL\*16, COMPLEX\*16, or CHARACTER), or by its name's first letter; BLOCK DATA, named or not, which holds declarations
+  SUBROUTINE; FUNCTION of any type, typed in its statement, by a type
+  statement, or by its name's first letter, a CHARACTER one of a fixed
+  length or `CHARACTER*(*)`, taking its length from the unit that references
+  it; BLOCK DATA, named or not, which holds declarations
   and initial values for named common blocks; END. A file may hold several
   units.
 - **Declarations:** type statements of every type and length (BYTE;
   LOGICAL `*1`, `*2`, `*4`; INTEGER `*2`, `*4`; REAL `*4`, `*8`, `*16`;
   DOUBLE PRECISION; COMPLEX `*8`, `*16`; DOUBLE COMPLEX; CHARACTER`*n`,
-  `*(expr)`, and `*(*)` for a dummy argument or a PARAMETER constant), and
+  `*(expr)`, and `*(*)` for a dummy argument, a function's own name, or a
+  PARAMETER constant), and
   DIMENSION and VIRTUAL, of variables and arrays of up to seven dimensions
   with constant bounds (a lower bound with a colon, `V(0:9)`; a bound may
   be a constant expression, and a REAL one is truncated); a dummy array's

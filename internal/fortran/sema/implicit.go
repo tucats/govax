@@ -153,9 +153,11 @@ func (a *analyzer) untyped() {
 }
 
 // passedLengths reports each name given a passed length, CHARACTER*(*),
-// that may not have one (PASSEDLEN): only a dummy argument, a function,
-// and a PARAMETER constant (sections 4.4.2, 6.2.2.2) take their lengths
-// from elsewhere.
+// that may not have one (PASSEDLEN): only a dummy argument, a function's
+// own name, and a PARAMETER constant (sections 4.4.2, 6.2.2.2) take their
+// lengths from elsewhere. A function referenced under such a name would
+// have no length at all, since it takes its length from the unit that
+// references it (ours, unconfirmed: the manual doesn't speak of it).
 func (a *analyzer) passedLengths() {
 	for _, s := range a.unit.Symbols {
 		if s.Type.Kind != Character || s.Type.Size != 0 || s.broken {
@@ -163,7 +165,7 @@ func (a *analyzer) passedLengths() {
 		}
 
 		switch {
-		case s.Dummy != 0, s.Result, s.Class == Function, s.Class == Constant:
+		case s.Dummy != 0, s.Result, s.Class == Constant:
 			continue
 		}
 

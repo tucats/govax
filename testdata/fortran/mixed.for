@@ -95,7 +95,7 @@ C     REAL*8.
       REAL*8 X
       POLYD = ((2*X - 3)*X + 4)*X - 5
       END
-C     A REAL*16 function is Phase 79's, so a subroutine.
+C     A subroutine, its value through its second argument.
       SUBROUTINE POLYQ(X, P)
       REAL*16 X, P
       P = ((2*X - 3)*X + 4)*X - 5

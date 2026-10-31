@@ -1,0 +1,97 @@
+routine FUNCS main
+  cell  S       B  $LOCAL+0    variable S
+  cell  Q       H  $LOCAL+8    variable Q
+  cell  Z       O  $LOCAL+24   variable Z
+  cell  $T1     B  $LOCAL+40   temporary
+  cell  $T2     B  $LOCAL+48   temporary
+  cell  $T3     B  $LOCAL+52   temporary
+  cell  $T4     H  $LOCAL+56   temporary
+  cell  $T5     O  $LOCAL+72   temporary
+  $LOCAL is 88 bytes
+  datum $K1     L 1
+  datum $D1     descriptor T S 5 $T1
+  datum $K2     text 'A'
+  datum $D2     descriptor T S 1 $K2
+  datum $D3     descriptor T S 3 $T2
+  datum $K3     text 'X'
+  datum $IO1    control PRINT *
+  datum $K4     L 5
+  datum $D4     descriptor L S 4 $K4
+  datum $K5     L 3
+B1:
+  ; line 6
+  call NAME5(ref $D1, ref $K1)
+  move S(5) = $T1(5)
+  ; line 7
+  call REPEAT(ref $D3, ref $D2)
+  move $T3(3) = $T2(3)
+  move $T3+3(1) = $K3(1)
+  move S(5) = $T3(4)
+  ; line 8
+  call QF(ref $T4, ref Q)
+  assign Q = $T4
+  ; line 9
+  call ZF(ref $T5, ref Z)
+  assign Z = $T5
+  ; line 10
+  call FTN$PRINT_LIST(ref $IO1)
+  call FTN$IO_ITEM(ref $D4)
+  call NAME5(ref $D1, ref $K5)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 11
+  return 1
+routine NAME5 function
+  param NAME5   B  argument 1
+  param I       L  argument 2
+  $LOCAL is 0 bytes
+  datum $K1     text 'ABCDE'
+  datum $K2     text '-'
+B1:
+  ; line 14
+  move @(@(arg NAME5)+4)(5) = $K1(5)
+  ; line 15
+  move @(@(arg NAME5)+4)-1[@I](1) = $K2(1)
+  ; line 16
+  return
+routine REPEAT function
+  param REPEAT  B  argument 1
+  param CARG    B  argument 2
+  cell  I       L  $LOCAL+0    variable I
+  cell  $C1     L  $LOCAL+4    DO 10's count
+  $LOCAL is 8 bytes
+B1:
+  ; line 20
+  assign $C1 = zext.WL(@(arg REPEAT))
+  assign I = 1
+  branch le.L($C1, 0) B3 B2
+B2: L10  ; DO 10's body
+  ; line 21
+  move @(@(arg REPEAT)+4)-1[I](1) = @(@(arg CARG)+4)(1)
+  assign I = add.L(I, 1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B3
+B3:
+  ; line 22
+  return
+routine QF function
+  param QF      H  argument 1
+  param X       H  argument 2
+  $LOCAL is 0 bytes
+B1:
+  ; line 26
+  assign @QF = add.H(@X, 1Q0)
+  ; line 27
+  return
+routine ZF function
+  param ZF      O  argument 1
+  param X       O  argument 2
+  cell  $T1     O  $LOCAL+0    temporary
+  $LOCAL is 16 bytes
+B1:
+  ; line 31
+  call OTS$MULCD_R3(val @X, val @X+8, val @X, val @X+8) -> $T1
+  assign @ZF = $T1
+  assign @ZF+8 = $T1+8
+  ; line 32
+  return

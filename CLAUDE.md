@@ -398,7 +398,13 @@ never had.
   (`testdata/fortran/loops.for`); subtask 4 (2026-10-31) STOP, PAUSE,
   RETURN, and END: PAUSE is `sema.Stop` with `Pause` set, a call of
   FTNRTL's `FTN$PAUSE` (`ftn_control.mar`, GSMATCH 1,7: the display, then
-  LIB$PAUSE), run by `TestFortranPause`; RETURN i waits for subtask 7.
+  LIB$PAUSE), run by `TestFortranPause`; RETURN i waits for subtask 7;
+  subtask 5 (2026-10-31) function results of every type: a CHARACTER,
+  REAL\*16, or COMPLEX\*16 value through a hidden first argument
+  (`sema.Type.HiddenResult`), the function's name an `ir.Param` so a
+  CHARACTER one is reached through its descriptor as a passed-length
+  dummy is, the caller passing a temporary (or a descriptor of one) and
+  never the assignment's target.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

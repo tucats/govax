@@ -196,14 +196,6 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		fallthrough
 
 	case Function:
-		if t := s.Type; t.Kind != Invalid && !t.returned() {
-			a.notImplForm(e.Pos, article(t.String()+" function"))
-
-			s.broken = true
-
-			return a.bad(e.Pos)
-		}
-
 		args := a.args(e.Args)
 		a.unit.calls = append(a.unit.calls, routineRef{s, args, e.Pos})
 
@@ -268,8 +260,8 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	case *Var, *Elem:
 	default:
 		if t.Kind != Invalid {
-			// A function's value (CHARACTER functions are Phase 79's) or a
-			// constant expression.
+			// A function's value or a constant expression: section 2.2.4's
+			// substrings are of variables and array elements.
 			a.report("SUBSTR", e.Pos, name, "not a variable or an array element")
 		}
 

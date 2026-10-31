@@ -15,8 +15,9 @@ package sema
 // FORTRAN's do.
 //
 // A dummy argument has no storage: it is the caller's, reached through
-// the argument list. Nor has a routine's name. A name only declared,
-// never used, is a variable, given storage as VAX FORTRAN gives it.
+// the argument list, as a function's value is when it goes through a hidden
+// argument (Type.HiddenResult). Nor has a routine's name. A name only
+// declared, never used, is a variable, given storage as VAX FORTRAN gives it.
 func (a *analyzer) layout() {
 	offset := 0
 
@@ -26,6 +27,10 @@ func (a *analyzer) layout() {
 		}
 
 		if s.Dummy != 0 || s.Common != nil || (s.Class != Variable && s.Class != Array) {
+			continue
+		}
+
+		if s.Result && s.Type.HiddenResult() {
 			continue
 		}
 

@@ -81,14 +81,16 @@ func (t Type) String() string {
 	return name + "*" + strconv.Itoa(t.Size)
 }
 
-// returned reports whether a function of the type can be compiled yet: a
-// numeric or LOGICAL type whose value comes back in registers, R0 or R0
-// and R1 (a COMPLEX*8's real part in R0, its imaginary part in R1). A
-// REAL*16 or COMPLEX*16 function's value comes back through a hidden first
-// argument, and a CHARACTER function's through a descriptor passed as one
-// (Decision 11 of docs/PHASE-74 - FORTRAN plan.md), which are Phase 79's.
-func (t Type) returned() bool {
-	return t.Kind != Character && t.Size <= 8
+// HiddenResult reports whether a function of the type returns its value
+// through a hidden first argument, not in registers. Up to 8 bytes come
+// back in R0, or R0 and R1 (a COMPLEX*8's real part in R0, its imaginary
+// part in R1). A REAL*16 or COMPLEX*16 value is too wide, so the caller
+// passes the address of a place for it; and a CHARACTER value goes to the
+// place a class S descriptor describes, which the caller passes, so the
+// descriptor also tells a CHARACTER*(*) function its length (Decision 3 of
+// docs/PHASE-79 - FORTRAN control flow and subprograms.md).
+func (t Type) HiddenResult() bool {
+	return t.Kind == Character || t.Size > 8
 }
 
 // Align is the boundary a variable of the type is placed on in $LOCAL:

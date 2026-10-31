@@ -26,7 +26,8 @@ func parseProgram(p *parser) ast.Stmt {
 // (the statement's FunctionType), and split off FUNCTION as a keyword
 // token after the type's length. A length after the name of a function
 // with no type keyword (FUNCTION F*8) gives a TypeSpec of no type, for
-// semantic analysis to report.
+// semantic analysis to report. A CHARACTER function may have a length in
+// only one of the two places (section 6.2.2.2).
 func parseFunction(p *parser) ast.Stmt {
 	s := &ast.FunctionStmt{StmtBase: p.base()}
 
@@ -45,6 +46,10 @@ func parseFunction(p *parser) ast.Stmt {
 	if p.at("*") {
 		if s.Type == nil {
 			s.Type = &ast.TypeSpec{Pos: p.here()}
+		}
+
+		if s.Type.Type == ast.Character && s.Type.HasLength() {
+			p.fail("TWOLENGTHS", p.here(), s.Name)
 		}
 
 		p.next()
