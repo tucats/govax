@@ -1,13 +1,15 @@
 # Phase 81 — FORTRAN files
 
-**Status:** in progress: subtask 1, the survey, done 2026-10-31, for the author's review. Planned 2026-10-29. Needs Phase 80 (formatting and the
+**Status:** in progress: subtask 1, the survey, done 2026-10-31 and
+accepted by the author the same day (Part A's answers). Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
 ## Goal
 
 FORTRAN's file statements and every access method this program
-supports, on volume files and host files:
+supports, on volume files (the author's answer 3: host files are
+brought in and out by COPY, and RMS's full function is a container's):
 
 - **OPEN** with every keyword in chapter 9 (Table 9-1): FILE, NAME,
   DEFAULTFILE, STATUS, DISPOSE, ACCESS, FORM, ORGANIZATION, RECORDTYPE,
@@ -545,6 +547,23 @@ Proposed, for the author's review.
    since it describes a later Fortran? **Recommended: yes,** as a
    secondary source.
 
+**The author's answers (2026-10-31):**
+
+1. They will run the probe on the simh VAX, in as many rounds as it takes:
+   subtask 2, as recommended.
+2. Find `FOR$OPEN`'s arguments by trial, **(a)**, with as many runs at it as
+   it takes; the half-day bound is dropped.
+3. **(a):** host files are imported and exported (COPY), and RMS's full
+   function is for files in a container. FORTRAN's files are volume files.
+   This narrows the goal's "volume files and host files".
+4. Yes, the 2005 HP manual is a secondary source. govax emulates no one
+   VMS compiler, so the feature sets may be mixed a little: what the 2005
+   manual adds may be taken where it fits, a probe case where FORRTL can
+   show it.
+
+So Decisions 1 to 14 stand as proposed, Decision 1 with FORRTL first, the
+1988 LRM next, and the 2005 manual after them.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (this Part A).
@@ -585,3 +604,8 @@ Proposed, for the author's review.
   mid-record. Part A has the rules, 14 decisions, 4 questions, and the
   revised subtasks. No code changed; nothing in the repository or the
   local volumes was written.
+- **2026-10-31, the review.** The author accepted the survey and answered
+  its four questions (after Part A's questions): the probe in as many
+  rounds as needed, `FOR$OPEN`'s arguments found by trial without a time
+  bound, volume files only (host files by COPY), and the 2005 HP manual as
+  a secondary source.
