@@ -24,7 +24,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "altreturns", "args", "callback", "chars", "complex", "complexg", "data", "entries", "flow", "formats", "funcs", "funcsg", "intrinsics", "iostmt", "jumps", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "powers", "procs", "reals", "realsg", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text"}
+var fortranPagingPrograms = []string{"adjust", "altreturns", "args", "callback", "chars", "complex", "complexg", "data", "entries", "flow", "formats", "funcs", "funcsg", "intedit", "intrinsics", "iostmt", "jumps", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "powers", "procs", "reals", "realsg", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text"}
 
 func TestFortranPrograms(t *testing.T) {
 	sources, err := filepath.Glob(filepath.Join(fortranPrograms, "*.for"))

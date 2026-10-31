@@ -4,7 +4,8 @@
 accepted by the author the same day; subtask 2 (the probe) done the same day, two
 rounds on VMS 7.1; subtask 3 (FORMAT's check, every statement through the
 compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
-interpreter) done the same day. Needs Phase 79 (control flow, for
+interpreter) done the same day; subtask 5 (integer, logical, and character
+editing) done the same day. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -774,7 +775,8 @@ subtasks land.
    conditions these raise. Done ("Subtask 4", below), with A and Q, run-time
    formats but for VFEs, and Decision 2's oracle.
 5. **Integer, logical, and character editing,** both directions, with BN and BZ,
-   short fields, and the default widths.
+   short fields, and the default widths. Done ("Subtask 5", below), with an
+   input oracle.
 6. **Floating editing:** F, E, D, G, P, S, complex, both directions.
 7. **List-directed:** output on the shared record (Part A's three differences),
    and input.
@@ -991,6 +993,78 @@ Tests: `TestFor80Oracle`, `testdata/fortran/formats.for` (both paging modes),
 A, Q, H read into a FORMAT, `/`, reversion, a run-time format, INPRECTOO, END=,
 IOSTAT's -1).
 
+## Subtask 5: what was built (2026-10-31)
+
+**FTNRTL's I, O, Z, and L** (`ftn_edit.mar`, new: `FTN$$EDIT_INT`, which
+`ftn_format.mar`'s EDIT calls for those four; A was subtask 4's). No new vector
+entries, so GSMATCH stays 1,8. `ftn_format.mar`'s record and error routines are
+global now (`FTN$$FMT_PUT`, `FTN$$FMT_WRITE`, `FTN$$FMT_FAIL`, and the new
+`FTN$$FMT_WARN`), for this module and the ones to come. The rules, all from VMS's
+run where the manual is silent:
+
+- **Output.** I is decimal with a sign (and `+` after SP), at least m digits
+  (I4.0 of 0 is blanks, I3.4 of 1 asterisks); a byte or word is sign-extended,
+  and an item longer than a longword is edited by its first. O and Z are the
+  item's bytes as one unsigned number of its length, of any type: Z16 of REAL\*8
+  1.0 is `4080`, Z5 of `'HI'` `4948`, O6 of -1 asterisks; SP doesn't apply. L is
+  T or F by the first byte's low bit, in the last column. A field too narrow is
+  w asterisks, and I0 or L0 writes none but still ends the record at its column
+  (VMS's `(1X,I0)` is a record of one blank).
+- **OUTCONERR goes on.** VMS's statement continues after OUTCONERR, its later
+  fields and records written, and IOSTAT gets 63 at the end. So the context keeps
+  such an error apart (`CTX_WARNING`, after the format's fields), and
+  `FTN$IO_END` reports it if nothing stopped the statement. With no specifier
+  it is signaled, an error, after the statement's records (VMS's run 3 shows
+  the record before the message too; whether FORRTL signals at the field or at
+  the end isn't known).
+- **FORVARMIS after the item.** I or L of an item that isn't an integer or a
+  logical (or Q's, subtask 4) edits it by its bytes and fails the statement once
+  the whole item is done: `(1X,I5,I5)` of a COMPLEX writes both parts, then
+  FORVARMIS (VMS's case 297), so `FTN$$FMT_ITEM` checks a flag (`CTX_MISMATCH`)
+  after the item's last part, and for output writes the record first, as VMS's
+  shows it. A CHARACTER item shorter than a longword under I is asterisks and
+  OUTCONERR instead (case 39); one of 4 or more is its first longword and
+  FORVARMIS (case 210). An array of the wrong type is edited whole before the
+  failure: unconfirmed, no case has one.
+- **Input fields.** A field is w characters from the position, ending early at
+  the record's end (so I's default 12 columns read `42` as 42, not as 42 and ten
+  zeros) or at a comma, after which the next field starts (8.6; `,,` is two
+  empty fields, a comma after a full field one). Leading blanks are passed over,
+  others are zeros (BZ, a unit's default) or nothing (BN), and an empty field is
+  0 or .FALSE.. I takes a sign and digits, into the item's byte, word, or first
+  longword by its length; O and Z no sign, and any type, the number filling the
+  item (`O12` of 7 into a REAL\*8 is 7 and 0); L an optional period, then T or F
+  in either case, the rest passed over (`.TRUE.`, `FALSE`). A value past the
+  item's range, or a character that can't be read, is INPCONERR (64, severe),
+  and the whole item is set to zeros (VMS's: an INTEGER\*2 slot shows `55550000`,
+  a CHARACTER\*3 three NULs). Unconfirmed: a sign alone is 0, a period alone
+  INPCONERR, a 3-byte item takes a word.
+- **Default widths** are Table 8-4's as VMS's run gave them: I, O, Z 7 for an
+  item of 1 or 2 bytes and 12 for 4; I 12 for anything longer; O and Z 23 for 8
+  and 44 for 16; L 2. A CHARACTER item's O and Z field is 15: VMS's one case is a
+  CHARACTER\*5, so other lengths are unconfirmed.
+
+**One difference listed:** VMS's `(1X,P,I3)` (case 351) is INFFORLOO with no
+record, where FTNRTL takes `P` alone as 0P and edits I3. VMS's `(1X,P)` is
+INFFORLOO too (FTNRTL agrees, for want of a data descriptor), so perhaps a P
+with no count ends VMS's format there; one case can't settle it, so
+`expectedFor80Differences` has it and both parsers keep the manual's reading.
+
+**The input oracle.** `gen.go` now also writes `for80i.for`, round 1's formatted
+input cases (internal records and SYS$INPUT's, but for G-floating items) as READs
+from unit 5 into slots of a COMMON block set to 55s first, and `for80i.dat`,
+their records under `#n` lines with VMS's `/` pads. `TestFor80InputOracle` types
+the data at the program and holds each case's IOSTAT and slots to VMS's e= and
+`v` lines; the cases whose internal record ran out on VMS (e=24) aren't compared,
+since a record of SYS$INPUT is followed by the next. 152 compare and match (A and
+Q's too, which subtask 4 had only by hand); 59 wait for floating editing.
+`TestFor80Oracle` compares 278 (133 more) and waits on 165.
+
+Tests: both oracles, `testdata/fortran/intedit.for` (both paging modes),
+`TestFortranIntegerInput` (FORMAT statements at the terminal, both modes), and
+`TestFortranIOSignals`' OUTCONERR, signaled with the program going on; `iostmt.for`
+and `formats.for` now take INFFORLOO and F as their failing cases.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1056,3 +1130,9 @@ IOSTAT's -1).
   `TestFor80Oracle`, runs `for80.for` (now written by `gen.go`) and matches VMS's
   run in all 145 cases FTNRTL can do so far. One defect found by it on the way:
   Q parsed with no repeat count served every item after it.
+- **2026-10-31, subtask 5, done.** I, O, Z, and L both ways in FTNRTL
+  (`ftn_edit.mar`), with BN and BZ, fields ended by a comma or the record's end,
+  default widths, OUTCONERR's statement going on, and FORVARMIS after the whole
+  item; "Subtask 5" above. A new input oracle, `TestFor80InputOracle`
+  (`for80i.for`, `for80i.dat`), matches VMS's run in all 152 cases it compares;
+  the output oracle now compares 278, all matching but case 351, a lone P.

@@ -1553,6 +1553,31 @@ the model for what the manual leaves open: a record's 133-column limit, a
 `T0` that loses what is written there, a `$` changing the first byte to
 `$` (a prompt) when the record is written.
 
+### Editing a value
+
+The walk hands each item to the module for its data descriptor; the
+integer and logical ones, I, O, Z, and L, are `ftn_edit.mar`'s, given the
+context, the operation, and the item's address, length, and type. Output
+needs no conversion routine: an integer's decimal digits come from a loop
+of `EDIV` by ten, which leaves them last digit first on the stack, and an
+O or Z field's digits are bit fields of the item, `EXTZV` three or four
+bits at a time from the most significant, so an item of any length (a
+REAL, a CHARACTER) is written as the unsigned number its bytes make, as
+VMS's library writes it. Input reads a *field*: w characters, but fewer at
+the record's end or before a comma, which is how a FORTRAN user can type
+`1,-2,,` for three values without counting columns. I accumulates the
+value with `EMUL`, whose quadword product shows an overflow; O and Z shift
+each digit into the item from its low end, byte by byte, so they too work
+for any length.
+
+Two kinds of error matter here. A value too wide for its field is written
+as asterisks, and the statement goes on: the condition, `OUTCONERR`, is
+kept apart from the error that stops a statement (`CTX_WARNING`), and
+reported at its end. An item of the wrong type for I or L is edited by its
+bytes anyway and fails the statement only when the whole item is done, so
+both parts of a complex value show (`CTX_MISMATCH`); the record is written
+first. Both rules are VMS's library's, found by the probe.
+
 ## 14. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole

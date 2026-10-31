@@ -3,7 +3,8 @@ WRITE (*,*)           2
 WRITE (6,*)           3
 TYPE           4
 WRITE (5,*)           5
-FORMATTED           2
+    6
+FORMATTED           0
 ERR= TAKEN
 READ           2
 UNIT 200          32

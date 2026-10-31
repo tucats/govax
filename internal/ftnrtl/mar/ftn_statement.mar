@@ -58,7 +58,10 @@
 ;
 ; The first error a statement meets is recorded in its context, and the
 ; rest of the statement does nothing but end: its items are passed over,
-; and FTN$IO_END returns or signals the error.
+; and FTN$IO_END returns or signals the error. An error after which VMS's
+; statement goes on, FOR$_OUTCONERR (a value too large for its field,
+; written as asterisks), is recorded apart (CTX_WARNING): the statement
+; goes on, and FTN$IO_END reports it if nothing stopped the statement.
 ;
 ; So far formatted input and output (FTN_FORMAT) and list-directed
 ; output (FTN_LISTOUT) to the units FTN_UNITS has are done; every other
@@ -95,7 +98,9 @@ CTX_RECLEN	= 24			; long: the bytes in the record so far
 CTX_RECORD	= 28			; the record being built
 RECORD_SIZE	= 256
 CTX_FREEFMT	= CTX_RECORD+RECORD_SIZE+12 ; long: FTN_FORMAT's run-time format
-CTX_SIZE	= CTX_RECORD+RECORD_SIZE+104 ; with FTN_FORMAT's fields
+CTX_WARNING	= CTX_RECORD+RECORD_SIZE+104 ; long: FTN_FORMAT's error the
+					;  statement went on after, or 0
+CTX_SIZE	= CTX_RECORD+RECORD_SIZE+112 ; with FTN_FORMAT's fields
 
 ; The kinds of statement: a READ's is even, a WRITE's odd, and those
 ; from K_READ_IF on have no unit.
@@ -237,6 +242,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVW	ICB_W_FLAGS(R0),CTX_FLAGS(R3)
 35$:	MOVB	R6,CTX_KIND(R3)
 	CLRL	CTX_STATUS(R3)
+	CLRL	CTX_WARNING(R3)
 	CLRL	CTX_FREEFMT(R3)
 	CLRL	CTX_STREAM(R3)
 	CLRL	CTX_RECLEN(R3)
@@ -361,6 +367,8 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	MOVL	FREE_LIST,CTX_NEXT(R2)
 	MOVL	R2,FREE_LIST
 	MOVL	CTX_STATUS(R2),R3
+	BNEQ	20$
+	MOVL	CTX_WARNING(R2),R3	; an error it went on after
 	BNEQ	20$
 	CLRL	R0			; success
 	RET

@@ -460,7 +460,14 @@ never had.
   `:`, `$`, OUTSTAOVE past 133; input records by `FTN$$UNIT_GET`,
   INPRECTOO past 199; A and Q; every other edit NOTIMP until its subtask),
   and Decision 2's oracle, `TestFor80Oracle` (`for80.for`, written by
-  `gen.go`, against VMS's run).
+  `gen.go`, against VMS's run); subtask 5 (2026-10-31) is I, O, Z, and L
+  both ways (`ftn_edit.mar`'s `FTN$$EDIT_INT`, over `ftn_format.mar`'s now
+  global `FTN$$FMT_PUT`, `_WRITE`, `_FAIL`, and `_WARN`): input fields ended
+  by a comma or the record's end, BN and BZ, Table 8-4's widths as VMS's
+  run gave them, OUTCONERR an error the statement goes on after
+  (`CTX_WARNING`), FORVARMIS after the whole item (`CTX_MISMATCH`); and the
+  input oracle, `TestFor80InputOracle` (`for80i.for` and `for80i.dat`, the
+  probe's input cases read from SYS$INPUT).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -710,7 +717,9 @@ never had.
   `vax/for80b-vax.txt`, are FTNRTL's requirement: `gen.go` also writes
   `for80.for`, the output cases as FORTRAN, which `TestFor80Oracle` runs with
   SYS$OUTPUT a file and holds to VMS's records and e= (NOTIMP cases wait for
-  their subtask). `TestFor80RunsOnFORRTL` and
+  their subtask), and `for80i.for` and `for80i.dat`, the formatted input cases
+  read from SYS$INPUT, which `TestFor80InputOracle` holds to VMS's stored
+  values. `TestFor80RunsOnFORRTL` and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
@@ -1970,6 +1979,7 @@ expect adjustment as phases land):
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the units' streams, SYS$OUTPUT
   and SYS$INPUT with RAT=FTN (units -4 to -1, 5, and 6 so far, Phase 80);
+  `ftn_edit.mar`, I, O, Z, and L editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and
   the rest; the old FTN$PRINT_LIST and FTN$WRITE_LIST kept), FTN$IO_ITEM,
   and FTN$IO_END, on a stack of statement contexts, with the control

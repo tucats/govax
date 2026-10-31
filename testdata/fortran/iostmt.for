@@ -1,5 +1,5 @@
       PROGRAM IOSTMT
-C     The I/O statements as Phase 80's subtask 3 leaves them: every one
+C     The I/O statements as Phase 80's subtask 3 left them: every one
 C     goes through FTNRTL's begin and end calls; list-directed output to
 C     the default units and units 5 and 6 works; IOSTAT=, ERR=, and END=
 C     take the errors FTNRTL finds so far; and a statement may run inside
@@ -12,10 +12,11 @@ C     another's item, on another unit (not on the same one).
       WRITE (6,*) 'WRITE (6,*)', 3
       TYPE *, 'TYPE', 4
       WRITE (5,*) 'WRITE (5,*)', 5
-C     Integer editing (I5) is subtask 5's: NOTIMP, FOR number 2.
+C     Integer editing (I5), subtask 5's; then a format with no data
+C     descriptor for its item (INFFORLOO, 60), which ERR= takes.
       WRITE (6, 10, IOSTAT=IOS) 6
       PRINT *, 'FORMATTED', IOS
-      WRITE (6, 10, ERR=20) 7
+      WRITE (6, '(1X,''A'')', ERR=20) 7
       PRINT *, 'NOT HERE'
    20 PRINT *, 'ERR= TAKEN'
       READ (5, *, IOSTAT=IOS, END=30) I

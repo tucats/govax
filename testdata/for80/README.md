@@ -20,6 +20,7 @@ holds FTNRTL to `vax/for80-vax.txt`.
 | `for80.com` | Builds and runs everything |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
 | `for80.for` | The output cases to unit 6 as FORTRAN statements, for govax (Decision 2) |
+| `for80i.for`, `for80i.dat` | The formatted input cases as FORTRAN READs from SYS$INPUT, and their records, each case's under its number, for govax |
 | `vax/for80-vax.txt` | Run 1 on VMS, as `FOR80D` printed it |
 | `vax/for80p-vax.txt` | Run 2 on VMS: the same cases with unit 6 a process-permanent file |
 | `vax/for80.log` | `FOR80.COM`'s log: run 3's messages, and the file's attributes |
@@ -128,3 +129,15 @@ line with its IOSTAT. The test runs it with SYS$OUTPUT a file, so its records
 keep their first bytes as VMS's FOR006 file did, and matches each case's records
 and IOSTAT with `vax/for80-vax.txt`'s records and e=. A case whose IOSTAT is 2,
 NOTIMP, uses an edit FTNRTL doesn't have yet, and waits for its subtask.
+
+`TestFor80InputOracle` (the same file, Phase 80's subtask 5) does the same for
+input: `for80i.for` is round 1's formatted input cases (`rd`, from an internal
+record, and `rd5`, from SYS$INPUT; not those with G-floating items, as a program
+is compiled in D or in G), each a READ from unit 5 with a run-time format, its
+items in 16-byte slots of a COMMON block whose bytes are first set to 55s as
+VMS's were. `for80i.dat` holds each case's records under a `#n` line, then three
+`/` lines as `FOR80R.COM` had, and the test types it at the program. Each case
+prints its IOSTAT and what its slots hold, which must be VMS's e= and `v` lines.
+An internal record read as a record of SYS$INPUT is the same to the format but
+for what follows it, so the cases whose internal record ran out (e=24) aren't
+compared.

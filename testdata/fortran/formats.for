@@ -2,8 +2,8 @@
 C     Formatted output as Phase 80's subtask 4 leaves it: the format
 C     interpreter's text, H, positions, records, groups, reversion, colon,
 C     and dollar sign; A and Q; run-time formats in a variable and in an
-C     array; and the conditions the walk raises. Integer and real
-C     editing are later subtasks': NOTIMP, FOR number 2, until then.
+C     array; and the conditions the walk raises. Real editing is a
+C     later subtask's: NOTIMP, FOR number 2, until then.
       CHARACTER*5 NAME(3)
       CHARACTER*12 RTF
       CHARACTER*6 PARTS(2)
@@ -42,6 +42,6 @@ C     editing are later subtasks': NOTIMP, FOR number 2, until then.
       PRINT *, 'OUTSTAOVE', IOS
       WRITE (6, '(1X,T133,''X'')', IOSTAT=IOS)
       PRINT *, 'T133', IOS
-      WRITE (6, '(1X,A,I5)', IOSTAT=IOS) 'I5 IS', 5
+      WRITE (6, '(1X,A,F5.1)', IOSTAT=IOS) 'F5.1 IS', 5.0
       PRINT *, 'NOTIMP', IOS
       END

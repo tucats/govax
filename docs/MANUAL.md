@@ -4357,8 +4357,8 @@ and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
-input and output, with the A and Q edit descriptors so far, and
-list-directed output, and stops a program at any other I/O statement or
+input and output, with the I, O, Z, L, A, and Q edit descriptors so far,
+and list-directed output, and stops a program at any other I/O statement or
 edit descriptor with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
@@ -4628,8 +4628,16 @@ output it prints, and programs of several files in its `modules` directory.
   default units and units 5 and 6 (SYS$INPUT and SYS$OUTPUT). A format's
   text, H constants, X, T, TL, TR, slashes, groups, reversion, the colon,
   and the dollar sign work as section 8 of the language manual says, as do
-  A and Q; the other data edit descriptors (I, O, Z, F, E, D, G, L) are
-  FOR's `NOTIMP` when a value reaches one, as is every other I/O
+  I, O, Z, L, A, and Q, both ways, with BN and BZ, a comma ending an input
+  field early, and Table 8-4's default widths. A value too wide for its
+  field is asterisks and `OUTCONERR` (63), after which the statement goes
+  on; an input field the item can't hold is `INPCONERR` (64), the item set
+  to 0; and I or L of an item that isn't an integer or a logical edits its
+  bytes as one and then fails with `FORVARMIS` (61), as VMS's library
+  does. A unit with no OPEN takes blanks in a number as zeros, so `1 2`
+  read by I3 is 102 (the manual's rule; BN reads it as 12). The floating
+  edit descriptors (F, E, D, G) are FOR's `NOTIMP` when a value reaches
+  one, as is every other I/O
   statement, and so are units 0 to 4 and 7 to 119, which later phases
   add. A run-time format is checked when it is used: one VMS's FORTRAN
   run-time library would refuse is `SYNERRFOR` (62). A format that runs

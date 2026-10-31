@@ -1918,6 +1918,8 @@ func main() {
 	files := map[string]string{
 		"for80.mar":  program("", round1Messages),
 		"for80.for":  fortranProgram(),
+		"for80i.for": fortranInputProgram(),
+		"for80i.dat": fortranInputData(),
 		"for80d.mar": dumpProgram,
 		"for80e.mar": errorProgram(),
 		"for80t.mar": terminalProgram,
@@ -2140,6 +2142,209 @@ C     vax/for80-vax.txt.
 	body.WriteString("      END\n")
 	b.WriteString("      END\n")
 	b.WriteString(body.String())
+
+	return b.String()
+}
+
+// fortranInputCase reports whether round 1's case c is one of for80i.for's:
+// formatted input from an internal record (rd) or from SYS$INPUT's lines
+// (rd5), its items of types a program compiled in D can have. A record
+// read in place of an internal one is the same to the format but at its
+// end, so the cases whose internal record ran out (FOR$_ENDDURREA, 24)
+// are left out by the test, which knows VMS's results.
+func fortranInputCase(c kase) bool {
+	if c.op != "rd" && (c.op != "rd5" || len(c.lines) == 0) {
+		return false
+	}
+
+	for _, it := range c.items {
+		if it.kind == "g" || it.kind == "gc" {
+			return false
+		}
+	}
+
+	return true
+}
+
+// fortranInputProgram is round 1's formatted input cases as FORTRAN
+// statements (Decision 2), for govax, read from SYS$INPUT: for80i.dat,
+// written beside it, holds each case's records under a line "#n", then
+// three lines "/", as VMS's FOR80R.COM did. Each case is
+//
+//	CALL SYNC('#n')                        reads up to the case's line
+//	CALL PRE                               every slot's bytes 55, as VMS's were
+//	READ (5, 'format', IOSTAT=IOS) items
+//	PRINT *, '=n', IOS
+//	CALL SHOWV(j, k) or CALL SHOWT(j, n)   what item j left: k longwords, or n characters
+//
+// Item j is in slot j, 16 bytes of COMMON /SLOTS/ seen as each type, or
+// for a CHARACTER item the first n characters of TX(j+1). SHOWV prints
+// the longwords as decimal integers, which TestFor80InputOracle compares
+// with VMS's hexadecimal; SHOWT prints the text between bars.
+func fortranInputProgram() string {
+	var b, body strings.Builder
+
+	b.WriteString(`C     FOR80I.FOR - written by testdata/for80/gen.go: round 1's
+C     formatted input cases, from SYS$INPUT, for govax.
+C     TestFor80InputOracle holds what they store to vax/for80-vax.txt.
+      PROGRAM FOR80I
+`)
+
+	declarations := `      INTEGER IOS
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      INTEGER*2 VW(8,16)
+      BYTE VB(16,16)
+      LOGICAL*4 VLU(4,16)
+      LOGICAL*2 VWU(8,16)
+      REAL VF(4,16)
+      DOUBLE PRECISION VD(2,16)
+      REAL*16 VH(16)
+      COMPLEX VFC(2,16)
+      COMPLEX*16 VDC(16)
+      EQUIVALENCE (S, VW, VB, VLU, VWU, VF, VD, VH, VFC, VDC)
+`
+	routines := 0
+	perRoutine := 0
+
+	for n, c := range cases {
+		if !fortranInputCase(c) {
+			continue
+		}
+
+		if routines == 0 || perRoutine == 40 {
+			if routines > 0 {
+				body.WriteString("      END\n")
+			}
+
+			routines++
+			perRoutine = 0
+			fmt.Fprintf(&b, "      CALL R%d\n", routines)
+			fmt.Fprintf(&body, "\n      SUBROUTINE R%d\n%s", routines, declarations)
+		}
+
+		perRoutine++
+
+		var items, shows []string
+
+		for j, it := range c.items {
+			k := j + 1
+
+			switch it.kind {
+			case "l":
+				items = append(items, fmt.Sprintf("S(1,%d)", k))
+			case "w":
+				items = append(items, fmt.Sprintf("VW(1,%d)", k))
+			case "b":
+				items = append(items, fmt.Sprintf("VB(1,%d)", k))
+			case "lu":
+				items = append(items, fmt.Sprintf("VLU(1,%d)", k))
+			case "wu":
+				items = append(items, fmt.Sprintf("VWU(1,%d)", k))
+			case "f":
+				items = append(items, fmt.Sprintf("VF(1,%d)", k))
+			case "d":
+				items = append(items, fmt.Sprintf("VD(1,%d)", k))
+			case "h":
+				items = append(items, fmt.Sprintf("VH(%d)", k))
+			case "fc":
+				items = append(items, fmt.Sprintf("VFC(1,%d)", k))
+			case "dc":
+				items = append(items, fmt.Sprintf("VDC(%d)", k))
+			case "t":
+				items = append(items, fmt.Sprintf("TX(%d)(1:%s)", k, it.val))
+				shows = append(shows, fmt.Sprintf("CALL SHOWT(%d, %s)", j, it.val))
+
+				continue
+			default:
+				log.Fatalf("input item kind %q", it.kind)
+			}
+
+			shows = append(shows, fmt.Sprintf("CALL SHOWV(%d, %d)", j, slotShow(it.kind)))
+		}
+
+		ftnStatement(&body, fmt.Sprintf("CALL SYNC('#%d')", n))
+		ftnStatement(&body, "CALL PRE")
+
+		read := "READ (5, " + ftnText(c.format) + ", IOSTAT=IOS)"
+		if len(items) > 0 {
+			read += " " + strings.Join(items, ", ")
+		}
+
+		ftnStatement(&body, read)
+		ftnStatement(&body, fmt.Sprintf("PRINT *, '=%d', IOS", n))
+
+		for _, show := range shows {
+			ftnStatement(&body, show)
+		}
+	}
+
+	body.WriteString("      END\n")
+	b.WriteString("      END\n")
+	b.WriteString(body.String())
+	b.WriteString(`
+      SUBROUTINE SYNC(M)
+      CHARACTER*(*) M
+      CHARACTER*80 LINE
+   10 READ (5, '(A)', END=20, ERR=10) LINE
+      IF (LINE .NE. M) GO TO 10
+   20 RETURN
+      END
+
+      SUBROUTINE PRE
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      DO 10 J = 1, 16
+      DO 5 K = 1, 4
+    5 S(K,J) = 1431655765
+   10 TX(J) = 'UUUUUUUUUUUUUUUU' // 'UUUUUUUUUUUUUUUU' //
+     &        'UUUUUUUUUUUUUUUU' // 'UUUUUUUUUUUUUUUU'
+      END
+
+      SUBROUTINE SHOWV(J, N)
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      PRINT *, 'v', J, (S(K,J+1), K = 1, N)
+      END
+
+      SUBROUTINE SHOWT(J, N)
+      INTEGER*4 S(4,16)
+      CHARACTER*64 TX(16)
+      COMMON /SLOTS/ S, TX
+      PRINT *, 'v', J, '|' // TX(J+1)(1:N) // '|'
+      END
+`)
+
+	return b.String()
+}
+
+// fortranInputData is for80i.dat, the records for80i.for reads: each
+// case's under a line holding its number, then three lines "/", which
+// stop a case that reads too far, as FOR80R.COM's did.
+func fortranInputData() string {
+	var b strings.Builder
+
+	for n, c := range cases {
+		if !fortranInputCase(c) {
+			continue
+		}
+
+		fmt.Fprintf(&b, "#%d\n", n)
+
+		lines := c.lines
+		if c.op == "rd" {
+			lines = []string{c.text}
+		}
+
+		for _, l := range lines {
+			b.WriteString(l + "\n")
+		}
+
+		b.WriteString("/\n/\n/\n")
+	}
 
 	return b.String()
 }

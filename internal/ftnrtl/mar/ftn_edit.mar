@@ -1,0 +1,619 @@
+	.TITLE	FTN_EDIT - FTNRTL's integer and logical editing
+	.IDENT	/V1.0/
+;
+; The I, O, Z, and L edit descriptors (the 1988 VAX FORTRAN Language
+; Reference Manual, 8.3.3 to 8.3.5 and 8.3.9; docs/PHASE-80 - FORTRAN
+; formatted IO.md, subtask 5), both ways. FTN_FORMAT's walk finds the data
+; descriptor an item takes and calls FTN$$EDIT_INT with the statement's
+; context, the descriptor's parsed operation, and the item. Where the
+; manual leaves a rule open, VMS's own run-time library, run by the
+; probe in testdata/for80, settles it (Decision 1); those rules are
+; marked "VMS's" below.
+;
+; Output. Iw.m writes an integer in decimal, right-justified in w columns:
+; a minus sign if it is negative (a plus too, after SP), and at least m
+; digits, with zeros in front if need be (I4.2 of 1 is "  01"); I4.0 of
+; 0 writes only blanks. Ow.m and Zw.m write the item's bytes as they are
+; stored, read as one unsigned number of the item's length, in octal or
+; hexadecimal, whatever its type: Z8 of REAL 1.0, whose bytes are 80 40
+; 00 00, is "    4080" (VMS's). Lw writes T or F, by the low bit of the
+; item's first byte, in the field's last column. A value that needs more
+; than w columns is w asterisks, and FOR$_OUTCONERR, an error after
+; which the statement goes on: the rest of its items are written, and
+; FTN$IO_END reports or signals it at the end (VMS's).
+;
+; Input. A field is w characters from the position, but fewer if the
+; record ends first, or if a comma comes first (8.6: the comma ends the
+; field, and the next field starts after it; two commas in a row are an
+; empty field). Leading blanks are passed over, and the other blanks are
+; zeros or nothing, by BZ or BN (a unit with no OPEN is BZ). An empty or
+; blank field is 0, or .FALSE.. I takes a sign and decimal digits; O and Z
+; take octal or hexadecimal digits (a or A to f or F) and no sign, and
+; store the number in all the item's bytes; L takes an optional period
+; and then T or F, in either case, and passes over what follows, so .TRUE.
+; and FALSE read as they should. A value too large for the item, or a
+; character the field can't hold, is FOR$_INPCONERR, a severe error that
+; ends the statement, and the item is set to zeros (VMS's).
+;
+; Types. I and L are for integers and logicals. An item of another type
+; is edited by its first bytes as if it were one (I5 of REAL 3.25 writes
+; 16720, its first longword), and when the whole item is done (both parts
+; of a complex value) the statement fails with FOR$_FORVARMIS; an output
+; statement's record is written first, so the fields show, as VMS's do. A character item shorter than a longword
+; under I is asterisks and FOR$_OUTCONERR instead (VMS's). O and Z take
+; any type.
+;
+; Default widths (8.3.10, Table 8-4, as VMS's run gave them): I, O, and Z
+; take 7 columns for an item of 1 or 2 bytes, 12 for 4; O and Z 23 for 8
+; and 44 for 16, and I 12 for any item longer than 2. L takes 2. A
+; character item's O and Z field is 15 columns: VMS's one case was a
+; CHARACTER*5, so other lengths are unconfirmed.
+;
+	$SSDEF
+
+; FORRTL's condition values, with their severities.
+FOR$_OUTCONERR	= ^X001881FA
+FOR$_INPCONERR	= ^X00188204
+
+; The descriptor's data types.
+DSC$K_DTYPE_BU	= 2
+DSC$K_DTYPE_LU	= 4
+DSC$K_DTYPE_B	= 6
+DSC$K_DTYPE_L	= 8
+DSC$K_DTYPE_T	= 14
+
+; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
+CTX_KIND	= 14			; byte: odd for a WRITE
+CTX_RECLEN	= 24			; long: the record's length
+CTX_RECORD	= 28			; the record
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_SIGN	= CTX_POS+36		; byte: 0 S, 1 SP, 2 SS
+CTX_BLANK	= CTX_SIGN+1		; byte: 1 if blanks are zeros (BZ)
+CTX_MISMATCH	= CTX_POS+108		; byte: 1 if the item's type doesn't suit
+
+; A parsed format's operation (FTN_FORMAT's).
+OP_B_CODE	= 0
+OP_B_FLAGS	= 1
+OP_W_W		= 8
+OP_B_D		= 10
+F_W		= 1			; flags: w given,
+F_D		= 2			;  m given
+C_I		= 0			; the codes
+C_O		= 1
+C_Z		= 2
+C_L		= 7
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$EDIT_INT(context, op, address, length, type)
+;
+; Edits one item, of type and length bytes at address, by op, an I, O, Z,
+; or L operation: writes its field into the output record, or reads one
+; from the input record into it. Through the routine R11 is the context,
+; R10 the operation, and R9 the field's width.
+;
+	.ENTRY	FTN$$EDIT_INT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	4(AP),R11
+	MOVL	8(AP),R10
+	JSB	WIDTH
+	BLBS	CTX_KIND(R11),10$
+	BRW	INPUT
+10$:	CASEB	OP_B_CODE(R10),#C_I,#<C_L-C_I>
+20$:	.WORD	OUT_I-20$		; I
+	.WORD	OUT_O-20$		; O
+	.WORD	OUT_Z-20$		; Z
+	.WORD	30$-20$			; F, E, D, G: not here
+	.WORD	30$-20$
+	.WORD	30$-20$
+	.WORD	30$-20$
+	.WORD	OUT_L-20$		; L
+30$:	RET
+
+;
+; I on output. The value is the item's, a byte or word made a longword
+; with its sign, or the first longword of anything longer; R8 is 1 if the
+; item is an integer or a logical. Its digits go on the stack from the
+; last, R6 the first of them and R7 how many.
+;
+OUT_I:	JSB	INTEGER_TYPE
+	MOVL	R0,R8
+	MOVL	12(AP),R1
+	BLBS	R8,10$
+	CMPB	20(AP),#DSC$K_DTYPE_T
+	BNEQ	10$
+	CMPL	16(AP),#4
+	BGEQ	10$
+	BRW	STARS			; a character item shorter than a longword
+10$:	CMPL	16(AP),#1
+	BNEQ	12$
+	CVTBL	(R1),R2
+	BRB	20$
+12$:	CMPL	16(AP),#2
+	BNEQ	14$
+	CVTWL	(R1),R2
+	BRB	20$
+14$:	MOVL	(R1),R2
+	;
+	; The digits of its magnitude: EDIV of the magnitude, unsigned, as a
+	; quadword whose high half is 0, so the most negative longword's
+	; 2147483648 divides as it should.
+	;
+20$:	MOVL	R2,R4
+	BGEQ	22$
+	MNEGL	R4,R4
+22$:	CLRL	R5
+	SUBL2	#12,SP			; room for the 10 digits
+	ADDL3	#12,SP,R6
+	CLRL	R7
+25$:	TSTL	R4
+	BEQL	30$
+	EDIV	#10,R4,R4,R0
+	ADDB3	#^A/0/,R0,-(R6)
+	INCL	R7
+	BRB	25$
+	;
+	; The zeros in front (R3), so that there are at least m digits, or
+	; 1 if m isn't given; and the sign (R5, a character or 0).
+	;
+30$:	MOVL	#1,R0
+	BBC	#1,OP_B_FLAGS(R10),32$	; F_D
+	MOVZBL	OP_B_D(R10),R0
+32$:	SUBL3	R7,R0,R3
+	BGEQ	34$
+	CLRL	R3
+34$:	CLRL	R5
+	TSTL	R2
+	BGEQ	36$
+	MOVL	#^A/-/,R5
+	BRB	38$
+36$:	CMPB	CTX_SIGN(R11),#1
+	BNEQ	38$
+	MOVL	#^A/+/,R5
+38$:	ADDL3	R3,R7,R4		; the columns it needs
+	TSTL	R5
+	BEQL	40$
+	INCL	R4
+40$:	CMPL	R4,R9
+	BLEQ	45$
+	BRW	STARS
+45$:	SUBL3	R4,R9,R0		; blanks, the sign, zeros, the digits
+	JSB	PUT_BLANKS
+	TSTL	R5
+	BEQL	50$
+	MOVL	R5,R0
+	JSB	PUT_CHAR
+50$:	MOVL	R3,R0
+	JSB	PUT_ZEROS
+	PUSHL	R7
+	PUSHL	R6
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT	; FTN_FORMAT
+	BRW	MISMATCH
+
+;
+; O and Z on output: R6 the bits a digit stands for, 3 or 4.
+;
+OUT_O:	MOVL	#3,R6
+	BRB	OUT_OZ
+OUT_Z:	MOVL	#4,R6
+	;
+	; The item's bits (R7), and its digits from the most significant
+	; (R8, counting down to 0): the first that isn't 0 is where the
+	; number starts. A digit's bits are at R8 times R6; the most
+	; significant octal digit may stand for fewer bits than 3 (DIGIT).
+	;
+OUT_OZ:	MULL3	#8,16(AP),R7
+	ADDL3	R6,R7,R8		; how many digits: R7 / R6, rounded up
+	DECL	R8
+	DIVL2	R6,R8
+10$:	DECL	R8
+	BLSS	20$			; none: the number is 0
+	JSB	DIGIT
+	TSTL	R0
+	BEQL	10$
+20$:	ADDL3	#1,R8,R4		; its digits
+	MOVL	#1,R0			; at least m, or 1
+	BBC	#1,OP_B_FLAGS(R10),22$	; F_D
+	MOVZBL	OP_B_D(R10),R0
+22$:	SUBL3	R4,R0,R3		; the zeros in front
+	BGEQ	24$
+	CLRL	R3
+24$:	ADDL3	R3,R4,R0
+	CMPL	R0,R9
+	BLEQ	30$
+	BRW	STARS
+30$:	SUBL3	R0,R9,R0
+	JSB	PUT_BLANKS
+	MOVL	R3,R0
+	JSB	PUT_ZEROS
+40$:	DECL	R4			; the digits, the most significant first
+	BLSS	50$
+	MOVL	R4,R8
+	JSB	DIGIT
+	ADDL2	#^A/0/,R0
+	CMPL	R0,#^A/9/
+	BLEQ	45$
+	ADDL2	#^A/A/-^A/9/-1,R0
+45$:	JSB	PUT_CHAR
+	BRB	40$
+50$:	RET
+
+;
+; DIGIT: R0 the R8th digit, from 0, of the item's bits (R7 of them), at R6
+; bits a digit. Uses R1.
+;
+DIGIT:	MULL3	R6,R8,R1		; its first bit
+	SUBL3	R1,R7,R0		; the bits from there to the top
+	CMPL	R0,R6
+	BLEQ	10$
+	MOVL	R6,R0			; a whole digit's
+10$:	EXTZV	R1,R0,@12(AP),R0
+	RSB
+
+;
+; L on output: T or F, by the item's low bit, in the field's last column.
+;
+OUT_L:	TSTL	R9
+	BNEQ	10$
+	BRW	STARS			; L0: no room
+10$:	SUBL3	#1,R9,R0
+	JSB	PUT_BLANKS
+	MOVZBL	@12(AP),R1		; its first byte
+	MOVL	#^A/F/,R0
+	BLBC	R1,20$
+	MOVL	#^A/T/,R0
+20$:	JSB	PUT_CHAR
+	JSB	INTEGER_TYPE
+	MOVL	R0,R8
+	BRW	MISMATCH
+
+;
+; STARS: a field of w asterisks, and FOR$_OUTCONERR; the statement goes on.
+;
+STARS:	TSTL	R9
+	BNEQ	5$
+	CLRQ	-(SP)			; w 0: no bytes, but the record reaches
+	PUSHL	R11			;  the field's column
+	CALLS	#3,FTN$$FMT_PUT		; FTN_FORMAT
+5$:	DECL	R9
+	BLSS	10$
+	MOVL	#^A/*/,R0
+	JSB	PUT_CHAR
+	BRB	5$
+10$:	PUSHL	#FOR$_OUTCONERR
+	PUSHL	R11
+	CALLS	#2,FTN$$FMT_WARN	; FTN_FORMAT
+	RET
+
+;
+; MISMATCH: after an output field, with R8 0 if the item isn't an integer
+; or a logical: FTN_FORMAT writes the record and fails the statement once
+; the whole item is edited (CTX_MISMATCH).
+;
+MISMATCH:
+	BLBS	R8,10$
+	MOVB	#1,CTX_MISMATCH(R11)
+10$:	RET
+
+;
+; Input: the field, R2 its first character and R3 how many (FIELD), then
+; by the descriptor.
+;
+INPUT:	CMPB	OP_B_CODE(R10),#C_L
+	BNEQ	10$
+	BRW	IN_L
+10$:	CMPB	OP_B_CODE(R10),#C_I
+	BEQL	IN_I
+	BRW	IN_OZ
+
+;
+; I on input: a sign, perhaps, and decimal digits; R5 the magnitude so
+; far, R6 1 for a minus sign. R7 and R8 hold the magnitude times ten, a
+; quadword, so that it can be seen to be too large.
+;
+IN_I:	JSB	FIELD
+	JSB	LEADING
+	CLRL	R5
+	CLRL	R6
+	TSTL	R3
+	BEQL	30$
+	CMPB	(R2),#^A/+/
+	BEQL	5$
+	CMPB	(R2),#^A/-/
+	BNEQ	10$
+	MOVL	#1,R6
+5$:	INCL	R2
+	DECL	R3
+10$:	JSB	NEXT_DIGIT
+	BLBC	R0,30$			; the field's end
+	CMPL	R1,#9
+	BGTRU	BAD
+	EMUL	#10,R5,R1,R7		; R5 times ten, plus the digit
+	TSTL	R8
+	BNEQ	BAD
+	CMPL	R7,#^X80000000		; 2147483648 at most, unsigned
+	BGTRU	BAD
+	MOVL	R7,R5
+	BRB	10$
+30$:	TSTL	R6			; the value, in R5
+	BEQL	32$
+	MNEGL	R5,R5			; -2147483648 stays as it is
+	BRB	34$
+32$:	CMPL	R5,#^X7FFFFFFF
+	BGTRU	BAD
+	;
+	; Stored in a byte, a word, or a longword, by the item's length; a
+	; value that doesn't fit a byte or a word is too large.
+	;
+34$:	MOVL	12(AP),R1
+	CMPL	16(AP),#1
+	BNEQ	36$
+	CVTLB	R5,(R1)
+	BVS	BAD
+	BRB	TYPED
+36$:	CMPL	16(AP),#3
+	BGTR	38$
+	CVTLW	R5,(R1)
+	BVS	BAD
+	BRB	TYPED
+38$:	MOVL	R5,(R1)
+
+;
+; TYPED: after an item is stored by I or L, the statement fails, once the
+; item is done, if it isn't an integer or a logical.
+;
+TYPED:	JSB	INTEGER_TYPE
+	BLBS	R0,10$
+	MOVB	#1,CTX_MISMATCH(R11)
+10$:	RET
+
+;
+; BAD: the field can't be read. The item is set to zeros, and the
+; statement fails.
+;
+BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP)
+	PUSHL	#FOR$_INPCONERR
+	PUSHL	R11
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+	RET
+
+;
+; O and Z on input: digits of R6 bits, 3 or 4, each shifted into the item
+; from its low end (SHIFT), the item set to zeros first.
+;
+IN_OZ:	MOVC5	#0,(R0),#0,16(AP),@12(AP)
+	MOVL	#3,R6
+	CMPB	OP_B_CODE(R10),#C_O
+	BEQL	10$
+	MOVL	#4,R6
+10$:	JSB	FIELD
+	JSB	LEADING
+20$:	JSB	NEXT_DIGIT
+	BLBC	R0,90$			; the field's end
+	ASHL	R6,#1,R0		; the digit's limit: 8 or 16
+	CMPL	R1,R0
+	BGEQU	BAD
+	MOVL	R1,R7
+	JSB	SHIFT
+	BLBC	R0,BAD			; too many bits for the item
+	BRB	20$
+90$:	RET
+
+;
+; SHIFT: the item, an unsigned number of its length's bytes, shifted R6
+; bits to the left, and R7 put in the bits that leaves at the bottom. R0 0
+; if bits that weren't 0 went past its top, else 1. Each byte from the top
+; down is made from the bits R6 below it, which aren't changed yet. Uses
+; R0, R1, R4, and R5.
+;
+SHIFT:	MOVL	12(AP),R1
+	MULL3	#8,16(AP),R4
+	SUBL2	R6,R4			; the top R6 bits, which go
+	EXTZV	R4,R6,(R1),R0
+	BNEQ	80$
+	MOVL	16(AP),R5
+10$:	DECL	R5			; byte R5, for R5 down to 1
+	BEQL	20$
+	MULL3	#8,R5,R4
+	SUBL2	R6,R4
+	EXTZV	R4,#8,(R1),R0
+	MOVB	R0,(R1)[R5]
+	BRB	10$
+20$:	MOVZBL	(R1),R0			; byte 0, and the digit
+	ASHL	R6,R0,R0
+	BISL2	R7,R0
+	MOVB	R0,(R1)
+	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+;
+; L on input: a period, perhaps, then T or F, and anything after; a blank
+; field is .FALSE..
+;
+IN_L:	JSB	FIELD
+	JSB	LEADING
+	CLRL	R5
+	TSTL	R3
+	BEQL	20$
+	CMPB	(R2),#^A/./
+	BNEQ	10$
+	INCL	R2
+	DECL	R3
+	BEQL	90$			; a period alone
+10$:	BICB3	#^X20,(R2),R0		; made a capital
+	CMPB	R0,#^A/F/
+	BEQL	20$
+	CMPB	R0,#^A/T/
+	BNEQ	90$
+	MNEGL	#1,R5
+20$:	MOVL	12(AP),R1		; stored by the item's length
+	CMPL	16(AP),#1
+	BNEQ	22$
+	MOVB	R5,(R1)
+	BRW	TYPED
+22$:	CMPL	16(AP),#3
+	BGTR	24$
+	MOVW	R5,(R1)
+	BRW	TYPED
+24$:	MOVL	R5,(R1)
+	BRW	TYPED
+90$:	BRW	BAD
+
+;
+; The JSB subroutines.
+;
+; WIDTH: R9 the field's width: w, or the default for the descriptor and
+; the item.
+;
+WIDTH:	MOVZWL	OP_W_W(R10),R9
+	BBS	#0,OP_B_FLAGS(R10),90$	; F_W: given
+	MOVL	#2,R9
+	CMPB	OP_B_CODE(R10),#C_L
+	BEQL	90$
+	MOVL	#7,R9
+	CMPL	16(AP),#2
+	BLEQ	90$
+	MOVL	#12,R9
+	CMPB	OP_B_CODE(R10),#C_I
+	BEQL	90$
+	CMPB	20(AP),#DSC$K_DTYPE_T
+	BNEQ	10$
+	MOVL	#15,R9			; a character item's O and Z
+	RSB
+10$:	CMPL	16(AP),#4
+	BLEQ	90$
+	MOVL	#23,R9
+	CMPL	16(AP),#8
+	BLEQ	90$
+	MOVL	#44,R9
+90$:	RSB
+
+;
+; INTEGER_TYPE: R0 1 if the item is an integer or a logical (BYTE,
+; LOGICAL*1, and the word and longword ones), else 0.
+;
+INTEGER_TYPE:
+	MOVZBL	20(AP),R0
+	CMPL	R0,#DSC$K_DTYPE_BU
+	BLSS	80$
+	CMPL	R0,#DSC$K_DTYPE_LU
+	BLEQ	10$
+	CMPL	R0,#DSC$K_DTYPE_B
+	BLSS	80$
+	CMPL	R0,#DSC$K_DTYPE_L
+	BGTR	80$
+10$:	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+;
+; FIELD: an input field of up to R9 characters from the position: R2 its
+; first and R3 how many. It ends at the record's end, or before a comma,
+; and the position moves past it: w columns on, or past the comma. Uses
+; R0, R1, and R4.
+;
+FIELD:	MOVL	CTX_POS(R11),R4
+	BGEQ	5$
+	CLRL	R4			; T0's column: the first
+5$:	MOVAB	CTX_RECORD(R11)[R4],R2
+	SUBL3	R4,CTX_RECLEN(R11),R3	; what is left of the record
+	BGEQ	10$
+	CLRL	R3
+10$:	CMPL	R3,R9
+	BLEQ	15$
+	MOVL	R9,R3
+15$:	ADDL3	R4,R9,CTX_POS(R11)
+	LOCC	#^A/,/,R3,(R2)
+	BEQL	20$			; no comma
+	SUBL3	R2,R1,R3		; the characters before it,
+	ADDL3	R4,R3,R0
+	ADDL3	#1,R0,CTX_POS(R11)	;  and the position past it
+20$:	RSB
+
+;
+; LEADING: passes over the field's leading blanks and tabs.
+;
+LEADING:
+	TSTL	R3
+	BEQL	20$
+	CMPB	(R2),#^A/ /
+	BEQL	10$
+	CMPB	(R2),#9
+	BNEQ	20$
+10$:	INCL	R2
+	DECL	R3
+	BRB	LEADING
+20$:	RSB
+
+;
+; NEXT_DIGIT: the field's next digit's value in R1 (0 to 9, or 10 to 15
+; for A to F in either case; anything else larger than 15), and R0 1; or R0
+; 0 at the field's end. A blank is 0 with BZ, and passed over with BN.
+;
+NEXT_DIGIT:
+	TSTL	R3
+	BEQL	80$
+	MOVZBL	(R2)+,R1
+	DECL	R3
+	CMPB	R1,#^A/ /
+	BNEQ	10$
+	TSTB	CTX_BLANK(R11)
+	BEQL	NEXT_DIGIT		; BN: nothing
+	CLRL	R1			; BZ: a zero
+	BRB	70$
+10$:	SUBL2	#^A/0/,R1
+	CMPL	R1,#9
+	BLEQU	70$
+	ADDL2	#^A/0/,R1		; a letter, perhaps
+	BICL2	#^X20,R1
+	SUBL2	#^A/A/,R1
+	CMPL	R1,#5
+	BLEQU	20$
+	MOVL	#16,R1			; not a digit
+	BRB	70$
+20$:	ADDL2	#10,R1
+70$:	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+;
+; PUT_CHAR: R0's low byte into the record. PUT_BLANKS and PUT_ZEROS: R0
+; blanks or zeros (none, if R0 isn't above 0). Use R0 and R1.
+;
+PUT_CHAR:
+	MOVL	R0,-(SP)
+	MOVL	SP,R1
+	PUSHL	#1
+	PUSHL	R1
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT	; FTN_FORMAT
+	ADDL2	#4,SP
+	RSB
+
+PUT_BLANKS:
+	TSTL	R0
+	BLEQ	10$
+	PUSHL	R0
+	CLRL	-(SP)			; no address: blanks
+	PUSHL	R11
+	CALLS	#3,FTN$$FMT_PUT	; FTN_FORMAT
+10$:	RSB
+
+PUT_ZEROS:
+	TSTL	R0
+	BLEQ	20$
+	PUSHL	R0
+10$:	MOVL	#^A/0/,R0
+	JSB	PUT_CHAR
+	DECL	(SP)
+	BGTR	10$
+	ADDL2	#4,SP
+20$:	RSB
+
+	.END
