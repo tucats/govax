@@ -3899,3 +3899,351 @@
 	.MACRO	$$LIB_KEY_TEXT NAME,VALUE
 	.ASCIC	/NAME/
 	.ENDM	$$LIB_KEY_TEXT
+
+; $FILESCAN srcstr, [valuelst], [fldflags], [auxout], [retlen]
+	.MACRO	$FILESCAN_S SRCSTR,VALUELST=0,FLDFLAGS=0,AUXOUT=0,RETLEN=0
+	.GLOBL	SYS$FILESCAN
+	.IF	B,<SRCSTR>
+	.ERROR	; MISSING REQUIRED ARGUMENT SRCSTR;
+	.MEXIT
+	.ENDC
+	$PUSHADR RETLEN,CONTEXT=W
+	$PUSHADR AUXOUT,CONTEXT=Q
+	$PUSHADR FLDFLAGS,CONTEXT=L
+	$PUSHADR VALUELST,CONTEXT=L
+	$PUSHADR SRCSTR,CONTEXT=Q
+	CALLS	#5,G^SYS$FILESCAN
+	.ENDM	$FILESCAN_S
+
+	.MACRO	$FILESCAN SRCSTR=0,VALUELST=0,FLDFLAGS=0,AUXOUT=0,RETLEN=0
+	.LONG	5
+	.ADDRESS	SRCSTR
+	.ADDRESS	VALUELST
+	.ADDRESS	FLDFLAGS
+	.ADDRESS	AUXOUT
+	.ADDRESS	RETLEN
+	.ENDM	$FILESCAN
+
+	.MACRO	$FILESCAN_G LST
+	.GLOBL	SYS$FILESCAN
+	CALLG	LST,G^SYS$FILESCAN
+	.ENDM	$FILESCAN_G
+
+; $FSCNDEF: $FILESCAN's item codes and flags (VSI's system services page names
+; them; the values are testdata/tpa80's).
+	.MACRO	$FSCNDEF GBL
+	.IF	NOT_DEFINED	$$$FSCNDEF
+	.SAVE	LOCAL_BLOCK
+	.PSECT	$ABS$,ABS
+	.IF	IDENTICAL	<GBL>,<GLOBAL>
+FSCN$_FILESPEC == 1
+FSCN$_NODE == 2
+FSCN$_DEVICE == 3
+FSCN$_ROOT == 4
+FSCN$_DIRECTORY == 5
+FSCN$_NAME == 6
+FSCN$_TYPE == 7
+FSCN$_VERSION == 8
+FSCN$_NODE_PRIMARY == 9
+FSCN$_NODE_ACS == 10
+FSCN$_NODE_SECONDARY == 11
+FSCN$M_NODE == ^X1
+FSCN$V_NODE == 0
+FSCN$M_DEVICE == ^X2
+FSCN$V_DEVICE == 1
+FSCN$M_ROOT == ^X4
+FSCN$V_ROOT == 2
+FSCN$M_DIRECTORY == ^X8
+FSCN$V_DIRECTORY == 3
+FSCN$M_NAME == ^X10
+FSCN$V_NAME == 4
+FSCN$M_TYPE == ^X20
+FSCN$V_TYPE == 5
+FSCN$M_VERSION == ^X40
+FSCN$V_VERSION == 6
+FSCN$M_NODE_PRIMARY == ^X80
+FSCN$V_NODE_PRIMARY == 7
+FSCN$M_NODE_ACS == ^X100
+FSCN$V_NODE_ACS == 8
+FSCN$M_NODE_SECONDARY == ^X200
+FSCN$V_NODE_SECONDARY == 9
+	.IFF
+FSCN$_FILESPEC = 1
+FSCN$_NODE = 2
+FSCN$_DEVICE = 3
+FSCN$_ROOT = 4
+FSCN$_DIRECTORY = 5
+FSCN$_NAME = 6
+FSCN$_TYPE = 7
+FSCN$_VERSION = 8
+FSCN$_NODE_PRIMARY = 9
+FSCN$_NODE_ACS = 10
+FSCN$_NODE_SECONDARY = 11
+FSCN$M_NODE = ^X1
+FSCN$V_NODE = 0
+FSCN$M_DEVICE = ^X2
+FSCN$V_DEVICE = 1
+FSCN$M_ROOT = ^X4
+FSCN$V_ROOT = 2
+FSCN$M_DIRECTORY = ^X8
+FSCN$V_DIRECTORY = 3
+FSCN$M_NAME = ^X10
+FSCN$V_NAME = 4
+FSCN$M_TYPE = ^X20
+FSCN$V_TYPE = 5
+FSCN$M_VERSION = ^X40
+FSCN$V_VERSION = 6
+FSCN$M_NODE_PRIMARY = ^X80
+FSCN$V_NODE_PRIMARY = 7
+FSCN$M_NODE_ACS = ^X100
+FSCN$V_NODE_ACS = 8
+FSCN$M_NODE_SECONDARY = ^X200
+FSCN$V_NODE_SECONDARY = 9
+	.ENDC
+$$$FSCNDEF = 1
+	.RESTORE
+	.ENDC
+	.ENDM	$FSCNDEF
+
+; $TPADEF: LIB$TPARSE's argument block (the LIB$ manual's Table LIB-22) and
+; symbol types (its binary encodings, each 256 more than the type byte, so
+; that $TRAN can tell one from a character's code).
+	.MACRO	$TPADEF GBL
+	.IF	NOT_DEFINED	$$$TPADEF
+	.SAVE	LOCAL_BLOCK
+	.PSECT	$ABS$,ABS
+	.IF	IDENTICAL	<GBL>,<GLOBAL>
+TPA$K_COUNT0 == 8
+TPA$K_LENGTH0 == 36
+TPA$L_COUNT == 0
+TPA$L_OPTIONS == 4
+TPA$B_MCOUNT == 7
+TPA$L_STRINGCNT == 8
+TPA$L_STRINGPTR == 12
+TPA$L_TOKENCNT == 16
+TPA$L_TOKENPTR == 20
+TPA$B_CHAR == 24
+TPA$L_NUMBER == 28
+TPA$L_PARAM == 32
+TPA$V_BLANKS == 0
+TPA$M_BLANKS == ^X1
+TPA$V_ABBREV == 1
+TPA$M_ABBREV == ^X2
+TPA$V_ABBRFM == 2
+TPA$M_ABBRFM == ^X4
+TPA$V_AMBIG == 16
+TPA$M_AMBIG == ^X10000
+TPA$_EXIT == -1
+TPA$_FAIL == -2
+TPA$_NODE_ACS == 487
+TPA$_NODE_PRIMARY == 488
+TPA$_NODE == 489
+TPA$_FILESPEC == 490
+TPA$_UIC == 491
+TPA$_IDENT == 492
+TPA$_ANY == 493
+TPA$_ALPHA == 494
+TPA$_DIGIT == 495
+TPA$_STRING == 496
+TPA$_SYMBOL == 497
+TPA$_BLANK == 498
+TPA$_DECIMAL == 499
+TPA$_OCTAL == 500
+TPA$_HEX == 501
+TPA$_LAMBDA == 502
+TPA$_EOS == 503
+TPA$_SUBEXPR == 504
+	.IFF
+TPA$K_COUNT0 = 8
+TPA$K_LENGTH0 = 36
+TPA$L_COUNT = 0
+TPA$L_OPTIONS = 4
+TPA$B_MCOUNT = 7
+TPA$L_STRINGCNT = 8
+TPA$L_STRINGPTR = 12
+TPA$L_TOKENCNT = 16
+TPA$L_TOKENPTR = 20
+TPA$B_CHAR = 24
+TPA$L_NUMBER = 28
+TPA$L_PARAM = 32
+TPA$V_BLANKS = 0
+TPA$M_BLANKS = ^X1
+TPA$V_ABBREV = 1
+TPA$M_ABBREV = ^X2
+TPA$V_ABBRFM = 2
+TPA$M_ABBRFM = ^X4
+TPA$V_AMBIG = 16
+TPA$M_AMBIG = ^X10000
+TPA$_EXIT = -1
+TPA$_FAIL = -2
+TPA$_NODE_ACS = 487
+TPA$_NODE_PRIMARY = 488
+TPA$_NODE = 489
+TPA$_FILESPEC = 490
+TPA$_UIC = 491
+TPA$_IDENT = 492
+TPA$_ANY = 493
+TPA$_ALPHA = 494
+TPA$_DIGIT = 495
+TPA$_STRING = 496
+TPA$_SYMBOL = 497
+TPA$_BLANK = 498
+TPA$_DECIMAL = 499
+TPA$_OCTAL = 500
+TPA$_HEX = 501
+TPA$_LAMBDA = 502
+TPA$_EOS = 503
+TPA$_SUBEXPR = 504
+	.ENDC
+$$$TPADEF = 1
+	.RESTORE
+	.ENDC
+	.ENDM	$TPADEF
+
+; $INIT_STATE state-table, key-table
+; $STATE [label]
+; $TRAN type [,label] [,action] [,mask] [,msk-adr] [,argument]
+; $END_STATE
+;
+; LIB$TPARSE's state tables, written from the binary layout in the LIB$
+; manual ("State Table Object Representation"). A state's transitions go in
+; _LIB$STATE$, the keyword vector in _LIB$KEY0$, and the keywords' text in
+; _LIB$KEY1$, each ending in -1, with one more -1 between states.
+;
+; A transition's flags byte has a bit for "last in the state", which $TRAN
+; can't know, so $STATE and $END_STATE go back and store the previous
+; transition's flags again with the bit set. These symbols are the macros'
+; memory between calls:
+;
+;	$$$TPA_KEYS	the key table's address
+;	$$$TPA_NKEY	the next keyword index
+;	$$$TPA_FLAGAT	where the last transition's flags byte is
+;	$$$TPA_FLAGS	what it holds
+;	$$$TPA_OPEN	whether this state has a transition
+;	$$$TPA_KEYED	whether this state has a keyword
+;
+; The type argument is looked at in text: a first character of "'" is a
+; single character (three characters long) or a keyword, of "!" a
+; subexpression, and anything else an expression: a value of 256 or more is
+; a TPA$_ symbol type, and less a character's code. "~" delimits the text, so
+; a transition on that character must be written with its code, 126.
+
+	.MACRO	$INIT_STATE STATE_TABLE,KEY_TABLE
+	$TPADEF
+	.SAVE_PSECT
+	.PSECT	_LIB$KEY0$,NOEXE,NOWRT,WORD
+KEY_TABLE::
+	$$$TPA_KEYS = KEY_TABLE
+	.PSECT	_LIB$KEY1$,NOEXE,NOWRT,BYTE
+	.PSECT	_LIB$STATE$,NOEXE,NOWRT,BYTE
+STATE_TABLE::
+	$$$TPA_NKEY = 0
+	$$$TPA_OPEN = 0
+	$$$TPA_KEYED = 0
+	.ENDM	$INIT_STATE
+
+	.MACRO	$STATE LABEL
+	$$TPA_CLOSE
+	.IF	NOT_BLANK <LABEL>
+LABEL:
+	.ENDC
+	.ENDM	$STATE
+
+	.MACRO	$END_STATE
+	$$TPA_CLOSE
+	.RESTORE_PSECT
+	.ENDM	$END_STATE
+
+; $$TPA_CLOSE ends a state: its last transition's flag, and the keywords' -1.
+	.MACRO	$$TPA_CLOSE
+	.IF	NOT_EQUAL $$$TPA_OPEN
+	$$$TPA_HERE = .
+	. = $$$TPA_FLAGAT
+	.BYTE	$$$TPA_FLAGS!^X04
+	. = $$$TPA_HERE
+	$$$TPA_OPEN = 0
+	.ENDC
+	.IF	NOT_EQUAL $$$TPA_KEYED
+	.SAVE_PSECT
+	.PSECT	_LIB$KEY1$
+	.BYTE	-1
+	.RESTORE_PSECT
+	$$$TPA_KEYED = 0
+	.ENDC
+	.ENDM	$$TPA_CLOSE
+
+	.MACRO	$TRAN TYPE,LABEL,ACTION,MASK,MSK_ADR,ARGUMENT
+	$$$TPA_F = 0
+	.IIF	NOT_BLANK <LABEL>, $$$TPA_F = $$$TPA_F!^X10
+	.IIF	NOT_BLANK <MASK>, $$$TPA_F = $$$TPA_F!^X20
+	.IIF	NOT_BLANK <MSK_ADR>, $$$TPA_F = $$$TPA_F!^X40
+	.IIF	NOT_BLANK <ACTION>, $$$TPA_F = $$$TPA_F!^X80
+	.IIF	NOT_BLANK <ARGUMENT>, $$$TPA_F = $$$TPA_F!^X02
+	$$$TPA_C = ^A~%EXTRACT(0,1,^~TYPE~)~
+	.NCHR	$$$TPA_L,^~TYPE~
+	.IF	EQUAL $$$TPA_C-^X27
+	.IF	EQUAL $$$TPA_L-3
+	.BYTE	^A'TYPE
+	.IFF
+	$$TPA_KEYWORD	^~TYPE~
+	.BYTE	$$$TPA_NKEY-1
+	$$$TPA_F = $$$TPA_F!^X01
+	.ENDC
+	.IFF
+	.IF	EQUAL $$$TPA_C-^X21
+	.BYTE	248
+	$$$TPA_F = $$$TPA_F!^X09
+	.IFF
+	$$$TPA_T = TYPE
+	.BYTE	$$$TPA_T&^XFF
+	.IIF	GREATER_EQUAL $$$TPA_T-256, $$$TPA_F = $$$TPA_F!^X01
+	.ENDC
+	.ENDC
+	$$$TPA_FLAGAT = .
+	$$$TPA_FLAGS = $$$TPA_F
+	$$$TPA_OPEN = 1
+	.BYTE	$$$TPA_F
+	.IIF	NOT_BLANK <ARGUMENT>, .BYTE 1
+	.IF	EQUAL $$$TPA_C-^X21
+	$$$TPA_N = $$$TPA_L-1
+	.SIGNED_WORD	%EXTRACT(1,$$$TPA_N,^~TYPE~)-.-2
+	.ENDC
+	.IIF	NOT_BLANK <ARGUMENT>, .LONG ARGUMENT
+	.IIF	NOT_BLANK <ACTION>, .LONG ACTION-.-4
+	.IIF	NOT_BLANK <MASK>, .LONG MASK
+	.IIF	NOT_BLANK <MSK_ADR>, .LONG MSK_ADR-.-4
+	.IF	NOT_BLANK <LABEL>
+	$$$TPA_E = 0
+	.IIF	IDENTICAL <LABEL>,<TPA$_EXIT>, $$$TPA_E = -1
+	.IIF	IDENTICAL <LABEL>,<tpa$_exit>, $$$TPA_E = -1
+	.IIF	IDENTICAL <LABEL>,<TPA$_FAIL>, $$$TPA_E = -2
+	.IIF	IDENTICAL <LABEL>,<tpa$_fail>, $$$TPA_E = -2
+	.IF	NOT_EQUAL $$$TPA_E
+	.WORD	$$$TPA_E
+	.IFF
+	.SIGNED_WORD	LABEL-.-2
+	.ENDC
+	.ENDC
+	.ENDM	$TRAN
+
+; $$TPA_KEYWORD adds a keyword, written 'TEXT' or for one character 'X*', to
+; the current table's strings and vector.
+	.MACRO	$$TPA_KEYWORD QUOTED
+	$$$TPA_N = $$$TPA_L-2
+	.IF	EQUAL $$$TPA_L-4
+	.IIF	EQUAL ^A~%EXTRACT(2,1,^~QUOTED~)~-^A/*/, $$$TPA_N = 1
+	.ENDC
+	.IF	GREATER_EQUAL $$$TPA_NKEY-220
+	.ERROR	; TOO MANY KEYWORDS IN A STATE TABLE;
+	.ENDC
+	.SAVE_PSECT
+	.PSECT	_LIB$KEY1$
+	$$$TPA_A = .
+	.ASCII	~%EXTRACT(1,$$$TPA_N,^~QUOTED~)~
+	.BYTE	-1
+	.PSECT	_LIB$KEY0$
+	.SIGNED_WORD	$$$TPA_A-$$$TPA_KEYS
+	.RESTORE_PSECT
+	$$$TPA_NKEY = $$$TPA_NKEY+1
+	$$$TPA_KEYED = 1
+	.ENDM	$$TPA_KEYWORD

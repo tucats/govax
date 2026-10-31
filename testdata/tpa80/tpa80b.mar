@@ -1,0 +1,28 @@
+	.TITLE	TPA80B	Phase 80 state table macro forms
+; Written by testdata/tpa80/gen.go: do not edit. No $TPADEF: does $INIT_STATE
+; define the symbols? The characters a macro's argument may trouble are each a
+; transition. It's assembled for its messages and object, and never run.
+	$INIT_STATE	BT,BK
+	$STATE	B1
+	$TRAN	TPA$_ANY,TPA$_EXIT
+	$TRAN	'<'
+	$TRAN	'>'
+	$TRAN	'!'
+	$TRAN	<';'>
+	$TRAN	'%'
+	$TRAN	'^'
+	$TRAN	'\'
+	$TRAN	'"'
+	$TRAN	'('
+	$TRAN	')'
+	$TRAN	'X',tpa$_exit
+	$TRAN	'Y',B1
+	$TRAN	'lower'
+	$STATE
+	$STATE	B2
+	$TRAN	'A$B_C'
+	$TRAN	'A*'
+	$TRAN	'AB*'
+	$END_STATE
+HERE:	.LONG	0
+	.END

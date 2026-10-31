@@ -487,7 +487,12 @@ never had.
   a record is the caller's memory, reached by every module through `CTX_RECP`;
   `CTX_INTERNAL` says the form, and ENCODE and DECODE take the buffer's address and a
   longword count), held to round 3 of the probe, run on VMS's FORRTL over govax, by
-  `TestFor80InternalOracle`.
+  `TestFor80InternalOracle`;
+  subtask 10 (2026-10-31) is LIB$TPARSE and LIB$TABLE_PARSE (`librtl/tparse.go`,
+  `tparsematch.go`, on `corevms.Environment.CallbackList`), `$FILESCAN`
+  (`corevms/filescan.go`), and the `$TPADEF`, `$FSCNDEF`, `$INIT_STATE`, `$STATE`,
+  `$TRAN`, and `$END_STATE` macros; FORRTL's namelist input over them matches VMS's
+  run, and `testdata/tpa80`'s probe waits for its VMS run.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -745,6 +750,13 @@ never had.
   `TestFor80RunsOnFORRTL`, `TestFor80Round3`, and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.
+- `testdata/tpa80/` — Phase 80's probe of LIB$TPARSE, LIB$TABLE_PARSE, and
+  `$FILESCAN` (README.md): `gen.go` writes `tpa80.mar` (the definitions' values, a
+  table's bytes, which characters each symbol type takes, every grammar under both
+  routines, raw type bytes, argument blocks, `$FILESCAN`), `tpa80b.mar` and
+  `tpa80c.mar` (macro forms, assembled only), `tpa80.com`, `exchange.cmd`, and
+  `copyout.cmd`. `TestTPA80Oracle` matches `vax/tpa80-vax.txt` once VMS has run it;
+  `TestTPA80Manual` holds cases to the manuals until then.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.

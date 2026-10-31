@@ -7,7 +7,8 @@ compiler, FTNRTL's statement calls) done the same day; subtask 4 (the format
 interpreter) done the same day; subtask 5 (integer, logical, and character
 editing), subtask 6 (floating editing), subtask 7 (list-directed output
 and input), subtask 8 (variable format expressions and run-time formats), and
-subtask 9 (internal files, ENCODE, DECODE) done the same day. Needs Phase 79 (control flow, for
+subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
+(LIB$TPARSE) built the same day, its probe waiting for a VMS run. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -794,7 +795,8 @@ subtasks land.
     routine, TABLE_PARSE, and govax's own `$INIT_STATE`/`$STATE`/`$TRAN`/
     `$END_STATE` macros, from the LIB$ manual (LIB-411 to LIB-452), clean room,
     with a probe of its own on VMS. Phase 60's trees stay there. FTNRTL's
-    namelist input is its own code either way.
+    namelist input is its own code either way. Built, with `$FILESCAN`
+    ("Subtask 10", below); `testdata/tpa80` waits for its VMS run.
 11. **NAMELIST.**
 12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
@@ -1351,6 +1353,70 @@ an element, a substring of computed length, dummies, END=, ERR=, a record of 300
 bytes, and a file used inside a unit's statement. `TestFortranIOSignals`' OUTSTAOVE
 has VMS's `unit -5  file `.
 
+## Subtask 10: what was built (2026-10-31)
+
+**LIB$TPARSE and LIB$TABLE_PARSE** (`internal/librtl/tparse.go`,
+`tparsematch.go`), written from the 5.0 LIB$ manual (LIB-411 to LIB-452) and VSI's.
+A routine in Go, on a goroutine of its own to call back, and recursion on Go's stack
+is a subexpression call. The argument block is the parser's only state, read
+from memory each time, so an action routine may change the string or the options.
+The two differ in the call: LIB$TPARSE's is CALLG with the block as the
+argument list (`corevms.Environment.CallbackList`, new), LIB$TABLE_PARSE's a CALLS
+of the block's address, as VSI's manual says. R0's low bit is set first. Each symbol
+type is a row of `tpaSymbolTypes`, by type code.
+
+**The first check needed no new VMS run.** FORRTL's namelist input calls LIB$TPARSE
+with tables VMS's own macros built, and VMS's output for them is already in
+`testdata/for80/vax`. Over the new parser every line of that section matches, 400 of
+them (`checkFor80Namelist`, part of `TestFor80RunsOnFORRTL`). So the transition's
+binary layout, the manual's, is right as printed, and so are the option bits in
+FORRTL's use. Namelist input through VMS's FORRTL now works on govax.
+
+**`$FILESCAN`** (`corevms/filescan.go`) was missing, and TPA$_FILESPEC and TPA$_NODE
+are defined to use it, so it's a service now, written from VSI's system services
+page, with `$FILESCAN`, `_S`, and `_G` macros. `ScanFileSpec` is the scanner both
+use. A quoted primary node isn't reduced in the auxiliary buffer: the string is
+copied as it is.
+
+**The macros** (`starlet.mar`): `$TPADEF`, `$FSCNDEF`, `$INIT_STATE`, `$STATE`,
+`$TRAN`, `$END_STATE`, clean room, from the manual's "State Table Object
+Representation" and its example tables. A transition's "last in the state" flag isn't
+known until the next state, so `$STATE` and `$END_STATE` go back and store the flags
+byte again (`.` set back, as `$FAB` does, and `overwrite.go` keeps). `$TRAN` looks at
+its type argument as text, delimited by `~`, so `'~'` must be written 126, and a
+blank can't be in a macro argument, so `' '` must be 32: both are `tpa80c.mar`'s
+questions for VMS. No definitions were to hand: the TPA$ and FSCN$ values are from the
+manuals where they give them (offsets, type bytes), and otherwise chosen, each
+printed by the probe: the options' bits (BLANKS 0, ABBREV 1, ABBRFM 2, AMBIG 16), a
+type's value as 256 plus its byte, and every FSCN$ code and flag.
+
+**Unconfirmed, each a case of `testdata/tpa80`, until VMS's run:**
+
+- what a count below 8 returns (LIB$_INVARG here, the manuals name no status), and
+  what a count of -1, VSI's 64-bit block, does on a VAX;
+- type bytes 228 to 233: TPA$_NODE and its neighbors are VSI's, not the 5.0 manual's.
+  231 to 233 are done with `$FILESCAN`, and 228 to 230, the 64-bit numbers, are
+  LIB$_INVTYPE;
+- which characters each type takes: ALPHA and SYMBOL's multinational letters (^XC0 to
+  ^XFD here), lowercase in TPA$_HEX (refused here, as the manual writes A through F);
+- what msk-adr gets from a subexpression: the manual's examples disagree, one a
+  descriptor, one "its value" (a descriptor here);
+- whether a subexpression's failing action status reaches its caller's failure (it
+  does here), and which status wins when two actions fail in a state (the last here);
+- whether TPA$L_NUMBER and TPA$B_CHAR change only for an action routine, as the
+  manual says (only then here), though the look-ahead example's note reads otherwise;
+- the string after a transition to TPA$_FAIL (past the token here), and whether an
+  exact keyword with a longer neighbor is ambiguous under ABBREV (not here);
+- UIC and identifier details: blanks inside, `[name1,name2]`'s value (name2's here);
+- the psects' attributes, `.PSECT` left as `$INIT_STATE` found it after `$END_STATE`,
+  and `$TRAN`'s argument names for keyword use;
+- `$FILESCAN`'s edges: `.`, `::`, `[A][B]`, `A:B:C`, and a bad item code's status
+  (SS$_BADPARAM here).
+
+Tests: `TestTPA80Manual` (30 cases held to the manuals), `TestTPA80Oracle` (skips the
+comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
+`TestFor80RunsOnFORRTL`'s namelist check.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1442,3 +1508,7 @@ has VMS's `unit -5  file `.
   author asked that READ and WRITE on a string variable work beside ENCODE and
   DECODE; they share the path. Found and fixed a CPU bug in byte and word
   immediates, which was also why FORRTL over govax passed 133 bytes.
+- **2026-10-31, subtask 10, built.** LIB$TPARSE, LIB$TABLE_PARSE, `$FILESCAN`, their
+  macros, and `testdata/tpa80`; "Subtask 10" above. FORRTL's namelist input over the
+  new parser matches VMS's run in all 400 lines of that section, on VMS's own tables.
+  The probe's choices stay unconfirmed until the author runs it on the simh VAX.

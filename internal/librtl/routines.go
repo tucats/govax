@@ -289,6 +289,8 @@ var Routines = []Routine{
 	{"OTS$SGET1_DD", 208, otsSget1DD},
 	{"OTS$SFREE1_DD", 209, otsSfree1DD},
 	{"OTS$SFREEN_DD", 210, otsSfreenDD},
+	{"LIB$TPARSE", 222, libTparse},
+	{"LIB$TABLE_PARSE", 223, libTableParse},
 }
 
 // callsBack names the routines that call back into the program (a
@@ -299,6 +301,8 @@ var callsBack = map[string]bool{
 	"LIB$FILE_SCAN":   true,
 	"LIB$DELETE_FILE": true,
 	"LIB$RENAME_FILE": true,
+	"LIB$TPARSE":      true,
+	"LIB$TABLE_PARSE": true,
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

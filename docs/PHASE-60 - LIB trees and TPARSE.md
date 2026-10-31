@@ -72,3 +72,5 @@ Two subjects that are mostly calls back into the program:
 ## Progress log
 
 - **2026-10-12** — Planned (Phase 53, Part A).
+- **2026-10-31** — TPARSE and TABLE_PARSE built in Phase 80's subtask 10
+  (`internal/librtl/tparse.go`, `testdata/tpa80`); only the trees remain here.

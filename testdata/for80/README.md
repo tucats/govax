@@ -131,9 +131,9 @@ bytes to those runs.
 `TestFor80Assembles` (`internal/console/for80_test.go`) checks that the programs,
 both rounds', assemble. `TestFor80RunsOnFORRTL` links them against VMS's FORRTL.EXE from a
 local-only volume, if there is one, and checks that the program reaches its end.
-That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement:
-`LIB$TPARSE` is NOTIMPL (Phase 80's subtask 10), which stops FORRTL's namelist
-input. VMS's run is. `TestFor80Messages` runs FOR80E's parts the same way and
+That is FORRTL's logic over govax's LIBRTL, so it isn't the requirement: VMS's run
+is. Its namelist section is compared with VMS's, as a check on govax's `LIB$TPARSE`
+(Phase 80's subtask 10; `testdata/tpa80`). `TestFor80Messages` runs FOR80E's parts the same way and
 holds their messages and statuses to VMS's `vax/for80.log`.
 
 `TestFor80Oracle` (`internal/console/for80oracle_test.go`, Phase 80's subtask 4)

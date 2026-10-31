@@ -3301,7 +3301,7 @@ starts, and the call signals:
 
 ```text
 %SYSTEM-E-UNSUPPORTED, unsupported operation or function
--GOVAX-E-NOTIMPL, routine LIB$TPARSE is not implemented in govax
+-GOVAX-E-NOTIMPL, routine LIB$INSERT_TREE is not implemented in govax
 ```
 
 Programs from VAX compilers also need their language's run-time library

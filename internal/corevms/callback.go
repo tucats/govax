@@ -162,6 +162,40 @@ func (env *Environment) Callback(routine uint32, args ...uint32) (uint32, error)
 
 	c.SetGPR(registers.SP, argList)
 
+	r0, err := env.makeCallback(call, routine, argList)
+	if err != nil {
+		return 0, err
+	}
+
+	// The procedure's RET left SP at the argument list; the list goes.
+	c.SetGPR(registers.SP, sp)
+
+	return r0, nil
+}
+
+// CallbackList is Callback with an argument list already in memory, at
+// argList: CALLG of a list the program made, as LIB$TPARSE calls an action
+// routine with its argument block. Only the routines Callback allows may
+// call it.
+func (env *Environment) CallbackList(routine, argList uint32) (uint32, error) {
+	call := env.Process.runningShim
+	if call == nil {
+		panic("corevms: CallbackList outside a routine registered with RegisterCallback")
+	}
+
+	if call.abandoned {
+		panic(errShimAbandoned)
+	}
+
+	if _, err := env.mem.LoadWord(env.cpu, routine); err != nil {
+		return 0, err
+	}
+
+	return env.makeCallback(call, routine, argList)
+}
+
+// makeCallback hands the engine the call and waits for the procedure's R0.
+func (env *Environment) makeCallback(call *shimCall, routine, argList uint32) (uint32, error) {
 	call.yield <- shimYield{call: &CallRequest{Routine: routine, ArgList: argList}}
 
 	r := <-call.resume
@@ -170,9 +204,6 @@ func (env *Environment) Callback(routine uint32, args ...uint32) (uint32, error)
 
 		panic(errShimAbandoned)
 	}
-
-	// The procedure's RET left SP at the argument list; the list goes.
-	c.SetGPR(registers.SP, sp)
 
 	return r.r0, nil
 }

@@ -278,4 +278,5 @@ func registerRightsServices(t *ServiceTable) {
 	t.Register("SYS$ASCTOID", serviceSysAsctoid)
 	t.Register("SYS$IDTOASC", serviceSysIdtoasc)
 	t.Register("SYS$FINISH_RDB", serviceSysFinishRdb)
+	t.Register("SYS$FILESCAN", serviceSysFilescan)
 }

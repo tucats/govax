@@ -3,6 +3,8 @@ package console_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -103,6 +105,58 @@ func TestFor80RunsOnFORRTL(t *testing.T) {
 	// A case's values, the manual's own list-directed example (7-19).
 	if !strings.Contains(got, "| v7=0000000E|") {
 		t.Errorf("no K=14 from the manual's list-directed READ")
+	}
+
+	checkFor80Namelist(t, got)
+}
+
+// for80Address masks what depends on where the images are: a case's PC.
+var for80Address = regexp.MustCompile(`^(\|=\d+ r=\w+ e=\d+ \w+ \w+ \d+ )\w+|^\|=c \w+`)
+
+// checkFor80Namelist holds the namelist cases, run on VMS's FORRTL over govax's
+// LIB$TPARSE (Phase 80's subtask 10), to VMS's output, up to where VMS's run
+// ended. FORRTL's state tables are VMS's macros' own, so this checks that the
+// parser reads the real tables' layout and follows their grammar.
+func checkFor80Namelist(t *testing.T, got string) {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(for80Dir, "vax", "for80-vax.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mask := func(line string) string { return for80Address.ReplaceAllString(line, "$1") }
+
+	var want []string
+
+	for line := range strings.SplitSeq(strings.ReplaceAll(string(data), "\r", ""), "\n") {
+		if line != "" {
+			want = append(want, line)
+		}
+	}
+
+	section := func(lines []string) []string {
+		return lines[slices.IndexFunc(lines, func(s string) bool { return strings.Contains(s, "##### Namelist") }):]
+	}
+
+	// The output's lines each have bars around them, and dispatch joins them with
+	// another.
+	var lines []string
+	for line := range strings.SplitSeq(strings.Trim(got, "|"), "|||") {
+		lines = append(lines, "|"+line+"|")
+	}
+
+	have := section(lines)
+	want = section(want)
+
+	if len(have) < len(want) {
+		t.Fatalf("%d lines of namelist cases, want %d", len(have), len(want))
+	}
+
+	for i, w := range want {
+		if mask(have[i]) != mask(w) {
+			t.Errorf("namelist line %d:\n vms   %q\n govax %q", i+1, w, have[i])
+		}
 	}
 }
 
