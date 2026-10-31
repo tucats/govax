@@ -116,6 +116,8 @@ CTX_RECMAX	= CTX_RECORD+RECORD_SIZE+4 ; long: the most bytes a record holds
 CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
 					;  own buffer, or an internal file's place)
 CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
+CTX_NM_CAPTURE	= CTX_RECP+24		; long: FTN_NAMELIST's: where a field goes
+CTX_NM_CAPLEN	= CTX_RECP+28		;  instead of the record, and its length
 
 FOR$_ERRDURWRI	= ^X00188134		; FORRTL's conditions: a write failed,
 FOR$_OUTSTAOVE	= ^X00188214		;  a value too long for a record
@@ -215,6 +217,12 @@ PUT_FIELD:
 	MOVL	4(AP),R6		; the context
 	TSTL	CTX_STATUS(R6)
 	BNEQ	90$
+	MOVL	CTX_NM_CAPTURE(R6),R3	; FTN_NAMELIST's field, not the record's
+	BEQL	3$
+	MOVL	12(AP),CTX_NM_CAPLEN(R6)
+	MOVC3	12(AP),@8(AP),(R3)
+	RET
+3$:
 	TSTB	CTX_INTERNAL(R6)
 	BEQL	5$
 	CMPL	12(AP),CTX_RECMAX(R6)
@@ -334,6 +342,8 @@ CTEXT_LEN	= -204			;  and its length so far
 FRAME_SIZE	= 204
 
 PUT_VALUE:
+FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
+					;  given CTX_NM_CAPTURE (not for text)
 	.WORD	^M<R2,R3,R4,R5,R6,R7,R8,R9,R10>
 	SUBL2	#FRAME_SIZE,SP		; the frame's local storage
 	MOVL	8(AP),R6		; the value

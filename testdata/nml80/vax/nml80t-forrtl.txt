@@ -1,0 +1,44 @@
+ $GRP
+ I
+ J
+ R
+ C
+ T
+ A
+ B
+ TA
+ LONGNAME1
+ $END
+ $GRP
+ I       =           0,
+ J       =      0,
+ R       =  0.0000000E+00,
+ C       = (0.0000000E+00,0.0000000E+00),
+ T       = '     ',
+ A       = 3*0,
+ B       = 4*0,
+ TA      = 3*'   ',
+ LONGNAME1       =           0
+ $END
+ $GRP
+ I
+ J
+ R
+ C
+ T
+ A
+ B
+ TA
+ LONGNAME1
+ $END
+ $GRP
+ I       =           0,
+ J       =      0,
+ R       =  0.0000000E+00,
+ C       = (0.0000000E+00,0.0000000E+00),
+ T       = '     ',
+ A       = 3*0,
+ B       = 4*0,
+ TA      = 3*'   ',
+ LONGNAME1       =           0
+ $END

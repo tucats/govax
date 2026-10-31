@@ -1,0 +1,650 @@
+%0
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "$GRP /"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%1
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before " I=7 /"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%2
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "RP I 7"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%3
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "RP I=="
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%4
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "$GRP 7"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%5
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "$GRP '"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%6
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "RP I=7"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%7
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "RP I=1"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%8
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "P A(2="
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%9
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "RP A ("
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%10
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "C=(5,)"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%11
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "(5,6 $"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041228
+%12
+%FOR-F-SYNERRNAM, syntax error in NAMELIST input at or before "I 8"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066A5  000066A5
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+229664
+%13
+%FOR-F-TOOMANVAL, too many values for NAMELIST variable "I"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           0000660D  0000660D
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041236
+%14
+%FOR-F-TOOMANVAL, too many values for NAMELIST variable "A"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           0000660D  0000660D
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041236
+%15
+%FOR-F-TOOMANVAL, too many values for NAMELIST variable "LONGNAME1"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           0000660D  0000660D
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041236
+%16
+%FOR-F-TOOMANVAL, too many values for NAMELIST variable "A"
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           0000660D  0000660D
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041236
+%17
+%FOR-F-INVREFVAR, invalid reference to variable "NOPE" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%18
+%FOR-F-INVREFVAR, invalid reference to variable "NOPE" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%19
+%FOR-F-INVREFVAR, invalid reference to variable "A" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066C4  000066C4
+                                                           000061B8  000061B8
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%20
+%FOR-F-INVREFVAR, invalid reference to variable "T" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066C4  000066C4
+                                                           000061B8  000061B8
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%21
+%FOR-F-INVREFVAR, invalid reference to variable "TA" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066C4  000066C4
+                                                           0000626F  0000626F
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%22
+%FOR-F-INVREFVAR, invalid reference to variable "B" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066C4  000066C4
+                                                           000061B8  000061B8
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%23
+%FOR-F-INVREFVAR, invalid reference to variable "ABC" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%24
+%FOR-F-INVREFVAR, invalid reference to variable "X" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%25
+%FOR-F-INVREFVAR, invalid reference to variable "LONG" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%26
+%FOR-F-INVREFVAR, invalid reference to variable "nope" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00006752  00006752
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%27
+%FOR-F-INVREFVAR, invalid reference to variable "T" in NAMELIST input
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           000066C4  000066C4
+                                                           000061B8  000061B8
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041244
+%28
+%FOR-F-INPCONERR, input conversion error
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-FOR-F-INVTEXREC, invalid text is "'" in record number 1
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B8F  00007B8F
+                                                           00006710  00006710
+                                                           000062B6  000062B6
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041604
+%29
+%FOR-F-INPCONERR, input conversion error
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-FOR-F-INVTEXREC, invalid text is "7" in record number 1
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B8F  00007B8F
+                                                           00006710  00006710
+                                                           0000640E  0000640E
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041604
+%30
+%FOR-F-INPCONERR, input conversion error
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-FOR-F-INVTEXREC, invalid text is "1E40" in record number 1
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B8F  00007B8F
+                                                           00006710  00006710
+                                                           0000640E  0000640E
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041604
+%31
+%FOR-F-INPCONERR, input conversion error
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-FOR-F-INVTEXREC, invalid text is "" in record number 1
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B8F  00007B8F
+                                                           00006710  00006710
+                                                           000065F0  000065F0
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041604
+%32
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%33
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%34
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%35
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%36
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%37
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%38
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%39
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%40
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%41
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%42
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284
+%43
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 5  file SYS$INPUT:.;
+  user PC 00000411
+-RMS-E-EOF, end of file detected
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+                                                           00007C92  00007C92
+                                                           00007B9F  00007B9F
+                                                           00004787  00004787
+                                                           00004230  00004230
+                                                           80029051  80029051
+                                                           000069EB  000069EB
+                                                           000068B9  000068B9
+NML80E          NML80E                                     00000011  00000411
+270041284

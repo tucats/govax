@@ -8,7 +8,8 @@ interpreter) done the same day; subtask 5 (integer, logical, and character
 editing), subtask 6 (floating editing), subtask 7 (list-directed output
 and input), subtask 8 (variable format expressions and run-time formats), and
 subtask 9 (internal files, ENCODE, DECODE) done the same day; subtask 10
-(LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run. Needs Phase 79 (control flow, for
+(LIB$TPARSE, with `$FILESCAN`) done the same day, held to VMS 7.1's run; subtask 11
+(NAMELIST) done the same day, held to VMS's FORRTL. Needs Phase 79 (control flow, for
 implied DO loops and ERR/END branches). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decisions 12, 13, and 15).
 
@@ -797,7 +798,8 @@ subtasks land.
     with a probe of its own on VMS. Phase 60's trees stay there. FTNRTL's
     namelist input is its own code either way. Done, with `$FILESCAN` ("Subtask
     10", below), held to `testdata/tpa80`'s run on VMS.
-11. **NAMELIST.**
+11. **NAMELIST.** Done ("Subtask 11", below), with a probe of its own,
+    `testdata/nml80`.
 12. **The error model:** ERR, END, IOSTAT, FOR messages, signaling, ERRSNS.
 13. **Terminal statements** end to end: TYPE, ACCEPT, READ f, units 5 and 6,
     and DUNGEON's use of them.
@@ -1451,6 +1453,94 @@ Tests: `TestTPA80Manual` (31 cases held to the manuals), `TestTPA80Oracle` (skip
 comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
 `TestFor80RunsOnFORRTL`'s namelist check.
 
+## Subtask 11: what was built (2026-10-31)
+
+**A probe first,** `testdata/nml80` (its README has the layout): one table of
+786 cases, `gen.go`'s, is `nml80.mar` on VMS's FORRTL and `nml80f.for`, the same
+cases as FORTRAN, on FTNRTL, each printing the case, the FOR number the READ ended
+with, and the group written back out by a namelist WRITE, so FORRTL's own output
+shows what it stored. Rounds 1 and 2 of `testdata/for80` had settled the block, the
+output's columns, and a few input cases; this probe asks the rest: how the group is
+found and ended, the separators, names, subscripts and substrings, every value to
+every type, questions, and where records break. It ran on FORRTL over govax (with
+govax's `LIB$TPARSE`, subtask 10, beneath FORRTL's namelist input), as `for80`'s
+round 3 did; `nml80.com` and the exchange scripts are there to run it on the VAX.
+
+**FTNRTL** (`ftn_namelist.mar`, new; no new vector entries, GSMATCH stays 1,8):
+`FTN$READ_SN` and `FTN$WRITE_SN` do the whole statement at the begin call, as a
+namelist statement has no items. Input reuses FTN_LISTIN's pieces (`FTN$$LI_SKIP`,
+`FTN$$LI_TEXT`, `FTN$$LI_ADD`, `FTN$$LI_STORE`: the blanks between values, a
+character constant across records, the value's text kept for each conversion), with
+`CTX_LI_COLUMN` saying a namelist record's reading starts in column 2. Output puts
+each value through FTN_LISTOUT's own fields (`FTN$$LIST_VALUE`, its field captured
+rather than put in a record, `CTX_NM_CAPTURE`), so a namelist value is written as a
+list-directed one is. Three conditions name what they found, a fourth FAO argument
+before the unit (`CTX_NM_FAO`), which `FTN$IO_END` passes when it signals.
+
+FTNRTL matches all 786 cases line for line on the first full run of the finished
+module, and the 44 conditions' messages and statuses, and the answers to `?` and
+`=?` at a terminal. What the probe settled, beyond the manual:
+
+- **Finding the group:** only a record with `$` or `&` in column 2, the group's name
+  in either case, and then a blank, a tab, or the record's end; any other record is
+  passed over whole, so ` $OTHER $GRP` isn't the group and neither is `$GRP` in
+  column 1. `&GRP` may end with `$END`, and anything after a `$` or `&` ends the
+  group, `$OTHER` and `$ENDX` too; the rest of that record is lost.
+- **Column 1 of every record** is passed over, even inside a character constant
+  continued from the record before (`'AB` then `CD'` is `'ABD'`).
+- **A word** of letters, digits, `_`, and `$` that is followed by `=` or a direct
+  `(` is the next assignment's name; any other word starting with T or F (or `.T`,
+  `.F`) is a logical value, its rest passed over (`TEST` is true, `T$END` is one word,
+  so `M=T$END I=5` sets I). Any other word is a name, so `NOPE` and `ABC` are
+  INVREFVAR. Names may have `$`: `LONGNAME1$` isn't `LONGNAME1`.
+- **Values to items:** a logical word is -1 or 0 to any numeric item (`R=T` is -1.0);
+  a number to a logical is the integer (so 2 is false, and 300 to a LOGICAL\*1
+  INPCONERR); a complex constant to anything but a complex or character item is its
+  real part; `'A'` to a number, and anything but a character constant to a character
+  item, is INPCONERR (64), as list-directed input's are.
+- **What ends a number:** a blank, tab, comma, `$`, `&`, `)`, or the record's end;
+  anything else (`7ABC`, `7'A'`, `7/`, `1E2.5`) is SYNERRNAM, nothing stored. `1E`,
+  `1E+`, `1D`, `1Q` are 1. A number or complex constant followed by `=` is SYNERRNAM.
+- **Counts:** a value fills from the element named on; one more value, or a null
+  past the end (`I=,,`), is TOOMANVAL (18), what came before stored. `0*7`, a count
+  past a longword, and `+2*5` are SYNERRNAM; `r*` before a separator or `$` is nulls;
+  `7*` on a scalar is 7 nulls, so TOOMANVAL.
+- **References:** subscripts and substring bounds are signed integers, with blanks
+  anywhere inside the parentheses and across records, but none between the name and
+  `(`. Anything wrong with a reference that parses is INVREFVAR (19): out of bounds,
+  too few or many subscripts, a substring of a number, `T(3:2)`, `T(2)`, a letter or
+  `$` where a number goes; bad syntax (`A(2=`, `A(1.5)`, `T(1:2:3)`, a second
+  substring) is SYNERRNAM (17). A substring of an array element applies to each
+  element its values go on to (`TA(2)(2:3)='Y','Z'`).
+- **Questions at a file** pass over the rest of the record, in the search and in the
+  group, where a name or a value could start. At a terminal `?` lists the names and
+  `=?` writes the group, each record after a blank, so its first byte shows.
+- **Messages:** SYNERRNAM shows the six bytes of the record ending where the
+  trouble is (never column 1), TOOMANVAL the entity's name, INVREFVAR the name as
+  typed or the entity's.
+- **Output's records** hold 80 characters after the control. A field goes whole on
+  the next record, its blank the control; a comma, and each byte of a character
+  value, fill the record and go on after a blank on the next (so a text may split
+  anywhere, the closing apostrophe alone on a record). A repeated value, `r*` and
+  the field without its leading blanks, stays on its record only if `r*` and the
+  whole field would fit (a sweep of name lengths and positions settled this). A
+  group name is written as stored.
+
+Unconfirmed, no case settling it: a doubled apostrophe split across output records
+(the two halves are split like any two bytes); which place a syntax error after a
+substring's parentheses names.
+
+What's left for the error model (subtask 12): the messages' other lines (FTNRTL's
+file name is still empty), and the secondary messages FORRTL adds, so
+`TestNML80Messages` compares each message's first line and the status.
+
+Tests: `TestNML80Oracle`, `TestNML80Messages`, `TestNML80Prompt` (FTNRTL against
+FORRTL's files), `TestNML80RunsOnFORRTL` (FORRTL against them, or skips),
+`TestFortranNamelist` (the manual's example of 7-38, read and written, and IOSTAT=,
+ERR=, and END= on namelist READs, both paging modes). `TestFortranIOSignals`'s
+NOTIMP case is now a unit Phase 81 adds. MANUAL.md's chapter 14 describes namelist
+I/O, with the manual's example as FTNRTL writes it.
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
@@ -1554,3 +1644,7 @@ comparison until `vax/tpa80-vax.txt` is here), `TestScanFileSpec`,
   ran whole. govax now matches VMS's 5,278 lines but for one case's reports
   (`TestTPA80Oracle`). The run corrected the manual's order of msk-adr and the mask, and
   the rules listed under "Subtask 10".
+- **2026-10-31, subtask 11, done.** NAMELIST input and output in FTNRTL
+  (`ftn_namelist.mar`), held to a probe of 786 cases on VMS's FORRTL,
+  `testdata/nml80`, whose run over govax is FTNRTL's requirement; "Subtask 11"
+  above.

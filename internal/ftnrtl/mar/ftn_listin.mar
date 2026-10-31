@@ -109,6 +109,8 @@ CTX_LI_KIND	= CTX_LI_REPEAT+4	; byte: the value's form, V_...
 CTX_LI_AFTER	= CTX_LI_KIND+1		; byte: 1 if a comma is the last value's
 CTX_LI_SLASH	= CTX_LI_AFTER+1	; byte: 1 once a slash ended the statement
 CTX_LI_ZERO	= CTX_LI_SLASH+1	; byte: 1 if the repeat count was 0
+CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a new record starts:
+					;  0, or 1 for namelist input (FTN_NAMELIST)
 
 V_NULL		= 0			; the forms of a value
 V_WORD		= 1
@@ -237,15 +239,21 @@ NEXT_VALUE:
 ; SKIP_BLANKS: passes over blanks, tabs, and records' ends, to the next
 ; byte. R0's low bit is set with the byte in R1, or clear if the next
 ; record couldn't be read (the statement's error). Changes R0 and R1.
+; FTN_NAMELIST uses it, and READ_TEXT and ADD_CHAR, as FTN$$LI_SKIP,
+; FTN$$LI_TEXT, and FTN$$LI_ADD.
 ;
 SKIP_BLANKS:
+FTN$$LI_SKIP::
 10$:	MOVL	CTX_POS(R6),R1
 	CMPL	R1,CTX_RECLEN(R6)
 	BLSS	20$
 	PUSHL	R6
 	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
 	TSTL	CTX_STATUS(R6)
-	BEQL	10$
+	BNEQ	15$
+	MOVL	CTX_LI_COLUMN(R6),CTX_POS(R6)
+	BRB	10$
+15$:
 	CLRL	R0
 	RSB
 20$:	MOVZBL	@CTX_RECP(R6)[R1],R1
@@ -313,6 +321,7 @@ REPEAT_COUNT:
 ; ADD_CHAR: adds the byte in R1 to the value's text. Changes R0 and R1.
 ;
 ADD_CHAR:
+FTN$$LI_ADD::
 	CMPL	CTX_LI_LENGTH(R6),CTX_LI_SIZE(R6)
 	BLSS	10$
 	PUSHL	R1			; CALLS changes R0 and R1
@@ -328,6 +337,7 @@ ADD_CHAR:
 ; READ_TEXT: a character constant, its opening apostrophe next.
 ;
 READ_TEXT:
+FTN$$LI_TEXT::
 	MOVB	#V_TEXT,CTX_LI_KIND(R6)
 	INCL	CTX_POS(R6)
 10$:	MOVL	CTX_POS(R6),R2
@@ -336,8 +346,10 @@ READ_TEXT:
 	PUSHL	R6			; the next record goes on it
 	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
 	TSTL	CTX_STATUS(R6)
-	BEQL	10$
-	RSB
+	BNEQ	15$
+	MOVL	CTX_LI_COLUMN(R6),CTX_POS(R6)
+	BRB	10$
+15$:	RSB
 20$:	MOVZBL	@CTX_RECP(R6)[R2],R1
 	INCL	R2
 	MOVL	R2,CTX_POS(R6)
@@ -458,7 +470,9 @@ GROW:	.WORD	^M<R2,R3,R4,R5,R6,R7>
 ;
 VALUE		= -16			; 16 bytes: a REAL*16's, or a COMPLEX*16's
 
-STORE:	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
+STORE:
+FTN$$LI_STORE::				; FTN_NAMELIST's way in
+	.WORD	^M<R2,R3,R4,R5,R6,R7,R8>
 	SUBL2	#16,SP
 	MOVL	4(AP),R6		; the context
 	MOVL	CTX_LI_BUFFER(R6),R7	; the value's text

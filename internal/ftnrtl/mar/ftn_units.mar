@@ -44,6 +44,7 @@
 ;	+4	long	1 if the stream may be read
 ;	+8		the FAB, then the RAB
 ;
+	$DEVDEF				; the device's characteristics
 	$FABDEF				; the FAB's fields
 	$RABDEF				; the RAB's fields
 	$RMSDEF				; RMS's statuses
@@ -199,6 +200,20 @@ INPUT_UNIT:	.LONG	0, 1		; not open; read and written
 30$:	MOVL	#FOR$_INPRECTOO,R0
 	RET
 40$:	MOVL	#FOR$_ERRDURREA,R0
+	RET
+
+;
+; FTN$$UNIT_TERMINAL(block)
+;
+; R0's low bit is set if the stream whose block is given, connected, is a
+; terminal (FTN_NAMELIST answers a ? only at one).
+;
+	.ENTRY	FTN$$UNIT_TERMINAL,^M<>
+	MOVL	4(AP),R0
+	CLRL	R1
+	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R0),10$
+	MOVL	#1,R1
+10$:	MOVL	R1,R0
 	RET
 
 	.END

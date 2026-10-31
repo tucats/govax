@@ -24,7 +24,7 @@ func TestFortranIOSignals(t *testing.T) {
 	}{
 		{"INVLOGUNI", "WRITE (1000, *) 1", "%FOR-F-INVLOGUNI, invalid logical unit number\n  unit 1000  file \n", "10188104", false},
 		{"RECIO_OPE", "WRITE (6, *) 'OUTER', INNER(6)", "%FOR-F-RECIO_OPE, recursive I/O operation\n  unit 6  file \n", "10188144", false},
-		{"NOTIMP", "WRITE (6, NML=GRP)", "%FOR-F-NOTIMP, not implemented\n", "10188014", false},
+		{"NOTIMP", "WRITE (1, *) 1", "%FOR-F-NOTIMP, not implemented\n", "10188014", false},
 		{"OUTSTAOVE", "WRITE (LINE, 30) 1", "%FOR-F-OUTSTAOVE, output statement overflows record\n  unit -5  file \n", "10188214", false},
 		{"VFEVALERR", "WRITE (6, 20) 1", "%FOR-F-VFEVALERR, variable format expression value error\n  unit 6  file \n", "10188224", false},
 		{"OUTCONERR", "WRITE (6, 10) 3244", "**\n%FOR-E-OUTCONERR, output conversion error\n  unit 6  file \n", "00000001", true},
@@ -33,7 +33,6 @@ func TestFortranIOSignals(t *testing.T) {
 			lines := []string{
 				"      PROGRAM SIGNAL",
 				"      CHARACTER*8 LINE",
-				"      NAMELIST /GRP/ LINE",
 				"   10 FORMAT (1X, I2)",
 				"   20 FORMAT (1X, I<-1>)",
 				"   30 FORMAT (I20)",
@@ -348,6 +347,72 @@ func TestFortranListInput(t *testing.T) {
 		got := shareRun(t, d, buf, "LBAD")
 		if !strings.Contains(got, "%FOR-F-LISIO_SYN, ") || strings.Contains(got, "NOT HERE") {
 			t.Errorf("RUN LBAD printed:\n%s", got)
+		}
+	})
+}
+
+// TestFortranNamelist reads and writes the manual's NAMELIST example (7-38):
+// the input it gives, a substring of an array element among the
+// assignments, and the output in VMS's FORTRAN run-time library's layout
+// (testdata/nml80, Phase 80's subtask 11); then a namelist READ's IOSTAT=,
+// ERR= after a value stored before the error, and END=, unit * included.
+func TestFortranNamelist(t *testing.T) {
+	eachLoader(t, func(t *testing.T, paging bool) {
+		d, c, buf := shareFindConsole(t, paging)
+
+		lines := []string{
+			"      PROGRAM NML",
+			"      CHARACTER*19 NAME(2)/2*' '/",
+			"      REAL PITCH, ROLL, YAW, POSITION(3)",
+			"      LOGICAL DIAGNOSTICS",
+			"      INTEGER ITERATIONS, IOS",
+			"      NAMELIST /PARAM/ NAME, PITCH, ROLL, YAW, POSITION,",
+			"     1         DIAGNOSTICS, ITERATIONS",
+			"      READ (5, PARAM)",
+			"      WRITE (6, PARAM)",
+			"      READ (5, NML=PARAM, IOSTAT=IOS)",
+			"      PRINT *, 'IOS', IOS",
+			"      READ (5, PARAM, ERR=10)",
+			"      PRINT *, 'NOT HERE'",
+			"   10 PRINT *, 'ERR', PITCH",
+			"      READ (*, PARAM, END=20)",
+			"      PRINT *, 'NOT HERE'",
+			"   20 PRINT *, 'END'",
+			"      END",
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]NML.FOR"},
+			rms.TextRecords, splitSource(strings.Join(lines, "\n")+"\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, "NML")
+
+		for _, command := range []string{"FORTRAN NML", "MACRO NML", "LINK NML"} {
+			shareFindRun(t, d, command)
+
+			if out := buf.String(); out != "" {
+				t.Fatalf("%s said:\n%s", command, out)
+			}
+		}
+
+		c.In = strings.NewReader(" $PARAM NAME(2)(10:)='HEISENBERG',\n PITCH=5.0, YAW=0.0, ROLL=5.0,\n" +
+			" DIAGNOSTICS=.TRUE.\n ITERATIONS=10$END\n $PARAM NOPE=1 $END\n $PARAM PITCH=1,2 $END\n")
+
+		want := "$PARAM\n" +
+			"NAME    = '                   ', '         HEISENBERG',\n" +
+			"PITCH   =   5.000000    ,\n" +
+			"ROLL    =   5.000000    ,\n" +
+			"YAW     =  0.0000000E+00,\n" +
+			"POSITION        = 3*0.0000000E+00,\n" +
+			"DIAGNOSTICS     = T,\n" +
+			"ITERATIONS      =          10\n" +
+			"$END\n" +
+			"IOS          19\n" +
+			"ERR   1.000000    \n" +
+			"END\n" +
+			"  $STATUS == \"%X00000001\"\n"
+		if got := shareRun(t, d, buf, "NML"); got != want {
+			t.Errorf("RUN NML printed:\n%s\nwant:\n%s", got, want)
 		}
 	})
 }

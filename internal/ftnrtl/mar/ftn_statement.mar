@@ -66,10 +66,12 @@
 ; written as asterisks), is recorded apart (CTX_WARNING): the statement
 ; goes on, and FTN$IO_END reports it if nothing stopped the statement.
 ;
-; So far formatted input and output (FTN_FORMAT) and list-directed
-; output (FTN_LISTOUT) and input (FTN_LISTIN), to the units FTN_UNITS has
-; and to internal files (FTN_INTERNAL), are done; a namelist statement is
-; FOR$_NOTIMP, until a later subtask of Phase 80.
+; Formatted input and output are FTN_FORMAT's, list-directed output and
+; input FTN_LISTOUT's and FTN_LISTIN's, namelist input and output
+; FTN_NAMELIST's (done whole by the begin call: a namelist statement has no
+; items), on the units FTN_UNITS has and on internal files (FTN_INTERNAL).
+; Three namelist conditions name what was wrong (the text, or the
+; entity's name) in their messages, before the unit: CTX_NM_FAO.
 ;
 	$SSDEF
 
@@ -115,7 +117,13 @@ CTX_RECP	= CTX_AP+4+4+12		; long: where the record is, CTX_RECORD or
 					;  an internal file (after FTN_FORMAT's
 					;  expressions' routine and copy of an
 					;  operation)
-CTX_SIZE	= CTX_RECP+4+4+4	; with FTN_INTERNAL's next record and count
+CTX_NM_FAO	= CTX_RECP+12		; long: FTN_NAMELIST's message's first FAO
+					;  argument, or 0 (then its descriptor and
+					;  two longwords)
+CTX_NM_CAPTURE	= CTX_RECP+24		; long: where FTN_LISTOUT puts a field for
+					;  FTN_NAMELIST, or 0
+CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a record starts
+CTX_SIZE	= CTX_RECP+36
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -263,6 +271,9 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CLRL	CTX_STATUS(R3)
 	CLRL	CTX_WARNING(R3)
 	CLRL	CTX_FREEFMT(R3)
+	CLRL	CTX_NM_FAO(R3)
+	CLRL	CTX_NM_CAPTURE(R3)
+	CLRL	CTX_LI_COLUMN(R3)
 	CLRL	CTX_STREAM(R3)
 	CLRL	CTX_RECLEN(R3)
 	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
@@ -293,24 +304,24 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CMPL	CTX_UNIT(R1),R7
 	BNEQ	45$
 	MOVL	#FOR$_RECIO_OPE,R0
-	BRB	FAIL
+	BRW	FAIL
 45$:	MOVL	CTX_NEXT(R1),R1
 	BRB	40$
 	;
-	; Start the statement, if it is of a kind FTNRTL does yet.
+	; Connect the unit's stream and start the statement.
 	;
-60$:	CMPL	R6,#K_WRITE_SL
-	BLEQ	70$			; formatted, or list-directed
-	MOVL	#FOR$_NOTIMP,R0
-	BRB	FAIL
-70$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
+60$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
 	CALLS	#1,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,75$
 	MOVL	#FOR$_ERRDURWRI,R0
 	BLBS	R6,FAIL
 	MOVL	#FOR$_ERRDURREA,R0
 	BRB	FAIL
-75$:	CMPL	R6,#K_WRITE_SL
+75$:	CMPL	R6,#K_READ_SN
+	BEQL	90$
+	CMPL	R6,#K_WRITE_SN
+	BEQL	95$
+	CMPL	R6,#K_WRITE_SL
 	BEQL	80$
 	CMPL	R6,#K_READ_SL
 	BEQL	85$
@@ -325,6 +336,17 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	RET
 85$:	PUSHL	R3
 	CALLS	#1,FTN$$LISTIN_START	; FTN_LISTIN
+	MOVL	#SS$_NORMAL,R0
+	RET
+90$:	PUSHL	12(AP)			; a namelist READ: the group's block
+	PUSHL	R3
+	CALLS	#2,FTN$$NML_READ	; FTN_NAMELIST
+	MOVL	#SS$_NORMAL,R0
+	RET
+95$:	PUSHL	#1			; a namelist WRITE: with the values
+	PUSHL	12(AP)
+	PUSHL	R3
+	CALLS	#3,FTN$$NML_WRITE	; FTN_NAMELIST
 	MOVL	#SS$_NORMAL,R0
 	RET
 
@@ -419,20 +441,26 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	;
 	; Signaled, with the FAO arguments the FOR messages take: the unit
 	; (a longword), the file (a descriptor's address: an empty name, for
-	; now), and the user PC (where this call returns). Pushed last
-	; first, the descriptor itself on the stack.
+	; now), and the user PC (where this call returns), after a namelist
+	; condition's text or name. Pushed last first, the descriptor itself
+	; on the stack.
 	;
 40$:	CLRQ	-(SP)			; an empty descriptor
 	MOVL	SP,R1
 	PUSHL	16(FP)			; the user PC
 	PUSHL	R1			; the file
 	PUSHL	CTX_UNIT(R2)		; the unit
-	PUSHL	#3			; three FAO arguments
+	MOVL	#5,R1			; the arguments: the condition, a count,
+	MOVL	CTX_NM_FAO(R2),R0	;  and three FAO arguments,
+	BEQL	45$
+	PUSHL	R0			;  or four
+	INCL	R1
+45$:	SUBL3	#2,R1,-(SP)		; the FAO arguments' count
 	PUSHL	R3			; the condition
 	CMPZV	#0,#3,R3,#4		; severe?
 	BNEQ	50$
-	CALLS	#5,G^LIB$STOP		; never returns
-50$:	CALLS	#5,G^LIB$SIGNAL
+	CALLS	R1,G^LIB$STOP		; never returns
+50$:	CALLS	R1,G^LIB$SIGNAL
 	CLRL	R0			; the program goes on
 90$:	RET
 

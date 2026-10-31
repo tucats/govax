@@ -1299,7 +1299,7 @@ declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
 EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
 intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; READ, WRITE,
-PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST, though FTNRTL doesn't run namelist statements yet), and reports any
+PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST), and reports any
 other statement as not implemented yet. The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4358,8 +4358,8 @@ intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
 input and output, with every edit descriptor and variable format
-expressions, and list-directed input and output, and stops a program at any other I/O
-statement with `%FOR-F-NOTIMP` (section 14.2). Any other statement draws
+expressions, list-directed input and output, and namelist input and output, and stops a
+program with `%FOR-F-NOTIMP` at a unit other than the terminal's (section 14.2). Any other statement draws
 `%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
 yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -4624,7 +4624,7 @@ output it prints, and programs of several files in its `modules` directory.
   IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
   compile, by the rules VMS's FORTRAN run-time library applies
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
-  runs formatted and list-directed input and output, to the
+  runs formatted, list-directed, and namelist input and output, to the
   default units, units 5 and 6 (SYS$INPUT and SYS$OUTPUT), and internal files.
   `WRITE (STR, '(F10.2)') VAL` and `ENCODE (20, '(F10.2)', STR) VAL` both write to
   memory, as `READ` and `DECODE` both read from it. An array is a record per
@@ -4648,14 +4648,41 @@ output it prints, and programs of several files in its `modules` directory.
   D, or G of one that isn't floating, edits its bytes as one and goes on,
   and the statement fails at its end with `FORVARMIS` (61), its records
   written, as VMS's library does. A unit with no OPEN takes blanks in a number as zeros, so `1 2`
-  read by I3 is 102 (the manual's rule; BN reads it as 12). Every other I/O
-  statement is FOR's `NOTIMP`, and so are units 0 to 4 and 7 to 119, which later phases
-  add. A run-time format is checked when it is used: one VMS's FORTRAN
+  read by I3 is 102 (the manual's rule; BN reads it as 12). Units 0 to 4 and
+  7 to 119 are FOR's `NOTIMP`, which later phases add. A run-time format is checked when it is used: one VMS's FORTRAN
   run-time library would refuse is `SYNERRFOR` (62). A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
   199 characters is `INPRECTOO` (22). Unformatted, direct access, and keyed I/O, REWRITE,
   OPEN, CLOSE, and the like, are `%FORT-E-NOTIMPL`.
+- **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
+  manual) follows VMS's FORTRAN run-time library where the manual is silent.
+  `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`
+  in columns 2 on (column 1 is always carriage control, in a character
+  constant across records too), then takes `name = values` assignments,
+  names with constant subscripts and substrings (`NAME(2)(10:)='HEISENBERG'`),
+  until a `$` or `&`. Values are as list-directed input's, with `r*c`, `r*`,
+  and nulls; `T` and `F` words, `.TRUE.`, and the like are -1 and 0 to any
+  numeric item. Bad syntax is `SYNERRNAM` (17), more values than the
+  entity holds `TOOMANVAL` (18), a name not in the group or a reference out
+  of bounds `INVREFVAR` (19); each message names what it found, and what
+  was stored before the error stays. At a terminal, `?` lists the group's
+  names and `=?` its values. `WRITE (6, PARAM)` writes the manual's
+  example as
+
+      $PARAM
+      NAME    = '                   ', '         HEISENBERG',
+      PITCH   =   5.000000    ,
+      ROLL    =   5.000000    ,
+      YAW     =  0.0000000E+00,
+      POSITION        = 3*0.0000000E+00,
+      DIAGNOSTICS     = T,
+      ITERATIONS      =          10
+      $END
+
+  each name padded to the next multiple of 8 past its length, values in
+  list-directed output's fields, equal neighbors as `r*value`, and records
+  of 80 characters.
 - **Variable format expressions:** `FORMAT (<N>F10.<N-1>)` computes a
   number from the program's values when the format's scan reaches it. Any
   number in a FORMAT statement may be one, but H's count; it may be any
@@ -4918,7 +4945,7 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
 | `FTN$ENCODE(icb, buffer, format, count)`, `FTN$DECODE(icb, buffer, format, count)` | Start ENCODE or DECODE: one record of `count` characters (a longword, by value; negative is 0) at the address `buffer` |
-| `FTN$READ_SN`, `FTN$WRITE_SN` | Start a namelist statement; so far `FOR$_NOTIMP` |
+| `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array) |
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |

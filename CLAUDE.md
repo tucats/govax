@@ -493,7 +493,12 @@ never had.
   (`corevms/filescan.go`), and the `$TPADEF`, `$FSCNDEF`, `$INIT_STATE`, `$STATE`,
   `$TRAN`, and `$END_STATE` macros; FORRTL's namelist input over them matches VMS's
   run, and so does `testdata/tpa80`'s probe (the manual has msk-adr and the mask the
-  wrong way round).
+  wrong way round);
+  subtask 11 (2026-10-31) is NAMELIST input and output (`ftn_namelist.mar`: the whole
+  statement at `FTN$READ_SN`/`FTN$WRITE_SN`, input on FTN_LISTIN's exported pieces,
+  `FTN$$LI_SKIP` and the rest, from column 2, `CTX_LI_COLUMN`; output through
+  FTN_LISTOUT's fields, `FTN$$LIST_VALUE` with `CTX_NM_CAPTURE`; SYNERRNAM, TOOMANVAL,
+  and INVREFVAR naming what they found, `CTX_NM_FAO`), held to `testdata/nml80`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -751,6 +756,14 @@ never had.
   `TestFor80RunsOnFORRTL`, `TestFor80Round3`, and
   `TestFor80Messages` (run 3's messages against VMS's log) need FORRTL.EXE on a
   local volume, or skip.
+- `testdata/nml80/` — Phase 80's probe of NAMELIST I/O (subtask 11; README.md):
+  `gen.go` writes `nml80.mar` (786 cases on VMS's FORRTL: each READ's FOR number and
+  the group written back), `nml80f.for` (the same cases as FORTRAN, for FTNRTL),
+  `nml80r.com` (either image with its records), and `nml80e.mar`/`.for`/`.com` (44
+  conditions with no handler). `vax/` is FORRTL's run over govax (data, messages, and
+  the answers to `?` at a terminal), which `TestNML80Oracle`, `TestNML80Messages`, and
+  `TestNML80Prompt` hold FTNRTL to; `TestNML80RunsOnFORRTL` makes it again
+  (`NML80_WRITE`), or skips without FORRTL.EXE on a local volume.
 - `testdata/tpa80/` — Phase 80's probe of LIB$TPARSE, LIB$TABLE_PARSE, and
   `$FILESCAN` (README.md): `gen.go` writes `tpa80.mar` (the definitions' values, a
   table's bytes, which characters each symbol type takes, every grammar under both
@@ -2023,7 +2036,7 @@ expect adjustment as phases land):
   and FTN$IO_END, on a stack of statement contexts, with the control
   block's layout, Phase 80; `ftn_format.mar`, the format interpreter,
   Phase 80; `ftn_listout.mar`, list-directed output in the
-  context's record, Phase 75; `ftn_listin.mar`, list-directed input, Phase 80; `ftn_internal.mar`, internal files, ENCODE, and DECODE, Phase 80; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
+  context's record, Phase 75; `ftn_listin.mar`, list-directed input, Phase 80; `ftn_namelist.mar`, namelist input and output, Phase 80; `ftn_internal.mar`, internal files, ENCODE, and DECODE, Phase 80; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
   FTN$LEN to FTN$NWORKERS, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;
