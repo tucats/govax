@@ -408,3 +408,44 @@ func TestRandomSettingFromAProgram(t *testing.T) {
 		t.Errorf("on: seeds %s and %s from one starting seed; the formula gives %s", first[1], second[1], formula[1])
 	}
 }
+
+// TestUnwindFromJSB: a handler that unwinds from a condition a JSB entry signaled
+// removes the frame the handler is in and no other, as it does from a CALL entry. The
+// program's outer routine goes on and prints; removing one frame too many would end it
+// at START's caller.
+func TestUnwindFromJSB(t *testing.T) {
+	_, d, out := boot(t)
+
+	build(t, d, out, "UNWJSB", `	.TITLE	UNWJSB
+	$SSDEF
+	.PSECT	DATA,WRT,NOEXE,LONG
+BACK:	.ASCID	/BACK IN START/
+	.PSECT	CODE,NOWRT,EXE,LONG
+	.ENTRY	HANDLER,^M<>
+	MOVL	4(AP),R0
+	CMPL	4(R0),#SS$_UNWIND
+	BEQL	1$
+	$UNWIND_S
+1$:	RET
+	.ENTRY	INNER,^M<>
+	MOVAB	HANDLER,(FP)
+	MOVL	#^X8000,R0	; a reserved operand
+	JSB	G^MTH$SQRT_R3
+	RET
+	.ENTRY	START,^M<>
+	CALLS	#0,INNER
+	PUSHAQ	BACK
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#1,R0
+	RET
+	.END	START
+`)
+
+	if err := d.Dispatch("RUN UNWJSB"); err != nil {
+		t.Fatalf("RUN: %v\n%s", err, out)
+	}
+
+	if !strings.Contains(out.String(), "BACK IN START") {
+		t.Errorf("START didn't go on; RUN said:\n%s", out)
+	}
+}

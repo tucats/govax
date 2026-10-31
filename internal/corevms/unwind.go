@@ -141,6 +141,14 @@ func serviceSysUnwind(env *Environment, argv []uint32) (uint32, error) {
 	return env.requestUnwind(d, depth, optArg(argv, 1), len(argv) > 1 && argv[1] != 0)
 }
 
+// hasStubFrame reports whether d's condition was signaled from a stub with a call
+// frame of its own, below the frame the search starts in. An exception has no such
+// frame, and neither has a routine reached by JSB: its condition is raised in its
+// caller's frame (signal), which an unwind must count only once.
+func (d *conditionDispatch) hasStubFrame() bool {
+	return d.kind != kindException && d.resumeFP != d.startFP
+}
+
 // requestUnwind records an unwind of depth frames for d, which must not
 // already have one, finding the frames to remove.
 func (env *Environment) requestUnwind(d *conditionDispatch, depth int32, newPC uint32, hasNewPC bool) (uint32, error) {
@@ -155,7 +163,7 @@ func (env *Environment) requestUnwind(d *conditionDispatch, depth int32, newPC u
 	// ten is an estimate...
 	frames := make([]uint32, 0, 10)
 
-	if d.kind != kindException {
+	if d.hasStubFrame() {
 		frames = append(frames, d.resumeFP) // the LIB$SIGNAL stub's frame
 	}
 
@@ -219,7 +227,7 @@ func (env *Environment) continueUnwind(d *conditionDispatch) (uint32, error) {
 		// The depth is the frame's position counting from the frame the
 		// condition happened in, not counting a LIB$SIGNAL stub.
 		depth := int32(u.next - 1)
-		if d.kind != kindException {
+		if d.hasStubFrame() {
 			depth--
 		}
 

@@ -558,6 +558,12 @@ never had.
   `TestDebuggerSessionOracle` replays the sessions, and
   `TestTrace73Procedure` runs `trace73.com` itself (with
   `TestDbgcmdProcedure`, `dbgcmd.com`).
+- `testdata/mth77/` — Phase 77's probe of MTHRTL (README.md): `gen.go` writes
+  `mth77.mar` (1,950 lines: conditions and limits by family, Table 1-1, complex,
+  `OTS$`, the JSB entries no manual gives, and a sweep in exact bits), `mth77.com`,
+  `exchange.cmd`, and `copyout.cmd` (DUA2 on govax, since a startup procedure may
+  mount DUA1). `TestMTH77Oracle` compares VMS's `vax/mth77-vax.txt` once it exists,
+  the sweep to within a few last bits.
 - `testdata/fortran/` — the FORTRAN end-to-end programs (Phase 75,
   subtask 8; README.md): each `name.for` with `name.out`, its terminal
   output and `$STATUS`, written by hand from the language's rules.

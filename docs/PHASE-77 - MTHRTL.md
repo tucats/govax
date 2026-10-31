@@ -6,7 +6,8 @@ and its registration, 3, the engine, square root, exponentials, and
 logarithms, 4, the trigonometric functions and their inverses, 5, the
 hyperbolic functions and ATAN2, 6, Table 1-1's routines, 7, the complex
 functions and parts, 8, the OTS$ powers, multiplication, and division, and 9,
-MTH$RANDOM and the conditions' audit, the same day).
+MTH$RANDOM and the conditions' audit, the same day; subtask 10's probe is written,
+and waits for its VAX run).
 Needs Phase 74 (the plan)
 only: this phase is independent of the compiler and could be done at any
 time before Phase 78. Part of the FORTRAN program laid out in `PHASE-74 -
@@ -434,7 +435,8 @@ be corrected.
 8. **OTS$ powers, multiplication, and division**, and Phase 76's folding made
    to agree (`sema/constant.go`'s `power`, `complexArith`). Done.
 9. **MTH$RANDOM and the remaining conditions.** Done.
-10. **Tests from MACRO** programs, and the VMS probe.
+10. **Tests from MACRO** programs, and the VMS probe. The probe is written
+    (`testdata/mth77`); its VAX run, and what follows from it, are to come.
 11. **Close-out:** CLAUDE.md, MANUAL.md's RTL section, HELP.
 
 ## Progress log
@@ -794,3 +796,24 @@ be corrected.
   each of 10 changes: a wrong multiplier 24 or increment 8, 23 bits 6, the wrong scale 8, no
   store 8, a failed store not signaled 2, the setting reversed 11 or ignored 2, a generator
   with 16 values 1, a fixed seed 2.
+- **2026-10-30:** Subtask 10, the probe. `testdata/mth77/gen.go` writes `mth77.mar`, 1,950
+  lines of output from one table of cases and one driver: `MTH$RANDOM`; each family's
+  conditions and limits; Table 1-1's; the complex functions; the `OTS$` routines; the JSB entries
+  the manuals give; those they don't, with every register shown and markers in the rest; and a
+  sweep of 1,072 calls on arguments from a fixed sequence, in exact bits. Each of the open
+  questions above has its cases, and its README has the line's form and the VAX run's steps.
+  The handler continues only from the library's own conditions and the arithmetic traps, and
+  unwinds from anything else and from a second signal, because continuing from a fault runs the
+  instruction again and would hang VMS. That means Decision 8's continue from `SS$_ROPRAND` isn't
+  compared: VMS's would never come back.
+
+  `TestMTH77Runs` holds the program to its end on govax. `TestMTH77Oracle` skips until there's a
+  VAX run; then it compares line for line, masking what depends on the system (`mth77Masked`), and
+  the sweep to within `mth77UlpLimit` last bits, counting how many match exactly. The limit of 2
+  is a first guess, to look at again with the results.
+
+  The dry run found a bug in govax, in `corevms`: an `$UNWIND` from a condition a JSB entry signaled
+  removed one frame too many. A JSB routine has no stub frame, its condition being raised in its
+  caller's frame, but `requestUnwind` counted one, so it listed that frame twice, and the first
+  copy's return address became a second `RET`. `conditionDispatch.hasStubFrame` now tells them
+  apart, and `TestUnwindFromJSB` fails without it. No earlier test unwound from a JSB entry.
