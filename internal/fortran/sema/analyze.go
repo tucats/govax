@@ -306,6 +306,8 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 		Labels: map[int]*Label{},
 		byName: map[string]*Symbol{},
 
+		structs: map[string]*Structure{},
+
 		GFloating: a.gFloating,
 	}
 	a.unit = u

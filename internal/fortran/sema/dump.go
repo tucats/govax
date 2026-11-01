@@ -60,6 +60,10 @@ func Dump(p *Program) string {
 			}
 		}
 
+		for _, st := range u.Structures {
+			b.WriteString(dumpStructure(st))
+		}
+
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
 
 		for _, c := range u.Commons {

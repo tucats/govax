@@ -7,8 +7,10 @@ import (
 
 // declarations is the first walk over a unit's statements: the type
 // statements, DIMENSION statements, COMMON statements, PARAMETER
-// statements, and EXTERNAL and INTRINSIC statements, in order (so that a
-// constant may be used in the declarations after its definition), the
+// statements, EXTERNAL and INTRINSIC statements, and structure
+// declarations, in order (so that a constant may be used in the
+// declarations after its definition, and a structure in the RECORD
+// statements after it), the
 // EQUIVALENCE, DATA, and SAVE statements, kept for when every declaration
 // is known, and the order of every statement
 // (Figure 1-1, order.go). It also finds the statement function
@@ -55,6 +57,9 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.NamelistStmt:
 			a.namelistStatement(s)
+
+		case *ast.StructureStmt:
+			a.structureStatement(s)
 		}
 	}
 }

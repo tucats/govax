@@ -86,6 +86,12 @@ type Unit struct {
 	// when they are in D_floating.
 	GFloating bool
 
+	// Structures are the unit's structure declarations, nested ones
+	// included, in the order they begin (structure.go); structs are the
+	// named ones by name, which RECORD statements look in.
+	Structures []*Structure
+	structs    map[string]*Structure
+
 	byName map[string]*Symbol
 
 	// calls are the unit's references to routines, which Analyze checks

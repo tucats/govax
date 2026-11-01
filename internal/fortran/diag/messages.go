@@ -144,6 +144,54 @@ var messages = map[string]kind{
 
 	// Semantic analysis's messages (internal/fortran/sema).
 
+	// Structure declarations' fields and layout (sections 4.15.1 to
+	// 4.15.3; sema/structure.go).
+
+	// STRUCTNAME is an outermost structure declaration without a name,
+	// which only a nested one may leave out.
+	"STRUCTNAME": {Error, "this structure declaration needs a name: STRUCTURE /name/"},
+
+	// STRUCTFIELDS is a field list where there can't be one, or none
+	// where there must be: the text says which.
+	"STRUCTFIELDS": {Error, "%s"},
+
+	// DUPSTRUCT is a second structure of one name in a unit.
+	"DUPSTRUCT": {Error, "a structure named %s is already declared, at line %d"},
+
+	// STRUCTEMPTY is a structure declaration with no fields.
+	"STRUCTEMPTY": {Error, "this structure declaration declares no fields"},
+
+	// NOSTRUCT is a RECORD statement naming a structure not declared
+	// before it.
+	"NOSTRUCT": {Error, "there is no structure named %s declared before this statement"},
+
+	// RECURSTRUCT is a RECORD statement inside a structure's declaration
+	// naming that structure, or one it is nested in.
+	"RECURSTRUCT": {Error, "the structure %s can't contain itself"},
+
+	// DUPFIELD is a second field of one name at one level of a
+	// structure (a union's maps' fields are at the structure's level).
+	"DUPFIELD": {Error, "this structure already has a field named %s, declared at line %d"},
+
+	// FIELDDIM is a field's array bound that isn't a constant expression:
+	// fields can't be adjustable or assumed-size arrays.
+	"FIELDDIM": {Error, "the bounds of the field %s must be constants"},
+
+	// FIELDLEN is a CHARACTER*(*) field: a field's length must be known.
+	"FIELDLEN": {Error, "the field %s can't have a passed length, CHARACTER*(*)"},
+
+	// FIELDOP is a field named like an operator or logical constant,
+	// which a reference can't reach: R.EQ.X is a comparison (section
+	// 2.2.5.2's note).
+	"FIELDOP": {Warning, "a field named %s can't be referenced, since .%[1]s. is an operator or constant"},
+
+	// FILLINIT is %FILL with initial values: an unnamed field is always
+	// undefined (section 4.15.1).
+	"FILLINIT": {Error, "%%FILL can't be given initial values"},
+
+	// STRUCTSIZE is a structure too long for a longword to measure.
+	"STRUCTSIZE": {Error, "the structure %s is too large: it takes more than 2147483647 bytes"},
+
 	// Program units.
 
 	// DUPUNIT is a second program unit or entry point with a name the file

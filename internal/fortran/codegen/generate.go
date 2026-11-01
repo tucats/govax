@@ -504,7 +504,32 @@ func (g *routineGen) writeMap(w *Writer) {
 		w.Comment("  " + g.names.symbol(name) + " is " + g.r.Name + "." + name)
 	}
 
+	writeStructures(w, g.r.Unit.Structures)
+
 	w.Comment("")
+}
+
+// writeStructures writes the layout of each of a unit's structures in its
+// storage map: each field's offset in the structure, name, and type, and
+// for a field in a union which map holds it.
+func writeStructures(w *Writer, list []*sema.Structure) {
+	for _, s := range list {
+		w.Comment(fmt.Sprintf("  Structure %s, %d bytes", s.Display(), s.Size))
+
+		width := 4
+		for _, f := range s.Fields {
+			width = max(width, len(f.Name))
+		}
+
+		for _, f := range s.Fields {
+			text := fmt.Sprintf("    +%-5d %-*s  %s", f.Offset, width, f.Name, f.TypeText())
+			if f.Union != nil {
+				text += fmt.Sprintf(", map %d of the union at +%d", f.Map, f.Union.Offset)
+			}
+
+			w.Comment(text)
+		}
+	}
 }
 
 // typeText is a variable's type, with an array's bounds: INTEGER,

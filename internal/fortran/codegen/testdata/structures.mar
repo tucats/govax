@@ -1,0 +1,66 @@
+	.TITLE	TEST
+
+; Storage map for SHAPES, the main program
+;   DATE  REAL  $LOCAL+0  SHAPES.DATE
+;   Structure /DATE/, 4 bytes
+;     +0     DAY    LOGICAL*1
+;     +1     MONTH  LOGICAL*1
+;     +2     YEAR   INTEGER*2
+;   Structure /APPOINTMENT/, 89 bytes
+;     +0     APP_DATE  /DATE/
+;     +4     APP_TIME  /TIME/ (1:2)
+;     +8     APP_MEMO  CHARACTER*20 (1:4)
+;     +88    APP_FLAG  LOGICAL*1
+;   Structure /TIME/, 2 bytes
+;     +0     HOUR    LOGICAL*1
+;     +1     MINUTE  LOGICAL*1
+;   Structure /STR/, 11 bytes
+;     +0     TAG   INTEGER
+;     +4     FLT   REAL, map 1 of the union at +4
+;     +8     CHR   CHARACTER*2, map 1 of the union at +4
+;     +4     INT   INTEGER*2, map 2 of the union at +4
+;     +10    LOG   LOGICAL*1
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SHAPES.DATE:
+	.BLKL	1			; DATE
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Structure declarations: each one's layout is in the storage map.
+;    2  C     A structure makes no storage, so the program's variables are as
+;    3  C     they would be without them. (Records are Phase 82's subtask 3.)
+;    4        PROGRAM SHAPES
+	.ENTRY	SHAPES,^M<>
+;    5        STRUCTURE /DATE/
+;    6          LOGICAL*1 DAY, MONTH
+;    7          INTEGER*2 YEAR
+;    8        END STRUCTURE
+;    9        STRUCTURE /APPOINTMENT/
+;   10          RECORD /DATE/ APP_DATE
+;   11          STRUCTURE /TIME/ APP_TIME(2)
+;   12            LOGICAL*1 HOUR, MINUTE
+;   13          END STRUCTURE
+;   14          CHARACTER*20 APP_MEMO(4)
+;   15          LOGICAL*1 APP_FLAG
+;   16        END STRUCTURE
+;   17        STRUCTURE /STR/
+;   18          INTEGER*4 TAG
+;   19          UNION
+;   20            MAP
+;   21              REAL*4 FLT
+;   22              CHARACTER*2 CHR
+;   23            END MAP
+;   24            MAP
+;   25              INTEGER*2 INT
+;   26            END MAP
+;   27          END UNION
+;   28          LOGICAL*1 LOG
+;   29        END STRUCTURE
+;   30        DATE = 1.5
+	MOVL	#^X000040C0,SHAPES.DATE	; 1.5
+;   31        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	SHAPES

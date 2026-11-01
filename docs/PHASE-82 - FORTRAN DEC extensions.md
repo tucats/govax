@@ -2,7 +2,7 @@
 
 **Status:** in progress: subtask 1, the survey (Part A below), done
 2026-11-01 and reviewed by the author the same day ("The author's
-answers"). Needs Phase 79 (subprograms).
+answers"); subtask 2, structure declarations, done 2026-11-01. Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -532,7 +532,7 @@ further Alpha-era directive; out, unless the author wants it.
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (done 2026-11-01): Part A.
-2. **STRUCTURE and its layout:** structures, UNION, MAP, `%FILL`,
+2. **STRUCTURE and its layout** (done 2026-11-01): structures, UNION, MAP, `%FILL`,
    PARAMETER inside, nested structures and RECORD fields, every rule's
    message, the packed layout with the manual's examples as tests, the
    storage map's structures.
@@ -586,3 +586,30 @@ further Alpha-era directive; out, unless the author wants it.
 - **2026-11-01:** The author's answers: AUTOMATIC, STATIC, and VOLATILE
   by the HP manual (groundwork for a later reentrancy phase); COMPLEX on
   octaword boundaries under `/ALIGN`; no `/ALIGN` on OPTIONS.
+- **2026-11-01:** Subtask 2, structure declarations. `sema/structure.go`:
+  a `Structure` per declaration (nested ones too) in the unit's own table
+  (`Unit.Structures`, and `structs` by name, which RECORD statements will
+  look in), its `Field`s in declaration order (a union's maps' fields
+  among them, at the structure's level, each with its `Union` and `Map`;
+  `%FILL` fields named so), laid out packed by `structBuilder` (a union
+  as long as its longest map, each map from the union's offset), and its
+  `FieldInitial`s from the field declarations' values (by data.go's
+  `dataValues` and `initialBytes`, so DATA's rules and messages hold; a
+  later map's values replace an earlier one's bytes). PARAMETER inside a
+  structure defines the unit's constant. A STRUCTURE statement is now
+  `handled`, so a unit with only structures compiles; RECORD and field
+  references stay NOTIMPL until subtask 3. New messages: STRUCTNAME,
+  STRUCTFIELDS, DUPSTRUCT, STRUCTEMPTY, NOSTRUCT, RECURSTRUCT, DUPFIELD,
+  FIELDDIM, FIELDLEN, FIELDOP (a warning: a field named EQ, TRUE, ...),
+  FILLINIT, STRUCTSIZE. A CDEC$ directive inside a structure is NOTIMPL
+  (subtask 8's OPTIONS groups). The storage map lists each structure's
+  fields with their offsets (`codegen`'s `writeStructures`), and sema's
+  dump each structure. Tests: `sema/testdata/structures.for`, the manual's
+  examples, whose sizes match its own (STRA 5, STRB 18, STR 11, DATE 4,
+  APPOINTMENT 89, WORDS_LONG 6), with initial values, `%FILL`, a nested
+  unnamed structure, and a union in a map; 31 `TestErrors` cases; the
+  codegen golden `structures.for`. Choices of ours, unconfirmed: a union
+  with one map, or a map with no fields, is allowed (the manual's syntax
+  shows two or more maps); a structure with no field declarations at all
+  is an error (4.15's "one or more"); a field's initial values follow
+  DATA's conversions (Phase 76's choices).

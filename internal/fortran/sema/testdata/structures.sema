@@ -1,0 +1,60 @@
+== main program LAYOUT
+  LAYOUT                  program unit
+  NB        INTEGER       constant         = 3
+  DATE      REAL          variable         $LOCAL+0
+  structure /STRA/ is 5 bytes
+    CHR         CHARACTER*1         +0
+    INT         INTEGER             +1
+  structure /STRB/ is 18 bytes
+    FLT         REAL*8              +0
+    STR         /STRA/ (1:2)        +8
+  structure /STR/ is 11 bytes
+    TAG         INTEGER             +0
+    FLT         REAL                +4  map 1 of the union at +4
+    CHR         CHARACTER*2         +8  map 1 of the union at +4
+    INT         INTEGER*2           +4  map 2 of the union at +4
+    LOG         LOGICAL*1           +10
+  structure /DATE/ is 4 bytes
+    DAY         LOGICAL*1           +0
+    MONTH       LOGICAL*1           +1
+    YEAR        INTEGER*2           +2
+  structure /APPOINTMENT/ is 89 bytes
+    APP_DATE    /DATE/              +0
+    APP_TIME    /TIME/ (1:2)        +4
+    APP_MEMO    CHARACTER*20 (1:4)  +8
+    APP_FLAG    LOGICAL*1           +88
+  structure /TIME/ is 2 bytes
+    HOUR        LOGICAL*1           +0
+    MINUTE      LOGICAL*1           +1
+  structure /WORDS_LONG/ is 6 bytes
+    WORD_0      INTEGER*2           +0  map 1 of the union at +0
+    WORD_1      INTEGER*2           +2  map 1 of the union at +0
+    WORD_2      INTEGER*2           +4  map 1 of the union at +0
+    LONG        INTEGER             +0  map 2 of the union at +0
+  structure /ITEM/ is 29 bytes
+    LEN         INTEGER*2           +0
+    CODE        INTEGER*2           +2
+    %FILL       INTEGER             +4
+    NAME        CHARACTER*4         +8
+    PAD         CHARACTER*2         +12
+    ARR         INTEGER*2 (0:2)     +14
+    PAIR        (structure at line 57) (1:2)  +20
+    WHOLE       INTEGER             +24  map 1 of the union at +24
+    HALF        INTEGER*2 (1:2)     +24  map 2 of the union at +24
+    B1          LOGICAL*1           +28  map 1 of the union at +28
+    initial +0 LEN INTEGER*2 = 04 00
+    initial +2 CODE INTEGER*2 = 19 03
+    initial +8 NAME CHARACTER*4 = 41 42 43 44
+    initial +12 PAD CHARACTER*2 = 58 20
+    initial +14 ARR(0) INTEGER*2 = 01 00
+    initial +16 ARR(1) INTEGER*2 = 07 00
+    initial +18 ARR(2) INTEGER*2 = 07 00
+    initial +24 WHOLE INTEGER = FF FF FF FF
+    initial +24 HALF(1) INTEGER*2 = 05 00
+    initial +26 HALF(2) INTEGER*2 = 05 00
+  structure at line 57 is 2 bytes
+    LO          LOGICAL*1           +0
+    HI          LOGICAL*1           +1
+  $LOCAL is 4 bytes
+75          DATE = 1.0
+76          END
