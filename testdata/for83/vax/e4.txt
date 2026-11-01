@@ -1,0 +1,4 @@
+      INTEGER*4 A
+      PARAMETER (A = 1)
+      INTEGER*4 A
+      PARAMETER (A = 1)

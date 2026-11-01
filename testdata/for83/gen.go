@@ -1542,16 +1542,17 @@ MOUNT DUA2 "testdata/disks/for83-exchange.dsk"
 COPY DUA2:[000000]STR83-VAX.TXT "testdata/str83/vax/str83-vax.txt"/HOST
 `)
 
-	for _, name := range []string{"FOR83-VAX.TXT", "FOR83B-VAX.TXT", "FOR83C-VAX.TXT", "FOR83.LOG", "DEF_OPC.ANL", "DEF_OPC.OBJ"} {
+	for _, name := range []string{"FOR83-VAX.TXT", "FOR83B-VAX.TXT", "FOR83C-VAX.TXT", "FOR83.LOG", "DEF_OPC.ANL", "E1.TXT", "E2.TXT", "E4.TXT", "E6.TXT"} {
 		fmt.Fprintf(&b, "COPY DUA2:[000000]%s \"testdata/for83/vax/%s\"/HOST\n", name, strings.ToLower(name))
 	}
 
+	// The libraries and the object byte for byte: as text they'd gain line ends.
 	for i := 1; i <= 9; i++ {
-		fmt.Fprintf(&b, "COPY DUA2:[000000]S%d.TLB \"testdata/for83/vax/s%d.tlb\"/HOST\n", i, i)
+		fmt.Fprintf(&b, "COPY DUA2:[000000]S%d.TLB \"testdata/for83/vax/s%d.tlb\"/HOST/BINARY/QUIET\n", i, i)
 	}
 
-	for _, name := range []string{"T2.TLB", "T3.TLB", "E1.TXT", "E2.TXT", "E4.TXT", "E6.TXT"} {
-		fmt.Fprintf(&b, "COPY DUA2:[000000]%s \"testdata/for83/vax/%s\"/HOST\n", name, strings.ToLower(name))
+	for _, name := range []string{"T1.TLB", "T2.TLB", "T3.TLB", "DEF_OPC.OBJ"} {
+		fmt.Fprintf(&b, "COPY DUA2:[000000]%s \"testdata/for83/vax/%s\"/HOST/BINARY/QUIET\n", name, strings.ToLower(name))
 	}
 
 	b.WriteString("DISMOUNT DUA2\n")

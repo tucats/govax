@@ -1,0 +1,323 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ WRITE SYS$OUTPUT F$TIME()
+ 1-NOV-2026 12:39:20.54
+$ !
+$ ! The STR$ routines.
+$ DEFINE/USER_MODE SYS$OUTPUT STR83.MLG
+$ MACRO/NOLIST STR83
+$ LINK/NOMAP STR83
+$ DEFINE/USER_MODE SYS$OUTPUT STR83-VAX.TXT
+$ RUN STR83
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Part A: FORRTL's system subroutines.
+$ DEFINE/USER_MODE SYS$OUTPUT FOR83.MLG
+$ MACRO/NOLIST FOR83
+$ LINK/NOMAP FOR83,FOR83/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ DEFINE/USER_MODE SYS$OUTPUT FOR83-VAX.TXT
+$ RUN FOR83
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Part B's files: FOR83D.DAT holds records, FOR83E.DAT none.
+$ CREATE FOR83D.DAT
+12X4
+LINE 2
+LINE 3
+$ CREATE FOR83E.DAT
+$ DEFINE/USER_MODE SYS$OUTPUT FOR83B.MLG
+$ MACRO/NOLIST FOR83B
+$ LINK/NOMAP FOR83B,FOR83/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ @FOR83R/OUTPUT=FOR83B-VAX.TXT FOR83B 64
+  $STATUS == "%X00000001"
+  $STATUS == "%X00000001"
+%LINK-W-PSCNXR, transfer address is not in executable, relocatable psect
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-NUDFSYMS, 11 undefined symbols:
+%LINK-I-UDFSYM, 	LCK$K_NLMODE 
+%LINK-I-UDFSYM, 	LKI$_RESNAM 
+%LINK-I-UDFSYM, 	LNM$_STRING 
+%LINK-I-UDFSYM, 	OPC$_RQ_RQST 
+%LINK-I-UDFSYM, 	PQL$_ASTLM 
+%LINK-I-UDFSYM, 	PRC$M_DETACH 
+%LINK-I-UDFSYM, 	PRV$M_CMKRNL 
+%LINK-I-UDFSYM, 	PRV$V_CMKRNL 
+%LINK-I-UDFSYM, 	PSL$C_USER 
+%LINK-I-UDFSYM, 	PSL$M_IV 
+%LINK-I-UDFSYM, 	PSL$V_IV 
+%LINK-W-USEUNDEF, undefined symbol LNM$_STRING referenced
+	in psect DATA offset %X00000030
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PSL$C_USER referenced
+	in psect DATA offset %X00000038
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PSL$M_IV referenced
+	in psect DATA offset %X0000003C
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PSL$V_IV referenced
+	in psect DATA offset %X00000040
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PRV$V_CMKRNL referenced
+	in psect DATA offset %X00000044
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PRV$M_CMKRNL referenced
+	in psect DATA offset %X00000048
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PRC$M_DETACH referenced
+	in psect DATA offset %X00000084
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol PQL$_ASTLM referenced
+	in psect DATA offset %X00000088
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol LCK$K_NLMODE referenced
+	in psect DATA offset %X0000008C
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol LKI$_RESNAM referenced
+	in psect DATA offset %X00000090
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol OPC$_RQ_RQST referenced
+	in psect DATA offset %X00000094
+	in module LNK83 file DUA2:[000000]LNK83.OBJ;1
+  $STATUS == "%X10648268"
+%ANALYZE-I-ERRORS, DUA2:[000000]DEF_OPC.OBJ;1                              0 errors
+  $STATUS == "%X10000001"
+Directory of TEXT library DUA2:[000000]T1.TLB;1 on  1-NOV-2026 12:39:25
+Creation date:   1-NOV-2026 12:39:25      Creator:  Librarian T09-20
+Revision date:   1-NOV-2026 12:39:25      Library format:   3.0
+Number of modules:      1                 Max. key length:  39
+Other entries:          0                 Preallocated index blocks:     11
+Recoverable deleted blocks:      0        Total index blocks used:        1
+Max. Number history records:      20      Library history records:        0
+
+TXA              inserted  1-NOV-2026 12:39:25
+%LIBRAR-S-INSERTED, module $MOD_B inserted in DUA2:[000000]T1.TLB;1
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+Directory of TEXT library DUA2:[000000]T1.TLB;1 on  1-NOV-2026 12:39:25
+Creation date:   1-NOV-2026 12:39:25      Creator:  Librarian T09-20
+Revision date:   1-NOV-2026 12:39:25      Library format:   3.0
+Number of modules:      3                 Max. key length:  39
+Other entries:          0                 Preallocated index blocks:     11
+Recoverable deleted blocks:      0        Total index blocks used:        1
+Max. Number history records:      20      Library history records:        2
+
+$MOD_B           inserted  1-NOV-2026 12:39:25
+CMOD             inserted  1-NOV-2026 12:39:25
+TXA              inserted  1-NOV-2026 12:39:25
+%LIBRAR-E-DUPMOD, module CMOD from file DUA2:[000000]TXC.TXT;1 already in DUA2:[000000]T1.TLB;1
+%LIBRAR-E-INSERTERR, error inserting CMOD in DUA2:[000000]T1.TLB;1
+-LBR-E-DUPKEY, duplicate key in index
+  $STATUS == "%X108680E2"
+  $STATUS == "%X10000001"
+%LIBRAR-S-INSERTED, module TXB inserted in DUA2:[000000]T1.TLB;1
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+%LIBRAR-E-MODNAMLNG, illegal module name (A_NAME_OF_FORTY_CHARACTERS_IS_ONE_TOO_MANY) of 42 characters in DUA2:[000000]TXA.TXT;1
+  $STATUS == "%X10868102"
+  $STATUS == "%X10000001"
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NAMES\
+  $STATUS == "%X10000001"
+
+Dump of file DUA2:[000000]E2.TXT;1 on  1-NOV-2026 12:39:25.37
+File ID (54,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 63 (003F) bytes, RFA(0001,0000,0000)
+
+ 6E6F206E 65687420 2C747865 6E20656E 696C206B 6E616C62 20612020 20202043 C     a blank line next, then on 000000
+   626174 2061206E 65687420 2C737265 74636172 61686320 32333120 666F2065 e of 132 characters, then a tab. 000020
+
+Record number 2 (00000002), 0 (0000) bytes, RFA(0001,0000,0042)
+
+
+Record number 3 (00000003), 132 (0084) bytes, RFA(0001,0000,0044)
+
+ 32313039 38373635 34333231 30393837 36353433 32313039 38373635 34333243 C2345678901234567890123456789012 000000
+ 34333231 30393837 36353433 32313039 38373635 34333231 30393837 36353433 34567890123456789012345678901234 000020
+ 36353433 32313039 38373635 34333231 30393837 36353433 32313039 38373635 56789012345678901234567890123456 000040
+ 38373635 34333231 30393837 36353433 32313039 38373635 34333231 30393837 78901234567890123456789012345678 000060
+                                                                32313039 9012............................ 000080
+
+Record number 4 (00000004), 10 (000A) bytes, RFA(0001,0000,00CA)
+
+                                                  5453 52494620 42415409 .TAB FIRST...................... 000000
+
+Directory DUA2:[000000]
+
+E3.TXT;1                   1/3      
+
+Total of 1 file, 1/3 blocks.
+      INTEGER*4 A
+      PARAMETER (A = 1)
+      INTEGER*4 A
+      PARAMETER (A = 1)
+%LIBRAR-E-LOOKUPERR, error looking up NOSUCH in DUA2:[000000]T1.TLB;1
+-LBR-E-KEYNOTFND, key not found
+  $STATUS == "%X108680F2"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+Directory of TEXT library DUA2:[000000]S9.TLB;1 on  1-NOV-2026 12:39:25
+Creation date:   1-NOV-2026 12:39:25      Creator:  Librarian T09-20
+Revision date:   1-NOV-2026 12:39:25      Library format:   3.0
+Number of modules:      7                 Max. key length:  39
+Other entries:          0                 Preallocated index blocks:      1
+Recoverable deleted blocks:      0        Total index blocks used:        1
+Max. Number history records:      20      Library history records:        0
+Library is in DCX data reduced format
+
+$MOD_B           inserted  1-NOV-2026 12:39:25
+A_NAME_OF_THIRTY_NINE_CHARACTERS_LONG_ inserted  1-NOV-2026 12:39:25
+LOWER_CASE       inserted  1-NOV-2026 12:39:25
+TWO              inserted  1-NOV-2026 12:39:25
+TXA              inserted  1-NOV-2026 12:39:25
+TXB              inserted  1-NOV-2026 12:39:25
+TXD              inserted  1-NOV-2026 12:39:25
+
+Dump of file DUA2:[000000]E6.TXT;1 on  1-NOV-2026 12:39:25.57
+File ID (60,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 63 (003F) bytes, RFA(0001,0000,0000)
+
+ 6E6F206E 65687420 2C747865 6E20656E 696C206B 6E616C62 20612020 20202043 C     a blank line next, then on 000000
+   626174 2061206E 65687420 2C737265 74636172 61686320 32333120 666F2065 e of 132 characters, then a tab. 000020
+
+Record number 2 (00000002), 0 (0000) bytes, RFA(0001,0000,0042)
+
+
+Record number 3 (00000003), 132 (0084) bytes, RFA(0001,0000,0044)
+
+ 32313039 38373635 34333231 30393837 36353433 32313039 38373635 34333243 C2345678901234567890123456789012 000000
+ 34333231 30393837 36353433 32313039 38373635 34333231 30393837 36353433 34567890123456789012345678901234 000020
+ 36353433 32313039 38373635 34333231 30393837 36353433 32313039 38373635 56789012345678901234567890123456 000040
+ 38373635 34333231 30393837 36353433 32313039 38373635 34333231 30393837 78901234567890123456789012345678 000060
+                                                                32313039 9012............................ 000080
+
+Record number 4 (00000004), 10 (000A) bytes, RFA(0001,0000,00CA)
+
+                                                  5453 52494620 42415409 .TAB FIRST...................... 000000
+  $STATUS == "%X10000001"
+Directory of TEXT library DUA2:[000000]T2.TLB;1 on  1-NOV-2026 12:39:25
+Creation date:   1-NOV-2026 12:39:25      Creator:  Librarian T09-20
+Revision date:   1-NOV-2026 12:39:25      Library format:   3.0
+Number of modules:      2                 Max. key length:  31
+Other entries:          0                 Preallocated index blocks:      3
+Recoverable deleted blocks:      0        Total index blocks used:        1
+Max. Number history records:      20      Library history records:        0
+
+TXA              inserted  1-NOV-2026 12:39:25
+TXC              inserted  1-NOV-2026 12:39:25
+  $STATUS == "%X10000001"
+
+Directory DUA2:[000000]
+
+S1.TLB;1                  13/15        1-NOV-2026 12:39:25.20
+S2.TLB;1                  15/15        1-NOV-2026 12:39:25.22
+S3.TLB;1                  16/18        1-NOV-2026 12:39:25.24
+S4.TLB;1                  17/18        1-NOV-2026 12:39:25.28
+S5.TLB;1                  19/21        1-NOV-2026 12:39:25.30
+S6.TLB;1                  21/21        1-NOV-2026 12:39:25.34
+S7.TLB;1                  21/21        1-NOV-2026 12:39:25.43
+S8.TLB;1                   4/102       1-NOV-2026 12:39:25.44
+S9.TLB;1                   5/102       1-NOV-2026 12:39:25.52
+T1.TLB;1                  21/102       1-NOV-2026 12:39:25.19
+T2.TLB;1                   5/21        1-NOV-2026 12:39:25.58
+T3.TLB;1                  13/102       1-NOV-2026 12:39:25.60
+
+Total of 12 files, 170/558 blocks.
+
+Dump of file DUA2:[000000]TXB.TXT;1 on  1-NOV-2026 12:39:25.62
+File ID (43,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 63 (003F) bytes, RFA(0001,0000,0000)
+
+ 6E6F206E 65687420 2C747865 6E20656E 696C206B 6E616C62 20612020 20202043 C     a blank line next, then on 000000
+   626174 2061206E 65687420 2C737265 74636172 61686320 32333120 666F2065 e of 132 characters, then a tab. 000020
+
+Record number 2 (00000002), 0 (0000) bytes, RFA(0001,0000,0042)
+
+
+Record number 3 (00000003), 132 (0084) bytes, RFA(0001,0000,0044)
+
+ 32313039 38373635 34333231 30393837 36353433 32313039 38373635 34333243 C2345678901234567890123456789012 000000
+ 34333231 30393837 36353433 32313039 38373635 34333231 30393837 36353433 34567890123456789012345678901234 000020
+ 36353433 32313039 38373635 34333231 30393837 36353433 32313039 38373635 56789012345678901234567890123456 000040
+ 38373635 34333231 30393837 36353433 32313039 38373635 34333231 30393837 78901234567890123456789012345678 000060
+                                                                32313039 9012............................ 000080
+
+Record number 4 (00000004), 10 (000A) bytes, RFA(0001,0000,00CA)
+
+                                                  5453 52494620 42415409 .TAB FIRST...................... 000000
+
+Directory DUA2:[000000]
+
+000000.DIR;1               4/6      
+BACKUP.SYS;1               0/0      
+BADBLK.SYS;1               3/3      
+BADLOG.SYS;1               0/0      
+BITMAP.SYS;1              27/27     
+CONTIN.SYS;1               0/0      
+CORIMG.SYS;1               0/0      
+DEF_OPC.ANL;1            160/162    
+DEF_OPC.MAR;1              1/3      
+DEF_OPC.OBJ;1             13/15     
+E1.TXT;1                   1/3      
+E2.TXT;1                   1/3      
+E3.TXT;1                   1/3      
+E4.TXT;1                   1/3      
+E6.TXT;1                   1/3      
+FOR017.DAT;3               0/0      
+FOR017.DAT;2               0/0      
+FOR017.DAT;1               0/0      
+FOR83-VAX.TXT;1           10/12     
+FOR83.COM;1                8/9      
+FOR83.EXE;1               26/27     
+FOR83.LOG;1                0/36     
+FOR83.MAR;1               86/87     
+FOR83.OBJ;1               40/42     
+FOR83.OPT;1                1/3      
+FOR83B-VAX.TXT;1          40/42     
+FOR83B.EXE;1              45/45     
+FOR83B.MAR;1             113/114    
+FOR83B.OBJ;1              72/72     
+FOR83C-VAX.TXT;1          83/84     
+FOR83C.EXE;1              53/54     
+FOR83C.MAR;1             131/132    
+FOR83C.OBJ;1              83/84     
+FOR83D.DAT;1               1/3      
+FOR83E.DAT;1               0/0      
+FOR83R.COM;1               2/3      
+INDEXF.SYS;1            5886/5886   
+LNK83.EXE;1                4/6      
+LNK83.MAR;1                2/3      
+LNK83.OBJ;1                3/3      
+S1.TLB;1                  13/15     
+S2.TLB;1                  15/15     
+S3.TLB;1                  16/18     
+S4.TLB;1                  17/18     
+S5.TLB;1                  19/21     
+S6.TLB;1                  21/21     
+S7.TLB;1                  21/21     
+S8.TLB;1                   4/102    
+S9.TLB;1                   5/102    
+SECURITY.SYS;1             1/6      
+STR83-VAX.TXT;1           25/27     
+STR83.EXE;1               78/78     
+STR83.MAR;1              251/252    
+STR83.OBJ;1              138/138    
+T1.TLB;1                  21/102    
+T2.TLB;1                   5/21     
+T3.TLB;1                  13/102    
+TXA.TXT;1                  1/3      
+TXB.TXT;1                  1/3      
+TXC.TXT;1                  1/3      
+TXD.TXT;1                  0/0      
+VOLSET.SYS;1               0/0      
+
+Total of 62 files, 7568/8046 blocks.

@@ -1,0 +1,889 @@
+#1 SIGNAL continue
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#2 SIGNAL error continue
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#3 SIGNAL severe continue
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#4 SIGNAL warning continue
+ =c n=3 cond=08018000 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#5 SIGNAL success continue
+ =c n=3 cond=08018001 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#6 SIGNAL with FAO args
+ =c n=6 cond=0801800A arg=00000002 00000007 pc=+00000046 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#7 SIGNAL two conditions
+ =c n=6 cond=0801800A arg=00000000 08018012 pc=+00000046 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#8 SIGNAL handler sets R0 R1
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=33333333 r1=44444444
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#9 SIGNAL unwind
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =u the unwind's call of the handler
+ =back r0=11111111
+  $STATUS == "%X00000001"
+#10 SIGNAL unwind depth
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#11 SIGNAL unwind new PC
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =u the unwind's call of the handler
+ =at new PC r0=11111111 r1=22222222
+  $STATUS == "%X00000001"
+#12 SIGNAL unwind R0 set
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000003C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =u the unwind's call of the handler
+ =back r0=33333333
+  $STATUS == "%X00000001"
+#13 SIGNAL system code
+ =c n=3 cond=0000000C arg=00000000 00000000 pc=+00000038 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#14 STOP unwind
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#15 STOP unwind depth
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+%NONAME-F-NOMSG, Message number 08018004
+  $STATUS == "%X18018004"
+#16 STOP severity rule, unwind
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#17 STOP with FAO args, unwind
+ =c n=5 cond=0801800C arg=00000001 00000007 pc=+00000027 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#18 STOP continue
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+%NONAME-F-NOMSG, Message number 08018004
+  $STATUS == "%X18018004"
+#19 STOP handler sets R0, continue
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+%NONAME-F-NOMSG, Message number 08018004
+  $STATUS == "%X18018004"
+#20 SIGNAL no args
+ =c n=3 cond=0015825C arg=00000000 00000000 pc=+0000002B psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =after call r0=11111111 r1=22222222
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#21 STOP no args
+ =c n=3 cond=0015825C arg=00000000 00000000 pc=+0000002B psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=11111111 r1=22222222
+ =u the unwind's call of the handler
+ =back r0=11111111
+  $STATUS == "%X00000001"
+#22 resignal to the outer frame
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =after call r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#23 resignal, outer unwinds
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#24 ESTABLISH and REVERT
+ =REVERT with the frame's handler, minus HND r0=00000000
+ =0(FP) r0=00000000
+ =REVERT with none r0=00000000
+ =ESTABLISH with none r0=00000000
+ =0(FP) minus HND r0=00000000
+ =ESTABLISH again, old minus HND r0=00000000
+ =0(FP) r0=00001000
+ =ESTABLISH 0 r0=00001000
+ =0(FP) r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#25 ESTABLISH no args
+ =R0 minus HND r0=00000000
+ =0(FP) r0=00001E88
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#26 REVERT then signal goes outward
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+0000002A psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00001E88 r1=00000000
+ =after call r0=00001E88
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#27 MATCH_COND
+ =first r0=00000001
+ =second r0=00000002
+ =none r0=00000000
+ =severity ignored r0=00000001
+ =control bits ignored r0=00000001
+ =facility differs r0=00000000
+ =message differs r0=00000000
+ =system, facility differs r0=00000001
+ =system, severity r0=00000001
+ =list has the facility bit r0=00000000
+ =zero r0=00000001
+ =no list r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#28 MATCH_COND no args
+ =R0 r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#29 SIG_TO_RET as the handler
+ =back r0=08018002
+  $STATUS == "%X00000001"
+#30 SIG_TO_RET called by the handler
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=08018002
+  $STATUS == "%X00000001"
+#31 SIG_TO_RET on STOP
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=08018004
+  $STATUS == "%X00000001"
+#32 SIG_TO_RET no args
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =c n=5 cond=0000000C arg=00000005 2FFC000C pc=+0001670B psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=2FFC0000 r1=00001E88
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#33 SIG_TO_RET one arg
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =c n=5 cond=0000000C arg=00000004 00001E94 pc=+000166AE psl=03C00001
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=000002A1
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#34 SIG_TO_STOP as the handler, outer continues
+%NONAME-F-NOMSG, Message number 08018004
+  $STATUS == "%X18018004"
+#35 SIG_TO_STOP as the handler, outer unwinds
+%NONAME-F-NOMSG, Message number 08018004
+  $STATUS == "%X18018004"
+#36 SIG_TO_STOP called by the handler, resignal, outer unwinds
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h SIG_TO_STOP r0=00000001
+ =cond now 08018004
+ =c n=3 cond=08018004 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#37 SIG_TO_STOP on a fake array
+ =R0 r0=00000001
+ =condition now r0=08018004
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#38 SIG_TO_STOP on SS$_UNWIND
+ =R0 r0=00158234
+ =condition now r0=00000920
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#39 SIG_TO_STOP no args
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =c n=5 cond=0000000C arg=00000004 00001E8C pc=+000163B5 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00001E88 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#40 MOVF register, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#41 MOVF register, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000001D psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#42 MOVF register, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000001D psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#43 MOVF memory, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#44 MOVF memory, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#45 MOVF memory, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#46 MOVF deferred, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#47 MOVF deferred, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#48 MOVF deferred, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#49 MOVF autoincrement, FIXUP_FLT as handler
+ =operand and result r0=00000004 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#50 MOVF autoincrement, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000004 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#51 MOVF autoincrement, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000004 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#52 MOVF autodecrement, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#53 MOVF autodecrement, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#54 MOVF autodecrement, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#55 MOVF indexed, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#56 MOVF indexed, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000024 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#57 MOVF indexed, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000024 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=000040C0
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#58 MOVF immediate, FIXUP_FLT as handler
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000001D psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#59 MOVF immediate, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=0000000C
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#60 MOVF immediate, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=0000000C
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#61 ADDF2 first, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00004080
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#62 ADDF2 first, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00004080
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#63 ADDF2 first, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=00004120
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#64 ADDF2 second, FIXUP_FLT as handler
+ =operand and result r0=00004080 r1=00004080
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#65 ADDF2 second, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00004080 r1=00004080
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#66 ADDF2 second, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00004080 r1=00004120
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#67 MULF3 both, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#68 MULF3 both, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000002C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000002C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#69 MULF3 both, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000002C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000002C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=00004110
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#70 MOVD, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#71 MOVD, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#72 MOVD, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#73 MOVG, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#74 MOVG, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#75 MOVG, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00004018 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#76 MOVH, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#77 MOVH, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#78 MOVH, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=80004001 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#79 CVTFL, FIXUP_FLT as handler
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#80 CVTFL, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=00000000 r1=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#81 CVTFL, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000001
+ =operand and result r0=000040C0 r1=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#82 POLYF table, FIXUP_FLT as handler
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000002F psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#83 POLYF table, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000918
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#84 POLYF table, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000918
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000028 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#85 reserved decimal, FIXUP_FLT as handler
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+0000001D psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#86 reserved decimal, handler calls it
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000918
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#87 reserved decimal, with a new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000918
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000016 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#88 FIXUP_FLT with a reserved new operand
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000454
+ =c n=3 cond=00000454 arg=00000000 00000000 pc=+00000021 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#89 FIXUP_FLT of another condition
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =h FIXUP_FLT r0=00000918
+ =c n=3 cond=08018002 arg=00000000 00000000 pc=+00000023 psl=03C00000
+ =m n=4 frame=+00000040 depth=1 r0=00000001 r1=00000000
+ =u the unwind's call of the handler
+ =u the unwind's call of the handler
+  $STATUS == "%X00000001"
+#90 FIXUP_FLT no args
+ =R0 r0=00000918
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#91 FIXUP_FLT one arg
+ =R0 r0=00000918
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#92 INT_OVER: the settings it returns
+ =set from LONE r0=00000000
+ =set from LZERO r0=00000001
+ =set from LONE r0=00000000
+ =set from LTWO r0=00000001
+ =set from LTHREE r0=00000000
+ =set from LZERO r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#93 INT_OVER: in a routine enabled by its mask
+ =c n=3 cond=0000047C arg=00000000 00000000 pc=+FFFFFEEF psl=03C0002A
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =enabled routine r0=00000001
+ =disabled routine r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#94 INT_OVER: enable, then the operation here
+ =old r0=00000000
+ =c n=3 cond=0000047C arg=00000000 00000000 pc=+0000003E psl=03C0002A
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =did it r0=00000001
+ =old r0=00000001
+ =did it again r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#95 INT_OVER: enable, then call a routine
+ =callee with its own frame r0=00000000
+ =c n=3 cond=0000047C arg=00000000 00000000 pc=+00000045 psl=03C0002A
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =here, after r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#96 INT_OVER: no args
+ =R0 r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#97 INT_OVER: null
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00012689 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#98 DEC_OVER: the settings it returns
+ =set from LONE r0=00000000
+ =set from LZERO r0=00000001
+ =set from LONE r0=00000000
+ =set from LTWO r0=00000001
+ =set from LTHREE r0=00000000
+ =set from LZERO r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#99 DEC_OVER: in a routine enabled by its mask
+ =c n=3 cond=000004A4 arg=00000000 00000000 pc=+FFFFFEEE psl=03C00082
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=0000027A
+ =enabled routine r0=00000000
+ =disabled routine r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#100 DEC_OVER: enable, then the operation here
+ =old r0=00000000
+ =c n=3 cond=000004A4 arg=00000000 00000000 pc=+0000003F psl=03C00082
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=0000027A
+ =did it r0=00000000
+ =old r0=00000001
+ =did it again r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#101 DEC_OVER: enable, then call a routine
+ =callee with its own frame r0=00000000
+ =c n=3 cond=000004A4 arg=00000000 00000000 pc=+00000046 psl=03C00086
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=0000027A
+ =here, after r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#102 DEC_OVER: no args
+ =R0 r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#103 DEC_OVER: null
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0000F4A2 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#104 FLT_UNDER: the settings it returns
+ =set from LONE r0=00000000
+ =set from LZERO r0=00000001
+ =set from LONE r0=00000000
+ =set from LTWO r0=00000001
+ =set from LTHREE r0=00000000
+ =set from LZERO r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#105 FLT_UNDER: in a routine enabled by its mask
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+FFFFFEE3 psl=03C00040
+ =m n=4 frame=+00000000 depth=1 r0=00000001 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#106 FLT_UNDER: enable, then the operation here
+ =old r0=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000032 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#107 FLT_UNDER: enable, then call a routine
+ =callee with its own frame r0=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =c n=3 cond=000004C4 arg=00000000 00000000 pc=+00000039 psl=03C00040
+ =m n=4 frame=+00000000 depth=0 r0=00000001 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+#108 FLT_UNDER: no args
+ =R0 r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#109 FLT_UNDER: null
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+00011980 psl=03C00004
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00000000
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"

@@ -1,0 +1,580 @@
+$ ! FOR83R.COM - runs a program's cases, one per image. P1 is the program, P2 how
+$ ! many. Written by testdata/for83/gen.go.
+$ SET NOON
+$ SET NOVERIFY
+#1 FILNOTFOU continue
+ =c n=9 cond=001880EC arg=00000003 0000000C pc=+0002DD68 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=7FED4FC0 r1=00030CEC
+%FOR-F-FILNOTFOU, file not found
+  unit 12  file DUA2:[000000]NOSUCH.DAT;
+  user PC 00001765
+-RMS-E-FNF, file not found
+  $STATUS == "%X101880EC"
+#2 FILNOTFOU unwind
+ =c n=9 cond=001880EC arg=00000003 0000000C pc=+0002DC8A psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=7FED4FC0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=7FED4FC0
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#3 FILNOTFOU SIG_TO_RET
+ =c n=9 cond=001880EC arg=00000003 0000000C pc=+0002DBAC psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=7FED4FC0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001880EC
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#4 ENDDURREA continue
+ =c n=9 cond=001880C4 arg=00000003 0000000C pc=+0002DACE psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+%FOR-F-ENDDURREA, end-of-file during read
+  unit 12  file DUA2:[000000]FOR83E.DAT;1
+  user PC 00001A0E
+-RMS-E-EOF, end of file detected
+  $STATUS == "%X101880C4"
+#5 ENDDURREA unwind
+ =c n=9 cond=001880C4 arg=00000003 0000000C pc=+0002D9C4 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#6 ENDDURREA SIG_TO_RET
+ =c n=9 cond=001880C4 arg=00000003 0000000C pc=+0002D8BA psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001880C4
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#7 INPCONERR continue
+ =c n=13 cond=00188204 arg=00000003 0000000C pc=+0002D7B0 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =value 00000000
+ =after statement r0=00000001
+ =back r0=00000001
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#8 INPCONERR unwind
+ =c n=13 cond=00188204 arg=00000003 0000000C pc=+0002D6A2 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#9 INPCONERR SIG_TO_RET
+ =c n=13 cond=00188204 arg=00000003 0000000C pc=+0002D594 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=00188204
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#10 OUTCONERR continue
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002D486 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =after statement r0=0000003F
+ =back r0=00000001
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+
+ file FOR013.DAT:
+nit 13 still works
+#11 OUTCONERR unwind
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002D385 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+
+ file FOR013.DAT:
+nit 13 still works
+#12 OUTCONERR SIG_TO_RET
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002D284 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001881FA
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+
+ file FOR013.DAT:
+nit 13 still works
+#13 FORVARMIS continue
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002D183 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =after statement r0=0000003F
+ =back r0=00000001
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+***
+ file FOR013.DAT:
+nit 13 still works
+#14 FORVARMIS unwind
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002D082 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+***
+ file FOR013.DAT:
+nit 13 still works
+#15 FORVARMIS SIG_TO_RET
+ =c n=9 cond=001881FA arg=00000003 0000000C pc=+0002CF81 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001881FA
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+***
+ file FOR013.DAT:
+nit 13 still works
+#16 INVLOGUNI continue
+ =c n=9 cond=00188104 arg=00000003 000000C8 pc=+0002CF2F psl=03C00000
+ =m n=4 frame=+00000000 depth=2 r0=00000000 r1=00030CEC
+%FOR-F-INVLOGUNI, invalid logical unit number
+  unit 200  file 
+  user PC 0000263B
+  $STATUS == "%X10188104"
+#17 INVLOGUNI unwind
+ =c n=9 cond=00188104 arg=00000003 000000C8 pc=+0002CE4F psl=03C00000
+ =m n=4 frame=+00000000 depth=2 r0=00000000 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00000000
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#18 INVLOGUNI SIG_TO_RET
+ =c n=9 cond=00188104 arg=00000003 000000C8 pc=+0002CD6F psl=03C00000
+ =m n=4 frame=+00000000 depth=2 r0=00000000 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=00188104
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#19 SYNERRFOR continue
+ =c n=9 cond=001881F4 arg=00000003 0000000C pc=+0002CBE0 psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+%FOR-F-SYNERRFOR, syntax error in format
+  unit 12  file DUA2:[000000]FOR83W.DAT;1
+  user PC 000028FC
+  $STATUS == "%X101881F4"
+ file FOR83W.DAT:
+#20 SYNERRFOR unwind
+ =c n=9 cond=001881F4 arg=00000003 0000000C pc=+0002CADF psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ file FOR013.DAT:
+nit 13 still works
+#21 SYNERRFOR SIG_TO_RET
+ =c n=9 cond=001881F4 arg=00000003 0000000C pc=+0002C9DE psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001881F4
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ file FOR013.DAT:
+nit 13 still works
+#22 INFFORLOO continue
+ =c n=9 cond=001881E4 arg=00000003 0000000C pc=+0002C8DD psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+%FOR-F-INFFORLOO, infinite format loop
+  unit 12  file DUA2:[000000]FOR83W.DAT;1
+  user PC 00002C0C
+  $STATUS == "%X101881E4"
+ file FOR83W.DAT:
+
+#23 INFFORLOO unwind
+ =c n=9 cond=001881E4 arg=00000003 0000000C pc=+0002C7DC psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032AD0
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+
+ file FOR013.DAT:
+nit 13 still works
+#24 INFFORLOO SIG_TO_RET
+ =c n=9 cond=001881E4 arg=00000003 0000000C pc=+0002C6DB psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00032AD0 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001881E4
+ =value FFFFFFFF
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+
+ file FOR013.DAT:
+nit 13 still works
+#25 REWRITE no open continue
+ =c n=9 cond=001881AC arg=00000003 00000011 pc=+0002C5DA psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032BC8 r1=00030CEC
+%FOR-F-NO_CURREC, no current record
+  unit 17  file DUA2:[000000]FOR017.DAT;1
+  user PC 00002EED
+-RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+  $STATUS == "%X101881AC"
+#26 REWRITE no open unwind
+ =c n=9 cond=001881AC arg=00000003 00000011 pc=+0002C502 psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032BC8 r1=00030CEC
+ =u the unwind's call of the handler
+ =back r0=00032BC8
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#27 REWRITE no open SIG_TO_RET
+ =c n=9 cond=001881AC arg=00000003 00000011 pc=+0002C42A psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=00032BC8 r1=00030CEC
+ =h SIG_TO_RET r0=00000001
+ =u the unwind's call of the handler
+ =back r0=001881AC
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR013.DAT:
+nit 13 still works
+#28 formatted WRITE: signal, unwind, next statements
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000087 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000A23
+ =u the unwind's call of the handler
+ =back r0=00032C99
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+efore
+fter
+#29 formatted WRITE: signal, continue, end
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000087 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000A23
+ =continued r0=00032C99
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+efore
+artial
+#30 list WRITE: signal, unwind, next statements
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000081 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=00000A2A
+ =u the unwind's call of the handler
+ =back r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+efore
+fter
+#31 list WRITE: signal, continue, end
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000081 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=00000A2A
+ =continued r0=00000000
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+efore
+partial
+#32 unformatted WRITE: signal, unwind, next statements
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000005E psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=00000A2A
+ =u the unwind's call of the handler
+ =back r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+fter
+ file FOR014.DAT:
+#33 unformatted WRITE: signal, continue, end
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000005E psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00000000 r1=00000A2A
+ =continued r0=00000000
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ file FOR014.DAT:
+ partial#34 formatted READ: signal, unwind, next statements
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000064 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00032A4C
+ =u the unwind's call of the handler
+ =back r0=00032C99
+ =read r0=00000000 |LINE 2                                  |
+ =read r0=00000000 |LINE 3                                  |
+  $STATUS == "%X00000001"
+#35 formatted READ: signal, continue, end
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+00000064 psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00032A4C
+ =continued r0=00032C99
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#36 handler with same unit during a WRITE
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000006C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000C40
+ =i n=9 cond=00188144
+%FOR-F-RECIO_OPE, recursive I/O operation
+  unit 12  file 
+  user PC 00003859
+  $STATUS == "%X10188144"
+ file FOR83W.DAT:
+#37 AST with same unit during a WRITE
+ =i n=9 cond=00188144
+%FOR-F-RECIO_OPE, recursive I/O operation
+  unit 12  file 
+  user PC 00003859
+  $STATUS == "%X10188144"
+ file FOR83W.DAT:
+#38 handler with another unit during a WRITE
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000006C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000C40
+ =hook's statement r0=00000001
+ =after r0=00032C99
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+ file FOR013.DAT:
+nner
+#39 AST with another unit during a WRITE
+ =hook's statement r0=00000001
+ =after r0=00000001
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+ file FOR013.DAT:
+nner
+#40 handler with internal file during a WRITE
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000006C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000C40
+ =hook's statement r0=00000000
+ =after r0=00032C99
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+#41 AST with internal file during a WRITE
+ =hook's statement r0=00000000
+ =after r0=00000001
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+#42 handler with unit 6 during a WRITE
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000006C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000C40
+nner on 6
+ =hook's statement r0=00000000
+ =after r0=00032C99
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+#43 AST with unit 6 during a WRITE
+nner on 6
+ =hook's statement r0=00000000
+ =after r0=00000001
+ =IO_END r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+irstsecond
+#44 handler with CLOSE of the unit during a WRITE
+ =c n=3 cond=08018003 arg=00000000 00000000 pc=+0000006C psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=00032C99 r1=00000C40
+ =i n=9 cond=00188144
+%FOR-F-RECIO_OPE, recursive I/O operation
+  unit 12  file 
+  user PC 00004044
+  $STATUS == "%X10188144"
+ file FOR83W.DAT:
+#45 AST with CLOSE of the unit during a WRITE
+ =i n=9 cond=00188144
+%FOR-F-RECIO_OPE, recursive I/O operation
+  unit 12  file 
+  user PC 00004044
+  $STATUS == "%X10188144"
+ file FOR83W.DAT:
+#46 AST with a whole WRITE, none in progress
+ =hook's statement r0=00000000
+ =after r0=00000001
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+nner
+#47 EXIT no args, a unit open
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ecord
+#48 EXIT 3, a unit open
+  $STATUS == "%X00000003"
+ file FOR83W.DAT:
+ecord
+#49 EXIT 2, a unit open
+%NONAME-E-NOMSG, Message number 00000002
+  $STATUS == "%X00000002"
+ file FOR83W.DAT:
+ecord
+#50 EXIT 0, a unit open
+%NONAME-W-NOMSG, Message number 00000000
+  $STATUS == "%X00000000"
+ file FOR83W.DAT:
+ecord
+#51 EXIT null, a unit open
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =c n=5 cond=0000000C arg=00000000 00000000 pc=+0002BCD7 psl=03C00000
+ =m n=4 frame=+00000000 depth=1 r0=00000000 r1=00032800
+ =too many conditions; the program stops itself
+  $STATUS == "%X00000003"
+ file FOR83W.DAT:
+ecord
+#52 EXIT_W 3, a unit open
+  $STATUS == "%X00000003"
+ file FOR83W.DAT:
+ecord
+#53 EXIT_W -1, a unit open
+  $STATUS == "%X0000FFFF"
+ file FOR83W.DAT:
+ecord
+#54 EXIT_W no args, a unit open
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ecord
+#55 STOP, a unit open
+FORTRAN STOP
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ecord
+#56 plain RET, a unit open
+ =returned r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+ecord
+#57 SYS$EXIT, a unit open
+  $STATUS == "%X00000003"
+ file FOR83W.DAT:
+ecord
+#58 exit handler declared before the OPEN, WRITE to it
+ =back r0=00000000
+ =exit handler status=00000001
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+ file FOR012.DAT:
+rom the exit handler
+#59 exit handler declared before the OPEN, WRITE to a new unit
+ =back r0=00000000
+ =exit handler status=00000001
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+ file FOR015.DAT:
+rom the exit handler
+#60 exit handler declared before the OPEN, only
+ =back r0=00000000
+ =exit handler status=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+#61 exit handler declared after the OPEN, WRITE to it
+ =back r0=00000000
+ =exit handler status=00000001
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+rom the exit handler
+#62 exit handler declared after the OPEN, WRITE to a new unit
+ =back r0=00000000
+ =exit handler status=00000001
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+ file FOR015.DAT:
+rom the exit handler
+#63 exit handler declared after the OPEN, only
+ =back r0=00000000
+ =exit handler status=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+#64 a severe error ends the image, exit handler writes
+%FOR-F-FILNOTFOU, file not found
+  unit 14  file DUA2:[000000]NOSUCH.DAT;
+  user PC 00004E16
+-RMS-E-FNF, file not found
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           0002F492  0002F492
+                                                           0002F39F  0002F39F
+                                                           00029E36  00029E36
+                                                           0002869D  0002869D
+FOR83B          C64                                        0000006D  00004E16
+FOR83B          C64                                        000000C6  00004E6F
+ =exit handler status=101880EC
+ =value 00000000
+  $STATUS == "%X101880EC"
+ file FOR83W.DAT:
+ file FOR015.DAT:
+rom the exit handler

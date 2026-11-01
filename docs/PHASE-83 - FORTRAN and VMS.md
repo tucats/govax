@@ -1,7 +1,8 @@
 # Phase 83 — FORTRAN and VMS: definitions, services, handlers, ASTs
 
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
-by the author the same day ("The author's answers"). Needs Phase 81 (files) and Phase 82 (structures). Part
+by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
+settled"). Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -286,11 +287,109 @@ All five as recommended:
    FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE.
 5. **The probe** gets a round on the author's simh VAX.
 
+# What the probe settled (2026-11-01)
+
+VMS 7.1 ran `FOR83.COM` whole on the author's simh VAX: `testdata/for83/vax/` and
+`testdata/str83/vax/`. Parts A and B also ran over govax with VMS's FORRTL.EXE, so a difference
+between the two runs is govax's services, RMS, LIBRTL, or DCL, and not FORRTL's.
+
+**Parts A and B over govax:** part A matches VMS but for what depends on where things are. Part B
+differs in three ways only, each listed below as 1, 2, and 8 of what govax gets wrong.
+
+## What VMS does
+
+- **DATE and TIME:** `FOR$DATE` and `FOR$TIME` store 9 and 8 bytes at an address, no more, and take
+  no account of a second argument; with nothing there or a null address `FOR$DATE` signals an access
+  violation and `FOR$TIME` returns SS$_ACCVIO. The
+  `_T_DS` forms copy to the descriptor's pointer for its length, blank-padded or cut, whatever its
+  class: a dynamic string of no length gets nothing, a varying string's text lands over its CURLEN,
+  and a class A descriptor gets one element. `FOR$DATE_T_DS` and `FOR$TIME_T_DS` with no argument just
+  return. The day has a leading blank, the month is in capitals: ` 1-NOV-26`. [Subtask 8.]
+- **IDATE:** the month, day, and year's last two digits, as words in `FOR$IDATE`, longwords in
+  `FOR$JDATE`, stored before any later fault shows: a null second argument leaves the first and
+  third set. Too few arguments are an access violation.
+- **SECNDS:** the seconds since midnight less x, plus 86400 once if that is negative, whatever x
+  is (x = 1E7 still adds only one day). No argument signals nothing (the probe didn't show the value),
+  and a null address is an access violation.
+- **MVBITS:** `EXTZV` then `INSV`, with no checks of its own, every argument by reference, words in
+  `FOR$IMVBITS` and longwords in `FOR$JMVBITS`. A length past the width is SS$_ROPRAND past 32, and short
+  of that runs into the next bytes (16 bits and one more changes the next word); a negative position
+  counts back. So D.5.3's limits are the program's to keep, and the compiler can write it in line.
+- **RAN:** `MTH$RANDOM` as it stands; govax's gives VMS's numbers.
+- **Which FORRTL errors a handler can continue from:** FILNOTFOU, ENDDURREA, INVLOGUNI, SYNERRFOR,
+  INFFORLOO, NO_CURREC, and RECIO_OPE can't: FORRTL stops. INPCONERR (the item's value 0) and
+  OUTCONERR can, and the statement goes on. FTNRTL's `FTN$IO_END` treats all alike and must not.
+  Those two are all the probe asked of the continuing kind: `FORVARMIS`'s case gave OUTCONERR, its text
+  being edited by I4. Subtask 6 either runs FTNRTL's whole list of statement-continuing errors on FORRTL
+  in a second, smaller round, or marks the others unconfirmed.
+- **Continuing from a stop:** no LIB$_ATTCONSTO. The condition's own message appears and the image
+  ends with its status and the inhibit bit, `%X18018004`, for LIB$STOP and for FORRTL's alike. Neither
+  run of VMS's shows ATTCONSTO anywhere. **Fix in govax's LIB$STOP.**
+- **Unwinding out of a statement:** the statement is gone: a record begun isn't written, the next
+  statement on the unit is fine, and a READ begun has used up its record.
+- **I/O during a statement,** from a handler or an AST alike: the same unit (or a CLOSE of it) is
+  RECIO_OPE, stopping; another unit, an internal file, and unit 6 work, and the statement goes on.
+- **Ending the image:** `FOR$EXIT` takes a longword's address, `FOR$EXIT_W` a word's (`-1` is
+  `%X0000FFFF`, not sign-extended); no argument is SS$_NORMAL, and a null address is an access violation.
+  Open units are closed by all of them, by STOP, by `$EXIT`, and by falling off the end. FORRTL's exit handler
+  closes units, so an exit handler declared before the first OPEN finds the unit closed (a write makes
+  `FOR012.DAT`) and one declared after finds it open.
+- **LIB$SIGNAL and LIB$STOP:** the mechanism array's R0 and R1 are the caller's, and a continued
+  LIB$SIGNAL returns them, as a handler set them or not. That settles DEVIATIONS.md's note. **No
+  argument** signals LIB$_SIGNO_ARG (`0015825C`) as any condition, from LIB$STOP too. LIB$STOP forces severe: `08018001` signals as `08018004`.
+- **LIB$ESTABLISH** with no argument returns the old handler and leaves it. **LIB$REVERT** returns it
+  and clears 0(FP).
+- **LIB$MATCH_COND** matches by the manual: a value with bit 15 clear compares only message numbers,
+  so `0C` matches `0802000C`, and a value's severity and control bits don't count.
+- **LIB$SIG_TO_RET** doesn't check its arguments: too few are an access violation.
+- **LIB$SIG_TO_STOP** forces the array's severity to severe and returns SS$_NORMAL, which as a
+  handler's value means continue: so as the handler itself it ends the image with the message, and no outer
+  handler hears of it. Called by a handler that then resignals, the outer handler sees it severe.
+  On SS$_UNWIND it returns LIB$_INVARG and changes nothing. Too few arguments: an access violation.
+- **LIB$FIXUP_FLT:** a reserved operand in a register, memory, deferred, autoincrement, autodecrement,
+  or indexed replaced in place and the instruction restarted (autoincrement's register ending with its
+  final value right), for F, D, G, H, and either operand of an instruction, each in turn. The new operand is
+  F, converted to the operand's format. SS$_RESIGNAL for another condition, a POLY table, or a decimal
+  reserved operand; SS$_ROPRAND for a reserved new operand; SS$_ACCVIO for an operand in read-only code,
+  an immediate. No arguments, or too few: SS$_RESIGNAL.
+- **LIB$INT_OVER, DEC_OVER, FLT_UNDER:** each returns the caller's old bit, 0 or 1, by bit 0 of a
+  longword (`LTWO` is off, `LTHREE` on), changes the caller's frame only, and takes effect at once:
+  SS$_INTOVF `47C` and SS$_DECOVF `4A4` trap there and go on; SS$_FLTUND_F `4C4` is a fault, so a
+  handler that continues gets it again, for ever. No argument returns 0 with no fault; a null address
+  is an access violation. [All three with subtask 6.]
+- **LIBRARY/TEXT:** a new library's key is 39 characters and index 11 blocks; a module defaults to the
+  file's name, in capitals, is named otherwise by `/MODULE=` on the file, one file's; a name past 39 is
+  MODNAMLNG; `/INSERT` of one there already is DUPMOD, INSERTERR, DUPKEY, `%X108680E2`; `/REPLACE` needs no
+  module there before; `/EXTRACT` of none is LOOKUPERR, KEYNOTFND, `%X108680F2`; several names go in one file,
+  in the order named; `/LIST/NAMES` on a text library is a CONFLICT; an empty file is a module of one empty
+  record; `/COMPRESS/DATA=REDUCE` gives DCX, which `internal/lbr` reads already, as it does all of VMS's `.TLB`s
+  here. `/LOG` says `%LIBRAR-S-INSERTED`. `$STATUS` on success is `%X10000001`.
+- **Definitions:** LINK's 11 undefined names are govax's 11 exactly (`PSL$`, `PRV$`, `LNM$_STRING`, ...), so
+  `EXTERNAL PSL$C_USER` is undefined on VMS too and nothing is to change. `$OPCDEF` gives 228 names in
+  `vax/def_opc.obj`, for `vmsdef` by `testdata/mp/defs`'s `decode.go` way.
+- **STR$:** `testdata/str83/vax/str83-vax.txt` is the requirement, and has the facility's 17 message
+  texts; subtask 9 reads it case by case. APPEND and PREFIX on a fixed string are ILLSTRCLA, and a bad class
+  signals, as does a string past 65,535.
+
+## What govax gets wrong
+
+| # | Finding | Subtask |
+|---|---|---|
+| 1 | Continuing from LIB$STOP or FORRTL's stop says ATTCONSTO; VMS gives the condition's message and ends with its status | 6 |
+| 2 | LIB$SIGNAL's R0 is 0 in the mechanism array, and after a continue or an unwind (DEVIATIONS.md) | 6 |
+| 3 | LIB$SIGNAL and LIB$STOP with no argument print `%rtl:` and end the image | 6 |
+| 4 | LIB$ESTABLISH with no argument clears 0(FP) | 6 |
+| 5 | LIB$MATCH_COND ignores the system-code rule | 6 |
+| 6 | LIB$SIG_TO_RET with too few arguments returns SS$_NOSIGNAL, where VMS has an access violation | 6 |
+| 7 | FTNRTL's `FTN$IO_END` stops for every error, not only those FORRTL stops for | 6 |
+| 8 | TYPE ignores FORTRAN carriage control: VMS's drops a record's first byte from a file with RAT=FTN (`unit 13` types as `nit 13`, `*` as an empty line) | 5 |
+| 9 | `DEFINE/USER_MODE` outlives govax's MACRO and LINK, which aren't images | 5 |
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (done 2026-11-01): Part A.
-2. **The probe** (written 2026-11-01; its VMS round is the author's): `testdata/for83`, `testdata/str83`,
-   and what they settle.
+2. **The probe** (done 2026-11-01): `testdata/for83`, `testdata/str83`, VMS's run, and "What the probe
+   settled".
 3. **Text libraries and INCLUDE:** LIBRARY/TEXT held to the probe's part C, `INCLUDE '(module)'` and
    `'lib(module)'`, `+` and `/LIBRARY`, `FORT$LIBRARY`, and `/[NO]LIST` on INCLUDE governing the `.MAR`.
 4. **govax's definition modules** from `vmsdef`, `$SYSSRVNAM`, `$CHFDEF`'s structures, no `.EXTRN` for an
@@ -327,3 +426,7 @@ All five as recommended:
   A third: `DEFINE/USER_MODE` outlives govax's MACRO and LINK, which aren't images, so the first RUN after
   them writes to the file named (case 1 of parts B and C goes to its `.MLG` on govax); on VMS MACRO's exit
   ends it. To fix with the oracle tests, which need that case.
+- **2026-11-01:** VMS's run of the probe, whole, with every case reaching its end: "What the probe settled".
+  `copyout.cmd` first took the libraries as text, adding line ends; it now takes them and the object with
+  `/BINARY`. The log shows no commands after part B, FOR83R's `SET NOVERIFY` lasting, which costs nothing.
+  This subtask's oracle tests are the later subtasks': each holds what it builds to these files.
