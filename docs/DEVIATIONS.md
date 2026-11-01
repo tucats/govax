@@ -1873,3 +1873,11 @@ Entry template:
 notice: VMS's routines go on after a handler continues from their condition, and may then fault
 on the reserved operand (`MTH$CEXP`, `MTH$CLOG`, ...), or store a corrected result (`MTH$HEXP`).
 govax's Go routines have ended by then, so the caller gets what the first signal left.
+
+## [Phase 82] An image with a VEC section runs
+
+`testdata/link82`'s C29 links a module whose BLK section is VEC first, so the section is VEC,
+with ordinary data in it. VMS V7.1 won't activate it: `%DCL-W-ACTIMAGE`, `-CLI-E-IMGNAME`,
+`-SYSTEM-F-BADVEC, invalid change mode or message vector`. govax has no protected images and runs
+it. One case can't say what makes a vector valid (a real one would presumably be activated), so
+nothing is changed until a program needs it. `TestLink82Oracle` lists the case.

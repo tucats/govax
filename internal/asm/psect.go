@@ -174,6 +174,14 @@ func (a *Assembler) pseudoPsect(c *cursor) error {
 		align, alignNamed = n, true
 	}
 
+	// Neither readable nor executable (testdata/link82's VNORD on real MACRO,
+	// the only form seen). The manual says only that NORD is reserved.
+	if flags&(gpsRD|gpsEXE) == 0 {
+		if err := a.recoverable(vmserrors.New(vmserrors.VAX_PSECTCONFLICT, "NORD", name)); err != nil {
+			return err
+		}
+	}
+
 	if err := a.endLocalBlock(); err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package link
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -272,6 +273,11 @@ func (l *linker) pass2(m *module) error {
 
 			for _, c := range r.Commands {
 				if err := run.command(c); err != nil {
+					var outside *outsideImage
+					if errors.As(err, &outside) {
+						return l.storeOutsideImage(m, outside.addr)
+					}
+
 					return fmt.Errorf("link: %s: %s: %w", m.input.File, c.Op, err)
 				}
 			}
@@ -565,7 +571,41 @@ func (l *linker) write(addr uint32, data []byte) error {
 		return nil
 	}
 
-	return fmt.Errorf("%d bytes stored at %08X, outside every image section", len(data), addr)
+	return &outsideImage{addr}
+}
+
+// outsideImage is a store at an address in no image section: addr.
+type outsideImage struct {
+	addr uint32
+}
+
+func (e *outsideImage) Error() string {
+	return fmt.Sprintf("store at %08X, outside every image section", e.addr)
+}
+
+// storeOutsideImage is the end of a link that stores at addr, in no image
+// section, as a module's data in a psect another module made absolute does
+// (VMS's OUTSIMG, testdata/link82's C27). VMS's message gives the image binary's
+// bounds, which were both 0 there, the only case seen, with an image section
+// at ^X200: what they are the bounds of isn't known, so they are 0 here (ours,
+// unconfirmed).
+func (l *linker) storeOutsideImage(m *module, addr uint32) *FatalError {
+	name := ""
+
+	for _, p := range l.order {
+		if addr >= p.base && addr < p.base+p.length {
+			name = p.name
+
+			break
+		}
+	}
+
+	fe := noImage(Message{'E', "OUTSIMG", fmt.Sprintf(
+		"attempted store location %%X%08X is outside image binary (%%X00000000 to %%X00000000)\n\tin psect %s module %s file %s",
+		addr, name, m.name, m.input.File)})
+	fe.Messages = append(l.messagesSoFar(), fe.Messages...)
+
+	return fe
 }
 
 // dzroMin is the fewest uninitialized pages the linker makes a separate
@@ -674,6 +714,11 @@ func (l *linker) image() (*Image, error) {
 		for _, s := range c.sections {
 			for _, run := range s.runs(minPages, &budget) {
 				d := isd{pages: run.count, vpn: (s.base >> 9) + run.first, pfc: c.pfc, flags: flags | l.sectionType(s)}
+
+				// A VEC section is protected, whatever its cluster (testdata/link82's C29).
+				if s.key&keyVEC != 0 {
+					d.flags |= isdPROTECT
+				}
 
 				switch {
 				case run.demandZero:
@@ -811,7 +856,7 @@ func (l *linker) image() (*Image, error) {
 	}
 
 	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet, l: l}
-	img.Messages = append(img.Messages, l.messages...)
+	img.Messages = l.messagesSoFar()
 
 	for _, m := range l.modules {
 		img.Messages = append(img.Messages, m.messages...)

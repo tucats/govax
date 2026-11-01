@@ -4893,10 +4893,19 @@ unit or among its statements:
 
 A string is at most 31 printable characters. Every unit of a file that names
 a block must leave it with the same attributes (`%FORT-E-PSECTDIFFER`); a
-store to a `NOWRT` block is an access violation when the program runs. Two
-separately compiled files that disagree about a block get no message from
-FORTRAN or LINK, so keep such a directive in an `INCLUDE` file with the
-block's COMMON statement.
+store to a `NOWRT` block is an access violation when the program runs. FORTRAN
+sees only one file, so for separately compiled files that disagree it is LINK
+that warns, as VMS's does, and the block takes its attributes from the first
+module that defines it, so the order of LINK's input can decide whether it is
+writable (alignment excepted: the largest counts, and never conflicts):
+
+```text
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+```
+
+To keep them alike, put such a directive in an `INCLUDE` file with the block's
+COMMON statement.
 
 `INCLUDE 'file'` reads a file (type `.FOR` unless given) in the
 statement's place. A file is found relative to the file that includes

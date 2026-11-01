@@ -147,6 +147,13 @@ func (w *mapWriter) imageSections(l *linker) {
 		}
 
 		if len(lines) == 0 {
+			// A cluster of the command's own that came to hold nothing, its
+			// modules' sections being in another's, still has its blank line
+			// (testdata/link82's C56).
+			if c.user() && l.hasModules(c) {
+				w.out("")
+			}
+
 			continue
 		}
 
@@ -374,4 +381,15 @@ func (w *mapWriter) symbolsByValue(l *linker) {
 	}
 
 	w.symbolKey()
+}
+
+// hasModules reports whether a module went in cluster c.
+func (l *linker) hasModules(c *cluster) bool {
+	for _, m := range l.modules {
+		if m.cluster == c {
+			return true
+		}
+	}
+
+	return false
 }

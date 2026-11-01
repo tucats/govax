@@ -785,9 +785,7 @@ further Alpha-era directive; out, unless the author wants it.
   PSECTDIFFER. Tests: about 50 `TestErrors` cases, `TestIdent`, the goldens
   `directives.for` in `sema` and `codegen`. **A gap this leaves:** two separately compiled
   files that disagree about a block's attributes get no message: `checkPsects` sees one
-  file, and govax's LINK says nothing (of a page-aligned NOWRT block and a default one, in
-  either order, it placed the block on a page). What real LINK says wasn't probed, this phase
-  having no VMS probe (the survey); so LINK is left as it is. Choices of ours, unconfirmed:
+  file, and govax's LINK says nothing (closed below, by `testdata/link82`). Choices of ours, unconfirmed:
   `ALIGN=` takes a number as written, not a PARAMETER's name, since a directive before a
   unit has no names to look in (the manual says "a constant"); choosing an attribute two ways
   for one block in a unit is PSECTCLASH for all of them, where the manual forbids only LCL
@@ -806,4 +804,35 @@ further Alpha-era directive; out, unless the author wants it.
   and a RUN that stores to the section. It ran on govax first, on a scratch volume, which found
   only that an ABS section can hold no data. The manual (5.0, 6.2.1.1 and 6.3) says LINK "checks
   for conflicting attributes" but not what follows; govax's `findPsect` doesn't check, so the first
-  module's attributes win silently, and only the largest alignment is kept. Waiting for VMS's run.
+  module's attributes win silently, and only the largest alignment is kept.
+- **2026-11-01:** VMS V7.1's run of `testdata/link82` (`vax/`), which closes subtask 7's gap.
+  **The rule:** a module whose definition of a section differs from the section's *first*
+  definition, in any attribute but alignment, gets `%LINK-W-MULPSC, conflicting attributes for psect
+  BLK` and `in module M file F` (in the log, and in the map after the module's line), with status
+  `%X10648268`, LINK's status for any warning. An image is still made. The section keeps the first
+  definition's attributes, so the same two modules can make a block writable or not by their order
+  (C06, C07). Alignment never conflicts: the largest wins, in either order (C08 to C17). Each module
+  is held to the first, not to the module before it (C44 to C47). PSECT_ATTR= and COLLECT= change a
+  module's attributes before the check, so they settle a conflict (C48 to C52). **LINK:**
+  `conflictingAttributes`, with the module's `conflicts`, which come before every other message
+  (`messagesSoFar`), as VMS gives them in pass 1. **Bugs it found in LINK:** a GBL definition took
+  an LCL section of an earlier cluster for its own, where VMS makes a section of its own (C54;
+  `findPsect`); and a store outside every image section (a psect an earlier module made ABS, C27)
+  was an internal error, now VMS's `%LINK-E-OUTSIMG` and NOIMGFIL. **MACRO:** real MACRO refuses
+  `NOEXE,NORD` (PSECOPCNFL), and takes `.PSECT ...,4`, which the compiler writes for ALIGN=4 and LINK
+  shows as OCTA. **The maps found four more:** a cluster only COLLECT= makes goes before the default
+  cluster, not after it, as Phase 68 had guessed, so it does move a psect the default cluster's modules
+  define (C52; `TestCollectBeforeDefault`); a user cluster left empty, its modules' sections in another's,
+  still has its blank line in the image section synopsis (C56, C57); a VEC section is protected, `P-` in
+  the map, ISD flag `isdPROTECT` (C29); and a module's line in the map shows the alignment it gave, not
+  PSECT_ATTR='s (C50; `contribution.written`). `TestLink82Oracle` holds the log, case by case, MACRO's
+  severities, and 53 of the 57 maps to VMS's, in both paging modes. **What still differs:** C22 and C23,
+  since govax's MACRO writes no object after an error, where VMS's does and LINK then refuses it
+  (ERRORS); C26's map, where VMS shows VABS's empty contribution to a REL section, and one case gives no
+  rule; C27's map, since govax writes none for a link that made no image; C29, an image whose first
+  module made BLK VEC, which VMS won't activate (BADVEC) and govax runs (DEVIATIONS.md). Choices of ours,
+  unconfirmed: OUTSIMG's bounds are always
+  0, as in the one case seen, whose image had a section at ^X200, so what they bound isn't known;
+  EXE,NORD is accepted, since only NOEXE,NORD was tried. For this phase: CDEC$ PSECT's rule across
+  files is now VMS's, a warning from LINK, and `checkPsects` remains an error within a file, the
+  manual's rule where the compiler can see it.

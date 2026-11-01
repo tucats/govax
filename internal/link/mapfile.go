@@ -109,6 +109,10 @@ func (img *Image) Map(opts MapOptions) []string {
 	for _, m := range l.mapModules(opts.Full) {
 		w.module(m)
 
+		for _, msg := range m.conflicts {
+			w.message(msg)
+		}
+
 		for _, msg := range m.messages {
 			w.message(msg)
 		}
@@ -329,7 +333,7 @@ func (w *mapWriter) psects(l *linker, full bool) {
 				continue
 			}
 
-			numbers := mapExtent(c.base(), c.size, c.align)
+			numbers := mapExtent(c.base(), c.size, c.written)
 
 			if len(m.name) > mapShortName {
 				w.out(fmt.Sprintf("%-16s%-39s", "", m.name))

@@ -81,13 +81,13 @@ func TestTitleAndIdent(t *testing.T) {
 // alignment a .PSECT list changes, and a name with a ".".
 func TestPsectAttributes(t *testing.T) {
 	a := macroAssemble(t, `.PSECT CODE, NOWRT, EXE, LONG
-	.PSECT $DATA.RW, WRT, NOEXE, PIC, SHR, GBL, OVR, LIB, VEC, NORD, 9
+	.PSECT $DATA.RW, WRT, EXE, PIC, SHR, GBL, OVR, LIB, VEC, NORD, 9
 	.PSECT PLAIN
 	.PSECT`)
 
 	requirePsect(t, a, absPsect, 0, 0, 0)
 	requirePsect(t, a, "CODE", 1, gpsREL|gpsEXE|gpsRD, 2)
-	requirePsect(t, a, "$DATA.RW", 2, gpsREL|gpsWRT|gpsPIC|gpsSHR|gpsGBL|gpsOVR|gpsLIB|gpsVEC, 9)
+	requirePsect(t, a, "$DATA.RW", 2, gpsREL|gpsWRT|gpsEXE|gpsPIC|gpsSHR|gpsGBL|gpsOVR|gpsLIB|gpsVEC, 9)
 	requirePsect(t, a, "PLAIN", 3, gpsREL|gpsEXE|gpsRD|gpsWRT, 0)
 	requirePsect(t, a, blankPsect, 4, gpsREL|gpsEXE|gpsRD|gpsWRT, 0)
 
@@ -108,6 +108,7 @@ func TestPsectContinuation(t *testing.T) {
 	requireMACROError(t, ".PSECT CODE, NOWRT\n.PSECT CODE, WRT", vmserrors.VAX_PSECTCONFLICT)
 	requireMACROError(t, ".PSECT CODE, LONG\n.PSECT CODE, QUAD", vmserrors.VAX_PSECTCONFLICT)
 	requireMACROError(t, ".PSECT CODE\n.PSECT CODE, NOEXE", vmserrors.VAX_PSECTCONFLICT)
+	requireMACROError(t, ".PSECT DATA, NOEXE, NORD", vmserrors.VAX_PSECTCONFLICT)
 }
 
 // TestDefaultPsects checks where statements before any .PSECT go: a

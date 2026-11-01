@@ -102,24 +102,24 @@ func TestClusterPsects(t *testing.T) {
 	}
 }
 
-// TestCollectAfterDefault checks a COLLECT= of a cluster nothing else
-// makes, which follows the default cluster in the list: the default
-// cluster's module defines the psect first, so it stays there (the
-// Linker manual's warning, 6.3.2), though it's made global. A COLLECT=
-// into a cluster before the module's moves it.
-func TestCollectAfterDefault(t *testing.T) {
+// TestCollectBeforeDefault checks a COLLECT= of a cluster nothing else
+// makes, which goes before the default cluster in the list, so it moves a
+// psect the default cluster's module defines, and makes it global, as VMS's
+// LINK does (testdata/link82's C52). So does a COLLECT= into a cluster that
+// CLUSTER= made.
+func TestCollectBeforeDefault(t *testing.T) {
 	img, _ := linkClusters(t, Options{
 		Clusters: []Cluster{{Name: "SUBS"}},
 		Collects: []Collect{{Cluster: "LATER", Psects: []string{"CODE"}}},
 	})
 
-	if code := psectsNamed(img, "CODE"); len(code) != 1 || code[0].Flags&obj.PsectGBL == 0 || code[0].Base != 0x800 {
-		t.Errorf("CODE is %+v, want global, at ^X800", code)
+	if code := psectsNamed(img, "CODE"); len(code) != 1 || code[0].Flags&obj.PsectGBL == 0 || code[0].Base != 0x600 {
+		t.Errorf("CODE is %+v, want global, at ^X600", code)
 	}
 
 	for _, p := range img.l.order {
-		if p.name == "CODE" && p.cluster.name != defaultClusterName {
-			t.Errorf("CODE is in cluster %s", p.cluster.name)
+		if p.name == "CODE" && p.cluster.name != "LATER" {
+			t.Errorf("CODE is in cluster %s, want LATER", p.cluster.name)
 		}
 	}
 

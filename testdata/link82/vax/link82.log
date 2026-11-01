@@ -1,0 +1,934 @@
+V7.1     VAX 8600
+$ @LINK82C C01 "MAINP,BASE,BASE2" "the same attributes, a control"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C01: the same attributes, a control"
+=== C01: the same attributes, a control
+$ LINK/MAP=C01/FULL/EXECUTABLE=C01 MAINP,BASE,BASE2
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C01.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C01
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C02 "MAINP,BASE,VLCL" "BASE then VLCL"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C02: BASE then VLCL"
+=== C02: BASE then VLCL
+$ LINK/MAP=C02/FULL/EXECUTABLE=C02 MAINP,BASE,VLCL
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VLCL file DUA2:[000000]VLCL.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C02.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C02
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C03 "MAINP,VLCL,BASE" "VLCL then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C03: VLCL then BASE"
+=== C03: VLCL then BASE
+$ LINK/MAP=C03/FULL/EXECUTABLE=C03 MAINP,VLCL,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C03.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C03
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C04 "MAINP,BASE,VNOSHR" "BASE then VNOSHR"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C04: BASE then VNOSHR"
+=== C04: BASE then VNOSHR
+$ LINK/MAP=C04/FULL/EXECUTABLE=C04 MAINP,BASE,VNOSHR
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOSHR file DUA2:[000000]VNOSHR.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C04.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C04
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C05 "MAINP,VNOSHR,BASE" "VNOSHR then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C05: VNOSHR then BASE"
+=== C05: VNOSHR then BASE
+$ LINK/MAP=C05/FULL/EXECUTABLE=C05 MAINP,VNOSHR,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C05.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C05
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C06 "MAINP,BASE,VNOWRT" "BASE then VNOWRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C06: BASE then VNOWRT"
+=== C06: BASE then VNOWRT
+$ LINK/MAP=C06/FULL/EXECUTABLE=C06 MAINP,BASE,VNOWRT
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C06.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C06
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C07 "MAINP,VNOWRT,BASE" "VNOWRT then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C07: VNOWRT then BASE"
+=== C07: VNOWRT then BASE
+$ LINK/MAP=C07/FULL/EXECUTABLE=C07 MAINP,VNOWRT,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C07.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C07
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINP           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ @LINK82C C08 "MAINP,BASE,VBYTE" "BASE then VBYTE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C08: BASE then VBYTE"
+=== C08: BASE then VBYTE
+$ LINK/MAP=C08/FULL/EXECUTABLE=C08 MAINP,BASE,VBYTE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C08.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C08
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C09 "MAINP,VBYTE,BASE" "VBYTE then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C09: VBYTE then BASE"
+=== C09: VBYTE then BASE
+$ LINK/MAP=C09/FULL/EXECUTABLE=C09 MAINP,VBYTE,BASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C09.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C09
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C10 "MAINP,BASE,VWORD" "BASE then VWORD"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C10: BASE then VWORD"
+=== C10: BASE then VWORD
+$ LINK/MAP=C10/FULL/EXECUTABLE=C10 MAINP,BASE,VWORD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C10.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C10
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C11 "MAINP,VWORD,BASE" "VWORD then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C11: VWORD then BASE"
+=== C11: VWORD then BASE
+$ LINK/MAP=C11/FULL/EXECUTABLE=C11 MAINP,VWORD,BASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C11.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C11
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C12 "MAINP,BASE,VQUAD" "BASE then VQUAD"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C12: BASE then VQUAD"
+=== C12: BASE then VQUAD
+$ LINK/MAP=C12/FULL/EXECUTABLE=C12 MAINP,BASE,VQUAD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C12.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C12
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C13 "MAINP,VQUAD,BASE" "VQUAD then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C13: VQUAD then BASE"
+=== C13: VQUAD then BASE
+$ LINK/MAP=C13/FULL/EXECUTABLE=C13 MAINP,VQUAD,BASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C13.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C13
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C14 "MAINP,BASE,VA4" "BASE then VA4"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C14: BASE then VA4"
+=== C14: BASE then VA4
+$ LINK/MAP=C14/FULL/EXECUTABLE=C14 MAINP,BASE,VA4
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C14.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C14
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C15 "MAINP,VA4,BASE" "VA4 then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C15: VA4 then BASE"
+=== C15: VA4 then BASE
+$ LINK/MAP=C15/FULL/EXECUTABLE=C15 MAINP,VA4,BASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C15.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C15
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C16 "MAINP,BASE,VPAGE" "BASE then VPAGE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C16: BASE then VPAGE"
+=== C16: BASE then VPAGE
+$ LINK/MAP=C16/FULL/EXECUTABLE=C16 MAINP,BASE,VPAGE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C16.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C16
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C17 "MAINP,VPAGE,BASE" "VPAGE then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C17: VPAGE then BASE"
+=== C17: VPAGE then BASE
+$ LINK/MAP=C17/FULL/EXECUTABLE=C17 MAINP,VPAGE,BASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C17.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C17
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C18 "MAINP,BASE,VNOPIC" "BASE then VNOPIC"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C18: BASE then VNOPIC"
+=== C18: BASE then VNOPIC
+$ LINK/MAP=C18/FULL/EXECUTABLE=C18 MAINP,BASE,VNOPIC
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOPIC file DUA2:[000000]VNOPIC.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C18.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C18
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C19 "MAINP,VNOPIC,BASE" "VNOPIC then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C19: VNOPIC then BASE"
+=== C19: VNOPIC then BASE
+$ LINK/MAP=C19/FULL/EXECUTABLE=C19 MAINP,VNOPIC,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C19.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C19
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C20 "MAINP,BASE,VEXE" "BASE then VEXE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C20: BASE then VEXE"
+=== C20: BASE then VEXE
+$ LINK/MAP=C20/FULL/EXECUTABLE=C20 MAINP,BASE,VEXE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VEXE file DUA2:[000000]VEXE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C20.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C20
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C21 "MAINP,VEXE,BASE" "VEXE then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C21: VEXE then BASE"
+=== C21: VEXE then BASE
+$ LINK/MAP=C21/FULL/EXECUTABLE=C21 MAINP,VEXE,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C21.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C21
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C22 "MAINP,BASE,VNORD" "BASE then VNORD"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C22: BASE then VNORD"
+=== C22: BASE then VNORD
+$ LINK/MAP=C22/FULL/EXECUTABLE=C22 MAINP,BASE,VNORD
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNORD file DUA2:[000000]VNORD.OBJ;1
+%LINK-E-ERRORS, compilation errors
+	in module VNORD file DUA2:[000000]VNORD.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X106482B2"
+$ IF F$SEARCH("C22.EXE") .EQS. "" THEN GOTO NOIMAGE
+$NOIMAGE:
+$ WRITE SYS$OUTPUT "NO IMAGE"
+NO IMAGE
+$ EXIT 1
+$ @LINK82C C23 "MAINP,VNORD,BASE" "VNORD then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C23: VNORD then BASE"
+=== C23: VNORD then BASE
+$ LINK/MAP=C23/FULL/EXECUTABLE=C23 MAINP,VNORD,BASE
+%LINK-E-ERRORS, compilation errors
+	in module VNORD file DUA2:[000000]VNORD.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X106482B2"
+$ IF F$SEARCH("C23.EXE") .EQS. "" THEN GOTO NOIMAGE
+$NOIMAGE:
+$ WRITE SYS$OUTPUT "NO IMAGE"
+NO IMAGE
+$ EXIT 1
+$ @LINK82C C24 "MAINP,BASE,VCON" "BASE then VCON"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C24: BASE then VCON"
+=== C24: BASE then VCON
+$ LINK/MAP=C24/FULL/EXECUTABLE=C24 MAINP,BASE,VCON
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VCON file DUA2:[000000]VCON.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C24.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C24
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C25 "MAINP,VCON,BASE" "VCON then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C25: VCON then BASE"
+=== C25: VCON then BASE
+$ LINK/MAP=C25/FULL/EXECUTABLE=C25 MAINP,VCON,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C25.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C25
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C26 "MAINP,BASE,VABS" "BASE then VABS"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C26: BASE then VABS"
+=== C26: BASE then VABS
+$ LINK/MAP=C26/FULL/EXECUTABLE=C26 MAINP,BASE,VABS
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VABS file DUA2:[000000]VABS.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C26.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C26
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C27 "MAINP,VABS,BASE" "VABS then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C27: VABS then BASE"
+=== C27: VABS then BASE
+$ LINK/MAP=C27/FULL/EXECUTABLE=C27 MAINP,VABS,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+%LINK-E-OUTSIMG, attempted store location %X00000000 is outside image binary (%X00000000 to %X00000000)
+	in psect BLK module BASE file DUA2:[000000]BASE.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X106482B2"
+$ IF F$SEARCH("C27.EXE") .EQS. "" THEN GOTO NOIMAGE
+$NOIMAGE:
+$ WRITE SYS$OUTPUT "NO IMAGE"
+NO IMAGE
+$ EXIT 1
+$ @LINK82C C28 "MAINP,BASE,VVEC" "BASE then VVEC"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C28: BASE then VVEC"
+=== C28: BASE then VVEC
+$ LINK/MAP=C28/FULL/EXECUTABLE=C28 MAINP,BASE,VVEC
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VVEC file DUA2:[000000]VVEC.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C28.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C28
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C29 "MAINP,VVEC,BASE" "VVEC then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C29: VVEC then BASE"
+=== C29: VVEC then BASE
+$ LINK/MAP=C29/FULL/EXECUTABLE=C29 MAINP,VVEC,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C29.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C29
+%DCL-W-ACTIMAGE, error activating image C29
+-CLI-E-IMGNAME, image file DUA2:[000000]C29.EXE;1
+-SYSTEM-F-BADVEC, invalid change mode or message vector
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10002064"
+$ EXIT 1
+$ @LINK82C C30 "MAINP,BASE,VLIB" "BASE then VLIB"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C30: BASE then VLIB"
+=== C30: BASE then VLIB
+$ LINK/MAP=C30/FULL/EXECUTABLE=C30 MAINP,BASE,VLIB
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VLIB file DUA2:[000000]VLIB.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C30.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C30
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C31 "MAINP,VLIB,BASE" "VLIB then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C31: VLIB then BASE"
+=== C31: VLIB then BASE
+$ LINK/MAP=C31/FULL/EXECUTABLE=C31 MAINP,VLIB,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C31.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C31
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C32 "MAINP,BASE,VMULTI" "BASE then VMULTI"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C32: BASE then VMULTI"
+=== C32: BASE then VMULTI
+$ LINK/MAP=C32/FULL/EXECUTABLE=C32 MAINP,BASE,VMULTI
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VMULTI file DUA2:[000000]VMULTI.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C32.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C32
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C33 "MAINP,VMULTI,BASE" "VMULTI then BASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C33: VMULTI then BASE"
+=== C33: VMULTI then BASE
+$ LINK/MAP=C33/FULL/EXECUTABLE=C33 MAINP,VMULTI,BASE
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C33.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C33
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINP           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ @LINK82C C34 "MAINL,LBASE,LOVR" "LBASE then LOVR"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C34: LBASE then LOVR"
+=== C34: LBASE then LOVR
+$ LINK/MAP=C34/FULL/EXECUTABLE=C34 MAINL,LBASE,LOVR
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LOVR file DUA2:[000000]LOVR.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C34.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C34
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C35 "MAINL,LOVR,LBASE" "LOVR then LBASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C35: LOVR then LBASE"
+=== C35: LOVR then LBASE
+$ LINK/MAP=C35/FULL/EXECUTABLE=C35 MAINL,LOVR,LBASE
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LBASE file DUA2:[000000]LBASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C35.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C35
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C36 "MAINL,LBASE,LGBL" "LBASE then LGBL"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C36: LBASE then LGBL"
+=== C36: LBASE then LGBL
+$ LINK/MAP=C36/FULL/EXECUTABLE=C36 MAINL,LBASE,LGBL
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LGBL file DUA2:[000000]LGBL.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C36.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C36
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C37 "MAINL,LGBL,LBASE" "LGBL then LBASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C37: LGBL then LBASE"
+=== C37: LGBL then LBASE
+$ LINK/MAP=C37/FULL/EXECUTABLE=C37 MAINL,LGBL,LBASE
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LBASE file DUA2:[000000]LBASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C37.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C37
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C38 "MAINL,LBASE,LNOWRT" "LBASE then LNOWRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C38: LBASE then LNOWRT"
+=== C38: LBASE then LNOWRT
+$ LINK/MAP=C38/FULL/EXECUTABLE=C38 MAINL,LBASE,LNOWRT
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LNOWRT file DUA2:[000000]LNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C38.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C38
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C39 "MAINL,LNOWRT,LBASE" "LNOWRT then LBASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C39: LNOWRT then LBASE"
+=== C39: LNOWRT then LBASE
+$ LINK/MAP=C39/FULL/EXECUTABLE=C39 MAINL,LNOWRT,LBASE
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LBASE file DUA2:[000000]LBASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C39.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C39
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000220, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINL           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ @LINK82C C40 "MAINL,LBASE,LSHR" "LBASE then LSHR"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C40: LBASE then LSHR"
+=== C40: LBASE then LSHR
+$ LINK/MAP=C40/FULL/EXECUTABLE=C40 MAINL,LBASE,LSHR
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LSHR file DUA2:[000000]LSHR.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C40.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C40
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C41 "MAINL,LSHR,LBASE" "LSHR then LBASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C41: LSHR then LBASE"
+=== C41: LSHR then LBASE
+$ LINK/MAP=C41/FULL/EXECUTABLE=C41 MAINL,LSHR,LBASE
+%LINK-W-MULPSC, conflicting attributes for psect LOC
+	in module LBASE file DUA2:[000000]LBASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C41.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C41
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C42 "MAINL,LBASE,LQUAD" "LBASE then LQUAD"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C42: LBASE then LQUAD"
+=== C42: LBASE then LQUAD
+$ LINK/MAP=C42/FULL/EXECUTABLE=C42 MAINL,LBASE,LQUAD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C42.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C42
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C43 "MAINL,LQUAD,LBASE" "LQUAD then LBASE"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C43: LQUAD then LBASE"
+=== C43: LQUAD then LBASE
+$ LINK/MAP=C43/FULL/EXECUTABLE=C43 MAINL,LQUAD,LBASE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C43.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C43
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C44 "MAINP,BASE,VNOWRT,BASE2" "a conflict, then one module like the first"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C44: a conflict, then one module like the first"
+=== C44: a conflict, then one module like the first
+$ LINK/MAP=C44/FULL/EXECUTABLE=C44 MAINP,BASE,VNOWRT,BASE2
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C44.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C44
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C45 "MAINP,BASE,VNOWRT,VNOWRT" "a conflict, then one module like the second"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C45: a conflict, then one module like the second"
+=== C45: a conflict, then one module like the second
+$ LINK/MAP=C45/FULL/EXECUTABLE=C45 MAINP,BASE,VNOWRT,VNOWRT
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C45.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C45
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C46 "MAINP,BASE,VNOWRT,VQUAD" "two conflicts with the first"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C46: two conflicts with the first"
+=== C46: two conflicts with the first
+$ LINK/MAP=C46/FULL/EXECUTABLE=C46 MAINP,BASE,VNOWRT,VQUAD
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C46.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C46
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C47 "MAINP,VNOWRT,BASE,VNOSHR" "conflicts in two attributes, by two modules"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C47: conflicts in two attributes, by two modules"
+=== C47: conflicts in two attributes, by two modules
+$ LINK/MAP=C47/FULL/EXECUTABLE=C47 MAINP,VNOWRT,BASE,VNOSHR
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOSHR file DUA2:[000000]VNOSHR.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C47.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C47
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINP           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ @LINK82C C48 "MAINP,BASE,VNOWRT,ATTRWRT/OPTIONS" "PSECT_ATTR= makes both WRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C48: PSECT_ATTR= makes both WRT"
+=== C48: PSECT_ATTR= makes both WRT
+$ LINK/MAP=C48/FULL/EXECUTABLE=C48 MAINP,BASE,VNOWRT,ATTRWRT/OPTIONS
+PSECT_ATTR=BLK,WRT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C48.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C48
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C49 "MAINP,BASE,VNOWRT,ATTRRO/OPTIONS" "PSECT_ATTR= makes both NOWRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C49: PSECT_ATTR= makes both NOWRT"
+=== C49: PSECT_ATTR= makes both NOWRT
+$ LINK/MAP=C49/FULL/EXECUTABLE=C49 MAINP,BASE,VNOWRT,ATTRRO/OPTIONS
+PSECT_ATTR=BLK,NOWRT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C49.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C49
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINP           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ @LINK82C C50 "MAINP,BASE,VQUAD,ATTRQ/OPTIONS" "PSECT_ATTR= makes both QUAD"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C50: PSECT_ATTR= makes both QUAD"
+=== C50: PSECT_ATTR= makes both QUAD
+$ LINK/MAP=C50/FULL/EXECUTABLE=C50 MAINP,BASE,VQUAD,ATTRQ/OPTIONS
+PSECT_ATTR=BLK,QUAD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C50.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C50
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C51 "MAINP,BASE,VLCL,ATTRG/OPTIONS" "PSECT_ATTR= makes both GBL"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C51: PSECT_ATTR= makes both GBL"
+=== C51: PSECT_ATTR= makes both GBL
+$ LINK/MAP=C51/FULL/EXECUTABLE=C51 MAINP,BASE,VLCL,ATTRG/OPTIONS
+PSECT_ATTR=BLK,GBL
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C51.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C51
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C52 "MAINP,BASE,VLCL,COLL/OPTIONS" "COLLECT= makes both GBL"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C52: COLLECT= makes both GBL"
+=== C52: COLLECT= makes both GBL
+$ LINK/MAP=C52/FULL/EXECUTABLE=C52 MAINP,BASE,VLCL,COLL/OPTIONS
+COLLECT=CC,BLK
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C52.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C52
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C53 "MAINP,CL1/OPTIONS" "GBL in one cluster, LCL in the next"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C53: GBL in one cluster, LCL in the next"
+=== C53: GBL in one cluster, LCL in the next
+$ LINK/MAP=C53/FULL/EXECUTABLE=C53 MAINP,CL1/OPTIONS
+CLUSTER=ONE,,,BASE.OBJ
+CLUSTER=TWO,,,VLCL.OBJ
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C53.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C53
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C54 "MAINP,CL2/OPTIONS" "LCL in one cluster, GBL in the next"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C54: LCL in one cluster, GBL in the next"
+=== C54: LCL in one cluster, GBL in the next
+$ LINK/MAP=C54/FULL/EXECUTABLE=C54 MAINP,CL2/OPTIONS
+CLUSTER=ONE,,,VLCL.OBJ
+CLUSTER=TWO,,,BASE.OBJ
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C54.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C54
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C55 "MAINN,CL3/OPTIONS" "LCL in two clusters, a control"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C55: LCL in two clusters, a control"
+=== C55: LCL in two clusters, a control
+$ LINK/MAP=C55/FULL/EXECUTABLE=C55 MAINN,CL3/OPTIONS
+CLUSTER=ONE,,,VLCL.OBJ
+CLUSTER=TWO,,,VLCL2.OBJ
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ IF F$SEARCH("C55.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C55
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C56 "MAINP,CL4/OPTIONS" "GBL in two clusters, WRT then NOWRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C56: GBL in two clusters, WRT then NOWRT"
+=== C56: GBL in two clusters, WRT then NOWRT
+$ LINK/MAP=C56/FULL/EXECUTABLE=C56 MAINP,CL4/OPTIONS
+CLUSTER=ONE,,,BASE.OBJ
+CLUSTER=TWO,,,VNOWRT.OBJ
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module VNOWRT file DUA2:[000000]VNOWRT.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C56.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C56
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT 1
+$ @LINK82C C57 "MAINP,CL5/OPTIONS" "GBL in two clusters, NOWRT then WRT"
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== C57: GBL in two clusters, NOWRT then WRT"
+=== C57: GBL in two clusters, NOWRT then WRT
+$ LINK/MAP=C57/FULL/EXECUTABLE=C57 MAINP,CL5/OPTIONS
+CLUSTER=ONE,,,VNOWRT.OBJ
+CLUSTER=TWO,,,BASE.OBJ
+%LINK-W-MULPSC, conflicting attributes for psect BLK
+	in module BASE file DUA2:[000000]BASE.OBJ;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10648268"
+$ IF F$SEARCH("C57.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN C57
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000402, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+MAINP           START                                      00000002  00000402
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ EXIT 1
+$ SET NOVERIFY
+=== END

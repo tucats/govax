@@ -67,3 +67,12 @@ yes, and an access violation is no.
 No licensed file goes on the volume, so it needs no erasing. The modules use no
 system macros, and MACRO has no `/LIST` here, so its log, `vax/link82.mlg`, holds at
 most its own messages about these few lines. Audit it as usual before it's read.
+
+## What VMS said
+
+`vax/` is VMS V7.1's run. `TestLink82Oracle` (`internal/console/link82oracle_test.go`)
+runs `LINK82.COM` on govax in both paging modes and holds its log, case by case, MACRO's
+severities, and the maps to VMS's; `link82Cases` and `link82Maps` list what still differs.
+The phase doc's progress log has the rule: every attribute but alignment conflicts, against
+the section's first definition, whose attributes the section keeps; `%LINK-W-MULPSC`, and an
+image is still made.

@@ -372,6 +372,8 @@ type module struct {
 	// messages are the messages about the module, such as each
 	// reference it makes to an undefined symbol.
 	messages []Message
+	// conflicts are its MULPSC messages, from pass 1 (conflictingAttributes).
+	conflicts []Message
 	// deferred are a selectively searched module's definitions of symbols
 	// nothing referred to when it was read, in case something does later.
 	deferred map[string]*obj.Symbol
@@ -409,6 +411,10 @@ type contribution struct {
 	size   uint32
 	align  byte
 	offset uint32 // from the psect's base
+
+	// written is the alignment the module gave, which the map shows even
+	// when PSECT_ATTR= changes the one it is placed by (testdata/link82's C50).
+	written byte
 }
 
 // base is the contribution's address.
@@ -547,6 +553,36 @@ func (l *linker) firstImageIdent() (string, bool) {
 	return "", false
 }
 
+// psectConflicts are the attributes in which a module's definition of a psect
+// must agree with its first definition: all of them, but for alignment, of which
+// the psect takes the largest (testdata/link82's run on VMS V7.1).
+var psectConflicts = obj.PsectPIC | obj.PsectLIB | obj.PsectOVR | obj.PsectREL | obj.PsectGBL |
+	obj.PsectSHR | obj.PsectEXE | obj.PsectRD | obj.PsectWRT | obj.PsectVEC
+
+// conflictingAttributes reports a module whose definition of p differs from
+// p's first, as PSECT_ATTR= and COLLECT= left them both. It is a warning, and
+// p keeps the first definition's attributes: so each module is held to the
+// first, not to the one before it, and a module like the first says nothing
+// after one that isn't. A later one like the one that wasn't gets its own message.
+func (l *linker) conflictingAttributes(m *module, p *psect, flags uint16) {
+	if (p.flags^flags)&psectConflicts != 0 {
+		m.conflicts = append(m.conflicts, Message{'W', "MULPSC", fmt.Sprintf(
+			"conflicting attributes for psect %s\n\tin module %s file %s", p.name, m.name, m.input.File)})
+	}
+}
+
+// messagesSoFar are the messages a link that stops now has given: pass 1's
+// conflicts first, as VMS gives them while it reads each module, then the rest.
+func (l *linker) messagesSoFar() []Message {
+	var list []Message
+
+	for _, m := range l.modules {
+		list = append(list, m.conflicts...)
+	}
+
+	return append(list, l.messages...)
+}
+
 // resolvePsects gives each relocatable symbol the module defines its
 // psect contribution, once the module's psects are all known.
 func (l *linker) resolvePsects(m *module) error {
@@ -575,8 +611,9 @@ func (l *linker) gsdEntry(m *module, sub obj.Subrecord) error {
 
 		flags, align := l.psectAttributes(e.Name, e.Flags, e.Align)
 		p := l.findPsect(m.cluster, e.Name, flags)
+		l.conflictingAttributes(m, p, flags)
 
-		c := &contribution{psect: p, size: e.Alloc, align: align}
+		c := &contribution{psect: p, size: e.Alloc, align: align, written: e.Align}
 		p.contribs = append(p.contribs, c)
 		m.contribs = append(m.contribs, c)
 

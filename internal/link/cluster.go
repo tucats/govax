@@ -114,9 +114,8 @@ func (l *linker) imageCluster(name string) *cluster {
 }
 
 // buildClusters makes the cluster list the options give: their clusters
-// and shareable images, then the default cluster, then any cluster a
-// COLLECT= names that nothing else made (after the default cluster, as
-// the manual has COLLECT= read after the command; unconfirmed).
+// and shareable images, then any cluster a COLLECT= names that nothing else
+// made, then the default cluster (testdata/link82's C52).
 func (l *linker) buildClusters() {
 	for _, o := range l.opts.Clusters {
 		if o.Shareable {
@@ -140,11 +139,6 @@ func (l *linker) buildClusters() {
 		c.protect = c.protect || o.Protect
 	}
 
-	l.defaultCluster = l.newCluster(defaultClusterName)
-	if l.opts.Base != nil {
-		l.defaultCluster.base, l.defaultCluster.based = pageUp(*l.opts.Base), true
-	}
-
 	for _, o := range l.opts.Collects {
 		c := l.clusterNamed(o.Cluster)
 		if c == nil {
@@ -156,6 +150,11 @@ func (l *linker) buildClusters() {
 		for _, name := range o.Psects {
 			c.collected[strings.ToUpper(name)] = true
 		}
+	}
+
+	l.defaultCluster = l.newCluster(defaultClusterName)
+	if l.opts.Base != nil {
+		l.defaultCluster.base, l.defaultCluster.based = pageUp(*l.opts.Base), true
 	}
 }
 
@@ -263,7 +262,9 @@ func psectAttributeBit(keyword string) (uint16, bool) {
 // findPsect returns the psect name that a module in cluster c, defining
 // it with flags, contributes to, defining it if it's new. A global psect
 // is looked for in each cluster up to c, where a COLLECT= of it counts as
-// its definition; a local one in c only.
+// its definition; a local one in c only. A local psect of another cluster
+// isn't a global one's definition, though one in c is, with conflicting
+// attributes (testdata/link82's C02 and C54).
 func (l *linker) findPsect(c *cluster, name string, flags uint16) *psect {
 	key := strings.ToUpper(name)
 
@@ -272,7 +273,7 @@ func (l *linker) findPsect(c *cluster, name string, flags uint16) *psect {
 			continue
 		}
 
-		if p := k.psects[key]; p != nil {
+		if p := k.psects[key]; p != nil && (k == c || p.flags&obj.PsectGBL != 0) {
 			return p
 		}
 
@@ -504,7 +505,7 @@ func noImage(msg Message) *FatalError {
 func (l *linker) conflictingMemory(c *cluster, at uint32) *FatalError {
 	fe := noImage(Message{'E', "CONFMEM", fmt.Sprintf(
 		"conflicting virtual memory requirement\n\tat %%X%08X for %d. pages in cluster %s", at, c.size/blockSize, c.name)})
-	fe.Messages = append(slices.Clone(l.messages), fe.Messages...)
+	fe.Messages = append(l.messagesSoFar(), fe.Messages...)
 
 	return fe
 }
