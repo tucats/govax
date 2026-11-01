@@ -14,9 +14,9 @@ import (
 // The I/O statements (chapter 7, appendix A.1), and the statements they
 // use: FORMAT (chapter 8) and NAMELIST (section 4.10). Every form of
 // formatted, list-directed, namelist, and unformatted sequential READ,
-// WRITE, PRINT, TYPE, and ACCEPT is analyzed into an IO, and ENCODE and
-// DECODE too; what is left for later subtasks is direct access and keyed
-// I/O, and REWRITE (NOTIMPL).
+// WRITE, PRINT, TYPE, and ACCEPT is analyzed into an IO, and formatted and
+// unformatted direct access READ and WRITE, ENCODE, and DECODE too; what is
+// left for later subtasks is keyed I/O and REWRITE (NOTIMPL).
 
 // The default units, which the statements without a unit and the units
 // written * use. VMS's FORTRAN run-time library numbers them -1 to -4,
@@ -84,6 +84,10 @@ type IO struct {
 
 	// Count is ENCODE's or DECODE's count of characters, an INTEGER*4.
 	Count Expr
+
+	// Rec is a direct access statement's record number (REC=r or u'r), an
+	// INTEGER*4, or nil for sequential access.
+	Rec Expr
 
 	// Form is the statement's form. A formatted one's format is Format, a
 	// FORMAT statement's; FormatVar, an INTEGER*4 variable a FORMAT's
@@ -280,9 +284,7 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 
 	switch {
 	case s.Rec != nil:
-		a.notImplForm(s.Rec.Position(), "direct access I/O")
-
-		return nil
+		return a.direct(io, s, path)
 
 	case s.Format == nil && s.Namelist == nil:
 		return a.unformatted(io, s, path)
@@ -335,6 +337,74 @@ func (a *analyzer) unformatted(io *IO, s *ast.TransferStmt, path []frame) Stmt {
 	}
 
 	return a.ioItems(io, s.Items)
+}
+
+// direct analyzes a direct access READ or WRITE (sections 7.2.2 and 7.3.2):
+// a unit number, a record number, and a format or none, formatted or
+// unformatted, never list-directed or namelist; a READ has no END=, since a
+// record by number has no end of file to reach.
+func (a *analyzer) direct(io *IO, s *ast.TransferStmt, path []frame) Stmt {
+	ok := a.ioUnit(io, &s.Unit)
+
+	if ok && (io.Internal || io.Unit == nil) {
+		a.report("DIRECTUNIT", s.Unit.Pos)
+
+		ok = false
+	}
+
+	if io.Rec = a.recordNumber(s.Rec); io.Rec == nil {
+		ok = false
+	}
+
+	switch {
+	case s.Namelist != nil:
+		a.report("DIRECTFORM", s.Namelist.Pos, "namelist")
+
+		ok = false
+	case s.Format == nil:
+		io.Form = UnformattedForm
+	case s.Format.Star:
+		a.report("DIRECTFORM", s.Format.Pos, "list-directed")
+
+		ok = false
+	case a.namelistNamed(s.Format) != nil:
+		a.report("DIRECTFORM", s.Format.Pos, "namelist")
+
+		ok = false
+	case !a.ioFormat(io, s.Format):
+		ok = false
+	}
+
+	for _, spec := range s.Specs {
+		if spec.Keyword == "END" {
+			a.report("DIRECTEND", spec.Pos)
+
+			ok = false
+		}
+	}
+
+	if !a.ioSpecs(io, s.Specs, path) || !ok {
+		return nil
+	}
+
+	return a.ioItems(io, s.Items)
+}
+
+// recordNumber analyzes a direct access record number (section 7.1.1.4): a
+// numeric expression, converted to INTEGER*4; nil if it is none.
+func (a *analyzer) recordNumber(e ast.Expr) Expr {
+	v := a.value(e)
+
+	switch t := v.Type(); t.Kind {
+	case Invalid:
+		return nil
+	case Integer, Real:
+		return a.convert(v, IntegerType)
+	default:
+		a.report("BADREC", e.Position(), article(t.String())+" value")
+
+		return nil
+	}
 }
 
 // codeStatement analyzes ENCODE and DECODE (c, f, b[,IOSTAT=ios][,ERR=s])

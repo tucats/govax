@@ -22,7 +22,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
-		*ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.BadStmt:
+		*ast.EntryStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.BadStmt:
 		return true
 
 	case *ast.AttrStmt:
@@ -35,9 +35,9 @@ func handled(s ast.Stmt) bool {
 		return s.Kind == lex.Read || s.Kind == lex.Write
 
 	case *ast.AuxIOStmt:
-		// DELETE, FIND, and UNLOCK are later subtasks of Phase 81's.
+		// DELETE and UNLOCK are later subtasks of Phase 81's.
 		switch s.Kind {
-		case lex.Open, lex.Close, lex.Inquire, lex.Rewind, lex.Backspace, lex.EndFile:
+		case lex.Open, lex.Close, lex.Inquire, lex.Rewind, lex.Backspace, lex.EndFile, lex.Find:
 			return true
 		}
 

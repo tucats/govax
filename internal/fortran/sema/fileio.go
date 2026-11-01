@@ -22,6 +22,7 @@ const (
 	nameKeyword                      // a file's name: a character value, or a numeric place
 	flagKeyword                      // nothing: READONLY
 	keysKeyword                      // KEY's list
+	assocKeyword                     // ASSOCIATEVARIABLE's: an INTEGER variable FTNRTL stores in
 	numberAnswer                     // INQUIRE's: an INTEGER place to store in
 	logicalAnswer                    // a LOGICAL place
 	textAnswer                       // a CHARACTER place
@@ -84,7 +85,7 @@ var openKeywords = map[string]fileKeyword{
 	"NOSPANBLOCKS":      {code: 12, kind: flagKeyword},
 	"SHARED":            {code: 13, kind: flagKeyword},
 	"MAXREC":            {code: 16, kind: numberKeyword},
-	"ASSOCIATEVARIABLE": {code: 17, later: "the ASSOCIATEVARIABLE= specifier"},
+	"ASSOCIATEVARIABLE": {code: 17, kind: assocKeyword},
 	"BLOCKSIZE":         {code: 18, kind: numberKeyword},
 	"ORGANIZATION":      {code: codeOrg, kind: choiceKeyword, choices: orgChoices},
 	"RECORDTYPE":        {code: codeType, kind: choiceKeyword, choices: typeChoices},
@@ -128,17 +129,32 @@ var inquireKeywords = map[string]fileKeyword{
 // codeUnit is the keyword INQUIRE passes its unit by, since by file it has none.
 const codeUnit = 1
 
-// FileStmt is OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, or ENDFILE (by its
-// AST's kind): the unit, an
-// INTEGER*4 value, nil for an OPEN with no UNIT= (FORRTL's unit 0) and for
-// INQUIRE, whose unit is a keyword; its keywords, in order; and ERR= and
-// IOSTAT=, as IO's.
+// FileStmt is OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, or FIND (by
+// its AST's kind): the unit, an INTEGER*4 value, nil for an OPEN with no
+// UNIT= (FORRTL's unit 0) and for INQUIRE, whose unit is a keyword; FIND's
+// record number, an INTEGER*4; its keywords, in order; and ERR= and IOSTAT=,
+// as IO's.
 type FileStmt struct {
 	stmtBase
 	Unit   Expr
+	Rec    Expr
 	Keys   []*FileKey
 	Err    int
 	IOStat Expr
+}
+
+// DefineFile is DEFINE FILE (appendix A.2): for each file, its unit, its
+// number of records, and their length in 16-bit words, each an INTEGER*4, and
+// its associated variable, an INTEGER*2 or INTEGER*4 *Var.
+type DefineFile struct {
+	stmtBase
+	Files []*FileDef
+}
+
+// FileDef is one file of a DEFINE FILE statement.
+type FileDef struct {
+	Unit, Records, Length Expr
+	Var                   Expr
 }
 
 // FileKey is one keyword: its code, and its value: Number, a number known
@@ -189,8 +205,21 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		keywords = closeKeywords
 	case lex.Inquire:
 		keywords = inquireKeywords
-	case lex.Rewind, lex.Backspace, lex.EndFile:
+	case lex.Rewind, lex.Backspace, lex.EndFile, lex.Find:
 		keywords = nil // only ERR= and IOSTAT=
+	}
+
+	if s.Kind == lex.Find {
+		switch {
+		case s.Rec == nil:
+			a.report("FINDREC", s.Pos)
+
+			ok = false
+		default:
+			if st.Rec = a.recordNumber(s.Rec); st.Rec == nil {
+				ok = false
+			}
+		}
 	}
 
 	var control []*ast.IOSpec
@@ -323,6 +352,16 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 	case numberAnswer, logicalAnswer, textAnswer:
 		return a.fileAnswer(spec, k)
 
+	case assocKeyword:
+		v := a.associatedVariable(spec.Value)
+		if v == nil {
+			return nil, false
+		}
+
+		key.Answer = v
+
+		return key, true
+
 	case flagKeyword, keysKeyword:
 		// KEY='s list is the indexed program's: FTNRTL only needs to know
 		// there is one (Decision 13).
@@ -403,6 +442,76 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 	key.Number, key.Known = n, true
 
 	return key, true
+}
+
+// associatedVariable analyzes a file's associated variable, OPEN's
+// ASSOCIATEVARIABLE= or DEFINE FILE's last (section 9.1.2, appendix A.2): an
+// INTEGER*2 or INTEGER*4 variable, not a dummy argument, which FTNRTL sets to
+// the next record's number after each direct access statement. It is nil, the
+// error reported, if e is none.
+func (a *analyzer) associatedVariable(e ast.Expr) Expr {
+	name := "the expression"
+	if n, isName := e.(*ast.Name); isName {
+		name = n.Name
+	}
+
+	v, isVar := a.place(e, false).(*Var)
+
+	switch {
+	case isVar && v.Type().Kind == Invalid:
+		return nil
+	case !isVar || v.Type().Kind != Integer || v.Type().Size == 1 || v.Sym.Dummy != 0:
+		a.report("ASSOCVAR", e.Position(), name)
+
+		return nil
+	}
+
+	return v
+}
+
+// defineFile analyzes DEFINE FILE u(m,n,U,v)[,...] (appendix A.2): each file's
+// unit, number of records, and record length, INTEGER values, and associated
+// variable.
+func (a *analyzer) defineFile(s *ast.DefineFileStmt) Stmt {
+	st := &DefineFile{stmtBase: stmtBase{s}}
+	ok := true
+
+	integer := func(e ast.Expr, what string) Expr {
+		v := a.value(e)
+
+		switch v.Type().Kind {
+		case Invalid:
+		case Integer:
+			return a.convert(v, IntegerType)
+		default:
+			a.report("DEFINEUNIT", e.Position(), what)
+		}
+
+		ok = false
+
+		return nil
+	}
+
+	for _, f := range s.Files {
+		def := &FileDef{
+			Unit:    integer(f.Unit, "unit"),
+			Records: integer(f.Records, "number of records"),
+			Length:  integer(f.Length, "record length"),
+			Var:     a.associatedVariable(f.Var),
+		}
+
+		if def.Var == nil {
+			ok = false
+		}
+
+		st.Files = append(st.Files, def)
+	}
+
+	if !ok {
+		return nil
+	}
+
+	return st
 }
 
 // checkOpen reports what FORRTL would refuse in an OPEN whose keywords are

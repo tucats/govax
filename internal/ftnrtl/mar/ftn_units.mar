@@ -62,6 +62,16 @@
 ; Image exit closes every unit by its disposition, through an exit handler
 ; declared when the first unit is connected (Decision 12).
 ;
+; A direct access unit (ACCESS='DIRECT', or one DEFINE FILE described) reads
+; and writes a record by its number, RMS's keyed $GET and $PUT on a file of
+; fixed-length records (RAB$B_RAC KEY, RAB$L_KBF the unit's UB_KEY). Each
+; record a statement moves takes the next number, so a format that writes two
+; records writes r and r+1; after each, the next number is the unit's NEXTREC
+; and its associated variable's value (FTN$$UNIT_DIRECT, DIRECT_DONE). DEFINE
+; FILE (FTN_DIRECT) only describes a unit: its file is opened by the first
+; direct statement, created by a WRITE and found by a READ or FIND, as the 1988
+; LRM's A.2 says.
+;
 ; FTN_OPEN and FTN_INQUIRE use this block too, and define its fields the same:
 ;
 	$DEVDEF				; the device's characteristics
@@ -101,7 +111,19 @@ UB_NAM		= UB_RAB+RAB$C_BLN
 UB_XAB		= UB_NAM+NAM$C_BLN
 UB_RSA		= UB_XAB+XAB$C_FHCLEN
 RSA_SIZE	= 255			; NAM$C_MAXRSS
-UB_BLN		= UB_RSA+RSA_SIZE+1
+UB_ASV		= UB_RSA+RSA_SIZE+1	; long: the associated variable's address, or 0
+UB_ASVSIZE	= UB_ASV+4		; long: and its size, 2 or 4
+UB_KEY		= UB_ASV+8		; long: the next direct record's number, RMS's key
+UB_MAXREC	= UB_ASV+12		; long: the highest record number, or 0 for any
+UB_DEFINED	= UB_ASV+16		; long: 1 once DEFINE FILE has described the
+					;  unit, which FTN$$UNIT_INIT leaves alone:
+UB_DEF_RECORDS	= UB_ASV+20		; long: its number of records,
+UB_DEF_LENGTH	= UB_ASV+24		; long: their length in words,
+UB_DEF_ASV	= UB_ASV+28		; long: and its associated variable's address
+UB_DEF_ASVSIZE	= UB_ASV+32		;  and size
+UB_BLN		= UB_ASV+36
+
+	.IIF NE UB_ASV-620, .ERROR	; FTN_OPEN and FTN_DIRECT say 620
 
 K_OUTPUT	= 1			; a unit on SYS$OUTPUT:
 K_INPUT		= 2			; a unit on SYS$INPUT:
@@ -118,6 +140,9 @@ INPUT_MAX	= 199			; the longest record read from SYS$INPUT:
 
 FOR$_INPRECTOO	= ^X001880B4		; FORRTL's condition values, with
 FOR$_ENDDURREA	= ^X001880C4		;  their severities
+FOR$_RECNUMOUT	= ^X001880CC
+FOR$_OPEDEFREQ	= ^X001880D4
+FOR$_ATTACCNON	= ^X00188124
 FOR$_CLOERR	= ^X001880E4
 FOR$_FILNOTFOU	= ^X001880EC
 FOR$_OPEFAI	= ^X001880F4
@@ -262,6 +287,10 @@ EXIT_DECLARED:	.LONG	0
 	MOVAB	UB_XAB(R6),UB_FAB+FAB$L_XAB(R6)
 	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_RSA(R6)
 	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_ESA(R6)
+	MOVAB	UB_KEY(R6),UB_RAB+RAB$L_KBF(R6)	; a direct record's number
+	MOVB	#4,UB_RAB+RAB$B_KSZ(R6)
+	CLRL	UB_ASV(R6)
+	CLRL	UB_MAXREC(R6)
 	CLRL	UB_KIND(R6)
 	CLRQ	UB_STS(R6)
 	CLRL	UB_RECORDS(R6)
@@ -535,6 +564,7 @@ EXIT_DECLARED:	.LONG	0
 	$CLOSE	FAB=R3
 	MOVL	R0,R4
 	CLRL	UB_OPEN(R2)
+	CLRL	UB_DEFINED(R2)		; DEFINE FILE's description goes with the file
 	CLRB	UB_NAM+NAM$B_RSL(R2)
 	CLRB	UB_NAM+NAM$B_ESL(R2)
 	PUSHAL	UB_RECP(R2)
@@ -646,16 +676,18 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	RET
 
 ;
-; FTN$$UNIT_RECORD(block, place, write[, form])
+; FTN$$UNIT_RECORD(block, place, write[, form[, direct]])
 ;
-; What a sequential statement uses of a connected unit, for reading if write
-; (by value) is 0, its form (by value) 1 formatted, the default, or 2
-; unformatted: returns in R0 its record buffer, and puts at place the longest
-; record it may write, then a longword, 1 if blanks in numbers are zeros. R1 is
-; 0, or the FOR$_ condition if the statement can't use the unit: MIXFILACC for
-; a statement of the other form, or on a unit that is direct, WRIREAFIL for a
-; write on a READONLY unit. A unit with no form yet takes the statement's, and
-; if unformatted, the size and segments of a unit connected for one.
+; What a statement uses of a connected unit, for reading if write (by value)
+; is 0, its form (by value) 1 formatted, the default, or 2 unformatted, and
+; direct (by value) 1 for a direct access statement: returns in R0 its record
+; buffer, and puts at place the longest record it may write, then a longword, 1
+; if blanks in numbers are zeros. R1 is 0, or the FOR$_ condition if the
+; statement can't use the unit: MIXFILACC for a statement of the other form, or
+; a sequential one on a unit that is direct, WRIREAFIL for a write on a READONLY
+; unit. (FTN$$UNIT_DIRECT has seen that a direct statement's unit is direct.) A
+; unit with no form yet takes the statement's, and if unformatted, the size and
+; segments of a unit connected for one.
 ;
 	.ENTRY	FTN$$UNIT_RECORD,^M<R2,R3>
 	MOVL	4(AP),R1
@@ -679,11 +711,14 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 10$:	MOVL	UB_RECP(R1),R0
 	CMPB	UB_FORM(R1),R3
 	BNEQ	30$
-	CMPB	UB_ACCESS(R1),#1
+	CMPB	(AP),#5
+	BLSSU	15$
+	BLBS	20(AP),17$		; a direct statement
+15$:	CMPB	UB_ACCESS(R1),#1
 	BEQL	30$
 	CMPB	UB_ACCESS(R1),#4
 	BEQL	30$
-	BLBC	12(AP),20$
+17$:	BLBC	12(AP),20$
 	TSTB	UB_READONLY(R1)
 	BEQL	20$
 	MOVL	#FOR$_WRIREAFIL,R1
@@ -722,7 +757,12 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 10$:	$PUT	RAB=R7
 	BLBC	R0,20$
 	INCL	UB_RECORDS(R6)
-	RET
+	CMPB	UB_ACCESS(R6),#1
+	BNEQ	15$
+	PUSHL	R0
+	BSBW	DIRECT_DONE
+	POPL	R0
+15$:	RET
 20$:	MOVL	RAB$L_STS(R7),UB_STS(R6)
 	MOVL	RAB$L_STV(R7),UB_STV(R6)
 	RET
@@ -739,7 +779,7 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; held, RMS$_RTB and its size, as RMS gives for one longer than the buffer, and
 ; as VMS's run reported for a record of 200.
 ;
-	.ENTRY	FTN$$UNIT_GET,^M<R2,R3>
+	.ENTRY	FTN$$UNIT_GET,^M<R2,R3,R6>
 	MOVL	4(AP),R3
 	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
@@ -747,11 +787,20 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	$GET	RAB=R2
 	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
-	TSTL	UB_KIND(R3)
-	BEQL	1$
+	CMPB	UB_ACCESS(R3),#1
+	BNEQ	1$
+	MOVL	R3,R6			; a direct record, of the file's size
+	PUSHL	R1
+	BSBW	DIRECT_DONE
+	POPL	R1
+	INCL	UB_RECORDS(R3)
+	MOVL	#SS$_NORMAL,R0
+	RET
+1$:	TSTL	UB_KIND(R3)
+	BEQL	4$
 	CMPL	R1,#INPUT_MAX
 	BGTRU	2$
-1$:	INCL	UB_RECORDS(R3)
+4$:	INCL	UB_RECORDS(R3)
 	CMPL	R1,#1			; ENDFILE's record: RMS has no complaint
 	BNEQ	3$
 	CMPB	@UB_RECP(R3),#^X1A
@@ -767,6 +816,14 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	RET
 5$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
 	MOVL	RAB$L_STV(R2),UB_STV(R3)
+	CMPB	UB_ACCESS(R3),#1
+	BNEQ	10$
+	CMPL	R0,#RMS$_EOF		; a direct record past the end: no such record
+	BEQL	7$
+	CMPL	R0,#RMS$_RNF
+	BNEQ	20$
+7$:	MOVL	#FOR$_ATTACCNON,R0
+	RET
 10$:	CMPL	R0,#RMS$_EOF
 	BNEQ	20$
 	MOVL	#FOR$_ENDDURREA,R0
@@ -778,6 +835,130 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 30$:	MOVL	#FOR$_INPRECTOO,R0
 	RET
 40$:	MOVL	#FOR$_ERRDURREA,R0
+	RET
+
+;
+; DIRECT_DONE: a direct record of the unit whose block is R6 has been read or
+; written: the next one is the next number, the unit's NEXTREC and its
+; associated variable's value. Changes R0 and R1.
+;
+DIRECT_DONE:
+	INCL	UB_KEY(R6)
+	MOVL	UB_KEY(R6),R0
+	BRB	SET_NEXT
+
+;
+; SET_NEXT: R0 is the next direct record of the unit whose block is R6: its
+; NEXTREC, and its associated variable's value, a word or a longword. Changes
+; R1.
+;
+SET_NEXT:
+	MOVL	R0,UB_NEXTREC(R6)
+	MOVL	UB_ASV(R6),R1
+	BEQL	20$
+	CMPL	UB_ASVSIZE(R6),#2
+	BNEQ	10$
+	MOVW	R0,(R1)
+	RSB
+10$:	MOVL	R0,(R1)
+20$:	RSB
+
+;
+; FTN$$UNIT_DIRECT(block, read, record)
+;
+; Readies the unit whose block is given for a direct access statement on the
+; record numbered record (by value), a READ or FIND if read (by value) is 1, a
+; WRITE if 0; R0 returns SS$_NORMAL, or the FOR$_ condition the statement fails
+; with. A unit that isn't connected is opened now if DEFINE FILE described it
+; (FTN$$UNIT_DEFINED), and is otherwise FOR$_OPEDEFREQ, as is a unit whose
+; access isn't direct, as on VMS (testdata/for81's #558, #562). Record 0, or one
+; past MAXREC, is FOR$_RECNUMOUT; any other goes to RMS, so that -1 fails as
+; RMS fails it (#553, #556). FTNRTL's own MAXREC is the one OPEN gave, which RMS
+; doesn't keep for a sequential file.
+;
+	.ENTRY	FTN$$UNIT_DIRECT,^M<R2>
+	MOVL	4(AP),R2
+	BLBS	UB_OPEN(R2),20$
+	BLBS	UB_DEFINED(R2),10$
+	MOVL	#FOR$_OPEDEFREQ,R0
+	RET
+10$:	PUSHL	8(AP)
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_DEFINED
+	BLBC	R0,90$
+20$:	CMPB	UB_ACCESS(R2),#1
+	BEQL	30$
+	MOVL	#FOR$_OPEDEFREQ,R0
+	RET
+30$:	MOVL	12(AP),R0
+	BEQL	40$
+	MOVL	UB_MAXREC(R2),R1
+	BLEQ	35$			; 0, or DEFINE FILE's -1: no limit
+	CMPL	R0,R1
+	BGTR	40$
+35$:	MOVL	R0,UB_KEY(R2)
+	MOVL	#SS$_NORMAL,R0
+	RET
+40$:	MOVL	#FOR$_RECNUMOUT,R0
+90$:	RET
+
+;
+; FTN$$UNIT_FOUND(block, record)
+;
+; FIND has positioned the unit whose block is given at the record numbered
+; record (by value): that is its NEXTREC and its associated variable's value,
+; and the next direct statement's record unless it says another (testdata/for81,
+; #561 and round 2's code 17 cases).
+;
+	.ENTRY	FTN$$UNIT_FOUND,^M<R6>
+	MOVL	4(AP),R6
+	MOVL	8(AP),R0
+	MOVL	R0,UB_KEY(R6)
+	BSBW	SET_NEXT
+	RET
+
+;
+; FTN$$UNIT_DEFINED(block, read)
+;
+; Opens the unit whose block is given as its DEFINE FILE described it: a file
+; of fixed-length records, 2n bytes each, MRN m, unformatted and direct, read
+; and written by its number (VMS's run, testdata/for81's #564), with the
+; definition's associated variable; created if read (by value) is 0, for a
+; WRITE, and found if 1, for a READ or FIND (the LRM's A.2; unconfirmed, as
+; VMS's run had only writes). Returns SS$_NORMAL in R0, or the FOR$_ condition
+; for the failure, RMS's status and value kept in the block.
+;
+	.ENTRY	FTN$$UNIT_DEFINED,^M<R2,R3,R4>
+	MOVL	4(AP),R2
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_INIT
+	MOVAB	UB_FAB(R2),R3
+	MOVAB	UB_RAB(R2),R4
+	MOVB	#2,UB_FORM(R2)		; unformatted
+	MOVB	#1,UB_ACCESS(R2)	; direct
+	MOVL	#1,UB_NEXTREC(R2)
+	MOVL	UB_DEF_RECORDS(R2),UB_MAXREC(R2)
+	MOVL	UB_DEF_RECORDS(R2),FAB$L_MRN(R3)
+	ADDL3	UB_DEF_LENGTH(R2),UB_DEF_LENGTH(R2),R0 ; the record's bytes
+	MOVL	R0,UB_SIZE(R2)
+	MOVW	R0,FAB$W_MRS(R3)
+	MOVB	#FAB$C_FIX,FAB$B_RFM(R3)
+	CLRB	FAB$B_RAT(R3)
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R4)
+	BISL2	#RAB$M_UIF,RAB$L_ROP(R4)
+	MOVL	UB_DEF_ASV(R2),UB_ASV(R2)
+	MOVL	UB_DEF_ASVSIZE(R2),UB_ASVSIZE(R2)
+	BLBS	8(AP),10$
+	$CREATE	FAB=R3
+	BRB	20$
+10$:	$OPEN	FAB=R3
+20$:	BLBC	R0,40$
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_READY
+	RET
+40$:	PUSHL	R0
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_FAILED
 	RET
 
 ;

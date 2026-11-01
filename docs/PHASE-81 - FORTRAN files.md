@@ -1133,3 +1133,42 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     ENDDURREA. A unit ENDFILE connected, whose first statement is unformatted, becomes what a unit
     with no OPEN would (segmented, 2044 bytes), so its buffer is made that large to begin with.
     UNFUNIT is a compile-time error, since no VAX FORTRAN compiler is here to ask.
+- **2026-10-31, subtask 8, direct access, DEFINE FILE, and FIND.** The compiler: `sema`'s
+  `direct` (`IO.Rec`, the record number an INTEGER*4 from any numeric expression; DIRECTUNIT,
+  DIRECTFORM, DIRECTEND, BADREC), FIND as a `FileStmt` with `Rec` (FINDREC), `DefineFile`
+  (DEFINEUNIT), and ASSOCIATEVARIABLE= (`assocKeyword`, an INTEGER*2 or INTEGER*4 variable,
+  not a dummy, by FORRTL's mechanisms 3 or 5; ASSOCVAR). The begin calls are `FTN$READ_DF`,
+  `FTN$READ_DU`, `FTN$WRITE_DF`, and `FTN$WRITE_DU`, the record the last argument, by value;
+  `FTN$FIND(block, unit, rec)`; and `FTN$DEF_FILE` and `FTN$DEF_FILE_W(block, unit, m, n,
+  v)`, which take a control block as every other statement does, where Decision 4 had none,
+  so that they share `FTN$$STMT_FILE` (offsets 456 to 504, GSMATCH 1,14; `ftn_direct.mar`).
+  `TestFor81DirectOracle` holds the probe's #553 to #562, #564, #565, and #569, and round 2's
+  #9 and #10 (ASSOCIATEVARIABLE by a longword and a word), to VMS's statuses, reads,
+  associated variable, INQUIRE's OPENED, NEXTREC, and RECL, and the records of DIR1 to DIR3;
+  `TestFor81InquireOracle` now has #507; `TestFortranDirectSignals` is #567, #568, #570's
+  messages; `testdata/fortran/direct.for` is the rest, read against these rules by hand.
+  - **FTN_UNITS:** the unit's block gained the associated variable, the key RMS reads
+    (`UB_KEY`, RAB$L_KBF of every unit), MAXREC, and DEFINE FILE's description, after the
+    NAM's buffer (offset 620, which FTN_OPEN and FTN_DIRECT repeat and an `.IIF` checks).
+    `FTN$$UNIT_DIRECT` readies a unit for a record (OPEDEFREQ, RECNUMOUT; a unit DEFINE FILE
+    described is opened by `FTN$$UNIT_DEFINED`, created by a WRITE, found by a READ or FIND);
+    each record `FTN$$UNIT_PUT` or `FTN$$UNIT_GET` moves on a direct unit takes the next number
+    (`DIRECT_DONE`), so a format of two records writes r and r+1, and sets NEXTREC and the
+    variable; FIND sets them to r (`FTN$$UNIT_FOUND`). A direct `$GET`'s RMS$_EOF or RNF is
+    ATTACCNON. `FTN$$UNIT_RECORD` takes a fifth argument, a direct statement's 1.
+  - **Found by the oracle:** a direct unformatted WRITE too long for its record writes as much
+    as fits and still fails OUTSTAOVE (#553's record 3), where a sequential FIXED unit writes
+    nothing (#533) and a formatted direct one nothing (#554), so `FTN$$UNF_END` writes it.
+  - **RMS:** a keyed record number past 2,147,483,647 is RMS$_KEY, so record -1 fails as RMS
+    fails it, ERRDURREA or ERRDURWRI, as VMS's did (#553).
+  - **Unconfirmed, govax's choices.** Which RMS status VMS's RMS gives record -1 (govax: KEY);
+    that a DEFINE FILE unit's READ or FIND does `$OPEN` (the LRM's A.2; VMS's run only wrote);
+    DEFINE FILE's limit, a record of 32767 bytes (VMS refused 40000 words with INCRECTYP, and
+    took 8); that CLOSE forgets a DEFINE FILE's description; that ATTACCNON's signal carries
+    RMS's status, as ENDDURREA's does, and FIND's other failures are FINERR; that the
+    associated variable and NEXTREC move only when a record is moved, not on a failure; that a
+    direct unit's MAXREC is FTNRTL's own, from OPEN's MAXREC= or DEFINE FILE's m (VMS's #556:
+    RMS keeps none for a sequential file); END= in a direct READ is a compile-time error
+    (DIRECTEND), as the LRM's forms have none.
+  - **Left:** relative files (subtasks 9 and 10), on which the same statements will run, and
+    DELETE, REWRITE, and UNLOCK with them.

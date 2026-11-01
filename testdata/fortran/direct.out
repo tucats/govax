@@ -1,0 +1,19 @@
+AFTER 3  4
+  30  31  32  4
+   0   0   0
+  10  2
+   0  3
+  30  4
+PAST THE END  36
+TOO LONG 66  40  41  42
+RECORD 0
+SEQUENTIAL  31
+FIND  2  2
+THREE   |TWO     |
+  66  36
+DEFINED, OPENED F
+NEXT  6
+PAST 5  25
+ T  1  6
+  16   5
+  $STATUS == "%X00000001"

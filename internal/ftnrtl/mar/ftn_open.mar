@@ -42,10 +42,15 @@ UB_APPENDED	= 43
 UB_NEXTREC	= 44
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
+UB_ASV		= 620
+UB_ASVSIZE	= UB_ASV+4
+UB_MAXREC	= UB_ASV+12
+UB_DEFINED	= UB_ASV+16
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
 
 FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
+FOR$_DUPFILSPE	= ^X001880AC
 FOR$_INCRECLEN	= ^X0018812C		;  their severities
 FOR$_FILNAMSPE	= ^X0018815C
 FOR$_INCRECTYP	= ^X00188164
@@ -54,9 +59,11 @@ FOR$_INCOPECLO	= ^X00188174
 FOR$_INCFILORG	= ^X0018819C
 
 ; The keywords' values, kept in a longword per code on the stack, R11 their
-; base: 0 if the keyword wasn't given, which for a number means the same.
+; base: 0 if the keyword wasn't given, which for a number means the same. After
+; them, ASSOCIATEVARIABLE's mechanism, which says the variable's width.
 CODES		= 29
-OPS_SIZE	= CODES*4
+OPS_ASVMECH	= CODES*4
+OPS_SIZE	= OPS_ASVMECH+4
 OPS_DISPOSE	= 2*4
 OPS_ACCESS	= 4*4
 OPS_FORM	= 5*4
@@ -71,6 +78,7 @@ OPS_SHARED	= 13*4
 OPS_FILE	= 14*4
 OPS_STATUS	= 15*4
 OPS_MAXREC	= 16*4
+OPS_ASSOC	= 17*4
 OPS_BLOCK	= 18*4
 OPS_ORG		= 19*4
 OPS_TYPE	= 20*4
@@ -79,8 +87,11 @@ OPS_BLANK	= 24*4
 OPS_DEFAULT	= 26*4
 
 CODE_FILE	= 14
+CODE_ASSOC	= 17
 CODE_DEFAULT	= 26
 
+MECHANISM_WORD	= 3			; a word, at the next argument's address
+MECHANISM_VALUE	= 4			; the next argument itself
 MECHANISM_TEXT	= 7
 
 ; The values of the choices.
@@ -259,6 +270,9 @@ START:	MOVAB	4(SP),R11
 30$:	CMPL	R2,#CODES
 	BGEQU	10$
 	MOVL	R1,(R11)[R2]
+	CMPL	R2,#CODE_ASSOC
+	BNEQ	10$
+	MOVL	R3,OPS_ASVMECH(R11)	; the associated variable's width
 	BRB	10$
 70$:	MOVL	#FOR$_KEYVALERR,CTX_STATUS(R9)
 	CLRL	R0
@@ -340,7 +354,10 @@ ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
 	BLBS	R0,1$
 	BRW	END
 1$:	BLBS	UB_OPEN(R7),2$
-	BRW	RULES
+	BLBC	UB_DEFINED(R7),5$	; a unit DEFINE FILE described (VMS's #569)
+	MOVL	#FOR$_DUPFILSPE,R0
+	BRW	FAILED
+5$:	BRW	RULES
 	;
 	; A connected unit. On the same file, or with no name, only BLANK
 	; changes, and nothing else is looked at; another file closes the first
@@ -629,7 +646,15 @@ SETUP:	PUSHL	R7
 37$:	BSBW	KEYLIKE
 	BNEQ	39$
 	MOVL	#1,UB_NEXTREC(R7)
-	MOVB	#RAB$C_KEY,RAB$B_RAC(R10)
+	MOVL	OPS_MAXREC(R11),UB_MAXREC(R7) ; FTNRTL's own limit (FTN_UNITS)
+	MOVL	OPS_ASSOC(R11),UB_ASV(R7) ; the associated variable, a word by
+	MOVL	#4,UB_ASVSIZE(R7)	;  mechanism 3 or (as FORRTL took it) 4
+	CMPL	OPS_ASVMECH(R11),#MECHANISM_WORD
+	BEQL	38$
+	CMPL	OPS_ASVMECH(R11),#MECHANISM_VALUE
+	BNEQ	381$
+38$:	MOVL	#2,UB_ASVSIZE(R7)
+381$:	MOVB	#RAB$C_KEY,RAB$B_RAC(R10)
 	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
 	BNEQ	39$
 	BISL2	#RAB$M_UIF,RAB$L_ROP(R10)

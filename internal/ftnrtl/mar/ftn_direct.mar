@@ -1,0 +1,149 @@
+	.TITLE	FTN_DIRECT - FTNRTL's DEFINE FILE and FIND
+	.IDENT	/V1.0/
+;
+; Two statements of direct access that move no data (the 1988 VAX FORTRAN
+; Language Reference Manual, A.2 and A.3) are one call each, by the compiler
+; (docs/PHASE-81 - FORTRAN files.md, Decision 4):
+;
+;	FTN$DEF_FILE(control block, unit, records, length, variable)
+;	FTN$DEF_FILE_W(the same)
+;	FTN$FIND(control block, unit, record)
+;
+; The numbers are by value, the associated variable by reference: a longword's
+; for FTN$DEF_FILE, a word's for FTN$DEF_FILE_W, as VMS's FORTRAN run-time
+; library has the two. Each is a statement like any other, ending in
+; FTN$IO_END, which returns the status in R0 or signals the failure; DEFINE FILE
+; has no ERR= or IOSTAT=, so a failure is always signaled.
+;
+; DEFINE FILE u(m,n,U,v) describes a unit, and opens nothing: the unit's first
+; direct statement does (FTN_UNITS's FTN$$UNIT_DEFINED). As VMS's run showed
+; (testdata/for81, #564 to #570), the unit is then a sequential file of
+; fixed-length records of 2n bytes, not the relative file the LRM's A.2 says;
+; INQUIRE knows nothing of a unit only described; a DEFINE FILE of a connected
+; unit is FOR$_UNIALROPE, a second one, or an OPEN after one, FOR$_DUPFILSPE; and
+; m of 0 or -1, or n of 0, is taken (n of 0 then fails at the open). n of 40000
+; was FOR$_INCRECTYP: govax's limit is a record of 32767 bytes, the largest RMS
+; makes of fixed-length records (unconfirmed).
+;
+; FIND (u'r) readies the unit as a direct READ would, opening a unit DEFINE FILE
+; described, and positions it at record r: a $FIND by its number. r is then the
+; unit's NEXTREC and its associated variable's value (VMS's #561 and round 2),
+; not r+1 as after a READ. A record past the end of the file is FOR$_ATTACCNON,
+; and any other failure of RMS's FOR$_FINERR.
+;
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+	$SSDEF
+
+UB_OPEN		= 0			; A unit's block (FTN_UNITS)
+UB_STS		= 8
+UB_STV		= 12
+UB_FAB		= 76
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_ASV		= 620
+UB_DEFINED	= UB_ASV+16
+UB_DEF_RECORDS	= UB_ASV+20
+UB_DEF_LENGTH	= UB_ASV+24
+UB_DEF_ASV	= UB_ASV+28
+UB_DEF_ASVSIZE	= UB_ASV+32
+
+CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
+
+MAX_WORDS	= 32767/2		; the longest record DEFINE FILE describes
+
+FOR$_DUPFILSPE	= ^X001880AC		; FORRTL's condition values, with
+FOR$_UNIALROPE	= ^X00188114		;  their severities
+FOR$_ATTACCNON	= ^X00188124
+FOR$_INCRECTYP	= ^X00188164
+FOR$_FINERR	= ^X001881CC
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
+
+;
+; START: begins the statement. R9 is the context, R7 the unit's block, R6 its
+; RAB. R0's low bit is clear if the statement has failed already.
+;
+START:	PUSHL	4(AP)			; the control block
+	PUSHL	16(FP)			; the user PC, saved in this frame
+	PUSHL	8(FP)			;  and its AP
+	PUSHL	12(FP)			;  and FP
+	PUSHL	8(AP)			; the unit
+	CALLS	#5,FTN$$STMT_FILE	; FTN_STATEMENT
+	MOVL	R0,R9
+	MOVL	R1,R7
+	MOVAB	UB_RAB(R7),R6
+	CLRL	R0
+	TSTL	CTX_STATUS(R9)
+	BNEQ	10$
+	MOVL	#SS$_NORMAL,R0
+10$:	RSB
+
+;
+; FTN$DEF_FILE(control block, unit, records, length, variable)
+; FTN$DEF_FILE_W(the same), the variable a word
+;
+	.ENTRY	FTN$DEF_FILE,ALL_MASK
+	MOVL	#4,R8			; the variable's size
+	BRB	DEFINE
+	.ENTRY	FTN$DEF_FILE_W,ALL_MASK
+	MOVL	#2,R8
+DEFINE:	BSBW	START
+	BLBS	R0,1$
+	BRW	END
+1$:	BLBS	UB_OPEN(R7),10$
+	BLBS	UB_DEFINED(R7),20$
+	MOVL	16(AP),R0		; the length, in words
+	CMPL	R0,#MAX_WORDS
+	BGTRU	30$			; or less than 0
+	MOVL	#1,UB_DEFINED(R7)
+	MOVL	12(AP),UB_DEF_RECORDS(R7)
+	MOVL	R0,UB_DEF_LENGTH(R7)
+	MOVL	20(AP),UB_DEF_ASV(R7)
+	MOVL	R8,UB_DEF_ASVSIZE(R7)
+	BRW	END
+10$:	MOVL	#FOR$_UNIALROPE,R0
+	BRB	FAILED
+20$:	MOVL	#FOR$_DUPFILSPE,R0
+	BRB	FAILED
+30$:	MOVL	#FOR$_INCRECTYP,R0
+	BRW	FAILED
+
+;
+; FTN$FIND(control block, unit, record)
+;
+	.ENTRY	FTN$FIND,ALL_MASK
+	BSBW	START
+	BLBC	R0,END
+	PUSHL	12(AP)			; the record
+	PUSHL	#1			; found, as a READ finds it
+	PUSHL	R7
+	CALLS	#3,FTN$$UNIT_DIRECT	; FTN_UNITS
+	BLBC	R0,FAILED
+	$FIND	RAB=R6
+	BLBS	R0,10$
+	MOVL	RAB$L_STS(R6),UB_STS(R7)
+	MOVL	RAB$L_STV(R6),UB_STV(R7)
+	MOVL	#FOR$_ATTACCNON,R2
+	CMPL	R0,#RMS$_EOF
+	BEQL	5$
+	CMPL	R0,#RMS$_RNF
+	BEQL	5$
+	MOVL	#FOR$_FINERR,R2
+5$:	MOVL	R2,R0
+	BRB	FAILED
+10$:	PUSHL	12(AP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FOUND	; FTN_UNITS
+	BRB	END
+
+;
+; The statement's error is the condition in R0.
+;
+FAILED:	MOVL	R0,CTX_STATUS(R9)
+END:	CALLS	#0,FTN$IO_END		; FTN_STATEMENT: R0 the status, or signaled
+	RET
+
+	.END

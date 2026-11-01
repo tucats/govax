@@ -533,7 +533,13 @@ never had.
   unformatted sequential I/O: `FTN$READ_SU`/`FTN$WRITE_SU` and `ftn_unformatted.mar` (VMS's
   segmented records, a segment written when full; the unit's record count of logical records),
   `sema.UnformattedForm`, held to VMS by `TestFor81UnformattedOracle` and
-  `testdata/fortran/unformatted.for`.
+  `testdata/fortran/unformatted.for`, and subtask 8 (2026-10-31) direct access, DEFINE FILE, and
+  FIND: `sema`'s `direct` (`IO.Rec`), `DefineFile`, FIND's `FileStmt.Rec`, ASSOCIATEVARIABLE=;
+  `FTN$READ_DF`/`_DU`, `FTN$WRITE_DF`/`_DU` (the record last, by value), `FTN$FIND`, and
+  `FTN$DEF_FILE`/`_W` (`ftn_direct.mar`); FTN_UNITS's `FTN$$UNIT_DIRECT` (a keyed `$GET` or
+  `$PUT` by `UB_KEY`, the next number after each record) and `FTN$$UNIT_DEFINED` (DEFINE FILE's
+  unit opened by its first statement, a sequential FIX file as VMS's), held to VMS by
+  `TestFor81DirectOracle` and `testdata/fortran/direct.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2083,7 +2089,8 @@ expect adjustment as phases land):
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the unit table, units -4 to 119, each with its own FAB
   (Phase 81); `ftn_open.mar`, OPEN and CLOSE, `ftn_inquire.mar`, INQUIRE, `ftn_position.mar`, REWIND,
-  BACKSPACE, and ENDFILE, and `ftn_unformatted.mar`, unformatted sequential I/O, Phase 81;
+  BACKSPACE, and ENDFILE, `ftn_unformatted.mar`, unformatted sequential I/O, and
+  `ftn_direct.mar`, DEFINE FILE and FIND, Phase 81;
   `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
   editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and

@@ -30,7 +30,9 @@ import (
 // run-time format's descriptor, or a NAMELIST group's block); a
 // list-directed or unformatted statement has no format argument. ENCODE and DECODE have a
 // fourth, the count of characters, by value: a longword, since VMS's take
-// counts past a descriptor's word.
+// counts past a descriptor's word. A direct access statement's last argument
+// is its record number, by value (docs/PHASE-81 - FORTRAN files.md, Decision
+// 4).
 //
 // FTN$IO_END's status is 0 for success, negative at an end of file, and
 // positive (the FOR number) for an error. A statement with none of ERR=,
@@ -60,6 +62,10 @@ func (l *lowerer) io(s *sema.IO) {
 
 	if s.Code {
 		args = append(args, Arg{Value: l.expr(s.Count)})
+	}
+
+	if s.Rec != nil {
+		args = append(args, Arg{Value: l.expr(s.Rec)})
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
@@ -143,9 +149,9 @@ func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat 
 
 // beginRoutine is the FTNRTL routine that begins statement s: FTN$, the
 // direction, and the access and form, as VMS's FORTRAN run-time library
-// names its own: S sequential or I internal, then F formatted, L
+// names its own: S sequential, D direct, or I internal, then F formatted, L
 // list-directed, N namelist, or U unformatted (FTN$WRITE_SF, FTN$READ_IL,
-// FTN$WRITE_SU); or FTN$ENCODE and FTN$DECODE.
+// FTN$WRITE_SU, FTN$READ_DF); or FTN$ENCODE and FTN$DECODE.
 func beginRoutine(s *sema.IO) string {
 	switch {
 	case s.Code && s.Read:
@@ -159,9 +165,12 @@ func beginRoutine(s *sema.IO) string {
 		name = "FTN$READ_"
 	}
 
-	if s.Internal {
+	switch {
+	case s.Internal:
 		name += "I"
-	} else {
+	case s.Rec != nil:
+		name += "D"
+	default:
 		name += "S"
 	}
 

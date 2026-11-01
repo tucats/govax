@@ -53,7 +53,11 @@ func (ctx *Context) keyedNumber(rabAddr uint32, attr ondisk.RecAttr) (uint32, ui
 		return 0, 0, err
 	}
 
-	if number == 0 {
+	// A number past 2,147,483,647 (FORTRAN's -1) is RMS$_KEY too, govax's
+	// choice: FORRTL's direct READ and WRITE of record -1 failed with a status
+	// from RMS (testdata/for81's #553), which VMS's run didn't show, and a
+	// relative file's records are numbered no higher.
+	if number == 0 || number > 0x7FFFFFFF {
 		return 0, rmsInvalidKey, nil
 	}
 

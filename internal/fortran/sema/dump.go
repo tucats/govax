@@ -283,6 +283,13 @@ func stmtText(list []Stmt) string {
 		return dumpIO(s)
 	case *FileStmt:
 		return dumpFile(s)
+	case *DefineFile:
+		files := make([]string, len(s.Files))
+		for i, f := range s.Files {
+			files[i] = DumpExpr(f.Unit) + "(" + DumpExpr(f.Records) + "," + DumpExpr(f.Length) + ",U," + DumpExpr(f.Var) + ")"
+		}
+
+		return "DEFINE FILE " + strings.Join(files, ",")
 	}
 
 	return fmt.Sprintf("%T", list[0])
@@ -295,6 +302,10 @@ func dumpFile(s *FileStmt) string {
 
 	if s.Unit != nil {
 		control = append(control, DumpExpr(s.Unit))
+	}
+
+	if s.Rec != nil {
+		control = append(control, "REC="+DumpExpr(s.Rec))
 	}
 
 	for _, k := range s.Keys {
@@ -535,6 +546,10 @@ func dumpIO(s *IO) string {
 
 	if s.Code {
 		control = append(control, DumpExpr(s.Unit))
+	}
+
+	if s.Rec != nil {
+		control = append(control, "REC="+DumpExpr(s.Rec))
 	}
 
 	if s.Err != 0 {

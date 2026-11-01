@@ -4638,9 +4638,8 @@ output it prints, and programs of several files in its `modules` directory.
   connection, so with `DEFINE SYS$OUTPUT file`, PRINT and unit 6 make a version of the
   file each, as on VMS; `@procedure/OUTPUT=file` shares one. Image exit closes every
   unit by its disposition. `DISPOSE='PRINT'` and `'SUBMIT'` keep the file, as VMS does
-  with no queue running. So far USEROPEN= and ASSOCIATEVARIABLE= draw
-  `%FORT-E-NOTIMPL`; relative and indexed files are `%FOR-F-NOTIMP`; a direct unit can
-  be opened but not yet read or written.
+  with no queue running. So far USEROPEN= draws `%FORT-E-NOTIMPL`, and relative and
+  indexed files are `%FOR-F-NOTIMP`.
 - **INQUIRE** (section 9.3), by a unit or by a file, every specifier in the manual. It
   doesn't fail: a unit that can't exist (anything but 0 to 119) has EXIST false, as does a
   file that isn't there, and IOSTAT= is 0. A name that can't be parsed, or has a wildcard,
@@ -4698,8 +4697,8 @@ output it prints, and programs of several files in its `modules` directory.
   run-time library would refuse is `SYNERRFOR` (62). A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
-  199 characters is `INPRECTOO` (22). Direct access and keyed I/O, REWRITE,
-  DELETE, FIND, and UNLOCK are `%FORT-E-NOTIMPL`.
+  199 characters is `INPRECTOO` (22). Keyed I/O, REWRITE, DELETE, and UNLOCK are
+  `%FORT-E-NOTIMPL`.
 - **Unformatted sequential I/O** (sections 7.2.1.4 and 7.3.1.4): `WRITE (1) N, X, ARRAY`
   writes its items' bytes one after another as one record, and `READ (1) N, X, ARRAY`
   gives each item as many bytes as it holds, from one record; what the items leave of
@@ -4715,6 +4714,32 @@ output it prints, and programs of several files in its `modules` directory.
   BACKSPACE steps over a whole record, its segments and all. A formatted statement on an
   unformatted unit, or an unformatted one on a formatted unit, is `MIXFILACC` (31). The
   records match those VMS's library writes, byte for byte.
+- **Direct access** (sections 7.2.2 and 7.3.2): `READ (1'5) X` or `READ (1, REC=5) X`,
+  formatted or unformatted (never list-directed or namelist: `%FORT-E-DIRECTFORM`), on a
+  unit opened `ACCESS='DIRECT'`, whose file has fixed-length records, read and written
+  by number as VMS's library does. Records may be written in any order; those between
+  the end of the file and a record written past it are zeros, and read as records. A
+  formatted record is filled out with blanks, an unformatted one with zeros; a format
+  of several records writes or reads the record, then the next. The record number may
+  be any numeric expression, converted to INTEGER. A record past the end of the file is
+  `ATTACCNON` (36), record 0 or one past MAXREC= `RECNUMOUT` (25), an unformatted record
+  too long `OUTSTAOVE` (66), with as much of it written as fits (a formatted one writes
+  nothing), a direct statement on a unit not opened for it `OPEDEFREQ` (26), and a
+  sequential one on a direct unit `MIXFILACC` (31). A direct READ has no END=.
+  `ASSOCIATEVARIABLE=NR` in the OPEN names an INTEGER variable (not a dummy argument)
+  that each statement sets to the next record's number, as INQUIRE's NEXTREC= says, so
+  `READ (1'NR)` reads the file in order.
+- **FIND** `(u'r)` or `(u, REC=r)` (A.3) positions a direct unit at record r without
+  reading it: r is then the associated variable's value and NEXTREC's (not r+1, as
+  after a READ). Past the end of the file it is `ATTACCNON`.
+- **DEFINE FILE** `u(m,n,U,v)` (A.2) describes unit u as m records of n 16-bit words,
+  unformatted, with v its associated variable, and opens nothing: the unit's first
+  direct statement does, a WRITE making the file (`FORnnn.DAT` unless the unit's
+  logical name says otherwise) and a READ or FIND finding it. As VMS's library has it,
+  the file is a sequential file of fixed-length records, not the relative file the
+  manual says. A DEFINE FILE of a connected unit is `UNIALROPE`, and a second one, or an
+  OPEN of a unit DEFINE FILE described, `DUPFILSPE`; DEFINE FILE has no ERR= or IOSTAT=,
+  so these are signaled. CLOSE forgets the description.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`

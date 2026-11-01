@@ -11,9 +11,10 @@
 ;
 ; The begin call is chosen by the statement's kind, named as VMS's
 ; FORTRAN run-time library names its own: READ or WRITE, then S for a
-; unit (sequential access) or I for an internal file, then F formatted,
-; L list-directed, N namelist, or U unformatted; and FTN$ENCODE and
-; FTN$DECODE. Its arguments are
+; unit (sequential access), D for a unit's record by its number (direct
+; access), or I for an internal file, then F formatted, L list-directed, N
+; namelist, or U unformatted; and FTN$ENCODE and FTN$DECODE. Its arguments
+; are
 ;
 ;	4(AP)	the statement's control block, made by the compiler:
 ;		+0  word  its size in bytes (8)
@@ -33,6 +34,7 @@
 ;		the number of entities, then for each the address of its
 ;		name and of its descriptor)
 ;	16(AP)	for ENCODE and DECODE, the count of characters, by value
+;	last	for a direct statement, the record's number, by value
 ;
 ; FTN$IO_ITEM's argument is an item's descriptor; FTN$IO_END returns the
 ; statement's status in R0: 0 for success, -1 at an end of file, or the
@@ -122,6 +124,8 @@ FOR$_FILNAMSPE	= ^X0018815C
 FOR$_REWERR	= ^X001880A4
 FOR$_BACERR	= ^X001880BC
 FOR$_ENDFILERR	= ^X0018810C
+FOR$_ATTACCNON	= ^X00188124
+FOR$_FINERR	= ^X001881CC
 
 ; The control block's fields and flags.
 ICB_W_SIZE	= 0
@@ -175,7 +179,9 @@ CTX_REASON	= CTX_RECP+56		; long: a second condition for the signal, or 0
 CTX_UNF_POS	= CTX_RECP+60		; FTN_UNFORMATTED's: where it reads, what the
 CTX_UNF_LEN	= CTX_RECP+64		;  buffer holds, and its state
 CTX_UNF_STATE	= CTX_RECP+68
-CTX_SIZE	= CTX_RECP+72
+CTX_DIRECT	= CTX_RECP+72		; long: 1 for a direct statement
+					;  (FTN_UNFORMATTED)
+CTX_SIZE	= CTX_RECP+76
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -192,6 +198,7 @@ K_READ_SU	= 8
 K_WRITE_SU	= 9
 K_INTERNAL	= 1@4
 K_CODE		= 2@4
+K_DIRECT	= 1@6			; a unit's record by number
 
 INTERNAL_UNIT	= -5			; an internal file's unit, as VMS's
 
@@ -218,7 +225,8 @@ LAST_ERROR:	.LONG	0, 0, 0, 0, 0
 RMS_REPORTED:
 	.LONG	FOR$_ENDDURREA, FOR$_INPRECTOO, FOR$_ERRDURREA, FOR$_ERRDURWRI
 	.LONG	FOR$_FILNOTFOU, FOR$_OPEFAI, FOR$_NO_SUCDEV, FOR$_FILNAMSPE
-	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR, 0
+	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR
+	.LONG	FOR$_ATTACCNON, FOR$_FINERR, 0
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -252,6 +260,18 @@ BEGIN_MASK	= ^M<R2,R3,R4,R5,R6,R7>
 	BRW	SEQUENTIAL
 	.ENTRY	FTN$WRITE_SU,BEGIN_MASK
 	MOVL	#K_WRITE_SU,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_DF,BEGIN_MASK
+	MOVL	#K_READ_SF+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_DF,BEGIN_MASK
+	MOVL	#K_WRITE_SF+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_DU,BEGIN_MASK
+	MOVL	#K_READ_SU+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_DU,BEGIN_MASK
+	MOVL	#K_WRITE_SU+K_DIRECT,R6
 	BRW	SEQUENTIAL
 	.ENTRY	FTN$READ_IF,BEGIN_MASK
 	MOVL	#K_READ_SF+K_INTERNAL,R6
@@ -309,8 +329,32 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	PUSHL	AP			; an internal file: its records
 	PUSHL	R3
 	CALLS	#2,FTN$$INT_START	; FTN_INTERNAL
-	BRB	75$
-36$:	BSBW	OPEN_FLAGS
+	BRW	75$
+36$:	TSTB	CTX_DIRECT(R3)
+	BEQL	38$
+	;
+	; A direct statement: its unit's block (connecting nothing here), and
+	; the unit readied for the record, the begin call's last argument
+	; (FTN$$UNIT_DIRECT, which opens a unit DEFINE FILE described).
+	;
+	CLRL	-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,34$
+	BSBW	CHECK_NESTED
+	BLBC	R0,34$
+	MOVZBL	(AP),R0
+	PUSHL	(AP)[R0]		; the record
+	BICL3	#^C1,R6,R0
+	XORL2	#1,R0			; 1 for a READ
+	PUSHL	R0
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#3,FTN$$UNIT_DIRECT	; FTN_UNITS
+	BLBC	R0,34$
+	BRW	65$
+34$:	BRW	FAIL
+38$:	BSBW	OPEN_FLAGS
 	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
@@ -329,14 +373,15 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,65$
 	BRW	FAIL
-65$:	MOVL	#FORM_FORMATTED,-(SP)	; the statement's form
+65$:	MOVZBL	CTX_DIRECT(R3),-(SP)	; 1 for a direct statement
+	MOVL	#FORM_FORMATTED,-(SP)	; the statement's form
 	CMPL	R6,#K_READ_SU
 	BLSSU	66$
 	MOVL	#FORM_UNFORMATTED,(SP)
 66$:	BICL3	#^C1,R6,-(SP)		; 1 for a WRITE
 	PUSHAB	CTX_UNITMAX(R3)
 	PUSHL	CTX_STREAM(R3)
-	CALLS	#4,FTN$$UNIT_RECORD	; FTN_UNITS
+	CALLS	#5,FTN$$UNIT_RECORD	; FTN_UNITS
 	MOVL	R0,CTX_RECP(R3)
 	TSTL	R1
 	BEQL	75$
@@ -500,6 +545,7 @@ PUSH_CONTEXT:
 	MOVW	ICB_W_FLAGS(R5),CTX_FLAGS(R3)
 35$:	EXTZV	#4,#2,R6,R0		; a form of internal file, or 0
 	MOVB	R0,CTX_INTERNAL(R3)
+	EXTZV	#6,#1,R6,CTX_DIRECT(R3)	; a direct statement, or 0
 	BICL2	#^C15,R6		; the kind, as a unit's
 	MOVB	R6,CTX_KIND(R3)
 	CLRL	CTX_STATUS(R3)

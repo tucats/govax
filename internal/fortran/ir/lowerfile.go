@@ -31,7 +31,8 @@ const (
 	mechanismByte       = 10
 )
 
-// fileStatement lowers OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, or ENDFILE.
+// fileStatement lowers OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, or
+// FIND, whose record number follows the unit, by value.
 func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	c := controlFor(s.Err, 0, s.IOStat)
 	kind := s.AST.Base().Kind
@@ -45,6 +46,10 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		}
 
 		args = append(args, Arg{Value: unit})
+	}
+
+	if s.Rec != nil {
+		args = append(args, Arg{Value: l.expr(s.Rec)})
 	}
 
 	for _, k := range s.Keys {
@@ -73,6 +78,8 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		routine = "FTN$BACKSPACE"
 	case lex.EndFile:
 		routine = "FTN$ENDFILE"
+	case lex.Find:
+		routine = "FTN$FIND"
 	}
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)
@@ -96,6 +103,33 @@ func (l *lowerer) fileAnswer(k *sema.FileKey) []Arg {
 	}
 
 	return []Arg{keyword(k.Code, mechanism), {Ref: l.mem(k.Answer)}}
+}
+
+// defineFile lowers DEFINE FILE: a call for each file, with no specifiers to
+// take a failure, so FTNRTL signals one.
+//
+//	DEFINE FILE 3 (1000, 48, U, NREC)
+//
+//	  call FTN$DEF_FILE($IO1, 3, 1000, 48, NREC)
+//
+// The unit and the two numbers are by value, the associated variable by
+// reference, FTN$DEF_FILE_W's a word, as VMS's FORTRAN run-time library has
+// two routines for the two widths.
+func (l *lowerer) defineFile(s *sema.DefineFile) {
+	for _, f := range s.Files {
+		routine := "FTN$DEF_FILE"
+		if f.Var.Type().Size == 2 {
+			routine = "FTN$DEF_FILE_W"
+		}
+
+		l.emit(&Call{origin: l.origin(), Routine: routine, Args: []Arg{
+			{Ref: l.control(Control{})},
+			{Value: l.expr(f.Unit)},
+			{Value: l.expr(f.Records)},
+			{Value: l.expr(f.Length)},
+			{Ref: l.mem(f.Var)},
+		}})
+	}
 }
 
 // keyword is a keyword's first argument: its code and mechanism.

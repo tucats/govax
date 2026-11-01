@@ -86,6 +86,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 
 	case *ast.AuxIOStmt:
 		return a.fileStatement(s, path)
+
+	case *ast.DefineFileStmt:
+		return a.defineFile(s)
 	}
 
 	return nil

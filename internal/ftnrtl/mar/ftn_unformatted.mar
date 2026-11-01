@@ -31,7 +31,9 @@
 ; records have no segments. Items past the record's end are FOR$_INPSTAREQ;
 ; what the items leave of the record is passed over, whatever its segments.
 ; A WRITE past the end of a record that can't have more segments (VARIABLE,
-; FIXED, STREAM) is FOR$_OUTSTAOVE, and writes nothing.
+; FIXED, STREAM) is FOR$_OUTSTAOVE, and writes nothing, but for a direct WRITE,
+; which writes as much as the record holds and still fails (testdata/for81's
+; #553, where a sequential FIXED unit's, #533, wrote nothing).
 ;
 ; The unit's count of records (FTN_UNITS's UB_RECORDS, which BACKSPACE
 ; reads) counts logical records: each segment's FTN$$UNIT_PUT or
@@ -57,6 +59,7 @@ CTX_UNITMAX	= 488			; long: the longest record (RAB$W_USZ)
 CTX_UNF_POS	= 504			; long: the next byte to read in the buffer
 CTX_UNF_LEN	= 508			; long: the bytes the buffer holds
 CTX_UNF_STATE	= 512			; long: S_ bits
+CTX_DIRECT	= 516			; long: 1 for a direct statement
 
 S_SEGMENTED	= 1			; the unit's records are segmented
 S_WRITTEN	= 2			; a segment of this record has been written
@@ -178,8 +181,16 @@ WRITE_ITEM:
 	.ENTRY	FTN$$UNF_END,ALL_MASK
 	MOVL	4(AP),R6
 	TSTL	CTX_STATUS(R6)
+	BEQL	5$
+	CMPL	CTX_STATUS(R6),#FOR$_OUTSTAOVE
 	BNEQ	90$
-	BLBC	CTX_KIND(R6),50$
+	BLBC	CTX_DIRECT(R6),90$	; a direct record, full: written all the same
+	PUSHL	CTX_RECLEN(R6)
+	PUSHL	CTX_RECP(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BRB	90$
+5$:	BLBC	CTX_KIND(R6),50$
 	BITL	#S_SEGMENTED,CTX_UNF_STATE(R6)
 	BEQL	20$
 	MOVL	#SEG_ONLY,R0

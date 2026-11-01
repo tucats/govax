@@ -70,8 +70,7 @@ func inquireReport() []string {
 // TestFor81InquireOracle holds FTNRTL's INQUIRE to VMS's FORRTL: each case is
 // one of testdata/for81's, in FORTRAN, and each answer must be the one in
 // vax/for81-vax.txt, the device's name aside (VMS's volume was DUA2). Relative
-// files wait for subtask 10 (#491, #492), a direct unit's NEXTREC moving for
-// subtask 8 (#507).
+// files wait for subtask 10 (#491, #492).
 // testdata/fortran/inquire.for has the places of each width (#506) and unit 6
 // once it's connected (#477).
 func TestFor81InquireOracle(t *testing.T) {
@@ -115,7 +114,7 @@ func TestFor81InquireOracle(t *testing.T) {
 	type inquireCase struct {
 		number int
 		before []string // what comes first
-		asks   []string // each ASK's arguments
+		asks   []string // each ASK's arguments, or a statement after a !
 		after  []string // what comes last
 	}
 
@@ -155,6 +154,8 @@ func TestFor81InquireOracle(t *testing.T) {
 		connected(503, ", SHARED"),
 		connected(504, ", RECL=133"),
 		{505, []string{"OPEN (10, FILE='OLD1.DAT', STATUS='OLD', READONLY,", "     1 BLANK='ZERO')"}, []string{"10, ' '"}, nil},
+		{507, []string{"OPEN (10, DISP='DELETE', ACCESS='DIRECT', RECL=4, BLANK='ZERO')"},
+			[]string{"10, ' '", "!WRITE (10'3) 1, 2, 3, 4", "10, ' '", "!READ (10'1) I, J", "10, ' '"}, nil},
 		{508, []string{"WRITE (13) 1"}, []string{"13, ' '"}, []string{"CLOSE (13, DISP='DELETE')"}},
 		{509, []string{"WRITE (13, '(A)') 'TEXT'"}, []string{"13, ' '"}, []string{"CLOSE (13, DISP='DELETE')"}},
 	}
@@ -186,6 +187,12 @@ func TestFor81InquireOracle(t *testing.T) {
 		}
 
 		for _, a := range ic.asks {
+			if statement, ok := strings.CutPrefix(a, "!"); ok {
+				program = append(program, "      "+statement)
+
+				continue
+			}
+
 			program = append(program, "      CALL ASK ("+a+")")
 		}
 

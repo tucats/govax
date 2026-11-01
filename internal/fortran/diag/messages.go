@@ -710,6 +710,36 @@ var messages = map[string]kind{
 	// (*), which are formatted (section 7.1.1.1).
 	"UNFUNIT": {Error, "unformatted I/O needs a unit number, not an internal file or *"},
 
+	// DIRECTUNIT is direct access I/O (REC= or u'r) to an internal file or
+	// the default unit (*), which have no records by number (section
+	// 7.1.1.1).
+	"DIRECTUNIT": {Error, "direct access I/O needs a unit number, not an internal file or *"},
+
+	// DIRECTFORM is direct access I/O that is list-directed or namelist,
+	// where it is formatted or unformatted (sections 7.2.2 and 7.3.2).
+	"DIRECTFORM": {Error, "direct access I/O is formatted or unformatted, not %s"},
+
+	// DIRECTEND is END= in a direct access READ, which has no end of file
+	// to reach (section 7.2.2).
+	"DIRECTEND": {Error, "a direct access READ can't have END="},
+
+	// BADREC is a record number that isn't an INTEGER or REAL expression
+	// (section 7.1.1.4).
+	"BADREC": {Error, "a record number must be an INTEGER expression, not %s"},
+
+	// ASSOCVAR is an associated variable (OPEN's ASSOCIATEVARIABLE=, DEFINE
+	// FILE's last) that isn't an INTEGER variable, or is a dummy argument
+	// (section 9.1.2, appendix A.2).
+	"ASSOCVAR": {Error, "the associated variable %s must be an INTEGER*2 or INTEGER*4 variable, and not a dummy argument"},
+
+	// FINDREC is a FIND with no record number (appendix A.3).
+	"FINDREC": {Error, "a FIND needs a record number, u'r or REC="},
+
+	// DEFINEUNIT is a DEFINE FILE unit that isn't an INTEGER constant or
+	// variable, or a record count or length that isn't an INTEGER (appendix
+	// A.2).
+	"DEFINEUNIT": {Error, "the %s of a DEFINE FILE must be an INTEGER constant or variable"},
+
 	// NMLTWICE is a NAMELIST group defined twice in a unit.
 	"NMLTWICE": {Error, "the NAMELIST group %s is defined already (line %d)"},
 
