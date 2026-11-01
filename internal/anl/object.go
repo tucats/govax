@@ -392,7 +392,8 @@ func (a *objectAnalyzer) mainHeader(h *obj.MainHeader) {
 	// only when it differs from the creation time, and its line is
 	// unconfirmed. Its label is the one "creation   date/time" is padded
 	// to match.
-	if p := strings.Trim(h.Patched, " \x00"); p != "" && p != h.Created {
+	// Both are trimmed: a day of one digit has a blank before it.
+	if p := strings.Trim(h.Patched, " \x00"); p != "" && p != strings.TrimSpace(h.Created) {
 		a.line("\tlast patch date/time: " + h.Patched)
 	}
 }

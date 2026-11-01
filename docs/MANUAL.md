@@ -58,7 +58,8 @@ programs to run as they would under VMS:
 - **RMS**, on real Files-11 (ODS-2) disk volumes: `$OPEN`, `$CREATE`,
   `$CONNECT`, `$GET`, `$PUT`, `$UPDATE`, `$FIND`, `$DELETE`, `$PARSE`,
   `$SEARCH`, and the rest, with FABs, RABs, NAM blocks, and XABs, file
-  sharing between processes, and record locks.
+  sharing between processes, and record locks, on sequential and relative
+  files laid out as VMS lays them out.
 - **The run-time library.** About 170 `LIB$` routines (strings,
   descriptors, conversions, dates and times, memory zones, condition
   handling, file searches, the CLI routines, `LIB$SPAWN`), and the whole
@@ -5478,7 +5479,8 @@ The main differences, gathered from the rest of the manual:
 - One user, `SYSTEM`, with all privileges; no login, batch, print
   queues, networking, or clusters.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
-  not host files (section 5).
+  not host files (section 5), and only sequential and relative files:
+  an indexed file's `$CREATE` is `RMS$_ORG`.
 - No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).

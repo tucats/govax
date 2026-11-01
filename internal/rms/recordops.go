@@ -42,6 +42,10 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 		return findOnDevice(ctx, rabAddr, handle)
 	}
 
+	if handle.relativeRecords() {
+		return ctx.relativeLocate(rabAddr, handle, true)
+	}
+
 	found, r0, err := ctx.locate(rabAddr, handle, true)
 	if err != nil || found.sts == 0 {
 		return r0, err
@@ -117,6 +121,10 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 
 	if handle.IsConsole() || handle.IsRecordDevice() {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
+	}
+
+	if handle.relativeRecords() {
+		return ctx.relativeUpdate(rabAddr, handle)
 	}
 
 	s := &handle.stream
@@ -287,6 +295,12 @@ func SysTruncate(ctx *Context, argv []uint32) (uint32, error) {
 		return fail(rmsFACNotAllowed)
 	}
 
+	// A relative file can't be cut off (unconfirmed: VMS 7.1 refused one
+	// with RMS$_FAC for want of TRN access, FOR81R's #23).
+	if handle.relativeRecords() {
+		return fail(rmsIOP)
+	}
+
 	rac, err := ctx.loadByte(rabAddr + rabRAC)
 	if err != nil {
 		return 0, err
@@ -324,15 +338,19 @@ func SysTruncate(ctx *Context, argv []uint32) (uint32, error) {
 
 // SysDelete implements SYS$DELETE (RAB at argv[0]), the record $DELETE:
 // it removes records from relative and indexed files only ("You cannot
-// use this service when processing sequential files", RMS manual), and
-// govax has sequential files only, so a connected stream's $DELETE is
-// RMS$_IOP.
+// use this service when processing sequential files", RMS manual), so a
+// sequential file's $DELETE is RMS$_IOP; a relative file's is
+// relative.go's.
 func SysDelete(ctx *Context, argv []uint32) (uint32, error) {
 	rabAddr := argv[0]
 
 	handle, sts, err := ctx.streamOf(rabAddr)
 	if err != nil || sts != 0 {
 		return sts, err
+	}
+
+	if handle.relativeRecords() {
+		return ctx.relativeDelete(rabAddr, handle)
 	}
 
 	handle.stream.lost()
@@ -363,6 +381,7 @@ func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 		s := &handle.stream
 		s.next, s.atEnd, s.afterFind, s.heldEnd = 0, false, false, false
 		s.nextBlock = 1
+		handle.relStream.afterPut = 0
 	}
 
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)

@@ -446,6 +446,23 @@ func closeHandle(h *FileHandle) error {
 func (h *FileHandle) arm(fac byte, rop uint32) uint32 {
 	h.startStream(fac, rop)
 
+	// A relative file's records are its cells, which relative.go reads and
+	// writes by block.
+	if isRelative(h.File) {
+		l, err := layoutOf(h.File)
+		if err != nil {
+			return rmsDeviceError
+		}
+
+		h.rel, h.relStream = l, relativeStream{}
+
+		if rop&ropEOF != 0 {
+			h.stream.next, h.stream.atEnd = h.relativeEnd(), false
+		}
+
+		return 0
+	}
+
 	if fac&facPut != 0 && h.Writer == nil {
 		w, err := odsrms.NewAppender(h.File)
 		if err != nil {

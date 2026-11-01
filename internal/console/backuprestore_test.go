@@ -78,7 +78,7 @@ func backupRestoreLines(t *testing.T) (commands []string, outputs [][]string) {
 
 // directoryTimes are the times DIRECTORY/DATE shows for the directory
 // files a restore made, which are the run's own.
-var directoryTimes = regexp.MustCompile(`^(\S+\.DIR;\d+ .*)\d\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d$`)
+var directoryTimes = regexp.MustCompile(`^(\S+\.DIR;\d+ .*)[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d$`)
 
 // maskRestoreOutput masks what differs from run to run in a restore's
 // output: a made directory's DIRECTORY/DATE time.

@@ -281,7 +281,7 @@ func TestDisconnect(t *testing.T) {
 		t.Errorf("RAB$W_ISI %d, want 0", isi)
 	}
 
-	wantSts(t, "$PUT disconnected", service(t, f.ctx, SysPut, testRabAddr), rmsInvalidIFI)
+	wantSts(t, "$PUT disconnected", service(t, f.ctx, SysPut, testRabAddr), rmsInvalidISI)
 	wantSts(t, "$DISCONNECT again", service(t, f.ctx, SysDisconnect, testRabAddr), rmsInvalidISI)
 
 	wantSts(t, "$CONNECT", service(t, f.ctx, SysConnect, testRabAddr), rmsNormal)

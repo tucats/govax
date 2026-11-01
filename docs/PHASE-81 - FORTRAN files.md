@@ -1172,3 +1172,56 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     (DIRECTEND), as the LRM's forms have none.
   - **Left:** relative files (subtasks 9 and 10), on which the same statements will run, and
     DELETE, REWRITE, and UNLOCK with them.
+- **2026-11-01, subtask 9, RMS relative files.** `rms/relative.go`, over ods2's block I/O (no
+  ods2 change was needed): `$CREATE` makes a relative file (the prologue, the allocation, the
+  end of file), `$CONNECT` arms one (`FileHandle.rel`, the layout, beside `streamContext`, whose
+  current and next are record numbers here), and `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`,
+  `$TRUNCATE`, and `$REWIND` each send a relative stream to it. `TestFor81RMSOracle` now holds
+  all of `FOR81R` to VMS's run, #2 to #24 among it, and the new `TestFor81RelativeOracle` all of
+  round 2's `FOR81D`; both then DUMP each relative file VMS's volumes had (R1 to R20; D1 to D4,
+  E1 to E8, E10, E11, B1, B2, B510 to B1024) and match VMS's blocks byte for byte, all-zero lines
+  left out as they were. The stat lines' MRN mask is gone, as govax's `$OPEN` now writes a
+  relative file's MRN.
+  - **The layout, from VMS's bytes:** the prologue's four fields and checksum; a cell is a control
+    byte (00 never used, 08 a record, 0C deleted), then a FIX record's bytes unpadded, a VAR
+    record's word and MRS bytes, or a VFC record's word (counting the fixed control), FSZ bytes,
+    and MRS bytes; buckets of BKS blocks from VBN 2, a cell crossing blocks but never a bucket;
+    BKS 0 chosen as the fewest blocks holding a cell, past 63 RMS$_BKS. Writing a record writes its
+    control byte, length, and bytes and leaves the rest of the cell, so a deleted record, a shorter
+    VAR record over a longer one, and a shorter `$UPDATE` leave the old bytes, as VMS's files do.
+  - **How a file grows (govax's reading of VMS's allocations, every one of which fits it):** a
+    `$CREATE` allocates ALQ, at least 1, rounded to the cluster; a record whose bucket is past the
+    allocation extends the file by what it lacks or by the file's DEQ, else the volume's default
+    extension (5), whichever is more, rounded to the cluster (`extendRelative`). The new blocks are
+    written as zeros, and the end of file is always the block after the allocation, FFB 0, in the
+    header and the prologue. (BKS 4 with record 100 in bucket 0 comes to 9 blocks, not 6, which is
+    what showed the extension's minimum.)
+  - **The operations, from VMS's statuses (FOR81R's #21, FOR81D):** by key, RMS$_KEY for 0, RMS$_MRN
+    past MRN, RMS$_RNF for a cell with no record, inside the file or past it; in sequence, empty and
+    deleted cells passed over, then RMS$_EOF with RAB$L_BKT 0; BKT the record number after a
+    sequential `$GET`, `$FIND`, or `$PUT`, and left alone by the others. A `$PUT` over a record is
+    RMS$_REX, or with UIF and by key a replacement; a sequential one goes to the next record. The size
+    is RMS$_RSZ (FIX exactly MRS, VAR and VFC at most). `$UPDATE` checks the current record (RMS$_CUR)
+    before the size, and leaves none; so does `$DELETE`. A failed `$GET`, `$FIND`, `$PUT`, or `$UPDATE`
+    clears RAB$W_RFA, a failed `$DELETE` doesn't. An RFA is the record number, then 0. RRL reading a
+    locked record is RMS$_OK_RRL (`lockReadAnyway`; a sequential file's stays a plain success).
+  - **A keyed `$PUT`, then a sequential `$GET`, reads the record put** (#21: records 1, 3, 5 read in
+    sequence, record 2 put by key, then the sequential `$GET`s read 2, 3, 5), BKT left as it was, as a
+    `$GET` after a `$FIND` does. govax reads it as the `$PUT` acting as a `$FIND` would
+    (`relativeStream.afterPut`), not as Table 8-3's "Put random: next unchanged", which it otherwise
+    follows; unconfirmed beyond that one case.
+  - **Two smaller answers:** a `$PUT` or `$GET` on a RAB with no stream is RMS$_ISI, as VMS's after a
+    failed `$CREATE` and `$CONNECT` (#15; govax said RMS$_IFI); a stream format refused for a relative
+    file leaves RAT CR in the FAB.
+  - **Unconfirmed, govax's choices.** `$TRUNCATE` with TRN access is RMS$_IOP (VMS's run had no TRN, so
+    RMS$_FAC); `$CONNECT` with RAB$V_EOF starts after the last record; a `$GET` by an RFA that isn't
+    (number, 0) is RMS$_RFA; an `$UPDATE` or `$DELETE` whose record another stream deleted is RMS$_CUR;
+    a `$DELETE` keeps the record's lock; whether VMS sets RAT CR on a sequential stream file with none.
+  - **Found by the full test run, and fixed:** six console tests failed from the 1st to the 9th of a
+    month, when VMS's dates have a blank for a day's first digit (` 1-NOV-2026`). Five were their
+    masks (`TestLexicalFileAttributes`, `TestBackupRestoreOracle`, `TestShareableImageLibrary`,
+    `TestPPF71Oracle`, `TestTB70Oracle`), which now take `[ \d]\d`. The sixth, `TestLink68Oracle`, was
+    ANALYZE's: it shows a module's patch time only when it differs from the creation time, and
+    compared the patch time without its blanks to the creation time with them, so on those days
+    every govax-linked shareable image's GST got a "last patch date/time" line VMS's doesn't have
+    (`anl/object.go`).

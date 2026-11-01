@@ -539,7 +539,10 @@ never had.
   `FTN$DEF_FILE`/`_W` (`ftn_direct.mar`); FTN_UNITS's `FTN$$UNIT_DIRECT` (a keyed `$GET` or
   `$PUT` by `UB_KEY`, the next number after each record) and `FTN$$UNIT_DEFINED` (DEFINE FILE's
   unit opened by its first statement, a sequential FIX file as VMS's), held to VMS by
-  `TestFor81DirectOracle` and `testdata/fortran/direct.for`.
+  `TestFor81DirectOracle` and `testdata/fortran/direct.for`, and subtask 9 (2026-11-01) RMS
+  relative files: `rms/relative.go` (the prologue, buckets, and cells as VMS's files have them,
+  over ods2's block I/O; `FileHandle.rel`; every record service sends a relative stream there),
+  held to VMS's runs and blocks by `TestFor81RMSOracle` and `TestFor81RelativeOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1864,7 +1867,7 @@ expect adjustment as phases land):
   spec RMS tried last. Phase 74: last of all `Builtin`, an image govax
   carries (FTNRTL), found as `FoundImage.Builtin`, named
   `BuiltinSpec`'s "FTNRTL.EXE (built into govax)".
-  Phase 81: `keyedput.go` is `$PUT` by record number on FIX sequential files
+  Phase 81: `relative.go` is relative files (subtask 9); `keyedput.go` is `$PUT` by record number on FIX sequential files
   (`streamContext.heldEnd`, what it does to a sequential `$PUT` after it), `fop.go`
   FOP's TMP, TMD, DLT, SPL, and SCF, and `blockio.go` `$READ`, `$WRITE`,
   `$DISCONNECT`, and RMS$_UPI. FIX records pad to a word, in ods2's reader and writer

@@ -332,6 +332,21 @@ func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File, mode xabMode) 
 		func() error { return ctx.storeWord(fab+fabOffset("GBC"), ra.GlobalBufferCount) },
 		func() error { return ctx.storeWord(fab+fabOffset("BLS"), ondisk.BlockSize) },
 		func() error {
+			// An opened relative file's highest record number, from its
+			// prologue; $CREATE leaves the FAB's (VMS 7.1: testdata/for81,
+			// FOR81R), and a sequential file has none to give.
+			if mode == xabCreate || !isRelative(f) {
+				return nil
+			}
+
+			mrn, err := prologueMRNOf(f)
+			if err != nil {
+				return err
+			}
+
+			return ctx.storeLongword(fab+fabMRN, mrn)
+		},
+		func() error {
 			fop, err := ctx.loadLongword(fab + fabFOP)
 			if err != nil {
 				return err

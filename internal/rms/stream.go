@@ -410,6 +410,12 @@ func (ctx *Context) lockFound(rabAddr uint32, h *FileHandle, r rfa, rop uint32) 
 			return 0, ctx.awaitLock(h, ls.waiting)
 		case lockAlready:
 			sts = rmsOKAlreadyLocked
+		case lockReadAnyway:
+			// RMS$_OK_RRL for a relative file (VMS 7.1: testdata/for81,
+			// FOR81D's #24); a sequential file's is a plain success.
+			if h.rel != nil {
+				sts = rmsOKReadAnyway
+			}
 		}
 
 		if held {

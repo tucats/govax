@@ -192,10 +192,29 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 				alq = in.Alloc
 			}
 
+			// A relative file has its prologue at least (relative.go).
+			relative := isRelative(h.File)
+			if relative {
+				alq = max(alq, 1)
+			}
+
 			if err := applyCreateXABs(h.File, in, alq); err != nil {
 				ctx.Files.Release(newIFI)
 
 				return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
+			}
+
+			if relative {
+				mrn, err := ctx.loadLongword(fabAddr + fabMRN)
+				if err != nil {
+					return 0, err
+				}
+
+				if err := initRelative(h.File, mrn); err != nil {
+					ctx.Files.Release(newIFI)
+
+					return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
+				}
 			}
 		}
 
@@ -279,7 +298,9 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
-	if org != orgSeq {
+	// Sequential and relative files (relative.go); indexed files aren't
+	// govax's yet.
+	if org != orgSeq && org != orgRel {
 		return 0, found, false, rmsInvalidOrg, nil
 	}
 
@@ -316,6 +337,29 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// positive values (VMS 7.1: testdata/for81, FOR81R and FOR81's #205).
 	if format == ondisk.RecordFormatFixed && (mrs == 0 || mrs > maxFixedRecord) {
 		return 0, found, false, rmsInvalidMRS, nil
+	}
+
+	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS
+	// manual, FAB$B_FSZ).
+	var fsz byte
+
+	if format == ondisk.RecordFormatVFC {
+		if fsz, err = ctx.loadByte(fabAddr + fabOffset("FSZ")); err != nil {
+			return 0, found, false, 0, err
+		}
+
+		if fsz == 0 {
+			fsz = 2
+		}
+	}
+
+	var bks byte
+
+	if org == orgRel {
+		var sts uint32
+		if bks, sts, err = ctx.checkRelativeCreate(fabAddr, format, mrs, fsz); err != nil || sts != 0 {
+			return 0, found, false, sts, err
+		}
 	}
 
 	shr, err := ctx.loadByte(fabAddr + fabSHR)
@@ -382,31 +426,21 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
+	// The header's record type byte holds the organization in its high
+	// nibble, the record format in its low one.
 	recAttr := ondisk.RecAttr{
-		Format:        format,
+		Format:        ondisk.RecordFormat(org | rfm),
 		Attributes:    rat,
 		MaxRecordSize: mrs,
 		DefaultExtend: deq,
+		VfcSize:       fsz,
+		BucketSize:    bks,
 	}
 
-	// A fixed-length file's longest record is its one size (XAB$W_LRL).
-	if format == ondisk.RecordFormatFixed {
+	// A fixed-length file's longest record is its one size (XAB$W_LRL), and
+	// so is a relative file's, whatever its format (VMS 7.1: FOR81R).
+	if format == ondisk.RecordFormatFixed || org == orgRel {
 		recAttr.RecordSize = mrs
-	}
-
-	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS
-	// manual, FAB$B_FSZ).
-	if format == ondisk.RecordFormatVFC {
-		fsz, err := ctx.loadByte(fabAddr + fabOffset("FSZ"))
-		if err != nil {
-			return 0, found, false, 0, err
-		}
-
-		if fsz == 0 {
-			fsz = 2
-		}
-
-		recAttr.VfcSize = fsz
 	}
 
 	f, err := vol.CreateFileVersion(dir, name, version, recAttr, bm, ib)

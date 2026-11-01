@@ -404,7 +404,7 @@ func TestLexicalFileAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := time.Parse("2-Jan-2006 15:04:05.00", cdt); err != nil {
+	if _, err := time.Parse("2-Jan-2006 15:04:05.00", strings.TrimSpace(cdt)); err != nil {
 		t.Errorf("CDT = %q: %v", cdt, err)
 	}
 

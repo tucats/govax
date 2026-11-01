@@ -43,13 +43,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 
 	handle, ok := ctx.Files.LookupStream(ifi)
 	if !ok {
-		// Lookup returning false means this RAB was never SYS$CONNECTed
-		// at all (RAB$W_ISI is still whatever zero value newFAB-style
-		// test fixtures or an uninitialized VAX program leave it at,
-		// which falls in ifi.go's reserved-and-never-allocated 0-3
-		// range) — a real, expected RMS$_IFI condition, not a bug in
-		// this package.
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
+		// This RAB was never SYS$CONNECTed (or its $CONNECT failed): RMS$_ISI,
+		// as VMS 7.1 gave a $PUT after a failed $CREATE (testdata/for81,
+		// FOR81R's #15).
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidISI)
 	}
 
 	if sts, err := ctx.indirectAccess(rabAddr, facPut); err != nil || sts != 0 {
@@ -79,7 +76,9 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// The console case needs no such check: a FileHandle's Console field
 	// is ready to write to the moment SYS$CREATE allocates it (see
 	// ifi.go's FileHandle doc comment).
-	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil {
+	relative := onVolume && handle.relativeRecords()
+
+	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil && !relative {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
@@ -117,6 +116,11 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// An indirect accessor's record to a VFC file takes the fixed
 	// control its record attributes call for (ppfaccess.go).
 	record = ctx.indirectRecord(ifi, handle, record)
+
+	// A relative file's record goes in its cell (relative.go).
+	if relative {
+		return ctx.relativePut(rabAddr, handle, record)
+	}
 
 	if rac == racKey {
 		return ctx.putKeyed(rabAddr, handle, record)

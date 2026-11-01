@@ -123,3 +123,12 @@ then `govax console < testdata/for81/copyoutf.cmd`. If the handler loops, the pr
 and ends rather than running out of stack.
 
 It ran on 2026-10-31, whole: `vax/for81f-vax.txt` and `vax/for81f.log`.
+
+## What the tests hold
+
+`internal/console/for81rms_test.go` runs the RMS programs on govax, on a fresh RD54 volume as
+DUA2: `TestFor81RMSOracle` holds `FOR81R` to `vax/for81r-vax.txt` and `TestFor81RelativeOracle`
+`FOR81D` to `vax/for81d-vax.txt`, line for line but for the channel VMS's `$CREATE` leaves in
+FAB$L_STV. Each then DUMPs the relative files VMS's volume had (`R*.DAT`; `D*`, `E*`, and `B*.DAT`)
+and holds their blocks to `vax/for81-blocks.txt` and `vax/for81c-blocks.txt`, all-zero lines left
+out and file IDs masked. `FOR81R_OUT` or `FOR81D_OUT` names a file for govax's output.

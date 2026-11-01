@@ -112,6 +112,12 @@ type FileHandle struct {
 	// records (stream.go).
 	stream streamContext
 
+	// rel is a relative file's layout, set when $CONNECT arms one, and
+	// relStream what its stream keeps beside stream (relative.go). A
+	// relative file has no Reader or Writer.
+	rel       *relativeLayout
+	relStream relativeStream
+
 	// readBuffer and writeBuffer are the last multiblock buffers the
 	// stream read and wrote, and written whether it wrote anything, for
 	// the I/O counts (iocount.go).

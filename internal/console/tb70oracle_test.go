@@ -57,7 +57,7 @@ var tb70SizeDifferences = map[string]string{
 }
 
 // tb70DirectoryTime is DIRECTORY/DATE's time.
-var tb70DirectoryTime = regexp.MustCompile(`\d\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
+var tb70DirectoryTime = regexp.MustCompile(`[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
 
 // tb70DirectoryTotal is DIRECTORY's total's blocks.
 var tb70DirectoryTotal = regexp.MustCompile(`, \d+/\d+ blocks\.$`)

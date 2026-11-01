@@ -61,10 +61,10 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 
 	handle, ok := ctx.Files.LookupStream(ifi)
 	if !ok {
-		// This RAB was never SYS$CONNECTed at all — a real, expected
-		// RMS$_IFI condition, not a bug in this package (see SysPut's own
-		// identical check for the fuller explanation).
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
+		// This RAB was never SYS$CONNECTed (or its $CONNECT failed): RMS$_ISI,
+		// as VMS 7.1 gave a $PUT after a failed $CREATE (testdata/for81,
+		// FOR81R's #15).
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidISI)
 	}
 
 	if sts, err := ctx.indirectAccess(rabAddr, facGet); err != nil || sts != 0 {
@@ -86,6 +86,10 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		}
 
 		return getRecordDevice(ctx, rabAddr, handle)
+	}
+
+	if handle.relativeRecords() {
+		return ctx.relativeLocate(rabAddr, handle, false)
 	}
 
 	// A file on a volume: the record the stream's context and RAB$B_RAC

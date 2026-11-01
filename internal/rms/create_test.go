@@ -317,12 +317,11 @@ func TestSysCreate_facNone(t *testing.T) {
 }
 
 // TestSysCreate_unsupportedOrg confirms a FAB naming an organization
-// other than sequential (fab.go's orgSeq) fails with RMS$_ORG, matching
-// docs/PHASE-22.md's sequential-only scope.
+// govax doesn't have, indexed, fails with RMS$_ORG.
 func TestSysCreate_unsupportedOrg(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:TEST.DAT")
-	putByte(t, f.ctx, testFabAddr+fabORG, orgRel)
+	putByte(t, f.ctx, testFabAddr+fabORG, byte(vmsConst("FAB$C_IDX")))
 
 	r0, err := SysCreate(f.ctx, []uint32{testFabAddr})
 	if err != nil {

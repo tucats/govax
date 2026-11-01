@@ -19,7 +19,7 @@ import (
 // libraries, checked against testdata/link68's R12 and E9.
 
 // listingDate is a date and time in a LIBRARY/LIST listing.
-var listingDate = regexp.MustCompile(`\d{1,2}-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d`)
+var listingDate = regexp.MustCompile(`[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d`)
 
 // TestShareableImageLibrary runs R12 through DCL with govax's own images:
 // LIBRARY/CREATE/SHARE of SHR1 and SHR2, LIBRARY/LIST of the library,

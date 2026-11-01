@@ -171,7 +171,8 @@ type lockResult int
 const (
 	lockHeld    lockResult = iota // the record is locked for the stream
 	lockAlready                   // the stream had it locked already
-	lockNone                      // returned without a lock (NLK, RRL)
+	lockNone                      // returned without a lock (NLK)
+	lockReadAnyway                // read without the lock another stream holds (RRL)
 	lockRefused                   // RMS$_RLK
 	lockWait                      // waiting for it (WAT)
 	lockQuota                     // RMS$_EXENQLM: no lock left of the job's ENQLM
@@ -210,7 +211,7 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 		l, _, err := ctx.Locks.Enqueue(req)
 		if errors.Is(err, lck.ErrNotQueued) {
 			if rop&ropRRL != 0 {
-				return lockNone, false, nil
+				return lockReadAnyway, false, nil
 			}
 
 			return lockRefused, false, nil
@@ -237,7 +238,7 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 	switch {
 	case errors.Is(err, lck.ErrNotQueued):
 		if rop&ropRRL != 0 {
-			return lockNone, false, nil
+			return lockReadAnyway, false, nil
 		}
 
 		return lockRefused, false, nil

@@ -227,7 +227,7 @@ func TestSysPut_multipleRecords(t *testing.T) {
 }
 
 // TestSysPut_invalidIFI confirms SYS$PUT against a RAB that was never
-// SYS$CONNECTed (RAB$W_ISI never set to a real IFI) fails with RMS$_IFI
+// SYS$CONNECTed (RAB$W_ISI never set to a real IFI) fails with RMS$_ISI
 // rather than panicking on a nil FileHandle.
 func TestSysPut_invalidIFI(t *testing.T) {
 	f := newCreateFixture(t, true)
@@ -244,8 +244,8 @@ func TestSysPut_invalidIFI(t *testing.T) {
 		t.Fatalf("SysPut: %v", err)
 	}
 
-	if r0 != rmsInvalidIFI {
-		t.Errorf("r0 = %d, want rmsInvalidIFI (%d)", r0, rmsInvalidIFI)
+	if r0 != rmsInvalidISI {
+		t.Errorf("r0 = %d, want rmsInvalidISI (%d)", r0, rmsInvalidISI)
 	}
 }
 

@@ -33,7 +33,7 @@ var ppf71Masks = []struct {
 	{regexp.MustCompile(`bytes 95 \d+ \d+ after 4 "[^"]*\$`), `bytes 95 ? ? after 4 "?$`},
 	{regexp.MustCompile(`bytes 5F [0-9A-F]{2} [0-9A-F]{4}, string "_GOVAX\$([^"]*)", after 4 "[^"]*"`), `bytes ?, string "_GOVAX$$$1"`},
 	{regexp.MustCompile(`rfa [0-9A-F]{8},[0-9A-F]{4}`), "rfa ?"},
-	{regexp.MustCompile(`\d\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`), "<time>"},
+	{regexp.MustCompile(`[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`), "<time>"},
 }
 
 // ppf71VAXOnly are VMS's lines that come from the VAX's own setup, not
