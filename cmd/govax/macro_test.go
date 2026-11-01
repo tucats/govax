@@ -255,6 +255,8 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{extendSource: true, dLines: true}, `FORTRAN "sq"/EXTEND_SOURCE/D_LINES`},
 		{[]string{"sq"}, fortranFlags{continuations: 40, continuationsGiven: true}, `FORTRAN "sq"/CONTINUATIONS=40`},
 		{[]string{"sq"}, fortranFlags{continuationsGiven: true}, `FORTRAN "sq"/CONTINUATIONS=0`},
+		{[]string{"sq"}, fortranFlags{align: "records=natural,commons=packed"}, `FORTRAN "sq"/ALIGN=(records=natural,commons=packed)`},
+		{[]string{"sq"}, fortranFlags{noAlign: true, align: "ignored"}, `FORTRAN "sq"/NOALIGN`},
 	}
 
 	for _, c := range cases {

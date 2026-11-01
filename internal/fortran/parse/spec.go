@@ -333,20 +333,18 @@ func (p *parser) qualifier(what string) *ast.Qualifier {
 		return q
 	}
 
-	value := func() string {
-		if t := p.peek(); t != nil && (t.Kind == lex.Name || t.Kind == lex.IntegerConst) {
-			return p.next().Text
-		}
+	p.qualifierValues(q, p.qualifierValue)
 
-		p.syntax("a value")
+	return q
+}
 
-		return ""
-	}
-
+// qualifierValues reads a qualifier's value, or a parenthesized list of them,
+// each by value.
+func (p *parser) qualifierValues(q *ast.Qualifier, value func() string) {
 	if !p.accept("(") {
 		q.Values = []string{value()}
 
-		return q
+		return
 	}
 
 	for {
@@ -358,12 +356,46 @@ func (p *parser) qualifier(what string) *ast.Qualifier {
 	}
 
 	p.expect(")")
+}
+
+// qualifierValue reads one value: a name or a number, kept as written.
+func (p *parser) qualifierValue() string {
+	if t := p.peek(); t != nil && (t.Kind == lex.Name || t.Kind == lex.IntegerConst) {
+		return p.next().Text
+	}
+
+	p.syntax("a value")
+
+	return ""
+}
+
+// optionsQualifier reads an option of CDEC$ OPTIONS, /ALIGN=(RECORDS=NATURAL,
+// COMMONS=PACKED): a qualifier whose values may be class=rule, kept as
+// "RECORDS=NATURAL".
+func (p *parser) optionsQualifier() *ast.Qualifier {
+	n := p.name("an option")
+	q := &ast.Qualifier{Name: n.Name, Pos: n.Pos}
+
+	if !p.accept("=") {
+		return q
+	}
+
+	p.qualifierValues(q, func() string {
+		text := p.qualifierValue()
+		if p.accept("=") {
+			text += "=" + p.qualifierValue()
+		}
+
+		return text
+	})
 
 	return q
 }
 
 // parseDirective parses a CDEC$ directive (section 10.3): IDENT 'string',
-// TITLE ['string'], SUBTITLE ['string'], or PSECT /cb/ attr[,attr]...
+// TITLE ['string'], SUBTITLE ['string'], PSECT /cb/ attr[,attr]..., OPTIONS
+// /option[/option]..., or END OPTIONS. Blanks don't count in a directive (10.1),
+// so END OPTIONS is one name to the lexer.
 // The lexer has tokenized the whole directive, its name first.
 func parseDirective(p *parser) ast.Stmt {
 	s := &ast.DirectiveStmt{StmtBase: p.base()}
@@ -397,6 +429,18 @@ func parseDirective(p *parser) ast.Stmt {
 				break
 			}
 		}
+
+	case "OPTIONS":
+		for {
+			p.expect("/")
+			s.Attrs = append(s.Attrs, p.optionsQualifier())
+
+			if p.atEnd() {
+				break
+			}
+		}
+
+	case "ENDOPTIONS":
 
 	default:
 		p.fail("BADDIRECTIVE", p.pos(*t), s.Name)

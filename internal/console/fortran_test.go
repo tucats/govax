@@ -2,6 +2,8 @@ package console
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -376,6 +378,65 @@ func TestFortran_includeVolume(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the MACRO file doesn't hold %q:\n%s", want, text)
+		}
+	}
+}
+
+// TestDispatch_fortranAlign runs FORTRAN through DCL with /ALIGN's forms: the
+// structure of 5 bytes packed is 8 aligned, and the MACRO file's storage map says
+// so. A value that isn't one stops the command before it reads a source.
+func TestDispatch_fortranAlign(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "al.for")
+	mar := filepath.Join(dir, "al.mar")
+
+	writeHostFile(t, src, "      STRUCTURE /S/\n      BYTE F\n      INTEGER N\n      END STRUCTURE\n      COMMON /C/ B, X\n      BYTE B\n      END\n")
+
+	for _, c := range []struct {
+		qualifier string
+		structure int
+		block     int
+	}{
+		{"", 5, 5},
+		{"/NOALIGN", 5, 5},
+		{"/ALIGN", 8, 8},
+		{"/ALIGN=ALL", 8, 8},
+		{"/ALIGN=NONE", 5, 5},
+		{"/ALIGN=NATURAL", 8, 8},
+		{"/ALIGN=RECORDS=NATURAL", 8, 5},
+		{"/ALIGN=RECO=NATU", 8, 5},
+		{"/ALIGN=COMMONS=STANDARD", 5, 8},
+		{"/ALIGN=(RECORDS=NATURAL,COMMONS=NATURAL)", 8, 8},
+		{"/ALIGN=(RECORDS=PACKED,COMMONS=STANDARD)", 5, 8},
+	} {
+		buf.Reset()
+
+		if err := d.Dispatch(`FORTRAN "` + src + `"` + c.qualifier); err != nil {
+			t.Errorf("%q: %v\n%s", c.qualifier, err, buf.String())
+
+			continue
+		}
+
+		text, err := os.ReadFile(mar)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, want := range []string{
+			fmt.Sprintf("Structure /S/, %d bytes", c.structure),
+			fmt.Sprintf("Common block /C/, %d bytes", c.block),
+		} {
+			if !strings.Contains(string(text), want) {
+				t.Errorf("%q: no %q in\n%s", c.qualifier, want, text)
+			}
+		}
+	}
+
+	for _, qualifier := range []string{"/ALIGN=STANDARD", "/ALIGN=BOGUS", "/ALIGN=RECORDS=STANDARD", "/ALIGN=(RECORDS=NATURAL,BOGUS=PACKED)"} {
+		err := d.Dispatch(`FORTRAN/NOMACRO "` + src + `"` + qualifier)
+		if !errors.Is(err, vmserrors.New(vmserrors.CLI_FORALIGN)) || strings.Contains(err.Error(), "!") {
+			t.Errorf("%q: %v, want CLI_FORALIGN", qualifier, err)
 		}
 	}
 }

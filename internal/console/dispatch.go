@@ -637,6 +637,8 @@ func (d *Dispatcher) bindGrammar() {
 			DLines:       r.Present("D_LINES") && !r.Negated("D_LINES"),
 			NoI4:         r.Present("I4") && r.Negated("I4"),
 			GFloating:    r.Present("G_FLOATING") && !r.Negated("G_FLOATING"),
+			Align:        nonEmpty(r.List("ALIGN")),
+			AlignGiven:   r.Present("ALIGN") && !r.Negated("ALIGN") && !r.Defaulted("ALIGN"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),

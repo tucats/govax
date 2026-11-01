@@ -1,0 +1,25 @@
+PACKED           5           1
+NAT          32          16
+STRIDE          32
+BOUND           0
+INIT           7
+CX          32          16
+CXMOD           0
+UN          16           4
+UNC           4
+UNB           8          12          11
+OUTER          80           4
+OUTERP           1
+OUTERG           9
+OUTERQ          64           7
+AFTER           5
+CN           4           8
+CND          16           0
+CNX          32           0
+CNI          44
+CS           4          12
+CP           1
+VALUES           5         300ABC
+SECOND           5           0           1
+THIRD           3
+  $STATUS == "%X00000001"

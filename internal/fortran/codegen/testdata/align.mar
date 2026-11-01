@@ -1,0 +1,162 @@
+	.TITLE	TEST
+
+; Common block /N/, 24 bytes, the most any unit in this file declares
+	.PSECT	N,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,4
+N.$BASE:
+	.BLKB	24
+
+; Common block /OCTA/, 64 bytes, the most any unit in this file declares
+	.PSECT	OCTA,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,4
+OCTA.$BASE:
+	.BLKB	32
+	.LONG	^X00004080,^X00004100	; RN.C = (complex 1. 2.)
+	.BLKB	2
+	.WORD	3			; RN.W = 3
+	.BLKB	4
+	.LONG	^X00004120,^X00000000	; RN.D = 2.5
+	.BLKB	8
+
+; Common block /S/, 20 bytes, the most any unit in this file declares
+	.PSECT	S,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+S.$BASE:
+	.BLKB	20
+
+; Common block /P/, 5 bytes, the most any unit in this file declares
+	.PSECT	P,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+P.$BASE:
+	.BLKB	5
+
+; Storage map for ALIGNED, the main program
+;   B1    LOGICAL*1    N+0         ALIGNED.B1
+;   I1    INTEGER      N+4         ALIGNED.I1
+;   C1    CHARACTER*1  N+8         ALIGNED.C1
+;   Z1    COMPLEX      N+16        ALIGNED.Z1
+;   RN    /NAT/        OCTA+0      ALIGNED.RN
+;   RL    /NAT/ (2)    $LOCAL+0    ALIGNED.RL
+;   RS    /SUB/        $LOCAL+128  ALIGNED.RS
+;   B2    LOGICAL*1    S+0         ALIGNED.B2
+;   D2    REAL*8       S+4         ALIGNED.D2
+;   Z2    COMPLEX      S+12        ALIGNED.Z2
+;   B3    LOGICAL*1    P+0         ALIGNED.B3
+;   I3    INTEGER      P+1         ALIGNED.I3
+;   Structure /NAT/, 64 bytes
+;     +0     F     LOGICAL*1
+;     +4     N     INTEGER
+;     +8     Q     REAL*16
+;     +32    C     COMPLEX
+;     +40    A     LOGICAL*1, map 1 of the union at +40
+;     +48    D     REAL*8, map 1 of the union at +40
+;     +40    B     LOGICAL*1, map 1 of the union at +40
+;     +42    W     INTEGER*2, map 1 of the union at +40
+;     +56    T     CHARACTER*3
+;   Structure /PAK/, 5 bytes
+;     +0     F     LOGICAL*1
+;     +1     N     INTEGER
+;   Structure /SUB/, 16 bytes
+;     +0     F     LOGICAL*1
+;     +4     P     /PAK/ (1:2)
+;     +14    G     LOGICAL*1
+;
+ALIGNED.B1 = N.$BASE			; B1, in /N/
+ALIGNED.I1 = N.$BASE+4			; I1, in /N/
+ALIGNED.C1 = N.$BASE+8			; C1, in /N/
+ALIGNED.Z1 = N.$BASE+16			; Z1, in /N/
+ALIGNED.RN = OCTA.$BASE			; RN, in /OCTA/
+ALIGNED.B2 = S.$BASE			; B2, in /S/
+ALIGNED.D2 = S.$BASE+4			; D2, in /S/
+ALIGNED.Z2 = S.$BASE+12			; Z2, in /S/
+ALIGNED.B3 = P.$BASE			; B3, in /P/
+ALIGNED.I3 = P.$BASE+1			; I3, in /P/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+ALIGNED.RL:
+	.BLKB	32
+	.LONG	^X00004080,^X00004100	; RL(1).C = (complex 1. 2.)
+	.BLKB	2
+	.WORD	3			; RL(1).W = 3
+	.BLKB	4
+	.LONG	^X00004120,^X00000000	; RL(1).D = 2.5
+	.BLKB	40
+	.LONG	^X00004080,^X00004100	; RL(2).C = (complex 1. 2.)
+	.BLKB	2
+	.WORD	3			; RL(2).W = 3
+	.BLKB	4
+	.LONG	^X00004120,^X00000000	; RL(2).D = 2.5
+	.BLKB	8
+ALIGNED.RS:
+	.BLKL	4			; RS
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM ALIGNED
+	.ENTRY	ALIGNED,^M<>
+;    2  CDEC$ OPTIONS /ALIGN=RECORDS=NATURAL
+;    3        STRUCTURE /NAT/
+;    4          LOGICAL*1 F
+;    5          INTEGER*4 N
+;    6          REAL*16 Q
+;    7          COMPLEX C /(1.,2.)/
+;    8          UNION
+;    9            MAP
+;   10              BYTE A
+;   11              REAL*8 D /2.5/
+;   12            END MAP
+;   13            MAP
+;   14              UNION
+;   15                MAP
+;   16                  BYTE B
+;   17                  INTEGER*2 W /3/
+;   18                END MAP
+;   19              END UNION
+;   20            END MAP
+;   21          END UNION
+;   22          CHARACTER*3 T
+;   23        END STRUCTURE
+;   24  CDEC$ END OPTIONS
+;   25        STRUCTURE /PAK/
+;   26          BYTE F
+;   27          INTEGER*4 N
+;   28        END STRUCTURE
+;   29  CDEC$ OPTIONS /ALIGN
+;   30        STRUCTURE /SUB/
+;   31          BYTE F
+;   32          RECORD /PAK/ P(2)
+;   33          BYTE G
+;   34        END STRUCTURE
+;   35        COMMON /N/ B1, I1, C1, Z1
+;   36        COMMON /OCTA/ RN
+;   37        LOGICAL*1 B1
+;   38        CHARACTER C1
+;   39        COMPLEX Z1
+;   40        RECORD /NAT/ RN, RL(2)
+;   41        RECORD /SUB/ RS
+;   42  CDEC$ OPTIONS /ALIGN=COMMONS=STANDARD
+;   43        COMMON /S/ B2, D2, Z2
+;   44        LOGICAL*1 B2
+;   45        REAL*8 D2
+;   46        COMPLEX Z2
+;   47  CDEC$ END OPTIONS
+;   48  CDEC$ END OPTIONS
+;   49        COMMON /P/ B3, I3
+;   50        LOGICAL*1 B3
+;   51        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for PLAIN, a subroutine
+;   X     REAL  $LOCAL+0  PLAIN.X
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+PLAIN.X:
+	.BLKL	1			; X
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   52        SUBROUTINE PLAIN
+	.ENTRY	PLAIN,^M<>
+;   53        X = 1
+	MOVL	#^X00004080,PLAIN.X	; 1.0
+;   54        END
+	RET
+
+	.END	ALIGNED

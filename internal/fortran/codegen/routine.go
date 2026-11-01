@@ -17,6 +17,9 @@ type routineGen struct {
 	bases *namer
 	src   *sourceLines
 
+	// localAlign is the module's $LOCAL section's alignment (localAlignment).
+	localAlign int
+
 	// pre is what comes before the routine's .ENTRY in $CODE: the source
 	// lines up to its header statement. code is everything after it.
 	// out is the one being written.

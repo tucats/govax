@@ -1288,7 +1288,7 @@ These commands are described fully in their own sections:
 ```text
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
-    /[NO]G_FLOATING
+    /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -1310,7 +1310,8 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
-than D_floating. `INCLUDE 'file'` reads a file (type `.FOR` by default)
+than D_floating, and `/ALIGN` lays out structures and common blocks on
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory. The compiler's messages show the line
 and column:
@@ -4858,7 +4859,34 @@ The command's syntax and qualifiers are in
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`, and
 `/[NO]G_FLOATING`. An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
-host shell, `govax fortran` runs it.
+host shell, `govax fortran` runs it (`--align value` and `--no-align` are
+`/ALIGN=value` and `/NOALIGN`).
+
+`/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
+are always packed, and which is the default here. It comes from a later VAX
+FORTRAN, by way of the HP Fortran manual's OPTIONS directive:
+
+| Form | Meaning |
+| --- | --- |
+| `/NOALIGN`, `/ALIGN=NONE`, `/ALIGN=PACKED` | PACKED for both classes: any byte |
+| `/ALIGN`, `/ALIGN=ALL`, `/ALIGN=NATURAL` | NATURAL for both classes |
+| `/ALIGN=class=rule`, `/ALIGN=(class=rule,...)` | The rule for that class, packed for a class not named |
+
+The classes are `RECORDS` (or `STRUCTURES`) and `COMMONS`, and the rules
+`PACKED`, `NATURAL`, and for `COMMONS` only `STANDARD`. Keywords may be cut
+short: `/ALIGN=RECO=NATU`. A **natural boundary** is an INTEGER's, LOGICAL's,
+or REAL's length, at most 8; 16 for any COMPLEX; 1 for CHARACTER; for a
+substructure or a union the largest of its fields', and for an array its
+element's. `STANDARD` is the same, at most 4. A structure laid out by
+`NATURAL` has a length that is a multiple of its boundary, so that a record
+array's elements stay aligned, and a record of it in static storage is on that
+boundary (an AUTOMATIC record only on a longword, all a stack frame's address
+promises). A common block's program section is aligned as strictly as its names
+need. The setting where a `STRUCTURE` or `COMMON` statement stands is the one
+that lays it out, so a program may mix them with `CDEC$ OPTIONS` groups
+([section 14.4](#144-source-lines)). Units that exchange records or share a
+block must agree: a record argument of another layout is `RECORDARG`, and a
+block declared alike but laid out differently the warning `COMMONLAYOUT`.
 
 ### 14.4 Source lines
 
@@ -4890,6 +4918,7 @@ unit or among its statements:
 | `CDEC$ IDENT 'string'` | The object module's identification. A file is one module, so the file's first IDENT counts, and later ones are ignored. |
 | `CDEC$ PSECT /block/ attr[,attr]...` | Changes a common block's program section (`//` for blank common): `LCL` or `GBL`, `[NO]WRT`, `[NO]SHR`, and `ALIGN=n`, a power of two from 0 (a byte) to 9 (a page). |
 | `CDEC$ TITLE ['string']`, `CDEC$ SUBTITLE ['string']` | Accepted, with no effect until FORTRAN has listings. |
+| `CDEC$ OPTIONS /option[/option]...` ... `CDEC$ END OPTIONS` | A group of declarations with their own alignment (nesting to 100 levels). An option is `/[NO]ALIGN[=value]`, as on the command ([section 14.3](#143-the-fortran-command)), or `/WARN=[NO]ALIGNMENT`, an informational message for each field or common name not on its natural boundary, off unless asked for. A group changes only the classes it names, must be in one unit, after a `SUBROUTINE`, `FUNCTION`, or `BLOCK DATA` statement and before the executable statements, and can't begin or end inside a structure declaration. |
 
 A string is at most 31 printable characters. Every unit of a file that names
 a block must leave it with the same attributes (`%FORT-E-PSECTDIFFER`); a

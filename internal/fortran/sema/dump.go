@@ -64,7 +64,13 @@ func Dump(p *Program) string {
 			b.WriteString(dumpStructure(st))
 		}
 
-		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
+		fmt.Fprintf(&b, "  $LOCAL is %d bytes", u.LocalSize)
+
+		if u.LocalAlign != 0 {
+			fmt.Fprintf(&b, ", ALIGN=%d", u.LocalAlign)
+		}
+
+		b.WriteString("\n")
 
 		for _, c := range u.Commons {
 			fmt.Fprintf(&b, "  %s is %d bytes", c, c.Size)

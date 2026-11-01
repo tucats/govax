@@ -20,8 +20,22 @@ import (
 const (
 	codePsect  = "$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG"
 	pdataPsect = "$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG"
-	localPsect = "$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG"
+	localPsect = "$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,"
 )
+
+// localAlignment is the alignment of the module's $LOCAL section, as a power of
+// two: a longword, unless /ALIGN placed a record in one of its routines on a
+// stricter boundary (sema.Unit.LocalAlign). A module writes one section however
+// many routines it has, so they must all give it the same attributes.
+func localAlignment(routines []*ir.Routine) int {
+	align := sema.DefaultAlign
+
+	for _, r := range routines {
+		align = max(align, r.Unit.LocalAlign)
+	}
+
+	return align
+}
 
 // commonAttributes are a common block's program section's attributes
 // (Table 10-1 of the Language Reference Manual, Decision 10): overlaid, so
@@ -91,9 +105,11 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line) {
 	writeCommons(w, routines, names)
 
 	main := ""
+	localAlign := localAlignment(routines)
 
 	for _, r := range routines {
 		g := newRoutineGen(r, names, src)
+		g.localAlign = localAlign
 		g.generate()
 		g.write(w)
 
@@ -378,7 +394,14 @@ func (g *routineGen) write(w *Writer) {
 
 	if len(g.cells()) > 0 {
 		w.Blank()
-		w.Statement("", ".PSECT", localPsect, "")
+		w.Statement("", ".PSECT", localPsect+alignmentName(g.localAlign), "")
+
+		// The section goes on from the module's routine before, so an offset
+		// in this one is an address's only from a boundary as strict.
+		if r.Unit.LocalAlign > 2 {
+			w.Statement("", ".ALIGN", alignmentName(r.Unit.LocalAlign), "the boundary of this routine's aligned records")
+		}
+
 		g.writeLocal(w)
 	}
 

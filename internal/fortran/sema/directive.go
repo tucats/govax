@@ -76,12 +76,17 @@ func (p PsectAttrs) String() string {
 	return strings.Join(list, ", ")
 }
 
+// endOptions is CDEC$ END OPTIONS's name, to the lexer, for which blanks don't
+// count.
+const endOptions = "ENDOPTIONS"
+
 // directive reads one directive of the file. The first IDENT is the module's,
 // since a file is one module (Decision 9; VAX FORTRAN made a module per unit,
 // each with its first). A PSECT directive is returned, to be applied when its
-// unit's common blocks are all known; it is nil for the others.
+// unit's common blocks are all known, and an OPTIONS or END OPTIONS directive,
+// for its unit (align.go); it is nil for the others.
 func (p *Program) directive(s *ast.DirectiveStmt, messages *diag.List) *ast.DirectiveStmt {
-	if s.Name == "PSECT" {
+	if s.Name == "PSECT" || s.Name == "OPTIONS" || s.Name == endOptions {
 		return s
 	}
 
@@ -114,8 +119,14 @@ func printableString(text string) bool {
 
 // directive reads a directive among the unit's statements.
 func (a *analyzer) directive(s *ast.DirectiveStmt) {
-	if d := a.prog.directive(s, a.messages); d != nil {
+	d := a.prog.directive(s, a.messages)
+
+	switch {
+	case d == nil:
+	case d.Name == "PSECT":
 		a.psects = append(a.psects, d)
+	default:
+		a.optionsDirective(d)
 	}
 }
 
@@ -227,7 +238,7 @@ func (a *analyzer) psectAttribute(b *CommonBlock, q *ast.Qualifier, given map[ps
 	case "SHR", "NOSHR":
 		b.Attrs.NoShare = q.Name == "NOSHR"
 	default:
-		b.Attrs.Align = align
+		b.Attrs.Align, b.alignGiven = align, true
 	}
 }
 

@@ -19,7 +19,8 @@ import (
 // A structure is laid out packed (section 2.2.5.1): each field's offset
 // is the sum of the lengths of the fields before it, with no gaps for
 // alignment, so the VAX may reach a longword at an odd address (which
-// it can, more slowly). A union takes as many bytes as its longest
+// it can, more slowly), unless the setting where it is declared says otherwise
+// (align.go). A union takes as many bytes as its longest
 // map, every map starting at the union's offset. The manual's example
 //
 //	STRUCTURE /STR/
@@ -60,6 +61,16 @@ type Structure struct {
 	// Size is the structure's length in bytes, which every record of it
 	// has.
 	Size int
+
+	// Natural is set if RECORDS=NATURAL laid it out: each field on its
+	// boundary, and Size a multiple of Boundary, so that the elements of a
+	// record array stay aligned.
+	Natural bool
+
+	// Boundary is the structure's natural boundary, the largest of its fields'
+	// (naturalBoundary), however it was laid out: where a record of it goes
+	// when it is aligned by something outside it.
+	Boundary int
 
 	// Initials are the initial values its field declarations give, in
 	// the order they are declared. Two in different maps of a union may
@@ -234,10 +245,20 @@ func (a *analyzer) declareStructure(s *ast.StructureStmt) *Structure {
 
 	a.unit.Structures = append(a.unit.Structures, st)
 
-	b := &structBuilder{a: a, s: st}
-	b.body(s.Body)
+	st.Natural = a.align.Records == Natural
+	b := &structBuilder{a: a, s: st, boundary: 1}
 
-	st.Size, st.open = b.offset, false
+	a.structDepth++
+	b.body(s.Body)
+	a.structDepth--
+
+	st.Size, st.Boundary, st.open = b.offset, b.boundary, false
+
+	if st.Natural {
+		st.Size = alignUp(st.Size, st.Boundary)
+	}
+
+	a.warnFields(st)
 
 	if !b.declares {
 		a.report("STRUCTEMPTY", s.Position())
@@ -256,6 +277,9 @@ type structBuilder struct {
 
 	union     *Union
 	mapNumber int
+
+	// boundary is the largest natural boundary of the fields so far.
+	boundary int
 
 	// tooLarge is set once the structure has grown past
 	// maxStructureBytes and said so.
@@ -391,10 +415,19 @@ func (b *structBuilder) nested(s *ast.StructureStmt) {
 }
 
 // unionStatement lays out a union: each map from the union's offset, the
-// union as long as its longest map (section 4.15.3).
+// union as long as its longest map (section 4.15.3). Under RECORDS=NATURAL the
+// union's offset is a multiple of its largest field's boundary, which isn't known
+// until its maps are read. So they are read as if the union were at 0, where each
+// field's boundary is reached from the union's start, and then everything in it
+// moves to the union's place, which keeps those boundaries.
 func (b *structBuilder) unionStatement(s *ast.UnionStmt) {
-	u := &Union{Offset: b.offset, Pos: s.Position()}
+	u := &Union{Pos: s.Position()}
 	outer, outerMap := b.union, b.mapNumber
+
+	base, outerBoundary := b.offset, b.boundary
+	firstField, firstInitial := len(b.s.Fields), len(b.s.Initials)
+
+	b.boundary = 1
 
 	for _, m := range s.Body {
 		if d, ok := m.(*ast.DirectiveStmt); ok {
@@ -407,15 +440,43 @@ func (b *structBuilder) unionStatement(s *ast.UnionStmt) {
 		}
 
 		u.Maps++
-		b.union, b.mapNumber, b.offset = u, u.Maps, u.Offset
+		b.union, b.mapNumber, b.offset = u, u.Maps, 0
 
 		b.body(m.Body)
 
-		u.Size = max(u.Size, b.offset-u.Offset)
+		u.Size = max(u.Size, b.offset)
 	}
 
+	place := base
+	if b.s.Natural {
+		place = alignUp(base, b.boundary)
+	}
+
+	moved := map[*Union]bool{}
+
+	for _, f := range b.s.Fields[firstField:] {
+		f.Offset += place
+
+		if f.Union != nil && !moved[f.Union] {
+			moved[f.Union] = true
+			f.Union.Offset += place
+		}
+	}
+
+	for _, in := range b.s.Initials[firstInitial:] {
+		in.Offset += place
+	}
+
+	u.Offset = place
 	b.union, b.mapNumber = outer, outerMap
-	b.offset = u.Offset + u.Size
+	b.offset = place + u.Size
+	b.boundary = max(outerBoundary, b.boundary)
+
+	if int64(b.offset) > maxStructureBytes && !b.tooLarge {
+		b.a.report("STRUCTSIZE", u.Pos, b.s.Display())
+
+		b.tooLarge = true
+	}
 }
 
 // fieldDims gives f the dimensions its declarator d declares, which must
@@ -495,6 +556,12 @@ func (b *structBuilder) constantBound(e ast.Expr, d *ast.Declarator) (int, bool)
 // maps' fields are at their structure's level: R.FLT and R.INT name two
 // maps' fields of one record.
 func (b *structBuilder) add(f *Field) {
+	b.boundary = max(b.boundary, f.boundary())
+
+	if b.s.Natural {
+		b.offset = alignUp(b.offset, f.boundary())
+	}
+
 	f.Offset, f.Union, f.Map = b.offset, b.union, b.mapNumber
 
 	if f.Name != "%FILL" {

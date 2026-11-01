@@ -36,6 +36,9 @@ type Options struct {
 	// GFloating is /G_FLOATING: REAL*8 is G_floating, not D_floating.
 	GFloating bool
 
+	// Align is /[NO]ALIGN (sema/align.go).
+	Align sema.Alignment
+
 	// Includes reads the files INCLUDE statements name; nil means a
 	// program can include nothing.
 	Includes source.Opener
@@ -113,7 +116,7 @@ func Compile(opts Options, file File) Result {
 	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
 		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		prog := sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating}, &messages)
+		prog := sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align}, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)

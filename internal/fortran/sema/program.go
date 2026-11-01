@@ -95,6 +95,10 @@ type Unit struct {
 	// when they are in D_floating.
 	GFloating bool
 
+	// LocalAlign is the alignment of the $LOCAL section, as a power of two, that
+	// the unit's aligned records need beyond a longword's (align.go), or 0.
+	LocalAlign int
+
 	// Structures are the unit's structure declarations, nested ones
 	// included, in the order they begin (structure.go); structs are the
 	// named ones by name, which RECORD statements look in.
@@ -260,6 +264,8 @@ type Symbol struct {
 	// groupOffset its place among them; equivPos is its first appearance
 	// in a list (equivalence.go).
 	Equivalenced bool
+	commonAlign  Alignment     // the setting where its COMMON statement is (align.go)
+	commonPos    diag.Position // where that statement names it
 	group        *equivGroup
 	groupOffset  int
 	equivPos     diag.Position

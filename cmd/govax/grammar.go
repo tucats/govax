@@ -63,6 +63,8 @@ type fortranFlags struct {
 	dLines       bool   // --d-lines
 	noI4         bool   // --no-i4
 	gFloating    bool   // --g-floating
+	align        string // --align: /ALIGN's value
+	noAlign      bool   // --no-align
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -321,6 +323,26 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.gFloating = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "align",
+		Description: "Lay out structures and common blocks aligned: all, none, a rule, or class=rule[,class=rule]",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.align, _ = c.String("align")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-align",
+		Description: "Lay out structures and common blocks packed (the default)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noAlign = true
 
 			return nil
 		},
@@ -805,6 +827,13 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.gFloating {
 		command += "/G_FLOATING"
+	}
+
+	switch {
+	case f.noAlign:
+		command += "/NOALIGN"
+	case f.align != "":
+		command += "/ALIGN=(" + f.align + ")"
 	}
 
 	if f.continuationsGiven {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/fortran"
+	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -18,7 +19,7 @@ import (
 //
 //	FORTRAN source[,...][/HOST] [/MACRO[=file] | /NOMACRO]
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
-//	        [/[NO]G_FLOATING]
+//	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -69,6 +70,11 @@ type FortranOptions struct {
 	// GFloating is /G_FLOATING (fortran.Options).
 	GFloating bool
 
+	// Align is /ALIGN's values, if AlignGiven says it was given; /NOALIGN is
+	// the default, so nothing need say it (sema.Alignment).
+	Align      []string
+	AlignGiven bool
+
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
 
@@ -98,6 +104,21 @@ func (fc FortranContinuations) limit() (int, error) {
 	return int(fc.Lines), nil
 }
 
+// alignment is the compiler's Options.Align for /ALIGN, or an error if a value
+// isn't one.
+func (opts FortranOptions) alignment() (sema.Alignment, error) {
+	if !opts.AlignGiven {
+		return sema.Alignment{}, nil
+	}
+
+	al, err := sema.Alignment{}.WithAlign(opts.Align)
+	if err != nil {
+		return al, vmserrors.New(vmserrors.CLI_FORALIGN, err.Error())
+	}
+
+	return al, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does.
 const defaultFortranType = "FOR"
@@ -106,6 +127,10 @@ const defaultFortranType = "FOR"
 // MACRO file.
 func (c *Context) Fortran(opts FortranOptions) error {
 	if _, err := opts.Continuations.limit(); err != nil {
+		return err
+	}
+
+	if _, err := opts.alignment(); err != nil {
 		return err
 	}
 
@@ -157,12 +182,14 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 	lines := recordLines(records)
 
 	continuations, _ := opts.Continuations.limit() // checked by Fortran
+	align, _ := opts.alignment()                   // checked by Fortran
 
 	result := fortran.Compile(fortran.Options{
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
 		NoI4:          opts.NoI4,
 		GFloating:     opts.GFloating,
+		Align:         align,
 		Continuations: continuations,
 		Includes:      fortranIncludes{c},
 		Version:       BuildVersion,

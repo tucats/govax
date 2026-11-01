@@ -4089,6 +4089,7 @@ $FOR
         FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
                 [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
+                [/ALIGN[=<value>] | /NOALIGN]
 
     Parameter:
 
@@ -4146,6 +4147,17 @@ $FOR
                         OPTIONS statement overrides this for that unit;
                         the units of a program must agree, since a value
                         passed from one format to the other is misread.
+
+        /ALIGN[=<value>] How structures and common blocks are laid out.
+        /NOALIGN        /NOALIGN, the default, packs them, as VAX FORTRAN
+                        V5.0 does.  /ALIGN puts each field and common name
+                        on its natural boundary.  A value is ALL, NONE,
+                        NATURAL, PACKED, or <class>=<rule>, and several go
+                        in parentheses: the classes are RECORDS (or
+                        STRUCTURES) and COMMONS, and the rules PACKED,
+                        NATURAL, and for COMMONS STANDARD, at most a
+                        longword.  /ALIGN alone is ALL.  CDEC$ OPTIONS
+                        groups in the source override it.
 
     The compiler reports each problem it finds with the line it is on:
 

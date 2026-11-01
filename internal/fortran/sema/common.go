@@ -13,6 +13,8 @@ import (
 // longest. A unit's names are laid out in the order its COMMON statements
 // list them, with nothing between them: the VAX reads unaligned data, and
 // aligning would move the names of one unit away from those of another.
+// /ALIGN asks for just that (align.go), name by name, by the setting where each
+// COMMON statement is.
 //
 //	COMMON HEAT,X /BLK1/KILO,Q         HEAT $BLANK+0, X $BLANK+4,
 //	                                   KILO BLK1+0, Q BLK1+4
@@ -49,6 +51,14 @@ type CommonBlock struct {
 	Attrs    PsectAttrs
 	psectPos diag.Position
 	psectBad bool
+
+	// alignGiven is set if a directive gave ALIGN=.
+	alignGiven bool
+
+	// LayoutAlign is the alignment of the program section, as a power of two,
+	// that this unit's layout needs for its offsets to be addresses' (align.go);
+	// 0 if it needs none.
+	LayoutAlign int
 }
 
 // String is the block as messages and the storage map say it: /BLK1/, or
@@ -126,6 +136,7 @@ func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
 	}
 
 	sym.Common = b
+	sym.commonAlign, sym.commonPos = a.align, d.Pos
 	b.Members = append(b.Members, sym)
 
 	if sym.Class == Unclassified {
@@ -138,12 +149,39 @@ func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
 }
 
 // layoutCommon gives each block's names their places, one after another,
-// and each block its size.
+// each on its boundary if the setting at its COMMON statement says so, and
+// each block its size. A block with an aligned name needs a program section
+// aligned at least as strictly, or an offset's alignment wouldn't be an
+// address's.
 func (a *analyzer) layoutCommon() {
 	for _, b := range a.unit.Commons {
+		needs := 1
+
 		for _, s := range b.Members {
-			s.Offset = b.Size
-			b.Size += s.Size()
+			natural := s.boundary()
+
+			boundary := 1
+
+			switch s.commonAlign.Commons {
+			case Natural:
+				boundary = natural
+			case Standard:
+				boundary = min(natural, 4)
+			}
+
+			needs = max(needs, boundary)
+			s.Offset = alignUp(b.Size, boundary)
+			b.Size = s.Offset + s.Size()
+
+			if s.commonAlign.Warn && s.Offset%natural != 0 {
+				a.report("ALIGNCOMMON", s.commonPos, s.Name, s.Offset, b.String(), natural)
+			}
+		}
+
+		b.LayoutAlign = alignPower(needs)
+
+		if b.alignGiven && !b.psectBad && b.Attrs.Align < b.LayoutAlign {
+			a.report("PSECTSMALL", b.psectPos, b.String(), b.LayoutAlign, b.Attrs.Align)
 		}
 	}
 }

@@ -1,0 +1,49 @@
+== main program ALIGNED
+  ALIGNED                 program unit
+  B1        LOGICAL*1     variable         N+0
+  I1        INTEGER       variable         N+4
+  C1        CHARACTER*1   variable         N+8
+  Z1        COMPLEX       variable         N+16
+  RN        /NAT/         variable         OCTA+0
+  RL        /NAT/         array(1:2)       $LOCAL+0
+  RS        /SUB/         variable         $LOCAL+128
+  B2        LOGICAL*1     variable         S+0
+  D2        REAL*8        variable         S+4
+  Z2        COMPLEX       variable         S+12
+  B3        LOGICAL*1     variable         P+0
+  I3        INTEGER       variable         P+1
+  structure /NAT/ is 64 bytes
+    F           LOGICAL*1           +0
+    N           INTEGER             +4
+    Q           REAL*16             +8
+    C           COMPLEX             +32
+    A           LOGICAL*1           +40  map 1 of the union at +40
+    D           REAL*8              +48  map 1 of the union at +40
+    B           LOGICAL*1           +40  map 1 of the union at +40
+    W           INTEGER*2           +42  map 1 of the union at +40
+    T           CHARACTER*3         +56
+    initial +32 C COMPLEX = 80 40 00 00 00 41 00 00
+    initial +48 D REAL*8 = 20 41 00 00 00 00 00 00
+    initial +42 W INTEGER*2 = 03 00
+  structure /PAK/ is 5 bytes
+    F           LOGICAL*1           +0
+    N           INTEGER             +1
+  structure /SUB/ is 16 bytes
+    F           LOGICAL*1           +0
+    P           /PAK/ (1:2)         +4
+    G           LOGICAL*1           +14
+  $LOCAL is 144 bytes, ALIGN=4
+  /N/ is 24 bytes, ALIGN=4
+  /OCTA/ is 64 bytes, ALIGN=4
+  /S/ is 20 bytes
+  /P/ is 5 bytes
+  initial $LOCAL+32 RL(1).C COMPLEX = 80 40 00 00 00 41 00 00
+  initial $LOCAL+42 RL(1).W INTEGER*2 = 03 00
+  initial $LOCAL+48 RL(1).D REAL*8 = 20 41 00 00 00 00 00 00
+  initial $LOCAL+96 RL(2).C COMPLEX = 80 40 00 00 00 41 00 00
+  initial $LOCAL+106 RL(2).W INTEGER*2 = 03 00
+  initial $LOCAL+112 RL(2).D REAL*8 = 20 41 00 00 00 00 00 00
+  initial OCTA+32 RN.C COMPLEX = 80 40 00 00 00 41 00 00
+  initial OCTA+42 RN.W INTEGER*2 = 03 00
+  initial OCTA+48 RN.D REAL*8 = 20 41 00 00 00 00 00 00
+51          END

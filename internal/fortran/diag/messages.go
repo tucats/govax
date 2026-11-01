@@ -120,7 +120,7 @@ var messages = map[string]kind{
 
 	// BADDIRECTIVE is a CDEC$ line naming no general directive (section
 	// 10.3).
-	"BADDIRECTIVE": {Error, "there is no CDEC$ %s directive; the directives are IDENT, PSECT, TITLE, and SUBTITLE"},
+	"BADDIRECTIVE": {Error, "there is no CDEC$ %s directive; the directives are IDENT, PSECT, TITLE, SUBTITLE, OPTIONS, and END OPTIONS"},
 
 	// DIRSTRING is a string for CDEC$ IDENT, TITLE, or SUBTITLE that is too
 	// long or holds a character that can't be printed (section 10.3).
@@ -141,6 +141,42 @@ var messages = map[string]kind{
 
 	// PSECTBLOCK is CDEC$ PSECT naming a block the unit doesn't declare.
 	"PSECTBLOCK": {Error, "%s is not a common block of this program unit, so CDEC$ PSECT can't change it"},
+
+	// OPTIONSBAD is an option of CDEC$ OPTIONS that isn't one (the HP manual's
+	// 14.14).
+	"OPTIONSBAD": {Error, "in CDEC$ OPTIONS: %s"},
+
+	// OPTIONSPLACE is a CDEC$ OPTIONS or END OPTIONS before a unit's SUBROUTINE,
+	// FUNCTION, or BLOCK DATA statement, or after the file's last unit.
+	"OPTIONSPLACE": {Error, "a CDEC$ OPTIONS or END OPTIONS directive must come after the %s statement"},
+
+	// OPTIONSLATE is a CDEC$ OPTIONS or END OPTIONS after the unit's first
+	// executable statement.
+	"OPTIONSLATE": {Error, "a CDEC$ OPTIONS or END OPTIONS directive must come before the executable statements"},
+
+	// OPTIONSSTRUCT is a group beginning or ending inside a structure
+	// declaration.
+	"OPTIONSSTRUCT": {Error, "a CDEC$ OPTIONS or END OPTIONS directive can't be inside a structure declaration"},
+
+	// OPTIONSOPEN is a CDEC$ OPTIONS with no END OPTIONS before its unit's END.
+	"OPTIONSOPEN": {Error, "this CDEC$ OPTIONS has no END OPTIONS in its program unit"},
+
+	// NOOPTIONS is a CDEC$ END OPTIONS with no group to end.
+	"NOOPTIONS": {Error, "this CDEC$ END OPTIONS has no CDEC$ OPTIONS"},
+
+	// OPTIONSDEPTH is groups nested too deep.
+	"OPTIONSDEPTH": {Error, "groups of CDEC$ OPTIONS can nest only %d levels"},
+
+	// PSECTSMALL is a CDEC$ PSECT ALIGN= smaller than the block's layout needs.
+	"PSECTSMALL": {Error, "%s needs ALIGN=%d for its aligned names, but CDEC$ PSECT gives it ALIGN=%d"},
+
+	// ALIGNFIELD and ALIGNCOMMON are /WARN=ALIGNMENT's remarks.
+	"ALIGNFIELD":  {Informational, "the field %s, at offset %d, is not on its natural boundary of %d"},
+	"ALIGNCOMMON": {Informational, "%s, at offset %d in %s, is not on its natural boundary of %d"},
+
+	// COMMONLAYOUT is a block two units declare alike under different alignment
+	// settings, so its names don't match up.
+	"COMMONLAYOUT": {Warning, "%s is declared here as at line %d, but aligned differently, so their names are at different places"},
 
 	// PSECTDIFFER is a block with other attributes than another unit of
 	// the file gives it, which section 10.3.2 forbids.

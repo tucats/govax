@@ -260,10 +260,11 @@ type (
 	}
 
 	// DirectiveStmt is a CDEC$ directive: Name is IDENT, TITLE,
-	// SUBTITLE, or PSECT. IDENT, TITLE, and SUBTITLE have a string, Text
-	// (HasText says whether one was given); PSECT a common block (Common,
-	// "" for blank common) and its attributes (LCL, GBL, [NO]WRT,
-	// [NO]SHR, ALIGN=n), each a Qualifier.
+	// SUBTITLE, PSECT, OPTIONS, or ENDOPTIONS. IDENT, TITLE, and SUBTITLE
+	// have a string, Text (HasText says whether one was given); PSECT a
+	// common block (Common, "" for blank common) and its attributes (LCL,
+	// GBL, [NO]WRT, [NO]SHR, ALIGN=n), each a Qualifier; OPTIONS its options
+	// in Attrs too (/ALIGN=(RECORDS=NATURAL) has the value "RECORDS=NATURAL").
 	DirectiveStmt struct {
 		StmtBase
 		Name    string

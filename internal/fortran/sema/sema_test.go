@@ -105,6 +105,49 @@ func TestErrors(t *testing.T) {
 		lines []string
 		want  string
 	}{
+		// CDEC$ OPTIONS and END OPTIONS (the HP manual's 14.14).
+		{"a group in a main program", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /B/ X", "CDEC$ END OPTIONS", "X = 1", "END"}, ""},
+		{"blanks don't count", []string{"CDEC$ OPTIONS / ALIGN = RECO = NATU / WARN = NOALIGNMENT", "CDEC$ ENDOPTIONS", "END"}, ""},
+		{"every form", []string{"CDEC$ OPTIONS /ALIGN=(RECORDS=NATURAL,COMMONS=STANDARD) /WARN=ALIGNMENT", "CDEC$ OPTIONS /NOALIGN", "CDEC$ OPTIONS /ALIGN=ALL", "CDEC$ END OPTIONS", "CDEC$ END OPTIONS", "CDEC$ END OPTIONS", "END"}, ""},
+		{"a group after a header", []string{"SUBROUTINE S", "CDEC$ OPTIONS /ALIGN", "CDEC$ END OPTIONS", "END"}, ""},
+		{"a group before PROGRAM", []string{"CDEC$ OPTIONS /ALIGN", "PROGRAM P", "CDEC$ END OPTIONS", "END"}, ""},
+		{"a group before SUBROUTINE", []string{"CDEC$ OPTIONS /ALIGN", "SUBROUTINE S", "END"}, "OPTIONSPLACE@1:7"},
+		{"a group before FUNCTION", []string{"CDEC$ END OPTIONS", "FUNCTION F()", "F = 1", "END"}, "OPTIONSPLACE@1:7"},
+		{"a group before BLOCK DATA", []string{"CDEC$ OPTIONS /ALIGN", "BLOCK DATA", "END"}, "OPTIONSPLACE@1:7"},
+		{"a group in BLOCK DATA", []string{"BLOCK DATA", "CDEC$ OPTIONS /ALIGN", "COMMON /B/ X", "CDEC$ END OPTIONS", "END"}, ""},
+		{"a group after the last unit", []string{"END", "CDEC$ OPTIONS /ALIGN"}, "OPTIONSPLACE@2:7"},
+		{"no END OPTIONS", []string{"CDEC$ OPTIONS /ALIGN", "CDEC$ OPTIONS /NOALIGN", "END"}, "OPTIONSOPEN@1:7 OPTIONSOPEN@2:7"},
+		{"a group doesn't pass END", []string{"CDEC$ OPTIONS /ALIGN", "END", "CDEC$ END OPTIONS", "SUBROUTINE S", "END"}, "OPTIONSOPEN@1:7 OPTIONSPLACE@3:7"},
+		{"no OPTIONS", []string{"CDEC$ END OPTIONS", "END"}, "NOOPTIONS@1:7"},
+		{"OPTIONS after a statement", []string{"X = 1", "CDEC$ OPTIONS /ALIGN", "CDEC$ END OPTIONS", "END"}, "OPTIONSLATE@2:7 OPTIONSLATE@3:7"},
+		{"END OPTIONS after a statement", []string{"CDEC$ OPTIONS /ALIGN", "X = 1", "CDEC$ END OPTIONS", "END"}, "OPTIONSLATE@3:7"},
+		{"OPTIONS in a structure", []string{"STRUCTURE /S/", "CDEC$ OPTIONS /ALIGN", "BYTE F", "CDEC$ END OPTIONS", "END STRUCTURE", "END"}, "OPTIONSSTRUCT@2:7 OPTIONSSTRUCT@4:7"},
+		{"OPTIONS in a union", []string{"STRUCTURE /S/", "UNION", "CDEC$ OPTIONS /ALIGN", "MAP", "BYTE F", "END MAP", "END UNION", "END STRUCTURE", "END"}, "OPTIONSSTRUCT@3:7"},
+		{"no option", []string{"CDEC$ OPTIONS", "END"}, "SYNTAX@1:14"},
+		{"no such option", []string{"CDEC$ OPTIONS /BOGUS", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"no such rule", []string{"CDEC$ OPTIONS /ALIGN=BOGUS", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"STANDARD alone", []string{"CDEC$ OPTIONS /ALIGN=STANDARD", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"STANDARD for records", []string{"CDEC$ OPTIONS /ALIGN=RECORDS=STANDARD", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"NOALIGN with a value", []string{"CDEC$ OPTIONS /NOALIGN=ALL", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"WARN alone", []string{"CDEC$ OPTIONS /WARN", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"WARN of something else", []string{"CDEC$ OPTIONS /WARN=BOGUS", "CDEC$ END OPTIONS", "END"}, "OPTIONSBAD@1:16"},
+		{"the OPTIONS statement takes no /ALIGN", []string{"OPTIONS /ALIGN", "END"}, "NOTIMPL@1:7"},
+		{"a PSECT ALIGN= too small", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /B/ D", "CDEC$ END OPTIONS", "REAL*8 D", "CDEC$ PSECT /B/ ALIGN=2", "END"}, "PSECTSMALL@5:14"},
+		{"a PSECT ALIGN= large enough", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /B/ D", "CDEC$ END OPTIONS", "REAL*8 D", "CDEC$ PSECT /B/ ALIGN=3", "END"}, ""},
+		{"a PSECT ALIGN= under STANDARD", []string{"CDEC$ OPTIONS /ALIGN=COMMONS=STANDARD", "COMMON /B/ D", "CDEC$ END OPTIONS", "REAL*8 D", "CDEC$ PSECT /B/ ALIGN=1", "END"}, "PSECTSMALL@5:14"},
+		{"a PSECT with no ALIGN= over a packed block", []string{"COMMON /B/ D", "REAL*8 D", "CDEC$ PSECT /B/ ALIGN=0", "END"}, ""},
+		{"a field off its boundary", []string{"CDEC$ OPTIONS /WARN=ALIGNMENT", "STRUCTURE /S/", "BYTE F", "INTEGER N", "CHARACTER*3 T", "END STRUCTURE", "CDEC$ END OPTIONS", "END"}, "ALIGNFIELD@4:15"},
+		{"no remark with /NOWARN's form", []string{"CDEC$ OPTIONS /WARN=NOALIGNMENT", "STRUCTURE /S/", "BYTE F", "INTEGER N", "END STRUCTURE", "CDEC$ END OPTIONS", "END"}, ""},
+		{"no remark for aligned fields", []string{"CDEC$ OPTIONS /WARN=ALIGNMENT /ALIGN", "STRUCTURE /S/", "BYTE F", "INTEGER N", "END STRUCTURE", "CDEC$ END OPTIONS", "END"}, ""},
+		{"no remark for %FILL", []string{"CDEC$ OPTIONS /WARN=ALIGNMENT", "STRUCTURE /S/", "BYTE F", "INTEGER*2 %FILL", "END STRUCTURE", "CDEC$ END OPTIONS", "END"}, ""},
+		{"a common name off its boundary", []string{"CDEC$ OPTIONS /WARN=ALIGN", "BYTE B", "COMMON /C/ B, X", "CDEC$ END OPTIONS", "END"}, "ALIGNCOMMON@3:21"},
+		{"a remark under STANDARD", []string{"CDEC$ OPTIONS /WARN=ALIGNMENT /ALIGN=COMMONS=STANDARD", "REAL*8 D", "COMMON /C/ X, D", "CDEC$ END OPTIONS", "END"}, "ALIGNCOMMON@3:21"},
+		{"one block aligned differently", []string{"CDEC$ OPTIONS /ALIGN", "BYTE B", "COMMON /C/ B, X", "CDEC$ END OPTIONS", "END", "SUBROUTINE S", "BYTE B", "COMMON /C/ B, X", "END"}, "COMMONLAYOUT@8:15"},
+		{"one block declared differently", []string{"CDEC$ OPTIONS /ALIGN", "BYTE B", "COMMON /C/ B, X", "CDEC$ END OPTIONS", "END", "SUBROUTINE S", "COMMON /C/ X, Y", "END"}, ""},
+		{"one layout under two settings", []string{"CDEC$ OPTIONS /ALIGN", "COMMON /C/ X, Y", "CDEC$ END OPTIONS", "END", "SUBROUTINE S", "COMMON /C/ X, Y", "END"}, ""},
+		{"a record argument of another layout", []string{"CDEC$ OPTIONS /ALIGN", "STRUCTURE /S/", "BYTE F", "INTEGER N", "END STRUCTURE", "CDEC$ END OPTIONS", "RECORD /S/ R", "CALL Y(R)", "END",
+			"SUBROUTINE Y(Q)", "STRUCTURE /S/", "BYTE F", "INTEGER N", "END STRUCTURE", "RECORD /S/ Q", "END"}, "RECORDARG@8:14"},
+
 		// The general directives (section 10.3).
 		{"directives before, in, and after a unit", []string{"CDEC$ IDENT 'A'", "CDEC$ PSECT /B/ NOWRT", "CDEC$ TITLE 'T'", "COMMON /B/ X", "CDEC$ SUBTITLE",
 			"X2 = X", "CDEC$ TITLE 'AGAIN'", "END", "CDEC$ IDENT 'B'"}, ""},
@@ -1902,5 +1945,151 @@ func TestGFloating(t *testing.T) {
 		"      SUBROUTINE B", "      END")
 	if len(messages) > 0 || !prog.Units[0].GFloating || prog.Units[1].GFloating {
 		t.Errorf("OPTIONS for one unit: %v, %t %t", messages, prog.Units[0].GFloating, prog.Units[1].GFloating)
+	}
+}
+
+// analyzeAligned is analyzeLines with the /ALIGN setting given, returning a
+// message's identifiers too.
+func analyzeAligned(t *testing.T, al Alignment, lines ...string) (*Program, []diag.Message) {
+	t.Helper()
+
+	var messages diag.List
+
+	program := source.Read(source.Form{}, &source.File{Spec: "T.FOR", Lines: lines}, nil, &messages)
+	file := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+	prog := Analyze(file, "T$MAIN", Options{Align: al}, &messages)
+
+	return prog, messages.Messages()
+}
+
+// TestAlignValues checks the grammar /ALIGN shares with CDEC$ OPTIONS (the HP
+// manual's 14.14).
+func TestAlignValues(t *testing.T) {
+	both := func(r AlignRule) Alignment { return Alignment{Records: r, Commons: r} }
+
+	cases := []struct {
+		values []string
+		want   Alignment
+		bad    bool
+	}{
+		{values: nil, want: both(Natural)},
+		{values: []string{"ALL"}, want: both(Natural)},
+		{values: []string{"NONE"}, want: both(Packed)},
+		{values: []string{"NATURAL"}, want: both(Natural)},
+		{values: []string{"PACKED"}, want: both(Packed)},
+		{values: []string{"RECORDS=NATURAL"}, want: Alignment{Records: Natural}},
+		{values: []string{"STRUCTURES=NATURAL"}, want: Alignment{Records: Natural}},
+		{values: []string{"RECO=NATU"}, want: Alignment{Records: Natural}},
+		{values: []string{"COMMONS=STANDARD"}, want: Alignment{Commons: Standard}},
+		{values: []string{"C=S"}, want: Alignment{Commons: Standard}},
+		{values: []string{"RECORDS=NATURAL", "COMMONS=NATURAL"}, want: both(Natural)},
+		{values: []string{"RECORDS=NATURAL", "RECORDS=PACKED"}, want: Alignment{}},
+		{values: []string{"STANDARD"}, bad: true},
+		{values: []string{"RECORDS=STANDARD"}, bad: true},
+		{values: []string{"STRUCTURES=STANDARD"}, bad: true},
+		{values: []string{"N"}, bad: true}, // NATURAL or NONE
+		{values: []string{"BOGUS"}, bad: true},
+		{values: []string{"BOGUS=NATURAL"}, bad: true},
+		{values: []string{"RECORDS=BOGUS"}, bad: true},
+		{values: []string{"RECORDS="}, bad: true},
+		{values: []string{"=NATURAL"}, bad: true},
+	}
+
+	for _, c := range cases {
+		got, err := Alignment{}.WithAlign(c.values)
+
+		switch {
+		case c.bad && err == nil:
+			t.Errorf("%q: no error", c.values)
+		case !c.bad && err != nil:
+			t.Errorf("%q: %v", c.values, err)
+		case !c.bad && got != c.want:
+			t.Errorf("%q = %+v, want %+v", c.values, got, c.want)
+		}
+	}
+}
+
+// TestAlignOption checks that the command's setting is where a unit starts, each
+// unit alike, and that a group changes it.
+func TestAlignOption(t *testing.T) {
+	lines := []string{
+		"      STRUCTURE /S/", "      BYTE F", "      INTEGER N", "      END STRUCTURE",
+		"CDEC$ OPTIONS /NOALIGN",
+		"      STRUCTURE /P/", "      BYTE F", "      INTEGER N", "      END STRUCTURE",
+		"CDEC$ END OPTIONS",
+		"      END",
+		"      SUBROUTINE A",
+		"      STRUCTURE /S/", "      BYTE F", "      INTEGER N", "      END STRUCTURE",
+		"      END",
+	}
+
+	prog, ms := analyzeAligned(t, Alignment{Records: Natural}, lines...)
+	if len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	for _, c := range []struct {
+		unit, structure, size int
+	}{{0, 0, 8}, {0, 1, 5}, {1, 0, 8}} {
+		if got := prog.Units[c.unit].Structures[c.structure].Size; got != c.size {
+			t.Errorf("unit %d structure %d is %d bytes, want %d", c.unit, c.structure, got, c.size)
+		}
+	}
+}
+
+// TestAlignDepth checks the limit of 100 nested groups.
+func TestAlignDepth(t *testing.T) {
+	nested := func(n int) []string {
+		var lines []string
+
+		for range n {
+			lines = append(lines, "CDEC$ OPTIONS /ALIGN")
+		}
+
+		for range n {
+			lines = append(lines, "CDEC$ END OPTIONS")
+		}
+
+		return append(lines, "      END")
+	}
+
+	if _, ms := analyzeAligned(t, Alignment{}, nested(100)...); len(ms) != 0 {
+		t.Errorf("100 levels: %v", ms)
+	}
+
+	if _, ms := analyzeAligned(t, Alignment{}, nested(101)...); len(ms) != 1 || ms[0].Ident != "OPTIONSDEPTH" {
+		t.Errorf("101 levels: %v", ms)
+	}
+}
+
+// TestCommonAlignments checks each block's program section's alignment, the most
+// any unit's layout needs, whatever the first unit's said.
+func TestCommonAlignments(t *testing.T) {
+	prog, ms := analyzeAligned(t, Alignment{},
+		"      COMMON /A/ B, X",
+		"      BYTE B",
+		"      END",
+		"      SUBROUTINE S",
+		"CDEC$ OPTIONS /ALIGN",
+		"      COMMON /A/ D, E /C/ Z",
+		"      REAL*8 D, E",
+		"      COMPLEX Z",
+		"CDEC$ END OPTIONS",
+		"      END")
+	if len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	for _, u := range prog.Units {
+		for _, b := range u.Commons {
+			want := 3
+			if b.Name == "C" {
+				want = 4
+			}
+
+			if b.Attrs.Align != want {
+				t.Errorf("unit %s block %s: ALIGN=%d, want %d", u.Name, b, b.Attrs.Align, want)
+			}
+		}
 	}
 }

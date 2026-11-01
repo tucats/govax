@@ -5,8 +5,8 @@
 answers"); subtask 2, structure declarations, subtask 3, RECORD and
 field references, subtask 4, aggregates, subtask 5, typeless,
 Hollerith, and RADIX-50 constants, subtask 6, VOLATILE, AUTOMATIC,
-and STATIC, and subtask 7, the CDEC$ directives, done 2026-11-01. Needs
-Phase 79 (subprograms).
+and STATIC, subtask 7, the CDEC$ directives, and subtask 8, `/ALIGN`, done
+2026-11-01. Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -560,7 +560,7 @@ further Alpha-era directive; out, unless the author wants it.
    frame area, FP-relative cells, ENTRY's reservations, descriptors.
 7. **The CDEC$ directives** (done 2026-11-01): IDENT, PSECT (with the cross-unit check),
    TITLE and SUBTITLE accepted.
-8. **`/ALIGN`:** the command's qualifier (`console.dcl`,
+8. **`/ALIGN`** (done 2026-11-01): the command's qualifier (`console.dcl`,
    `dclcmd/fortran.go`, `govax fortran`), CDEC$ OPTIONS and END OPTIONS
    groups, the natural layouts of records and commons, the psect
    alignment, `/WARN=ALIGNMENT`.
@@ -836,3 +836,37 @@ further Alpha-era directive; out, unless the author wants it.
   EXE,NORD is accepted, since only NOEXE,NORD was tried. For this phase: CDEC$ PSECT's rule across
   files is now VMS's, a warning from LINK, and `checkPsects` remains an error within a file, the
   manual's rule where the compiler can see it.
+- **2026-11-01:** Subtask 8, `/ALIGN` (`sema/align.go`). `Alignment` is the setting (`Records`,
+  `Commons`, `Warn`), whose zero value is `/NOALIGN`; `WithAlign` reads the grammar the command and
+  CDEC$ OPTIONS share, keywords cut short by `matchKeyword`. **Groups:** `optionsDirective` keeps
+  `analyzer.align` and a stack of `alignGroups`, per unit, in the declarations walk; the parser's
+  `optionsQualifier` keeps `class=rule` as one value, and END OPTIONS is one name, ENDOPTIONS, since
+  blanks don't count. **Structures:** a `Structure` has `Natural` (the setting at its STRUCTURE
+  statement) and `Boundary`, the largest of its fields' natural boundaries however it was laid out;
+  `structBuilder.add` aligns a natural field, and the size is rounded up. **Unions** needed a change the
+  survey didn't foresee: a union's place depends on its largest field, known only after its maps are
+  read, so `unionStatement` reads them as if at 0, then moves its fields, initial values, and nested
+  unions to the place, keeping each boundary. **Commons:** a name keeps the setting at its COMMON
+  statement (`Symbol.commonAlign`), `layoutCommon` places it, and `LayoutAlign` is what the block's
+  section needs: `raiseCommonAlignments` gives each block the most any unit's layout needs, after
+  `checkPsects`, which compares only what directives said. **`$LOCAL`:** a record of a natural
+  structure goes on its boundary (`Unit.LocalAlign`). Since MACRO continues one section across a module's
+  routines, every routine writes `$LOCAL` with the module's alignment (`localAlignment`), and a routine
+  that needs it starts with `.ALIGN`. **The command:** `/ALIGN`, `/NOALIGN`, CLI_FORALIGN; `--align value`
+  and `--no-align` on `govax fortran`, where a value is required (the CLI's string options have one).
+  New messages: OPTIONSBAD, OPTIONSPLACE, OPTIONSLATE, OPTIONSSTRUCT, OPTIONSOPEN, NOOPTIONS, OPTIONSDEPTH,
+  PSECTSMALL, ALIGNFIELD, ALIGNCOMMON, COMMONLAYOUT. Decision 8 said two units laying out one block
+  differently is "EXTCOMMON's existing message": no such message exists, so COMMONLAYOUT is new, a warning,
+  given only when the units declare the block alike (their types and sizes in order), since units may
+  legally declare a block differently. `OPTIONS /ALIGN`, by answer 3, stays refused as any qualifier the
+  statement doesn't take is, NOTIMPL until Phase 85 settles those. Tests: about 45 `TestErrors` cases,
+  `TestAlignValues`, `TestAlignOption`, `TestCommonAlignments`, the goldens `align.for` in `sema` and
+  `codegen`, `TestDispatch_fortranAlign`, and `testdata/fortran/align.for`, in both paging modes, whose
+  places were worked out by hand from Decision 8. Choices of ours, unconfirmed: a group can't begin or end
+  inside a structure declaration (OPTIONSSTRUCT), since a layout has one rule; a group may come before a
+  PROGRAM statement or a main program's first statement, the manual's list naming only SUBROUTINE,
+  FUNCTION, and BLOCK DATA; a group can't span units; a union's length isn't rounded up, only the
+  structure's; a packed structure as a field of a natural one goes on its largest field's boundary, its own
+  fields where they are; `%FILL` fields get boundaries but no ALIGNFIELD; an AUTOMATIC record of a natural
+  structure is only on a longword, since FP promises no more (the question subtask 6 left), with no message;
+  each unit starts from the command's setting; ambiguous abbreviations (`N`, NATURAL or NONE) are errors.

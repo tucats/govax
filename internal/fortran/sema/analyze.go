@@ -21,6 +21,10 @@ type Options struct {
 	// GFloating is /G_FLOATING: REAL*8 and COMPLEX*16 are in G_floating,
 	// not D_floating (Decision 16 of docs/PHASE-74 - FORTRAN plan.md).
 	GFloating bool
+
+	// Align is /[NO]ALIGN: how each unit starts, which its CDEC$ OPTIONS groups
+	// change (align.go).
+	Align Alignment
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -38,7 +42,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 	units := unitNames(file, mainName, messages)
 
 	for _, au := range file.Units {
-		unitOpts, psects := prologue(prog, au.Prologue, opts, messages)
+		unitOpts, psects, groups := prologue(prog, au.Prologue, opts, messages)
 
 		if _, bad := au.Header.(*ast.BadStmt); bad {
 			continue
@@ -62,6 +66,8 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			defaultInt:     defaultInt,
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
+			align:          opts.Align,
+			prologueGroups: groups,
 		}
 
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
@@ -69,14 +75,20 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 
 	// A PSECT directive after the last unit has no unit to belong to, so no
 	// block it could name.
-	_, psects := prologue(prog, file.Trailing, opts, messages)
+	_, psects, groups := prologue(prog, file.Trailing, opts, messages)
 	for _, s := range psects {
 		b := CommonBlock{Name: s.Common}
 		messages.Report("PSECTBLOCK", s.CommonPos, b.String())
 	}
 
+	for _, s := range groups {
+		messages.Report("OPTIONSPLACE", s.Position(), "program unit's first")
+	}
+
 	checkReferences(prog, units, messages)
 	checkPsects(prog, messages)
+	checkCommonLayouts(prog, messages)
+	raiseCommonAlignments(prog)
 	checkCommonInitials(prog, messages)
 
 	return prog
@@ -85,18 +97,23 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 // prologue is the options a unit is compiled with: the compilation's, as
 // the OPTIONS statements before it change them, until the unit's end
 // (section 1.4.3), and the PSECT directives before it, which are that unit's
-// (ours, as OPTIONS statements are). The qualifiers not implemented yet are
-// reported.
-func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List) (Options, []*ast.DirectiveStmt) {
-	var psects []*ast.DirectiveStmt
+// (ours, as OPTIONS statements are), and its CDEC$ OPTIONS and END OPTIONS
+// directives. The qualifiers not implemented yet are reported; /ALIGN is among the
+// names no OPTIONS statement takes (the author's answer 3).
+func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List) (Options, []*ast.DirectiveStmt, []*ast.DirectiveStmt) {
+	var psects, groups []*ast.DirectiveStmt
 
 	for _, s := range list {
 		switch s := s.(type) {
 		case *ast.BadStmt:
 
 		case *ast.DirectiveStmt:
-			if d := prog.directive(s, messages); d != nil {
+			switch d := prog.directive(s, messages); {
+			case d == nil:
+			case d.Name == "PSECT":
 				psects = append(psects, d)
+			default:
+				groups = append(groups, d)
 			}
 
 		case *ast.OptionsStmt:
@@ -120,7 +137,7 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 		}
 	}
 
-	return opts, psects
+	return opts, psects, groups
 }
 
 // unitName is the name of the unit au.
@@ -249,6 +266,15 @@ type analyzer struct {
 	// applied when every COMMON statement is read (directive.go).
 	psects []*ast.DirectiveStmt
 
+	// align is the alignment setting at the declaration being read, alignGroups
+	// the open CDEC$ OPTIONS groups, innermost last, and prologueGroups the
+	// directives before the unit (align.go). structDepth is how many structure
+	// declarations are being read.
+	align          Alignment
+	alignGroups    []alignGroup
+	prologueGroups []*ast.DirectiveStmt
+	structDepth    int
+
 	// defaultInt and defaultLogical are the types INTEGER and LOGICAL with
 	// no length mean in this unit: 4 bytes, or with /NOI4 2.
 	defaultInt, defaultLogical Type
@@ -362,7 +388,9 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// statement uses it. (A declaration after an executable statement is
 	// an error, LATEDECL, but it still counts, so the one mistake isn't
 	// reported again at each use.)
+	a.applyPrologueGroups()
 	a.declarations(body)
+	a.checkAlignGroups()
 	a.checkEntryTypes()
 	a.psectDirectives()
 	a.layoutCommon()

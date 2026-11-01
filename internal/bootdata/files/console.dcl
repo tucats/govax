@@ -788,7 +788,10 @@ grammar console
     ! statement may have (0 to 99; 19 when not given). I4 is /[NO]I4:
     ! INTEGER and LOGICAL with no length are 4 bytes, or with /NOI4 2.
     ! G_FLOATING is /[NO]G_FLOATING: REAL*8 is D_floating, or with
-    ! /G_FLOATING G_floating. Later phases add
+    ! /G_FLOATING G_floating. ALIGN is /ALIGN[=value] or /NOALIGN, how
+    ! structures and common blocks are laid out (docs/PHASE-82): no value
+    ! is ALL, a value is ALL, NONE, a rule, or class=rule, and a list of
+    ! them is in parentheses. Later phases add
     ! the rest of the compiler's qualifiers.
     !
     verb fortran/id=1370
@@ -806,6 +809,9 @@ grammar console
         qualifier   d_lines/id=1375
         qualifier   i4/id=1377
         qualifier   g_floating/id=1378
+        qualifier   align/id=1379               -
+                    /type=$any/list             -
+                    /default=""
         qualifier   continuations/id=1376       -
                     /type=$integer
 

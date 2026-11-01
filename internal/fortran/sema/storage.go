@@ -253,6 +253,19 @@ func (a *analyzer) layout() {
 		}
 
 		align := s.Type.Align()
+
+		// A record of a structure laid out by RECORDS=NATURAL goes on the
+		// structure's boundary, so that its fields are aligned as addresses.
+		// FP is only on a longword, so a frame can't do that past a longword
+		// (ours, unconfirmed).
+		if !s.Automatic && s.Struct != nil && s.Struct.Natural && s.Struct.Boundary > align {
+			align = s.Struct.Boundary
+
+			if power := alignPower(align); power > 2 {
+				a.unit.LocalAlign = max(a.unit.LocalAlign, power)
+			}
+		}
+
 		s.Offset = (*place + align - 1) / align * align
 		*place = s.Offset + s.Size()
 	}
