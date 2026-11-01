@@ -3,7 +3,7 @@
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
 done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
-same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
+same day; subtask 4, OPEN and CLOSE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -1002,3 +1002,38 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     with RMS$_UPI. RMS$_UPI is applied to FAB$V_BRO too.
 - **2026-10-31, CONVERT.** The author answered the question left by subtask 2: (a), the keyword
   taken and INQUIRE answering it, NATIVE working, and any other name FOR$_NOTIMP at OPEN.
+- **2026-10-31, subtask 4, OPEN and CLOSE.** `sema/fileio.go` (`FileStmt`, `FileKey`; a table of
+  keywords and their codes; KEYTWICE, KEYNUMBER, KEYTEXT, KEYCHOICE, OPENCONFLICT, NEEDRECL) and
+  `ir/lowerfile.go`; FTNRTL's unit table (`ftn_units.mar`, rewritten: Phase 80's two streams are
+  gone, Decision 3), `ftn_open.mar` (FTN$OPEN, FTN$CLOSE; offsets 392 and 400, GSMATCH 1,10), the
+  exit handler, the default names, and each statement's record in its unit's buffer (`CTX_RECP`,
+  `CTX_UNITMAX`, `CTX_UNITBLANK`). `TestFor81OpenOracle` holds 170 of the probe's OPEN cases
+  (texts, RECL's limits, combinations) to VMS's statuses, with the values in variables so that
+  FTNRTL decides them; `testdata/fortran/files.for` is the rest, each IOSTAT VMS's;
+  `TestFortranFiles` is image exit, `TestFortranOpenSignals` the signals. `SET DEBUG RMS` shows
+  the FABs VMS's run has, but ROP LOC (below).
+  - **OPEN takes more than this subtask's list,** because the rules are one chain: READONLY,
+    SHARED, the sizes, BLOCKSIZE, BUFFERCOUNT, MAXREC, NOSPANBLOCKS, and every combination rule
+    work now, on sequential files. **What is left:** ASSOCIATEVARIABLE= (subtask 8) and USEROPEN=
+    (11) draw NOTIMPL at compile time; CONVERT= (11) isn't parsed yet; ORGANIZATION='RELATIVE'
+    and a relative file found are FOR$_NOTIMP until subtask 10; so is indexed, Decision 13, with
+    KEY= taken but not read. Direct and unformatted units open, and a formatted sequential
+    statement on one is MIXFILACC; their statements are subtasks 7 and 8.
+  - **Found by the oracle:** `$CREATE` of a FIX file with MRS past 32767 is RMS$_MRS (#205),
+    now in `rms/create.go`.
+  - **Each unit its own FAB has a visible result, as on VMS:** with `DEFINE/USER_MODE SYS$OUTPUT
+    file`, PRINT and unit 6 each `$CREATE` a version of the file (FOR81.COM's comment says VMS's
+    do). So `TestFor80Oracle` now defines FOR006, and `for80.for`'s markers are `WRITE (6,*)`, not
+    PRINT. A program with a `$` prompt on one unit and the reply on another still works; RMS needed
+    no change.
+  - **Unconfirmed, govax's choices.** An implicit READ's `$OPEN` uses FAC 1F as the write does,
+    with no retry read-only for a protected file; ROP LOC isn't set, FTNRTL having its own buffer;
+    a read is limited to 199 bytes only on SYS$INPUT:, and elsewhere to the buffer, which holds
+    the file's longest record as of the open, past which is INPRECTOO; list-directed output's
+    record is 81 bytes or a shorter RECL, a longer RECL not widening it; the same file on a
+    connected unit is by expanded names without versions (`FTN$$UNIT_SAME`); RMS$_DNF is OPEFAI
+    for OLD as VMS showed for NEW, and which FOR number a failed name's other statuses get (FNM,
+    DIR, WLD, TYP, VER: FILNAMSPE) beyond `A[B`'s; a failed OPEN's message names what RMS expanded;
+    `STATUS=''`, which faulted in VMS's FOR$OPEN, is KEYVALERR, and a FORTRAN program can't write it
+    as a constant; the compile-time rules (OPENCONFLICT, NEEDRECL) are FORRTL's run-time ones, as
+    the survey proposed, since no VAX FORTRAN compiler is here to ask.

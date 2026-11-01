@@ -7,7 +7,7 @@ WRITE (5,*)           5
 FORMATTED           0
 ERR= TAKEN
 UNIT 200          32
-UNIT 7           2
+UNIT 7           0
 UNIT -1          10
 UNIT -1           0
 READ (6)          -1

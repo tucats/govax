@@ -25,7 +25,6 @@ func TestFortranIOSignals(t *testing.T) {
 	}{
 		{"INVLOGUNI", "WRITE (1000, *) 1", "%FOR-F-INVLOGUNI, invalid logical unit number\n  unit 1000  file \n", "10188104", false},
 		{"RECIO_OPE", "WRITE (6, *) 'OUTER', INNER(6)", "%FOR-F-RECIO_OPE, recursive I/O operation\n  unit 6  file \n", "10188144", false},
-		{"NOTIMP", "WRITE (1, *) 1", "%FOR-F-NOTIMP, not implemented\n", "10188014", false},
 		{"OUTSTAOVE", "WRITE (LINE, 30) 1", "%FOR-F-OUTSTAOVE, output statement overflows record\n  unit -5  file \n", "10188214", false},
 		{"VFEVALERR", "WRITE (6, 20) 1", "%FOR-F-VFEVALERR, variable format expression value error\n  unit 6  file SYS$OUTPUT:.;\n", "10188224", false},
 		{"OUTCONERR", "WRITE (6, 10) 3244", "**\n%FOR-E-OUTCONERR, output conversion error\n  unit 6  file SYS$OUTPUT:.;\n", "00000001", true},

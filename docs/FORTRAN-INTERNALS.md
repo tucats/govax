@@ -1726,16 +1726,21 @@ rules, by a probe of 786 cases (`testdata/nml80`).
 
 ### Units and the terminal
 
-A unit (`ftn_units.mar`) is a block holding a FAB, a RAB, and a NAM, connected at
-its first use by `$CREATE` and `$CONNECT`, never at image start: a program that does
-no I/O opens nothing. There are two streams so far, SYS$OUTPUT for units 6, -1, and
--2 and SYS$INPUT for 5, -3, and -4, and a unit shares its stream with the default
-units on the same file. That sharing is visible: a prompt written by `TYPE` with `$`
-leaves the line open, and the `READ (5,...)` that follows reads the reply on it. The
-other unit numbers, 0 to 119, wait for OPEN.
+A unit (`ftn_units.mar`) is a block from `LIB$GET_VM`, the address kept in a table with
+a longword for each number from -4 to 119. It holds a FAB, a RAB, a NAM, an XABFHC, and
+what INQUIRE and the statements ask (form, access, blank, disposition), each copied from
+a prototype when the unit is set up, because a shareable image can't store addresses at
+link time. A unit is connected at its first use by `$CREATE` (or for a READ `$OPEN`) and
+`$CONNECT`, never at image start: a program that does no I/O opens nothing. The record
+being built or read lives in the unit's buffer, reached through the context's `CTX_RECP`,
+as long as the unit's record or the file's longest.
 
-Both files are process-permanent (`SYS$OUTPUT` and `SYS$INPUT` exist before the image
-does), so `$CREATE` opens nothing new: it gives the FAB indirect access to the
+Each unit has its own FAB, as VMS's library has, even -1, -2, and 6 on one SYS$OUTPUT, so
+it is RMS and not FTNRTL that remembers a line left open: a prompt written by `TYPE` with
+`$` leaves the line open, and the `READ (5,...)` that follows reads the reply on it.
+
+The default units' files are process-permanent (`SYS$OUTPUT` and `SYS$INPUT` exist before
+the image does), so `$CREATE` opens nothing new: it gives the FAB indirect access to the
 process's own file, the terminal or a procedure's data lines. That is why FTNRTL needn't
 know which it has, with two exceptions it asks the FAB's device characteristics about:
 a namelist `?` is answered only at a terminal, and an output unit may be read only at
@@ -1747,6 +1752,28 @@ carriage return after, the cursor left at the prompt's end. govax's terminal is 
 a line at a time, so RMS keeps one fact, whether the last line is still open, and ends
 it before any record that starts its own line, when the terminal is read, and at
 image rundown, so DCL's prompt comes on a line of its own.
+
+### OPEN and CLOSE: a statement of one call
+
+A file statement has no items, so it is one call, and the compiler's arguments
+(`ir/lowerfile.go`) are pairs after the unit: a keyword's code and how its value comes,
+then the value.
+
+```text
+OPEN (3, FILE=NAME, STATUS='OLD', RECL=N)
+
+  call FTN$OPEN($IO1, 3, 1806, <descriptor of NAME>, 1039, 1, 1030, N, 1048, 2)
+```
+
+The codes are VMS's library's, found by calling it, so one table (`sema/fileio.go`) runs
+from the source's keyword to the run-time library; `1048, 2` is a `BLANK='NULL'` no one
+wrote, since VMS's library leaves the LRM's defaults to the compiler. A choice whose value
+is a constant is a number here, checked at compile time; one known only at run time is
+a descriptor, and `ftn_open.mar` looks its text up in a table of the same numbers, and
+applies the same rules. FTN$OPEN is still a statement like any other: it has a context,
+and ends by calling FTN$IO_END, so its failures are signaled or returned as every other
+statement's are. The one difference is the user PC in the signal, the PC FTN$OPEN returns
+to rather than FTN$IO_END's, which the context carries (`CTX_USERPC`).
 
 ### Errors: one status, three ways to take it
 

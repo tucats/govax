@@ -113,6 +113,7 @@ CTX_RECLEN	= 24			; long: the bytes in the record so far
 CTX_RECORD	= 28			; the record being built
 RECORD_SIZE	= 256
 CTX_RECMAX	= CTX_RECORD+RECORD_SIZE+4 ; long: the most bytes a record holds
+CTX_UNITMAX	= CTX_RECORD+RECORD_SIZE+160+44 ; long: the unit's longest record
 CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context's
 					;  own buffer, or an internal file's place)
 CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
@@ -136,6 +137,9 @@ FOR$_OUTSTAOVE	= ^X00188214		;  a value too long for a record
 	TSTB	CTX_INTERNAL(R0)
 	BNEQ	10$			; an internal file's limit is its record's
 	MOVL	#RECORD_MAX,CTX_RECMAX(R0)
+	CMPL	CTX_UNITMAX(R0),#RECORD_MAX
+	BGEQ	10$			; a shorter RECL= is the limit (unconfirmed)
+	MOVL	CTX_UNITMAX(R0),CTX_RECMAX(R0)
 10$:	RET
 
 ;

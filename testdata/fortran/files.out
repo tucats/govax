@@ -1,0 +1,45 @@
+FIRST               
+ N=  42             
+END OF FILE          -1
+MISSING          29
+NO DEVICE          42
+BAD NAME          43
+NO DIRECTORY          30
+BAD UNIT          32
+BAD STATUS          45
+READONLY NEW          46
+ANY CASE           0
+FIXED, NO RECL          37
+NEGATIVE RECL          37
+BUFFERCOUNT          45
+TOO LONG          66
+ANOTHER RECL          37
+ANOTHER TYPE          44
+THE SAME           0
+[ABC                 ]
+SCRATCH KEPT          46
+SCRATCH GONE          29
+DELETED          29
+SAVED           0
+PRINTED, THERE           0
+WRITE READONLY          47
+DELETE READONLY          46
+LAST                
+CLOSE TWICE           0
+NEVER OPEN           0
+CLOSE BAD UNIT          32
+ZERO         102
+THE SAME FILE           0
+NULL          12
+ANOTHER FILE           0
+THE FIRST WENT          29
+IMPLICIT         304
+LIST           7           8
+DEFAULTFILE           0
+NO FILE          29
+STARTEND
+PAST 133          66
+SIX
+SIX AGAIN
+DONE
+  $STATUS == "%X00000001"

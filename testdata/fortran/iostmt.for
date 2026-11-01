@@ -29,6 +29,7 @@ C     is PRINT's; 6 can't be read (ERRDURREA, 39).
       PRINT *, 'UNIT 200', IOS
       WRITE (7, *, IOSTAT=IOS) 9
       PRINT *, 'UNIT 7', IOS
+      CLOSE (7, DISP='DELETE')
       WRITE (-1, *, IOSTAT=IOS) 'UNIT -1', 10
       PRINT *, 'UNIT -1', IOS
 C     Unit 6 is read only at a terminal, as it is here, whose input

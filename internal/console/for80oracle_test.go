@@ -66,7 +66,9 @@ func TestFor80Oracle(t *testing.T) {
 		}
 	}
 
-	shareFindRun(t, d, "DEFINE/USER_MODE SYS$OUTPUT FOR80.DAT")
+	// Unit 6's logical name: a name DEFINEd for SYS$OUTPUT would be a file per
+	// unit, each unit having its own FAB and $CREATE (VMS's too).
+	shareFindRun(t, d, "DEFINE/USER_MODE FOR006 FOR80.DAT")
 
 	if out := shareRun(t, d, buf, "FOR80"); out != "  $STATUS == \"%X00000001\"\n" {
 		t.Fatalf("RUN FOR80 printed:\n%s", out)

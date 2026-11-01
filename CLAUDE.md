@@ -518,8 +518,12 @@ never had.
   error model; MANUAL.md's 14.7); the phase doc's "Where things stand" lists what
   is left (OPEN and the other units are Phase 81's).
   Phase 81 (in progress) is FORTRAN's file statements: subtask 1 (2026-10-31) is the survey,
-  its doc's Part A, subtask 2 (2026-10-31) the probe, `testdata/for81`, and subtask 3
-  (2026-10-31) RMS and ods2's groundwork, `TestFor81RMSOracle`.
+  its doc's Part A, subtask 2 (2026-10-31) the probe, `testdata/for81`, subtask 3
+  (2026-10-31) RMS and ods2's groundwork, `TestFor81RMSOracle`, and subtask 4 (2026-10-31)
+  OPEN and CLOSE: `sema/fileio.go` (keywords as VMS's FORRTL's codes), `ir/lowerfile.go`,
+  FTNRTL's unit table (`ftn_units.mar`: a block per unit, each its own FAB, the default names,
+  the exit handler, the record in the unit's buffer) and `ftn_open.mar`, held to VMS by
+  `TestFor81OpenOracle` and `testdata/fortran/files.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2067,8 +2071,8 @@ expect adjustment as phases land):
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
-  FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the units' streams, SYS$OUTPUT
-  and SYS$INPUT with RAT=FTN (units -4 to -1, 5, and 6 so far, Phase 80);
+  FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the unit table, units -4 to 119, each with its own FAB
+  (Phase 81); `ftn_open.mar`, OPEN and CLOSE, Phase 81;
   `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
   editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and

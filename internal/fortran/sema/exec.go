@@ -83,6 +83,9 @@ func (a *analyzer) executable(s ast.Stmt, path []frame) Stmt {
 
 	case *ast.CodeStmt:
 		return a.codeStatement(s, path)
+
+	case *ast.AuxIOStmt:
+		return a.fileStatement(s, path)
 	}
 
 	return nil

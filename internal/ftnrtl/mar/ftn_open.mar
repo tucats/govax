@@ -1,0 +1,753 @@
+	.TITLE	FTN_OPEN - FTNRTL's OPEN and CLOSE statements
+	.IDENT	/V1.0/
+;
+; OPEN and CLOSE (the 1988 VAX FORTRAN Language Reference Manual, 9.1 and 9.2)
+; are one call each, by the compiler (docs/PHASE-81 - FORTRAN files.md,
+; Decision 4):
+;
+;	FTN$OPEN(control block, unit, keyword, value, keyword, value, ...)
+;	FTN$CLOSE(the same)
+;
+; A keyword is a longword: its code in bits 0 to 7, and its mechanism in bits
+; 8 to 15, 4 if the next argument is the value itself, 7 if it is a descriptor's
+; address. The codes are those of VMS's FORTRAN run-time library, which the phase
+; doc lists, and a choice's values too, so that a text and the compiler's number
+; for it mean the same. Each call's a statement like any other: it has a context
+; (FTN_STATEMENT), and ends in FTN$IO_END, which returns the status in R0 or
+; signals the failure.
+;
+; The rules are VMS's run of testdata/for81: its sections "Round 1 on VMS" and
+; "Round 2's FORRTL program". Relative files are FOR$_NOTIMP until FTNRTL has
+; them; so is an indexed file, until a later program (Decision 13).
+;
+	$FABDEF
+	$NAMDEF
+	$RABDEF
+	$RMSDEF
+	$SSDEF
+	$XABDEF
+	$XABFHCDEF
+
+UB_OPEN		= 0			; A unit's block (FTN_UNITS)
+UB_KIND		= 4
+UB_SIZE		= 32
+UB_FORM		= 36
+UB_ACCESS	= 37
+UB_BLANK	= 38
+UB_DISPOSE	= 39
+UB_READONLY	= 40
+UB_SCRATCH	= 41
+UB_FAB		= 72
+UB_RAB		= UB_FAB+FAB$C_BLN
+
+CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
+
+FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
+FOR$_INCRECLEN	= ^X0018812C		;  their severities
+FOR$_FILNAMSPE	= ^X0018815C
+FOR$_INCRECTYP	= ^X00188164
+FOR$_KEYVALERR	= ^X0018816C
+FOR$_INCOPECLO	= ^X00188174
+FOR$_INCFILORG	= ^X0018819C
+
+; The keywords' values, kept in a longword per code on the stack, R11 their
+; base: 0 if the keyword wasn't given, which for a number means the same.
+CODES		= 29
+OPS_SIZE	= CODES*4
+OPS_DISPOSE	= 2*4
+OPS_ACCESS	= 4*4
+OPS_FORM	= 5*4
+OPS_RECL	= 6*4
+OPS_CC		= 7*4
+OPS_READONLY	= 8*4
+OPS_BUFFERS	= 9*4
+OPS_INITIAL	= 10*4
+OPS_EXTEND	= 11*4
+OPS_NOSPAN	= 12*4
+OPS_SHARED	= 13*4
+OPS_FILE	= 14*4
+OPS_STATUS	= 15*4
+OPS_MAXREC	= 16*4
+OPS_BLOCK	= 18*4
+OPS_ORG		= 19*4
+OPS_TYPE	= 20*4
+OPS_KEY		= 23*4
+OPS_BLANK	= 24*4
+OPS_DEFAULT	= 26*4
+
+CODE_FILE	= 14
+CODE_DEFAULT	= 26
+
+MECHANISM_TEXT	= 7
+
+; The values of the choices.
+ACCESS_DIRECT	= 1
+ACCESS_SEQ	= 2
+ACCESS_APPEND	= 3
+ACCESS_KEYED	= 4
+FORM_FORMATTED	= 1
+FORM_UNFORMATTED = 2
+STATUS_OLD	= 1
+STATUS_NEW	= 2
+STATUS_SCRATCH	= 3
+STATUS_UNKNOWN	= 4
+ORG_SEQ		= 1
+ORG_RELATIVE	= 2
+ORG_INDEXED	= 3
+TYPE_FIXED	= 1
+TYPE_SEGMENTED	= 3
+TYPE_STREAM	= 4
+DISP_KEEP	= 1
+DISP_DELETE	= 2
+DISP_PRINT_DEL	= 5
+DISP_SUBMIT_DEL	= 6
+
+DSC$K_DTYPE_T	= 14
+
+DEFAULT_RECL	= 133			; Table 9-3, with no RECL=
+DEFAULT_SEG	= 2044			; an unformatted unit's, in bytes, by VMS's run
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+;
+; The texts of the choices: a counted string and the number it means, then a 0.
+;
+CHOICES:
+DISPOSE_TEXT:	.ASCIC	/KEEP/
+		.BYTE	1
+		.ASCIC	/SAVE/
+		.BYTE	1
+		.ASCIC	/DELETE/
+		.BYTE	2
+		.ASCIC	/PRINT/
+		.BYTE	3
+		.ASCIC	/SUBMIT/
+		.BYTE	4
+		.ASCIC	|PRINT/DELETE|
+		.BYTE	5
+		.ASCIC	|SUBMIT/DELETE|
+		.BYTE	6, 0
+ACCESS_TEXT:	.ASCIC	/DIRECT/
+		.BYTE	1
+		.ASCIC	/SEQUENTIAL/
+		.BYTE	2
+		.ASCIC	/APPEND/
+		.BYTE	3
+		.ASCIC	/KEYED/
+		.BYTE	4, 0
+FORM_TEXT:	.ASCIC	/FORMATTED/
+		.BYTE	1
+		.ASCIC	/UNFORMATTED/
+		.BYTE	2, 0
+CC_TEXT:	.ASCIC	/FORTRAN/
+		.BYTE	1
+		.ASCIC	/LIST/
+		.BYTE	2
+		.ASCIC	/NONE/
+		.BYTE	3, 0
+STATUS_TEXT:	.ASCIC	/OLD/
+		.BYTE	1
+		.ASCIC	/NEW/
+		.BYTE	2
+		.ASCIC	/SCRATCH/
+		.BYTE	3
+		.ASCIC	/UNKNOWN/
+		.BYTE	4, 0
+ORG_TEXT:	.ASCIC	/SEQUENTIAL/
+		.BYTE	1
+		.ASCIC	/RELATIVE/
+		.BYTE	2
+		.ASCIC	/INDEXED/
+		.BYTE	3, 0
+TYPE_TEXT:	.ASCIC	/FIXED/
+		.BYTE	1
+		.ASCIC	/VARIABLE/
+		.BYTE	2
+		.ASCIC	/SEGMENTED/
+		.BYTE	3
+		.ASCIC	/STREAM/
+		.BYTE	4
+		.ASCIC	/STREAM_CR/
+		.BYTE	5
+		.ASCIC	/STREAM_LF/
+		.BYTE	6, 0
+BLANK_TEXT:	.ASCIC	/ZERO/
+		.BYTE	1
+		.ASCIC	/NULL/
+		.BYTE	2, 0
+
+;
+; Which codes are choices: each code's texts, as an offset from CHOICES, or
+; -1.
+;
+	.ALIGN	WORD
+TEXTS:	.WORD	-1			; 0
+	.WORD	-1			; 1
+	.WORD	DISPOSE_TEXT-CHOICES	; 2 DISPOSE
+	.WORD	-1			; 3
+	.WORD	ACCESS_TEXT-CHOICES	; 4 ACCESS
+	.WORD	FORM_TEXT-CHOICES	; 5 FORM
+	.WORD	-1			; 6
+	.WORD	CC_TEXT-CHOICES		; 7 CARRIAGECONTROL
+	.WORD	-1, -1, -1, -1, -1, -1, -1 ; 8 to 14
+	.WORD	STATUS_TEXT-CHOICES	; 15 STATUS
+	.WORD	-1, -1, -1		; 16 to 18
+	.WORD	ORG_TEXT-CHOICES	; 19 ORGANIZATION
+	.WORD	TYPE_TEXT-CHOICES	; 20 RECORDTYPE
+	.WORD	-1, -1, -1		; 21 to 23
+	.WORD	BLANK_TEXT-CHOICES	; 24 BLANK
+	.WORD	-1, -1, -1, -1		; 25 to 28
+
+;
+; Each RECORDTYPE's record format, from none (which the rules make VARIABLE or
+; FIXED) on: SEGMENTED is variable-length records with a control word in each.
+;
+FORMATS:
+	.BYTE	FAB$C_VAR, FAB$C_FIX, FAB$C_VAR, FAB$C_VAR
+	.BYTE	FAB$C_STM, FAB$C_STMCR, FAB$C_STMLF
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; START: begins the statement and reads its keywords, in a frame with the
+; keywords' longwords below FP (each entry makes room for them first). R9 is the
+; context, R7 the unit's block, R11 the longwords. R0's low bit is clear if the
+; statement has failed already.
+;
+START:	MOVAB	4(SP),R11
+	MOVC5	#0,(SP),#0,#OPS_SIZE,(R11)
+	PUSHL	4(AP)			; the control block
+	PUSHL	16(FP)			; the user PC, saved in this frame
+	PUSHL	8(FP)			;  and its AP
+	PUSHL	12(FP)			;  and FP
+	PUSHL	8(AP)			; the unit
+	CALLS	#5,FTN$$STMT_FILE	; FTN_STATEMENT
+	MOVL	R0,R9
+	MOVL	R1,R7
+	TSTL	CTX_STATUS(R9)
+	BEQL	5$
+	CLRL	R0
+	RSB
+	;
+	; The keywords, the last of a code winning.
+	;
+5$:	MOVL	#3,R8			; the first keyword's argument
+10$:	MOVZBL	(AP),R0
+	CMPL	R8,R0
+	BGEQ	80$
+	MOVL	(AP)[R8],R0
+	MOVL	4(AP)[R8],R1
+	ADDL2	#2,R8
+	MOVZBL	R0,R2			; the code
+	EXTZV	#8,#8,R0,R3		; the mechanism
+	CMPL	R3,#MECHANISM_TEXT
+	BNEQ	30$
+	CMPL	R2,#CODES
+	BGEQU	30$
+	CVTWL	TEXTS[R2],R0
+	BLSS	30$			; not a choice: FILE=, DEFAULTFILE=
+	MOVAB	CHOICES,R3
+	ADDL2	R3,R0
+	PUSHL	R2
+	BSBB	CHOICE
+	MOVL	(SP)+,R2
+	MOVL	R0,R1
+	BEQL	70$
+30$:	CMPL	R2,#CODES
+	BGEQU	10$
+	MOVL	R1,(R11)[R2]
+	BRB	10$
+70$:	MOVL	#FOR$_KEYVALERR,CTX_STATUS(R9)
+	CLRL	R0
+	RSB
+80$:	MOVL	#SS$_NORMAL,R0
+	RSB
+
+;
+; CHOICE: the number of the text whose descriptor's address is in R1, in the
+; table at R0: in any case, blanks after it not counting, and any other
+; difference a mistake. R0 returns the number, or 0. Changes R1 to R5.
+;
+CHOICE:	MOVZWL	(R1),R2			; the text's length
+	MOVL	4(R1),R3		; and address
+10$:	TSTL	R2			; less blanks at its end
+	BEQL	20$
+	CMPB	-1(R3)[R2],#^A/ /
+	BNEQ	20$
+	DECL	R2
+	BRB	10$
+20$:	MOVZBL	(R0)+,R4		; an entry's length
+	BEQL	90$			; the table's end
+	CMPL	R4,R2
+	BNEQ	60$
+	CLRL	R5
+30$:	CMPL	R5,R2
+	BEQL	70$			; all of it the same
+	MOVZBL	(R3)[R5],R1
+	CMPB	R1,#^A/a/
+	BLSSU	40$
+	CMPB	R1,#^A/z/
+	BGTRU	40$
+	SUBL2	#32,R1
+40$:	CMPB	R1,(R0)[R5]
+	BNEQ	60$
+	INCL	R5
+	BRB	30$
+60$:	ADDL2	R4,R0			; the next entry
+	INCL	R0
+	BRB	20$
+70$:	ADDL2	R4,R0
+	MOVZBL	(R0),R0
+	RSB
+90$:	CLRL	R0
+	RSB
+
+;
+; NAME_TEXT: a file's name, given the address of a descriptor in R1: a character
+; value less the blanks at its end, or a numeric place's ASCII up to a NUL (9.1.11).
+; R0 returns its length and R1 its address.
+;
+NAME_TEXT:
+	CMPB	2(R1),#DSC$K_DTYPE_T
+	BNEQ	20$
+	MOVZWL	(R1),R0
+	MOVL	4(R1),R1
+10$:	TSTL	R0
+	BEQL	15$
+	CMPB	-1(R1)[R0],#^A/ /
+	BNEQ	15$
+	DECL	R0
+	BRB	10$
+15$:	RSB
+20$:	MOVL	4(R1),R1
+	LOCC	#0,#255,(R1)
+	SUBL3	R0,#255,R0
+	SUBL2	R0,R1
+	RSB
+
+;
+; FTN$OPEN(control block, unit, keyword, value, ...)
+;
+ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+
+	.ENTRY	FTN$OPEN,ALL_MASK
+	MOVAB	-OPS_SIZE(SP),SP
+	BSBW	START
+	BLBS	R0,1$
+	BRW	END
+1$:	BLBS	UB_OPEN(R7),2$
+	BRW	RULES
+	;
+	; A connected unit. On the same file, or with no name, only BLANK
+	; changes, and nothing else is looked at; another file closes the first
+	; by its disposition, and if the new one fails, the unit stays closed.
+	;
+2$:	MOVL	OPS_FILE(R11),R1
+	BEQL	10$
+	BSBW	NAME_TEXT
+	MOVQ	R0,R4			; the name: R4 its length, R5 its address
+	MOVL	OPS_DEFAULT(R11),R1
+	BEQL	3$
+	BSBW	NAME_TEXT
+	BRB	4$
+3$:	MOVZBL	UB_FAB+FAB$B_DNS(R7),R0
+	MOVL	UB_FAB+FAB$L_DNA(R7),R1
+4$:	PUSHL	R0
+	PUSHL	R1
+	PUSHL	R4
+	PUSHL	R5
+	PUSHL	R7
+	CALLS	#5,FTN$$UNIT_SAME	; FTN_UNITS
+	BLBS	R0,10$
+	MOVZBL	UB_DISPOSE(R7),-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_CLOSE	; FTN_UNITS
+	BLBS	R0,RULES
+	BRW	FAILED
+10$:	MOVL	OPS_BLANK(R11),R0
+	BEQL	15$
+	MOVB	R0,UB_BLANK(R7)
+15$:	BRW	END
+
+;
+; The rules that need no file. Each value's default is settled first.
+;
+RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
+	BNEQ	5$			;  passes the LRM's default)
+	MOVL	#STATUS_NEW,OPS_STATUS(R11)
+5$:	TSTL	OPS_ACCESS(R11)
+	BNEQ	6$
+	MOVL	#ACCESS_SEQ,OPS_ACCESS(R11)
+6$:	TSTL	OPS_FORM(R11)		; by the access
+	BNEQ	7$
+	MOVL	#FORM_FORMATTED,OPS_FORM(R11)
+	BSBW	KEYLIKE
+	BNEQ	7$
+	MOVL	#FORM_UNFORMATTED,OPS_FORM(R11)
+7$:	MOVL	OPS_STATUS(R11),R2
+	MOVL	OPS_DISPOSE(R11),R3
+	;
+	; Indexed files aren't here yet.
+	;
+	CMPL	OPS_ORG(R11),#ORG_INDEXED
+	BNEQ	10$
+	BRW	NOT_YET
+10$:	TSTL	OPS_KEY(R11)
+	BEQL	12$
+	BRW	BAD_KEYWORDS
+12$:	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
+	BNEQ	14$
+	CMPL	OPS_FORM(R11),#FORM_FORMATTED
+	BNEQ	14$
+	BRW	BAD_KEYWORDS
+	;
+	; READONLY: never a new file, nor one to delete.
+	;
+14$:	TSTL	OPS_READONLY(R11)
+	BEQL	20$
+	CMPL	R2,#STATUS_NEW
+	BEQL	15$
+	CMPL	R2,#STATUS_SCRATCH
+	BEQL	15$
+	CMPL	R3,#DISP_DELETE
+	BEQL	15$
+	CMPL	R3,#DISP_PRINT_DEL
+	BEQL	15$
+	CMPL	R3,#DISP_SUBMIT_DEL
+	BNEQ	20$
+15$:	BRW	BAD_KEYWORDS
+	;
+	; A scratch file can only go.
+	;
+20$:	CMPL	R2,#STATUS_SCRATCH
+	BNEQ	22$
+	TSTL	R3
+	BEQL	22$
+	CMPL	R3,#DISP_DELETE
+	BEQL	22$
+	BRW	BAD_KEYWORDS
+	;
+	; APPEND: an existing file, written.
+	;
+22$:	CMPL	OPS_ACCESS(R11),#ACCESS_APPEND
+	BNEQ	24$
+	CMPL	R2,#STATUS_NEW
+	BEQL	15$
+	CMPL	R2,#STATUS_SCRATCH
+	BEQL	15$
+	TSTL	OPS_READONLY(R11)
+	BNEQ	15$
+	;
+	; Direct or keyed access is to FIXED records, a relative file's aren't
+	; STREAM.
+	;
+24$:	BSBW	KEYLIKE
+	BNEQ	26$
+	TSTL	OPS_TYPE(R11)
+	BNEQ	25$
+	MOVL	#TYPE_FIXED,OPS_TYPE(R11)
+	BRB	26$
+25$:	CMPL	OPS_TYPE(R11),#TYPE_FIXED
+	BNEQ	15$
+26$:	CMPL	OPS_ORG(R11),#ORG_RELATIVE
+	BNEQ	30$
+	CMPL	OPS_TYPE(R11),#TYPE_STREAM
+	BGEQ	15$
+	;
+	; The numbers. RECL's limits by its units, and it is mandatory for a
+	; new file of FIXED records.
+	;
+30$:	MOVL	OPS_RECL(R11),R4
+	BLSS	38$
+	CMPL	OPS_FORM(R11),#FORM_FORMATTED
+	BNEQ	32$
+	CMPL	R4,#65535
+	BGTR	38$
+	BRB	34$
+32$:	CMPL	R4,#16383
+	BGTR	38$
+34$:	TSTL	R4
+	BNEQ	40$
+	CMPL	R2,#STATUS_OLD		; an existing file has its own
+	BEQL	40$
+	CMPL	OPS_TYPE(R11),#TYPE_FIXED
+	BEQL	38$
+	CMPL	OPS_ORG(R11),#ORG_RELATIVE
+	BNEQ	40$
+38$:	BRW	BAD_LENGTH
+40$:	CMPL	OPS_BUFFERS(R11),#127
+	BGTRU	48$
+	CMPL	OPS_BLOCK(R11),#65024
+	BGTRU	48$
+	CMPL	OPS_EXTEND(R11),#65535
+	BLEQ	50$
+48$:	BRW	BAD_VALUE
+	;
+	; Relative files are the next subtasks'.
+	;
+50$:	CMPL	OPS_ORG(R11),#ORG_RELATIVE
+	BNEQ	SETUP
+	BRW	NOT_YET
+
+;
+; KEYLIKE: the Z bit set if the access is DIRECT or KEYED.
+;
+KEYLIKE:
+	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
+	BEQL	10$
+	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
+10$:	RSB
+
+;
+; The FAB and the RAB, from the rules' values. R6 the FAB, R10 the RAB.
+;
+SETUP:	PUSHL	R7
+	CALLS	#1,FTN$$UNIT_INIT	; FTN_UNITS: as for no OPEN, with its names
+	MOVAB	UB_FAB(R7),R6
+	MOVAB	UB_RAB(R7),R10
+	;
+	; The names.
+	;
+	MOVL	OPS_FILE(R11),R1
+	BEQL	10$
+	BSBW	NAME_TEXT
+	TSTL	R0			; FILE=' ' is no name at all
+	BEQL	10$
+	CMPL	R0,#255
+	BLEQ	5$
+	BRW	BAD_NAME
+5$:	MOVB	R0,FAB$B_FNS(R6)
+	MOVL	R1,FAB$L_FNA(R6)
+	CLRL	UB_KIND(R7)
+10$:	MOVL	OPS_DEFAULT(R11),R1
+	BEQL	15$
+	BSBW	NAME_TEXT
+	CMPL	R0,#255
+	BLEQ	12$
+	BRW	BAD_NAME
+12$:	MOVB	R0,FAB$B_DNS(R6)
+	MOVL	R1,FAB$L_DNA(R6)
+	;
+	; What the unit remembers.
+	;
+15$:	MOVB	OPS_FORM(R11),UB_FORM(R7)
+	MOVB	OPS_ACCESS(R11),UB_ACCESS(R7)
+	MOVL	OPS_BLANK(R11),R0
+	BEQL	16$
+	MOVB	R0,UB_BLANK(R7)
+16$:	MOVL	OPS_DISPOSE(R11),R0
+	BNEQ	17$
+	MOVL	#DISP_KEEP,R0
+	CMPL	OPS_STATUS(R11),#STATUS_SCRATCH
+	BNEQ	17$
+	MOVL	#DISP_DELETE,R0
+17$:	MOVB	R0,UB_DISPOSE(R7)
+	;
+	; The longest record: bytes when formatted, longwords when not, with a
+	; word for the segment's control if segmented.
+	;
+	MOVL	OPS_RECL(R11),R4
+	CMPL	OPS_FORM(R11),#FORM_FORMATTED
+	BNEQ	20$
+	TSTL	R4
+	BNEQ	25$
+	MOVL	#DEFAULT_RECL,R4
+	BRB	25$
+20$:	TSTL	R4
+	BNEQ	22$
+	MOVL	#DEFAULT_SEG,R4
+	BRB	25$
+22$:	ASHL	#2,R4,R4
+	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
+	BEQL	23$
+	TSTL	OPS_TYPE(R11)
+	BNEQ	25$
+23$:	ADDL2	#2,R4
+25$:	MOVL	R4,UB_SIZE(R7)
+	;
+	; The record format and carriage control.
+	;
+	MOVL	OPS_TYPE(R11),R0
+	MOVAB	FORMATS,R1
+	MOVB	(R1)[R0],FAB$B_RFM(R6)
+	CMPL	R0,#TYPE_FIXED
+	BNEQ	26$
+	MOVW	R4,FAB$W_MRS(R6)
+26$:	MOVL	OPS_CC(R11),R1
+	BEQL	27$
+	CLRL	R2			; given: 1 FORTRAN, 2 LIST, 3 NONE
+	CMPL	R1,#3
+	BEQL	30$
+	MOVL	R1,R2
+	BRB	30$
+27$:	MOVL	#FAB$M_FTN,R2		; by the form
+	CMPL	OPS_FORM(R11),#FORM_FORMATTED
+	BEQL	30$
+	CLRL	R2
+	CMPL	OPS_TYPE(R11),#TYPE_STREAM
+	BLSS	30$
+	MOVL	#FAB$M_CR,R2
+30$:	TSTL	OPS_NOSPAN(R11)
+	BEQL	31$
+	BISL2	#FAB$M_BLK,R2
+31$:	MOVB	R2,FAB$B_RAT(R6)
+	;
+	; The rest of the FAB and the RAB. Sizes of -1 count as 1.
+	;
+	MOVL	OPS_INITIAL(R11),R0
+	BEQL	33$
+	BGTR	32$
+	MOVL	#1,R0
+32$:	MOVL	R0,FAB$L_ALQ(R6)
+	BISL2	#FAB$M_CBT,FAB$L_FOP(R6)
+33$:	MOVL	OPS_EXTEND(R11),R0
+	BGEQ	34$
+	MOVL	#1,R0
+34$:	MOVW	R0,FAB$W_DEQ(R6)
+	MOVL	OPS_MAXREC(R11),FAB$L_MRN(R6)
+	MOVB	OPS_BUFFERS(R11),RAB$B_MBF(R10)
+	ADDL3	#511,OPS_BLOCK(R11),R0	; in bytes, in whole blocks
+	DIVL2	#512,R0
+	MOVB	R0,RAB$B_MBC(R10)
+	TSTL	OPS_SHARED(R11)
+	BEQL	35$
+	MOVB	#^X0F,FAB$B_SHR(R6)
+35$:	TSTL	OPS_READONLY(R11)
+	BEQL	36$
+	CLRB	FAB$B_FAC(R6)
+	MOVB	#1,UB_READONLY(R7)
+36$:	CMPL	OPS_ACCESS(R11),#ACCESS_APPEND
+	BNEQ	37$
+	BISL2	#RAB$M_EOF,RAB$L_ROP(R10)
+	BICL2	#FAB$M_NEF,FAB$L_FOP(R6)
+37$:	BSBW	KEYLIKE
+	BNEQ	39$
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R10)
+	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
+	BNEQ	39$
+	BISL2	#RAB$M_UIF,RAB$L_ROP(R10)
+	;
+	; Open it, by the status. READONLY with 'UNKNOWN' only opens.
+	;
+39$:	MOVL	OPS_STATUS(R11),R0
+	CMPL	R0,#STATUS_OLD
+	BEQL	50$
+	CMPL	R0,#STATUS_SCRATCH
+	BNEQ	40$
+	BISL2	#FAB$M_TMD,FAB$L_FOP(R6)
+	MOVB	#1,UB_SCRATCH(R7)
+	BRB	45$
+40$:	CMPL	R0,#STATUS_UNKNOWN
+	BNEQ	45$
+	TSTL	OPS_READONLY(R11)
+	BNEQ	50$
+	BISL2	#FAB$M_CIF,FAB$L_FOP(R6)
+45$:	$CREATE	FAB=R6
+	BLBC	R0,60$
+	CMPL	R0,#RMS$_CREATED
+	BEQL	46$
+	CMPL	OPS_STATUS(R11),#STATUS_UNKNOWN
+	BEQL	EXISTING		; CIF found one
+46$:	BRW	READY
+50$:	$OPEN	FAB=R6
+	BLBS	R0,EXISTING
+60$:	PUSHL	R0
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FAILED	; FTN_UNITS
+	BRW	FAILED
+
+;
+; A file that was there: its own attributes win, and what the keywords said of
+; them must agree.
+;
+EXISTING:
+	MOVZBL	FAB$B_ORG(R6),R0
+	BEQL	10$
+	MOVL	#FOR$_NOTIMP,R2		; relative or indexed: not here yet
+	TSTL	OPS_ORG(R11)
+	BEQL	80$
+	MOVL	#FOR$_INCFILORG,R2	;  or not what was asked for
+	BRB	80$
+10$:	MOVL	#FOR$_INCFILORG,R2
+	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED ; a sequential file has no keys
+	BEQL	80$
+	MOVL	#FOR$_INCRECLEN,R2
+	TSTL	OPS_RECL(R11)
+	BEQL	20$
+	MOVZWL	FAB$W_MRS(R6),R0
+	BEQL	20$
+	CMPL	R0,UB_SIZE(R7)
+	BNEQ	80$
+20$:	MOVL	#FOR$_INCRECTYP,R2
+	MOVL	OPS_TYPE(R11),R0
+	BEQL	READY
+	MOVAB	FORMATS,R1
+	CMPB	(R1)[R0],FAB$B_RFM(R6)
+	BEQL	READY
+80$:	$CLOSE	FAB=R6			; R2 is why
+	MOVL	R2,R0
+	BRW	FAILED
+
+READY:	PUSHL	R7
+	CALLS	#1,FTN$$UNIT_READY	; FTN_UNITS
+	BLBC	R0,FAILED
+	BRW	END
+
+NOT_YET:
+	MOVL	#FOR$_NOTIMP,R0
+	BRB	FAILED
+BAD_KEYWORDS:
+	MOVL	#FOR$_INCOPECLO,R0
+	BRB	FAILED
+BAD_LENGTH:
+	MOVL	#FOR$_INCRECLEN,R0
+	BRB	FAILED
+BAD_VALUE:
+	MOVL	#FOR$_KEYVALERR,R0
+	BRB	FAILED
+BAD_NAME:
+	MOVL	#FOR$_FILNAMSPE,R0
+
+;
+; The statement's error is the condition in R0.
+;
+FAILED:	MOVL	R0,CTX_STATUS(R9)
+END:	CALLS	#0,FTN$IO_END		; FTN_STATEMENT: R0 the status, or signaled
+	RET
+
+;
+; FTN$CLOSE(control block, unit, keyword, value, ...)
+;
+; A unit not open is no error, and its keywords are read but not used. CLOSE's
+; disposition overrides OPEN's, but a scratch file can only go, and a read-only
+; one can't: those leave the unit open.
+;
+	.ENTRY	FTN$CLOSE,ALL_MASK
+	MOVAB	-OPS_SIZE(SP),SP
+	BSBW	START
+	BLBC	R0,5$
+	BLBS	UB_OPEN(R7),6$
+5$:	BRW	END
+6$:	MOVL	OPS_DISPOSE(R11),R3
+	BNEQ	10$
+	MOVZBL	UB_DISPOSE(R7),R3
+10$:	TSTB	UB_SCRATCH(R7)
+	BEQL	20$
+	CMPL	R3,#DISP_DELETE
+	BNEQ	25$
+20$:	TSTB	UB_READONLY(R7)
+	BEQL	30$
+	CMPL	R3,#DISP_DELETE
+	BEQL	25$
+	CMPL	R3,#DISP_PRINT_DEL
+	BEQL	25$
+	CMPL	R3,#DISP_SUBMIT_DEL
+	BNEQ	30$
+25$:	BRW	BAD_KEYWORDS
+30$:	PUSHL	R3
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_CLOSE	; FTN_UNITS
+	BLBC	R0,FAILED
+	BRB	END
+
+	.END

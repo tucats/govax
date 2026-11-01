@@ -1315,9 +1315,9 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, the OPEN statement is not implemented yet
+%FORT-E-NOTIMPL, the INQUIRE statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
-        OPEN (UNIT=1, FILE='DATA')
+        INQUIRE (UNIT=1, EXIST=E)
   ------^
 ```
 
@@ -4358,10 +4358,10 @@ intrinsic function, all of the language's control statements and
 subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
 input and output, with every edit descriptor and variable format
-expressions, list-directed input and output, and namelist input and output, and stops a
-program with `%FOR-F-NOTIMP` at a unit other than the terminal's (section 14.2):
-OPEN, CLOSE, and the other units are Phase 81's. Any other statement draws
-`%FORT-E-NOTIMPL`, naming it ("the OPEN statement is not implemented
+expressions, list-directed input and output, and namelist input and output, on
+sequential files through OPEN and CLOSE (section 14.2), with the other file statements
+to come in Phase 81. Any other statement draws
+`%FORT-E-NOTIMPL`, naming it ("the INQUIRE statement is not implemented
 yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
@@ -4626,7 +4626,21 @@ output it prints, and programs of several files in its `modules` directory.
   compile, by the rules VMS's FORTRAN run-time library applies
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
   runs formatted, list-directed, and namelist input and output, to the
-  default units, units 5 and 6 (SYS$INPUT and SYS$OUTPUT), and internal files.
+  default units, units 0 to 119, and internal files.
+- **OPEN and CLOSE** (chapter 9) on sequential files on a mounted volume: a host file
+  is brought in with COPY. A value known at compile time is checked then
+  (`%FORT-E-KEYCHOICE`, `%FORT-E-OPENCONFLICT`, `%FORT-E-NEEDRECL`), and one known only
+  when the program runs gets the same rules from FTNRTL, as VMS's FOR numbers. A unit
+  with no OPEN is `FORnnn.DAT`, or what the logical name `FORnnn` says; units 5 and 6
+  and the default units are SYS$INPUT and SYS$OUTPUT unless `FOR005`, `FOR006`,
+  `FOR$PRINT`, `FOR$TYPE`, `FOR$ACCEPT`, or `FOR$READ` is defined. Each unit has its own
+  connection, so with `DEFINE SYS$OUTPUT file`, PRINT and unit 6 make a version of the
+  file each, as on VMS; `@procedure/OUTPUT=file` shares one. Image exit closes every
+  unit by its disposition. `DISPOSE='PRINT'` and `'SUBMIT'` keep the file, as VMS does
+  with no queue running. So far USEROPEN= and ASSOCIATEVARIABLE= draw
+  `%FORT-E-NOTIMPL`; relative and indexed files are `%FOR-F-NOTIMP`; an unformatted or
+  direct unit can be opened but not yet read or written.
+
   At a terminal a program may also write unit 5 and read unit 6, as an
   interactive program does; where SYS$OUTPUT isn't a terminal, a READ of unit 6
   is `%FOR-F-ERRDURREA`, as on VMS. A prompt written with `$` leaves the cursor

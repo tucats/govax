@@ -2295,7 +2295,7 @@ func ftnEnd(b *strings.Builder, n int) {
 // fortranProgram is round 1's output cases to unit 6 as FORTRAN statements
 // (Decision 2): for govax, not VMS, which has no compiler. Each case is
 //
-//	PRINT *, '#n'
+//	WRITE (6,*) '#n'
 //	WRITE (6, 'format', IOSTAT=IOS) items
 //	CALL ERRSNS(IE, IS, IV, IU, IC)
 //	WRITE (6, '(...)') '=n', IOS, IE, IS, IV, IU, IC
@@ -2433,7 +2433,7 @@ C     vax/for80-vax.txt.
 
 		perRoutine++
 
-		ftnStatement(&body, fmt.Sprintf("PRINT *, '#%d'", n))
+		ftnStatement(&body, fmt.Sprintf("WRITE (6,*) '#%d'", n))
 
 		for _, set := range sets {
 			ftnStatement(&body, set)

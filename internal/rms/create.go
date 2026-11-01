@@ -312,8 +312,9 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
-	// A fixed-length record needs a length (VMS 7.1: testdata/for81, FOR81R).
-	if format == ondisk.RecordFormatFixed && mrs == 0 {
+	// A fixed-length record needs a length, and one that fits a word's
+	// positive values (VMS 7.1: testdata/for81, FOR81R and FOR81's #205).
+	if format == ondisk.RecordFormatFixed && (mrs == 0 || mrs > maxFixedRecord) {
 		return 0, found, false, rmsInvalidMRS, nil
 	}
 
@@ -479,3 +480,6 @@ func loadFileSpecString(ctx *Context, fabAddr uint32) (string, error) {
 
 	return ctx.loadFixedString(fna, int(fns))
 }
+
+// maxFixedRecord is the longest record a FIX file may have.
+const maxFixedRecord = 32767

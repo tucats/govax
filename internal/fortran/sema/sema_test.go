@@ -644,9 +644,26 @@ func TestErrors(t *testing.T) {
 		// yet (Phase 76): statements, reported where they are, and the
 		// forms inside statements, reported where analysis reaches them.
 		{"a REWRITE statement", []string{"REWRITE (1) X", "END"}, "NOTIMPL@1:7"},
-		{"an OPEN statement", []string{"OPEN (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"an INQUIRE statement", []string{"INQUIRE (UNIT=1)", "END"}, "NOTIMPL@1:7"},
 		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
-		{"a logical IF's CLOSE", []string{"IF (X .GT. 0) CLOSE (1)", "END"}, "NOTIMPL@1:21"},
+		{"a logical IF's REWIND", []string{"IF (X .GT. 0) REWIND 1", "END"}, "NOTIMPL@1:21"},
+
+		// OPEN and CLOSE (sections 9.1, 9.2).
+		{"OPEN and CLOSE", []string{"CHARACTER*8 F, S", "OPEN (1, FILE=F, STATUS=S, RECL=80.0, ERR=9, IOSTAT=I)", "CLOSE (1, DISP='DELETE')", "9 END"}, ""},
+		{"a keyword under two names", []string{"OPEN (1, FILE='A', NAME='B')", "END"}, "KEYTWICE@1:26"},
+		{"a keyword's number", []string{"OPEN (1, RECL='A')", "END"}, "KEYNUMBER@1:16"},
+		{"a keyword's text", []string{"OPEN (1, STATUS=3)", "END"}, "KEYTEXT@1:16"},
+		{"a value not in the list", []string{"OPEN (1, STATUS='NEWS')", "END"}, "KEYCHOICE@1:16"},
+		{"a value in any case, blanks after", []string{"OPEN (1, STATUS='new  ')", "END"}, ""},
+		{"CLOSE's STATUS is a disposition", []string{"CLOSE (1, STATUS='OLD')", "END"}, "KEYCHOICE@1:17"},
+		{"READONLY, new", []string{"OPEN (1, READONLY, STATUS='NEW')", "END"}, "OPENCONFLICT@1:7"},
+		{"SCRATCH, kept", []string{"OPEN (1, STATUS='SCRATCH', DISPOSE='KEEP')", "END"}, "OPENCONFLICT@1:7"},
+		{"SEGMENTED, formatted", []string{"OPEN (1, RECORDTYPE='SEGMENTED', FORM='FORMATTED')", "END"}, "OPENCONFLICT@1:7"},
+		{"APPEND, new", []string{"OPEN (1, ACCESS='APPEND', STATUS='NEW')", "END"}, "OPENCONFLICT@1:7"},
+		{"direct, no RECL", []string{"OPEN (1, ACCESS='DIRECT')", "END"}, "NEEDRECL@1:7"},
+		{"direct, no RECL, an existing file", []string{"OPEN (1, ACCESS='DIRECT', STATUS='OLD')", "END"}, ""},
+		{"OPEN's unit", []string{"OPEN (UNIT=1.5)", "END"}, "BADUNIT@1:18"},
+		{"USEROPEN isn't yet", []string{"EXTERNAL U", "OPEN (1, USEROPEN=U)", "END"}, "NOTIMPL@2:16"},
 		{"PRINT of an ASSIGNed format", []string{"ASSIGN 10 TO K", "PRINT K, 5", "10 FORMAT (I5)", "END"}, ""},
 		{"VOLATILE", []string{"VOLATILE /B/, X", "END"}, "NOTIMPL@1:7"},
 		{"an OPTIONS statement", []string{"OPTIONS /EXTEND_SOURCE", "PROGRAM P", "END"}, "NOTIMPL@1:7"},

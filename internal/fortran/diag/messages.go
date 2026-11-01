@@ -657,6 +657,30 @@ var messages = map[string]kind{
 	// array element (section 7.1.1.9).
 	"BADIOSTAT": {Error, "an IOSTAT= specifier must name an INTEGER variable or array element"},
 
+	// KEYTWICE is a file statement's keyword given twice, under one of its
+	// names or the other (sections 9.1, 9.2).
+	"KEYTWICE": {Error, "%s repeats %s in this statement"},
+
+	// KEYNUMBER is a keyword that takes a number given something else
+	// (section 9.1).
+	"KEYNUMBER": {Error, "%s= must be a number, not %s"},
+
+	// KEYTEXT is a keyword that takes a character value given something
+	// else (section 9.1).
+	"KEYTEXT": {Error, "%s= must be a character value, not %s"},
+
+	// KEYCHOICE is a keyword's constant value that isn't one of its list
+	// (section 9.1), which VMS's run-time library would call FOR$_KEYVALERR.
+	"KEYCHOICE": {Error, "'%s' isn't a value of %s="},
+
+	// OPENCONFLICT is an OPEN whose keywords VMS's run-time library would
+	// refuse together (FOR$_INCOPECLO).
+	"OPENCONFLICT": {Error, "%s= can't be given with %s"},
+
+	// NEEDRECL is an OPEN of a new file of fixed-length records with no
+	// RECL= (Table 9-3).
+	"NEEDRECL": {Error, "%s needs RECL= for a new file"},
+
 	// BADCOUNT is an ENCODE or DECODE count that isn't an INTEGER
 	// expression (appendix A.1).
 	"BADCOUNT": {Error, "%s's count of characters must be an INTEGER expression"},

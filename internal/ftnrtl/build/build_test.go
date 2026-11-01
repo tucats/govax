@@ -39,7 +39,7 @@ func TestImage(t *testing.T) {
 	}
 
 	image, ok := src.Image(ftnrtl.Name)
-	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 9 {
+	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 10 {
 		t.Errorf("image %+v", image)
 	}
 
@@ -57,7 +57,7 @@ func TestImage(t *testing.T) {
 		"FTN$READ_SF": 280, "FTN$WRITE_SF": 288, "FTN$READ_SL": 296, "FTN$WRITE_SL": 304,
 		"FTN$READ_SN": 312, "FTN$WRITE_SN": 320, "FTN$READ_IF": 328, "FTN$WRITE_IF": 336,
 		"FTN$READ_IL": 344, "FTN$WRITE_IL": 352, "FTN$DECODE": 360, "FTN$ENCODE": 368,
-		"FTN$ERRSNS": 376, "FTN$ERRSNS_W": 384,
+		"FTN$ERRSNS": 376, "FTN$ERRSNS_W": 384, "FTN$OPEN": 392, "FTN$CLOSE": 400,
 	} {
 		d, ok, _ := src.Lookup(symbol)
 		if !ok || d.Image != ftnrtl.Name || d.Value != offset {

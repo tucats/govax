@@ -110,6 +110,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 
 	case *sema.IO:
 		l.io(s)
+
+	case *sema.FileStmt:
+		l.fileStatement(s)
 	}
 
 	l.flush()

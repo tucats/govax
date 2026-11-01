@@ -33,6 +33,10 @@ func handled(s ast.Stmt) bool {
 	case *ast.TransferStmt:
 		// REWRITE is Phase 81's.
 		return s.Kind == lex.Read || s.Kind == lex.Write
+
+	case *ast.AuxIOStmt:
+		// INQUIRE and the others are later subtasks of Phase 81's.
+		return s.Kind == lex.Open || s.Kind == lex.Close
 	}
 
 	return false

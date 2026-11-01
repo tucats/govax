@@ -65,9 +65,9 @@
 ; before the first, where a byte written is lost, as VMS's is. A record
 ; ends at /, at reversion, and at the statement's end, and is written
 ; then; a statement writes at least one, empty if nothing was put in it.
-; A unit's record holds 133 bytes (VMS's limit, the probe's round 1): a
-; byte written past them is FOR$_OUTSTAOVE, as is a field that doesn't
-; fit. A $ in the format (8.3.12.2) marks the record being built: when it
+; A unit's record holds 133 bytes (VMS's limit, the probe's round 1), or
+; its RECL (Phase 81): a byte written past them is FOR$_OUTSTAOVE, as is a
+; field that doesn't fit. A $ in the format (8.3.12.2) marks the record being built: when it
 ; is written, a blank first byte becomes $ (a prompt: no carriage return
 ; after it) and a + becomes NUL (no new line before or after it), as
 ; VMS's run-time library stores them.
@@ -75,7 +75,7 @@
 ; Input reads a record at the statement's start, another at each / and
 ; at reversion, into the same buffer, and fields take their characters
 ; from the position on: past the record's end, blanks. A record longer
-; than 199 bytes is FOR$_INPRECTOO (VMS's limit reading SYS$INPUT, round
+; than 199 bytes read from SYS$INPUT is FOR$_INPRECTOO (VMS's limit, round
 ; 2; FTN_UNITS checks it), the end of the file FOR$_ENDDURREA. A character constant or H in an
 ; input format takes the record's characters in place of its text, in the
 ; parsed format, so a later statement using the same FORMAT writes them
@@ -167,7 +167,8 @@ CTX_AP		= CTX_WARNING+36		; long: the AP of the routine that began it
 CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
 CTX_RESOLVED	= CTX_VFE+4		; an operation with its expressions' values
 
-OUTPUT_MAX	= 133			; an output record's bytes, at most
+CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_STATEMENT)
+CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros
 
 ;
 ; A parsed format: its size (for LIB$FREE_VM), the address of the
@@ -277,13 +278,14 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	CLRL	CTX_RECLEN(R6)
 	TSTB	CTX_INTERNAL(R6)
 	BNEQ	10$			; an internal file's limit is its record's
-	MOVL	#OUTPUT_MAX,CTX_RECMAX(R6)
+	MOVL	CTX_UNITMAX(R6),CTX_RECMAX(R6)
 10$:
 	CLRL	CTX_COUNT(R6)
 	CLRL	CTX_DEPTH(R6)
 	CLRL	CTX_SCALE(R6)
 	CLRB	CTX_SIGN(R6)
-	MOVB	#1,CTX_BLANK(R6)	; a unit with no OPEN: BLANK='ZERO' (8.3)
+	MOVB	CTX_UNITBLANK(R6),CTX_BLANK(R6) ; the unit's BLANK= (with no OPEN, or
+					;  an internal file, 'ZERO': 8.3)
 	CLRB	CTX_DOLLAR(R6)
 	CLRB	CTX_USED(R6)
 	CLRB	CTX_MISMATCH(R6)
@@ -776,10 +778,8 @@ NEW_RECORD:
 	PUSHL	R2			; an internal file's next record
 	CALLS	#1,FTN$$INT_READ	; FTN_INTERNAL
 	RET
-5$:	PUSHL	#RECORD_SIZE
-	PUSHL	CTX_RECP(R2)
-	PUSHL	CTX_STREAM(R2)
-	CALLS	#3,FTN$$UNIT_GET	; FTN_UNITS: INPRECTOO past 199 bytes
+5$:	PUSHL	CTX_STREAM(R2)
+	CALLS	#1,FTN$$UNIT_GET	; FTN_UNITS: into its buffer, CTX_RECP
 	BLBC	R0,80$
 	MOVL	R1,CTX_RECLEN(R2)
 	CLRL	CTX_POS(R2)

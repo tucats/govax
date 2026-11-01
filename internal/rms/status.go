@@ -189,7 +189,8 @@ var (
 	// file's own declared maximum record size (fab.go's fabMRS).
 	rmsRecordTooBig = vmsConst("RMS$_RSZ")
 
-	// rmsInvalidMRS is RMS$_MRS: a FIX file with no record size.
+	// rmsInvalidMRS is RMS$_MRS: a FIX file with no record size, or one
+	// past maxFixedRecord.
 	rmsInvalidMRS = vmsConst("RMS$_MRS")
 
 	// rmsRecordTruncated is RMS$_RTB, a warning: a SYS$GET record was

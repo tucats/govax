@@ -112,6 +112,11 @@ FOR$_SYNERRFOR	= ^X001881F4
 FOR$_INPCONERR	= ^X00188204
 FOR$_INVTEXREC	= ^X00188834
 FOR$_INVTEX	= ^X0018883C
+FOR$_CLOERR	= ^X001880E4
+FOR$_FILNOTFOU	= ^X001880EC
+FOR$_OPEFAI	= ^X001880F4
+FOR$_NO_SUCDEV	= ^X00188154
+FOR$_FILNAMSPE	= ^X0018815C
 
 ; The control block's fields and flags.
 ICB_W_SIZE	= 0
@@ -156,7 +161,11 @@ CTX_NM_CAPTURE	= CTX_RECP+24		; long: where FTN_LISTOUT puts a field for
 CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a record starts
 CTX_TEXT	= CTX_RECP+36		; long: FOR$_INPCONERR's text, and its
 					;  length (FTN_EDIT, FTN_LISTIN)
-CTX_SIZE	= CTX_RECP+44
+CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_UNITS)
+CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros
+CTX_USERPC	= CTX_RECP+52		; long: the user PC of a statement of one
+					;  call (FTN_OPEN), or 0
+CTX_SIZE	= CTX_RECP+56
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -168,6 +177,7 @@ K_READ_SL	= 2
 K_WRITE_SL	= 3
 K_READ_SN	= 4
 K_WRITE_SN	= 5
+K_FILE		= 6			; OPEN or CLOSE, which has no records
 K_INTERNAL	= 1@4
 K_CODE		= 2@4
 
@@ -253,72 +263,15 @@ INTERNAL:
 	MNEGL	#-INTERNAL_UNIT,R7
 
 ;
-; BEGIN: pops the contexts of statements whose routines have gone, makes
-; a context for this one and pushes it, then finds the unit and starts
-; the statement. R6 is the kind, R7 the unit, and R3 the context once
-; it is made.
+; BEGIN: makes the statement's context, finds the unit, and starts the
+; statement. R6 is the kind, R7 the unit, and R3 the context once it is made.
 ;
 BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
-10$:	MOVL	STMT_TOP,R3
-	BEQL	20$
-	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
-	BGTRU	20$			; a routine further out: still running
-	MOVL	CTX_NEXT(R3),STMT_TOP	; gone: its context is free again
-	PUSHL	R3			;  (and its run-time format's
-	CALLS	#1,FTN$$FMT_FREE	;  parsed copy, if it had one)
-	MOVL	FREE_LIST,CTX_NEXT(R3)
-	MOVL	R3,FREE_LIST
-	BRB	10$
+	MOVL	8(FP),R4		;  and AP
+	MOVL	4(AP),R5		; the control block
+	BSBW	PUSH_CONTEXT
 	;
-	; A context from the free list, or a new one from LIB$GET_VM, whose
-	; two arguments are addresses: of the size, and of a longword for
-	; the block's address. Both longwords are made on the stack.
-	;
-20$:	MOVL	FREE_LIST,R3
-	BEQL	25$
-	MOVL	CTX_NEXT(R3),FREE_LIST
-	BRB	30$
-25$:	CLRL	-(SP)			; the block's address goes here
-	PUSHL	#CTX_SIZE		; the size
-	PUSHAL	4(SP)			; LIB$GET_VM's second argument
-	PUSHAL	4(SP)			;  and its first
-	CALLS	#2,G^LIB$GET_VM
-	BLBS	R0,27$
-	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
-	CALLS	#1,G^LIB$STOP
-27$:	MOVL	4(SP),R3
-	ADDL2	#8,SP
-	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
-	CLRL	CTX_LI_SIZE(R3)
-	;
-	; Fill it in and push it.
-	;
-30$:	MOVL	R2,CTX_FP(R3)
-	MOVL	8(FP),CTX_AP(R3)	; the caller's AP, saved in this frame
-	MOVL	R7,CTX_UNIT(R3)
-	CLRW	CTX_FLAGS(R3)
-	MOVL	4(AP),R0		; the control block
-	CMPW	ICB_W_SIZE(R0),#ICB_W_FLAGS+2
-	BLSSU	35$			; too small to have flags
-	MOVW	ICB_W_FLAGS(R0),CTX_FLAGS(R3)
-35$:	EXTZV	#4,#2,R6,R0		; a form of internal file, or 0
-	MOVB	R0,CTX_INTERNAL(R3)
-	BICL2	#^C15,R6		; the kind, as a unit's
-	MOVB	R6,CTX_KIND(R3)
-	CLRL	CTX_STATUS(R3)
-	CLRL	CTX_WARNING(R3)
-	CLRL	CTX_FREEFMT(R3)
-	CLRL	CTX_NM_FAO(R3)
-	CLRL	CTX_NM_CAPTURE(R3)
-	CLRL	CTX_LI_COLUMN(R3)
-	CLRQ	CTX_TEXT(R3)
-	CLRL	CTX_STREAM(R3)
-	CLRL	CTX_RECLEN(R3)
-	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
-	MOVL	STMT_TOP,CTX_NEXT(R3)
-	MOVL	R3,STMT_TOP
-	;
-	; A unit: its stream (FTN$$UNIT_FIND, given the unit and 1 to read),
+	; A unit: its block (FTN$$UNIT_FIND, given the unit and 1 to read),
 	; and no other statement in progress on it.
 	;
 	TSTB	CTX_INTERNAL(R3)
@@ -332,30 +285,31 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
-	MOVL	R1,CTX_STREAM(R3)	; its stream, or 0 for no unit
+	MOVL	R1,CTX_STREAM(R3)	; its block, or 0 for no unit
 	BLBS	R0,37$
 	BRW	FAIL
-37$:
-	MOVL	CTX_NEXT(R3),R1		; the statements below
-40$:	BEQL	60$
-	TSTB	CTX_INTERNAL(R1)
-	BNEQ	45$			; an internal file's
-	CMPL	CTX_UNIT(R1),R7
-	BNEQ	45$
-	MOVL	#FOR$_RECIO_OPE,R0
+37$:	BSBW	CHECK_NESTED
+	BLBS	R0,60$
 	BRW	FAIL
-45$:	MOVL	CTX_NEXT(R1),R1
-	BRB	40$
 	;
-	; Connect the unit's stream and start the statement.
+	; Connect the unit, take its record buffer, and start the statement.
 	;
-60$:	PUSHL	CTX_STREAM(R3)		; the unit's stream, connected
-	CALLS	#1,FTN$$UNIT_OPEN	; FTN_UNITS
-	BLBS	R0,75$
-	MOVL	#FOR$_ERRDURWRI,R0
-	BLBS	R6,FAIL
-	MOVL	#FOR$_ERRDURREA,R0
-	BRB	FAIL
+60$:	BICL3	#^C1,R6,R0		; 1 for a WRITE
+	XORL2	#1,R0			; 1 for a READ
+	PUSHL	R0
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
+	BLBS	R0,65$
+	BRW	FAIL
+65$:	BICL3	#^C1,R6,-(SP)		; 1 for a WRITE
+	PUSHAB	CTX_UNITMAX(R3)
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#3,FTN$$UNIT_RECORD	; FTN_UNITS
+	MOVL	R0,CTX_RECP(R3)
+	TSTL	R1
+	BEQL	75$
+	MOVL	R1,R0			; the statement can't use the unit
+	BRW	FAIL
 75$:	CMPL	R6,#K_READ_SN
 	BEQL	90$
 	CMPL	R6,#K_WRITE_SN
@@ -398,6 +352,121 @@ FAIL:	TSTL	CTX_STATUS(R3)
 	MOVL	R0,CTX_STATUS(R3)
 10$:	MOVL	#SS$_NORMAL,R0
 	RET
+
+;
+; FTN$$STMT_FILE(unit, FP, AP, user PC, control block)
+;
+; Begins a statement that is a single call, OPEN or CLOSE (FTN_OPEN): the
+; context, with the FP and AP of the routine the statement is in and the PC it
+; returns to; and the unit. Returns the context in R0, and in R1 the unit's block,
+; or 0 with the context holding the error.
+;
+	.ENTRY	FTN$$STMT_FILE,BEGIN_MASK
+	MOVL	4(AP),R7
+	MOVL	8(AP),R2
+	MOVL	12(AP),R4
+	MOVL	20(AP),R5
+	MOVL	#K_FILE,R6
+	BSBW	PUSH_CONTEXT
+	MOVL	16(AP),CTX_USERPC(R3)
+	CLRL	-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,80$
+	BSBW	CHECK_NESTED
+	BLBS	R0,90$
+80$:	MOVL	R0,CTX_STATUS(R3)
+90$:	MOVL	R3,R0
+	MOVL	CTX_STREAM(R3),R1
+	RET
+
+;
+; CHECK_NESTED: R0's low bit is clear, with FOR$_RECIO_OPE, if a statement
+; below this one, R3, is in progress on its unit, R7. Changes R0 and R1.
+;
+CHECK_NESTED:
+	MOVL	CTX_NEXT(R3),R1
+40$:	BEQL	60$
+	TSTB	CTX_INTERNAL(R1)
+	BNEQ	45$			; an internal file's
+	CMPL	CTX_UNIT(R1),R7
+	BNEQ	45$
+	MOVL	#FOR$_RECIO_OPE,R0
+	RSB
+45$:	MOVL	CTX_NEXT(R1),R1
+	BRB	40$
+60$:	MOVL	#SS$_NORMAL,R0
+	RSB
+
+;
+; PUSH_CONTEXT: pops the contexts of statements whose routines have gone,
+; then makes a context for this statement and pushes it. R6 is the kind, R7 the
+; unit, R2 the FP and R4 the AP of the routine the statement is in, R5 the
+; control block; R3 returns the context. Changes R0, R1, R3, and R6.
+;
+PUSH_CONTEXT:
+10$:	MOVL	STMT_TOP,R3
+	BEQL	20$
+	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
+	BGTRU	20$			; a routine further out: still running
+	MOVL	CTX_NEXT(R3),STMT_TOP	; gone: its context is free again
+	PUSHL	R3			;  (and its run-time format's
+	CALLS	#1,FTN$$FMT_FREE	;  parsed copy, if it had one)
+	MOVL	FREE_LIST,CTX_NEXT(R3)
+	MOVL	R3,FREE_LIST
+	BRB	10$
+	;
+	; A context from the free list, or a new one from LIB$GET_VM, whose
+	; two arguments are addresses: of the size, and of a longword for
+	; the block's address. Both longwords are made on the stack.
+	;
+20$:	MOVL	FREE_LIST,R3
+	BEQL	25$
+	MOVL	CTX_NEXT(R3),FREE_LIST
+	BRB	30$
+25$:	CLRL	-(SP)			; the block's address goes here
+	PUSHL	#CTX_SIZE		; the size
+	PUSHAL	4(SP)			; LIB$GET_VM's second argument
+	PUSHAL	4(SP)			;  and its first
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,27$
+	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
+	CALLS	#1,G^LIB$STOP
+27$:	MOVL	4(SP),R3
+	ADDL2	#8,SP
+	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
+	CLRL	CTX_LI_SIZE(R3)
+	;
+	; Fill it in and push it.
+	;
+30$:	MOVL	R2,CTX_FP(R3)
+	MOVL	R4,CTX_AP(R3)
+	MOVL	R7,CTX_UNIT(R3)
+	CLRW	CTX_FLAGS(R3)
+	CMPW	ICB_W_SIZE(R5),#ICB_W_FLAGS+2
+	BLSSU	35$			; too small to have flags
+	MOVW	ICB_W_FLAGS(R5),CTX_FLAGS(R3)
+35$:	EXTZV	#4,#2,R6,R0		; a form of internal file, or 0
+	MOVB	R0,CTX_INTERNAL(R3)
+	BICL2	#^C15,R6		; the kind, as a unit's
+	MOVB	R6,CTX_KIND(R3)
+	CLRL	CTX_STATUS(R3)
+	CLRL	CTX_WARNING(R3)
+	CLRL	CTX_FREEFMT(R3)
+	CLRL	CTX_NM_FAO(R3)
+	CLRL	CTX_NM_CAPTURE(R3)
+	CLRL	CTX_LI_COLUMN(R3)
+	CLRQ	CTX_TEXT(R3)
+	CLRL	CTX_STREAM(R3)
+	CLRL	CTX_RECLEN(R3)
+	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
+	CLRL	CTX_UNITMAX(R3)
+	MOVL	#1,CTX_UNITBLANK(R3)
+	CLRL	CTX_USERPC(R3)
+	MOVL	STMT_TOP,CTX_NEXT(R3)
+	MOVL	R3,STMT_TOP
+	RSB
 
 ;
 ; FTN$IO_ITEM(desc)
@@ -499,6 +568,16 @@ REPORT		= -36			; the name's length and address, RMS's
 	BEQL	30$
 	CMPL	R3,#FOR$_ERRDURWRI
 	BEQL	30$
+	CMPL	R3,#FOR$_FILNOTFOU
+	BEQL	30$
+	CMPL	R3,#FOR$_OPEFAI
+	BEQL	30$
+	CMPL	R3,#FOR$_NO_SUCDEV
+	BEQL	30$
+	CMPL	R3,#FOR$_FILNAMSPE
+	BEQL	30$
+	CMPL	R3,#FOR$_CLOERR
+	BEQL	30$
 	CLRQ	REPORT+8(FP)		; no: no RMS status
 	;
 	; Saved for ERRSNS.
@@ -545,7 +624,10 @@ REPORT		= -36			; the name's length and address, RMS's
 	ADDL2	#3,R6
 50$:	PUSHL	REPORT+12(FP)		; RMS's status value
 	PUSHL	REPORT+8(FP)		;  and status
-	PUSHL	16(FP)			; the user PC
+	MOVL	CTX_USERPC(R2),R0	; the user PC: a statement of one call's,
+	BNEQ	52$
+	MOVL	16(FP),R0		;  or where this call returns
+52$:	PUSHL	R0
 	PUSHAQ	FILE_DESC(FP)		; the file
 	PUSHL	CTX_UNIT(R2)		; the unit
 	ADDL2	#5,R6

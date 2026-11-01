@@ -46,19 +46,7 @@ const (
 
 // io lowers an I/O statement.
 func (l *lowerer) io(s *sema.IO) {
-	c := Control{}
-
-	if s.Err != 0 {
-		c.Flags |= ControlErr
-	}
-
-	if s.End != 0 {
-		c.Flags |= ControlEnd
-	}
-
-	if s.IOStat != nil {
-		c.Flags |= ControlIOStat
-	}
+	c := controlFor(s.Err, s.End, s.IOStat)
 
 	if s.RunFormat != nil {
 		c.Flags |= ControlRunFormat
@@ -77,8 +65,32 @@ func (l *lowerer) io(s *sema.IO) {
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
 	l.ioItems(s.Items)
 
-	end := &Call{origin: l.origin(), Routine: ftnIOEnd}
+	l.ioFinish(&Call{origin: l.origin(), Routine: ftnIOEnd}, c, s.Err, s.End, s.IOStat)
+}
 
+// controlFor is the control block of a statement with these specifiers.
+func controlFor(errLabel, endLabel int, iostat sema.Expr) Control {
+	c := Control{}
+
+	if errLabel != 0 {
+		c.Flags |= ControlErr
+	}
+
+	if endLabel != 0 {
+		c.Flags |= ControlEnd
+	}
+
+	if iostat != nil {
+		c.Flags |= ControlIOStat
+	}
+
+	return c
+}
+
+// ioFinish emits the call that ends an I/O statement and returns its
+// status in R0, and what the statement does with the status: IOSTAT=, END=,
+// and ERR=.
+func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat sema.Expr) {
 	if c.Flags&(ControlErr|ControlEnd|ControlIOStat) == 0 {
 		l.emit(end)
 
@@ -89,15 +101,15 @@ func (l *lowerer) io(s *sema.IO) {
 	// and the statement's last work is done (both may use R0).
 	var status Expr = &CallValue{}
 
-	if s.IOStat != nil || len(l.after) > 0 {
+	if iostat != nil || len(l.after) > 0 {
 		end.Result = l.temp(Long)
 		status = &Load{end.Result}
 	}
 
 	l.emit(end)
 
-	if s.IOStat != nil {
-		ios := l.mem(s.IOStat)
+	if iostat != nil {
+		ios := l.mem(iostat)
 
 		value := status
 		if ios.T != Long {
@@ -107,7 +119,7 @@ func (l *lowerer) io(s *sema.IO) {
 		l.emit(&Assign{l.origin(), ios, value})
 	}
 
-	if s.Err == 0 && s.End == 0 {
+	if errLabel == 0 && endLabel == 0 {
 		return
 	}
 
@@ -115,14 +127,14 @@ func (l *lowerer) io(s *sema.IO) {
 	neg, pos := next, next
 
 	switch {
-	case s.End != 0:
-		neg = l.labelBlock(s.End)
-	case s.Err != 0:
-		neg = l.labelBlock(s.Err)
+	case endLabel != 0:
+		neg = l.labelBlock(endLabel)
+	case errLabel != 0:
+		neg = l.labelBlock(errLabel)
 	}
 
-	if s.Err != 0 {
-		pos = l.labelBlock(s.Err)
+	if errLabel != 0 {
+		pos = l.labelBlock(errLabel)
 	}
 
 	l.terminate(&Sign{l.origin(), status, neg, next, pos})

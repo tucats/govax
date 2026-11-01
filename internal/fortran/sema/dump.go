@@ -281,9 +281,42 @@ func stmtText(list []Stmt) string {
 		return "END"
 	case *IO:
 		return dumpIO(s)
+	case *FileStmt:
+		return dumpFile(s)
 	}
 
 	return fmt.Sprintf("%T", list[0])
+}
+
+// dumpFile shows OPEN or CLOSE: the unit, and each keyword as its code's
+// name and value.
+func dumpFile(s *FileStmt) string {
+	var control []string
+
+	if s.Unit != nil {
+		control = append(control, DumpExpr(s.Unit))
+	}
+
+	for _, k := range s.Keys {
+		switch {
+		case k.Known:
+			control = append(control, k.Name+"="+strconv.Itoa(k.Number))
+		case k.Value != nil:
+			control = append(control, k.Name+"="+DumpExpr(k.Value))
+		default:
+			control = append(control, k.Name+"="+DumpExpr(k.Text))
+		}
+	}
+
+	if s.Err != 0 {
+		control = append(control, "ERR="+strconv.Itoa(s.Err))
+	}
+
+	if s.IOStat != nil {
+		control = append(control, "IOSTAT="+DumpExpr(s.IOStat))
+	}
+
+	return s.AST.Base().Kind.String() + " (" + strings.Join(control, ",") + ")"
 }
 
 // dumpAltPlaces shows where a dummy argument list has *s, counted from 0, or
