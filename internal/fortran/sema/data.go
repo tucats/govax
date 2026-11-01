@@ -759,12 +759,18 @@ func (a *analyzer) placeInitials() {
 }
 
 // checkCommonInitials reports two values for one byte of a common block,
-// among all the file's units (their names may differ). Whether two separately
-// compiled modules may do so is LINK's business: it has the last one's.
+// among all the file's units (their names may differ). A value another unit has
+// given already, at the same place with the same bytes, is that value again, as
+// when each unit INCLUDEs one declaration, so it is no error, and it leaves its
+// unit's list: the block has one image, with one value per byte (ours; each unit
+// of VAX FORTRAN's own was a module, and LINK kept the last). Whether two
+// separately compiled modules may differ is LINK's business too.
 func checkCommonInitials(prog *Program, messages *diag.List) {
 	blocks := map[string][]*Initial{}
 
 	var names []string
+
+	dropRepeatedInitials(prog)
 
 	for _, u := range prog.Units {
 		for _, in := range u.Initials {
@@ -780,6 +786,46 @@ func checkCommonInitials(prog *Program, messages *diag.List) {
 
 	for _, name := range names {
 		reportTwice(blocks[name], messages)
+	}
+}
+
+// dropRepeatedInitials takes out of each unit's list the common block values an
+// earlier unit gives identically. Only the first of a unit's own repeats goes: a
+// unit that says the same thing twice has given two values, as it has in $LOCAL.
+func dropRepeatedInitials(prog *Program) {
+	type value struct {
+		psect  string
+		offset int
+		bytes  string
+	}
+
+	seen := map[value]bool{}
+
+	for _, u := range prog.Units {
+		mine := map[value]bool{}
+		kept := u.Initials[:0:0]
+
+		for _, in := range u.Initials {
+			if in.Sym.Common == nil {
+				kept = append(kept, in)
+
+				continue
+			}
+
+			v := value{in.Sym.Common.Psect, in.Offset, string(in.Bytes)}
+
+			if !seen[v] || mine[v] {
+				kept = append(kept, in)
+			}
+
+			mine[v] = true
+		}
+
+		u.Initials = kept
+
+		for v := range mine {
+			seen[v] = true
+		}
 	}
 }
 

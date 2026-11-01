@@ -172,7 +172,8 @@ gets the structure's `Initial`s at its offset, every element of a
 record array likewise; overlaps from a union aren't DATATWICE, and
 later ones replace earlier ones. A record's initial values are DATA's
 for the COMMON rules Phase 76 chose (a named block, in any unit, once
-per byte across the file's units).]
+per byte across the file's units; since the author's review of subtask 4, a
+value repeated identically by another unit counts as one).]
 
 **RECORD (4.13).** `RECORD /s/ list[, /s/ list]...`, list items
 variables, arrays, or array declarators. Record names may be in COMMON
@@ -679,6 +680,12 @@ further Alpha-era directive; out, unless the author wants it.
   names one); a record goes to no dummy but a record of its form, a byte array included,
   except by `%VAL` or `%DESCR`, which say how the argument goes; a field's array bounds
   count in a form only as extents; a record longer than 65,535 bytes overlapping itself
-  through a union moves in undefined order. By the survey's rule, a structure with
-  initial values whose records share a named block in two units of one file is DATATWICE,
-  even with the same values; a program that INCLUDEs one will meet it.
+  through a union moves in undefined order.
+- **2026-11-01:** The author's review of subtask 4: identical initial values may be
+  repeated, so that a definition can be INCLUDEd in each unit. `dropRepeatedInitials`
+  (`sema/data.go`) takes out of a unit's list a common block value an earlier unit of the
+  file gives at the same place with the same bytes, so DATATWICE doesn't see it and the
+  block's one image has one value per byte, which `writeInitials` depends on. It covers
+  DATA and type statements' values as well as a structure's, whatever the names. Values
+  that differ, overlap in another shape (an INTEGER\*4 over an INTEGER\*2, even of equal
+  bytes), or repeat within one unit are still DATATWICE. Choices of ours, unconfirmed.

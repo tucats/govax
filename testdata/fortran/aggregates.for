@@ -32,6 +32,8 @@ C     a record too long for one MOVC3.
       RECORD /GROUP/ G
       RECORD /SHARED/ S
       COMMON /BLK/ S
+      COMMON /PLAIN/ K1, K2
+      DATA K1 /3/, K2 /4/
       INTEGER I, J, TOTAL, COUNTQ, SUMTAB
       INTEGER*4 ADDR1, ADDR2
       CHARACTER*6 TXT
@@ -90,10 +92,12 @@ C     %LOC and %REF of a whole record.
       PRINT *, TWO.QTY(2)
       PRINT *, SIZEOF(ONE), SIZEOF(STOCK), SIZEOF(ONE.WHEN),
      1  SIZEOF(STOCK(1)), SIZEOF(ONE.QTY), SIZEOF(G.DATES)
-C     A record in COMMON, with its structure's initial values.
+C     A record in COMMON, with its structure's initial values, which BUMP's
+C     declaration repeats, and DATA it repeats too.
       PRINT *, S.COUNT, S.LABEL, '|'
       CALL BUMP
       PRINT *, S.COUNT, S.LABEL, '|'
+      PRINT *, K1, K2
 C     Unformatted I/O: a record, an element, a substructure, an array of
 C     records, and an array field, in one I/O record.
       OPEN (UNIT=1, FILE='AGG.DAT', STATUS='NEW', FORM='UNFORMATTED')
@@ -228,11 +232,13 @@ C     and its array field as a whole.
 
       SUBROUTINE BUMP
       STRUCTURE /QQ/
-        INTEGER*4 N
-        CHARACTER*4 L
+        INTEGER*4 N /7/
+        CHARACTER*4 L /'BLK '/
       END STRUCTURE
       RECORD /QQ/ Q
       COMMON /BLK/ Q
+      COMMON /PLAIN/ K1, K2
+      DATA K1 /3/, K2 /4/
       Q.N = Q.N + 1
       Q.L = 'BUMP'
       END
