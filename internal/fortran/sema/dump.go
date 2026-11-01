@@ -288,7 +288,7 @@ func stmtText(list []Stmt) string {
 	return fmt.Sprintf("%T", list[0])
 }
 
-// dumpFile shows OPEN or CLOSE: the unit, and each keyword as its code's
+// dumpFile shows OPEN, CLOSE, or INQUIRE: the unit, and each keyword as its code's
 // name and value.
 func dumpFile(s *FileStmt) string {
 	var control []string
@@ -303,6 +303,8 @@ func dumpFile(s *FileStmt) string {
 			control = append(control, k.Name+"="+strconv.Itoa(k.Number))
 		case k.Value != nil:
 			control = append(control, k.Name+"="+DumpExpr(k.Value))
+		case k.Answer != nil:
+			control = append(control, k.Name+"="+DumpExpr(k.Answer))
 		default:
 			control = append(control, k.Name+"="+DumpExpr(k.Text))
 		}

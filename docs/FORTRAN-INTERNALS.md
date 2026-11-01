@@ -1775,6 +1775,34 @@ and ends by calling FTN$IO_END, so its failures are signaled or returned as ever
 statement's are. The one difference is the user PC in the signal, the PC FTN$OPEN returns
 to rather than FTN$IO_END's, which the context carries (`CTX_USERPC`).
 
+### INQUIRE: the statement that can't fail
+
+INQUIRE is one call too, `FTN$INQUIRE` (`ftn_inquire.mar`), but with no unit argument,
+since it may ask by file: its unit is a keyword, code 1. Its answers are keywords as well,
+each followed by where to store it. The compiler knows the place's width and the run-time
+library doesn't, so the keyword's mechanism says: a byte, a word, or a longword for a
+number or logical, and a descriptor for a text.
+
+```text
+INQUIRE (FILE=F, EXIST=L, NUMBER=N2, NAME=T)
+
+  call FTN$INQUIRE($IO1, 1806, <descriptor of F>, 1310, L, 800, N2, 1058, <descriptor of T>)
+```
+
+VMS's INQUIRE never reports a failure. A unit that can't exist, or a name that can't be
+one, is an answer like any other. So this one statement needs no context and never signals:
+R0 is 0, and the compiler's code for IOSTAT= stores it as always. That also lets the routine
+work in two steps, which is worth copying: it first works out every answer into a table
+with a longword for each code, then walks the keywords and stores what was asked. Which
+specifiers a program wrote, and in what order, can't change what any of them says.
+
+Asking by name is a small lesson in RMS: `$PARSE` says whether it can be a name (and a
+wildcard can't), `$SEARCH` says whether the file is there, and the resultant name, version
+and all, is compared with each connected unit's. Only a file no unit has is opened, shared,
+to read its attributes; it is closed again, and a last `$PARSE` given a bad default name ends
+any search the first began, which is how VMS's library does it, and why RMS must leave
+a NAM's answers alone when it can't read a string.
+
 ### Errors: one status, three ways to take it
 
 An I/O error is found deep inside a statement: in an item's conversion, in RMS, in

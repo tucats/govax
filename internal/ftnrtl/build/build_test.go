@@ -39,7 +39,7 @@ func TestImage(t *testing.T) {
 	}
 
 	image, ok := src.Image(ftnrtl.Name)
-	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 10 {
+	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 11 {
 		t.Errorf("image %+v", image)
 	}
 

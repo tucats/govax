@@ -392,6 +392,13 @@ type nameInputs struct {
 	// NoConceal is NAM$V_NOCONCEAL: show a concealed device's
 	// translation rather than its logical name.
 	NoConceal bool
+
+	// BadString is RMS$_FNA or RMS$_DNA when the file name's or default
+	// name's string can't be read, and 0 otherwise. A status, not a fault:
+	// RMS checks a program's strings. FORRTL's INQUIRE gives a $PARSE an
+	// address of 0 with a length, to end the search it was in, and doesn't
+	// look at the status, so which one VMS gives is unconfirmed.
+	BadString uint32
 }
 
 // FNB bits.
@@ -531,6 +538,10 @@ func mergeName(f, def fileName) (fileName, uint32) {
 // has no device) is a search list. On failure it returns the RMS status
 // instead.
 func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
+	if in.BadString != 0 {
+		return nil, in.BadString
+	}
+
 	db := ctx.Logicals
 
 	primaries, sts := translateName(db, in.Primary)

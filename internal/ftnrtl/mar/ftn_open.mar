@@ -37,7 +37,9 @@ UB_BLANK	= 38
 UB_DISPOSE	= 39
 UB_READONLY	= 40
 UB_SCRATCH	= 41
-UB_FAB		= 72
+UB_SEGMENTED	= 42
+UB_NEXTREC	= 44
+UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
@@ -307,6 +309,7 @@ CHOICE:	MOVZWL	(R1),R2			; the text's length
 ; value less the blanks at its end, or a numeric place's ASCII up to a NUL (9.1.11).
 ; R0 returns its length and R1 its address.
 ;
+FTN$$NAME_TEXT::
 NAME_TEXT:
 	CMPB	2(R1),#DSC$K_DTYPE_T
 	BNEQ	20$
@@ -553,16 +556,18 @@ SETUP:	PUSHL	R7
 	BNEQ	25$
 	MOVL	#DEFAULT_RECL,R4
 	BRB	25$
-20$:	TSTL	R4
+20$:	TSTL	OPS_TYPE(R11)		; unformatted: segmented unless it says
+	BEQL	21$
+	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
 	BNEQ	22$
+21$:	MOVB	#1,UB_SEGMENTED(R7)
+22$:	TSTL	R4
+	BNEQ	23$
 	MOVL	#DEFAULT_SEG,R4
 	BRB	25$
-22$:	ASHL	#2,R4,R4
-	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
-	BEQL	23$
-	TSTL	OPS_TYPE(R11)
-	BNEQ	25$
-23$:	ADDL2	#2,R4
+23$:	ASHL	#2,R4,R4
+	BLBC	UB_SEGMENTED(R7),25$
+	ADDL2	#2,R4
 25$:	MOVL	R4,UB_SIZE(R7)
 	;
 	; The record format and carriage control.
@@ -622,6 +627,7 @@ SETUP:	PUSHL	R7
 	BICL2	#FAB$M_NEF,FAB$L_FOP(R6)
 37$:	BSBW	KEYLIKE
 	BNEQ	39$
+	MOVL	#1,UB_NEXTREC(R7)
 	MOVB	#RAB$C_KEY,RAB$B_RAC(R10)
 	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
 	BNEQ	39$
@@ -661,7 +667,10 @@ SETUP:	PUSHL	R7
 ; them must agree.
 ;
 EXISTING:
-	MOVZBL	FAB$B_ORG(R6),R0
+	CMPB	FAB$B_RFM(R6),#FAB$C_VAR ; only variable-length records have segments
+	BEQL	5$
+	CLRB	UB_SEGMENTED(R7)
+5$:	MOVZBL	FAB$B_ORG(R6),R0
 	BEQL	10$
 	MOVL	#FOR$_NOTIMP,R2		; relative or indexed: not here yet
 	TSTL	OPS_ORG(R11)

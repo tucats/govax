@@ -3,7 +3,7 @@
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
 done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
-same day; subtask 4, OPEN and CLOSE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
+same day; subtask 4, OPEN and CLOSE, the same day; subtask 5, INQUIRE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -1037,3 +1037,36 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     `STATUS=''`, which faulted in VMS's FOR$OPEN, is KEYVALERR, and a FORTRAN program can't write it
     as a constant; the compile-time rules (OPENCONFLICT, NEEDRECL) are FORRTL's run-time ones, as
     the survey proposed, since no VAX FORTRAN compiler is here to ask.
+- **2026-10-31, subtask 5, INQUIRE.** `FTN$INQUIRE` (`ftn_inquire.mar`, offset 408, GSMATCH
+  1,11), `sema/fileio.go`'s `inquireKeywords` and `fileAnswer`, `ir`'s `fileAnswer`.
+  `TestFor81InquireOracle` holds 25 of the probe's cases (#474 to #509) to VMS's answers, every
+  specifier; `testdata/fortran/inquire.for` is the rest, by these rules, and its output was
+  read against them by hand. New messages: INQUIREBOTH, INQUIRENONE, KEYPLACE.
+  - **It takes no context and can't fail,** as VMS's never reported one, so R0 is 0 and IOSTAT=
+    stores it. Its unit is keyword 1, since it may ask by file. Decision 4 otherwise stands.
+  - **What a fourth trial added, FORRTL over govax (`SET DEBUG RMS`; not kept).** A unit is not
+    connected by INQUIRE: units 5 and 6 say OPENED false before their first use, or after a
+    CLOSE, so the probe's #476 and #477 had connected them earlier. Units -1 to -5 are as an
+    invalid unit, even once connected. By a name, FORRTL does `$PARSE` with default name `.DAT`
+    (not the unit's FORnnn.DAT), `$SEARCH`, `$OPEN` with FAC GET, SHR 4F, a NAM and an XABFHC,
+    `$CLOSE`, then a `$PARSE` with FAB$L_DNA 0, DNS not 0, and the NAM's strings cleared, ending
+    the search. A closed file's RECL is MRS, or the longest record with none. `[NOSUCH]A.DAT` is
+    `$PARSE`'s DNF, so NAMED false, as written.
+  - **RMS:** that last `$PARSE` faulted over govax. A file name or default name it can't read is
+    now RMS$_FNA or RMS$_DNA (`nameInputs.BadString`), and `$PARSE` leaves the NAM's answers.
+  - **The unit's block** gained UB_SEGMENTED, an unformatted unit's with no other RECORDTYPE, and
+    UB_NEXTREC, 1 on a direct unit (subtask 8 moves it). An existing VAR file opened unformatted
+    answers SEGMENTED as a new one does (unconfirmed for an existing one); any other keeps its
+    own type, and RECL is its record size in longwords.
+  - **Left:** CONVERT= (11), which the parser doesn't take in INQUIRE yet; relative files' answers
+    (#491, #492) with subtask 10; #507's NEXTREC moving, 8; #508's unit with no OPEN, 7.
+  - **Open.** FORRTL's by-name NAME comes back blank over govax, where VMS's run shows the full
+    name (#479), so something in RMS's NAM differs from VMS's. FTNRTL isn't affected, and this
+    wasn't found; a later subtask running FORRTL may need it.
+  - **Unconfirmed, govax's choices.** INQUIRE by both a unit and a file is a compile-time error,
+    where FOR$INQUIRE answers for the file (#485; the LRM has only the two forms). An open file is
+    found by its whole resultant name, so another version of it answers as closed. A file that
+    exists but can't be opened answers EXIST and NAME only. Blanks after a name are dropped, as
+    FORTRAN's character values need, where FORRTL over govax took `for013.dat   ` as a bad name,
+    which may be govax's `$PARSE`. A closed VFC file's RECORDTYPE is UNKNOWN, an indexed file's
+    KEYED YES and DIRECT NO, and DEFAULTFILE= alone with a name that won't parse leaves NAME blank.

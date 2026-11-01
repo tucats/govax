@@ -62,7 +62,7 @@
 ; Image exit closes every unit by its disposition, through an exit handler
 ; declared when the first unit is connected (Decision 12).
 ;
-; FTN_OPEN uses this block too, and defines its fields the same:
+; FTN_OPEN and FTN_INQUIRE use this block too, and define its fields the same:
 ;
 	$DEVDEF				; the device's characteristics
 	$FABDEF				; the FAB's fields
@@ -88,9 +88,11 @@ UB_BLANK	= 38			; byte: 1 ZERO, 2 NULL
 UB_DISPOSE	= 39			; byte: 1 KEEP to 6 SUBMIT/DELETE
 UB_READONLY	= 40			; byte: 1 for READONLY
 UB_SCRATCH	= 41			; byte: 1 for STATUS='SCRATCH'
-UB_FNA		= 44			; the default file name's text
-UB_DNA		= 56			; the default default name's text
-UB_FAB		= 72
+UB_SEGMENTED	= 42			; byte: 1 for unformatted segmented records
+UB_NEXTREC	= 44			; long: the next direct record, or 0 (INQUIRE)
+UB_FNA		= 48			; the default file name's text
+UB_DNA		= 60			; the default default name's text
+UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_NAM		= UB_RAB+RAB$C_BLN
 UB_XAB		= UB_NAM+NAM$C_BLN
@@ -265,6 +267,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVB	#1,UB_DISPOSE(R6)
 	CLRB	UB_READONLY(R6)
 	CLRB	UB_SCRATCH(R6)
+	CLRB	UB_SEGMENTED(R6)
+	CLRL	UB_NEXTREC(R6)
 	;
 	; The default names. R7 is the unit.
 	;
@@ -572,6 +576,44 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	MOVL	#1,R0
 	RET
 80$:	CLRL	R0
+	RET
+
+;
+; FTN$$UNIT_BLOCK(unit)
+;
+; R0 is the block of the unit numbered unit (by value, from 0 to 119) if it is
+; connected, and otherwise 0: unlike FTN$$UNIT_FIND, it makes nothing.
+;
+	.ENTRY	FTN$$UNIT_BLOCK,^M<>
+	MOVL	4(AP),R1
+	MOVL	UNITS+16[R1],R0
+	BEQL	10$
+	BLBS	UB_OPEN(R0),10$
+	CLRL	R0
+10$:	RET
+
+;
+; FTN$$UNIT_NAMED(name, length)
+;
+; R0 is the block of the unit from 0 to 119 that has the file open whose
+; resultant name, version and all, is given, and otherwise 0.
+;
+	.ENTRY	FTN$$UNIT_NAMED,^M<R2,R3,R4,R5,R6,R7>
+	MOVAL	UNITS+<4*4>,R6		; unit 0
+	MOVL	#UNIT_HIGH+1,R7
+10$:	MOVL	(R6)+,R2
+	BEQL	20$
+	BLBC	UB_OPEN(R2),20$
+	MOVZBL	UB_NAM+NAM$B_RSL(R2),R0
+	CMPL	R0,8(AP)
+	BNEQ	20$
+	MOVL	R2,R3			; CMPC3 changes R0 to R3
+	CMPC3	R0,@4(AP),UB_RSA(R3)
+	BNEQ	20$
+	MOVL	-4(R6),R0
+	RET
+20$:	SOBGTR	R7,10$
+	CLRL	R0
 	RET
 
 ;

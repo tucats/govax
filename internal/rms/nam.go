@@ -93,7 +93,9 @@ func fabNames(ctx *Context, fab, nam uint32) (nameInputs, error) {
 
 	fn, err := loadFileSpecString(ctx, fab)
 	if err != nil {
-		return in, err
+		in.BadString = vmsConst("RMS$_FNA")
+
+		return in, nil
 	}
 
 	dns, err := ctx.loadByte(fab + fabDNS)
@@ -110,7 +112,9 @@ func fabNames(ctx *Context, fab, nam uint32) (nameInputs, error) {
 
 	if dns > 0 {
 		if dn, err = ctx.loadFixedString(dna, int(dns)); err != nil {
-			return in, err
+			in.BadString = vmsConst("RMS$_DNA")
+
+			return in, nil
 		}
 	}
 

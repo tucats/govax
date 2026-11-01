@@ -386,3 +386,40 @@ func TestManyVersions(t *testing.T) {
 		service(t, f.ctx, SysClose, testFabAddr)
 	}
 }
+
+// TestParseBadStrings: $PARSE of a string it can't read is a status and leaves
+// the NAM's answers, which is how FORRTL's INQUIRE ends a search.
+func TestParseBadStrings(t *testing.T) {
+	f := newCreateFixture(t, true)
+	ctx := f.ctx
+
+	putByte(t, ctx, testFabAddr+fabBID, fabBIDValue)
+	putByte(t, ctx, testFabAddr+fabBLN, fabBLNValue)
+	newFAB(t, ctx, "DUA0:OK.DAT")
+	putByte(t, ctx, testNamAddr+namBID, namBIDValue)
+	putByte(t, ctx, testNamAddr+namBLN, namBLNValue)
+	putLongwordAt(t, ctx, testNamAddr+namESA, testESAAddr)
+	putByte(t, ctx, testNamAddr+namESS, 255)
+	putLongwordAt(t, ctx, testFabAddr+fabNAM, testNamAddr)
+	wantSts(t, "a good name", service(t, ctx, SysParse, testFabAddr), rmsNormal)
+
+	esl := readByte(t, ctx, testNamAddr+namESL)
+	if esl == 0 {
+		t.Fatal("no expanded name from the first $PARSE")
+	}
+
+	// Past this test's memory, as page 0 is in a process's.
+	const unreadable = 0x3FFFFFF0
+
+	putLongwordAt(t, ctx, testFabAddr+fabDNA, unreadable)
+	putByte(t, ctx, testFabAddr+fabDNS, 1)
+	wantSts(t, "no default name", service(t, ctx, SysParse, testFabAddr), vmsConst("RMS$_DNA"))
+
+	if got := readByte(t, ctx, testNamAddr+namESL); got != esl {
+		t.Errorf("ESL is %d after it, want %d", got, esl)
+	}
+
+	putByte(t, ctx, testFabAddr+fabDNS, 0)
+	putLongwordAt(t, ctx, testFabAddr+fabFNA, unreadable)
+	wantSts(t, "no name", service(t, ctx, SysParse, testFabAddr), vmsConst("RMS$_FNA"))
+}

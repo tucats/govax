@@ -644,7 +644,16 @@ func TestErrors(t *testing.T) {
 		// yet (Phase 76): statements, reported where they are, and the
 		// forms inside statements, reported where analysis reaches them.
 		{"a REWRITE statement", []string{"REWRITE (1) X", "END"}, "NOTIMPL@1:7"},
-		{"an INQUIRE statement", []string{"INQUIRE (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"a BACKSPACE statement", []string{"BACKSPACE (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"an INQUIRE by unit", []string{"LOGICAL L", "CHARACTER*8 C", "INTEGER*2 N", "INQUIRE (1, EXIST=L, NAME=C, NUMBER=N)", "END"}, ""},
+		{"an INQUIRE by file", []string{"LOGICAL L", "INQUIRE (FILE='X', DEFAULTFILE='.Y', OPENED=L, ERR=9, IOSTAT=I)", "9 END"}, ""},
+		{"an INQUIRE of a default name alone", []string{"LOGICAL L", "INQUIRE (DEFAULTFILE='X.Y', OPENED=L)", "END"}, ""},
+		{"an INQUIRE of both", []string{"INQUIRE (1, FILE='X')", "END"}, "INQUIREBOTH@1:7"},
+		{"an INQUIRE of neither", []string{"LOGICAL L", "INQUIRE (EXIST=L)", "END"}, "INQUIRENONE@2:7"},
+		{"an INQUIRE's answer of the wrong type", []string{"INTEGER I", "INQUIRE (1, EXIST=I)", "END"}, "KEYPLACE@2:19"},
+		{"an INQUIRE's answer that isn't a place", []string{"LOGICAL L", "INQUIRE (1, NAME='X', EXIST=L)", "END"}, "KEYPLACE@2:19"},
+		{"an INQUIRE's number of the wrong type", []string{"REAL X", "INQUIRE (1, RECL=X)", "END"}, "KEYPLACE@2:19"},
+		{"an INQUIRE asking twice", []string{"LOGICAL L", "INQUIRE (1, EXIST=L, EXIST=L)", "END"}, "DUPSPECIFIER@2:28"},
 		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
 		{"a logical IF's REWIND", []string{"IF (X .GT. 0) REWIND 1", "END"}, "NOTIMPL@1:21"},
 

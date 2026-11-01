@@ -18,24 +18,39 @@ import (
 // its value. The codes and the mechanisms are VMS's FORTRAN run-time
 // library's, as far as FTNRTL needs them: 4 for the value itself, 7 for a
 // descriptor's address.
+//
+// INQUIRE has no unit argument, since it may ask by file: its unit is a
+// keyword, code 1. Its answers are keywords too, each followed by where to
+// store it: by the place's width for a number or logical, and a descriptor's
+// address for a text, which FORRTL gives mechanism 4.
 const (
+	mechanismWord       = 3
 	mechanismValue      = 4
+	mechanismLong       = 5
 	mechanismDescriptor = 7
+	mechanismByte       = 10
 )
 
-// fileStatement lowers OPEN or CLOSE.
+// fileStatement lowers OPEN, CLOSE, or INQUIRE.
 func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	c := controlFor(s.Err, 0, s.IOStat)
+	kind := s.AST.Base().Kind
 
-	var unit Expr = LongConst(0)
-	if s.Unit != nil {
-		unit = l.expr(s.Unit)
+	args := []Arg{{Ref: l.control(c)}}
+
+	if kind != lex.Inquire {
+		var unit Expr = LongConst(0)
+		if s.Unit != nil {
+			unit = l.expr(s.Unit)
+		}
+
+		args = append(args, Arg{Value: unit})
 	}
-
-	args := []Arg{{Ref: l.control(c)}, {Value: unit}}
 
 	for _, k := range s.Keys {
 		switch {
+		case k.Answer != nil:
+			args = append(args, l.fileAnswer(k)...)
 		case k.Known:
 			args = append(args, keyword(k.Code, mechanismValue), Arg{Value: LongConst(int32(k.Number))})
 		case k.Value != nil:
@@ -46,11 +61,35 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	}
 
 	routine := "FTN$OPEN"
-	if s.AST.Base().Kind == lex.Close {
+
+	switch kind {
+	case lex.Close:
 		routine = "FTN$CLOSE"
+	case lex.Inquire:
+		routine = "FTN$INQUIRE"
 	}
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)
+}
+
+// fileAnswer is the two arguments of one of INQUIRE's answers.
+func (l *lowerer) fileAnswer(k *sema.FileKey) []Arg {
+	t := k.Answer.Type()
+
+	if t.Kind == sema.Character {
+		return []Arg{keyword(k.Code, mechanismValue), {Ref: l.item(k.Answer)}}
+	}
+
+	mechanism := mechanismLong
+
+	switch t.Size {
+	case 1:
+		mechanism = mechanismByte
+	case 2:
+		mechanism = mechanismWord
+	}
+
+	return []Arg{keyword(k.Code, mechanism), {Ref: l.mem(k.Answer)}}
 }
 
 // keyword is a keyword's first argument: its code and mechanism.

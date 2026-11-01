@@ -681,6 +681,15 @@ var messages = map[string]kind{
 	// RECL= (Table 9-3).
 	"NEEDRECL": {Error, "%s needs RECL= for a new file"},
 
+	// INQUIREBOTH and INQUIRENONE are an INQUIRE that doesn't ask by a unit
+	// or by a file, the two forms of section 9.3.
+	"INQUIREBOTH": {Error, "an INQUIRE asks by a unit or by FILE=, not both"},
+	"INQUIRENONE": {Error, "an INQUIRE needs a unit, FILE=, or DEFAULTFILE="},
+
+	// KEYPLACE is an INQUIRE specifier that doesn't name a place of the
+	// type its answer has.
+	"KEYPLACE": {Error, "%s= must name a place to store %s value"},
+
 	// BADCOUNT is an ENCODE or DECODE count that isn't an INTEGER
 	// expression (appendix A.1).
 	"BADCOUNT": {Error, "%s's count of characters must be an INTEGER expression"},

@@ -523,7 +523,10 @@ never had.
   OPEN and CLOSE: `sema/fileio.go` (keywords as VMS's FORRTL's codes), `ir/lowerfile.go`,
   FTNRTL's unit table (`ftn_units.mar`: a block per unit, each its own FAB, the default names,
   the exit handler, the record in the unit's buffer) and `ftn_open.mar`, held to VMS by
-  `TestFor81OpenOracle` and `testdata/fortran/files.for`.
+  `TestFor81OpenOracle` and `testdata/fortran/files.for`, and subtask 5 (2026-10-31) INQUIRE:
+  `FTN$INQUIRE` (`ftn_inquire.mar`, no context, never failing; each answer's place by a
+  keyword's mechanism, `ir`'s `fileAnswer`), held to VMS by `TestFor81InquireOracle` and
+  `testdata/fortran/inquire.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2072,7 +2075,7 @@ expect adjustment as phases land):
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the unit table, units -4 to 119, each with its own FAB
-  (Phase 81); `ftn_open.mar`, OPEN and CLOSE, Phase 81;
+  (Phase 81); `ftn_open.mar`, OPEN and CLOSE, and `ftn_inquire.mar`, INQUIRE, Phase 81;
   `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
   editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and

@@ -22,6 +22,9 @@ const (
 	nameKeyword                      // a file's name: a character value, or a numeric place
 	flagKeyword                      // nothing: READONLY
 	keysKeyword                      // KEY's list
+	numberAnswer                     // INQUIRE's: an INTEGER place to store in
+	logicalAnswer                    // a LOGICAL place
+	textAnswer                       // a CHARACTER place
 )
 
 // fileKeyword is one keyword's entry: its code, its kind, and for a choice
@@ -97,9 +100,38 @@ var closeKeywords = map[string]fileKeyword{
 	"DISP":    {code: codeDispose, kind: choiceKeyword, choices: disposeChoice},
 }
 
-// FileStmt is OPEN or CLOSE (by its AST's kind): the unit, an INTEGER*4
-// value, nil for an OPEN with no UNIT= (FORRTL's unit 0); its keywords, in
-// order; and ERR= and IOSTAT=, as IO's.
+// inquireKeywords are INQUIRE's (section 9.3): the file's name, and what it
+// asks, each answer's code FORRTL's.
+var inquireKeywords = map[string]fileKeyword{
+	"FILE":            {code: 14, kind: nameKeyword},
+	"DEFAULTFILE":     {code: 26, kind: nameKeyword},
+	"EXIST":           {code: 30, kind: logicalAnswer},
+	"OPENED":          {code: 31, kind: logicalAnswer},
+	"NUMBER":          {code: 32, kind: numberAnswer},
+	"NAMED":           {code: 33, kind: logicalAnswer},
+	"NAME":            {code: 34, kind: textAnswer},
+	"ACCESS":          {code: 35, kind: textAnswer},
+	"SEQUENTIAL":      {code: 36, kind: textAnswer},
+	"DIRECT":          {code: 37, kind: textAnswer},
+	"FORM":            {code: 38, kind: textAnswer},
+	"FORMATTED":       {code: 39, kind: textAnswer},
+	"UNFORMATTED":     {code: 40, kind: textAnswer},
+	"RECL":            {code: 41, kind: numberAnswer},
+	"NEXTREC":         {code: 42, kind: numberAnswer},
+	"BLANK":           {code: 43, kind: textAnswer},
+	"ORGANIZATION":    {code: 44, kind: textAnswer},
+	"RECORDTYPE":      {code: 45, kind: textAnswer},
+	"KEYED":           {code: 46, kind: textAnswer},
+	"CARRIAGECONTROL": {code: 47, kind: textAnswer},
+}
+
+// codeUnit is the keyword INQUIRE passes its unit by, since by file it has none.
+const codeUnit = 1
+
+// FileStmt is OPEN, CLOSE, or INQUIRE (by its AST's kind): the unit, an
+// INTEGER*4 value, nil for an OPEN with no UNIT= (FORRTL's unit 0) and for
+// INQUIRE, whose unit is a keyword; its keywords, in order; and ERR= and
+// IOSTAT=, as IO's.
 type FileStmt struct {
 	stmtBase
 	Unit   Expr
@@ -109,18 +141,20 @@ type FileStmt struct {
 }
 
 // FileKey is one keyword: its code, and its value: Number, a number known
-// now (a choice's, or a flag's 1); Value, an INTEGER*4 expression; or Text,
-// a character value or a numeric place holding a name.
+// now (a choice's, or a flag's 1); Value, an INTEGER*4 expression; Text, a
+// character value or a numeric place holding a name; or Answer, the place
+// INQUIRE stores its answer in.
 type FileKey struct {
 	Code   int
 	Name   string
 	Number int
 	Value  Expr
 	Text   Expr
+	Answer Expr
 	Known  bool
 }
 
-// fileStatement analyzes OPEN and CLOSE (sections 9.1, 9.2).
+// fileStatement analyzes OPEN, CLOSE, and INQUIRE (sections 9.1 to 9.3).
 func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	st := &FileStmt{stmtBase: stmtBase{s}}
 	ok := true
@@ -147,8 +181,12 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	}
 
 	keywords := openKeywords
-	if s.Kind == lex.Close {
+
+	switch s.Kind {
+	case lex.Close:
 		keywords = closeKeywords
+	case lex.Inquire:
+		keywords = inquireKeywords
 	}
 
 	var control []*ast.IOSpec
@@ -203,6 +241,10 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		st.Keys = append(st.Keys, openDefaults(byCode)...)
 	}
 
+	if s.Kind == lex.Inquire && !a.inquireTarget(s, st, byCode) {
+		ok = false
+	}
+
 	if !ok {
 		return nil
 	}
@@ -210,11 +252,73 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	return st
 }
 
+// inquireTarget checks that an INQUIRE asks by a unit or by a file, the two
+// forms of section 9.3, and makes its unit a keyword. FORRTL takes a statement
+// with both, and answers for the file (testdata/for81, #485), but the manual
+// has no such form.
+func (a *analyzer) inquireTarget(s *ast.AuxIOStmt, st *FileStmt, keys map[int]*FileKey) bool {
+	byFile := keys[inquireKeywords["FILE"].code] != nil || keys[inquireKeywords["DEFAULTFILE"].code] != nil
+
+	switch {
+	case s.Unit != nil && byFile:
+		a.report("INQUIREBOTH", s.Pos)
+
+		return false
+	case s.Unit == nil && !byFile:
+		a.report("INQUIRENONE", s.Pos)
+
+		return false
+	}
+
+	if st.Unit != nil {
+		st.Keys = append([]*FileKey{{Code: codeUnit, Name: "UNIT", Value: st.Unit}}, st.Keys...)
+		st.Unit = nil
+	}
+
+	return true
+}
+
+// fileAnswer analyzes a place INQUIRE stores an answer in.
+func (a *analyzer) fileAnswer(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool) {
+	want, what := Integer, "an INTEGER"
+
+	switch k.kind {
+	case logicalAnswer:
+		want, what = Logical, "a LOGICAL"
+	case textAnswer:
+		want, what = Character, "a CHARACTER"
+	}
+
+	v := a.place(spec.Value, false)
+
+	switch {
+	case v == nil:
+		a.report("KEYPLACE", spec.Pos, spec.Keyword, what)
+
+		return nil, false
+	case v.Type().Kind == Invalid:
+		return nil, false
+	case v.Type().Kind != want:
+		a.report("KEYPLACE", spec.Pos, spec.Keyword, what)
+
+		return nil, false
+	}
+
+	if x, isVar := v.(*Var); isVar {
+		a.checkLoopVariable(x.Sym, x.Pos)
+	}
+
+	return &FileKey{Code: k.code, Name: spec.Keyword, Answer: v}, true
+}
+
 // fileKeyword analyzes one keyword's value.
 func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool) {
 	key := &FileKey{Code: k.code, Name: spec.Keyword}
 
 	switch k.kind {
+	case numberAnswer, logicalAnswer, textAnswer:
+		return a.fileAnswer(spec, k)
+
 	case flagKeyword, keysKeyword:
 		// KEY='s list is the indexed program's: FTNRTL only needs to know
 		// there is one (Decision 13).

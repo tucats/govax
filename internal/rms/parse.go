@@ -89,6 +89,13 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return 0, 0, err
 	}
 
+	// A string it can't read ends the search the NAM was in and leaves the
+	// NAM's answers there: FORRTL's INQUIRE ends each search this way, then
+	// reads the name $SEARCH left (testdata/for81, #479).
+	if in.BadString != 0 {
+		return in.BadString, 0, ctx.releaseSearch(nam)
+	}
+
 	// What a $PARSE writes starts clear; a name that isn't well formed
 	// leaves it so (the oracle's PARSE case 10). The search the NAM was
 	// in, if any, goes with it.

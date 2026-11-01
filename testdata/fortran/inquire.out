@@ -1,0 +1,33 @@
+T F          19 F [    ] UNKNOWN                0           0           0
+F           0           0
+F           0
+F T           0 DUA1:[000000]MISSING.DAT;               
+F F OLD*.DAT                                
+F F NOSUCH:[X]Y.DAT                         
+F F A[B                                                0
+T T          10 T DUA1:[000000]INQ1.DAT;1                 
+SEQUENTIAL  YES         NO          
+FORMATTED   YES         YES         
+        133           0 NULL        SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+         10 T FORMATTED   
+         10
+T F           0 T DUA1:[000000]INQ1.DAT;1                 
+UNKNOWN     YES         NO          
+UNKNOWN     YES         YES         
+          9           0 UNKNOWN     SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+F DUA1:[000000]INQ1.XYZ;                  
+T
+F          19 [    ]
+YES                   20 FIXED       
+          5 UNFORMATTED UNKNOWN     FIXED       
+     4 T           1
+A BYTE IS TRUE
+DIRE UNFORMATTED  FIXED  
+F DUA1:[000000]FOR013.DAT;                         133
+F [    ]
+UNIT 6
+T T           6 SYS$OUTPUT:.;                           
+FORTRAN STOP
+  $STATUS == "%X00000001"
