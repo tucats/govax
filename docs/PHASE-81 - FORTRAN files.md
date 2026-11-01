@@ -891,6 +891,9 @@ other name FOR$_NOTIMP when the OPEN is done. (b) All of it, converting unformat
 each format: real work (FDX, FGX, IBM, CRAY floating), and a phase of its own. (c) Leave it
 out, as in the 1988 manual. **Recommended: (a).**
 
+**The author's answer (2026-10-31): (a).** OPEN takes the keyword and INQUIRE answers it, NATIVE
+works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does it.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (this Part A).
@@ -910,7 +913,8 @@ out, as in the 1988 manual. **Recommended: (a).**
 9. **RMS relative files** (and ods2 as needed), held to VMS's files.
 10. **FORTRAN on relative files:** DELETE, REWRITE, UNLOCK; indexed as
     NOTIMP.
-11. **USEROPEN, SHARED, READONLY**, and the remaining keywords.
+11. **USEROPEN, SHARED, READONLY**, CONVERT (NATIVE only, the author's answer), and the
+    remaining keywords.
 12. **End to end**, then the **close-out** (MANUAL.md's FORTRAN files
     section, FORTRAN-INTERNALS.md).
 
@@ -996,3 +1000,5 @@ out, as in the 1988 manual. **Recommended: (a).**
     at the end of the block holding the end of file; `$WRITE` zeros the rest of its last block,
     and `$READ` and `$WRITE` are tested only by unit tests, since VMS refused the probe's dumps
     with RMS$_UPI. RMS$_UPI is applied to FAB$V_BRO too.
+- **2026-10-31, CONVERT.** The author answered the question left by subtask 2: (a), the keyword
+  taken and INQUIRE answering it, NATIVE working, and any other name FOR$_NOTIMP at OPEN.
