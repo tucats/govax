@@ -1,7 +1,8 @@
 # Phase 82 — FORTRAN: DEC's data extensions
 
 **Status:** in progress: subtask 1, the survey (Part A below), done
-2026-11-01, awaiting the author's review. Needs Phase 79 (subprograms).
+2026-11-01 and reviewed by the author the same day ("The author's
+answers"). Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -457,8 +458,8 @@ further Alpha-era directive; out, unless the author wants it.
      records and commons.
    - **Natural boundaries** (ours, unconfirmed): an INTEGER, LOGICAL, or
      REAL its length, at most 8 under NATURAL and 4 under STANDARD (so
-     REAL\*16 at 8); a COMPLEX its part's (COMPLEX\*8 at 4, COMPLEX\*16
-     at 8); CHARACTER and BYTE 1; a substructure or union the largest of
+     REAL\*16 at 8); a COMPLEX at 16 under NATURAL (the author's answer
+     2; proposed was its part's); CHARACTER and BYTE 1; a substructure or union the largest of
      its fields'; an array its element's. Under RECORDS=NATURAL each
      field goes to its next boundary, and a structure's length is
      rounded up to its own boundary, so the elements of a record array
@@ -506,6 +507,28 @@ further Alpha-era directive; out, unless the author wants it.
    statement) also take `/ALIGN`, as a per-unit override? The HP
    manual's OPTIONS doesn't; recommended: no.
 
+## The author's answers (2026-11-01)
+
+1. **AUTOMATIC, STATIC, and VOLATILE: the HP manual's versions** (its
+   5.3 and 5.19), statement forms only. A later phase, not yet defined,
+   is to make routines really reentrant, and the frame area is
+   groundwork for it. VOLATILE is then the 1988 manual's 4.16 with the
+   HP manual's additions: a procedure, a function result, or a namelist
+   group can't be named (each an error), and a record's fields are
+   volatile with it. A function result can't be VOLATILE, so a
+   FUNCTION's name (or an ENTRY's in a function) in the list is an
+   error, which Decision 7 didn't say.
+2. **COMPLEX aligns on an octaword boundary** under NATURAL: COMPLEX\*8
+   and COMPLEX\*16 both at 16 (past the HP manual's "up to 64-bit",
+   by the author's choice). Under COMMONS=STANDARD ("up to 32-bit") a
+   COMPLEX is at 4. A structure or common block holding a COMPLEX under
+   NATURAL is then octaword-aligned: a block's psect is OCTA, and a
+   record's place in `$LOCAL` is a multiple of 16, which needs `$LOCAL`
+   OCTA-aligned in a unit where `/ALIGN` places such a record (subtask 8).
+   The rest of Decision 8 stands.
+3. **No `/ALIGN` on the OPTIONS statement.** The command qualifier and
+   the CDEC$ OPTIONS groups only.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (done 2026-11-01): Part A.
@@ -526,7 +549,7 @@ further Alpha-era directive; out, unless the author wants it.
    rule in both scanners, RADIX-50 tokens and their bytes, typing by
    context in expressions, assignments, arguments, and IFs; character
    constants in numeric contexts.
-6. **VOLATILE, and AUTOMATIC and STATIC** if question 1 says so: the
+6. **VOLATILE, AUTOMATIC, and STATIC** (the HP manual's, answer 1): the
    frame area, FP-relative cells, ENTRY's reservations, descriptors.
 7. **The CDEC$ directives:** IDENT, PSECT (with the cross-unit check),
    TITLE and SUBTITLE accepted.
@@ -560,3 +583,6 @@ further Alpha-era directive; out, unless the author wants it.
   `/CHECK`, `/EXTEND_SOURCE`, and `/F77` are Phase 85's, not this
   phase's (Phase 76's close-out said otherwise). Ten decisions, three
   questions; subtasks revised from seven to nine.
+- **2026-11-01:** The author's answers: AUTOMATIC, STATIC, and VOLATILE
+  by the HP manual (groundwork for a later reentrancy phase); COMPLEX on
+  octaword boundaries under `/ALIGN`; no `/ALIGN` on OPTIONS.
