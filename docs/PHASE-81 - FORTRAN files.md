@@ -1,10 +1,14 @@
 # Phase 81 — FORTRAN files
 
-**Status:** in progress: subtask 1, the survey, done 2026-10-31 and
+**Status:** done 2026-11-01. Subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
 done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
 same day; subtask 4, OPEN and CLOSE, the same day; subtask 5, INQUIRE, the same day; subtask 6,
-REWIND, BACKSPACE, and ENDFILE, the same day; subtask 7, unformatted sequential I/O, the same day.
+REWIND, BACKSPACE, and ENDFILE, the same day; subtask 7, unformatted sequential I/O, the same day;
+subtask 8, direct access, DEFINE FILE, and FIND, the same day; subtask 9, RMS relative files,
+2026-11-01; subtask 10, FORTRAN on relative files, subtask 11, USEROPEN and CONVERT, and subtask
+12, end to end and the close-out, the same day. "Where things stand", before the progress log,
+says what is left.
 Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
@@ -920,6 +924,37 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
 12. **End to end**, then the **close-out** (MANUAL.md's FORTRAN files
     section, FORTRAN-INTERNALS.md).
 
+## Where things stand
+
+Phase 81 is done: OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE, FIND,
+REWRITE, DELETE, and UNLOCK, unformatted and direct access I/O, units 0 to 119 with VMS's
+default names, sequential and relative files in govax's RMS laid out as VMS's, USEROPEN=,
+and the exit handler, held to VMS's FORRTL by `testdata/for81`'s three rounds
+(`TestFor81OpenOracle`, `...InquireOracle`, `...PositionOracle`, `...UnformattedOracle`,
+`...DirectOracle`, `...RelativeFortranOracle`, `...UserOpenOracle`) and RMS to VMS 7.1's
+files by `TestFor81RMSOracle` and `TestFor81RelativeOracle`; `testdata/fortran`'s `files`,
+`inquire`, `positions`, `unformatted`, `direct`, `relative`, `useropen`, and `ledger` are
+the rest. Left for later:
+
+- **Indexed files** (Decision 13, the author's choice in Phase 74's review): ORGANIZATION=
+  'INDEXED' and an indexed file found are FOR$_NOTIMP at OPEN, KEY= is taken and not used,
+  and the keyed READ (`FTN$READ_KF`, `_KU`) is OPEDEFREQ or NOTIMP. RMS has no indexed
+  organization yet.
+- **CONVERT=** other than NATIVE (the author's answer (a)): FOR$_NOTIMP.
+- **Host files:** FORTRAN's files are volume files (Answer 3); a host file comes in by COPY.
+- **Phase 83:** the system subroutines (EXIT, IDATE, RAN) and calling RTL routines and
+  services by name; a USEROPEN routine in FORTRAN already calls `SYS$CREATE`
+  (`testdata/fortran/useropen.for`).
+- **Phase 86:** DUNGEON, whose data base is a direct access file of fixed-length records,
+  as these statements now read it.
+- **Unconfirmed on VMS,** each a choice recorded in the progress log: the current record
+  after REWIND, BACKSPACE, ENDFILE, and UNLOCK; DELETE by number on a unit not open and on
+  a sequential-access relative unit; the associated variable after DELETE by number; the
+  status VMS's RMS gives a keyed record -1; an implicit READ's FAC; the compile-time
+  versions of FORRTL's run-time rules; INQUIRE by both unit and file; a last FIX record cut
+  short by the end of file; a relative file's growth beyond VMS's allocations; FORRTL's
+  by-name NAME blank over govax (subtask 5's open item, which doesn't affect FTNRTL).
+
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74. The author confirmed that ods2
@@ -1287,3 +1322,15 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     isn't one a routine needs; that an OLD file a routine opened is checked against the keywords
     (VMS's run had only matching ones); the routine's arguments' order and passing are VMS's
     (#374), its use of the unit's number past the call isn't known.
+- **2026-11-01, subtask 12, end to end and the close-out.** `testdata/fortran/ledger.for` uses
+  the phase's statements together: a sequential file of transactions written and read back, a
+  relative file of accounts by number (READ and REWRITE, WRITE for a new account, DELETE for a
+  closed one, UNLOCK after a refused withdrawal, ATTACCNON for a missing account), the accounts
+  read in sequence into a report file of LIST carriage control and read back, and a checkpoint
+  in a segmented unformatted scratch file, backed over and read; run in both paging modes, as
+  are `relative.for` and `useropen.for`. Writing it found two mistakes of the program's own, not
+  FTNRTL's (A10 output of a shorter text right-justifies it; READONLY with DISPOSE='DELETE' is
+  INCOPECLO at CLOSE, VMS's rule). The close-out: MANUAL.md's 14.2 (relative files, REWRITE,
+  DELETE, UNLOCK, USEROPEN, CONVERT; the FTNRTL table's file routines; 14.7's choices; the
+  NOTIMPL example now VOLATILE), FORTRAN-INTERNALS.md's section 13 (unformatted segments, records
+  by number, the current record, USEROPEN), PLAN.md's index, and CLAUDE.md.

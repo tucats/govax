@@ -517,7 +517,7 @@ never had.
   (FORTRAN-INTERNALS.md's sections on NAMELIST, units and the terminal, and the
   error model; MANUAL.md's 14.7); the phase doc's "Where things stand" lists what
   is left (OPEN and the other units are Phase 81's).
-  Phase 81 (in progress) is FORTRAN's file statements: subtask 1 (2026-10-31) is the survey,
+  Phase 81 (done 2026-11-01) is FORTRAN's file statements: subtask 1 (2026-10-31) is the survey,
   its doc's Part A, subtask 2 (2026-10-31) the probe, `testdata/for81`, subtask 3
   (2026-10-31) RMS and ods2's groundwork, `TestFor81RMSOracle`, and subtask 4 (2026-10-31)
   OPEN and CLOSE: `sema/fileio.go` (keywords as VMS's FORRTL's codes), `ir/lowerfile.go`,
@@ -550,7 +550,9 @@ never had.
   `TestFor81RelativeFortranOracle` and `testdata/fortran/relative.for`, and subtask 11 (2026-11-01)
   USEROPEN= (the routine called with the FAB, RAB, and unit where FTN_OPEN would call RMS) and
   CONVERT= (NATIVE only), held to VMS by `TestFor81UserOpenOracle` and
-  `testdata/fortran/useropen.for`; ROP LOC as VMS's, `FTN$$UNIT_GET` copying from RAB$L_RBF.
+  `testdata/fortran/useropen.for`; ROP LOC as VMS's, `FTN$$UNIT_GET` copying from RAB$L_RBF, and
+  subtask 12 (2026-11-01) end to end (`testdata/fortran/ledger.for`) and the close-out; the
+  phase doc's "Where things stand" lists what is left (indexed files, CONVERT other than NATIVE).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

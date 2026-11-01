@@ -4352,16 +4352,17 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 80 done, 2026-10-31):** the compiler reads
+**Where things stand (Phase 81 done, 2026-11-01):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
-subprograms, and every formatted, list-directed, and namelist I/O
-statement, with FORMAT checked as it compiles; FTNRTL runs formatted
-input and output, with every edit descriptor and variable format
-expressions, list-directed input and output, and namelist input and output, on
-sequential files through OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, and ENDFILE
-(section 14.2), with the other file statements to come in Phase 81. Any other
+subprograms, and every I/O and file statement, with FORMAT checked as it
+compiles; FTNRTL runs formatted input and output, with every edit
+descriptor and variable format expressions, list-directed, namelist, and
+unformatted input and output, sequential and direct access, on sequential
+and relative files through OPEN (USEROPEN= too), CLOSE, INQUIRE, REWIND,
+BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
+14.2). Indexed files and the keyed READ are a later program's. Any other
 statement draws `%FORT-E-NOTIMPL`, naming it ("the VOLATILE statement is not
 implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -4701,8 +4702,7 @@ output it prints, and programs of several files in its `modules` directory.
   D, or G of one that isn't floating, edits its bytes as one and goes on,
   and the statement fails at its end with `FORVARMIS` (61), its records
   written, as VMS's library does. A unit with no OPEN takes blanks in a number as zeros, so `1 2`
-  read by I3 is 102 (the manual's rule; BN reads it as 12). Units 0 to 4 and
-  7 to 119 are FOR's `NOTIMP`, which later phases add. A run-time format is checked when it is used: one VMS's FORTRAN
+  read by I3 is 102 (the manual's rule; BN reads it as 12). A run-time format is checked when it is used: one VMS's FORTRAN
   run-time library would refuse is `SYNERRFOR` (62). A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
@@ -5081,6 +5081,15 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
+| `FTN$READ_SU(icb, unit)`, `FTN$WRITE_SU(icb, unit)` | Start an unformatted sequential READ or WRITE |
+| `FTN$READ_DF(icb, unit, format, rec)`, `FTN$WRITE_DF`, `FTN$READ_DU(icb, unit, rec)`, `FTN$WRITE_DU` | Start a direct access READ or WRITE of record `rec` (by value), formatted or unformatted |
+| `FTN$REWRITE_SF(icb, unit, format)`, `FTN$REWRITE_SU(icb, unit)` | Start a REWRITE of the unit's current record, formatted or unformatted |
+| `FTN$READ_KF(icb, unit, format, key, match, keyid)`, `FTN$READ_KU(icb, unit, key, match, keyid)` | Start a keyed READ (`key` a descriptor, `match` 0 equal, 1 greater or equal, 2 greater, `keyid` by value): until indexed files, OPEDEFREQ or NOTIMP |
+| `FTN$OPEN(icb, unit, keyword, value, ...)`, `FTN$CLOSE(...)` | OPEN and CLOSE: after the unit (by value), each keyword a longword of its code (bits 0 to 7, VMS's library's codes) and how its value comes (bits 8 to 15: 4 the value itself, 7 a descriptor's address, 3 or 5 a word's or longword's address), then the value; returns the status as `FTN$IO_END` does |
+| `FTN$INQUIRE(icb, keyword, value, ...)` | INQUIRE: the unit (code 1) or file (code 14) a keyword too, and each answer a keyword followed by where to store it; never fails |
+| `FTN$REWIND(icb, unit)`, `FTN$BACKSPACE`, `FTN$ENDFILE`, `FTN$UNLOCK`, `FTN$DELETE` | REWIND, BACKSPACE, ENDFILE, UNLOCK, and DELETE of the current record |
+| `FTN$DELETE_D(icb, unit, rec)`, `FTN$FIND(icb, unit, rec)` | DELETE of record `rec`, and FIND |
+| `FTN$DEF_FILE(icb, unit, m, n, v)`, `FTN$DEF_FILE_W(...)` | DEFINE FILE `u(m,n,U,v)`, `v` a longword's or a word's address |
 | `FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])`, `FTN$ERRSNS_W(...)` | The system subroutine ERRSNS: the last I/O error's FOR number, RMS status and status value, unit, and condition value, stored as longwords (or words, for `_W`) where the arguments point, a missing or zero argument passed over; then cleared |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
@@ -5207,6 +5216,17 @@ FORTRAN compiler was available to check them). So far:
 - INCLUDE files are found relative to the including file, ten deep at
   most.
 - `FTN$STOP` and `FTN$PAUSE` write to `SYS$OUTPUT`.
+- The file statements' rules that VMS's run-time library applies when the
+  program runs (a keyword's text, OPEN's combinations, RECL's need) are checked
+  at compile time too where the values are constants (`%FORT-E-KEYCHOICE`,
+  `OPENCONFLICT`, `NEEDRECL`, `RECORDUNIT`, `RECORDFORM`, `KEYEDREC`,
+  `USEROPENNAME`); INQUIRE by both a unit and a file is an error, where VMS's
+  library answers for the file.
+- CONVERT= converts nothing: `'NATIVE'` works, and any other conversion is
+  FOR's `NOTIMP` when the OPEN is done.
+- REWIND, BACKSPACE, and ENDFILE leave a unit with no current record for
+  REWRITE or DELETE, as the language manual says any statement does; VMS's
+  runs showed it only after a WRITE and a DELETE by number.
 - The statements without a unit, and a unit `*`, use VMS's default units
   -1 to -4 (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT,
   -4 for `READ f` and `READ (*,...)`); which statement uses which isn't

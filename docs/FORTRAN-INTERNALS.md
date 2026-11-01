@@ -7,7 +7,7 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 80) the compiler parses every statement of the
+So far (Phases 74 to 81) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
@@ -17,8 +17,11 @@ INTEGER of every length, REAL\*4, \*8 in D or G, and \*16, COMPLEX\*8 and
 \*16, CHARACTER), with every intrinsic function; assignment; every IF, DO,
 and GO TO, CALL, RETURN, STOP, and PAUSE; and the I/O statements, READ,
 WRITE, PRINT, TYPE, ACCEPT, ENCODE, and DECODE, formatted, list-directed,
-and namelist, at the terminal and to internal files, with ERR=, END=,
-IOSTAT=, and ERRSNS (the other units, OPEN, and CLOSE are Phase 81's).
+namelist, and unformatted, at the terminal, to internal files, and to the
+files of units 0 to 119, sequential and relative, by sequential and direct
+access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
+(with USEROPEN=), CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE,
+FIND, REWRITE, DELETE, and UNLOCK. Indexed files are a later program's.
 The tour follows one small program through every pass (section 1), then
 takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
@@ -1819,6 +1822,70 @@ for each record but the last, which is exactly the manual's own description and 
 library does over govax. Two details follow from it: a READ that meets the end of the file
 mustn't add to the count, and a file opened with `ACCESS='APPEND'` has no count until a
 REWIND gives it one, which is why VMS refuses that BACKSPACE.
+
+### Unformatted records: segments of a record
+
+An unformatted WRITE's items go into the unit's buffer as their bytes, one after
+another (`ftn_unformatted.mar`), and a READ takes them out the same way. RMS's
+variable-length records are at most 32,767 bytes, and a FORTRAN record has no
+limit, so VMS's library cuts a long one into segments, each an RMS record whose
+first word says where it falls: 1 the first, 0 a middle one, 2 the last, 3 the
+only. The run-time library writes a segment only when it is full and another
+byte comes, so a record that fills one exactly is still an only segment, and the
+READ side follows the words to a record's end. The unit's record count, which
+BACKSPACE relies on, is of these logical records, so BACKSPACE reads a record's
+segments back to its last.
+
+### Records by number: direct access and relative files
+
+A direct access statement's record number is the begin call's last argument
+(`FTN$WRITE_DU($IO1, 3, R)`), and the unit's RAB reads and writes by key:
+`RAB$B_RAC` KEY, with `RAB$L_KBF` pointing into the unit's block, where the
+number goes before each `$GET` or `$PUT`. Two kinds of file take it. A
+sequential file of fixed-length records is what DEFINE FILE makes, as VMS's
+library makes it, the manual notwithstanding: RMS finds record n at n-1 times
+the record's size, padded to a word, and a `$PUT` past the end fills the gap
+with zeros, which read back as records. A relative file (`rms/relative.go`) is
+cells by number, each with a control byte saying whether a record is there, so
+a record never written, or deleted, is missing (`ATTACCNON`) rather than zeros,
+and a sequential READ passes over the empty cells. Each record a statement moves
+takes the next number, so `READ (3'NR)` with an associated variable reads a
+file in order, and FIND moves the number without moving data.
+
+### The current record: what REWRITE and DELETE may change
+
+REWRITE and `DELETE (u)` act on the unit's current record, the one its last READ
+reached. RMS has a current record of its own, but VMS's library doesn't simply
+ask RMS: its runs show a unit with no READ since its last WRITE refusing with
+`NO_CURREC`, which is FORRTL's message, while a unit whose READ failed at the
+end of the file passes the request to RMS, which refuses it (`DELERR`,
+`REWRITERR`). So the unit keeps a flag (`UB_CURRENT`): a READ or FIND that
+reached RMS sets it, whatever RMS answered, and a WRITE, a DELETE by number, or
+a statement that moves the unit's place clears it. REWRITE is then an ordinary
+output statement with one difference, which only the record routine sees: while
+`UB_REWRITE` is set, `FTN$$UNIT_PUT` does an `$UPDATE` instead of a `$PUT`. The
+formatting, the padding of a fixed-length record, and the error model are all
+shared, and `FTN$IO_END` only renames a failed write `REWRITERR`.
+
+Record locks come with relative files on a SHARED unit: RMS locks the record a
+`$GET` reads until the stream's next operation, so another unit's READ of it is
+RMS$_RLK, which the run-time library reports as `SPERECLOC` at once, as VMS's
+does, and UNLOCK is a `$FREE`.
+
+### USEROPEN: handing the FAB to the program
+
+`USEROPEN=name` passes a routine's address where a keyword's value would go
+(code 21). FTN_OPEN builds the FAB and RAB exactly as it would for itself, its
+own names, sizes, and options, and where it would call `$CREATE` or `$OPEN` it
+calls the routine instead, with the FAB, the RAB, and the unit's number. The
+routine may change anything before it opens the file, and what it leaves is
+what the unit uses: FTNRTL then reads the FAB's record format and size as for any
+file. A RAB the routine didn't connect FTNRTL connects, because VMS's library
+took such an OPEN, so `FTN$$UNIT_READY` connects only a RAB with no ISI. The
+test that holds this to VMS (`TestFor81UserOpenOracle`) uses the probe's own
+routine, which prints what it was given: it is how the RAB's options (locate
+mode, `ROP LOC`, so `FTN$$UNIT_GET` copies a record RMS left in its own buffer)
+and the FAB's block sizes came to be VMS's.
 
 ### Errors: one status, three ways to take it
 
