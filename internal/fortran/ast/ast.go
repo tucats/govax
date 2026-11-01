@@ -392,6 +392,13 @@ type (
 		Radix  int
 	}
 
+	// Radix50Const is a RADIX-50 constant, nRtext (appendix B.3): Value is its
+	// n characters, its letters in capitals.
+	Radix50Const struct {
+		ExprBase
+		Value string
+	}
+
 	// ComplexConst is a complex constant, (Re, Im) (section 2.2.1.3).
 	// Each part should be a constant (signed) or a constant's name
 	// (section 4.11), which semantic analysis checks: the parser takes

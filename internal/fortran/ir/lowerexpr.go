@@ -237,6 +237,15 @@ var operators = map[ast.Op]Operator{
 // own size (a LOGICAL's -1 or 0), a REAL's bits in its format, or a
 // COMPLEX's two parts' bits.
 func (l *lowerer) constOf(c *sema.Const) *Const {
+	if c.Raw != nil {
+		part := l.typeOf(c.T)
+		if c.T.Kind == sema.Complex {
+			part = l.partOf(c.T)
+		}
+
+		return RawConst(l.typeOf(c.T), part, c.Raw)
+	}
+
 	switch c.T.Kind {
 	case sema.Real:
 		return RealConst(l.typeOf(c.T), c.Real)

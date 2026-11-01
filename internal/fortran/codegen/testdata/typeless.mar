@@ -1,0 +1,119 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for CONSTS, the main program
+;   W     INTEGER*2   $LOCAL+0   CONSTS.W
+;   D     REAL*8      $LOCAL+4   CONSTS.D
+;   Q     REAL*16     $LOCAL+12  CONSTS.Q
+;   C     COMPLEX     $LOCAL+28  CONSTS.C
+;   CD    COMPLEX*16  $LOCAL+36  CONSTS.CD
+;   R50   INTEGER*2   $LOCAL+52  CONSTS.R50
+;   J     INTEGER     $LOCAL+56  CONSTS.J
+;   X     REAL        $LOCAL+60  CONSTS.X
+;   Y     REAL        $LOCAL+64  CONSTS.Y
+;   I     INTEGER     $LOCAL+68  CONSTS.I
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+CONSTS.W:
+	.BLKB	2			; W
+	.BLKB	2
+CONSTS.D:
+	.BLKL	2			; D
+CONSTS.Q:
+	.BLKL	4			; Q
+CONSTS.C:
+	.BLKL	2			; C
+CONSTS.CD:
+	.BLKL	4			; CD
+CONSTS.R50:
+	.WORD	1683			; R50 = 3RABC
+	.BLKB	2
+CONSTS.J:
+	.LONG	432932499		; J = 6RABCDEF
+CONSTS.X:
+	.BLKL	1			; X
+CONSTS.Y:
+	.BLKL	1			; Y
+CONSTS.I:
+	.BLKL	1			; I
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+CONSTS.$K1:
+	.LONG	216002
+CONSTS.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS CONSTS.$K2
+CONSTS.$F1:
+	.LONG	^X00008000,^X00000000	; ^X0000000000008000
+CONSTS.$F2:
+	.LONG	^X00008000,^X00000000,^X00000000,^X00000000 ; ^X00000000000000000000000000008000
+CONSTS.$F3:
+	.LONG	^X00008000,^X00000000	; ^X0000000000008000
+CONSTS.$F4:
+	.LONG	^X00008000,^X00000000,^X00000000,^X00000000 ; ^X00000000000000000000000000008000
+CONSTS.$F5:
+	.LONG	^X44434241,^X48474645	; ^X4847464544434241
+CONSTS.$F6:
+	.LONG	^X00004080		; 1.0
+CONSTS.$K2:
+	.ASCII	/ABCD/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Constants with no type of their own, each moved or computed as its type
+;    2  C     says (Phase 82, subtask 5).
+;    3        PROGRAM CONSTS
+	.ENTRY	CONSTS,^M<>
+;    4        INTEGER*2 W
+;    5        REAL*8 D
+;    6        REAL*16 Q
+;    7        COMPLEX*8 C
+;    8        COMPLEX*16 CD
+;    9        INTEGER*2 R50 /3RABC/
+;   10        INTEGER J /6RABCDEF/
+;   11  C     Bits that are no number: moved as integers of their width.
+;   12        X = '8000'X
+	MOVL	#^X00008000,CONSTS.X	; ^X00008000
+;   13        D = '8000'X
+	MOVQ	CONSTS.$F1,CONSTS.D
+;   14        Q = '8000'X
+	MOVO	CONSTS.$F2,CONSTS.Q
+;   15        C = '8000'X
+	MOVQ	CONSTS.$F3,CONSTS.C
+;   16        CD = '8000'X
+	MOVO	CONSTS.$F4,CONSTS.CD
+;   17  C     Bits that are a number: the same.
+;   18        X = '00004080'X
+	MOVL	#^X00004080,CONSTS.X	; ^X00004080
+;   19        D = 8HABCDEFGH
+	MOVQ	CONSTS.$F5,CONSTS.D
+;   20  C     Zero bits clear the place.
+;   21        D = '0'X
+	CLRD	CONSTS.D
+;   22  C     In an expression, a number of the other operand's type.
+;   23        Y = X + '00004080'X
+	ADDF3	CONSTS.X,CONSTS.$F6,CONSTS.Y
+;   24        W = W + 2HXY
+	ADDW2	#22872,CONSTS.W
+;   25        I = 1HC - 1HA
+	MOVL	#2,CONSTS.I
+;   26        X = 'AB'
+	MOVL	#^X20204241,CONSTS.X	; ^X20204241
+;   27        I = I + 'A'
+	ADDL2	#538976321,CONSTS.I
+;   28        IF ('1'X) I = .NOT. 'FF'X
+	MOVL	#-256,CONSTS.I
+;   29        CALL S('34BC2'X, 4HABCD, 'ABCD')
+	PUSHAQ	CONSTS.$D1
+	PUSHAB	CONSTS.$K2
+	PUSHAL	CONSTS.$K1
+	CALLS	#3,G^S
+;   30        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	CONSTS

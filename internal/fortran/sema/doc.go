@@ -164,8 +164,8 @@
 // reaches it (notimpl.go): a statement it doesn't handle (OPEN, REWRITE,
 // VOLATILE) is "the OPEN statement is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
-// inside a statement it does handle (a Hollerith constant in an expression,
-// a variable format expression) is reported where it is analyzed. Each
+// inside a statement it does handle (an expression's form, by formWhat) is
+// reported where it is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
 // Some declarations can't be read yet at all: VOLATILE, RECORD, and

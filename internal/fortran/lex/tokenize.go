@@ -158,7 +158,7 @@ func (l *lexer) character(tokens *[]Token, i, j int) int {
 	return k
 }
 
-// number adds the number, or Hollerith constant, starting at i, and
+// number adds the number, or Hollerith or RADIX-50 constant, starting at i, and
 // returns where the text after it starts. With plain set the number is
 // digits only (a label or a type length).
 //
@@ -179,6 +179,15 @@ func (l *lexer) number(tokens *[]Token, i, j int, plain bool) int {
 		n, _ := strconv.Atoi(string(text[i:k]))
 		end := min(k+1+n, j)
 		*tokens = append(*tokens, Token{Kind: HollerithConst, Text: string(text[k+1 : end]), Offset: l.offset(i)})
+
+		return end
+	}
+
+	// nR: a RADIX-50 constant, which squeeze marked too.
+	if k > i && k < j && lit[k] && text[k] == 'R' {
+		n, _ := strconv.Atoi(string(text[i:k]))
+		end := min(k+1+n, j)
+		*tokens = append(*tokens, Token{Kind: Radix50Const, Text: strings.ToUpper(string(text[k+1 : end])), Offset: l.offset(i)})
 
 		return end
 	}

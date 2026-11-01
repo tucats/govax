@@ -435,6 +435,8 @@ func DumpExpr(e Expr) string {
 		return "(paren " + DumpExpr(e.X) + ")"
 	case *HollerithConst:
 		return strconv.Itoa(len(e.Value)) + "H" + e.Value
+	case *Radix50Const:
+		return strconv.Itoa(len(e.Value)) + "R" + e.Value
 	case *TypelessConst:
 		if e.Radix == 8 {
 			return "'" + e.Digits + "'O"

@@ -1,0 +1,32 @@
+== main program CONSTS
+  CONSTS                  program unit
+  W         INTEGER*2     variable         $LOCAL+0
+  D         REAL*8        variable         $LOCAL+4
+  Q         REAL*16       variable         $LOCAL+12
+  C         COMPLEX       variable         $LOCAL+28
+  CD        COMPLEX*16    variable         $LOCAL+36
+  R50       INTEGER*2     variable         $LOCAL+52
+  J         INTEGER       variable         $LOCAL+56
+  X         REAL          variable         $LOCAL+60
+  Y         REAL          variable         $LOCAL+64
+  I         INTEGER       variable         $LOCAL+68
+  S                       subroutine
+  $LOCAL is 72 bytes
+  initial $LOCAL+52 R50 INTEGER*2 = 93 06
+  initial $LOCAL+56 J INTEGER = 93 06 CE 19
+12          X = 0.0
+13          D = 0.0D0
+14          Q = 0.0Q0
+15          C = (0.0, 0.0)
+16          CD = (0.0D0, 0.0D0)
+18          X = 1.0
+19          D = 12.0791657204577108D0
+21          D = 0.0D0
+23          Y = (+:R X 1.0)
+24          W = (+:I W 22872)
+25          I = 2
+26          X = 12.070343
+27          I = (+:I I 538976321)
+28          IF (LOGICAL 1) I = -256
+29          CALL S(216002, (%REF 'ABCD'), 'ABCD')
+30          END

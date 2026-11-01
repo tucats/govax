@@ -2,7 +2,6 @@ package sema
 
 import (
 	"errors"
-	"math/big"
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
@@ -84,20 +83,20 @@ func worse(x, y *constErr) *constErr {
 
 // evaluator computes constant expressions for one unit. quiet makes it
 // report nothing, to learn whether an expression is constant at all
-// before it is evaluated for its messages; typeless allows octal and
-// hexadecimal constants, which only declarations may use yet (their use
-// in executable statements is Phase 82's). vars are the implied-DO
-// variables in scope, in a DATA statement's list, with their values now.
+// before it is evaluated for its messages; moved says the value is only moved
+// to a place of its type, so a typeless constant's bits are kept whatever they
+// are (bytesConst). vars are the implied-DO variables in scope, in a DATA
+// statement's list, with their values now.
 type evaluator struct {
-	a        *analyzer
-	quiet    bool
-	typeless bool
-	vars     map[string]int32
+	a     *analyzer
+	quiet bool
+	moved bool
+	vars  map[string]int32
 }
 
 // declEval is the evaluator for declarations.
 func (a *analyzer) declEval() *evaluator {
-	return &evaluator{a: a, typeless: true}
+	return &evaluator{a: a}
 }
 
 // report reports a message, unless the evaluator is quiet, and returns
@@ -110,15 +109,7 @@ func (ev *evaluator) report(ident string, pos diag.Position, args ...any) *const
 	return failed
 }
 
-// notImpl and notImplForm report NOTIMPL as the analyzer's do.
-func (ev *evaluator) notImpl(pos diag.Position, what string) *constErr {
-	if !ev.quiet {
-		ev.a.notImpl(pos, what)
-	}
-
-	return failed
-}
-
+// notImplForm reports NOTIMPL as the analyzer's does.
 func (ev *evaluator) notImplForm(pos diag.Position, what string) *constErr {
 	if !ev.quiet {
 		ev.a.notImplForm(pos, what)
@@ -168,13 +159,16 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 		return ev.complex(e)
 
 	case *ast.TypelessConst:
-		if !ev.typeless {
-			return nil, ev.notImplForm(e.Pos, formWhat(e))
-		}
-
 		// "When the constant is used in any other context, an INTEGER*4
-		// data type is assumed" (section 2.2.1.4).
+		// data type is assumed" (section 2.2.1.4), and a Hollerith constant
+		// likewise (section 2.2.1.7).
 		return ev.typelessAs(e, ev.a.defaultInt)
+
+	case *ast.HollerithConst:
+		return ev.textAs(e.Value, ev.a.defaultInt, e.Pos)
+
+	case *ast.Radix50Const:
+		return nil, ev.report("RAD50PLACE", e.Pos)
 
 	case *ast.Name:
 		if v, ok := ev.vars[e.Name]; ok {
@@ -308,61 +302,6 @@ func (ev *evaluator) complex(e *ast.ComplexConst) (*Const, *constErr) {
 	return c, nil
 }
 
-// typelessAs is an octal or hexadecimal constant (section 2.2.1.4) given
-// type t: its bits, extended on the left with zeros or cut on the left to
-// t's size (section 4.3's rule), as the VAX holds a t in memory.
-func (ev *evaluator) typelessAs(e *ast.TypelessConst, t Type) (*Const, *constErr) {
-	v, ok := new(big.Int).SetString(e.Digits, e.Radix)
-	if !ok {
-		return nil, failed
-	}
-
-	lo := new(big.Int).And(v, new(big.Int).SetUint64(^uint64(0))).Uint64()
-	hi := new(big.Int).Rsh(v, 64).Uint64()
-	c := &Const{exprBase: exprBase{t, e.Pos}}
-
-	switch t.Kind {
-	case Integer, Logical:
-		c.Int = truncate(int32(uint32(lo)), t.Size)
-
-	case Real:
-		f := ev.a.format(t)
-		if f == vaxfloat.F {
-			lo &= 0xFFFFFFFF
-		}
-
-		r, err := vaxfloat.Unpack(f, vaxfloat.Bits{Lo: lo, Hi: hi})
-		if err != nil {
-			return nil, ev.report("BADTYPELESS", e.Pos, t.String())
-		}
-
-		c.Real = r
-
-	case Complex:
-		f, reBits, imBits := ev.a.format(t), vaxfloat.Bits{Lo: lo}, vaxfloat.Bits{Lo: hi}
-		if f == vaxfloat.F {
-			reBits, imBits = vaxfloat.Bits{Lo: lo & 0xFFFFFFFF}, vaxfloat.Bits{Lo: lo >> 32}
-		}
-
-		re, err := vaxfloat.Unpack(f, reBits)
-		im, err2 := vaxfloat.Unpack(f, imBits)
-
-		if err != nil || err2 != nil {
-			return nil, ev.report("BADTYPELESS", e.Pos, t.String())
-		}
-
-		c.Real, c.Imag = re, im
-
-	case Character:
-		return nil, ev.notImplForm(e.Pos, "an octal or hexadecimal constant given a CHARACTER type")
-
-	default:
-		return nil, failed
-	}
-
-	return c, nil
-}
-
 // truncate is v cut to an INTEGER or LOGICAL of size bytes, sign
 // extended: the value such a datum holds.
 func truncate(v int32, size int) int32 {
@@ -389,14 +328,16 @@ func (ev *evaluator) unary(e *ast.Unary) (*Const, *constErr) {
 		return nil, err
 	}
 
+	if x, err = ev.numeric(x); err != nil {
+		return nil, err
+	}
+
 	if e.Op == ast.Not {
 		switch x.T.Kind {
 		case Logical, Integer:
 			c := &Const{exprBase: exprBase{x.T, e.Pos}, Int: ^x.Int}
 
 			return c, nil
-		case Character:
-			return nil, ev.notImpl(x.Pos, hollerith)
 		}
 
 		return nil, ev.report("BADOPERAND", e.Pos, ".NOT.", x.T.String())
@@ -454,61 +395,31 @@ func (ev *evaluator) arithmetic(x *Const) (*Const, *constErr) {
 	case Logical:
 		return ev.convert(x, x.T.integer(), x.Pos)
 	case Character:
-		return nil, ev.notImpl(x.Pos, hollerith)
+		return ev.numeric(x)
 	}
 
 	return x, nil
 }
 
-// pair is the values of a binary operator's operands. An octal or
-// hexadecimal constant takes the other operand's type (section 2.2.1.4).
-func (ev *evaluator) pair(ex, ey ast.Expr) (*Const, *Const, *constErr) {
-	tx, okx := ex.(*ast.TypelessConst)
-	ty, oky := ey.(*ast.TypelessConst)
-
-	if ev.typeless && okx != oky {
-		if okx {
-			y, err := ev.eval(ey)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			x, err := ev.typelessAs(tx, contextType(y.T))
-
-			return x, y, err
-		}
-
-		x, err := ev.eval(ex)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		y, err := ev.typelessAs(ty, contextType(x.T))
-
-		return x, y, err
-	}
-
-	x, err := ev.eval(ex)
-	y, err2 := ev.eval(ey)
-
-	return x, y, worse(err, err2)
-}
-
-// contextType is the type an octal or hexadecimal constant takes beside
-// an operand of type t: t's, or INTEGER*4 beside a CHARACTER.
-func contextType(t Type) Type {
-	if t.Kind == Character {
-		return IntegerType
-	}
-
-	return t
-}
-
 // binary is X op Y.
 func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
+	if e.Op == ast.Concat {
+		return ev.concat(e)
+	}
+
 	x, y, err := ev.pair(e.X, e.Y)
 	if err != nil {
 		return nil, err
+	}
+
+	if !e.Op.Relational() {
+		if x, err = ev.numeric(x); err != nil {
+			return nil, err
+		}
+
+		if y, err = ev.numeric(y); err != nil {
+			return nil, err
+		}
 	}
 
 	switch {
@@ -517,15 +428,6 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 
 	case e.Op == ast.And || e.Op == ast.Or || e.Op == ast.Eqv || e.Op == ast.Neqv || e.Op == ast.Xor:
 		return ev.logical(e, x, y)
-
-	case e.Op == ast.Concat:
-		for _, o := range []*Const{x, y} {
-			if o.T.Kind != Character {
-				return nil, ev.report("BADOPERAND", e.Pos, "//", o.T.String())
-			}
-		}
-
-		return charConst(x.Text+y.Text, e.Pos), nil
 
 	case e.Op == ast.Pow:
 		return ev.power(e, x, y)
@@ -550,6 +452,24 @@ func (ev *evaluator) binary(e *ast.Binary) (*Const, *constErr) {
 	}
 
 	return ev.operate(e.Op, x, y, e.Pos)
+}
+
+// concat is X // Y, two CHARACTER values joined.
+func (ev *evaluator) concat(e *ast.Binary) (*Const, *constErr) {
+	x, err := ev.eval(e.X)
+	y, err2 := ev.eval(e.Y)
+
+	if err = worse(err, err2); err != nil {
+		return nil, err
+	}
+
+	for _, o := range []*Const{x, y} {
+		if o.T.Kind != Character {
+			return nil, ev.report("BADOPERAND", e.Pos, "//", o.T.String())
+		}
+	}
+
+	return charConst(x.Text+y.Text, e.Pos), nil
 }
 
 // operate is x op y for the four arithmetic operators, x and y of one
@@ -786,11 +706,7 @@ func (ev *evaluator) power(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 // converted to the higher type, COMPLEX values only equal or not, and
 // CHARACTER values compared in ASCII, the shorter padded with blanks.
 func (ev *evaluator) compare(e *ast.Binary, x, y *Const) (*Const, *constErr) {
-	if x.T.Kind == Character || y.T.Kind == Character {
-		if x.T.Kind != y.T.Kind {
-			return nil, ev.notImpl(e.Pos, hollerith)
-		}
-
+	if x.T.Kind == Character && y.T.Kind == Character {
 		return logicalConst(relation(e.Op, compareText(x.Text, y.Text)), e.Pos), nil
 	}
 
@@ -877,10 +793,7 @@ func relation(op ast.Op, order int) bool {
 // bit, an INTEGER.
 func (ev *evaluator) logical(e *ast.Binary, x, y *Const) (*Const, *constErr) {
 	for _, o := range []*Const{x, y} {
-		switch o.T.Kind {
-		case Character:
-			return nil, ev.notImpl(o.Pos, hollerith)
-		case Real, Complex:
+		if o.T.Kind == Real || o.T.Kind == Complex {
 			return nil, ev.report("BADOPERAND", e.Pos, e.Op.String(), o.T.String())
 		}
 	}
@@ -948,7 +861,7 @@ func (ev *evaluator) convert(c *Const, t Type, pos diag.Position) (*Const, *cons
 
 			v = i.Int64()
 		case Character:
-			return nil, ev.notImpl(pos, hollerith)
+			return ev.textAs(c.Text, t, pos)
 		default:
 			return nil, failed
 		}
@@ -981,7 +894,7 @@ func (ev *evaluator) convert(c *Const, t Type, pos diag.Position) (*Const, *cons
 				re, im = c.exactRe, c.exactIm
 			}
 		case Character:
-			return nil, ev.notImpl(pos, hollerith)
+			return ev.textAs(c.Text, t, pos)
 		default:
 			return nil, failed
 		}

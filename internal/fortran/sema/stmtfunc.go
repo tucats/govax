@@ -49,7 +49,7 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 	}
 
 	a.defining = sym
-	value := a.value(s.Value)
+	value := a.assignedExpr(s.Value, sym.Type)
 	a.defining = nil
 
 	for name, was := range saved {
@@ -66,6 +66,10 @@ func (a *analyzer) defineStmtFunction(s *ast.AssignStmt, sym *Symbol) {
 		ok = false
 	} else if value.Type().Kind != Invalid {
 		value = a.assignedValue(s.Pos, &Var{exprBase{sym.Type, s.Pos}, sym}, value)
+	}
+
+	if value != nil {
+		value = a.notMoved(value)
 	}
 
 	if !ok || value == nil || value.Type().Kind == Invalid {

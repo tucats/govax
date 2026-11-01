@@ -3,7 +3,8 @@
 **Status:** in progress: subtask 1, the survey (Part A below), done
 2026-11-01 and reviewed by the author the same day ("The author's
 answers"); subtask 2, structure declarations, subtask 3, RECORD and
-field references, and subtask 4, aggregates, done 2026-11-01. Needs Phase 79
+field references, subtask 4, aggregates, and subtask 5, typeless,
+Hollerith, and RADIX-50 constants, done 2026-11-01. Needs Phase 79
 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
@@ -550,7 +551,7 @@ further Alpha-era directive; out, unless the author wants it.
    unformatted I/O (and the messages for the other forms), and array
    fields without subscripts as arguments and I/O items (2.2.6's array
    name references; NOTIMPL since subtask 3).
-5. **Typeless, Hollerith, and RADIX-50 constants:** the lexer's count
+5. **Typeless, Hollerith, and RADIX-50 constants** (done 2026-11-01): the lexer's count
    rule in both scanners, RADIX-50 tokens and their bytes, typing by
    context in expressions, assignments, arguments, and IFs; character
    constants in numeric contexts.
@@ -689,3 +690,37 @@ further Alpha-era directive; out, unless the author wants it.
   DATA and type statements' values as well as a structure's, whatever the names. Values
   that differ, overlap in another shape (an INTEGER\*4 over an INTEGER\*2, even of equal
   bytes), or repeat within one unit are still DATATWICE. Choices of ours, unconfirmed.
+- **2026-11-01:** Subtask 5, typeless, Hollerith, and RADIX-50 constants.
+  **Counts:** one rule, `source.CountMayFollow`, used by both scanners, adds `+` and `-`
+  and any `*`. The survey's "digits followed by H there can't be anything but a count" is
+  wrong about `*`: in `REAL*8 H` the 8 is a length, so a `*` right after a type statement's
+  keyword at the statement's start (REAL, INTEGER, LOGICAL, COMPLEX, CHARACTER) is no place
+  for a count. `nR` is a count the same way, a `Radix50Const` token (RAD50END if cut short).
+  **Typing** (`sema/typeless.go`): `untyped` says an expression is an octal, hexadecimal, or
+  Hollerith constant, `typelessAs` and `textAs` give one a type through `bytesConst`, the
+  bytes memory would hold, and `operands` and the evaluator's `pair` give an operator's
+  operand the other's type, or the default integer's beside another with none. A character
+  constant beside a number is a Hollerith constant of the number's type, and alone in a
+  numeric context (`numericConst`, `numeric`) of the default integer's; two compared stay
+  CHARACTER. An argument is `Arg.Typeless`, four bytes, or a Hollerith constant's own length
+  as before; HOLLCHAR takes both. **Bits:** an assignment
+  (`assignedExpr`, `movedText`) keeps the constant's bytes (`Const.Raw`, the IR's
+  `RawConst`), which needn't be a number, and codegen moves them as an integer of the
+  width (MOVL, MOVQ, MOVO), so `X = '8000'X` doesn't fault and `X = '1'X` keeps its one bit;
+  they are never folded, since nothing but a move sees them. RADIX-50 (`radix50Bytes`) is in
+  DATA and initial values through `dataValue.radix`. New messages: RAD50END, BADDIGITS (a
+  bad digit in DATA or anywhere used to say nothing at all), TYPELESSLONG, TYPELESSCUT,
+  HOLLCUT, NOCHARVALUE, BADRAD50, RAD50LONG, RAD50PLACE. A change to earlier behavior: a
+  PARAMETER's typeless constant with nonzero digits past its type is TYPELESSCUT, by
+  2.2.1.4's "an error results", where it was silently cut; DATA's stays as Phase 76 had it,
+  section 4.3's rule. Tests: about 40 `TestErrors` cases; `TestParameterValues`; the lexer's
+  and the source pass's scanners; the goldens `typeless.for` in `sema`, `ir`, and `codegen`;
+  `testdata/fortran/typeless.for`, whose output was worked out by hand from the manual's
+  rules, in both paging modes. Choices of ours, unconfirmed: bits that are a reserved
+  operand are BADTYPELESS in an expression rather than a fault when the program runs; a
+  named character constant or a constant expression of CHARACTER type is treated as a
+  character constant is; an octal or hexadecimal constant can't be a CHARACTER value
+  (NOCHARVALUE; the manual says so only of a Hollerith one), though DATA's one-byte case
+  stays; a Hollerith bound like `A(1H1)` is its large integer, so ARRAYSIZE; a statement
+  function's value takes the function's type as an assignment does, but is expanded into
+  expressions, so its bits must be a number (`notMoved`).

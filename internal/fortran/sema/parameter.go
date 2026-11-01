@@ -77,8 +77,8 @@ func (a *analyzer) parameter(s *ast.ParameterStmt, d *ast.ParamDef) {
 		err *constErr
 	)
 
-	if tc, ok := d.Value.(*ast.TypelessConst); ok && t.Kind != Character && t.Kind != Invalid {
-		c, err = ev.typelessAs(tc, t)
+	if u := untyped(d.Value); u != nil && t.Kind != Character && t.Kind != Invalid {
+		c, err = ev.untypedAs(u, t)
 	} else if c, err = ev.eval(d.Value); err == nil && keep && t.Kind != Invalid {
 		v := c
 		if c, err = ev.convert(c, t, d.Value.Position()); err == incompatible {

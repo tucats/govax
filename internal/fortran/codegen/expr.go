@@ -810,6 +810,12 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 			}
 
 			g.emit("MOVL", ir.Long, fmt.Sprintf("#^X%08X", uint32(s.Bits)), d.text)
+		case s.Raw && t.Width() == 2:
+			// Bits that needn't be a number: moved as an integer, since MOVD
+			// or MOVG would fault on a reserved operand.
+			g.emit("MOVQ", ir.Quad, g.constant(s), d.text)
+		case s.Raw && t.Width() == 4:
+			g.emit("MOVO", ir.Octa, g.constant(s), d.text)
 		case !t.Integer():
 			// A D, G, or H constant, or a complex one, from its datum,
 			// which holds the compiler's bits (constant).

@@ -371,6 +371,10 @@ func TextText(t Text) string {
 func ExprText(e Expr) string {
 	switch e := e.(type) {
 	case *Const:
+		if e.Raw {
+			return rawText(e)
+		}
+
 		if e.T == Quad || e.T == Octa {
 			re, im := e.Parts()
 
@@ -454,4 +458,17 @@ func floatText(c *Const) string {
 	}
 
 	return text + letter + "0"
+}
+
+// rawText is a constant's bits, the highest longword first, as they would be
+// written in an octal or hexadecimal constant: its value may be none.
+func rawText(c *Const) string {
+	words := c.Longwords()
+	text := "^X"
+
+	for i := len(words) - 1; i >= 0; i-- {
+		text += fmt.Sprintf("%08X", words[i])
+	}
+
+	return text
 }

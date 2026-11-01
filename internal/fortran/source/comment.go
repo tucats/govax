@@ -24,9 +24,15 @@ package source
 // DO 10 H = 1, 2 the 10 is a label. A Hollerith constant can only be
 // where a value can go, so the scanner counts digits as a Hollerith count
 // only after a character a value can follow: ( , / = or . (as in
-// .EQ.5HHELLO), or * when a digit is before it (the repeat count in DATA
-// X/2*4HABCD/). Digits that follow a letter are part of a name, and the
-// other places digits go (labels, lengths) are after a keyword.
+// .EQ.5HHELLO), or the * of a repeat count (DATA X/2*4HABCD/). Digits that
+// follow a letter are part of a name, and the other places digits go
+// (labels, lengths) are after a keyword.
+//
+// Phase 82 widened that: a value may also follow + and - (ICOUNT + 2HXY), and
+// any * but the one in a type statement's length, which is why a * looks back
+// at the statement so far (CountMayFollow). And a RADIX-50 constant, nRabc
+// (appendix B.3), is followed the same way, as a count, an R, and that many
+// characters.
 //
 // VAX FORTRAN uses the apostrophe once more: READ (1'10) X reads record
 // 10 of unit 1. There the apostrophe follows the unit, a name or number,
@@ -39,12 +45,16 @@ type commentScanner struct {
 
 	depth int // how many parentheses are open
 
-	// The last two characters that weren't blanks, outside constants,
-	// and whether the digits ending at last could be a Hollerith count
-	// (count is their value).
-	last, prev byte
-	counting   bool
-	count      int
+	// The last character that wasn't a blank, outside constants, and
+	// whether the digits ending at it could be a Hollerith count (count is
+	// their value).
+	last     byte
+	counting bool
+	count    int
+
+	// start is the statement's first characters outside constants, in
+	// capitals: enough to know a type statement's length (CountMayFollow).
+	start []byte
 }
 
 // maxHollerith caps a Hollerith count, so a long run of digits can't
@@ -103,7 +113,7 @@ func (s *commentScanner) cut(field string) int {
 				continue
 			}
 
-		case (c == 'H' || c == 'h') && s.counting && s.count > 0:
+		case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && s.counting && s.count > 0:
 			s.hollerith = s.count
 			s.note(c)
 
@@ -125,18 +135,47 @@ func (s *commentScanner) cut(field string) int {
 // note records c as the last character seen outside a constant, which
 // ends any digits being counted.
 func (s *commentScanner) note(c byte) {
-	s.prev, s.last = s.last, c
+	s.last = c
 	s.counting = false
+
+	if len(s.start) < TypeLengthStart {
+		if c >= 'a' && c <= 'z' {
+			c -= 'a' - 'A'
+		}
+
+		s.start = append(s.start, c)
+	}
 }
 
-// countMayFollow reports whether a Hollerith count may start here: after
-// a character a value can follow (see commentScanner).
+// countMayFollow reports whether a Hollerith count may start here.
 func (s *commentScanner) countMayFollow() bool {
-	switch s.last {
-	case '(', ',', '/', '=', '.':
+	return CountMayFollow(s.last, string(s.start))
+}
+
+// TypeLengthStart is how much of a statement CountMayFollow needs to see:
+// "CHARACTER*", the longest of its words, and one more, so that a longer
+// statement that starts the same way isn't taken for it.
+const TypeLengthStart = 11
+
+// CountMayFollow reports whether digits after last may be a Hollerith or
+// RADIX-50 count: whether a value can go there. start is the statement so far,
+// last included, in capitals, of which only the first TypeLengthStart characters
+// matter.
+//
+// After a * they may, but for a type statement's length: in REAL*8 H the 8 is
+// a length and H a name, where in X = N*2HAB the 2 is a count. The lexer uses
+// this too, since the two must agree where constants are.
+func CountMayFollow(last byte, start string) bool {
+	switch last {
+	case '(', ',', '/', '=', '.', '+', '-':
 		return true
 	case '*':
-		return s.prev >= '0' && s.prev <= '9'
+		switch start {
+		case "REAL*", "INTEGER*", "LOGICAL*", "COMPLEX*", "CHARACTER*":
+			return false
+		}
+
+		return true
 	}
 
 	return false

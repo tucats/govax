@@ -122,12 +122,13 @@ type dataValues struct {
 
 // dataValue is one constant of a list. Exactly one of its fields says what it
 // is: a Hollerith or character constant's bytes (text, with isText set), an
-// octal or hexadecimal constant (typeless), or a constant of any other type
-// (c).
+// octal or hexadecimal constant (typeless), a RADIX-50 constant's bytes (radix),
+// or a constant of any other type (c).
 type dataValue struct {
 	text     string
 	isText   bool
 	typeless *ast.TypelessConst
+	radix    []byte
 	c        *Const
 	source   string
 	pos      diag.Position
@@ -220,7 +221,15 @@ func (a *analyzer) dataConstant(item *ast.DataValue) (dataValue, bool) {
 	case *ast.TypelessConst:
 		v.typeless = e
 
-		return v, true
+		_, err := a.declEval().typelessValue(e)
+
+		return v, err == nil
+
+	case *ast.Radix50Const:
+		var ok bool
+		v.radix, ok = a.radix50Bytes(e)
+
+		return v, ok
 	}
 
 	c, err := a.declEval().eval(item.Value)
@@ -613,6 +622,14 @@ func (a *analyzer) initialBytes(v *dataValue, t Type) ([]byte, bool) {
 		}
 
 		copy(b, v.text)
+
+		return b, true
+
+	case v.radix != nil:
+		// Appendix B.3: zero bytes on the right if it's short, and if it's
+		// long, the rightmost characters not used.
+		b := make([]byte, t.Size)
+		copy(b, v.radix)
 
 		return b, true
 

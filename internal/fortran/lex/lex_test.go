@@ -129,6 +129,22 @@ func TestClassify(t *testing.T) {
 		{text: "STOP 'END OF RUN'", want: "STOP: 'END OF RUN'"},
 		{text: "STOP 98", want: "STOP: 98"},
 		{text: "CALL S(5HHELLO, 4H A B)", want: `CALL: S ( 5H"HELLO" , 4H" A B" )`},
+
+		// Hollerith counts where a value can go, and lengths that aren't.
+		{text: "J = I + 2HXY", want: `assignment: J = I + 2H"XY"`},
+		{text: "J = I - 2HXY", want: `assignment: J = I - 2H"XY"`},
+		{text: "J = N * 2HXY", want: `assignment: J = N * 2H"XY"`},
+		{text: "J = X ** 1HA", want: `assignment: J = X ** 1H"A"`},
+		{text: "REAL*8 H", want: `REAL: * 8 H`},
+		{text: "INTEGER*2 HOLD", want: `INTEGER: * 2 HOLD`},
+		{text: "CHARACTER*4 HOLD", want: `CHARACTER: * 4 HOLD`},
+
+		// RADIX-50 constants, their blanks kept and letters made capitals.
+		{text: "DATA I /3RABC/", want: `DATA: I / 3R"ABC" /`},
+		{text: "DATA I /2*5R a.b$/", want: `DATA: I / 2 * 5R" A.B$" /`},
+		{text: "REAL*4 R", want: `REAL: * 4 R`},
+		{text: "COMPLEX*8 R", want: `COMPLEX: * 8 R`},
+		{text: "LOGICAL*4 R", want: `LOGICAL: * 4 R`},
 		{text: "DATA X/2*4HAB D/", want: `DATA: X / 2 * 4H"AB D" /`},
 		{text: "I = '17'O + '1F'X + \"17", want: "assignment: I = '17'O + '1F'X + \"17"},
 		{text: "READ (1'10) X", want: "READ: ( 1 ' 10 ) X"},

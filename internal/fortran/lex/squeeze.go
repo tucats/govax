@@ -1,5 +1,7 @@
 package lex
 
+import "github.com/tucats/govax/internal/fortran/source"
+
 // squeezed is a statement's text with the blanks and tabs taken out of it
 // everywhere but inside constants, and letters outside constants made
 // capitals: the first of the lexer's three steps (see doc.go).
@@ -38,9 +40,9 @@ const maxHollerith = 1 << 20
 //     once, which is as good: both are lit);
 //   - but an apostrophe after a name or number inside parentheses is the
 //     record separator of READ (1'10), not a constant;
-//   - digits after one of ( , / = . (or after * with a digit before it, a
-//     DATA repeat count) followed by an H are a Hollerith count, and that
-//     many characters after the H, blanks and all, are the constant.
+//   - digits where a value can go (source.CountMayFollow) followed by an H
+//     are a Hollerith count, and that many characters after the H, blanks
+//     and all, are the constant; followed by an R, a RADIX-50 constant's.
 func squeeze(text string) (*squeezed, []squeezeProblem) {
 	var (
 		s        = &squeezed{}
@@ -51,13 +53,14 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 		hollerith int  // a Hollerith constant's characters still to come
 		hollAt    int  // where its count started
 		hollCount int  // its count
+		radix     bool // it is a RADIX-50 constant, not a Hollerith one
 
 		depth int // parentheses open
 
-		last, prev byte // the last two characters kept outside constants
-		counting   bool // the digits ending at last may be a Hollerith count
-		countAt    int  // where they started
-		count      int
+		last     byte // the last character kept outside constants
+		counting bool // the digits ending at last may be a Hollerith count
+		countAt  int  // where they started
+		count    int
 	)
 
 	keep := func(c byte, at int, lit bool) {
@@ -67,7 +70,7 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 	}
 
 	note := func(c byte) {
-		prev, last = last, c
+		last = c
 		counting = false
 	}
 
@@ -114,7 +117,7 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 
 				continue
 
-			case countMayFollow(last, prev):
+			case source.CountMayFollow(last, startOf(s.text)):
 				keep(c, i, false)
 				note(c)
 				counting, countAt, count = true, i, int(c-'0')
@@ -122,10 +125,11 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 				continue
 			}
 
-		case (c == 'H' || c == 'h') && counting && count > 0:
-			keep('H', i, true)
-			hollerith, hollAt, hollCount = count, countAt, count
-			note('H')
+		case (c == 'H' || c == 'h' || c == 'R' || c == 'r') && counting && count > 0:
+			c = upper(c)
+			keep(c, i, true)
+			hollerith, hollAt, hollCount, radix = count, countAt, count, c == 'R'
+			note(c)
 
 			continue
 
@@ -145,24 +149,21 @@ func squeeze(text string) (*squeezed, []squeezeProblem) {
 	case quoted:
 		problems = append(problems, squeezeProblem{ident: "NOQUOTE", offset: quoteAt})
 	case hollerith > 0:
-		problems = append(problems, squeezeProblem{ident: "HOLLEND", offset: hollAt,
+		ident := "HOLLEND"
+		if radix {
+			ident = "RAD50END"
+		}
+
+		problems = append(problems, squeezeProblem{ident: ident, offset: hollAt,
 			args: []any{hollCount, hollCount - hollerith}})
 	}
 
 	return s, problems
 }
 
-// countMayFollow reports whether a Hollerith count may start after last
-// (and prev before it): where a value can go.
-func countMayFollow(last, prev byte) bool {
-	switch last {
-	case '(', ',', '/', '=', '.':
-		return true
-	case '*':
-		return isDigit(prev)
-	}
-
-	return false
+// startOf is what source.CountMayFollow needs of the text kept so far.
+func startOf(text []byte) string {
+	return string(text[:min(len(text), source.TypeLengthStart)])
 }
 
 // isNameChar reports whether c can be part of a FORTRAN name or number:

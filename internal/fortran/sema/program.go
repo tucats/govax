@@ -554,6 +554,12 @@ type (
 		// 0.3333333's F_floating value.
 		literal          bool
 		exactRe, exactIm vaxfloat.Value
+
+		// Raw is a REAL or COMPLEX constant's bytes as memory holds them, for
+		// an octal, hexadecimal, or Hollerith constant only moved to a place
+		// of its type (typeless.go). Its bits needn't be a number, and needn't
+		// be what Real and Imag would pack to.
+		Raw []byte
 	}
 
 	// Var is a scalar variable.
@@ -746,6 +752,10 @@ type Arg struct {
 	Copy      bool
 	Mode      ArgMode
 	Hollerith bool
+
+	// Typeless is set for an octal or hexadecimal constant: it has no type, so
+	// its Expr's INTEGER*4 is only its four bytes (section 2.2.1.4).
+	Typeless bool
 }
 
 // ArgMode is how an actual argument is passed.

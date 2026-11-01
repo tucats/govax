@@ -53,6 +53,15 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 
 		return Arg{Expr: c, Mode: ByRef, Hollerith: true}
 
+	case *ast.TypelessConst:
+		// No type, and "a length of four bytes is always used".
+		c, err := (&evaluator{a: a}).typelessAs(x, IntegerType)
+		if err != nil {
+			return Arg{Expr: a.bad(x.Pos)}
+		}
+
+		return Arg{Expr: c, Typeless: true}
+
 	case *ast.BuiltinArg:
 		if x.Func != "LOC" {
 			return a.passedBy(x)
@@ -227,14 +236,16 @@ func constantArguments(r routineRef, fu *fileUnit, messages *diag.List) {
 		c, ok := arg.Expr.(*Const)
 		p := fu.params()[i]
 
-		if !ok || c.T.Kind != Character || p == nil {
+		if !ok || p == nil {
 			continue
 		}
 
 		switch {
 		case arg.Hollerith && p.Type.Kind == Character:
-			messages.Report("HOLLCHAR", c.Pos, r.sym.Name, p.Name, fu.pos.Line)
-		case arg.Mode == ByDefault && p.Type.Kind != Character:
+			messages.Report("HOLLCHAR", c.Pos, "a Hollerith constant", r.sym.Name, p.Name, fu.pos.Line)
+		case arg.Typeless && p.Type.Kind == Character:
+			messages.Report("HOLLCHAR", c.Pos, "an octal or hexadecimal constant", r.sym.Name, p.Name, fu.pos.Line)
+		case c.T.Kind == Character && arg.Mode == ByDefault && p.Type.Kind != Character:
 			arg.Mode = ByRef
 		}
 	}

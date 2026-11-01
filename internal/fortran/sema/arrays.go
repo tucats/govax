@@ -207,7 +207,7 @@ func (a *analyzer) constantBound(ev *evaluator, c *Const, pos diag.Position) (in
 // functions" are not allowed. The names go on adj for checkArrays, once
 // it is known what each is, and on boundVars for checkBoundType.
 func (a *analyzer) boundOperands(adj *adjustableArray, e ast.Expr) bool {
-	if c, err := (&evaluator{a: a, quiet: true, typeless: true}).eval(e); err == nil {
+	if c, err := (&evaluator{a: a, quiet: true}).eval(e); err == nil {
 		if c.T.Kind != Integer && c.T.Kind != Real {
 			a.report("BADBOUND", e.Position())
 

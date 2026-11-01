@@ -784,11 +784,16 @@ type (
 	// longword's bits, 1.0 being ^X00004080, a D_floating quadword's), and
 	// High the bytes of an H_floating value past its first eight. A
 	// complex constant is a Quad or an Octa, its real part first, and Part
-	// is its parts' type (Float, Double, or GFloat).
+	// is its parts' type (Float, Double, or GFloat). Raw is set for a
+	// floating or complex constant whose bits needn't be a number (an octal,
+	// hexadecimal, or Hollerith constant given the type): it may only be moved,
+	// and only as an integer of its width, since a floating move faults on a
+	// reserved operand.
 	Const struct {
 		T          Type
 		Bits, High uint64
 		Part       Type
+		Raw        bool
 	}
 
 	// Load is the value at Mem.
@@ -965,6 +970,22 @@ func ComplexConst(re, im *Const) *Const {
 	return &Const{T: Octa, Bits: re.Bits, High: im.Bits, Part: re.T}
 }
 
+// RawConst is the floating or complex constant of type t whose memory holds b,
+// lowest address first; part is a complex one's parts' type.
+func RawConst(t, part Type, b []byte) *Const {
+	c := &Const{T: t, Part: part, Raw: true}
+
+	for i, x := range b {
+		if i < 8 {
+			c.Bits |= uint64(x) << (8 * i)
+		} else {
+			c.High |= uint64(x) << (8 * (i - 8))
+		}
+	}
+
+	return c
+}
+
 // Parts are a complex constant's real and imaginary parts.
 func (c *Const) Parts() (re, im *Const) {
 	if c.T == Quad {
@@ -1014,7 +1035,7 @@ func (c *Const) Longwords() []uint32 {
 
 // IsZero reports whether the constant is zero (0, 0.0, or (0.0, 0.0)).
 func (c *Const) IsZero() bool {
-	if c.T == Quad || c.T == Octa {
+	if c.Raw || c.T == Quad || c.T == Octa {
 		return c.Bits == 0 && c.High == 0
 	}
 

@@ -64,6 +64,10 @@ var messages = map[string]kind{
 	// the statement.
 	"HOLLEND": {Error, "this Hollerith constant should have %d characters, but the statement ends after %d"},
 
+	// RAD50END is a RADIX-50 constant whose count runs past the end of the
+	// statement.
+	"RAD50END": {Error, "this RADIX-50 constant should have %d characters, but the statement ends after %d"},
+
 	// UNRECSTMT is a statement the lexer can't take for any FORTRAN
 	// statement: no keyword it knows starts it, and it isn't an
 	// assignment.
@@ -606,6 +610,39 @@ var messages = map[string]kind{
 	// reserved operand in the floating type it is given.
 	"BADTYPELESS": {Error, "this constant's bits are a reserved operand, not a %s value"},
 
+	// BADDIGITS is an octal or hexadecimal constant with a digit its base
+	// doesn't have, or none at all (section 2.2.1.4).
+	"BADDIGITS": {Error, "this constant isn't made of %s digits"},
+
+	// TYPELESSLONG is an octal or hexadecimal constant of more than 128 bits
+	// (section 2.2.1.4).
+	"TYPELESSLONG": {Error, "this constant has more than 128 bits"},
+
+	// TYPELESSCUT is an octal or hexadecimal constant whose nonzero digits
+	// don't fit the type it takes (section 2.2.1.4).
+	"TYPELESSCUT": {Error, "this constant's nonzero digits are too many for %s, %d bytes long"},
+
+	// HOLLCUT is a Hollerith constant with characters other than blanks past
+	// the type it takes (section 2.2.1.7), or a character constant taken for
+	// one.
+	"HOLLCUT": {Error, "this constant's characters are too many for %s, %d bytes long"},
+
+	// NOCHARVALUE is a Hollerith, octal, or hexadecimal constant where a
+	// CHARACTER value is wanted: it can't take that type (section 2.2.1.7; for
+	// an octal or hexadecimal one, ours).
+	"NOCHARVALUE": {Error, "%s can't be a CHARACTER value"},
+
+	// BADRAD50 is a character the RADIX-50 set doesn't have (Table B-2).
+	"BADRAD50": {Error, "the character %q is not in the RADIX-50 character set"},
+
+	// RAD50LONG is a RADIX-50 constant of more than 12 characters (appendix
+	// B.3).
+	"RAD50LONG": {Error, "this RADIX-50 constant has %d characters, and may have at most 12"},
+
+	// RAD50PLACE is a RADIX-50 constant outside a DATA statement or an initial
+	// value (appendix B.3).
+	"RAD50PLACE": {Error, "a RADIX-50 constant may be only in a DATA statement or an initial value"},
+
 	// Statements and blocks.
 
 	// MAINRETURN is RETURN in a main program (section 5.9).
@@ -700,9 +737,9 @@ var messages = map[string]kind{
 	// LOCARG is %LOC of what has no address to give (section 6.1.2.2).
 	"LOCARG": {Error, "%%LOC needs a variable, an array, an array element, a substring, or a procedure"},
 
-	// HOLLCHAR is a Hollerith constant passed to a CHARACTER dummy argument
-	// of a routine of the file (section 6.1.1.4).
-	"HOLLCHAR": {Error, "a Hollerith constant can't be passed to %s's CHARACTER dummy argument %s (line %d)"},
+	// HOLLCHAR is a Hollerith, octal, or hexadecimal constant passed to a
+	// CHARACTER dummy argument of a routine of the file (section 6.1.1.4).
+	"HOLLCHAR": {Error, "%s can't be passed to %s's CHARACTER dummy argument %s (line %d)"},
 
 	// ARGCOUNT is a reference to a routine of the file with a different
 	// number of arguments from its dummy arguments.

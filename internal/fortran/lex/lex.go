@@ -521,6 +521,8 @@ func (t Token) short() string {
 		return "'" + strings.ReplaceAll(t.Text, "'", "''") + "'"
 	case HollerithConst:
 		return strconv.Itoa(len(t.Text)) + `H"` + t.Text + `"`
+	case Radix50Const:
+		return strconv.Itoa(len(t.Text)) + `R"` + t.Text + `"`
 	case IntegerConst:
 		if t.Radix == 8 {
 			return `"` + t.Text

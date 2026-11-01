@@ -192,7 +192,7 @@ func (p *parser) primary() ast.Expr {
 var builtinArgs = map[string]bool{"LOC": true, "VAL": true, "REF": true, "DESCR": true}
 
 // literal reads a literal constant, if the next token is one: an integer,
-// real, logical, character, Hollerith, octal, or hexadecimal constant;
+// real, logical, character, Hollerith, RADIX-50, octal, or hexadecimal constant;
 // otherwise it returns nil and reads nothing. A sign isn't part of it.
 func (p *parser) literal() ast.Expr {
 	t := p.peek()
@@ -217,6 +217,8 @@ func (p *parser) literal() ast.Expr {
 		e = &ast.HollerithConst{ExprBase: base, Value: t.Text}
 	case lex.TypelessConst:
 		e = &ast.TypelessConst{ExprBase: base, Digits: t.Text, Radix: t.Radix}
+	case lex.Radix50Const:
+		e = &ast.Radix50Const{ExprBase: base, Value: t.Text}
 	default:
 		return nil
 	}

@@ -38,6 +38,10 @@ const (
 	// IntegerConst with Radix 8: it is an INTEGER, not typeless.)
 	TypelessConst
 
+	// Radix50Const is a RADIX-50 constant, nRxxx (appendix B.3): Text is the
+	// n characters after the R, lowercase letters made capitals.
+	Radix50Const
+
 	// LogicalConst is a logical constant: Text is .TRUE. or .FALSE.
 	LogicalConst
 
@@ -51,7 +55,7 @@ const (
 // String names the kind, for dumps and tests.
 func (k TokenKind) String() string {
 	return [...]string{"name", "keyword", "integer", "real", "character", "hollerith",
-		"typeless", "logical", "operator"}[k]
+		"typeless", "radix50", "logical", "operator"}[k]
 }
 
 // Token is one word of a statement.
@@ -76,7 +80,7 @@ type Token struct {
 // text of a constant quoted.
 func (t Token) String() string {
 	switch t.Kind {
-	case CharConst, HollerithConst:
+	case CharConst, HollerithConst, Radix50Const:
 		return fmt.Sprintf("%s %q", t.Kind, t.Text)
 	case TypelessConst:
 		return fmt.Sprintf("%s %q radix %d", t.Kind, t.Text, t.Radix)

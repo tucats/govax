@@ -104,7 +104,7 @@ func (a *analyzer) labelVariable(n *ast.Name) *Symbol {
 func (a *analyzer) arithIf(s *ast.ArithIfStmt, path []frame) Stmt {
 	a.jumps(s.Targets[:], path)
 
-	cond := a.value(s.Cond)
+	cond := a.numericConst(a.value(s.Cond))
 
 	switch t := cond.Type(); t.Kind {
 	case Invalid:

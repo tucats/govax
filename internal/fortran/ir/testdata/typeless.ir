@@ -1,0 +1,54 @@
+routine CONSTS main
+  cell  W       W  $LOCAL+0    variable W
+  cell  D       D  $LOCAL+4    variable D
+  cell  Q       H  $LOCAL+12   variable Q
+  cell  C       Q  $LOCAL+28   variable C
+  cell  CD      O  $LOCAL+36   variable CD
+  cell  R50     W  $LOCAL+52   variable R50
+  cell  J       L  $LOCAL+56   variable J
+  cell  X       F  $LOCAL+60   variable X
+  cell  Y       F  $LOCAL+64   variable Y
+  cell  I       L  $LOCAL+68   variable I
+  $LOCAL is 72 bytes
+  init  $LOCAL+52 R50 = 93 06
+  init  $LOCAL+56 J = 93 06 CE 19
+  datum $K1     L 216002
+  datum $K2     text 'ABCD'
+  datum $D1     descriptor T S 4 $K2
+B1:
+  ; line 12
+  assign X = ^X00008000
+  ; line 13
+  assign D = ^X0000000000008000
+  ; line 14
+  assign Q = ^X00000000000000000000000000008000
+  ; line 15
+  assign C = ^X0000000000008000
+  ; line 16
+  assign CD = ^X00000000000000000000000000008000
+  ; line 18
+  assign X = ^X00004080
+  ; line 19
+  assign D = ^X4847464544434241
+  ; line 21
+  assign D = ^X0000000000000000
+  ; line 23
+  assign Y = add.F(X, 1.0)
+  ; line 24
+  assign W = add.W(W, 22872)
+  ; line 25
+  assign I = 2
+  ; line 26
+  assign X = ^X20204241
+  ; line 27
+  assign I = add.L(I, 538976321)
+  ; line 28
+  jump B2
+B2:
+  assign I = -256
+  jump B3
+B3:
+  ; line 29
+  call S(ref $K1, ref $K2, ref $D1)
+  ; line 30
+  return 1

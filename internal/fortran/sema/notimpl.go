@@ -59,14 +59,10 @@ func (a *analyzer) unimplemented(s ast.Stmt) {
 }
 
 // formWhat names an expression's form that semantic analysis doesn't
-// compile yet, as a NOTIMPL message does ("a Hollerith constant"), or ""
+// compile yet, as a NOTIMPL message does ("an implied-DO list"), or ""
 // for a form it compiles.
 func formWhat(e ast.Expr) string {
 	switch e.(type) {
-	case *ast.HollerithConst:
-		return "a Hollerith constant"
-	case *ast.TypelessConst:
-		return "an octal or hexadecimal constant"
 	case *ast.ComplexConst:
 		return "a COMPLEX constant"
 	case *ast.ImpliedDo:

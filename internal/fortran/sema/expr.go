@@ -14,12 +14,6 @@ import (
 // operand of lower rank in a mixed operation gets an explicit Convert,
 // and constant operations are folded.
 
-// hollerith is NOTIMPL's subject for a character constant where a
-// number is wanted: VAX FORTRAN takes it for a Hollerith constant there
-// (section 2.2.1.6), which is Phase 82's. As an actual argument it is this
-// phase's (arguments.go).
-const hollerith = "a character constant in a numeric context (a Hollerith constant)"
-
 // bad is an expression whose error has been reported.
 func (a *analyzer) bad(pos diag.Position) Expr {
 	return &bad{exprBase{invalid, pos}}
@@ -30,7 +24,7 @@ func (a *analyzer) bad(pos diag.Position) Expr {
 // for the caller to accept or not.
 func (a *analyzer) value(e ast.Expr) Expr {
 	switch e := e.(type) {
-	case *ast.IntConst, *ast.RealConst:
+	case *ast.IntConst, *ast.RealConst, *ast.TypelessConst, *ast.HollerithConst, *ast.Radix50Const:
 		v, _ := a.folded(e)
 
 		return v
@@ -396,10 +390,11 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 // arithmetic makes e an arithmetic operand: a LOGICAL value is used as
 // an INTEGER (section 2.3.1.2: "Logical entities used in an arithmetic
 // context are treated as integers"), a character constant is a
-// Hollerith constant, NOTIMPL, and any other CHARACTER value is an error
-// (CHARNUMBER): FORTRAN converts no character value to a number.
+// Hollerith constant, of the default integer type (typeless.go), and any other
+// CHARACTER value is an error (CHARNUMBER): FORTRAN converts no character value
+// to a number.
 func (a *analyzer) arithmetic(e Expr) Expr {
-	switch e.Type().Kind {
+	switch e = a.numericConst(e); e.Type().Kind {
 	case Logical:
 		return a.convert(e, e.Type().integer())
 	case Character:
@@ -412,15 +407,8 @@ func (a *analyzer) arithmetic(e Expr) Expr {
 }
 
 // notCharacter reports a CHARACTER value where a number or a logical value
-// must be: a character constant is a Hollerith constant there (NOTIMPL, Phase
-// 82's), and any other is CHARNUMBER.
+// must be.
 func (a *analyzer) notCharacter(e Expr) {
-	if _, ok := e.(*Const); ok {
-		a.notImpl(e.Position(), hollerith)
-
-		return
-	}
-
 	a.report("CHARNUMBER", e.Position(), article(e.Type().String()))
 }
 
@@ -442,7 +430,7 @@ func (a *analyzer) unary(e *ast.Unary) Expr {
 		return &Const{exprBase: exprBase{IntegerType, e.Pos}, Int: minInt}
 	}
 
-	x := a.value(e.X)
+	x := a.numericConst(a.value(e.X))
 
 	switch {
 	case x.Type().Kind == Invalid:
@@ -489,7 +477,11 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 		return a.concat(e)
 	}
 
-	x, y := a.value(e.X), a.value(e.Y)
+	x, y := a.operands(e.X, e.Y)
+	if !e.Op.Relational() {
+		x, y = a.numericConst(x), a.numericConst(y)
+	}
+
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
@@ -516,7 +508,7 @@ func (a *analyzer) binary(e *ast.Binary) Expr {
 // keep the types the OTS$ routine computing it takes, which needn't be the
 // result's (powerTypes).
 func (a *analyzer) power(e *ast.Binary) Expr {
-	x, y := a.value(e.X), a.value(e.Y)
+	x, y := a.operands(e.X, e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
 	}
@@ -572,6 +564,14 @@ func (a *analyzer) powerTypes(x, y Expr) (result, base, exponent Type) {
 // (A // (B // C) has the parts A, B, and C), and constants side by side are
 // one. Its length is its parts' lengths' sum, unknown when one of theirs is.
 func (a *analyzer) concat(e *ast.Binary) Expr {
+	for _, o := range []ast.Expr{e.X, e.Y} {
+		if u := untyped(o); u != nil {
+			a.report("NOCHARVALUE", u.Position(), untypedWhat(u))
+
+			return a.bad(e.Pos)
+		}
+	}
+
 	x, y := a.value(e.X), a.value(e.Y)
 	if x.Type().Kind == Invalid || y.Type().Kind == Invalid {
 		return a.bad(e.Pos)
@@ -663,7 +663,7 @@ func (a *analyzer) mixedType(x, y Expr) Type {
 // are compared as they are, whatever their lengths, the shorter as if
 // padded with blanks; a CHARACTER value can't be compared with any other
 // (COMPARETYPE), but for a character constant, which is a Hollerith
-// constant beside a number (NOTIMPL).
+// constant beside a number, and is one already (operands).
 func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 	switch cx, cy := x.Type().Kind == Character, y.Type().Kind == Character; {
 	case cx && cy:
@@ -682,11 +682,7 @@ func (a *analyzer) compare(e *ast.Binary, x, y Expr) Expr {
 			c, o = y, x
 		}
 
-		if _, ok := c.(*Const); ok {
-			a.notImpl(c.Position(), hollerith)
-		} else {
-			a.report("COMPARETYPE", e.Pos, article(c.Type().String()), article(o.Type().String()))
-		}
+		a.report("COMPARETYPE", e.Pos, article(c.Type().String()), article(o.Type().String()))
 
 		return a.bad(e.Pos)
 	}
@@ -741,21 +737,13 @@ func (a *analyzer) logical(e *ast.Binary, x, y Expr) Expr {
 // its truth is its bit 0, so an INTEGER condition is converted to
 // LOGICAL, with no change to its bits.
 func (a *analyzer) condition(e ast.Expr) Expr {
-	c := a.value(e)
+	c := a.numericConst(a.value(e))
 
 	switch c.Type().Kind {
 	case Logical, Invalid:
 		return c
 	case Integer:
 		return a.convert(c, Type{Logical, c.Type().Size})
-	case Character:
-		if _, ok := c.(*Const); ok {
-			a.notImpl(c.Position(), hollerith)
-
-			break
-		}
-
-		fallthrough
 	default:
 		a.report("NOTLOGICAL", e.Position(), c.Type().String())
 	}

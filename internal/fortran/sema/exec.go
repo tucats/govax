@@ -115,7 +115,7 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	if target == nil || target.Type().Kind == Record {
 		value = a.aggregateValue(s.Value)
 	} else {
-		value = a.value(s.Value)
+		value = a.assignedExpr(s.Value, target.Type())
 	}
 
 	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
@@ -155,11 +155,11 @@ func (a *analyzer) assignedValue(pos diag.Position, target, value Expr) Expr {
 		return value
 
 	case vt.Kind == Character:
-		if _, ok := value.(*Const); ok {
-			a.notImpl(value.Position(), hollerith)
-		} else {
-			a.report("ASSIGNTYPE", pos, article(vt.String()), placeName(target), tt.String())
+		if c, ok := value.(*Const); ok {
+			return a.movedText(c, tt)
 		}
+
+		a.report("ASSIGNTYPE", pos, article(vt.String()), placeName(target), tt.String())
 
 		return nil
 
