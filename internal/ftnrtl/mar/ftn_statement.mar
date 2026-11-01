@@ -12,8 +12,8 @@
 ; The begin call is chosen by the statement's kind, named as VMS's
 ; FORTRAN run-time library names its own: READ or WRITE, then S for a
 ; unit (sequential access) or I for an internal file, then F formatted,
-; L list-directed, or N namelist; and FTN$ENCODE and FTN$DECODE. Its
-; arguments are
+; L list-directed, N namelist, or U unformatted; and FTN$ENCODE and
+; FTN$DECODE. Its arguments are
 ;
 ;	4(AP)	the statement's control block, made by the compiler:
 ;		+0  word  its size in bytes (8)
@@ -22,7 +22,7 @@
 ;		+4  long  not used yet
 ;	8(AP)	the unit, by value; for an internal file, its descriptor;
 ;		for ENCODE and DECODE, the buffer's address
-;	12(AP)	the format, but for a list-directed statement: a FORMAT
+;	12(AP)	the format, but for a list-directed or unformatted statement: a FORMAT
 ;		statement's block (+0 the address of a longword where the
 ;		parsed form is kept, +4 the text's length, a word, +6 a word
 ;		of flags, +8 the text's address, and with flag bit 0 of those
@@ -95,7 +95,8 @@
 ; Formatted input and output are FTN_FORMAT's, list-directed output and
 ; input FTN_LISTOUT's and FTN_LISTIN's, namelist input and output
 ; FTN_NAMELIST's (done whole by the begin call: a namelist statement has no
-; items), on the units FTN_UNITS has and on internal files (FTN_INTERNAL).
+; items), unformatted input and output FTN_UNFORMATTED's, on the units
+; FTN_UNITS has and on internal files (FTN_INTERNAL).
 ; Three namelist conditions name what was wrong (the text, or the
 ; entity's name) in their messages, before the unit: CTX_NM_FAO.
 ;
@@ -171,7 +172,10 @@ CTX_USERPC	= CTX_RECP+52		; long: the user PC of a statement of one
 					;  call (FTN_OPEN), or 0
 CTX_REASON	= CTX_RECP+56		; long: a second condition for the signal, or 0
 					;  (FTN_POSITION)
-CTX_SIZE	= CTX_RECP+60
+CTX_UNF_POS	= CTX_RECP+60		; FTN_UNFORMATTED's: where it reads, what the
+CTX_UNF_LEN	= CTX_RECP+64		;  buffer holds, and its state
+CTX_UNF_STATE	= CTX_RECP+68
+CTX_SIZE	= CTX_RECP+72
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -184,10 +188,16 @@ K_WRITE_SL	= 3
 K_READ_SN	= 4
 K_WRITE_SN	= 5
 K_FILE		= 6			; OPEN or CLOSE, which has no records
+K_READ_SU	= 8
+K_WRITE_SU	= 9
 K_INTERNAL	= 1@4
 K_CODE		= 2@4
 
 INTERNAL_UNIT	= -5			; an internal file's unit, as VMS's
+
+FORM_FORMATTED	= 1			; FTN$$UNIT_RECORD's forms
+FORM_UNFORMATTED = 2
+OPEN_UNFORMATTED = 4			; FTN$$UNIT_OPEN's: unformatted
 
 ;
 ; The statement stack and the free list: data each program has its own
@@ -237,6 +247,12 @@ BEGIN_MASK	= ^M<R2,R3,R4,R5,R6,R7>
 	.ENTRY	FTN$WRITE_SN,BEGIN_MASK
 	MOVL	#K_WRITE_SN,R6
 	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_SU,BEGIN_MASK
+	MOVL	#K_READ_SU,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_SU,BEGIN_MASK
+	MOVL	#K_WRITE_SU,R6
+	BRW	SEQUENTIAL
 	.ENTRY	FTN$READ_IF,BEGIN_MASK
 	MOVL	#K_READ_SF+K_INTERNAL,R6
 	BRW	INTERNAL
@@ -285,7 +301,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	MOVL	4(AP),R5		; the control block
 	BSBW	PUSH_CONTEXT
 	;
-	; A unit: its block (FTN$$UNIT_FIND, given the unit and 1 to read),
+	; A unit: its block (FTN$$UNIT_FIND, given the unit and OPEN_FLAGS),
 	; and no other statement in progress on it.
 	;
 	TSTB	CTX_INTERNAL(R3)
@@ -294,8 +310,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	PUSHL	R3
 	CALLS	#2,FTN$$INT_START	; FTN_INTERNAL
 	BRB	75$
-36$:	BICL3	#^C1,R6,R0		; 1 for a WRITE
-	XORL2	#1,R0			; 1 for a READ
+36$:	BSBW	OPEN_FLAGS
 	PUSHL	R0
 	PUSHL	R7
 	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
@@ -308,23 +323,31 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	;
 	; Connect the unit, take its record buffer, and start the statement.
 	;
-60$:	BICL3	#^C1,R6,R0		; 1 for a WRITE
-	XORL2	#1,R0			; 1 for a READ
+60$:	BSBW	OPEN_FLAGS
 	PUSHL	R0
 	PUSHL	CTX_STREAM(R3)
 	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,65$
 	BRW	FAIL
-65$:	BICL3	#^C1,R6,-(SP)		; 1 for a WRITE
+65$:	MOVL	#FORM_FORMATTED,-(SP)	; the statement's form
+	CMPL	R6,#K_READ_SU
+	BLSSU	66$
+	MOVL	#FORM_UNFORMATTED,(SP)
+66$:	BICL3	#^C1,R6,-(SP)		; 1 for a WRITE
 	PUSHAB	CTX_UNITMAX(R3)
 	PUSHL	CTX_STREAM(R3)
-	CALLS	#3,FTN$$UNIT_RECORD	; FTN_UNITS
+	CALLS	#4,FTN$$UNIT_RECORD	; FTN_UNITS
 	MOVL	R0,CTX_RECP(R3)
 	TSTL	R1
 	BEQL	75$
 	MOVL	R1,R0			; the statement can't use the unit
 	BRW	FAIL
-75$:	CMPL	R6,#K_READ_SN
+75$:	CMPL	R6,#K_READ_SU
+	BLSSU	76$
+	PUSHL	R3			; unformatted
+	CALLS	#1,FTN$$UNF_START	; FTN_UNFORMATTED
+	RET
+76$:	CMPL	R6,#K_READ_SN
 	BEQL	90$
 	CMPL	R6,#K_WRITE_SN
 	BEQL	95$
@@ -356,6 +379,19 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#3,FTN$$NML_WRITE	; FTN_NAMELIST
 	MOVL	#SS$_NORMAL,R0
 	RET
+
+;
+; OPEN_FLAGS: R0 is what FTN$$UNIT_FIND and FTN$$UNIT_OPEN are told of the
+; statement whose kind is R6: 1 for a READ, 0 for a WRITE, with 4 added for an
+; unformatted one.
+;
+OPEN_FLAGS:
+	BICL3	#^C1,R6,R0		; 1 for a WRITE
+	XORL2	#1,R0			; 1 for a READ
+	CMPL	R6,#K_READ_SU
+	BLSSU	10$
+	BISL2	#OPEN_UNFORMATTED,R0
+10$:	RSB
 
 ;
 ; FAIL: the statement's error, the condition in R0, recorded in its
@@ -502,7 +538,11 @@ PUSH_CONTEXT:
 	BGTRU	10$
 	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
 	BRB	90$
-10$:	CMPB	CTX_KIND(R2),#K_READ_SL
+10$:	CMPB	CTX_KIND(R2),#K_READ_SU
+	BLSSU	15$
+	CALLS	#2,FTN$$UNF_ITEM	; FTN_UNFORMATTED
+	BRB	90$
+15$:	CMPB	CTX_KIND(R2),#K_READ_SL
 	BNEQ	20$
 	CALLS	#2,FTN$$LISTIN_ITEM	; FTN_LISTIN
 	BRB	90$
@@ -537,7 +577,12 @@ REPORT		= -36			; the name's length and address, RMS's
 	PUSHL	R2			; formatted: the end of the walk, the
 	CALLS	#1,FTN$$FMT_END		;  last record, after no failure
 	BRB	10$
-7$:	TSTL	CTX_STATUS(R2)
+7$:	CMPB	CTX_KIND(R2),#K_READ_SU
+	BLSSU	8$
+	PUSHL	R2			; unformatted: the last segment, after no
+	CALLS	#1,FTN$$UNF_END		;  failure
+	BRB	10$
+8$:	TSTL	CTX_STATUS(R2)
 	BNEQ	10$
 	CMPB	CTX_KIND(R2),#K_WRITE_SL
 	BNEQ	10$

@@ -71,7 +71,7 @@ func inquireReport() []string {
 // one of testdata/for81's, in FORTRAN, and each answer must be the one in
 // vax/for81-vax.txt, the device's name aside (VMS's volume was DUA2). Relative
 // files wait for subtask 10 (#491, #492), a direct unit's NEXTREC moving for
-// subtask 8 (#507), and an unformatted unit with no OPEN for subtask 7 (#508).
+// subtask 8 (#507).
 // testdata/fortran/inquire.for has the places of each width (#506) and unit 6
 // once it's connected (#477).
 func TestFor81InquireOracle(t *testing.T) {
@@ -155,6 +155,7 @@ func TestFor81InquireOracle(t *testing.T) {
 		connected(503, ", SHARED"),
 		connected(504, ", RECL=133"),
 		{505, []string{"OPEN (10, FILE='OLD1.DAT', STATUS='OLD', READONLY,", "     1 BLANK='ZERO')"}, []string{"10, ' '"}, nil},
+		{508, []string{"WRITE (13) 1"}, []string{"13, ' '"}, []string{"CLOSE (13, DISP='DELETE')"}},
 		{509, []string{"WRITE (13, '(A)') 'TEXT'"}, []string{"13, ' '"}, []string{"CLOSE (13, DISP='DELETE')"}},
 	}
 

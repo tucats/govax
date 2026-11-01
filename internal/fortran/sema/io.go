@@ -13,10 +13,10 @@ import (
 
 // The I/O statements (chapter 7, appendix A.1), and the statements they
 // use: FORMAT (chapter 8) and NAMELIST (section 4.10). Every form of
-// formatted, list-directed, and namelist READ, WRITE, PRINT, TYPE, and
-// ACCEPT is analyzed into an IO, and ENCODE and DECODE too; what is left
-// for later phases is unformatted, direct access, and keyed I/O, and REWRITE
-// (NOTIMPL).
+// formatted, list-directed, namelist, and unformatted sequential READ,
+// WRITE, PRINT, TYPE, and ACCEPT is analyzed into an IO, and ENCODE and
+// DECODE too; what is left for later subtasks is direct access and keyed
+// I/O, and REWRITE (NOTIMPL).
 
 // The default units, which the statements without a unit and the units
 // written * use. VMS's FORTRAN run-time library numbers them -1 to -4,
@@ -35,9 +35,10 @@ type Form int
 
 // The forms of I/O this phase compiles.
 const (
-	ListForm      Form = iota // list-directed: format * (section 7.2.1.2)
-	FormattedForm             // under a format
-	NamelistForm              // a NAMELIST group's (section 7.2.1.3)
+	ListForm        Form = iota // list-directed: format * (section 7.2.1.2)
+	FormattedForm               // under a format
+	NamelistForm                // a NAMELIST group's (section 7.2.1.3)
+	UnformattedForm             // no format: the values' bytes (section 7.2.1.4)
 )
 
 // Format is a FORMAT statement: its label, its specification's text,
@@ -284,9 +285,7 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 		return nil
 
 	case s.Format == nil && s.Namelist == nil:
-		a.notImplForm(s.Pos, "unformatted I/O")
-
-		return nil
+		return a.unformatted(io, s, path)
 	}
 
 	ok := a.ioUnit(io, &s.Unit)
@@ -305,6 +304,28 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 
 	if io.Internal && io.Form == NamelistForm {
 		a.report("NMLINTERNAL", s.Unit.Pos)
+
+		ok = false
+	}
+
+	if !a.ioSpecs(io, s.Specs, path) || !ok {
+		return nil
+	}
+
+	return a.ioItems(io, s.Items)
+}
+
+// unformatted analyzes an unformatted sequential READ or WRITE (sections
+// 7.2.1.4 and 7.3.1.4): a control list with a unit and no format, whose
+// statement reads or writes one record of its items' bytes. The unit is a
+// number: an internal file and the default unit are formatted (section
+// 7.1.1.1).
+func (a *analyzer) unformatted(io *IO, s *ast.TransferStmt, path []frame) Stmt {
+	io.Form = UnformattedForm
+	ok := a.ioUnit(io, &s.Unit)
+
+	if ok && (io.Internal || io.Unit == nil) {
+		a.report("UNFUNIT", s.Unit.Pos)
 
 		ok = false
 	}

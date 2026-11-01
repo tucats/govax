@@ -4625,8 +4625,9 @@ output it prints, and programs of several files in its `modules` directory.
   IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
   compile, by the rules VMS's FORTRAN run-time library applies
   (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
-  runs formatted, list-directed, and namelist input and output, to the
-  default units, units 0 to 119, and internal files.
+  runs formatted, list-directed, namelist, and unformatted sequential input
+  and output, to the default units, units 0 to 119, and internal files (which,
+  like the default unit `*`, take only formatted I/O: `%FORT-E-UNFUNIT`).
 - **OPEN and CLOSE** (chapter 9) on sequential files on a mounted volume: a host file
   is brought in with COPY. A value known at compile time is checked then
   (`%FORT-E-KEYCHOICE`, `%FORT-E-OPENCONFLICT`, `%FORT-E-NEEDRECL`), and one known only
@@ -4638,8 +4639,8 @@ output it prints, and programs of several files in its `modules` directory.
   file each, as on VMS; `@procedure/OUTPUT=file` shares one. Image exit closes every
   unit by its disposition. `DISPOSE='PRINT'` and `'SUBMIT'` keep the file, as VMS does
   with no queue running. So far USEROPEN= and ASSOCIATEVARIABLE= draw
-  `%FORT-E-NOTIMPL`; relative and indexed files are `%FOR-F-NOTIMP`; an unformatted or
-  direct unit can be opened but not yet read or written.
+  `%FORT-E-NOTIMPL`; relative and indexed files are `%FOR-F-NOTIMP`; a direct unit can
+  be opened but not yet read or written.
 - **INQUIRE** (section 9.3), by a unit or by a file, every specifier in the manual. It
   doesn't fail: a unit that can't exist (anything but 0 to 119) has EXIST false, as does a
   file that isn't there, and IOSTAT= is 0. A name that can't be parsed, or has a wildcard,
@@ -4697,8 +4698,23 @@ output it prints, and programs of several files in its `modules` directory.
   run-time library would refuse is `SYNERRFOR` (62). A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
-  199 characters is `INPRECTOO` (22). Unformatted, direct access, and keyed I/O, REWRITE,
+  199 characters is `INPRECTOO` (22). Direct access and keyed I/O, REWRITE,
   DELETE, FIND, and UNLOCK are `%FORT-E-NOTIMPL`.
+- **Unformatted sequential I/O** (sections 7.2.1.4 and 7.3.1.4): `WRITE (1) N, X, ARRAY`
+  writes its items' bytes one after another as one record, and `READ (1) N, X, ARRAY`
+  gives each item as many bytes as it holds, from one record; what the items leave of
+  the record is passed over, and `READ (1)` passes a whole record over. Items past the
+  record's end are `INPSTAREQ` (67). A unit opened `FORM='UNFORMATTED'`, or with no OPEN
+  whose first statement is unformatted, has segmented records, as VMS's do: a record is
+  one or more variable-length records of the file, each up to 2,044 bytes (`4*RECL+2`
+  with RECL=) and starting with a word that says whether it is the record's first, last,
+  only, or a middle segment, so a record may be as long as the program likes. Such a
+  file read as segmented, if its records have no segments, is `SEGRECFOR` (35).
+  `RECORDTYPE='VARIABLE'`, `'FIXED'` (filled out with zeros), and `'STREAM'` records have
+  no segments, and a record longer than RECL is `OUTSTAOVE` (66), with nothing written.
+  BACKSPACE steps over a whole record, its segments and all. A formatted statement on an
+  unformatted unit, or an unformatted one on a formatted unit, is `MIXFILACC` (31). The
+  records match those VMS's library writes, byte for byte.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`

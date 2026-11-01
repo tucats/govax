@@ -4,7 +4,8 @@
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
 done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
 same day; subtask 4, OPEN and CLOSE, the same day; subtask 5, INQUIRE, the same day; subtask 6,
-REWIND, BACKSPACE, and ENDFILE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
+REWIND, BACKSPACE, and ENDFILE, the same day; subtask 7, unformatted sequential I/O, the same day.
+Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -1107,3 +1108,28 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     come from the same test as a direct unit's, waiting for relative files in subtask 10; that
     BACKSPACE passes over a record too long for the buffer (RMS$_RTB) rather than failing; and the
     second condition's values for a relative unit.
+- **2026-10-31, subtask 7, unformatted sequential I/O.** `FTN$READ_SU` and `FTN$WRITE_SU`
+  (offsets 440 and 448, GSMATCH 1,13), begun as the other sequential statements are, and
+  `ftn_unformatted.mar` (`FTN$$UNF_START`, `_ITEM`, `_END`): a WRITE's items' bytes into the unit's
+  buffer, a READ's out of it, a segment written only when it is full and another byte comes, so a
+  record that fills one exactly is an only segment. The compiler's side is `sema.UnformattedForm`
+  (`unformatted`; UNFUNIT for an internal file or `*`) and `U` in `beginRoutine`.
+  `TestFor81UnformattedOracle` holds the probe's cases #522 to #542 and #546 to VMS's statuses, the
+  bytes each read returned, and every record's length and first 32 bytes, all matching;
+  `TestFor81InquireOracle` now has #508, the unit with no OPEN; `testdata/fortran/unformatted.for`
+  is the rest (every type, arrays, implied-DO lists, BACKSPACE over two segments, ENDFILE's record),
+  read against these rules by hand; `TestFortranUnformattedSignals` is the messages.
+  - **FTN_UNITS:** `FTN$$UNIT_FIND` and `FTN$$UNIT_OPEN` take 4 for an unformatted statement, which
+    connects a unit with no OPEN as VMS's does (#508: unformatted, segmented, RAT 0, RECL 510);
+    `FTN$$UNIT_RECORD` takes the statement's form, MIXFILACC for the other one; `FTN$$UNIT_READY`
+    clears UB_SEGMENTED for a file that isn't VAR (an existing FIXED file opened unformatted).
+  - **The unit's record count** is of logical records: a segment that doesn't end its record is
+    taken off, and BACKSPACE's `$GET`s read a record's segments to its last (#540).
+  - **#534, a STREAM file,** reads back without the record's first byte (a 0) on govax too, so it
+    is in the oracle.
+  - **Unconfirmed, govax's choices.** What is SEGRECFOR beyond VMS's one case (a first word of
+    0100): any word over 3, a segment with no room for its word, a first segment where a record
+    goes on, and a later one where one starts; a file that ends inside a segmented record is
+    ENDDURREA. A unit ENDFILE connected, whose first statement is unformatted, becomes what a unit
+    with no OPEN would (segmented, 2044 bytes), so its buffer is made that large to begin with.
+    UNFUNIT is a compile-time error, since no VAX FORTRAN compiler is here to ask.

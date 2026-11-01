@@ -460,7 +460,10 @@ func TestErrors(t *testing.T) {
 		{"RETURN in a main program", []string{"RETURN", "END"}, "MAINRETURN@1:7"},
 		{"formatted PRINT", []string{"PRINT 10, X", "10 FORMAT (F8.2)", "END"}, ""},
 		{"a unit number", []string{"WRITE (6,*) X", "END"}, ""},
-		{"unformatted WRITE", []string{"WRITE (*) X", "END"}, "NOTIMPL@1:7"},
+		{"unformatted WRITE", []string{"DIMENSION A(2)", "WRITE (1) X, 'AB', (A(I), I = 1, 2)", "END"}, ""},
+		{"unformatted READ", []string{"DIMENSION A(2)", "READ (1, END=10, ERR=10, IOSTAT=I) X, A", "READ (1)", "10 END"}, ""},
+		{"unformatted WRITE to *", []string{"WRITE (*) X", "END"}, "UNFUNIT@1:14"},
+		{"unformatted WRITE to an internal file", []string{"CHARACTER*8 S", "WRITE (S) X", "END"}, "UNFUNIT@2:14"},
 		{"a REAL format", []string{"WRITE (*,F) X", "END"}, "BADFORMAT@1:16"},
 		{"an assumed-size array written", []string{"SUBROUTINE S(A)", "DIMENSION A(*)", "PRINT *, A", "END"}, "NOSIZE@3:16"},
 

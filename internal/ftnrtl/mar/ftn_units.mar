@@ -110,6 +110,8 @@ UNIT_LOW	= -4			; the units the table holds
 UNIT_HIGH	= 119
 
 DEFAULT_RECL	= 133			; a record's length with no RECL= (Table 9-3)
+DEFAULT_SEG	= 2044			; an unformatted one's, a segment with its
+					;  control word (testdata/for81, round 1)
 MIN_BUFFER	= 256			; a unit's buffer holds at least this
 INPUT_MAX	= 199			; the longest record read from SYS$INPUT:
 					;  (testdata/for80, round 2)
@@ -190,7 +192,7 @@ EXIT_DECLARED:	.LONG	0
 ;
 ; Finds the block of the unit numbered unit (a longword, by value), making it
 ; if this is the unit's first use, for reading if read (by value) is 1, for
-; writing if 0. Returns in R0 SS$_NORMAL and in R1 the block, or in R0 the
+; writing if 0, with 4 added for an unformatted statement (FTN$$UNIT_OPEN). Returns in R0 SS$_NORMAL and in R1 the block, or in R0 the
 ; FOR$_ condition that the unit can't be used: INVLOGUNI for a number outside
 ; -4 to 119 (R1 0); and for a read, whatever connecting the unit failed with,
 ; or ERRDURREA for an output unit that isn't a terminal (R1 its block, whose
@@ -224,7 +226,7 @@ EXIT_DECLARED:	.LONG	0
 	MOVL	R6,UB_UNIT(R2)
 10$:	BLBC	8(AP),60$		; written: nothing to see yet
 	BLBS	UB_OPEN(R2),30$
-	PUSHL	#1
+	PUSHL	8(AP)
 	PUSHL	R2
 	CALLS	#2,FTN$$UNIT_OPEN
 	BLBC	R0,70$
@@ -380,8 +382,11 @@ EXIT_DECLARED:	.LONG	0
 ; a READ if read (by value) is 1: a READ finds a file, and a WRITE makes one
 ; (a unit on SYS$INPUT: or SYS$OUTPUT: is a $CREATE either way, of a
 ; process-permanent file). With read 2 it is for ENDFILE, which makes one with
-; no carriage control and leaves the unit's form to its next statement. Returns SS$_NORMAL in R0, or the FOR$_ condition
-; for the failure, RMS's status and value kept in the block.
+; no carriage control and leaves the unit's form to its next statement. With 4
+; added it is for an unformatted statement, and the unit is as VMS's library
+; connects one (testdata/for81's #508): unformatted, segmented, with no
+; carriage control. Returns SS$_NORMAL in R0, or the FOR$_ condition for the
+; failure, RMS's status and value kept in the block.
 ;
 	.ENTRY	FTN$$UNIT_OPEN,^M<R2,R3>
 	MOVL	4(AP),R2
@@ -390,9 +395,14 @@ EXIT_DECLARED:	.LONG	0
 	CALLS	#1,FTN$$UNIT_INIT
 	MOVAB	UB_FAB(R2),R3
 	CMPL	8(AP),#2
-	BNEQ	5$
+	BNEQ	3$
 	CLRB	UB_FORM(R2)
 	CLRB	FAB$B_RAT(R3)
+3$:	BBC	#2,8(AP),5$
+	MOVB	#2,UB_FORM(R2)		; unformatted
+	CLRB	FAB$B_RAT(R3)
+	MOVB	#1,UB_SEGMENTED(R2)
+	MOVL	#DEFAULT_SEG,UB_SIZE(R2)
 5$:	BLBC	8(AP),10$
 	TSTL	UB_KIND(R2)
 	BNEQ	10$
@@ -451,7 +461,9 @@ EXIT_DECLARED:	.LONG	0
 ; FTN$$UNIT_READY(block)
 ;
 ; A unit's file is open: connects the RAB, gives the unit its record buffer,
-; and if this is the first unit connected declares the exit handler. Returns
+; and if this is the first unit connected declares the exit handler. Only a
+; file of variable-length records has segments. A unit with no form yet gets a
+; buffer that holds a segment, should its first statement be unformatted. Returns
 ; SS$_NORMAL in R0, or FOR$_OPEFAI with RMS's status kept, the file closed.
 ;
 	.ENTRY	FTN$$UNIT_READY,^M<R2,R3,R4>
@@ -469,15 +481,23 @@ EXIT_DECLARED:	.LONG	0
 	; A file's own records may be longer than the unit would write: the
 	; buffer holds the longest. A file with a record size has records of it.
 	;
-10$:	TSTL	UB_KIND(R2)
+10$:	CMPB	FAB$B_RFM(R3),#FAB$C_VAR
+	BEQL	15$
+	CLRB	UB_SEGMENTED(R2)
+15$:	TSTL	UB_KIND(R2)
 	BNEQ	20$
 	MOVZWL	FAB$W_MRS(R3),R0
 	BEQL	20$
 	MOVL	R0,UB_SIZE(R2)
 20$:	MOVL	UB_SIZE(R2),R0
 	CMPL	R0,#MIN_BUFFER
-	BGEQ	25$
+	BGEQ	22$
 	MOVL	#MIN_BUFFER,R0
+22$:	TSTB	UB_FORM(R2)
+	BNEQ	25$
+	CMPL	R0,#DEFAULT_SEG
+	BGEQ	25$
+	MOVL	#DEFAULT_SEG,R0
 25$:	TSTL	UB_KIND(R2)
 	BNEQ	30$
 	MOVZWL	UB_XAB+XAB$W_LRL(R2),R1
@@ -626,29 +646,38 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	RET
 
 ;
-; FTN$$UNIT_RECORD(block, place, write)
+; FTN$$UNIT_RECORD(block, place, write[, form])
 ;
-; What a statement uses of a connected unit, for reading if write (by value)
-; is 0: returns in R0 its record buffer, and puts at place the longest record
-; it may write, then a longword, 1 if blanks in numbers are zeros. R1 is 0, or
-; the FOR$_ condition if the statement can't use the unit: MIXFILACC for a
-; formatted sequential statement on a unit that is unformatted or direct,
-; WRIREAFIL for a write on a READONLY unit. A unit with no form yet takes the
-; statement's.
+; What a sequential statement uses of a connected unit, for reading if write
+; (by value) is 0, its form (by value) 1 formatted, the default, or 2
+; unformatted: returns in R0 its record buffer, and puts at place the longest
+; record it may write, then a longword, 1 if blanks in numbers are zeros. R1 is
+; 0, or the FOR$_ condition if the statement can't use the unit: MIXFILACC for
+; a statement of the other form, or on a unit that is direct, WRIREAFIL for a
+; write on a READONLY unit. A unit with no form yet takes the statement's, and
+; if unformatted, the size and segments of a unit connected for one.
 ;
-	.ENTRY	FTN$$UNIT_RECORD,^M<R2>
+	.ENTRY	FTN$$UNIT_RECORD,^M<R2,R3>
 	MOVL	4(AP),R1
-	MOVL	8(AP),R2
+	MOVL	#1,R3			; the statement's form
+	CMPB	(AP),#4
+	BLSSU	5$
+	MOVL	16(AP),R3
+5$:	TSTB	UB_FORM(R1)
+	BNEQ	8$
+	MOVB	R3,UB_FORM(R1)
+	CMPL	R3,#1
+	BEQL	8$
+	MOVB	#1,UB_SEGMENTED(R1)
+	MOVL	#DEFAULT_SEG,UB_SIZE(R1)
+8$:	MOVL	8(AP),R2
 	MOVL	UB_SIZE(R1),(R2)+
 	CLRL	(R2)
 	CMPB	UB_BLANK(R1),#1
 	BNEQ	10$
 	MOVL	#1,(R2)
 10$:	MOVL	UB_RECP(R1),R0
-	TSTB	UB_FORM(R1)
-	BNEQ	15$
-	MOVB	#1,UB_FORM(R1)
-15$:	CMPB	UB_FORM(R1),#1
+	CMPB	UB_FORM(R1),R3
 	BNEQ	30$
 	CMPB	UB_ACCESS(R1),#1
 	BEQL	30$

@@ -706,6 +706,10 @@ var messages = map[string]kind{
 	// doesn't allow.
 	"NMLINTERNAL": {Error, "namelist I/O can't use an internal file"},
 
+	// UNFUNIT is unformatted I/O to an internal file or the default unit
+	// (*), which are formatted (section 7.1.1.1).
+	"UNFUNIT": {Error, "unformatted I/O needs a unit number, not an internal file or *"},
+
 	// NMLTWICE is a NAMELIST group defined twice in a unit.
 	"NMLTWICE": {Error, "the NAMELIST group %s is defined already (line %d)"},
 

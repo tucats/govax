@@ -28,7 +28,7 @@ import (
 // descriptor; ENCODE's or DECODE's buffer's address), and the format (a
 // FORMAT statement's block, the address an ASSIGNed variable holds, a
 // run-time format's descriptor, or a NAMELIST group's block); a
-// list-directed statement has no format argument. ENCODE and DECODE have a
+// list-directed or unformatted statement has no format argument. ENCODE and DECODE have a
 // fourth, the count of characters, by value: a longword, since VMS's take
 // counts past a descriptor's word.
 //
@@ -54,7 +54,7 @@ func (l *lowerer) io(s *sema.IO) {
 
 	args := []Arg{{Ref: l.control(c)}, l.ioUnit(s)}
 
-	if s.Form != sema.ListForm {
+	if s.Form != sema.ListForm && s.Form != sema.UnformattedForm {
 		args = append(args, l.ioFormat(s))
 	}
 
@@ -144,8 +144,8 @@ func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat 
 // beginRoutine is the FTNRTL routine that begins statement s: FTN$, the
 // direction, and the access and form, as VMS's FORTRAN run-time library
 // names its own: S sequential or I internal, then F formatted, L
-// list-directed, or N namelist (FTN$WRITE_SF, FTN$READ_IL); or FTN$ENCODE
-// and FTN$DECODE.
+// list-directed, N namelist, or U unformatted (FTN$WRITE_SF, FTN$READ_IL,
+// FTN$WRITE_SU); or FTN$ENCODE and FTN$DECODE.
 func beginRoutine(s *sema.IO) string {
 	switch {
 	case s.Code && s.Read:
@@ -165,7 +165,7 @@ func beginRoutine(s *sema.IO) string {
 		name += "S"
 	}
 
-	return name + [...]string{sema.ListForm: "L", sema.FormattedForm: "F", sema.NamelistForm: "N"}[s.Form]
+	return name + [...]string{sema.ListForm: "L", sema.FormattedForm: "F", sema.NamelistForm: "N", sema.UnformattedForm: "U"}[s.Form]
 }
 
 // ioUnit is the begin call's unit argument: a unit's number by value (a

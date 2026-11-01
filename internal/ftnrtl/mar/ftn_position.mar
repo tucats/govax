@@ -21,7 +21,8 @@
 ;			manual's way, a $REWIND and then a $GET for each record
 ;			before the one to go back to. So the unit's record count
 ;			says where it is, and a read that met the end of the file
-;			added nothing to it.
+;			added nothing to it. On a unit of segmented records, a
+;			record is its segments to the last (FTN_UNFORMATTED).
 ;	ENDFILE		A unit not connected is connected, to a file with no
 ;			carriage control and no form yet. A record of one byte,
 ;			^Z, which a READ of any unit takes for an end of file
@@ -160,11 +161,16 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	MOVW	UB_RECSIZE(R7),RAB$W_USZ(R6)
 20$:	DECL	R8
 	BLSS	30$
-	$GET	RAB=R6
-	BLBS	R0,20$
+25$:	$GET	RAB=R6
+	BLBS	R0,27$
 	CMPL	R0,#RMS$_RTB		; a record too long to hold is still passed
 	BEQL	20$
 	BRB	80$
+27$:	BLBC	UB_SEGMENTED(R7),20$
+	CMPW	RAB$W_RSZ(R6),#2
+	BLSSU	20$			; ENDFILE's record, which has no segments
+	BBS	#1,@UB_RECP(R7),20$	; a record's last segment
+	BRB	25$			; more of the same record
 30$:	BRW	END
 80$:	MOVL	#FOR$_BACERR,R0
 	BRW	REFUSED
