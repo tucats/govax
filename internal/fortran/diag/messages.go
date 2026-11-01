@@ -732,6 +732,23 @@ var messages = map[string]kind{
 	// (section 9.1.2, appendix A.2).
 	"ASSOCVAR": {Error, "the associated variable %s must be an INTEGER*2 or INTEGER*4 variable, and not a dummy argument"},
 
+	// RECORDUNIT is a REWRITE or a keyed READ of an internal file or the
+	// default unit (*), which have no current record or keys (sections 7.2.3
+	// and 7.4).
+	"RECORDUNIT": {Error, "%s needs a unit number, not an internal file or *"},
+
+	// RECORDFORM is a REWRITE or a keyed READ that is list-directed or
+	// namelist, where it is formatted or unformatted (sections 7.2.3 and 7.4).
+	"RECORDFORM": {Error, "%s is formatted or unformatted, not %s"},
+
+	// KEYEDREC is a READ with both a key (KEY=, KEYEQ=, ...) and a record
+	// number, two ways of choosing its record.
+	"KEYEDREC": {Error, "a READ can't have both a key and a record number"},
+
+	// KEYEDVALUE is a key that isn't an INTEGER or CHARACTER value, or a
+	// KEYID= that isn't an INTEGER (section 7.1.1.5).
+	"KEYEDVALUE": {Error, "%s= must be %s, not %s"},
+
 	// FINDREC is a FIND with no record number (appendix A.3).
 	"FINDREC": {Error, "a FIND needs a record number, u'r or REC="},
 

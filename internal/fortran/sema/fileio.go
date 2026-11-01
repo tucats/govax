@@ -171,8 +171,10 @@ type FileKey struct {
 	Known  bool
 }
 
-// fileStatement analyzes OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, and ENDFILE
-// (sections 9.1 to 9.6).
+// fileStatement analyzes OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE,
+// DELETE, and UNLOCK (sections 9.1 to 9.8), and FIND (appendix A.3). A DELETE
+// with a record number deletes that record of a relative file, and one without
+// the unit's current record.
 func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	st := &FileStmt{stmtBase: stmtBase{s}}
 	ok := true
@@ -205,8 +207,14 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		keywords = closeKeywords
 	case lex.Inquire:
 		keywords = inquireKeywords
-	case lex.Rewind, lex.Backspace, lex.EndFile, lex.Find:
+	case lex.Rewind, lex.Backspace, lex.EndFile, lex.Find, lex.Delete, lex.Unlock:
 		keywords = nil // only ERR= and IOSTAT=
+	}
+
+	if s.Kind == lex.Delete && s.Rec != nil {
+		if st.Rec = a.recordNumber(s.Rec); st.Rec == nil {
+			ok = false
+		}
 	}
 
 	if s.Kind == lex.Find {
@@ -539,7 +547,7 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 		direct, appendTo              = 1, 3
 		formatted                     = 1
 		deleteFile                    = 2
-		fixed, segmented              = 1, 3
+		fixed, variable, segmented    = 1, 2, 3
 		relative, indexed             = 2, 3
 	)
 
@@ -554,7 +562,7 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 		return conflict(codeDispose, "STATUS='SCRATCH'")
 	case is(codeType, segmented) && is(codeForm, formatted):
 		return conflict(codeType, "FORM='FORMATTED'")
-	case is(codeAccess, direct) && known(codeType) && !is(codeType, fixed):
+	case is(codeAccess, direct) && known(codeType) && !is(codeType, fixed) && !(is(codeOrg, relative) && is(codeType, variable)):
 		return conflict(codeType, "ACCESS='DIRECT'")
 	case is(codeAccess, appendTo) && (is(codeStatus, newFile) || is(codeStatus, scratchFile)):
 		return conflict(codeStatus, "ACCESS='APPEND'")

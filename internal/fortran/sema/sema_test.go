@@ -562,7 +562,7 @@ func TestErrors(t *testing.T) {
 		{"a jump to a declaration", []string{"10 INTEGER I", "GO TO 10", "END"}, "NOTEXEC@2:13"},
 		{"a jump to a FORMAT", []string{"10 FORMAT (I5)", "GO TO 10", "END"}, "NOTEXEC@2:13"},
 		{"a jump to ELSE", []string{"IF (L) THEN", "GO TO 10", "10 ELSE", "END IF", "END"}, "NOTEXEC@2:13"},
-		{"a jump to a statement with an error", []string{"10 REWRITE (1) X", "GO TO 10", "END"}, "NOTIMPL@1:7"},
+		{"a jump to a statement with an error", []string{"10 READ (1, KEYLE=1) X", "GO TO 10", "END"}, "NOTIMPL@1:16"},
 		{"a jump into an IF block", []string{"GO TO 10", "IF (L) THEN", "10 CONTINUE", "END IF", "END"}, "INTOBLOCK@1:13"},
 		{"a jump between blocks", []string{"IF (L) THEN", "10 X = 1", "ELSE", "GO TO 10", "END IF", "END"}, "INTOBLOCK@4:13"},
 		{"a jump to END IF from an earlier block", []string{"IF (L) THEN", "GO TO 10", "ELSE", "X = 1", "10 END IF", "END"}, "INTOBLOCK@2:13"},
@@ -646,8 +646,17 @@ func TestErrors(t *testing.T) {
 		// What the parser parses and semantic analysis doesn't compile
 		// yet (Phase 76): statements, reported where they are, and the
 		// forms inside statements, reported where analysis reaches them.
-		{"a REWRITE statement", []string{"REWRITE (1) X", "END"}, "NOTIMPL@1:7"},
-		{"an UNLOCK statement", []string{"UNLOCK (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"a REWRITE statement", []string{"REWRITE (1) X", "REWRITE (1, '(F5.1)', ERR=9, IOSTAT=I) X", "9 END"}, ""},
+		{"a REWRITE of *", []string{"REWRITE (*, '(A)') X", "END"}, "RECORDUNIT@1:16"},
+		{"a list-directed REWRITE", []string{"REWRITE (1, *) X", "END"}, "RECORDFORM@1:19"},
+		{"an UNLOCK statement", []string{"UNLOCK (UNIT=1)", "UNLOCK 2", "END"}, ""},
+		{"DELETE statements", []string{"DELETE (1, REC=5)", "DELETE (1'N, ERR=9)", "DELETE (UNIT=1, IOSTAT=I)", "9 END"}, ""},
+		{"a DELETE by a CHARACTER record", []string{"CHARACTER C", "DELETE (1, REC=C)", "END"}, "BADREC@2:22"},
+		{"keyed READs", []string{"CHARACTER*4 C", "READ (1, KEY=C) X", "READ (1, '(A)', KEYGE='AB', KEYID=1, ERR=9) C", "READ (1, KEYGT=5) X", "9 END"}, ""},
+		{"a keyed READ by a REAL", []string{"READ (1, KEY=1.5) X", "END"}, "KEYEDVALUE@1:16"},
+		{"a keyed READ with a REC=", []string{"READ (1, KEY=1, REC=2) X", "END"}, "KEYEDREC@1:7"},
+		{"a keyed READ with two keys", []string{"READ (1, KEY=1, KEYGE=2) X", "END"}, "KEYTWICE@1:23"},
+		{"a later Fortran's key", []string{"READ (1, KEYLE=1) X", "END"}, "NOTIMPL@1:16"},
 		{"a REWIND of *", []string{"REWIND *", "END"}, "BADUNIT@1:14"},
 		{"a BACKSPACE of a text", []string{"BACKSPACE (UNIT='A')", "END"}, "BADUNIT@1:23"},
 		{"an ENDFILE of a REAL", []string{"X = 1", "ENDFILE X", "END"}, "BADUNIT@2:15"},
@@ -661,7 +670,7 @@ func TestErrors(t *testing.T) {
 		{"an INQUIRE's number of the wrong type", []string{"REAL X", "INQUIRE (1, RECL=X)", "END"}, "KEYPLACE@2:19"},
 		{"an INQUIRE asking twice", []string{"LOGICAL L", "INQUIRE (1, EXIST=L, EXIST=L)", "END"}, "DUPSPECIFIER@2:28"},
 		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
-		{"a logical IF's UNLOCK", []string{"IF (X .GT. 0) UNLOCK 1", "END"}, "NOTIMPL@1:21"},
+		{"a logical IF's UNLOCK", []string{"IF (X .GT. 0) UNLOCK 1", "END"}, ""},
 
 		// OPEN and CLOSE (sections 9.1, 9.2).
 		{"OPEN and CLOSE", []string{"CHARACTER*8 F, S", "OPEN (1, FILE=F, STATUS=S, RECL=80.0, ERR=9, IOSTAT=I)", "CLOSE (1, DISP='DELETE')", "9 END"}, ""},

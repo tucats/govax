@@ -31,17 +31,10 @@ func handled(s ast.Stmt) bool {
 		return s.Kind == lex.Save || s.Kind == lex.External || s.Kind == lex.Intrinsic
 
 	case *ast.TransferStmt:
-		// REWRITE is Phase 81's.
-		return s.Kind == lex.Read || s.Kind == lex.Write
+		return true
 
 	case *ast.AuxIOStmt:
-		// DELETE and UNLOCK are later subtasks of Phase 81's.
-		switch s.Kind {
-		case lex.Open, lex.Close, lex.Inquire, lex.Rewind, lex.Backspace, lex.EndFile, lex.Find:
-			return true
-		}
-
-		return false
+		return true
 	}
 
 	return false

@@ -69,8 +69,7 @@ func inquireReport() []string {
 
 // TestFor81InquireOracle holds FTNRTL's INQUIRE to VMS's FORRTL: each case is
 // one of testdata/for81's, in FORTRAN, and each answer must be the one in
-// vax/for81-vax.txt, the device's name aside (VMS's volume was DUA2). Relative
-// files wait for subtask 10 (#491, #492).
+// vax/for81-vax.txt, the device's name aside (VMS's volume was DUA2).
 // testdata/fortran/inquire.for has the places of each width (#506) and unit 6
 // once it's connected (#477).
 func TestFor81InquireOracle(t *testing.T) {
@@ -141,6 +140,8 @@ func TestFor81InquireOracle(t *testing.T) {
 		connected(487, ", FORM='UNFORMATTED'"),
 		connected(488, ", ACCESS='DIRECT', RECL=4"),
 		connected(489, ", ACCESS='DIRECT', RECL=40, FORM='FORMATTED'"),
+		connected(491, ", ORGANIZATION='RELATIVE', RECL=10"),
+		connected(492, ", ORGANIZATION='RELATIVE', ACCESS='DIRECT', RECL=10"),
 		connected(493, ", RECORDTYPE='FIXED', RECL=10"),
 		connected(494, ", RECORDTYPE='SEGMENTED', FORM='UNFORMATTED'"),
 		connected(495, ", RECORDTYPE='STREAM'"),

@@ -28,6 +28,9 @@
 ;			^Z, which a READ of any unit takes for an end of file
 ;			(FTN$$UNIT_GET).
 ;
+; Each takes the unit's current record away (FTN_UNITS), as the 1988 LRM's 7.4
+; says any statement does; ENDFILE's write does it in FTN$$UNIT_PUT.
+;
 ; None of them works on a unit with direct or keyed access, or on a file that
 ; isn't sequential. BACKSPACE doesn't work on a device that isn't file-oriented,
 ; which a process-permanent file's FAB says it isn't, or on a file opened with
@@ -55,6 +58,7 @@ UB_SEGMENTED	= 42
 UB_APPENDED	= 43
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
+UB_CURRENT	= 620+36
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
 CTX_REASON	= 500
@@ -120,7 +124,8 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BLBC	R0,1$
 	BLBS	UB_OPEN(R7),2$
 1$:	BRW	END
-2$:	BSBW	RANDOM
+2$:	CLRB	UB_CURRENT(R7)		; no current record after
+	BSBW	RANDOM
 	BNEQ	80$
 	$REWIND	RAB=R6
 	BLBS	R0,10$
@@ -140,7 +145,8 @@ RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
 	BLBC	R0,1$
 	BLBS	UB_OPEN(R7),2$
 1$:	BRW	END
-2$:	MOVL	#FOR$_NOBACK,CTX_REASON(R9)
+2$:	CLRB	UB_CURRENT(R7)
+	MOVL	#FOR$_NOBACK,CTX_REASON(R9)
 	BSBW	RANDOM
 	BNEQ	80$
 	TSTB	UB_APPENDED(R7)

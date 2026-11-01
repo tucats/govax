@@ -542,7 +542,12 @@ never had.
   `TestFor81DirectOracle` and `testdata/fortran/direct.for`, and subtask 9 (2026-11-01) RMS
   relative files: `rms/relative.go` (the prologue, buckets, and cells as VMS's files have them,
   over ods2's block I/O; `FileHandle.rel`; every record service sends a relative stream there),
-  held to VMS's runs and blocks by `TestFor81RMSOracle` and `TestFor81RelativeOracle`.
+  held to VMS's runs and blocks by `TestFor81RMSOracle` and `TestFor81RelativeOracle`, and subtask 10 (2026-11-01)
+  FORTRAN on relative files: OPEN's ORGANIZATION='RELATIVE', REWRITE (`FTN$REWRITE_SF`/`_SU`, an
+  `$UPDATE` while `UB_REWRITE` is set), DELETE and UNLOCK (`ftn_record.mar`), the keyed READ
+  (`FTN$READ_KF`/`_KU`, OPEDEFREQ or NOTIMP), each unit's current record (`UB_CURRENT`), SPERECLOC
+  (GSMATCH 1,15; `sema`'s `byRecord`, `keySpecs`), held to VMS by
+  `TestFor81RelativeFortranOracle` and `testdata/fortran/relative.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2093,7 +2098,7 @@ expect adjustment as phases land):
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the unit table, units -4 to 119, each with its own FAB
   (Phase 81); `ftn_open.mar`, OPEN and CLOSE, `ftn_inquire.mar`, INQUIRE, `ftn_position.mar`, REWIND,
   BACKSPACE, and ENDFILE, `ftn_unformatted.mar`, unformatted sequential I/O, and
-  `ftn_direct.mar`, DEFINE FILE and FIND, Phase 81;
+  `ftn_direct.mar`, DEFINE FILE and FIND, and `ftn_record.mar`, DELETE and UNLOCK, Phase 81;
   `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
   editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and

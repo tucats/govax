@@ -17,8 +17,11 @@
 ; signals the failure.
 ;
 ; The rules are VMS's run of testdata/for81: its sections "Round 1 on VMS" and
-; "Round 2's FORRTL program". Relative files are FOR$_NOTIMP until FTNRTL has
-; them; so is an indexed file, until a later program (Decision 13).
+; "Round 2's FORRTL program". A relative file (ORGANIZATION='RELATIVE') has
+; fixed-length records unless RECORDTYPE says VARIABLE, and RECL is their
+; length; a relative file found by an OPEN that names no organization is opened
+; as one (#576). An indexed file is FOR$_NOTIMP, until a later program
+; (Decision 13).
 ;
 	$FABDEF
 	$NAMDEF
@@ -109,6 +112,7 @@ ORG_SEQ		= 1
 ORG_RELATIVE	= 2
 ORG_INDEXED	= 3
 TYPE_FIXED	= 1
+TYPE_VARIABLE	= 2
 TYPE_SEGMENTED	= 3
 TYPE_STREAM	= 4
 DISP_KEEP	= 1
@@ -459,21 +463,39 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	TSTL	OPS_READONLY(R11)
 	BNEQ	15$
 	;
-	; Direct or keyed access is to FIXED records, a relative file's aren't
-	; STREAM.
+	; Keyed access is to an indexed file's keys, which no other organization
+	; has (#576).
 	;
-24$:	BSBW	KEYLIKE
+24$:	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
+	BNEQ	241$
+	TSTL	OPS_ORG(R11)
+	BNEQ	15$			; indexed went above
+	;
+	; Direct or keyed access is to FIXED records, a relative file's aren't
+	; STREAM, and are FIXED unless it says (but for a file that is there,
+	; which has its own).
+	;
+241$:	BSBW	KEYLIKE
 	BNEQ	26$
 	TSTL	OPS_TYPE(R11)
 	BNEQ	25$
 	MOVL	#TYPE_FIXED,OPS_TYPE(R11)
 	BRB	26$
 25$:	CMPL	OPS_TYPE(R11),#TYPE_FIXED
+	BEQL	26$
+	CMPL	OPS_ORG(R11),#ORG_RELATIVE ; a relative file's may vary (#574)
+	BNEQ	15$
+	CMPL	OPS_TYPE(R11),#TYPE_VARIABLE
 	BNEQ	15$
 26$:	CMPL	OPS_ORG(R11),#ORG_RELATIVE
 	BNEQ	30$
 	CMPL	OPS_TYPE(R11),#TYPE_STREAM
 	BGEQ	15$
+	TSTL	OPS_TYPE(R11)
+	BNEQ	30$
+	CMPL	R2,#STATUS_OLD
+	BEQL	30$
+	MOVL	#TYPE_FIXED,OPS_TYPE(R11)
 	;
 	; The numbers. RECL's limits by its units, and it is mandatory for a
 	; new file of FIXED records.
@@ -501,14 +523,8 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	CMPL	OPS_BLOCK(R11),#65024
 	BGTRU	48$
 	CMPL	OPS_EXTEND(R11),#65535
-	BLEQ	50$
+	BLEQ	SETUP
 48$:	BRW	BAD_VALUE
-	;
-	; Relative files are the next subtasks'.
-	;
-50$:	CMPL	OPS_ORG(R11),#ORG_RELATIVE
-	BNEQ	SETUP
-	BRW	NOT_YET
 
 ;
 ; KEYLIKE: the Z bit set if the access is DIRECT or KEYED.
@@ -593,9 +609,13 @@ SETUP:	PUSHL	R7
 	MOVL	OPS_TYPE(R11),R0
 	MOVAB	FORMATS,R1
 	MOVB	(R1)[R0],FAB$B_RFM(R6)
-	CMPL	R0,#TYPE_FIXED
+	CMPL	OPS_ORG(R11),#ORG_RELATIVE ; a relative file's cells are as long
+	BNEQ	251$			;  as its longest record, whatever the type
+	MOVB	#FAB$C_REL,FAB$B_ORG(R6)
+	BRB	252$
+251$:	CMPL	R0,#TYPE_FIXED
 	BNEQ	26$
-	MOVW	R4,FAB$W_MRS(R6)
+252$:	MOVW	R4,FAB$W_MRS(R6)
 26$:	MOVL	OPS_CC(R11),R1
 	BEQL	27$
 	CLRL	R2			; given: 1 FORTRAN, 2 LIST, 3 NONE
@@ -699,15 +719,28 @@ EXISTING:
 3$:	CMPB	FAB$B_RFM(R6),#FAB$C_VAR ; only variable-length records have segments
 	BEQL	5$
 	CLRB	UB_SEGMENTED(R7)
+	;
+	; Its organization: the one asked for, or any but indexed if none was
+	; (#576); and only an indexed file has keys (round 2's #32).
+	;
 5$:	MOVZBL	FAB$B_ORG(R6),R0
-	BEQL	10$
-	MOVL	#FOR$_NOTIMP,R2		; relative or indexed: not here yet
+	MOVL	#ORG_SEQ,R1
+	CMPL	R0,#FAB$C_SEQ
+	BEQL	7$
+	MOVL	#ORG_RELATIVE,R1
+	CMPL	R0,#FAB$C_REL
+	BEQL	7$
+	MOVL	#FOR$_NOTIMP,R2		; indexed: not here yet
 	TSTL	OPS_ORG(R11)
 	BEQL	80$
 	MOVL	#FOR$_INCFILORG,R2	;  or not what was asked for
 	BRB	80$
-10$:	MOVL	#FOR$_INCFILORG,R2
-	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED ; a sequential file has no keys
+7$:	MOVL	#FOR$_INCFILORG,R2
+	TSTL	OPS_ORG(R11)
+	BEQL	8$
+	CMPL	R1,OPS_ORG(R11)
+	BNEQ	80$
+8$:	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
 	BEQL	80$
 	MOVL	#FOR$_INCRECLEN,R2
 	TSTL	OPS_RECL(R11)

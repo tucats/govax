@@ -15,8 +15,10 @@ import (
 // use: FORMAT (chapter 8) and NAMELIST (section 4.10). Every form of
 // formatted, list-directed, namelist, and unformatted sequential READ,
 // WRITE, PRINT, TYPE, and ACCEPT is analyzed into an IO, and formatted and
-// unformatted direct access READ and WRITE, ENCODE, and DECODE too; what is
-// left for later subtasks is keyed I/O and REWRITE (NOTIMPL).
+// unformatted direct access READ and WRITE, ENCODE, and DECODE too, and
+// REWRITE and the keyed READ (sections 7.4 and 7.2.3; FTNRTL answers the keyed
+// READ FOR$_NOTIMP until indexed files are done, Decision 13 of docs/PHASE-81 -
+// FORTRAN files.md).
 
 // The default units, which the statements without a unit and the units
 // written * use. VMS's FORTRAN run-time library numbers them -1 to -4,
@@ -72,6 +74,18 @@ type IO struct {
 
 	// Read is set for input: READ, ACCEPT, DECODE.
 	Read bool
+
+	// Rewrite is set for REWRITE, which writes over a file's current record.
+	Rewrite bool
+
+	// Key is a keyed READ's key (KEY=, KEYEQ=, KEYGE=, or KEYGT=), an INTEGER
+	// or CHARACTER value, nil for any other statement; KeyMatch is how a
+	// record's key must compare with it, 0 equal (KEY=, KEYEQ=), 1 greater or
+	// equal (KEYGE=), 2 greater (KEYGT=); and KeyID is KEYID='s key number, an
+	// INTEGER*4, or nil for the primary key.
+	Key      Expr
+	KeyMatch int
+	KeyID    Expr
 
 	// Unit is the unit, an INTEGER*4 value, or with Internal set an
 	// internal file (a CHARACTER variable, array element, substring, or
@@ -282,7 +296,26 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 		io.Default = ReadUnit
 	}
 
+	if s.Kind == lex.Rewrite {
+		io.Rewrite = true
+
+		return a.byRecord(io, s, path, "a REWRITE")
+	}
+
+	specs, keyed, ok := a.keySpecs(io, s)
+	if !ok {
+		return nil
+	}
+
+	s.Specs = specs
+
 	switch {
+	case keyed && s.Rec != nil:
+		a.report("KEYEDREC", s.Pos)
+
+		return nil
+	case keyed:
+		return a.byRecord(io, s, path, "a keyed READ")
 	case s.Rec != nil:
 		return a.direct(io, s, path)
 
@@ -290,7 +323,7 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 		return a.unformatted(io, s, path)
 	}
 
-	ok := a.ioUnit(io, &s.Unit)
+	ok = a.ioUnit(io, &s.Unit)
 
 	if s.Namelist != nil {
 		io.Form, io.Group = NamelistForm, a.unit.namelists[s.Namelist.Name]
@@ -381,6 +414,111 @@ func (a *analyzer) direct(io *IO, s *ast.TransferStmt, path []frame) Stmt {
 
 			ok = false
 		}
+	}
+
+	if !a.ioSpecs(io, s.Specs, path) || !ok {
+		return nil
+	}
+
+	return a.ioItems(io, s.Items)
+}
+
+// keyMatches are the keyed READ's specifiers and the comparison each asks
+// for; the later Fortran's KEYLE=, KEYLT=, KEYNXT=, and KEYNXTNE= aren't
+// the 1988 manual's.
+var keyMatches = map[string]int{"KEY": 0, "KEYEQ": 0, "KEYGE": 1, "KEYGT": 2}
+
+// keySpecs takes a READ's key specifiers out of its control list (section
+// 7.1.1.5), returning the rest, and whether the READ is keyed.
+func (a *analyzer) keySpecs(io *IO, s *ast.TransferStmt) (rest []*ast.IOSpec, keyed, ok bool) {
+	ok = true
+
+	for _, spec := range s.Specs {
+		match, isKey := keyMatches[spec.Keyword]
+
+		switch {
+		case isKey:
+			if io.Key != nil {
+				a.report("KEYTWICE", spec.Pos, spec.Keyword, "a key")
+
+				ok = false
+
+				continue
+			}
+
+			v := a.value(spec.Value)
+
+			switch t := v.Type(); t.Kind {
+			case Invalid:
+				ok = false
+			case Integer, Character:
+				io.Key, io.KeyMatch = v, match
+			default:
+				a.report("KEYEDVALUE", spec.Pos, spec.Keyword, "an INTEGER or CHARACTER value", article(t.String())+" value")
+
+				ok = false
+			}
+
+			keyed = true
+
+		case spec.Keyword == "KEYID":
+			v := a.value(spec.Value)
+
+			switch t := v.Type(); t.Kind {
+			case Invalid:
+				ok = false
+			case Integer:
+				io.KeyID = a.convert(v, IntegerType)
+			default:
+				a.report("KEYEDVALUE", spec.Pos, spec.Keyword, "an INTEGER value", article(t.String())+" value")
+
+				ok = false
+			}
+
+			keyed = true
+
+		case strings.HasPrefix(spec.Keyword, "KEY"):
+			a.notImplForm(spec.Pos, "the "+spec.Keyword+"= specifier")
+
+			ok = false
+
+		default:
+			rest = append(rest, spec)
+		}
+	}
+
+	return rest, keyed, ok
+}
+
+// byRecord analyzes a REWRITE (section 7.4) or a keyed READ (section 7.2.3),
+// what, each a statement on one record of a file, the unit's current record
+// or the one the READ's key chooses: a unit number, and a format or none.
+func (a *analyzer) byRecord(io *IO, s *ast.TransferStmt, path []frame, what string) Stmt {
+	ok := a.ioUnit(io, &s.Unit)
+
+	if ok && (io.Internal || io.Unit == nil) {
+		a.report("RECORDUNIT", s.Unit.Pos, what)
+
+		ok = false
+	}
+
+	switch {
+	case s.Namelist != nil:
+		a.report("RECORDFORM", s.Namelist.Pos, what, "namelist")
+
+		ok = false
+	case s.Format == nil:
+		io.Form = UnformattedForm
+	case s.Format.Star:
+		a.report("RECORDFORM", s.Format.Pos, what, "list-directed")
+
+		ok = false
+	case a.namelistNamed(s.Format) != nil:
+		a.report("RECORDFORM", s.Format.Pos, what, "namelist")
+
+		ok = false
+	case !a.ioFormat(io, s.Format):
+		ok = false
 	}
 
 	if !a.ioSpecs(io, s.Specs, path) || !ok {

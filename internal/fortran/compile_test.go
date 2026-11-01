@@ -222,7 +222,7 @@ func TestCompileParseErrors(t *testing.T) {
 		Lines: []string{
 			"      PROGRAM P",
 			"      X = (1 + 2",
-			"      REWRITE (1) Y",
+			"      READ (1, KEYLE=1) Y",
 			"      GO TO 10",
 		},
 	})

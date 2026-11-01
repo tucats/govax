@@ -31,8 +31,9 @@ const (
 	mechanismByte       = 10
 )
 
-// fileStatement lowers OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, or
-// FIND, whose record number follows the unit, by value.
+// fileStatement lowers OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE,
+// UNLOCK, DELETE, or FIND, a record number following the unit, by value: FIND's,
+// and DELETE's if it has one (FTN$DELETE_D; FTN$DELETE without).
 func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	c := controlFor(s.Err, 0, s.IOStat)
 	kind := s.AST.Base().Kind
@@ -80,6 +81,13 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		routine = "FTN$ENDFILE"
 	case lex.Find:
 		routine = "FTN$FIND"
+	case lex.Delete:
+		routine = "FTN$DELETE"
+		if s.Rec != nil {
+			routine = "FTN$DELETE_D"
+		}
+	case lex.Unlock:
+		routine = "FTN$UNLOCK"
 	}
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)

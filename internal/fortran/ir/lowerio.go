@@ -32,7 +32,10 @@ import (
 // fourth, the count of characters, by value: a longword, since VMS's take
 // counts past a descriptor's word. A direct access statement's last argument
 // is its record number, by value (docs/PHASE-81 - FORTRAN files.md, Decision
-// 4).
+// 4), and a keyed READ's last three its key's descriptor, how a record's key
+// must compare with it (0 equal, 1 greater or equal, 2 greater), and the key's
+// number, by value. REWRITE's begin call is FTN$REWRITE_SF or _SU, a keyed
+// READ's FTN$READ_KF or _KU.
 //
 // FTN$IO_END's status is 0 for success, negative at an end of file, and
 // positive (the FOR number) for an error. A statement with none of ERR=,
@@ -66,6 +69,15 @@ func (l *lowerer) io(s *sema.IO) {
 
 	if s.Rec != nil {
 		args = append(args, Arg{Value: l.expr(s.Rec)})
+	}
+
+	if s.Key != nil {
+		var id Expr = LongConst(0)
+		if s.KeyID != nil {
+			id = l.expr(s.KeyID)
+		}
+
+		args = append(args, Arg{Ref: l.item(s.Key)}, Arg{Value: LongConst(int32(s.KeyMatch))}, Arg{Value: id})
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})
@@ -161,11 +173,17 @@ func beginRoutine(s *sema.IO) string {
 	}
 
 	name := "FTN$WRITE_"
-	if s.Read {
+
+	switch {
+	case s.Rewrite:
+		name = "FTN$REWRITE_"
+	case s.Read:
 		name = "FTN$READ_"
 	}
 
 	switch {
+	case s.Key != nil:
+		name += "K"
 	case s.Internal:
 		name += "I"
 	case s.Rec != nil:

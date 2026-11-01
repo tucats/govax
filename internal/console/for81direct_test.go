@@ -31,6 +31,16 @@ import (
 //	U n		LU set to n
 //	V		the associated variable set to 12345678 (hex), as round 2 did
 //	P		WALK.DAT made, a sequential file of one record
+//	M name		a file the case reads made, on unit 99 (for81relfortran_test.go)
+//	f n		a sequential formatted READ of n characters under (A)
+//	X r		a DELETE of record r, Z one of the current record
+//	K n		an unformatted REWRITE of n bytes (none for 0), k text a
+//			formatted one under (A)
+//	L		an UNLOCK
+//	N, b, E		a REWIND, a BACKSPACE, an ENDFILE
+//	Y, y		an unformatted and a formatted keyed READ
+//
+// A text's _ is a blank. An O step that names its FILE= opens that file.
 //
 // asv says whether VMS's run shows the associated variable (round 1's
 // ASSOCIATEVARIABLE code was IOSTAT's, so its values there are IOSTAT's), and
@@ -87,7 +97,7 @@ type directEvent struct {
 }
 
 var (
-	directResult  = regexp.MustCompile(`^=(OPEN|CLOSE|IO_END|FIND|DEF_FILE|DEF_FILE_W) r=([0-9A-F]+)`)
+	directResult  = regexp.MustCompile(`^=(OPEN|CLOSE|IO_END|FIND|DEF_FILE|DEF_FILE_W|DELETE|DELETE_D|UNLOCK|REWIND|BACKSPACE|ENDFILE) r=([0-9A-F]+)`)
 	directSignal  = regexp.MustCompile(`^=c ([0-9A-F]+) `)
 	directASV     = regexp.MustCompile(`^ asv=([0-9A-F]+)`)
 	directInquire = regexp.MustCompile(`^ q(\d+) r=[0-9A-F]+ v=([0-9A-F]+)`)
@@ -202,6 +212,7 @@ func directProgram(dc directCase) []string {
 
 	for k, step := range dc.steps {
 		f := strings.Fields(step)
+		text := func(i int) string { return strings.ReplaceAll(f[i], "_", " ") }
 		args := strings.TrimSpace(step[1:])
 		report := fmt.Sprintf("      WRITE (6, '(1X,I3,I5)') %d, IOS", k)
 		show := func(n string) []string {
@@ -216,7 +227,7 @@ func directProgram(dc directCase) []string {
 		switch f[0] {
 		case "O":
 			name := ""
-			if dc.name != "" {
+			if dc.name != "" && !strings.Contains(args, "FILE=") {
 				name = "FILE='" + dc.name + "', "
 			}
 
@@ -229,7 +240,7 @@ func directProgram(dc directCase) []string {
 			program = append(program, "      RD = ' '", fmt.Sprintf("      READ (LU, REC=%s, IOSTAT=IOS) RD(1:%s)", f[1], f[2]))
 			program = append(program, show(f[2])...)
 		case "w":
-			program = append(program, fmt.Sprintf("      WRITE (LU, '(A)', REC=%s, IOSTAT=IOS) '%s'", f[1], f[2]), report)
+			program = append(program, fmt.Sprintf("      WRITE (LU, '(A)', REC=%s, IOSTAT=IOS) '%s'", f[1], text(2)), report)
 		case "r":
 			program = append(program, "      RD = ' '", fmt.Sprintf("      READ (LU, '(A)', REC=%s, IOSTAT=IOS) RD(1:%s)", f[1], f[2]))
 			program = append(program, show(f[2])...)
@@ -239,7 +250,7 @@ func directProgram(dc directCase) []string {
 			program = append(program, "      RD = ' '", fmt.Sprintf("      READ (LU, IOSTAT=IOS) RD(1:%s)", f[1]))
 			program = append(program, show(f[1])...)
 		case "T":
-			program = append(program, fmt.Sprintf("      WRITE (LU, '(A)', IOSTAT=IOS) '%s'", f[1]), report)
+			program = append(program, fmt.Sprintf("      WRITE (LU, '(A)', IOSTAT=IOS) '%s'", text(1)), report)
 		case "F":
 			program = append(program, fmt.Sprintf("      FIND (LU, REC=%s, IOSTAT=IOS)", f[1]), report)
 		case "D":
@@ -263,6 +274,36 @@ func directProgram(dc directCase) []string {
 		case "P":
 			program = append(program, "      OPEN (LU, FILE='WALK.DAT', STATUS='NEW')",
 				"      WRITE (LU, '(A)') 'ONE'", "      CLOSE (LU)")
+		case "M":
+			program = append(program, madeFile(f[1])...)
+		case "f":
+			program = append(program, "      RD = ' '", fmt.Sprintf("      READ (LU, '(A)', IOSTAT=IOS) RD(1:%s)", f[1]))
+			program = append(program, show(f[1])...)
+		case "X":
+			program = append(program, fmt.Sprintf("      DELETE (LU, REC=%s, IOSTAT=IOS)", f[1]), report)
+		case "Z":
+			program = append(program, "      DELETE (LU, IOSTAT=IOS)", report)
+		case "K":
+			list := " BIG(1:" + f[1] + ")"
+			if f[1] == "0" {
+				list = ""
+			}
+
+			program = append(program, "      REWRITE (LU, IOSTAT=IOS)"+list, report)
+		case "k":
+			program = append(program, fmt.Sprintf("      REWRITE (LU, '(A)', IOSTAT=IOS) '%s'", text(1)), report)
+		case "L":
+			program = append(program, "      UNLOCK (LU, IOSTAT=IOS)", report)
+		case "N":
+			program = append(program, "      REWIND (LU, IOSTAT=IOS)", report)
+		case "b":
+			program = append(program, "      BACKSPACE (LU, IOSTAT=IOS)", report)
+		case "E":
+			program = append(program, "      ENDFILE (LU, IOSTAT=IOS)", report)
+		case "Y":
+			program = append(program, "      READ (LU, KEY='KEY', IOSTAT=IOS) RD(1:4)", report)
+		case "y":
+			program = append(program, "      READ (LU, '(A)', KEY='KEY', IOSTAT=IOS) RD(1:4)", report)
 		}
 	}
 
@@ -279,7 +320,7 @@ func directWant(t *testing.T, dc directCase, events []directEvent) string {
 
 	for k, step := range dc.steps {
 		switch step[0] {
-		case 'U', 'V', 'P':
+		case 'U', 'V', 'P', 'M':
 			continue
 		}
 
@@ -310,7 +351,7 @@ func directWant(t *testing.T, dc directCase, events []directEvent) string {
 
 			fmt.Fprintf(&want, "%3d%5d", k, ev.iostat)
 
-			if (step[0] == 'R' || step[0] == 'r' || step[0] == 's') && ev.iostat == 0 {
+			if (step[0] == 'R' || step[0] == 'r' || step[0] == 's' || step[0] == 'f') && ev.iostat == 0 {
 				fmt.Fprintf(&want, " %s", ev.text)
 			}
 

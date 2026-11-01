@@ -72,6 +72,17 @@
 ; direct statement, created by a WRITE and found by a READ or FIND, as the 1988
 ; LRM's A.2 says.
 ;
+; A relative file (ORGANIZATION='RELATIVE') is read and written as either: by
+; its records' numbers on a direct unit, and in sequence on a sequential one,
+; where RMS passes over the cells with no record. Either may REWRITE or DELETE
+; the current record, the one its last READ or FIND reached (UB_CURRENT): as
+; VMS's runs show (testdata/for81, #571, round 2's #33 to #36), a READ that
+; reached RMS gives the unit one even if it failed, so that the REWRITE or
+; DELETE is RMS's to refuse, and a WRITE, a DELETE by number, or a statement
+; that moves the unit's place takes it away, so that FORRTL refuses it with
+; FOR$_NO_CURREC. A READ of a record another stream holds is FOR$_SPERECLOC,
+; at once (round 2's #68).
+;
 ; FTN_OPEN and FTN_INQUIRE use this block too, and define its fields the same:
 ;
 	$DEVDEF				; the device's characteristics
@@ -121,7 +132,13 @@ UB_DEF_RECORDS	= UB_ASV+20		; long: its number of records,
 UB_DEF_LENGTH	= UB_ASV+24		; long: their length in words,
 UB_DEF_ASV	= UB_ASV+28		; long: and its associated variable's address
 UB_DEF_ASVSIZE	= UB_ASV+32		;  and size
-UB_BLN		= UB_ASV+36
+UB_CURRENT	= UB_ASV+36		; byte: 1 if the unit's last statement to
+					;  reach the file was a READ or FIND, so
+					;  that it has a current record to REWRITE
+					;  or DELETE
+UB_REWRITE	= UB_ASV+37		; byte: 1 while a REWRITE is in progress:
+					;  FTN$$UNIT_PUT updates the record
+UB_BLN		= UB_ASV+40
 
 	.IIF NE UB_ASV-620, .ERROR	; FTN_OPEN and FTN_DIRECT say 620
 
@@ -153,6 +170,7 @@ FOR$_INSVIRMEM	= ^X0018814C
 FOR$_NO_SUCDEV	= ^X00188154
 FOR$_FILNAMSPE	= ^X0018815C
 FOR$_WRIREAFIL	= ^X0018817C
+FOR$_SPERECLOC	= ^X001881A4
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 
@@ -304,6 +322,8 @@ EXIT_DECLARED:	.LONG	0
 	CLRB	UB_SEGMENTED(R6)
 	CLRB	UB_APPENDED(R6)
 	CLRL	UB_NEXTREC(R6)
+	CLRB	UB_CURRENT(R6)
+	CLRB	UB_REWRITE(R6)
 	;
 	; The default names. R7 is the unit.
 	;
@@ -511,8 +531,20 @@ EXIT_DECLARED:	.LONG	0
 	; buffer holds the longest. A file with a record size has records of it.
 	;
 10$:	CMPB	FAB$B_RFM(R3),#FAB$C_VAR
-	BEQL	15$
+	BEQL	12$
 	CLRB	UB_SEGMENTED(R2)
+	;
+	; A relative file has its own highest record number, which FTNRTL takes
+	; for the unit's when OPEN gave none (RMS's 7FFFFFFF is none).
+	;
+12$:	CMPB	FAB$B_ORG(R3),#FAB$C_REL
+	BNEQ	15$
+	TSTL	UB_MAXREC(R2)
+	BNEQ	15$
+	MOVL	FAB$L_MRN(R3),R0
+	CMPL	R0,#^X7FFFFFFF
+	BEQL	15$
+	MOVL	R0,UB_MAXREC(R2)
 15$:	TSTL	UB_KIND(R2)
 	BNEQ	20$
 	MOVZWL	FAB$W_MRS(R3),R0
@@ -735,7 +767,10 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; has none, to the unit whose block is given, which is connected: the record's
 ; address is the second argument, its length (a longword, by value) the third.
 ; A file of fixed-length records gets the record filled out, with blanks, or
-; zeros if unformatted. Returns RMS's status in R0.
+; zeros if unformatted. During a REWRITE (UB_REWRITE) the record replaces the
+; current one, an $UPDATE, which leaves the unit's place and current record
+; alone; any other write takes the current record away. Returns RMS's status
+; in R0.
 ;
 	.ENTRY	FTN$$UNIT_PUT,^M<R2,R3,R4,R5,R6,R7>
 	MOVL	4(AP),R6
@@ -754,7 +789,13 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 5$:	MOVC5	12(AP),@8(AP),R1,R2,@UB_RECP(R6)
 	MOVL	UB_RECP(R6),RAB$L_RBF(R7)
 	MOVW	UB_FAB+FAB$W_MRS(R6),RAB$W_RSZ(R7)
-10$:	$PUT	RAB=R7
+10$:	TSTB	UB_REWRITE(R6)
+	BEQL	12$
+	$UPDATE	RAB=R7
+	BLBC	R0,20$
+	RET
+12$:	CLRB	UB_CURRENT(R6)
+	$PUT	RAB=R7
 	BLBC	R0,20$
 	INCL	UB_RECORDS(R6)
 	CMPB	UB_ACCESS(R6),#1
@@ -774,7 +815,9 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; into its record buffer. Returns in R0 SS$_NORMAL and in R1 the record's
 ; length, or in R0 the FOR$_ condition for the failure: ENDDURREA at the end of
 ; the file or for a record of ^Z alone, which ENDFILE wrote, INPRECTOO for a record longer than the buffer (RMS's RTB or RSZ) or,
-; on SYS$INPUT:, than 199 bytes, ERRDURREA for any other. RMS's status and value
+; on SYS$INPUT:, than 199 bytes, SPERECLOC for a record another stream holds
+; (RMS's RLK), ERRDURREA for any other. Either way the unit has a current
+; record, for RMS to say whether REWRITE and DELETE may have it. RMS's status and value
 ; are kept in the block: for a record longer than 199 bytes that the buffer
 ; held, RMS$_RTB and its size, as RMS gives for one longer than the buffer, and
 ; as VMS's run reported for a record of 200.
@@ -784,6 +827,7 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
 	MOVW	UB_RECSIZE(R3),RAB$W_USZ(R2) ; and its size
+	MOVB	#1,UB_CURRENT(R3)
 	$GET	RAB=R2
 	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
@@ -816,7 +860,11 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	RET
 5$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
 	MOVL	RAB$L_STV(R2),UB_STV(R3)
-	CMPB	UB_ACCESS(R3),#1
+	CMPL	R0,#RMS$_RLK		; another stream has it
+	BNEQ	6$
+	MOVL	#FOR$_SPERECLOC,R0
+	RET
+6$:	CMPB	UB_ACCESS(R3),#1
 	BNEQ	10$
 	CMPL	R0,#RMS$_EOF		; a direct record past the end: no such record
 	BEQL	7$

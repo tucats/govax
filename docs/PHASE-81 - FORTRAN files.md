@@ -1225,3 +1225,43 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     compared the patch time without its blanks to the creation time with them, so on those days
     every govax-linked shareable image's GST got a "last patch date/time" line VMS's doesn't have
     (`anl/object.go`).
+- **2026-11-01, subtask 10, FORTRAN on relative files.** OPEN takes ORGANIZATION='RELATIVE' (FIXED
+  records unless RECORDTYPE='VARIABLE', which direct access allows on a relative file, #574; MRS
+  RECL whatever the type), and opens a relative file found with no ORGANIZATION= as one (#576);
+  another organization asked for is INCFILORG, and ACCESS='KEYED' with any organization but
+  indexed INCOPECLO. Every statement Phase 81 has runs on a relative unit, direct or sequential, by
+  RMS's rules (subtask 9). New: REWRITE (`FTN$REWRITE_SF`, `_SU`), DELETE (`FTN$DELETE`, and
+  `FTN$DELETE_D` with a record), UNLOCK (`FTN$UNLOCK`), and the keyed READ (`FTN$READ_KF`, `_KU`;
+  key, comparison, and key number after the format), offsets 512 to 560, GSMATCH 1,15; DELETE and
+  UNLOCK are the new `ftn_record.mar`. The compiler: `sema`'s `byRecord` (REWRITE and the keyed
+  READ: RECORDUNIT, RECORDFORM), `keySpecs` (KEY=, KEYEQ=, KEYGE=, KEYGT=, KEYID=; KEYEDREC,
+  KEYEDVALUE; the 2005 manual's KEYLE= and the rest NOTIMPL), and DELETE and UNLOCK as file
+  statements. `TestFor81RelativeFortranOracle` holds round 1's #571 to #580 and round 2's #28, #33
+  to #40, and #68 to VMS's statuses and reads; `TestFor81InquireOracle` now has #491 and #492;
+  `testdata/fortran/relative.for` is the rest, read against these rules by hand.
+  - **The current record (FTN_UNITS's `UB_CURRENT`), as VMS's runs show it.** A READ that reached RMS
+    gives the unit one, whether it succeeded or not (round 2's #35: after a READ at the end of the
+    file, DELETE is DELERR and REWRITE REWRITERR, RMS's refusals), and so does FIND (#36); a WRITE, a
+    DELETE by number, and REWIND, BACKSPACE, and ENDFILE take it away, after which REWRITE and DELETE
+    are FORRTL's NO_CURREC (#33, #36, #572). REWRITE and DELETE leave it, so a second DELETE, or one
+    after a REWRITE (whose `$UPDATE` leaves RMS no current record), is RMS's DELERR (#571). On a unit
+    not connected DELETE is DELERR, UNLOCK UNLERR, and REWRITE NO_CURREC; on a sequential file DELETE
+    is DELERR, and REWRITE an `$UPDATE` that RMS refuses (REWRITERR) unless the record keeps its
+    length, or a FIX file's, padded (#577 to #579).
+  - **REWRITE** writes through the unit's record routine with `UB_REWRITE` set, so `FTN$$UNIT_PUT`
+    does an `$UPDATE`; FTN$IO_END makes the write's ERRDURWRI REWRITERR.
+  - **Locks:** a READ of a record another unit holds is RMS$_RLK, FOR$_SPERECLOC (#68); RMS frees a
+    unit's held record at its next operation, and UNLOCK is a `$FREE` (RMS$_RNL ignored).
+  - **The keyed READ** connects its unit as a READ does (FILNOTFOU with no file, round 2's #38, #40),
+    and is OPEDEFREQ on a unit whose access isn't keyed (#37, #39, #580); keyed access would be
+    NOTIMP, but no unit has it, an indexed file failing at OPEN (Decision 13).
+  - **A relative file's MAXREC** is FTNRTL's limit for the unit when OPEN gave none (FAB$L_MRN, not
+    7FFFFFFF), so a record past it is RECNUMOUT as with MAXREC=.
+  - **Unconfirmed, govax's choices.** That REWIND, BACKSPACE, and ENDFILE take the current record
+    away (the LRM's 7.4 says any I/O statement does; VMS's runs only showed WRITE and DELETE by
+    number); that UNLOCK leaves it; DELETE by number on a unit not connected (DELERR) and on a
+    sequential-access relative unit (a `$FIND` by key all the same); that DELETE by number sets the
+    associated variable and NEXTREC to r+1 (the LRM's 9.7; round 1's variable was IOSTAT's); that
+    SPERECLOC's signal carries RMS's RLK; a REWRITE of a record of several segments (each segment an
+    `$UPDATE`, so REWRITERR); the keyed READ's arguments, our own. RECORDUNIT, RECORDFORM, KEYEDREC,
+    and KEYEDVALUE are compile-time errors, as no VAX FORTRAN compiler is here to ask.

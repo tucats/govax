@@ -1316,9 +1316,9 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, the UNLOCK statement is not implemented yet
+%FORT-E-NOTIMPL, the VOLATILE statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
-        UNLOCK (UNIT=1)
+        VOLATILE X
   ------^
 ```
 
@@ -4362,7 +4362,7 @@ input and output, with every edit descriptor and variable format
 expressions, list-directed input and output, and namelist input and output, on
 sequential files through OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, and ENDFILE
 (section 14.2), with the other file statements to come in Phase 81. Any other
-statement draws `%FORT-E-NOTIMPL`, naming it ("the UNLOCK statement is not
+statement draws `%FORT-E-NOTIMPL`, naming it ("the VOLATILE statement is not
 implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
@@ -4698,8 +4698,7 @@ output it prints, and programs of several files in its `modules` directory.
   run-time library would refuse is `SYNERRFOR` (62). A format that runs
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
-  199 characters is `INPRECTOO` (22). Keyed I/O, REWRITE, DELETE, and UNLOCK are
-  `%FORT-E-NOTIMPL`.
+  199 characters is `INPRECTOO` (22).
 - **Unformatted sequential I/O** (sections 7.2.1.4 and 7.3.1.4): `WRITE (1) N, X, ARRAY`
   writes its items' bytes one after another as one record, and `READ (1) N, X, ARRAY`
   gives each item as many bytes as it holds, from one record; what the items leave of
@@ -4741,6 +4740,33 @@ output it prints, and programs of several files in its `modules` directory.
   manual says. A DEFINE FILE of a connected unit is `UNIALROPE`, and a second one, or an
   OPEN of a unit DEFINE FILE described, `DUPFILSPE`; DEFINE FILE has no ERR= or IOSTAT=,
   so these are signaled. CLOSE forgets the description.
+- **Relative files** (section 9.1.19): `OPEN (1, FILE='PARTS.DAT', ORGANIZATION='RELATIVE',
+  RECL=12, ...)` makes or opens a file of numbered cells, each holding a record or none;
+  RECL is mandatory for a new one, its records are fixed-length unless
+  `RECORDTYPE='VARIABLE'`, and an OPEN with no ORGANIZATION= of a relative file that is
+  there opens it as one (another organization asked for is `INCFILORG`, 51). With
+  `ACCESS='DIRECT'` its records are read and written by number, as above, a WRITE over a
+  record replacing it and a READ of a cell with no record `ATTACCNON` (36); in sequence, a
+  READ passes over the empty cells and a WRITE goes after the last record reached
+  (`REX`, so `ERRDURWRI`, if one is there). REWIND, BACKSPACE, and ENDFILE are refused on a
+  relative unit (`REWERR`, `BACERR`, `ENDFILERR`), as VMS's library refuses them.
+- **REWRITE** `(u, fmt)` or `(u)` (section 7.4) writes over the current record, the one
+  the unit's last READ or FIND reached, formatted or unformatted, filled out as a WRITE's
+  would be; **DELETE** `(u)` deletes the current record, and `(u'r)` or `(u, REC=r)`
+  (section 9.7) record r of a relative file, after which the associated variable is r+1;
+  **UNLOCK** `(u)` or `UNLOCK u` (section 9.8) frees the record the unit's last READ
+  locked on a file opened SHARED, where another unit's READ of it is `SPERECLOC` (52),
+  at once. As VMS's library has it, a READ that reached the file gives the unit a
+  current record even if it failed, so that RMS refuses the REWRITE (`REWRITERR`, 54) or
+  DELETE (`DELERR`, 55); a WRITE, a DELETE by number, or a REWIND, BACKSPACE, or ENDFILE
+  leaves none, and then REWRITE and DELETE are `NO_CURREC` (53). On a sequential file
+  DELETE is `DELERR`, and REWRITE works where the record keeps its length (or the file's
+  records are fixed-length); on a unit not open DELETE is `DELERR`, UNLOCK `UNLERR`
+  (56), and REWRITE `NO_CURREC`.
+- **Indexed files and keyed READs** (`ORGANIZATION='INDEXED'`, `READ (u, KEY=k)`) are a
+  later program's: OPEN of an indexed file is FOR's `NOTIMP` (2), and a keyed READ
+  connects its unit as a READ would and is `OPEDEFREQ` (26) on a unit not opened
+  `ACCESS='KEYED'`, as VMS's library says of such a unit.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`
