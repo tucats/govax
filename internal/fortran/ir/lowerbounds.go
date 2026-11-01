@@ -245,8 +245,9 @@ func (l *lowerer) elementAt(base *Mem, s *sema.Symbol, index Expr) *Mem {
 // the last so that it takes one multiplication a dimension.
 func (l *lowerer) adjustableElement(e *sema.Elem, c *Cell) *Mem {
 	a0 := &Mem{
-		Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}},
-		T:   l.typeOf(e.Sym.Type),
+		Ptr:      &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}},
+		T:        l.typeOf(e.Sym.Type),
+		Volatile: e.Sym.Volatile,
 	}
 
 	return l.elementAt(a0, e.Sym, l.adjustableIndex(e.Subs, e.Sym, c))

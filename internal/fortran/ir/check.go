@@ -30,8 +30,12 @@ func Check(r *Routine) error {
 	for _, c := range r.Cells {
 		cells[c] = true
 
-		if c.Common == nil {
+		if c.Common == nil && !c.Frame {
 			local = append(local, c)
+		}
+
+		if c.Frame && (c.Offset < 0 || c.Offset+c.Size > r.FrameSize) {
+			return fmt.Errorf("%s: cell %s at %d is outside the frame's %d bytes", r.Name, c.Name, c.Offset, r.FrameSize)
 		}
 	}
 

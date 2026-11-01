@@ -25,9 +25,13 @@ import (
 //	  RET
 //
 // It needs that AP because a dummy argument is reached through it (@N(AP)), and
-// a dummy argument may be in the expression. RET puts FTNRTL's back. Nothing
-// else about the routine's own frame matters to compiled code: its variables,
-// temporaries, and spill cells are all static.
+// a dummy argument may be in the expression. RET puts FTNRTL's back. Its
+// temporaries and spill cells are static, and so are its variables, but for an
+// AUTOMATIC one, which is below the routine's FP, and that can't be made this
+// routine's FP as AP is: FP is what RET finds its frame by, and what a signal's
+// search starts from. So a routine whose expressions use such a variable has a
+// cell, $FP, where each entry point leaves its FP, and the expressions reach the
+// variable through it (frameBaseMem).
 //
 // The code runs in the middle of an I/O statement, between its calls. So it
 // may not share a temporary with any statement, or the I/O statement's implied
@@ -57,6 +61,22 @@ func (l *lowerer) vfeRoutine(f *sema.Format) *VFERoutine {
 	return v
 }
 
+// frameBaseMem is the AUTOMATIC variable c's place as a variable format
+// expression reaches it, through the routine's FP in its cell: a displacement
+// from that, which is negative, the frame being below FP.
+func (l *lowerer) frameBaseMem(c *Cell, t Type) *Mem {
+	if l.r.FrameBase == nil {
+		l.r.FrameBase = l.newCell("$FP", FrameBaseCell, Long, Long.Size())
+	}
+
+	return &Mem{
+		Ptr:      &Load{&Mem{Cell: l.r.FrameBase, T: Long}},
+		Offset:   c.Offset - l.r.FrameSize,
+		T:        t,
+		Volatile: c.Sym.Volatile,
+	}
+}
+
 // layOutVFEs lays out, after everything else in the routine, each expression's
 // blocks.
 func (l *lowerer) layOutVFEs() {
@@ -67,6 +87,7 @@ func (l *lowerer) layOutVFEs() {
 	l.free = map[Type][]*Cell{}
 	l.freeDesc = map[string][]*Cell{}
 	l.freeText = map[int][]*Cell{}
+	l.inVFE = true
 
 	for _, f := range l.vfes {
 		l.from = f.format.AST

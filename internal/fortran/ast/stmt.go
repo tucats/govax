@@ -113,8 +113,8 @@ type (
 	// AttrStmt is a statement that gives each name in its list an
 	// attribute, which its Kind says: SAVE [a[,a]...] (section 4.14),
 	// EXTERNAL v[,v]... (4.7), INTRINSIC v[,v]... (4.9), VOLATILE nlist
-	// (4.16), and AUTOMATIC and STATIC (not in the 1988 manual: Phase
-	// 76's survey). SAVE with no list has Items nil: everything.
+	// (4.16), and AUTOMATIC and STATIC (not in the 1988 manual: the HP
+	// manual's 5.3). SAVE with no list has Items nil: everything.
 	AttrStmt struct {
 		StmtBase
 		Items []*AttrItem
@@ -227,6 +227,11 @@ type AttrItem struct {
 	Name   string
 	Common bool
 	Pos    diag.Position
+
+	// Array is an AUTOMATIC or STATIC item as a declarator, whose Dims are
+	// an array specification if it has one: AUTOMATIC K(20). Nil in the
+	// other statements' lists.
+	Array *Declarator
 }
 
 // NamelistGroup is one group of a NAMELIST statement.

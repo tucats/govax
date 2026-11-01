@@ -126,7 +126,8 @@
 // storage, the $LOCAL program section: in order of first appearance,
 // each on its type's natural boundary (a longword on a multiple of 4, a
 // LOGICAL*1 anywhere). A dummy argument has no storage of its own; it is
-// the caller's, reached through the argument list.
+// the caller's, reached through the argument list. An AUTOMATIC variable is in
+// the stack, in a frame area each entry point reserves (storage.go).
 //
 // A structure declaration (structure.go, Phase 82) makes no storage: it is
 // the form records of it will have, a Structure in the unit's own table
@@ -161,17 +162,17 @@
 //
 // The parser builds a node for every statement and form of VAX FORTRAN,
 // and this pass is where one it can't compile yet is reported, as it
-// reaches it (notimpl.go): a statement it doesn't handle (OPEN, REWRITE,
-// VOLATILE) is "the OPEN statement is not implemented yet" at the
+// reaches it (notimpl.go): a statement it doesn't handle (a CDEC$ directive,
+// DICTIONARY) is "a CDEC$ directive is not implemented yet" at the
 // statement, keeping its place in the blocks and its label; a form
 // inside a statement it does handle (an expression's form, by formWhat) is
 // reported where it is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
-// Some declarations can't be read yet at all: VOLATILE, RECORD, and
-// the rest are NOTIMPL until later phases.
+// Some declarations can't be read yet at all: DICTIONARY is NOTIMPL, and the
+// directives until later phases.
 // Without them, most of what this pass would say about a unit's names
-// would be wrong (a name declared in a RECORD statement would be "not a
+// would be wrong (a name a dictionary's record declares would be "not a
 // record" at every use), so a unit with one gets only the messages about its
 // structure (labels, blocks, loops, and statement order) and the
 // NOTIMPLs of what it wrote (notImplForm). A unit whose header the

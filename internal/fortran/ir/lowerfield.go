@@ -34,7 +34,7 @@ const maxWordLength = 65535
 func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 	base := l.symbolMem(e.Sym)
 	if base.Param != nil {
-		base = &Mem{Ptr: &ArgPointer{base.Param}, T: base.T}
+		base = &Mem{Ptr: &ArgPointer{base.Param}, T: base.T, Volatile: base.Volatile}
 	}
 
 	offset := base.Offset
@@ -64,7 +64,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 	}
 
 	if c := l.adjustable[e.Sym]; c != nil && e.Subs != nil {
-		base = &Mem{Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, T: Byte}
+		base = &Mem{Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}}, T: Byte, Volatile: e.Sym.Volatile}
 		v, k := split(l.adjustableIndex(e.Subs, e.Sym, c))
 		offset += int(k) * e.Sym.Struct.Size
 
@@ -114,7 +114,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 
 	m.T = Byte
 
-	return &Mem{Ptr: &Addr{&m}, T: t}
+	return &Mem{Ptr: &Addr{&m}, T: t, Volatile: m.Volatile}
 }
 
 // fieldArrayDescriptor is a class A descriptor of a whole array field (section

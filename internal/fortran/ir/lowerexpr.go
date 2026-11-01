@@ -271,14 +271,21 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 	t := l.typeOf(s.Type)
 
 	if p := l.charParam(s); p != nil {
-		return dummyText(p)
+		m := dummyText(p)
+		m.Volatile = s.Volatile
+
+		return m
 	}
 
 	if p := l.params[s]; p != nil {
-		return &Mem{Param: p, T: t}
+		return &Mem{Param: p, T: t, Volatile: s.Volatile}
 	}
 
-	return &Mem{Cell: l.cells[s], T: t}
+	if c := l.cells[s]; c.Frame && l.inVFE {
+		return l.frameBaseMem(c, t)
+	}
+
+	return &Mem{Cell: l.cells[s], T: t, Volatile: s.Volatile}
 }
 
 // mem is where a variable or an array element is. An element's address
@@ -340,7 +347,7 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 			}
 		}
 
-		m.Offset = first * e.Sym.Type.Size
+		m.Offset += first * e.Sym.Type.Size
 		m.Index = index
 
 		return m

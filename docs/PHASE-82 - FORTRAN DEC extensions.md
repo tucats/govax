@@ -3,9 +3,9 @@
 **Status:** in progress: subtask 1, the survey (Part A below), done
 2026-11-01 and reviewed by the author the same day ("The author's
 answers"); subtask 2, structure declarations, subtask 3, RECORD and
-field references, subtask 4, aggregates, and subtask 5, typeless,
-Hollerith, and RADIX-50 constants, done 2026-11-01. Needs Phase 79
-(subprograms).
+field references, subtask 4, aggregates, subtask 5, typeless,
+Hollerith, and RADIX-50 constants, and subtask 6, VOLATILE, AUTOMATIC,
+and STATIC, done 2026-11-01. Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -555,7 +555,7 @@ further Alpha-era directive; out, unless the author wants it.
    rule in both scanners, RADIX-50 tokens and their bytes, typing by
    context in expressions, assignments, arguments, and IFs; character
    constants in numeric contexts.
-6. **VOLATILE, AUTOMATIC, and STATIC** (the HP manual's, answer 1): the
+6. **VOLATILE, AUTOMATIC, and STATIC** (done 2026-11-01; the HP manual's, answer 1): the
    frame area, FP-relative cells, ENTRY's reservations, descriptors.
 7. **The CDEC$ directives:** IDENT, PSECT (with the cross-unit check),
    TITLE and SUBTITLE accepted.
@@ -724,3 +724,42 @@ further Alpha-era directive; out, unless the author wants it.
   stays; a Hollerith bound like `A(1H1)` is its large integer, so ARRAYSIZE; a statement
   function's value takes the function's type as an assignment does, but is expanded into
   expressions, so its bits must be a number (`notMoved`).
+- **2026-11-01:** Subtask 6, VOLATILE, AUTOMATIC, and STATIC (`sema/storage.go`).
+  **The frame:** an AUTOMATIC name's `Symbol.Offset` is its place in the frame area,
+  `Unit.FrameSize` bytes long, a whole number of longwords; `layout` places it as it
+  places a name in `$LOCAL`. In the IR it is a `Cell` with `Frame` set, and each entry
+  point starts with `SUBL2 #n,SP` (`codegen`'s `writeFrame`), so the area is right below FP
+  whatever the entry mask saves: CALLS and CALLG leave SP at FP, on a longword. The
+  symbol is a displacement, `LOCALS.T = -12`, and the operand `LOCALS.T(FP)`, as a
+  dummy's is `SUB.A(AP)`. A descriptor can't be read-only data, so `describe` asks
+  `Mem.Linked` and fills in a descriptor cell at run time, as for a dummy. **Variable
+  format expressions**, which the survey didn't foresee: FTNRTL calls them, so FP isn't the
+  routine's, and it can't be made so as AP is (RET finds its frame by FP, and a signal's
+  search starts there). A routine whose expressions use an AUTOMATIC variable gets a cell,
+  `$FP` (`Routine.FrameBase`, like `Selector`), each entry point storing its FP there, and
+  `frameBaseMem` reaches the variable through it, `-4(R0)`. FTNRTL still needs nothing.
+  **Array specifications:** `AUTOMATIC I, K(20)` and `STATIC E(30)`, the HP manual's form,
+  which the survey's text didn't mention (`AttrItem.Array`). **VOLATILE** is
+  `Symbol.Volatile`, spread through named blocks and EQUIVALENCE groups, and `Mem.Volatile`
+  in the IR, set where a variable's place is made (`symbolMem`, `adjustableElement`,
+  `fieldMem`, `frameBaseMem`), `{volatile}` in the dump; nothing reads it until Phase 84. New
+  messages: VOLATILEBLANK, VOLATILEGROUP, DUPSTORAGE, STORAGEDUMMY, AUTOCOMMON, AUTOSAVE,
+  AUTOINIT, AUTOEQUIVALENT, NMLAUTOMATIC. `handled` now takes every AttrStmt; DICTIONARY
+  replaces VOLATILE as the NOTIMPL example in the tests and MANUAL.md. Tests: about 50
+  `TestErrors` cases; the parser's; the goldens `automatic.for` in `sema`, `ir`, and
+  `codegen`; `testdata/fortran/automatic.for`, in both paging modes, whose `IFACT` shows a
+  call's own values by calling itself through its argument, with `ISFACT`'s STATIC beside
+  it. Limits: with paging on the stack expands (a 10 MB frame ran); with paging off it
+  doesn't, and a frame past it ends the image with status SS$_ACCVIO and no message
+  (120,000 bytes ran, 10 MB didn't). For subtask 8: FP is only on a longword, so an AUTOMATIC record can't be on the
+  octaword answer 2 asks of `$LOCAL`; that needs a choice there. Choices of ours,
+  unconfirmed: an AUTOMATIC name's EQUIVALENCE group is all in the frame, an error if a
+  member is in a common block, in a SAVE list, STATIC, or has an initial value; a SAVE
+  statement with no list leaves AUTOMATIC names in the frame ("all allowable items"); an
+  initial value on an AUTOMATIC name is an error (the HP manual makes it static, the
+  survey chose the message); AUTOMATIC in a NAMELIST group is an error, since the group's
+  block is read-only data holding addresses; AUTOMATIC and STATIC are allowed in a main
+  program, though the HP manual speaks of subprograms; neither statement is in a block data
+  subprogram, nor is VOLATILE, by 4.1's list; a repeated name in VOLATILE is harmless; a
+  variable given to ASSOCIATEVARIABLE= is the program's to keep alive, as a dummy is,
+  so an AUTOMATIC one dangles after its routine returns.

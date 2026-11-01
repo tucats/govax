@@ -105,6 +105,61 @@ func TestErrors(t *testing.T) {
 		lines []string
 		want  string
 	}{
+		// VOLATILE (section 4.16, the HP manual's 5.19).
+		{"VOLATILE of names and a block", []string{"COMMON /B/ A, C", "VOLATILE /B/, D, E", "EQUIVALENCE (A, P1), (P1, P4)", "END"}, ""},
+		{"VOLATILE of a dummy", []string{"SUBROUTINE S(A)", "VOLATILE A", "END"}, ""},
+		{"VOLATILE of a record", structS("RECORD /S/ R", "VOLATILE R", "R.A = 1", "END"), ""},
+		{"VOLATILE of an array, twice", []string{"DIMENSION A(3)", "VOLATILE A, A", "END"}, ""},
+		{"VOLATILE of a name otherwise unused", []string{"VOLATILE V", "V = 1", "END"}, ""},
+		{"VOLATILE of an AUTOMATIC variable", []string{"VOLATILE V", "AUTOMATIC V", "END"}, ""},
+		{"VOLATILE in a block with no such block", []string{"VOLATILE /B/", "END"}, "SAVEBLOCK@1:17"},
+		{"VOLATILE of blank common", []string{"COMMON A", "VOLATILE //", "END"}, "VOLATILEBLANK@2:16"},
+		{"VOLATILE of the function's value", []string{"FUNCTION F()", "VOLATILE F", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of an entry point's value", []string{"FUNCTION F()", "VOLATILE G", "ENTRY G", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of the subroutine", []string{"SUBROUTINE S", "VOLATILE S", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of a procedure", []string{"EXTERNAL P", "VOLATILE P", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of a dummy procedure", []string{"SUBROUTINE S(P)", "EXTERNAL P", "VOLATILE P", "END"}, "BADUSE@3:16"},
+		{"VOLATILE of an intrinsic", []string{"INTRINSIC SIN", "VOLATILE SIN", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of a statement function", []string{"F(X) = X", "VOLATILE F", "END"}, "ORDER@2:7 BADUSE@2:16"},
+		{"VOLATILE of a constant", []string{"PARAMETER (K = 1)", "VOLATILE K", "END"}, "BADUSE@2:16"},
+		{"VOLATILE of a namelist group", []string{"NAMELIST /G/ A", "VOLATILE G", "END"}, "VOLATILEGROUP@2:16"},
+		{"VOLATILE in a block data subprogram", []string{"BLOCK DATA", "VOLATILE A", "END"}, "BLOCKSTMT@2:7"},
+		{"a function call of a VOLATILE name", []string{"VOLATILE A", "X = A(1)", "END"}, "NOTARRAY@2:11"},
+		{"VOLATILE after an executable statement", []string{"X = 1", "VOLATILE Y", "END"}, "LATEDECL@2:7"},
+
+		// AUTOMATIC and STATIC (the HP manual's 5.3).
+		{"the HP manual's example", []string{"INTEGER FUNCTION F()", "INTEGER I, J(10), K", "REAL C, D, E(30)", "AUTOMATIC I, J, K(20)", "STATIC C, D, E", "F = K(2)", "END"}, ""},
+		{"AUTOMATIC of a record", structS("RECORD /S/ R, RA(2)", "AUTOMATIC R, RA", "R.A = 1", "END"), ""},
+		{"AUTOMATIC in a main program", []string{"AUTOMATIC A", "A = 1", "END"}, ""},
+		{"STATIC in a common block, with SAVE, and with DATA", []string{"COMMON /B/ A", "STATIC A, C, D", "SAVE C", "DATA D /1.0/", "END"}, ""},
+		{"a SAVE statement with no list", []string{"AUTOMATIC A", "SAVE", "END"}, ""},
+		{"AUTOMATIC's group", []string{"AUTOMATIC A", "EQUIVALENCE (A, B), (B, C)", "END"}, ""},
+		{"a name AUTOMATIC twice", []string{"AUTOMATIC A, A", "END"}, "DUPSTORAGE@1:20"},
+		{"a name STATIC twice", []string{"STATIC A", "STATIC A", "END"}, "DUPSTORAGE@2:14"},
+		{"a name in both", []string{"AUTOMATIC A", "STATIC A", "END"}, "DUPSTORAGE@2:14"},
+		{"AUTOMATIC of a dummy", []string{"SUBROUTINE S(A)", "AUTOMATIC A", "END"}, "STORAGEDUMMY@2:17"},
+		{"STATIC of a dummy", []string{"SUBROUTINE S(A)", "STATIC A", "END"}, "STORAGEDUMMY@2:14"},
+		{"AUTOMATIC of an ENTRY's dummy", []string{"SUBROUTINE S", "AUTOMATIC A", "ENTRY E(A)", "END"}, "STORAGEDUMMY@2:17"},
+		{"AUTOMATIC of the function's value", []string{"FUNCTION F()", "AUTOMATIC F", "END"}, "BADUSE@2:17"},
+		{"STATIC of the function's value", []string{"FUNCTION F()", "STATIC F", "END"}, "BADUSE@2:14"},
+		{"AUTOMATIC of a constant", []string{"PARAMETER (K = 1)", "AUTOMATIC K", "END"}, "BADUSE@2:17"},
+		{"STATIC of a procedure", []string{"EXTERNAL P", "STATIC P", "END"}, "BADUSE@2:14"},
+		{"AUTOMATIC of a common name", []string{"COMMON A", "AUTOMATIC A", "END"}, "AUTOCOMMON@2:17"},
+		{"AUTOMATIC with SAVE", []string{"SAVE A", "AUTOMATIC A", "END"}, "AUTOSAVE@2:17"},
+		{"AUTOMATIC with DATA", []string{"AUTOMATIC A", "DATA A /1.0/", "END"}, "AUTOINIT@1:17"},
+		{"AUTOMATIC with an initial value", []string{"AUTOMATIC I", "INTEGER I /1/", "END"}, "AUTOINIT@1:17"},
+		{"AUTOMATIC of a record with initial values", []string{"STRUCTURE /S/", "INTEGER A /1/", "END STRUCTURE", "RECORD /S/ R", "AUTOMATIC R", "END"}, "AUTOINIT@5:17"},
+		{"AUTOMATIC's group in a common block", []string{"COMMON C", "AUTOMATIC A", "EQUIVALENCE (A, C)", "END"}, "AUTOCOMMON@2:17"},
+		{"AUTOMATIC's group with SAVE", []string{"SAVE B", "AUTOMATIC A", "EQUIVALENCE (A, B)", "END"}, "AUTOSAVE@2:17"},
+		{"AUTOMATIC's group with STATIC", []string{"AUTOMATIC A", "STATIC B", "EQUIVALENCE (A, B)", "END"}, "AUTOEQUIVALENT@1:17"},
+		{"AUTOMATIC's group with DATA", []string{"AUTOMATIC A", "EQUIVALENCE (A, B)", "DATA B /1.0/", "END"}, "AUTOINIT@1:17"},
+		{"AUTOMATIC in a NAMELIST group", []string{"AUTOMATIC A", "NAMELIST /G/ A", "END"}, "NMLAUTOMATIC@2:17"},
+		{"an adjustable AUTOMATIC array", []string{"SUBROUTINE S(N)", "AUTOMATIC A(N)", "END"}, "ADJNOTDUMMY@2:19"},
+		{"AUTOMATIC with dimensions twice", []string{"DIMENSION A(2)", "AUTOMATIC A(3)", "END"}, "DUPDIM@2:17"},
+		{"AUTOMATIC with a type", []string{"REAL, AUTOMATIC :: A", "END"}, "SYNTAX@1:11"},
+		{"AUTOMATIC in a block data subprogram", []string{"BLOCK DATA", "AUTOMATIC A", "END"}, "BLOCKSTMT@2:7"},
+		{"AUTOMATIC with no list", []string{"AUTOMATIC", "END"}, "SYNTAX@1:16"},
+
 		// Program units.
 		{"two units, one name", []string{"SUBROUTINE S", "END", "SUBROUTINE S", "END"}, "DUPUNIT@3:7"},
 		{"two main programs", []string{"PROGRAM A", "END", "PROGRAM B", "END"}, "TWOMAINS@3:7"},
@@ -823,10 +878,10 @@ func TestErrors(t *testing.T) {
 		// gets only the messages about its structure.
 		{"a bound with an error", []string{"DIMENSION A(N)", "A(1) = 2", "X = A(2) + A", "END"}, "ADJNOTDUMMY@1:19"},
 		{"a CHARACTER value misused", []string{"CHARACTER*4 B", "L = B", "CALL S(B)", "END"}, "ASSIGNTYPE@2:7"},
-		{"a declaration not read yet", []string{"VOLATILE A", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
+		{"a declaration not read yet", []string{"DICTIONARY 'A'", "X = A(1)", "GO TO 99", "END"}, "NOTIMPL@1:7 UNDEFLBL@3:13"},
 		{"a declaration with a syntax error", []string{"INTEGER A(", "X = A(1)", "END IF", "END"}, "SYNTAX@1:17 NOIF@3:7"},
 		{"a FORMAT declares nothing", []string{"10 FORMAT (I5)", "X = 1", "Y = X(2)", "END"}, "NOTARRAY@3:11"},
-		{"an incomplete unit's references", []string{"VOLATILE X", "I = F(1.0)", "END", "REAL FUNCTION F(X)", "F = X", "END"}, "NOTIMPL@1:7"},
+		{"an incomplete unit's references", []string{"DICTIONARY 'A'", "I = F(1.0)", "END", "REAL FUNCTION F(X)", "F = X", "END"}, "NOTIMPL@1:7"},
 
 		// What the parser parses and semantic analysis doesn't compile
 		// yet (Phase 76): statements, reported where they are, and the
@@ -879,7 +934,6 @@ func TestErrors(t *testing.T) {
 		{"CONVERT", []string{"CHARACTER*8 C", "OPEN (1, CONVERT='NATIVE')", "OPEN (2, CONVERT='VAXG')", "OPEN (3, CONVERT=C)", "INQUIRE (1, CONVERT=C)", "END"}, ""},
 		{"CONVERT unknown", []string{"OPEN (1, CONVERT='EBCDIC')", "END"}, "KEYCHOICE@1:16"},
 		{"PRINT of an ASSIGNed format", []string{"ASSIGN 10 TO K", "PRINT K, 5", "10 FORMAT (I5)", "END"}, ""},
-		{"VOLATILE", []string{"VOLATILE /B/, X", "END"}, "NOTIMPL@1:7"},
 		{"an OPTIONS statement", []string{"OPTIONS /EXTEND_SOURCE", "PROGRAM P", "END"}, "NOTIMPL@1:7"},
 		{"a CHARACTER declaration", []string{"CHARACTER*10 S", "S = 'ABC'", "PRINT *, S", "END"}, ""},
 		{"a CHARACTER function", []string{"CHARACTER*4 FUNCTION F(X)", "F = 'X'", "END"}, ""},
@@ -939,7 +993,7 @@ func TestErrors(t *testing.T) {
 		{"a Hollerith bound", []string{"DIMENSION A(1H1)", "END"}, "ARRAYSIZE@1:17"},
 		{"an octal integer", []string{"I = \"17 + 1", "DIMENSION A(\"10)", "A(8) = I", "END"}, "LATEDECL@2:7"},
 		{"an octal integer too big", []string{"I = \"777777777777", "END"}, "INTRANGE@1:11"},
-		{"NOTIMPL in an incomplete unit", []string{"VOLATILE X", "AUTOMATIC Y", "END"}, "NOTIMPL@1:7 NOTIMPL@2:7"},
+		{"NOTIMPL in an incomplete unit", []string{"DICTIONARY 'A'", "DICTIONARY 'B'", "END"}, "NOTIMPL@1:7 NOTIMPL@2:7"},
 
 		// Constants with no type of their own (sections 2.2.1.4, 2.2.1.6,
 		// 2.2.1.7), and RADIX-50 constants (appendix B.3).

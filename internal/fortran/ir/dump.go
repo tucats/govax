@@ -85,14 +85,22 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 
 	for _, c := range r.Cells {
 		section := "$LOCAL"
-		if c.Common != nil {
+
+		switch {
+		case c.Common != nil:
 			section = c.Common.Psect
+		case c.Frame:
+			section = "frame"
 		}
 
 		fmt.Fprintf(b, "  cell  %-7s %-2s %s+%-4d %s\n", c.Name, c.T, section, c.Offset, cellNote(c))
 	}
 
 	fmt.Fprintf(b, "  $LOCAL is %d bytes\n", r.LocalSize)
+
+	if r.FrameSize != 0 {
+		fmt.Fprintf(b, "  the frame is %d bytes\n", r.FrameSize)
+	}
 
 	for _, in := range r.Initials {
 		section := "$LOCAL"
@@ -172,6 +180,8 @@ func cellNote(c *Cell) string {
 		return "the entry point used"
 	case FormatCell:
 		return "the parsed form of a FORMAT"
+	case FrameBaseCell:
+		return "the routine's FP"
 	}
 
 	return "temporary"
@@ -356,6 +366,10 @@ func MemText(m *Mem) string {
 
 	if m.Index != nil {
 		text += "[" + ExprText(m.Index) + "]"
+	}
+
+	if m.Volatile {
+		text += "{volatile}"
 	}
 
 	return text

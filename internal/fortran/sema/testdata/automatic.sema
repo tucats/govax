@@ -1,0 +1,33 @@
+== SUBROUTINE LOCALS
+  LOCALS                  program unit
+  ARG       REAL          variable         argument 1 volatile
+  N         INTEGER       variable         argument 2
+  K         INTEGER       array(0:4)       frame+0 volatile
+  R         /PAIR/        variable         frame+20
+  RA        /PAIR/        array(1:2)       frame+40
+  T         CHARACTER*7   variable         frame+76
+  EQ1       LOGICAL*1     variable         frame+84
+  EQ2       INTEGER       variable         frame+84
+  C1        REAL          variable         BLK+0 volatile
+  C2        REAL          variable         BLK+4 volatile
+  P1        REAL          variable         BLK+0 volatile
+  P4        REAL          variable         BLK+0 volatile
+  S         REAL          variable         $LOCAL+0
+  I         INTEGER       variable         frame+88
+  V         REAL          variable         $LOCAL+4 volatile
+  structure /PAIR/ is 18 bytes
+    A           INTEGER*2           +0
+    B           REAL*8 (1:2)        +2
+  $LOCAL is 8 bytes
+  /BLK/ is 8 bytes
+20          I = N
+21          K[I] = 1
+22          T = 'FRAME'
+23          R.A:+0 = 1
+24          RA[I].B:+2[2] = 2.0D0
+25          EQ2 = 3
+26          S = (REAL I)
+27          V = S
+28          ARG = V
+29          C2 = P4
+30          END

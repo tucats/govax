@@ -114,6 +114,15 @@ type Routine struct {
 	// LocalSize is the size of the routine's $LOCAL storage, in bytes.
 	LocalSize int
 
+	// FrameSize is the size of the frame area, holding its AUTOMATIC variables,
+	// that each entry point reserves on the stack, in bytes.
+	FrameSize int
+
+	// FrameBase, in a routine whose variable format expressions use AUTOMATIC
+	// variables, is the cell where each entry point leaves its FP; nil
+	// otherwise (lowervfe.go).
+	FrameBase *Cell
+
 	// Data are the routine's read-only data, its contribution to the
 	// $PDATA program section: constants passed by reference, texts,
 	// descriptors, and I/O control blocks.
@@ -206,9 +215,11 @@ const (
 	ArgCell                        // the address of a dummy argument, in a routine with ENTRY statements
 	SelectorCell                   // which entry point the routine was called by
 	FormatCell                     // where FTNRTL keeps a FORMAT statement's parsed form
+	FrameBaseCell                  // the frame's FP, for a FORMAT's variable format expressions (lowervfe.go)
 )
 
-// Cell is a place in the routine's static storage.
+// Cell is a place in the routine's static storage, or, if Frame is set, in the
+// frame area its entry points reserve.
 type Cell struct {
 	// Name is the cell's name in the routine: a variable's FORTRAN
 	// name, or the compiler's own ($C1, $T2, $D3). The code generator
@@ -228,6 +239,11 @@ type Cell struct {
 
 	// Common is the common block the cell is in; nil for a cell in $LOCAL.
 	Common *sema.CommonBlock
+
+	// Frame says the cell is an AUTOMATIC variable: its Offset is its place in
+	// the frame area, Routine.FrameSize bytes below FP, so its address is known
+	// only when the routine runs.
+	Frame bool
 
 	// Sym is the variable, array, or function result the cell holds;
 	// nil for the compiler's cells.
@@ -724,6 +740,17 @@ type Mem struct {
 
 	// T is the type of the value there.
 	T Type
+
+	// Volatile says the place is part of a variable a VOLATILE statement names:
+	// no reference to it may be optimized away, which Phase 84 will ask.
+	Volatile bool
+}
+
+// Linked reports whether the linker knows the place's address, so that read-only
+// data can hold it: not through an argument or a computed address, with no index,
+// and not in the frame.
+func (m *Mem) Linked() bool {
+	return m.Param == nil && m.Ptr == nil && m.Index == nil && (m.Cell == nil || !m.Cell.Frame)
 }
 
 // Text is a CHARACTER value's place: Mem, a Byte place whose offset and

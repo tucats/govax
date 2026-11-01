@@ -1,0 +1,100 @@
+routine LOCALS subroutine
+  param ARG     F  through $A1
+  param N       L  through $A2
+  param TEXT    B  through $A3
+  entry 1 LOCALS ARG=1 N=2 TEXT=3
+  entry 2 OTHER N=1 ARG=2 at B3
+  vfe   $V100 B4 B5
+  cell  K       L  frame+0    array K, 20 bytes
+  cell  R       B  frame+20   variable R
+  cell  RA      B  frame+32   array RA, 20 bytes
+  cell  T       B  frame+52   variable T
+  cell  I       L  frame+60   variable I
+  cell  V       F  $LOCAL+0    variable V
+  cell  $A1     L  $LOCAL+4    address of ARG
+  cell  $A2     L  $LOCAL+8    address of N
+  cell  $A3     L  $LOCAL+12   address of TEXT
+  cell  $B1     L  $LOCAL+16   descriptor F A 4 (?)
+  cell  $D1     L  $LOCAL+48   descriptor L S 4
+  cell  $D2     L  $LOCAL+56   descriptor L A 4 (0:4)
+  cell  $D3     L  $LOCAL+88   descriptor T S 7
+  cell  $D4     L  $LOCAL+96   descriptor L S 4
+  cell  $D5     L  $LOCAL+104  descriptor W S 2
+  cell  $FC100  L  $LOCAL+112  the parsed form of a FORMAT
+  cell  $FP     L  $LOCAL+116  the routine's FP
+  $LOCAL is 120 bytes
+  the frame is 64 bytes
+  datum $K1     text 'FRAME'
+  datum $IO1    control
+  datum $IO2    control run-time format
+  datum $K2     text '(I7)'
+  datum $D6     descriptor T S 4 $K2
+  datum $K3     text '(I<1>, A<2>)'
+  datum $F100   format 100 $K3 cache $FC100 expressions $V100
+B1:
+  assign $B1+4 = addr(@ARG{volatile})
+  assign $B1+28 = @N
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@ARG-4{volatile})
+  assign $B1+12 = mul.L(4, $B1+20)
+  ; line 15
+  assign I{volatile} = @N
+  ; line 16
+  assign K[I{volatile}] = add.L(K+8, 1)
+  ; line 17
+  move T(7) = $K1(5)
+  ; line 18
+  assign R{volatile} = cvt.LW(I{volatile})
+  ; line 19
+  assign @(addr(RA-4[mul.L(I{volatile}, 10)])) = 2.0
+  ; line 20
+  move RA(10) = R{volatile}(10)
+  ; line 21
+  assign @($B1+16)[I{volatile}]{volatile} = V{volatile}
+  ; line 22
+  move @(@(arg TEXT)+4){volatile}(zext.WL(@(arg TEXT))) = T(7)
+  ; line 23
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $D1+4 = addr(I{volatile})
+  call FTN$IO_ITEM(ref $D1)
+  assign $D2+4 = addr(K)
+  assign $D2+16 = addr(K)
+  call FTN$IO_ITEM(ref $D2)
+  assign $D3+4 = addr(T)
+  call FTN$IO_ITEM(ref $D3)
+  assign $D4+4 = addr(K[I{volatile}])
+  call FTN$IO_ITEM(ref $D4)
+  assign $D5+4 = addr(R{volatile})
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_END()
+  ; line 24
+  assign $D3+4 = addr(T)
+  call S(ref I{volatile}, ref K, ref $D3, ref R{volatile})
+  ; line 25
+  assign $D3+4 = addr(T)
+  call FTN$WRITE_IF(ref $IO2, ref $D3, ref $D6)
+  assign $D4+4 = addr(I{volatile})
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_END()
+  ; line 26
+  jump B2
+B2:  ; ENTRY OTHER
+  ; line 27
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $F100)
+  assign $D4+4 = addr(I{volatile})
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_END()
+  ; line 29
+  return
+B3:  ; OTHER's adjustable arrays' bounds
+  assign $B1+4 = addr(@ARG{volatile})
+  assign $B1+28 = @N
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@ARG-4{volatile})
+  assign $B1+12 = mul.L(4, $B1+20)
+  jump B2
+B4:  ; FORMAT 100's expression 1
+  ; line 28
+  return add.L(@($FP)-4{volatile}, @($FP)-56)
+B5:  ; FORMAT 100's expression 2
+  return 7

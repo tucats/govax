@@ -1,0 +1,242 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_W = 7			; word integer
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Storage map for LOCALS, a subroutine
+;   ARG   REAL (?)       an argument  @LOCALS.$A1
+;   N     INTEGER        an argument  @LOCALS.$A2
+;   TEXT  CHARACTER*(*)  an argument  @LOCALS.$A3
+;   K     INTEGER (0:4)  FP-64        LOCALS.K(FP)
+;   R     /PAIR/         FP-44        LOCALS.R(FP)
+;   RA    /PAIR/ (2)     FP-32        LOCALS.RA(FP)
+;   T     CHARACTER*7    FP-12        LOCALS.T(FP)
+;   I     INTEGER        FP-4         LOCALS.I(FP)
+;   V     REAL           $LOCAL+0     LOCALS.V
+;   Structure /PAIR/, 10 bytes
+;     +0     A     INTEGER*2
+;     +2     B     REAL (1:2)
+;
+LOCALS.K = -64				; K, INTEGER (0:4), in the frame
+LOCALS.R = -44				; R, in the frame
+LOCALS.RA = -32				; RA, /PAIR/ (2), in the frame
+LOCALS.T = -12				; T, in the frame
+LOCALS.I = -4				; I, in the frame
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+LOCALS.V:
+	.BLKL	1			; V
+LOCALS.$A1:
+	.BLKL	1			; ARG's longword of the argument list, set at each entry point
+LOCALS.$A2:
+	.BLKL	1			; N's longword of the argument list, set at each entry point
+LOCALS.$A3:
+	.BLKL	1			; TEXT's longword of the argument list, set at each entry point
+LOCALS.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; ARG's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+LOCALS.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+LOCALS.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	20			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	5			; multipliers
+	.LONG	0,4			; bounds
+LOCALS.$D3:
+	.WORD	7			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+LOCALS.$D4:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+LOCALS.$D5:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_W,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+LOCALS.$FC100:
+	.BLKL	1			; the parsed form of FORMAT 100, FTNRTL's
+LOCALS.$FP:
+	.BLKL	1			; the routine's FP, for its variable format expressions
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+LOCALS.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+LOCALS.$IO2:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0008			; flags: run-time format
+	.LONG	0			; (not used yet)
+LOCALS.$D6:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS LOCALS.$K2
+LOCALS.$F100:
+	.ADDRESS LOCALS.$FC100		; FORMAT 100's block: its parsed form's cell
+	.WORD	12			; the text's length
+	.WORD	1			; flags: it has variable format expressions
+	.ADDRESS LOCALS.$K3		; the text
+	.ADDRESS LOCALS.$V100		; their routine
+LOCALS.$K1:
+	.ASCII	/FRAME/
+LOCALS.$K2:
+	.ASCII	/(I7)/
+LOCALS.$K3:
+	.ASCII	/(I<1>, A<2>)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     AUTOMATIC variables reached through FP, descriptors of them filled in at
+;    2  C     run time, each entry point reserving the frame, a variable format expression
+;    3  C     reaching them through a cell; VOLATILE places marked (Phase 82, subtask 6).
+;    4        SUBROUTINE LOCALS(ARG, N, TEXT)
+	.ENTRY	LOCALS,^M<R2,R3,R4,R5>
+	SUBL2	#64,SP			; the frame's AUTOMATIC variables
+	MOVL	FP,LOCALS.$FP		; where variable format expressions find them
+	MOVL	4(AP),LOCALS.$A1	; ARG is argument 1
+	MOVL	8(AP),LOCALS.$A2	; N is argument 2
+	MOVL	12(AP),LOCALS.$A3	; TEXT is argument 3
+	MOVAL	@LOCALS.$A1,LOCALS.$B1+4
+	MOVL	@LOCALS.$A2,LOCALS.$B1+28
+	MOVL	LOCALS.$B1+28,LOCALS.$B1+20
+	MOVL	#-1,R0
+	MOVAL	@LOCALS.$A1[R0],LOCALS.$B1+16
+	MULL3	#4,LOCALS.$B1+20,LOCALS.$B1+12
+;    5        STRUCTURE /PAIR/
+;    6          INTEGER*2 A
+;    7          REAL*4 B(2)
+;    8        END STRUCTURE
+;    9        AUTOMATIC I, K(0:4), T, R, RA
+;   10        RECORD /PAIR/ R, RA(2)
+;   11        CHARACTER*7 T
+;   12        CHARACTER*(*) TEXT
+;   13        DIMENSION ARG(N)
+;   14        VOLATILE I, ARG, TEXT, V, R
+;   15        I = N
+	MOVL	@LOCALS.$A2,LOCALS.I(FP)
+;   16        K(I) = K(2) + 1
+	MOVL	LOCALS.I(FP),R0
+	ADDL3	LOCALS.K+8(FP),#1,LOCALS.K(FP)[R0]
+;   17        T = 'FRAME'
+	MOVC5	#5,LOCALS.$K1,#^A/ /,#7,LOCALS.T(FP)
+;   18        R.A = I
+	CVTLW	LOCALS.I(FP),LOCALS.R(FP)
+;   19        RA(I).B(2) = 2.0
+	MULL3	LOCALS.I(FP),#10,R0
+	MOVAB	LOCALS.RA-4(FP)[R0],R0
+	MOVL	#^X00004100,(R0)	; 2.0
+;   20        RA(1) = R
+	MOVC3	#10,LOCALS.R(FP),LOCALS.RA(FP)
+;   21        ARG(I) = V
+	MOVL	LOCALS.$B1+16,R0
+	MOVL	LOCALS.I(FP),R1
+	MOVF	LOCALS.V,(R0)[R1]
+;   22        TEXT = T
+	MOVZWL	@LOCALS.$A3,R0
+	MOVL	LOCALS.$A3,R1
+	MOVC5	#7,LOCALS.T(FP),#^A/ /,R0,@4(R1)
+;   23        PRINT *, I, K, T, K(I), R.A
+	PUSHL	#-1
+	PUSHAB	LOCALS.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVAL	LOCALS.I(FP),LOCALS.$D1+4
+	PUSHAQ	LOCALS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAL	LOCALS.K(FP),LOCALS.$D2+4
+	MOVAL	LOCALS.K(FP),LOCALS.$D2+16
+	PUSHAQ	LOCALS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAB	LOCALS.T(FP),LOCALS.$D3+4
+	PUSHAQ	LOCALS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	LOCALS.I(FP),R0
+	MOVAL	LOCALS.K(FP)[R0],LOCALS.$D4+4
+	PUSHAQ	LOCALS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAW	LOCALS.R(FP),LOCALS.$D5+4
+	PUSHAQ	LOCALS.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   24        CALL S(I, K, T, R)
+	MOVAB	LOCALS.T(FP),LOCALS.$D3+4
+	PUSHAB	LOCALS.R(FP)
+	PUSHAQ	LOCALS.$D3
+	PUSHAL	LOCALS.K(FP)
+	PUSHAL	LOCALS.I(FP)
+	CALLS	#4,G^S
+;   25        WRITE (T, '(I7)') I
+	MOVAB	LOCALS.T(FP),LOCALS.$D3+4
+	PUSHAQ	LOCALS.$D6
+	PUSHAQ	LOCALS.$D3
+	PUSHAB	LOCALS.$IO2
+	CALLS	#3,G^FTN$WRITE_IF
+	MOVAL	LOCALS.I(FP),LOCALS.$D4+4
+	PUSHAQ	LOCALS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   26        ENTRY OTHER(N, ARG)
+LOCALS.$1:				; ENTRY OTHER
+;   27        WRITE (6, 100) I
+	PUSHAB	LOCALS.$F100
+	PUSHL	#6
+	PUSHAB	LOCALS.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVAL	LOCALS.I(FP),LOCALS.$D4+4
+	PUSHAQ	LOCALS.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   28    100 FORMAT (I<I + K(2)>, A<LEN(T)>)
+;   29        END
+	RET
+LOCALS.$2:				; OTHER's adjustable arrays' bounds
+	MOVAL	@LOCALS.$A1,LOCALS.$B1+4
+	MOVL	@LOCALS.$A2,LOCALS.$B1+28
+	MOVL	LOCALS.$B1+28,LOCALS.$B1+20
+	MOVL	#-1,R0
+	MOVAL	@LOCALS.$A1[R0],LOCALS.$B1+16
+	MULL3	#4,LOCALS.$B1+20,LOCALS.$B1+12
+	BRW	LOCALS.$1
+LOCALS.$3:				; FORMAT 100's expression 1
+	MOVL	LOCALS.$FP,R0		; the expression's value
+	MOVL	LOCALS.$FP,R1
+	ADDL3	-4(R0),-56(R1),R0
+	RET
+LOCALS.$4:				; FORMAT 100's expression 2
+	MOVL	#7,R0			; the expression's value
+	RET
+
+	.ENTRY	OTHER,^M<R2,R3,R4,R5>
+	SUBL2	#64,SP			; the frame's AUTOMATIC variables
+	MOVL	FP,LOCALS.$FP		; where variable format expressions find them
+	MOVL	4(AP),LOCALS.$A2	; N is argument 1
+	MOVL	8(AP),LOCALS.$A1	; ARG is argument 2
+	BRW	LOCALS.$2
+
+LOCALS.$V100:
+	.WORD	^M<R2,R3,R4,R5>		; FORMAT 100's variable format expressions
+	MOVL	4(AP),R0		; which expression FTNRTL wants
+	MOVL	8(AP),AP		; the AP of the routine doing the I/O, for its dummy arguments
+	CASEL	R0,#1,#1
+LOCALS.$5:
+	.WORD	LOCALS.$3-LOCALS.$5
+	.WORD	LOCALS.$4-LOCALS.$5
+	RET
+
+	.END

@@ -300,6 +300,16 @@ func (g *routineGen) writeCommonNames(w *Writer) {
 	}
 }
 
+// writeFrameNames defines the symbols of the routine's AUTOMATIC variables, as
+// their displacements from FP: UNIT.T = -16.
+func (g *routineGen) writeFrameNames(w *Writer) {
+	for _, c := range g.r.Cells {
+		if c.Frame {
+			w.Assignment(g.names.symbol(c.Name), strconv.Itoa(c.Offset-g.r.FrameSize), g.cellNote(c)+", in the frame")
+		}
+	}
+}
+
 // write writes the routine: its storage map, the definitions of its
 // dummy arguments' offsets and its names in common blocks, its $LOCAL
 // storage, its $PDATA data, and its code.
@@ -317,6 +327,7 @@ func (g *routineGen) write(w *Writer) {
 	}
 
 	g.writeCommonNames(w)
+	g.writeFrameNames(w)
 
 	if r.Kind == ir.BlockData {
 		// Nothing runs, but a name in another unit's EXTERNAL statement
@@ -353,6 +364,7 @@ func (g *routineGen) write(w *Writer) {
 	w.Statement("", ".PSECT", codePsect, "")
 	w.Append(&g.pre)
 	w.Statement("", ".ENTRY", r.Name+","+g.entryMask(), "")
+	g.writeFrame(w)
 
 	if len(r.Entries) > 0 {
 		g.writeEntryArgs(w, r.Entries[0])
@@ -401,8 +413,24 @@ func (g *routineGen) writeVFE(w *Writer, v *ir.VFERoutine) {
 func (g *routineGen) writeEntry(w *Writer, e *ir.Entry) {
 	w.Blank()
 	w.Statement("", ".ENTRY", e.Name+","+g.entryMask(), "")
+	g.writeFrame(w)
 	g.writeEntryArgs(w, e)
 	w.Statement("", "BRW", g.blockLabel(e.First), "")
+}
+
+// writeFrame writes the first thing every entry point does in a routine with
+// AUTOMATIC variables: it reserves their area on the stack, right below FP, since
+// CALLS and CALLG leave SP at FP, and RET gives it back. CALLS and CALLG also leave
+// SP on a longword, and the area is a whole number of longwords, so each variable's
+// boundary in the area is its boundary in memory.
+func (g *routineGen) writeFrame(w *Writer) {
+	if g.r.FrameSize != 0 {
+		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.r.FrameSize)+",SP", "the frame's AUTOMATIC variables")
+	}
+
+	if c := g.r.FrameBase; c != nil {
+		w.Statement("", "MOVL", "FP,"+g.names.symbol(c.Name), "where variable format expressions find them")
+	}
 }
 
 // writeEntryArgs writes what starts an entry point's code: its number, if the
@@ -472,7 +500,14 @@ func (g *routineGen) writeMap(w *Writer) {
 	}
 
 	for _, c := range g.r.Cells {
-		if c.Sym != nil {
+		switch {
+		case c.Sym == nil:
+
+		case c.Frame:
+			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
+				"FP" + strconv.Itoa(c.Offset-g.r.FrameSize), g.names.symbol(c.Name) + "(FP)"})
+
+		default:
 			section := "$LOCAL"
 			if c.Common != nil {
 				section = c.Common.Psect
@@ -575,7 +610,7 @@ func (g *routineGen) cells() []*ir.Cell {
 	var cells []*ir.Cell
 
 	for _, c := range g.r.Cells {
-		if c.Common == nil {
+		if c.Common == nil && !c.Frame {
 			cells = append(cells, c)
 		}
 	}
@@ -707,6 +742,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "the entry point the routine was called by"
 	case ir.FormatCell:
 		return "the parsed form of FORMAT " + strings.TrimPrefix(c.Name, "$FC") + ", FTNRTL's"
+	case ir.FrameBaseCell:
+		return "the routine's FP, for its variable format expressions"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {

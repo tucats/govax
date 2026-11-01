@@ -452,7 +452,7 @@ func (g *routineGen) localSize() int {
 }
 
 // mem is the operand for the place m, its index computed into a
-// register: SQUARES.I, CALLS.M-12[R0], @ISQ.N(AP), SUMUP.$K1.
+// register: SQUARES.I, CALLS.M-12[R0], @ISQ.N(AP), SUMUP.$K1, SUB.T+4(FP).
 func (g *routineGen) mem(m *ir.Mem) operand {
 	var base string
 
@@ -461,6 +461,8 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 		return g.pointerMem(m)
 	case m.Param != nil:
 		base = "@" + g.argumentPlace(m.Param)
+	case m.Cell != nil && m.Cell.Frame:
+		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset) + "(FP)"
 	case m.Cell != nil:
 		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset)
 	default:

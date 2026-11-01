@@ -611,7 +611,7 @@ func (l *lowerer) textDescriptor(s string) *Mem {
 // A0: the address of the element whose subscripts are all zero, which
 // is m's less the offset of the first element from it).
 func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
-	if m.Param == nil && m.Ptr == nil && m.Index == nil {
+	if m.Linked() {
 		d.Target = m
 
 		return l.descriptor(d)

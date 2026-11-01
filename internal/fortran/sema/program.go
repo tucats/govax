@@ -67,6 +67,10 @@ type Unit struct {
 	// contribution to $LOCAL, in bytes.
 	LocalSize int
 
+	// FrameSize is the size of the frame area holding the unit's AUTOMATIC
+	// variables, which each entry point reserves on the stack, in bytes.
+	FrameSize int
+
 	// Commons are the common blocks the unit declares, in order of first
 	// appearance.
 	Commons []*CommonBlock
@@ -225,6 +229,26 @@ type Symbol struct {
 	// External is set for a name in an EXTERNAL statement, a dummy
 	// argument's among them.
 	External bool
+
+	// Automatic is set for a name in an AUTOMATIC statement, or tied to one
+	// by EQUIVALENCE: its Offset is its place in the unit's frame area
+	// (Unit.FrameSize), not $LOCAL (storage.go).
+	Automatic bool
+
+	// Volatile is set for a name a VOLATILE statement names, directly, by its
+	// common block, or by EQUIVALENCE with such a name (storage.go). It says
+	// that no reference may be optimized away, which Phase 84's optimizer will
+	// ask.
+	Volatile bool
+
+	// saved is set for a name in a SAVE statement's list. storageStmt is the
+	// AUTOMATIC or STATIC statement naming it, a name's only one.
+	saved       bool
+	storageStmt *ast.AttrStmt
+
+	// automaticPos is where the AUTOMATIC statement names the name, or the
+	// name that made it AUTOMATIC.
+	automaticPos diag.Position
 
 	// Equivalenced is set for a name in an EQUIVALENCE list, whose storage
 	// may overlap other names'. group is the names it is tied to, and

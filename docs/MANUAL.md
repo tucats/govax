@@ -1316,9 +1316,9 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, the VOLATILE statement is not implemented yet
+%FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
-        VOLATILE X
+        DICTIONARY 'X'
   ------^
 ```
 
@@ -4363,7 +4363,7 @@ unformatted input and output, sequential and direct access, on sequential
 and relative files through OPEN (USEROPEN= too), CLOSE, INQUIRE, REWIND,
 BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
 14.2). Indexed files and the keyed READ are a later program's. Any other
-statement draws `%FORT-E-NOTIMPL`, naming it ("the VOLATILE statement is not
+statement draws `%FORT-E-NOTIMPL`, naming it ("the DICTIONARY statement is not
 implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 

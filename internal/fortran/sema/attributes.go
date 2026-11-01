@@ -21,8 +21,8 @@ import (
 
 // attributeStatement reads an EXTERNAL or INTRINSIC statement in the
 // declarations walk, since what they say changes how every later statement
-// reads the name, and keeps a SAVE statement for when every declaration is
-// known (saves).
+// reads the name, and keeps a SAVE, VOLATILE, AUTOMATIC, or STATIC statement for
+// when every declaration is known (saves, storage.go).
 func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 	switch s.Kind {
 	case lex.Save:
@@ -36,6 +36,18 @@ func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 	case lex.Intrinsic:
 		for _, item := range s.Items {
 			a.intrinsic(item)
+		}
+
+	case lex.Volatile:
+		a.volatileStmts = append(a.volatileStmts, s)
+
+	case lex.Automatic, lex.Static:
+		a.storageStmts = append(a.storageStmts, s)
+
+		for _, item := range s.Items {
+			if item.Array.Dims != nil {
+				a.dimension(a.lookup(item.Name, item.Pos), item.Array)
+			}
 		}
 	}
 }
@@ -119,8 +131,12 @@ func (a *analyzer) saves() {
 				// static anyway.
 				a.badUse(s, item.Pos, "be named in a SAVE statement")
 
-			case s.Class == Unclassified:
-				s.Class = Variable
+			default:
+				s.saved = true
+
+				if s.Class == Unclassified {
+					s.Class = Variable
+				}
 			}
 		}
 	}

@@ -490,6 +490,24 @@ var messages = map[string]kind{
 	"SAVEBLANK":  {Error, "blank common can't be in a SAVE statement"},
 	"SAVEBLOCK":  {Error, "this unit has no common block /%s/"},
 
+	// VOLATILE's messages (section 4.16, the HP manual's 5.19).
+	"VOLATILEBLANK": {Error, "blank common can't be in a VOLATILE statement"},
+	"VOLATILEGROUP": {Error, "%s is a NAMELIST group, which can't be in a VOLATILE statement"},
+
+	// AUTOMATIC's and STATIC's messages (the HP manual's 5.3). A name in
+	// either statement but once; none is a dummy argument; and what is static
+	// by its nature (in a common block, in a SAVE statement, or with an initial
+	// value) can't be AUTOMATIC, which the name's EQUIVALENCE group shares. A
+	// NAMELIST group's block holds its names' addresses in read-only data, which
+	// an AUTOMATIC variable's is not known in time for (ours).
+	"DUPSTORAGE":     {Error, "%s is named in a %s statement already (line %d)"},
+	"STORAGEDUMMY":   {Error, "%s is a dummy argument, so it can't be in a %s statement"},
+	"AUTOCOMMON":     {Error, "%s is in %s, so it can't be AUTOMATIC"},
+	"AUTOSAVE":       {Error, "%s is in a SAVE statement, so it can't be AUTOMATIC"},
+	"AUTOINIT":       {Error, "%s has an initial value, so it can't be AUTOMATIC"},
+	"AUTOEQUIVALENT": {Error, "%s is AUTOMATIC, and EQUIVALENCE ties it to %s, which is named in a STATIC statement"},
+	"NMLAUTOMATIC":   {Error, "the AUTOMATIC variable %s can't be in a NAMELIST group"},
+
 	// EXTERNAL's and INTRINSIC's messages (sections 4.7, 4.9).
 	"DUPATTR":      {Error, "%s is %s already"},
 	"BADINTRINSIC": {Error, "%s is not one of FORTRAN's intrinsic functions"},

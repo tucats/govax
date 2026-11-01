@@ -109,8 +109,14 @@ func dumpSymbol(s *Symbol) string {
 		where = "argument " + strconv.Itoa(s.Dummy)
 	case s.Common != nil:
 		where = s.Common.Psect + "+" + strconv.Itoa(s.Offset)
+	case s.Automatic:
+		where = "frame+" + strconv.Itoa(s.Offset)
 	case s.Offset >= 0:
 		where = "$LOCAL+" + strconv.Itoa(s.Offset)
+	}
+
+	if s.Volatile {
+		where += " volatile"
 	}
 
 	return fmt.Sprintf("%-9s %-13s %-16s %s", s.Name, typ, class, where)

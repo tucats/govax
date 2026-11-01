@@ -275,6 +275,11 @@ type analyzer struct {
 	dataSets  []dataSet
 	saveStmts []*ast.AttrStmt
 
+	// volatileStmts are the unit's VOLATILE statements, and storageStmts its
+	// AUTOMATIC and STATIC statements, read when every declaration is known
+	// (storage.go).
+	volatileStmts, storageStmts []*ast.AttrStmt
+
 	// open are the IF blocks and DO loops open at the statement being
 	// analyzed, outermost first; nextID numbers them.
 	open   []*construct
@@ -341,6 +346,8 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.checkArrays()
 	a.checkCommonSizes()
 	a.saves()
+	a.storageStatements()
+	a.volatiles()
 	a.dataStatements()
 	a.statements(body)
 	a.checkNamelists()
@@ -349,6 +356,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.passedLengths()
 	a.layout()
 	a.recordInitials()
+	a.checkAutomaticInitials()
 	a.placeInitials()
 
 	return u

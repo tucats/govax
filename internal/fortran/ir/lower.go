@@ -75,6 +75,10 @@ type lowerer struct {
 	// adjustable is each adjustable array's descriptor cell, and
 	// adjustableOrder the arrays in the unit's order (lowerbounds.go).
 	adjustable      map[*sema.Symbol]*Cell
+
+	// inVFE is set while a variable format expression is lowered: code that
+	// runs with another routine's FP (lowervfe.go).
+	inVFE bool
 	adjustableOrder []*sema.Symbol
 
 	returns []*returnBlock
@@ -91,7 +95,7 @@ type lowerer struct {
 
 // lowerUnit lowers one program unit.
 func lowerUnit(u *sema.Unit) *Routine {
-	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize, Initials: u.Initials}
+	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials}
 
 	l := &lowerer{
 		unit:     u,
@@ -146,7 +150,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 			continue
 		}
 
-		c := &Cell{Name: s.Name, Kind: VariableCell, T: l.typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Common: s.Common, Sym: s}
+		c := &Cell{Name: s.Name, Kind: VariableCell, T: l.typeOf(s.Type), Size: s.Size(), Offset: s.Offset, Common: s.Common, Frame: s.Automatic, Sym: s}
 
 		switch {
 		case s.Result:

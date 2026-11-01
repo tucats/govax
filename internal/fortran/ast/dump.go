@@ -263,6 +263,10 @@ func dumpSpec(s Stmt) (string, bool) {
 			if it.Common {
 				items[i] = "/" + it.Name + "/"
 			}
+
+			if it.Array != nil && it.Array.Dims != nil {
+				items[i] += bounds(it.Array.Dims)
+			}
 		}
 
 		return strings.TrimSpace(s.Kind.String() + " " + strings.Join(items, ", ")), true
