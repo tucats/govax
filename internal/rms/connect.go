@@ -113,7 +113,7 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr, rabAddr uint32) (failS
 		fac = handle.Access
 	}
 
-	if fac&(facPut|facReads) == 0 {
+	if fac&(facPut|facReads|facBIO|facBRO) == 0 {
 		// None of PUT, GET, UPD, DEL, or TRN was ever asked for —
 		// nothing for CONNECT to arm this stream to do.
 		return rmsPrivilegeViolation, nil

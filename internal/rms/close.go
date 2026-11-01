@@ -102,6 +102,15 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 
 		handle.locks.release()
 
+		fop, err := ctx.loadLongword(fabAddr + fabFOP)
+		if err != nil {
+			return 0, err
+		}
+
+		if err := ctx.deleteAtClose(handle, fop); err != nil {
+			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
+		}
+
 		if handle.written {
 			ctx.countIO(ioCloseBuffered, 1)
 		} else {

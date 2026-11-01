@@ -5296,7 +5296,7 @@ side effects follow DIGITAL's *System Services Reference Manual*.
 | Sections | `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, `$UPDSEC(W)` |
 | Locks | `$ENQ`, `$ENQW`, `$DEQ` |
 | Command language | `$CLI` |
-| RMS | `$OPEN`, `$CREATE`, `$CLOSE`, `$CONNECT`, `$GET`, `$PUT`, `$FIND`, `$UPDATE`, `$DELETE`, `$TRUNCATE`, `$REWIND`, `$FLUSH`, `$FREE`, `$RELEASE`, `$WAIT`, `$ERASE`, `$RENAME`, `$PARSE`, `$SEARCH`, `$DISPLAY` |
+| RMS | `$OPEN`, `$CREATE`, `$CLOSE`, `$CONNECT`, `$DISCONNECT`, `$GET`, `$PUT`, `$FIND`, `$UPDATE`, `$DELETE`, `$TRUNCATE`, `$REWIND`, `$READ`, `$WRITE`, `$FLUSH`, `$FREE`, `$RELEASE`, `$WAIT`, `$ERASE`, `$RENAME`, `$PARSE`, `$SEARCH`, `$DISPLAY` |
 
 Other VMS services aren't available yet.
 

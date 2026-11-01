@@ -57,7 +57,7 @@ func SysDisplay(ctx *Context, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if err := ctx.fillFABAttributes(fab, h.File); err != nil {
+	if err := ctx.fillFABAttributes(fab, h.File, xabOpen); err != nil {
 		return 0, err
 	}
 

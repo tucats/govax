@@ -38,7 +38,8 @@ var rabServices = map[string]bool{
 	"SYS$CONNECT": true, "SYS$GET": true, "SYS$PUT": true, "SYS$FIND": true,
 	"SYS$UPDATE": true, "SYS$DELETE": true, "SYS$TRUNCATE": true,
 	"SYS$REWIND": true, "SYS$FLUSH": true, "SYS$FREE": true,
-	"SYS$RELEASE": true, "SYS$WAIT": true,
+	"SYS$RELEASE": true, "SYS$WAIT": true, "SYS$READ": true, "SYS$WRITE": true,
+	"SYS$DISCONNECT": true,
 }
 
 func isRABService(service string) bool { return rabServices[service] }

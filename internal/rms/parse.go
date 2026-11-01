@@ -10,7 +10,7 @@ import (
 // specification in the FAB's NAM block, without looking for the file.
 //
 // From the RMS Reference Manual's $PARSE description. The inputs are the
-// FAB's FNA/FNS, DNA/DNS, FOP's OFP bit, and NAM (which must be given),
+// FAB's FNA/FNS, DNA/DNS, FOP's OFP bit, and NAM,
 // and the NAM's ESA/ESS, NOP, and RLF. The outputs:
 //
 //   - the expanded string in ESA, when ESA and ESS are both nonzero, its
@@ -48,11 +48,22 @@ func SysParse(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	if sts == 0 && nam == 0 {
-		sts = rmsInvalidNAM
+	if sts != 0 {
+		return fabStatus(ctx, fab, sts, 0)
 	}
 
-	if sts != 0 {
+	// With no NAM there is nowhere to report the name: only its status
+	// (VMS 7.1, testdata/for81, FOR81R's first cases: FORRTL's first call).
+	if nam == 0 {
+		_, sts, err := ctx.expandFAB(fab, 0)
+		if err != nil {
+			return 0, err
+		}
+
+		if sts == 0 {
+			sts = rmsNormal
+		}
+
 		return fabStatus(ctx, fab, sts, 0)
 	}
 

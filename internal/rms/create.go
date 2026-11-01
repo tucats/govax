@@ -90,6 +90,8 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	} else if sts := ufoSharing(fop, shr); sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, 0)
+	} else if sts := blockSharing(fac, shr); sts != 0 {
+		return fabStatus(ctx, fabAddr, sts, 0)
 	}
 
 	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
@@ -310,6 +312,11 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
+	// A fixed-length record needs a length (VMS 7.1: testdata/for81, FOR81R).
+	if format == ondisk.RecordFormatFixed && mrs == 0 {
+		return 0, found, false, rmsInvalidMRS, nil
+	}
+
 	shr, err := ctx.loadByte(fabAddr + fabSHR)
 	if err != nil {
 		return 0, found, false, 0, err
@@ -381,6 +388,11 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		DefaultExtend: deq,
 	}
 
+	// A fixed-length file's longest record is its one size (XAB$W_LRL).
+	if format == ondisk.RecordFormatFixed {
+		recAttr.RecordSize = mrs
+	}
+
 	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS
 	// manual, FAB$B_FSZ).
 	if format == ondisk.RecordFormatVFC {
@@ -421,6 +433,11 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, rmsDeviceError, nil
 	}
 
+	fop, err := ctx.loadLongword(fabAddr + fabFOP)
+	if err != nil {
+		return 0, found, false, 0, err
+	}
+
 	n, t := splitEntryName(name)
 	found = foundFile{
 		Parsed: p, Device: spec.Device, Dirs: spec.Dirs,
@@ -428,6 +445,16 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		FID: f.Header.Fid, DID: dir.Header.Fid,
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
+
+	// FAB$V_TMP and FAB$V_TMD: the file has no directory entry, and its name
+	// no version (fop.go).
+	if fop&(fopTMP|fopTMD) != 0 {
+		if err := makeTemporary(dir, name, version, f, fop); err != nil {
+			return 0, found, false, rmsDeviceError, nil
+		}
+
+		found.Version = 0
+	}
 
 	h := &FileHandle{File: f, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: true, Access: fac,
 		claim: ctx.Mounts.claimOpen(spec.Device, fileIDFrom(f.Header.Fid), fac, shr)}

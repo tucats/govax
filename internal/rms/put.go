@@ -24,14 +24,11 @@ package rms
 // storeStatus doc comment for how those two very different kinds of
 // "failure" are kept distinct throughout this package.
 //
-// # Why this only implements sequential access
+// # Access modes
 //
-// Real RMS's RAB$B_RAC field can ask for sequential, keyed (indexed
-// files), or direct-by-RFA access, but docs/PHASE-22.md scopes this whole
-// phase to sequential organization only (see fab.go's orgSeq and rab.go's
-// racSeq) — so any other RAB$B_RAC value is a real RMS$_RAC error to
-// report back to the calling program, not something to silently
-// misinterpret as sequential anyway.
+// RAB$B_RAC asks for sequential access, or keyed access by record number on a
+// file of fixed-length records (keyedput.go). Anything else, keyed access to
+// a terminal or mailbox among it, is RMS$_RAC.
 func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	rabAddr := argv[0]
 
@@ -64,8 +61,14 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	if rac != racSeq {
+	onVolume := !handle.IsConsole() && !handle.IsRecordDevice()
+
+	if rac != racSeq && (rac != racKey || !onVolume) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidRAC)
+	}
+
+	if onVolume && handle.stream.blocks {
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
 	}
 
 	// A real ODS-2-backed file has to have been armed for writing by
@@ -115,6 +118,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// control its record attributes call for (ppfaccess.go).
 	record = ctx.indirectRecord(ifi, handle, record)
 
+	if rac == racKey {
+		return ctx.putKeyed(rabAddr, handle, record)
+	}
+
 	if handle.IsRecordDevice() {
 		return putRecordDevice(ctx, rabAddr, handle, record)
 	}
@@ -135,9 +142,6 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 
 		handle.wrote(ctx, handle.endOfFile())
 
-		// A VFC record's fixed control isn't counted in its length.
-		handle.noteLongest(max(len(record)-int(handle.File.Header.RecordAttributes.VfcSize), 0))
-
 		if err := handle.Writer.Put(record); err != nil {
 			// The sibling ods2 module's rms.Writer.Put only ever
 			// fails this way for a record whose length doesn't fit
@@ -151,6 +155,9 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 			// anticipated exactly this SYS$PUT use.
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsRecordTooBig)
 		}
+
+		// A VFC record's fixed control isn't counted in its length.
+		handle.noteLongest(max(len(record)-int(handle.File.Header.RecordAttributes.VfcSize), 0))
 
 		if err := ctx.storeRFA(rabAddr, rfaAt(handle.Writer.RecordOffset())); err != nil {
 			return 0, err
@@ -172,6 +179,15 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 // or the status it stored in the RAB: RMS$_NEF away from the end without
 // TPT, RMS$_FAC with TPT but without TRN.
 func (ctx *Context) putPosition(rabAddr uint32, h *FileHandle) (uint32, error) {
+	// A keyed $PUT left the stream's place where the end of the file was
+	// (keyedput.go): the record goes there, and ends the file.
+	if h.stream.heldEnd {
+		h.stream.heldEnd = false
+		h.truncateAt(h.stream.next)
+
+		return 0, nil
+	}
+
 	if h.atEndOfFile() {
 		return 0, nil
 	}

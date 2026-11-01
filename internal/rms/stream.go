@@ -60,6 +60,16 @@ type streamContext struct {
 	next  int64
 	atEnd bool
 
+	// heldEnd is set while next is where the file's end was when a keyed
+	// $PUT moved it past (keyedput.go): the next sequential $PUT goes
+	// there, and ends the file, and a sequential $GET is RMS$_EOF.
+	heldEnd bool
+
+	// blocks is set for a stream that transfers blocks, by $READ and
+	// $WRITE (blockio.go), and nextBlock is the block after its last.
+	blocks    bool
+	nextBlock uint32
+
 	// fresh is set when every read must come from the disk, not from the
 	// Reader's read-ahead: the file has other writers, or this stream
 	// changes records in place.
@@ -90,7 +100,7 @@ func (h *FileHandle) endOfFile() int64 {
 // startStream sets h's context as $CONNECT leaves it, for access fac and
 // the RAB's options rop.
 func (h *FileHandle) startStream(fac byte, rop uint32) {
-	h.stream = streamContext{fac: fac}
+	h.stream = streamContext{fac: fac, blocks: blockStream(fac, rop)}
 
 	if rop&ropEOF != 0 {
 		h.stream.next, h.stream.atEnd = h.endOfFile(), true
@@ -162,9 +172,29 @@ type located struct {
 func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, uint32, error) {
 	fail := func(sts uint32) (located, uint32, error) {
 		h.stream.lost()
+
+		// A $GET that fails leaves a size of 0, and one that reached no
+		// record no RFA (VMS 7.1: testdata/for81, FOR81R's RMS$_RAC,
+		// RMS$_EOF, and RMS$_KEY).
+		if !find {
+			if err := ctx.storeWord(rabAddr+rabRSZ, 0); err != nil {
+				return located{}, 0, err
+			}
+		}
+
+		if sts == rmsEOF || sts == rmsInvalidKey {
+			if err := ctx.storeRFA(rabAddr, rfa{}); err != nil {
+				return located{}, 0, err
+			}
+		}
+
 		r0, err := storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
 
 		return located{}, r0, err
+	}
+
+	if h.stream.blocks {
+		return fail(rmsIOP)
 	}
 
 	if h.Reader == nil || h.stream.fac&facReads == 0 {
@@ -191,6 +221,10 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 	case racSeq:
 		target = s.next
 		if s.atEnd {
+			target = h.endOfFile()
+		}
+
+		if s.heldEnd {
 			target = h.endOfFile()
 		}
 
@@ -289,7 +323,7 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 	// The context moves on (Table 8-3).
 	s.current, s.hasCurrent, s.afterFind = target, true, find
 	if rac == racSeq || !find {
-		s.next, s.atEnd = end, false
+		s.next, s.atEnd, s.heldEnd = end, false, false
 	}
 
 	if err := ctx.storeRFA(rabAddr, rfaAt(target)); err != nil {

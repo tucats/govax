@@ -1,6 +1,9 @@
 package rms
 
-import "github.com/tucats/ods2/ondisk"
+import (
+	"github.com/tucats/ods2/ondisk"
+	odsrms "github.com/tucats/ods2/rms"
+)
 
 // Random access by relative record number (Phase 72).
 //
@@ -12,11 +15,9 @@ import "github.com/tucats/ods2/ondisk"
 // access READ (READ (u, REC=n)) is this; DUNGEON reads its message text
 // that way.
 //
-// Unconfirmed (no probe yet): the statuses for a record number of 0
-// (RMS$_KEY here) and for one past the end of the file (RMS$_EOF here),
-// RMS$_RAC for a file of another format, and whether an odd record size
-// is padded to a word: govax lays fixed-length records end to end, as
-// its sequential reads do.
+// VMS 7.1 confirmed it (testdata/for81, FOR81R; keyedput.go is the $PUT): RMS$_KEY for a record
+// number of 0, RMS$_EOF past the end of the file, RMS$_RAC for a file of
+// another format, and an odd record size padded to a word.
 
 var (
 	// rmsInvalidKey is RMS$_KEY: a record number that names no record
@@ -25,11 +26,10 @@ var (
 	rmsInvalidKeySize = vmsConst("RMS$_KSZ")
 )
 
-// keyedRecord returns the byte offset of the record RAB$L_KBF's record
-// number names in h's file, or the status for why there is none; err is
-// a failed read of the RAB or the key buffer, as for its other fields.
-func (ctx *Context) keyedRecord(rabAddr uint32, h *FileHandle) (int64, uint32, error) {
-	attr := h.File.Header.RecordAttributes
+// keyedNumber returns the record number RAB$L_KBF names, for a file with
+// attributes attr, or the status for why it can't be used; err is a failed
+// read of the RAB or the key buffer, as for its other fields.
+func (ctx *Context) keyedNumber(rabAddr uint32, attr ondisk.RecAttr) (uint32, uint32, error) {
 	if attr.Format != ondisk.RecordFormatFixed || attr.MaxRecordSize == 0 {
 		return 0, rmsInvalidRAC, nil
 	}
@@ -57,7 +57,21 @@ func (ctx *Context) keyedRecord(rabAddr uint32, h *FileHandle) (int64, uint32, e
 		return 0, rmsInvalidKey, nil
 	}
 
-	off := int64(number-1) * int64(attr.MaxRecordSize)
+	return number, 0, nil
+}
+
+// keyedRecord returns the byte offset of the record RAB$L_KBF's record
+// number names in h's file, or the status for why there is none; err is
+// a failed read of the RAB or the key buffer.
+func (ctx *Context) keyedRecord(rabAddr uint32, h *FileHandle) (int64, uint32, error) {
+	attr := h.File.Header.RecordAttributes
+
+	number, sts, err := ctx.keyedNumber(rabAddr, attr)
+	if err != nil || sts != 0 {
+		return 0, sts, err
+	}
+
+	off := odsrms.FixedRecordOffset(attr, number)
 	if off >= h.endOfFile() {
 		return 0, rmsEOF, nil
 	}

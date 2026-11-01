@@ -55,7 +55,7 @@ func (f foundFile) resultant() fileName {
 		Dir:  dirSpec{Elems: f.Dirs}.String(),
 		Name: f.Name,
 		Type: "." + f.Type,
-		Ver:  ";" + strconv.Itoa(int(f.Version)),
+		Ver:  versionText(f.Version),
 	}
 }
 
@@ -149,6 +149,17 @@ func stvFor(sts uint32) uint32 {
 	}
 
 	return 0
+}
+
+// versionText is a NAM's version: a temporary file, with no directory entry,
+// has none, and its result name ends in the semicolon (VMS 7.1: testdata/for81,
+// FOR81R's "TMP").
+func versionText(version uint16) string {
+	if version == 0 {
+		return ";"
+	}
+
+	return ";" + strconv.Itoa(int(version))
 }
 
 // lookupVersion finds name's entry in dir for a version as written after
@@ -248,7 +259,7 @@ func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, c
 		}
 	}
 
-	if err := ctx.fillFABAttributes(fab, h.File); err != nil {
+	if err := ctx.fillFABAttributes(fab, h.File, mode); err != nil {
 		return 0, err
 	}
 

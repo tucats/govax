@@ -127,9 +127,20 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
 	}
 
+	rsz, err := ctx.loadWord(rabAddr + rabRSZ)
+	if err != nil {
+		return 0, err
+	}
+
+	attr := handle.File.Header.RecordAttributes
+
 	switch {
 	case s.fac&facUpd == 0 || handle.Reader == nil:
 		return fail(rmsFACNotAllowed)
+	case attr.Format == ondisk.RecordFormatFixed && rsz != attr.MaxRecordSize:
+		// The size before the current record: VMS 7.1's on a FIX file
+		// with none (testdata/for81, FOR81R's "keyed then sequential").
+		return fail(rmsRecordTooBig)
 	case !s.hasCurrent:
 		return fail(rmsNoCurrent)
 	case ctx.locksRecords(handle) && handle.locks.records[rfaAt(s.current)] == nil:
@@ -140,11 +151,6 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 	if sts != 0 {
 		// The record went (the file was truncated by another stream).
 		return fail(rmsNoCurrent)
-	}
-
-	rsz, err := ctx.loadWord(rabAddr + rabRSZ)
-	if err != nil {
-		return 0, err
 	}
 
 	terminator, stream := streamTerminator(handle.File)
@@ -355,7 +361,8 @@ func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 
 	if !handle.IsConsole() && !handle.IsRecordDevice() {
 		s := &handle.stream
-		s.next, s.atEnd, s.afterFind = 0, false, false
+		s.next, s.atEnd, s.afterFind, s.heldEnd = 0, false, false, false
+		s.nextBlock = 1
 	}
 
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)

@@ -89,7 +89,7 @@ func (ctx *Context) storeIndirectAttributes(fab uint32, e *PermanentEntry, full 
 
 	h := e.handle
 	if h.File != nil {
-		return ctx.fillFABAttributes(fab, h.File)
+		return ctx.fillFABAttributes(fab, h.File, xabOpen)
 	}
 
 	// The terminal's process-permanent files are VFC print files with

@@ -117,6 +117,12 @@ func scanName(text string) (fileName, uint32) {
 	}
 
 	if !validName(s[:k]) {
+		// A directory after the name is a syntax error (VMS 7.1:
+		// testdata/for81, FOR81R's "A[B").
+		if strings.ContainsAny(s[:k], "[<") {
+			return f, rmsSyntaxError
+		}
+
 		return f, rmsFileNameError
 	}
 

@@ -262,7 +262,7 @@ func TestSysPut_invalidRAC(t *testing.T) {
 
 	connectRAB(t, f.ctx, testFabAddr)
 
-	putByte(t, f.ctx, testRabAddr+rabRAC, racKey) // not sequential
+	putByte(t, f.ctx, testRabAddr+rabRAC, racRFA) // neither sequential nor by key
 	putRecord(t, f.ctx, testRabAddr, make([]byte, 80))
 
 	r0, err := SysPut(f.ctx, []uint32{testRabAddr})

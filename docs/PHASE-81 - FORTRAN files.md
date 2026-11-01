@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
-subtask 2, the probe, done the same day (three VMS runs). Planned 2026-10-29. Needs Phase 80 (formatting and the
+done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
+same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -955,3 +956,43 @@ out, as in the 1988 manual. **Recommended: (a).**
   APPEND, relative files in sequence, the keyed statements, locks, and CONVERT (the section
   "Round 2's FORRTL program on VMS"). One question to the author, on CONVERT. Also from these
   runs: `$CREATE` keeps FAB$W_DEQ, and `SET DEBUG RMS` shows more of a FAB and RAB.
+- **2026-10-31, subtask 3, RMS and ods2's groundwork.** `TestFor81RMSOracle`
+  (`internal/console/for81rms_test.go`) holds `for81r.mar`'s cases on sequential files and
+  FOP's bits, #0, #1, and #25 to #59, to VMS's run line for line; #2 to #24, relative files,
+  wait for subtask 9. It masks only the channel VMS leaves in FAB$L_STV at `$CREATE` (govax
+  opens none) and the stat lines' MRN, which that FAB gets from a relative file. Unit tests
+  are `internal/rms/for81_test.go` and ods2's own.
+  - **ods2** (committed and tagged v0.1.25 locally; not pushed or pinned, so govax builds only
+    with `go.work` until it is): `RecordFormat.Organization` and `.Record` name the byte's
+    nibbles, and `Reader` and `Writer` refuse a file that isn't sequential (`ErrNotSequential`).
+    FIX records pad to a word (`FixedRecordSpace`); with `AttrNoSpan` a FIX or VAR record that
+    won't fit goes to the next block, and a VAR one longer than a block is refused
+    (`ErrSpansBlock`); `FixedRecordOffset` is a record's place by number. A name's versions go
+    on in the next directory block past one's worth.
+  - **Keyed `$PUT`** (`rms/keyedput.go`), with UIF, on FIX sequential files, gaps as zeros.
+    VMS's "keyed then sequential" case shows a stream's place doesn't move: on a stream at the
+    end of the file, a keyed `$PUT` that grows it leaves the next sequential `$PUT` going where
+    the end was, and the file then ends after that record (`streamContext.heldEnd`). A direct
+    WRITE never mixes the two, so FORTRAN doesn't meet this.
+  - **FOP** (`rms/fop.go`): TMP and TMD leave no directory entry and a result name ending in `;`;
+    TMD and DLT delete at the last deaccess; SPL and SCF keep the file, even with DLT, as VMS
+    did with no queue running. MXV, DFW, NEF, OFP, and CTG on an empty file are accepted, and
+    a `$CREATE`'s CTG stays in the FAB.
+  - **Block I/O** (`rms/blockio.go`): `$READ`, `$WRITE`, `$DISCONNECT`, RMS$_UPI for a block
+    `$OPEN` or `$CREATE` that lets others write without UPI.
+  - **Smaller answers from the run:** `$PARSE` with no NAM is the name's status alone, and a
+    directory after a name (`A[B`) RMS$_SYN; a failed `$GET` leaves RSZ 0, and RMS$_EOF or
+    RMS$_KEY no RFA; `$UPDATE` of the wrong size on a FIX file is RMS$_RSZ before RMS$_CUR; FIX
+    with MRS 0 is RMS$_MRS; `$OPEN` writes DEQ only if the file's isn't 0; a FIX file's XAB$W_LRL
+    is its size; a `$PUT` refused leaves the longest record alone.
+  - **Left for subtask 9:** FAB$L_MRN and `$CREATE`'s FAB$B_BKS mean something only on relative
+    files, so they go with them. `$OPEN` already gives BKS back and leaves MRN alone on a
+    sequential file, as VMS's does.
+  - **Unconfirmed, govax's choices.** A last FIX record the end of file cuts short (FORRTL.EXE's
+    own) reads as what the file has of it: the case meant to show it, #38, never made such a file,
+    so a later probe round should. A sequential `$GET` after a keyed `$PUT` that moved the end is
+    RMS$_EOF. RMS$_IOP for a record operation on a block stream and a block operation on a record
+    stream (`vmsdef` has no RMS$_BIO or RMS$_BRO, which may not be VMS 7.1's names); a `$READ` stops
+    at the end of the block holding the end of file; `$WRITE` zeros the rest of its last block,
+    and `$READ` and `$WRITE` are tested only by unit tests, since VMS refused the probe's dumps
+    with RMS$_UPI. RMS$_UPI is applied to FAB$V_BRO too.

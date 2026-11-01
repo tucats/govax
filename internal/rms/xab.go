@@ -306,13 +306,23 @@ func verLimit(limit uint16, mode xabMode) uint16 {
 
 // fillFABAttributes writes the file's attributes into the FAB, as $OPEN
 // and $DISPLAY do: ALQ, DEQ, ORG, RFM, RAT, MRS, FSZ, BKS, GBC, BLS (the
-// block size), and FOP's CTG and CBT for a contiguous file.
-func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File) error {
+// block size), and FOP's CTG and CBT for a contiguous file. A $CREATE's own
+// CTG or CBT stays, for a file with no blocks to be contiguous yet (VMS 7.1:
+// testdata/for81, FOR81R's "CTG").
+func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File, mode xabMode) error {
 	ra := f.Header.RecordAttributes
 
 	for _, s := range []func() error{
 		func() error { return ctx.storeLongword(fab+fabOffset("ALQ"), ra.HighestBlock) },
-		func() error { return ctx.storeWord(fab+fabOffset("DEQ"), ra.DefaultExtend) },
+		func() error {
+			// A file with no default extension leaves the FAB's alone
+			// (VMS 7.1: testdata/for81, FOR81R's last case).
+			if ra.DefaultExtend == 0 {
+				return nil
+			}
+
+			return ctx.storeWord(fab+fabOffset("DEQ"), ra.DefaultExtend)
+		},
 		func() error { return ctx.storeByte(fab+fabORG, byte(ra.Format)&0xf0) },
 		func() error { return ctx.storeByte(fab+fabRFM, byte(ra.Format)&0x0f) },
 		func() error { return ctx.storeByte(fab+fabRAT, ra.Attributes) },
@@ -327,7 +337,9 @@ func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File) error {
 				return err
 			}
 
-			fop &^= fopCTG | fopCBT
+			if mode != xabCreate {
+				fop &^= fopCTG | fopCBT
+			}
 
 			switch {
 			case f.Header.FileCharacteristics&ondisk.FchContig != 0:

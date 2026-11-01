@@ -85,6 +85,10 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, sts, 0)
 	}
 
+	if sts := blockSharing(fac, shr); sts != 0 {
+		return fabStatus(ctx, fabAddr, sts, 0)
+	}
+
 	// FAB$V_NAM: open by the NAM's file ID, or by its directory ID and
 	// the file name (namfid.go).
 	if nam != 0 && fop&fopNAM != 0 {

@@ -517,6 +517,9 @@ never had.
   (FORTRAN-INTERNALS.md's sections on NAMELIST, units and the terminal, and the
   error model; MANUAL.md's 14.7); the phase doc's "Where things stand" lists what
   is left (OPEN and the other units are Phase 81's).
+  Phase 81 (in progress) is FORTRAN's file statements: subtask 1 (2026-10-31) is the survey,
+  its doc's Part A, subtask 2 (2026-10-31) the probe, `testdata/for81`, and subtask 3
+  (2026-10-31) RMS and ods2's groundwork, `TestFor81RMSOracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1841,6 +1844,11 @@ expect adjustment as phases land):
   spec RMS tried last. Phase 74: last of all `Builtin`, an image govax
   carries (FTNRTL), found as `FoundImage.Builtin`, named
   `BuiltinSpec`'s "FTNRTL.EXE (built into govax)".
+  Phase 81: `keyedput.go` is `$PUT` by record number on FIX sequential files
+  (`streamContext.heldEnd`, what it does to a sequential `$PUT` after it), `fop.go`
+  FOP's TMP, TMD, DLT, SPL, and SCF, and `blockio.go` `$READ`, `$WRITE`,
+  `$DISCONNECT`, and RMS$_UPI. FIX records pad to a word, in ods2's reader and writer
+  (`FixedRecordOffset`).
   Phase 69: `saveset.go`'s `OpenSaveSet` (a save set as an
   `io.ReaderAt`), and `restore.go`'s `Session.RestoreFile`: one
   `backup.File` made on a volume with every saved header field, its
