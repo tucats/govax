@@ -254,6 +254,8 @@ func (a *analyzer) checkNamelists() {
 			switch {
 			case s.Dummy != 0:
 				a.report("NMLDUMMY", n.Pos, s.Name)
+			case s.Struct != nil:
+				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.External || (s.Class != Variable && s.Class != Array):
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.Class == Array:
@@ -670,6 +672,9 @@ func (a *analyzer) place(e ast.Expr, whole bool) Expr {
 
 	case *ast.Substring:
 		return a.target(e)
+
+	case *ast.FieldRef:
+		return a.field(e, whole)
 	}
 
 	return nil
@@ -878,6 +883,10 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 		}
 
 		return item
+	}
+
+	if f, ok := e.(*ast.FieldRef); ok {
+		return a.field(f, true)
 	}
 
 	return a.value(e)

@@ -161,6 +161,8 @@ func placeName(e Expr) string {
 		return "an element of " + e.Sym.Name
 	case *Substring:
 		return "a substring of " + placeName(e.X)
+	case *FieldRef:
+		return "the field " + e.Text()
 	}
 
 	return "it"
@@ -226,9 +228,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 		t = a.substring(e)
 
 	case *ast.FieldRef:
-		a.notImplForm(e.Position(), formWhat(e))
-
-		return nil
+		t = a.field(e, false)
 
 	case *ast.Apply:
 		// After the first executable statement, F(X) = ... can only be
@@ -259,7 +259,7 @@ func (a *analyzer) target(e ast.Expr) Expr {
 
 		return t
 
-	case *Elem, *Substring:
+	case *Elem, *Substring, *FieldRef:
 		return t
 	}
 

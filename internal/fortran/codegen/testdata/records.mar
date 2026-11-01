@@ -1,0 +1,179 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_W = 7			; word integer
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for RECS, the main program
+;   TODAY  /DATE/       $LOCAL+0    RECS.TODAY
+;   E      /ENTRY/      $LOCAL+4    RECS.E
+;   LIST   /ENTRY/ (3)  $LOCAL+48   RECS.LIST
+;   S      CHARACTER*2  $LOCAL+177  RECS.S
+;   I      INTEGER      $LOCAL+180  RECS.I
+;   J      INTEGER      $LOCAL+184  RECS.J
+;   Structure /DATE/, 4 bytes
+;     +0     DAY    LOGICAL*1
+;     +1     MONTH  LOGICAL*1
+;     +2     YEAR   INTEGER*2
+;   Structure /ENTRY/, 43 bytes
+;     +0     TAG     CHARACTER*3
+;     +3     WHEN    /DATE/
+;     +7     COUNTS  INTEGER (1:2)
+;     +15    WHOLE   INTEGER, map 1 of the union at +15
+;     +15    HALF    INTEGER*2, map 2 of the union at +15
+;     +19    PAIR    (structure at line 22) (1:2)
+;   Structure at line 22, 12 bytes
+;     +0     X     REAL
+;     +4     Z     COMPLEX
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+RECS.TODAY:
+	.BYTE	1[2]			; TODAY.DAY to TODAY.MONTH = 1
+	.WORD	1988			; TODAY.YEAR = 1988
+RECS.E:
+	.ASCII	/ABC/			; E.TAG
+	.BYTE	1[2]			; E.WHEN.DAY to E.WHEN.MONTH = 1
+	.WORD	1988			; E.WHEN.YEAR = 1988
+	.BLKB	8
+	.WORD	5			; E.HALF = 5
+	.ASCII	<255><255>		; E.WHOLE (in part)
+	.BLKB	24
+	.BLKB	1
+RECS.LIST:
+	.ASCII	/ABC/			; LIST(1).TAG
+	.BYTE	1[2]			; LIST(1).WHEN.DAY to LIST(1).WHEN.MONTH = 1
+	.WORD	1988			; LIST(1).WHEN.YEAR = 1988
+	.BLKB	8
+	.WORD	5			; LIST(1).HALF = 5
+	.ASCII	<255><255>		; LIST(1).WHOLE (in part)
+	.BLKB	24
+	.ASCII	/ABC/			; LIST(2).TAG
+	.BYTE	1[2]			; LIST(2).WHEN.DAY to LIST(2).WHEN.MONTH = 1
+	.WORD	1988			; LIST(2).WHEN.YEAR = 1988
+	.BLKB	8
+	.WORD	5			; LIST(2).HALF = 5
+	.ASCII	<255><255>		; LIST(2).WHOLE (in part)
+	.BLKB	24
+	.ASCII	/ABC/			; LIST(3).TAG
+	.BYTE	1[2]			; LIST(3).WHEN.DAY to LIST(3).WHEN.MONTH = 1
+	.WORD	1988			; LIST(3).WHEN.YEAR = 1988
+	.BLKB	8
+	.WORD	5			; LIST(3).HALF = 5
+	.ASCII	<255><255>		; LIST(3).WHOLE (in part)
+	.BLKB	24
+RECS.S:	.BLKB	2			; S
+	.BLKB	1
+RECS.I:	.BLKL	1			; I
+RECS.J:	.BLKL	1			; J
+RECS.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+RECS.$D1:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS RECS.E
+RECS.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+RECS.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_W,DSC$K_CLASS_S
+	.ADDRESS RECS.TODAY+2
+RECS.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS RECS.$T1
+RECS.$F1:
+	.LONG	^X00004080,^X00004100	; (1.0, 2.0)
+RECS.$K1:
+	.ASCII	/Z/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Records and scalar field references (sections 2.2.5.2, 4.13): records
+;    2  C     in $LOCAL with their structures' initial values (a substructure's, and
+;    3  C     a union's later map's replacing the earlier one's bytes), fields of
+;    4  C     every kind of place, constant and variable subscripts.
+;    5        PROGRAM RECS
+	.ENTRY	RECS,^M<R2,R3,R4,R5>
+;    6        STRUCTURE /DATE/
+;    7          LOGICAL*1 DAY /1/, MONTH /1/
+;    8          INTEGER*2 YEAR /1988/
+;    9        END STRUCTURE
+;   10        STRUCTURE /ENTRY/
+;   11          CHARACTER*3 TAG /'ABC'/
+;   12          RECORD /DATE/ WHEN
+;   13          INTEGER*4 COUNTS(2)
+;   14          UNION
+;   15            MAP
+;   16              INTEGER*4 WHOLE /-1/
+;   17            END MAP
+;   18            MAP
+;   19              INTEGER*2 HALF /5/
+;   20            END MAP
+;   21          END UNION
+;   22          STRUCTURE PAIR(2)
+;   23            REAL*4 X
+;   24            COMPLEX*8 Z
+;   25          END STRUCTURE
+;   26        END STRUCTURE
+;   27        RECORD /DATE/ TODAY
+;   28        RECORD /ENTRY/ E, LIST(3)
+;   29        CHARACTER*2 S
+;   30        TODAY.YEAR = TODAY.YEAR + 1
+	INCW	RECS.TODAY+2
+;   31        E.COUNTS(2) = TODAY.DAY
+	CVTBL	RECS.TODAY,RECS.E+11
+;   32        E.PAIR(1).Z = (1.0, 2.0)
+	MOVQ	RECS.$F1,RECS.E+23	; (1.0, 2.0)
+;   33        E.PAIR(2).X = REAL(E.PAIR(1).Z)
+	MOVF	RECS.E+23,RECS.E+31
+;   34        LIST(I).COUNTS(J) = I + J
+	MULL3	RECS.I,#43,R0
+	MULL3	RECS.J,#4,R1
+	ADDL2	R1,R0
+	MOVAB	RECS.LIST-40[R0],R0
+	ADDL3	RECS.I,RECS.J,(R0)
+;   35        LIST(I).WHEN.YEAR = 2000
+	MULL3	RECS.I,#43,R0
+	MOVAB	RECS.LIST-38[R0],R0
+	MOVW	#2000,(R0)
+;   36        LIST(2).PAIR(I).X = 0.5
+	MULL3	RECS.I,#3,R0
+	MOVL	#^X00004000,RECS.LIST+50[R0] ; 0.5
+;   37        S = LIST(I).TAG(2:3)
+	MULL3	RECS.I,#43,R0
+	MOVC3	#2,RECS.LIST-42[R0],RECS.S
+;   38        E.TAG(I:I) = 'Z'
+	MOVL	RECS.I,R0
+	MOVC3	#1,RECS.$K1,RECS.E-1[R0]
+;   39        CALL SHOW(E.COUNTS(1), E.TAG, LIST(I).PAIR(J).Z)
+	MULL3	RECS.I,#43,R0
+	MULL3	RECS.J,#12,R1
+	ADDL2	R1,R0
+	MOVAB	RECS.LIST-32[R0],R0
+	PUSHAQ	(R0)
+	PUSHAQ	RECS.$D1
+	PUSHAL	RECS.E+7
+	CALLS	#3,G^SHOW
+;   40        PRINT *, TODAY.YEAR, E.TAG, %LOC(E.WHEN.MONTH)
+	PUSHL	#-1
+	PUSHAB	RECS.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	RECS.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	RECS.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVAB	RECS.E+4,RECS.$T1
+	PUSHAQ	RECS.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   41        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	RECS

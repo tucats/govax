@@ -60,6 +60,9 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.StructureStmt:
 			a.structureStatement(s)
+
+		case *ast.RecordStmt:
+			a.recordStatement(s)
 		}
 	}
 }
@@ -99,7 +102,8 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		a.report("DUPSTMTFUNC", ap.Pos, ap.Name, sym.defPos.Line)
 		a.stmtFuncs[s] = nil
 
-	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil || sym.External || sym.Class == Intrinsic:
+	case sym.Class == UnitName || sym.Result || sym.Class == Constant || sym.Common != nil || sym.External ||
+		sym.Class == Intrinsic || sym.Struct != nil:
 		a.badUse(sym, ap.Pos, "be a statement function")
 		a.stmtFuncs[s] = nil
 
@@ -154,7 +158,7 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		a.checkBoundType(sym, t, ok, d.Pos)
 
 		switch {
-		case sym.Class == UnitName:
+		case sym.Class == UnitName || sym.Struct != nil:
 			a.badUse(sym, d.Pos, "be given a type")
 		case sym.Class == Constant && sym.oldForm:
 			a.report("OLDPARAMTYPE", d.Pos, d.Name, "PARAMETER statement", sym.defPos.Line)

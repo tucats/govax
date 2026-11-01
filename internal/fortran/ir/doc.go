@@ -76,6 +76,12 @@
 // Not), or as the whole value of an Assign; anywhere else lowering computes
 // it into a temporary first, as it does a call.
 //
+// A record's field (lowerfield.go) is the record's place with the field's
+// offset and type. Subscripts that aren't constant are an index when each
+// moves the place by a multiple of the field's size; a packed structure's
+// needn't, and then the place is a Ptr, the address computed with a count of
+// bytes as the index.
+//
 // A CHARACTER argument is passed by descriptor, so a CHARACTER dummy's text
 // is a Mem whose Ptr is the address its descriptor holds, and a passed-length
 // dummy's length the descriptor's first word, made a longword by Zext. A

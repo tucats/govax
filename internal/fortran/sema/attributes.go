@@ -49,7 +49,8 @@ func (a *analyzer) external(item *ast.AttrItem) {
 	switch {
 	case s.External || s.Class == Intrinsic:
 		a.report("DUPATTR", item.Pos, s.Name, a.describe(s))
-	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction || s.Class == Array || s.Common != nil:
+	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction || s.Class == Array ||
+		s.Common != nil || s.Struct != nil:
 		a.badUse(s, item.Pos, "be named in an EXTERNAL statement")
 
 		s.broken = true
@@ -78,7 +79,7 @@ func (a *analyzer) intrinsic(item *ast.AttrItem) {
 		a.report("DUPATTR", item.Pos, s.Name, a.describe(s))
 
 	case s.Dummy != 0 || s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
-		s.Class == Array || s.Common != nil:
+		s.Class == Array || s.Common != nil || s.Struct != nil:
 		a.badUse(s, item.Pos, "be named in an INTRINSIC statement")
 
 		s.broken = true
@@ -113,7 +114,9 @@ func (a *analyzer) saves() {
 				a.report("SAVECOMMON", item.Pos, s.Name, s.Common.String())
 
 			case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
-				s.Class == External || s.Class == Intrinsic:
+				s.Class == External || s.Class == Intrinsic || s.Struct != nil:
+				// Section 4.13 excludes records, though their storage is
+				// static anyway.
 				a.badUse(s, item.Pos, "be named in a SAVE statement")
 
 			case s.Class == Unclassified:

@@ -61,6 +61,9 @@ func (a *analyzer) value(e ast.Expr) Expr {
 	case *ast.Substring:
 		return a.substring(e)
 
+	case *ast.FieldRef:
+		return a.field(e, false)
+
 	case *ast.BuiltinArg:
 		return a.builtinValue(e)
 	}
@@ -109,6 +112,12 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 
 	if s.Class == Constant {
 		return a.constantUse(s, n)
+	}
+
+	if s.Struct != nil {
+		a.notImplForm(n.Pos, aggregate)
+
+		return a.bad(n.Pos)
 	}
 
 	if s.External || s.Class == Intrinsic {
@@ -240,6 +249,12 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	case *ast.Apply:
 		x, name = a.apply(n), n.Name
 
+	case *ast.FieldRef:
+		x = a.field(n, false)
+		if f, ok := x.(*FieldRef); ok {
+			name = "the field " + f.Text()
+		}
+
 	default:
 		a.notImplForm(e.X.Position(), formWhat(e.X))
 
@@ -249,7 +264,7 @@ func (a *analyzer) substring(e *ast.Substring) Expr {
 	t := x.Type()
 
 	switch x.(type) {
-	case *Var, *Elem:
+	case *Var, *Elem, *FieldRef:
 	default:
 		if t.Kind != Invalid {
 			// A function's value or a constant expression: section 2.2.4's
@@ -369,14 +384,13 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	subs := make([]Expr, len(e.Args))
-	ok := true
+	if s.Struct != nil {
+		a.notImplForm(e.Pos, aggregate)
 
-	for i, arg := range e.Args {
-		subs[i] = a.convert(a.arithmetic(a.value(arg)), IntegerType)
-		ok = ok && subs[i].Type().Kind != Invalid
+		return a.bad(e.Pos)
 	}
 
+	subs, ok := a.subscripts(e.Args)
 	if !ok {
 		return a.bad(e.Pos)
 	}

@@ -185,6 +185,11 @@ type Symbol struct {
 	// it is NOTYPE.
 	untyped bool
 
+	// Struct is a record's structure, which a RECORD statement gave it
+	// (section 4.13), its Type then of the kind Record; nil for any other
+	// name.
+	Struct *Structure
+
 	// Dims are an array's dimensions; DimPos is where they were
 	// declared.
 	Dims   []Dim
@@ -313,6 +318,16 @@ func (s *Symbol) Elements() int {
 	}
 
 	return n
+}
+
+// TypeText is the name's type as maps and dumps show it: its Type's, or
+// for a record its structure's name, /DATE/.
+func (s *Symbol) TypeText() string {
+	if s.Struct != nil {
+		return s.Struct.Display()
+	}
+
+	return s.Type.String()
 }
 
 // Size is the storage the name takes, in bytes.

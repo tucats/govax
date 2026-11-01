@@ -168,7 +168,9 @@ func (a *analyzer) equivalenceName(name string, pos diag.Position) (*Symbol, boo
 		return s, false
 
 	case s.Class == UnitName || s.Result || s.Class == Constant || s.Class == StmtFunction ||
-		s.External || s.Class == Intrinsic:
+		s.External || s.Class == Intrinsic || s.Struct != nil:
+		// A record can't be (section 2.2.5.2): a union is how a structure's
+		// fields share storage.
 		a.badUse(s, pos, "be in an EQUIVALENCE list")
 
 		s.broken = true

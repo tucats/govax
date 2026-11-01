@@ -22,7 +22,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
-		*ast.EntryStmt, *ast.StructureStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.BadStmt:
+		*ast.EntryStmt, *ast.StructureStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.BadStmt:
 		return true
 
 	case *ast.AttrStmt:
@@ -69,8 +69,6 @@ func formWhat(e ast.Expr) string {
 		return "an octal or hexadecimal constant"
 	case *ast.ComplexConst:
 		return "a COMPLEX constant"
-	case *ast.FieldRef:
-		return "a record's field"
 	case *ast.ImpliedDo:
 		return "an implied-DO list"
 	case *ast.KeyList:

@@ -55,7 +55,7 @@ func (l *lowerer) arg(a sema.Arg) Arg {
 	}
 
 	switch e := a.Expr.(type) {
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FieldRef:
 		if a.Copy {
 			return Arg{Ref: l.value(l.expr(e))}
 		}

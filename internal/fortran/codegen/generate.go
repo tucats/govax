@@ -536,7 +536,7 @@ func writeStructures(w *Writer, list []*sema.Structure) {
 // REAL (0:9), INTEGER (2,3), INTEGER (*), or for bounds computed when the
 // program runs REAL (?,3), REAL (?:?).
 func typeText(s *sema.Symbol) string {
-	text := s.Type.String()
+	text := s.TypeText()
 
 	if len(s.Dims) == 0 {
 		return text

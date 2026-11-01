@@ -84,6 +84,14 @@ func TestGolden(t *testing.T) {
 // program (the statements of a main program, in fixed form, unless the
 // case gives its own header) and the messages it gets, each as
 // IDENT@line:column.
+// structS is lines with the structure S declared before them, in lines 1
+// to 7: INTEGER A, B(3); CHARACTER*4 C; and T(2), a nested structure of a
+// REAL X.
+func structS(lines ...string) []string {
+	return append([]string{"STRUCTURE /S/", "INTEGER A, B(3)", "CHARACTER*4 C", "STRUCTURE T(2)", "REAL X",
+		"END STRUCTURE", "END STRUCTURE"}, lines...)
+}
+
 func TestErrors(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -683,6 +691,49 @@ func TestErrors(t *testing.T) {
 		{"a structure in a block data subprogram", []string{"BLOCK DATA B", "STRUCTURE /S/", "INTEGER A", "END STRUCTURE",
 			"END"}, ""},
 
+		// RECORD statements and field references (sections 2.2.5.2, 4.13);
+		// structS is lines 1 to 7.
+		{"records and their fields", structS("RECORD /S/ R, RA(5)", "R.A = 1", "R.B(2) = R.A", "RA(R.A).T(2).X = 1.5",
+			"R.C(2:3) = 'XY'", "CALL SUB(R.A, R.C, RA(1).T(1).X, (R.A))", "PRINT *, R.A, R.C, %LOC(R.B(1))",
+			"IF (R.C .EQ. 'AB') R.B(R.A) = R.B(1) + 2", "END"), ""},
+		{"a record under IMPLICIT NONE", append([]string{"IMPLICIT NONE"}, structS("RECORD /S/ R", "R.A = 1", "END")...), ""},
+		{"DIMENSION of a record", structS("RECORD /S/ R", "DIMENSION R(3)", "R(2).A = 1", "END"), ""},
+		{"a record of a structure not declared", structS("RECORD /Q/ R", "R.A = 1", "END"), "NOSTRUCT@8:15"},
+		{"a record with a type", structS("INTEGER R", "RECORD /S/ R", "END"), "RECORDTYPED@9:18"},
+		{"a type for a record", structS("RECORD /S/ R", "INTEGER R", "END"), "BADUSE@9:15"},
+		{"a record twice", structS("RECORD /S/ R", "RECORD /S/ R", "END"), "DUPRECORD@9:18"},
+		{"a constant as a record", structS("PARAMETER (R = 1)", "RECORD /S/ R", "END"), "BADUSE@9:18"},
+		{"a record as a dummy", []string{"SUBROUTINE X(R)", "STRUCTURE /S/", "INTEGER A", "END STRUCTURE", "RECORD /S/ R",
+			"END"}, "NOTIMPL@5:18"},
+		{"a record in COMMON", structS("RECORD /S/ R", "COMMON /B/ R", "END"), "NOTIMPL@9:18"},
+		{"a name in COMMON made a record", structS("COMMON /B/ R", "RECORD /S/ R", "END"), "NOTIMPL@9:18"},
+		{"a record in DATA", structS("RECORD /S/ R", "DATA R /1/", "END"), "BADUSE@9:12"},
+		{"a field in DATA", structS("RECORD /S/ R", "DATA R.A /1/", "END"), "DATAFORM@9:14"},
+		{"a record in EQUIVALENCE", structS("RECORD /S/ R", "EQUIVALENCE (R, Y)", "END"), "BADUSE@9:20"},
+		{"a field in EQUIVALENCE", structS("RECORD /S/ R", "EQUIVALENCE (R.A, Y)", "END"), "EQUIVFORM@9:22"},
+		{"a record in SAVE", structS("RECORD /S/ R", "SAVE R", "END"), "BADUSE@9:12"},
+		{"a record in a NAMELIST group", structS("RECORD /S/ R", "NAMELIST /N/ R", "END"), "NMLITEM@9:17"},
+		{"a record in EXTERNAL", structS("RECORD /S/ R", "EXTERNAL R", "END"), "BADUSE@9:16"},
+		{"a record as a statement function", structS("RECORD /S/ R", "R(X) = X", "END"), "BADUSE@9:7"},
+		{"a record as a DO variable", structS("RECORD /S/ R", "DO 10 R = 1, 2", "10 CONTINUE", "END"), "BADUSE@9:13"},
+		{"a record as a whole", structS("RECORD /S/ R, Q", "Y = R", "R = Q", "CALL SUB(R)", "END"),
+			"NOTIMPL@9:11 NOTIMPL@10:7 NOTIMPL@10:11 NOTIMPL@11:16"},
+		{"a substructure as a whole", structS("RECORD /S/ R", "CALL SUB(R.T(1))", "END"), "NOTIMPL@9:18"},
+		{"an element of an array of records as a whole", structS("RECORD /S/ RA(2)", "CALL SUB(RA(1))", "END"),
+			"NOTIMPL@9:16"},
+		{"an array field as a whole", structS("RECORD /S/ R", "CALL SUB(R.B)", "PRINT *, R.B", "END"),
+			"NOTIMPL@9:18 NOTIMPL@10:18"},
+		{"no such field", structS("RECORD /S/ R", "R.Z = 1", "END"), "NOFIELD@9:9"},
+		{"a field of a scalar field", structS("RECORD /S/ R", "R.A.B = 1", "END"), "FIELDNOTRECORD@9:11"},
+		{"subscripts on a scalar field", structS("RECORD /S/ R", "R.A(1) = 1", "END"), "FIELDSUBS@9:9"},
+		{"too many subscripts on a field", structS("RECORD /S/ R", "R.B(1, 2) = 1", "END"), "FIELDSUBS@9:9"},
+		{"an array field without subscripts", structS("RECORD /S/ R", "X = R.B + 1", "END"), "FIELDWHOLE@9:13"},
+		{"an array of records without subscripts", structS("RECORD /S/ RA(2)", "RA.A = 1", "END"), "NEEDSUBSCRIPT@9:7"},
+		{"subscripts on a record", structS("RECORD /S/ R", "R(1).A = 1", "END"), "NOTARRAY@9:7"},
+		{"too many subscripts on a record", structS("RECORD /S/ RA(2)", "RA(1, 1).A = 1", "END"), "SUBSCRIPTS@9:7"},
+		{"a substring of a number field", structS("RECORD /S/ R", "R.A(1:2) = 1", "END"), "SUBSTR@9:9"},
+		{"a field's substring out of range", structS("RECORD /S/ R", "R.C(2:5) = 'X'", "END"), "SUBRANGE@9:9"},
+
 		// Recovery: a name whose declaration had an error gets no more
 		// messages, and a unit with a declaration this phase can't read
 		// gets only the messages about its structure.
@@ -781,7 +832,7 @@ func TestErrors(t *testing.T) {
 		{"a substring's one bound out", []string{"CHARACTER*8 S", "S(I:9) = 'A'", "S(0:I) = 'A'", "END"}, "SUBBOUND@2:7 SUBBOUND@3:7"},
 		{"a substring of a constant", []string{"CHARACTER*8 S", "PARAMETER (S = 'ABC')", "PRINT *, S(1:2)", "END"}, "BADUSE@3:16"},
 		{"a substring of an array", []string{"CHARACTER*8 S(2)", "PRINT *, S(1:2)", "END"}, "NEEDSUBSCRIPT@2:16"},
-		{"a record's field", []string{"X = R.F + 1", "END"}, "NOTIMPL@1:13"},
+		{"a field of a name that isn't a record", []string{"X = R.F + 1", "END"}, "NOTRECORD@1:11"},
 		{"an implied-DO list", []string{"PRINT *, (I, I = 1, 3)", "END"}, ""},
 		{"WRITE with ERR=", []string{"WRITE (*, *, ERR=10) X", "10 END"}, ""},
 		{"direct access", []string{"WRITE (1'10) X", "READ (1, REC=N, FMT=10, ERR=20, IOSTAT=I) X", "10 FORMAT (F5.0)", "20 END"}, ""},

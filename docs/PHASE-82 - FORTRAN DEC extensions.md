@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1, the survey (Part A below), done
 2026-11-01 and reviewed by the author the same day ("The author's
-answers"); subtask 2, structure declarations, done 2026-11-01. Needs Phase 79 (subprograms).
+answers"); subtask 2, structure declarations, and subtask 3, RECORD and
+field references, done 2026-11-01. Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -536,7 +537,7 @@ further Alpha-era directive; out, unless the author wants it.
    PARAMETER inside, nested structures and RECORD fields, every rule's
    message, the packed layout with the manual's examples as tests, the
    storage map's structures.
-3. **RECORD and field references:** records in `$LOCAL` with the
+3. **RECORD and field references** (done 2026-11-01): records in `$LOCAL` with the
    structure's initial values, scalar field references in every
    executable context (folded offsets, computed addresses), substrings
    of fields, the restrictions (DO variable, EQUIVALENCE, DATA, SAVE,
@@ -544,7 +545,9 @@ further Alpha-era directive; out, unless the author wants it.
 4. **Aggregates:** aggregate assignment, records as actual and dummy
    arguments (adjustable record arrays, the cross-unit check, `%LOC`,
    `%REF`), records in COMMON (with their initial values), records in
-   unformatted I/O (and the messages for the other forms).
+   unformatted I/O (and the messages for the other forms), and array
+   fields without subscripts as arguments and I/O items (2.2.6's array
+   name references; NOTIMPL since subtask 3).
 5. **Typeless, Hollerith, and RADIX-50 constants:** the lexer's count
    rule in both scanners, RADIX-50 tokens and their bytes, typing by
    context in expressions, assignments, arguments, and IFs; character
@@ -613,3 +616,32 @@ further Alpha-era directive; out, unless the author wants it.
   shows two or more maps); a structure with no field declarations at all
   is an error (4.15's "one or more"); a field's initial values follow
   DATA's conversions (Phase 76's choices).
+- **2026-11-01:** Subtask 3, RECORD and field references.
+  `sema/record.go`: a RECORD statement makes each name a variable or array
+  whose `Type` is of the new kind `Record` (the structure's size) and whose
+  `Symbol.Struct` is the structure; DIMENSION may give it its bounds. A
+  scalar field reference is a `FieldRef` (the record, its element's
+  subscripts, and a `FieldStep` per field), accepted wherever an `Elem` is:
+  values, targets, arguments (by reference, or a copy in parentheses),
+  `%LOC`, I/O items, an internal file, IOSTAT=, ERRSNS, substrings, statement
+  functions. `recordInitials` gives each record in `$LOCAL` its structure's
+  `image` (a substructure's values at its field's place, element by element;
+  a later declaration's bytes replacing an earlier map's, what is left of the
+  earlier value kept as CHARACTER pieces). `ir/lowerfield.go`'s `fieldMem`
+  folds the constant parts into the place's offset. Decision 2 is refined:
+  when every variable part's stride is a multiple of the field's size, the
+  place uses plain indexed mode (`LIST+50[R0]`, whatever the offset, since
+  indexed mode adds to any base address), and only otherwise a computed address
+  (`MOVAB LIST-40[R0],R0`); the survey had left that to Phase 84, but it costs
+  nothing here and needs no alignment of the offset. New messages: RECORDTYPED,
+  DUPRECORD, NOTRECORD, NOFIELD, FIELDNOTRECORD, FIELDSUBS, FIELDWHOLE. A record
+  in DATA, EQUIVALENCE, SAVE, NAMELIST, EXTERNAL, or INTRINSIC, as a DO
+  variable or a statement function, or in a type statement, is an error; a field
+  in DATA or EQUIVALENCE is DATAFORM or EQUIVFORM, and a field can't be a DO
+  variable by the syntax. NOTIMPL until subtask 4: aggregate references, a record
+  as a dummy or in COMMON, an array field without subscripts where an array may
+  be. Tests: 34 `TestErrors` cases; the goldens `records.for` in `sema`, `ir`, and
+  `codegen`; `testdata/fortran/records.for`, in both paging modes. Choices of
+  ours, unconfirmed: a record in `$LOCAL` is on the boundary `Type.Align` gives
+  its size (at most a longword); a field's initial value's bytes overlapping
+  another's only partly leave the rest in place.

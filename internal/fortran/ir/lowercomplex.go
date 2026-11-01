@@ -67,7 +67,7 @@ func (l *lowerer) complexParts(e sema.Expr) (re, im Expr) {
 	case *sema.Const:
 		return RealConst(p, e.Real), RealConst(p, e.Imag)
 
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FieldRef:
 		r, i := parts(l.mem(e), p)
 
 		return &Load{r}, &Load{i}
@@ -195,7 +195,7 @@ func convertTo(t Type, x Expr) Expr {
 // computed into.
 func (l *lowerer) complexValue(e sema.Expr) *Mem {
 	switch e := e.(type) {
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FieldRef:
 		return l.mem(e)
 
 	case *sema.Const:
@@ -235,7 +235,7 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	}
 
 	switch e.(type) {
-	case *sema.Var, *sema.Elem, *sema.FuncRef, *sema.StmtFuncRef:
+	case *sema.Var, *sema.Elem, *sema.FieldRef, *sema.FuncRef, *sema.StmtFuncRef:
 		// A statement function's value is computed apart from dst, which may
 		// be its actual argument, and so what its parts are read from.
 		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})

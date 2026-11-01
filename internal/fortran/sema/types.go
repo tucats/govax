@@ -20,6 +20,11 @@ const (
 	Logical
 	Character
 	Complex
+
+	// Record is a record's type (section 2.2.5): its size is its
+	// structure's, which the record's Symbol.Struct is. Only a record
+	// itself has it; a field reference has its field's type.
+	Record
 )
 
 // Type is a data type: its kind and its size in bytes (section 2.1.1,
@@ -70,6 +75,9 @@ func (t Type) String() string {
 		}
 
 		return "CHARACTER*" + strconv.Itoa(t.Size)
+	case Record:
+		// Symbol.TypeText names the structure.
+		return "RECORD"
 	default:
 		return "(invalid)"
 	}

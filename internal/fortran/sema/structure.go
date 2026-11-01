@@ -69,6 +69,11 @@ type Structure struct {
 
 	byName map[string]*Field
 
+	// imageList is a record's initial values, image's, made at its
+	// first call (imageMade).
+	imageList []*FieldInitial
+	imageMade bool
+
 	// open is set while the structure's body is being read, when a
 	// RECORD statement inside it can't name it: a structure can't
 	// contain itself (section 4.15.2).

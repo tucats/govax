@@ -192,6 +192,33 @@ var messages = map[string]kind{
 	// STRUCTSIZE is a structure too long for a longword to measure.
 	"STRUCTSIZE": {Error, "the structure %s is too large: it takes more than 2147483647 bytes"},
 
+	// RECORDTYPED is a RECORD statement naming a name a type statement
+	// has given a type (section 4.13: a record's form is its structure).
+	"RECORDTYPED": {Error, "%s's type is declared at line %d, so it can't be a record"},
+
+	// DUPRECORD is a name two RECORD statements name.
+	"DUPRECORD": {Error, "%s is already a record, declared at line %d"},
+
+	// NOTRECORD is a field reference to a name that isn't a record.
+	"NOTRECORD": {Error, "%s is %s, not a record, so it has no field %s"},
+
+	// NOFIELD is a field reference naming a field its structure doesn't
+	// have.
+	"NOFIELD": {Error, "the structure %s has no field named %s"},
+
+	// FIELDNOTRECORD is a field reference that goes on past a field that
+	// isn't a substructure.
+	"FIELDNOTRECORD": {Error, "the field %s is %s, not a substructure, so it has no field %s"},
+
+	// FIELDSUBS is a field reference whose subscripts don't fit the
+	// field's dimensions: too many or too few, or any for a field that
+	// isn't an array.
+	"FIELDSUBS": {Error, "the field %s takes %s, not %d"},
+
+	// FIELDWHOLE is an array field without subscripts where a single
+	// item must be.
+	"FIELDWHOLE": {Error, "the field %s is an array, and can't be used without subscripts here"},
+
 	// Program units.
 
 	// DUPUNIT is a second program unit or entry point with a name the file

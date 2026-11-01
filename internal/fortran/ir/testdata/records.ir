@@ -1,0 +1,71 @@
+routine RECS main
+  cell  TODAY   B  $LOCAL+0    variable TODAY
+  cell  E       B  $LOCAL+4    variable E
+  cell  LIST    B  $LOCAL+48   array LIST, 129 bytes
+  cell  S       B  $LOCAL+177  variable S
+  cell  I       L  $LOCAL+180  variable I
+  cell  J       L  $LOCAL+184  variable J
+  cell  $T1     L  $LOCAL+188  temporary
+  $LOCAL is 192 bytes
+  init  $LOCAL+0 TODAY.DAY = 01
+  init  $LOCAL+1 TODAY.MONTH = 01
+  init  $LOCAL+2 TODAY.YEAR = C4 07
+  init  $LOCAL+4 E.TAG = 41 42 43
+  init  $LOCAL+7 E.WHEN.DAY = 01
+  init  $LOCAL+8 E.WHEN.MONTH = 01
+  init  $LOCAL+9 E.WHEN.YEAR = C4 07
+  init  $LOCAL+19 E.HALF = 05 00
+  init  $LOCAL+21 E.WHOLE (in part) = FF FF
+  init  $LOCAL+48 LIST(1).TAG = 41 42 43
+  init  $LOCAL+51 LIST(1).WHEN.DAY = 01
+  init  $LOCAL+52 LIST(1).WHEN.MONTH = 01
+  init  $LOCAL+53 LIST(1).WHEN.YEAR = C4 07
+  init  $LOCAL+63 LIST(1).HALF = 05 00
+  init  $LOCAL+65 LIST(1).WHOLE (in part) = FF FF
+  init  $LOCAL+91 LIST(2).TAG = 41 42 43
+  init  $LOCAL+94 LIST(2).WHEN.DAY = 01
+  init  $LOCAL+95 LIST(2).WHEN.MONTH = 01
+  init  $LOCAL+96 LIST(2).WHEN.YEAR = C4 07
+  init  $LOCAL+106 LIST(2).HALF = 05 00
+  init  $LOCAL+108 LIST(2).WHOLE (in part) = FF FF
+  init  $LOCAL+134 LIST(3).TAG = 41 42 43
+  init  $LOCAL+137 LIST(3).WHEN.DAY = 01
+  init  $LOCAL+138 LIST(3).WHEN.MONTH = 01
+  init  $LOCAL+139 LIST(3).WHEN.YEAR = C4 07
+  init  $LOCAL+149 LIST(3).HALF = 05 00
+  init  $LOCAL+151 LIST(3).WHOLE (in part) = FF FF
+  datum $K1     text 'Z'
+  datum $D1     descriptor T S 3 E
+  datum $IO1    control
+  datum $D2     descriptor W S 2 TODAY+2
+  datum $D3     descriptor L S 4 $T1
+B1:
+  ; line 30
+  assign TODAY+2 = add.W(TODAY+2, 1)
+  ; line 31
+  assign E+11 = cvt.BL(TODAY)
+  ; line 32
+  assign E+23 = (1.0, 2.0)
+  ; line 33
+  assign E+31 = E+23
+  ; line 34
+  assign @(addr(LIST-40[add.L(mul.L(I, 43), mul.L(J, 4))])) = add.L(I, J)
+  ; line 35
+  assign @(addr(LIST-38[mul.L(I, 43)])) = 2000
+  ; line 36
+  assign LIST+50[mul.L(I, 3)] = 0.5
+  ; line 37
+  move S(2) = LIST-42[mul.L(I, 43)](2)
+  ; line 38
+  move E-1[I](1) = $K1(1)
+  ; line 39
+  call SHOW(ref E+7, ref $D1, ref @(addr(LIST-32[add.L(mul.L(I, 43), mul.L(J, 12))])))
+  ; line 40
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_ITEM(ref $D1)
+  assign $T1 = addr(E+4)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 41
+  return 1

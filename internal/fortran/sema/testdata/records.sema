@@ -1,0 +1,69 @@
+== main program RECS
+  RECS                    program unit
+  TODAY     /DATE/        variable         $LOCAL+0
+  E         /ENTRY/       variable         $LOCAL+4
+  LIST      /ENTRY/       array(1:3)       $LOCAL+48
+  S         CHARACTER*2   variable         $LOCAL+177
+  I         INTEGER       variable         $LOCAL+180
+  J         INTEGER       variable         $LOCAL+184
+  SHOW                    subroutine
+  structure /DATE/ is 4 bytes
+    DAY         LOGICAL*1           +0
+    MONTH       LOGICAL*1           +1
+    YEAR        INTEGER*2           +2
+    initial +0 DAY LOGICAL*1 = 01
+    initial +1 MONTH LOGICAL*1 = 01
+    initial +2 YEAR INTEGER*2 = C4 07
+  structure /ENTRY/ is 43 bytes
+    TAG         CHARACTER*3         +0
+    WHEN        /DATE/              +3
+    COUNTS      INTEGER (1:2)       +7
+    WHOLE       INTEGER             +15  map 1 of the union at +15
+    HALF        INTEGER*2           +15  map 2 of the union at +15
+    PAIR        (structure at line 22) (1:2)  +19
+    initial +0 TAG CHARACTER*3 = 41 42 43
+    initial +15 WHOLE INTEGER = FF FF FF FF
+    initial +15 HALF INTEGER*2 = 05 00
+  structure at line 22 is 12 bytes
+    X           REAL                +0
+    Z           COMPLEX             +4
+  $LOCAL is 188 bytes
+  initial $LOCAL+0 TODAY.DAY LOGICAL*1 = 01
+  initial $LOCAL+1 TODAY.MONTH LOGICAL*1 = 01
+  initial $LOCAL+2 TODAY.YEAR INTEGER*2 = C4 07
+  initial $LOCAL+4 E.TAG CHARACTER*3 = 41 42 43
+  initial $LOCAL+7 E.WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+8 E.WHEN.MONTH LOGICAL*1 = 01
+  initial $LOCAL+9 E.WHEN.YEAR INTEGER*2 = C4 07
+  initial $LOCAL+19 E.HALF INTEGER*2 = 05 00
+  initial $LOCAL+21 E.WHOLE (in part) CHARACTER*2 = FF FF
+  initial $LOCAL+48 LIST(1).TAG CHARACTER*3 = 41 42 43
+  initial $LOCAL+51 LIST(1).WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+52 LIST(1).WHEN.MONTH LOGICAL*1 = 01
+  initial $LOCAL+53 LIST(1).WHEN.YEAR INTEGER*2 = C4 07
+  initial $LOCAL+63 LIST(1).HALF INTEGER*2 = 05 00
+  initial $LOCAL+65 LIST(1).WHOLE (in part) CHARACTER*2 = FF FF
+  initial $LOCAL+91 LIST(2).TAG CHARACTER*3 = 41 42 43
+  initial $LOCAL+94 LIST(2).WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+95 LIST(2).WHEN.MONTH LOGICAL*1 = 01
+  initial $LOCAL+96 LIST(2).WHEN.YEAR INTEGER*2 = C4 07
+  initial $LOCAL+106 LIST(2).HALF INTEGER*2 = 05 00
+  initial $LOCAL+108 LIST(2).WHOLE (in part) CHARACTER*2 = FF FF
+  initial $LOCAL+134 LIST(3).TAG CHARACTER*3 = 41 42 43
+  initial $LOCAL+137 LIST(3).WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+138 LIST(3).WHEN.MONTH LOGICAL*1 = 01
+  initial $LOCAL+139 LIST(3).WHEN.YEAR INTEGER*2 = C4 07
+  initial $LOCAL+149 LIST(3).HALF INTEGER*2 = 05 00
+  initial $LOCAL+151 LIST(3).WHOLE (in part) CHARACTER*2 = FF FF
+30          TODAY.YEAR:+2 = (+:I TODAY.YEAR:+2 1)
+31          E.COUNTS:+7[2] = (INTEGER TODAY.DAY:+0)
+32          E.PAIR:+19[1].Z:+4 = (1.0, 2.0)
+33          E.PAIR:+19[2].X:+0 = (REAL E.PAIR:+19[1].Z:+4)
+34          LIST[I].COUNTS:+7[J] = (+:I I J)
+35          LIST[I].WHEN:+3.YEAR:+2 = 2000
+36          LIST[2].PAIR:+19[I].X:+0 = 0.5
+37          S = LIST[I].TAG:+0(2:3)
+38          E.TAG:+0(I:I) = 'Z'
+39          CALL SHOW(E.COUNTS:+7[1], E.TAG:+0, LIST[I].PAIR:+19[J].Z:+4)
+40          PRINT * TODAY.YEAR:+2 E.TAG:+0 (%LOC E.WHEN:+3.MONTH:+1)
+41          END

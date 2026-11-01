@@ -95,7 +95,7 @@ func dumpSymbol(s *Symbol) string {
 		class = strings.TrimPrefix(strings.TrimPrefix(class, "a "), "an ")
 	}
 
-	typ := s.Type.String()
+	typ := s.TypeText()
 	if s.Class == Subroutine || s.Class == UnitName {
 		typ = ""
 	}
@@ -356,6 +356,21 @@ func labelList(labels []int) string {
 	return strings.Join(text, ", ")
 }
 
+// dumpSubs is an element's subscripts in the dump, [I, 2], or nothing
+// for none.
+func dumpSubs(subs []Expr) string {
+	if subs == nil {
+		return ""
+	}
+
+	text := make([]string, len(subs))
+	for i, s := range subs {
+		text[i] = DumpExpr(s)
+	}
+
+	return "[" + strings.Join(text, ", ") + "]"
+}
+
 // DumpExpr is an expression in the dump's form.
 func DumpExpr(e Expr) string {
 	switch e := e.(type) {
@@ -366,12 +381,15 @@ func DumpExpr(e Expr) string {
 	case *Var:
 		return e.Sym.Name
 	case *Elem:
-		subs := make([]string, len(e.Subs))
-		for i, s := range e.Subs {
-			subs[i] = DumpExpr(s)
+		return e.Sym.Name + dumpSubs(e.Subs)
+	case *FieldRef:
+		// R[I].F:+12[J], each field with its offset in its structure.
+		text := e.Sym.Name + dumpSubs(e.Subs)
+		for _, s := range e.Path {
+			text += "." + s.Field.Name + ":+" + strconv.Itoa(s.Field.Offset) + dumpSubs(s.Subs)
 		}
 
-		return e.Sym.Name + "[" + strings.Join(subs, ", ") + "]"
+		return text
 	case *ArrayRef:
 		return e.Sym.Name + "[]"
 	case *Substring:

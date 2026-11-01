@@ -39,11 +39,14 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		v := a.value(x)
 
 		switch v.(type) {
-		case *Var, *Elem, *Substring, *StmtFuncRef:
+		case *Var, *Elem, *Substring, *StmtFuncRef, *FieldRef:
 			return Arg{Expr: v, Copy: true}
 		}
 
 		return Arg{Expr: v}
+
+	case *ast.FieldRef:
+		return Arg{Expr: a.field(x, true)}
 
 	case *ast.HollerithConst:
 		c := &Const{exprBase: exprBase{Type{Character, len(x.Value)}, x.Pos}, Text: x.Value}
@@ -183,7 +186,7 @@ func (a *analyzer) builtinValue(b *ast.BuiltinArg) Expr {
 	}
 
 	switch x.Expr.(type) {
-	case *Var, *Elem, *ArrayRef, *Substring, *Procedure:
+	case *Var, *Elem, *ArrayRef, *Substring, *Procedure, *FieldRef:
 		if !x.Copy {
 			return &Loc{exprBase{IntegerType, b.Pos}, x.Expr}
 		}

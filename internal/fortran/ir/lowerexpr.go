@@ -29,7 +29,7 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 	case *sema.Const:
 		return l.constOf(e)
 
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FieldRef:
 		return &Load{l.mem(e)}
 
 	case *sema.FuncRef:
@@ -174,6 +174,10 @@ func (l *lowerer) chars(e sema.Expr) Text {
 	case *sema.Elem:
 		return Text{l.mem(e), l.charLength(e.Sym)}
 
+	case *sema.FieldRef:
+		// A field's length is always known (section 4.15.1).
+		return Text{l.fieldMem(e), LongConst(int32(e.T.Size))}
+
 	case *sema.Concat:
 		return l.concat(e)
 
@@ -284,6 +288,9 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 	switch e := e.(type) {
 	case *sema.Var:
 		return l.symbolMem(e.Sym)
+
+	case *sema.FieldRef:
+		return l.fieldMem(e)
 
 	case *sema.Elem:
 		if c := l.adjustable[e.Sym]; c != nil {

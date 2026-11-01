@@ -559,7 +559,7 @@ func (l *lowerer) item(e sema.Expr) *Mem {
 	case *sema.ArrayRef:
 		return l.arrayDescriptor(e.Sym)
 
-	case *sema.Var, *sema.Elem:
+	case *sema.Var, *sema.Elem, *sema.FieldRef:
 		if t.Kind != sema.Character {
 			return l.describe(d, l.mem(e))
 		}

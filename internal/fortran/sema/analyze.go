@@ -348,6 +348,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.untyped()
 	a.passedLengths()
 	a.layout()
+	a.recordInitials()
 	a.placeInitials()
 
 	return u
@@ -453,6 +454,10 @@ func (a *analyzer) describe(s *Symbol) string {
 		return "the name of this subroutine"
 	case s.External:
 		return External.String()
+	case s.Struct != nil && s.Class == Array:
+		return "an array of records"
+	case s.Struct != nil:
+		return "a record"
 	}
 
 	return s.Class.String()

@@ -203,7 +203,9 @@ func lowerUnit(u *sema.Unit) *Routine {
 // bytes, its place a Byte place (Text).
 func (l *lowerer) typeOf(t sema.Type) Type {
 	switch {
-	case t.Kind == sema.Character:
+	case t.Kind == sema.Character || t.Kind == sema.Record:
+		// A record is bytes, as a CHARACTER value is: a field's place
+		// has the field's own type (fieldMem).
 		return Byte
 	case t.Kind == sema.Complex && t.Size == 8:
 		return Quad

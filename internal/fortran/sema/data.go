@@ -355,6 +355,14 @@ func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 
 		return s, false
 
+	case s.Struct != nil:
+		// Section 4.13: its initial values are its structure's.
+		a.badUse(s, pos, "be in a DATA statement")
+
+		s.broken = true
+
+		return s, false
+
 	case s.Common != nil && s.Common.Name == "":
 		a.report("DATABLANK", pos, name)
 
