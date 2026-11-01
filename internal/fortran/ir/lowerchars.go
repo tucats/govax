@@ -213,6 +213,11 @@ func (l *lowerer) charArg(a sema.Arg) Arg {
 		}
 
 		return Arg{Ref: l.arrayDescriptor(e.Sym)}
+
+	case *sema.FieldRef:
+		if e.WholeArray() {
+			return Arg{Ref: l.fieldArrayDescriptor(e)}
+		}
 	}
 
 	t := l.chars(a.Expr)

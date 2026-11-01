@@ -80,7 +80,9 @@
 // offset and type. Subscripts that aren't constant are an index when each
 // moves the place by a multiple of the field's size; a packed structure's
 // needn't, and then the place is a Ptr, the address computed with a count of
-// bytes as the index.
+// bytes as the index. A record as a whole is a Byte place: assigning it is a
+// CharMove of its length, passing it is its address, and in an I/O list it has a
+// descriptor of the type Z.
 //
 // A CHARACTER argument is passed by descriptor, so a CHARACTER dummy's text
 // is a Mem whose Ptr is the address its descriptor holds, and a passed-length

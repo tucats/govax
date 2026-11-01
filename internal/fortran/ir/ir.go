@@ -297,6 +297,7 @@ type DType int
 // The data types in use.
 const (
 	DTypeBU  DType = 2  // a byte logical (unsigned): BYTE, LOGICAL*1
+	DTypeZ   DType = 0  // unspecified: a record's bytes
 	DTypeWU  DType = 3  // a word logical (unsigned): LOGICAL*2
 	DTypeLU  DType = 4  // a longword logical (unsigned): LOGICAL*4
 	DTypeW   DType = 7  // a word integer: INTEGER*2
@@ -344,6 +345,8 @@ func (d DType) String() string {
 		return "T"
 	case DTypeZEM:
 		return "ZEM"
+	case DTypeZ:
+		return "Z"
 	}
 
 	return "?"

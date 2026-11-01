@@ -624,6 +624,7 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 			}
 
 			constantArguments(r, fu, messages)
+			recordArguments(r, fu, messages)
 		}
 	}
 }

@@ -241,8 +241,14 @@ func (l *lowerer) returnValue() Expr {
 // moved (CharMove), and a character comparison's value stored as it is
 // computed.
 func (l *lowerer) assign(s *sema.Assign) {
-	if s.Target.Type().Kind == sema.Character {
+	switch s.Target.Type().Kind {
+	case sema.Character:
 		l.emit(&CharMove{l.origin(), l.chars(s.Target), l.chars(s.Value)})
+
+		return
+
+	case sema.Record:
+		l.moveRecord(s)
 
 		return
 	}
@@ -547,6 +553,10 @@ func (l *lowerer) stop(s *sema.Stop) {
 func (l *lowerer) item(e sema.Expr) *Mem {
 	t := e.Type()
 	d := &Descriptor{DType: l.dtypeOf(t), Class: ClassS, Length: t.Size}
+
+	if f, ok := e.(*sema.FieldRef); ok && f.WholeArray() {
+		return l.fieldArrayDescriptor(f)
+	}
 
 	switch e := e.(type) {
 	case *sema.Const:

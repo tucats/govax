@@ -1,0 +1,133 @@
+routine AGG main
+  cell  D1      B  $LOCAL+0    variable D1
+  cell  D2      B  BLK+0    variable D2
+  cell  ONE     B  $LOCAL+4    variable ONE
+  cell  STOCK   B  $LOCAL+28   array STOCK, 66 bytes
+  cell  I       L  $LOCAL+96   variable I
+  cell  $D5     L  $LOCAL+100  descriptor Z S 22
+  cell  $D7     L  $LOCAL+108  descriptor L A 4 (1:3)
+  cell  $T1     L  $LOCAL+140  temporary
+  $LOCAL is 144 bytes
+  init  $LOCAL+0 D1.DAY = 01
+  init  $LOCAL+7 ONE.WHEN.DAY = 01
+  init  $LOCAL+31 STOCK(1).WHEN.DAY = 01
+  init  $LOCAL+53 STOCK(2).WHEN.DAY = 01
+  init  $LOCAL+75 STOCK(3).WHEN.DAY = 01
+  init  BLK+0 D2.DAY = 01
+  datum $D1     descriptor L A 4 (1:3) ONE+6
+  datum $D2     descriptor T A 2 (1:2) ONE+18
+  datum $IO1    control
+  datum $D3     descriptor Z S 22 ONE
+  datum $D4     descriptor Z A 22 (1:3) STOCK
+  datum $D6     descriptor Z S 3 D1
+  datum $D8     descriptor L S 4 $T1
+B1:
+  ; line 17
+  assign I = 2
+  ; line 18
+  move D1(3) = D2(3)
+  ; line 19
+  move ONE+3(3) = D1(3)
+  ; line 20
+  move STOCK-22[mul.L(I, 22)](22) = ONE(22)
+  ; line 21
+  move STOCK+25(3) = STOCK-19[mul.L(I, 22)](3)
+  ; line 22
+  call TAKE(ref ONE, ref STOCK-22[mul.L(I, 22)], ref STOCK, ref ONE+3)
+  ; line 23
+  call NUMS(ref ONE+6, ref @(addr(STOCK-16[mul.L(I, 22)])), ref ONE, ref $D1)
+  ; line 24
+  call TEXTS(ref $D2)
+  ; line 25
+  call FTN$WRITE_SU(ref $IO1, val 1)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_ITEM(ref $D4)
+  assign $D5+4 = addr(STOCK-22[mul.L(I, 22)])
+  call FTN$IO_ITEM(ref $D5)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 26
+  call FTN$READ_SU(ref $IO1, val 1)
+  call FTN$IO_ITEM(ref $D6)
+  call FTN$IO_END()
+  ; line 27
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call FTN$IO_ITEM(ref $D1)
+  assign $D7+4 = addr(@(addr(STOCK-16[mul.L(I, 22)])))
+  assign $D7+16 = addr(@(addr(STOCK-16[mul.L(I, 22)]))-4)
+  call FTN$IO_ITEM(ref $D7)
+  call FTN$IO_END()
+  ; line 28
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  call FTN$IO_ITEM(ref $D2)
+  assign $T1 = addr(STOCK-22[mul.L(I, 22)])
+  call FTN$IO_ITEM(ref $D8)
+  call FTN$IO_END()
+  ; line 29
+  return 1
+routine TAKE subroutine
+  param R       B  argument 1
+  param E       B  argument 2
+  param LIST    B  argument 3
+  param W       B  argument 4
+  cell  $D1     L  $LOCAL+0    descriptor L A 4 (1:3)
+  $LOCAL is 32 bytes
+  datum $IO1    control
+B1:
+  ; line 44
+  move @E(22) = @R(22)
+  ; line 45
+  move @LIST+22(22) = @E(22)
+  ; line 46
+  assign @(arg W)+1 = @(arg R)+4
+  ; line 47
+  assign @(arg R)+10 = @(arg LIST)+50
+  ; line 48
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $D1+4 = addr(@(arg R)+6)
+  assign $D1+16 = addr(@(arg R)+2)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 49
+  call FURTHER(ref @R, ref @(arg R)+3)
+  ; line 50
+  return
+routine ADJ subroutine
+  param T       B  argument 1
+  param N       L  argument 2
+  param M       L  argument 3
+  cell  H       B  $LOCAL+0    variable H
+  cell  $B1     L  $LOCAL+12   descriptor Z A 11 (?,?)
+  cell  $D1     L  $LOCAL+56   descriptor L A 4 (1:2)
+  cell  $T1     L  $LOCAL+88   temporary
+  $LOCAL is 92 bytes
+  datum $IO1    control
+  datum $D2     descriptor L S 4 $T1
+B1:
+  assign $B1+4 = addr(@T)
+  assign $B1+32 = @N
+  assign $B1+20 = $B1+32
+  assign $B1+40 = @M
+  assign $B1+24 = $B1+40
+  assign $B1+16 = addr(@T-11[mul.L(neg.L($B1+20), 11)])
+  assign $B1+12 = mul.L(mul.L(11, $B1+20), $B1+24)
+  ; line 58
+  move H(11) = @($B1+16)[mul.L(add.L(mul.L(@M, $B1+20), @N), 11)](11)
+  ; line 59
+  move @($B1+16)+11[mul.L(mul.L(2, $B1+20), 11)](11) = H(11)
+  ; line 60
+  assign @(addr(@($B1+16)+7[mul.L(add.L($B1+20, @N), 11)])) = @(addr(@($B1+16)+10[add.L(mul.L(mul.L(@M, $B1+20), 11), mul.L(@N, 4))]))
+  ; line 61
+  call FTN$WRITE_SL(ref $IO1, val -1)
+  assign $D1+4 = addr(@(addr(@($B1+16)+3[mul.L(add.L($B1+20, @N), 11)])))
+  assign $D1+16 = addr(@(addr(@($B1+16)+3[mul.L(add.L($B1+20, @N), 11)]))-4)
+  call FTN$IO_ITEM(ref $D1)
+  assign $T1 = $B1+12
+  call FTN$IO_ITEM(ref $D2)
+  call FTN$IO_END()
+  ; line 62
+  call FTN$WRITE_SU(ref $IO1, val 1)
+  call FTN$IO_ITEM(ref $B1)
+  call FTN$IO_END()
+  ; line 63
+  return

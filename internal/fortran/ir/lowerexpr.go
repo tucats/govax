@@ -315,11 +315,12 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 			multiplier *= dim.Extent()
 		}
 
-		// A CHARACTER element's place is a Byte place, whose index the VAX
-		// doesn't multiply by the element's length: it is multiplied here.
-		// A passed-length array's length is known only when the program
-		// runs, so its first element's offset is part of the index too.
-		if e.Sym.Type.Kind == sema.Character {
+		// A CHARACTER element's place, or a record's, is a Byte place, whose
+		// index the VAX doesn't multiply by the element's length: it is
+		// multiplied here. A passed-length array's length is known only when
+		// the program runs, so its first element's offset is part of the
+		// index too.
+		if isBytes(e.Sym.Type) {
 			if e.Sym.Type.Size == 0 && first != 0 {
 				index = arith(Add, Long, index, LongConst(int32(first)))
 				first = 0
@@ -337,6 +338,12 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 	}
 
 	panic("ir: an assignment's target that is neither a variable nor an array element")
+}
+
+// isBytes reports whether a place of the type t is a Byte place, however long
+// a value of it is: a CHARACTER value's or a record's.
+func isBytes(t sema.Type) bool {
+	return t.Kind == sema.Character || t.Kind == sema.Record
 }
 
 // value is a place holding x's value, for a statement that needs one: a

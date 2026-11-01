@@ -1,7 +1,9 @@
 package sema
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
@@ -24,12 +26,19 @@ import (
 // constant parts of that into one offset (Decision 2 of docs/PHASE-82 -
 // FORTRAN DEC extensions.md).
 //
-// A record or a substructure as a whole (an aggregate reference: TODAY,
-// NEXT_APP.APP_DATE) and an array field without subscripts are subtask 4's,
-// as are records in common blocks and records as dummy arguments.
+// A record or a substructure as a whole is an aggregate reference (section
+// 2.2.6): TODAY, HISTORY(3), NEXT_APP.APP_DATE. Its Type is of the kind Record,
+// with the length of its structure, which structureOf finds. FORTRAN does only
+// three things with one: assign it to another of the same structure (section
+// 3.4), pass it by reference (section 6.1.1), and move its bytes in an
+// unformatted I/O list (section 7.1.2). It is never a value, so value refuses
+// it (scalar) and those three ask for it themselves. An array field without
+// subscripts, like an array's name, is an array name reference (FieldRef's
+// WholeArray), for arguments and I/O lists.
 
-// aggregate is NOTIMPL's subject for a record or substructure as a whole.
-const aggregate = "a record or substructure as a whole (an aggregate reference)"
+// maxItemBytes is the longest item a descriptor of class S can describe, whose
+// length is a word.
+const maxItemBytes = 65535
 
 // FieldStep is one field of a field reference, with its subscripts, each
 // INTEGER, if the field is an array; nil if it isn't.
@@ -40,8 +49,9 @@ type FieldStep struct {
 
 // FieldRef is a scalar field reference (section 2.2.5.2): Sym is the record,
 // or the array of records whose element Subs (each INTEGER) names, and Path
-// the fields from the record's own down to the scalar field, whose type is
-// the reference's. Every field but the last is a substructure.
+// the fields from the record's own down to the field named last, whose type is
+// the reference's, or for a substructure of the kind Record. Every field but
+// the last is a substructure.
 type FieldRef struct {
 	exprBase
 	Sym  *Symbol
@@ -49,9 +59,17 @@ type FieldRef struct {
 	Path []FieldStep
 }
 
-// Field is the reference's scalar field, its last.
+// Field is the field the reference names, its last.
 func (f *FieldRef) Field() *Field {
 	return f.Path[len(f.Path)-1].Field
+}
+
+// WholeArray reports whether the reference is an array field without
+// subscripts: every element of it, an array name reference.
+func (f *FieldRef) WholeArray() bool {
+	last := f.Path[len(f.Path)-1]
+
+	return last.Field.Dims != nil && last.Subs == nil
 }
 
 // Text is the reference as messages and dumps name it, its subscripts
@@ -111,16 +129,6 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 
 				sym.broken = true
 
-			case sym.Dummy != 0:
-				a.notImplForm(d.Pos, "a record as a dummy argument")
-
-				sym.broken = true
-
-			case sym.Common != nil:
-				a.notImplForm(d.Pos, "a record in a common block")
-
-				sym.broken = true
-
 			default:
 				sym.Struct, sym.Type = st, Type{Record, st.Size}
 				sym.Typed, sym.TypePos, sym.untyped = true, d.Pos, false
@@ -137,9 +145,9 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 	}
 }
 
-// field analyzes a field reference. Only a scalar field reference is a
-// value; an aggregate one, and where whole allows it (an actual argument,
-// an I/O list item) an array field without subscripts, are subtask 4's.
+// field analyzes a field reference: a scalar one, an aggregate one (which
+// value refuses, scalar), or where whole allows it (an actual argument, an I/O
+// list item) an array field without subscripts.
 func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 	// The syntax tree nests a reference from its last field in: R.A.B is
 	// FieldRef{FieldRef{Name R, A}, B}. The steps, from the record's own
@@ -197,13 +205,10 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 		st, prev = f.Struct, f
 	}
 
-	if prev.Struct != nil {
-		a.notImplForm(e.Pos, aggregate)
-
-		return a.bad(e.Pos)
-	}
-
 	ref.T = prev.Type
+	if prev.Struct != nil {
+		ref.T = Type{Record, prev.Struct.Size}
+	}
 
 	return ref
 }
@@ -277,7 +282,7 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 // fieldSubscripts are a field's subscripts in a reference, one for each of
 // its dimensions, or none for a field that isn't an array. An array field
 // without them is an array name reference (section 2.2.6), which only an
-// actual argument or an I/O list item may be (whole), and is subtask 4's.
+// actual argument or an I/O list item may be (whole).
 func (a *analyzer) fieldSubscripts(f *Field, step *ast.FieldRef, whole bool) ([]Expr, bool) {
 	switch {
 	case f.Dims == nil && step.Args != nil:
@@ -288,10 +293,8 @@ func (a *analyzer) fieldSubscripts(f *Field, step *ast.FieldRef, whole bool) ([]
 	case f.Dims == nil:
 		return nil, true
 
-	case step.Args == nil && whole && f.Struct == nil:
-		a.notImplForm(step.Pos, "an array field as a whole")
-
-		return nil, false
+	case step.Args == nil && whole:
+		return nil, true
 
 	case step.Args == nil:
 		a.report("FIELDWHOLE", step.Pos, f.Name)
@@ -321,18 +324,190 @@ func (a *analyzer) subscripts(args []ast.Expr) ([]Expr, bool) {
 	return subs, ok
 }
 
-// recordInitials gives each record in $LOCAL its structure's initial values
-// (section 4.15.1: they are "the initial values of every record" of it), every
-// element of an array of records alike, as Initials of the record's Symbol,
-// which placeInitials then places as it places DATA's.
+// scalar is e where a value is wanted: an aggregate reference isn't one
+// (section 2.2.5.2: "no other operations ... on aggregate fields"). The name of
+// a record never gets here, since name refuses it itself.
+func (a *analyzer) scalar(e Expr) Expr {
+	if e.Type().Kind != Record {
+		return e
+	}
+
+	a.report("AGGREGATE", e.Position(), aggregateName(e))
+
+	return a.bad(e.Position())
+}
+
+// aggregateName names an aggregate reference for a message.
+func aggregateName(e Expr) string {
+	switch e := e.(type) {
+	case *Var:
+		return e.Sym.Name
+	case *ArrayRef:
+		return e.Sym.Name
+	case *Elem:
+		return e.Sym.Name + "()"
+	case *FieldRef:
+		return e.Text()
+	}
+
+	return "it"
+}
+
+// structureOf is the structure of an aggregate reference, or of a reference to
+// an array of records or of substructures; nil for any other expression.
+func structureOf(e Expr) *Structure {
+	switch e := e.(type) {
+	case *Var:
+		return e.Sym.Struct
+	case *ArrayRef:
+		return e.Sym.Struct
+	case *Elem:
+		return e.Sym.Struct
+	case *FieldRef:
+		return e.Field().Struct
+	}
+
+	return nil
+}
+
+// aggregateValue analyzes the value of an assignment to an aggregate reference:
+// another one if it can be, or whatever value makes of it, for assignedValue to
+// refuse. An array of records as a whole isn't one.
+func (a *analyzer) aggregateValue(e ast.Expr) Expr {
+	switch x := e.(type) {
+	case *ast.Name:
+		v := a.name(x, true)
+		if _, whole := v.(*ArrayRef); whole {
+			a.report("NEEDSUBSCRIPT", x.Pos, x.Name)
+
+			return a.bad(x.Pos)
+		}
+
+		return v
+
+	case *ast.Apply:
+		return a.apply(x)
+
+	case *ast.FieldRef:
+		return a.field(x, false)
+	}
+
+	return a.value(e)
+}
+
+// checkRecordItems checks an I/O list's records (section 2.2.5.2): only an
+// unformatted statement may hold one, and only as long as a descriptor can
+// describe it.
+func (a *analyzer) checkRecordItems(io *IO, items []*Item) {
+	for _, it := range items {
+		if it.Loop != nil {
+			a.checkRecordItems(io, it.Loop.Items)
+
+			continue
+		}
+
+		switch t := it.Value.Type(); {
+		case t.Kind != Record:
+
+		case io.Form != UnformattedForm:
+			a.report("AGGREGATEIO", it.Value.Position(), aggregateName(it.Value))
+
+		case t.Size > maxItemBytes:
+			a.report("RECORDIOSIZE", it.Value.Position(), aggregateName(it.Value), t.Size, maxItemBytes)
+		}
+	}
+}
+
+// form is the structure's form as a dummy argument's must match an actual
+// argument's (section 2.2.5.2: "the same number and types of fields in the same
+// order. The ordering of map fields within a union declaration is irrelevant"):
+// each field's place, type, and extents, in order of place, whatever it is named
+// and whichever map it is in. Two structures with one form need not be one
+// declaration.
+func (s *Structure) form() string {
+	parts := make([]string, 0, len(s.Fields))
+
+	for _, f := range s.Fields {
+		var b strings.Builder
+
+		fmt.Fprintf(&b, "%010d:", f.Offset)
+
+		if f.Struct != nil {
+			b.WriteString("{" + f.Struct.form() + "}")
+		} else {
+			b.WriteString(f.Type.String())
+		}
+
+		for _, d := range f.Dims {
+			fmt.Fprintf(&b, "*%d", d.Extent())
+		}
+
+		parts = append(parts, b.String())
+	}
+
+	sort.Strings(parts)
+
+	return strconv.Itoa(s.Size) + "=" + strings.Join(parts, ",")
+}
+
+// recordArguments checks a reference's arguments against the dummy arguments of
+// the file's routine it calls, for what section 6.1.1 says of records: a dummy
+// declared as a record takes only an aggregate reference with a matching form,
+// and a record goes to no other dummy (ours: the manual calls the argument's
+// and the dummy's forms a match, and a number has none). %VAL and %DESCR choose
+// how an argument goes, and a null argument has nothing to compare.
+func recordArguments(r routineRef, fu *fileUnit, messages *diag.List) {
+	for i, arg := range r.args {
+		p := fu.params()[i]
+
+		if arg.Expr == nil || p == nil || p.broken || arg.Expr.Type().Kind == Invalid ||
+			arg.Mode == ByValue || arg.Mode == ByDescriptor {
+			continue
+		}
+
+		given, wanted := structureOf(arg.Expr), p.Struct
+
+		switch {
+		case given == nil && wanted == nil:
+
+		case given != nil && wanted != nil && given.form() == wanted.form():
+
+		default:
+			messages.Report("RECORDARG", arg.Expr.Position(), i+1, r.sym.Name, argumentKind(given, arg.Expr.Type()),
+				p.Name, fu.pos.Line, argumentKind(wanted, p.Type))
+		}
+	}
+}
+
+// argumentKind says what an argument or a dummy argument is for RECORDARG.
+func argumentKind(s *Structure, t Type) string {
+	if s != nil {
+		return "a record of the structure " + s.Display()
+	}
+
+	return article(t.String())
+}
+
+// recordInitials gives each record in $LOCAL or a named common block its
+// structure's initial values (section 4.15.1: they are "the initial values of
+// every record" of it), every element of an array of records alike, as Initials
+// of the record's Symbol, which placeInitials then places as it places DATA's. A
+// dummy argument's storage is its caller's, and blank common takes no initial
+// values, as DATA's rule has it (DATABLANK; section 4.15.1 doesn't say).
 func (a *analyzer) recordInitials() {
 	for _, s := range a.unit.Symbols {
-		if s.Struct == nil || s.broken || s.Dummy != 0 || s.Common != nil {
+		if s.Struct == nil || s.broken || s.Dummy != 0 {
 			continue
 		}
 
 		image := s.Struct.image()
 		if len(image) == 0 {
+			continue
+		}
+
+		if s.Common != nil && s.Common.Name == "" {
+			a.report("DATABLANK", s.TypePos, s.Name)
+
 			continue
 		}
 

@@ -264,6 +264,8 @@ func (l *lowerer) dtypeOf(t sema.Type) DType {
 		return DTypeFC
 	case sema.Character:
 		return DTypeT
+	case sema.Record:
+		return DTypeZ
 	}
 
 	if t.Size == 2 {

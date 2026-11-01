@@ -35,8 +35,12 @@ func (a *analyzer) errsns(s *ast.CallStmt, list []ast.Expr) Stmt {
 
 		t := arg.Expr.Type()
 
-		switch arg.Expr.(type) {
-		case *Var, *Elem, *FieldRef:
+		switch e := arg.Expr.(type) {
+		case *Var, *Elem:
+		case *FieldRef:
+			if e.WholeArray() {
+				t = Type{}
+			}
 		default:
 			t = Type{}
 		}

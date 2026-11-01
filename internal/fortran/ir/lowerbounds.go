@@ -66,6 +66,13 @@ func (l *lowerer) prepareBounds() {
 
 		d := &Descriptor{DType: l.dtypeOf(s.Type), Class: ClassA, Length: s.Type.Size}
 
+		// A record may be longer than the descriptor's word can say, and
+		// nothing reads that word of an adjustable array of records: sema
+		// keeps such a record out of I/O lists, and an argument is its address.
+		if s.Struct != nil && d.Length > maxWordLength {
+			d.Length = 0
+		}
+
 		for _, dim := range s.Dims {
 			d.Dims = append(d.Dims, Bound{dim.Lower, dim.Upper, dim.Assumed || dim.LowerExpr != nil || dim.UpperExpr != nil})
 		}
@@ -224,7 +231,7 @@ func (l *lowerer) elementAt(base *Mem, s *sema.Symbol, index Expr) *Mem {
 	v, k := split(index)
 	m.Offset += int(k) * s.Type.Size
 
-	if v != nil && s.Type.Kind == sema.Character {
+	if v != nil && isBytes(s.Type) {
 		v = arith(Mul, Long, v, l.charLength(s))
 	}
 
@@ -237,23 +244,29 @@ func (l *lowerer) elementAt(base *Mem, s *sema.Symbol, index Expr) *Mem {
 // its subscripts' sum, each multiplied by the extents before it, written from
 // the last so that it takes one multiplication a dimension.
 func (l *lowerer) adjustableElement(e *sema.Elem, c *Cell) *Mem {
-	subs := make([]Expr, len(e.Subs))
-	for i, sub := range e.Subs {
+	a0 := &Mem{
+		Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}},
+		T:   l.typeOf(e.Sym.Type),
+	}
+
+	return l.elementAt(a0, e.Sym, l.adjustableIndex(e.Subs, e.Sym, c))
+}
+
+// adjustableIndex is an element's number from A0, the subscripts of the
+// adjustable array s whose descriptor is c.
+func (l *lowerer) adjustableIndex(list []sema.Expr, s *sema.Symbol, c *Cell) Expr {
+	subs := make([]Expr, len(list))
+	for i, sub := range list {
 		subs[i] = l.expr(sub)
 	}
 
 	index := subs[len(subs)-1]
 
 	for i := len(subs) - 2; i >= 0; i-- {
-		index = arith(Add, Long, arith(Mul, Long, index, l.extent(e.Sym, c, i)), subs[i])
+		index = arith(Add, Long, arith(Mul, Long, index, l.extent(s, c, i)), subs[i])
 	}
 
-	a0 := &Mem{
-		Ptr: &Load{&Mem{Cell: c, Offset: A0Offset, T: Long}},
-		T:   l.typeOf(e.Sym.Type),
-	}
-
-	return l.elementAt(a0, e.Sym, index)
+	return index
 }
 
 // arraySize is an adjustable array's size in bytes, for SIZEOF.

@@ -219,6 +219,26 @@ var messages = map[string]kind{
 	// item must be.
 	"FIELDWHOLE": {Error, "the field %s is an array, and can't be used without subscripts here"},
 
+	// AGGREGATE is a record or substructure as a whole where a value must
+	// be: section 2.2.5.2 has no operations on them but assignment.
+	"AGGREGATE": {Error, "%s is a record as a whole, which only an assignment, an argument, or an unformatted I/O list can use"},
+
+	// RECORDASSIGN is an assignment to a record of anything but a record of
+	// the same structure declaration (section 3.4).
+	"RECORDASSIGN": {Error, "%s can't be assigned to %s, which is a record of the structure %s: both must be of one structure"},
+
+	// AGGREGATEIO is a record in a formatted, list-directed, or NAMELIST I/O
+	// list (section 2.2.5.2).
+	"AGGREGATEIO": {Error, "%s is a record as a whole, which only an unformatted I/O list can hold"},
+
+	// RECORDIOSIZE is a record in an I/O list too long for its descriptor's
+	// length, a word.
+	"RECORDIOSIZE": {Error, "%s takes %d bytes, too long for an I/O list item, which can take %d"},
+
+	// RECORDARG is an argument and a dummy argument of the file's routine
+	// that aren't both records of one form (section 6.1.1).
+	"RECORDARG": {Error, "argument %d of %s is %s, but its dummy argument %s (line %d) is %s: a record goes only to a record of the same form"},
+
 	// Program units.
 
 	// DUPUNIT is a second program unit or entry point with a name the file

@@ -1,0 +1,79 @@
+== main program AGG
+  AGG                     program unit
+  D1        /DATE/        variable         $LOCAL+0
+  D2        /DATE/        variable         BLK+0
+  ONE       /ITEM/        variable         $LOCAL+4
+  STOCK     /ITEM/        array(1:3)       $LOCAL+28
+  I         INTEGER       variable         $LOCAL+96
+  TAKE                    subroutine
+  NUMS                    subroutine
+  TEXTS                   subroutine
+  structure /DATE/ is 3 bytes
+    DAY         LOGICAL*1           +0
+    YEAR        INTEGER*2           +1
+    initial +0 DAY LOGICAL*1 = 01
+  structure /ITEM/ is 22 bytes
+    TAG         CHARACTER*3         +0
+    WHEN        /DATE/              +3
+    QTY         INTEGER (1:3)       +6
+    NAMES       CHARACTER*2 (1:2)   +18
+  $LOCAL is 100 bytes
+  /BLK/ is 3 bytes
+  initial $LOCAL+0 D1.DAY LOGICAL*1 = 01
+  initial $LOCAL+7 ONE.WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+31 STOCK(1).WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+53 STOCK(2).WHEN.DAY LOGICAL*1 = 01
+  initial $LOCAL+75 STOCK(3).WHEN.DAY LOGICAL*1 = 01
+  initial BLK+0 D2.DAY LOGICAL*1 = 01
+17          I = 2
+18          D1 = D2
+19          ONE.WHEN:+3 = D1
+20          STOCK[I] = ONE
+21          STOCK[2].WHEN:+3 = STOCK[I].WHEN:+3
+22          CALL TAKE(ONE, STOCK[I], STOCK[], ONE.WHEN:+3)
+23          CALL NUMS(ONE.QTY:+6, STOCK[I].QTY:+6, (%REF ONE), (%DESCR ONE.QTY:+6))
+24          CALL TEXTS(ONE.NAMES:+18)
+25          WRITE (1,unformatted) ONE STOCK[] STOCK[I] ONE.QTY:+6
+26          READ (1,unformatted) D1
+27          PRINT * ONE.QTY:+6 STOCK[I].QTY:+6
+28          PRINT * ONE.NAMES:+18 (%LOC STOCK[I])
+29          END
+== SUBROUTINE TAKE
+  TAKE                    program unit
+  R         /ITEM/        variable         argument 1
+  E         /ITEM/        variable         argument 2
+  LIST      /ITEM/        array(1:*)       argument 3
+  W         /DATE/        variable         argument 4
+  FURTHER                 subroutine
+  structure /DATE/ is 3 bytes
+    DAY         LOGICAL*1           +0
+    YEAR        INTEGER*2           +1
+  structure /ITEM/ is 22 bytes
+    TAG         CHARACTER*3         +0
+    WHEN        /DATE/              +3
+    QTY         INTEGER (1:3)       +6
+    NAMES       CHARACTER*2 (1:2)   +18
+  $LOCAL is 0 bytes
+44          E = R
+45          LIST[2] = E
+46          W.YEAR:+1 = R.WHEN:+3.YEAR:+1
+47          R.QTY:+6[2] = LIST[3].QTY:+6[1]
+48          PRINT * R.QTY:+6
+49          CALL FURTHER(R, R.WHEN:+3)
+50          END
+== SUBROUTINE ADJ
+  ADJ                     program unit
+  T         /P/           array(1:N, 1:M)  argument 1
+  N         INTEGER       variable         argument 2
+  M         INTEGER       variable         argument 3
+  H         /P/           variable         $LOCAL+0
+  structure /P/ is 11 bytes
+    C           CHARACTER*3         +0
+    V           INTEGER (1:2)       +3
+  $LOCAL is 12 bytes
+58          H = T[N, M]
+59          T[1, 2] = H
+60          T[N, 1].V:+3[2] = T[1, M].V:+3[N]
+61          PRINT * T[N, 1].V:+3 (arraysize:INTEGER  T[])
+62          WRITE (1,unformatted) T[]
+63          END

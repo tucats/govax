@@ -21,6 +21,7 @@ to check against. To add a program, add both files; this directory's
 
 | Program | What it exercises |
 | ------- | ----------------- |
+| `aggregates.for` | Records as wholes: aggregate assignment; a record, an element, a substructure, an array, and an adjustable array of records as arguments, fields at odd offsets, a dummy record through ENTRY; %LOC and %REF; a record in COMMON with its initial values; records and array fields in unformatted I/O; array fields without subscripts as arguments, items, and an internal file; a record too long for one MOVC3 |
 | `average.for` | The manual's first program (14.1) and the internals tour's: a REAL function given an array, a function reference in a PRINT list |
 | `squares.for` | A main program with no PROGRAM statement (`SQUARES$MAIN`), DO, PRINT of a text and integers |
 | `factorials.for` | INTEGER and REAL arithmetic, REAL output in G's F and E forms, mixed-mode conversions, truncating division, WRITE (\*,\*) |

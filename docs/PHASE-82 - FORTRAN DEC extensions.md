@@ -2,8 +2,9 @@
 
 **Status:** in progress: subtask 1, the survey (Part A below), done
 2026-11-01 and reviewed by the author the same day ("The author's
-answers"); subtask 2, structure declarations, and subtask 3, RECORD and
-field references, done 2026-11-01. Needs Phase 79 (subprograms).
+answers"); subtask 2, structure declarations, subtask 3, RECORD and
+field references, and subtask 4, aggregates, done 2026-11-01. Needs Phase 79
+(subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -542,7 +543,7 @@ further Alpha-era directive; out, unless the author wants it.
    executable context (folded offsets, computed addresses), substrings
    of fields, the restrictions (DO variable, EQUIVALENCE, DATA, SAVE,
    NAMELIST); goldens and a program run end to end.
-4. **Aggregates:** aggregate assignment, records as actual and dummy
+4. **Aggregates** (done 2026-11-01): aggregate assignment, records as actual and dummy
    arguments (adjustable record arrays, the cross-unit check, `%LOC`,
    `%REF`), records in COMMON (with their initial values), records in
    unformatted I/O (and the messages for the other forms), and array
@@ -645,3 +646,39 @@ further Alpha-era directive; out, unless the author wants it.
   ours, unconfirmed: a record in `$LOCAL` is on the boundary `Type.Align` gives
   its size (at most a longword); a field's initial value's bytes overlapping
   another's only partly leave the rest in place.
+- **2026-11-01:** Subtask 4, aggregates. An aggregate reference is a `Var`, an
+  `Elem`, or a `FieldRef` whose `Type` is of the kind `Record`, and its structure is
+  `structureOf`'s. It isn't a value: `value` refuses one (`scalar`, and `name` without
+  `wholeOK`), AGGREGATE, so every expression context refuses it with no case of its
+  own, and the three places that take one ask for it: `aggregateValue` for an
+  assignment, `arg` for an argument, `outputItem` and `place` for an I/O list. An
+  array field without subscripts is a `FieldRef` whose `WholeArray` is true.
+  **Assignment:** `assignedValue` asks for one structure declaration (RECORDASSIGN);
+  `moveRecord` (`ir/lowerfield.go`) is a `CharMove` of the length, a MOVC3, and past
+  65,535 bytes (MOVC3's length is a word) pieces from two addresses computed once.
+  **Arguments:** by reference; `notAllowed` refuses `%VAL` and `%DESCR` (Table 6-1);
+  a record may now be a dummy, an adjustable array of records included. Across the
+  file's units `recordArguments` compares `Structure.form` (each field's place, type,
+  and extents in order of place, so names and map order don't count, as 2.2.5.2 says),
+  RECORDARG. **Lowering:** a record is a Byte place, so an element's index is multiplied
+  by the record's length (`isBytes`). A dummy record's field goes through `ArgPointer`,
+  since the ordinary dummy place says its offset as a count of elements, which a packed
+  field's needn't be (codegen's `index` would panic on it); an adjustable array's field
+  starts from its A0 (`adjustableIndex`, shared with `adjustableElement`). `DTypeZ` is
+  a record's descriptor type. `fieldArrayDescriptor` is a class A descriptor of a whole
+  array field, for I/O lists, internal files, `%DESCR`, and CHARACTER arguments.
+  **COMMON:** `recordInitials` now covers named blocks; initial values in blank common
+  are DATABLANK. **I/O:** `checkRecordItems`: only unformatted lists (AGGREGATEIO). New
+  messages: AGGREGATE, RECORDASSIGN, AGGREGATEIO, RECORDIOSIZE, RECORDARG. FTNRTL
+  needed nothing. Tests: about 60 `TestErrors` cases; the goldens `aggregates.for` in
+  `sema`, `ir`, and `codegen`; `testdata/fortran/aggregates.for`, in both paging modes.
+  Choices of ours, unconfirmed: `(R)` in parentheses is AGGREGATE, not a copy (an
+  expression holds no aggregate); a record longer than 65,535 bytes in an I/O list is
+  RECORDIOSIZE, since a class S descriptor's length is a word; a record as ENCODE's or
+  DECODE's buffer, an internal file, a format, or a key is an error (none of their lists
+  names one); a record goes to no dummy but a record of its form, a byte array included,
+  except by `%VAL` or `%DESCR`, which say how the argument goes; a field's array bounds
+  count in a form only as extents; a record longer than 65,535 bytes overlapping itself
+  through a union moves in undefined order. By the survey's rule, a structure with
+  initial values whose records share a named block in two units of one file is DATATWICE,
+  even with the same values; a program that INCLUDEs one will meet it.

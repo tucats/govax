@@ -109,7 +109,14 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	}
 
 	target := a.target(s.Target)
-	value := a.value(s.Value)
+
+	// A target with an error says nothing of what its value may be.
+	var value Expr
+	if target == nil || target.Type().Kind == Record {
+		value = a.aggregateValue(s.Value)
+	} else {
+		value = a.value(s.Value)
+	}
 
 	if target == nil || target.Type().Kind == Invalid || value.Type().Kind == Invalid {
 		return nil
@@ -126,9 +133,24 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 // assignedValue is value as it is assigned to target, or nil after an error. A
 // CHARACTER value is assigned only to a CHARACTER place, of any length: it is
 // cut or filled with blanks on the right to the place's length when the program
-// runs (section 3.3).
+// runs (section 3.3). A record is assigned only a record of the same structure
+// declaration (section 3.4; two declared alike aren't the same, ours).
 func (a *analyzer) assignedValue(pos diag.Position, target, value Expr) Expr {
 	switch tt, vt := target.Type(), value.Type(); {
+	case tt.Kind == Record:
+		if st := structureOf(target); vt.Kind != Record || structureOf(value) != st {
+			what := article(vt.String()) + " value"
+			if s := structureOf(value); s != nil {
+				what = "a record of the structure " + s.Display()
+			}
+
+			a.report("RECORDASSIGN", pos, what, aggregateName(target), st.Display())
+
+			return nil
+		}
+
+		return value
+
 	case tt.Kind == Character && vt.Kind == Character:
 		return value
 

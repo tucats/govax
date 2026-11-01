@@ -394,9 +394,14 @@ func (a *analyzer) intrinsicValue(e *ast.Apply, f form, args []Expr) Expr {
 func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 	var x Expr
 
-	if n, ok := e.Args[0].(*ast.Name); ok {
+	switch n := e.Args[0].(type) {
+	case *ast.Name:
 		x = a.name(n, true)
-	} else {
+	case *ast.Apply:
+		x = a.apply(n)
+	case *ast.FieldRef:
+		x = a.field(n, true)
+	default:
 		x = a.value(e.Args[0])
 	}
 
@@ -406,6 +411,10 @@ func (a *analyzer) sizeOf(e *ast.Apply) Expr {
 	}
 
 	size := t.Size
+
+	if f, ok := x.(*FieldRef); ok && f.WholeArray() {
+		size = f.Field().Size()
+	}
 
 	if r, ok := x.(*ArrayRef); ok {
 		switch {

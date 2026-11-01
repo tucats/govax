@@ -576,7 +576,14 @@ func (a *analyzer) codeStatement(s *ast.CodeStmt, path []frame) Stmt {
 		ok = false
 	}
 
-	switch b := a.place(s.Buffer, true).(type) {
+	// Appendix A.1's buffer is a variable, an array, an element, or a substring:
+	// not an aggregate reference.
+	buffer := a.place(s.Buffer, true)
+	if buffer != nil && buffer.Type().Kind == Record {
+		buffer = nil
+	}
+
+	switch b := buffer.(type) {
 	case nil:
 		a.report("BADBUFFER", s.Buffer.Position(), what)
 
@@ -732,7 +739,7 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 	case t.Kind == Character:
 		io.RunFormat = e
 
-	case isArrayPlace(e):
+	case isArrayPlace(e) && t.Kind != Record:
 		if r, ok := e.(*ArrayRef); ok && r.Sym.AssumedSize() {
 			a.report("NOSIZE", f.Pos, r.Sym.Name)
 
@@ -826,6 +833,8 @@ func (a *analyzer) ioItems(io *IO, list []ast.Expr) Stmt {
 		return nil
 	}
 
+	a.checkRecordItems(io, items)
+
 	io.Items = items
 
 	return io
@@ -870,8 +879,8 @@ func (a *analyzer) ioList(list []ast.Expr, read bool) ([]*Item, bool) {
 }
 
 // outputItem analyzes an output list's item: a value, a whole array
-// (section 2.2.3.5; not an assumed-size one, whose size isn't known), or
-// a character constant.
+// (section 2.2.3.5; not an assumed-size one, whose size isn't known), an
+// aggregate reference, or a character constant.
 func (a *analyzer) outputItem(e ast.Expr) Expr {
 	if n, ok := e.(*ast.Name); ok {
 		item := a.name(n, true)
@@ -887,6 +896,10 @@ func (a *analyzer) outputItem(e ast.Expr) Expr {
 
 	if f, ok := e.(*ast.FieldRef); ok {
 		return a.field(f, true)
+	}
+
+	if ap, ok := e.(*ast.Apply); ok {
+		return a.apply(ap)
 	}
 
 	return a.value(e)

@@ -116,12 +116,6 @@ func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
 
 		return
 
-	case sym.Struct != nil:
-		a.notImplForm(d.Pos, "a record in a common block")
-
-		sym.broken = true
-
-		return
 	}
 
 	sym.Common = b

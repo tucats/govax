@@ -45,7 +45,7 @@ func (a *analyzer) value(e ast.Expr) Expr {
 		return a.name(e, false)
 
 	case *ast.Apply:
-		return a.apply(e)
+		return a.scalar(a.apply(e))
 
 	case *ast.Paren:
 		// Parentheses group, and the tree's shape keeps the grouping;
@@ -62,7 +62,7 @@ func (a *analyzer) value(e ast.Expr) Expr {
 		return a.substring(e)
 
 	case *ast.FieldRef:
-		return a.field(e, false)
+		return a.scalar(a.field(e, false))
 
 	case *ast.BuiltinArg:
 		return a.builtinValue(e)
@@ -102,7 +102,8 @@ func (a *analyzer) folded(e ast.Expr) (v Expr, ok bool) {
 }
 
 // name analyzes a name standing alone: a variable, or, where wholeOK
-// allows it (an actual argument, an I/O list item), a whole array.
+// allows it (an actual argument, an I/O list item), a whole array or a
+// record as a whole.
 func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 	s := a.lookup(n.Name, n.Pos)
 
@@ -114,8 +115,8 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 		return a.constantUse(s, n)
 	}
 
-	if s.Struct != nil {
-		a.notImplForm(n.Pos, aggregate)
+	if s.Struct != nil && !wholeOK {
+		a.report("AGGREGATE", n.Pos, n.Name)
 
 		return a.bad(n.Pos)
 	}
@@ -380,12 +381,6 @@ func constantInt(e Expr) (int, bool) {
 func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 	if len(e.Args) != len(s.Dims) {
 		a.report("SUBSCRIPTS", e.Pos, e.Name, count(len(s.Dims), "subscript"), len(e.Args))
-
-		return a.bad(e.Pos)
-	}
-
-	if s.Struct != nil {
-		a.notImplForm(e.Pos, aggregate)
 
 		return a.bad(e.Pos)
 	}

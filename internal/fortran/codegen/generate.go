@@ -82,6 +82,7 @@ var definitions = []struct {
 	{"DSC$K_DTYPE_BU", int(ir.DTypeBU), "byte logical"},
 	{"DSC$K_DTYPE_WU", int(ir.DTypeWU), "word logical"},
 	{"DSC$K_DTYPE_LU", int(ir.DTypeLU), "longword logical"},
+	{"DSC$K_DTYPE_Z", int(ir.DTypeZ), "unspecified"},
 	{"DSC$K_DTYPE_W", int(ir.DTypeW), "word integer"},
 	{"DSC$K_DTYPE_L", int(ir.DTypeL), "longword integer"},
 	{"DSC$K_DTYPE_F", int(ir.DTypeF), "F_floating"},

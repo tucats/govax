@@ -59,7 +59,14 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 		}
 	}
 
-	v := a.value(e)
+	// An element of an array of records is an aggregate reference, which a
+	// value isn't.
+	var v Expr
+	if ap, ok := e.(*ast.Apply); ok {
+		v = a.apply(ap)
+	} else {
+		v = a.value(e)
+	}
 
 	// A statement function may be only its dummy argument's name, the actual
 	// variable itself; what is passed is its value.
@@ -140,20 +147,27 @@ func (a *analyzer) builtinOperand(b *ast.BuiltinArg) (x Arg, ok bool) {
 // Yes, and otherwise what x is, for the message. Every mode takes a logical or
 // integer value, a REAL*4, or any other value by reference or by descriptor, but
 // %VAL takes nothing wider than a longword, nothing CHARACTER, and no array or
-// procedure, and nothing takes a Hollerith constant.
+// procedure, nothing takes a Hollerith constant, and an aggregate goes only by
+// %REF.
 func notAllowed(mode ArgMode, x Arg) string {
 	t := x.Expr.Type()
 
 	switch {
 	case x.Hollerith:
 		return "a Hollerith constant"
+	case t.Kind == Record && mode != ByRef:
+		return "a record"
 	case mode != ByValue:
 		return ""
 	}
 
-	switch x.Expr.(type) {
+	switch e := x.Expr.(type) {
 	case *ArrayRef:
 		return "an array"
+	case *FieldRef:
+		if e.WholeArray() {
+			return "an array"
+		}
 	case *Procedure:
 		return "a procedure"
 	}

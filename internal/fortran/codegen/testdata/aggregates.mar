@@ -1,0 +1,418 @@
+	.TITLE	TEST
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_Z = 0			; unspecified
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Common block /BLK/, 3 bytes, the most any unit in this file declares
+	.PSECT	BLK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+BLK.$BASE:
+	.BYTE	1			; D2.DAY = 1
+	.BLKB	2
+
+; Storage map for AGG, the main program
+;   D1     /DATE/      $LOCAL+0   AGG.D1
+;   D2     /DATE/      BLK+0      AGG.D2
+;   ONE    /ITEM/      $LOCAL+4   AGG.ONE
+;   STOCK  /ITEM/ (3)  $LOCAL+28  AGG.STOCK
+;   I      INTEGER     $LOCAL+96  AGG.I
+;   Structure /DATE/, 3 bytes
+;     +0     DAY   LOGICAL*1
+;     +1     YEAR  INTEGER*2
+;   Structure /ITEM/, 22 bytes
+;     +0     TAG    CHARACTER*3
+;     +3     WHEN   /DATE/
+;     +6     QTY    INTEGER (1:3)
+;     +18    NAMES  CHARACTER*2 (1:2)
+;
+AGG.D2 = BLK.$BASE			; D2, in /BLK/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+AGG.D1:
+	.BYTE	1			; D1.DAY = 1
+	.BLKB	2
+	.BLKB	1
+AGG.ONE:
+	.BLKB	3
+	.BYTE	1			; ONE.WHEN.DAY = 1
+	.BLKB	18
+	.BLKB	2
+AGG.STOCK:
+	.BLKB	3
+	.BYTE	1			; STOCK(1).WHEN.DAY = 1
+	.BLKB	21
+	.BYTE	1			; STOCK(2).WHEN.DAY = 1
+	.BLKB	21
+	.BYTE	1			; STOCK(3).WHEN.DAY = 1
+	.BLKB	18
+	.BLKB	2
+AGG.I:	.BLKL	1			; I
+AGG.$D5:
+	.WORD	22			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+AGG.$D7:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+AGG.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+AGG.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.ADDRESS AGG.ONE+6
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.ADDRESS AGG.ONE+2		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+AGG.$D2:
+	.WORD	2			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_A
+	.ADDRESS AGG.ONE+18
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	4			; the array's size in bytes
+	.ADDRESS AGG.ONE+16		; A0, where the element with zero subscripts would be
+	.LONG	2			; multipliers
+	.LONG	1,2			; bounds
+AGG.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+AGG.$D3:
+	.WORD	22			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_S
+	.ADDRESS AGG.ONE
+AGG.$D4:
+	.WORD	22			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_A
+	.ADDRESS AGG.STOCK
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	66			; the array's size in bytes
+	.ADDRESS AGG.STOCK-22		; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+AGG.$D6:
+	.WORD	3			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_S
+	.ADDRESS AGG.D1
+AGG.$D8:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS AGG.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     Records as wholes: assignment, arguments, COMMON, unformatted I/O, and
+;    2  C     whole array fields.
+;    3        PROGRAM AGG
+	.ENTRY	AGG,^M<R2,R3,R4,R5>
+;    4        STRUCTURE /DATE/
+;    5          LOGICAL*1 DAY /1/
+;    6          INTEGER*2 YEAR
+;    7        END STRUCTURE
+;    8        STRUCTURE /ITEM/
+;    9          CHARACTER*3 TAG
+;   10          RECORD /DATE/ WHEN
+;   11          INTEGER*4 QTY(3)
+;   12          CHARACTER*2 NAMES(2)
+;   13        END STRUCTURE
+;   14        RECORD /DATE/ D1, D2
+;   15        RECORD /ITEM/ ONE, STOCK(3)
+;   16        COMMON /BLK/ D2
+;   17        I = 2
+	MOVL	#2,AGG.I
+;   18        D1 = D2
+	MOVC3	#3,AGG.D2,AGG.D1
+;   19        ONE.WHEN = D1
+	MOVC3	#3,AGG.D1,AGG.ONE+3
+;   20        STOCK(I) = ONE
+	MULL3	AGG.I,#22,R0
+	MOVC3	#22,AGG.ONE,AGG.STOCK-22[R0]
+;   21        STOCK(2).WHEN = STOCK(I).WHEN
+	MULL3	AGG.I,#22,R0
+	MOVC3	#3,AGG.STOCK-19[R0],AGG.STOCK+25
+;   22        CALL TAKE(ONE, STOCK(I), STOCK, ONE.WHEN)
+	PUSHAB	AGG.ONE+3
+	PUSHAB	AGG.STOCK
+	MULL3	AGG.I,#22,R0
+	PUSHAB	AGG.STOCK-22[R0]
+	PUSHAB	AGG.ONE
+	CALLS	#4,G^TAKE
+;   23        CALL NUMS(ONE.QTY, STOCK(I).QTY, %REF(ONE), %DESCR(ONE.QTY))
+	PUSHAQ	AGG.$D1
+	PUSHAB	AGG.ONE
+	MULL3	AGG.I,#22,R0
+	MOVAB	AGG.STOCK-16[R0],R0
+	PUSHAL	(R0)
+	PUSHAL	AGG.ONE+6
+	CALLS	#4,G^NUMS
+;   24        CALL TEXTS(ONE.NAMES)
+	PUSHAQ	AGG.$D2
+	CALLS	#1,G^TEXTS
+;   25        WRITE (1) ONE, STOCK, STOCK(I), ONE.QTY
+	PUSHL	#1
+	PUSHAB	AGG.$IO1
+	CALLS	#2,G^FTN$WRITE_SU
+	PUSHAQ	AGG.$D3
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	AGG.$D4
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	AGG.I,#22,R0
+	MOVAB	AGG.STOCK-22[R0],AGG.$D5+4
+	PUSHAQ	AGG.$D5
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	AGG.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   26        READ (1) D1
+	PUSHL	#1
+	PUSHAB	AGG.$IO1
+	CALLS	#2,G^FTN$READ_SU
+	PUSHAQ	AGG.$D6
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   27        PRINT *, ONE.QTY, STOCK(I).QTY
+	PUSHL	#-1
+	PUSHAB	AGG.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	AGG.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	AGG.I,#22,R0
+	MOVAB	AGG.STOCK-16[R0],R0
+	MOVAL	(R0),AGG.$D7+4
+	MULL3	AGG.I,#22,R0
+	MOVAB	AGG.STOCK-16[R0],R0
+	MOVAL	-4(R0),AGG.$D7+16
+	PUSHAQ	AGG.$D7
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   28        PRINT *, ONE.NAMES, %LOC(STOCK(I))
+	PUSHL	#-1
+	PUSHAB	AGG.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	AGG.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	MULL3	AGG.I,#22,R0
+	MOVAB	AGG.STOCK-22[R0],AGG.$T1
+	PUSHAQ	AGG.$D8
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   29        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for TAKE, a subroutine
+;   R     /ITEM/      argument 1  @TAKE.R(AP)
+;   E     /ITEM/      argument 2  @TAKE.E(AP)
+;   LIST  /ITEM/ (*)  argument 3  @TAKE.LIST(AP)
+;   W     /DATE/      argument 4  @TAKE.W(AP)
+;   Structure /DATE/, 3 bytes
+;     +0     DAY   LOGICAL*1
+;     +1     YEAR  INTEGER*2
+;   Structure /ITEM/, 22 bytes
+;     +0     TAG    CHARACTER*3
+;     +3     WHEN   /DATE/
+;     +6     QTY    INTEGER (1:3)
+;     +18    NAMES  CHARACTER*2 (1:2)
+;
+TAKE.R = 4				; R is argument 1
+TAKE.E = 8				; E is argument 2
+TAKE.LIST = 12				; LIST is argument 3
+TAKE.W = 16				; W is argument 4
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+TAKE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	12			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	3			; multipliers
+	.LONG	1,3			; bounds
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+TAKE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   30
+;   31        SUBROUTINE TAKE(R, E, LIST, W)
+	.ENTRY	TAKE,^M<R2,R3,R4,R5>
+;   32        STRUCTURE /DATE/
+;   33          LOGICAL*1 DAY
+;   34          INTEGER*2 YEAR
+;   35        END STRUCTURE
+;   36        STRUCTURE /ITEM/
+;   37          CHARACTER*3 TAG
+;   38          RECORD /DATE/ WHEN
+;   39          INTEGER*4 QTY(3)
+;   40          CHARACTER*2 NAMES(2)
+;   41        END STRUCTURE
+;   42        RECORD /ITEM/ R, E, LIST(*)
+;   43        RECORD /DATE/ W
+;   44        E = R
+	MOVC3	#22,@TAKE.R(AP),@TAKE.E(AP)
+;   45        LIST(2) = E
+	MOVL	#22,R0
+	MOVC3	#22,@TAKE.E(AP),@TAKE.LIST(AP)[R0]
+;   46        W.YEAR = R.WHEN.YEAR
+	MOVL	TAKE.R(AP),R0
+	MOVL	TAKE.W(AP),R1
+	MOVW	4(R0),1(R1)
+;   47        R.QTY(2) = LIST(3).QTY(1)
+	MOVL	TAKE.LIST(AP),R0
+	MOVL	TAKE.R(AP),R1
+	MOVL	50(R0),10(R1)
+;   48        PRINT *, R.QTY
+	PUSHL	#-1
+	PUSHAB	TAKE.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVL	TAKE.R(AP),R0
+	MOVAL	6(R0),TAKE.$D1+4
+	MOVL	TAKE.R(AP),R0
+	MOVAL	2(R0),TAKE.$D1+16
+	PUSHAQ	TAKE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   49        CALL FURTHER(R, R.WHEN)
+	MOVL	TAKE.R(AP),R0
+	PUSHAB	3(R0)
+	PUSHAB	@TAKE.R(AP)
+	CALLS	#2,G^FURTHER
+;   50        END
+	RET
+
+; Storage map for ADJ, a subroutine
+;   T     /P/ (?,?)  argument 1  @ADJ.T(AP)
+;   N     INTEGER    argument 2  @ADJ.N(AP)
+;   M     INTEGER    argument 3  @ADJ.M(AP)
+;   H     /P/        $LOCAL+0    ADJ.H
+;   Structure /P/, 11 bytes
+;     +0     C     CHARACTER*3
+;     +3     V     INTEGER (1:2)
+;
+ADJ.T = 4				; T is argument 1
+ADJ.N = 8				; N is argument 2
+ADJ.M = 12				; M is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+ADJ.H:	.BLKB	11			; H
+	.BLKB	1
+ADJ.$B1:
+	.WORD	11			; length
+	.BYTE	DSC$K_DTYPE_Z,DSC$K_CLASS_A
+	.LONG	0			; T's bounds: set at each entry point
+	.BYTE	0,0,^XE0,2		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0,0			; multipliers
+	.LONG	1,0,1,0			; bounds
+ADJ.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_A
+	.LONG	0			; set when the descriptor is used
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	8			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	2			; multipliers
+	.LONG	1,2			; bounds
+ADJ.$T1:
+	.BLKL	1			; temporary
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+ADJ.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+ADJ.$D2:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS ADJ.$T1
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   51
+;   52        SUBROUTINE ADJ(T, N, M)
+	.ENTRY	ADJ,^M<R2,R3,R4,R5>
+	MOVAB	@ADJ.T(AP),ADJ.$B1+4
+	MOVL	@ADJ.N(AP),ADJ.$B1+32
+	MOVL	ADJ.$B1+32,ADJ.$B1+20
+	MOVL	@ADJ.M(AP),ADJ.$B1+40
+	MOVL	ADJ.$B1+40,ADJ.$B1+24
+	MNEGL	ADJ.$B1+20,R0
+	MULL2	#11,R0
+	SUBL2	#11,R0
+	MOVAB	@ADJ.T(AP)[R0],ADJ.$B1+16
+	MULL3	#11,ADJ.$B1+20,R0
+	MULL3	R0,ADJ.$B1+24,ADJ.$B1+12
+;   53        STRUCTURE /P/
+;   54          CHARACTER*3 C
+;   55          INTEGER*4 V(2)
+;   56        END STRUCTURE
+;   57        RECORD /P/ T(N, M), H
+;   58        H = T(N, M)
+	MOVL	ADJ.$B1+16,R0
+	MULL3	@ADJ.M(AP),ADJ.$B1+20,R1
+	ADDL2	@ADJ.N(AP),R1
+	MULL2	#11,R1
+	MOVC3	#11,(R0)[R1],ADJ.H
+;   59        T(1, 2) = H
+	MOVL	ADJ.$B1+16,R0
+	MULL3	#2,ADJ.$B1+20,R1
+	MULL2	#11,R1
+	MOVC3	#11,ADJ.H,11(R0)[R1]
+;   60        T(N, 1).V(2) = T(1, M).V(N)
+	MOVL	ADJ.$B1+16,R0
+	MULL3	@ADJ.M(AP),ADJ.$B1+20,R1
+	MULL2	#11,R1
+	MULL3	@ADJ.N(AP),#4,R2
+	ADDL2	R2,R1
+	MOVAB	10(R0)[R1],R0
+	MOVL	ADJ.$B1+16,R1
+	ADDL3	ADJ.$B1+20,@ADJ.N(AP),R2
+	MULL2	#11,R2
+	MOVAB	7(R1)[R2],R1
+	MOVL	(R0),(R1)
+;   61        PRINT *, T(N, 1).V, SIZEOF(T)
+	PUSHL	#-1
+	PUSHAB	ADJ.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	MOVL	ADJ.$B1+16,R0
+	ADDL3	ADJ.$B1+20,@ADJ.N(AP),R1
+	MULL2	#11,R1
+	MOVAB	3(R0)[R1],R0
+	MOVAL	(R0),ADJ.$D1+4
+	MOVL	ADJ.$B1+16,R0
+	ADDL3	ADJ.$B1+20,@ADJ.N(AP),R1
+	MULL2	#11,R1
+	MOVAB	3(R0)[R1],R0
+	MOVAL	-4(R0),ADJ.$D1+16
+	PUSHAQ	ADJ.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	ADJ.$B1+12,ADJ.$T1
+	PUSHAQ	ADJ.$D2
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   62        WRITE (1) T
+	PUSHL	#1
+	PUSHAB	ADJ.$IO1
+	CALLS	#2,G^FTN$WRITE_SU
+	PUSHAQ	ADJ.$B1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   63        END
+	RET
+
+	.END	AGG

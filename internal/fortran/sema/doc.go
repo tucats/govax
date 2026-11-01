@@ -135,8 +135,11 @@
 // its longest map. A RECORD statement (record.go) makes a variable or array
 // of that form, its Type of the kind Record and its Struct the structure, and
 // a scalar field reference is a FieldRef, which stands wherever an array
-// element may. Each record in $LOCAL gets its structure's initial values as
-// Initials of its own.
+// element may. Each record in $LOCAL or a named common block gets its
+// structure's initial values as Initials of its own. A record or substructure
+// as a whole is an aggregate reference: a Var, an Elem, or a FieldRef whose Type
+// is of the kind Record. It isn't a value, so value refuses it, and only an
+// assignment, an argument, and an I/O list ask for one.
 //
 // A name may have any type, but expressions are compiled only on the types
 // Type.Compiled says; a name of any other type is NOTIMPL where an

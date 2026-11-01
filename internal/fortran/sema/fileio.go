@@ -432,10 +432,10 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 		switch t := v.Type(); {
 		case t.Kind == Invalid:
 			return nil, false
-		case t.Kind == Character || isArrayPlace(v):
+		case t.Kind == Character || (isArrayPlace(v) && t.Kind != Record):
 			key.Text = v
 		default:
-			if _, isVar := v.(*Var); !isVar {
+			if _, isVar := v.(*Var); !isVar || t.Kind == Record {
 				a.report("KEYTEXT", spec.Pos, spec.Keyword, article(t.String())+" value")
 
 				return nil, false
