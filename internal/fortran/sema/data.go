@@ -410,6 +410,10 @@ func (a *analyzer) dataElement(e *ast.Apply, vars map[string]int32) (*Symbol, in
 		return s, 0, false
 	}
 
+	if a.nullSubscript(e.Pos, e.Args) {
+		return s, 0, false
+	}
+
 	subs := make([]int, len(e.Args))
 
 	for i, arg := range e.Args {

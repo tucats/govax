@@ -205,6 +205,10 @@ func (a *analyzer) equivalenceElement(e *ast.Apply) (equivItem, bool) {
 		return item, false
 	}
 
+	if a.nullSubscript(e.Pos, e.Args) {
+		return item, false
+	}
+
 	subs := make([]int, len(e.Args))
 
 	for i, arg := range e.Args {

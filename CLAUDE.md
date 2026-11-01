@@ -580,7 +580,9 @@ never had.
   `TestFor83LibraryOracle`; `INCLUDE '(module)'` by `source.Opener`'s `OpenModule`, searching `dclcmd`'s `fortranIncludes`;
   `Line.Listed`; `FORTRAN A+B+LIB/LIBRARY`, a `/joinable` list and `fortran.CompileAll`), and subtask 4 govax's definition
   modules (`internal/fortran/sysdef`: 47 modules from `vmsdef`, by each name's longest prefix, `$SYSSRVNAM`, `$CHFDEF`'s
-  structures, searched last; a module's EXTERNAL is a `.EXTRN` only if used, `Line.Library`, `Symbol.Linked`; `mkforsysdef` writes a `.TLB`).
+  structures, searched last; a module's EXTERNAL is a `.EXTRN` only if used, `Line.Library`, `Symbol.Linked`; `mkforsysdef` writes a `.TLB`), and subtask 5 calling services and RTL routines (null arguments in function references, kept as nil by the parser and refused
+  by sema where the name isn't a routine's; a missing service signals, `corevms/missingservice.go`; TYPE of an FTN file, `rms.writeFortranRecords`; a utility's end deletes
+  user-mode names, `Interpreter.endUtility`; `testdata/fortran/services.for`, `rtlcalls.for`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

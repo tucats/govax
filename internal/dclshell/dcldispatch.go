@@ -202,7 +202,10 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 	// (dclinput.go). It is known when the command has run, after any
 	// procedure or command it ran in turn.
 	if !dclOwnCommands[r.Active] {
-		defer func() { c.imageRan = true }()
+		defer func() {
+			c.imageRan = true
+			c.endUtility(r.Active)
+		}()
 	}
 
 	return c.Grammar.Dispatch(r)

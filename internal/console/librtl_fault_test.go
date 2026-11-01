@@ -64,6 +64,28 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 	}
 }
 
+// TestMissingService: a service in the P1 vector with no routine behind it
+// signals as a missing LIB$ routine does (docs/PHASE-83, Decision 6), where it
+// used to be a reserved operand fault. A handler that continues, or none,
+// gets SS$_UNSUPPORTED back.
+func TestMissingService(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^SYS$GETCHN\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 0xE4A { // SS$_UNSUPPORTED
+		t.Errorf("R0 = %#x, want SS$_UNSUPPORTED (0xE4A)", r0)
+	}
+
+	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
+		"-GOVAX-E-NOTIMPL, routine SYS$GETCHN is not implemented in govax\n" +
+		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
+		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		".MAIN.          START                                      00000009  00000209\n"
+	if out != want {
+		t.Errorf("output %q, want %q", out, want)
+	}
+}
+
 // TestLibrtlAccessViolation: LIB$ADAWI given an address it can't read, or
 // one it can't write, signals SS$_ACCVIO with the hardware's reason mask
 // and address; no handler takes it, and the image ends with it.

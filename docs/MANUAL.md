@@ -950,7 +950,10 @@ TYPE [/PAGE] [/HOST] file-spec
 Displays a file (one file; no wildcards that match several). Volume files
 are shown record by record, whatever their record format; host files line
 by line. `/PAGE` stops after each screenful. `TYPE SYS$INPUT` types the
-lines that follow it in a command procedure.
+lines that follow it in a command procedure. A file with FORTRAN carriage
+control, as a FORTRAN program's formatted files have, shows each record's first
+byte as its control and not as text, as VMS's TYPE does, so a record written
+with no blank to spare loses its first letter.
 
 #### COPY
 
@@ -1235,7 +1238,8 @@ CREATE/NAME_TABLE [/PARENT_TABLE=t] [/mode] table
 These follow VMS exactly. The default table is the process table, and
 the default mode supervisor. The job table is shared by the console's
 process and its subprocesses. A user-mode process name is deleted when
-the next image you `RUN` exits. `SHOW LOGICAL` follows a name through
+the next image exits: one you `RUN`, or a command VMS runs as an image, as it
+does `MACRO`, `LINK`, and `TYPE`, though not `DEFINE` or `SHOW TRANSLATION`. `SHOW LOGICAL` follows a name through
 each level of translation:
 
 ```text
@@ -3327,6 +3331,10 @@ starts, and the call signals:
 -GOVAX-E-NOTIMPL, routine LIB$INSERT_TREE is not implemented in govax
 ```
 
+A system service govax doesn't have does the same, naming `SYS$GETCHN` or
+whichever it is. Handlers see these as any other condition; if nothing stops the
+program, the call returns `SS$_UNSUPPORTED`.
+
 Programs from VAX compilers also need their language's run-time library
 (`FOR$`, `BAS$`, `PAS$`, `DECC$`); govax implements part of the C
 library and none of the others, so such programs need those libraries'
@@ -4531,7 +4539,9 @@ output it prints, and programs of several files in its `modules` directory.
   initializing one byte of a block get whatever LINK leaves, the last one's.
 - **Arguments:** a CALL or a function reference passes a number by reference
   and a CHARACTER value by descriptor. An argument may be left out, `CALL
-  S(A, , B)`, which passes a longword 0. A name in an EXTERNAL or INTRINSIC
+  S(A, , B)` or `STATUS = SYS$GETSYIW(,,,LIST,IOSB,,)`, which passes a longword 0
+  (`F(,)` has two null arguments, `F()` none); a subscript, an intrinsic function's
+  argument, or a statement function's may not. A name in an EXTERNAL or INTRINSIC
   statement passes the routine, which the routine given it calls through its
   dummy argument, `CALL P(X)` or `Y = F(X)`, of any type, with alternate returns,
   and passes on, in an EXTERNAL statement or after a call of it; a CHARACTER

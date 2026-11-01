@@ -3,7 +3,7 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
 settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
-day. Needs Phase 81 (files) and Phase 82 (structures). Part
+day; subtask 5, calling services and RTL routines, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -395,7 +395,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
    `'lib(module)'`, `+` and `/LIBRARY`, `FORT$LIBRARY`, and `/[NO]LIST` on INCLUDE governing the `.MAR`.
 4. **govax's definition modules** (done 2026-11-01): from `vmsdef`, `$SYSSRVNAM`, `$CHFDEF`'s structures, no `.EXTRN` for an
    unused name from one; the `.TLB` command.
-5. **Calling services and RTL routines:** null arguments in function references; a missing service's
+5. **Calling services and RTL routines** (done 2026-11-01): null arguments in function references; a missing service's
    signal; programs calling `$ASCTIM`, `$GETJPIW` (`itemlist.for`'s list, handed over at last), `$GETSYIW`,
    `$TRNLNM`, `$FAO`, `$FAOL`, LIB$GET_INPUT, LIB$SPAWN, LIB$DATE_TIME; the manuals' examples.
 6. **Condition handlers in FORTRAN**, by the probe's part B; what question 4 moves here.
@@ -478,3 +478,26 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   the modules end to end in both paging modes. A program's own `INTEGER*4` or `EXTERNAL` of a name a module already declares is DUPDECL or DUPATTR,
   as any second declaration is; whether VAX FORTRAN and its FORSYSDEF allow it is unconfirmed, and it matters to a program that
   declares a service it also gets from `$SYSSRVNAM`.
+- **2026-11-01:** Subtask 5, calling services and RTL routines. **Null arguments in function references**, Decision 1: the
+  parser's `subscripts` keeps a nil as `parseCall` does (`F(A,,B)` three arguments, `F(,)` two, `F()` none), and sema refuses
+  one where the name isn't a routine's: NULLSUBSCRIPT for an array element, a field's subscripts, DATA, and EQUIVALENCE,
+  NULLSTMTARG for a statement function, and NULLINTRINARG for an intrinsic (in place of an INTRINARGS that said `not 2` of a
+  two-argument list). `TestNullArguments` compiles each form through to the MACRO file. **A missing service signals**, Decision 6
+  (`corevms/missingservice.go`; `Environment.StackString` moved from `librtl`, which still calls it), found in `TestMissingService`.
+  **The probe's findings 8 and 9:** TYPE takes a record's first byte as its control in a file of RAT=FTN (`rms.writeFortranRecords`,
+  over `ftnTerminalText`; COPY is unchanged); a line a `$` record leaves open at the end of the file is ended, unconfirmed. A
+  command VMS runs as an image deletes the process's user-mode names when it ends (`Interpreter.endUtility`, by `dclOwnCommands`),
+  except RUN and DEBUG, whose images have a rundown of their own or may still be running under the debugger.
+  **Programs:** `testdata/fortran/services.for` (with `.in`) and `rtlcalls.for`, in both paging modes. They are written fresh, with
+  values of their own: DIGITAL's examples aren't copied into the repository.
+  **The manuals' examples** ran as throwaway programs: ADDX, BBCCI, EDIV, LP_LINES, MATCH_COND (with `CALL EXIT` taken out, which is subtask 8's), POLYF, SIG_TO_RET,
+  SKPC, and ESTABLISH's PUTMSG action routine give the manual's output, allowing for its OCR. Two don't, and are left:
+  **EMUL's** has `TYPE *,14H'10000000000'x`, a Hollerith constant as a list item printing as text in the manual's output, where the
+  LRM (2.2.1.7) says any other context makes it INTEGER\*4, so govax says HOLLCUT, as `TestErrors` has held since Phase 82;
+  there is no compiler to settle which is right, and the LRM is what this program follows. **SIGNAL's**, LIB$SIGNAL of a bare
+  `SS$_ACCVIO`, shows `reason mask=!XB, virtual address=!XL, ...` here, where the manual shows the signal's PC and PSL taken as the
+  message's parameters (`reason mask=10, virtual address=03C00020, ...`); that is for subtask 6's review of LIB$SIGNAL.
+  **Seen on the way:** `SYS$UNWIND(MECHARGS(3),)` returns to the establisher, past the statement that failed, and depth + 1 to
+  its caller, which is what the manual's LIB$MATCH_COND example needs (it goes on to LIB$REVERT and CLOSE), and the unwind calls the
+  handler of a frame it removes with SS$_UNWIND. A name used both as a function and in a CALL in one unit is BADUSE (ANSI's rule);
+  whether VAX FORTRAN allowed it is unconfirmed, and it matters to a program calling a routine both ways.

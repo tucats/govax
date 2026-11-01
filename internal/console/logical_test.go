@@ -387,3 +387,38 @@ func TestShowLogical_fullTableHeader(t *testing.T) {
 		"\n(LNM$PROCESS_TABLE)\t[kernel]\n\t\t\t[no protection information]\n\n"+
 			"  \"P5_SUPER\" [super] = \"X\"\n")
 }
+
+// TestUserModeNameEndsWithUtility: a command VMS runs as an image ends a
+// user-mode name as an image's exit would, though govax does it in Go (seen for
+// MACRO in VMS's run of testdata/for83). One of DCL's own commands leaves it, and
+// SHOW TRANSLATION, which is one, shows it for the image to come.
+func TestUserModeNameEndsWithUtility(t *testing.T) {
+	d, _, buf := logicalDispatcher(t)
+
+	mustDispatch(t, d, "DEFINE/USER_MODE USERNAME A")
+	mustDispatch(t, d, "DEFINE/SUPERVISOR_MODE KEPT B")
+	mustDispatch(t, d, "SET DEFAULT [000000]")
+	translated := func(name, want string) bool {
+		t.Helper()
+		buf.Reset()
+		mustDispatch(t, d, "SHOW TRANSLATION "+name)
+
+		return strings.Contains(buf.String(), `= "`+want+`"`)
+	}
+
+	if !translated("USERNAME", "A") {
+		t.Errorf("before TYPE, SHOW TRANSLATION said %q", buf.String())
+	}
+
+	// A utility: this one fails, there being no such file, which is an
+	// image's exit like any other.
+	_ = d.Dispatch("TYPE NOSUCH.TXT")
+
+	if translated("USERNAME", "A") {
+		t.Errorf("after TYPE, SHOW TRANSLATION said %q", buf.String())
+	}
+
+	if !translated("KEPT", "B") {
+		t.Errorf("a supervisor-mode name after TYPE: %q", buf.String())
+	}
+}

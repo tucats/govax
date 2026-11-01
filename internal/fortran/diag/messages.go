@@ -391,6 +391,12 @@ var messages = map[string]kind{
 	// from its dummy argument (section 6.2.1).
 	"STMTFUNCARG": {Error, "argument %d of the statement function %s is %s, but its dummy argument %s is %s"},
 
+	// NULLINTRINARG and NULLSTMTARG are an argument left out of a reference to
+	// an intrinsic function or a statement function, neither of which is
+	// called with an argument list a routine could look at.
+	"NULLINTRINARG": {Error, "an argument of the intrinsic function %s can't be left out"},
+	"NULLSTMTARG":   {Error, "an argument of the statement function %s can't be left out"},
+
 	// IMPLNONE is IMPLICIT NONE in a unit with another IMPLICIT
 	// statement (section 4.8).
 	"IMPLNONE": {Error, "a program unit with an IMPLICIT NONE statement can't have another IMPLICIT statement, and this one has the %s statement at line %d"},
@@ -588,6 +594,10 @@ var messages = map[string]kind{
 
 	// SUBSCRIPTS is an array element with the wrong number of subscripts.
 	"SUBSCRIPTS": {Error, "the array %s takes %s, not %d"},
+
+	// NULLSUBSCRIPT is a subscript left out, A(1,,2): a list after a name may
+	// have a null only if the name is a function's.
+	"NULLSUBSCRIPT": {Error, "a subscript can't be left out"},
 
 	// NOSIZE is an assumed-size array as a whole in an I/O list.
 	"NOSIZE": {Error, "the assumed-size array %s has no size, so it can't be written as a whole"},

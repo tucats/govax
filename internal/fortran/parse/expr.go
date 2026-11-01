@@ -327,9 +327,12 @@ func (p *parser) substring(x ast.Expr) ast.Expr {
 
 // subscripts reads the parenthesized list after a name in an
 // expression: an array element's subscripts or a function's arguments.
-// F() is a function reference with no arguments. An argument may be an
-// alternate return specifier only in a CALL (stmt.go), where this isn't
-// used, and a null argument only there too.
+// F() is a function reference with no arguments. Something left out between
+// commas is a null argument, kept as nil, as in a CALL (stmt.go): F(A,,B) has
+// three arguments, the second null, and F(,) two. Whether the name is a
+// function or an array isn't known here, so semantic analysis refuses a null
+// where the name turns out to be one that can't have it. An alternate return
+// specifier is only for a CALL, where this isn't used.
 func (p *parser) subscripts() []ast.Expr {
 	p.expect("(")
 
@@ -340,7 +343,11 @@ func (p *parser) subscripts() []ast.Expr {
 	}
 
 	for {
-		list = append(list, p.expr())
+		if p.at(",") || p.at(")") {
+			list = append(list, nil)
+		} else {
+			list = append(list, p.expr())
+		}
 
 		if !p.accept(",") {
 			break

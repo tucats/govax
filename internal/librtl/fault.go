@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -130,32 +129,8 @@ func stringFailure(env *corevms.Environment, err error) (uint32, error) {
 	}
 }
 
-// stackString puts s, and a class S descriptor for it, on the stack below
-// SP, moves SP below them, and returns the descriptor's address: a
-// string to pass by descriptor in a signal's arguments, as a VAX routine
-// would build one in its own frame. The space is the routine's call
-// frame's, so its RET gives it back.
+// stackString is Environment.StackString: a string for a signal's arguments,
+// in the running routine's frame.
 func stackString(env *corevms.Environment, s string) (uint32, error) {
-	mem, cpu := env.Memory(), env.CPU()
-	size := (uint32(len(s)) + 3) &^ 3
-	desc := cpu.GPR(registers.SP) - size - 8
-	text := desc + 8
-
-	for i := range len(s) {
-		if err := mem.StoreByte(cpu, text+uint32(i), s[i]); err != nil {
-			return 0, err
-		}
-	}
-
-	if err := mem.StoreLongword(cpu, desc, uint32(len(s))|dscClassS<<24|dscDTypeT<<16); err != nil {
-		return 0, err
-	}
-
-	if err := mem.StoreLongword(cpu, desc+4, text); err != nil {
-		return 0, err
-	}
-
-	cpu.SetGPR(registers.SP, desc)
-
-	return desc, nil
+	return env.StackString(s)
 }

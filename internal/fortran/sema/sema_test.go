@@ -529,7 +529,7 @@ func TestErrors(t *testing.T) {
 		{"a statement function given a long constant", []string{"INTEGER*2 N", "F(N) = N", "Y = F(70000)", "END"}, "STMTFUNCARG@3:13"},
 		{"a statement function given a word constant", []string{"INTEGER*2 N", "F(N) = N", "Y = F(7)", "END"}, ""},
 		{"a statement function given another CHARACTER length", []string{"CHARACTER*3 S", "CHARACTER*9 T", "L(S) = 1", "Y = L(T)", "END"}, ""},
-		{"a statement function given no argument", []string{"F(X, Y) = X + Y", "Z = F(1.0, )", "END"}, "SYNTAX@2:18"},
+		{"a statement function given no argument", []string{"F(X, Y) = X + Y", "Z = F(1.0, )", "END"}, "NULLSTMTARG@2:11"},
 		{"a statement function given a label", []string{"F(X) = X", "Z = F(*10)", "10 END"}, "SYNTAX@2:13"},
 		{"a statement function given an array", []string{"DIMENSION A(3)", "F(X) = X", "Z = F(A)", "END"}, "NEEDSUBSCRIPT@3:13"},
 		{"a statement function passed", []string{"F(X) = X", "CALL S(F)", "END"}, "BADUSE@2:14"},

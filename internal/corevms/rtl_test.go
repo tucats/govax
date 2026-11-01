@@ -256,14 +256,11 @@ func TestEnvironmentSystemServiceKnownAddressUnregisteredHandler(t *testing.T) {
 	env, _ := fixture()
 	putArgs(t, env, 0x2000, nil)
 
-	// SYS$SPACE is a real p1Vector entry with no registered handler yet.
-	_, handled, err := env.SystemService(0x7FFEE218)
-	if err != nil {
-		t.Fatalf("SystemService: %v", err)
-	}
-
-	if handled {
-		t.Error("SystemService(SYS$SPACE) handled, want unimplemented")
+	// SYS$SPACE is a real p1Vector entry with no registered handler yet: its
+	// call is handled, by signaling (missingservice.go), which the console's
+	// TestMissingService runs. This fixture has no stack to signal on.
+	if _, handled, _ := env.SystemService(0x7FFEE218); !handled {
+		t.Error("SystemService(SYS$SPACE) not handled, want it to signal")
 	}
 }
 

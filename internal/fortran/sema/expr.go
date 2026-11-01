@@ -379,7 +379,7 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
-	subs, ok := a.subscripts(e.Args)
+	subs, ok := a.subscripts(e.Pos, e.Args)
 	if !ok {
 		return a.bad(e.Pos)
 	}

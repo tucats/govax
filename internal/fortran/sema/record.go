@@ -268,7 +268,7 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 	ref.Sym = s
 
 	if args != nil {
-		subs, ok := a.subscripts(args)
+		subs, ok := a.subscripts(pos, args)
 		if !ok {
 			return false
 		}
@@ -307,12 +307,16 @@ func (a *analyzer) fieldSubscripts(f *Field, step *ast.FieldRef, whole bool) ([]
 		return nil, false
 	}
 
-	return a.subscripts(step.Args)
+	return a.subscripts(step.Pos, step.Args)
 }
 
 // subscripts analyzes an element's subscripts, each made INTEGER (a REAL one
 // is truncated, section 2.2.3.2).
-func (a *analyzer) subscripts(args []ast.Expr) ([]Expr, bool) {
+func (a *analyzer) subscripts(pos diag.Position, args []ast.Expr) ([]Expr, bool) {
+	if a.nullSubscript(pos, args) {
+		return nil, false
+	}
+
 	subs := make([]Expr, len(args))
 	ok := true
 

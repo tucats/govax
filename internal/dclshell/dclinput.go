@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -107,6 +108,28 @@ var dclOwnCommands = map[string]bool{
 	"THEN":             true,
 	"WAIT":             true,
 	"WRITE":            true,
+}
+
+// imagesOfTheirOwn are the commands, by the grammar's name for their syntax,
+// that run an image with an image rundown of its own, or leave one running under
+// the debugger, so that its end isn't the command's.
+var imagesOfTheirOwn = map[string]bool{
+	"RUN":   true,
+	"DEBUG": true,
+}
+
+// endUtility does what an image's exit would for a command VMS runs as an image
+// and govax does in Go (MACRO, LINK, TYPE, ...): it deletes the process's
+// user-mode logical names (User's Manual, 11.3.5), so one DEFINE/USER_MODE made
+// for it doesn't outlive it and reach the next image. VMS's run of
+// testdata/for83 saw MACRO's exit end it.
+func (c *Interpreter) endUtility(command string) {
+	if imagesOfTheirOwn[command] || c.Logicals == nil {
+		return
+	}
+
+	// Having none to delete is no failure.
+	_, _ = c.Logicals.Delete(lnm.ProcessTableName, "", lnm.User)
 }
 
 // procedureDeck is a DECK in effect: its end of file indicator, "" for

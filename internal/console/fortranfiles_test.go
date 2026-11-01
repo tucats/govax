@@ -58,7 +58,9 @@ func TestFortranFiles(t *testing.T) {
 	shareFindRun(t, d, "TYPE EXITKEEP.DAT")
 	shareFindRun(t, d, "TYPE FOR012.DAT")
 
-	if out := buf.String(); !strings.Contains(out, "KEPT") || !strings.Contains(out, "IMPLICIT") {
+	// TYPE takes each record's first byte as its carriage control, as VMS's
+	// does: the format had no blank for it.
+	if out := buf.String(); !strings.Contains(out, "EPT\n") || !strings.Contains(out, "MPLICIT\n") {
 		t.Errorf("the files kept hold:\n%s", out)
 	}
 
@@ -118,5 +120,36 @@ func TestFortranOpenSignals(t *testing.T) {
 
 	if out := shareRun(t, d, buf, "SIGNAL"); !strings.Contains(out, "-RMS-E-FNF, file not found") {
 		t.Errorf("RUN SIGNAL printed:\n%s", out)
+	}
+}
+
+// TestTypeFortranCarriageControl: TYPE takes the first byte of each record of a
+// file with FORTRAN carriage control as the control and not as text, as VMS 7.1's
+// does (testdata/for83's part B: "unit 13 still works" shows as "nit 13 still
+// works", and "*" as an empty line).
+func TestTypeFortranCarriageControl(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	fortranBuild(t, d, c, buf, "TYPEFTN", []string{
+		"      PROGRAM TYPEFTN",
+		"      OPEN (9, FILE='TYPEFTN.DAT', STATUS='NEW')",
+		"      WRITE (9, '(A)') 'unit 13 still works'",
+		"      WRITE (9, '(A)') '*'",
+		"      WRITE (9, '(A)') ' a line'",
+		"      WRITE (9, '(A)') '0after a blank'",
+		"      WRITE (9, '(A)') '$open'",
+		"      WRITE (9, '(A)') '+ and more'",
+		"      END",
+	})
+
+	buf.Reset()
+	shareRun(t, d, buf, "TYPEFTN")
+
+	buf.Reset()
+	shareFindRun(t, d, "TYPE TYPEFTN.DAT")
+
+	want := "nit 13 still works\n\na line\n\nafter a blank\nopen and more\n"
+	if got := buf.String(); got != want {
+		t.Errorf("TYPE printed %q, want %q", got, want)
 	}
 }

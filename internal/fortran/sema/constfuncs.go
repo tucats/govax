@@ -80,7 +80,7 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 
 	for i, arg := range e.Args {
 		if arg == nil {
-			return nil, ev.report("INTRINARGS", e.Pos, e.Name, fn.takes, len(e.Args))
+			return nil, ev.report("NULLINTRINARG", e.Pos, e.Name)
 		}
 
 		var argErr *constErr

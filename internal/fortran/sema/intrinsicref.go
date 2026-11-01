@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/fortran/ast"
+	"github.com/tucats/govax/internal/fortran/diag"
 )
 
 // A reference to an intrinsic function (section 6.3), by the table in
@@ -18,7 +19,13 @@ import (
 func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
 	forms := formsNamed(e.Name)
 
-	if !argCountFits(forms, len(e.Args)) || hasNull(e.Args) {
+	if hasNull(e.Args) {
+		a.report("NULLINTRINARG", e.Pos, e.Name)
+
+		return a.bad(e.Pos)
+	}
+
+	if !argCountFits(forms, len(e.Args)) {
 		a.report("INTRINARGS", e.Pos, e.Name, takes(forms), len(e.Args))
 
 		return a.bad(e.Pos)
@@ -64,6 +71,19 @@ func hasNull(args []ast.Expr) bool {
 	}
 
 	return false
+}
+
+// nullSubscript reports, with its message, whether a list of subscripts has one
+// left out, A(1,,2). The parser reads a list the same way whatever the name
+// is, and only a function or subroutine has null arguments.
+func (a *analyzer) nullSubscript(pos diag.Position, args []ast.Expr) bool {
+	if !hasNull(args) {
+		return false
+	}
+
+	a.report("NULLSUBSCRIPT", pos)
+
+	return true
 }
 
 // takes is how many arguments a function takes, as INTRINARGS says it.

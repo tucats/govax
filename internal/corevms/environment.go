@@ -523,12 +523,11 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 
 	fn, ok := env.services.Lookup(entry.Name)
 	if !ok {
-		// Matches call_service's own "Unimplemented native service"
-		// path: a real, known P1-vector address with no Go handler
-		// registered yet is reported the same as an address that
-		// doesn't exist at all — from a calling program's perspective
-		// both mean "this service isn't implemented."
-		return 0, false, nil
+		// A real entry of the vector with no routine behind it
+		// (missingservice.go).
+		r0, err := env.missingService(entry.Name)
+
+		return r0, true, err
 	}
 
 	// A service reached by something other than CALLS/CALLG (the AST exit,

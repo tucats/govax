@@ -3,8 +3,11 @@ package rms
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/ondisk"
+	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -109,6 +112,10 @@ func (s *Session) Type(specText string) (string, error) {
 			return err
 		}
 
+		if f.Header.RecordAttributes.Attributes&ondisk.AttrFortranCC != 0 {
+			return writeFortranRecords(&buf, f)
+		}
+
 		return writeRecords(&buf, f, lfLineEnding)
 	})
 	if err != nil {
@@ -116,4 +123,46 @@ func (s *Session) Type(specText string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// writeFortranRecords writes f's records to w as TYPE shows a file of FORTRAN
+// carriage control (FAB$M_FTN): each record's first byte is its control, as at
+// the terminal (ftncc.go), and not part of the text. A file FORTRAN wrote with
+// no blank to spare loses a letter this way: VMS 7.1's TYPE shows the record
+// "unit 13" as "nit 13" and "*" as an empty line (testdata/for83's part B). A
+// line a "$" record leaves open at the end of the file is ended, for the
+// command's next output (unconfirmed).
+func writeFortranRecords(w io.Writer, f *volume.File) error {
+	r, err := odsrms.NewReader(f)
+	if err != nil {
+		return err
+	}
+
+	open := false
+
+	for {
+		rec, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		var text []byte
+
+		text, open = ftnTerminalText(rec, open)
+		if _, err := w.Write(text); err != nil {
+			return err
+		}
+	}
+
+	if open {
+		_, err := w.Write(lfLineEnding)
+
+		return err
+	}
+
+	return nil
 }

@@ -1,0 +1,23 @@
+T T           4 T
+T T
+T           8V
+T     23 19-OCT-1987 13:30:15.25
+T     11 13:30:15.25
+T
+T
+T
+T           9 THE VALUE
+T
+T     16 DISK has 5 files
+T     15 7 then 000000FF
+--::.
+FROM THE SUBPROCESS
+T
+Name? T     11 Alice Baker
+T
+HANDLER           6 T           1
+T
+          0         100          10           1         111
+       1010         100
+--BA--A-B
+  $STATUS == "%X00000001"

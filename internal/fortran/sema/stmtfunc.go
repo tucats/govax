@@ -139,6 +139,12 @@ func (a *analyzer) stmtFuncRef(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
+	if hasNull(e.Args) {
+		a.report("NULLSTMTARG", e.Pos, e.Name)
+
+		return a.bad(e.Pos)
+	}
+
 	args := make([]Expr, len(e.Args))
 	ok := true
 
