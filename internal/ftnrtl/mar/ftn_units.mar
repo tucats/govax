@@ -176,10 +176,12 @@ FOR$_SPERECLOC	= ^X001881A4
 
 ;
 ; What a unit's blocks start as: FORRTL's choices for a unit with no OPEN
-; (testdata/for81's trials), but for ROP LOC, which FTNRTL has no use for.
+; (testdata/for81's trials, and the RAB a USEROPEN routine is given, #374).
+; ROP LOC lets RMS leave a record it reads in its own buffer, RAB$L_RBF, from
+; which FTN$$UNIT_GET copies it.
 ;
 PROTO_FAB:	$FAB	FAC=<GET,PUT,DEL,UPD,TRN>,FOP=<DFW,NEF>,RAT=FTN,RFM=VAR
-PROTO_RAB:	$RAB	ROP=<TPT,RAH,WBH>
+PROTO_RAB:	$RAB	ROP=<LOC,TPT,RAH,WBH>
 PROTO_NAM:	$NAM	RSS=RSA_SIZE,ESS=RSA_SIZE
 PROTO_XAB:	$XABFHC
 
@@ -305,8 +307,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVAB	UB_XAB(R6),UB_FAB+FAB$L_XAB(R6)
 	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_RSA(R6)
 	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_ESA(R6)
-	MOVAB	UB_KEY(R6),UB_RAB+RAB$L_KBF(R6)	; a direct record's number
-	MOVB	#4,UB_RAB+RAB$B_KSZ(R6)
+	MOVAB	UB_KEY(R6),UB_RAB+RAB$L_KBF(R6)	; a direct record's number (KSZ 0,
+					;  RMS's 4, as VMS's library leaves it)
 	CLRL	UB_ASV(R6)
 	CLRL	UB_MAXREC(R6)
 	CLRL	UB_KIND(R6)
@@ -509,7 +511,8 @@ EXIT_DECLARED:	.LONG	0
 ;
 ; FTN$$UNIT_READY(block)
 ;
-; A unit's file is open: connects the RAB, gives the unit its record buffer,
+; A unit's file is open: connects the RAB (unless a USEROPEN routine has),
+; gives the unit its record buffer,
 ; and if this is the first unit connected declares the exit handler. Only a
 ; file of variable-length records has segments. A unit with no form yet gets a
 ; buffer that holds a segment, should its first statement be unformatted. Returns
@@ -519,6 +522,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVL	4(AP),R2
 	MOVAB	UB_FAB(R2),R3
 	MOVAB	UB_RAB(R2),R4
+	TSTW	RAB$W_ISI(R4)		; connected already, by a USEROPEN routine
+	BNEQ	10$
 	$CONNECT RAB=R4
 	BLBS	R0,10$
 	MOVL	RAB$L_STS(R4),UB_STS(R2)
@@ -822,7 +827,7 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; held, RMS$_RTB and its size, as RMS gives for one longer than the buffer, and
 ; as VMS's run reported for a record of 200.
 ;
-	.ENTRY	FTN$$UNIT_GET,^M<R2,R3,R6>
+	.ENTRY	FTN$$UNIT_GET,^M<R2,R3,R4,R5,R6>
 	MOVL	4(AP),R3
 	MOVAB	UB_RAB(R3),R2		; the RAB
 	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
@@ -831,6 +836,12 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	$GET	RAB=R2
 	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
+	CMPL	RAB$L_RBF(R2),UB_RECP(R3) ; located elsewhere: copied to the buffer
+	BEQL	0$
+	PUSHR	#^M<R1,R2,R3>
+	MOVC3	R1,@RAB$L_RBF(R2),@UB_RECP(R3)
+	POPR	#^M<R1,R2,R3>
+0$:
 	CMPB	UB_ACCESS(R3),#1
 	BNEQ	1$
 	MOVL	R3,R6			; a direct record, of the file's size

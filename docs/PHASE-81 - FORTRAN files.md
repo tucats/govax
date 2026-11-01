@@ -1265,3 +1265,25 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     SPERECLOC's signal carries RMS's RLK; a REWRITE of a record of several segments (each segment an
     `$UPDATE`, so REWRITERR); the keyed READ's arguments, our own. RECORDUNIT, RECORDFORM, KEYEDREC,
     and KEYEDVALUE are compile-time errors, as no VAX FORTRAN compiler is here to ask.
+- **2026-11-01, subtask 11, USEROPEN, CONVERT, and the rest of OPEN.** `USEROPEN=` (`sema`'s
+  `procKeyword`: a procedure declared EXTERNAL, or a dummy procedure; USEROPENNAME) passes the
+  routine's address, code 21 by mechanism 4. FTN_OPEN calls it where it would call `$CREATE` or
+  `$OPEN`, with the FAB, the RAB, and the unit's number (`UB_UNIT`), each by reference; a failure
+  is OPEFAI with the routine's status as RMS's (#376); a RAB left unconnected FTNRTL connects
+  (`FTN$$UNIT_READY` connects only a RAB with no ISI; #377, which VMS's OPEN took); a file it
+  opened STATUS='OLD' is checked as any other. `TestFor81UserOpenOracle` runs a MACRO routine like
+  the probe's UOLOG under FORTRAN programs for #374 to #398 and #406 and matches every line the
+  routine and the program print, but for the XAB chain (VMS's has an XABSUM after the XABFHC) and
+  RMS's status values (a `$CREATE`'s STV is VMS's channel). It found three things, now as VMS's:
+  ROP LOC is set (so `FTN$$UNIT_GET` copies a record RMS located elsewhere, RAB$L_RBF, into the
+  unit's buffer), RAB$B_KSZ is 0 (RMS's 4), and BLOCKSIZE= sets the FAB's BLS and BKS as well as
+  the RAB's MBC (#398). `CONVERT=` (code 27; INQUIRE's 48) takes VMS's texts, NATIVE as 9, and any
+  other is FOR$_NOTIMP when the OPEN is done, by the author's answer; a text that isn't one is
+  KEYVALERR, or KEYCHOICE at compile time. `testdata/fortran/useropen.for` has a USEROPEN routine
+  in FORTRAN (calling `SYS$CREATE` and `SYS$CONNECT`), its unit read and written, a failing one,
+  CONVERT, SHARED, and READONLY. With these every OPEN, CLOSE, and INQUIRE keyword of the 1988
+  LRM is compiled; KEY= is taken for Decision 13's indexed files, which remain NOTIMP.
+  - **Unconfirmed, govax's choices.** That VMS's XABSUM, which FTNRTL doesn't give the routine,
+    isn't one a routine needs; that an OLD file a routine opened is checked against the keywords
+    (VMS's run had only matching ones); the routine's arguments' order and passing are VMS's
+    (#374), its use of the unit's number past the call isn't known.

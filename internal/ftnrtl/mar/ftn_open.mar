@@ -23,6 +23,18 @@
 ; as one (#576). An indexed file is FOR$_NOTIMP, until a later program
 ; (Decision 13).
 ;
+; CONVERT= is taken, and NATIVE (0 or 9, or the text) is all FTNRTL converts
+; to: any other is FOR$_NOTIMP when the OPEN is done (the author's answer to
+; the phase doc's question), and INQUIRE's CONVERT= answers NATIVE for an
+; unformatted unit as VMS's does.
+;
+; USEROPEN= is a routine that opens the file itself (the 1988 LRM's 9.1.28):
+; it is called with the FAB, the RAB, and the unit's number, each by reference,
+; where FTNRTL would call $CREATE or $OPEN, the FAB and RAB as FTNRTL would give
+; RMS (testdata/for81, #374 to #406). It does the $CREATE or $OPEN and the
+; $CONNECT, and a failure it returns in R0 is FOR$_OPEFAI (#376); if it leaves
+; the RAB unconnected, FTNRTL connects it (#377, which VMS's OPEN took).
+;
 	$FABDEF
 	$NAMDEF
 	$RABDEF
@@ -43,6 +55,9 @@ UB_SCRATCH	= 41
 UB_SEGMENTED	= 42
 UB_APPENDED	= 43
 UB_NEXTREC	= 44
+UB_UNIT		= 20
+UB_STS		= 8
+UB_STV		= 12
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_ASV		= 620
@@ -60,6 +75,7 @@ FOR$_INCRECTYP	= ^X00188164
 FOR$_KEYVALERR	= ^X0018816C
 FOR$_INCOPECLO	= ^X00188174
 FOR$_INCFILORG	= ^X0018819C
+FOR$_OPEFAI	= ^X001880F4
 
 ; The keywords' values, kept in a longword per code on the stack, R11 their
 ; base: 0 if the keyword wasn't given, which for a number means the same. After
@@ -85,9 +101,11 @@ OPS_ASSOC	= 17*4
 OPS_BLOCK	= 18*4
 OPS_ORG		= 19*4
 OPS_TYPE	= 20*4
+OPS_USEROPEN	= 21*4
 OPS_KEY		= 23*4
 OPS_BLANK	= 24*4
 OPS_DEFAULT	= 26*4
+OPS_CONVERT	= 27*4
 
 CODE_FILE	= 14
 CODE_ASSOC	= 17
@@ -119,6 +137,7 @@ DISP_KEEP	= 1
 DISP_DELETE	= 2
 DISP_PRINT_DEL	= 5
 DISP_SUBMIT_DEL	= 6
+CONVERT_NATIVE	= 9			; also 0, which is no CONVERT= at all
 
 DSC$K_DTYPE_T	= 14
 
@@ -193,6 +212,24 @@ BLANK_TEXT:	.ASCIC	/ZERO/
 		.BYTE	1
 		.ASCIC	/NULL/
 		.BYTE	2, 0
+CONVERT_TEXT:	.ASCIC	/NATIVE/
+		.BYTE	9
+		.ASCIC	/LITTLE_ENDIAN/
+		.BYTE	1
+		.ASCIC	/BIG_ENDIAN/
+		.BYTE	2
+		.ASCIC	/CRAY/
+		.BYTE	3
+		.ASCIC	/IBM/
+		.BYTE	4
+		.ASCIC	/VAXD/
+		.BYTE	5
+		.ASCIC	/VAXG/
+		.BYTE	6
+		.ASCIC	/FDX/
+		.BYTE	7
+		.ASCIC	/FGX/
+		.BYTE	8, 0
 
 ;
 ; Which codes are choices: each code's texts, as an offset from CHOICES, or
@@ -214,7 +251,9 @@ TEXTS:	.WORD	-1			; 0
 	.WORD	TYPE_TEXT-CHOICES	; 20 RECORDTYPE
 	.WORD	-1, -1, -1		; 21 to 23
 	.WORD	BLANK_TEXT-CHOICES	; 24 BLANK
-	.WORD	-1, -1, -1, -1		; 25 to 28
+	.WORD	-1, -1			; 25, 26
+	.WORD	CONVERT_TEXT-CHOICES	; 27 CONVERT
+	.WORD	-1			; 28
 
 ;
 ; Each RECORDTYPE's record format, from none (which the rules make VARIABLE or
@@ -523,7 +562,14 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	CMPL	OPS_BLOCK(R11),#65024
 	BGTRU	48$
 	CMPL	OPS_EXTEND(R11),#65535
-	BLEQ	SETUP
+	BGTR	48$
+	MOVL	OPS_CONVERT(R11),R0	; only NATIVE, as yet
+	BEQL	SETUP
+	CMPL	R0,#CONVERT_NATIVE
+	BEQL	SETUP
+	CMPL	R0,#CONVERT_NATIVE
+	BGTRU	48$			; past the codes VMS's has: INVARGFOR there
+	BRW	NOT_YET
 48$:	BRW	BAD_VALUE
 
 ;
@@ -649,9 +695,14 @@ SETUP:	PUSHL	R7
 34$:	MOVW	R0,FAB$W_DEQ(R6)
 	MOVL	OPS_MAXREC(R11),FAB$L_MRN(R6)
 	MOVB	OPS_BUFFERS(R11),RAB$B_MBF(R10)
-	ADDL3	#511,OPS_BLOCK(R11),R0	; in bytes, in whole blocks
-	DIVL2	#512,R0
-	MOVB	R0,RAB$B_MBC(R10)
+	ADDL3	#511,OPS_BLOCK(R11),R0	; in bytes, in whole blocks: the RAB's
+	DIVL2	#512,R0			;  and, as VMS's run gave them (#398), the
+	MOVB	R0,RAB$B_MBC(R10)	;  FAB's block and bucket sizes
+	BEQL	341$
+	MOVB	R0,FAB$B_BKS(R6)
+	MULL3	#512,R0,R1
+	MOVW	R1,FAB$W_BLS(R6)
+341$:
 	TSTL	OPS_SHARED(R11)
 	BEQL	35$
 	MOVB	#^X0F,FAB$B_SHR(R6)
@@ -694,14 +745,20 @@ SETUP:	PUSHL	R7
 	TSTL	OPS_READONLY(R11)
 	BNEQ	50$
 	BISL2	#FAB$M_CIF,FAB$L_FOP(R6)
-45$:	$CREATE	FAB=R6
+45$:	TSTL	OPS_USEROPEN(R11)
+	BEQL	46$
+	BRW	USER_OPEN
+46$:	$CREATE	FAB=R6
 	BLBC	R0,60$
 	CMPL	R0,#RMS$_CREATED
-	BEQL	46$
+	BEQL	47$
 	CMPL	OPS_STATUS(R11),#STATUS_UNKNOWN
 	BEQL	EXISTING		; CIF found one
-46$:	BRW	READY
-50$:	$OPEN	FAB=R6
+47$:	BRW	READY
+50$:	TSTL	OPS_USEROPEN(R11)
+	BEQL	51$
+	BRW	USER_OPEN
+51$:	$OPEN	FAB=R6
 	BLBS	R0,EXISTING
 60$:	PUSHL	R0
 	PUSHL	R7
@@ -758,6 +815,25 @@ EXISTING:
 80$:	$CLOSE	FAB=R6			; R2 is why
 	MOVL	R2,R0
 	BRW	FAILED
+
+;
+; USER_OPEN: the program's routine opens the file: its arguments the FAB, the
+; RAB, and the unit's number. A file it opened OLD is checked as any other;
+; one it may have made (any other status) is taken as it is.
+;
+USER_OPEN:
+	PUSHAL	UB_UNIT(R7)
+	PUSHL	R10
+	PUSHL	R6
+	CALLS	#3,@OPS_USEROPEN(R11)
+	BLBS	R0,10$
+	MOVL	R0,UB_STS(R7)		; its status, as RMS's
+	MOVL	FAB$L_STV(R6),UB_STV(R7)
+	MOVL	#FOR$_OPEFAI,R0
+	BRB	FAILED
+10$:	CMPL	OPS_STATUS(R11),#STATUS_OLD
+	BNEQ	READY
+	BRW	EXISTING
 
 READY:	PUSHL	R7
 	CALLS	#1,FTN$$UNIT_READY	; FTN_UNITS

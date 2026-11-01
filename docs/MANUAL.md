@@ -4629,7 +4629,7 @@ output it prints, and programs of several files in its `modules` directory.
   runs formatted, list-directed, namelist, and unformatted sequential input
   and output, to the default units, units 0 to 119, and internal files (which,
   like the default unit `*`, take only formatted I/O: `%FORT-E-UNFUNIT`).
-- **OPEN and CLOSE** (chapter 9) on sequential files on a mounted volume: a host file
+- **OPEN and CLOSE** (chapter 9) on sequential and relative files on a mounted volume: a host file
   is brought in with COPY. A value known at compile time is checked then
   (`%FORT-E-KEYCHOICE`, `%FORT-E-OPENCONFLICT`, `%FORT-E-NEEDRECL`), and one known only
   when the program runs gets the same rules from FTNRTL, as VMS's FOR numbers. A unit
@@ -4639,8 +4639,15 @@ output it prints, and programs of several files in its `modules` directory.
   connection, so with `DEFINE SYS$OUTPUT file`, PRINT and unit 6 make a version of the
   file each, as on VMS; `@procedure/OUTPUT=file` shares one. Image exit closes every
   unit by its disposition. `DISPOSE='PRINT'` and `'SUBMIT'` keep the file, as VMS does
-  with no queue running. So far USEROPEN= draws `%FORT-E-NOTIMPL`, and relative and
-  indexed files are `%FOR-F-NOTIMP`.
+  with no queue running. `USEROPEN=name` (section 9.1.28; the name declared EXTERNAL,
+  else `%FORT-E-USEROPENNAME`) is a function of the program's that opens the file
+  itself: it is given the FAB, the RAB, and the unit's number, each by reference, as
+  FTNRTL would have given them to RMS, calls `SYS$CREATE` or `SYS$OPEN` and
+  `SYS$CONNECT`, and returns RMS's status; a failure is `OPEFAI` (30), and a RAB it
+  leaves unconnected FTNRTL connects. `CONVERT=` (the later manual's, which VMS's
+  library has) takes `'NATIVE'`, which an unformatted unit is anyway; any other
+  conversion (`'VAXG'`, `'BIG_ENDIAN'`, ...) is FOR's `NOTIMP` (2) when the program
+  runs, and a name that isn't one `KEYVALERR` (45). Indexed files are `NOTIMP`.
 - **INQUIRE** (section 9.3), by a unit or by a file, every specifier in the manual. It
   doesn't fail: a unit that can't exist (anything but 0 to 119) has EXIST false, as does a
   file that isn't there, and IOSTAT= is 0. A name that can't be parsed, or has a wildcard,
@@ -4650,7 +4657,8 @@ output it prints, and programs of several files in its `modules` directory.
   and 6 say OPENED false until their first use. Each answer's place may be of any width,
   and asking by both unit and file is `%FORT-E-INQUIREBOTH`, where VMS's library answers for
   the file. A closed file is opened and closed again to look at it, shared, so that a file
-  another program holds without sharing answers only EXIST. CONVERT= is still to come.
+  another program holds without sharing answers only EXIST. CONVERT= is `NATIVE` for an
+  unformatted unit and `UNKNOWN` otherwise.
 - **REWIND, BACKSPACE, and ENDFILE** (sections 9.4 to 9.6) on sequential units. REWIND and
   BACKSPACE of a unit not yet connected do nothing; ENDFILE connects it, and the file's form is
   then its next statement's. BACKSPACE reads the file again from its start, as the manual

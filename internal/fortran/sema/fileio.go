@@ -23,6 +23,7 @@ const (
 	flagKeyword                      // nothing: READONLY
 	keysKeyword                      // KEY's list
 	assocKeyword                     // ASSOCIATEVARIABLE's: an INTEGER variable FTNRTL stores in
+	procKeyword                      // USEROPEN's: a procedure declared EXTERNAL
 	numberAnswer                     // INQUIRE's: an INTEGER place to store in
 	logicalAnswer                    // a LOGICAL place
 	textAnswer                       // a CHARACTER place
@@ -48,6 +49,13 @@ var (
 	orgChoices    = map[string]int{"SEQUENTIAL": 1, "RELATIVE": 2, "INDEXED": 3}
 	typeChoices   = map[string]int{"FIXED": 1, "VARIABLE": 2, "SEGMENTED": 3, "STREAM": 4, "STREAM_CR": 5, "STREAM_LF": 6}
 	blankChoices  = map[string]int{"ZERO": 1, "NULL": 2}
+
+	// convertChoices are CONVERT='s (the 2005 manual's; VMS 7.1's FORRTL has
+	// them, testdata/for81's round 2). NATIVE is 9 here, as FORRTL also takes
+	// it, since FTNRTL reads 0 as no CONVERT= at all; FTNRTL converts nothing,
+	// so any other is FOR$_NOTIMP when the program runs.
+	convertChoices = map[string]int{"NATIVE": 9, "LITTLE_ENDIAN": 1, "BIG_ENDIAN": 2, "CRAY": 3, "IBM": 4,
+		"VAXD": 5, "VAXG": 6, "FDX": 7, "FGX": 8}
 )
 
 // The codes this package needs by name.
@@ -89,9 +97,10 @@ var openKeywords = map[string]fileKeyword{
 	"BLOCKSIZE":         {code: 18, kind: numberKeyword},
 	"ORGANIZATION":      {code: codeOrg, kind: choiceKeyword, choices: orgChoices},
 	"RECORDTYPE":        {code: codeType, kind: choiceKeyword, choices: typeChoices},
-	"USEROPEN":          {code: 21, later: "the USEROPEN= specifier"},
+	"USEROPEN":          {code: 21, kind: procKeyword},
 	"KEY":               {code: codeKey, kind: keysKeyword},
 	"BLANK":             {code: codeBlank, kind: choiceKeyword, choices: blankChoices},
+	"CONVERT":           {code: 27, kind: choiceKeyword, choices: convertChoices},
 }
 
 // closeKeywords are CLOSE's: STATUS is another name for DISPOSE here.
@@ -124,6 +133,7 @@ var inquireKeywords = map[string]fileKeyword{
 	"RECORDTYPE":      {code: 45, kind: textAnswer},
 	"KEYED":           {code: 46, kind: textAnswer},
 	"CARRIAGECONTROL": {code: 47, kind: textAnswer},
+	"CONVERT":         {code: 48, kind: textAnswer},
 }
 
 // codeUnit is the keyword INQUIRE passes its unit by, since by file it has none.
@@ -168,6 +178,7 @@ type FileKey struct {
 	Value  Expr
 	Text   Expr
 	Answer Expr
+	Proc   *Procedure
 	Known  bool
 }
 
@@ -369,6 +380,23 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 		key.Answer = v
 
 		return key, true
+
+	case procKeyword:
+		// USEROPEN's routine, which the 1988 LRM's 9.1.28 says must be
+		// declared EXTERNAL (or a dummy procedure, passed on).
+		if n, isName := spec.Value.(*ast.Name); isName {
+			if p, isProc := a.nameArg(n).(*Procedure); isProc && (p.Routine != "" || p.Dummy != nil) {
+				if s := a.unit.byName[n.Name]; s != nil && s.Class != Intrinsic {
+					key.Proc = p
+
+					return key, true
+				}
+			}
+		}
+
+		a.report("USEROPENNAME", spec.Pos)
+
+		return nil, false
 
 	case flagKeyword, keysKeyword:
 		// KEY='s list is the indexed program's: FTNRTL only needs to know

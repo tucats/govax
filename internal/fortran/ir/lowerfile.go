@@ -57,6 +57,8 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		switch {
 		case k.Answer != nil:
 			args = append(args, l.fileAnswer(k)...)
+		case k.Proc != nil:
+			args = append(args, keyword(k.Code, mechanismValue), l.procedureArg(k.Proc, sema.ByRef))
 		case k.Known:
 			args = append(args, keyword(k.Code, mechanismValue), Arg{Value: LongConst(int32(k.Number))})
 		case k.Value != nil:

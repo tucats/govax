@@ -547,7 +547,10 @@ never had.
   `$UPDATE` while `UB_REWRITE` is set), DELETE and UNLOCK (`ftn_record.mar`), the keyed READ
   (`FTN$READ_KF`/`_KU`, OPEDEFREQ or NOTIMP), each unit's current record (`UB_CURRENT`), SPERECLOC
   (GSMATCH 1,15; `sema`'s `byRecord`, `keySpecs`), held to VMS by
-  `TestFor81RelativeFortranOracle` and `testdata/fortran/relative.for`.
+  `TestFor81RelativeFortranOracle` and `testdata/fortran/relative.for`, and subtask 11 (2026-11-01)
+  USEROPEN= (the routine called with the FAB, RAB, and unit where FTN_OPEN would call RMS) and
+  CONVERT= (NATIVE only), held to VMS by `TestFor81UserOpenOracle` and
+  `testdata/fortran/useropen.for`; ROP LOC as VMS's, `FTN$$UNIT_GET` copying from RAB$L_RBF.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

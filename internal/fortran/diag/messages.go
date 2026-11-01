@@ -732,6 +732,10 @@ var messages = map[string]kind{
 	// (section 9.1.2, appendix A.2).
 	"ASSOCVAR": {Error, "the associated variable %s must be an INTEGER*2 or INTEGER*4 variable, and not a dummy argument"},
 
+	// USEROPENNAME is a USEROPEN= that isn't the name of a procedure
+	// declared EXTERNAL (section 9.1.28).
+	"USEROPENNAME": {Error, "the routine USEROPEN= names must be a procedure declared EXTERNAL"},
+
 	// RECORDUNIT is a REWRITE or a keyed READ of an internal file or the
 	// default unit (*), which have no current record or keys (sections 7.2.3
 	// and 7.4).

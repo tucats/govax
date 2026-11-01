@@ -37,7 +37,7 @@ var (
 	openSpecs  = map[string]specKind{
 		"ACCESS": specValue, "ASSOCIATEVARIABLE": specValue, "BLANK": specValue,
 		"BLOCKSIZE": specValue, "BUFFERCOUNT": specValue, "CARRIAGECONTROL": specValue,
-		"DEFAULTFILE": specValue, "DISP": specValue, "DISPOSE": specValue, "ERR": specLabel,
+		"CONVERT": specValue, "DEFAULTFILE": specValue, "DISP": specValue, "DISPOSE": specValue, "ERR": specLabel,
 		"EXTENDSIZE": specValue, "FILE": specValue, "FORM": specValue, "INITIALSIZE": specValue,
 		"IOSTAT": specValue, "KEY": specKeys, "MAXREC": specValue, "NAME": specValue,
 		"NOSPANBLOCKS": specNone, "ORGANIZATION": specValue, "READONLY": specNone,
@@ -47,7 +47,7 @@ var (
 	closeSpecs   = map[string]specKind{"STATUS": specValue, "DISPOSE": specValue, "DISP": specValue, "ERR": specLabel, "IOSTAT": specValue}
 	inquireSpecs = map[string]specKind{
 		"FILE": specValue, "DEFAULTFILE": specValue, "ACCESS": specValue, "BLANK": specValue,
-		"CARRIAGECONTROL": specValue, "DIRECT": specValue, "ERR": specLabel, "EXIST": specValue,
+		"CARRIAGECONTROL": specValue, "CONVERT": specValue, "DIRECT": specValue, "ERR": specLabel, "EXIST": specValue,
 		"FORM": specValue, "FORMATTED": specValue, "IOSTAT": specValue, "KEYED": specValue,
 		"NAME": specValue, "NAMED": specValue, "NEXTREC": specValue, "NUMBER": specValue,
 		"OPENED": specValue, "ORGANIZATION": specValue, "RECL": specValue,
