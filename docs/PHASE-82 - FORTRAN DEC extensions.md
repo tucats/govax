@@ -799,3 +799,11 @@ further Alpha-era directive; out, unless the author wants it.
   PSECTBLOCK; `PSECT /B/ NOWRT NOSHR` without its comma is one word to the lexer, so
   PSECTATTR, and `PSECT NOWRT` is BADDIRECTIVE, naming PSECTNOWRT, since blanks don't count
   (10.1).
+- **2026-11-01:** The author asked for a probe of the gap subtask 7 left, before subtask 8.
+  `testdata/link82` (README.md): 57 LINKs of MACRO modules, each a section with FORTRAN's
+  attributes for a common block or `$LOCAL` and a variant with one attribute changed, in both
+  orders; three and four modules; PSECT_ATTR= and COLLECT=; clusters. Each has its log, full map,
+  and a RUN that stores to the section. It ran on govax first, on a scratch volume, which found
+  only that an ABS section can hold no data. The manual (5.0, 6.2.1.1 and 6.3) says LINK "checks
+  for conflicting attributes" but not what follows; govax's `findPsect` doesn't check, so the first
+  module's attributes win silently, and only the largest alignment is kept. Waiting for VMS's run.

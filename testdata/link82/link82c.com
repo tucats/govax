@@ -1,0 +1,13 @@
+$ ! LINK82C.COM - one case: P1 its name, P2 LINK's input, P3 what it asks.
+$ ! Written by gen.go.
+$ SET NOON
+$ WRITE SYS$OUTPUT "=== ''P1': ''P3'"
+$ LINK/MAP='P1'/FULL/EXECUTABLE='P1' 'P2'
+$ SHOW SYMBOL $STATUS
+$ IF F$SEARCH("''P1'.EXE") .EQS. "" THEN GOTO NOIMAGE
+$ RUN 'P1'
+$ SHOW SYMBOL $STATUS
+$ EXIT 1
+$NOIMAGE:
+$ WRITE SYS$OUTPUT "NO IMAGE"
+$ EXIT 1
