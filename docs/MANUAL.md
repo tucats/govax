@@ -4880,7 +4880,23 @@ comment to the end of the line, unless it's in a character or Hollerith
 constant. A D in column 1 marks a debugging line, compiled with
 `/D_LINES` and a comment otherwise. A statement may have 19
 continuation lines, or as many as `/CONTINUATIONS=n` says (to 99).
-`CDEC$` lines are compiler directives (Phase 82 compiles them).
+
+`CDEC$` lines are compiler directives (`CDEC$` in columns 1 to 5, a blank or
+tab in column 6, no continuation lines), which may stand anywhere, before a
+unit or among its statements:
+
+| Directive | What it does |
+|---|---|
+| `CDEC$ IDENT 'string'` | The object module's identification. A file is one module, so the file's first IDENT counts, and later ones are ignored. |
+| `CDEC$ PSECT /block/ attr[,attr]...` | Changes a common block's program section (`//` for blank common): `LCL` or `GBL`, `[NO]WRT`, `[NO]SHR`, and `ALIGN=n`, a power of two from 0 (a byte) to 9 (a page). |
+| `CDEC$ TITLE ['string']`, `CDEC$ SUBTITLE ['string']` | Accepted, with no effect until FORTRAN has listings. |
+
+A string is at most 31 printable characters. Every unit of a file that names
+a block must leave it with the same attributes (`%FORT-E-PSECTDIFFER`); a
+store to a `NOWRT` block is an access violation when the program runs. Two
+separately compiled files that disagree about a block get no message from
+FORTRAN or LINK, so keep such a directive in an `INCLUDE` file with the
+block's COMMON statement.
 
 `INCLUDE 'file'` reads a file (type `.FOR` unless given) in the
 statement's place. A file is found relative to the file that includes

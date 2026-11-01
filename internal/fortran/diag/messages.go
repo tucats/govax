@@ -122,6 +122,30 @@ var messages = map[string]kind{
 	// 10.3).
 	"BADDIRECTIVE": {Error, "there is no CDEC$ %s directive; the directives are IDENT, PSECT, TITLE, and SUBTITLE"},
 
+	// DIRSTRING is a string for CDEC$ IDENT, TITLE, or SUBTITLE that is too
+	// long or holds a character that can't be printed (section 10.3).
+	"DIRSTRING": {Error, "the string of a CDEC$ %s directive must be at most %d printable characters"},
+
+	// PSECTATTR is a word CDEC$ PSECT doesn't take (section 10.3.2).
+	"PSECTATTR": {Error, "%s is not an attribute of CDEC$ PSECT, which takes LCL, GBL, [NO]WRT, [NO]SHR, and ALIGN=n"},
+
+	// PSECTVALUE is CDEC$ PSECT's attribute with a value it doesn't take.
+	"PSECTVALUE": {Error, "the CDEC$ PSECT attribute %s takes no value"},
+
+	// PSECTALIGN is CDEC$ PSECT's ALIGN= without a number from 0 to 9.
+	"PSECTALIGN": {Error, "the ALIGN= attribute of CDEC$ PSECT takes one number from 0 to 9"},
+
+	// PSECTCLASH is one unit choosing two ways for one attribute of a
+	// block: LCL with GBL (section 10.3.2), NOWRT with WRT.
+	"PSECTCLASH": {Error, "the CDEC$ PSECT attribute %s can't go with %s for %s"},
+
+	// PSECTBLOCK is CDEC$ PSECT naming a block the unit doesn't declare.
+	"PSECTBLOCK": {Error, "%s is not a common block of this program unit, so CDEC$ PSECT can't change it"},
+
+	// PSECTDIFFER is a block with other attributes than another unit of
+	// the file gives it, which section 10.3.2 forbids.
+	"PSECTDIFFER": {Error, "the attributes of %s here are %s, but at line %d they are %s; every unit must change them alike"},
+
 	// Structure declarations (section 4.15).
 
 	// NOBLOCKEND is a STRUCTURE, UNION, or MAP declaration with no END

@@ -105,6 +105,62 @@ func TestErrors(t *testing.T) {
 		lines []string
 		want  string
 	}{
+		// The general directives (section 10.3).
+		{"directives before, in, and after a unit", []string{"CDEC$ IDENT 'A'", "CDEC$ PSECT /B/ NOWRT", "CDEC$ TITLE 'T'", "COMMON /B/ X", "CDEC$ SUBTITLE",
+			"X2 = X", "CDEC$ TITLE 'AGAIN'", "END", "CDEC$ IDENT 'B'"}, ""},
+		{"a directive inside blocks", []string{"DO 10 I = 1, 2", "CDEC$ TITLE 'T'", "IF (I .EQ. 1) THEN", "CDEC$ SUBTITLE 'S'", "END IF", "10 CONTINUE", "END"}, ""},
+		{"a directive in a structure, a union, and a map", []string{"COMMON /B/ X", "STRUCTURE /S/", "CDEC$ PSECT /B/ NOSHR", "UNION", "CDEC$ TITLE 'T'", "MAP", "CDEC$ SUBTITLE 'U'", "INTEGER I",
+			"END MAP", "END UNION", "END STRUCTURE", "END"}, ""},
+		{"a directive in a structure with an error", []string{"COMMON /B/ X", "STRUCTURE /S/", "INTEGER I", "CDEC$ PSECT /C/ NOSHR", "END STRUCTURE", "END"}, "PSECTBLOCK@4:14"},
+		{"a directive in a block data subprogram", []string{"BLOCK DATA", "COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=0", "END"}, ""},
+		{"a string of 31 characters", []string{"CDEC$ IDENT '" + strings.Repeat("X", 31) + "'", "END"}, ""},
+		{"an empty string", []string{"CDEC$ IDENT ''", "CDEC$ TITLE ''", "END"}, ""},
+		{"an IDENT of 32 characters", []string{"CDEC$ IDENT '" + strings.Repeat("X", 32) + "'", "END"}, "DIRSTRING@1:7"},
+		{"a later IDENT of 32 characters", []string{"CDEC$ IDENT 'A'", "CDEC$ IDENT '" + strings.Repeat("X", 32) + "'", "END"}, "DIRSTRING@2:7"},
+		{"a TITLE of 32 characters", []string{"X = 1", "CDEC$ TITLE '" + strings.Repeat("X", 32) + "'", "END"}, "DIRSTRING@2:7"},
+		{"a SUBTITLE after the last unit, of 32", []string{"END", "CDEC$ SUBTITLE '" + strings.Repeat("X", 32) + "'"}, "DIRSTRING@2:7"},
+		{"an IDENT with a tab", []string{"CDEC$ IDENT 'A\tB'", "END"}, "DIRSTRING@1:7"},
+		{"no IDENT string", []string{"CDEC$ IDENT", "END"}, "SYNTAX@1:12"},
+		{"no such directive", []string{"CDEC$ OPTIMIZE", "END"}, "BADDIRECTIVE@1:7"},
+		{"every PSECT attribute", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ LCL, NOWRT, NOSHR, ALIGN=9", "END"}, ""},
+		{"the defaults' attributes", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ GBL, WRT, SHR, ALIGN=2", "END"}, ""},
+		{"ALIGN from 0 to 9", []string{"COMMON /A/ X /B/ Y", "CDEC$ PSECT /A/ ALIGN=0", "CDEC$ PSECT /B/ ALIGN = 9", "END"}, ""},
+		{"blank common", []string{"COMMON X", "CDEC$ PSECT // ALIGN=3", "CDEC$ PSECT / / NOSHR", "END"}, ""},
+		{"a block named after the directive", []string{"CDEC$ PSECT /B/ NOWRT", "X = 1", "COMMON /B/ Y", "END"}, "LATEDECL@3:7"},
+		{"an attribute repeated alike", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT, NOWRT", "CDEC$ PSECT /B/ NOWRT, ALIGN=3", "CDEC$ PSECT /B/ ALIGN=3", "END"}, ""},
+		{"LCL with GBL", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ LCL, GBL", "END"}, "PSECTCLASH@2:22"},
+		{"NOWRT with WRT", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT", "CDEC$ PSECT /B/ WRT", "END"}, "PSECTCLASH@3:17"},
+		{"NOSHR with SHR", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ SHR, NOSHR", "END"}, "PSECTCLASH@2:22"},
+		{"two alignments", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=2, ALIGN=3", "END"}, "PSECTCLASH@2:26"},
+		{"a choice before the unit, and in it", []string{"CDEC$ PSECT /B/ NOWRT", "COMMON /B/ X", "CDEC$ PSECT /B/ WRT", "END"}, "PSECTCLASH@3:17"},
+		{"no attribute", []string{"COMMON /B/ X", "CDEC$ PSECT /B/", "END"}, "SYNTAX@2:16"},
+		{"no block: blanks don't count, so one word", []string{"COMMON /B/ X", "CDEC$ PSECT NOWRT", "END"}, "BADDIRECTIVE@2:7"},
+		{"nothing after PSECT", []string{"COMMON /B/ X", "CDEC$ PSECT", "END"}, "SYNTAX@2:12"},
+		{"an unknown attribute", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ RD", "END"}, "PSECTATTR@2:17"},
+		{"attributes without a comma", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT NOSHR", "END"}, "PSECTATTR@2:17"},
+		{"a value for NOWRT", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT=1", "END"}, "PSECTVALUE@2:17"},
+		{"ALIGN with no value", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN", "END"}, "PSECTALIGN@2:17"},
+		{"ALIGN of 10", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=10", "END"}, "PSECTALIGN@2:17"},
+		{"ALIGN of a name", []string{"PARAMETER (K = 2)", "COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=K", "END"}, "PSECTALIGN@3:17"},
+		{"ALIGN of a list", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=(1,2)", "END"}, "PSECTALIGN@2:17"},
+		{"a block no COMMON names", []string{"CDEC$ PSECT /B/ NOWRT", "END"}, "PSECTBLOCK@1:14"},
+		{"blank common no COMMON names", []string{"COMMON /B/ X", "CDEC$ PSECT // NOWRT", "END"}, "PSECTBLOCK@2:13"},
+		{"a bad attribute of a block no COMMON names", []string{"CDEC$ PSECT /B/ RD", "END"}, "PSECTBLOCK@1:14 PSECTATTR@1:17"},
+		{"a variable's name, not a block's", []string{"B = 1", "CDEC$ PSECT /B/ NOWRT", "END"}, "PSECTBLOCK@2:14"},
+		{"PSECT after the last unit", []string{"END", "CDEC$ PSECT /B/ NOWRT"}, "PSECTBLOCK@2:14"},
+		{"PSECT in a file with no units", []string{"CDEC$ PSECT /B/ NOWRT"}, "PSECTBLOCK@1:14"},
+		{"PSECT for the last unit, but not the next", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT", "END", "SUBROUTINE Y", "CDEC$ PSECT /B/ NOWRT", "END"}, "PSECTBLOCK@5:14"},
+		{"a block alike in two units", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT, ALIGN=3", "END", "CDEC$ PSECT /B/ ALIGN=3", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ NOWRT", "END"}, ""},
+		{"a default written in one unit only", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ GBL, WRT, SHR, ALIGN=2", "END", "SUBROUTINE Y", "COMMON /B/ Z", "END"}, ""},
+		{"a directive in one unit only", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ NOWRT", "END", "SUBROUTINE Y", "COMMON /B/ Z", "END"}, "PSECTDIFFER@5:15"},
+		{"a directive in the second unit only", []string{"COMMON /B/ X", "END", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ NOSHR", "END"}, "PSECTDIFFER@5:14"},
+		{"alignments that differ", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ ALIGN=3", "END", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ ALIGN=4", "END"}, "PSECTDIFFER@6:14"},
+		{"scopes that differ, in blank common", []string{"COMMON X", "CDEC$ PSECT // LCL", "END", "SUBROUTINE Y", "COMMON Z", "CDEC$ PSECT // GBL", "END"}, "PSECTDIFFER@6:13"},
+		{"three units, each compared with the first", []string{"COMMON /B/ X", "END", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ NOWRT", "END", "SUBROUTINE W", "COMMON /B/ V", "CDEC$ PSECT /B/ NOWRT", "END"},
+			"PSECTDIFFER@5:14 PSECTDIFFER@9:14"},
+		{"no second message after a bad attribute", []string{"COMMON /B/ X", "CDEC$ PSECT /B/ RD", "END", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ NOWRT", "END"}, "PSECTATTR@2:17"},
+		{"no second message after a directive that won't parse", []string{"COMMON /B/ X", "CDEC$ PSECT /B/", "END", "SUBROUTINE Y", "COMMON /B/ Z", "CDEC$ PSECT /B/ NOWRT", "END"}, "SYNTAX@2:16"},
+
 		// VOLATILE (section 4.16, the HP manual's 5.19).
 		{"VOLATILE of names and a block", []string{"COMMON /B/ A, C", "VOLATILE /B/, D, E", "EQUIVALENCE (A, P1), (P1, P4)", "END"}, ""},
 		{"VOLATILE of a dummy", []string{"SUBROUTINE S(A)", "VOLATILE A", "END"}, ""},
@@ -1173,7 +1229,11 @@ func TestErrors(t *testing.T) {
 	for _, c := range cases {
 		lines := make([]string, len(c.lines))
 		for i, l := range c.lines {
-			lines[i] = fixedLine(l)
+			lines[i] = l
+
+			if !strings.HasPrefix(l, "CDEC$") {
+				lines[i] = fixedLine(l)
+			}
 		}
 
 		_, ms := analyzeLines(t, "T.FOR", lines...)

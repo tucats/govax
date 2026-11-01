@@ -38,7 +38,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 	units := unitNames(file, mainName, messages)
 
 	for _, au := range file.Units {
-		unitOpts := prologue(au.Prologue, opts, messages)
+		unitOpts, psects := prologue(prog, au.Prologue, opts, messages)
 
 		if _, bad := au.Header.(*ast.BadStmt); bad {
 			continue
@@ -51,6 +51,8 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 
 		a := &analyzer{
 			messages:       messages,
+			prog:           prog,
+			psects:         psects,
 			units:          units,
 			stmtFuncs:      map[ast.Stmt]*Symbol{},
 			entryOf:        map[*ast.EntryStmt]*Entry{},
@@ -65,8 +67,16 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
 	}
 
-	prologue(file.Trailing, opts, messages)
+	// A PSECT directive after the last unit has no unit to belong to, so no
+	// block it could name.
+	_, psects := prologue(prog, file.Trailing, opts, messages)
+	for _, s := range psects {
+		b := CommonBlock{Name: s.Common}
+		messages.Report("PSECTBLOCK", s.CommonPos, b.String())
+	}
+
 	checkReferences(prog, units, messages)
+	checkPsects(prog, messages)
 	checkCommonInitials(prog, messages)
 
 	return prog
@@ -74,12 +84,20 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 
 // prologue is the options a unit is compiled with: the compilation's, as
 // the OPTIONS statements before it change them, until the unit's end
-// (section 1.4.3). The qualifiers and directives not implemented yet are
+// (section 1.4.3), and the PSECT directives before it, which are that unit's
+// (ours, as OPTIONS statements are). The qualifiers not implemented yet are
 // reported.
-func prologue(list []ast.Stmt, opts Options, messages *diag.List) Options {
+func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List) (Options, []*ast.DirectiveStmt) {
+	var psects []*ast.DirectiveStmt
+
 	for _, s := range list {
 		switch s := s.(type) {
 		case *ast.BadStmt:
+
+		case *ast.DirectiveStmt:
+			if d := prog.directive(s, messages); d != nil {
+				psects = append(psects, d)
+			}
 
 		case *ast.OptionsStmt:
 			for _, q := range s.Qualifiers {
@@ -102,7 +120,7 @@ func prologue(list []ast.Stmt, opts Options, messages *diag.List) Options {
 		}
 	}
 
-	return opts
+	return opts, psects
 }
 
 // unitName is the name of the unit au.
@@ -223,8 +241,13 @@ func unitNames(file *ast.File, mainName string, messages *diag.List) map[string]
 // analyzer is semantic analysis's state for one unit.
 type analyzer struct {
 	messages *diag.List
+	prog     *Program
 	units    map[string]*fileUnit
 	unit     *Unit
+
+	// psects are the PSECT directives before the unit and in it, in order,
+	// applied when every COMMON statement is read (directive.go).
+	psects []*ast.DirectiveStmt
 
 	// defaultInt and defaultLogical are the types INTEGER and LOGICAL with
 	// no length mean in this unit: 4 bytes, or with /NOI4 2.
@@ -341,6 +364,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	// reported again at each use.)
 	a.declarations(body)
 	a.checkEntryTypes()
+	a.psectDirectives()
 	a.layoutCommon()
 	a.equivalences()
 	a.checkArrays()
@@ -517,7 +541,7 @@ var structural = map[string]bool{
 
 // incompleteDeclarations reports whether a unit's body holds a
 // declaration this phase can't read: a specification statement that is
-// not implemented yet (VOLATILE, RECORD, ...), or one the parser
+// not implemented yet (DICTIONARY), or one the parser
 // rejected. Without it, what semantic analysis would say about the unit's
 // names would mostly be wrong (a name in RECORD isn't a variable), so
 // such a unit gets only the messages about its structure, and its statements'

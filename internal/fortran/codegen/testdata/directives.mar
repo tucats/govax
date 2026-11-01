@@ -1,0 +1,99 @@
+	.TITLE	TEST
+
+; Common block /FIXED/, 4 bytes, the most any unit in this file declares
+	.PSECT	FIXED,PIC,OVR,REL,GBL,NOSHR,NOEXE,RD,NOWRT,LONG
+FIXED.$BASE:
+	.BLKB	4
+
+; Common block /PAGED/, 4 bytes, the most any unit in this file declares
+	.PSECT	PAGED,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,PAGE
+PAGED.$BASE:
+	.BLKB	4
+
+; Common block /LOCAL/, 4 bytes, the most any unit in this file declares
+	.PSECT	LOCAL,PIC,OVR,REL,LCL,SHR,NOEXE,RD,WRT,LONG
+LOCAL.$BASE:
+	.BLKB	4
+
+; Common block /PLAIN/, 4 bytes, the most any unit in this file declares
+	.PSECT	PLAIN,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+PLAIN.$BASE:
+	.BLKB	4
+
+; Common block /B0/, 4 bytes, the most any unit in this file declares
+	.PSECT	B0,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,BYTE
+B0.$BASE:
+	.BLKB	4
+
+; Common block /B1/, 4 bytes, the most any unit in this file declares
+	.PSECT	B1,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,WORD
+B1.$BASE:
+	.BLKB	4
+
+; Common block /B3/, 4 bytes, the most any unit in this file declares
+	.PSECT	B3,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,QUAD
+B3.$BASE:
+	.BLKB	4
+
+; Common block /B4/, 4 bytes, the most any unit in this file declares
+	.PSECT	B4,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,4
+B4.$BASE:
+	.BLKB	4
+
+; Blank common, 4 bytes, the most any unit in this file declares
+	.PSECT	$BLANK,PIC,OVR,REL,GBL,NOSHR,NOEXE,RD,WRT,LONG
+$BLANK.$BASE:
+	.BLKB	4
+
+; Storage map for T$MAIN, the main program
+;   A     REAL     FIXED+0   T$MAIN.A
+;   B     REAL     PAGED+0   T$MAIN.B
+;   C     REAL     LOCAL+0   T$MAIN.C
+;   D     REAL     PLAIN+0   T$MAIN.D
+;   E     REAL     B0+0      T$MAIN.E
+;   F     REAL     B1+0      T$MAIN.F
+;   G     REAL     B3+0      T$MAIN.G
+;   H     REAL     B4+0      T$MAIN.H
+;   I     INTEGER  $BLANK+0  T$MAIN.I
+;   X     REAL     $LOCAL+0  T$MAIN.X
+;
+T$MAIN.A = FIXED.$BASE			; A, in /FIXED/
+T$MAIN.B = PAGED.$BASE			; B, in /PAGED/
+T$MAIN.C = LOCAL.$BASE			; C, in /LOCAL/
+T$MAIN.D = PLAIN.$BASE			; D, in /PLAIN/
+T$MAIN.E = B0.$BASE			; E, in /B0/
+T$MAIN.F = B1.$BASE			; F, in /B1/
+T$MAIN.G = B3.$BASE			; G, in /B3/
+T$MAIN.H = B4.$BASE			; H, in /B4/
+T$MAIN.I = $BLANK.$BASE			; I, in blank common
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+T$MAIN.X:
+	.BLKL	1			; X
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+	.ENTRY	T$MAIN,^M<>
+;    1  C     Each attribute CDEC$ PSECT can change, in the block's .PSECT, and a block
+;    2  C     left as it was. TITLE, SUBTITLE, and IDENT make no code at all.
+;    3  CDEC$ IDENT 'V1'
+;    4  CDEC$ TITLE 'T'
+;    5  CDEC$ PSECT /FIXED/ NOWRT, NOSHR
+;    6        COMMON /FIXED/ A /PAGED/ B /LOCAL/ C /PLAIN/ D /B0/ E /B1/ F
+;    7        COMMON /B3/ G /B4/ H
+;    8        COMMON I
+;    9  CDEC$ PSECT /PAGED/ ALIGN=9
+;   10  CDEC$ PSECT /LOCAL/ LCL
+;   11  CDEC$ PSECT /PLAIN/ GBL, WRT, SHR, ALIGN=2
+;   12  CDEC$ PSECT /B0/ ALIGN=0
+;   13  CDEC$ PSECT /B1/ ALIGN=1
+;   14  CDEC$ PSECT /B3/ ALIGN=3
+;   15  CDEC$ PSECT /B4/ ALIGN=4
+;   16  CDEC$ PSECT // NOSHR
+;   17        X = A
+	MOVF	T$MAIN.A,T$MAIN.X
+;   18  CDEC$ SUBTITLE 'S'
+;   19        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	T$MAIN

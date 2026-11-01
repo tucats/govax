@@ -298,7 +298,7 @@ func (b *structBuilder) body(list []ast.Stmt) {
 			}
 
 		case *ast.DirectiveStmt:
-			b.a.notImplForm(s.Position(), "a CDEC$ directive in a structure declaration")
+			b.a.directive(s)
 		}
 	}
 }
@@ -397,6 +397,10 @@ func (b *structBuilder) unionStatement(s *ast.UnionStmt) {
 	outer, outerMap := b.union, b.mapNumber
 
 	for _, m := range s.Body {
+		if d, ok := m.(*ast.DirectiveStmt); ok {
+			b.a.directive(d)
+		}
+
 		m, ok := m.(*ast.MapStmt)
 		if !ok {
 			continue

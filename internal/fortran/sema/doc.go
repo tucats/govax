@@ -162,15 +162,13 @@
 //
 // The parser builds a node for every statement and form of VAX FORTRAN,
 // and this pass is where one it can't compile yet is reported, as it
-// reaches it (notimpl.go): a statement it doesn't handle (a CDEC$ directive,
-// DICTIONARY) is "a CDEC$ directive is not implemented yet" at the
-// statement, keeping its place in the blocks and its label; a form
+// reaches it (notimpl.go): a statement it doesn't handle (DICTIONARY) is
+// "the DICTIONARY statement is not implemented yet" at the statement, keeping its place in the blocks and its label; a form
 // inside a statement it does handle (an expression's form, by formWhat) is
 // reported where it is analyzed. Each
 // later phase moves statements and forms from one side to the other.
 //
-// Some declarations can't be read yet at all: DICTIONARY is NOTIMPL, and the
-// directives until later phases.
+// Some declarations can't be read yet at all: DICTIONARY is NOTIMPL.
 // Without them, most of what this pass would say about a unit's names
 // would be wrong (a name a dictionary's record declares would be "not a
 // record" at every use), so a unit with one gets only the messages about its

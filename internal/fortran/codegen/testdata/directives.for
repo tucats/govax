@@ -1,0 +1,19 @@
+C     Each attribute CDEC$ PSECT can change, in the block's .PSECT, and a block
+C     left as it was. TITLE, SUBTITLE, and IDENT make no code at all.
+CDEC$ IDENT 'V1'
+CDEC$ TITLE 'T'
+CDEC$ PSECT /FIXED/ NOWRT, NOSHR
+      COMMON /FIXED/ A /PAGED/ B /LOCAL/ C /PLAIN/ D /B0/ E /B1/ F
+      COMMON /B3/ G /B4/ H
+      COMMON I
+CDEC$ PSECT /PAGED/ ALIGN=9
+CDEC$ PSECT /LOCAL/ LCL
+CDEC$ PSECT /PLAIN/ GBL, WRT, SHR, ALIGN=2
+CDEC$ PSECT /B0/ ALIGN=0
+CDEC$ PSECT /B1/ ALIGN=1
+CDEC$ PSECT /B3/ ALIGN=3
+CDEC$ PSECT /B4/ ALIGN=4
+CDEC$ PSECT // NOSHR
+      X = A
+CDEC$ SUBTITLE 'S'
+      END

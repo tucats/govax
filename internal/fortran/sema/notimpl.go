@@ -2,7 +2,6 @@ package sema
 
 import (
 	"github.com/tucats/govax/internal/fortran/ast"
-	"github.com/tucats/govax/internal/fortran/lex"
 )
 
 // What semantic analysis can compile so far, and what it says about the
@@ -22,7 +21,7 @@ func handled(s ast.Stmt) bool {
 		*ast.AssignLabelStmt, *ast.AssignedGotoStmt, *ast.ArithIfStmt,
 		*ast.IfStmt, *ast.IfThenStmt, *ast.ElseIfStmt, *ast.ElseStmt, *ast.EndIfStmt,
 		*ast.DoStmt, *ast.DoWhileStmt, *ast.EndDoStmt, *ast.ContinueStmt, *ast.StopStmt, *ast.ReturnStmt, *ast.EndStmt,
-		*ast.EntryStmt, *ast.StructureStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.BadStmt:
+		*ast.EntryStmt, *ast.StructureStmt, *ast.RecordStmt, *ast.FormatStmt, *ast.NamelistStmt, *ast.PrintStmt, *ast.CodeStmt, *ast.DefineFileStmt, *ast.AttrStmt, *ast.DirectiveStmt, *ast.BadStmt:
 		return true
 
 	case *ast.TransferStmt:
@@ -36,14 +35,9 @@ func handled(s ast.Stmt) bool {
 }
 
 // statementWhat names the statement s as a NOTIMPL message does: "the
-// READ statement", "a CDEC$ directive".
+// DICTIONARY statement".
 func statementWhat(s ast.Stmt) string {
-	switch k := s.Base().Kind; {
-	case k == lex.Directive:
-		return "a CDEC$ directive"
-	default:
-		return "the " + k.String() + " statement"
-	}
+	return "the " + s.Base().Kind.String() + " statement"
 }
 
 // unimplemented reports a statement semantic analysis doesn't compile

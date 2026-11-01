@@ -9,6 +9,11 @@ import (
 // Program is a source file's program units after semantic analysis.
 type Program struct {
 	Units []*Unit
+
+	// Ident is the string of the file's first CDEC$ IDENT directive, if
+	// HasIdent says it has one (directive.go).
+	Ident    string
+	HasIdent bool
 }
 
 // Unit is one program unit: its symbol table, its storage, and its

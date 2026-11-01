@@ -63,6 +63,9 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.RecordStmt:
 			a.recordStatement(s)
+
+		case *ast.DirectiveStmt:
+			a.directive(s)
 		}
 	}
 }

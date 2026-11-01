@@ -26,9 +26,45 @@ const (
 // commonAttributes are a common block's program section's attributes
 // (Table 10-1 of the Language Reference Manual, Decision 10): overlaid, so
 // that LINK starts every module's contribution at the same place and makes
-// the section as long as the longest; global, so that it is one section
-// across clusters.
-const commonAttributes = ",PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG"
+// the section as long as the longest; and unless CDEC$ PSECT says otherwise,
+// global, so that it is one section across clusters, shared, writable, and on
+// a longword.
+func commonAttributes(attrs sema.PsectAttrs) string {
+	scope, share, write := "GBL", "SHR", "WRT"
+
+	if attrs.Local {
+		scope = "LCL"
+	}
+
+	if attrs.NoShare {
+		share = "NOSHR"
+	}
+
+	if attrs.NoWrite {
+		write = "NOWRT"
+	}
+
+	return ",PIC,OVR,REL," + scope + "," + share + ",NOEXE,RD," + write + "," + alignmentName(attrs.Align)
+}
+
+// alignmentName is the alignment, a power of two, as .PSECT takes it: a keyword
+// if MACRO has one, or the number.
+func alignmentName(align int) string {
+	switch align {
+	case 0:
+		return "BYTE"
+	case 1:
+		return "WORD"
+	case 2:
+		return "LONG"
+	case 3:
+		return "QUAD"
+	case 9:
+		return "PAGE"
+	}
+
+	return strconv.Itoa(align)
+}
 
 // The flags of a class A descriptor (the OpenVMS Calling Standard's
 // DSC$B_AFLAGS): FORTRAN's arrays are stored by columns, and the
@@ -176,7 +212,7 @@ func writeCommons(w *Writer, routines []*ir.Routine, names *namer) {
 		}
 
 		w.Comment(fmt.Sprintf("%s, %d bytes, the most any unit in this file declares", what, sizes[b.Psect]))
-		w.Statement("", ".PSECT", b.Psect+commonAttributes, "")
+		w.Statement("", ".PSECT", b.Psect+commonAttributes(b.Attrs), "")
 
 		if list := initials[b.Psect]; len(list) > 0 {
 			sort.SliceStable(list, func(i, j int) bool { return list[i].Offset < list[j].Offset })

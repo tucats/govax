@@ -1,0 +1,14 @@
+== main program DIRS
+  DIRS                    program unit
+  A         REAL          variable         FIRST+0
+  B         REAL          variable         SECOND+0
+  C         REAL          variable         THIRD+0
+  D         REAL          variable         $BLANK+0
+  X         REAL          variable         $LOCAL+0
+  $LOCAL is 4 bytes
+  /FIRST/ is 4 bytes, NOWRT, NOSHR
+  /SECOND/ is 4 bytes, LCL, ALIGN=9
+  /THIRD/ is 4 bytes
+  blank common is 4 bytes, ALIGN=0
+10          X = A
+12          END

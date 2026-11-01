@@ -67,7 +67,13 @@ func Dump(p *Program) string {
 		fmt.Fprintf(&b, "  $LOCAL is %d bytes\n", u.LocalSize)
 
 		for _, c := range u.Commons {
-			fmt.Fprintf(&b, "  %s is %d bytes\n", c, c.Size)
+			fmt.Fprintf(&b, "  %s is %d bytes", c, c.Size)
+
+			if c.Attrs != (PsectAttrs{Align: DefaultAlign}) {
+				fmt.Fprintf(&b, ", %s", c.Attrs)
+			}
+
+			b.WriteString("\n")
 		}
 
 		for _, in := range u.Initials {

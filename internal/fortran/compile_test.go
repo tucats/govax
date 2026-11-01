@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/fortran/source"
 )
 
@@ -234,6 +235,69 @@ func TestCompileParseErrors(t *testing.T) {
 
 	if r.MACRO != nil || r.Errors != 4 || strings.Join(got, " ") != "SYNTAX NOEND NOTIMPL UNDEFLBL" {
 		t.Errorf("result: %d errors, %v", r.Errors, r.Messages)
+	}
+}
+
+// TestIdent checks that CDEC$ IDENT reaches the object module: the file's first
+// directive's string, whichever unit it is in, and whatever characters it holds,
+// through the .IDENT MACRO reads back.
+func TestIdent(t *testing.T) {
+	allPunctuation := "!\"#$%&''()*+,-./:;<=>?@[\\]^_`{|}~"
+
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"none", []string{"      END"}, "01"},
+		{"before the unit", []string{"CDEC$ IDENT 'V1.2'", "      END"}, "V1.2"},
+		{"in the unit", []string{"      X = 1", "CDEC$ IDENT 'V1.2'", "      END"}, "V1.2"},
+		{"in a structure", []string{"      STRUCTURE /S/", "      INTEGER I", "CDEC$ IDENT 'V1.2'", "      END STRUCTURE", "      END"}, "V1.2"},
+		{"after the unit", []string{"      END", "CDEC$ IDENT 'V1.2'"}, "V1.2"},
+		{"in no unit", []string{"CDEC$ IDENT 'V1.2'"}, "V1.2"},
+		{"the first of a unit", []string{"CDEC$ IDENT 'A'", "      X = 1", "CDEC$ IDENT 'B'", "      END"}, "A"},
+		{"the first of the file", []string{"      END", "CDEC$ IDENT 'A'", "      SUBROUTINE Y", "CDEC$ IDENT 'B'", "      END"}, "A"},
+		{"case and blanks kept", []string{"CDEC$   IDENT 'a  B' ! a comment", "      END"}, "a  B"},
+		{"an empty first string", []string{"CDEC$ IDENT ''", "CDEC$ IDENT 'B'", "      END"}, "01"},
+		{"31 characters", []string{"CDEC$ IDENT '" + strings.Repeat("X", 31) + "'", "      END"}, strings.Repeat("X", 31)},
+		{"every punctuation mark", []string{"CDEC$ IDENT '" + allPunctuation[:31] + "'", "      END"}, strings.ReplaceAll(allPunctuation[:31], "''", "'")},
+		{"the rest of them", []string{"CDEC$ IDENT '" + allPunctuation[31:] + "'", "      END"}, allPunctuation[31:]},
+	}
+
+	// And each character alone, which may be the delimiter MACRO would be given.
+	for c := byte(' '); c <= '~'; c++ {
+		text := string(c)
+		if c == '\'' {
+			text = "''"
+		}
+
+		cases = append(cases, struct {
+			name  string
+			lines []string
+			want  string
+		}{"the character " + string(c), []string{"CDEC$ IDENT '" + text + "'", "      END"}, string(c)})
+	}
+
+	for _, c := range cases {
+		r := Compile(testOptions, File{Spec: "I.FOR", Name: "I", Lines: c.lines})
+		if r.MACRO == nil {
+			t.Errorf("%s: %v", c.name, r.Messages)
+
+			continue
+		}
+
+		a := asm.New(false)
+		a.SetDialect(asm.DialectMACRO)
+
+		if _, err := a.Assemble(strings.Join(r.MACRO, "\n") + "\n"); err != nil {
+			t.Errorf("%s: %s doesn't assemble: %v", c.name, r.MACRO[1], err)
+
+			continue
+		}
+
+		if got := a.Ident(); got != c.want {
+			t.Errorf("%s: %s made the ident %q, want %q", c.name, r.MACRO[1], got, c.want)
+		}
 	}
 }
 

@@ -95,6 +95,7 @@ func Compile(opts Options, file File) Result {
 	var (
 		messages diag.List
 		routines []*ir.Routine
+		ident    string
 	)
 
 	// The first pass: the source's lines into statements.
@@ -116,6 +117,7 @@ func Compile(opts Options, file File) Result {
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)
+			ident = prog.Ident
 		}
 	}
 
@@ -138,7 +140,7 @@ func Compile(opts Options, file File) Result {
 
 	var w codegen.Writer
 
-	writeHeader(&w, opts, file, module)
+	writeHeader(&w, opts, file, module, ident)
 	codegen.Generate(&w, routines, program.Lines)
 	result.MACRO = w.Lines()
 
@@ -147,9 +149,10 @@ func Compile(opts Options, file File) Result {
 
 // writeHeader writes the MACRO file's opening: the module's .TITLE and
 // .IDENT, then comments saying what made the file, from what, and when.
-func writeHeader(w *codegen.Writer, opts Options, file File, module string) {
+// ident is the file's CDEC$ IDENT string, "" with none.
+func writeHeader(w *codegen.Writer, opts Options, file File, module, ident string) {
 	w.Statement("", ".TITLE", module, "")
-	w.Statement("", ".IDENT", "/01/", "")
+	w.Statement("", ".IDENT", identOperand(ident), "")
 	w.Comment("")
 	w.Comment("Compiled by govax FORTRAN V" + opts.Version + " on " + vmsTime(opts.Compiled))
 	w.Comment("from " + file.Spec)
@@ -163,6 +166,26 @@ func writeHeader(w *codegen.Writer, opts Options, file File, module string) {
 	w.Comment("the instructions it became; a line from an INCLUDE file has its include depth")
 	w.Comment("before the number. Each routine's storage map says where its variables are.")
 	w.Comment("")
+}
+
+// identOperand is .IDENT's operand for ident: the string between delimiters it
+// doesn't hold, which MACRO lets be any printing character but <, ;, and =. It
+// holds at most 31 characters, so one is always free. MACRO's ident can't be
+// empty, so a file with none, or with CDEC$ IDENT '', has 01 (ours, unconfirmed).
+func identOperand(ident string) string {
+	if ident == "" {
+		ident = "01"
+	}
+
+	for c := byte('/'); ; c++ {
+		if c > '~' {
+			c = '!'
+		}
+
+		if c != '<' && c != ';' && c != '=' && strings.IndexByte(ident, c) < 0 {
+			return string(c) + ident + string(c)
+		}
+	}
 }
 
 // ModuleName is the MACRO module name for a source file named name: the

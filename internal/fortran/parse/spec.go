@@ -388,7 +388,7 @@ func parseDirective(p *parser) ast.Stmt {
 		}
 
 	case "PSECT":
-		s.Common, _ = p.slashName("a common block's name", true)
+		s.Common, s.CommonPos = p.slashName("a common block's name", true)
 
 		for {
 			s.Attrs = append(s.Attrs, p.qualifier("an attribute"))

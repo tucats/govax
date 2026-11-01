@@ -4,8 +4,9 @@
 2026-11-01 and reviewed by the author the same day ("The author's
 answers"); subtask 2, structure declarations, subtask 3, RECORD and
 field references, subtask 4, aggregates, subtask 5, typeless,
-Hollerith, and RADIX-50 constants, and subtask 6, VOLATILE, AUTOMATIC,
-and STATIC, done 2026-11-01. Needs Phase 79 (subprograms).
+Hollerith, and RADIX-50 constants, subtask 6, VOLATILE, AUTOMATIC,
+and STATIC, and subtask 7, the CDEC$ directives, done 2026-11-01. Needs
+Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -557,7 +558,7 @@ further Alpha-era directive; out, unless the author wants it.
    constants in numeric contexts.
 6. **VOLATILE, AUTOMATIC, and STATIC** (done 2026-11-01; the HP manual's, answer 1): the
    frame area, FP-relative cells, ENTRY's reservations, descriptors.
-7. **The CDEC$ directives:** IDENT, PSECT (with the cross-unit check),
+7. **The CDEC$ directives** (done 2026-11-01): IDENT, PSECT (with the cross-unit check),
    TITLE and SUBTITLE accepted.
 8. **`/ALIGN`:** the command's qualifier (`console.dcl`,
    `dclcmd/fortran.go`, `govax fortran`), CDEC$ OPTIONS and END OPTIONS
@@ -763,3 +764,38 @@ further Alpha-era directive; out, unless the author wants it.
   subprogram, nor is VOLATILE, by 4.1's list; a repeated name in VOLATILE is harmless; a
   variable given to ASSOCIATEVARIABLE= is the program's to keep alive, as a dummy is,
   so an AUTOMATIC one dangles after its routine returns.
+- **2026-11-01:** Subtask 7, the CDEC$ directives (`sema/directive.go`). A directive is now
+  `handled`, read in the declarations walk where it stands, or by `prologue` before a unit,
+  so one may be anywhere: inside IF blocks and DO loops, and in a structure, a union, or a
+  map, which were NOTIMPL. **IDENT:** `Program.Ident`, the file's first; `compile.go`'s
+  `identOperand` writes `.IDENT` with the first delimiter the string doesn't hold.
+  `TestIdent` reads it back through `internal/asm` for every printable character.
+  **PSECT:** `CommonBlock.Attrs`, a `PsectAttrs` (Local, NoWrite, NoShare, Align), applied
+  by `psectDirectives` once the unit's COMMON statements are read, so a directive may come
+  before its block's; `codegen`'s `commonAttributes` writes them, in the order Table 10-1's
+  defaults always had, so nothing else's MACRO changed. `checkPsects` compares each block's
+  result across the file's units: PSECTDIFFER. **TITLE and SUBTITLE:** their strings are
+  checked and the syntax tree keeps them, in place, for Phase 85. **Run:**
+  `testdata/fortran/directives.for`, in both paging modes: blocks of one byte between
+  aligned ones land where each ALIGN= says, and a like program without directives put
+  them on longwords (checked once by hand, 2026-11-01); a store to a NOWRT block is an
+  ACCVIO at the address the program prints first. `modules/psects`: the attributes across
+  two files, linked in both orders, the LCL block one section since an image here has one
+  cluster. New messages: DIRSTRING, PSECTATTR, PSECTVALUE, PSECTALIGN, PSECTCLASH, PSECTBLOCK,
+  PSECTDIFFER. Tests: about 50 `TestErrors` cases, `TestIdent`, the goldens
+  `directives.for` in `sema` and `codegen`. **A gap this leaves:** two separately compiled
+  files that disagree about a block's attributes get no message: `checkPsects` sees one
+  file, and govax's LINK says nothing (of a page-aligned NOWRT block and a default one, in
+  either order, it placed the block on a page). What real LINK says wasn't probed, this phase
+  having no VMS probe (the survey); so LINK is left as it is. Choices of ours, unconfirmed:
+  `ALIGN=` takes a number as written, not a PARAMETER's name, since a directive before a
+  unit has no names to look in (the manual says "a constant"); choosing an attribute two ways
+  for one block in a unit is PSECTCLASH for all of them, where the manual forbids only LCL
+  with GBL; a repeated choice alike is harmless; `CDEC$ IDENT ''` counts as the file's first
+  and leaves the ident 01, as MACRO's can't be empty; a block's attributes are compared by
+  their result, so GBL in one unit agrees with no directive in another; TITLE's and SUBTITLE's
+  strings are checked even though nothing uses them yet; a string's 31 characters are ASCII
+  32 to 126; a PSECT directive after a file's last unit, or in a file with no units, is
+  PSECTBLOCK; `PSECT /B/ NOWRT NOSHR` without its comma is one word to the lexer, so
+  PSECTATTR, and `PSECT NOWRT` is BADDIRECTIVE, naming PSECTNOWRT, since blanks don't count
+  (10.1).

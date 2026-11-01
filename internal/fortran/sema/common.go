@@ -42,6 +42,13 @@ type CommonBlock struct {
 
 	// NamePos is where the unit first names the block.
 	NamePos diag.Position
+
+	// Attrs are the attributes of its program section, as this unit's CDEC$
+	// PSECT directives leave them (directive.go). psectPos is where the first
+	// of them names the block, and psectBad is set if one had an error.
+	Attrs    PsectAttrs
+	psectPos diag.Position
+	psectBad bool
 }
 
 // String is the block as messages and the storage map say it: /BLK1/, or
@@ -63,7 +70,7 @@ func (a *analyzer) commonBlock(name string, block *ast.CommonBlock) *CommonBlock
 		}
 	}
 
-	b := &CommonBlock{Name: name, Psect: name, NamePos: block.Pos}
+	b := &CommonBlock{Name: name, Psect: name, NamePos: block.Pos, Attrs: PsectAttrs{Align: DefaultAlign}}
 	if name == "" {
 		b.Psect = blankPsect
 	}

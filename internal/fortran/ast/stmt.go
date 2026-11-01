@@ -271,6 +271,9 @@ type (
 		HasText bool
 		Common  string
 		Attrs   []*Qualifier
+
+		// CommonPos is where a PSECT directive names its block.
+		CommonPos diag.Position
 	}
 
 	// FormatStmt is FORMAT (spec) (chapter 8). Text is the specification
