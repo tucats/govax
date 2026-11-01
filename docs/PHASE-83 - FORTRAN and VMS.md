@@ -1,7 +1,7 @@
 # Phase 83 — FORTRAN and VMS: definitions, services, handlers, ASTs
 
-**Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, waiting for
-the author's answers to its questions. Needs Phase 81 (files) and Phase 82 (structures). Part
+**Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
+by the author the same day ("The author's answers"). Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -272,10 +272,25 @@ There is no VAX FORTRAN (Phase 74's answer 5), but VMS 7.1 has FORRTL, STR$, and
 5. **The probe.** It needs a round on your simh VAX, as Phases 80 and 81 did. All right to plan on
    that, once subtask 2 has `gen.go` ready?
 
+## The author's answers (2026-11-01)
+
+All five as recommended:
+
+1. **A plain INCLUDE leaves its lines out of the `.MAR`,** for files and modules alike, the LRM's
+   `/NOLIST` default; `/LIST` brings them back, and a comment always names the file.
+2. **STR$:** the 26 string routines, a subtask with a probe (`testdata/str83`); the 5 arithmetic ones
+   stay NOTIMPL.
+3. **Structures:** `$CHFDEF`'s three only; `$FABDEF`, `$RABDEF`, `$NAMDEF`, and `$XABDEF` are constants.
+4. **Phase 61:** SIG_TO_STOP, FIXUP_FLT, INT_OVER, DEC_OVER, FLT_UNDER, and the review of SIGNAL, STOP,
+   ESTABLISH, REVERT, SIG_TO_RET, and MATCH_COND move here; Phase 61 keeps DECODE_FAULT, SIM_TRAP,
+   FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE.
+5. **The probe** gets a round on the author's simh VAX.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (done 2026-11-01): Part A.
-2. **The probe:** `testdata/for83`, its VMS round, and what it settles.
+2. **The probe** (written 2026-11-01; its VMS round is the author's): `testdata/for83`, `testdata/str83`,
+   and what they settle.
 3. **Text libraries and INCLUDE:** LIBRARY/TEXT held to the probe's part C, `INCLUDE '(module)'` and
    `'lib(module)'`, `+` and `/LIBRARY`, `FORT$LIBRARY`, and `/[NO]LIST` on INCLUDE governing the `.MAR`.
 4. **govax's definition modules** from `vmsdef`, `$SYSSRVNAM`, `$CHFDEF`'s structures, no `.EXTRN` for an
@@ -299,3 +314,16 @@ There is no VAX FORTRAN (Phase 74's answer 5), but VMS 7.1 has FORRTL, STR$, and
   references, STR$UPCASE's wrong form, the reserved operand fault for a missing service, and the lines an
   INCLUDE adds to the `.MAR` (the author's suggestion, Decision 4). 38 prototype modules compile.
   Nothing else changed; five questions wait for the author.
+- **2026-11-01:** The author's answers: all five as recommended. Phase 61's doc notes what moved here.
+- **2026-11-01:** Subtask 2, the probe, written: `testdata/for83` (part A, 79 cases of FORRTL's system
+  subroutines; part B, 64 runs of conditions on FORRTL; part C, 109 runs of LIBRTL's condition routines;
+  part D, LIBRARY/TEXT; `lnk83.mar`, `def_opc.mar`) and `testdata/str83` (255 cases), one volume and one
+  procedure. `FOR83.COM` runs whole on govax with VMS's FORRTL.EXE from `xfer.dsk` (LIBRARY/TEXT and
+  `$OPCDEF` failing there, which is what they're for), every case reaching its end, and the handler stopping
+  FLT_UNDER's repeating trap. That run only proves the programs; nothing is settled until VMS's run. Two things
+  seen on the way, to compare with it: FORRTL ends the image with LIB$_ATTCONSTO if a handler continues from
+  FILNOTFOU or ENDDURREA but not from INPCONERR, so FTNRTL's choice can't be one rule; and govax's LIB$SIGNAL
+  with no arguments prints `%rtl:` and ends the image.
+  A third: `DEFINE/USER_MODE` outlives govax's MACRO and LINK, which aren't images, so the first RUN after
+  them writes to the file named (case 1 of parts B and C goes to its `.MLG` on govax); on VMS MACRO's exit
+  ends it. To fix with the oracle tests, which need that case.

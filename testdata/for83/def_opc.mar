@@ -1,0 +1,4 @@
+	.TITLE	DEF_OPC	$OPCDEF's values, in the object's global symbols
+; Written by testdata/for83/gen.go.
+	$OPCDEF	GLOBAL
+	.END

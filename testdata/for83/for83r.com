@@ -1,0 +1,28 @@
+$ ! FOR83R.COM - runs a program's cases, one per image. P1 is the program, P2 how
+$ ! many. Written by testdata/for83/gen.go.
+$ SET NOON
+$ SET NOVERIFY
+$ DIR = F$ENVIRONMENT("DEFAULT")
+$ PROG :== $'DIR''P1'
+$ N = 1
+$ LAST = F$INTEGER(P2)
+$NEXT:
+$ PROG 'N'
+$ SHOW SYMBOL $STATUS
+$ GOSUB FILES
+$ N = N + 1
+$ IF N .LE. LAST THEN GOTO NEXT
+$ DELETE/SYMBOL/GLOBAL PROG
+$ EXIT 1
+$FILES:
+$ NAMES = "FOR83W.DAT,FOR012.DAT,FOR013.DAT,FOR014.DAT,FOR015.DAT"
+$ I = 0
+$FILE:
+$ NAME = F$ELEMENT(I,",",NAMES)
+$ IF NAME .EQS. "," THEN RETURN
+$ I = I + 1
+$ IF F$SEARCH(NAME) .EQS. "" THEN GOTO FILE
+$ WRITE SYS$OUTPUT " file ",NAME,":"
+$ TYPE 'NAME'
+$ DELETE 'NAME';*
+$ GOTO FILE

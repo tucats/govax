@@ -81,3 +81,6 @@ activates a shareable image at run time:
 ## Progress log
 
 - **2026-10-12** — Planned (Phase 53, Part A).
+- **2026-11-01** — SIG_TO_STOP, FIXUP_FLT, INT_OVER, DEC_OVER, FLT_UNDER, and the review of the
+  existing condition routines moved to Phase 83 (its survey, the author's answer 4); this phase keeps
+  DECODE_FAULT, SIM_TRAP, FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE.

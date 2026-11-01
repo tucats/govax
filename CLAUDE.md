@@ -574,7 +574,8 @@ never had.
   (`testdata/fortran/itemlist.for`, `modules/aligned`) and the close-out (FORTRAN-INTERNALS.md's section 13,
   MANUAL.md's 14.2 to 14.4 and 14.7); the phase doc's "Where things stand" lists what is left.
   Phase 83 (in progress) is FORTRAN and VMS: definition modules, services, handlers, ASTs, the system
-  subroutines; subtask 1 (2026-11-01) is the survey, its doc's Part A, with questions for the author.
+  subroutines; subtask 1 (2026-11-01) is the survey, its doc's Part A, with the author's answers, and subtask 2
+  the probe, `testdata/for83` and `testdata/str83`, written and waiting for its VMS run.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -876,6 +877,10 @@ never had.
   `modules/` is programs of several files (Phase 76, subtask 8), a
   directory each, linked once per line of its `links.txt` and printing
   one output every time (`TestFortranModules`).
+- `testdata/for83/` — Phase 83's probe (README.md; written, VMS's run pending): `gen.go` writes `for83.mar`
+  (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
+  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `testdata/str83/` is the
+  STR$ routines' program, on the same volume.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
