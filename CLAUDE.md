@@ -573,6 +573,8 @@ never had.
   `raiseCommonAlignments`; `Unit.LocalAlign`, codegen's `localAlignment`), and subtask 9 end to end
   (`testdata/fortran/itemlist.for`, `modules/aligned`) and the close-out (FORTRAN-INTERNALS.md's section 13,
   MANUAL.md's 14.2 to 14.4 and 14.7); the phase doc's "Where things stand" lists what is left.
+  Phase 83 (in progress) is FORTRAN and VMS: definition modules, services, handlers, ASTs, the system
+  subroutines; subtask 1 (2026-11-01) is the survey, its doc's Part A, with questions for the author.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
