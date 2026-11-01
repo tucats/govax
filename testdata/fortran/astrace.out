@@ -1,0 +1,3 @@
+WRONG           0           0
+ANY TICKS T
+  $STATUS == "%X00000001"

@@ -586,7 +586,8 @@ never had.
   (LIB$STOP continued ends the image with the condition's message; `corevms.CallerR0Stub` gives LIB$SIGNAL's mechanism array the caller's R0; `librtl/fixupflt.go`
   and `corevms/condregs.go`, LIB$FIXUP_FLT; LIB$SIG_TO_STOP, INT_OVER, DEC_OVER, FLT_UNDER; a fault restores its operands' registers, `registers/operandlog.go`;
   FTNRTL signals INPCONERR at its item and stops for all but it, OUTCONERR, and FORVARMIS, `FTN$$IO_SIGNAL`; held to VMS by `TestFor83ConditionOracle` and `TestFor83PartBOnFORRTL`,
-  and to FORRTL by `TestFor83ContinueOnFORRTL`).
+  and to FORRTL by `TestFor83ContinueOnFORRTL`), and subtask 7 ASTs and exit handlers (FTNRTL holds ASTs off with `$SETAST` while its statement stack and free list change, and a context records its
+  frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -890,7 +891,7 @@ never had.
   one output every time (`TestFortranModules`).
 - `testdata/for83/` — Phase 83's probe (README.md; `vax/` is VMS V7.1's run): `gen.go` writes `for83.mar`
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
-  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `decode.go` turns
+  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `for83g.mar` (what's left of an unwound statement, on FORRTL over govax); `for83x.for`, `for83y.for`, and `for83t.for` (the same on FTNRTL, by hand); `decode.go` turns
   `def_opc.obj` into `defined.txt` for `vmsdef`; `testdata/str83/` is the STR$ routines' program, on the same volume.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by

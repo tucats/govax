@@ -676,6 +676,154 @@ func forrtlCases() *runProg {
 	return p
 }
 
+// goneCases is a third round on FORRTL, for Phase 83's subtask 7, which needs no
+// VAX either: what's left of a statement a handler unwound from. A statement never
+// reaches its FOR$IO_END then, so a later statement or item has to tell that it's
+// gone. It may start where the gone statement's frame was, by a different call or
+// the same one, and it may be deeper than that frame, or inside an outer statement.
+func goneCases() *runProg {
+	p := newRun("FOR83G")
+
+	const w = "FOR83W.DAT"
+
+	// DEEP is three calls down, its statement on the unit in R2's place; each entry
+	// saves what the case's own routine saves, so that frames coincide.
+	entry := "^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>"
+	p.body = &p.code
+	fmt.Fprintf(&p.code, "\t.ENTRY\tDEEP,%s\n\tCALLS\t#0,DEEP2\n\tRET\n\t.ENTRY\tDEEP2,%s\n\tCALLS\t#0,DEEP3\n\tRET\n\t.ENTRY\tDEEP3,%s\n", entry, entry, entry)
+	p.call("FOR$WRITE_SO", "UNIT", "&FMTA")
+	p.call("FOR$IO_T_DS", "&"+p.text("deep"))
+	p.call("FOR$IO_END")
+	p.said("deep statement")
+	p.code.WriteString("\tRET\n")
+
+	// begun is a statement on unit u, an item in, that a signal then leaves.
+	begun := func(u int) {
+		p.call("FOR$WRITE_SO", fmt.Sprintf("#%d", u), "&FMTAA")
+		p.call("FOR$IO_T_DS", "&"+p.text("gone"))
+		p.call("LIB$SIGNAL", "#^X08018003")
+		p.said("NOT REACHED")
+	}
+
+	deep := func(u int) {
+		p.emit("MOVL\t#%d,UNIT", u)
+		p.emit("CALLS\t#0,DEEP")
+	}
+
+	// AGAIN is called twice from one place: the second call's frame is the first's.
+	fmt.Fprintf(&p.code, "\t.ENTRY\tAGAIN,%s\n\tMOVAB\tHND,(FP)\n\tMOVL\tFP,SFP\n\tMOVAB\tAGAIN,SADDR\n\tTSTL\tTURN\n\tBNEQ\t10$\n", entry)
+	begun(12)
+	p.code.WriteString("10$:\tMOVL\t#12,UNIT\n\tCALLS\t#0,DEEP\n\tRET\n")
+
+	p.kase("gone at depth 1, then the same unit from deeper", func() {
+		p.open(12, w, "NEW")
+		p.sub(mUnwind, func() { begun(12) })
+		deep(12)
+		p.closeU(12)
+	})
+
+	p.kase("gone, then the same unit from the same routine called again", func() {
+		p.open(12, w, "NEW")
+		p.emit("MOVL\t#%d,HMODE", mUnwind)
+		p.emit("CLRL\tTURN")
+		p.emit("CALLS\t#0,AGAIN")
+		p.said("first call")
+		p.emit("MOVL\t#1,TURN")
+		p.emit("CALLS\t#0,AGAIN")
+		p.said("second call")
+		p.closeU(12)
+	})
+
+	p.kase("gone, then the same unit from the frame above", func() {
+		p.open(12, w, "NEW")
+		p.sub(mUnwind, func() { begun(12) })
+		p.write(12, "above")
+		p.said("above")
+		p.closeU(12)
+	})
+
+	p.kase("gone inside an outer statement, which goes on", func() {
+		p.open(12, w, "NEW")
+		p.call("FOR$WRITE_SO", "#12", "&FMTAA")
+		p.call("FOR$IO_T_DS", "&"+p.text("outer"))
+		p.sub(mUnwind, func() { begun(13) })
+		p.call("FOR$IO_T_DS", "&"+p.text("second"))
+		p.call("FOR$IO_END")
+		p.said("outer's end")
+		p.closeU(12)
+		p.closeU(13)
+	})
+
+	p.kase("gone inside an outer statement, then its unit from deeper", func() {
+		p.open(12, w, "NEW")
+		p.call("FOR$WRITE_SO", "#12", "&FMTAA")
+		p.call("FOR$IO_T_DS", "&"+p.text("outer"))
+		p.sub(mUnwind, func() { begun(13) })
+		deep(13)
+		p.call("FOR$IO_T_DS", "&"+p.text("second"))
+		p.call("FOR$IO_END")
+		p.said("outer's end")
+		p.closeU(12)
+		p.closeU(13)
+	})
+
+	// The controls: nothing gone, so these are recursive.
+	p.kase("live, then its unit from deeper", func() {
+		p.emit("MOVAB\tINNER,(FP)")
+		p.open(12, w, "NEW")
+		p.call("FOR$WRITE_SO", "#12", "&FMTAA")
+		p.call("FOR$IO_T_DS", "&"+p.text("outer"))
+		deep(12)
+		p.said("NOT REACHED")
+	})
+
+	p.kase("gone, then called again with nothing between", func() {
+		p.open(12, w, "NEW")
+		p.emit("MOVL\t#%d,HMODE", mUnwind)
+		p.emit("CLRL\tTURN")
+		p.emit("CALLS\t#0,AGAIN")
+		p.emit("MOVL\t#1,TURN")
+		p.emit("CALLS\t#0,AGAIN")
+		p.said("second call")
+		p.closeU(12)
+	})
+
+	// An AST's statement, gone: the interrupted statement goes on.
+	hook := "GONEAST"
+	fmt.Fprintf(&p.code, "\t.ENTRY\t%s,%s\n", hook, entry)
+	p.body = &p.code
+	p.sub(mUnwind, func() { begun(13) })
+	p.code.WriteString("\tRET\n")
+
+	p.kase("gone in an AST, during a statement", func() {
+		p.emit("MOVAB\t%s,HOOK", hook)
+		p.open(12, w, "NEW")
+		p.call("FOR$WRITE_SO", "#12", "&FMTAA")
+		p.call("FOR$IO_T_DS", "&"+p.text("outer"))
+		p.call("SYS$DCLAST", "#ASTHOOK", "#0", "#0")
+		p.said("after")
+		p.call("FOR$IO_T_DS", "&"+p.text("second"))
+		p.call("FOR$IO_END")
+		p.said("outer's end")
+		p.closeU(12)
+		p.closeU(13)
+	})
+
+	// Whether unit 6's first use is what declares FORRTL's exit handler: if so, this
+	// one runs first, and unit 12 is still open in it.
+	p.kase("exit handler declared after a WRITE to unit 6, before the OPEN", func() {
+		p.emit("MOVL\t#1,XMODE")
+		p.write(6, " on 6")
+		p.call("SYS$DCLEXH", "&XBLK")
+		p.open(12, w, "NEW")
+		p.write(12, "from the program")
+	})
+
+	p.dataf("UNIT:\t.LONG\t0\nTURN:\t.LONG\t0")
+
+	return p
+}
+
 // continueCases is a second round on FORRTL for Phase 83's subtask 6, which
 // needs no VAX: whether FORRTL goes on from a condition is in FORRTL's own
 // code, so it runs over govax. Each statement errs under a handler that
@@ -1715,6 +1863,7 @@ func main() {
 	b := forrtlCases()
 	c := librtlCases()
 	e := continueCases()
+	g := goneCases()
 	dir := filepath.Join("testdata", "for83")
 
 	for name, text := range map[string]string{
@@ -1722,6 +1871,7 @@ func main() {
 		"for83b.mar":   b.program(true),
 		"for83c.mar":   c.program(false),
 		"for83e.mar":   e.program(true),
+		"for83g.mar":   g.program(true),
 		"for83e.opt":   "FORRTL/SHAREABLE\n",
 		"for83d.dat":   "12X4\nLINE 2\nLINE 3\n",
 		"for83e.dat":   "",

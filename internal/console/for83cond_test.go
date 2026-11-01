@@ -40,6 +40,19 @@ func for83Cases(text string) []for83Case {
 func for83RunPart(t *testing.T, dispatch func(string) string, program string, count int, link string, files ...string) string {
 	t.Helper()
 
+	return for83Run(t, dispatch, program, program+".MAR", count, link, files...)
+}
+
+// for83RunFortran is for83RunPart for one of the probe's FORTRAN programs.
+func for83RunFortran(t *testing.T, dispatch func(string) string, program string, count int) string {
+	t.Helper()
+
+	return for83Run(t, dispatch, program, program+".FOR", count, "")
+}
+
+func for83Run(t *testing.T, dispatch func(string) string, program, source string, count int, link string, files ...string) string {
+	t.Helper()
+
 	dir := t.TempDir()
 	dsk := filepath.Join(dir, "for83.dsk")
 
@@ -47,13 +60,19 @@ func for83RunPart(t *testing.T, dispatch func(string) string, program string, co
 	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
 	dispatch("SET DEFAULT DUA1:[000000]")
 
-	for _, name := range append([]string{program + ".MAR", "FOR83R.COM"}, files...) {
+	for _, name := range append([]string{source, "FOR83R.COM"}, files...) {
 		host, err := filepath.Abs(for83CondDir + strings.ToLower(name))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		dispatch(`COPY "` + host + `"/HOST ` + name)
+	}
+
+	if strings.HasSuffix(source, ".FOR") {
+		if out := dispatch("FORTRAN " + program); out != "" {
+			t.Fatalf("FORTRAN: %s", out)
+		}
 	}
 
 	if out := dispatch("MACRO/NOLIST " + program); out != "" {
@@ -207,6 +226,111 @@ func TestFor83ContinueOnFORRTL(t *testing.T) {
 	}
 }
 
+// TestFor83GoneOnFORRTL runs the probe's third round on VMS's FORRTL.EXE over
+// govax, what's left of a statement a handler unwound from. vax/for83g-forrtl.txt
+// is that run; with FOR83G_WRITE set the test writes it instead.
+func TestFor83GoneOnFORRTL(t *testing.T) {
+	disk, file := findFORRTL(t)
+	_, dispatch := wsDispatcher(t)
+
+	dispatch(`MOUNT/NOWRITE DUA5 "` + disk + `"`)
+	dispatch("DEFINE/NOLOG FORRTL DUA5:" + file)
+
+	got := for83RunPart(t, dispatch, "FOR83G", 9, ",FOR83E/OPTIONS", "FOR83E.OPT")
+	got = for83PC.ReplaceAllString(strings.ReplaceAll(got, "\r", ""), "pc")
+	path := for83CondDir + "vax/for83g-forrtl.txt"
+
+	if os.Getenv("FOR83G_WRITE") != "" {
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != string(want) {
+		t.Errorf("FORRTL's run differs from %s:\n%s", path, got)
+	}
+}
+
+// for83GoneSameFrame are the cases of the third round where a routine called again
+// from one place has the very frame of its gone statement, and a deeper statement
+// uses the unit with nothing between. FORRTL knows the statement is gone, in some
+// way a frame doesn't show, and FTNRTL takes it as recursive (the phase doc's log).
+var for83GoneSameFrame = map[int]bool{2: true, 7: true}
+
+// TestFor83GoneOnFTNRTL runs for83y.for, the third round as FORTRAN, and holds
+// FTNRTL to FORRTL's run of it.
+func TestFor83GoneOnFTNRTL(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+
+	got := for83Cases(for83RunFortran(t, dispatch, "FOR83Y", 9))
+
+	data, err := os.ReadFile(for83CondDir + "vax/for83g-forrtl.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := for83Cases(string(data))
+	if len(want) != 9 || len(got) != 9 {
+		t.Fatalf("%d cases of FORRTL's, %d of FTNRTL's", len(want), len(got))
+	}
+
+	for i := range want {
+		if a, b := for83Compared(got[i]), for83Compared(want[i]); a != b {
+			if for83GoneSameFrame[i+1] {
+				if !strings.Contains(a, "RECIO_OPE") {
+					t.Errorf("%s: no longer the known difference:\n%s", want[i].title, a)
+				}
+
+				continue
+			}
+
+			t.Errorf("%s:\n--- FTNRTL\n%s\n--- FORRTL\n%s", want[i].title, a, b)
+		}
+	}
+}
+
+// TestFor83ASTEverywhere runs for83t.for, which has an AST run at every instruction
+// of its statements that ASTs aren't held off for, by tracing itself: what timers
+// can only sample. An AST's statement mustn't change an interrupted one's.
+func TestFor83ASTEverywhere(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+
+	dir := t.TempDir()
+	dsk := filepath.Join(dir, "for83.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD54 FOR83`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+
+	for _, name := range []string{"FOR83T.FOR", "FOR83U.MAR"} {
+		host, err := filepath.Abs(for83CondDir + strings.ToLower(name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dispatch(`COPY "` + host + `"/HOST ` + name)
+	}
+
+	for _, command := range []string{"FORTRAN FOR83T", "MACRO FOR83T", "MACRO FOR83U", "LINK FOR83T,FOR83U"} {
+		if out := dispatch(command); out != "" {
+			t.Fatalf("%s: %s", command, out)
+		}
+	}
+
+	got := dispatch("RUN FOR83T")
+	want := "FIRST R     7     |SECOND  LIST       |IOSTAT           0          64           0           0|" +
+		"BUF     42      |AST BAD           0|MANY T T"
+
+	if got != want {
+		t.Errorf("RUN FOR83T printed:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 // for83PartBMask takes out of part B's output what depends on where things are:
 // PCs in FORRTL or the program, addresses in a traceback, and R0 and R1 on a
 // mechanism array's line, which FORRTL's calls of RMS and LIBRTL leave there.
@@ -271,5 +395,84 @@ func TestFor83PartBOnFORRTL(t *testing.T) {
 
 	if len(got) != len(want) {
 		t.Errorf("%d lines of govax's, %d of VMS's", len(got), len(want))
+	}
+}
+
+// for83FTNRTLCase says which of part B's cases for83x.for has: the ones with
+// I/O during a statement, and those ending an image, but for EXIT's forms,
+// which are for FTNRTL's EXIT.
+func for83FTNRTLCase(n int) bool {
+	return n >= 36 && n <= 46 || n >= 55
+}
+
+var (
+	for83ConditionLine = regexp.MustCompile(`^( =c n=\d+ cond=\w+) .*`)
+	for83MechanismLine = regexp.MustCompile(`^ =m (n=\d+) frame=\S+ (depth=\d+) .*`)
+	for83ReachedLine   = regexp.MustCompile(`^( =[^=]*?) r0=\w+`)
+)
+
+// for83Comparable reduces a line of part B's output to what a FORTRAN program
+// can show of it: not the statuses in R0 and the frames' offsets, which are
+// MACRO's to see. It's "" for a line with no FORTRAN form, and for those of a
+// traceback, whose routines are the programs'.
+func for83Comparable(line string) string {
+	switch {
+	case strings.HasPrefix(line, " =value"), strings.HasPrefix(line, " =u "), strings.HasPrefix(line, "$ "),
+		strings.HasPrefix(line, "%TRACE-"), strings.HasPrefix(line, "module name"),
+		for83Traceback.MatchString(line), strings.HasPrefix(line, "FOR83"), line == "":
+		return ""
+	}
+
+	line = for83ConditionLine.ReplaceAllString(line, "$1")
+	line = for83MechanismLine.ReplaceAllString(line, " =m $1 $2")
+	line = for83ReachedLine.ReplaceAllString(line, "$1")
+	line = for83UserPC.ReplaceAllString(line, "user PC")
+
+	if line == "  pc" {
+		line = "  user PC"
+	}
+
+	return strings.ReplaceAll(line, "DUA1:", "DUA2:")
+}
+
+// for83Compared is a case's lines as for83Comparable leaves them.
+func for83Compared(c for83Case) string {
+	var lines []string
+
+	for _, line := range c.lines {
+		if line = for83Comparable(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// TestFor83PartBOnFTNRTL runs for83x.for, part B's cases as FORTRAN, and holds
+// FTNRTL to VMS's run of them.
+func TestFor83PartBOnFTNRTL(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+
+	got := for83Cases(for83RunFortran(t, dispatch, "FOR83X", 64))
+
+	data, err := os.ReadFile(for83CondDir + "vax/for83b-vax.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Part B's mask says why: VMS's TYPE left case 33's last line unended.
+	want := for83Cases(strings.Replace(string(data), "partial#34", "partial\n#34", 1))
+	if len(want) != 64 || len(got) != 64 {
+		t.Fatalf("%d cases of VMS's, %d of FTNRTL's", len(want), len(got))
+	}
+
+	for i := range want {
+		if !for83FTNRTLCase(i + 1) {
+			continue
+		}
+
+		if a, b := for83Compared(got[i]), for83Compared(want[i]); a != b {
+			t.Errorf("%s:\n--- FTNRTL\n%s\n--- VMS\n%s", want[i].title, a, b)
+		}
 	}
 }

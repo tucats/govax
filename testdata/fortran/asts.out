@@ -1,0 +1,19 @@
+PARM        1234
+DCLAST           1
+WAKER          77
+SETIMR           1
+WOKEN           1
+CANTIM           1
+LINE BY QIO
+DONE           5
+IOSB      1     12
+WASSET T
+HELD           0
+WASCLR T           1
+INTERNAL   42     
+UNIT 13 ANOTHER   
+AFTER THE AST
+firstsecond 
+LEVEL           2          20          20
+LEVEL           1          10          20
+  $STATUS == "%X00000001"

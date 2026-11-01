@@ -5,7 +5,7 @@ FORTRAN compiler, so VMS's own FORRTL.EXE and LIBRTL.EXE are called from MACRO, 
 do becomes FTNRTL's and LIBRTL's requirement (only what they do is used, never their code).
 `testdata/str83` is the same volume's other program, the STR$ routines.
 
-`gen.go` writes everything here but this README and the output files:
+`gen.go` writes everything here but this README, the output files, and the FORTRAN programs of subtask 7 (below):
 
     go run testdata/for83/gen.go
 
@@ -15,12 +15,21 @@ do becomes FTNRTL's and LIBRTL's requirement (only what they do is used, never t
 | `for83b.mar` | Part B, 64 runs on FORRTL: nine errors under a handler that continues, unwinds, or calls LIB$SIG_TO_RET; a condition between a statement's items; I/O from a handler and from an AST during a statement, on the same unit, another, an internal file, unit 6, and a CLOSE; every way of ending an image with a unit open; exit handlers declared before and after an OPEN |
 | `for83c.mar` | Part C, 109 runs on LIBRTL: LIB$SIGNAL, LIB$STOP, LIB$ESTABLISH, LIB$REVERT, LIB$MATCH_COND, LIB$SIG_TO_RET, LIB$SIG_TO_STOP, LIB$FIXUP_FLT with a reserved operand in each place and format, LIB$INT_OVER, LIB$DEC_OVER, LIB$FLT_UNDER |
 | `for83e.mar` | Part E, 18 runs on FORRTL (Phase 83's subtask 6): what a handler can go on from, and what the statement then does with its items. It needs no VAX: `TestFor83ContinueOnFORRTL` runs it on FORRTL.EXE over govax, with `for83e.opt`, `for83f.dat`, `for83g.dat`, and `for83h.dat` |
+| `for83g.mar` | A third round on FORRTL, 9 runs (Phase 83's subtask 7), needing no VAX: what's left of a statement a handler unwound from, and which use of a unit declares FORRTL's exit handler. `TestFor83GoneOnFORRTL` runs it over govax |
 | `for83d.dat`, `for83e.dat` | The files `FOR83.COM` makes for part B, for `TestFor83PartBOnFORRTL` |
 | `lnk83.mar` | References only: LINK's log says which definitions the system's libraries don't define globally, which decides what `EXTERNAL NAME` can find |
 | `def_opc.mar` | `$OPCDEF GLOBAL`: its values from the object, no listing, as `testdata/mp/defs` |
 | `for83.com` | Builds and runs them all, then part D: LIBRARY/TEXT, each library kept at each step for its bytes |
 | `for83r.com` | Runs a program's cases, one image each, then types and deletes what a case wrote |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
+
+Subtask 7's FTNRTL programs, written by hand, as there's no VAX FORTRAN to run them on VMS:
+
+| File | What it holds |
+| ---- | ------------- |
+| `for83x.for` | Part B's cases 36 to 46 and 55 to 64 as FORTRAN, by number, which `TestFor83PartBOnFTNRTL` holds to VMS's log |
+| `for83y.for` | `for83g.mar` as FORTRAN, which `TestFor83GoneOnFTNRTL` holds to FORRTL's run |
+| `for83t.for`, `for83u.mar` | An AST at every instruction of a statement, the program tracing itself (`TestFor83ASTEverywhere`) |
 
 ## How the programs work
 
@@ -85,6 +94,7 @@ It ran on 2026-11-01, whole; the phase doc's "What the probe settled" says what 
 | ---- | ------------- |
 | `vax/for83-vax.txt`, `vax/for83b-vax.txt`, `vax/for83c-vax.txt` | The three programs' output on VMS 7.1 |
 | `vax/for83e-forrtl.txt` | Part E's output, FORRTL's run over govax, with PCs masked |
+| `vax/for83g-forrtl.txt` | The third round's output, FORRTL's run over govax, with PCs masked |
 | `vax/for83.log` | `FOR83.COM`'s log: LINK's undefined names, and part D's messages, listings, and dumps in order (no commands past part B, as `FOR83R.COM`'s `SET NOVERIFY` lasts) |
 | `vax/def_opc.obj`, `vax/def_opc.anl` | `$OPCDEF GLOBAL`'s object and its analysis |
 | `decode.go`, `defined.txt` | `defined.txt` is every name and value in that object, which `decode.go` writes and `go run ./internal/vmsdef/gen -values testdata/for83/defined.txt` merged into `vmsdef` |

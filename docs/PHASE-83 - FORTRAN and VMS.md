@@ -3,7 +3,7 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
 settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
-day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
+day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day; subtask 7, ASTs and exit handlers, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -399,7 +399,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
    signal; programs calling `$ASCTIM`, `$GETJPIW` (`itemlist.for`'s list, handed over at last), `$GETSYIW`,
    `$TRNLNM`, `$FAO`, `$FAOL`, LIB$GET_INPUT, LIB$SPAWN, LIB$DATE_TIME; the manuals' examples.
 6. **Condition handlers in FORTRAN** (done 2026-11-01), by the probe's part B; what question 4 moves here.
-7. **ASTs and exit handlers in FORTRAN**, by the probe's part B; programs for `testdata/fortran`, whose
+7. **ASTs and exit handlers in FORTRAN** (done 2026-11-01), by the probe's part B; programs for `testdata/fortran`, whose
    timing doesn't show in their output.
 8. **The appendix D system subroutines**, held to the probe's part A.
 9. **STR$** (question 2) and `testdata/str83`, with the STR facility's messages.
@@ -536,3 +536,22 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   **Programs:** `testdata/fortran/handlers.for`, in both paging modes, and `TestFor83PartBOnFORRTL`, part B whole against VMS's log on VMS's FORRTL over
   govax. **Seen and left:** VMS's TYPE ends no line after a record with no carriage control (case 33's unformatted file), and govax's does. The five new routines
   moved the stubs after LIB$MATCH_COND in the table, so `testdata/nml80/vax/nml80e-forrtl.txt`'s one stub address changed.
+- **2026-11-01:** Subtask 7, ASTs and exit handlers. **Part B held to FTNRTL:** `testdata/for83/for83x.for` is cases 36 to 46 and 55 to 64 as
+  FORTRAN, numbered as `for83b.mar`'s, and `TestFor83PartBOnFTNRTL` holds them to VMS's log, less what only MACRO can see (R0, frame offsets): I/O from
+  a handler and an AST during a statement, a unit open at the end, exit handlers before and after the OPEN. They passed unchanged. Cases 47 to 54, EXIT's forms, are
+  subtask 8's. The two faults below are what reading FTNRTL for ASTs found; part B doesn't reach either.
+  **An AST's statement could change an interrupted one's.** `FTN$IO_END` put its context on the free list and then read its status, so an AST between took the
+  context and gave it the AST statement's: a READ that failed reported IOSTAT 0, 57 times in 300,000 iterations of a timer program. The stack and free list also
+  took several instructions to change. Now ASTs are held off with `$SETAST` while they change (`HOLD_ASTS`, `RELEASE_ASTS`, on `PUSH_CONTEXT`, `DROP_TOP`, `POP_TO`,
+  `POP_GONE`, `FREE_CONTEXT`), and a context goes on the free list only once it's been read, before the signal if there is one. That's six more service calls per statement.
+  The first OPEN's `EXIT_DECLARED` is a `BBSS`. **`TestFor83ASTEverywhere`** (`for83t.for`, `for83u.mar`) is the regression test, as timers aren't: a change of one line moved
+  `astrace.for`'s first failure past its 2,000 iterations, so that program, with no failures on the old library either, shows only that timers work among statements. `for83t.for` traces itself, and its handler
+  declares an AST at every instruction that isn't held off, about 8,000 of them in under a second; the old library gets its IOSTAT wrong every run. RET ends tracing, by the
+  manual and by Phase 73's probe, so `KEEPT` sets T in the saved PSW of each frame out to the establisher. On govax an AST declared by the handler runs in the handler, which sees the statement's state as it was at that instruction.
+  **A statement a handler unwound from wrongly held its unit.** Its context stayed until a begin call from a routine at or above its frame, so after an unwind a statement on that unit from any deeper
+  routine was RECIO_OPE, and an item or end of an outer statement used the gone statement's context. A third round on FORRTL (`for83g.mar`, 9 cases, `vax/for83g-forrtl.txt`, over govax, `TestFor83GoneOnFORRTL`) settled
+  it, and `for83y.for` holds FTNRTL to it (`TestFor83GoneOnFTNRTL`). A context now records its frame's saved PC, and a begin call pops one the call chain doesn't reach with that FP and PC; `FTN$IO_ITEM` and
+  `FTN$IO_END` pop those above their own statement (an AST's among them). **One difference stands** (cases 2 and 7, `for83GoneSameFrame`): a routine called again from the same place has the very frame of its gone statement, and if something deeper uses the unit with
+  no statement between, FTNRTL says RECIO_OPE and FORRTL doesn't. Nothing in the frame tells them apart, and how FORRTL does isn't to be looked into; DEVIATIONS.md has it. A statement in that routine itself, the likelier form, is fine.
+  **FORRTL declares its exit handler at a unit's first use, unit 6's too** (case 9), as FTNRTL does: one declared after a PRINT runs before the units are closed. **Programs:** `testdata/fortran/asts.for` (`$DCLAST`, `$SETIMR`, `$CANTIM`, `$QIO`'s AST, `$HIBER`, `$WAKE`,
+  `$SETAST`, I/O from an AST during a statement, AUTOMATIC and static variables in a routine an AST reenters), `astrace.for`, and `exits.for`, in both paging modes. Unconfirmed: `exits.for`'s handler calling `$EXIT`, after which the rest run with the new status, as govax does and the services manual doesn't settle.

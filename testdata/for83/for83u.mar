@@ -1,0 +1,40 @@
+	.TITLE	FOR83U	Keeps PSW<T> set for FOR83T.FOR
+;
+; A frame saves T clear and RET restores it from the frame, so RET ends tracing
+; (the architecture's rule, which Phase 73's probe saw on VMS). To trace through a
+; whole statement these set T in saved PSWs.
+;
+	.PSECT	FOR83U_CODE,EXE,NOWRT
+;
+; TRACEON: T set on return to the caller.
+;
+	.ENTRY	TRACEON,^M<>
+	BISL2	#^X10,4(FP)
+	RET
+;
+; TRACEOFF: T clear at once, the handler seeing one trace after it (TP), which may
+; set T in this frame again, so that's cleared after the trace has gone.
+;
+	.ENTRY	TRACEOFF,^M<>
+	BICPSW	#^X10
+	NOP
+	BICL2	#^X10,4(FP)
+	RET
+;
+; KEEPT(establisher's FP, by value), from the trace handler: T set in the saved PSW
+; of every frame from the code that was traced, the frame the handler's was called
+; from, out to the establisher's, whose caller stays untraced.
+;
+	.ENTRY	KEEPT,^M<>
+	MOVL	12(FP),R0		; the handler's frame
+	MOVL	12(R0),R0		; the traced code's
+10$:	CMPL	R0,4(AP)
+	BGEQU	20$			; the establisher: its RET is the program's
+	BISL2	#^X10,4(R0)
+	MOVL	12(R0),R1
+	CMPL	R1,R0
+	BLEQU	20$			; the chain's end
+	MOVL	R1,R0
+	BRB	10$
+20$:	RET
+	.END

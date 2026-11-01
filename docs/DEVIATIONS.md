@@ -1883,3 +1883,11 @@ with ordinary data in it. VMS V7.1 won't activate it: `%DCL-W-ACTIMAGE`, `-CLI-E
 `-SYSTEM-F-BADVEC, invalid change mode or message vector`. govax has no protected images and runs
 it. One case can't say what makes a vector valid (a real one would presumably be activated), so
 nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
+
+### [Phase 83] A gone statement in an identical frame
+
+- **Where**: `internal/ftnrtl/mar/ftn_statement.mar`'s `PUSH_CONTEXT`; `docs/PHASE-83 - FORTRAN and VMS.md`, subtask 7's log.
+- **What**: FTNRTL tells a statement a handler unwound from by its frame's FP and saved PC. If the routine is called again from the same place, its frame is the same, and
+  a statement on that unit from something it calls is `FOR$_RECIO_OPE`, unless a statement ran between at or above that frame. VMS's FORRTL goes on (`testdata/for83/vax/for83g-forrtl.txt`, cases 2 and 7;
+  `TestFor83GoneOnFTNRTL` holds this as the known difference).
+

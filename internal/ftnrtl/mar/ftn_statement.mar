@@ -89,10 +89,23 @@
 ; kind, and flags, its first error, and the record it is building. The
 ; blocks come from LIB$GET_VM, and go back on a free list to be used
 ; again. A statement whose routine was left by a signal never reaches its
-; FTN$IO_END: each context records the FP of the routine that began it,
-; and a begin call first pops the contexts of routines that can't still
-; be running, those whose FP is at or below its caller's (the stack grows
-; down, so a routine called later, and still running, has a lower FP).
+; FTN$IO_END: each context records the FP of the routine that began it and
+; that frame's saved PC, and a begin call first pops the contexts of routines
+; that can't still be running: those whose FP is at or below its caller's (the
+; stack grows down, so a routine called later, and still running, has a lower
+; FP), and those the call chain doesn't reach, a later routine's frame being
+; where the gone one was. A routine called again from the same place has the
+; very frame it had, which this can't tell (the phase doc's log for subtask 7).
+; An item or an end pops the contexts above its own, of routines it has
+; outlived.
+;
+; ASTs. An AST routine may run a statement between any two instructions of
+; another, on the same stack, so its context goes above the interrupted one's and
+; is gone before that goes on, unless a handler unwound it. The stack and the free
+; list take more than one instruction to change, so ASTs are held off while they
+; change ($SETAST, HOLD_ASTS and RELEASE_ASTS). And a context isn't on the free
+; list until its statement has read the last of it, or an AST's statement could
+; take it and change its status.
 ;
 ; The first error a statement meets is recorded in its context, and the
 ; rest of the statement does nothing but end: its items are passed over,
@@ -205,7 +218,8 @@ CTX_REWRITE	= CTX_RECP+76		; byte: 1 for a REWRITE
 CTX_KEYED	= CTX_RECP+77		; byte: 1 for a keyed READ
 CTX_ITEMPC	= CTX_RECP+80		; long: where the begin call, or the last
 					;  item's FTN$IO_ITEM, returns
-CTX_SIZE	= CTX_RECP+84
+CTX_FRAMEPC	= CTX_RECP+84		; long: the saved PC of CTX_FP's frame
+CTX_SIZE	= CTX_RECP+88
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -240,6 +254,8 @@ OPEN_UNFORMATTED = 4			; FTN$$UNIT_OPEN's: unformatted
 
 STMT_TOP:	.LONG	0		; the statement in progress, or 0
 FREE_LIST:	.LONG	0		; contexts to use again
+AST_WAS:	.LONG	0		; HOLD_ASTS's $SETAST status; ASTs being
+					;  off, no one else can be using it
 
 ; The last failure, for ERRSNS: its FOR number, RMS's status and value,
 ; the unit, and the condition value, in ERRSNS's order; all 0 for none.
@@ -594,15 +610,22 @@ CHECK_NESTED:
 ; control block; R3 returns the context. Changes R0, R1, R3, and R6.
 ;
 PUSH_CONTEXT:
+	BSBW	HOLD_ASTS
 10$:	MOVL	STMT_TOP,R3
 	BEQL	20$
 	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
-	BGTRU	20$			; a routine further out: still running
-	MOVL	CTX_NEXT(R3),STMT_TOP	; gone: its context is free again
-	PUSHL	R3			;  (and its run-time format's
-	CALLS	#1,FTN$$FMT_FREE	;  parsed copy, if it had one)
-	MOVL	FREE_LIST,CTX_NEXT(R3)
-	MOVL	R3,FREE_LIST
+	BLEQU	18$			; at or below this routine: gone
+	MOVL	R2,R1			; further out: is it in the call chain?
+12$:	MOVL	12(R1),R0		; the frame's saved FP
+	CMPL	R0,R1
+	BLEQU	18$			; the chain's end: not in it
+	MOVL	R0,R1
+	CMPL	R1,CTX_FP(R3)
+	BLSSU	12$
+	BNEQ	18$			; passed it
+	CMPL	16(R1),CTX_FRAMEPC(R3)
+	BEQL	20$			; its own frame: still running
+18$:	BSBW	DROP_TOP		; gone
 	BRB	10$
 	;
 	; A context from the free list, or a new one from LIB$GET_VM, whose
@@ -619,9 +642,10 @@ PUSH_CONTEXT:
 	PUSHAL	4(SP)			;  and its first
 	CALLS	#2,G^LIB$GET_VM
 	BLBS	R0,27$
+	BSBW	RELEASE_ASTS
 	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
 	CALLS	#1,G^LIB$STOP
-27$:	MOVL	4(SP),R3
+27$:	MOVL	4(SP),R3		; (ASTs stay off through LIB$GET_VM)
 	ADDL2	#8,SP
 	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
 	CLRL	CTX_LI_SIZE(R3)
@@ -629,6 +653,7 @@ PUSH_CONTEXT:
 	; Fill it in and push it.
 	;
 30$:	MOVL	R2,CTX_FP(R3)
+	MOVL	16(R2),CTX_FRAMEPC(R3)
 	MOVL	R4,CTX_AP(R3)
 	MOVL	R7,CTX_UNIT(R3)
 	CLRW	CTX_FLAGS(R3)
@@ -661,7 +686,82 @@ PUSH_CONTEXT:
 	MOVL	16(FP),CTX_ITEMPC(R3)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
 	MOVL	R3,STMT_TOP
+	BSBW	RELEASE_ASTS
 	RSB
+
+;
+; DROP_TOP: the context R3, the top of the stack, is gone: pops it and frees it
+; (and its run-time format's parsed copy, if it had one). ASTs are held off.
+; Changes R0 and R1.
+;
+DROP_TOP:
+	MOVL	CTX_NEXT(R3),STMT_TOP
+	PUSHL	R3
+	CALLS	#1,FTN$$FMT_FREE
+	MOVL	FREE_LIST,CTX_NEXT(R3)
+	MOVL	R3,FREE_LIST
+	RSB
+
+;
+; HOLD_ASTS and RELEASE_ASTS: no AST of this mode between them, and as they were
+; after. Change R0 and R1.
+;
+HOLD_ASTS:
+	$SETAST_S ENBFLG=#0
+	MOVL	R0,AST_WAS
+	RSB
+
+RELEASE_ASTS:
+	CMPL	AST_WAS,#SS$_WASSET
+	BNEQ	10$
+	$SETAST_S ENBFLG=#1
+10$:	RSB
+
+;
+; FREE_CONTEXT: puts the context R7, which its statement has finished reading, on
+; the free list. Keeps R0; changes R1.
+;
+FREE_CONTEXT:
+	PUSHL	R0
+	BSBW	HOLD_ASTS
+	MOVL	FREE_LIST,CTX_NEXT(R7)
+	MOVL	R7,FREE_LIST
+	BSBW	RELEASE_ASTS
+	MOVL	(SP)+,R0
+	RSB
+
+;
+; POP_TO(context): takes the context (by value) off the stack, popping any gone
+; ones above it, which an AST's statement a handler unwound from may have left.
+;
+	.ENTRY	POP_TO,^M<R2,R3>
+	MOVL	4(AP),R2
+	BSBW	HOLD_ASTS
+10$:	MOVL	STMT_TOP,R3
+	BEQL	30$
+	CMPL	R3,R2
+	BEQL	20$
+	BSBW	DROP_TOP
+	BRB	10$
+20$:	MOVL	CTX_NEXT(R2),STMT_TOP
+30$:	BSBW	RELEASE_ASTS
+	RET
+
+;
+; POP_GONE(fp): pops the contexts above the caller's statement, whose FP (by value)
+; is further out than theirs: their routines have gone.
+;
+	.ENTRY	POP_GONE,^M<R2,R3>
+	MOVL	4(AP),R2
+	BSBW	HOLD_ASTS
+10$:	MOVL	STMT_TOP,R3
+	BEQL	20$
+	CMPL	CTX_FP(R3),R2
+	BGEQU	20$
+	BSBW	DROP_TOP
+	BRB	10$
+20$:	BSBW	RELEASE_ASTS
+	RET
 
 ;
 ; FTN$IO_ITEM(desc)
@@ -673,6 +773,13 @@ PUSH_CONTEXT:
 	.ENTRY	FTN$IO_ITEM,^M<R2>
 	MOVL	STMT_TOP,R2
 	BEQL	90$			; no statement: nothing to do
+	CMPL	CTX_FP(R2),12(FP)
+	BGEQU	5$
+	PUSHL	12(FP)			; a statement of a routine that's gone
+	CALLS	#1,POP_GONE
+	MOVL	STMT_TOP,R2
+	BEQL	90$
+5$:
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$			; it has failed
 	MOVL	16(FP),CTX_ITEMPC(R2)
@@ -711,10 +818,16 @@ FILE_DESC	= -16
 REPORT		= -36			; the name's length and address, RMS's
 					;  status and value, the records
 
-	.ENTRY	FTN$IO_END,^M<R2,R3,R4,R5,R6>
+	.ENTRY	FTN$IO_END,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	STMT_TOP,R2
+	BEQL	3$
+	CMPL	CTX_FP(R2),12(FP)
+	BGEQU	5$
+	PUSHL	12(FP)			; a statement of a routine that's gone
+	CALLS	#1,POP_GONE
 	MOVL	STMT_TOP,R2
 	BNEQ	5$
-	CLRL	R0			; no statement
+3$:	CLRL	R0			; no statement
 	RET
 5$:	CMPB	CTX_KIND(R2),#K_WRITE_SF
 	BGTRU	7$
@@ -733,12 +846,13 @@ REPORT		= -36			; the name's length and address, RMS's
 	PUSHL	R2
 	CALLS	#1,FTN$$LIST_END	; FTN_LISTOUT: the last record
 	;
-	; The context goes on the free list. Its fields stay as they are
-	; until a begin call takes it again, so they are read after.
+	; The statement is over, so its unit is free to a handler. An AST
+	; may have left a gone statement above it, in the calls just made.
+	; The context goes on the free list when it has been read (R7).
 	;
-10$:	MOVL	CTX_NEXT(R2),STMT_TOP
-	MOVL	FREE_LIST,CTX_NEXT(R2)
-	MOVL	R2,FREE_LIST
+10$:	MOVL	R2,R7
+	PUSHL	R2
+	CALLS	#1,POP_TO
 	MOVL	CTX_STATUS(R2),R3
 	TSTB	CTX_REWRITE(R2)		; a REWRITE: its record is written
 	BEQL	15$
@@ -752,6 +866,7 @@ REPORT		= -36			; the name's length and address, RMS's
 	BNEQ	20$
 	MOVL	CTX_WARNING(R2),R3	; an error it went on after
 	BNEQ	20$
+	BSBW	FREE_CONTEXT
 	CLRL	R0			; success
 	RET
 	;
@@ -773,7 +888,8 @@ REPORT		= -36			; the name's length and address, RMS's
 	BRB	40$
 35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
 	BEQL	40$
-38$:	RET
+38$:	BSBW	FREE_CONTEXT
+	RET
 	;
 	; Signaled, and if it comes back the program goes on.
 	;
@@ -791,7 +907,8 @@ REPORT		= -36			; the name's length and address, RMS's
 ; to go on from: its frame is laid out as FTN$IO_END's for the two
 ; subroutines below. Saved for ERRSNS as FTN$IO_END saves a failure.
 ;
-	.ENTRY	FTN$$IO_SIGNAL,^M<R2,R3,R4,R5,R6>
+	.ENTRY	FTN$$IO_SIGNAL,^M<R2,R3,R4,R5,R6,R7>
+	CLRL	R7			; the statement goes on
 	SUBL2	#-REPORT,SP
 	MOVL	4(AP),R2
 	MOVL	8(AP),R3
@@ -838,7 +955,9 @@ FAILURE_REPORT:
 
 ;
 ; SIGNAL_FAILURE: signals R3 for the context R2, with the user PC R5 and the
-; report at REPORT(FP), the arguments pushed last first; R6 counts them.
+; report at REPORT(FP), the arguments pushed last first; R6 counts them. A context
+; in R7 is finished with: it goes on the free list before the signal, which may
+; never come back.
 ; Changes R0, R1, R4, and R6, and returns if a handler goes on from it.
 ;
 SIGNAL_FAILURE:
@@ -881,7 +1000,10 @@ SIGNAL_FAILURE:
 55$:	PUSHL	R4			; their count
 	PUSHL	R3			; the condition
 	ADDL2	#2,R6
-	CMPZV	#0,#3,R3,#4		; severe?
+	TSTL	R7
+	BEQL	58$
+	BSBW	FREE_CONTEXT
+58$:	CMPZV	#0,#3,R3,#4		; severe?
 	BNEQ	60$
 	CMPL	R3,#FOR$_INPCONERR	; severe, but a handler can go on
 	BEQL	60$

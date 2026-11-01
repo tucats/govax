@@ -1,0 +1,85 @@
+#1 gone at depth 1, then the same unit from deeper
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000AE99 r1=00000618
+ =u the unwind's call of the handler
+ =back r0=0000AE99
+ =deep statement r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+eep
+#2 gone, then the same unit from the same routine called again
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000AE99 r1=00000618
+ =u the unwind's call of the handler
+ =first call r0=0000AE99
+ =deep statement r0=00000000
+ =second call r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+eep
+#3 gone, then the same unit from the frame above
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000AE99 r1=00000618
+ =u the unwind's call of the handler
+ =back r0=0000AE99
+ =above r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+bove
+#4 gone inside an outer statement, which goes on
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000B1D9 r1=00000618
+ =u the unwind's call of the handler
+ =back r0=0000B1D9
+ =outer's end r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+utersecond
+ file FOR013.DAT:
+#5 gone inside an outer statement, then its unit from deeper
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000B1D9 r1=00000618
+ =u the unwind's call of the handler
+ =back r0=0000B1D9
+ =deep statement r0=00000000
+ =outer's end r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+utersecond
+ file FOR013.DAT:
+eep
+#6 live, then its unit from deeper
+ =i n=9 cond=00188144
+%FOR-F-RECIO_OPE, recursive I/O operation
+  unit 12  file 
+  pc
+  $STATUS == "%X10188144"
+ file FOR83W.DAT:
+#7 gone, then called again with nothing between
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000AE99 r1=00000618
+ =u the unwind's call of the handler
+ =deep statement r0=00000000
+ =second call r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+eep
+#8 gone in an AST, during a statement
+ =c n=3 cond=08018003 arg=00000000 00000000 pc psl=03C00000
+ =m n=4 frame=+00000000 depth=0 r0=0000B1D9 r1=00000618
+ =u the unwind's call of the handler
+ =back r0=0000B1D9
+ =after r0=00000001
+ =outer's end r0=00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+utersecond
+ file FOR013.DAT:
+#9 exit handler declared after a WRITE to unit 6, before the OPEN
+on 6
+ =exit handler status=00000001
+ =value 00000000
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+rom the program
+rom the exit handler
