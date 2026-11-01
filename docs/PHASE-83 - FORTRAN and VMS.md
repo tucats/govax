@@ -390,7 +390,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
 1. **Survey** (done 2026-11-01): Part A.
 2. **The probe** (done 2026-11-01): `testdata/for83`, `testdata/str83`, VMS's run, and "What the probe
    settled".
-3. **Text libraries and INCLUDE:** LIBRARY/TEXT held to the probe's part C, `INCLUDE '(module)'` and
+3. **Text libraries and INCLUDE:** (done 2026-11-01): LIBRARY/TEXT held to the probe's part C, `INCLUDE '(module)'` and
    `'lib(module)'`, `+` and `/LIBRARY`, `FORT$LIBRARY`, and `/[NO]LIST` on INCLUDE governing the `.MAR`.
 4. **govax's definition modules** from `vmsdef`, `$SYSSRVNAM`, `$CHFDEF`'s structures, no `.EXTRN` for an
    unused name from one; the `.TLB` command.
