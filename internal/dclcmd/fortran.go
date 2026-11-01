@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/fortran"
 	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
+	"github.com/tucats/govax/internal/fortran/sysdef"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
@@ -53,9 +54,10 @@ import (
 // INCLUDE '(module)' searches, in order and unconfirmed (the VAX FORTRAN User
 // Manual isn't to hand; docs/PHASE-83 - FORTRAN and VMS.md, Decision 2): the
 // libraries named with /LIBRARY in the source's +-list, the library or search
-// list the logical name FORT$LIBRARY names, and SYS$LIBRARY:FORSYSDEF.TLB if
-// there is one. INCLUDE 'lib(module)' reads only lib, found as an INCLUDE file
-// is, of default type TLB.
+// list the logical name FORT$LIBRARY names, SYS$LIBRARY:FORSYSDEF.TLB if
+// there is one, and last the definition modules built into govax
+// (internal/fortran/sysdef). INCLUDE 'lib(module)' reads only lib, found as an
+// INCLUDE file is, of default type TLB.
 
 // FortranOptions is one FORTRAN command.
 type FortranOptions struct {
@@ -178,6 +180,7 @@ const (
 	defaultTextLibraryType = "TLB"
 	fortLibraryName        = "FORT$LIBRARY"
 	forSysDefFile          = "FORSYSDEF.TLB"
+	builtinModuleSpec      = "FORSYSDEF.TLB (built into govax)"
 )
 
 // Fortran compiles each source file and, unless opts.NoMacro, writes its
@@ -492,6 +495,10 @@ func (fi *fortranIncludes) OpenModule(library, module string, from *source.File)
 
 	if library != "" {
 		return nil, fmt.Errorf("the library has no module %s", module)
+	}
+
+	if lines, ok := sysdef.Module(module); ok {
+		return &source.File{Spec: builtinModuleSpec + "(" + strings.ToUpper(module) + ")", Lines: lines, Handle: from.Handle}, nil
 	}
 
 	return nil, fmt.Errorf("no library has a module %s", module)

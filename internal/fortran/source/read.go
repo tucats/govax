@@ -24,7 +24,7 @@ func ReadAll(f Form, files []*File, opener Opener, messages *diag.List) *Program
 
 	for _, file := range files {
 		if !r.stopped {
-			r.readFile(file, 0, true)
+			r.readFile(file, 0, true, false)
 		}
 	}
 
@@ -43,15 +43,16 @@ type reader struct {
 }
 
 // readFile reads one file's lines, at include depth depth, adding them
-// and their statements to the program. listed is each line's Listed.
-func (r *reader) readFile(file *File, depth int, listed bool) {
+// and their statements to the program. listed and library are each line's
+// Listed and Library.
+func (r *reader) readFile(file *File, depth int, listed, library bool) {
 	n := len(file.Lines)
 	lines := make([]*Line, n)
 	splits := make([]fields, n)
 
 	for i, text := range file.Lines {
 		splits[i] = r.form.split(text)
-		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed}
+		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library}
 	}
 
 	for i := 0; i < n && !r.stopped; {
@@ -97,7 +98,7 @@ func (r *reader) readFile(file *File, depth int, listed bool) {
 // initial line and the rest its continuation lines and the comment lines
 // among them; first is the initial line's index in the program's lines.
 func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
-	s := &Statement{First: first, Last: first + len(lines) - 1, Depth: depth}
+	s := &Statement{First: first, Last: first + len(lines) - 1, Depth: depth, Library: lines[0].Library}
 	r.label(s, lines[0], splits[0])
 
 	var (
@@ -139,7 +140,7 @@ func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
 	s.Text = text.String()
 
 	if spec, ok := r.include(s); ok {
-		r.includeFile(s, spec, depth, lines[0].Listed)
+		r.includeFile(s, spec, depth, lines[0])
 
 		return
 	}
@@ -164,6 +165,7 @@ func (r *reader) directive(line *Line, fl fields, index int) {
 		First:     index,
 		Last:      index,
 		Depth:     line.Depth,
+		Library:   line.Library,
 		pieces:    []piece{{line: line, column: fl.start + 1}},
 	})
 }

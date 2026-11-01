@@ -2,7 +2,8 @@
 
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
-settled"); subtask 3, text libraries and INCLUDE, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
+settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
+day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -454,3 +455,26 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   Unconfirmed, there being no VAX FORTRAN or its User Manual: the search's order, a library named last still searched
   from the first INCLUDE, and `A+B`'s MACRO file named for A. Seen on the way and left: govax's COPY reports
   `%COPY-S-COPIED` without `/LOG`, where VMS's says nothing (the oracle filters the line).
+- **2026-11-01:** Subtask 4, govax's definition modules. **`internal/fortran/sysdef`**: 47 modules, made once as
+  FORTRAN text from `vmsdef` (`Symbols` over `LibrarySymbols`, as Part A found). A module is a list of prefixes and a name
+  goes to the longest that matches, so no name is in two (`TestAllModulesTogether` compiles them in one unit under IMPLICIT
+  NONE); names are in capitals, those that differ only by case one (`TT$_PRO_SERIES` stays), and past 31 characters none. The
+  plan's list has the survey's counts (`TestPlannedModules`), with its "others ready by prefix". Added to them, by the same
+  rule: `$LIBCLIDEF`, `$LIBDTDEF`, and `$LIBVMDEF`, which take `LIB$` names `$LIBDEF` and `$LIBDCFDEF` don't; and `$BRKDEF`,
+  `$SHRDEF`, and `$STATEDEF`, which `vmsdef` already held. `$OPCDEF`'s 228 names are from VMS's `vax/def_opc.obj`
+  (`testdata/for83/decode.go`, `defined.txt`, `gen -values`), so `vmsdef` now has them as Decision 10 said.
+  `$SYSSRVNAM` is `vmsdef.P1VectorTable` without data cells, spares, `_2` halves, and `SYS$SRCHANDLER`. `$CHFDEF` has `CHFDEF`, `CHFDEF1`, and
+  `CHFDEF2` as well as its constants (`TestHandlerLayouts` holds them to `vmsdef`), `L_` names only, so VSI's example's Alpha
+  `CHF$IS_MCH_DEPTH` isn't a field, as its comment there says VAX's isn't. `$FORIOSDEF` is each `FOR$_` name's message number, which
+  equals `FOR$K_`'s wherever both exist (`TestIOSTATNames`); its names are unconfirmed, and an end of file's IOSTAT is -1, not its number.
+  The search of Decision 2 now ends in these (`FORSYSDEF.TLB (built into govax)` in messages and the MACRO file).
+  **Decision 5**: `source.Line.Library` and `Statement.Library` (inherited through a module's own INCLUDEs), `sema`'s
+  `Symbol.Linked` for the `.EXTRN`: a program's own EXTERNAL always, a module's if called or passed, a `%LOC` being passed. The
+  storage map leaves out only a scalar a module declares and the unit never uses (`UnusedFromLibrary`, what layout
+  already calls `onlyDeclared`). A module's unused array, COMMON, or EQUIVALENCE name still shows, since nothing tracks
+  those; govax's modules declare none.
+  **The `.TLB`**: `sysdef.Library` and `go run ./internal/fortran/sysdef/mkforsysdef [file]`, read by LIBRARY and `/LIBRARY`
+  (`TestFortranBuiltinLibrary`). It isn't a govax command, so a user with only the binary can't make one. `testdata/fortran/sysdef.for` runs
+  the modules end to end in both paging modes. A program's own `INTEGER*4` or `EXTERNAL` of a name a module already declares is DUPDECL or DUPATTR,
+  as any second declaration is; whether VAX FORTRAN and its FORSYSDEF allow it is unconfirmed, and it matters to a program that
+  declares a service it also gets from `$SYSSRVNAM`.

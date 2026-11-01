@@ -2,6 +2,7 @@ package fortran
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -409,5 +410,76 @@ func TestModuleName(t *testing.T) {
 func TestVMSTime(t *testing.T) {
 	if got := vmsTime(time.Date(2026, time.March, 9, 8, 7, 6, 50_000_000, time.UTC)); got != "9-MAR-2026 08:07:06.05" {
 		t.Errorf("vmsTime = %q", got)
+	}
+}
+
+// moduleIncludes is an Opener whose modules are in memory.
+type moduleIncludes map[string][]string
+
+func (moduleIncludes) OpenInclude(name string, _ *source.File) (*source.File, error) {
+	return nil, errors.New("no file " + name)
+}
+
+func (m moduleIncludes) OpenModule(_, module string, _ *source.File) (*source.File, error) {
+	return &source.File{Spec: module, Lines: m[module]}, nil
+}
+
+// TestLibraryNamesCostNothing checks Decision 5 of Phase 83: of a text library
+// module's EXTERNAL names only those used are in the .EXTRN, where a program's
+// own are all there; and the storage map leaves out a variable a module declares
+// and the unit never uses.
+func TestLibraryNamesCostNothing(t *testing.T) {
+	opts := testOptions
+	opts.Includes = moduleIncludes{
+		"NESTED": {"      EXTERNAL NESTUSE,NESTOFF"},
+		"NAMES": {
+			"      EXTERNAL CALLED,FUNCTN,PASSED,ADDRESS,UNUSED",
+			"      INTEGER*4 FUNCTN,USEDVAR,IDLEVAR",
+			"      INCLUDE '(NESTED)'",
+		},
+	}
+
+	r := Compile(opts, File{Spec: "T.FOR", Name: "T", Lines: []string{
+		"      PROGRAM T",
+		"      INCLUDE '(NAMES)'",
+		"      EXTERNAL OWNDATA",
+		"      INTEGER*4 OWNIDLE",
+		"      CALL CALLED(PASSED)",
+		"      CALL NESTUSE",
+		"      USEDVAR = FUNCTN(%LOC(ADDRESS))",
+		"      END",
+	}})
+	if r.Errors != 0 || r.Warnings != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	var extrn []string
+
+	for _, line := range r.MACRO {
+		if rest, ok := strings.CutPrefix(line, "\t.EXTRN\t"); ok {
+			extrn = strings.Split(strings.Fields(rest)[0], ",")
+		}
+	}
+
+	for _, name := range []string{"CALLED", "FUNCTN", "PASSED", "ADDRESS", "NESTUSE", "OWNDATA"} {
+		if !slices.Contains(extrn, name) {
+			t.Errorf(".EXTRN has no %s: %v", name, extrn)
+		}
+	}
+
+	for _, name := range []string{"UNUSED", "NESTOFF"} {
+		if slices.Contains(extrn, name) {
+			t.Errorf(".EXTRN has %s: %v", name, extrn)
+		}
+	}
+
+	if !strings.Contains(text, ";   USEDVAR") || !strings.Contains(text, ";   OWNIDLE") {
+		t.Errorf("the map lacks a variable:\n%s", text)
+	}
+
+	if strings.Contains(text, ";   IDLEVAR") {
+		t.Errorf("the map has a module's unused variable:\n%s", text)
 	}
 }

@@ -4074,8 +4074,10 @@ $FOR
     INCLUDE '(module)' reads a text library's module (see HELP LIBRARY),
     from the first of these that has it: the libraries given with the
     source (FORTRAN PROG+MYLIB/LIBRARY), the library the logical name
-    FORT$LIBRARY names, and SYS$LIBRARY:FORSYSDEF.TLB.  INCLUDE
-    'lib(module)' reads only that library.
+    FORT$LIBRARY names, SYS$LIBRARY:FORSYSDEF.TLB, and last the definition
+    modules built into govax, such as $SSDEF, $IODEF, $JPIDEF, $FORDEF,
+    $CHFDEF, and $SYSSRVNAM, whose INTEGER*4 and PARAMETER statements give
+    VMS's names their values.  INCLUDE 'lib(module)' reads only that library.
 
     Compiled programs call FTNRTL, govax's FORTRAN run-time library, a
     shareable image written in MACRO-32 and built into govax.  LINK

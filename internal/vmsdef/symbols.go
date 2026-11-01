@@ -60,6 +60,9 @@ import (
 //     codes: the disk ACP's $QIO argument.
 //   - ATR$: $ATRDEF's disk ACP attribute codes, their sizes, and the
 //     layout of an attribute list's entries.
+//   - OPC$: $OPCDEF's $SNDOPR request block: its field offsets, operator
+//     classes, and request types, from real MACRO's output for Phase 83's
+//     probe (testdata/for83).
 //   - OBJ$, MHD$, GSD$, GPS$, GSY$, SDF$, SRF$, EPM$, TIR$, EOM$, and the
 //     rest of the VAX object language ($OBJRECDEF through $TIRDEF): record
 //     and subrecord types, TIR commands, flag bits, and field offsets. Only

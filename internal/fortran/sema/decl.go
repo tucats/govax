@@ -26,6 +26,9 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		a.order(s, stmtFunc)
 
+		from := s.Base().Source
+		a.inLibrary = from != nil && from.Library
+
 		switch s := s.(type) {
 		case *ast.TypeStmt:
 			a.typeStatement(s)

@@ -232,8 +232,8 @@ package never touches a file system.
 
 `INCLUDE '(module)'` and `'lib(module)'` go to the `Opener`'s other method,
 `OpenModule`, since which libraries to search is the command's business: its
-`/LIBRARY` files, the `FORT$LIBRARY` logical name, and `FORSYSDEF.TLB`. The
-compiler gets a `File` either way, and can't tell a module from a file. A
+`/LIBRARY` files, the `FORT$LIBRARY` logical name, `FORSYSDEF.TLB`, and last the
+modules built into govax. The compiler gets a `File` either way, and can't tell a module from a file. A
 parenthesis tells the forms apart, as no file specification holds one.
 
 A line remembers whether it's `Listed`: every line of the files compiled, and an
@@ -243,6 +243,24 @@ of lines a program uses a few of, and the MACRO file should stay readable. The
 statements don't care; only the code generator's source comments (and in time
 a listing) look at it, which is why a program's code still comes out with no
 source beside it when its INCLUDE doesn't say `/LIST`.
+
+A line also remembers whether it's from a `Library` module, or a file one includes,
+which its statement carries on to semantic analysis. Definitions are a program's to
+ignore: VMS has hundreds of system services, and a program that includes the module
+naming them all shouldn't have every one looked for by LINK. So a name that an
+`EXTERNAL` in a module declares reaches the MACRO file's `.EXTRN` only if the unit
+uses it (`Symbol.Linked`), while an `EXTERNAL` of the program's own always does, since
+naming a BLOCK DATA unit and not using it is the whole point of that statement.
+
+**The built-in modules** are `internal/fortran/sysdef`. They are ordinary FORTRAN
+source, made once from `vmsdef`'s tables when a compilation first asks. A module is a
+list of name prefixes, and each name goes to the module with its longest matching
+prefix, so `LIB$_NORMAL` is `$LIBDEF`'s and `LIB$K_DCFOPR_AB` `$LIBDCFDEF`'s, and no
+name is in two modules. Making them text rather than symbol tables handed to `sema`
+means there is nothing special about them past the search: the lexer, parser, and
+semantic analysis read `$SSDEF`'s 1,463 lines as they read a program's. A file of
+3,000 such statements compiles in a few hundredths of a second, so nothing here needs
+to be cleverer than that. `mkforsysdef` writes the same text as a `.TLB`.
 
 `FORTRAN A+B` is `ReadAll`: each file at depth 0 in turn, one `Program`. Nothing
 ends a program unit at a file's end, so a unit may run on into the next file.

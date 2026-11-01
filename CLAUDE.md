@@ -578,7 +578,9 @@ never had.
   the probe, `testdata/for83` and `testdata/str83`; the doc's "What the probe settled" is VMS's answers, and subtask 3
   text libraries and INCLUDE (LIBRARY/TEXT, `lbr.TextModule`, held to VMS by `TestFor83NewLibraries` and
   `TestFor83LibraryOracle`; `INCLUDE '(module)'` by `source.Opener`'s `OpenModule`, searching `dclcmd`'s `fortranIncludes`;
-  `Line.Listed`; `FORTRAN A+B+LIB/LIBRARY`, a `/joinable` list and `fortran.CompileAll`).
+  `Line.Listed`; `FORTRAN A+B+LIB/LIBRARY`, a `/joinable` list and `fortran.CompileAll`), and subtask 4 govax's definition
+  modules (`internal/fortran/sysdef`: 47 modules from `vmsdef`, by each name's longest prefix, `$SYSSRVNAM`, `$CHFDEF`'s
+  structures, searched last; a module's EXTERNAL is a `.EXTRN` only if used, `Line.Library`, `Symbol.Linked`; `mkforsysdef` writes a `.TLB`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -882,8 +884,8 @@ never had.
   one output every time (`TestFortranModules`).
 - `testdata/for83/` — Phase 83's probe (README.md; `vax/` is VMS V7.1's run): `gen.go` writes `for83.mar`
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
-  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `testdata/str83/` is the
-  STR$ routines' program, on the same volume.
+  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `decode.go` turns
+  `def_opc.obj` into `defined.txt` for `vmsdef`; `testdata/str83/` is the STR$ routines' program, on the same volume.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -2130,6 +2132,9 @@ expect adjustment as phases land):
   verifies a routine; golden dumps (`Dump`) are in `ir/testdata`.
   `Compile` lowers a program without errors and generates its code,
   the module named for the first unit; `opt` is Phase 84's.
+- `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
+  the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
+  import it: `dclcmd`'s `fortranIncludes` searches it last.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`

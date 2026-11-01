@@ -84,5 +84,6 @@ It ran on 2026-11-01, whole; the phase doc's "What the probe settled" says what 
 | `vax/for83-vax.txt`, `vax/for83b-vax.txt`, `vax/for83c-vax.txt` | The three programs' output on VMS 7.1 |
 | `vax/for83.log` | `FOR83.COM`'s log: LINK's undefined names, and part D's messages, listings, and dumps in order (no commands past part B, as `FOR83R.COM`'s `SET NOVERIFY` lasts) |
 | `vax/def_opc.obj`, `vax/def_opc.anl` | `$OPCDEF GLOBAL`'s object and its analysis |
+| `decode.go`, `defined.txt` | `defined.txt` is every name and value in that object, which `decode.go` writes and `go run ./internal/vmsdef/gen -values testdata/for83/defined.txt` merged into `vmsdef` |
 | `vax/s1.tlb` to `vax/s9.tlb`, `vax/t1.tlb` to `vax/t3.tlb` | Part D's libraries, byte for byte: `s1` to `s7` are `T1` after each step, `s8` compressed, `s9` data-reduced |
 | `vax/e1.txt`, `e2.txt`, `e4.txt`, `e6.txt` | What `/EXTRACT` wrote |

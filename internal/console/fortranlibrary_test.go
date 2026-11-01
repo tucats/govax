@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/tucats/govax/internal/fortran/sysdef"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -148,6 +150,124 @@ func TestFortranLibrarySysDef(t *testing.T) {
 
 	if !strings.Contains(out, " 1") {
 		t.Errorf("the program wrote %q", out)
+	}
+}
+
+// builtinSSDEF is a program using a definition module with no library in sight.
+const builtinSSDEF = "      INCLUDE '($ssdef)'\n      PRINT *, SS$_ABORT\n      END\n"
+
+// TestFortranBuiltinModules finds a module built into govax: in any case, with
+// no lines in the MACRO file but the comments naming it.
+func TestFortranBuiltinModules(t *testing.T) {
+	d, buf := fortranLibraryConsole(t, map[string]string{"B.FOR": builtinSSDEF})
+
+	out := fortranLibraryRun(t, d, buf, "FORTRAN B", "MACRO B", "LINK B", "RUN B")
+	if !strings.Contains(out, " 44") {
+		t.Errorf("the program wrote %q", out)
+	}
+
+	out = strings.ReplaceAll(fortranLibraryRun(t, d, buf, "TYPE B.MAR"), "\r", "")
+
+	if want := "; INCLUDE file FORSYSDEF.TLB (built into govax)($SSDEF):\n; end of FORSYSDEF.TLB (built into govax)($SSDEF)\n"; !strings.Contains(out, want) {
+		t.Errorf("no %q in:\n%s", want, out)
+	}
+
+	if strings.Contains(out, "SS$_CANCEL") {
+		t.Errorf("a name the program doesn't use is in the MACRO file:\n%s", out)
+	}
+}
+
+// TestFortranBuiltinModulesLast checks that a library of any kind comes before
+// the built-in modules, and that 'lib(module)' doesn't reach them.
+func TestFortranBuiltinModulesLast(t *testing.T) {
+	d, buf := fortranLibraryConsole(t, map[string]string{
+		"B.FOR":     builtinSSDEF,
+		"C.FOR":     "      INCLUDE 'MINE($IODEF)'\n      END\n",
+		"SSDEF.TXT": "      INTEGER SS$_ABORT\n      PARAMETER (SS$_ABORT = 7)\n",
+	})
+
+	for _, tc := range []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"built in", []string{"FORTRAN B"}, " 44"},
+		{"/LIBRARY", []string{"FORTRAN B+MINE/LIBRARY"}, " 7"},
+		{"FORT$LIBRARY", []string{"DEFINE FORT$LIBRARY DUA1:[000000]MINE", "FORTRAN B"}, " 7"},
+	} {
+		if tc.name == "built in" {
+			fortranLibraryRun(t, d, buf, "LIBRARY/CREATE/TEXT MINE SSDEF.TXT/MODULE=$SSDEF")
+		}
+
+		out := fortranLibraryRun(t, d, buf, append(tc.lines, "MACRO B", "LINK B", "RUN B")...)
+		if !strings.Contains(out, tc.want+"\r") && !strings.Contains(out, tc.want+"\n") {
+			t.Errorf("%s: the program wrote %q, want %q", tc.name, out, tc.want)
+		}
+	}
+
+	buf.Reset()
+
+	err := d.Dispatch("FORTRAN C")
+	if err == nil || !strings.Contains(buf.String(), "the library has no module $IODEF") {
+		t.Errorf("'lib(module)': %v, %q", err, buf)
+	}
+}
+
+// TestFortranBuiltinLibrary reads the built-in modules as the text library
+// mkforsysdef writes, with LIBRARY and as FORTRAN's own /LIBRARY.
+func TestFortranBuiltinLibrary(t *testing.T) {
+	d, buf := fortranLibraryConsole(t, map[string]string{"B.FOR": builtinSSDEF})
+
+	data, err := sysdef.Library(time.Date(2026, time.November, 1, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	host := filepath.Join(t.TempDir(), "forsysdef.tlb")
+	if err := os.WriteFile(host, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	quoted := `"` + host + `"`
+
+	out := fortranLibraryRun(t, d, buf, "LIBRARY/LIST "+quoted)
+
+	for _, want := range []string{"$SSDEF", "$SYSSRVNAM", "$CHFDEF"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("no %s in the listing:\n%s", want, out)
+		}
+	}
+
+	out = fortranLibraryRun(t, d, buf, "FORTRAN B+"+quoted+"/LIBRARY", "MACRO B", "LINK B", "RUN B")
+	if !strings.Contains(out, " 44") {
+		t.Errorf("the program wrote %q", out)
+	}
+
+	out = fortranLibraryRun(t, d, buf, "TYPE B.MAR")
+	if !strings.Contains(out, host+"($SSDEF)") {
+		t.Errorf("the module isn't the library's:\n%s", out)
+	}
+
+	extracted := filepath.Join(filepath.Dir(host), "ssdef.txt")
+	fortranLibraryRun(t, d, buf, `LIBRARY/TEXT/EXTRACT=$SSDEF/OUTPUT="`+extracted+`" `+quoted)
+
+	text, err := os.ReadFile(extracted)
+	if err != nil || !strings.Contains(string(text), "PARAMETER (SS$_ABORT = '0000002C'X)") {
+		t.Errorf("the module's text: %v, %.200q", err, text)
+	}
+}
+
+// TestFortranServiceNames checks $SYSSRVNAM's cost: the .EXTRN of a unit that
+// includes it names only the service it calls.
+func TestFortranServiceNames(t *testing.T) {
+	d, buf := fortranLibraryConsole(t, map[string]string{
+		"S.FOR": "      INCLUDE '($SYSSRVNAM)'\n      INTEGER*4 T(2), I\n      I = SYS$GETTIM(T)\n      END\n",
+	})
+
+	out := fortranLibraryRun(t, d, buf, "FORTRAN S", "TYPE S.MAR")
+
+	if !strings.Contains(out, ".EXTRN\tSYS$GETTIM") || strings.Contains(out, "SYS$ASCTIM") {
+		t.Errorf("the MACRO file:\n%s", out)
 	}
 }
 

@@ -100,6 +100,8 @@ func (a *analyzer) nameArg(n *ast.Name) Expr {
 		return &Procedure{exprBase: exprBase{s.Type, n.Pos}, Name: s.Name, Dummy: s}
 
 	case s.External:
+		s.passed = true
+
 		return &Procedure{exprBase: exprBase{s.Type, n.Pos}, Name: s.Name, Routine: s.Name}
 	}
 

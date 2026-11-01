@@ -142,7 +142,7 @@ func lowerUnit(u *sema.Unit) *Routine {
 	// The unit's variables and arrays keep the places semantic analysis
 	// gave them; the compiler's cells come after them.
 	for _, s := range u.Symbols {
-		if s.External && s.Dummy == 0 {
+		if s.Linked() {
 			r.Externals = append(r.Externals, s.Name)
 		}
 

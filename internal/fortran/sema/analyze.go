@@ -304,6 +304,10 @@ type analyzer struct {
 	// entryOf are the unit's ENTRY statements' entry points (entry.go).
 	entryOf map[*ast.EntryStmt]*Entry
 
+	// inLibrary is set while the declarations walk reads a statement from a
+	// text library's module (source.Statement.Library).
+	inLibrary bool
+
 	// walking is set during the statement walk, when using a name is using
 	// it in a statement (usedBeforeEntry).
 	walking bool
@@ -493,7 +497,7 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 	}
 
 	t, untyped := a.implicit.typeOf(name)
-	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos}
+	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary}
 	a.unit.byName[name] = s
 	a.unit.Symbols = append(a.unit.Symbols, s)
 

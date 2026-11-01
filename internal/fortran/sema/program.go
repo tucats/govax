@@ -239,6 +239,14 @@ type Symbol struct {
 	// argument's among them.
 	External bool
 
+	// library is set for a name first seen in a statement from a text
+	// library's module. ownExternal is set for a name in an EXTERNAL statement
+	// of the program's own, and passed for an external name given as an
+	// argument (Symbol.Linked).
+	library     bool
+	ownExternal bool
+	passed      bool
+
 	// Automatic is set for a name in an AUTOMATIC statement, or tied to one
 	// by EQUIVALENCE: its Offset is its place in the unit's frame area
 	// (Unit.FrameSize), not $LOCAL (storage.go).

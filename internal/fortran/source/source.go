@@ -143,6 +143,11 @@ type Line struct {
 	// Listed says the line goes in the MACRO file: every line of the files
 	// compiled, and an included one only if each INCLUDE above it says /LIST.
 	Listed bool
+
+	// Library says the line came from a text library's module, or from a file
+	// such a module includes. What such a line declares, a program may leave
+	// unused without cost (docs/PHASE-83 - FORTRAN and VMS.md, Decision 5).
+	Library bool
 }
 
 // Statement is one statement: its label, its text, and where it came
@@ -168,6 +173,10 @@ type Statement struct {
 
 	// Depth is the include depth of the file the statement is in.
 	Depth int
+
+	// Library says the statement came from a text library's module
+	// (Line.Library).
+	Library bool
 
 	// pieces map Text back to the source: one for each line that gave
 	// the statement text, in order.

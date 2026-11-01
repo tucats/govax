@@ -5027,9 +5027,45 @@ directory. Included files may include others, ten deep.
 1. the libraries given with the source: `FORTRAN PROG+MYDEFS/LIBRARY`, in order
    (a library's type is `.TLB` by default);
 2. the library or search list the logical name `FORT$LIBRARY` names;
-3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one.
+3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one;
+4. govax's own definition modules, built in.
 
 `INCLUDE 'lib(module)'` reads only that library, found as an INCLUDE file is.
+
+The built-in modules let a program name what VMS defines without having VAX
+FORTRAN's FORSYSDEF.TLB. Each holds the names of VMS's definition file of that
+name, with their values, as `INTEGER*4` and `PARAMETER` statements:
+
+```fortran
+      INCLUDE '($SSDEF)'
+      INCLUDE '($SYSSRVNAM)'
+      INTEGER*4 STATUS, NOW(2)
+      STATUS = SYS$GETTIM(NOW)
+      IF (STATUS .NE. SS$_NORMAL) CALL LIB$SIGNAL(%VAL(STATUS))
+```
+
+| Modules | What they define |
+|---|---|
+| `$SSDEF`, `$RMSDEF`, `$LIBDEF`, `$FORDEF`, `$MTHDEF`, `$OTSDEF`, `$STRDEF`, `$SHRDEF`, `$CLIDEF` | Condition values |
+| `$FORIOSDEF` | `FOR$IOS_name`: the number `IOSTAT=` returns for each FORTRAN error (for an end of file, -1 instead) |
+| `$SYSSRVNAM` | Every system service as an `INTEGER*4` function named in `EXTERNAL` |
+| `$CHFDEF` | A handler's arrays: offsets, and the structures `CHFDEF`, `CHFDEF1`, and `CHFDEF2` |
+| `$JPIDEF`, `$SYIDEF`, `$DVIDEF`, `$LNMDEF`, `$LKIDEF` | Item codes |
+| `$IODEF`, `$TTDEF`, `$TT2DEF`, `$DCDEF`, `$DEVDEF`, `$MSGDEF`, `$FIBDEF`, `$ATRDEF` | I/O functions, devices, and the disk ACP |
+| `$FABDEF`, `$RABDEF`, `$NAMDEF`, `$XABDEF` | RMS's blocks, as constants |
+| `$DSCDEF`, `$STSDEF`, `$PSLDEF`, `$PRVDEF`, `$PRTDEF`, `$STATEDEF` | Descriptors, condition fields, the PSL, privileges, protections, process states |
+| `$SECDEF`, `$PRCDEF`, `$PQLDEF`, `$LCKDEF`, `$ACCDEF`, `$BRKDEF`, `$OPCDEF` | Other services' flags and blocks |
+| `$LIBCLIDEF`, `$LIBDCFDEF`, `$LIBDTDEF`, `$LIBVMDEF`, `$SMGDEF` | The run-time library's other constants |
+
+A module costs a program only the time to read it: a constant makes no code or
+storage, its lines stay out of the MACRO file without `/LIST`, and an `EXTERNAL`
+in a text library's module (of any library, not only these) reaches the object
+module only if the unit uses the name. An `EXTERNAL` statement in the program's
+own files always does, used or not, since that's how a BLOCK DATA unit gets linked.
+
+To read them, make them a text library with
+`go run ./internal/fortran/sysdef/mkforsysdef` in govax's source directory, which
+writes `FORSYSDEF.TLB`. `FORT$LIBRARY` or `/LIBRARY` can name a changed copy.
 
 An INCLUDE's lines appear in the MACRO file only with `/LIST`, as in
 `INCLUDE 'limits/LIST'` or `INCLUDE '(TIMES)/LIST'`, and `/NOLIST`, the default,

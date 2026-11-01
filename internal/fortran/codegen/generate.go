@@ -560,7 +560,7 @@ func (g *routineGen) writeMap(w *Writer) {
 
 	for _, c := range g.r.Cells {
 		switch {
-		case c.Sym == nil:
+		case c.Sym == nil || c.Sym.UnusedFromLibrary():
 
 		case c.Frame:
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),

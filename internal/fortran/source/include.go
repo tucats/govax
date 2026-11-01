@@ -87,8 +87,9 @@ func (r *reader) include(s *Statement) (includeSpec, bool) {
 }
 
 // includeFile reads the file or module the INCLUDE statement s names into
-// the program, after s's lines. listed says whether s's own lines are.
-func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, listed bool) {
+// the program, after s's lines. line is s's initial line, whose Listed and
+// Library the included lines inherit from.
+func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, line *Line) {
 	if spec.name == "" {
 		return // a malformed INCLUDE, already reported
 	}
@@ -129,7 +130,7 @@ func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, listed b
 		return
 	}
 
-	r.readFile(file, depth+1, listed && spec.list)
+	r.readFile(file, depth+1, line.Listed && spec.list, line.Library || spec.isModule)
 }
 
 // squeezeKeyword finds keyword at the start of text, ignoring blanks and
