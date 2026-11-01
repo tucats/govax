@@ -1,0 +1,9 @@
+SIZE          28
+FIRST    4    0   25    3
+SECOND   12    0    2    2
+LONGS    51970052    33685516           0
+BUFADR 1
+RETADR 1
+BUFADR 2
+RETADR 2
+  $STATUS == "%X00000001"

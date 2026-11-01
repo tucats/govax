@@ -1,0 +1,5 @@
+OTHER           5
+DMOD           0
+ZMOD           0
+D           7
+  $STATUS == "%X00000001"

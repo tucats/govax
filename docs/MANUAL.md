@@ -1297,7 +1297,9 @@ compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
 plan.md`); so far it compiles a subset of the language (main
 programs, subroutines, functions, and BLOCK DATA; every type's
 declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
-EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; expressions in every type
+EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; DEC's STRUCTURE, RECORD, UNION,
+MAP, typeless and RADIX-50 constants, VOLATILE, AUTOMATIC, STATIC, and the
+CDEC$ directives; expressions in every type
 and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
 intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; READ, WRITE,
 PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST), and reports any
@@ -4840,6 +4842,64 @@ output it prints, and programs of several files in its `modules` directory.
   value, then clears them, so a second call returns zeros. Each argument is
   an INTEGER variable or array element, or null, all INTEGER\*4 or all
   INTEGER\*2 (which get the low 16 bits), as the manual's D.4.3 says.
+- **Structures and records** (sections 2.2.5, 3.4, 4.13, and 4.15 of the
+  language manual). A structure declaration describes a record's form; a RECORD
+  statement makes records of it:
+
+  ```fortran
+        STRUCTURE /ITEM/
+          INTEGER*2 BUFLEN, CODE
+          INTEGER*4 BUFADR /0/
+          UNION
+            MAP
+              INTEGER*4 RETADR
+            END MAP
+            MAP
+              BYTE RAW(4)
+            END MAP
+          END UNION
+        END STRUCTURE
+        RECORD /ITEM/ LIST(3), ONE
+        LIST(2).CODE = 5
+        LIST(2) = ONE
+  ```
+
+  Fields are packed, each where the one before it ends, unless `/ALIGN` says
+  otherwise (section 14.3). A union is as long as its longest map, and its maps'
+  fields are named as the structure's own (`ONE.RAW(2)`). A field may be
+  a nested STRUCTURE (with a field list), a RECORD of a structure declared
+  before, or `%FILL`, which only takes space; PARAMETER inside a structure defines
+  the unit's constant. Every record starts with its fields' initial values,
+  in COMMON too, and a later map's replace an earlier one's bytes. A field
+  reference may be used wherever a variable or array element may, but as a DO
+  variable, or in DATA, EQUIVALENCE, COMMON, NAMELIST, or SAVE; a record can't be
+  in DATA, EQUIVALENCE, NAMELIST, or SAVE. A whole record or substructure, an
+  *aggregate*, can do only three things: be assigned to one of the same structure
+  declaration, be an argument, by reference (or `%LOC`, `%REF`, never `%VAL` or
+  `%DESCR`), to a dummy record of the same form, and be an item of an unformatted
+  I/O list. Dummy records may be adjustable arrays.
+- **Typeless constants** (2.2.1.4, 2.2.1.6, 2.2.1.7): octal `'777'O` and
+  hexadecimal `'FF'X` constants, and Hollerith constants `5HHELLO`, have no type:
+  they take the other operand's, or the assignment's target's; where none is
+  given, as with two of them, the default integer's. A REAL or COMPLEX target gets
+  their bits, moved as an integer, so `X = '8000'X` doesn't fault. Shorter than the
+  type they are filled with zeros on the left, or a Hollerith constant with blanks
+  on the right; longer is an error if what is cut isn't a zero digit or a blank. A
+  character constant in a numeric context is a Hollerith constant. As an argument
+  an octal or hexadecimal constant is four bytes, and a Hollerith constant its own
+  length. `"177` is an INTEGER, in octal.
+- **RADIX-50 constants** (appendix B.3): `6RABCDEF`, in DATA and initial values
+  only. Three characters make a word, blanks pad the last, and lowercase is taken
+  as uppercase.
+- **VOLATILE, AUTOMATIC, and STATIC.** VOLATILE (4.16) names variables, arrays,
+  records, dummy arguments, and `/blocks/`, and reaches through EQUIVALENCE; every
+  reference goes to memory anyway until the compiler has an optimizer. AUTOMATIC
+  and STATIC come from a later VAX FORTRAN, by way of the HP Fortran manual's 5.3,
+  statement forms only: `AUTOMATIC T, K(20)` puts a variable in the routine's stack
+  frame, new at each call, with no value until assigned; STATIC, the default, says
+  it is in static storage. An AUTOMATIC name can't have an initial value, or be in
+  COMMON, SAVE, or a NAMELIST group. A routine with AUTOMATIC variables isn't
+  reentrant: its temporaries are still static.
 - **Arguments** are passed by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
@@ -5456,6 +5516,41 @@ FORTRAN compiler was available to check them). So far:
   couldn't be made to read one from MACRO, so it is unconfirmed.
 - ERRSNS reports every I/O error since its last call, those taken by ERR=,
   END=, or IOSTAT= too; whether VMS's library saves those wasn't checked.
+- Structures: "the same structure" for an aggregate assignment is the same
+  declaration, even if another is declared alike. A map's field names share their
+  structure's level, so they must differ from the other maps' and the structure's.
+  A union may have one map, and a map no fields; a structure must declare something.
+  A field named like an operator (`EQ`, `TRUE`) gets a warning.
+- Records: a record in `$LOCAL` is on the boundary its length gives it, at most a
+  longword (under `NATURAL`, its structure's). A record may go only to a dummy
+  record of its form, not even to a byte array, and a dummy record takes only such a
+  record; an argument by `%VAL` or `%DESCR`, as `%VAL(%LOC(R))`, isn't compared. Forms
+  are compared across one file's units only. `(R)` in parentheses is an error, not
+  a copy. A record longer than 65,535 bytes can't be an I/O item (`RECORDIOSIZE`),
+  and one overlapping itself through a union moves in no defined order. Identical
+  initial values may be repeated by other units of a file (`DATATWICE` otherwise).
+- Typeless constants: bits that are a reserved operand are an error (`BADTYPELESS`)
+  in an expression, where only a move keeps them. An octal or hexadecimal constant
+  can't be a CHARACTER value (`NOCHARVALUE`). A PARAMETER's constant with nonzero
+  digits past its type is an error, where DATA's is cut as section 4.3 says.
+- AUTOMATIC: a name's EQUIVALENCE group is all in the frame, and can't have a member
+  in a block, SAVE, STATIC, or with an initial value. A SAVE with no list leaves
+  AUTOMATIC names in the frame. Both AUTOMATIC and STATIC are allowed in a main
+  program. A variable given to `ASSOCIATEVARIABLE=` is the program's to keep alive.
+  A frame too large for the stack with paging off ends the image with `SS$_ACCVIO`
+  and no message; with paging on the stack grows.
+- Directives: a file is one module, so the first IDENT is the file's, where VAX
+  FORTRAN made a module per unit. `ALIGN=` takes a number as written, not a
+  PARAMETER's name. Choosing a PSECT attribute two ways for one block is an error,
+  though the manual forbids only LCL with GBL.
+- `/ALIGN` isn't V5.0's. Its grammar is the HP manual's, and what that manual leaves
+  to its *User Manual* is govax's: every boundary but those it states, COMPLEX on an
+  octaword by the author's choice past its "up to 64-bit"; a union's length isn't
+  rounded up, only a structure's; a packed structure as a field of a natural one goes
+  on its largest field's boundary; an AUTOMATIC record is only on a longword; a
+  `CDEC$ PSECT ALIGN=` smaller than a block's layout needs is an error; `/WARN=ALIGNMENT`
+  is off by default, where the HP compiler's is on; a group can't begin or end inside a
+  structure declaration, and may come before a main program's first statement.
 
 ---
 

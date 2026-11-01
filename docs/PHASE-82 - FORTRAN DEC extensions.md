@@ -1,12 +1,12 @@
 # Phase 82 — FORTRAN: DEC's data extensions
 
-**Status:** in progress: subtask 1, the survey (Part A below), done
-2026-11-01 and reviewed by the author the same day ("The author's
-answers"); subtask 2, structure declarations, subtask 3, RECORD and
-field references, subtask 4, aggregates, subtask 5, typeless,
-Hollerith, and RADIX-50 constants, subtask 6, VOLATILE, AUTOMATIC,
-and STATIC, subtask 7, the CDEC$ directives, and subtask 8, `/ALIGN`, done
-2026-11-01. Needs Phase 79 (subprograms).
+**Status:** done 2026-11-01. Subtask 1, the survey (Part A below), reviewed by the
+author the same day ("The author's answers"); subtask 2, structure declarations,
+subtask 3, RECORD and field references, subtask 4, aggregates, subtask 5, typeless,
+Hollerith, and RADIX-50 constants, subtask 6, VOLATILE, AUTOMATIC, and STATIC,
+subtask 7, the CDEC$ directives, subtask 8, `/ALIGN`, and subtask 9, end to end and
+the close-out, the same day. "Where things stand", before the progress log, says what
+is left. Needs Phase 79 (subprograms).
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 1 and 10).
 
@@ -564,13 +564,39 @@ further Alpha-era directive; out, unless the author wants it.
    `dclcmd/fortran.go`, `govax fortran`), CDEC$ OPTIONS and END OPTIONS
    groups, the natural layouts of records and commons, the psect
    alignment, `/WARN=ALIGNMENT`.
-9. **End to end:** a `$GETJPIW` item list built from a structure, its
+9. **End to end** (done 2026-11-01): a `$GETJPIW` item list built from a structure, its
    layout checked byte by byte (run in Phase 83 once services are
    reachable), and programs in `testdata/fortran` for records, unions,
    aggregates, constants, AUTOMATIC, and `/ALIGN`; then the
    **close-out** (FORTRAN-INTERNALS.md's section on records and
    storage, MANUAL.md's 14, HELP FORTRAN, the unconfirmed choices in
    MANUAL.md's differences, CLAUDE.md).
+
+## Where things stand
+
+Phase 82 is done: STRUCTURE, RECORD, UNION, MAP, and `%FILL`; field references,
+aggregate assignment, records as arguments, in COMMON, and in unformatted I/O; octal,
+hexadecimal, Hollerith, and RADIX-50 constants typed by context; VOLATILE, AUTOMATIC, and
+STATIC; CDEC$ IDENT, PSECT, TITLE, SUBTITLE, OPTIONS, and END OPTIONS; and `/ALIGN`. There
+is no VAX FORTRAN to check them against, so `testdata/fortran`'s `records`, `aggregates`,
+`typeless`, `automatic`, `directives`, `align`, `itemlist`, and `modules/psects` and
+`modules/aligned` are written by hand from the manuals; only LINK's side of conflicting
+sections is VMS's (`testdata/link82`). Left for later:
+
+- **Phase 83:** the item list of `itemlist.for` handed to `$GETJPIW`; this phase checked
+  only its bytes.
+- **Phase 84:** VOLATILE's meaning: `Mem.Volatile` is carried in the IR and nothing reads
+  it until there is an optimizer to tell.
+- **Phase 85:** TITLE and SUBTITLE's listing (the syntax tree keeps them); OPTIONS's `/CHECK`,
+  `/EXTEND_SOURCE`, and `/F77`, still NOTIMPL, where `/ALIGN` on OPTIONS also lands, refused by
+  answer 3; the command's `/WARNINGS`, so `/WARN=ALIGNMENT` is only CDEC$ OPTIONS's.
+- **A later phase, not yet defined:** routines really reentrant (answer 1): AUTOMATIC's frame
+  is its groundwork, and the compiler's temporaries are what stays in `$LOCAL`.
+- **Staying out:** DICTIONARY (NOTIMPL, as govax has no Common Data Dictionary), CDEC$ PACK.
+- **Known limits:** LINK's C22, C23, C26, C27, and C29 differ from VMS (the entry below on
+  `testdata/link82`, DEVIATIONS.md); an AUTOMATIC record of a natural structure is only on a
+  longword; an aligned block's layout difference between separately compiled files gets no
+  message, since neither LINK nor the compiler sees both layouts.
 
 ## Progress log
 
@@ -870,3 +896,15 @@ further Alpha-era directive; out, unless the author wants it.
   fields where they are; `%FILL` fields get boundaries but no ALIGNFIELD; an AUTOMATIC record of a natural
   structure is only on a longword, since FP promises no more (the question subtask 6 left), with no message;
   each unit starts from the command's setting; ambiguous abbreviations (`N`, NATURAL or NONE) are errors.
+- **2026-11-01:** Subtask 9, end to end and the close-out. `testdata/fortran/itemlist.for` builds a
+  `$GETJPIW` item list from a structure under `/ALIGN /WARN=ALIGNMENT`, which says nothing and moves
+  nothing, and reads its words and addresses back through the union's other maps; the call itself is
+  Phase 83's. `modules/aligned`: a block declared at two lengths in two files, linked in both orders,
+  LINK keeping the larger alignment. Both were worked out by hand, ran the first time they compiled,
+  in both paging modes. FORTRAN-INTERNALS.md's new section 13 follows one routine through the layouts,
+  packed and natural, with the compiler's own output, showing `MOVAB` give way to indexed mode; FTNRTL
+  and testing are now its 14 and 15. MANUAL.md's 14.2 describes structures, records, the constants, and
+  the storage statements, which the earlier subtasks hadn't, 14.3 `/ALIGN`, 14.4 CDEC$ OPTIONS, and 14.7
+  the unconfirmed choices. HELP FORTRAN's account of the compiler was stale, from Phase 78 (only list-directed
+  output, ENCODE as its NOTIMPL example), and now says what compiles. Decision 2 of the survey (a variable part
+  is a computed address) stands as subtask 3 refined it, shown in the section.

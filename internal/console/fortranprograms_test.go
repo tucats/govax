@@ -26,7 +26,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "floatedit", "flow", "formats", "funcs", "funcsg", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "runformat", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text", "typeless", "unformatted", "useropen", "vfe"}
+var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "floatedit", "flow", "formats", "funcs", "funcsg", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "runformat", "stmtfuncs", "stopdo", "stops", "strings", "tables", "text", "typeless", "unformatted", "useropen", "vfe"}
 
 func TestFortranPrograms(t *testing.T) {
 	sources, err := filepath.Glob(filepath.Join(fortranPrograms, "*.for"))

@@ -4025,15 +4025,19 @@ $FOR
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
     FORTRAN plan.md).  So far it reads every statement of the language,
-    and compiles a subset: main programs, subroutines, functions (but
-    REAL*16, COMPLEX*16, and CHARACTER ones), and BLOCK DATA;
-    declarations of every type, IMPLICIT, PARAMETER, arrays, COMMON,
-    EQUIVALENCE, DATA, SAVE, EXTERNAL, and INTRINSIC; assignment and
+    and compiles nearly all of it: main programs, subroutines, functions
+    of every type, ENTRY, and BLOCK DATA; declarations of every type,
+    IMPLICIT, PARAMETER, arrays, COMMON, EQUIVALENCE, DATA, SAVE,
+    EXTERNAL, and INTRINSIC; DEC's STRUCTURE, RECORD, UNION, and MAP,
+    octal, hexadecimal, Hollerith, and RADIX-50 constants, VOLATILE,
+    AUTOMATIC, and STATIC, and the CDEC$ directives (IDENT, PSECT,
+    TITLE, SUBTITLE, OPTIONS, and END OPTIONS); assignment and
     expressions in every type and length (BYTE, LOGICAL, INTEGER, REAL
     in F, D or G, and H, COMPLEX, and CHARACTER, with substrings and
     concatenation), and every intrinsic function, in line or by MTHRTL;
-    IF, block IF, DO, GO TO, CALL, RETURN, and STOP; PRINT * and
-    WRITE (*,*).  Any other statement draws %FORT-E-NOTIMPL.  Such
+    every IF, DO, and GO TO, CALL, RETURN, STOP, and PAUSE; READ, WRITE,
+    and the other I/O statements, and OPEN and the other file statements,
+    on sequential and relative files.  Any other statement draws %FORT-E-NOTIMPL.  Such
     programs compile, link, and run:
 
         FORTRAN AVERAGE
@@ -4069,10 +4073,9 @@ $FOR
     finds its routines (named FTN$...) without an options file, and RUN
     finds the image.  Both look for a file of one's own first: a logical
     name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
-    directory.  So far FTNRTL has FTN$VERSION, FTN$STOP, the I/O
+    directory.  FTNRTL has FTN$VERSION, FTN$STOP, the I/O
     statements' calls (FTN$READ_SF, FTN$WRITE_SF, and the other begin
-    calls, FTN$IO_ITEM, FTN$IO_END), of which only list-directed output
-    works yet, to the default units and units 5 and 6, ISHFTC (FTN$IISHFTC,
+    calls, FTN$IO_ITEM, FTN$IO_END), ISHFTC (FTN$IISHFTC,
     FTN$JISHFTC), and a routine for each intrinsic function MTHRTL
     lacks, for a program that passes the function's name as an argument
     (FTN$LEN, FTN$INDEX, ..., FTN$NWORKERS), which MACRO programs can
@@ -4161,7 +4164,7 @@ $FOR
 
     The compiler reports each problem it finds with the line it is on:
 
-        %FORT-E-NOTIMPL, the ENCODE statement is not implemented yet
+        %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
           at line 7 of DUA0:[WORK]PROG.FOR;1
                 ENCODE (8, 10, BUF) X
           ------^
@@ -4174,7 +4177,8 @@ $FOR
 
     From the host shell, "govax fortran <source>..." runs this command,
     with --macro <file> or --no-macro, --extend-source, --d-lines,
-    --continuations <n>, --no-i4, and --g-floating.
+    --continuations <n>, --no-i4, --g-floating, --align <value>, and
+    --no-align.
 
     Examples:
 
@@ -4187,6 +4191,8 @@ $FOR
         FORTRAN A,B,C
 
         FORTRAN DUNGEON /CONTINUATIONS=40
+
+        FORTRAN PROG /ALIGN=(RECORDS=NATURAL,COMMONS=STANDARD)
 
         $ govax --mount-write DUA0=work.dsk fortran DUA0:[000000]PROG.FOR
 

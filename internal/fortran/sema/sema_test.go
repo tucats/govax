@@ -2062,6 +2062,35 @@ func TestAlignDepth(t *testing.T) {
 	}
 }
 
+// TestAlignAutomatic checks that a natural record goes on its boundary in $LOCAL
+// and on no more than a longword in the frame, FP's only promise.
+func TestAlignAutomatic(t *testing.T) {
+	prog, ms := analyzeAligned(t, Alignment{Records: Natural},
+		"      STRUCTURE /S/", "      COMPLEX C", "      END STRUCTURE",
+		"      RECORD /S/ S, A", "      BYTE B", "      AUTOMATIC A", "      B = 1", "      END")
+	if len(ms) != 0 {
+		t.Fatalf("messages: %v", ms)
+	}
+
+	u := prog.Units[0]
+
+	if got := u.Lookup("S").Offset; got != 0 {
+		t.Errorf("S at %d, want 0", got)
+	}
+
+	if u.LocalAlign != 4 {
+		t.Errorf("LocalAlign = %d, want 4", u.LocalAlign)
+	}
+
+	if got := u.Lookup("A").Offset % 4; got != 0 {
+		t.Errorf("A at %d, not on a longword", u.Lookup("A").Offset)
+	}
+
+	if u.FrameSize != 16 {
+		t.Errorf("FrameSize = %d, want 16", u.FrameSize)
+	}
+}
+
 // TestCommonAlignments checks each block's program section's alignment, the most
 // any unit's layout needs, whatever the first unit's said.
 func TestCommonAlignments(t *testing.T) {

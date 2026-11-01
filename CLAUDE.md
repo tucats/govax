@@ -553,6 +553,26 @@ never had.
   `testdata/fortran/useropen.for`; ROP LOC as VMS's, `FTN$$UNIT_GET` copying from RAB$L_RBF, and
   subtask 12 (2026-11-01) end to end (`testdata/fortran/ledger.for`) and the close-out; the
   phase doc's "Where things stand" lists what is left (indexed files, CONVERT other than NATIVE).
+  Phase 82 (done 2026-11-01) is DEC's data extensions; subtask 1 is the survey, its doc's Part A,
+  answered by the author, with no VMS probe, there being no VAX FORTRAN, and the HP Fortran manual
+  (`VMS-FORTRAN-LANGUAGE.txt`) read for what V5.0's lacks; subtask 2 structure declarations
+  (`sema/structure.go`: a `Structure` of `Field`s, packed, unions' maps among them), subtask 3 RECORD and
+  scalar field references (`sema/record.go`, `FieldRef`; `ir/lowerfield.go`'s `fieldMem`: constant parts
+  folded, indexed mode if every stride is a multiple of the field's size, otherwise `MOVAB`), subtask 4
+  aggregates (a Record-typed reference `value` refuses; `moveRecord`, a MOVC3 in pieces past 65,535 bytes;
+  arguments by reference, compared by `Structure.form`, RECORDARG; COMMON; unformatted items, `DTypeZ`),
+  subtask 5 typeless, Hollerith, and RADIX-50 constants (`source.CountMayFollow`, `sema/typeless.go`:
+  `Const.Raw`, the IR's `RawConst`, moved as an integer of its width, never folded), subtask 6 VOLATILE,
+  AUTOMATIC, and STATIC (`sema/storage.go`: `Unit.FrameSize`, a `Cell` with `Frame`, `SUBL2 #n,SP`
+  at each entry point, FP-relative symbols; `$FP` for variable format expressions; `Mem.Volatile` for Phase
+  84), subtask 7 the CDEC$ directives (`sema/directive.go`: `Program.Ident`, `CommonBlock.Attrs`,
+  `checkPsects`), then `testdata/link82`, which holds LINK's and MACRO's handling of conflicting section
+  attributes to VMS 7.1's (MULPSC, the first definition's attributes, the largest alignment; `TestLink82Oracle`),
+  subtask 8 `/ALIGN` (`sema/align.go`: an `Alignment`, the command's and CDEC$ OPTIONS groups'; `Structure.Natural`
+  and `Boundary`; `unionStatement` reads maps at 0 and moves them; `layoutCommon`, `LayoutAlign`,
+  `raiseCommonAlignments`; `Unit.LocalAlign`, codegen's `localAlignment`), and subtask 9 end to end
+  (`testdata/fortran/itemlist.for`, `modules/aligned`) and the close-out (FORTRAN-INTERNALS.md's section 13,
+  MANUAL.md's 14.2 to 14.4 and 14.7); the phase doc's "Where things stand" lists what is left.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -823,6 +843,10 @@ never had.
   `copyoutc.cmd`; `for81f.com` and `exchangef.cmd` ran `for81c.mar` again. `vax/` is VMS V7.1's
   runs (`for81-vax.txt` and `for81c-vax.txt` cut where the probe ran away; `for81f-vax.txt` is
   round 2's FORRTL whole); `vax/for81-blocks.txt` and `for81c-blocks.txt` the blocks of VMS-made files.
+- `testdata/link82/` — Phase 82's probe of LINK and conflicting section attributes (README.md): 57 LINKs
+  of MACRO modules, each a section with FORTRAN's attributes and a variant with one changed, in both orders,
+  across modules, PSECT_ATTR=, COLLECT=, and clusters. `TestLink82Oracle` holds the log, MACRO's severities,
+  and 53 of the 57 maps to VMS V7.1's `vax/`, in both paging modes.
 - `testdata/nml80/` — Phase 80's probe of NAMELIST I/O (subtask 11; README.md):
   `gen.go` writes `nml80.mar` (786 cases on VMS's FORRTL: each READ's FOR number and
   the group written back), `nml80f.for` (the same cases as FORTRAN, for FTNRTL),

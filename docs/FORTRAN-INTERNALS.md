@@ -7,7 +7,7 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 81) the compiler parses every statement of the
+So far (Phases 74 to 82) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
@@ -21,12 +21,15 @@ namelist, and unformatted, at the terminal, to internal files, and to the
 files of units 0 to 119, sequential and relative, by sequential and direct
 access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
 (with USEROPEN=), CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE,
-FIND, REWRITE, DELETE, and UNLOCK. Indexed files are a later program's.
+FIND, REWRITE, DELETE, and UNLOCK; and DEC's data extensions, structures and
+records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
+and `/ALIGN`. Indexed files are a later program's.
 The tour follows one small program through every pass (section 1), then
 takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
 instructions (section 11), and a fourth for control flow and subprograms
-(section 12), then FTNRTL, then how the compiler is tested.
+(section 12), a fifth for records and how a layout reaches the code (section
+13), then FTNRTL, then how the compiler is tested.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -1407,7 +1410,175 @@ value of another length goes to a temporary of the function's length; and an
 argument that is a statement function's value is passed as a copy, since `F(X) =
 X` would otherwise hand the routine X itself.
 
-## 13. FTNRTL: the run-time library (`internal/ftnrtl`)
+## 13. Records, typeless constants, and the frame
+
+Phase 82 added DEC's extensions to the data. None of them needs much new
+machinery in the code generator, because every one of them comes down to a place
+in memory: an offset, a length, and sometimes a register. This section follows
+one routine, and then the same routine laid out differently:
+
+```
+      SUBROUTINE LOG(N, R)
+      STRUCTURE /ENTRY/
+        LOGICAL*1 FLAG /.TRUE./
+        INTEGER*4 COUNT
+        UNION
+          MAP
+            REAL*4 VALUE
+          END MAP
+          MAP
+            CHARACTER*3 TAG
+          END MAP
+        END UNION
+      END STRUCTURE
+      RECORD /ENTRY/ TABLE(10), R
+      TABLE(N).COUNT = TABLE(3).COUNT + 1
+      TABLE(N) = R
+      END
+```
+
+### A layout is a table of offsets
+
+`sema/structure.go` reads a declaration into a `Structure`: its `Field`s with their
+offsets, its size, its initial values. Structures have a name space of their own,
+so a structure, a field, and a variable may all be called X. V5.0's rule is
+*packed*: each field starts where the last ended, which the VAX allows, since it
+reaches a longword at any address, only more slowly. A map has no name, so its
+fields are the structure's own, and every map starts at the union's offset. The
+storage map shows the result:
+
+```
+;   TABLE  /ENTRY/ (10)  $LOCAL+0    LOG.TABLE
+;   Structure /ENTRY/, 9 bytes
+;     +0     FLAG   LOGICAL*1
+;     +1     COUNT  INTEGER
+;     +5     VALUE  REAL, map 1 of the union at +5
+;     +5     TAG    CHARACTER*3, map 2 of the union at +5
+```
+
+A record is an ordinary variable whose `Type` has the kind `Record` and the
+structure's length, so `$LOCAL`, COMMON, and argument lists needed almost nothing
+new. Its initial values are repeated at each element's place:
+
+```
+LOG.TABLE:
+	.BYTE	-1			; TABLE(1).FLAG = .TRUE.
+	.BLKB	8
+	.BYTE	-1			; TABLE(2).FLAG = .TRUE.
+```
+
+### A field reference is arithmetic on an offset
+
+`TABLE(3).COUNT` has constant subscripts, so `fieldMem` (`ir/lowerfield.go`) folds
+it to one number: 2 × 9 + 1 is 19. `TABLE(N).COUNT` has a variable part, and here
+the packing costs something. Indexed mode multiplies its register by the operand's
+size, 4 for a longword, but the elements are 9 bytes apart, and 9 isn't a multiple of 4.
+So the code computes the address, with `MOVAB`, whose operand's size is 1, and stores
+through it. The displacement is what's left of the record's first element and the
+field's offset, -9 + 1:
+
+```
+;   15        TABLE(N).COUNT = TABLE(3).COUNT + 1
+	MULL3	@LOG.N(AP),#9,R0
+	MOVAB	LOG.TABLE-8[R0],R0
+	ADDL3	LOG.TABLE+19,#1,(R0)
+```
+
+### An aggregate is a byte move
+
+An aggregate can't be a value: `value` refuses one, so every expression context
+refuses it with no case of its own, and the three places that take one (an
+assignment, an argument, an I/O list) ask for it specifically. Assignment is
+`CharMove` of the length, the same IR statement a CHARACTER assignment uses, which
+is written as MOVC3; past 65,535 bytes, MOVC3's limit, in pieces:
+
+```
+;   16        TABLE(N) = R
+	MULL3	@LOG.N(AP),#9,R0
+	MOVC3	#9,@LOG.R(AP),LOG.TABLE-9[R0]
+```
+
+An argument is the record's address, as any variable's. Across one file's units
+`recordArguments` compares `Structure.form`, each field's place, type, and extents
+in order of place, so that a map's order doesn't count, as the manual says it
+doesn't, and names don't either. A dummy record's field goes through `ArgPointer`,
+since the ordinary dummy place expresses its offset as a count of elements, which a
+packed field's needn't be.
+
+### `/ALIGN`: the same routine, laid out again
+
+V5.0 has no choice of layout. A later VAX FORTRAN did, and `sema/align.go` takes
+it from the HP manual: an `Alignment` setting, which the command starts each unit
+with and `CDEC$ OPTIONS` groups change. Wrapping the structure above in a group
+changes only the table of offsets:
+
+```
+;   Structure /ENTRY/, 12 bytes
+;     +0     FLAG   LOGICAL*1
+;     +4     COUNT  INTEGER
+;     +8     VALUE  REAL, map 1 of the union at +8
+;     +8     TAG    CHARACTER*3, map 2 of the union at +8
+```
+
+and the code improves with no change to the code generator, which only ever saw
+offsets. The element length, 12, is now a multiple of 4, so the rule from Phase 82's
+subtask 3 can use plain indexed mode, with a smaller multiplier:
+
+```
+;   17        TABLE(N).COUNT = TABLE(3).COUNT + 1
+	MULL3	@LOG.N(AP),#3,R0
+	ADDL3	LOG.TABLE+28,#1,LOG.TABLE-8[R0]
+```
+
+Three things make alignment harder than it looks. A **union's** place depends on
+its largest field, which isn't known until its maps are read, so `unionStatement`
+reads them as if the union were at 0, then moves everything in it to the place: a
+field's boundary, reached from the union's start, survives the move because the
+place is a multiple of every boundary inside. An **offset's alignment is an
+address's only if the section's is as strict**, so a common block's `.PSECT` gets
+the most any unit's layout needs (`LayoutAlign`, `raiseCommonAlignments`), and the
+natural record's `$LOCAL` too. And **`$LOCAL` is one section across a module's
+routines**, which MACRO continues from where it was left, and a second `.PSECT` with
+other attributes would conflict. So every routine in the module writes the same
+alignment (`localAlignment`), and one that needs the boundary starts with `.ALIGN`:
+
+```
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,4
+	.ALIGN	4			; the boundary of this routine's aligned records
+```
+
+### Constants with no type
+
+A `'FF'X` or `5HHELLO` has no type until it's used (`sema/typeless.go`): beside a
+typed operand it takes that one's, and in an assignment the target's, by way of the
+bytes memory would hold. So far that is folding. The surprise is a REAL target.
+`X = '8000'X` has bits that are a *reserved operand*, on which any floating instruction
+faults; so a `Const` keeps its `Raw` bytes, the IR's `RawConst` is never folded, and the
+code generator moves them as an integer of the width: `MOVL`, `MOVQ`, or `MOVO`. Since
+nothing but a move sees them, nothing can fault. RADIX-50 is only in DATA, so it is just
+words in `$LOCAL`; MACRO-32 has no `.RAD50` (that was MACRO-11's), so they are `.WORD`s.
+
+### AUTOMATIC: the only storage FORTRAN keeps on the stack
+
+An AUTOMATIC name gets its `Symbol.Offset` in a frame area, as a name in `$LOCAL` gets
+one, and each entry point starts with `SUBL2 #n,SP`. CALLS and CALLG leave SP at FP,
+on a longword, so the area is right below FP whatever the entry mask saved. The symbol is
+then a displacement, `LOCALS.T = -12`, and the operand `LOCALS.T(FP)`, just as a dummy's
+is `SUB.A(AP)`. Two things can't be assembled ahead of time: a descriptor of a frame
+variable can't be read-only data, so it is a cell filled in at run time; and a variable
+format expression is called *by FTNRTL*, so FP isn't the routine's there. A routine that
+needs it keeps its FP in a cell, `$FP`, stored at each entry point, and reaches the
+variable through that. Note what this doesn't do: the compiler's own temporaries are
+still in `$LOCAL`, so a routine with AUTOMATIC variables still isn't reentrant.
+
+### Directives
+
+`CDEC$` lines reach sema as `DirectiveStmt`s, read where they stand. IDENT becomes the
+file's `.IDENT`, a file being one module. PSECT changes a `CommonBlock`'s `Attrs`, which
+`commonAttributes` writes, and `checkPsects` compares across the file's units; between files
+it is LINK that sees a conflict, and VMS's LINK decides for the first module (`testdata/link82`).
+
+## 14. FTNRTL: the run-time library (`internal/ftnrtl`)
 
 Compiled code does arithmetic and branches itself; for I/O, STOP, and
 the like it calls FTNRTL. FTNRTL is written in MACRO-32 (Decision 13),
@@ -1910,7 +2081,7 @@ a call of `FTN$ERRSNS` or, for INTEGER\*2 arguments, `FTN$ERRSNS_W`: a routine t
 arguments by reference can't see their lengths, so the compiler, which can, chooses
 the routine.
 
-## 14. Testing a compiler
+## 15. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.
