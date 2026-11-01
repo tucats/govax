@@ -39,12 +39,13 @@ func TestImage(t *testing.T) {
 	}
 
 	image, ok := src.Image(ftnrtl.Name)
-	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 11 {
+	if !ok || image.Match != link.MatchLEQ || image.MajorID != 1 || image.MinorID != 12 {
 		t.Errorf("image %+v", image)
 	}
 
 	for symbol, offset := range map[string]uint32{
 		"FTN$VERSION": 0, "FTN$STOP": 8,
+		"FTN$REWIND": 416, "FTN$BACKSPACE": 424, "FTN$ENDFILE": 432,
 		"FTN$PRINT_LIST": 16, "FTN$WRITE_LIST": 24, "FTN$IO_ITEM": 32, "FTN$IO_END": 40,
 		"FTN$IISHFTC": 48, "FTN$JISHFTC": 56,
 		"FTN$LEN": 64, "FTN$INDEX": 72, "FTN$ICHAR": 80, "FTN$CHAR": 88,

@@ -35,8 +35,13 @@ func handled(s ast.Stmt) bool {
 		return s.Kind == lex.Read || s.Kind == lex.Write
 
 	case *ast.AuxIOStmt:
-		// REWIND and the others are later subtasks of Phase 81's.
-		return s.Kind == lex.Open || s.Kind == lex.Close || s.Kind == lex.Inquire
+		// DELETE, FIND, and UNLOCK are later subtasks of Phase 81's.
+		switch s.Kind {
+		case lex.Open, lex.Close, lex.Inquire, lex.Rewind, lex.Backspace, lex.EndFile:
+			return true
+		}
+
+		return false
 	}
 
 	return false

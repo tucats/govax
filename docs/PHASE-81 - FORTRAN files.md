@@ -3,7 +3,8 @@
 **Status:** in progress: subtask 1, the survey, done 2026-10-31 and
 accepted by the author the same day (Part A's answers); subtask 2, the probe,
 done the same day (three VMS runs); subtask 3, RMS and ods2's groundwork, done the
-same day; subtask 4, OPEN and CLOSE, the same day; subtask 5, INQUIRE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
+same day; subtask 4, OPEN and CLOSE, the same day; subtask 5, INQUIRE, the same day; subtask 6,
+REWIND, BACKSPACE, and ENDFILE, the same day. Planned 2026-10-29. Needs Phase 80 (formatting and the
 error model). Part of the FORTRAN program laid out in `PHASE-74 -
 FORTRAN plan.md` (Decisions 12, 13, and 21).
 
@@ -1070,3 +1071,39 @@ works, and any other name is FOR$_NOTIMP when the OPEN is done. Subtask 11 does 
     FORTRAN's character values need, where FORRTL over govax took `for013.dat   ` as a bad name,
     which may be govax's `$PARSE`. A closed VFC file's RECORDTYPE is UNKNOWN, an indexed file's
     KEYED YES and DIRECT NO, and DEFAULTFILE= alone with a name that won't parse leaves NAME blank.
+- **2026-10-31, subtask 6, REWIND, BACKSPACE, and ENDFILE.** `ftn_position.mar` (`FTN$REWIND`,
+  `FTN$BACKSPACE`, `FTN$ENDFILE`, offsets 416 to 432, GSMATCH 1,12), each `(control block, unit)`,
+  begun by `FTN$$STMT_FILE` as OPEN is; sema's `fileStatement` and `ir`'s take the three as
+  statements with only ERR= and IOSTAT=. `TestFor81PositionOracle` holds the probe's cases on
+  formatted units (#543 to #545, #547, #549, #550; round 2's #21, #22, #26, #27) to VMS's
+  statuses, reads, and records; `testdata/fortran/positions.for` is the rest, read against these
+  rules by hand; `TestFor81PositionNotOpen` is #548; `TestFortranPositionSignals` and
+  `TestFortranPositionProcedure` the messages. #546, unformatted, waits for subtask 7.
+  - **A fifth trial, FORRTL over govax (`SET DEBUG RMS`; not kept),** showed how: REWIND is a
+    `$REWIND`, its RMS$_IOP on a terminal or a procedure ignored (the place doesn't move, so a
+    procedure's next line is read). BACKSPACE is the manual's: a `$REWIND`, then a `$GET` for each
+    record before the one to go back to, so FTNRTL's record count (`UB_RECORDS`, which
+    INVTEXREC's record number already used) is now the records before the unit's place: REWIND
+    clears it, BACKSPACE takes one off, and a read at the end of the file adds nothing (two reads
+    past the end, then BACKSPACE, reads the last record again). It refuses a device that isn't
+    file-oriented (DEV$V_FOD: SYS$OUTPUT, SYS$INPUT, TT:, NL:), and a file opened APPEND that was
+    there, until a REWIND (`UB_APPENDED`), as round 2's #21 shows. ENDFILE is a `$PUT`
+    of `1A`, which RMS refuses on a READONLY unit (FAC, so ENDFILERR with -RMS-F-FAC); FORRTL itself
+    refuses it on FIX records and on unformatted files that aren't segmented (VARIABLE, STREAM),
+    and allows it on formatted STREAM, STREAM_CR, and STREAM_LF and on SYS$OUTPUT. A unit
+    ENDFILE connects is `$CREATE`d with RAT 0, and INQUIRE answers FORM and BLANK UNKNOWN until its
+    next statement gives it a form (VMS's #548); FTNRTL's `FTN$$UNIT_OPEN` takes 2 for this.
+  - **A read of `1A` alone is ENDDURREA,** with no RMS status in the signal or ERRSNS, where an
+    RMS end of file has -RMS-E-EOF (the trial's messages).
+  - **BACKSPACE's second condition.** FORRTL's BACERR carries one more condition with no
+    arguments: 0018884C for direct access or APPEND, 00188844 for a device that isn't
+    file-oriented. VMS 7.1's `$GETMSG` has no text for them over govax (`-NONAME-F-NOMSG`), and no
+    VMS run printed these messages, so their names are unknown; FTNRTL signals the same values
+    (`CTX_REASON`, shown the same way). A refusal after an RMS failure (`$REWIND`'s IOP on the
+    terminal) also carries RMS's status, as the trial showed.
+  - **The signal's list of conditions RMS reports** is now a table in `ftn_statement.mar`
+    (`RMS_REPORTED`), with REWERR, BACERR, and ENDFILERR in it.
+  - **Unconfirmed, govax's choices.** That a relative unit's REWERR, BACERR, and ENDFILERR (round 2)
+    come from the same test as a direct unit's, waiting for relative files in subtask 10; that
+    BACKSPACE passes over a record too long for the buffer (RMS$_RTB) rather than failing; and the
+    second condition's values for a relative unit.

@@ -1315,9 +1315,9 @@ its volume's device and directory. The compiler's messages show the line
 and column:
 
 ```text
-%FORT-E-NOTIMPL, the BACKSPACE statement is not implemented yet
+%FORT-E-NOTIMPL, the UNLOCK statement is not implemented yet
   at line 7 of DUA0:[WORK]PROG.FOR;1
-        BACKSPACE (UNIT=1)
+        UNLOCK (UNIT=1)
   ------^
 ```
 
@@ -4359,10 +4359,10 @@ subprograms, and every formatted, list-directed, and namelist I/O
 statement, with FORMAT checked as it compiles; FTNRTL runs formatted
 input and output, with every edit descriptor and variable format
 expressions, list-directed input and output, and namelist input and output, on
-sequential files through OPEN, CLOSE, and INQUIRE (section 14.2), with the other file
-statements to come in Phase 81. Any other statement draws
-`%FORT-E-NOTIMPL`, naming it ("the BACKSPACE statement is not implemented
-yet"); the later phases widen the language.
+sequential files through OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, and ENDFILE
+(section 14.2), with the other file statements to come in Phase 81. Any other
+statement draws `%FORT-E-NOTIMPL`, naming it ("the UNLOCK statement is not
+implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
 ### 14.1 A first program
@@ -4650,6 +4650,17 @@ output it prints, and programs of several files in its `modules` directory.
   and asking by both unit and file is `%FORT-E-INQUIREBOTH`, where VMS's library answers for
   the file. A closed file is opened and closed again to look at it, shared, so that a file
   another program holds without sharing answers only EXIST. CONVERT= is still to come.
+- **REWIND, BACKSPACE, and ENDFILE** (sections 9.4 to 9.6) on sequential units. REWIND and
+  BACKSPACE of a unit not yet connected do nothing; ENDFILE connects it, and the file's form is
+  then its next statement's. BACKSPACE reads the file again from its start, as the manual
+  describes it, so it costs a pass over the records before. ENDFILE writes a record of one
+  character, `^Z`, which a READ takes for an end of file (END= or `IOSTAT=-1`), and a READ after
+  it goes on to the records beyond. On a direct unit each is an error (`REWERR` 20, `BACERR` 23,
+  `ENDFILERR` 33), and so are ENDFILE on fixed-length records, on an unformatted file that isn't
+  segmented, or READONLY, and BACKSPACE where there is no file to read again: a terminal, a
+  procedure's data lines, or a file opened with `ACCESS='APPEND'` before a REWIND. REWIND of the
+  terminal or a procedure does nothing. VMS's BACKSPACE errors carry a second condition whose
+  text govax doesn't have, shown as `-NONAME-F-NOMSG`.
 
   At a terminal a program may also write unit 5 and read unit 6, as an
   interactive program does; where SYS$OUTPUT isn't a terminal, a READ of unit 6
@@ -4687,7 +4698,7 @@ output it prints, and programs of several files in its `modules` directory.
   out of data edit descriptors with items left is `INFFORLOO` (60), and a
   record past column 133 `OUTSTAOVE` (66); reading, a record longer than
   199 characters is `INPRECTOO` (22). Unformatted, direct access, and keyed I/O, REWRITE,
-  REWIND, and the like, are `%FORT-E-NOTIMPL`.
+  DELETE, FIND, and UNLOCK are `%FORT-E-NOTIMPL`.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`

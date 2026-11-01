@@ -128,7 +128,8 @@ var inquireKeywords = map[string]fileKeyword{
 // codeUnit is the keyword INQUIRE passes its unit by, since by file it has none.
 const codeUnit = 1
 
-// FileStmt is OPEN, CLOSE, or INQUIRE (by its AST's kind): the unit, an
+// FileStmt is OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, or ENDFILE (by its
+// AST's kind): the unit, an
 // INTEGER*4 value, nil for an OPEN with no UNIT= (FORRTL's unit 0) and for
 // INQUIRE, whose unit is a keyword; its keywords, in order; and ERR= and
 // IOSTAT=, as IO's.
@@ -154,7 +155,8 @@ type FileKey struct {
 	Known  bool
 }
 
-// fileStatement analyzes OPEN, CLOSE, and INQUIRE (sections 9.1 to 9.3).
+// fileStatement analyzes OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, and ENDFILE
+// (sections 9.1 to 9.6).
 func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 	st := &FileStmt{stmtBase: stmtBase{s}}
 	ok := true
@@ -187,6 +189,8 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 		keywords = closeKeywords
 	case lex.Inquire:
 		keywords = inquireKeywords
+	case lex.Rewind, lex.Backspace, lex.EndFile:
+		keywords = nil // only ERR= and IOSTAT=
 	}
 
 	var control []*ast.IOSpec

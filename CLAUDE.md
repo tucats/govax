@@ -526,7 +526,10 @@ never had.
   `TestFor81OpenOracle` and `testdata/fortran/files.for`, and subtask 5 (2026-10-31) INQUIRE:
   `FTN$INQUIRE` (`ftn_inquire.mar`, no context, never failing; each answer's place by a
   keyword's mechanism, `ir`'s `fileAnswer`), held to VMS by `TestFor81InquireOracle` and
-  `testdata/fortran/inquire.for`.
+  `testdata/fortran/inquire.for`, and subtask 6 (2026-10-31) REWIND, BACKSPACE, and ENDFILE:
+  `ftn_position.mar` (BACKSPACE a `$REWIND` and a `$GET` for each record before, by the unit's
+  count; ENDFILE a `^Z` record, which a READ takes for an end of file), held to VMS by
+  `TestFor81PositionOracle` and `testdata/fortran/positions.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2075,7 +2078,8 @@ expect adjustment as phases land):
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
   entries at fixed offsets; `ftn_control.mar`, FTN$VERSION,
   FTN$STOP, and FTN$PAUSE; `ftn_units.mar`, the unit table, units -4 to 119, each with its own FAB
-  (Phase 81); `ftn_open.mar`, OPEN and CLOSE, and `ftn_inquire.mar`, INQUIRE, Phase 81;
+  (Phase 81); `ftn_open.mar`, OPEN and CLOSE, `ftn_inquire.mar`, INQUIRE, and `ftn_position.mar`, REWIND,
+  BACKSPACE, and ENDFILE, Phase 81;
   `ftn_edit.mar`, I, O, Z, and L editing, and `ftn_float.mar`, F, E, D, and G
   editing, Phase 80;
   `ftn_statement.mar`, the I/O statements' begin calls (FTN$WRITE_SL and

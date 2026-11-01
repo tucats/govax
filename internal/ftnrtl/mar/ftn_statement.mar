@@ -55,6 +55,7 @@
 ;	for FOR$_INPCONERR, FOR$_INVTEXREC with the text that couldn't be
 ;		converted and the unit's record number, or for an internal file
 ;		FOR$_INVTEX with the text alone
+;	for FOR$_BACERR, the condition saying why, with no arguments
 ;
 ; The file's name is the one RMS gave when the unit was connected
 ; (SYS$INPUT:.; for a process-permanent file), and empty for an internal
@@ -117,6 +118,9 @@ FOR$_FILNOTFOU	= ^X001880EC
 FOR$_OPEFAI	= ^X001880F4
 FOR$_NO_SUCDEV	= ^X00188154
 FOR$_FILNAMSPE	= ^X0018815C
+FOR$_REWERR	= ^X001880A4
+FOR$_BACERR	= ^X001880BC
+FOR$_ENDFILERR	= ^X0018810C
 
 ; The control block's fields and flags.
 ICB_W_SIZE	= 0
@@ -165,7 +169,9 @@ CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_UNITS)
 CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros
 CTX_USERPC	= CTX_RECP+52		; long: the user PC of a statement of one
 					;  call (FTN_OPEN), or 0
-CTX_SIZE	= CTX_RECP+56
+CTX_REASON	= CTX_RECP+56		; long: a second condition for the signal, or 0
+					;  (FTN_POSITION)
+CTX_SIZE	= CTX_RECP+60
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -195,6 +201,14 @@ FREE_LIST:	.LONG	0		; contexts to use again
 ; The last failure, for ERRSNS: its FOR number, RMS's status and value,
 ; the unit, and the condition value, in ERRSNS's order; all 0 for none.
 LAST_ERROR:	.LONG	0, 0, 0, 0, 0
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+; The conditions a signal gives RMS's status and value with, then a 0.
+RMS_REPORTED:
+	.LONG	FOR$_ENDDURREA, FOR$_INPRECTOO, FOR$_ERRDURREA, FOR$_ERRDURWRI
+	.LONG	FOR$_FILNOTFOU, FOR$_OPEFAI, FOR$_NO_SUCDEV, FOR$_FILNAMSPE
+	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR, 0
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -356,7 +370,8 @@ FAIL:	TSTL	CTX_STATUS(R3)
 ;
 ; FTN$$STMT_FILE(unit, FP, AP, user PC, control block)
 ;
-; Begins a statement that is a single call, OPEN or CLOSE (FTN_OPEN): the
+; Begins a statement that is a single call, OPEN or CLOSE (FTN_OPEN), REWIND,
+; BACKSPACE, or ENDFILE (FTN_POSITION): the
 ; context, with the FP and AP of the routine the statement is in and the PC it
 ; returns to; and the unit. Returns the context in R0, and in R1 the unit's block,
 ; or 0 with the context holding the error.
@@ -464,6 +479,7 @@ PUSH_CONTEXT:
 	CLRL	CTX_UNITMAX(R3)
 	MOVL	#1,CTX_UNITBLANK(R3)
 	CLRL	CTX_USERPC(R3)
+	CLRL	CTX_REASON(R3)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
 	MOVL	R3,STMT_TOP
 	RSB
@@ -560,24 +576,13 @@ REPORT		= -36			; the name's length and address, RMS's
 	CMPL	R3,#FOR$_SYNERRFOR
 	BNEQ	24$
 22$:	CLRL	REPORT(FP)
-24$:	CMPL	R3,#FOR$_ENDDURREA	; reported by RMS?
+24$:	MOVAL	RMS_REPORTED,R0		; reported by RMS?
+25$:	MOVL	(R0)+,R1
+	BEQL	26$
+	CMPL	R3,R1
 	BEQL	30$
-	CMPL	R3,#FOR$_INPRECTOO
-	BEQL	30$
-	CMPL	R3,#FOR$_ERRDURREA
-	BEQL	30$
-	CMPL	R3,#FOR$_ERRDURWRI
-	BEQL	30$
-	CMPL	R3,#FOR$_FILNOTFOU
-	BEQL	30$
-	CMPL	R3,#FOR$_OPEFAI
-	BEQL	30$
-	CMPL	R3,#FOR$_NO_SUCDEV
-	BEQL	30$
-	CMPL	R3,#FOR$_FILNAMSPE
-	BEQL	30$
-	CMPL	R3,#FOR$_CLOERR
-	BEQL	30$
+	BRB	25$
+26$:
 	CLRQ	REPORT+8(FP)		; no: no RMS status
 	;
 	; Saved for ERRSNS.
@@ -622,7 +627,12 @@ REPORT		= -36			; the name's length and address, RMS's
 	PUSHL	#1
 	PUSHL	#FOR$_INVTEX
 	ADDL2	#3,R6
-50$:	PUSHL	REPORT+12(FP)		; RMS's status value
+50$:	MOVL	CTX_REASON(R2),R0	; a second condition, with no arguments
+	BEQL	51$
+	CLRL	-(SP)
+	PUSHL	R0
+	ADDL2	#2,R6
+51$:	PUSHL	REPORT+12(FP)		; RMS's status value
 	PUSHL	REPORT+8(FP)		;  and status
 	MOVL	CTX_USERPC(R2),R0	; the user PC: a statement of one call's,
 	BNEQ	52$

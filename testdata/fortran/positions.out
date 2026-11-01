@@ -1,0 +1,36 @@
+FIRST           1
+SECOND           4
+SECOND AGAIN           4
+FIRST AGAIN           1
+RECORDS           5           0
+PAST THE END          -1
+LAST          25
+AFTER THE WRITE          -1
+          1
+         99
+         -1
+ PART ONE   
+END OF PART           2
+ PART TWO   
+END OF PART           4
+END OF PART           5
+          0
+          0
+DIRECT REWIND          20
+DIRECT BACKSPACE          23
+DIRECT ENDFILE          33
+FIXED ENDFILE          33
+NO SUCH UNIT          32
+         32
+         32
+F
+T UNKNOWN     
+FORMATTED   
+         -1
+ WORDS      
+APPEND BACKSPACE          23
+ NEW        
+ ONLY       
+READONLY ENDFILE          33
+FORTRAN STOP
+  $STATUS == "%X00000001"

@@ -31,7 +31,7 @@ const (
 	mechanismByte       = 10
 )
 
-// fileStatement lowers OPEN, CLOSE, or INQUIRE.
+// fileStatement lowers OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, or ENDFILE.
 func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	c := controlFor(s.Err, 0, s.IOStat)
 	kind := s.AST.Base().Kind
@@ -67,6 +67,12 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 		routine = "FTN$CLOSE"
 	case lex.Inquire:
 		routine = "FTN$INQUIRE"
+	case lex.Rewind:
+		routine = "FTN$REWIND"
+	case lex.Backspace:
+		routine = "FTN$BACKSPACE"
+	case lex.EndFile:
+		routine = "FTN$ENDFILE"
 	}
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)

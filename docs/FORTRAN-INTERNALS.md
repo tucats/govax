@@ -1803,6 +1803,23 @@ to read its attributes; it is closed again, and a last `$PARSE` given a bad defa
 any search the first began, which is how VMS's library does it, and why RMS must leave
 a NAM's answers alone when it can't read a string.
 
+### REWIND, BACKSPACE, ENDFILE: what RMS can't do for you
+
+The positioning statements (`ftn_position.mar`) are one call each, `FTN$REWIND($IO1, u)`
+and the like, begun by the same `FTN$$STMT_FILE` as OPEN, so they too end in FTN$IO_END.
+REWIND is RMS's `$REWIND`. ENDFILE is a `$PUT` of one byte, `^Z`, and the reading side
+(`FTN$$UNIT_GET`) turns a record of that byte alone into an end of file, though RMS sees
+nothing unusual in it; so a READ after it simply goes on.
+
+BACKSPACE is the instructive one. A file of variable-length records can be read forwards
+only: each record's length is in front of it, and nothing says where the previous one
+began. So the run-time library counts the records before the unit's place (the count it
+already kept for `FOR$_INVTEXREC`'s message), and BACKSPACE is a `$REWIND` and a `$GET`
+for each record but the last, which is exactly the manual's own description and what VMS's
+library does over govax. Two details follow from it: a READ that meets the end of the file
+mustn't add to the count, and a file opened with `ACCESS='APPEND'` has no count until a
+REWIND gives it one, which is why VMS refuses that BACKSPACE.
+
 ### Errors: one status, three ways to take it
 
 An I/O error is found deep inside a statement: in an item's conversion, in RMS, in

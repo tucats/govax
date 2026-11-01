@@ -438,7 +438,11 @@ OF_UNIT:
 	;
 	; The form says how RECL counts, and if blanks and conversion mean anything.
 	;
-30$:	CMPB	UB_FORM(R11),#1
+30$:	TSTB	UB_FORM(R11)		; none yet: a unit ENDFILE connected
+	BNEQ	35$
+	MOVL	UB_SIZE(R11),A_RECL(FP)
+	RSB
+35$:	CMPB	UB_FORM(R11),#1
 	BNEQ	50$
 	MOVAB	T_FORMATTED,A_FORM(FP)
 	MOVL	UB_SIZE(R11),A_RECL(FP)

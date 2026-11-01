@@ -644,7 +644,10 @@ func TestErrors(t *testing.T) {
 		// yet (Phase 76): statements, reported where they are, and the
 		// forms inside statements, reported where analysis reaches them.
 		{"a REWRITE statement", []string{"REWRITE (1) X", "END"}, "NOTIMPL@1:7"},
-		{"a BACKSPACE statement", []string{"BACKSPACE (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"an UNLOCK statement", []string{"UNLOCK (UNIT=1)", "END"}, "NOTIMPL@1:7"},
+		{"a REWIND of *", []string{"REWIND *", "END"}, "BADUNIT@1:14"},
+		{"a BACKSPACE of a text", []string{"BACKSPACE (UNIT='A')", "END"}, "BADUNIT@1:23"},
+		{"an ENDFILE of a REAL", []string{"X = 1", "ENDFILE X", "END"}, "BADUNIT@2:15"},
 		{"an INQUIRE by unit", []string{"LOGICAL L", "CHARACTER*8 C", "INTEGER*2 N", "INQUIRE (1, EXIST=L, NAME=C, NUMBER=N)", "END"}, ""},
 		{"an INQUIRE by file", []string{"LOGICAL L", "INQUIRE (FILE='X', DEFAULTFILE='.Y', OPENED=L, ERR=9, IOSTAT=I)", "9 END"}, ""},
 		{"an INQUIRE of a default name alone", []string{"LOGICAL L", "INQUIRE (DEFAULTFILE='X.Y', OPENED=L)", "END"}, ""},
@@ -655,7 +658,7 @@ func TestErrors(t *testing.T) {
 		{"an INQUIRE's number of the wrong type", []string{"REAL X", "INQUIRE (1, RECL=X)", "END"}, "KEYPLACE@2:19"},
 		{"an INQUIRE asking twice", []string{"LOGICAL L", "INQUIRE (1, EXIST=L, EXIST=L)", "END"}, "DUPSPECIFIER@2:28"},
 		{"PAUSE", []string{"PAUSE", "PAUSE 1", "PAUSE 'X'", "IF (.TRUE.) PAUSE", "END"}, ""},
-		{"a logical IF's REWIND", []string{"IF (X .GT. 0) REWIND 1", "END"}, "NOTIMPL@1:21"},
+		{"a logical IF's UNLOCK", []string{"IF (X .GT. 0) UNLOCK 1", "END"}, "NOTIMPL@1:21"},
 
 		// OPEN and CLOSE (sections 9.1, 9.2).
 		{"OPEN and CLOSE", []string{"CHARACTER*8 F, S", "OPEN (1, FILE=F, STATUS=S, RECL=80.0, ERR=9, IOSTAT=I)", "CLOSE (1, DISP='DELETE')", "9 END"}, ""},

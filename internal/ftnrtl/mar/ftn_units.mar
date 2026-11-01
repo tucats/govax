@@ -56,8 +56,8 @@
 ; expanded name, SYS$OUTPUT:.;, as VMS's run showed), or if the file couldn't
 ; be opened the name RMS got as far as; RMS's status and status value from
 ; the last operation that failed, the RMS STS and STV of ERRSNS; and how many
-; records the unit has transferred, the record number of FOR$_INVTEXREC's
-; message.
+; records come before the unit's place, the record number of FOR$_INVTEXREC's
+; message, which REWIND starts again and BACKSPACE takes one from.
 ;
 ; Image exit closes every unit by its disposition, through an exit handler
 ; declared when the first unit is connected (Decision 12).
@@ -77,18 +77,21 @@ UB_OPEN		= 0			; long: 1 once the unit is connected
 UB_KIND		= 4			; long: 0 a file, K_OUTPUT, K_INPUT
 UB_STS		= 8			; long: RMS's status from the last failure
 UB_STV		= 12			; long: and its status value
-UB_RECORDS	= 16			; long: the records read and written
+UB_RECORDS	= 16			; long: the records before the unit's place
 UB_UNIT		= 20			; long: the unit's number
 UB_RECP		= 24			; long: the record buffer's address
 UB_RECSIZE	= 28			; long: and its size
 UB_SIZE		= 32			; long: the longest record it may write
-UB_FORM		= 36			; byte: 1 FORMATTED, 2 UNFORMATTED
+UB_FORM		= 36			; byte: 1 FORMATTED, 2 UNFORMATTED, 0 not known
+					;  yet (a unit ENDFILE connected)
 UB_ACCESS	= 37			; byte: 1 DIRECT, 2 SEQUENTIAL, 3 APPEND, 4 KEYED
 UB_BLANK	= 38			; byte: 1 ZERO, 2 NULL
 UB_DISPOSE	= 39			; byte: 1 KEEP to 6 SUBMIT/DELETE
 UB_READONLY	= 40			; byte: 1 for READONLY
 UB_SCRATCH	= 41			; byte: 1 for STATUS='SCRATCH'
 UB_SEGMENTED	= 42			; byte: 1 for unformatted segmented records
+UB_APPENDED	= 43			; byte: 1 at the end of a file that was there,
+					;  with no count of its records
 UB_NEXTREC	= 44			; long: the next direct record, or 0 (INQUIRE)
 UB_FNA		= 48			; the default file name's text
 UB_DNA		= 60			; the default default name's text
@@ -268,6 +271,7 @@ EXIT_DECLARED:	.LONG	0
 	CLRB	UB_READONLY(R6)
 	CLRB	UB_SCRATCH(R6)
 	CLRB	UB_SEGMENTED(R6)
+	CLRB	UB_APPENDED(R6)
 	CLRL	UB_NEXTREC(R6)
 	;
 	; The default names. R7 is the unit.
@@ -375,7 +379,8 @@ EXIT_DECLARED:	.LONG	0
 ; Connects a unit with no OPEN, if it isn't yet, for its first statement,
 ; a READ if read (by value) is 1: a READ finds a file, and a WRITE makes one
 ; (a unit on SYS$INPUT: or SYS$OUTPUT: is a $CREATE either way, of a
-; process-permanent file). Returns SS$_NORMAL in R0, or the FOR$_ condition
+; process-permanent file). With read 2 it is for ENDFILE, which makes one with
+; no carriage control and leaves the unit's form to its next statement. Returns SS$_NORMAL in R0, or the FOR$_ condition
 ; for the failure, RMS's status and value kept in the block.
 ;
 	.ENTRY	FTN$$UNIT_OPEN,^M<R2,R3>
@@ -384,7 +389,11 @@ EXIT_DECLARED:	.LONG	0
 	PUSHL	R2
 	CALLS	#1,FTN$$UNIT_INIT
 	MOVAB	UB_FAB(R2),R3
-	BLBC	8(AP),10$
+	CMPL	8(AP),#2
+	BNEQ	5$
+	CLRB	UB_FORM(R2)
+	CLRB	FAB$B_RAT(R3)
+5$:	BLBC	8(AP),10$
 	TSTL	UB_KIND(R2)
 	BNEQ	10$
 	$OPEN	FAB=R3
@@ -624,7 +633,8 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; it may write, then a longword, 1 if blanks in numbers are zeros. R1 is 0, or
 ; the FOR$_ condition if the statement can't use the unit: MIXFILACC for a
 ; formatted sequential statement on a unit that is unformatted or direct,
-; WRIREAFIL for a write on a READONLY unit.
+; WRIREAFIL for a write on a READONLY unit. A unit with no form yet takes the
+; statement's.
 ;
 	.ENTRY	FTN$$UNIT_RECORD,^M<R2>
 	MOVL	4(AP),R1
@@ -635,7 +645,10 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	BNEQ	10$
 	MOVL	#1,(R2)
 10$:	MOVL	UB_RECP(R1),R0
-	CMPB	UB_FORM(R1),#1
+	TSTB	UB_FORM(R1)
+	BNEQ	15$
+	MOVB	#1,UB_FORM(R1)
+15$:	CMPB	UB_FORM(R1),#1
 	BNEQ	30$
 	CMPB	UB_ACCESS(R1),#1
 	BEQL	30$
@@ -691,7 +704,7 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; Reads the next record of the unit whose block is given, which is connected,
 ; into its record buffer. Returns in R0 SS$_NORMAL and in R1 the record's
 ; length, or in R0 the FOR$_ condition for the failure: ENDDURREA at the end of
-; the file, INPRECTOO for a record longer than the buffer (RMS's RTB or RSZ) or,
+; the file or for a record of ^Z alone, which ENDFILE wrote, INPRECTOO for a record longer than the buffer (RMS's RTB or RSZ) or,
 ; on SYS$INPUT:, than 199 bytes, ERRDURREA for any other. RMS's status and value
 ; are kept in the block: for a record longer than 199 bytes that the buffer
 ; held, RMS$_RTB and its size, as RMS gives for one longer than the buffer, and
@@ -710,7 +723,14 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	CMPL	R1,#INPUT_MAX
 	BGTRU	2$
 1$:	INCL	UB_RECORDS(R3)
-	MOVL	#SS$_NORMAL,R0
+	CMPL	R1,#1			; ENDFILE's record: RMS has no complaint
+	BNEQ	3$
+	CMPB	@UB_RECP(R3),#^X1A
+	BNEQ	3$
+	CLRQ	UB_STS(R3)
+	MOVL	#FOR$_ENDDURREA,R0
+	RET
+3$:	MOVL	#SS$_NORMAL,R0
 	RET
 2$:	MOVL	#RMS$_RTB,UB_STS(R3)	; too long for FORTRAN
 	MOVL	R1,UB_STV(R3)

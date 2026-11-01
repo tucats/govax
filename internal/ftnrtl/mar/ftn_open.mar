@@ -38,6 +38,7 @@ UB_DISPOSE	= 39
 UB_READONLY	= 40
 UB_SCRATCH	= 41
 UB_SEGMENTED	= 42
+UB_APPENDED	= 43
 UB_NEXTREC	= 44
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
@@ -667,7 +668,10 @@ SETUP:	PUSHL	R7
 ; them must agree.
 ;
 EXISTING:
-	CMPB	FAB$B_RFM(R6),#FAB$C_VAR ; only variable-length records have segments
+	CMPL	OPS_ACCESS(R11),#ACCESS_APPEND ; BACKSPACE has no count from here
+	BNEQ	3$
+	MOVB	#1,UB_APPENDED(R7)
+3$:	CMPB	FAB$B_RFM(R6),#FAB$C_VAR ; only variable-length records have segments
 	BEQL	5$
 	CLRB	UB_SEGMENTED(R7)
 5$:	MOVZBL	FAB$B_ORG(R6),R0
