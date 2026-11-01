@@ -62,15 +62,15 @@
 //     1 to 5, with a blank or tab in column 6, is a directive, never
 //     continued. CPAR$ lines, the parallel directives, are comments:
 //     govax has no /PARALLEL (Decision 1).
-//   - INCLUDE 'file' (section 1.4.2) is handled here, not by the parser,
-//     since it changes which file the lines come from: the included
-//     file's statements take the INCLUDE statement's place.
+//   - INCLUDE 'file' and INCLUDE '(module)' (section 1.4.2) are handled
+//     here, not by the parser, since they change where the lines come
+//     from: the included statements take the INCLUDE statement's place.
 //
 // # What this pass hands on
 //
 // Read returns a Program: every line it read, in order, from the source
-// and every included file (the code generator copies them into the MACRO
-// file as comments), and the statements, each a Statement with its label,
+// and every included file (the code generator copies those Listed into the
+// MACRO file as comments), and the statements, each a Statement with its label,
 // its text, and a map from each character of the text back to the file,
 // line, and column it came from, so later passes can point at the exact
 // place a problem is (Statement.Position).

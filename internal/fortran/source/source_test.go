@@ -3,6 +3,7 @@ package source
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -16,6 +17,18 @@ func (fs files) OpenInclude(name string, _ *File) (*File, error) {
 	lines, ok := fs[name]
 	if !ok {
 		return nil, errors.New("no such file")
+	}
+
+	return &File{Spec: name, Lines: lines}, nil
+}
+
+// OpenModule finds a module as the key "(MODULE)" or "LIB(MODULE)".
+func (fs files) OpenModule(library, module string, _ *File) (*File, error) {
+	name := library + "(" + module + ")"
+
+	lines, ok := fs[name]
+	if !ok {
+		return nil, errors.New("no such module")
 	}
 
 	return &File{Spec: name, Lines: lines}, nil
@@ -479,8 +492,8 @@ func TestIncludeErrors(t *testing.T) {
 		{[]string{"      INCLUDE 'LATER", "      X = 2"}, "BADINCLUDE", 1},
 		{[]string{"      INCLUDE ''", "      X = 2"}, "BADINCLUDE", 1},
 		{[]string{"      INCLUDE '/LIST'", "      X = 2"}, "BADINCLUDE", 1},
-		{[]string{"      INCLUDE '($SSDEF)'", "      X = 2"}, "NOTIMPL", 1},
-		{[]string{"      INCLUDE 'SYS$LIBRARY:FORSYSDEF(SSDEF)'", "      X = 2"}, "NOTIMPL", 1},
+		{[]string{"      INCLUDE '($SSDEF)'", "      X = 2"}, "INCLOPEN", 0},
+		{[]string{"      INCLUDE 'SYS$LIBRARY:FORSYSDEF(SSDEF)'", "      X = 2"}, "INCLOPEN", 0},
 		{[]string{"      INCLUDEX = 1"}, "", 1},
 		{[]string{"      INCLUDE = 1"}, "", 1},
 	}
@@ -516,5 +529,89 @@ func TestIncludeMessage(t *testing.T) {
 
 	if m := messages.Messages(); len(m) != 1 || m[0].String() != want {
 		t.Errorf("message:\n%v\nwant:\n%s", m, want)
+	}
+}
+
+// TestIncludeForms checks INCLUDE's forms, in a program whose modules and files
+// each hold one statement, and which of their lines are listed.
+func TestIncludeForms(t *testing.T) {
+	fs := files{
+		"F.FOR":     {"      A = 1"},
+		"(MOD)":     {"      B = 2"},
+		"LIB(MOD)":  {"      C = 3"},
+		"LISTED":    {"      D = 4", "      INCLUDE 'F.FOR'", "      INCLUDE '(MOD)/LIST'"},
+		"NOTLISTED": {"      INCLUDE '(MOD)/LIST'"},
+	}
+
+	p, idents := read(t, Form{}, fs,
+		"      INCLUDE 'F.FOR'",
+		"      INCLUDE '(MOD)'",
+		"      INCLUDE 'LIB(MOD)/NOLIST'",
+		"      INCLUDE ' ( MOD ) / list '",
+		"      INCLUDE 'LISTED/LIST'",
+		"      INCLUDE 'NOTLISTED'",
+	)
+	if len(idents) != 0 {
+		t.Fatalf("messages: %v", idents)
+	}
+
+	var got []string
+
+	for _, s := range p.Statements {
+		got = append(got, s.Text)
+	}
+
+	want := []string{"A = 1", "B = 2", "C = 3", "B = 2", "D = 4", "A = 1", "B = 2", "B = 2"}
+	if !slices.Equal(got, want) {
+		t.Errorf("statements: %q, want %q", got, want)
+	}
+
+	var listed []string
+
+	for _, line := range p.Lines {
+		if line.Listed {
+			listed = append(listed, strings.TrimSpace(line.Text))
+		}
+	}
+
+	// Every line of the source; then, of the included ones, those under /LIST
+	// all the way up: a plain INCLUDE inside a listed file isn't, and a file
+	// not listed can't list what it includes.
+	wantListed := []string{
+		"INCLUDE 'F.FOR'", "INCLUDE '(MOD)'", "INCLUDE 'LIB(MOD)/NOLIST'", "INCLUDE ' ( MOD ) / list '",
+		"B = 2",
+		"INCLUDE 'LISTED/LIST'", "D = 4", "INCLUDE 'F.FOR'", "INCLUDE '(MOD)/LIST'", "B = 2",
+		"INCLUDE 'NOTLISTED'",
+	}
+	if !slices.Equal(listed, wantListed) {
+		t.Errorf("listed: %q, want %q", listed, wantListed)
+	}
+}
+
+// TestIncludeBadForms checks what isn't an INCLUDE of a module.
+func TestIncludeBadForms(t *testing.T) {
+	for _, line := range []string{"      INCLUDE '()'", "      INCLUDE 'LIB()'", "      INCLUDE '/LIST'"} {
+		if _, idents := read(t, Form{}, files{}, line); !slices.Equal(idents, []string{"BADINCLUDE"}) {
+			t.Errorf("%s: %v", line, idents)
+		}
+	}
+
+	if _, idents := read(t, Form{}, files{}, "      INCLUDE '(NONE)'"); !slices.Equal(idents, []string{"INCLOPEN"}) {
+		t.Errorf("a missing module: %v", idents)
+	}
+}
+
+// TestReadAll checks files joined into one compilation: one sequence of
+// statements, each line depth 0 in its own file.
+func TestReadAll(t *testing.T) {
+	var messages diag.List
+
+	p := ReadAll(Form{}, []*File{
+		{Spec: "A.FOR", Lines: []string{"      X = 1"}},
+		{Spec: "B.FOR", Lines: []string{"      Y = 2", "      END"}},
+	}, nil, &messages)
+
+	if len(p.Statements) != 3 || p.Lines[0].File.Spec != "A.FOR" || p.Lines[2].File.Spec != "B.FOR" || p.Lines[2].Depth != 0 || !p.Lines[2].Listed {
+		t.Errorf("%d statements, lines %+v", len(p.Statements), p.Lines)
 	}
 }

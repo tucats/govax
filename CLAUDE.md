@@ -575,7 +575,10 @@ never had.
   MANUAL.md's 14.2 to 14.4 and 14.7); the phase doc's "Where things stand" lists what is left.
   Phase 83 (in progress) is FORTRAN and VMS: definition modules, services, handlers, ASTs, the system
   subroutines; subtask 1 (2026-11-01) is the survey, its doc's Part A, with the author's answers, and subtask 2
-  the probe, `testdata/for83` and `testdata/str83`; the doc's "What the probe settled" is VMS's answers.
+  the probe, `testdata/for83` and `testdata/str83`; the doc's "What the probe settled" is VMS's answers, and subtask 3
+  text libraries and INCLUDE (LIBRARY/TEXT, `lbr.TextModule`, held to VMS by `TestFor83NewLibraries` and
+  `TestFor83LibraryOracle`; `INCLUDE '(module)'` by `source.Opener`'s `OpenModule`, searching `dclcmd`'s `fortranIncludes`;
+  `Line.Listed`; `FORTRAN A+B+LIB/LIBRARY`, a `/joinable` list and `fortran.CompileAll`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -49,6 +49,7 @@ type libraryFlags struct {
 	listFile                string   // --list-file
 	full, names             bool     // --full, --names
 	macro, object, share    bool     // --macro, --object, --share
+	text                    bool     // --text
 	noSqueeze               bool     // --no-squeeze
 	selective               bool     // --selective-search
 	log                     bool     // --log
@@ -686,6 +687,7 @@ var libraryGrammar = []cli.Option{
 	libraryBool("macro", "A macro library (.mlb)", &library.macro),
 	libraryBool("object", "An object library (.olb, the default)", &library.object),
 	libraryBool("share", "A shareable image library (.olb), whose inputs are shareable images", &library.share),
+	libraryBool("text", "A text library (.tlb), whose inputs are text files, a module each", &library.text),
 	libraryBool("no-squeeze", "Keep macros' comments and trailing blanks", &library.noSqueeze),
 	libraryBool("selective-search", "Mark inserted object modules for selective search", &library.selective),
 	libraryBool("log", "Report each module inserted, replaced, or deleted", &library.log),
@@ -796,12 +798,31 @@ func fortranCmd(c *cli.Context) error {
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{fortranCommand(sources, fortran)})
 }
 
+// fortranElement is one of the subcommand's arguments as an element of the
+// FORTRAN command's list: a + joins files, each name is quoted, as a host path
+// has to be, and /LIBRARY stays outside its name's quotes.
+func fortranElement(argument string) string {
+	names := strings.Split(argument, "+")
+
+	for i, name := range names {
+		qualifier := ""
+
+		if cut := len(name) - len("/LIBRARY"); cut > 0 && strings.EqualFold(name[cut:], "/LIBRARY") {
+			name, qualifier = name[:cut], "/LIBRARY"
+		}
+
+		names[i] = dclQuote(name) + qualifier
+	}
+
+	return strings.Join(names, "+")
+}
+
 // fortranCommand is the console FORTRAN command for the fortran
 // subcommand's source files and options.
 func fortranCommand(sources []string, f fortranFlags) string {
 	quoted := make([]string, len(sources))
 	for i, name := range sources {
-		quoted[i] = dclQuote(name)
+		quoted[i] = fortranElement(name)
 	}
 
 	command := "FORTRAN " + strings.Join(quoted, ",")
@@ -1036,7 +1057,7 @@ func libraryCommand(lib string, inputs []string, f libraryFlags) string {
 		name string
 	}{
 		{f.create, "/CREATE"}, {f.insert, "/INSERT"}, {f.replace, "/REPLACE"},
-		{f.macro, "/MACRO"}, {f.object, "/OBJECT"}, {f.share, "/SHARE"}, {f.noSqueeze, "/NOSQUEEZE"},
+		{f.macro, "/MACRO"}, {f.object, "/OBJECT"}, {f.share, "/SHARE"}, {f.text, "/TEXT"}, {f.noSqueeze, "/NOSQUEEZE"},
 		{f.selective, "/SELECTIVE_SEARCH"}, {f.log, "/LOG"},
 	} {
 		if q.set {

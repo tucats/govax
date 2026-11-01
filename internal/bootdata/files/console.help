@@ -179,6 +179,8 @@
 //                          first light.md)
 //              10/30/26    FORTRAN's declarations and storage (docs/PHASE-76
 //                          - FORTRAN front end.md)
+//              11/01/26    LIBRARY/TEXT; FORTRAN's +, /LIBRARY, and INCLUDE of a
+//                          text module (docs/PHASE-83 - FORTRAN and VMS.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -4020,8 +4022,9 @@ $FOR
 
     The MACRO file is meant to be read: it holds the FORTRAN source as
     comments, each line with its number, so the code and the FORTRAN it
-    came from are side by side.  A line from an INCLUDE file has its
-    include depth before its number.
+    came from are side by side.  A comment names each INCLUDE file, whose
+    lines appear only with INCLUDE's /LIST, with their include depth
+    before their numbers.
 
     The compiler is being built a phase at a time (docs/PHASE-74 -
     FORTRAN plan.md).  So far it reads every statement of the language,
@@ -4065,8 +4068,14 @@ $FOR
 
     INCLUDE 'file' reads a file, by default of type .FOR, found relative
     to the file that includes it: on the host, in its directory; on a
-    volume, on its device and in its directory.  INCLUDE '(module)', a
-    text library's module, is not implemented yet.
+    volume, on its device and in its directory.  INCLUDE 'file/LIST' puts
+    the file's lines in the MACRO file; /NOLIST is the default.
+
+    INCLUDE '(module)' reads a text library's module (see HELP LIBRARY),
+    from the first of these that has it: the libraries given with the
+    source (FORTRAN PROG+MYLIB/LIBRARY), the library the logical name
+    FORT$LIBRARY names, and SYS$LIBRARY:FORSYSDEF.TLB.  INCLUDE
+    'lib(module)' reads only that library.
 
     Compiled programs call FTNRTL, govax's FORTRAN run-time library, a
     shareable image written in MACRO-32 and built into govax.  LINK
@@ -4089,7 +4098,8 @@ $FOR
 
     Syntax:
 
-        FORTRAN <source>[,...][/HOST] [/MACRO[=<file>] | /NOMACRO]
+        FORTRAN <source>[+<source>...][+<library>/LIBRARY][,...][/HOST]
+                [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
                 [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
                 [/ALIGN[=<value>] | /NOALIGN]
@@ -4097,7 +4107,11 @@ $FOR
     Parameter:
 
         <source>        The source file, or several separated by commas,
-                        each compiled to its own MACRO file.  Without a
+                        each compiled to its own MACRO file.  Files joined
+                        by + are one compilation, to one MACRO file named
+                        for the first, and a file followed by /LIBRARY is
+                        a text library (.TLB by default) for that
+                        compilation's INCLUDE statements.  Without a
                         file type a source is .FOR.  A source can be a
                         host file or a file on a mounted volume, by the
                         rules MACRO's source follows (HELP MACRO): /HOST
@@ -4675,7 +4689,7 @@ $LIBR
     Parameters:
 
         <library>       The library file.  Without a file type it is .OLB,
-                        or .MLB with /MACRO.  It can be a host file or a
+                        .MLB with /MACRO, or .TLB with /TEXT.  It can be a host file or a
                         file on a mounted volume, by the rules MACRO uses
                         for its source (see HELP MACRO).
 
@@ -4686,7 +4700,10 @@ $LIBR
                         one module for each object module, or shareable
                         images (.EXE, the default for a shareable image
                         library), one module each, holding the image's
-                        name, ident, and universal symbols.  A bare name
+                        name, ident, and universal symbols, or text files
+                        (.TXT, the default for a text library), one module
+                        each, of the file's records, named for the file or
+                        by /MODULE=<name> after its name.  A bare name
                         is found beside the input before it.  With input
                         files and no operation named, their modules
                         replace any of the same names, as LIBRARIAN's
@@ -4694,12 +4711,16 @@ $LIBR
 
     Qualifiers:
 
-        /CREATE         Creates a new library (a new version on a volume),
-                        then inserts any input files' modules.
+        /CREATE[=(<option>:<n>,...)]
+                        Creates a new library (a new version on a volume),
+                        then inserts any input files' modules.  The options
+                        are BLOCKS (which has no effect), GLOBALS, HISTORY,
+                        KEYSIZE, and MODULES.
 
         /INSERT         Inserts the input files' modules.  A module
                         already in the library is a warning, and is left
-                        as it is.
+                        as it is (in a text library, an error that ends
+                        the command).
 
         /REPLACE        Replaces modules with the input files' ones of the
                         same names, inserting the rest.  The default.
@@ -4711,7 +4732,7 @@ $LIBR
         /EXTRACT=(<module>,...)
                         Copies modules out of the library, to the file
                         /OUTPUT= names (by default, the library's name
-                        with the type .MAR or .OBJ).  Names may hold * and
+                        with the type .MAR, .OBJ, or .TXT).  Names may hold * and
                         %.
 
         /LIST[=<file>]  Lists the library: its header, then its modules.
@@ -4730,8 +4751,9 @@ $LIBR
         /MACRO          A macro library.  /OBJECT (the default) is an
                         object library, and /SHARE a shareable image
                         library, which LINK searches for the images that
-                        define symbols (see HELP LINK).  These choose a
-                        new library's type; an existing library keeps its
+                        define symbols (see HELP LINK), and /TEXT a text
+                        library, which FORTRAN's INCLUDE reads (see HELP
+                        FORTRAN).  These choose a new library's type; an existing library keeps its
                         own.
 
         /NOSQUEEZE      Keeps macros' comments and trailing blanks.  By
@@ -4749,12 +4771,13 @@ $LIBR
 
     LIBRARIAN changes a library in place; LIBRARY builds the whole library
     and writes it only when every step has succeeded, so an error leaves
-    the library as it was.  A changed library keeps its name and version.
+    the library as it was.  A changed library keeps its name and version,
+    and no update history.  /COMPRESS and /DATA aren't implemented.
 
     From the host shell, "govax library <library> [<input>...]" runs this
     command, with --create, --insert, --replace, --delete, --extract,
     --output, --list, --list-file, --full, --names, --macro, --object,
-    --share, --no-squeeze, --selective-search, and --log.
+    --share, --text, --no-squeeze, --selective-search, and --log.
 
     Examples:
 
@@ -4768,6 +4791,8 @@ $LIBR
         LIBRARY/EXTRACT=(ADD*)/OUTPUT="adds.mar" "mymacros.mlb"
 
         LIBRARY/CREATE/SHARE DUA0:[LIB]MYSHR SHR1.EXE,SHR2.EXE
+
+        LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
         DEFINE LNK$LIBRARY DUA0:[LIB]MYSHR.OLB
         LINK MAIN
 

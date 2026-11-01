@@ -2,7 +2,7 @@
 
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
-settled"). Needs Phase 81 (files) and Phase 82 (structures). Part
+settled"); subtask 3, text libraries and INCLUDE, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -430,3 +430,27 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   `copyout.cmd` first took the libraries as text, adding line ends; it now takes them and the object with
   `/BINARY`. The log shows no commands after part B, FOR83R's `SET NOVERIFY` lasting, which costs nothing.
   This subtask's oracle tests are the later subtasks': each holds what it builds to these files.
+- **2026-11-01:** Subtask 3, text libraries and INCLUDE. **LIBRARY/TEXT**: `lbr.TextModule`, `lbr.CreateWith`
+  (`/CREATE=(BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n)`), an edited library keeping its preallocated
+  blocks, the positional `/MODULE=`, default types TLB and TXT. A text library's failures are LIBRARIAN's messages
+  with its statuses (DUPMOD, INSERTERR, DUPKEY; LOOKUPERR, KEYNOTFND; MODNAMLNG), through `library.stop`, and
+  `/LIST/NAMES` is CONFLICT; the other types keep govax's words, unprobed. `/LOG`'s messages are `%LIBRAR-`, for
+  every type (a new `LIBRFacility`). `TestFor83NewLibraries` matches `S1.TLB`, `T2.TLB`, and `T3.TLB` byte for byte, given VMS's
+  times and librarian's name, and `TestFor83LibraryOracle` runs the part D commands on a volume and matches VMS's log
+  line for line (times, file IDs, the creator, and the count of history records masked).
+  **What part D's `S2.TLB` to `S7.TLB` show and govax doesn't do**, so the survey's "byte for byte" holds only for a
+  library made by one command, which is also all `.MLB`s were held to. LIBRARIAN changes a library in place: each session starts a new data block, a
+  replaced module's header gets a reference count of 0, a later module may reuse a deleted one's block, a failed
+  `/INSERT` leaves its data behind, and history records (`ABBA`, length, time, a word of 1, 2 for insert or 3 for
+  replace, the user, the module) go in a block of their own, which the header locates, with the bytes they use. LIBRARY
+  builds a whole new layout, as it has since Phase 28, with the same modules and index and no history records, which it also
+  drops from a VMS library it edits; `/LIST` shows 0 there. `/COMPRESS` and `/DATA=REDUCE` are left out. A failed `/INSERT`
+  of several files leaves the library unchanged, where LIBRARIAN keeps the files before the failure.
+  **INCLUDE**: `'(module)'` and `'lib(module)'` through `source.Opener`'s `OpenModule`; `/[NO]LIST` as `Line.Listed`, by the
+  author's answer 1, which also changed the manual's 14.5 example to `INCLUDE 'limits/LIST'`. **The command**: a `/joinable`
+  list in the grammar (`dcl.Result.Joined`), the positional `/LIBRARY`, `dclcmd.FortranSource`, `fortran.CompileAll` and
+  `source.ReadAll`; `govax fortran` splits an argument at `+`, so a host path holding one can't be named there, and
+  `govax library --text` is the subcommand's. The search is Decision 2's, without govax's modules, which are subtask 4's.
+  Unconfirmed, there being no VAX FORTRAN or its User Manual: the search's order, a library named last still searched
+  from the first INCLUDE, and `A+B`'s MACRO file named for A. Seen on the way and left: govax's COPY reports
+  `%COPY-S-COPIED` without `/LOG`, where VMS's says nothing (the oracle filters the line).

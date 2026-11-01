@@ -13,51 +13,89 @@ import (
 // a text library (Phase 83). The included lines take the INCLUDE
 // statement's place, and may themselves include others.
 //
+// /NOLIST, the default, keeps the included lines out of the MACRO file (and
+// Phase 85's listing). A file's own /LIST can't bring back lines in a file
+// that wasn't listed: Line.Listed needs every INCLUDE above it to say /LIST.
+//
 // Since FORTRAN ignores blanks, "IN CLUDE 'X'" is an INCLUDE statement
 // too; and since its keywords aren't reserved, an INCLUDE is recognized
 // by its whole shape, the word and then a character constant and nothing
 // else. (No other statement starts with a name followed by an
 // apostrophe.)
 
-// include reports whether s is an INCLUDE statement, and if so the name
-// it gives (its string, without /LIST or /NOLIST). A statement that
-// starts like one but isn't one in full is reported as an error and
-// dropped.
-func (r *reader) include(s *Statement) (string, bool) {
-	keyword, rest := squeezeKeyword(s.Text, "INCLUDE")
-	if keyword < 0 || !strings.HasPrefix(s.Text[rest:], "'") {
-		return "", false
-	}
+// includeSpec is what an INCLUDE statement's string says.
+type includeSpec struct {
+	// name is the string without /LIST or /NOLIST.
+	name string
 
-	name, end, ok := characterConstant(s.Text, rest)
-	if ok {
-		name = trimListQualifier(name)
-	}
+	// isModule says the second form: module is the module's name, and
+	// library the text library named before it, "" for none.
+	isModule        bool
+	library, module string
 
-	if !ok || name == "" || strings.TrimSpace(s.Text[end:]) != "" {
-		r.messages.Report("BADINCLUDE", s.Position(keyword))
-
-		return "", true
-	}
-
-	return name, true
+	// list is /LIST.
+	list bool
 }
 
-// includeFile reads the file the INCLUDE statement s names into the
-// program, after s's lines.
-func (r *reader) includeFile(s *Statement, name string, depth int) {
-	if name == "" {
+// readIncludeSpec reads an INCLUDE statement's string. A parenthesis at the
+// name's end is a module, since a file specification can't hold one.
+func readIncludeSpec(text string) includeSpec {
+	spec := includeSpec{name: strings.TrimSpace(text)}
+
+	if slash := strings.LastIndexByte(spec.name, '/'); slash >= 0 {
+		switch strings.ToUpper(strings.TrimSpace(spec.name[slash+1:])) {
+		case "LIST":
+			spec.list = true
+			spec.name = strings.TrimSpace(spec.name[:slash])
+		case "NOLIST":
+			spec.name = strings.TrimSpace(spec.name[:slash])
+		}
+	}
+
+	if open := strings.IndexByte(spec.name, '('); open >= 0 && strings.HasSuffix(spec.name, ")") {
+		spec.isModule = true
+		spec.library = strings.TrimSpace(spec.name[:open])
+		spec.module = strings.TrimSpace(spec.name[open+1 : len(spec.name)-1])
+	}
+
+	return spec
+}
+
+// include reports whether s is an INCLUDE statement, and if so what its
+// string says. A statement that starts like one but isn't one in full is
+// reported as an error and dropped: its spec's name is empty.
+func (r *reader) include(s *Statement) (includeSpec, bool) {
+	keyword, rest := squeezeKeyword(s.Text, "INCLUDE")
+	if keyword < 0 || !strings.HasPrefix(s.Text[rest:], "'") {
+		return includeSpec{}, false
+	}
+
+	var spec includeSpec
+
+	text, end, ok := characterConstant(s.Text, rest)
+	if ok {
+		spec = readIncludeSpec(text)
+	}
+
+	if !ok || spec.name == "" || (spec.isModule && spec.module == "") || strings.TrimSpace(s.Text[end:]) != "" {
+		r.messages.Report("BADINCLUDE", s.Position(keyword))
+
+		return includeSpec{}, true
+	}
+
+	return spec, true
+}
+
+// includeFile reads the file or module the INCLUDE statement s names into
+// the program, after s's lines. listed says whether s's own lines are.
+func (r *reader) includeFile(s *Statement, spec includeSpec, depth int, listed bool) {
+	if spec.name == "" {
 		return // a malformed INCLUDE, already reported
 	}
 
 	pos := s.Position(strings.IndexByte(s.Text, '\''))
 
 	switch {
-	case strings.HasSuffix(name, ")") && strings.Contains(name, "("):
-		r.messages.Report("NOTIMPL", pos, "INCLUDE of a text library module")
-
-		return
-
 	case depth+1 > MaxIncludeDepth:
 		r.messages.Report("INCLDEPTH", pos, MaxIncludeDepth)
 		r.stopped = true
@@ -65,7 +103,7 @@ func (r *reader) includeFile(s *Statement, name string, depth int) {
 		return
 
 	case r.opener == nil:
-		r.messages.Report("INCLOPEN", pos, name, "no INCLUDE files can be read here")
+		r.messages.Report("INCLOPEN", pos, spec.name, "no INCLUDE files can be read here")
 		r.stopped = true
 
 		return
@@ -73,15 +111,25 @@ func (r *reader) includeFile(s *Statement, name string, depth int) {
 
 	from := r.program.Lines[s.First].File
 
-	file, err := r.opener.OpenInclude(name, from)
+	var (
+		file *File
+		err  error
+	)
+
+	if spec.isModule {
+		file, err = r.opener.OpenModule(spec.library, spec.module, from)
+	} else {
+		file, err = r.opener.OpenInclude(spec.name, from)
+	}
+
 	if err != nil {
-		r.messages.Report("INCLOPEN", pos, name, err.Error())
+		r.messages.Report("INCLOPEN", pos, spec.name, err.Error())
 		r.stopped = true
 
 		return
 	}
 
-	r.readFile(file, depth+1)
+	r.readFile(file, depth+1, listed && spec.list)
 }
 
 // squeezeKeyword finds keyword at the start of text, ignoring blanks and
@@ -143,20 +191,4 @@ func characterConstant(text string, start int) (value string, end int, ok bool) 
 	}
 
 	return "", len(text), false
-}
-
-// trimListQualifier removes a trailing /LIST or /NOLIST (any case, with
-// blanks around it) from an INCLUDE statement's name. The listing it
-// controls is Phase 85's.
-func trimListQualifier(name string) string {
-	name = strings.TrimSpace(name)
-
-	if slash := strings.LastIndexByte(name, '/'); slash >= 0 {
-		switch strings.ToUpper(strings.TrimSpace(name[slash+1:])) {
-		case "LIST", "NOLIST":
-			name = strings.TrimSpace(name[:slash])
-		}
-	}
-
-	return name
 }

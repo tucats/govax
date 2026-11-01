@@ -250,6 +250,7 @@ func TestFortranCommand(t *testing.T) {
 	}{
 		{[]string{"sq.for"}, fortranFlags{}, `FORTRAN "sq.for"`},
 		{[]string{"a.for", "/x/B"}, fortranFlags{}, `FORTRAN "a.for","/x/B"`},
+		{[]string{"a+b+lib/library", "c"}, fortranFlags{}, `FORTRAN "a"+"b"+"lib"/LIBRARY,"c"`},
 		{[]string{"sq"}, fortranFlags{macro: "out/sq.mar"}, `FORTRAN "sq"/MACRO="out/sq.mar"`},
 		{[]string{"sq"}, fortranFlags{noMacro: true, macro: "ignored"}, `FORTRAN "sq"/NOMACRO`},
 		{[]string{"sq"}, fortranFlags{extendSource: true, dLines: true}, `FORTRAN "sq"/EXTEND_SOURCE/D_LINES`},

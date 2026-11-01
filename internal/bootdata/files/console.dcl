@@ -791,16 +791,23 @@ grammar console
     ! /G_FLOATING G_floating. ALIGN is /ALIGN[=value] or /NOALIGN, how
     ! structures and common blocks are laid out (docs/PHASE-82): no value
     ! is ALL, a value is ALL, NONE, a rule, or class=rule, and a list of
-    ! them is in parentheses. Later phases add
+    ! them is in parentheses. Elements joined by + are one compilation
+    ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
+    ! element is a text library that compilation's INCLUDE '(module)'
+    ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
     ! the rest of the compiler's qualifiers.
     !
     verb fortran/id=1370
 
         parameter   sources/id=1371             -
                     /type=$string/list          -
+                    /joinable                   -
                     /prompt="File"
         qualifier   host/id=1372                -
                     /parameter=sources
+        qualifier   library/id=1380             -
+                    /parameter=sources          -
+                    /placement=positional
 
         qualifier   macro/id=1373               -
                     /type=$string               -
@@ -946,9 +953,12 @@ grammar console
     ! they replace modules of the same names (LIBRARIAN's default
     ! /REPLACE). DELETE and EXTRACT take module names, which may hold * and
     ! %. LIST is /LIST[=file] (empty default: the console). MACRO, OBJECT,
-    ! or SHARE (a shareable image symbol table library, whose inputs are
-    ! shareable images: docs/PHASE-68, subtask 12) picks a new library's
-    ! type; SQUEEZE is on unless /NOSQUEEZE.
+    ! SHARE (a shareable image symbol table library, whose inputs are
+    ! shareable images: docs/PHASE-68, subtask 12), or TEXT (a text library,
+    ! a module per input file: docs/PHASE-83, subtask 3) picks a new library's
+    ! type; SQUEEZE is on unless /NOSQUEEZE. MODULE is positional, the
+    ! module's name for the text file it follows, by default the file's name.
+    ! CREATE may take (BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n).
     !
     verb library/id=1400
 
@@ -962,8 +972,14 @@ grammar console
                     /type=$string/list
         qualifier   host/id=1404                -
                     /parameter=inputs
+        qualifier   module/id=1422              -
+                    /parameter=inputs           -
+                    /placement=positional       -
+                    /type=$string
 
-        qualifier   create/id=1405
+        qualifier   create/id=1405              -
+                    /type=$string/list          -
+                    /default=""
         qualifier   insert/id=1406
         qualifier   replace/id=1407
         qualifier   delete/id=1408              -
@@ -985,9 +1001,13 @@ grammar console
         qualifier   selective_search/id=1418
         qualifier   log/id=1419
         qualifier   share/id=1420
+        qualifier   text/id=1421
         disallow    macro and object
         disallow    macro and share
         disallow    object and share
+        disallow    text and macro
+        disallow    text and object
+        disallow    text and share
         disallow    insert and replace
 
     !

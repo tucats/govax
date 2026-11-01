@@ -44,7 +44,8 @@ func (s *sourceLines) rest(w *Writer) {
 
 // upTo writes the lines from the next one to lines[last], each
 // included file's lines between a comment naming the file and one
-// marking its end.
+// marking its end. A line not Listed (INCLUDE's default, /NOLIST) leaves
+// only those comments. Files joined by + are named as they start.
 func (s *sourceLines) upTo(w *Writer, last int) {
 	for ; s.next <= last && s.next < len(s.lines); s.next++ {
 		line := s.lines[s.next]
@@ -55,13 +56,18 @@ func (s *sourceLines) upTo(w *Writer, last int) {
 		}
 
 		if len(s.files) == line.Depth {
-			if line.Depth > 0 {
+			switch {
+			case line.Depth > 0:
 				w.Comment("INCLUDE file " + line.File.Spec + ":")
+			case s.next > 0:
+				w.Comment("source file " + line.File.Spec + ":")
 			}
 
 			s.files = append(s.files, line.File)
 		}
 
-		w.SourceLineAt(line.Depth, line.Number, line.Text)
+		if line.Listed {
+			w.SourceLineAt(line.Depth, line.Number, line.Text)
+		}
 	}
 }

@@ -95,7 +95,7 @@ func TestFortran_host(t *testing.T) {
 
 		buf.Reset()
 
-		if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{filepath.Join(dir, tc.typed)}}); err != nil {
+		if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, tc.typed))}); err != nil {
 			t.Errorf("%s: Fortran: %v", tc.typed, err)
 
 			continue
@@ -126,7 +126,7 @@ func TestFortran_header(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "squares.for")
 	writeHostFile(t, src, fortranSource)
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}, CommandLine: "FORTRAN SQ"}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src), CommandLine: "FORTRAN SQ"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -151,7 +151,7 @@ func TestFortran_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"DUA0:[000000]SQUARES"}}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("DUA0:[000000]SQUARES")}); err != nil {
 		t.Fatalf("Fortran: %v", err)
 	}
 
@@ -162,7 +162,7 @@ func TestFortran_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"SQUARES.FOR"}}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("SQUARES.FOR")}); err != nil {
 		t.Fatalf("Fortran: %v", err)
 	}
 
@@ -172,7 +172,7 @@ func TestFortran_volume(t *testing.T) {
 	}
 
 	// /MACRO= without a type gets MAR, as /OBJECT= gets OBJ.
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"SQUARES"}, Macro: "OTHER"}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("SQUARES"), Macro: "OTHER"}); err != nil {
 		t.Fatalf("Fortran/MACRO=: %v", err)
 	}
 
@@ -180,7 +180,7 @@ func TestFortran_volume(t *testing.T) {
 
 	// To the host.
 	hostMAR := filepath.Join(t.TempDir(), "squares.mar")
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"SQUARES"}, Macro: hostMAR}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("SQUARES"), Macro: hostMAR}); err != nil {
 		t.Fatalf("Fortran/MACRO=host: %v", err)
 	}
 
@@ -195,7 +195,7 @@ func TestFortran_noMacro(t *testing.T) {
 	src := filepath.Join(dir, "squares.for")
 	writeHostFile(t, src, fortranSource)
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}, NoMacro: true}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src), NoMacro: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -210,12 +210,12 @@ func TestFortran_failures(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 
-	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{filepath.Join(dir, "none")}})
+	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, "none"))})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("missing source: %v, want SS_NOSUCHFILE", err)
 	}
 
-	err = c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"DUB0:[X]NONE.FOR"}})
+	err = c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("DUB0:[X]NONE.FOR")})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_DEVNOTMOUNT)) {
 		t.Errorf("unmounted volume: %v, want SS_DEVNOTMOUNT", err)
 	}
@@ -223,7 +223,7 @@ func TestFortran_failures(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, fortranSource)
 
-	err = c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}})
+	err = c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src)})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_FORSAMEFILE)) {
 		t.Errorf(".MAR source: %v, want CLI_FORSAMEFILE", err)
 	}
@@ -233,7 +233,7 @@ func TestFortran_failures(t *testing.T) {
 	}
 
 	// Named elsewhere, it compiles.
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}, Macro: filepath.Join(dir, "out.mar")}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src), Macro: filepath.Join(dir, "out.mar")}); err != nil {
 		t.Errorf("/MACRO= for a .MAR source: %v", err)
 	}
 }
@@ -295,11 +295,11 @@ func TestFortran_include(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "squares.for")
 
-	writeHostFile(t, src, "      PROGRAM SQUARES\n      INCLUDE 'inc/limits'\n      END\n")
-	writeHostFile(t, filepath.Join(dir, "inc", "limits.for"), "      INTEGER N\n      INCLUDE 'more.inc'\n")
+	writeHostFile(t, src, "      PROGRAM SQUARES\n      INCLUDE 'inc/limits/LIST'\n      END\n")
+	writeHostFile(t, filepath.Join(dir, "inc", "limits.for"), "      INTEGER N\n      INCLUDE 'more.inc/LIST'\n")
 	writeHostFile(t, filepath.Join(dir, "inc", "more.inc"), "C     found beside limits.for\n")
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{src}}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(src)}); err != nil {
 		t.Fatalf("Fortran: %v\n%s", err, buf.String())
 	}
 
@@ -333,7 +333,7 @@ func TestFortran_include(t *testing.T) {
 	writeHostFile(t, bad, "      PROGRAM BAD\n      INCLUDE 'nowhere'\n      END\n")
 	buf.Reset()
 
-	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{bad}})
+	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(bad)})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_FORERRORS)) {
 		t.Errorf("missing INCLUDE file: %v, want CLI_FORERRORS", err)
 	}
@@ -356,7 +356,7 @@ func TestFortran_includeVolume(t *testing.T) {
 
 	s := c.ContainerSession
 	for name, text := range map[string]string{
-		"DUA0:[000000]SQUARES.FOR": "      PROGRAM SQUARES\n      INCLUDE 'LIMITS'\n      INCLUDE 'DUA0:[000000]OTHER.INC'\n      END\n",
+		"DUA0:[000000]SQUARES.FOR": "      PROGRAM SQUARES\n      INCLUDE 'LIMITS/LIST'\n      INCLUDE 'DUA0:[000000]OTHER.INC/LIST'\n      END\n",
 		"DUA0:[000000]LIMITS.FOR":  "      INTEGER N\n",
 		"DUA0:[000000]OTHER.INC":   "      INTEGER K\n",
 	} {
@@ -365,7 +365,7 @@ func TestFortran_includeVolume(t *testing.T) {
 		}
 	}
 
-	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: []string{"DUA0:[000000]SQUARES"}}); err != nil {
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources("DUA0:[000000]SQUARES")}); err != nil {
 		t.Fatalf("Fortran: %v\n%s", err, buf.String())
 	}
 

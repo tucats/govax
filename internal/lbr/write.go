@@ -61,6 +61,10 @@ type Builder struct {
 	Created uint64
 	Updated uint64
 
+	// preallocate is how many index blocks to reserve, at least: what the
+	// entries /CREATE allows for come to, or what an edited library has.
+	preallocate int
+
 	flags    []uint16 // each index's IDD$W_FLAGS
 	userSize int      // LHD$B_MHDUSZ
 	entries  map[string]*Entry
@@ -75,31 +79,52 @@ type Builder struct {
 var typeDefaults = map[Type]struct {
 	indexes, keySize, userSize int
 	caseFlags                  uint16
-	entries                    int // CRE$L_ENTALL
 }{
-	TypeObject:    {2, 31, 33, IndexNoCaseCmp | IndexNoCaseEnt, 128 + 512},
-	TypeMacro:     {1, 31, 0, 0, 128},
-	TypeHelp:      {1, 15, 0, IndexNoCaseEnt | IndexUpcase, 128},
-	TypeText:      {1, 39, 0, 0, 128},
-	TypeShareable: {2, 39, 33, IndexNoCaseCmp | IndexNoCaseEnt, 128 + 512},
+	TypeObject:    {2, 31, 33, IndexNoCaseCmp | IndexNoCaseEnt},
+	TypeMacro:     {1, 31, 0, 0},
+	TypeHelp:      {1, 15, 0, IndexNoCaseEnt | IndexUpcase},
+	TypeText:      {1, 39, 0, 0},
+	TypeShareable: {2, 39, 33, IndexNoCaseCmp | IndexNoCaseEnt},
 }
 
 const (
 	// LibrarianName is what govax puts in LHD$T_LBRVER.
 	LibrarianName = "govax Librarian"
 
-	defaultHistory = 20 // LIB$C_DEFLUHREC
+	defaultHistory = 20  // LIB$C_DEFLUHREC
+	defaultModules = 128 // /CREATE's MODULES
+	defaultGlobals = 512 // /CREATE's GLOBALS
+	maxKeySize     = 128 // the longest key /CREATE=KEYSIZE takes; govax's limit, unconfirmed
 	indexSpace     = blockSize - indexEntries
 	rfaLength      = 6 // RFA$C_LENGTH
 	keyOverhead    = 7 // an index entry's RFA and key length byte
 )
 
+// CreateOptions are /CREATE=(...)'s values. A zero means the type's default.
+// /CREATE=BLOCKS changes only the file's allocation, which a Builder doesn't
+// choose, so it isn't here.
+type CreateOptions struct {
+	Modules int // MODULES: the modules to reserve index blocks for
+	Globals int // GLOBALS: the global symbols, in a library that has them
+	KeySize int // KEYSIZE: the longest key
+	History int // HISTORY: how many update history records to keep
+}
+
 // Create starts a new, empty library of type t, with LIBRARY/CREATE's
 // defaults for the type.
 func Create(t Type) (*Builder, error) {
+	return CreateWith(t, CreateOptions{})
+}
+
+// CreateWith starts a new, empty library of type t, with /CREATE's values.
+func CreateWith(t Type, opts CreateOptions) (*Builder, error) {
 	d, ok := typeDefaults[t]
 	if !ok {
 		return nil, fmt.Errorf("lbr: can't create a %s library", t)
+	}
+
+	if opts.KeySize < 0 || opts.KeySize > maxKeySize {
+		return nil, fmt.Errorf("lbr: a key of %d characters is out of range (the limit is %d)", opts.KeySize, maxKeySize)
 	}
 
 	b := &Builder{
@@ -111,6 +136,32 @@ func Create(t Type) (*Builder, error) {
 		entries:   map[string]*Entry{},
 		symbols:   map[string]string{},
 	}
+
+	if opts.KeySize > 0 {
+		b.KeySize = opts.KeySize
+	}
+
+	if opts.History > 0 {
+		b.History = opts.History
+	}
+
+	// The index blocks: prealloc_index's, from the entries to allow for and
+	// how many keys of the longest length fit in a block. Only a library with
+	// two indexes reserves room for global symbols.
+	modules, globals := defaultModules, 0
+	if d.indexes > 1 {
+		globals = defaultGlobals
+	}
+
+	if opts.Modules > 0 {
+		modules = opts.Modules
+	}
+
+	if opts.Globals > 0 && d.indexes > 1 {
+		globals = opts.Globals
+	}
+
+	b.preallocate = (modules + globals) / (indexSpace / (b.KeySize + rfaLength))
 
 	for range d.indexes {
 		b.flags = append(b.flags, IndexASCII|IndexVarLength|d.caseFlags)
@@ -138,6 +189,8 @@ func Edit(l *Library) (*Builder, error) {
 		userSize:  l.mhdUserSize,
 		entries:   map[string]*Entry{},
 		symbols:   map[string]string{},
+
+		preallocate: int(l.Preallocated),
 	}
 
 	for _, x := range l.Indexes {
@@ -502,9 +555,7 @@ func (b *Builder) Bytes() []byte {
 	}
 
 	// How many index blocks the trees take, and so how many to
-	// preallocate: LIBRARY/CREATE's default (prealloc_index's, from the
-	// entries to allow for and how many keys of the longest length fit in
-	// a block), or more if needed.
+	// preallocate: what the Builder was made with, or more if needed.
 	next := uint32(2)
 	for _, k := range keys {
 		buildTree(k, &next)
@@ -512,14 +563,7 @@ func (b *Builder) Bytes() []byte {
 
 	used := int(next - 2)
 
-	d := typeDefaults[b.Type]
-	entall := d.entries
-
-	if entall == 0 {
-		entall = 300 // LBR$C_DEFENTALL
-	}
-
-	prealloc := max(entall/(indexSpace/(b.KeySize+rfaLength)), 1, used)
+	prealloc := max(b.preallocate, 1, used)
 
 	// The data, after the preallocated index blocks.
 	w := &dataWriter{first: uint32(prealloc) + 2}

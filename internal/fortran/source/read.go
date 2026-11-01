@@ -14,8 +14,19 @@ import (
 // reading stops there. opener reads INCLUDE files; with none, an INCLUDE
 // statement is a fatal error.
 func Read(f Form, file *File, opener Opener, messages *diag.List) *Program {
+	return ReadAll(f, []*File{file}, opener, messages)
+}
+
+// ReadAll is Read for files joined into one compilation (FORTRAN A+B): one
+// Program, of their lines in turn.
+func ReadAll(f Form, files []*File, opener Opener, messages *diag.List) *Program {
 	r := &reader{form: f, opener: opener, messages: messages, program: &Program{}}
-	r.readFile(file, 0)
+
+	for _, file := range files {
+		if !r.stopped {
+			r.readFile(file, 0, true)
+		}
+	}
 
 	return r.program
 }
@@ -32,15 +43,15 @@ type reader struct {
 }
 
 // readFile reads one file's lines, at include depth depth, adding them
-// and their statements to the program.
-func (r *reader) readFile(file *File, depth int) {
+// and their statements to the program. listed is each line's Listed.
+func (r *reader) readFile(file *File, depth int, listed bool) {
 	n := len(file.Lines)
 	lines := make([]*Line, n)
 	splits := make([]fields, n)
 
 	for i, text := range file.Lines {
 		splits[i] = r.form.split(text)
-		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind}
+		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed}
 	}
 
 	for i := 0; i < n && !r.stopped; {
@@ -127,8 +138,8 @@ func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
 
 	s.Text = text.String()
 
-	if name, ok := r.include(s); ok {
-		r.includeFile(s, name, depth)
+	if spec, ok := r.include(s); ok {
+		r.includeFile(s, spec, depth, lines[0].Listed)
 
 		return
 	}

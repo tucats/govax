@@ -2,6 +2,7 @@ package dcl
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -99,5 +100,54 @@ func TestPositionalQualifierDefinitions(t *testing.T) {
 		if _, err := ParseGrammar(text); err == nil {
 			t.Errorf("no error for:\n%s", text)
 		}
+	}
+}
+
+// TestJoinableList checks a /joinable list's "+": between elements, around a
+// quoted one and a positional qualifier, with blanks, among commas; and that
+// a list without the switch keeps "+" in its names.
+func TestJoinableList(t *testing.T) {
+	g, err := ParseGrammar(`
+grammar test
+
+verb one
+    parameter files/id=2/type=$string/list/joinable
+    qualifier lib/id=3/parameter=files/placement=positional
+
+verb two
+    parameter files/id=5/type=$string/list
+    qualifier lib/id=6/parameter=files/placement=positional
+
+end
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := g.Parse(`ONE A+B/LIB + "c+d",E,F+G`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	names := r.List("FILES")
+	items := r.Items("FILES")
+
+	if want := []string{"A", "B", "c+d", "E", "F", "G"}; !slices.Equal(names, want) {
+		t.Fatalf("names %q, want %q", names, want)
+	}
+
+	joined := []bool{true, true, false, false, true, false}
+	for i, item := range items {
+		if item.Joined() != joined[i] {
+			t.Errorf("%s: Joined is %v", names[i], item.Joined())
+		}
+	}
+
+	if !items[1].Present("LIB") || items[0].Present("LIB") {
+		t.Error("/LIB isn't on B alone")
+	}
+
+	if r, err = g.Parse("TWO A+B"); err != nil || !slices.Equal(r.List("FILES"), []string{"A+B"}) {
+		t.Errorf("without /joinable: %v, %v", r, err)
 	}
 }

@@ -17,6 +17,7 @@ const (
 	parameterTOKEN   = "PARAMETER"
 	placementTOKEN   = "PLACEMENT"
 	positionalTOKEN  = "POSITIONAL"
+	joinableTOKEN    = "JOINABLE"
 	promptTOKEN      = "PROMPT"
 	qualifierTOKEN   = "QUALIFIER"
 	separatorTOKEN   = "SEPARATOR"

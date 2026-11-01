@@ -1307,7 +1307,8 @@ other statement as not implemented yet. The MACRO file holds every source line a
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
-`/NOMACRO` writes none. `/EXTEND_SOURCE` lets fixed-format statements
+`/NOMACRO` writes none. Names joined by `+` are one compilation, to one MACRO file named for
+the first, and one followed by `/LIBRARY` is a text library for its `INCLUDE` statements. `/EXTEND_SOURCE` lets fixed-format statements
 run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
@@ -1315,7 +1316,7 @@ bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, and `/ALIGN` lays out structures and common blocks on
 natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
-its volume's device and directory. The compiler's messages show the line
+its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
 
 ```text
@@ -3079,36 +3080,46 @@ and VMS:
 - **Macro libraries** (`.MLB`), which `MACRO` searches for macros;
 - **Object libraries** (`.OLB`), which `LINK` searches for modules;
 - **Shareable image libraries** (`.OLB`, made with `/SHARE`), which `LINK`
-  searches for the shareable images that define symbols.
+  searches for the shareable images that define symbols;
+- **Text libraries** (`.TLB`, made with `/TEXT`), which FORTRAN's
+  `INCLUDE '(module)'` reads.
 
 ```text
 LIBRARY library [input[,...]]
-        /CREATE  /INSERT  /REPLACE  /DELETE=(module,...)  /EXTRACT=(module,...)
-        /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /WIDTH=n
-        /MACRO  /OBJECT  /SHARE  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
+        /CREATE[=(option:n,...)]  /INSERT  /REPLACE  /DELETE=(module,...)
+        /EXTRACT=(module,...)  /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /WIDTH=n
+        /MACRO  /OBJECT  /SHARE  /TEXT  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
 ```
 
 | Qualifier | Meaning |
 | --- | --- |
-| `/CREATE` | Make a new library (a new version on a volume), then insert any input files. |
-| `/INSERT` | Insert modules; one already there is a warning and is left as it was. |
+| `/CREATE` | Make a new library (a new version on a volume), then insert any input files. `/CREATE=(BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n)` gives its sizes; `BLOCKS` is accepted and has no effect. |
+| `/INSERT` | Insert modules; one already there is a warning and is left as it was (in a text library, an error that ends the command). |
 | `/REPLACE` | Replace modules of the same names, inserting the rest. The default when input files are given. |
 | `/DELETE=(...)` | Delete modules (wildcards `*` and `%` allowed). |
-| `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR` or `.OBJ`). |
+| `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR`, `.OBJ`, or `.TXT`). |
 | `/LIST[=file]` | List the library's header and modules. `/FULL` adds idents, insertion times, and symbol counts; `/NAMES` lists each object module's global symbols. |
-| `/MACRO`, `/OBJECT`, `/SHARE` | The kind of new library (object by default). An existing library keeps its own kind. |
+| `/MACRO`, `/OBJECT`, `/SHARE`, `/TEXT` | The kind of new library (object by default). An existing library keeps its own kind. |
 | `/NOSQUEEZE` | Keep macros' comments and trailing blanks, which are removed by default. |
 | `/SELECTIVE_SEARCH` | Mark inserted object modules for selective search. |
 
 The input files are macro sources (`.MAR`: one module per macro), objects
-(`.OBJ`: one module per object module), or shareable images (`.EXE`).
+(`.OBJ`: one module per object module), shareable images (`.EXE`), or text
+files (`.TXT`: one module per file, of its records exactly as they are). A
+text module is named for its file, in capitals, or by a `/MODULE=name` after the
+file's name, up to the library's 39 characters: `LIBRARY/TEXT MYDEFS TIMES.TXT/MODULE=$TIMES`.
 
 The librarian builds the whole library and writes it only when every
-step has succeeded, so an error leaves the library as it was.
+step has succeeded, so an error leaves the library as it was. A library
+made by one command matches VMS's byte for byte, but one changed afterwards
+holds the same modules laid out afresh: VMS's librarian adds to the file in
+place, reuses deleted modules' blocks, and keeps update history records, and
+govax's keeps no history. VMS's `/COMPRESS` and `/DATA=REDUCE` aren't here,
+though a data-reduced library can be read.
 
 ```text
 VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
-%DCL-S-INSERTED, module ROUTINES inserted in DUA0:[SHR]MATHLIB.OLB;1
+%LIBRAR-S-INSERTED, module ROUTINES inserted in DUA0:[SHR]MATHLIB.OLB;1
 VAX> LIBRARY/LIST/FULL/NAMES MATHLIB
 Directory of OBJECT library DUA0:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
 Creation date:  20-OCT-2026 10:10:06      Creator:  govax Librarian
@@ -3132,6 +3143,14 @@ A macro library:
 VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC.MAR
 VAX> LIBRARY/REPLACE/MACRO MYMAC NEWMACS.MAR      ! update some macros
 VAX> MACRO PROG/LIBRARY=MYMAC
+```
+
+A text library, for FORTRAN ([section 14.4](#144-source-lines)):
+
+```text
+VAX> LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
+VAX> LIBRARY/TEXT/EXTRACT=$TIMES/OUTPUT=OUT.TXT MYDEFS
+VAX> FORTRAN PROG+MYDEFS/LIBRARY
 ```
 
 ### Analyzing objects and images
@@ -4915,12 +4934,13 @@ output it prints, and programs of several files in its `modules` directory.
 ### 14.3 The FORTRAN command
 
 The command's syntax and qualifiers are in
-[section 6.5](#fortran): the source files, `/MACRO` and `/NOMACRO`,
+[section 6.5](#fortran): the source files, joined by `+` and with
+`/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`, and
 `/[NO]G_FLOATING`. An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
 host shell, `govax fortran` runs it (`--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`).
+`/ALIGN=value` and `/NOALIGN`, and `a.for+lib.tlb/library` an argument with `+`).
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5000,7 +5020,24 @@ COMMON statement.
 statement's place. A file is found relative to the file that includes
 it: on the host in its directory, on a volume on its device and in its
 directory. Included files may include others, ten deep.
-`INCLUDE '(module)'`, a text library's module, comes in Phase 83.
+
+`INCLUDE '(module)'` reads a text library's module
+([section 6.5](#fortran) makes one), found in the first of these that has it:
+
+1. the libraries given with the source: `FORTRAN PROG+MYDEFS/LIBRARY`, in order
+   (a library's type is `.TLB` by default);
+2. the library or search list the logical name `FORT$LIBRARY` names;
+3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one.
+
+`INCLUDE 'lib(module)'` reads only that library, found as an INCLUDE file is.
+
+An INCLUDE's lines appear in the MACRO file only with `/LIST`, as in
+`INCLUDE 'limits/LIST'` or `INCLUDE '(TIMES)/LIST'`, and `/NOLIST`, the default,
+leaves only comments naming the file ([section 14.5](#145-the-macro-file)). A
+file must itself be listed for an INCLUDE in it to list anything.
+
+`FORTRAN A+B` compiles the files as one source, one after the other, to one
+MACRO file named for `A`. A program unit can even run on from one into the next.
 
 A problem with a line's layout is reported with the line and column;
 after an error no MACRO file is written, and a fatal error (an INCLUDE
@@ -5024,15 +5061,16 @@ VAX> FORTRAN BAD
 The MACRO file is meant to be read beside the program it came from. It
 starts with what made it, and holds every line of the source as a
 comment, with its number, just before the instructions it became, so
-comments and declarations appear where they are in the source; a line
-from an INCLUDE file has its include depth before the number, between
-comments naming the file. For this program and its INCLUDE file,
+comments and declarations appear where they are in the source. Comments name
+each INCLUDE file where it starts and ends, and with `/LIST` on the INCLUDE
+its lines are there too, each with its include depth before the number.
+For this program and its INCLUDE file,
 `LIMITS.FOR`, which holds `INTEGER N`:
 
 ```text
       PROGRAM SQUARES
 C     Squares of the first N integers
-      INCLUDE 'limits'
+      INCLUDE 'limits/LIST'
       DO 10 I = 1, N
 	PRINT *, I,
 	1  I*I
@@ -5051,8 +5089,9 @@ FORTRAN writes this `SQUARES.MAR`:
 ; by the command FORTRAN SQUARES
 ;
 ; Each line of the FORTRAN source appears as a comment, with its line number, before
-; the instructions it became; a line from an INCLUDE file has its include depth
-; before the number. Each routine's storage map says where its variables are.
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
 ;
 ; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
 DSC$K_DTYPE_L = 8			; longword integer
@@ -5092,7 +5131,7 @@ SQUARES.$D2:
 ;    1        PROGRAM SQUARES
 	.ENTRY	SQUARES,^M<>
 ;    2  C     Squares of the first N integers
-;    3        INCLUDE 'limits'
+;    3        INCLUDE 'limits/LIST'
 ; INCLUDE file DUA0:[WORK]LIMITS.FOR;1:
 ;1   1        INTEGER N
 ; end of DUA0:[WORK]LIMITS.FOR;1
@@ -5328,7 +5367,9 @@ FORTRAN compiler was available to check them). So far:
   continued from a short line goes straight on to the next.
 - `CPAR$` lines (parallel directives) are comments.
 - INCLUDE files are found relative to the including file, ten deep at
-  most.
+  most, and modules in the order [section 14.4](#144-source-lines) gives. The
+  language manual gives INCLUDE's forms and its `/NOLIST` default; the rest is
+  in a User Manual not at hand, as is which file `A+B`'s output is named for.
 - `FTN$STOP` and `FTN$PAUSE` write to `SYS$OUTPUT`.
 - The file statements' rules that VMS's run-time library applies when the
   program runs (a keyword's text, OPEN's combinations, RECL's need) are checked

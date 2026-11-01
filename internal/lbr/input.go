@@ -275,6 +275,17 @@ func squeezeLine(line string) string {
 	return line
 }
 
+// TextModule makes a file's records into the text module named name, as
+// LIBRARY/TEXT does (testdata/for83's part D): every record as it is, blanks,
+// tabs, and empty records kept, and an empty file a module of one empty record.
+func TextModule(name string, records [][]byte) *Entry {
+	if len(records) == 0 {
+		records = [][]byte{{}}
+	}
+
+	return &Entry{Name: name, Records: records}
+}
+
 // ObjectModules splits an object file's records into modules, one per
 // module header through end of module, as LIBRARY/OBJECT does. Each
 // module's index 2 keys are the global symbols it defines: symbol

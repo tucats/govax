@@ -39,8 +39,8 @@ type Options struct {
 	// Align is /[NO]ALIGN (sema/align.go).
 	Align sema.Alignment
 
-	// Includes reads the files INCLUDE statements name; nil means a
-	// program can include nothing.
+	// Includes reads the files and modules INCLUDE statements name; nil
+	// means a program can include nothing.
 	Includes source.Opener
 
 	// Version is govax's version ("1.0-115"), named in the header as the
@@ -95,18 +95,32 @@ type Result struct {
 
 // Compile compiles one source file.
 func Compile(opts Options, file File) Result {
+	return CompileAll(opts, []File{file})
+}
+
+// CompileAll compiles source files joined into one compilation (FORTRAN A+B):
+// their statements are one sequence, so a program unit may even run on from
+// one file into the next. The first file names what a file's name names.
+func CompileAll(opts Options, files []File) Result {
 	var (
 		messages diag.List
 		routines []*ir.Routine
 		ident    string
 	)
 
+	file := files[0]
+
+	sources := make([]*source.File, len(files))
+	for i, f := range files {
+		sources[i] = &source.File{Spec: f.Spec, Lines: f.Lines, Handle: f.Handle}
+	}
+
 	// The first pass: the source's lines into statements.
-	program := source.Read(source.Form{
+	program := source.ReadAll(source.Form{
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
 		Continuations: opts.Continuations,
-	}, &source.File{Spec: file.Spec, Lines: file.Lines, Handle: file.Handle}, opts.Includes, &messages)
+	}, sources, opts.Includes, &messages)
 
 	// The second, third, and fourth passes: each statement's kind and
 	// tokens, then the syntax tree, then its meaning. Semantic analysis
@@ -143,7 +157,7 @@ func Compile(opts Options, file File) Result {
 
 	var w codegen.Writer
 
-	writeHeader(&w, opts, file, module, ident)
+	writeHeader(&w, opts, files, module, ident)
 	codegen.Generate(&w, routines, program.Lines)
 	result.MACRO = w.Lines()
 
@@ -153,12 +167,15 @@ func Compile(opts Options, file File) Result {
 // writeHeader writes the MACRO file's opening: the module's .TITLE and
 // .IDENT, then comments saying what made the file, from what, and when.
 // ident is the file's CDEC$ IDENT string, "" with none.
-func writeHeader(w *codegen.Writer, opts Options, file File, module, ident string) {
+func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident string) {
 	w.Statement("", ".TITLE", module, "")
 	w.Statement("", ".IDENT", identOperand(ident), "")
 	w.Comment("")
 	w.Comment("Compiled by govax FORTRAN V" + opts.Version + " on " + vmsTime(opts.Compiled))
-	w.Comment("from " + file.Spec)
+
+	for _, file := range files {
+		w.Comment("from " + file.Spec)
+	}
 
 	if opts.CommandLine != "" {
 		w.Comment("by the command " + opts.CommandLine)
@@ -166,8 +183,9 @@ func writeHeader(w *codegen.Writer, opts Options, file File, module, ident strin
 
 	w.Comment("")
 	w.Comment("Each line of the FORTRAN source appears as a comment, with its line number, before")
-	w.Comment("the instructions it became; a line from an INCLUDE file has its include depth")
-	w.Comment("before the number. Each routine's storage map says where its variables are.")
+	w.Comment("the instructions it became. An INCLUDE file's lines appear only with INCLUDE's")
+	w.Comment("/LIST, their include depth before the number; a comment names the file either way.")
+	w.Comment("Each routine's storage map says where its variables are.")
 	w.Comment("")
 }
 

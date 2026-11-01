@@ -10,6 +10,9 @@ import (
 // Result holds everything DCLdump/DCLresults would have handed back after a
 // successful Parse: which verb/syntax ended up active, and the value of every parameter/qualifier that was actually matched.
 type Result struct {
+	// joined is set on an element of a /joinable list that a "+" follows.
+	joined bool
+
 	Verb     string // the top-level verb name, before any /syntax= or keyword redirect
 	Active   string // the final active entry name (verb or a redirected-to syntax)
 	ActiveID int64  // the final active entry's ID, for the handler to disambiguate what part of the grammar invoked it
@@ -51,6 +54,10 @@ type matchedValue struct {
 func newResult() *Result {
 	return &Result{values: map[string]*matchedValue{}, paramValues: map[string]map[string]*matchedValue{}, items: map[string][]*Result{}}
 }
+
+// Joined reports, for an element of a /joinable list (one of Items'), that
+// a "+" and not a "," or the list's end follows it.
+func (r *Result) Joined() bool { return r.joined }
 
 // Items returns the positional qualifiers of each element of the list
 // parameter name, in the list's order: element i's are read with
@@ -1144,6 +1151,12 @@ func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Paramete
 			return nil, nil, "", err
 		}
 
+		// In a /joinable list a bare element ends at a "+" too. (A quoted
+		// one has ended at its closing quote.)
+		if plus := strings.IndexByte(tok, '+'); p.Joinable && plus >= 0 && !strings.HasPrefix(s, `"`) {
+			tok, rem = tok[:plus], s[plus:]
+		}
+
 		if tok == "" && !strings.HasPrefix(s, `""`) {
 			return nil, nil, "", vmserrors.New(vmserrors.CLI_EMPTYELEMENT, orig)
 		}
@@ -1182,7 +1195,9 @@ func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Paramete
 		items = append(items, item)
 
 		after := strings.TrimLeft(rem, " \t")
-		if !strings.HasPrefix(after, ",") {
+		item.joined = p.Joinable && strings.HasPrefix(after, "+")
+
+		if !strings.HasPrefix(after, ",") && !item.joined {
 			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
 			if err != nil {
 				return nil, nil, "", vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)

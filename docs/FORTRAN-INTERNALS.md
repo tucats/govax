@@ -158,7 +158,7 @@ So "where does a statement start and end?" is a question about columns,
 not words, and it's answered before any tokenizing. `source.Read`
 answers it and hands on a `Program`: every line it read, in order
 (comments, included files' lines, and all, since the code generator
-copies them into the MACRO file), and the statements.
+copies those `Listed` into the MACRO file), and the statements.
 
 ### Classifying a line
 
@@ -229,6 +229,23 @@ place, one include depth deeper. The `Opener` is an interface the
 FORTRAN command implements (finding files relative to the including
 file, as MACRO's `.INCLUDE` does) and tests implement with maps; this
 package never touches a file system.
+
+`INCLUDE '(module)'` and `'lib(module)'` go to the `Opener`'s other method,
+`OpenModule`, since which libraries to search is the command's business: its
+`/LIBRARY` files, the `FORT$LIBRARY` logical name, and `FORSYSDEF.TLB`. The
+compiler gets a `File` either way, and can't tell a module from a file. A
+parenthesis tells the forms apart, as no file specification holds one.
+
+A line remembers whether it's `Listed`: every line of the files compiled, and an
+included one only if each INCLUDE above it says `/LIST`, since the language
+manual makes `/NOLIST` the default. A library of definitions can be thousands
+of lines a program uses a few of, and the MACRO file should stay readable. The
+statements don't care; only the code generator's source comments (and in time
+a listing) look at it, which is why a program's code still comes out with no
+source beside it when its INCLUDE doesn't say `/LIST`.
+
+`FORTRAN A+B` is `ReadAll`: each file at depth 0 in turn, one `Program`. Nothing
+ends a program unit at a file's end, so a unit may run on into the next file.
 
 
 ## 5. The second pass: lexing (`internal/fortran/lex`)
@@ -877,8 +894,8 @@ MACRO's 132 characters (a comment that won't fit moves to a line of its
 own, a long one is split), and writes the FORTRAN source as comments. A
 source line's prefix (`;`, the number in five columns, two blanks) is
 exactly 8 characters, one tab stop, so tab-format source keeps its
-layout; an included line's prefix starts with its include depth
-(`;1  12  `). `Generate` writes the module: the `DSC$K_` codes its
+layout; an included line, when it's listed at all, has a prefix that
+starts with its include depth (`;1  12  `). `Generate` writes the module: the `DSC$K_` codes its
 descriptors use (govax's STARLET has no `$DSCDEF`), then for each
 routine a storage map, its `$LOCAL` storage, its `$PDATA` data, and its
 `$CODE`. Each routine's code is generated before its storage is written,

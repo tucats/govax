@@ -2,6 +2,7 @@ package dclcmd
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/tucats/govax/internal/fortran"
 	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
+	"github.com/tucats/govax/internal/lbr"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -17,7 +20,7 @@ import (
 // This file is the FORTRAN command (docs/PHASE-74 - FORTRAN plan.md,
 // Decision 18; subtask 2):
 //
-//	FORTRAN source[,...][/HOST] [/MACRO[=file] | /NOMACRO]
+//	FORTRAN source[+source...][+library/LIBRARY][,...][/HOST] [/MACRO[=file] | /NOMACRO]
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
 //	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN]
 //
@@ -33,7 +36,10 @@ import (
 // ends with CLI_FORERRORS; one with warnings writes the file and leaves
 // $STATUS a warning. Several sources, separated by commas, are compiled
 // one after another, each to its own MACRO file, and the command's
-// status is the last failure's.
+// status is the last failure's. Sources joined by + are one compilation, to
+// one MACRO file, named by default for the first (which VAX FORTRAN's object
+// file is named for isn't in the manuals to hand; govax's choice, unconfirmed);
+// each name's missing parts come from the name before it in the list.
 //
 // A source's INCLUDE 'file' statements name files found as MACRO's
 // .INCLUDE finds them: relative to the file that includes them (on the
@@ -43,12 +49,19 @@ import (
 // FORTRAN looks beside the including file or in the default directory
 // isn't in the manuals to hand; for a source in the default directory
 // the two agree. govax's choice, unconfirmed.
+//
+// INCLUDE '(module)' searches, in order and unconfirmed (the VAX FORTRAN User
+// Manual isn't to hand; docs/PHASE-83 - FORTRAN and VMS.md, Decision 2): the
+// libraries named with /LIBRARY in the source's +-list, the library or search
+// list the logical name FORT$LIBRARY names, and SYS$LIBRARY:FORSYSDEF.TLB if
+// there is one. INCLUDE 'lib(module)' reads only lib, found as an INCLUDE file
+// is, of default type TLB.
 
 // FortranOptions is one FORTRAN command.
 type FortranOptions struct {
-	// Sources are the source files, in the order given, and SourceHost
-	// an explicit /HOST on them.
-	Sources    []string
+	// Sources are the source files and text libraries, in the order given,
+	// and SourceHost an explicit /HOST on them.
+	Sources    []FortranSource
 	SourceHost bool
 
 	// Macro is the MACRO file's name from /MACRO=; "" means the default:
@@ -80,6 +93,43 @@ type FortranOptions struct {
 
 	// CommandLine is the command as typed, for the MACRO file's header.
 	CommandLine string
+}
+
+// FortranSource is one element of the FORTRAN command's list.
+type FortranSource struct {
+	// Name is the file's name, and Library says it has /LIBRARY: a text
+	// library for this compilation's INCLUDE statements.
+	Name    string
+	Library bool
+
+	// Joined says a + follows it, so the next element is in the same
+	// compilation.
+	Joined bool
+}
+
+// FortranSources makes a list of source files, each its own compilation.
+func FortranSources(names ...string) []FortranSource {
+	sources := make([]FortranSource, len(names))
+	for i, name := range names {
+		sources[i].Name = name
+	}
+
+	return sources
+}
+
+// fortranCompilations groups the command's list: each compilation's elements,
+// from one a + doesn't follow to the next.
+func fortranCompilations(list []FortranSource) [][]FortranSource {
+	var groups [][]FortranSource
+
+	for start, i := 0, 0; i < len(list); i++ {
+		if !list[i].Joined || i == len(list)-1 {
+			groups = append(groups, list[start:i+1])
+			start = i + 1
+		}
+	}
+
+	return groups
 }
 
 // FortranContinuations is /CONTINUATIONS=n: whether it was given, and
@@ -120,8 +170,15 @@ func (opts FortranOptions) alignment() (sema.Alignment, error) {
 }
 
 // defaultFortranType is the file type FORTRAN gives a source named
-// without one, as VMS's FORTRAN command does.
-const defaultFortranType = "FOR"
+// without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
+// text library's. fortLibraryName and forSysDefFile name the libraries
+// searched by default.
+const (
+	defaultFortranType     = "FOR"
+	defaultTextLibraryType = "TLB"
+	fortLibraryName        = "FORT$LIBRARY"
+	forSysDefFile          = "FORSYSDEF.TLB"
+)
 
 // Fortran compiles each source file and, unless opts.NoMacro, writes its
 // MACRO file.
@@ -134,8 +191,9 @@ func (c *Context) Fortran(opts FortranOptions) error {
 		return err
 	}
 
-	if len(opts.Sources) == 1 {
-		return c.compileFortran(opts.Sources[0], opts)
+	groups := fortranCompilations(opts.Sources)
+	if len(groups) == 1 {
+		return c.compileFortran(groups[0], opts)
 	}
 
 	// With several sources, each failure is shown as it happens, so the
@@ -143,8 +201,8 @@ func (c *Context) Fortran(opts FortranOptions) error {
 	// the last failure's status, not shown again.
 	var failed uint32
 
-	for _, source := range opts.Sources {
-		if err := c.compileFortran(source, opts); err != nil {
+	for _, group := range groups {
+		if err := c.compileFortran(group, opts); err != nil {
 			c.Printf("%%%s\n", err)
 
 			failed = vmserrors.CLI_FORERRORS
@@ -163,44 +221,78 @@ func (c *Context) Fortran(opts FortranOptions) error {
 	return nil
 }
 
-// compileFortran compiles one source file.
-func (c *Context) compileFortran(source string, opts FortranOptions) error {
+// compileFortran does one compilation: its source files, and the text
+// libraries among them.
+func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) error {
 	s := c.ContainerSession
+	includes := &fortranIncludes{c: c}
 
-	loc, err := s.Locate(source, opts.SourceHost)
-	if err != nil {
-		return FileFailure(err, source)
+	var (
+		files []fortran.File
+		prev  rms.FileLocation
+	)
+
+	for i, item := range group {
+		var (
+			loc rms.FileLocation
+			err error
+		)
+
+		if i == 0 {
+			loc, err = s.Locate(item.Name, opts.SourceHost)
+		} else {
+			loc, err = s.LocateRelated(item.Name, opts.SourceHost, prev)
+		}
+
+		if err != nil {
+			return FileFailure(err, item.Name)
+		}
+
+		if item.Library {
+			lib, found, err := includes.readLibrary(loc)
+			if err != nil {
+				return err
+			}
+
+			includes.named = append(includes.named, lib)
+			prev = found
+
+			continue
+		}
+
+		loc = loc.WithDefaultType(defaultFortranType)
+
+		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
+		if err != nil {
+			return FileFailure(err, loc.Name)
+		}
+
+		prev = found
+
+		files = append(files, fortran.File{Spec: sourceSpec(found), Name: sourceStem(found), Lines: recordLines(records), Handle: found})
 	}
 
-	loc = loc.WithDefaultType(defaultFortranType)
-
-	records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
-	if err != nil {
-		return FileFailure(err, loc.Name)
+	if len(files) == 0 {
+		return vmserrors.New(vmserrors.CLI_FORNOSOURCE, group[0].Name)
 	}
 
-	lines := recordLines(records)
+	found, _ := files[0].Handle.(rms.FileLocation)
 
 	continuations, _ := opts.Continuations.limit() // checked by Fortran
 	align, _ := opts.alignment()                   // checked by Fortran
 
-	result := fortran.Compile(fortran.Options{
+	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:  opts.ExtendSource,
 		DLines:        opts.DLines,
 		NoI4:          opts.NoI4,
 		GFloating:     opts.GFloating,
 		Align:         align,
 		Continuations: continuations,
-		Includes:      fortranIncludes{c},
+		Includes:      includes,
 		Version:       BuildVersion,
 		Compiled:      time.Now(),
 		CommandLine:   opts.CommandLine,
-	}, fortran.File{
-		Spec:   sourceSpec(found),
-		Name:   sourceStem(found),
-		Lines:  lines,
-		Handle: found,
-	})
+	}, files)
 
 	for _, m := range result.Messages {
 		c.Printf("%s\n", m)
@@ -227,28 +319,192 @@ func (c *Context) compileFortran(source string, opts FortranOptions) error {
 	return nil
 }
 
-// fortranIncludes reads the files a source's INCLUDE statements name
-// (source.Opener).
+// fortranIncludes reads the files and modules a compilation's INCLUDE
+// statements name (source.Opener).
 type fortranIncludes struct {
 	c *Context
+
+	// named are the libraries /LIBRARY named, in order.
+	named []*includeLibrary
+
+	// defaults are the libraries found by name, read at the first
+	// INCLUDE '(module)' that gets past named; searched says they have been.
+	defaults []*includeLibrary
+	searched bool
+}
+
+// includeLibrary is a text library a compilation has read.
+type includeLibrary struct {
+	lib   *lbr.Library
+	found rms.FileLocation
+}
+
+// readLibrary reads the text library at loc, of default type TLB.
+func (fi *fortranIncludes) readLibrary(loc rms.FileLocation) (*includeLibrary, rms.FileLocation, error) {
+	loc = loc.WithDefaultType(defaultTextLibraryType)
+
+	data, found, err := fi.c.ContainerSession.ReadRawFile(loc)
+	if err != nil {
+		return nil, found, FileFailure(err, loc.Name)
+	}
+
+	lib, err := openTextLibrary(data, found)
+	if err != nil {
+		return nil, found, err
+	}
+
+	return lib, found, nil
+}
+
+// openTextLibrary makes a library's bytes an includeLibrary, if it is a
+// text library.
+func openTextLibrary(data []byte, found rms.FileLocation) (*includeLibrary, error) {
+	lib, err := lbr.Open(data)
+	if err != nil {
+		return nil, vmserrors.Wrap(vmserrors.CLI_LIBRARY, err, found.Name)
+	}
+
+	if lib.Type != lbr.TypeText {
+		err := fmt.Errorf("%s is a %s library, not a text library", found.Name, lib.Type)
+
+		return nil, vmserrors.Wrap(vmserrors.CLI_LIBRARY, err, found.Name)
+	}
+
+	return &includeLibrary{lib: lib, found: found}, nil
+}
+
+// module returns the library's module of that name, as an included file, or
+// nil if it has none. A name is tried as written, then in capitals, as
+// LIBRARY writes a name given without quotes.
+func (il *includeLibrary) module(name string) (*source.File, error) {
+	rfa, ok := il.lib.Lookup(name)
+	if !ok {
+		name = strings.ToUpper(name)
+
+		if rfa, ok = il.lib.Lookup(name); !ok {
+			return nil, nil
+		}
+	}
+
+	m, err := il.lib.Module(rfa)
+	if err != nil {
+		return nil, err
+	}
+
+	return &source.File{Spec: sourceSpec(il.found) + "(" + name + ")", Lines: recordLines(m.Records), Handle: il.found}, nil
+}
+
+// defaultLibraries finds the libraries searched after those /LIBRARY names:
+// FORT$LIBRARY's, then SYS$LIBRARY:FORSYSDEF.TLB. A name that doesn't lead to
+// a file adds nothing; one that leads to anything but a text library is an
+// error, as a /LIBRARY's is.
+func (fi *fortranIncludes) defaultLibraries() ([]*includeLibrary, error) {
+	if fi.searched {
+		return fi.defaults, nil
+	}
+
+	fi.searched = true
+
+	s := fi.c.ContainerSession
+
+	db := fi.c.Logicals
+	if db == nil && s != nil {
+		db = s.Logicals
+	}
+
+	if db != nil {
+		for _, table := range []string{"LNM$PROCESS", "LNM$JOB", "LNM$GROUP", "LNM$SYSTEM"} {
+			e, err := db.Translate(table, fortLibraryName, lnm.User, 0)
+			if err != nil {
+				continue
+			}
+
+			for _, equivalence := range e.Equivalences {
+				loc, err := s.Locate(equivalence.Value, false)
+				if err != nil {
+					return nil, FileFailure(err, equivalence.Value)
+				}
+
+				lib, _, err := fi.readLibrary(loc)
+				if err != nil {
+					return nil, err
+				}
+
+				fi.defaults = append(fi.defaults, lib)
+			}
+
+			break
+		}
+	}
+
+	data, found, err := fi.c.readLibraryFile("SYS$LIBRARY", forSysDefFile)
+	if err != nil {
+		return nil, FileFailure(err, forSysDefFile)
+	}
+
+	if data != nil {
+		lib, err := openTextLibrary(data, found)
+		if err != nil {
+			return nil, err
+		}
+
+		fi.defaults = append(fi.defaults, lib)
+	}
+
+	return fi.defaults, nil
+}
+
+// OpenModule reads a text library's module (source.Opener).
+func (fi *fortranIncludes) OpenModule(library, module string, from *source.File) (*source.File, error) {
+	var search []*includeLibrary
+
+	if library != "" {
+		loc, err := fi.related(library, from)
+		if err != nil {
+			return nil, err
+		}
+
+		lib, _, err := fi.readLibrary(loc)
+		if err != nil {
+			return nil, err
+		}
+
+		search = []*includeLibrary{lib}
+	} else {
+		defaults, err := fi.defaultLibraries()
+		if err != nil {
+			return nil, err
+		}
+
+		search = append(append(search, fi.named...), defaults...)
+	}
+
+	for _, lib := range search {
+		file, err := lib.module(module)
+		if err != nil {
+			return nil, err
+		}
+
+		if file != nil {
+			return file, nil
+		}
+	}
+
+	if library != "" {
+		return nil, fmt.Errorf("the library has no module %s", module)
+	}
+
+	return nil, fmt.Errorf("no library has a module %s", module)
 }
 
 // OpenInclude reads the file named name, which the file from includes:
 // name is resolved relative to from, with the default type FOR.
-func (fi fortranIncludes) OpenInclude(name string, from *source.File) (*source.File, error) {
+func (fi *fortranIncludes) OpenInclude(name string, from *source.File) (*source.File, error) {
 	s := fi.c.ContainerSession
 
-	related, _ := from.Handle.(rms.FileLocation)
-
-	loc, err := s.LocateRelated(name, false, related)
+	loc, err := fi.related(name, from)
 	if err != nil {
-		return nil, FileFailure(err, name)
-	}
-
-	// A relative host path (inc/limits.for) is relative to the including
-	// file's directory too, as a bare name is.
-	if loc.Host && related.Host && strings.ContainsAny(name, `/\`) && !filepath.IsAbs(name) {
-		loc.Name = filepath.Join(filepath.Dir(related.Name), name)
+		return nil, err
 	}
 
 	loc = loc.WithDefaultType(defaultFortranType)
@@ -267,6 +523,24 @@ func (fi fortranIncludes) OpenInclude(name string, from *source.File) (*source.F
 	}
 
 	return &source.File{Spec: sourceSpec(found), Lines: recordLines(records), Handle: found}, nil
+}
+
+// related finds the file named name, relative to the file from.
+func (fi *fortranIncludes) related(name string, from *source.File) (rms.FileLocation, error) {
+	related, _ := from.Handle.(rms.FileLocation)
+
+	loc, err := fi.c.ContainerSession.LocateRelated(name, false, related)
+	if err != nil {
+		return loc, FileFailure(err, name)
+	}
+
+	// A relative host path (inc/limits.for) is relative to the including
+	// file's directory too, as a bare name is.
+	if loc.Host && related.Host && strings.ContainsAny(name, `/\`) && !filepath.IsAbs(name) {
+		loc.Name = filepath.Join(filepath.Dir(related.Name), name)
+	}
+
+	return loc, nil
 }
 
 // recordLines is a text file's records as strings.

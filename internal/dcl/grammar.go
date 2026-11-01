@@ -113,6 +113,12 @@ type Parameter struct {
 	// that themselves contain commas), read back with Result.List.
 	List bool
 
+	// Joinable marks a list parameter declared with /joinable, whose
+	// elements (it must have positional qualifiers, so readItems reads it)
+	// may also be separated by "+", as VMS's compilers take "A+B,C". An
+	// element followed by "+" reports Joined.
+	Joinable bool
+
 	// Separator, when nonzero, is a character that ends this parameter's
 	// value (the grammar's /separator="c"): one is skipped, with blanks
 	// around it, before the next parameter, so DEPOSIT X=5 reads as

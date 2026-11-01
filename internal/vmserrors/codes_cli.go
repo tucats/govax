@@ -213,6 +213,9 @@ const (
 	cliForSameFile
 	cliForContRange
 	cliForAlign
+
+	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
+	cliForNoSource
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -503,6 +506,9 @@ const (
 	// for SET NOVERIFY with keywords; CLI_INVPREFIX, an error, for a SET
 	// PREFIX control string it can't use.
 	CLI_CONFLICT  = CLIFacility<<FacilityPosition | cliConflict<<MessagePosition | StatusWarning
+
+	// CLI_FORNOSOURCE reports a FORTRAN compilation of libraries alone.
+	CLI_FORNOSOURCE = CLIFacility<<FacilityPosition | cliForNoSource<<MessagePosition | StatusError
 	CLI_INVPREFIX = CLIFacility<<FacilityPosition | cliInvPrefix<<MessagePosition | StatusError
 
 	// DCL's file I/O's message (docs/PHASE-50, subtask 17): CLI_UNDFIL, a
@@ -657,11 +663,12 @@ func init() {
 	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
 	DefineMessage(CLI_LISWRITE, CLIFacility, "LISWRITE", "Writing listing file !S")
 	DefineMessage(CLI_LINKING, CLIFacility, "LINKING", "Linking !S")
+	DefineMessage(CLI_FORNOSOURCE, CLIFacility, "FORNOSOURCE", "FORTRAN: no source file to compile with library !S")
 	DefineMessage(CLI_LIBRARY, CLIFacility, "LIBRARY", "Library !S")
 	DefineMessage(CLI_LIBWARNING, CLIFacility, "LIBWARNING", "Library !S")
-	DefineMessage(CLI_LIBINSERTED, CLIFacility, "INSERTED", "module !S inserted in !S")
-	DefineMessage(CLI_LIBREPLACED, CLIFacility, "REPLACED", "module !S replaced in !S")
-	DefineMessage(CLI_LIBDELETED, CLIFacility, "DELETED", "module !S deleted from !S")
+	DefineMessage(CLI_LIBINSERTED, LIBRFacility, "INSERTED", "module !S inserted in !S")
+	DefineMessage(CLI_LIBREPLACED, LIBRFacility, "REPLACED", "module !S replaced in !S")
+	DefineMessage(CLI_LIBDELETED, LIBRFacility, "DELETED", "module !S deleted from !S")
 	DefineMessage(CLI_BADVERSIONS, CLIFacility, "BADVERSIONS", "Invalid /VERSIONS value !D (must be at least 1)")
 	DefineMessage(CLI_MAXPARM, CLIFacility, "MAXPARM", "too many parameters - reenter command with fewer parameters")
 	DefineMessage(CLI_SKPDAT, CLIFacility, "SKPDAT", `image data (records not beginning with "$") ignored`)

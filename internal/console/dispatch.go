@@ -569,12 +569,19 @@ func (d *Dispatcher) bindGrammar() {
 	// from, and lists libraries (Console.Library, internal/console/
 	// library.go).
 	g.Bind("LIBRARY", func(id int64, r *dcl.Result) error {
+		modules := make([]string, len(r.Items("INPUTS")))
+		for i, item := range r.Items("INPUTS") {
+			modules[i] = item.String("MODULE")
+		}
+
 		return d.Console.cmd().Library(dclcmd.LibraryOptions{
 			Library:     r.String("LIBRARY"),
 			LibraryHost: r.ParamPresent("LIBRARY", "HOST"),
 			Inputs:      r.List("INPUTS"),
 			InputHost:   r.ParamPresent("INPUTS", "HOST"),
-			Create:      r.Present("CREATE"),
+			Modules:     modules,
+			Create:      r.Present("CREATE") && !r.Defaulted("CREATE") && !r.Negated("CREATE"),
+			CreateSizes: nonEmpty(r.List("CREATE")),
 			Insert:      r.Present("INSERT"),
 			Replace:     r.Present("REPLACE"),
 			Delete:      r.List("DELETE"),
@@ -588,6 +595,7 @@ func (d *Dispatcher) bindGrammar() {
 			Macro:       r.Present("MACRO"),
 			Object:      r.Present("OBJECT"),
 			Share:       r.Present("SHARE"),
+			Text:        r.Present("TEXT"),
 			NoSqueeze:   r.Present("SQUEEZE") && r.Negated("SQUEEZE"),
 			Selective:   r.Present("SELECTIVE_SEARCH"),
 			Log:         r.Present("LOG"),
@@ -628,8 +636,16 @@ func (d *Dispatcher) bindGrammar() {
 	// docs/PHASE-74 - FORTRAN plan.md: FORTRAN compiles FORTRAN sources
 	// into MACRO-32 sources (dclcmd.Context.Fortran, internal/fortran).
 	g.Bind("FORTRAN", func(id int64, r *dcl.Result) error {
+		names := r.List("SOURCES")
+		items := r.Items("SOURCES")
+		sources := make([]dclcmd.FortranSource, len(names))
+
+		for i, name := range names {
+			sources[i] = dclcmd.FortranSource{Name: name, Library: items[i].Present("LIBRARY"), Joined: items[i].Joined()}
+		}
+
 		return d.Console.cmd().Fortran(dclcmd.FortranOptions{
-			Sources:      r.List("SOURCES"),
+			Sources:      sources,
 			SourceHost:   r.ParamPresent("SOURCES", "HOST"),
 			Macro:        r.String("MACRO"),
 			NoMacro:      r.Present("MACRO") && r.Negated("MACRO"),

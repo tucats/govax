@@ -84,14 +84,19 @@ type File struct {
 	Handle any
 }
 
-// Opener finds and reads the file an INCLUDE statement names. The FORTRAN
-// command supplies one that reads host and volume files; tests supply
+// Opener finds and reads the file or module an INCLUDE statement names. The
+// FORTRAN command supplies one that reads host and volume files; tests supply
 // files from memory.
 type Opener interface {
 	// OpenInclude reads the file named name (the INCLUDE statement's
 	// string, without its /LIST or /NOLIST), which the file from
 	// includes.
 	OpenInclude(name string, from *File) (*File, error)
+
+	// OpenModule reads the text module named module, which the file from
+	// includes: from the text library named library, or with library ""
+	// from the first of the compilation's libraries that has it.
+	OpenModule(library, module string, from *File) (*File, error)
 }
 
 // LineKind says what a line is.
@@ -134,6 +139,10 @@ type Line struct {
 
 	// Kind is what the line is.
 	Kind LineKind
+
+	// Listed says the line goes in the MACRO file: every line of the files
+	// compiled, and an included one only if each INCLUDE above it says /LIST.
+	Listed bool
 }
 
 // Statement is one statement: its label, its text, and where it came

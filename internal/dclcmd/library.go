@@ -2,6 +2,8 @@ package dclcmd
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tucats/govax/internal/lbr"
@@ -14,22 +16,25 @@ import (
 // the style of VMS's LIBRARIAN:
 //
 //	LIBRARY library[/HOST] [input[,...][/HOST]]
-//	        [/CREATE] [/INSERT | /REPLACE] [/DELETE=(module,...)]
+//	        [/CREATE[=(option:n,...)]] [/INSERT | /REPLACE] [/DELETE=(module,...)]
 //	        [/EXTRACT=(module,...) [/OUTPUT=file]]
 //	        [/LIST[=file] [/FULL] [/NAMES] [/WIDTH=n]]
-//	        [/MACRO | /OBJECT | /SHARE] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
+//	        [/MACRO | /OBJECT | /SHARE | /TEXT] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
 //
 // It creates or changes a macro library (.MLB), an object library (.OLB),
-// or a shareable image symbol table library (.OLB, /SHARE; docs/PHASE-68 -
-// link shareable images.md, subtask 12) with internal/lbr, extracts
+// a shareable image symbol table library (.OLB, /SHARE; docs/PHASE-68 -
+// link shareable images.md, subtask 12), or a text library (.TLB, /TEXT;
+// docs/PHASE-83 - FORTRAN and VMS.md, subtask 3) with internal/lbr, extracts
 // modules from one, and lists one as LIBRARY/LIST does. /MACRO, /OBJECT,
-// or /SHARE picks the type of a new library (an object library by default,
-// as on VMS) and the library's default file type; an existing library
-// keeps its own type, and naming another is an error.
+// /SHARE, or /TEXT picks the type of a new library (an object library by
+// default, as on VMS) and the library's default file type; an existing
+// library keeps its own type, and naming another is an error.
 //
 // Input files are inserted in order: macro source (.MAR), one module per
-// macro, object files (.OBJ), one module per object module, or shareable
-// images (.EXE), one module each, holding its universal symbols. With no
+// macro, object files (.OBJ), one module per object module, shareable
+// images (.EXE), one module each, holding its universal symbols, or text
+// files (.TXT), one module each, named by the file's /MODULE= or for the
+// file. With no
 // operation named, they replace modules of the same names, as LIBRARIAN's
 // default /REPLACE does; with /INSERT or /CREATE, a module already in the
 // library is a warning and isn't changed. /DELETE= is done first, and
@@ -50,6 +55,15 @@ import (
 // and a volume library is rewritten at its version
 // (rms.Session.RewriteRecordFile). /CREATE makes a new file, a new version
 // on a volume, as on VMS.
+//
+// So a library made by one command matches LIBRARIAN's byte for byte, but
+// one changed since doesn't: LIBRARIAN adds each session's modules in new
+// blocks, reuses deleted modules' blocks, and keeps update history records,
+// and LIBRARY lays the modules out afresh with no history (testdata/for83's
+// S2.TLB to S7.TLB show LIBRARIAN's way). Its modules and index are the same.
+//
+// A text library's failures use LIBRARIAN's messages and statuses, as
+// testdata/for83 shows them; the other types' are still govax's words.
 
 // LibraryOptions is one LIBRARY command.
 type LibraryOptions struct {
@@ -61,10 +75,16 @@ type LibraryOptions struct {
 	Inputs      []string
 	InputHost   bool
 
-	// Create is /CREATE, Insert /INSERT, and Replace /REPLACE.
-	Create  bool
-	Insert  bool
-	Replace bool
+	// Modules holds each input's /MODULE= (a text module's name), "" for
+	// none. It may be shorter than Inputs.
+	Modules []string
+
+	// Create is /CREATE, CreateSizes its values ("KEYSIZE:31"), Insert
+	// /INSERT, and Replace /REPLACE.
+	Create      bool
+	CreateSizes []string
+	Insert      bool
+	Replace     bool
 
 	// Delete and Extract are /DELETE= and /EXTRACT='s module names, and
 	// Output /OUTPUT='s file for the extracted modules.
@@ -81,11 +101,12 @@ type LibraryOptions struct {
 	Names    bool
 	Width    int
 
-	// Macro is /MACRO, Object /OBJECT, and Share /SHARE. NoSqueeze is
-	// /NOSQUEEZE, Selective /SELECTIVE_SEARCH, and Log /LOG.
+	// Macro is /MACRO, Object /OBJECT, Share /SHARE, and Text /TEXT.
+	// NoSqueeze is /NOSQUEEZE, Selective /SELECTIVE_SEARCH, and Log /LOG.
 	Macro     bool
 	Object    bool
 	Share     bool
+	Text      bool
 	NoSqueeze bool
 	Selective bool
 	Log       bool
@@ -132,6 +153,14 @@ func (l *library) run() error {
 		typ, libType = lbr.TypeMacro, "MLB"
 	case opts.Share:
 		typ = lbr.TypeShareable
+	case opts.Text:
+		typ, libType = lbr.TypeText, "TLB"
+	}
+
+	// /NAMES lists an object library's global symbols. DCL's own syntax for
+	// /TEXT has no such qualifier (testdata/for83's log).
+	if opts.Text && opts.Names {
+		return vmserrors.NewSegment(vmserrors.CLI_CONFLICT, "NAMES")
 	}
 
 	loc, err := s.Locate(opts.Library, opts.LibraryHost)
@@ -151,7 +180,12 @@ func (l *library) run() error {
 	}
 
 	if opts.Create {
-		if l.b, err = lbr.Create(typ); err != nil {
+		sizes, err := createSizes(opts.CreateSizes)
+		if err != nil {
+			return err
+		}
+
+		if l.b, err = lbr.CreateWith(typ, sizes); err != nil {
 			return l.failed(err, loc.Name)
 		}
 
@@ -196,6 +230,56 @@ func (l *library) run() error {
 	return nil
 }
 
+// createSizes reads /CREATE's values. BLOCKS is the file's first allocation,
+// which LIBRARY doesn't choose, and is only checked.
+func createSizes(values []string) (lbr.CreateOptions, error) {
+	var sizes lbr.CreateOptions
+
+	for _, value := range values {
+		keyword, number, _ := strings.Cut(strings.ToUpper(value), ":")
+
+		n, err := strconv.Atoi(number)
+		if err != nil || n < 0 {
+			return sizes, vmserrors.New(vmserrors.CLI_IVKEYW, value)
+		}
+
+		switch {
+		case abbreviates(keyword, "BLOCKS", 1):
+		case abbreviates(keyword, "GLOBALS", 1):
+			sizes.Globals = n
+		case abbreviates(keyword, "HISTORY", 1):
+			sizes.History = n
+		case abbreviates(keyword, "KEYSIZE", 1):
+			sizes.KeySize = n
+		case abbreviates(keyword, "MODULES", 1):
+			sizes.Modules = n
+		default:
+			return sizes, vmserrors.New(vmserrors.CLI_IVKEYW, value)
+		}
+	}
+
+	return sizes, nil
+}
+
+// LIBRARIAN's condition values for a text library's failures, as $STATUS
+// shows them in testdata/for83's log (without its inhibit bit).
+const (
+	librarInsertErr  = 0x008680E2 // %LIBRAR-E-INSERTERR
+	librarLookupErr  = 0x008680F2 // %LIBRAR-E-LOOKUPERR
+	librarModNameLng = 0x00868102 // %LIBRAR-E-MODNAMLNG
+)
+
+// stop ends the command with LIBRARIAN's messages, which it writes itself,
+// and status: DCL shows nothing more, and $STATUS has the inhibit bit, as it
+// does after LIBRARIAN's own.
+func (l *library) stop(status uint32, messages ...string) error {
+	for _, m := range messages {
+		l.c.Printf("%s\n", m)
+	}
+
+	return vmserrors.InhibitMessage(vmserrors.ConditionError{Status: status, Text: messages[len(messages)-1]})
+}
+
 func (l *library) failed(err error, name string) error {
 	return vmserrors.Wrap(vmserrors.CLI_LIBRARY, err, name)
 }
@@ -226,7 +310,8 @@ func (l *library) open(loc rms.FileLocation) error {
 	}
 
 	switch t := l.lib.Type; {
-	case l.opts.Macro && t != lbr.TypeMacro, l.opts.Object && t != lbr.TypeObject, l.opts.Share && t != lbr.TypeShareable:
+	case l.opts.Macro && t != lbr.TypeMacro, l.opts.Object && t != lbr.TypeObject, l.opts.Share && t != lbr.TypeShareable,
+		l.opts.Text && t != lbr.TypeText:
 		return l.failed(fmt.Errorf("%s is a %s library", found.Name, t), found.Name)
 	}
 
@@ -269,7 +354,12 @@ func (l *library) insert() error {
 			return FileFailure(err, name)
 		}
 
-		entries, found, err := l.readInput(loc)
+		module := ""
+		if i < len(l.opts.Modules) {
+			module = l.opts.Modules[i]
+		}
+
+		entries, found, err := l.readInput(loc, module)
 		if err != nil {
 			return err
 		}
@@ -282,6 +372,13 @@ func (l *library) insert() error {
 
 			if !replace {
 				if _, ok := l.b.Module(e.Name); ok {
+					if l.b.Type == lbr.TypeText {
+						return l.stop(librarInsertErr,
+							fmt.Sprintf("%%LIBRAR-E-DUPMOD, module %s from file %s already in %s", e.Name, found.Name, l.found.Name),
+							fmt.Sprintf("%%LIBRAR-E-INSERTERR, error inserting %s in %s", e.Name, l.found.Name),
+							"-LBR-E-DUPKEY, duplicate key in index")
+					}
+
 					l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
 
 					continue
@@ -312,11 +409,37 @@ func (l *library) insert() error {
 	return nil
 }
 
-// readInput reads one input file's modules.
-func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocation, error) {
+// readInput reads one input file's modules. module is the file's /MODULE=,
+// which only a text file's module can have.
+func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, rms.FileLocation, error) {
 	s := l.c.ContainerSession
 
+	if module != "" && l.b.Type != lbr.TypeText {
+		return nil, loc, l.failed(fmt.Errorf("/MODULE names a module of a text library, not a %s library", l.b.Type), l.found.Name)
+	}
+
 	switch l.b.Type {
+	case lbr.TypeText:
+		loc = loc.WithDefaultType("TXT")
+
+		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
+		if err != nil {
+			return nil, found, FileFailure(err, loc.Name)
+		}
+
+		if module == "" {
+			module = sourceStem(found)
+		}
+
+		module = strings.ToUpper(module)
+
+		if len(module) > l.b.KeySize {
+			return nil, found, l.stop(librarModNameLng,
+				fmt.Sprintf("%%LIBRAR-E-MODNAMLNG, illegal module name (%s) of %d characters in %s", module, len(module), found.Name))
+		}
+
+		return []*lbr.Entry{lbr.TextModule(module, records)}, found, nil
+
 	case lbr.TypeMacro:
 		loc = loc.WithDefaultType("MAR")
 
@@ -429,6 +552,12 @@ func (l *library) extract() error {
 	for _, pattern := range l.opts.Extract {
 		keys := l.lib.Match(pattern)
 		if len(keys) == 0 {
+			if l.lib.Type == lbr.TypeText {
+				return l.stop(librarLookupErr,
+					fmt.Sprintf("%%LIBRAR-E-LOOKUPERR, error looking up %s in %s", pattern, l.found.Name),
+					"-LBR-E-KEYNOTFND, key not found")
+			}
+
 			l.warn(fmt.Errorf("no module matches %s", pattern))
 		}
 

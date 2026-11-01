@@ -49,8 +49,9 @@ func TestCompileSquares(t *testing.T) {
 		"; by the command FORTRAN SQUARES",
 		";",
 		"; Each line of the FORTRAN source appears as a comment, with its line number, before",
-		"; the instructions it became; a line from an INCLUDE file has its include depth",
-		"; before the number. Each routine's storage map says where its variables are.",
+		"; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's",
+		"; /LIST, their include depth before the number; a comment names the file either way.",
+		"; Each routine's storage map says where its variables are.",
 		";",
 	}
 
@@ -136,33 +137,37 @@ func (fs includes) OpenInclude(name string, _ *source.File) (*source.File, error
 	return &source.File{Spec: "[INC]" + name, Lines: lines}, nil
 }
 
-// TestCompileIncludes checks that included files' lines are in the MACRO
-// file, marked with their depth and their files' names.
+func (includes) OpenModule(_, module string, _ *source.File) (*source.File, error) {
+	return nil, errors.New("no module " + module)
+}
+
+// TestCompileIncludes checks included files' lines in the MACRO file: with
+// /LIST all the way down, each marked with its depth, and every file named.
 func TestCompileIncludes(t *testing.T) {
 	opts := testOptions
 	opts.Includes = includes{
-		"A": {"      INCLUDE 'B'", "      X = 1"},
-		"B": {"      Y = 2", "      INCLUDE 'C'"},
+		"A": {"      INCLUDE 'B/LIST'", "      X = 1"},
+		"B": {"      Y = 2", "      INCLUDE 'C/LIST'"},
 		"C": {"C     innermost"},
 	}
 
 	r := Compile(opts, File{
 		Spec:  "MAIN.FOR",
 		Name:  "MAIN",
-		Lines: []string{"      INCLUDE 'A'", "      INCLUDE 'C'", "      END"},
+		Lines: []string{"      INCLUDE 'A/LIST'", "      INCLUDE 'C/LIST'", "      END"},
 	})
 	if len(r.Messages) != 0 {
 		t.Fatalf("messages: %v", r.Messages)
 	}
 
 	want := []string{
-		";    1        INCLUDE 'A'",
+		";    1        INCLUDE 'A/LIST'",
 		"; INCLUDE file [INC]A:",
-		";1   1        INCLUDE 'B'",
+		";1   1        INCLUDE 'B/LIST'",
 		"; INCLUDE file [INC]B:",
 		";2   1        Y = 2",
 		"\tMOVL\t#^X00004100,MAIN$MAIN.Y\t; 2.0",
-		";2   2        INCLUDE 'C'",
+		";2   2        INCLUDE 'C/LIST'",
 		"; INCLUDE file [INC]C:",
 		";3   1  C     innermost",
 		"; end of [INC]C",
@@ -170,7 +175,7 @@ func TestCompileIncludes(t *testing.T) {
 		";1   2        X = 1",
 		"\tMOVL\t#^X00004080,MAIN$MAIN.X\t; 1.0",
 		"; end of [INC]A",
-		";    2        INCLUDE 'C'",
+		";    2        INCLUDE 'C/LIST'",
 		"; INCLUDE file [INC]C:",
 		";1   1  C     innermost",
 		"; end of [INC]C",
@@ -184,6 +189,58 @@ func TestCompileIncludes(t *testing.T) {
 	got := r.MACRO[len(r.MACRO)-len(want):]
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("MACRO file ends:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestCompileIncludesNoList checks INCLUDE's default: the code is there and the
+// files are named, but not their lines, and /LIST in a file not listed brings
+// nothing back.
+func TestCompileIncludesNoList(t *testing.T) {
+	opts := testOptions
+	opts.Includes = includes{
+		"A": {"      INCLUDE 'B/LIST'", "      X = 1"},
+		"B": {"      Y = 2"},
+	}
+
+	r := Compile(opts, File{Spec: "MAIN.FOR", Name: "MAIN", Lines: []string{"      INCLUDE 'A'", "      END"}})
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	want := []string{
+		";    1        INCLUDE 'A'",
+		"; INCLUDE file [INC]A:",
+		"; INCLUDE file [INC]B:",
+		"\tMOVL\t#^X00004100,MAIN$MAIN.Y\t; 2.0",
+		"; end of [INC]B",
+		"\tMOVL\t#^X00004080,MAIN$MAIN.X\t; 1.0",
+		"; end of [INC]A",
+		";    2        END",
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+	if !strings.Contains(text, strings.Join(want, "\n")) {
+		t.Errorf("MACRO file:\n%s\nwant, among it:\n%s", text, strings.Join(want, "\n"))
+	}
+}
+
+// TestCompileAll checks files joined by + : one module, named for the first
+// file, whose unit runs from one file into the next, each file named.
+func TestCompileAll(t *testing.T) {
+	r := CompileAll(testOptions, []File{
+		{Spec: "A.FOR", Name: "A", Lines: []string{"      X = 1"}},
+		{Spec: "B.FOR", Name: "B", Lines: []string{"      Y = 2", "      END"}},
+	})
+	if len(r.Messages) != 0 {
+		t.Fatalf("messages: %v", r.Messages)
+	}
+
+	text := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{"\t.TITLE\tA$MAIN", "; from A.FOR\n; from B.FOR\n", "; end of A.FOR\n; source file B.FOR:\n;    1        Y = 2", "\t.END\tA$MAIN"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in:\n%s", want, text)
+		}
 	}
 }
 
