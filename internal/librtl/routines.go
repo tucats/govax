@@ -122,6 +122,11 @@ var Routines = []Routine{
 	{"LIB$REVERT", 36, libRevert},
 	{"LIB$SIG_TO_RET", 37, libSigToRet},
 	{"LIB$MATCH_COND", 38, libMatchCond},
+	{"LIB$SIG_TO_STOP", 224, libSigToStop},
+	{"LIB$FIXUP_FLT", 225, libFixupFlt},
+	{"LIB$INT_OVER", 226, libIntOver},
+	{"LIB$DEC_OVER", 227, libDecOver},
+	{"LIB$FLT_UNDER", 228, libFltUnder},
 	{"LIB$CREATE_DIR", 39, libCreateDir},
 	{"LIB$PUT_OUTPUT", 40, libPutOutput},
 	{"LIB$GET_FOREIGN", 41, libGetForeign},
@@ -347,7 +352,9 @@ func provided() []corevms.ShimLink {
 	links := make([]corevms.ShimLink, 0, len(Routines)+len(JSBRoutines)+len(Tables))
 
 	for _, r := range Routines {
-		links = append(links, link(r.Name, r.Code))
+		l := link(r.Name, r.Code)
+		l.KeepR0 = r.Name == "LIB$SIGNAL" || r.Name == "LIB$STOP"
+		links = append(links, l)
 	}
 
 	for _, r := range JSBRoutines {

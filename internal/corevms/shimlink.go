@@ -13,13 +13,15 @@ package corevms
 // JSB marks a routine reached by JSB rather than CALL (its stub is
 // JSBShimStub). Data, when it isn't nil, makes the entry a table rather
 // than a routine (LIBRTL's LIB$AB_UPCASE): the symbol names a copy of
-// Data in system space, and Code is 0.
+// Data in system space, and Code is 0. KeepR0 marks a routine that needs
+// its caller's R0 (its stub is CallerR0Stub).
 type ShimLink struct {
 	Name    string
 	Library string
 	Offset  uint32
 	Code    uint32
 	JSB     bool
+	KeepR0  bool
 	Data    []byte
 }
 
@@ -76,6 +78,25 @@ func ShimStub(code uint32) []byte {
 		0x00, 0x00, // entry mask: no registers saved
 		0xD0, 0x8F, // MOVL I^#...
 		byte(code), byte(code >> 8), byte(code >> 16), byte(code >> 24),
+		0x50, // R0
+		0xFC, // XFC
+		0x7D, // #XFC$SHIM
+		0x04, // RET
+	}
+}
+
+// CallerR0Stub returns the stub of a routine that needs its caller's R0,
+// which ShimStub's MOVL replaces: LIB$SIGNAL and LIB$STOP, whose handlers
+// see it in the mechanism array. It pushes R0 first, so it is on top of the
+// stack while the shim runs (Environment.Signal), and the RET discards it.
+// To stay ShimStubSize, the code is a word: PUSHL R0 (2 bytes), MOVZWL
+// I^#code,R0 (5 bytes), XFC #XFC$SHIM (2 bytes), RET.
+func CallerR0Stub(code uint32) []byte {
+	return []byte{
+		0x00, 0x00, // entry mask: no registers saved
+		0xDD, 0x50, // PUSHL R0
+		0x3C, 0x8F, // MOVZWL I^#...
+		byte(code), byte(code >> 8),
 		0x50, // R0
 		0xFC, // XFC
 		0x7D, // #XFC$SHIM

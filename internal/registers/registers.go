@@ -103,6 +103,11 @@ type CPU struct {
 
 	debug    DebugFlags
 	debugOut io.Writer
+
+	// operandLog is what the current instruction's operand specifiers
+	// changed (operandlog.go).
+	operandLog     [maxOperandChanges]operandChange
+	operandChanges int
 }
 
 // New returns a CPU with all registers and the PSL zeroed, and the debug

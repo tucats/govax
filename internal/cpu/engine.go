@@ -461,6 +461,8 @@ func (e *Engine) Step() error {
 	dec := &e.decoded[next&1]
 
 	if err := decodeInstruction(e.cpu, e.mem, e.table, dec); err != nil {
+		e.undoOperands(err)
+
 		return e.raise(err)
 	}
 
@@ -480,6 +482,8 @@ func (e *Engine) Step() error {
 			return ErrHalted
 		}
 
+		e.undoOperands(err)
+
 		return e.raise(err)
 	}
 
@@ -488,6 +492,21 @@ func (e *Engine) Step() error {
 	}
 
 	return nil
+}
+
+// undoOperands puts back the registers the instruction's operand specifiers
+// changed, if err is a fault: the instruction will run again from its start
+// (registers.CPU's operand log says why). A trap, or a change mode instruction's
+// exception, is taken with the instruction finished, and keeps them.
+func (e *Engine) undoOperands(err error) {
+	var f *Fault
+
+	err = wrapMemError(err)
+	if !errors.As(err, &f) || f.Trap || f.Code >= ExcChangeModeK && f.Code <= ExcChangeModeU {
+		return
+	}
+
+	e.cpu.RestoreOperandRegisters()
 }
 
 // raise turns err into a *Fault (wrapping a raw *vm.TranslationFault/

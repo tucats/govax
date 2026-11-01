@@ -96,7 +96,7 @@ func shimTraceback(env *Environment, argv []uint32) (uint32, error) {
 
 	// A severe condition goes on too when the debugger stopped for it
 	// (catchAll says why).
-	if cond&7 != severitySevere || d.debuggerHeld && d.kind != kindStop {
+	if cond&7 != severitySevere || d.debuggerHeld && !d.stops() {
 		return ssContinue, nil
 	}
 

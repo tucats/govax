@@ -470,6 +470,8 @@ func decodeGeneral(cpu *registers.CPU, mem *vm.Memory, pc *uint32, size int, dty
 		return nil
 
 	case 0x07: // Autodecrement: -(Rn)
+		cpu.NoteOperandRegister(reg)
+
 		v := cpu.GPR(reg) - uint32(size)
 		cpu.SetGPR(reg, v)
 
@@ -479,6 +481,8 @@ func decodeGeneral(cpu *registers.CPU, mem *vm.Memory, pc *uint32, size int, dty
 		return nil
 
 	case 0x08: // Autoincrement: (Rn)+
+		cpu.NoteOperandRegister(reg)
+
 		v := cpu.GPR(reg)
 		cpu.SetGPR(reg, v+uint32(size))
 
@@ -496,6 +500,8 @@ func decodeGeneral(cpu *registers.CPU, mem *vm.Memory, pc *uint32, size int, dty
 		// from decode_operand.c, which eagerly loads the operand's value
 		// during decode instead, silently breaking write access through
 		// this mode.
+		cpu.NoteOperandRegister(reg)
+
 		ptr := cpu.GPR(reg)
 		cpu.SetGPR(reg, ptr+4)
 

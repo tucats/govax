@@ -180,7 +180,7 @@ func TestSignals_assembledProgram(t *testing.T) {
 		t.Errorf("R0 = %#x, want the exit status 0x18018004", got)
 	}
 
-	want := "%SYSTEM-W-ENDOFFILE, end of file\n%LIB-F-ATTCONSTO, attempt to continue from stop\n"
+	want := "%SYSTEM-W-ENDOFFILE, end of file\n%NONAME-F-NOMSG, Message number 08018004\n"
 	if got := c.Out.(*bytes.Buffer).String(); got != want {
 		t.Errorf("output %q\nwant   %q", got, want)
 	}

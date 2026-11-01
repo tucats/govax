@@ -435,8 +435,15 @@ func (env *Environment) formatMessageVector(vec, tail []uint32, flags uint32, fa
 	// of the vector, run on into tail (see above).
 	params := func(n int) []uint32 {
 		out := take(n)
-		if short := n - len(out); short > 0 && i == len(vec) {
+		if short := n - len(out); short > 0 && i == len(vec) && tail != nil {
 			out = append(append([]uint32(nil), out...), tail[:min(short, len(tail))]...)
+
+			// A system message with too little to show runs on past the
+			// signal array, into the stack: LIB$SIGNAL of a bare SS$_ACCVIO
+			// has its PC and PSL as the reason mask and address, and
+			// whatever is there as the rest (the LIB$ manual's examples).
+			// govax shows zeros there.
+			out = append(out, make([]uint32, n-len(out))...)
 		}
 
 		return out
@@ -466,6 +473,8 @@ func (env *Environment) formatMessageVector(vec, tail []uint32, flags uint32, fa
 			switch {
 			case m.FAOCount > 0:
 				add(code, stv)
+			case len(stv) == 1 && code == rmsFileNotFound && stv[0] == ssNoSuchFile:
+				add(code, nil)
 			case len(stv) == 1 && stv[0] != 0:
 				add(code, nil)
 				add(stv[0], nil)
@@ -490,6 +499,12 @@ func (env *Environment) formatMessageVector(vec, tail []uint32, flags uint32, fa
 
 	return lines
 }
+
+// RMS$_FNF's usual status value, SS$_NOSUCHFILE, is one VMS 7.1 has but doesn't
+// show, where it does under RMS$_DNF (testdata/lib58's values; testdata/dcl50's
+// probe50f and testdata/for83's part B the messages). What it does with another
+// value is unconfirmed, and it's shown as any status value is.
+var rmsFileNotFound = vmsdef.Symbols["RMS$_FNF"]
 
 // cancelPutmsgCalls is image rundown's $PUTMSG step: a $PUTMSG whose
 // action routine never returned (it called $EXIT, say) is forgotten.

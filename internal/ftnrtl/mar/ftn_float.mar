@@ -411,7 +411,10 @@ INPUT:	JSB	FTN$$EDIT_FIELD		; FTN_EDIT: R2 and R3
 24$:	CALLS	#5,G^OTS$CVT_T_H
 30$:	BLBS	R0,40$
 	MOVC5	#0,(SP),#0,16(AP),@12(AP) ; it can't be read: zeros, and it fails
-	PUSHL	#FOR$_INPCONERR
+	BLBS	L_REAL(FP),35$
+	MOVB	#1,CTX_MISMATCH(R11)	; not a real: that's the only error, at the
+	RET				;  end (testdata/for83's part E)
+35$:	PUSHL	#FOR$_INPCONERR
 	PUSHL	R11
 	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
 	RET

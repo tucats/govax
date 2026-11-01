@@ -135,7 +135,7 @@ func TestLibStop(t *testing.T) {
 		t.Errorf("exit status %#x", args[1])
 	}
 
-	if out.String() != "%LIB-F-ATTCONSTO, attempt to continue from stop\n" {
+	if out.String() != "%NONAME-F-NOMSG, Message number 08018004\n" {
 		t.Errorf("output %q", out.String())
 	}
 }
@@ -161,10 +161,6 @@ func TestLibStop_catchAllExits(t *testing.T) {
 
 func TestLibSignal_errors(t *testing.T) {
 	env, _ := signalFixture(t)
-
-	if _, err := env.Signal(nil, false); err == nil {
-		t.Error("no condition value: expected an error")
-	}
 
 	putLongword(t, env, condStub, 0) // no SYS$SRCHANDLER stub
 
@@ -229,5 +225,51 @@ func TestLibSignal_traced(t *testing.T) {
 
 	if got := c.PSL(); got.T() || got.TP() || len(env.Process.conditions) != 0 {
 		t.Errorf("PSL %#x, %d dispatches; want T and TP clear, none", uint32(got), len(env.Process.conditions))
+	}
+}
+
+// TestLibSignal_callerR0: the mechanism array's R0 is the caller's, which
+// LIB$SIGNAL's stub (CallerR0Stub) leaves on top of the stack.
+func TestLibSignal_callerR0(t *testing.T) {
+	env, _ := signalFixture(t)
+
+	putLongword(t, env, env.cpu.GPR(registers.SP), 0x11111111)
+
+	if _, err := env.Signal([]uint32{userWarning}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	d := env.Process.conditions[0]
+	if mech := longwordsAt(t, env, d.mech, 5); mech[3] != 0x11111111 {
+		t.Errorf("mechanism array's R0 = %#x", mech[3])
+	}
+}
+
+// TestLibSignal_noArguments: with no arguments the condition is
+// LIB$_SIGNO_ARG, not a failure of the routine's own.
+func TestLibSignal_noArguments(t *testing.T) {
+	env, _ := signalFixture(t)
+
+	if _, err := env.Signal(nil, false); err != nil {
+		t.Fatal(err)
+	}
+
+	d := env.Process.conditions[0]
+	if sig := longwordsAt(t, env, d.sig, 4); sig[0] != 3 || sig[1] != libSigNoArg {
+		t.Errorf("signal array = %#x", sig)
+	}
+}
+
+// TestBareSystemMessage: LIB$SIGNAL of SS$_ACCVIO alone has its PC and PSL as
+// the message's reason mask and address, as the LIB$ manual's examples show, and
+// zeros past them where VMS has what's on the stack.
+func TestBareSystemMessage(t *testing.T) {
+	env, _ := signalFixture(t)
+
+	lines := env.formatMessageVector([]uint32{ssAccVioCond}, []uint32{0x20F, 0x03C00000}, defaultMessageFlags, "")
+	want := "%SYSTEM-F-ACCVIO, access violation, reason mask=0F, virtual address=03C00000, PC=00000000, PSL=00000000"
+
+	if len(lines) != 1 || lines[0] != want {
+		t.Errorf("message = %q\nwant %q", lines, want)
 	}
 }

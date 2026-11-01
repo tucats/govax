@@ -676,6 +676,155 @@ func forrtlCases() *runProg {
 	return p
 }
 
+// continueCases is a second round on FORRTL for Phase 83's subtask 6, which
+// needs no VAX: whether FORRTL goes on from a condition is in FORRTL's own
+// code, so it runs over govax. Each statement errs under a handler that
+// continues; if the image gets to "=after statement", FORRTL went on, and the
+// values show what the statement did with its items.
+func continueCases() *runProg {
+	p := newRun("FOR83E")
+
+	p.dataf("LVAL2:\t.LONG\t^X55555555\nLONEF:\t.FLOAT\t1.0\nISHORT:\t.WORD\t4\n\t.BYTE\t14,1\n\t.ADDRESS IBUF")
+	p.dataf("FMTII:\t.ASCIZ\t~(I4,1X,I4)~\nFMTII2:\t.ASCIZ\t~(I4,I1)~\nFMTFI:\t.ASCIZ\t~(F4.0,1X,I4)~\nFMTOI:\t.ASCIZ\t~(O4,1X,I4)~\nFMTZI:\t.ASCIZ\t~(Z4,1X,I4)~")
+	p.dataf("FMTLI:\t.ASCIZ\t~(L4,1X,I4)~\nFMTI4A:\t.ASCIZ\t~(I4,A)~\nFMTI4I:\t.ASCIZ\t~(I4,I4)~\nFMTLONG: .ASCIZ\t~(140X,A,A)~\nFMTEND:\t.ASCIZ\t~(I4)~")
+
+	const (
+		bad  = "FOR83F.DAT"
+		long = "FOR83G.DAT"
+		w    = "FOR83W.DAT"
+	)
+
+	// values shows LVAL and LVAL2 after a statement that sets them.
+	values := func() {
+		p.said("after statement")
+		p.emit("PUSHL\tLVAL")
+		p.emit("CALLS\t#1,L^SHOWV")
+		p.emit("PUSHL\tLVAL2")
+		p.emit("CALLS\t#1,L^SHOWV")
+	}
+
+	read := func(begin []string, items ...string) func() {
+		return func() {
+			p.open(12, bad, "OLD")
+			p.call(begin[0], begin[1:]...)
+
+			for _, item := range items {
+				p.call(strings.Fields(item)[0], strings.Fields(item)[1])
+			}
+
+			p.call("FOR$IO_END")
+			values()
+		}
+	}
+
+	fmtRead := func(format string, items ...string) func() {
+		return read([]string{"FOR$READ_SO", "#12", "&" + format}, items...)
+	}
+
+	for _, c := range []struct {
+		name string
+		f    func()
+	}{
+		{"INPCONERR I, then an item", fmtRead("FMTII", "FOR$IO_L_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"INPCONERR I, last item", fmtRead("FMTII", "FOR$IO_L_R &LVAL2", "FOR$IO_L_R &LVAL")},
+		{"INPCONERR F, then an item", fmtRead("FMTFI", "FOR$IO_F_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"INPCONERR O, then an item", fmtRead("FMTOI", "FOR$IO_L_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"INPCONERR O, a digit too large, then an item", func() {
+			p.open(12, "FOR83H.DAT", "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTOI")
+			p.call("FOR$IO_L_R", "&LVAL")
+			p.call("FOR$IO_L_R", "&LVAL2")
+			p.call("FOR$IO_END")
+			values()
+		}},
+		{"INPCONERR Z, a letter, then an item", func() {
+			p.open(12, bad, "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTZI")
+			p.call("FOR$IO_L_R", "&LVAL")
+			p.call("FOR$IO_L_R", "&LVAL2")
+			p.call("FOR$IO_END")
+			values()
+		}},
+		{"INPCONERR L, then an item", fmtRead("FMTLI", "FOR$IO_L_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"INPCONERR twice in a record", fmtRead("FMTII2", "FOR$IO_L_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"list-directed, a bad integer, then an item", read([]string{"FOR$READ_SL", "#12"}, "FOR$IO_L_R &LVAL", "FOR$IO_L_R &LVAL2")},
+		{"FORVARMIS on output", func() {
+			p.open(12, w, "NEW")
+			p.call("FOR$WRITE_SO", "#12", "&FMTI4A")
+			p.call("FOR$IO_F_R", "&LONEF")
+			p.call("FOR$IO_T_DS", "&"+p.text("NEXT"))
+			p.call("FOR$IO_END")
+			p.said("after statement")
+		}},
+		{"FORVARMIS on input", func() {
+			p.open(12, bad, "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTI4I")
+			p.call("FOR$IO_F_R", "&LVAL")
+			p.call("FOR$IO_L_R", "&LVAL2")
+			p.call("FOR$IO_END")
+			values()
+		}},
+		{"FORVARMIS on input, a field read", func() {
+			p.open(12, "FOR83H.DAT", "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTI4I")
+			p.call("FOR$IO_F_R", "&LVAL")
+			p.call("FOR$IO_END")
+			values()
+		}},
+		{"FORVARMIS on input, an integer under F", func() {
+			p.open(12, bad, "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTFI")
+			p.call("FOR$IO_L_R", "&LVAL")
+			p.call("FOR$IO_L_R", "&LVAL2")
+			p.call("FOR$IO_END")
+			values()
+		}},
+		{"OUTSTAOVE on a unit", func() {
+			p.open(12, w, "NEW")
+			p.call("FOR$WRITE_SO", "#12", "&FMTLONG")
+			p.call("FOR$IO_T_DS", "&"+p.text("PAST"))
+			p.call("FOR$IO_T_DS", "&"+p.text("NEXT"))
+			p.call("FOR$IO_END")
+			p.said("after statement")
+		}},
+		{"OUTSTAOVE in an internal record", func() {
+			p.call("FOR$WRITE_IO", "&ISHORT", "&FMTI4I")
+			p.call("FOR$IO_L_V", "#1")
+			p.call("FOR$IO_L_V", "#2")
+			p.call("FOR$IO_END")
+			p.said("after statement")
+		}},
+		{"INPRECTOO", func() {
+			p.open(12, long, "OLD")
+			p.call("FOR$READ_SO", "#12", "&FMTA")
+			p.call("FOR$IO_T_DS", "&RBD")
+			p.call("FOR$IO_END")
+			p.emit("PUSHL\tR0")
+			p.emit("CALLS\t#1,L^SHOWRB")
+			p.said("after statement")
+		}},
+		{"ERRDURWRI, a file opened to read", func() {
+			p.open(12, bad, "OLD")
+			p.call("FOR$WRITE_SO", "#12", "&FMTA")
+			p.call("FOR$IO_T_DS", "&"+p.text("X"))
+			p.call("FOR$IO_END")
+			p.said("after statement")
+		}},
+		{"ERR with no handler's choice: an INPCONERR at FOR$IO_END", fmtRead("FMTEND")},
+	} {
+		c := c
+
+		p.kase(c.name, func() {
+			p.emit("MOVL\t#^X55555555,LVAL")
+			p.emit("MOVL\t#^X66666666,LVAL2")
+			p.sub(mContinue, c.f)
+			p.closeU(12)
+		})
+	}
+
+	return p
+}
+
 // cond is a condition with facility 0x0401, facility-specific, message n, and the
 // severity in its low 3 bits.
 func cond(n, sev int) string { return fmt.Sprintf("#^X%08X", 0x08018000+n*8+sev) }
@@ -1565,12 +1714,20 @@ func main() {
 
 	b := forrtlCases()
 	c := librtlCases()
+	e := continueCases()
 	dir := filepath.Join("testdata", "for83")
 
 	for name, text := range map[string]string{
 		"for83.mar":    program(),
 		"for83b.mar":   b.program(true),
 		"for83c.mar":   c.program(false),
+		"for83e.mar":   e.program(true),
+		"for83e.opt":   "FORRTL/SHAREABLE\n",
+		"for83d.dat":   "12X4\nLINE 2\nLINE 3\n",
+		"for83e.dat":   "",
+		"for83f.dat":   "12X4  77\n",
+		"for83h.dat":   "9700  77\n",
+		"for83g.dat":   strings.Repeat("X", 300) + "\n",
 		"lnk83.mar":    lnkProgram,
 		"def_opc.mar":  defProgram,
 		"for83.opt":    "SYS$SHARE:FORRTL/SHAREABLE\n",

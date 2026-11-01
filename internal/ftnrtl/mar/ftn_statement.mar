@@ -40,10 +40,17 @@
 ; statement's status in R0: 0 for success, -1 at an end of file, or the
 ; FOR number of the error (FOR$_INVLOGUNI is 32). A statement whose
 ; control block gives none of ERR=, END=, and IOSTAT= never sees a
-; failure: FTN$IO_END signals the condition (LIB$STOP, ending the image,
-; for a severe one; LIB$SIGNAL for an error, after which the program
-; goes on). An end of file goes to END=, or ERR= without it, so either
-; one, or IOSTAT=, takes it; any other error is taken by ERR= or IOSTAT=.
+; failure: FTN$IO_END signals the condition. By LIB$SIGNAL if a handler can
+; go on from it, as VMS's library has it (testdata/for83's parts B and E):
+; FOR$_INPCONERR, FOR$_OUTCONERR, and FOR$_FORVARMIS. Every other condition
+; is by LIB$STOP, and ends the image however a handler answers. An end of
+; file goes to END=, or ERR= without it, so either one, or IOSTAT=, takes it;
+; any other error is taken by ERR= or IOSTAT=.
+;
+; FOR$_INPCONERR with no specifier doesn't wait for the end: it is signaled
+; at its item, the statement going on after it to its other items
+; (FTN$$IO_SIGNAL), and the user PC in its message is where that item's call
+; returns (CTX_ITEMPC).
 ;
 ; The signal is laid out as VMS's run-time library lays out its own
 ; (testdata/for80's run 3, testdata/nml80's conditions):
@@ -196,7 +203,9 @@ CTX_DIRECT	= CTX_RECP+72		; long: 1 for a direct statement
 					;  (FTN_UNFORMATTED)
 CTX_REWRITE	= CTX_RECP+76		; byte: 1 for a REWRITE
 CTX_KEYED	= CTX_RECP+77		; byte: 1 for a keyed READ
-CTX_SIZE	= CTX_RECP+80
+CTX_ITEMPC	= CTX_RECP+80		; long: where the begin call, or the last
+					;  item's FTN$IO_ITEM, returns
+CTX_SIZE	= CTX_RECP+84
 
 ; The kinds of statement: a READ's is even, a WRITE's odd. An internal
 ; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
@@ -649,6 +658,7 @@ PUSH_CONTEXT:
 	MOVL	#1,CTX_UNITBLANK(R3)
 	CLRL	CTX_USERPC(R3)
 	CLRL	CTX_REASON(R3)
+	MOVL	16(FP),CTX_ITEMPC(R3)
 	MOVL	STMT_TOP,CTX_NEXT(R3)
 	MOVL	R3,STMT_TOP
 	RSB
@@ -665,6 +675,7 @@ PUSH_CONTEXT:
 	BEQL	90$			; no statement: nothing to do
 	TSTL	CTX_STATUS(R2)
 	BNEQ	90$			; it has failed
+	MOVL	16(FP),CTX_ITEMPC(R2)
 	PUSHL	4(AP)
 	PUSHL	R2
 	CMPB	CTX_KIND(R2),#K_WRITE_SF
@@ -748,6 +759,54 @@ REPORT		= -36			; the name's length and address, RMS's
 	; RMS's status and value, used only for the failures RMS reports.
 	;
 20$:	SUBL2	#-REPORT,SP
+	JSB	FAILURE_REPORT
+	;
+	; Returned if a specifier takes it: the FOR number, or -1 for an end
+	; of file.
+	;
+	EXTZV	#3,#12,R3,R0
+	CMPL	R3,#FOR$_ENDDURREA
+	BNEQ	35$
+	MNEGL	#1,R0
+	BITW	#FLAG_END!FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BNEQ	38$
+	BRB	40$
+35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BEQL	40$
+38$:	RET
+	;
+	; Signaled, and if it comes back the program goes on.
+	;
+40$:	MOVL	CTX_USERPC(R2),R5	; the user PC: a statement of one call's,
+	BNEQ	45$
+	MOVL	16(FP),R5		;  or where this call returns
+45$:	JSB	SIGNAL_FAILURE
+	CLRL	R0
+	RET
+
+;
+; FTN$$IO_SIGNAL(context, condition)
+;
+; Signals a condition at an item of the statement in progress, for a handler
+; to go on from: its frame is laid out as FTN$IO_END's for the two
+; subroutines below. Saved for ERRSNS as FTN$IO_END saves a failure.
+;
+	.ENTRY	FTN$$IO_SIGNAL,^M<R2,R3,R4,R5,R6>
+	SUBL2	#-REPORT,SP
+	MOVL	4(AP),R2
+	MOVL	8(AP),R3
+	JSB	FAILURE_REPORT
+	MOVL	CTX_ITEMPC(R2),R5
+	JSB	SIGNAL_FAILURE
+	RET
+
+;
+; FAILURE_REPORT: what its unit's stream says of a failure: the file's name,
+; and RMS's status and value, used only for the failures RMS reports, at
+; REPORT(FP), which it then saves for ERRSNS. R2 is the context, R3 the
+; condition. Changes R0 and R1.
+;
+FAILURE_REPORT:
 	CLRQ	REPORT(FP)		; no name, no RMS status
 	CLRQ	REPORT+8(FP)
 	CLRL	REPORT+16(FP)
@@ -771,31 +830,19 @@ REPORT		= -36			; the name's length and address, RMS's
 	BRB	25$
 26$:
 	CLRQ	REPORT+8(FP)		; no: no RMS status
-	;
-	; Saved for ERRSNS.
-	;
 30$:	EXTZV	#3,#12,R3,LAST_ERROR	; the FOR number: bits 3 to 14
 	MOVQ	REPORT+8(FP),LAST_ERROR+4 ; RMS's status and value
 	MOVL	CTX_UNIT(R2),LAST_ERROR+12
 	MOVL	R3,LAST_ERROR+16
-	;
-	; Returned if a specifier takes it: the FOR number, or -1 for an end
-	; of file.
-	;
-	EXTZV	#3,#12,R3,R0
-	CMPL	R3,#FOR$_ENDDURREA
-	BNEQ	35$
-	MNEGL	#1,R0
-	BITW	#FLAG_END!FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
-	BNEQ	38$
-	BRB	40$
-35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
-	BEQL	40$
-38$:	RET
-	;
-	; Signaled, the arguments pushed last first; R6 counts them.
-	;
-40$:	MOVZWL	CTX_TEXT+4(R2),TEXT_DESC(FP) ; the text's descriptor
+	RSB
+
+;
+; SIGNAL_FAILURE: signals R3 for the context R2, with the user PC R5 and the
+; report at REPORT(FP), the arguments pushed last first; R6 counts them.
+; Changes R0, R1, R4, and R6, and returns if a handler goes on from it.
+;
+SIGNAL_FAILURE:
+	MOVZWL	CTX_TEXT+4(R2),TEXT_DESC(FP) ; the text's descriptor
 	MOVL	CTX_TEXT(R2),TEXT_DESC+4(FP)
 	MOVZWL	REPORT(FP),FILE_DESC(FP) ; the file's
 	MOVL	REPORT+4(FP),FILE_DESC+4(FP)
@@ -803,14 +850,14 @@ REPORT		= -36			; the name's length and address, RMS's
 	CMPL	R3,#FOR$_INPCONERR	; the text that couldn't be converted
 	BNEQ	50$
 	TSTB	CTX_INTERNAL(R2)
-	BNEQ	45$
+	BNEQ	46$
 	PUSHL	REPORT+16(FP)		; at a unit, with its record number
 	PUSHAQ	TEXT_DESC(FP)
 	PUSHL	#2
 	PUSHL	#FOR$_INVTEXREC
 	ADDL2	#4,R6
 	BRB	50$
-45$:	PUSHAQ	TEXT_DESC(FP)		; in an internal file, alone
+46$:	PUSHAQ	TEXT_DESC(FP)		; in an internal file, alone
 	PUSHL	#1
 	PUSHL	#FOR$_INVTEX
 	ADDL2	#3,R6
@@ -821,10 +868,7 @@ REPORT		= -36			; the name's length and address, RMS's
 	ADDL2	#2,R6
 51$:	PUSHL	REPORT+12(FP)		; RMS's status value
 	PUSHL	REPORT+8(FP)		;  and status
-	MOVL	CTX_USERPC(R2),R0	; the user PC: a statement of one call's,
-	BNEQ	52$
-	MOVL	16(FP),R0		;  or where this call returns
-52$:	PUSHL	R0
+	PUSHL	R5			; the user PC
 	PUSHAQ	FILE_DESC(FP)		; the file
 	PUSHL	CTX_UNIT(R2)		; the unit
 	ADDL2	#5,R6
@@ -839,10 +883,13 @@ REPORT		= -36			; the name's length and address, RMS's
 	ADDL2	#2,R6
 	CMPZV	#0,#3,R3,#4		; severe?
 	BNEQ	60$
+	CMPL	R3,#FOR$_INPCONERR	; severe, but a handler can go on
+	BEQL	60$
+	CMPL	R3,#FOR$_FORVARMIS
+	BEQL	60$
 	CALLS	R6,G^LIB$STOP		; never returns
 60$:	CALLS	R6,G^LIB$SIGNAL
-	CLRL	R0			; the program goes on
-	RET
+	RSB
 
 ;
 ; FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])

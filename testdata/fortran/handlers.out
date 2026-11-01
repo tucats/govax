@@ -1,0 +1,21 @@
+GOON           1           4
+I           0          77           1
+GOON           1           4
+O          -1          77           2
+GOON           1           4
+GOON           2           4
+WRONG TYPE           4
+GOON           3           4
+**                 1
+          3
+         77
+         55
+       2160
+  1.000000               0
+  3.500000       2.500000    
+INTOVF T
+          0           1 -2147483648
+         55
+GOON           4           4
+%SYSTEM-F-ENDOFFILE, end of file
+  $STATUS == "%X10000874"

@@ -129,7 +129,10 @@ FB_A_TEXT	= 8
 FB_A_VFE	= 12			; with flag bit 0: the expressions' routine
 
 ; The control block's flag for a run-time format (FTN_STATEMENT's).
+FLAG_ERR	= 1
+FLAG_IOSTAT	= 4
 FLAG_RUNFMT	= 8
+FOR$_INPCONERR	= ^X00188204
 
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags
@@ -448,13 +451,20 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 
 ;
 ; FTN$$FMT_FAIL(context, condition): records the statement's error, unless it has
-; one already.
+; one already. FOR$_INPCONERR in a statement with no ERR= or IOSTAT= is signaled
+; now instead (FTN_STATEMENT's introduction), and the statement goes on.
 ;
 	.ENTRY	FTN$$FMT_FAIL,^M<>
 	MOVL	4(AP),R0
 	TSTL	CTX_STATUS(R0)
 	BNEQ	10$
-	MOVL	8(AP),CTX_STATUS(R0)
+	CMPL	8(AP),#FOR$_INPCONERR
+	BNEQ	5$
+	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R0)
+	BNEQ	5$
+	CALLG	(AP),FTN$$IO_SIGNAL	; FTN_STATEMENT
+	RET
+5$:	MOVL	8(AP),CTX_STATUS(R0)
 10$:	RET
 
 ;

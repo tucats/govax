@@ -285,8 +285,12 @@ func TestEnsureShims_overflowPages(t *testing.T) {
 		}
 
 		want := corevms.ShimStub(e.Code)
-		if e.JSB {
+
+		switch {
+		case e.JSB:
 			want = corevms.JSBShimStub(e.Code)
+		case e.KeepR0:
+			want = corevms.CallerR0Stub(e.Code)
 		}
 
 		if string(got) != string(want) {

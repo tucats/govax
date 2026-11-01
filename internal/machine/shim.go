@@ -130,8 +130,12 @@ func (m *Machine) EnsureShims() error {
 		}
 
 		stub := corevms.ShimStub(e.Code)
-		if e.JSB {
+
+		switch {
+		case e.JSB:
 			stub = corevms.JSBShimStub(e.Code)
+		case e.KeepR0:
+			stub = corevms.CallerR0Stub(e.Code)
 		}
 
 		if err := m.storeBytes(addr, stub); err != nil {

@@ -113,6 +113,8 @@ func decodeInstruction(cpu *registers.CPU, mem *vm.Memory, table *Table, d *Deco
 	d.Opcode = opcode
 	d.Instruction = inst
 
+	cpu.BeginOperands()
+
 	for i := 0; i < inst.OperandCount; i++ {
 		if err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false, &d.Operands[i]); err != nil {
 			return err

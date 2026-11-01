@@ -504,7 +504,9 @@ changed as a result.
   - `LIB$SIGNAL`/`LIB$STOP` (subtask 33) put 0 in the mechanism array's
     R0, where VMS puts the caller's R0: the shim stub's
     `MOVL #code, R0` has replaced it before the shim runs. So a handler
-    that continues without setting it makes `LIB$SIGNAL` return 0.
+    that continues without setting it makes `LIB$SIGNAL` return 0. Fixed
+    2026-11-01 (Phase 83, subtask 6; VMS 7.1's answer is `testdata/for83`'s
+    part C): `corevms.CallerR0Stub` pushes R0 first.
   - `$UNWIND` (subtask 34) from a vectored handler with no `depadr`
     does nothing: the default depth is the establisher's plus one, and a
     vectored handler has no establisher frame. `newpc` is taken as the

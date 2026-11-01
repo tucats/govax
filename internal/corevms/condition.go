@@ -120,8 +120,8 @@ const (
 	// kindSignal is LIB$SIGNAL: continuing returns from LIB$SIGNAL.
 	kindSignal
 
-	// kindStop is LIB$STOP, which can't be continued: a handler that
-	// tries gets "attempt to continue from stop", and the image exits.
+	// kindStop is LIB$STOP, which can't be continued: if a handler tries,
+	// the image exits with the condition's message and status.
 	kindStop
 )
 
@@ -196,6 +196,10 @@ type conditionDispatch struct {
 	// program continue, doesn't show the message twice.
 	reported bool
 
+	// stopped says LIB$SIG_TO_STOP was given this dispatch's signal array:
+	// whatever its kind, it can't be continued now, as a LIB$STOP can't.
+	stopped bool
+
 	// debuggerHeld says a debugger stopped the program for the condition
 	// (OnUnhandled said so), so a severe one continues when the program
 	// goes on (catchAll).
@@ -237,9 +241,9 @@ const stsInhibitMsg = 0x10000000
 // SEVERE (F) conditions, the ones the catch-all exits for.
 const severitySevere = 4
 
-// libAttConSto is LIB$_ATTCONSTO, "attempt to continue from stop"
-// (%LIB-F-ATTCONSTO), from the VMS 7.3 message file's LIB facility.
-const libAttConSto = 0x0015827C
+// libSigNoArg is LIB$_SIGNO_ARG, the condition LIB$SIGNAL and LIB$STOP
+// signal when they're called with no arguments.
+var libSigNoArg = vmsdef.Symbols["LIB$_SIGNO_ARG"]
 
 // consoleCallSentinel is the saved FP and PC of the call frame the
 // console builds to start a program (cpu.SentinelReturn): the bottom of
@@ -735,7 +739,7 @@ func (env *Environment) sigWords(d *conditionDispatch) ([]uint32, error) {
 func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) {
 	c := env.cpu
 
-	if d.kind == kindStop {
+	if d.stops() {
 		return env.attemptToContinueFromStop(d)
 	}
 
@@ -787,7 +791,7 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	}
 
 	cond := words[0]
-	exiting := d.kind == kindStop || cond&7 == severitySevere
+	exiting := d.stops() || cond&7 == severitySevere
 
 	// An exception's condition that ends the image gets EXE$EXCMSG's
 	// dump after its message.
@@ -804,7 +808,7 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	// lets the program go on, as under VMS 7.1's debugger, which says
 	// %DEBUG-I-CONFROMEXC (testdata/trace73's TRUNH). A LIB$STOP still
 	// ends the image (unconfirmed).
-	if exiting && d.debuggerHeld && d.kind != kindStop {
+	if exiting && d.debuggerHeld && !d.stops() {
 		return env.continueCondition(d)
 	}
 
@@ -910,7 +914,7 @@ type UnhandledCondition struct {
 // PC is in the signal array; a software signal's is the return address in
 // the call frame of the LIB$SIGNAL or LIB$STOP stub, which resumeFP is.
 func (env *Environment) unhandledCondition(d *conditionDispatch, cond uint32) UnhandledCondition {
-	u := UnhandledCondition{Condition: cond, Stop: d.kind == kindStop}
+	u := UnhandledCondition{Condition: cond, Stop: d.stops()}
 
 	if words, err := env.sigWords(d); err == nil && len(words) >= 3 {
 		u.Message = env.signalMessage(words)
@@ -928,18 +932,27 @@ func (env *Environment) unhandledCondition(d *conditionDispatch, cond uint32) Un
 	return u
 }
 
-// attemptToContinueFromStop is a handler continuing a LIB$STOP, which
-// VMS refuses: it reports %LIB-F-ATTCONSTO and exits with the stop's
-// condition.
+// stops reports whether d's condition can't be continued: a LIB$STOP, or
+// one LIB$SIG_TO_STOP was given.
+func (d *conditionDispatch) stops() bool {
+	return d.kind == kindStop || d.stopped
+}
+
+// attemptToContinueFromStop is a handler continuing a LIB$STOP. On VMS 7.1
+// the image ends with the condition's message, as its handlers left it,
+// and its status, with no traceback and no other handler called
+// (testdata/for83's part C, cases 15, 18, and 19; part B's case 1).
 func (env *Environment) attemptToContinueFromStop(d *conditionDispatch) (uint32, error) {
-	cond, err := env.mem.LoadLongword(env.cpu, d.sig+4)
-	if err != nil {
+	words, err := env.sigWords(d)
+	if err != nil || len(words) < 3 {
 		return 0, fmt.Errorf("rtl: can't read the condition's signal array at %08X", d.sig)
 	}
 
-	env.putMessage(libAttConSto, env.formatMessageVector([]uint32{libAttConSto, 0}, nil, defaultMessageFlags, ""))
+	if words[0]&stsInhibitMsg == 0 {
+		env.putMessage(words[0], env.signalMessage(words))
+	}
 
-	return env.exitForCondition(d, cond)
+	return env.exitForCondition(d, words[0])
 }
 
 // exitForCondition ends d by ending the image: it calls the SYS$EXIT

@@ -28,9 +28,11 @@ import (
 // LIB$SIGNAL returns too; a SEVERE one ends the image.
 //
 // LIB$STOP is LIB$SIGNAL for errors the caller can't go on from: it
-// forces the condition's severity to SEVERE, and it never returns. A
-// handler that tries to continue gets "%LIB-F-ATTCONSTO, attempt to
-// continue from stop" and the image exits; the only way on is $UNWIND.
+// forces the condition's severity to SEVERE, and it never returns. If a
+// handler continues it the condition's own message is shown and the image
+// exits with it as the status, as VMS 7.1 does (testdata/for83's part C,
+// which never shows the manual's LIB$_ATTCONSTO); the only way on is
+// $UNWIND.
 //
 // The search starts with LIB$SIGNAL's caller's frame, at depth 0: the
 // LIB manual says "the call to LIB$SIGNAL or LIB$STOP is not included in
@@ -46,6 +48,11 @@ import (
 // LIB$SIGNAL": resume at the stub's RET, which is where PC points while
 // the shim runs, with the stub's FP and SP.
 //
+// A handler that continues sees LIB$SIGNAL return R0 and R1 as they were
+// at the call, unless it changed them in the mechanism array. Their stubs
+// (CallerR0Stub) push the caller's R0 before the code replaces it, so it is
+// on top of the stack while the shim runs.
+//
 // LIB$ESTABLISH and LIB$REVERT set and clear the handler of the *calling*
 // procedure's frame. The stub's own frame is LIB$ESTABLISH's; its saved
 // FP (at 12(FP)) is the caller's frame.
@@ -56,6 +63,7 @@ import (
 const (
 	frameHandler = 0
 	frameMaskPSW = 4
+	frameSavedAP = 8
 	frameSavedFP = 12
 	frameSavedPC = 16
 
@@ -70,11 +78,11 @@ const (
 //
 // The signal array is the argument list plus the PC the call returns to
 // (the stub frame's saved PC) and the caller's PSL (the current PSL with
-// the PSW the call saved in the frame). The mechanism array's R1 is the
-// caller's, and its R0 is r0: what the call returns if a handler
-// continues the condition. For LIB$SIGNAL that's 0, since the stub's
-// MOVL #code, R0 has already replaced the caller's R0 by the time the
-// shim runs; a routine that signals its own failure passes its status.
+// the PSW the call saved in the frame). With no arguments the condition
+// is LIB$_SIGNO_ARG. The mechanism array's R1 is the caller's, and its R0
+// is r0: what the call returns if a handler continues the condition, for
+// LIB$SIGNAL the caller's own R0 (Signal), and for a routine that signals
+// its own failure its status.
 func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint32, error) {
 	c := env.cpu
 	name := "LIB$SIGNAL"
@@ -84,7 +92,7 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 	}
 
 	if len(argv) == 0 {
-		return 0, fmt.Errorf("rtl: %s called with no condition value", name)
+		argv = []uint32{libSigNoArg}
 	}
 
 	fp := c.GPR(registers.FP)
@@ -190,9 +198,9 @@ func (env *Environment) callerState() (callerFP, returnPC, maskPSW uint32, err e
 	return callerFP, returnPC, maskPSW, err
 }
 
-// setCallerHandler stores handler in the frame of the procedure that
-// called the running shim, returning the previous one.
-func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, error) {
+// callerHandler returns the condition handler of the frame of the
+// procedure that called the running shim.
+func (env *Environment) callerHandler(name string) (uint32, error) {
 	c := env.cpu
 
 	callerFP, err := env.mem.LoadLongword(c, c.GPR(registers.FP)+frameSavedFP)
@@ -203,6 +211,24 @@ func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, e
 	old, err := env.mem.LoadLongword(c, callerFP+frameHandler)
 	if err != nil {
 		return 0, fmt.Errorf("rtl: %s can't read its caller's frame at %08X: %w", name, callerFP, err)
+	}
+
+	return old, nil
+}
+
+// setCallerHandler stores handler in the frame of the procedure that
+// called the running shim, returning the previous one.
+func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, error) {
+	c := env.cpu
+
+	old, err := env.callerHandler(name)
+	if err != nil {
+		return 0, err
+	}
+
+	callerFP, err := env.mem.LoadLongword(c, c.GPR(registers.FP)+frameSavedFP)
+	if err != nil {
+		return 0, fmt.Errorf("rtl: %s can't read its call frame: %w", name, err)
 	}
 
 	if err := env.mem.StoreLongword(c, callerFP+frameHandler, handler); err != nil {

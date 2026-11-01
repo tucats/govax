@@ -3,7 +3,7 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
 settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
-day; subtask 5, calling services and RTL routines, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
+day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -398,7 +398,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
 5. **Calling services and RTL routines** (done 2026-11-01): null arguments in function references; a missing service's
    signal; programs calling `$ASCTIM`, `$GETJPIW` (`itemlist.for`'s list, handed over at last), `$GETSYIW`,
    `$TRNLNM`, `$FAO`, `$FAOL`, LIB$GET_INPUT, LIB$SPAWN, LIB$DATE_TIME; the manuals' examples.
-6. **Condition handlers in FORTRAN**, by the probe's part B; what question 4 moves here.
+6. **Condition handlers in FORTRAN** (done 2026-11-01), by the probe's part B; what question 4 moves here.
 7. **ASTs and exit handlers in FORTRAN**, by the probe's part B; programs for `testdata/fortran`, whose
    timing doesn't show in their output.
 8. **The appendix D system subroutines**, held to the probe's part A.
@@ -501,3 +501,38 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   its caller, which is what the manual's LIB$MATCH_COND example needs (it goes on to LIB$REVERT and CLOSE), and the unwind calls the
   handler of a frame it removes with SS$_UNWIND. A name used both as a function and in a CALL in one unit is BADUSE (ANSI's rule);
   whether VAX FORTRAN allowed it is unconfirmed, and it matters to a program calling a routine both ways.
+- **2026-11-01:** Subtask 6, condition handlers. **LIBRTL, held to part C** (`TestFor83ConditionOracle`, all 109 cases;
+  six compare only the condition, listed below). Findings 1 to 6 of "What govax gets wrong": continuing a stop ends the
+  image with the condition's message and status (`attemptToContinueFromStop`; `libAttConSto` is gone); LIB$SIGNAL's and LIB$STOP's
+  mechanism R0 is the caller's, by a stub that pushes R0 first (`corevms.CallerR0Stub`, `ShimLink.KeepR0`, read by
+  `Environment.Signal`), which settles DEVIATIONS.md's note; no arguments is LIB$_SIGNO_ARG; LIB$ESTABLISH with none leaves the
+  handler; LIB$MATCH_COND's systemwide rule, the facility being bits 17 to 27 by the manual, which the probe's values can't tell from
+  16 to 27; LIB$SIG_TO_RET with too few arguments is an access violation. **New:** LIB$SIG_TO_STOP (`conditionDispatch.stopped`,
+  `stops()`), LIB$INT_OVER, DEC_OVER, FLT_UNDER (`setTrapEnable`: the stub frame's saved PSW, which its RET restores), and LIB$FIXUP_FLT
+  (`librtl/fixupflt.go`, over `disasm`; `corevms/condregs.go` finds the exception's registers in the mechanism array, the frames
+  up to the handler's, or the registers themselves). Unconfirmed: no argument to the three with the bit set (it returns
+  the old bit; VMS's 0 was with it clear); FIXUP_FLT of an immediate is always SS$_ACCVIO, as an image's code is read-only, even in a
+  writable section; FIXUP_FLT of a SS$_ROPRAND from LIB$SIGNAL is SS$_RESIGNAL.
+  **The cases that compare only the condition** (32, 33, 39, 97, 103, 109): VMS takes the access violation in the routine's own code, so
+  a handler's continue runs the instruction again until the program stops itself. A shim's memory fault is a condition in
+  its caller's frame that returns SS$_ACCVIO when continued (Phase 53, Decision 5), and that stands.
+  **A CPU bug found by it:** a fault left the registers its operands' autoincrement and autodecrement had changed, so an instruction a
+  handler continued ran from the wrong place. Decode now keeps a log (`registers/operandlog.go`), and `Engine.undoOperands`
+  restores them for a fault, not a trap or a change mode instruction's exception. All faults get this, access violations too.
+  **Messages:** a system message with too few arguments shows zeros past the signal's PC and PSL, as in the LIB$ manual's SIGNAL
+  example, so its FORTRAN example now runs but for the last longword, stack contents there (`08000000`); RMS$_FNF doesn't show a status value of SS$_NOSUCHFILE, where
+  RMS$_DNF does (part B, `testdata/dcl50`; lib58 shows the value is there); another value is shown, unconfirmed.
+  **FORRTL's rule, by a new round:** `testdata/for83`'s part E (`for83e.mar`, 18 cases, `vax/for83e-forrtl.txt`) runs on FORRTL over govax, needing no VAX, since whether
+  FORRTL goes on is FORRTL's own code (`TestFor83ContinueOnFORRTL`). A handler can go on from INPCONERR, at its item, the statement
+  reading its other items; from OUTCONERR and FORVARMIS, at the statement's end; and from nothing else tried: OUTSTAOVE and INPRECTOO stop, with part
+  B's FILNOTFOU, ENDDURREA, INVLOGUNI, SYNERRFOR, INFFORLOO, NO_CURREC, and RECIO_OPE. The other severe conditions, the namelist ones among them, are
+  taken to stop, unconfirmed. After INPCONERR and a continue, I, L, and F have left the item 0, and O and Z as it was (where, unwound or with
+  a specifier, Phase 80's oracle has 0: at the signal it's 0, and the continue puts it back); list-directed leaves it. A wrong type under I
+  is INPCONERR and then FORVARMIS at the end, and under F only FORVARMIS, with the item 0.
+  **FTNRTL does so** (finding 7): `FTN$IO_END`'s signal is `SIGNAL_FAILURE`, by LIB$SIGNAL for those three and LIB$STOP for the rest, and
+  `FTN$$FMT_FAIL` signals INPCONERR at once when the statement has no ERR= or IOSTAT= (`FTN$$IO_SIGNAL`, the user PC the item call's,
+  `CTX_ITEMPC`). A namelist's INPCONERR takes the same path, its going on unconfirmed. FORRTL's FOR$IO_END also returns the FOR number after a list-directed
+  or wrong-type condition, which compiled FORTRAN with no specifier ignores, so FTN$IO_END doesn't.
+  **Programs:** `testdata/fortran/handlers.for`, in both paging modes, and `TestFor83PartBOnFORRTL`, part B whole against VMS's log on VMS's FORRTL over
+  govax. **Seen and left:** VMS's TYPE ends no line after a record with no carriage control (case 33's unformatted file), and govax's does. The five new routines
+  moved the stubs after LIB$MATCH_COND in the table, so `testdata/nml80/vax/nml80e-forrtl.txt`'s one stub address changed.

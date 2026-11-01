@@ -63,6 +63,7 @@ DSC$K_DTYPE_T	= 14
 
 ; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's.
 CTX_KIND	= 14			; byte: odd for a WRITE
+CTX_STATUS	= 16			; long: the statement's first error, or 0
 CTX_RECLEN	= 24			; long: the record's length
 CTX_RECORD	= 28			; the record
 RECORD_SIZE	= 256
@@ -387,19 +388,25 @@ TYPED:	JSB	INTEGER_TYPE
 
 ;
 ; BAD: the field can't be read. The item is set to zeros, and the
-; statement fails.
+; statement fails; if a handler goes on from that, the item's type counts, as
+; it does after a field that was read (testdata/for83's part E).
 ;
 BAD:	MOVC5	#0,(R2),#0,16(AP),@12(AP)
 	PUSHL	#FOR$_INPCONERR
 	PUSHL	R11
 	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
-	RET
+	BRW	TYPED
 
 ;
 ; O and Z on input: digits of R6 bits, 3 or 4, each shifted into the item
-; from its low end (SHIFT), the item set to zeros first.
+; from its low end (SHIFT), the item set to zeros first. A field that can't be
+; read makes it zeros, but if the condition was signaled and a handler went on
+; from it, it is as it was before, which is kept on the stack meanwhile
+; (testdata/for83's part E).
 ;
-IN_OZ:	MOVC5	#0,(R0),#0,16(AP),@12(AP)
+IN_OZ:	SUBL2	16(AP),SP
+	MOVC3	16(AP),@12(AP),(SP)
+	MOVC5	#0,(R0),#0,16(AP),@12(AP)
 	MOVL	#3,R6
 	CMPB	OP_B_CODE(R10),#C_O
 	BEQL	10$
@@ -410,12 +417,20 @@ IN_OZ:	MOVC5	#0,(R0),#0,16(AP),@12(AP)
 	BLBC	R0,90$			; the field's end
 	ASHL	R6,#1,R0		; the digit's limit: 8 or 16
 	CMPL	R1,R0
-	BGEQU	BAD
+	BGEQU	BAD_OZ
 	MOVL	R1,R7
 	JSB	SHIFT
-	BLBC	R0,BAD			; too many bits for the item
+	BLBC	R0,BAD_OZ		; too many bits for the item
 	BRB	20$
 90$:	RET
+BAD_OZ:	MOVC5	#0,(SP),#0,16(AP),@12(AP)
+	PUSHL	#FOR$_INPCONERR
+	PUSHL	R11
+	CALLS	#2,FTN$$FMT_FAIL	; FTN_FORMAT
+	TSTL	CTX_STATUS(R11)
+	BNEQ	10$			; a specifier takes it
+	MOVC3	16(AP),(SP),@12(AP)
+10$:	RET
 
 ;
 ; SHIFT: the item, an unsigned number of its length's bytes, shifted R6

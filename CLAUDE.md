@@ -582,7 +582,11 @@ never had.
   modules (`internal/fortran/sysdef`: 47 modules from `vmsdef`, by each name's longest prefix, `$SYSSRVNAM`, `$CHFDEF`'s
   structures, searched last; a module's EXTERNAL is a `.EXTRN` only if used, `Line.Library`, `Symbol.Linked`; `mkforsysdef` writes a `.TLB`), and subtask 5 calling services and RTL routines (null arguments in function references, kept as nil by the parser and refused
   by sema where the name isn't a routine's; a missing service signals, `corevms/missingservice.go`; TYPE of an FTN file, `rms.writeFortranRecords`; a utility's end deletes
-  user-mode names, `Interpreter.endUtility`; `testdata/fortran/services.for`, `rtlcalls.for`).
+  user-mode names, `Interpreter.endUtility`; `testdata/fortran/services.for`, `rtlcalls.for`), and subtask 6 condition handlers
+  (LIB$STOP continued ends the image with the condition's message; `corevms.CallerR0Stub` gives LIB$SIGNAL's mechanism array the caller's R0; `librtl/fixupflt.go`
+  and `corevms/condregs.go`, LIB$FIXUP_FLT; LIB$SIG_TO_STOP, INT_OVER, DEC_OVER, FLT_UNDER; a fault restores its operands' registers, `registers/operandlog.go`;
+  FTNRTL signals INPCONERR at its item and stops for all but it, OUTCONERR, and FORVARMIS, `FTN$$IO_SIGNAL`; held to VMS by `TestFor83ConditionOracle` and `TestFor83PartBOnFORRTL`,
+  and to FORRTL by `TestFor83ContinueOnFORRTL`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -886,7 +890,7 @@ never had.
   one output every time (`TestFortranModules`).
 - `testdata/for83/` — Phase 83's probe (README.md; `vax/` is VMS V7.1's run): `gen.go` writes `for83.mar`
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
-  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `decode.go` turns
+  image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `decode.go` turns
   `def_opc.obj` into `defined.txt` for `vmsdef`; `testdata/str83/` is the STR$ routines' program, on the same volume.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by

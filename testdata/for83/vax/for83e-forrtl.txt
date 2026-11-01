@@ -1,0 +1,139 @@
+#1 INPCONERR I, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 00000000
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#2 INPCONERR I, last item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 0000004D
+ =value 00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#3 INPCONERR F, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 00000000
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#4 INPCONERR O, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 55555555
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#5 INPCONERR O, a digit too large, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 55555555
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#6 INPCONERR Z, a letter, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 55555555
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#7 INPCONERR L, then an item
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 00000000
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#8 INPCONERR twice in a record
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000000
+ =value 00000000
+ =value 00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#9 list-directed, a bad integer, then an item
+ =c n=9 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=00000040
+ =value 55555555
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#10 FORVARMIS on output
+ =c n=9 cond=001881FA arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=0000003F
+ =back r0=00000001
+  $STATUS == "%X00000001"
+ file FOR83W.DAT:
+***NEXT
+#11 FORVARMIS on input
+ =c n=13 cond=00188204 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+ =c n=9 cond=001881EC arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=0000003D
+ =value 00000000
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#12 FORVARMIS on input, a field read
+ =c n=9 cond=001881EC arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=0000003D
+ =value 000025E4
+ =value 66666666
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#13 FORVARMIS on input, an integer under F
+ =c n=9 cond=001881EC arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=3 r0=0000B6D0 r1=0000AEEC
+ =after statement r0=0000003D
+ =value 00000000
+ =value 0000004D
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#14 OUTSTAOVE on a unit
+ =c n=9 cond=00188214 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+%FOR-F-OUTSTAOVE, output statement overflows record
+  unit 12  file DUA1:[000000]FOR83W.DAT;1
+  pc
+  $STATUS == "%X10188214"
+ file FOR83W.DAT:
+#15 OUTSTAOVE in an internal record
+ =c n=9 cond=00188214 arg=00000003 FFFFFFFB pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=00000000 r1=0000AEEC
+%FOR-F-OUTSTAOVE, output statement overflows record
+  unit -5  file 
+  pc
+  $STATUS == "%X10188214"
+#16 INPRECTOO
+ =c n=9 cond=001880B4 arg=00000003 0000000C pc psl=03C00000
+ =m n=4 frame=+00000000 depth=4 r0=0000B6D0 r1=0000AEEC
+%FOR-F-INPRECTOO, input record too long
+  unit 12  file DUA1:[000000]FOR83G.DAT;1
+  pc
+-RMS-W-RTB, 300 byte record too large for user's buffer
+  $STATUS == "%X101880B4"
+#17 ERRDURWRI, a file opened to read
+ =after statement r0=00000000
+ =back r0=00000001
+  $STATUS == "%X00000001"
+#18 ERR with no handler's choice: an INPCONERR at FOR$IO_END
+ =after statement r0=00000000
+ =value 55555555
+ =value 66666666
+ =back r0=00000001
+  $STATUS == "%X00000001"

@@ -185,14 +185,10 @@ func TestLibEstablishRevert(t *testing.T) {
 	}
 }
 
-// TestLibSigToRetOutsideHandler: with no condition being handled, or too
-// few arguments, LIB$SIG_TO_RET returns SS$_NOSIGNAL.
+// TestLibSigToRetOutsideHandler: with no condition being handled,
+// LIB$SIG_TO_RET returns SS$_NOSIGNAL.
 func TestLibSigToRetOutsideHandler(t *testing.T) {
 	env := fixture(t)
-
-	if r0 := call(t, env, "LIB$SIG_TO_RET"); r0 != ssNoSignal {
-		t.Errorf("no arguments: %#x, want SS$_NOSIGNAL", r0)
-	}
 
 	if r0 := call(t, env, "LIB$SIG_TO_RET", 0x1000, 0x1100); r0 != ssNoSignal {
 		t.Errorf("no condition: %#x, want SS$_NOSIGNAL", r0)

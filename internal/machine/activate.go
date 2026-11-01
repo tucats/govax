@@ -335,12 +335,15 @@ func (p *ImageProcess) vectorEntry(library string, offset uint32, data []byte, j
 	return append([]byte{byte(mask), byte(mask >> 8)}, jmpAbsolute(target+2)...), nil
 }
 
-// isStub reports whether addr is a CALL stub's (ShimStub: an empty
-// entry mask, then MOVL I^#code,R0).
+// isStub reports whether addr is a CALL stub's (an empty entry mask, then
+// ShimStub's MOVL I^#code,R0 or CallerR0Stub's PUSHL R0).
 func (p *ImageProcess) isStub(addr uint32) bool {
 	b, err := p.loadBytes(addr, 4)
+	if err != nil || b[0] != 0 || b[1] != 0 {
+		return false
+	}
 
-	return err == nil && b[0] == 0 && b[1] == 0 && b[2] == 0xD0 && b[3] == 0x8F
+	return b[2] == 0xD0 && b[3] == 0x8F || b[2] == 0xDD && b[3] == 0x50
 }
 
 // jmpAbsolute is JMP @#target's bytes.

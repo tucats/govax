@@ -27,15 +27,22 @@ func (env *Environment) Memory() *vm.Memory { return env.mem }
 func (sys *System) Shims() *ShimTable { return sys.shims }
 
 // Signal signals the condition whose argument list (condition value,
-// argument count, FAO arguments) is argv, from a running shim, as LIB$SIGNAL
-// does -- or LIB$STOP, with stop, which forces SEVERE and can't be
-// continued. See signal.go.
+// argument count, FAO arguments) is argv, as LIB$SIGNAL does -- or
+// LIB$STOP, with stop, which forces SEVERE and can't be continued. The
+// running shim's stub must be a CallerR0Stub, which leaves the caller's R0
+// on top of the stack. See signal.go.
 func (env *Environment) Signal(argv []uint32, stop bool) (uint32, error) {
+	kind := kindSignal
 	if stop {
-		return env.signal(kindStop, argv, 0)
+		kind = kindStop
 	}
 
-	return env.signal(kindSignal, argv, 0)
+	r0, err := env.mem.LoadLongword(env.cpu, env.cpu.GPR(registers.SP))
+	if err != nil {
+		return 0, err
+	}
+
+	return env.signal(kind, argv, r0)
 }
 
 // SignalFailure signals the condition argv describes, as Signal does, for
@@ -63,6 +70,23 @@ func (env *Environment) CallerFU() (bool, error) {
 	_, _, maskPSW, err := env.callerState()
 
 	return registers.PSL(maskPSW & 0xFFFF).FU(), err
+}
+
+// StopCondition marks the condition being dispatched whose signal array is at
+// sig as one that can't be continued, as LIB$SIG_TO_STOP does; a condition with
+// no dispatch in progress, an array the program made, is left alone.
+func (env *Environment) StopCondition(sig uint32) {
+	for _, d := range env.Process.conditions {
+		if d.sig == sig {
+			d.stopped = true
+		}
+	}
+}
+
+// CallerHandler returns the condition handler of the frame of the procedure
+// that called the running shim. name is the routine's, for errors.
+func (env *Environment) CallerHandler(name string) (uint32, error) {
+	return env.callerHandler(name)
 }
 
 // SetCallerHandler makes handler (0 for none) the condition handler of the
