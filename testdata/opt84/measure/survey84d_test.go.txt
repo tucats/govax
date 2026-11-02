@@ -1,0 +1,181 @@
+package console
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/rms"
+	"sort"
+)
+
+func TestSurvey84Build(t *testing.T) {
+	out := os.Getenv("SURVEY_OUT")
+	if out == "" {
+		t.Skip()
+	}
+	dir := os.Getenv("HOME") + "/Documents/Technical Doc/VMS/dungeon-3.2A"
+	d, c, buf := shareFindConsole(t, false)
+	path := filepath.Join(t.TempDir(), "big.dsk")
+	if err := c.cmd().InitializeContainer(path, 60000, "BIG", 0, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Dispatch(`MOUNT DUA3: "` + path + `"`); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Dispatch("SET DEFAULT DUA3:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+	put := func(host, name string) {
+		text, err := os.ReadFile(host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA3:[000000]" + name}, rms.TextRecords, splitSource(string(text))); err != nil {
+			t.Fatal(name, err)
+		}
+	}
+	put(filepath.Join(dir, "dparam.for"), "DPARAM.FOR")
+	for _, n := range []string{"dungeon", "game", "gdt", "objects", "parser", "rooms", "subr", "timefnc", "verbs"} {
+		u := strings.ToUpper(n)
+		put(filepath.Join(dir, n+".f"), u+".FOR")
+		buf.Reset()
+		err := d.Dispatch("FORTRAN/CONTINUATIONS=40 " + u)
+		o := buf.String()
+		fmt.Printf("== FORTRAN %s err=%v, %d bytes of messages\n", u, err, len(o))
+		// message identifiers only: never the source text
+		seen := map[string]int{}
+		for _, l := range strings.Split(o, "\n") {
+			if strings.HasPrefix(l, "%") {
+				id, _, _ := strings.Cut(l, ",")
+				seen[id]++
+			}
+		}
+		fmt.Println(seen)
+		if err == nil {
+			if mx := os.Getenv("SURVEY_MARX"); mx != "" {
+				put(filepath.Join(mx, "dungeon-"+n+".marx"), u+".MAR")
+			}
+			recs, _, e := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA3:[000000]" + u + ".MAR"}, rms.TextRecords)
+			if e == nil {
+				var b strings.Builder
+				for _, r := range recs {
+					b.Write(r)
+					b.WriteByte('\n')
+				}
+				os.WriteFile(filepath.Join(out, "dungeon-"+n+".marx"), []byte(b.String()), 0o600)
+			}
+			buf.Reset()
+			err = d.Dispatch("MACRO " + u)
+			fmt.Printf("   MACRO err=%v said %d bytes\n", err, buf.Len())
+			if buf.Len() > 0 {
+				fmt.Println(firstLine(buf.String()))
+			}
+		}
+	}
+
+	// the data files
+	raw, _ := os.ReadFile(filepath.Join(dir, "dtext"))
+	var recs [][]byte
+	for i := 0; i+80 <= len(raw); i += 80 {
+		recs = append(recs, raw[i:i+80])
+	}
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA3:[000000]DTEXTV.DAT"}, rms.VariableRecords, recs); err != nil {
+		t.Fatal(err)
+	}
+	put(filepath.Join(dir, "dindx"), "DINDX.DAT")
+	put(os.Getenv("SURVEY_KIT")+"/mkdtx.for", "MKDTX.FOR")
+	put(os.Getenv("SURVEY_KIT")+"/itime.for", "ITIME.FOR")
+	buf.Reset()
+	for _, l := range []string{"FORTRAN MKDTX", "MACRO MKDTX", "LINK MKDTX", "RUN MKDTX", "FORTRAN ITIME", "MACRO ITIME", "LINK/EXECUTABLE=DUNGEON DUNGEON,GAME,GDT,OBJECTS,PARSER,ROOMS,SUBR,TIMEFNC,VERBS,ITIME"} {
+		err := d.Dispatch(l)
+		fmt.Printf("%s: err=%v said=%q\n", l, err, firstLine(buf.String()))
+		buf.Reset()
+	}
+	for _, script := range []string{"quit", "game"} {
+		input, _ := os.ReadFile(os.Getenv("SURVEY_KIT") + "/" + script + ".in")
+		c.In = strings.NewReader(string(input))
+		counts := map[uint32]int64{}
+		names := map[uint32]string{}
+		cpu.SurveyProfile = func(pc uint32, dec *cpu.Decoded) {
+			if counts[pc] == 0 {
+				names[pc] = dec.Instruction.Name
+			}
+			counts[pc]++
+		}
+		_, r0, w0, mr0, mw0 := c.Engine.Memory().Stats()
+		got := shareRun(t, d, buf, "DUNGEON")
+		cpu.SurveyProfile = nil
+		_, r1, w1, mr1, mw1 := c.Engine.Memory().Stats()
+		os.WriteFile(filepath.Join(out, "dungeon-"+script+".printedx"), []byte(got), 0o600)
+		var rep strings.Builder
+		var total, nmain, nftn, ns0, nother int64
+		byOp := map[string]int64{}
+		byRoutine := map[string]int64{}
+		var dbg = c.ImageState(nil).FindMainICB()
+		var ftnLo, ftnHi uint32
+		for _, icb := range c.ImageState(nil).ICBList {
+			if icb.Name == "FTNRTL" {
+				ftnLo, ftnHi = icb.Base, icb.End
+			}
+		}
+		for pc, n := range counts {
+			total += n
+			switch {
+			case pc >= dbg.Base && pc < dbg.End:
+				nmain += n
+				byOp[names[pc]] += n
+				name := "?"
+				if dbg.Debug != nil {
+					if r, _, ok := dbg.Debug.RoutineAt(pc); ok && r != nil {
+						name = r.Name
+					}
+				}
+				byRoutine[name] += n
+			case pc >= ftnLo && pc < ftnHi:
+				nftn += n
+			case pc >= 0x80000000:
+				ns0 += n
+			default:
+				nother += n
+			}
+		}
+		fmt.Fprintf(&rep, "script=%s lines=%d printed=%d total=%d main=%d ftnrtl=%d s0=%d other=%d reads=%d writes=%d code=%d\n", script, strings.Count(string(input), "\n"), len(got), total, nmain, nftn, ns0, nother, r1-r0+mr1-mr0, w1-w0+mw1-mw0, dbg.End-dbg.Base)
+		list := func(m map[string]int64, top int) {
+			var ks []string
+			for k := range m {
+				ks = append(ks, k)
+			}
+			sort.Slice(ks, func(i, j int) bool { return m[ks[i]] > m[ks[j]] })
+			for i, k := range ks {
+				if i == top {
+					break
+				}
+				fmt.Fprintf(&rep, "  %-14s %11d %5.1f%%\n", k, m[k], 100*float64(m[k])/float64(max(nmain, 1)))
+			}
+		}
+		list(byOp, 20)
+		if script == "quit" {
+			type hp struct {
+				pc uint32
+				n  int64
+			}
+			var hs []hp
+			for pc, n := range counts {
+				if pc >= ftnLo && pc < ftnHi {
+					hs = append(hs, hp{pc, n})
+				}
+			}
+			sort.Slice(hs, func(i, j int) bool { return hs[i].n > hs[j].n })
+			for i := 0; i < 16 && i < len(hs); i++ {
+				fmt.Fprintf(&rep, "FTN %8d +%06X %s\n", hs[i].n, hs[i].pc-ftnLo, names[hs[i].pc])
+			}
+		}
+		list(byRoutine, 14)
+		fmt.Print(rep.String())
+		os.WriteFile(filepath.Join(out, "dungeon-"+script+".profx"), []byte(rep.String()), 0o600)
+	}
+}

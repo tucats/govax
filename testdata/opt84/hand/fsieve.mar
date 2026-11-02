@@ -1,0 +1,111 @@
+	.TITLE	SIEVE
+	.IDENT	/01/
+;
+; Compiled by govax FORTRAN V on 1-NOV-2026 21:07:08.29
+; from DUA1:[000000]SIEVE.FOR;1
+; by the command FORTRAN SIEVE
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_L = 8			; longword integer
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for SIEVE, the main program
+;   F      LOGICAL*1 (20000)  $LOCAL+0      SIEVE.F
+;   I      INTEGER            $LOCAL+20000  SIEVE.I
+;   K      INTEGER            $LOCAL+20004  SIEVE.K
+;   ITER   INTEGER            $LOCAL+20008  SIEVE.ITER
+;   COUNT  INTEGER            $LOCAL+20012  SIEVE.COUNT
+;   P      INTEGER            $LOCAL+20016  SIEVE.P
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SIEVE.F:
+	.BLKL	5000			; F, LOGICAL*1 (20000)
+SIEVE.I:
+	.BLKL	1			; I
+SIEVE.K:
+	.BLKL	1			; K
+SIEVE.ITER:
+	.BLKL	1			; ITER
+SIEVE.COUNT:
+	.BLKL	1			; COUNT
+SIEVE.P:
+	.BLKL	1			; P
+SIEVE.$C1:
+	.BLKL	1			; DO 100's count
+SIEVE.$C2:
+	.BLKL	1			; DO 10's count
+SIEVE.$C3:
+	.BLKL	1			; DO 30's count
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+SIEVE.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+SIEVE.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS SIEVE.COUNT
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM SIEVE
+	.ENTRY	SIEVE,^M<R6,R7>
+;    2  C     The sieve of Eratosthenes, run ten times over.
+;    3        INTEGER M
+;    4        PARAMETER (M = 20000)
+;    5        LOGICAL*1 F(M)
+;    6        INTEGER I, K, ITER, COUNT, P
+;    7        DO 100 ITER = 1, 10
+	MOVL	#10,SIEVE.$C1		; DO 100's count
+	MOVL	#1,SIEVE.ITER
+SIEVE.$1:				; DO 100's body
+;    8           COUNT = 0
+	CLRL	SIEVE.COUNT
+;    9           DO 10 I = 1, M
+	MOVL	#1,R6
+SIEVE.$2:
+	MOVB	#-1,SIEVE.F-1[R6]
+	AOBLEQ	#20000,R6,SIEVE.$2
+	MOVL	#2,R6
+SIEVE.$4:
+	BITB	#1,SIEVE.F-1[R6]
+	BEQL	SIEVE.L30
+	MOVL	R6,SIEVE.P
+	INCL	SIEVE.COUNT
+	ADDL3	R6,R6,R7
+	BRB	SIEVE.$X
+SIEVE.L20:
+	CLRB	SIEVE.F-1[R7]
+	ADDL2	R6,R7
+SIEVE.$X:
+	CMPL	R7,#20000
+	BLEQ	SIEVE.L20
+	MOVL	R7,SIEVE.K
+SIEVE.L30:
+	AOBLEQ	#20000,R6,SIEVE.$4
+	MOVL	R6,SIEVE.I
+SIEVE.$7:
+;   22    100 CONTINUE
+SIEVE.L100:
+	INCL	SIEVE.ITER
+	SOBGTR	SIEVE.$C1,SIEVE.$1
+SIEVE.$8:
+;   23        PRINT *, COUNT
+	PUSHL	#-1
+	PUSHAB	SIEVE.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	SIEVE.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   24        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	SIEVE

@@ -1,0 +1,179 @@
+	.TITLE	MATMUL
+	.IDENT	/01/
+;
+; Compiled by govax FORTRAN V on 1-NOV-2026 21:12:59.62
+; from DUA1:[000000]MATMUL.FOR;1
+; by the command FORTRAN MATMUL
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+;
+
+; Storage map for MATMUL, the main program
+;   A     REAL (60,60)  $LOCAL+0      MATMUL.A
+;   B     REAL (60,60)  $LOCAL+14400  MATMUL.B
+;   C     REAL (60,60)  $LOCAL+28800  MATMUL.C
+;   S     REAL          $LOCAL+43200  MATMUL.S
+;   I     INTEGER       $LOCAL+43204  MATMUL.I
+;   J     INTEGER       $LOCAL+43208  MATMUL.J
+;   K     INTEGER       $LOCAL+43212  MATMUL.K
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+MATMUL.A:
+	.BLKL	3600			; A, REAL (60,60)
+MATMUL.B:
+	.BLKL	3600			; B, REAL (60,60)
+MATMUL.C:
+	.BLKL	3600			; C, REAL (60,60)
+MATMUL.S:
+	.BLKL	1			; S
+MATMUL.I:
+	.BLKL	1			; I
+MATMUL.J:
+	.BLKL	1			; J
+MATMUL.K:
+	.BLKL	1			; K
+MATMUL.$C1:
+	.BLKL	1			; DO 20's count
+MATMUL.$C2:
+	.BLKL	1			; DO 10's count
+MATMUL.$C3:
+	.BLKL	1			; DO 50's count
+MATMUL.$C4:
+	.BLKL	1			; DO 40's count
+MATMUL.$C5:
+	.BLKL	1			; DO 30's count
+MATMUL.$C6:
+	.BLKL	1			; DO 60's count
+
+	.PSECT	$LOCAL
+MATMUL.$T1:	.BLKL	1
+MATMUL.$T2:	.BLKL	1
+MATMUL.$T3:	.BLKL	1
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+MATMUL.$IO1:
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+MATMUL.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.ADDRESS MATMUL.S
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1        PROGRAM MATMUL
+	.ENTRY	MATMUL,^M<R2>
+;    2  C     Matrix multiplication, the classic triple loop.
+;    3        INTEGER N
+;    4        PARAMETER (N = 60)
+;    5        REAL A(N,N), B(N,N), C(N,N), S
+;    6        INTEGER I, J, K
+;    7        DO 20 J = 1, N
+	MOVL	#60,MATMUL.$C1		; DO 20's count
+	MOVL	#1,MATMUL.J
+MATMUL.$1:				; DO 20's body
+;    8           DO 10 I = 1, N
+	MOVL	#60,MATMUL.$C2		; DO 10's count
+	MOVL	#1,MATMUL.I
+MATMUL.$2:				; DO 10's body
+;    9              A(I,J) = I + J
+	ADDL3	MATMUL.I,MATMUL.J,R0
+	MULL3	MATMUL.J,#60,R1
+	ADDL2	MATMUL.I,R1
+	CVTLF	R0,MATMUL.A-244[R1]
+;   10              B(I,J) = 2*I - J
+	MULL3	#2,MATMUL.I,R0
+	SUBL2	MATMUL.J,R0
+	MULL3	MATMUL.J,#60,R1
+	ADDL2	MATMUL.I,R1
+	CVTLF	R0,MATMUL.B-244[R1]
+;   11              C(I,J) = 0.0
+	MULL3	MATMUL.J,#60,R0
+	ADDL2	MATMUL.I,R0
+	CLRF	MATMUL.C-244[R0]
+;   12     10    CONTINUE
+MATMUL.L10:
+	INCL	MATMUL.I
+	DECL	MATMUL.$C2		; one pass fewer
+	BLEQ	MATMUL.$3
+	BRW	MATMUL.$2
+MATMUL.$3:
+;   13     20 CONTINUE
+MATMUL.L20:
+	INCL	MATMUL.J
+	DECL	MATMUL.$C1		; one pass fewer
+	BLEQ	MATMUL.$4
+	BRW	MATMUL.$1
+MATMUL.$4:
+;   14        DO 50 J = 1, N
+	MOVL	#60,MATMUL.$C3		; DO 50's count
+	MOVL	#1,MATMUL.J
+MATMUL.$5:				; DO 50's body
+;   15           DO 40 K = 1, N
+	MOVL	#60,MATMUL.$C4		; DO 40's count
+	MOVL	#1,MATMUL.K
+MATMUL.$6:				; DO 40's body
+;   16              DO 30 I = 1, N
+	MOVL	#60,MATMUL.$C5
+	MOVL	#1,MATMUL.I
+	MULL3	MATMUL.K,#60,MATMUL.$T1
+	MULL3	MATMUL.J,#60,MATMUL.$T2
+	ADDL3	MATMUL.K,MATMUL.$T2,R0
+	MOVF	MATMUL.B-244[R0],MATMUL.$T3
+MATMUL.$7:
+	ADDL3	MATMUL.I,MATMUL.$T1,R0
+	ADDL3	MATMUL.I,MATMUL.$T2,R1
+	MULF3	MATMUL.A-244[R0],MATMUL.$T3,R0
+	ADDF2	R0,MATMUL.C-244[R1]
+MATMUL.L30:
+	INCL	MATMUL.I
+	SOBGTR	MATMUL.$C5,MATMUL.$7
+MATMUL.L40:
+	INCL	MATMUL.K
+	DECL	MATMUL.$C4
+	BLEQ	MATMUL.$9
+	BRW	MATMUL.$6
+MATMUL.$9:
+MATMUL.L50:
+	INCL	MATMUL.J
+	DECL	MATMUL.$C3
+	BLEQ	MATMUL.$AA
+	BRW	MATMUL.$5
+MATMUL.$AA:
+MATMUL.$10:
+;   21        S = 0.0
+	CLRF	MATMUL.S
+;   22        DO 60 I = 1, N
+	MOVL	#60,MATMUL.$C6		; DO 60's count
+	MOVL	#1,MATMUL.I
+MATMUL.$11:				; DO 60's body
+;   23           S = S + C(I,I)
+	MULL3	MATMUL.I,#60,R0
+	ADDL2	MATMUL.I,R0
+	ADDF2	MATMUL.C-244[R0],MATMUL.S
+;   24     60 CONTINUE
+MATMUL.L60:
+	INCL	MATMUL.I
+	DECL	MATMUL.$C6		; one pass fewer
+	BLEQ	MATMUL.$12
+	BRW	MATMUL.$11
+MATMUL.$12:
+;   25        PRINT *, S
+	PUSHL	#-1
+	PUSHAB	MATMUL.$IO1
+	CALLS	#2,G^FTN$WRITE_SL
+	PUSHAQ	MATMUL.$D1
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   26        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+	.END	MATMUL

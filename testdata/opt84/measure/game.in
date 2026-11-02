@@ -1,0 +1,31 @@
+open mailbox
+read leaflet
+drop leaflet
+south
+east
+open window
+enter
+take all
+west
+take lamp
+take sword
+move rug
+open trap door
+down
+turn on lamp
+north
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+north
+east
+inventory
+look
+south
+west
+up
+score
+quit
+y

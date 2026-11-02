@@ -1,0 +1,22 @@
+diff --git a/internal/cpu/engine.go b/internal/cpu/engine.go
+index 0479262d..92626797 100644
+--- a/internal/cpu/engine.go
++++ b/internal/cpu/engine.go
+@@ -468,6 +468,10 @@ func (e *Engine) Step() error {
+ 
+ 	e.current = next
+ 
++	if SurveyProfile != nil {
++		SurveyProfile(e.instructionPC, dec)
++	}
++
+ 	// Advance PC past the instruction before dispatching, matching
+ 	// decode_opcode.c leaving registers.PC there on a successful decode — a
+ 	// branch/jump Handler expects PC to already be "the next sequential
+@@ -591,3 +595,6 @@ func (e *Engine) Run() error {
+ 
+ 	return ErrHalted
+ }
++
++// SurveyProfile is a temporary measuring hook (Phase 84's survey).
++var SurveyProfile func(pc uint32, d *Decoded)

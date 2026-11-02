@@ -1,0 +1,183 @@
+package console
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/rms"
+)
+
+func TestSurvey84(t *testing.T) {
+	out := os.Getenv("SURVEY_OUT")
+	if out == "" {
+		t.Skip("no SURVEY_OUT")
+	}
+	var sources []string
+	for _, dir := range strings.Split(os.Getenv("SURVEY_DIRS"), ":") {
+		s, _ := filepath.Glob(filepath.Join(dir, "*.for"))
+		sources = append(sources, s...)
+	}
+	d, c, buf := shareFindConsole(t, false)
+	summary, _ := os.Create(filepath.Join(out, "summary.txt"))
+	defer summary.Close()
+	fmt.Fprintln(summary, "name total main ftnrtl s0 p1 otherp0 dataReads dataWrites codeBytes")
+	for _, source := range sources {
+		name := strings.TrimSuffix(filepath.Base(source), ".for")
+		text, _ := os.ReadFile(source)
+		upper := strings.ToUpper(name)
+		c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + ".FOR"}, rms.TextRecords, splitSource(string(text)))
+		buf.Reset()
+		okb := true
+		for _, cmd := range []string{"FORTRAN ", "MACRO ", "LINK "} {
+			if err := d.Dispatch(cmd + upper); err != nil || buf.Len() > 0 {
+				fmt.Fprintf(summary, "%s BUILD-FAILED %s %v %q\n", name, cmd, err, firstLine(buf.String()))
+				okb = false
+				break
+			}
+		}
+		if !okb {
+			shareCleanup(d, upper)
+			continue
+		}
+		recs, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + ".MAR"}, rms.TextRecords)
+		if err == nil {
+			var b bytes.Buffer
+			for _, r := range recs {
+				b.Write(r)
+				b.WriteByte('\n')
+			}
+			os.WriteFile(filepath.Join(out, name+".mar"), b.Bytes(), 0o644)
+		}
+		input, _ := os.ReadFile(strings.TrimSuffix(source, ".for") + ".in")
+		c.In = strings.NewReader(string(input))
+		counts := map[uint32]int64{}
+		names := map[uint32]string{}
+		cpu.SurveyProfile = func(pc uint32, dec *cpu.Decoded) {
+			if counts[pc] == 0 {
+				names[pc] = dec.Instruction.Name
+			}
+			counts[pc]++
+		}
+		_, r0, w0, mr0, mw0 := c.Engine.Memory().Stats()
+		got := shareRun(t, d, buf, upper)
+		cpu.SurveyProfile = nil
+		_, r1, w1, mr1, mw1 := c.Engine.Memory().Stats()
+		want, werr := os.ReadFile(strings.TrimSuffix(source, ".for") + ".out")
+		if werr == nil && got != string(want) {
+			fmt.Fprintf(summary, "# %s output differs\n", name)
+		}
+		os.WriteFile(filepath.Join(out, name+".printed"), []byte(got), 0o644)
+
+		var mainLo, mainHi, ftnLo, ftnHi uint32
+		for _, icb := range c.ImageState(nil).ICBList {
+			if icb.Name == "<MAIN>" {
+				mainLo, mainHi = icb.Base, icb.End
+			}
+			if icb.Name == "FTNRTL" {
+				ftnLo, ftnHi = icb.Base, icb.End
+			}
+		}
+		var total, nmain, nftn, ns0, np1, nother int64
+		byOp := map[string]int64{}
+		type hot struct {
+			pc uint32
+			n  int64
+		}
+		var hots []hot
+		for pc, n := range counts {
+			total += n
+			switch {
+			case pc >= mainLo && pc < mainHi:
+				nmain += n
+				byOp[names[pc]] += n
+				hots = append(hots, hot{pc, n})
+			case pc >= ftnLo && pc < ftnHi:
+				nftn += n
+			case pc >= 0x80000000:
+				ns0 += n
+			case pc >= 0x40000000:
+				np1 += n
+			default:
+				nother += n
+			}
+		}
+		fmt.Fprintln(summary, name, total, nmain, nftn, ns0, np1, nother, r1-r0+mr1-mr0, w1-w0+mw1-mw0, mainHi-mainLo)
+		var ops []string
+		for k := range byOp {
+			ops = append(ops, k)
+		}
+		sort.Slice(ops, func(i, j int) bool { return byOp[ops[i]] > byOp[ops[j]] })
+		var rep bytes.Buffer
+		fmt.Fprintf(&rep, "%s total=%d main=%d ftnrtl=%d s0=%d\nby opcode (main image):\n", name, total, nmain, nftn, ns0)
+		for _, k := range ops {
+			fmt.Fprintf(&rep, "  %-10s %12d %5.1f%%\n", k, byOp[k], 100*float64(byOp[k])/float64(max(nmain, 1)))
+		}
+		sort.Slice(hots, func(i, j int) bool { return hots[i].n > hots[j].n })
+		buf.Reset()
+		c.In = strings.NewReader(string(input))
+		d.Dispatch("RUN/NOEXECUTE " + upper)
+		buf.Reset()
+		fmt.Fprintf(&rep, "hot PCs (main image):\n")
+		for i, h := range hots {
+			if i == 40 {
+				break
+			}
+			buf.Reset()
+			c.Disassemble(h.pc, h.pc)
+			fmt.Fprintf(&rep, "%10d  %08X %s\n", h.n, h.pc, strings.TrimSpace(buf.String()))
+		}
+		buf.Reset()
+		os.WriteFile(filepath.Join(out, name+".prof"), rep.Bytes(), 0o644)
+		shareCleanup(d, upper)
+	}
+}
+
+func firstLine(s string) string {
+	s, _, _ = strings.Cut(s, "\n")
+	return s
+}
+
+func shareCleanup(d *Dispatcher, upper string) {
+	d.Dispatch("DELETE " + upper + ".*;*")
+}
+
+func TestSurvey84Hand(t *testing.T) {
+	out := os.Getenv("SURVEY_OUT")
+	d, c, buf := shareFindConsole(t, false)
+	for _, dir := range strings.Split(os.Getenv("SURVEY_DIRS"), ":") {
+		files, _ := filepath.Glob(filepath.Join(dir, "*.mar"))
+		for _, f := range files {
+			name := strings.TrimSuffix(filepath.Base(f), ".mar")
+			u := strings.ToUpper(name)
+			text, _ := os.ReadFile(f)
+			c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + u + ".MAR"}, rms.TextRecords, splitSource(string(text)))
+			buf.Reset()
+			for _, cmd := range []string{"MACRO ", "LINK "} {
+				if err := d.Dispatch(cmd + u); err != nil || buf.Len() > 0 {
+					fmt.Printf("%s %s: %v %.300s\n", cmd, u, err, buf.String())
+				}
+			}
+			var total int64
+			cpu.SurveyProfile = func(pc uint32, dec *cpu.Decoded) { total++ }
+			_, r0, w0, mr0, mw0 := c.Engine.Memory().Stats()
+			got := shareRun(t, d, buf, u)
+			cpu.SurveyProfile = nil
+			_, r1, w1, mr1, mw1 := c.Engine.Memory().Stats()
+			var code uint32
+			for _, icb := range c.ImageState(nil).ICBList {
+				if icb.Name == "<MAIN>" {
+					code = icb.End - icb.Base
+				}
+			}
+			fmt.Printf("%s total=%d reads=%d writes=%d code=%d printed=%q\n", name, total, r1-r0+mr1-mr0, w1-w0+mw1-mw0, code, strings.TrimSpace(firstLine(got)))
+			_ = out
+			shareCleanup(d, u)
+		}
+	}
+}
