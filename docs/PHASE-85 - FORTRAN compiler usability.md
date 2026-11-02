@@ -1,7 +1,7 @@
 # Phase 85 — FORTRAN compiler usability: listings, checks, warnings
 
-**Status:** in progress. Subtask 1, the survey, is done (2026-11-02) and
-awaits the author's answers (Part A, "Questions"). Planned 2026-10-29. Needs
+**Status:** in progress. Subtask 1, the survey, was reviewed by the author on
+2026-11-02; their answers are in Part A, "The review". Planned 2026-10-29. Needs
 Phase 80 (I/O, for the run-time checks' messages); best done after Phase 83.
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
 (Decisions 18 and 19).
@@ -55,21 +55,23 @@ spirit but our own layouts:
 
 ## Subtasks
 
-The list as the survey proposes it, pending the author's answers:
+The list as the survey proposed it and the author's review settled it:
 
 1. **Survey** (done 2026-11-02): Part A below.
-2. **The debugger reads dotted names**, with a small VMS probe of the rule
-   (Part A, "The debugger"). First, since every later check of `/DEBUG` needs it.
+2. **The debugger reads dotted names**, with a VMS probe of the rule, written for
+   the author to run on the simh VAX (Part A, "The debugger", answer 4). First,
+   since every later check of `/DEBUG` needs it.
 3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE.**
 4. **`/CROSS_REFERENCE`.**
 5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
 6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
-7. **`/WARNINGS`.**
+7. **`/WARNINGS`,** with `UNUSED` a keyword of its own, off by default (answer 3).
 8. **`/STANDARD`,** with the list of extensions read from the manual's pages.
 9. **`/DEBUG` and `/OBJECT`.**
-10. **The rest of the debugger review:** what the answer to question 1 keeps of
-    D2 to D9.
-11. **`/[NO]F77`,** if question 5 keeps it.
+10. **The rest of the debugger review,** level B (answer 1): D2 to D9, statement
+    labels, bare names in a routine, the FORTRAN line at a stop, and subscripts and
+    types. Likely to be split once it starts.
+11. **`/[NO]F77`** (answer 5).
 12. **Close-out:** HELP FORTRAN complete; MANUAL.md; FORTRAN-INTERNALS.md.
 
 # Part A — the survey (2026-11-02)
@@ -307,7 +309,25 @@ under the defaults; DUNGEON stays quiet under the defaults (and has its own buil
 The debugger: oracle tests against the probe where it speaks, a new session on a compiled program
 in `internal/debugger/fortran_test.go`.
 
-## Questions
+## The review (2026-11-02)
+
+The author accepted the survey's decisions and the subtask list above, and answered:
+
+1. **Level B:** symbol names, plus subscripts and types. The debugger work stays in this
+   phase. `EXAMINE V(1)` shows the element, and a REAL shows as REAL. The language stays MACRO,
+   and Phase 74's Decision 3 stands, so there are no FORTRAN debugger records. How the debugger
+   learns a variable's type and bounds is still open, and subtask 10 starts by settling it: what
+   the compiler can write that MACRO and LINK carry into the image, or what the debugger can read
+   beside it as it already reads the `.MAR` file for source lines.
+2. **No checks by default,** as recommended. MANUAL.md's 14.7 lists VAX FORTRAN's default as a
+   possible difference.
+3. **`UNUSED` is its own keyword,** off by default and included in `ALL`.
+4. **The probe:** yes. I write it, and the author runs it on the simh VAX.
+5. **`/[NO]F77` stays,** as the last subtask before the close-out.
+6. **The listing's layout stands as drawn:** the two-line heading, and maps and cross references
+   after the whole source.
+
+## Questions, as put to the author
 
 1. **How far should the debugger go, and in which phase?** You asked for this as
    part of the work; I've made it subtasks here rather than a new phase, since Phase 86 is the
@@ -350,7 +370,8 @@ in `internal/debugger/fortran_test.go`.
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
-- **2026-11-02:** Subtask 1, the survey (Part A), written and awaiting the author's
-  answers. The author asked during it for a review of debugging FORTRAN programs, after
+- **2026-11-02:** Subtask 1, the survey (Part A), written and reviewed; the author chose
+  level B for the debugger and took the other recommendations ("The review"). The author asked
+  during it for a review of debugging FORTRAN programs, after
   finding the debugger refuses the compiler's dotted names; reproduced, and made
   subtasks 2 and 10. No code changed.

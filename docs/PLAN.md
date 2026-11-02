@@ -134,7 +134,7 @@ questions, and a progress log extended as that phase is worked.
 | 82 | [PHASE-82 - FORTRAN DEC extensions](PHASE-82%20-%20FORTRAN%20DEC%20extensions.md) | STRUCTURE, RECORD, UNION, MAP; typeless and Hollerith constants; VOLATILE, AUTOMATIC, STATIC; CDEC$ directives; `/ALIGN` — done 2026-11-01 |
 | 83 | [PHASE-83 - FORTRAN and VMS](PHASE-83%20-%20FORTRAN%20and%20VMS.md) | INCLUDE of text library modules and govax's definitions from vmsdef; calling system services and RTL routines; handlers, ASTs, and exit handlers in FORTRAN; the system subroutines; STR$ — done 2026-11-01 |
 | 84 | [PHASE-84 - FORTRAN optimizer](PHASE-84%20-%20FORTRAN%20optimizer.md) | `/OPTIMIZE`: folding, dead code, common subexpressions, loop invariants, strength reduction, register allocation, VAX loop instructions, a peephole pass — done 2026-11-02 |
-| 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG` — planned |
+| 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on FORTRAN programs — in progress |
 | 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | A substantial program compiled and run, an optional VMS round, the manual's chapter, the internals tour — planned |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
