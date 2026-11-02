@@ -217,6 +217,10 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 		g.label(g.blockLabel(b), b.Note)
 	}
 
+	if b.Rotated {
+		g.noteRotated(b)
+	}
+
 	for _, s := range b.Stmts {
 		g.source(s.Source())
 
@@ -235,6 +239,20 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 	g.source(b.End.Source())
 	g.terminator(b.End, next)
 	g.endStatement()
+}
+
+// noteRotated has the first instruction of a block moved to the bottom of its loop say
+// where it's from, since the source lines stay in order (Decision 12 of docs/PHASE-84 -
+// FORTRAN optimizer.md).
+func (g *routineGen) noteRotated(b *ir.Block) {
+	from := b.End.Source()
+	if len(b.Stmts) > 0 {
+		from = b.Stmts[0].Source()
+	}
+
+	if from != nil {
+		g.note = "from line " + strconv.Itoa(from.Base().Pos.Line)
+	}
 }
 
 // blockLabel is the label of block b: unit.Ln for the block that starts
@@ -276,6 +294,9 @@ func (g *routineGen) assign(s *ir.Assign) {
 					g.note = "one pass fewer"
 				}
 			}
+
+		case ir.LimitCell:
+			g.note = c.Loop + "'s limit"
 
 		case ir.StepCell:
 			g.note = c.Loop + "'s step"

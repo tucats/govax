@@ -320,7 +320,7 @@ func TestRegisterCode(t *testing.T) {
 	}{
 		{"an index, used where it is", []string{
 			"SUBROUTINE S", "REAL A(10)", "COMMON /V/ A, N", "DO 10 I = 1, N", "A(I) = 0.0", "10:CONTINUE", "END",
-		}, []string{"CLRF\tS.A-4[R", "SOBGTR\tR"}, []string{"MOVL\tS.I,R0"}},
+		}, []string{"CLRF\tS.A-4[R", "AOBLEQ\tR"}, []string{"MOVL\tS.I,R0"}},
 
 		{"a dummy's element by a constant subscript", []string{
 			"SUBROUTINE S(A, N)", "REAL A(10)", "DO 10 I = 1, N", "X = X + A(3)", "CALL NEXT", "10:CONTINUE", "END",

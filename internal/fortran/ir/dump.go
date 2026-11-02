@@ -174,6 +174,8 @@ func cellNote(c *Cell) string {
 		return "result " + c.Sym.Name
 	case CountCell:
 		return c.Loop + "'s count"
+	case LimitCell:
+		return c.Loop + "'s limit"
 	case StepCell:
 		return c.Loop + "'s step"
 	case DescriptorCell:

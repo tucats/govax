@@ -1,6 +1,7 @@
 package opt
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,7 +21,12 @@ func improved(t *testing.T, name string, lines ...string) *ir.Routine {
 // beforeRegisters are the passes before the register allocator, whose results a test can
 // read by the program's own names.
 func beforeRegisters() []Pass {
-	return Passes[:len(Passes)-1]
+	return Passes[:registersAt()]
+}
+
+// registersAt is where the register allocator is in the list of passes.
+func registersAt() int {
+	return slices.IndexFunc(Passes, func(p Pass) bool { return p.Name == "registers" })
 }
 
 // codeText is a routine's statements and terminators, a line each, as the dump
@@ -367,6 +373,7 @@ func TestVariablesKeepStores(t *testing.T) {
 func TestDeadCount(t *testing.T) {
 	r := improved(t, "S",
 		"SUBROUTINE S(IA)",
+		"INTEGER*2 I",
 		"N = 0",
 		"DO 10 I = 5, N",
 		"IA = 1",
@@ -381,7 +388,7 @@ func TestDeadCount(t *testing.T) {
 			t.Errorf("the first loop's count is still there")
 		}
 
-		if c.Name == "$C2" && c.Offset != cellNamed(t, r, "I").Offset+4 {
+		if c.Name == "$C2" && c.Offset != cellNamed(t, r, "N").Offset+4 {
 			t.Errorf("the second loop's count is at %d", c.Offset)
 		}
 	}
@@ -458,8 +465,8 @@ func TestPassesOnCorpus(t *testing.T) {
 		t.Errorf("a second run changed something:\n%s", firstDifference(first, second))
 	}
 
-	// The allocator is last, and a second run of it does nothing.
-	allocate := Passes[len(Passes)-1:]
+	// The allocator and what follows it are last, and a second run of them does nothing.
+	allocate := Passes[registersAt():]
 	run(routines, allocate)
 
 	first = ir.Dump(routines)

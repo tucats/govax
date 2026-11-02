@@ -25,7 +25,7 @@ import (
 //
 // A pass can't give anything a register without knowing what would be there otherwise, so
 // this one lists every candidate first, with what it would gain, and rewrites only the
-// winners. The candidates are of four kinds.
+// winners. The candidates are of five kinds.
 //
 // The compiler's own temporaries, counts, and steps ($H1, $U1, $C5). They have no home to
 // keep up, as nothing reads them after they die (Decision 6), so the cell simply becomes a
@@ -60,6 +60,8 @@ import (
 //	      C(I,J), with J*60 not changing:     ADDL3 $H1,I,R0  and  C-244[R0]
 //
 // which with C-244+J*60*4 in R6 is (R6)[R8], one instruction fewer on every trip.
+//
+// An index that goes up by a constant each trip, computed by a multiplication: induction.go.
 //
 // A dummy argument's value or text pointer has to be read before the loop, so the loop
 // must have been sure to read it on its first trip: an optional argument not passed
@@ -100,7 +102,8 @@ import (
 // variables as they were when the loop began. The manual gives a handler no such promise:
 // VOLATILE is how to say a variable must be right at every moment (Decision 9).
 //
-// Registers runs last of the IR's passes, since other passes recognize places by their forms.
+// Registers runs after the IR's other passes that look at statements, since they recognize
+// places by their forms. Only Rotate (rotate.go), which only moves blocks, comes after it.
 
 // Registers is the pass.
 func Registers(r *ir.Routine) {
@@ -117,6 +120,7 @@ func Registers(r *ir.Routine) {
 
 	a := newAllocator(r)
 	a.findTemporaries()
+	a.findStepped()
 	a.findBases()
 	a.findPointers()
 	a.findVariables()
@@ -137,6 +141,9 @@ const (
 // enoughGain is the least a candidate must gain: more than the entry mask's push and pop.
 const enoughGain = 3
 
+// leavingLoop is the note on a block that gives a variable back on the way out of a loop.
+const leavingLoop = "leaving the loop"
+
 // reference is one use of a place.
 type reference struct {
 	m     *ir.Mem
@@ -155,7 +162,8 @@ type candidateKind int
 // first: a base's place must still look as it did when it was found, and so must a
 // pointer's, and what the outer loops' rewrites leave alone isn't in their way.
 const (
-	baseCandidate    candidateKind = iota // an array's address and an index that doesn't change
+	steppedCandidate candidateKind = iota // an index that goes up with a loop's variable (induction.go)
+	baseCandidate                         // an array's address and an index that doesn't change
 	pointerCandidate                      // an address in memory that doesn't change
 	otherCandidate                        // a variable's value, or a dummy's address
 	cellCandidate                         // a compiler's cell, as it is
@@ -190,6 +198,11 @@ type candidate struct {
 	home    *ir.Mem
 	written bool
 
+	// key is a stepped value's, the expression it takes the place of, and steps what keeps it
+	// up to date.
+	key   string
+	steps []valueStep
+
 	register int
 }
 
@@ -220,6 +233,10 @@ type allocator struct {
 	// needn't be.
 	valued map[*ir.Param][]*Loop
 
+	// stepped are the indexes, by expression and loop, that a stepped candidate may
+	// replace, so that they aren't split for a base as well.
+	stepped map[string]bool
+
 	mover  *mover
 	copies int
 	exits  int
@@ -236,6 +253,7 @@ func newAllocator(r *ir.Routine) *allocator {
 		touched:     map[*Loop][]Place{},
 		claimed:     map[*ir.Mem]bool{},
 		valued:      map[*ir.Param][]*Loop{},
+		stepped:     map[string]bool{},
 		exitOf:      map[*ir.Block]bool{},
 	}
 
@@ -431,6 +449,10 @@ func (a *allocator) findBases() {
 	for _, ref := range a.refs {
 		inner := a.g.LoopOf(ref.block)
 		if inner == nil {
+			continue
+		}
+
+		if ref.m.Index != nil && a.stepped[steppedKey(ref.m.Index, inner)] {
 			continue
 		}
 
@@ -1114,7 +1136,10 @@ func (a *allocator) install(c *candidate) {
 	}
 	a.r.Cells = append(a.r.Cells, cell)
 
-	rep := &replacer{place: func(m *ir.Mem) *ir.Mem { return c.place(cell, m) }}
+	rep := &replacer{key: c.key, with: &ir.Load{Mem: &ir.Mem{Cell: cell, T: c.t}}}
+	if c.place != nil {
+		rep = &replacer{place: func(m *ir.Mem) *ir.Mem { return c.place(cell, m) }}
+	}
 
 	for _, b := range l.Blocks {
 		rep.rewrite(b, 0, len(b.Stmts))
@@ -1136,6 +1161,8 @@ func (a *allocator) install(c *candidate) {
 	if c.home != nil && c.written {
 		a.writeBack(g, l, c, cell)
 	}
+
+	a.keepStepping(l, c, cell)
 }
 
 // bitsOf is the place m read as an integer of the type t.
@@ -1193,7 +1220,7 @@ func (a *allocator) writeBack(g *Graph, l *Loop, c *candidate, cell *ir.Cell) {
 
 		a.exits++
 
-		out := &ir.Block{Name: "W" + strconv.Itoa(a.exits), Note: "leaving the loop", Stmts: []ir.Stmt{store}}
+		out := &ir.Block{Name: "W" + strconv.Itoa(a.exits), Note: leavingLoop, Stmts: []ir.Stmt{store}}
 		out.End = ir.NewJump(from, e.To)
 		a.exitOf[out] = true
 

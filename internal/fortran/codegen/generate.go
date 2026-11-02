@@ -818,6 +818,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return c.Sym.Name + ", the function's value"
 	case ir.CountCell:
 		return c.Loop + "'s count"
+	case ir.LimitCell:
+		return c.Loop + "'s limit"
 	case ir.StepCell:
 		return c.Loop + "'s step"
 	case ir.TextCell:

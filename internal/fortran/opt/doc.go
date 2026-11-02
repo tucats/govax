@@ -29,7 +29,8 @@
 // breaks a routine is named at once, rather than being found later as a
 // program that prints the wrong thing.
 //
-// Each subtask of the phase adds to the list. OneCharacter (onechar.go) makes a string
+// Each subtask of the phase adds to the list. DoLimits (dolimit.go) lets a DO loop's variable
+// end it, in place of a count; OneCharacter (onechar.go) makes a string
 // of one character the byte it is; Forward (forward.go) uses what a store
 // said in place of reading it back, and settles branches that come out constant;
 // Unreachable (unreachable.go) takes out what can't run after that; DeadCode
@@ -37,8 +38,9 @@
 // an adjustable array's element through its A0 where that is; LoopInvariants
 // (invariant.go) computes before a loop what every trip computes the same;
 // CommonSubexpressions (cse.go) computes once what a block computes several times, and
-// finds a place once for an operation on it; Registers (registers.go), last, keeps in R6 to
-// R11 what the loops use most.
+// finds a place once for an operation on it; Registers (registers.go) keeps in R6 to
+// R11 what the loops use most, an index a multiplication would compute among them (induction.go);
+// and Rotate (rotate.go), last, puts a loop's test at its bottom.
 //
 // # Analyses
 //
@@ -62,7 +64,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for, optchar.for, optreg.for) are there to
+// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for, optchar.for, optreg.for, optloop.for) are there to
 // catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

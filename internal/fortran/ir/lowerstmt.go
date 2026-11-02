@@ -413,7 +413,8 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	count := l.loopCell(CountCell, n, Long, name)
 	trips := tripCount(t, first, last, by)
 
-	l.emit(&Assign{origin: l.origin(), Dst: count, Src: trips})
+	set := &Assign{origin: l.origin(), Dst: count, Src: trips}
+	l.emit(set)
 	l.emit(&Assign{origin: l.origin(), Dst: place, Src: first})
 
 	if release {
@@ -424,9 +425,12 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	pass.Note = name + "'s body"
 	exit := l.newBlock()
 
+	var test *Branch
+
 	switch c, ok := trips.(*Const); {
 	case !ok:
-		l.branch(&Cmp{Le, &Load{count}, LongConst(0)}, exit, pass)
+		test = &Branch{l.origin(), &Cmp{Le, &Load{count}, LongConst(0)}, exit, pass}
+		l.terminate(test)
 	case c.Int() <= 0:
 		l.jump(exit)
 	}
@@ -434,10 +438,21 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	l.begin(pass)
 	body()
 
-	l.emit(&Assign{origin: l.origin(), Dst: place, Src: arith(Add, t, &Load{place}, by)})
-	l.emit(&Assign{origin: l.origin(), Dst: count, Src: arith(Sub, Long, &Load{count}, LongConst(1))})
-	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, pass, exit)
+	advance := &Assign{origin: l.origin(), Dst: place, Src: arith(Add, t, &Load{place}, by)}
+	less := &Assign{origin: l.origin(), Dst: count, Src: arith(Sub, Long, &Load{count}, LongConst(1))}
+	closing := &Branch{l.origin(), &Cmp{Gt, &Load{count}, LongConst(0)}, pass, exit}
+
+	l.emit(advance)
+	l.emit(less)
+	l.terminate(closing)
 	l.begin(exit)
+
+	if c, ok := by.(*Const); ok && t == Long && last.Type() == Long {
+		l.r.Counted = append(l.r.Counted, &CountedLoop{
+			Var: place, Limit: last, Step: c.Int(), Count: count,
+			Set: set, Advance: advance, Less: less, Test: test, Close: closing, Body: pass,
+		})
+	}
 }
 
 // doWhile lowers DO WHILE (e) (section 5.3.2): the test at the top, before

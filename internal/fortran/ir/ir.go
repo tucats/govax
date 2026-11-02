@@ -141,6 +141,10 @@ type Routine struct {
 	// return to go by; nil otherwise.
 	Selector *Cell
 
+	// Counted are the routine's loops of DO's kind that an optimizer could close on their
+	// limits, as lowering wrote them; nil once it has looked.
+	Counted []*CountedLoop
+
 	// Blocks are the routine's code, in the order the code generator
 	// lays them out; the first is the entry. A block data subprogram has
 	// none: it has only storage and initial values.
@@ -208,6 +212,7 @@ const (
 	ArrayCell                      // an array
 	ResultCell                     // a function's value: the function's own name
 	CountCell                      // a DO loop's iteration count
+	LimitCell                      // a DO loop's terminal value, where an optimizer dropped its count
 	StepCell                       // a DO loop's step, when it isn't a constant
 	TempCell                       // a temporary, for one statement's use
 	DescriptorCell                 // a descriptor whose addresses are set at run time
@@ -573,8 +578,34 @@ type Block struct {
 	// body", "ENTRY SINH".
 	Note string
 
+	// Rotated says an optimizer moved the block to the bottom of its loop, so that its
+	// code comes after the source line it's from, which a comment says.
+	Rotated bool
+
 	Stmts []Stmt
 	End   Terminator
+}
+
+// CountedLoop is a DO loop or implied-DO list with a Long variable and a constant step,
+// what lowering wrote for it (countedLoop), for an optimizer to find those statements
+// again without having to recognize them.
+type CountedLoop struct {
+	// Var is the variable, Limit the terminal value's expression, and Step the step.
+	Var   *Mem
+	Limit Expr
+	Step  int32
+
+	// Count is the iteration count's place.
+	Count *Mem
+
+	// Set stores the count before the loop, Advance adds the step to the variable, and
+	// Less takes one from the count.
+	Set, Advance, Less *Assign
+
+	// Test is the branch past a loop of no trips, nil if the count is a constant. Close
+	// is the branch at the loop's end, to Body or past it.
+	Test, Close *Branch
+	Body        *Block
 }
 
 // Stmt is a statement in a block: an Assign, a CharMove, or a Call.

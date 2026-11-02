@@ -86,7 +86,7 @@ func DeadCode(r *ir.Routine) {
 func (s *Storage) findDying() {
 	for _, c := range s.r.Cells {
 		switch c.Kind {
-		case ir.TempCell, ir.CountCell, ir.StepCell, ir.ResultCell:
+		case ir.TempCell, ir.CountCell, ir.LimitCell, ir.StepCell, ir.ResultCell:
 		default:
 			continue
 		}
@@ -401,7 +401,7 @@ func removeUnusedCells(r *ir.Routine) {
 	gone := map[*ir.Cell]bool{}
 
 	for _, c := range local {
-		if !used[c] && c.Sym == nil && (c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.StepCell) {
+		if !used[c] && c.Sym == nil && (c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.LimitCell || c.Kind == ir.StepCell) {
 			gone[c] = true
 		}
 	}
