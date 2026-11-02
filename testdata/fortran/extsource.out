@@ -1,0 +1,5 @@
+WIDE         351
+LENGTH         115
+SHORT         105
+AGAIN         253
+  $STATUS == "%X00000001"

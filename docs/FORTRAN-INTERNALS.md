@@ -164,6 +164,14 @@ answers it and hands on a `Program`: every line it read, in order
 (comments, included files' lines, and all, since the code generator
 copies those `Listed` into the MACRO file), and the statements.
 
+One qualifier reaches this pass from inside the source. `OPTIONS /EXTEND_SOURCE` moves the
+statement field's end for the unit after it, and every other qualifier of that statement can
+wait for semantic analysis, but this one decides what the statements are. So `source/options.go`
+knows just enough FORTRAN to follow it: what an OPTIONS statement looks like, that any other statement
+starts a unit, and that an initial line holding only END ends one. A line's kind doesn't depend on the
+field's end, so `readFile` classifies a file's lines first, and each statement's fields are worked
+out when it's reached, under the form then in effect.
+
 ### Classifying a line
 
 `lines.go`'s `split` looks at a line's first columns and decides what it

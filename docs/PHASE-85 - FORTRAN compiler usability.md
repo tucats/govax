@@ -63,7 +63,7 @@ The list as the survey proposed it and the author's review settled it:
 3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE** (done 2026-11-02).
 4. **`/CROSS_REFERENCE`** (done 2026-11-02).
 5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it (done 2026-11-02).
-6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
+6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass (done 2026-11-02).
 7. **`/WARNINGS`,** with `UNUSED` a keyword of its own, off by default (answer 3).
 8. **`/STANDARD`,** with the list of extensions read from the manual's pages.
 9. **`/DEBUG` and `/OBJECT`.**
@@ -480,3 +480,12 @@ For subtask 10, and changing what the survey assumed:
   `/CHECK=UNDERFLOW` is severe (Decision 7), and a zero-extent `A(0)` is ADJARRDIM, as Decision 5's words have it (`adjust.for`'s `SIZES(V,0,4)` does this, and is fine unchecked); a `DO` variable stepping past the integer limit after its last trip overflows (`optloop.for`'s LARGEST).
   **Tried once, not kept:** the whole corpus under `/CHECK=ALL`, both ways: no panic and no false `SUBRNG`. Nine programs differ, each for a reason read from its source: word arithmetic that wraps on purpose (`lengths`, `mixed`, `mixedg`, `optreg`, `powers`), `optloop`'s limit, `handlers`' own `INTOVF`, `adjust`'s zero extent, and `directives`' moved PC. DUNGEON under `/CHECK=BOUNDS`, both ways: no `SUBRNG`, and the same game.
   Tests: `TestFortranCheck` (28 programs, each with the check and without, both optimizer settings, both loaders), `TestFortranCheckQualifier`, `testdata/fortran/checks.for` (nothing to find, in the corpus), and `TestImage`.
+- **2026-11-02:** Subtask 6, by Decision 10. **`source/options.go`:** `followUnit`, called with each statement, tracks the reader's
+  `form` (`command`'s, as OPTIONS statements before the unit change it, until its END) and `inUnit`, by the parser's and lexer's rules: an OPTIONS
+  statement, a directive, or a statement of only a label opens no unit, and END is `isEnd`, section 5.5's initial line. `readFile` now gets only a line's kind ahead of time (which doesn't
+  depend on the field's end), and `statement` and `directive` split each line under the form they find. `sema`'s `prologue` passes over the qualifier. The form follows the statements, so an included file's lines are their unit's,
+  and OPTIONS or END may be in an included file, or a unit run on into the next file of `A+B`. **Found on the way:** section 1.4.3 says OPTIONS's qualifiers take the command's abbreviations, and `prologue` took only whole names, so `OptionsQualifier`
+  (one table, used here and by `prologue`) gives a name cut short its whole form when it stands for only one of them, for every qualifier; and an OPTIONS statement inside a unit said NOTIMPL,
+  which it never will be: it's now OPTIONSFIRST. Ours, each unconfirmed, no manual saying: the statement's own lines are read under the form before it, so a qualifier takes effect only after them; several OPTIONS statements before a unit each apply, the last winning;
+  a unit a header interrupts with no END (NOEND, so the compilation fails anyway) keeps the form to the next END, the one place this pass and the parser differ. Tests: `TestOptionsExtendSource`, `TestOptionsExtendSourceFiles`, and `TestOptionsQualifier` in `source_test.go`;
+  `TestOptionsExtendSource` in `compile_test.go`; `sema_test.go`'s OPTIONS cases; `testdata/fortran/extsource.for`, in the corpus both ways.

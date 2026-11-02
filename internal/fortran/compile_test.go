@@ -796,3 +796,67 @@ func TestNoCrossReference(t *testing.T) {
 		t.Errorf("a listing with a cross reference:\n%s", text)
 	}
 }
+
+// TestOptionsExtendSource checks OPTIONS's /[NO]EXTEND_SOURCE through the compiler: the
+// first pass acts on it, and no later pass minds it.
+func TestOptionsExtendSource(t *testing.T) {
+	// X = 1 ... in columns 7 to 72, with text past them that only compiles if the
+	// statement field is the one the unit should have.
+	narrow := "      X = 1" + strings.Repeat(" ", 61) + ") SEQ 10" // a sequence field
+	wide := "      X = 1" + strings.Repeat(" ", 61) + "+ 2"        // part of the statement
+
+	compile := func(extend bool, lines ...string) Result {
+		options := testOptions
+		options.ExtendSource = extend
+		options.List = true
+
+		return Compile(options, File{Spec: "T.FOR", Name: "T", Lines: lines})
+	}
+
+	tests := []struct {
+		name   string
+		extend bool
+		lines  []string
+	}{
+		{"on for a unit", false, []string{"      OPTIONS /EXTEND_SOURCE", "      PROGRAM T", wide, "      END"}},
+		{"off again after its END", false, []string{"      OPTIONS /EXTEND_SOURCE", "      PROGRAM T", wide, "      END", "      SUBROUTINE S", narrow, "      END"}},
+		{"off for a unit", true, []string{"      OPTIONS /NOEXTEND_SOURCE", "      PROGRAM T", narrow, "      END", "      SUBROUTINE S", wide, "      END"}},
+		{"cut short, among others", false, []string{"      OPTIONS /CHECK=BOUNDS/EXT", "      PROGRAM T", wide, "      END"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := compile(tt.extend, tt.lines...)
+			if r.Errors != 0 || len(r.Messages) != 0 {
+				t.Fatalf("messages: %v", r.Messages)
+			}
+
+			if text := strings.Join(r.Listing, "\n"); !strings.Contains(text, tt.lines[2]) {
+				t.Errorf("the listing doesn't have the whole line:\n%s", text)
+			}
+		})
+	}
+
+	// Without it, the statement ends at column 72, the rest being a sequence field,
+	// so X is 1 and there's no error even in what's past it.
+	if r := compile(false, "      PROGRAM T", narrow, "      END"); r.Errors != 0 {
+		t.Errorf("a sequence field: %v", r.Messages)
+	}
+
+	// With it, the same line's text is part of the statement: an error.
+	if r := compile(false, "      OPTIONS /EXTEND_SOURCE", "      PROGRAM T", narrow, "      END"); r.Errors == 0 {
+		t.Errorf("text past column 72 under OPTIONS was ignored")
+	}
+
+	// Past column 132 is fatal under OPTIONS as on the command (1.3.5).
+	r := compile(false, "      OPTIONS /EXTEND_SOURCE", "      PROGRAM T", "      X = 1"+strings.Repeat(" ", 125)+"2", "      END")
+	if r.Errors != 1 || r.Messages[0].Ident != "LINETOOLONG" {
+		t.Errorf("past column 132: %v", r.Messages)
+	}
+
+	// In a unit, an OPTIONS statement is an error, and does nothing to the lines (1.4.3).
+	r = compile(false, "      PROGRAM T", "      OPTIONS /EXTEND_SOURCE", narrow, "      END")
+	if r.Errors != 1 || r.Messages[0].Ident != "OPTIONSFIRST" {
+		t.Errorf("OPTIONS in a unit: %v", r.Messages)
+	}
+}

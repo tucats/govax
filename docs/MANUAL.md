@@ -4963,7 +4963,7 @@ The command's syntax and qualifiers are in
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
-`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, or `/NOCHECK` for that unit alone. From the
+`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, or `/NOEXTEND_SOURCE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
 `/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, and `--check keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, and `/CHECK=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
 

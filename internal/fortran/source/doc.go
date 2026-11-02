@@ -55,7 +55,9 @@
 //   - The statement field ends at column 72, or 132 with
 //     /EXTEND_SOURCE; text past it is ignored without a message, as the
 //     manual says. With /EXTEND_SOURCE there is no sequence field, and
-//     text past column 132 is a fatal error.
+//     text past column 132 is a fatal error. An OPTIONS statement's
+//     /[NO]EXTEND_SOURCE says the same for the unit after it (options.go),
+//     the one qualifier of that statement read as early as this.
 //   - A statement may have at most /CONTINUATIONS=n continuation lines
 //     (19 by default).
 //   - Compiler directives (chapter 10): a line starting CDEC$ in columns

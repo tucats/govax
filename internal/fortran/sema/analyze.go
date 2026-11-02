@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/lex"
+	"github.com/tucats/govax/internal/fortran/source"
 )
 
 // Options are the qualifiers on the FORTRAN command that semantic analysis
@@ -123,7 +124,9 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 
 		case *ast.OptionsStmt:
 			for _, q := range s.Qualifiers {
-				switch q.Name {
+				switch source.OptionsQualifier(q.Name) {
+				case "EXTEND_SOURCE", "NOEXTEND_SOURCE":
+					// The first pass has already acted on it (source/options.go).
 				case "I4":
 					opts.NoI4 = false
 				case "NOI4":

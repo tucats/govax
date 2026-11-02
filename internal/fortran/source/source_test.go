@@ -615,3 +615,167 @@ func TestReadAll(t *testing.T) {
 		t.Errorf("%d statements, lines %+v", len(p.Statements), p.Lines)
 	}
 }
+
+// TestOptionsExtendSource checks an OPTIONS statement's /[NO]EXTEND_SOURCE
+// (section 1.4.3): it says where the field ends for the unit after it, to the unit's
+// END, whatever the command said.
+func TestOptionsExtendSource(t *testing.T) {
+	field := strings.Repeat("A", 66)              // columns 7 to 72
+	line := "      " + field + "BEYOND"           // with text past column 72
+	cut, whole := "0|"+field, "0|"+field+"BEYOND" // read to 72, and to 132
+
+	tests := []struct {
+		name  string
+		form  Form
+		lines []string
+		want  []string
+	}{
+		{
+			name:  "a unit, and the next",
+			lines: []string{line, "      OPTIONS", "      END", "      OPTIONS /EXTEND_SOURCE", "      PROGRAM P", line, "      END", line, "      END"},
+			want:  []string{cut, "0|OPTIONS", "0|END", "0|OPTIONS /EXTEND_SOURCE", "0|PROGRAM P", whole, "0|END", cut, "0|END"},
+		},
+		{
+			name:  "the manual's form, among others",
+			lines: []string{"      OPTIONS /CHECK/EXTEND_SOURCE", line, "      END", "      OPTIONS /G_FLOATING", line, "      END"},
+			want:  []string{"0|OPTIONS /CHECK/EXTEND_SOURCE", whole, "0|END", "0|OPTIONS /G_FLOATING", cut, "0|END"},
+		},
+		{
+			name:  "/NOEXTEND_SOURCE against the command",
+			form:  Form{ExtendSource: true},
+			lines: []string{"      OPTIONS /NOEXTEND_SOURCE", line, "      END", line, "      END"},
+			want:  []string{"0|OPTIONS /NOEXTEND_SOURCE", cut, "0|END", whole, "0|END"},
+		},
+		{
+			name:  "the last one wins, and blanks, case, and a short name don't matter",
+			lines: []string{"      OPTIONS /NOEXTEND_SOURCE", "      o p t ions / ext", line, "      END"},
+			want:  []string{"0|OPTIONS /NOEXTEND_SOURCE", "0|o p t ions / ext", whole, "0|END"},
+		},
+		{
+			name:  "an OPTIONS statement's own lines come before it takes effect",
+			lines: []string{"      OPTIONS /EXTEND_SOURCE/CHECK=(BOUNDS,", "     1" + field[:60] + "OVERFLOW)", line, "      END"},
+			want:  []string{"0|OPTIONS /EXTEND_SOURCE/CHECK=(BOUNDS," + field[:60] + "OVERFL", whole, "0|END"},
+		},
+		{
+			name:  "inside a unit it changes nothing",
+			lines: []string{"      X = 1", "      OPTIONS /EXTEND_SOURCE", line, "      END", line, "      END"},
+			want:  []string{"0|X = 1", "0|OPTIONS /EXTEND_SOURCE", cut, "0|END", cut, "0|END"},
+		},
+		{
+			name:  "a label alone starts no unit",
+			lines: []string{"   10", "      OPTIONS /EXTEND_SOURCE", line, "      END"},
+			want:  []string{"10|", "0|OPTIONS /EXTEND_SOURCE", whole, "0|END"},
+		},
+		{
+			name:  "assignments to a variable named OPTIONS start a unit",
+			lines: []string{"      OPTIONS = 1", "      OPTIONS /EXTEND_SOURCE", line, "      END"},
+			want:  []string{"0|OPTIONS = 1", "0|OPTIONS /EXTEND_SOURCE", cut, "0|END"},
+		},
+		{
+			name: "only END ends the unit",
+			lines: []string{
+				"      OPTIONS /EXTEND_SOURCE", "      END = 1", "      ENDIF", "      ENDFILE 1", "      E ND X", line,
+				"      END   ! the end", line, "      END",
+			},
+			want: []string{
+				"0|OPTIONS /EXTEND_SOURCE", "0|END = 1", "0|ENDIF", "0|ENDFILE 1", "0|E ND X", whole,
+				"0|END   ", cut, "0|END",
+			},
+		},
+		{
+			name:  "END on an initial line, with a continuation line (section 5.5)",
+			lines: []string{"      OPTIONS /EXTEND_SOURCE", "      END", "     1 = 1", line, "      END"},
+			want:  []string{"0|OPTIONS /EXTEND_SOURCE", "0|END = 1", cut, "0|END"},
+		},
+		{
+			name:  "a CDEC$ directive, and a carriage return left on END",
+			lines: []string{"      OPTIONS /EXTEND_SOURCE", "CDEC$ " + field + "BEYOND", "      END\r", "CDEC$ " + field + "BEYOND", line, "      END"},
+			want:  []string{"0|OPTIONS /EXTEND_SOURCE", "D|" + field + "BEYOND", "0|END\r", "D|" + field, cut, "0|END"},
+		},
+		{
+			name:  "a tab-format line",
+			lines: []string{"      OPTIONS /EXTEND_SOURCE", "\t" + field + "BEYOND", "      END", "\t" + field + "BEYOND", "      END"},
+			want:  []string{"0|OPTIONS /EXTEND_SOURCE", whole, "0|END", cut, "0|END"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			check(t, tt.form, tt.lines, tt.want...)
+		})
+	}
+}
+
+// TestOptionsExtendSourceFiles checks that the form follows the statements, wherever their
+// lines are: an included file's lines belong to the unit they're in, and a unit
+// may start or end in an included file, or in the next file of a joined compilation.
+func TestOptionsExtendSourceFiles(t *testing.T) {
+	field := strings.Repeat("A", 66)
+	line := "      " + field + "BEYOND"
+	cut, whole := "0|"+field, "0|"+field+"BEYOND"
+
+	check := func(t *testing.T, fs files, lines []string, want ...string) {
+		t.Helper()
+
+		p, idents := read(t, Form{}, fs, lines...)
+		if len(idents) != 0 {
+			t.Errorf("messages %v", idents)
+		}
+
+		if got := texts(p); !slices.Equal(got, want) {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	}
+
+	t.Run("a unit's included lines", func(t *testing.T) {
+		check(t, files{"I": {line}}, []string{"      OPTIONS /EXTEND_SOURCE", "      INCLUDE 'I'", "      END", "      INCLUDE 'I'", "      END"},
+			"0|OPTIONS /EXTEND_SOURCE", whole, "0|END", cut, "0|END")
+	})
+
+	t.Run("OPTIONS in an included file", func(t *testing.T) {
+		check(t, files{"I": {"C     options", "      OPTIONS /EXTEND_SOURCE"}}, []string{"      INCLUDE 'I'", line, "      END"},
+			"0|OPTIONS /EXTEND_SOURCE", whole, "0|END")
+	})
+
+	t.Run("END in an included file", func(t *testing.T) {
+		check(t, files{"I": {"      END"}}, []string{"      OPTIONS /EXTEND_SOURCE", line, "      INCLUDE 'I'", line, "      END"},
+			"0|OPTIONS /EXTEND_SOURCE", whole, "0|END", cut, "0|END")
+	})
+
+	t.Run("joined files", func(t *testing.T) {
+		var messages diag.List
+
+		a := &File{Spec: "A.FOR", Lines: []string{"      OPTIONS /EXTEND_SOURCE", line}}
+		b := &File{Spec: "B.FOR", Lines: []string{line, "      END", line, "      END"}}
+
+		got := texts(ReadAll(Form{}, []*File{a, b}, nil, &messages))
+		want := []string{"0|OPTIONS /EXTEND_SOURCE", whole, whole, "0|END", cut, "0|END"}
+
+		if !slices.Equal(got, want) || len(messages.Messages()) != 0 {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("past column 132 under OPTIONS", func(t *testing.T) {
+		long := strings.Repeat("B", 126)
+
+		p, idents := read(t, Form{}, nil, "      OPTIONS /EXTEND_SOURCE", "      "+long+"Y", "      Z = 2")
+		if strings.Join(idents, ",") != "LINETOOLONG" || len(p.Statements) != 1 {
+			t.Errorf("past column 132: %v, %q", idents, texts(p))
+		}
+	})
+}
+
+// TestOptionsQualifier checks the names a qualifier may be cut to.
+func TestOptionsQualifier(t *testing.T) {
+	for name, want := range map[string]string{
+		"EXTEND_SOURCE": "EXTEND_SOURCE", "EXT": "EXTEND_SOURCE", "E": "EXTEND_SOURCE",
+		"NOEXTEND": "NOEXTEND_SOURCE", "NOE": "NOEXTEND_SOURCE",
+		"CH": "CHECK", "NOC": "NOCHECK", "G": "G_FLOATING", "NOG": "NOG_FLOATING", "F": "F77", "NOF": "NOF77", "I": "I4", "NOI": "NOI4",
+		"NO": "NO", "N": "N", "BOGUS": "BOGUS", "EXTEND_SOURCES": "EXTEND_SOURCES",
+	} {
+		if got := OptionsQualifier(name); got != want {
+			t.Errorf("OptionsQualifier(%s) is %s, want %s", name, got, want)
+		}
+	}
+}

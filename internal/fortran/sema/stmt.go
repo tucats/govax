@@ -138,6 +138,12 @@ func (a *analyzer) statement(s ast.Stmt) {
 		}
 	}
 
+	if _, isOptions := s.(*ast.OptionsStmt); isOptions {
+		a.report("OPTIONSFIRST", s.Position())
+
+		return
+	}
+
 	if !handled(s) {
 		a.unimplemented(s)
 

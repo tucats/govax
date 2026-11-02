@@ -152,6 +152,9 @@ var messages = map[string]kind{
 	// PSECTBLOCK is CDEC$ PSECT naming a block the unit doesn't declare.
 	"PSECTBLOCK": {Error, "%s is not a common block of this program unit, so CDEC$ PSECT can't change it"},
 
+	// OPTIONSFIRST is an OPTIONS statement inside a unit (section 1.4.3).
+	"OPTIONSFIRST": {Error, "an OPTIONS statement must come before the statements of its program unit"},
+
 	// OPTIONSBAD is an option of CDEC$ OPTIONS that isn't one (the HP manual's
 	// 14.14).
 	"OPTIONSBAD": {Error, "in CDEC$ OPTIONS: %s"},

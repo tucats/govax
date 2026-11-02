@@ -4154,7 +4154,8 @@ $FOR
         /EXTEND_SOURCE  Lets the statement field of a fixed-format line
         /NOEXTEND_SOURCE
                         run to column 132 instead of column 72.  The
-                        default is /NOEXTEND_SOURCE.
+                        default is /NOEXTEND_SOURCE.  An OPTIONS statement
+                        overrides this for the unit after it.
 
         /D_LINES        Compiles the debugging lines (those with a D in
         /NOD_LINES      column 1) as statements.  The default is

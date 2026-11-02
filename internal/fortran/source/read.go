@@ -20,7 +20,7 @@ func Read(f Form, file *File, opener Opener, messages *diag.List) *Program {
 // ReadAll is Read for files joined into one compilation (FORTRAN A+B): one
 // Program, of their lines in turn.
 func ReadAll(f Form, files []*File, opener Opener, messages *diag.List) *Program {
-	r := &reader{form: f, opener: opener, messages: messages, program: &Program{}}
+	r := &reader{command: f, form: f, opener: opener, messages: messages, program: &Program{}}
 
 	for _, file := range files {
 		if !r.stopped {
@@ -33,7 +33,14 @@ func ReadAll(f Form, files []*File, opener Opener, messages *diag.List) *Program
 
 // reader is Read's state.
 type reader struct {
-	form     Form
+	// command is the form the command gave, and form the one in effect: the
+	// command's, as the OPTIONS statements before the current unit change it.
+	command Form
+	form    Form
+
+	// inUnit is set from a unit's first statement to its END (options.go).
+	inUnit bool
+
 	opener   Opener
 	messages *diag.List
 	program  *Program
@@ -51,11 +58,12 @@ type reader struct {
 func (r *reader) readFile(file *File, depth int, listed, library bool) {
 	n := len(file.Lines)
 	lines := make([]*Line, n)
-	splits := make([]fields, n)
 
+	// A line's kind doesn't depend on where the statement field ends, so it can
+	// be known ahead of the OPTIONS statements that change that. The fields
+	// themselves are worked out as each line is reached.
 	for i, text := range file.Lines {
-		splits[i] = r.form.split(text)
-		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library}
+		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: r.form.split(text).kind, Listed: listed, Library: library}
 	}
 
 	for i := 0; i < n && !r.stopped; {
@@ -68,7 +76,7 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 
 		case Directive:
 			r.add(lines[i])
-			r.directive(lines[i], splits[i], first)
+			r.directive(lines[i], first)
 			i++
 
 		case Continuation:
@@ -91,7 +99,7 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 			}
 
 			r.add(lines[i : last+1]...)
-			r.statement(lines[i:last+1], splits[i:last+1], first, depth)
+			r.statement(lines[i:last+1], first, depth)
 			i = last + 1
 		}
 	}
@@ -112,9 +120,9 @@ func (r *reader) add(lines ...*Line) {
 // statement puts together the statement on lines, whose first is its
 // initial line and the rest its continuation lines and the comment lines
 // among them; first is the initial line's index in the program's lines.
-func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
+func (r *reader) statement(lines []*Line, first, depth int) {
 	s := &Statement{First: first, Last: first + len(lines) - 1, Depth: depth, Library: lines[0].Library}
-	r.label(s, lines[0], splits[0])
+	r.label(s, lines[0], r.form.split(lines[0].Text))
 
 	var (
 		text      strings.Builder
@@ -122,8 +130,8 @@ func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
 		continued int
 	)
 
-	for k, line := range lines {
-		fl := splits[k]
+	for _, line := range lines {
+		fl := r.form.split(line.Text)
 
 		switch fl.kind {
 		case Comment:
@@ -161,10 +169,13 @@ func (r *reader) statement(lines []*Line, splits []fields, first, depth int) {
 	}
 
 	r.program.Statements = append(r.program.Statements, s)
+	r.followUnit(s)
 }
 
 // directive adds a CDEC$ line as a directive statement.
-func (r *reader) directive(line *Line, fl fields, index int) {
+func (r *reader) directive(line *Line, index int) {
+	fl := r.form.split(line.Text)
+
 	if r.tooLong(line, fl) {
 		return
 	}

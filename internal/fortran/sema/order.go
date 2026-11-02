@@ -80,8 +80,8 @@ func placementOf(s ast.Stmt, stmtFunc bool) placement {
 		return placement{execGroup, execGroup}
 	}
 
-	// FORMAT, ENTRY, NAMELIST, the directives, OPTIONS (which the parser
-	// reports where it doesn't belong).
+	// FORMAT, ENTRY, NAMELIST, the directives, OPTIONS (which the statement
+	// walk reports where it doesn't belong: OPTIONSFIRST).
 	return placement{}
 }
 
