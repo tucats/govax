@@ -35,7 +35,7 @@ func listingInput(opts Options, file File, program *source.Program, messages []d
 		in.Units = listingUnits(prog)
 
 		if opts.CrossReference {
-			in.CrossRefs = listingCrossRefs(prog)
+			in.CrossRefs = listingCrossRefs(prog, program)
 		}
 	}
 
@@ -53,9 +53,16 @@ var referenceKinds = map[sema.RefKind]string{
 	sema.RefAssigned: "A",
 }
 
-// listingCrossRefs is each unit's cross reference, as text.
-func listingCrossRefs(prog *sema.Program) []listing.CrossRef {
+// listingCrossRefs is each unit's cross reference, as text. A mention on an included
+// line has that line's include depth before its number, as the listing's source lines
+// do, since line 1 of an INCLUDE file isn't line 1 of the file that includes it.
+func listingCrossRefs(prog *sema.Program, program *source.Program) []listing.CrossRef {
 	crossRefs := make([]listing.CrossRef, 0, len(prog.Units))
+
+	depths := map[int]int{}
+	for _, line := range program.Lines {
+		depths[line.Serial] = line.Depth
+	}
 
 	for _, u := range prog.Units {
 		crossRef := listing.CrossRef{Unit: u.Name}
@@ -63,7 +70,12 @@ func listingCrossRefs(prog *sema.Program) []listing.CrossRef {
 		for _, name := range u.CrossReference() {
 			row := listing.CrossRow{Name: name.Name, What: name.What}
 			for _, ref := range name.Refs {
-				row.Refs = append(row.Refs, strconv.Itoa(ref.Line)+referenceKinds[ref.Kind])
+				text := strconv.Itoa(ref.Line) + referenceKinds[ref.Kind]
+				if depth := depths[ref.Serial]; depth > 0 {
+					text = strconv.Itoa(depth) + ":" + text
+				}
+
+				row.Refs = append(row.Refs, text)
 			}
 
 			crossRef.Rows = append(crossRef.Rows, row)

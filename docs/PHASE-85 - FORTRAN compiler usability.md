@@ -459,8 +459,9 @@ For subtask 10, and changing what the survey assumed:
   as used; rows grouped as the drawing has them (variables, constants, routines, others, labels), alphabetically within a
   group; `/SHOW` doesn't touch a cross reference; shown after errors, for the units analysis reached, with none if the source pass
   stopped the compilation. **Left out:** a statement function's dummies and a DATA implied-DO's variable (in no table of the
-  unit), the unit's own name, a record's fields, and a text library's names the program doesn't use. **Known limits:** an
-  included line's number is shown plain, as the accepted drawing's `MAX constant 1D 4` has it, so it can't be told
-  from the main file's line 1 (raised with the author at hand-over); `REAL SQRT` and a reference to it show as a REAL
+  unit), the unit's own name, a record's fields, and a text library's names the program doesn't use. **A change to the accepted drawing,** by the
+  author's decision at hand-over: a mention on an included line has its include depth, as the source lines do (`listingCrossRefs`),
+  so the drawing's `MAX constant 1D 4` is `MAX constant 1:1D 4`, since a plain 1 can't be told from the main file's line 1. Two
+  files at one depth still share a prefix, as they do among the source lines. **Known limit:** `REAL SQRT` and a reference to it show as a REAL
   variable's row. Tests: `TestCrossReference*` in `listing_test.go` and `compile_test.go`, `TestNoCrossReference`, `TestFortran_list`,
   `TestFortranCommand`.

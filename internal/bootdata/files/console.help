@@ -4214,7 +4214,8 @@ $FOR
         /CROSS_REFERENCE  A listing follows each unit's map with where its
         /NOCROSS_REFERENCE  names and labels are mentioned: a line number each,
                         with D if the line defines the name and A if it
-                        assigns it.  It is there after errors too.  Without
+                        assigns it; 1:3 is line 3 of a file included at
+                        depth 1.  It is there after errors too.  Without
                         /LIST it does nothing but say so.  The default is
                         /NOCROSS_REFERENCE.
 

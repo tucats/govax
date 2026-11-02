@@ -28,13 +28,13 @@
 //
 // With /CROSS_REFERENCE each unit's map is followed by where its names and labels
 // are mentioned, a line number each, with D if the line defines the name and A if it
-// assigns it:
+// assigns it, and a line of an INCLUDE file with its include depth before that:
 //
 //	Cross reference for SQUARES                 (D defined, A assigned, a blank is used)
-//	  I     INTEGER   2D  4A  5
-//	  N     INTEGER   2D  5A
-//	  MAX   constant  1D  4
-//	  20    label     4   6D
+//	  I     INTEGER   2D    4A    5
+//	  N     INTEGER   2D    5A
+//	  MAX   constant  1:1D  4
+//	  20    label     4     6D
 //
 // The layout is govax's own, in MACRO's manner. VAX FORTRAN's is in a manual not
 // to hand, and no program depends on a listing's columns.

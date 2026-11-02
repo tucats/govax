@@ -5008,16 +5008,16 @@ It is written after errors too, for the names the analysis reached.
 
 ```text
 Cross reference for SQUARES                 (D defined, A assigned, a blank is used)
-  I     INTEGER   2D  4A  5
-  N     INTEGER   2D  5A
-  MAX   constant  1D  4
-  20    label     4   6D
+  I     INTEGER   2D    4A    5
+  N     INTEGER   2D    5A
+  MAX   constant  1:1D  4
+  20    label     4     6D
 ```
 
 Rows go variables, constants, routines, then common blocks, namelists, and structures,
-alphabetically within each, then labels by number. A number from an `INCLUDE` file is
-that file's own line, and the mentions are in the order the source
-has them. A name from a text library's module has a row only if the program uses it.
+alphabetically within each, then labels by number. A mention on a line of an `INCLUDE` file
+has its include depth first, so `1:1D` is that file's line 1, included at depth 1, as
+the source lines above show it. The mentions are in the order the source has them. A name from a text library's module has a row only if the program uses it.
 A statement function's dummy argument, a program unit's own name, and a record's field
 have none. `/CROSS_REFERENCE` without `/LIST` is only `%FORT-I-NOLISTING`.
 

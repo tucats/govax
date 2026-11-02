@@ -688,8 +688,27 @@ func TestCrossReferenceSquares(t *testing.T) {
 		"SQUARES:",
 		"I INTEGER 2D 4A 5",
 		"N INTEGER 2D 5A",
-		"MAX constant 1D 4",
+		"MAX constant 1:1D 4",
 		"20 label 4 6D")
+}
+
+// TestCrossReferenceIncludes: a mention on an included line has its include depth, and
+// a file included twice is mentioned for each reading.
+func TestCrossReferenceIncludes(t *testing.T) {
+	opts := testOptions
+	opts.Includes = memoryIncludes{
+		"A": {"      I = 1", "      INCLUDE 'B'"},
+		"B": {"      I = 2"},
+	}
+
+	compareRows(t, crossReferenceOf(t, opts,
+		"      PROGRAM P",
+		"      I = 3",
+		"      INCLUDE 'A'",
+		"      INCLUDE 'B'",
+		"      END"),
+		"P:",
+		"I INTEGER 2A 1:1A 2:1A 1:1A")
 }
 
 // TestCrossReferenceKinds has each way of mentioning a name, and each kind of row in
