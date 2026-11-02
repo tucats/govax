@@ -382,8 +382,8 @@ The survey's decisions drew no objection, and stand.
 4. **The analyses** (done 2026-11-01): the control flow graph with every entry,
    dominators, natural loops, the places and effects of Decision 7. No code changes
    yet; tested on their own.
-5. **Forwarding and dead code:** store to load in a block, constants across
-   statements, dead compiler cells, the function value, unreachable blocks.
+5. **Forwarding and dead code** (done 2026-11-01): store to load in a block, constants
+   across statements, dead compiler cells, the function value, unreachable blocks.
 6. **Local common subexpressions.**
 7. **Loop-invariant motion:** with hoisted array bases and descriptor A0s, by
    Decision 8's rules.
@@ -560,3 +560,73 @@ The survey's decisions drew no objection, and stand.
     INCLUDE a file beside them.
     Dominators are checked against their definition, by removing each block and seeing what
     can still be reached, and each loop against the definition of a natural loop.
+- **2026-11-01:** Subtask 5, forwarding and dead code: three IR passes, the first in
+  `Passes`, each teaching its technique in its comment. `/NOOPTIMIZE`'s output is
+  unchanged.
+  - **`opt/forward.go`** is constants, in every block and across blocks: a forward
+    analysis over the graph, where a block starts with what all the blocks that can go to
+    it agree on, and an entry with nothing. A known index becomes part of the offset, what
+    comes out constant is folded by lowering's own rules (`ir.Fold`, and comparisons here), and
+    a settled `Branch`, `Switch`, or `Sign` becomes a `Jump` (`ir.NewJump`), after which the
+    analysis runs again, since a way in has gone. A store of what a place already holds goes.
+    A place has facts only if it is known exactly and isn't VOLATILE, a fact ends at any store
+    `Conflict` says can touch it and at a call by `ChangedByCall`, and a load uses one only of
+    the same type, so a REAL read of an INTEGER's bits still reads them.
+  - **`opt/unreachable.go`** removes what the graph can't reach, repeatedly, since a block
+    removed may hold the last ASSIGN of another's label.
+  - **`opt/deadcode.go`** is liveness over the cells that can die (`Storage.findDying`:
+    temporaries, DO counts and steps, a function's value; not taken, not VOLATILE). A dead
+    store goes unless its value may fault, a store just before the `RETURN` that reads it goes
+    into the `RETURN` even if it may, and temporaries, counts, and steps nothing uses leave
+    `$LOCAL`, the compiler's cells after them closing up.
+  - **A choice the manual doesn't settle (ours):** a place live at an entry is treated as live at
+    every exit. So a function with a path that doesn't set its value goes on returning the last
+    call's, as static storage always did, though the standard calls that undefined; the same rule
+    covers a DO count read after an ENTRY statement in the loop. Decision 6 says a function's value
+    can die, and this is the one case where it doesn't. `optforward.for`'s `KEEP` is the check.
+  - **Dead stores and faults:** Decision 8 speaks of moving and merging, not removing. Removing
+    `F = 5/K` could lose a program's only condition, so this keeps it (`mayFault`: a division, a
+    floating operation, a floating load). A Raw constant has no facts, for the same reason.
+  - **Copies were tried and taken out.** The survey and the plan's "store to load" suggest that
+    after `$T = N`, a read of `$T` could read `N`. It saves no memory reference, the temporary usually
+    stays live, a dummy's address is read as well, and it can cost a `TST` the generator had left out.
+    Leaving them out gained 413 instructions and 47,604 reads on DUNGEON, and no corpus program ran more
+    instructions for it (`text.for` had been 2 worse than before the pass); other programs' reads moved by
+    at most 131 either way. What copies were wanted for, a function's value, the `RETURN` does. So store-to-load for a value that
+    isn't constant waits for registers (subtask 8).
+  - **Not done, on purpose:**
+    - A DATA value as a constant (Decision 6 allows it if nothing in the unit can change it): nothing
+      measured asks for it.
+    - An AUTOMATIC variable dying at return: it could, but Decision 6 lists only the compiler's cells
+      and the value, and it is rare.
+    - A dead `Call.Result`: dropping it would leave `R2` and `R3` out of the entry mask when an `OTS$..._R3`
+      routine changes them, since `codegen`'s `call` notes them from the result's width.
+    - Read-only data no statement uses any more: a removed statement's descriptors and control blocks
+      stay in `$PDATA`, and a descriptor's target stays taken.
+    - Duplicating a `RETURN` into the blocks that jump to it, which would let each arm of an IF forward
+      its own value.
+  - **New program:** `optforward.for`, worked by hand, matched on the first run both ways. Partial stores,
+    types sharing storage, arms that agree and don't, loops, DO counts of no trips, what a call changes,
+    each settled terminator, an ASSIGNed label, D and complex values, known character lengths, each
+    shape of function value, and the faults that have to stay (`LIB$FIXUP_FLT` on a Raw constant's load).
+  - **Testing:** `forward_test.go` has a small program for each rule. `TestPassesOnCorpus` runs the passes
+    on 589 routines, with `ir.Check` after each; every block left can run (2,393 to 2,335 blocks), and
+    a second run changes nothing. `TestBoundsHold` holds with them. A negative or too-long constant
+    length isn't put in a `Text`, since `charMove` takes it for a length (`TestCharacterLengths`).
+  - **Results**, instructions in the run, cumulative with subtask 3's:
+
+    | Program | `/NOOPTIMIZE` | Subtask 3 | Now | Writes, subtask 3 to now |
+    |---|---:|---:|---:|---:|
+    | DUNGEON's game, whole run | 6,818,609 | 5,596,938 | 5,528,332 (−18.9%) | 2,641,371 to 2,581,016 |
+    | `subs` | 6,876,884 | 6,671,464 | 6,669,464 (−3.0%) | 1,843,907 to 1,841,907 |
+    | `matmul`, `sieve`, `whet`, `textk` | | | unchanged | unchanged |
+
+    As the survey expected, little is left for this pass: 1.2% of DUNGEON's instructions and 2.3% of
+    its writes, which weren't broken down further. The kernels' loops have no constants to find, and
+    wait for subtasks 6 to 9. Against subtask 3's build no program ran more instructions or wrote more.
+  - **Data reads move with layout, not only with code.** `subs`'s reads fell 808,280 with 2,000 fewer
+    instructions, for a change of a few bytes in `FLT`, far from its loops, and `whet`'s rise of 4,000 in
+    subtask 3 looks the same. The likely cause, not checked, is an instruction across a page's end, whose
+    fetch misses the window and goes through the single-byte reads `Stats` counts. So the survey's read
+    counts aren't all data, and a small change in reads says little: 11 corpus programs' reads rose by 3 to
+    112, with no more instructions or writes than before.

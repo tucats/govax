@@ -448,6 +448,13 @@ func arith(op Operator, t Type, x, y Expr) Expr {
 	return &Op{op, t, x, y}
 }
 
+// Fold is what arith is to lowering, for an optimizer that has found out more
+// about an operand: op on x and y in type t, folded by the same rules, so that
+// the compiler has one answer for what a constant expression's value is.
+func Fold(op Operator, t Type, x, y Expr) Expr {
+	return arith(op, t, x, y)
+}
+
 // split divides a Long expression into a part that isn't constant (nil
 // if there is none) and a constant added to it: I+1 is I and 1, I-1 is
 // I and -1, 5 is nil and 5.

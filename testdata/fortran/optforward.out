@@ -1,0 +1,25 @@
+HALF  327681
+BITS   0.750
+SUBSCRIPT      31      10
+UNKNOWN       7      30
+AGREE       4
+DIFFER       5
+LOOP       3       4
+COUNT       6       4
+NO TRIPS       6       5
+CALL      11      22       3
+LOGICAL
+COMPUTED 42
+OUT OF RANGE
+ARITHMETIC NEGATIVE
+ASSIGNED
+DOUBLE   3.000   1.000
+TEXT ABXDEF XD
+CHARS       2       4
+FUNC       3       6      10
+KEPT       7       7
+KEPT       7
+DIVIDE       1       8
+RESERVED       2
+FIXED   1.500
+  $STATUS == "%X00000001"

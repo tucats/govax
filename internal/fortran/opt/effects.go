@@ -74,6 +74,9 @@ type Storage struct {
 
 	// anyVolatile says something in the routine is VOLATILE.
 	anyVolatile bool
+
+	// dying are the cells whose values can die (deadcode.go).
+	dying []*ir.Cell
 }
 
 // NewStorage looks over routine r.
@@ -94,6 +97,7 @@ func NewStorage(r *ir.Routine) *Storage {
 	}
 
 	s.findTaken()
+	s.findDying()
 
 	return s
 }

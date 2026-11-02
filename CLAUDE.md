@@ -598,7 +598,10 @@ never had.
   analyses, used by no pass yet: `opt/graph.go` (`Graph`: every entry, dominators; an assigned GO TO's edges are its list
   and every label the unit ASSIGNs, section 5.6.3), `loops.go` (natural loops, `Irreducible`), `places.go` (`Place`, a region
   and a byte range; `Conflict`), and `effects.go` (`Storage`: what a statement does, what a call may change, VOLATILE), with
-  `optasts.for`.
+  `optasts.for`; subtask 5 (2026-11-01) forwarding and dead code, the first passes on the IR:
+  `opt/forward.go` (constants across blocks, known indexes, settled branches, `ir.Fold`, `ir.NewJump`),
+  `unreachable.go`, and `deadcode.go` (liveness of the cells that can die, `Storage.findDying`; a place live
+  at an entry stays live at every exit; a store whose value may fault stays), with `optforward.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2158,7 +2161,8 @@ expect adjustment as phases land):
   under `/OPTIMIZE`, with `ir.Check` after each, a failure a panic naming the pass. Without `/OPTIMIZE` it isn't run.
   `CodePasses` work on a routine's instructions (`codegen.Code`), called through `codegen.Options.Improve`, with
   `Code.Check` after each: `peephole.go` and `branches.go`. It imports `codegen`, not the reverse.
-  `Graph` and `Storage` are its analyses, each a picture of one routine.
+  `Graph` and `Storage` are its analyses, each a picture of one routine. `Passes` so far: `Forward`,
+  `Unreachable`, and `DeadCode`.
 - `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
   the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
   import it: `dclcmd`'s `fortranIncludes` searches it last.

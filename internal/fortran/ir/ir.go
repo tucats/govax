@@ -698,6 +698,12 @@ type (
 	}
 )
 
+// NewJump is a Jump to to that came from the statement from: what an optimizer
+// makes of a branch whose way it has worked out.
+func NewJump(from ast.Stmt, to *Block) *Jump {
+	return &Jump{origin{from}, to}
+}
+
 func (*Jump) terminator()         {}
 func (*Branch) terminator()       {}
 func (*Switch) terminator()       {}

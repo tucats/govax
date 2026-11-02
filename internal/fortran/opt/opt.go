@@ -16,7 +16,11 @@ type Pass struct {
 
 // Passes are the optimizer's passes, in the order they run. Each subtask of
 // docs/PHASE-84 - FORTRAN optimizer.md adds to this list.
-var Passes = []Pass{}
+var Passes = []Pass{
+	{"forward", Forward},
+	{"unreachable", Unreachable},
+	{"dead code", DeadCode},
+}
 
 // CodePass is one optimization of a routine's instructions, after the code
 // generator has chosen them and before they are written: its name, for the same
