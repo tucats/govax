@@ -262,6 +262,11 @@ func (l *lowerer) shift(t Type, e *sema.IntrinsicRef) Expr {
 		return x
 	case n >= width || n <= -width:
 		return IntConst(t, 0)
+	case n > 0 && l.unit.Checks.Overflow:
+		// ASHL sets V when it shifts out bits that differ from the sign, which would
+		// trap here, and a shift isn't arithmetic. ROTL never sets it: rotated, then
+		// with the bits that came round cleared, the value is the same.
+		v = arith(And, Long, arith(Rot, Long, longword(x), LongConst(n)), LongConst(-1<<uint(n)))
 	case n > 0:
 		v = arith(Ash, Long, longword(x), LongConst(n))
 	default:
@@ -301,7 +306,14 @@ func (l *lowerer) bitFunction(t Type, e *sema.IntrinsicRef) Expr {
 		return convertLow(t, arith(Neg, Long, field(longword(x), pos, LongConst(1)), nil))
 	}
 
-	mask := convertLow(a, arith(Ash, Long, LongConst(1), pos))
+	// 1 rotated and 1 shifted are the same for a position in the value, and only ASHL
+	// sets V, which at the sign bit would trap under /CHECK=OVERFLOW (shift, above).
+	shifter := Ash
+	if l.unit.Checks.Overflow {
+		shifter = Rot
+	}
+
+	mask := convertLow(a, arith(shifter, Long, LongConst(1), pos))
 
 	if e.Op == sema.BitSetOp {
 		return convertTo(t, arith(Or, a, x, mask))

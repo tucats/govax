@@ -453,6 +453,9 @@ func ExprText(e Expr) string {
 
 	case *CharIndex:
 		return "index(" + TextText(e.X) + ", " + TextText(e.Y) + ", " + ExprText(e.Base) + ")"
+
+	case *InRange:
+		return "inrange(" + ExprText(e.X) + ", " + ExprText(e.Low) + ", " + ExprText(e.High) + ")"
 	}
 
 	return fmt.Sprintf("%T", e)

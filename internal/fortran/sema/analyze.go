@@ -25,6 +25,9 @@ type Options struct {
 	// Align is /[NO]ALIGN: how each unit starts, which its CDEC$ OPTIONS groups
 	// change (align.go).
 	Align Alignment
+
+	// Checks is /CHECK (checks.go), which a unit's OPTIONS statements may change.
+	Checks Checks
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -70,7 +73,9 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			prologueGroups: groups,
 		}
 
-		prog.Units = append(prog.Units, a.analyzeUnit(au, unitName(au, mainName)))
+		unit := a.analyzeUnit(au, unitName(au, mainName))
+		unit.Checks = unitOpts.Checks
+		prog.Units = append(prog.Units, unit)
 	}
 
 	// A PSECT directive after the last unit has no unit to belong to, so no
@@ -127,6 +132,15 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 					opts.GFloating = true
 				case "NOG_FLOATING":
 					opts.GFloating = false
+				case "CHECK":
+					checks, err := opts.Checks.With(q.Values)
+					if err != nil {
+						messages.Report("BADCHECK", q.Pos, err.Error())
+					} else {
+						opts.Checks = checks
+					}
+				case "NOCHECK":
+					opts.Checks = Checks{}
 				default:
 					messages.Report("NOTIMPL", s.Position(), "the OPTIONS statement's /"+q.Name)
 				}

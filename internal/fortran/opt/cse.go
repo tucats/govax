@@ -390,7 +390,7 @@ func (c *cse) candidate(e ir.Expr) bool {
 			return false
 		}
 
-	case *ir.Op, *ir.Field:
+	case *ir.Op, *ir.Field, *ir.InRange:
 
 	default:
 		return false
@@ -417,6 +417,8 @@ func hasCallValue(e ir.Expr) bool {
 		return hasCallValue(e.X) || hasCallValue(e.Y)
 	case *ir.Field:
 		return hasCallValue(e.X) || hasCallValue(e.Pos) || hasCallValue(e.Size)
+	case *ir.InRange:
+		return hasCallValue(e.X) || hasCallValue(e.Low) || hasCallValue(e.High)
 	}
 
 	return false
@@ -574,7 +576,7 @@ func (r *replacer) terminator(t ir.Terminator) {
 // expr is e with the replacement made; e itself if it contains nothing to replace.
 func (r *replacer) expr(e ir.Expr) ir.Expr {
 	switch e.(type) {
-	case *ir.Load, *ir.Op, *ir.Field:
+	case *ir.Load, *ir.Op, *ir.Field, *ir.InRange:
 		if r.place == nil && exprKey(e) == r.key {
 			return r.with
 		}
@@ -613,6 +615,12 @@ func (r *replacer) expr(e ir.Expr) ir.Expr {
 		x, pos, size := r.expr(e.X), r.expr(e.Pos), r.expr(e.Size)
 		if x != e.X || pos != e.Pos || size != e.Size {
 			return &ir.Field{X: x, Pos: pos, Size: size}
+		}
+
+	case *ir.InRange:
+		x, low, high := r.expr(e.X), r.expr(e.Low), r.expr(e.High)
+		if x != e.X || low != e.Low || high != e.High {
+			return &ir.InRange{X: x, Low: low, High: high}
 		}
 
 	case *ir.CharCmp:
@@ -735,6 +743,9 @@ func exprKey(e ir.Expr) string {
 
 	case *ir.Field:
 		return "field(" + exprKey(e.X) + "," + exprKey(e.Pos) + "," + exprKey(e.Size) + ")"
+
+	case *ir.InRange:
+		return "inrange(" + exprKey(e.X) + "," + exprKey(e.Low) + "," + exprKey(e.High) + ")"
 	}
 
 	// The rest are never part of a candidate's value but as themselves.
@@ -771,7 +782,7 @@ func memKey(m *ir.Mem) string {
 // destination, by an operation, rather than read where it is.
 func computed(e ir.Expr) bool {
 	switch e.(type) {
-	case *ir.Op, *ir.Field, *ir.Cmp, *ir.Addr, *ir.LabelAddr, *ir.RoutineAddr:
+	case *ir.Op, *ir.Field, *ir.InRange, *ir.Cmp, *ir.Addr, *ir.LabelAddr, *ir.RoutineAddr:
 		return true
 	}
 
@@ -816,6 +827,9 @@ func costOf(e ir.Expr) price {
 
 	case *ir.Field:
 		return costOf(e.X).add(costOf(e.Pos)).add(costOf(e.Size)).add(price{1, 0})
+
+	case *ir.InRange:
+		return costOf(e.X).add(costOf(e.Low)).add(costOf(e.High)).add(price{1, 0})
 
 	case *ir.LabelAddr, *ir.RoutineAddr:
 		return price{1, 0}

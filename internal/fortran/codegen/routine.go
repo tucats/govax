@@ -613,6 +613,12 @@ func (g *routineGen) entryMask() string {
 		}
 	}
 
+	// With /CHECK=OVERFLOW the mask's IV bit makes CALLS set PSL<IV>, so that integer
+	// overflow in this routine traps; RET puts back the caller's.
+	if g.r.Checks.Overflow {
+		regs = append(regs, "IV")
+	}
+
 	return "^M<" + strings.Join(regs, ",") + ">"
 }
 

@@ -27,7 +27,7 @@ import (
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
 //	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN] [/[NO]OPTIMIZE]
 //	        [/LIST[=file] | /NOLIST] [/SHOW[=(keyword,...)] | /NOSHOW]
-//	        [/[NO]CROSS_REFERENCE]
+//	        [/[NO]CROSS_REFERENCE] [/CHECK[=(keyword,...)] | /NOCHECK]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -111,6 +111,11 @@ type FortranOptions struct {
 
 	// CrossReference is /CROSS_REFERENCE (fortran.Options).
 	CrossReference bool
+
+	// Check is /CHECK's keywords, if CheckGiven says it was given (none for /CHECK
+	// alone); /NOCHECK is the default, so nothing need say it (sema.Checks).
+	Check      []string
+	CheckGiven bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -211,6 +216,21 @@ func (opts FortranOptions) listingShow() (listing.Show, error) {
 	return show, nil
 }
 
+// checks is what the compiled code looks out for, or an error if /CHECK has a keyword
+// that isn't one.
+func (opts FortranOptions) checks() (sema.Checks, error) {
+	if !opts.CheckGiven {
+		return sema.Checks{}, nil
+	}
+
+	checks, err := sema.Checks{}.With(opts.Check)
+	if err != nil {
+		return checks, vmserrors.New(vmserrors.CLI_FORCHECK, err.Error())
+	}
+
+	return checks, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
 // text library's. fortLibraryName and forSysDefFile name the libraries
@@ -235,6 +255,10 @@ func (c *Context) Fortran(opts FortranOptions) error {
 	}
 
 	if _, err := opts.listingShow(); err != nil {
+		return err
+	}
+
+	if _, err := opts.checks(); err != nil {
 		return err
 	}
 
@@ -340,6 +364,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	continuations, _ := opts.Continuations.limit() // checked by Fortran
 	align, _ := opts.alignment()                   // checked by Fortran
 	show, _ := opts.listingShow()                  // checked by Fortran
+	checks, _ := opts.checks()                     // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:   opts.ExtendSource,
@@ -351,6 +376,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		List:           opts.List,
 		Show:           show,
 		CrossReference: opts.CrossReference,
+		Checks:         checks,
 		Continuations:  continuations,
 		Includes:       includes,
 		Version:        BuildVersion,

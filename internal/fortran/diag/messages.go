@@ -22,6 +22,12 @@ var messages = map[string]kind{
 	// that doesn't ask for one.
 	"NOLISTING": {Informational, "%s has no effect without /LIST"},
 
+	// BADCHECK is an OPTIONS statement's /CHECK with a keyword that isn't one.
+	"BADCHECK": {Error, "%s"},
+
+	// SUBSCRIPTRANGE is a constant subscript outside its dimension.
+	"SUBSCRIPTRANGE": {Warning, "subscript %d of %s is past its %s bound, %d"},
+
 	// The source form's messages (internal/fortran/source).
 
 	// NOINITIAL is a continuation line with no statement before it to

@@ -291,7 +291,9 @@ func (d *liveness) dead(a *ir.Assign, live liveSet) bool {
 		}
 	}
 
-	return found && !mayFault(a.Src)
+	overflow := d.r.Checks.Overflow
+
+	return found && !mayFault(a.Src, overflow) && !memMayFault(a.Dst, overflow)
 }
 
 // sink makes a RETURN of what the statement before it just stored a RETURN of the
@@ -338,46 +340,51 @@ func (d *liveness) sink(b *ir.Block) {
 }
 
 // mayFault reports whether computing e can fault, by Decision 8's list: a division,
-// any floating operation, or a floating load (a reserved operand).
-func mayFault(e ir.Expr) bool {
+// any floating operation, or a floating load (a reserved operand). A subscript's check
+// is on the list, and with overflow, a routine compiled with /CHECK=OVERFLOW, so is an
+// integer operation that can overflow.
+func mayFault(e ir.Expr, overflow bool) bool {
 	switch e := e.(type) {
 	case *ir.Load:
-		return e.Mem.T.Floating() || memMayFault(e.Mem)
+		return e.Mem.T.Floating() || memMayFault(e.Mem, overflow)
 
 	case *ir.Addr:
-		return memMayFault(e.Mem)
+		return memMayFault(e.Mem, overflow)
+
+	case *ir.InRange:
+		return true
 
 	case *ir.Op:
-		if e.Op == ir.Div || e.T.Floating() || e.X.Type().Floating() {
+		if e.Op == ir.Div || e.T.Floating() || e.X.Type().Floating() || (overflow && ir.MayOverflow(e)) {
 			return true
 		}
 
-		return mayFault(e.X) || (e.Y != nil && mayFault(e.Y))
+		return mayFault(e.X, overflow) || (e.Y != nil && mayFault(e.Y, overflow))
 
 	case *ir.Cmp:
-		return mayFault(e.X) || mayFault(e.Y)
+		return mayFault(e.X, overflow) || mayFault(e.Y, overflow)
 
 	case *ir.Field:
-		return mayFault(e.X) || mayFault(e.Pos) || mayFault(e.Size)
+		return mayFault(e.X, overflow) || mayFault(e.Pos, overflow) || mayFault(e.Size, overflow)
 
 	case *ir.CharCmp:
-		return textMayFault(e.X) || textMayFault(e.Y)
+		return textMayFault(e.X, overflow) || textMayFault(e.Y, overflow)
 
 	case *ir.CharIndex:
-		return textMayFault(e.X) || textMayFault(e.Y) || mayFault(e.Base)
+		return textMayFault(e.X, overflow) || textMayFault(e.Y, overflow) || mayFault(e.Base, overflow)
 	}
 
 	return false
 }
 
 // memMayFault reports whether finding m's address can fault.
-func memMayFault(m *ir.Mem) bool {
-	return (m.Index != nil && mayFault(m.Index)) || (m.Ptr != nil && mayFault(m.Ptr))
+func memMayFault(m *ir.Mem, overflow bool) bool {
+	return (m.Index != nil && mayFault(m.Index, overflow)) || (m.Ptr != nil && mayFault(m.Ptr, overflow))
 }
 
 // textMayFault reports whether finding a CHARACTER value can fault.
-func textMayFault(t ir.Text) bool {
-	return memMayFault(t.Mem) || mayFault(t.Len)
+func textMayFault(t ir.Text, overflow bool) bool {
+	return memMayFault(t.Mem, overflow) || mayFault(t.Len, overflow)
 }
 
 // removeUnusedCells takes out the compiler's temporaries, counts, and steps that no
@@ -497,6 +504,10 @@ func walkMems(r *ir.Routine, visit func(*ir.Mem)) {
 			expr(e.X)
 			expr(e.Pos)
 			expr(e.Size)
+		case *ir.InRange:
+			expr(e.X)
+			expr(e.Low)
+			expr(e.High)
 		case *ir.CharCmp:
 			text(e.X)
 			text(e.Y)

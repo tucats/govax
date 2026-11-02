@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"math"
 	"slices"
 	"strconv"
 
@@ -162,6 +163,10 @@ func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
 
 	// A0 is the first element's address, less the element number the lowest
 	// subscripts would have counting from all zeros.
+	if l.unit.Checks.Bounds {
+		l.checkArrayBounds(s, c)
+	}
+
 	first := l.lowerBound(s, c, len(s.Dims)-1)
 
 	for i := len(s.Dims) - 2; i >= 0; i-- {
@@ -209,6 +214,21 @@ func (l *lowerer) lowerBound(s *sema.Symbol, c *Cell, i int) Expr {
 	}
 
 	return &Load{&Mem{Cell: c, Offset: c.Desc.LowerOffset(i), T: Long}}
+}
+
+// upperBound is dimension i's upper bound as a check needs it: a constant, its
+// descriptor's, or for a dimension with none the most a Long can be.
+func (l *lowerer) upperBound(s *sema.Symbol, c *Cell, i int) Expr {
+	dim := s.Dims[i]
+
+	switch {
+	case sema.OpenEnded(s, s.Dims, i):
+		return LongConst(math.MaxInt32)
+	case dim.UpperExpr == nil:
+		return LongConst(int32(dim.Upper))
+	}
+
+	return &Load{&Mem{Cell: c, Offset: c.Desc.LowerOffset(i) + Long.Size(), T: Long}}
 }
 
 // elementAt is the place index elements past base in the array s. The constant
@@ -259,6 +279,10 @@ func (l *lowerer) adjustableIndex(list []sema.Expr, s *sema.Symbol, c *Cell) Exp
 	subs := make([]Expr, len(list))
 	for i, sub := range list {
 		subs[i] = l.expr(sub)
+
+		if l.unit.Checks.Bounds {
+			subs[i] = inRange(subs[i], l.lowerBound(s, c, i), l.upperBound(s, c, i))
+		}
 	}
 
 	index := subs[len(subs)-1]

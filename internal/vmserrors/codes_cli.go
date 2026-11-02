@@ -214,6 +214,7 @@ const (
 	cliForContRange
 	cliForAlign
 	cliForShow
+	cliForCheck
 
 	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
@@ -561,6 +562,9 @@ const (
 
 	// CLI_FORSHOW refuses a FORTRAN whose /SHOW has a keyword that isn't one.
 	CLI_FORSHOW = CLIFacility<<FacilityPosition | cliForShow<<MessagePosition | StatusError
+
+	// CLI_FORCHECK refuses a FORTRAN whose /CHECK has a keyword that isn't one.
+	CLI_FORCHECK = CLIFacility<<FacilityPosition | cliForCheck<<MessagePosition | StatusError
 )
 
 func init() {
@@ -725,5 +729,6 @@ func init() {
 	DefineMessage(CLI_FORCONTRANGE, CLIFacility, "FORCONTRANGE", "/CONTINUATIONS=!D is out of range; give 0 to !D")
 	DefineMessage(CLI_FORALIGN, CLIFacility, "FORALIGN", "!S")
 	DefineMessage(CLI_FORSHOW, CLIFacility, "FORSHOW", "!S")
+	DefineMessage(CLI_FORCHECK, CLIFacility, "FORCHECK", "!S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

@@ -95,7 +95,7 @@ type lowerer struct {
 
 // lowerUnit lowers one program unit.
 func lowerUnit(u *sema.Unit) *Routine {
-	r := &Routine{Name: u.Name, Unit: u, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials}
+	r := &Routine{Name: u.Name, Unit: u, Checks: u.Checks, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials}
 
 	l := &lowerer{
 		unit:     u,

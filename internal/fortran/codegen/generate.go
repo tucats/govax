@@ -468,6 +468,7 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 func (g *routineGen) writeVFE(w *Writer, v *ir.VFERoutine) {
 	w.Blank()
 	w.Statement(g.names.symbol(v.Name), ".WORD", g.entryMask(), fmt.Sprintf("FORMAT %d's variable format expressions", v.Label))
+	g.writeUnderflow(w)
 	w.Statement("", "MOVL", "4(AP),R0", "which expression FTNRTL wants")
 	w.Statement("", "MOVL", "8(AP),AP", "the AP of the routine doing the I/O, for its dummy arguments")
 	w.Statement("", "CASEL", "R0,#1,#"+strconv.Itoa(len(v.Cases)-1), "")
@@ -504,12 +505,24 @@ func (g *routineGen) writeEntry(w *Writer, e *ir.Entry) {
 // SP on a longword, and the area is a whole number of longwords, so each variable's
 // boundary in the area is its boundary in memory.
 func (g *routineGen) writeFrame(w *Writer) {
+	g.writeUnderflow(w)
+
 	if g.r.FrameSize != 0 {
 		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.r.FrameSize)+",SP", "the frame's AUTOMATIC variables")
 	}
 
 	if c := g.r.FrameBase; c != nil {
 		w.Statement("", "MOVL", "FP,"+g.names.symbol(c.Name), "where variable format expressions find them")
+	}
+}
+
+// writeUnderflow writes what an entry point does under /CHECK=UNDERFLOW: it sets PSL<FU>,
+// floating underflow enable, bit 6. No entry mask has a bit for it, and CALLS clears it, so
+// each routine that wants it sets it, and RET puts back the caller's. Without it an underflow
+// is a quiet zero.
+func (g *routineGen) writeUnderflow(w *Writer) {
+	if g.r.Checks.Underflow {
+		w.Statement("", "BISPSW", "#^X40", "report floating underflow")
 	}
 }
 

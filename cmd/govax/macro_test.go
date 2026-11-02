@@ -261,6 +261,7 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{list: true}, `FORTRAN "sq"/LIST`},
 		{[]string{"sq"}, fortranFlags{list: true, listFile: "out/sq.lis", show: "all,nomap"}, `FORTRAN "sq"/LIST="out/sq.lis"/SHOW=(all,nomap)`},
 		{[]string{"sq"}, fortranFlags{list: true, crossRef: true}, `FORTRAN "sq"/LIST/CROSS_REFERENCE`},
+		{[]string{"sq"}, fortranFlags{check: "bounds,nooverflow"}, `FORTRAN "sq"/CHECK=(bounds,nooverflow)`},
 	}
 
 	for _, c := range cases {

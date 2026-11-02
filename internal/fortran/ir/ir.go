@@ -92,6 +92,10 @@ type Routine struct {
 	// Name is the routine's entry point: SQUARES, ISQ, SQUARES$MAIN.
 	Name string
 
+	// Checks is what the unit's /CHECK asks of its code. Overflow and Underflow are its
+	// entry points' to set, and make what an optimizer may do differ (opt's mayFault).
+	Checks sema.Checks
+
 	Kind Kind
 
 	// Result is a function's type, whose value Return leaves in R0 (and the
@@ -909,13 +913,14 @@ const (
 	LeU
 	GtU
 	GeU
+	Rot // X rotated left Y places, Longs: ROTL, which never overflows
 )
 
 // String is the operator's name in the dump.
 func (o Operator) String() string {
 	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "xor", "not", "cvt",
 		"eq", "ne", "lt", "le", "gt", "ge", "zext", "round", "ash", "low",
-		"ltu", "leu", "gtu", "geu"}[o]
+		"ltu", "leu", "gtu", "geu", "rot"}[o]
 }
 
 // The expressions.
@@ -989,6 +994,15 @@ type (
 		X, Y Expr
 	}
 
+	// InRange is X, a Long, which the program has asked to have checked: it is X's
+	// value if Low <= X <= High, all Longs, and a subscript range trap otherwise, which
+	// is what the INDEX instruction does (/CHECK=BOUNDS). The code generator writes it
+	// INDEX X,Low,High,#1,#0,Rn, which leaves (0+X)*1 in Rn. An optimizer may take it
+	// away only if it knows the value is in range: otherwise it counts as what can fault.
+	InRange struct {
+		X, Low, High Expr
+	}
+
 	// Field is the bit field of X, a Long, Size bits from bit Pos (bit 0 the
 	// lowest), as an unsigned Long: EXTZV. Pos and Size are Longs, Pos from 0
 	// to 31 and Size from 0 to 32 with Pos+Size at most 32.
@@ -1047,6 +1061,9 @@ func (*Cmp) Type() Type { return Long }
 // Type is Long: a comparison's value is a LOGICAL.
 func (*CharCmp) Type() Type { return Long }
 
+// Type is Long: a subscript's value.
+func (*InRange) Type() Type { return Long }
+
 // Type is Long: the field's value, zero-extended.
 func (*Field) Type() Type { return Long }
 
@@ -1064,6 +1081,7 @@ func (*Op) exprNode()          {}
 func (*Cmp) exprNode()         {}
 func (*CharCmp) exprNode()     {}
 func (*Field) exprNode()       {}
+func (*InRange) exprNode()     {}
 func (*CharIndex) exprNode()   {}
 
 // LongConst is the Long constant n.

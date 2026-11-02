@@ -398,6 +398,17 @@ func (c *checker) expr(e Expr) error {
 			}
 		}
 
+	case *InRange:
+		for _, x := range []Expr{e.X, e.Low, e.High} {
+			if err := c.expr(x); err != nil {
+				return err
+			}
+
+			if x.Type() != Long {
+				return fmt.Errorf("%s has a %s operand", ExprText(e), x.Type())
+			}
+		}
+
 	case *CharCmp:
 		return fmt.Errorf("%s is inside an expression, where it would hold registers across CMPC", ExprText(e))
 

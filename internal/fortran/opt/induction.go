@@ -87,6 +87,13 @@ func steppedKey(e ir.Expr, l *Loop) string {
 
 // findStepped lists what can be stepped in each loop.
 func (a *allocator) findStepped() {
+	// A stepped value runs ahead of what the program computes: it is worked out before
+	// a loop that may not run, and stepped once past the last trip. With overflow
+	// trapping, that could trap where the program wouldn't.
+	if a.r.Checks.Overflow {
+		return
+	}
+
 	for _, l := range a.g.Loops {
 		if !a.usable(l) {
 			continue

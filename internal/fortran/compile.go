@@ -42,6 +42,9 @@ type Options struct {
 	// Align is /[NO]ALIGN (sema/align.go).
 	Align sema.Alignment
 
+	// Checks is /CHECK: what the compiled code looks out for (sema.Checks).
+	Checks sema.Checks
+
 	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
 	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
@@ -154,7 +157,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
 		tree = parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align}, &messages)
+		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align, Checks: opts.Checks}, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)

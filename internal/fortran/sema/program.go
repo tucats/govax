@@ -22,6 +22,9 @@ type Unit struct {
 	// AST is the unit the parser built.
 	AST *ast.Unit
 
+	// Checks is what the unit's code checks: /CHECK, as its OPTIONS statements change it.
+	Checks Checks
+
 	// Kind is a main program, a FUNCTION, a SUBROUTINE, or BLOCK DATA.
 	Kind ast.UnitKind
 

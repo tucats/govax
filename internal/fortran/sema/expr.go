@@ -383,6 +383,8 @@ func (a *analyzer) element(s *Symbol, e *ast.Apply) Expr {
 		return a.bad(e.Pos)
 	}
 
+	a.checkConstantSubscripts(s, e.Name, s.Dims, subs)
+
 	return &Elem{exprBase{s.Type, e.Pos}, s, subs}
 }
 

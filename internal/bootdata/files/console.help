@@ -4219,6 +4219,14 @@ $FOR
                         /LIST it does nothing but say so.  The default is
                         /NOCROSS_REFERENCE.
 
+        /CHECK[=(<keyword>,...)]  What the compiled code looks out for: ALL,
+        /NOCHECK        NONE, [NO]BOUNDS (subscripts and substrings: the
+                        subscript range trap; an adjustable array's bounds:
+                        FOR$_ADJARRDIM), [NO]OVERFLOW (integer overflow traps),
+                        and [NO]UNDERFLOW (floating underflow faults).  /CHECK
+                        alone is ALL.  The default is /NOCHECK.  An OPTIONS
+                        statement before a unit may change it for that unit.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet

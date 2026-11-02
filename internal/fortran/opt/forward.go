@@ -61,7 +61,9 @@ import (
 // on it can't be worked out, so it has no facts: the program's own instructions run.
 //
 // An operation that would fault stays as it is (ir.Fold leaves it), to fault at run
-// time (Decision 8): K = 0, then J = 5/K, is still a division.
+// time (Decision 8): K = 0, then J = 5/K, is still a division. Under /CHECK an integer
+// operation that would overflow, or a floating one that would underflow, is the same
+// (ir.FoldFor), and a subscript's check goes only if the facts show it passes.
 //
 // A store of a value the place already holds goes, as nothing can see it happen.
 //
@@ -315,7 +317,18 @@ func (f *forwarder) isKey(m *ir.Mem) bool {
 // mem is m with its index replaced by what is known of it. A constant index becomes
 // part of the offset. The result is m itself if nothing changed: lowering may use one
 // Mem in several places, so a new one is made rather than m changed.
+//
+// A place reached through an address computed here (a packed field's, Addr) has that
+// address's own index looked at too.
 func (f *forwarder) mem(m *ir.Mem) *ir.Mem {
+	if p, ok := m.Ptr.(*ir.Addr); ok {
+		if inner := f.mem(p.Mem); inner != p.Mem {
+			n := *m
+			n.Ptr = &ir.Addr{Mem: inner}
+			m = &n
+		}
+	}
+
 	if m.Index == nil {
 		return m
 	}
@@ -382,7 +395,7 @@ func (f *forwarder) expr(e ir.Expr) ir.Expr {
 		}
 
 		if x != e.X || y != e.Y {
-			return ir.Fold(e.Op, e.T, x, y)
+			return ir.FoldFor(f.g.Routine, e.Op, e.T, x, y)
 		}
 
 	case *ir.Cmp:
@@ -402,6 +415,18 @@ func (f *forwarder) expr(e ir.Expr) ir.Expr {
 			return &ir.Field{X: x, Pos: pos, Size: size}
 		}
 
+	case *ir.InRange:
+		x, low, high := f.expr(e.X), f.expr(e.Low), f.expr(e.High)
+
+		// A check the facts prove is gone. One they prove will fail stays, to fail.
+		if inRangeKnown(x, low, high) {
+			return x
+		}
+
+		if x != e.X || low != e.Low || high != e.High {
+			return &ir.InRange{X: x, Low: low, High: high}
+		}
+
 	case *ir.CharCmp:
 		x, y := f.text(e.X), f.text(e.Y)
 		if x != e.X || y != e.Y {
@@ -416,6 +441,15 @@ func (f *forwarder) expr(e ir.Expr) ir.Expr {
 	}
 
 	return e
+}
+
+// inRangeKnown reports whether constants show a check's value is in range.
+func inRangeKnown(x, low, high ir.Expr) bool {
+	v, ok := x.(*ir.Const)
+	lo, ok2 := low.(*ir.Const)
+	hi, ok3 := high.(*ir.Const)
+
+	return ok && ok2 && ok3 && v.Int() >= lo.Int() && v.Int() <= hi.Int()
 }
 
 // foldCompare is a comparison's value, a LOGICAL, if both operands are constants

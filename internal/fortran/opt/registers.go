@@ -567,7 +567,7 @@ func (a *allocator) fixedPart(l *Loop, e ir.Expr) bool {
 
 	c := a.mover.c
 
-	return !hasCallValue(e) && !unsafeToMove(e) && !c.volatile(c.readsOf(e)) && a.unchanged(l, e)
+	return !hasCallValue(e) && !unsafeToMove(e, c.r.Checks.Overflow) && !c.volatile(c.readsOf(e)) && a.unchanged(l, e)
 }
 
 // sameBase is the part of m's index other than fixed, if m is base's place with an index

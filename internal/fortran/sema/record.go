@@ -279,6 +279,8 @@ func (a *analyzer) recordBase(ref *FieldRef, x ast.Expr, first string) bool {
 			return false
 		}
 
+		a.checkConstantSubscripts(s, name, s.Dims, subs)
+
 		ref.Subs = subs
 	}
 
@@ -313,7 +315,12 @@ func (a *analyzer) fieldSubscripts(f *Field, step *ast.FieldRef, whole bool) ([]
 		return nil, false
 	}
 
-	return a.subscripts(step.Pos, step.Args)
+	subs, ok := a.subscripts(step.Pos, step.Args)
+	if ok {
+		a.checkConstantSubscripts(nil, f.Name, f.Dims, subs)
+	}
+
+	return subs, ok
 }
 
 // subscripts analyzes an element's subscripts, each made INTEGER (a REAL one

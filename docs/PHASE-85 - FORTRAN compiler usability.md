@@ -62,7 +62,7 @@ The list as the survey proposed it and the author's review settled it:
    rule, run by the author on the simh VAX (Part A, "What the probe settled").
 3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE** (done 2026-11-02).
 4. **`/CROSS_REFERENCE`** (done 2026-11-02).
-5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
+5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it (done 2026-11-02).
 6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
 7. **`/WARNINGS`,** with `UNUSED` a keyword of its own, off by default (answer 3).
 8. **`/STANDARD`,** with the list of extensions read from the manual's pages.
@@ -465,3 +465,18 @@ For subtask 10, and changing what the survey assumed:
   files at one depth still share a prefix, as they do among the source lines. **Known limit:** `REAL SQRT` and a reference to it show as a REAL
   variable's row. Tests: `TestCrossReference*` in `listing_test.go` and `compile_test.go`, `TestNoCrossReference`, `TestFortran_list`,
   `TestFortranCommand`.
+- **2026-11-02:** Subtask 5, by Decisions 1 to 9. **The check** is the IR's `InRange` (three operands, not an `Op`), written
+  `INDEX x,low,high,#1,#0,Rn`; `ir/lowerchecks.go` wraps each subscript where it's lowered (`mem`, `fieldMem`, `adjustableIndex`) and each
+  substring's bounds (`checkedSubstring`), `checkedSubscript` moving the bounds by the subscript's constant so that `TABLE(I+1)` keeps its address's form.
+  It stays inside the expression rather than going ahead of the statement, so a branch's `.AND.` keeps it from running. A substring is
+  two `INDEX`es at most: `S(I:)`, `S(k:J)`, and `S(I:I)` need one, and `S(I:I)` keeps its constant length. **The optimizer:** `Forward` folds a check its facts
+  prove and keeps a failing one; `mayFault` says yes to one, as `unsafeToMove` always did; `CommonSubexpressions` and `LoopInvariants` take one as a candidate
+  (`exprKey`, `costOf`), so that it moves only with a sure use. **Overflow:** `ir.Routine.Checks` (Decision 8, read in `prologue`); `ir.MayOverflow`, which `mayFault(e, overflow)` and `unsafeToMove(e, overflow)` ask;
+  `ir.FoldFor`, which leaves an overflowing or underflowing constant operation to trap. `^M<...,IV>` on every entry point and a variable format expression's routine. sema already refuses a
+  constant expression that overflows, so lowering's `arith` is unchanged. **Found on the way:** ASHL sets V, so `ISHFT` and `IBSET`/`IBCLR` would trap, though they aren't
+  arithmetic: under overflow they're the new `Rot`, ROTL, which doesn't (a shift then masked). `findStepped` is off under overflow, since a stepped value runs ahead of the program's and past its last trip. `Forward` now looks inside a computed address's index (`Addr`, a packed field's), which only a second run did, as `TestPassesOnCorpus` showed on `checks.for`.
+  **Underflow:** `BISPSW #^X40` after each `.ENTRY`, `writeUnderflow`. **ADJARRDIM** is FTNRTL's `FTN$ADJARRDIM` (`ftn_control.mar`, vector 656, GSMATCH 1,17), a `LIB$STOP`, called from a block `checkArrayBounds` makes at each
+  entry point. **Decision 9:** `SUBSCRIPTRANGE` (`checkConstantSubscripts`), for elements, records, and fields. **The command:** `/[NO]CHECK[=(keyword,...)]`, `--check`, `CLI_FORCHECK`, OPTIONS's `/[NO]CHECK` (`BADCHECK`); `sema.Checks.With`, keywords cut short as `/SHOW`'s. Ours, each unconfirmed:
+  `/CHECK=UNDERFLOW` is severe (Decision 7), and a zero-extent `A(0)` is ADJARRDIM, as Decision 5's words have it (`adjust.for`'s `SIZES(V,0,4)` does this, and is fine unchecked); a `DO` variable stepping past the integer limit after its last trip overflows (`optloop.for`'s LARGEST).
+  **Tried once, not kept:** the whole corpus under `/CHECK=ALL`, both ways: no panic and no false `SUBRNG`. Nine programs differ, each for a reason read from its source: word arithmetic that wraps on purpose (`lengths`, `mixed`, `mixedg`, `optreg`, `powers`), `optloop`'s limit, `handlers`' own `INTOVF`, `adjust`'s zero extent, and `directives`' moved PC. DUNGEON under `/CHECK=BOUNDS`, both ways: no `SUBRNG`, and the same game.
+  Tests: `TestFortranCheck` (28 programs, each with the check and without, both optimizer settings, both loaders), `TestFortranCheckQualifier`, `testdata/fortran/checks.for` (nothing to find, in the corpus), and `TestImage`.

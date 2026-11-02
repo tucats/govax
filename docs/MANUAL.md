@@ -4963,9 +4963,9 @@ The command's syntax and qualifiers are in
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
-`/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
+`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, or `/NOCHECK` for that unit alone. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, and `--cross-reference` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, and `/CROSS_REFERENCE`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, and `--check keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, and `/CHECK=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -5026,6 +5026,35 @@ its second line's, by the manual's section 10.3.3: a directive takes effect on t
 *after* the one it's on, the last of each kind on a page winning, and one without a
 string changes nothing. So a directive on a program's first line doesn't head page 1. With no
 `TITLE` a page's title is its program unit's name.
+
+**Run-time checks.** `/CHECK` asks the compiled code to look out for what's wrong:
+
+| Keyword | What's checked | What happens |
+| --- | --- | --- |
+| `BOUNDS` | Each subscript against its dimension, and `1 <= first <= last <= length` for each substring | The `INDEX` instruction's trap, `%SYSTEM-F-SUBRNG` |
+| | An adjustable array's bounds at each entry point defining it, an upper below its lower being wrong | `%FOR-F-ADJARRDIM` |
+| `OVERFLOW` | Integer arithmetic, each unit's entry masks setting the IV bit | `%SYSTEM-F-INTOVF` |
+| `UNDERFLOW` | Floating arithmetic, each entry point setting the PSW's FU bit | `%SYSTEM-F-FLTUND_F`, not a quiet zero |
+
+The keywords also come as `NOBOUNDS` and so on, with `ALL` and `NONE`, cut short if you
+like, in order: `/CHECK=(ALL,NOBOUNDS)`. `/CHECK` alone is `ALL`, and `/NOCHECK`, the
+default, is `NONE`. Each unit keeps its own checks, so a routine compiled without
+`OVERFLOW` doesn't trap, even called from one compiled with it.
+
+An array has no upper bound to check in an assumed-size last dimension, or in a dummy
+argument's last dimension of `(1)`, the way FORTRAN-66 wrote `(*)`: only the lower is
+checked. The checks run where the subscript would be computed, so the second operand of
+a `.AND.` that isn't reached isn't checked. `/OPTIMIZE` takes a check away only if it
+can show the value is in range. A value that will fail is still checked, and one that
+is never used too, so a program compiled both ways fails the same. It may check a value
+once where the source asks twice, or before a loop whose first trip surely would. Under
+`OVERFLOW`, the optimizer treats integer arithmetic as it does division, and code may run
+a little slower for that as well as for the checks. A `DO` variable that passes the
+integer limit when it steps after the last trip overflows like any other, and a shift
+or bit function never does.
+
+A subscript that is a constant outside its array's bounds is `%FORT-W-SUBSCRIPTRANGE`, with
+or without `/CHECK`, since the program is surely wrong even if it never reaches the statement.
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5489,6 +5518,10 @@ Where the manuals at hand don't settle a rule, govax makes a choice
 FORTRAN compiler was available to check them). So far:
 
 - `/CONTINUATIONS` allows 0 to 99, and 19 without it.
+- `/NOCHECK` is the default. The manuals at hand don't state VAX FORTRAN's, which
+  may have had `OVERFLOW` on: a program that counts on that says `/CHECK=OVERFLOW`.
+  What a check does when it fails, a dummy's `(1)` being open-ended, and
+  `/CHECK=UNDERFLOW` being a severe condition are govax's choices.
 - In a tab-format line, the tab stands for the columns before column 7,
   so the statement still ends at column 72 (or 132).
 - A line whose first nonblank character is `!` is a comment line, and

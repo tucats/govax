@@ -290,6 +290,9 @@ func readsMemory(e Expr) bool {
 
 	case *Field:
 		return readsMemory(e.X) || readsMemory(e.Pos) || readsMemory(e.Size)
+
+	case *InRange:
+		return readsMemory(e.X) || readsMemory(e.Low) || readsMemory(e.High)
 	}
 
 	return false

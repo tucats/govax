@@ -3,6 +3,7 @@ package ir
 import (
 	"errors"
 	"math"
+	"math/bits"
 
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/sema"
@@ -215,12 +216,17 @@ func (l *lowerer) chars(e sema.Expr) Text {
 			upper = l.expr(e.Upper)
 		}
 
-		v, k := split(lower)
+		first, last := lower, upper
+		if l.unit.Checks.Bounds {
+			first, last = checkedSubstring(lower, upper, t.Len, e.Upper != nil)
+		}
+
+		v, k := split(first)
 		m := *t.Mem
 		m.Offset += int(k) - 1
 		m.Index = arith(Add, Long, m.Index, v)
 
-		return Text{&m, arith(Sub, Long, arith(Add, Long, upper, LongConst(1)), lower)}
+		return Text{&m, arith(Sub, Long, arith(Add, Long, last, LongConst(1)), lower)}
 	}
 
 	panic("ir: a CHARACTER value semantic analysis left that lowering can't lower")
@@ -321,7 +327,7 @@ func (l *lowerer) mem(e sema.Expr) *Mem {
 
 		for i, sub := range e.Subs {
 			dim := e.Sym.Dims[i]
-			v, k := split(l.expr(sub))
+			v, k := l.checkedSubscript(l.expr(sub), e.Sym, e.Sym.Dims, i)
 			first += (int(k) - dim.Lower) * multiplier
 
 			if v != nil {
@@ -453,6 +459,103 @@ func arith(op Operator, t Type, x, y Expr) Expr {
 // the compiler has one answer for what a constant expression's value is.
 func Fold(op Operator, t Type, x, y Expr) Expr {
 	return arith(op, t, x, y)
+}
+
+// FoldFor is Fold in the routine r, whose /CHECK may ask for what a folded operation
+// would hide: an operation on constants that would overflow or underflow is left to
+// trap when it runs.
+func FoldFor(r *Routine, op Operator, t Type, x, y Expr) Expr {
+	cx, okx := x.(*Const)
+	cy, oky := y.(*Const)
+
+	if okx && (y == nil || oky) && trapsOn(r.Checks, op, t, cx, cy) {
+		return &Op{op, t, x, y}
+	}
+
+	return arith(op, t, x, y)
+}
+
+// trapsOn reports whether op on the constants x and y (y nil for one operand), in
+// type t, traps by the checks given.
+func trapsOn(c sema.Checks, op Operator, t Type, x, y *Const) bool {
+	switch {
+	case x.Raw || (y != nil && y.Raw):
+		return false
+	case t.Integer() && x.T.Integer() && c.Overflow:
+		return integerOverflows(op, t, x, y)
+	case t.Floating() && c.Underflow:
+		return floatUnderflows(op, t, x, y)
+	}
+
+	return false
+}
+
+// integerOverflows reports whether an integer operation on constants sets V.
+func integerOverflows(op Operator, t Type, x, y *Const) bool {
+	a := int64(x.Int())
+
+	var v int64
+
+	switch {
+	case op == Neg:
+		v = -a
+	case op == Cvt:
+		v = a
+	case y == nil:
+		return false
+	case op == Add:
+		v = a + int64(y.Int())
+	case op == Sub:
+		v = a - int64(y.Int())
+	case op == Mul:
+		v = a * int64(y.Int())
+	case op == Ash:
+		n := int8(y.Int())
+
+		return n > 0 && (n >= 32 && a != 0 || n < 32 && int64(shiftArithmetic(x.Int(), int32(n)))>>uint(n) != a)
+	default:
+		return false
+	}
+
+	lo, hi := intRange(t)
+
+	return v < lo || v > hi
+}
+
+// floatUnderflows reports whether a floating operation on constants underflows.
+func floatUnderflows(op Operator, t Type, x, y *Const) bool {
+	var err error
+
+	f := t.Format()
+
+	switch {
+	case op == Cvt && x.T.Floating():
+		_, err = vaxfloat.Round(f, x.Real())
+	case y == nil:
+		return false
+	case op == Add:
+		_, err = vaxfloat.Add(f, x.Real(), y.Real())
+	case op == Sub:
+		_, err = vaxfloat.Sub(f, x.Real(), y.Real())
+	case op == Mul:
+		_, err = vaxfloat.Mul(f, x.Real(), y.Real())
+	case op == Div:
+		_, err = vaxfloat.Div(f, x.Real(), y.Real())
+	}
+
+	return errors.Is(err, vaxfloat.ErrUnderflow)
+}
+
+// MayOverflow reports whether the operation can set V: with /CHECK=OVERFLOW, a trap.
+func MayOverflow(e *Op) bool {
+	switch e.Op {
+	case Add, Sub, Mul, Neg, Ash:
+		return true
+	case Cvt:
+		return e.T.Integer() && e.X.Type().Integer() && e.T.Size() < e.X.Type().Size()
+	}
+
+	return false
 }
 
 // split divides a Long expression into a part that isn't constant (nil
@@ -640,6 +743,8 @@ func foldBinary(op Operator, t Type, x, y *Const) *Const {
 			return IntConst(t, a^b)
 		case Ash:
 			return LongConst(shiftArithmetic(a, b))
+		case Rot:
+			return LongConst(int32(bits.RotateLeft32(uint32(a), int(int8(b)))))
 		}
 
 		return nil

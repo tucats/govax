@@ -72,6 +72,7 @@ type fortranFlags struct {
 	listFile     string // --list-file: the listing's name
 	show         string // --show: /SHOW's keywords
 	crossRef     bool   // --cross-reference: /CROSS_REFERENCE
+	check        string // --check: /CHECK's keywords, separated by commas
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -411,6 +412,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
 			fortran.show, _ = c.String("show")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "check",
+		Description: "What the compiled code looks out for: all, none, [no]bounds, [no]overflow, [no]underflow, separated by commas",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.check, _ = c.String("check")
 
 			return nil
 		},
@@ -944,6 +955,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.crossRef {
 		command += "/CROSS_REFERENCE"
+	}
+
+	if f.check != "" {
+		command += "/CHECK=(" + f.check + ")"
 	}
 
 	if f.continuationsGiven {

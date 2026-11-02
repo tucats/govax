@@ -50,7 +50,9 @@ import (
 //
 // # What may move
 //
-// Integer arithmetic can always move, overflow not being enabled. Whatever can fault
+// Integer arithmetic can always move, unless /CHECK=OVERFLOW has enabled overflow, when
+// an operation that can overflow is one more thing that can fault, as a subscript's
+// check always is. Whatever can fault
 // can move only if the program was going to run it anyway (Decision 8): a division, any
 // floating operation or load (a reserved operand faults), and a load through an index or
 // a dummy argument, whose address may be bad. In
@@ -184,7 +186,7 @@ func (m *mover) loop(g *Graph, l *Loop) {
 		again := false
 
 		for _, v := range found {
-			if !v.movable() {
+			if !v.movable(m.c.r.Checks.Overflow) {
 				refused[v.key] = true
 				again = true
 			}
@@ -203,8 +205,8 @@ func (m *mover) loop(g *Graph, l *Loop) {
 }
 
 // movable reports whether v can move out of the loop, and gains by it.
-func (v *invariant) movable() bool {
-	if unsafeToMove(v.e) && !v.sure {
+func (v *invariant) movable(overflow bool) bool {
+	if unsafeToMove(v.e, overflow) && !v.sure {
 		return false
 	}
 
@@ -321,7 +323,7 @@ func surely(g *Graph, l *Loop, b *ir.Block) bool {
 // mayFault's list (deadcode.go), which is enough to keep a store, and a load from a place
 // that may not be there, which an earlier test may have been keeping off it. Anything
 // else, it says yes to.
-func unsafeToMove(e ir.Expr) bool {
+func unsafeToMove(e ir.Expr, overflow bool) bool {
 	switch e := e.(type) {
 	case *ir.Const:
 		return false
@@ -332,11 +334,11 @@ func unsafeToMove(e ir.Expr) bool {
 		return e.Type().Floating() || m.Index != nil || m.Ptr != nil || m.Param != nil
 
 	case *ir.Op:
-		if e.Op == ir.Div || e.T.Floating() || e.X.Type().Floating() {
+		if e.Op == ir.Div || e.T.Floating() || e.X.Type().Floating() || (overflow && ir.MayOverflow(e)) {
 			return true
 		}
 
-		return unsafeToMove(e.X) || (e.Y != nil && unsafeToMove(e.Y))
+		return unsafeToMove(e.X, overflow) || (e.Y != nil && unsafeToMove(e.Y, overflow))
 	}
 
 	return true

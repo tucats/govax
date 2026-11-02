@@ -358,6 +358,11 @@ func (c *collector) expr(e ir.Expr) {
 		c.expr(e.Pos)
 		c.expr(e.Size)
 
+	case *ir.InRange:
+		c.expr(e.X)
+		c.expr(e.Low)
+		c.expr(e.High)
+
 	case *ir.CharCmp:
 		c.textRead(e.X)
 		c.textRead(e.Y)

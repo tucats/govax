@@ -52,7 +52,7 @@ func (l *lowerer) fieldMem(e *sema.FieldRef) *Mem {
 		multiplier := size
 
 		for i, sub := range subs {
-			v, k := split(l.expr(sub))
+			v, k := l.checkedSubscript(l.expr(sub), e.Sym, dims, i)
 			offset += (int(k) - dims[i].Lower) * multiplier
 
 			if v != nil {

@@ -3,7 +3,8 @@
 ;
 ; The routines of FTNRTL that control a program as a whole: FTN$VERSION,
 ; which says which FTNRTL a program is running with, FTN$STOP, which is
-; FORTRAN's STOP statement, and FTN$PAUSE, its PAUSE statement.
+; FORTRAN's STOP statement, FTN$PAUSE, its PAUSE statement, and
+; FTN$ADJARRDIM, /CHECK=BOUNDS finding an array's bounds wrong.
 ;
 ; Like every FTNRTL routine, each is called with CALLS or CALLG, by the
 ; VAX calling standard: AP points at the argument list, whose first byte
@@ -124,5 +125,17 @@ PAUSE_LEN	= .-PAUSE_TEXT
 20$:	CALLS	#1,G^LIB$PUT_OUTPUT	; write the line to SYS$OUTPUT
 	CALLS	#0,G^LIB$PAUSE		; wait for DCL's CONTINUE
 	RET				; the descriptor goes with the frame
+
+;
+; FTN$ADJARRDIM
+;
+; An adjustable array's upper bound is below its lower, which a subprogram
+; compiled with /CHECK=BOUNDS finds when it is entered. The condition is FOR's,
+; severe, so this doesn't come back.
+;
+	.ENTRY	FTN$ADJARRDIM,^M<>
+	PUSHL	#FOR$_ADJARRDIM
+	CALLS	#1,G^LIB$STOP
+	RET
 
 	.END

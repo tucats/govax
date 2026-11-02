@@ -146,6 +146,9 @@ func need(e ir.Expr) int {
 	case *ir.Field:
 		return fieldNeed(e)
 
+	case *ir.InRange:
+		return inRangeNeed(e)
+
 	case *ir.LabelAddr, *ir.RoutineAddr:
 		// Its value, made by MOVAB.
 		return 1
@@ -168,6 +171,19 @@ func fieldNeed(e *ir.Field) int {
 			holding++
 			n = max(n, holding)
 		}
+	}
+
+	return max(n, 1)
+}
+
+// inRangeNeed is what an InRange needs: its three operands are computed in that order,
+// each while the ones before it are held; then its value.
+func inRangeNeed(e *ir.InRange) int {
+	n, holding := 0, 0
+
+	for _, x := range []ir.Expr{e.X, e.Low, e.High} {
+		n = max(n, holding+need(x))
+		holding += held(x)
 	}
 
 	return max(n, 1)
@@ -196,7 +212,7 @@ func held(e ir.Expr) int {
 	switch e := e.(type) {
 	case *ir.Op:
 		return e.T.Width()
-	case *ir.Cmp, *ir.CharCmp, *ir.CharIndex, *ir.Field, *ir.Addr:
+	case *ir.Cmp, *ir.CharCmp, *ir.CharIndex, *ir.Field, *ir.InRange, *ir.Addr:
 		return 1
 	case *ir.Load:
 		return memHeld(e.Mem)
@@ -386,6 +402,22 @@ func (g *routineGen) fit(e ir.Expr) ir.Expr {
 				n.Pos = g.spill(n.Pos)
 			default:
 				n.Size = g.spill(n.Size)
+			}
+		}
+
+		return n
+
+	case *ir.InRange:
+		n := &ir.InRange{X: g.fit(e.X), Low: g.fit(e.Low), High: g.fit(e.High)}
+
+		for need(n) > budget {
+			switch a, b, c := need(n.X), need(n.Low), need(n.High); {
+			case a >= b && a >= c:
+				n.X = g.spill(n.X)
+			case b >= c:
+				n.Low = g.spill(n.Low)
+			default:
+				n.High = g.spill(n.High)
 			}
 		}
 
@@ -640,6 +672,9 @@ func (g *routineGen) eval(e ir.Expr) operand {
 
 	case *ir.Field:
 		return g.field(e)
+
+	case *ir.InRange:
+		return g.inRange(e)
 	}
 
 	panic(fmt.Sprintf("codegen: an expression of type %T", e))
@@ -670,8 +705,8 @@ func (g *routineGen) operands(e *ir.Op) (operand, operand) {
 		vy = g.eval(y)
 	}
 
-	if e.Op == ir.Ash {
-		// ASHL's count is a byte, which an index would scale by 1.
+	if e.Op == ir.Ash || e.Op == ir.Rot {
+		// ASHL's and ROTL's count is a byte, which an index would scale by 1.
 		vy = g.unindexed(vy, ir.Long)
 	}
 
@@ -720,6 +755,25 @@ func (g *routineGen) field(e *ir.Field) operand {
 	return inRegister(r, ir.Long)
 }
 
+// inRange writes a subscript's check, the INDEX instruction: INDEX subscript,low,high,
+// size,indexin,indexout leaves (indexin + subscript) * size in indexout, and takes a
+// subscript range trap if the subscript is out of range. With a size of 1 and an
+// indexin of 0 what it leaves is the subscript, which is all that's wanted of it: the
+// rest of the element's address is the indexed mode's, as without the check.
+//
+//	INDEX   PROG.I,#1,#10,#1,#0,R0
+func (g *routineGen) inRange(e *ir.InRange) operand {
+	x := g.eval(e.X)
+	low := g.eval(e.Low)
+	high := g.eval(e.High)
+
+	g.free(x, low, high)
+	r := g.alloc(ir.Long)
+	g.emit("INDEX", ir.Long, x.text, low.text, high.text, "#1", "#0", register(r))
+
+	return inRegister(r, ir.Long)
+}
+
 // operate writes the instruction for e, whose operands are x and y (y
 // empty for one operand), its value going to dst.
 func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
@@ -759,6 +813,9 @@ func (g *routineGen) operate(e *ir.Op, x, y operand, dst string) {
 	case ir.Ash:
 		// ASHL count,source,result.
 		g.emit("ASHL", e.T, y.text, x.text, dst)
+	case ir.Rot:
+		// ROTL count,source,result.
+		g.emit("ROTL", e.T, y.text, x.text, dst)
 	case ir.Low:
 		// MOVW of a longword: its low word, unchecked; nothing at all when
 		// the longword is in the register the word goes to, since a word in
