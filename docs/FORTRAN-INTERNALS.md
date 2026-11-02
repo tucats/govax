@@ -7,7 +7,7 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 82) the compiler parses every statement of the
+So far (Phases 74 to 83) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
@@ -23,13 +23,15 @@ access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
 (with USEROPEN=), CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE,
 FIND, REWRITE, DELETE, and UNLOCK; and DEC's data extensions, structures and
 records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
-and `/ALIGN`. Indexed files are a later program's.
+and `/ALIGN`; and what a program needs to use VMS: definition modules, null
+arguments, handlers, ASTs, and the system subroutines. Indexed files are a later program's.
 The tour follows one small program through every pass (section 1), then
 takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
 instructions (section 11), and a fourth for control flow and subprograms
 (section 12), a fifth for records and how a layout reaches the code (section
-13), then FTNRTL, then how the compiler is tested.
+13), then FTNRTL, then what using VMS asks of them both, then how the compiler
+is tested.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -2116,7 +2118,93 @@ a call of `FTN$ERRSNS` or, for INTEGER\*2 arguments, `FTN$ERRSNS_W`: a routine t
 arguments by reference can't see their lengths, so the compiler, which can, chooses
 the routine.
 
-## 15. Testing a compiler
+## 15. FORTRAN and VMS
+
+Almost nothing in this section is code generation. A compiler that follows VMS's
+calling standard has services, RTL routines, handlers, and AST routines already: `CALL
+SYS$HIBER` is a CALLS through an external name the linker finds, and a function given to
+LIB$ESTABLISH is a routine with an entry mask, like any other. What VMS asks of a compiler
+is a handful of details, and what it asks of a run-time library is a good deal more.
+
+### Definitions come from the same table as everything else
+
+`INCLUDE '($SSDEF)'` is an INCLUDE like any other. `source.Opener` has a method for
+modules, and the command's opener (`dclcmd`'s `fortranIncludes`) searches the libraries
+named, FORT$LIBRARY, and FORSYSDEF.TLB, in the order the manual's section 14.4 gives. Its last
+place is `internal/fortran/sysdef`, which makes FORTRAN text from `vmsdef`, the table of
+VMS's names the assembler and LINK use. A module is a list of prefixes, a name goes to the
+module with its longest matching prefix so that no name is in two, and each comes out as
+`INTEGER*4` and `PARAMETER`. So a module is ordinary source, read by the same passes, and the
+compiler knows nothing about it but two facts on each line, which `source` keeps:
+
+- `Line.Listed`: an INCLUDE without `/LIST` leaves its lines out of the MACRO file.
+  `$SSDEF` alone would otherwise add about 1,460 comment lines to each unit that includes it.
+- `Line.Library`: this line came from a text library. Then `$SYSSRVNAM`'s 200-odd EXTERNAL
+  names don't each become a `.EXTRN`: sema's `Symbol.Linked` gives one only to a name
+  called or passed. A program's own `EXTERNAL BLKDAT` always gets one, because that's how it
+  pulls a BLOCK DATA in from a library.
+
+### Null arguments: the parser couldn't tell
+
+`F(A,,B)` is a syntax error if F is an array and three arguments if it's a routine, and the
+parser doesn't know which. So it keeps the empty place as a nil and lets sema refuse it
+where the name turns out not to be a routine. It's the usual answer for FORTRAN, whose
+grammar doesn't depend on declarations until something forces it to.
+
+### System subroutines: the types choose the routine
+
+A routine taking its arguments by reference can't see their lengths, and `CALL IDATE(M,D,Y)`
+must store words or longwords. The compiler can see them, so `sema/system.go` has a table,
+and each subroutine picks FTNRTL's routine from its arguments' types: `FTN$IDATE` for
+INTEGER\*2, `FTN$JDATE` for INTEGER\*4; `FTN$DATE` for a place with no descriptor, and
+`FTN$DATE_T_DS` for a CHARACTER one. As with ERRSNS, a symbol in no unit's table stands for
+the routine, so a unit's own `DATE` or an `EXTERNAL DATE` wins without a special case.
+`RAN` is just a call of `MTH$RANDOM`, typed REAL\*4 whatever IMPLICIT says.
+
+### What a handler asks of a run-time library
+
+A handler is called by VMS in the middle of whatever FTNRTL was doing, and may do three things
+to it: go on, unwind it away, or start another statement. Each has a consequence.
+
+**Going on.** Whether a statement can continue after an error is the library's decision, by
+which call it signals with: LIB$SIGNAL returns if a handler continues, and LIB$STOP doesn't.
+`SIGNAL_FAILURE` uses LIB$SIGNAL for INPCONERR, OUTCONERR, and FORVARMIS and LIB$STOP for
+the rest. INPCONERR comes by a different road, because "going on" has to mean going on *at that
+item*: `FTN$$FMT_FAIL` signals it at once when the statement has no ERR= or IOSTAT=
+(`FTN$$IO_SIGNAL`), where the other two wait for `FTN$IO_END`. Which is which
+was found by running VMS's FORRTL under handlers (`testdata/for83`'s part E), not assumed.
+
+**Being unwound.** FTNRTL keeps a stack of statement contexts, and a handler's `$UNWIND` takes
+frames off the VAX stack without telling it. So a context records its frame's FP and saved PC.
+A begin call pops any context the current call chain no longer reaches, and `FTN$IO_ITEM` and
+`FTN$IO_END` pop those above their own statement. One case can't be told apart: a routine
+called again from the same place has the very frame of its gone statement
+(DEVIATIONS.md).
+
+**Starting another statement.** A statement on another unit is simply pushed on that stack. On the
+same unit it's RECIO_OPE, and the unit's own state stays safe because of it.
+
+### ASTs: every instruction is a boundary
+
+An AST routine runs between any two instructions, and if it does I/O it uses the same stack
+and free list as the statement it interrupted. A timer test won't find what goes wrong: one
+unrelated line moved `astrace.for`'s first failure past its 2,000 iterations. So
+`TestFor83ASTEverywhere` makes a program trace itself (`for83t.for`), with a trace handler
+declaring an AST at every instruction, about 8,000 of them, and that found a real one: `FTN$IO_END`
+put its context on the free list and only then read its status, so an AST between the two took the
+context and the status became the AST statement's. Now a context goes on the free list only once
+it's been read, and `HOLD_ASTS` and `RELEASE_ASTS` (`$SETAST`) go around changes to the stack and the
+list. That's six more service calls per statement, the price of a library that's safe here.
+
+### STR$ and the rest aren't FTNRTL's
+
+Everything a FORTRAN program may call that isn't about FORTRAN is in Go, in `internal/librtl`
+beside the LIB$ routines, usable from MACRO just the same: `STR$COPY_DX` and the rest of the 26
+string routines (`str.go`, `strparts.go`, `strsearch.go`) and the condition routines
+(`condition.go`, `fixupflt.go`). The test of the whole thing is `testdata/fortran/vmstour.for`,
+and each piece is held to VMS's own run (`testdata/for83`, `testdata/str83`).
+
+## 16. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.

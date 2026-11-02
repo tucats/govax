@@ -573,7 +573,7 @@ never had.
   `raiseCommonAlignments`; `Unit.LocalAlign`, codegen's `localAlignment`), and subtask 9 end to end
   (`testdata/fortran/itemlist.for`, `modules/aligned`) and the close-out (FORTRAN-INTERNALS.md's section 13,
   MANUAL.md's 14.2 to 14.4 and 14.7); the phase doc's "Where things stand" lists what is left.
-  Phase 83 (in progress) is FORTRAN and VMS: definition modules, services, handlers, ASTs, the system
+  Phase 83 (done 2026-11-01) is FORTRAN and VMS: definition modules, services, handlers, ASTs, the system
   subroutines; subtask 1 (2026-11-01) is the survey, its doc's Part A, with the author's answers, and subtask 2
   the probe, `testdata/for83` and `testdata/str83`; the doc's "What the probe settled" is VMS's answers, and subtask 3
   text libraries and INCLUDE (LIBRARY/TEXT, `lbr.TextModule`, held to VMS by `TestFor83NewLibraries` and
@@ -587,7 +587,7 @@ never had.
   and `corevms/condregs.go`, LIB$FIXUP_FLT; LIB$SIG_TO_STOP, INT_OVER, DEC_OVER, FLT_UNDER; a fault restores its operands' registers, `registers/operandlog.go`;
   FTNRTL signals INPCONERR at its item and stops for all but it, OUTCONERR, and FORVARMIS, `FTN$$IO_SIGNAL`; held to VMS by `TestFor83ConditionOracle` and `TestFor83PartBOnFORRTL`,
   and to FORRTL by `TestFor83ContinueOnFORRTL`), and subtask 7 ASTs and exit handlers (FTNRTL holds ASTs off with `$SETAST` while its statement stack and free list change, and a context records its
-  frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`), and subtask 8 the system subroutines (`sema/system.go`: a table, each subroutine's arguments choosing FTNRTL's routine, as ERRSNS's do, RAN and SECNDS REAL\*4 whatever IMPLICIT says; `ftn_system.mar`, GSMATCH 1,16, held to VMS by `TestFor83PartAOnFTNRTL`, part A with each `FOR$` name's `FTN$`), and subtask 9 STR$ (`librtl/str.go`, `strparts.go`, `strsearch.go`; `vmsdef/strmessages.go`; held to VMS by `TestStr83Oracle`; the five arithmetic routines NOTIMPL).
+  frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`), and subtask 8 the system subroutines (`sema/system.go`: a table, each subroutine's arguments choosing FTNRTL's routine, as ERRSNS's do, RAN and SECNDS REAL\*4 whatever IMPLICIT says; `ftn_system.mar`, GSMATCH 1,16, held to VMS by `TestFor83PartAOnFTNRTL`, part A with each `FOR$` name's `FTN$`), and subtask 9 STR$ (`librtl/str.go`, `strparts.go`, `strsearch.go`; `vmsdef/strmessages.go`; held to VMS by `TestStr83Oracle`; the five arithmetic routines NOTIMPL), and subtask 10 end to end (`testdata/fortran/vmstour.for`) and the close-out (MANUAL.md's 14.8, FORTRAN-INTERNALS.md's section 15); the phase doc's "Where things stand" lists what is left.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -4382,7 +4382,7 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 81 done, 2026-11-01):** the compiler reads
+**Where things stand (Phase 83 done, 2026-11-01):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
@@ -4392,9 +4392,12 @@ descriptor and variable format expressions, list-directed, namelist, and
 unformatted input and output, sequential and direct access, on sequential
 and relative files through OPEN (USEROPEN= too), CLOSE, INQUIRE, REWIND,
 BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
-14.2). Indexed files and the keyed READ are a later program's. Any other
-statement draws `%FORT-E-NOTIMPL`, naming it ("the DICTIONARY statement is not
-implemented yet"); the later phases widen the language.
+14.2). DEC's data extensions compile too, structures and records among them, and
+a program can use VMS as VMS programmers did: definition modules, system services
+and RTL routines, condition handlers, ASTs, exit handlers, and the system
+subroutines (section 14.8). Indexed files and the keyed READ are a later program's.
+Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the DICTIONARY statement is
+not implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
 
 ### 14.1 A first program
@@ -5647,6 +5650,186 @@ FORTRAN compiler was available to check them). So far:
 
 ---
 
+
+### 14.8 Calling VMS from FORTRAN
+
+A FORTRAN routine follows VMS's calling standard, so a system service or an RTL
+routine is called as any other routine is: as a function for its status, or with
+CALL if the status doesn't matter. `testdata/fortran/vmstour.for` is one program
+that does all of what follows, and the excerpts here are from it.
+
+**Definitions.** `INCLUDE '($SSDEF)'` and its neighbors (section 14.4) give VMS's names
+their values, and `INCLUDE '($SYSSRVNAM)'` declares each service as an INTEGER\*4
+function. An RTL routine's name you declare yourself. With `IMPLICIT NONE`, or when
+the name's first letter would make it REAL, you must; `L` is a safe start for
+`LIB$` and `S` isn't.
+
+**Arguments.** A numeric argument goes by reference and a CHARACTER one by descriptor,
+which is what most services want. `%VAL` passes a value, `%REF` a CHARACTER's address,
+`%DESCR` a descriptor, and `%LOC` is an address as a number. An argument left out
+is a longword of 0, in a function reference as in a CALL. A status's low bit says
+whether it succeeded, which is all `.NOT.` tests in an INTEGER:
+
+```fortran
+      SUBROUTINE CHECK(STATUS)
+      INTEGER*4 STATUS
+      IF (.NOT. STATUS) CALL LIB$STOP(%VAL(STATUS))
+      END
+```
+
+An item list is an array of records:
+
+```fortran
+      STRUCTURE /ITEM/
+          INTEGER*2 BUFLEN, CODE
+          INTEGER*4 BUFADR, RETADR
+      END STRUCTURE
+      RECORD /ITEM/ LIST(3)
+      ...
+      LIST(1).BUFLEN = 4
+      LIST(1).CODE = JPI$_PID
+      LIST(1).BUFADR = %LOC(PID)
+      LIST(1).RETADR = 0
+      ...
+      CALL CHECK(SYS$GETJPIW(, , , LIST, IOSB, , ))
+      CALL CHECK(IOSB(1))
+      CALL CHECK(LIB$GETJPI(JPI$_PID, , , PID2))
+```
+
+A service govax doesn't have is still there to link against. Calling one signals
+`SS$_UNSUPPORTED` and `%GOVAX-E-NOTIMPL` with its name, as a missing RTL routine does.
+There is no queue manager, so `$GETQUI` and `$SNDJBC` are among them, and `$QUIDEF` and
+`$SJCDEF` aren't modules.
+
+**Strings.** The `STR$` routines write any class of descriptor. A CHARACTER variable is a
+fixed string, padded with blanks or cut, and cutting it is the warning `STR$_TRU`. Those
+that give a string a new length, `STR$APPEND` and `STR$PREFIX`, can't use a fixed string
+at all, and signal `STR$_ILLSTRCLA`. A position off the string is no failure: the
+routine uses the nearest that makes sense and returns the success `STR$_ILLSTRPOS` or
+`STR$_ILLSTRSPE`. A character passed to `STR$DUPL_CHAR` goes by `%REF`. All are in place
+but `STR$ADD`, `DIVIDE`, `MUL`, `RECIP`, and `ROUND`, and the undocumented
+`STR$ELEMENT_R8`.
+
+**Condition handlers.** A handler is an INTEGER\*4 function of the signal array and the
+mechanism array, set with `CALL LIB$ESTABLISH(name)` and an `EXTERNAL name`. It's for the
+routine that established it and what that calls. The value it returns, `SS$_CONTINUE` or
+`SS$_RESIGNAL`, says what happens next, unless it unwinds:
+
+```fortran
+      INTEGER*4 FUNCTION OPENED(NAME)
+      CHARACTER*(*) NAME
+      INTEGER*4 RECOVER
+      EXTERNAL RECOVER
+      CALL LIB$ESTABLISH(RECOVER)
+      OPEN (UNIT=12, FILE=NAME, STATUS='OLD')
+      OPENED = 1
+      CLOSE (UNIT=12)
+      END
+
+      INTEGER*4 FUNCTION RECOVER(SIGARGS, MECHARGS)
+      IMPLICIT NONE
+      INCLUDE '($SSDEF)'
+      INCLUDE '($FORDEF)'
+      INCLUDE '($CHFDEF)'
+      INTEGER*4 SIGARGS(*), LIB$MATCH_COND, DEPTH
+      RECORD /CHFDEF2/ MECHARGS
+      RECOVER = SS$_RESIGNAL
+      IF (LIB$MATCH_COND(SIGARGS(2), FOR$_FILNOTFOU) .NE. 0) THEN
+          PRINT *, 'Handler: no such file'
+          MECHARGS.CHF$L_MCH_SAVR0 = 0
+          DEPTH = MECHARGS.CHF$L_MCH_DEPTH + 1
+          CALL SYS$UNWIND(DEPTH, )
+      END IF
+      END
+```
+
+`$UNWIND` to the mechanism's depth goes on in the establisher just after the call that
+failed, here at `OPENED = 1`. One more goes to the establisher's caller, so `OPENED`
+returns, and its value is the R0 the handler left. A handler is called again, with
+`SS$_UNWIND`, for each frame the unwind removes. `LIB$SIG_TO_RET` as a handler does the
+same without any of this, and the routine returns the condition as its status.
+
+Of FTNRTL's errors with no `ERR=` or `IOSTAT=`, a handler can go on from `INPCONERR`,
+which is signaled at its item, so the statement goes on with the item 0 or unchanged
+by its edit descriptor; and from `OUTCONERR` and `FORVARMIS`, signaled when the statement
+ends. FTNRTL stops for the others, as VMS's library does: a handler can unwind, but if it
+continues, the image ends with the condition's message and status. A statement unwound
+from is gone, a record it began isn't written, and the unit is free again. During a
+statement, a handler's or an AST's statement on the same unit is `RECIO_OPE`, which stops;
+that includes a function in a PRINT's list that PRINTs. On another unit or an internal
+file it works.
+
+`LIB$FIXUP_FLT` replaces a reserved floating operand and restarts the instruction.
+`LIB$INT_OVER`, `LIB$DEC_OVER`, and `LIB$FLT_UNDER` turn their traps on or off for the
+calling routine alone, from then on. `LIB$SIG_TO_STOP` makes a condition one that can't be
+continued.
+
+**AST routines.** An AST routine is a SUBROUTINE. Its one argument is the AST parameter
+**by value**, where a dummy argument expects an address, so `%LOC(PARAM)` is how to read
+it. A routine can't name itself in an EXTERNAL statement, so one that sets its own timer
+again gets its address from elsewhere, and uses `%VAL`:
+
+```fortran
+      SUBROUTINE TICK(PARAM)
+      IMPLICIT NONE
+      INCLUDE '($SYSSRVNAM)'
+      COMMON /TIMER/ TICKS, DELAY, AGAIN
+      INTEGER*4 TICKS, DELAY(2), AGAIN, PARAM
+      VOLATILE TICKS
+      IF (%LOC(PARAM) .EQ. 7) TICKS = TICKS + 1
+      IF (TICKS .LT. 3) THEN
+          CALL SYS$SETIMR(, DELAY, %VAL(AGAIN), %VAL(7), )
+      ELSE
+          CALL SYS$WAKE(, )
+      END IF
+      END
+```
+
+An AST can arrive between any two instructions, so a variable both sides use should be
+`VOLATILE`, as `TICKS` is here. **FORTRAN's variables are static:** if an AST routine calls a
+routine the interrupted code was in the middle of, the two share its variables and
+overwrite each other. Declaring them `AUTOMATIC` (section 14.2) gives each call its own.
+FTNRTL itself is safe to call from an AST, holding ASTs off while its own lists change.
+
+**Exit handlers.** `$DCLEXH` takes a block of four longwords or more: a 0 for VMS's own use,
+the routine's address, the number of arguments the routine gets, and the address where VMS
+puts the status, which is the first of them, then any others of your own. The routine is called as the image ends,
+with that status by reference, the last declared first:
+
+```fortran
+      EXITBLOCK(1) = 0
+      EXITBLOCK(2) = %LOC(ATEXIT)
+      EXITBLOCK(3) = 1
+      EXITBLOCK(4) = %LOC(EXITVALUE)
+      CALL CHECK(SYS$DCLEXH(EXITBLOCK))
+```
+
+FTNRTL closes units with an exit handler of its own, declared when a program first uses a
+unit. So one declared before that runs after the units are closed, and one declared after
+it finds them open.
+
+**System subroutines.** Appendix D of the language manual, with `ERRSNS` (section 14.2):
+
+| Name | What it does |
+| --- | --- |
+| `CALL DATE(buf)` | 9 bytes, ` 1-NOV-26`, the day with a leading blank; `buf` a variable, array, element, or substring of any type |
+| `CALL TIME(buf)` | 8 bytes, `hh:mm:ss` |
+| `CALL IDATE(m, d, y)` | Month, day, and the year's last two digits, all INTEGER\*2 or all INTEGER\*4 |
+| `CALL EXIT[(status)]` | Ends the program, closing units; SS\$_NORMAL without a status |
+| `y = SECNDS(x)` | REAL\*4: the seconds since midnight less x, plus a day if that's negative |
+| `y = RAN(seed)` | REAL\*4, from an INTEGER\*4 seed it changes; `MTH$RANDOM` |
+| `CALL MVBITS(m, i, len, n, j)` | Moves `len` bits from position `i` of `m` to position `j` of `n`; other bits stay |
+
+A routine of your own with one of these names wins, and so does an `EXTERNAL` statement
+naming it.
+
+The choices govax made where no VAX FORTRAN was at hand to ask are in the phase's document
+(`docs/PHASE-83 - FORTRAN and VMS.md`). The ones you're likely to meet: a second declaration of
+a name a module declares is `DUPDECL` or `DUPATTR`, so don't declare a service you also get
+from `$SYSSRVNAM`; a name used both as a function and in a CALL in one unit is `BADUSE`; and
+the system subroutines' arguments are checked when compiling (`SYSARG`, `SYSCOUNT`), by the
+language manual's types.
+
 ## 15. Appendices
 
 ### Appendix A: System services
@@ -5687,7 +5870,7 @@ and run, but signals `GOVAX-E-NOTIMPL` if called.
 | Conversion | `LIB$CVT_DTB`, `LIB$CVT_HTB`, `LIB$CVT_OTB` |
 | Arithmetic and bits | `LIB$ADDX`, `LIB$SUBX`, `LIB$EMUL`, `LIB$EDIV`, `LIB$ADAWI`, `LIB$EMODF`/`D`/`G`/`H`, `LIB$POLYF`/`D`/`G`/`H`, `LIB$EXTV`, `LIB$EXTZV`, `LIB$INSV`, `LIB$FFC`, `LIB$FFS`, `LIB$BBSSI`, `LIB$BBCCI`, `LIB$CRC`, `LIB$CRC_TABLE` |
 | Queues | `LIB$INSQHI`, `LIB$INSQTI`, `LIB$REMQHI`, `LIB$REMQTI` |
-| Conditions | `LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$SIG_TO_RET`, `LIB$MATCH_COND`, `LIB$CALLG` |
+| Conditions | `LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$SIG_TO_RET`, `LIB$SIG_TO_STOP`, `LIB$MATCH_COND`, `LIB$FIXUP_FLT`, `LIB$INT_OVER`, `LIB$DEC_OVER`, `LIB$FLT_UNDER`, `LIB$CALLG` |
 | Memory | `LIB$GET_VM`, `LIB$FREE_VM`, `LIB$GET_VM_PAGE`, `LIB$FREE_VM_PAGE`, `LIB$CREATE_VM_ZONE`, `LIB$CREATE_USER_VM_ZONE`, `LIB$DELETE_VM_ZONE`, `LIB$RESET_VM_ZONE`, `LIB$FIND_VM_ZONE`, `LIB$SHOW_VM_ZONE`, `LIB$VERIFY_VM_ZONE`, `LIB$STAT_VM`, `LIB$SHOW_VM`, `LIB$VM_MALLOC`, `LIB$VM_CALLOC`, `LIB$VM_REALLOC`, `LIB$VM_FREE` |
 | Dates and times | `LIB$DATE_TIME`, `LIB$DAY`, `LIB$DAY_OF_WEEK`, `LIB$ADD_TIMES`, `LIB$SUB_TIMES`, `LIB$MULT_DELTA_TIME`, `LIB$MULTF_DELTA_TIME`, `LIB$CVT_TO_INTERNAL_TIME`, `LIB$CVT_FROM_INTERNAL_TIME`, `LIB$CVTF_TO_INTERNAL_TIME`, `LIB$CVTF_FROM_INTERNAL_TIME`, `LIB$CVT_VECTIM`, `LIB$SYS_ASCTIM`, `LIB$FORMAT_DATE_TIME`, `LIB$CONVERT_DATE_STRING`, `LIB$INIT_DATE_TIME_CONTEXT`, `LIB$FREE_DATE_TIME_CONTEXT`, `LIB$GET_DATE_FORMAT`, `LIB$GET_MAXIMUM_DATE_LENGTH` |
 | System service jackets and items | `LIB$SYS_FAO`, `LIB$SYS_FAOL`, `LIB$SYS_GETMSG`, `LIB$SYS_TRNLOG`, `LIB$GETJPI`, `LIB$GETSYI`, `LIB$GETDVI` |

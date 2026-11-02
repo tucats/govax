@@ -181,6 +181,8 @@
 //                          - FORTRAN front end.md)
 //              11/01/26    LIBRARY/TEXT; FORTRAN's +, /LIBRARY, and INCLUDE of a
 //                          text module (docs/PHASE-83 - FORTRAN and VMS.md)
+//              11/01/26    FORTRAN: services, handlers, ASTs, and the system
+//                          subroutines (docs/PHASE-83 - FORTRAN and VMS.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2545,7 +2547,7 @@ $HELP
     GOSUB           Call a subroutine at a label (RETURN comes back)
     GOTO            Go on at a label of a command procedure
     INITIALIZE      Initialize the virtual VAX, or a disk-image container
-    LIBRARY         Create, change, or list a macro or object library
+    LIBRARY         Create, change, or list a macro, object, or text library
     LINK            Link object modules into an executable image
     LOAD            Load a saved memory image
     MACRO           Assemble a MACRO-32 source file into an object module
@@ -4078,6 +4080,14 @@ $FOR
     modules built into govax, such as $SSDEF, $IODEF, $JPIDEF, $FORDEF,
     $CHFDEF, and $SYSSRVNAM, whose INTEGER*4 and PARAMETER statements give
     VMS's names their values.  INCLUDE 'lib(module)' reads only that library.
+
+    A program can use VMS directly: a system service or RTL routine is a
+    routine like any other, called as a function for its status, with
+    arguments left out (STATUS = SYS$GETJPIW(,,,LIST,IOSB,,)), %VAL, %REF,
+    %DESCR, and %LOC.  A FORTRAN function can be a condition handler
+    (LIB$ESTABLISH), and a subroutine an AST routine or exit handler.
+    The system subroutines are there: DATE, TIME, IDATE, EXIT, SECNDS,
+    RAN, MVBITS, and ERRSNS.
 
     Compiled programs call FTNRTL, govax's FORTRAN run-time library, a
     shareable image written in MACRO-32 and built into govax.  LINK

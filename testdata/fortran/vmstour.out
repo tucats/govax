@@ -1,0 +1,9 @@
+The two ways agree: T
+"ONE TWO"  7
+Handler: no such file
+NOSUCH.DAT opened: F
+3 ticks
+DATE agrees: T
+IDATE in range: T
+Exit handler: status 00000001
+  $STATUS == "%X00000001"

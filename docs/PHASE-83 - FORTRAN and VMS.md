@@ -1,9 +1,6 @@
 # Phase 83 — FORTRAN and VMS: definitions, services, handlers, ASTs
 
-**Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
-by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
-settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
-day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day; subtask 7, ASTs and exit handlers, the same day; subtask 8, the system subroutines, the same day; subtask 9, STR$, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
+**Status:** done 2026-11-01. Subtask 1, the survey (Part A below), reviewed by the author the same day ("The author's answers"); subtask 2, the probe ("What the probe settled"); and the rest, each logged below, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -386,6 +383,18 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
 | 8 | TYPE ignores FORTRAN carriage control: VMS's drops a record's first byte from a file with RAT=FTN (`unit 13` types as `nit 13`, `*` as an empty line) | 5 |
 | 9 | `DEFINE/USER_MODE` outlives govax's MACRO and LINK, which aren't images | 5 |
 
+## Where things stand
+
+Done: everything in the goal above. Left for later, and logged where it was found:
+
+- **Phase 61 keeps** LIB$DECODE_FAULT, SIM_TRAP, FIND_IMAGE_SYMBOL, GET_OPCODE, and LIB$INITIALIZE (answer 4).
+- **STR$'s** ADD, DIVIDE, MUL, RECIP, and ROUND stay NOTIMPL (answer 2), with the undocumented STR$ELEMENT_R8.
+- **LIBRARY edits a library by rebuilding it,** where LIBRARIAN changes one in place (subtask 3), so only a library made by one command matches VMS's byte for byte, and history records are dropped. `/COMPRESS` and `/DATA=REDUCE` are left out.
+- **Services are added when a program needs them;** 191 of the vector's entries signal NOTIMPL (Decision 6). `$QUIDEF` and `$SJCDEF` stay out (Decision 10).
+- **One FORRTL difference stands** (subtask 7, DEVIATIONS.md): a routine called again from one place has its gone statement's frame, and deeper I/O on that unit before another statement is RECIO_OPE.
+- **Seen and left:** COPY's `%COPY-S-COPIED` without `/LOG` (subtask 3); TYPE ending a line after a record with no carriage control (subtask 6); the probe's STR$MATCH_WILD cases with `%` (subtask 9), which a later round could ask again.
+- **Unconfirmed, there being no VAX FORTRAN:** the INCLUDE search's order, `A+B`'s MACRO file's name, `$FORIOSDEF`'s names, a second declaration of a module's name being an error, a name both called and referenced being BADUSE, and the system subroutines' compile-time checks. Each subtask's log has its own.
+
 ## Subtasks (provisional, revised by the survey)
 
 1. **Survey** (done 2026-11-01): Part A.
@@ -403,7 +412,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
    timing doesn't show in their output.
 8. **The appendix D system subroutines** (done 2026-11-01), held to the probe's part A.
 9. **STR$** (done 2026-11-01) (question 2) and `testdata/str83`, with the STR facility's messages.
-10. **End to end**, then **close-out** (MANUAL.md's "Calling VMS from FORTRAN", with AST reentrancy;
+10. **End to end**, then **close-out** (done 2026-11-01) (MANUAL.md's "Calling VMS from FORTRAN", with AST reentrancy;
     FORTRAN-INTERNALS.md; HELP FORTRAN and HELP LIBRARY; CLAUDE.md).
 
 ## Progress log
@@ -566,3 +575,4 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   **What the run showed that the manual doesn't say:** a position routine's two conditions have an order (`strparts.go`: POS_EXTR 4 2 is ILLSTRSPE and an empty string, LEN_EXTR running past the end ILLSTRSPE with what there is, LEFT 0 and RIGHT at the place past the end no complaint); FIND_FIRST_NOT_IN_SET of an empty source is 1 and of an empty set 0; STR$ANALYZE_SDESC's R0 is the length; COMPARE_EQL of unequal strings is always 1; CASE_BLIND_COMPARE differs from COMPARE past the shorter's end (AB and AB<tab>); a negative STR$ELEMENT number is element 0; capitals are the Multinational Character Set's (LIB$AB_UPCASE). The routines read no argument count but STR$CONCAT's, so a missing argument is whatever follows the argument list on the stack, as on VMS: `strArg`, which gives the probe's "no args" and "one arg" cases exactly, access violation address and all.
   **Unconfirmed, the probe having no case:** STR$COMPARE_MULTI's order past what VMS's run shows (by capital, a lowercase letter just before its capital), with all six languages the same order, there being no table to read; TRU over an alternate success when both apply; POS_EXTR's and LEN_EXTR's rules where two conditions meet (`TestPositionRules` records the choice); STR$ELEMENT leaving a destination alone on NOELEM and INVDELIM; TRANSLATE's first place in a repeated match string. **`%` in STR$MATCH_WILD** is the manual's alone: `gen.go`'s label prefix replaced every `%` in a case's data, so the probe's patterns with one have `C123_` there. A later round could ask again, with a `gen.go` that spares them.
   **Left out:** STR$ELEMENT_R8, in the vector and in neither manual, stays NOTIMPL with the five arithmetic routines, as answer 2 has them.
+- **2026-11-01:** Subtask 10, end to end and the close-out. **`testdata/fortran/vmstour.for`**, in both paging modes: the definition modules, `$GETJPIW`'s item list from a structure beside LIB$GETJPI with null arguments, STR$, a handler using `CHFDEF2` that recovers from a failed OPEN with `$UNWIND` and the mechanism's R0, a timer AST re-arming itself while the program is in `$HIBER`, `$FAO`, an exit handler with `CALL EXIT`, DATE and IDATE. It needed no change to govax. It had three faults of its own, each of which govax reported as VMS would: a declaration past column 72 (NOTYPE), a PRINT list calling a routine whose handler PRINTs (RECIO_OPE), and an `$UNWIND` to the establisher, which goes on after the OPEN. **A language rule to note for Phase 86:** a routine naming itself in EXTERNAL is BADUSE, so an AST routine that re-arms itself takes its address from elsewhere, here `%LOC` in the main program; whether VAX FORTRAN allowed it is unconfirmed. **Docs:** MANUAL.md's 14.8, "Calling VMS from FORTRAN", whose excerpts are this program's, with AST reentrancy; FORTRAN-INTERNALS.md's new section 15, "FORTRAN and VMS" (Testing is now 16); HELP FORTRAN, and HELP's line for LIBRARY; Appendix B's conditions row; PLAN.md; CLAUDE.md; this doc's "Where things stand".
