@@ -327,8 +327,10 @@ INPUT:	CMPB	OP_B_CODE(R10),#C_L
 
 ;
 ; I on input: a sign, perhaps, and decimal digits; R5 the magnitude so
-; far, R6 1 for a minus sign. R7 and R8 hold the magnitude times ten, a
-; quadword, so that it can be seen to be too large.
+; far, R6 1 for a minus sign. A plain digit, and a magnitude too small to
+; overflow, takes the short way round, which is most of them. Otherwise, R7
+; and R8 hold the magnitude times ten, a quadword, so that it can be seen to
+; be too large, and NEXT_DIGIT has the rules for what isn't a digit.
 ;
 IN_I:	JSB	FIELD
 	JSB	LEADING
@@ -343,11 +345,24 @@ IN_I:	JSB	FIELD
 	MOVL	#1,R6
 5$:	INCL	R2
 	DECL	R3
-10$:	JSB	NEXT_DIGIT
+10$:	DECL	R3
+	BLSS	30$			; the field's end
+	MOVZBL	(R2)+,R1
+	SUBL2	#^A/0/,R1
+	CMPL	R1,#9
+	BGTRU	20$
+	CMPL	R5,#214748364		; times ten, plus 9, still fits
+	BGEQU	25$
+	MULL2	#10,R5
+	ADDL2	R1,R5
+	BRB	10$
+20$:	DECL	R2			; not a plain digit: looked at again
+	INCL	R3
+	JSB	NEXT_DIGIT
 	BLBC	R0,30$			; the field's end
 	CMPL	R1,#9
 	BGTRU	BAD
-	EMUL	#10,R5,R1,R7		; R5 times ten, plus the digit
+25$:	EMUL	#10,R5,R1,R7		; R5 times ten, plus the digit
 	TSTL	R8
 	BNEQ	BAD
 	CMPL	R7,#^X80000000		; 2147483648 at most, unsigned
@@ -529,6 +544,8 @@ WIDTH:	MOVZWL	OP_W_W(R10),R9
 ;
 INTEGER_TYPE:
 	MOVZBL	20(AP),R0
+	CMPL	R0,#DSC$K_DTYPE_L	; the commonest
+	BEQL	10$
 	CMPL	R0,#DSC$K_DTYPE_BU
 	BLSS	80$
 	CMPL	R0,#DSC$K_DTYPE_LU
@@ -572,16 +589,17 @@ FIELD:	MOVL	CTX_POS(R11),R4
 	RSB
 
 ;
-; LEADING: passes over the field's leading blanks and tabs.
+; LEADING: passes over the field's leading blanks and tabs. Changes R0
+; and R1.
 ;
 LEADING:
-	TSTL	R3
-	BEQL	20$
-	CMPB	(R2),#^A/ /
-	BEQL	10$
+	SKPC	#^A/ /,R3,(R2)
+	MOVL	R1,R2
+	MOVL	R0,R3
+	BEQL	20$			; nothing else in the field
 	CMPB	(R2),#9
 	BNEQ	20$
-10$:	INCL	R2
+	INCL	R2
 	DECL	R3
 	BRB	LEADING
 20$:	RSB

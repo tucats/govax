@@ -813,24 +813,33 @@ NEW_RECORD:
 	MOVL	8(AP),R2		; the bytes
 	MOVL	12(AP),R3		; how many
 	BNEQ	7$
-	;
-	; No bytes: a field of width 0 (I0, which VMS's library writes as
-	; no asterisks) still ends the record at its column, as if blanks
-	; were before it.
-	;
-	MOVL	CTX_POS(R6),R4
-	CMPL	R4,CTX_RECMAX(R6)
-	BGTR	90$
-	MOVL	CTX_RECLEN(R6),R5
-5$:	CMPL	R5,R4
-	BGEQ	90$
-	MOVB	#^A/ /,@CTX_RECP(R6)[R5]
-	INCL	R5
-	MOVL	R5,CTX_RECLEN(R6)
-	BRB	5$
+	BRW	100$
 7$:	ADDL3	CTX_POS(R6),R3,R4	; all of them fit, or none is written
 	CMPL	R4,CTX_RECMAX(R6)
 	BGTR	80$
+	MOVL	CTX_POS(R6),R5
+	BLSS	10$			; before the first column: a byte at a time
+	MOVL	R4,CTX_POS(R6)
+	SUBL3	CTX_RECLEN(R6),R5,R0	; blanks up to the position
+	BLEQ	8$
+	PUSHR	#^M<R2,R3,R4,R5>
+	ADDL3	CTX_RECLEN(R6),CTX_RECP(R6),R1
+	MOVC5	#0,(R1),#^A/ /,R0,(R1)
+	POPR	#^M<R2,R3,R4,R5>
+8$:	CMPL	R4,CTX_RECLEN(R6)
+	BLEQ	9$
+	MOVL	R4,CTX_RECLEN(R6)	; the record is longer
+9$:	ADDL3	R5,CTX_RECP(R6),R1
+	TSTL	R2
+	BEQL	95$
+	MOVC3	R3,(R2),(R1)
+	RET
+95$:	MOVC5	#0,(R1),#^A/ /,R3,(R1)
+	RET
+80$:	PUSHL	#FOR$_OUTSTAOVE
+	PUSHL	R6
+	CALLS	#2,FTN$$FMT_FAIL
+	RET
 10$:	DECL	R3
 	BLSS	90$
 	MOVL	CTX_POS(R6),R4
@@ -855,10 +864,22 @@ NEW_RECORD:
 	BEQL	10$
 	INCL	R2
 	BRB	10$
-80$:	PUSHL	#FOR$_OUTSTAOVE
-	PUSHL	R6
-	CALLS	#2,FTN$$FMT_FAIL
 90$:	RET
+	;
+	; No bytes: a field of width 0 (I0, which VMS's library writes as
+	; no asterisks) still ends the record at its column, as if blanks
+	; were before it.
+	;
+100$:	MOVL	CTX_POS(R6),R4
+	CMPL	R4,CTX_RECMAX(R6)
+	BGTR	90$
+	MOVL	CTX_RECLEN(R6),R5
+105$:	CMPL	R5,R4
+	BGEQ	90$
+	MOVB	#^A/ /,@CTX_RECP(R6)[R5]
+	INCL	R5
+	MOVL	R5,CTX_RECLEN(R6)
+	BRB	105$
 
 ;
 ; GET_CHARS(context, address, length): copies length characters of the
@@ -870,6 +891,15 @@ GET_CHARS:
 	MOVL	4(AP),R5		; the context
 	MOVL	8(AP),R2		; where they go
 	MOVL	12(AP),R3		; how many
+	BLEQ	90$
+	MOVL	CTX_POS(R5),R4
+	BLSS	10$			; before the first column: a byte at a time
+	ADDL3	R4,R3,CTX_POS(R5)
+	SUBL3	R4,CTX_RECLEN(R5),R0	; what the record has from there
+	BGEQ	5$
+	CLRL	R0
+5$:	MOVC5	R0,@CTX_RECP(R5)[R4],#^A/ /,R3,(R2)
+	RET
 10$:	DECL	R3
 	BLSS	90$
 	MOVL	CTX_POS(R5),R4

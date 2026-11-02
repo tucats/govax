@@ -400,7 +400,7 @@ The survey's decisions drew no objection, and stand.
    stride isn't the element's size, and autoincrement; a loop that tests at its top
    rotated so that its test is at the bottom; and a DO's count dropped for
    `AOBLEQ` on its limit, where that's safe.
-11. **FTNRTL's loops** (the author's answer 3): its character loops tuned by
+11. **FTNRTL's loops** (done 2026-11-02; the author's answer 3): its character loops tuned by
     hand, as DUNGEON's startup and the corpus measure them, held to the
     existing oracles. No new entry points, so no change to its GSMATCH.
 12. **Close-out:** the measured gains against this survey's table;
@@ -846,3 +846,28 @@ The survey's decisions drew no objection, and stand.
     `matmul`, `sieve`, and `subs` now beat the survey's hand versions, whose figures were called upper estimates. Reads still include fetches and page table reads (subtask 8), so they aren't all data. DUNGEON's game printed the same both ways. Against subtask 9's build, on the copying loader, 50 of the 91 programs it can be compared on run fewer instructions, none runs more, and none writes more by over 50.
   - **New program:** `optloop.for`, worked by hand, whose values all matched on the first run both ways. Its expected file had a layout error of mine, an `A8` taken as left-justifying. Limits changed in the loop, no trips, steps on and off the limit, down to 1, 0, and a variable, the largest and smallest integers, a variable changed by a call and another name, COMMON limits, a limit reading the variable, GO TO out, the extended range, a dummy, a shared terminal statement, implied-DO, tests at the top with statements, two ways back and two ways in, a loop that starts its routine, and every stride: a diagonal, a row, in place, down, by 2, backward, some of the time, twice a trip, past a call, CHARACTER, adjustable.
   - **Testing:** `loopform_test.go` has a case per rule; `TestPassesOnCorpus` holds second runs to no change; `TestBoundsHold` holds on the new forms. Thirteen rules were then broken on purpose, and twelve failed a test (the largest-limit rule by running forever, until the test's timeout). The thirteenth was `s.Volatile`, which was a second check beside `Mem.Volatile`; taking out `Mem.Volatile`'s, the tests still pass, so the one left stands. A found bug: `findStepped` first listed candidates from a Go map, so that two compilations could differ (`TestSteppedSameTwice`). Real MACRO hasn't assembled this output (Phase 86's optional round).
+- **2026-11-02:** The author's answers to subtask 10's two questions, both as recommended: a limit known only at run time goes on closing with `AOBLEQ`, and autoincrement stays out. The author also asked that the remaining subtasks go on without a pause for review, each committed.
+- **2026-11-02:** Subtask 11, FTNRTL's loops: `ftn_edit.mar` and `ftn_format.mar`, with `ftnrtl.exe` rebuilt. No entry points change, so GSMATCH stays. Every program benefits, compiled either way, since FTNRTL is shared.
+  - **Where the time went.** The survey's per-PC patch, with a map from image offsets to FTNRTL's labels, on DUNGEON's startup and the corpus. Startup is about 7,900 records of one `I8` field each, 254 instructions a record: `LEADING` 38 of those, a loop per blank at 9 instructions each; `NEXT_DIGIT` 29, and the loop calling it; `FTN$$FMT_PUT` led the corpus at 14% of its FTNRTL instructions, apart from `astrace`, at about 17 instructions per byte.
+  - **What changed:**
+    - `FTN$$FMT_PUT` is one `MOVC3` or `MOVC5`, with one `MOVC5` for any gap before it. A position before the first column keeps the old loop, as only that case loses bytes. The instruction's per-byte work no longer counts here; a real VAX still spends time per byte, though less than the old loop did.
+    - `GET_CHARS` is one `MOVC5`, likewise.
+    - `LEADING` is `SKPC`, with a tab handled after it.
+    - `IN_I` takes a plain digit in 11 instructions rather than 22, with the `EMUL` and its overflow checks only once the magnitude reaches 214748364; below that, ten times it plus 9 fits. Anything else goes back through `NEXT_DIGIT`, whose rules are unchanged.
+    - `INTEGER_TYPE` looks for a longword first.
+  - **What can differ:** `MOVC` copies as if the regions didn't overlap, where the old loop went forward a byte at a time. So an item overlapping its own internal file's record, which the language forbids, could write differently. This wasn't run. The other routines' `R0` and `R1` were checked at each call of the two routines, as `MOVC` changes them where the old loops didn't: nothing reads them after the call before setting them.
+  - **Left alone:** the rest of the record's 170-odd instructions, the format walk (`LOOP`, `DATA`, `AT_END`), `FTN$$UNIT_GET`, and the statement's begin and end, are per statement and not character loops. `NEXTCH`, in the format parser, is the corpus's largest loop left, 720,000 of its 800,000 runs being `astrace`'s; why that program parses so often wasn't looked into. `PUT_ZEROS`' per-character loop is rarely run.
+  - **Results**, instructions, with `/OPTIMIZE`:
+
+    | Run | Before | Now |
+    |---|---:|---:|
+    | DUNGEON, start and quit, whole run | 2,094,185 | 1,561,644 (−25.4%) |
+    | its FTNRTL part | 2,012,960 | 1,480,419 (−26.5%) |
+    | DUNGEON's game, whole run | 4,724,119 | 4,073,361 (−13.8%) |
+    | `astrace` | 6,303,618 | 5,828,260 (−7.5%) |
+    | `inventory` | 37,983 | 29,492 (−22.4%) |
+    | `floatedit` | 67,415 | 52,778 (−21.7%) |
+    | `formats` | 28,865 | 24,480 (−15.2%) |
+
+    Against `/NOOPTIMIZE` with the old FTNRTL (6,818,609), DUNGEON's game is now −40.3%. `/NOOPTIMIZE`'s own count for it falls to 6,167,851, so `go test -v` now logs its gain as −34.0%, the compiler's part alone. The kernels are unchanged: their time is in their own code.
+  - **Testing:** every oracle holds as it stood: `TestFor80Oracle` and its input, internal-file, and message oracles, `TestFor81*`, `TestFor83*`, and `TestNML80*`, and all of `testdata/fortran`, both ways, in both paging modes. They weren't aimed at these edges, so there's a new program, `rtlchars.for`: integer fields at a longword's limits and either side of the new path's 214748364, signs, non-digits, blanks both ways, tabs and only tabs, commas, short items; output with gaps, overwrites, `T`, `TL`, `TR`, `X`, a full record, before the first column; input past a record's end. **Its expected file isn't worked by hand**, unlike the others, but is the output of the FTNRTL before this subtask, run on the same program: this subtask is to change no behavior, and that FTNRTL is held to VMS's FORRTL by the oracles above. Each line was read for sense. It says `(I5)` of ` 1 2 ` is 1020, blanks as zeros, in an internal file; that is unchanged here, and wasn't looked at further.
