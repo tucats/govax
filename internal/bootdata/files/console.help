@@ -4191,7 +4191,7 @@ $FOR
         /OPTIMIZE       Runs the optimizer's passes, for code that does what
         /NOOPTIMIZE     the program says in fewer instructions.  The passes
                         run are named in the MACRO file's header.  The
-                        default is /NOOPTIMIZE.
+                        default is /OPTIMIZE.
 
     The compiler reports each problem it finds with the line it is on:
 

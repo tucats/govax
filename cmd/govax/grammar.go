@@ -332,7 +332,7 @@ var fortranGrammar = []cli.Option{
 	},
 	{
 		LongName:    "optimize",
-		Description: "Run the optimizer's passes on the compiled code",
+		Description: "Run the optimizer's passes on the compiled code (the default)",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.optimize = true
@@ -342,7 +342,7 @@ var fortranGrammar = []cli.Option{
 	},
 	{
 		LongName:    "no-optimize",
-		Description: "Don't run the optimizer's passes (the default)",
+		Description: "Don't run the optimizer's passes",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.noOptimize = true

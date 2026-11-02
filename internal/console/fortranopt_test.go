@@ -32,9 +32,8 @@ func readMacro(t *testing.T, c *Console, name string) []string {
 	return lines
 }
 
-// TestFortranOptimizeQualifier checks /[NO]OPTIMIZE: the default is
-// /NOOPTIMIZE (until the phase's close-out), whose file doesn't mention the
-// optimizer at all, and /OPTIMIZE's header says it ran.
+// TestFortranOptimizeQualifier checks /[NO]OPTIMIZE: the default is /OPTIMIZE,
+// whose header says it ran, and /NOOPTIMIZE's file doesn't mention the optimizer.
 func TestFortranOptimizeQualifier(t *testing.T) {
 	d, c, buf := shareFindConsole(t, false)
 
@@ -55,16 +54,16 @@ func TestFortranOptimizeQualifier(t *testing.T) {
 
 	plain := strings.Join(compile(""), "\n")
 
-	if strings.Contains(plain, "OPTIMIZE") {
-		t.Errorf("the default's file mentions the optimizer:\n%s", plain)
+	if !strings.Contains(plain, "; Optimized by") {
+		t.Errorf("the default's file doesn't say it was optimized:\n%s", plain)
 	}
 
-	if got := strings.Join(compile("/NOOPTIMIZE"), "\n"); got != plain {
-		t.Errorf("/NOOPTIMIZE's file differs from the default's:\n%s\nand:\n%s", got, plain)
+	if got := strings.Join(compile("/OPTIMIZE"), "\n"); got != plain {
+		t.Errorf("/OPTIMIZE's file differs from the default's:\n%s\nand:\n%s", got, plain)
 	}
 
-	if got := strings.Join(compile("/OPTIMIZE"), "\n"); !strings.Contains(got, "; Optimized by /OPTIMIZE's passes: ") {
-		t.Errorf("/OPTIMIZE's header doesn't say so:\n%s", got)
+	if got := strings.Join(compile("/NOOPTIMIZE"), "\n"); strings.Contains(got, "OPTIMIZE'S") || strings.Contains(got, "Optimized by") {
+		t.Errorf("/NOOPTIMIZE's file mentions the optimizer:\n%s", got)
 	}
 }
 

@@ -7,7 +7,7 @@ a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
 the program; its Part B holds the decisions this tour refers to). The
 user's side is the manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 83) the compiler parses every statement of the
+So far (Phases 74 to 84) the compiler parses every statement of the
 language and gives every declaration its meaning and its storage, and
 compiles a subset of the executable statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
@@ -30,8 +30,10 @@ takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
 instructions (section 11), and a fourth for control flow and subprograms
 (section 12), a fifth for records and how a layout reaches the code (section
-13), then FTNRTL, then what using VMS asks of them both, then how the compiler
-is tested.
+13), then FTNRTL, then what using VMS asks of them both, then the optimizer,
+then how the compiler is tested. Every dump and MACRO listing before section 16
+is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
+explain; `/OPTIMIZE` is the command's default.
 Each pass's package also has a `doc.go` that teaches it in more detail;
 this tour is the story across them.
 
@@ -861,8 +863,8 @@ does (`ADDF2`), and `INCL` and `DECL` add and subtract 1.
   127 bytes, and nothing here knows how long the code between is, so a
   branch is always the opposite condition's byte branch around a `BRW`,
   whose word displacement reaches 32K. A block reached by falling
-  through needs no branch at all. Phase 84's optimizer can shorten what
-  this writes; the point now is code that is always right.
+  through needs no branch at all. The optimizer shortens what this writes
+  (section 16); the point here is code that is always right.
 
 MEAN's code, as it appears in `AVERAGE.MAR`:
 
@@ -1197,8 +1199,8 @@ has the source lines.) The
 imaginary part of the dummy C is `@AREA.C(AP)[R1]` with R1 holding 1:
 `@n(AP)` has no room for an offset, so the 4 bytes go in an index scaled
 by F's size. Multiplying by 0.0 and 1.0 and widening a value only to
-round it back are left for Phase 84's optimizer: the point now is code
-that is right in every type.
+round it back are left as they are, by lowering and by the optimizer, which
+nothing measured has asked to: the point here is code that is right in every type.
 
 ## 12. Control flow and subprograms
 
@@ -2204,7 +2206,168 @@ string routines (`str.go`, `strparts.go`, `strsearch.go`) and the condition rout
 (`condition.go`, `fixupflt.go`). The test of the whole thing is `testdata/fortran/vmstour.for`,
 and each piece is held to VMS's own run (`testdata/for83`, `testdata/str83`).
 
-## 16. Testing a compiler
+## 16. The optimizer (`internal/fortran/opt`)
+
+Everything up to here makes code that is right, and takes no trouble over anything
+else. `/OPTIMIZE`, the default, makes it fast. The rule is one sentence: a correct
+program must print the same. Most of what follows is what "correct" allows.
+
+### Measure first
+
+The plan listed the classic passes in the classic order, constant propagation first.
+Measuring first (`PHASE-84 - FORTRAN optimizer.md`, Part A) turned the order round.
+The corpus's programs spend 95% of their time in FTNRTL, so it can't measure a compiler;
+five small kernels had to be written. In DUNGEON's own code, a fifth of the instructions
+were `BRW`, the far half of a branch around one (section 10). Constant propagation
+had almost nothing to do, since PARAMETER is a constant in `sema`, and `arith` folds as
+it lowers. So the branch peephole went first, and registers before induction variables.
+Hand-optimizing the kernels and running them first said what each pass could gain, and
+which a real pass had then to reach. The last column here is the survey's hand version,
+which the survey took for an upper estimate; three of them were passed:
+
+| Program | Plain | Peephole | CSE | Invariants | Registers | Loop forms | By hand |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `matmul` | 3,101,599 | 2,658,800 | 2,223,200 | 1,362,920 | 930,989 | 696,690 | 750,799 |
+| `sieve` | 5,785,872 | 4,785,922 | 4,785,922 | 4,785,922 | 3,907,317 | 3,051,278 | 3,073,873 |
+| `subs` | 6,876,884 | 6,671,464 | 6,669,464 | 3,866,184 | 2,259,946 | 1,856,936 | 2,463,514 |
+
+### Two lists of passes
+
+`opt.Passes` work on the IR, in order, `ir.Check` after each, so that a pass that breaks a
+routine is named at once. `opt.CodePasses` work on the instructions the code generator
+chose, the only place to ask how far a branch goes (`codegen.Code`, a list of items that
+`Generate` hands to `Improve` before writing any text). `/NOOPTIMIZE` runs neither, and
+its output is byte for byte what it was before the optimizer existed: the golden files
+in `codegen/testdata` never changed.
+
+Each pass's own file teaches its technique on a small FORTRAN example. In the order they run:
+
+| Pass | File | What it does |
+|---|---|---|
+| DoLimits | `dolimit.go` | A DO's count goes, its variable and limit ending the loop |
+| OneCharacter | `onechar.go` | `MOVC3` and `CMPC3` of one character become byte operations |
+| Forward | `forward.go` | Constants carried across blocks; settled branches become jumps |
+| Unreachable | `unreachable.go` | What no block goes to goes |
+| DeadCode | `deadcode.go` | Stores nothing reads, of the compiler's cells and a function's value |
+| DeferredIndexes | `deferred.go` | `@S.$B1+16[R1]`, an A0 read by the addressing mode |
+| LoopInvariants | `invariant.go` | Values no trip changes, before the loop |
+| CommonSubexpressions | `cse.go` | A value computed twice in a block, once; `ADDF2 X,C[R1]` in place |
+| Registers | `registers.go`, `induction.go` | R6 to R11, and indexes stepped |
+| Rotate | `rotate.go` | A test at a loop's top, to its bottom |
+| Peephole | `peephole.go` | One instruction at a time: `MOVL #0` to `CLRL` |
+| Branches | `branches.go` | Short and inverted branches, `SOBGTR`, `AOBLEQ`, `ACBL` |
+
+### The two questions every pass asks
+
+**Where can control go?** `graph.go` is the control flow graph, with every entry, ENTRY's and
+variable format expressions' among them, and its dominators. `loops.go` finds natural loops from
+back edges, never from DO statements. A GO TO loop is as good as a DO, and the extended range
+is just a block in the loop that happens to lie elsewhere in the file. A cycle with a second
+way in isn't a natural loop, the graph lists it as `Irreducible`, and no pass touches it. One
+find here is worth repeating: the survey took an assigned GO TO to go only to its list, and
+the manual's section 5.6.3 says the list "does not affect statement execution".
+
+**What can change this place?** `places.go` makes each `Mem` a `Place`, a region and a byte
+range, so that EQUIVALENCE's overlaps and a union's fields are just byte ranges that conflict
+(Decision 7). `effects.go` says what a statement reads and writes and what a call may change: an
+address-taken local, COMMON, or a dummy. Other locals survive calls, and that rests on a rule of
+the language: section 6.2 forbids recursion, so a callee can't reach them.
+
+### What correct allows
+
+The rules worth knowing, since each is a choice a compiler writer has to make somewhere:
+
+- **Variables keep their values** across calls (the note to SAVE, section 4.14). So a variable
+  in a register has its home written on each way out of a loop, and a compiler's cell can die
+  and a variable can't.
+- **Dummies don't alias**, by the standard's rule, which the author chose over safety. Being
+  safe would force `B(K,J)` to be reloaded on every store to `C(I,J)`.
+- **Faults aren't moved onto paths that had none.** `invariant.go`'s rule ended up stricter than
+  the plan's "blocks that run on every trip". In `DO: IF (Z.EQ.0.0) GO TO 90; X(I)=Y/Z`, the
+  division is on every trip that goes round, and the program never divides by zero. So what
+  can fault moves only if the first trip was sure to reach it, with no call before.
+- **ASTs and handlers aren't seen.** VOLATILE (section 4.16) is the program's way to say so,
+  and `optasts.for` holds what that means. The analysis can't help, and doesn't pretend to.
+
+### Registers without virtual registers
+
+Most compilers give every value a virtual register and color a graph at the end. This one
+has two pools by design (Decisions 2 and 3): R0 to R5 for Sethi-Ullman's expressions within a
+statement, which MOVC and CMPC clobber anyway, and R6 to R11 for what lasts longer, which every
+entry mask saves, so a value there survives a CALLS. The IR goes on naming cells. A register
+is a `Cell.Register` the code generator prints as `R8`, so a dump stays readable and every other
+pass goes on working on what it knows.
+
+`registers.go` lists every candidate first, each with its gain, a use counting ten times more per
+loop it's in, and rewrites only the winners. So no earlier pass needs a fallback: if a temporary
+loses, it just stays in memory, and the earlier passes' cost models say what that would cost.
+Five kinds compete: the compiler's cells, for the whole routine by liveness; a variable, for a
+loop, copied in before and written back on each exit edge in a block of its own, so that
+trips pay nothing; a dummy's address; an address that doesn't change, A0 or an array's base; and
+an index that goes up with the loop's variable.
+
+That last one is strength reduction, and it belongs here because it is a loss without a
+register: in memory it's an `ADDL2` and a `MOVL`, against one `MULL3`. The VAX's index mode
+scales already, so down a column `A(I,K)` is `(R7)[R6]`, and only a stride that isn't the
+element's size asks for it: `C(I,I)` with 60 rows is 61 elements a trip.
+
+### A pass that moves nothing
+
+`rotate.go` is the simplest of them, and it was a surprise: the terminators name both ways, so
+moving a loop's header below its body changes when nothing runs. Only where it lies changes,
+so it needs no analysis of what the test reads. One branch less per trip, for one jump on the
+way in. Layout is free to change like this because the IR never falls through implicitly.
+
+### After the program
+
+`AVERAGE`'s `MEAN` loop, from `MEAN.L10`:
+
+```
+MEAN.L10:				; DO 10's body
+	SUBL3	#1,MEAN.I,R0
+	ADDF2	@MEAN.A(AP)[R0],MEAN.MEAN
+	INCL	MEAN.I
+	DECL	MEAN.$C1		; one pass fewer
+	BLEQ	MEAN.$3
+	BRW	MEAN.L10
+```
+
+becomes
+
+```
+MEAN.L10:				; DO 10's body
+	ADDF2	-4(R8)[R6],R7
+	AOBLEQ	R9,R6,MEAN.L10
+```
+
+The `SUBL3` went because the subscript's constant went to the displacement, which needs a dummy's address
+in a register (`-4(R8)`, where `@n(AP)` has no room for one). Six instructions with nine
+references to memory became two with one.
+
+### What it didn't do
+
+Global common subexpressions and partial redundancy elimination: the survey found no case that
+asked for them. Autoincrement: `(R7)+` for `(R7)[R6]` changes no count, and would take a register
+per array. Copying a rotated loop's test to its way in, which would let `K = K + 1` GO TO loops
+close with `AOBLEQ`. The phase doc's log has these, with what each subtask measured and left.
+
+### FTNRTL gets its turn
+
+A third of DUNGEON's game was in FTNRTL, which no compiler pass reaches. Its character loops
+took a byte at a time what the VAX does in one instruction, and hand-tuning them
+(`MOVC3`, `MOVC5`, `SKPC`) took a quarter off DUNGEON's startup. A run-time library written in
+one language's terms and compiled by nobody still has to be measured like the rest.
+
+### Testing it
+
+Every program runs both ways and must print the same (`optimizerModes`), logging its gain.
+DUNGEON's game does too (`TestFortranDungeonBothWays`). The `opt*.for` programs each target one
+pass's rules, with values worked by hand. `TestBoundsHold` holds each instruction's size bound to the
+distance in MACRO's symbol table, since a branch is shortened only if the bound says it fits,
+and MACRO won't lengthen one. And each subtask broke its rules on purpose, one at a time, and
+checked that a test failed: a guard that no test notices is a guard nobody knows is there.
+
+## 17. Testing a compiler
 
 Each pass is tested on its own, on sources held in memory, and the whole
 pipeline is tested end to end on govax.

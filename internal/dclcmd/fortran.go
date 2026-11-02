@@ -90,7 +90,7 @@ type FortranOptions struct {
 	Align      []string
 	AlignGiven bool
 
-	// Optimize is /OPTIMIZE (fortran.Options); /NOOPTIMIZE is the default.
+	// Optimize is /OPTIMIZE (fortran.Options): the console sets it unless given /NOOPTIMIZE.
 	Optimize bool
 
 	// Continuations is /CONTINUATIONS=n.

@@ -40,7 +40,8 @@ type Options struct {
 	// Align is /[NO]ALIGN (sema/align.go).
 	Align sema.Alignment
 
-	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt).
+	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
+	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
 
 	// Includes reads the files and modules INCLUDE statements name; nil

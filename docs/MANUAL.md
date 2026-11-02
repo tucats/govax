@@ -1319,7 +1319,7 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE` runs the optimizer's passes, which the MACRO file's header names (not the default; the optimizer is being built, and so far has only passes that shorten instructions and branches and close loops with the VAX's loop instructions). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -4383,7 +4383,7 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 83 done, 2026-11-01):** the compiler reads
+**Where things stand (Phase 84 done, 2026-11-02):** the compiler reads
 every statement of the language and gives every declaration its meaning
 and its storage, compiles every expression in every type with every
 intrinsic function, all of the language's control statements and
@@ -4396,7 +4396,8 @@ BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
 14.2). DEC's data extensions compile too, structures and records among them, and
 a program can use VMS as VMS programmers did: definition modules, system services
 and RTL routines, condition handlers, ASTs, exit handlers, and the system
-subroutines (section 14.8). Indexed files and the keyed READ are a later program's.
+subroutines (section 14.8). The compiler optimizes what it writes by default
+(section 14.9). Indexed files and the keyed READ are a later program's.
 Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the DICTIONARY statement is
 not implemented yet"); the later phases widen the language.
 `docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
@@ -4926,7 +4927,8 @@ output it prints, and programs of several files in its `modules` directory.
   as uppercase.
 - **VOLATILE, AUTOMATIC, and STATIC.** VOLATILE (4.16) names variables, arrays,
   records, dummy arguments, and `/blocks/`, and reaches through EQUIVALENCE; every
-  reference goes to memory anyway until the compiler has an optimizer. AUTOMATIC
+  reference goes to memory, and the optimizer never moves, merges, or removes one
+  ([section 14.9](#149-what-optimize-does)). AUTOMATIC
   and STATIC come from a later VAX FORTRAN, by way of the HP Fortran manual's 5.3,
   statement forms only: `AUTOMATIC T, K(20)` puts a variable in the routine's stack
   frame, new at each call, with no value until assigned; STATIC, the default, says
@@ -4951,7 +4953,7 @@ The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, joined by `+` and with
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
-`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE`. An `OPTIONS` statement before a unit may give `/I4`,
+`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
 `/ALIGN=value` and `/NOALIGN`, and `a.for+lib.tlb/library` an argument with `+`).
@@ -5128,15 +5130,16 @@ C     Squares of the first N integers
       END
 ```
 
-FORTRAN writes this `SQUARES.MAR`:
+`FORTRAN/NOOPTIMIZE` writes this `SQUARES.MAR`, the compiler's plain code, which the optimizer's output
+([section 14.9](#149-what-optimize-does)) is an improvement on:
 
 ```text
 	.TITLE	SQUARES
 	.IDENT	/01/
 ;
-; Compiled by govax FORTRAN V1.0-612 on 30-OCT-2026 08:49:36.21
+; Compiled by govax FORTRAN V1.0-712 on  2-NOV-2026 09:14:22.05
 ; from DUA0:[WORK]SQUARES.FOR;1
-; by the command FORTRAN SQUARES
+; by the command FORTRAN/NOOPTIMIZE SQUARES
 ;
 ; Each line of the FORTRAN source appears as a comment, with its line number, before
 ; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
@@ -5165,9 +5168,9 @@ SQUARES.$T1:
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 SQUARES.$IO1:
-	.WORD	8			; PRINT *'s control block: its size
-	.WORD	0			; flags
-	.LONG	-1			; unit *
+	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
 SQUARES.$D1:
 	.WORD	4			; length
 	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
@@ -5409,6 +5412,8 @@ VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
 ```
 
 ### 14.7 Differences from VAX FORTRAN
+
+What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
 Where the manuals at hand don't settle a rule, govax makes a choice
 (each phase's document lists its own, unconfirmed on VMS, since no VAX
@@ -5830,6 +5835,142 @@ a name a module declares is `DUPDECL` or `DUPATTR`, so don't declare a service y
 from `$SYSSRVNAM`; a name used both as a function and in a CALL in one unit is `BADUSE`; and
 the system subroutines' arguments are checked when compiling (`SYSARG`, `SYSCOUNT`), by the
 language manual's types.
+
+### 14.9 What /OPTIMIZE does
+
+`/OPTIMIZE` is the default. The program prints what it would have printed, in
+fewer instructions and fewer references to memory, and the image is smaller:
+
+| Program | `/NOOPTIMIZE` | `/OPTIMIZE` | Instructions | Data reads, before and after |
+|---|---:|---:|---:|---|
+| Matrix multiply, 60 by 60 | 3,101,599 | 696,690 | −77.5% | 2,976,136 to 563,788 |
+| Sieve, ten times | 5,785,872 | 3,051,278 | −47.3% | 3,544,696 to 317,074 |
+| Sort and dot product on dummy arguments | 6,876,884 | 1,856,936 | −73.0% | 6,797,633 to 1,356,287 |
+| A game of DUNGEON | 6,167,851 | 4,073,361 | −34.0% | 5,150,508 to 2,945,233 |
+
+A program spending its time in input and output gains less, its time being in
+FTNRTL. These programs are in `testdata/opt84/kernels`, but for DUNGEON.
+
+`MEAN`, from [section 14.1](#141-a-first-program), compiled `/NOOPTIMIZE`, runs
+six instructions on each trip of its loop:
+
+```text
+	.ENTRY	MEAN,^M<>
+;    9        REAL A(*)
+;   10        MEAN = 0
+	CLRF	MEAN.MEAN
+;   11        DO 10 I = 1, N
+	MOVL	@MEAN.N(AP),MEAN.$C1	; DO 10's count
+	MOVL	#1,MEAN.I
+	TSTL	MEAN.$C1
+	BGTR	MEAN.$2
+	BRW	MEAN.$1
+MEAN.$2:
+;   12     10 MEAN = MEAN + A(I)
+MEAN.L10:				; DO 10's body
+	SUBL3	#1,MEAN.I,R0
+	ADDF2	@MEAN.A(AP)[R0],MEAN.MEAN
+	INCL	MEAN.I
+	DECL	MEAN.$C1		; one pass fewer
+	BLEQ	MEAN.$3
+	BRW	MEAN.L10
+MEAN.$3:
+MEAN.$1:
+;   13        MEAN = MEAN / N
+	CVTLF	@MEAN.N(AP),R0
+	DIVF2	R0,MEAN.MEAN
+;   14        END
+	MOVF	MEAN.MEAN,R0		; the function's value
+	RET
+```
+
+And by default, two:
+
+```text
+	.ENTRY	MEAN,^M<R6,R7,R8,R9>
+;    9        REAL A(*)
+;   10        MEAN = 0
+	CLRF	R7
+;   11        DO 10 I = 1, N
+	MOVL	@MEAN.N(AP),R9		; DO 10's limit
+	MOVL	#1,MEAN.I
+	CMPL	#1,R9
+	BGTR	MEAN.$1
+	MOVL	MEAN.I,R6
+	MOVL	MEAN.A(AP),R8
+;   12     10 MEAN = MEAN + A(I)
+MEAN.L10:				; DO 10's body
+	ADDF2	-4(R8)[R6],R7
+	AOBLEQ	R9,R6,MEAN.L10
+	MOVL	R6,MEAN.I
+MEAN.$1:
+;   13        MEAN = MEAN / N
+;   14        END
+	CVTLF	@MEAN.N(AP),R0		; the function's value
+	DIVF3	R0,R7,R0
+	RET
+```
+
+What the passes did, each named in the MACRO file's header:
+
+- **The storage map says where things went.** `MEAN` is in R7 throughout. I is in R6
+  and A's address in R8 only for the loop, and the map says so:
+
+  ```text
+  ; Storage map for MEAN, a REAL function
+  ;   A     REAL (*)  argument 1  @MEAN.A(AP)
+  ;   N     INTEGER   argument 2  @MEAN.N(AP)
+  ;   MEAN  REAL      R7          R7
+  ;   I     INTEGER   $LOCAL+4    MEAN.I
+  ;   R9 is $L1: DO 10's limit
+  ;   R6 is $R1: I, during a loop
+  ;   R8 is $R2: A's address
+  ;
+  ```
+
+  The compiler's own names gain `$Ln`, a DO loop's limit, `$Hn` a value computed
+  before a loop, `$Un` a value a block uses twice, and `$Rn` a register's contents.
+- **A variable in a register is out of date in memory** until the loop ends, when
+  it is written back on each way out. This matters in the debugger: during the
+  loop, `EXAMINE MEAN.I` shows I's value before the loop; `EXAMINE R6` shows it
+  now. The source lines stay in order in the file, so an instruction moved before a
+  loop or to its bottom says where it came from: `; from line 17`. To debug a
+  routine by its variables, compile it `/NOOPTIMIZE`.
+- **DO loops close with `AOBLEQ`,** `ACBL`, or `SOBGTR` on the variable, a test at
+  the top of a loop moves to its bottom, and an index a multiplication computes is
+  kept in a register and stepped.
+
+**What the optimizer takes the language at its word on.** A correct program prints
+the same both ways. A program breaking these rules can print something different
+with `/OPTIMIZE`, or differently from one version to the next:
+
+- **A dummy argument changed through another name,** which the standard forbids:
+  two dummies given the same variable, or a dummy and the COMMON variable passed to it.
+- **A subscript outside its array.** `A(I)` is taken to be somewhere in A, not in the
+  array after it in COMMON. A constant subscript's place is exact.
+- **The control variable changed in its DO's range,** which section 5.3.1 forbids. Where
+  a call could do it, or another name, the loop keeps its count and does what it
+  always did.
+- **A DO limit of the largest integer known only at run time.** One step past it wraps,
+  so `DO I = N-2, N` with N 2147483647 never ends under `/OPTIMIZE`, where it ends
+  under `/NOOPTIMIZE`. A constant limit like that is safe. A range too wide for a count,
+  `DO I = -2000000000, 2000000000`, goes the other way: `/OPTIMIZE` runs it as
+  the manual's formula says, and `/NOOPTIMIZE`'s count overflows, so it doesn't run.
+
+**What only VOLATILE can say.** The optimizer can't see an AST routine or a handler
+coming. A variable an AST routine changes needs VOLATILE, or to be in COMMON and read across
+a call; so does one a condition handler reads after a fault in a loop, or one read after an
+unwind from a call in a loop. A loop with no call in it, waiting for an AST to change
+a variable, never ends without VOLATILE (section 4.16 of the language manual).
+
+Faults aren't moved onto paths that had none: a division or a reserved floating
+operand leaves a loop only if the first trip was sure to reach it. So one can only
+come sooner, before a store on that first trip. Two identical operations in a statement
+may become one, so a handler can be called once where it would have been called twice.
+A store whose value can fault stays, even if nothing reads it.
+
+Output through real VAX MACRO is unconfirmed: the optimizer's branch lengths are held
+to govax's MACRO's, and real MACRO won't lengthen a branch that doesn't reach.
 
 ## 15. Appendices
 

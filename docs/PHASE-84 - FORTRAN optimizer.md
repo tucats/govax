@@ -1,6 +1,6 @@
 # Phase 84 — the FORTRAN optimizer
 
-**Status:** in progress. Subtask 1, the survey, was reviewed by the author
+**Status:** done 2026-11-02. Subtask 1, the survey, was reviewed by the author
 on 2026-11-01. Planned 2026-10-29. Needs Phase 83 (the whole language
 compiled, so the corpus is complete). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decision 9).
@@ -52,6 +52,17 @@ order of payoff:
 - **How far to go:** global CSE and partial redundancy elimination are
   more than the corpus may justify; the survey measures where the time
   goes in the corpus's larger programs first.
+
+## Where things stand
+
+Done: everything in the goal above, with `/OPTIMIZE` the default since the corpus and DUNGEON's game both pass both ways. Left for later, and logged where it was found:
+
+- **Not done, by measurement:** global CSE and PRE (the survey), autoincrement (subtask 10, the author's choice), a rotated test copied to its way in (subtask 10), `Call.Result`s that nothing reads (subtask 5), read-only data no statement uses any more (subtask 5).
+- **Small waste seen and left:** `MOVL #1,S.I` then `MOVL S.I,R6` where a loop's copy follows the DO's own store, and a copy into a register before the loop sets it itself (subtask 9). These cost a move per loop entry. A `$H` used only to make a base, in memory for lack of a register (subtask 9).
+- **FTNRTL's per-statement paths** are as they were (subtask 11): about 170 instructions per record of DUNGEON's startup, in the format walk, `FTN$$UNIT_GET`, and the statement's begin and end. `astrace` parses formats 80,000 times, which wasn't looked into.
+- **Our choices, unconfirmed, there being no VAX FORTRAN:** dummies don't alias (answer 1); a subscript stays in its array (subtask 4); a limit of the largest integer known only at run time doesn't end (subtask 10); what a handler or an unwind can see of a loop's variables (subtask 9, not tested with an unwind); a function with a path that doesn't set its value goes on returning the last (subtask 5). MANUAL.md's 14.9 tells a programmer these.
+- **Real MACRO hasn't assembled `/OPTIMIZE`'s output;** the bounds are held to govax's MACRO (Phase 86's optional round). `testdata/opt84`'s hand versions, and every count here, are instruction counts, not time on a VAX.
+- **`/CHECK`, when Phase 85 adds it,** must keep its checks through these passes (Decision 8).
 
 # Part A — the survey (2026-11-01)
 
@@ -403,7 +414,7 @@ The survey's decisions drew no objection, and stand.
 11. **FTNRTL's loops** (done 2026-11-02; the author's answer 3): its character loops tuned by
     hand, as DUNGEON's startup and the corpus measure them, held to the
     existing oracles. No new entry points, so no change to its GSMATCH.
-12. **Close-out:** the measured gains against this survey's table;
+12. **Close-out** (done 2026-11-02): the measured gains against this survey's table;
     FORTRAN-INTERNALS.md's optimizer chapter; MANUAL.md; the default switched.
 
 ## Progress log
@@ -871,3 +882,18 @@ The survey's decisions drew no objection, and stand.
 
     Against `/NOOPTIMIZE` with the old FTNRTL (6,818,609), DUNGEON's game is now −40.3%. `/NOOPTIMIZE`'s own count for it falls to 6,167,851, so `go test -v` now logs its gain as −34.0%, the compiler's part alone. The kernels are unchanged: their time is in their own code.
   - **Testing:** every oracle holds as it stood: `TestFor80Oracle` and its input, internal-file, and message oracles, `TestFor81*`, `TestFor83*`, and `TestNML80*`, and all of `testdata/fortran`, both ways, in both paging modes. They weren't aimed at these edges, so there's a new program, `rtlchars.for`: integer fields at a longword's limits and either side of the new path's 214748364, signs, non-digits, blanks both ways, tabs and only tabs, commas, short items; output with gaps, overwrites, `T`, `TL`, `TR`, `X`, a full record, before the first column; input past a record's end. **Its expected file isn't worked by hand**, unlike the others, but is the output of the FTNRTL before this subtask, run on the same program: this subtask is to change no behavior, and that FTNRTL is held to VMS's FORRTL by the oracles above. Each line was read for sense. It says `(I5)` of ` 1 2 ` is 1020, blanks as zeros, in an internal file; that is unchanged here, and wasn't looked at further.
+- **2026-11-02:** Subtask 12, the close-out.
+  - **The default is `/OPTIMIZE`** (`console/dispatch.go`; answer 2's condition holds: the corpus and DUNGEON's game pass both ways). So every test that compiles without a qualifier now runs the optimizer, the oracles and the probes' FORTRAN twins among them, which all pass but for `TestFortranOptimizeQualifier`, which pinned the old default and was changed. That is a wider test than either way's corpus run, and it found nothing. `/NOOPTIMIZE` stays what it was.
+  - **Docs:** MANUAL.md's 14.9, on what a program can see, and its 14.5 example, regenerated as `FORTRAN/NOOPTIMIZE`'s; FORTRAN-INTERNALS.md's section 16; the help text. A wrong count of mine in the chapter's first draft, a loop's memory references, was caught on reading it back.
+  - **The measured gains against the survey's table.** Instructions, each with today's FTNRTL, whole runs. Reads are data alone, with window refills and page table reads taken out, as subtask 8 asked, by a temporary patch not kept:
+
+    | Program | Instructions, `/NOOPTIMIZE` | `/OPTIMIZE` | Change | Survey's hand version | Data reads | Data writes |
+    |---|---:|---:|---:|---:|---|---|
+    | `matmul` | 3,101,599 | 696,690 | −77.5% | 750,799 (−75.8%) | 2,976,136 to 563,788 | 683,227 to 232,753 |
+    | `sieve` | 5,785,872 | 3,051,278 | −47.3% | 3,073,873 (−46.9%) | 3,544,696 to 317,074 | 2,027,158 to 680,635 |
+    | `subs` | 6,876,884 | 1,856,936 | −73.0% | 2,463,514 (−64.2%) | 6,797,633 to 1,356,287 | 1,843,907 to 427,380 |
+    | `whet` | 2,695,057 | 1,702,065 | −36.8% | no hand version | 3,283,506 to 1,261,708 | 716,480 to 618,285 |
+    | `textk` | 485,525 | 249,035 | −48.7% | no hand version | 423,445 to 177,455 | 210,536 to 62,045 |
+    | DUNGEON's game | 6,167,851 | 4,073,361 | −34.0% | 5,070,333 (the peephole and `QHERE` alone, old FTNRTL) | 5,150,508 to 2,945,233 | 2,598,867 to 1,747,097 |
+
+    Against the survey's own baseline for DUNGEON's game, 6,818,609 with the old FTNRTL, the whole phase is −40.3%. Its image goes from 191,487 to 178,687 bytes, −6.7%, in whole blocks, against the survey's prototype's −2.7%. The survey held in three respects: registers and branches gave the most, constant propagation very little, and global CSE was never asked for. Its hand versions, called upper estimates, turned out not to be: all three were passed, `subs` by far the most, which wasn't looked into. These are instruction and reference counts, and none of them is time on a VAX.
