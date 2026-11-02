@@ -123,6 +123,10 @@ func (c *checker) block(b *Block) error {
 				err = fmt.Errorf("%s assigns a %s value to a %s place", StmtText(s), s.Src.Type(), s.Dst.T)
 			}
 
+			if err == nil && s.InPlace && InPlaceOperand(s) == nil {
+				err = fmt.Errorf("%s isn't an operation on its own place", StmtText(s))
+			}
+
 		case *CharMove:
 			if err = c.text(s.Dst); err == nil {
 				err = c.text(s.Src)

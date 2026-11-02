@@ -860,6 +860,51 @@ func (g *routineGen) store(src ir.Expr, dst *ir.Mem) {
 	}
 }
 
+// twoOperand are the two-operand instructions of the operations an Assign can do
+// in place, but for their type's letter.
+var twoOperand = map[ir.Operator]string{
+	ir.Add: "ADD", ir.Sub: "SUB", ir.Mul: "MUL", ir.Div: "DIV",
+	ir.Or: "BIS", ir.Xor: "XOR", ir.And: "BIC",
+}
+
+// storeInPlace writes the code for an Assign marked InPlace: the place found once,
+// and the operation done where it is, ADDF2 R0,MATMUL.C-244[R1] (or INCL for adding
+// 1). Like store, it computes whichever operand needs more registers first.
+func (g *routineGen) storeInPlace(s *ir.Assign) {
+	e := s.Src.(*ir.Op)
+
+	other := ir.InPlaceOperand(s)
+	if e.Op == ir.And {
+		_, other = opOperands(e)
+	}
+
+	other = g.fit(other)
+	dst := g.fitMem(s.Dst)
+
+	var o, d operand
+
+	if need(other) > memNeed(dst) {
+		o = g.eval(other)
+		d = g.mem(dst)
+	} else {
+		d = g.mem(dst)
+		o = g.eval(other)
+	}
+
+	t := e.T.String()
+
+	switch {
+	case e.T.Integer() && e.Op == ir.Add && o.text == "#1":
+		g.emit("INC"+t, e.T, d.text)
+	case e.T.Integer() && e.Op == ir.Sub && o.text == "#1":
+		g.emit("DEC"+t, e.T, d.text)
+	default:
+		g.emit(twoOperand[e.Op]+t+"2", e.T, o.text, d.text)
+	}
+
+	g.free(o, d)
+}
+
 // addressOp is MOVA or PUSHA with the letter for the place m: an index
 // register is multiplied by the size the letter says, so an element's address
 // takes its own type's letter (MOVAW A[R0],R1 for a word's, MOVAD for a

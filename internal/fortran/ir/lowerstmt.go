@@ -54,9 +54,9 @@ func (l *lowerer) stmt(s sema.Stmt) {
 	case *sema.AssignLabel:
 		if f := l.unit.Formats[s.Label]; f != nil {
 			// A FORMAT's label: its block's address, for PRINT v.
-			l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &Addr{l.formatBlock(f)}})
+			l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(s.Var), Src: &Addr{l.formatBlock(f)}})
 		} else {
-			l.emit(&Assign{l.origin(), l.symbolMem(s.Var), &LabelAddr{l.labelBlock(s.Label)}})
+			l.emit(&Assign{origin: l.origin(), Dst: l.symbolMem(s.Var), Src: &LabelAddr{l.labelBlock(s.Label)}})
 		}
 
 	case *sema.AssignedGoto:
@@ -259,7 +259,7 @@ func (l *lowerer) assign(s *sema.Assign) {
 // store lowers dst = value, for a value that isn't CHARACTER, of dst's type.
 func (l *lowerer) store(dst *Mem, value sema.Expr) {
 	if c, ok := value.(*sema.Compare); ok && c.X.Type().Kind == sema.Character && dst.T == Long {
-		l.emit(&Assign{l.origin(), dst, l.charCompare(c)})
+		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: l.charCompare(c)})
 
 		return
 	}
@@ -276,7 +276,7 @@ func (l *lowerer) store(dst *Mem, value sema.Expr) {
 		return
 	}
 
-	l.emit(&Assign{l.origin(), dst, l.expr(value)})
+	l.emit(&Assign{origin: l.origin(), Dst: dst, Src: l.expr(value)})
 }
 
 // blockIf lowers an IF THEN ... END IF construct: each arm's condition
@@ -406,15 +406,15 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 
 	if _, ok := by.(*Const); !ok {
 		s := l.loopCell(StepCell, n, t, name)
-		l.emit(&Assign{l.origin(), s, by})
+		l.emit(&Assign{origin: l.origin(), Dst: s, Src: by})
 		by = &Load{s}
 	}
 
 	count := l.loopCell(CountCell, n, Long, name)
 	trips := tripCount(t, first, last, by)
 
-	l.emit(&Assign{l.origin(), count, trips})
-	l.emit(&Assign{l.origin(), place, first})
+	l.emit(&Assign{origin: l.origin(), Dst: count, Src: trips})
+	l.emit(&Assign{origin: l.origin(), Dst: place, Src: first})
 
 	if release {
 		l.release()
@@ -434,8 +434,8 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	l.begin(pass)
 	body()
 
-	l.emit(&Assign{l.origin(), place, arith(Add, t, &Load{place}, by)})
-	l.emit(&Assign{l.origin(), count, arith(Sub, Long, &Load{count}, LongConst(1))})
+	l.emit(&Assign{origin: l.origin(), Dst: place, Src: arith(Add, t, &Load{place}, by)})
+	l.emit(&Assign{origin: l.origin(), Dst: count, Src: arith(Sub, Long, &Load{count}, LongConst(1))})
 	l.branch(&Cmp{Gt, &Load{count}, LongConst(0)}, pass, exit)
 	l.begin(exit)
 }
@@ -594,8 +594,8 @@ func (l *lowerer) describeText(d *Descriptor, t Text) *Mem {
 
 	d.Length = 0
 	c := l.descriptorCell(d)
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, T: Word}, arith(Cvt, Word, t.Len, nil)})
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{t.Mem}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: arith(Cvt, Word, t.Len, nil)})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &Addr{t.Mem}})
 
 	return &Mem{Cell: c, T: Long}
 }
@@ -618,7 +618,7 @@ func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
 	}
 
 	c := l.descriptorCell(d)
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{m}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &Addr{m}})
 
 	if d.Class == ClassA {
 		first, multiplier := 0, 1
@@ -630,7 +630,7 @@ func (l *lowerer) describe(d *Descriptor, m *Mem) *Mem {
 
 		a0 := *m
 		a0.Offset -= first * d.Length
-		l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: A0Offset, T: Long}, &Addr{&a0}})
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: A0Offset, T: Long}, Src: &Addr{&a0}})
 	}
 
 	return &Mem{Cell: c, T: Long}

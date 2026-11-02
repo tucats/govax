@@ -179,7 +179,7 @@ func (l *lowerer) dynamicText(length Expr) *Mem {
 	desc := &Mem{Cell: c, T: Long}
 
 	n := l.temp(Word)
-	l.emit(&Assign{l.origin(), n, arith(Cvt, Word, length, nil)})
+	l.emit(&Assign{origin: l.origin(), Dst: n, Src: arith(Cvt, Word, length, nil)})
 	l.emit(&Call{origin: l.origin(), Routine: libGetString, Args: []Arg{{Ref: n}, {Ref: desc}}})
 	l.after = append(l.after, &Call{origin: l.origin(), Routine: libFreeString, Args: []Arg{{Ref: desc}}})
 
@@ -259,11 +259,11 @@ func (l *lowerer) arrayDescriptor(s *sema.Symbol) *Mem {
 		a0.Index = arith(Mul, Long, LongConst(int32(-first)), n)
 	}
 
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, T: Word}, &Load{descriptorField(p, 0, Word)}})
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{m}})
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: ArsizeOffset, T: Long},
-		arith(Mul, Long, n, LongConst(int32(d.Elements())))})
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: A0Offset, T: Long}, &Addr{&a0}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: &Load{descriptorField(p, 0, Word)}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &Addr{m}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: ArsizeOffset, T: Long},
+		Src: arith(Mul, Long, n, LongConst(int32(d.Elements())))})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: A0Offset, T: Long}, Src: &Addr{&a0}})
 
 	return &Mem{Cell: c, T: Long}
 }

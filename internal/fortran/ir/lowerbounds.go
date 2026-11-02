@@ -119,7 +119,7 @@ func (l *lowerer) computeBounds(params []*sema.Symbol) {
 // computeArrayBounds fills in the descriptor c of the adjustable array s.
 func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
 	store := func(offset int, t Type, x Expr) {
-		l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: offset, T: t}, x})
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: offset, T: t}, Src: x})
 	}
 
 	field := func(offset int) Expr {

@@ -232,7 +232,9 @@ func (f *forwarder) redundant(st ir.Stmt) bool {
 func (f *forwarder) rewrite(st ir.Stmt) {
 	switch st := st.(type) {
 	case *ir.Assign:
-		st.Dst, st.Src = f.mem(st.Dst), f.expr(st.Src)
+		// What this finds may leave Src no operation on Dst's place: cse.go marks
+		// the statement again if it still is one.
+		st.Dst, st.Src, st.InPlace = f.mem(st.Dst), f.expr(st.Src), false
 
 	case *ir.CharMove:
 		st.Dst, st.Src = f.text(st.Dst), f.text(st.Src)

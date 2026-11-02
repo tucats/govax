@@ -104,7 +104,7 @@ func (l *lowerer) layOutVFEs() {
 			// dynamic string) comes after its value is computed.
 			if len(l.after) > 0 {
 				t := l.temp(Long)
-				l.emit(&Assign{l.origin(), t, value})
+				l.emit(&Assign{origin: l.origin(), Dst: t, Src: value})
 				l.flush()
 				value = &Load{t}
 			}

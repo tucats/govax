@@ -153,7 +153,7 @@ func (l *lowerer) procedureArg(p *sema.Procedure, mode sema.ArgMode) Arg {
 	}
 
 	c := l.descriptorCell(d)
-	l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &ArgPointer{param}})
+	l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &ArgPointer{param}})
 
 	return Arg{Ref: &Mem{Cell: c, T: Long}}
 }

@@ -271,7 +271,12 @@ func descriptorText(d *Descriptor) string {
 func StmtText(s Stmt) string {
 	switch s := s.(type) {
 	case *Assign:
-		return "assign " + MemText(s.Dst) + " = " + ExprText(s.Src)
+		text := "assign " + MemText(s.Dst) + " = " + ExprText(s.Src)
+		if s.InPlace {
+			text += " in place"
+		}
+
+		return text
 
 	case *CharMove:
 		return "move " + TextText(s.Dst) + " = " + TextText(s.Src)

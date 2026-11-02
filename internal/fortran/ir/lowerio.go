@@ -134,7 +134,7 @@ func (l *lowerer) ioFinish(end *Call, c Control, errLabel, endLabel int, iostat 
 			value = arith(Cvt, ios.T, status, nil)
 		}
 
-		l.emit(&Assign{l.origin(), ios, value})
+		l.emit(&Assign{origin: l.origin(), Dst: ios, Src: value})
 	}
 
 	if errLabel == 0 && endLabel == 0 {
@@ -271,8 +271,8 @@ func (l *lowerer) runFormat(e sema.Expr) *Mem {
 			length = arith(Sub, Long, LongConst(int32(n*e.Sym.Type.Size)), before)
 		}
 
-		l.emit(&Assign{l.origin(), &Mem{Cell: c, T: Word}, arith(Cvt, Word, length, nil)})
-		l.emit(&Assign{l.origin(), &Mem{Cell: c, Offset: PointerOffset, T: Long}, &Addr{m}})
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, T: Word}, Src: arith(Cvt, Word, length, nil)})
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: PointerOffset, T: Long}, Src: &Addr{m}})
 
 		return &Mem{Cell: c, T: Long}
 	}

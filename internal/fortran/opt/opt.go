@@ -20,6 +20,7 @@ var Passes = []Pass{
 	{"forward", Forward},
 	{"unreachable", Unreachable},
 	{"dead code", DeadCode},
+	{"common subexpressions", CommonSubexpressions},
 }
 
 // CodePass is one optimization of a routine's instructions, after the code

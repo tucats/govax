@@ -229,7 +229,7 @@ func (l *lowerer) complexValue(e sema.Expr) *Mem {
 // is moved whole, with MOVQ or MOVO; anything else is computed part by part.
 func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	if x, ok := e.(*sema.IntrinsicRef); ok && x.Op == sema.CallOp {
-		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
+		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: &Load{l.complexValue(e)}})
 
 		return
 	}
@@ -238,10 +238,10 @@ func (l *lowerer) assignComplex(dst *Mem, e sema.Expr) {
 	case *sema.Var, *sema.Elem, *sema.FieldRef, *sema.FuncRef, *sema.StmtFuncRef:
 		// A statement function's value is computed apart from dst, which may
 		// be its actual argument, and so what its parts are read from.
-		l.emit(&Assign{l.origin(), dst, &Load{l.complexValue(e)}})
+		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: &Load{l.complexValue(e)}})
 
 	case *sema.Const:
-		l.emit(&Assign{l.origin(), dst, l.expr(e)})
+		l.emit(&Assign{origin: l.origin(), Dst: dst, Src: l.expr(e)})
 
 	default:
 		l.assignParts(dst, e, false)
@@ -260,14 +260,14 @@ func (l *lowerer) assignParts(dst *Mem, e sema.Expr, fresh bool) {
 
 	if !fresh && readsMemory(im) {
 		re = &Load{l.value(re)}
-		l.emit(&Assign{l.origin(), i, im})
-		l.emit(&Assign{l.origin(), r, re})
+		l.emit(&Assign{origin: l.origin(), Dst: i, Src: im})
+		l.emit(&Assign{origin: l.origin(), Dst: r, Src: re})
 
 		return
 	}
 
-	l.emit(&Assign{l.origin(), r, re})
-	l.emit(&Assign{l.origin(), i, im})
+	l.emit(&Assign{origin: l.origin(), Dst: r, Src: re})
+	l.emit(&Assign{origin: l.origin(), Dst: i, Src: im})
 }
 
 // readsMemory reports whether computing e loads from a place a program's

@@ -384,7 +384,7 @@ The survey's decisions drew no objection, and stand.
    yet; tested on their own.
 5. **Forwarding and dead code** (done 2026-11-01): store to load in a block, constants
    across statements, dead compiler cells, the function value, unreachable blocks.
-6. **Local common subexpressions.**
+6. **Local common subexpressions** (done 2026-11-01).
 7. **Loop-invariant motion:** with hoisted array bases and descriptor A0s, by
    Decision 8's rules.
 8. **Register allocation:** register cells, liveness, write-backs by Decision
@@ -630,3 +630,60 @@ The survey's decisions drew no objection, and stand.
     fetch misses the window and goes through the single-byte reads `Stats` counts. So the survey's read
     counts aren't all data, and a small change in reads says little: 11 corpus programs' reads rose by 3 to
     112, with no more instructions or writes than before.
+- **2026-11-01:** Subtask 6, local common subexpressions: `opt/cse.go`, the fourth IR pass, teaching its
+  technique in its comment. `/NOOPTIMIZE`'s output is unchanged.
+  - **Finding a place once.** `C(I,J) = C(I,J) + X` turned out to be most of what the survey's "local CSE" stage
+    gained, and it needs no temporary: `ADDF2 X,C-244[R1]`. `Assign.InPlace` asks the code generator for this
+    (`storeInPlace`), and `ir.InPlaceOperand` says when it can be asked: either side of `+`, `*`, `.OR.`, and `IEOR`,
+    the first of `-`, `/`, and `.AND.`. Check holds the mark to it, and Forward clears it, as what it finds may leave
+    the statement no operation on its own place. Nothing VOLATILE is marked.
+  - **Merging.** A value is one run of an expression through a block, ended by any store `Conflict` says can touch what
+    it reads, or a call by `ChangedByCall`. `A+B` is `B+A`, by key. Nothing reading something VOLATILE merges. The value is
+    computed just before the first statement using it, into `$Un`, a temporary in memory (Decision 2); temporaries go back
+    for later blocks' use at a block's end.
+  - **A short-circuited operand can't be a value's first use.** `IF (N.NE.0 .AND. M/N.GT.2)`: code generator's `branchTo`
+    doesn't run the second operand if the first decides it, and `M/N` ahead of the test would fault where the original
+    didn't (Decision 8). It can use a value already computed.
+  - **A value already in a variable:** `K = J*5 + I` then `A(J*5 + I) = 0.0` reads K, with no store added, as long as K holds it.
+  - **Decision 2 shows its cost here, and that's what the cost model is for.** A temporary in memory takes a store and a
+    read per use, and an index has to be moved to a register too, so `MULL3 J,#60,R1; ADDL2 I,R1` twice is no better
+    as `$U1`, and worse by a write. `worth` counts what each choice runs, and takes a temporary only if it saves an
+    instruction and costs no more memory references than it saves instructions. That refuses `J*60` shared between
+    `matmul`'s `B(K,J)` and `C(I,J)`, which the survey's hand version kept in a register for the statement: its third
+    instruction of three, waiting for subtask 8. **Subtask 8 must change `worth`:** a temporary in a register costs none
+    of that, and it should be the first thing looked at there.
+  - **Left alone:**
+    - A variable format expression's blocks, which run in the middle of another block's I/O statement and would share
+      its temporaries.
+    - `Mem.Ptr` itself, since `throughPointer` knows a place by its form. So `subs`'s descriptor A0s stay for subtask 7, and
+      its `MOVL BUBBLE.$B1+16,R0` before every element, and the index with it, are unchanged: `IF` ends its block between
+      `A(J)`'s uses, so a local pass sees little there.
+    - A call's `Result` and `Through`, whose index is computed after the call, and `CharIndex.Base`, whose form `ir.Check`
+      requires.
+    - A comparison's value, which a test does far better as a branch.
+    - Across blocks: the survey found no case that asks for it.
+  - **New program:** `optcse.for`, worked by hand, matched on the first run both ways once its layout was right, with every
+    value set through a CALL so no earlier pass settles it. Each operator in place and each that can't be; other lengths;
+    each form of dummy; each thing that ends a value; a value held and a holder changed, in part, or by its own expression;
+    both orders; a short-circuited operand with and without an earlier value; a format expression sharing a value with its list; and
+    substrings.
+  - **Testing:** `cse_test.go` has a small program for each rule. `TestPassesOnCorpus` runs the pass on every routine with
+    `ir.Check` after it, and a second run changes nothing. `TestBoundsHold` holds with the new forms.
+  - **Results**, instructions in the run, cumulative with subtasks 3 and 5:
+
+    | Program | `/NOOPTIMIZE` | Subtask 5 | Now | Survey's hand CSE stage |
+    |---|---:|---:|---:|---:|
+    | `matmul` | 3,101,599 | 2,658,800 | 2,223,200 (−28.3%) | 2,025,199 (−34.7%) |
+    | `whet` | 2,695,057 | 2,655,457 | 2,475,457 (−8.1%) | not measured |
+    | DUNGEON's game, whole run | 6,818,609 | 5,528,332 | 5,526,804 (−18.9%) | not measured |
+    | `sieve`, `subs`, `textk` | | | unchanged | not measured |
+
+    `matmul` has two thirds of the hand stage's gain, nearly all of it from finding `C(I,J)` once. Its reads fall 435,601 and its
+    writes rise 3,599, about a store per trip of its first loop, whose three uses of `J*60+I` are the one temporary it gets. `whet` trades: reads fall 180,000 and writes rise
+    120,000, its elements of `E` read from two temporaries. DUNGEON has very little that a block repeats and that's worth a temporary
+    in memory: its `QHERE` is a loop of comparisons whose gain is in registers. Its reads rose 74,198, with its writes down 40 and 1,528
+    fewer instructions. A temporary would have added writes, so this looks like the layout effect subtask 5 noted, though it wasn't
+    checked further.
+  - **Not done, and not in any subtask yet:** the author's answer 4, `CMPB` and `MOVB` for one-character strings under
+    `/OPTIMIZE`, which the survey said could go with subtask 3 or a small subtask of its own. DUNGEON runs 28,856 `CMPC3`s, and `textk`
+    is built on them. It needs a place in the list.

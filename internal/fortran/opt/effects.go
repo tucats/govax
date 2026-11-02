@@ -108,25 +108,7 @@ func NewStorage(r *ir.Routine) *Storage {
 // addresses the linker fills in, whether or not any statement uses them now; and
 // everything a variable format expression touches.
 func (s *Storage) findTaken() {
-	expressions := map[*ir.Block]bool{}
-
-	var mark func(*ir.Block)
-
-	mark = func(b *ir.Block) {
-		if !expressions[b] {
-			expressions[b] = true
-
-			for _, next := range Successors(b.End) {
-				mark(next)
-			}
-		}
-	}
-
-	for _, v := range s.r.VFEs {
-		for _, b := range v.Cases {
-			mark(b)
-		}
-	}
+	expressions := expressionBlocks(s.r)
 
 	for _, b := range s.r.Blocks {
 		e := s.BlockEffects(b)
@@ -148,6 +130,32 @@ func (s *Storage) findTaken() {
 			s.take([]Place{s.Whole(&ir.Mem{Cell: c, T: c.T})})
 		}
 	}
+}
+
+// expressionBlocks are the blocks of routine r's variable format expressions, which
+// run when FTNRTL calls them, in the middle of an I/O statement.
+func expressionBlocks(r *ir.Routine) map[*ir.Block]bool {
+	blocks := map[*ir.Block]bool{}
+
+	var mark func(*ir.Block)
+
+	mark = func(b *ir.Block) {
+		if !blocks[b] {
+			blocks[b] = true
+
+			for _, next := range Successors(b.End) {
+				mark(next)
+			}
+		}
+	}
+
+	for _, v := range r.VFEs {
+		for _, b := range v.Cases {
+			mark(b)
+		}
+	}
+
+	return blocks
 }
 
 // take adds the local ones of the places to the list of those taken: the rest a

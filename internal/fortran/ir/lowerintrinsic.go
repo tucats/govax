@@ -152,14 +152,14 @@ func (l *lowerer) choose(cond Expr, v *Mem, x Expr) {
 	set, next := l.newBlock(), l.newBlock()
 	l.divert(cond, set, next)
 	l.begin(set)
-	l.emit(&Assign{l.origin(), v, x})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: x})
 	l.begin(next)
 }
 
 // absolute is |x|: x in a temporary, negated if it is less than zero.
 func (l *lowerer) absolute(t Type, x Expr) Expr {
 	v := l.temp(t)
-	l.emit(&Assign{l.origin(), v, x})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: x})
 	l.choose(&Cmp{Lt, &Load{v}, zero(t)}, v, arith(Neg, t, &Load{v}, nil))
 
 	return &Load{v}
@@ -174,7 +174,7 @@ func (l *lowerer) extreme(e *sema.IntrinsicRef, t Type) Expr {
 	}
 
 	v := l.temp(t)
-	l.emit(&Assign{l.origin(), v, l.expr(e.Args[0])})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: l.expr(e.Args[0])})
 
 	for _, a := range e.Args[1:] {
 		x := l.reusable(l.expr(a))
@@ -191,7 +191,7 @@ func (l *lowerer) difference(t Type, x, y Expr) Expr {
 	x, y = l.reusable(x), l.reusable(y)
 
 	v := l.temp(t)
-	l.emit(&Assign{l.origin(), v, zero(t)})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: zero(t)})
 	l.choose(&Cmp{Gt, x, y}, v, arith(Sub, t, x, y))
 
 	return &Load{v}
@@ -218,7 +218,7 @@ func (l *lowerer) transferSign(t Type, x, y Expr) Expr {
 	}
 
 	v := l.temp(t)
-	l.emit(&Assign{l.origin(), v, x})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: x})
 
 	positive, negative, flip, join := l.newBlock(), l.newBlock(), l.newBlock(), l.newBlock()
 
@@ -228,7 +228,7 @@ func (l *lowerer) transferSign(t Type, x, y Expr) Expr {
 	l.begin(negative)
 	l.divert(&Cmp{Gt, &Load{v}, zero(t)}, flip, join)
 	l.begin(flip)
-	l.emit(&Assign{l.origin(), v, arith(Neg, t, &Load{v}, nil)})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: arith(Neg, t, &Load{v}, nil)})
 	l.begin(join)
 
 	return &Load{v}
@@ -345,7 +345,7 @@ func (l *lowerer) index(e *sema.IntrinsicRef) Expr {
 	}
 
 	v := l.temp(Long)
-	l.emit(&Assign{l.origin(), v, &CharIndex{x, y, base}})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: &CharIndex{x, y, base}})
 
 	return &Load{v}
 }
@@ -355,7 +355,7 @@ func (l *lowerer) index(e *sema.IntrinsicRef) Expr {
 // argument is from 0 to 255).
 func (l *lowerer) char(e *sema.IntrinsicRef) Text {
 	v := l.temp(Byte)
-	l.emit(&Assign{l.origin(), v, convertLow(Byte, l.expr(e.Args[0]))})
+	l.emit(&Assign{origin: l.origin(), Dst: v, Src: convertLow(Byte, l.expr(e.Args[0]))})
 
 	return Text{v, LongConst(1)}
 }

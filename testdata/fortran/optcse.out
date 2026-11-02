@@ -1,0 +1,42 @@
+ADD   12.50
+MUL   25.00
+SUB   20.00
+DIV    5.00
+SUBR   -4.00
+DIVR   -5.00
+OTHER    5.00
+TWICE   10.00
+INC      13
+DEC      12
+MULDIV       7
+XOR       2
+OR      11
+AND       2
+WORD       8
+DOUBLE    2.00
+DUMMY    1.00    3.00    6.00
+FIXED    1.00    5.00    3.00
+MERGED   31.00   29.00   32.00
+INDEX   31.00   59.00   62.00
+INDEX   63.00
+ELEMENT   31.00  299.00  302.00
+SHARED    7.00   -1.00    2.00
+COMMON      13      23      26
+TAKEN      16      17      20
+LOCAL      29      27      30
+HOLDER      17      99
+CHANGED      18      77       0
+HALF       1      55       0
+ITSELF       7      11
+COMMUTE   11.00    9.00   30.00
+NOT   -2.00    4.00
+NESTED      50
+LOOP   36.00
+NOFAULT       7
+USED      10
+VOLATILE    7.00    5.00    8.00
+VFE       8  16
+SUBSTR CD DE
+STORED XD XD
+EQUAL
+  $STATUS == "%X00000001"

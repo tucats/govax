@@ -152,7 +152,7 @@ func (l *lowerer) moveRecord(s *sema.Assign) {
 
 	address := func(m *Mem) Expr {
 		t := l.temp(Long)
-		l.emit(&Assign{l.origin(), t, &Addr{m}})
+		l.emit(&Assign{origin: l.origin(), Dst: t, Src: &Addr{m}})
 
 		return &Load{t}
 	}

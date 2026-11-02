@@ -83,7 +83,7 @@ func (l *lowerer) expr(e sema.Expr) Expr {
 			// Computed before the statement, so that no register is held
 			// across its CMPC (CharCmp).
 			t := l.temp(Long)
-			l.emit(&Assign{l.origin(), t, l.charCompare(e)})
+			l.emit(&Assign{origin: l.origin(), Dst: t, Src: l.charCompare(e)})
 
 			return &Load{t}
 		}
@@ -134,7 +134,7 @@ func (l *lowerer) cond(e sema.Expr) Expr {
 			}
 
 			t := l.temp(Long)
-			l.emit(&Assign{l.origin(), t, c})
+			l.emit(&Assign{origin: l.origin(), Dst: t, Src: c})
 
 			return &Load{t}
 		}
@@ -371,7 +371,7 @@ func (l *lowerer) value(x Expr) *Mem {
 	}
 
 	t := l.temp(x.Type())
-	l.emit(&Assign{l.origin(), t, x})
+	l.emit(&Assign{origin: l.origin(), Dst: t, Src: x})
 
 	return t
 }

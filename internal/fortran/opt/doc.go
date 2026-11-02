@@ -32,7 +32,9 @@
 // Each subtask of the phase adds to the list. Forward (forward.go) uses what a store
 // said in place of reading it back, and settles branches that come out constant;
 // Unreachable (unreachable.go) takes out what can't run after that; DeadCode
-// (deadcode.go) takes out the stores nothing reads.
+// (deadcode.go) takes out the stores nothing reads; CommonSubexpressions (cse.go)
+// computes once what a block computes several times, and finds a place once for an
+// operation on it.
 //
 // # Analyses
 //
@@ -56,7 +58,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for) are there to
+// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for) are there to
 // catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

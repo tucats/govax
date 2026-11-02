@@ -254,6 +254,12 @@ func (g *routineGen) assign(s *ir.Assign) {
 		}
 	}
 
+	if s.InPlace {
+		g.storeInPlace(s)
+
+		return
+	}
+
 	g.store(s.Src, s.Dst)
 }
 

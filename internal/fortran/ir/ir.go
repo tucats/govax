@@ -591,10 +591,15 @@ func (o origin) Source() ast.Stmt { return o.from }
 // The statements.
 type (
 	// Assign is Dst = Src. Src has Dst's type.
+	//
+	// InPlace says Src is an operation on Dst's own value and the code generator
+	// is to find the place once: ADDF2 R0,C-244[R1], not one index for the operand
+	// and another for the result (InPlaceOperand). An optimizer sets it.
 	Assign struct {
 		origin
-		Dst *Mem
-		Src Expr
+		Dst     *Mem
+		Src     Expr
+		InPlace bool
 	}
 
 	// CharMove is Dst = Src for CHARACTER values (section 3.3 of the
@@ -702,6 +707,47 @@ type (
 // makes of a branch whose way it has worked out.
 func NewJump(from ast.Stmt, to *Block) *Jump {
 	return &Jump{origin{from}, to}
+}
+
+// NewAssign is Dst = Src that came from the statement from: a value an optimizer
+// computes ahead of the statement that wants it.
+func NewAssign(from ast.Stmt, dst *Mem, src Expr) *Assign {
+	return &Assign{origin: origin{from}, Dst: dst, Src: src}
+}
+
+// InPlaceOperand is the operand of a's value other than Dst's own, if the value is
+// an operation the VAX has a two-operand form of that changes Dst where it is: Dst
+// + Y or Y + Dst, and so on, but only Dst - Y and Dst / Y, since SUBL2 and DIVL2 can
+// do no other. A .AND. is BIC of its second operand's complement from its first. It
+// is nil if the value is none of these.
+func InPlaceOperand(a *Assign) Expr {
+	op, ok := a.Src.(*Op)
+	if !ok || op.T != a.Dst.T || op.Y == nil {
+		return nil
+	}
+
+	switch op.Op {
+	case Add, Mul, Or, Xor:
+		if isLoadOf(op.Y, a.Dst) && !isLoadOf(op.X, a.Dst) {
+			return op.X
+		}
+	case Sub, Div, And:
+	default:
+		return nil
+	}
+
+	if isLoadOf(op.X, a.Dst) {
+		return op.Y
+	}
+
+	return nil
+}
+
+// isLoadOf reports whether e reads the place m, as the dump would write it.
+func isLoadOf(e Expr, m *Mem) bool {
+	l, ok := e.(*Load)
+
+	return ok && l.Mem.T == m.T && MemText(l.Mem) == MemText(m)
 }
 
 func (*Jump) terminator()         {}
