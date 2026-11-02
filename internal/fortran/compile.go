@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/ir"
 	"github.com/tucats/govax/internal/fortran/lex"
+	"github.com/tucats/govax/internal/fortran/opt"
 	"github.com/tucats/govax/internal/fortran/parse"
 	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
@@ -38,6 +39,9 @@ type Options struct {
 
 	// Align is /[NO]ALIGN (sema/align.go).
 	Align sema.Alignment
+
+	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt).
+	Optimize bool
 
 	// Includes reads the files and modules INCLUDE statements name; nil
 	// means a program can include nothing.
@@ -135,6 +139,10 @@ func CompileAll(opts Options, files []File) Result {
 		if !messages.Failed() {
 			routines = ir.Lower(prog)
 			ident = prog.Ident
+
+			if opts.Optimize {
+				opt.Optimize(routines)
+			}
 		}
 	}
 
@@ -181,12 +189,25 @@ func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident st
 		w.Comment("by the command " + opts.CommandLine)
 	}
 
+	if opts.Optimize {
+		w.Comment("Optimized by /OPTIMIZE's passes: " + passList())
+	}
+
 	w.Comment("")
 	w.Comment("Each line of the FORTRAN source appears as a comment, with its line number, before")
 	w.Comment("the instructions it became. An INCLUDE file's lines appear only with INCLUDE's")
 	w.Comment("/LIST, their include depth before the number; a comment names the file either way.")
 	w.Comment("Each routine's storage map says where its variables are.")
 	w.Comment("")
+}
+
+// passList names the optimizer's passes for the header.
+func passList() string {
+	if len(opt.Passes) == 0 {
+		return "none yet"
+	}
+
+	return strings.Join(opt.Names(), ", ")
 }
 
 // identOperand is .IDENT's operand for ident: the string between delimiters it

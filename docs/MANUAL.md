@@ -374,7 +374,8 @@ Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
 govax run [--debug | --no-debug] IMAGE [text...]
 
 govax fortran [--macro FILE | --no-macro] [--extend-source] [--d-lines]
-              [--continuations N] [--no-i4] [--g-floating] SOURCE...
+              [--continuations N] [--no-i4] [--g-floating] [--optimize | --no-optimize]
+              SOURCE...
 
 govax macro [--object FILE | --no-object] [--list | --list-file FILE]
             [--show OPTS] [--no-show OPTS] [--cross-reference]
@@ -1292,7 +1293,7 @@ These commands are described fully in their own sections:
 ```text
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
-    /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN
+    /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN  /[NO]OPTIMIZE
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -1317,8 +1318,8 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 `/CONTINUATIONS=n` allows a statement n continuation lines (0 to 99;
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
-than D_floating, and `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+than D_floating, `/ALIGN` lays out structures and common blocks on
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE` runs the optimizer's passes, which the MACRO file's header names (not the default; the optimizer is being built, and has none yet). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -4949,10 +4950,10 @@ output it prints, and programs of several files in its `modules` directory.
 The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, joined by `+` and with
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
-`/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`, and
-`/[NO]G_FLOATING`. An `OPTIONS` statement before a unit may give `/I4`,
+`/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
+`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE`. An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
-host shell, `govax fortran` runs it (`--align value` and `--no-align` are
+host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
 `/ALIGN=value` and `/NOALIGN`, and `a.for+lib.tlb/library` an argument with `+`).
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks

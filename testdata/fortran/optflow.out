@@ -1,0 +1,12 @@
+ENTRY      43
+ASSIGNED       2      11
+EXTENDED     306       4
+GO TO LOOP      30       5
+ALTERNATE       1       5      10
+ 1
+  4
+   9
+NAMELIST       7      14
+STATEMENT FN      36
+AXCAXC       2
+  $STATUS == "%X00000001"

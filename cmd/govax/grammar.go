@@ -66,6 +66,8 @@ type fortranFlags struct {
 	gFloating    bool   // --g-floating
 	align        string // --align: /ALIGN's value
 	noAlign      bool   // --no-align
+	optimize     bool   // --optimize
+	noOptimize   bool   // --no-optimize
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -324,6 +326,26 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.gFloating = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "optimize",
+		Description: "Run the optimizer's passes on the compiled code",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.optimize = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-optimize",
+		Description: "Don't run the optimizer's passes (the default)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noOptimize = true
 
 			return nil
 		},
@@ -855,6 +877,13 @@ func fortranCommand(sources []string, f fortranFlags) string {
 		command += "/NOALIGN"
 	case f.align != "":
 		command += "/ALIGN=(" + f.align + ")"
+	}
+
+	switch {
+	case f.noOptimize:
+		command += "/NOOPTIMIZE"
+	case f.optimize:
+		command += "/OPTIMIZE"
 	}
 
 	if f.continuationsGiven {

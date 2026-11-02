@@ -373,7 +373,7 @@ The survey's decisions drew no objection, and stand.
 ## Subtasks (revised by the survey and the review)
 
 1. **Survey** (done 2026-11-01): this Part A.
-2. **The pass framework:** `internal/fortran/opt`, `/[NO]OPTIMIZE` and
+2. **The pass framework** (done 2026-11-01): `internal/fortran/opt`, `/[NO]OPTIMIZE` and
    `--optimize`, `ir.Check` after each pass, the both-ways test, its counts
    logged, the kernels.
 3. **The instruction list, branch shortening, the peephole:** `MOVL #0`, `ADDL2
@@ -407,3 +407,32 @@ The survey's decisions drew no objection, and stand.
   earlier than Phase 86 needed it to.
 - **2026-11-01:** The author's review: answers 1, 2, and 4 as recommended, and
   FTNRTL's loops added to this phase as subtask 10 (the close-out is now 11).
+- **2026-11-01:** Subtask 2, the pass framework. `internal/fortran/opt` is a list
+  of passes (`Passes`, empty for now), each followed by `ir.Check`, a failure a
+  panic naming the pass. `/[NO]OPTIMIZE` and `--optimize`/`--no-optimize` reach it
+  through `fortran.Options.Optimize`, and only `/OPTIMIZE`'s MACRO file says
+  anything of it, in a header line naming the passes. `TestFortranPrograms` and
+  `TestFortranModules` run everything both ways, each way on a console of its
+  own since a program may leave files; every program's two outputs must match
+  each other and its `.out`, and `go test -v` logs the gain per program.
+  - **The counts:** `Engine.BeginRun` zeroes the instruction count at each run, so
+    after a RUN `InstructionCount` is that image's alone. It agreed exactly with
+    the survey's per-PC hook on the kernels, so Decision 11's choice stands.
+  - **The kernels** joined the harness from `testdata/opt84/kernels`. Their
+    `.out` files come from a calculation outside govax (F_floating rounding worked
+    in exact fractions for `subs`); `whet` has none and must only print the same
+    both ways.
+  - **New programs for Decision 10:** `optalias.for`, `optfaults.for`, and
+    `optflow.for`, whose outputs were worked by hand and passed as written. They
+    guard against passes not yet written, so passing now says only that the
+    compiler without an optimizer gets them right.
+  - **DUNGEON:** `TestFortranDungeonBothWays` plays `measure/game.in` each way, and
+    skips without the source. Its baseline is 6,732,500 instructions, where the
+    survey's 6,818,609 came after a first run in the same session (running that
+    first here gives exactly 6,818,609; why a second run costs 1.3% more wasn't
+    looked into). Later comparisons use this test's number. The game's output is
+    only compared between builds and never kept.
+  - **For Decision 7:** `asts.for` has an AST reentering a routine with static
+    variables, so a local can change with no call in sight. Decision 7's "a local
+    that is neither survives calls" assumes no such thing, and subtask 4 must
+    settle it: the manual's VOLATILE would be the rule, and `asts.for` the check.

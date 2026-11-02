@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,7 +27,54 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
+var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "optalias", "optfaults", "optflow", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
+
+// fortranKernels are the optimizer's kernels (docs/PHASE-84 - FORTRAN
+// optimizer.md), compute programs that spend their time in their own loops, as
+// the corpus's programs don't, so the counts below mean something. A kernel
+// without an expected output (its value is a floating chain, not to be worked out
+// by hand) must print the same both ways.
+var fortranKernels = filepath.Join("..", "..", "testdata", "opt84", "kernels")
+
+// optimizerModes are the two ways every program is compiled, each on a console of
+// its own, since a program may leave files behind it.
+var optimizerModes = []struct{ name, qualifier string }{
+	{"noopt", "/NOOPTIMIZE"},
+	{"opt", "/OPTIMIZE"},
+}
+
+// runCounts is what one program's RUN cost: its instructions, and its data
+// references, the memory's reads and writes (instruction fetches aren't among
+// them).
+type runCounts struct {
+	instructions, reads, writes int64
+}
+
+// countedRun is shareRun, and what the run cost.
+func countedRun(t *testing.T, d *Dispatcher, c *Console, buf *bytes.Buffer, image string) (string, runCounts) {
+	t.Helper()
+
+	_, r0, w0, mr0, mw0 := c.Engine.Memory().Stats()
+
+	out := shareRun(t, d, buf, image)
+
+	_, r1, w1, mr1, mw1 := c.Engine.Memory().Stats()
+
+	// Each run starts the engine's count again (Engine.BeginRun), so this is the
+	// image's alone.
+	return out, runCounts{int64(c.Engine.InstructionCount()), r1 - r0 + mr1 - mr0, w1 - w0 + mw1 - mw0}
+}
+
+// logGain logs what /OPTIMIZE did for one program (go test -v shows it), the
+// measure Phase 84's passes are held to.
+func logGain(t *testing.T, name string, before, after runCounts) {
+	t.Helper()
+
+	t.Logf("%-12s instructions %10d to %10d (%+6.1f%%), reads %10d to %10d, writes %10d to %10d",
+		name, before.instructions, after.instructions,
+		100*(float64(after.instructions)/float64(max(before.instructions, 1))-1),
+		before.reads, after.reads, before.writes, after.writes)
+}
 
 func TestFortranPrograms(t *testing.T) {
 	sources, err := filepath.Glob(filepath.Join(fortranPrograms, "*.for"))
@@ -34,53 +82,81 @@ func TestFortranPrograms(t *testing.T) {
 		t.Fatalf("no programs in %s (%v)", fortranPrograms, err)
 	}
 
+	kernels, err := filepath.Glob(filepath.Join(fortranKernels, "*.for"))
+	if err != nil || len(kernels) == 0 {
+		t.Fatalf("no kernels in %s (%v)", fortranKernels, err)
+	}
+
+	sources = append(sources, kernels...)
+
 	eachLoader(t, func(t *testing.T, paging bool) {
-		d, c, buf := shareFindConsole(t, paging)
+		printed := map[string]string{}
+		counts := map[string]runCounts{}
 
-		for _, source := range sources {
-			name := strings.TrimSuffix(filepath.Base(source), ".for")
-			if paging && !slices.Contains(fortranPagingPrograms, name) {
-				continue
-			}
+		for _, mode := range optimizerModes {
+			t.Run(mode.name, func(t *testing.T) {
+				d, c, buf := shareFindConsole(t, paging)
 
-			t.Run(name, func(t *testing.T) {
-				text, err := os.ReadFile(source)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				want, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".out")
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				upper := strings.ToUpper(name)
-				deleteFilesAfter(t, d, upper)
-
-				if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + ".FOR"},
-					rms.TextRecords, splitSource(string(text))); err != nil {
-					t.Fatal(err)
-				}
-
-				buf.Reset()
-
-				for _, command := range []string{"FORTRAN ", "MACRO ", "LINK "} {
-					shareFindRun(t, d, command+upper)
-
-					if out := buf.String(); out != "" {
-						t.Fatalf("%s%s said:\n%s", command, upper, out)
+				for _, source := range sources {
+					name := strings.TrimSuffix(filepath.Base(source), ".for")
+					if paging && !slices.Contains(fortranPagingPrograms, name) {
+						continue
 					}
-				}
 
-				input, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".in")
-				if err != nil && !os.IsNotExist(err) {
-					t.Fatal(err)
-				}
+					t.Run(name, func(t *testing.T) {
+						text, err := os.ReadFile(source)
+						if err != nil {
+							t.Fatal(err)
+						}
 
-				c.In = strings.NewReader(string(input))
+						want, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".out")
+						if err != nil && (filepath.Dir(source) != fortranKernels || !os.IsNotExist(err)) {
+							t.Fatal(err)
+						}
 
-				if got := shareRun(t, d, buf, upper); got != string(want) {
-					t.Errorf("RUN %s printed:\n%s\nwant:\n%s", upper, got, want)
+						hasWant := err == nil
+
+						upper := strings.ToUpper(name)
+						deleteFilesAfter(t, d, upper)
+
+						if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper + ".FOR"},
+							rms.TextRecords, splitSource(string(text))); err != nil {
+							t.Fatal(err)
+						}
+
+						buf.Reset()
+
+						for _, command := range []string{"FORTRAN" + mode.qualifier + " ", "MACRO ", "LINK "} {
+							shareFindRun(t, d, command+upper)
+
+							if out := buf.String(); out != "" {
+								t.Fatalf("%s%s said:\n%s", command, upper, out)
+							}
+						}
+
+						input, err := os.ReadFile(strings.TrimSuffix(source, ".for") + ".in")
+						if err != nil && !os.IsNotExist(err) {
+							t.Fatal(err)
+						}
+
+						c.In = strings.NewReader(string(input))
+
+						got, cost := countedRun(t, d, c, buf, upper)
+
+						if hasWant && got != string(want) {
+							t.Errorf("RUN %s printed:\n%s\nwant:\n%s", upper, got, want)
+						}
+
+						if before, ok := printed[name]; !ok {
+							printed[name], counts[name] = got, cost
+						} else {
+							if got != before {
+								t.Errorf("RUN %s printed, with /OPTIMIZE:\n%s\nand without it:\n%s", upper, got, before)
+							}
+
+							logGain(t, name, counts[name], cost)
+						}
+					})
 				}
 			})
 		}
@@ -109,83 +185,95 @@ func TestFortranModules(t *testing.T) {
 	}
 
 	eachLoader(t, func(t *testing.T, paging bool) {
-		d, c, buf := shareFindConsole(t, paging)
-
-		for _, program := range programs {
-			name := filepath.Base(program)
-
-			t.Run(name, func(t *testing.T) {
-				want, err := os.ReadFile(filepath.Join(program, name+".out"))
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				links, err := os.ReadFile(filepath.Join(program, "links.txt"))
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				files, err := os.ReadDir(program)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				var sources []string
-
-				for _, file := range files {
-					if file.Name() == name+".out" || file.Name() == "links.txt" {
-						continue
-					}
-
-					text, err := os.ReadFile(filepath.Join(program, file.Name()))
-					if err != nil {
-						t.Fatal(err)
-					}
-
-					upper := strings.ToUpper(file.Name())
-					deleteFilesAfter(t, d, strings.TrimSuffix(upper, filepath.Ext(upper)))
-
-					if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper},
-						rms.TextRecords, splitSource(string(text))); err != nil {
-						t.Fatal(err)
-					}
-
-					if strings.HasSuffix(upper, ".FOR") {
-						sources = append(sources, strings.TrimSuffix(upper, ".FOR"))
-					}
-				}
-
-				buf.Reset()
-
-				commands := []string{"FORTRAN " + strings.Join(sources, ",")}
-				for _, source := range sources {
-					commands = append(commands, "MACRO "+source)
-				}
-
-				for _, command := range commands {
-					shareFindRun(t, d, command)
-
-					if out := buf.String(); out != "" {
-						t.Fatalf("%s said:\n%s", command, out)
-					}
-				}
-
-				image := strings.ToUpper(name)
-
-				for _, modules := range strings.Fields(string(links)) {
-					shareFindRun(t, d, "LINK/EXECUTABLE="+image+" "+modules)
-
-					if out := buf.String(); out != "" {
-						t.Fatalf("LINK %s said:\n%s", modules, out)
-					}
-
-					if got := shareRun(t, d, buf, image); got != string(want) {
-						t.Errorf("after LINK %s, RUN %s printed:\n%s\nwant:\n%s", modules, image, got, want)
-					}
-				}
+		for _, mode := range optimizerModes {
+			t.Run(mode.name, func(t *testing.T) {
+				fortranModules(t, programs, paging, mode.qualifier)
 			})
 		}
 	})
+}
+
+// fortranModules runs TestFortranModules's programs one way, with FORTRAN's
+// qualifier: on a console of its own, as TestFortranPrograms does.
+func fortranModules(t *testing.T, programs []string, paging bool, qualifier string) {
+	t.Helper()
+
+	d, c, buf := shareFindConsole(t, paging)
+
+	for _, program := range programs {
+		name := filepath.Base(program)
+
+		t.Run(name, func(t *testing.T) {
+			want, err := os.ReadFile(filepath.Join(program, name+".out"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			links, err := os.ReadFile(filepath.Join(program, "links.txt"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			files, err := os.ReadDir(program)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var sources []string
+
+			for _, file := range files {
+				if file.Name() == name+".out" || file.Name() == "links.txt" {
+					continue
+				}
+
+				text, err := os.ReadFile(filepath.Join(program, file.Name()))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				upper := strings.ToUpper(file.Name())
+				deleteFilesAfter(t, d, strings.TrimSuffix(upper, filepath.Ext(upper)))
+
+				if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + upper},
+					rms.TextRecords, splitSource(string(text))); err != nil {
+					t.Fatal(err)
+				}
+
+				if strings.HasSuffix(upper, ".FOR") {
+					sources = append(sources, strings.TrimSuffix(upper, ".FOR"))
+				}
+			}
+
+			buf.Reset()
+
+			commands := []string{"FORTRAN" + qualifier + " " + strings.Join(sources, ",")}
+			for _, source := range sources {
+				commands = append(commands, "MACRO "+source)
+			}
+
+			for _, command := range commands {
+				shareFindRun(t, d, command)
+
+				if out := buf.String(); out != "" {
+					t.Fatalf("%s said:\n%s", command, out)
+				}
+			}
+
+			image := strings.ToUpper(name)
+
+			for _, modules := range strings.Fields(string(links)) {
+				shareFindRun(t, d, "LINK/EXECUTABLE="+image+" "+modules)
+
+				if out := buf.String(); out != "" {
+					t.Fatalf("LINK %s said:\n%s", modules, out)
+				}
+
+				if got := shareRun(t, d, buf, image); got != string(want) {
+					t.Errorf("after LINK %s, RUN %s printed:\n%s\nwant:\n%s", modules, image, got, want)
+				}
+			}
+		})
+	}
 }
 
 // TestFortranBlockDataLibrary runs a program whose common block's initial

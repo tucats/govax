@@ -1,0 +1,8 @@
+NO TRIPS       5
+GUARDED       3       5
+INTEGER       3       9
+RESERVED       3       2
+WHILE       4
+TRAPPED       1
+KNOWN       2
+  $STATUS == "%X00000001"

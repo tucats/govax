@@ -791,7 +791,8 @@ grammar console
     ! /G_FLOATING G_floating. ALIGN is /ALIGN[=value] or /NOALIGN, how
     ! structures and common blocks are laid out (docs/PHASE-82): no value
     ! is ALL, a value is ALL, NONE, a rule, or class=rule, and a list of
-    ! them is in parentheses. Elements joined by + are one compilation
+    ! them is in parentheses. OPTIMIZE is /[NO]OPTIMIZE: run the optimizer's
+    ! passes (docs/PHASE-84). Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -819,6 +820,7 @@ grammar console
         qualifier   align/id=1379               -
                     /type=$any/list             -
                     /default=""
+        qualifier   optimize/id=1381
         qualifier   continuations/id=1376       -
                     /type=$integer
 

@@ -7,7 +7,9 @@ followed by SHOW SYMBOL's line for `$STATUS`. `TestFortranPrograms`
 volume, runs FORTRAN, MACRO, LINK, and RUN on govax, checks that the
 first three said nothing, and compares RUN's output with `name.out`.
 Every program runs with paging off; those in `fortranPagingPrograms`
-run with paging on too.
+run with paging on too. Every program runs compiled both ways, with `/NOOPTIMIZE`
+and `/OPTIMIZE` (Phase 84), against one `name.out`; `testdata/opt84/kernels`
+runs here as well.
 
 A program that reads the terminal has a third file, `name.in`, the lines
 typed at it (Phase 80, subtask 14); the test's terminal doesn't echo them,
@@ -21,6 +23,9 @@ to check against. To add a program, add both files; this directory's
 
 | Program | What it exercises |
 | ------- | ----------------- |
+| `optalias.for` | What an optimizer mustn't assume about where values are: EQUIVALENCE overlaps, COMMON changed by a call in a loop, a local changed through an address kept elsewhere, the DO variable after each way out, values kept with no SAVE, what I/O statements store, ASSOCIATEVARIABLE, dummies sharing storage to read, an unsigned character comparison (Phase 84) |
+| `optfaults.for` | Faults an optimizer mustn't move or remove: divisions by zero and a reserved operand where they never run, and divisions by zero that do run, with the result unused and the operands known (Phase 84) |
+| `optflow.for` | Control flow that isn't a plain DO loop, and code outside a loop that reads its variables: ENTRY, assigned GO TO, the extended range, a GO TO loop, alternate returns, a variable format expression, NAMELIST, a statement function (Phase 84) |
 | `aggregates.for` | Records as wholes: aggregate assignment; a record, an element, a substructure, an array, and an adjustable array of records as arguments, fields at odd offsets, a dummy record through ENTRY; %LOC and %REF; a record in COMMON with its initial values, repeated by another unit's declaration; records and array fields in unformatted I/O; array fields without subscripts as arguments, items, and an internal file; a record too long for one MOVC3 |
 | `average.for` | The manual's first program (14.1) and the internals tour's: a REAL function given an array, a function reference in a PRINT list |
 | `services.for` | Calling services and RTL routines as functions, with null arguments (Phase 83, subtask 5): `$GETJPIW` and `$GETSYIW` with item lists from a structure, `$BINTIM`, `$ASCTIM`, `$CRELNM`, `$TRNLNM`, `$FAO`, `$FAOL`, LIB$GETJPI, LIB$DATE_TIME, LIB$SPAWN, LIB$GET_INPUT with a prompt and at the end of its input, a service govax lacks reaching a handler that continues, and FORTRAN routines given null arguments, a function with a hidden result among them |

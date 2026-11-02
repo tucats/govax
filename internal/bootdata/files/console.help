@@ -4114,7 +4114,7 @@ $FOR
                 [/MACRO[=<file>] | /NOMACRO]
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
                 [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
-                [/ALIGN[=<value>] | /NOALIGN]
+                [/ALIGN[=<value>] | /NOALIGN] [/[NO]OPTIMIZE]
 
     Parameter:
 
@@ -4188,6 +4188,11 @@ $FOR
                         longword.  /ALIGN alone is ALL.  CDEC$ OPTIONS
                         groups in the source override it.
 
+        /OPTIMIZE       Runs the optimizer's passes, for code that does what
+        /NOOPTIMIZE     the program says in fewer instructions.  The passes
+                        run are named in the MACRO file's header.  The
+                        default is /NOOPTIMIZE.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
@@ -4203,8 +4208,8 @@ $FOR
 
     From the host shell, "govax fortran <source>..." runs this command,
     with --macro <file> or --no-macro, --extend-source, --d-lines,
-    --continuations <n>, --no-i4, --g-floating, --align <value>, and
-    --no-align.
+    --continuations <n>, --no-i4, --g-floating, --align <value>,
+    --no-align, --optimize, and --no-optimize.
 
     Examples:
 

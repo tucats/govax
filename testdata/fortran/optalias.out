@@ -1,0 +1,15 @@
+EQUIVALENCE       7       7      13
+OVERLAP  131074       2       2
+COMMON       3       3       2
+ACROSS CALL       3       4       1
+BY REFERENCE       8      11
+KEPT ADDRESS      20      21
+DO VARIABLE       4       4       5
+NO SAVE       3       3
+DATA       2       3       5
+READ      13      31
+ASSOCIATE       4       6      33
+SAME ARRAY      14
+THROUGH DUMMY       6
+UNSIGNED
+  $STATUS == "%X00000001"

@@ -589,7 +589,10 @@ never had.
   and to FORRTL by `TestFor83ContinueOnFORRTL`), and subtask 7 ASTs and exit handlers (FTNRTL holds ASTs off with `$SETAST` while its statement stack and free list change, and a context records its
   frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`), and subtask 8 the system subroutines (`sema/system.go`: a table, each subroutine's arguments choosing FTNRTL's routine, as ERRSNS's do, RAN and SECNDS REAL\*4 whatever IMPLICIT says; `ftn_system.mar`, GSMATCH 1,16, held to VMS by `TestFor83PartAOnFTNRTL`, part A with each `FOR$` name's `FTN$`), and subtask 9 STR$ (`librtl/str.go`, `strparts.go`, `strsearch.go`; `vmsdef/strmessages.go`; held to VMS by `TestStr83Oracle`; the five arithmetic routines NOTIMPL), and subtask 10 end to end (`testdata/fortran/vmstour.for`) and the close-out (MANUAL.md's 14.8, FORTRAN-INTERNALS.md's section 15); the phase doc's "Where things stand" lists what is left.
   Phase 84 (in progress) is the FORTRAN optimizer; subtask 1 (2026-11-01) is the survey, its doc's Part A,
-  with the author's answers, and its kernels and measuring code in `testdata/opt84`.
+  with the author's answers, and its kernels and measuring code in `testdata/opt84`; subtask 2 (2026-11-01) the
+  pass framework: `internal/fortran/opt`, `/[NO]OPTIMIZE`, and every FORTRAN program run both ways
+  (`optimizerModes`), the gains logged by `go test -v`, with `optalias.for`, `optfaults.for`, `optflow.for`, and
+  `TestFortranDungeonBothWays`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -886,7 +889,8 @@ never had.
   for a program that reads the terminal `name.in`, what is typed (Phase 80).
   `TestFortranPrograms` (`internal/console/fortranprograms_test.go`)
   runs FORTRAN, MACRO, LINK, and RUN on each (the first three must say
-  nothing) and compares the output; `fortranPagingPrograms` also run
+  nothing) and compares the output, compiled both `/NOOPTIMIZE` and
+  `/OPTIMIZE` (Phase 84); `fortranPagingPrograms` also run
   with paging on. Its `.gitignore` keeps `*.out` in the repository.
   `modules/` is programs of several files (Phase 76, subtask 8), a
   directory each, linked once per line of its `links.txt` and printing
@@ -895,9 +899,9 @@ never had.
   (FORRTL's system subroutines), `for83b.mar` and `for83c.mar` (conditions on FORRTL and LIBRTL, a case per
   image), `lnk83.mar`, `def_opc.mar`, and `for83.com` (which also runs LIBRARY/TEXT); `for83e.mar` (what a handler can go on from, run on FORRTL over govax); `for83g.mar` (what's left of an unwound statement, on FORRTL over govax); `for83x.for`, `for83y.for`, and `for83t.for` (the same on FTNRTL, by hand); `decode.go` turns
   `def_opc.obj` into `defined.txt` for `vmsdef`; `testdata/str83/` is the STR$ routines' program, on the same volume.
-- `testdata/opt84/` — Phase 84's survey measurements (README.md): five compute kernels, their loops
-  optimized by hand, and the measuring code (a patch to `Engine.Step`, kept out of the tree). `go test` doesn't
-  run them.
+- `testdata/opt84/` — Phase 84's survey measurements (README.md): five compute kernels, which `TestFortranPrograms`
+  runs both ways, their loops optimized by hand, and the measuring code (a patch to `Engine.Step`, kept out of the
+  tree), part of which `TestFortranDungeonBothWays` uses.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -2144,6 +2148,8 @@ expect adjustment as phases land):
   verifies a routine; golden dumps (`Dump`) are in `ir/testdata`.
   `Compile` lowers a program without errors and generates its code,
   the module named for the first unit; `opt` is Phase 84's.
+- `internal/fortran/opt` — the optimizer (Phase 84): `Passes`, a list of `Pass`es run in order on each `ir.Routine`
+  under `/OPTIMIZE`, with `ir.Check` after each, a failure a panic naming the pass. Without `/OPTIMIZE` it isn't run.
 - `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
   the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
   import it: `dclcmd`'s `fortranIncludes` searches it last.

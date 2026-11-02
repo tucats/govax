@@ -1,12 +1,17 @@
 # testdata/opt84: Phase 84's survey measurements
 
 What `docs/PHASE-84 - FORTRAN optimizer.md`, Part A, measured with, kept so
-its numbers can be made again. Nothing here is built or run by `go test`.
+its numbers can be made again. `go test` runs `kernels/` (below) and uses
+`measure/`'s `game.in`, `mkdtx.for`, and `itime.for`; nothing else here.
 
 - `kernels/` are five small compute programs. The corpus in
   `testdata/fortran` spends about 95% of its instructions in FTNRTL, so it
   can't show what an optimizer gains. These spend almost all of theirs in
-  their own loops.
+  their own loops. `TestFortranPrograms` runs them compiled both ways and logs
+  what `/OPTIMIZE` gains (`go test -v`). Each `.out` comes from a calculation
+  outside govax, with F_floating's rounding worked by hand for `subs`; `whet`
+  has none, its value being a chain of floating operations, and must only print
+  the same both ways.
 - `hand/` is generated MACRO with loops rewritten by hand, as the proposed
   passes would rewrite them: `m1peep` to `m4reg` are `matmul` after each
   stage in turn, and `fsieve` and `fsubs` are `sieve` and `subs` after all

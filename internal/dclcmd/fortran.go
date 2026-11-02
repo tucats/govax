@@ -23,7 +23,7 @@ import (
 //
 //	FORTRAN source[+source...][+library/LIBRARY][,...][/HOST] [/MACRO[=file] | /NOMACRO]
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
-//	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN]
+//	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN] [/[NO]OPTIMIZE]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -89,6 +89,9 @@ type FortranOptions struct {
 	// the default, so nothing need say it (sema.Alignment).
 	Align      []string
 	AlignGiven bool
+
+	// Optimize is /OPTIMIZE (fortran.Options); /NOOPTIMIZE is the default.
+	Optimize bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -290,6 +293,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		NoI4:          opts.NoI4,
 		GFloating:     opts.GFloating,
 		Align:         align,
+		Optimize:      opts.Optimize,
 		Continuations: continuations,
 		Includes:      includes,
 		Version:       BuildVersion,
