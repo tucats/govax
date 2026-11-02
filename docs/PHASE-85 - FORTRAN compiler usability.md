@@ -1,9 +1,10 @@
 # Phase 85 — FORTRAN compiler usability: listings, checks, warnings
 
-**Status:** planned (2026-10-29). Needs Phase 80 (I/O, for the
-run-time checks' messages); best done after Phase 83. Part of the
-FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 18
-and 19).
+**Status:** in progress. Subtask 1, the survey, is done (2026-11-02) and
+awaits the author's answers (Part A, "Questions"). Planned 2026-10-29. Needs
+Phase 80 (I/O, for the run-time checks' messages); best done after Phase 83.
+Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
+(Decisions 18 and 19).
 
 ## Goal
 
@@ -32,7 +33,11 @@ spirit but our own layouts:
   FORTRAN runs MACRO on the `.MAR` file it wrote, keeping the `.MAR`
   file, so `FORTRAN/OBJECT; LINK; RUN` works as on VMS. Off by default:
   FORTRAN writes only the `.MAR` file unless asked;
-- **`/F77` and `/NOF77`**, if kept (appendix A.6).
+- **`/F77` and `/NOF77`**, if kept (appendix A.6);
+- **the debugger on FORTRAN programs** (added 2026-11-02 at the author's
+  request): the debugger can't read the names the compiler writes
+  (`EXAMINE SQUARES.I`), which Phase 74's Decision 10 chose those names to allow.
+  A review of what debugging a compiled program is like, and fixes.
 
 ## What earlier phases leave in place
 
@@ -48,17 +53,304 @@ spirit but our own layouts:
 - **Bounds checks on assumed-size arrays:** only the lower bound and
   the known dimensions can be checked; the manual's rule.
 
-## Subtasks (provisional)
+## Subtasks
 
-1. **Survey:** the qualifiers as the DCL Dictionary's FORTRAN entry (if
-   any) and the manual describe them.
-2. **`/LIST`, `/SHOW`, TITLE and SUBTITLE.**
-3. **`/CROSS_REFERENCE`.**
-4. **`/CHECK`.**
-5. **`/WARNINGS` and `/STANDARD`.**
-6. **`/DEBUG` and `/OBJECT`.**
-7. **Close-out:** HELP FORTRAN complete; MANUAL.md.
+The list as the survey proposes it, pending the author's answers:
+
+1. **Survey** (done 2026-11-02): Part A below.
+2. **The debugger reads dotted names**, with a small VMS probe of the rule
+   (Part A, "The debugger"). First, since every later check of `/DEBUG` needs it.
+3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE.**
+4. **`/CROSS_REFERENCE`.**
+5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
+6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
+7. **`/WARNINGS`.**
+8. **`/STANDARD`,** with the list of extensions read from the manual's pages.
+9. **`/DEBUG` and `/OBJECT`.**
+10. **The rest of the debugger review:** what the answer to question 1 keeps of
+    D2 to D9.
+11. **`/[NO]F77`,** if question 5 keeps it.
+12. **Close-out:** HELP FORTRAN complete; MANUAL.md; FORTRAN-INTERNALS.md.
+
+# Part A — the survey (2026-11-02)
+
+## Summary
+
+- **The manuals to hand don't describe the command.** The DCL Dictionary has no
+  FORTRAN entry, only examples that use it, and the LRM sends every qualifier
+  question to the *VAX FORTRAN User Manual*, which we don't have. What's documented is
+  OPTIONS's forms, a few asides, and later HP Fortran's language manual. So
+  layouts, and most keywords and defaults, are ours (the phase's goal says so), each
+  marked below by where it comes from. There's no VAX FORTRAN to probe.
+- **The debugger is the largest finding.** The reported problem is real: every
+  name the compiler writes is refused. It's also the first of nine problems. Dummy
+  arguments are recorded as small constants, no command takes a FORTRAN line number,
+  and one location is named after an unrelated common block.
+- **`/CHECK` is the riskiest part.** In a test run, a subscript of 7 in a
+  3-element array had already been folded by the optimizer into a plain
+  `MOVL T.A+24,T.J`. Checks have to be something the optimizer can see and must
+  keep, and Phase 84's rule that integer arithmetic moves freely holds only with
+  overflow off.
+- **`/CHECK`'s default is the one decision with real consequences** (question 2).
+  Nothing to hand states it, and one piece of evidence suggests that VAX
+  FORTRAN's default isn't what govax assumed.
+
+## What the manuals say
+
+*LRM* is the 1988 VAX FORTRAN manual; *HP* the later HP Fortran language manual,
+usable on the terms of Phase 82's survey; *plan* this phase's goal; *memory* what I
+recall of VAX FORTRAN's command, which no document to hand confirms and which is
+only a starting point.
+
+| Qualifier | Source | Forms | Default | What the source says |
+|---|---|---|---|---|
+| `/LIST[=file]` | LRM 10.3.3, plan | `/[NO]LIST` | `/NOLIST` (plan: interactive; memory: on in batch) | TITLE and SUBTITLE need it |
+| `/SHOW` | plan, memory | `INCLUDE`, `MAP`, `ALL`, `NONE` | `MAP`, no `INCLUDE` (memory) | Nothing in the manuals. `DICTIONARY`, `PREPROCESSOR`, `SINGLE` are memory only and have nothing here to control |
+| INCLUDE's `/LIST` | LRM 1.4.2 | in the string | `/NOLIST` | "A number precedes each incorporated statement": the depth. Already in `Line.Listed` |
+| `/CROSS_REFERENCE` | plan | `/[NO]` | off | Nothing in the manuals |
+| `/CHECK` | LRM 1.4.3, D; HP 13.3 | `ALL`, `NONE`, `[NO]BOUNDS`, `[NO]OVERFLOW`, `[NO]UNDERFLOW`; `/NOCHECK` | **not stated** | LRM's example: `OPTIONS /CHECK` is "full checking". Same forms on the command |
+| `/WARNINGS` | LRM 4.8's note, plan | `[NO]DECLARATIONS`, `[NO]GENERAL`, `NONE` | general on, declarations off (memory) | LRM: `=DECLARATIONS` warns of names used but not typed, as IMPLICIT NONE would |
+| `/STANDARD` | LRM 4.14 note, plan | `SYNTAX`, `SOURCE_FORM` | off | LRM: leaving out a needed SAVE isn't flagged, since the compiler can't tell. Memory adds `SEMANTIC`, `MIA`, out of scope |
+| `/[NO]DEBUG` | Dictionary's examples, plan | memory: `ALL`, `NONE`, `[NO]SYMBOLS`, `[NO]TRACEBACK` | traceback only (memory) | The Dictionary's examples use `FORTRAN/DEBUG/NOOPTIMIZE` |
+| `/[NO]OBJECT[=file]` | LRM 10.3.1, Phase 74 | | off (Phase 74's answer 3; VAX FORTRAN's was on) | LRM: CDEC$ IDENT has no effect with `/NOOBJECT` |
+| `/[NO]F77` | LRM 1.4.3, 5.3.1, 9.1, A.6; HP | | `/F77` | Below |
+| `/[NO]EXTEND_SOURCE` in OPTIONS | LRM 1.4.3 | | the command's | For one unit |
+
+`/MACHINE_CODE` (memory) isn't in the plan: the `.MAR` file is the machine code,
+each statement above its instructions. **Decision: left out.**
+
+**`/NOF77`** does four things by the manuals: a DO whose count is zero or negative runs
+once (5.3.1); OPEN's BLANK= defaults to `'ZERO'` (9.1) and STATUS= to `'NEW'` (9.1);
+and EXTERNAL takes the old form, `EXTERNAL *v` (A.6). OPTIONS takes it for one unit.
+
+## What's in place, tried on this build
+
+- The FORTRAN command refuses all of the above as unrecognized, and OPTIONS's
+  `/CHECK`, `/EXTEND_SOURCE`, `/NOF77` are NOTIMPL (`sema/analyze.go`'s `prologue`).
+- CDEC$ TITLE and SUBTITLE are checked and kept (`sema/directive.go`).
+- `source.Program.Lines` has every line with its file, number, depth, and `Listed`,
+  even after an error, and each `diag.Message` its position, which a listing needs.
+  But `Result` carries only the MACRO file, and only without errors.
+- The storage map is `codegen`'s `writeMap`, comments in the `.MAR` file written after
+  lowering; under `/OPTIMIZE` it says which register holds what. It takes the IR, so a
+  compilation with errors has none.
+- MACRO's and ANALYZE's pagers are their own (`asm`'s unexported `listPager`, `anl.Pager`,
+  each with rules reconstructed from VMS's output); neither fits.
+- The CPU's INDEX stores its result, then traps with SS$_SUBRNG out of range
+  (`cpu/misc.go`); its message is in `vmsdef`. CALLS clears FU and sets IV from the
+  entry mask (`cpu/call.go`), so overflow is a mask bit but underflow needs a `BISPSW`
+  at each entry. No generated code has yet run with any of these.
+- FOR's message table has ADJARRDIM ("adjustable array dimension error") and no
+  substring message.
+- A constant subscript out of bounds compiles without a word (`A(7)` in a `A(3)`), though a
+  constant substring bound out of range is an error.
+
+## `/CHECK`
+
+**The trap.** In a program with `INTEGER A(3)`, `I = 7`, `J = A(I)`, today's
+`/OPTIMIZE` writes `MOVL T.A+24,T.J`: forwarding replaced the subscript before anything
+could check it. It runs and gets garbage, which `/CHECK=BOUNDS` is meant to stop.
+
+Proposed:
+
+- **Decision 1: an IR operation, not a pass.** A new `Op` that yields its operand
+  or faults, written `INDEX s,low,high,#1,#0,Rn`, which leaves `s` in `Rn` (`(0+s)*1`).
+  Each subscript is wrapped where it's lowered, so the rest of an element's address is
+  unchanged, and expression registers and spill just work. No compare and signal: the
+  plan offered both, and one instruction gives VMS's own condition.
+- **Decision 2: the optimizer may remove a check it can prove,** folding when the
+  value is known in range, and keeps it otherwise, a known-bad one included. A check counts as
+  something that faults under Phase 84's Decision 8: hoisted only from a block
+  that runs on every trip, and never removed with a dead store.
+- **Decision 3: substrings use INDEX too.** `1 <= e1 <= e2 <= len` is `INDEX e2,#1,len`
+  then `INDEX e1,#1,e2`, also SS$_SUBRNG, since FOR has no message for it (ours).
+- **Decision 4: assumed-size.** The manual gives no rule (the phase's open question
+  assumed one): 6.1.1.2 says only that the size isn't known. Every bound known is checked,
+  which for the last dimension is the lower alone (ours). A dummy's last dimension of `(1)`,
+  FORTRAN-66's way to write `(*)`, is treated as `(*)` (ours, or such programs fail
+  `/CHECK`).
+- **Decision 5: an adjustable array's bounds are read when checked,** from the descriptor
+  cell Phase 79 fills. An upper below the lower signals FOR$_ADJARRDIM at the entry point,
+  under BOUNDS (ours; the manuals don't give its rule).
+- **Decision 6: overflow is the mask's IV bit,** on each `.ENTRY` of a unit compiled
+  with it. Then integer arithmetic can fault, so `ir.Routine` carries the unit's
+  checks, and `opt` treats integer operations as it does division. `opt/forward.go` leaves an
+  overflowing constant to fault at run time. Address arithmetic runs under IV too; a
+  wild subscript may then trap as INTOVF rather than run wild, which is fine.
+- **Decision 7: underflow is `BISPSW #^X40` at each entry point** of a unit compiled
+  with it, so an underflow is SS$_FLTUND_F, severe, to the program's handlers and
+  traceback. "Reporting" in the plan may mean something gentler on VAX FORTRAN; the
+  manuals don't say, and LIB$FLT_UNDER is there for a program that wants otherwise.
+- **Decision 8: the checks are per unit:** `sema.Options`, read in `prologue`, as `/I4` is.
+- **Decision 9: a constant subscript out of bounds is a warning,** GENERAL's, in any
+  compilation, but not for a dummy's `(1)` or `(*)` dimension (ours).
+
+## OPTIONS's `/EXTEND_SOURCE`
+
+Lines become statements in the first pass, but OPTIONS is read in the fourth, so the
+statement field's end is settled before anything knows of it. **Decision 10:** `source`
+recognizes a line beginning `OPTIONS` before a unit, and `END`, enough to switch the field
+for that unit's lines. Both are simple there. It reads only this one qualifier.
+
+## The listing
+
+**Decision 11: a package of its own,** `internal/fortran/listing`, plain Go like the other
+passes, given the source's lines, the messages, and each unit's map and cross reference,
+with its own small pager. `Result` gets a `Listing`. A listing is written even when a
+compilation has errors, since that's when it's wanted: then with messages but no map.
+`.LIS`, beside the source like the `.MAR`, by `outputLocation`.
+
+**Decision 12: the map moves to data.** `codegen` exposes what `writeMap` writes, and both
+the comment and the listing use it. Same words in both.
+
+Layout (ours, in MACRO's manner; 132 columns, 66 lines; question 6):
+
+```
+SQUARES                                  2-NOV-2026 14:05:11  govax FORTRAN V1.0-115        Page 1
+TAXES                                    DUA0:[WORK]SQUARES.FOR;1
+
+    1        PROGRAM SQUARES
+    2        INTEGER I, N
+    3        INCLUDE 'LIMITS.FOR/LIST'
+  1 1        PARAMETER (MAX = 10)
+    4        DO 20 I = 1, MAX
+    5        N = I * I + K
+                       ^
+%FORT-W-..., ...
+    6  20    CONTINUE
+    7        END
+
+
+Storage map for SQUARES, the main program
+  I     INTEGER     $LOCAL+0   SQUARES.I
+  N     INTEGER     $LOCAL+4   SQUARES.N
+
+Cross reference for SQUARES                 (D defined, A assigned, a blank is used)
+  I     INTEGER   2D  4A  5
+  K     INTEGER   5
+  N     INTEGER   2D  5A
+  MAX   constant  1D  4
+  20    label     4   6D
+```
+
+TITLE and SUBTITLE take effect on the next page, the last on a page winning, and a directive
+without a string changes nothing (10.3.3). With neither, the title is the unit's name.
+
+**Decision 13: the cross reference is recorded by `sema`,** which knows what a name is,
+rather than by a second walk. Each `Symbol` and label collects positions and kinds.
+`/CROSS_REFERENCE` without `/LIST` is an informational message and nothing else (ours).
+
+## `/WARNINGS` and `/STANDARD`
+
+- `DECLARATIONS` is the check IMPLICIT NONE already makes, reported as a warning.
+- `GENERAL` (`NOGENERAL`, `NONE`) holds back `diag`'s warnings and informational messages,
+  as a filter in one place; `$STATUS` follows what's shown. Errors stay.
+- `ALIGNMENT` joins the keywords, the command's form of CDEC$ OPTIONS's `/WARN` (Phase 82 left
+  this here).
+- Unused names and labels: question 3.
+- **Decision 14: `/STANDARD`'s messages are informational,** `%FORT-I-EXTENSION`, so a
+  flagged program still compiles with a good status. `/STANDARD` alone is both keywords (ours).
+- **Decision 15: `/STANDARD`'s checks are one walk, in `sema/standard.go`,** over the tree
+  with a table of what's flagged, and for `SOURCE_FORM` over the lines (tabs, lowercase, `!`
+  comments, D lines, past column 72, more than 19 continuations). The other passes stay as they are.
+- **The list of extensions can be read from the LRM itself.** "Extensions to the
+  FORTRAN-77 standard appear in blue print." The OCR text drops that, and the scan is
+  one bit per pixel, but on the one page rendered (2-1) the blue came out as visibly lighter
+  text: "(REAL\*4)" against "REAL". So a script could pick out the lighter runs across the 464
+  pages for reading against the OCR. HP's appendix E helps little, being relative to
+  Fortran 95. That's subtask 8's start; one page isn't proof it works throughout.
+
+## `/DEBUG` and `/OBJECT`
+
+- **`/DEBUG`** writes `.ENABLE DEBUG` in the `.MAR`, so plain `MACRO` gives debugger records.
+  Keywords as MACRO's `debugFunctions`, and `/NODEBUG` keeps traceback as today unless
+  `/DEBUG=NOTRACEBACK`.
+- **Decision 16: `/DEBUG` doesn't turn the optimizer off.** The Dictionary's examples say
+  `/DEBUG/NOOPTIMIZE` outright, so a programmer says so too. Under both, an
+  informational message says variables may be in registers.
+- **`/OBJECT`** calls `Context.Macro` on the `.MAR` just written, with `/DEBUG` carried over,
+  once per compilation. MACRO's own messages appear as they do when it's run by hand.
+- **Decision 17: `/OBJECT/NOMACRO` is refused,** since MACRO reads a file and the plan
+  keeps the `.MAR` (ours). A compilation with errors assembles nothing.
+
+## The debugger
+
+Tried on two small programs, `MACRO/DEBUG`, `LINK/DEBUG`, `RUN`, both ways. **What works:**
+breaking on a routine, STEP, SHOW CALLS, SHOW REGISTERS, EXAMINE/INSTRUCTION, GO to the end,
+EXAMINE by number with the right name shown (`EXAMINE/FLOAT 400` is `D\D.X:  0.0000000`).
+
+| | What happens | Where it starts |
+|---|---|---|
+| **D1** | `EXAMINE T.I`, `EVALUATE/ADDRESS T.K`, `EXAMINE T\T.I`: `%DCL-E-EXTRAPARAMETER, ... near ".I"`. Yet the debugger itself prints `L^T\T.K` and `D\SUB.I`, so it can't read its own output | `machine/expr.go`'s `isSymbolChar` lacks `.`, as does the path loop; the message comes from `dcl/parse.go`, and which step splits the name is subtask 2's to trace |
+| **D2** | A dummy argument is `SUB.A = 4`, so SHOW SYMBOL has `SUB.A` as "constant: 4", and once D1 is fixed `EXAMINE SUB.A` would look at address 4, not the argument | The offset is what the code needs (`@SUB.A(AP)`); the debugger can't tell that from a constant. Under ENTRY it's different again (`$A1`) |
+| **D3** | SHOW SYMBOL calls `D.X` "address", `D.V`, `D.DD`, `D.H`, `D.NAME` "descriptor address", and COMMON's `D.IC` "label". What EXAMINE does with each can't be tried until D1 | MACRO's types, from the directive after the label. MACRO follows real MACRO, so the compiler's output is what can change |
+| **D4** | `EXAMINE X`, `I`, `V(1)`: NOSYMBOL. Only `unit.name` exists, and no subscripts | Phase 74's Decision 3: no FORTRAN debugger records |
+| **D5** | `%LINE` and every stop are the `.MAR` file's lines. A stop shows `MOVAL @SUB.A(AP),SUB.$B1+4`, not the FORTRAN line a comment above it holds; STEP goes by instruction lines; no command takes a FORTRAN line | Same |
+| **D6** | At `SUB+2`, `EXAMINE .PC` is named `D\BLK.$BASE+26C`, a common block at ^X450 in another psect, while EXAMINE/INSTRUCTION has it right | Probably `debugger/data.go`'s nearest-label rule. A bug whatever else is decided |
+| **D7** | EXAMINE/SOURCE is a syntax error; `SHOW MODULE D` an extra parameter; `EXAMINE D\$LOCAL` NOSYMBOL (naming `D$LOCAL`) though SHOW SYMBOL lists it | General gaps, met here |
+| **D8** | SHOW MODULE lists FTNRTL's 19 `FTN_` modules beside the program, "total MACRO modules: 20" | Not explained yet; to check against VMS for a shareable image |
+| **D9** | Under `/OPTIMIZE` a loop's variable is in a register and its home is stale. SHOW SYMBOL also lists `SUB.$1`, `DSC$K_`, and the like | Inherent, but the storage map knows; Decision 16 warns |
+
+**D1's rule.** A `.` inside a name after its start joins the name. `.X` and `.PC` stay "contents
+of", and `.` alone the current location, so `X+.Y` is unchanged. Since `T.I` is an error today, nothing
+that works now changes meaning. **A probe** (`testdata/dbg85`): MACRO labels with periods under
+VMS 7.1's debugger, EXAMINE, EVALUATE, `T\T.I`, `T.A+4`, `.T.I`, SHOW SYMBOL, and the same for D2's
+and D3's symbols. It needs only MACRO, so the simh VAX can run it; I'd write it for you to run, as
+before. D6 to D8 can go in it too.
+
+## Tests
+
+No oracle for the compiler's new output, there being no VAX FORTRAN: by hand, from the rules.
+Listings and cross references as goldens; `testdata/fortran` programs for each check tripped and
+not tripped, both optimizer settings; `TestFortranPrograms`' silence stays required of the corpus
+under the defaults; DUNGEON stays quiet under the defaults (and has its own build's `/NOCHECK`).
+The debugger: oracle tests against the probe where it speaks, a new session on a compiled program
+in `internal/debugger/fortran_test.go`.
+
+## Questions
+
+1. **How far should the debugger go, and in which phase?** You asked for this as
+   part of the work; I've made it subtasks here rather than a new phase, since Phase 86 is the
+   milestone, and it can move out if you'd rather. As to how far, there are three levels:
+   - **A, MACRO-level, made usable (recommended):** D1, D3, D6, D7, D8; D2 by a debugger rule for
+     a dummy's symbol; a statement label per FORTRAN line under `/DEBUG`
+     (`SUB.S25`, so `SET BREAK SUB.S25`); a stop showing the FORTRAN comment above its line;
+     and in a routine, bare `X` meaning `routine.X`. Language stays MACRO.
+   - **B, A plus subscripts and types:** `EXAMINE V(1)`, shown as REAL, which means teaching the
+     debugger arrays from something the compiler writes.
+   - **C, real FORTRAN debugging:** the compiler writing debugger records so the language is FORTRAN.
+     This reverses Phase 74's Decision 3, and is a phase of its own.
+
+2. **What should `/CHECK`'s default be?** Nothing to hand states it, and govax has
+   assumed none since Phase 75 (Phase 86's notes agree). But DUNGEON's own build instructions compile
+   with `/NOCHECK`, which is odd if nothing were on, and I recall VAX FORTRAN's default as
+   `(NOBOUNDS,OVERFLOW,NOUNDERFLOW)`, with programs that hash by multiplying needing
+   `/CHECK=NOOVERFLOW`. **I recommend staying with none:** my memory isn't a source, and overflow on by
+   default would take away integer code motion from every default compilation and could stop
+   programs that run today. MANUAL.md's 14.7 would list it as a possible difference. If you know
+   it was on, say so and I'll match it; the switch itself is small.
+
+3. **Unused names and labels: on by default?** The plan lists them under `/WARNINGS`. Under GENERAL,
+   which is on by default, they'd end the corpus's silence, which `TestFortranPrograms` requires, and
+   would likely flag many real programs. **I recommend a keyword of their own, `UNUSED`, off by default** and included in `ALL`.
+
+4. **May I write the debugger probe for you to run on the simh VAX?** Without it D1's rule stands
+   as ours, unconfirmed. **Recommended,** since it's cheap and the debugger has been held to VMS
+   until now.
+
+5. **Keep `/[NO]F77`?** The plan says "if kept", and Phase 74's Decision 1 "late, optional". It's four small
+   behaviors, but the one-trip DO reaches `ir`'s `countedLoop` and `opt`'s DO passes. **I recommend
+   keeping it,** as the last subtask before the close-out, since OPTIONS `/NOF77` is in the manual and
+   old programs are the reason to want it. Dropping it saves about a subtask.
+
+6. **Is the listing's layout above acceptable?** Mostly a matter of taste: it's ours either way. In
+   particular the two-line heading, and maps and cross references per unit, after the whole source,
+   rather than after each unit's lines. Say if you'd rather have them after each unit.
 
 ## Progress log
 
 - **2026-10-29:** Planned with Phase 74.
+- **2026-11-02:** Subtask 1, the survey (Part A), written and awaiting the author's
+  answers. The author asked during it for a review of debugging FORTRAN programs, after
+  finding the debugger refuses the compiler's dotted names; reproduced, and made
+  subtasks 2 and 10. No code changed.
