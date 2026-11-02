@@ -861,12 +861,17 @@ const (
 	Round // a floating value rounded to the nearest Long, halves away from zero: CVTRFL
 	Ash   // X shifted left Y places (right -Y), Longs, the sign copied in from the left: ASHL
 	Low   // an integer's low bits, as a shorter type, with no check that it fits: MOVW of a Long
+	LtU   // the comparisons of integers as unsigned, by BLSSU and so on: a character's order
+	LeU
+	GtU
+	GeU
 )
 
 // String is the operator's name in the dump.
 func (o Operator) String() string {
 	return [...]string{"add", "sub", "mul", "div", "neg", "and", "or", "xor", "not", "cvt",
-		"eq", "ne", "lt", "le", "gt", "ge", "zext", "round", "ash", "low"}[o]
+		"eq", "ne", "lt", "le", "gt", "ge", "zext", "round", "ash", "low",
+		"ltu", "leu", "gtu", "geu"}[o]
 }
 
 // The expressions.

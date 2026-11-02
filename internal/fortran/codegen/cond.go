@@ -5,9 +5,11 @@ import "github.com/tucats/govax/internal/fortran/ir"
 // The branch conditions after a CMP or TST, by the comparison that
 // holds: the suffix of the branch instruction (BEQL, BLSS, ...). The VAX's
 // signed branches look only at N and Z, which CMPL, CMPF, TSTL, TSTF, and
-// every instruction that writes a value set from that value.
+// every instruction that writes a value set from that value. The unsigned
+// branches look at C and Z, which only CMP and TST are sure to set.
 var conditions = map[ir.Operator]string{
 	ir.Eq: "EQL", ir.Ne: "NEQ", ir.Lt: "LSS", ir.Le: "LEQ", ir.Gt: "GTR", ir.Ge: "GEQ",
+	ir.LtU: "LSSU", ir.LeU: "LEQU", ir.GtU: "GTRU", ir.GeU: "GEQU",
 }
 
 // opposite is the condition that holds when another doesn't.
@@ -20,6 +22,7 @@ var opposite = map[string]string{
 // Y: X .LT. Y is Y .GT. X.
 var swapped = map[ir.Operator]ir.Operator{
 	ir.Eq: ir.Eq, ir.Ne: ir.Ne, ir.Lt: ir.Gt, ir.Le: ir.Ge, ir.Gt: ir.Lt, ir.Ge: ir.Le,
+	ir.LtU: ir.GtU, ir.LeU: ir.GeU, ir.GtU: ir.LtU, ir.GeU: ir.LeU,
 }
 
 // comparing is a comparison whose operands are computed: X op Y, or,
@@ -61,7 +64,8 @@ func (g *routineGen) compareOperands(e *ir.Cmp) comparing {
 // computed, frees them, and returns the branch condition for the
 // comparison's holding. A TST of what the instruction before it wrote is
 // left out: that instruction set the condition codes already (DECL
-// count, then BLEQ).
+// count, then BLEQ). An unsigned comparison keeps its TST, since a MOV leaves
+// C as it was.
 func (g *routineGen) compare(c comparing) string {
 	t := c.t.String()
 
@@ -69,13 +73,18 @@ func (g *routineGen) compare(c comparing) string {
 	// instruction between would have changed g.set), registers included.
 	if !c.test {
 		g.emit("CMP"+t, ir.None, c.x.text, c.y.text)
-	} else if g.set != c.x.text || g.setType != c.t {
+	} else if g.set != c.x.text || g.setType != c.t || unsignedComparison(c.op) {
 		g.emit("TST"+t, ir.None, c.x.text)
 	}
 
 	g.free(c.x, c.y)
 
 	return conditions[c.op]
+}
+
+// unsignedComparison reports whether op compares as unsigned.
+func unsignedComparison(op ir.Operator) bool {
+	return op == ir.LtU || op == ir.LeU || op == ir.GtU || op == ir.GeU
 }
 
 // isZero reports whether e is the constant 0 or 0.0.

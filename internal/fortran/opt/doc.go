@@ -29,7 +29,8 @@
 // breaks a routine is named at once, rather than being found later as a
 // program that prints the wrong thing.
 //
-// Each subtask of the phase adds to the list. Forward (forward.go) uses what a store
+// Each subtask of the phase adds to the list. OneCharacter (onechar.go) makes a string
+// of one character the byte it is; Forward (forward.go) uses what a store
 // said in place of reading it back, and settles branches that come out constant;
 // Unreachable (unreachable.go) takes out what can't run after that; DeadCode
 // (deadcode.go) takes out the stores nothing reads; DeferredIndexes (deferred.go) reaches
@@ -60,7 +61,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for) are there to
+// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for, optchar.for) are there to
 // catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

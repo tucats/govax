@@ -389,8 +389,9 @@ The survey's decisions drew no objection, and stand.
 7. **Loop-invariant motion** (done 2026-11-02): by Decision 8's rules, with
    deferred indexes for descriptor A0s; hoisted array bases and A0s themselves wait for
    registers (subtask 9), having no gain in memory.
-8. **One-character strings** (the author's answer 4): `CMPB` and `MOVB` where
-   `CMPC3` and `MOVC3` of one character are lowered now, only under `/OPTIMIZE`.
+8. **One-character strings** (done 2026-11-02; the author's answer 4): `CMPB` and
+   `MOVB` where `CMPC3` and `MOVC3` of one character are lowered now, only under
+   `/OPTIMIZE`.
 9. **Register allocation:** register cells, liveness, write-backs by Decision
    6, dummy addresses loaded once, the loop instructions on registers.
 10. **Induction variables and strength reduction,** where a stride isn't the
@@ -737,3 +738,33 @@ The survey's decisions drew no objection, and stand.
     `matmul` passes the hand stage in instructions, with reads and writes close to its (2,156,480 and 690,546 against 2,160,122 and 694,027). `subs`'s reads fall from 7,595,774 to 5,592,479 and its writes from 1,843,907 to 1,442,892.
     `sieve`, `whet`, and `textk` run the same instructions as before. `whet`'s loops read plain variables, which gain nothing from a temporary in memory; `sieve`'s and `textk`'s weren't looked into. DUNGEON's reads fall 519,789 against `/NOOPTIMIZE`, but its writes are 22,826 above subtask 5's; a store per
     loop entered would explain that, though it wasn't checked. Neither was why its gain is so small here.
+- **2026-11-02:** Subtask 8, one-character strings: `opt/onechar.go`, the first IR pass. `/NOOPTIMIZE`'s output is unchanged.
+  - **A pass rather than a change to lowering.** The survey called this a change to lowering, but lowering doesn't know about `/OPTIMIZE`. As the first pass, it leaves an ordinary Byte `Assign` or an ordinary `Cmp`, and every later pass
+    already knows those: Forward knows what `C = 'X'` stored, and a byte can leave a loop.
+  - **What changes.** A move with a destination of one character and a source of at least one is a byte moved, as the rest of the source would be cut. A comparison of one byte against one byte is `CMPB`. A constant becomes an immediate, `CMPB S.LINE-1[R0],#32`, and its
+    text leaves `$PDATA` if nothing else uses it (a descriptor, a FORMAT, or a NAMELIST's names may share it). An entry mask has less to save: `R2` and `R3` no longer go in it for these. A shorter source, which is filled, and a comparison of two lengths stay as they were.
+  - **Left alone:** a length Forward only works out later (`C(1:L)` with L known to be 1) stays a string instruction, as does `C .EQ. 'A '`, whose constant is only blanks after its first character. Neither looked common enough to add code for, though neither was measured.
+  - **Unsigned comparisons: `ir`'s `LtU`, `LeU`, `GtU`, `GeU`.** A character's order is unsigned (section 2.3.3), and `CHAR(200)` is a negative byte. These are operators rather than a flag on `Cmp` because passes rebuild a `Cmp` from its parts, and a flag they forgot would be a wrong answer with no error. Forward's `foldCompare` compares their
+    constants by `Bits`.
+  - **A TST the code generator must keep.** `compare` leaves out a `TST` of what the last instruction wrote, as that set N and Z. It doesn't set C: a `MOV` leaves it as it was, and the unsigned branches read it. So `E = F` then `IF (E .GT. CHAR(0))` keeps its `TSTB`. `optchar.for` sets C first with a comparison, and fails with the
+    guard removed.
+  - **New program:** `optchar.for`, worked by hand. Its expected file had four errors of mine, none of them the compiler's: `1X` taken as a printed blank when it is carriage control, a missing `$STATUS` line, a sum in CONDITIONS, and a string cut to 12 that I'd counted wrongly. Its first draft also took a substring of a PARAMETER, which sema refuses, so that case went. The output then matched both ways. Making the comparisons signed fails it and `optalias`; removing the TST guard fails it and `TestOneCharacterCode`.
+  - **Testing:** `onechar_test.go` has which moves and comparisons change, the constants' text, the instructions, and known bytes folded as unsigned. `TestPassesOnCorpus` holds a second run to no change.
+  - **Results.** Each `CMPC3` becomes one `CMPB`, so this was never going to change instruction counts much; what it saves is memory references and work a real VAX would spend in a string instruction, which these counts don't show.
+
+    | Program | Instructions without the pass | With it | Reads without | With |
+    |---|---:|---:|---:|---:|
+    | `textk` | 371,025 | 371,025 | 423,565 | 383,565 |
+    | DUNGEON's game, whole run | 5,512,277 | 5,512,012 | 5,398,913 | 6,626,408 |
+    | `matmul`, `sieve`, `subs`, `whet` | | unchanged | | unchanged |
+
+    `textk`'s 40,000 fewer reads are its constant, `' '`, read once per comparison.
+  - **DUNGEON's reads rose 1.2M, and that is the counter, not the code.** Reads count more than data, whatever `countedRun`'s comment said (corrected now). A fetch that leaves the window's page is a `LoadByte`, and its translation may read a page table entry; a temporary patch, not kept, separated them:
+
+    | DUNGEON's game | Reads | Window refills | Page table reads | What's left: data |
+    |---|---:|---:|---:|---:|
+    | `/NOOPTIMIZE` | 5,918,702 | 538,138 | 323,614 | 5,056,950 |
+    | Before this pass | 5,398,913 | 470,086 | 320,340 | 4,608,487 |
+    | With it | 6,626,408 | 1,108,423 | 937,976 | 4,580,009 |
+
+    Data reads fall 28,478, close to the 28,856 `CMPC3`s the survey counted. Refills and page table reads rise by about 620,000 each, which looks like one hot loop now crossing a page boundary because the code before it got shorter, though which loop wasn't looked for. This costs the emulator time. It also probably explains the rises subtasks 6 and 7 could only guess at. **The survey's "data reads" tables have this noise in them too, so the close-out should compare with these parts taken out.**

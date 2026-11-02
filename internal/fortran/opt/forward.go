@@ -1,6 +1,10 @@
 package opt
 
-import "github.com/tucats/govax/internal/fortran/ir"
+import (
+	"cmp"
+
+	"github.com/tucats/govax/internal/fortran/ir"
+)
 
 // Forward: using what a store just said, rather than reading it back.
 //
@@ -427,6 +431,9 @@ func foldCompare(op ir.Operator, x, y ir.Expr) *ir.Const {
 	var order int
 
 	switch {
+	case op == ir.LtU || op == ir.LeU || op == ir.GtU || op == ir.GeU:
+		// Bits holds an integer without its sign.
+		order = cmp.Compare(a.Bits, b.Bits)
 	case a.T.Integer():
 		order = compareInts(a.Int(), b.Int())
 	case a.T.Floating():
@@ -442,13 +449,13 @@ func foldCompare(op ir.Operator, x, y ir.Expr) *ir.Const {
 		holds = order == 0
 	case ir.Ne:
 		holds = order != 0
-	case ir.Lt:
+	case ir.Lt, ir.LtU:
 		holds = order < 0
-	case ir.Le:
+	case ir.Le, ir.LeU:
 		holds = order <= 0
-	case ir.Gt:
+	case ir.Gt, ir.GtU:
 		holds = order > 0
-	case ir.Ge:
+	case ir.Ge, ir.GeU:
 		holds = order >= 0
 	}
 

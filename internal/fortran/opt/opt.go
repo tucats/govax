@@ -17,6 +17,7 @@ type Pass struct {
 // Passes are the optimizer's passes, in the order they run. Each subtask of
 // docs/PHASE-84 - FORTRAN optimizer.md adds to this list.
 var Passes = []Pass{
+	{"one character", OneCharacter},
 	{"forward", Forward},
 	{"unreachable", Unreachable},
 	{"dead code", DeadCode},

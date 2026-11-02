@@ -28,7 +28,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "optalias", "optasts", "optbranch", "optcse", "optinvar", "optfaults", "optflow", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
+var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "optalias", "optasts", "optbranch", "optcse", "optchar", "optinvar", "optfaults", "optflow", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
 
 // fortranKernels are the optimizer's kernels (docs/PHASE-84 - FORTRAN
 // optimizer.md), compute programs that spend their time in their own loops, as
@@ -44,9 +44,10 @@ var optimizerModes = []struct{ name, qualifier string }{
 	{"opt", "/OPTIMIZE"},
 }
 
-// runCounts is what one program's RUN cost: its instructions, and its data
-// references, the memory's reads and writes (instruction fetches aren't among
-// them).
+// runCounts is what one program's RUN cost: its instructions, and the memory's
+// reads and writes. Those are mostly data references, but the reads have a part
+// that goes with where code falls and not what it does: instruction fetches that
+// refill the fetch window at a new page, and the page table entries that takes.
 type runCounts struct {
 	instructions, reads, writes int64
 }
