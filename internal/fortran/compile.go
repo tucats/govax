@@ -166,7 +166,13 @@ func CompileAll(opts Options, files []File) Result {
 	var w codegen.Writer
 
 	writeHeader(&w, opts, files, module, ident)
-	codegen.Generate(&w, routines, program.Lines)
+
+	var generating codegen.Options
+	if opts.Optimize {
+		generating.Improve = opt.Improve
+	}
+
+	codegen.Generate(&w, routines, program.Lines, generating)
 	result.MACRO = w.Lines()
 
 	return result
@@ -190,7 +196,7 @@ func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident st
 	}
 
 	if opts.Optimize {
-		w.Comment("Optimized by /OPTIMIZE's passes: " + passList())
+		w.Comment("Optimized by /OPTIMIZE's passes: " + strings.Join(opt.Names(), ", "))
 	}
 
 	w.Comment("")
@@ -199,15 +205,6 @@ func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident st
 	w.Comment("/LIST, their include depth before the number; a comment names the file either way.")
 	w.Comment("Each routine's storage map says where its variables are.")
 	w.Comment("")
-}
-
-// passList names the optimizer's passes for the header.
-func passList() string {
-	if len(opt.Passes) == 0 {
-		return "none yet"
-	}
-
-	return strings.Join(opt.Names(), ", ")
 }
 
 // identOperand is .IDENT's operand for ident: the string between delimiters it

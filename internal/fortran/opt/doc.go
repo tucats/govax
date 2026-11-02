@@ -29,8 +29,13 @@
 // breaks a routine is named at once, rather than being found later as a
 // program that prints the wrong thing.
 //
-// The list starts empty, and each subtask of the phase adds to it, so for now
-// /OPTIMIZE does nothing but say so in the MACRO file's header.
+// Each subtask of the phase adds to the list; so far it is empty.
+//
+// A second list, CodePasses, works on a routine's instructions rather than its
+// IR, once the code generator has chosen them and before they are written
+// (codegen.Code, an instruction list): that is the only place to ask how far a
+// branch goes. Peephole and Branches are these. Generate calls them through
+// Improve, and Code.Check runs after each, as ir.Check does for the others.
 //
 // # How it is tested
 //
@@ -38,7 +43,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optfaults.for, optflow.for) are there to catch an
-// optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
+// programs (optalias.for, optfaults.for, optflow.for, optbranch.for) are there to
+// catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

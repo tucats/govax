@@ -48,7 +48,7 @@ func generate(t *testing.T, spec string, lines ...string) []string {
 	var w Writer
 
 	w.Statement("", ".TITLE", "TEST", "")
-	Generate(&w, ir.Lower(prog), program.Lines)
+	Generate(&w, ir.Lower(prog), program.Lines, Options{})
 
 	return w.Lines()
 }

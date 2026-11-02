@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "optalias", "optfaults", "optflow", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
+var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "rtlcalls", "runformat", "optalias", "optbranch", "optfaults", "optflow", "services", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
 
 // fortranKernels are the optimizer's kernels (docs/PHASE-84 - FORTRAN
 // optimizer.md), compute programs that spend their time in their own loops, as
@@ -74,6 +75,20 @@ func logGain(t *testing.T, name string, before, after runCounts) {
 		name, before.instructions, after.instructions,
 		100*(float64(after.instructions)/float64(max(before.instructions, 1))-1),
 		before.reads, after.reads, before.writes, after.writes)
+}
+
+// codeAddresses are what a program's output says of where its code is: the PC in a
+// condition's message, and the last two columns of a line of a traceback.
+var codeAddresses = regexp.MustCompile(`PC=[0-9A-F]{8}|[0-9A-F]{8}  [0-9A-F]{8}$`)
+
+// maskCodeAddresses is text with those taken out, line by line.
+func maskCodeAddresses(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = codeAddresses.ReplaceAllString(line, "<code>")
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 func TestFortranPrograms(t *testing.T) {
@@ -143,14 +158,21 @@ func TestFortranPrograms(t *testing.T) {
 
 						got, cost := countedRun(t, d, c, buf, upper)
 
-						if hasWant && got != string(want) {
+						// /OPTIMIZE moves the code, so what a program prints that
+						// says where its code is can't be the same.
+						matches := got == string(want)
+						if mode.qualifier == "/OPTIMIZE" {
+							matches = maskCodeAddresses(got) == maskCodeAddresses(string(want))
+						}
+
+						if hasWant && !matches {
 							t.Errorf("RUN %s printed:\n%s\nwant:\n%s", upper, got, want)
 						}
 
 						if before, ok := printed[name]; !ok {
 							printed[name], counts[name] = got, cost
 						} else {
-							if got != before {
+							if maskCodeAddresses(got) != maskCodeAddresses(before) {
 								t.Errorf("RUN %s printed, with /OPTIMIZE:\n%s\nand without it:\n%s", upper, got, before)
 							}
 

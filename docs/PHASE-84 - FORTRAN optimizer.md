@@ -376,9 +376,9 @@ The survey's decisions drew no objection, and stand.
 2. **The pass framework** (done 2026-11-01): `internal/fortran/opt`, `/[NO]OPTIMIZE` and
    `--optimize`, `ir.Check` after each pass, the both-ways test, its counts
    logged, the kernels.
-3. **The instruction list, branch shortening, the peephole:** `MOVL #0`, `ADDL2
-   #1`, branches to branches, inverted branches, `SOBGTR`, `AOBLEQ`, `ACBL` on
-   counts in memory.
+3. **The instruction list, branch shortening, the peephole** (done 2026-11-01):
+   `MOVL #0`, `ADDL2 #1`, branches to branches, inverted branches, `SOBGTR`,
+   `AOBLEQ`, `ACBL` on counts in memory.
 4. **The analyses:** the control flow graph with every entry, dominators,
    natural loops, the places and effects of Decision 7. No code changes yet;
    tested on their own.
@@ -436,3 +436,68 @@ The survey's decisions drew no objection, and stand.
     variables, so a local can change with no call in sight. Decision 7's "a local
     that is neither survives calls" assumes no such thing, and subtask 4 must
     settle it: the manual's VOLATILE would be the rule, and `asts.for` the check.
+- **2026-11-01:** Subtask 3, the instruction list, branch shortening, and the
+  peephole. `/NOOPTIMIZE`'s output is unchanged: every golden file holds as it was.
+  - **The list** (Decision 4): `codegen/code.go`'s `Code`, a routine's `Item`s
+    (instructions, labels, source lines), which `emit` and `label` now add to, and
+    `Code.Write` writes. It also carries what a pass must ask about symbols: labels
+    reached from outside the list (`Outside`: ENTRY's and FORMAT's code, written
+    after it), displacements' values, and which operands are whole variables (`Cells`,
+    `Params`). `Generate` takes `Options.Improve`, and `opt` imports `codegen`, not
+    the reverse. `opt.CodePasses` sits beside `opt.Passes`, with `Code.Check` after
+    each as `ir.Check` is after the IR's.
+  - **The bounds** (Decision 5): `Code.Bound`, from an instruction's operand forms.
+    `TestBoundsHold` puts a label either side of every instruction of every program
+    to hand, assembles it, and holds each bound to the distance in MACRO's symbol
+    table, both as generated and as the passes leave it: 226 compilations, 54,958
+    instructions, 353,965 bytes by the bounds and 353,587 by MACRO, none too small.
+    That closeness is what the survey's prototype lacked, and it is why `matmul` and
+    `subs` now close their loops short. Real MACRO hasn't assembled this output yet
+    (Phase 86's optional round); the bounds are held to govax's MACRO only.
+  - **`opt/peephole.go`** is the replacements one instruction at a time. The generator
+    already chose nearly all of them, so what's left is mostly a constant index's
+    `MOVL #0,R1`. A move followed by a test wasn't added: the generator already leaves
+    those out (`g.set`).
+  - **`opt/branches.go`** is the rest, in rounds until nothing changes (its comment
+    teaches it). Every rule only takes bytes out, so a distance found at a round's
+    start stays good through it.
+  - **What `AOBLEQ` and `ACBL` change, as settled by `cpu/loop.go` and
+    `branchacb.go`:** they read the limit before stepping the index, read the index
+    once, and set N and Z from the index rather than the comparison. So a rule needs
+    a limit that can't overlap the index (Decision 7, by the cells' extents; two
+    dummies by answer 1), neither VOLATILE, and no conditional branch next on either
+    path. `SOBGTR` and `SOBGEQ` are exactly `DECL` and a branch but for C, which no
+    branch after a `DECL` reads. These loop instructions only fire on GO TO loops: a DO
+    loop has a count, so `SOBGTR`. A far DO loop keeps its `DECL`, `BLEQ`, and `BRW`.
+    `ACBL #1,#-1,C,T` would do it, but is longer in bytes, and rules must not lengthen.
+  - **Not done:** `.WORD` tables and the `BRW` in `writeEntry` aren't threaded or
+    shortened, being rarely run. A conditional branch to another on the same condition
+    isn't threaded either, since the generator never writes one that matters.
+  - **Dead code** after a jump goes, though the plan gave that to subtask 5, since
+    threading makes it. A FORTRAN label stays even when nothing goes to it, and code
+    after one nothing goes to goes (the label naming the place).
+  - **Results** (`go test -v`), instructions in the run:
+
+    | Program | `/NOOPTIMIZE` | `/OPTIMIZE` | Change | Survey's prototype |
+    |---|---:|---:|---:|---:|
+    | `matmul` | 3,101,599 | 2,658,800 | −14.3% | under 0.1% (−13.8% by hand) |
+    | `sieve` | 5,785,872 | 4,785,922 | −17.3% | −7.3% |
+    | `subs` | 6,876,884 | 6,671,464 | −3.0% | under 0.1% |
+    | `whet` | 2,695,057 | 2,655,457 | −1.5% | −1.5% |
+    | `textk` | 485,525 | 371,025 | −23.6% | not measured |
+    | DUNGEON's game, whole run | 6,818,609 | 5,596,938 | −17.9% | −16.9% |
+
+    DUNGEON's own code goes from 4,504,906 to about 3,283,000, −27.1%, its FTNRTL part
+    being unchanged. It printed the same. Its baseline here is the 6,818,609 the log
+    above explains, since these ran after other tests in one session. Data reads
+    barely move, as expected: registers come in subtask 8. `whet`'s reads rise by
+    exactly 4,000 (0.1%) with only two `SOBGTR`s changed in its code; why wasn't looked
+    into.
+  - **A test changed:** `directives.for` prints a traceback, whose PCs follow from the
+    code's length. So under `/OPTIMIZE`, and between the two ways, `TestFortranPrograms`
+    compares output with `PC=` and traceback addresses masked (`maskCodeAddresses`);
+    `/NOOPTIMIZE` is still held to the `.out` exactly.
+  - **New program:** `optbranch.for`, each value worked by hand and matched on the first
+    run both ways. An index and limit sharing storage by EQUIVALENCE, steps up and
+    down stopping exactly at zero, a far loop, an arithmetic IF reading a step's
+    condition codes, chains, and labels reached only through an ASSIGN or a table.

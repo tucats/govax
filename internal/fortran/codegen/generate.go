@@ -89,6 +89,14 @@ const (
 	flagBounds = 1 << 7 // DSC$V_FL_BOUNDS
 )
 
+// Options are the choices Generate is given.
+type Options struct {
+	// Improve, if not nil, is given each routine's code before it is written:
+	// /OPTIMIZE's instruction passes (package opt). Without it, the code is
+	// written as it was chosen.
+	Improve func(*Code)
+}
+
 // Generate writes the MACRO-32 code for a source file's routines to w,
 // after the header the caller has written: the definitions the file
 // uses, then each routine (its storage map, its storage, its read-only
@@ -97,7 +105,7 @@ const (
 // the main program's entry as the image's transfer address if the file
 // has a main program. lines are the source's lines, as the source pass
 // read them.
-func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line) {
+func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Options) {
 	src := &sourceLines{lines: lines}
 	names := &namer{}
 
@@ -110,6 +118,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line) {
 	for _, r := range routines {
 		g := newRoutineGen(r, names, src)
 		g.localAlign = localAlign
+		g.improve = opts.Improve
 		g.generate()
 		g.write(w)
 
@@ -414,7 +423,7 @@ func (g *routineGen) write(w *Writer) {
 	if r.Kind == ir.BlockData {
 		w.Blank()
 		w.Append(&g.pre)
-		w.Append(&g.code)
+		g.code.Write(w)
 
 		return
 	}
@@ -429,7 +438,7 @@ func (g *routineGen) write(w *Writer) {
 		g.writeEntryArgs(w, r.Entries[0])
 	}
 
-	w.Append(&g.code)
+	g.code.Write(w)
 
 	for _, e := range r.Entries[min(1, len(r.Entries)):] {
 		g.writeEntry(w, e)

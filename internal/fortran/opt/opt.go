@@ -3,6 +3,7 @@ package opt
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/ir"
 )
 
@@ -16,6 +17,38 @@ type Pass struct {
 // Passes are the optimizer's passes, in the order they run. Each subtask of
 // docs/PHASE-84 - FORTRAN optimizer.md adds to this list.
 var Passes = []Pass{}
+
+// CodePass is one optimization of a routine's instructions, after the code
+// generator has chosen them and before they are written: its name, for the same
+// purposes, and the function that improves them.
+type CodePass struct {
+	Name string
+	Run  func(*codegen.Code)
+}
+
+// CodePasses are the instruction passes, in the order they run.
+var CodePasses = []CodePass{
+	{"peephole", Peephole},
+	{"branches", Branches},
+}
+
+// Improve runs every instruction pass on a routine's code: what the code generator
+// is given to call under /OPTIMIZE.
+func Improve(c *codegen.Code) {
+	improve(c, CodePasses)
+}
+
+// improve runs the given passes on a routine's code, checking it after each, as
+// run does a routine's IR.
+func improve(c *codegen.Code, passes []CodePass) {
+	for _, p := range passes {
+		p.Run(c)
+
+		if err := c.Check(); err != nil {
+			panic(fmt.Sprintf("opt: after %s: %v", p.Name, err))
+		}
+	}
+}
 
 // Optimize runs every pass on each routine.
 func Optimize(routines []*ir.Routine) {
@@ -46,9 +79,14 @@ func check(r *ir.Routine, by string) {
 
 // Names are the names of the passes that run, in order.
 func Names() []string {
-	names := make([]string, len(Passes))
-	for i, p := range Passes {
-		names[i] = p.Name
+	names := make([]string, 0, len(Passes)+len(CodePasses))
+
+	for _, p := range Passes {
+		names = append(names, p.Name)
+	}
+
+	for _, p := range CodePasses {
+		names = append(names, p.Name)
 	}
 
 	return names

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/ir"
 )
 
@@ -22,9 +23,11 @@ type routineGen struct {
 
 	// pre is what comes before the routine's .ENTRY in $CODE: the source
 	// lines up to its header statement. code is everything after it.
-	// out is the one being written.
-	pre, code Writer
-	out       *Writer
+	pre  Writer
+	code Code
+
+	// improve, if not nil, is an optimizer's instruction passes (Options).
+	improve func(*Code)
 
 	// labels are the blocks' labels, made when first needed; targets
 	// are the blocks some branch goes to, which need one.
@@ -73,9 +76,7 @@ func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 
 // generate writes the routine's code into pre and code.
 func (g *routineGen) generate() {
-	g.out = &g.pre
-	g.src.through(g.out, g.r.Unit.AST.Header)
-	g.out = &g.code
+	g.src.through(&g.pre, g.r.Unit.AST.Header)
 
 	g.findTargets()
 
@@ -91,8 +92,21 @@ func (g *routineGen) generate() {
 	// The rest of the unit's lines, its END among them when nothing came
 	// of it (after a RETURN).
 	if body := g.r.Unit.AST.Body; len(body) > 0 {
-		g.src.through(g.out, body[len(body)-1])
+		g.source(body[len(body)-1])
 	}
+
+	if g.improve != nil {
+		g.facts()
+		g.improve(&g.code)
+	}
+}
+
+// source adds to the code the source lines up to the end of the statement stmt.
+func (g *routineGen) source(stmt ast.Stmt) {
+	var w Writer
+
+	g.src.through(&w, stmt)
+	g.code.text(w.lines)
 }
 
 // findTargets notes the blocks a jump or branch goes to: all but those
@@ -158,24 +172,25 @@ func (g *routineGen) findTargets() {
 func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 	for _, e := range g.r.Entries {
 		if e.First == b {
-			g.src.through(g.out, e.Source)
+			g.source(e.Source)
 		}
 	}
 
 	switch {
 	case b.Label != 0:
 		if l := g.r.Unit.Labels[b.Label]; l != nil {
-			g.src.through(g.out, l.Stmt)
+			g.source(l.Stmt)
 		}
 
-		g.label(g.blockLabel(b), b.Note)
+		g.code.label(g.blockLabel(b), b.Note, true)
+		g.set = ""
 
 	case g.targets[b]:
 		g.label(g.blockLabel(b), b.Note)
 	}
 
 	for _, s := range b.Stmts {
-		g.src.through(g.out, s.Source())
+		g.source(s.Source())
 
 		switch s := s.(type) {
 		case *ir.Assign:
@@ -189,7 +204,7 @@ func (g *routineGen) block(b *ir.Block, next *ir.Block) {
 		g.endStatement()
 	}
 
-	g.src.through(g.out, b.End.Source())
+	g.source(b.End.Source())
 	g.terminator(b.End, next)
 	g.endStatement()
 }
@@ -547,7 +562,7 @@ func (g *routineGen) entryMask() string {
 // receives, ir.None if it writes none; its condition codes then describe
 // that value, which lets a test of it right after be left out.
 func (g *routineGen) emit(opcode string, wrote ir.Type, operands ...string) {
-	g.out.Statement("", opcode, strings.Join(operands, ","), g.note)
+	g.code.instruction(opcode, g.note, operands)
 	g.note = ""
 
 	g.set = ""
@@ -559,6 +574,6 @@ func (g *routineGen) emit(opcode string, wrote ir.Type, operands ...string) {
 // label writes a label, with a comment. Since another branch may come
 // to it, nothing is known of the condition codes after it.
 func (g *routineGen) label(name, comment string) {
-	g.out.LabelComment(name, comment)
+	g.code.label(name, comment, false)
 	g.set = ""
 }

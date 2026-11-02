@@ -592,7 +592,9 @@ never had.
   with the author's answers, and its kernels and measuring code in `testdata/opt84`; subtask 2 (2026-11-01) the
   pass framework: `internal/fortran/opt`, `/[NO]OPTIMIZE`, and every FORTRAN program run both ways
   (`optimizerModes`), the gains logged by `go test -v`, with `optalias.for`, `optfaults.for`, `optflow.for`, and
-  `TestFortranDungeonBothWays`.
+  `TestFortranDungeonBothWays`; subtask 3 (2026-11-01) the instruction list (`codegen/code.go`'s `Code`, `Code.Bound`
+  held to MACRO by `TestBoundsHold`), `opt.CodePasses`, `opt/peephole.go`, and `opt/branches.go` (short and inverted
+  branches, threading, `SOBGTR`, `AOBLEQ`, `ACBL`, dead code), with `optbranch.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2150,6 +2152,8 @@ expect adjustment as phases land):
   the module named for the first unit; `opt` is Phase 84's.
 - `internal/fortran/opt` — the optimizer (Phase 84): `Passes`, a list of `Pass`es run in order on each `ir.Routine`
   under `/OPTIMIZE`, with `ir.Check` after each, a failure a panic naming the pass. Without `/OPTIMIZE` it isn't run.
+  `CodePasses` work on a routine's instructions (`codegen.Code`), called through `codegen.Options.Improve`, with
+  `Code.Check` after each: `peephole.go` and `branches.go`. It imports `codegen`, not the reverse.
 - `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
   the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
   import it: `dclcmd`'s `fortranIncludes` searches it last.

@@ -62,13 +62,17 @@ func TestBrokenByLowering(t *testing.T) {
 
 // TestNames checks that the list's names come back in order.
 func TestNames(t *testing.T) {
-	if got, want := len(Names()), len(Passes); got != want {
-		t.Fatalf("%d names of %d passes", got, want)
+	var want []string
+
+	for _, p := range Passes {
+		want = append(want, p.Name)
 	}
 
-	for i, p := range Passes {
-		if Names()[i] != p.Name {
-			t.Errorf("name %d is %s, want %s", i, Names()[i], p.Name)
-		}
+	for _, p := range CodePasses {
+		want = append(want, p.Name)
+	}
+
+	if got := strings.Join(Names(), " "); got != strings.Join(want, " ") {
+		t.Errorf("the names are %s, want %s", got, strings.Join(want, " "))
 	}
 }

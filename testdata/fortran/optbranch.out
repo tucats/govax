@@ -1,0 +1,18 @@
+LE           6           6
+LT           5           5
+GE           4           4
+SAME           3           4
+UP          13           4
+DOWNGE          -4           3
+DOWNGT           0           2
+DOWN1           5           3
+WORD      4           4
+DUMMY           8           7
+FARDO           4         120
+FARGOTO           3         174
+ZERO           0           1
+NEGATIVE          -1
+CHAINS
+REACHED
+ISPOS           1           0           0
+  $STATUS == "%X00000001"

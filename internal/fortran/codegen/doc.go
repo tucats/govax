@@ -83,10 +83,15 @@
 // register (3(R2)[R3]).
 //
 // A block the one before falls into needs no branch at all. Phase 84's
-// optimizer can shorten what this writes; the point here is code that
-// is always right. One small thing is done now: a TST of the value the
-// instruction just before wrote is left out, since that instruction set
+// optimizer shortens what this writes (package opt's Branches); the point here
+// is code that is always right. One small thing is done now: a TST of the value
+// the instruction just before wrote is left out, since that instruction set
 // the condition codes (DECL count, then BLEQ).
+//
+// A routine's instructions, labels, and source lines are collected in a list as
+// they are chosen (code.go), and written when the routine is done, so that
+// /OPTIMIZE's instruction passes can work on them first. Without those passes
+// the list is written as it stands.
 //
 // # Writing the file
 //
