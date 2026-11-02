@@ -79,7 +79,7 @@ import (
 // Four instructions and four reads on the left, four instructions, four reads, and a
 // store on the right. So worth counts what each choice would run, and a temporary is
 // made only if that saves an instruction and costs no more memory references than it
-// saves instructions. Once temporaries can live in registers (subtask 8) that sum
+// saves instructions. Once temporaries can live in registers (subtask 9) that sum
 // changes, and worth is the place to change it.
 //
 // # What it leaves alone

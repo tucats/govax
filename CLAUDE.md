@@ -603,7 +603,7 @@ never had.
   `unreachable.go`, and `deadcode.go` (liveness of the cells that can die, `Storage.findDying`; a place live
   at an entry stays live at every exit; a store whose value may fault stays), with `optforward.for`; subtask 6
   (2026-11-01) local common subexpressions: `opt/cse.go` (a value is one run of an expression through a block; `$Un`
-  temporaries in memory, by a cost model subtask 8 must change, `worth`; a variable already holding the value read instead), and
+  temporaries in memory, by a cost model subtask 9 must change, `worth`; a variable already holding the value read instead), and
   `Assign.InPlace` (`ir.InPlaceOperand`, codegen's `storeInPlace`: `ADDF2 X,C-244[R1]`, the place found once), with `optcse.for`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

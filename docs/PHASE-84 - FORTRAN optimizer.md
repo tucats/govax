@@ -364,9 +364,10 @@ a row-wise loop, or a CHARACTER\*n array.
 2. **The default:** as recommended. `/OPTIMIZE` becomes the default at the
    close-out, if the corpus and DUNGEON's game both pass both ways.
 3. **FTNRTL's character loops:** **in this phase**, against the recommendation:
-   a subtask tuning them, as part of the general optimization work (subtask 10).
+   a subtask tuning them, as part of the general optimization work (subtask 11).
 4. **`CMPB` and `MOVB` for one-character strings:** as recommended, only under
-   `/OPTIMIZE`.
+   `/OPTIMIZE`, as a small subtask of its own after loop-invariant motion
+   (subtask 8; the author's choice, 2026-11-02).
 
 The survey's decisions drew no objection, and stand.
 
@@ -387,14 +388,16 @@ The survey's decisions drew no objection, and stand.
 6. **Local common subexpressions** (done 2026-11-01).
 7. **Loop-invariant motion:** with hoisted array bases and descriptor A0s, by
    Decision 8's rules.
-8. **Register allocation:** register cells, liveness, write-backs by Decision
+8. **One-character strings** (the author's answer 4): `CMPB` and `MOVB` where
+   `CMPC3` and `MOVC3` of one character are lowered now, only under `/OPTIMIZE`.
+9. **Register allocation:** register cells, liveness, write-backs by Decision
    6, dummy addresses loaded once, the loop instructions on registers.
-9. **Induction variables and strength reduction,** where a stride isn't the
+10. **Induction variables and strength reduction,** where a stride isn't the
    element's size, and autoincrement.
-10. **FTNRTL's loops** (the author's answer 3): its character loops tuned by
+11. **FTNRTL's loops** (the author's answer 3): its character loops tuned by
     hand, as DUNGEON's startup and the corpus measure them, held to the
     existing oracles. No new entry points, so no change to its GSMATCH.
-11. **Close-out:** the measured gains against this survey's table;
+12. **Close-out:** the measured gains against this survey's table;
     FORTRAN-INTERNALS.md's optimizer chapter; MANUAL.md; the default switched.
 
 ## Progress log
@@ -490,7 +493,7 @@ The survey's decisions drew no objection, and stand.
     DUNGEON's own code goes from 4,504,906 to about 3,283,000, −27.1%, its FTNRTL part
     being unchanged. It printed the same. Its baseline here is the 6,818,609 the log
     above explains, since these ran after other tests in one session. Data reads
-    barely move, as expected: registers come in subtask 8. `whet`'s reads rise by
+    barely move, as expected: registers come in subtask 9. `whet`'s reads rise by
     exactly 4,000 (0.1%) with only two `SOBGTR`s changed in its code; why wasn't looked
     into.
   - **A test changed:** `directives.for` prints a traceback, whose PCs follow from the
@@ -593,7 +596,7 @@ The survey's decisions drew no objection, and stand.
     Leaving them out gained 413 instructions and 47,604 reads on DUNGEON, and no corpus program ran more
     instructions for it (`text.for` had been 2 worse than before the pass); other programs' reads moved by
     at most 131 either way. What copies were wanted for, a function's value, the `RETURN` does. So store-to-load for a value that
-    isn't constant waits for registers (subtask 8).
+    isn't constant waits for registers (subtask 9).
   - **Not done, on purpose:**
     - A DATA value as a constant (Decision 6 allows it if nothing in the unit can change it): nothing
       measured asks for it.
@@ -650,7 +653,7 @@ The survey's decisions drew no objection, and stand.
     as `$U1`, and worse by a write. `worth` counts what each choice runs, and takes a temporary only if it saves an
     instruction and costs no more memory references than it saves instructions. That refuses `J*60` shared between
     `matmul`'s `B(K,J)` and `C(I,J)`, which the survey's hand version kept in a register for the statement: its third
-    instruction of three, waiting for subtask 8. **Subtask 8 must change `worth`:** a temporary in a register costs none
+    instruction of three, waiting for subtask 9. **Subtask 9 must change `worth`:** a temporary in a register costs none
     of that, and it should be the first thing looked at there.
   - **Left alone:**
     - A variable format expression's blocks, which run in the middle of another block's I/O statement and would share
@@ -687,3 +690,6 @@ The survey's decisions drew no objection, and stand.
   - **Not done, and not in any subtask yet:** the author's answer 4, `CMPB` and `MOVB` for one-character strings under
     `/OPTIMIZE`, which the survey said could go with subtask 3 or a small subtask of its own. DUNGEON runs 28,856 `CMPC3`s, and `textk`
     is built on them. It needs a place in the list.
+- **2026-11-02:** The author placed answer 4 as a subtask of its own after loop-invariant motion: subtask 8, one-character strings.
+  Register allocation is now 9, induction variables 10, FTNRTL's loops 11, and the close-out 12; this doc's earlier log entries that look
+  ahead to those subtasks, and `cse.go`'s comment, use the new numbers, except the entry that first numbered FTNRTL's loops.
