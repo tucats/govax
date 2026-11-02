@@ -359,7 +359,7 @@ For subtask 10, and changing what the survey assumed:
 - **D8:** VMS's SHOW MODULE lists only the current image's modules, `SHOW MODULE/SHARE` adds a
   `SHARE$` line per image, and `SET IMAGE` reaches the rest; govax's list of FTNRTL's is wrong.
 - **Real MACRO assembled `/OPTIMIZE`'s output** (`DBG85O.MAR`) without a message, a small start on
-  what Phase 84 left to Phase 86. VMS's debugger read govax's images but for the two MACRO bugs below,
+  what Phase 84 left to Phase 86. VMS's debugger read govax's images but for the MACRO bugs in the log,
   and could say no more about source lines since the volume was DUA2 here and DUA1 there.
 
 ## Questions, as put to the author
@@ -418,7 +418,7 @@ For subtask 10, and changing what the survey assumed:
   LANGUAGE** (`debugger/program.go`, `useLanguage`; ours, unconfirmed, that languages but FORTRAN
   take MACRO's rule). **Paths** (`dbgsym.Lookup`): one may start at a routine, and a module's name is
   seen from its routines. **EXAMINE** anywhere in a routine is an instruction (D6). **`!XL`** is in
-  capitals, as VMS's is; it showed in `NOACCESSR ... 0000000C`. **MACRO**, three bugs VMS's objects
+  capitals, as VMS's is; it showed in `NOACCESSR ... 0000000C`. **MACRO**, four bugs VMS's objects
   showed: a leading `_` was still the console dialect's scope (`_.L` became `__1_.L`); a name past 31
   characters was kept whole, now cut with `ILLSYMLEN`; and a source of 128 to 255 lines wrote the byte
   form of DEFLINES, and a `.TITLE` with no text no TTL record. Tests: `TestDebugRecords` holds DBG85M's

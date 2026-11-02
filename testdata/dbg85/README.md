@@ -53,5 +53,5 @@ From the author's run on VMS 7.1, 2-NOV-2026, by `copyout.cmd`. MACRO's one warn
 own: `AB.CDEF...01234` is 32 characters, which is a useful accident (ILLSYMLEN). The phase doc's
 "What the probe settled" has the answers. `TestDebuggerSessionOracle` replays `dbg85m.dlg` and
 `dbg85.dlg`, and `TestDebugRecords` holds `dbg85m.obj` and `dbg85.obj` to govax's MACRO.
-`gvdbg85*.dlg` are VMS's debugger on govax's images (made before the two MACRO fixes the run led
+`gvdbg85*.dlg` are VMS's debugger on govax's images (made before the MACRO fixes the run led
 to), whose source lines it couldn't read, the volume having been DUA2 when they were built.
