@@ -1,0 +1,39 @@
+CHARACTER T
+BYTE array T
+BYTE element T
+INTEGER array T
+substring T
+element T T
+array T T
+field T     -1     -2
+short T
+long T
+passed length T
+clock T
+bytes T
+long T T
+short T
+longwords T T T
+words T T T
+elements T T T
+neighbors     -1     -1
+elapsed T
+today T
+ahead T
+once T
+an expression T
+       269.0        69070
+   1857923.0    475628535
+   3330690.0    852656806
+         0.0            1
+                part  00000070  0000000F
+       in the middle  FF56FFFF  12345678
+            in place  00000077  00000077
+        the sign bit  80000000  00000001
+             no bits  00000007  12345678
+            them all  12345678  12345678
+         expressions  00000000  0000FF00
+               words  0070  000F
+        the sign bit  8000  0001
+   word and longword  0FF0  0000
+  $STATUS == "%X00000003"

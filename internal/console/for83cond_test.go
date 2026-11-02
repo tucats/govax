@@ -399,10 +399,9 @@ func TestFor83PartBOnFORRTL(t *testing.T) {
 }
 
 // for83FTNRTLCase says which of part B's cases for83x.for has: the ones with
-// I/O during a statement, and those ending an image, but for EXIT's forms,
-// which are for FTNRTL's EXIT.
+// I/O during a statement, and those ending an image.
 func for83FTNRTLCase(n int) bool {
-	return n >= 36 && n <= 46 || n >= 55
+	return n >= 36
 }
 
 var (

@@ -587,7 +587,7 @@ never had.
   and `corevms/condregs.go`, LIB$FIXUP_FLT; LIB$SIG_TO_STOP, INT_OVER, DEC_OVER, FLT_UNDER; a fault restores its operands' registers, `registers/operandlog.go`;
   FTNRTL signals INPCONERR at its item and stops for all but it, OUTCONERR, and FORVARMIS, `FTN$$IO_SIGNAL`; held to VMS by `TestFor83ConditionOracle` and `TestFor83PartBOnFORRTL`,
   and to FORRTL by `TestFor83ContinueOnFORRTL`), and subtask 7 ASTs and exit handlers (FTNRTL holds ASTs off with `$SETAST` while its statement stack and free list change, and a context records its
-  frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`).
+  frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`), and subtask 8 the system subroutines (`sema/system.go`: a table, each subroutine's arguments choosing FTNRTL's routine, as ERRSNS's do, RAN and SECNDS REAL\*4 whatever IMPLICIT says; `ftn_system.mar`, GSMATCH 1,16, held to VMS by `TestFor83PartAOnFTNRTL`, part A with each `FOR$` name's `FTN$`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2160,7 +2160,7 @@ expect adjustment as phases land):
   context's record, Phase 75; `ftn_listin.mar`, list-directed input, Phase 80; `ftn_namelist.mar`, namelist input and output, Phase 80; `ftn_internal.mar`, internal files, ENCODE, and DECODE, Phase 80; `ftn_intrinsics.mar`, the intrinsic functions MTHRTL
   lacks, FTN$IISHFTC and FTN$JISHFTC, and since subtask 9 a routine for
   each function MTHRTL lacks that a program may pass as an argument,
-  FTN$LEN to FTN$NWORKERS, Phase 78), linked by `ftnrtl.opt` (the vector its own cluster, first;
+  FTN$LEN to FTN$NWORKERS, Phase 78; `ftn_system.mar`, the system subroutines, Phase 83), linked by `ftnrtl.opt` (the vector its own cluster, first;
   `GSMATCH=LEQUAL`; raise the minor id with each new entry), committed
   as `ftnrtl.exe` and embedded (`Files`, `Image`). `ftnrtl/build`
   assembles and links it with `internal/asm` and `internal/link` as

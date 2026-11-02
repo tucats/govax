@@ -5290,6 +5290,12 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$DELETE_D(icb, unit, rec)`, `FTN$FIND(icb, unit, rec)` | DELETE of record `rec`, and FIND |
 | `FTN$DEF_FILE(icb, unit, m, n, v)`, `FTN$DEF_FILE_W(...)` | DEFINE FILE `u(m,n,U,v)`, `v` a longword's or a word's address |
 | `FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])`, `FTN$ERRSNS_W(...)` | The system subroutine ERRSNS: the last I/O error's FOR number, RMS status and status value, unit, and condition value, stored as longwords (or words, for `_W`) where the arguments point, a missing or zero argument passed over; then cleared |
+| `FTN$DATE(buf)`, `FTN$DATE_T_DS(string)` | The system subroutine DATE, `dd-mmm-yy`: 9 bytes at an address, or into a descriptor's string, filled with blanks or cut short |
+| `FTN$TIME(buf)`, `FTN$TIME_T_DS(string)` | TIME, `hh:mm:ss`: 8 bytes, or as `FTN$DATE_T_DS` does |
+| `FTN$IDATE(i, j, k)`, `FTN$JDATE(i, j, k)` | IDATE: the month, the day, and the year's last two digits, as words or as longwords |
+| `FTN$SECNDS(x)` | SECNDS, a REAL\*4 in R0: the seconds since midnight less `x`, plus a day once if that is negative |
+| `FTN$EXIT([status])`, `FTN$EXIT_W([status])` | EXIT: `$EXIT` with a longword's or a word's status, SS$_NORMAL without one |
+| `FTN$IMVBITS(m, i, len, n, j)`, `FTN$JMVBITS(...)` | MVBITS: EXTZV and INSV, every argument a word's address or a longword's |
 | `FTN$JISHFTC(i, shift, size)` | The intrinsic function ISHFTC of INTEGER\*4s (by reference): the low `size` bits of `i` shifted `shift` places to the left (`-shift` to the right), circularly, the other bits as they were, in R0 |
 | `FTN$IISHFTC(i, shift, size)` | The same of INTEGER\*2s, its word sign-extended to an INTEGER\*4 in R0, as Table D-3 gives IISHFTC's result |
 | `FTN$LEN(s)`, `FTN$INDEX(s, t)`, `FTN$ICHAR(s)` | LEN, INDEX, and ICHAR of strings by descriptor, an INTEGER\*4 in R0 |

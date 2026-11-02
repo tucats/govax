@@ -532,14 +532,6 @@ func (a *analyzer) badUse(s *Symbol, pos diag.Position, what string) {
 	a.report("BADUSE", pos, s.Name, a.describe(s), what)
 }
 
-// notImpl reports that what isn't implemented yet (NOTIMPL), when the
-// question depends on the declarations: a name that may be an intrinsic
-// function's, a dummy procedure. A unit whose declarations are incomplete
-// doesn't get it (see report).
-func (a *analyzer) notImpl(pos diag.Position, what string) {
-	a.report("NOTIMPL", pos, what)
-}
-
 // notImplForm reports that what, a statement or a form the program wrote
 // (a COMMON statement, a Hollerith constant, an implied-DO list), isn't
 // implemented yet (NOTIMPL). No declaration changes that, so every unit

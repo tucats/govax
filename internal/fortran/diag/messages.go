@@ -1004,6 +1004,17 @@ var messages = map[string]kind{
 
 	// ERRSNSCOUNT is a call of ERRSNS with more than its five arguments.
 	"ERRSNSCOUNT": {Error, "the system subroutine ERRSNS takes at most 5 arguments, and is given %d"},
+
+	// SYSCOUNT is a system subroutine or function given the wrong number of
+	// arguments (D.4, D.5.3): its name, how many it takes, and how many it has.
+	"SYSCOUNT": {Error, "the system routine %s takes %s, and is given %d"},
+
+	// SYSARG is an argument of a system subroutine or function of the wrong
+	// kind: the routine's name, then what the argument must be.
+	"SYSARG": {Error, "an argument of %s must be %s"},
+
+	// SYSLEN is a system subroutine's arguments of both integer lengths.
+	"SYSLEN": {Error, "the arguments of %s must be all INTEGER*2 or all INTEGER*4"},
 }
 
 // Known reports whether ident is a message in the table, and its

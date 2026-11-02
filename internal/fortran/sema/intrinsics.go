@@ -424,13 +424,6 @@ func formsNamed(name string) []form {
 	return specific
 }
 
-// systemFunctions and systemSubroutines are the system subroutines of
-// appendix D.4, which FORTRAN's run-time library provides (Phase 83).
-var (
-	systemFunctions   = setOf("RAN SECNDS")
-	systemSubroutines = setOf("DATE IDATE ERRSNS EXIT TIME MVBITS")
-)
-
 // setOf is the set of the blank-separated names in list.
 func setOf(list string) map[string]bool {
 	set := map[string]bool{}
@@ -440,17 +433,4 @@ func setOf(list string) map[string]bool {
 	}
 
 	return set
-}
-
-// builtin is NOTIMPL's subject for a name that is one of FORTRAN's system
-// functions (function set) or subroutines, or "" if it isn't.
-func builtin(name string, function bool) string {
-	switch {
-	case function && systemFunctions[name]:
-		return "the system function " + name
-	case !function && systemSubroutines[name]:
-		return "the system subroutine " + name
-	}
-
-	return ""
 }

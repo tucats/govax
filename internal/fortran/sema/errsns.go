@@ -17,7 +17,7 @@ import "github.com/tucats/govax/internal/fortran/ast"
 var errsnsRoutines = map[int]string{2: "FTN$ERRSNS_W", 4: "FTN$ERRSNS"}
 
 // errsns analyzes CALL ERRSNS(list): a call of FTNRTL's routine for the
-// arguments' length, through a symbol of its own that no unit's table holds.
+// arguments' length.
 func (a *analyzer) errsns(s *ast.CallStmt, list []ast.Expr) Stmt {
 	if len(list) > 5 {
 		a.report("ERRSNSCOUNT", s.NamePos, len(list))
@@ -33,19 +33,8 @@ func (a *analyzer) errsns(s *ast.CallStmt, list []ast.Expr) Stmt {
 			continue // a null argument: nothing stored there
 		}
 
-		t := arg.Expr.Type()
-
-		switch e := arg.Expr.(type) {
-		case *Var, *Elem:
-		case *FieldRef:
-			if e.WholeArray() {
-				t = Type{}
-			}
-		default:
-			t = Type{}
-		}
-
-		if arg.Copy || arg.Mode != ByDefault || t.Kind != Integer || (t.Size != 2 && t.Size != 4) {
+		t, ok1 := integerPlace(arg)
+		if !ok1 {
 			a.report("ERRSNSARG", arg.Expr.Position())
 
 			ok = false
@@ -72,7 +61,5 @@ func (a *analyzer) errsns(s *ast.CallStmt, list []ast.Expr) Stmt {
 		size = 4
 	}
 
-	sub := &Symbol{Name: errsnsRoutines[size], Class: Subroutine}
-
-	return &Call{stmtBase: stmtBase{s}, Sub: sub, Args: args}
+	return systemCall(s, errsnsRoutines[size], args)
 }

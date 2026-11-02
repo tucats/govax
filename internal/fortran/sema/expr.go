@@ -164,10 +164,9 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 			return a.intrinsicRef(e)
 		}
 
-		if what := builtin(e.Name, true); what != "" && a.units[e.Name] == nil {
-			a.notImpl(e.Pos, what)
-
-			return a.bad(e.Pos)
+		// A system function, unless the file has one of its own.
+		if system, ok := systemFunctions[e.Name]; ok && a.units[e.Name] == nil {
+			return a.systemFunction(e, system)
 		}
 	}
 

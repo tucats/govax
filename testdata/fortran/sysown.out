@@ -1,0 +1,5 @@
+own DATE           3
+  7.500000    
+          6
+own EXIT
+  $STATUS == "%X00000001"

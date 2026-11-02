@@ -309,15 +309,9 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	sym := a.unit.byName[s.Name]
 
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
-		if s.Name == "ERRSNS" && a.units["ERRSNS"] == nil && len(targets) == 0 {
-			// The system subroutine, unless the file has one of its own.
-			return a.errsns(s, list)
-		}
-
-		if what := builtin(s.Name, false); what != "" && a.units[s.Name] == nil {
-			a.notImpl(s.NamePos, what)
-
-			return nil
+		// A system subroutine, unless the file has one of its own.
+		if system := systemSubroutines[s.Name]; system != nil && a.units[s.Name] == nil && len(targets) == 0 {
+			return system(a, s, list)
 		}
 	}
 

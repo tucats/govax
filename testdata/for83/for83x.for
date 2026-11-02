@@ -1,12 +1,14 @@
 C     Part B's cases on FTNRTL (testdata/for83's README): I/O from a handler and from
-C     an AST during a statement, the ways of ending an image with a unit open, and
+C     an AST during a statement, the ways of ending an image with a unit open (CALL
+C     EXIT's forms among them), and
 C     exit handlers, numbered as for83b.mar's, so TestFor83PartBOnFTNRTL can hold
 C     them to VMS's run. A number this program doesn't have just prints itself.
       PROGRAM FOR83X
       INTEGER N, XBLK(4), XST
+      INTEGER*2 IW
       CHARACTER*8 PAR
       CHARACTER*6 INLIST
-      EXTERNAL ASTH, XHAND
+      EXTERNAL ASTH, XHAND, COUNTH
       COMMON /CASE/ NHOOK, NVIA, NXMODE
       CALL LIB$GET_FOREIGN(PAR)
       READ (PAR, '(BN,I8)') N
@@ -30,6 +32,22 @@ C     them to VMS's run. A number this program doesn't have just prints itself.
           CALL SAY(' =after')
           CALL SAY(' =back')
           CLOSE (12)
+      ELSE IF (N .GE. 47 .AND. N .LE. 54) THEN
+          OPEN (12, FILE='FOR83W.DAT', STATUS='NEW')
+          WRITE (12, '(A)') 'record'
+          IF (N .EQ. 47) CALL EXIT
+          IF (N .EQ. 48) CALL EXIT(3)
+          IF (N .EQ. 49) CALL EXIT(2)
+          IF (N .EQ. 50) CALL EXIT(0)
+          IF (N .EQ. 51) THEN
+C             The compiler refuses a null status: the routine's own answer.
+              CALL LIB$ESTABLISH(COUNTH)
+              CALL FTN$EXIT(%VAL(0))
+          END IF
+          IW = 3
+          IF (N .EQ. 53) IW = -1
+          IF (N .EQ. 52 .OR. N .EQ. 53) CALL EXIT(IW)
+          CALL FTN$EXIT_W
       ELSE IF (N .GE. 55 .AND. N .LE. 57) THEN
           OPEN (12, FILE='FOR83W.DAT', STATUS='NEW')
           WRITE (12, '(A)') 'record'
@@ -78,6 +96,21 @@ C     I/O in it, then the rest of the statement.
       CALL SHOW(' =m n=!UL depth=!UL', MECH(1), MECH(3))
       CALL HOOK
       HAND = SS$_CONTINUE
+      END
+
+C     Continues a condition that comes back, until the program stops itself.
+      INTEGER FUNCTION COUNTH(SIG, MECH)
+      INCLUDE '($SSDEF)'
+      INTEGER SIG(*), MECH(*)
+      DATA NCALLS /0/
+      CALL SHOW(' =c n=!UL cond=!XL', SIG(1), SIG(2))
+      CALL SHOW(' =m n=!UL depth=!UL', MECH(1), MECH(3))
+      NCALLS = NCALLS + 1
+      IF (NCALLS .GE. 12) THEN
+          CALL SAY(' =too many conditions; the program stops itself')
+          CALL SYS$EXIT(%VAL(3))
+      END IF
+      COUNTH = SS$_CONTINUE
       END
 
 C     The I/O: on the same unit, another, an internal file, unit 6, or a CLOSE.

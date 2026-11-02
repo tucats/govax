@@ -3,7 +3,7 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done 2026-11-01, and reviewed
 by the author the same day ("The author's answers"); subtask 2, the probe, the same day ("What the probe
 settled"); subtask 3, text libraries and INCLUDE, the same day; subtask 4, govax's definition modules, the same
-day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day; subtask 7, ASTs and exit handlers, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
+day; subtask 5, calling services and RTL routines, the same day; subtask 6, condition handlers, the same day; subtask 7, ASTs and exit handlers, the same day; subtask 8, the system subroutines, the same day. Needs Phase 81 (files) and Phase 82 (structures). Part
 of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md` (Decisions 11, 17, and 21).
 
 ## Goal
@@ -401,7 +401,7 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
 6. **Condition handlers in FORTRAN** (done 2026-11-01), by the probe's part B; what question 4 moves here.
 7. **ASTs and exit handlers in FORTRAN** (done 2026-11-01), by the probe's part B; programs for `testdata/fortran`, whose
    timing doesn't show in their output.
-8. **The appendix D system subroutines**, held to the probe's part A.
+8. **The appendix D system subroutines** (done 2026-11-01), held to the probe's part A.
 9. **STR$** (question 2) and `testdata/str83`, with the STR facility's messages.
 10. **End to end**, then **close-out** (MANUAL.md's "Calling VMS from FORTRAN", with AST reentrancy;
     FORTRAN-INTERNALS.md; HELP FORTRAN and HELP LIBRARY; CLAUDE.md).
@@ -555,3 +555,10 @@ differs in three ways only, each listed below as 1, 2, and 8 of what govax gets 
   no statement between, FTNRTL says RECIO_OPE and FORRTL doesn't. Nothing in the frame tells them apart, and how FORRTL does isn't to be looked into; DEVIATIONS.md has it. A statement in that routine itself, the likelier form, is fine.
   **FORRTL declares its exit handler at a unit's first use, unit 6's too** (case 9), as FTNRTL does: one declared after a PRINT runs before the units are closed. **Programs:** `testdata/fortran/asts.for` (`$DCLAST`, `$SETIMR`, `$CANTIM`, `$QIO`'s AST, `$HIBER`, `$WAKE`,
   `$SETAST`, I/O from an AST during a statement, AUTOMATIC and static variables in a routine an AST reenters), `astrace.for`, and `exits.for`, in both paging modes. Unconfirmed: `exits.for`'s handler calling `$EXIT`, after which the rest run with the new status, as govax does and the services manual doesn't settle.
+- **2026-11-01:** Subtask 8, the system subroutines. **FTNRTL** (`ftn_system.mar`, GSMATCH 1,16): `FTN$DATE`, `FTN$DATE_T_DS`, `FTN$TIME`, `FTN$TIME_T_DS`, `FTN$IDATE`, `FTN$JDATE`, `FTN$SECNDS`, `FTN$EXIT`, `FTN$EXIT_W`,
+  `FTN$IMVBITS`, `FTN$JMVBITS`, with FORRTL's split by argument type, as Decision 8 has it; RAN is `MTH$RANDOM`. **The compiler** (`sema/system.go`): a table of the subroutines, each analyzing its own CALL with ERRSNS beside them, and of the two functions, REAL\*4 whatever IMPLICIT
+  says. As ERRSNS's, a symbol in no unit's table stands for the routine, and a unit's own name or an `EXTERNAL` wins. NOTIMPL's `builtin` and `notImpl` are gone, no longer used. **Part A** (`TestFor83PartAOnFTNRTL`): `for83.mar` with each `FOR$` name's `FTN$`, every case, R0 too,
+  against VMS's run, with the date, time, and year masked and then checked against `$ASCTIM`'s line of the same run. It differs in two lines, both past a bad argument: the address `IMVBITS` with a position of 65535 faults at (DEVIATIONS.md), and the reason mask's write bit where `JMVBITS` is given 4 arguments.
+  **Part B's** cases 47 to 54 went into `for83x.for`, so `TestFor83PartBOnFTNRTL` now compares every case from 36 on. `testdata/fortran/sysroutines.for` and `sysown.for` are the end-to-end programs, in both paging modes, and DUNGEON's source files that use these routines (local only) compile with no message.
+  **Choices the probe can't settle**, there being no VAX FORTRAN, unconfirmed: the compiler refuses what a routine would fault on, a null, a missing argument, or a constant for a place, though it could leave those to run time; types are the LRM's, so `CALL EXIT(L)` of a LOGICAL and `RAN` of an INTEGER\*2 are errors (SYSARG); an `EXIT` status or a `SECNDS` argument may be any
+  expression; MVBITS's `m` and `n` must be of one length, which chooses the routine, and `i`, `len`, and `j` are converted to it, so `CALL MVBITS(W, I, 8, X, 0)` works with INTEGER\*2 W and X and INTEGER\*4 I, where the LRM's "all" allows that only for values in range. `RAN` of two arguments, the older form the 1988 LRM doesn't have, is SYSCOUNT. `INTEGER RAN` doesn't change what `RAN` returns, a REAL\*4 converted where it's used.

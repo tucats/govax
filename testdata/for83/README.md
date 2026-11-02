@@ -11,7 +11,7 @@ do becomes FTNRTL's and LIBRTL's requirement (only what they do is used, never t
 
 | File | What it holds |
 | ---- | ------------- |
-| `for83.mar` | Part A, 79 cases: `FOR$DATE`, `FOR$TIME` and their `_T_DS` forms, `FOR$IDATE`, `FOR$JDATE`, `FOR$SECNDS`, `FOR$IMVBITS`, `FOR$JMVBITS`, `MTH$RANDOM`, with short buffers, missing arguments, and bits out of range |
+| `for83.mar` | Part A, 79 cases: `FOR$DATE`, `FOR$TIME` and their `_T_DS` forms, `FOR$IDATE`, `FOR$JDATE`, `FOR$SECNDS`, `FOR$IMVBITS`, `FOR$JMVBITS`, `MTH$RANDOM`, with short buffers, missing arguments, and bits out of range. `TestFor83PartAOnFTNRTL` runs it with each `FOR$` name's `FTN$`, FTNRTL having the same routines (Phase 83's subtask 8) |
 | `for83b.mar` | Part B, 64 runs on FORRTL: nine errors under a handler that continues, unwinds, or calls LIB$SIG_TO_RET; a condition between a statement's items; I/O from a handler and from an AST during a statement, on the same unit, another, an internal file, unit 6, and a CLOSE; every way of ending an image with a unit open; exit handlers declared before and after an OPEN |
 | `for83c.mar` | Part C, 109 runs on LIBRTL: LIB$SIGNAL, LIB$STOP, LIB$ESTABLISH, LIB$REVERT, LIB$MATCH_COND, LIB$SIG_TO_RET, LIB$SIG_TO_STOP, LIB$FIXUP_FLT with a reserved operand in each place and format, LIB$INT_OVER, LIB$DEC_OVER, LIB$FLT_UNDER |
 | `for83e.mar` | Part E, 18 runs on FORRTL (Phase 83's subtask 6): what a handler can go on from, and what the statement then does with its items. It needs no VAX: `TestFor83ContinueOnFORRTL` runs it on FORRTL.EXE over govax, with `for83e.opt`, `for83f.dat`, `for83g.dat`, and `for83h.dat` |
@@ -23,11 +23,11 @@ do becomes FTNRTL's and LIBRTL's requirement (only what they do is used, never t
 | `for83r.com` | Runs a program's cases, one image each, then types and deletes what a case wrote |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
 
-Subtask 7's FTNRTL programs, written by hand, as there's no VAX FORTRAN to run them on VMS:
+Subtask 7's FTNRTL programs, and subtask 8's EXIT cases, written by hand, as there's no VAX FORTRAN to run them on VMS:
 
 | File | What it holds |
 | ---- | ------------- |
-| `for83x.for` | Part B's cases 36 to 46 and 55 to 64 as FORTRAN, by number, which `TestFor83PartBOnFTNRTL` holds to VMS's log |
+| `for83x.for` | Part B's cases 36 to 64 as FORTRAN, by number, which `TestFor83PartBOnFTNRTL` holds to VMS's log |
 | `for83y.for` | `for83g.mar` as FORTRAN, which `TestFor83GoneOnFTNRTL` holds to FORRTL's run |
 | `for83t.for`, `for83u.mar` | An AST at every instruction of a statement, the program tracing itself (`TestFor83ASTEverywhere`) |
 
