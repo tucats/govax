@@ -1,0 +1,32 @@
+COPY_DX     "HELLO   " T
+TRUNCATED   "HEL" T
+UPCASE      "ABC1D   " T
+CONCAT      "ABCDE   " T
+TRIM        "XY" T
+LEFT        "AB      " T
+RIGHT       "DE      " T
+POS_EXTR    "BCD     " T
+LEN_EXTR    "AB      " T
+REPLACE     "AxyzDE  " T
+DUPL_CHAR   "ZZZ     " T
+DUPL blanks "        " T
+ELEMENT     "CD      " T
+NO ELEMENT  "CD      " T
+TRANSLATE   "xyCDx   " T
+COMPARE       0
+COMPARE      -1
+EQL           1
+BLIND         0
+MULTI        -1
+MULTI blind   0
+POSITION      4
+IN SET        3
+NOT IN SET    0
+SUBSTRING     1  2  2
+WILD        T
+WILD        T
+ILLSTRCLA   T
+UNCHANGED   "xyCDx   " T
+%STR-W-TRU, truncation
+%STR-S-ILLSTRPOS, illegal string position
+  $STATUS == "%X00000001"

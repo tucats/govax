@@ -147,7 +147,8 @@ func TestStrUpcase(t *testing.T) {
 	env := fixture(t)
 	putDescriptor(t, env, 0x1000, 0x1100, "Hello, World!")
 
-	if r0 := call(t, env, "STR$UPCASE", 0x1000); r0 != 1 {
+	// STR$UPCASE(destination, source): here both the one string, in place.
+	if r0 := call(t, env, "STR$UPCASE", 0x1000, 0x1000); r0 != 1 {
 		t.Errorf("r0 = %d, want 1", r0)
 	}
 
