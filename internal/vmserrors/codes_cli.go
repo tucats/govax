@@ -213,6 +213,7 @@ const (
 	cliForSameFile
 	cliForContRange
 	cliForAlign
+	cliForShow
 
 	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
@@ -557,6 +558,9 @@ const (
 
 	// CLI_FORALIGN refuses a FORTRAN whose /ALIGN has a value that isn't one.
 	CLI_FORALIGN = CLIFacility<<FacilityPosition | cliForAlign<<MessagePosition | StatusError
+
+	// CLI_FORSHOW refuses a FORTRAN whose /SHOW has a keyword that isn't one.
+	CLI_FORSHOW = CLIFacility<<FacilityPosition | cliForShow<<MessagePosition | StatusError
 )
 
 func init() {
@@ -717,8 +721,9 @@ func init() {
 	DefineMessage(CLI_P1TOOSMALL, CLIFacility, "P1TOOSMALL", "P1 region too small to hold its permanent part and the user stack")
 	DefineMessage(CLI_FORERRORS, CLIFacility, "FORERRORS", "!D error(s) compiling !S; no MACRO file written")
 	DefineMessage(CLI_FORWARNINGS, CLIFacility, "FORWARNINGS", "!D warning(s) compiling !S")
-	DefineMessage(CLI_FORSAMEFILE, CLIFacility, "FORSAMEFILE", "the MACRO file !S would replace the FORTRAN source; name another with /MACRO=")
+	DefineMessage(CLI_FORSAMEFILE, CLIFacility, "FORSAMEFILE", "the output file !S would replace the FORTRAN source; name another with !S")
 	DefineMessage(CLI_FORCONTRANGE, CLIFacility, "FORCONTRANGE", "/CONTINUATIONS=!D is out of range; give 0 to !D")
 	DefineMessage(CLI_FORALIGN, CLIFacility, "FORALIGN", "!S")
+	DefineMessage(CLI_FORSHOW, CLIFacility, "FORSHOW", "!S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

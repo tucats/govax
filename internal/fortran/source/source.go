@@ -148,6 +148,11 @@ type Line struct {
 	// such a module includes. What such a line declares, a program may leave
 	// unused without cost (docs/PHASE-83 - FORTRAN and VMS.md, Decision 5).
 	Library bool
+
+	// Serial numbers the lines read, from 1, across every file. A file included
+	// twice has each line twice, and this tells them apart: a message's position
+	// has it, so a listing can put the message under the right one.
+	Serial int
 }
 
 // Statement is one statement: its label, its text, and where it came
@@ -245,6 +250,7 @@ func linePosition(line *Line, column int) diag.Position {
 		Line:   line.Number,
 		Column: column,
 		Text:   line.Text,
+		Serial: line.Serial,
 	}
 }
 

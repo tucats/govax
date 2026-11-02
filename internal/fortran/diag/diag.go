@@ -90,6 +90,10 @@ type Position struct {
 
 	// Text is the source line itself, quoted under the message.
 	Text string
+
+	// Serial is the line's source.Line.Serial, or 0 with no line: which reading of
+	// the line this is, since a file included twice has each line twice.
+	Serial int
 }
 
 // Message is one reported problem.
@@ -107,7 +111,7 @@ type Message struct {
 func (m Message) String() string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%%FORT-%s-%s, %s", m.Severity.Letter(), m.Ident, m.Text)
+	b.WriteString(m.Headline())
 
 	switch {
 	case m.Pos.Line > 0:
@@ -125,6 +129,12 @@ func (m Message) String() string {
 	}
 
 	return b.String()
+}
+
+// Headline is the message's first line, in VMS's form, which is all of it that a
+// listing shows, under the line it's about.
+func (m Message) Headline() string {
+	return fmt.Sprintf("%%FORT-%s-%s, %s", m.Severity.Letter(), m.Ident, m.Text)
 }
 
 // pointer is the line drawn under a quoted source line to point at a

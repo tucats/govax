@@ -20,7 +20,8 @@ import (
 // A directive may stand anywhere: before a unit, among its statements, inside
 // a structure declaration. Each is read where it stands in the declarations
 // walk, or by prologue before a unit. TITLE and SUBTITLE only have their
-// strings checked: the syntax tree keeps them, in place, for the listing.
+// strings checked: the syntax tree keeps them, in place, for the listing
+// (the compiler's listingHeadings).
 
 // maxDirectiveString is the longest string IDENT, TITLE, and SUBTITLE take
 // (sections 10.3.1 and 10.3.3).

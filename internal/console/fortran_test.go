@@ -507,3 +507,132 @@ func TestDispatch_fortranSource(t *testing.T) {
 		t.Errorf("output:\n%s", buf.String())
 	}
 }
+
+// TestFortran_list checks /LIST and /SHOW through the command: the listing's default
+// name and /LIST='s, on the host and a volume, written after errors too, and /SHOW's
+// mistakes and its message without /LIST.
+func TestFortran_list(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	dir := t.TempDir()
+
+	const included = "      PARAMETER (LIMIT = 1)\n"
+
+	writeHostFile(t, filepath.Join(dir, "limit.for"), included)
+	writeHostFile(t, filepath.Join(dir, "p.for"), "      PROGRAM P\n      INCLUDE 'limit.for'\n      I = LIMIT\n      END\n")
+	writeHostFile(t, filepath.Join(dir, "bad.for"), "      PROGRAM B\n      GO TO 30\n      END\n")
+
+	read := func(name string) string {
+		t.Helper()
+
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return string(data)
+	}
+
+	run := func(command string) {
+		t.Helper()
+		buf.Reset()
+
+		if err := d.Dispatch(command); err != nil {
+			t.Errorf("%s: %v", command, err)
+		}
+	}
+
+	host := `"` + filepath.Join(dir, "p.for") + `"`
+
+	run("FORTRAN " + host + "/LIST")
+
+	if buf.Len() != 0 {
+		t.Errorf("FORTRAN/LIST said %q", buf.String())
+	}
+
+	text := read("p.lis")
+	if !strings.HasPrefix(text, "\fP ") || !strings.Contains(text, "Storage map for P") || strings.Contains(text, "LIMIT = 1") {
+		t.Errorf("the default listing:\n%s", text)
+	}
+
+	run("FORTRAN " + host + `/LIST="` + filepath.Join(dir, "other.lst") + `"/SHOW=(INCLUDE,NOMAP)`)
+
+	text = read("other.lst")
+	if !strings.Contains(text, "  1 1        PARAMETER (LIMIT = 1)") || strings.Contains(text, "Storage map") {
+		t.Errorf("/SHOW=(INCLUDE,NOMAP):\n%s", text)
+	}
+
+	run("FORTRAN " + host + "/LIST/NOSHOW")
+
+	if text = read("p.lis"); strings.Contains(text, "Storage map") {
+		t.Errorf("/NOSHOW:\n%s", text)
+	}
+
+	run("FORTRAN " + host + "/SHOW=MAP")
+
+	if !strings.Contains(buf.String(), "%FORT-I-NOLISTING, /SHOW has no effect without /LIST") {
+		t.Errorf("/SHOW without /LIST said %q", buf.String())
+	}
+
+	// The listing of a failed compilation is written; its MACRO file isn't.
+	buf.Reset()
+
+	err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, "bad.for")), List: true})
+	if err == nil {
+		t.Error("errors should make the command fail")
+	}
+
+	if text = read("bad.lis"); !strings.Contains(text, "%FORT-E-") {
+		t.Errorf("the failed compilation's listing:\n%s", text)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "bad.mar")); err == nil {
+		t.Error("a failed compilation wrote a MACRO file")
+	}
+
+	// A keyword that isn't one stops the command before anything is compiled.
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, "p.for")), ShowGiven: true, Show: []string{"SINGLE"}}); err == nil ||
+		!strings.Contains(err.Error(), "FORSHOW") {
+		t.Errorf("/SHOW=SINGLE: %v", err)
+	}
+
+	// A source named as its own listing isn't replaced.
+	writeHostFile(t, filepath.Join(dir, "same.lis"), "      END\n")
+
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: dclcmd.FortranSources(filepath.Join(dir, "same.lis")), List: true}); err == nil ||
+		!strings.Contains(err.Error(), "/LIST=") {
+		t.Errorf("a source as its own listing: %v", err)
+	}
+
+	if read("same.lis") != "      END\n" {
+		t.Error("the source was replaced")
+	}
+}
+
+// TestFortran_listVolume writes the listing beside a source on a volume, and to the
+// name /LIST= gives, which takes the type LIS as the MACRO file's takes MAR.
+func TestFortran_listVolume(t *testing.T) {
+	c, _ := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	s := c.ContainerSession
+	if _, err := s.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]SQUARES.FOR"}, rms.TextRecords, splitSource(fortranSource)); err != nil {
+		t.Fatal(err)
+	}
+
+	sources := dclcmd.FortranSources("DUA0:[000000]SQUARES")
+
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: sources, List: true}); err != nil {
+		t.Fatalf("Fortran: %v", err)
+	}
+
+	if err := c.cmd().Fortran(dclcmd.FortranOptions{Sources: sources, List: true, ListFile: "DUA0:[000000]OTHER"}); err != nil {
+		t.Fatalf("Fortran/LIST=: %v", err)
+	}
+
+	for _, name := range []string{"SQUARES.LIS;1", "OTHER.LIS;1"} {
+		text := strings.Join(readMACRO(t, c, rms.FileLocation{Name: "DUA0:[000000]" + name}), "\n")
+		if !strings.Contains(text, "DUA0:[000000]SQUARES.FOR;1") || !strings.Contains(text, "    1        PROGRAM SQUARES") {
+			t.Errorf("%s:\n%s", name, text)
+		}
+	}
+}

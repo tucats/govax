@@ -40,6 +40,9 @@ type reader struct {
 
 	// stopped is set by a fatal error: nothing more is read.
 	stopped bool
+
+	// serial is the last Line.Serial given.
+	serial int
 }
 
 // readFile reads one file's lines, at include depth depth, adding them
@@ -52,7 +55,8 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 
 	for i, text := range file.Lines {
 		splits[i] = r.form.split(text)
-		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library}
+		r.serial++
+		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library, Serial: r.serial}
 	}
 
 	for i := 0; i < n && !r.stopped; {

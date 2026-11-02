@@ -4,10 +4,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/diag"
 	"github.com/tucats/govax/internal/fortran/ir"
 	"github.com/tucats/govax/internal/fortran/lex"
+	"github.com/tucats/govax/internal/fortran/listing"
 	"github.com/tucats/govax/internal/fortran/opt"
 	"github.com/tucats/govax/internal/fortran/parse"
 	"github.com/tucats/govax/internal/fortran/sema"
@@ -43,6 +45,11 @@ type Options struct {
 	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
 	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
+
+	// List is /LIST: make a listing (Result.Listing), and Show is what /SHOW says it
+	// holds (listing.DefaultShow with no /SHOW).
+	List bool
+	Show listing.Show
 
 	// Includes reads the files and modules INCLUDE statements name; nil
 	// means a program can include nothing.
@@ -88,6 +95,11 @@ type Result struct {
 	// message), since then there is no file to write.
 	MACRO []string
 
+	// Listing is the listing's lines, each page's first starting with a form feed:
+	// made with Options.List, whether or not the compilation failed, when it's
+	// wanted most.
+	Listing []string
+
 	// Messages are the messages reported, in order.
 	Messages []diag.Message
 
@@ -106,11 +118,14 @@ func Compile(opts Options, file File) Result {
 // CompileAll compiles source files joined into one compilation (FORTRAN A+B):
 // their statements are one sequence, so a program unit may even run on from
 // one file into the next. The first file names what a file's name names.
-func CompileAll(opts Options, files []File) Result {
+func CompileAll(opts Options, files []File) (result Result) {
 	var (
 		messages diag.List
 		routines []*ir.Routine
 		ident    string
+		tree     *ast.File
+		prog     *sema.Program
+		maps     []codegen.StorageMap
 	)
 
 	file := files[0]
@@ -134,8 +149,8 @@ func CompileAll(opts Options, files []File) Result {
 	// compilation reports as much as it can. Then, for a program with no
 	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
-		tree := parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		prog := sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align}, &messages)
+		tree = parse.Parse(lex.Lex(program.Statements, &messages), &messages)
+		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align}, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)
@@ -147,11 +162,18 @@ func CompileAll(opts Options, files []File) Result {
 		}
 	}
 
-	result := Result{
+	result = Result{
 		Messages: messages.Messages(),
 		Errors:   messages.Count(diag.Error) + messages.Count(diag.Fatal),
 		Warnings: messages.Count(diag.Warning),
 	}
+
+	// A listing is the last thing made, with what the passes that ran have left.
+	defer func() {
+		if opts.List {
+			result.Listing = listing.Make(listingInput(opts, file, program, result.Messages, tree, prog, maps))
+		}
+	}()
 
 	if messages.Failed() {
 		return result
@@ -173,7 +195,7 @@ func CompileAll(opts Options, files []File) Result {
 		generating.Improve = opt.Improve
 	}
 
-	codegen.Generate(&w, routines, program.Lines, generating)
+	maps = codegen.Generate(&w, routines, program.Lines, generating)
 	result.MACRO = w.Lines()
 
 	return result

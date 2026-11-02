@@ -4115,6 +4115,8 @@ $FOR
                 [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
                 [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
                 [/ALIGN[=<value>] | /NOALIGN] [/[NO]OPTIMIZE]
+                [/LIST[=<file>] | /NOLIST]
+                [/SHOW[=(<keyword>,...)] | /NOSHOW]
 
     Parameter:
 
@@ -4193,6 +4195,21 @@ $FOR
                         run are named in the MACRO file's header.  The
                         default is /OPTIMIZE.
 
+        /LIST[=<file>]  Writes a listing: the source's lines with their
+        /NOLIST         numbers, each message under its line, and each
+                        unit's storage map.  By default it is the source's
+                        name with the type LIS, beside the source, and it is
+                        written after errors too.  The default is /NOLIST.
+                        CDEC$ TITLE and SUBTITLE set the heading of the page
+                        after the one they are on; with no TITLE, a page's
+                        title is its unit's name.
+
+        /SHOW[=(<keyword>,...)]  What a listing holds: ALL, NONE, [NO]INCLUDE
+        /NOSHOW         (every INCLUDE file's lines, whatever INCLUDE's own
+                        /LIST says), and [NO]MAP.  /SHOW alone is ALL and
+                        /NOSHOW NONE; with no /SHOW, a listing has the maps,
+                        and only the INCLUDE files that say /LIST.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
@@ -4209,7 +4226,8 @@ $FOR
     From the host shell, "govax fortran <source>..." runs this command,
     with --macro <file> or --no-macro, --extend-source, --d-lines,
     --continuations <n>, --no-i4, --g-floating, --align <value>,
-    --no-align, --optimize, and --no-optimize.
+    --no-align, --optimize, --no-optimize, --list, --list-file <file>, and
+    --show <keywords>.
 
     Examples:
 

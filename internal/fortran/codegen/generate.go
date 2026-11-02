@@ -104,10 +104,12 @@ type Options struct {
 // instructions they became), the source's last lines, and .END, naming
 // the main program's entry as the image's transfer address if the file
 // has a main program. lines are the source's lines, as the source pass
-// read them.
-func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Options) {
+// read them. It returns the routines' storage maps, which the file has as
+// comments, for the listing.
+func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Options) []StorageMap {
 	src := &sourceLines{lines: lines}
 	names := &namer{}
+	maps := make([]StorageMap, 0, len(routines))
 
 	writeDefinitions(w, routines)
 	writeCommons(w, routines, names)
@@ -120,7 +122,10 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 		g.localAlign = localAlign
 		g.improve = opts.Improve
 		g.generate()
-		g.write(w)
+
+		storage := StorageMap{Routine: r.Name, Lines: g.storageMap()}
+		maps = append(maps, storage)
+		g.write(w, storage)
 
 		if r.Kind == ir.Main {
 			main = r.Name
@@ -130,6 +135,8 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 	src.rest(w)
 	w.Blank()
 	w.Statement("", ".END", main, "")
+
+	return maps
 }
 
 // The descriptor codes the file may use, with what each means, in the
@@ -374,11 +381,16 @@ func (g *routineGen) writeFrameNames(w *Writer) {
 // write writes the routine: its storage map, the definitions of its
 // dummy arguments' offsets and its names in common blocks, its $LOCAL
 // storage, its $PDATA data, and its code.
-func (g *routineGen) write(w *Writer) {
+func (g *routineGen) write(w *Writer, storage StorageMap) {
 	r := g.r
 
 	w.Blank()
-	g.writeMap(w)
+
+	for _, line := range storage.Lines {
+		w.Comment(line)
+	}
+
+	w.Comment("")
 
 	for _, p := range r.Params {
 		if p.Through == nil {
@@ -543,10 +555,19 @@ func (g *routineGen) what() string {
 	return "the main program"
 }
 
-// writeMap writes the routine's storage map: where each of its
-// variables, arrays, and dummy arguments is, and its symbol in the
-// MACRO file; then the numbered forms of names too long for MACRO.
-func (g *routineGen) writeMap(w *Writer) {
+// StorageMap is a routine's storage map: where each of its variables, arrays, and
+// dummy arguments is, and its symbol in the MACRO file. Lines are its lines of text,
+// the first its heading, which the MACRO file has as comments and a listing as they
+// are, so the two say the same.
+type StorageMap struct {
+	Routine string
+	Lines   []string
+}
+
+// storageMap makes the routine's storage map's lines: its variables; what any
+// other register holds; then the numbered forms of names too long for MACRO, and
+// the layouts of its structures.
+func (g *routineGen) storageMap() []string {
 	type row struct{ name, typ, where, symbol string }
 
 	var rows []row
@@ -589,10 +610,10 @@ func (g *routineGen) writeMap(w *Writer) {
 		}
 	}
 
-	w.Comment("Storage map for " + g.r.Name + ", " + g.what())
+	lines := []string{"Storage map for " + g.r.Name + ", " + g.what()}
 
 	if len(rows) == 0 {
-		w.Comment("  (no variables)")
+		lines = append(lines, "  (no variables)")
 	}
 
 	widths := [3]int{4, 4, 5}
@@ -604,30 +625,30 @@ func (g *routineGen) writeMap(w *Writer) {
 	}
 
 	for _, r := range rows {
-		w.Comment(fmt.Sprintf("  %-*s  %-*s  %-*s  %s", widths[0], r.name, widths[1], r.typ, widths[2], r.where, r.symbol))
+		lines = append(lines, fmt.Sprintf("  %-*s  %-*s  %-*s  %s", widths[0], r.name, widths[1], r.typ, widths[2], r.where, r.symbol))
 	}
 
 	for _, c := range g.r.Cells {
 		if c.Register != 0 && c.Sym == nil {
-			w.Comment("  " + register(c.Register) + " is " + g.registerNote(c))
+			lines = append(lines, "  "+register(c.Register)+" is "+g.registerNote(c))
 		}
 	}
 
 	for _, name := range g.names.long {
-		w.Comment("  " + g.names.symbol(name) + " is " + g.r.Name + "." + name)
+		lines = append(lines, "  "+g.names.symbol(name)+" is "+g.r.Name+"."+name)
 	}
 
-	writeStructures(w, g.r.Unit.Structures)
-
-	w.Comment("")
+	return append(lines, structureLines(g.r.Unit.Structures)...)
 }
 
-// writeStructures writes the layout of each of a unit's structures in its
-// storage map: each field's offset in the structure, name, and type, and
-// for a field in a union which map holds it.
-func writeStructures(w *Writer, list []*sema.Structure) {
+// structureLines is the layout of each of a unit's structures in its storage map:
+// each field's offset in the structure, name, and type, and for a field in a union
+// which map holds it.
+func structureLines(list []*sema.Structure) []string {
+	var lines []string
+
 	for _, s := range list {
-		w.Comment(fmt.Sprintf("  Structure %s, %d bytes", s.Display(), s.Size))
+		lines = append(lines, fmt.Sprintf("  Structure %s, %d bytes", s.Display(), s.Size))
 
 		width := 4
 		for _, f := range s.Fields {
@@ -640,9 +661,11 @@ func writeStructures(w *Writer, list []*sema.Structure) {
 				text += fmt.Sprintf(", map %d of the union at +%d", f.Map, f.Union.Offset)
 			}
 
-			w.Comment(text)
+			lines = append(lines, text)
 		}
 	}
+
+	return lines
 }
 
 // typeText is a variable's type, with an array's bounds: INTEGER,

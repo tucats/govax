@@ -68,6 +68,9 @@ type fortranFlags struct {
 	noAlign      bool   // --no-align
 	optimize     bool   // --optimize
 	noOptimize   bool   // --no-optimize
+	list         bool   // --list, or --list-file
+	listFile     string // --list-file: the listing's name
+	show         string // --show: /SHOW's keywords
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -366,6 +369,37 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.noAlign = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "list",
+		Description: "Write a listing, the source's name with the type LIS",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.list = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "list-file",
+		Description: "Write a listing to this file",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.list = true
+			fortran.listFile, _ = c.String("list-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "show",
+		Description: "What a listing holds: all, none, [no]include, [no]map, separated by commas",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.show, _ = c.String("show")
 
 			return nil
 		},
@@ -884,6 +918,17 @@ func fortranCommand(sources []string, f fortranFlags) string {
 		command += "/NOOPTIMIZE"
 	case f.optimize:
 		command += "/OPTIMIZE"
+	}
+
+	switch {
+	case f.listFile != "":
+		command += "/LIST=" + dclQuote(f.listFile)
+	case f.list:
+		command += "/LIST"
+	}
+
+	if f.show != "" {
+		command += "/SHOW=(" + f.show + ")"
 	}
 
 	if f.continuationsGiven {

@@ -258,6 +258,8 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{continuationsGiven: true}, `FORTRAN "sq"/CONTINUATIONS=0`},
 		{[]string{"sq"}, fortranFlags{align: "records=natural,commons=packed"}, `FORTRAN "sq"/ALIGN=(records=natural,commons=packed)`},
 		{[]string{"sq"}, fortranFlags{noAlign: true, align: "ignored"}, `FORTRAN "sq"/NOALIGN`},
+		{[]string{"sq"}, fortranFlags{list: true}, `FORTRAN "sq"/LIST`},
+		{[]string{"sq"}, fortranFlags{list: true, listFile: "out/sq.lis", show: "all,nomap"}, `FORTRAN "sq"/LIST="out/sq.lis"/SHOW=(all,nomap)`},
 	}
 
 	for _, c := range cases {

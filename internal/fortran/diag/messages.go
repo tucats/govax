@@ -18,6 +18,10 @@ var messages = map[string]kind{
 	// the feature silently missing (Decision 1).
 	"NOTIMPL": {Error, "%s is not implemented yet"},
 
+	// NOLISTING is a qualifier that only says what a listing holds, on a command
+	// that doesn't ask for one.
+	"NOLISTING": {Informational, "%s has no effect without /LIST"},
+
 	// The source form's messages (internal/fortran/source).
 
 	// NOINITIAL is a continuation line with no statement before it to

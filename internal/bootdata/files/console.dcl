@@ -792,7 +792,9 @@ grammar console
     ! structures and common blocks are laid out (docs/PHASE-82): no value
     ! is ALL, a value is ALL, NONE, a rule, or class=rule, and a list of
     ! them is in parentheses. OPTIMIZE is /[NO]OPTIMIZE: run the optimizer's
-    ! passes (docs/PHASE-84), which the command does unless told not to. Elements joined by + are one compilation
+    ! passes (docs/PHASE-84), which the command does unless told not to. LIST is
+    ! /[NO]LIST[=file], a listing (docs/PHASE-85; empty default: the source's name
+    ! with type LIS), and SHOW is /[NO]SHOW[=(keyword,...)], what it holds. Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -821,6 +823,12 @@ grammar console
                     /type=$any/list             -
                     /default=""
         qualifier   optimize/id=1381
+        qualifier   list/id=1382                -
+                    /type=$string               -
+                    /default=""
+        qualifier   show/id=1383                -
+                    /type=$any/list             -
+                    /default=""
         qualifier   continuations/id=1376       -
                     /type=$integer
 

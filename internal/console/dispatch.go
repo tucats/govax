@@ -656,6 +656,11 @@ func (d *Dispatcher) bindGrammar() {
 			Align:        nonEmpty(r.List("ALIGN")),
 			AlignGiven:   r.Present("ALIGN") && !r.Negated("ALIGN") && !r.Defaulted("ALIGN"),
 			Optimize:     !r.Negated("OPTIMIZE"),
+			List:         r.Present("LIST") && !r.Negated("LIST") && !r.Defaulted("LIST"),
+			ListFile:     r.String("LIST"),
+			Show:         nonEmpty(r.List("SHOW")),
+			ShowGiven:    r.Present("SHOW") && !r.Negated("SHOW") && !r.Defaulted("SHOW"),
+			NoShow:       r.Negated("SHOW"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),

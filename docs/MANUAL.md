@@ -1294,6 +1294,7 @@ These commands are described fully in their own sections:
 FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
     /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN  /[NO]OPTIMIZE
+    /LIST[=file] | /NOLIST  /SHOW[=(keyword,...)] | /NOSHOW
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -1319,7 +1320,7 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `INCLUDE 'file'` reads a file (type `.FOR` by default)
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -4963,7 +4964,45 @@ The command's syntax and qualifiers are in
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, and `--show keywords` are `/LIST`, `/LIST=file`, and `/SHOW=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
+
+**The listing.** `/LIST` writes a listing, by default the source's name with the
+type `.LIS`, beside the source; `/LIST=file` names another. It is written after
+errors too, without maps, since that's when it's wanted. Its layout is govax's own,
+in MACRO's manner: 132 columns and 66 lines to a page, with a two-line heading. Each
+line of the source has its number, one from an `INCLUDE` file its include depth before
+that, and a message about a line comes under it, with a caret under the column. Each
+program unit starts a page. After the whole source come the units' storage maps, in
+the same words as the MACRO file's.
+
+```text
+SQUARES                                  2-NOV-2026 14:42:20  govax FORTRAN V1.0-115        Page 1
+                                         DUA0:[WORK]SQUARES.FOR;1
+
+    1        PROGRAM SQUARES
+    2        INTEGER I, N
+    3        INCLUDE 'LIMITS.FOR/LIST'
+  1 1        PARAMETER (MAX = 10)
+    4        DO 20 I = 1, MAX
+    5        GO TO 30
+                   ^
+%FORT-E-UNDEFLBL, statement label 30 is never defined
+    6  20    N = I * I
+    7        END
+```
+
+`/SHOW` says what a listing holds: `ALL`, `NONE`, `[NO]INCLUDE`, and `[NO]MAP`, cut
+short if you like, `/SHOW` alone being `ALL` and `/NOSHOW` `NONE`. With no `/SHOW` a
+listing has the maps, and the lines of only those `INCLUDE` files whose string says
+`/LIST` (section 1.4.2 of the manual); `/SHOW=INCLUDE` has every included line. A line
+with a message about it shows whatever was asked for. `/SHOW` without `/LIST` is only
+the message `%FORT-I-NOLISTING`.
+
+`CDEC$ TITLE 'string'` and `CDEC$ SUBTITLE 'string'` set the heading's first field and
+its second line's, by the manual's section 10.3.3: a directive takes effect on the page
+*after* the one it's on, the last of each kind on a page winning, and one without a
+string changes nothing. So a directive on a program's first line doesn't head page 1. With no
+`TITLE` a page's title is its program unit's name.
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX

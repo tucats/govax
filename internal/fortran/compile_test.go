@@ -483,3 +483,153 @@ func TestLibraryNamesCostNothing(t *testing.T) {
 		t.Errorf("the map has a module's unused variable:\n%s", text)
 	}
 }
+
+// listingOf compiles the lines with a listing, and returns it as one string too.
+func listingOf(t *testing.T, opts Options, lines ...string) (Result, string) {
+	t.Helper()
+
+	opts.List = true
+
+	r := Compile(opts, File{Spec: "DUA0:[WORK]P.FOR;1", Name: "P", Lines: lines})
+	if len(r.Listing) < 3 {
+		t.Fatalf("listing %q", r.Listing)
+	}
+
+	return r, strings.Join(r.Listing, "\n")
+}
+
+// TestListingMapIsTheMACROFiles: the storage map's words are the same in both, and
+// each unit's is there, after the whole source.
+func TestListingMapIsTheMACROFiles(t *testing.T) {
+	opts := testOptions
+	opts.Show.Map = true
+
+	r, text := listingOf(t, opts,
+		"      PROGRAM P",
+		"      INTEGER I",
+		"      I = 1",
+		"      CALL S(I)",
+		"      END",
+		"      SUBROUTINE S(K)",
+		"      K = 2",
+		"      END")
+
+	macro := strings.Join(r.MACRO, "\n")
+
+	for _, want := range []string{"Storage map for P, the main program", "Storage map for S, a subroutine"} {
+		if !strings.Contains(text, "\n"+want+"\n") || !strings.Contains(macro, "; "+want+"\n") {
+			t.Errorf("%s isn't in both:\n%s", want, text)
+		}
+	}
+
+	for _, line := range r.Listing {
+		if strings.HasPrefix(line, "  ") && strings.Contains(line, "$LOCAL+") && !strings.Contains(macro, "; "+line+"\n") {
+			t.Errorf("the MACRO file doesn't have %q", line)
+		}
+	}
+
+	if strings.Count(text, "\f") != 2 || !strings.HasPrefix(text, "\fP ") || !strings.Contains(text, "\fS ") {
+		t.Errorf("each unit should start a page with its name:\n%s", text)
+	}
+}
+
+// TestListingWithErrors: a listing has the messages under their lines and no map,
+// and the compilation still has no MACRO file.
+func TestListingWithErrors(t *testing.T) {
+	opts := testOptions
+	opts.Show.Map = true
+
+	r, text := listingOf(t, opts, "      PROGRAM P", "      GO TO 30", "      END")
+
+	if r.Errors == 0 || r.MACRO != nil {
+		t.Fatalf("errors %d, MACRO %v", r.Errors, r.MACRO)
+	}
+
+	if !strings.Contains(text, "    2        GO TO 30\n") || !strings.Contains(text, "%FORT-E-") || strings.Contains(text, "Storage map") {
+		t.Errorf("listing:\n%s", text)
+	}
+}
+
+// memoryIncludes reads INCLUDE files from a map, a new File at each reading.
+type memoryIncludes map[string][]string
+
+func (m memoryIncludes) OpenInclude(name string, _ *source.File) (*source.File, error) {
+	lines, ok := m[name]
+	if !ok {
+		return nil, errors.New("no such file")
+	}
+
+	return &source.File{Spec: name, Lines: lines}, nil
+}
+
+func (m memoryIncludes) OpenModule(_, module string, _ *source.File) (*source.File, error) {
+	return nil, errors.New("no module " + module)
+}
+
+// TestListingIncludeTwice: a message is under the reading of an included line it's
+// about, here the second unit's, which shows though nobody asked for its lines.
+func TestListingIncludeTwice(t *testing.T) {
+	opts := testOptions
+	opts.Includes = memoryIncludes{"L": {"      GO TO 30"}}
+
+	_, text := listingOf(t, opts,
+		"      PROGRAM P",
+		"30    CONTINUE",
+		"      INCLUDE 'L'",
+		"      END",
+		"      SUBROUTINE S",
+		"      INCLUDE 'L'",
+		"      END")
+
+	if got := strings.Count(text, "  1 1        GO TO 30"); got != 1 {
+		t.Fatalf("the included line shows %d times:\n%s", got, text)
+	}
+
+	if strings.Index(text, "\fS ") > strings.Index(text, "GO TO 30") {
+		t.Errorf("the message belongs under the second reading:\n%s", text)
+	}
+}
+
+// TestListingAfterFatal: a compilation the source pass stopped has a listing, of the
+// lines read, with the file's name for its title.
+func TestListingAfterFatal(t *testing.T) {
+	opts := testOptions
+
+	r, text := listingOf(t, opts, "      PROGRAM P", "      INCLUDE 'GONE'", "      END")
+
+	if r.Errors == 0 || !strings.HasPrefix(text, "\fP ") || !strings.Contains(text, "%FORT-F-INCLOPEN") {
+		t.Errorf("listing:\n%s", text)
+	}
+}
+
+// TestListingTitle: directives in a structure and between units reach the heading,
+// on the next page.
+func TestListingTitle(t *testing.T) {
+	opts := testOptions
+
+	_, text := listingOf(t, opts,
+		"      PROGRAM P",
+		"      STRUCTURE /S/",
+		"CDEC$ TITLE 'IN A STRUCTURE'",
+		"      INTEGER F",
+		"      END STRUCTURE",
+		"      END",
+		"CDEC$ SUBTITLE 'BEFORE A UNIT'",
+		"      SUBROUTINE Q",
+		"CDEC$ TITLE",
+		"      END")
+
+	if !strings.HasPrefix(text, "\fP ") {
+		t.Errorf("the first page's title should be the unit's:\n%s", text)
+	}
+
+	second := text[strings.LastIndex(text, "\f"):]
+	if !strings.HasPrefix(second, "\fIN A STRUCTURE ") {
+		t.Errorf("the second page's title:\n%s", second)
+	}
+
+	// The SUBTITLE is on the second page, so it heads a third, if there is one.
+	if strings.Contains(second[:strings.Index(second, "\n\n")], "BEFORE A UNIT") {
+		t.Errorf("the SUBTITLE took effect on its own page:\n%s", second)
+	}
+}

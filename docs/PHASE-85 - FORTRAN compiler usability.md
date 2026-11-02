@@ -60,7 +60,7 @@ The list as the survey proposed it and the author's review settled it:
 1. **Survey** (done 2026-11-02): Part A below.
 2. **The debugger reads dotted names** (done 2026-11-02), with a VMS probe of the
    rule, run by the author on the simh VAX (Part A, "What the probe settled").
-3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE.**
+3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE** (done 2026-11-02).
 4. **`/CROSS_REFERENCE`.**
 5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
 6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
@@ -426,3 +426,21 @@ For subtask 10, and changing what the survey assumed:
   `TestDottedNamesOnCompiledProgram`, on a program compiled, assembled, and linked by govax; and
   `TestDebuggerSessionOracle` replays DBG85M's and DBG85's sessions, all the name cases matching, with
   what remains listed for subtask 10 (mostly SHOW SYMBOL's form, EXAMINE/SOURCE, and D3).
+- **2026-11-02:** Subtask 3, by Decisions 11 and 12. **`internal/fortran/listing`** (`Make`, from an
+  `Input`) is the pager and the layout as the review accepted it, its number column as wide as the
+  longest number shown (so one digit, as drawn, for a short program), tabs expanded to the source's stops,
+  and control characters made blanks. `Result.Listing` is made even when the source pass stops the
+  compilation (the title then the file's name, `listinginput.go`). **The map:** `codegen.Generate`
+  returns each routine's `StorageMap`, its lines of text, which the MACRO file has as comments, so the words
+  are the same. **Messages:** a message goes under the line it's about, even an included line nobody
+  asked for; since a file included twice has each line twice, `source.Line.Serial` numbers the readings
+  and `diag.Position` carries it. One about no line comes after the source, whole. **`/SHOW`**
+  (`Show.With`): the survey's keywords, cut short while unambiguous; `/SHOW=INCLUDE` overrides an INCLUDE's
+  `/NOLIST`. **The command:** `/LIST[=file]`, `/SHOW`, `--list`, `--list-file`, `--show`; `writeCompilerFile`
+  is `writeMACRO` for either file, and FORSAMEFILE names the qualifier to use. Ours, each unconfirmed, the
+  VAX FORTRAN User Manual not being to hand: each unit and each file of a `+` list starts a page, so a page has one
+  unit's name; a unit starts past the last unit's last statement, so its opening comments are with it; a page that
+  starts during the maps has that map's unit's name; `/SHOW` without `/LIST` is `%FORT-I-NOLISTING`, as
+  Decision 13 has for `/CROSS_REFERENCE`; a source line past 132 columns isn't cut. By 10.3.3's words a TITLE on
+  page 1 heads page 2, even on the program's first line, so a one-page program never shows it.
+  Tests: `listing_test.go`, `TestListing*` in `compile_test.go`, `TestFortran_list`, `TestFortran_listVolume`.

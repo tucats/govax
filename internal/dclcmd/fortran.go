@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/fortran"
+	"github.com/tucats/govax/internal/fortran/diag"
+	"github.com/tucats/govax/internal/fortran/listing"
 	"github.com/tucats/govax/internal/fortran/sema"
 	"github.com/tucats/govax/internal/fortran/source"
 	"github.com/tucats/govax/internal/fortran/sysdef"
@@ -24,13 +26,15 @@ import (
 //	FORTRAN source[+source...][+library/LIBRARY][,...][/HOST] [/MACRO[=file] | /NOMACRO]
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
 //	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN] [/[NO]OPTIMIZE]
+//	        [/LIST[=file] | /NOLIST] [/SHOW[=(keyword,...)] | /NOSHOW]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
 // with its source and object, the source and the MACRO file can each be
 // a host file or a file on a mounted volume (rms.Session.Locate's rules),
 // a source named without a type is .FOR, and the MACRO file is by default
-// the source's name with the type MAR, beside the source.
+// the source's name with the type MAR, beside the source. /LIST writes a
+// listing the same way, of type LIS, even after errors (docs/PHASE-85).
 //
 // The compiler prints its own messages. A compilation with errors writes
 // no MACRO file (so a failed compilation never replaces a good one) and
@@ -92,6 +96,17 @@ type FortranOptions struct {
 
 	// Optimize is /OPTIMIZE (fortran.Options): the console sets it unless given /NOOPTIMIZE.
 	Optimize bool
+
+	// List is /LIST, and ListFile the listing's name from /LIST=: "" means the
+	// source's name with the type LIS.
+	List     bool
+	ListFile string
+
+	// Show is /SHOW's keywords if ShowGiven says it was given (none for /SHOW
+	// alone), and NoShow is /NOSHOW.
+	Show      []string
+	ShowGiven bool
+	NoShow    bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -174,6 +189,24 @@ func (opts FortranOptions) alignment() (sema.Alignment, error) {
 	return al, nil
 }
 
+// listingShow is what the listing holds, or an error if /SHOW has a keyword that
+// isn't one.
+func (opts FortranOptions) listingShow() (listing.Show, error) {
+	switch {
+	case opts.NoShow:
+		return listing.Show{}, nil
+	case !opts.ShowGiven:
+		return listing.DefaultShow(), nil
+	}
+
+	show, err := listing.DefaultShow().With(opts.Show)
+	if err != nil {
+		return show, vmserrors.New(vmserrors.CLI_FORSHOW, err.Error())
+	}
+
+	return show, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
 // text library's. fortLibraryName and forSysDefFile name the libraries
@@ -195,6 +228,16 @@ func (c *Context) Fortran(opts FortranOptions) error {
 
 	if _, err := opts.alignment(); err != nil {
 		return err
+	}
+
+	if _, err := opts.listingShow(); err != nil {
+		return err
+	}
+
+	if (opts.ShowGiven || opts.NoShow) && !opts.List {
+		var messages diag.List
+
+		c.Printf("%s\n", messages.Report("NOLISTING", diag.Position{}, "/SHOW"))
 	}
 
 	groups := fortranCompilations(opts.Sources)
@@ -286,6 +329,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 
 	continuations, _ := opts.Continuations.limit() // checked by Fortran
 	align, _ := opts.alignment()                   // checked by Fortran
+	show, _ := opts.listingShow()                  // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:  opts.ExtendSource,
@@ -294,6 +338,8 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		GFloating:     opts.GFloating,
 		Align:         align,
 		Optimize:      opts.Optimize,
+		List:          opts.List,
+		Show:          show,
 		Continuations: continuations,
 		Includes:      includes,
 		Version:       BuildVersion,
@@ -305,14 +351,26 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		c.Printf("%s\n", m)
 	}
 
+	// A listing is written first, since it is written after errors too. A failure
+	// to write it is reported only if the compilation had none of its own.
+	var listingErr error
+
+	if opts.List {
+		listingErr = c.writeCompilerFile(result.Listing, opts.ListFile, found, "LIS", "/LIST=")
+	}
+
 	if result.Errors > 0 {
 		return vmserrors.New(vmserrors.CLI_FORERRORS, result.Errors, found.Name)
 	}
 
 	if !opts.NoMacro {
-		if err := c.writeMACRO(result.MACRO, opts.Macro, found); err != nil {
+		if err := c.writeCompilerFile(result.MACRO, opts.Macro, found, "MAR", "/MACRO="); err != nil {
 			return err
 		}
+	}
+
+	if listingErr != nil {
+		return listingErr
 	}
 
 	if c.SetStatus != nil {
@@ -564,21 +622,22 @@ func recordLines(records [][]byte) []string {
 	return lines
 }
 
-// writeMACRO writes the MACRO file lines for the source found, named
-// name (or by default the source's name with the type MAR).
-func (c *Context) writeMACRO(lines []string, name string, found rms.FileLocation) error {
+// writeCompilerFile writes a file the compiler made, of the lines given, for the
+// source found: one named name, or by default the source's name with the type typ.
+// qualifier is what names another, for the message if it's needed.
+func (c *Context) writeCompilerFile(lines []string, name string, found rms.FileLocation, typ, qualifier string) error {
 	s := c.ContainerSession
 
-	macLoc, err := outputLocation(s, name, found, "MAR")
+	macLoc, err := outputLocation(s, name, found, typ)
 	if err != nil {
 		return FileFailure(err, name)
 	}
 
-	// A host source that is already a .MAR file would be its own default
-	// MACRO file: refuse rather than overwrite the source. (On a volume
-	// the MACRO file is a new version, and the source survives.)
+	// A host source that is already a .MAR or .LIS file would be its own
+	// default output file: refuse rather than overwrite the source. (On a
+	// volume the output is a new version, and the source survives.)
 	if macLoc.Host && found.Host && samePath(macLoc.Name, found.Name) {
-		return vmserrors.New(vmserrors.CLI_FORSAMEFILE, macLoc.Name)
+		return vmserrors.New(vmserrors.CLI_FORSAMEFILE, macLoc.Name, qualifier)
 	}
 
 	records := make([][]byte, len(lines))

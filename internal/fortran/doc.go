@@ -29,6 +29,9 @@
 //   - opt: improves the IR, optionally;
 //   - codegen: chooses VAX instructions and writes the MACRO file.
 //
+// listing isn't a pass: it lays out what /LIST asks for from what the passes that
+// ran have left (docs/PHASE-85 - FORTRAN compiler usability.md).
+//
 // diag holds every pass's error and warning messages, and ast the syntax
 // tree's node types, which parse builds and sema reads.
 //

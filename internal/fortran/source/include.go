@@ -13,8 +13,8 @@ import (
 // a text library (Phase 83). The included lines take the INCLUDE
 // statement's place, and may themselves include others.
 //
-// /NOLIST, the default, keeps the included lines out of the MACRO file (and
-// Phase 85's listing). A file's own /LIST can't bring back lines in a file
+// /NOLIST, the default, keeps the included lines out of the MACRO file and the
+// listing (unless the listing's /SHOW=INCLUDE asks for them). A file's own /LIST can't bring back lines in a file
 // that wasn't listed: Line.Listed needs every INCLUDE above it to say /LIST.
 //
 // Since FORTRAN ignores blanks, "IN CLUDE 'X'" is an INCLUDE statement
