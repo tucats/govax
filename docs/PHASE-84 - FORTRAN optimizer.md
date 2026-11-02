@@ -394,8 +394,11 @@ The survey's decisions drew no objection, and stand.
    `/OPTIMIZE`.
 9. **Register allocation** (done 2026-11-02): register cells, liveness, write-backs by Decision
    6, dummy addresses loaded once, the loop instructions on registers.
-10. **Induction variables and strength reduction,** where a stride isn't the
-   element's size, and autoincrement.
+10. **Loop forms: induction variables, strength reduction, rotation, and DO's
+   count** (extended 2026-11-02, the author's choice): strength reduction where a
+   stride isn't the element's size, and autoincrement; a loop that tests at its top
+   rotated so that its test is at the bottom; and a DO's count dropped for
+   `AOBLEQ` on its limit, where that's safe.
 11. **FTNRTL's loops** (the author's answer 3): its character loops tuned by
     hand, as DUNGEON's startup and the corpus measure them, held to the
     existing oracles. No new entry points, so no change to its GSMATCH.
@@ -808,3 +811,4 @@ The survey's decisions drew no objection, and stand.
   - **Choices the manual doesn't settle (ours, unconfirmed).** A handler reading COMMON after a fault in a loop with no call sees what the loop last wrote back, by Decision 9. A routine unwound from a call in a loop leaves its locals as they were when the loop began, where `/NOOPTIMIZE` leaves them current; VOLATILE is the way to ask otherwise. This wasn't tested with an unwind.
   - **New program:** `optreg.for`, worked by hand, whose values all matched on the first run both ways; only the `$STATUS` line was missing from its expected file. Ways out of a loop, a local kept past a RETURN in a loop, registers across a routine that uses them all, COMMON with and without a call, EQUIVALENCE, the four kinds of dummy, a format expression, more variables than registers, every width, an unsigned character, computed GO TO and arithmetic IF as exits, ENTRY, an adjustable array, a CHARACTER dummy, `LIB$FIXUP_FLT` changing a register, and a reserved operand copied without a fault.
   - **Testing:** `registers_test.go` has a case per rule, and `TestPassesOnCorpus` holds a second run of the allocator to no change, the other passes being held to that among themselves, since they recognize places by forms it changes. `TestBoundsHold` holds on the new operands. Each of eight rules was then broken on purpose (no write-back, floating copies, taken locals and COMMON across calls, dummies not surely reached, overlaps ignored, no interference, cells live on entry), and each failed a test. Real MACRO hasn't assembled this output (Phase 86's optional round).
+- **2026-11-02:** The author's answer to subtask 9's question: rotating a loop and dropping a DO's count for its limit go in subtask 10, with induction variables.
