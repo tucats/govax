@@ -61,7 +61,7 @@ The list as the survey proposed it and the author's review settled it:
 2. **The debugger reads dotted names** (done 2026-11-02), with a VMS probe of the
    rule, run by the author on the simh VAX (Part A, "What the probe settled").
 3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE** (done 2026-11-02).
-4. **`/CROSS_REFERENCE`.**
+4. **`/CROSS_REFERENCE`** (done 2026-11-02).
 5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
 6. **OPTIONS's `/EXTEND_SOURCE`,** which reaches back into the first pass.
 7. **`/WARNINGS`,** with `UNUSED` a keyword of its own, off by default (answer 3).
@@ -444,3 +444,23 @@ For subtask 10, and changing what the survey assumed:
   Decision 13 has for `/CROSS_REFERENCE`; a source line past 132 columns isn't cut. By 10.3.3's words a TITLE on
   page 1 heads page 2, even on the program's first line, so a one-page program never shows it.
   Tests: `listing_test.go`, `TestListing*` in `compile_test.go`, `TestFortran_list`, `TestFortran_listVolume`.
+- **2026-11-02:** Subtask 4, by Decision 13 and the review's answer 6. **`sema/crossref.go`:** `lookup` notes a use,
+  `declare` (lookup for a specification statement's name) a definition, and `noteAssigned` an assignment, in the callers
+  of `place` and `target`, since `ioUnit` uses `place` for reads too; `noteOther` is what has no `Symbol` (common blocks,
+  namelists, structures, intrinsics, system routines), and `noteLabel` labels. Every mention is recorded and
+  `Unit.CrossReference` settles them when asked: source order, one per place at its strongest kind, then one per line and
+  kind. **`listing`:** `Input.CrossRefs`, `crossLines`, and `units`, which merges maps and cross references by unit, since either
+  may be missing (no maps after errors or with `/SHOW=NOMAP`). **The command:** `/[NO]CROSS_REFERENCE`, `--cross-reference`,
+  `%FORT-I-NOLISTING` without `/LIST`. **A change to subtask 3's `Line.Serial`:** lines are now numbered as they join the
+  program (`reader.add`), not as their file is read, so an included line's serial falls between those of the lines around
+  its INCLUDE; it still tells two readings apart, and is now the source's order. `FieldRef.NamePos` is where the record's
+  name is, its `Pos` being the last field's. Ours, each unconfirmed, no manual to hand giving VAX FORTRAN's: `DATA` counts as
+  A, every specification statement (SAVE and EQUIVALENCE too) as D, and NAMELIST's items and an adjustable array's bound names
+  as used; rows grouped as the drawing has them (variables, constants, routines, others, labels), alphabetically within a
+  group; `/SHOW` doesn't touch a cross reference; shown after errors, for the units analysis reached, with none if the source pass
+  stopped the compilation. **Left out:** a statement function's dummies and a DATA implied-DO's variable (in no table of the
+  unit), the unit's own name, a record's fields, and a text library's names the program doesn't use. **Known limits:** an
+  included line's number is shown plain, as the accepted drawing's `MAX constant 1D 4` has it, so it can't be told
+  from the main file's line 1 (raised with the author at hand-over); `REAL SQRT` and a reference to it show as a REAL
+  variable's row. Tests: `TestCrossReference*` in `listing_test.go` and `compile_test.go`, `TestNoCrossReference`, `TestFortran_list`,
+  `TestFortranCommand`.

@@ -360,6 +360,8 @@ func (a *analyzer) fileAnswer(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool) 
 		a.checkLoopVariable(x.Sym, x.Pos)
 	}
 
+	a.noteAssigned(v)
+
 	return &FileKey{Code: k.code, Name: spec.Keyword, Answer: v}, true
 }
 
@@ -501,6 +503,8 @@ func (a *analyzer) associatedVariable(e ast.Expr) Expr {
 
 		return nil
 	}
+
+	a.noteAssigned(v)
 
 	return v
 }

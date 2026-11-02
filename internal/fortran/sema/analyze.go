@@ -408,6 +408,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.statements(body)
 	a.checkNamelists()
 	a.checkLabels()
+	a.noteLabels()
 	a.untyped()
 	a.passedLengths()
 	a.layout()
@@ -425,7 +426,7 @@ func (a *analyzer) header(au *ast.Unit) {
 
 	switch h := au.Header.(type) {
 	case *ast.FunctionStmt:
-		s := a.lookup(h.Name, h.Pos)
+		s := a.declare(h.Name, h.Pos)
 		s.Class = Variable
 		s.Result = true
 		u.Result = s
@@ -441,7 +442,7 @@ func (a *analyzer) header(au *ast.Unit) {
 		a.params(h.Params, &u.AltPlaces)
 
 	case *ast.SubroutineStmt:
-		s := a.lookup(h.Name, h.Pos)
+		s := a.declare(h.Name, h.Pos)
 		s.Class = UnitName
 
 		a.params(h.Params, &u.AltPlaces)
@@ -464,7 +465,7 @@ func (a *analyzer) params(params []*ast.Name, places *[]int) {
 			continue
 		}
 
-		s := a.lookup(p.Name, p.Pos)
+		s := a.declare(p.Name, p.Pos)
 
 		switch {
 		case s.Class == UnitName || s.Result:
@@ -493,6 +494,8 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 			a.usedBeforeEntry(s, pos)
 		}
 
+		a.note(&s.refs, pos, RefUsed)
+
 		return s
 	}
 
@@ -500,6 +503,7 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary}
 	a.unit.byName[name] = s
 	a.unit.Symbols = append(a.unit.Symbols, s)
+	a.note(&s.refs, pos, RefUsed)
 
 	return s
 }

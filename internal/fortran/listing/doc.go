@@ -26,11 +26,21 @@
 //	  I  INTEGER  $LOCAL+0  SQUARES.I
 //	  N  INTEGER  $LOCAL+4  SQUARES.N
 //
+// With /CROSS_REFERENCE each unit's map is followed by where its names and labels
+// are mentioned, a line number each, with D if the line defines the name and A if it
+// assigns it:
+//
+//	Cross reference for SQUARES                 (D defined, A assigned, a blank is used)
+//	  I     INTEGER   2D  4A  5
+//	  N     INTEGER   2D  5A
+//	  MAX   constant  1D  4
+//	  20    label     4   6D
+//
 // The layout is govax's own, in MACRO's manner. VAX FORTRAN's is in a manual not
 // to hand, and no program depends on a listing's columns.
 //
 // This package knows nothing of how those things were found: Make is given the
-// source pass's lines, every pass's messages, and the code generator's maps as
-// text, and is the same whether or not the compilation succeeded. A compilation
-// with errors has no maps, but its listing is the one most wanted.
+// source pass's lines, every pass's messages, and the code generator's maps and
+// semantic analysis's cross references as text, and is the same whether or not the compilation succeeded. A compilation
+// with errors has no maps, and a cross reference only as far as analysis reached, but its listing is the one most wanted.
 package listing

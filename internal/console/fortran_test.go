@@ -573,6 +573,26 @@ func TestFortran_list(t *testing.T) {
 		t.Errorf("/SHOW without /LIST said %q", buf.String())
 	}
 
+	buf.Reset()
+
+	run("FORTRAN " + host + "/CROSS_REFERENCE")
+
+	if !strings.Contains(buf.String(), "%FORT-I-NOLISTING, /CROSS_REFERENCE has no effect without /LIST") {
+		t.Errorf("/CROSS_REFERENCE without /LIST said %q", buf.String())
+	}
+
+	run("FORTRAN " + host + "/LIST/CROSS_REFERENCE")
+
+	if text = read("p.lis"); !strings.Contains(text, "Cross reference for ") {
+		t.Errorf("/CROSS_REFERENCE:\n%s", text)
+	}
+
+	run("FORTRAN " + host + "/LIST/CROSS_REFERENCE/NOCROSS_REFERENCE")
+
+	if text = read("p.lis"); strings.Contains(text, "Cross reference for ") {
+		t.Errorf("/NOCROSS_REFERENCE:\n%s", text)
+	}
+
 	// The listing of a failed compilation is written; its MACRO file isn't.
 	buf.Reset()
 

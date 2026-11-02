@@ -1295,6 +1295,7 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
     /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN  /[NO]OPTIMIZE
     /LIST[=file] | /NOLIST  /SHOW[=(keyword,...)] | /NOSHOW
+    /[NO]CROSS_REFERENCE
 ```
 
 Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
@@ -4964,7 +4965,7 @@ The command's syntax and qualifiers are in
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, or `/NOG_FLOATING` for that unit alone. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, and `--show keywords` are `/LIST`, `/LIST=file`, and `/SHOW=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, and `--cross-reference` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, and `/CROSS_REFERENCE`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -4997,6 +4998,28 @@ listing has the maps, and the lines of only those `INCLUDE` files whose string s
 `/LIST` (section 1.4.2 of the manual); `/SHOW=INCLUDE` has every included line. A line
 with a message about it shows whatever was asked for. `/SHOW` without `/LIST` is only
 the message `%FORT-I-NOLISTING`.
+
+`/CROSS_REFERENCE` follows each unit's map with where its names and labels are
+mentioned. Each mention is a line number, with `D` if the line says what the name is
+(any specification statement, or a label on the line) and `A` if it gives the name a
+value (an assignment, `DATA`, a `DO` variable, an input item, `ASSIGN`); a line that
+only uses the name has neither. A line that does both, as `N = N + 1` does, shows both.
+It is written after errors too, for the names the analysis reached.
+
+```text
+Cross reference for SQUARES                 (D defined, A assigned, a blank is used)
+  I     INTEGER   2D  4A  5
+  N     INTEGER   2D  5A
+  MAX   constant  1D  4
+  20    label     4   6D
+```
+
+Rows go variables, constants, routines, then common blocks, namelists, and structures,
+alphabetically within each, then labels by number. A number from an `INCLUDE` file is
+that file's own line, and the mentions are in the order the source
+has them. A name from a text library's module has a row only if the program uses it.
+A statement function's dummy argument, a program unit's own name, and a record's field
+have none. `/CROSS_REFERENCE` without `/LIST` is only `%FORT-I-NOLISTING`.
 
 `CDEC$ TITLE 'string'` and `CDEC$ SUBTITLE 'string'` set the heading's first field and
 its second line's, by the manual's section 10.3.3: a directive takes effect on the page

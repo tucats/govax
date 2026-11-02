@@ -27,6 +27,7 @@ import (
 //	        [/[NO]EXTEND_SOURCE] [/[NO]D_LINES] [/CONTINUATIONS=n] [/[NO]I4]
 //	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN] [/[NO]OPTIMIZE]
 //	        [/LIST[=file] | /NOLIST] [/SHOW[=(keyword,...)] | /NOSHOW]
+//	        [/[NO]CROSS_REFERENCE]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -107,6 +108,9 @@ type FortranOptions struct {
 	Show      []string
 	ShowGiven bool
 	NoShow    bool
+
+	// CrossReference is /CROSS_REFERENCE (fortran.Options).
+	CrossReference bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -240,6 +244,12 @@ func (c *Context) Fortran(opts FortranOptions) error {
 		c.Printf("%s\n", messages.Report("NOLISTING", diag.Position{}, "/SHOW"))
 	}
 
+	if opts.CrossReference && !opts.List {
+		var messages diag.List
+
+		c.Printf("%s\n", messages.Report("NOLISTING", diag.Position{}, "/CROSS_REFERENCE"))
+	}
+
 	groups := fortranCompilations(opts.Sources)
 	if len(groups) == 1 {
 		return c.compileFortran(groups[0], opts)
@@ -332,19 +342,20 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	show, _ := opts.listingShow()                  // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
-		ExtendSource:  opts.ExtendSource,
-		DLines:        opts.DLines,
-		NoI4:          opts.NoI4,
-		GFloating:     opts.GFloating,
-		Align:         align,
-		Optimize:      opts.Optimize,
-		List:          opts.List,
-		Show:          show,
-		Continuations: continuations,
-		Includes:      includes,
-		Version:       BuildVersion,
-		Compiled:      time.Now(),
-		CommandLine:   opts.CommandLine,
+		ExtendSource:   opts.ExtendSource,
+		DLines:         opts.DLines,
+		NoI4:           opts.NoI4,
+		GFloating:      opts.GFloating,
+		Align:          align,
+		Optimize:       opts.Optimize,
+		List:           opts.List,
+		Show:           show,
+		CrossReference: opts.CrossReference,
+		Continuations:  continuations,
+		Includes:       includes,
+		Version:        BuildVersion,
+		Compiled:       time.Now(),
+		CommandLine:    opts.CommandLine,
 	}, files)
 
 	for _, m := range result.Messages {

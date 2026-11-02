@@ -222,6 +222,7 @@ func (a *analyzer) namelistStatement(s *ast.NamelistStmt) {
 		}
 
 		n := &Namelist{Name: g.Name, Pos: g.Pos}
+		a.noteOther(whatNamelist, g.Name, g.Pos, RefDefined)
 
 		for _, item := range g.Items {
 			n.Items = append(n.Items, a.lookup(item.Name, item.Pos))
@@ -331,6 +332,10 @@ func (a *analyzer) transferStatement(s *ast.TransferStmt, path []frame) Stmt {
 
 	if s.Namelist != nil {
 		io.Form, io.Group = NamelistForm, a.unit.namelists[s.Namelist.Name]
+
+		if io.Group != nil {
+			a.noteOther(whatNamelist, s.Namelist.Name, s.Namelist.Pos, RefUsed)
+		}
 
 		if io.Group == nil {
 			a.report("NOTNAMELIST", s.Namelist.Pos, s.Namelist.Name)
@@ -585,6 +590,10 @@ func (a *analyzer) codeStatement(s *ast.CodeStmt, path []frame) Stmt {
 		buffer = nil
 	}
 
+	if !io.Read {
+		a.noteAssigned(buffer)
+	}
+
 	switch b := buffer.(type) {
 	case nil:
 		a.report("BADBUFFER", s.Buffer.Position(), what)
@@ -630,6 +639,10 @@ func (a *analyzer) ioUnit(io *IO, u *ast.UnitSpec) bool {
 		}
 
 		io.Unit, io.Internal = t, true
+
+		if !io.Read {
+			a.noteAssigned(t)
+		}
 
 		return true
 	}
@@ -721,6 +734,7 @@ func (a *analyzer) ioFormat(io *IO, f *ast.FormatSpec) bool {
 
 	if n := a.namelistNamed(f); n != nil {
 		io.Form, io.Group = NamelistForm, n
+		a.noteOther(whatNamelist, n.Name, f.Expr.Position(), RefUsed)
 
 		return true
 	}
@@ -814,6 +828,8 @@ func (a *analyzer) ioSpecs(io *IO, specs []*ast.IOSpec, path []frame) bool {
 				if v, isVar := t.(*Var); isVar {
 					a.checkLoopVariable(v.Sym, v.Pos)
 				}
+
+				a.noteAssigned(t)
 
 				io.IOStat = t
 			}
@@ -929,6 +945,8 @@ func (a *analyzer) inputItem(e ast.Expr) Expr {
 	case *Var:
 		a.checkLoopVariable(t.Sym, t.Pos)
 	}
+
+	a.noteAssigned(t)
 
 	return t
 }

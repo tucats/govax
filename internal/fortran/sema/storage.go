@@ -43,7 +43,7 @@ func (a *analyzer) storageStatements() {
 // A name in one of these is a variable from here on, as a name in a SAVE
 // statement is.
 func (a *analyzer) storageName(st *ast.AttrStmt, item *ast.AttrItem) {
-	s := a.lookup(item.Name, item.Pos)
+	s := a.declare(item.Name, item.Pos)
 	statement := st.Kind.String()
 	automatic := st.Kind == lex.Automatic
 
@@ -140,7 +140,7 @@ func (a *analyzer) volatileName(item *ast.AttrItem) {
 		return
 	}
 
-	s := a.lookup(item.Name, item.Pos)
+	s := a.declare(item.Name, item.Pos)
 
 	switch {
 	case s.broken:
@@ -177,6 +177,8 @@ func (a *analyzer) volatileBlock(item *ast.AttrItem) {
 
 		return
 	}
+
+	a.noteOther(whatCommon, item.Name, item.Pos, RefDefined)
 
 	for _, b := range a.unit.Commons {
 		if b.Name != item.Name {

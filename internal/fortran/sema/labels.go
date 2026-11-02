@@ -61,6 +61,7 @@ func (a *analyzer) defineLabel(label int, s ast.Stmt, path []frame) {
 	}
 
 	a.unit.Labels[label] = &Label{Number: label, Stmt: s, path: path}
+	a.noteLabel(label, s.Base().Source.LabelPosition(), RefDefined)
 }
 
 // checkLabels checks every jump in the unit against the label it goes

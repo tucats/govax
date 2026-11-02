@@ -44,6 +44,7 @@ func (a *analyzer) assignLabel(s *ast.AssignLabelStmt) Stmt {
 	}
 
 	a.checkLoopVariable(v, s.Var.Pos)
+	a.note(&v.refs, s.Var.Pos, RefAssigned)
 
 	if !slices.Contains(a.unit.Assigned, s.Target.Label) {
 		a.unit.Assigned = append(a.unit.Assigned, s.Target.Label)

@@ -4117,6 +4117,7 @@ $FOR
                 [/ALIGN[=<value>] | /NOALIGN] [/[NO]OPTIMIZE]
                 [/LIST[=<file>] | /NOLIST]
                 [/SHOW[=(<keyword>,...)] | /NOSHOW]
+                [/[NO]CROSS_REFERENCE]
 
     Parameter:
 
@@ -4209,6 +4210,13 @@ $FOR
                         /LIST says), and [NO]MAP.  /SHOW alone is ALL and
                         /NOSHOW NONE; with no /SHOW, a listing has the maps,
                         and only the INCLUDE files that say /LIST.
+
+        /CROSS_REFERENCE  A listing follows each unit's map with where its
+        /NOCROSS_REFERENCE  names and labels are mentioned: a line number each,
+                        with D if the line defines the name and A if it
+                        assigns it.  It is there after errors too.  Without
+                        /LIST it does nothing but say so.  The default is
+                        /NOCROSS_REFERENCE.
 
     The compiler reports each problem it finds with the line it is on:
 

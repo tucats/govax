@@ -35,7 +35,7 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 
 		case *ast.DimensionStmt:
 			for _, d := range s.Entities {
-				a.dimension(a.lookup(d.Name, d.Pos), d)
+				a.dimension(a.declare(d.Name, d.Pos), d)
 			}
 
 		case *ast.CommonStmt:
@@ -101,7 +101,7 @@ func (a *analyzer) statementFunction(s *ast.AssignStmt) bool {
 		}
 	}
 
-	sym := a.lookup(ap.Name, ap.Pos)
+	sym := a.declare(ap.Name, ap.Pos)
 
 	switch {
 	case sym.Class == StmtFunction:
@@ -145,7 +145,7 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 	)
 
 	for _, d := range s.Entities {
-		sym := a.lookup(d.Name, d.Pos)
+		sym := a.declare(d.Name, d.Pos)
 
 		t, ok := stmtType, stmtOK
 

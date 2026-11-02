@@ -76,7 +76,7 @@ func (a *analyzer) entries(body []ast.Stmt) {
 // point: nil if the name isn't free, which is reported (DUPUNIT, by
 // unitNames, if it is the name of a unit or of an earlier entry point).
 func (a *analyzer) entryName(s *ast.EntryStmt) *Entry {
-	sym := a.lookup(s.Name, s.Pos)
+	sym := a.declare(s.Name, s.Pos)
 
 	switch {
 	case sym.Dummy != 0:
@@ -117,7 +117,7 @@ func (a *analyzer) entryParams(e *Entry) {
 			continue
 		}
 
-		s := a.lookup(p.Name, p.Pos)
+		s := a.declare(p.Name, p.Pos)
 
 		switch {
 		case s.Class == UnitName || s.Result:

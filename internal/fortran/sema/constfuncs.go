@@ -70,6 +70,8 @@ func (ev *evaluator) apply(e *ast.Apply) (*Const, *constErr) {
 		return nil, named(e.Name+" is a function, not a constant", e.Pos)
 	}
 
+	ev.a.noteIntrinsic(e.Name, e.Pos)
+
 	if n := len(e.Args); n < fn.min || fn.max >= 0 && n > fn.max {
 		return nil, ev.report("INTRINARGS", e.Pos, e.Name, fn.takes, n)
 	}

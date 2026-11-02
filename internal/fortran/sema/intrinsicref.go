@@ -17,6 +17,8 @@ import (
 
 // intrinsicRef analyzes a reference to the intrinsic function e.Name.
 func (a *analyzer) intrinsicRef(e *ast.Apply) Expr {
+	a.noteIntrinsic(e.Name, e.Pos)
+
 	forms := formsNamed(e.Name)
 
 	if hasNull(e.Args) {

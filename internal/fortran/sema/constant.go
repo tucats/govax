@@ -177,6 +177,10 @@ func (ev *evaluator) eval(e ast.Expr) (*Const, *constErr) {
 
 		s := ev.a.unit.byName[e.Name]
 
+		if s != nil {
+			ev.a.note(&s.refs, e.Pos, RefUsed)
+		}
+
 		switch {
 		case s == nil || s.Class != Constant:
 			return nil, named(e.Name+" is not a constant", e.Pos)

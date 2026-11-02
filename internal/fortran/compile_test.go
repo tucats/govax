@@ -633,3 +633,147 @@ func TestListingTitle(t *testing.T) {
 		t.Errorf("the SUBTITLE took effect on its own page:\n%s", second)
 	}
 }
+
+// crossReferenceOf compiles the lines with a cross reference, and returns the rows
+// of each unit's, with their blanks squeezed, one string per line.
+func crossReferenceOf(t *testing.T, opts Options, lines ...string) []string {
+	t.Helper()
+
+	opts.CrossReference = true
+
+	r, _ := listingOf(t, opts, lines...)
+
+	var rows []string
+
+	in := false
+
+	for _, line := range r.Listing {
+		switch {
+		case strings.HasPrefix(line, "Cross reference for "):
+			in = true
+
+			rows = append(rows, strings.Fields(line)[3]+":")
+		case !strings.HasPrefix(line, "  "):
+			in = false
+		case in:
+			rows = append(rows, strings.Join(strings.Fields(line), " "))
+		}
+	}
+
+	return rows
+}
+
+func compareRows(t *testing.T, got []string, want ...string) {
+	t.Helper()
+
+	if !slices.Equal(got, want) {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestCrossReferenceSquares is the program the author's drawing shows: an included
+// line comes in the source's order, between the lines around its INCLUDE.
+func TestCrossReferenceSquares(t *testing.T) {
+	opts := testOptions
+	opts.Includes = memoryIncludes{"L": {"      PARAMETER (MAX = 10)"}}
+
+	compareRows(t, crossReferenceOf(t, opts,
+		"      PROGRAM SQUARES",
+		"      INTEGER I, N",
+		"      INCLUDE 'L'",
+		"      DO 20 I = 1, MAX",
+		"      N = I * I",
+		"20    CONTINUE",
+		"      END"),
+		"SQUARES:",
+		"I INTEGER 2D 4A 5",
+		"N INTEGER 2D 5A",
+		"MAX constant 1D 4",
+		"20 label 4 6D")
+}
+
+// TestCrossReferenceKinds has each way of mentioning a name, and each kind of row in
+// the order they come. A DATA statement assigns; a line that does two things to a name
+// has it twice, and a statement function's dummy argument isn't a row.
+func TestCrossReferenceKinds(t *testing.T) {
+	compareRows(t, crossReferenceOf(t, testOptions,
+		"      PROGRAM T",
+		"      STRUCTURE /POINT/",
+		"        INTEGER X",
+		"      END STRUCTURE",
+		"      RECORD /POINT/ P",
+		"      COMMON /BLK/ A",
+		"      REAL A, V(5)",
+		"      CHARACTER*8 TEXT",
+		"      INTEGER K, L, IS",
+		"      NAMELIST /NL/ K",
+		"      DATA K /1/",
+		"      F(Q) = Q + K",
+		"      ASSIGN 30 TO L",
+		"      P.X = 3",
+		"      K = K + P.X",
+		"      TEXT(1:2) = 'AB'",
+		"      V(K) = SQRT(A) + F(A)",
+		"      READ (5, 100, IOSTAT=IS) A",
+		"100   FORMAT (F5.1)",
+		"      CALL SUB(K, *30)",
+		"      WRITE (6, NL)",
+		"30    PRINT *, V, TEXT, IS",
+		"      END"),
+		"T:",
+		"A REAL 6D 7D 17 18A",
+		"IS INTEGER 9D 18A 22",
+		"K INTEGER 9D 10 11A 12 15A 15 17 20",
+		"L INTEGER 9D 13A",
+		"P /POINT/ 5D 14A 15",
+		"TEXT CHARACTER*8 8D 16A 22",
+		"V REAL array 7D 17A 22",
+		"F REAL statement function 12D 17",
+		"SQRT intrinsic 17",
+		"SUB subroutine 20",
+		"/BLK/ common block 6D",
+		"/POINT/ structure 2D 5",
+		"NL namelist 10D 21",
+		"30 label 13 20 22D",
+		"100 label 18 19D")
+}
+
+// TestCrossReferenceLibrary: of the names a text library's module declares, a row
+// only for those the program uses, with only the program's lines.
+func TestCrossReferenceLibrary(t *testing.T) {
+	opts := testOptions
+	opts.Includes = moduleIncludes{"NAMES": {"      INTEGER*4 USEDVAR,IDLEVAR"}}
+
+	compareRows(t, crossReferenceOf(t, opts,
+		"      PROGRAM T",
+		"      INCLUDE '(NAMES)'",
+		"      USEDVAR = 1",
+		"      END"),
+		"T:",
+		"USEDVAR INTEGER 3A")
+}
+
+// TestCrossReferenceAfterErrors: errors leave the cross reference there, each unit's
+// names as far as the analysis found them, with no maps.
+func TestCrossReferenceAfterErrors(t *testing.T) {
+	compareRows(t, crossReferenceOf(t, testOptions,
+		"      PROGRAM T",
+		"      I = 1",
+		"      GO TO 30",
+		"      END",
+		"      SUBROUTINE S",
+		"      J = 2",
+		"      END"),
+		"T:",
+		"I INTEGER 2A",
+		"30 label 3",
+		"S:",
+		"J INTEGER 6A")
+}
+
+// TestNoCrossReference: without /CROSS_REFERENCE a listing has none.
+func TestNoCrossReference(t *testing.T) {
+	if _, text := listingOf(t, testOptions, "      I = 1", "      END"); strings.Contains(text, "Cross reference") {
+		t.Errorf("a listing with a cross reference:\n%s", text)
+	}
+}

@@ -51,6 +51,10 @@ type Options struct {
 	List bool
 	Show listing.Show
 
+	// CrossReference is /CROSS_REFERENCE: a listing ends each unit with where its names
+	// and labels are defined, assigned, and used.
+	CrossReference bool
+
 	// Includes reads the files and modules INCLUDE statements name; nil
 	// means a program can include nothing.
 	Includes source.Opener
@@ -233,7 +237,7 @@ func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident st
 // identOperand is .IDENT's operand for ident: the string between delimiters it
 // doesn't hold, which MACRO lets be any printing character but <, ;, and =. It
 // holds at most 31 characters, so one is always free. MACRO's ident can't be
-// empty, so a file with none, or with CDEC$ IDENT '', has 01 (ours, unconfirmed).
+// empty, so a file with none, or with CDEC$ IDENT ”, has 01 (ours, unconfirmed).
 func identOperand(ident string) string {
 	if ident == "" {
 		ident = "01"

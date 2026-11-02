@@ -21,7 +21,7 @@ import (
 // (section 2.2.1.4: an assignment's other operand), or INTEGER*4 in the
 // old form.
 func (a *analyzer) parameter(s *ast.ParameterStmt, d *ast.ParamDef) {
-	sym := a.lookup(d.Name.Name, d.Name.Pos)
+	sym := a.declare(d.Name.Name, d.Name.Pos)
 	ev := a.declEval()
 
 	// keep is whether the name becomes this constant: not if it is one

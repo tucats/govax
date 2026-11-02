@@ -461,6 +461,10 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 	d := &Do{stmtBase: stmtBase{s}, Label: s.Target.Label}
 	d.Var = a.doVariable(s.Var)
 
+	if d.Label != 0 {
+		a.noteLabel(d.Label, s.Target.Pos, RefUsed)
+	}
+
 	t := IntegerType
 	if d.Var != nil {
 		t = d.Var.Type
@@ -624,6 +628,7 @@ func (a *analyzer) doVariable(n *ast.Name) *Symbol {
 	}
 
 	a.checkLoopVariable(v.Sym, n.Pos)
+	a.noteAssigned(v)
 
 	return v.Sym
 }

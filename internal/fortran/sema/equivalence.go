@@ -154,7 +154,7 @@ func (a *analyzer) equivalenceItem(e ast.Expr) (equivItem, bool) {
 
 // equivalenceName is the symbol of a name in a list, if it may be in one.
 func (a *analyzer) equivalenceName(name string, pos diag.Position) (*Symbol, bool) {
-	s := a.lookup(name, pos)
+	s := a.declare(name, pos)
 
 	switch {
 	case s.broken:

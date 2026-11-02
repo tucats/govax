@@ -220,3 +220,98 @@ func TestShowKeywords(t *testing.T) {
 		}
 	}
 }
+
+// TestCrossReference is the layout the author accepted, after the map and with the
+// source above it.
+func TestCrossReference(t *testing.T) {
+	in := testInput(lines(&source.File{Spec: "DUA0:[WORK]P.FOR;1"}, 0, 1, "      END"))
+	in.Units = []Unit{{0, "SQUARES"}}
+	in.Maps = []Map{{"SQUARES", []string{"Storage map for SQUARES, the main program"}}}
+	in.CrossRefs = []CrossRef{{"SQUARES", []CrossRow{
+		{"I", "INTEGER", []string{"2D", "4A", "5"}},
+		{"MAX", "constant", []string{"1D", "4"}},
+		{"20", "label", []string{"4", "6D"}},
+	}}}
+
+	compare(t, Make(in)[3:], []string{
+		"    1        END",
+		"",
+		"",
+		"Storage map for SQUARES, the main program",
+		"",
+		"Cross reference for SQUARES                 (D defined, A assigned, a blank is used)",
+		"  I     INTEGER   2D  4A  5",
+		"  MAX   constant  1D  4",
+		"  20    label     4   6D",
+	})
+}
+
+// TestCrossReferenceUnits: a unit's map comes before its cross reference, /SHOW=NOMAP
+// leaves only the cross references, and a unit without a map (with errors, all of
+// them; a unit no map names) keeps its place among those with one.
+func TestCrossReferenceUnits(t *testing.T) {
+	in := testInput(nil)
+	in.Maps = []Map{{"A", []string{"map A"}}, {"C", []string{"map C"}}}
+	in.CrossRefs = []CrossRef{{Unit: "A"}, {Unit: "B"}, {Unit: "C"}}
+
+	sections := func() []string {
+		var got []string
+
+		for _, line := range Make(in) {
+			if strings.HasPrefix(line, "map ") {
+				got = append(got, line)
+			} else if name, ok := strings.CutPrefix(line, "Cross reference for "); ok {
+				got = append(got, "cross "+strings.Fields(name)[0])
+			}
+		}
+
+		return got
+	}
+
+	compare(t, sections(), []string{"map A", "cross A", "cross B", "map C", "cross C"})
+
+	in.Show.Map = false
+
+	compare(t, sections(), []string{"cross A", "cross B", "cross C"})
+}
+
+// TestCrossReferenceEmpty: a unit with nothing to list says so.
+func TestCrossReferenceEmpty(t *testing.T) {
+	got := crossLines(CrossRef{Unit: "E"})
+	if len(got) != 2 || got[1] != "  (no names)" {
+		t.Errorf("got %q", got)
+	}
+}
+
+// TestCrossReferenceWraps: a row too long for the page goes on under its first
+// reference, in the same columns, and no line is past the page's width.
+func TestCrossReferenceWraps(t *testing.T) {
+	row := CrossRow{Name: "LONG", What: "INTEGER"}
+	for i := 1000; i < 1100; i++ {
+		row.Refs = append(row.Refs, fmt.Sprintf("%dA", i))
+	}
+
+	got := crossLines(CrossRef{Unit: "W", Rows: []CrossRow{row}})[1:]
+	if len(got) < 2 {
+		t.Fatalf("got %q", got)
+	}
+
+	seen := 0
+	start := strings.Index(got[0], "1000A")
+
+	for _, line := range got {
+		if len(line) > pageWidth {
+			t.Errorf("too long, %d: %q", len(line), line)
+		}
+
+		if line[start] != '1' {
+			t.Errorf("column %d: %q", start, line)
+		}
+
+		seen += len(strings.Fields(line[start:]))
+	}
+
+	if seen != len(row.Refs) {
+		t.Errorf("%d references shown, want %d", seen, len(row.Refs))
+	}
+}

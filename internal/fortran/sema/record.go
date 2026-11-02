@@ -54,6 +54,10 @@ type FieldStep struct {
 // the last is a substructure.
 type FieldRef struct {
 	exprBase
+
+	// NamePos is where the record's name is; Pos is the last field's.
+	NamePos diag.Position
+
 	Sym  *Symbol
 	Subs []Expr
 	Path []FieldStep
@@ -103,10 +107,12 @@ func (a *analyzer) recordStatement(s *ast.RecordStmt) {
 		st := a.unit.structs[g.Structure]
 		if st == nil {
 			a.report("NOSTRUCT", g.Pos, g.Structure)
+		} else {
+			a.noteOther(whatStructure, g.Structure, g.Pos, RefUsed)
 		}
 
 		for _, d := range g.Entities {
-			sym := a.lookup(d.Name, d.Pos)
+			sym := a.declare(d.Name, d.Pos)
 
 			switch {
 			case sym.broken:
@@ -166,7 +172,7 @@ func (a *analyzer) field(e *ast.FieldRef, whole bool) Expr {
 		x = f.X
 	}
 
-	ref := &FieldRef{exprBase: exprBase{Pos: e.Pos}}
+	ref := &FieldRef{exprBase: exprBase{Pos: e.Pos}, NamePos: x.Position()}
 
 	if !a.recordBase(ref, x, steps[0].Field) {
 		return a.bad(e.Pos)

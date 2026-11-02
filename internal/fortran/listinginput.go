@@ -1,6 +1,8 @@
 package fortran
 
 import (
+	"strconv"
+
 	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/codegen"
 	"github.com/tucats/govax/internal/fortran/diag"
@@ -31,6 +33,10 @@ func listingInput(opts Options, file File, program *source.Program, messages []d
 
 	if prog != nil {
 		in.Units = listingUnits(prog)
+
+		if opts.CrossReference {
+			in.CrossRefs = listingCrossRefs(prog)
+		}
 	}
 
 	for _, m := range maps {
@@ -38,6 +44,35 @@ func listingInput(opts Options, file File, program *source.Program, messages []d
 	}
 
 	return in
+}
+
+// referenceKinds is the letter after a line number that says what the line does to
+// a name: a line that only uses it has none.
+var referenceKinds = map[sema.RefKind]string{
+	sema.RefDefined:  "D",
+	sema.RefAssigned: "A",
+}
+
+// listingCrossRefs is each unit's cross reference, as text.
+func listingCrossRefs(prog *sema.Program) []listing.CrossRef {
+	crossRefs := make([]listing.CrossRef, 0, len(prog.Units))
+
+	for _, u := range prog.Units {
+		crossRef := listing.CrossRef{Unit: u.Name}
+
+		for _, name := range u.CrossReference() {
+			row := listing.CrossRow{Name: name.Name, What: name.What}
+			for _, ref := range name.Refs {
+				row.Refs = append(row.Refs, strconv.Itoa(ref.Line)+referenceKinds[ref.Kind])
+			}
+
+			crossRef.Rows = append(crossRef.Rows, row)
+		}
+
+		crossRefs = append(crossRefs, crossRef)
+	}
+
+	return crossRefs
 }
 
 // listingUnits says where each unit starts: at its first line, or past its

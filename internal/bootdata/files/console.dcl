@@ -794,7 +794,8 @@ grammar console
     ! them is in parentheses. OPTIMIZE is /[NO]OPTIMIZE: run the optimizer's
     ! passes (docs/PHASE-84), which the command does unless told not to. LIST is
     ! /[NO]LIST[=file], a listing (docs/PHASE-85; empty default: the source's name
-    ! with type LIS), and SHOW is /[NO]SHOW[=(keyword,...)], what it holds. Elements joined by + are one compilation
+    ! with type LIS), and SHOW is /[NO]SHOW[=(keyword,...)], what it holds, and CROSS_REFERENCE
+    ! is /[NO]CROSS_REFERENCE, where each name is mentioned. Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -829,6 +830,7 @@ grammar console
         qualifier   show/id=1383                -
                     /type=$any/list             -
                     /default=""
+        qualifier   cross_reference/id=1384
         qualifier   continuations/id=1376       -
                     /type=$integer
 

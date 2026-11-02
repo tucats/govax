@@ -344,6 +344,7 @@ func (a *analyzer) dataItem(s *Symbol, offset int, t Type, text string, pos diag
 // named common blocks", and nothing else could reach a program from one).
 func (a *analyzer) dataName(name string, pos diag.Position) (*Symbol, bool) {
 	s := a.lookup(name, pos)
+	a.note(&s.refs, pos, RefAssigned)
 
 	switch {
 	case s.broken || s.Type.Kind == Invalid:

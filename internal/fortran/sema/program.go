@@ -107,6 +107,11 @@ type Unit struct {
 
 	byName map[string]*Symbol
 
+	// others and labelRefs are the mentions of the names that have no Symbol, and
+	// of the statement labels (crossref.go).
+	others    map[otherName][]Reference
+	labelRefs map[int][]Reference
+
 	// calls are the unit's references to routines, which Analyze checks
 	// against the file's other units once every unit is analyzed.
 	calls []routineRef
@@ -202,6 +207,9 @@ type Symbol struct {
 	// (section 4.13), its Type then of the kind Record; nil for any other
 	// name.
 	Struct *Structure
+
+	// refs are the unit's mentions of the name (crossref.go).
+	refs []Reference
 
 	// Dims are an array's dimensions; DimPos is where they were
 	// declared.

@@ -55,8 +55,7 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 
 	for i, text := range file.Lines {
 		splits[i] = r.form.split(text)
-		r.serial++
-		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library, Serial: r.serial}
+		lines[i] = &Line{File: file, Number: i + 1, Text: text, Depth: depth, Kind: splits[i].kind, Listed: listed, Library: library}
 	}
 
 	for i := 0; i < n && !r.stopped; {
@@ -64,11 +63,11 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 
 		switch lines[i].Kind {
 		case Comment:
-			r.program.Lines = append(r.program.Lines, lines[i])
+			r.add(lines[i])
 			i++
 
 		case Directive:
-			r.program.Lines = append(r.program.Lines, lines[i])
+			r.add(lines[i])
 			r.directive(lines[i], splits[i], first)
 			i++
 
@@ -76,7 +75,7 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 			// A continuation line with no statement to continue: at the
 			// start of a file (an included file can't begin with one,
 			// section 1.4.2) or after a directive.
-			r.program.Lines = append(r.program.Lines, lines[i])
+			r.add(lines[i])
 			r.messages.Report("NOINITIAL", linePosition(lines[i], 0))
 			i++
 
@@ -91,11 +90,23 @@ func (r *reader) readFile(file *File, depth int, listed, library bool) {
 				}
 			}
 
-			r.program.Lines = append(r.program.Lines, lines[i:last+1]...)
+			r.add(lines[i : last+1]...)
 			r.statement(lines[i:last+1], splits[i:last+1], first, depth)
 			i = last + 1
 		}
 	}
+}
+
+// add makes lines the program's next, and numbers them. A file's lines are numbered
+// here, not when it's read, so that an included file's come between the lines around
+// its INCLUDE: Serial is the source's order, the order a compilation sees its lines.
+func (r *reader) add(lines ...*Line) {
+	for _, line := range lines {
+		r.serial++
+		line.Serial = r.serial
+	}
+
+	r.program.Lines = append(r.program.Lines, lines...)
 }
 
 // statement puts together the statement on lines, whose first is its

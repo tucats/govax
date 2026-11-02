@@ -71,6 +71,7 @@ type fortranFlags struct {
 	list         bool   // --list, or --list-file
 	listFile     string // --list-file: the listing's name
 	show         string // --show: /SHOW's keywords
+	crossRef     bool   // --cross-reference: /CROSS_REFERENCE
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -390,6 +391,16 @@ var fortranGrammar = []cli.Option{
 		Action: func(c *cli.Context) error {
 			fortran.list = true
 			fortran.listFile, _ = c.String("list-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "cross-reference",
+		Description: "End each unit's listing with where its names and labels are mentioned",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.crossRef = true
 
 			return nil
 		},
@@ -929,6 +940,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.show != "" {
 		command += "/SHOW=(" + f.show + ")"
+	}
+
+	if f.crossRef {
+		command += "/CROSS_REFERENCE"
 	}
 
 	if f.continuationsGiven {

@@ -74,6 +74,8 @@ func (b *CommonBlock) String() string {
 // commonBlock returns the unit's block named name, making it the first
 // time.
 func (a *analyzer) commonBlock(name string, block *ast.CommonBlock) *CommonBlock {
+	a.noteOther(whatCommon, name, block.Pos, RefDefined)
+
 	for _, b := range a.unit.Commons {
 		if b.Name == name {
 			return b
@@ -108,7 +110,7 @@ func (a *analyzer) commonStatement(s *ast.CommonStmt) {
 // its caller's, so it can't be in a block (the standard's rule, which the
 // manual doesn't state), and a name can be in only one block, once.
 func (a *analyzer) commonEntity(b *CommonBlock, d *ast.Declarator) {
-	sym := a.lookup(d.Name, d.Pos)
+	sym := a.declare(d.Name, d.Pos)
 
 	switch {
 	case sym.Dummy != 0:

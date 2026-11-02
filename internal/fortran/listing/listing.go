@@ -2,6 +2,7 @@ package listing
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,19 @@ const (
 	versionWidth = 30
 	maxHeading   = 31 // the most a TITLE or SUBTITLE can show (section 10.3.3)
 	tabStop      = 8
+	pageWidth    = 132
+)
+
+// The cross reference's layout. A row's columns line up across its table, so
+// the eye can run down a table's names, and a row too long for the page goes on
+// under its first reference.
+const (
+	crossHeadingWidth = 43 // the heading's unit, before the legend
+	crossLegend       = "(D defined, A assigned, a blank is used)"
+	crossIndent       = 2
+	crossNameGap      = 3 // between a name and what it is
+	crossWhatGap      = 2 // between what it is and the first reference
+	crossRefGap       = 2 // between references
 )
 
 // Input is everything a listing shows.
@@ -40,6 +54,10 @@ type Input struct {
 
 	// Maps are the program units' storage maps. A compilation with errors has none.
 	Maps []Map
+
+	// CrossRefs are the program units' cross references, with /CROSS_REFERENCE. They
+	// are made after errors too, for the units the analysis reached.
+	CrossRefs []CrossRef
 
 	// Show is what /SHOW asks for.
 	Show Show
@@ -73,13 +91,26 @@ type Map struct {
 	Lines []string
 }
 
+// CrossRef is a program unit's cross reference.
+type CrossRef struct {
+	Unit string
+	Rows []CrossRow
+}
+
+// CrossRow is one name or label: what it is, and where it is mentioned, each place
+// as a listing shows it (6D, 4A, 5).
+type CrossRow struct {
+	Name, What string
+	Refs       []string
+}
+
 // Make lays out the listing, a string per line, each page's first starting with a
 // form feed.
 func Make(in Input) []string {
 	p := &pager{in: in, unit: in.Title, file: in.File, needPage: true}
 
 	p.source()
-	p.maps()
+	p.units()
 
 	if p.page == 0 {
 		p.newPage()
@@ -161,23 +192,94 @@ func (p *pager) source() {
 	}
 }
 
-// maps writes the storage maps. A page these start has the unit's name.
-func (p *pager) maps() {
-	if !p.in.Show.Map {
-		return
+// units writes what the listing says of each program unit after the source: its
+// storage map, then its cross reference. A unit may have only one of them: with
+// errors there are no maps, and BLOCK DATA has no code to have one.
+func (p *pager) units() {
+	var maps []Map
+	if p.in.Show.Map {
+		maps = p.in.Maps
 	}
 
-	for i, m := range p.in.Maps {
-		p.unit = m.Unit
+	crossRefs := p.in.CrossRefs
 
-		if i == 0 {
-			p.blank(2)
-		} else {
-			p.blank(1)
+	// writeCross writes the next count of the cross references.
+	writeCross := func(count int) {
+		for _, x := range crossRefs[:count] {
+			p.section(x.Unit, crossLines(x))
 		}
 
-		p.keep(m.Lines)
+		crossRefs = crossRefs[count:]
 	}
+
+	for _, m := range maps {
+		at := slices.IndexFunc(crossRefs, func(x CrossRef) bool { return x.Unit == m.Unit })
+
+		writeCross(max(at, 0))
+		p.section(m.Unit, m.Lines)
+
+		if at >= 0 {
+			writeCross(1)
+		}
+	}
+
+	writeCross(len(crossRefs))
+}
+
+// section writes a block of a unit's lines, set off from what comes before. A page
+// it starts has the unit's name.
+func (p *pager) section(unit string, lines []string) {
+	p.unit = unit
+
+	if p.sections == 0 {
+		p.blank(2)
+	} else {
+		p.blank(1)
+	}
+
+	p.sections++
+	p.keep(lines)
+}
+
+// crossLines is a unit's cross reference as lines of a page.
+func crossLines(x CrossRef) []string {
+	out := []string{fmt.Sprintf("%-*s %s", crossHeadingWidth, "Cross reference for "+x.Unit, crossLegend)}
+
+	if len(x.Rows) == 0 {
+		return append(out, strings.Repeat(" ", crossIndent)+"(no names)")
+	}
+
+	nameWidth, whatWidth, refWidth := 0, 0, 0
+
+	for _, row := range x.Rows {
+		nameWidth = max(nameWidth, len(row.Name))
+		whatWidth = max(whatWidth, len(row.What))
+
+		for _, ref := range row.Refs {
+			refWidth = max(refWidth, len(ref))
+		}
+	}
+
+	start := crossIndent + nameWidth + crossNameGap + whatWidth + crossWhatGap
+	perLine := max(1, (pageWidth-start+crossRefGap)/(refWidth+crossRefGap))
+
+	for _, row := range x.Rows {
+		line := fmt.Sprintf("%*s%-*s%*s%-*s%*s", crossIndent, "", nameWidth, row.Name, crossNameGap, "",
+			whatWidth, row.What, crossWhatGap, "")
+
+		for i, ref := range row.Refs {
+			if i > 0 && i%perLine == 0 {
+				out = append(out, strings.TrimRight(line, " "))
+				line = strings.Repeat(" ", start)
+			}
+
+			line += fmt.Sprintf("%-*s%*s", refWidth, ref, crossRefGap, "")
+		}
+
+		out = append(out, strings.TrimRight(line, " "))
+	}
+
+	return out
 }
 
 // lineWithMessages is a source line as the listing shows it, then for each message
@@ -245,6 +347,9 @@ type pager struct {
 	// needPage says the next line starts a page, whatever room this one has.
 	page, used int
 	needPage   bool
+
+	// sections counts the maps and cross references written so far.
+	sections int
 
 	// unit is the unit being listed, whose name heads a page with no TITLE, and
 	// file the file a page names.

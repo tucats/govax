@@ -90,6 +90,10 @@ func (a *analyzer) arg(e ast.Expr) Arg {
 func (a *analyzer) nameArg(n *ast.Name) Expr {
 	s := a.unit.byName[n.Name]
 
+	if s != nil {
+		a.note(&s.refs, n.Pos, RefUsed)
+	}
+
 	switch {
 	case s == nil || s.broken:
 

@@ -109,6 +109,7 @@ func (a *analyzer) assignment(s *ast.AssignStmt) Stmt {
 	}
 
 	target := a.target(s.Target)
+	a.noteAssigned(target)
 
 	// A target with an error says nothing of what its value may be.
 	var value Expr
@@ -311,6 +312,8 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
 		// A system subroutine, unless the file has one of its own.
 		if system := systemSubroutines[s.Name]; system != nil && a.units[s.Name] == nil && len(targets) == 0 {
+			a.noteOther(whatSystem, s.Name, s.NamePos, RefUsed)
+
 			return system(a, s, list)
 		}
 	}

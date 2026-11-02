@@ -46,7 +46,7 @@ func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 
 		for _, item := range s.Items {
 			if item.Array.Dims != nil {
-				a.dimension(a.lookup(item.Name, item.Pos), item.Array)
+				a.dimension(a.declare(item.Name, item.Pos), item.Array)
 			}
 		}
 	}
@@ -56,7 +56,7 @@ func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 // one, a procedure the caller passes; the unit's own name may not, nor
 // anything that has storage or a value.
 func (a *analyzer) external(item *ast.AttrItem) {
-	s := a.lookup(item.Name, item.Pos)
+	s := a.declare(item.Name, item.Pos)
 
 	switch {
 	case s.External || s.Class == Intrinsic:
@@ -96,7 +96,7 @@ func (s *Symbol) UnusedFromLibrary() bool {
 // intrinsic makes the name FORTRAN's own function of that name, which it must
 // have.
 func (a *analyzer) intrinsic(item *ast.AttrItem) {
-	s := a.lookup(item.Name, item.Pos)
+	s := a.declare(item.Name, item.Pos)
 
 	switch {
 	case !intrinsics[item.Name]:
@@ -131,7 +131,7 @@ func (a *analyzer) saves() {
 				continue
 			}
 
-			s := a.lookup(item.Name, item.Pos)
+			s := a.declare(item.Name, item.Pos)
 
 			switch {
 			case s.broken:
@@ -167,6 +167,8 @@ func (a *analyzer) saveBlock(item *ast.AttrItem) {
 
 		return
 	}
+
+	a.noteOther(whatCommon, item.Name, item.Pos, RefDefined)
 
 	for _, b := range a.unit.Commons {
 		if b.Name == item.Name {

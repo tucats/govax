@@ -138,6 +138,8 @@ func (a *analyzer) psectDirectives() {
 	given := map[psectChoice]string{}
 
 	for _, s := range a.psects {
+		a.noteOther(whatCommon, s.Common, s.CommonPos, RefDefined)
+
 		var b *CommonBlock
 
 		for _, c := range a.unit.Commons {

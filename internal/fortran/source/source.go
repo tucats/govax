@@ -149,9 +149,10 @@ type Line struct {
 	// unused without cost (docs/PHASE-83 - FORTRAN and VMS.md, Decision 5).
 	Library bool
 
-	// Serial numbers the lines read, from 1, across every file. A file included
-	// twice has each line twice, and this tells them apart: a message's position
-	// has it, so a listing can put the message under the right one.
+	// Serial numbers the lines in the order the program has them, from 1, across
+	// every file. A file included twice has each line twice, and this tells them
+	// apart: a message's position has it, so a listing can put the message under the
+	// right one, and a cross reference's mentions go in the source's order by it.
 	Serial int
 }
 

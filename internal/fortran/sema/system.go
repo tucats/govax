@@ -47,6 +47,8 @@ var systemFunctions = map[string]systemFunction{
 
 // systemFunction analyzes y = RAN(i) or y = SECNDS(x).
 func (a *analyzer) systemFunction(e *ast.Apply, f systemFunction) Expr {
+	a.noteOther(whatSystem, e.Name, e.Pos, RefUsed)
+
 	if len(e.Args) != 1 {
 		a.report("SYSCOUNT", e.Pos, e.Name, "1 argument", len(e.Args))
 
@@ -61,6 +63,10 @@ func (a *analyzer) systemFunction(e *ast.Apply, f systemFunction) Expr {
 		}
 
 		return a.bad(e.Pos)
+	}
+
+	if f.place {
+		a.noteAssigned(arg.Expr)
 	}
 
 	sym := &Symbol{Name: f.routine, Class: Function, Type: RealType}
@@ -126,6 +132,8 @@ func (a *analyzer) systemBuffer(s *ast.CallStmt, list []ast.Expr) Stmt {
 		return nil
 	}
 
+	a.noteAssigned(arg.Expr)
+
 	place := false
 
 	switch arg.Expr.(type) {
@@ -162,6 +170,8 @@ func (a *analyzer) systemIDate(s *ast.CallStmt, list []ast.Expr) Stmt {
 	size := 0
 
 	for _, arg := range args {
+		a.noteAssigned(arg.Expr)
+
 		if !a.systemPlace(s, arg, &size) {
 			return nil
 		}
@@ -259,6 +269,8 @@ func (a *analyzer) systemMVBits(s *ast.CallStmt, list []ast.Expr) Stmt {
 
 	args := a.args(list)
 	size := 0
+
+	a.noteAssigned(args[3].Expr)
 
 	if !a.systemPlace(s, args[0], &size) || !a.systemPlace(s, args[3], &size) {
 		return nil
