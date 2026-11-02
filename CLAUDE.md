@@ -604,7 +604,9 @@ never had.
   at an entry stays live at every exit; a store whose value may fault stays), with `optforward.for`; subtask 6
   (2026-11-01) local common subexpressions: `opt/cse.go` (a value is one run of an expression through a block; `$Un`
   temporaries in memory, by a cost model subtask 9 must change, `worth`; a variable already holding the value read instead), and
-  `Assign.InPlace` (`ir.InPlaceOperand`, codegen's `storeInPlace`: `ADDF2 X,C-244[R1]`, the place found once), with `optcse.for`.
+  `Assign.InPlace` (`ir.InPlaceOperand`, codegen's `storeInPlace`: `ADDF2 X,C-244[R1]`, the place found once), with `optcse.for`; subtask 7
+  (2026-11-02) loop-invariant motion: `opt/invariant.go` (a preheader per natural loop, outermost first, `$Hn` temporaries in memory, `surely` and `unsafeToMove` for what can fault,
+  `Assign.Moved`'s comment), `opt/deferred.go` (`Mem.Deferred`, codegen's `deferredIndex`: `@S.$B1+16[R1]`), and `opt/walker.go`, with `optinvar.for`; hoisted array bases and A0s wait for subtask 9.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2165,7 +2167,7 @@ expect adjustment as phases land):
   `CodePasses` work on a routine's instructions (`codegen.Code`), called through `codegen.Options.Improve`, with
   `Code.Check` after each: `peephole.go` and `branches.go`. It imports `codegen`, not the reverse.
   `Graph` and `Storage` are its analyses, each a picture of one routine. `Passes` so far: `Forward`,
-  `Unreachable`, `DeadCode`, and `CommonSubexpressions`.
+  `Unreachable`, `DeadCode`, `DeferredIndexes`, `LoopInvariants`, and `CommonSubexpressions`.
 - `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
   the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
   import it: `dclcmd`'s `fortranIncludes` searches it last.

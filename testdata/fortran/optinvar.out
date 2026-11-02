@@ -1,0 +1,26 @@
+NESTED     198
+NO TRIPS       0    5.00
+GUARDED       3    5.00
+SHORT       3    5.00
+LEFT       1    5.00
+SURE       4    3.50
+COMMON      18
+PASSED      12
+KEPT      36
+EQUIVALENT      36
+ELEMENT      22
+GO TO      24
+EXTENDED      24
+ASSIGNED      18
+ASSIGNED TOP      24
+OMITTED       3
+ROUTINE      18
+FROM THE TOP     118
+FROM ENTRY     124
+ADJUSTABLE       3    8.00
+ADJUSTABLE       3    9.00
+ADJUSTABLE       3    4.00
+CD EF AB
+GIVING UP       1
+FORTRAN STOP
+  $STATUS == "%X00000001"

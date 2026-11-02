@@ -254,6 +254,10 @@ func (g *routineGen) assign(s *ir.Assign) {
 		}
 	}
 
+	if s.Moved != nil {
+		g.note = "from line " + strconv.Itoa(s.Moved.Base().Pos.Line)
+	}
+
 	if s.InPlace {
 		g.storeInPlace(s)
 

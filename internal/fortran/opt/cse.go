@@ -87,19 +87,15 @@ import (
 // A variable format expression's blocks run in the middle of another block's I/O
 // statement, and would share temporaries with it, so they get none here. A dummy's or
 // descriptor's address (Mem.Ptr) stays as it is, since places.go recognizes a place by
-// its form; hoisting those is the next subtask's. A function's Result is stored after
-// its call, so its index isn't this block's to change.
+// its form. A function's Result is stored after its call, so its index isn't this
+// block's to change.
 
 // CommonSubexpressions is the pass.
 func CommonSubexpressions(r *ir.Routine) {
 	c := &cse{r: r, s: NewStorage(r), spare: map[ir.Type][]*ir.Cell{}}
 	expressions := expressionBlocks(r)
 
-	for _, cell := range r.Cells {
-		if n, err := strconv.Atoi(strings.TrimPrefix(cell.Name, "$U")); err == nil && n > c.named {
-			c.named = n
-		}
-	}
+	c.named = highestNamed(r, "$U")
 
 	for _, b := range r.Blocks {
 		c.markInPlace(b)
@@ -127,6 +123,19 @@ func CommonSubexpressions(r *ir.Routine) {
 			c.spare[t.T] = append(c.spare[t.T], t)
 		}
 	}
+}
+
+// highestNamed is the highest number of a cell of routine r named prefix and a number.
+func highestNamed(r *ir.Routine, prefix string) int {
+	highest := 0
+
+	for _, cell := range r.Cells {
+		if n, err := strconv.Atoi(strings.TrimPrefix(cell.Name, prefix)); err == nil && n > highest {
+			highest = n
+		}
+	}
+
+	return highest
 }
 
 // cse is the pass's state for one routine.
@@ -252,149 +261,30 @@ type scanner struct {
 	all  []*value
 }
 
-// scan is every run of an expression through block b.
-func (c *cse) scan(b *ir.Block) []*value {
-	w := &scanner{c: c, open: map[string]*value{}}
-
-	for i, st := range b.Stmts {
-		w.at = i
-		w.stmt(st)
-		w.after(st)
-	}
-
-	w.at = len(b.Stmts)
-	w.terminator(b.End)
-
-	return w.all
-}
-
-// stmt looks at what st computes before it stores anything.
-func (w *scanner) stmt(st ir.Stmt) {
-	switch st := st.(type) {
-	case *ir.Assign:
-		w.mem(st.Dst, false)
-
-		if st.InPlace {
-			w.expr(ir.InPlaceOperand(st), false, false)
-		} else {
-			w.expr(st.Src, true, false)
-		}
-
-	case *ir.CharMove:
-		w.text(st.Dst, false)
-		w.text(st.Src, false)
-
-	case *ir.Call:
-		for _, a := range st.Args {
-			switch {
-			case a.Ref != nil:
-				w.mem(a.Ref, false)
-			case a.Value != nil:
-				w.expr(a.Value, false, false)
-			}
-		}
-	}
-}
-
-// terminator looks at what t computes.
-func (w *scanner) terminator(t ir.Terminator) {
-	switch t := t.(type) {
-	case *ir.Branch:
-		w.condition(t.Cond, false)
-	case *ir.Switch:
-		w.expr(t.Index, true, false)
-	case *ir.Sign:
-		w.expr(t.Value, false, false)
-	case *ir.IndirectJump:
-		w.mem(t.Through, false)
-	case *ir.Return:
-		if t.Value != nil {
-			w.expr(t.Value, true, false)
-		}
-	}
-}
-
-// condition looks at a branch's condition, whose .AND. and .OR. go on to their second
-// operand only some of the time (codegen's branchTo).
-func (w *scanner) condition(e ir.Expr, maybe bool) {
-	if op, ok := e.(*ir.Op); ok {
-		switch op.Op {
-		case ir.Not:
-			w.condition(op.X, maybe)
-
-			return
-		case ir.And, ir.Or:
-			w.condition(op.X, maybe)
-			w.condition(op.Y, true)
-
-			return
-		}
-	}
-
-	w.expr(e, false, maybe)
-}
-
-// expr looks at e. moved says the value is wanted in a register or moved to a
-// destination, so that one in memory would take an instruction more; maybe says it's
-// computed only some of the time, so that this can't be its first use.
-func (w *scanner) expr(e ir.Expr, moved, maybe bool) {
+// visit notes e, if it could be computed once, and goes on inside it.
+func (w *scanner) visit(e ir.Expr, moved, maybe bool) bool {
 	if w.c.candidate(e) {
 		w.use(e, moved, maybe)
 	}
 
-	switch e := e.(type) {
-	case *ir.Load:
-		w.mem(e.Mem, maybe)
-
-	case *ir.Addr:
-		w.mem(e.Mem, maybe)
-
-	case *ir.Op:
-		w.expr(e.X, false, maybe)
-
-		if e.Y != nil {
-			w.expr(e.Y, false, maybe)
-		}
-
-	case *ir.Cmp:
-		w.expr(e.X, false, maybe)
-		w.expr(e.Y, false, maybe)
-
-	case *ir.Field:
-		w.expr(e.X, false, maybe)
-		w.expr(e.Pos, false, maybe)
-		w.expr(e.Size, false, maybe)
-
-	case *ir.CharCmp:
-		w.text(e.X, maybe)
-		w.text(e.Y, maybe)
-
-	case *ir.CharIndex:
-		// Its Base is a constant or a temporary, as ir.Check requires.
-		w.text(e.X, maybe)
-		w.text(e.Y, maybe)
-	}
+	return true
 }
 
-// mem looks at what finding m computes. An index is wanted in a register. An address
-// stays as it is, what's inside it aside.
-func (w *scanner) mem(m *ir.Mem, maybe bool) {
-	if m.Index != nil {
-		w.expr(m.Index, true, maybe)
+// scan is every run of an expression through block b.
+func (c *cse) scan(b *ir.Block) []*value {
+	w := &scanner{c: c, open: map[string]*value{}}
+	walk := walker{visit: w.visit}
+
+	for i, st := range b.Stmts {
+		w.at = i
+		walk.stmt(st)
+		w.after(st)
 	}
 
-	switch p := m.Ptr.(type) {
-	case *ir.Addr:
-		w.mem(p.Mem, maybe)
-	case *ir.Load:
-		w.mem(p.Mem, maybe)
-	}
-}
+	w.at = len(b.Stmts)
+	walk.terminator(b.End)
 
-// text looks at what finding a CHARACTER value computes.
-func (w *scanner) text(t ir.Text, maybe bool) {
-	w.mem(t.Mem, maybe)
-	w.expr(t.Len, false, maybe)
+	return w.all
 }
 
 // use notes one computation of e, in the value whose run it's in, or as a new value's
@@ -564,9 +454,14 @@ func (c *cse) temporary(t ir.Type) *ir.Cell {
 
 	c.named++
 
-	cell := &ir.Cell{Name: "$U" + strconv.Itoa(c.named), Kind: ir.TempCell, T: t, Size: t.Size(), Offset: c.r.LocalSize}
-	c.r.Cells = append(c.r.Cells, cell)
-	c.r.LocalSize += (cell.Size + 3) &^ 3
+	return newTemporary(c.r, "$U"+strconv.Itoa(c.named), t)
+}
+
+// newTemporary is a new temporary of type t, placed as lowering places its cells.
+func newTemporary(r *ir.Routine, name string, t ir.Type) *ir.Cell {
+	cell := &ir.Cell{Name: name, Kind: ir.TempCell, T: t, Size: t.Size(), Offset: r.LocalSize}
+	r.Cells = append(r.Cells, cell)
+	r.LocalSize += (cell.Size + 3) &^ 3
 
 	return cell
 }
@@ -903,7 +798,7 @@ func memCost(m *ir.Mem) price {
 
 	if m.Ptr != nil {
 		p = p.add(costOf(m.Ptr))
-		if m.Offset != 0 || m.Index != nil {
+		if (m.Offset != 0 || m.Index != nil) && !m.Deferred {
 			// The address in a register, not reached through where it is.
 			p.instructions++
 		}

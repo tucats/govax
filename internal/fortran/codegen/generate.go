@@ -818,6 +818,10 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "a part of an expression, set aside"
 	}
 
+	if strings.HasPrefix(c.Name, "$H") {
+		return "a value computed before a loop"
+	}
+
 	return "temporary"
 }
 

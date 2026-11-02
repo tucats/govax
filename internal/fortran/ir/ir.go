@@ -595,11 +595,16 @@ type (
 	// InPlace says Src is an operation on Dst's own value and the code generator
 	// is to find the place once: ADDF2 R0,C-244[R1], not one index for the operand
 	// and another for the result (InPlaceOperand). An optimizer sets it.
+	//
+	// Moved, also an optimizer's, is the statement a value was taken from when it
+	// was moved out of a loop, whose line the MACRO file's comment names; Source is
+	// then where the code now is.
 	Assign struct {
 		origin
 		Dst     *Mem
 		Src     Expr
 		InPlace bool
+		Moved   ast.Stmt
 	}
 
 	// CharMove is Dst = Src for CHARACTER values (section 3.3 of the
@@ -798,6 +803,12 @@ type Mem struct {
 	// Volatile says the place is part of a variable a VOLATILE statement names:
 	// no reference to it may be optimized away, which Phase 84 will ask.
 	Volatile bool
+
+	// Deferred, an optimizer's, asks that a place with a Ptr and an Index be reached
+	// through the address where it is, @S.$B1+16[R1], with Offset part of the index,
+	// where the code generator can: not one move of the address to a register, and
+	// (R0)[R1].
+	Deferred bool
 }
 
 // Linked reports whether the linker knows the place's address, so that read-only

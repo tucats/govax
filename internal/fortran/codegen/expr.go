@@ -233,10 +233,18 @@ func memHeld(m *ir.Mem) int {
 // reached through that address where it is, by the VAX's deferred modes:
 // @SUB.A(AP), the place whose address is in the argument list; @4(R0), the
 // one whose address is in the longword 4 bytes past R0's. Those take no
-// offset and no index, and the address must be a place of its own that
-// isn't already deferred.
+// offset, and an index only if an optimizer asked (deferredIndex), and the
+// address must be a place of its own that isn't already deferred.
 func direct(m *ir.Mem) bool {
-	return m.Ptr != nil && m.Offset == 0 && index(m) == nil && deferrable(m.Ptr)
+	return m.Ptr != nil && deferrable(m.Ptr) && (deferredIndex(m) || (m.Offset == 0 && index(m) == nil))
+}
+
+// deferredIndex reports whether the place m is reached by a deferred mode with an
+// index, @SUB.$B1+16[R1], as an optimizer asks of a place whose address is in memory.
+// The mode has no room for an offset, so its offset goes in the index, as a dummy
+// argument's does (index).
+func deferredIndex(m *ir.Mem) bool {
+	return m.Deferred && m.Ptr != nil && m.Index != nil && deferrable(m.Ptr)
 }
 
 // deferrable reports whether e's operand is a place in memory a deferred
@@ -259,7 +267,7 @@ func deferrable(e ir.Expr) bool {
 // part of the index, in elements (@A-4[I], T(I) of T(1:10), is
 // @SUB.A(AP)[R0] with I-1 in R0).
 func index(m *ir.Mem) ir.Expr {
-	if m.Param == nil || m.Offset == 0 {
+	if m.Offset == 0 || (m.Param == nil && !deferredIndex(m)) {
 		return m.Index
 	}
 
@@ -487,7 +495,14 @@ func (g *routineGen) pointerMem(m *ir.Mem) operand {
 	p := g.eval(m.Ptr)
 
 	if direct(m) {
-		return operand{text: "@" + p.text, regs: p.regs}
+		x := index(m)
+		if x == nil {
+			return operand{text: "@" + p.text, regs: p.regs}
+		}
+
+		i := g.intoRegister(x)
+
+		return operand{text: "@" + p.text + "[" + register(i) + "]", regs: append(p.regs[:len(p.regs):len(p.regs)], i)}
 	}
 
 	var r int

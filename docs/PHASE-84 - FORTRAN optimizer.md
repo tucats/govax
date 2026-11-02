@@ -386,8 +386,9 @@ The survey's decisions drew no objection, and stand.
 5. **Forwarding and dead code** (done 2026-11-01): store to load in a block, constants
    across statements, dead compiler cells, the function value, unreachable blocks.
 6. **Local common subexpressions** (done 2026-11-01).
-7. **Loop-invariant motion:** with hoisted array bases and descriptor A0s, by
-   Decision 8's rules.
+7. **Loop-invariant motion** (done 2026-11-02): by Decision 8's rules, with
+   deferred indexes for descriptor A0s; hoisted array bases and A0s themselves wait for
+   registers (subtask 9), having no gain in memory.
 8. **One-character strings** (the author's answer 4): `CMPB` and `MOVB` where
    `CMPC3` and `MOVC3` of one character are lowered now, only under `/OPTIMIZE`.
 9. **Register allocation:** register cells, liveness, write-backs by Decision
@@ -693,3 +694,46 @@ The survey's decisions drew no objection, and stand.
 - **2026-11-02:** The author placed answer 4 as a subtask of its own after loop-invariant motion: subtask 8, one-character strings.
   Register allocation is now 9, induction variables 10, FTNRTL's loops 11, and the close-out 12; this doc's earlier log entries that look
   ahead to those subtasks, and `cse.go`'s comment, use the new numbers, except the entry that first numbered FTNRTL's loops.
+- **2026-11-02:** Subtask 7, loop-invariant motion: `opt/invariant.go` and `opt/deferred.go`, two more IR passes before common
+  subexpressions, each teaching its technique in its comment; the walk through what a statement computes moved from `cse.go` to `walker.go`,
+  which both use. `/NOOPTIMIZE`'s output is unchanged.
+  - **The pass.** Each natural loop, outermost first, gets a new block before its header, its preheader, if anything moves. The largest
+    expression that nothing in the loop changes goes into a temporary in memory, `$Hn`. A value moves as far out as it can: in `matmul`
+    `J*60` goes before the K loop, further than the survey's hand version put it. An outer loop refusing a value leaves it for the loops inside.
+  - **Stricter than Decision 8, on purpose.** The decision says what can fault moves only "from blocks that run on every trip". An exit taken on
+    the first trip gets past that: in `DO: IF (Z.EQ.0.0) GO TO 90; X(I) = Y/Z`, the division's block is on every trip that goes round, and the
+    program never divides by zero. So what can fault needs one use the first trip surely reaches (`surely`): in a block that every latch and every
+    exit comes through, with no call anywhere before it, as a call may not come back (`IF (Z.EQ.0.0) CALL GIVEUP`). With that, the program ran it
+    anyway with the same operands. A load through an index or a dummy argument counts as able to fault too, which Decision 8 doesn't list, since a
+    test may be keeping it off a bad address or a dummy that wasn't passed (`unsafeToMove`). `optinvar.for` has both. A fault can still come sooner
+    than it would have: a store before it on the first trip has then not run when a handler sees it. Output can't go
+    this way, since writing it is a call.
+  - **What it can't do:** a loop whose header an ENTRY statement reaches, or an assigned GO TO from outside (`canPrecede`), since nothing can be put on those
+    paths. A loop that starts its routine gets a new first block.
+  - **Moved code stays readable (Decision 12):** `; from line 17` on its first instruction, and its source is what comes before the loop, so the file's lines stay in
+    order. The storage map says "a value computed before a loop". `Assign.Moved` holds the statement.
+  - **Hoisted array bases and A0s are not done, and this changes what the subtask said.** In memory they gain nothing: `MOVL I,R0; @$H1[R0]` is one
+    instruction and three reads, the same as `ADDL3 I,$H1,R0; A-244[R0]`, and an A0 in another cell costs what it costs where it is. Their gain is all in registers,
+    `(R6)[R9]`, so they are subtask 9's, along with `J*60` used alone as an index, which `worth`'s sum (`movable`) refuses for the same reason. **Subtask 9 must revisit `movable`
+    as well as `cse.go`'s `worth`.** `throughPointer` must also learn a hoisted address's form, or the place becomes `UnknownRegion`, which conflicts with every store.
+  - **Deferred indexes, added:** what the survey blamed on A0 (pattern 5, two `MOVL`s per reference) can be helped now without moving anything. `@S.$B1+16[R1]` looks through the
+    longword in memory and indexes what it finds, one instruction fewer per reference and the same reads. `Mem.Deferred` asks for it, `DeferredIndexes` sets it on every place with a
+    `Ptr` and an index, and the code generator (`deferredIndex`, `direct`, `pointerMem`) uses it where the address is such a longword, an offset going into the index as a dummy's does. This is most of
+    `subs`'s gain, and with fewer registers held it spills less, so its writes fall too.
+  - **A bug the corpus test caught:** a value inside another found elsewhere (`K*3`, and `K+K*3`). Rewriting `K*3` first changed the larger one's key, so its uses weren't replaced and its temporary was left
+    unread. `TestPassesOnCorpus`'s second run showed it, in `numeric`. The longest now go first (`hoist`), and each shorter one is replaced in the definitions already placed.
+  - **New program:** `optinvar.for`, worked by hand; each value matched on the first run. Its expected file had two errors of mine: `STOP`'s `FORTRAN STOP`, and a trailing `1X`, which writes no blank. With the fault
+    rule disabled it fails, under `/OPTIMIZE` only, in both paging modes.
+  - **Testing:** `invariant_test.go` has a small program for each rule and each thing that stops a value. `TestPassesOnCorpus` holds a second run to no change.
+  - **Results**, cumulative:
+
+    | Program | `/NOOPTIMIZE` | Subtask 6 | Now | Survey's hand stage |
+    |---|---:|---:|---:|---:|
+    | `matmul` | 3,101,599 | 2,223,200 | 1,362,920 (−56.1%) | 1,391,599 (−55.1%) |
+    | `subs` | 6,876,884 | 6,669,464 | 3,866,184 (−43.8%) | not measured at this stage |
+    | DUNGEON's game, whole run | 6,818,609 | 5,526,804 | 5,512,277 (−19.2%) | not measured |
+    | `sieve`, `whet`, `textk` | | | unchanged | not measured |
+
+    `matmul` passes the hand stage in instructions, with reads and writes close to its (2,156,480 and 690,546 against 2,160,122 and 694,027). `subs`'s reads fall from 7,595,774 to 5,592,479 and its writes from 1,843,907 to 1,442,892.
+    `sieve`, `whet`, and `textk` run the same instructions as before. `whet`'s loops read plain variables, which gain nothing from a temporary in memory; `sieve`'s and `textk`'s weren't looked into. DUNGEON's reads fall 519,789 against `/NOOPTIMIZE`, but its writes are 22,826 above subtask 5's; a store per
+    loop entered would explain that, though it wasn't checked. Neither was why its gain is so small here.

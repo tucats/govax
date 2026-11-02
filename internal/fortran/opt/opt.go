@@ -20,6 +20,8 @@ var Passes = []Pass{
 	{"forward", Forward},
 	{"unreachable", Unreachable},
 	{"dead code", DeadCode},
+	{"deferred indexes", DeferredIndexes},
+	{"loop invariants", LoopInvariants},
 	{"common subexpressions", CommonSubexpressions},
 }
 
