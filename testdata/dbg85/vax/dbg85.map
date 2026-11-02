@@ -1,0 +1,98 @@
+
+                                                                 2-NOV-2026 13:06        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBG85           01                    445 DUA1:[000000]DBG85.OBJ;1              2-NOV-2026 13:06  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+$PDATA                          00000200 0000021C 0000001D (         29.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,NOEXE,  RD,NOWRT,NOVEC
+                DBG85           00000200 0000021C 0000001D (         29.) LONG  2
+$LOCAL                          00000400 0000046B 0000006C (        108.) LONG  2   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBG85           00000400 0000046B 0000006C (        108.) LONG  2
+BLK                             0000046C 00000473 00000008 (          8.) LONG  2   PIC,USR,OVR,REL,GBL,  SHR,NOEXE,  RD,  WRT,NOVEC
+                DBG85           0000046C 00000473 00000008 (          8.) LONG  2
+$CODE                           00000600 0000072B 0000012C (        300.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                DBG85           00000600 0000072B 0000012C (        300.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+DBG85           00000600-R        
+SUB85           000006A1-R        
+TXT85           0000071C-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]DBG85.EXE;1                                         2-NOV-2026 13:06        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000009FF 00000800 (2048. bytes, 4. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        5. (    4. blocks)
+Image name and identification:                    DBG85 01
+Number of files:                                         3.
+Number of modules:                                       2.
+Number of program sections:                              6.
+Number of global symbols:                                4.
+Number of image sections:                                5.
+User transfer address:                            00000600
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]DBG85.MAP;1
+Estimated map length:                             13. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    95	00:00:00.00	00:00:00.00
+    Pass 1:                                              1245	00:00:00.00	00:00:00.02
+    Allocation/Relocation:                                 65	00:00:00.00	00:00:00.01
+    Pass 2:                                               948	00:00:00.00	00:00:00.02
+    Map data after object module synopsis:                 46	00:00:00.00	00:00:00.00
+    Symbol table output:                                   23	00:00:00.00	00:00:00.00
+Total run values:                                        2422	00:00:00.00	00:00:00.05
+
+Using a working set limited to 512 pages and 56 pages of data storage (excluding image)
+
+Total number object records read (both passes):   112
+    of which 26 were in libraries and 6 were DEBUG data records containing 1223 bytes
+1070 bytes of DEBUG data were written,starting at VBN 6 with 3 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP DBG85

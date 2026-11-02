@@ -330,6 +330,9 @@ func (a *Assembler) endLocalBlock() error {
 	return a.closeLocalBlock()
 }
 
+// maxMacroSymbol is the longest name MACRO-32 keeps.
+const maxMacroSymbol = 31
+
 // resolvedName applies scopeName using the assembler's current entry scope,
 // generating one on demand if needed. A local label ("n$") is qualified
 // by the current local label block instead.
@@ -338,6 +341,23 @@ func (a *Assembler) resolvedName(name string) (resolved string, wasLocal bool) {
 		a.localUsed = true
 
 		return a.localLabelName(name), false
+	}
+
+	// MACRO-32 has no "_name" scopes, a leading underscore being one more
+	// character of a name (testdata/dbg85's _.L), and keeps a name's first
+	// 31 characters, with a warning.
+	if a.dialect == DialectMACRO {
+		if len(name) > maxMacroSymbol {
+			// A statement resolves a name more than once: one warning.
+			if a.longSymbol != a.line {
+				a.longSymbol = a.line
+				a.warn(vmserrors.New(vmserrors.VAX_ILLSYMLEN))
+			}
+
+			name = name[:maxMacroSymbol]
+		}
+
+		return name, false
 	}
 
 	if len(name) < 2 || name[0] != '_' || name[1] == '_' {

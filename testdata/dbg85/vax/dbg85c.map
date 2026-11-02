@@ -1,0 +1,93 @@
+
+                                                                 2-NOV-2026 13:06        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBG85S          01                      0 DUA1:[000000]DBG85S.EXE;1             2-NOV-2026 13:06  Linker V11-39
+DBG85C          01                     13 DUA1:[000000]DBG85C.OBJ;1             2-NOV-2026 13:06  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+CODEC                           00000200 0000020C 0000000D (         13.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBG85C          00000200 0000020C 0000000D (         13.) BYTE  0
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+SHR85           00000448-RX       
+STARTC          00000200-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]DBG85C.EXE;1                                        2-NOV-2026 13:06        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000005FF 00000400 (1024. bytes, 2. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    DBG85C 01
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              4.
+Number of global symbols:                                3.
+Number of image sections:                                4.
+User transfer address:                            00000200
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]DBG85C.MAP;1
+Estimated map length:                             11. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   239	00:00:00.00	00:00:00.00
+    Pass 1:                                              1238	00:00:00.00	00:00:00.01
+    Allocation/Relocation:                                 73	00:00:00.00	00:00:00.01
+    Pass 2:                                               930	00:00:00.00	00:00:00.02
+    Map data after object module synopsis:                 42	00:00:00.00	00:00:00.00
+    Symbol table output:                                   23	00:00:00.00	00:00:00.00
+Total run values:                                        2545	00:00:00.00	00:00:00.04
+
+Using a working set limited to 512 pages and 74 pages of data storage (excluding image)
+
+Total number object records read (both passes):   93
+    of which 26 were in libraries and 4 were DEBUG data records containing 143 bytes
+129 bytes of DEBUG data were written,starting at VBN 4 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP DBG85C,DBG85C.OPT/OPTIONS

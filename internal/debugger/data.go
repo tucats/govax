@@ -625,6 +625,14 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 		if d.defaultType != nil {
 			return d.examineTyped(addr, *d.defaultType, nil, radix)
 		}
+
+		// Anywhere else in a routine is an instruction (testdata/dbg85:
+		// EXAMINE .PC, EXAMINE SUB85\SUB85.L10).
+		if prog != nil {
+			if _, _, inRoutine := prog.RoutineAt(addr); inRoutine {
+				return d.examineTyped(addr, dataType{kind: typeInstruction}, nil, radix)
+			}
+		}
 	}
 
 	size := uint32(defaultSize)

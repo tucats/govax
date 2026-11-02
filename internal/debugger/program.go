@@ -48,6 +48,7 @@ func (d *Dispatcher) bindProgram() {
 	g.Bind("SHOW_IMAGE", func(id int64, r *dcl.Result) error { return dbg.showImage(r.Present("FULL")) })
 	g.Bind("SHOW_MODULE", func(id int64, r *dcl.Result) error { return dbg.showModule() })
 	g.Bind("SHOW_LANGUAGE", func(id int64, r *dcl.Result) error { return dbg.showLanguage() })
+	g.Bind("SET_LANGUAGE", func(id int64, r *dcl.Result) error { return dbg.setLanguage(r.String("LANGUAGE")) })
 	g.Bind("SHOW_SCOPE", func(id int64, r *dcl.Result) error { return dbg.showScope() })
 	g.Bind("SHOW_SYMBOL", func(id int64, r *dcl.Result) error {
 		switch {
@@ -491,9 +492,42 @@ func (d *Debugger) showLanguage() error {
 		}
 	}
 
+	if d.language != "" {
+		language = d.language
+	}
+
 	c.Printf("language: %s\n", language)
 
 	return nil
+}
+
+// debuggerLanguages are the names SET LANGUAGE takes (the VMS debugger manual's list).
+var debuggerLanguages = []string{
+	"ADA", "AMACRO", "BASIC", "BLISS", "C", "C_PLUS_PLUS", "COBOL", "DIBOL", "FORTRAN",
+	"MACRO", "MACRO64", "PASCAL", "PLI", "RPG", "SCAN", "UNKNOWN",
+}
+
+// setLanguage runs SET LANGUAGE: the radix goes to the language's (testdata/dbg85's
+// probe: FORTRAN's decimal, as SHOW RADIX showed after it), and names are read by its rule.
+func (d *Debugger) setLanguage(name string) error {
+	language := strings.ToUpper(strings.TrimSpace(name))
+	if !slices.Contains(debuggerLanguages, language) {
+		return vmserrors.New(vmserrors.DBG_SYNTAX, name)
+	}
+
+	d.language = language
+	d.useLanguage(language)
+
+	return nil
+}
+
+// useLanguage gives the debugger language's radix and its rule for a "." inside a
+// name. VMS's FORTRAN treats it as a record's component and MACRO as part of the name.
+// The other languages take MACRO's rule, which no probe has checked (ours, unconfirmed).
+func (d *Debugger) useLanguage(language string) {
+	d.languageRadix = languageRadixOf(language)
+	d.inputRadix, d.outputRadix = d.languageRadix, d.languageRadix
+	d.Machine.FieldDots = language == "FORTRAN"
 }
 
 // showScope runs SHOW SCOPE: the call levels, innermost first, that the

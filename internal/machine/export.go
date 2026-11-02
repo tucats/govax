@@ -76,6 +76,12 @@ func (m *Machine) EvalWholeMode(radix int, text string, value bool) (uint32, err
 	}
 
 	if extra := strings.TrimSpace(rest); extra != "" {
+		// A blank ended the name, or a "(" MACRO's expressions don't have,
+		// as VMS's debugger says of A .B and @N(AP) (testdata/dbg85's probe).
+		if extra[0] == '.' || extra[0] == '(' {
+			return 0, vmserrors.New(vmserrors.DBG_MISOPEMIS, extra[:1])
+		}
+
 		return 0, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
 	}
 

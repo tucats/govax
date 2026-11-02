@@ -70,6 +70,7 @@ var macroIdents = map[uint32]string{
 	vmserrors.VAX_GENERR:        "GENERR",
 	vmserrors.VAX_GENWRN:        "GENWRN",
 	vmserrors.VAX_ILLEXPR:       "ILLEXPR",
+	vmserrors.VAX_ILLSYMLEN:     "ILLSYMLEN",
 	vmserrors.VAX_INCOMPLETENUM: "ILLEXPR",
 	vmserrors.VAX_INDEXBASE:     "ILLINDXREG",
 	vmserrors.VAX_INDEXNEST:     "MAYNOTINDX",

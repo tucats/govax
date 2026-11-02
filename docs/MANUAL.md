@@ -3439,6 +3439,13 @@ VAX> RUN FACT
 DBG>
 ```
 
+A period inside a name is part of the name, in any position but the first:
+`EXAMINE T.I` and `EXAMINE E.` read those symbols, and `MOD\R.TN\LOC.AL` is a
+path. A period that starts an operand is "the contents of", so `.T.I` is the
+contents of `T.I`, as VMS's debugger has it. `SET LANGUAGE FORTRAN` changes
+this as it does on VMS: there `X.Y` selects a record's component, and `R.X`
+is `X` in routine `R`. It also makes the radix decimal.
+
 ### A session
 
 Using the factorial program from section 8, stop in `FACTORIAL` when its

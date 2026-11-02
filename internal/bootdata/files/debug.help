@@ -744,6 +744,26 @@ $SE,RADI
   radix is DECIMAL, HEXADECIMAL, OCTAL, or BINARY (also 10, 16, 8, 2).
   With no qualifier it sets both. HELP RADIX says more.
 
+$SET,LANG
+$SE,LANG
+  Sets the language commands are read in, which at the start is the main
+  program's.
+
+  Format:
+
+    SET LANGUAGE language
+
+  language is ADA, AMACRO, BASIC, BLISS, C, C_PLUS_PLUS, COBOL, DIBOL,
+  FORTRAN, MACRO, MACRO64, PASCAL, PLI, RPG, SCAN, or UNKNOWN. The radix
+  goes to the language's: decimal for FORTRAN, hexadecimal otherwise.
+
+  In MACRO a period inside a name is part of the name, so EXAMINE T.I
+  reads the symbol T.I; one that starts an operand is the contents of it,
+  so .T.I is the contents of T.I. In FORTRAN a period after a name selects
+  a record's component, and DBG85.X means X in routine DBG85. The FORTRAN
+  compiler's names (SQUARES.I) are MACRO's, so a program it compiled, whose
+  language is MACRO, reads them whole.
+
 $SET,MODU
 $SE,MODU
   Notes that a module's symbols are wanted.

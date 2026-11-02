@@ -1,0 +1,303 @@
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   1
+01                                                                        2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+                                     0000     1 	.TITLE	DBG85
+                                     0000     2 	.IDENT	/01/
+                                     0000     3 ;
+                                     0000     4 ; Compiled by govax FORTRAN V0.0-0 on 2-NOV-2026 13:04:35.34
+                                     0000     5 ; from DUA2:[000000]DBG85.FOR;1
+                                     0000     6 ; by the command FORTRAN/NOOPTIMIZE DUA2:[000000]DBG85.FOR
+                                     0000     7 ;
+                                     0000     8 ; Each line of the FORTRAN source appears as a comment, with its line number, before
+                                     0000     9 ; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+                                     0000    10 ; /LIST, their include depth before the number; a comment names the file either way.
+                                     0000    11 ; Each routine's storage map says where its variables are.
+                                     0000    12 ;
+                                     0000    13 ; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+                           0000000A  0000    14 DSC$K_DTYPE_F = 10			; F_floating
+                           0000000E  0000    15 DSC$K_DTYPE_T = 14			; text
+                           00000001  0000    16 DSC$K_CLASS_S = 1			; scalar or fixed-length string
+                           00000004  0000    17 DSC$K_CLASS_A = 4			; array
+                                     0000    18 ;
+                                     0000    19 
+                                     0000    20 ; Common block /BLK/, 8 bytes, the most any unit in this file declares
+                                 00000000    21 	.PSECT	BLK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+                                     0000    22 BLK.$BASE:
+                           00000008  0000    23 	.BLKB	8
+                                     0008    24 
+                                     0008    25 ; Storage map for DBG85, the main program
+                                     0008    26 ;   X     REAL           $LOCAL+0   DBG85.X
+                                     0008    27 ;   V     REAL (3)       $LOCAL+4   DBG85.V
+                                     0008    28 ;   DD    REAL*8         $LOCAL+16  DBG85.DD
+                                     0008    29 ;   H     INTEGER*2      $LOCAL+24  DBG85.H
+                                     0008    30 ;   I     INTEGER        $LOCAL+28  DBG85.I
+                                     0008    31 ;   M     INTEGER (2,3)  $LOCAL+32  DBG85.M
+                                     0008    32 ;   L     LOGICAL        $LOCAL+56  DBG85.L
+                                     0008    33 ;   NAME  CHARACTER*8    $LOCAL+60  DBG85.NAME
+                                     0008    34 ;   IC    INTEGER        BLK+0      DBG85.IC
+                                     0008    35 ;   RC    REAL           BLK+4      DBG85.RC
+                                     0008    36 ;
+                           00000000  0008    37 DBG85.IC = BLK.$BASE			; IC, in /BLK/
+                           00000004  0008    38 DBG85.RC = BLK.$BASE+4			; RC, in /BLK/
+                                     0008    39 
+                                 00000000    40 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+                                     0000    41 DBG85.X:
+                           00000004  0000    42 	.BLKL	1			; X
+                                     0004    43 DBG85.V:
+                           00000010  0004    44 	.BLKL	3			; V, REAL (3)
+                                     0010    45 DBG85.DD:
+                           00000018  0010    46 	.BLKL	2			; DD
+                                     0018    47 DBG85.H:
+                           0000001A  0018    48 	.BLKB	2			; H
+                           0000001C  001A    49 	.BLKB	2
+                                     001C    50 DBG85.I:
+                           00000020  001C    51 	.BLKL	1			; I
+                                     0020    52 DBG85.M:
+                           00000038  0020    53 	.BLKL	6			; M, INTEGER (2,3)
+                                     0038    54 DBG85.L:
+                           0000003C  0038    55 	.BLKL	1			; L
+                                     003C    56 DBG85.NAME:
+                           00000044  003C    57 	.BLKL	2			; NAME
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   2
+01                                                                        2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+                                     0044    58 
+                                 00000000    59 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+                                     0000    60 DBG85.$K2:
+                           00000003  0000    61 	.LONG	3
+                                     0004    62 DBG85.$D1:
+                               0008  0004    63 	.WORD	8			; length
+                              01 0E  0006    64 	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+                           0000003C' 0008    65 	.ADDRESS DBG85.NAME
+                                     000C    66 DBG85.$F1:
+                  00000000 00004120  000C    67 	.LONG	^X00004120,^X00000000	; 2.5D0
+                                     0014    68 DBG85.$K1:
+            48 47 46 45 44 43 42 41  0014    69 	.ASCII	/ABCDEFGH/
+                                     001C    70 
+                                 00000000    71 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+                                     0000    72 ;    1  C DBG85.FOR - the program behind Phase 85's debugger probe (README.md). It
+                                     0000    73 ;    2  C makes no I/O statement, so its MACRO file needs no run-time library, and
+                                     0000    74 ;    3  C VMS's MACRO and LINK can build it. Each name has a form the compiler writes.
+                                     0000    75 ;    4        PROGRAM DBG85
+                               003C  0000    76 	.ENTRY	DBG85,^M<R2,R3,R4,R5>
+                                     0002    77 ;    5        REAL X, V(3)
+                                     0002    78 ;    6        DOUBLE PRECISION DD
+                                     0002    79 ;    7        INTEGER*2 H
+                                     0002    80 ;    8        INTEGER I, M(2,3)
+                                     0002    81 ;    9        LOGICAL L
+                                     0002    82 ;   10        CHARACTER*8 NAME
+                                     0002    83 ;   11        COMMON /BLK/ IC, RC
+                                     0002    84 ;   12        V(1) = 1.5
+     00000004'EF   000040C0 8F   D0  0002    85 	MOVL	#^X000040C0,DBG85.V	; 1.5
+                                     000D    86 ;   13        V(2) = 2.5
+     00000008'EF   00004120 8F   D0  000D    87 	MOVL	#^X00004120,DBG85.V+4	; 2.5
+                                     0018    88 ;   14        V(3) = 3.5
+     0000000C'EF   00004160 8F   D0  0018    89 	MOVL	#^X00004160,DBG85.V+8	; 3.5
+                                     0023    90 ;   15        X = 0.25
+     00000000'EF   00003F80 8F   D0  0023    91 	MOVL	#^X00003F80,DBG85.X	; 0.25
+                                     002E    92 ;   16        DD = 2.5D0
+     00000010'EF   0000000C'EF   70  002E    93 	MOVD	DBG85.$F1,DBG85.DD	; 2.5D0
+                                     0039    94 ;   17        H = 7
+              00000018'EF   07   B0  0039    95 	MOVW	#7,DBG85.H
+                                     0040    96 ;   18        I = 11
+              0000001C'EF   0B   D0  0040    97 	MOVL	#11,DBG85.I
+                                     0047    98 ;   19        L = .TRUE.
+     00000038'EF   FFFFFFFF 8F   D0  0047    99 	MOVL	#-1,DBG85.L
+                                     0052   100 ;   20        NAME = 'ABCDEFGH'
+0000003C'EF   00000014'EF   08   28  0052   101 	MOVC3	#8,DBG85.$K1,DBG85.NAME
+                                     005E   102 ;   21        IC = 42
+              00000000'EF   2A   D0  005E   103 	MOVL	#42,DBG85.IC
+                                     0065   104 ;   22        RC = 9.5
+     00000004'EF   00004218 8F   D0  0065   105 	MOVL	#^X00004218,DBG85.RC	; 9.5
+                                     0070   106 ;   23        M(2,3) = 23
+              00000034'EF   17   D0  0070   107 	MOVL	#23,DBG85.M+20
+                                     0077   108 ;   24        CALL SUB85(V, 3, X)
+                   00000000'EF   DF  0077   109 	PUSHAL	DBG85.X
+                   00000000'EF   DF  007D   110 	PUSHAL	DBG85.$K2
+                   00000004'EF   DF  0083   111 	PUSHAL	DBG85.V
+              000000A1'GF   03   FB  0089   112 	CALLS	#3,G^SUB85
+                                     0090   113 ;   25        CALL TXT85(NAME)
+                   00000004'EF   7F  0090   114 	PUSHAQ	DBG85.$D1
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   3
+01                                                                        2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+              0000011C'GF   01   FB  0096   115 	CALLS	#1,G^TXT85
+                                     009D   116 ;   26        END
+                       50   01   D0  009D   117 	MOVL	#1,R0			; SS$_NORMAL
+                                 04  00A0   118 	RET
+                                     00A1   119 
+                                     00A1   120 ; Storage map for SUB85, a subroutine
+                                     00A1   121 ;   A      REAL (?)  argument 1  @SUB85.A(AP)
+                                     00A1   122 ;   N      INTEGER   argument 2  @SUB85.N(AP)
+                                     00A1   123 ;   TOTAL  REAL      argument 3  @SUB85.TOTAL(AP)
+                                     00A1   124 ;   I      INTEGER   $LOCAL+0    SUB85.I
+                                     00A1   125 ;
+                           00000004  00A1   126 SUB85.A = 4				; A is argument 1
+                           00000008  00A1   127 SUB85.N = 8				; N is argument 2
+                           0000000C  00A1   128 SUB85.TOTAL = 12			; TOTAL is argument 3
+                                     00A1   129 
+                                 00000044   130 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+                                     0044   131 SUB85.I:
+                           00000048  0044   132 	.BLKL	1			; I
+                                     0048   133 SUB85.$B1:
+                               0004  0048   134 	.WORD	4			; length
+                              04 0A  004A   135 	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+                           00000000  004C   136 	.LONG	0			; A's bounds: set at each entry point
+                        01 E0 00 00  0050   137 	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+                           00000000  0054   138 	.LONG	0			; the array's size in bytes
+                           00000000  0058   139 	.LONG	0			; A0, where the element with zero subscripts would be
+                           00000000  005C   140 	.LONG	0			; multipliers
+                  00000000 00000001  0060   141 	.LONG	1,0			; bounds
+                                     0068   142 SUB85.$C1:
+                           0000006C  0068   143 	.BLKL	1			; DO 10's count
+                                     006C   144 
+                                 000000A1   145 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+                                     00A1   146 ;   27        SUBROUTINE SUB85(A, N, TOTAL)
+                               0000  00A1   147 	.ENTRY	SUB85,^M<>
+           0000004C'EF   04 BC   DE  00A3   148 	MOVAL	@SUB85.A(AP),SUB85.$B1+4
+           00000064'EF   08 BC   D0  00AB   149 	MOVL	@SUB85.N(AP),SUB85.$B1+28
+     0000005C'EF   00000064'EF   D0  00B3   150 	MOVL	SUB85.$B1+28,SUB85.$B1+20
+              50   FFFFFFFF 8F   D0  00BE   151 	MOVL	#-1,R0
+         00000058'EF   04 BC40   DE  00C5   152 	MOVAL	@SUB85.A(AP)[R0],SUB85.$B1+16
+00000054'EF   0000005C'EF   04   C5  00CE   153 	MULL3	#4,SUB85.$B1+20,SUB85.$B1+12
+                                     00DA   154 ;   28        REAL A(N), TOTAL
+                                     00DA   155 ;   29        INTEGER I
+                                     00DA   156 ;   30        TOTAL = 0.0
+                         0C BC   D4  00DA   157 	CLRF	@SUB85.TOTAL(AP)
+                                     00DD   158 ;   31        DO 10 I = 1, N
+           00000068'EF   08 BC   D0  00DD   159 	MOVL	@SUB85.N(AP),SUB85.$C1	; DO 10's count
+              00000044'EF   01   D0  00E5   160 	MOVL	#1,SUB85.I
+                   00000068'EF   D5  00EC   161 	TSTL	SUB85.$C1
+                            03   14  00F2   162 	BGTR	SUB85.$2
+                          0024   31  00F4   163 	BRW	SUB85.$1
+                                     00F7   164 SUB85.$2:
+                                     00F7   165 SUB85.$3:				; DO 10's body
+                                     00F7   166 ;   32           TOTAL = TOTAL + A(I)
+              50   00000058'EF   D0  00F7   167 	MOVL	SUB85.$B1+16,R0
+              51   00000044'EF   D0  00FE   168 	MOVL	SUB85.I,R1
+                  0C BC   6041   40  0105   169 	ADDF2	(R0)[R1],@SUB85.TOTAL(AP)
+                                     010A   170 ;   33   10   CONTINUE
+                                     010A   171 SUB85.L10:
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   4
+01                                                                        2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+                   00000044'EF   D6  010A   172 	INCL	SUB85.I
+                   00000068'EF   D7  0110   173 	DECL	SUB85.$C1		; one pass fewer
+                            03   15  0116   174 	BLEQ	SUB85.$4
+                          FFDC   31  0118   175 	BRW	SUB85.$3
+                                     011B   176 SUB85.$4:
+                                     011B   177 SUB85.$1:
+                                     011B   178 ;   34        RETURN
+                                 04  011B   179 	RET
+                                     011C   180 ;   35        END
+                                     011C   181 
+                                     011C   182 ; Storage map for TXT85, a subroutine
+                                     011C   183 ;   S     CHARACTER*(*)  argument 1  @TXT85.S(AP)
+                                     011C   184 ;
+                           00000004  011C   185 TXT85.S = 4				; S is argument 1
+                                     011C   186 
+                                 0000001C   187 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+                                     001C   188 TXT85.$K1:
+                                 5A  001C   189 	.ASCII	/Z/
+                                     001D   190 
+                                 0000011C   191 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+                                     011C   192 ;   36        SUBROUTINE TXT85(S)
+                               003C  011C   193 	.ENTRY	TXT85,^M<R2,R3,R4,R5>
+                                     011E   194 ;   37        CHARACTER*(*) S
+                                     011E   195 ;   38        S(1:1) = 'Z'
+                    50   04 AC   D0  011E   196 	MOVL	TXT85.S(AP),R0
+      04 B0   0000001C'EF   01   28  0122   197 	MOVC3	#1,TXT85.$K1,@4(R0)
+                                     012B   198 ;   39        RETURN
+                                 04  012B   199 	RET
+                                     012C   200 ;   40        END
+                                     012C   201 
+                                     012C   202 	.END	DBG85
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   5
+Symbol table                                                              2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+BLK.$BASE        00000000 R  D  01      
+DBG85            00000000 RG D  04      
+DBG85.$D1        00000004 R  D  03      
+DBG85.$F1        0000000C R  D  03      
+DBG85.$K1        00000014 R  D  03      
+DBG85.$K2        00000000 R  D  03      
+DBG85.DD         00000010 R  D  02      
+DBG85.H          00000018 R  D  02      
+DBG85.I          0000001C R  D  02      
+DBG85.IC       = 00000000 R  D  01      
+DBG85.L          00000038 R  D  02      
+DBG85.M          00000020 R  D  02      
+DBG85.NAME       0000003C R  D  02      
+DBG85.RC       = 00000004 R  D  01      
+DBG85.V          00000004 R  D  02      
+DBG85.X          00000000 R  D  02      
+DSC$K_CLASS_A  = 00000004    D          
+DSC$K_CLASS_S  = 00000001    D          
+DSC$K_DTYPE_F  = 0000000A    D          
+DSC$K_DTYPE_T  = 0000000E    D          
+SUB85            000000A1 RG D  04      
+SUB85.$1         0000011B R  D  04      
+SUB85.$2         000000F7 R  D  04      
+SUB85.$3         000000F7 R  D  04      
+SUB85.$4         0000011B R  D  04      
+SUB85.$B1        00000048 R  D  02      
+SUB85.$C1        00000068 R  D  02      
+SUB85.A        = 00000004    D          
+SUB85.I          00000044 R  D  02      
+SUB85.L10        0000010A R  D  04      
+SUB85.N        = 00000008    D          
+SUB85.TOTAL    = 0000000C    D          
+TXT85            0000011C RG D  04      
+TXT85.$K1        0000001C R  D  03      
+TXT85.S        = 00000004    D          
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+BLK                             00000008  (    8.)  01 (  1.)    PIC   USR   OVR   REL   GBL   SHR NOEXE   RD    WRT NOVEC LONG  
+$LOCAL                          0000006C  (  108.)  02 (  2.)    PIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$PDATA                          0000001D  (   29.)  03 (  3.)    PIC   USR   CON   REL   LCL   SHR NOEXE   RD  NOWRT NOVEC LONG  
+$CODE                           0000012C  (  300.)  04 (  4.)    PIC   USR   CON   REL   LCL   SHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  424     00:00:00.00    00:00:00.01
+Command processing              932     00:00:00.00    00:00:00.01
+Pass 1                          199     00:00:00.00    00:00:00.01
+DBG85                                                                     2-NOV-2026 13:06:14  VAX MACRO V5.4-3            Page   6
+VAX-11 Macro Run Statistics                                               2-NOV-2026 13:04:35  DUA1:[000000]DBG85.MAR;1          (1)
+
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           44     00:00:00.00    00:00:00.01
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1628     00:00:00.00    00:00:00.04
+
+The working set limit was 512 pages.
+3333 bytes (7 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 35 non-local and 0 local symbols.
+202 source lines were read in Pass 1, producing 29 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DBG85

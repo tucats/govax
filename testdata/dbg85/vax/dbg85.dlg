@@ -1,0 +1,504 @@
+@DBG85.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG85.DBG
+! ! DBG85.DBG - the debugger on the compiler's own MACRO (README.md). VMS's log
+! ! leaves out a command that fails, so a comment names each case first.
+! SHOW LANGUAGE
+!language: MACRO
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG85 ]
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBG85                           yes        3316
+!
+!total MACRO modules: 1.         bytes allocated: 64304.
+! !> SHOW MODULE DBG85
+! SHOW MODULE DBG85
+!module name                     symbols    size
+!
+!DBG85                           yes        3316
+!
+!total MACRO modules: 1.         bytes allocated: 64344.
+! SET MODULE/ALL
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBG85                           yes        3316
+!
+!total MACRO modules: 1.         bytes allocated: 64304.
+! !> SHOW SYMBOL *
+! SHOW SYMBOL *
+!routine DBG85
+!routine DBG85\SUB85
+!routine DBG85\TXT85
+!data DBG85\BLK.$BASE
+!data DBG85\DBG85.$D1
+!data DBG85\DBG85.$F1
+!data DBG85\DBG85.$K1
+!data DBG85\DBG85.$K2
+!data DBG85\DBG85.DD
+!data DBG85\DBG85.H
+!data DBG85\DBG85.I
+!label DBG85\DBG85.IC
+!data DBG85\DBG85.L
+!data DBG85\DBG85.M
+!data DBG85\DBG85.NAME
+!label DBG85\DBG85.RC
+!data DBG85\DBG85.V
+!data DBG85\DBG85.X
+!data DBG85\DSC$K_CLASS_A
+!data DBG85\DSC$K_CLASS_S
+!data DBG85\DSC$K_DTYPE_F
+!data DBG85\DSC$K_DTYPE_T
+!label DBG85\SUB85\SUB85.$1
+!label DBG85\SUB85\SUB85.$2
+!label DBG85\SUB85\SUB85.$3
+!label DBG85\SUB85\SUB85.$4
+!data DBG85\SUB85.$B1
+!data DBG85\SUB85.$C1
+!data DBG85\SUB85.A
+!data DBG85\SUB85.I
+!label DBG85\SUB85\SUB85.L10
+!data DBG85\SUB85.N
+!data DBG85\SUB85.TOTAL
+!data DBG85\TXT85.$K1
+!data DBG85\TXT85.S
+!label DBG85\BLK
+!label DBG85\$LOCAL
+!label DBG85\$PDATA
+!label DBG85\$CODE
+!routine DBG85 (global)
+!routine SUB85 (global)
+!routine TXT85 (global)
+!data SYS$IMGSTA (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$DBG85 (global)
+! !> SHOW SYMBOL/ADDRESS *
+! SHOW SYMBOL/ADDRESS *
+!routine DBG85
+!    address: 00000600, size: 000000A1 bytes
+!routine DBG85\SUB85
+!    address: 000006A1, size: 0000007B bytes
+!routine DBG85\TXT85
+!    address: 0000071C, size: 00000010 bytes
+!data DBG85\BLK.$BASE
+!    descriptor address: 00267AF1
+!data DBG85\DBG85.$D1
+!    address: 00000204
+!data DBG85\DBG85.$F1
+!    descriptor address: 00267B33
+!data DBG85\DBG85.$K1
+!    descriptor address: 00267B64
+!data DBG85\DBG85.$K2
+!    address: 00000200
+!data DBG85\DBG85.DD
+!    descriptor address: 00267B8D
+!data DBG85\DBG85.H
+!    descriptor address: 00267BBC
+!data DBG85\DBG85.I
+!    address: 0000041C
+!label DBG85\DBG85.IC
+!    address: 0000046C
+!data DBG85\DBG85.L
+!    address: 00000438
+!data DBG85\DBG85.M
+!    descriptor address: 00267C19
+!data DBG85\DBG85.NAME
+!    descriptor address: 00267C4B
+!label DBG85\DBG85.RC
+!    address: 00000470
+!data DBG85\DBG85.V
+!    descriptor address: 00267C8A
+!data DBG85\DBG85.X
+!    address: 00000400
+!data DBG85\DSC$K_CLASS_A
+!    constant: 00000004
+!data DBG85\DSC$K_CLASS_S
+!    constant: 00000001
+!data DBG85\DSC$K_DTYPE_F
+!    constant: 0000000A
+!data DBG85\DSC$K_DTYPE_T
+!    constant: 0000000E
+!label DBG85\SUB85\SUB85.$1
+!    address: 0000071B
+!label DBG85\SUB85\SUB85.$2
+!    address: 000006F7
+!label DBG85\SUB85\SUB85.$3
+!    address: 000006F7
+!label DBG85\SUB85\SUB85.$4
+!    address: 0000071B
+!data DBG85\SUB85.$B1
+!    address: 00000448
+!data DBG85\SUB85.$C1
+!    address: 00000468
+!data DBG85\SUB85.A
+!    constant: 00000004
+!data DBG85\SUB85.I
+!    address: 00000444
+!label DBG85\SUB85\SUB85.L10
+!    address: 0000070A
+!data DBG85\SUB85.N
+!    constant: 00000008
+!data DBG85\SUB85.TOTAL
+!    constant: 0000000C
+!data DBG85\TXT85.$K1
+!    descriptor address: 00267DD1
+!data DBG85\TXT85.S
+!    constant: 00000004
+!label DBG85\BLK
+!    address: 0000046C, size: 00000008 bytes
+!label DBG85\$LOCAL
+!    address: 00000400, size: 0000006C bytes
+!label DBG85\$PDATA
+!    address: 00000200, size: 0000001D bytes
+!label DBG85\$CODE
+!    address: 00000600, size: 0000012C bytes
+!routine DBG85 (global)
+!    address: 00000600
+!routine SUB85 (global)
+!    address: 000006A1
+!routine TXT85 (global)
+!    address: 0000071C
+!data SYS$IMGSTA (global)
+!    address: 7FFEDF68
+!data SHARE$DBGTBKMSG (global)
+!    address: 0006DE00
+!data SHARE$DBGSSISHR (global)
+!    address: 0006A800
+!data SHARE$DEBUG (global)
+!    address: 00000A00
+!data SHARE$DBG85 (global)
+!    address: 00000200
+! !> SHOW SYMBOL/TYPE *
+! SHOW SYMBOL/TYPE *
+!routine DBG85
+!routine DBG85\SUB85
+!routine DBG85\TXT85
+!data DBG85\BLK.$BASE
+!    array descriptor type, 1 dimension, bounds: [0:7], size: 8 bytes
+!        cell type: atomic type, byte integer, size: 1 byte
+!data DBG85\DBG85.$D1
+!    atomic type, word integer, size: 2 bytes
+!data DBG85\DBG85.$F1
+!    array descriptor type, 1 dimension, bounds: [0:1], size: 8 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.$K1
+!    string descriptor type, character-coded text, size: 8 bytes
+!data DBG85\DBG85.$K2
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.DD
+!    array descriptor type, 1 dimension, bounds: [0:1], size: 8 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.H
+!    array descriptor type, 1 dimension, bounds: [0:1], size: 2 bytes
+!        cell type: atomic type, byte integer, size: 1 byte
+!data DBG85\DBG85.I
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85\DBG85.IC
+!data DBG85\DBG85.L
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.M
+!    array descriptor type, 1 dimension, bounds: [0:5], size: 24 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.NAME
+!    array descriptor type, 1 dimension, bounds: [0:1], size: 8 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!label DBG85\DBG85.RC
+!data DBG85\DBG85.V
+!    array descriptor type, 1 dimension, bounds: [0:2], size: 12 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBG85\DBG85.X
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DSC$K_CLASS_A
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DSC$K_CLASS_S
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DSC$K_DTYPE_F
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\DSC$K_DTYPE_T
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85\SUB85\SUB85.$1
+!label DBG85\SUB85\SUB85.$2
+!label DBG85\SUB85\SUB85.$3
+!label DBG85\SUB85\SUB85.$4
+!data DBG85\SUB85.$B1
+!    atomic type, word integer, size: 2 bytes
+!data DBG85\SUB85.$C1
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\SUB85.A
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\SUB85.I
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85\SUB85\SUB85.L10
+!data DBG85\SUB85.N
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\SUB85.TOTAL
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85\TXT85.$K1
+!    string descriptor type, character-coded text, size: 1 byte
+!data DBG85\TXT85.S
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85\BLK
+!label DBG85\$LOCAL
+!label DBG85\$PDATA
+!label DBG85\$CODE
+!routine DBG85 (global)
+!routine SUB85 (global)
+!routine TXT85 (global)
+!data SYS$IMGSTA (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$DBG85 (global)
+! !> SHOW SYMBOL $LOCAL
+! SHOW SYMBOL $LOCAL
+!%DEBUG-I-SYMNOTFND, no symbols matching $LOCAL are defined
+! !> EXAMINE $LOCAL
+!%DEBUG-E-NOSYMBOL, symbol '$LOCAL' is not in the symbol table
+! !> EXAMINE DBG85\$LOCAL
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85\$LOCAL' is not in the symbol table
+! !> SET BREAK SUB85
+! SET BREAK SUB85
+! !> SET BREAK SUB85.L10
+! SET BREAK SUB85.L10
+! !> SHOW BREAK
+! SHOW BREAK
+!breakpoint at routine DBG85\SUB85
+!breakpoint at DBG85\SUB85\SUB85.L10
+! !> GO to SUB85
+! GO
+!break at routine DBG85\SUB85
+!   148:         MOVAL   @SUB85.A(AP),SUB85.$B1+4
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG85           SUB85              148               00000002         000006A3
+!*DBG85           DBG85              112               00000090         00000690
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG85\SUB85 ], 
+!    1 [ = DBG85 ]
+! !> EXAMINE .PC, D6
+! EXAMINE .PC
+!DBG85\SUB85\%LINE 148:  MOVAL    @B^04(AP),L^0000044C
+! !> EXAMINE/INSTRUCTION .PC
+! EXAMINE/INSTRUCTION .PC
+!DBG85\SUB85\%LINE 148:  MOVAL    @B^04(AP),L^0000044C
+! !> EXAMINE/SOURCE .PC
+! EXAMINE/SOURCE .PC
+!module DBG85
+!   148:         MOVAL   @SUB85.A(AP),SUB85.$B1+4
+! !> TYPE 1:5
+! TYPE 1:5
+!module DBG85
+!     1:         .TITLE  DBG85
+!     2:         .IDENT  /01/
+!     3: ;
+!     4: ; Compiled by govax FORTRAN V0.0-0 on 2-NOV-2026 13:04:35.34
+!     5: ; from DUA2:[000000]DBG85.FOR;1
+! !> Each kind of variable as the compiler declares it
+! !> EXAMINE DBG85.X
+! EXAMINE DBG85.X
+!DBG85\DBG85.X:  00003F80
+! !> EXAMINE DBG85.V
+! EXAMINE DBG85.V
+!DBG85\DBG85.V[0:2]
+!    [0]:        000040C0
+!    [1]:        00004120
+!    [2]:        00004160
+! !> EXAMINE DBG85.V[1]
+! EXAMINE DBG85.V[1]
+!DBG85\DBG85.V[1]:       00004120
+! !> EXAMINE DBG85.V+4
+! EXAMINE DBG85.V+4
+!DBG85\DBG85.V[1]:       00004120
+! !> EXAMINE/FLOAT DBG85.V
+! EXAMINE/FLOAT DBG85.V
+!DBG85\DBG85.V[0:2]
+!    [0]:        1.500000
+!    [1]:        2.500000
+!    [2]:        3.500000
+! !> EXAMINE/FLOAT DBG85.V[1]
+! EXAMINE/FLOAT DBG85.V[1]
+!DBG85\DBG85.V[1]:       2.500000
+! !> EXAMINE/FLOAT DBG85.V:DBG85.V+8
+! EXAMINE/FLOAT DBG85.V:DBG85.V+8
+!DBG85\DBG85.V[0]:       1.500000
+!DBG85\DBG85.V[1]:       2.500000
+!DBG85\DBG85.V[2]:       3.500000
+! !> EXAMINE DBG85.DD
+! EXAMINE DBG85.DD
+!DBG85\DBG85.DD[0:1]
+!    [0]:        00004120
+!    [1]:        00000000
+! !> EXAMINE/D_FLOAT DBG85.DD
+! EXAMINE/D_FLOAT DBG85.DD
+!DBG85\DBG85.DD[0:1]
+!    [0]:        2.500000000000000
+! !> EXAMINE DBG85.H
+! EXAMINE DBG85.H
+!DBG85\DBG85.H[0:1]
+!    [0]:        07
+!    [1]:        00
+! !> EXAMINE DBG85.I
+! EXAMINE DBG85.I
+!DBG85\DBG85.I:  0000000B
+! !> EXAMINE DBG85.L
+! EXAMINE DBG85.L
+!DBG85\DBG85.L:  0FFFFFFFF
+! !> EXAMINE DBG85.NAME
+! EXAMINE DBG85.NAME
+!DBG85\DBG85.NAME[0:1]
+!    [0]:        44434241
+!    [1]:        48474645
+! !> EXAMINE/ASCII:8 DBG85.NAME
+! EXAMINE/ASCII:8 DBG85.NAME
+!DBG85\DBG85.NAME[0:1]:  'ABCDEFGH'
+! !> EXAMINE DBG85.M
+! EXAMINE DBG85.M
+!DBG85\DBG85.M[0:5]
+!    [0]:        00000000
+!    [1]:        00000000
+!    [2]:        00000000
+!    [3]:        00000000
+!    [4]:        00000000
+!    [5]:        00000017
+! !> EXAMINE DBG85.M[1,2]
+!%DEBUG-W-TOOMANSUB, too many subscripts, array has 1 dimension
+! !> EXAMINE DBG85.IC, in a common block
+! EXAMINE DBG85.IC
+!DBG85\DBG85.IC: SCANC    S^#00,S^#00,S^#00,S^#18
+! !> EXAMINE DBG85.RC
+! EXAMINE DBG85.RC
+!DBG85\DBG85.RC: BGEQ     000004B4
+! !> EXAMINE/FLOAT DBG85.RC
+! EXAMINE/FLOAT DBG85.RC
+!DBG85\DBG85.RC: 9.500000
+! !> EXAMINE BLK
+!%DEBUG-E-NOSYMBOL, symbol 'BLK' is not in the symbol table
+! !> EXAMINE BLK.$BASE
+! EXAMINE BLK.$BASE
+!DBG85\BLK.$BASE[0:7]
+!    [0]:        2A
+!    [1]:        00
+!    [2]:        00
+!    [3]:        00
+!    [4]:        18
+!    [5]:        42
+!    [6]:        00
+!    [7]:        00
+! !> EXAMINE DBG85.$K1
+! EXAMINE DBG85.$K1
+!DBG85\DBG85.$K1:        'ABCDEFGH'
+! !> EVALUATE/ADDRESS DBG85.X
+! EVALUATE/ADDRESS DBG85.X
+!00000400
+! !> Dummy arguments, D2: EXAMINE SUB85.A
+! EXAMINE SUB85.A
+!%DEBUG-E-NOACCESSR, no read access to address 00000004
+! !> EVALUATE SUB85.N
+! EVALUATE SUB85.N
+!00000008
+! !> EVALUATE/ADDRESS SUB85.N
+! EVALUATE/ADDRESS SUB85.N
+!00000008
+! !> SHOW SYMBOL/TYPE SUB85.N
+! SHOW SYMBOL/TYPE SUB85.N
+!data DBG85\SUB85.N
+!    atomic type, longword integer, size: 4 bytes
+! !> EXAMINE @(AP+SUB85.N)
+! EXAMINE @(AP+SUB85.N)
+!%DEBUG-E-NOACCESSR, no read access to address FFFF0038
+! !> EXAMINE .(.AP+SUB85.N)
+! EXAMINE .(.AP+SUB85.N)
+!DBG85\DBG85.$K2:        00000003
+! !> EXAMINE @SUB85.N(AP)
+!%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '('
+! !> EXAMINE SUB85.I
+! EXAMINE SUB85.I
+!DBG85\SUB85.I:  00000000
+! !> EXAMINE SUB85\SUB85.I
+! EXAMINE SUB85\SUB85.I
+!DBG85\SUB85.I:  00000000
+! !> EXAMINE DBG85\SUB85\SUB85.I
+! EXAMINE DBG85\SUB85\SUB85.I
+!DBG85\SUB85.I:  00000000
+! !> EXAMINE DBG85\SUB85.I
+! EXAMINE DBG85\SUB85.I
+!DBG85\SUB85.I:  00000000
+! !> EXAMINE SUB85\SUB85.L10
+! EXAMINE SUB85\SUB85.L10
+!DBG85\SUB85\SUB85.L10:  INCL     L^DBG85\SUB85.I
+! !> EXAMINE/INSTRUCTION DBG85\SUB85\SUB85.L10
+! EXAMINE/INSTRUCTION DBG85\SUB85\SUB85.L10
+!DBG85\SUB85\SUB85.L10:  INCL     L^DBG85\SUB85.I
+! !> Bare FORTRAN names: EXAMINE I
+!%DEBUG-E-NOSYMBOL, symbol 'I' is not in the symbol table
+! !> EXAMINE V
+!%DEBUG-E-NOSYMBOL, symbol 'V' is not in the symbol table
+! !> Stepping
+! STEP
+!stepped to DBG85\SUB85\%LINE 149
+!   149:         MOVL    @SUB85.N(AP),SUB85.$B1+28
+! STEP
+!stepped to DBG85\SUB85\%LINE 150
+!   150:         MOVL    SUB85.$B1+28,SUB85.$B1+20
+! STEP/INSTRUCTION
+!stepped to DBG85\SUB85\%LINE 151: MOVL     I^#0FFFFFFFF,R0
+!   151:         MOVL    #-1,R0
+! !> GO to the label
+! GO
+!break at DBG85\SUB85\SUB85.L10
+!   172:         INCL    SUB85.I
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG85           SUB85              172               00000069         0000070A
+!*DBG85           DBG85              112               00000090         00000690
+! EXAMINE/INSTRUCTION .PC
+!DBG85\SUB85\SUB85.L10:  INCL     L^DBG85\SUB85.I
+! !> EXAMINE .PC
+! EXAMINE .PC
+!DBG85\SUB85\SUB85.L10:  INCL     L^DBG85\SUB85.I
+! !> Language FORTRAN
+! SET LANGUAGE FORTRAN
+! SHOW LANGUAGE
+!language: FORTRAN
+! SHOW RADIX
+!input radix : decimal
+!output radix: decimal
+! !> EXAMINE DBG85.X
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85\X' is not in the symbol table
+! !> EXAMINE DBG85.V(1)
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85\V' is not in the symbol table
+! !> EXAMINE DBG85.M(1,2)
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85\M' is not in the symbol table
+! !> EXAMINE DBG85.NAME
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85\NAME' is not in the symbol table
+! !> SET LANGUAGE MACRO
+! SET LANGUAGE MACRO
+! CANCEL BREAK/ALL
+! !> GO to TXT85
+! SET BREAK TXT85
+! GO
+!break at routine DBG85\TXT85
+!   196:         MOVL    TXT85.S(AP),R0
+! !> EXAMINE TXT85.S
+! EXAMINE TXT85.S
+!%DEBUG-E-NOACCESSR, no read access to address 00000004
+! !> EXAMINE .PC
+! EXAMINE .PC
+!DBG85\TXT85\%LINE 196:  MOVL     B^04(AP),R0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG85           TXT85              196               00000002         0000071E
+!*DBG85           DBG85              115               0000009D         0000069D
+! !> GO to the end
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG85.DBG
+EXIT

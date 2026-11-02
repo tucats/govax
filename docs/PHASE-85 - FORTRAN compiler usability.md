@@ -58,9 +58,8 @@ spirit but our own layouts:
 The list as the survey proposed it and the author's review settled it:
 
 1. **Survey** (done 2026-11-02): Part A below.
-2. **The debugger reads dotted names**, with a VMS probe of the rule, written for
-   the author to run on the simh VAX (Part A, "The debugger", answer 4). First,
-   since every later check of `/DEBUG` needs it.
+2. **The debugger reads dotted names** (done 2026-11-02), with a VMS probe of the
+   rule, run by the author on the simh VAX (Part A, "What the probe settled").
 3. **`/LIST`, `/SHOW`, TITLE and SUBTITLE.**
 4. **`/CROSS_REFERENCE`.**
 5. **`/CHECK`,** with OPTIONS's `/CHECK` and the optimizer's rules for it.
@@ -327,6 +326,42 @@ The author accepted the survey's decisions and the subtask list above, and answe
 6. **The listing's layout stands as drawn:** the two-line heading, and maps and cross references
    after the whole source.
 
+## What the probe settled (2026-11-02)
+
+`testdata/dbg85`, VMS 7.1's run in its `vax/`. Language MACRO:
+
+- **A period is an ordinary character of a name but for the first:** `A.B`, `E.`, `F..G`,
+  `H.1`, `$.K`, `_.L`, and `R.TN\LOC.AL` as a path. So is the case: `a.b` finds `A.B`.
+- **D1's proposed rule held.** `.A.B` is the contents of `A.B`, and `..A` the contents of the
+  contents. `C.D`, whose parts exist and which doesn't, is NOSYMBOL for the whole name, as is
+  `DBG85M.A`. `.P.Q`, though MACRO accepts that label and SHOW SYMBOL lists it, is NOSYMBOL `P.Q`:
+  a leading period is always the operator.
+- **`A .B` is `%DEBUG-E-MISOPEMIS`** at the `.`, as `@SUB85.N(AP)` is at the `(`.
+
+Language FORTRAN, which `SET LANGUAGE` reaches, is different, and our images aren't in it:
+
+- `A.B` with `A` data is `%DEBUG-W-NOTRECORD`, "cannot select component B"; `GLOB.AL` is NOSYMBOL
+  `GLOB`; and `DBG85.X`, with `DBG85` a routine, is NOSYMBOL `DBG85\X`, so there `R.X` is a way
+  to write a path. The radix goes to decimal.
+
+For subtask 10, and changing what the survey assumed:
+
+- **Level B has more help than expected.** VMS gets from `.BLKF 3`'s label an array, `DBG85.V[0:2]`,
+  and `EXAMINE/FLOAT DBG85.V[1]` works, but everything is typed by MACRO's directive: `DBG85.X`
+  shows as a longword, and `M(2,3)` is one dimension (`TOOMANSUB` for two subscripts).
+- **D2:** `EXAMINE SUB85.A` on VMS too is an access violation at address 4. `.(.AP+SUB85.N)` is the
+  argument. So a debugger that knows dummies does more than VMS's did with this MACRO.
+- **D3:** a common block's `DBG85.IC` is a label, so VMS decodes it as an instruction (`SCANC`).
+  That's what VMS does with the compiler's current output, not something to copy for level B.
+- **D6 is fixed:** anywhere in a routine `EXAMINE` shows an instruction. That's why `.PC` looked wrong.
+- **D7 is partly no gap:** `EXAMINE $LOCAL` is NOSYMBOL on VMS, though SHOW SYMBOL * lists it. It
+  needs EXAMINE/SOURCE, TYPE, SHOW MODULE's name, and SHOW SYMBOL without addresses, with globals.
+- **D8:** VMS's SHOW MODULE lists only the current image's modules, `SHOW MODULE/SHARE` adds a
+  `SHARE$` line per image, and `SET IMAGE` reaches the rest; govax's list of FTNRTL's is wrong.
+- **Real MACRO assembled `/OPTIMIZE`'s output** (`DBG85O.MAR`) without a message, a small start on
+  what Phase 84 left to Phase 86. VMS's debugger read govax's images but for the two MACRO bugs below,
+  and could say no more about source lines since the volume was DUA2 here and DUA1 there.
+
 ## Questions, as put to the author
 
 1. **How far should the debugger go, and in which phase?** You asked for this as
@@ -376,4 +411,18 @@ The author accepted the survey's decisions and the subtask list above, and answe
   finding the debugger refuses the compiler's dotted names; reproduced, and made
   subtasks 2 and 10. No code changed.
   Subtask 2's probe, `testdata/dbg85`, written and run through on govax to find its own
-  mistakes; waiting on the author's run on the simh VAX. The fix waits for its answers.
+  mistakes, then run by the author on VMS 7.1 ("What the probe settled").
+- **2026-11-02:** Subtask 2. **The evaluator** (`machine/expr.go`): `isNameChar`, a period inside a
+  name, and `FieldDots`, `Machine.FieldDots`, `component` for language FORTRAN. `..A` now works.
+  `EvalWholeMode` says MISOPEMIS (new, with NOTRECORD) for what's left starting `.` or `(`. **SET
+  LANGUAGE** (`debugger/program.go`, `useLanguage`; ours, unconfirmed, that languages but FORTRAN
+  take MACRO's rule). **Paths** (`dbgsym.Lookup`): one may start at a routine, and a module's name is
+  seen from its routines. **EXAMINE** anywhere in a routine is an instruction (D6). **`!XL`** is in
+  capitals, as VMS's is; it showed in `NOACCESSR ... 0000000C`. **MACRO**, three bugs VMS's objects
+  showed: a leading `_` was still the console dialect's scope (`_.L` became `__1_.L`); a name past 31
+  characters was kept whole, now cut with `ILLSYMLEN`; and a source of 128 to 255 lines wrote the byte
+  form of DEFLINES, and a `.TITLE` with no text no TTL record. Tests: `TestDebugRecords` holds DBG85M's
+  and the compiler's DBG85's objects to VMS's byte for byte; `TestMacroSymbolNames`;
+  `TestDottedNamesOnCompiledProgram`, on a program compiled, assembled, and linked by govax; and
+  `TestDebuggerSessionOracle` replays DBG85M's and DBG85's sessions, all the name cases matching, with
+  what remains listed for subtask 10 (mostly SHOW SYMBOL's form, EXAMINE/SOURCE, and D3).

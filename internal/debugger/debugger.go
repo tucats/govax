@@ -147,6 +147,9 @@ type Debugger struct {
 	outputRadix   int
 	languageRadix int
 
+	// language is what SET LANGUAGE set, "" if it hasn't been.
+	language string
+
 	// defaultType is SET TYPE's type for locations the program's symbols
 	// don't type, nil for the default, a longword; overrideType is SET
 	// TYPE/OVERRIDE's type for every location, nil for none (types.go).

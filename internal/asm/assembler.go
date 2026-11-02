@@ -95,6 +95,9 @@ type Assembler struct {
 	curEntry string
 	tempSeq  int
 
+	// longSymbol is the line that last had the warning for a name past 31 characters.
+	longSymbol int
+
 	// localBlock numbers the current MACRO-32 local label block (see
 	// closeLocalBlock); localUsed says whether any "n$" label has been
 	// defined or referenced in it.

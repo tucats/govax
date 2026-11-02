@@ -1,0 +1,20 @@
+@DBG85N.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG85N.DBG
+! ! DBG85N.DBG - a name starting with a period, if it assembled (README.md).
+! SHOW SYMBOL *
+!routine DBG85N\STARTN
+!data DBG85N\.P.Q
+!label DBG85N\DATAN
+!label DBG85N\CODEN
+!routine STARTN (global)
+!data SYS$IMGSTA (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$DBG85N (global)
+! !> EXAMINE .P.Q
+!%DEBUG-E-NOSYMBOL, symbol 'P.Q' is not in the symbol table
+! !> EVALUATE/ADDRESS .P.Q
+!%DEBUG-E-NOSYMBOL, symbol 'P.Q' is not in the symbol table
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG85N.DBG
+EXIT

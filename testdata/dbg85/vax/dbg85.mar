@@ -1,0 +1,202 @@
+	.TITLE	DBG85
+	.IDENT	/01/
+;
+; Compiled by govax FORTRAN V0.0-0 on 2-NOV-2026 13:04:35.34
+; from DUA2:[000000]DBG85.FOR;1
+; by the command FORTRAN/NOOPTIMIZE DUA2:[000000]DBG85.FOR
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
+DSC$K_DTYPE_F = 10			; F_floating
+DSC$K_DTYPE_T = 14			; text
+DSC$K_CLASS_S = 1			; scalar or fixed-length string
+DSC$K_CLASS_A = 4			; array
+;
+
+; Common block /BLK/, 8 bytes, the most any unit in this file declares
+	.PSECT	BLK,PIC,OVR,REL,GBL,SHR,NOEXE,RD,WRT,LONG
+BLK.$BASE:
+	.BLKB	8
+
+; Storage map for DBG85, the main program
+;   X     REAL           $LOCAL+0   DBG85.X
+;   V     REAL (3)       $LOCAL+4   DBG85.V
+;   DD    REAL*8         $LOCAL+16  DBG85.DD
+;   H     INTEGER*2      $LOCAL+24  DBG85.H
+;   I     INTEGER        $LOCAL+28  DBG85.I
+;   M     INTEGER (2,3)  $LOCAL+32  DBG85.M
+;   L     LOGICAL        $LOCAL+56  DBG85.L
+;   NAME  CHARACTER*8    $LOCAL+60  DBG85.NAME
+;   IC    INTEGER        BLK+0      DBG85.IC
+;   RC    REAL           BLK+4      DBG85.RC
+;
+DBG85.IC = BLK.$BASE			; IC, in /BLK/
+DBG85.RC = BLK.$BASE+4			; RC, in /BLK/
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DBG85.X:
+	.BLKL	1			; X
+DBG85.V:
+	.BLKL	3			; V, REAL (3)
+DBG85.DD:
+	.BLKL	2			; DD
+DBG85.H:
+	.BLKB	2			; H
+	.BLKB	2
+DBG85.I:
+	.BLKL	1			; I
+DBG85.M:
+	.BLKL	6			; M, INTEGER (2,3)
+DBG85.L:
+	.BLKL	1			; L
+DBG85.NAME:
+	.BLKL	2			; NAME
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+DBG85.$K2:
+	.LONG	3
+DBG85.$D1:
+	.WORD	8			; length
+	.BYTE	DSC$K_DTYPE_T,DSC$K_CLASS_S
+	.ADDRESS DBG85.NAME
+DBG85.$F1:
+	.LONG	^X00004120,^X00000000	; 2.5D0
+DBG85.$K1:
+	.ASCII	/ABCDEFGH/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C DBG85.FOR - the program behind Phase 85's debugger probe (README.md). It
+;    2  C makes no I/O statement, so its MACRO file needs no run-time library, and
+;    3  C VMS's MACRO and LINK can build it. Each name has a form the compiler writes.
+;    4        PROGRAM DBG85
+	.ENTRY	DBG85,^M<R2,R3,R4,R5>
+;    5        REAL X, V(3)
+;    6        DOUBLE PRECISION DD
+;    7        INTEGER*2 H
+;    8        INTEGER I, M(2,3)
+;    9        LOGICAL L
+;   10        CHARACTER*8 NAME
+;   11        COMMON /BLK/ IC, RC
+;   12        V(1) = 1.5
+	MOVL	#^X000040C0,DBG85.V	; 1.5
+;   13        V(2) = 2.5
+	MOVL	#^X00004120,DBG85.V+4	; 2.5
+;   14        V(3) = 3.5
+	MOVL	#^X00004160,DBG85.V+8	; 3.5
+;   15        X = 0.25
+	MOVL	#^X00003F80,DBG85.X	; 0.25
+;   16        DD = 2.5D0
+	MOVD	DBG85.$F1,DBG85.DD	; 2.5D0
+;   17        H = 7
+	MOVW	#7,DBG85.H
+;   18        I = 11
+	MOVL	#11,DBG85.I
+;   19        L = .TRUE.
+	MOVL	#-1,DBG85.L
+;   20        NAME = 'ABCDEFGH'
+	MOVC3	#8,DBG85.$K1,DBG85.NAME
+;   21        IC = 42
+	MOVL	#42,DBG85.IC
+;   22        RC = 9.5
+	MOVL	#^X00004218,DBG85.RC	; 9.5
+;   23        M(2,3) = 23
+	MOVL	#23,DBG85.M+20
+;   24        CALL SUB85(V, 3, X)
+	PUSHAL	DBG85.X
+	PUSHAL	DBG85.$K2
+	PUSHAL	DBG85.V
+	CALLS	#3,G^SUB85
+;   25        CALL TXT85(NAME)
+	PUSHAQ	DBG85.$D1
+	CALLS	#1,G^TXT85
+;   26        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for SUB85, a subroutine
+;   A      REAL (?)  argument 1  @SUB85.A(AP)
+;   N      INTEGER   argument 2  @SUB85.N(AP)
+;   TOTAL  REAL      argument 3  @SUB85.TOTAL(AP)
+;   I      INTEGER   $LOCAL+0    SUB85.I
+;
+SUB85.A = 4				; A is argument 1
+SUB85.N = 8				; N is argument 2
+SUB85.TOTAL = 12			; TOTAL is argument 3
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+SUB85.I:
+	.BLKL	1			; I
+SUB85.$B1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_A
+	.LONG	0			; A's bounds: set at each entry point
+	.BYTE	0,0,^XE0,1		; scale, digits, flags, dimensions
+	.LONG	0			; the array's size in bytes
+	.LONG	0			; A0, where the element with zero subscripts would be
+	.LONG	0			; multipliers
+	.LONG	1,0			; bounds
+SUB85.$C1:
+	.BLKL	1			; DO 10's count
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   27        SUBROUTINE SUB85(A, N, TOTAL)
+	.ENTRY	SUB85,^M<>
+	MOVAL	@SUB85.A(AP),SUB85.$B1+4
+	MOVL	@SUB85.N(AP),SUB85.$B1+28
+	MOVL	SUB85.$B1+28,SUB85.$B1+20
+	MOVL	#-1,R0
+	MOVAL	@SUB85.A(AP)[R0],SUB85.$B1+16
+	MULL3	#4,SUB85.$B1+20,SUB85.$B1+12
+;   28        REAL A(N), TOTAL
+;   29        INTEGER I
+;   30        TOTAL = 0.0
+	CLRF	@SUB85.TOTAL(AP)
+;   31        DO 10 I = 1, N
+	MOVL	@SUB85.N(AP),SUB85.$C1	; DO 10's count
+	MOVL	#1,SUB85.I
+	TSTL	SUB85.$C1
+	BGTR	SUB85.$2
+	BRW	SUB85.$1
+SUB85.$2:
+SUB85.$3:				; DO 10's body
+;   32           TOTAL = TOTAL + A(I)
+	MOVL	SUB85.$B1+16,R0
+	MOVL	SUB85.I,R1
+	ADDF2	(R0)[R1],@SUB85.TOTAL(AP)
+;   33   10   CONTINUE
+SUB85.L10:
+	INCL	SUB85.I
+	DECL	SUB85.$C1		; one pass fewer
+	BLEQ	SUB85.$4
+	BRW	SUB85.$3
+SUB85.$4:
+SUB85.$1:
+;   34        RETURN
+	RET
+;   35        END
+
+; Storage map for TXT85, a subroutine
+;   S     CHARACTER*(*)  argument 1  @TXT85.S(AP)
+;
+TXT85.S = 4				; S is argument 1
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+TXT85.$K1:
+	.ASCII	/Z/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   36        SUBROUTINE TXT85(S)
+	.ENTRY	TXT85,^M<R2,R3,R4,R5>
+;   37        CHARACTER*(*) S
+;   38        S(1:1) = 'Z'
+	MOVL	TXT85.S(AP),R0
+	MOVC3	#1,TXT85.$K1,@4(R0)
+;   39        RETURN
+	RET
+;   40        END
+
+	.END	DBG85

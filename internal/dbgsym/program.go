@@ -257,7 +257,12 @@ func (p *Program) Lookup(path string) (*symtab.Symbol, bool) {
 
 	m, ok := p.ModuleNamed(parts[0])
 	if !ok {
-		return nil, false
+		// A path may start at a routine: R.TN\LOC.AL (testdata/dbg85).
+		if m, ok = p.moduleOfRoutine(parts[0]); !ok {
+			return nil, false
+		}
+
+		parts = append([]string{m.Name}, parts...)
 	}
 
 	s, ok := m.Symbols.Get(parts[len(parts)-1])
@@ -266,11 +271,36 @@ func (p *Program) Lookup(path string) (*symtab.Symbol, bool) {
 	}
 
 	scope := strings.Join(parts[:len(parts)-1], `\`)
-	if !strings.EqualFold(s.Scope, scope) && !strings.EqualFold(DisplayScope(s.Scope), scope) {
-		return nil, false
+	if strings.EqualFold(s.Scope, scope) || strings.EqualFold(DisplayScope(s.Scope), scope) {
+		return s, true
 	}
 
-	return s, true
+	// A name of the module is seen from its routines too: DBG85\SUB85\SUB85.I
+	// is DBG85\SUB85.I (testdata/dbg85), though a routine's label isn't seen from
+	// the module, as above.
+	if len(parts) == 3 && strings.EqualFold(s.Scope, parts[0]) && isRoutine(m, parts[1]) {
+		return s, true
+	}
+
+	return nil, false
+}
+
+// moduleOfRoutine finds the module holding a routine of that name.
+func (p *Program) moduleOfRoutine(name string) (*Module, bool) {
+	for _, m := range p.Modules {
+		if isRoutine(m, name) {
+			return m, true
+		}
+	}
+
+	return nil, false
+}
+
+// isRoutine reports whether module m has a routine of that name.
+func isRoutine(m *Module, name string) bool {
+	s, ok := m.Symbols.Get(name)
+
+	return ok && s.IsEntry()
 }
 
 // Path is a symbol's path name as the debugger writes it: its scope (see

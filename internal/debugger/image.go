@@ -48,9 +48,10 @@ func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 	c.Printf("\n         GOVAX DEBUG\n\n")
 	c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_INITIAL, a.Language, a.Module))
 
-	// The language sets the radix numbers are typed and shown in.
-	d.languageRadix = languageRadixOf(a.Language)
-	d.inputRadix, d.outputRadix = d.languageRadix, d.languageRadix
+	// The language sets the radix numbers are typed and shown in, and how
+	// a name with a period reads.
+	d.language = ""
+	d.useLanguage(a.Language)
 
 	d.imageDebug = true
 	d.imageExited = false

@@ -264,7 +264,8 @@ func DSTSourceFileRecord(f SourceFile) DSTRecord {
 
 // DSTLineCountRecord returns the source correlation record that maps the
 // source's lines, one to one, to its records: DST$K_SRC_DEFLINES_B (0B)
-// and a byte, or DST$K_SRC_DEFLINES_W (0A) and a word, as many as it
+// and a byte up to 127 (a line count of 202 is the word form in VMS's
+// testdata/dbg85), or DST$K_SRC_DEFLINES_W (0A) and a word, as many as it
 // takes.
 func DSTLineCountRecord(lines int) DSTRecord {
 	var data []byte
@@ -273,7 +274,7 @@ func DSTLineCountRecord(lines int) DSTRecord {
 		data = append(data, 0x0A, 0xFF, 0xFF)
 	}
 
-	if lines <= 0xFF {
+	if lines <= 0x7F {
 		data = append(data, 0x0B, byte(lines))
 	} else {
 		data = append(data, 0x0A, byte(lines), byte(lines>>8))

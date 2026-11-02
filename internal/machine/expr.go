@@ -75,6 +75,13 @@ type Evaluator struct {
 	// (%LINE 120, DBGSUB\%LINE 14). Nil for none.
 	Debug DebugNames
 
+	// FieldDots says a "." after a name selects a record's component, as
+	// the debugger's language FORTRAN has it, rather than being part of the
+	// name, as in MACRO, whose symbols may hold periods (T.I, E., F..G).
+	// Only a "." inside a name is either: one that starts an operand is
+	// always "the contents of" (testdata/dbg85's probe). See component.
+	FieldDots bool
+
 	// Names, when set, is asked about a name before any other table
 	// (PRINT's DCL symbols, Hooks.DCLSymbol); ok false passes the name
 	// on to the usual lookup. Nil for none.
@@ -470,7 +477,7 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 
 	if isSymbolStart(s[0]) {
 		i := 1
-		for i < len(s) && isSymbolChar(s[i]) {
+		for i < len(s) && e.isNameChar(s[i]) {
 			i++
 		}
 
@@ -486,12 +493,20 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			}
 
 			i += 2
-			for i < len(s) && isSymbolChar(s[i]) {
+			for i < len(s) && e.isNameChar(s[i]) {
 				i++
 			}
 		}
 
 		name, rest := s[:i], s[i:]
+
+		if e.FieldDots && len(rest) > 1 && rest[0] == '.' && isSymbolStart(rest[1]) {
+			var err error
+
+			if name, rest, err = e.component(name, rest[1:]); err != nil {
+				return 0, "", err
+			}
+		}
 
 		if strings.EqualFold(name, "DEFINED") {
 			return e.parseDefined(rest)
@@ -653,7 +668,7 @@ func (e *Evaluator) dataContents(name string, addr uint32) (v uint32, isData boo
 // takes: a name, a number, a parenthesis, or a "%" register. (A "." before
 // a digit is a number's own point, and is left to the number.)
 func startsOperand(ch byte) bool {
-	return isSymbolStart(ch) || isDigit(ch) || ch == '(' || ch == '%'
+	return isSymbolStart(ch) || isDigit(ch) || ch == '(' || ch == '%' || ch == '.'
 }
 
 // parseContents evaluates the operand after a "." or "@" and returns its
@@ -690,7 +705,7 @@ func (e *Evaluator) isRegister(s string) bool {
 	t := strings.TrimPrefix(s, "%")
 
 	i := 0
-	for i < len(t) && isSymbolChar(t[i]) {
+	for i < len(t) && e.isNameChar(t[i]) {
 		i++
 	}
 
@@ -986,6 +1001,38 @@ func isSymbolStart(ch byte) bool {
 
 func isSymbolChar(ch byte) bool {
 	return isSymbolStart(ch) || isDigit(ch)
+}
+
+// isNameChar reports whether ch continues a name in an expression: a symbol
+// character, or a period unless FieldDots makes it an operator.
+func (e *Evaluator) isNameChar(ch byte) bool {
+	return isSymbolChar(ch) || (ch == '.' && !e.FieldDots)
+}
+
+// component reads the rest of name.component, s starting at the component,
+// under FieldDots, and returns the name to look up and what follows it. VMS's
+// debugger, in language FORTRAN (testdata/dbg85's probe): with no such name,
+// the name is what's missing (GLOB.AL says GLOB); a name that is data isn't a
+// record (A.B says "cannot select component B"); and otherwise the name is a
+// scope and the component a name in it (DBG85.X says DBG85\X). govax has no
+// records in its debugger yet, so every data name is the second case.
+func (e *Evaluator) component(name, s string) (path, rest string, err error) {
+	i := 1
+	for i < len(s) && isSymbolChar(s[i]) {
+		i++
+	}
+
+	if _, ok := e.lookupSymbol(name); !ok {
+		return "", "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+	}
+
+	if data, ok := e.Debug.(DebugData); ok {
+		if _, isData := data.DataSize(name); isData {
+			return "", "", vmserrors.New(vmserrors.DBG_NOTRECORD, s[:i])
+		}
+	}
+
+	return name + `\` + s[:i], s[i:], nil
 }
 
 // parseNumber parses a numeric literal, matching asm_hex/asm_dec's

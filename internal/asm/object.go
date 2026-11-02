@@ -67,10 +67,11 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		b.Language = defaultLanguage
 	}
 
-	// With no .TITLE at all, real MACRO still writes a title header
-	// record, of "\x01 ", whether or not a .SBTTL came first
-	// (testdata/mar/round: NOTITLE, NOTITLE2, and NOTITLE3).
-	if a.title == "" {
+	// With no .TITLE at all, or one with no text after the module's name,
+	// real MACRO still writes a title header record, of "\x01 ", whether or
+	// not a .SBTTL came first (testdata/mar/round: NOTITLE, NOTITLE2, and
+	// NOTITLE3; testdata/dbg85: DBG85M).
+	if b.Title == "" {
 		b.Title = noTitleText
 	}
 

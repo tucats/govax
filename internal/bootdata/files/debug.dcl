@@ -111,6 +111,7 @@ grammar debugger
         keyword     source              /syntax=set_source/nonegatable
         keyword     mode                /syntax=set_mode/nonegatable
         keyword     radix               /syntax=set_radix/nonegatable
+        keyword     language            /syntax=set_language/nonegatable
         keyword     module              /syntax=set_module/nonegatable
         keyword     psl                 /syntax=set_psl/nonegatable
         keyword     pte                 /syntax=set_pte/nonegatable
@@ -226,6 +227,14 @@ grammar debugger
 
         ! SET RADIX [/INPUT|/OUTPUT] DECIMAL|HEXADECIMAL|OCTAL|BINARY. With
         ! neither qualifier it sets both radixes.
+        ! SET LANGUAGE language: the language commands are read in, which
+        ! decides the radix and what a "." inside a name means
+        ! (docs/PHASE-85, subtask 2).
+        syntax set_language/id=1816
+            parameter   language/id=1817          -
+                        /type=$rest_of_line     -
+                        /prompt="Language"
+
         syntax set_radix/id=82
             qualifier   input/id=83/nonegatable
             qualifier   output/id=84/nonegatable

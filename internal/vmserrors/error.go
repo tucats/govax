@@ -83,7 +83,7 @@ func fixedHex(a any, width int) (string, bool) {
 		return "", false
 	}
 
-	return fmt.Sprintf("%0*x", width, v), true
+	return fmt.Sprintf("%0*X", width, v), true
 }
 
 // toUint64 converts any of Go's integer types (signed or unsigned, any

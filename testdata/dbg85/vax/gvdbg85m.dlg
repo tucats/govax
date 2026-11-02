@@ -1,0 +1,340 @@
+@DBG85M.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG85M.DBG
+! ! DBG85M.DBG - the debugger's rule for names with periods (README.md). VMS's log
+! ! leaves out a command that fails, so a comment names each case first.
+! SHOW LANGUAGE
+!language: MACRO
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBG85M                          yes        1280
+!
+!total MACRO modules: 1.         bytes allocated: 59704.
+! SET MODULE/ALL
+! !> SHOW SYMBOL *
+! SHOW SYMBOL *
+!routine DBG85M\R.TN
+!routine DBG85M\START
+!data DBG85M\$.K
+!data DBG85M\A
+!data DBG85M\A.B
+!data DBG85M\AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+!data DBG85M\B
+!data DBG85M\C
+!data DBG85M\D
+!data DBG85M\E.
+!data DBG85M\EQU.X
+!data DBG85M\F..G
+!data DBG85M\FLT.X
+!data DBG85M\GLOB.AL
+!data DBG85M\H.1
+!label DBG85M\R.TN\LOC.AL
+!data DBG85M\TABLE.X
+!data DBG85M\__1_.L
+!label DBG85M\DATA85
+!label DBG85M\CODE85
+!routine START (global)
+!routine R.TN (global)
+!data GLOB.AL (global)
+!data SYS$IMGSTA (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$GVDBG85M (global)
+! !> SHOW SYMBOL/ADDRESS *
+! SHOW SYMBOL/ADDRESS *
+!routine DBG85M\R.TN
+!    address: 0000041B, size: 00000014 bytes
+!routine DBG85M\START
+!    address: 00000400, size: 0000001B bytes
+!data DBG85M\$.K
+!    address: 00000220
+!data DBG85M\A
+!    address: 00000200
+!data DBG85M\A.B
+!    address: 00000208
+!data DBG85M\AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+!    address: 00000240
+!data DBG85M\B
+!    address: 00000204
+!data DBG85M\C
+!    address: 0000020C
+!data DBG85M\D
+!    address: 00000210
+!data DBG85M\E.
+!    address: 00000214
+!data DBG85M\EQU.X
+!    constant: 0000000C
+!data DBG85M\F..G
+!    address: 00000218
+!data DBG85M\FLT.X
+!    address: 0000023C
+!data DBG85M\GLOB.AL
+!    address: 00000228
+!data DBG85M\H.1
+!    address: 0000021C
+!label DBG85M\R.TN\LOC.AL
+!    address: 00000424
+!data DBG85M\TABLE.X
+!    descriptor address: 00267B49
+!data DBG85M\__1_.L
+!    address: 00000224
+!label DBG85M\DATA85
+!    address: 00000200, size: 00000044 bytes
+!label DBG85M\CODE85
+!    address: 00000400, size: 0000002F bytes
+!routine START (global)
+!    address: 00000400
+!routine R.TN (global)
+!    address: 0000041B
+!data GLOB.AL (global)
+!    address: 00000228
+!data SYS$IMGSTA (global)
+!    address: 7FFEDF68
+!data SHARE$DBGTBKMSG (global)
+!    address: 0006DC00
+!data SHARE$DBGSSISHR (global)
+!    address: 0006A600
+!data SHARE$DEBUG (global)
+!    address: 00000800
+!data SHARE$GVDBG85M (global)
+!    address: 00000200
+! !> SHOW SYMBOL/TYPE *
+! SHOW SYMBOL/TYPE *
+!routine DBG85M\R.TN
+!routine DBG85M\START
+!data DBG85M\$.K
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\A
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\A.B
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\B
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\C
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\D
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\E.
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\EQU.X
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\F..G
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\FLT.X
+!    atomic type, F_floating, size: 4 bytes
+!data DBG85M\GLOB.AL
+!    atomic type, longword integer, size: 4 bytes
+!data DBG85M\H.1
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85M\R.TN\LOC.AL
+!data DBG85M\TABLE.X
+!    array descriptor type, 1 dimension, bounds: [0:3], size: 16 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBG85M\__1_.L
+!    atomic type, longword integer, size: 4 bytes
+!label DBG85M\DATA85
+!label DBG85M\CODE85
+!routine START (global)
+!routine R.TN (global)
+!data GLOB.AL (global)
+!data SYS$IMGSTA (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$GVDBG85M (global)
+! !> SHOW SYMBOL A.B
+! SHOW SYMBOL A.B
+!data DBG85M\A.B
+! !> SHOW SYMBOL A*
+! SHOW SYMBOL A*
+!data DBG85M\A
+!data DBG85M\A.B
+!data DBG85M\AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+! !> EXAMINE A
+! EXAMINE A
+!DBG85M\A:       00000001
+! !> EXAMINE A.B, which exists
+! EXAMINE A.B
+!DBG85M\A.B:     00000003
+! !> EXAMINE a.b
+! EXAMINE a.b
+!DBG85M\A.B:     00000003
+! !> EXAMINE C.D, whose parts exist and which doesn't
+!%DEBUG-E-NOSYMBOL, symbol 'C.D' is not in the symbol table
+! !> EXAMINE E.
+! EXAMINE E.
+!DBG85M\E.:      00000006
+! !> EXAMINE F..G
+! EXAMINE F..G
+!DBG85M\F..G:    00000007
+! !> EXAMINE H.1
+! EXAMINE H.1
+!DBG85M\H.1:     00000008
+! !> EXAMINE $.K
+! EXAMINE $.K
+!DBG85M\$.K:     00000009
+! !> EXAMINE _.L
+!%DEBUG-E-NOSYMBOL, symbol '_.L' is not in the symbol table
+! !> EXAMINE GLOB.AL
+! EXAMINE GLOB.AL
+!DBG85M\GLOB.AL: 0000000B
+! !> EXAMINE AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+! EXAMINE AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234
+!DBG85M\AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234:        0000000C
+! !> EXAMINE EQU.X, a constant
+! EXAMINE EQU.X
+!%DEBUG-E-NOACCESSR, no read access to address 0000000C
+! !> EVALUATE EQU.X
+! EVALUATE EQU.X
+!0000000C
+! !> EXAMINE FLT.X
+! EXAMINE FLT.X
+!DBG85M\FLT.X:   1.500000
+! !> EXAMINE/FLOAT FLT.X
+! EXAMINE/FLOAT FLT.X
+!DBG85M\FLT.X:   1.500000
+! !> Expressions: EXAMINE A .B
+!%DEBUG-E-MISOPEMIS, misplaced operator or missing operand at '.'
+! !> EXAMINE A+.B
+! EXAMINE A+.B
+!DBG85M\A+2:     00020000
+! !> EXAMINE .A
+! EXAMINE .A
+!%DEBUG-E-NOACCESSR, no read access to address 00000001
+! !> EXAMINE ..A
+! EXAMINE ..A
+!%DEBUG-E-NOACCESSR, no read access to address 00000001
+! !> EXAMINE .A.B
+! EXAMINE .A.B
+!%DEBUG-E-NOACCESSR, no read access to address 00000003
+! !> EXAMINE A.B+4
+! EXAMINE A.B+4
+!DBG85M\C:       00000004
+! !> EXAMINE A.B:C
+! EXAMINE A.B:C
+!DBG85M\A.B:     00000003
+!DBG85M\C:       00000004
+! !> EXAMINE A.B,C
+! EXAMINE A.B,C
+!DBG85M\A.B:     00000003
+!DBG85M\C:       00000004
+! !> EXAMINE TABLE.X[2]
+! EXAMINE TABLE.X[2]
+!DBG85M\TABLE.X[2]:      00000017
+! !> EXAMINE TABLE.X:TABLE.X+12
+! EXAMINE TABLE.X:TABLE.X+12
+!DBG85M\TABLE.X[0]:      00000015
+!DBG85M\TABLE.X[1]:      00000016
+!DBG85M\TABLE.X[2]:      00000017
+!DBG85M\TABLE.X[3]:      00000018
+!DBG85M\FLT.X:   1.500000
+! !> EVALUATE A.B
+! EVALUATE A.B
+!00000003
+! !> EVALUATE/ADDRESS A.B
+! EVALUATE/ADDRESS A.B
+!00000208
+! !> EVALUATE .A.B
+!%DEBUG-E-NOACCESSR, no read access to address 00000003
+! !> EVALUATE A.B+1
+! EVALUATE A.B+1
+!00000004
+! !> EVALUATE C.D
+!%DEBUG-E-NOSYMBOL, symbol 'C.D' is not in the symbol table
+! !> Paths: EXAMINE DBG85M\A.B
+! EXAMINE DBG85M\A.B
+!DBG85M\A.B:     00000003
+! !> EXAMINE DBG85M\A
+! EXAMINE DBG85M\A
+!DBG85M\A:       00000001
+! !> EXAMINE DBG85M.A
+!%DEBUG-E-NOSYMBOL, symbol 'DBG85M.A' is not in the symbol table
+! !> EXAMINE DBG85M\R.TN\LOC.AL
+! EXAMINE DBG85M\R.TN\LOC.AL
+!DBG85M\R.TN\LOC.AL:     ADDL2    S^#0C,R2
+! !> EXAMINE R.TN\LOC.AL
+! EXAMINE R.TN\LOC.AL
+!DBG85M\R.TN\LOC.AL:     ADDL2    S^#0C,R2
+! !> EXAMINE/INSTRUCTION LOC.AL
+! EXAMINE/INSTRUCTION LOC.AL
+!DBG85M\R.TN\LOC.AL:     ADDL2    S^#0C,R2
+! !> DEPOSIT A.B=99
+! DEPOSIT A.B=99
+! !> EXAMINE A.B
+! EXAMINE A.B
+!DBG85M\A.B:     00000099
+! !> DEPOSIT A.B=3
+! DEPOSIT A.B=3
+! !> SET BREAK R.TN
+! SET BREAK R.TN
+! !> SET BREAK LOC.AL
+! SET BREAK LOC.AL
+! !> SET WATCH A.B
+! SET WATCH A.B
+! !> SHOW BREAK
+! SHOW BREAK
+!breakpoint at routine DBG85M\R.TN
+!breakpoint at DBG85M\R.TN\LOC.AL
+! !> SHOW WATCH
+! SHOW WATCH
+!watchpoint of DBG85M\A.B
+! !> GO to R.TN
+! GO
+!break at routine DBG85M\R.TN
+!%DEBUG-W-UNAOPNSRC, unable to open source file DUA2:[000000]DBG85M.MAR;1
+!-RMS-E-DNR, device not ready, not mounted, or unavailable
+!    30: Source line not available
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG85M          R.TN                30               00000002         0000041D
+!*DBG85M          START               26               00000017         00000417
+! EXAMINE/INSTRUCTION .PC
+!DBG85M\R.TN\%LINE 30:   MOVL     L^DBG85M\TABLE.X[1],R2
+! EXAMINE .PC
+!DBG85M\R.TN\%LINE 30:   MOVL     L^DBG85M\TABLE.X[1],R2
+! !> GO to LOC.AL
+! GO
+!break at DBG85M\R.TN\LOC.AL
+!    31: Source line not available
+! EXAMINE/INSTRUCTION .PC
+!DBG85M\R.TN\LOC.AL:     ADDL2    S^#0C,R2
+! !> GO to the watch
+! GO
+!watch of DBG85M\A.B at DBG85M\R.TN\%LINE 32
+!    32: Source line not available
+!   old value: 00000003
+!   new value: 00000022
+!break at DBG85M\R.TN\%LINE 33
+!    33: Source line not available
+! !> CANCEL WATCH A.B
+! CANCEL WATCH A.B
+! !> Language FORTRAN
+! SET LANGUAGE FORTRAN
+! SHOW LANGUAGE
+!language: FORTRAN
+! !> EXAMINE A.B
+!%DEBUG-W-NOTRECORD, variable is not record; cannot select component B
+! !> EXAMINE C.D
+!%DEBUG-W-NOTRECORD, variable is not record; cannot select component D
+! !> EXAMINE .A
+! EXAMINE .A
+!%DEBUG-E-NOACCESSR, no read access to address 00000001
+! !> EXAMINE GLOB.AL
+!%DEBUG-E-NOSYMBOL, symbol 'GLOB' is not in the symbol table
+! !> EXAMINE TABLE.X(2)
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+! !> EVALUATE A.B
+!%DEBUG-W-NOTRECORD, variable is not record; cannot select component B
+! !> Language MACRO again
+! SET LANGUAGE MACRO
+! !> GO to the end
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG85M.DBG
+EXIT

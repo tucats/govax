@@ -30,6 +30,8 @@ const (
 	dbgNotNumeric
 	dbgConFromExc
 	dbgVerifyICF
+	dbgMisOpeMis
+	dbgNotRecord
 )
 
 // DBG facility status codes.
@@ -77,6 +79,12 @@ const (
 	// probe's sessions), as SHOW SYMBOL answers a pattern that matches
 	// nothing.
 	DBG_NOSYMBOL = DBGFacility<<FacilityPosition | dbgNoSymbol<<MessagePosition | StatusError
+	// DBG_MISOPEMIS is what VMS's debugger says of an operand it can't go on
+	// from (testdata/dbg85's probe: A .B); its argument is what it found.
+	DBG_MISOPEMIS = DBGFacility<<FacilityPosition | dbgMisOpeMis<<MessagePosition | StatusError
+	// DBG_NOTRECORD is language FORTRAN's answer to X.Y when X is data but
+	// no record (testdata/dbg85's probe); its argument is the component.
+	DBG_NOTRECORD = DBGFacility<<FacilityPosition | dbgNotRecord<<MessagePosition | StatusWarning
 	// DBG_NOSUCHMODULE is SET MODULE's and SHOW SYMBOL's answer to a
 	// module name no loaded image has. The wording is govax's choice: no
 	// probe showed it.
@@ -139,6 +147,8 @@ func init() {
 	DefineMessage(DBG_NOACCESSR, DBGFacility, "NOACCESSR", "no read access to address !XL")
 	DefineMessage(DBG_NOCALLS, DBGFacility, "NOCALLS", "no active call frames")
 	DefineMessage(DBG_NOSYMBOL, DBGFacility, "NOSYMBOL", "symbol '!S' is not in the symbol table")
+	DefineMessage(DBG_MISOPEMIS, DBGFacility, "MISOPEMIS", "misplaced operator or missing operand at '!S'")
+	DefineMessage(DBG_NOTRECORD, DBGFacility, "NOTRECORD", "variable is not record; cannot select component !S")
 	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
 	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
 	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")

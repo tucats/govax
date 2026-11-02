@@ -54,6 +54,10 @@ type Machine struct {
 
 	Radix       int // 8, 10, or 16
 	DepositAddr uint32
+
+	// FieldDots is the expression evaluator's FieldDots, which the debugger
+	// sets from its language.
+	FieldDots bool
 	Verbose     bool
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
@@ -580,7 +584,8 @@ func (m *Machine) withKernelMode(fn func() error) error {
 func (m *Machine) Evaluator() *Evaluator {
 	return &Evaluator{
 		Symbols: m.Symbols, Radix: m.Radix, Here: m.DepositAddr, Mem: m.Mem, CPU: m.CPU,
-		Debug:    imageNames{m: m},
+		FieldDots: m.FieldDots,
+		Debug:     imageNames{m: m},
 		Builtins: m.DebugBuiltins,
 		Load: func(addr uint32) (uint32, error) {
 			v, err := m.loadSized(addr, SizeLongword)

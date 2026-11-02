@@ -90,6 +90,10 @@ func TestDebugRecords(t *testing.T) {
 		// with MOVAB START+2,R0's word displacement.
 		{name: "dbgdis", source: "../dbg/dbgdis.mar", object: "../dbg/vax/dbgdis.obj", enable: debug},
 		{name: "dbgsub", source: "../dbg/dbgsub.mar", object: "../dbg/vax/dbgsub.obj", enable: debug},
+		// Phase 85's probe: names with periods (and _.L, and one past 31
+		// characters), and the FORTRAN compiler's own output.
+		{name: "dbg85m", source: "../dbg85/dbg85m.mar", object: "../dbg85/vax/dbg85m.obj", enable: debug},
+		{name: "dbg85", source: "../dbg85/vax/dbg85.mar", object: "../dbg85/vax/dbg85.obj", enable: debug},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			src, err := os.ReadFile(filepath.Join(mar, tc.source))
@@ -264,5 +268,28 @@ OVER:	PUSHAQ	LBL
 
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("rows = %v, want %v", got, want)
+	}
+}
+
+// TestMacroSymbolNames: in MACRO-32 a leading underscore is one more character of
+// a name, not the console dialect's "_name" scope, and a name keeps its first 31
+// characters with a warning, as VMS's MACRO did to testdata/dbg85's dbg85m.mar.
+func TestMacroSymbolNames(t *testing.T) {
+	const long = "AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234" // 32 characters
+
+	a := macroAssembler()
+
+	if _, err := a.Assemble("\t.PSECT\tD\n_.L:\t.LONG\t1\n" + long + ":\t.LONG\t2\n\t.END\n"); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+
+	if w := a.Warnings(); len(w) != 1 || !strings.Contains(w[0].Error(), "ILLSYMLEN") {
+		t.Errorf("warnings %v, want one ILLSYMLEN", w)
+	}
+
+	for name, want := range map[string]bool{"_.L": true, long[:31]: true, long: false, "__1_.L": false} {
+		if _, ok := a.Symbols().Get(name); ok != want {
+			t.Errorf("symbol %s defined: %v, want %v", name, ok, want)
+		}
 	}
 }

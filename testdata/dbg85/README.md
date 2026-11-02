@@ -45,4 +45,13 @@ builds govax's own images, GVDBG85 and GVDBG85M, for VMS's debugger to read.
 If `DBG85N` didn't assemble, `copyout.cmd` reports that `DBG85N.DLG` isn't there, which is fine.
 
 The same procedure ran on govax (a scratch copy, 2026-11-02) from end to end, to find mistakes in
-the probe; that says nothing about what VMS will answer.
+the probe.
+
+## What came back (`vax/`)
+
+From the author's run on VMS 7.1, 2-NOV-2026, by `copyout.cmd`. MACRO's one warning is the probe's
+own: `AB.CDEF...01234` is 32 characters, which is a useful accident (ILLSYMLEN). The phase doc's
+"What the probe settled" has the answers. `TestDebuggerSessionOracle` replays `dbg85m.dlg` and
+`dbg85.dlg`, and `TestDebugRecords` holds `dbg85m.obj` and `dbg85.obj` to govax's MACRO.
+`gvdbg85*.dlg` are VMS's debugger on govax's images (made before the two MACRO fixes the run led
+to), whose source lines it couldn't read, the volume having been DUA2 when they were built.

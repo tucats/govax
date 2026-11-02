@@ -1,0 +1,76 @@
+@DBG85C.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG85C.DBG
+! ! DBG85C.DBG - what the debugger says of a shareable image's modules (README.md, D8).
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+!*DBG85C                          yes    00000200       000005FF
+! DBG85S                          no     00000600       000007FF
+! DBGSSISHR                       no     0006A600       0006DBFF
+! DBGTBKMSG                       no     0006DC00       0007A1FF
+! DEBUG                           no     00000800       0006A5FF
+!
+! total images: 5                 bytes allocated: 58576
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBG85C                          yes         396
+!
+!total MACRO modules: 1.         bytes allocated: 58584.
+! !> SHOW MODULE/SHARE
+! SHOW MODULE/SHARE
+!module name                     symbols   language   size
+!
+!DBG85C                          yes       MACRO       396
+!SHARE$DBG85S                    no        Image         0
+!SHARE$DBGSSISHR                 no        Image         0
+!SHARE$DBGTBKMSG                 no        Image         0
+!SHARE$DEBUG                     no        Image         0
+!
+!total modules: 5.               bytes allocated: 58600.
+! !> SET IMAGE DBG85S
+! SET IMAGE DBG85S
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+! DBG85C                          yes    00000200       000005FF
+!*DBG85S                          yes    00000600       000007FF
+! DBGSSISHR                       no     0006A600       0006DBFF
+! DBGTBKMSG                       no     0006DC00       0007A1FF
+! DEBUG                           no     00000800       0006A5FF
+!
+! total images: 5                 bytes allocated: 80888
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBG85S                          no          160
+!
+!total MACRO modules: 1.         bytes allocated: 80904.
+! !> SET MODULE/ALL
+! SET MODULE/ALL
+! SHOW SYMBOL *
+!routine DBG85S\SHR85
+!label DBG85S\CODES
+!routine SHR85 (global)
+!data SHARE$DBGTBKMSG (global)
+!data SHARE$DBGSSISHR (global)
+!data SHARE$DEBUG (global)
+!data SHARE$DBG85S (global)
+!data SHARE$DBG85C (global)
+! !> SET BREAK SHR85
+! SET BREAK SHR85
+! GO
+!break at routine DBG85S\SHR85
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!                 SHR85                                00000002         00000602
+! SHARE$DBG85C                                         00000000         00000209
+! EXAMINE/INSTRUCTION .PC
+!SHR85+2:        MOVL     S^#01,R0
+! !> EXAMINE .PC
+! EXAMINE .PC
+!SHR85+2:        MOVL     S^#01,R0
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG85C.DBG
+EXIT

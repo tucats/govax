@@ -129,6 +129,7 @@ const (
 
 	// internal/console: a command a subprocess's DCL doesn't have.
 	vaxNotSubproc
+	vaxIllSymLen
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -262,6 +263,8 @@ const (
 	// GENWRN).
 	VAX_GENERR = VAXFacility<<FacilityPosition | vaxGenErr<<MessagePosition | StatusError
 	VAX_GENWRN = VAXFacility<<FacilityPosition | vaxGenWrn<<MessagePosition | StatusWarning
+	// VAX_ILLSYMLEN is MACRO's warning for a name past 31 characters, of which it keeps 31.
+	VAX_ILLSYMLEN = VAXFacility<<FacilityPosition | vaxIllSymLen<<MessagePosition | StatusWarning
 
 	// Macro libraries: .MCALL of a macro no library has, a library that
 	// can't be read, and .LIBRARY with no way to open, or failing to
@@ -395,6 +398,7 @@ func init() {
 	DefineMessage(VAX_NOTINREPEAT, VAXFacility, "NOTINREPEAT", "!S is not inside a repeat block")
 	DefineMessage(VAX_GENERR, VAXFacility, "GENERR", "Generated ERROR: !S")
 	DefineMessage(VAX_GENWRN, VAXFacility, "GENWRN", "Generated WARNING: !S")
+	DefineMessage(VAX_ILLSYMLEN, VAXFacility, "ILLSYMLEN", "Symbol exceeds 31 characters")
 	DefineMessage(VAX_UNDEFMACRO, VAXFacility, "UNDEFMACRO", "Macro !S is not in any macro library")
 	DefineMessage(VAX_LIBREAD, VAXFacility, "LIBREAD", "Reading macro !S from its library")
 	DefineMessage(VAX_NOLIBRESOLVER, VAXFacility, "NOLIBRESOLVER", ".LIBRARY !Q: no library resolver configured")
