@@ -66,23 +66,29 @@ the artifacts from once having run on a MacOS 7 in the 1990's...
 
 ## Current status
 
-This isn't a complete set of featurees, but generally covers what's
-been do so far with `govax`:
+This isn't a complete set of features, but generally covers what's
+been done so far with `govax`:
 
 - CPU instruction fidelity (including VAX floating point, packed decimal,
   and octaword instructions).
 - Virtual memory support (including $CRMPSC sections). There is currently
   no pager support outside mapped sections.
 - Support for RMS services and ODS2 Files-11 container disks, as well as
-  limited RMS support for accessing native files.
-- Support for VMS-style processes, and system servcies for managing
+  ability to copy native files in and out of the Files-11 containers.
+- Support for VMS-style processes, and system services for managing
   processes and inter-process communication.
+- Support for VMS disk, terminal, mailbox, and null devices, and logical names
 - MACRO32 and LINK command support, allowing first-class VAX macro programs
   to be compiled, linked, and run.
+- FORTRAN compiler support. This is compatible with VAX FORTRAN syntax and
+  VMS extensions. The compiler generates MACRO-32 source files as its output.
 - Clean-room implementation of STARLET.MLB and related files, so VAX macro
   programs can be run using VMS-style macro invocations.
 - Debugger support for GST/TBT records in images, so debugging is familiar
   to a VAX/VMS user.
+- VMS LIBRARY support, for managing object, text, and macro lirbraries.
+- VMS BACKUP support for reading VMS save set files into Files-11 containes.
+- Support for DCL command files.
 
 ## Optional VMS files
 
@@ -116,10 +122,10 @@ does.
 
 Here's a general list of next tasks:
 
-- A FORTRAN compiler (not an emulation of DEC FORTRAN, but supporting DEC extensions)
 - Better HELP command emulation of VMS HELP output and formatting
 - More accurate device operations and reference counting
 - ANALYZE/DISK/REPAIR for ODS2 container volumes
+- Support for re-entrancy in FORTRAN programs
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
