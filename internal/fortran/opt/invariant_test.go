@@ -51,7 +51,7 @@ func TestInvariants(t *testing.T) {
 		want  []string
 	}{
 		{"an index's part", []string{"DO 10 I = 1, N", "K(J*M+I) = I", "10:CONTINUE"}, []string{"mul.L(J, M)"}},
-		{"an index alone isn't worth it", []string{"DO 10 I = 1, N", "K(J*5) = I", "10:CONTINUE"}, nil},
+		{"an index alone, for a register", []string{"DO 10 I = 1, N", "K(J*5) = I", "10:CONTINUE"}, []string{"mul.L(J, 5)"}},
 		{"an index alone that saves a read", []string{"DO 10 I = 1, N", "K(J*M) = I", "10:CONTINUE"}, []string{"mul.L(J, M)"}},
 		{"an index with two operations", []string{"DO 10 I = 1, N", "K(J*M+N) = I", "10:CONTINUE"}, []string{"add.L(mul.L(J, M), N)"}},
 		{"used twice, moved once", []string{"DO 10 I = 1, N", "K(J*M+I) = K(J*M+I+1)", "10:CONTINUE"}, []string{"mul.L(J, M)"}},

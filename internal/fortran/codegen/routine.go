@@ -41,6 +41,10 @@ type routineGen struct {
 	// routine has used at all, for its entry mask.
 	inUse, used [numRegisters]bool
 
+	// cellRegister are the registers register cells hold for the whole routine, which
+	// no expression may take.
+	cellRegister [numRegisters]bool
+
 	// spills are the cells holding parts of expressions too complex for
 	// the registers ($X1, ...), and spillFree those not in use.
 	spills    []*ir.Cell
@@ -79,6 +83,7 @@ func (g *routineGen) generate() {
 	g.src.through(&g.pre, g.r.Unit.AST.Header)
 
 	g.findTargets()
+	g.noteCellRegisters()
 
 	for i, b := range g.r.Blocks {
 		var next *ir.Block
@@ -99,6 +104,29 @@ func (g *routineGen) generate() {
 		g.facts()
 		g.improve(&g.code)
 	}
+}
+
+// noteCellRegisters keeps the register cells' registers from the expressions, and has
+// the entry mask save them: what keeps a value in R6 across a CALLS is that every
+// routine called saves what it uses (Decision 3 of docs/PHASE-84 - FORTRAN optimizer.md).
+func (g *routineGen) noteCellRegisters() {
+	for _, c := range g.r.Cells {
+		if c.Register != 0 {
+			for i := range c.T.Width() {
+				g.cellRegister[c.Register+i], g.used[c.Register+i] = true, true
+			}
+		}
+	}
+}
+
+// ExpressionRegisters says which registers routine r's expressions use, each from its
+// number, when no register cell is in the way: the code generated for nothing, for an
+// optimizer to see which registers it can have.
+func ExpressionRegisters(r *ir.Routine) [numRegisters]bool {
+	g := newRoutineGen(r, &namer{}, &sourceLines{})
+	g.generate()
+
+	return g.used
 }
 
 // source adds to the code the source lines up to the end of the statement stmt.

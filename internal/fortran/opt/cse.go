@@ -79,8 +79,12 @@ import (
 // Four instructions and four reads on the left, four instructions, four reads, and a
 // store on the right. So worth counts what each choice would run, and a temporary is
 // made only if that saves an instruction and costs no more memory references than it
-// saves instructions. Once temporaries can live in registers (subtask 9) that sum
-// changes, and worth is the place to change it.
+// saves instructions.
+//
+// In a loop the temporary most likely has a register (registers.go), which costs none of
+// that: a use is no instruction and no read. So in a block of a loop worth counts it so.
+// Outside loops a value isn't run often enough to earn a register, and the sum above
+// stands.
 //
 // # What it leaves alone
 //
@@ -94,6 +98,7 @@ import (
 func CommonSubexpressions(r *ir.Routine) {
 	c := &cse{r: r, s: NewStorage(r), spare: map[ir.Type][]*ir.Cell{}}
 	expressions := expressionBlocks(r)
+	g := NewGraph(r)
 
 	c.named = highestNamed(r, "$U")
 
@@ -103,6 +108,8 @@ func CommonSubexpressions(r *ir.Routine) {
 		if expressions[b] {
 			continue
 		}
+
+		c.inLoop = g.LoopOf(b) != nil
 
 		var used []*ir.Cell
 
@@ -147,6 +154,9 @@ type cse struct {
 	// made.
 	spare map[ir.Type][]*ir.Cell
 	named int
+
+	// inLoop says the block being worked on is in a loop.
+	inLoop bool
 }
 
 // markInPlace marks the statements of block b that can change their own place where
@@ -214,13 +224,18 @@ type value struct {
 func (c *cse) worth(v *value) (instructions, references int) {
 	cost := costOf(v.e)
 
-	if v.holder != nil {
-		return v.instructions - v.moved, v.uses * (cost.reads - 1)
-	}
-
 	def := cost.instructions
 	if !computed(v.e) {
 		def++
+	}
+
+	switch {
+	case v.holder != nil && c.inLoop:
+		return v.instructions, v.uses * cost.reads
+	case v.holder != nil:
+		return v.instructions - v.moved, v.uses * (cost.reads - 1)
+	case c.inLoop:
+		return v.instructions - def, (v.uses - 1) * cost.reads
 	}
 
 	return v.instructions - def - v.moved, (v.uses-1)*cost.reads - v.uses - 1
@@ -468,9 +483,14 @@ func newTemporary(r *ir.Routine, name string, t ir.Type) *ir.Cell {
 
 // replacer puts with in place of every expression whose key is key. Lowering may use
 // one Mem or tree in several places, so what changes is rebuilt, not changed.
+//
+// place, if not nil, is asked instead about every place, a call's Result and Through
+// among them, and each address, once what's inside it has been seen to: it returns the
+// place to use, or nil to leave it.
 type replacer struct {
-	key  string
-	with ir.Expr
+	key   string
+	with  ir.Expr
+	place func(*ir.Mem) *ir.Mem
 }
 
 // rewrite replaces in the statements from first to last, the terminator being the
@@ -501,6 +521,16 @@ func (r *replacer) rewrite(b *ir.Block, first, last int) {
 					st.Args[j].Ref = r.mem(a.Ref)
 				case a.Value != nil:
 					st.Args[j].Value = r.expr(a.Value)
+				}
+			}
+
+			if r.place != nil {
+				if st.Through != nil {
+					st.Through = r.mem(st.Through)
+				}
+
+				if st.Result != nil {
+					st.Result = r.mem(st.Result)
 				}
 			}
 		}
@@ -545,7 +575,7 @@ func (r *replacer) terminator(t ir.Terminator) {
 func (r *replacer) expr(e ir.Expr) ir.Expr {
 	switch e.(type) {
 	case *ir.Load, *ir.Op, *ir.Field:
-		if exprKey(e) == r.key {
+		if r.place == nil && exprKey(e) == r.key {
 			return r.with
 		}
 	}
@@ -593,8 +623,13 @@ func (r *replacer) expr(e ir.Expr) ir.Expr {
 
 	case *ir.CharIndex:
 		x, y := r.text(e.X), r.text(e.Y)
-		if x != e.X || y != e.Y {
-			return &ir.CharIndex{X: x, Y: y, Base: e.Base}
+		base := e.Base
+		if r.place != nil {
+			base = r.expr(base)
+		}
+
+		if x != e.X || y != e.Y || base != e.Base {
+			return &ir.CharIndex{X: x, Y: y, Base: base}
 		}
 	}
 
@@ -614,6 +649,7 @@ func (r *replacer) mem(m *ir.Mem) *ir.Mem {
 	}
 
 	switch p := m.Ptr.(type) {
+	case nil:
 	case *ir.Addr:
 		if inner := r.mem(p.Mem); inner != p.Mem {
 			n.Ptr, changed = &ir.Addr{Mem: inner}, true
@@ -622,6 +658,24 @@ func (r *replacer) mem(m *ir.Mem) *ir.Mem {
 		if inner := r.mem(p.Mem); inner != p.Mem {
 			n.Ptr, changed = &ir.Load{Mem: inner}, true
 		}
+	default:
+		if r.place != nil {
+			if n.Ptr = r.expr(p); n.Ptr != m.Ptr {
+				changed = true
+			}
+		}
+	}
+
+	if r.place != nil {
+		if changed {
+			m = &n
+		}
+
+		if to := r.place(m); to != nil {
+			return to
+		}
+
+		return m
 	}
 
 	if !changed {

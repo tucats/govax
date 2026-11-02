@@ -71,28 +71,22 @@ import (
 //
 // # What it's worth
 //
-// The value goes in a temporary in memory ($H1), which each use reads. So an index,
-// wanted in a register, gains no instruction from J*60 alone:
+// The value goes in a temporary ($H1), which the register allocator (registers.go) most
+// likely puts in a register, since it is read on every trip. Then each use of J*60 as an
+// index is no instruction at all:
 //
-//	      MULL3   J,#60,R0                MOVL    $H1,R0
+//	      MULL3   J,#60,R0                ... A-244[R6] ...
+//	      ... A-244[R0] ...
 //
-// and that stays, until temporaries can be in registers (subtask 9). J*60+I gains one,
-// ADDL3 $H1,I,R0 for a MULL3 and an ADDL2. A dummy argument read as an operand gains a
-// memory reference, the argument list's. worth counts these per trip, and asks for a
-// gain with no instruction lost. For the same reason an array's base address or an
-// adjustable array's A0 isn't moved yet: in another cell they cost what they cost now.
-// See deferred.go for what's done about A0 meanwhile.
+// If registers run out and the temporary stays in memory, a use costs one MOVL and a
+// read, no more than the MULL3 and its read, and the only loss is a store each time the
+// loop starts. So anything that takes an instruction or a read moves (movable). An
+// array's base address and an adjustable array's A0 are the allocator's own affair,
+// since they gain nothing except in a register.
 
 // LoopInvariants is the pass.
 func LoopInvariants(r *ir.Routine) {
-	m := &mover{c: &cse{r: r, s: NewStorage(r)}, named: highestNamed(r, "$H")}
-
-	for _, b := range r.Blocks {
-		if strings.HasPrefix(b.Name, "P") {
-			m.blocks++
-		}
-	}
-
+	m := newMover(r, NewStorage(r))
 	expressions := expressionBlocks(r)
 	done := map[*ir.Block]bool{}
 
@@ -155,17 +149,29 @@ type mover struct {
 	blocks int
 }
 
+// newMover starts on routine r, going on from what an earlier run named.
+func newMover(r *ir.Routine, s *Storage) *mover {
+	m := &mover{c: &cse{r: r, s: s}, named: highestNamed(r, "$H")}
+
+	for _, b := range r.Blocks {
+		if strings.HasPrefix(b.Name, "P") {
+			m.blocks++
+		}
+	}
+
+	return m
+}
+
 // invariant is an expression found in a loop that doesn't change there.
 type invariant struct {
 	key  string
 	e    ir.Expr
 	from ast.Stmt
 
-	// uses is how many times the loop computes it; moved how many of those want it in
-	// a register or moved to a destination; instructions what those uses cost as they
-	// are; and sure whether the first trip surely reaches one.
-	uses, moved, instructions int
-	sure                      bool
+	// uses is how many times the loop computes it; instructions what those uses cost
+	// as they are; and sure whether the first trip surely reaches one.
+	uses, instructions int
+	sure               bool
 }
 
 // loop moves what it can out of loop l.
@@ -202,10 +208,7 @@ func (v *invariant) movable() bool {
 		return false
 	}
 
-	instructions := v.instructions - v.moved
-	references := v.uses * (costOf(v.e).reads - 1)
-
-	return instructions >= 0 && instructions+references >= 1
+	return v.instructions+v.uses*costOf(v.e).reads >= 1
 }
 
 // changedIn is every place loop l's statements write, and whether any of them calls.
@@ -231,7 +234,7 @@ func (m *mover) scan(g *Graph, l *Loop, changed []Place, call bool, refused map[
 
 		var from ast.Stmt
 
-		walk := walker{visit: func(e ir.Expr, moved, maybe bool) bool {
+		walk := walker{visit: func(e ir.Expr, _, maybe bool) bool {
 			if !m.c.candidate(e) || !m.unchanged(e, changed, call) {
 				return true
 			}
@@ -251,14 +254,6 @@ func (m *mover) scan(g *Graph, l *Loop, changed []Place, call bool, refused map[
 			v.uses++
 			v.instructions += costOf(e).instructions
 			v.sure = v.sure || (sure && !maybe)
-
-			if moved {
-				v.moved++
-
-				if !computed(e) {
-					v.instructions++
-				}
-			}
 
 			return false
 		}}

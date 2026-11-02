@@ -30,7 +30,7 @@ func Check(r *Routine) error {
 	for _, c := range r.Cells {
 		cells[c] = true
 
-		if c.Common == nil && !c.Frame {
+		if c.Common == nil && !c.Frame && c.Register == 0 {
 			local = append(local, c)
 		}
 

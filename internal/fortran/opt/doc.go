@@ -37,7 +37,8 @@
 // an adjustable array's element through its A0 where that is; LoopInvariants
 // (invariant.go) computes before a loop what every trip computes the same;
 // CommonSubexpressions (cse.go) computes once what a block computes several times, and
-// finds a place once for an operation on it.
+// finds a place once for an operation on it; Registers (registers.go), last, keeps in R6 to
+// R11 what the loops use most.
 //
 // # Analyses
 //
@@ -61,7 +62,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for, optchar.for) are there to
+// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for, optforward.for, optcse.for, optinvar.for, optchar.for, optreg.for) are there to
 // catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

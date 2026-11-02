@@ -1,0 +1,28 @@
+EXIT       3       6
+END       6      21
+KEPT     102     104     105
+CALLER     200
+COMMON       6      33
+EQUIV  196611
+RO      21
+MAYBE      10      13       7
+OPT       0      12
+OUT       4
+  1
+   2
+EIGHT     108
+DOUBLE  12.000
+QUAD   3.375
+WORD  -31536
+BYTE     -56
+LOGICAL       4
+CHARS       1 E
+SWITCH       4       8       7
+SIGN       3       0
+FSUM      15
+ENTRY       4       6
+MATRIX     129      12
+TEXT       2
+FIXUP    4.50       3
+BITS       5
+  $STATUS == "%X00000001"

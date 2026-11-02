@@ -392,7 +392,7 @@ The survey's decisions drew no objection, and stand.
 8. **One-character strings** (done 2026-11-02; the author's answer 4): `CMPB` and
    `MOVB` where `CMPC3` and `MOVC3` of one character are lowered now, only under
    `/OPTIMIZE`.
-9. **Register allocation:** register cells, liveness, write-backs by Decision
+9. **Register allocation** (done 2026-11-02): register cells, liveness, write-backs by Decision
    6, dummy addresses loaded once, the loop instructions on registers.
 10. **Induction variables and strength reduction,** where a stride isn't the
    element's size, and autoincrement.
@@ -768,3 +768,43 @@ The survey's decisions drew no objection, and stand.
     | With it | 6,626,408 | 1,108,423 | 937,976 | 4,580,009 |
 
     Data reads fall 28,478, close to the 28,856 `CMPC3`s the survey counted. Refills and page table reads rise by about 620,000 each, which looks like one hot loop now crossing a page boundary because the code before it got shorter, though which loop wasn't looked for. This costs the emulator time. It also probably explains the rises subtasks 6 and 7 could only guess at. **The survey's "data reads" tables have this noise in them too, so the close-out should compare with these parts taken out.**
+- **2026-11-02:** Subtask 9, register allocation: `opt/registers.go`, the last IR pass, teaching its technique in its comment. `/NOOPTIMIZE`'s output is unchanged.
+  - **The cell** (Decision 2): `Cell.Register`, printed as `R8` by `g.mem`; `Holds` and `Points` are for a cell the pass makes. A register cell has no `$LOCAL` storage, the compiler's cells after it close up (`closeUp`), and the storage map has a line for each (Decision 12): `;   R6 is $R3: I, during a loop`. The entry mask names them, in every entry point and format routine.
+  - **Four kinds of candidate**, listed with their gains first, so that only winners are rewritten and no pass needs a fallback:
+    - the compiler's own cells, for the whole routine, by liveness, unless live at an entry;
+    - a variable for a loop: a `$Rn` loaded before it and, if written, given back on each exit edge, in a block of its own (`W1`), so that trips pay nothing. Decision 6's write-back is there. The copies are moves of the bits (`MOVL` for a REAL, `MOVQ` for a REAL\*8), so a reserved operand in a variable the loop only might read doesn't fault;
+    - a dummy's address, `(R6)[R1]` and `8(R6)`;
+    - an address that doesn't change: A0, a CHARACTER dummy's text pointer (`@4(R6)` if the address of its descriptor is in a register too), and an array's base and the unchanging part of its index, `MOVAL C-244[R9],R7` and `(R7)[R6]`, the survey's hoisted base.
+  - **Decision 7 by the loop.** A taken local, COMMON, or a dummy can be in a register only for a loop with no call, as the other passes already treat them, and nothing else in the loop may overlap it. A local not taken can be there across calls. So printing a DO variable somewhere doesn't keep it out of a register in a loop that doesn't print it.
+  - **Dummies, stricter than a local.** A dummy's value must surely be read on the first trip, invariant.go's rule, since an argument may not be there. A written one must surely be written, or the write-back could store in a constant the caller passed to an argument it only sometimes changes. A dummy that fails gets its address in a register instead. `optreg.for` has each case.
+  - **Decision 3, a little differently.** The expressions' pool doesn't shrink to R0–R5. `codegen.ExpressionRegisters` generates the routine for nothing and says which registers its expressions use, the allocator keeps off those, and `alloc` skips what cells hold. So a routine needing R6 and R7 for H_floating gets R8 to R11. `alloc`'s panic stays as the check.
+  - **`movable` and `worth` changed, as subtasks 6 and 7 said they must.** LoopInvariants moves anything that takes an instruction or a read: a temporary that loses the register costs a `MOVL` and a read in place of what it replaced, plus one store per loop entry. CommonSubexpressions counts a temporary in a loop as having no cost, and outside loops keeps the old sum. `throughPointer` knows a pointer cell by `Points`, though nothing asks it yet, the pass being last.
+  - **Results**, cumulative, against subtask 8's build:
+
+    | Program | `/NOOPTIMIZE` | Subtask 8 | Now | Survey's hand version |
+    |---|---:|---:|---:|---:|
+    | `matmul` | 3,101,599 | 1,362,920 | 930,989 (−70.0%) | 750,799 (−75.8%) |
+    | `sieve` | 5,785,872 | 4,785,922 | 3,907,317 (−32.5%) | 3,073,873 (−46.9%) |
+    | `subs` | 6,876,884 | 3,866,184 | 2,259,946 (−67.1%) | 2,463,514 (−64.2%) |
+    | `whet` | 2,695,057 | 2,475,457 | 1,736,265 (−35.6%) | not measured |
+    | `textk` | 485,525 | 371,025 | 290,034 (−40.3%) | not measured |
+    | DUNGEON's game, whole run | 6,818,609 | 5,512,012 | 5,123,390 (−24.9%) | 5,070,333 (−25.6%, the peephole and `QHERE` alone) |
+
+    | Reads, writes | `/NOOPTIMIZE` | Now |
+    |---|---:|---:|
+    | `matmul` | 3,033,109, 683,227 | 585,563, 240,074 |
+    | `sieve` | 3,610,717, 2,027,158 | 339,425, 680,645 |
+    | `subs` | 7,595,774, 1,843,907 | 1,356,429, 427,381 |
+    | DUNGEON's game | 5,918,702, 2,641,419 | 3,673,539, 1,789,667 |
+
+    Reads still include the fetches and page table reads subtask 8 found, so they aren't all data. DUNGEON's game printed the same both ways.
+  - **What got worse.** Against subtask 8, 17 of 92 programs run a few more instructions, the copies in and out of very short loops: at most 64 (`loops`, 0.8%). `vfe` writes 133 more (0.4%). None reads more by over 200.
+  - **Where the hand versions still win.** `sieve`, in two ways (`testdata/opt84/hand/fsieve.mar`). Its GO TO loop tests at its top, `CMPL R6,#20000; BGTR; CLRB; ADDL2; BRB`, five instructions a trip, where the hand version jumps to a test at the bottom and has four. And its DO loops close with `INCL` and `SOBGTR` on a count, where the hand version has one `AOBLEQ #20000,R6` and no count. Rotating a loop, and dropping a DO's count for its limit, are in no subtask yet, and **are a question for the author.** `matmul`'s remaining gap is subtask 10's autoincrement.
+  - **Not done, on purpose:**
+    - Copies in and write-backs out are always made, though a local may not be read before it's written, or be read again at all in a main program, where Decision 6 asks less. They cost a move per loop entry, and a liveness of every variable wasn't worth it for that.
+    - Interference is by the whole loop, for a candidate that isn't a compiler's cell, and by what was true before rewriting. So `matmul`'s `$H4`, used only to make a base in the block before the loop, stays in memory with all six taken, costing a store and a read per trip of the K loop.
+    - Store-to-load for a value that isn't constant, which subtask 5 left for here: nothing measured asks for it now, `P = I` being `MOVL R8,R7`.
+    - A loop with an assigned GO TO gets no variables, and straight-line code none either.
+  - **Choices the manual doesn't settle (ours, unconfirmed).** A handler reading COMMON after a fault in a loop with no call sees what the loop last wrote back, by Decision 9. A routine unwound from a call in a loop leaves its locals as they were when the loop began, where `/NOOPTIMIZE` leaves them current; VOLATILE is the way to ask otherwise. This wasn't tested with an unwind.
+  - **New program:** `optreg.for`, worked by hand, whose values all matched on the first run both ways; only the `$STATUS` line was missing from its expected file. Ways out of a loop, a local kept past a RETURN in a loop, registers across a routine that uses them all, COMMON with and without a call, EQUIVALENCE, the four kinds of dummy, a format expression, more variables than registers, every width, an unsigned character, computed GO TO and arithmetic IF as exits, ENTRY, an adjustable array, a CHARACTER dummy, `LIB$FIXUP_FLT` changing a register, and a reserved operand copied without a fault.
+  - **Testing:** `registers_test.go` has a case per rule, and `TestPassesOnCorpus` holds a second run of the allocator to no change, the other passes being held to that among themselves, since they recognize places by forms it changes. `TestBoundsHold` holds on the new operands. Each of eight rules was then broken on purpose (no write-back, floating copies, taken locals and COMMON across calls, dummies not surely reached, overlaps ignored, no interference, cells live on entry), and each failed a test. Real MACRO hasn't assembled this output (Phase 86's optional round).

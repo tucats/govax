@@ -140,3 +140,161 @@ func (w *walker) text(t ir.Text, maybe bool) {
 	w.mem(t.Mem, maybe)
 	w.expr(t.Len, false, maybe)
 }
+
+// memRole is what a statement does with a place.
+type memRole int
+
+// The roles.
+const (
+	roleRead    memRole = iota // its value is read as an operand
+	roleIndex                  // its value is read as an index
+	rolePointer                // its value is read as the address of another place
+	roleWrite                  // its value is written
+	roleAddress                // its address is wanted, which a register hasn't
+	roleText                   // it is a CHARACTER value, reached by address
+)
+
+// memWalker goes through every place a statement or terminator names, as an operand,
+// a destination, or on the way to another: where walker asks what is computed, this
+// asks what is touched, a Call's Result and Through among them.
+type memWalker struct {
+	// visit is told of each place: what's done with it, and whether it's done only some
+	// of the time.
+	visit func(m *ir.Mem, role memRole, maybe bool)
+
+	maybe bool
+}
+
+// stmt goes through st.
+func (w *memWalker) stmt(st ir.Stmt) {
+	switch st := st.(type) {
+	case *ir.Assign:
+		w.use(st.Dst, roleWrite)
+		w.expr(st.Src)
+
+	case *ir.CharMove:
+		w.text(st.Dst)
+		w.text(st.Src)
+
+	case *ir.Call:
+		if st.Through != nil {
+			w.use(st.Through, roleAddress)
+		}
+
+		for _, a := range st.Args {
+			switch {
+			case a.Ref != nil:
+				w.use(a.Ref, roleAddress)
+			case a.Value != nil:
+				w.expr(a.Value)
+			}
+		}
+
+		if st.Result != nil {
+			w.use(st.Result, roleWrite)
+		}
+	}
+}
+
+// terminator goes through t.
+func (w *memWalker) terminator(t ir.Terminator) {
+	switch t := t.(type) {
+	case *ir.Branch:
+		w.condition(t.Cond)
+	case *ir.Switch:
+		w.expr(t.Index)
+	case *ir.Sign:
+		w.expr(t.Value)
+	case *ir.IndirectJump:
+		w.use(t.Through, roleRead)
+	case *ir.Return:
+		if t.Value != nil {
+			w.expr(t.Value)
+		}
+	}
+}
+
+// condition goes through a branch's condition, whose .AND. and .OR. go on to their
+// second operand only some of the time.
+func (w *memWalker) condition(e ir.Expr) {
+	if op, ok := e.(*ir.Op); ok {
+		switch op.Op {
+		case ir.Not:
+			w.condition(op.X)
+
+			return
+		case ir.And, ir.Or:
+			w.condition(op.X)
+
+			was := w.maybe
+			w.maybe = true
+			w.condition(op.Y)
+			w.maybe = was
+
+			return
+		}
+	}
+
+	w.expr(e)
+}
+
+// expr goes through e.
+func (w *memWalker) expr(e ir.Expr) {
+	switch e := e.(type) {
+	case *ir.Load:
+		w.use(e.Mem, roleRead)
+
+	case *ir.Addr:
+		w.use(e.Mem, roleAddress)
+
+	case *ir.Op:
+		w.expr(e.X)
+
+		if e.Y != nil {
+			w.expr(e.Y)
+		}
+
+	case *ir.Cmp:
+		w.expr(e.X)
+		w.expr(e.Y)
+
+	case *ir.Field:
+		w.expr(e.X)
+		w.expr(e.Pos)
+		w.expr(e.Size)
+
+	case *ir.CharCmp:
+		w.text(e.X)
+		w.text(e.Y)
+
+	case *ir.CharIndex:
+		w.text(e.X)
+		w.text(e.Y)
+		w.expr(e.Base)
+	}
+}
+
+// use goes through the place m, and what finding it reads.
+func (w *memWalker) use(m *ir.Mem, role memRole) {
+	w.visit(m, role, w.maybe)
+
+	if l, ok := m.Index.(*ir.Load); ok {
+		w.use(l.Mem, roleIndex)
+	} else if m.Index != nil {
+		w.expr(m.Index)
+	}
+
+	switch p := m.Ptr.(type) {
+	case nil:
+	case *ir.Load:
+		w.use(p.Mem, rolePointer)
+	default:
+		w.expr(p)
+	}
+}
+
+// text goes through a CHARACTER value.
+func (w *memWalker) text(t ir.Text) {
+	w.use(t.Mem, roleText)
+	w.expr(t.Len)
+}

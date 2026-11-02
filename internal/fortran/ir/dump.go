@@ -87,6 +87,10 @@ func dumpRoutine(b *strings.Builder, r *Routine) {
 		section := "$LOCAL"
 
 		switch {
+		case c.Register != 0:
+			fmt.Fprintf(b, "  cell  %-7s %-2s R%d  %s\n", c.Name, c.T, c.Register, c.Holds)
+
+			continue
 		case c.Common != nil:
 			section = c.Common.Psect
 		case c.Frame:

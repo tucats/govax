@@ -79,6 +79,9 @@ const (
 	// (the pieces of a move of a record longer than 65,535 bytes). It may be
 	// anything that can be written.
 	UnknownRegion
+
+	// RegisterRegion is a register cell, Place.Cell, which is no memory at all.
+	RegisterRegion
 )
 
 // The range of a place whose extent isn't known: everything in its region.
@@ -164,6 +167,9 @@ func (s *Storage) place(m *ir.Mem, size int) Place {
 	p := Place{Lo: wholeLo, Hi: wholeHi}
 
 	switch {
+	case m.Cell != nil && m.Cell.Register != 0:
+		p.Region, p.Cell = RegisterRegion, m.Cell
+
 	case m.Cell != nil:
 		c := m.Cell
 		p.Lo, p.Hi = c.Offset, c.Offset+c.Size
@@ -237,6 +243,10 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 			return span(whole, 0)
 
 		case inner.Cell == nil:
+
+		// An address the register allocator keeps: where it points says what it is.
+		case inner.Cell.Points != nil:
+			return s.Whole(inner.Cell.Points)
 
 		// An AUTOMATIC variable from a variable format expression, by the FP each
 		// entry point leaves (ir/lowervfe.go): an offset below it.

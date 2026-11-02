@@ -399,23 +399,46 @@ func removeUnusedCells(r *ir.Routine) {
 	sort.SliceStable(local, func(i, j int) bool { return local[i].Offset < local[j].Offset })
 
 	gone := map[*ir.Cell]bool{}
+
+	for _, c := range local {
+		if !used[c] && c.Sym == nil && (c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.StepCell) {
+			gone[c] = true
+		}
+	}
+
+	if !closeUp(r, local, gone) {
+		return
+	}
+
+	kept := r.Cells[:0]
+
+	for _, c := range r.Cells {
+		if !gone[c] {
+			kept = append(kept, c)
+		}
+	}
+
+	r.Cells = kept
+}
+
+// closeUp takes the cells gone out of $LOCAL, whose cells in order of offset are local,
+// and moves those after them down. It reports whether it did: a program's variable, which
+// may have an initial value by offset, never moves, so nothing can if one comes after a
+// cell that's going, which isn't lowering's order.
+func closeUp(r *ir.Routine, local []*ir.Cell, gone map[*ir.Cell]bool) bool {
 	shift := 0
 
 	for _, c := range local {
-		removable := !used[c] && c.Sym == nil && (c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.StepCell)
-
 		switch {
-		case removable:
-			gone[c] = true
+		case gone[c]:
 			shift += (c.Size + 3) &^ 3
 		case c.Sym != nil && shift > 0:
-			// Not lowering's order, so nothing can move after all.
-			return
+			return false
 		}
 	}
 
 	if shift == 0 {
-		return
+		return false
 	}
 
 	moved := 0
@@ -428,16 +451,9 @@ func removeUnusedCells(r *ir.Routine) {
 		}
 	}
 
-	kept := r.Cells[:0]
-
-	for _, c := range r.Cells {
-		if !gone[c] {
-			kept = append(kept, c)
-		}
-	}
-
-	r.Cells = kept
 	r.LocalSize -= shift
+
+	return true
 }
 
 // walkMems calls visit for every Mem in the routine's code and data, those inside

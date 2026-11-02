@@ -29,6 +29,10 @@ const budget = 4
 type operand struct {
 	text string
 	regs []int
+
+	// cell is the register, if the operand is a register cell: a value that lives in
+	// the register, which no instruction allocates or frees.
+	cell int
 }
 
 // register is the name of register n: R0.
@@ -51,7 +55,24 @@ func inRegister(n int, t ir.Type) operand {
 // isRegister reports whether o is a register (or a run of them) by
 // itself, not a place in memory a register indexes.
 func (o operand) isRegister() bool {
-	return len(o.regs) > 0 && o.text == register(o.regs[0])
+	return o.cell != 0 || (len(o.regs) > 0 && o.text == register(o.regs[0]))
+}
+
+// number is the register o is, if isRegister.
+func (o operand) number() int {
+	if o.cell != 0 {
+		return o.cell
+	}
+
+	return o.regs[0]
+}
+
+// inCell reports whether e is the value of a register cell, an operand with no
+// instruction or register needed to reach it.
+func inCell(e ir.Expr) bool {
+	l, ok := e.(*ir.Load)
+
+	return ok && l.Mem.Cell != nil && l.Mem.Cell.Register != 0
 }
 
 // alloc takes the lowest run of free registers that holds a value of type
@@ -63,7 +84,7 @@ func (g *routineGen) alloc(t ir.Type) int {
 		free := true
 
 		for j := i; j < i+w; j++ {
-			free = free && !g.inUse[j]
+			free = free && !g.inUse[j] && !g.cellRegister[j]
 		}
 
 		if free {
@@ -192,7 +213,7 @@ func held(e ir.Expr) int {
 func memNeed(m *ir.Mem) int {
 	n, ptr := 0, 0
 
-	if m.Ptr != nil {
+	if m.Ptr != nil && !inCell(m.Ptr) {
 		n, ptr = need(m.Ptr), 1
 
 		if direct(m) {
@@ -202,7 +223,7 @@ func memNeed(m *ir.Mem) int {
 		}
 	}
 
-	if x := index(m); x != nil {
+	if x := index(m); x != nil && !inCell(x) {
 		n = max(n, ptr+max(need(x), 1))
 	}
 
@@ -214,12 +235,12 @@ func memNeed(m *ir.Mem) int {
 func memHeld(m *ir.Mem) int {
 	n := 0
 
-	if index(m) != nil {
+	if x := index(m); x != nil && !inCell(x) {
 		n++
 	}
 
 	switch {
-	case m.Ptr == nil:
+	case m.Ptr == nil, inCell(m.Ptr):
 	case direct(m):
 		n += held(m.Ptr)
 	default:
@@ -249,13 +270,14 @@ func deferredIndex(m *ir.Mem) bool {
 
 // deferrable reports whether e's operand is a place in memory a deferred
 // mode can reach through: an argument list's longword, or a load from a
-// place with no index that isn't itself reached by a deferred mode.
+// place with no index that isn't itself reached by a deferred mode. A register
+// cell isn't memory: its address goes in parentheses (pointerMem).
 func deferrable(e ir.Expr) bool {
 	switch e := e.(type) {
 	case *ir.ArgPointer:
 		return true
 	case *ir.Load:
-		return index(e.Mem) == nil && e.Mem.Param == nil && !direct(e.Mem)
+		return !inCell(e) && index(e.Mem) == nil && e.Mem.Param == nil && !direct(e.Mem)
 	}
 
 	return false
@@ -464,6 +486,10 @@ func (g *routineGen) localSize() int {
 func (g *routineGen) mem(m *ir.Mem) operand {
 	var base string
 
+	if m.Cell != nil && m.Cell.Register != 0 {
+		return operand{text: register(m.Cell.Register), cell: m.Cell.Register}
+	}
+
 	switch {
 	case m.Ptr != nil:
 		return g.pointerMem(m)
@@ -508,7 +534,7 @@ func (g *routineGen) pointerMem(m *ir.Mem) operand {
 	var r int
 
 	if p.isRegister() {
-		r = p.regs[0]
+		r = p.number()
 	} else {
 		g.free(p)
 		r = g.alloc(ir.Long)
@@ -545,7 +571,7 @@ func (g *routineGen) argumentPlace(p *ir.Param) string {
 func (g *routineGen) intoRegister(e ir.Expr) int {
 	v := g.eval(e)
 	if v.isRegister() {
-		return v.regs[0]
+		return v.number()
 	}
 
 	g.free(v)

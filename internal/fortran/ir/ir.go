@@ -261,6 +261,19 @@ type Cell struct {
 	// Target nil, since the address it holds is stored there when the
 	// descriptor is used (see Descriptor).
 	Desc *Descriptor
+
+	// Register, an optimizer's, says the cell is a register and not memory: its
+	// number, from 6 to 11 (and the ones after it, for a value wider than a
+	// longword), or 0 for a cell in memory. Such a cell's Offset means nothing.
+	Register int
+
+	// Holds, in a cell an optimizer made for a register, says what it holds, for the
+	// storage map: "I, during a loop", "A's address".
+	Holds string
+
+	// Points, in a cell an optimizer made to hold an address, is the place the address
+	// is in, whichever part of that place it reaches.
+	Points *Mem
 }
 
 // DatumKind is what a datum is.

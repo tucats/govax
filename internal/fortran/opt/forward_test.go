@@ -12,9 +12,15 @@ func improved(t *testing.T, name string, lines ...string) *ir.Routine {
 	t.Helper()
 
 	r := routineOf(t, name, lines...)
-	run([]*ir.Routine{r}, Passes)
+	run([]*ir.Routine{r}, beforeRegisters())
 
 	return r
+}
+
+// beforeRegisters are the passes before the register allocator, whose results a test can
+// read by the program's own names.
+func beforeRegisters() []Pass {
+	return Passes[:len(Passes)-1]
 }
 
 // codeText is a routine's statements and terminators, a line each, as the dump
@@ -427,7 +433,8 @@ func TestPassesOnCorpus(t *testing.T) {
 		before += len(r.Blocks)
 	}
 
-	run(routines, Passes)
+	passes := beforeRegisters()
+	run(routines, passes)
 
 	after := 0
 
@@ -445,10 +452,22 @@ func TestPassesOnCorpus(t *testing.T) {
 
 	first := ir.Dump(routines)
 
-	run(routines, Passes)
+	run(routines, passes)
 
 	if second := ir.Dump(routines); second != first {
 		t.Errorf("a second run changed something:\n%s", firstDifference(first, second))
+	}
+
+	// The allocator is last, and a second run of it does nothing.
+	allocate := Passes[len(Passes)-1:]
+	run(routines, allocate)
+
+	first = ir.Dump(routines)
+
+	run(routines, allocate)
+
+	if second := ir.Dump(routines); second != first {
+		t.Errorf("a second run of the allocator changed something:\n%s", firstDifference(first, second))
 	}
 
 	t.Logf("%d routines, %d blocks to %d", len(routines), before, after)

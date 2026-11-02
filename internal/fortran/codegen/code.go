@@ -129,6 +129,10 @@ func (g *routineGen) facts() {
 	}
 
 	for _, cell := range g.r.Cells {
+		if cell.Register != 0 {
+			continue
+		}
+
 		if cell.Frame {
 			c.Displacements[g.names.symbol(cell.Name)] = cell.Offset - g.r.FrameSize
 		} else {

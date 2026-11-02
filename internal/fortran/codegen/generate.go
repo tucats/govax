@@ -571,6 +571,9 @@ func (g *routineGen) writeMap(w *Writer) {
 		switch {
 		case c.Sym == nil || c.Sym.UnusedFromLibrary():
 
+		case c.Register != 0:
+			rows = append(rows, row{c.Sym.Name, typeText(c.Sym), register(c.Register), register(c.Register)})
+
 		case c.Frame:
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
 				"FP" + strconv.Itoa(c.Offset-g.r.FrameSize), g.names.symbol(c.Name) + "(FP)"})
@@ -602,6 +605,12 @@ func (g *routineGen) writeMap(w *Writer) {
 
 	for _, r := range rows {
 		w.Comment(fmt.Sprintf("  %-*s  %-*s  %-*s  %s", widths[0], r.name, widths[1], r.typ, widths[2], r.where, r.symbol))
+	}
+
+	for _, c := range g.r.Cells {
+		if c.Register != 0 && c.Sym == nil {
+			w.Comment("  " + register(c.Register) + " is " + g.registerNote(c))
+		}
 	}
 
 	for _, name := range g.names.long {
@@ -678,7 +687,7 @@ func (g *routineGen) cells() []*ir.Cell {
 	var cells []*ir.Cell
 
 	for _, c := range g.r.Cells {
-		if c.Common == nil && !c.Frame {
+		if c.Common == nil && !c.Frame && c.Register == 0 {
 			cells = append(cells, c)
 		}
 	}
@@ -787,6 +796,15 @@ func overlapping(cells []*ir.Cell) []*ir.Cell {
 	}
 
 	return cells[:n]
+}
+
+// registerNote says what a register cell holds, for the storage map.
+func (g *routineGen) registerNote(c *ir.Cell) string {
+	if c.Holds != "" {
+		return c.Name + ": " + c.Holds
+	}
+
+	return c.Name + ": " + g.cellNote(c)
 }
 
 // cellNote says what a cell holds, for its comment.

@@ -24,6 +24,7 @@ var Passes = []Pass{
 	{"deferred indexes", DeferredIndexes},
 	{"loop invariants", LoopInvariants},
 	{"common subexpressions", CommonSubexpressions},
+	{"registers", Registers},
 }
 
 // CodePass is one optimization of a routine's instructions, after the code
