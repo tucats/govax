@@ -1,7 +1,7 @@
 # Phase 84 — the FORTRAN optimizer
 
-**Status:** in progress: subtask 1, the survey (2026-11-01), awaits the
-author's review. Planned 2026-10-29. Needs Phase 83 (the whole language
+**Status:** in progress. Subtask 1, the survey, was reviewed by the author
+on 2026-11-01. Planned 2026-10-29. Needs Phase 83 (the whole language
 compiled, so the corpus is complete). Part of the FORTRAN program laid
 out in `PHASE-74 - FORTRAN plan.md` (Decision 9).
 
@@ -55,7 +55,8 @@ order of payoff:
 
 # Part A — the survey (2026-11-01)
 
-Awaiting the author's review. The decisions below are proposals until then.
+Reviewed by the author on 2026-11-01. Their answers follow the questions below,
+and one of them adds a subtask the survey had recommended against.
 
 ## Summary
 
@@ -254,7 +255,7 @@ is in a register and a column's base is hoisted, `A(I,K)` is `(R6)[R9]` with no
 stepped address at all. Only a stride that isn't the element's size needs one:
 a row-wise loop, or a CHARACTER\*n array.
 
-## Decisions (proposed)
+## Decisions
 
 1. **Analyses work from the control flow graph, never from DO statements.**
    `sieve`'s hottest loop is a GO TO loop, and the extended range of a DO
@@ -267,8 +268,8 @@ a row-wise loop, or a CHARACTER\*n array.
    Trees and the Sethi–Ullman generator stay as they are, and a dump stays
    readable.
 3. **R6 to R11 are the allocator's, R0 to R5 the expressions'.** In all of the
-   corpus and DUNGEON, one routine touches R6 and none goes higher, and MOVC and CMPC clobber
-   only R0 to R5, so values in R6 and up also survive them. The generator's
+   corpus and DUNGEON, one routine touches R6 and none goes higher, and MOVC and
+   CMPC clobber only R0 to R5, so values in R6 and up also survive them. The generator's
    pool shrinks to R0–R5 in a routine that uses a register cell; a routine that
    needs more, as H_floating might, gets fewer register cells rather than a
    failure, with `alloc`'s panic kept as the check. A CALLS preserves R6–R11
@@ -356,7 +357,20 @@ a row-wise loop, or a CHARACTER\*n array.
    Decision 4's golden files hold, as part of subtask 3 or a small subtask of its
    own.
 
-## Subtasks (revised by the survey; the review may change them)
+## The author's answers (2026-11-01)
+
+1. **Dummy arguments that alias:** as recommended. The optimizer follows the
+   standard's rule, with no qualifier.
+2. **The default:** as recommended. `/OPTIMIZE` becomes the default at the
+   close-out, if the corpus and DUNGEON's game both pass both ways.
+3. **FTNRTL's character loops:** **in this phase**, against the recommendation:
+   a subtask tuning them, as part of the general optimization work (subtask 10).
+4. **`CMPB` and `MOVB` for one-character strings:** as recommended, only under
+   `/OPTIMIZE`.
+
+The survey's decisions drew no objection, and stand.
+
+## Subtasks (revised by the survey and the review)
 
 1. **Survey** (done 2026-11-01): this Part A.
 2. **The pass framework:** `internal/fortran/opt`, `/[NO]OPTIMIZE` and
@@ -377,7 +391,10 @@ a row-wise loop, or a CHARACTER\*n array.
    6, dummy addresses loaded once, the loop instructions on registers.
 9. **Induction variables and strength reduction,** where a stride isn't the
    element's size, and autoincrement.
-10. **Close-out:** the measured gains against this survey's table;
+10. **FTNRTL's loops** (the author's answer 3): its character loops tuned by
+    hand, as DUNGEON's startup and the corpus measure them, held to the
+    existing oracles. No new entry points, so no change to its GSMATCH.
+11. **Close-out:** the measured gains against this survey's table;
     FORTRAN-INTERNALS.md's optimizer chapter; MANUAL.md; the default switched.
 
 ## Progress log
@@ -388,3 +405,5 @@ a row-wise loop, or a CHARACTER\*n array.
   per-PC hook; kernels, hand-optimized code, and measuring code are in
   `testdata/opt84`. DUNGEON compiled, linked, and ran a scripted game on the way,
   earlier than Phase 86 needed it to.
+- **2026-11-01:** The author's review: answers 1, 2, and 4 as recommended, and
+  FTNRTL's loops added to this phase as subtask 10 (the close-out is now 11).

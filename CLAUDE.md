@@ -589,7 +589,7 @@ never had.
   and to FORRTL by `TestFor83ContinueOnFORRTL`), and subtask 7 ASTs and exit handlers (FTNRTL holds ASTs off with `$SETAST` while its statement stack and free list change, and a context records its
   frame's saved PC, popped when the call chain doesn't reach it; held to VMS by `TestFor83PartBOnFTNRTL`, to FORRTL by `TestFor83GoneOnFTNRTL`, with an AST at every instruction by `TestFor83ASTEverywhere`), and subtask 8 the system subroutines (`sema/system.go`: a table, each subroutine's arguments choosing FTNRTL's routine, as ERRSNS's do, RAN and SECNDS REAL\*4 whatever IMPLICIT says; `ftn_system.mar`, GSMATCH 1,16, held to VMS by `TestFor83PartAOnFTNRTL`, part A with each `FOR$` name's `FTN$`), and subtask 9 STR$ (`librtl/str.go`, `strparts.go`, `strsearch.go`; `vmsdef/strmessages.go`; held to VMS by `TestStr83Oracle`; the five arithmetic routines NOTIMPL), and subtask 10 end to end (`testdata/fortran/vmstour.for`) and the close-out (MANUAL.md's 14.8, FORTRAN-INTERNALS.md's section 15); the phase doc's "Where things stand" lists what is left.
   Phase 84 (in progress) is the FORTRAN optimizer; subtask 1 (2026-11-01) is the survey, its doc's Part A,
-  awaiting the author's review, with its kernels and measuring code in `testdata/opt84`.
+  with the author's answers, and its kernels and measuring code in `testdata/opt84`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
