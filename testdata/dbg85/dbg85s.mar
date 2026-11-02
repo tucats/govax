@@ -1,0 +1,9 @@
+	.TITLE	DBG85S
+	.IDENT	/01/
+; DBG85S.MAR - a shareable image, several modules' worth of it being what FTNRTL
+; is: what SHOW MODULE says of one (README.md, D8).
+	.PSECT	CODES,PIC,SHR,NOWRT,EXE
+	.ENTRY	SHR85,^M<>
+	MOVL	#1,R0
+	RET
+	.END

@@ -1,0 +1,6 @@
+! DBG85N.DBG - a name starting with a period, if it assembled (README.md).
+SHOW SYMBOL *
+!> EXAMINE .P.Q
+EXAMINE .P.Q
+!> EVALUATE/ADDRESS .P.Q
+EVALUATE/ADDRESS .P.Q

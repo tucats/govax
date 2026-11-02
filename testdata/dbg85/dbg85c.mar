@@ -1,0 +1,10 @@
+	.TITLE	DBG85C
+	.IDENT	/01/
+; DBG85C.MAR - calls DBG85S, for what the debugger says of a shareable image's
+; modules (README.md, D8).
+	.PSECT	CODEC,NOWRT,EXE
+	.ENTRY	STARTC,^M<>
+	CALLS	#0,G^SHR85
+	MOVL	#1,R0
+	RET
+	.END	STARTC

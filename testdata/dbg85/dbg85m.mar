@@ -1,0 +1,34 @@
+	.TITLE	DBG85M
+	.IDENT	/01/
+; DBG85M.MAR - names with periods, for the debugger's rule (README.md). A, B,
+; and A.B all exist; C and D exist and C.D doesn't. The rest are a period in
+; each place MACRO may allow one but the first.
+	.PSECT	DATA85,LONG,NOEXE,WRT
+A:	.LONG	1
+B:	.LONG	2
+A.B:	.LONG	3
+C:	.LONG	4
+D:	.LONG	5
+E.:	.LONG	6
+F..G:	.LONG	7
+H.1:	.LONG	8
+$.K:	.LONG	9
+_.L:	.LONG	10
+GLOB.AL:: .LONG	11
+TABLE.X: .LONG	21,22,23,24
+FLT.X:	.FLOAT	1.5
+AB.CDEFGHIJKLMNOPQRSTUVWXYZ01234: .LONG 12
+EQU.X = 12
+	.PSECT	CODE85,NOWRT,EXE
+	.ENTRY	START,^M<>
+	MOVL	A.B,R2
+	MOVL	GLOB.AL,R3
+	CALLS	#0,R.TN
+	MOVL	#1,R0
+	RET
+	.ENTRY	R.TN,^M<R2>
+	MOVL	TABLE.X+4,R2
+LOC.AL:	ADDL2	#EQU.X,R2
+	MOVL	R2,A.B
+	RET
+	.END	START

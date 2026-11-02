@@ -375,3 +375,5 @@ The author accepted the survey's decisions and the subtask list above, and answe
   during it for a review of debugging FORTRAN programs, after
   finding the debugger refuses the compiler's dotted names; reproduced, and made
   subtasks 2 and 10. No code changed.
+  Subtask 2's probe, `testdata/dbg85`, written and run through on govax to find its own
+  mistakes; waiting on the author's run on the simh VAX. The fix waits for its answers.

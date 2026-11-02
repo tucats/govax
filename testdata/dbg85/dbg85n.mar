@@ -1,0 +1,12 @@
+	.TITLE	DBG85N
+	.IDENT	/01/
+; DBG85N.MAR - a name starting with a period, which may not assemble: alone, so
+; the other images don't depend on it (README.md).
+	.PSECT	DATAN,LONG,NOEXE,WRT
+.P.Q:	.LONG	1
+	.PSECT	CODEN,NOWRT,EXE
+	.ENTRY	STARTN,^M<>
+	MOVL	.P.Q,R2
+	MOVL	#1,R0
+	RET
+	.END	STARTN
