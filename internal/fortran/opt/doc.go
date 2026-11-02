@@ -31,6 +31,16 @@
 //
 // Each subtask of the phase adds to the list; so far it is empty.
 //
+// # Analyses
+//
+// What a pass needs to know of a routine comes from four files, none of which
+// changes anything. graph.go is the control flow graph, with every way into the
+// routine, and its dominators. loops.go is the natural loops, found from the graph
+// and not from DO statements. places.go says which bytes of storage a Mem can be,
+// and whether two places conflict. effects.go says what a statement reads and
+// writes, and what a call may change that the statement doesn't name. A Graph and a
+// Storage are each a picture of a routine: a pass that changes it makes new ones.
+//
 // A second list, CodePasses, works on a routine's instructions rather than its
 // IR, once the code generator has chosen them and before they are written
 // (codegen.Code, an instruction list): that is the only place to ask how far a
@@ -43,7 +53,7 @@
 // right is that every program of the compiler's corpus runs both ways, with
 // /OPTIMIZE and /NOOPTIMIZE, and must print the same
 // (internal/console/fortranprograms_test.go, TestFortranPrograms); some of those
-// programs (optalias.for, optfaults.for, optflow.for, optbranch.for) are there to
+// programs (optalias.for, optasts.for, optfaults.for, optflow.for, optbranch.for) are there to
 // catch an optimizer that breaks the rules above. Without /OPTIMIZE this package isn't
 // run at all, and the compiler's output is what it always was.
 package opt

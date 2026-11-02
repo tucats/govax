@@ -9,4 +9,5 @@ ALTERNATE       1       5      10
 NAMELIST       7      14
 STATEMENT FN      36
 AXCAXC       2
+LISTED       2
   $STATUS == "%X00000001"

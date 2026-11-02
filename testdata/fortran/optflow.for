@@ -100,6 +100,17 @@ C     One character at a time, compared and moved, in a loop.
          END IF
   700 CONTINUE
       PRINT 100, LINE, COUNT
+C
+C     An assigned GO TO to a label its list doesn't name, which section 5.6.3 allows.
+C     Nothing else reaches label 810, so it looks like dead code if the list is
+C     believed.
+      V = 0
+      ASSIGN 810 TO L
+      GO TO L, (800)
+  800 V = 1
+      GO TO 820
+  810 V = 2
+  820 PRINT 100, 'LISTED', V
       END
 C
       SUBROUTINE WALK(N, T)

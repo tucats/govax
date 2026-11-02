@@ -379,9 +379,9 @@ The survey's decisions drew no objection, and stand.
 3. **The instruction list, branch shortening, the peephole** (done 2026-11-01):
    `MOVL #0`, `ADDL2 #1`, branches to branches, inverted branches, `SOBGTR`,
    `AOBLEQ`, `ACBL` on counts in memory.
-4. **The analyses:** the control flow graph with every entry, dominators,
-   natural loops, the places and effects of Decision 7. No code changes yet;
-   tested on their own.
+4. **The analyses** (done 2026-11-01): the control flow graph with every entry,
+   dominators, natural loops, the places and effects of Decision 7. No code changes
+   yet; tested on their own.
 5. **Forwarding and dead code:** store to load in a block, constants across
    statements, dead compiler cells, the function value, unreachable blocks.
 6. **Local common subexpressions.**
@@ -501,3 +501,62 @@ The survey's decisions drew no objection, and stand.
     run both ways. An index and limit sharing storage by EQUIVALENCE, steps up and
     down stopping exactly at zero, a far loop, an arithmetic IF reading a step's
     condition codes, chains, and labels reached only through an ASSIGN or a table.
+- **2026-11-01:** Subtask 4, the analyses. `opt/graph.go`, `loops.go`, `places.go`, and
+  `effects.go`, each teaching its technique in its comment; no pass uses them yet, and
+  the compiler's output is unchanged.
+  - **The graph** (Decision 1): `Graph.Entries` are the first block, each ENTRY
+    statement's block, and each variable format expression's first block, under an
+    imaginary root. Dominators are Cooper, Harvey, and Kennedy's iteration. A natural
+    loop is any back edge's, however it's written; two back edges to one header are one
+    `Loop`. A retreating edge that isn't a back edge is listed in `Irreducible`, its cycle
+    having a second way in, and no pass may treat that as a loop. Those are rare: 16
+    edges against 318 loops, counting the 581 routines below, all in small programs about
+    jumps (`jumps.for`, `flow.for`, and the golden `altreturn.for` and `jumps.for`), none in
+    a kernel.
+  - **Decision 1 was wrong about assigned GO TO, and the manual settles it.** The decision
+    says it "lists its targets", and `ir.IndirectJump`'s comment agreed, but section 5.6.3
+    says the list "does not affect statement execution" and can be omitted, and the
+    generated `JMP @v` doesn't look at it. So `GO TO K, (20)` with K assigned 30 goes to 30.
+    An `IndirectJump`'s edges in the graph are its list plus every label the unit ASSIGNs
+    (the ASSIGN and the GO TO must be in one unit, the same section says). A label ASSIGNed
+    where no jump can reach it counts as an entry, since its symbol must stay defined.
+    `optflow.for` has the case, a block nothing else reaches.
+  - **The survey was wrong about recursion, and that settles what subtask 2 left open.**
+    Decision 7 says the manual never mentions recursion, but section 6.2 does: "A subprogram
+    can refer to other subprograms, but it cannot refer to itself, either directly or
+    indirectly." So a local that isn't taken survives a call, by the language's rule. An AST
+    routine that reenters a routine, or changes a local or COMMON variable between two
+    instructions, is outside what any analysis can see, and VOLATILE is how to say so
+    (section 4.16). `asts.for`'s `SHARED` holds as it stands: STAT is in an I/O list, so
+    taken, and the AST comes during the `$DCLAST` call (`TestAstsProgram`). The new
+    `optasts.for` has what isn't caught that way: a static VOLATILE variable no call is
+    given, changed by a reentry; VOLATILE COMMON changed during a call; and a loop with no
+    call in it that only a timer's AST ends. Its output was worked by hand and matched on
+    the first run both ways. As with the other guards, it says little until a pass exists.
+  - **Places** (Decision 7): a `Place` is a region and a byte range. Regions are `$LOCAL`,
+    the frame, one COMMON block, read-only data, one dummy, a CHARACTER dummy's descriptor,
+    one dynamic string, and unknown. A place through a computed address is recognized by
+    the forms lowering makes (`throughPointer`). Only `moveRecord`'s pieces, a record past
+    65,535 bytes, are unknown: 4 of the corpus's 21,996 places. An AUTOMATIC variable read
+    from a format expression through `$FP` lands on the same frame range as its cell.
+  - **Choices the manual doesn't settle (ours, unconfirmed):** a subscript or substring that
+    isn't constant is held to its array or variable's own cell, the FORTRAN standard's rule,
+    which the manual doesn't state. So a program relying on running off the end of an array
+    into its neighbor in COMMON may print something different under `/OPTIMIZE`, as with
+    answer 1's aliased dummies. `/NOOPTIMIZE` still does what it did. A constant subscript's
+    range is exact, wherever it falls. Also, a dummy conflicts with no other storage, not
+    even a variable the caller could have passed, which is answer 1 taken at its word.
+  - **What is taken** (`Storage.findTaken`): an address in an `Arg.Ref`, an `Addr` (but not
+    one that only reaches a packed field in the same instruction, `Mem.Ptr`), a descriptor
+    in read-only data, a FORMAT block's cache cell, and anything a format expression
+    touches. It's computed over every block, reachable or not, so deleting a block can't
+    change the answer. `IOSTAT=` isn't among them: FTNRTL returns the status and the
+    statement's own code stores it. `TestTaken` has a case for each way in Decision 7's list.
+    A descriptor's or namelist's datum exists only if used, so a NAMELIST never read or
+    written takes nothing.
+  - **Testing:** the analyses have small programs for each form, and `TestGraphsOnCorpus` and
+    `TestStorageOnCorpus` run on 581 routines from 168 of the 171 files to hand (the module
+    programs included, definition modules opened), the 3 others being `modules/ledger`'s, which
+    INCLUDE a file beside them.
+    Dominators are checked against their definition, by removing each block and seeing what
+    can still be reached, and each loop against the definition of a natural loop.

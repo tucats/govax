@@ -669,8 +669,10 @@ type (
 
 	// IndirectJump goes to the address the Long at Through holds, which
 	// an ASSIGN put there (a LabelAddr): the assigned GO TO (section
-	// 5.6.3), JMP @Through. Targets are the blocks it may go to, which
-	// the jump itself doesn't need, but which say where control goes.
+	// 5.6.3), JMP @Through. Targets are the blocks its list names, or with
+	// no list every label the unit ASSIGNs. The list doesn't bind the jump
+	// (section 5.6.3: it "does not affect statement execution"), so any
+	// label the unit ASSIGNs is also a place it may go: opt's Graph adds them.
 	IndirectJump struct {
 		origin
 		Through *Mem

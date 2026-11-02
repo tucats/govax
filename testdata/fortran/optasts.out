@@ -1,0 +1,4 @@
+REENT          20
+BUMP           2
+FLAG           7 T
+  $STATUS == "%X00000001"
