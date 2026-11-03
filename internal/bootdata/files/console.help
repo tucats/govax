@@ -4315,13 +4315,13 @@ $FOR
 
 $MACR
 
-    The MACRO command assembles a VAX MACRO-32 source file and writes a
-    VAX/VMS object module (.OBJ), the same kind of file VMS's own MACRO
+    The MACRO command assembles VAX MACRO-32 source files and writes
+    VAX/VMS object modules (.OBJ), the same kind of file VMS's own MACRO
     writes for its linker.
 
     Syntax:
 
-        MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
+        MACRO <source>[{,|+}...][/HOST] [/OBJECT[=<object>] | /NOOBJECT]
               [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
               [/SHOW=(<option>[,...]) | /NOSHOW=(<option>[,...])]
               [/CROSS_REFERENCE[=(<option>[,...])] | /NOCROSS_REFERENCE]
@@ -4330,8 +4330,16 @@ $MACR
 
     Parameter:
 
-        <source>        The source file.  Without a file type it is .MAR.
-                        The source can be a host file or a file on a
+        <source>        The source file, or a list of them.  Files separated
+                        by commas are each assembled by themselves, to an
+                        object (and listing) of their own, and an error in
+                        one doesn't stop the next.  Files separated by plus
+                        signs are concatenated into one input, for a single
+                        object (and listing), named for the first file.
+                        All have the same qualifiers, and /OBJECT= or /LIST=
+                        with a file name gets each assembly's output in
+                        turn.  Without a file type a source is .MAR.
+                        A source can be a host file or a file on a
                         mounted volume:
 
                           - with /HOST attached, it is a host path;
@@ -4476,7 +4484,7 @@ $MACR
     in line) and NAME_G (CALLG), and gives the same code as VAX MACRO's.
     Macro libraries are made with LIBRARY/MACRO.
 
-    From the host shell, "govax macro <source>" runs this command, with
+    From the host shell, "govax macro <source>..." runs this command, with
     --object <file> or --no-object, --list or --list-file <file>,
     --show and --no-show <option,...>, and --library <library> (which may
     be repeated).  --mount DEVICE=container (or

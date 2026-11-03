@@ -19,7 +19,7 @@ import (
 // This file implements docs/PHASE-27.md subtask 10's MACRO command, with
 // docs/PHASE-28.md subtask 9's macro libraries:
 //
-//	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
+//	MACRO source[{,|+}...][/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
 //	      [/[NO]SHOW=(option[,...])] [/[NO]CROSS_REFERENCE[=(option[,...])]]
 //	      [/ENABLE=(function[,...])] [/DISABLE=(function[,...])]
 //	      [/[NO]DEBUG[=(option[,...])]]
@@ -63,6 +63,12 @@ type MacroOptions struct {
 	// it.
 	Source     string
 	SourceHost bool
+
+	// Joined are the files + joins to Source (MACRO A+B), read after it as one
+	// input. Each takes its defaults from the file before it, and the single
+	// object and listing are named for Source, as on VMS (the author's check,
+	// docs/PHASE-86 - FORTRAN milestone.md).
+	Joined []string
 
 	// Object is the object file name from /OBJECT=; "" means the default
 	// name: the source's, with the extension OBJ in the same case as the
@@ -163,6 +169,78 @@ func debugFunctions(none bool, kinds []string) (on, off []string, err error) {
 // one, as VMS MACRO does.
 const defaultSourceType = "MAR"
 
+// MacroSource is one element of the MACRO command's list.
+type MacroSource struct {
+	// Name is the file's name.
+	Name string
+
+	// Joined says a + follows it, so the next element is in the same assembly.
+	Joined bool
+}
+
+// macroAssemblies groups the command's list: each assembly's elements, from one
+// a + doesn't follow to the next.
+func macroAssemblies(list []MacroSource) [][]MacroSource {
+	var groups [][]MacroSource
+
+	for start, i := 0, 0; i < len(list); i++ {
+		if !list[i].Joined || i == len(list)-1 {
+			groups = append(groups, list[start:i+1])
+			start = i + 1
+		}
+	}
+
+	return groups
+}
+
+// MacroList is the MACRO command's list of sources. VMS's HELP MACRO says what
+// the list means: names separated by commas are each assembled by themselves, to
+// an object and listing of their own, and names joined by + are concatenated into
+// one input, for a single object and listing. All have the same qualifiers.
+//
+// With several assemblies, a failure doesn't stop the next one. Each failure is
+// shown as it happens, so the next file's messages follow it in order, and the
+// command ends with the last failure's status, not shown again. FORTRAN's list
+// works the same way (Context.Fortran).
+func (c *Context) MacroList(sources []MacroSource, opts MacroOptions) error {
+	groups := macroAssemblies(sources)
+
+	assemble := func(group []MacroSource) error {
+		opts.Source, opts.Joined = group[0].Name, nil
+
+		for _, source := range group[1:] {
+			opts.Joined = append(opts.Joined, source.Name)
+		}
+
+		return c.Macro(opts)
+	}
+
+	if len(groups) == 1 {
+		return assemble(groups[0])
+	}
+
+	var failed uint32
+
+	for _, group := range groups {
+		if err := assemble(group); err != nil {
+			c.Printf("%%%s\n", err)
+
+			failed = vmserrors.CLI_ASMERRORS
+
+			var vmsErr vmserrors.VMSError
+			if errors.As(err, &vmsErr) {
+				failed = vmsErr.Status
+			}
+		}
+	}
+
+	if failed != 0 && c.SetStatus != nil {
+		c.SetStatus(failed | stsInhibitMsg)
+	}
+
+	return nil
+}
+
 // Macro assembles one MACRO-32 source file and, unless opts.NoObject,
 // writes its object module; with opts.List, it writes the listing too.
 func (c *Context) Macro(opts MacroOptions) error {
@@ -182,6 +260,23 @@ func (c *Context) Macro(opts MacroOptions) error {
 	lines, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
 		return FileFailure(err, loc.Name)
+	}
+
+	for prev, i := found, 0; i < len(opts.Joined); i++ {
+		next, err := s.LocateRelated(opts.Joined[i], opts.SourceHost, prev)
+		if err != nil {
+			return FileFailure(err, opts.Joined[i])
+		}
+
+		next = next.WithDefaultType(defaultSourceType)
+
+		more, read, err := s.ReadRecordFile(next, rms.TextRecords)
+		if err != nil {
+			return FileFailure(err, next.Name)
+		}
+
+		lines = append(lines, more...)
+		prev = read
 	}
 
 	a := asm.New(false)

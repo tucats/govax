@@ -612,8 +612,15 @@ func (d *Dispatcher) bindGrammar() {
 			show = r.List("SHOW")
 		}
 
-		return d.Console.cmd().Macro(dclcmd.MacroOptions{
-			Source:      r.String("SOURCE"),
+		names := r.List("SOURCE")
+		items := r.Items("SOURCE")
+		sources := make([]dclcmd.MacroSource, len(names))
+
+		for i, name := range names {
+			sources[i] = dclcmd.MacroSource{Name: name, Joined: items[i].Joined()}
+		}
+
+		return d.Console.cmd().MacroList(sources, dclcmd.MacroOptions{
 			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
 			Object:      r.String("OBJECT"),
 			NoObject:    r.Present("OBJECT") && r.Negated("OBJECT"),

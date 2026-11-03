@@ -151,3 +151,38 @@ end
 		t.Errorf("without /joinable: %v, %v", r, err)
 	}
 }
+
+// TestJoinableWithoutPositional: a /joinable list needs no positional qualifier to
+// say which elements a "+" follows, and other qualifiers still parse among them.
+func TestJoinableWithoutPositional(t *testing.T) {
+	g, err := ParseGrammar(`
+grammar test
+
+verb asm
+    parameter files/id=2/type=$string/list/joinable
+    qualifier quiet/id=3
+
+end
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := g.Parse("ASM A+B/QUIET,C")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := r.List("FILES"); !slices.Equal(got, []string{"A", "B", "C"}) {
+		t.Errorf("FILES = %v", got)
+	}
+
+	items := r.Items("FILES")
+	if len(items) != 3 || !items[0].Joined() || items[1].Joined() || items[2].Joined() {
+		t.Errorf("items = %v", items)
+	}
+
+	if !r.Present("QUIET") {
+		t.Error("/QUIET lost")
+	}
+}

@@ -746,7 +746,8 @@ grammar console
     verb macro/id=1300
 
         parameter   source/id=1301              -
-                    /type=$string               -
+                    /type=$string/list          -
+                    /joinable                   -
                     /prompt="Source"
         qualifier   host/id=1302                -
                     /parameter=source

@@ -312,7 +312,7 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	if sym == nil || (sym.Class == Unclassified && sym.Dummy == 0) {
 		// A system subroutine, unless the file has one of its own.
 		if system := systemSubroutines[s.Name]; system != nil && a.units[s.Name] == nil && len(targets) == 0 {
-			a.noteOther(whatSystem, s.Name, s.NamePos, RefUsed)
+			a.noteSystem(s.Name, s.NamePos)
 
 			return system(a, s, list)
 		}

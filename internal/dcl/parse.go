@@ -62,7 +62,7 @@ func (r *Result) Joined() bool { return r.joined }
 // Items returns the positional qualifiers of each element of the list
 // parameter name, in the list's order: element i's are read with
 // Items(name)[i].Present, String, List, and so on. It's nil for a
-// parameter with no positional qualifiers.
+// parameter with no positional qualifiers that isn't /joinable.
 func (r *Result) Items(name string) []*Result {
 	return r.items[upcase(name)]
 }
@@ -478,7 +478,7 @@ func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 
 		p := active.Parameters[nextParam]
 
-		if p.List && len(p.positional()) > 0 {
+		if p.List && (p.Joinable || len(p.positional()) > 0) {
 			var (
 				vals  []Value
 				items []*Result

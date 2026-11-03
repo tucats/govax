@@ -47,7 +47,7 @@ var systemFunctions = map[string]systemFunction{
 
 // systemFunction analyzes y = RAN(i) or y = SECNDS(x).
 func (a *analyzer) systemFunction(e *ast.Apply, f systemFunction) Expr {
-	a.noteOther(whatSystem, e.Name, e.Pos, RefUsed)
+	a.noteSystem(e.Name, e.Pos)
 
 	if len(e.Args) != 1 {
 		a.report("SYSCOUNT", e.Pos, e.Name, "1 argument", len(e.Args))

@@ -200,11 +200,11 @@ var grammar = []cli.Option{
 	},
 	{
 		LongName:             "macro",
-		Description:          "Assemble a MACRO-32 source file into an object module",
+		Description:          "Assemble MACRO-32 source files into object modules",
 		OptionType:           cli.Subcommand,
 		Action:               macroCmd,
-		ParametersExpected:   1,
-		ParameterDescription: "source",
+		ParametersExpected:   -99,
+		ParameterDescription: "source...",
 		Value:                macroGrammar,
 	},
 	{
@@ -1063,19 +1063,37 @@ func fortranCommand(sources []string, f fortranFlags) string {
 // qualifier.
 func macroCmd(c *cli.Context) error {
 	params := c.FindGlobal().Parameters
-	if len(params) != 1 {
-		return fmt.Errorf("macro: expected one source file")
+	if len(params) == 0 {
+		return fmt.Errorf("macro: expected one or more source files")
 	}
 
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{macroCommand(params[0], macro)})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{macroListCommand(params, macro)})
 }
 
-// macroCommand is the console MACRO command for the macro subcommand's
-// source file and options.
+// macroCommand is the console MACRO command for one source file and the
+// macro subcommand's options.
 func macroCommand(source string, f macroFlags) string {
-	command := "MACRO " + dclQuote(source)
+	return macroListCommand([]string{source}, f)
+}
+
+// macroListCommand is the console MACRO command for the macro subcommand's
+// source files and options, each name quoted, as a host path has to be. An
+// argument's + joins files into one assembly, and stays outside the quotes.
+func macroListCommand(sources []string, f macroFlags) string {
+	quoted := make([]string, len(sources))
+
+	for i, source := range sources {
+		names := strings.Split(source, "+")
+		for j, name := range names {
+			names[j] = dclQuote(name)
+		}
+
+		quoted[i] = strings.Join(names, "+")
+	}
+
+	command := "MACRO " + strings.Join(quoted, ",")
 
 	switch {
 	case f.noObject:

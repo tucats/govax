@@ -44,6 +44,15 @@ func TestMacroCommand(t *testing.T) {
 	}
 }
 
+// TestMacroListCommand: each argument is an element of the list, and a + in one
+// joins files into one assembly.
+func TestMacroListCommand(t *testing.T) {
+	got := macroListCommand([]string{"a.mar", "b+c.mar", "d"}, macroFlags{noObject: true})
+	if want := `MACRO "a.mar","b"+"c.mar","d"/NOOBJECT`; got != want {
+		t.Errorf("macroListCommand = %q, want %q", got, want)
+	}
+}
+
 func TestLinkCommand(t *testing.T) {
 	cases := []struct {
 		objects []string

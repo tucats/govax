@@ -359,7 +359,7 @@ you, so their case is kept.
 | `govax console CMD...` | `CMD` | Run one DCL command (the default). |
 | `govax run IMAGE [text...]` | `RUN IMAGE` | Run an image. Any words after the image's name are its command text, which it reads with `LIB$GET_FOREIGN`. |
 | `govax fortran SOURCE...` | `FORTRAN SOURCE,...` | Compile FORTRAN source files into MACRO-32 source files. |
-| `govax macro SOURCE` | `MACRO SOURCE` | Assemble a MACRO-32 source file. |
+| `govax macro SOURCE...` | `MACRO SOURCE,...` | Assemble MACRO-32 source files. |
 | `govax link OBJECT...` | `LINK OBJECT,...` | Link object modules into an image. |
 | `govax library LIB [INPUT...]` | `LIBRARY LIB INPUT,...` | Create, change, list, or extract from a library. |
 | `govax analyze FILE...` | `ANALYZE/OBJECT` or `/IMAGE` | Describe object or image files. |
@@ -381,7 +381,7 @@ govax macro [--object FILE | --no-object] [--list | --list-file FILE]
             [--show OPTS] [--no-show OPTS] [--cross-reference]
             [--cross-reference-kinds KINDS] [--enable FUNCS]
             [--disable FUNCS] [--debug OPTS | --no-debug]
-            [--library MLB]... SOURCE
+            [--library MLB]... SOURCE...
 
 govax link [--executable FILE | --no-executable] [--shareable]
            [--symbol-table FILE] [--debug] [--no-traceback]
@@ -2104,11 +2104,17 @@ what you need.
 ### The MACRO command
 
 ```text
-MACRO source[/HOST] [/OBJECT[=file] | /NOOBJECT] [/LIST[=file] | /NOLIST]
+MACRO source[{,|+}...][/HOST] [/OBJECT[=file] | /NOOBJECT] [/LIST[=file] | /NOLIST]
       [/LIBRARY=(mlb,...)] [/SHOW=(...) | /NOSHOW=(...)]
       [/CROSS_REFERENCE[=(...)]] [/DEBUG[=(...)] | /NODEBUG]
       [/ENABLE=(...)] [/DISABLE=(...)]
 ```
+
+Sources separated by commas are each assembled by themselves, to an object and
+listing of their own; an error in one doesn't stop the next, and the command ends
+with the last failure's status. Sources joined by `+` are concatenated into one
+input, for a single object and listing named for the first file. All have the same
+qualifiers.
 
 | Qualifier | Meaning |
 | --- | --- |

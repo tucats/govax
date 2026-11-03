@@ -15,7 +15,14 @@ import (
 func readMacro(t *testing.T, c *Console, name string) []string {
 	t.Helper()
 
-	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name + ".MAR"}, rms.TextRecords)
+	return macroLines(t, c, rms.FileLocation{Name: "DUA1:[000000]" + name + ".MAR"})
+}
+
+// macroLines is readMacro for a MACRO file anywhere.
+func macroLines(t *testing.T, c *Console, loc rms.FileLocation) []string {
+	t.Helper()
+
+	records, _, err := c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,9 +128,9 @@ func TestFortranDungeonBothWays(t *testing.T) {
 	}
 }
 
-// playDungeon builds DUNGEON with FORTRAN's qualifier on a large volume of its
-// own, then plays the game script input, and returns what it printed and cost.
-func playDungeon(t *testing.T, dir, kit, qualifier, input string) (string, runCounts) {
+// dungeonConsole is a console whose default directory is on a volume large enough
+// for DUNGEON, DUA3:[000000].
+func dungeonConsole(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 	t.Helper()
 
 	d, c, buf := shareFindConsole(t, false)
@@ -138,6 +145,16 @@ func playDungeon(t *testing.T, dir, kit, qualifier, input string) (string, runCo
 	}
 
 	shareFindRun(t, d, "SET DEFAULT DUA3:[000000]")
+
+	return d, c, buf
+}
+
+// playDungeon builds DUNGEON with FORTRAN's qualifier on a large volume of its
+// own, then plays the game script input, and returns what it printed and cost.
+func playDungeon(t *testing.T, dir, kit, qualifier, input string) (string, runCounts) {
+	t.Helper()
+
+	d, c, buf := dungeonConsole(t)
 
 	create := func(name string, kind rms.RecordKind, records [][]byte) {
 		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA3:[000000]" + name}, kind, records); err != nil {

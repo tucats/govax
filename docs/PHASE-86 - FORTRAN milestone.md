@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** planned (2026-10-29). Needs every earlier phase of the
+**Status:** in progress (subtask 1 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -112,7 +112,7 @@ or text.
 
 ## Subtasks (provisional)
 
-1. **DUNGEON compiled:** every source through FORTRAN and MACRO with no
+1. **DUNGEON compiled** (done 2026-11-03): every source through FORTRAN and MACRO with no
    message; whatever it finds missing is fixed in subtasks of its own.
 2. **DUNGEON linked and run**, with its ITIME and its data files.
 3. **The milestone test** in every mode, with a scripted game.
@@ -128,3 +128,36 @@ or text.
   above.
 - **2026-10-29:** The author decided DUNGEON stays local: used for
   development, never committed.
+- **2026-11-03, subtask 1:** DUNGEON compiled, by its own documentation's commands.
+  Phase 84 had already built it, with `/CONTINUATIONS=40` and a command per file, and
+  compared two builds' games. `TestDungeonCompiles` holds the kit's build as it's typed
+  (`FORT/NOCHECK/CONT=40 DUNGEON.F,GAME.F,...`, the abbreviations, `.F` names, two lists):
+  - **The result.** Silent through FORTRAN and MACRO on a volume and on host files, nine
+    objects that `obj.Check` accepts, the MACRO files the same on both sides but for the
+    comments naming the source and INCLUDE files. The same under 11 settings (`/NOOPTIMIZE`, `/CHECK=ALL` both ways,
+    `/DEBUG/NOOPTIMIZE`, `/LIST/CROSS_REFERENCE/SHOW=ALL`, `/NOF77`, `/G_FLOATING`,
+    `/ALIGN=ALL`, `/D_LINES`, `/EXTEND_SOURCE`). Without `/CONT=40`, three statements are
+    TOOMANYCONT, so the qualifier is needed. Tried once, not kept: `/NOI4` is rightly 425
+    INTRANGEs (the source's 32768s) and a SYSARG, and `/DEBUG` with the optimizer says only
+    DEBUGOPTIMIZE; `/STANDARD=ALL` and `/WARNINGS=ALL` gave no panic.
+  - **MACRO takes a list** (found here; the author's direction, with VMS's HELP MACRO
+    text). `MACRO A,B` assembles each to an object and listing of its own, and `MACRO A+B`
+    concatenates them into one input, for a single object and listing named for the first
+    file, which the author checked on VMS. A later name takes its defaults from the name
+    before it. An error goes on to the next assembly, the command ending with the last
+    failure's status, as FORTRAN's list does (`dclcmd.MacroList`). `govax macro` takes
+    several sources, `a+b` joined. `/joinable` no longer needs a positional qualifier
+    (`dcl.Parse`). Files joined are numbered as one input in messages and listings, and
+    `/DEBUG`'s source file is the first: **unconfirmed** against VMS, as is what a `.END` in
+    a file before the last does (govax's assembler stops at it, so what follows is unread).
+    VMS's positional `/LIBRARY` (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps its
+    `/LIBRARY=(...)`.
+  - **A false warning fixed.** `/WARNINGS=UNUSED` said `REAL RAN` was never used in a unit
+    calling RAN: a system function's reference was noted under the routine, not the declared
+    name (`sema`'s `noteSystem`, as `noteIntrinsic`). Of DUNGEON's 14 findings the other 13
+    were read against their units and are true; the test keeps the count.
+  - **Left for later:** a typed name that's a system or intrinsic function (`REAL SQRT`)
+    still gets a `$LOCAL` cell and a variable's line in the map, harmless but wasted; a full
+    volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is
+    full; and `-` continuation typed at the console isn't honored (`LINK A,-`, as the kit's
+    LINK is written), which subtask 2 is to fix.

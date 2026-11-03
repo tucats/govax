@@ -285,3 +285,27 @@ func TestWarningsListing(t *testing.T) {
 		t.Error("under NOGENERAL the message is in the listing")
 	}
 }
+
+// TestWarningsSystemFunctions: a declared system function that a statement calls is
+// used, as a declared intrinsic is, and one nothing calls isn't.
+func TestWarningsSystemFunctions(t *testing.T) {
+	got := warningsOf(t, Options{}, []string{"UNUSED"},
+		"      REAL RAN, SECNDS, X",
+		"      INTEGER SEED",
+		"      SEED = 5",
+		"      X = RAN(SEED) + SECNDS(0.0)",
+		"      PRINT *, X",
+		"      END")
+
+	if len(got) != 0 {
+		t.Errorf("called system functions said %q", got)
+	}
+
+	got = warningsOf(t, Options{}, []string{"UNUSED"},
+		"      REAL RAN",
+		"      END")
+
+	if want := []string{"UNUSEDNAME 1 RAN is declared but never used"}; !slices.Equal(got, want) {
+		t.Errorf("an uncalled system function said %q, want %q", got, want)
+	}
+}

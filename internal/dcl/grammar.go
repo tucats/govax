@@ -114,8 +114,8 @@ type Parameter struct {
 	List bool
 
 	// Joinable marks a list parameter declared with /joinable, whose
-	// elements (it must have positional qualifiers, so readItems reads it)
-	// may also be separated by "+", as VMS's compilers take "A+B,C". An
+	// elements may also be separated by "+", as VMS's compilers take
+	// "A+B,C". readItems reads it, positional qualifiers or none, and an
 	// element followed by "+" reports Joined.
 	Joinable bool
 

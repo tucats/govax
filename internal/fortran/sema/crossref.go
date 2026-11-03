@@ -131,6 +131,17 @@ func (a *analyzer) noteIntrinsic(name string, pos diag.Position) {
 	}
 }
 
+// noteSystem notes a reference to the system routine name: a mention of its Symbol
+// if the unit has declared it (REAL RAN), so that the name counts as used, or of
+// the routine.
+func (a *analyzer) noteSystem(name string, pos diag.Position) {
+	if s := a.unit.byName[name]; s != nil {
+		a.note(&s.refs, pos, RefUsed)
+	} else {
+		a.noteOther(whatSystem, name, pos, RefUsed)
+	}
+}
+
 // noteLabel notes a mention of a statement label.
 func (a *analyzer) noteLabel(label int, pos diag.Position, kind RefKind) {
 	if a.unit.labelRefs == nil {
