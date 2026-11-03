@@ -77,8 +77,9 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 		}
 	}
 
-	// As from an earlier run in the same session, which on VMS made LINK look for the
-	// image it was to make, FTNRTL/OPTIONS translating to it: the procedure must cope.
+	// As from an earlier run in the same session. This doesn't test what that did on
+	// VMS: there LINK translates the name for FTNRTL/OPTIONS and looks for the image it
+	// is to make, and govax's LINK doesn't translate it (the phase doc's log).
 	shareFindRun(t, d, "DEFINE/NOLOG FTNRTL DUA2:[FTN86]FTNRTL.EXE")
 	shareFindRun(t, d, "@FTN86/OUTPUT=FTN86.LOG")
 

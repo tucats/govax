@@ -274,6 +274,9 @@ or text.
 - **2026-11-03, subtask 4, round 2's first try:** in the same VAX session as round 1, so FTNRTL was still
   defined, and `LINK/SHAREABLE=FTNRTL FTNRTL/OPTIONS` took the name for its options file:
   `%LINK-F-OPENIN, error opening DUA1:[FTN86]FTNRTL.EXE; as input`, and no program had an image. The
-  procedure's fault: `ftn86.com` now deassigns the name first, and `TestFTN86Procedure` runs with it defined.
-  All 19 modules assembled on VMS, and their objects are the ones compared below.
+  procedure's fault: `ftn86.com` now deassigns the name first. **A gap this shows, left for later:** govax's
+  LINK doesn't translate a logical name for an options file (`LINK X/OPTIONS` with X defined), so
+  `TestFTN86Procedure`, which runs with the name defined, can't catch this; `LINK` builds the image. The fix
+  rests on VMS's message alone until the next run. All 19 modules assembled on VMS, and their objects, from the
+  fixed sources, match govax's record for record but for the three header records.
 
