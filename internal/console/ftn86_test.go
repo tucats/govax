@@ -16,7 +16,7 @@ import (
 // them, with why. A name.out is a terminal's output, and the procedure's runs write a file
 // and read a file; each of these also runs with its N variant, compiled /NOOPTIMIZE.
 var ftn86FileDifferences = map[string]string{
-	"ASTS":       "reads a line from the terminal by $QIO, which a file for SYS$INPUT isn't",
+	"ASTS":       "writes a line by $QIO to SYS$OUTPUT, here a file and not a terminal",
 	"DIALOG":     "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
 	"FORMATS":    "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
 	"INQUIRE":    "the directory is the program's own, not [000000]",

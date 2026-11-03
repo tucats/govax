@@ -279,4 +279,10 @@ or text.
   `TestFTN86Procedure`, which runs with the name defined, can't catch this; `LINK` builds the image. The fix
   rests on VMS's message alone until the next run. All 19 modules assembled on VMS, and their objects, from the
   fixed sources, match govax's record for record but for the three header records.
+- **2026-11-03, subtask 4, round 2's second try:** the LINK worked. It stopped at ASTS, 14 runs in, all 14
+  printing their `name.out`, ASTRACE among them, which didn't link in round 1. ASTS hibernated for ever: its
+  `$QIO` to a channel on SYS$OUTPUT, here a file through `@FTN86/OUTPUT=`, gave no AST, and it didn't look at
+  the status. On govax the same request is accepted and completes with an error in its IOSB. `asts.for` now
+  looks, and prints a refusal's status; which of the two is VMS's comes back with the next run. The other
+  programs round 1 couldn't link were read for the same hazard, and VMSTOUR's `$HIBER` waits on a timer.
 

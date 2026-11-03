@@ -34,8 +34,14 @@ C     A $QIO's completion AST, its IOSB set by then.
       ST = SYS$ASSIGN('SYS$OUTPUT', CHAN,,)
       ST = SYS$QIO(, %VAL(CHAN), %VAL(IO$_WRITEVBLK), IOSB, DONE,
      1  %VAL(5), %REF(LINE), %VAL(12),,,,)
-      ST = SYS$HIBER()
-      PRINT *, 'IOSB', IOSB(1), IOSB(2)
+C     Only an accepted request has an AST to wait for: VMS 7.1 hibernated here for
+C     ever with SYS$OUTPUT a file (testdata/ftn86), this having had no check.
+      IF (ST) THEN
+         ST = SYS$HIBER()
+         PRINT *, 'IOSB', IOSB(1), IOSB(2)
+      ELSE
+         PRINT *, 'QIO REFUSED', ST
+      END IF
 C
 C     $SETAST holds an AST off until they're enabled again, and says how it was.
       ST = SYS$SETAST(%VAL(0))
