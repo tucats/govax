@@ -298,6 +298,13 @@ STARTUP.COM as now, `vax.sysgen.paging.size` blocks (32,768, 16 MB, of an
 RD54's 159). With no writable system volume, there is no page file, as
 today. A configured name wins, as now.
 
+When the system volume is read-only (a second session, Decision 7),
+govax doesn't try to open a page file there at all: there is no page
+file, nothing fails, and no message beyond SYSREADONLY's. SHOW MEMORY's
+page file section says why (the author, 2026-11-03): the default page
+file wasn't used because the system volume is read-only, in place of
+today's "no page file" report (`PageFileReport` gets the reason).
+
 **Decision 9 — ASM and LOAD read volume files.** `ASM` and
 `LOAD/ROM`/`LOAD/NVRAM` take a VMS file name as well as a quoted host
 path, as RUN and @ do (`Session.Locate`), and ASM's `.INCLUDE` looks
@@ -390,7 +397,7 @@ recommendation:
 
 1. **The survey and plan** (this document's Parts A and B), and the
    author's review (done 2026-11-03).
-2. **The volume's contents** (`internal/sysvol`): the table of supplied
+2. (done 2026-11-03) **The volume's contents** (`internal/sysvol`): the table of supplied
    files (directory, name, record format, source: `bootdata.FS`,
    `ftnrtl.Files` and `ftnrtl.Image`, `sysdef.Library`), the new
    built-in files (`startup.com`, `systartup_vms.com`, `buildftn.com`,
@@ -418,7 +425,9 @@ recommendation:
    built-in STARTUP.COM's path with no volume. A test that boots from an
    edited KERNEL.ASM on the volume.
 7. **The page file on the volume** (Decision 8), both paging modes; no page
-   file when the volume is read-only; SHOW MEMORY/FILES naming it.
+   file, and no attempt to open one, when the volume is read-only, with
+   SHOW MEMORY saying the default page file wasn't used (read-only); SHOW
+   MEMORY/FILES naming it.
 8. **The libraries:** MACRO, FORTRAN, LINK, and RUN using SYS$LIBRARY's
    and SYS$SHARE's files from STARTUP.COM's names; BUILDFTN.COM building
    and installing FTNRTL.EXE (a new version in SYS$SHARE) from the sources,
@@ -445,4 +454,40 @@ recommendation:
   added the unit-number rule while it was being written (Decision 6).
 - **2026-11-03** — Subtask 1 done: the author accepted every
   recommendation ("The review"); Decision 0 records the first three
-  answers.
+  answers. The author added (the same day) that a read-only system volume
+  means no page file and no attempt at one, with SHOW MEMORY saying why
+  (Decision 8, subtask 7).
+- **2026-11-03** — Subtask 2 done: `internal/sysvol`.
+  - `files.go` is the layout: `Directories` (each after its parent), and
+    `Files()`, one `File` per file (directory, name, `Format`, `Kind`, and a
+    reader of its built-in source), with `Spec` and `Lookup`. FTNRTL's
+    modules are read from `ftnrtl.Files`' directory, so a new module goes on
+    the volume with no change here. `Label`, `DefaultDevice`, and
+    `DefaultType` are Decision 0's.
+  - `contents.go`: one canonical form per format, which is what's written,
+    compared, and summed. A `Text` file is its lines, each ended by a line
+    feed, CRLF made LF. A `Binary` file is its bytes zero-padded to whole
+    blocks: DEFAULT.ROM is 127,944 bytes, and the padding is harmless
+    because LOAD/ROM stops at a zero block count. `Records` and `Join` go
+    between canonical contents and records. `Sum` is SHA-256.
+  - `manifest.go`: `Manifest`, `[SYSTEM]GOVAX$FILES.DAT`, which starts with
+    comment records, then has one record per supplied file, its spec and
+    digest, sorted, so the same manifest is always the same file. A damaged
+    record is an error naming it, never a file left out.
+  - `populate.go`: the `Volume` interface (`CreateDirectory`, `WriteFile` a
+    new version, `ReadFile` the highest), `Populate` (directories, files, a
+    seeded file only if missing, the manifest of supplied files), and
+    `ReadManifest`/`WriteManifest`.
+  - FORSYSDEF.TLB is built with a fixed time (`definitionTime`), as
+    STARLET.MLB is, so its digest doesn't change from start to start
+    (`TestContentsRepeat`).
+  - New built-in files in `internal/bootdata/files`: `startup.com` (vax.init
+    plus STARTUP.COM's definitions of SYS$SYSTEM, SYS$MANAGER, SYS$HELP,
+    SYS$LIBRARY, SYS$SHARE, and SYS$SOURCES under SYS$SYSDEVICE; the kernel
+    and ROM from the volume, or the built-in names with no SYS$SYSDEVICE;
+    SYSTARTUP_VMS.COM last), `systartup_vms.com`, `buildftn.com`, and
+    `buildstarlet.com`. `vax.init` is still the startup procedure until
+    subtask 5, and `startup.com` isn't run yet. Subtasks 5, 6, and 8 run
+    and test the procedures. `TestBuildProcedureModules` holds
+    BUILDFTN.COM's MACRO lines to FTNRTL.OPT's objects and to the modules
+    on the volume.

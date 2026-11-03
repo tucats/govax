@@ -11,6 +11,15 @@
 // falls back on, and STARLET.MAR, the source it's generated from
 // (starlet.go; docs/PHASE-28.md).
 //
+// And the procedures the system volume holds (internal/sysvol; docs/PHASE-87
+// - system volume.md): startup.com, the volume's SYS$MANAGER:STARTUP.COM,
+// which is vax.init made to define the system logical names and to read the
+// kernel and ROM from the volume (vax.init stays the startup procedure until
+// govax runs STARTUP.COM from the volume, Phase 87's subtask 5);
+// systartup_vms.com, the user's site-specific startup, written once;
+// buildftn.com and buildstarlet.com, which rebuild FTNRTL.EXE and STARLET.MLB
+// from the volume's sources.
+//
 // FS is the last, implicit entry in every internal/respath.Resolver's
 // search order: a "govax" invocation with no "-path" flags at all still
 // boots correctly, purely off these embedded copies.

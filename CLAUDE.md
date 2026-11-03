@@ -613,7 +613,9 @@ never had.
   system volume: a container govax always mounts (`~/.govax/govax-system.dsk`, GOVAXSYS, DUA0), made from its built-in
   files, holding STARTUP.COM (was `vax.init`), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and
   the kernel's sources with build procedures, and the page file; refreshed by content against a manifest; a device with
-  no unit is the next free one. Subtask 1 (2026-11-03) is the survey and plan.
+  no unit is the next free one. Subtask 1 (2026-11-03) is the survey and plan, and subtask 2 (2026-11-03) the
+  volume's contents, `internal/sysvol` (the layout, canonical contents, the manifest, `Populate` over a `Volume`
+  interface), with bootdata's new `startup.com`, `systartup_vms.com`, `buildftn.com`, and `buildstarlet.com`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2189,6 +2191,11 @@ expect adjustment as phases land):
 - `internal/fortran/sysdef` — govax's FORTRAN definition modules (Phase 83): `Module(name)` is `$SSDEF`, `$SYSSRVNAM`, and
   the rest as FORTRAN source, made from `vmsdef`, and `Library` the same as a `.TLB` (`mkforsysdef`). The compiler doesn't
   import it: `dclcmd`'s `fortranIncludes` searches it last.
+- `internal/sysvol` — what the system volume holds (Phase 87): `Files()`, the table of every file (directory, name,
+  `Text` or `Binary` format, `Supplied` or `Seeded`, and its built-in source in bootdata, ftnrtl, or sysdef);
+  `Canonical`/`Records`/`Join`, the one form contents are written, compared, and summed in; the `Manifest`
+  (`[SYSTEM]GOVAX$FILES.DAT`, a SHA-256 per supplied file); `Populate` over a `Volume` interface (RMS's in govax, a map
+  in its tests). Plain Go: it knows nothing of RMS or the console.
 - `internal/ftnrtl` — FTNRTL.EXE, the FORTRAN run-time library (Phase
   74, Decision 13): a shareable image written in MACRO-32 (`mar/*.mar`:
   `ftn_vector.mar`, the transfer vector, `.TRANSFER`/`.MASK`/`JMP`
