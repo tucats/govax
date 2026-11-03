@@ -24,11 +24,14 @@
 //   - the manifest (manifest.go), the volume's record of what govax
 //     supplied, by which later versions of govax tell a file the user
 //     changed from one they didn't;
-//   - Populate (populate.go), which fills a newly made volume.
+//   - Refresh (populate.go), run at every start on a volume mounted for
+//     writing, which brings it up to date with this govax's files, and
+//     Populate, the same on a newly made volume.
 //
 // Two kinds of file go on the volume. A supplied file (Supplied) is
 // govax's: listed in the manifest, and replaced by a newer govax's copy
 // unless the user has changed it. A seeded file (Seeded) is the user's
 // from the start: govax writes it once, when it's missing, as a starting
-// point (SYSTARTUP_VMS.COM, the site-specific startup), and never again.
+// point (SYSTARTUP_VMS.COM, the site-specific startup), and never again;
+// the manifest marks it SEEDED, so one the user deletes stays deleted.
 package sysvol

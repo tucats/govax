@@ -14,6 +14,8 @@ const (
 	mountSysReadOnly
 	mountSysInit
 	mountSysFiles
+	mountSysKept
+	mountSysUpdated
 )
 
 // MOUNT facility status codes.
@@ -43,9 +45,17 @@ const (
 	// MOUNT_SYSINIT reports a system volume made again by
 	// --system-initialize, and where the old one went (Decision 10).
 	MOUNT_SYSINIT = MOUNTFacility<<FacilityPosition | mountSysInit<<MessagePosition | StatusInfo
-	// MOUNT_SYSFILES reports a new system volume whose files couldn't all
-	// be written; its cause says which.
+	// MOUNT_SYSFILES reports a system volume that couldn't be filled or
+	// refreshed (Decision 3): a file that couldn't be read or written, or a
+	// damaged manifest; its cause says which. The volume stays mounted.
 	MOUNT_SYSFILES = MOUNTFacility<<FacilityPosition | mountSysFiles<<MessagePosition | StatusWarning
+	// MOUNT_SYSKEPT reports a file on the system volume the user changed,
+	// which a newer copy in this govax didn't replace (Decision 3); said
+	// once for each new copy.
+	MOUNT_SYSKEPT = MOUNTFacility<<FacilityPosition | mountSysKept<<MessagePosition | StatusInfo
+	// MOUNT_SYSUPDATED reports the files the refresh wrote on a system
+	// volume that was there already: newer copies, and missing files.
+	MOUNT_SYSUPDATED = MOUNTFacility<<FacilityPosition | mountSysUpdated<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -58,5 +68,7 @@ func init() {
 	DefineMessage(MOUNT_SYSREADONLY, MOUNTFacility, "SYSREADONLY",
 		"system volume !S is in use by another govax session; mounted read-only")
 	DefineMessage(MOUNT_SYSINIT, MOUNTFacility, "SYSINIT", "system volume !S initialized again; the old one is !S")
-	DefineMessage(MOUNT_SYSFILES, MOUNTFacility, "SYSFILES", "not every file could be written to system volume !S")
+	DefineMessage(MOUNT_SYSFILES, MOUNTFacility, "SYSFILES", "system volume !S could not be brought up to date")
+	DefineMessage(MOUNT_SYSKEPT, MOUNTFacility, "SYSKEPT", "!S was changed, govax's new version not installed")
+	DefineMessage(MOUNT_SYSUPDATED, MOUNTFacility, "SYSUPDATED", "!S on system volume !S updated by this govax")
 }

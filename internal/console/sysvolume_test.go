@@ -101,8 +101,12 @@ func TestSystemVolumeCreated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := len(m.Specs()); got != len(sysvol.Files())-1 {
-		t.Errorf("the manifest lists %d files, want every supplied file, %d", got, len(sysvol.Files())-1)
+	// Every supplied file has a digest, and the seeded one is marked.
+	for _, f := range sysvol.Files() {
+		_, summed := m.Sum(f.Spec())
+		if summed != (f.Kind == sysvol.Supplied) || m.Seeded(f.Spec()) != (f.Kind == sysvol.Seeded) {
+			t.Errorf("%s: in the manifest with a digest %v, seeded %v", f.Spec(), summed, m.Seeded(f.Spec()))
+		}
 	}
 
 	// A binary file has LINK's attributes, and a text file CREATE's.
@@ -123,7 +127,7 @@ func TestSystemVolumeCreated(t *testing.T) {
 }
 
 // TestSystemVolumeReused checks a later start: the container found and
-// mounted as it is, nothing written again.
+// mounted as it is, refreshed, and nothing written again.
 func TestSystemVolumeReused(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
@@ -136,12 +140,17 @@ func TestSystemVolumeReused(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	start := time.Now()
+
 	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
 	if !r.Mounted || !r.Writable || r.Created {
 		t.Fatalf("second start = %+v; output:\n%s", r, buf)
 	}
 
-	if strings.Contains(buf.String(), "CREATED") {
+	// The refresh reads every file at every start (Decision 3).
+	t.Logf("mounted and refreshed in %v", time.Since(start))
+
+	if strings.Contains(buf.String(), "CREATED") || strings.Contains(buf.String(), "SYSUPDATED") {
 		t.Errorf("made again:\n%s", buf)
 	}
 

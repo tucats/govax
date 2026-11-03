@@ -621,7 +621,9 @@ never had.
   startup going on), `dclcmd/units.go`'s `ResolveUnit` (`DUA` is the next free unit; the default volume's default
   device), `rms.MountTable`'s `SetSystem`/`IsSystem`/`Hold`, DISMOUNT refused, `--system-file`/`--system-device`/
   `--system-initialize` and the `vax.default.system.*` keys; `cmd/govax`'s `TestMain` runs its tests with
-  `--system-file none`.
+  `--system-file none`; and subtask 4 (2026-11-03) the refresh at every writable start, `sysvol.Refresh`
+  (missing files written, govax's unchanged files given its new copies as new versions, the user's kept with
+  `%MOUNT-I-SYSKEPT` once per copy; the manifest's `KEPT=` and `SEEDED` notes, written only when it changes).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

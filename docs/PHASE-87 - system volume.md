@@ -232,7 +232,7 @@ of what it wrote. At every start, for each supplied file:
   back), and updates the manifest;
 - the volume's file doesn't match the manifest (the user changed it, or
   rebuilt FTNRTL): it's left alone, and if govax's copy has changed since
-  the manifest's, `%GOVAX-I-SYSKEPT, DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;3 was
+  the manifest's, `%MOUNT-I-SYSKEPT, DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE was
   changed, govax's new version not installed` says so, once per new
   built-in content;
 - missing: written again.
@@ -413,7 +413,7 @@ recommendation:
    fallback, DISMOUNT refused; `cmd/govax`'s `run` reordered (the sequence
    above) and given a test seam (a system-volume option, so tests choose
    a temporary file or none).
-4. **The refresh** (Decision 3): new versions, kept files and their
+4. (done 2026-11-03) **The refresh** (Decision 3): new versions, kept files and their
    message, missing files, the manifest updated; tests for each case and
    for an interrupted refresh (a manifest that doesn't match what's
    there).
@@ -566,3 +566,58 @@ recommendation:
   and `%MOUNT-I-MOUNTED` names the unit (`TestMountCommandNextUnit`).
   `Context.Mount` itself takes the device as given; its other callers
   resolve first. HELP MOUNT and MANUAL.md's MOUNT say so.
+- **2026-11-03** — Subtask 4 done: the refresh.
+  - `sysvol.Refresh` (`populate.go`) runs at every start on a system
+    volume mounted for writing; a read-only one (Decision 7) is used as it
+    is. It makes any missing directory, reads the manifest, and takes each
+    file of `Files()` (`refreshFile`):
+    - **missing:** written (`Written`);
+    - **already govax's copy:** nothing written (`Current`); a manifest
+      digest that differs is corrected;
+    - **as the manifest says govax wrote it:** govax's newer copy written as
+      a new version, the old one kept below it (`Updated`);
+    - **anything else:** the user's (`Kept`), never written. `Notify` is
+      set when govax's copy differs from the manifest's digest and the user
+      hasn't been told about this copy yet.
+  - **The manifest's new notes.** `KEPT=digest` records the copy the user
+    was told about, so each new copy is reported once; a file that was
+    never govax's (one there before the manifest) has a `KEPT=` record with
+    no digest. `SEEDED` marks a seeded file govax has made or found, so
+    SYSTARTUP_VMS.COM is made once and one the user deletes stays deleted
+    (Decision 3's "created once"). A digest set again drops the `KEPT=` note:
+    a user who goes back to govax's copy gets the next one.
+  - **What's written, and when.** The manifest is written last, and only
+    when it changed, so a start with nothing to do writes no version of
+    anything. Records for files govax no longer supplies are kept, so a
+    later govax that supplies one again still knows whether it was changed.
+    `Populate` is now `Refresh` of an empty volume.
+  - **Failures.** A write that fails ends the refresh with the file's name
+    and the manifest unwritten. That does no harm: the files written before
+    it hold govax's copies, which the next refresh finds current and records
+    (the interrupted refresh). A damaged manifest stops the refresh before
+    anything is written, so no file whose owner can't be told is replaced.
+    The case a refresh can't recover from is a file left half written by a
+    crash during the write: it matches neither digest and is kept as the
+    user's, with SYSKEPT. `--system-initialize` or a DELETE of the version
+    is the cure.
+  - **Messages** (`vmserrors/codes_mount.go`, `dclcmd`'s
+    `refreshSystemVolume`):
+    - `%MOUNT-I-SYSKEPT, DUA0:[SYSTEM.SYSMGR]STARTUP.COM was changed,
+      govax's new version not installed`, shown even when the console isn't
+      verbose, since it comes once per copy;
+    - `%MOUNT-I-SYSUPDATED, 3 files on system volume DUA0: updated by this
+      govax`, verbose only, and not on a new volume, where CREATED says
+      enough;
+    - SYSFILES is now `system volume DUA0: could not be brought up to
+      date`, its cause naming the file or the manifest's record.
+  - **Time:** a start with nothing to refresh mounts and refreshes an RD51
+    in about 8 ms (`TestSystemVolumeReused` logs it).
+  - **Tests:**
+    - `internal/sysvol`, with stand-in files whose contents a test changes
+      as a later govax would (`refreshFiles`): `TestRefresh` (every case in
+      turn on one volume), `TestRefreshInterrupted`, `TestRefreshNoManifest`,
+      `TestRefreshDamagedManifest`, `TestRefreshBuiltIn`,
+      `TestManifestNotes`;
+    - `internal/console/sysrefresh_test.go`, on a real volume made to look
+      as an older govax and a user left it, and a read-only and a damaged
+      case.

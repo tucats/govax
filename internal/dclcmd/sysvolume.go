@@ -79,7 +79,9 @@ type SystemVolumeResult struct {
 
 // MountSystemVolume mounts the system volume v describes, making it
 // first if it doesn't exist or v.Initialize asks, and records it as the
-// system volume (rms.MountTable.SetSystem). Nothing it finds stops
+// system volume (rms.MountTable.SetSystem). Mounted for writing, the
+// volume is filled or refreshed with this govax's files
+// (refreshSystemVolume). Nothing it finds stops
 // govax's startup: a volume that can't be used is MOUNT_NOSYSVOL's
 // warning, and the result says no volume is mounted. Informational
 // messages are shown only when the console is verbose.
@@ -183,13 +185,44 @@ func (c *Context) MountSystemVolume(v SystemVolume) SystemVolumeResult {
 
 	c.reportMounted(device, writeLocked)
 
-	if open.created && result.Writable {
-		if _, err := sysvol.Populate(c.systemFiles(device)); err != nil {
-			c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.MOUNT_SYSFILES, err, device+":"))
-		}
+	// A volume mounted for writing is filled, if it's new, or brought up
+	// to date with this govax's files (Decision 3); a read-only one is
+	// used as it is.
+	if result.Writable {
+		c.refreshSystemVolume(device, open.created)
 	}
 
 	return result
+}
+
+// refreshSystemVolume fills or refreshes the system volume on device
+// (sysvol.Refresh) and reports what it did: each file the user changed
+// that a newer govax copy didn't replace, always, since each is said only
+// once; and, when the console is verbose, how many files were written on
+// a volume that was there already (a new one's CREATED says enough). A
+// failure is SYSFILES's warning, and the volume stays mounted as it is.
+func (c *Context) refreshSystemVolume(device string, created bool) {
+	report, err := sysvol.Refresh(c.systemFiles(device))
+	if err != nil {
+		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.MOUNT_SYSFILES, err, device+":"))
+
+		return
+	}
+
+	for _, change := range report.Changes {
+		if change.Notify {
+			c.Printf("%%%s\n", vmserrors.New(vmserrors.MOUNT_SYSKEPT, device+":"+change.File.Spec()))
+		}
+	}
+
+	if written := report.Count(sysvol.Written) + report.Count(sysvol.Updated); written > 0 && !created {
+		files := "1 file"
+		if written > 1 {
+			files = fmt.Sprintf("%d files", written)
+		}
+
+		c.info(vmserrors.New(vmserrors.MOUNT_SYSUPDATED, files, device+":"))
+	}
 }
 
 // systemContainer is what openSystemContainer found or made.

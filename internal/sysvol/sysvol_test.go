@@ -445,3 +445,321 @@ func TestPopulateFailure(t *testing.T) {
 		t.Errorf("ReadManifest of a volume without one = %v, %v, %v", m.Specs(), found, err)
 	}
 }
+
+// TestManifestNotes checks that KEPT= and SEEDED survive a round trip,
+// that a digest set again drops a KEPT note, and that each is refused
+// where it doesn't belong.
+func TestManifestNotes(t *testing.T) {
+	m := NewManifest()
+	m.Set(SysMgr+"CONSOLE.DCL", SumOf([]byte("old")))
+	m.SetKept(SysMgr+"CONSOLE.DCL", SumOf([]byte("new")))
+	m.SetSeeded(SysMgr + "SYSTARTUP_VMS.COM")
+
+	back, err := ParseManifest(m.Records())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if kept, ok := back.Kept(SysMgr + "console.dcl"); !ok || kept != SumOf([]byte("new")) {
+		t.Errorf("KEPT after the round trip: %v, %v", kept, ok)
+	}
+
+	if !back.Seeded(SysMgr+"SYSTARTUP_VMS.COM") || back.Seeded(SysMgr+"CONSOLE.DCL") {
+		t.Error("SEEDED isn't where it was put")
+	}
+
+	if _, ok := back.Sum(SysMgr + "SYSTARTUP_VMS.COM"); ok {
+		t.Error("a seeded file has a digest")
+	}
+
+	// A KEPT note alone: a file govax never wrote.
+	only, err := ParseManifest([][]byte{[]byte(SysMgr + "X.COM KEPT=" + SumOf([]byte("x")).String())})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := only.Sum(SysMgr + "X.COM"); ok {
+		t.Error("a KEPT note alone has a digest")
+	}
+
+	if _, ok := only.Kept(SysMgr + "X.COM"); !ok {
+		t.Error("a KEPT note alone was lost")
+	}
+
+	back.Set(SysMgr+"CONSOLE.DCL", SumOf([]byte("new")))
+
+	if _, ok := back.Kept(SysMgr + "CONSOLE.DCL"); ok {
+		t.Error("Set kept the KEPT note")
+	}
+
+	good := SumOf([]byte("x")).String()
+
+	for _, record := range []string{
+		SysMgr + "X.COM SEEDED " + good,
+		SysMgr + "X.COM " + good + " SEEDED",
+		SysMgr + "X.COM " + good + " KEPT=" + good[:10],
+		SysMgr + "X.COM KEPT=" + good + " " + good,
+		SysMgr + "X.COM KEPT=" + good + " KEPT=" + good,
+	} {
+		if _, err := ParseManifest([][]byte{[]byte(record)}); err == nil {
+			t.Errorf("ParseManifest(%q) took it", record)
+		}
+	}
+}
+
+// refreshTest is a volume and a stand-in for govax's files: a supplied
+// text file, a supplied binary file, and a seeded file, whose contents a
+// test changes as a later govax would.
+type refreshTest struct {
+	t      *testing.T
+	v      *mapVolume
+	copies map[string]string // each file's name, and govax's contents of it
+}
+
+func newRefreshTest(t *testing.T) *refreshTest {
+	return &refreshTest{t: t, v: newMapVolume(), copies: map[string]string{
+		"A.COM":    "$ write sys$output \"a\"\n",
+		"B.EXE":    "image one",
+		"SITE.COM": "$ ! yours\n",
+	}}
+}
+
+// files returns the stand-in file table, reading the current copies.
+func (r *refreshTest) files() []File {
+	read := func(name string) func() ([]byte, error) {
+		return func() ([]byte, error) { return []byte(r.copies[name]), nil }
+	}
+
+	return []File{
+		{Directory: SysMgr, Name: "A.COM", Format: Text, read: read("A.COM")},
+		{Directory: SysLib, Name: "B.EXE", Format: Binary, read: read("B.EXE")},
+		{Directory: SysMgr, Name: "SITE.COM", Format: Text, Kind: Seeded, read: read("SITE.COM")},
+	}
+}
+
+// refresh runs a refresh and returns each file's action, notified ones
+// marked "!", as "A.COM=written B.EXE=kept! ...".
+func (r *refreshTest) refresh() (string, *Report) {
+	r.t.Helper()
+
+	report, err := refreshFiles(r.v, r.files())
+	if err != nil {
+		r.t.Fatal(err)
+	}
+
+	var parts []string
+
+	for _, c := range report.Changes {
+		part := c.File.Name + "=" + c.Action.String()
+		if c.Notify {
+			part += "!"
+		}
+
+		parts = append(parts, part)
+	}
+
+	return strings.Join(parts, " "), report
+}
+
+// expect runs a refresh and checks its actions and whether it wrote the
+// manifest.
+func (r *refreshTest) expect(actions string, manifestWritten bool) {
+	r.t.Helper()
+
+	got, report := r.refresh()
+	if got != actions {
+		r.t.Errorf("refresh: %s\n                want %s", got, actions)
+	}
+
+	if report.ManifestWritten != manifestWritten {
+		r.t.Errorf("refresh (%s): manifest written %v, want %v", got, report.ManifestWritten, manifestWritten)
+	}
+}
+
+// versions returns how many versions of the file name there are.
+func (r *refreshTest) versions(dir, name string) int {
+	return len(r.v.files[dir+name])
+}
+
+// text returns the highest version of the text file dir+name.
+func (r *refreshTest) text(dir, name string) string {
+	records, _, _ := r.v.ReadFile(dir + name)
+
+	return string(Join(records, Text))
+}
+
+// edit writes a new version of dir+name with the user's text.
+func (r *refreshTest) edit(dir, name, text string) {
+	_ = r.v.WriteFile(dir+name, Records(Canonical([]byte(text), Text), Text), Text)
+}
+
+// TestRefresh walks one volume through the refresh's cases (Decision 3),
+// a refresh after each change.
+func TestRefresh(t *testing.T) {
+	r := newRefreshTest(t)
+
+	// A new volume: everything written, and the manifest.
+	r.expect("A.COM=written B.EXE=written SITE.COM=written", true)
+
+	// Nothing changed: nothing written, not even the manifest.
+	r.expect("A.COM=current B.EXE=current SITE.COM=left", false)
+
+	if r.versions(SysMgr, "A.COM") != 1 || r.versions(Root, ManifestName) != 1 {
+		t.Error("a refresh with nothing to do wrote a version")
+	}
+
+	// A newer govax changes both supplied files: each is a new version,
+	// the old one kept below it.
+	r.copies["A.COM"] = "$ write sys$output \"a2\"\n"
+	r.copies["B.EXE"] = "image two"
+	r.expect("A.COM=updated B.EXE=updated SITE.COM=left", true)
+
+	if r.versions(SysMgr, "A.COM") != 2 || r.text(SysMgr, "A.COM") != r.copies["A.COM"] {
+		t.Errorf("A.COM: %d versions, the highest %q", r.versions(SysMgr, "A.COM"), r.text(SysMgr, "A.COM"))
+	}
+
+	// The user changes A.COM; govax hasn't: kept, and nothing said.
+	r.edit(SysMgr, "A.COM", "$ mine\n")
+	r.expect("A.COM=kept B.EXE=current SITE.COM=left", false)
+
+	// govax changes it too: kept, and said once.
+	r.copies["A.COM"] = "$ write sys$output \"a3\"\n"
+	r.expect("A.COM=kept! B.EXE=current SITE.COM=left", true)
+	r.expect("A.COM=kept B.EXE=current SITE.COM=left", false)
+
+	// And again: said again, for the new copy.
+	r.copies["A.COM"] = "$ write sys$output \"a4\"\n"
+	r.expect("A.COM=kept! B.EXE=current SITE.COM=left", true)
+
+	if r.text(SysMgr, "A.COM") != "$ mine\n" {
+		t.Errorf("the user's A.COM was replaced: %q", r.text(SysMgr, "A.COM"))
+	}
+
+	// The user goes back to govax's copy (a PURGE and a COPY, say): it is
+	// govax's again, and the next new copy replaces it.
+	r.edit(SysMgr, "A.COM", r.copies["A.COM"])
+	r.expect("A.COM=current B.EXE=current SITE.COM=left", true)
+
+	if _, kept := r.v.manifest(t).Kept(SysMgr + "A.COM"); kept {
+		t.Error("the KEPT note outlived the user's change")
+	}
+
+	r.copies["A.COM"] = "$ write sys$output \"a5\"\n"
+	r.expect("A.COM=updated B.EXE=current SITE.COM=left", true)
+
+	// A supplied file deleted is written again; the seeded one, deleted,
+	// is left deleted.
+	delete(r.v.files, SysLib+"B.EXE")
+	delete(r.v.files, SysMgr+"SITE.COM")
+	r.expect("A.COM=current B.EXE=written SITE.COM=left", false)
+
+	if r.versions(SysMgr, "SITE.COM") != 0 {
+		t.Error("the seeded file came back")
+	}
+}
+
+// TestRefreshInterrupted checks a refresh that stopped after writing a
+// file but before writing the manifest: the file holds govax's copy, the
+// manifest the old digest. The next refresh takes the file as current and
+// corrects the manifest; nothing is written or reported.
+func TestRefreshInterrupted(t *testing.T) {
+	r := newRefreshTest(t)
+	r.expect("A.COM=written B.EXE=written SITE.COM=written", true)
+
+	r.copies["A.COM"] = "$ write sys$output \"a2\"\n"
+	r.edit(SysMgr, "A.COM", r.copies["A.COM"]) // the write that happened
+
+	r.expect("A.COM=current B.EXE=current SITE.COM=left", true)
+
+	if r.versions(SysMgr, "A.COM") != 2 {
+		t.Errorf("A.COM has %d versions, want 2", r.versions(SysMgr, "A.COM"))
+	}
+
+	if sum, _ := r.v.manifest(t).Sum(SysMgr + "A.COM"); sum != SumOf([]byte(r.copies["A.COM"])) {
+		t.Error("the manifest's digest wasn't corrected")
+	}
+
+	// A failure part way: B.EXE refused. Nothing after it is done, the
+	// manifest isn't written, and the next refresh (B.EXE allowed) finishes
+	// the job, A.COM, already written, taken as current.
+	r.copies["A.COM"] = "$ write sys$output \"a3\"\n"
+	r.copies["B.EXE"] = "image two"
+	r.v.fail = SysLib + "B.EXE"
+
+	if _, err := refreshFiles(r.v, r.files()); err == nil || !strings.Contains(err.Error(), "B.EXE") {
+		t.Fatalf("refresh = %v, want B.EXE's failure", err)
+	}
+
+	if r.versions(Root, ManifestName) != 2 {
+		t.Errorf("the failed refresh wrote the manifest: %d versions", r.versions(Root, ManifestName))
+	}
+
+	r.v.fail = ""
+	r.expect("A.COM=current B.EXE=updated SITE.COM=left", true)
+}
+
+// TestRefreshNoManifest checks a volume whose manifest is gone (deleted,
+// or a volume made by hand): a file that is govax's copy is taken as
+// govax's, one that differs as the user's, said once; a missing seeded
+// file is made, the manifest not saying it was before.
+func TestRefreshNoManifest(t *testing.T) {
+	r := newRefreshTest(t)
+	r.expect("A.COM=written B.EXE=written SITE.COM=written", true)
+
+	r.edit(SysMgr, "A.COM", "$ mine\n")
+	delete(r.v.files, SysMgr+"SITE.COM")
+	delete(r.v.files, Root+ManifestName)
+
+	r.expect("A.COM=kept! B.EXE=current SITE.COM=written", true)
+	r.expect("A.COM=kept B.EXE=current SITE.COM=left", false)
+}
+
+// TestRefreshDamagedManifest checks that a manifest that can't be read
+// stops the refresh before anything is written, so no file whose owner
+// can't be told is replaced.
+func TestRefreshDamagedManifest(t *testing.T) {
+	r := newRefreshTest(t)
+	r.expect("A.COM=written B.EXE=written SITE.COM=written", true)
+
+	_ = r.v.WriteFile(ManifestSpec, [][]byte{[]byte("[SYSTEM.SYSMGR]A.COM not-a-digest")}, Text)
+	r.copies["A.COM"] = "$ write sys$output \"a2\"\n"
+
+	if _, err := refreshFiles(r.v, r.files()); err == nil || !strings.Contains(err.Error(), "record 1") {
+		t.Errorf("refresh = %v, want the manifest's record 1", err)
+	}
+
+	if r.versions(SysMgr, "A.COM") != 1 {
+		t.Error("A.COM was written past a damaged manifest")
+	}
+}
+
+// TestRefreshBuiltIn runs the real refresh twice on a volume Populate
+// made: the second finds every file current and writes nothing.
+func TestRefreshBuiltIn(t *testing.T) {
+	v := newMapVolume()
+	if _, err := Populate(v); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := Refresh(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if report.ManifestWritten || report.Count(Current)+report.Count(Left) != len(Files()) {
+		t.Errorf("a second refresh: %d current, %d left of %d, manifest written %v",
+			report.Count(Current), report.Count(Left), len(Files()), report.ManifestWritten)
+	}
+}
+
+// manifest reads the volume's manifest.
+func (v *mapVolume) manifest(t *testing.T) *Manifest {
+	t.Helper()
+
+	m, _, err := ReadManifest(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return m
+}
