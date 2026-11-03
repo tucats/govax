@@ -1,0 +1,3 @@
+! FTN86.OPT - links a compiled FORTRAN program against FTNRTL, which FTN86.COM has built
+! and defined. govax's LINK finds FTNRTL by itself; VMS's has to be told.
+FTNRTL/SHAREABLE

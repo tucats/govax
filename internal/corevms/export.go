@@ -238,6 +238,10 @@ func (env *Environment) readPermanentLine(name, prompt string, maxLen int) (line
 		return line, ok, err
 	}
 
+	if line, ok, handled := env.inputFileRecord(name, maxLen); handled {
+		return line, ok, nil
+	}
+
 	return env.readTerminalInput(prompt, maxLen)
 }
 

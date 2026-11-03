@@ -108,6 +108,9 @@ type Environment struct {
 	// (msgout.go).
 	output, errorOutput processOutput
 
+	// input is SYS$INPUT as the image's own file, while it has one (outfile.go).
+	input *inputFile
+
 	// sectionPages are the pages of the process's address space mapped
 	// to global sections (gblsec.go), which image rundown unmaps.
 	sectionPages map[uint32]bool

@@ -216,4 +216,25 @@ or text.
     there, and a game in the echo room can't even QUIT. The volume damage after that (an index file
     inconsistency) was the harness's, killing govax before it dismounted. Without a file, `>` ends
     its line where a terminal read does; with one the next record starts a line, as it should.
+- **2026-11-03, subtask 4, prepared:** the author asked for the VMS round: does a program we compile
+  run on a real VMS, with FTNRTL built there from its sources, and a set of test programs?
+  `testdata/ftn86` (README.md) is the round. `gen.go` writes `exchange.cmd`, a volume with FTNRTL's
+  sources, and every corpus program, kernel, and module program compiled by govax both ways, each in a
+  directory of its own, since a program may leave files; `ftn86.com` has VMS's MACRO and LINK build
+  FTNRTL, then each program against that FTNRTL, 206 runs; `copyout.cmd` brings back the log, FTNRTL's
+  objects, image, and map, to hold our MACRO and LINK to VMS's on it. `exchanged.cmd`, `ftn86d.com`,
+  and `copyoutd.cmd` are the same for DUNGEON, whose log stays in `testdata/disks`.
+  - **Checked before the VAX:** FTNRTL's outside references. `OTS$$CVT_x_T_R8` is in VMS 7.1's LIBRTL
+    symbol table, and each `FOR$_` value is defined in FTNRTL's own sources. Only the LINK differs:
+    `/NOSYSLIB` is for govax's build, with its own symbol tables, and VMS's needs IMAGELIB.
+  - **The rehearsal, `TestFTN86Procedure`:** the same procedure on govax, FTNRTL from its sources and
+    every program linked against that. All 206 runs print their `name.out`, code addresses masked, but
+    for `ftn86FileDifferences`, each saying why: a `name.out` is a terminal's output.
+  - **Another bug found: LIB$GET_INPUT with SYS$INPUT a file.** `services.for` read the console's next
+    commands, since a name DCL defined for the image led to no process-permanent file and so to the
+    terminal; the code said so, as unconfirmed. Like an image's SYS$OUTPUT file, it now opens the
+    file at the first read and holds it until rundown (`corevms/outfile.go`, `inputFileRecord`).
+    `TestLibGetInputFile`. The round will confirm it: `services.in` has its line.
+  - **Not bugs:** `SET NOON` doesn't reach a `CALL`'s level, so a program's fatal condition ended the
+    subroutine, as it would on VMS; `ONE` has its own.
 

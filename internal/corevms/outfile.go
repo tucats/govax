@@ -107,9 +107,80 @@ func closeOutputFile(out *processOutput) {
 	}
 }
 
-// closeImageOutput is image rundown's step for the files the image made
-// (this file's opening comment).
+// closeImageOutput is image rundown's step for the files the image has open
+// (this file's opening comment), its SYS$INPUT file among them.
 func (env *Environment) closeImageOutput() {
 	closeOutputFile(&env.output)
 	closeOutputFile(&env.errorOutput)
+
+	if env.input != nil {
+		_ = env.input.file.Close()
+		env.input = nil
+	}
+}
+
+// SYS$INPUT as an image's own file: a name the image's DCL defined for it (DEFINE/USER_MODE
+// SYS$INPUT file, then RUN) leads to no process-permanent file, so LIB$GET_INPUT reads the
+// file it names, opened at the first read and held until the image's rundown, as
+// LIB$PUT_OUTPUT holds SYS$OUTPUT's (docs/PHASE-86 - FORTRAN milestone.md).
+
+// inputFile is the file SYS$INPUT named at the image's first read.
+type inputFile struct {
+	spec string
+	file *rms.DCLFile
+}
+
+// inputFileRecord reads the next record of the file name leads to, truncated to maxLen
+// bytes, when name is SYS$INPUT and leads to one. handled is false when it doesn't: the
+// name isn't defined in the process table, leads to a process-permanent file, or names a
+// device that holds no files (a terminal, say), and the caller reads the terminal. ok is
+// false at the file's end, or if it can't be opened, which is the end of the input here:
+// the caller has no other way to say it. Unconfirmed against VMS.
+func (env *Environment) inputFileRecord(name string, maxLen int) (line string, ok, handled bool) {
+	if name != "SYS$INPUT" || env.Session == nil {
+		return "", false, false
+	}
+
+	spec := env.processName(name)
+	if spec == "" || isPermanentString(env.processValue(name)) {
+		return "", false, false
+	}
+
+	if _, permanent := env.permanentEntry(name); permanent {
+		return "", false, false
+	}
+
+	if device, st := env.deviceName(name); st == 0 && !env.isFileDevice(device) {
+		return "", false, false
+	}
+
+	if env.input == nil || env.input.spec != spec {
+		if env.input != nil {
+			_ = env.input.file.Close()
+			env.input = nil
+		}
+
+		loc, err := env.Session.Locate(spec, false)
+		if err != nil {
+			return "", false, true
+		}
+
+		file, err := env.Session.OpenDCLFile(loc, rms.DCLAccess{Read: true, ShareRead: true})
+		if err != nil {
+			return "", false, true
+		}
+
+		env.input = &inputFile{spec: spec, file: file}
+	}
+
+	record, status := env.input.file.Get()
+	if status&1 == 0 {
+		return "", false, true
+	}
+
+	if len(record) > maxLen {
+		record = record[:maxLen]
+	}
+
+	return string(record), true, true
 }

@@ -277,3 +277,67 @@ func TestFortranReadInputFile(t *testing.T) {
 		t.Errorf("the input file is now:\n%s", out)
 	}
 }
+
+// TestLibGetInputFile: LIB$GET_INPUT with SYS$INPUT defined as a file reads that file, as
+// FORTRAN's READ does, with no prompt: not the terminal, whose next lines are the console's
+// commands. Each image starts the file again, and without the name it reads what it did.
+func TestLibGetInputFile(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	source := "      PROGRAM GETIN\n" +
+		"      INTEGER LIB$GET_INPUT, ST\n" +
+		"      INTEGER*2 W\n" +
+		"      CHARACTER*20 LINE\n" +
+		"   10 ST = LIB$GET_INPUT(LINE, 'PROMPT ', W)\n" +
+		"      IF (.NOT. ST) GO TO 20\n" +
+		"      WRITE (6,'(1X,A)') LINE(:W)\n" +
+		"      GO TO 10\n" +
+		"   20 CONTINUE\n" +
+		"      END\n"
+
+	for name, text := range map[string]string{"GETIN.FOR": source, "IN.TXT": "ONE\nTWO\n"} {
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name},
+			rms.TextRecords, splitSource(text)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, command := range []string{"FORTRAN GETIN", "MACRO GETIN", "LINK GETIN"} {
+		shareFindRun(t, d, command)
+	}
+
+	if out := buf.String(); out != "" {
+		t.Fatalf("building said: %s", out)
+	}
+
+	// What a read of the terminal would take instead, and show the prompt for.
+	c.In = strings.NewReader("TERMINAL\n")
+
+	for run := range 2 {
+		shareFindRun(t, d, "DEFINE/USER_MODE/NOLOG SYS$INPUT IN.TXT")
+		shareFindRun(t, d, "RUN GETIN")
+
+		if out := buf.String(); out != "ONE\nTWO\n" {
+			t.Errorf("run %d printed %q", run, out)
+		}
+
+		buf.Reset()
+	}
+
+	// A file that isn't there is the end of the input, not the terminal.
+	shareFindRun(t, d, "DEFINE/USER_MODE/NOLOG SYS$INPUT NOSUCH.TXT")
+	shareFindRun(t, d, "RUN GETIN")
+
+	if out := buf.String(); out != "" {
+		t.Errorf("with no file it printed %q", out)
+	}
+
+	buf.Reset()
+
+	// The name's gone with its image: this read is the terminal's.
+	shareFindRun(t, d, "RUN GETIN")
+
+	if out := buf.String(); !strings.Contains(out, "PROMPT") || !strings.Contains(out, "TERMINAL") {
+		t.Errorf("at the terminal it printed %q", out)
+	}
+}

@@ -23,7 +23,9 @@
 !	$ MACRO FTN_SYSTEM
 !	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 !
-! would, with internal/asm and internal/link. The transfer vector is a
+! would, with internal/asm and internal/link, which take LIBRTL's and MTHRTL's
+! symbols from govax's own tables. VMS's LINK finds them in IMAGELIB, so on VMS
+! it is the same LINK without /NOSYSLIB (testdata/ftn86). The transfer vector is a
 ! cluster of its own, first, so that it starts the image; the modules
 ! follow. GSMATCH=LEQUAL lets a program linked against this FTNRTL run on
 ! any later one: add 1 to the minor number whenever the vector gains an

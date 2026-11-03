@@ -28,10 +28,11 @@ import (
 // a prompt-string's; or LIB$_INSVIRMEM. An argument it can't read or
 // write is an access violation, signaled (memoryFault).
 //
+// A SYS$INPUT that names a file rather than a process-permanent file
+// (DEFINE/USER_MODE SYS$INPUT file) is read from that file, with no prompt.
+//
 // Unconfirmed against VMS: that at the end of the input get-string and
-// resultant-length are left as they were; and a SYS$INPUT that names a
-// file rather than a process-permanent file is the terminal (the logical
-// name isn't followed).
+// resultant-length are left as they were.
 func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return getLine(env, argv, env.ReadInputLine)
 }
