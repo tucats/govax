@@ -105,6 +105,7 @@ F_NAM		= F_FAB-NAM$C_BLN
 F_XAB		= F_NAM-XAB$C_FHCLEN
 F_ESA		= F_XAB-NAME_SIZE
 F_RSA		= F_ESA-NAME_SIZE
+F_WORK		= F_RSA-NAME_SIZE	; END_SEARCH's expanded name
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 
@@ -143,8 +144,8 @@ DAT_LEN		= .-DAT_NAME
 ; FTN$INQUIRE(control block, keyword, value, ...)
 ;
 	.ENTRY	FTN$INQUIRE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
-	MOVAB	F_RSA(SP),SP
-	MOVC5	#0,(SP),#0,#-F_RSA,F_RSA(FP)
+	MOVAB	F_WORK(SP),SP
+	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP)
 	MOVAB	T_UNKNOWN,R0		; each text UNKNOWN until it's known
 	MOVL	R0,A_ACCESS(FP)
 	MOVL	R0,A_SEQUENTIAL(FP)
@@ -305,8 +306,6 @@ A_NAME_OF_ONE:
 	MNEGL	#1,A_NAMED(FP)
 	$SEARCH	FAB=R11
 	BLBS	R0,40$
-	$PARSE	FAB=R11			; VMS's $SEARCH that fails may leave its work in
-					;  the expanded name (testdata/ftn86's INQUIRE)
 	MOVZBL	F_NAM+NAM$B_ESL(FP),NAME_LENGTH(FP)
 	MOVAB	F_ESA(FP),A_NAME(FP)
 	BRW	END_SEARCH
@@ -346,6 +345,8 @@ A_NAME_OF_ONE:
 ;
 END_SEARCH:
 	PUSHL	R0
+	MOVAB	F_WORK(FP),F_NAM+NAM$L_ESA(FP) ; VMS's $PARSE writes the name it makes:
+					;  INQ1.; over the answer's INQ1.XYZ; (testdata/ftn86)
 	MOVAB	F_FAB(FP),R1
 	CLRL	FAB$L_DNA(R1)
 	MOVB	#1,FAB$B_DNS(R1)

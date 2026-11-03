@@ -155,7 +155,8 @@ BUFFER_SPARE	= 9
 ; or G operation: writes its field into the output record, or reads one
 ; from the input record into it. Through the routine R11 is the context,
 ; R10 the operation, R9 the field's width, R8 d, R7 the scale factor, and
-; R6 the value (OTS$$CVT_x_T_R8 may change R0 to R6, so DIGITS puts it back).
+; R6 the value (VMS's OTS$$CVT_x_T_R8 changes R0 and R2 to R8, testdata/ots72's
+; records say, so DIGITS keeps the ones this routine needs).
 ;
 	.ENTRY	FTN$$EDIT_FLOAT,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
 	SUBL2	#FRAME_SIZE,SP
@@ -496,7 +497,7 @@ FIELD_SIZES:
 ;
 DIGITS:	CLRL	CVT_SIGN(FP)
 	CLRL	CVT_EXPONENT(FP)
-	MOVL	R6,-(SP)		; keep the value's address
+	PUSHR	#^M<R6,R7,R8>		; the value's address, the scale factor, d
 	MOVL	R6,R0			; the value
 	MOVL	FP,R1			; the frame
 	MOVL	L_SIZE(FP),R2		; the buffer's size
@@ -512,7 +513,7 @@ DIGITS:	CLRL	CVT_SIGN(FP)
 40$:	JSB	G^OTS$$CVT_G_T_R8
 	BRB	90$
 50$:	JSB	G^OTS$$CVT_H_T_R8
-90$:	MOVL	(SP)+,R6
+90$:	POPR	#^M<R6,R7,R8>
 	MOVL	CVT_EXPONENT(FP),R0
 	RSB
 

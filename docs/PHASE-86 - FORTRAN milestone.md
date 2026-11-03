@@ -261,9 +261,8 @@ or text.
     writes a zero as VMS does. `go test` found FTNRTL's second caller that way, and REAL\*16 one byte short.
   - **The CPU:** an instruction that faults leaves the condition codes as they were. `CLRL` of a read-only
     page had set Z before its store faulted; VMS's PSL shows them untouched (`Engine.undoOperands`).
-  - **RMS:** VMS's `$SEARCH` that fails can change the expanded name: `INQ1.XYZ` looked for where `INQ1.DAT`
-    exists became `INQ1.;YZ;` in INQUIRE's NAME=. FTNRTL now parses again before using it. The rule behind
-    it is unconfirmed, and our `$SEARCH` doesn't do it.
+  - **RMS:** INQUIRE's NAME= came back `INQ1.;YZ;`. Put down here first to a `$SEARCH` that fails, and a second
+    `$PARSE` didn't help (round 2). The next entry has the cause.
   - **Open, for round 2:** VMS's `OTS$POWRJ(1.5,-2)` prints `0.4444445`, ours `0.4444444`. Neither order
     tried fits: the reciprocal first fits this and VMS's D bits for `3.0**(-5)`, the present order its F
     bits. CSIN's last digit differs too (`-27.03494`). `powbits.for` prints the exact bits of a grid of
@@ -285,4 +284,22 @@ or text.
   the status. On govax the same request is accepted and completes with an error in its IOSB. `asts.for` now
   looks, and prints a refusal's status; which of the two is VMS's comes back with the next run. The other
   programs round 1 couldn't link were read for the same hazard, and VMSTOUR's `$HIBER` waits on a timer.
+- **2026-11-03, subtask 4, round 2** (`vax/round2/`; DUNGEON's log local): reached its end, with no MACRO or LINK
+  message from anything. 161 of 210 sections match govax's. Of the rest:
+  - **The routine changes registers.** 30 sections wrote through S0 from FTN_FLOAT's digit loop: VMS's
+    OTS$$CVT_x_T_R8 changes R0 and R2 to R8 (every call in `testdata/ots72`'s records), FTNRTL kept its scale factor
+    in R7 and d in R8, and "changes R0 to R6" had come from our emulation. FTNRTL keeps them now, and the emulation
+    changes what VMS's does. Only `ftn_float.mar`'s and `ftn_listout.mar`'s two calls reach it.
+  - **INQUIRE:** END_SEARCH's `$PARSE`, with no default name, writes `INQ1.;` over the answer `INQ1.XYZ;` still in
+    the expanded name's buffer. It has a buffer of its own now. Round 1's second `$PARSE` is gone. Why our
+    `$PARSE` doesn't write there, given DNA 0 and DNS 1, isn't known.
+  - **`$QIO`:** a virtual transfer with no file accessed is refused, SS$_FILNOTACC, with no AST; ours completed it.
+  - **`$EXIT` in an exit handler:** VMS ran no more handlers after EXITS's THIRD, nor FTNRTL's, where ours goes on.
+    `exitmore.for` asks without FORTRAN I/O in the way. Nothing changed yet.
+  - **The power routines, closed:** `powbits.for`'s 408 values: every positive power is exact to VMS's bits, and 70
+    of 192 negative ones differ, by the last bit where looked at. Six orders of operations were fitted, none
+    matching a format throughout (the best, reciprocal first on H, 42 of 48), so VMS's has something else in it,
+    more precision perhaps. Left as they are: `POWERS`'s and `MATHFNS`'s last digits are known differences, as
+    MTHRTL's complex functions' last bits are.
+  - **Expected:** SERVICES's `$GETCHN` (a service govax lacks), and FTNRTL's addresses in a traceback.
 

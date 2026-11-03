@@ -51,6 +51,11 @@ import (
 // FORRTL prints no digit past the ones it asked for, so the output is
 // the same.
 //
+// It returns with R0 and R2 to R8 changed (R1, the caller's FP, is kept, and
+// R9 to R11; VMS 7.1's records). So does this, or a caller keeping something in
+// them would work here and not there: FTNRTL's first kept its scale factor in R7,
+// and its digits ran off through S0 on VMS (testdata/ftn86).
+//
 // Those groups don't stop at the size in R2. FORRTL always gives FP-16 and
 // 19 more, and FP-16 is w-1 for F, so govax can't say what a smaller size
 // does but that FTNRTL's first did on VMS: its digits overwrote the frame
@@ -61,6 +66,9 @@ import (
 // Unconfirmed: a reserved operand (SS$_ROPRAND, signaled, as the 2.0
 // Run-Time Library manual says FOR$CVT_x_Ty's are); a value whose digits
 // before the rounding position don't fit the buffer (not rounded).
+
+// cvtScratch is what the registers the routine changes are left holding.
+const cvtScratch = 0xCCCCCCCC
 
 // cvtSpareDigits is how many bytes the buffer has beyond the significant digits,
 // the most FORRTL ever gave it.
@@ -176,6 +184,14 @@ func editDigits(env *corevms.Environment, regs *corevms.JSBRegisters, f vaxfloat
 			return err
 		}
 	}
+
+	// What VMS's routine leaves behind means nothing: no caller may use it.
+	for reg := registers.R2; reg <= registers.R7; reg++ {
+		regs[reg] = cvtScratch
+	}
+
+	regs[registers.R0] = cvtScratch
+	cpu.SetGPR(registers.R8, cvtScratch)
 
 	return nil
 }

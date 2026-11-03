@@ -498,7 +498,8 @@ func diskReadVirtual(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // whole blocks. Only allocated blocks can be written: a transfer that
 // would pass the end of the allocation writes nothing and completes with
 // SS$_ENDOFFILE (IO$_MODIFY extends the file). The IOSB's count is the
-// bytes written.
+// bytes written. With no file accessed $QIO refuses the request, so no AST comes
+// (VMS 7.1, testdata/ftn86's ASTS).
 func diskWriteVirtual(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	size := req.p[1] & 0xFFFF
 	if !env.accessible(req.p[0], size, vm.AccessRead) {
@@ -507,7 +508,7 @@ func diskWriteVirtual(env *Environment, req *ioRequest) (ioStatus, uint32) {
 
 	c := req.channel
 	if c.acp == nil {
-		return ioStatus{status: ssFilNotAcc}, 0
+		return ioStatus{}, ssFilNotAcc
 	}
 
 	data, err := loadBytes(env, req.p[0], int(size))
