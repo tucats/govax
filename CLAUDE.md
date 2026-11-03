@@ -632,7 +632,10 @@ never had.
   and subtask 6 (2026-11-03) ASM and LOAD on volume files (`machine/consolefile.go`: `Session.Locate`'s rules, a bare
   name not on the default volume then looked for through the resolver, `rms.BareName`; `.INCLUDE` beside the including
   file on its side, `includeReader`), STARTUP.COM assembling `SYS$SOURCES:KERNEL.ASM` and loading
-  `SYS$SYSTEM:DEFAULT.ROM`.
+  `SYS$SYSTEM:DEFAULT.ROM`; and subtask 7 (2026-11-03) the page file's default, the system volume's
+  `[SYSTEM.SYSEXE]PAGEFILE.SYS` when no `vax.sysgen.paging.file` is named (`corevms/pagefile.go`'s
+  `pageFileName`, from the mount table; `sysvol.PageFile`), none and no attempt at one when the volume
+  is read-only, SHOW MEMORY saying why (`PageFileReport.Unused`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

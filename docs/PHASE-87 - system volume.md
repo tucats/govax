@@ -426,7 +426,7 @@ recommendation:
    including file; STARTUP.COM assembling `SYS$SOURCES:KERNEL.ASM`; the
    built-in STARTUP.COM's path with no volume. A test that boots from an
    edited KERNEL.ASM on the volume.
-7. **The page file on the volume** (Decision 8), both paging modes; no page
+7. (done 2026-11-03) **The page file on the volume** (Decision 8), both paging modes; no page
    file, and no attempt to open one, when the volume is read-only, with
    SHOW MEMORY saying the default page file wasn't used (read-only); SHOW
    MEMORY/FILES naming it.
@@ -749,3 +749,43 @@ recommendation:
     - `cmd/govax/startup_test.go`'s `TestRun_systemVolumeKernel`: the ROM
       with and without a system volume, and a KERNEL.ASM edited by COPY
       booting.
+- **2026-11-03** — Subtask 7 done: the page file on the system volume.
+  - **The default** (`corevms/pagefile.go`'s `pageFileName`): with no
+    `vax.sysgen.paging.file`, the page file is `_DUA0:[SYSTEM.SYSEXE]PAGEFILE.SYS`
+    on the system volume (`sysvol.PageFile`, the layout's one place for it),
+    named by the device's own name with an underscore, so neither STARTUP.COM's
+    names nor a user's logical name can move it. It's decided when the page
+    file is opened, from the mount table (`System`, `Writable`), so nothing
+    new is passed from cmd/govax: the system volume is mounted before
+    STARTUP.COM, and `StartPageFile` installs the file after it, as before.
+    Each new System (VMINIT, INIT, ZERO) installs the same file again. A
+    configured name wins.
+  - **Paging off:** no page file and no PAGEFILE.SYS, as before.
+  - **Read-only** (another session holds the volume, Decision 7): no page
+    file, no attempt to open one (neither at startup nor at the pager's or
+    `$GETSYI`'s need), and no message. `PageFileReport.Unused` says why, and
+    SHOW MEMORY's page file section shows it under "Page file: none":
+    `DUA0:[SYSTEM.SYSEXE]PAGEFILE.SYS not used: the system volume is
+    read-only`; so does `--stats`. SHOW MEMORY/FILES lists no files, and
+    `F$GETSYI("PAGEFILE_PAGE")` is 0. With no system volume at all
+    (`--system-file none`) the report is a plain "none", as before.
+  - **Names:** SHOW MEMORY shows `DUA0:[SYSTEM.SYSEXE]PAGEFILE.SYS;1`, and
+    SHOW MEMORY/FILES `DISK$GOVAXSYS:[SYSTEM.SYSEXE]PAGEFILE.SYS`, as VMS's
+    shows its volume's logical name.
+  - **Size and time:** on the default RD54, a first start with paging on
+    makes the volume and its 32,768-block page file in about 154 ms
+    (`TestRun_systemPageFile` logs it). The page file's blocks are
+    allocated, not written, so the 159 MB container took 2.9 MB of the
+    host's disk (measured once while writing the test, on macOS's APFS;
+    the test doesn't check it, the measure being Unix-only). The test volumes,
+    RD51s, can't hold the default size, so the console's tests use 500
+    blocks.
+  - **Docs:** HELP CONFIG KEYS' `vax.sysgen.paging.file` and MANUAL.md's
+    configuration table and 13.5 give the new default; their examples name
+    DUA1, DUA0 being the system volume.
+  - **Tests:** `internal/console/syspagefile_test.go` (STARTUP.COM run from
+    a system volume, then the page file installed: made at the first start
+    and found again by the next session, SHOW MEMORY and /FILES; paging off;
+    read-only; a configured file instead), and `cmd/govax`'s
+    `TestRun_systemPageFile` (the default RD54 and size, `--stats` and SHOW
+    MEMORY/FILES).

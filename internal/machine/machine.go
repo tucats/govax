@@ -387,9 +387,11 @@ func NewMachine(out io.Writer) *Machine {
 
 // StartPageFile installs the page file as the system starts
 // (corevms.System.InstallPageFile; docs/PHASE-64 - page file.md, subtask
-// 8): cmd/govax calls it once vax.init has run, before any of the user's
-// commands, and from then on each new System (VMINIT, INIT, ZERO)
-// installs its own as it's made.
+// 8): cmd/govax calls it once STARTUP.COM has run, before any of the
+// user's commands, and from then on each new System (VMINIT, INIT, ZERO)
+// installs its own as it's made. With no page file configured, it's the
+// system volume's when that's mounted for writing (docs/PHASE-87 -
+// system volume.md, Decision 8).
 func (m *Machine) StartPageFile() {
 	m.pageFileStarted = true
 

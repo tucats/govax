@@ -268,6 +268,10 @@ func (m *Machine) showPageFile(r corevms.PageFileReport) {
 	switch r.Status {
 	case corevms.PageFileNone:
 		m.Printf("    Page file: none\n")
+
+		if r.Unused != "" {
+			m.Printf("        %s\n", r.Unused)
+		}
 	case corevms.PageFileNotOpened:
 		m.Printf("    Page file: %s (not opened yet)\n", r.Name)
 	case corevms.PageFileUnavailable:

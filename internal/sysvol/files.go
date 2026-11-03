@@ -37,6 +37,13 @@ const (
 // the order they are made in.
 var Directories = []string{Root, SysExe, SysMgr, SysHlp, SysLib, Sources}
 
+// PageFile is the default page file's place on the volume, by directory
+// and name (Decision 8). It isn't one of Files(): the page file's own
+// code makes it (internal/rms's pagefile.go), at vax.sysgen.paging.size
+// blocks, and nothing in it outlives the session, so it has no contents
+// to supply, compare, or refresh.
+const PageFile = SysExe + "PAGEFILE.SYS"
+
 // Format is how a file's contents are laid out in records on the volume.
 type Format int
 

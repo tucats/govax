@@ -2474,7 +2474,7 @@ $CONF,KEY
                                       pages with no file of their own go
                                       when their memory is needed.  A
                                       file on a mounted volume
-                                      (DUA0:[WORK]PAGEFILE.SYS), or a
+                                      (DUA1:[WORK]PAGEFILE.SYS), or a
                                       host file, in quotes
                                       ("./pagefile.sys").  It's
                                       installed as govax starts, after
@@ -2486,8 +2486,13 @@ $CONF,KEY
                                       it isn't, so its space is taken at
                                       once.  Its volume can't be
                                       dismounted while it's open.
-                                      Unset, or with paging off, there's
-                                      no page file.
+                                      Unset, it's the system volume's
+                                      [SYSTEM.SYSEXE]PAGEFILE.SYS, or
+                                      none when there is no system
+                                      volume or it's read-only (another
+                                      govax session has it; SHOW MEMORY
+                                      says so).  With paging off,
+                                      there's no page file.
 
         vax.sysgen.paging.size        The page file's size in blocks
                                       (pages).  An existing page file of

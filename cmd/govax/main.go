@@ -571,6 +571,10 @@ func printPagingStats(out io.Writer, s machine.PagingStatistics) {
 	case corevms.PageFileNone:
 		fmt.Fprintf(out, "    None\n")
 
+		if r.Unused != "" {
+			fmt.Fprintf(out, "    %s\n", r.Unused)
+		}
+
 		return
 	case corevms.PageFileNotOpened:
 		fmt.Fprintf(out, "    %s (not opened)\n", r.Name)

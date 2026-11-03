@@ -511,7 +511,7 @@ Quote values your shell would otherwise change. In particular, zsh and
 some other shells treat `[...]` as a file name pattern:
 
 ```sh
-govax config set "vax.sysgen.paging.file=DUA0:[WORK]PAGEFILE.SYS"
+govax config set "vax.sysgen.paging.file=DUA1:[WORK]PAGEFILE.SYS"
 ```
 
 ### Profiles
@@ -638,7 +638,7 @@ paging on; section 13 explains what they control.
 | Key | VMS parameter | Default |
 | --- | --- | --- |
 | `vax.sysgen.paging.enable` | (govax's) turns VMS paging on | false |
-| `vax.sysgen.paging.file` | (govax's) the page file: a volume file, or a quoted host path | none |
+| `vax.sysgen.paging.file` | (govax's) the page file: a volume file, or a quoted host path | the system volume's `[SYSTEM.SYSEXE]PAGEFILE.SYS`; none if it's read-only or not used |
 | `vax.sysgen.paging.size` | (govax's) the page file's size in blocks | 32768 |
 | `vax.sysgen.paging.defer` | (govax's) open the page file only when first needed | false |
 | `vax.sysgen.pql_dwsdefault` | PQL_DWSDEFAULT: a new process's default working set | 294 |
@@ -4209,15 +4209,24 @@ Turn it on with:
 
 ```sh
 govax config set vax.sysgen.paging.enable=true
-govax config set "vax.sysgen.paging.file=DUA0:[WORK]PAGEFILE.SYS"
+```
+
+STARTUP.COM then runs `VMINIT/PAGING`, and govax creates the page file
+(`vax.sysgen.paging.size` blocks, 32,768 by default) before your first
+command: `PAGEFILE.SYS` in the system volume's `[SYSTEM.SYSEXE]`, VMS's
+`SYS$SYSTEM:PAGEFILE.SYS`. The next start uses the same file again. To put
+it elsewhere, name it:
+
+```sh
+govax config set "vax.sysgen.paging.file=DUA1:[WORK]PAGEFILE.SYS"
 ```
 
 The page file may be a volume file, as above, or a host file in quotes
-(`'vax.sysgen.paging.file="./pagefile.sys"'`). `vax.init` then runs
-`VMINIT/PAGING`, and govax creates the page file (`vax.sysgen.paging.size`
-blocks, 32,768 by default) before your first command. Without a page
-file, paging still works, but pages with no file of their own can't be
-written out.
+(`'vax.sysgen.paging.file="./pagefile.sys"'`). With none named and no
+system volume (`--system-file none`), or a system volume another govax
+session has (mounted read-only), there is no page file, and SHOW MEMORY
+says why. Without a page file, paging still works, but pages with no file
+of their own can't be written out.
 
 #### The page frame database
 

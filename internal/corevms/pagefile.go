@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/sysvol"
 )
 
 // The page file (docs/PHASE-64 - page file.md, subtask 2; the paging
@@ -18,21 +19,22 @@ import (
 // program has written or a private copy of a copy-on-reference page, goes
 // to the page file: on VMS, SYS$SYSTEM:PAGEFILE.SYS; in govax, the file
 // vax.sysgen.paging.file names, on a mounted volume or the host, of
-// vax.sysgen.paging.size blocks. Each block holds one page. Which blocks
-// are in use is kept in Go (internal/paging's PageFileMap), and nothing
-// in the file outlives the System that wrote it.
+// vax.sysgen.paging.size blocks, or with none named the system volume's
+// [SYSTEM.SYSEXE]PAGEFILE.SYS (pageFileName). Each block holds one page.
+// Which blocks are in use is kept in Go (internal/paging's PageFileMap),
+// and nothing in the file outlives the System that wrote it.
 //
 // On VMS the page file is made when the system is installed (or by
 // AUTOGEN) and installed at every boot, so its blocks are the system's
 // before anything else can take them, and a volume without room for it
 // is known at once. govax does the same by installing it when the
 // system starts (InstallPageFile, subtask 8): the console calls it once
-// vax.init has run, before any of the user's commands, and for each new
-// System after that (VMINIT, INIT, ZERO). Installing creates the file if
-// it's missing and makes it vax.sysgen.paging.size blocks if it isn't
+// STARTUP.COM has run, before any of the user's commands, and for each
+// new System after that (VMINIT, INIT, ZERO). Installing creates the file
+// if it's missing and makes it vax.sysgen.paging.size blocks if it isn't
 // (internal/rms's pagefile.go). The System can't install it when it's
-// made, during vax.init: a volume vax.init mounts after its VMINIT isn't
-// there yet.
+// made, during STARTUP.COM: a volume the procedure mounts after its
+// VMINIT isn't there yet.
 //
 // With vax.sysgen.paging.defer, or before the system has started, the
 // file is opened instead the first time the pager needs it
@@ -116,7 +118,8 @@ func (sys *System) OpenPageFile() *PageFile {
 
 	sys.pageFileState = pageFileFailed
 
-	if !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "" {
+	name, _ := sys.pageFileName()
+	if !sys.Sysgen.Paging || name == "" {
 		return nil
 	}
 
@@ -125,10 +128,10 @@ func (sys *System) OpenPageFile() *PageFile {
 		size = DefaultPageFileSize
 	}
 
-	store, err := sys.pageFileSession().OpenPageFile(sys.Sysgen.PageFileName, size)
+	store, err := sys.pageFileSession().OpenPageFile(name, size)
 	if err != nil {
 		sys.consoleNotice(fmt.Sprintf("%%GOVAX-W-NOPAGEFILE, page file %s not opened; paging continues without one\n-GOVAX-W-REASON, %v\n",
-			sys.Sysgen.PageFileName, err))
+			name, err))
 
 		return nil
 	}
@@ -157,11 +160,47 @@ func (sys *System) OpenPageFile() *PageFile {
 // file waits for the pager's first need. It returns the page file, or
 // nil.
 func (sys *System) InstallPageFile() *PageFile {
-	if !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "" || sys.Sysgen.PageFileDefer {
+	if name, _ := sys.pageFileName(); !sys.Sysgen.Paging || name == "" || sys.Sysgen.PageFileDefer {
 		return nil
 	}
 
 	return sys.OpenPageFile()
+}
+
+// The default page file (docs/PHASE-87 - system volume.md, Decision 8).
+// With no vax.sysgen.paging.file, the page file is PAGEFILE.SYS in the
+// system volume's [SYSTEM.SYSEXE], VMS's SYS$SYSTEM:PAGEFILE.SYS. It's
+// named by device and directory, not by SYS$SYSTEM, so that it doesn't
+// depend on the names STARTUP.COM defines, and by the device's own name
+// with an underscore, so no logical name can send it elsewhere. A
+// system volume another govax session holds is mounted read-only
+// (internal/dclcmd's sysvolume.go), and then there is no page file and
+// no attempt to make one: the report says why instead.
+
+// pageFileName returns the page file's name: vax.sysgen.paging.file's,
+// or with none configured the system volume's default when that volume
+// is mounted for writing. With none configured and the system volume
+// mounted read-only, name is "" and unused names the default and why
+// it isn't used. With neither, both are "".
+func (sys *System) pageFileName() (name string, unused string) {
+	if sys.Sysgen.PageFileName != "" {
+		return sys.Sysgen.PageFileName, ""
+	}
+
+	if sys.Mounts == nil {
+		return "", ""
+	}
+
+	device := sys.Mounts.System()
+	if device == "" {
+		return "", ""
+	}
+
+	if !sys.Mounts.Writable(device) {
+		return "", device + ":" + sysvol.PageFile + " not used: the system volume is read-only"
+	}
+
+	return "_" + device + ":" + sysvol.PageFile, ""
 }
 
 // pageFileSession is the RMS session a page file's name is resolved in:
@@ -310,7 +349,9 @@ func (sys *System) consoleNotice(text string) {
 type PageFileStatus uint8
 
 const (
-	// PageFileNone: paging is off, or no page file is configured.
+	// PageFileNone: paging is off, or no page file is configured and
+	// there is no writable system volume to hold the default one
+	// (PageFileReport.Unused says when it's read-only).
 	PageFileNone PageFileStatus = iota
 
 	// PageFileNotOpened: one is configured, but nothing has needed it yet.
@@ -328,9 +369,15 @@ const (
 type PageFileReport struct {
 	Status PageFileStatus
 
-	// Name is the open file's full name, or the configured one when it
-	// isn't open.
+	// Name is the open file's full name, or the configured one (or the
+	// system volume's default) when it isn't open.
 	Name string
+
+	// Unused, with PageFileNone and paging on, says why the system
+	// volume's default page file isn't used though no other is named:
+	// "DUA0:[SYSTEM.SYSEXE]PAGEFILE.SYS not used: the system volume is
+	// read-only". It is "" otherwise.
+	Unused string
 
 	// Size, Free, and Used count its blocks (each holds a page), and
 	// AllocationSize is the run of blocks its map looks for now. All are
@@ -361,7 +408,8 @@ type PageFileReport struct {
 
 // PageFileReport reports on the System's page file. It never opens it.
 func (sys *System) PageFileReport() PageFileReport {
-	r := PageFileReport{Name: sys.Sysgen.PageFileName, Charged: sys.pageFileCommitted()}
+	name, unused := sys.pageFileName()
+	r := PageFileReport{Name: strings.TrimPrefix(name, "_"), Charged: sys.pageFileCommitted()}
 
 	switch {
 	case sys.pageFileState == pageFileOpen:
@@ -372,8 +420,11 @@ func (sys *System) PageFileReport() PageFileReport {
 		r.AllocationSize, r.Warned, r.Full = m.AllocationSize(), m.Warned(), sys.pageFileFull
 		r.FilesName, r.Processes = sys.pageFileFilesName(), len(sys.Processes())
 
-	case !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "":
+	case !sys.Sysgen.Paging:
 		r.Status = PageFileNone
+
+	case name == "":
+		r.Status, r.Unused = PageFileNone, unused
 
 	case sys.pageFileState == pageFileUnopened:
 		r.Status = PageFileNotOpened

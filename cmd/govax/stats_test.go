@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // runWithStats runs govax with --stats on a script and returns its
@@ -104,5 +105,33 @@ func TestRun_statsNoPaging(t *testing.T) {
 
 	if strings.Contains(out, "Paging:") || strings.Contains(out, "Page File:") {
 		t.Errorf("paging's section with paging off:\n%s", out)
+	}
+}
+
+// TestRun_systemPageFile: with paging on and no page file named, the page
+// file is the system volume's [SYSTEM.SYSEXE]PAGEFILE.SYS at its default
+// size (docs/PHASE-87 - system volume.md, Decision 8), on the default
+// RD54, and --stats and SHOW MEMORY/FILES name it.
+func TestRun_systemPageFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "govax-system.dsk")
+	withSystemVolume(t, systemFlags{file: path})
+
+	setConfig(t, "vax.sysgen.paging.enable", "true")
+	setConfig(t, "vax.sysgen.paging.file", "")
+	setConfig(t, "vax.sysgen.paging.size", "")
+
+	start := time.Now()
+	out := runWithStats(t, "SHOW MEMORY/FILES\n")
+
+	t.Logf("first start with paging, the page file made: %v", time.Since(start))
+
+	for _, want := range []string{
+		"  DISK$GOVAXSYS:[SYSTEM.SYSEXE]PAGEFILE.SYS ",
+		"\n  Page File:\n    DUA0:[SYSTEM.SYSEXE]PAGEFILE.SYS;1\n",
+		"    Size (blocks):                 32,768\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
 	}
 }
