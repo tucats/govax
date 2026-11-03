@@ -85,6 +85,15 @@ func classifyName(name string) nameKind {
 	return nameBare
 }
 
+// BareName reports whether name's syntax alone says nothing about where it
+// is (rule 4 above): no directory, no device or logical name, no host
+// path. A command may treat such a name more freely than an explicit one,
+// as ASM and LOAD do: a bare name not found on the default volume is
+// looked for among the console's host and built-in files.
+func BareName(name string) bool {
+	return classifyName(name) == nameBare
+}
+
 // hasBracketDirectory reports whether name has a directory in square or
 // angle brackets.
 func hasBracketDirectory(name string) bool {

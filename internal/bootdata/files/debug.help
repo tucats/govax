@@ -1500,9 +1500,19 @@ $ASSE
     Parameter:
 
         <file>       You can optionally specify a file on disk that is to
-                     be read in and assembled.  If you do not specify a 
+                     be read in and assembled.  If you do not specify a
                      file then the console prompt changes to ASM> and the
                      assembler statements are entered from the keyboard.
+
+    The file is found as RUN's and @'s are: a VMS file specification
+    (SYS$SOURCES:KERNEL.ASM) is a file on a mounted volume, a host path
+    ("./my.asm") a host file, and a bare name (my.asm) a file in the
+    default directory when SET DEFAULT is on a volume.  A bare name that
+    isn't there, or any name when the default is on the host, is looked
+    for in the host's current directory, the --path directories, and
+    govax's built-in files (kernel.asm, ssdef.asm).  Quote a host file's
+    name to keep its case.  A .INCLUDE of a bare name looks beside the
+    file being assembled first, on the same volume or host directory.
 
 $ASM ,LABE
 

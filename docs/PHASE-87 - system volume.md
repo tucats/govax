@@ -422,7 +422,7 @@ recommendation:
    names); `SYS$SYSDEVICE` and `SYS$SYSROOT`; the resolver's volume layer
    and the grammar fallback (Decision 4); STARTUP.COM run from the volume,
    checking that its data lines still reach the debugger after its VMINIT.
-6. **ASM and LOAD on volume files** (Decision 9), `.INCLUDE` beside the
+6. (done 2026-11-03) **ASM and LOAD on volume files** (Decision 9), `.INCLUDE` beside the
    including file; STARTUP.COM assembling `SYS$SOURCES:KERNEL.ASM`; the
    built-in STARTUP.COM's path with no volume. A test that boots from an
    edited KERNEL.ASM on the volume.
@@ -693,3 +693,59 @@ recommendation:
       volume, the names, an edited STARTUP.COM run and booting, and a
       grammar that doesn't parse, one without EXIT, and a good edited one,
       all put on the volume by COPY.
+- **2026-11-03** — Subtask 6 done: ASM and LOAD on volume files.
+  - **Where a file is** (`machine/consolefile.go`'s `readConsoleFile`, for
+    ASM, LOAD/ROM, and LOAD/NVRAM, in the console and the debugger): by
+    `rms.Session.Locate`'s rules, as RUN and @ place theirs. A VMS
+    specification is a volume file, a host path a host file read through
+    the resolver as before, and a bare name a file in the default directory
+    when SET DEFAULT is on a volume.
+  - **One rule of the console's own:** a bare name that isn't in the
+    default volume directory is then looked for through the resolver (the
+    host's current directory, `--path`, govax's built-in files). RUN and @
+    don't do this, their bare names being the user's files; ASM's and
+    LOAD's are usually govax's, and without it STARTUP.COM's `ASM
+    "kernel.asm"` would fail with no system volume but a work volume as the
+    default. `rms.BareName` says which names are bare.
+  - **`.INCLUDE`** (`includeReader`): a bare name beside the including file,
+    on its side: the same device and directory of its volume
+    (`LocateRelated`), or its host directory and then the resolver, as
+    before; a bare name not beside a volume file then goes to the resolver
+    too. An explicit name follows Locate's rules. Interactive ASM, with no
+    file, sends bare names to the resolver and VMS specifications to their
+    volumes.
+  - **Messages:** a volume file that isn't there is `%SYSTEM-W-NOSUCHFILE`
+    with its expanded name, and a device that isn't mounted DEVNOTMOUNT, as
+    DCL's commands say (`volumeFileFailure`, the same mapping as
+    `dclcmd.FileFailure`, which the machine doesn't import). A host file's
+    message is the resolver's, unchanged. With `/NOERROR`, LOAD loads
+    nothing for either.
+  - **The ROM** on the volume has fixed 512-byte records, so its last block
+    is padded with zeros; LOAD/ROM stops at the image's zero count before
+    them, and the bytes loaded are the built-in ROM's
+    (`TestLoadVolumeFiles`). SHOW ROM names the file it came from in full,
+    `DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1`; a host file is still named as
+    given.
+  - **STARTUP.COM** assembles `SYS$SOURCES:KERNEL.ASM` and loads
+    `SYS$SYSTEM:DEFAULT.ROM` with a system volume, and govax's built-in
+    `kernel.asm` and `default.rom` without one (the built-in procedure run
+    as a host file, as before). The kernel's `.INCLUDE "ssdef.asm"` finds
+    `SYS$SOURCES:SSDEF.ASM` beside it. Existing volumes get the new
+    STARTUP.COM from subtask 4's refresh, unless the user changed theirs.
+  - **Left as it was:** SAVE/ROM and SAVE/NVRAM still write host files
+    only (Decision 9 named only LOAD); a SAVE to a volume is follow-up work.
+    MANUAL.md's startup section, which still describes `vax.init`, is the
+    close-out's; its section on the interactive assembler now says how ASM
+    and LOAD find files, and so do HELP ASM (both grammars) and HELP LOAD.
+  - **Tests:**
+    - `internal/console/consolefile_test.go`: ASM of a volume file with an
+      `.INCLUDE` found only beside it (`TestASMVolumeFile`), bare names
+      from the default volume directory and from the built-in files
+      (`TestASMBareName`), a missing volume file and an unmounted device
+      (`TestASMVolumeFileMissing`), LOAD/ROM and LOAD/NVRAM of volume files
+      (`TestLoadVolumeFiles`), and STARTUP.COM booting an edited KERNEL.ASM
+      whose `.INCLUDE` names a file only on the volume
+      (`TestBootFromEditedKernel`);
+    - `cmd/govax/startup_test.go`'s `TestRun_systemVolumeKernel`: the ROM
+      with and without a system volume, and a KERNEL.ASM edited by COPY
+      booting.

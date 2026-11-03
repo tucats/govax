@@ -30,8 +30,19 @@ $    define/system/executive_mode sys$library sys$sysdevice:[system.syslib]
 $    define/system/executive_mode sys$share   sys$sysdevice:[system.syslib]
 $    define/system/executive_mode sys$sources sys$sysdevice:[system.sources]
 $ endif
+$!
+$!  The microkernel and the console ROM. On the system volume they are
+$!  SYS$SOURCES:KERNEL.ASM (which includes SSDEF.ASM from beside it) and
+$!  SYS$SYSTEM:DEFAULT.ROM, so an edited kernel is the one that boots.
+$!  Without one, they are govax's built-in kernel.asm and default.rom.
+$!
 $ kernel = """kernel.asm"""
 $ rom = ""
+$ if system_volume
+$ then
+$    kernel = "sys$sources:kernel.asm"
+$    rom = "sys$system:default.rom"
+$ endif
 $!
 $!  The memory's sizes, all in 512-byte pages. Each is the default here
 $!  unless govax's configuration sets its vax.memory.* item (see HELP

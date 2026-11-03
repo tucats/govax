@@ -1,11 +1,11 @@
 package machine
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -41,34 +41,29 @@ func (m *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		return 0, false, err
 	}
 
-	src, err := m.Paths.ReadFile(path)
+	// The file is a volume file or a host one, by consolefile.go's rules.
+	src, err := m.readConsoleFile(path, true)
 	if err != nil {
 		return 0, false, err
 	}
 
 	a := m.ensureAsmSession()
 
-	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are resolved
-	// alongside path's own directory first (WithDir), falling through to
-	// c.Paths' own search directories/embedded fallback — see
-	// docs/PHASE-15.md. Overrides ensureAsmSession's own directory-less
-	// default resolver every call, so a session shared across several ASM
-	// <file> commands always resolves .INCLUDE relative to whichever file
-	// is currently being assembled.
-	includePaths := m.Paths.WithDir(filepath.Dir(path))
+	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are looked for
+	// beside the file being assembled, on its side, volume or host
+	// (includeReader), then through m.Paths' search directories and
+	// built-in files (docs/PHASE-15.md). This replaces ensureAsmSession's
+	// directory-less default every call, so a session shared across
+	// several ASM <file> commands always resolves .INCLUDE relative to
+	// whichever file is being assembled.
+	a.SetIncludeResolver(m.includeReader(src.loc))
 
-	a.SetIncludeResolver(func(name string) (string, error) {
-		b, err := includePaths.ReadFile(name)
-
-		return string(b), err
-	})
-
-	if _, err := a.Assemble(string(src)); err != nil {
-		return 0, false, vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, err, path)
+	if _, err := a.Assemble(string(src.data)); err != nil {
+		return 0, false, vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, err, src.name)
 	}
 
 	if err := m.depositAsmImage(a); err != nil {
-		return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, path)
+		return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, src.name)
 	}
 
 	m.mergeAsmSymbols(a)
@@ -112,12 +107,9 @@ func (m *Machine) ensureAsmSession() *asm.Assembler {
 		m.asmSession.SetSCBB(m.CPU.PR(registers.SCBB))
 		// A directory-less default .INCLUDE resolver for interactive mode,
 		// which has no "current file" of its own to bias the search with
-		// (unlike Assemble's own per-call WithDir override above).
-		m.asmSession.SetIncludeResolver(func(name string) (string, error) {
-			b, err := m.Paths.ReadFile(name)
-
-			return string(b), err
-		})
+		// (unlike Assemble's own per-file reader above): a bare name goes
+		// to m.Paths, a VMS specification to its volume.
+		m.asmSession.SetIncludeResolver(m.includeReader(rms.FileLocation{Host: true}))
 	}
 
 	return m.asmSession

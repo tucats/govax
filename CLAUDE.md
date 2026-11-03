@@ -628,7 +628,11 @@ never had.
   `startup.com` run only without a volume), `SYS$SYSDEVICE` and `SYS$SYSROOT` defined at mount (`dclcmd/sysnames.go`;
   plain names, RMS having no rooted directories), and the grammars and help files through the resolver's volume
   layer (`respath.Resolver.Volume`, `dclcmd.SystemFS`, `sysvol.Resolved`), a volume grammar that doesn't parse or lacks
-  a bound syntax (`dcl.Grammar.Missing`) replaced by govax's own with `%VAX-W-SYSGRAMMAR` (`cmd/govax/grammarfiles.go`).
+  a bound syntax (`dcl.Grammar.Missing`) replaced by govax's own with `%VAX-W-SYSGRAMMAR` (`cmd/govax/grammarfiles.go`);
+  and subtask 6 (2026-11-03) ASM and LOAD on volume files (`machine/consolefile.go`: `Session.Locate`'s rules, a bare
+  name not on the default volume then looked for through the resolver, `rms.BareName`; `.INCLUDE` beside the including
+  file on its side, `includeReader`), STARTUP.COM assembling `SYS$SOURCES:KERNEL.ASM` and loading
+  `SYS$SYSTEM:DEFAULT.ROM`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -3752,6 +3752,16 @@ such as `HALT` fault there, as on a real VAX (`%SYSTEM-F-OPCDEC`), so end
 a test with a breakpoint, as above. `HELP ASM` at `DBG>` describes the
 assembler's directives.
 
+`ASM file` finds its file as `RUN` does. A VMS file specification
+(`ASM SYS$SOURCES:KERNEL.ASM`) is a file on a mounted volume, a host path
+(`ASM "./my.asm"`) a host file, and a bare name a file in the default
+directory when `SET DEFAULT` is on a volume. A bare name that isn't
+there, or any name when the default is on the host, is looked for in the
+host's current directory, the `--path` directories, and govax's built-in
+files. A `.INCLUDE` of a bare name looks beside the including file first,
+on the same volume or in the same host directory. `LOAD/ROM` and
+`LOAD/NVRAM` find their files the same way.
+
 The debugger's `HELP` covers every command: `HELP SET BREAK`, `HELP
 EXAMINE /INSTRUCTION`, `HELP EXPRESSIONS`, and so on.
 

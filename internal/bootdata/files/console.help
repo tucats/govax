@@ -342,9 +342,12 @@ $ASM
 $ASSE
     The ASM command assembles VAX source into memory, either from a file
     (ASM file) or, with no file, one statement at a time.  The console accepts
-    it only until the microkernel is in place, which is how VAX.INIT loads
-    it.  After that ASM is a debugger command: enter the debugger with DEBUG
-    and type ASM there.  HELP ASM at the DBG> prompt describes the assembler.
+    it only until the microkernel is in place, which is how STARTUP.COM loads
+    it (SYS$SOURCES:KERNEL.ASM on the system volume, or govax's built-in
+    kernel.asm without one).  After that ASM is a debugger command: enter the
+    debugger with DEBUG and type ASM there.  HELP ASM at the DBG> prompt
+    describes the assembler, and how its file is found: a volume file or a
+    host file, as RUN's is.
 
 $ANAL
 
@@ -885,8 +888,17 @@ $LOAD,/ROM
 
         <file-name>     The name of the file to be read.  If
                         omitted, the default name of "default.rom"
-                        is assumed.
-        
+                        is assumed.  A VMS file specification
+                        (SYS$SYSTEM:DEFAULT.ROM) is a file on a
+                        mounted volume, a host path a host file, and
+                        a bare name a file in the default directory
+                        when SET DEFAULT is on a volume.  A bare name
+                        that isn't there, or any name when the default
+                        is on the host, is looked for in the host's
+                        current directory, the --path directories,
+                        and govax's built-in files.  STARTUP.COM loads
+                        the system volume's SYS$SYSTEM:DEFAULT.ROM.
+
         <base-addr>     When loading a ROM image, this specifies
                         the base physical address of the ROM image
                         to use.  If ommitted, 20040000 is assumed.
@@ -926,8 +938,9 @@ $LOAD,/NVR
 
         <file-name>     The name of the file to be read.  If
                         omitted, the default name of "default.nvram"
-                        is assumed.
-        
+                        is assumed.  The file is found as LOAD/ROM's
+                        is: a volume file or a host file.
+
         
         The second example (using the /NOERROR qualifier) indicates that if
         the default NVRAM file cannot be found then no error is displayed.  This

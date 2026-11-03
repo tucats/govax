@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
 	"os"
@@ -72,17 +73,22 @@ func (m *Machine) SaveROM(path string) error {
 	return writeBE32(f, 0)
 }
 
-// LoadROM reads a binary ROM image file, matching load_rom. path is
-// resolved through c.Paths (docs/PHASE-15.md).
+// LoadROM reads a binary ROM image file, matching load_rom. path is a
+// volume file or a host one, by consolefile.go's rules: a host file is
+// found through m.Paths (docs/PHASE-15.md).
 //
 // With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.rom.
+//
+// A ROM file on a volume has fixed 512-byte records, so its last block
+// is padded with zeros; the loop below stops at the image's zero count
+// before it reaches them.
 func (m *Machine) LoadROM(path string, noError bool) error {
 	if path == "" && noError {
 		path = "default.rom"
 	}
 
-	f, err := m.Paths.Open(path)
+	file, err := m.readConsoleFile(path, false)
 	if err != nil {
 		if noError {
 			return nil
@@ -91,7 +97,7 @@ func (m *Machine) LoadROM(path string, noError bool) error {
 		return err
 	}
 
-	defer f.Close()
+	f := bytes.NewReader(file.data)
 
 	var magic [8]byte
 
@@ -100,7 +106,7 @@ func (m *Machine) LoadROM(path string, noError bool) error {
 	}
 
 	if magic != romMagic {
-		return vmserrors.New(vmserrors.RMS_BADMAGIC, path)
+		return vmserrors.New(vmserrors.RMS_BADMAGIC, file.name)
 	}
 
 	base, err := readBE32(f)
@@ -143,7 +149,7 @@ func (m *Machine) LoadROM(path string, noError bool) error {
 	m.Engine.Memory().ROM = rom
 	m.Engine.Memory().ROMBase = base
 	m.Engine.Memory().ROMEnd = end
-	m.Engine.Memory().ROMFile = path
+	m.Engine.Memory().ROMFile = file.name
 
 	return nil
 }
@@ -176,7 +182,7 @@ func (m *Machine) SaveNVRAM(path string) error {
 }
 
 // LoadNVRAM reads an NVRAM image file, matching load_nvram. path is
-// resolved through c.Paths (docs/PHASE-15.md).
+// found as LoadROM's is.
 //
 // With noError (LOAD/NVRAM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.nvram.
@@ -185,7 +191,7 @@ func (m *Machine) LoadNVRAM(path string, noError bool) error {
 		path = "default.nvram"
 	}
 
-	f, err := m.Paths.Open(path)
+	file, err := m.readConsoleFile(path, false)
 	if err != nil {
 		if noError {
 			return nil
@@ -194,7 +200,7 @@ func (m *Machine) LoadNVRAM(path string, noError bool) error {
 		return err
 	}
 
-	defer f.Close()
+	f := bytes.NewReader(file.data)
 
 	base, err := readBE32(f)
 	if err != nil {
@@ -214,7 +220,7 @@ func (m *Machine) LoadNVRAM(path string, noError bool) error {
 	m.Engine.Memory().NVRAM = nvram
 	m.Engine.Memory().NVRAMBase = base
 	m.Engine.Memory().NVRAMEnd = base + size - 1
-	m.Engine.Memory().NVRAMFile = path
+	m.Engine.Memory().NVRAMFile = file.name
 
 	return nil
 }
