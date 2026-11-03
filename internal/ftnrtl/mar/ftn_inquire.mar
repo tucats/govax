@@ -305,6 +305,8 @@ A_NAME_OF_ONE:
 	MNEGL	#1,A_NAMED(FP)
 	$SEARCH	FAB=R11
 	BLBS	R0,40$
+	$PARSE	FAB=R11			; VMS's $SEARCH that fails may leave its work in
+					;  the expanded name (testdata/ftn86's INQUIRE)
 	MOVZBL	F_NAM+NAM$B_ESL(FP),NAME_LENGTH(FP)
 	MOVAB	F_ESA(FP),A_NAME(FP)
 	BRW	END_SEARCH

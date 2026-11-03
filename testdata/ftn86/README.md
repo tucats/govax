@@ -47,3 +47,13 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
        ./govax console < testdata/ftn86/copyoutd.cmd
 
 `TestFTN86Procedure` runs the same procedure on govax, so a mistake in it shows here first.
+
+## What came back
+
+`vax/round1/` is the author's first run on VMS 7.1, 3-NOV-2026, before the fixes it led to: the log,
+FTNRTL's objects, image, and map. The phase doc's log has what it found. `powbits.for` is for the second
+round: the exact bits of VMS's power routines and a few complex functions.
+
+Before a later round, rename the old volume and DUNGEON's log in `testdata/disks`: `exchange.cmd`
+makes a new volume, and `copyoutd.cmd` writes the log.
+

@@ -475,6 +475,8 @@ func (e *Engine) Step() error {
 	e.cpu.SetGPR(registers.PC, dec.NextPC)
 
 	handler := e.table.HandlerFor(dec.Instruction)
+	before := e.cpu.PSL()
+
 	if err := handler(e, dec); err != nil {
 		if errors.Is(err, ErrHalted) {
 			e.halted = true
@@ -482,7 +484,9 @@ func (e *Engine) Step() error {
 			return ErrHalted
 		}
 
-		e.undoOperands(err)
+		if e.undoOperands(err) {
+			e.cpu.SetPSL(e.cpu.PSL().WithConditionCodes(before))
+		}
 
 		return e.raise(err)
 	}
@@ -497,16 +501,21 @@ func (e *Engine) Step() error {
 // undoOperands puts back the registers the instruction's operand specifiers
 // changed, if err is a fault: the instruction will run again from its start
 // (registers.CPU's operand log says why). A trap, or a change mode instruction's
-// exception, is taken with the instruction finished, and keeps them.
-func (e *Engine) undoOperands(err error) {
+// exception, is taken with the instruction finished, and keeps them. It reports
+// whether err was a fault, whose instruction hasn't happened: its condition codes
+// are as they were too, though a handler may have set them before its store faulted
+// (VMS 7.1: a CLRL of a read-only page, testdata/ftn86's DIRECTIVES).
+func (e *Engine) undoOperands(err error) bool {
 	var f *Fault
 
 	err = wrapMemError(err)
 	if !errors.As(err, &f) || f.Trap || f.Code >= ExcChangeModeK && f.Code <= ExcChangeModeU {
-		return
+		return false
 	}
 
 	e.cpu.RestoreOperandRegisters()
+
+	return true
 }
 
 // raise turns err into a *Fault (wrapping a raw *vm.TranslationFault/

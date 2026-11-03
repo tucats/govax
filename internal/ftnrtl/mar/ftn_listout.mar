@@ -332,8 +332,6 @@ CVT_SIGN	= -24			; out: 1, -1, or 0 for zero
 CVT_EXPONENT	= -28			; out: the value is 0.ddd x 10**this
 CVT_FIRST	= -32			; out: the first digit's offset
 CVT_FDIGITS	= -36			; F editing's digits (not used here)
-DIGITS		= -76			; the digit buffer, 40 bytes: a guard
-DIGITS_LEN	= 40			;  digit and REAL*16's 34 digits
 FIELD		= -124			; the field being formatted, 48 bytes
 FIELD_DESC	= -132			; a descriptor of FIELD
 FMT_W		= -136			; a floating format's width, w,
@@ -343,7 +341,17 @@ FMT_KIND	= -148			;  and which OTS$$CVT_x_T_R8: 0 F,
 					;  1 D, 2 G, 3 H
 CTEXT		= -200			; a complex value's text, 52 bytes
 CTEXT_LEN	= -204			;  and its length so far
-FRAME_SIZE	= 204
+;
+; The digit buffer, last in the frame. VMS's routine writes whole groups of nine
+; digits, not stopping at the size it's given, which FORRTL makes the significant
+; digits and 19 more: 53 for REAL*16's 34 (testdata/ots72's records). So it's more than
+; that, and what's above it is DIGITS_SPARE bytes away (docs/PHASE-86 - FORTRAN
+; milestone.md).
+;
+DIGITS_LEN	= 56
+DIGITS_SPARE	= 28
+DIGITS		= CTEXT_LEN-DIGITS_SPARE-DIGITS_LEN
+FRAME_SIZE	= -DIGITS
 
 PUT_VALUE:
 FTN$$LIST_VALUE::			; FTN_NAMELIST's way in: the field alone,
@@ -674,7 +682,12 @@ DIGITS_OF:
 	BRB	90$
 50$:	JSB	G^OTS$$CVT_H_T_R8
 90$:	MOVL	(SP)+,R6
-	MOVL	CVT_FIRST(FP),R7
+	TSTL	CVT_SIGN(FP)		; zero: VMS's routine leaves E's digits as
+	BNEQ	95$			;  they were, and only says its sign
+	MOVC5	#0,(SP),#^A/0/,#DIGITS_LEN,DIGITS(FP)
+	CLRL	CVT_FIRST(FP)
+	CLRL	CVT_EXPONENT(FP)
+95$:	MOVL	CVT_FIRST(FP),R7
 	MOVL	CVT_EXPONENT(FP),R8
 	RSB
 

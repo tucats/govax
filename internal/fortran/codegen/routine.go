@@ -14,6 +14,9 @@ type routineGen struct {
 	r     *ir.Routine
 	names *routineNames
 
+	// defined are the names the module's routines and entry points define.
+	defined map[string]bool
+
 	// bases names the common blocks' first bytes.
 	bases *namer
 	src   *sourceLines

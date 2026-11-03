@@ -28,6 +28,11 @@ const defaultS0Base = 0x80000000
 // minus the console-interactive and live-VM-specific pieces Phase 11's
 // batch-oriented Assemble doesn't need (see docs/PHASE-11.md).
 type Assembler struct {
+	// lastLabel is the label most recently defined, and where (noteMaskRoutine).
+	lastLabel     string
+	lastLabelSect *section
+	lastLabelPC   uint32
+
 	table   *cpu.Table
 	symbols *symbolTable
 	image   *image
@@ -1064,6 +1069,7 @@ func (a *Assembler) parseLabel(c *cursor) error {
 	// past it once the label is defined.
 	c.pos = i
 	err := a.defineHere(name, flags, true)
+	a.lastLabel, a.lastLabelSect, a.lastLabelPC = name, a.cur, a.pc()
 	c.pos = end
 
 	if err == nil {

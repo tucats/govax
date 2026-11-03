@@ -56,7 +56,27 @@ func readFileArg(c *cursor) string {
 // expressions, each stored at scale bytes and forward-reference-capable
 // (K_ADDR_B/W/L).
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
+	if scale == 2 {
+		a.noteMaskRoutine(c)
+	}
+
 	return a.pseudoDataSigned(c, scale, false)
+}
+
+// noteMaskRoutine marks the label at this place, if there is one, as a routine if
+// the .WORD it's on is a register mask (SymMaskRoutine).
+func (a *Assembler) noteMaskRoutine(c *cursor) {
+	if a.dialect != DialectMACRO || a.lastLabel == "" || a.lastLabelSect != a.cur || a.lastLabelPC != a.pc() {
+		return
+	}
+
+	if !strings.HasPrefix(strings.ToUpper(strings.TrimLeft(c.rest(), " \t")), "^M") || isLocalLabel(a.lastLabel) {
+		return
+	}
+
+	if sym, found := a.symbols.find(a.lastLabel); found {
+		sym.flags |= SymMaskRoutine
+	}
 }
 
 // pseudoDataSigned is pseudoData, or with signed MACRO-32's .SIGNED_BYTE

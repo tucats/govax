@@ -159,7 +159,7 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 
 // traceback adds the traceback records real MACRO writes at the end of a
 // module (docs/PHASE-29.md, subtask 10): a TBT record of routine begin
-// records, one for each .ENTRY in name order, then one of psect records,
+// records, one for each .ENTRY or label on a register mask in name order, then one of psect records,
 // one for each relocatable psect in psect number order (none for an
 // absolute psect, named or not: psects.obj's OFFSETS), and the module
 // end record. (The module begin record is written after the
@@ -168,7 +168,7 @@ func (a *Assembler) traceback(b *obj.Builder) error {
 	var entries []*symbol
 
 	for _, s := range a.symbols.byName {
-		if s.flags&SymEntry != 0 && s.defined() && s.sect != nil {
+		if s.flags&(SymEntry|SymMaskRoutine) != 0 && s.defined() && s.sect != nil {
 			entries = append(entries, s)
 		}
 	}

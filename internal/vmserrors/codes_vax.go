@@ -130,6 +130,8 @@ const (
 	// internal/console: a command a subprocess's DCL doesn't have.
 	vaxNotSubproc
 	vaxIllSymLen
+	vaxSymDclExtr
+	vaxSymDefInMo
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -196,6 +198,8 @@ const (
 	VAX_BADIMMLIT     = VAXFacility<<FacilityPosition | vaxBadImmLit<<MessagePosition | StatusError
 	VAX_FLOATRANGE    = VAXFacility<<FacilityPosition | vaxFloatRange<<MessagePosition | StatusError
 	VAX_DUPSYM        = VAXFacility<<FacilityPosition | vaxDupSym<<MessagePosition | StatusError
+	VAX_SYMDCLEXTR    = VAXFacility<<FacilityPosition | vaxSymDclExtr<<MessagePosition | StatusError
+	VAX_SYMDEFINMO    = VAXFacility<<FacilityPosition | vaxSymDefInMo<<MessagePosition | StatusError
 	VAX_FWDWORD       = VAXFacility<<FacilityPosition | vaxFwdWord<<MessagePosition | StatusError
 	VAX_FWDBYTE       = VAXFacility<<FacilityPosition | vaxFwdByte<<MessagePosition | StatusError
 	VAX_BADFLOAT      = VAXFacility<<FacilityPosition | vaxBadFloat<<MessagePosition | StatusError
@@ -349,6 +353,8 @@ func init() {
 	DefineMessage(VAX_BADIMMLIT, VAXFacility, "BADIMMLIT", "Invalid immediate literal syntax")
 	DefineMessage(VAX_FLOATRANGE, VAXFacility, "FLOATRANGE", "Floating literal out of range")
 	DefineMessage(VAX_DUPSYM, VAXFacility, "DUPSYM", "Duplicate symbol definition !Q")
+	DefineMessage(VAX_SYMDCLEXTR, VAXFacility, "SYMDCLEXTR", "Symbol !Q declared external")
+	DefineMessage(VAX_SYMDEFINMO, VAXFacility, "SYMDEFINMO", "Symbol !Q is defined in module")
 	DefineMessage(VAX_FWDWORD, VAXFacility, "FWDWORD", "Forward reference displacement !D out of word range")
 	DefineMessage(VAX_FWDBYTE, VAXFacility, "FWDBYTE", "Forward reference displacement !D out of byte range")
 	DefineMessage(VAX_BADFLOAT, VAXFacility, "BADFLOAT", "Invalid floating point value !Q")

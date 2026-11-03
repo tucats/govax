@@ -127,5 +127,12 @@ func (p *PSL) SetCM(v bool)  { *p = setFlag(*p, pslCM, v) }
 // PSL returns the processor status longword.
 func (c *CPU) PSL() PSL { return c.psl }
 
+// WithConditionCodes is p with q's N, Z, V, and C.
+func (p PSL) WithConditionCodes(q PSL) PSL {
+	const codes = PSL(pslN | pslZ | pslV | pslC)
+
+	return p&^codes | q&codes
+}
+
 // SetPSL replaces the processor status longword wholesale.
 func (c *CPU) SetPSL(p PSL) { c.psl = p }

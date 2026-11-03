@@ -8,7 +8,7 @@ READ          60
 NOTES           7    9
 FIXED          10          20          30
 STORE AT      304
-%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B88, PSL=03C00004
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B88, PSL=03C00000
 %TRACE-F-TRACEBACK, symbolic stack dump follows
 module name     routine name                     line       rel PC    abs PC
 

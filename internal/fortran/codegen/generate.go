@@ -121,8 +121,20 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 	main := ""
 	localAlign := localAlignment(routines)
 
+	// The names this module defines, whichever routine comes first.
+	defined := map[string]bool{}
+
+	for _, r := range routines {
+		defined[r.Name] = true
+
+		for _, e := range r.Entries {
+			defined[e.Name] = true
+		}
+	}
+
 	for _, r := range routines {
 		g := newRoutineGen(r, names, src)
+		g.defined = defined
 		g.localAlign = localAlign
 		g.improve = opts.Improve
 		g.debugTable = opts.DebugTable
@@ -415,8 +427,19 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 		w.GlobalAssignment(r.Name, "0", "this block data subprogram's name, for EXTERNAL statements")
 	}
 
-	if len(r.Externals) > 0 {
-		w.Statement("", ".EXTRN", strings.Join(r.Externals, ","), "named in an EXTERNAL statement")
+	// A routine of this module named in an EXTERNAL statement needs no .EXTRN, and
+	// MACRO refuses one: SYMDCLEXTR before the routine, SYMDEFINMO after it (VMS 7.1,
+	// testdata/ftn86).
+	var externals []string
+
+	for _, name := range r.Externals {
+		if !g.defined[name] {
+			externals = append(externals, name)
+		}
+	}
+
+	if len(externals) > 0 {
+		w.Statement("", ".EXTRN", strings.Join(externals, ","), "named in an EXTERNAL statement")
 	}
 
 	if len(g.cells()) > 0 {

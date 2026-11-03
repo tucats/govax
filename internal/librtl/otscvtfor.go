@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // OTS$$CVT_D_T_R8, _F_, _G_, and _H_ (Phase 72, subtask 6): the JSB
@@ -38,8 +39,11 @@ import (
 // rounding position and leaves the ones after it as they were, as VMS's
 // routine does; a carry into the guard makes it the first digit, one
 // place earlier, and the exponent one more. FORRTL reads no register
-// back. A zero value is a buffer of zeros, the first digit at offset 0
-// and the sign 0, the exponent left as it was.
+// back. A zero value's sign is 0 and its first digit at offset 0, its exponent
+// left as it was, and it writes the significant digits FP-16 asks for, all 0,
+// and nothing past them, for E, F, and G alike (VMS 7.1's records: 4, 19, and
+// 16). A caller that shows one more digit than it asked for sees what was there
+// already: on VMS, FTNRTL's first printed 0.000000/E+00 (testdata/ftn86).
 //
 // VMS's routine fills the buffer with fewer digits than govax's (whole
 // groups of nine, an integer part's leading zeros among them: it works
@@ -47,9 +51,20 @@ import (
 // FORRTL prints no digit past the ones it asked for, so the output is
 // the same.
 //
+// Those groups don't stop at the size in R2. FORRTL always gives FP-16 and
+// 19 more, and FP-16 is w-1 for F, so govax can't say what a smaller size
+// does but that FTNRTL's first did on VMS: its digits overwrote the frame
+// and the PC it returned to (testdata/ftn86). So a size too small, for the
+// significant digits or for F's digits after the point, fails here too, as
+// SS$_BUFFEROVF, signaled, rather than appear to work.
+//
 // Unconfirmed: a reserved operand (SS$_ROPRAND, signaled, as the 2.0
 // Run-Time Library manual says FOR$CVT_x_Ty's are); a value whose digits
 // before the rounding position don't fit the buffer (not rounded).
+
+// cvtSpareDigits is how many bytes the buffer has beyond the significant digits,
+// the most FORRTL ever gave it.
+const cvtSpareDigits = 19
 
 // The edit descriptors' kinds, at FP-9.
 const (
@@ -106,7 +121,21 @@ func editDigits(env *corevms.Environment, regs *corevms.JSBRegisters, f vaxfloat
 		return err
 	}
 
-	size := max(int(int32(regs[registers.R2]))-1, 1)
+	given := int(int32(regs[registers.R2]))
+
+	needed := int(int32(words[16])) + cvtSpareDigits
+	if kind == cvtKindF {
+		needed = max(needed, int(int32(words[36]))+cvtSpareDigits)
+	}
+
+	if given < needed {
+		status := vmsdef.Symbols["SS$_BUFFEROVF"]
+		_, err = env.SignalFailure([]uint32{status}, status)
+
+		return err
+	}
+
+	size := max(given-1, 1)
 	text, first, exp := digitBuffer(v.Rat(), size)
 
 	switch kind {
@@ -126,6 +155,10 @@ func editDigits(env *corevms.Environment, regs *corevms.JSBRegisters, f vaxfloat
 			off   uint32
 			value int
 		}{{32, 0}, {24, 0}}
+
+		if significant := int(int32(words[16])); significant > 0 && significant < len(text) {
+			text = text[:significant]
+		}
 	}
 
 	for i, c := range text {

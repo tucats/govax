@@ -57,6 +57,10 @@ const (
 	// symbol table doesn't mark global (G) while it's undefined, though
 	// .EXTERNAL also sets SymGlobal.
 	SymExtern
+	// SymMaskRoutine marks a label on a .WORD ^M<...>, a routine written without
+	// .ENTRY, which real MACRO's traceback names as it does an .ENTRY's
+	// (testdata/ftn86's objects); .WORD of anything else isn't one.
+	SymMaskRoutine
 	// SymTransfer marks a symbol named by .TRANSFER, which the linker
 	// may redefine (see pseudoTransfer): the object refers to it by
 	// name, even where the module defines it.
@@ -491,6 +495,15 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	}
 
 	sym, found := a.symbols.find(resolved)
+
+	// A label for a name .EXTERNAL declared (VMS 7.1's MACRO, testdata/ftn86): the
+	// assembly goes on, as for a label defined twice.
+	if unique && found && sym.flags&SymExtern != 0 {
+		if err := a.recoverable(vmserrors.New(vmserrors.VAX_SYMDCLEXTR, name)); err != nil {
+			return err
+		}
+	}
+
 	if unique && found && sym.defined() {
 		// Real MACRO reports a label defined again on both lines and
 		// goes on, the later definition giving its value (errors.lis).

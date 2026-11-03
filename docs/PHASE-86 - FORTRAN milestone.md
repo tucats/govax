@@ -237,4 +237,38 @@ or text.
     `TestLibGetInputFile`. The round will confirm it: `services.in` has its line.
   - **Not bugs:** `SET NOON` doesn't reach a `CALL`'s level, so a program's fatal condition ended the
     subroutine, as it would on VMS; `ONE` has its own.
+- **2026-11-03, subtask 4, round 1 on VMS 7.1** (`testdata/ftn86/vax/round1/`; DUNGEON's log local,
+  `testdata/disks/ftn86d-round1.log`):
+  - **It works.** VMS's MACRO and LINK built FTNRTL from its sources with no message.
+    **DUNGEON, built there from our compiler's `.MAR` files against that FTNRTL, printed exactly what
+    govax's did:** all 2,751 lines of the scripted game, the save, and the restore. Of 206 runs of the
+    corpus, 109 printed what govax's did as it stood.
+  - **MACRO:** FTNRTL's objects are govax's record for record, but for the headers (time, tool, command)
+    and one thing: real MACRO's traceback names a label on a `.WORD ^M<...>` as it does an `.ENTRY`
+    (`SymMaskRoutine`). `TEXTS: .WORD -1` isn't one. Now the same, on the five modules checked.
+  - **The compiler's `.EXTRN`:** an EXTERNAL statement naming a routine in the same module is refused by
+    real MACRO, SYMDCLEXTR before the routine and SYMDEFINMO after it, and LINK then makes no image: 48 of
+    the 206 runs. Our MACRO took it. Now the compiler leaves those out (`Generate`'s `defined`) and our
+    MACRO refuses them too, in those words.
+  - **OTS$$CVT_x_T_R8, the undocumented routine:** the one real difference a program can see, in 2 ways,
+    that govax's emulation hid. It writes whole groups of nine digits, not stopping at the size in R2, so
+    FTNRTL's small buffers let digits overwrite the frame and the saved PC (ACCVIO at 30303030, ASCII
+    `0000`; 25 programs). And a zero writes only the significant digits asked for, while list-directed
+    output shows one more (`0.000000/E+00`). FORRTL always gives FP-16 and 19 more, and FP-16 is w-1 for
+    F (`testdata/ots72`'s records). FTNRTL now does, with spare bytes above, and looks at the sign for a
+    zero, in `ftn_float.mar` and `ftn_listout.mar`, whose buffer also lay right below the routine's results.
+    **So this can't hide again:** the emulation now refuses a size too small (SS$_BUFFEROVF, signaled) and
+    writes a zero as VMS does. `go test` found FTNRTL's second caller that way, and REAL\*16 one byte short.
+  - **The CPU:** an instruction that faults leaves the condition codes as they were. `CLRL` of a read-only
+    page had set Z before its store faulted; VMS's PSL shows them untouched (`Engine.undoOperands`).
+  - **RMS:** VMS's `$SEARCH` that fails can change the expanded name: `INQ1.XYZ` looked for where `INQ1.DAT`
+    exists became `INQ1.;YZ;` in INQUIRE's NAME=. FTNRTL now parses again before using it. The rule behind
+    it is unconfirmed, and our `$SEARCH` doesn't do it.
+  - **Open, for round 2:** VMS's `OTS$POWRJ(1.5,-2)` prints `0.4444445`, ours `0.4444444`. Neither order
+    tried fits: the reciprocal first fits this and VMS's D bits for `3.0**(-5)`, the present order its F
+    bits. CSIN's last digit differs too (`-27.03494`). `powbits.for` prints the exact bits of a grid of
+    cases, in F, D, G, and H, to settle them; nothing is changed until then. Real LIBRTL on govax
+    (a `DEFINE LIBRTL` to VMS's) faults in its own code at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX.
+  - **`vax/round1`** keeps VMS's log, objects, image, and map. Round 2 is the same procedure; the oracle
+    tests come with its results.
 

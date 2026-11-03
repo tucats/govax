@@ -2,6 +2,7 @@ package asm
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -483,4 +484,33 @@ func TestConsoleKeepsItsForms(t *testing.T) {
 	.BYTE 1
 	.ALIGN 4
 	.MASK <R2>`), 1, 0, 0, 0, 4, 0)
+}
+
+// TestExternalDefinedInModule: a name .EXTERNAL declares and the module defines is an
+// error whichever comes first, in real MACRO's words (VMS 7.1, testdata/ftn86).
+func TestExternalDefinedInModule(t *testing.T) {
+	cases := []struct{ name, source, want string }{
+		{"declared, then defined", ".EXTRN SUB\n.PSECT C,EXE\n.ENTRY SUB,^M<>\nRET", "declared external"},
+		{"declared, then a label", ".EXTRN SUB\n.PSECT C,EXE\nSUB:\tRET", "declared external"},
+		{"defined, then declared", ".PSECT C,EXE\n.ENTRY SUB,^M<>\nRET\n.EXTRN SUB", "is defined in module"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := New(false)
+			a.SetDialect(DialectMACRO)
+
+			if _, err := a.Assemble(tc.source); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("Assemble said %v, want %q", err, tc.want)
+			}
+		})
+	}
+
+	// A plain .GLOBAL of a name the module defines is what .GLOBAL is for.
+	a := New(false)
+	a.SetDialect(DialectMACRO)
+
+	if _, err := a.Assemble(".GLOBAL SUB\n.PSECT C,EXE\n.ENTRY SUB,^M<>\nRET"); err != nil {
+		t.Errorf(".GLOBAL: %v", err)
+	}
 }

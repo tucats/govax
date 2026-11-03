@@ -114,6 +114,7 @@ $ !
 	var programs []string
 	programs = append(programs, glob("testdata/fortran/*.for")...)
 	programs = append(programs, glob("testdata/opt84/kernels/*.for")...)
+	programs = append(programs, glob(dir+"/*.for")...)
 
 	for _, source := range programs {
 		name := stem(source)

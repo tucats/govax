@@ -136,6 +136,16 @@ L_TAIL		= -88			; the field's last columns, an exponent
 L_DESC		= -96			; a descriptor of an input field
 FRAME_SIZE	= 96
 
+;
+; VMS's OTS$$CVT_x_T_R8 writes whole groups of nine digits, so it doesn't stop at the
+; size it's given. FORRTL gives it the significant digits at CVT_SIGNIF and 19 more, w-1
+; significant digits for F (testdata/ots72's records), and our buffer is at least that:
+; BUFFER_MORE beyond w, d, and n. BUFFER_SPARE more bytes are between it and the field,
+; where a group that overruns does no harm (docs/PHASE-86 - FORTRAN milestone.md).
+;
+BUFFER_MORE	= 27
+BUFFER_SPARE	= 9
+
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
 ;
@@ -175,14 +185,17 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 	MNEGL	R0,R0
 10$:	ADDL2	R9,R0
 	ADDL2	R8,R0
-	ADDL2	#8,R0
+	ADDL2	#BUFFER_MORE,R0
 	MOVL	R0,L_SIZE(FP)
 	ADDL2	R9,R0			; the field after it
+	ADDL2	#BUFFER_SPARE,R0
 	ADDL2	#3,R0
 	BICL2	#3,R0
 	SUBL2	R0,SP
 	MOVL	SP,CVT_BUFFER(FP)
-	ADDL3	SP,L_SIZE(FP),L_FIELD(FP)
+	MOVC5	#0,(SP),#^A/0/,L_SIZE(FP),@CVT_BUFFER(FP) ; digits it doesn't write
+	ADDL3	CVT_BUFFER(FP),L_SIZE(FP),R0
+	ADDL3	#BUFFER_SPARE,R0,L_FIELD(FP)
 	MOVC5	#0,(SP),#^A/ /,R9,@L_FIELD(FP)	; w blanks
 	;
 	; The value: the item, or an item that isn't floating's first bytes.
@@ -209,6 +222,7 @@ OUTPUT:	ADDL3	CTX_POS(R11),R9,R0
 ;
 OUT_F:	MOVB	#2,CVT_KIND(FP)
 	ADDL3	R8,R7,CVT_FDIGITS(FP)
+	SUBL3	#1,R9,CVT_SIGNIF(FP)
 	BSBW	DIGITS
 	ADDL2	R7,R0
 	TSTL	CVT_SIGN(FP)
@@ -504,12 +518,14 @@ DIGITS:	CLRL	CVT_SIGN(FP)
 
 ;
 ; SHOWN: R0 the character shown R4 places from the point (negative: before
-; it): the digit there, or a 0 before the first digit or past the buffer.
-; Uses R1.
+; it): the digit there, or a 0 before the first digit or past the buffer, or
+; if the value is zero. Uses R1.
 ;
-SHOWN:	ADDL3	L_SHIFT(FP),R4,R1
+SHOWN:	MOVL	#^A/0/,R0
+	TSTL	CVT_SIGN(FP)		; zero: VMS's routine leaves E's digits
+	BEQL	10$			;  as they were, and only says its sign
+	ADDL3	L_SHIFT(FP),R4,R1
 	ADDL2	CVT_FIRST(FP),R1
-	MOVL	#^A/0/,R0
 	CMPL	R1,CVT_FIRST(FP)
 	BLSS	10$
 	CMPL	R1,L_SIZE(FP)

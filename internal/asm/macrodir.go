@@ -309,6 +309,17 @@ func (a *Assembler) declareSymbols(c *cursor, flags SymFlag) error {
 			return vmserrors.New(vmserrors.VAX_NOTGLOBAL, name)
 		}
 
+		// .EXTERNAL of a name the module has defined (VMS 7.1's MACRO, testdata/ftn86).
+		if flags&SymExtern != 0 {
+			if sym, found := a.symbols.find(name); found && sym.defined() {
+				if err := a.recoverable(vmserrors.New(vmserrors.VAX_SYMDEFINMO, name)); err != nil {
+					return err
+				}
+
+				continue
+			}
+		}
+
 		a.declareSymbol(name, flags)
 	}
 }

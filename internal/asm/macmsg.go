@@ -60,6 +60,8 @@ var macroIdents = map[uint32]string{
 	vmserrors.VAX_DIVZERO:       "DIVBYZERO",
 	vmserrors.VAX_DIVZEROWARN:   "DIVBYZERO",
 	vmserrors.VAX_DUPSYM:        "MULDEFLBL",
+	vmserrors.VAX_SYMDCLEXTR:    "SYMDCLEXTR",
+	vmserrors.VAX_SYMDEFINMO:    "SYMDEFINMO",
 	vmserrors.VAX_ENDMNAME:      "ENDWRNGMAC",
 	vmserrors.VAX_ENTRYMASK:     "ILLMASKBIT",
 	vmserrors.VAX_FLOATHERE:     "FLTPNTSYNX",
