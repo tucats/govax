@@ -120,6 +120,10 @@ type CopyOptions struct {
 	// always the file as it is (copyVolumeToVolume).
 	Binary bool
 
+	// Records is /RECORD_FORMAT and its companions: what a host source's file
+	// is to be on the volume (copyformat.go). Only from a host file to a volume.
+	Records HostRecords
+
 	// Quiet suppresses the per-file "%COPY-S-COPIED" (or
 	// "...materialized as directory...") confirmation line Console.Copy
 	// would otherwise print. Never read by this file -- see this type's
@@ -319,6 +323,10 @@ func (s *Session) Copy(sourceText string, sourceHost bool, destText string, dest
 		return nil, fmt.Errorf("copy: %w", &HostToHostError{})
 	}
 
+	if opts.Records.Given() && !sourceHost {
+		return nil, fmt.Errorf("copy: %w", &HostRecordsError{Reason: "it is for a copy from a host file"})
+	}
+
 	switch {
 	case sourceHost:
 		return s.copyFromHost(sourceText, destText, opts)
@@ -465,6 +473,14 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 		return nil, err
 	}
 
+	var layout hostLayout
+
+	if opts.Records.Given() {
+		if layout, err = opts.Records.layout(data, opts.Binary); err != nil {
+			return nil, fmt.Errorf("copy: %s: %w", hostPath, &HostRecordsError{Reason: err.Error()})
+		}
+	}
+
 	hostName, hostType := hostBaseNameType(hostPath)
 	name, typ := destNameType(destSpec, hostName, hostType)
 
@@ -489,6 +505,8 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 	}
 
 	switch kind, ok := hostRecordTypes[hostType]; {
+	case opts.Records.Given():
+		version, err = createLaidOutFile(destVol, destDir, destBm, destIb, name, typ, version, layout, data)
 	case ok:
 		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, version, hostPath, data, kind)
 	case opts.Binary:

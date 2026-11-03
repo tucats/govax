@@ -213,3 +213,188 @@ func TestDungeonCompiles(t *testing.T) {
 		}
 	})
 }
+
+// A game saved, and one restoring it.
+const (
+	dungeonSaveGame    = "open mailbox\nsave\nquit\ny\n"
+	dungeonRestoreGame = "restore\nquit\ny\n"
+)
+
+// lastLines is text's last n lines.
+func lastLines(text string, n int) string {
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+
+	return strings.Join(lines[max(len(lines)-n, 0):], "\n")
+}
+
+// checkDungeonRun holds what a run printed to its having started and taken every
+// move: the game prompts for each with a line starting ">", which a failed start
+// never gets to, and no system message. What the game says isn't quoted here.
+func checkDungeonRun(t *testing.T, out string, moves int) {
+	t.Helper()
+
+	if got := strings.Count("\n"+out, "\n>"); got < moves {
+		t.Errorf("%d prompts, want at least %d, in:\n%.300s", got, moves, out)
+	}
+
+	if strings.Contains("\n"+out, "\n%") {
+		t.Errorf("a system message in:\n%s", out)
+	}
+}
+
+// TestDungeonRuns is the milestone's subtask 2: DUNGEON built by its documentation's
+// commands, with its ITIME and data files, and played. On a volume a game is saved
+// and restored by another run. From the host, the program is on the host and its
+// data on a volume, by the logical names the kit gives; a program's RMS reaches only
+// volume files.
+func TestDungeonRuns(t *testing.T) {
+	sources := dungeonSources(t)
+	dir := dungeonSource()
+
+	vmssubr, err := filepath.Abs(filepath.Join("..", "..", "testdata", "dungeon86", "vmssubr.for"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d, c, buf := dungeonConsole(t)
+
+	run := func(t *testing.T, command string) {
+		t.Helper()
+		shareFindRun(t, d, command)
+
+		if out := buf.String(); out != "" {
+			t.Fatalf("%s said: %.300s", command, out)
+		}
+	}
+
+	bringData := func(t *testing.T) {
+		t.Helper()
+		run(t, `COPY/QUIET "`+filepath.Join(dir, "dindx")+`"/HOST DUA3:[000000]DINDX.DAT`)
+		run(t, `COPY/QUIET "`+filepath.Join(dir, "dtext")+`"/HOST DUA3:[000000]DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80`)
+	}
+
+	link := func(t *testing.T) {
+		t.Helper()
+		run(t, "FORT/NOCHECK/CONT=40 "+dungeonCompile[0])
+		run(t, "FORT/NOCHECK/CONT=40 "+dungeonCompile[1]+",VMSSUBR.FOR")
+		run(t, dungeonAssemble+",VMSSUBR")
+
+		// The kit's LINK, as it's written: on two lines.
+		run(t, "LINK DUNGEON,GAME,GDT,PARSER,SUBR,-")
+
+		if !d.Continuing() {
+			t.Fatal("LINK's first line isn't held for the next")
+		}
+
+		run(t, "ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR")
+	}
+
+	play := func(t *testing.T, game string, moves int) string {
+		t.Helper()
+
+		c.In = strings.NewReader(game)
+		out := shareRun(t, d, buf, "DUNGEON")
+		checkDungeonRun(t, out, moves)
+
+		return out
+	}
+
+	t.Run("volume", func(t *testing.T) {
+		for host, name := range sources {
+			run(t, `COPY/QUIET "`+host+`"/HOST `+name)
+		}
+
+		run(t, `COPY/QUIET "`+vmssubr+`"/HOST VMSSUBR.FOR`)
+		bringData(t)
+		link(t)
+
+		shareFindRun(t, d, "DIRECTORY/FULL DTEXT.DAT")
+
+		if out := buf.String(); !strings.Contains(out, "Fixed length 80 byte records") {
+			t.Errorf("DTEXT.DAT is:\n%s", out)
+		}
+
+		buf.Reset()
+
+		saved := play(t, dungeonSaveGame, 3)
+		if _, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DSAVE.DAT"}, rms.VariableRecords); err != nil {
+			t.Errorf("no save file: %v", err)
+		}
+
+		// The score and moves at the end of a game are the saved game's, the
+		// restore not being a move.
+		restored := play(t, dungeonRestoreGame, 2)
+		if got, want := lastLines(restored, 4), lastLines(saved, 4); got != want {
+			t.Errorf("the restored game ends:\n%s\nand the saved one:\n%s", got, want)
+		}
+	})
+
+	t.Run("host", func(t *testing.T) {
+		work := t.TempDir()
+
+		for host, name := range sources {
+			data, err := os.ReadFile(host)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.WriteFile(filepath.Join(work, name), data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			if name == "DPARAM.FOR" {
+				if err := os.WriteFile(filepath.Join(work, "dparam.for"), data, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+
+		data, err := os.ReadFile(vmssubr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(work, "VMSSUBR.FOR"), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		// A new console: one with no default directory on a volume, whose bare names
+		// are host files, and with the volume only by its logical names.
+		hc, hbuf := newTestConsole(t)
+		hc.Paths = respath.New(nil, bootdata.FS)
+		hd := NewDispatcher(hc, loadEvaxGrammar(t), nil)
+		installPlainDebugger(hc)
+
+		if err := hd.Console.RunHostProcedure("vax.init", hd.Dispatch); err != nil {
+			t.Fatal(err)
+		}
+
+		mountFreshContainerSized(t, hc, "DUA3:", 60000)
+
+		d, c, buf = hd, hc, hbuf
+		buf.Reset()
+
+		bringData(t)
+		t.Chdir(work)
+		link(t)
+
+		run(t, "DEFINE DINDX DUA3:[000000]DINDX.DAT")
+		run(t, "DEFINE DTEXT DUA3:[000000]DTEXT.DAT")
+
+		play(t, "open mailbox\nquit\ny\n", 2)
+	})
+}
+
+// mountFreshContainerSized mounts a new volume of the given blocks on device.
+func mountFreshContainerSized(t *testing.T, c *Console, device string, blocks uint32) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "sized.dsk")
+	if err := c.cmd().InitializeContainer(path, blocks, "SIZED", 0, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().Mount(device, path, true); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -3954,6 +3954,40 @@ $COPY
                         volume locations keeps the source's record
                         format and attributes.
 
+        /RECORD_FORMAT=<format>
+                        (Copies from a host file only; govax's own.)  What
+                        file to make on the volume, since a host file can't
+                        say what records it holds.  Without /BINARY the host
+                        file is read as lines, each a record.  With /BINARY
+                        it is read as bytes.  <format> is:
+
+                          FIXED      Fixed-length records, of /RECORD_SIZE
+                                     bytes.  Lines are padded with blanks;
+                                     bytes are cut, and must make whole
+                                     records.
+                          VARIABLE   Variable-length records.  Bytes are cut
+                                     every /RECORD_SIZE bytes.
+                          VFC        Variable-length with a fixed control
+                                     field.  Lines only.
+                          STREAM, STREAM_LF, STREAM_CR
+                                     Stream files, ending each line with CR LF,
+                                     LF, or CR.  Bytes are kept as they are.
+                          UNDEFINED  No records.  Needs /BINARY, and the bytes
+                                     are kept as they are.
+
+        /RECORD_SIZE=<n>
+                        With /RECORD_FORMAT: a fixed record's length, or the
+                        longest record allowed, up to 32767.
+
+        /CARRIAGE_CONTROL=<kind>
+                        With /RECORD_FORMAT: CARRIAGE_RETURN, FORTRAN, NONE, or
+                        for VFC, PRINT.  The default is CARRIAGE_RETURN for
+                        lines (PRINT for VFC) and NONE with /BINARY.
+
+        /CONTROL_FIELD_SIZE=<n>
+                        With /RECORD_FORMAT=VFC: the control bytes in each
+                        record, 2 by default.
+
         /QUIET          Suppresses the normal %COPY-S-COPIED confirmation
                         line.
 

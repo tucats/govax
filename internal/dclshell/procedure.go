@@ -296,6 +296,21 @@ func continuation(line string) (string, bool) {
 	return strings.TrimRight(text[:len(text)-1], " \t"), true
 }
 
+// JoinContinued is what DCL makes of a line read from the terminal, as a
+// procedure's records are joined (User's Manual, 13.1 to 13.3), with held the
+// text of the lines before it: complete says the command is whole, and otherwise
+// its text so far is to be held, for the next line, read with the prompt "_" and
+// the command prompt.
+func JoinContinued(held, line string) (text string, complete bool) {
+	if held != "" {
+		line = held + " " + line
+	}
+
+	text, more := continuation(line)
+
+	return text, !more
+}
+
 // procedureCommand is what an @ command says: the procedure's file, its
 // /OUTPUT file, and its parameters. host says the file is on the host
 // whatever the default device (RunHostProcedure), and plain that it's a

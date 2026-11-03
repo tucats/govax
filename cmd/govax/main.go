@@ -392,6 +392,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 				prompt, mode = "ASM> ", "asm"
 			} else if c.InDebugger() {
 				prompt, mode = debugger.Prompt, "debug"
+			} else if d.Continuing() {
+				prompt = "_" + prompt
 			}
 
 			rl.SetPrompt(prompt)
@@ -405,6 +407,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			// of file, with nothing typed.
 			if keys.eofPending() {
 				fmt.Fprint(out, prompt+echoExit+"\n")
+				d.CancelContinuation()
 				endOfFile(c, d, out)
 
 				continue
@@ -419,11 +422,14 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			if err != nil {
 				switch {
 				case keys.endOfFile(err):
+					d.CancelContinuation()
 					endOfFile(c, d, out)
 
 					continue
 
 				case errors.Is(err, readline.ErrInterrupt): // CTRL/C
+					d.CancelContinuation()
+
 					continue
 				}
 

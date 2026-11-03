@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/help"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
@@ -19,6 +20,10 @@ type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
 	Help    *help.File
+
+	// continued is the command so far, while it goes on in the next line typed
+	// (Dispatch).
+	continued string
 }
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
@@ -75,6 +80,19 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return err
 	}
 
+	// At command level 0 the line came from the terminal, and a hyphen at its end
+	// says the command goes on in the next (a procedure's own lines come joined).
+	if d.Console.CommandLevel() == 0 {
+		text, complete := dclshell.JoinContinued(d.continued, line)
+		if !complete {
+			d.continued = text
+
+			return nil
+		}
+
+		line, d.continued = text, ""
+	}
+
 	err := d.Console.DispatchConsole(line)
 
 	// A command of process 1's command level 0 is done: the other
@@ -86,6 +104,14 @@ func (d *Dispatcher) Dispatch(line string) error {
 
 	return err
 }
+
+// Continuing reports that the last line ended in a hyphen, so the next goes on with
+// it: the front end's prompt starts with an underscore, as DCL's "_$ " does.
+func (d *Dispatcher) Continuing() bool { return d.continued != "" }
+
+// CancelContinuation forgets a command being continued: CTRL/C or CTRL/Z typed at
+// the prompt for its next line.
+func (d *Dispatcher) CancelContinuation() { d.continued = "" }
 
 // bindGrammar binds every DCL verb/syntax this port implements a handler
 // for. Everything else (device/RTL/assembler-dependent SHOW/CLEAR/DEFINE
@@ -476,6 +502,12 @@ func (d *Dispatcher) bindGrammar() {
 			Dirs:    r.Present("DIRS"),
 			Stream:  r.Present("STREAM"),
 			CRLF:    r.Present("CRLF"),
+			Records: rms.HostRecords{
+				Format:          r.String("RECORD_FORMAT"),
+				Size:            r.Int("RECORD_SIZE"),
+				CarriageControl: r.String("CARRIAGE_CONTROL"),
+				ControlSize:     r.Int("CONTROL_FIELD_SIZE"),
+			},
 		}
 
 		return d.Console.cmd().Copy(

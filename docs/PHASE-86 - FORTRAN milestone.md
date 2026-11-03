@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtask 1 done 2026-11-03). Needs every earlier phase of the
+**Status:** in progress (subtasks 1 and 2 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -114,7 +114,7 @@ or text.
 
 1. **DUNGEON compiled** (done 2026-11-03): every source through FORTRAN and MACRO with no
    message; whatever it finds missing is fixed in subtasks of its own.
-2. **DUNGEON linked and run**, with its ITIME and its data files.
+2. **DUNGEON linked and run** (done 2026-11-03), with its ITIME and its data files.
 3. **The milestone test** in every mode, with a scripted game.
 4. **The VMS round** (optional): exchange volume, procedure, results.
 5. **The manual chapter.**
@@ -161,3 +161,28 @@ or text.
     volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is
     full; and `-` continuation typed at the console isn't honored (`LINK A,-`, as the kit's
     LINK is written), which subtask 2 is to fix.
+- **2026-11-03, subtask 2:** DUNGEON linked and run, by the kit's commands and with
+  its data files. `TestDungeonRuns` builds it from the kit's files and plays:
+  - **On a volume:** everything brought in by COPY, built, and played, SAVE in one run
+    and RESTORE in the next, whose score and moves match. Nothing in the program or
+    its link needed changing.
+  - **On host files:** the sources, objects, and image on the host, and the data on a
+    volume by the logical names `dungeon.doc` gives (DINDX, DTEXT). A program's RMS reaches
+    only volume files (Phase 81's answer 3), so with no default directory on a volume SAVE
+    reports that it can't reach the file, which the game handles. That's what "host files"
+    means for this milestone.
+  - **ITIME** is `testdata/dungeon86/vmssubr.for`, the kit's missing VMSSUBR.FOR: the
+    system subroutine TIME's text read as three integers, by an internal READ.
+  - **COPY's record qualifiers** (the author's direction; `rms/copyformat.go`). A host file
+    says nothing of records, so `/RECORD_FORMAT` (FIXED, VARIABLE, VFC, STREAM, STREAM_LF,
+    STREAM_CR, UNDEFINED), `/RECORD_SIZE`, `/CARRIAGE_CONTROL`, and `/CONTROL_FIELD_SIZE`, named
+    as in FDL's RECORD section, say what to make; `/BINARY` says whether the host file is read
+    as bytes or lines. DTEXT.DAT is `COPY "dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80`.
+    govax's own, there being no host on VMS. Our choices, unconfirmed: lines padded with blanks,
+    PRINT's control bytes (a line feed before, a carriage return after).
+  - **`-` continuation at the terminal** (found in subtask 1): `Dispatcher.Dispatch` holds a
+    line ending in a hyphen at command level 0 and joins the next, `dclshell.JoinContinued`
+    with a procedure's rule, the prompt an underscore and the usual one. CTRL/C or CTRL/Z
+    drops what's held. A subprocess's DCL does the same (`subprocessCLI.nextLine`). The
+    Ctrl/Y level's prompt doesn't.
+

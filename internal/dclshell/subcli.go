@@ -233,6 +233,10 @@ type subprocessCLI struct {
 	// prompt is written before each command read from the terminal.
 	prompt string
 
+	// continued is the command so far, while it goes on in the next line read
+	// (nextLine).
+	continued string
+
 	// login is set for LOGINOUT's CLI (see this file's opening comment);
 	// reported is set once it has written LOGOUT's report; logoutCommand
 	// once a LOGOUT command has logged it out.
@@ -728,12 +732,33 @@ func (cli *subprocessCLI) nextLine() (string, bool, error) {
 		cli.input = in
 	}
 
-	prompt := ""
-	if cli.input.Interactive() {
-		prompt = cli.prompt
+	if !cli.input.Interactive() {
+		return cli.input.ReadLine("")
 	}
 
-	return cli.input.ReadLine(prompt)
+	// A line ending in a hyphen goes on in the next, as at process 1's prompt
+	// (Dispatcher.Dispatch). What's held waits in the CLI, since a read can come
+	// back to wait for its line, and is read again.
+	for {
+		prompt := cli.prompt
+		if cli.continued != "" {
+			prompt = "_" + prompt
+		}
+
+		line, ok, err := cli.input.ReadLine(prompt)
+		if err != nil || !ok {
+			return line, ok, err
+		}
+
+		text, complete := JoinContinued(cli.continued, line)
+		if complete {
+			cli.continued = ""
+
+			return text, true, nil
+		}
+
+		cli.continued = text
+	}
 }
 
 // readTerminal is the CLI's read of a line from its terminal

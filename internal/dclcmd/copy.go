@@ -121,6 +121,11 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.Wrap(vmserrors.CLI_BADQUALIFIERCOMBO, err, "SOURCE/HOST", "DESTINATION/HOST")
 		}
 
+		var records *rms.HostRecordsError
+		if errors.As(err, &records) {
+			return vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, "RECORD_FORMAT")
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, sourceText)
 	}
 

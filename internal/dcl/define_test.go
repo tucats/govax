@@ -376,7 +376,7 @@ func TestLoadEvaxGrammar_copy(t *testing.T) {
 		t.Errorf("DESTINATION.Qualifiers = %+v, want a single %s qualifier", destination.Qualifiers, testQualifierName)
 	}
 
-	wantQualifiers := []string{"BINARY", "QUIET", "VERBOSE", "TEST", "TIME", "IGNORE", "DIRS", "STREAM", "VFC", "CRLF", "LF"}
+	wantQualifiers := []string{"BINARY", "QUIET", "VERBOSE", "TEST", "TIME", "IGNORE", "DIRS", "STREAM", "VFC", "CRLF", "LF", "RECORD_FORMAT", "RECORD_SIZE", "CARRIAGE_CONTROL", "CONTROL_FIELD_SIZE"}
 
 	if len(cp.Qualifiers) != len(wantQualifiers) {
 		t.Fatalf("COPY has %d entry-level qualifiers, want %d: %+v", len(cp.Qualifiers), len(wantQualifiers), cp.Qualifiers)

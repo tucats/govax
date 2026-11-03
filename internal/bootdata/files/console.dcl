@@ -719,6 +719,17 @@ grammar console
         qualifier   vfc/id=1263
         qualifier   crlf/id=1264
         qualifier   lf/id=1265
+        ! govax's (docs/PHASE-86; rms/copyformat.go): what a host file is to be
+        ! on the volume, named as in FDL's RECORD section, since a host file
+        ! can't say what records it holds.
+        qualifier   record_format/id=1266       -
+                    /type=$string
+        qualifier   record_size/id=1267         -
+                    /type=$integer
+        qualifier   carriage_control/id=1268    -
+                    /type=$string
+        qualifier   control_field_size/id=1269  -
+                    /type=$integer
         disallow    crlf and lf
 
     !

@@ -891,7 +891,8 @@ General rules, as in VMS's DCL:
 - Unquoted text is made uppercase; quoted text keeps its case and its
   blanks. `""` inside quotes is a quote.
 - `!` starts a comment, outside quotes.
-- A line ending in `-` continues on the next line.
+- A line ending in `-` continues on the next line, for which DCL prompts with
+  an underscore (`_$ `).
 - Qualifiers can go after the verb or after a parameter. A qualifier
   after a file name may apply to that file only (`/HOST`, `/LIBRARY`).
 - Each command sets `$STATUS` (see [Statuses](#statuses-status-and-severity)).
@@ -962,6 +963,8 @@ with no blank to spare loses its first letter.
 COPY source[/HOST] destination[/HOST]
     /BINARY  /QUIET  /VERBOSE  /TEST
     (to the host only) /CRLF  /LF  /TIME  /STREAM  /DIRS  /IGNORE
+    (from the host only) /RECORD_FORMAT=format  /RECORD_SIZE=n
+                         /CARRIAGE_CONTROL=kind  /CONTROL_FIELD_SIZE=n
 ```
 
 Copies files between the host and a volume, or between volume locations
@@ -970,6 +973,30 @@ destination that's only a directory, or whose name is `*`, takes each
 source file's name; a `*` type takes the source's type. A wildcarded
 source copies every match. A copy never replaces an existing version:
 with no version in the destination, the copy is the next version.
+
+`/RECORD_FORMAT` is govax's own, with the three qualifiers that go with it,
+named as in FDL's RECORD section. A Files-11 file's header says how its bytes
+make records; a host file says nothing, so a copy from the host can be told what
+file to make. Without `/BINARY` the host file is read as lines, each a record. With
+`/BINARY` it is read as bytes.
+
+| `/RECORD_FORMAT=` | Lines of text | With `/BINARY` |
+| --- | --- | --- |
+| `FIXED` | Each padded with blanks to `/RECORD_SIZE`, which is required; a longer line is an error | Cut every `/RECORD_SIZE` bytes, which is required; they must make whole records |
+| `VARIABLE` | Each a record | Cut every `/RECORD_SIZE` bytes, which is required |
+| `VFC` | Each a record, after `/CONTROL_FIELD_SIZE` control bytes (2 by default) | Not allowed |
+| `STREAM`, `STREAM_LF`, `STREAM_CR` | Each ended with CR LF, LF, or CR | The bytes as they are |
+| `UNDEFINED` | Not allowed | The bytes as they are |
+
+`/RECORD_SIZE` is otherwise the longest record allowed. `/CARRIAGE_CONTROL` is
+`CARRIAGE_RETURN`, `FORTRAN`, `NONE`, or for `VFC`, `PRINT`; it defaults to
+`CARRIAGE_RETURN` for lines (`PRINT` for `VFC`, whose two control bytes then say a
+line feed before the line and a carriage return after), and `NONE` with `/BINARY`.
+
+```text
+VAX> COPY "table"/HOST TABLE.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
+VAX> COPY "report.txt"/HOST REPORT.LIS/RECORD_FORMAT=VFC
+```
 
 #### CREATE
 
