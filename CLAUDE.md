@@ -656,7 +656,9 @@ never had.
   subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS, and
   subtask 3 (2026-11-03) `internal/isam`'s reader, and subtask 4 (2026-11-03) its writing without
   splits, the same as VMS's files to the byte, and subtask 5 (2026-11-03) its growth: splits, RRVs,
-  continuations, index levels, ROP LOA, and `Check`.
+  continuations, index levels, ROP LOA, and `Check`, and subtask 6 (2026-11-03) its update and delete
+  (`change.go`: in place or by a split, a bucket's last record a deleted stub, ROP FDL's pointers and
+  `DropPointer`), each of the probe's changing cases VMS's at every dump.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2089,7 +2091,7 @@ expect adjustment as phases land):
   `key.go` each type's order, a key's value in a record; `bucket.go` buckets, index entries, data records and RRVs, SIDRs, and
   decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
   is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
-  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`). `split.go` is what a full bucket does (data, SIDR, and index splits, RRVs, continuations, new roots; `PutLoad` is ROP LOA), and `check.go` `Check`, which walks a whole file for what no operation may leave; `growth_test.go` holds random loads to a model with it.
+  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`). `split.go` is what a full bucket does (data, SIDR, and index splits, RRVs, continuations, new roots; `PutLoad` is ROP LOA), and `check.go` `Check`, which walks a whole file for what no operation may leave; `growth_test.go` holds random loads to a model with it. `change.go` is `Update` (in place, its RFA kept, or by a split), `Delete` (closing up; a bucket's last record a deleted stub with its key; a moved record's RRV taken out; `fast` is ROP FDL, leaving the alternates' pointers), and `DropPointer` (RMS's taking out such a pointer when a search finds it); `change_test.go` replays the probe's changing cases and runs random changes against the model.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

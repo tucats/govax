@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -11,7 +11,9 @@ in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the re
 Part A is the survey, Part B the accepted decisions and the author's answers, and
 Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create`, `Put`, and `PutLoad`,
 splits and all: the probe's in-order loads, three index levels, root splits, duplicates past a bucket, and SIDRs past a bucket come
-out as VMS's in every structure, and `Check` holds any file to the rules. RMS doesn't call it yet. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 6,** `isam`'s update and delete.
+out as VMS's in every structure, and `Check` holds any file to the rules. `Update`, `Delete`, and `DropPointer` change and take out
+records, the probe's twelve "changing" cases coming out as VMS's at every dump, ten of them to the byte. RMS doesn't call it yet.
+`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 7,** RMS's `$CREATE`, `$OPEN`, and `$DISPLAY`.
 
 ## Goal
 
@@ -403,6 +405,47 @@ the ones above differ, this one wins.
   the two halves (`alone`; records of one size never need it); a SIDR filling a bucket with SIDRs after it splits the bucket
   first; index pointers wider than 2 bytes; extension past an area's extent is `allocate`'s, unchanged.
 
+## What update and delete settled (2026-11-03)
+
+Subtask 6 replays the probe's "changing" cases (138 to 149, files U128 to U139) on files made by the same `$PUT`s, each
+`$UPDATE` and `$DELETE` with VMS's status, and holds the file to every dump the log has of it: all twelve by `Dump`, and the
+ten with no split byte for byte, stale bytes past the free offsets too (`TestChangesAsVMS`). Where this section and the ones
+above differ, this one wins.
+
+- **An update is in place.** The record keeps its offset, ID, RFA, and control byte; its bytes after the key are rewritten,
+  and the rest of the bucket moves up or down to suit (U128: 100 bytes, then 250, then 60, in the same bucket, which counts a
+  write for each). Alternates whose values didn't change aren't touched: their buckets' check characters stay.
+- **An update too long for its bucket splits it** like a `$PUT`, the record in its place among the others and keeping its RFA
+  (U137: 150 bytes grown to 390 beside one other record; it went right with ID 1, the RRV in the bucket its RFA names pointed
+  at it there, and the level above got an entry for the left bucket's new high key).
+- **A changed alternate:** the new pointer goes in first, last among the new value's, and then the old one comes out
+  (U130's stale bytes are the new SIDR's, moved down over the old SIDR's place).
+- **The statuses, all before anything is written:** a different primary key, an alternate without CHG changed, or a record
+  too short for an alternate without CHG are RMS$_CHG (`ErrKeyChanged`), even when another key had CHG (U131); too short for
+  the primary key is RMS$_RSZ (`ErrRecordSize`); a new value a key without DUP already has is RMS$_DUP; one a key with DUP
+  has is RMS$_OK_DUP. A null value given a real one with CHG enters the index (U135).
+- **A deleted record's bytes close up,** and if keys are compressed the next record's key is stored again against the one
+  before, **after** the record comes out (U136's stale bytes, for a SIDR; a data record's order is taken to be the same,
+  unconfirmed). The bucket's next ID doesn't go back, so the RFA's ID is missing: RMS$_DEL.
+- **The last record left in a bucket stays as a stub:** its control byte with `IRC$M_DELETED`, ID, RFA, a size word, and its
+  key, no data (U137's only record, and each of U139's buckets, emptied one record at a time). Whether a bucket keeps its last
+  record *by key* or only its last one left, no case tells apart: `lastLeft` takes "only", unconfirmed. A fixed file with no
+  size word can't hold a shorter record, and no case deletes one there: its stub keeps the whole record, marked. A `$PUT` of a
+  stub's key takes its place in the same write, with a new ID (U139).
+- **A record a split moved,** deleted, takes its RRV with it: the RRV in the bucket its RFA names closes up (U137).
+- **A SIDR's pointer comes out,** and the SIDR with it if it was the only one. A value's first pointer passing its
+  `IRC$M_FIRST_KEY` to the next, and a SIDR bucket left empty, are unconfirmed: no case takes out a first pointer with others
+  after it, or empties a SIDR bucket.
+- **ROP FDL,** answering "What the reader settled": VMS 7.1 left the pointers, and the probe's later `$GET`s by each alternate,
+  finding them, took them out and said RMS$_RNF, as the Guide's 8.2.4 says RMS must. That's why no file showed one.
+  `Delete(rfa, true)` leaves them; `DropPointer` is RMS's taking one out, which subtask 8 calls when a search finds one;
+  `Check` allows a pointer to a record whose ID was given and is gone; and a value held only by such pointers isn't a
+  duplicate (`valueHeld`), the Guide's "find that the record no longer exists".
+- **Found by the randomized test** (`TestChangesAgainstAModel`, 3,000 mixed puts, updates, and deletes in eleven shapes), a
+  fault of subtask 4's, not VMS's: RRVs can sit between records, a record put past a bucket's last going after them, so the
+  record whose key is stored again after a removal is the next one *with a key*, not the next entry.
+- **ods2** needed nothing.
+
 ## The rules
 
 ### Keys [manual]
@@ -624,7 +667,7 @@ them.
 5. **`isam`: growth.** Splits, RRVs, index levels and root splits, duplicates, continuation, SIDR
    arrays, extension; `Check`, and a randomized test against a Go map. (done 2026-11-03)
 6. **`isam`: update and delete.** Length changes, alternates moved, deleted records and pointers, RRV
-   chains; ods2's additions if any.
+   chains; ods2's additions if any. (done 2026-11-03; ods2 needed none)
 7. **RMS: `$CREATE`, `$OPEN`, `$DISPLAY`.** XABKEY, XABSUM, XABALLs, every status; CIF;
    F$FILE_ATTRIBUTES; `$EXTEND`; SET DEBUG RMS.
 8. **RMS: record operations.** `$CONNECT`, `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`,
@@ -761,3 +804,12 @@ has REV at all.
   file and on damaged ones, and `TestGrowthAgainstAModel`, 30 runs of 1,500 records of mixed sizes against a model, which reach
   what the probe doesn't. The rules were fitted by replaying the probe's dumps with each candidate rule and keeping the one that
   matched; "What the splits settled" has them, and what's still open (G117 and part of G118).
+- **2026-11-03: subtask 6, `isam`'s update and delete.** `change.go`: `Update` (in place, or `splitForUpdate`, the split's
+  code with the updated record as an old item that keeps its RFA), `Delete` (closing up, a bucket's last record a stub, a moved
+  record's RRV taken out, each alternate's pointer), `DropPointer`, `ErrKeyChanged`; `split.go`'s `leftBytes`, `moveRRVs`, and
+  `alone` now take each leaving item's destination, and a stub leaves no RRV; `insertRecord` puts a record in its key's stub's
+  place; `Check` allows a fast delete's pointers. `change_test.go`'s `TestChangesAsVMS` replays cases 138 to 149 against every
+  dump in the log; `TestChangesAgainstAModel` runs mixed puts, updates, and deletes against the growth test's model (now with
+  each key's order of equal values), `Check` every 25 operations; `TestChangeRefuses` the refusals. Two orders VMS uses were
+  read off stale bytes (U130, U136); the randomized test found subtask 4's RRV-between-records fault. "What update and delete
+  settled" has the findings.

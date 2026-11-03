@@ -1,6 +1,9 @@
 package isam
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Check walks a whole file and reports the first thing wrong with it: what no
 // operation may leave, whatever else it did. For every key, each level is a ring
@@ -8,7 +11,8 @@ import "fmt"
 // entry names a bucket a level down whose keys aren't above the entry's. For the
 // primary key, RFAs are unique, each RRV forwards to the record naming it, and
 // each record can be found by its RFA. For an alternate, each pointer leads to a
-// record with that key's value, and each record that belongs in the index has one.
+// record with that key's value, or to one a fast delete took out, and each record
+// that belongs in the index has one.
 func (f *File) Check() error {
 	records, err := f.checkPrimary()
 	if err != nil {
@@ -306,6 +310,12 @@ func (f *File) checkAlternate(k *Key, records map[RFA][]byte) error {
 	if err := f.Walk(k.Ref, func(e Entry) bool {
 		record, ok := records[e.RFA]
 		if !ok {
+			// A fast delete (ROP FDL) leaves its record's pointers, which a later
+			// search takes out: one to a record that's gone is allowed.
+			if _, err := f.Record(e.RFA); errors.Is(err, ErrDeleted) && f.wasGiven(e.RFA) {
+				return true
+			}
+
 			walkErr = &CorruptError{VBN: e.RFA.VBN, Where: "a pointer to no record"}
 
 			return false
@@ -333,4 +343,18 @@ func (f *File) checkAlternate(k *Key, records map[RFA][]byte) error {
 	}
 
 	return nil
+}
+
+// wasGiven says whether an RFA's ID was ever given out by its bucket: below the
+// bucket's next ID, in a primary data bucket. A deleted record's RFA was; an ID
+// made up by damage usually wasn't.
+func (f *File) wasGiven(rfa RFA) bool {
+	k := f.Keys[0]
+
+	b, err := f.readBucket(rfa.VBN, k.DataBucketSize)
+	if err != nil {
+		return false
+	}
+
+	return b.level == 0 && b.indexNo == 0 && rfa.ID >= 1 && rfa.ID < b.nextID
 }

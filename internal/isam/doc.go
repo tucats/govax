@@ -34,8 +34,11 @@
 // whole key, Record reads by RFA, and Dump shows the structure as text. It
 // also makes one (subtask 4): Create lays out the prolog, and Put adds a
 // record, making a key's tree at its first record. A record that doesn't fit
-// its bucket splits it (split.go, subtask 5), and Check walks a whole file for
-// what no operation may leave, which the tests run after them. It's plain Go that
+// its bucket splits it (split.go, subtask 5). Update and Delete change and take
+// out records already there (change.go, subtask 6): an update in place, its RFA
+// kept, or by a split if it outgrows its bucket; a delete closing up, but for a
+// bucket's last record, kept as a deleted stub with its key. Check walks a whole
+// file for what no operation may leave, which the tests run after them. It's plain Go that
 // knows nothing of VAX memory, FABs, or RABs: internal/rms maps those
 // onto it. Only Prolog 3 files are read, by the author's choice; Open
 // reports anything else as an ErrPrologLevel.

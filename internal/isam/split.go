@@ -123,12 +123,26 @@ func splitOrder(count, balanced int, equal func(int) bool) []int {
 }
 
 // dataItem is one record in a data bucket being split: an old record, or the
-// new one, which has no ID until its place is settled.
+// new one, which has no ID until its place is settled. An updated record is an
+// old one with its new body.
 type dataItem struct {
 	old   *dataRecord
 	key   []byte
 	body  []byte
 	isNew bool
+}
+
+// leavesRRV says whether the item, leaving the bucket, must leave an RRV there:
+// a live record whose RFA names that bucket. A deleted record's stub leaves none,
+// its RFA being RMS$_DEL whether or not one is found (U137's last step).
+func (it *dataItem) leavesRRV(vbn uint32) bool {
+	return it.old != nil && !it.old.isDeleted() && it.old.rfa.VBN == vbn
+}
+
+// movedBefore says whether the item is a live record living away from the bucket
+// its RFA names, whose RRV there must follow it if it moves again.
+func (it *dataItem) movedBefore(vbn uint32) bool {
+	return it.old != nil && !it.old.isDeleted() && it.old.rfa.VBN != vbn
 }
 
 // dataSplit is what splitting a data bucket works from.
@@ -138,7 +152,15 @@ type dataSplit struct {
 	left  *bucket
 	items []dataItem
 	rrvs  []dataRecord // the RRVs already in the bucket
-	pos   int          // the new record's place in items
+	pos   int          // the new or updated record's place in items
+}
+
+// destination says where each item at or past a place goes, for its RRV.
+type destination func(i int) RFA
+
+// onRight is a plain split's destination: items[n:] numbered from 1 in a bucket.
+func onRight(n int, vbn uint32) destination {
+	return func(i int) RFA { return RFA{VBN: vbn, ID: uint16(i - n + 1)} }
 }
 
 // encodeRRV lays out a forwarding record.
@@ -183,8 +205,8 @@ func (s *dataSplit) encodeItems(items []dataItem, vbn uint32, id func(*dataItem,
 
 // leftBytes lays out what stays when items[:n] do: those records, the RRVs
 // already there, and one for each record leaving whose RFA names this bucket.
-// Their IDs on the right are their places there, so the RRVs can be written now.
-func (s *dataSplit) leftBytes(n int, rightVBN uint32) []byte {
+// Where each goes is its destination, so the RRVs can be written now.
+func (s *dataSplit) leftBytes(n int, dest destination) []byte {
 	out := s.encodeItems(s.items[:n], s.left.vbn, func(it *dataItem, _ int) uint16 {
 		if it.old != nil {
 			return it.old.id
@@ -199,8 +221,8 @@ func (s *dataSplit) leftBytes(n int, rightVBN uint32) []byte {
 	}
 
 	for i := n; i < len(s.items); i++ {
-		if it := &s.items[i]; it.old != nil && it.old.rfa.VBN == s.left.vbn {
-			out = append(out, encodeRRV(it.old.rfa.ID, RFA{VBN: rightVBN, ID: uint16(i - n + 1)})...)
+		if it := &s.items[i]; it.leavesRRV(s.left.vbn) {
+			out = append(out, encodeRRV(it.old.rfa.ID, dest(i))...)
 		}
 	}
 
@@ -217,7 +239,7 @@ func (s *dataSplit) leavingRRVs(n int) int {
 	count := 0
 
 	for i := n; i < len(s.items); i++ {
-		if it := &s.items[i]; it.old != nil && it.old.rfa.VBN == s.left.vbn {
+		if s.items[i].leavesRRV(s.left.vbn) {
 			count++
 		}
 	}
@@ -261,7 +283,7 @@ func (s *dataSplit) choose() (int, bool) {
 
 	for _, n := range order {
 		// The VBN changes nothing about a side's size.
-		if fits(blocks, len(s.leftBytes(n, 0))) && fits(blocks, len(s.rightBytes(n, 0))) {
+		if fits(blocks, len(s.leftBytes(n, onRight(n, 0)))) && fits(blocks, len(s.rightBytes(n, 0))) {
 			return n, true
 		}
 	}
@@ -316,6 +338,44 @@ func (f *File) splitData(b *bucket, k *Key, list []dataRecord, value, rest []byt
 	}
 
 	return s.split(n)
+}
+
+// splitForUpdate makes room for a record that an update made too long for its
+// bucket: the bucket splits as it would for a new record, the updated one in its
+// place among the others, keeping its ID where it stays and its RFA wherever it
+// goes. U137's record, grown from 150 bytes to 390 in a bucket holding one other,
+// went right with ID 1, its RRV in the bucket its RFA names pointed there, and the
+// level above got an entry for the bucket's new high key, as for any split.
+func (f *File) splitForUpdate(b *bucket, k *Key, list []dataRecord, at int, rest []byte) error {
+	s := &dataSplit{f: f, k: k, left: b}
+
+	for i := range list {
+		r := &list[i]
+		if r.isRRV() {
+			s.rrvs = append(s.rrvs, *r)
+
+			continue
+		}
+
+		it := dataItem{old: r, key: bytes.Clone(r.key), body: bytes.Clone(r.body)}
+		if i == at {
+			s.pos = len(s.items)
+			it.body = rest
+		}
+
+		s.items = append(s.items, it)
+	}
+
+	n, ok := s.choose()
+	if !ok {
+		_, err := s.alone()
+
+		return err
+	}
+
+	_, err := s.split(n)
+
+	return err
 }
 
 // lastIsNewest says whether the bucket's last record is also the last one it was
@@ -377,7 +437,8 @@ func (f *File) linkNew(left, right *bucket, k *Key, leftHigh, rightFirst []byte)
 // where its RFA says, in another bucket, and that RRV is changed; one still in
 // the bucket its RFA names leaves a new RRV behind. The new record, if it stays,
 // takes the bucket's next ID; if it moves, it's named by its place in the new
-// bucket, and the old bucket spends no ID on it (G106).
+// bucket, and the old bucket spends no ID on it (G106). An updated record is an
+// old one, and keeps its RFA.
 func (s *dataSplit) split(n int) (RFA, error) {
 	f, k, b := s.f, s.k, s.left
 
@@ -386,40 +447,48 @@ func (s *dataSplit) split(n int) (RFA, error) {
 		return RFA{}, err
 	}
 
-	rfa := RFA{VBN: b.vbn, ID: b.nextID}
-	if s.pos >= n {
+	it := &s.items[s.pos]
+
+	var rfa RFA
+
+	switch {
+	case !it.isNew:
+		rfa = it.old.rfa
+	case s.pos >= n:
 		rfa = RFA{VBN: right.vbn, ID: uint16(s.pos - n + 1)}
+	default:
+		rfa = RFA{VBN: b.vbn, ID: b.nextID}
 	}
 
-	moved := s.items[n:]
+	dest := onRight(n, right.vbn)
 
-	b.putBytes(s.leftBytes(n, right.vbn))
+	b.putBytes(s.leftBytes(n, dest))
 	right.putBytes(s.rightBytes(n, right.vbn))
-	right.nextID = uint16(len(moved) + 1)
+	right.nextID = uint16(len(s.items) - n + 1)
 
-	if s.pos < n {
+	if it.isNew && s.pos < n {
 		b.nextID++
 	}
 
 	chainAfter(b, right)
 
-	if err := s.moveRRVs(moved, right.vbn); err != nil {
+	if err := s.moveRRVs(n, dest); err != nil {
 		return RFA{}, err
 	}
 
 	return rfa, f.linkNew(b, right, k, s.lastKey(n), s.items[n].key)
 }
 
-// alone gives the new record a bucket of its own, between what's before it and
-// what's after: no split of the old records left room for it either side. No
-// VMS case reaches this, each using one size of record, so it's the plainest
-// thing that works: three buckets, each entry its own.
+// alone gives the new or updated record a bucket of its own, between what's
+// before it and what's after: no split of the old records left room for it
+// either side. No VMS case reaches this, each using one size of record, so it's
+// the plainest thing that works: three buckets, each entry its own. An updated
+// record keeps its RFA and control byte, with ID 1 in the new bucket.
 func (s *dataSplit) alone() (RFA, error) {
 	f, k, b := s.f, s.k, s.left
 
-	before := s.items[:s.pos]
+	it := &s.items[s.pos]
 	after := s.items[s.pos+1:]
-	value, rest := s.items[s.pos].key, s.items[s.pos].body
 
 	var right *bucket
 
@@ -430,30 +499,48 @@ func (s *dataSplit) alone() (RFA, error) {
 		if err != nil {
 			return RFA{}, err
 		}
-
-		old := s.items
-		s.items = append(append([]dataItem(nil), before...), after...)
-		left := s.leftBytes(len(before), right.vbn)
-		moved := s.rightBytes(len(before), right.vbn)
-		s.items = old
-
-		b.putBytes(left)
-		right.putBytes(moved)
-		right.nextID = uint16(len(after) + 1)
-
-		chainAfter(b, right)
-
-		if err := s.moveRRVs(after, right.vbn); err != nil {
-			return RFA{}, err
-		}
 	}
 
-	middle, rfa, err := f.newRecordBucket(b, k, value, rest)
+	middle, err := f.startRight(k.DataArea, k.DataBucketSize, k.Ref, 0)
 	if err != nil {
 		return RFA{}, err
 	}
 
-	if err := f.linkNew(b, middle, k, s.lastKey(len(before)), value); err != nil {
+	rfa := RFA{VBN: middle.vbn, ID: 1}
+
+	stored := f.encodeRecord(k, 1, rfa, it.key, nil, it.body)
+	if !it.isNew {
+		rfa = it.old.rfa
+		stored = f.encodeRecord(k, 1, rfa, it.key, nil, it.body)
+		stored[0] = it.old.control
+	}
+
+	middle.putBytes(stored)
+	middle.nextID = 2
+
+	dest := func(i int) RFA {
+		if i == s.pos {
+			return RFA{VBN: middle.vbn, ID: 1}
+		}
+
+		return RFA{VBN: right.vbn, ID: uint16(i - s.pos)}
+	}
+
+	b.putBytes(s.leftBytes(s.pos, dest))
+
+	if right != nil {
+		right.putBytes(s.rightBytes(s.pos+1, right.vbn))
+		right.nextID = uint16(len(after) + 1)
+		chainAfter(b, right)
+	}
+
+	chainAfter(b, middle)
+
+	if err := s.moveRRVs(s.pos, dest); err != nil {
+		return RFA{}, err
+	}
+
+	if err := f.linkNew(b, middle, k, s.lastKey(s.pos), it.key); err != nil {
 		return RFA{}, err
 	}
 
@@ -465,21 +552,22 @@ func (s *dataSplit) alone() (RFA, error) {
 		return RFA{}, err
 	}
 
-	return rfa, f.addIndexEntry(k, 1, bytes.Clone(value), right.vbn)
+	return rfa, f.addIndexEntry(k, 1, bytes.Clone(it.key), right.vbn)
 }
 
 // moveRRVs changes the RRVs of records that moved before and have moved again,
-// each in the bucket its RFA names. A bucket is written once in a split however
-// many of its RRVs change, which its check character shows: G106's bucket 3 counts
-// one write for one, and G118's bucket 9 one for two.
-func (s *dataSplit) moveRRVs(moved []dataItem, rightVBN uint32) error {
+// items[from:] going to their destinations, each RRV in the bucket its RFA names.
+// A bucket is written once in a split however many of its RRVs change, which its
+// check character shows: G106's bucket 3 counts one write for one, and G118's
+// bucket 9 one for two.
+func (s *dataSplit) moveRRVs(from int, dest destination) error {
 	byBucket := map[uint32]map[uint16]RFA{}
 
 	var order []uint32
 
-	for i := range moved {
-		it := &moved[i]
-		if it.old == nil || it.old.rfa.VBN == s.left.vbn {
+	for i := from; i < len(s.items); i++ {
+		it := &s.items[i]
+		if !it.movedBefore(s.left.vbn) {
 			continue
 		}
 
@@ -489,7 +577,7 @@ func (s *dataSplit) moveRRVs(moved []dataItem, rightVBN uint32) error {
 			order = append(order, vbn)
 		}
 
-		byBucket[vbn][it.old.rfa.ID] = RFA{VBN: rightVBN, ID: uint16(i + 1)}
+		byBucket[vbn][it.old.rfa.ID] = dest(i)
 	}
 
 	for _, vbn := range order {

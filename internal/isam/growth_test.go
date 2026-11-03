@@ -137,31 +137,63 @@ func TestCheckFindsDamage(t *testing.T) {
 // RFA, in the order put.
 type model struct {
 	records []modelRecord
+
+	// gone is every record deleted, whose RFA must be RMS$_DEL from then on and
+	// whose pointers a fast delete may have left in an alternate.
+	gone map[RFA]bool
 }
 
 type modelRecord struct {
 	rfa  RFA
 	data []byte
+
+	// stamp is when the record took its place among each key's equal values, by
+	// key of reference: an update that changes an alternate puts the record last
+	// among the new value's. With none, the order put is the order.
+	stamp []int
 }
 
-// inOrder lists a key's entries as they should be: by key, then the order put.
+// inOrder lists a key's entries as they should be: by key, then the order put
+// or given the value.
 func (m *model) inOrder(k *Key) []modelRecord {
 	var list []modelRecord
 
-	for _, r := range m.records {
+	var when []int
+
+	for i, r := range m.records {
 		if _, belongs := k.Indexes(r.data); belongs {
 			list = append(list, r)
+
+			if r.stamp != nil {
+				when = append(when, r.stamp[k.Ref])
+			} else {
+				when = append(when, i)
+			}
 		}
 	}
 
-	sort.SliceStable(list, func(i, j int) bool {
-		a, _ := k.Indexes(list[i].data)
-		b, _ := k.Indexes(list[j].data)
+	order := make([]int, len(list))
+	for i := range order {
+		order[i] = i
+	}
 
-		return k.Compare(a, b) < 0
+	sort.SliceStable(order, func(i, j int) bool {
+		a, _ := k.Indexes(list[order[i]].data)
+		b, _ := k.Indexes(list[order[j]].data)
+
+		if c := k.Compare(a, b); c != 0 {
+			return c < 0
+		}
+
+		return when[order[i]] < when[order[j]]
 	})
 
-	return list
+	sorted := make([]modelRecord, len(list))
+	for i, at := range order {
+		sorted[i] = list[at]
+	}
+
+	return sorted
 }
 
 // verify holds a file to the model: Check, each key's walk in order, each record
@@ -179,6 +211,10 @@ func (m *model) verify(t *testing.T, what string, f *File) {
 		at := 0
 
 		if err := f.Walk(k.Ref, func(e Entry) bool {
+			if k.Ref > 0 && m.gone[e.RFA] {
+				return true // a fast delete's leftover
+			}
+
 			if at >= len(want) {
 				t.Errorf("%s: key %d has more than %d entries", what, k.Ref, len(want))
 
@@ -224,6 +260,12 @@ func (m *model) verify(t *testing.T, what string, f *File) {
 
 		if !bytes.Equal(got, r.data) {
 			t.Fatalf("%s: RFA %v holds another record", what, r.rfa)
+		}
+	}
+
+	for rfa := range m.gone {
+		if _, err := f.Record(rfa); !errors.Is(err, ErrDeleted) {
+			t.Fatalf("%s: deleted RFA %v: %v", what, rfa, err)
 		}
 	}
 }

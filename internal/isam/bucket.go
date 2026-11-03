@@ -351,8 +351,10 @@ type sidr struct {
 	pointers []sidrPointer
 }
 
-// sidrPointer is one pointer in a SIDR.
+// sidrPointer is one pointer in a SIDR: where it is in the bucket, its
+// control byte, and the RFA it holds.
 type sidrPointer struct {
+	offset  int
 	control uint8
 	rfa     RFA
 }
@@ -391,7 +393,7 @@ func (f *File) sidrs(b *bucket, k *Key) ([]sidr, error) {
 				return nil, b.corrupt(cursor, "a SIDR pointer past its record")
 			}
 
-			p := sidrPointer{control: b.data[cursor]}
+			p := sidrPointer{offset: cursor, control: b.data[cursor]}
 			id := binary.LittleEndian.Uint16(b.data[cursor+1:])
 			cursor += 3
 

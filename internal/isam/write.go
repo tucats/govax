@@ -23,7 +23,6 @@ var (
 	// ErrRecordSize is a record too short for the primary key, the wrong
 	// size for a fixed format file, or too long for a bucket.
 	ErrRecordSize = errors.New("isam: bad record size")
-
 )
 
 // WritableBlocks is a file Create and Put can change. Extend adds at least
@@ -708,7 +707,7 @@ func (f *File) put(record []byte, load bool) (PutResult, error) {
 	for i := 1; i < len(f.Keys); i++ {
 		dup, err := f.insertAlternate(f.Keys[i], record, rfa)
 		if err != nil {
-			f.backOut(i, record, value, rfa)
+			f.backOut(i, record, rfa)
 
 			return PutResult{}, err
 		}
@@ -793,6 +792,21 @@ func (f *File) insertRecord(b *bucket, k *Key, value, rest []byte) (RFA, error) 
 	list, err := f.dataRecords(b, k)
 	if err != nil {
 		return RFA{}, err
+	}
+
+	// A deleted record's stub with this key gives way to it, in the same write:
+	// U139's P0000003 went where its stub was, with a new ID, the bucket counting
+	// one write.
+	for i := range list {
+		if r := &list[i]; r.isDeleted() && !r.isRRV() && k.Compare(r.key, value) == 0 {
+			f.closeUp(b, k, list, i)
+
+			if list, err = f.dataRecords(b, k); err != nil {
+				return RFA{}, err
+			}
+
+			break
+		}
 	}
 
 	at, previous, next := b.free, []byte(nil), (*dataRecord)(nil)
@@ -931,11 +945,18 @@ func (f *File) insertSIDR(b *bucket, k *Key, value []byte, rfa RFA) (bool, error
 
 		switch c := k.Compare(s.key, value); {
 		case c == 0:
-			if k.Flags&FlagDuplicates == 0 {
+			// Only a live record makes it a duplicate, not a pointer a fast delete
+			// left (valueHeld).
+			held, err := f.valueHeld(k, value)
+			if err != nil {
+				return false, err
+			}
+
+			if held && k.Flags&FlagDuplicates == 0 {
 				return false, ErrDuplicate
 			}
 
-			return true, f.addPointer(b, k, list, i, rfa)
+			return held, f.addPointer(b, k, list, i, rfa)
 		case c > 0:
 			next = s
 		default:
@@ -1123,7 +1144,7 @@ func (f *File) addPointer(b *bucket, k *Key, list []sidr, i int, rfa RFA) error 
 // done so far, last first, then the data bucket. A failure here leaves the
 // record in the file, which is as RMS would leave it (the manual's
 // RMS$_OK_IDX has a like case), so errors here aren't Put's to report.
-func (f *File) backOut(failed int, record, value []byte, rfa RFA) {
+func (f *File) backOut(failed int, record []byte, rfa RFA) {
 	for i := failed - 1; i >= 1; i-- {
 		k := f.Keys[i]
 		if v, belongs := k.Indexes(record); belongs {
@@ -1131,131 +1152,5 @@ func (f *File) backOut(failed int, record, value []byte, rfa RFA) {
 		}
 	}
 
-	_ = f.removeRecord(f.Keys[0], value, rfa)
-}
-
-// removeRecord closes up a record just put in a data bucket. Its ID stays
-// spent, and its old last bytes stay past the free offset.
-func (f *File) removeRecord(k *Key, value []byte, rfa RFA) error {
-	b, err := f.readBucket(rfa.VBN, k.DataBucketSize)
-	if err != nil {
-		return err
-	}
-
-	list, err := f.dataRecords(b, k)
-	if err != nil {
-		return err
-	}
-
-	var previous []byte
-
-	for i := range list {
-		r := &list[i]
-		if r.isRRV() {
-			continue
-		}
-
-		if r.rfa != rfa {
-			previous = r.key
-
-			continue
-		}
-
-		end := b.free
-		if i+1 < len(list) {
-			end = list[i+1].offset
-		}
-
-		// The next record's key goes back to depending on the one before.
-		if i+1 < len(list) && !list[i+1].isRRV() && k.Flags&FlagKeyCompress != 0 {
-			next := &list[i+1]
-			keyAt, old := f.dataKeyPlace(b, k, next)
-			f.restoreDataKey(b, keyAt, old, compressKey(next.key, previous))
-		}
-
-		b.replace(r.offset, end-r.offset, nil)
-		b.touch()
-
-		return f.writeBucket(b)
-	}
-
-	return nil
-}
-
-// removePointer takes a record's pointer out of its SIDR, and the SIDR out
-// if that was its only one.
-func (f *File) removePointer(k *Key, value []byte, rfa RFA) error {
-	vbn, err := f.descend(k, value)
-	if err != nil {
-		return err
-	}
-
-	b, err := f.lastFor(k, vbn, value)
-	if err != nil {
-		return err
-	}
-
-	list, err := f.sidrs(b, k)
-	if err != nil {
-		return err
-	}
-
-	for i := range list {
-		s := &list[i]
-		if k.Compare(s.key, value) != 0 {
-			continue
-		}
-
-		if len(s.pointers) == 1 {
-			f.removeSIDR(b, k, list, i)
-		} else if err := removeFromArray(b, s, rfa); err != nil {
-			return err
-		}
-
-		b.touch()
-
-		return f.writeBucket(b)
-	}
-
-	return nil
-}
-
-// removeSIDR closes up a whole SIDR.
-func (f *File) removeSIDR(b *bucket, k *Key, list []sidr, i int) {
-	s := &list[i]
-
-	end := b.free
-	if i+1 < len(list) {
-		end = list[i+1].offset
-	}
-
-	if i+1 < len(list) && k.Flags&FlagKeyCompress != 0 {
-		var previous []byte
-		if i > 0 {
-			previous = list[i-1].key
-		}
-
-		next := &list[i+1]
-		restoreSIDRKey(b, next.offset, 2+int(b.data[next.offset+2]), compressKey(next.key, previous))
-	}
-
-	b.replace(s.offset, end-s.offset, nil)
-}
-
-// removeFromArray takes one pointer out of a SIDR holding others. Only the
-// last can have been added by the record being taken out.
-func removeFromArray(b *bucket, s *sidr, rfa RFA) error {
-	last := s.pointers[len(s.pointers)-1]
-	if last.rfa != rfa {
-		return b.corrupt(s.offset, "a SIDR's last pointer isn't the record's")
-	}
-
-	size := 3 + int(last.control&ircPtrSize) + 2
-	whole := int(binary.LittleEndian.Uint16(b.data[s.offset:]))
-	end := s.offset + 2 + whole
-
-	binary.LittleEndian.PutUint16(b.data[s.offset:], uint16(whole-size))
-	b.replace(end-size, size, nil)
-
-	return nil
+	_ = f.removeRecord(f.Keys[0], rfa)
 }
