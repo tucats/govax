@@ -29,9 +29,12 @@
 // the record carries its RFA with it. That's why a SIDR's pointers still
 // work after a split, and why a program can keep an RFA.
 //
-// So far the package reads such a file (subtask 3): Open reads the prolog,
-// Find searches a key's tree, First and Following read in key order, Walk
-// reads a whole key, Record reads by RFA, and Dump shows the structure as text. It's plain Go that
+// The package reads such a file (subtask 3): Open reads the prolog, Find
+// searches a key's tree, First and Following read in key order, Walk reads a
+// whole key, Record reads by RFA, and Dump shows the structure as text. It
+// also makes one (subtask 4): Create lays out the prolog, and Put adds a
+// record, making a key's tree at its first record. Put can't yet split a
+// bucket, so a record that doesn't fit is ErrBucketFull. It's plain Go that
 // knows nothing of VAX memory, FABs, or RABs: internal/rms maps those
 // onto it. Only Prolog 3 files are read, by the author's choice; Open
 // reports anything else as an ErrPrologLevel.

@@ -219,6 +219,7 @@ type Area struct {
 // File is an open indexed file.
 type File struct {
 	blocks Blocks
+	out    WritableBlocks // nil if blocks can't be written
 	attr   Attributes
 
 	Version     int
@@ -263,6 +264,8 @@ func Open(blocks Blocks, attr Attributes) (*File, error) {
 		EOF:         binary.LittleEndian.Uint32(first[plgEOF:]),
 		GlobalBufs:  int(binary.LittleEndian.Uint16(first[plgGlobalBuf:])),
 	}
+
+	f.out, _ = blocks.(WritableBlocks)
 
 	if err := f.readKeys(first); err != nil {
 		return nil, err

@@ -3,14 +3,14 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
 Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key; nothing writes one yet, and RMS
-doesn't call it. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 4,** `isam`'s writing, without splits.
+Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create` and `Put`, the same to the byte
+as VMS's up to the first split; a record that needs one is `ErrBucketFull`. RMS doesn't call it yet. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 5,** `isam`'s growth: splits, RRVs, index levels, and the rest.
 
 ## Goal
 
@@ -345,6 +345,22 @@ Subtask 3's tests read the probe's 103 Prolog 3 files and the 27 indexed files o
 - **`IRC$M_NOPTRSZ`** on a data record or a SIDR pointer appears in no file here. The decoder takes it to mean no VBN follows, which is unconfirmed.
 - **ROP FDL's pointers** still aren't seen: `U134` (case 144) and every system file have no pointer to a deleted record, though `$DELETE` with FDL should leave them, and that case's reads by alternate key said RMS$_RNF. An entry whose `Record` is `ErrDeleted` is therefore possible only in theory so far. Subtask 6 settles it with `U134`'s dumps, and RMS must skip such an entry.
 
+## What the writer settled (2026-11-03)
+
+Subtask 4 replays the probe's `$PUT`s on `Create`'s files. The 61 Prolog 3 "key shapes" files (cases 1 to 65, every key type, flag, and area layout) and each step of the ten growth cases up to its first split come out
+**the same as VMS's to the byte**, unused bytes too. So answer 3's decoded comparison is met and more, for now; a later subtask may fall back on `Dump` where a stale byte's origin isn't worth following. Where this section and the ones above differ, this one wins.
+
+- **Data compression scans a longword at a time,** from the start of the fragment being built: a run is seen only if a whole longword at that stride is one byte, and then it's measured both ways. That's why a run of 6 is compressed or not by where it falls (one starting a byte past a stride holds no whole longword), which looked like no rule at all until `fragoff` was tabulated. The Guide's "runs under 5" holds: 5 is the shortest, which only the local system disk's files show (`SYSUAF.DAT` and others fail at 6; the probe's fail at 4). `CheckCompression` recompresses every key and record of a file, and every file here passes.
+- **A run past 256 bytes is unconfirmed.** A byte's count allows 255 repeats, and `compressData` starts a new fragment there, but no file here has so long a run (setting the limit to 200 or to none changes nothing). The VMS round can try one.
+- **A level's last index entry is the key's highest value by its type,** not FF bytes: `7F` as the top byte of a signed key, `9999999C` for packed, and for a descending key the lowest (zeros, a top byte of `80` when signed, `9999999B` packed). Compressed like any key. "An index bucket" above has only the ascending unsigned form.
+- **A new key's bucket order:** the level 0 bucket, then the index bucket over it. A level 1 area apart from the index area makes the root a level 2 bucket over a level 1 bucket (`S63`). Index buckets start with a check character of 0, level 0 buckets get 1 at their first record.
+- **Allocation:** area 0 starts at VBN 1, its first extent holding the prolog; the others follow in order, each rounded by the volume. What's left of an extent too small for a bucket stays unused, and the next extent is a new one even when contiguous. `Extend` asks for the larger of the bucket and DEQ; a 3-block cluster hides which VMS asks for, so that's unconfirmed.
+- **Order within a bucket:** a record with an equal key goes after those there. A SIDR's new pointer goes last in its array. The next key is stored again against the new one, **before** the new record goes in for a data bucket and **after** it for a SIDR, which VMS's stale bytes show (`S6`, `S39`).
+- **A failed `$PUT`:** a primary duplicate is refused with nothing written and no ID spent. An alternate's is found after the record went in: it comes out again, the bucket counting two writes and an ID spent, the old bytes left past the free offset (`S41`). Taking out earlier alternates' pointers has no VMS case, since none has two alternates failing at the second: `TestBackOutOfAlternates` holds only that the file reads as before.
+- **The prolog:** a named key's name is blank filled, an unnamed one's zeros. Keys 1 on start at VBN 2, `66` hex apart. VMS's files show 3 in a block; 5 is as many as fit, the next block past that being unconfirmed.
+- **Pointers:** a data record's is always 4 bytes, an index's and a SIDR's 2 here. Wider ones for VBNs past 65,535 are `pointerBytes`'s guess, unconfirmed. So is an unmade key's root field's byte order, DAN, LAN, IAN, when the areas differ: no dump catches one.
+- **Left to later subtasks:** `Spec`'s flags are the descriptor's, so an XABKEY's mapping onto them (which keys compress: strings of 6 bytes or more, data only on the primary) and the default bucket size are subtask 7's, as are RMS's checks of a `Spec`. `TestShapesAsVMS` reads its `Spec` from VMS's own descriptors.
+
 ## The rules
 
 ### Keys [manual]
@@ -562,7 +578,7 @@ them.
    decompression, key comparison for each type and direction; search, sequence, and `Dump`; every
    VMS-made file read whole, and each record found by each key. (done 2026-11-03)
 4. **`isam`: writing, without splits.** `Create`, areas, first records, indexes made at first need,
-   compression, IDs, check characters, the prolog's sums; files as the probe's first cases.
+   compression, IDs, check characters, the prolog's sums; files as the probe's first cases. (done 2026-11-03)
 5. **`isam`: growth.** Splits, RRVs, index levels and root splits, duplicates, continuation, SIDR
    arrays, extension; `Check`, and a randomized test against a Go map.
 6. **`isam`: update and delete.** Length changes, alternates moved, deleted records and pointers, RRV
@@ -692,3 +708,7 @@ has REV at all.
   7-3 and 7-4 both ways, generic, numeric, exact, sequence), each alternate's entries against the records that belong in it, and `Find`
   against the long way round at every level. `TestRealIndexedFiles` (`internal/rms`, local) reads the system disk's 27 files, LMF$LICENSE.LDB
   left out as in the survey. Nothing outside the package calls it yet.
+- **2026-11-03: subtask 4, `isam`'s writing, without splits.** `write.go` (`Create`, a `Spec` of `KeySpec`s and `AreaSpec`s; `Put`; `allocate`; `makeIndex`; each insertion and its backing out; `WritableBlocks`,
+  which `Open` finds by asking its `Blocks`) and `compress.go` (`compressKey`, `compressData`, `recordRest`, `CheckCompression`). `write_test.go` holds it to VMS: `TestShapesAsVMS` makes each shape file by the log's `$PUT`s with each status and RFA, and compares by `Dump`, then
+  byte for byte; `TestGrowthStepsAsVMS` does the growth cases after every `$PUT`, reopening each time, up to the first split, against the blocks in the log; `TestCompressionIsVMSs` recompresses every file, and `TestRealIndexedFiles` the 27 on the system disk. Changing `shortestRun`, or the stride,
+  made these fail, so they do hold those rules; the longest run's limit they don't (above). "What the writer settled" has the findings. `ErrBucketFull` is the seam subtask 5 replaces.

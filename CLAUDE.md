@@ -654,7 +654,8 @@ never had.
   organization on volume files, laid out as VMS's, and FORTRAN's keyed statements
   through FTNRTL; its Part A has the layout read from VMS's own files, and
   subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS, and
-  subtask 3 (2026-11-03) `internal/isam`'s reader.
+  subtask 3 (2026-11-03) `internal/isam`'s reader, and subtask 4 (2026-11-03) its writing without
+  splits, the same as VMS's files to the byte.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2087,7 +2088,7 @@ expect adjustment as phases land):
   `key.go` each type's order, a key's value in a record; `bucket.go` buckets, index entries, data records and RRVs, SIDRs, and
   decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
   is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
-  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. Reading only so far.
+  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`); a record needing a split is `ErrBucketFull` so far.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

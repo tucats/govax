@@ -114,6 +114,10 @@ func readIndexed(t *testing.T, name string, f *volume.File, attr ondisk.RecAttr)
 		return -1, 0
 	}
 
+	if _, err := file.CheckCompression(); err != nil {
+		t.Errorf("%s: %v", name, err)
+	}
+
 	count, gone := 0, 0
 
 	for _, k := range file.Keys {
