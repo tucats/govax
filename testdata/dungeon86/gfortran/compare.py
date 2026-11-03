@@ -114,8 +114,9 @@ def play_govax(binary, work, script):
         out, cut = run_govax(binary, work, commands, LIMIT), False
     except subprocess.TimeoutExpired as e:
         out, cut = (e.stdout or b"").decode(errors="replace"), True
-    at = out.find("Welcome to Dungeon.")
-    return (out[at:] if at >= 0 else out), cut
+    # The commands before RUN print nothing after MOUNT's message, so the game's output
+    # is what's after it.
+    return out.split("mounted on _DUA1:\n", 1)[-1], cut
 
 
 def play_gfortran(work, script):
