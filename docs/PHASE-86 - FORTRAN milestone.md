@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtasks 1 to 5 done 2026-11-03). Needs every earlier phase of the
+**Status:** in progress (subtasks 1 to 6 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -115,7 +115,7 @@ or text.
 3. **The milestone test** (done 2026-11-03) in every mode, with a scripted game.
 4. **The VMS round** (done 2026-11-03): exchange volume, procedure, results.
 5. **The manual chapter** (done 2026-11-03).
-6. **FORTRAN-INTERNALS.md finished.**
+6. **FORTRAN-INTERNALS.md finished** (done 2026-11-03).
 7. **Close-out:** CLAUDE.md, PLAN.md, the follow-up list.
 
 ## Progress log
@@ -338,4 +338,11 @@ or text.
     device), 14.6's list-directed output and STOPPER, the 19-module FTNRTL build as now printed with a program run on it, the
     NOTIMPL message, and 14.11's DUNGEON commands through a scripted game. **Not run:** 14.11's VMS commands as printed: they
     are `ftn86.com`'s, with a program's own options file in place of `FTN86.OPT`.
+- **2026-11-03, subtask 6:** `FORTRAN-INTERNALS.md` finished as a guided tour. Its opening and the passages that looked ahead
+  now describe the compiler as it stands (`Type.Compiled`, which it cited, is long gone). What it lacked is new: section 19
+  is listings, cross references, `/CHECK`, and `/NOF77`, with `INDEX`'s code from a compile run for it; section 20 is DUNGEON against
+  gfortran and everything on VMS, with what the rounds found and why govax had hidden it; section 21 is a map of the files and
+  what this compiler's history suggests for another. Section 17 points to section 20. Sections keep their numbers, since other
+  documents cite them. Each code name the new sections use was checked against the source, which corrected two sentences as written:
+  a shift's `ROTL` is for any left shift under `OVERFLOW`, constant counts too, and `FoldFor` leaves an overflowing operation to trap.
 

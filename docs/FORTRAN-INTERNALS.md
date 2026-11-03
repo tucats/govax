@@ -2,14 +2,15 @@
 
 This is a guided tour of govax's FORTRAN compiler and its run-time
 library, FTNRTL, for someone who wants to know how they work, or to
-write a compiler of their own for the VAX under VMS. It grows a phase at
-a time with the compiler (`docs/PHASE-74 - FORTRAN plan.md` lays out
-the program; its Part B holds the decisions this tour refers to). The
-user's side is the manual's chapter 14, "Programming in FORTRAN".
+write a compiler of their own for the VAX under VMS. It was written with
+the compiler, a phase at a time (`docs/PHASE-74 - FORTRAN plan.md` lays out
+the program; its Part B holds the decisions this tour refers to), and a
+later section may say what an earlier phase added. The user's side is the
+manual's chapter 14, "Programming in FORTRAN".
 
-So far (Phases 74 to 84) the compiler parses every statement of the
-language and gives every declaration its meaning and its storage, and
-compiles a subset of the executable statements: main programs,
+The compiler parses every statement of the language, gives every
+declaration its meaning and its storage, and compiles the executable
+statements: main programs,
 subroutines, and functions of every type, with ENTRY, alternate returns,
 adjustable arrays, procedures as arguments, the built-in functions, and
 statement functions; every expression in every type (BYTE, LOGICAL and
@@ -24,14 +25,20 @@ access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
 FIND, REWRITE, DELETE, and UNLOCK; and DEC's data extensions, structures and
 records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
 and `/ALIGN`; and what a program needs to use VMS: definition modules, null
-arguments, handlers, ASTs, and the system subroutines. Indexed files are a later program's.
+arguments, handlers, ASTs, and the system subroutines. It has no indexed files
+or DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
+output has run on a real VAX (section 20).
+
 The tour follows one small program through every pass (section 1), then
 takes the passes in order, with a second program for declarations and
 storage (section 8), a third for the types and how each chooses its
 instructions (section 11), and a fourth for control flow and subprograms
 (section 12), a fifth for records and how a layout reaches the code (section
 13), then FTNRTL, then what using VMS asks of them both, then the optimizer,
-then how the compiler is tested. Every dump and MACRO listing before section 16
+then how the compiler is tested, what it tells the debugger, its listings and
+run-time checks, and what a real program and a real VAX found. Section 21 is a
+map of the files, with what building this one suggests about building another.
+Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
 Each pass's package also has a `doc.go` that teaches it in more detail;
@@ -46,13 +53,14 @@ produced and handing on something a step closer to machine code:
  AVERAGE.FOR
      |
  source ---------- lines into statements: columns, continuations,
-     |             comments, INCLUDE                     (Phase 74)
- lex ------------- each statement's kind, and its tokens (Phases 75-76)
- parse ----------- tokens into a syntax tree             (Phases 75-76)
- sema ------------ names, types, blocks, labels, storage (Phases 75-78)
- ir -------------- the tree lowered to basic blocks      (Phases 75, 78)
- opt ------------- optional improvements                 (Phase 84)
- codegen --------- VAX instructions, as MACRO-32 text    (Phases 74-78)
+     |             comments, INCLUDE
+ lex ------------- each statement's kind, and its tokens
+ parse ----------- tokens into a syntax tree
+ sema ------------ names, types, blocks, labels, storage
+ ir -------------- the tree lowered to basic blocks
+ opt ------------- improvements to the blocks, under /OPTIMIZE
+ codegen --------- VAX instructions, as MACRO-32 text
+ opt ------------- improvements to the instructions, under /OPTIMIZE
      |
  AVERAGE.MAR --MACRO--> AVERAGE.OBJ --LINK (FTNRTL)--> AVERAGE.EXE
 ```
@@ -222,8 +230,8 @@ and keywords aren't reserved: in `REAL*8 HVAL` the 8 is a length, and
 in `DO 10 H = 1, 2` the 10 is a label. A Hollerith constant can only be
 where a value can be, so the scanner takes digits as a count only after
 `( , / = .`, or after `*` that follows a digit (DATA's repeat count, as
-in `2*4HABCD`). The lexer will meet the same question and can use the
-same rule.
+in `2*4HABCD`). The lexer meets the same question and uses the same
+rule.
 
 VAX FORTRAN uses the apostrophe once more: `READ (1'10) X` reads record
 10 of unit 1. An apostrophe after a name or number inside parentheses
@@ -310,7 +318,7 @@ the other way round, in three steps (Decision 5):
    the two statements above); anything else is a keyword statement,
    whose keyword is the longest the text starts with (`ENDIF` before
    `END`). `kinds.go`'s table names every VAX FORTRAN statement, so a
-   statement the compiler can't compile yet is still known by name.
+   statement the compiler doesn't compile, DICTIONARY, is still known by name.
 3. **Tokenize** (`tokenize.go`): with the kind known, split the text
    after the keyword into names, numbers, constants, and operators. The
    kind helps here too: in `DO10E1=1,5` the tokenizer knows a label comes
@@ -353,12 +361,12 @@ parser (Decision 6) is **recursive descent**: a table (`parse.go`'s
 order its statement's grammar gives them, so each function reads like
 the grammar rule it implements, and an error can say exactly what was
 expected where (`expected '=', but found ','`). Every kind has a
-function, since Phase 76: the parser builds a node for every statement
-of VAX FORTRAN, and it is semantic analysis that reports one it can't
-compile yet, by name, where it reaches it: `%FORT-E-NOTIMPL, the READ
-statement is not implemented yet`. Keeping that judgment out of the
-parser means the grammar is finished once, and each later phase only
-gives statements their meaning.
+function: the parser builds a node for every statement of VAX FORTRAN,
+and it is semantic analysis that reports one it can't compile, by name,
+where it reaches it: `%FORT-E-NOTIMPL, the DICTIONARY statement is not
+implemented yet`. Keeping that judgment out of the parser meant the grammar
+was finished once, at Phase 76, when the same message named READ and much
+else, and each phase after it only gave statements their meaning.
 
 The I/O statements share one grammar, the **control list**: specifiers
 in parentheses, each `keyword=value`, except that the first (the unit)
@@ -607,10 +615,11 @@ and what semantic analysis makes of it (`sema.Dump`):
 
 A `Type` is a kind and a size, so each line of the manual's Table 2-1 is its
 own type, and BYTE is only another way to write LOGICAL\*1 (`types.go`).
-Phase 76 gives every type its size and alignment; `Type.Compiled` says
-which ones expressions can use so far. A name of another type still gets
-its storage and initial values, and draws `%FORT-E-NOTIMPL` only where a
-statement first uses it, so each later phase has only expressions to add.
+Every type has its size and alignment here, from the start. That let
+declarations and storage be finished at Phase 76, before most types could
+appear in an expression: a name of such a type had its storage and initial
+values, and drew a message only where a statement first used it, so
+Phase 78 had only expressions to add.
 
 The IMPLICIT statements are read before anything else in the unit, since
 they type the names in the unit's own header (`implicit.go`).
@@ -1305,8 +1314,8 @@ SCALE.$1:
 A word reaches 32K bytes either way, as far as the `BRW` every long branch
 uses. An `IndirectJump` keeps the blocks it may reach (its label list, or
 every label the unit ASSIGNs), though the instruction doesn't use them: a
-jump's targets are what the flow analysis of Phase 84 will need to see, and
-sema checks them as it checks any jump's. ASSIGN is `MOVAB L10,V`, an
+jump's targets are what the optimizer's flow analysis (section 16) needs to
+see, and sema checks them as it checks any jump's. ASSIGN is `MOVAB L10,V`, an
 address, which is why V must be a longword; `LabelAddr` is the IR's
 expression for it.
 
@@ -1727,9 +1736,9 @@ the loop and calls for each.
 - **The control block** is a few longwords in the program's `$PDATA`: a
   word of size, a word of flags (which of ERR=, END=, and IOSTAT= the
   statement has, and whether its format is a run-time one), and a
-  longword not used yet. Later phases add fields after these and raise
-  the size, and FTNRTL reads only what the size says is there, so old
-  programs go on working. What changes from one execution of the
+  longword not used. A new field would go after these and raise the
+  size, and FTNRTL reads only what the size says is there, so old
+  programs would go on working. What changes from one execution of the
   statement to the next, the unit and the format, are the begin call's
   other arguments.
 - **The descriptors** are the VAX calling standard's: the item's
@@ -1902,7 +1911,8 @@ The floating descriptors, F, E, D, and G, are `ftn_float.mar`'s. Writing a
 real number correctly is the hard part of a run-time library, and FTNRTL
 doesn't do it: LIBRTL's `OTS$$CVT_x_T_R8` gives the value's exact decimal
 digits in a buffer in the caller's frame, rounded half up at the place
-asked for. The module's own work is the layout, and one routine, `LAYOUT`,
+asked for. (The routine is undocumented, and what it writes and changes had to
+be learned twice: section 20.) The module's own work is the layout, and one routine, `LAYOUT`,
 serves every form: it is told how many digits go before the point, how many
 after, how far the first digit is from the point (`L_SHIFT`, so that a
 negative scale factor's or a small value's leading zeros need no case of
@@ -2450,6 +2460,9 @@ pipeline is tested end to end on govax.
   first, or is longest, or holds the values, the program must print the
   same thing. That is the test of everything the compiler leaves to the
   linker.
+- **Another compiler, and the real machine.** `testdata/dungeon86/gfortran` and
+  `testdata/ftn86` compare a whole program's output with gfortran's and with VMS's
+  own run. Section 20 tells what they found.
 
 ## 18. Telling the debugger
 
@@ -2484,3 +2497,128 @@ no optimizer pass looks at. That matters: a debugging qualifier that moved one i
 for. `TestDebugChangesNoCode` compiles every program both ways and takes the directive, the table, and the labels out of the result: what's
 left has to be the same file. That test earned its place at once: the first name tried, `$Ln`, was already the optimizer's name for a
 loop's limit.
+
+## 19. Listings and run-time checks
+
+**A listing is laid out, not generated.** `internal/fortran/listing` isn't a pass. It takes an `Input` (the source's lines, the
+messages, where units start, the headings, the maps' text) and makes pages of it, and `listinginput.go` gathers that input from
+whichever passes ran. That shape comes from when a listing is wanted: after errors, when later passes never ran. So the listing
+can't be something the last pass writes. A line read twice, through two INCLUDEs, needs its messages under the right reading, which
+is why `source.Line` has a `Serial`, and the map is one piece of text (`codegen.StorageMap`) that both files print.
+
+**A cross reference is noted, not computed.** Only semantic analysis knows what a name is, so it notes each mention as it goes:
+`lookup` a use, `declare` a definition, `noteAssigned` a value given (`sema/crossref.go`). The trouble is that analysis may look at one
+place more than once, evaluating a constant expression twice or trying an input item two ways, so a mention is keyed by its line and
+column, and the strongest thing said of it wins. As section 7 says, `/WARNINGS=UNUSED` then needed nothing new.
+
+**`/CHECK=BOUNDS` is one instruction.** The VAX has an instruction for it. This program stores past its array:
+
+```
+      PROGRAM CHK
+      REAL V(10)
+      I = 11
+      V(I) = 2.5
+```
+
+The store becomes
+
+```
+	INDEX	CHK.I,#1,#10,#1,#0,R0
+	MOVL	#^X00004120,CHK.V-4[R0]	; 2.5
+```
+
+`INDEX` checks its subscript against the two limits and computes `(subscript + index) * size`, here just the subscript, and if the
+limits are broken takes the subscript range trap, so the failure is `%SYSTEM-F-SUBRNG` with no run-time library involved. In the IR it
+is an expression like any other, `InRange` (`ir/lowerchecks.go`), and it matters that it is. A check that went ahead of the statement,
+as a function's call does, would run in
+
+```
+      IF (I .GE. 1 .AND. A(I) .GT. 0.0) ...
+```
+
+when I is 0, which the branch's `.AND.` exists to prevent. The check must run only when the subscript would have, so it lives inside
+the expression that uses the subscript. Subscripts of the form `I+1` check `I` with both limits moved by one, which keeps the element's
+address in its usual form.
+
+**The other checks are bits.** `OVERFLOW` sets the IV bit in each entry mask, `^M<IV>`, and the hardware does the rest. A left shift under
+it has to be a `ROTL` and a mask, since `ASHL` sets V for bits shifted out, which FORTRAN doesn't call overflow. `UNDERFLOW` is a `BISPSW #^X40` at each entry point. An entry mask holds only for the routine it's on, so each unit keeps its own
+checks, even when called from one compiled otherwise.
+
+**The cost is in the optimizer.** A check is an exception the program can see, so `/CHECK` changes what the optimizer may do. Under
+`OVERFLOW`, integer arithmetic may fault, so it's treated as division is: `mayFault` and `unsafeToMove` take the unit's setting, folding
+goes through `ir.FoldFor`, which leaves an operation that overflows to trap when it runs, and stepped indexes are left alone, since one runs ahead of what the program computes. A check is removed only when `Forward`'s
+facts show its value in range. A check that will surely fail stays, so that a program fails the same whichever way it's compiled.
+
+**`/NOF77` is four small tests.** A one-trip `DO` is a flag in `ir`'s `countedLoop`, a test skipped; OPEN's two defaults are what `sema` passes when the
+statement says nothing; and `EXTERNAL SIN` meaning the library's function is `sema`'s `libraryExternal`. It takes per-unit settings like the
+rest (`OPTIONS /NOF77`), so each of these reads the unit, not the command.
+
+## 20. A real program, and a real VAX
+
+Everything before this was tested against rules: the manual's, as read when writing the expected output by hand, or those of VMS's FORRTL,
+studied from outside. Neither tells you whether the compiler's own idea of the program is right, or whether the machine it's been running on
+is the real one. Phase 86 had two ways of finding out.
+
+**DUNGEON against gfortran.** DUNGEON is about 11,600 lines of VAX FORTRAN, which builds silently here and has done since Phase 84 first
+tried it. The game's text stays out of the repository, because of the notice on its files, so `TestDungeonMilestone` holds only a digest,
+and a digest proves nothing about itself: it only says the output hasn't changed. What makes this one worth having is
+`testdata/dungeon86/gfortran/compare.py`, which builds the same source with gfortran, each patch only saying in that dialect what VAX FORTRAN
+says in its own, and compares the two line by line. `RAN` there is the manual's generator, so combat and the thief follow the same numbers. `randgame.py` writes
+random games that use the game's own debugging commands to reach any room, any object, and every table. No line differed, in 22 games and some 48,000 lines.
+If you're writing a compiler, look for a second compiler: it is a witness that doesn't share your reading of the manual.
+
+**Everything on VMS.** There's no VAX FORTRAN on the simh VAX, and none is needed, which is the choice of section 1 paying off again: the compiler's
+output and FTNRTL's sources are MACRO-32, so VMS's MACRO and LINK can build them. `testdata/ftn86` has them build FTNRTL and every program in the
+corpus, compiled both ways, and run them all (212 sections of a log). DUNGEON's game came out the same to the byte, 60,117 bytes on the third round.
+That round also settled a worry from section 16: the branch shortening that only `TestBoundsHold` had held to govax's MACRO assembled on the real one.
+
+What's instructive is the first round, of whose 206 runs only 109 matched. In all three rounds' findings, none came from an instruction the code
+generator chose. They came from everything around it:
+
+| What VMS showed | Why govax had hidden it |
+| --- | --- |
+| `OTS$$CVT_x_T_R8` writes whole groups of nine digits, past the size it's given, over FTNRTL's frame and saved PC | govax's emulation of the undocumented routine stopped at the size |
+| The same routine changes R0 and R2 to R8, where FTNRTL kept two values in R7 and R8 | The emulation changed only what its authors assumed |
+| MACRO refuses `.EXTRN` of a routine the module defines, and LINK then makes no image (48 runs) | Our MACRO accepted it |
+| A faulting `CLRL` leaves the condition codes alone | The CPU set Z before the store faulted |
+| A virtual `$QIO` with no file accessed is refused, with no AST, and a program waited for ever | Ours accepted it and completed it with an error |
+| `$EXIT` in an exit handler ends the image at once, with no more handlers | Ours went on to the next |
+
+The pattern is the lesson. A compiler tested on an emulator inherits the emulator's forgiveness: every place the emulation was kinder than the machine was a
+place FTNRTL's bug could live unseen, and an emulated routine called through a contract nobody wrote down is the kindest of all. So the fix came in two halves.
+FTNRTL was corrected, and the emulation was made as unforgiving as the real routine, so that the same mistake can't hide again: it now signals `SS$_BUFFEROVF` for a size VMS's would overrun. `go test` found a second caller that way at once, and a REAL\*16 buffer one byte short.
+
+The comparison had its own failures, too. A script's text mode hid a `\r` that VMS's traceback heading has, and `grep` passed over matches in a log it took for binary. What's still different is kept in
+one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a timing, and the last bits of negative powers and complex functions, where six candidate orders of operations were fitted to VMS's 408 values and none explained them.
+
+## 21. A map, and some advice
+
+| To see | Look in |
+| --- | --- |
+| How the command finds files, and runs MACRO | `internal/dclcmd/fortran.go` |
+| The passes in order | `internal/fortran/compile.go` |
+| A message's text and severity | `internal/fortran/diag/messages.go` |
+| Lines into statements, INCLUDE | `internal/fortran/source` |
+| Statement kinds, the IF and DO tests | `internal/fortran/lex` (`lex.go`, `kinds.go`) |
+| A statement's grammar | `internal/fortran/parse` |
+| A statement's meaning, its errors | `internal/fortran/sema` (`decl.go`, `stmt.go`, `io.go`, `fileio.go`) |
+| Storage: arrays, COMMON, EQUIVALENCE, DATA, records | `sema/arrays.go`, `common.go`, `equivalence.go`, `data.go`, `structure.go` |
+| Statements into blocks | `internal/fortran/ir` (`lowerstmt.go`, `lowerio.go`, and the other `lower*.go`) |
+| Choosing instructions | `internal/fortran/codegen` (`expr.go`, `cond.go`, `routine.go`, `chars.go`) |
+| The optimizer's list of passes | `internal/fortran/opt` |
+| A FORMAT's grammar | `internal/fortran/format` |
+| Definition modules | `internal/fortran/sysdef` |
+| Listings; the debugger's table | `internal/fortran/listing`; `internal/fortran/dbgtable` |
+| The run-time library | `internal/ftnrtl/mar/*.mar`, `ftnrtl.opt`, and `go generate ./internal/ftnrtl` |
+| Math routines | `internal/mthrtl`, Go, not MACRO |
+| Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/ftn86` |
+| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, each with its decisions and log |
+
+If you're writing a compiler for this machine, this one's history suggests a few things:
+
+- **Write assembly language.** Everything MACRO and LINK do correctly is something you needn't, the output can be read, and it runs unchanged on the real system, which is what made section 20 possible.
+- **Follow one small program through every pass first** (Phase 75), and add language after. Each pass having a text `Dump` makes a change a readable diff.
+- **Name what isn't done.** A message naming the missing statement, from one place, shows what's left, and a list of what's refused is more use than a program that fails oddly.
+- **Follow the calling standard exactly,** and the system comes free: handlers, ASTs, services, and RTL routines needed almost no code generation (section 15).
+- **Measure before optimizing.** Passes were chosen from counts on real programs, and some standard ones were left out because nothing asked for them (section 16).
+- **Find a witness outside your own reading:** a real run-time library to call, another compiler, and in the end the real machine. Every one of them found what the hand-written expected output couldn't, since the same person wrote both.
