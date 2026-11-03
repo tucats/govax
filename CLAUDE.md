@@ -655,7 +655,8 @@ never had.
   through FTNRTL; its Part A has the layout read from VMS's own files, and
   subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS, and
   subtask 3 (2026-11-03) `internal/isam`'s reader, and subtask 4 (2026-11-03) its writing without
-  splits, the same as VMS's files to the byte.
+  splits, the same as VMS's files to the byte, and subtask 5 (2026-11-03) its growth: splits, RRVs,
+  continuations, index levels, ROP LOA, and `Check`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2088,7 +2089,7 @@ expect adjustment as phases land):
   `key.go` each type's order, a key's value in a record; `bucket.go` buckets, index entries, data records and RRVs, SIDRs, and
   decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
   is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
-  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`); a record needing a split is `ErrBucketFull` so far.
+  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`). `split.go` is what a full bucket does (data, SIDR, and index splits, RRVs, continuations, new roots; `PutLoad` is ROP LOA), and `check.go` `Check`, which walks a whole file for what no operation may leave; `growth_test.go` holds random loads to a model with it.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

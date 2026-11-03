@@ -3,14 +3,15 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
 Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create` and `Put`, the same to the byte
-as VMS's up to the first split; a record that needs one is `ErrBucketFull`. RMS doesn't call it yet. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 5,** `isam`'s growth: splits, RRVs, index levels, and the rest.
+Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create`, `Put`, and `PutLoad`,
+splits and all: the probe's in-order loads, three index levels, root splits, duplicates past a bucket, and SIDRs past a bucket come
+out as VMS's in every structure, and `Check` holds any file to the rules. RMS doesn't call it yet. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 6,** `isam`'s update and delete.
 
 ## Goal
 
@@ -361,6 +362,47 @@ Subtask 4 replays the probe's `$PUT`s on `Create`'s files. The 61 Prolog 3 "key 
 - **Pointers:** a data record's is always 4 bytes, an index's and a SIDR's 2 here. Wider ones for VBNs past 65,535 are `pointerBytes`'s guess, unconfirmed. So is an unmade key's root field's byte order, DAN, LAN, IAN, when the areas differ: no dump catches one.
 - **Left to later subtasks:** `Spec`'s flags are the descriptor's, so an XABKEY's mapping onto them (which keys compress: strings of 6 bytes or more, data only on the primary) and the default bucket size are subtask 7's, as are RMS's checks of a `Spec`. `TestShapesAsVMS` reads its `Spec` from VMS's own descriptors.
 
+## What the splits settled (2026-11-03)
+
+Subtask 5 replays the growth cases (104 to 119) through every split, and the bulk loads to their end. Where this section and
+the ones above differ, this one wins.
+
+- **A new bucket goes to the right.** The old bucket keeps its VBN, so a key's first data bucket never changes, and the new
+  one takes the old one's place in the ring and its last flag.
+- **An append doesn't split** when the bucket's last record is also the newest it was given: the record gets a bucket to
+  itself and nothing moves, so a load in key order leaves full buckets (G104; G113 for a duplicate key). When the last record
+  isn't the newest, a record past it splits the bucket like any other (G108's 16 after 8, 9, 12, 15).
+- **Where a split falls:** where the two sides' bytes differ least, the new record counted, and the RRVs the split itself
+  leaves on the left counted, those already there not; a tie goes to the place further right. G118's scattered load is what
+  tells these apart; the Guide only says "half".
+- **IDs and RFAs:** records staying keep their IDs. The new record, if it stays, takes the bucket's next ID; if it moves, the
+  old bucket spends none on it. The new bucket's records are numbered from 1 in key order, and the new record's RFA is its
+  place there (G106).
+- **RRVs:** a record leaving the bucket its RFA names leaves an RRV, after those already there. A record that moved before
+  and moves again has its RRV rewritten where it is; each such bucket is written once per split, which its check character
+  shows (G106, G118). RRVs stay in their bucket for good, so a bucket can end up mostly RRVs (G105's VBN 3).
+- **The index:** the level above gets an entry for the left side's new high key, keeping the pointer to the old bucket, and the
+  entry that pointed there now points to the new bucket.
+- **Continuations:** a run of one key going past a bucket goes on in the next with no index entry (G113). A SIDR alone in a
+  full bucket goes on in a new bucket with its key repeated, its first pointer `00` (G114). A SIDR that's the last of several
+  moves whole, its new pointer with it (G115).
+- **An index split** leaves on the left as many old entries as take no more than half the bucket's room, and the new entry too
+  if it falls among them: 24 and 26 of 50 (G115), and a compressed bucket cut by bytes (G116). An index bucket is full when
+  its keys would reach its pointers, not only pass them (G116's VBN 539). A root that splits gets a new root over the two,
+  allocated after the new bucket, check character 1 (G115's VBN 59).
+- **ROP LOA** (`PutLoad`): a record past a bucket's last stops at the key's data fill size, and an index bucket at its index
+  fill size; later `Put`s fill past them (G119).
+- **What matches.** Each step of G104 to G113 is VMS's by `Dump`, and byte for byte until its first split; past it VMS's
+  stale bytes beyond a free offset aren't followed (answer 3). G114, G115, G116, and G119 are VMS's by `Dump`. G118 (500
+  scattered records, no compression) has VMS's data buckets, records, IDs, RRVs, and check characters in VMS's order, and its
+  index entries and values; a few of its SIDR buckets split elsewhere, which moves VBNs after them. **G117** (the same,
+  compressed) differs: one write more in VBN 4's check character, then split places from its 30th data bucket on. Neither is
+  explained, so neither file is held to VMS's structure, only to `Check` and the same values by each key. The VMS round, or
+  a probe case of its own, can look again.
+- **Unconfirmed, no case here reaching them:** a record that no split leaves room for gets a bucket of its own between
+  the two halves (`alone`; records of one size never need it); a SIDR filling a bucket with SIDRs after it splits the bucket
+  first; index pointers wider than 2 bytes; extension past an area's extent is `allocate`'s, unchanged.
+
 ## The rules
 
 ### Keys [manual]
@@ -580,7 +622,7 @@ them.
 4. **`isam`: writing, without splits.** `Create`, areas, first records, indexes made at first need,
    compression, IDs, check characters, the prolog's sums; files as the probe's first cases. (done 2026-11-03)
 5. **`isam`: growth.** Splits, RRVs, index levels and root splits, duplicates, continuation, SIDR
-   arrays, extension; `Check`, and a randomized test against a Go map.
+   arrays, extension; `Check`, and a randomized test against a Go map. (done 2026-11-03)
 6. **`isam`: update and delete.** Length changes, alternates moved, deleted records and pointers, RRV
    chains; ods2's additions if any.
 7. **RMS: `$CREATE`, `$OPEN`, `$DISPLAY`.** XABKEY, XABSUM, XABALLs, every status; CIF;
@@ -712,3 +754,10 @@ has REV at all.
   which `Open` finds by asking its `Blocks`) and `compress.go` (`compressKey`, `compressData`, `recordRest`, `CheckCompression`). `write_test.go` holds it to VMS: `TestShapesAsVMS` makes each shape file by the log's `$PUT`s with each status and RFA, and compares by `Dump`, then
   byte for byte; `TestGrowthStepsAsVMS` does the growth cases after every `$PUT`, reopening each time, up to the first split, against the blocks in the log; `TestCompressionIsVMSs` recompresses every file, and `TestRealIndexedFiles` the 27 on the system disk. Changing `shortestRun`, or the stride,
   made these fail, so they do hold those rules; the longest run's limit they don't (above). "What the writer settled" has the findings. `ErrBucketFull` is the seam subtask 5 replaces.
+- **2026-11-03: subtask 5, `isam`'s growth.** `split.go` (data, SIDR, and index splits, RRVs, continuations, root splits, ROP LOA)
+  and `check.go` (`Check`: rings, order, index entries over their buckets, RFAs and RRVs, every alternate's pointers both ways);
+  `ErrBucketFull` is gone. `write_test.go`'s `TestGrowthStepsAsVMS` now follows every step, `TestBulkLoadsAsVMS` the five bulk
+  cases, `TestScatteredDataAsVMS` G118's data buckets, `TestLoadAsVMS` case 119; `growth_test.go` has `Check` on every VMS
+  file and on damaged ones, and `TestGrowthAgainstAModel`, 30 runs of 1,500 records of mixed sizes against a model, which reach
+  what the probe doesn't. The rules were fitted by replaying the probe's dumps with each candidate rule and keeping the one that
+  matched; "What the splits settled" has them, and what's still open (G117 and part of G118).

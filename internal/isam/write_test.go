@@ -169,9 +169,8 @@ func blocksIn(lines []string) memoryBlocks {
 }
 
 // replayPuts does a stretch of the log's $PUTs on a file, comparing each
-// status and RFA. It stops at the first needing a split, the next subtask's,
-// and says so.
-func replayPuts(t *testing.T, name string, f *File, puts []putLine) bool {
+// status and RFA.
+func replayPuts(t *testing.T, name string, f *File, puts []putLine) {
 	t.Helper()
 
 	for _, p := range puts {
@@ -180,10 +179,6 @@ func replayPuts(t *testing.T, name string, f *File, puts []putLine) bool {
 		}
 
 		result, err := f.Put(commonRecord(p.n, p.size))
-		if errors.Is(err, ErrBucketFull) {
-			return false
-		}
-
 		what := fmt.Sprintf("%s: $PUT n=%d", name, p.n)
 
 		switch p.status {
@@ -209,8 +204,6 @@ func replayPuts(t *testing.T, name string, f *File, puts []putLine) bool {
 			t.Errorf("%s: a status this test doesn't know, %s", what, p.status)
 		}
 	}
-
-	return true
 }
 
 // compareFiles holds a file to VMS's: first by Dump, whose lines show what
@@ -326,11 +319,7 @@ func TestShapesAsVMS(t *testing.T) {
 			continue
 		}
 
-		if !replayPuts(t, name, f, putsOf(lines)) {
-			t.Errorf("%s: a split in a case that has none", name)
-
-			continue
-		}
+		replayPuts(t, name, f, putsOf(lines))
 
 		reopened, err := Open(g, vms.attr)
 		if err != nil {
@@ -354,7 +343,7 @@ func TestShapesAsVMS(t *testing.T) {
 var growthCases = []int{104, 105, 106, 107, 108, 109, 110, 111, 112, 113}
 
 // TestGrowthStepsAsVMS follows the growth cases a step at a time, each
-// $PUT on a file closed and opened again, up to the first split. After each
+// $PUT on a file closed and opened again, through every split. After each
 // step the file must be what VMS's dump of it was then, so it tests a first
 // record, an index made, IDs, and check characters at every step, on files
 // that were reopened from their bytes.
@@ -387,16 +376,14 @@ func TestGrowthStepsAsVMS(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 
-		start := 0
+		start, split := 0, false
 
 		for i := range lines {
 			if !logMark.MatchString(lines[i]) {
 				continue
 			}
 
-			if !replayPuts(t, name, f, putsOf(lines[start:i])) {
-				break
-			}
+			replayPuts(t, name, f, putsOf(lines[start:i]))
 
 			end := i
 			for end < len(lines) && !strings.HasPrefix(lines[end], "=dump") {
@@ -421,7 +408,21 @@ func TestGrowthStepsAsVMS(t *testing.T) {
 			}
 
 			compareFiles(t, step, f, want)
-			sameBytes(t, step, g.data, vms)
+
+			// Before the first split nothing has moved, and the bytes past a free
+			// offset are the same too. A split leaves VMS's working bytes there,
+			// which the phase doc's answer 3 sets aside.
+			if !split {
+				if f.Areas[0].TotalAllocation != want.Areas[0].TotalAllocation {
+					t.Errorf("%s: allocation", step)
+				}
+
+				if levelZeroBuckets(t, want, 0) > 1 {
+					split = true
+				} else {
+					sameBytes(t, step, g.data, vms)
+				}
+			}
 
 			steps++
 			start = end
@@ -495,66 +496,6 @@ func TestPutRefuses(t *testing.T) {
 
 	if _, err := f.Put(big); !errors.Is(err, ErrRecordSize) {
 		t.Errorf("a record past its bucket: %v", err)
-	}
-}
-
-// TestPutUntilFull fills a bucket: the record that doesn't fit is refused,
-// and the file is left as it was, until splits (the next subtask) take it.
-func TestPutUntilFull(t *testing.T) {
-	g := &growingBlocks{cluster: volumeCluster}
-
-	f, err := Create(g, oneKey(0))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	record := func(n int) []byte {
-		r := make([]byte, 100)
-		copy(r, fmt.Sprintf("%08d", n))
-
-		return r
-	}
-
-	n := 0
-
-	for ; ; n++ {
-		before := bytes.Clone(g.data)
-
-		_, err := f.Put(record(n))
-		if errors.Is(err, ErrBucketFull) {
-			if !bytes.Equal(before, g.data) {
-				t.Error("a refused record changed the file")
-			}
-
-			break
-		}
-
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if n != 9 {
-		t.Errorf("%d records fit, not 9", n)
-	}
-
-	got := 0
-
-	if err := f.Walk(0, func(e Entry) bool {
-		r, err := f.Record(e.RFA)
-		if err != nil || !bytes.Equal(r, record(got)) {
-			t.Errorf("record %d: %q, %v", got, r, err)
-		}
-
-		got++
-
-		return true
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if got != n {
-		t.Errorf("read %d of %d", got, n)
 	}
 }
 
@@ -694,4 +635,234 @@ func TestPrologLayout(t *testing.T) {
 	if got := binary.LittleEndian.Uint32(g.data[keyNextVBN:]); got != 2 {
 		t.Errorf("key 0's next is VBN %d", got)
 	}
+}
+
+// levelZeroBuckets counts a key's level 0 buckets.
+func levelZeroBuckets(t *testing.T, f *File, ref int) int {
+	t.Helper()
+
+	k := f.Keys[ref]
+	count := 0
+
+	for vbn := k.FirstData; ; count++ {
+		z, err := f.readLevelZero(k, vbn)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if z.bucket.isLast() {
+			return count + 1
+		}
+
+		vbn = z.bucket.next
+	}
+}
+
+// bulkCases are the probe's cases that load many records and dump the file only
+// at the end: the record numbers as gen.go's puts makes them. exact says the
+// file comes out as VMS's in every structure. For the two scattered loads it
+// doesn't, as the phase doc's "What the splits settled" says, and what's held
+// instead is below.
+var bulkCases = []struct {
+	c                             int
+	first, count, step, mod, size int
+	exact                         bool
+}{
+	{114, 1, 400, 1, 0, 150, true},
+	{115, 1, 1200, 1, 0, 200, true},
+	{116, 1, 1500, 1, 0, 200, true},
+	{117, 1, 500, 211, 997, 100, false},
+	{118, 1, 500, 211, 997, 100, false},
+}
+
+// makeBulk loads one of the bulk cases' files.
+func makeBulk(t *testing.T, log map[int]*logCase, vms *File, i int) *File {
+	t.Helper()
+
+	b := bulkCases[i]
+
+	m := logCreate.FindStringSubmatch(log[b.c].lines[1])
+	if m == nil {
+		t.Fatalf("case %d: no $CREATE", b.c)
+	}
+
+	alq, _ := strconv.Atoi(m[1])
+	g := &growingBlocks{cluster: volumeCluster}
+
+	f, err := Create(g, specOf(vms, uint32(alq)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for n := 0; n < b.count; n++ {
+		v := b.first + n*b.step
+		if b.mod != 0 {
+			v = v%b.mod + 1
+		}
+
+		if _, err := f.Put(commonRecord(v, b.size)); err != nil {
+			t.Fatalf("case %d: record %d: %v", b.c, v, err)
+		}
+	}
+
+	reopened, err := Open(g, vms.attr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return reopened
+}
+
+// TestBulkLoadsAsVMS makes the large cases' files: three index levels, root
+// splits, index compression, and SIDR arrays past a bucket. The in-order ones
+// must be VMS's in every structure. Every one must pass Check, and hold just
+// what VMS's holds by each key.
+func TestBulkLoadsAsVMS(t *testing.T) {
+	log := readLog(t)
+	files := readable(t)
+
+	for i, b := range bulkCases {
+		name := fmt.Sprintf("G%d", b.c)
+		vms := files[name]
+		f := makeBulk(t, log, vms, i)
+
+		if b.exact {
+			compareFiles(t, name, f, vms)
+		}
+
+		if err := f.Check(); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+
+		for ref := range vms.Keys {
+			ours, theirs := keysIn(t, f, ref), keysIn(t, vms, ref)
+			if ours != theirs {
+				t.Errorf("%s: key %d's values differ from VMS's", name, ref)
+			}
+		}
+	}
+}
+
+// keysIn lists a key's values in order, as text to compare.
+func keysIn(t *testing.T, f *File, ref int) string {
+	t.Helper()
+
+	var out strings.Builder
+
+	if err := f.Walk(ref, func(e Entry) bool {
+		fmt.Fprintf(&out, "%X\n", e.Key)
+
+		return true
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	return out.String()
+}
+
+// TestScatteredDataAsVMS holds what the scattered load without compression does
+// match: every data bucket of its primary key has VMS's records, IDs, RRVs,
+// and check character, in VMS's order, whatever their VBNs. Its SIDR buckets
+// don't all match, which moves the VBNs: the phase doc has it.
+func TestScatteredDataAsVMS(t *testing.T) {
+	const scattered = 4
+
+	vms := readable(t)["G118"]
+	f := makeBulk(t, readLog(t), vms, scattered)
+
+	ours, theirs := primaryShape(t, f), primaryShape(t, vms)
+	if len(ours) != len(theirs) {
+		t.Fatalf("%d data buckets, VMS has %d", len(ours), len(theirs))
+	}
+
+	for i := range ours {
+		if ours[i] != theirs[i] {
+			t.Errorf("data bucket %d:\n ours %s\n VMS  %s", i, ours[i], theirs[i])
+		}
+	}
+}
+
+// primaryShape describes each of the primary key's data buckets without any VBN.
+func primaryShape(t *testing.T, f *File) []string {
+	t.Helper()
+
+	var shape []string
+
+	k := f.Keys[0]
+
+	for vbn := k.FirstData; ; {
+		z, err := f.readLevelZero(k, vbn)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		line := fmt.Sprintf("check %02X free %X next ID %d:", z.bucket.check, z.bucket.free, z.bucket.nextID)
+
+		for i := range z.primary {
+			r := &z.primary[i]
+			if r.isRRV() {
+				line += fmt.Sprintf(" RRV %d", r.id)
+			} else {
+				line += fmt.Sprintf(" %d=%X", r.id, r.key)
+			}
+		}
+
+		shape = append(shape, line)
+
+		if z.bucket.isLast() {
+			return shape
+		}
+
+		vbn = z.bucket.next
+	}
+}
+
+// TestLoadAsVMS is ROP LOA, case 119: records in order only up to the fill size,
+// and later records, without LOA, filling past it.
+func TestLoadAsVMS(t *testing.T) {
+	lines := readLog(t)[119].lines
+	final := readable(t)["G119"]
+
+	var dumps [][]string
+
+	start := 0
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, "=dump") {
+			dumps = append(dumps, lines[start:i])
+			start = i
+		}
+	}
+
+	if len(dumps) != 2 {
+		t.Fatalf("%d dumps", len(dumps))
+	}
+
+	g := &growingBlocks{cluster: volumeCluster}
+
+	f, err := Create(g, specOf(final, 3))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for n := 1; n <= 15; n += 2 {
+		if _, err := f.PutLoad(commonRecord(n, 100)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want, err := Open(blocksIn(dumps[0]), final.attr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	compareFiles(t, "after the load", f, want)
+
+	for n := 2; n <= 16; n += 2 {
+		if _, err := f.Put(commonRecord(n, 100)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	compareFiles(t, "after the rest", f, final)
 }

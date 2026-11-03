@@ -1,6 +1,7 @@
 package isam
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 )
@@ -23,10 +24,6 @@ var (
 	// size for a fixed format file, or too long for a bucket.
 	ErrRecordSize = errors.New("isam: bad record size")
 
-	// ErrBucketFull means a record doesn't fit the bucket it belongs in.
-	// Splitting a bucket is the phase's next subtask, and until then Put
-	// refuses such a record, leaving the file as it was.
-	ErrBucketFull = errors.New("isam: bucket full")
 )
 
 // WritableBlocks is a file Create and Put can change. Extend adds at least
@@ -638,6 +635,19 @@ const dataPointerBytes = 4
 // record went in, which is then taken out again, so the bucket counts two
 // writes and has spent an ID (S41).
 func (f *File) Put(record []byte) (PutResult, error) {
+	return f.put(record, false)
+}
+
+// PutLoad is Put with RMS's ROP LOA: a bucket takes records in key order only
+// up to its key's fill size, leaving room for records to come (G119).
+func (f *File) PutLoad(record []byte) (PutResult, error) {
+	return f.put(record, true)
+}
+
+// put is Put and PutLoad.
+func (f *File) put(record []byte, load bool) (PutResult, error) {
+	f.loading = load
+
 	if f.out == nil {
 		return PutResult{}, ErrReadOnly
 	}
@@ -677,7 +687,7 @@ func (f *File) Put(record []byte) (PutResult, error) {
 			return PutResult{}, err
 		}
 
-		b, err = f.readBucket(vbn, k.DataBucketSize)
+		b, err = f.lastFor(k, vbn, value)
 		if err != nil {
 			return PutResult{}, err
 		}
@@ -746,6 +756,27 @@ func (b *bucket) room(more int) bool {
 	return b.free+more <= len(b.data)-1
 }
 
+// limit is how far records may fill a level 0 bucket. ROP LOA stops a record
+// going past the bucket's last at the key's fill size, and one going between
+// others may use the whole bucket: no VMS case loads out of order, so that part
+// is unconfirmed. A size of 0 means the whole bucket.
+func (f *File) limit(k *Key, atEnd bool) int {
+	if f.loading && atEnd {
+		return k.DataFill
+	}
+
+	return 0
+}
+
+// roomFor is room with a limit from limit.
+func (b *bucket) roomFor(limit, more int) bool {
+	if limit > 0 && b.free+more > limit {
+		return false
+	}
+
+	return b.room(more)
+}
+
 // replace swaps the bytes at an offset for others, moving what follows up
 // to the free offset. Whatever a shorter result uncovers stays as it was:
 // VMS leaves stale bytes past the free offset too.
@@ -793,8 +824,8 @@ func (f *File) insertRecord(b *bucket, k *Key, value, rest []byte) (RFA, error) 
 		again = compressKey(next.key, value)
 	}
 
-	if !b.room(len(stored) + len(again) - oldKey) {
-		return RFA{}, ErrBucketFull
+	if !b.roomFor(f.limit(k, next == nil), len(stored)+len(again)-oldKey) {
+		return f.splitData(b, k, list, value, rest)
 	}
 
 	// The next record's key first, then the new record, so nothing's left past
@@ -867,7 +898,7 @@ func (f *File) insertAlternate(k *Key, record []byte, rfa RFA) (bool, error) {
 			return false, err
 		}
 
-		b, err = f.readBucket(vbn, k.DataBucketSize)
+		b, err = f.lastFor(k, vbn, value)
 		if err != nil {
 			return false, err
 		}
@@ -904,7 +935,7 @@ func (f *File) insertSIDR(b *bucket, k *Key, value []byte, rfa RFA) (bool, error
 				return false, ErrDuplicate
 			}
 
-			return true, f.addPointer(b, s, rfa)
+			return true, f.addPointer(b, k, list, i, rfa)
 		case c > 0:
 			next = s
 		default:
@@ -938,8 +969,8 @@ func (f *File) insertSIDR(b *bucket, k *Key, value []byte, rfa RFA) (bool, error
 		}
 	}
 
-	if !b.room(len(stored) + len(again) - oldKey) {
-		return false, ErrBucketFull
+	if !b.roomFor(f.limit(k, next == nil), len(stored)+len(again)-oldKey) {
+		return false, f.growSIDRs(b, k, list, value, stored, next == nil)
 	}
 
 	// The new SIDR first, then the next one's key, as in insertRecord.
@@ -986,11 +1017,96 @@ func sidrPointerBytes(rfa RFA, first bool) []byte {
 	return append(out, vbn...)
 }
 
-// addPointer adds a pointer to the end of a SIDR.
-func (f *File) addPointer(b *bucket, s *sidr, rfa RFA) error {
+// growSIDRs makes room for a new SIDR in a bucket that hasn't any. One going
+// past the bucket's last has a new bucket to itself; otherwise half of them move.
+func (f *File) growSIDRs(b *bucket, k *Key, list []sidr, value, stored []byte, atEnd bool) error {
+	items := b.sidrItems(k, list)
+
+	high := []byte(nil)
+	if len(items) > 0 {
+		high = items[len(items)-1].key
+	}
+
+	if atEnd {
+		right, err := f.startRight(k.DataArea, k.DataBucketSize, k.Ref, 0)
+		if err != nil {
+			return err
+		}
+
+		pointers := bytes.Clone(stored[2+len(storedKey(k, value, high)):])
+		right.putBytes(sidrBytes(k, value, nil, pointers))
+		chainAfter(b, right)
+
+		return f.linkNew(b, right, k, high, value)
+	}
+
+	at := 0
+	for at < len(items) && k.Compare(items[at].key, value) < 0 {
+		at++
+	}
+
+	var previous []byte
+	if at > 0 {
+		previous = items[at-1].key
+	}
+
+	pointers := bytes.Clone(stored[2+len(storedKey(k, value, previous)):])
+
+	grown := make([]sidrItem, 0, len(items)+1)
+	grown = append(grown, items[:at]...)
+	grown = append(grown, sidrItem{key: value, pointers: pointers})
+	grown = append(grown, items[at:]...)
+
+	n, ok := chooseSIDRs(k, grown)
+	if !ok {
+		return b.corrupt(bktOverhead, "a SIDR too long for any split")
+	}
+
+	_, err := f.splitSIDRs(b, k, grown, n)
+
+	return err
+}
+
+// addPointer adds a pointer to the end of a SIDR. With no room, a SIDR alone in
+// its bucket goes on in a new bucket holding its key again and the new pointer,
+// which has no FIRST_KEY bit and no index entry (G114). A SIDR that's the last of
+// several moves whole to a new bucket, pointer and all (G115, where a value's
+// third record moves the value's first two). One with others after it splits
+// the bucket like a new SIDR would: unconfirmed until a VMS case shows it.
+func (f *File) addPointer(b *bucket, k *Key, list []sidr, i int, rfa RFA) error {
+	s := &list[i]
+
 	pointer := sidrPointerBytes(rfa, false)
 	if !b.room(len(pointer)) {
-		return ErrBucketFull
+		items := b.sidrItems(k, list)
+
+		if len(items) == 1 {
+			right, err := f.startRight(k.DataArea, k.DataBucketSize, k.Ref, 0)
+			if err != nil {
+				return err
+			}
+
+			right.putBytes(sidrBytes(k, items[0].key, nil, pointer))
+			chainAfter(b, right)
+
+			return f.linkNew(b, right, k, items[0].key, items[0].key)
+		}
+
+		items[i].pointers = append(items[i].pointers, pointer...)
+
+		n := i
+		if i+1 < len(items) {
+			var ok bool
+
+			n, ok = chooseSIDRs(k, items)
+			if !ok {
+				return b.corrupt(bktOverhead, "a SIDR too long for any split")
+			}
+		}
+
+		_, err := f.splitSIDRs(b, k, items, n)
+
+		return err
 	}
 
 	size := int(binary.LittleEndian.Uint16(b.data[s.offset:]))
@@ -1074,7 +1190,7 @@ func (f *File) removePointer(k *Key, value []byte, rfa RFA) error {
 		return err
 	}
 
-	b, err := f.readBucket(vbn, k.DataBucketSize)
+	b, err := f.lastFor(k, vbn, value)
 	if err != nil {
 		return err
 	}

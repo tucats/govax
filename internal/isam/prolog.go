@@ -230,6 +230,8 @@ type File struct {
 	GlobalBufs  int    // PLG$W_GBC
 	Keys        []*Key
 	Areas       []Area
+
+	loading bool // the Put in progress is a PutLoad
 }
 
 // Open reads a file's prolog. Nothing else is read until asked for, and

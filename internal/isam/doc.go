@@ -33,8 +33,9 @@
 // searches a key's tree, First and Following read in key order, Walk reads a
 // whole key, Record reads by RFA, and Dump shows the structure as text. It
 // also makes one (subtask 4): Create lays out the prolog, and Put adds a
-// record, making a key's tree at its first record. Put can't yet split a
-// bucket, so a record that doesn't fit is ErrBucketFull. It's plain Go that
+// record, making a key's tree at its first record. A record that doesn't fit
+// its bucket splits it (split.go, subtask 5), and Check walks a whole file for
+// what no operation may leave, which the tests run after them. It's plain Go that
 // knows nothing of VAX memory, FABs, or RABs: internal/rms maps those
 // onto it. Only Prolog 3 files are read, by the author's choice; Open
 // reports anything else as an ErrPrologLevel.
