@@ -1,14 +1,14 @@
 # Phase 88 — keyed index files
 
-**Status:** planned 2026-11-03. Subtask 1, the survey, done the same day and
-waiting for the author's review (Part B's questions). No code has changed.
-Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+**Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
+reviewed and accepted by the author the same day ("The review", in Part B).
+Subtask 2, the probe, is in progress. Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
-Part A is the survey, Part B the proposed decisions and the questions for the
-author, and Part C the subtasks. Nothing is implemented.
+Part A is the survey, Part B the accepted decisions and the author's answers, and
+Part C the subtasks. No code is implemented yet; the probe comes first.
 
 ## Goal
 
@@ -390,7 +390,7 @@ that key.
 
 ## Decisions
 
-Proposed, for the author's review.
+Accepted by the author, 2026-11-03 ("The review", below).
 
 1. **VMS sets the requirement, in this order:** VMS's runs and files, then the manuals, then a
    reasonable choice logged as unconfirmed. Where the Guide and the bytes disagree (a bucket's
@@ -415,7 +415,7 @@ Proposed, for the author's review.
 6. **Volume files only,** as Phase 81's answer 3. A host file comes in through COPY or CONVERT.
 7. **Left out, each answering as VMS would for a file it can't use:** collating keys (COL, DCOL:
    they need the National Character Set utility; RMS$_DTP), RU journaling, statistics monitoring,
-   and DECnet access. Question 1 settles Prologs 1 and 2. Tell me if any of these should come in.
+   and DECnet access. Prologs 1 and 2 are out too (answer 1).
 8. **The FORTRAN specifiers are the LRM's:** all of 7.1.1.7, correcting `keySpecs`. FTNRTL's
    interface stays our own, named as FORRTL names its entries, with FORRTL's keyword codes where
    Phase 81 already adopted them.
@@ -472,6 +472,23 @@ Proposed, for the author's review.
      offered to capture symbols and it costs one round. The rule is yours, though: this library
      isn't one the clean-room notes name.
    - (b) No: ANALYZE/RMS_FILE's reports and the bytes only. Workable, with a few more rounds.
+
+## The review (2026-11-03)
+
+The author read the plan and accepted the recommendation on all five questions:
+
+1. **(a):** Prolog 3 only.
+2. **(b):** CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, the report), with a shared
+   FDL reader. EDIT/FDL, CONVERT/RECLAIM, and interactive ANALYZE stay out.
+3. **(a):** the same structure, and VMS's choices where they're deterministic, held by a decoded
+   comparison that ignores unused bytes; VMS's `/CHECK` passes govax's files.
+4. **(a):** `internal/isam` in govax, ods2 changing only as it must. It could move later.
+5. **(a):** values only, through a probe: `$BKTDEF`, `$IRCDEF`, `$KEYDEF`, `$AREADEF`, and `$PLGDEF`
+   assembled `GLOBAL`, no macro text and no listing. This extends the clean-room notes to these
+   definitions' values.
+
+On Decision 7, the author first leaned towards including collating keys, then, after reading about them,
+said to omit them. RU journaling, statistics monitoring, and network access are out as proposed.
 
 # Part C — the subtasks
 
@@ -545,10 +562,10 @@ and `/FDL`**, and DIRECTORY/FULL, so that VMS names what the bytes hold.
 match, through FOR$RAB to show RAC, KRF, KSZ, and ROP; WRITE, REWRITE, DELETE, UNLOCK; sequential after
 keyed; each condition; positioning on an indexed unit.
 
-**Round 3, if Question 2's (b) or (c):** CREATE/FDL and CONVERT's messages and qualifiers; ANALYZE's
+**Round 3 (answer 2):** CREATE/FDL and CONVERT's messages and qualifiers; ANALYZE's
 output on files of each shape.
 
-**Round 4, the utilities' DCL side:** READ's and WRITE's qualifiers, F$FILE_ATTRIBUTES's KNOWN, NOK, NOA,
+**Round 4, DCL's side:** READ's and WRITE's qualifiers, F$FILE_ATTRIBUTES's KNOWN, NOK, NOA,
 PVN; TYPE, DUMP/RECORD of an indexed file, as a procedure with SET VERIFY.
 
 **What the rounds must settle** (Part A's [open]s, in one list): an RRV's form, and a deleted record's;
@@ -568,3 +585,5 @@ has REV at all.
   decoded enough to write the layout above: a walk over 46,155 records of 8 files agrees, and RRVs are
   what's left. Found `keySpecs`'s comment wrong about the 1988 manual. Scratch scripts only, not kept;
   no code, volume, or local file changed. Part B has 10 proposed decisions and 5 questions.
+- **2026-11-03: the review.** The author accepted the survey and the recommendation on all five
+  questions, and omitted collating keys ("The review", in Part B).
