@@ -652,7 +652,8 @@ never had.
   Phase 88 (planned 2026-11-03; subtask 1, the survey, done and accepted the
   same day) is keyed index files: RMS's indexed
   organization on volume files, laid out as VMS's, and FORTRAN's keyed statements
-  through FTNRTL; its Part A has the layout read from VMS's own files.
+  through FTNRTL; its Part A has the layout read from VMS's own files, and
+  subtask 2 is the probe, `testdata/idx88`, round 1 written.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -968,6 +969,9 @@ never had.
   sources and every corpus program compiled by govax both ways, and `ftn86.com`, which has VMS's MACRO and LINK
   build FTNRTL and each program against it, and runs them; `ftn86d.com` is the same for DUNGEON, its log local.
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
+- `testdata/idx88/` — Phase 88's probe of RMS's indexed files (README.md): `gen.go` writes `idx88.mar` (152 cases
+  making 138 files on the common record of `MKREC`), `idx88.com` (with ANALYZE/RMS_FILE on each file, and a save set of
+  them), and `def_*.mar` (`$BKTDEF` and the rest, `GLOBAL`, values only; `decode.go`). `TestIdx88Probe` rehearses it on govax.
 - `testdata/opt84/` — Phase 84's survey measurements (README.md): five compute kernels, which `TestFortranPrograms`
   runs both ways, their loops optimized by hand, and the measuring code (a patch to `Engine.Step`, kept out of the
   tree), part of which `TestFortranDungeonBothWays` uses.

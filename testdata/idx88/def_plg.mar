@@ -1,0 +1,5 @@
+	.TITLE	DEF_PLG	$PLGDEF's values, in the object's global symbols
+; Written by testdata/idx88/gen.go.
+	.LIBRARY	/SYS$LIBRARY:LIB.MLB/
+	$PLGDEF	GLOBAL
+	.END

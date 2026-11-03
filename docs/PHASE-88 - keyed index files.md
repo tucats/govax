@@ -2,13 +2,16 @@
 
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
-Subtask 2, the probe, is in progress. Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+Subtask 2, the probe: round 1 is written and waiting for its run on the VAX. Needs
+nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
 Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. No code is implemented yet; the probe comes first.
+Part C the subtasks. No code is implemented yet; the probe comes first. Round 1,
+`testdata/idx88`, is written and rehearsed on govax. **Next: the author runs it** (its
+README has the commands).
 
 ## Goal
 
@@ -497,6 +500,7 @@ them.
 
 1. **Survey** (this doc). (done 2026-11-03)
 2. **The probe,** `testdata/idx88`, on the simh VAX, as many rounds as it takes; described below.
+   Round 1 written 2026-11-03.
 3. **`isam`: the format, reading.** Prolog, key and area descriptors, buckets, records, RRVs, SIDRs,
    decompression, key comparison for each type and direction; search, sequence, and `Dump`; every
    VMS-made file read whole, and each record found by each key.
@@ -530,13 +534,21 @@ them.
 ## The probe (subtask 2)
 
 The author runs it (2026-11-03: "as always, happy to run probes"). It follows `testdata/for81`'s shape:
-`gen.go` writes the programs, procedures, and `exchange.cmd`/`copyout.cmd`, on DUA2, each case under a
-handler, every status printed, every RAB and XAB field shown. Files of our own data are copied back, so
-they can be committed.
+`gen.go` writes the programs, procedures, and `exchange.cmd`/`copyout.cmd`, on DUA5 (the author's startup
+has XFER on DUA2), each case under a handler, every status printed, every RAB and XAB field shown. Files of our
+own data come back in a save set, which `internal/backup` can read, so they can be committed with their
+attributes. `TestIdx88Probe` rehearses the program on govax.
 
 **Over govax first (no VAX needed):** FORRTL's FOR$OPEN with KEY= and a USEROPEN routine that logs the XAB
 chain, to learn code 23's argument and what XABKEYs FORRTL builds. `FOR$READ_KF`'s arguments can't be seen
-this way, since it must reach RMS; they go on the VAX.
+this way, since it must reach RMS; they go on the VAX. **Tried 2026-11-03, and not finished:** with mechanism 4
+the value is the address of a block, and FORRTL reads a word at +2 first (mechanisms 5 and 10 fault at that
+longword's value plus 2, which shows it). That word is a count: 0 is taken and makes no key, a multiple of 3 is
+INVKEYSPE, and anything else INVARGFOR. Three items per key, then. Longwords, words, bytes, mechanism-coded
+longwords, and pointers, across about 400 shapes, are all still INVKEYSPE or INVARGFOR, with one more clue: a
+third longword item not below the second is INVARGFOR. No shape has put an XABKEY in the chain. This doesn't hold
+anything up: FTNRTL's interface is its own (Decision 8), and round 2 can make files by RMS and open them
+without KEY=, so only which XABKEY flags KEY= asks for still depends on it.
 
 **Round 1, on RMS (`idx88.mar`):**
 
@@ -587,3 +599,16 @@ has REV at all.
   no code, volume, or local file changed. Part B has 10 proposed decisions and 5 questions.
 - **2026-11-03: the review.** The author accepted the survey and the recommendation on all five
   questions, and omitted collating keys ("The review", in Part B).
+- **2026-11-03: subtask 2, the probe, round 1 written.** `testdata/idx88`: `gen.go` writes `idx88.mar`, 152 cases
+  making 138 files (key shapes, areas, `$CREATE`'s refusals, growth a step at a time, finding by Tables 7-3 and 7-4,
+  generic and numeric keys, sequence, `$UPDATE`, `$DELETE`, RFAs across splits, null keys, locks); `idx88.com`, with
+  ANALYZE/RMS_FILE on every file, three scripted interactive walks, and a save set; and the five `def_*.mar`, values
+  only by answer 5, MACRO's output kept out of the main log with SYS$ERROR NL:. `TestIdx88Probe` assembles, links,
+  and runs it on govax to its end with no condition, the first case exercising every helper on a sequential file.
+  The rehearsal caught two assembly errors that would have cost a round (`$XABKEY` itself refuses CHG on a primary
+  key, so that case now pokes the field at run time; a branch out of range). FOR$OPEN's KEY= was tried over govax and
+  isn't found yet (the section above). `sema/io.go`'s comment is still wrong; subtask 11 changes it with the code.
+- **2026-11-03, a mistake of ours in the rehearsal.** The author's startup mounts `testdata/disks/xfer.dsk` as DUA2,
+  so the first rehearsal's `MOUNT DUA2` failed and its files landed on XFER. Its 16 files, all dated that minute, were
+  deleted by name, which leaves XFER's directory as it was, though the container's bytes aren't identical (header
+  slots, sequence numbers). The probe now uses DUA5.
