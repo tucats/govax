@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtasks 1 to 3 done 2026-11-03). Needs every earlier phase of the
+**Status:** in progress (subtasks 1 to 4 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -113,7 +113,7 @@ or text.
    message; whatever it finds missing is fixed in subtasks of its own.
 2. **DUNGEON linked and run** (done 2026-11-03), with its ITIME and its data files.
 3. **The milestone test** (done 2026-11-03) in every mode, with a scripted game.
-4. **The VMS round** (optional): exchange volume, procedure, results.
+4. **The VMS round** (done 2026-11-03): exchange volume, procedure, results.
 5. **The manual chapter.**
 6. **FORTRAN-INTERNALS.md finished.**
 7. **Close-out:** CLAUDE.md, PLAN.md, the follow-up list.
@@ -302,4 +302,24 @@ or text.
     more precision perhaps. Left as they are: `POWERS`'s and `MATHFNS`'s last digits are known differences, as
     MTHRTL's complex functions' last bits are.
   - **Expected:** SERVICES's `$GETCHN` (a service govax lacks), and FTNRTL's addresses in a traceback.
+- **2026-11-03, subtask 4, round 3 and the close** (`testdata/ftn86/vax/`, with `vax/mar/` the sources VMS built;
+  DUNGEON's log local): VMS 7.1 ran everything, with no MACRO or LINK message. **The author's question is answered:
+  a program our compiler makes runs on a real VMS, with FTNRTL built there from its sources.** 193 of 212 sections
+  matched before this entry's fixes, and now all do but `ftn86VMSDifferences`:
+  - **DUNGEON's log is VMS's to the byte,** 60,117 bytes of game, the save, and the restore, on VMS's own LIBRTL.
+  - **`$EXIT` in an exit handler ends the image with that status:** EXITMORE, with no FORTRAN I/O in it, ran no handler
+    after it, and neither did EXITS. Ours moved on to the next (`serviceSysExit`, told by the SP). `exits.out` had it
+    the old way.
+  - **Traceback's heading is one record ending in CR LF** (`\r\n\n` on VMS), which every comparison had been stripping.
+  - **RMS$_FLK's STV:** another RMS opener's sharing has none (DIALOG; `probe50f`), a running image's file
+    SS$_ACCONFLICT (`testdata/pg66`'s A9). DIALOG's FLK itself is right: ACCEPT and READ(5) each open SYS$INPUT, and with
+    a file there the second fails, as on VMS's FORRTL over govax.
+  - **What's left, on purpose** (`ftn86VMSDifferences`): `$GETCHN`, which govax lacks; SECNDS within a second of T1, by
+    timing; and the last bits of OTS$ negative powers and MTHRTL's complex functions.
+  - **The tests:** `TestFTN86Oracle` holds the procedure's run to VMS's log, a traceback's frames in FTNRTL masked, positive
+    powers to their exact bits. `TestFTN86Dungeon` holds DUNGEON's to VMS's digests. `TestFTN86Objects` holds MACRO's objects to
+    VMS's, but for the headers, and LINK's image up to its debug symbol table, from `vax/mar`.
+  - **Not compared:** the image's symbol tables past that, which differ at least in the link's time and the linker's name.
+    A comparison's own lessons: a script's text mode hid `\r`, and `grep` a binary-looking log's matches. `LINK` not
+    translating a logical name for an options file is still open.
 

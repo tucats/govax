@@ -45,6 +45,7 @@ C     Running off the end is an exit with SS$_NORMAL; a handler changes the stat
       INTEGER ST
       PRINT *, 'THIRD', ST
       WRITE (12, '(A)') 'FROM THIRD'
+C     That ends the image: VMS 7.1 runs no more of the handlers (testdata/ftn86).
       CALL SYS$EXIT(%VAL(3))
       PRINT *, 'NOT REACHED'
       END

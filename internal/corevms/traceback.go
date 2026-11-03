@@ -174,8 +174,7 @@ var faultConditions = func() map[uint32]bool {
 func (env *Environment) tracebackDump(d *conditionDispatch, cond, startup uint32) []string {
 	lines := []string{
 		"%TRACE-" + severityLetters[cond&7] + tracebackMessage,
-		tracebackHeading,
-		"",
+		tracebackHeading + "\r\n", // one record, with its own line end (testdata/ftn86's log)
 	}
 
 	name := func(pc uint32, exact bool) TraceName {

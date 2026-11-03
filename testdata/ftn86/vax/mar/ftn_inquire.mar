@@ -1,0 +1,466 @@
+	.TITLE	FTN_INQUIRE - FTNRTL's INQUIRE statement
+	.IDENT	/V1.0/
+;
+; INQUIRE (the 1988 VAX FORTRAN Language Reference Manual, 9.3) is one call, by
+; the compiler:
+;
+;	FTN$INQUIRE(control block, keyword, value, keyword, value, ...)
+;
+; A keyword is a longword, its code in bits 0 to 7 and its mechanism in bits 8 to
+; 15, and the codes are VMS's FORTRAN run-time library's (docs/PHASE-81 - FORTRAN
+; files.md, "FOR$OPEN's arguments"):
+;
+;	1 UNIT, its value next (mechanism 4)
+;	14 FILE, 26 DEFAULTFILE, a descriptor's address next (mechanism 7)
+;	30 to 48, an answer: where to store it next, a byte, word, or longword by
+;	  mechanism 10, 3, or 5, or a text's descriptor by mechanism 4
+;
+; VMS's INQUIRE never fails: a unit that can't exist or a name that can't be one
+; is an answer, and the status is always success. So this statement, alone among
+; them, needs no context, and R0 is simply 0, which is what the compiler stores in
+; IOSTAT=.
+;
+; The answers are worked out first, in a table with a longword for each code from
+; 30, and stored at the end, so that a keyword's place in the list doesn't matter.
+; They follow VMS's run of testdata/for81 (its cases #474 to #509), and where that
+; says nothing, FORRTL's over govax, with the phase doc's section on this subtask:
+;
+;	by a unit	0 to 119 exists, whether or not it's connected, and any
+;			other number doesn't. A unit with no file knows its number
+;			and nothing else.
+;	by a name	$PARSE, then $SEARCH. A name that won't parse, or a wildcard,
+;			is NAMED false and given back as it was written. One that
+;			parses and isn't there is NAMED true, with its expanded name.
+;			One that is there and on a unit answers as that unit does.
+;			Otherwise it is opened to look at, read and shared, and
+;			closed: the file's own attributes, nothing of a connection.
+;
+	$FABDEF
+	$NAMDEF
+	$RABDEF
+	$XABDEF
+	$XABFHCDEF
+
+UB_UNIT		= 20			; A unit's block (FTN_UNITS)
+UB_SIZE		= 32
+UB_FORM		= 36
+UB_ACCESS	= 37
+UB_BLANK	= 38
+UB_SCRATCH	= 41
+UB_SEGMENTED	= 42
+UB_NEXTREC	= 44
+UB_FAB		= 76
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_NAM		= UB_RAB+RAB$C_BLN
+UB_XAB		= UB_NAM+NAM$C_BLN
+UB_RSA		= UB_XAB+XAB$C_FHCLEN
+
+
+UNIT_HIGH	= 119
+
+CODE_UNIT	= 1
+CODE_FILE	= 14
+CODE_DEFAULT	= 26
+CODE_NAME	= 34
+Q_FIRST		= 30
+Q_LAST		= 48
+
+MECHANISM_WORD	= 3
+MECHANISM_TEXT	= 4
+MECHANISM_LONG	= 5
+MECHANISM_BYTE	= 10
+
+SEGMENT_WORD	= 2			; a segmented record's control word
+
+NAME_SIZE	= 256
+
+;
+; The frame, below FP: the answers, the name given, and a FAB, NAM, XABFHC,
+; and two strings for looking at a file that no unit has.
+;
+ANSWERS		= -<<Q_LAST-Q_FIRST+1>*4>
+A_EXIST		= ANSWERS+<<30-Q_FIRST>*4>
+A_OPENED	= ANSWERS+<<31-Q_FIRST>*4>
+A_NUMBER	= ANSWERS+<<32-Q_FIRST>*4>
+A_NAMED		= ANSWERS+<<33-Q_FIRST>*4>
+A_NAME		= ANSWERS+<<34-Q_FIRST>*4>	; the name's address
+A_ACCESS	= ANSWERS+<<35-Q_FIRST>*4>
+A_SEQUENTIAL	= ANSWERS+<<36-Q_FIRST>*4>
+A_DIRECT	= ANSWERS+<<37-Q_FIRST>*4>
+A_FORM		= ANSWERS+<<38-Q_FIRST>*4>
+A_FORMATTED	= ANSWERS+<<39-Q_FIRST>*4>
+A_UNFORMATTED	= ANSWERS+<<40-Q_FIRST>*4>
+A_RECL		= ANSWERS+<<41-Q_FIRST>*4>
+A_NEXTREC	= ANSWERS+<<42-Q_FIRST>*4>
+A_BLANK		= ANSWERS+<<43-Q_FIRST>*4>
+A_ORG		= ANSWERS+<<44-Q_FIRST>*4>
+A_TYPE		= ANSWERS+<<45-Q_FIRST>*4>
+A_KEYED		= ANSWERS+<<46-Q_FIRST>*4>
+A_CC		= ANSWERS+<<47-Q_FIRST>*4>
+A_CONVERT	= ANSWERS+<<48-Q_FIRST>*4>
+NAME_LENGTH	= ANSWERS-4
+GIVEN		= NAME_LENGTH-8		; the name as written: length, address
+F_FAB		= GIVEN-FAB$C_BLN
+F_NAM		= F_FAB-NAM$C_BLN
+F_XAB		= F_NAM-XAB$C_FHCLEN
+F_ESA		= F_XAB-NAME_SIZE
+F_RSA		= F_ESA-NAME_SIZE
+F_WORK		= F_RSA-NAME_SIZE	; END_SEARCH's expanded name
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+PROTO_FAB:	$FAB	FAC=GET,SHR=<GET,PUT,DEL,UPD,UPI>
+PROTO_NAM:	$NAM	RSS=NAME_SIZE-1,ESS=NAME_SIZE-1
+PROTO_XAB:	$XABFHC
+
+T_UNKNOWN:	.ASCIC	/UNKNOWN/
+T_YES:		.ASCIC	/YES/
+T_NO:		.ASCIC	/NO/
+T_DIRECT:	.ASCIC	/DIRECT/
+T_SEQUENTIAL:	.ASCIC	/SEQUENTIAL/
+T_KEYED:	.ASCIC	/KEYED/
+T_FORMATTED:	.ASCIC	/FORMATTED/
+T_UNFORMATTED:	.ASCIC	/UNFORMATTED/
+T_ZERO:		.ASCIC	/ZERO/
+T_NULL:		.ASCIC	/NULL/
+T_RELATIVE:	.ASCIC	/RELATIVE/
+T_INDEXED:	.ASCIC	/INDEXED/
+T_FIXED:	.ASCIC	/FIXED/
+T_VARIABLE:	.ASCIC	/VARIABLE/
+T_SEGMENTED:	.ASCIC	/SEGMENTED/
+T_STREAM:	.ASCIC	/STREAM/
+T_STREAM_CR:	.ASCIC	/STREAM_CR/
+T_STREAM_LF:	.ASCIC	/STREAM_LF/
+T_FORTRAN:	.ASCIC	/FORTRAN/
+T_LIST:		.ASCIC	/LIST/
+T_NONE:		.ASCIC	/NONE/
+T_NATIVE:	.ASCIC	/NATIVE/
+DAT_NAME:	.ASCII	/.DAT/
+DAT_LEN		= .-DAT_NAME
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$INQUIRE(control block, keyword, value, ...)
+;
+	.ENTRY	FTN$INQUIRE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVAB	F_WORK(SP),SP
+	MOVC5	#0,(SP),#0,#-F_WORK,F_WORK(FP)
+	MOVAB	T_UNKNOWN,R0		; each text UNKNOWN until it's known
+	MOVL	R0,A_ACCESS(FP)
+	MOVL	R0,A_SEQUENTIAL(FP)
+	MOVL	R0,A_DIRECT(FP)
+	MOVL	R0,A_FORM(FP)
+	MOVL	R0,A_FORMATTED(FP)
+	MOVL	R0,A_UNFORMATTED(FP)
+	MOVL	R0,A_BLANK(FP)
+	MOVL	R0,A_ORG(FP)
+	MOVL	R0,A_TYPE(FP)
+	MOVL	R0,A_KEYED(FP)
+	MOVL	R0,A_CC(FP)
+	MOVL	R0,A_CONVERT(FP)
+	;
+	; What it asks about. R9 says if a unit was given, R10 is the unit, and
+	; R6 and R7 the name's and default name's descriptors.
+	;
+	CLRQ	R6
+	CLRQ	R9
+	MOVL	#2,R8			; the first keyword's argument
+10$:	MOVZBL	(AP),R0
+	CMPL	R8,R0
+	BGEQ	20$
+	MOVL	(AP)[R8],R0
+	MOVZBL	R0,R2			; the code
+	MOVL	4(AP)[R8],R1		; its value
+	ADDL2	#2,R8
+	CMPL	R2,#CODE_UNIT
+	BNEQ	12$
+	MOVL	#1,R9
+	MOVL	R1,R10
+	BRB	10$
+12$:	CMPL	R2,#CODE_FILE
+	BNEQ	14$
+	MOVL	R1,R6
+	BRB	10$
+14$:	CMPL	R2,#CODE_DEFAULT
+	BNEQ	10$
+	MOVL	R1,R7
+	BRB	10$
+20$:	TSTL	R6
+	BNEQ	30$
+	TSTL	R7
+	BEQL	25$
+30$:	BSBW	BY_NAME
+	BRB	STORE
+	;
+	; By a unit: only one that can exist has answers.
+	;
+25$:	BLBC	R9,STORE
+	CMPL	R10,#UNIT_HIGH
+	BGTRU	STORE
+	MNEGL	#1,A_EXIST(FP)
+	MOVL	R10,A_NUMBER(FP)
+	PUSHL	R10
+	CALLS	#1,FTN$$UNIT_BLOCK	; FTN_UNITS
+	TSTL	R0
+	BEQL	STORE
+	MOVL	R0,R11
+	BSBW	OF_UNIT
+
+;
+; Each answer asked for goes where its keyword says, by its mechanism.
+;
+STORE:	MOVL	#2,R8
+10$:	MOVZBL	(AP),R0
+	CMPL	R8,R0
+	BGEQ	90$
+	MOVL	(AP)[R8],R0
+	MOVZBL	R0,R2			; the code
+	EXTZV	#8,#8,R0,R3		; the mechanism
+	MOVL	4(AP)[R8],R6		; the place
+	ADDL2	#2,R8
+	CMPL	R2,#Q_FIRST
+	BLSS	10$
+	CMPL	R2,#Q_LAST
+	BGTR	10$
+	MOVAL	ANSWERS(FP),R4
+	MOVL	-<Q_FIRST*4>(R4)[R2],R1
+	CMPL	R3,#MECHANISM_TEXT
+	BEQL	40$
+	CMPL	R3,#MECHANISM_LONG
+	BNEQ	20$
+	MOVL	R1,(R6)
+	BRB	10$
+20$:	CMPL	R3,#MECHANISM_WORD
+	BNEQ	30$
+	MOVW	R1,(R6)
+	BRB	10$
+30$:	CMPL	R3,#MECHANISM_BYTE
+	BNEQ	10$
+	MOVB	R1,(R6)
+	BRB	10$
+	;
+	; A text fills its place with blanks after it, and is cut short by it.
+	;
+40$:	CMPL	R2,#CODE_NAME
+	BNEQ	50$
+	MOVL	NAME_LENGTH(FP),R0
+	BRB	60$
+50$:	MOVZBL	(R1)+,R0
+60$:	MOVZWL	(R6),R4
+	MOVL	4(R6),R5
+	MOVC5	R0,(R1),#^A/ /,R4,(R5)
+	BRB	10$
+90$:	CLRL	R0
+	RET
+
+;
+; BY_NAME: the answers for a name, R6 the file's descriptor or 0, and R7 the
+; default name's or 0. FORRTL's default name is .DAT, not the unit's.
+;
+BY_NAME:
+	MOVC3	#FAB$C_BLN,PROTO_FAB,F_FAB(FP)
+	MOVC3	#NAM$C_BLN,PROTO_NAM,F_NAM(FP)
+	MOVC3	#XAB$C_FHCLEN,PROTO_XAB,F_XAB(FP)
+	MOVAB	F_FAB(FP),R11
+	MOVAB	F_NAM(FP),FAB$L_NAM(R11)
+	MOVAB	F_XAB(FP),FAB$L_XAB(R11)
+	MOVAB	F_ESA(FP),F_NAM+NAM$L_ESA(FP)
+	MOVAB	F_RSA(FP),F_NAM+NAM$L_RSA(FP)
+	MOVAB	DAT_NAME,FAB$L_DNA(R11)
+	MOVB	#DAT_LEN,FAB$B_DNS(R11)
+	TSTL	R7
+	BEQL	10$
+	MOVL	R7,R1
+	JSB	FTN$$NAME_TEXT		; FTN_OPEN: R0 the length, R1 the address
+	MOVL	R1,FAB$L_DNA(R11)
+	MOVB	R0,FAB$B_DNS(R11)
+	CMPL	R0,#255
+	BGTR	NOT_A_NAME
+10$:	TSTL	R6
+	BEQL	20$
+	MOVL	R6,R1
+	JSB	FTN$$NAME_TEXT
+	MOVL	R0,GIVEN(FP)
+	MOVL	R1,GIVEN+4(FP)
+	MOVL	R1,FAB$L_FNA(R11)
+	MOVB	R0,FAB$B_FNS(R11)
+	CMPL	R0,#255
+	BGTR	NOT_A_NAME
+	;
+	; Is it a name of one file?
+	;
+20$:	$PARSE	FAB=R11
+	BLBC	R0,NOT_A_NAME
+	BITL	#NAM$M_WILDCARD,F_NAM+NAM$L_FNB(FP)
+	BEQL	A_NAME_OF_ONE
+	BSBW	END_SEARCH
+NOT_A_NAME:
+	MOVL	GIVEN(FP),NAME_LENGTH(FP)
+	MOVL	GIVEN+4(FP),A_NAME(FP)
+	RSB
+	;
+	; Is it there?
+	;
+A_NAME_OF_ONE:
+	MNEGL	#1,A_NAMED(FP)
+	$SEARCH	FAB=R11
+	BLBS	R0,40$
+	MOVZBL	F_NAM+NAM$B_ESL(FP),NAME_LENGTH(FP)
+	MOVAB	F_ESA(FP),A_NAME(FP)
+	BRW	END_SEARCH
+40$:	MNEGL	#1,A_EXIST(FP)
+	MOVZBL	F_NAM+NAM$B_RSL(FP),NAME_LENGTH(FP)
+	MOVAB	F_RSA(FP),A_NAME(FP)
+	;
+	; On a unit? It answers as that unit.
+	;
+	PUSHL	NAME_LENGTH(FP)
+	PUSHL	A_NAME(FP)
+	CALLS	#2,FTN$$UNIT_NAMED	; FTN_UNITS
+	TSTL	R0
+	BEQL	50$
+	BSBW	END_SEARCH
+	MOVL	R0,R11
+	BRW	OF_UNIT
+	;
+	; Open it to look at it. A file that can't be opened (another's, with no
+	; sharing) exists, and that's all (unconfirmed).
+	;
+50$:	$OPEN	FAB=R11
+	BLBC	R0,70$
+	MOVL	R11,R2
+	BSBW	OF_FILE
+	MOVZWL	FAB$W_MRS(R11),R0	; the longest record if it has no size
+	BNEQ	60$
+	MOVZWL	F_XAB+XAB$W_LRL(FP),R0
+60$:	MOVL	R0,A_RECL(FP)
+	$CLOSE	FAB=R11
+70$:	BRW	END_SEARCH
+
+;
+; END_SEARCH: ends the search a parse may have begun, as FORRTL does: a $PARSE
+; given a default name it can't read, whose status doesn't matter. The name the
+; NAM holds stays, and R0 is kept.
+;
+END_SEARCH:
+	PUSHL	R0
+	MOVAB	F_WORK(FP),F_NAM+NAM$L_ESA(FP) ; VMS's $PARSE writes the name it makes:
+					;  INQ1.; over the answer's INQ1.XYZ; (testdata/ftn86)
+	MOVAB	F_FAB(FP),R1
+	CLRL	FAB$L_DNA(R1)
+	MOVB	#1,FAB$B_DNS(R1)
+	$PARSE	FAB=R1
+	MOVL	(SP)+,R0
+	RSB
+
+;
+; OF_FILE: the answers any file has, R2 its FAB.
+;
+OF_FILE:
+	MOVAB	T_YES,R0
+	MOVL	R0,A_SEQUENTIAL(FP)
+	MOVL	R0,A_FORMATTED(FP)
+	MOVL	R0,A_UNFORMATTED(FP)
+	MOVAB	T_NO,A_KEYED(FP)
+	MOVAB	T_NO,A_DIRECT(FP)
+	;
+	; The organization. A relative file may be direct, an indexed one keyed.
+	;
+	MOVAB	T_SEQUENTIAL,A_ORG(FP)
+	CMPB	FAB$B_ORG(R2),#FAB$C_REL
+	BNEQ	10$
+	MOVAB	T_RELATIVE,A_ORG(FP)
+	MOVL	R0,A_DIRECT(FP)
+	BRB	20$
+10$:	CMPB	FAB$B_ORG(R2),#FAB$C_IDX
+	BNEQ	20$
+	MOVAB	T_INDEXED,A_ORG(FP)
+	MOVL	R0,A_KEYED(FP)
+	;
+	; The record type. Only fixed-length records can be numbered in a
+	; sequential file. VFC isn't one of FORTRAN's.
+	;
+20$:	CASEB	FAB$B_RFM(R2),#FAB$C_FIX,#<FAB$C_STMCR-FAB$C_FIX>
+1$:	.WORD	30$-1$			; FIX
+	.WORD	40$-1$			; VAR
+	.WORD	70$-1$			; VFC
+	.WORD	50$-1$			; STM
+	.WORD	55$-1$			; STMLF
+	.WORD	60$-1$			; STMCR
+	BRB	70$
+30$:	MOVAB	T_FIXED,A_TYPE(FP)
+	CMPB	FAB$B_ORG(R2),#FAB$C_SEQ
+	BNEQ	70$
+	MOVL	R0,A_DIRECT(FP)
+	BRB	70$
+40$:	MOVAB	T_VARIABLE,A_TYPE(FP)
+	BRB	70$
+50$:	MOVAB	T_STREAM,A_TYPE(FP)
+	BRB	70$
+55$:	MOVAB	T_STREAM_LF,A_TYPE(FP)
+	BRB	70$
+60$:	MOVAB	T_STREAM_CR,A_TYPE(FP)
+	;
+	; Carriage control.
+	;
+70$:	MOVAB	T_NONE,A_CC(FP)
+	BBC	#FAB$V_FTN,FAB$B_RAT(R2),80$
+	MOVAB	T_FORTRAN,A_CC(FP)
+	RSB
+80$:	BBC	#FAB$V_CR,FAB$B_RAT(R2),90$
+	MOVAB	T_LIST,A_CC(FP)
+90$:	RSB
+
+;
+; OF_UNIT: the answers for a connected unit, R11 its block.
+;
+OF_UNIT:
+	MOVAB	UB_FAB(R11),R2
+	BSBW	OF_FILE
+	MNEGL	#1,A_EXIST(FP)
+	MNEGL	#1,A_OPENED(FP)
+	MOVL	UB_UNIT(R11),A_NUMBER(FP)
+	TSTB	UB_SCRATCH(R11)		; a scratch file has no name to use
+	BNEQ	10$
+	MNEGL	#1,A_NAMED(FP)
+10$:	MOVZBL	UB_NAM+NAM$B_RSL(R11),NAME_LENGTH(FP)
+	MOVAB	UB_RSA(R11),A_NAME(FP)
+	MOVL	UB_NEXTREC(R11),A_NEXTREC(FP)
+	;
+	; The access: APPEND is sequential, once it has found the end.
+	;
+	MOVAB	T_SEQUENTIAL,A_ACCESS(FP)
+	CMPB	UB_ACCESS(R11),#1
+	BNEQ	20$
+	MOVAB	T_DIRECT,A_ACCESS(FP)
+	BRB	30$
+20$:	CMPB	UB_ACCESS(R11),#4
+	BNEQ	30$
+	MOVAB	T_KEYED,A_ACCESS(FP)
+	;
+	; The form says how RECL counts, and if blanks and conversion mean anything.
+	;
+30$:	TSTB	UB_FORM(R11)		; none yet: a unit ENDFILE connected
+	BNEQ	35$
+	MOVL	UB_SIZE(R11),A_RECL(FP)
+	RSB
+35$:	CMPB	UB_FORM(R11),#1
+	BNEQ	50$
+	MOVAB	T_FORMATTED,A_FORM(FP)
+	MOVL	UB_SIZE(R11),A_RECL(FP)
+	MOVAB	T_ZERO,A_BLANK(FP)
+	CMPB	UB_BLANK(R11),#1
+	BEQL	40$
+	MOVAB	T_NULL,A_BLANK(FP)
+40$:	RSB
+50$:	MOVAB	T_UNFORMATTED,A_FORM(FP)
+	MOVAB	T_NATIVE,A_CONVERT(FP)
+	MOVL	UB_SIZE(R11),R0
+	BLBC	UB_SEGMENTED(R11),60$
+	SUBL2	#SEGMENT_WORD,R0
+	MOVAB	T_SEGMENTED,A_TYPE(FP)
+60$:	DIVL3	#4,R0,A_RECL(FP)
+	RSB
+
+	.END

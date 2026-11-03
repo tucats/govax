@@ -1,0 +1,257 @@
+	.TITLE	FTN_SYSTEM - FORTRAN's system subroutines
+	.IDENT	/V1.0/
+;
+; The system subroutines of the 1988 Language Reference Manual's appendix D
+; (D.4, D.5.3) that aren't about I/O: DATE, TIME, IDATE, SECNDS, EXIT, and
+; MVBITS. ERRSNS is FTN_STATEMENT's, and RAN is MTH$RANDOM itself.
+;
+; A routine gets only addresses, with nothing of what they're the addresses of,
+; so where a subroutine takes arguments of several types there's a routine for
+; each, and the compiler chooses by the arguments it sees: a word's and a
+; longword's, or a descriptor's for a CHARACTER argument. What each does is held
+; to VMS's FORRTL.EXE, called as a black box (testdata/for83's part A), which is
+; where the things no manual says come from: what happens to a short buffer,
+; the order things are stored in, what a bad argument does. These routines
+; check nothing. A bad address faults in the routine, and the condition goes to
+; the caller's handlers.
+;
+; R0's value after a subroutine means nothing to a program, but it comes out as
+; FORRTL's does here, which lets the oracle compare it.
+;
+	$SSDEF				; SS$_NORMAL
+
+; A string descriptor's fields, as FTN_CONTROL has them.
+DSC$W_LENGTH	= 0			; the length, in bytes
+DSC$A_POINTER	= 4			; the string's address
+
+BLANK		= ^A/ /			; what pads a long buffer
+
+; What $NUMTIM stores: seven words, of which these are used.
+NUM_YEAR	= 0
+NUM_MONTH	= 2
+NUM_DAY		= 4
+NUM_HOUR	= 6
+NUM_MINUTE	= 8
+NUM_SECOND	= 10
+NUM_HUNDREDTH	= 12
+NUM_SIZE	= 16			; its size, rounded up to a longword
+
+ASCTIM_DATE	= 11			; dd-mmm-yyyy, which $ASCTIM writes first
+DATE_LEN	= 9			; dd-mmm-yy, which DATE wants
+TIME_LEN	= 8			; hh:mm:ss, which TIME wants
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; DATE_TEXT: a local subroutine, reached by BSBW, that writes today's date as
+; DATE wants it to the buffer R2 points at, which has ASCTIM_DATE bytes of room.
+; $ASCTIM writes the year's four digits, and DATE wants the last two, so those
+; move back over the first two. R2 is kept; R0 and R1 aren't.
+;
+DATE_TEXT:
+	PUSHL	R2			; a descriptor of the buffer, on the
+	PUSHL	#ASCTIM_DATE		; stack: its address, then its length
+	MOVL	SP,R0			; (type and class don't matter)
+	;
+	; Given a buffer shorter than the whole date and time, $ASCTIM writes
+	; what fits and returns SS$_BUFFEROVF, which here is what's wanted.
+	;
+	$ASCTIM_S TIMBUF=(R0)
+	MOVW	<ASCTIM_DATE-2>(R2),<DATE_LEN-2>(R2)	; yyyy's last two digits
+	ADDL2	#8,SP			; the descriptor goes
+	RSB
+
+;
+; CALL DATE(buf), with buf not CHARACTER: FTN$DATE(address).
+;
+; Stores exactly DATE_LEN bytes at the address, whatever is there.
+;
+	.ENTRY	FTN$DATE,^M<R2,R3,R4,R5>
+	SUBL2	#ASCTIM_DATE+1,SP	; room for $ASCTIM's text
+	MOVL	SP,R2
+	BSBW	DATE_TEXT
+	MOVC3	#DATE_LEN,(R2),@4(AP)
+	RET
+
+;
+; CALL DATE(buf), with buf CHARACTER: FTN$DATE_T_DS(descriptor).
+;
+; Moves the date as FORTRAN assigns a character value, to the descriptor's
+; address for its length, cut short or filled with blanks. The class doesn't
+; matter: a dynamic string of no length gets nothing, a varying string's text
+; lands over its length word, an array descriptor gets one element, all as
+; FORRTL's does. With no argument it writes nothing.
+;
+	.ENTRY	FTN$DATE_T_DS,^M<R2,R3,R4,R5>
+	SUBL2	#ASCTIM_DATE+1,SP
+	MOVL	SP,R2
+	BSBW	DATE_TEXT
+	TSTB	(AP)			; a descriptor?
+	BEQL	10$
+	MOVL	4(AP),R1		; a null one is no argument too
+	BEQL	10$
+	MOVC5	#DATE_LEN,(R2),#BLANK,DSC$W_LENGTH(R1),@DSC$A_POINTER(R1)
+	RET
+10$:	MOVL	#DATE_LEN,R0		; what MOVC5 leaves when it moves nothing
+	RET
+
+;
+; CALL TIME(buf), with buf not CHARACTER: FTN$TIME(address).
+;
+; Stores exactly TIME_LEN bytes at the address. This is $ASCTIM itself, asked
+; for the time only, hh:mm:ss.cc, in a buffer that holds as far as the seconds,
+; so R0 is SS$_BUFFEROVF when all is well. A bad address is $ASCTIM's to find,
+; and so is a status in R0, where DATE's is a condition: FORRTL's differ so too.
+;
+	.ENTRY	FTN$TIME,^M<>
+	PUSHL	4(AP)			; a descriptor of the caller's bytes
+	PUSHL	#TIME_LEN
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	RET
+
+;
+; CALL TIME(buf), with buf CHARACTER: FTN$TIME_T_DS(descriptor).
+;
+; To the descriptor's address for its length, as FTN$DATE_T_DS does. A length up
+; to TIME_LEN is the length $ASCTIM is given, and a longer one has the time
+; moved there with blanks after it.
+;
+	.ENTRY	FTN$TIME_T_DS,^M<R2,R3,R4,R5>
+	CLRL	R2			; no argument: a length of 0, and no address
+	CLRL	R3
+	TSTB	(AP)
+	BEQL	10$
+	MOVL	4(AP),R1
+	BEQL	10$
+	MOVZWL	DSC$W_LENGTH(R1),R2
+	MOVL	DSC$A_POINTER(R1),R3
+	CMPL	R2,#TIME_LEN		; longer than the time?
+	BGTR	20$
+10$:	PUSHL	R3			; a descriptor of the caller's bytes
+	PUSHL	R2
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	RET
+20$:	SUBL2	#TIME_LEN,SP		; the time, in a buffer of its own
+	MOVL	SP,R4
+	PUSHL	R4
+	PUSHL	#TIME_LEN
+	MOVL	SP,R0
+	$ASCTIM_S TIMBUF=(R0),CVTFLG=#1
+	MOVC5	#TIME_LEN,(R4),#BLANK,R2,(R3)
+	RET
+
+;
+; CALL IDATE(i,j,k), all INTEGER*2: FTN$IDATE(i,j,k).
+; CALL IDATE(i,j,k), all INTEGER*4: FTN$JDATE(i,j,k).
+;
+; The month, the day, and the year's last two digits. The year goes first, then
+; the month, then the day, so that a bad address leaves the ones before it set,
+; as FORRTL's does. R0 ends up the year.
+;
+; EDIV divides a quadword, here R0 and R1, leaving the quotient (R1, unwanted)
+; and the remainder (R0).
+;
+	.ENTRY	FTN$IDATE,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_YEAR(R2),R0
+	CLRL	R1
+	EDIV	#100,R0,R1,R0
+	MOVW	R0,@12(AP)
+	MOVW	NUM_MONTH(R2),@4(AP)
+	MOVW	NUM_DAY(R2),@8(AP)
+	RET
+
+	.ENTRY	FTN$JDATE,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_YEAR(R2),R0
+	CLRL	R1
+	EDIV	#100,R0,R1,R0
+	MOVL	R0,@12(AP)
+	MOVZWL	NUM_MONTH(R2),@4(AP)
+	MOVZWL	NUM_DAY(R2),@8(AP)
+	RET
+
+;
+; y = SECNDS(x): FTN$SECNDS(x), a REAL*4 function, its value in R0.
+;
+; The seconds since midnight less x. If that's negative a day is added, once,
+; whatever x is: that is what makes an interval right across midnight. The time
+; is first counted in hundredths, which a REAL*4's 24 bits hold exactly (a day
+; is 8,640,000 of them), so that the division is the one place it rounds.
+;
+	.ENTRY	FTN$SECNDS,^M<R2>
+	SUBL2	#NUM_SIZE,SP
+	MOVL	SP,R2
+	$NUMTIM_S TIMBUF=(R2)
+	MOVZWL	NUM_HOUR(R2),R0
+	MULL2	#60,R0
+	MOVZWL	NUM_MINUTE(R2),R1
+	ADDL2	R1,R0
+	MULL2	#60,R0
+	MOVZWL	NUM_SECOND(R2),R1
+	ADDL2	R1,R0
+	MULL2	#100,R0
+	MOVZWL	NUM_HUNDREDTH(R2),R1
+	ADDL2	R1,R0
+	CVTLF	R0,R0
+	DIVF2	#100.0,R0
+	SUBF2	@4(AP),R0
+	BGEQ	10$
+	ADDF2	#86400.0,R0
+10$:	RET
+
+;
+; CALL EXIT, CALL EXIT(status): FTN$EXIT([status]), with a longword's address.
+; CALL EXIT(status), INTEGER*2: FTN$EXIT_W([status]), with a word's, whose value
+; isn't sign-extended: -1 is the status %X0000FFFF.
+;
+; $EXIT runs the image's exit handlers, FTNRTL's own among them, which closes the
+; units. No status is SS$_NORMAL.
+;
+	.ENTRY	FTN$EXIT,^M<>
+	MOVL	#SS$_NORMAL,R0
+	TSTB	(AP)
+	BEQL	10$
+	MOVL	@4(AP),R0
+10$:	$EXIT_S	R0
+
+	.ENTRY	FTN$EXIT_W,^M<>
+	MOVL	#SS$_NORMAL,R0
+	TSTB	(AP)
+	BEQL	10$
+	MOVZWL	@4(AP),R0
+10$:	$EXIT_S	R0
+
+;
+; CALL MVBITS(m,i,len,n,j): FTN$IMVBITS with every argument a word's address,
+; FTN$JMVBITS with every one a longword's.
+;
+; EXTZV takes len bits from i up in m, and INSV puts them at j up in n; those
+; instructions are the whole of it, with their limits and nothing added. So a
+; length past 32 is their reserved operand fault, one past the variable's width
+; runs on into the next bytes, and a position past the variable, which the VAX
+; takes as a bit number from the variable's address, reaches into what's nearby.
+; Both instructions take a position that's a signed longword, so a negative one
+; counts back in FTN$JMVBITS; FTN$IMVBITS's words are unsigned, as FORRTL's are.
+;
+	.ENTRY	FTN$IMVBITS,^M<R2,R3>
+	MOVZWL	@8(AP),R1		; i
+	MOVZWL	@12(AP),R2		; len
+	MOVZWL	@20(AP),R3		; j
+	EXTZV	R1,R2,@4(AP),R0
+	INSV	R0,R3,R2,@16(AP)
+	RET
+
+	.ENTRY	FTN$JMVBITS,^M<>
+	MOVL	@12(AP),R0		; len
+	EXTZV	@8(AP),R0,@4(AP),R1
+	INSV	R1,@20(AP),R0,@16(AP)
+	RET
+
+	.END

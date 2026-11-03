@@ -5,10 +5,4 @@ DECLARE           1
 CANCEL           1
 END
 THIRD           1
-SECOND           3         123
-FIRST           3
-FROM THE PROGRAM    
-FROM THIRD          
-FROM SECOND         
-OPENED LATE         
   $STATUS == "%X00000003"

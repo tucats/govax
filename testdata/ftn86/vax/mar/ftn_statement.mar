@@ -1,0 +1,1051 @@
+	.TITLE	FTN_STATEMENT - FTNRTL's I/O statements
+	.IDENT	/V1.0/
+;
+; Every FORTRAN I/O statement becomes a call per part (docs/PHASE-74 -
+; FORTRAN plan.md, Decision 12; docs/PHASE-80 - FORTRAN formatted IO.md):
+;
+;	WRITE (6,10) I, X	CALLS #3,G^FTN$WRITE_SF	(the begin call)
+;				CALLS #1,G^FTN$IO_ITEM	(I)
+;				CALLS #1,G^FTN$IO_ITEM	(X)
+;				CALLS #0,G^FTN$IO_END	(the end)
+;
+; The begin call is chosen by the statement's kind, named as VMS's
+; FORTRAN run-time library names its own: READ or WRITE, then S for a
+; unit (sequential access), D for a unit's record by its number (direct
+; access), or I for an internal file, then F formatted, L list-directed, N
+; namelist, or U unformatted; and FTN$ENCODE and FTN$DECODE. Its arguments
+; are
+;
+;	4(AP)	the statement's control block, made by the compiler:
+;		+0  word  its size in bytes (8)
+;		+2  word  flags: bit 0 ERR=, bit 1 END=, bit 2 IOSTAT= is
+;			  given; bit 3 the format is a run-time format
+;		+4  long  not used yet
+;	8(AP)	the unit, by value; for an internal file, its descriptor;
+;		for ENCODE and DECODE, the buffer's address
+;	12(AP)	the format, but for a list-directed or unformatted statement: a FORMAT
+;		statement's block (+0 the address of a longword where the
+;		parsed form is kept, +4 the text's length, a word, +6 a word
+;		of flags, +8 the text's address, and with flag bit 0 of those
+;		+12 the routine for its variable format expressions, which
+;		FTN_FORMAT calls with F(n, the caller's AP)); or with flag bit 3 a
+;		run-time format's descriptor; or a NAMELIST group's block
+;		(+0 the address of the group's name, a counted string, +4
+;		the number of entities, then for each the address of its
+;		name and of its descriptor)
+;	16(AP)	for ENCODE and DECODE, the count of characters, by value
+;	last	for a direct statement, the record's number, by value
+;
+; FTN$IO_ITEM's argument is an item's descriptor; FTN$IO_END returns the
+; statement's status in R0: 0 for success, -1 at an end of file, or the
+; FOR number of the error (FOR$_INVLOGUNI is 32). A statement whose
+; control block gives none of ERR=, END=, and IOSTAT= never sees a
+; failure: FTN$IO_END signals the condition. By LIB$SIGNAL if a handler can
+; go on from it, as VMS's library has it (testdata/for83's parts B and E):
+; FOR$_INPCONERR, FOR$_OUTCONERR, and FOR$_FORVARMIS. Every other condition
+; is by LIB$STOP, and ends the image however a handler answers. An end of
+; file goes to END=, or ERR= without it, so either one, or IOSTAT=, takes it;
+; any other error is taken by ERR= or IOSTAT=.
+;
+; FOR$_INPCONERR with no specifier doesn't wait for the end: it is signaled
+; at its item, the statement going on after it to its other items
+; (FTN$$IO_SIGNAL), and the user PC in its message is where that item's call
+; returns (CTX_ITEMPC).
+;
+; The signal is laid out as VMS's run-time library lays out its own
+; (testdata/for80's run 3, testdata/nml80's conditions):
+;
+;	the condition, then its FAO count and arguments: the unit, the
+;		file's name (a descriptor), and the user PC (where FTN$IO_END
+;		returns), after a namelist condition's text or name
+;	RMS's status and status value, for a failure RMS reported, else
+;		two zeros, which $PUTMSG passes over: -RMS-E-EOF follows
+;		FOR$_ENDDURREA's message
+;	for FOR$_INPCONERR, FOR$_INVTEXREC with the text that couldn't be
+;		converted and the unit's record number, or for an internal file
+;		FOR$_INVTEX with the text alone
+;	for FOR$_BACERR, the condition saying why, with no arguments
+;
+; The file's name is the one RMS gave when the unit was connected
+; (SYS$INPUT:.; for a process-permanent file), and empty for an internal
+; file, a unit not yet connected, and the conditions VMS's library finds
+; before it reaches the file: FOR$_INVLOGUNI, FOR$_RECIO_OPE, and
+; FOR$_SYNERRFOR (a run-time format is parsed first; VMS showed no name
+; for one at a unit not yet used, and the rule for one already in use is
+; govax's, unconfirmed).
+;
+; ERRSNS. Every failure FTN$IO_END sees, taken by a specifier or signaled,
+; is saved for the system subroutine ERRSNS (the manual's D.4.3): its FOR
+; number (24 at an end of file), RMS's status and value (as in the signal),
+; the unit, and the condition value. FTN$ERRSNS and FTN$ERRSNS_W return
+; them, as longwords or as words, and clear them.
+;
+; Statements nest: a function called for an item of one statement may
+; do I/O of its own, to another unit or an internal file (the 1988 VAX
+; FORTRAN Language Reference Manual, 7.1.2; on the same unit it is
+; FOR$_RECIO_OPE). So each statement has a context of its own, a block
+; on a stack (STMT_TOP), which the begin call pushes and FTN$IO_END pops;
+; FTN$IO_ITEM uses the top one. A context holds the statement's unit,
+; kind, and flags, its first error, and the record it is building. The
+; blocks come from LIB$GET_VM, and go back on a free list to be used
+; again. A statement whose routine was left by a signal never reaches its
+; FTN$IO_END: each context records the FP of the routine that began it and
+; that frame's saved PC, and a begin call first pops the contexts of routines
+; that can't still be running: those whose FP is at or below its caller's (the
+; stack grows down, so a routine called later, and still running, has a lower
+; FP), and those the call chain doesn't reach, a later routine's frame being
+; where the gone one was. A routine called again from the same place has the
+; very frame it had, which this can't tell (the phase doc's log for subtask 7).
+; An item or an end pops the contexts above its own, of routines it has
+; outlived.
+;
+; ASTs. An AST routine may run a statement between any two instructions of
+; another, on the same stack, so its context goes above the interrupted one's and
+; is gone before that goes on, unless a handler unwound it. The stack and the free
+; list take more than one instruction to change, so ASTs are held off while they
+; change ($SETAST, HOLD_ASTS and RELEASE_ASTS). And a context isn't on the free
+; list until its statement has read the last of it, or an AST's statement could
+; take it and change its status.
+;
+; The first error a statement meets is recorded in its context, and the
+; rest of the statement does nothing but end: its items are passed over,
+; and FTN$IO_END returns or signals the error. An error after which VMS's
+; statement goes on, FOR$_OUTCONERR (a value too large for its field,
+; written as asterisks), is recorded apart (CTX_WARNING): the statement
+; goes on, and FTN$IO_END reports it if nothing stopped the statement.
+;
+; Formatted input and output are FTN_FORMAT's, list-directed output and
+; input FTN_LISTOUT's and FTN_LISTIN's, namelist input and output
+; FTN_NAMELIST's (done whole by the begin call: a namelist statement has no
+; items), unformatted input and output FTN_UNFORMATTED's, on the units
+; FTN_UNITS has and on internal files (FTN_INTERNAL).
+; Three namelist conditions name what was wrong (the text, or the
+; entity's name) in their messages, before the unit: CTX_NM_FAO.
+;
+	$SSDEF
+
+FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
+FOR$_ENDDURREA	= ^X001880C4		;  their severities
+FOR$_ERRDURWRI	= ^X00188134
+FOR$_ERRDURREA	= ^X0018813C
+FOR$_RECIO_OPE	= ^X00188144
+FOR$_INSVIRMEM	= ^X0018814C
+FOR$_INVLOGUNI	= ^X00188104
+FOR$_INPRECTOO	= ^X001880B4
+FOR$_SYNERRFOR	= ^X001881F4
+FOR$_INPCONERR	= ^X00188204
+FOR$_INVTEXREC	= ^X00188834
+FOR$_INVTEX	= ^X0018883C
+FOR$_CLOERR	= ^X001880E4
+FOR$_FILNOTFOU	= ^X001880EC
+FOR$_OPEFAI	= ^X001880F4
+FOR$_NO_SUCDEV	= ^X00188154
+FOR$_FILNAMSPE	= ^X0018815C
+FOR$_REWERR	= ^X001880A4
+FOR$_BACERR	= ^X001880BC
+FOR$_ENDFILERR	= ^X0018810C
+FOR$_ATTACCNON	= ^X00188124
+FOR$_FINERR	= ^X001881CC
+FOR$_NOTIMP_K	= ^X00188014		; (FOR$_NOTIMP, for a keyed READ)
+FOR$_OPEDEFREQ	= ^X001880D4
+FOR$_NO_CURREC	= ^X001881AC
+FOR$_REWRITERR	= ^X001881B4
+FOR$_DELERR	= ^X001881BC
+FOR$_UNLERR	= ^X001881C4
+FOR$_SPERECLOC	= ^X001881A4
+
+UB_OPEN		= 0			; A unit's block (FTN_UNITS)
+UB_ACCESS	= 37
+UB_CURRENT	= 620+36
+UB_REWRITE	= 620+37
+ACCESS_KEYED	= 4
+
+; The control block's fields and flags.
+ICB_W_SIZE	= 0
+ICB_W_FLAGS	= 2
+FLAG_ERR	= 1
+FLAG_END	= 2
+FLAG_IOSTAT	= 4
+
+; A statement's context. FTN_LISTOUT, FTN_LISTIN, and FTN_FORMAT use
+; CTX_STREAM, CTX_RECLEN, CTX_RECP, and CTX_STATUS too, and define them
+; the same; FTN_FORMAT's own fields follow the record, then FTN_LISTIN's,
+; to CTX_SIZE.
+CTX_NEXT	= 0			; long: the statement below it, or 0
+CTX_FP		= 4			; long: the FP of the routine that began it
+CTX_UNIT	= 8			; long: the unit, -5 for an internal file
+CTX_FLAGS	= 12			; word: the control block's flags
+CTX_KIND	= 14			; byte: the statement's kind, K_...
+CTX_INTERNAL	= 15			; byte: 0 a unit, 1 an internal file, 2 ENCODE
+					;  or DECODE (FTN_INTERNAL)
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
+CTX_RECLEN	= 24			; long: the bytes in the record so far
+CTX_RECORD	= 28			; the record being built
+RECORD_SIZE	= 256
+CTX_FREEFMT	= CTX_RECORD+RECORD_SIZE+12 ; long: FTN_FORMAT's run-time format
+CTX_WARNING	= CTX_RECORD+RECORD_SIZE+104 ; long: FTN_FORMAT's error the
+					;  statement went on after, or 0
+CTX_LI_BUFFER	= CTX_RECORD+RECORD_SIZE+112 ; long: FTN_LISTIN's text buffer,
+CTX_LI_SIZE	= CTX_LI_BUFFER+4	;  long: and its size, which last as long
+					;  as the context does: 0 in a new one
+CTX_AP		= CTX_LI_SIZE+24	; long: the AP of the routine that began it
+					;  (after FTN_LISTIN's other fields)
+CTX_RECP	= CTX_AP+4+4+12		; long: where the record is, CTX_RECORD or
+					;  an internal file (after FTN_FORMAT's
+					;  expressions' routine and copy of an
+					;  operation)
+CTX_NM_FAO	= CTX_RECP+12		; long: FTN_NAMELIST's message's first FAO
+					;  argument, or 0 (then its descriptor and
+					;  two longwords)
+CTX_NM_CAPTURE	= CTX_RECP+24		; long: where FTN_LISTOUT puts a field for
+					;  FTN_NAMELIST, or 0
+CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a record starts
+CTX_TEXT	= CTX_RECP+36		; long: FOR$_INPCONERR's text, and its
+					;  length (FTN_EDIT, FTN_LISTIN)
+CTX_UNITMAX	= CTX_RECP+44		; long: the unit's longest record (FTN_UNITS)
+CTX_UNITBLANK	= CTX_RECP+48		; long: 1 if its blanks in numbers are zeros
+CTX_USERPC	= CTX_RECP+52		; long: the user PC of a statement of one
+					;  call (FTN_OPEN), or 0
+CTX_REASON	= CTX_RECP+56		; long: a second condition for the signal, or 0
+					;  (FTN_POSITION)
+CTX_UNF_POS	= CTX_RECP+60		; FTN_UNFORMATTED's: where it reads, what the
+CTX_UNF_LEN	= CTX_RECP+64		;  buffer holds, and its state
+CTX_UNF_STATE	= CTX_RECP+68
+CTX_DIRECT	= CTX_RECP+72		; long: 1 for a direct statement
+					;  (FTN_UNFORMATTED)
+CTX_REWRITE	= CTX_RECP+76		; byte: 1 for a REWRITE
+CTX_KEYED	= CTX_RECP+77		; byte: 1 for a keyed READ
+CTX_ITEMPC	= CTX_RECP+80		; long: where the begin call, or the last
+					;  item's FTN$IO_ITEM, returns
+CTX_FRAMEPC	= CTX_RECP+84		; long: the saved PC of CTX_FP's frame
+CTX_SIZE	= CTX_RECP+88
+
+; The kinds of statement: a READ's is even, a WRITE's odd. An internal
+; file's are a unit's with K_INTERNAL or K_CODE added, which the begin call
+; takes off into CTX_INTERNAL, so that the other modules see the form and
+; direction alone.
+K_READ_SF	= 0
+K_WRITE_SF	= 1
+K_READ_SL	= 2
+K_WRITE_SL	= 3
+K_READ_SN	= 4
+K_WRITE_SN	= 5
+K_FILE		= 6			; OPEN or CLOSE, which has no records
+K_READ_SU	= 8
+K_WRITE_SU	= 9
+K_INTERNAL	= 1@4
+K_CODE		= 2@4
+K_DIRECT	= 1@6			; a unit's record by number
+K_REWRITE	= 1@7			; a REWRITE: a WRITE of the current record
+K_KEYED		= 1@8			; a keyed READ
+
+INTERNAL_UNIT	= -5			; an internal file's unit, as VMS's
+
+FORM_FORMATTED	= 1			; FTN$$UNIT_RECORD's forms
+FORM_UNFORMATTED = 2
+OPEN_UNFORMATTED = 4			; FTN$$UNIT_OPEN's: unformatted
+
+;
+; The statement stack and the free list: data each program has its own
+; copy of.
+;
+	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+
+STMT_TOP:	.LONG	0		; the statement in progress, or 0
+FREE_LIST:	.LONG	0		; contexts to use again
+AST_WAS:	.LONG	0		; HOLD_ASTS's $SETAST status; ASTs being
+					;  off, no one else can be using it
+
+; The last failure, for ERRSNS: its FOR number, RMS's status and value,
+; the unit, and the condition value, in ERRSNS's order; all 0 for none.
+LAST_ERROR:	.LONG	0, 0, 0, 0, 0
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+; The conditions a signal gives RMS's status and value with, then a 0.
+RMS_REPORTED:
+	.LONG	FOR$_ENDDURREA, FOR$_INPRECTOO, FOR$_ERRDURREA, FOR$_ERRDURWRI
+	.LONG	FOR$_FILNOTFOU, FOR$_OPEFAI, FOR$_NO_SUCDEV, FOR$_FILNAMSPE
+	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR
+	.LONG	FOR$_ATTACCNON, FOR$_FINERR, FOR$_REWRITERR, FOR$_DELERR
+	.LONG	FOR$_UNLERR, FOR$_SPERECLOC, 0
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; The begin calls. Each sets R6 to its kind and R7 to its unit, and goes
+; on at BEGIN in its own frame, so that BEGIN sees the caller's
+; arguments and FP; so every entry saves the registers BEGIN uses.
+;
+BEGIN_MASK	= ^M<R2,R3,R4,R5,R6,R7>
+
+	.ENTRY	FTN$READ_SF,BEGIN_MASK
+	MOVL	#K_READ_SF,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_SF,BEGIN_MASK
+	MOVL	#K_WRITE_SF,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_SL,BEGIN_MASK
+	MOVL	#K_READ_SL,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_SL,BEGIN_MASK
+	MOVL	#K_WRITE_SL,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_SN,BEGIN_MASK
+	MOVL	#K_READ_SN,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_SN,BEGIN_MASK
+	MOVL	#K_WRITE_SN,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_SU,BEGIN_MASK
+	MOVL	#K_READ_SU,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_SU,BEGIN_MASK
+	MOVL	#K_WRITE_SU,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_DF,BEGIN_MASK
+	MOVL	#K_READ_SF+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_DF,BEGIN_MASK
+	MOVL	#K_WRITE_SF+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_DU,BEGIN_MASK
+	MOVL	#K_READ_SU+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$WRITE_DU,BEGIN_MASK
+	MOVL	#K_WRITE_SU+K_DIRECT,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$REWRITE_SF,BEGIN_MASK
+	MOVL	#K_WRITE_SF+K_REWRITE,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$REWRITE_SU,BEGIN_MASK
+	MOVL	#K_WRITE_SU+K_REWRITE,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_KF,BEGIN_MASK
+	MOVL	#K_READ_SF+K_KEYED,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_KU,BEGIN_MASK
+	MOVL	#K_READ_SU+K_KEYED,R6
+	BRW	SEQUENTIAL
+	.ENTRY	FTN$READ_IF,BEGIN_MASK
+	MOVL	#K_READ_SF+K_INTERNAL,R6
+	BRW	INTERNAL
+	.ENTRY	FTN$WRITE_IF,BEGIN_MASK
+	MOVL	#K_WRITE_SF+K_INTERNAL,R6
+	BRW	INTERNAL
+	.ENTRY	FTN$READ_IL,BEGIN_MASK
+	MOVL	#K_READ_SL+K_INTERNAL,R6
+	BRW	INTERNAL
+	.ENTRY	FTN$WRITE_IL,BEGIN_MASK
+	MOVL	#K_WRITE_SL+K_INTERNAL,R6
+	BRW	INTERNAL
+	.ENTRY	FTN$DECODE,BEGIN_MASK
+	MOVL	#K_READ_SF+K_CODE,R6
+	BRW	INTERNAL
+	.ENTRY	FTN$ENCODE,BEGIN_MASK
+	MOVL	#K_WRITE_SF+K_CODE,R6
+	BRW	INTERNAL
+
+;
+; FTN$PRINT_LIST(icb) and FTN$WRITE_LIST(icb): PRINT * and WRITE (*,*) as
+; Phase 75's compiler called them, the unit always -1. Kept so that a
+; program linked against an earlier FTNRTL still runs.
+;
+	.ENTRY	FTN$PRINT_LIST,BEGIN_MASK
+	MOVL	#K_WRITE_SL,R6
+	MNEGL	#1,R7
+	BRB	BEGIN
+	.ENTRY	FTN$WRITE_LIST,BEGIN_MASK
+	MOVL	#K_WRITE_SL,R6
+	MNEGL	#1,R7
+	BRB	BEGIN
+
+SEQUENTIAL:
+	MOVL	8(AP),R7		; the unit
+	BRB	BEGIN
+INTERNAL:
+	MNEGL	#-INTERNAL_UNIT,R7
+
+;
+; BEGIN: makes the statement's context, finds the unit, and starts the
+; statement. R6 is the kind, R7 the unit, and R3 the context once it is made.
+;
+BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
+	MOVL	8(FP),R4		;  and AP
+	MOVL	4(AP),R5		; the control block
+	BSBW	PUSH_CONTEXT
+	;
+	; A unit: its block (FTN$$UNIT_FIND, given the unit and OPEN_FLAGS),
+	; and no other statement in progress on it.
+	;
+	TSTB	CTX_INTERNAL(R3)
+	BEQL	36$
+	PUSHL	AP			; an internal file: its records
+	PUSHL	R3
+	CALLS	#2,FTN$$INT_START	; FTN_INTERNAL
+	BRW	75$
+36$:	TSTB	CTX_REWRITE(R3)
+	BEQL	361$
+	BRW	40$
+361$:	TSTB	CTX_KEYED(R3)
+	BEQL	362$
+	BRW	50$
+362$:	TSTB	CTX_DIRECT(R3)
+	BEQL	38$
+	;
+	; A direct statement: its unit's block (connecting nothing here), and
+	; the unit readied for the record, the begin call's last argument
+	; (FTN$$UNIT_DIRECT, which opens a unit DEFINE FILE described).
+	;
+	CLRL	-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,34$
+	BSBW	CHECK_NESTED
+	BLBC	R0,34$
+	MOVZBL	(AP),R0
+	PUSHL	(AP)[R0]		; the record
+	BICL3	#^C1,R6,R0
+	XORL2	#1,R0			; 1 for a READ
+	PUSHL	R0
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#3,FTN$$UNIT_DIRECT	; FTN_UNITS
+	BLBC	R0,34$
+	BRW	65$
+34$:	BRW	FAIL
+38$:	BSBW	OPEN_FLAGS
+	PUSHL	R0
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)	; its block, or 0 for no unit
+	BLBS	R0,37$
+	BRW	FAIL
+37$:	BSBW	CHECK_NESTED
+	BLBS	R0,60$
+	BRW	FAIL
+	;
+	; Connect the unit, take its record buffer, and start the statement.
+	;
+60$:	BSBW	OPEN_FLAGS
+	PUSHL	R0
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
+	BLBS	R0,65$
+	BRW	FAIL
+65$:	MOVZBL	CTX_DIRECT(R3),-(SP)	; 1 for a direct statement or a
+	BISB2	CTX_REWRITE(R3),(SP)	;  REWRITE, which has either kind of unit
+	MOVL	#FORM_FORMATTED,-(SP)	; the statement's form
+	CMPL	R6,#K_READ_SU
+	BLSSU	66$
+	MOVL	#FORM_UNFORMATTED,(SP)
+66$:	BICL3	#^C1,R6,-(SP)		; 1 for a WRITE
+	PUSHAB	CTX_UNITMAX(R3)
+	PUSHL	CTX_STREAM(R3)
+	CALLS	#5,FTN$$UNIT_RECORD	; FTN_UNITS
+	MOVL	R0,CTX_RECP(R3)
+	TSTL	R1
+	BEQL	75$
+	MOVL	R1,R0			; the statement can't use the unit
+	BRW	FAIL
+75$:	CMPL	R6,#K_READ_SU
+	BLSSU	76$
+	PUSHL	R3			; unformatted
+	CALLS	#1,FTN$$UNF_START	; FTN_UNFORMATTED
+	RET
+76$:	CMPL	R6,#K_READ_SN
+	BEQL	90$
+	CMPL	R6,#K_WRITE_SN
+	BEQL	95$
+	CMPL	R6,#K_WRITE_SL
+	BEQL	80$
+	CMPL	R6,#K_READ_SL
+	BEQL	85$
+	PUSHL	12(AP)			; formatted: the format
+	PUSHL	R3
+	CALLS	#2,FTN$$FMT_START	; FTN_FORMAT
+	BLBS	R0,77$
+	BRW	FAIL
+77$:	RET
+80$:	PUSHL	R3
+	CALLS	#1,FTN$$LIST_START	; FTN_LISTOUT
+	MOVL	#SS$_NORMAL,R0
+	RET
+85$:	PUSHL	R3
+	CALLS	#1,FTN$$LISTIN_START	; FTN_LISTIN
+	MOVL	#SS$_NORMAL,R0
+	RET
+90$:	PUSHL	12(AP)			; a namelist READ: the group's block
+	PUSHL	R3
+	CALLS	#2,FTN$$NML_READ	; FTN_NAMELIST
+	MOVL	#SS$_NORMAL,R0
+	RET
+95$:	PUSHL	#1			; a namelist WRITE: with the values
+	PUSHL	12(AP)
+	PUSHL	R3
+	CALLS	#3,FTN$$NML_WRITE	; FTN_NAMELIST
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; A REWRITE's unit, which it doesn't connect, needs a current record
+; (FTN_UNITS's UB_CURRENT): else FOR$_NO_CURREC, as VMS's runs show
+; (testdata/for81, #577, round 2's #33 and #36). While the statement is in
+; progress FTN$$UNIT_PUT updates that record, and FTN$IO_END makes a failure
+; to write FOR$_REWRITERR.
+;
+40$:	CLRL	-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,42$
+	BSBW	CHECK_NESTED
+	BLBC	R0,42$
+	MOVL	CTX_STREAM(R3),R1
+	MOVL	#FOR$_NO_CURREC,R0
+	BLBC	UB_OPEN(R1),42$
+	TSTB	UB_CURRENT(R1)
+	BEQL	42$
+	MOVB	#1,UB_REWRITE(R1)
+	BRW	65$
+42$:	BRW	FAIL
+
+;
+; A keyed READ (KEY=, KEYEQ=, KEYGE=, KEYGT=) reads an indexed file,
+; which FTNRTL doesn't open yet (Decision 13). As VMS's run shows (testdata/for81,
+; round 2's #37 to #40), the unit is connected as a READ's would be, so that one
+; with no file is FOR$_FILNOTFOU, and a unit whose access isn't keyed is
+; FOR$_OPEDEFREQ; any other would be FOR$_NOTIMP.
+;
+50$:	BSBW	OPEN_FLAGS
+	PUSHL	R0
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,52$
+	BSBW	CHECK_NESTED
+	BLBC	R0,52$
+	MOVL	CTX_STREAM(R3),R1
+	MOVL	#FOR$_OPEDEFREQ,R0
+	CMPB	UB_ACCESS(R1),#ACCESS_KEYED
+	BNEQ	52$
+	MOVL	#FOR$_NOTIMP_K,R0
+52$:	BRW	FAIL
+
+;
+; OPEN_FLAGS: R0 is what FTN$$UNIT_FIND and FTN$$UNIT_OPEN are told of the
+; statement whose kind is R6: 1 for a READ, 0 for a WRITE, with 4 added for an
+; unformatted one.
+;
+OPEN_FLAGS:
+	BICL3	#^C1,R6,R0		; 1 for a WRITE
+	XORL2	#1,R0			; 1 for a READ
+	CMPL	R6,#K_READ_SU
+	BLSSU	10$
+	BISL2	#OPEN_UNFORMATTED,R0
+10$:	RSB
+
+;
+; FAIL: the statement's error, the condition in R0, recorded in its
+; context, R3, unless it has one already.
+;
+FAIL:	TSTL	CTX_STATUS(R3)
+	BNEQ	10$
+	MOVL	R0,CTX_STATUS(R3)
+10$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$STMT_FILE(unit, FP, AP, user PC, control block)
+;
+; Begins a statement that is a single call, OPEN or CLOSE (FTN_OPEN), REWIND,
+; BACKSPACE, or ENDFILE (FTN_POSITION): the
+; context, with the FP and AP of the routine the statement is in and the PC it
+; returns to; and the unit. Returns the context in R0, and in R1 the unit's block,
+; or 0 with the context holding the error.
+;
+	.ENTRY	FTN$$STMT_FILE,BEGIN_MASK
+	MOVL	4(AP),R7
+	MOVL	8(AP),R2
+	MOVL	12(AP),R4
+	MOVL	20(AP),R5
+	MOVL	#K_FILE,R6
+	BSBW	PUSH_CONTEXT
+	MOVL	16(AP),CTX_USERPC(R3)
+	CLRL	-(SP)
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FIND	; FTN_UNITS
+	MOVL	R1,CTX_STREAM(R3)
+	BLBC	R0,80$
+	BSBW	CHECK_NESTED
+	BLBS	R0,90$
+80$:	MOVL	R0,CTX_STATUS(R3)
+90$:	MOVL	R3,R0
+	MOVL	CTX_STREAM(R3),R1
+	RET
+
+;
+; CHECK_NESTED: R0's low bit is clear, with FOR$_RECIO_OPE, if a statement
+; below this one, R3, is in progress on its unit, R7. Changes R0 and R1.
+;
+CHECK_NESTED:
+	MOVL	CTX_NEXT(R3),R1
+40$:	BEQL	60$
+	TSTB	CTX_INTERNAL(R1)
+	BNEQ	45$			; an internal file's
+	CMPL	CTX_UNIT(R1),R7
+	BNEQ	45$
+	MOVL	#FOR$_RECIO_OPE,R0
+	RSB
+45$:	MOVL	CTX_NEXT(R1),R1
+	BRB	40$
+60$:	MOVL	#SS$_NORMAL,R0
+	RSB
+
+;
+; PUSH_CONTEXT: pops the contexts of statements whose routines have gone,
+; then makes a context for this statement and pushes it. R6 is the kind, R7 the
+; unit, R2 the FP and R4 the AP of the routine the statement is in, R5 the
+; control block; R3 returns the context. Changes R0, R1, R3, and R6.
+;
+PUSH_CONTEXT:
+	BSBW	HOLD_ASTS
+10$:	MOVL	STMT_TOP,R3
+	BEQL	20$
+	CMPL	CTX_FP(R3),R2		; compared unsigned, as addresses are
+	BLEQU	18$			; at or below this routine: gone
+	MOVL	R2,R1			; further out: is it in the call chain?
+12$:	MOVL	12(R1),R0		; the frame's saved FP
+	CMPL	R0,R1
+	BLEQU	18$			; the chain's end: not in it
+	MOVL	R0,R1
+	CMPL	R1,CTX_FP(R3)
+	BLSSU	12$
+	BNEQ	18$			; passed it
+	CMPL	16(R1),CTX_FRAMEPC(R3)
+	BEQL	20$			; its own frame: still running
+18$:	BSBW	DROP_TOP		; gone
+	BRB	10$
+	;
+	; A context from the free list, or a new one from LIB$GET_VM, whose
+	; two arguments are addresses: of the size, and of a longword for
+	; the block's address. Both longwords are made on the stack.
+	;
+20$:	MOVL	FREE_LIST,R3
+	BEQL	25$
+	MOVL	CTX_NEXT(R3),FREE_LIST
+	BRB	30$
+25$:	CLRL	-(SP)			; the block's address goes here
+	PUSHL	#CTX_SIZE		; the size
+	PUSHAL	4(SP)			; LIB$GET_VM's second argument
+	PUSHAL	4(SP)			;  and its first
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,27$
+	BSBW	RELEASE_ASTS
+	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
+	CALLS	#1,G^LIB$STOP
+27$:	MOVL	4(SP),R3		; (ASTs stay off through LIB$GET_VM)
+	ADDL2	#8,SP
+	CLRL	CTX_LI_BUFFER(R3)	; no text buffer yet
+	CLRL	CTX_LI_SIZE(R3)
+	;
+	; Fill it in and push it.
+	;
+30$:	MOVL	R2,CTX_FP(R3)
+	MOVL	16(R2),CTX_FRAMEPC(R3)
+	MOVL	R4,CTX_AP(R3)
+	MOVL	R7,CTX_UNIT(R3)
+	CLRW	CTX_FLAGS(R3)
+	CMPW	ICB_W_SIZE(R5),#ICB_W_FLAGS+2
+	BLSSU	35$			; too small to have flags
+	MOVW	ICB_W_FLAGS(R5),CTX_FLAGS(R3)
+35$:	EXTZV	#4,#2,R6,R0		; a form of internal file, or 0
+	MOVB	R0,CTX_INTERNAL(R3)
+	EXTZV	#6,#1,R6,CTX_DIRECT(R3)	; a direct statement, or 0
+	EXTZV	#7,#1,R6,R0		; a REWRITE
+	MOVB	R0,CTX_REWRITE(R3)
+	EXTZV	#8,#1,R6,R0		; a keyed READ
+	MOVB	R0,CTX_KEYED(R3)
+	BICL2	#^C15,R6		; the kind, as a unit's
+	MOVB	R6,CTX_KIND(R3)
+	CLRL	CTX_STATUS(R3)
+	CLRL	CTX_WARNING(R3)
+	CLRL	CTX_FREEFMT(R3)
+	CLRL	CTX_NM_FAO(R3)
+	CLRL	CTX_NM_CAPTURE(R3)
+	CLRL	CTX_LI_COLUMN(R3)
+	CLRQ	CTX_TEXT(R3)
+	CLRL	CTX_STREAM(R3)
+	CLRL	CTX_RECLEN(R3)
+	MOVAB	CTX_RECORD(R3),CTX_RECP(R3)
+	CLRL	CTX_UNITMAX(R3)
+	MOVL	#1,CTX_UNITBLANK(R3)
+	CLRL	CTX_USERPC(R3)
+	CLRL	CTX_REASON(R3)
+	MOVL	16(FP),CTX_ITEMPC(R3)
+	MOVL	STMT_TOP,CTX_NEXT(R3)
+	MOVL	R3,STMT_TOP
+	BSBW	RELEASE_ASTS
+	RSB
+
+;
+; DROP_TOP: the context R3, the top of the stack, is gone: pops it and frees it
+; (and its run-time format's parsed copy, if it had one). ASTs are held off.
+; Changes R0 and R1.
+;
+DROP_TOP:
+	MOVL	CTX_NEXT(R3),STMT_TOP
+	PUSHL	R3
+	CALLS	#1,FTN$$FMT_FREE
+	MOVL	FREE_LIST,CTX_NEXT(R3)
+	MOVL	R3,FREE_LIST
+	RSB
+
+;
+; HOLD_ASTS and RELEASE_ASTS: no AST of this mode between them, and as they were
+; after. Change R0 and R1.
+;
+HOLD_ASTS:
+	$SETAST_S ENBFLG=#0
+	MOVL	R0,AST_WAS
+	RSB
+
+RELEASE_ASTS:
+	CMPL	AST_WAS,#SS$_WASSET
+	BNEQ	10$
+	$SETAST_S ENBFLG=#1
+10$:	RSB
+
+;
+; FREE_CONTEXT: puts the context R7, which its statement has finished reading, on
+; the free list. Keeps R0; changes R1.
+;
+FREE_CONTEXT:
+	PUSHL	R0
+	BSBW	HOLD_ASTS
+	MOVL	FREE_LIST,CTX_NEXT(R7)
+	MOVL	R7,FREE_LIST
+	BSBW	RELEASE_ASTS
+	MOVL	(SP)+,R0
+	RSB
+
+;
+; POP_TO(context): takes the context (by value) off the stack, popping any gone
+; ones above it, which an AST's statement a handler unwound from may have left.
+;
+	.ENTRY	POP_TO,^M<R2,R3>
+	MOVL	4(AP),R2
+	BSBW	HOLD_ASTS
+10$:	MOVL	STMT_TOP,R3
+	BEQL	30$
+	CMPL	R3,R2
+	BEQL	20$
+	BSBW	DROP_TOP
+	BRB	10$
+20$:	MOVL	CTX_NEXT(R2),STMT_TOP
+30$:	BSBW	RELEASE_ASTS
+	RET
+
+;
+; POP_GONE(fp): pops the contexts above the caller's statement, whose FP (by value)
+; is further out than theirs: their routines have gone.
+;
+	.ENTRY	POP_GONE,^M<R2,R3>
+	MOVL	4(AP),R2
+	BSBW	HOLD_ASTS
+10$:	MOVL	STMT_TOP,R3
+	BEQL	20$
+	CMPL	CTX_FP(R3),R2
+	BGEQU	20$
+	BSBW	DROP_TOP
+	BRB	10$
+20$:	BSBW	RELEASE_ASTS
+	RET
+
+;
+; FTN$IO_ITEM(desc)
+;
+; One item of the statement in progress, described by desc: a scalar
+; (class S) or a whole array (class A). Does nothing after the
+; statement's first error. Returns SS$_NORMAL in R0.
+;
+	.ENTRY	FTN$IO_ITEM,^M<R2>
+	MOVL	STMT_TOP,R2
+	BEQL	90$			; no statement: nothing to do
+	CMPL	CTX_FP(R2),12(FP)
+	BGEQU	5$
+	PUSHL	12(FP)			; a statement of a routine that's gone
+	CALLS	#1,POP_GONE
+	MOVL	STMT_TOP,R2
+	BEQL	90$
+5$:
+	TSTL	CTX_STATUS(R2)
+	BNEQ	90$			; it has failed
+	MOVL	16(FP),CTX_ITEMPC(R2)
+	PUSHL	4(AP)
+	PUSHL	R2
+	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	BGTRU	10$
+	CALLS	#2,FTN$$FMT_ITEM	; FTN_FORMAT
+	BRB	90$
+10$:	CMPB	CTX_KIND(R2),#K_READ_SU
+	BLSSU	15$
+	CALLS	#2,FTN$$UNF_ITEM	; FTN_UNFORMATTED
+	BRB	90$
+15$:	CMPB	CTX_KIND(R2),#K_READ_SL
+	BNEQ	20$
+	CALLS	#2,FTN$$LISTIN_ITEM	; FTN_LISTIN
+	BRB	90$
+20$:	CMPB	CTX_KIND(R2),#K_WRITE_SL
+	BNEQ	90$
+	CALLS	#2,FTN$$LIST_ITEM	; FTN_LISTOUT
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$IO_END()
+;
+; Ends the statement in progress: writes its last record, pops its
+; context, saves a failure for ERRSNS, and returns its status in R0, or
+; signals its error, as the introduction says.
+;
+; The frame below FP holds the signal's two descriptors, the text's and
+; the file's, and the unit's report (FTN$$UNIT_REPORT's five longwords).
+;
+TEXT_DESC	= -8
+FILE_DESC	= -16
+REPORT		= -36			; the name's length and address, RMS's
+					;  status and value, the records
+
+	.ENTRY	FTN$IO_END,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	STMT_TOP,R2
+	BEQL	3$
+	CMPL	CTX_FP(R2),12(FP)
+	BGEQU	5$
+	PUSHL	12(FP)			; a statement of a routine that's gone
+	CALLS	#1,POP_GONE
+	MOVL	STMT_TOP,R2
+	BNEQ	5$
+3$:	CLRL	R0			; no statement
+	RET
+5$:	CMPB	CTX_KIND(R2),#K_WRITE_SF
+	BGTRU	7$
+	PUSHL	R2			; formatted: the end of the walk, the
+	CALLS	#1,FTN$$FMT_END		;  last record, after no failure
+	BRB	10$
+7$:	CMPB	CTX_KIND(R2),#K_READ_SU
+	BLSSU	8$
+	PUSHL	R2			; unformatted: the last segment, after no
+	CALLS	#1,FTN$$UNF_END		;  failure
+	BRB	10$
+8$:	TSTL	CTX_STATUS(R2)
+	BNEQ	10$
+	CMPB	CTX_KIND(R2),#K_WRITE_SL
+	BNEQ	10$
+	PUSHL	R2
+	CALLS	#1,FTN$$LIST_END	; FTN_LISTOUT: the last record
+	;
+	; The statement is over, so its unit is free to a handler. An AST
+	; may have left a gone statement above it, in the calls just made.
+	; The context goes on the free list when it has been read (R7).
+	;
+10$:	MOVL	R2,R7
+	PUSHL	R2
+	CALLS	#1,POP_TO
+	MOVL	CTX_STATUS(R2),R3
+	TSTB	CTX_REWRITE(R2)		; a REWRITE: its record is written
+	BEQL	15$
+	MOVL	CTX_STREAM(R2),R0
+	BEQL	12$
+	CLRB	UB_REWRITE(R0)
+12$:	CMPL	R3,#FOR$_ERRDURWRI	; and a failure to write is REWRITERR
+	BNEQ	15$
+	MOVL	#FOR$_REWRITERR,R3
+15$:	TSTL	R3
+	BNEQ	20$
+	MOVL	CTX_WARNING(R2),R3	; an error it went on after
+	BNEQ	20$
+	BSBW	FREE_CONTEXT
+	CLRL	R0			; success
+	RET
+	;
+	; A failure. What its unit's stream says of it: the file's name, and
+	; RMS's status and value, used only for the failures RMS reports.
+	;
+20$:	SUBL2	#-REPORT,SP
+	JSB	FAILURE_REPORT
+	;
+	; Returned if a specifier takes it: the FOR number, or -1 for an end
+	; of file.
+	;
+	EXTZV	#3,#12,R3,R0
+	CMPL	R3,#FOR$_ENDDURREA
+	BNEQ	35$
+	MNEGL	#1,R0
+	BITW	#FLAG_END!FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BNEQ	38$
+	BRB	40$
+35$:	BITW	#FLAG_ERR!FLAG_IOSTAT,CTX_FLAGS(R2)
+	BEQL	40$
+38$:	BSBW	FREE_CONTEXT
+	RET
+	;
+	; Signaled, and if it comes back the program goes on.
+	;
+40$:	MOVL	CTX_USERPC(R2),R5	; the user PC: a statement of one call's,
+	BNEQ	45$
+	MOVL	16(FP),R5		;  or where this call returns
+45$:	JSB	SIGNAL_FAILURE
+	CLRL	R0
+	RET
+
+;
+; FTN$$IO_SIGNAL(context, condition)
+;
+; Signals a condition at an item of the statement in progress, for a handler
+; to go on from: its frame is laid out as FTN$IO_END's for the two
+; subroutines below. Saved for ERRSNS as FTN$IO_END saves a failure.
+;
+	.ENTRY	FTN$$IO_SIGNAL,^M<R2,R3,R4,R5,R6,R7>
+	CLRL	R7			; the statement goes on
+	SUBL2	#-REPORT,SP
+	MOVL	4(AP),R2
+	MOVL	8(AP),R3
+	JSB	FAILURE_REPORT
+	MOVL	CTX_ITEMPC(R2),R5
+	JSB	SIGNAL_FAILURE
+	RET
+
+;
+; FAILURE_REPORT: what its unit's stream says of a failure: the file's name,
+; and RMS's status and value, used only for the failures RMS reports, at
+; REPORT(FP), which it then saves for ERRSNS. R2 is the context, R3 the
+; condition. Changes R0 and R1.
+;
+FAILURE_REPORT:
+	CLRQ	REPORT(FP)		; no name, no RMS status
+	CLRQ	REPORT+8(FP)
+	CLRL	REPORT+16(FP)
+	MOVL	CTX_STREAM(R2),R0
+	BEQL	30$
+	PUSHAB	REPORT(FP)
+	PUSHL	R0
+	CALLS	#2,FTN$$UNIT_REPORT	; FTN_UNITS
+	CMPL	R3,#FOR$_INVLOGUNI	; found before the file is reached:
+	BEQL	22$			;  no name
+	CMPL	R3,#FOR$_RECIO_OPE
+	BEQL	22$
+	CMPL	R3,#FOR$_SYNERRFOR
+	BNEQ	24$
+22$:	CLRL	REPORT(FP)
+24$:	MOVAL	RMS_REPORTED,R0		; reported by RMS?
+25$:	MOVL	(R0)+,R1
+	BEQL	26$
+	CMPL	R3,R1
+	BEQL	30$
+	BRB	25$
+26$:
+	CLRQ	REPORT+8(FP)		; no: no RMS status
+30$:	EXTZV	#3,#12,R3,LAST_ERROR	; the FOR number: bits 3 to 14
+	MOVQ	REPORT+8(FP),LAST_ERROR+4 ; RMS's status and value
+	MOVL	CTX_UNIT(R2),LAST_ERROR+12
+	MOVL	R3,LAST_ERROR+16
+	RSB
+
+;
+; SIGNAL_FAILURE: signals R3 for the context R2, with the user PC R5 and the
+; report at REPORT(FP), the arguments pushed last first; R6 counts them. A context
+; in R7 is finished with: it goes on the free list before the signal, which may
+; never come back.
+; Changes R0, R1, R4, and R6, and returns if a handler goes on from it.
+;
+SIGNAL_FAILURE:
+	MOVZWL	CTX_TEXT+4(R2),TEXT_DESC(FP) ; the text's descriptor
+	MOVL	CTX_TEXT(R2),TEXT_DESC+4(FP)
+	MOVZWL	REPORT(FP),FILE_DESC(FP) ; the file's
+	MOVL	REPORT+4(FP),FILE_DESC+4(FP)
+	CLRL	R6
+	CMPL	R3,#FOR$_INPCONERR	; the text that couldn't be converted
+	BNEQ	50$
+	TSTB	CTX_INTERNAL(R2)
+	BNEQ	46$
+	PUSHL	REPORT+16(FP)		; at a unit, with its record number
+	PUSHAQ	TEXT_DESC(FP)
+	PUSHL	#2
+	PUSHL	#FOR$_INVTEXREC
+	ADDL2	#4,R6
+	BRB	50$
+46$:	PUSHAQ	TEXT_DESC(FP)		; in an internal file, alone
+	PUSHL	#1
+	PUSHL	#FOR$_INVTEX
+	ADDL2	#3,R6
+50$:	MOVL	CTX_REASON(R2),R0	; a second condition, with no arguments
+	BEQL	51$
+	CLRL	-(SP)
+	PUSHL	R0
+	ADDL2	#2,R6
+51$:	PUSHL	REPORT+12(FP)		; RMS's status value
+	PUSHL	REPORT+8(FP)		;  and status
+	PUSHL	R5			; the user PC
+	PUSHAQ	FILE_DESC(FP)		; the file
+	PUSHL	CTX_UNIT(R2)		; the unit
+	ADDL2	#5,R6
+	MOVL	#3,R4			; the FAO arguments: three,
+	MOVL	CTX_NM_FAO(R2),R0
+	BEQL	55$
+	PUSHL	R0			;  or four
+	INCL	R6
+	INCL	R4
+55$:	PUSHL	R4			; their count
+	PUSHL	R3			; the condition
+	ADDL2	#2,R6
+	TSTL	R7
+	BEQL	58$
+	BSBW	FREE_CONTEXT
+58$:	CMPZV	#0,#3,R3,#4		; severe?
+	BNEQ	60$
+	CMPL	R3,#FOR$_INPCONERR	; severe, but a handler can go on
+	BEQL	60$
+	CMPL	R3,#FOR$_FORVARMIS
+	BEQL	60$
+	CALLS	R6,G^LIB$STOP		; never returns
+60$:	CALLS	R6,G^LIB$SIGNAL
+	RSB
+
+;
+; FTN$ERRSNS([fnum], [rmssts], [rmsstv], [iunit], [condval])
+; FTN$ERRSNS_W(the same)
+;
+; The system subroutine ERRSNS: the last failure saved by FTN$IO_END, each
+; value stored in the longword (or for FTN$ERRSNS_W the word, its low 16
+; bits) its argument gives the address of, unless the argument is missing
+; or 0; then nothing is saved until the next failure. The compiler chooses
+; the routine by the arguments' type (Decision 13).
+;
+	.ENTRY	FTN$ERRSNS,^M<R2,R3>
+	CLRL	R3			; longwords
+	BRB	ERRSNS
+	.ENTRY	FTN$ERRSNS_W,^M<R2,R3>
+	MOVL	#1,R3			; words
+ERRSNS:	CLRL	R2			; the argument, from 0
+10$:	CMPL	R2,#5
+	BGEQ	40$
+	CMPB	R2,(AP)			; past the arguments given
+	BGEQU	40$
+	MOVL	4(AP)[R2],R0		; its address
+	BEQL	30$			; a null argument
+	MOVL	LAST_ERROR[R2],R1
+	BLBS	R3,20$
+	MOVL	R1,(R0)
+	BRB	30$
+20$:	MOVW	R1,(R0)
+30$:	INCL	R2
+	BRB	10$
+40$:	CLRQ	LAST_ERROR		; cleared
+	CLRQ	LAST_ERROR+8
+	CLRL	LAST_ERROR+16
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+	.END

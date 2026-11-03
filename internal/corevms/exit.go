@@ -44,8 +44,11 @@ import (
 // XFC runs $EXIT again, for the next handler. When none are left, $EXIT
 // returns ErrExit, and the engine ends the image by returning from the
 // console's call frame, with R0 holding the exit status (see
-// internal/cpu/exit.go). Since each call removes the handler it calls, a
-// handler that itself calls $EXIT simply moves on to the next one.
+// internal/cpu/exit.go). A handler that itself calls $EXIT ends the image there,
+// with that status: VMS 7.1 runs no more of the handlers (testdata/ftn86's
+// EXITMORE). The two ways in are told apart by the stack: the XFC a handler's
+// return lands on has SP where the first $EXIT had it, and a handler's own call
+// has it lower.
 //
 // VMS images normally end by returning from their main routine, not by
 // calling $EXIT; VMS's image activator then calls $EXIT with the value
@@ -220,6 +223,16 @@ func serviceSysExit(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	p.ExitStatus = status
+
+	sp := env.cpu.GPR(registers.SP)
+	if p.exiting && sp < p.exitSP {
+		return status, ErrExit
+	}
+
+	if !p.exiting {
+		p.exitSP = sp
+	}
+
 	p.exiting = true
 
 	list := &p.exitHandlers[env.cpu.PSL().CurMod()]

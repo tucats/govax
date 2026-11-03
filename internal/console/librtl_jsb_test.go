@@ -35,7 +35,7 @@ func TestLibrtlMissingJSBEntry(t *testing.T) {
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
 		"-GOVAX-E-NOTIMPL, routine OTS$CVTDP_R9 is not implemented in govax\n" +
 		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
-		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		"module name     routine name                     line       rel PC    abs PC\r\n\n" +
 		".MAIN.          START                                      0000000E  0000020E\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)

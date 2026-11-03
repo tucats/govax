@@ -35,6 +35,10 @@ import (
 // answer to the same need, built from types (internal/vm, internal/registers,
 // internal/io) that don't import internal/rtl either.
 type Context struct {
+	// lockedByOpener says an open's RMS$_FLK was another RMS opener's sharing, which
+	// has no STV (stvFor).
+	lockedByOpener bool
+
 	// Mem/CPU are how a handler reads and writes VAX memory directly —
 	// FAB/RAB fields, file-specification strings, and record buffers all
 	// live in emulated VAX memory, addressed exactly the same way every

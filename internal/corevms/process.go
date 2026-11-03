@@ -161,6 +161,9 @@ type Process struct {
 	// AST fields; ast.go).
 	ast astState
 
+	// exitSP is SP at the image's first $EXIT, while it is exiting (exit.go).
+	exitSP uint32
+
 	// exitHandlers holds each access mode's declared exit control blocks
 	// ($DCLEXH), by address, oldest first — the lists VMS heads at
 	// CTL$GL_THEXIT and friends (exit.go). Kernel mode's is always empty.

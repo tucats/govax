@@ -190,7 +190,12 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if failStatus != 0 {
-		return fabStatus(ctx, fabAddr, failStatus, stvFor(failStatus))
+		stv := stvFor(failStatus)
+		if ctx.lockedByOpener {
+			stv, ctx.lockedByOpener = 0, false
+		}
+
+		return fabStatus(ctx, fabAddr, failStatus, stv)
 	}
 
 	if ok {
@@ -283,6 +288,8 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 
 	claim := ctx.Mounts.claimOpen(device, fileIDFrom(fid), fac, shr)
 	if claim == nil {
+		ctx.lockedByOpener = true
+
 		return 0, rmsFileLocked, nil
 	}
 

@@ -57,7 +57,7 @@ func TestLibrtlMissingRoutine(t *testing.T) {
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
 		"-GOVAX-E-NOTIMPL, routine LIB$GETQUI is not implemented in govax\n" +
 		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
-		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		"module name     routine name                     line       rel PC    abs PC\r\n\n" +
 		".MAIN.          START                                      00000009  00000209\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
@@ -79,7 +79,7 @@ func TestMissingService(t *testing.T) {
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
 		"-GOVAX-E-NOTIMPL, routine SYS$GETCHN is not implemented in govax\n" +
 		"%TRACE-E-TRACEBACK, symbolic stack dump follows\n" +
-		"module name     routine name                     line       rel PC    abs PC\n\n" +
+		"module name     routine name                     line       rel PC    abs PC\r\n\n" +
 		".MAIN.          START                                      00000009  00000209\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)

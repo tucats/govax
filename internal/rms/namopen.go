@@ -134,8 +134,9 @@ func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint3
 
 // stvFor is the STV value VMS reports with a failure to find, open, or
 // make a file: the file system's SS$_ reason. A file another opener's
-// sharing keeps from this one is RMS$_FLK with SS$_ACCONFLICT
-// (testdata/pg66's A9: VMS 7.1's $OPEN of a running image's file).
+// sharing keeps from this one is RMS$_FLK with SS$_ACCONFLICT (testdata/pg66's
+// A9: VMS 7.1's $OPEN of a running image's file); another RMS opener is RMS$_FLK
+// alone (testdata/ftn86's DIALOG, testdata/dcl50's probe50f: open.go has that case).
 func stvFor(sts uint32) uint32 {
 	switch sts {
 	case rmsFileLocked:

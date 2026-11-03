@@ -41,7 +41,7 @@ func tracebackFixture(t *testing.T, cond uint32) (*Environment, *strings.Builder
 // letter sev at PC 3000 in the main routine, which tracebackFixture's
 // frames have: one line, as no TraceName names the PC.
 func tracebackDumpOf(sev string) string {
-	return "%TRACE-" + sev + "-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\n\n" +
+	return "%TRACE-" + sev + "-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\r\n\n" +
 		"                                                           00003000  00003000\n"
 }
 
@@ -214,7 +214,7 @@ func TestTracebackDump_frames(t *testing.T) {
 		t.Fatal("a severe condition was continued")
 	}
 
-	want := "%TRACE-F-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\n\n" +
+	want := "%TRACE-F-TRACEBACK, symbolic stack dump follows\n" + tracebackHeading + "\r\n\n" +
 		"A_VERY_LONG_MOD SUB                                12      00000010  00003000\n" +
 		"MAIN            MAIN                                6      00000111  00001111\n"
 
