@@ -653,7 +653,8 @@ never had.
   same day) is keyed index files: RMS's indexed
   organization on volume files, laid out as VMS's, and FORTRAN's keyed statements
   through FTNRTL; its Part A has the layout read from VMS's own files, and
-  subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS.
+  subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS, and
+  subtask 3 (2026-11-03) `internal/isam`'s reader.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2081,6 +2082,12 @@ expect adjustment as phases land):
   the buffers); `TestRewriteVAXSaveSets` rewrites every VMS save set
   byte for byte. The command is `internal/dclcmd/backupsave.go`, and
   `TestBackupSaveOracle` replays the probe's saves against VMS's.
+- `internal/isam` — RMS's indexed files on disk (Phase 88; `doc.go` explains the structure): a leaf package over a
+  `Blocks` interface, knowing nothing of FABs or VAX memory, Prolog 3 only. `prolog.go` is `Open`, the key and area descriptors;
+  `key.go` each type's order, a key's value in a record; `bucket.go` buckets, index entries, data records and RRVs, SIDRs, and
+  decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
+  is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
+  files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. Reading only so far.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

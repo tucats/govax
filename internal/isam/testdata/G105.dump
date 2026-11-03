@@ -1,0 +1,51 @@
+prolog 3, areas at VBN 2, data at VBN 0, EOF 0, global buffers 0
+area 0: bucket 1, extent 10+3, used 2, next 12, avail 0, next extent 0+0, deq 0, total 12, aln 0, aop 00
+key 0: type 00, flags 00, size 8, segments 0:8, null 00, min record 8, name ""
+  areas 0 0 0, buckets 1 1, fill 512 512, root 4 at level 1, first data 3
+  bucket 4: level 1, check 07, key 0, free 004E, next ID 1, next 4, flags 03
+    000E key 5030303030303032 -> 3
+    0016 key 5030303030303034 -> 11
+    001E key 5030303030303036 -> 10
+    0026 key 5030303030303038 -> 9
+    002E key 5030303030303130 -> 8
+    0036 key 5030303030303132 -> 7
+    003E key 5030303030303134 -> 6
+    0046 key FFFFFFFFFFFFFFFF -> 5
+  bucket 3: level 0, check 10, key 0, free 01CE, next ID 17, next 11, flags 00
+    000E 02 id 16: rfa 3,16 key 5030303030303031, size 150, sum 3A56B5D7
+    00AF 02 id 15: rfa 3,15 key 5030303030303032, size 150, sum ABE5494C
+    0150 0A id 2: RRV to 5,1
+    0159 0A id 1: RRV to 5,2
+    0162 0A id 4: RRV to 6,1
+    016B 0A id 3: RRV to 6,2
+    0174 0A id 6: RRV to 7,1
+    017D 0A id 5: RRV to 7,2
+    0186 0A id 8: RRV to 8,1
+    018F 0A id 7: RRV to 8,2
+    0198 0A id 10: RRV to 9,1
+    01A1 0A id 9: RRV to 9,2
+    01AA 0A id 12: RRV to 10,1
+    01B3 0A id 11: RRV to 10,2
+    01BC 0A id 14: RRV to 11,1
+    01C5 0A id 13: RRV to 11,2
+  bucket 11: level 0, check 01, key 0, free 0150, next ID 3, next 10, flags 00
+    000E 02 id 1: rfa 3,14 key 5030303030303033, size 150, sum FA799CCF
+    00AF 02 id 2: rfa 3,13 key 5030303030303034, size 150, sum 2203FA78
+  bucket 10: level 0, check 01, key 0, free 0150, next ID 3, next 9, flags 00
+    000E 02 id 1: rfa 3,12 key 5030303030303035, size 150, sum A1A1E6F5
+    00AF 02 id 2: rfa 3,11 key 5030303030303036, size 150, sum 0CAAD86A
+  bucket 9: level 0, check 01, key 0, free 0150, next ID 3, next 8, flags 00
+    000E 02 id 1: rfa 3,10 key 5030303030303037, size 150, sum A1DEDB84
+    00AF 02 id 2: rfa 3,9 key 5030303030303038, size 150, sum 16574C3C
+  bucket 8: level 0, check 01, key 0, free 0150, next ID 3, next 7, flags 00
+    000E 02 id 1: rfa 3,8 key 5030303030303039, size 150, sum 34B1B81A
+    00AF 02 id 2: rfa 3,7 key 5030303030303130, size 150, sum 9CE3E4CB
+  bucket 7: level 0, check 01, key 0, free 0150, next ID 3, next 6, flags 00
+    000E 02 id 1: rfa 3,6 key 5030303030303131, size 150, sum 3197E725
+    00AF 02 id 2: rfa 3,5 key 5030303030303132, size 150, sum 9D6EC182
+  bucket 6: level 0, check 01, key 0, free 0150, next ID 3, next 5, flags 00
+    000E 02 id 1: rfa 3,4 key 5030303030303133, size 150, sum 1ECCDD0F
+    00AF 02 id 2: rfa 3,3 key 5030303030303134, size 150, sum 60F54844
+  bucket 5: level 0, check 01, key 0, free 0150, next ID 3, next 3, flags 01
+    000E 02 id 1: rfa 3,2 key 5030303030303135, size 150, sum 31699DC7
+    00AF 02 id 2: rfa 3,1 key 5030303030303136, size 150, sum 870308D8

@@ -1,0 +1,12 @@
+prolog 3, areas at VBN 2, data at VBN 0, EOF 0, global buffers 0
+area 0: bucket 2, extent 7+3, used 2, next 9, avail 0, next extent 0+0, deq 0, total 9, aln 0, aop 00
+key 0: type 00, flags 00, size 8, segments 0:8, null 00, min record 8, name ""
+  areas 0 0 0, buckets 2 2, fill 1024 1024, root 7 at level 1, first data 4
+  bucket 7: level 1, check 00, key 0, free 0016, next ID 1, next 7, flags 03
+    000E key FFFFFFFFFFFFFFFF -> 4
+  bucket 4: level 0, check 05, key 0, free 022F, next ID 6, next 4, flags 01
+    000E 02 id 2: rfa 4,2 key 5030303030303031, size 100, sum 122A07D3
+    007B 02 id 4: rfa 4,4 key 5030303030303032, size 100, sum 2C97E1FE
+    00E8 02 id 3: rfa 4,3 key 5030303030303033, size 100, sum 4BF4395A
+    0155 02 id 5: rfa 4,5 key 5030303030303034, size 100, sum 51578A23
+    01C2 02 id 1: rfa 4,1 key 5030303030303035, size 100, sum 05EB64E4

@@ -1,0 +1,44 @@
+prolog 3, areas at VBN 3, data at VBN 0, EOF 0, global buffers 0
+area 0: bucket 2, extent 19+3, used 2, next 21, avail 0, next extent 0+0, deq 0, total 21, aln 0, aop 00
+key 0: type 00, flags C8, size 8, segments 0:8, null 00, min record 8, name ""
+  areas 0 0 0, buckets 2 2, fill 1024 1024, root 7 at level 1, first data 4
+  bucket 7: level 1, check 00, key 0, free 0011, next ID 1, next 7, flags 03
+    000E key FFFFFFFFFFFFFFFF -> 4
+  bucket 4: level 0, check 0B, key 0, free 025D, next ID 11, next 4, flags 01
+    000E 02 id 1: rfa 4,1 key 5030303030303130, size 100, sum 35938C2C
+    0055 02 id 2: rfa 4,2 key 5030303030303230, size 100, sum 87C6D9A1
+    0096 02 id 3: rfa 4,3 key 5030303030303330, size 100, sum 79D0854C
+    00D7 02 id 4: rfa 4,4 key 5030303030303430, size 100, sum DA11A9CE
+    0118 02 id 6: rfa 4,6 key 5030303030303630, size 100, sum 2FD6978D
+    0159 02 id 7: rfa 4,7 key 5030303030303730, size 100, sum F90FEA63
+    019A 02 id 8: rfa 4,8 key 5030303030303830, size 100, sum 0DCC2F25
+    01DB 02 id 9: rfa 4,9 key 5030303030303930, size 100, sum B2E80E1D
+    021C 02 id 10: rfa 4,10 key 5030303030313030, size 100, sum 87F900B1
+key 1: type 00, flags 49, size 8, segments 16:8, null 00, min record 24, name ""
+  areas 0 0 0, buckets 2 2, fill 1024 1024, root 13 at level 1, first data 10
+  bucket 13: level 1, check 00, key 1, free 0011, next ID 1, next 13, flags 03
+    000E key FFFFFFFFFFFFFFFF -> 10
+  bucket 10: level 0, check 0B, key 1, free 0072, next ID 1, next 10, flags 01
+    000E key 4130303030303033: 80 4,1
+    001F key 4130303030303036: 80 4,2
+    0029 key 4130303030303130: 80 4,3
+    0034 key 4130303030303133: 80 4,4
+    003E key 4130303030303230: 80 4,6
+    0049 key 4130303030303233: 80 4,7
+    0053 key 4130303030303236: 80 4,8
+    005D key 4130303030303330: 80 4,9
+    0068 key 4130303030303333: 80 4,10
+key 2: type 00, flags 4A, size 8, segments 24:8, null 00, min record 32, name ""
+  areas 0 0 0, buckets 2 2, fill 1024 1024, root 19 at level 1, first data 16
+  bucket 19: level 1, check 00, key 2, free 0011, next ID 1, next 19, flags 03
+    000E key FFFFFFFFFFFFFFFF -> 16
+  bucket 16: level 0, check 0B, key 2, free 0077, next ID 1, next 16, flags 01
+    000E key 4239393939383939: 80 4,10
+    001E key 4239393939393039: 80 4,9
+    002A key 4239393939393139: 80 4,8
+    0035 key 4239393939393239: 80 4,7
+    0040 key 4239393939393339: 80 4,6
+    004B key 4239393939393539: 80 4,4
+    0056 key 4239393939393639: 80 4,3
+    0061 key 4239393939393739: 80 4,2
+    006C key 4239393939393839: 80 4,1

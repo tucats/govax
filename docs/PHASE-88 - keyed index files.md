@@ -3,14 +3,14 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
 Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. No RMS code is implemented yet. `testdata/idx88` holds VMS's run, files, and
-definitions. **Next: subtask 3,** `internal/isam`'s reader.
+Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key; nothing writes one yet, and RMS
+doesn't call it. `testdata/idx88` holds VMS's run, files, and definitions. **Next: subtask 4,** `isam`'s writing, without splits.
 
 ## Goal
 
@@ -332,6 +332,19 @@ subtasks 3 to 6 replay them. A case the dumps don't answer can go in a later rou
 
 **The later rounds move to their subtasks,** since each is best written with its code at hand: FORRTL's (round 2) before subtask 11, the utilities' (round 3) before 10, and DCL's (round 4) before 9.
 
+## What the reader settled (2026-11-03)
+
+Subtask 3's tests read the probe's 103 Prolog 3 files and the 27 indexed files on the local system disk (178,472 records, no error). Where this section and the ones above differ, this one wins.
+
+- **An index bucket's pointers:** the *first* key's is nearest the bucket's end, not the last's as "An index bucket" above has it. ANALYZE's walks (`idx88w2.txt`, 2 entries) and every search through an index say so.
+- **The last entry of a level's last bucket** is passed to, never compared: it's FF bytes, which isn't the highest value of a signed or descending key.
+- **A generic REV,** which the probe's list asked: REV+KGE of `P00001` is `P0000100`, the *first* record answering, not the last. REV+KGT of it is `P0000099`, the last before them. The manual's "a duplicate set found by REV gives only its first record" isn't tried by any case on a whole key's duplicates, so `findBackward` has that rule from the manual alone.
+- **A SIDR's pointers:** the value's very first has control `80` and the rest `00`, with the pointer size in the low bits. A value past one bucket repeats its key in the next, whose first pointer is `00` (`G114`): `IRC$M_FIRST_KEY` marks the value's start, not the SIDR's.
+- **Packed keys** order by value, both ways (`F122`'s key 5, `S22`, `S30`). All the probe's are positive, so the sign rule is the VAX Architecture's, unconfirmed on a key.
+- **The size word's rule is partly unconfirmed.** A fixed file with nothing compressed has none, and one with both compressed has one (`S13`, `G109`; `S12`). Fixed with only one of key and data compressed isn't in the probe; `fixedStorage` gives it a size word.
+- **`IRC$M_NOPTRSZ`** on a data record or a SIDR pointer appears in no file here. The decoder takes it to mean no VBN follows, which is unconfirmed.
+- **ROP FDL's pointers** still aren't seen: `U134` (case 144) and every system file have no pointer to a deleted record, though `$DELETE` with FDL should leave them, and that case's reads by alternate key said RMS$_RNF. An entry whose `Record` is `ErrDeleted` is therefore possible only in theory so far. Subtask 6 settles it with `U134`'s dumps, and RMS must skip such an entry.
+
 ## The rules
 
 ### Keys [manual]
@@ -547,7 +560,7 @@ them.
    to the subtasks that need them)
 3. **`isam`: the format, reading.** Prolog, key and area descriptors, buckets, records, RRVs, SIDRs,
    decompression, key comparison for each type and direction; search, sequence, and `Dump`; every
-   VMS-made file read whole, and each record found by each key.
+   VMS-made file read whole, and each record found by each key. (done 2026-11-03)
 4. **`isam`: writing, without splits.** `Create`, areas, first records, indexes made at first need,
    compression, IDs, check characters, the prolog's sums; files as the probe's first cases.
 5. **`isam`: growth.** Splits, RRVs, index levels and root splits, duplicates, continuation, SIDR
@@ -669,3 +682,13 @@ has REV at all.
 - **2026-11-03: round 1's third run, and subtask 2 done.** All 154 cases, 428 `$PUT`s with RMS$_SUC and only the intended
   RMS$_SEQ. "What round 1 settled", in Part A, has the answers: RRVs, deleted records, the check character, fixed records, `$CREATE`'s statuses, and
   the names. `vax/` is committed: the run, the save set, VMS's reports. `IDX88M.LOG` doesn't exist, MACRO having said nothing.
+- **2026-11-03: subtask 3, `isam`'s reader.** `internal/isam`: `prolog.go` (`Open`, `Key`, `Area`, the block sums; Prologs 1 and 2 an
+  `ErrPrologLevel`, a file with none `ErrBadProlog`), `key.go` (each type's order both ways, `Value`, `IsNull`, `Indexes`, `assemble`),
+  `bucket.go` (buckets, index entries, data records and RRVs, SIDRs, both compressions), `search.go` (`Find` with RMS's five
+  answers, `First`, `Following`, `Walk`, `Record`), and `dump.go` (`Dump`, which later subtasks compare files with, showing nothing past
+  a free offset). The reader read everything at its first run, so the survey and round 1 had the layout right but for the two
+  corrections in "What the reader settled". The tests hold it to VMS: every prolog field to ANALYZE's report on the same file, each bucket and
+  record in the interactive walks, every record rebuilt from `MKREC`'s number, the log's walks, RFAs (across splits), and searches (Tables
+  7-3 and 7-4 both ways, generic, numeric, exact, sequence), each alternate's entries against the records that belong in it, and `Find`
+  against the long way round at every level. `TestRealIndexedFiles` (`internal/rms`, local) reads the system disk's 27 files, LMF$LICENSE.LDB
+  left out as in the survey. Nothing outside the package calls it yet.
