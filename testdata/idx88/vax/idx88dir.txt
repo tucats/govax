@@ -1,0 +1,1969 @@
+
+Directory DUA1:[000000]
+
+E103.IDX;2                    File ID:  (100,1,0)             
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.57
+Revised:    3-NOV-2026 15:19:33.57 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E103.IDX;1                    File ID:  (99,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.56
+Revised:    3-NOV-2026 15:19:33.57 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E71.IDX;1                     File ID:  (95,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.55
+Revised:    3-NOV-2026 15:19:33.55 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E84.IDX;1                     File ID:  (96,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.56
+Revised:    3-NOV-2026 15:19:33.56 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E85.IDX;1                     File ID:  (97,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.56
+Revised:    3-NOV-2026 15:19:33.56 (0)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E92.IDX;1                     File ID:  (98,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.56
+Revised:    3-NOV-2026 15:19:33.56 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 1, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 63, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 32225 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+F120.IDX;1                    File ID:  (117,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.36
+Revised:    3-NOV-2026 15:19:37.37 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+F121.IDX;1                    File ID:  (118,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.37
+Revised:    3-NOV-2026 15:19:37.37 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+F122.IDX;1                    File ID:  (119,1,0)             
+Size:          246/246        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.38
+Revised:    3-NOV-2026 15:19:37.93 (12)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 8 keys
+Shelved state:      Online 
+File attributes:    Allocation: 246, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G104.IDX;1                    File ID:  (101,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.57
+Revised:    3-NOV-2026 15:19:33.61 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G105.IDX;1                    File ID:  (102,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.62
+Revised:    3-NOV-2026 15:19:33.67 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G106.IDX;1                    File ID:  (103,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.67
+Revised:    3-NOV-2026 15:19:33.72 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G107.IDX;1                    File ID:  (104,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.72
+Revised:    3-NOV-2026 15:19:33.76 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G108.IDX;1                    File ID:  (105,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.77
+Revised:    3-NOV-2026 15:19:33.81 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G109.IDX;1                    File ID:  (106,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.81
+Revised:    3-NOV-2026 15:19:33.85 (14)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Fixed length 150 byte records
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G110.IDX;1                    File ID:  (107,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.85
+Revised:    3-NOV-2026 15:19:33.90 (14)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G111.IDX;1                    File ID:  (108,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.90
+Revised:    3-NOV-2026 15:19:33.96 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G112.IDX;1                    File ID:  (109,1,0)             
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.96
+Revised:    3-NOV-2026 15:19:34.02 (18)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G113.IDX;1                    File ID:  (110,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:34.02
+Revised:    3-NOV-2026 15:19:34.06 (14)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G114.IDX;1                    File ID:  (111,1,0)             
+Size:          150/150        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:34.06
+Revised:    3-NOV-2026 15:19:34.35 (3)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 150, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G115.IDX;1                    File ID:  (112,1,0)             
+Size:          648/648        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:34.35
+Revised:    3-NOV-2026 15:19:35.21 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 648, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G116.IDX;1                    File ID:  (113,1,0)             
+Size:          792/792        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:35.36
+Revised:    3-NOV-2026 15:19:36.58 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 792, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G117.IDX;1                    File ID:  (114,1,0)             
+Size:          126/126        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:36.75
+Revised:    3-NOV-2026 15:19:36.94 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G118.IDX;1                    File ID:  (115,1,0)             
+Size:          210/210        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:36.96
+Revised:    3-NOV-2026 15:19:37.31 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 210, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+G119.IDX;1                    File ID:  (116,1,0)             
+Size:            6/6          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.35
+Revised:    3-NOV-2026 15:19:37.36 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 6, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+L140.IDX;1                    File ID:  (137,1,0)             
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.24
+Revised:    3-NOV-2026 15:19:38.25 (7)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Q123.IDX;1                    File ID:  (120,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.93
+Revised:    3-NOV-2026 15:19:37.93 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Q124.IDX;1                    File ID:  (121,1,0)             
+Size:           27/27         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.94
+Revised:    3-NOV-2026 15:19:37.97 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 27, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Q125.IDX;1                    File ID:  (122,1,0)             
+Size:           27/27         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:37.97
+Revised:    3-NOV-2026 15:19:38.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 27, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 200 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Q126.IDX;1                    File ID:  (123,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.01
+Revised:    3-NOV-2026 15:19:38.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Q127.IDX;1                    File ID:  (124,1,0)             
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.02
+Revised:    3-NOV-2026 15:19:38.02 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S1.IDX;1                      File ID:  (29,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:32.99
+Revised:    3-NOV-2026 15:19:33.00 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S10.IDX;1                     File ID:  (38,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.06
+Revised:    3-NOV-2026 15:19:33.06 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S11.IDX;1                     File ID:  (39,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.07
+Revised:    3-NOV-2026 15:19:33.07 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S12.IDX;1                     File ID:  (40,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.07
+Revised:    3-NOV-2026 15:19:33.08 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Fixed length 100 byte records
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S13.IDX;1                     File ID:  (41,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.08
+Revised:    3-NOV-2026 15:19:33.09 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Fixed length 100 byte records
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S14.IDX;1                     File ID:  (42,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.09
+Revised:    3-NOV-2026 15:19:33.10 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S15.IDX;1                     File ID:  (43,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.10
+Revised:    3-NOV-2026 15:19:33.10 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S16.IDX;1                     File ID:  (44,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.11
+Revised:    3-NOV-2026 15:19:33.11 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S17.IDX;1                     File ID:  (45,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.11
+Revised:    3-NOV-2026 15:19:33.12 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S18.IDX;1                     File ID:  (46,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.12
+Revised:    3-NOV-2026 15:19:33.13 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S19.IDX;1                     File ID:  (47,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.13
+Revised:    3-NOV-2026 15:19:33.14 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S2.IDX;1                      File ID:  (30,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.00
+Revised:    3-NOV-2026 15:19:33.00 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S20.IDX;1                     File ID:  (48,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.14
+Revised:    3-NOV-2026 15:19:33.14 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S21.IDX;1                     File ID:  (49,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.15
+Revised:    3-NOV-2026 15:19:33.15 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S22.IDX;1                     File ID:  (50,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.15
+Revised:    3-NOV-2026 15:19:33.16 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S23.IDX;1                     File ID:  (51,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.16
+Revised:    3-NOV-2026 15:19:33.16 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S24.IDX;1                     File ID:  (52,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.17
+Revised:    3-NOV-2026 15:19:33.17 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S25.IDX;1                     File ID:  (53,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.17
+Revised:    3-NOV-2026 15:19:33.18 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S26.IDX;1                     File ID:  (54,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.18
+Revised:    3-NOV-2026 15:19:33.19 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S27.IDX;1                     File ID:  (55,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.19
+Revised:    3-NOV-2026 15:19:33.19 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S28.IDX;1                     File ID:  (56,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.19
+Revised:    3-NOV-2026 15:19:33.20 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S29.IDX;1                     File ID:  (57,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.20
+Revised:    3-NOV-2026 15:19:33.21 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S3.IDX;1                      File ID:  (31,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.00
+Revised:    3-NOV-2026 15:19:33.01 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S30.IDX;1                     File ID:  (58,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.21
+Revised:    3-NOV-2026 15:19:33.21 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S31.IDX;1                     File ID:  (59,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.22
+Revised:    3-NOV-2026 15:19:33.22 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S32.IDX;1                     File ID:  (60,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.22
+Revised:    3-NOV-2026 15:19:33.23 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S33.IDX;1                     File ID:  (61,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.23
+Revised:    3-NOV-2026 15:19:33.23 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S34.IDX;1                     File ID:  (62,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.24
+Revised:    3-NOV-2026 15:19:33.24 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 1, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S35.IDX;1                     File ID:  (63,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.24
+Revised:    3-NOV-2026 15:19:33.25 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S36.IDX;1                     File ID:  (64,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.25
+Revised:    3-NOV-2026 15:19:33.26 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S37.IDX;1                     File ID:  (65,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.27
+Revised:    3-NOV-2026 15:19:33.27 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S38.IDX;1                     File ID:  (66,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.28
+Revised:    3-NOV-2026 15:19:33.28 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S39.IDX;1                     File ID:  (67,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.29
+Revised:    3-NOV-2026 15:19:33.29 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S4.IDX;1                      File ID:  (32,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.01
+Revised:    3-NOV-2026 15:19:33.01 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S40.IDX;1                     File ID:  (68,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.30
+Revised:    3-NOV-2026 15:19:33.30 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S41.IDX;1                     File ID:  (69,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.31
+Revised:    3-NOV-2026 15:19:33.31 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S42.IDX;1                     File ID:  (70,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.32
+Revised:    3-NOV-2026 15:19:33.33 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S43.IDX;1                     File ID:  (71,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.33
+Revised:    3-NOV-2026 15:19:33.34 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S44.IDX;1                     File ID:  (72,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.34
+Revised:    3-NOV-2026 15:19:33.35 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S45.IDX;1                     File ID:  (73,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.35
+Revised:    3-NOV-2026 15:19:33.36 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S46.IDX;1                     File ID:  (74,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.36
+Revised:    3-NOV-2026 15:19:33.37 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S47.IDX;1                     File ID:  (75,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.37
+Revised:    3-NOV-2026 15:19:33.37 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S48.IDX;1                     File ID:  (76,1,0)              
+Size:            6/6          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.38
+Revised:    3-NOV-2026 15:19:33.38 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 6, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S49.IDX;1                     File ID:  (77,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.39
+Revised:    3-NOV-2026 15:19:33.39 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S5.IDX;1                      File ID:  (33,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.02
+Revised:    3-NOV-2026 15:19:33.02 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S50.IDX;1                     File ID:  (78,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.39
+Revised:    3-NOV-2026 15:19:33.40 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 3, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S51.IDX;1                     File ID:  (79,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.40
+Revised:    3-NOV-2026 15:19:33.41 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 4, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S52.IDX;1                     File ID:  (80,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.41
+Revised:    3-NOV-2026 15:19:33.41 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 7, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S53.IDX;1                     File ID:  (81,1,0)              
+Size:          129/129        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.42
+Revised:    3-NOV-2026 15:19:33.42 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 129, Extend: 0, Maximum bucket size: 63, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S54.IDX;1                     File ID:  (82,1,0)              
+Size:           27/27         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.44
+Revised:    3-NOV-2026 15:19:33.44 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 27, Extend: 0, Maximum bucket size: 10, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 5000 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S55.IDX;1                     File ID:  (83,1,0)              
+Size:          129/129        Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.44
+Revised:    3-NOV-2026 15:19:33.45 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 129, Extend: 0, Maximum bucket size: 63, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 32224 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S56.IDX;1                     File ID:  (84,1,0)              
+Size:           51/51         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.46
+Revised:    3-NOV-2026 15:19:33.46 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 51, Extend: 7, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S57.IDX;1                     File ID:  (85,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.47
+Revised:    3-NOV-2026 15:19:33.47 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S58.IDX;1                     File ID:  (86,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.48
+Revised:    3-NOV-2026 15:19:33.48 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S59.IDX;1                     File ID:  (87,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.48
+Revised:    3-NOV-2026 15:19:33.49 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 1, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S6.IDX;1                      File ID:  (34,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.02
+Revised:    3-NOV-2026 15:19:33.03 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S60.IDX;1                     File ID:  (88,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.49
+Revised:    3-NOV-2026 15:19:33.50 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 1, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S61.IDX;1                     File ID:  (89,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.50
+Revised:    3-NOV-2026 15:19:33.50 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 2, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S62.IDX;1                     File ID:  (90,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.51
+Revised:    3-NOV-2026 15:19:33.51 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+                             In 3 areas
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 3, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S63.IDX;1                     File ID:  (91,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.52
+Revised:    3-NOV-2026 15:19:33.52 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+                             In 3 areas
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S64.IDX;1                     File ID:  (92,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.52
+Revised:    3-NOV-2026 15:19:33.53 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 4, Maximum bucket size: 2, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S65.IDX;1                     File ID:  (93,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.53
+Revised:    3-NOV-2026 15:19:33.53 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit, Contiguous
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S66.IDX;1                     File ID:  (94,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.54
+Revised:    3-NOV-2026 15:19:33.55 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+                             In 2 areas
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 2, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S7.IDX;1                      File ID:  (35,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.03
+Revised:    3-NOV-2026 15:19:33.04 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S8.IDX;1                      File ID:  (36,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.05
+Revised:    3-NOV-2026 15:19:33.05 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+S9.IDX;1                      File ID:  (37,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:33.05
+Revised:    3-NOV-2026 15:19:33.06 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 120 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U128.IDX;1                    File ID:  (125,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.03
+Revised:    3-NOV-2026 15:19:38.04 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U129.IDX;1                    File ID:  (126,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.05
+Revised:    3-NOV-2026 15:19:38.06 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U130.IDX;1                    File ID:  (127,1,0)             
+Size:           27/27         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.06
+Revised:    3-NOV-2026 15:19:38.08 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 4 keys
+Shelved state:      Online 
+File attributes:    Allocation: 27, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U131.IDX;1                    File ID:  (128,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.09
+Revised:    3-NOV-2026 15:19:38.10 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U132.IDX;1                    File ID:  (129,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.11
+Revised:    3-NOV-2026 15:19:38.12 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U133.IDX;1                    File ID:  (130,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.13
+Revised:    3-NOV-2026 15:19:38.14 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U134.IDX;1                    File ID:  (131,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.14
+Revised:    3-NOV-2026 15:19:38.16 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U135.IDX;1                    File ID:  (132,1,0)             
+Size:           15/15         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.16
+Revised:    3-NOV-2026 15:19:38.17 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U136.IDX;1                    File ID:  (133,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.18
+Revised:    3-NOV-2026 15:19:38.19 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 300 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U137.IDX;1                    File ID:  (134,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.19
+Revised:    3-NOV-2026 15:19:38.21 (3)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 2 keys
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U138.IDX;1                    File ID:  (135,1,0)             
+Size:            6/6          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.21
+Revised:    3-NOV-2026 15:19:38.22 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 6, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+U139.IDX;1                    File ID:  (136,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:    3-NOV-2026 15:19:38.22
+Revised:    3-NOV-2026 15:19:38.23 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 1, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 400 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 109 files, 3669/3669 blocks.

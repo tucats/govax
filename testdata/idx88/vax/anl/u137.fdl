@@ -1,0 +1,94 @@
+IDENT	" 3-NOV-2026 15:19:43	OpenVMS ANALYZE/RMS_FILE Utility"
+
+SYSTEM
+	SOURCE                  OpenVMS
+
+FILE
+	ALLOCATION              12
+	BEST_TRY_CONTIGUOUS     no
+	BUCKET_SIZE             1
+	CLUSTER_SIZE            3
+	CONTIGUOUS              no
+	EXTENSION               0
+	FILE_MONITORING         no
+	GLOBAL_BUFFER_COUNT     0
+	NAME                    "DUA1:[000000]U137.IDX;1"
+	ORGANIZATION            indexed
+	OWNER                   [SYSTEM]
+	PROTECTION              (system:RWED, owner:RWED, group:RE, world:)
+
+RECORD
+	BLOCK_SPAN              yes
+	CARRIAGE_CONTROL        carriage_return
+	FORMAT                  variable
+	SIZE                    400
+
+AREA 0
+	ALLOCATION              12
+	BUCKET_SIZE             1
+	EXTENSION               0
+
+KEY 0
+	CHANGES                 no
+	DATA_KEY_COMPRESSION    no
+	DATA_RECORD_COMPRESSION no
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              no
+	INDEX_AREA              0
+	INDEX_COMPRESSION       no
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	PROLOG                  3
+	SEG0_LENGTH             8
+	SEG0_POSITION           0
+	TYPE                    string
+
+KEY 1
+	CHANGES                 no
+	DATA_KEY_COMPRESSION    yes
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              yes
+	INDEX_AREA              0
+	INDEX_COMPRESSION       yes
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	SEG0_LENGTH             8
+	SEG0_POSITION           16
+	TYPE                    string
+
+ANALYSIS_OF_AREA 0
+	RECLAIMED_SPACE         0
+
+ANALYSIS_OF_KEY 0
+	DATA_FILL               51
+	DATA_KEY_COMPRESSION    0
+	DATA_RECORD_COMPRESSION 0
+	DATA_RECORD_COUNT       9
+	DATA_SPACE_OCCUPIED     6
+	DEPTH                   1
+	INDEX_COMPRESSION       0
+	INDEX_FILL              15
+	INDEX_SPACE_OCCUPIED    1
+	LEVEL1_RECORD_COUNT     6
+	MEAN_DATA_LENGTH        150
+	MEAN_INDEX_LENGTH       10
+
+ANALYSIS_OF_KEY 1
+	DATA_FILL               18
+	DATA_KEY_COMPRESSION    42
+	DATA_RECORD_COUNT       5
+	DATA_SPACE_OCCUPIED     1
+	DEPTH                   1
+	DUPLICATES_PER_SIDR     1
+	INDEX_COMPRESSION       50
+	INDEX_FILL              4
+	INDEX_SPACE_OCCUPIED    1
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        16
+	MEAN_INDEX_LENGTH       10

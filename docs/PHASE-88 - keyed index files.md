@@ -2,16 +2,15 @@
 
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
-Subtask 2, the probe: round 1 is written and waiting for its run on the VAX. Needs
-nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
+in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
 Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. No code is implemented yet; the probe comes first. Round 1,
-`testdata/idx88`, is written and rehearsed on govax. **Next: the author runs it** (its
-README has the commands).
+Part C the subtasks. No RMS code is implemented yet. `testdata/idx88` holds VMS's run, files, and
+definitions. **Next: subtask 3,** `internal/isam`'s reader.
 
 ## Goal
 
@@ -286,6 +285,53 @@ VMSKITBLD's second key descriptor block has leftover text past its descriptor, a
 still comes out right. So **byte-for-byte comparison can't be the whole test**; unused bytes
 must be ignored (Question 3).
 
+## What round 1 settled (2026-11-03)
+
+VMS 7.1 ran `testdata/idx88`'s 154 cases to their end with no condition, and ANALYZE/RMS_FILE/CHECK found 0 errors
+in every file but E85 (below). `vax/idx88-vax.txt` is the run; `vax/idx88.bck` the 140 files' survivors; `vax/anl` VMS's
+report, check, and FDL of each; `defined.txt` the 246 names of `$BKTDEF`, `$IRCDEF`, `$KEYDEF`, `$AREADEF`, and
+`$PLGDEF` (values only). Where this section and "The file on disk" differ, this one wins.
+
+**The names confirm Part A's offsets,** and from here on the code may use them: `KEY$` for the descriptor (its `KEY$C_BLN` is 60
+hex, with `KEY$W_IDXFILL`, `KEY$W_DATFILL`, `KEY$W_MINRECSZ`, `KEY$L_LDVBN`, `KEY$B_TYPE0`), `AREA$` (`AREA$L_CVBN`, `CNBLK`,
+`USED`, `NXTVBN`, `AREA$L_NXT` at 1C and `NXBLK` at 20 for an extent to come, `AREA$W_DEQ` at 24, `AREA$L_TOTAL_ALLOC` at 32,
+`AREA$W_CHECK` at 3E), `PLG$` (`PLG$B_AVBN`, `AMAX`, `PLG$W_DVBN` at 68, `PLG$L_MRN` at 6C, `PLG$L_EOF` at 70, `PLG$W_VER_NO`
+at 74, `PLG$W_GBC` at 76, and collating's `PLG$W_COLVBN`), `BKT$`, and `IRC$`.
+
+**Answers to Part A's [open]s:**
+
+| Question | Answer |
+| -------- | ------ |
+| A bucket's byte 1 | The key of reference (`BKT$B_INDEXNO`; ANALYZE says "Key of Reference"), overlaid by `BKT$B_AREANO`: the Guide's example was only ever key 0 |
+| The check character | A count of the bucket's writes: 1 after the first, 4 after 3 `$PUT`s and a `$DELETE`. Bytes 0 and last alike |
+| An index's pointer size | `BKT$M_PTR_SZ`, bits 3 and 4 of the bucket's flags, less 2; 2 bytes in every case so far |
+| An RRV | Control `0A` (bit 3, pointer size 4), ID word, RRV ID word, pointer: 9 bytes, `IRC$C_RRVOVHSZ3`. So a moved record is `02 01 00 02 00 04 00 00 00...` in its new bucket, with RRV (4,2), and `0A 02 00 01 00 08 00 00 00` in the old, "ID 2 is ID 1 in VBN 8". That's where Part A's walk went wrong |
+| A deleted record with no RRV to keep | Gone: the bucket's records close up, and its RFA is RMS$_DEL. The next `$PUT`, even of the same key, gets a new ID: 3,4 after 3,2. IDs aren't reused |
+| Bytes past the free offset | Left as they were, stale records and all, like VMSKITBLD's leftovers: not to be compared |
+| Fixed-length records | No size word with data compression off (`02 ID RRVID VBN key data`); with it on, the word and fragments are there |
+| Control `80`, `82` on SIDR pointers | `IRC$M_FIRST_KEY`, bit 7, with the pointer size in the low bits. `IRC$M_NOPTRSZ` and `NODUPCNT` are one bit, 4 |
+| An index not made yet | `KEY$M_INITIDX` (10 hex) until its first record; the root field holds the areas meanwhile, as Part A read |
+| FLG's compression bits | Inverted on disk, as Part A read: `KEY$M_KEY_COMPR`, `IDX_COMPR`, `REC_COMPR` |
+| ROP REV | **In VMS 7.1,** by Tables 7-3 and 7-4, and the three combinations that are RMS$_ROP are too. Decision 9's doubt is gone |
+| Default bucket size | 2 for a small record; MRS 5000 is 10. VMS picks more than one record's worth, the formula for subtask 7 to fit from the shape cases |
+| Allocation | `$CREATE` returns ALQ 3 with none asked for, and `$OPEN` later 9 with one key, 15 with two: 3 at a time by bucket size 2; ALQ 50 is 51 (a multiple of 3, the cluster here). Replayed in subtask 4 |
+| DFL under half the bucket | Taken as half, as the manual says (200 and 300 show 512 of 1024) |
+| An in-order load | A full bucket is left alone and a new one takes the next record: no records move, and the ring's next pointer goes to the new one |
+
+**`$CREATE`'s statuses, one bad field at a time:** no XABKEY or key 1 alone RMS$_NPK (STV the XAB's address for the second); keys 0 and 2, two key 0s, XABALLs 0 and 2 or AID 1 alone RMS$_IMX (STV the XAB); CHG or NUL on the primary, or FLG all ones,
+RMS$_FLG; a primary past MRS or a FIX shorter than the key RMS$_POS; size 0, BN4 of 2, PAC of 17, or 256 in all RMS$_SIZ; DTP 9 or 200 RMS$_DTP; DAN, IAN, LAN 3 with no XABALL RMS$_DAN, IAN, LAN; DFL, IFL past the bucket
+RMS$_DFL, IFL; a bad KNM address RMS$_KNM, **which leaves a file with an empty prolog** (E85, the one `/CHECK` error); BN2 of two segments RMS$_SEG; BKS 64 RMS$_BKS, XABALL BKZ 64 RMS$_BKZ; BKS 1 and MRS 600, FIX MRS 0, MRS 32234 RMS$_MRS; VFC, STM, UDF RMS$_RFM; PROLOG 9
+RMS$_PLV. Taken: an alternate before the primary in the chain, MRS 32225 (a lower prolog), CIF over a file. PROLOG=1, PROLOG=2, and overlapping primary segments make Prolog 1 and 2 files (pvn 1, 2), which answer 1 makes an error of ours.
+
+**The record services:** `$PUT` is RMS$_SEQ out of order by RAC SEQ, RMS$_DUP, or the success RMS$_OK_DUP where a key's duplicate was taken; `$UPDATE` RMS$_CHG (the primary, an alternate with no CHG, or a record too short for one with no CHG, and one with it if it's short of another),
+RMS$_RSZ (too short for the primary), RMS$_CUR (no current record, and after a failed `$GET`), RMS$_DUP, RMS$_OK_DUP; `$GET` RMS$_RNF, RMS$_KSZ, RMS$_KRF, RMS$_KBF, RMS$_ROP, RMS$_RTB (USZ short), RMS$_DEL (by a deleted record's RFA), RMS$_RLK, RMS$_OK_RRL, RMS$_OK_LIM, RMS$_OK_DUP (CDK);
+`$TRUNCATE` RMS$_FAC with FAC lacking TRN; `$DELETE` RMS$_CUR. Each case's exact order is the run's, for `TestIdx88Oracle`.
+
+**Still to be fitted from the run, not asked of VMS again:** where a split falls when a record lands mid-bucket; continuation buckets for a long duplicate chain; SIDR pointers across buckets; how index compression treats a split; and an area's extension. The block dumps after each step hold all of these, and
+subtasks 3 to 6 replay them. A case the dumps don't answer can go in a later round.
+
+**The later rounds move to their subtasks,** since each is best written with its code at hand: FORRTL's (round 2) before subtask 11, the utilities' (round 3) before 10, and DCL's (round 4) before 9.
+
 ## The rules
 
 ### Keys [manual]
@@ -422,9 +468,7 @@ Accepted by the author, 2026-11-03 ("The review", below).
 8. **The FORTRAN specifiers are the LRM's:** all of 7.1.1.7, correcting `keySpecs`. FTNRTL's
    interface stays our own, named as FORRTL names its entries, with FORRTL's keyword codes where
    Phase 81 already adopted them.
-9. **ROP REV as VMS 7.1 has it.** The manuals are 7.3's. If 7.1's RMS refuses it, govax still
-   takes it, by the 7.3 manual, since Phase 81's answer 4 allows mixing a little. Logged in
-   DEVIATIONS.md either way. VMS 7.1's answer is a probe case.
+9. **ROP REV as VMS 7.1 has it.** VMS 7.1's RMS has it, by Tables 7-3 and 7-4 (round 1).
 10. **Tests follow the existing pattern.** `TestIdx88Oracle` holds RMS's statuses and records to
     VMS's run; `isam`'s tests read VMS's files, or skip on a clean clone (the files are local) but
     for INDEXED.IDX and the probe's own, which are made from our data and can be committed; a
@@ -499,8 +543,8 @@ Each is one commit, complete and tested, then a stop for review. Provisional; th
 them.
 
 1. **Survey** (this doc). (done 2026-11-03)
-2. **The probe,** `testdata/idx88`, on the simh VAX, as many rounds as it takes; described below.
-   Round 1 written 2026-11-03.
+2. **The probe,** `testdata/idx88`, on the simh VAX; described below. (done 2026-11-03, RMS's round; the others move
+   to the subtasks that need them)
 3. **`isam`: the format, reading.** Prolog, key and area descriptors, buckets, records, RRVs, SIDRs,
    decompression, key comparison for each type and direction; search, sequence, and `Dump`; every
    VMS-made file read whole, and each record found by each key.
@@ -622,3 +666,6 @@ has REV at all.
   out of order was RMS$_SEQ (247 of them), and the shape, growth, and split cases that wrote out of order made little.
   `put` now writes by key, a pair of cases sets a load by RAC SEQ beside the same by RAC KEY, and the interactive walks use the paths VMS
   listed. Seen so far: ROP REV is in VMS 7.1, by Tables 7-3 and 7-4; FLG's compression bits are stored inverted, as Part A read them.
+- **2026-11-03: round 1's third run, and subtask 2 done.** All 154 cases, 428 `$PUT`s with RMS$_SUC and only the intended
+  RMS$_SEQ. "What round 1 settled", in Part A, has the answers: RRVs, deleted records, the check character, fixed records, `$CREATE`'s statuses, and
+  the names. `vax/` is committed: the run, the save set, VMS's reports. `IDX88M.LOG` doesn't exist, MACRO having said nothing.

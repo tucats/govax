@@ -1,0 +1,26 @@
+IDENT	" 3-NOV-2026 15:19:38	OpenVMS ANALYZE/RMS_FILE Utility"
+
+SYSTEM
+	SOURCE                  OpenVMS
+
+FILE
+	ALLOCATION              3
+	BEST_TRY_CONTIGUOUS     no
+	BUCKET_SIZE             2
+	CLUSTER_SIZE            3
+	CONTIGUOUS              no
+	EXTENSION               0
+	FILE_MONITORING         no
+	GLOBAL_BUFFER_COUNT     0
+	NAME                    "DUA1:[000000]E85.IDX;1"
+	ORGANIZATION            indexed
+	OWNER                   [SYSTEM]
+	PROTECTION              (system:RWED, owner:RWED, group:RE, world:)
+
+RECORD
+	BLOCK_SPAN              yes
+	CARRIAGE_CONTROL        carriage_return
+	FORMAT                  variable
+	SIZE                    120
+***  Attempt to read block with invalid VBN 0.
+Unrecoverable error encountered in structure of file.

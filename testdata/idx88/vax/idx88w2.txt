@@ -1,0 +1,395 @@
+
+FILE HEADER
+
+	File Spec: DUA1:[000000]U137.IDX;1
+	File ID: (134,1,0)
+	Owner UIC: [SYSTEM]
+	Protection:  System: RWED, Owner: RWED, Group: RE, World: 
+	Creation Date:    3-NOV-2026 15:19:38.19
+	Revision Date:    3-NOV-2026 15:19:38.21, Number: 3
+	Expiration Date: none specified
+	Backup Date:     none posted
+	Contiguity Options:  none
+	Performance Options: none
+	Reliability Options: none
+	Journaling Enabled:  none
+
+
+RMS FILE ATTRIBUTES
+
+	File Organization: indexed
+	Record Format: variable
+	Record Attributes:  carriage-return 
+	Maximum Record Size: 400
+	Blocks Allocated: 12, Default Extend Size: 0
+	Bucket Size: 1
+	File Monitoring: disabled
+	Global Buffer Count: 0
+
+
+FIXED PROLOG
+
+	Number of Areas: 1, VBN of First Descriptor: 3
+	Prolog Version: 3
+
+
+AREA DESCRIPTOR #0 (VBN 3, offset %X'0000')
+
+	Bucket Size: 1
+	Reclaimed Bucket VBN: 0
+	Current Extent Start: 10, Blocks: 3, Used: 3, Next: 13
+	Default Extend Quantity: 0
+	Total Allocation: 12
+
+
+FIXED PROLOG
+
+	Number of Areas: 1, VBN of First Descriptor: 3
+	Prolog Version: 3
+
+
+KEY DESCRIPTOR #0 (VBN 1, offset %X'0000')
+
+	Next Key Descriptor VBN: 2, Offset: %X'0000'
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 1, Data Bucket Size: 1
+	Root VBN: 5
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+		(7)  KEY$V_REC_COMPR  0
+	Key Segments: 1
+	Key Size: 8
+	Minimum Record Size: 8
+	Index Fill Quantity: 512, Data Fill Quantity: 512
+	Segment Positions:       0
+	Segment Sizes:           8
+	Data Type: string
+	Name: ""
+	First Data Bucket VBN: 4
+
+
+BUCKET HEADER (VBN 5)
+
+	Check Character: %X'05'
+	Key of Reference: 0
+	VBN Sample: 5
+	Free Space Offset: %X'003E'
+	Free Record ID: 1
+	Next Bucket VBN: 5
+	Level: 1
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    1
+		(1)  BKT$V_ROOTBKT    1
+	Bucket Pointer Size: 2
+
+	VBN Free Space Offset: %X'01EF'
+
+
+	INDEX RECORD (VBN 5, offset %X'000E')
+
+		2-Byte Bucket Pointer: 4
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 31 31 30 30 30 30 30 50|  0000  |P0000011|
+
+
+	INDEX RECORD (VBN 5, offset %X'0016')
+
+		2-Byte Bucket Pointer: 8
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 32 31 30 30 30 30 30 50|  0000  |P0000012|
+
+
+BUCKET HEADER (VBN 5)
+
+	Check Character: %X'05'
+	Key of Reference: 0
+	VBN Sample: 5
+	Free Space Offset: %X'003E'
+	Free Record ID: 1
+	Next Bucket VBN: 5
+	Level: 1
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    1
+		(1)  BKT$V_ROOTBKT    1
+	Bucket Pointer Size: 2
+
+	VBN Free Space Offset: %X'01EF'
+
+
+KEY DESCRIPTOR #0 (VBN 1, offset %X'0000')
+
+	Next Key Descriptor VBN: 2, Offset: %X'0000'
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 1, Data Bucket Size: 1
+	Root VBN: 5
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+		(7)  KEY$V_REC_COMPR  0
+	Key Segments: 1
+	Key Size: 8
+	Minimum Record Size: 8
+	Index Fill Quantity: 512, Data Fill Quantity: 512
+	Segment Positions:       0
+	Segment Sizes:           8
+	Data Type: string
+	Name: ""
+	First Data Bucket VBN: 4
+
+
+BUCKET HEADER (VBN 4)
+
+	Check Character: %X'09'
+	Key of Reference: 0
+	VBN Sample: 4
+	Free Space Offset: %X'0159'
+	Free Record ID: 5
+	Next Bucket VBN: 8
+	Level: 0
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    0
+
+
+
+	PRIMARY DATA RECORD (VBN 4, offset %X'000E')
+
+		Record Control Flags:
+			(2)  IRC$V_DELETED    0
+			(3)  IRC$V_RRV        0
+			(4)  IRC$V_NOPTRSZ    0
+			(5)  IRC$V_RU_DELETE  0
+			(6)  IRC$V_RU_UPDATE  0
+		Record ID: 1
+		RRV ID: 1, 4-Byte Bucket Pointer: 4
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 30 31 30 30 30 30 30 50|  0000  |P0000010|
+
+
+	  7  6  5  4  3  2  1  0          01234567
+	------------------------          --------
+	 FF FF FF F6 00 00 00 0A|  0000  |....ö...|
+	 33 30 30 30 30 30 30 41|  0008  |A0000003|
+	 39 38 39 39 39 39 39 42|  0010  |B9999989|
+	 00 00 00 0A 0C 01 00 00|  0018  |........|
+	 FF FF FF F6 00 00 00 00|  0020  |....ö...|
+	 64 63 62 61 FF FF FF FF|  0028  |....abcd|
+	 20 20 20 20 68 67 66 65|  0030  |efgh    |
+	 20 20 20 20 20 20 20 20|  0038  |        |
+	 20 20 20 20 20 20 20 20|  0040  |        |
+	 20 20 20 20 20 20 20 20|  0048  |        |
+	 20 20 20 20 20 20 20 20|  0050  |        |
+	 7A 79 78 77 20 20 20 20|  0058  |    wxyz|
+	 68 67 66 65 64 63 62 61|  0060  |abcdefgh|
+	 70 6F 6E 6D 6C 6B 6A 69|  0068  |ijklmnop|
+	 78 77 76 75 74 73 72 71|  0070  |qrstuvwx|
+	 66 65 64 63 62 61 7A 79|  0078  |yzabcdef|
+	 6E 6D 6C 6B 6A 69 68 67|  0080  |ghijklmn|
+	       74 73 72 71 70 6F|  0088  |opqrst  |
+
+
+	PRIMARY DATA RECORD (VBN 4, offset %X'000E')
+
+		Record Control Flags:
+			(2)  IRC$V_DELETED    0
+			(3)  IRC$V_RRV        0
+			(4)  IRC$V_NOPTRSZ    0
+			(5)  IRC$V_RU_DELETE  0
+			(6)  IRC$V_RU_UPDATE  0
+		Record ID: 1
+		RRV ID: 1, 4-Byte Bucket Pointer: 4
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 30 31 30 30 30 30 30 50|  0000  |P0000010|
+
+
+BUCKET HEADER (VBN 4)
+
+	Check Character: %X'09'
+	Key of Reference: 0
+	VBN Sample: 4
+	Free Space Offset: %X'0159'
+	Free Record ID: 5
+	Next Bucket VBN: 8
+	Level: 0
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    0
+
+
+
+	PRIMARY DATA RECORD (VBN 4, offset %X'000E')
+
+		Record Control Flags:
+			(2)  IRC$V_DELETED    0
+			(3)  IRC$V_RRV        0
+			(4)  IRC$V_NOPTRSZ    0
+			(5)  IRC$V_RU_DELETE  0
+			(6)  IRC$V_RU_UPDATE  0
+		Record ID: 1
+		RRV ID: 1, 4-Byte Bucket Pointer: 4
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 30 31 30 30 30 30 30 50|  0000  |P0000010|
+
+
+	PRIMARY DATA RECORD (VBN 4, offset %X'00AF')
+
+		Record Control Flags:
+			(2)  IRC$V_DELETED    0
+			(3)  IRC$V_RRV        0
+			(4)  IRC$V_NOPTRSZ    0
+			(5)  IRC$V_RU_DELETE  0
+			(6)  IRC$V_RU_UPDATE  0
+		Record ID: 4
+		RRV ID: 4, 4-Byte Bucket Pointer: 4
+		Key:
+			  7  6  5  4  3  2  1  0          01234567
+			------------------------          --------
+			 31 31 30 30 30 30 30 50|  0000  |P0000011|
+
+
+BUCKET HEADER (VBN 4)
+
+	Check Character: %X'09'
+	Key of Reference: 0
+	VBN Sample: 4
+	Free Space Offset: %X'0159'
+	Free Record ID: 5
+	Next Bucket VBN: 8
+	Level: 0
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    0
+
+
+
+BUCKET HEADER (VBN 8)
+
+	Check Character: %X'04'
+	Key of Reference: 0
+	VBN Sample: 8
+	Free Space Offset: %X'00AF'
+	Free Record ID: 4
+	Next Bucket VBN: 12
+	Level: 0
+	Bucket Header Flags:
+		(0)  BKT$V_LASTBKT    0
+
+
+
+KEY DESCRIPTOR #0 (VBN 1, offset %X'0000')
+
+	Next Key Descriptor VBN: 2, Offset: %X'0000'
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 1, Data Bucket Size: 1
+	Root VBN: 5
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+		(7)  KEY$V_REC_COMPR  0
+	Key Segments: 1
+	Key Size: 8
+	Minimum Record Size: 8
+	Index Fill Quantity: 512, Data Fill Quantity: 512
+	Segment Positions:       0
+	Segment Sizes:           8
+	Data Type: string
+	Name: ""
+	First Data Bucket VBN: 4
+
+
+FIXED PROLOG
+
+	Number of Areas: 1, VBN of First Descriptor: 3
+	Prolog Version: 3
+
+
+RMS FILE ATTRIBUTES
+
+	File Organization: indexed
+	Record Format: variable
+	Record Attributes:  carriage-return 
+	Maximum Record Size: 400
+	Blocks Allocated: 12, Default Extend Size: 0
+	Bucket Size: 1
+	File Monitoring: disabled
+	Global Buffer Count: 0
+
+
+FILE HEADER
+
+	File Spec: DUA1:[000000]U137.IDX;1
+	File ID: (134,1,0)
+	Owner UIC: [SYSTEM]
+	Protection:  System: RWED, Owner: RWED, Group: RE, World: 
+	Creation Date:    3-NOV-2026 15:19:38.19
+	Revision Date:    3-NOV-2026 15:19:38.21, Number: 3
+	Expiration Date: none specified
+	Backup Date:     none posted
+	Contiguity Options:  none
+	Performance Options: none
+	Reliability Options: none
+	Journaling Enabled:  none
+
+
+RMS FILE ATTRIBUTES
+
+	File Organization: indexed
+	Record Format: variable
+	Record Attributes:  carriage-return 
+	Maximum Record Size: 400
+	Blocks Allocated: 12, Default Extend Size: 0
+	Bucket Size: 1
+	File Monitoring: disabled
+	Global Buffer Count: 0
+
+
+FIXED PROLOG
+
+	Number of Areas: 1, VBN of First Descriptor: 3
+	Prolog Version: 3
+
+
+RMS FILE ATTRIBUTES
+
+	File Organization: indexed
+	Record Format: variable
+	Record Attributes:  carriage-return 
+	Maximum Record Size: 400
+	Blocks Allocated: 12, Default Extend Size: 0
+	Bucket Size: 1
+	File Monitoring: disabled
+	Global Buffer Count: 0
+
+
+FILE HEADER
+
+	File Spec: DUA1:[000000]U137.IDX;1
+	File ID: (134,1,0)
+	Owner UIC: [SYSTEM]
+	Protection:  System: RWED, Owner: RWED, Group: RE, World: 
+	Creation Date:    3-NOV-2026 15:19:38.19
+	Revision Date:    3-NOV-2026 15:19:38.21, Number: 3
+	Expiration Date: none specified
+	Backup Date:     none posted
+	Contiguity Options:  none
+	Performance Options: none
+	Reliability Options: none
+	Journaling Enabled:  none
+

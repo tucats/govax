@@ -1,0 +1,53 @@
+IDENT	" 3-NOV-2026 15:19:40	OpenVMS ANALYZE/RMS_FILE Utility"
+
+SYSTEM
+	SOURCE                  OpenVMS
+
+FILE
+	ALLOCATION              3
+	BEST_TRY_CONTIGUOUS     no
+	BUCKET_SIZE             2
+	CLUSTER_SIZE            3
+	CONTIGUOUS              no
+	EXTENSION               0
+	FILE_MONITORING         no
+	GLOBAL_BUFFER_COUNT     0
+	NAME                    "DUA1:[000000]S2.IDX;1"
+	ORGANIZATION            indexed
+	OWNER                   [SYSTEM]
+	PROTECTION              (system:RWED, owner:RWED, group:RE, world:)
+
+RECORD
+	BLOCK_SPAN              yes
+	CARRIAGE_CONTROL        carriage_return
+	FORMAT                  variable
+	SIZE                    120
+
+AREA 0
+	ALLOCATION              3
+	BUCKET_SIZE             2
+	EXTENSION               0
+
+KEY 0
+	CHANGES                 no
+	DATA_KEY_COMPRESSION    yes
+	DATA_RECORD_COMPRESSION yes
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              no
+	INDEX_AREA              0
+	INDEX_COMPRESSION       yes
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	PROLOG                  3
+	SEG0_LENGTH             8
+	SEG0_POSITION           0
+	TYPE                    string
+
+ANALYSIS_OF_AREA 0
+	RECLAIMED_SPACE         0
+
+ANALYSIS_OF_KEY 0
+	! This index is uninitialized - there are no records.

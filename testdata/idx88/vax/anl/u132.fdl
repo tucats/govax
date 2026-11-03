@@ -1,0 +1,124 @@
+IDENT	" 3-NOV-2026 15:19:43	OpenVMS ANALYZE/RMS_FILE Utility"
+
+SYSTEM
+	SOURCE                  OpenVMS
+
+FILE
+	ALLOCATION              21
+	BEST_TRY_CONTIGUOUS     no
+	BUCKET_SIZE             2
+	CLUSTER_SIZE            3
+	CONTIGUOUS              no
+	EXTENSION               0
+	FILE_MONITORING         no
+	GLOBAL_BUFFER_COUNT     0
+	NAME                    "DUA1:[000000]U132.IDX;1"
+	ORGANIZATION            indexed
+	OWNER                   [SYSTEM]
+	PROTECTION              (system:RWED, owner:RWED, group:RE, world:)
+
+RECORD
+	BLOCK_SPAN              yes
+	CARRIAGE_CONTROL        carriage_return
+	FORMAT                  variable
+	SIZE                    300
+
+AREA 0
+	ALLOCATION              21
+	BUCKET_SIZE             2
+	EXTENSION               0
+
+KEY 0
+	CHANGES                 no
+	DATA_KEY_COMPRESSION    yes
+	DATA_RECORD_COMPRESSION yes
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              no
+	INDEX_AREA              0
+	INDEX_COMPRESSION       yes
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	PROLOG                  3
+	SEG0_LENGTH             8
+	SEG0_POSITION           0
+	TYPE                    string
+
+KEY 1
+	CHANGES                 yes
+	DATA_KEY_COMPRESSION    yes
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              yes
+	INDEX_AREA              0
+	INDEX_COMPRESSION       yes
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	SEG0_LENGTH             8
+	SEG0_POSITION           16
+	TYPE                    string
+
+KEY 2
+	CHANGES                 yes
+	DATA_KEY_COMPRESSION    no
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              yes
+	INDEX_AREA              0
+	INDEX_COMPRESSION       no
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	SEG0_LENGTH             4
+	SEG0_POSITION           8
+	TYPE                    bin4
+
+ANALYSIS_OF_AREA 0
+	RECLAIMED_SPACE         0
+
+ANALYSIS_OF_KEY 0
+	DATA_FILL               81
+	DATA_KEY_COMPRESSION    44
+	DATA_RECORD_COMPRESSION 41
+	DATA_RECORD_COUNT       11
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	INDEX_COMPRESSION       50
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        109
+	MEAN_INDEX_LENGTH       10
+
+ANALYSIS_OF_KEY 1
+	DATA_FILL               13
+	DATA_KEY_COMPRESSION    50
+	DATA_RECORD_COUNT       11
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	DUPLICATES_PER_SIDR     0
+	INDEX_COMPRESSION       50
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        11
+	MEAN_INDEX_LENGTH       10
+
+ANALYSIS_OF_KEY 2
+	DATA_FILL               13
+	DATA_KEY_COMPRESSION    0
+	DATA_RECORD_COUNT       11
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	DUPLICATES_PER_SIDR     0
+	INDEX_COMPRESSION       0
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        11
+	MEAN_INDEX_LENGTH       6

@@ -78,7 +78,7 @@ driver, so a fault costs that case. The driver closes every file after each case
 | 44 | 8 | signed quadword -n |
 | 52 | to 33000 | letters, with a run of blanks at 60 to 99, for data compression |
 
-Numbers in the ROP field are written as numbers: `RAB$V_REV` and `CDK` may not be names VMS
+Records go in by RAC KEY unless a case says otherwise. Numbers in the ROP field are written as numbers: `RAB$V_REV` and `CDK` may not be names VMS
 7.1's macros know, and an undefined symbol there would cost a round.
 
 `TestIdx88Probe` (`internal/console/idx88_test.go`) rehearses the program on govax: it must
@@ -88,7 +88,7 @@ file, exercises the helpers.
 
 ## What's next
 
-Round 2 is on FORRTL, as Part C says, once this round's files can be read. What's known so far of
+`vax/` is VMS V7.1's third run; the phase doc's "What round 1 settled" says what it showed. Round 2 is on FORRTL, as Part C says, once this round's files can be read. What's known so far of
 FOR$OPEN's KEY= (code 23, by trial over govax, 2026-11-03): the value is the address of a block
 whose word at +2 is a count that must be a multiple of 3 (0 is accepted and makes no key, a
 number that isn't a multiple is FOR$_INVARGFOR, and any other multiple is FOR$_INVKEYSPE so far).
