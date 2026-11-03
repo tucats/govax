@@ -4254,6 +4254,13 @@ $FOR
                         default, is traceback alone.  It doesn't turn the
                         optimizer off: give /NOOPTIMIZE as well to debug.
 
+        /NOF77          FORTRAN-66's reading of what FORTRAN-77 changed: a DO runs
+                        at least once, OPEN's defaults are STATUS='NEW' and
+                        BLANK='ZERO', and EXTERNAL means a library function
+                        of that name unless written *name.  The default is
+                        /F77.  An OPTIONS statement before a unit may change it
+                        for that unit.
+
         /OBJECT[=<file>]  Runs MACRO on the MACRO file too, for an object file,
         /NOOBJECT       by default the source's name with type OBJ.  The MACRO
                         file is kept, so /OBJECT can't go with /NOMACRO.  The
@@ -4278,7 +4285,7 @@ $FOR
     --no-align, --optimize, --no-optimize, --list, --list-file <file>,
     --show <keywords>, --cross-reference, --check <keywords>,
     --warnings <keywords>, --standard <keywords>, --debug <keywords>,
-    --object, and --object-file <file>.
+    --object, --object-file <file>, and --no-f77.
 
     Examples:
 

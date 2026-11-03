@@ -290,7 +290,7 @@ func (a *analyzer) fileStatement(s *ast.AuxIOStmt, path []frame) Stmt {
 			ok = false
 		}
 
-		st.Keys = append(st.Keys, openDefaults(byCode)...)
+		st.Keys = append(st.Keys, openDefaults(byCode, a.noF77)...)
 	}
 
 	if s.Kind == lex.Inquire && !a.inquireTarget(s, st, byCode) {
@@ -631,16 +631,22 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 // openDefaults are the keywords an OPEN gets without giving them, which
 // FORRTL leaves to the compiler: STATUS='UNKNOWN' (section 9.1.25; NEW is
 // what FORRTL takes with none) and BLANK='NULL' (section 9.1.4; ZERO is
-// what a unit with no OPEN has).
-func openDefaults(keys map[int]*FileKey) []*FileKey {
+// what a unit with no OPEN has). Under /NOF77 they are NEW and ZERO, those
+// sections say.
+func openDefaults(keys map[int]*FileKey, noF77 bool) []*FileKey {
 	var added []*FileKey
 
+	status, blank := "UNKNOWN", "NULL"
+	if noF77 {
+		status, blank = "NEW", "ZERO"
+	}
+
 	if keys[codeStatus] == nil {
-		added = append(added, &FileKey{Code: codeStatus, Name: "STATUS", Number: statusChoices["UNKNOWN"], Known: true})
+		added = append(added, &FileKey{Code: codeStatus, Name: "STATUS", Number: statusChoices[status], Known: true})
 	}
 
 	if keys[codeBlank] == nil {
-		added = append(added, &FileKey{Code: codeBlank, Name: "BLANK", Number: blankChoices["NULL"], Known: true})
+		added = append(added, &FileKey{Code: codeBlank, Name: "BLANK", Number: blankChoices[blank], Known: true})
 	}
 
 	return added

@@ -232,6 +232,10 @@ type AttrItem struct {
 	// an array specification if it has one: AUTOMATIC K(20). Nil in the
 	// other statements' lists.
 	Array *Declarator
+
+	// Star is EXTERNAL's *name, appendix A.6's: a routine of the program's, not the
+	// library's, under /NOF77.
+	Star bool
 }
 
 // NamelistGroup is one group of a NAMELIST statement.

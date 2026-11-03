@@ -30,7 +30,14 @@ func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 
 	case lex.External:
 		for _, item := range s.Items {
-			a.external(item)
+			switch {
+			case item.Star && !a.noF77:
+				a.report("NOF77", item.Pos, item.Name)
+			case a.libraryExternal(item):
+				a.intrinsic(item)
+			default:
+				a.external(item)
+			}
 		}
 
 	case lex.Intrinsic:
@@ -50,6 +57,19 @@ func (a *analyzer) attributeStatement(s *ast.AttrStmt) {
 			}
 		}
 	}
+}
+
+// libraryExternal reports whether an EXTERNAL statement's item means a FORTRAN library
+// function, which appendix A.6 says it does under /NOF77 when the name is one, unless a * says
+// the program's own. A dummy argument's name is the dummy's.
+func (a *analyzer) libraryExternal(item *ast.AttrItem) bool {
+	if !a.noF77 || item.Star || !intrinsics[item.Name] {
+		return false
+	}
+
+	s := a.unit.byName[item.Name]
+
+	return s == nil || s.Dummy == 0
 }
 
 // external makes the name a routine outside the unit. A dummy argument may be

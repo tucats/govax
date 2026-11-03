@@ -652,6 +652,7 @@ func (d *Dispatcher) bindGrammar() {
 			ExtendSource:   r.Present("EXTEND_SOURCE") && !r.Negated("EXTEND_SOURCE"),
 			DLines:         r.Present("D_LINES") && !r.Negated("D_LINES"),
 			NoI4:           r.Present("I4") && r.Negated("I4"),
+			NoF77:          r.Present("F77") && r.Negated("F77"),
 			GFloating:      r.Present("G_FLOATING") && !r.Negated("G_FLOATING"),
 			Align:          nonEmpty(r.List("ALIGN")),
 			AlignGiven:     r.Present("ALIGN") && !r.Negated("ALIGN") && !r.Defaulted("ALIGN"),

@@ -98,6 +98,11 @@ type Unit struct {
 	// when they are in D_floating.
 	GFloating bool
 
+	// NoF77 is set when the unit is compiled with /NOF77, which the manual gives four
+	// meanings: a DO runs at least once (section 5.3.1), OPEN's BLANK= defaults to 'ZERO'
+	// (9.1.3) and STATUS= to 'NEW' (9.1.25), and EXTERNAL takes appendix A.6's form.
+	NoF77 bool
+
 	// LocalAlign is the alignment of the $LOCAL section, as a power of two, that
 	// the unit's aligned records need beyond a longword's (align.go), or 0.
 	LocalAlign int

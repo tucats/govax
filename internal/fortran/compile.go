@@ -51,6 +51,9 @@ type Options struct {
 	// Standard is /STANDARD: what to flag as an extension to FORTRAN-77 (sema.Conformance).
 	Standard sema.Conformance
 
+	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (sema.Unit.NoF77).
+	NoF77 bool
+
 	// Debug is /DEBUG: what MACRO is to write for the debugger (debug.go).
 	Debug Debug
 
@@ -178,6 +181,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 
 		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{
 			NoI4:      opts.NoI4,
+			NoF77:     opts.NoF77,
 			GFloating: opts.GFloating,
 			Align:     align,
 			Checks:    opts.Checks,

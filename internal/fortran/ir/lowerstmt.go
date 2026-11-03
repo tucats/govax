@@ -428,7 +428,12 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 
 	var test *Branch
 
+	// Under /NOF77 a DO statement's body runs once even with no trips (section 5.3.1):
+	// there's no test before it. An implied-DO list is another statement's.
+	oneTrip := release && l.r.Unit.NoF77
+
 	switch c, ok := trips.(*Const); {
+	case oneTrip:
 	case !ok:
 		test = &Branch{l.origin(), &Cmp{Le, &Load{count}, LongConst(0)}, exit, pass}
 		l.terminate(test)
@@ -448,7 +453,9 @@ func (l *lowerer) countedLoop(name string, v *sema.Symbol, start, limit, step se
 	l.terminate(closing)
 	l.begin(exit)
 
-	if c, ok := by.(*Const); ok && t == Long && last.Type() == Long {
+	// The optimizer's loop forms take a loop's end to say when its count runs out, or a
+	// test for no trips to have kept it from starting: not so for a one-trip loop.
+	if c, ok := by.(*Const); ok && t == Long && last.Type() == Long && !oneTrip {
 		l.r.Counted = append(l.r.Counted, &CountedLoop{
 			Var: place, Limit: last, Step: c.Int(), Count: count,
 			Set: set, Advance: advance, Less: less, Test: test, Close: closing, Body: pass,

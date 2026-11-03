@@ -348,9 +348,12 @@ func (x *extensions) statement(s ast.Stmt) {
 		}
 
 	case *ast.AttrStmt:
-		if kind == lex.Intrinsic {
-			for _, item := range s.Items {
+		for _, item := range s.Items {
+			switch {
+			case kind == lex.Intrinsic:
 				x.intrinsic(item.Name, item.Pos)
+			case item.Star:
+				x.add(item.Pos, "EXTERNAL's * form")
 			}
 		}
 

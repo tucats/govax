@@ -427,7 +427,6 @@ func TestErrors(t *testing.T) {
 		{"IMPLICIT REAL (Z-A)", "BADLETTERS", 22, "Z-A is not a range of letters in alphabetical order"},
 		{"IMPLICIT REAL (AB)", "SYNTAX", 22, "expected a letter, but found the name AB"},
 		{"IMPLICIT FOO (A)", "SYNTAX", 16, "expected a data type, but found the name FOO"},
-		{"EXTERNAL F, *TAN", "NOF77", 19, "the form EXTERNAL *TAN is appendix A.6's, for /NOF77, which govax doesn't have"},
 		{"INTEGER*(4) I", "SYNTAX", 15, "expected a length in bytes, but found '('"},
 		{"CHARACTER A*4(10)", "EXTRATEXT", 20, ""},
 		{"INTEGER A(10)/1, 2", "SYNTAX", 25, "expected '/', but found the end of the statement"},

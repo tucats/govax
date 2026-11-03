@@ -139,7 +139,7 @@ var messages = map[string]kind{
 
 	// NOF77 is the EXTERNAL statement's *name form, which only /NOF77
 	// allows (appendix A.6), and govax has no /NOF77.
-	"NOF77": {Error, "the form EXTERNAL *%s is appendix A.6's, for /NOF77, which govax doesn't have"},
+	"NOF77": {Error, "the form EXTERNAL *%s is appendix A.6's, which only /NOF77 has"},
 
 	// BADDIRECTIVE is a CDEC$ line naming no general directive (section
 	// 10.3).

@@ -800,7 +800,8 @@ grammar console
     ! the compiler says beyond errors (diag.Warnings), and STANDARD is /[NO]STANDARD[=(keyword,...)], what
     ! to flag as an extension to FORTRAN-77 (sema.Conformance), DEBUG is /[NO]DEBUG[=(keyword,...)], what
     ! MACRO is to write for the debugger (fortran.Debug), and OBJECT is /[NO]OBJECT[=file], MACRO run on
-    ! the result (empty default: the source's name with type OBJ). Elements joined by + are one compilation
+    ! the result (empty default: the source's name with type OBJ), and F77 is /[NO]F77, FORTRAN-66's reading
+    ! of what FORTRAN-77 changed. Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -824,6 +825,7 @@ grammar console
         qualifier   extend_source/id=1374
         qualifier   d_lines/id=1375
         qualifier   i4/id=1377
+        qualifier   f77/id=1390
         qualifier   g_floating/id=1378
         qualifier   align/id=1379               -
                     /type=$any/list             -

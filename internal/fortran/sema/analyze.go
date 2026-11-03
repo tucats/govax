@@ -23,6 +23,9 @@ type Options struct {
 	// not D_floating (Decision 16 of docs/PHASE-74 - FORTRAN plan.md).
 	GFloating bool
 
+	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (Program.NoF77).
+	NoF77 bool
+
 	// Align is /[NO]ALIGN: how each unit starts, which its CDEC$ OPTIONS groups
 	// change (align.go).
 	Align Alignment
@@ -77,6 +80,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			defaultInt:     defaultInt,
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
+			noF77:          unitOpts.NoF77,
 			align:          opts.Align,
 			warnings:       opts.Warnings,
 			extensions:     newExtensions(opts.Standard),
@@ -149,6 +153,10 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 					opts.GFloating = true
 				case "NOG_FLOATING":
 					opts.GFloating = false
+				case "F77":
+					opts.NoF77 = false
+				case "NOF77":
+					opts.NoF77 = true
 				case "CHECK":
 					checks, err := opts.Checks.With(q.Values)
 					if err != nil {
@@ -343,6 +351,9 @@ type analyzer struct {
 	// text library's module among them (source.Statement.Depth).
 	inInclude bool
 
+	// noF77 is the unit's /NOF77.
+	noF77 bool
+
 	// warnings is /WARNINGS (warnings.go).
 	warnings diag.Warnings
 
@@ -408,6 +419,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 		structs: map[string]*Structure{},
 
 		GFloating: a.gFloating,
+		NoF77:     a.noF77,
 	}
 	a.unit = u
 

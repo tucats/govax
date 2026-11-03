@@ -150,8 +150,8 @@ func (p *parser) dataName() ast.Expr {
 // STATIC (sections 4.14, 4.7, 4.9, 4.16; the HP manual's 5.3): a list of
 // names, where SAVE and VOLATILE also take common blocks' names in slashes,
 // AUTOMATIC and STATIC array specifications, and SAVE's list may be empty.
-// EXTERNAL's *name form is appendix A.6's, under /NOF77 only, which govax
-// doesn't have (NOF77).
+// EXTERNAL's *name form is appendix A.6's, under /NOF77 only, which is semantic
+// analysis's to check, since only it knows the unit's OPTIONS statements.
 func parseAttr(p *parser) ast.Stmt {
 	s := &ast.AttrStmt{StmtBase: p.base()}
 	k := p.st.Kind
@@ -169,7 +169,9 @@ func parseAttr(p *parser) ast.Stmt {
 
 		case k == lex.External && t != nil && t.Is("*"):
 			p.next()
-			p.fail("NOF77", p.pos(*t), p.name("a subprogram's name").Name)
+
+			n := p.name("a subprogram's name")
+			s.Items = append(s.Items, &ast.AttrItem{Name: n.Name, Pos: n.Pos, Star: true})
 
 		case k == lex.Automatic || k == lex.Static:
 			d := p.declarator(declPlain, false)

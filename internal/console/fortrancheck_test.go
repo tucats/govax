@@ -749,3 +749,34 @@ func TestFortranObjectQualifier(t *testing.T) {
 		t.Errorf("/DEBUG=LINES: %v", err)
 	}
 }
+
+// TestFortranF77Qualifier runs /[NO]F77 through the command: a DO of no trips.
+func TestFortranF77Qualifier(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]F77Q.FOR"},
+		rms.TextRecords, splitSource("      N = 0\n      DO 10 I = 1, N\n      PRINT *, 'A TRIP'\n 10   CONTINUE\n      END\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	deleteFilesAfter(t, d, "F77Q")
+
+	for _, f := range []struct {
+		qualifier string
+		trip      bool
+	}{
+		{"", false},
+		{"/F77", false},
+		{"/NOF77", true},
+		{"/NOF77/NOOPTIMIZE", true},
+	} {
+		shareFindRun(t, d, "FORTRAN/OBJECT"+f.qualifier+" F77Q")
+		shareFindRun(t, d, "LINK F77Q")
+		buf.Reset()
+		shareFindRun(t, d, "RUN F77Q")
+
+		if got := strings.Contains(buf.String(), "A TRIP"); got != f.trip {
+			t.Errorf("%q: a trip %v, want %v: %q", f.qualifier, got, f.trip, buf.String())
+		}
+	}
+}

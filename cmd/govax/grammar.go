@@ -63,6 +63,7 @@ type fortranFlags struct {
 	extendSource bool   // --extend-source
 	dLines       bool   // --d-lines
 	noI4         bool   // --no-i4
+	noF77        bool   // --no-f77
 	gFloating    bool   // --g-floating
 	align        string // --align: /ALIGN's value
 	noAlign      bool   // --no-align
@@ -316,6 +317,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.dLines = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-f77",
+		Description: "FORTRAN-66's reading of what FORTRAN-77 changed: /NOF77",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.noF77 = true
 
 			return nil
 		},
@@ -974,6 +985,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.dLines {
 		command += "/D_LINES"
+	}
+
+	if f.noF77 {
+		command += "/NOF77"
 	}
 
 	if f.noI4 {
