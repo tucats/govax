@@ -1,5 +1,7 @@
 package dcl
 
+import "sort"
+
 // ValueType identifies the kind of value a parameter or qualifier accepts,
 // matching dclrtl.h's DCL_ANY/DCL_NAME/DCL_STRING/DCL_INTEGER/DCL_KEYWORD
 // datatype codes plus dcldef.h's DCL_KEYWORD__REST_OF_LINE — restricted to
@@ -272,4 +274,23 @@ func (g *Grammar) Verbs() (names []string, alias []bool) {
 // error until the Dispatch call is made, at which point an error is returned.
 func (g *Grammar) Bind(name string, h Handler) {
 	g.handlers[upcase(name)] = h
+}
+
+// Missing returns, sorted, the names that handlers are bound to (Bind)
+// for which the grammar has no verb or syntax: the commands a program
+// expects of its grammar that this one lacks, as an older or edited copy
+// of a program's grammar file may (docs/PHASE-87 - system volume.md,
+// Decision 4). A grammar the program was built with has none.
+func (g *Grammar) Missing() []string {
+	var missing []string
+
+	for name := range g.handlers {
+		if _, ok := g.entries[name]; !ok {
+			missing = append(missing, name)
+		}
+	}
+
+	sort.Strings(missing)
+
+	return missing
 }

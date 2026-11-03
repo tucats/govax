@@ -594,7 +594,7 @@ _done:          ret
 ;   KERNEL INITIALIZATION
 ;--------------------------------------------------------------------
 
-;       This is called by the vax.init file after the kernel is built.
+;       This is called by STARTUP.COM after the kernel is built.
 ;       This completes the runtime initialization of the system.  Put
 ;       things here that you want to have built by the VAX as opposed
 ;       to the assembler.  You must GO this code, not CALL it because

@@ -763,3 +763,27 @@ func (v *mapVolume) manifest(t *testing.T) *Manifest {
 
 	return m
 }
+
+// TestResolvedFiles checks that each name the resolver reads from the
+// volume is a file on it, whose contents are the built-in file of that
+// name: the volume's copy stands in for the right one.
+func TestResolvedFiles(t *testing.T) {
+	for name, spec := range Resolved {
+		f, ok := Lookup(spec)
+		if !ok {
+			t.Errorf("%s: %s isn't on the volume", name, spec)
+
+			continue
+		}
+
+		want, err := boot(name)()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got, _ := f.Contents()
+		if !bytes.Equal(got, Canonical(want, f.Format)) {
+			t.Errorf("%s: %s holds another file", name, spec)
+		}
+	}
+}

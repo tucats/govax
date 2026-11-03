@@ -169,7 +169,7 @@ func boot(t *testing.T) (*console.Console, *console.Dispatcher, *bytes.Buffer) {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 	consoletest.InstallDebugger(t, c, d)
 
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v", err)
 	}
 

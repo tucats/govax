@@ -2,8 +2,10 @@ package respath
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -164,5 +166,72 @@ func TestResolver_withDirSearchesAheadOfExistingDirs(t *testing.T) {
 	
 	if string(got) != "from-extra" {
 		t.Errorf("got %q, want WithDir's own extra directory to win", got)
+	}
+}
+
+// TestResolver_volumeBetweenDirsAndFallback checks the system volume's
+// place in the search (docs/PHASE-87 - system volume.md, Decision 4):
+// after the search directories, before the fallback, and each file's
+// origin reported.
+func TestResolver_volumeBetweenDirsAndFallback(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "host.txt"), []byte("from-dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := New([]string{dir}, fstest.MapFS{
+		"host.txt":     &fstest.MapFile{Data: []byte("from-fallback")},
+		"volume.txt":   &fstest.MapFile{Data: []byte("from-fallback")},
+		"embedded.txt": &fstest.MapFile{Data: []byte("from-fallback")},
+	})
+	r.Volume = fstest.MapFS{
+		"host.txt":   &fstest.MapFile{Data: []byte("from-volume")},
+		"volume.txt": &fstest.MapFile{Data: []byte("from-volume")},
+	}
+
+	for name, want := range map[string]struct {
+		text   string
+		origin Origin
+	}{
+		"host.txt":     {"from-dir", Host},
+		"volume.txt":   {"from-volume", Volume},
+		"embedded.txt": {"from-fallback", Embedded},
+	} {
+		got, origin, err := r.ReadFileFrom(name)
+		if err != nil || string(got) != want.text || origin != want.origin {
+			t.Errorf("ReadFileFrom(%s) = %q, %v, %v; want %q, %v", name, got, origin, err, want.text, want.origin)
+		}
+	}
+
+	if got, err := r.ReadEmbedded("volume.txt"); err != nil || string(got) != "from-fallback" {
+		t.Errorf("ReadEmbedded = %q, %v", got, err)
+	}
+
+	// WithDir keeps the volume.
+	if got, _, _ := r.WithDir(t.TempDir()).ReadFileFrom("volume.txt"); string(got) != "from-volume" {
+		t.Errorf("WithDir lost the volume: %q", got)
+	}
+}
+
+// failingFS is an fs.FS whose every file fails to open, for a damaged
+// volume.
+type failingFS struct{}
+
+func (failingFS) Open(name string) (fs.File, error) {
+	return nil, &fs.PathError{Op: "open", Path: name, Err: errors.New("bad block")}
+}
+
+// TestResolver_volumeError checks that a volume's failure, other than a
+// missing file, is a VolumeError with the Volume origin, which a caller can
+// take as a reason to read the fallback's copy instead.
+func TestResolver_volumeError(t *testing.T) {
+	r := New(nil, fstest.MapFS{"f.txt": &fstest.MapFile{Data: []byte("built-in")}})
+	r.Volume = failingFS{}
+
+	_, origin, err := r.ReadFileFrom("f.txt")
+
+	var ve *VolumeError
+	if !errors.As(err, &ve) || origin != Volume || !strings.Contains(err.Error(), "bad block") {
+		t.Errorf("ReadFileFrom = %v, %v; want a VolumeError", origin, err)
 	}
 }

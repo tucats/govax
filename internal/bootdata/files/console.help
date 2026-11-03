@@ -1152,9 +1152,11 @@ $RUN ,/DEB
            VMS's activator does: a logical name of the image's name
            (DEFINE MYSHR DUA0:[LIB]MYSHR.EXE) leads to its file, with any
            fields it lacks taken from SYS$SHARE; otherwise SYS$SHARE does,
-           each place of a search list in turn.  govax doesn't define
-           SYS$SHARE (it has no system disk); define it, in vax.init say,
-           to keep shareable images on a volume.
+           each place of a search list in turn.  With a system volume,
+           its STARTUP.COM defines SYS$SHARE as its [SYSTEM.SYSLIB]
+           directory, where FTNRTL.EXE is; define it as a search list, in
+           SYS$MANAGER:SYSTARTUP_VMS.COM say, to keep shareable images of
+           your own on another volume too.
         3. The host: the host library directory (the vax.library
            setting), then the name as given, each as written and then in
            lower case.
@@ -2088,6 +2090,20 @@ $CONF,KEY
         %MOUNT-W-NOSYSVOL warning says why, and govax starts from its
         built-in files.  DISMOUNT won't dismount it.
 
+        Each start runs the volume's SYS$MANAGER:STARTUP.COM, which
+        defines SYS$SYSTEM, SYS$MANAGER, SYS$HELP, SYS$LIBRARY,
+        SYS$SHARE, and SYS$SOURCES (govax itself defines SYS$SYSDEVICE,
+        the volume's device, and SYS$SYSROOT, its [SYSTEM] directory),
+        and runs your SYS$MANAGER:SYSTARTUP_VMS.COM last.  The console's
+        and the debugger's grammars and help files are the volume's
+        copies too, unless one is in the current directory or a --path
+        directory; one that can't be read, or a grammar that doesn't
+        parse or lacks one of govax's commands, is a %VAX-W-SYSGRAMMAR
+        warning, and govax uses its own.  A newer govax replaces each of
+        its files you haven't changed with its own copy, as a new
+        version; one you have changed is kept, and %MOUNT-I-SYSKEPT says
+        so, once for each new copy.
+
         The options --system-file FILE and --system-device DEVICE take
         precedence over the settings below for one run, and
         --system-file none starts govax with no system volume at all.
@@ -2232,11 +2248,11 @@ $CONF,KEY
 
     Memory
 
-        These are read by the startup procedure, vax.init (with F$CONFIG),
-        for its INITIALIZE/VAX and VMINIT commands; each is a number of
-        512-byte pages, a DCL integer (decimal, or %X for hex).  One that
-        isn't set keeps vax.init's own value.  A vax.init of your own
-        need not read them.
+        These are read by the startup procedure, STARTUP.COM (with
+        F$CONFIG), for its INITIALIZE/VAX and VMINIT commands; each is a
+        number of 512-byte pages, a DCL integer (decimal, or %X for hex).
+        One that isn't set keeps STARTUP.COM's own value.  A STARTUP.COM
+        you have changed need not read them.
 
         vax.memory.size               Physical memory (INITIALIZE/VAX).
                                       Default 16384 (8MB).
@@ -2264,7 +2280,7 @@ $CONF,KEY
         With paging off, a region given 0 shares, with the others given
         0, the physical memory the rest leave, and physical memory still
         left over is added to S0.  With paging on
-        (vax.sysgen.paging.enable), vax.init gives VMINIT 0 for each
+        (vax.sysgen.paging.enable), STARTUP.COM gives VMINIT 0 for each
         region not set here, and VMINIT's paging defaults apply (see
         HELP VMINIT).
 
@@ -2449,7 +2465,7 @@ $CONF,KEY
                                       host file, in quotes
                                       ("./pagefile.sys").  It's
                                       installed as govax starts, after
-                                      vax.init and before your commands
+                                      STARTUP.COM and before your commands
                                       (and again after each VMINIT,
                                       INIT, or ZERO): created if it's
                                       missing, and made
@@ -2665,7 +2681,7 @@ $VM
     privileged registers and stack pointers to begin using it.  The command
     displays the physical and virtual address ranges of each region it
     creates.  INITIALIZE/VAX must come first.  The startup procedure,
-    vax.init, runs it with sizes the configuration may set (see HELP
+    STARTUP.COM, runs it with sizes the configuration may set (see HELP
     CONFIG KEYS, vax.memory.*).
 
     Syntax:

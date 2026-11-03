@@ -61,7 +61,7 @@ func TestProcedureInput_image(t *testing.T) {
 	// its input.
 	c.In = strings.NewReader("")
 
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v\n%s", err, out.String())
 	}
 

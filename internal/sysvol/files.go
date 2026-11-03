@@ -167,6 +167,18 @@ func Files() []File {
 	)
 }
 
+// Resolved maps the names govax reads some of its built-in files by, through
+// its resolver (internal/respath), to the system volume's copies that stand
+// in for them (Decision 4): the grammars and the help files, read as govax
+// starts. A copy on the host (in the current directory or a --path
+// directory) still comes first, and govax's own last.
+var Resolved = map[string]string{
+	"console.dcl":  SysMgr + "CONSOLE.DCL",
+	"debug.dcl":    SysMgr + "DEBUG.DCL",
+	"console.help": SysHlp + "CONSOLE.HLP",
+	"debug.help":   SysHlp + "DEBUG.HLP",
+}
+
 // Lookup returns the file whose specification is spec (in any case), and
 // true, or false if no file on the volume has it.
 func Lookup(spec string) (File, bool) {

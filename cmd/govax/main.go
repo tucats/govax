@@ -29,10 +29,8 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/debugger"
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/respath"
@@ -132,8 +130,6 @@ func isLimitStop(err error) bool {
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
-	var consoleHelp *help.File
-
 	// Squirrel away the command line arguments.
 	argText := strings.Builder{}
 
@@ -153,43 +149,6 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// Set up the fall-back path resolver for including files that might need to be found in the
 	// default bootdata embedded file system.
 	resolver := respath.New(paths, bootdata.FS)
-
-	grammarSrc, err := resolver.ReadFile("console.dcl")
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
-	}
-
-	grammar, err := dcl.ParseGrammar(string(grammarSrc))
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
-	}
-
-	if helpSrc, err := resolver.ReadFile("console.help"); err != nil {
-		fmt.Fprintln(out, "Warning: no help file available:", err)
-	} else {
-		consoleHelp = help.Parse(string(helpSrc))
-	}
-
-	// The debugger has its own grammar and help file (docs/PHASE-42.md).
-	// They are required, like the console's: the DEBUG command and the
-	// DBG> prompt depend on them.
-	debugGrammarSrc, err := resolver.ReadFile("debug.dcl")
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
-	}
-
-	debugGrammar, err := dcl.ParseGrammar(string(debugGrammarSrc))
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
-	}
-
-	var debugHelp *help.File
-
-	if helpSrc, err := resolver.ReadFile("debug.help"); err != nil {
-		fmt.Fprintln(out, "Warning: no debugger help file available:", err)
-	} else {
-		debugHelp = help.Parse(string(helpSrc))
-	}
 
 	// Read from the real terminal, the console writes through a
 	// promptOutput (promptout.go), so that what the other processes
@@ -257,22 +216,35 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 	}()
 
-	d := console.NewDispatcher(c, grammar, consoleHelp)
-	c.Dispatcher = d
-
-	// The debugger works on this console's machine. It is idle until the
-	// DEBUG command (or, in later subtasks, GO, CALL, or RUN of a debug
-	// image) starts a session.
-	debugger.Install(c, debugGrammar, debugHelp)
-
 	if len(args) == 0 {
 		fmt.Fprintf(out, "govax %s\n", BuildVersion)
 	}
 
 	// The system volume first (docs/PHASE-87 - system volume.md), so that
 	// it gets its device, then the --mount options, whose devices may be a
-	// controller alone ("DUA") for its next free unit.
-	c.Commands().MountSystemVolume(systemVolume())
+	// controller alone ("DUA") for its next free unit. Mounting it needs
+	// no grammar: it is RMS's and ods2's work, in Go.
+	system := c.Commands().MountSystemVolume(systemVolume())
+
+	// The grammars and help files, the system volume's copies before
+	// govax's own (grammarfiles.go).
+	files := grammarFiles{resolver: resolver, out: out}
+	if system.Mounted {
+		resolver.Volume = c.Commands().SystemFS()
+		files.device = system.Device
+	}
+
+	d, err := installConsoleGrammar(c, files)
+	if err != nil {
+		return err
+	}
+
+	// The debugger works on this console's machine. It is idle until the
+	// DEBUG command (or GO, CALL, or RUN of a debug image) starts a
+	// session.
+	if err := installDebuggerGrammar(c, files); err != nil {
+		return err
+	}
 
 	for _, m := range mountRequests {
 		if err := c.Commands().Mount(c.Commands().ResolveUnit(m.device), m.path, m.write); err != nil {
@@ -295,14 +267,15 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// function's doc comment.
 	c.SetRunLimits(instructionLimit, timeLimit)
 
-	// vax.init is govax's login command procedure, run at command level 1
-	// (docs/PHASE-50 - DCL command procedures.md). A command in it that
-	// fails has shown its message, which ends it.
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
+	// STARTUP.COM is govax's login command procedure, run at command level
+	// 1 (docs/PHASE-50 - DCL command procedures.md): the system volume's,
+	// or govax's own without one (docs/PHASE-87 - system volume.md). A
+	// command in it that fails has shown its message, which ends it.
+	if err := c.RunStartup(d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
 		fmt.Fprintln(out, "%"+err.Error())
 	}
 
-	// With paging on, the page file is installed now, after vax.init and
+	// With paging on, the page file is installed now, after STARTUP.COM and
 	// before any of the user's commands, as VMS installs its page file at
 	// boot: created, or made its configured size, so its space is the
 	// system's from the start (unless vax.sysgen.paging.defer leaves it

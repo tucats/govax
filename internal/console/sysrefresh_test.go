@@ -6,7 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sysvol"
 )
@@ -229,5 +232,67 @@ func TestSystemVolumeRefreshDamaged(t *testing.T) {
 
 	if versionCount(t, c, sysvol.SysHlp+"DEBUG.HLP") != 0 {
 		t.Error("a file was written past a damaged manifest")
+	}
+}
+
+// TestStartupFromSystemVolume runs STARTUP.COM from the system volume as
+// cmd/govax does (RunStartup), and checks what it left: the system logical
+// names, the microkernel placed and its initialization run by the debugger
+// from the procedure's data lines after its VMINIT (the debugger exited
+// again), the terminal defined, and SYSTARTUP_VMS.COM run last.
+func TestStartupFromSystemVolume(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "govax-system.dsk")
+
+	c, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
+	if !r.Mounted || !r.Writable {
+		t.Fatalf("result = %+v", r)
+	}
+
+	c.Paths = respath.New(nil, bootdata.FS)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	installPlainDebugger(c)
+
+	// The site's startup, run last: it can see what STARTUP.COM made.
+	writeVolumeFile(t, c, sysvol.SysMgr+"SYSTARTUP_VMS.COM", sysvol.Canonical([]byte(
+		"$ write sys$output \"site startup: \", f$trnlnm(\"SYS$SHARE\")\n"), sysvol.Text), sysvol.Text)
+
+	// The volume's STARTUP.COM, with a line of the user's, so that it shows
+	// where it ran from.
+	f, _ := sysvol.Lookup(sysvol.SysMgr + "STARTUP.COM")
+	startup, _ := f.Contents()
+	writeVolumeFile(t, c, f.Spec(), append(startup, "$ write sys$output \"the volume's own\"\n"...), sysvol.Text)
+
+	buf.Reset()
+
+	if err := c.RunStartup(d.Dispatch); err != nil {
+		t.Fatalf("RunStartup: %v\n%s", err, buf)
+	}
+
+	for name, want := range map[string]string{
+		dclcmd.SystemDeviceName: "_DUA0:",
+		dclcmd.SystemRootName:   "_DUA0:[SYSTEM]",
+		"SYS$LIBRARY":           "SYS$SYSDEVICE:[SYSTEM.SYSLIB]",
+		"SYS$MANAGER":           "SYS$SYSDEVICE:[SYSTEM.SYSMGR]",
+	} {
+		e, err := c.Logicals.Translate(lnm.SystemTableName, name, lnm.Executive, 0)
+		if err != nil || e.Equivalences[0].Value != want {
+			t.Errorf("%s = %v, %v; want %s", name, e, err, want)
+		}
+	}
+
+	if !c.KernelPlaced() || c.InDebugger() {
+		t.Errorf("after STARTUP.COM: kernel placed %v, in the debugger %v\n%s", c.KernelPlaced(), c.InDebugger(), buf)
+	}
+
+	if _, found := c.Devices.Find("TTA0"); !found {
+		t.Error("STARTUP.COM didn't define TTA0:")
+	}
+
+	if want := "site startup: SYS$SYSDEVICE:[SYSTEM.SYSLIB]\n"; !strings.Contains(buf.String(), want) {
+		t.Errorf("output lacks %q:\n%s", want, buf)
+	}
+
+	if !strings.Contains(buf.String(), "the volume's own\n") {
+		t.Errorf("STARTUP.COM didn't run from the volume:\n%s", buf)
 	}
 }

@@ -60,7 +60,7 @@ func TestRun_statsPaging(t *testing.T) {
 	}
 
 	// VMINIT's paging-mode sizes (docs/PHASE-67 - address space under
-	// paging.md, subtask 8) leave nearly all of vax.init's 16384 frames
+	// paging.md, subtask 8) leave nearly all of startup.com's 16384 frames
 	// free: VMINIT's layout, the microkernel, and process 1's few pages
 	// hold the rest.
 	if free := statCount(t, stats, "Free List Frames:"); free < 16000 {

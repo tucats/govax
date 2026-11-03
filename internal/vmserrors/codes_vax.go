@@ -132,6 +132,9 @@ const (
 	vaxIllSymLen
 	vaxSymDclExtr
 	vaxSymDefInMo
+
+	// main.go: a system volume's file govax didn't use.
+	vaxSysGrammar
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -312,6 +315,13 @@ const (
 	// VAX_NOTSUBPROC is a command that works the machine itself, or
 	// process 1's session, typed in a subprocess's DCL.
 	VAX_NOTSUBPROC = VAXFacility<<FacilityPosition | vaxNotSubproc<<MessagePosition | StatusError
+
+	// VAX_SYSGRAMMAR reports a grammar or help file on the system volume
+	// that govax didn't use (docs/PHASE-87 - system volume.md, Decision
+	// 4): one that couldn't be read, or a grammar that doesn't parse or
+	// lacks a command govax has. Its cause says why; govax uses its own
+	// built-in copy instead, so this is a warning.
+	VAX_SYSGRAMMAR = VAXFacility<<FacilityPosition | vaxSysGrammar<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -422,6 +432,7 @@ func init() {
 	DefineMessage(VAX_NOTSUBPROC, VAXFacility, "NOTSUBPROC", "!S is not available in a subprocess")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
+	DefineMessage(VAX_SYSGRAMMAR, VAXFacility, "SYSGRAMMAR", "!S on the system volume not used; govax's own instead")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
 	DefineMessage(VAX_READLINE, VAXFacility, "READLINE", "Initializing readline")
 }

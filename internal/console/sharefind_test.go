@@ -35,7 +35,7 @@ func shareFindConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *bytes.
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 	installPlainDebugger(c)
 
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v", err)
 	}
 

@@ -29,12 +29,9 @@ $    define/system/executive_mode sys$help    sys$sysdevice:[system.syshlp]
 $    define/system/executive_mode sys$library sys$sysdevice:[system.syslib]
 $    define/system/executive_mode sys$share   sys$sysdevice:[system.syslib]
 $    define/system/executive_mode sys$sources sys$sysdevice:[system.sources]
-$    kernel = "SYS$SOURCES:KERNEL.ASM"
-$    rom = "SYS$SYSTEM:DEFAULT.ROM"
-$ else
-$    kernel = """kernel.asm"""
-$    rom = ""
 $ endif
+$ kernel = """kernel.asm"""
+$ rom = ""
 $!
 $!  The memory's sizes, all in 512-byte pages. Each is the default here
 $!  unless govax's configuration sets its vax.memory.* item (see HELP
@@ -105,8 +102,7 @@ $!
 $ load/rom/noerror 'rom'
 $ load/nvram/noerror
 $!
-$!	Assemble the microkernel: SYS$SOURCES:KERNEL.ASM on the system
-$!	volume, so a changed kernel is the one that boots.
+$!	Assemble the microkernel.
 $!
 $! ASM is the console's only until the microkernel is in place; after this,
 $! it is a debugger command.

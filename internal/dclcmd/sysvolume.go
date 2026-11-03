@@ -170,6 +170,7 @@ func (c *Context) MountSystemVolume(v SystemVolume) SystemVolumeResult {
 	}
 
 	c.Mounts.SetSystem(device)
+	c.defineSystemNames(device)
 
 	result.Mounted = true
 

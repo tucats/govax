@@ -417,7 +417,7 @@ recommendation:
    message, missing files, the manifest updated; tests for each case and
    for an interrupted refresh (a manifest that doesn't match what's
    there).
-5. **Names, grammars, and STARTUP.COM from the volume:** whether RMS
+5. (done 2026-11-03) **Names, grammars, and STARTUP.COM from the volume:** whether RMS
    merges rooted directories (and making it, if small; otherwise plain
    names); `SYS$SYSDEVICE` and `SYS$SYSROOT`; the resolver's volume layer
    and the grammar fallback (Decision 4); STARTUP.COM run from the volume,
@@ -621,3 +621,75 @@ recommendation:
     - `internal/console/sysrefresh_test.go`, on a real volume made to look
       as an older govax and a user left it, and a read-only and a damaged
       case.
+- **2026-11-03** — Subtask 5 done: names, grammars, and STARTUP.COM from the
+  volume.
+  - **Rooted directories:** RMS has none. A logical name's equivalence is
+    pasted into the specification as text (`lnm.TranslateFileSpec`), so
+    `DUA0:[SYSTEM.]` followed by `[SYSLIB]` is `DUA0:[SYSTEM.][SYSLIB]`, not
+    `[SYSTEM.SYSLIB]`. Doing it as VMS does would mean placing the root
+    after the default directory is applied, and changing how expanded names
+    are shown. That isn't small, so, as the plan allowed, the names are
+    plain ones; rooted directories are follow-up work.
+  - **The names govax defines** (`dclcmd/sysnames.go`, at mount, in the
+    system table at executive mode, both terminal): `SYS$SYSDEVICE` is
+    `_DUA0:`, and `SYS$SYSROOT` is `_DUA0:[SYSTEM]`, so
+    `SYS$SYSROOT:GOVAX$FILES.DAT` works but `SYS$SYSROOT:[SYSLIB]` doesn't.
+    VMS's attributes for these names (concealed or not) are unconfirmed;
+    govax's aren't concealed, so expanded names show the device.
+  - **STARTUP.COM:** bootdata's `vax.init` is gone (Decision 11).
+    `Console.RunStartup` (`console/startup.go`) runs the volume's STARTUP.COM
+    by device and directory, never a host file, or bootdata's `startup.com`
+    through the resolver when there is no volume (or it has no STARTUP.COM),
+    so `--path` and the current directory still override it then, as they did
+    `vax.init`. The volume's procedure boots as `vax.init` did: its data
+    lines after VMINIT (`go exe$initialize`, `exit`) reach the debugger
+    (`TestStartupFromSystemVolume`: the kernel placed, the debugger exited,
+    TTA0: defined, SYSTARTUP_VMS.COM run last). Until subtask 6 lets ASM and
+    LOAD read volume files, STARTUP.COM assembles the built-in `kernel.asm`
+    and loads no ROM file in both branches.
+  - **The resolver's volume layer:** `respath.Resolver.Volume`, after the
+    `--path` directories and before the embedded files, kept by `WithDir`.
+    `OpenFrom`/`ReadFileFrom` say where a file came from (`Host`, `Volume`,
+    `Embedded`); a failure reading the volume, other than a missing file, is
+    a `VolumeError`; `ReadEmbedded` reads govax's own copy.
+    `dclcmd.SystemFS` is the `fs.FS` over RMS. It covers only
+    `sysvol.Resolved`'s four names (`console.dcl`, `debug.dcl`,
+    `console.help`, `debug.help`). ASM's and LOAD's files are subtask 6's,
+    by their VMS names.
+  - **The grammar fallback** (`cmd/govax/grammarfiles.go`):
+    - a volume grammar that can't be read or doesn't parse is
+      `%VAX-W-SYSGRAMMAR, DUA0:[SYSTEM.SYSMGR]CONSOLE.DCL on the system
+      volume not used; govax's own instead: cause`, and govax uses its own;
+    - so is one that, once bound, lacks a syntax this govax binds
+      (`dcl.Grammar.Missing`, "it has no EXIT"). Binding never fails in
+      `dcl`, so this is what "whose binding fails" (Decision 4) became. Both
+      built-in grammars lack none, so it never fires on govax's own copies;
+    - a volume help file that can't be read falls back the same way;
+    - a host grammar (current directory or `--path`) that fails is still
+      VAX_GRAMMAR's error, as before, since a developer gave it on purpose.
+  - **`run`'s order:** the system volume is mounted before the grammars are
+    read, then the console's dispatcher and the debugger are installed,
+    then the `--mount`s and the default volume (the new startup sequence's
+    steps 3 to 5).
+  - **Side effects to know about.** STARTUP.COM now defines `SYS$LIBRARY`
+    and `SYS$SHARE`, so with a system volume MACRO, FORTRAN, LINK, and RUN
+    already find the volume's macro library, FORSYSDEF.TLB, and FTNRTL.EXE
+    (the same bytes as the built-in ones). Subtask 8 tests that. LINK finds
+    no IMAGELIB.OLB there and goes on to `vax.library` and govax's tables, as
+    before. IMAGELIB.OLB is VMS's licensed file, never govax's, and LINK gets
+    its information from tables, so nothing is added to the volume for it
+    (the author asked, 2026-11-03).
+  - **Left for later:** MANUAL.md's mentions of `vax.init` (the
+    close-out's), and test comments that still say `vax.init` (subtask 9).
+    The tests' `RunHostProcedure("vax.init")` calls now name `startup.com`,
+    and `cmd/govax`'s `--path` override tests test `startup.com`. HELP's
+    mentions are updated, and HELP CONFIG KEYS describes STARTUP.COM,
+    SYSTARTUP_VMS.COM, the grammars, and the refresh.
+  - **Tests:**
+    - `respath`: the volume's place, `VolumeError`;
+    - `sysvol`: `TestResolvedFiles`;
+    - `console`: `TestStartupFromSystemVolume`;
+    - `cmd/govax/startup_test.go`: a host `startup.com` not run with a
+      volume, the names, an edited STARTUP.COM run and booting, and a
+      grammar that doesn't parse, one without EXIT, and a good edited one,
+      all put on the volume by COPY.

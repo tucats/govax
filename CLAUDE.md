@@ -623,7 +623,12 @@ never had.
   `--system-initialize` and the `vax.default.system.*` keys; `cmd/govax`'s `TestMain` runs its tests with
   `--system-file none`; and subtask 4 (2026-11-03) the refresh at every writable start, `sysvol.Refresh`
   (missing files written, govax's unchanged files given its new copies as new versions, the user's kept with
-  `%MOUNT-I-SYSKEPT` once per copy; the manifest's `KEPT=` and `SEEDED` notes, written only when it changes).
+  `%MOUNT-I-SYSKEPT` once per copy; the manifest's `KEPT=` and `SEEDED` notes, written only when it changes);
+  and subtask 5 (2026-11-03) STARTUP.COM from the volume (`Console.RunStartup`; bootdata's `vax.init` is gone, its
+  `startup.com` run only without a volume), `SYS$SYSDEVICE` and `SYS$SYSROOT` defined at mount (`dclcmd/sysnames.go`;
+  plain names, RMS having no rooted directories), and the grammars and help files through the resolver's volume
+  layer (`respath.Resolver.Volume`, `dclcmd.SystemFS`, `sysvol.Resolved`), a volume grammar that doesn't parse or lacks
+  a bound syntax (`dcl.Grammar.Missing`) replaced by govax's own with `%VAX-W-SYSGRAMMAR` (`cmd/govax/grammarfiles.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1213,7 +1218,7 @@ expect adjustment as phases land):
   `dclshell.NewInterpreter` sets. `NewMachine` makes one with hooks of
   its own, so it works, and is tested, alone (`helpers_test.go`:
   `newTestMachine`, `newBootableMachine`). Imports only lower packages.
-  Phase 64: `StartPageFile` installs the page file after vax.init;
+  Phase 64: `StartPageFile` installs the page file after STARTUP.COM;
   `show.go` has SHOW MEMORY's page file section, `ShowMemoryFiles`
   (/FILES[/FULL] in VMS's VAX layout), and `PagingStatistics`, the
   figures cmd/govax's `--stats` prints at exit (`printPagingStats`).
@@ -1308,8 +1313,9 @@ expect adjustment as phases land):
   at its end of file. CALL runs `label: SUBROUTINE`'s lines at a new
   level (`runLevel`, as @ does); running line by line passes over a
   subroutine.
-  `vax.init` is a DCL procedure, run like a login command procedure
-  (`RunHostProcedure`); the one-shot command on govax's command line
+  STARTUP.COM is a DCL procedure, run like a login command procedure
+  (`Console.RunStartup`: the system volume's, or bootdata's `startup.com`
+  by `RunHostProcedure`); the one-shot command on govax's command line
   is then level 0's input (`RunCommandLine`). The debugger's `@` reads
   the VMS debugger's format, every line a command
   (`RunDebuggerProcedure`).
@@ -1422,7 +1428,7 @@ expect adjustment as phases land):
   GO, CALL, and ASM are debugger commands (live code): the console has
   no GO or CALL, and accepts ASM only until the microkernel is in place
   (`Machine.KernelPlaced`, set when ASM defines EXE$INITIALIZE), which is
-  how `vax.init` loads it before `$ DEBUG` and the data lines
+  how STARTUP.COM loads it before `$ DEBUG` and the data lines
   `GO EXE$INITIALIZE` / `EXIT`.
   Tests that need them install the debugger and enter its mode with
   `consoletest.InstallDebugger` and `consoletest.DebugMode`. A session

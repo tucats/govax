@@ -90,7 +90,7 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 	consoletest.InstallDebugger(t, c, d)
 
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v\n%s", err, out.String())
 	}
 

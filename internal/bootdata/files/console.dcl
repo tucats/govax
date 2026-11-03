@@ -1285,7 +1285,7 @@ grammar console
     ! no file enters interactive assembler mode. A host file name with
     ! lowercase letters or a "/" must be quoted, as everywhere in DCL.
     ! The console accepts ASM only until the microkernel is in place (it
-    ! is how vax.init loads kernel.asm); after that it is the debugger's
+    ! is how STARTUP.COM loads kernel.asm); after that it is the debugger's
     ! command (debug.dcl).
     verb asm/id=1720
         parameter   file/id=1721                -

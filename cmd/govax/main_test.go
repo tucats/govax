@@ -19,8 +19,8 @@ func emptyStdin() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }
 
 // TestRun_startupBootsFromEmbeddedFilesAlone is docs/PHASE-15.md's own named
 // deliverable: govax with zero -path flags must still boot correctly using
-// only internal/bootdata's embedded copies of evax.dcl/vax.help/vax.init
-// (and, via vax.init's own "asm kernel.asm", kernel.asm/ssdef.asm) — no
+// only internal/bootdata's embedded copies of console.dcl/console.help/startup.com
+// (and, via startup.com's own "asm kernel.asm", kernel.asm/ssdef.asm) — no
 // testdata/ checkout required.
 func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
 	var buf bytes.Buffer
@@ -68,7 +68,7 @@ func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
 
 // TestRun_instructionLimitStopsARunawayProgram exercises govax's own
 // -instruction-limit flag end to end (docs/PHASE-15.md's sub-phase 2):
-// after the embedded vax.init finishes booting, an infinite loop (NOP; BRB
+// after the embedded startup.com finishes booting, an infinite loop (NOP; BRB
 // back to itself) deposited from the debugger (DEBUG starts a session on
 // the booted machine) must not hang the process when a low instruction
 // limit is configured -- GO should return control to the prompt instead.
@@ -105,7 +105,7 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 
 // TestRun_limitsStopAOneShotRun is the one-shot counterpart of the two
 // tests above: a command given on govax's command line (here, RUN of a
-// program that loops forever) runs from inside vax.init, through
+// program that loops forever) runs from inside startup.com, through
 // INCLUDE/COMMAND_LINE, so the limits have to be applied there too, not
 // only before the interactive prompt. A one-shot run a limit stops has
 // failed: run returns the limit error, and govax exits with
@@ -165,14 +165,16 @@ func TestRun_limitsStopAOneShotRun(t *testing.T) {
 
 // TestRun_pathOverridesEmbeddedForThatFileOnly exercises the per-file search
 // order docs/PHASE-15.md describes: a -path directory holding only a
-// customized vax.init is used for vax.init, while evax.dcl/vax.help still
-// fall through to the embedded copies (never named on the command line) —
-// a full replacement set isn't required to override one file.
+// customized startup.com is used for startup.com, while console.dcl and
+// console.help still fall through to the embedded copies (never named on
+// the command line) — a full replacement set isn't required to override
+// one file. With no system volume (this package's tests have none unless
+// they ask, TestMain) the startup procedure is found this way.
 func TestRun_pathOverridesEmbeddedForThatFileOnly(t *testing.T) {
 	dir := t.TempDir()
-	custom := `$ print "custom-vax-init-ran"` + "\n"
+	custom := `$ print "custom-startup-ran"` + "\n"
 
-	if err := os.WriteFile(filepath.Join(dir, "vax.init"), []byte(custom), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "startup.com"), []byte(custom), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -182,29 +184,30 @@ func TestRun_pathOverridesEmbeddedForThatFileOnly(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "custom-vax-init-ran") {
-		t.Errorf("output = %q, want the overriding vax.init's own PRINT output", buf.String())
+	if !strings.Contains(buf.String(), "custom-startup-ran") {
+		t.Errorf("output = %q, want the overriding startup.com's own PRINT output", buf.String())
 	}
 }
 
 // TestRun_asGivenPathWinsOverPathFlag confirms a name that already resolves
 // as given (relative to the working directory) is never overridden by a
 // -path directory — the "as-given" leg of the search always runs first.
+// (The startup procedure with no system volume, as above.)
 func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	asGiven := filepath.Join(wd, "vax.init")
-	if err := os.WriteFile(asGiven, []byte(`$ print "as-given-vax-init-ran"`+"\n"), 0o644); err != nil {
+	asGiven := filepath.Join(wd, "startup.com")
+	if err := os.WriteFile(asGiven, []byte(`$ print "as-given-startup-ran"`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Cleanup(func() { os.Remove(asGiven) })
 
 	pathDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(pathDir, "vax.init"), []byte(`$ print "path-flag-vax-init-ran"`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(pathDir, "startup.com"), []byte(`$ print "path-flag-startup-ran"`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,8 +217,8 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "as-given-vax-init-ran") {
-		t.Errorf("output = %q, want the CWD-relative vax.init's own PRINT output", buf.String())
+	if !strings.Contains(buf.String(), "as-given-startup-ran") {
+		t.Errorf("output = %q, want the CWD-relative startup.com's own PRINT output", buf.String())
 	}
 }
 
@@ -250,7 +253,7 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 	}
 }
 
-// TestRun_bareAsmStartsAtX200 checks that, with vax.init no longer setting
+// TestRun_bareAsmStartsAtX200 checks that, with startup.com no longer setting
 // PC=200 (docs/PHASE-42.md), a bare ASM after boot still assembles at
 // X^200: statements typed with no .ORG land there, which the debugger's
 // EXAMINE/INSTRUCTION then shows.

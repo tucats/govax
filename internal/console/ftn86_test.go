@@ -41,7 +41,7 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 	installPlainDebugger(c)
 
-	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatal(err)
 	}
 
