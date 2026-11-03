@@ -4965,7 +4965,7 @@ The command's syntax and qualifiers are in
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, or `/NOEXTEND_SOURCE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, and `--check keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, and `/CHECK=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, and `--warnings keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, and `/WARNINGS=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -5055,6 +5055,28 @@ or bit function never does.
 
 A subscript that is a constant outside its array's bounds is `%FORT-W-SUBSCRIPTRANGE`, with
 or without `/CHECK`, since the program is surely wrong even if it never reaches the statement.
+
+**Warnings.** `/WARNINGS` says what the compiler is to tell you, beyond errors, which it always does:
+
+| Keyword | Default | What's said |
+| --- | --- | --- |
+| `GENERAL` | on | Its warnings and informational messages that no keyword below asks for |
+| `DECLARATIONS` | off | `%FORT-W-UNDECLARED` for each name with no type of its own, the ones `IMPLICIT NONE` would refuse |
+| `UNUSED` | off | `%FORT-W-UNUSEDNAME` for a name only declared, `UNUSEDDUMMY` for a dummy argument never mentioned, and `UNUSEDLABEL` for a label nothing refers to |
+| `ALIGNMENT` | off | `%FORT-I-ALIGNFIELD` and `ALIGNCOMMON`, as `CDEC$ OPTIONS /WARN=ALIGNMENT` does from each unit's start |
+
+The keywords also come as `NOGENERAL` and so on, with `ALL` and `NONE`, cut short if you like, applied in
+order to the default: `/WARNINGS=UNUSED` adds to it, and `/WARNINGS=(NONE,UNUSED)` shows only that.
+`/WARNINGS` alone is `ALL`, and `/NOWARNINGS` is `NONE`. What isn't shown doesn't count: a compilation whose
+only warnings were held back ends with a good `$STATUS`, and a listing doesn't have them either.
+
+`UNUSED` means only declared: a variable given a value and never read isn't reported, and neither is one in a
+common block or an `EQUIVALENCE` list, one an `INCLUDE` file declares, an `EXTERNAL` name that isn't a dummy
+argument (naming a `BLOCK DATA` unit that way gets it linked), or one declared to type a statement function's
+dummy argument. After an error nothing is reported as unused, since the statement in error may have been the use.
+`DECLARATIONS` reports every name in an `INCLUDE` file too, used or not, in each unit including it, as
+`IMPLICIT NONE` would refuse them: a program that relies on implicit typing and shares its common blocks that way
+gets a great many.
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5522,6 +5544,10 @@ FORTRAN compiler was available to check them). So far:
   may have had `OVERFLOW` on: a program that counts on that says `/CHECK=OVERFLOW`.
   What a check does when it fails, a dummy's `(1)` being open-ended, and
   `/CHECK=UNDERFLOW` being a severe condition are govax's choices.
+- `/WARNINGS`: of the keywords, only `DECLARATIONS` is in the manuals at hand. `UNUSED` and
+  `ALIGNMENT`, the default, what `/WARNINGS` alone means, and what each message says are govax's.
+  `/WARNINGS=NONE` gives only what each unit starts with, so a source's own
+  `CDEC$ OPTIONS /WARN=ALIGNMENT` still gets its messages.
 - In a tab-format line, the tab stands for the columns before column 7,
   so the statement still ends at column 72 (or 132).
 - A line whose first nonblank character is `!` is a comment line, and

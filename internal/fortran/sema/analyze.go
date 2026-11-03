@@ -29,6 +29,10 @@ type Options struct {
 
 	// Checks is /CHECK (checks.go), which a unit's OPTIONS statements may change.
 	Checks Checks
+
+	// Warnings is /WARNINGS, for the two keywords that look for something here
+	// (warnings.go). No OPTIONS statement takes it (section 1.4.3).
+	Warnings diag.Warnings
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -71,6 +75,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
 			align:          opts.Align,
+			warnings:       opts.Warnings,
 			prologueGroups: groups,
 		}
 
@@ -325,6 +330,13 @@ type analyzer struct {
 	// text library's module (source.Statement.Library).
 	inLibrary bool
 
+	// inInclude is set while it reads a statement from a file INCLUDE brought in, a
+	// text library's module among them (source.Statement.Depth).
+	inInclude bool
+
+	// warnings is /WARNINGS (warnings.go).
+	warnings diag.Warnings
+
 	// walking is set during the statement walk, when using a name is using
 	// it in a statement (usedBeforeEntry).
 	walking bool
@@ -427,6 +439,8 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.checkLabels()
 	a.noteLabels()
 	a.untyped()
+	a.undeclared()
+	a.reportUnused()
 	a.passedLengths()
 	a.layout()
 	a.recordInitials()
@@ -517,7 +531,7 @@ func (a *analyzer) lookup(name string, pos diag.Position) *Symbol {
 	}
 
 	t, untyped := a.implicit.typeOf(name)
-	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary}
+	s := &Symbol{Name: name, Type: t, untyped: untyped, Offset: -1, Pos: pos, library: a.inLibrary, included: a.inInclude}
 	a.unit.byName[name] = s
 	a.unit.Symbols = append(a.unit.Symbols, s)
 	a.note(&s.refs, pos, RefUsed)

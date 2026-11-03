@@ -137,14 +137,11 @@ func (a *analyzer) implicitLetters(t Type, ok bool, l ast.LetterRange, line int)
 }
 
 // untyped reports each name that needs a type and has none, under
-// IMPLICIT NONE (NOTYPE): a variable, an array, a function, a statement
-// function, a dummy argument. A subroutine, a program unit's name, and an
-// EXTERNAL name no reference makes a function need none. The name is broken, so
+// IMPLICIT NONE (NOTYPE; needsType says which do). The name is broken, so
 // a later pass ignores it.
 func (a *analyzer) untyped() {
 	for _, s := range a.unit.Symbols {
-		if !s.untyped || s.Typed || s.broken || s.Class == Subroutine || s.Class == UnitName ||
-			(s.External && s.Class != Function) {
+		if !s.untyped || !needsType(s) {
 			continue
 		}
 

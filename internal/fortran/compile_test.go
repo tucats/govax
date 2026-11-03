@@ -757,6 +757,21 @@ func TestCrossReferenceKinds(t *testing.T) {
 		"100 label 18 19D")
 }
 
+// TestCrossReferenceDoWhile: a DO WHILE's label is mentioned by the DO, as any DO's is.
+func TestCrossReferenceDoWhile(t *testing.T) {
+	compareRows(t, crossReferenceOf(t, testOptions,
+		"      PROGRAM T",
+		"      INTEGER K",
+		"      DATA K /1/",
+		"      DO 10 WHILE (K .LT. 3)",
+		"      K = K + 1",
+		"10    CONTINUE",
+		"      END"),
+		"T:",
+		"K INTEGER 2D 3A 4 5A 5",
+		"10 label 4 6D")
+}
+
 // TestCrossReferenceLibrary: of the names a text library's module declares, a row
 // only for those the program uses, with only the program's lines.
 func TestCrossReferenceLibrary(t *testing.T) {

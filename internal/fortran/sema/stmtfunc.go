@@ -93,9 +93,16 @@ func (a *analyzer) stmtFuncDummy(n *ast.Name) *Symbol {
 
 	if s := a.unit.byName[n.Name]; s != nil {
 		d.Type, d.broken = s.Type, s.broken
+		s.typesDummy = true
 		untyped = s.untyped && !s.Typed
 	} else {
 		d.Type, untyped = a.implicit.typeOf(n.Name)
+
+		// In no table of the unit, so undeclared won't see it; a name the unit has
+		// is seen there.
+		if a.warnings.Declarations && !untyped {
+			a.report("UNDECLARED", n.Pos, n.Name, d.Type.String())
+		}
 	}
 
 	switch {

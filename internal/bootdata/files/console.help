@@ -4228,6 +4228,16 @@ $FOR
                         alone is ALL.  The default is /NOCHECK.  An OPTIONS
                         statement before a unit may change it for that unit.
 
+        /WARNINGS[=(<keyword>,...)]  What the compiler says, beyond errors: ALL,
+        /NOWARNINGS     NONE, [NO]GENERAL (its warnings and informational
+                        messages; on by default), [NO]DECLARATIONS (each name
+                        with no type of its own), [NO]UNUSED (names only
+                        declared, and labels nothing refers to), and
+                        [NO]ALIGNMENT (fields and common names off their natural
+                        boundaries).  /WARNINGS alone is ALL and /NOWARNINGS is
+                        NONE.  What isn't shown doesn't count: a compilation
+                        with only those ends with a good status.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
@@ -4244,8 +4254,9 @@ $FOR
     From the host shell, "govax fortran <source>..." runs this command,
     with --macro <file> or --no-macro, --extend-source, --d-lines,
     --continuations <n>, --no-i4, --g-floating, --align <value>,
-    --no-align, --optimize, --no-optimize, --list, --list-file <file>, and
-    --show <keywords>.
+    --no-align, --optimize, --no-optimize, --list, --list-file <file>,
+    --show <keywords>, --cross-reference, --check <keywords>, and
+    --warnings <keywords>.
 
     Examples:
 

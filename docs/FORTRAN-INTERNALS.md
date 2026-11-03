@@ -502,6 +502,20 @@ INTEGER in the main program:
 A mistake is reported once: an expression with an error has the
 `Invalid` type, and nothing built on it reports again.
 
+A compiler's warnings are a place to see two different kinds of work. Most messages are found on the
+way past, and `/WARNINGS=NOGENERAL` only has to stop showing them, which is one filter, not a test in
+every pass: `CompileAll` drops them from the list after the passes run (`diag.Warnings.Held`,
+`List.Drop`), so the count, `$STATUS`, and a listing all go by what's shown. `DECLARATIONS` and `UNUSED` look
+for something, so they run at the end of each unit (`sema/warnings.go`). `DECLARATIONS` is IMPLICIT
+NONE's own question (`needsType`) with a different answer: a warning, where IMPLICIT NONE makes
+it an error. `UNUSED` needed nothing new, since the cross reference (`sema/crossref.go`) had
+already recorded every mention: a name is unused if all its mentions are definitions. Most of the work is
+the exceptions, each something a real program does on purpose. An `INCLUDE`d file is shared by units that each
+use part of it, a `COMMON` name holds a place in a layout, `EXTERNAL BLOCK` is how a BLOCK DATA unit gets linked,
+and `REAL X` may be there only to type a statement function's dummy. It was running every program in
+`testdata/fortran` under `/WARNINGS=ALL`, and reading what came out, that found the last of those, and that
+`DO 10 WHILE` had never noted its label.
+
 ## 8. Declarations and storage
 
 AVERAGE declares very little. A real FORTRAN program's declarations are

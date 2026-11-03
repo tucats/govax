@@ -28,6 +28,12 @@ var messages = map[string]kind{
 	// SUBSCRIPTRANGE is a constant subscript outside its dimension.
 	"SUBSCRIPTRANGE": {Warning, "subscript %d of %s is past its %s bound, %d"},
 
+	// What /WARNINGS's keywords ask for (diag.Warnings; sema/warnings.go).
+	"UNDECLARED":  {Warning, "%s is used but not typed, and its first letter makes it %s"},
+	"UNUSEDNAME":  {Warning, "%s is declared but never used"},
+	"UNUSEDDUMMY": {Warning, "the dummy argument %s is never used"},
+	"UNUSEDLABEL": {Warning, "statement label %s is never used"},
+
 	// The source form's messages (internal/fortran/source).
 
 	// NOINITIAL is a continuation line with no statement before it to

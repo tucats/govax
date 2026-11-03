@@ -146,3 +146,67 @@ func TestSeverityStatus(t *testing.T) {
 		}
 	}
 }
+
+// TestWarningsKeywords: keywords apply in order to the setting, cut short if you like,
+// and what isn't one is refused by name.
+func TestWarningsKeywords(t *testing.T) {
+	cases := []struct {
+		keywords []string
+		want     Warnings
+	}{
+		{nil, Warnings{Declarations: true, Unused: true, Alignment: true}},
+		{[]string{"NONE"}, Warnings{NoGeneral: true}},
+		{[]string{"ALL", "NONE"}, Warnings{NoGeneral: true}},
+		{[]string{"NONE", "ALL"}, Warnings{Declarations: true, Unused: true, Alignment: true}},
+		{[]string{"unused"}, Warnings{Unused: true}},
+		{[]string{"DECL", "NOGEN", "ALI"}, Warnings{Declarations: true, NoGeneral: true, Alignment: true}},
+		{[]string{"ALL", "NODECLARATIONS", "NOUNUSED", "NOALIGNMENT"}, Warnings{}},
+		{[]string{"NON"}, Warnings{NoGeneral: true}},
+	}
+
+	for _, c := range cases {
+		got, err := Warnings{}.With(c.keywords)
+		if err != nil {
+			t.Errorf("%v: %v", c.keywords, err)
+		} else if got != c.want {
+			t.Errorf("%v: got %+v, want %+v", c.keywords, got, c.want)
+		}
+	}
+
+	if _, err := (Warnings{}).With([]string{"BOGUS"}); err == nil || !strings.Contains(err.Error(), "no keyword BOGUS") {
+		t.Errorf("BOGUS: %v", err)
+	}
+
+	if _, err := (Warnings{}).With([]string{"NO"}); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Errorf("NO: %v", err)
+	}
+}
+
+// TestWarningsHeld: NOGENERAL holds back what's less than an error and asked for by no
+// keyword, and Drop takes it out of a list.
+func TestWarningsHeld(t *testing.T) {
+	var l List
+
+	l.Report("SUBSCRIPTRANGE", Position{}, 7, "A", "upper", 3)
+	l.Report("NOLISTING", Position{}, "/SHOW")
+	l.Report("UNUSEDNAME", Position{}, "X")
+	l.Report("ALIGNFIELD", Position{}, "F", 1, 4)
+	l.Report("UNDEFLBL", Position{}, 10)
+
+	l.Drop(Warnings{}.Held)
+
+	if got := len(l.Messages()); got != 5 {
+		t.Errorf("the default held back %d", 5-got)
+	}
+
+	l.Drop(Warnings{NoGeneral: true}.Held)
+
+	idents := []string{}
+	for _, m := range l.Messages() {
+		idents = append(idents, m.Ident)
+	}
+
+	if got := strings.Join(idents, " "); got != "UNUSEDNAME ALIGNFIELD UNDEFLBL" {
+		t.Errorf("NOGENERAL left %s", got)
+	}
+}

@@ -45,6 +45,9 @@ type Options struct {
 	// Checks is /CHECK: what the compiled code looks out for (sema.Checks).
 	Checks sema.Checks
 
+	// Warnings is /WARNINGS: what the compiler says, beyond errors (diag.Warnings).
+	Warnings diag.Warnings
+
 	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
 	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
@@ -157,7 +160,17 @@ func CompileAll(opts Options, files []File) (result Result) {
 	// errors, the fifth: lowering each unit to the IR.
 	if !messages.Failed() {
 		tree = parse.Parse(lex.Lex(program.Statements, &messages), &messages)
-		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{NoI4: opts.NoI4, GFloating: opts.GFloating, Align: opts.Align, Checks: opts.Checks}, &messages)
+
+		align := opts.Align
+		align.Warn = align.Warn || opts.Warnings.Alignment
+
+		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{
+			NoI4:      opts.NoI4,
+			GFloating: opts.GFloating,
+			Align:     align,
+			Checks:    opts.Checks,
+			Warnings:  opts.Warnings,
+		}, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)
@@ -168,6 +181,10 @@ func CompileAll(opts Options, files []File) (result Result) {
 			}
 		}
 	}
+
+	// One place holds back what /WARNINGS doesn't want, so that every pass reports
+	// alike, and the count, the status, and a listing all go by what's shown.
+	messages.Drop(opts.Warnings.Held)
 
 	result = Result{
 		Messages: messages.Messages(),

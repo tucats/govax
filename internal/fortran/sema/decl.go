@@ -18,6 +18,10 @@ import (
 // told from them only here, where it is known which names are arrays.
 func (a *analyzer) declarations(body []ast.Stmt) {
 	for _, s := range body {
+		from := s.Base().Source
+		a.inLibrary = from != nil && from.Library
+		a.inInclude = from != nil && from.Depth > 0
+
 		stmtFunc := false
 
 		if st, ok := s.(*ast.AssignStmt); ok {
@@ -25,9 +29,6 @@ func (a *analyzer) declarations(body []ast.Stmt) {
 		}
 
 		a.order(s, stmtFunc)
-
-		from := s.Base().Source
-		a.inLibrary = from != nil && from.Library
 
 		switch s := s.(type) {
 		case *ast.TypeStmt:

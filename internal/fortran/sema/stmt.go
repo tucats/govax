@@ -507,6 +507,10 @@ func (a *analyzer) doStatement(s *ast.DoStmt) {
 // doWhile analyzes DO s WHILE (e) (section 5.3.2) and opens its loop.
 func (a *analyzer) doWhile(s *ast.DoWhileStmt) {
 	d := &DoWhile{stmtBase: stmtBase{s}, Label: s.Target.Label, Cond: a.condition(s.Cond)}
+
+	if d.Label != 0 {
+		a.noteLabel(d.Label, s.Target.Pos, RefUsed)
+	}
 	a.add(d)
 
 	if a.labelBehind(s, d.Label) {

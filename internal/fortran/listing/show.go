@@ -3,6 +3,8 @@ package listing
 import (
 	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/fortran/diag"
 )
 
 // Show is what /SHOW asks a listing to hold. The manuals to hand don't give the
@@ -52,29 +54,14 @@ func (s Show) With(keywords []string) (Show, error) {
 
 // showKeyword finds the keyword word is, whole or cut short.
 func showKeyword(word string) (func(*Show), error) {
-	word = strings.ToUpper(word)
-
-	if apply, ok := showKeywords[word]; ok {
-		return apply, nil
-	}
-
-	var found func(*Show)
-
-	matches := 0
-
-	for name, apply := range showKeywords {
-		if word != "" && strings.HasPrefix(name, word) {
-			found = apply
-			matches++
-		}
-	}
+	found, matches := diag.FindKeyword(showKeywords, word)
 
 	switch matches {
 	case 0:
-		return nil, fmt.Errorf("/SHOW has no keyword %s; give ALL, NONE, [NO]INCLUDE, or [NO]MAP", word)
+		return nil, fmt.Errorf("/SHOW has no keyword %s; give ALL, NONE, [NO]INCLUDE, or [NO]MAP", strings.ToUpper(word))
 	case 1:
 		return found, nil
 	}
 
-	return nil, fmt.Errorf("/SHOW's keyword %s is ambiguous; give ALL, NONE, [NO]INCLUDE, or [NO]MAP", word)
+	return nil, fmt.Errorf("/SHOW's keyword %s is ambiguous; give ALL, NONE, [NO]INCLUDE, or [NO]MAP", strings.ToUpper(word))
 }

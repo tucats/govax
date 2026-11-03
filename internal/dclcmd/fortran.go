@@ -28,6 +28,7 @@ import (
 //	        [/[NO]G_FLOATING] [/ALIGN[=value] | /NOALIGN] [/[NO]OPTIMIZE]
 //	        [/LIST[=file] | /NOLIST] [/SHOW[=(keyword,...)] | /NOSHOW]
 //	        [/[NO]CROSS_REFERENCE] [/CHECK[=(keyword,...)] | /NOCHECK]
+//	        [/WARNINGS[=(keyword,...)] | /NOWARNINGS]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -116,6 +117,12 @@ type FortranOptions struct {
 	// alone); /NOCHECK is the default, so nothing need say it (sema.Checks).
 	Check      []string
 	CheckGiven bool
+
+	// Warnings is /WARNINGS's keywords, if WarningsGiven says it was given (none for
+	// /WARNINGS alone), and NoWarnings is /NOWARNINGS (diag.Warnings).
+	Warnings      []string
+	WarningsGiven bool
+	NoWarnings    bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -231,6 +238,24 @@ func (opts FortranOptions) checks() (sema.Checks, error) {
 	return checks, nil
 }
 
+// warnings is what the compiler is to say, beyond errors, or an error if /WARNINGS has
+// a keyword that isn't one. /NOWARNINGS is NONE.
+func (opts FortranOptions) warnings() (diag.Warnings, error) {
+	switch {
+	case opts.NoWarnings:
+		return diag.Warnings{}.With([]string{"NONE"})
+	case !opts.WarningsGiven:
+		return diag.Warnings{}, nil
+	}
+
+	warnings, err := diag.Warnings{}.With(opts.Warnings)
+	if err != nil {
+		return warnings, vmserrors.New(vmserrors.CLI_FORWARNKEY, err.Error())
+	}
+
+	return warnings, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
 // text library's. fortLibraryName and forSysDefFile name the libraries
@@ -262,16 +287,25 @@ func (c *Context) Fortran(opts FortranOptions) error {
 		return err
 	}
 
-	if (opts.ShowGiven || opts.NoShow) && !opts.List {
+	warnings, err := opts.warnings()
+	if err != nil {
+		return err
+	}
+
+	noListing := func(qualifier string) {
 		var messages diag.List
 
-		c.Printf("%s\n", messages.Report("NOLISTING", diag.Position{}, "/SHOW"))
+		if m := messages.Report("NOLISTING", diag.Position{}, qualifier); !warnings.Held(m) {
+			c.Printf("%s\n", m)
+		}
+	}
+
+	if (opts.ShowGiven || opts.NoShow) && !opts.List {
+		noListing("/SHOW")
 	}
 
 	if opts.CrossReference && !opts.List {
-		var messages diag.List
-
-		c.Printf("%s\n", messages.Report("NOLISTING", diag.Position{}, "/CROSS_REFERENCE"))
+		noListing("/CROSS_REFERENCE")
 	}
 
 	groups := fortranCompilations(opts.Sources)
@@ -365,6 +399,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	align, _ := opts.alignment()                   // checked by Fortran
 	show, _ := opts.listingShow()                  // checked by Fortran
 	checks, _ := opts.checks()                     // checked by Fortran
+	warnings, _ := opts.warnings()                 // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:   opts.ExtendSource,
@@ -377,6 +412,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		Show:           show,
 		CrossReference: opts.CrossReference,
 		Checks:         checks,
+		Warnings:       warnings,
 		Continuations:  continuations,
 		Includes:       includes,
 		Version:        BuildVersion,

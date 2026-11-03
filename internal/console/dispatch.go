@@ -664,6 +664,9 @@ func (d *Dispatcher) bindGrammar() {
 			CrossReference: r.Present("CROSS_REFERENCE") && !r.Negated("CROSS_REFERENCE"),
 			Check:          nonEmpty(r.List("CHECK")),
 			CheckGiven:     r.Present("CHECK") && !r.Negated("CHECK") && !r.Defaulted("CHECK"),
+			Warnings:       nonEmpty(r.List("WARNINGS")),
+			WarningsGiven:  r.Present("WARNINGS") && !r.Negated("WARNINGS") && !r.Defaulted("WARNINGS"),
+			NoWarnings:     r.Negated("WARNINGS"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),

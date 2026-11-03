@@ -206,6 +206,15 @@ type Symbol struct {
 	// it is NOTYPE.
 	untyped bool
 
+	// typesDummy is set for a name a statement function's dummy argument shares,
+	// whose declaration gives that dummy its type, so is of some use even if nothing
+	// else mentions the name (neverUsed).
+	typesDummy bool
+
+	// included is set for a name first seen in a file INCLUDE brought in, in a
+	// declaration (neverUsed).
+	included bool
+
 	// Struct is a record's structure, which a RECORD statement gave it
 	// (section 4.13), its Type then of the kind Record; nil for any other
 	// name.

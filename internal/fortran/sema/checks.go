@@ -3,6 +3,8 @@ package sema
 import (
 	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/fortran/diag"
 )
 
 // Checks is what /CHECK asks the compiled code to look out for (section 1.4.3 and
@@ -62,31 +64,16 @@ func (c Checks) With(keywords []string) (Checks, error) {
 
 // checkKeyword finds the keyword word is, whole or cut short.
 func checkKeyword(word string) (func(*Checks), error) {
-	word = strings.ToUpper(word)
-
-	if apply, ok := checkKeywords[word]; ok {
-		return apply, nil
-	}
-
-	var found func(*Checks)
-
-	matches := 0
-
-	for name, apply := range checkKeywords {
-		if word != "" && strings.HasPrefix(name, word) {
-			found = apply
-			matches++
-		}
-	}
+	found, matches := diag.FindKeyword(checkKeywords, word)
 
 	switch matches {
 	case 0:
-		return nil, fmt.Errorf("/CHECK has no keyword %s; give %s", word, checkKeywordList)
+		return nil, fmt.Errorf("/CHECK has no keyword %s; give %s", strings.ToUpper(word), checkKeywordList)
 	case 1:
 		return found, nil
 	}
 
-	return nil, fmt.Errorf("/CHECK's keyword %s is ambiguous; give %s", word, checkKeywordList)
+	return nil, fmt.Errorf("/CHECK's keyword %s is ambiguous; give %s", strings.ToUpper(word), checkKeywordList)
 }
 
 // OpenEnded reports whether dimension i of dims has no upper bound a check can use: an

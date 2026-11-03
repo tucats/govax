@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -536,5 +537,58 @@ func TestFortranCheckQualifier(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("no %q in:\n%s", want, text)
 		}
+	}
+}
+
+// TestFortranWarningsQualifier is /WARNINGS at the command: what's said, the keywords
+// refused, and the status, which follows what's shown.
+func TestFortranWarningsQualifier(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]WQUAL.FOR"},
+		rms.TextRecords, splitSource("      INTEGER A(3), IDLE\n      A(7) = K\n      END\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	deleteFilesAfter(t, d, "WQUAL")
+
+	for _, f := range []struct {
+		qualifier string
+		says      []string
+		status    string
+	}{
+		{"", []string{"SUBSCRIPTRANGE"}, "warning"},
+		{"/WARNINGS=GENERAL", []string{"SUBSCRIPTRANGE"}, "warning"},
+		{"/NOWARNINGS", nil, "normal"},
+		{"/WARNINGS=NONE", nil, "normal"},
+		{"/WARNINGS=(NONE,UNUSED)", []string{"UNUSEDNAME"}, "warning"},
+		{"/WARNINGS=(NOGENERAL,DECL)", []string{"UNDECLARED"}, "warning"},
+		{"/WARNINGS", []string{"SUBSCRIPTRANGE", "UNDECLARED", "UNUSEDNAME"}, "warning"},
+		// What's held back includes a message of the command's own.
+		{"/CROSS_REFERENCE", []string{"NOLISTING", "SUBSCRIPTRANGE"}, "warning"},
+		{"/CROSS_REFERENCE/NOWARNINGS", nil, "normal"},
+	} {
+		buf.Reset()
+		shareFindRun(t, d, "FORTRAN"+f.qualifier+" WQUAL")
+
+		text := buf.String()
+
+		for _, ident := range []string{"NOLISTING", "SUBSCRIPTRANGE", "UNDECLARED", "UNUSEDNAME"} {
+			if got, want := strings.Contains(text, "-"+ident+","), slices.Contains(f.says, ident); got != want {
+				t.Errorf("%q: %s %v, want %v:\n%s", f.qualifier, ident, got, want, text)
+			}
+		}
+
+		buf.Reset()
+		shareFindRun(t, d, `WRITE SYS$OUTPUT F$INTEGER($SEVERITY)`)
+
+		severity := strings.TrimSpace(buf.String())
+		if want := map[string]string{"warning": "0", "normal": "1"}[f.status]; severity != want {
+			t.Errorf("%q: $SEVERITY %s, want %s", f.qualifier, severity, want)
+		}
+	}
+
+	if err := d.Dispatch("FORTRAN/WARNINGS=BOGUS WQUAL"); err == nil || !strings.Contains(err.Error(), "no keyword BOGUS") {
+		t.Errorf("/WARNINGS=BOGUS: %v", err)
 	}
 }
