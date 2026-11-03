@@ -3,6 +3,7 @@ package dclcmd
 import (
 	"fmt"
 	"io"
+	"os/exec"
 
 	"github.com/tucats/govax/internal/corevms"
 	iodev "github.com/tucats/govax/internal/io"
@@ -83,6 +84,11 @@ type Context struct {
 	// utility shows the lines it reads from a file (LINK's options
 	// files).
 	VerifyImage func() bool
+
+	// LendTerminal runs a host program at the terminal, nothing else reading
+	// the keys while it does (EDIT). Without one, a program has the DCL's
+	// output and no input.
+	LendTerminal func(cmd *exec.Cmd) error
 }
 
 // Printf writes to the DCL's output.

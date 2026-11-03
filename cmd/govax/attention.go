@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"sync"
 	"sync/atomic"
@@ -116,6 +117,10 @@ type attentionStdin struct {
 
 	// aborting is true once CTRL/Y has asked govax to end.
 	aborting atomic.Bool
+
+	// lent is true while a host program has the terminal (lendTerminal):
+	// the signals its keys make are for that program.
+	lent atomic.Bool
 
 	// pumpEnded is set when the pump has stopped: the input has ended.
 	pumpEnded atomic.Bool
@@ -516,6 +521,10 @@ func installKeySignals(s *attentionStdin) func() {
 
 	go func() {
 		for sig := range ch {
+			if s.lent.Load() {
+				continue
+			}
+
 			if sig == syscall.SIGQUIT {
 				s.ctrlY(true)
 			} else {
@@ -525,6 +534,37 @@ func installKeySignals(s *attentionStdin) func() {
 	}()
 
 	return func() { signal.Stop(ch) }
+}
+
+// lendTerminal is Console.LendTerminal: it runs a host program at the
+// terminal and takes the terminal back. For as long as the program runs,
+// the pump reads nothing (keys), the terminal is as the host's programs
+// expect it (hostMode), and the signals the program's keys make aren't
+// taken for CTRL/C or CTRL/Y (lent).
+//
+// With no terminal (keys is nil: the input is a pipe), the program has no
+// input, leaving the input to the commands it was meant for.
+func lendTerminal(s *attentionStdin, keys *terminalInput, hostMode func() (back func())) func(*exec.Cmd) error {
+	return func(cmd *exec.Cmd) error {
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+
+		if keys == nil {
+			return cmd.Run()
+		}
+
+		cmd.Stdin = os.Stdin
+
+		keys.pause()
+		defer keys.resume()
+
+		back := hostMode()
+		defer back()
+
+		s.lent.Store(true)
+		defer s.lent.Store(false)
+
+		return cmd.Run()
+	}
 }
 
 // promptKeys gives the command line's editor (readline, in raw mode) the

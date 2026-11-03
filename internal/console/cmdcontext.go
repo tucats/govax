@@ -28,6 +28,7 @@ func (c *Console) cmd() *dclcmd.Context {
 		InputStream:      c.IsInputStream,
 		VerifyImage:      c.VerifyImage,
 		ParseTime:        c.ParseTime,
+		LendTerminal:     c.LendTerminal,
 	}
 }
 

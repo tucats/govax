@@ -198,6 +198,28 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
+	// EDIT runs an editor on the host on a copy of a file, and SET EDITOR
+	// and SHOW EDITOR say which (internal/dclcmd/edit.go).
+	g.Bind("EDIT", func(id int64, r *dcl.Result) error {
+		return d.Console.cmd().Edit(r.String("SPEC"), r.Present("HOST"))
+	})
+	g.Bind("SET_EDITOR", func(id int64, r *dcl.Result) error {
+		var opts dclcmd.EditorOptions
+
+		if r.Present("COMMAND") {
+			text := r.String("COMMAND")
+			opts.Command = &text
+		}
+
+		if r.Present("SCRATCH") {
+			text := r.String("SCRATCH")
+			opts.Scratch = &text
+		}
+
+		return d.Console.cmd().SetEditor(opts)
+	})
+	g.Bind("SHOW_EDITOR", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowEditor() })
+
 	// SHOW MEMORY is allowed in both console and debugger
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error {
 		if r.Present("FILES") {

@@ -1266,7 +1266,10 @@ expect adjustment as phases land):
   CREATE, SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, the
   default volume, DEFINE/ASSIGN/DEASSIGN and SHOW LOGICAL/TRANSLATION,
   DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, SET and SHOW
-  WORKING_SET (`workingset.go`, Phase 63), BACKUP (`backup*.go`,
+  WORKING_SET (`workingset.go`, Phase 63), EDIT and SET/SHOW EDITOR
+  (`edit.go`: a host editor on a scratch copy, `rms/edit.go` the record
+  layouts, `vax.editor.command` and `.scratch`; `Context.LendTerminal`,
+  cmd/govax's, stops the pump, `terminalInput`, while it runs), BACKUP (`backup*.go`,
   Phase 69), MACRO, LINK
   (`linksource.go`, `GovaxSymbols`; since Phase 74 `ftnrtlSource`,
   FTNRTL's symbols, read only for an `FTN$` name), LIBRARY, ANALYZE,

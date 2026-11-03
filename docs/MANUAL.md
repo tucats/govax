@@ -623,6 +623,8 @@ read-only.
 | `vax.console.lines` | The screen height `TYPE/PAGE` uses when it can't ask the terminal. | 24 |
 | `vax.disassemble.symbolic` | Whether the debugger shows instructions with symbolic names by default. | true |
 | `vax.language` | The user's language, as `LIB$GET_USERS_LANGUAGE` returns it when `SYS$LANGUAGE` isn't defined. | the host's locale |
+| `vax.editor.command` | The host command `EDIT` runs. `%file` in it stands for the file; without one, the file goes last. `SET EDITOR` changes it and saves it here. | `vi %file` |
+| `vax.editor.scratch` | The host directory `EDIT` works in. `SET EDITOR` changes it and saves it here. | the host's temporary directory |
 
 A login procedure is a good place for your own symbols and logical
 names:
@@ -1141,6 +1143,68 @@ lines that follow it in a command procedure. A file with FORTRAN carriage
 control, as a FORTRAN program's formatted files have, shows each record's first
 byte as its control and not as text, as VMS's TYPE does, so a record written
 with no blank to spare loses its first letter.
+
+#### EDIT
+
+```text
+EDIT [/HOST] file-spec
+SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]
+SHOW EDITOR
+```
+
+Edits a file with an editor on the host. VMS's EDT and TPU aren't part of
+govax; instead, `EDIT` copies the file to a scratch directory as lines of text,
+runs the editor on the copy, and makes what the editor wrote the file's next
+version, with the same record format, record attributes, protection, and owner.
+A name no file has, with no version, makes a new text file if the editor writes
+one. With `/HOST`, or a name that is on the host's side, the host file is
+replaced under the same rules. Every process waits while the editor runs.
+
+```text
+$ SET EDITOR/COMMAND="vim -n %file"
+$ EDIT HELLO.FOR
+%EDIT-S-CREATED, DUA1:[WORK]HELLO.FOR;2 created, 12 lines
+```
+
+The file is left alone if the editor doesn't write its copy (`:q!` in vi), which
+`EDIT` reports with `%EDIT-I-NOCHANGE`, or if the editor ends with a failure status
+(`:cq` in vi, or an editor that can't be run). Writing the file with no changes in
+it (`:wq` in vi) still makes a new version, as VMS's editors do.
+
+How a line becomes a record depends on the file:
+
+| Record format | A line becomes |
+| --- | --- |
+| Fixed | A record filled out with blanks. The editor sees each record without the blanks at its end, so that a `FORTRAN` source doesn't show 80 columns of them. |
+| Variable, stream | The record, as it is. |
+| VFC | The record, after control bytes: those all the records had, or if they differed, the usual ones for the file, with `%EDIT-W-VFCCONTROL`. |
+
+A line longer than a fixed record, or than a file's maximum record size, loses the
+blanks at its end if that is enough. Otherwise there is no new version, and since
+what you typed shouldn't be lost, the copy stays and the message says where:
+
+```text
+%EDIT-E-TOOLONG, line 2 is 83 characters long, too long for DUA1:[WORK]DATA.FIX;1, whose records hold 80; it is unchanged
+-EDIT-I-KEPT, the edited text is in /tmp/govax-edit-1838201843/data.fix
+```
+
+The same happens if the editor writes its copy and then reports a failure. You
+delete a copy kept this way when you're done with it.
+
+A file that isn't lines of text is refused before the editor starts, with
+`%EDIT-E-NOTTEXT`: a directory, a relative or indexed file, a file with undefined
+records, or one whose records hold a null byte or a line feed, as an image's or an
+object module's do. A file on a volume mounted read-only is refused too, with
+`%EDIT-E-READONLY`.
+
+`SET EDITOR` changes the configuration keys `vax.editor.command` and
+`vax.editor.scratch`, which govax saves when it exits, so later sessions keep them.
+`SHOW EDITOR` shows them. `/COMMAND` is split into words at blanks, quotes keeping
+blanks in a word, and no shell runs it; `%file` in it stands for the file, and
+without one the file goes last. Quote its value, since DCL makes text without quotes
+uppercase. An empty value (`""`) goes back to the default. The editor gets a file in
+a private directory under `/SCRATCH`, named in lowercase (`hello.for`), so that it
+knows the file's type.
 
 #### COPY
 

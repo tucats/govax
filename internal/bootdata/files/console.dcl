@@ -310,6 +310,8 @@ grammar console
         ! WORKING_SET (docs/PHASE-63, subtask 9): the process's working
         ! set values.
         keyword         working_set     /syntax=show_working_set
+        ! EDITOR: the editor EDIT runs, and where it works.
+        keyword         editor          /syntax=show_editor
                 
 
 	verb vminit
@@ -408,6 +410,7 @@ grammar console
             parameter   process_name/id=1941        -
                         /type=$string
         syntax          show_working_set/id=166
+        syntax          show_editor/id=167
 
 
     !
@@ -659,6 +662,15 @@ grammar console
     ! rules; /HOST forces the host. TYPE has one parameter, so /HOST is the
     ! verb's own qualifier: TYPE/HOST X and TYPE X/HOST mean the same.
     !
+    ! govax's own: EDIT runs an editor on the host on a copy of the file
+    ! (internal/dclcmd/edit.go). VMS's EDT and TPU have no place here.
+    verb edit/id=2253
+
+        parameter   spec/id=2254                -
+                    /type=$string               -
+                    /prompt="File"
+        qualifier   host/id=2255
+
     verb type/id=1200
 
         parameter   spec/id=1201                -
@@ -1333,6 +1345,7 @@ grammar console
         keyword     control             /syntax=set_control/value
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     working_set         /syntax=set_working_set/nonegatable
+        keyword     editor              /syntax=set_editor/nonegatable
 
 
     verb set/id=1760
@@ -1358,6 +1371,14 @@ grammar console
                     /type=$integer
         qualifier   adjust/id=1824
         qualifier   log/id=1825
+
+    ! SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]: the
+    ! editor EDIT runs, and where it works (internal/dclcmd/edit.go).
+    syntax set_editor/id=2250
+        qualifier   command/id=2251/nonegatable -
+                    /type=$string
+        qualifier   scratch/id=2252/nonegatable -
+                    /type=$string
 
     ! SET RADIX 8|10|16|HEX|DEC.
     syntax set_radix/id=1773

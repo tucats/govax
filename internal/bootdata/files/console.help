@@ -187,6 +187,8 @@
 //                          volume, STARTUP.COM, SYSTARTUP_VMS.COM, and
 //                          rebuilding FTNRTL and STARLET.MLB
 //                          (docs/PHASE-87 - system volume.md)
+//              11/03/26    Added EDIT, SET EDITOR, and SHOW EDITOR; CONFIG
+//                          KEYS' vax.editor.command and vax.editor.scratch
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2232,6 +2234,17 @@ $CONF,KEY
                                       debugger's symbolic layout by
                                       default.  Default true.
 
+        vax.editor.command            The host command EDIT runs to edit
+                                      a file, %file standing for the file;
+                                      without one, the file goes last.
+                                      SET EDITOR/COMMAND changes it.
+                                      Default "vi %file".
+
+        vax.editor.scratch            The host directory EDIT works in.
+                                      SET EDITOR/SCRATCH changes it.
+                                      Default the host's temporary
+                                      directory.
+
         vax.language                  The user's language, as
                                       LIB$GET_USERS_LANGUAGE returns it
                                       (FRENCH, GERMAN, ...) when the
@@ -2626,6 +2639,7 @@ $HELP
     DISMOUNT        Detach a device's mounted disk-image container
     DECK            Mark data lines that start with "$" (EOD ends them)
     CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
+    EDIT            Edit a file with an editor on the host
     EOD             End a command procedure's data lines
     EXIT            End a command procedure, or govax at the terminal
     FORTRAN         Compile a FORTRAN source file into a MACRO-32 source file
@@ -3995,6 +4009,103 @@ $REN
         REN/NONEW_VERSION REPORT.LIS SUMMARY
 
     See also the help for COPY, DELETE, DIRECTORY, and SET DEFAULT.
+
+$EDIT
+$EDI
+
+    The EDIT command edits a file with an editor on the host, such as vi.
+    govax copies the file to a scratch directory on the host as lines of
+    text, runs the editor on the copy, and if the editor wrote it, makes
+    what it wrote the next version of the file.
+
+    Syntax:
+
+         EDIT file-spec [/HOST]
+
+    Parameters:
+
+         file-spec    One file.  If no file has the name, and the name has
+                      no version, EDIT makes a new one (variable-length
+                      records, carriage-return carriage control) if the
+                      editor writes it.
+
+    Qualifiers:
+
+         /HOST        The file is a host file, replaced when the editor
+                      has written its copy.
+
+    The new version has the record format, record attributes, protection,
+    and owner of the version edited, so a line becomes a record of the
+    same kind:
+
+         Fixed        A short line is filled out with blanks.  The editor
+                      doesn't see the blanks at the end of a record.
+         Variable,    The line is the record.
+         stream
+         VFC          The line is the record, after control bytes: those
+                      all the records had, or if they differed, the usual
+                      ones for the file, with a warning.
+
+    A line longer than a fixed record, or than a file's maximum record
+    size, loses the blanks at its end if that is enough.  Otherwise it is
+    the error EDIT-E-TOOLONG, and there is no new version.
+
+    The file is left alone if the editor doesn't write its copy (:q! in
+    vi) or ends with a failure status (:cq in vi).  When the editor wrote
+    its copy but that can't become a new version, the message ends with
+    -EDIT-I-KEPT and the name of the copy, which stays until you delete it.
+
+    A file that isn't lines of text is refused before the editor starts: a
+    directory, a relative or indexed file, one with undefined records, or
+    one whose records hold a null byte or a line feed, as an image does.
+    So is a file on a volume mounted read-only.
+
+    Every process waits while the editor runs.
+
+    See also the help for SET EDITOR and SHOW EDITOR.
+
+$SET ,EDIT
+$SET ,EDI 
+
+    The SET EDITOR command says which host editor EDIT runs, and where its
+    files go.  The values are the configuration keys vax.editor.command and
+    vax.editor.scratch, saved when govax exits, so later sessions keep them.
+
+    Syntax:
+
+         SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]
+
+    Qualifiers:
+
+         /COMMAND     The command to run.  %file in it stands for the file
+                      to edit; without one, the file goes last.  It is split
+                      into words at blanks, and quotes keep blanks in a word.
+                      No shell runs it.  Quote the value, as DCL makes text
+                      without quotes uppercase.  The default is "vi %file".
+
+         /SCRATCH     An existing directory to work in.  EDIT makes a private
+                      directory in it for each file.  The default is the
+                      host's temporary directory.
+
+    An empty value ("") goes back to the default.
+
+    Examples:
+
+         SET EDITOR/COMMAND="vim -n %file"
+
+         SET EDITOR/COMMAND="code --wait"/SCRATCH="/tmp"
+
+$SHOW,EDIT
+$SH  ,EDIT
+$SHOW,EDI 
+$SH  ,EDI 
+
+    The SHOW EDITOR command shows the host editor EDIT runs, and the
+    directory it works in, as SET EDITOR set them.
+
+    Syntax:
+
+         SHOW EDITOR
 
 $TYPE
 $TYP

@@ -34,6 +34,7 @@ const (
 	CREFacility   = 7  // The CREATE command (docs/PHASE-34.md)
 	MOUNTFacility = 8  // The MOUNT command and the startup default volume
 	LIBRFacility  = 9  // The LIBRARY command, as VMS's LIBRARIAN names itself
+	EDITFacility  = 10 // The EDIT command and SET EDITOR
 	VAXFacility   = 15 // This is the facility used by govax internal messages
 
 	// Well known names for the severity field values. Note that, matching
@@ -111,6 +112,7 @@ var FacilityNames = map[uint32]string{
 	CREFacility:   "CREATE",
 	MOUNTFacility: "MOUNT",
 	LIBRFacility:  "LIBRAR",
+	EDITFacility:  "EDIT",
 	VAXFacility:   "VAX", // These are the errors used by govax internally
 }
 

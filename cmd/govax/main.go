@@ -183,7 +183,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		c.In = in
 		rlStdin = in
 	} else {
-		restoreTerminal, vmsMode := vmsTerminalMode(int(os.Stdin.Fd()))
+		restoreTerminal, hostMode, vmsMode := vmsTerminalMode(int(os.Stdin.Fd()))
 		defer restoreTerminal()
 
 		// A second CTRL/Y while govax is still ending after the first
@@ -193,8 +193,21 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			os.Exit(1)
 		}
 
-		attn = newAttentionStdin(os.Stdin, out, vmsMode, func() *cpu.Engine { return c.Engine }, forceExit)
+		// At a terminal the pump reads through terminalInput, which can stop
+		// so that a host program started by a command gets the keys.
+		var (
+			input io.Reader = os.Stdin
+			keys  *terminalInput
+		)
+
+		if vmsMode {
+			keys = newTerminalInput(int(os.Stdin.Fd()))
+			input = keys
+		}
+
+		attn = newAttentionStdin(input, out, vmsMode, func() *cpu.Engine { return c.Engine }, forceExit)
 		attn.controlY = c.ControlYEnabled
+		c.LendTerminal = lendTerminal(attn, keys, hostMode)
 		c.In = attn
 		rlStdin = attn.promptReader()
 
@@ -729,6 +742,8 @@ var validConfigs = map[string]bool{
 	"vax.console.lines":    true,
 	"vax.language":         true,
 	"vax.runtime.random":   true,
+	"vax.editor.command":   true,
+	"vax.editor.scratch":   true,
 
 	"vax.default.system.file":   true,
 	"vax.default.system.device": true,
