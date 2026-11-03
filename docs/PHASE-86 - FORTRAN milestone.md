@@ -271,4 +271,9 @@ or text.
     (a `DEFINE LIBRTL` to VMS's) faults in its own code at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX.
   - **`vax/round1`** keeps VMS's log, objects, image, and map. Round 2 is the same procedure; the oracle
     tests come with its results.
+- **2026-11-03, subtask 4, round 2's first try:** in the same VAX session as round 1, so FTNRTL was still
+  defined, and `LINK/SHAREABLE=FTNRTL FTNRTL/OPTIONS` took the name for its options file:
+  `%LINK-F-OPENIN, error opening DUA1:[FTN86]FTNRTL.EXE; as input`, and no program had an image. The
+  procedure's fault: `ftn86.com` now deassigns the name first, and `TestFTN86Procedure` runs with it defined.
+  All 19 modules assembled on VMS, and their objects are the ones compared below.
 

@@ -101,7 +101,10 @@ $ WRITE SYS$OUTPUT "==== FTNRTL"
 		fmt.Fprintf(&com, "$ MACRO/NOLIST %s\n$ SHOW SYMBOL $STATUS\n", m)
 	}
 
-	fmt.Fprint(&com, `$ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
+	// A name left from an earlier run in this session would be taken for the options
+	// file: LINK translates FTNRTL, and doesn't find the image this LINK is to make.
+	fmt.Fprint(&com, `$ IF F$TRNLNM("FTNRTL") .NES. "" THEN DEASSIGN FTNRTL
+$ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 $ SHOW SYMBOL $STATUS
 $ DEFINE FTNRTL 'ROOT'[FTN86]FTNRTL.EXE
 $ !
