@@ -816,8 +816,7 @@ grammar console
     ! of what FORTRAN-77 changed. Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
-    ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
-    ! the rest of the compiler's qualifiers.
+    ! statements search ("FORTRAN PROG+MYLIB/LIBRARY").
     !
     verb fortran/id=1370
 

@@ -4062,9 +4062,8 @@ $FOR
     lines appear only with INCLUDE's /LIST, with their include depth
     before their numbers.
 
-    The compiler is being built a phase at a time (docs/PHASE-74 -
-    FORTRAN plan.md).  So far it reads every statement of the language,
-    and compiles nearly all of it: main programs, subroutines, functions
+    The compiler takes VAX FORTRAN V5.0, FORTRAN-77 with DEC's extensions:
+    main programs, subroutines, functions
     of every type, ENTRY, and BLOCK DATA; declarations of every type,
     IMPLICIT, PARAMETER, arrays, COMMON, EQUIVALENCE, DATA, SAVE,
     EXTERNAL, and INTRINSIC; DEC's STRUCTURE, RECORD, UNION, and MAP,
@@ -4076,8 +4075,9 @@ $FOR
     concatenation), and every intrinsic function, in line or by MTHRTL;
     every IF, DO, and GO TO, CALL, RETURN, STOP, and PAUSE; READ, WRITE,
     and the other I/O statements, and OPEN and the other file statements,
-    on sequential and relative files.  Any other statement draws %FORT-E-NOTIMPL.  Such
-    programs compile, link, and run:
+    on sequential and relative files.  Indexed files aren't there: OPEN of
+    one fails when the program runs.  DICTIONARY draws %FORT-E-NOTIMPL.  A
+    program compiles, links, and runs:
 
         FORTRAN AVERAGE
         MACRO AVERAGE

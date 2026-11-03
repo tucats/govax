@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtasks 1 to 4 done 2026-11-03). Needs every earlier phase of the
+**Status:** in progress (subtasks 1 to 5 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -114,7 +114,7 @@ or text.
 2. **DUNGEON linked and run** (done 2026-11-03), with its ITIME and its data files.
 3. **The milestone test** (done 2026-11-03) in every mode, with a scripted game.
 4. **The VMS round** (done 2026-11-03): exchange volume, procedure, results.
-5. **The manual chapter.**
+5. **The manual chapter** (done 2026-11-03).
 6. **FORTRAN-INTERNALS.md finished.**
 7. **Close-out:** CLAUDE.md, PLAN.md, the follow-up list.
 
@@ -322,4 +322,20 @@ or text.
   - **Not compared:** the image's symbol tables past that, which differ at least in the link's time and the linker's name.
     A comparison's own lessons: a script's text mode hid `\r`, and `grep` a binary-looking log's matches. `LINK` not
     translating a logical name for an options file is still open.
+- **2026-11-03, subtask 5:** the manual chapter. Chapter 14 had grown phase by phase, so this was a pass over it as a
+  finished chapter, documentation only:
+  - **No longer "so far":** the opening, 14.2's title, FTNRTL's table, section 1, Appendix C, section 6.5, and HELP FORTRAN
+    all spoke of a compiler being built. The opening now says what the compiler does and how far it's been checked, with a
+    table of the sections.
+  - **Wrong or missing, fixed:** `/NOF77` was in HELP and not the manual (14.3 has it now, and 6.5's and `govax fortran`'s
+    synopses every qualifier since Phase 84); `CDEC$ TITLE` was said to do nothing; building one's own FTNRTL named 5 of the
+    19 modules; `FTN$ADJARRDIM` wasn't in the table, the only one of the vector's names missing; the powers' paragraph
+    said ours matched VMS's `OTS$` routines, which round 2 showed false for negative exponents; integer overflow and substring
+    bounds were said to go unchecked, without saying `/CHECK` changes that; a `.EXTRN` of a routine in the same file.
+  - **New:** 14.7 opens with a table of what isn't there, and 14.11 is DUNGEON's build and how to run a compiled program
+    on VMS, with the round's results. Neither quotes the game.
+  - **Run for this, on a scratch volume:** 14.1's programs, 14.5's `SQUARES.MAR` (the same but for the version, time, and
+    device), 14.6's list-directed output and STOPPER, the 19-module FTNRTL build as now printed with a program run on it, the
+    NOTIMPL message, and 14.11's DUNGEON commands through a scripted game. **Not run:** 14.11's VMS commands as printed: they
+    are `ftn86.com`'s, with a program's own options file in place of `FTN86.OPT`.
 

@@ -105,8 +105,8 @@ replays those VMS runs to keep it that way.
   that behaves as VMS's services do.
 - **It doesn't include VMS's compilers or utilities.** There is no C,
   BASIC, or Pascal compiler; MACRO-32 is the language you can build
-  programs in, and govax's own FORTRAN compiler, which writes MACRO-32,
-  is being built ([14. Programming in FORTRAN](#14-programming-in-fortran)).
+  programs in, and so is FORTRAN, through govax's own compiler, which writes
+  MACRO-32 ([14. Programming in FORTRAN](#14-programming-in-fortran)).
   Images built by those compilers on a real VAX will
   run if every run-time library routine they call is one govax provides
   (see [Running programs built on VMS](#running-programs-built-on-vms)).
@@ -374,7 +374,10 @@ Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
 govax run [--debug | --no-debug] IMAGE [text...]
 
 govax fortran [--macro FILE | --no-macro] [--extend-source] [--d-lines]
-              [--continuations N] [--no-i4] [--g-floating] [--optimize | --no-optimize]
+              [--continuations N] [--no-i4] [--g-floating] [--align VALUE | --no-align]
+              [--optimize | --no-optimize] [--list | --list-file FILE] [--show KEYS]
+              [--cross-reference] [--check KEYS] [--warnings KEYS] [--standard KEYS]
+              [--debug KEYS] [--object | --object-file FILE] [--no-f77]
               SOURCE...
 
 govax macro [--object FILE | --no-object] [--list | --list-file FILE]
@@ -1322,22 +1325,15 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /[NO]EXTEND_SOURCE  /[NO]D_LINES  /CONTINUATIONS=n  /[NO]I4
     /[NO]G_FLOATING  /ALIGN[=value] | /NOALIGN  /[NO]OPTIMIZE
     /LIST[=file] | /NOLIST  /SHOW[=(keyword,...)] | /NOSHOW
-    /[NO]CROSS_REFERENCE
+    /[NO]CROSS_REFERENCE  /CHECK[=(keyword,...)] | /NOCHECK
+    /WARNINGS[=(keyword,...)] | /NOWARNINGS  /STANDARD[=(keyword,...)] | /NOSTANDARD
+    /DEBUG[=(keyword,...)] | /NODEBUG  /OBJECT[=file] | /NOOBJECT  /[NO]F77
 ```
 
-Compiles VAX FORTRAN source files (type `.FOR` by default) into MACRO-32
-source files, which MACRO assembles and LINK links. govax's FORTRAN
-compiler is being built a phase at a time (`docs/PHASE-74 - FORTRAN
-plan.md`); so far it compiles a subset of the language (main
-programs, subroutines, functions, and BLOCK DATA; every type's
-declaration and storage, PARAMETER, IMPLICIT, arrays, COMMON,
-EQUIVALENCE, DATA, SAVE, EXTERNAL, INTRINSIC; DEC's STRUCTURE, RECORD, UNION,
-MAP, typeless and RADIX-50 constants, VOLATILE, AUTOMATIC, STATIC, and the
-CDEC$ directives; expressions in every type
-and length, INTEGER, LOGICAL, REAL, COMPLEX, and CHARACTER, with every
-intrinsic function; IF, DO in every form, DO WHILE, END DO, GO TO in every form, ASSIGN, CALL, RETURN, STOP, PAUSE; READ, WRITE,
-PRINT, TYPE, ACCEPT, ENCODE, DECODE, FORMAT, and NAMELIST), and reports any
-other statement as not implemented yet. The MACRO file holds every source line as a comment,
+Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default) into MACRO-32
+source files, which MACRO assembles and LINK links. It compiles the whole language;
+what's missing is indexed files, which fail when the program runs, and DICTIONARY, which
+draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
@@ -1348,7 +1344,7 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds; `/CHECK` adds run-time checks, `/WARNINGS` and `/STANDARD` say what to report, `/DEBUG` what MACRO writes for the debugger, `/OBJECT` runs MACRO too, and `/NOF77` reads a program as FORTRAN-66 ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -4407,11 +4403,8 @@ programs on VMS.
 
 ## 14. Programming in FORTRAN
 
-govax is gaining a FORTRAN compiler, built a phase at a time
-(`docs/PHASE-74 - FORTRAN plan.md` lays out the program, Phases 74 to
-86). This chapter describes what is there so far, and grows with each
-phase. The compiler accepts VAX FORTRAN V5.0, FORTRAN-77 with DEC's
-extensions, as the 1988 *VAX FORTRAN Language Reference Manual*
+govax has a FORTRAN compiler. It accepts VAX FORTRAN V5.0, FORTRAN-77 with
+DEC's extensions, as the 1988 *VAX FORTRAN Language Reference Manual*
 describes it. It doesn't write object modules: it writes a MACRO-32
 source file, which `MACRO` assembles and `LINK` links against FTNRTL,
 govax's FORTRAN run-time library:
@@ -4427,24 +4420,41 @@ The goal is programs that compile and run correctly, as the manual
 defines the language and its run-time behavior. Matching DIGITAL's
 compiler's object code, messages, or listings is not a goal.
 
-**Where things stand (Phase 84 done, 2026-11-02):** the compiler reads
-every statement of the language and gives every declaration its meaning
-and its storage, compiles every expression in every type with every
-intrinsic function, all of the language's control statements and
-subprograms, and every I/O and file statement, with FORMAT checked as it
-compiles; FTNRTL runs formatted input and output, with every edit
-descriptor and variable format expressions, list-directed, namelist, and
-unformatted input and output, sequential and direct access, on sequential
+**What it does.** The compiler reads every statement of the language and
+gives every declaration its meaning and its storage. It compiles every
+expression in every type with every intrinsic function, all of the language's
+control statements and subprograms, and every I/O and file statement, with
+FORMAT checked as it compiles. FTNRTL runs formatted input and output, with
+every edit descriptor and variable format expressions, list-directed, namelist,
+and unformatted input and output, sequential and direct access, on sequential
 and relative files through OPEN (USEROPEN= too), CLOSE, INQUIRE, REWIND,
 BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
 14.2). DEC's data extensions compile too, structures and records among them, and
 a program can use VMS as VMS programmers did: definition modules, system services
 and RTL routines, condition handlers, ASTs, exit handlers, and the system
 subroutines (section 14.8). The compiler optimizes what it writes by default
-(section 14.9). Indexed files and the keyed READ are a later program's.
-Any other statement draws `%FORT-E-NOTIMPL`, naming it ("the DICTIONARY statement is
-not implemented yet"); the later phases widen the language.
-`docs/FORTRAN-INTERNALS.md` is a tour of how the compiler works.
+(section 14.9), and has listings, cross references, run-time checks (section
+14.3), and the debugger (section 14.10). The language's largest omissions are
+indexed files and DICTIONARY (section 14.7).
+
+**How far it can be trusted.** A real program, DUNGEON, compiles and plays on
+govax, and the same game on another compiler and on VMS itself printed the
+same lines (section 14.11). `docs/FORTRAN-INTERNALS.md` is a tour of how the
+compiler works.
+
+| To learn about | See |
+| --- | --- |
+| Compiling and running a program | [14.1](#141-a-first-program) |
+| The language as compiled | [14.2](#142-what-the-compiler-accepts) |
+| The command's qualifiers | [14.3](#143-the-fortran-command) |
+| Source forms, INCLUDE, directives, definition modules | [14.4](#144-source-lines) |
+| Reading the MACRO file | [14.5](#145-the-macro-file) |
+| The run-time library | [14.6](#146-ftnrtl-the-run-time-library) |
+| What's missing, and where govax chose | [14.7](#147-differences-from-vax-fortran) |
+| System services, RTL routines, handlers, ASTs | [14.8](#148-calling-vms-from-fortran) |
+| The optimizer | [14.9](#149-what-optimize-does) |
+| The debugger | [14.10](#1410-debugging-a-compiled-program) |
+| A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
 
 ### 14.1 A first program
 
@@ -4533,7 +4543,7 @@ VAX> RUN STORE
 More programs are in govax's `testdata/fortran` directory, each with the
 output it prints, and programs of several files in its `modules` directory.
 
-### 14.2 What the compiler accepts so far
+### 14.2 What the compiler accepts
 
 - **Program units:** a main program, with or without a PROGRAM statement;
   SUBROUTINE; FUNCTION of any type, typed in its statement, by a type
@@ -4707,7 +4717,7 @@ output it prints, and programs of several files in its `modules` directory.
   CHARACTER variable, element, substring, or array); ERR=, END=, and
   IOSTAT=; implied-DO lists, nested. FORMAT statements are checked as they
   compile, by the rules VMS's FORTRAN run-time library applies
-  (`%FORT-E-FMTSYNTAX` points at the character in error). So far FTNRTL
+  (`%FORT-E-FMTSYNTAX` points at the character in error). FTNRTL
   runs formatted, list-directed, namelist, and unformatted sequential input
   and output, to the default units, units 0 to 119, and internal files (which,
   like the default unit `*`, take only formatted I/O: `%FORT-E-UNFUNIT`).
@@ -4852,8 +4862,8 @@ output it prints, and programs of several files in its `modules` directory.
   DELETE is `DELERR`, and REWRITE works where the record keeps its length (or the file's
   records are fixed-length); on a unit not open DELETE is `DELERR`, UNLOCK `UNLERR`
   (56), and REWRITE `NO_CURREC`.
-- **Indexed files and keyed READs** (`ORGANIZATION='INDEXED'`, `READ (u, KEY=k)`) are a
-  later program's: OPEN of an indexed file is FOR's `NOTIMP` (2), and a keyed READ
+- **Indexed files and keyed READs** (`ORGANIZATION='INDEXED'`, `READ (u, KEY=k)`) aren't
+  there, since RMS has no indexed files: OPEN of an indexed file is FOR's `NOTIMP` (2), and a keyed READ
   connects its unit as a READ would and is `OPEDEFREQ` (26) on a unit not opened
   `ACCESS='KEYED'`, as VMS's library says of such a unit.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
@@ -4979,7 +4989,7 @@ output it prints, and programs of several files in its `modules` directory.
   it is in static storage. An AUTOMATIC name can't have an initial value, or be in
   COMMON, SAVE, or a NAMELIST group. A routine with AUTOMATIC variables isn't
   reentrant: its temporaries are still static.
-- **Arguments** are passed by reference: a routine that assigns to its
+- **How arguments are passed:** by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
   variable, element, substring, constant, or expression) is passed by
@@ -4997,8 +5007,8 @@ The command's syntax and qualifiers are in
 [section 6.5](#fortran): the source files, joined by `+` and with
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
-`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
-`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, or `/NOEXTEND_SOURCE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
+`/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
+`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, or `/NOF77` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
 `/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, and `--object-file file` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, and `/OBJECT=file`, and `a.for+lib.tlb/library` an argument with `+`).
 
@@ -5149,7 +5159,17 @@ the default. `/DEBUG` doesn't turn the optimizer off, so under `/OPTIMIZE`, the 
 a variable may be in a register, its home out of date. To debug, say both, as the DCL Dictionary's examples do, and link
 with `/DEBUG` too, as [section 14.10](#1410-debugging-a-compiled-program) shows.
 
-`/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
+**FORTRAN-66.** `/NOF77` reads a program as FORTRAN-66 did where FORTRAN-77 changed the
+meaning. The default is `/F77`:
+
+| What | `/F77` | `/NOF77` |
+| --- | --- | --- |
+| A `DO` whose limits give no passes | Runs no times | Runs once |
+| OPEN's default `STATUS=` | `'UNKNOWN'` | `'NEW'` |
+| OPEN's default `BLANK=` | `'NULL'` | `'ZERO'` |
+| `EXTERNAL SIN` | A routine of your own called `SIN` | The library's function; `EXTERNAL *SIN` is your own |
+
+**Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
 FORTRAN, by way of the HP Fortran manual's OPTIONS directive:
 
@@ -5204,7 +5224,7 @@ unit or among its statements:
 |---|---|
 | `CDEC$ IDENT 'string'` | The object module's identification. A file is one module, so the file's first IDENT counts, and later ones are ignored. |
 | `CDEC$ PSECT /block/ attr[,attr]...` | Changes a common block's program section (`//` for blank common): `LCL` or `GBL`, `[NO]WRT`, `[NO]SHR`, and `ALIGN=n`, a power of two from 0 (a byte) to 9 (a page). |
-| `CDEC$ TITLE ['string']`, `CDEC$ SUBTITLE ['string']` | Accepted, with no effect until FORTRAN has listings. |
+| `CDEC$ TITLE ['string']`, `CDEC$ SUBTITLE ['string']` | The listing's page headings ([section 14.3](#143-the-fortran-command)). |
 | `CDEC$ OPTIONS /option[/option]...` ... `CDEC$ END OPTIONS` | A group of declarations with their own alignment (nesting to 100 levels). An option is `/[NO]ALIGN[=value]`, as on the command ([section 14.3](#143-the-fortran-command)), or `/WARN=[NO]ALIGNMENT`, an informational message for each field or common name not on its natural boundary, off unless asked for. A group changes only the classes it names, must be in one unit, after a `SUBROUTINE`, `FUNCTION`, or `BLOCK DATA` statement and before the executable statements, and can't begin or end inside a structure declaration. |
 
 A string is at most 31 printable characters. Every unit of a file that names
@@ -5463,19 +5483,20 @@ resolves its routines with no options file. Its routines are named
 `FTN$...`, and its transfer vector keeps each at a fixed offset, so a
 program linked against one FTNRTL runs with any later one.
 
-So far it has these routines, which MACRO programs can call too:
+It has these routines, which MACRO programs can call too:
 
 | Routine | What it does |
 | --- | --- |
 | `FTN$VERSION([text])` | Returns FTNRTL's version in R0 (`^X00010000` for V1.0) and, given a string descriptor, writes `FTNRTL V1.0` there, blank-padded or cut short |
 | `FTN$STOP([display])` | FORTRAN's `STOP`: writes the display (or `FORTRAN STOP` without one) to `SYS$OUTPUT` and ends the image with `SS$_NORMAL` |
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
+| `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
 | `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
 | `FTN$ENCODE(icb, buffer, format, count)`, `FTN$DECODE(icb, buffer, format, count)` | Start ENCODE or DECODE: one record of `count` characters (a longword, by value; negative is 0) at the address `buffer` |
 | `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array) |
-| `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler called them before Phase 80, kept for programs linked then |
+| `FTN$PRINT_LIST(icb)`, `FTN$WRITE_LIST(icb)` | Start `PRINT *` and `WRITE (*,*)` as the compiler once called them, kept for programs linked then |
 | `FTN$IO_ITEM(desc)` | Reads or writes one value, described by a descriptor: a scalar (class S) or a whole array (class A) of `BYTE` (`DSC$K_DTYPE_BU`), `LOGICAL*2` and `*4` (`WU`, `LU`), `INTEGER*2` and `*4` (`W`, `L`), `REAL*4` (`F`), `REAL*8` (`D` or `G`), `REAL*16` (`H`), `COMPLEX*8` (`FC`), `COMPLEX*16` (`DC` or `GC`), or text (`T`) |
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
 | `FTN$READ_SU(icb, unit)`, `FTN$WRITE_SU(icb, unit)` | Start an unformatted sequential READ or WRITE |
@@ -5507,9 +5528,9 @@ So far it has these routines, which MACRO programs can call too:
 | `FTN$QEXT(result, x)`, `FTN$QEXTD`, `FTN$QEXTG`, `FTN$QFLOAT` | A REAL\*4, a REAL\*8 in D_floating or G_floating, or an INTEGER\*4 made a REAL\*16 at `result` |
 | `FTN$NWORKERS()` | 1 in R0 |
 
-Every routine but ISHFTC's is the routine of an intrinsic function MTHRTL
-hasn't, for a program that passes the function's name as an argument; a
-reference to the function is written in line.
+The routines from `FTN$LEN` on are those of intrinsic functions MTHRTL hasn't,
+for a program that passes the function's name as an argument; a reference to
+the function is written in line.
 
 A list-directed statement writes `SYS$OUTPUT`, with FORTRAN carriage
 control: each record begins with a blank (a new line at the terminal),
@@ -5590,25 +5611,37 @@ VAX> SHOW SYMBOL $STATUS
 ```
 
 To change FTNRTL, build your own from its sources and point the logical
-name at it:
+name at it. With the 19 `.MAR` files and `ftnrtl.opt` on your volume:
 
 ```text
-VAX> MACRO FTN_VECTOR
-VAX> MACRO FTN_CONTROL
-VAX> MACRO FTN_UNITS
-VAX> MACRO FTN_LISTOUT
-VAX> MACRO FTN_INTRINSICS
+VAX> MACRO FTN_VECTOR,FTN_CONTROL,FTN_UNITS,FTN_STATEMENT,FTN_FORMAT,FTN_EDIT
+VAX> MACRO FTN_FLOAT,FTN_LISTOUT,FTN_LISTIN,FTN_NAMELIST,FTN_INTERNAL,FTN_OPEN
+VAX> MACRO FTN_INQUIRE,FTN_POSITION,FTN_UNFORMATTED,FTN_DIRECT,FTN_RECORD
+VAX> MACRO FTN_INTRINSICS,FTN_SYSTEM
 VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
 VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
 ```
 
 ### 14.7 Differences from VAX FORTRAN
 
+**What isn't there.** These parts of VAX FORTRAN V5.0, or of its compiler, govax leaves out:
+
+| What | What happens |
+| --- | --- |
+| Indexed files and keyed access | OPEN of one is FOR's `NOTIMP`, and a keyed READ `OPEDEFREQ` or `NOTIMP` (section 14.2); RMS has no indexed files |
+| `DICTIONARY` | `%FORT-E-NOTIMPL`: there is no Common Data Dictionary |
+| `CONVERT=` other than `'NATIVE'` | FOR's `NOTIMP` when the OPEN is done |
+| Files on the host, for a running program | A program's RMS reaches only mounted volumes; the compiler itself reads and writes either |
+| Object modules from the compiler | `/OBJECT` runs MACRO on the MACRO file, and that file is always written |
+| The debugger's FORTRAN language | It reads compiled names from the MACRO file, and its language stays MACRO (section 14.10) |
+| Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
+| Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
+
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
 
-Where the manuals at hand don't settle a rule, govax makes a choice
-(each phase's document lists its own, unconfirmed on VMS, since no VAX
-FORTRAN compiler was available to check them). So far:
+**Choices.** Where the manuals at hand don't settle a rule, govax makes a choice.
+No VAX FORTRAN compiler was available to check these, though many rest on VMS's
+FORTRAN run-time library, which could be run:
 
 - `/CONTINUATIONS` allows 0 to 99, and 19 without it.
 - `/NOCHECK` is the default. The manuals at hand don't state VAX FORTRAN's, which
@@ -5703,9 +5736,11 @@ FORTRAN compiler was available to check them). So far:
   with a constant exponent from 1 to 8, which is multiplied out in line:
   `X**2` is `X*X`. Either way, and in a constant expression too, a power to an
   INTEGER exponent is repeated squaring, rounded at each product, and for a
-  negative exponent the product of the squares' reciprocals, as the `OTS$`
-  routines' are, so `X**7` is `(X * X**2) * X**4`, each product rounded, and
-  `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. A COMPLEX power is
+  negative exponent the product of the squares' reciprocals,
+  so `X**7` is `(X * X**2) * X**4`, each product rounded, and
+  `2.0 ** (-127)` is in range though `2.0 ** 127` isn't. A positive power has
+  VMS's exact bits. A negative one can differ from VMS's routine in its last bit
+  (70 of 192 values tried), whose method couldn't be found. A COMPLEX power is
   always called, its products' parts rounded once. An INTEGER\*2 to an
   INTEGER\*2 power (or to a small constant) is an INTEGER\*2, so with `I2` at
   10, `I2**5` wraps to -31072; in line, an INTEGER power that overflows wraps,
@@ -5759,7 +5794,8 @@ FORTRAN compiler was available to check them). So far:
 - Blank common's program section is `$BLANK`, and an unnamed BLOCK DATA's name
   is `file$DATA`, so a file holds at most one.
 - An EXTERNAL name is a reference in the object module whether or not code
-  uses it, so LINK reports one that nothing defines.
+  uses it, so LINK reports one that nothing defines. A name the same file
+  defines is left out, since MACRO refuses a `.EXTRN` of its own routine.
 - A character or Hollerith constant may initialize a LOGICAL item as it may a
   number, and INTEGER and LOGICAL constants initialize each other's items, as
   assignment converts them. A REAL literal for a `REAL*8` item is rounded from
@@ -5769,13 +5805,13 @@ FORTRAN compiler was available to check them). So far:
   expression: `D = 0.1` is 0.1D0, not the REAL\*4 value widened.
 - `FUNCTION F*8(X)`, a length with no type keyword, gives the length to
   the type F has from its first letter (here `REAL*8`).
-- Integer overflow isn't detected (the result wraps, as with VAX
-  FORTRAN's `/CHECK=NOOVERFLOW`); an integer division by zero ends the
-  program with the VAX's divide-by-zero trap.
+- Without `/CHECK=OVERFLOW`, integer overflow isn't detected (the result
+  wraps); an integer division by zero always ends the program with the VAX's
+  divide-by-zero trap.
 - A constant passed as an argument is read-only: a routine that assigns
   to its dummy argument gets an access violation.
-- A substring's bounds that aren't constants aren't checked when the program
-  runs (as with VAX FORTRAN's `/CHECK=NOBOUNDS`): a substring past its
+- Without `/CHECK=BOUNDS`, a substring's bounds that aren't constants aren't
+  checked when the program runs: a substring past its
   variable's end reaches the bytes after it, and one whose last position is
   before its first moves or compares the characters an unsigned word of its
   length says, so `S(5:4)` is empty but `S(5:3)` is 65535 characters long.
@@ -5861,9 +5897,6 @@ FORTRAN compiler was available to check them). So far:
   `CDEC$ PSECT ALIGN=` smaller than a block's layout needs is an error; `/WARN=ALIGNMENT`
   is off by default, where the HP compiler's is on; a group can't begin or end inside a
   structure declaration, and may come before a main program's first statement.
-
----
-
 
 ### 14.8 Calling VMS from FORTRAN
 
@@ -6265,6 +6298,60 @@ WIDGETS    14.50000
   may be in a register. A variable there throughout is read from it, and one in a register only during a loop gets a
   line saying which, and what it holds, since the debugger can't tell whether the program is in that loop.
 
+### 14.11 A large program, and a real VMS
+
+**DUNGEON.** R. M. Supnik's FORTRAN version of the game, V3.2A, is about 11,600 lines of VAX
+FORTRAN: tab-format source, some 490 PARAMETER statements, COMMON and EQUIVALENCE, octal
+constants and edit descriptors, direct-access and unformatted files. It isn't part of govax,
+since its files say commercial use is prohibited, but if you have the kit, it builds with the
+commands in its own documentation, with one addition. VAX FORTRAN has no ITIME, and the kit's
+`VMSSUBR.FOR`, which supplied one, may be missing; govax's `testdata/dungeon86/vmssubr.for` will
+do. The kit's data file `dtext` is binary, so it comes in as fixed-length records ([COPY](#copy)):
+
+```text
+VAX> COPY "dindx"/HOST DINDX.DAT
+VAX> COPY "dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
+VAX> FORT/NOCHECK/CONT=40 DUNGEON.F,GAME.F,GDT.F,PARSER.F,SUBR.F
+VAX> FORT/NOCHECK/CONT=40 ROOMS.F,VERBS.F,OBJECTS.F,TIMEFNC.F,VMSSUBR.FOR
+VAX> MACRO DUNGEON,GAME,GDT,PARSER,SUBR,ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
+VAX> LINK DUNGEON,GAME,GDT,PARSER,SUBR,-
+_VAX> ROOMS,VERBS,OBJECTS,TIMEFNC,VMSSUBR
+VAX> RUN DUNGEON
+```
+
+Here the sources and `DPARAM.FOR` have been copied to the default directory on a volume too. They, the
+objects, and the image may instead all be on the host, with the data on a volume named by the logical
+names `DINDX` and `DTEXT`. SAVE then reports that it can't reach its file, since a running program's
+files are on volumes (section 14.7).
+
+`/CONT=40` is needed: three of its statements have more than 19 continuation lines. Scripted games
+printed the same lines on a gfortran build of the same source, some 48,000 lines over 22 games, and
+one game prints the same bytes in every mode of govax, paging on and off, with and without the
+optimizer, on a volume and from the host.
+
+**Running on VMS.** The compiler's output is MACRO-32, and FTNRTL's sources are too, so a program
+compiled by govax runs on a real VMS with no FORTRAN compiler there. Take the program's `.MAR` file,
+FTNRTL's `.MAR` files, and `ftnrtl.opt` to the VAX. There, assemble FTNRTL's modules as in
+[section 14.6](#146-ftnrtl-the-run-time-library), and link them without `/NOSYSLIB`, since VMS's LINK
+finds LIBRTL and MTHRTL in IMAGELIB. Make sure no logical name `FTNRTL` is defined at that point: VMS's
+LINK would take it for the options file. VMS's LINK has to be told about the library, in an options
+file (here `PROG.OPT`) holding the line `FTNRTL/SHAREABLE`:
+
+```text
+$ LINK/SHAREABLE=FTNRTL FTNRTL/OPTIONS
+$ DEFINE FTNRTL DEV:[DIR]FTNRTL.EXE
+$ MACRO PROG
+$ LINK PROG,PROG/OPTIONS
+$ RUN PROG
+```
+
+VMS 7.1 did this for every program in govax's `testdata/fortran` directory, compiled both with and
+without the optimizer, with no message from its MACRO or LINK, and for DUNGEON, whose log of a game, a
+save, and a restore is the same to the byte as govax's. The programs print what they print on govax,
+but for a program using `$GETCHN`, which govax doesn't have; SECNDS within a second of its argument, by
+timing; and the last bits of `OTS$` negative powers and MTHRTL's complex functions.
+`testdata/ftn86/README.md` has the procedure, which the tests hold to VMS's log.
+
 ## 15. Appendices
 
 ### Appendix A: System services
@@ -6388,8 +6475,8 @@ left.
 
 The main differences, gathered from the rest of the manual:
 
-- No VMS boot, executive, or compilers; MACRO-32 is the only language you
-  can build in (section 1).
+- No VMS boot, executive, or compilers; MACRO-32 and govax's own FORTRAN are
+  the languages you can build in (sections 1 and 14).
 - One user, `SYSTEM`, with all privileges; no login, batch, print
   queues, networking, or clusters.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
@@ -6423,6 +6510,8 @@ difference in instruction behavior.
 - `docs/DEVIATIONS.md`: known differences from the VAX architecture and
   from VMS.
 - `docs/PERFORMANCE.md`: how govax was profiled and made faster.
+- `docs/FORTRAN-INTERNALS.md`: a guided tour of the FORTRAN compiler and
+  FTNRTL, for someone who wants to write a compiler for the VAX.
 - `docs/MODE-STACKS.md`, `docs/DISK-DEVICES.md`, `docs/RMS-MACROS.md`,
   `docs/DEBUG-RECORDS.md`: notes on particular subsystems.
 - DIGITAL's manuals: the *VAX Architecture Reference Manual*, the *VAX
