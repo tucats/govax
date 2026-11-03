@@ -8,6 +8,11 @@ skip without it. Only what govax adds is here, and none of it quotes the game.
 | File | What it is |
 | ---- | ---------- |
 | `vmssubr.for` | ITIME, which VAX FORTRAN doesn't have. The kit's own VMSSUBR.FOR supplied it, and is missing from this copy. |
+| `fixtime.for` | IDATE and ITIME at a fixed moment, compiled as `GAME.F+FIXTIME.FOR`, so the game's random numbers repeat: its seed is made from both. |
+| `game.in` | The moves `TestDungeonMilestone` plays: a walk by hand, then `randgame.py 101 500 gdt`'s moves. |
+| `gfortran/compare.py` | Plays scripts on gfortran's and govax's builds of the kit, and compares every line. Run it after a change that alters the test's digest, which it also prints (`--sha`). |
+| `gfortran/randgame.py` | Writes a random game, to find what a person's game wouldn't. |
+| `gfortran/gfsubr.f` | gfortran's IDATE, ITIME, and RAN (MTH$RANDOM's manual's generator). |
 
 To build it by hand, from a directory holding the kit, in govax's console:
 

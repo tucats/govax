@@ -130,10 +130,10 @@ func TestFortranDungeonBothWays(t *testing.T) {
 
 // dungeonConsole is a console whose default directory is on a volume large enough
 // for DUNGEON, DUA3:[000000].
-func dungeonConsole(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
+func dungeonConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *bytes.Buffer) {
 	t.Helper()
 
-	d, c, buf := shareFindConsole(t, false)
+	d, c, buf := shareFindConsole(t, paging)
 
 	path := filepath.Join(t.TempDir(), "dungeon.dsk")
 	if err := c.cmd().InitializeContainer(path, 60000, "DUNGEON", 0, "RD54"); err != nil {
@@ -154,7 +154,7 @@ func dungeonConsole(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 func playDungeon(t *testing.T, dir, kit, qualifier, input string) (string, runCounts) {
 	t.Helper()
 
-	d, c, buf := dungeonConsole(t)
+	d, c, buf := dungeonConsole(t, false)
 
 	create := func(name string, kind rms.RecordKind, records [][]byte) {
 		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA3:[000000]" + name}, kind, records); err != nil {

@@ -32,9 +32,9 @@
 ; on SYS$OUTPUT: may be written, and read only at a terminal; one on
 ; SYS$INPUT: may be read and, as on VMS, written too (a program may write
 ; unit 5 and read unit 6 at a terminal, as DUNGEON does; where SYS$INPUT is a
-; procedure, RMS refuses the write). Each has a FAB of its own, a $CREATE of
-; a process-permanent file, which opens no new file but gives the FAB indirect
-; access to the one the process has. A record written without a carriage
+; procedure, RMS refuses the write). Each has a FAB of its own, and opening it on
+; a process-permanent file opens no new file but gives the FAB indirect access
+; to the one the process has. A record written without a carriage
 ; return ($) is RMS's to remember, for whichever unit writes next.
 ;
 ; A statement's records are in the unit's buffer, as long as its record can
@@ -430,9 +430,12 @@ EXIT_DECLARED:	.LONG	0
 ; FTN$$UNIT_OPEN(block, read)
 ;
 ; Connects a unit with no OPEN, if it isn't yet, for its first statement,
-; a READ if read (by value) is 1: a READ finds a file, and a WRITE makes one
-; (a unit on SYS$INPUT: or SYS$OUTPUT: is a $CREATE either way, of a
-; process-permanent file). With read 2 it is for ENDFILE, which makes one with
+; a READ if read (by value) is 1: a READ finds a file, and a WRITE makes one.
+; A unit on SYS$INPUT: follows the rule too, as VMS's library does (docs/PHASE-86):
+; on a process-permanent file either gives the FAB indirect access to it, and with
+; SYS$INPUT defined as a file, DEFINE/USER SYS$INPUT DATA.DAT, a READ must read that
+; file, not make a new version of it. A unit on SYS$OUTPUT: is a $CREATE either way,
+; so a READ of one reaches the file it's writing. With read 2 it is for ENDFILE, which makes one with
 ; no carriage control and leaves the unit's form to its next statement. With 4
 ; added it is for an unformatted statement, and the unit is as VMS's library
 ; connects one (testdata/for81's #508): unformatted, segmented, with no
@@ -455,8 +458,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVB	#1,UB_SEGMENTED(R2)
 	MOVL	#DEFAULT_SEG,UB_SIZE(R2)
 5$:	BLBC	8(AP),10$
-	TSTL	UB_KIND(R2)
-	BNEQ	10$
+	CMPL	UB_KIND(R2),#K_OUTPUT
+	BEQL	10$
 	$OPEN	FAB=R3
 	BRB	20$
 10$:	$CREATE	FAB=R3

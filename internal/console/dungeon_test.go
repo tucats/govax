@@ -1,6 +1,9 @@
 package console
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"slices"
@@ -8,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 )
@@ -78,7 +82,7 @@ func dungeonSources(t *testing.T) map[string]string {
 func TestDungeonCompiles(t *testing.T) {
 	sources := dungeonSources(t)
 
-	d, c, buf := dungeonConsole(t)
+	d, c, buf := dungeonConsole(t, false)
 
 	for host, name := range sources {
 		data, err := os.ReadFile(host)
@@ -170,25 +174,7 @@ func TestDungeonCompiles(t *testing.T) {
 
 	t.Run("host", func(t *testing.T) {
 		dir := t.TempDir()
-
-		for host, name := range sources {
-			data, err := os.ReadFile(host)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
-				t.Fatal(err)
-			}
-
-			// The source's INCLUDE names it in lower case, which a case-sensitive
-			// host file system tells apart.
-			if name == "DPARAM.FOR" {
-				if err := os.WriteFile(filepath.Join(dir, "dparam.for"), data, 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
+		copyDungeonKit(t, sources, dir)
 
 		c, buf := newTestConsole(t)
 		c.Paths = respath.New(nil, bootdata.FS)
@@ -256,7 +242,7 @@ func TestDungeonRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, c, buf := dungeonConsole(t)
+	d, c, buf := dungeonConsole(t, false)
 
 	run := func(t *testing.T, command string) {
 		t.Helper()
@@ -331,23 +317,7 @@ func TestDungeonRuns(t *testing.T) {
 
 	t.Run("host", func(t *testing.T) {
 		work := t.TempDir()
-
-		for host, name := range sources {
-			data, err := os.ReadFile(host)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if err := os.WriteFile(filepath.Join(work, name), data, 0o644); err != nil {
-				t.Fatal(err)
-			}
-
-			if name == "DPARAM.FOR" {
-				if err := os.WriteFile(filepath.Join(work, "dparam.for"), data, 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
+		copyDungeonKit(t, sources, work)
 
 		data, err := os.ReadFile(vmssubr)
 		if err != nil {
@@ -358,18 +328,7 @@ func TestDungeonRuns(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// A new console: one with no default directory on a volume, whose bare names
-		// are host files, and with the volume only by its logical names.
-		hc, hbuf := newTestConsole(t)
-		hc.Paths = respath.New(nil, bootdata.FS)
-		hd := NewDispatcher(hc, loadEvaxGrammar(t), nil)
-		installPlainDebugger(hc)
-
-		if err := hd.Console.RunHostProcedure("vax.init", hd.Dispatch); err != nil {
-			t.Fatal(err)
-		}
-
-		mountFreshContainerSized(t, hc, "DUA3:", 60000)
+		hd, hc, hbuf := dungeonHostConsole(t, false)
 
 		d, c, buf = hd, hc, hbuf
 		buf.Reset()
@@ -385,6 +344,59 @@ func TestDungeonRuns(t *testing.T) {
 	})
 }
 
+// copyDungeonKit copies what a compilation reads into the host directory dir. The
+// source's INCLUDE names its file in lower case, which a case-sensitive host file
+// system tells apart.
+func copyDungeonKit(t *testing.T, sources map[string]string, dir string) {
+	t.Helper()
+
+	for host, name := range sources {
+		data, err := os.ReadFile(host)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		if name == "DPARAM.FOR" {
+			if err := os.WriteFile(filepath.Join(dir, "dparam.for"), data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+// dungeonHostConsole is a console with no default directory on a volume, whose bare
+// names are host files, and with a volume large enough for the game's data on DUA3:,
+// reached only by name.
+func dungeonHostConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *bytes.Buffer) {
+	t.Helper()
+
+	if paging {
+		withSettings(t, map[string]string{machine.PagingSetting: "true"})
+	}
+
+	c, buf := newTestConsole(t)
+	c.Paths = respath.New(nil, bootdata.FS)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	installPlainDebugger(c)
+
+	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
+		t.Fatal(err)
+	}
+
+	if (c.Mem.Paging() != nil) != paging {
+		t.Fatalf("paging is %v, want %v", c.Mem.Paging() != nil, paging)
+	}
+
+	mountFreshContainerSized(t, c, "DUA3:", 60000)
+	buf.Reset()
+
+	return d, c, buf
+}
+
 // mountFreshContainerSized mounts a new volume of the given blocks on device.
 func mountFreshContainerSized(t *testing.T, c *Console, device string, blocks uint32) {
 	t.Helper()
@@ -396,5 +408,132 @@ func mountFreshContainerSized(t *testing.T, c *Console, device string, blocks ui
 
 	if err := c.cmd().Mount(device, path, true); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// dungeonGameSHA is the SHA-256 of what DUNGEON prints playing testdata/dungeon86's
+// game.in. The game's text can't be kept here, so its digest stands for it. Before it
+// was recorded, the same game on gfortran's build of the same source printed the same
+// (testdata/dungeon86/gfortran/compare.py; its --sha option prints this). A change here
+// means the program's behavior changed: run compare.py to see whether it's still right.
+const dungeonGameSHA = "a4e1c720a3c32d67ad40110986492a42192101fb6f68106d3d8ca1a2a23c0f26"
+
+// TestDungeonMilestone is the FORTRAN program's milestone, its subtask 3: DUNGEON built by
+// its own commands and playing a scripted game, on volume files and from host files, in
+// both paging modes, with and without the optimizer, printing the same every time. On a
+// volume a game is also saved, and restored by another run. fixtime.for fixes the seed.
+func TestDungeonMilestone(t *testing.T) {
+	sources := dungeonSources(t)
+	kit := filepath.Join("..", "..", "testdata", "dungeon86")
+
+	dir := dungeonSource()
+
+	game, err := filepath.Abs(filepath.Join(kit, "game.in"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fixtime, err := filepath.Abs(filepath.Join(kit, "fixtime.for"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, paging := range []bool{false, true} {
+		for _, mode := range optimizerModes {
+			for _, host := range []bool{false, true} {
+				name := map[bool]string{false: "volume", true: "host"}[host] + "/" +
+					map[bool]string{false: "nopaging", true: "paging"}[paging] + "/" + mode.name
+
+				t.Run(name, func(t *testing.T) {
+					var (
+						d   *Dispatcher
+						c   *Console
+						buf *bytes.Buffer
+					)
+
+					run := func(command string) {
+						t.Helper()
+						shareFindRun(t, d, command)
+
+						if out := buf.String(); out != "" {
+							t.Fatalf("%s said: %.300s", command, out)
+						}
+					}
+
+					if host {
+						work := t.TempDir()
+						copyDungeonKit(t, sources, work)
+
+						data, err := os.ReadFile(fixtime)
+						if err != nil {
+							t.Fatal(err)
+						}
+
+						if err := os.WriteFile(filepath.Join(work, "FIXTIME.FOR"), data, 0o644); err != nil {
+							t.Fatal(err)
+						}
+
+						d, c, buf = dungeonHostConsole(t, paging)
+						t.Chdir(work)
+					} else {
+						d, c, buf = dungeonConsole(t, paging)
+
+						for host, name := range sources {
+							run(`COPY/QUIET "` + host + `"/HOST ` + name)
+						}
+
+						run(`COPY/QUIET "` + fixtime + `"/HOST FIXTIME.FOR`)
+					}
+
+					run(`COPY/QUIET "` + filepath.Join(dir, "dindx") + `"/HOST DUA3:[000000]DINDX.DAT`)
+					run(`COPY/QUIET "` + filepath.Join(dir, "dtext") + `"/HOST DUA3:[000000]DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80`)
+					run(`COPY/QUIET "` + game + `"/HOST DUA3:[000000]GAME.IN`)
+
+					// As in dungeonCompile, but for GAME.F's having FIXTIME's IDATE.
+					qualifiers := "FORT/NOCHECK/CONT=40" + mode.qualifier + " "
+					run(qualifiers + "DUNGEON.F,GDT.F,PARSER.F,SUBR.F,GAME.F+FIXTIME.FOR")
+					run(qualifiers + "ROOMS.F,VERBS.F,OBJECTS.F,TIMEFNC.F")
+					run(dungeonAssemble)
+					run("LINK DUNGEON,GAME,GDT,PARSER,SUBR,ROOMS,VERBS,OBJECTS,TIMEFNC")
+
+					if host {
+						run("DEFINE/NOLOG DINDX DUA3:[000000]DINDX.DAT")
+						run("DEFINE/NOLOG DTEXT DUA3:[000000]DTEXT.DAT")
+					}
+
+					// The moves come from a file, so nothing is left to reach DCL.
+					run("DEFINE/USER_MODE/NOLOG SYS$INPUT DUA3:[000000]GAME.IN")
+
+					shareFindRun(t, d, "RUN DUNGEON")
+
+					out := buf.String()
+					buf.Reset()
+
+					sum := sha256.Sum256([]byte(out))
+
+					if got := hex.EncodeToString(sum[:]); got != dungeonGameSHA {
+						t.Errorf("the game printed %d bytes, SHA-256 %s, want %s", len(out), got, dungeonGameSHA)
+					}
+
+					if host {
+						return
+					}
+
+					// Saved here and restored by another run. Each ends by showing the
+					// score and moves, the restore not being a move.
+					c.In = strings.NewReader(dungeonSaveGame)
+					saved := shareRun(t, d, buf, "DUNGEON")
+					checkDungeonRun(t, saved, 3)
+
+					c.In = strings.NewReader(dungeonRestoreGame)
+					restored := shareRun(t, d, buf, "DUNGEON")
+					checkDungeonRun(t, restored, 2)
+
+					if got, want := lastLines(restored, 4), lastLines(saved, 4); got != want {
+						t.Errorf("the restored game ends:\n%s\nand the saved one:\n%s", got, want)
+					}
+				})
+			}
+		}
 	}
 }

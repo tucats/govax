@@ -1,6 +1,6 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtasks 1 and 2 done 2026-11-03). Needs every earlier phase of the
+**Status:** in progress (subtasks 1 to 3 done 2026-11-03). Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
 plan.md`.
 
@@ -105,9 +105,6 @@ or text.
 
 ## Open questions
 
-- **A scripted game:** the test needs a fixed sequence of moves whose
-  output doesn't depend on the random seed (IDATE and ITIME seed RAN),
-  or a way to fix the seed (a logical name the test's ITIME reads).
 - **Whether the VMS round is wanted**, and on which volume.
 
 ## Subtasks (provisional)
@@ -115,7 +112,7 @@ or text.
 1. **DUNGEON compiled** (done 2026-11-03): every source through FORTRAN and MACRO with no
    message; whatever it finds missing is fixed in subtasks of its own.
 2. **DUNGEON linked and run** (done 2026-11-03), with its ITIME and its data files.
-3. **The milestone test** in every mode, with a scripted game.
+3. **The milestone test** (done 2026-11-03) in every mode, with a scripted game.
 4. **The VMS round** (optional): exchange volume, procedure, results.
 5. **The manual chapter.**
 6. **FORTRAN-INTERNALS.md finished.**
@@ -185,4 +182,38 @@ or text.
     with a procedure's rule, the prompt an underscore and the usual one. CTRL/C or CTRL/Z
     drops what's held. A subprocess's DCL does the same (`subprocessCLI.nextLine`). The
     Ctrl/Y level's prompt doesn't.
+- **2026-11-03, subtask 3:** the milestone test, `TestDungeonMilestone`: DUNGEON built by its
+  commands and playing `testdata/dungeon86/game.in`, on a volume and from the host, with paging
+  on and off, with and without the optimizer, 8 runs printing one SHA-256; on a volume a game is
+  also saved and restored. The author accepted a digest, since the game's text can't be kept.
+  - **Why the digest can be trusted: gfortran.** The author installed gfortran during this
+    subtask, so a digest needn't rest on reading a transcript.
+    `testdata/dungeon86/gfortran/compare.py` builds the same source with gfortran (a scratch copy,
+    each patch only saying in its dialect what VAX FORTRAN says in its own) and with govax, plays a
+    script on both, and compares every line, normalizing only what gfortran does with column 1. RAN
+    is MTH$RANDOM's manual's generator there, so combat and the thief follow the same numbers.
+    `randgame.py` writes random games, whose debugging-tool stretches turn death off, move the
+    player to any room, hand over any object, and show its tables, octal ones among them.
+    **Result: no line differed**, in 22 games, the longest 3,666 lines typed, about 48,000 lines
+    printed in all, and 5 of them again under `/NOOPTIMIZE`. Both compilers' subscript checks
+    (`/CHECK=BOUNDS`, `-fcheck=bounds`) ran four of the games with nothing to report. So the compiler, FTNRTL, MTHRTL,
+    and RMS agree with another compiler on a real program, which is more than the plan hoped for:
+    Phase 74's review had nothing to compare our run-time output with.
+  - **The seed was the date too.** `game.f` makes the seed from IDATE and ITIME, so Phase 84's
+    fixed ITIME alone gave one game per day, which a digest can't take.
+    `testdata/dungeon86/fixtime.for` has both, compiled as `GAME.F+FIXTIME.FOR` so the file's own
+    IDATE wins over the system subroutine, and `vmssubr.for` stays the real ITIME that
+    `TestDungeonRuns` plays.
+  - **A bug the input redirection found.** `DEFINE/USER SYS$INPUT file` then `RUN` read nothing, and
+    made a new, empty version of the input: FTN$$UNIT_OPEN did a `$CREATE` for every unit on
+    SYS$INPUT:. Phase 72 had seen FORRTL `$CREATE` it, on a program whose first statement wrote it.
+    Asked with `SET DEBUG RMS`, FORRTL's first READ is a `$OPEN`, whether SYS$INPUT is a file, the
+    terminal, or a procedure (a `$PARSE` before it, which we don't need). FTNRTL now does the same.
+    A unit on SYS$OUTPUT: stays a `$CREATE`, so a READ of one gets ERRDURREA as
+    `TestFortranReadOutputFile` wants; FORRTL wasn't asked about that. `TestFortranReadInputFile`.
+  - **What looked like bugs and weren't.** A game that reaches the end of its input loops: DUNGEON's
+    `END=` tries again, and on gfortran a second read past the end is fatal, so the two only differ
+    there, and a game in the echo room can't even QUIT. The volume damage after that (an index file
+    inconsistency) was the harness's, killing govax before it dismounted. Without a file, `>` ends
+    its line where a terminal read does; with one the next record starts a line, as it should.
 

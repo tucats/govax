@@ -215,3 +215,65 @@ func TestFortranReadOutputFile(t *testing.T) {
 		t.Errorf("RDOUT.DAT holds %q, want %q", got, want)
 	}
 }
+
+// TestFortranReadInputFile: a program's first READ of unit 5, with SYS$INPUT defined as a
+// file, reads that file, as VMS's library does (docs/PHASE-86 - FORTRAN milestone.md): a
+// $OPEN, not the $CREATE a first WRITE does, which would make a new, empty version of it.
+// ACCEPT reaches SYS$INPUT too, and FOR005 is unit 5's own name for it.
+func TestFortranReadInputFile(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	source := "      PROGRAM RDIN\n" +
+		"      CHARACTER*20 L\n" +
+		"   10 READ (5,'(A)',END=20) L\n" +
+		"      WRITE (6,'(1X,A)') L\n" +
+		"      GO TO 10\n" +
+		"   20 CONTINUE\n" +
+		"      END\n"
+	accept := "      PROGRAM ACIN\n" +
+		"      CHARACTER*20 L\n" +
+		"      ACCEPT '(A)', L\n" +
+		"      WRITE (6,'(1X,A)') L\n" +
+		"      END\n"
+
+	for name, text := range map[string]string{"RDIN.FOR": source, "ACIN.FOR": accept, "IN.TXT": "ONE\nTWO\n"} {
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name},
+			rms.TextRecords, splitSource(text)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, command := range []string{"FORTRAN RDIN,ACIN", "MACRO RDIN,ACIN", "LINK RDIN", "LINK ACIN"} {
+		shareFindRun(t, d, command)
+	}
+
+	if out := buf.String(); out != "" {
+		t.Fatalf("building said: %s", out)
+	}
+
+	for _, name := range []string{"SYS$INPUT", "FOR005"} {
+		shareFindRun(t, d, "DEFINE/USER_MODE/NOLOG "+name+" IN.TXT")
+		shareFindRun(t, d, "RUN RDIN")
+
+		if out := buf.String(); out != "ONE                 \nTWO                 \n" {
+			t.Errorf("with %s, it printed %q", name, out)
+		}
+
+		buf.Reset()
+	}
+
+	shareFindRun(t, d, "DEFINE/USER_MODE/NOLOG SYS$INPUT IN.TXT")
+	shareFindRun(t, d, "RUN ACIN")
+
+	if out := buf.String(); out != "ONE                 \n" {
+		t.Errorf("ACCEPT printed %q", out)
+	}
+
+	// No READ made a new version of what it read.
+	buf.Reset()
+	shareFindRun(t, d, "DIRECTORY IN.TXT")
+
+	if out := buf.String(); !strings.Contains(out, "IN.TXT;1") || strings.Contains(out, "IN.TXT;2") {
+		t.Errorf("the input file is now:\n%s", out)
+	}
+}
