@@ -184,6 +184,15 @@ func ftnrtlBuild(t *testing.T, d *Dispatcher, c *Console) {
 		t.Fatal(err)
 	}
 
+	checkRebuiltFTNRTL(t, built)
+}
+
+// checkRebuiltFTNRTL fails t unless built, an FTNRTL.EXE built from
+// FTNRTL's sources with govax's MACRO and LINK, is the built-in image but
+// for the link time, the linker's name, and the modules' creation times.
+func checkRebuiltFTNRTL(t *testing.T, built []byte) {
+	t.Helper()
+
 	builtin, _ := ftnrtl.Image(ftnrtl.Name)
 	if len(built) != len(builtin) {
 		t.Fatalf("the commands' FTNRTL is %d bytes, the built-in one %d", len(built), len(builtin))

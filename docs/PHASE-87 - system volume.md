@@ -430,7 +430,7 @@ recommendation:
    file, and no attempt to open one, when the volume is read-only, with
    SHOW MEMORY saying the default page file wasn't used (read-only); SHOW
    MEMORY/FILES naming it.
-8. **The libraries:** MACRO, FORTRAN, LINK, and RUN using SYS$LIBRARY's
+8. (done 2026-11-03) **The libraries:** MACRO, FORTRAN, LINK, and RUN using SYS$LIBRARY's
    and SYS$SHARE's files from STARTUP.COM's names; BUILDFTN.COM building
    and installing FTNRTL.EXE (a new version in SYS$SHARE) from the sources,
    and a program linked and run against the rebuilt one (`TestFTNRTL`'s
@@ -789,3 +789,44 @@ recommendation:
     read-only; a configured file instead), and `cmd/govax`'s
     `TestRun_systemPageFile` (the default RD54 and size, `--stats` and SHOW
     MEMORY/FILES).
+- **2026-11-03** — Subtask 8 done: the libraries.
+  - **Nothing new was needed in the commands.** STARTUP.COM's SYS$LIBRARY
+    and SYS$SHARE (subtask 5) are what MACRO (`openStarlet`), FORTRAN
+    (`defaultLibraries`), LINK (`ftnrtlSource`, through the image locator),
+    and RUN (the locator) already looked through, ahead of the copies built
+    into govax. The subtask is the tests that show it, and the build
+    procedures run.
+  - **BUILDFTN.COM** runs as written: MACRO of each module in SYS$SOURCES,
+    LINK/SHAREABLE by FTNRTL.OPT, the image copied to SYS$SHARE as
+    `FTNRTL.EXE;2`, the objects and the built image deleted, the default
+    directory put back. The new version is the built-in image but for the
+    link time, the linker's name, and the modules' creation times (the same
+    check as `TestFTNRTL`'s, now `checkRebuiltFTNRTL`). A program linked
+    against version 1 runs with version 2, the locator taking the highest
+    version, and so does one linked again.
+  - **BUILDSTARLET.COM** runs as written, and its library, `;2` in
+    SYS$LIBRARY, is byte for byte the one govax builds from the same two
+    sources at the time LIBRARY used: LIBRARY takes the time once per
+    command, for the library's creation and revision and every module's
+    insertion, so `bootdata.BuildStarletAt` (`BuildStarlet` at a given
+    time) remakes it exactly. Nothing about it is unconfirmed. (Masking the
+    times byte by byte doesn't work: a module header can straddle a block,
+    the next block's link word in the middle of its time.)
+  - **Rebuilt files and the refresh.** A rebuilt FTNRTL.EXE or STARLET.MLB
+    no longer matches the manifest, so later refreshes keep it as the
+    user's (Decision 3), with SYSKEPT only when a later govax brings a new
+    copy. BUILDFTN.COM's comments say how to go back.
+  - **COPY's message.** The procedures' COPY shows `%COPY-S-COPIED`, as
+    govax's COPY always has without `/QUIET`; VMS's COPY says nothing
+    without `/LOG`. Left as it is: that's COPY's own long-standing choice,
+    not this phase's.
+  - **Tests** (`internal/console/syslibrary_test.go`, each on a booted
+    system volume): `TestSystemFTNRTL` (both paging modes: FTNCALL against
+    `FTNRTL.EXE;1`, BUILDFTN, the new version checked, nothing left in
+    SYS$SOURCES, the old and the relinked program on `;2`),
+    `TestSystemMacroLibrary` (BUILDSTARLET's library held to govax's; a
+    program using a macro MACRO can't find, then STARLET.MAR edited with
+    it, BUILDSTARLET again, and the program assembled, linked, and run),
+    and `TestSystemFortranLibrary` (an INCLUDE of a module FORSYSDEF.TLB
+    lacks, the module added there by LIBRARY/TEXT, then the program
+    compiled, built, and run against SYS$SHARE's FTNRTL).

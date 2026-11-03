@@ -635,7 +635,12 @@ never had.
   `SYS$SYSTEM:DEFAULT.ROM`; and subtask 7 (2026-11-03) the page file's default, the system volume's
   `[SYSTEM.SYSEXE]PAGEFILE.SYS` when no `vax.sysgen.paging.file` is named (`corevms/pagefile.go`'s
   `pageFileName`, from the mount table; `sysvol.PageFile`), none and no attempt at one when the volume
-  is read-only, SHOW MEMORY saying why (`PageFileReport.Unused`).
+  is read-only, SHOW MEMORY saying why (`PageFileReport.Unused`); and
+  subtask 8 (2026-11-03) the libraries: MACRO, FORTRAN, LINK, and RUN
+  reading SYS$LIBRARY's and SYS$SHARE's files on the volume, BUILDFTN.COM
+  and BUILDSTARLET.COM run, their files new versions there (the macro
+  library byte for byte `bootdata.BuildStarletAt`'s at LIBRARY's time;
+  `internal/console/syslibrary_test.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

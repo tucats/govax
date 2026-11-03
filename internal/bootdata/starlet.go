@@ -51,12 +51,19 @@ var starletTime = time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)
 // would: one module per macro, squeezed. A warning from the librarian is
 // an error here, since govax's own source should draw none.
 func BuildStarlet(src string) ([]byte, error) {
+	return BuildStarletAt(src, vmsdef.Time(starletTime))
+}
+
+// BuildStarletAt is BuildStarlet with when, a VMS time, as the library's
+// creation, revision, and insertion time: what LIBRARY/CREATE/MACRO makes
+// of the same source at that time (docs/PHASE-87 - system volume.md,
+// subtask 8, holds BUILDSTARLET.COM's library to it).
+func BuildStarletAt(src string, when uint64) ([]byte, error) {
 	b, err := lbr.Create(lbr.TypeMacro)
 	if err != nil {
 		return nil, err
 	}
 
-	when := vmsdef.Time(starletTime)
 	b.Created, b.Updated = when, when
 
 	lines := strings.Split(strings.TrimSuffix(strings.ReplaceAll(src, "\r\n", "\n"), "\n"), "\n")
