@@ -3419,7 +3419,12 @@ $MOUN
         <device>        The device name to attach the container to, such
                         as DUA0.  A trailing colon is optional.  A logical
                         name is translated to the device it names; a
-                        leading underscore (_DUA0:) prevents that.
+                        leading underscore (_DUA0:) prevents that.  A
+                        controller with no unit number (DUA) is its first
+                        unit with nothing mounted on it, which the
+                        %MOUNT-I-MOUNTED message names: with the system
+                        volume on DUA0, MOUNT DUA "foo.dsk" mounts it on
+                        DUA1.
 
         <file>          The path to the disk-image container file on the
                         native file system.  If the native file system is

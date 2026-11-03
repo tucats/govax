@@ -1237,8 +1237,11 @@ DISMOUNT device
 ```
 
 `MOUNT` attaches a container to a device (creating the device if it's
-new). `DISMOUNT` writes pending changes and detaches it; it refuses a
-volume with files open (a process still using them, say).
+new). A controller with no unit number, `MOUNT DUA "file"`, picks that
+controller's first unit with nothing mounted on it, and the
+`%MOUNT-I-MOUNTED` message names it. `DISMOUNT` writes pending changes
+and detaches it; it refuses a volume with files open (a process still
+using them, say).
 
 #### SHOW DEVICES
 

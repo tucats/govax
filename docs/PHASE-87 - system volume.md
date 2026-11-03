@@ -271,8 +271,9 @@ the user can see and change them.
 configured device with no unit number (`DUA`, `DUB`, `MUA`) means the next
 unit of that controller not defined or mounted, from 0, settled when the
 volume is mounted. It applies to `vax.default.system.device`,
-`vax.default.volume.device`, `--system-device`, and `--mount`/`--mount-write`
-(`--mount DUA=work.dsk`). The system volume is mounted first, so with the
+`vax.default.volume.device`, `--system-device`, `--mount`/`--mount-write`
+(`--mount DUA=work.dsk`), and the MOUNT command (`MOUNT DUA "work.dsk"`;
+the author, after subtask 3). The system volume is mounted first, so with the
 defaults it is DUA0, and **`vax.default.volume.device`'s default becomes
 `DUA`**: DUA1 beside it. A configuration naming DUA0 for the work volume
 gets a clear message (`%MOUNT-W-NODEFAULT, ...: DUA0: is the system
@@ -559,3 +560,9 @@ recommendation:
     the lock let go, initialized, not used, DISMOUNT refused,
     `ResolveUnit`, the default volume beside it) and
     `cmd/govax/sysvolume_test.go` (the options end to end, `--mount DUA`).
+- **2026-11-03** — The author asked (after subtask 3) for the rule in the
+  MOUNT command too: `MountCommand` resolves its device with `ResolveUnit`,
+  so `MOUNT DUA "foo.dsk"` mounts on the first DUA unit with nothing on it,
+  and `%MOUNT-I-MOUNTED` names the unit (`TestMountCommandNextUnit`).
+  `Context.Mount` itself takes the device as given; its other callers
+  resolve first. HELP MOUNT and MANUAL.md's MOUNT say so.

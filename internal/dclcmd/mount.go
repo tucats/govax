@@ -109,7 +109,13 @@ func (c *Context) Mount(device, path string, write bool) error {
 //	%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
 //
 // /NOLOG silences only that message; a failed mount is still reported.
+//
+// A device given as a controller alone (MOUNT DUA "foo.dsk") is that
+// controller's lowest unit with nothing mounted on it (ResolveUnit), and
+// the message names the unit chosen.
 func (c *Context) MountCommand(device, path string, write, log bool) error {
+	device = c.ResolveUnit(device)
+
 	if err := c.Mount(device, path, write); err != nil {
 		return err
 	}

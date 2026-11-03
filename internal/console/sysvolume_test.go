@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -382,5 +383,37 @@ func TestDefaultVolumeBesideSystem(t *testing.T) {
 
 	if want := "DUA0: is the system volume"; !strings.Contains(buf.String(), want) {
 		t.Errorf("output lacks %q:\n%s", want, buf)
+	}
+}
+
+// TestMountCommandNextUnit checks the MOUNT command's next-free-unit
+// rule: MOUNT DUA "file" mounts on the lowest DUA unit with nothing on
+// it, after the system volume's, and says which.
+func TestMountCommandNextUnit(t *testing.T) {
+	dir := t.TempDir()
+
+	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(dir, "sys.dsk")})
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	for i, label := range []string{"FIRST", "SECOND"} {
+		path := filepath.Join(dir, label+".dsk")
+		if err := c.cmd().InitializeContainer(path, 0, label, 0, "RX50"); err != nil {
+			t.Fatal(err)
+		}
+
+		buf.Reset()
+
+		if err := d.Dispatch(`MOUNT DUA "` + path + `"`); err != nil {
+			t.Fatalf("MOUNT DUA: %v\n%s", err, buf)
+		}
+
+		unit := fmt.Sprintf("DUA%d", i+1)
+		if want := "%MOUNT-I-MOUNTED, " + label + " mounted on _" + unit + ":\n"; buf.String() != want {
+			t.Errorf("output = %q, want %q", buf, want)
+		}
+
+		if got, _ := c.Mounts.VolumeLabel(unit); strings.TrimSpace(got) != label {
+			t.Errorf("%s holds %q, not %s", unit, got, label)
+		}
 	}
 }
