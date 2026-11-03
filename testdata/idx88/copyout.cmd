@@ -394,12 +394,12 @@ COPY DUA5:[000000]Q124.FDL "testdata/idx88/vax/anl/q124.fdl"/HOST/QUIET
 COPY DUA5:[000000]Q125.ANL "testdata/idx88/vax/anl/q125.anl"/HOST/QUIET
 COPY DUA5:[000000]Q125.CHK "testdata/idx88/vax/anl/q125.chk"/HOST/QUIET
 COPY DUA5:[000000]Q125.FDL "testdata/idx88/vax/anl/q125.fdl"/HOST/QUIET
-COPY DUA5:[000000]U126.ANL "testdata/idx88/vax/anl/u126.anl"/HOST/QUIET
-COPY DUA5:[000000]U126.CHK "testdata/idx88/vax/anl/u126.chk"/HOST/QUIET
-COPY DUA5:[000000]U126.FDL "testdata/idx88/vax/anl/u126.fdl"/HOST/QUIET
-COPY DUA5:[000000]U127.ANL "testdata/idx88/vax/anl/u127.anl"/HOST/QUIET
-COPY DUA5:[000000]U127.CHK "testdata/idx88/vax/anl/u127.chk"/HOST/QUIET
-COPY DUA5:[000000]U127.FDL "testdata/idx88/vax/anl/u127.fdl"/HOST/QUIET
+COPY DUA5:[000000]Q126.ANL "testdata/idx88/vax/anl/q126.anl"/HOST/QUIET
+COPY DUA5:[000000]Q126.CHK "testdata/idx88/vax/anl/q126.chk"/HOST/QUIET
+COPY DUA5:[000000]Q126.FDL "testdata/idx88/vax/anl/q126.fdl"/HOST/QUIET
+COPY DUA5:[000000]Q127.ANL "testdata/idx88/vax/anl/q127.anl"/HOST/QUIET
+COPY DUA5:[000000]Q127.CHK "testdata/idx88/vax/anl/q127.chk"/HOST/QUIET
+COPY DUA5:[000000]Q127.FDL "testdata/idx88/vax/anl/q127.fdl"/HOST/QUIET
 COPY DUA5:[000000]U128.ANL "testdata/idx88/vax/anl/u128.anl"/HOST/QUIET
 COPY DUA5:[000000]U128.CHK "testdata/idx88/vax/anl/u128.chk"/HOST/QUIET
 COPY DUA5:[000000]U128.FDL "testdata/idx88/vax/anl/u128.fdl"/HOST/QUIET
@@ -430,7 +430,13 @@ COPY DUA5:[000000]U136.FDL "testdata/idx88/vax/anl/u136.fdl"/HOST/QUIET
 COPY DUA5:[000000]U137.ANL "testdata/idx88/vax/anl/u137.anl"/HOST/QUIET
 COPY DUA5:[000000]U137.CHK "testdata/idx88/vax/anl/u137.chk"/HOST/QUIET
 COPY DUA5:[000000]U137.FDL "testdata/idx88/vax/anl/u137.fdl"/HOST/QUIET
-COPY DUA5:[000000]L138.ANL "testdata/idx88/vax/anl/l138.anl"/HOST/QUIET
-COPY DUA5:[000000]L138.CHK "testdata/idx88/vax/anl/l138.chk"/HOST/QUIET
-COPY DUA5:[000000]L138.FDL "testdata/idx88/vax/anl/l138.fdl"/HOST/QUIET
+COPY DUA5:[000000]U138.ANL "testdata/idx88/vax/anl/u138.anl"/HOST/QUIET
+COPY DUA5:[000000]U138.CHK "testdata/idx88/vax/anl/u138.chk"/HOST/QUIET
+COPY DUA5:[000000]U138.FDL "testdata/idx88/vax/anl/u138.fdl"/HOST/QUIET
+COPY DUA5:[000000]U139.ANL "testdata/idx88/vax/anl/u139.anl"/HOST/QUIET
+COPY DUA5:[000000]U139.CHK "testdata/idx88/vax/anl/u139.chk"/HOST/QUIET
+COPY DUA5:[000000]U139.FDL "testdata/idx88/vax/anl/u139.fdl"/HOST/QUIET
+COPY DUA5:[000000]L140.ANL "testdata/idx88/vax/anl/l140.anl"/HOST/QUIET
+COPY DUA5:[000000]L140.CHK "testdata/idx88/vax/anl/l140.chk"/HOST/QUIET
+COPY DUA5:[000000]L140.FDL "testdata/idx88/vax/anl/l140.fdl"/HOST/QUIET
 DISMOUNT DUA5

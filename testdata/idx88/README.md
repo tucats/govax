@@ -11,7 +11,7 @@ records are our own data, made from a number, so the files can be kept.
 
 | File | What it holds |
 | ---- | ------------- |
-| `idx88.mar` | RMS, 152 cases: key shapes, areas, `$CREATE`'s refusals, growth a step at a time, finding, sequence, changing, locks |
+| `idx88.mar` | RMS, 154 cases: key shapes, areas, `$CREATE`'s refusals, growth a step at a time, finding, sequence, changing, locks |
 | `idx88.com` | Builds and runs it; then ANALYZE/RMS_FILE's report, `/CHECK`, and `/FDL` on every file, three scripted interactive walks, and a save set of the files |
 | `idx88w.dat` | The commands of ANALYZE/RMS_FILE/INTERACTIVE's walks, whose stops print VMS's names for each structure's fields |
 | `def_bkt.mar`, `def_irc.mar`, `def_key.mar`, `def_area.mar`, `def_plg.mar` | One internal definition macro each, `GLOBAL`: its values from the object, no listing (the author's answer 5) |

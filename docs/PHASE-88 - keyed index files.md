@@ -616,3 +616,9 @@ has REV at all.
   author), so nothing ran past LINK: IN4 and BN4 sizes, segments on a type but STG and COL, PAC's 16 bytes, and 255 in
   all. Those cases now poke the fields at run time, and govax's `$XABKEY` makes the same four checks, so the rehearsal
   would have caught them. The five `def_*.obj` came back whole. Whether other sizes (BN2, IN8) have such checks isn't known.
+- **2026-11-03: round 1's second run, and a third to come.** VMS ran all 152 cases with no condition, and `/CHECK` found 0
+  errors in every file but E85, whose `$CREATE` was refused (RMS$_KNM) and left a file with no prolog. The definitions
+  came back, `defined.txt`: 246 names for the buckets, records, keys, areas, and prolog. But `p.put` wrote RAC SEQ, so a record
+  out of order was RMS$_SEQ (247 of them), and the shape, growth, and split cases that wrote out of order made little.
+  `put` now writes by key, a pair of cases sets a load by RAC SEQ beside the same by RAC KEY, and the interactive walks use the paths VMS
+  listed. Seen so far: ROP REV is in VMS 7.1, by Tables 7-3 and 7-4; FLG's compression bits are stored inverted, as Part A read them.

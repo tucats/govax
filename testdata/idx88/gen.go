@@ -299,8 +299,9 @@ func (p *prog) open(name string) { p.call("OPN", "&"+p.text(name), 0) }
 func (p *prog) reopen(n string)  { p.call("OPN", "&"+p.text(n), 1) } // no key report
 func (p *prog) dump(name string) { p.call("DUMPF", "&"+p.text(name)) }
 
-// put writes record n of size bytes in the common layout.
-func (p *prog) put(n, size int) { p.call("PUTN", n, size, 0, 0) }
+// put writes record n of size bytes in the common layout, by key: in sequence a
+// record out of order is RMS$_SEQ, which round 1's first full run found out.
+func (p *prog) put(n, size int) { p.call("PUTN", n, size, 0, 1) }
 
 // putK is put by RAC KEY, with options.
 func (p *prog) putK(n, size int, rop string) { p.call("PUTN", n, size, rop, 1) }
@@ -398,7 +399,7 @@ func cases() *prog {
 	p.kase("helpers on a sequential file", func() {
 		n := "HELPERS.DAT"
 		p.create(n, spec{org: "FAB$C_SEQ", mrs: 120})
-		p.put(1, 80)
+		p.call("PUTN", 1, 80, 0, 0)
 		p.call("PUTS", 2, 5, 1, 0, 100, 0)
 		p.closeF()
 		p.open(n)
@@ -927,6 +928,24 @@ func cases() *prog {
 		}
 		p.closeF()
 		p.dump(seqName)
+	})
+	seqBig := fresh("Q")
+	p.kase("RAC SEQ past several buckets, to set beside the same load by key", func() {
+		k := prim(fP, 8)
+		k.flg = noCmprs
+		p.create(seqBig, spec{mrs: 200, bks: 1, keys: []key{k, alt(1, fA, 8, "DUP")}})
+		p.call("PUTS", 1, 60, 1, 0, 150, 0)
+		p.closeF()
+		p.dump(seqBig)
+	})
+	keyBig := fresh("Q")
+	p.kase("the same load, RAC KEY", func() {
+		k := prim(fP, 8)
+		k.flg = noCmprs
+		p.create(keyBig, spec{mrs: 200, bks: 1, keys: []key{k, alt(1, fA, 8, "DUP")}})
+		p.call("PUTS", 1, 60, 1, 0, 150, 1)
+		p.closeF()
+		p.dump(keyBig)
 	})
 	dseq := fresh("Q")
 	p.kase("RAC SEQ, descending", func() {
@@ -2016,29 +2035,37 @@ func defModule(name string) string {
 // structure's fields.
 const walk = `DOWN
 DOWN
-DOWN AREA
-NEXT
+DOWN AREAS
 NEXT
 UP
-DOWN KEY
+DOWN KEYS
+DOWN INDEX
 DOWN
 NEXT
-DOWN
+UP
+UP
+DOWN DATA
 DOWN
 DOWN BYTES
 UP
 DOWN RRV
 UP
+NEXT
+DOWN
 UP
 NEXT
 UP
 UP
 NEXT
+DOWN INDEX
 DOWN
-DOWN
+UP
+UP
+DOWN DATA
 DOWN
 DOWN
 NEXT
+UP
 UP
 UP
 UP
