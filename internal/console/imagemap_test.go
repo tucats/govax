@@ -90,7 +90,7 @@ func mappedImageConsole(t *testing.T, pfc string) (*console.Console, *console.Di
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
 	if c.Mem.Paging() == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	path := filepath.Join(t.TempDir(), "work.dsk")

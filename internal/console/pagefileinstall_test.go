@@ -5,7 +5,7 @@ import (
 )
 
 // Phase 64's subtask 8 (docs/PHASE-64 - page file.md): the page file is
-// installed as the system starts, after vax.init and before the user's
+// installed as the system starts, after STARTUP.COM and before the user's
 // commands (cmd/govax calls StartPageFile), so its blocks are taken on
 // its volume at once and the volume can't be dismounted, before any page
 // has been written; vax.sysgen.paging.defer keeps the old behavior, the

@@ -71,7 +71,7 @@ func pg63Console(t *testing.T) (func(string) string, func(string) []string) {
 	c, dispatch := wsDispatcher(t)
 
 	if c.Mem.Paging() == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	src, err := os.ReadFile(filepath.Join(pg63Dir, "pg63.mar"))

@@ -17,7 +17,7 @@ import (
 )
 
 // Phase 45's subtask 4: $CREPRC creates a process, on a machine booted
-// as cmd/govax boots it (vax.init), with the scheduler on. The process
+// as cmd/govax boots it (STARTUP.COM), with the scheduler on. The process
 // exists and is computable, but its startup (subtask 5) is pending:
 // these tests look at it without running it. The checks that refuse a
 // request are tested in internal/corevms's creprc_test.go.
@@ -136,7 +136,7 @@ func TestCreprc_subprocess(t *testing.T) {
 		t.Errorf("PCB %+v doesn't start the process in user mode on its own stacks and tables", pcb)
 	}
 
-	// Page tables (128 + 64 pages for vax.init's sizes), 22 pages of
+	// Page tables (128 + 64 pages for STARTUP.COM's sizes), 22 pages of
 	// privileged stacks and guard pages, and the PCB's page.
 	if used := poolFree - sys.S0Pool().FreePages(); used != 128+64+22+1 {
 		t.Errorf("the new process took %d pool pages, want %d", used, 128+64+22+1)

@@ -9,7 +9,7 @@ import "github.com/tucats/govax/internal/vm"
 // nothing to talk to ($CREPRC's input, output, and error, and `NL:` in
 // a DEFINE). Any number of processes may have it assigned at once.
 //
-// The device is defined by vax.init: VMS 7.1 reports NLA0: with class
+// The device is defined by STARTUP.COM: VMS 7.1 reports NLA0: with class
 // DC$_MAILBOX (160), type 3, and DEVCHAR 0C150001, so that is how it is
 // defined, and qio.go's driverFor picks this driver by its type. This file
 // is only the driver.

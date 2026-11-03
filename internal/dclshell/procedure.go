@@ -37,7 +37,7 @@ import (
 // The stack is explicit (Console.levels), not just Go's call stack. The
 // procedure runs synchronously: whoever dispatched "@file" (the prompt,
 // another procedure, TIME, a symbol's value, the debugger's @, cmd/govax
-// running vax.init) gets control back when the procedure ends. The
+// running STARTUP.COM) gets control back when the procedure ends. The
 // commands that act on the current level find it there: EXIT, ON, GOTO,
 // GOSUB, block IF, CALL, and later F$ENVIRONMENT. A level's source keeps
 // its file's records and a cursor, so GOTO moves the cursor (Seek) and
@@ -461,7 +461,7 @@ func (c *Interpreter) RunProcedure(file string, dispatch func(string) error) err
 }
 
 // RunHostProcedure is RunProcedure for a host file, whatever the default
-// device: govax's own startup procedure, vax.init, found through the
+// device: govax's own startup procedure, STARTUP.COM, found through the
 // search path (c.Paths) even when SET DEFAULT is on a volume.
 func (c *Interpreter) RunHostProcedure(file string, dispatch func(string) error) error {
 	return c.procedureCommand(procedureCommand{file: file, host: true}, dispatch)
@@ -1029,7 +1029,7 @@ func procedureNotFound(fe *rms.DCLFileError) error {
 // in the order they're tried: a name with no extension with .COM added
 // (in the name's case), then as given. DCL uppercases a name that isn't
 // quoted, so a name with no lowercase letters is tried in lowercase too,
-// after each of those: "@VAX.INIT" finds vax.init.
+// after each of those: "@STARTUP" finds startup.com.
 func procedureHostNames(name string) []string {
 	names := []string{name}
 	if filepath.Ext(name) == "" {

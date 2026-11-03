@@ -43,7 +43,7 @@ func backup69Round2Govax(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	path := filepath.Join(t.TempDir(), "round2.dsk")

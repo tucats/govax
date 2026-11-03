@@ -1,14 +1,15 @@
 // Command govax is the interactive entry point for the VAX emulator. Its
-// job is toload the DCL grammar, allocate a minimal machine, run vax.init
-// as the real startup script, then prompt for console input.
+// job is to mount the system volume, load the DCL grammar, allocate a
+// minimal machine, run STARTUP.COM as the real startup script, then prompt
+// for console input.
 //
-// File location (console.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
-// other file a console command names) is described in docs/PHASE-15.md's
-// repeatable -path flag, which names directories searched, in order, after
-// the name exactly as given; an embedded copy of the required startup files
+// The system volume (docs/PHASE-87 - system volume.md) holds STARTUP.COM,
+// the grammars and help files, the kernel's sources, and the libraries.
+// Without one, the files are found as docs/PHASE-15.md describes: the
+// name exactly as given, then the directories of the repeatable --path
+// flag, in order; an embedded copy of the required startup files
 // (internal/bootdata) is always the last, implicit search location, so
-// "govax" with no -path flags at all still boots correctly with no
-// testdata/ checkout nearby.
+// "govax" still boots correctly with no testdata/ checkout nearby.
 package main
 
 import (
@@ -40,7 +41,7 @@ import (
 	"golang.org/x/text/message"
 )
 
-// minimumVAXMemory is the minimal machine allocated before vax.init
+// minimumVAXMemory is the minimal machine allocated before STARTUP.COM
 // runs and does the real INIT/VMINIT.
 const minimumVAXMemory = 2048 * 512
 
@@ -126,7 +127,7 @@ func isLimitStop(err error) bool {
 // controlled reader so startup can be exercised deterministically without
 // depending on the test process's own stdin. instructionLimit/timeLimit are
 // -instruction-limit/-time-limit (docs/PHASE-15.md's sub-phase 2), applied
-// only once vax.init's own startup script has finished running — a limit
+// only once STARTUP.COM's own startup script has finished running — a limit
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
@@ -317,7 +318,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	// After that, if we're still running, do a console loop.
 	if c.Running() {
-		// Applied only from here on, not during vax.init's own boot sequence
+		// Applied only from here on, not during STARTUP.COM's own boot sequence
 		// above -- see this function's own doc comment.
 		c.ApplyRunLimits()
 
@@ -769,7 +770,7 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.pfcdefault":     true,
 	"vax.sysgen.virtualpagecnt": true,
 
-	// Read by vax.init (F$CONFIG): the memory's sizes, in pages.
+	// Read by STARTUP.COM (F$CONFIG): the memory's sizes, in pages.
 	"vax.memory.size": true,
 	"vax.memory.p0":   true,
 	"vax.memory.p1":   true,

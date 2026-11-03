@@ -30,7 +30,7 @@ func newTestMachine(t *testing.T) (*Machine, *bytes.Buffer) {
 }
 
 // newBootableMachine is newRunnableMachine's own real-size counterpart,
-// matching vax.init's actual `init ^d8192` / `vminit /p0=2048 /p1=8192
+// matching STARTUP.COM's actual `init ^d8192` / `vminit /p0=2048 /p1=8192
 // /s0=2048 /ksp=20` boot parameters exactly rather than newRunnableMachine's
 // own much smaller, lighter-weight sizing (chosen there purely for the
 // image-load/fixup-only tests that share it, none of which ever run real
@@ -56,7 +56,7 @@ func newBootableMachine(t testing.TB) *Machine {
 }
 
 // runKernelInitialize runs kernel.asm's own EXE$INITIALIZE routine to
-// completion, matching vax.init's own "go exe$initialize" boot step: it
+// completion, matching STARTUP.COM's own "go exe$initialize" boot step: it
 // enables the TXCS/RXCS console-device interrupt-on-ready bits and the
 // interval timer, then fakes a REI down to user mode at IPL 0 "so
 // interrupts will start happening" (kernel.asm's own comment) before

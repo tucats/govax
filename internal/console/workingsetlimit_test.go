@@ -76,7 +76,7 @@ func TestAdjwslWorkingSet(t *testing.T) {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
 	if c.Mem.Paging() == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	env := c.ProcessOne()

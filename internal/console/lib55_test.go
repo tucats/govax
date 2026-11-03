@@ -55,7 +55,7 @@ var expectedLib55Differences = map[string]string{
 
 // runLib55 assembles, links, and runs lib55.mar as lib55.com does on
 // VMS: with LIB55_DISK naming a mounted RD51 volume labeled LIB55 (the
-// exchange volume's twin), NLA0: defined (as vax.init defines it),
+// exchange volume's twin), NLA0: defined (as STARTUP.COM defines it),
 // SYS$LANGUAGE ENGLISH in the system table (as on the VAX: lib55.log),
 // and no host locale.
 func runLib55(t *testing.T) (uint32, string) {
@@ -77,7 +77,7 @@ func runLib55(t *testing.T) (uint32, string) {
 		t.Fatal(err)
 	}
 
-	// LIB55_DISK, and the null device as vax.init defines it.
+	// LIB55_DISK, and the null device as STARTUP.COM defines it.
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 
 	for _, line := range []string{

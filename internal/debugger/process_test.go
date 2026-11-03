@@ -118,7 +118,7 @@ func TestSetProcess(t *testing.T) {
 	}
 }
 
-// bootedSession is a session on a machine booted by vax.init, as
+// bootedSession is a session on a machine booted by STARTUP.COM, as
 // cmd/govax boots one: the microkernel, the devices, and the scheduler.
 func bootedSession(t *testing.T) *session {
 	t.Helper()
@@ -134,7 +134,7 @@ func bootedSession(t *testing.T) *session {
 	db := debugger.Install(c, consoletest.DebugGrammar(t), consoletest.ParseHelp(t, "debug.help"))
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v\n%s", err, out.String())
+		t.Fatalf("STARTUP.COM: %v\n%s", err, out.String())
 	}
 
 	return &session{c: c, d: d, db: db, out: &out}

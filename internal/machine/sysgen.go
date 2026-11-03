@@ -96,7 +96,7 @@ func SysgenNumberKeys() []string {
 }
 
 // ParseSysgenCount reads a count key's text: a positive decimal integer,
-// or %X followed by hex digits, as vax.init's F$INTEGER reads the
+// or %X followed by hex digits, as STARTUP.COM's F$INTEGER reads the
 // vax.memory.* keys. It reports false for anything else.
 func ParseSysgenCount(text string) (uint32, bool) {
 	v, ok := ParseSysgenNumber(text)

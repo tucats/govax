@@ -108,7 +108,7 @@ func startCluster(t *testing.T, name, source string) *clusterRun {
 	})
 
 	if c.Mem.Paging() == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	makePagesFile(t, c)

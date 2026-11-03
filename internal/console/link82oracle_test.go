@@ -72,7 +72,7 @@ func TestLink82Oracle(t *testing.T) {
 		installPlainDebugger(c)
 
 		if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-			t.Fatalf("vax.init: %v", err)
+			t.Fatalf("STARTUP.COM: %v", err)
 		}
 
 		path := filepath.Join(t.TempDir(), "link82.dsk")

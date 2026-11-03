@@ -78,7 +78,7 @@ type Machine struct {
 	paging bool
 
 	// pageFileStarted is set once the system has started (StartPageFile:
-	// vax.init has run), after which each new System installs its page
+	// STARTUP.COM has run), after which each new System installs its page
 	// file as it's made.
 	pageFileStarted bool
 
@@ -121,7 +121,7 @@ type Machine struct {
 
 	// instructionLimit and timeLimit are govax's --instruction-limit and
 	// --time-limit options (SetRunLimits, misc.go). They are held here,
-	// not set on the Engine at once, because the boot script (vax.init)
+	// not set on the Engine at once, because the boot script (STARTUP.COM)
 	// runs the microkernel's own initialization, which the limits mustn't
 	// cut short. They go onto the Engine (cpu.Engine.SetLimits) just
 	// before the command given on govax's command line runs
@@ -164,7 +164,7 @@ type Machine struct {
 	// reference an earlier one's labels (e.g. testdata/asm/hello.asm's
 	// "@#lib$put_output" resolving to internal/bootdata/files/kernel.asm's own
 	// .ENTRY lib$put_output, once kernel.asm has been ASMed first in the
-	// same session) exactly as vax.init's own boot sequence relies on.
+	// same session) exactly as STARTUP.COM's own boot sequence relies on.
 	// Reset (nil, so the next ASM lazily creates a fresh one) by VMInit,
 	// since its symbol table and deposit pointer would otherwise reference
 	// a since-wiped address space.
@@ -509,7 +509,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 	}
 
 	// Then the CLI's (DCL's own SYS$OUTPUT, and its command procedures'
-	// files if it is running some: VMINIT in vax.init).
+	// files if it is running some: VMINIT in STARTUP.COM).
 	if m.Hooks.ProcessOneStarted != nil {
 		m.Hooks.ProcessOneStarted(env)
 	}

@@ -11,7 +11,7 @@ import (
 
 // CommandLineString is any "left over" text from govax's own command line,
 // put here by cmd/govax when it parses its options: the one-shot command,
-// which RunCommandLine runs once vax.init is done. Empty, there is none.
+// which RunCommandLine runs once STARTUP.COM is done. Empty, there is none.
 var CommandLineString string
 
 // RunCommandLine is the text after the image's file name in govax's own
@@ -72,7 +72,7 @@ func scaleCount(n float64) string {
 
 // RunCommandLine runs the one-shot command: the text left on govax's own
 // command line once its options are parsed (CommandLineString). cmd/govax
-// calls it once vax.init has run, as a login command procedure runs before
+// calls it once STARTUP.COM has run, as a login command procedure runs before
 // the command interpreter reads its input (docs/PHASE-50 - DCL command
 // procedures.md): the command is level 0's input, in place of the
 // terminal, and the session ends when it's done. It reports whether there

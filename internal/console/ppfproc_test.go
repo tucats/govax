@@ -221,7 +221,7 @@ func TestProcedureFiles_volume(t *testing.T) {
 	}
 }
 
-// TestProcedureFiles_vminit: VMINIT in a procedure (as vax.init's) makes a
+// TestProcedureFiles_vminit: VMINIT in a procedure (as STARTUP.COM's) makes a
 // new process 1, which takes over DCL's procedure files: an image's
 // SYS$INPUT after it is still the procedure's data lines.
 func TestProcedureFiles_vminit(t *testing.T) {

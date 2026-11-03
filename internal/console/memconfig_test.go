@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 )
 
-// Tests of vax.init's memory sizes, which the vax.memory.* configuration
+// Tests of STARTUP.COM's memory sizes, which the vax.memory.* configuration
 // items override (read with F$CONFIG).
 
 // memoryLayout is what a boot's INITIALIZE/VAX and VMINIT made, as the
@@ -20,7 +20,7 @@ type memoryLayout struct {
 	esp, ssp, isp        uint32
 }
 
-// bootLayout boots vax.init with the configuration items values sets
+// bootLayout boots STARTUP.COM with the configuration items values sets
 // (and none of the others), and returns the layout it made.
 func bootLayout(t *testing.T, values map[string]string) memoryLayout {
 	t.Helper()
@@ -62,7 +62,7 @@ func bootLayout(t *testing.T, values map[string]string) memoryLayout {
 	}
 }
 
-// TestVaxInitMemoryConfig: with no vax.memory.* items, vax.init's own
+// TestVaxInitMemoryConfig: with no vax.memory.* items, STARTUP.COM's own
 // sizes; with them, theirs, in decimal or %X.
 func TestVaxInitMemoryConfig(t *testing.T) {
 	def := bootLayout(t, nil)

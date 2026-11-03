@@ -11,7 +11,7 @@ import (
 // plainDebugger stands in for internal/debugger in this package's own
 // tests, which can't import it (it imports this package). GO, CALL, and
 // the console's other internal calls are the debugger's, so a test that
-// runs vax.init needs something to be one. It runs each program to its
+// runs STARTUP.COM needs something to be one. It runs each program to its
 // end, with no breakpoints, as a bare Console does, and understands just
 // "GO [address]" and "EXIT" as commands.
 type plainDebugger struct {

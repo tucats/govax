@@ -48,11 +48,11 @@ func TestPagingFrames(t *testing.T) {
 
 	db := c.Mem.Paging()
 	if !c.Paging() || db == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	if err := db.Check(); err != nil {
-		t.Fatalf("after vax.init: %v", err)
+		t.Fatalf("after STARTUP.COM: %v", err)
 	}
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)

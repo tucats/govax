@@ -338,7 +338,7 @@ func TestMilestone_paging(t *testing.T) {
 
 			c, out, path := milestoneMachine(t, "500")
 			if c.Mem.Paging() == nil {
-				t.Fatal("vax.init's VMINIT left paging off")
+				t.Fatal("STARTUP.COM's VMINIT left paging off")
 			}
 
 			opts := machine.RunOptions{CommandLine: how.mode + " DUA0:[000000]MSCHILD.EXE"}

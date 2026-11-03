@@ -123,7 +123,7 @@ func TestCross_suspendedChild(t *testing.T) {
 	}
 }
 
-// TestNullDevice_defined: vax.init defines the null device, NLA0:.
+// TestNullDevice_defined: STARTUP.COM defines the null device, NLA0:.
 func TestNullDevice_defined(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 

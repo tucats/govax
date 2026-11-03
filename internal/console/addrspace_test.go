@@ -12,7 +12,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// bootedConsole returns a console that has run vax.init: VMINIT, the
+// bootedConsole returns a console that has run STARTUP.COM: VMINIT, the
 // microkernel, and the P1 vector.
 func bootedConsole(t *testing.T) *Console {
 	t.Helper()
@@ -23,7 +23,7 @@ func bootedConsole(t *testing.T) *Console {
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	return c
@@ -44,12 +44,12 @@ func TestProcessOneAdoptsVMInitTables(t *testing.T) {
 	}
 
 	if s.Entries != 16384+8192 || s.P0LR != 16384 || s.P1Pages() != 8192 {
-		t.Errorf("area of %d entries, sizes %d/%d, want vax.init's 16384/8192", s.Entries, s.P0LR, s.P1Pages())
+		t.Errorf("area of %d entries, sizes %d/%d, want STARTUP.COM's 16384/8192", s.Entries, s.P0LR, s.P1Pages())
 	}
 }
 
 // TestBuildAddressSpace builds a second process's address space after
-// vax.init and checks its P0 is its own, its P1 vector is process 1's
+// STARTUP.COM and checks its P0 is its own, its P1 vector is process 1's
 // physical pages (read-only), its P0 page 0 is a guard, and teardown
 // gives every page back.
 func TestBuildAddressSpace(t *testing.T) {

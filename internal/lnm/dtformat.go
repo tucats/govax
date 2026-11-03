@@ -49,7 +49,7 @@ func TimeFormatName(n int) string { return fmt.Sprintf("LIB$TIME_FORMAT_%03d", n
 // newDTFormatTable creates LNM$DT_FORMAT_TABLE in the system directory,
 // holding the predefined formats. On VMS a startup procedure
 // (LIB$DT_STARTUP) makes it; govax makes it with the rest of the shared
-// tables, as system data a user's own vax.init needn't repeat (the
+// tables, as system data a user's own STARTUP.COM needn't repeat (the
 // author's choice, 2026-10-13). The table and its names are executive
 // mode, as the manual asks of a format name, so a translation at any mode
 // sees them and a user's own names (DEFINE/EXECUTIVE) go beside them.

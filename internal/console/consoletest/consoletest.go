@@ -107,7 +107,7 @@ func ParseHelp(t testing.TB, name string) *help.File {
 }
 
 // New returns a console with a machine ready to run programs: 2 MB of
-// memory, with VMINIT's page tables and stacks, as vax.init builds them
+// memory, with VMINIT's page tables and stacks, as STARTUP.COM builds them
 // but without assembling the microkernel (a test that runs an image
 // assembles it with KernelPath). Its output goes to the returned buffer.
 // Its file search path ends in govax's embedded files, as cmd/govax's.

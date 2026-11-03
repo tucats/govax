@@ -51,7 +51,7 @@ func TestControlY_image(t *testing.T) {
 	c.In = strings.NewReader("")
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v\n%s", err, out.String())
+		t.Fatalf("STARTUP.COM: %v\n%s", err, out.String())
 	}
 
 	forever := buildImage(t, c, "forever", strings.Replace(spinSource, "COUNT", "0", 1))

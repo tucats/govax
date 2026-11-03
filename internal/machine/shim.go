@@ -56,7 +56,7 @@ const shimPageBytes = 512
 // fill VMInit's page first, so their addresses don't move as the table
 // grows, then contiguous S0 pages allocated together, which hold the
 // tables too, after the stubs. Must run after kernel.asm has been
-// assembled (Console.Run's own call site does, via vax.init's boot
+// assembled (Console.Run's own call site does, via STARTUP.COM's boot
 // sequence), since the code-0 branch depends on every routine name it
 // resolves already being a defined symbol. Idempotent: a second call is a
 // no-op, so fixups performed across multiple RUNs keep resolving to the

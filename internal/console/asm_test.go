@@ -118,7 +118,7 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 // TestAssemble_kernelThenHelloRunsBounded assembles kernel.asm (the
 // microkernel image, defining LIB$PUT_OUTPUT and wiring the .SCB CHMK
 // vector) and then hello.asm on top, in the same session -- matching
-// vax.init's own boot sequence (ASM kernel.asm) followed by an interactive
+// STARTUP.COM's own boot sequence (ASM kernel.asm) followed by an interactive
 // "ASM hello.asm" -- and runs hello.asm's auto-triggered entry (.end main)
 // with a bounded step count so a real gap anywhere in the CHMK/RTL dispatch
 // chain reports as a clear, logged outcome rather than hanging the suite.

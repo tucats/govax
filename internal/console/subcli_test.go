@@ -54,7 +54,7 @@ const abortSource = `	.title	abort
 	.end	start
 `
 
-// debugTrace is a DEBUG trace line, which the vax.init debug settings
+// debugTrace is a DEBUG trace line, which the STARTUP.COM debug settings
 // write.
 var debugTrace = regexp.MustCompile(`DEBUG\([A-Z]+\): [^\n]*\n?`)
 

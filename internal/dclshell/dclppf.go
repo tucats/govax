@@ -34,7 +34,7 @@ import (
 // in the reader. Which level's records it reads is the current one's.
 // The names follow the levels: defineProcedureNames sets them from the
 // stack as it is, when a level starts or ends, and when VMINIT makes a new
-// process 1 under a procedure (vax.init), which takes DCL's entries over
+// process 1 under a procedure (STARTUP.COM), which takes DCL's entries over
 // (adoptProcedureFiles).
 
 // The FAB$B_FAC and FAB$B_RAT values of DCL's opens.
@@ -228,7 +228,7 @@ func (c *Interpreter) openOutputEntry(f *rms.DCLFile) (*procedureOutput, error) 
 var rmsWER = vmsdef.Symbols["RMS$_WER"]
 
 // adoptProcedureFiles is the Hooks.ProcessOneStarted step for a new
-// process 1 (VMINIT in vax.init): the procedure entry, each level's
+// process 1 (VMINIT in STARTUP.COM): the procedure entry, each level's
 // /OUTPUT file, and the files OPEN has open, still open in the process 1
 // VMINIT replaced, become entries of the new one's, and the names are
 // defined again.

@@ -18,7 +18,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	// ensureShims's code-0 entries (e.g. decc$main, below) resolve by
 	// looking up kernel.asm's own already-assembled routine by name -- see
 	// shim.go's own doc comment -- so it must be assembled first here,
-	// matching vax.init's own boot sequence (ASM kernel.asm before any RUN).
+	// matching STARTUP.COM's own boot sequence (ASM kernel.asm before any RUN).
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}

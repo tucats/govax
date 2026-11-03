@@ -100,7 +100,7 @@ func TestSetWorkingSetPaging(t *testing.T) {
 
 	ws := env.WorkingSet()
 	if ws == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	for _, tt := range []struct {

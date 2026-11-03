@@ -47,7 +47,7 @@ func TestCreChild(t *testing.T) {
 		"Parent: child ended with status 00000007",
 	}, "\n")
 
-	// The vax.init debug settings also print DEBUG lines, which aren't
+	// The STARTUP.COM debug settings also print DEBUG lines, which aren't
 	// the program's.
 	var lines []string
 

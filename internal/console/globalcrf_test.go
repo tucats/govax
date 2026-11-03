@@ -231,7 +231,7 @@ func TestGlobalCopyOnRefPaging(t *testing.T) {
 	c, env, p := r.c, r.env, r.env.Process
 
 	if c.Mem.Paging() == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	// Checkpoint 1: every PTE of both ranges holds its global page table

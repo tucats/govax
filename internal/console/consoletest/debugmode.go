@@ -9,7 +9,7 @@ import (
 
 // InstallDebugger gives c the real debugger, as cmd/govax does, and makes
 // d the console's dispatcher. GO, CALL, and (once the microkernel is in
-// place) ASM are the debugger's commands, so a console that runs vax.init
+// place) ASM are the debugger's commands, so a console that runs STARTUP.COM
 // or those commands needs one installed first.
 func InstallDebugger(t testing.TB, c *console.Console, d *console.Dispatcher) *debugger.Debugger {
 	t.Helper()

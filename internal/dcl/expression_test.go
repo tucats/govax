@@ -123,7 +123,7 @@ func TestExpressionGrammar(t *testing.T) {
 		{"SET/PERMANENT PC = 200", "SET_SYMBOL", map[string]string{"NAME": "PC", "VALUE": "200"}},
 		{"SET X=1 /PERMANENT", "SET_SYMBOL", map[string]string{"NAME": "X", "VALUE": "1"}},
 		{"@FILE", "INCLUDE", map[string]string{"FILE": "FILE"}},
-		{`@ "vax.init"`, "INCLUDE", map[string]string{"FILE": "vax.init"}},
+		{`@ "startup.com"`, "INCLUDE", map[string]string{"FILE": "startup.com"}},
 	}
 
 	for _, c := range cases {

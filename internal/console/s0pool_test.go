@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// TestS0PoolAfterVaxInit boots as cmd/govax does, running vax.init (VMINIT
+// TestS0PoolAfterVaxInit boots as cmd/govax does, running STARTUP.COM (VMINIT
 // /P0=16384 /P1=8192 /S0=8192 /KSP=20, then ASM of the microkernel), and
 // checks the S0 pool that's left for new processes: it starts past the
 // microkernel, ends at S0's end, and holds the number of processes
@@ -21,7 +21,7 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	pool := c.RTL.S0Pool()
@@ -43,7 +43,7 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 
 	// The pool starts at the first page past the microkernel's S0.
 	if c.AsmSession() == nil {
-		t.Fatal("no ASM session after vax.init")
+		t.Fatal("no ASM session after STARTUP.COM")
 	}
 
 	if end := c.AsmSession().S0End(); base != (end+511)&^511 {
@@ -73,7 +73,7 @@ func s0Mapped(t *testing.T, c *Console, va uint32) bool {
 	return pte.Valid()
 }
 
-// TestS0PoolOnDemand: with paging on (Phase 67, subtask 5), vax.init
+// TestS0PoolOnDemand: with paging on (Phase 67, subtask 5), STARTUP.COM
 // leaves frames behind VMINIT's layout, the microkernel (claimed before
 // it was written), and the pool's allocations, and none behind the
 // pool's other pages, which have no access; AllocateS0 gives a run
@@ -87,14 +87,14 @@ func TestS0PoolOnDemand(t *testing.T) {
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	sys := c.RTL.System
 	db := c.Mem.Paging()
 
 	if db == nil {
-		t.Fatal("vax.init left paging off")
+		t.Fatal("STARTUP.COM left paging off")
 	}
 
 	pool := sys.S0Pool()

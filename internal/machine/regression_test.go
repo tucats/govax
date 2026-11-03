@@ -174,7 +174,7 @@ func TestRegression_float1(t *testing.T) {
 // internal/bootdata/files/kernel.asm into the same session first -- for fixtures that
 // call a real kernel.asm-defined RTL routine (LIB$PUT_OUTPUT,
 // LIB$GET_INPUT, LIB$QUIT_EMULATION, a DECC$SHR SHIM$ stub, ...), matching
-// vax.init's own boot sequence (ASM kernel.asm) followed by ASMing a user
+// STARTUP.COM's own boot sequence (ASM kernel.asm) followed by ASMing a user
 // program on top.
 func runAsmRegressionWithKernel(t *testing.T, fixture, entrySymbol string, maxSteps int) (*Machine, error, bool) {
 	t.Helper()

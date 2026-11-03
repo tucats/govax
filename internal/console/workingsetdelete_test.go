@@ -111,7 +111,7 @@ func TestDeleteTransitionPages(t *testing.T) {
 
 	db := c.Mem.Paging()
 	if db == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
@@ -318,7 +318,7 @@ func TestDeleteProcessTransitionPages(t *testing.T) {
 
 	db := c.Mem.Paging()
 	if db == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	before := db.Counts()

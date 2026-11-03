@@ -112,7 +112,7 @@ func TestShowShim(t *testing.T) {
 
 	// ensureShims's code-0 entries resolve by looking up kernel.asm's own
 	// already-assembled routine by name (see shim.go's own doc comment), so
-	// it must be assembled first here, matching vax.init's own boot
+	// it must be assembled first here, matching STARTUP.COM's own boot
 	// sequence.
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)

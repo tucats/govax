@@ -36,7 +36,7 @@ func shareFindConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *bytes.
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	if (c.Mem.Paging() != nil) != paging {

@@ -65,7 +65,7 @@ func TestAssembleFixtures(t *testing.T) {
 
 // TestAssembleForth assembles forth.asm, which needs .MICROKERNEL enabled
 // up front: it uses .REGION without a .MICROKERNEL statement of its own,
-// matching how the reference tool's own vax.init boots kernel.asm (which
+// matching how the reference tool's own STARTUP.COM boots kernel.asm (which
 // does declare .MICROKERNEL) before a user might separately ASM forth.asm
 // in the same, by-then-already-microkernel-valid console session — see
 // pseudoRegion's doc comment.
@@ -90,7 +90,7 @@ func TestAssembleForth(t *testing.T) {
 }
 
 // TestAssembleKernel assembles kernel.asm, the microkernel image
-// vax.init's own "asm kernel.asm" builds: it needs an .INCLUDE resolver
+// STARTUP.COM's own "asm kernel.asm" builds: it needs an .INCLUDE resolver
 // (for ssdef.asm) and, per docs/PHASE-11.md's own scope note, exercises
 // nearly every microkernel-gated pseudo-op (.MICROKERNEL/.SCB/.SHIM/
 // .REGION/.SCOPE/.P1VECTOR). Its bytes end up almost entirely in S0 (it

@@ -2683,7 +2683,7 @@ $DEBU
     GO, CALL, and ASM (the assembler that puts code into memory) are the
     debugger's commands, not the console's, for working with live code.  The
     console's ASM is accepted only until the microkernel is in place, which
-    is how VAX.INIT loads it.
+    is how STARTUP.COM loads it.
 
     The debugger also starts by itself when a program stops: a GO or CALL
     that reaches a breakpoint, RUN/DEBUG, or an image linked /DEBUG.  A

@@ -42,7 +42,7 @@ var expectedLib58Differences = map[string]string{
 // runLib58 assembles, links, and runs lib58.mar as lib58.com does on
 // VMS: on a fresh RD51 volume labeled LIB58 mounted as DUA1, its
 // [000000] the default directory, LIB58_DISK naming it, NLA0: defined
-// (as vax.init defines it), and the VAX's node name, SIMVAX.
+// (as STARTUP.COM defines it), and the VAX's node name, SIMVAX.
 func runLib58(t *testing.T) (uint32, string) {
 	t.Helper()
 

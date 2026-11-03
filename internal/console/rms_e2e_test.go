@@ -89,7 +89,7 @@ func TestRMSRoundTrip_assembledProgram(t *testing.T) {
 }
 
 // TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent covers the real
-// scenario a plain govax run's own boot sequence produces: vax.init's own
+// scenario a plain govax run's own boot sequence produces: STARTUP.COM's own
 // "asm kernel.asm" already runs kernel.asm's ".p1vector" line once, in the
 // same persistent console session (c.asmSession) any subsequent "ASM
 // <file>" command shares -- so a file like rms_roundtrip.asm that carries

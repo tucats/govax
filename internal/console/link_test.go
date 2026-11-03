@@ -42,7 +42,7 @@ func runImage(t *testing.T, c *Console, path string) uint32 {
 	return runImageBounded(t, c, path, 100_000)
 }
 
-// prepareRun boots c's microkernel and lays down the shims, as vax.init
+// prepareRun boots c's microkernel and lays down the shims, as STARTUP.COM
 // and RUN do, so that an image can run.
 func prepareRun(t *testing.T, c *Console) {
 	t.Helper()

@@ -289,7 +289,7 @@ func runUntilDone(t *testing.T, c *console.Console, limit int, envs ...*corevms.
 }
 
 // waitSlack allows for the instructions between timerWait's two $GETTIMs
-// and its timer: vax.init runs the quantum clock at one millisecond per
+// and its timer: STARTUP.COM runs the quantum clock at one millisecond per
 // instruction (SET QUANTUM 1), so they add a few milliseconds.
 const waitSlack = 20
 

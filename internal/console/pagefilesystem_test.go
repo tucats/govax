@@ -108,7 +108,7 @@ func TestReclaimerPageFile(t *testing.T) {
 	db := c.Mem.Paging()
 
 	if db == nil {
-		t.Fatal("vax.init's VMINIT left paging off")
+		t.Fatal("STARTUP.COM's VMINIT left paging off")
 	}
 
 	if c.RTL.Sysgen.MPWHiLimit < 80 {

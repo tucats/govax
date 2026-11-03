@@ -12,7 +12,7 @@ var profileFile *os.File
 
 // startCPUProfile starts Go's sampling CPU profiler (runtime/pprof),
 // writing to the named host file. The profile covers everything govax does
-// from here on: startup, vax.init, and the emulated program. It's for
+// from here on: startup, STARTUP.COM, and the emulated program. It's for
 // performance studies (docs/PERFORMANCE.md):
 //
 //	govax --cpu-profile cpu.prof run pi 10000

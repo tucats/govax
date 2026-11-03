@@ -12,10 +12,10 @@ import (
 )
 
 // Phase 67's subtask 8 (docs/PHASE-67 - address space under paging.md):
-// with paging on, vax.init gives VMINIT 0 for each region the
+// with paging on, STARTUP.COM gives VMINIT 0 for each region the
 // configuration doesn't size, so VMINIT's paging defaults apply.
 
-// runVaxInit runs the built-in vax.init on a new console with the
+// runVaxInit runs the built-in STARTUP.COM on a new console with the
 // settings given, and returns the console.
 func runVaxInit(t *testing.T, config map[string]string) *Console {
 	t.Helper()
@@ -28,13 +28,13 @@ func runVaxInit(t *testing.T, config map[string]string) *Console {
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	return c
 }
 
-// TestVaxInitPagingSizes: vax.init with paging on uses VMINIT's paging
+// TestVaxInitPagingSizes: STARTUP.COM with paging on uses VMINIT's paging
 // defaults (P0 19456, P1 5120, S0 16384), leaving nearly every frame
 // free, as SHOW MEMORY shows; a vax.memory.* key still sizes its region.
 func TestVaxInitPagingSizes(t *testing.T) {
@@ -84,7 +84,7 @@ func TestVaxInitPagingSizes(t *testing.T) {
 	}
 }
 
-// TestVaxInitNoPagingSizes: with paging off vax.init's sizes are as
+// TestVaxInitNoPagingSizes: with paging off STARTUP.COM's sizes are as
 // before, P0 16384, P1 8192, S0 8192.
 func TestVaxInitNoPagingSizes(t *testing.T) {
 	c := runVaxInit(t, map[string]string{machine.PagingSetting: "false"})

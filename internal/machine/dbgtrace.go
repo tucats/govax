@@ -89,7 +89,7 @@ func (m *Machine) symbolicTraceLine(pc uint32) (text string, ok bool, err error)
 func (m *Machine) InstructionText(pc uint32) string { return m.InstructionTextIn(pc, m.symbolRadix()) }
 
 // InstructionTextIn is InstructionText with names' offsets in radix (16 or
-// 10): the debugger's, which isn't the console's (vax.init's SET RADIX
+// 10): the debugger's, which isn't the console's (STARTUP.COM's SET RADIX
 // DECIMAL is the console's alone).
 func (m *Machine) InstructionTextIn(pc uint32, radix int) string {
 	if _, names, ok := m.symbolicLocation(pc, radix); ok {

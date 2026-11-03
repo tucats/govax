@@ -21,7 +21,7 @@ import (
 // switched by hand.
 //
 // The test does by hand what Phase 44's scheduler will do: boots as
-// cmd/govax does (vax.init: VMINIT and the microkernel), runs a little
+// cmd/govax does (STARTUP.COM: VMINIT and the microkernel), runs a little
 // user-mode code in process 1, builds a second process (an address space,
 // stacks, and a hardware PCB starting in its P0), and switches the CPU to
 // it and back with Engine.SaveContext and LoadContext, which have the
@@ -90,7 +90,7 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v\n%s", err, out.String())
+		t.Fatalf("STARTUP.COM: %v\n%s", err, out.String())
 	}
 
 	one := c.RTL

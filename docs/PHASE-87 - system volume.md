@@ -437,7 +437,7 @@ recommendation:
    program); BUILDSTARLET.COM building STARLET.MLB with LIBRARY, compared
    with the built-in library (identical but for dates, or logged as
    unconfirmed).
-9. **Tests and the one-shot subcommands:** every `cmd/govax` test on a
+9. (done 2026-11-03) **Tests and the one-shot subcommands:** every `cmd/govax` test on a
    temporary system volume or none; `govax run`, `macro`, `fortran`,
    `link`, `library`, `analyze` with the system volume; the time a first
    start takes to create the volume, measured and recorded; the tests that
@@ -830,3 +830,35 @@ recommendation:
     and `TestSystemFortranLibrary` (an INCLUDE of a module FORSYSDEF.TLB
     lacks, the module added there by LIBRARY/TEXT, then the program
     compiled, built, and run against SYS$SHARE's FTNRTL).
+- **2026-11-03** — Subtask 9 done: the tests and the one-shot subcommands.
+  - **No test touches the user's volume.** `cmd/govax`'s `TestMain` (subtask
+    3) starts every test there with `--system-file none`, and the tests of
+    the system volume give themselves a temporary one (`withSystemVolume`).
+    Elsewhere only cmd/govax reaches `DefaultSystemFile`, and every test's
+    `dclcmd.SystemVolume` names its own file.
+  - **The one-shot subcommands** need nothing new: `govax macro`, `fortran`,
+    `link`, `run`, `library`, and `analyze` each build a console command and
+    go through the same `run`, so each mounts the system volume and runs
+    STARTUP.COM before its command. `TestRun_oneShotsOnSystemVolume`
+    (`cmd/govax/sysoneshot_test.go`) runs each on host files with a
+    temporary system volume, the first of them making it:
+    - `macro` of a program using `$EXIT_S` and FTN$VERSION, `link --map
+      --full` (whose map names `DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1`: a default
+      map lists only the command's modules, as VMS's does), and `run`;
+    - FTN_CONTROL.MAR's version text edited on the volume, `@SYS$SOURCES:BUILDFTN`
+      as a one-shot command, and the same image then printing the new text,
+      so `run` uses SYS$SHARE's newest FTNRTL;
+    - `library --text` adding a module to `DUA0:[SYSTEM.SYSLIB]FORSYSDEF.TLB`,
+      then `fortran`, `macro`, `link`, and `run` of a program including it;
+    - `analyze --image` of that program, listing FTNRTL among its images.
+  - **Time:** a first start that makes the default RD54 takes about 160 ms
+    in all, interactive (`TestRun_systemVolume`, 158 ms) or with a one-shot
+    command (`TestRun_oneShotsOnSystemVolume`, 165 ms, the MACRO command
+    included); a start with nothing to refresh mounts and refreshes in about
+    8 ms (subtask 4). The one-shot test's thirteen starts, BUILDFTN among
+    them, take under half a second.
+  - **`vax.init` in the code** (Decision 11): the 109 mentions left in Go
+    comments and test messages, in 70 files, now say STARTUP.COM (none named
+    a file a test reads; subtask 5 had already moved the tests' procedures
+    and `--path` overrides to `startup.com`), and HELP DEBUG's one. The help
+    file's history keeps its old entry, and MANUAL.md's are the close-out's.

@@ -91,7 +91,7 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v\n%s", err, out.String())
+		t.Fatalf("STARTUP.COM: %v\n%s", err, out.String())
 	}
 
 	if !c.RTL.ProcessSettings.Scheduler {
@@ -181,7 +181,7 @@ func countOf(t *testing.T, c *console.Console, env *corevms.Environment) uint32 
 // Process 2, made computable at process 1's priority, preempts it at the
 // hook's next call (a newcomer at an equal priority preempts; see
 // internal/sched), so process 2 runs first. Process 1 used some of its
-// quantum booting (vax.init runs the microkernel), and keeps the rest
+// quantum booting (STARTUP.COM runs the microkernel), and keeps the rest
 // for its first turn.
 func TestScheduler_roundRobin(t *testing.T) {
 	const quantum = 100

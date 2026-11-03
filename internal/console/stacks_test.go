@@ -21,8 +21,8 @@ func s0Protection(t *testing.T, c *Console, va uint32) vm.Protection {
 	return pte.Protection()
 }
 
-// TestBuildStacks lays out a new process's stacks after vax.init, with
-// vax.init's sizes, and checks MODE-STACKS.md's layout and protections,
+// TestBuildStacks lays out a new process's stacks after STARTUP.COM, with
+// STARTUP.COM's sizes, and checks MODE-STACKS.md's layout and protections,
 // the stack pointers, and the PCB page.
 func TestBuildStacks(t *testing.T) {
 	c := bootedConsole(t)

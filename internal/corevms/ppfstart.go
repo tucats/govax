@@ -51,7 +51,7 @@ var fabRATPRN = byte(vmsdef.Symbols["FAB$M_PRN"])
 // and defines SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND (executive
 // mode, CONCEALED and TERMINAL) as their strings: process 1's, at the
 // console terminal. The terminal needn't be in the device table yet
-// (vax.init defines TTA0 after VMINIT makes process 1).
+// (STARTUP.COM defines TTA0 after VMINIT makes process 1).
 func (env *Environment) OpenTerminalFiles() error {
 	device := strings.Trim(env.Process.Terminal, "_:")
 	terminal := "_" + device + ":"

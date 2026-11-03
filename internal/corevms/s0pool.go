@@ -36,7 +36,7 @@ import (
 // belongs to and what it's for, so a process's pages can all be freed
 // when it's deleted, and SHOW MEMORY can list them.
 //
-// How many processes fit, with vax.init's VMINIT /P0=16384 /P1=8192
+// How many processes fit, with STARTUP.COM's VMINIT /P0=16384 /P1=8192
 // /S0=8192 /KSP=20: S0 is 8192 pages (4 MB). VMINIT's own layout takes
 // pages 0-308 and the microkernel the next 11, so the pool is pages
 // 320-8191, 7872 pages (TestS0PoolAfterVaxInit measures it; the start
@@ -47,7 +47,7 @@ import (
 // executive, 1 guard and 8 supervisor), and a page for its PCB: 231
 // pages, so 34 processes fit beside process 1. (With paging on that's
 // virtual space only: a process's frames are its stacks', its PCB's, and
-// those of the table pages its regions need.) With paging on, vax.init
+// those of the table pages its regions need.) With paging on, STARTUP.COM
 // leaves the regions to VMINIT's paging defaults (subtask 8: /P0=19456
 // /P1=5120 /S0=16384), the same 24576-entry table area, and S0 twice as
 // big, apart from physical memory: VMINIT's layout takes pages 0-372

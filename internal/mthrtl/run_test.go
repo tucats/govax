@@ -159,7 +159,7 @@ const mthUnhandled = `	.TITLE	MTHEND
 	.END	START
 `
 
-// boot is a console through vax.init, whose host directory, the current one,
+// boot is a console through STARTUP.COM, whose host directory, the current one,
 // is a new temporary directory to hold the programs.
 func boot(t *testing.T) (*console.Console, *console.Dispatcher, *bytes.Buffer) {
 	t.Helper()
@@ -170,7 +170,7 @@ func boot(t *testing.T) (*console.Console, *console.Dispatcher, *bytes.Buffer) {
 	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
-		t.Fatalf("vax.init: %v", err)
+		t.Fatalf("STARTUP.COM: %v", err)
 	}
 
 	buf.Reset()

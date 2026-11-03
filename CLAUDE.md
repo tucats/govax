@@ -640,7 +640,11 @@ never had.
   reading SYS$LIBRARY's and SYS$SHARE's files on the volume, BUILDFTN.COM
   and BUILDSTARLET.COM run, their files new versions there (the macro
   library byte for byte `bootdata.BuildStarletAt`'s at LIBRARY's time;
-  `internal/console/syslibrary_test.go`).
+  `internal/console/syslibrary_test.go`); and subtask 9 (2026-11-03) the
+  tests and the one-shot subcommands: each subcommand on a temporary system
+  volume (`cmd/govax/sysoneshot_test.go`), a first start's time (about
+  160 ms for the default RD54), and the code's mentions of `vax.init` now
+  STARTUP.COM.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
