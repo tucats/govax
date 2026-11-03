@@ -1,6 +1,8 @@
 package io
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmsdef"
@@ -461,4 +463,63 @@ func (t *DeviceTable) All() []*Device {
 	copy(out, t.devices)
 
 	return out
+}
+
+// Sorted returns every defined device in the order VMS's SHOW DEVICE
+// lists them: grouped by device class, the name's first two letters ("DU",
+// "MB", "TT"), the groups in alphabetical order, and within a group by
+// controller letter and then by unit number, compared as a number so that
+// DUA2 comes before DUA10.
+func (t *DeviceTable) Sorted() []*Device {
+	out := t.All()
+
+	sort.SliceStable(out, func(i, j int) bool {
+		return deviceNameLess(out[i].Name, out[j].Name)
+	})
+
+	return out
+}
+
+// deviceNameLess orders two device names: by the letters before the unit
+// number (the class and controller, "DUA"), then by the unit number's
+// value, then, for names that are otherwise equal, by their text.
+func deviceNameLess(a, b string) bool {
+	aLetters, aUnit, aNumbered := splitDeviceName(a)
+	bLetters, bUnit, bNumbered := splitDeviceName(b)
+
+	if aLetters != bLetters {
+		return aLetters < bLetters
+	}
+
+	if aNumbered && bNumbered && aUnit != bUnit {
+		return aUnit < bUnit
+	}
+
+	if aNumbered != bNumbered {
+		return !aNumbered // a name with no unit number first
+	}
+
+	return a < b
+}
+
+// splitDeviceName splits a device name such as "DUA12" into the text
+// before its trailing digits ("DUA") and the unit number those digits
+// make (12). numbered is false when the name doesn't end in digits, or
+// when they are too many to be a unit number.
+func splitDeviceName(name string) (letters string, unit uint64, numbered bool) {
+	end := len(name)
+	for end > 0 && name[end-1] >= '0' && name[end-1] <= '9' {
+		end--
+	}
+
+	if end == len(name) {
+		return name, 0, false
+	}
+
+	n, err := strconv.ParseUint(name[end:], 10, 64)
+	if err != nil {
+		return name, 0, false
+	}
+
+	return name[:end], n, true
 }

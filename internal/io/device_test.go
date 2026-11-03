@@ -1,6 +1,9 @@
 package io
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDeviceClassName(t *testing.T) {
 	cases := []struct {
@@ -106,5 +109,26 @@ func TestDeviceTableRemove(t *testing.T) {
 
 	if got := DeviceClassName(DeviceClassMailbox); got != "mailbox" {
 		t.Errorf("DeviceClassName(mailbox) = %q", got)
+	}
+}
+
+// TestSortedOrdersByClassThenUnit checks that SHOW DEVICE's order groups
+// devices by class and puts units in numeric order, whatever order they
+// were defined in.
+func TestSortedOrdersByClassThenUnit(t *testing.T) {
+	table := NewDeviceTable()
+
+	for _, name := range []string{"TTA0", "DUA2", "MBA10", "DUA10", "NLA0", "DUA1", "MBA2", "DUA0", "DUB0", "OPA0"} {
+		table.Define(name, DeviceOptions{})
+	}
+
+	var got []string
+	for _, d := range table.Sorted() {
+		got = append(got, d.Name)
+	}
+
+	want := []string{"DUA0", "DUA1", "DUA2", "DUA10", "DUB0", "MBA2", "MBA10", "NLA0", "OPA0", "TTA0"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("Sorted() = %v, want %v", got, want)
 	}
 }

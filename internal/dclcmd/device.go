@@ -20,7 +20,8 @@ func (c *Context) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Dev
 // name begins with it ("DU" shows DUA0, DUA1, ...; a colon or a leading
 // "_" is ignored), and when no device does, the command says
 // %SYSTEM-W-NOSUCHDEV, as VMS's SHOW DEVICE does (the author's VMS
-// system, 2026-10-08).
+// system, 2026-10-08). The devices are listed as VMS lists them, by class
+// and then by name and unit number, DUA0 before DUA1 (iodev's Sorted).
 //
 // A disk-class device's /FULL output (showDiskDeviceFull) is a from-scratch,
 // VMS-realistic reformat.
@@ -36,7 +37,7 @@ func (c *Context) ShowDevices(name string, full bool) error {
 
 	disks := -1 // the kind of device the last brief heading was for
 
-	for _, d := range c.Devices.All() {
+	for _, d := range c.Devices.Sorted() {
 		if !strings.HasPrefix(d.Name, prefix) {
 			continue
 		}
