@@ -1,8 +1,8 @@
 # Phase 86 — the FORTRAN milestone and close-out
 
-**Status:** in progress (subtasks 1 to 6 done 2026-11-03). Needs every earlier phase of the
+**Status:** done 2026-11-03. Needs every earlier phase of the
 program. Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN
-plan.md`.
+plan.md`. "Where things stand" is the program's follow-up list.
 
 ## Goal
 
@@ -99,15 +99,52 @@ volumes do. Only govax's own additions (the test, its ITIME, its
 scripted game) are committed, and they must not quote the game's source
 or text.
 
+## Where things stand
+
+Done: the milestone (DUNGEON built by its own commands and played in 8 modes, its output compared with gfortran's), the VMS round
+(FTNRTL and every program built by VMS 7.1's MACRO and LINK and run, DUNGEON to the byte), and the documentation. With this phase the
+FORTRAN program, Phases 74 to 86, is done; PLAN.md summarizes it.
+
+**What the language lacks, and could have.** Each fails cleanly today:
+
+- **Indexed files and keyed access.** RMS has no indexed organization, so this starts there: `$CREATE`'s RMS$_ORG, FTNRTL's
+  `FTN$READ_KF`/`_KU` waiting behind it, and OPEN's NOTIMP. The largest gap, and a program of its own.
+- **`CONVERT=`** other than NATIVE: FOR's NOTIMP.
+- **Routines really reentrant:** AUTOMATIC's frame is the groundwork; the compiler's temporaries are what stays in `$LOCAL`.
+- **Real FORTRAN debugger records** (Phase 85's review, level C), and SET SCOPE, a record's fields, and which of several active calls
+  a dummy means.
+- **`/STANDARD`'s** meaning rather than form (`SEMANTIC`).
+- **Staying out, by decision:** DICTIONARY (no Common Data Dictionary), CDEC$ PACK, CPAR$ directives.
+
+**What this phase found and left:**
+
+- **LINK doesn't translate a logical name for an options file** (`LINK X/OPTIONS` with X defined), as VMS's does, which caught `ftn86.com`
+  (subtask 4). So `TestFTN86Procedure` can't catch that mistake.
+- **MACRO's positional `/LIBRARY`** (`MACRO LIB/LIBRARY+SRC`) isn't done; govax keeps `/LIBRARY=(...)` (subtask 1).
+- **Small things from subtask 1:** a typed name that's a system or intrinsic function (`REAL SQRT`) still gets a `$LOCAL` cell and a line in the map, harmless; a
+  full volume is `%DCL-E-BADFILESPEC` with the reason at its end, where VMS says the device is full.
+- **The Ctrl/Y level's prompt** doesn't take `-` continuation (subtask 2).
+- **Known differences from VMS** (`ftn86VMSDifferences`): `$GETCHN`, a service govax lacks; SECNDS within a second of its argument, by timing; the last bits of OTS$ negative powers and of
+  MTHRTL's complex functions, where six orders of operations were tried and none fits. Real LIBRTL on govax faults at `SHARE$LIBRTL+0CE1`, so it can't stand in for the VAX; why isn't known.
+- **The image's symbol tables** past the debug symbol table aren't compared with VMS's in `TestFTN86Objects`.
+- **Unconfirmed on VMS:** `MACRO A+B`'s numbering of files and `/DEBUG`'s source file, what a `.END` before the last file does, and COPY's choices for a host source
+  (lines padded with blanks, PRINT's control bytes).
+
+**Left by earlier phases, each with more in its own "Where things stand":**
+
+- **Phase 80:** a `+` record after an ended line, on govax's line-at-a-time terminal; namelist input to arrays; which of units -1 and -2, and -3 and -4, each statement uses.
+- **Phase 81:** the current record after REWIND, BACKSPACE, ENDFILE, and UNLOCK; DELETE by number in odd cases; a relative file's growth beyond VMS's allocations.
+- **Phase 82:** LINK's C22, C23, C26, C27, and C29 differ from VMS (DEVIATIONS.md); an aligned block's layout difference across files gets no message.
+- **Phase 83:** STR$'s five arithmetic routines and STR$ELEMENT_R8 are NOTIMPL; LIB$DECODE_FAULT and its neighbors wait for Phase 61; LIBRARY edits by rebuilding; 191 of the service vector's entries
+  signal NOTIMPL until a program needs them; one FORRTL difference stands (DEVIATIONS.md).
+- **Phase 84:** not done, by measurement: global CSE and PRE, autoincrement, a rotated test copied to its way in. FTNRTL's per-statement paths, about 170 instructions a record, are the next place to look for speed.
+- **Unconfirmed throughout,** there being no VAX FORTRAN: what MANUAL.md's 14.7 lists, `/CHECK`'s default among it.
+
 ## What earlier phases leave in place
 
 - The compiler, FTNRTL, MTHRTL, and the corpus with its tests.
 
-## Open questions
-
-- **Whether the VMS round is wanted**, and on which volume.
-
-## Subtasks (provisional)
+## Subtasks
 
 1. **DUNGEON compiled** (done 2026-11-03): every source through FORTRAN and MACRO with no
    message; whatever it finds missing is fixed in subtasks of its own.
@@ -116,7 +153,7 @@ or text.
 4. **The VMS round** (done 2026-11-03): exchange volume, procedure, results.
 5. **The manual chapter** (done 2026-11-03).
 6. **FORTRAN-INTERNALS.md finished** (done 2026-11-03).
-7. **Close-out:** CLAUDE.md, PLAN.md, the follow-up list.
+7. **Close-out** (done 2026-11-03): CLAUDE.md, PLAN.md, the follow-up list.
 
 ## Progress log
 
@@ -345,4 +382,7 @@ or text.
   what this compiler's history suggests for another. Section 17 points to section 20. Sections keep their numbers, since other
   documents cite them. Each code name the new sections use was checked against the source, which corrected two sentences as written:
   a shift's `ROTL` is for any left shift under `OVERFLOW`, constant counts too, and `FoldFor` leaves an overflowing operation to trap.
+- **2026-11-03, subtask 7:** the close-out. "Where things stand" above gathers what the FORTRAN program left, from this phase's log and each
+  earlier phase's own list; the open question on whether the VMS round was wanted is gone, the author having asked for it. PLAN.md has the
+  program's summary, and its rows for Phases 85 and 86 are done. CLAUDE.md says the phase is done.
 

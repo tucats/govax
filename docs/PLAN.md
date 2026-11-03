@@ -134,8 +134,8 @@ questions, and a progress log extended as that phase is worked.
 | 82 | [PHASE-82 - FORTRAN DEC extensions](PHASE-82%20-%20FORTRAN%20DEC%20extensions.md) | STRUCTURE, RECORD, UNION, MAP; typeless and Hollerith constants; VOLATILE, AUTOMATIC, STATIC; CDEC$ directives; `/ALIGN` — done 2026-11-01 |
 | 83 | [PHASE-83 - FORTRAN and VMS](PHASE-83%20-%20FORTRAN%20and%20VMS.md) | INCLUDE of text library modules and govax's definitions from vmsdef; calling system services and RTL routines; handlers, ASTs, and exit handlers in FORTRAN; the system subroutines; STR$ — done 2026-11-01 |
 | 84 | [PHASE-84 - FORTRAN optimizer](PHASE-84%20-%20FORTRAN%20optimizer.md) | `/OPTIMIZE`: folding, dead code, common subexpressions, loop invariants, strength reduction, register allocation, VAX loop instructions, a peephole pass — done 2026-11-02 |
-| 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on FORTRAN programs — in progress |
-| 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | A substantial program compiled and run, an optional VMS round, the manual's chapter, the internals tour — planned |
+| 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on FORTRAN programs — done 2026-11-02 |
+| 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | DUNGEON V3.2A compiled and run in every mode (local only), the VMS round (`testdata/ftn86`), the manual's chapter, the internals tour, the follow-up list — done 2026-11-03 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -517,3 +517,31 @@ What remains unconfirmed against VMS is listed in DEVIATIONS.md
 ("[Phases 43–48] Multiprocessing rules chosen without a manual or probe");
 `testdata/mp/final` (probe 5 and round 7 of the macro probes) is the next
 VMS run. What the program left for later is Phase 49.
+
+## The FORTRAN program (Phases 74–86)
+
+Phases 74 to 86 (2026-10-29 to 2026-11-03) gave govax a FORTRAN compiler. PHASE-74's Part A is the
+survey, Part B the decisions, and Part C the phases; each phase's doc has its progress log.
+
+- **The compiler.** `FORTRAN` compiles VAX FORTRAN V5.0, FORTRAN-77 with DEC's extensions, into an
+  annotated MACRO-32 file that MACRO and LINK turn into an image. `internal/fortran` is a package per
+  pass, written to teach: source forms, lexer, parser, semantic analysis, IR, optimizer, code generator.
+  Fidelity is to the language and its documented run-time behavior, not to VAX FORTRAN's object code.
+- **The libraries.** FTNRTL.EXE is MACRO we write (`internal/ftnrtl`), built by govax's own MACRO and LINK
+  and embedded in govax. MTHRTL is emulated in Go (`internal/mthrtl`), usable by any program.
+- **The language.** Every statement and type, every intrinsic function, formatted, list-directed, namelist,
+  unformatted, and direct I/O on sequential and relative files, DEC's data extensions, and VMS's services,
+  handlers, ASTs, and system subroutines (Phases 75–83).
+- **The compiler's tools.** An optimizer, on by default, with listings, cross references, `/CHECK`,
+  `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on compiled programs (Phases 84–85).
+- **What it needed elsewhere.** RMS relative files, LIB$TPARSE, `$FILESCAN`, STR$, LIB$FIXUP_FLT, MACRO's
+  and LINK's gaps, and a good many fixes found along the way, each in its phase's log.
+- **Checked.** There's no VAX FORTRAN to compare with, so FTNRTL is held to VMS's own FORRTL, called from
+  MACRO as a black box (`testdata/for80`, `for81`, `nml80`, `for83`). DUNGEON V3.2A, about 11,600 lines, kept
+  local, plays in 8 modes, its output the same as a gfortran build's in every line of 22 games (Phase 86).
+- **On a real VMS.** VMS 7.1's MACRO and LINK built FTNRTL and every program from govax's `.MAR` files and
+  ran them, with no message from either: DUNGEON's game the same to the byte, and the rest but for a listed few
+  (`testdata/ftn86`, `ftn86VMSDifferences`).
+
+MANUAL.md's chapter 14 is the user's side, and FORTRAN-INTERNALS.md a guided tour. What the program left,
+RMS's indexed files first, is in PHASE-86's "Where things stand".
