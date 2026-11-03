@@ -1,6 +1,9 @@
 package fortran
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -74,5 +77,39 @@ func TestDebugDirectives(t *testing.T) {
 	r := Compile(Options{Debug: Debug{Symbols: true}, Optimize: true}, source)
 	if len(r.Messages) != 1 || r.Messages[0].Ident != "DEBUGOPTIMIZE" || r.Warnings != 0 {
 		t.Errorf("under /OPTIMIZE: %v, %d warnings", r.Messages, r.Warnings)
+	}
+}
+
+// TestDebugChangesNoCode: /DEBUG adds its directive, its table, and its labels on the
+// source's lines, and nothing else, for every program in the corpus, both ways. An
+// instruction it moved or changed would make a bug that went away when debugged.
+func TestDebugChangesNoCode(t *testing.T) {
+	files, err := filepath.Glob("../../testdata/fortran/*.for")
+	if err != nil || len(files) == 0 {
+		t.Fatal(files, err)
+	}
+
+	added := regexp.MustCompile(`^(;DBG\$ .*|\t\.ENABLE\tDEBUG|.*\.\$LINE[0-9]+:)$`)
+
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		source := File{Spec: path, Name: "T", Lines: strings.Split(strings.TrimRight(string(data), "\n"), "\n")}
+
+		for _, optimize := range []bool{false, true} {
+			plain := Compile(Options{Optimize: optimize, Includes: includes{}}, source)
+			debug := Compile(Options{Optimize: optimize, Includes: includes{}, Debug: Debug{Symbols: true}}, source)
+
+			kept := slices.DeleteFunc(slices.Clone(debug.MACRO), func(line string) bool {
+				return added.MatchString(line)
+			})
+
+			if !slices.Equal(kept, plain.MACRO) {
+				t.Errorf("%s, optimize %v: /DEBUG changed the code", path, optimize)
+			}
+		}
 	}
 }

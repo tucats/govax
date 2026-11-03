@@ -18,8 +18,10 @@ type routineGen struct {
 	bases *namer
 	src   *sourceLines
 
-	// debugTable says the program was compiled with /DEBUG (debugtable.go).
+	// debugTable says the program was compiled with /DEBUG (debugtable.go), and
+	// lineLabels are the FORTRAN lines it has labeled so far.
 	debugTable bool
+	lineLabels map[int]bool
 
 	// localAlign is the module's $LOCAL section's alignment (localAlignment).
 	localAlign int
@@ -136,7 +138,13 @@ func ExpressionRegisters(r *ir.Routine) [numRegisters]bool {
 func (g *routineGen) source(stmt ast.Stmt) {
 	var w Writer
 
+	before := g.src.next
 	g.src.through(&w, stmt)
+
+	if stmt != nil {
+		g.debugLabel(&w, stmt, g.src.next != before)
+	}
+
 	g.code.text(w.lines)
 }
 

@@ -73,6 +73,32 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 	return line.Line, records[record-1], true
 }
 
+// SourceAt returns the lines of the source file pc's line is in, and which of them,
+// counted from 0, is that line. ok is as SourceLine's.
+func (m *Machine) SourceAt(pc uint32) (records []string, index int, ok bool) {
+	prog := m.debugImageAt(pc)
+	if prog == nil {
+		return nil, 0, false
+	}
+
+	line, mod, found := prog.LineAt(pc)
+	if !found {
+		return nil, 0, false
+	}
+
+	file, record, found := mod.SourceOf(line.Line)
+	if !found {
+		return nil, 0, false
+	}
+
+	records = m.sourceRecords(file.Spec)
+	if record < 1 || record > len(records) {
+		return nil, 0, false
+	}
+
+	return records, record - 1, true
+}
+
 // ModuleSource returns the lines of a module's source file, or nil if it can't be
 // found. A module from several files has the first's, which for a FORTRAN program's
 // MACRO file is all there is.

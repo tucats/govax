@@ -603,9 +603,77 @@ func (d *Debugger) examineFortran(r *dcl.Result, places []fortranPlace) error {
 
 		d.setCurrentValue(data)
 		d.Machine.Printf("%s%s\n", tabPad(p.name+":"), d.fortranText(p, data, radix))
+		d.showLoopRegister(p, radix)
 	}
 
 	return nil
+}
+
+// showLoopRegister says when /OPTIMIZE keeps a variable in a register during a loop,
+// when what's in memory may be out of date. Whether the program is in that loop the
+// table doesn't say, so this gives what's there and leaves it to whoever is reading.
+func (d *Debugger) showLoopRegister(p fortranPlace, radix int) {
+	table := d.fortranTable(p.module)
+	if table == nil || table.Units[p.v.Unit] == nil {
+		return
+	}
+
+	n, ok := table.Units[p.v.Unit].Loops[p.v.Name]
+	if !ok {
+		return
+	}
+
+	data := make([]byte, 4)
+	binary.LittleEndian.PutUint32(data, d.Machine.CPU.GPR(registers.Reg(n)))
+
+	text, _ := d.fixedText(dataType{kind: typeInteger, size: 4}, data, radix)
+	d.Machine.Printf("%sduring a loop, R%d holds it: %s\n", tabPad(""), n, text)
+}
+
+// fortranLineAt is which line of the FORTRAN source the code at pc came from, in a
+// program with a table: the source line last written above that instruction in the MACRO
+// file. The number is told apart by the record, so a line of an included file, whose
+// number means nothing here, is a line too.
+func (d *Debugger) fortranLineAt(pc uint32) (string, bool) {
+	prog := d.Machine.DebugProgramAt(pc)
+	if prog == nil {
+		return "", false
+	}
+
+	_, mod, ok := prog.LineAt(pc)
+	if !ok || d.fortranTable(mod) == nil {
+		return "", false
+	}
+
+	records, index, ok := d.Machine.SourceAt(pc)
+	if !ok {
+		return "", false
+	}
+
+	for ; index >= 0; index-- {
+		if _, isLine := dbgtable.FortranLine(records[index]); isLine {
+			return records[index], true
+		}
+	}
+
+	return "", false
+}
+
+// showFortranLine shows, above the MACRO line a stop is at, the FORTRAN line it came from.
+func (d *Debugger) showFortranLine(pc uint32) {
+	record, ok := d.fortranLineAt(pc)
+	if !ok {
+		return
+	}
+
+	number, _ := dbgtable.FortranLine(record)
+	text := ""
+
+	if len(record) > dbgtable.FortranLinePrefix {
+		text = record[dbgtable.FortranLinePrefix:]
+	}
+
+	d.Machine.Printf("FORTRAN line %d: %s\n", number, strings.TrimSpace(expandTabs(text)))
 }
 
 // evaluateFortran is EVALUATE of a variable: what EXAMINE shows, without the name.
@@ -698,6 +766,13 @@ func (d *Debugger) fortranValue(p fortranPlace, t dataType, typed bool, value st
 // variable's address, as a MACRO label is, or under EVALUATE, as with a data label, what
 // it holds (d.evaluating).
 func (d *Debugger) fortranName(name string) (uint32, bool) {
+	// $LINE30 is the label on line 30 of the routine the program is in.
+	if strings.HasPrefix(strings.ToUpper(name), "$LINE") {
+		if addr, ok := d.fortranLabel(strings.ToUpper(name)); ok {
+			return addr, true
+		}
+	}
+
 	places, ok, err := d.fortranPlaces(name)
 	if !ok || err != nil || len(places) == 0 {
 		return 0, false
@@ -729,4 +804,21 @@ func (d *Debugger) fortranName(name string) (uint32, bool) {
 	}
 
 	return p.addr, true
+}
+
+// fortranLabel finds a line's label in the routine the program is in.
+func (d *Debugger) fortranLabel(name string) (uint32, bool) {
+	for _, f := range d.fortranFrames() {
+		if u, _, prog := d.frameUnit(f); u != nil {
+			// A label is the routine's symbol, not the module's, so its path would need
+			// the routine, and its whole name is enough.
+			if s, ok := prog.Lookup(u.Name + "." + name); ok {
+				return s.Value, true
+			}
+
+			return 0, false
+		}
+	}
+
+	return 0, false
 }

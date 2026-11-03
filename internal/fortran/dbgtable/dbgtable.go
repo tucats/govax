@@ -133,10 +133,18 @@ func EntryLine(unit, entry string) string {
 	return Prefix + "E " + unit + " " + entry
 }
 
+// LoopLine says that during a loop, /OPTIMIZE keeps the variable name in a register.
+func LoopLine(unit, name string, register int) string {
+	return fmt.Sprintf("%sH %s %s %d", Prefix, unit, name, register)
+}
+
 // Unit is one program unit's variables, by name.
 type Unit struct {
 	Name string
 	Vars map[string]*Var
+
+	// Loops are the registers that hold a variable during a loop, by the variable's name.
+	Loops map[string]int
 }
 
 // Table is the units a MACRO file describes.
@@ -167,6 +175,10 @@ func Parse(lines []string) *Table {
 		switch {
 		case len(f) == 3 && f[0] == "E":
 			t.Entries[f[2]] = t.unit(f[1])
+		case len(f) == 4 && f[0] == "H":
+			if n, err := strconv.Atoi(f[3]); err == nil {
+				t.unit(f[1]).Loops[f[2]] = n
+			}
 		case len(f) == 8 && f[0] == "V":
 			if v, ok := parseVar(f); ok {
 				t.unit(v.Unit).Vars[v.Name] = v
@@ -180,7 +192,7 @@ func Parse(lines []string) *Table {
 func (t *Table) unit(name string) *Unit {
 	u := t.Units[name]
 	if u == nil {
-		u = &Unit{Name: name, Vars: map[string]*Var{}}
+		u = &Unit{Name: name, Vars: map[string]*Var{}, Loops: map[string]int{}}
 		t.Units[name] = u
 	}
 
@@ -292,6 +304,9 @@ func (v *Var) Sized() bool {
 func (v *Var) DescriptorPassed() bool {
 	return v.Type == Char && (v.Place.Kind == Argument || v.Place.Kind == Through)
 }
+
+// FortranLinePrefix is how long the part before a source line's text is in a MACRO file.
+const FortranLinePrefix = 8
 
 // FortranLine reports whether a line of a MACRO file is a line of the FORTRAN source, as
 // the code generator writes them (Writer.SourceLineAt): a semicolon, an include depth if

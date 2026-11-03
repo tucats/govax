@@ -1,6 +1,10 @@
 package codegen
 
 import (
+	"strconv"
+	"strings"
+
+	"github.com/tucats/govax/internal/fortran/ast"
 	"github.com/tucats/govax/internal/fortran/dbgtable"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
@@ -33,6 +37,10 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 	}
 
 	for _, c := range g.r.Cells {
+		if name, inLoop := strings.CutSuffix(c.Holds, ", during a loop"); inLoop && c.Register != 0 {
+			lines = append(lines, dbgtable.LoopLine(g.r.Name, name, c.Register))
+		}
+
 		switch {
 		case c.Sym == nil || c.Sym.UnusedFromLibrary():
 
@@ -102,3 +110,27 @@ func debugType(s *sema.Symbol, gFloating bool) string {
 	return dbgtable.Record
 }
 
+
+// debugLabel is the label on a FORTRAN line's first instruction, under /DEBUG, which
+// the debugger can stop at: SET BREAK SUB.$LINE30. It goes among the source's lines, which no
+// optimizer's pass looks at, so that /DEBUG doesn't change the code. A line of an included
+// file has none, since its number could be that of a line in the file including it, and
+// a line whose statement has been written already (ELSE, say, after its IF's block) has its label.
+func (g *routineGen) debugLabel(w *Writer, stmt ast.Stmt, wrote bool) {
+	base := stmt.Base()
+	if !g.debugTable || !wrote || base.Source == nil || base.Source.Depth != 0 {
+		return
+	}
+
+	number := g.src.lines[base.Source.First].Number
+	if g.lineLabels[number] {
+		return
+	}
+
+	if g.lineLabels == nil {
+		g.lineLabels = map[int]bool{}
+	}
+
+	g.lineLabels[number] = true
+	w.LabelComment(g.names.symbol("$LINE"+strconv.Itoa(number)), "")
+}

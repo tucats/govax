@@ -374,6 +374,9 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 	// until it is back in some, or the program ends.
 	hadLines := c.HasLineInfo(c.CPU.GPR(registers.PC))
 
+	// In a compiled program a line is a line of the FORTRAN source (fortran.go).
+	statement, fortran := d.fortranLineAt(c.CPU.GPR(registers.PC))
+
 	for {
 		if outcome, done, err := d.stepOne(); done {
 			return outcome, false, err
@@ -401,6 +404,13 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 
 		if !req.byInstruction && hadLines && !hasLines {
 			continue
+		}
+
+		// Still on the FORTRAN statement it started on, the step goes on.
+		if fortran && !req.byInstruction && hasLines && name != "RET" && name != "RSB" {
+			if here, ok := d.fortranLineAt(pc); ok && here == statement {
+				continue
+			}
 		}
 
 		if req.byInstruction || !hasLines || c.LineStart(pc) || name == "RET" || name == "RSB" {

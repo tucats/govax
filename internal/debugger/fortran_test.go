@@ -347,6 +347,79 @@ func TestFortranVariablesEntry(t *testing.T) {
 	}
 }
 
+// TestFortranStatements holds the labels on FORTRAN's lines, the FORTRAN line at a stop,
+// and a step going a line of FORTRAN at a time. Line 37 is TOTAL = A(2) + A(3), in SUB.
+func TestFortranStatements(t *testing.T) {
+	c := fortranDebugSession(t, "SUB.$LINE37")
+	noUserStep(c)
+
+	at := say(t, c, "EXAMINE/INSTRUCTION .PC")
+	if !strings.Contains(at, "SUB.$LINE37") {
+		t.Errorf("at SUB.$LINE37: %q", at)
+	}
+
+	out := say(t, c, "STEP")
+	if !strings.Contains(out, "FORTRAN line 38:") || !strings.Contains(out, "S(1:1) = 'Z'") {
+		t.Errorf("a step should go to line 38: %q", out)
+	}
+
+	out = say(t, c, "STEP/INSTRUCTION")
+	if !strings.Contains(out, "FORTRAN line 38:") {
+		t.Errorf("a step by instruction stays with its line: %q", out)
+	}
+
+	// A bare label is the current routine's, and a break there says where it is.
+	say(t, c, "SET BREAK $LINE40")
+
+	out = say(t, c, "GO")
+	if !strings.Contains(out, "SUB.$LINE40") || !strings.Contains(out, "FORTRAN line 40:") || !strings.Contains(out, "RETURN") {
+		t.Errorf("break at $LINE40: %q", out)
+	}
+}
+
+// TestFortranLoopRegister: a variable /OPTIMIZE keeps in a register during a loop says so.
+func TestFortranLoopRegister(t *testing.T) {
+	c := newRunnableConsole(t)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dir := t.TempDir()
+	file := func(name string) string { return filepath.Join(dir, name) }
+
+	source := `      PROGRAM LR
+      INTEGER I, S
+      S = 0
+      DO 10 I = 1, 5
+        S = S + I
+ 10   CONTINUE
+      IF (S .GT. 0) CALL DONE(S)
+      END
+      SUBROUTINE DONE(K)
+      RETURN
+      END
+`
+
+	if err := os.WriteFile(file("lr.for"), []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{
+		`FORTRAN "` + file("lr.for") + `"/HOST/DEBUG/OBJECT`,
+		`LINK "` + file("lr.obj") + `"/HOST/DEBUG/NOSYSLIB/EXECUTABLE="` + file("lr.exe") + `"`,
+	} {
+		if err := d.Dispatch(command); err != nil {
+			t.Fatalf("%s: %v", command, err)
+		}
+	}
+
+	c = stoppedAt(t, file("lr.exe"), "DONE")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	if got := say(t, c, "EXAMINE LR.S"); !strings.Contains(got, "during a loop, R") {
+		t.Errorf("EXAMINE LR.S: %q", got)
+	}
+}
+
 // TestFortranVariablesNoFrame: what needs a frame says so when there's none.
 func TestFortranVariablesNoFrame(t *testing.T) {
 	c := fortranDebugSession(t, "")

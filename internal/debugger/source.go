@@ -60,6 +60,7 @@ func (d *Debugger) showSource(pc uint32) {
 		return
 	}
 
+	d.showFortranLine(pc)
 	d.Machine.Printf("%s", formatSource(n, text))
 }
 
