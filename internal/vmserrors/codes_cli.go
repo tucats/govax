@@ -216,6 +216,7 @@ const (
 	cliForShow
 	cliForCheck
 	cliForWarnKey
+	cliForStandard
 
 	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
@@ -569,6 +570,9 @@ const (
 
 	// CLI_FORWARNKEY refuses a FORTRAN whose /WARNINGS has a keyword that isn't one.
 	CLI_FORWARNKEY = CLIFacility<<FacilityPosition | cliForWarnKey<<MessagePosition | StatusError
+
+	// CLI_FORSTANDARD refuses a FORTRAN whose /STANDARD has a keyword that isn't one.
+	CLI_FORSTANDARD = CLIFacility<<FacilityPosition | cliForStandard<<MessagePosition | StatusError
 )
 
 func init() {
@@ -735,5 +739,6 @@ func init() {
 	DefineMessage(CLI_FORSHOW, CLIFacility, "FORSHOW", "!S")
 	DefineMessage(CLI_FORCHECK, CLIFacility, "FORCHECK", "!S")
 	DefineMessage(CLI_FORWARNKEY, CLIFacility, "FORWARNKEY", "!S")
+	DefineMessage(CLI_FORSTANDARD, CLIFacility, "FORSTANDARD", "!S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

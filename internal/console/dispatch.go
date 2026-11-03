@@ -667,6 +667,8 @@ func (d *Dispatcher) bindGrammar() {
 			Warnings:       nonEmpty(r.List("WARNINGS")),
 			WarningsGiven:  r.Present("WARNINGS") && !r.Negated("WARNINGS") && !r.Defaulted("WARNINGS"),
 			NoWarnings:     r.Negated("WARNINGS"),
+			Standard:       nonEmpty(r.List("STANDARD")),
+			StandardGiven:  r.Present("STANDARD") && !r.Negated("STANDARD") && !r.Defaulted("STANDARD"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),

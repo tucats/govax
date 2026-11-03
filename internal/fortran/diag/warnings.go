@@ -73,7 +73,7 @@ func (w Warnings) With(keywords []string) (Warnings, error) {
 // even under /WARNINGS=NONE, which gives only the setting each unit starts with (ours).
 var askedFor = map[string]bool{
 	"UNDECLARED": true, "UNUSEDNAME": true, "UNUSEDDUMMY": true, "UNUSEDLABEL": true,
-	"ALIGNFIELD": true, "ALIGNCOMMON": true,
+	"ALIGNFIELD": true, "ALIGNCOMMON": true, "EXTENSION": true,
 }
 
 // Held reports whether the setting keeps the message m from being shown.

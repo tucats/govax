@@ -516,6 +516,15 @@ and `REAL X` may be there only to type a statement function's dummy. It was runn
 `testdata/fortran` under `/WARNINGS=ALL`, and reading what came out, that found the last of those, and that
 `DO 10 WHILE` had never noted its label.
 
+`/STANDARD` is the other way to find something: a walk of its own (`sema/standard.go`), over the syntax tree with
+tables of what FORTRAN-77 has, after each unit, leaving the other passes as they are. It works from the tree rather
+than the analyzed statements because extensions are mostly a matter of how something is written: an analyzed
+`INTEGER*2 I` and an `I` of the same type would look alike. Two things the tree can't say come from elsewhere. Only
+analysis can tell `SIND(X)` from an array element, so the one place that notes an intrinsic reference
+(`noteIntrinsic`) tells the walk too. And a line's tabs, small letters, and `!` comments are gone by the time there is
+a statement, so the first pass notes them as `source.Mark`s, which nothing reads unless asked. The findings are sorted
+into the source's order before they're reported, since a walk and those notes each find theirs in their own order.
+
 ## 8. Declarations and storage
 
 AVERAGE declares very little. A real FORTRAN program's declarations are

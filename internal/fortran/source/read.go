@@ -140,6 +140,10 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 		case Continuation:
 			continued++
 
+			if continued == standardContinuations+1 {
+				r.mark(line, 1, "more than 19 continuation lines")
+			}
+
 			if continued == r.continuationLimit()+1 {
 				r.messages.Report("TOOMANYCONT", linePosition(line, 0), r.continuationLimit())
 			}
@@ -154,6 +158,7 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 		}
 
 		field := line.Text[fl.start:fl.end]
+		r.markField(line, fl, field, &comments)
 		field = field[:comments.cut(field)]
 
 		s.pieces = append(s.pieces, piece{offset: text.Len(), line: line, column: fl.start + 1})
@@ -163,6 +168,7 @@ func (r *reader) statement(lines []*Line, first, depth int) {
 	s.Text = text.String()
 
 	if spec, ok := r.include(s); ok {
+		r.program.Includes = append(r.program.Includes, Mark{s.Position(0), "the INCLUDE statement", lines[0].Library})
 		r.includeFile(s, spec, depth, lines[0])
 
 		return

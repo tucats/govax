@@ -797,7 +797,8 @@ grammar console
     ! with type LIS), and SHOW is /[NO]SHOW[=(keyword,...)], what it holds, and CROSS_REFERENCE
     ! is /[NO]CROSS_REFERENCE, where each name is mentioned. CHECK is /[NO]CHECK[=(keyword,...)], what the
     ! compiled code looks out for (sema.Checks), and WARNINGS is /[NO]WARNINGS[=(keyword,...)], what
-    ! the compiler says beyond errors (diag.Warnings). Elements joined by + are one compilation
+    ! the compiler says beyond errors (diag.Warnings), and STANDARD is /[NO]STANDARD[=(keyword,...)], what
+    ! to flag as an extension to FORTRAN-77 (sema.Conformance). Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -837,6 +838,9 @@ grammar console
                     /type=$any/list             -
                     /default=""
         qualifier   warnings/id=1386            -
+                    /type=$any/list             -
+                    /default=""
+        qualifier   standard/id=1387            -
                     /type=$any/list             -
                     /default=""
         qualifier   continuations/id=1376       -

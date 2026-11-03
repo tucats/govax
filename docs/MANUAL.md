@@ -4965,7 +4965,7 @@ The command's syntax and qualifiers are in
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, or `/NOEXTEND_SOURCE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, and `--warnings keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, and `/WARNINGS=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, and `--standard keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, and `/STANDARD=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -5077,6 +5077,20 @@ dummy argument. After an error nothing is reported as unused, since the statemen
 `DECLARATIONS` reports every name in an `INCLUDE` file too, used or not, in each unit including it, as
 `IMPLICIT NONE` would refuse them: a program that relies on implicit typing and shares its common blocks that way
 gets a great many.
+
+**FORTRAN-77 conformance.** `/STANDARD` flags what a program does that FORTRAN-77 doesn't have, for a program
+meant to move to another compiler. Each finding is `%FORT-I-EXTENSION`, informational, so a flagged program still
+compiles with a good `$STATUS`, and its code is the same:
+
+| Keyword | What's flagged |
+| --- | --- |
+| `SYNTAX` | DEC's statements (`TYPE`, `STRUCTURE`, `DO WHILE`, `INCLUDE`, ...), `*n` lengths on types other than `CHARACTER`, a `DO` without a label, `IMPLICIT NONE`, initial values in a type statement, Hollerith, octal, hexadecimal, and RADIX-50 constants, `Q` exponents, `COMPLEX*16` constants, `.XOR.`, a sign straight after an operator, `%LOC` and its kin, record fields, null arguments, control list specifiers and word values FORTRAN-77 lacks, `READ (u'r)`, the `O`, `Z`, `Q`, and `$` edit descriptors, a descriptor with no width, variable format expressions, names over six characters or with `$` or `_`, and intrinsic functions FORTRAN-77 lacks |
+| `SOURCE_FORM` | Tabs in the first six columns, small letters outside constants and comments, `!` comments, debugging lines, a statement past column 72 (under `/EXTEND_SOURCE`), and more than 19 continuation lines |
+
+The keywords also come as `NOSYNTAX` and `NOSOURCE_FORM`, with `ALL` and `NONE`, cut short if you like. `/STANDARD`
+alone is `ALL`, and the default is `/NOSTANDARD`. `/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for
+them. What a program *means* isn't looked at: a non-integer subscript, `.AND.` of integers, and a character variable
+beside a number in a common block aren't flagged, and neither is a bare `X`, or anything in a text library's module.
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5548,6 +5562,9 @@ FORTRAN compiler was available to check them). So far:
   `ALIGNMENT`, the default, what `/WARNINGS` alone means, and what each message says are govax's.
   `/WARNINGS=NONE` gives only what each unit starts with, so a source's own
   `CDEC$ OPTIONS /WARN=ALIGNMENT` still gets its messages.
+- `/STANDARD`: the manuals at hand give the keywords' names and no more. What's flagged comes from the language
+  manual's blue print and FORTRAN-77's own rules, and the messages are govax's. No keyword covers what a program
+  means, nor does any OPTIONS statement take it.
 - In a tab-format line, the tab stands for the columns before column 7,
   so the statement still ends at column 72 (or 132).
 - A line whose first nonblank character is `!` is a comment line, and

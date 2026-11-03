@@ -592,3 +592,52 @@ func TestFortranWarningsQualifier(t *testing.T) {
 		t.Errorf("/WARNINGS=BOGUS: %v", err)
 	}
 }
+
+// TestFortranStandardQualifier runs /STANDARD through the command: what each form flags,
+// that a program flagged still ends with a good status, and that a keyword that isn't one
+// is refused.
+func TestFortranStandardQualifier(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]STDQ.FOR"},
+		rms.TextRecords, splitSource("      BYTE B\n      i = 1\n      END\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	deleteFilesAfter(t, d, "STDQ")
+
+	for _, f := range []struct {
+		qualifier string
+		says      []string
+	}{
+		{"", nil},
+		{"/NOSTANDARD", nil},
+		{"/STANDARD=NONE", nil},
+		{"/STANDARD", []string{"the BYTE statement", "small letters"}},
+		{"/STANDARD=SYNTAX", []string{"the BYTE statement"}},
+		{"/STANDARD=SOURCE_FORM", []string{"small letters"}},
+		{"/STANDARD=SYNTAX/WARNINGS=NONE", []string{"the BYTE statement"}},
+	} {
+		buf.Reset()
+		shareFindRun(t, d, "FORTRAN"+f.qualifier+" STDQ")
+
+		text := buf.String()
+
+		for _, what := range []string{"the BYTE statement", "small letters"} {
+			if got, want := strings.Contains(text, "FORTRAN-77: "+what), slices.Contains(f.says, what); got != want {
+				t.Errorf("%q: %q %v, want %v:\n%s", f.qualifier, what, got, want, text)
+			}
+		}
+
+		buf.Reset()
+		shareFindRun(t, d, `WRITE SYS$OUTPUT F$INTEGER($SEVERITY)`)
+
+		if severity := strings.TrimSpace(buf.String()); severity != "1" {
+			t.Errorf("%q: $SEVERITY %s, want 1", f.qualifier, severity)
+		}
+	}
+
+	if err := d.Dispatch("FORTRAN/STANDARD=SEMANTIC STDQ"); !errors.Is(err, vmserrors.New(vmserrors.CLI_FORSTANDARD)) || !strings.Contains(err.Error(), "SEMANTIC") {
+		t.Errorf("a keyword that isn't one: %v", err)
+	}
+}

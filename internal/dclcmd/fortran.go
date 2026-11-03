@@ -29,6 +29,7 @@ import (
 //	        [/LIST[=file] | /NOLIST] [/SHOW[=(keyword,...)] | /NOSHOW]
 //	        [/[NO]CROSS_REFERENCE] [/CHECK[=(keyword,...)] | /NOCHECK]
 //	        [/WARNINGS[=(keyword,...)] | /NOWARNINGS]
+//	        [/STANDARD[=(keyword,...)] | /NOSTANDARD]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -123,6 +124,11 @@ type FortranOptions struct {
 	Warnings      []string
 	WarningsGiven bool
 	NoWarnings    bool
+
+	// Standard is /STANDARD's keywords, if StandardGiven says it was given (none for
+	// /STANDARD alone). /NOSTANDARD is the default (sema.Conformance).
+	Standard      []string
+	StandardGiven bool
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -256,6 +262,21 @@ func (opts FortranOptions) warnings() (diag.Warnings, error) {
 	return warnings, nil
 }
 
+// standard is what /STANDARD asks to have flagged, or an error if it has a keyword that
+// isn't one.
+func (opts FortranOptions) standard() (sema.Conformance, error) {
+	if !opts.StandardGiven {
+		return sema.Conformance{}, nil
+	}
+
+	standard, err := sema.Conformance{}.With(opts.Standard)
+	if err != nil {
+		return standard, vmserrors.New(vmserrors.CLI_FORSTANDARD, err.Error())
+	}
+
+	return standard, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
 // text library's. fortLibraryName and forSysDefFile name the libraries
@@ -289,6 +310,10 @@ func (c *Context) Fortran(opts FortranOptions) error {
 
 	warnings, err := opts.warnings()
 	if err != nil {
+		return err
+	}
+
+	if _, err := opts.standard(); err != nil {
 		return err
 	}
 
@@ -400,6 +425,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	show, _ := opts.listingShow()                  // checked by Fortran
 	checks, _ := opts.checks()                     // checked by Fortran
 	warnings, _ := opts.warnings()                 // checked by Fortran
+	standard, _ := opts.standard()                 // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:   opts.ExtendSource,
@@ -413,6 +439,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		CrossReference: opts.CrossReference,
 		Checks:         checks,
 		Warnings:       warnings,
+		Standard:       standard,
 		Continuations:  continuations,
 		Includes:       includes,
 		Version:        BuildVersion,

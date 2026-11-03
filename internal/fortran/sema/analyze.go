@@ -33,6 +33,9 @@ type Options struct {
 	// Warnings is /WARNINGS, for the two keywords that look for something here
 	// (warnings.go). No OPTIONS statement takes it (section 1.4.3).
 	Warnings diag.Warnings
+
+	// Standard is /STANDARD: what to flag as an extension to FORTRAN-77 (standard.go).
+	Standard Conformance
 }
 
 // Analyze gives the parser's tree its meaning, reporting what is wrong
@@ -76,6 +79,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			gFloating:      unitOpts.GFloating,
 			align:          opts.Align,
 			warnings:       opts.Warnings,
+			extensions:     newExtensions(opts.Standard),
 			prologueGroups: groups,
 		}
 
@@ -83,6 +87,11 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 		unit.Checks = unitOpts.Checks
 		prog.Units = append(prog.Units, unit)
 	}
+
+	// What comes after the last unit is an extension as anywhere.
+	trailing := newExtensions(opts.Standard)
+	trailing.statements(file.Trailing)
+	trailing.report(messages)
 
 	// A PSECT directive after the last unit has no unit to belong to, so no
 	// block it could name.
@@ -337,6 +346,9 @@ type analyzer struct {
 	// warnings is /WARNINGS (warnings.go).
 	warnings diag.Warnings
 
+	// extensions is what /STANDARD has found so far in this unit (standard.go).
+	extensions *extensions
+
 	// walking is set during the statement walk, when using a name is using
 	// it in a statement (usedBeforeEntry).
 	walking bool
@@ -441,6 +453,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.untyped()
 	a.undeclared()
 	a.reportUnused()
+	a.reportExtensions(au)
 	a.passedLengths()
 	a.layout()
 	a.recordInitials()

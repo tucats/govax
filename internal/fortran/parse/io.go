@@ -91,6 +91,7 @@ type control struct {
 	format   *ast.FormatSpec
 	namelist *ast.Name
 	rec      ast.Expr
+	recQuote bool
 	specs    []*ast.IOSpec
 }
 
@@ -171,6 +172,7 @@ func (p *parser) controlList() *control {
 
 				if cl.rec && p.accept("'") {
 					c.rec = p.expr()
+					c.recQuote = true
 					seen["REC"] = true
 				}
 
@@ -283,7 +285,7 @@ func parseTransfer(p *parser) ast.Stmt {
 	s := &ast.TransferStmt{StmtBase: p.base()}
 	c := p.controlList()
 
-	s.Unit, s.Format, s.Namelist, s.Rec, s.Specs = *c.unit, c.format, c.namelist, c.rec, c.specs
+	s.Unit, s.Format, s.Namelist, s.Rec, s.RecQuote, s.Specs = *c.unit, c.format, c.namelist, c.rec, c.recQuote, c.specs
 
 	if !p.atEnd() {
 		s.Items = p.ioList()

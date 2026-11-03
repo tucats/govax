@@ -472,6 +472,9 @@ type (
 		Rec      Expr
 		Specs    []*IOSpec
 		Items    []Expr
+
+		// RecQuote says the record was written u'r, not REC=r.
+		RecQuote bool
 	}
 
 	// CodeStmt is ENCODE or DECODE (c, f, b[,IOSTAT=ios][,ERR=s]) [list]

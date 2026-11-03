@@ -48,6 +48,9 @@ type Options struct {
 	// Warnings is /WARNINGS: what the compiler says, beyond errors (diag.Warnings).
 	Warnings diag.Warnings
 
+	// Standard is /STANDARD: what to flag as an extension to FORTRAN-77 (sema.Conformance).
+	Standard sema.Conformance
+
 	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
 	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
@@ -152,6 +155,8 @@ func CompileAll(opts Options, files []File) (result Result) {
 		Continuations: opts.Continuations,
 	}, sources, opts.Includes, &messages)
 
+	sema.ReportSourceExtensions(program, opts.Standard, &messages)
+
 	// The second, third, and fourth passes: each statement's kind and
 	// tokens, then the syntax tree, then its meaning. Semantic analysis
 	// runs even after the parser's errors, since the tree keeps a
@@ -170,6 +175,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 			Align:     align,
 			Checks:    opts.Checks,
 			Warnings:  opts.Warnings,
+			Standard:  opts.Standard,
 		}, &messages)
 
 		if !messages.Failed() {

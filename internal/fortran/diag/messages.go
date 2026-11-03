@@ -34,6 +34,10 @@ var messages = map[string]kind{
 	"UNUSEDDUMMY": {Warning, "the dummy argument %s is never used"},
 	"UNUSEDLABEL": {Warning, "statement label %s is never used"},
 
+	// EXTENSION is something in the program that FORTRAN-77 doesn't have, as
+	// /STANDARD asks (sema/standard.go): a remark, so a program flagged still compiles.
+	"EXTENSION": {Informational, "extension to FORTRAN-77: %s"},
+
 	// The source form's messages (internal/fortran/source).
 
 	// NOINITIAL is a continuation line with no statement before it to

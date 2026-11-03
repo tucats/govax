@@ -263,6 +263,7 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{list: true, crossRef: true}, `FORTRAN "sq"/LIST/CROSS_REFERENCE`},
 		{[]string{"sq"}, fortranFlags{check: "bounds,nooverflow"}, `FORTRAN "sq"/CHECK=(bounds,nooverflow)`},
 		{[]string{"sq"}, fortranFlags{warnings: "nogeneral,unused"}, `FORTRAN "sq"/WARNINGS=(nogeneral,unused)`},
+		{[]string{"sq"}, fortranFlags{standard: "syntax"}, `FORTRAN "sq"/STANDARD=(syntax)`},
 	}
 
 	for _, c := range cases {

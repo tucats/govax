@@ -122,6 +122,8 @@ func (a *analyzer) noteOther(what, name string, pos diag.Position, kind RefKind)
 // noteIntrinsic notes a reference to the intrinsic function name: a mention of its
 // Symbol if the unit has declared it, or of the function.
 func (a *analyzer) noteIntrinsic(name string, pos diag.Position) {
+	a.extensions.intrinsic(name, pos)
+
 	if s := a.unit.byName[name]; s != nil {
 		a.note(&s.refs, pos, RefUsed)
 	} else {

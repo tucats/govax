@@ -4238,6 +4238,15 @@ $FOR
                         NONE.  What isn't shown doesn't count: a compilation
                         with only those ends with a good status.
 
+        /STANDARD[=(<keyword>,...)]  Flags what FORTRAN-77 doesn't have, each an
+        /NOSTANDARD     informational message, so the program still compiles:
+                        SYNTAX (statements, constants, operators, specifiers,
+                        edit descriptors, names, intrinsic functions),
+                        SOURCE_FORM (tabs, small letters, ! comments, debugging
+                        lines, past column 72, over 19 continuation lines), ALL,
+                        NONE, and NOSYNTAX and NOSOURCE_FORM.  /STANDARD alone
+                        is ALL.  The default is /NOSTANDARD.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
@@ -4255,8 +4264,8 @@ $FOR
     with --macro <file> or --no-macro, --extend-source, --d-lines,
     --continuations <n>, --no-i4, --g-floating, --align <value>,
     --no-align, --optimize, --no-optimize, --list, --list-file <file>,
-    --show <keywords>, --cross-reference, --check <keywords>, and
-    --warnings <keywords>.
+    --show <keywords>, --cross-reference, --check <keywords>,
+    --warnings <keywords>, and --standard <keywords>.
 
     Examples:
 

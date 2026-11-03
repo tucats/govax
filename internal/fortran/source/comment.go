@@ -55,6 +55,10 @@ type commentScanner struct {
 	// start is the statement's first characters outside constants, in
 	// capitals: enough to know a type statement's length (CountMayFollow).
 	start []byte
+
+	// lower is where the last cut found its field's first small letter outside
+	// constants, or -1 if it found none, for /STANDARD=SOURCE_FORM.
+	lower int
 }
 
 // maxHollerith caps a Hollerith count, so a long run of digits can't
@@ -65,8 +69,14 @@ const maxHollerith = 1 << 20
 // index of the ! that starts one, or len(field) if there is none. The
 // scanner remembers where it is in any constant for the next line.
 func (s *commentScanner) cut(field string) int {
+	s.lower = -1
+
 	for i := 0; i < len(field); i++ {
 		c := field[i]
+
+		if c >= 'a' && c <= 'z' && s.lower < 0 && s.hollerith == 0 && !s.quoted {
+			s.lower = i
+		}
 
 		switch {
 		case s.hollerith > 0:

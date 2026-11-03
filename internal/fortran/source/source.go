@@ -264,4 +264,12 @@ type Program struct {
 	// Statements are the statements, in order, INCLUDE statements
 	// replaced by the statements of the files they include.
 	Statements []*Statement
+
+	// Includes are where the INCLUDE statements are, since they aren't among
+	// the Statements. Library says each came from a text library's module.
+	Includes []Mark
+
+	// Marks are the places in statements' lines that /STANDARD=SOURCE_FORM asks
+	// about and only this pass can see (standard.go).
+	Marks []Mark
 }

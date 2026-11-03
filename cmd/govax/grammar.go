@@ -74,6 +74,7 @@ type fortranFlags struct {
 	crossRef     bool   // --cross-reference: /CROSS_REFERENCE
 	check        string // --check: /CHECK's keywords, separated by commas
 	warnings     string // --warnings: /WARNINGS's keywords, separated by commas
+	standard     string // --standard: /STANDARD's keywords, separated by commas
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -433,6 +434,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
 			fortran.warnings, _ = c.String("warnings")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "standard",
+		Description: "Flag what FORTRAN-77 doesn't have: all, none, [no]syntax, [no]source_form, separated by commas",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.standard, _ = c.String("standard")
 
 			return nil
 		},
@@ -974,6 +985,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.warnings != "" {
 		command += "/WARNINGS=(" + f.warnings + ")"
+	}
+
+	if f.standard != "" {
+		command += "/STANDARD=(" + f.standard + ")"
 	}
 
 	if f.continuationsGiven {
