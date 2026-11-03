@@ -32,6 +32,10 @@ const (
 	dbgVerifyICF
 	dbgMisOpeMis
 	dbgNotRecord
+	dbgTooManSub
+	dbgTooFewSub
+	dbgSubOutBnd
+	dbgNotActive
 )
 
 // DBG facility status codes.
@@ -85,6 +89,15 @@ const (
 	// DBG_NOTRECORD is language FORTRAN's answer to X.Y when X is data but
 	// no record (testdata/dbg85's probe); its argument is the component.
 	DBG_NOTRECORD = DBGFacility<<FacilityPosition | dbgNotRecord<<MessagePosition | StatusWarning
+	// DBG_TOOMANSUB is too many subscripts for an array (testdata/dbg85's probe); its
+	// argument is how many dimensions it has, with the word. DBG_TOOFEWSUB is the other
+	// way, DBG_SUBOUTBND a subscript past its dimension, and DBG_NOTACTIVE a dummy
+	// argument or AUTOMATIC variable of a routine with no active frame: their
+	// wording is govax's, no probe having shown them.
+	DBG_TOOMANSUB = DBGFacility<<FacilityPosition | dbgTooManSub<<MessagePosition | StatusWarning
+	DBG_TOOFEWSUB = DBGFacility<<FacilityPosition | dbgTooFewSub<<MessagePosition | StatusWarning
+	DBG_SUBOUTBND = DBGFacility<<FacilityPosition | dbgSubOutBnd<<MessagePosition | StatusWarning
+	DBG_NOTACTIVE = DBGFacility<<FacilityPosition | dbgNotActive<<MessagePosition | StatusWarning
 	// DBG_NOSUCHMODULE is SET MODULE's and SHOW SYMBOL's answer to a
 	// module name no loaded image has. The wording is govax's choice: no
 	// probe showed it.
@@ -149,6 +162,10 @@ func init() {
 	DefineMessage(DBG_NOSYMBOL, DBGFacility, "NOSYMBOL", "symbol '!S' is not in the symbol table")
 	DefineMessage(DBG_MISOPEMIS, DBGFacility, "MISOPEMIS", "misplaced operator or missing operand at '!S'")
 	DefineMessage(DBG_NOTRECORD, DBGFacility, "NOTRECORD", "variable is not record; cannot select component !S")
+	DefineMessage(DBG_TOOMANSUB, DBGFacility, "TOOMANSUB", "too many subscripts, array has !S")
+	DefineMessage(DBG_TOOFEWSUB, DBGFacility, "TOOFEWSUB", "too few subscripts, array has !S")
+	DefineMessage(DBG_SUBOUTBND, DBGFacility, "SUBOUTBND", "subscript !S is out of bounds, value is !S, bounds are !S")
+	DefineMessage(DBG_NOTACTIVE, DBGFacility, "NOTACTIVE", "!S has no active call frame")
 	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
 	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
 	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")

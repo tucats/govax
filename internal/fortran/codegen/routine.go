@@ -18,6 +18,9 @@ type routineGen struct {
 	bases *namer
 	src   *sourceLines
 
+	// debugTable says the program was compiled with /DEBUG (debugtable.go).
+	debugTable bool
+
 	// localAlign is the module's $LOCAL section's alignment (localAlignment).
 	localAlign int
 

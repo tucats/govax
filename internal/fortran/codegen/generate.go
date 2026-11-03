@@ -95,6 +95,10 @@ type Options struct {
 	// /OPTIMIZE's instruction passes (package opt). Without it, the code is
 	// written as it was chosen.
 	Improve func(*Code)
+
+	// DebugTable is /DEBUG's table for the debugger (debugtable.go), and its labels
+	// on each statement.
+	DebugTable bool
 }
 
 // Generate writes the MACRO-32 code for a source file's routines to w,
@@ -121,6 +125,7 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 		g := newRoutineGen(r, names, src)
 		g.localAlign = localAlign
 		g.improve = opts.Improve
+		g.debugTable = opts.DebugTable
 		g.generate()
 
 		storage := StorageMap{Routine: r.Name, Lines: g.storageMap()}
@@ -391,6 +396,7 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 	}
 
 	w.Comment("")
+	g.writeDebugTable(w)
 
 	for _, p := range r.Params {
 		if p.Through == nil {

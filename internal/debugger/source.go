@@ -121,6 +121,9 @@ func expandTabs(s string) string {
 // grammar, unquoted text is made upper case and a "/" starts a qualifier,
 // so a host path, whose case counts, is written in quotes.
 func (d *Debugger) SetSource(list string) error {
+	// A table comes from a file the new list may find elsewhere.
+	d.fortranTables = nil
+
 	var dirs []string
 
 	for _, dir := range splitTop(list, ',') {

@@ -232,6 +232,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 		generating.Improve = opt.Improve
 	}
 
+	generating.DebugTable = opts.Debug.Symbols
 	maps = codegen.Generate(&w, routines, program.Lines, generating)
 	result.MACRO = w.Lines()
 

@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/fortran/dbgtable"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 )
@@ -30,6 +31,18 @@ type Debugger struct {
 
 	// Console is the console the debugger is installed in.
 	Console Console
+
+	// fortranTables are the tables of the FORTRAN programs' modules, each read from its
+	// MACRO file once, nil for a module that has none (fortran.go).
+	fortranTables map[*dbgsym.Module]*dbgtable.Table
+
+	// evaluating is set while EVALUATE (not EVALUATE/ADDRESS) reads its expression, in
+	// which a name stands for what it holds (fortran.go).
+	evaluating bool
+
+	// namedPlace, when set, is what locationName calls the location being shown: a
+	// FORTRAN variable, whose address alone wouldn't say which (fortran.go).
+	namedPlace string
 
 	// Dispatcher parses and runs the debugger's commands.
 	Dispatcher *Dispatcher
@@ -226,6 +239,7 @@ func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal
 	c.DebugBuiltins = d.builtinSymbol
+	c.DebugNames = d.fortranName
 
 	return d
 }

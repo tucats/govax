@@ -155,6 +155,10 @@ func (d *Debugger) registerScope() string {
 // that names it (with the offset past it), or the program's symbol for the
 // address (a routine's code), or just the address in hex.
 func (d *Debugger) locationName(addr uint32) string {
+	if d.namedPlace != "" {
+		return d.namedPlace
+	}
+
 	if d.numericNames {
 		return fmt.Sprintf("%08X", addr)
 	}
@@ -244,6 +248,14 @@ func numericItem(item string) bool {
 func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 	if reg, name, isPSL, ok := registerOf(item); ok {
 		return d.examineRegister(r, reg, name, isPSL)
+	}
+
+	if places, ok, err := d.fortranPlaces(item); ok {
+		if err != nil {
+			return err
+		}
+
+		return d.examineFortran(r, places)
 	}
 
 	cur := d.examined
@@ -944,9 +956,30 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 		return err
 	}
 
-	value, err := dbg.Machine.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
-	if err != nil {
-		return err
+	// A FORTRAN variable's value is what it holds, by its type.
+	var (
+		value uint32
+		err   error
+	)
+
+	if places, ok, placeErr := dbg.fortranPlaces(text); ok {
+		if placeErr != nil {
+			return placeErr
+		}
+
+		if !r.Present("ADDRESS") {
+			return dbg.evaluateFortran(places, dbg.examineRadix(r))
+		}
+
+		value = places[0].addr
+	} else {
+		dbg.evaluating = !r.Present("ADDRESS")
+		value, err = dbg.Machine.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
+		dbg.evaluating = false
+
+		if err != nil {
+			return err
+		}
 	}
 
 	// EVALUATE/ADDRESS makes the address the current location (%CURLOC);
@@ -1070,6 +1103,14 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		dbg.setCurrentValue(data)
 
 		return dbg.setRegisterBytes(reg, data)
+	}
+
+	if places, ok, err := dbg.fortranPlaces(target); ok {
+		if err != nil {
+			return err
+		}
+
+		return dbg.depositFortran(places, t, typed, value)
 	}
 
 	addr, err := dbg.evalWhole(target)

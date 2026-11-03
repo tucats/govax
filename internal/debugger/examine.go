@@ -67,6 +67,14 @@ func parseRadix(word string) int {
 // debugger's input radix. A number with no prefix (^D, ^X, ^O, ^B) is read
 // in it, so "SET RADIX DECIMAL" makes "EXAMINE 100" decimal.
 func (d *Debugger) evalWhole(text string) (uint32, error) {
+	if places, ok, err := d.fortranPlaces(text); ok {
+		if err != nil {
+			return 0, err
+		}
+
+		return places[0].addr, nil
+	}
+
 	return d.Machine.EvalWholeIn(d.inputRadix, text)
 }
 

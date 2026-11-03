@@ -3,6 +3,7 @@ package debugger_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -125,6 +126,248 @@ func TestFortranDebugQualifier(t *testing.T) {
 
 	if out := say(t, c, "SHOW MODULE"); !strings.Contains(out, "DBG85") || !strings.Contains(out, "MACRO") {
 		t.Errorf("SHOW MODULE: %s", out)
+	}
+}
+
+// fortranDebugSource is a program with a variable of each kind, and a routine with each
+// kind of dummy argument, stopped at by TestFortranVariables.
+const fortranDebugSource = `      PROGRAM FV
+      REAL X, V(3)
+      DOUBLE PRECISION DD
+      INTEGER*2 H
+      INTEGER I, M(2,3), L0(-1:1)
+      LOGICAL T, F
+      COMPLEX Z
+      CHARACTER*8 NAME, NAMES(2)
+      COMMON /BLK/ IC, RC
+      V(1) = 1.5
+      V(2) = 2.5
+      V(3) = 3.5
+      X = 0.25
+      DD = 2.5D0
+      H = 7
+      I = 11
+      T = .TRUE.
+      F = .FALSE.
+      Z = (1.5, -2.5)
+      NAME = 'ABCDEFGH'
+      NAMES(2) = 'SECOND'
+      IC = 42
+      RC = 9.5
+      M(1,1) = 11
+      M(2,1) = 21
+      M(2,3) = 23
+      L0(-1) = 5
+      CALL SUB(V, 3, X, NAME, M)
+      END
+      SUBROUTINE SUB(A, N, TOTAL, S, ASSUME)
+      REAL A(N), TOTAL
+      CHARACTER*(*) S
+      INTEGER ASSUME(2,*), LOCAL
+      AUTOMATIC IAUTO
+      IAUTO = 77
+      LOCAL = 5
+      TOTAL = A(2) + A(3)
+      S(1:1) = 'Z'
+      CALL NEST(TOTAL)
+      RETURN
+      END
+      SUBROUTINE NEST(P)
+      REAL P
+      P = P + 1
+      CALL OTHER(P, 'TEXT')
+      RETURN
+      END
+      SUBROUTINE FIRST(Q)
+      REAL Q, R
+      CHARACTER*(*) C
+      R = Q
+      RETURN
+      ENTRY OTHER(Q, C)
+      R = Q + 1
+      RETURN
+      END
+`
+
+// fortranDebugSession stops FORTRAN/DEBUG's program in a routine.
+func fortranDebugSession(t *testing.T, at string) *console.Console {
+	t.Helper()
+
+	c := newRunnableConsole(t)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dir := t.TempDir()
+	file := func(name string) string { return filepath.Join(dir, name) }
+
+	if err := os.WriteFile(file("fv.for"), []byte(fortranDebugSource), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{
+		`FORTRAN "` + file("fv.for") + `"/HOST/NOOPTIMIZE/DEBUG/OBJECT`,
+		`LINK "` + file("fv.obj") + `"/HOST/DEBUG/NOSYSLIB/EXECUTABLE="` + file("fv.exe") + `"`,
+	} {
+		if err := d.Dispatch(command); err != nil {
+			t.Fatalf("%s: %v", command, err)
+		}
+	}
+
+	if at == "" {
+		started, _ := runImage(t, file("fv.exe"), machine.RunOptions{Debug: machine.DebugOn})
+
+		return started
+	}
+
+	return stoppedAt(t, file("fv.exe"), at)
+}
+
+// variableOutput is EXAMINE's output with the blanks after each name made two, since
+// how far a value is from its name depends on the name's length, not on what's being tested.
+func variableOutput(t *testing.T, c *console.Console, line string) string {
+	t.Helper()
+
+	return regexp.MustCompile(`: +`).ReplaceAllString(examineOutput(t, c, line), ":  ")
+}
+
+// TestFortranVariables holds EXAMINE of each kind of variable, from the routine it's in
+// and by its unit's name from elsewhere, each shown as its own type.
+func TestFortranVariables(t *testing.T) {
+	c := fortranDebugSession(t, "NEST")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, want := range []struct{ line, output string }{
+		// The caller's, by the unit's name.
+		{"EXAMINE FV.X", "FV\\FV.X:  6.000000\n"},
+		{"EXAMINE FV.DD", "FV\\FV.DD:  2.50000000000000\n"},
+		{"EXAMINE FV.H", "FV\\FV.H:  7\n"},
+		{"EXAMINE FV.I", "FV\\FV.I:  11\n"},
+		{"EXAMINE FV.T", "FV\\FV.T:  .TRUE.\n"},
+		{"EXAMINE FV.F", "FV\\FV.F:  .FALSE.\n"},
+		{"EXAMINE FV.Z", "FV\\FV.Z:  (1.500000,-2.500000)\n"},
+		{"EXAMINE FV.NAME", "FV\\FV.NAME:  'ZBCDEFGH'\n"},
+		{"EXAMINE FV.NAME(2:4)", "FV\\FV.NAME(2:4):  'BCD'\n"},
+		{"EXAMINE FV.NAMES(2)", "FV\\FV.NAMES(2):  'SECOND  '\n"},
+		{"EXAMINE FV.NAMES(2)(1:3)", "FV\\FV.NAMES(2)(1:3):  'SEC'\n"},
+		{"EXAMINE FV.IC", "FV\\FV.IC:  42\n"},
+		{"EXAMINE FV.RC", "FV\\FV.RC:  9.500000\n"},
+		// Arrays, in FORTRAN's bounds and order.
+		{"EXAMINE FV.V(2)", "FV\\FV.V(2):  2.500000\n"},
+		{"EXAMINE FV.M(2,3)", "FV\\FV.M(2,3):  23\n"},
+		{"EXAMINE FV.M(2,1)", "FV\\FV.M(2,1):  21\n"},
+		{"EXAMINE FV.L0(-1)", "FV\\FV.L0(-1):  5\n"},
+		{"EXAMINE FV.V", "FV\\FV.V(1):  1.500000\nFV\\FV.V(2):  2.500000\nFV\\FV.V(3):  3.500000\n"},
+		// A bare name is the routine's, a dummy argument found through its frame.
+		{"EXAMINE P", "FV\\NEST.P:  6.000000\n"},
+		// The routine that called it, by the unit's name, through its own frame.
+		{"EXAMINE SUB.N", "FV\\SUB.N:  3\n"},
+		{"EXAMINE SUB.A(3)", "FV\\SUB.A(3):  3.500000\n"},
+		{"EXAMINE SUB.A", "FV\\SUB.A(1):  1.500000\nFV\\SUB.A(2):  2.500000\nFV\\SUB.A(3):  3.500000\n"},
+		{"EXAMINE SUB.S", "FV\\SUB.S:  'ZBCDEFGH'\n"},
+		{"EXAMINE SUB.S(1:1)", "FV\\SUB.S(1:1):  'Z'\n"},
+		{"EXAMINE SUB.ASSUME(1,1)", "FV\\SUB.ASSUME(1,1):  11\n"},
+		{"EXAMINE SUB.ASSUME(2,3)", "FV\\SUB.ASSUME(2,3):  23\n"},
+		{"EXAMINE SUB.LOCAL", "FV\\SUB.LOCAL:  5\n"},
+		{"EXAMINE SUB.IAUTO", "FV\\SUB.IAUTO:  77\n"},
+		// EVALUATE gives what it holds.
+		{"EVALUATE FV.X", "6.000000\n"},
+		{"EVALUATE FV.M(2,3)", "23\n"},
+		// A qualifier still decides how it's shown, under the variable's name.
+		{"EXAMINE/LONGWORD/HEXADECIMAL FV.I", "FV\\FV.I:  0000000B\n"},
+		{"EXAMINE/ASCII:3 FV.NAME", "FV\\FV.NAME:  'ZBC'\n"},
+	} {
+		if got := variableOutput(t, c, want.line); got != want.output {
+			t.Errorf("%s: got %q, want %q", want.line, got, want.output)
+		}
+	}
+
+	for _, want := range []struct{ line, says string }{
+		{"EXAMINE FV.M(1)", "too few subscripts, array has 2 dimensions"},
+		{"EXAMINE FV.V(1,2)", "too many subscripts, array has 1 dimension"},
+		{"EXAMINE FV.V(4)", "subscript 1 is out of bounds, value is 4, bounds are 1:3"},
+		{"EXAMINE FV.NAME(7:9)", "out of bounds"},
+		{"EXAMINE FV.NOSUCH", "FV.NOSUCH"},
+	} {
+		if _, err := sayErr(c, want.line); err == nil || !strings.Contains(err.Error(), want.says) {
+			t.Errorf("%s: %v, want %q", want.line, err, want.says)
+		}
+	}
+
+	// A DEPOSIT reads the value as the variable's type.
+	for _, want := range []struct{ line, examine, output string }{
+		{"DEPOSIT FV.X=6.5", "EXAMINE FV.X", "FV\\FV.X:  6.500000\n"},
+		{"DEPOSIT FV.V(2)=0.5", "EXAMINE FV.V(2)", "FV\\FV.V(2):  0.5000000\n"},
+		{"DEPOSIT FV.M(1,1)=99", "EXAMINE FV.M(1,1)", "FV\\FV.M(1,1):  99\n"},
+		{"DEPOSIT FV.DD=0.25", "EXAMINE FV.DD", "FV\\FV.DD:  0.250000000000000\n"},
+		{"DEPOSIT FV.F=.TRUE.", "EXAMINE FV.F", "FV\\FV.F:  .TRUE.\n"},
+		{"DEPOSIT FV.NAME='Hi'", "EXAMINE FV.NAME", "FV\\FV.NAME:  'Hi      '\n"},
+		{"DEPOSIT FV.NAME(2:3)='xy'", "EXAMINE FV.NAME", "FV\\FV.NAME:  'Hxy     '\n"},
+		{"DEPOSIT P=2.5", "EXAMINE P", "FV\\NEST.P:  2.500000\n"},
+		{"DEPOSIT SUB.N=2", "EXAMINE SUB.N", "FV\\SUB.N:  2\n"},
+	} {
+		dispatch(t, c, want.line)
+
+		if got := variableOutput(t, c, want.examine); got != want.output {
+			t.Errorf("%s: got %q, want %q", want.line, got, want.output)
+		}
+	}
+
+	// In an expression EVALUATE takes a name's value, and a location's address, as with a
+	// MACRO label; so too for a bare name, which is no MACRO symbol.
+	dispatch(t, c, "DEPOSIT SUB.N=3")
+
+	for _, want := range []struct{ line, output string }{
+		{"EVALUATE FV.I + 1", "12\n"},
+		{"EVALUATE SUB.N + 1", "4\n"},
+	} {
+		if got := examineOutput(t, c, want.line); got != want.output {
+			t.Errorf("%s: %q, want %q", want.line, got, want.output)
+		}
+	}
+}
+
+// TestFortranVariablesEntry: in a routine stopped at through an ENTRY statement, a dummy
+// argument is found through the cell the entry point filled in, a CHARACTER one by its
+// descriptor, and the routine is the unit's whichever name it was called by.
+func TestFortranVariablesEntry(t *testing.T) {
+	// Past the two MOVLs, of eight bytes each, that fill the cells.
+	c := fortranDebugSession(t, "OTHER+12")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, want := range []struct{ line, output string }{
+		{"EXAMINE Q", "FV\\FIRST.Q:  7.000000\n"},
+		{"EXAMINE FIRST.Q", "FV\\FIRST.Q:  7.000000\n"},
+		{"EXAMINE C", "FV\\FIRST.C:  'TEXT'\n"},
+		{"EXAMINE C(2:3)", "FV\\FIRST.C(2:3):  'EX'\n"},
+	} {
+		if got := variableOutput(t, c, want.line); got != want.output {
+			t.Errorf("%s: got %q, want %q", want.line, got, want.output)
+		}
+	}
+}
+
+// TestFortranVariablesNoFrame: what needs a frame says so when there's none.
+func TestFortranVariablesNoFrame(t *testing.T) {
+	c := fortranDebugSession(t, "")
+
+	if _, err := sayErr(c, "EXAMINE SUB.N"); err == nil || !strings.Contains(err.Error(), "SUB.N has no active call frame") {
+		t.Errorf("EXAMINE SUB.N: %v", err)
+	}
+
+	// A bare name in the main program, and the static variable of a routine not running.
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	if got := variableOutput(t, c, "EVALUATE I + 1"); got == "" {
+		t.Error("EVALUATE I + 1 said nothing")
+	}
+
+	if got := examineOutput(t, c, "EXAMINE I"); !strings.HasPrefix(got, "FV\\FV.I:") {
+		t.Errorf("EXAMINE I: %q", got)
+	}
+
+	if got := examineOutput(t, c, "EXAMINE SUB.LOCAL"); !strings.HasPrefix(got, "FV\\SUB.LOCAL:") {
+		t.Errorf("EXAMINE SUB.LOCAL: %q", got)
 	}
 }
 

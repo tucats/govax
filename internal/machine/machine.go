@@ -58,6 +58,10 @@ type Machine struct {
 	// FieldDots is the expression evaluator's FieldDots, which the debugger
 	// sets from its language.
 	FieldDots bool
+
+	// DebugNames, when set, is the Evaluator's Names: the debugger's names for what a
+	// program's symbols don't say (docs/PHASE-85, subtask 10). Nil for none.
+	DebugNames func(name string) (uint32, bool)
 	Verbose     bool
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
@@ -585,6 +589,7 @@ func (m *Machine) Evaluator() *Evaluator {
 	return &Evaluator{
 		Symbols: m.Symbols, Radix: m.Radix, Here: m.DepositAddr, Mem: m.Mem, CPU: m.CPU,
 		FieldDots: m.FieldDots,
+		Names:     m.DebugNames,
 		Debug:     imageNames{m: m},
 		Builtins: m.DebugBuiltins,
 		Load: func(addr uint32) (uint32, error) {

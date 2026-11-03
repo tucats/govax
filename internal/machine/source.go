@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"github.com/tucats/govax/internal/dbgsym"
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
@@ -70,6 +71,17 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 	// record's own position in the file would differ only for a module
 	// built from several files, and VMS shows the listing's.
 	return line.Line, records[record-1], true
+}
+
+// ModuleSource returns the lines of a module's source file, or nil if it can't be
+// found. A module from several files has the first's, which for a FORTRAN program's
+// MACRO file is all there is.
+func (m *Machine) ModuleSource(mod *dbgsym.Module) []string {
+	if len(mod.Files) == 0 {
+		return nil
+	}
+
+	return m.sourceRecords(mod.Files[0].Spec)
 }
 
 // sourceRecords returns the lines of the source file whose recorded name
