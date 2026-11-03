@@ -612,3 +612,7 @@ has REV at all.
   so the first rehearsal's `MOUNT DUA2` failed and its files landed on XFER. Its 16 files, all dated that minute, were
   deleted by name, which leaves XFER's directory as it was, though the container's bytes aren't identical (header
   slots, sequence numbers). The probe now uses DUA5.
+- **2026-11-03: round 1's first run.** VMS's MACRO refused four of `idx88.mar`'s `$XABKEY`s (`IDX88M.LOG`, audited by the
+  author), so nothing ran past LINK: IN4 and BN4 sizes, segments on a type but STG and COL, PAC's 16 bytes, and 255 in
+  all. Those cases now poke the fields at run time, and govax's `$XABKEY` makes the same four checks, so the rehearsal
+  would have caught them. The five `def_*.obj` came back whole. Whether other sizes (BN2, IN8) have such checks isn't known.

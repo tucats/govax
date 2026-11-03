@@ -589,10 +589,20 @@ func cases() *prog {
 	refuse("IFL past the bucket", spec{keys: []key{func() key { k := prim(fP, 8); k.ifl = 30000; return k }()}})
 	refuse("DFL below half the bucket", spec{keys: []key{func() key { k := prim(fP, 8); k.dfl = 10; return k }()}})
 	refuse("KNM a bad address", spec{keys: []key{poke(prim(fP, 8), "XAB$L_KNM", 16, "MOVL")}})
-	refuse("BN4 of size 2", spec{keys: []key{func() key { k := prim(fBN4, 2); k.dtp = "BN4"; return k }()}})
-	refuse("BN2 of two segments", spec{keys: []key{{dtp: "BN2", pos: []int{0, 8}, siz: []int{1, 1}}}})
-	refuse("PAC of size 17", spec{keys: []key{func() key { k := prim(fPAC, 17); k.dtp = "PAC"; return k }()}})
-	refuse("STG 256 by NSG 2", spec{keys: []key{{pos: []int{0, 100}, siz: []int{200, 56}}}, mrs: 400})
+	// These too by poking: real MACRO's $XABKEY refuses each at assembly time
+	// (the first run's IDX88M.LOG).
+	refuse("BN4 of size 2", spec{keys: []key{poke(typed(0, fBN4, 4, "BN4", ""), "XAB$B_SIZ0", 2, "MOVB")}})
+	refuse("BN2 of two segments", spec{keys: []key{func() key {
+		k := typed(0, fBN4, 2, "BN2", "")
+		k.bad = func(p *prog, l string) {
+			p.emit("MOVB\t#1,%s+XAB$B_SIZ0", l)
+			p.emit("MOVB\t#1,%s+XAB$B_SIZ0+1", l)
+			p.emit("MOVW\t#%d,%s+XAB$W_POS0+2", fIN4, l)
+		}
+		return k
+	}()}})
+	refuse("PAC of size 17", spec{keys: []key{poke(typed(0, fPAC, 4, "PAC", ""), "XAB$B_SIZ0", 17, "MOVB")}})
+	refuse("STG 256 by NSG 2", spec{mrs: 400, keys: []key{poke(key{pos: []int{0, 100}, siz: []int{200, 10}}, "XAB$B_SIZ0+1", 56, "MOVB")}})
 	refuse("BKS 64", spec{keys: []key{prim(fP, 8)}, bks: 64})
 	refuse("BKS 1 and MRS 600", spec{keys: []key{prim(fP, 8)}, bks: 1, mrs: 600})
 	refuse("MRS 32225", spec{keys: []key{prim(fP, 8)}, bks: 63, mrs: 32225})

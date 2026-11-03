@@ -1,6 +1,7 @@
 package console_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,5 +53,48 @@ func TestIdx88Probe(t *testing.T) {
 
 	if i := strings.Index(out, "\n=c "); i >= 0 {
 		t.Errorf("a condition reached a case's handler: %.200s", out[i:])
+	}
+}
+
+// TestXABKEYRefusals holds govax's $XABKEY to the four keys real MACRO's refuses at
+// assembly time (testdata/idx88's first run, whose log has these messages), and to
+// what it takes beside them.
+func TestXABKEYRefusals(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+	dir := t.TempDir()
+	dsk := filepath.Join(dir, "x.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD51 X`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+
+	for _, c := range []struct{ line, want string }{
+		{"DTP=BN4,SIZ=2", "SIZE MUST BE 4 BYTES FOR IN4 AND BN4 DATA TYPES"},
+		{"DTP=DIN4,SIZ=8", "SIZE MUST BE 4 BYTES FOR IN4 AND BN4 DATA TYPES"},
+		{"DTP=BN2,POS=<0,8>,SIZ=<1,1>", "SEGMENTED KEYS ONLY ALLOWED FOR STG OR COL DATA TYPES"},
+		{"DTP=PAC,SIZ=17", "MAXIMUM KEY SIZE (16) EXCEEDED FOR PAC DATA TYPE"},
+		{"POS=<0,100>,SIZ=<200,56>", "MAXIMUM SIZE OF KEY FIELD EXCEEDED"},
+		{"DTP=BN4,SIZ=4", ""},
+		{"DTP=DSTG,POS=<0,100>,SIZ=<200,55>", ""},
+		{"DTP=COL,POS=<0,100>,SIZ=<4,4>", ""},
+		{"DTP=DPAC,SIZ=16", ""},
+	} {
+		src := filepath.Join(dir, "x.mar")
+		text := "\t.TITLE\tX\n\t$XABKEY\t" + c.line + "\n\t.END\n"
+
+		if err := os.WriteFile(src, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		dispatch(`COPY "` + src + `"/HOST X.MAR/QUIET`)
+
+		out := dispatch("MACRO/NOLIST X")
+		if c.want == "" && out != "" {
+			t.Errorf("%s: %s", c.line, out)
+		}
+
+		if c.want != "" && !strings.Contains(out, c.want) {
+			t.Errorf("%s: want %q, got %q", c.line, c.want, out)
+		}
 	}
 }
