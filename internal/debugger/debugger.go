@@ -40,6 +40,9 @@ type Debugger struct {
 	// which a name stands for what it holds (fortran.go).
 	evaluating bool
 
+	// imageName is the image SET IMAGE named, "" for the main image (program.go).
+	imageName string
+
 	// namedPlace, when set, is what locationName calls the location being shown: a
 	// FORTRAN variable, whose address alone wouldn't say which (fortran.go).
 	namedPlace string

@@ -378,7 +378,7 @@ const (
 	reasonSymbolListing = "VMS lists only the routine named as the module for the TRACE images (docs/PHASE-42.md, " +
 		"subtask 12)"
 
-	reasonSymbolForm = "SHOW SYMBOL: VMS shows no address without /ADDRESS, and also lists the image's globals (D7)"
+	reasonSymbolForm = "SHOW SYMBOL *: VMS also lists its debugger's own images as globals, SHARE$DEBUG and the rest"
 
 	reasonUnconfirmedMSG = "EVALUATE/ADDRESS of a string label: VMS shows the string's own address, govax the " +
 		"descriptor's (unconfirmed)"
@@ -393,26 +393,14 @@ var expectedDifferences = map[string]map[int]string{
 	// What VMS's debugger says of the names is matched. What's listed here is the rest of
 	// the survey's debugger review, subtask 10's (docs/PHASE-85 - FORTRAN compiler usability.md).
 	"dbg85m.dlg": {
-		4: reasonSymbolForm, 5: reasonSymbolForm, 6: reasonSymbolForm, 7: reasonSymbolForm, 8: reasonSymbolForm,
-		33: "a range's element that starts a typed datum: VMS shows it by its type, govax by the range's step",
+		4: reasonSymbolForm, 5: reasonSymbolForm, 6: reasonSymbolForm,
 	},
 	"dbg85.dlg": {
-		4:  "SHOW MODULE takes no module name yet (D7)",
 		7:  reasonSymbolForm,
 		8:  reasonSymbolForm,
 		9:  reasonSymbolForm,
-		10: "psect labels: VMS lists them in SHOW SYMBOL * but finds no such name; govax finds them (D7)",
-		21: "EXAMINE/SOURCE isn't there yet (D7)",
-		22: "TYPE isn't there yet (D7)",
-		27: "EXAMINE/FLOAT of an array shows only its first element (D3)",
-		31: "EXAMINE/D_FLOAT of an array, the same, and a digit fewer (D3)",
-		37: "TOOMANSUB for too many subscripts (D3)",
-		39: "a label over an array's bytes: VMS names the label and shows an instruction (D3)",
-		40: "a label over an array's bytes (D3)",
-		41: "a label over an array's bytes (D3)",
 		50: "@(AP+N): VMS takes AP alone there as something other than its value, which isn't understood (D2)",
 		51: "@N(AP): VMS sees the syntax error first; govax reads memory first (D2)",
-		63: "an immediate starting with a letter: VMS writes 0FFFFFFFF, govax FFFFFFFF",
 	},
 
 	"dbgdis.dlg":   {29: reasonGlobalName},

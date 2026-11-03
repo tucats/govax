@@ -239,7 +239,7 @@ func TestFortranVariables(t *testing.T) {
 	for _, want := range []struct{ line, output string }{
 		// The caller's, by the unit's name.
 		{"EXAMINE FV.X", "FV\\FV.X:  6.000000\n"},
-		{"EXAMINE FV.DD", "FV\\FV.DD:  2.50000000000000\n"},
+		{"EXAMINE FV.DD", "FV\\FV.DD:  2.500000000000000\n"},
 		{"EXAMINE FV.H", "FV\\FV.H:  7\n"},
 		{"EXAMINE FV.I", "FV\\FV.I:  11\n"},
 		{"EXAMINE FV.T", "FV\\FV.T:  .TRUE.\n"},
@@ -298,7 +298,7 @@ func TestFortranVariables(t *testing.T) {
 		{"DEPOSIT FV.X=6.5", "EXAMINE FV.X", "FV\\FV.X:  6.500000\n"},
 		{"DEPOSIT FV.V(2)=0.5", "EXAMINE FV.V(2)", "FV\\FV.V(2):  0.5000000\n"},
 		{"DEPOSIT FV.M(1,1)=99", "EXAMINE FV.M(1,1)", "FV\\FV.M(1,1):  99\n"},
-		{"DEPOSIT FV.DD=0.25", "EXAMINE FV.DD", "FV\\FV.DD:  0.250000000000000\n"},
+		{"DEPOSIT FV.DD=0.25", "EXAMINE FV.DD", "FV\\FV.DD:  0.2500000000000000\n"},
 		{"DEPOSIT FV.F=.TRUE.", "EXAMINE FV.F", "FV\\FV.F:  .TRUE.\n"},
 		{"DEPOSIT FV.NAME='Hi'", "EXAMINE FV.NAME", "FV\\FV.NAME:  'Hi      '\n"},
 		{"DEPOSIT FV.NAME(2:3)='xy'", "EXAMINE FV.NAME", "FV\\FV.NAME:  'Hxy     '\n"},
@@ -417,6 +417,59 @@ func TestFortranLoopRegister(t *testing.T) {
 
 	if got := say(t, c, "EXAMINE LR.S"); !strings.Contains(got, "during a loop, R") {
 		t.Errorf("EXAMINE LR.S: %q", got)
+	}
+}
+
+// TestFortranShowModule: SHOW MODULE is the current image's, and /SHARE names the rest. A
+// program using FTNRTL doesn't list FTNRTL's modules (the survey's D8).
+func TestFortranShowModule(t *testing.T) {
+	c := newRunnableConsole(t)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dir := t.TempDir()
+	file := func(name string) string { return filepath.Join(dir, name) }
+
+	if err := os.WriteFile(file("rt.for"), []byte("      PRINT *, 1\n      END\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{
+		`FORTRAN "` + file("rt.for") + `"/HOST/DEBUG/NOOPTIMIZE/OBJECT`,
+		`LINK "` + file("rt.obj") + `"/HOST/DEBUG/EXECUTABLE="` + file("rt.exe") + `"`,
+	} {
+		if err := d.Dispatch(command); err != nil {
+			t.Fatalf("%s: %v", command, err)
+		}
+	}
+
+	started, _ := runImage(t, file("rt.exe"), machine.RunOptions{Debug: machine.DebugOn})
+
+	out := say(t, started, "SHOW MODULE")
+	if strings.Contains(out, "FTN_") || !strings.Contains(out, "total MACRO modules: 1.") {
+		t.Errorf("SHOW MODULE:\n%s", out)
+	}
+
+	out = say(t, started, "SHOW MODULE/SHARE")
+	if !strings.Contains(out, "SHARE$FTNRTL") || !strings.Contains(out, "Image") || strings.Contains(out, "FTN_") {
+		t.Errorf("SHOW MODULE/SHARE:\n%s", out)
+	}
+
+	say(t, started, "SET IMAGE FTNRTL")
+
+	if out = say(t, started, "SHOW MODULE"); !strings.Contains(out, "FTN_") {
+		t.Errorf("SHOW MODULE of FTNRTL:\n%s", out)
+	}
+
+	if out = say(t, started, "SHOW IMAGE"); !strings.Contains(out, "*FTNRTL") {
+		t.Errorf("SHOW IMAGE:\n%s", out)
+	}
+
+	if _, err := sayErr(started, "SET IMAGE NOSUCH"); err == nil {
+		t.Error("SET IMAGE NOSUCH: no error")
+	}
+
+	if out = say(t, started, "SHOW MODULE FTN_F*"); !strings.Contains(out, "FTN_FORMAT") || strings.Contains(out, "FTN_UNITS") {
+		t.Errorf("SHOW MODULE FTN_F*:\n%s", out)
 	}
 }
 

@@ -52,8 +52,8 @@ func TestShowSymbol_permanentAndLabelAttributes(t *testing.T) {
 func TestShowSymbol_undefined(t *testing.T) {
 	c, _ := symbolSession(t)
 
-	if _, err := sayErr(c, "SHOW SYMBOL NOSUCH"); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOSYMBOL, "NOSUCH")) {
-		t.Errorf("err = %v, want DEBUG-E-NOSYMBOL", err)
+	if out := say(t, c, "SHOW SYMBOL NOSUCH"); !strings.Contains(out, "no symbols matching NOSUCH are defined") {
+		t.Errorf("output = %q, want SYMNOTFND", out)
 	}
 }
 
@@ -124,8 +124,8 @@ func TestShowSymbol_wildcards(t *testing.T) {
 		t.Errorf("SHOW SYMBOL PTE$K_UR = %q; want the table's own 7", out)
 	}
 
-	if _, err := sayErr(c, "SHOW SYMBOL NOSUCH*"); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOSYMBOL, "NOSUCH*")) {
-		t.Errorf("SHOW SYMBOL NOSUCH*: err = %v, want DEBUG-E-NOSYMBOL", err)
+	if out := say(t, c, "SHOW SYMBOL NOSUCH*"); !strings.Contains(out, "no symbols matching NOSUCH* are defined") {
+		t.Errorf("SHOW SYMBOL NOSUCH*: %q, want SYMNOTFND", out)
 	}
 
 	for _, cmd := range []string{"SHOW SYMBOL/ALL NOSUCH%", "SHOW SYMBOL/SYSTEM MX*"} {

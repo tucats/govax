@@ -76,6 +76,7 @@ func (p *Program) readGST(img *vmsimage.Image, data []byte, base uint32) error {
 			}
 
 			p.Globals.Set(symtab.Symbol{Name: s.Name, Value: s.Value + base, Flags: flags})
+			p.GlobalOrder = append(p.GlobalOrder, s.Name)
 		}
 	}
 

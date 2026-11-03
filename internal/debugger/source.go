@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -161,7 +163,116 @@ func (d *Debugger) ShowSource() error {
 }
 
 // bindSource binds SET SOURCE, SHOW SOURCE, and CANCEL SOURCE.
+// examineSource is EXAMINE/SOURCE of a location: the source line of the code there, under
+// its module's name, as VMS's shows it (testdata/dbg85).
+func (d *Debugger) examineSource(items []string) error {
+	shown := ""
+
+	for _, item := range items {
+		pc, err := d.evalWhole(item)
+		if err != nil {
+			return err
+		}
+
+		prog := d.Machine.DebugProgramAt(pc)
+		if prog == nil {
+			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
+		}
+
+		_, mod, found := prog.LineAt(pc)
+		if !found {
+			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
+		}
+
+		n, text, ok := d.Machine.SourceLine(pc)
+		if !ok {
+			return vmserrors.New(vmserrors.DBG_NOSYMBOL, item)
+		}
+
+		if mod.Name != shown {
+			d.Machine.Printf("module %s\n", mod.Name)
+			shown = mod.Name
+		}
+
+		d.Machine.Printf("%s", formatSource(n, text))
+	}
+
+	return nil
+}
+
+// typeSource is TYPE [module\]line[:line][,...]: lines of a module's source, of the module
+// the program is in unless one is named, as VMS's shows them (testdata/dbg85).
+func (d *Debugger) typeSource(text string) error {
+	for _, item := range strings.Split(text, ",") {
+		item = strings.TrimSpace(item)
+
+		mod := d.scopeModule()
+
+		if name, rest, named := strings.Cut(item, `\`); named {
+			if mod = d.moduleNamed(name); mod == nil {
+				return vmserrors.New(vmserrors.DBG_NOSUCHMODULE, name)
+			}
+
+			item = rest
+		}
+
+		if mod == nil {
+			return vmserrors.New(vmserrors.DBG_NOSUCHMODULE, item)
+		}
+
+		low, high, ranged := strings.Cut(item, ":")
+		if !ranged {
+			high = low
+		}
+
+		first, err := d.evalWhole(strings.TrimSpace(low))
+		if err != nil {
+			return err
+		}
+
+		last, err := d.evalWhole(strings.TrimSpace(high))
+		if err != nil {
+			return err
+		}
+
+		records := d.Machine.ModuleSource(mod)
+
+		d.Machine.Printf("module %s\n", mod.Name)
+
+		for n := int(first); n <= int(last) && n >= 1 && n <= len(records); n++ {
+			d.Machine.Printf("%s", formatSource(n, records[n-1]))
+		}
+	}
+
+	return nil
+}
+
+// scopeModule is the module the program is in, or the current image's first.
+func (d *Debugger) scopeModule() *dbgsym.Module {
+	pc := d.Machine.CPU.GPR(registers.PC)
+
+	if prog := d.Machine.DebugProgramAt(pc); prog != nil {
+		if m, ok := prog.ModuleAt(pc); ok {
+			return m
+		}
+	}
+
+	if modules := d.imageModules(); len(modules) > 0 {
+		return modules[0]
+	}
+
+	return nil
+}
+
 func (d *Dispatcher) bindSource() {
+	d.Grammar.Bind("TYPE", func(id int64, r *dcl.Result) error {
+		if text := strings.TrimSpace(r.String("LINES")); text != "" {
+			return d.Debugger.typeSource(text)
+		}
+
+		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "lines")
+	})
+
 	d.Grammar.Bind("SET_SOURCE", func(id int64, r *dcl.Result) error {
 		return d.Debugger.SetSource(r.String("DIRECTORIES"))
 	})

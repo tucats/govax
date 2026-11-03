@@ -32,6 +32,8 @@ const (
 	dbgVerifyICF
 	dbgMisOpeMis
 	dbgNotRecord
+	dbgSymNotFnd
+	dbgNoSuchImage
 	dbgTooManSub
 	dbgTooFewSub
 	dbgSubOutBnd
@@ -89,6 +91,10 @@ const (
 	// DBG_NOTRECORD is language FORTRAN's answer to X.Y when X is data but
 	// no record (testdata/dbg85's probe); its argument is the component.
 	DBG_NOTRECORD = DBGFacility<<FacilityPosition | dbgNotRecord<<MessagePosition | StatusWarning
+	// DBG_SYMNOTFND is SHOW SYMBOL's answer when nothing matches (testdata/dbg85), and
+	// DBG_NOSUCHIMAGE SET IMAGE's to an image not loaded, whose wording is govax's.
+	DBG_SYMNOTFND   = DBGFacility<<FacilityPosition | dbgSymNotFnd<<MessagePosition | StatusInfo
+	DBG_NOSUCHIMAGE = DBGFacility<<FacilityPosition | dbgNoSuchImage<<MessagePosition | StatusError
 	// DBG_TOOMANSUB is too many subscripts for an array (testdata/dbg85's probe); its
 	// argument is how many dimensions it has, with the word. DBG_TOOFEWSUB is the other
 	// way, DBG_SUBOUTBND a subscript past its dimension, and DBG_NOTACTIVE a dummy
@@ -162,6 +168,8 @@ func init() {
 	DefineMessage(DBG_NOSYMBOL, DBGFacility, "NOSYMBOL", "symbol '!S' is not in the symbol table")
 	DefineMessage(DBG_MISOPEMIS, DBGFacility, "MISOPEMIS", "misplaced operator or missing operand at '!S'")
 	DefineMessage(DBG_NOTRECORD, DBGFacility, "NOTRECORD", "variable is not record; cannot select component !S")
+	DefineMessage(DBG_SYMNOTFND, DBGFacility, "SYMNOTFND", "no symbols matching !S are defined")
+	DefineMessage(DBG_NOSUCHIMAGE, DBGFacility, "NOSUCHIMAGE", "image '!S' is not loaded")
 	DefineMessage(DBG_TOOMANSUB, DBGFacility, "TOOMANSUB", "too many subscripts, array has !S")
 	DefineMessage(DBG_TOOFEWSUB, DBGFacility, "TOOFEWSUB", "too few subscripts, array has !S")
 	DefineMessage(DBG_SUBOUTBND, DBGFacility, "SUBOUTBND", "subscript !S is out of bounds, value is !S, bounds are !S")

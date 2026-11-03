@@ -603,6 +603,12 @@ func (e *Evaluator) parseElement(name, s string) (uint32, string, error) {
 	}
 
 	rest = strings.TrimLeft(rest, " \t")
+
+	// A label's array has one dimension, however it's used (testdata/dbg85).
+	if strings.HasPrefix(rest, ",") {
+		return 0, "", vmserrors.New(vmserrors.DBG_TOOMANSUB, "1 dimension")
+	}
+
 	if !strings.HasPrefix(rest, "]") {
 		return 0, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
 	}

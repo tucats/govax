@@ -218,8 +218,9 @@ func TestSetModule(t *testing.T) {
 	}
 
 	// Only DBGDIS is searched until DBGSUB is set.
-	if _, err := sayErr(c, "SHOW SYMBOL SUB1"); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOSYMBOL, "SUB1")) {
-		t.Errorf("SHOW SYMBOL SUB1 before SET MODULE: %v", err)
+	// (The image's globals are always listed.)
+	if out := say(t, c, "SHOW SYMBOL SUB1"); out != "routine SUB1 (global)\n" {
+		t.Errorf("SHOW SYMBOL SUB1 before SET MODULE: %q", out)
 	}
 
 	if _, err := sayErr(c, "SET MODULE DBGSUB,NOPE"); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOSUCHMODULE, "NOPE")) {
@@ -232,7 +233,7 @@ func TestSetModule(t *testing.T) {
 
 	say(t, c, "SET MODULE dbgsub")
 
-	expect(t, "SHOW SYMBOL SUB1", say(t, c, "SHOW SYMBOL SUB1"), "routine DBGSUB\\SUB1\n    address: 00000544, size: 00000014 bytes\n")
+	expect(t, "SHOW SYMBOL SUB1", say(t, c, "SHOW SYMBOL/ADDRESS SUB1"), "routine DBGSUB\\SUB1\n    address: 00000544, size: 00000014 bytes\nroutine SUB1 (global)\n    address: 00000544\n")
 
 	if _, err := sayErr(c, "SET MODULE"); err == nil {
 		t.Error("SET MODULE with nothing didn't fail")
@@ -254,9 +255,9 @@ func TestShowSymbolForms(t *testing.T) {
 		"data DBGDIS\\COUNT\n    address: 00000200\n    atomic type, longword integer, size: 4 bytes\n")
 
 	// % is one character; a path pattern matches the whole name.
-	expect(t, "SHOW SYMBOL LOO%", say(t, c, "SHOW SYMBOL LOO% IN DBGDIS"),
+	expect(t, "SHOW SYMBOL LOO%", say(t, c, "SHOW SYMBOL/ADDRESS LOO% IN DBGDIS"),
 		"label DBGDIS\\START\\LOOP\n    address: 000004DD\n")
-	expect(t, "SHOW SYMBOL path", say(t, c, `SHOW SYMBOL DBGDIS\START\L*`),
+	expect(t, "SHOW SYMBOL path", say(t, c, `SHOW SYMBOL/ADDRESS DBGDIS\START\L*`),
 		"label DBGDIS\\START\\LAST\n    address: 00000531\n"+
 			"label DBGDIS\\START\\LOOP\n    address: 000004DD\n")
 
@@ -264,8 +265,8 @@ func TestShowSymbolForms(t *testing.T) {
 		t.Errorf("IN a missing module: %v", err)
 	}
 
-	if _, err := sayErr(c, "SHOW SYMBOL ZZZ*"); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOSYMBOL, "ZZZ*")) {
-		t.Errorf("a pattern that matches nothing: %v", err)
+	if out := say(t, c, "SHOW SYMBOL ZZZ*"); !strings.Contains(out, "no symbols matching ZZZ* are defined") {
+		t.Errorf("a pattern that matches nothing: %q", out)
 	}
 }
 

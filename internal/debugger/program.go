@@ -46,7 +46,10 @@ func (d *Dispatcher) bindProgram() {
 	dbg := d.Debugger
 
 	g.Bind("SHOW_IMAGE", func(id int64, r *dcl.Result) error { return dbg.showImage(r.Present("FULL")) })
-	g.Bind("SHOW_MODULE", func(id int64, r *dcl.Result) error { return dbg.showModule() })
+	g.Bind("SHOW_MODULE", func(id int64, r *dcl.Result) error {
+		return dbg.showModule(r.String("MODULES"), r.Present("SHARE"))
+	})
+	g.Bind("SET_IMAGE", func(id int64, r *dcl.Result) error { return dbg.setImage(r.String("NAME")) })
 	g.Bind("SHOW_LANGUAGE", func(id int64, r *dcl.Result) error { return dbg.showLanguage() })
 	g.Bind("SET_LANGUAGE", func(id int64, r *dcl.Result) error { return dbg.setLanguage(r.String("LANGUAGE")) })
 	g.Bind("SHOW_SCOPE", func(id int64, r *dcl.Result) error { return dbg.showScope() })
@@ -151,7 +154,7 @@ func (d *Debugger) showImage(full bool) error {
 
 	for _, img := range images {
 		mark := ' '
-		if img.Main {
+		if current, ok := d.currentImage(); ok && current.Name == img.Name {
 			mark = '*'
 		}
 
@@ -363,14 +366,40 @@ func frameBacking(s machine.ImageSection) string {
 // As in SHOW IMAGE, the sizes and "bytes allocated" are govax's figures
 // (the size of each module's records, and of the set modules'), since
 // VMS's count its own memory.
-func (d *Debugger) showModule() error {
+//
+// The list is the current image's modules, as VMS's is (testdata/dbg85's dbg85c.dlg; SET
+// IMAGE changes which). names picks some, with wildcards, separated by commas. /SHARE adds
+// a line for each other image, as SHARE$name with the language Image, the way
+// VMS names an image in its debugger's symbols.
+func (d *Debugger) showModule(names string, share bool) error {
 	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
 	}
 
-	modules := d.allModules()
+	modules := d.imageModules()
+
+	if names = strings.TrimSpace(names); names != "" {
+		var picked []*dbgsym.Module
+
+		for _, m := range modules {
+			for _, name := range strings.Split(names, ",") {
+				if lnm.Match(strings.ToUpper(strings.TrimSpace(name)), strings.ToUpper(m.Name)) {
+					picked = append(picked, m)
+
+					break
+				}
+			}
+		}
+
+		if len(picked) == 0 {
+			return vmserrors.New(vmserrors.DBG_NOSUCHMODULE, names)
+		}
+
+		modules = picked
+	}
+
 	sort.SliceStable(modules, func(i, j int) bool { return modules[i].Name < modules[j].Name })
 
 	// The modules' languages, in the order they're first seen.
@@ -382,7 +411,7 @@ func (d *Debugger) showModule() error {
 		}
 	}
 
-	mixed := len(languages) > 1
+	mixed := len(languages) > 1 || share
 
 	if mixed {
 		c.Printf("module name                     symbols   language   size\n\n")
@@ -405,14 +434,86 @@ func (d *Debugger) showModule() error {
 		}
 	}
 
+	count := len(modules)
+
+	if share {
+		for _, img := range d.otherImages() {
+			c.Printf("%-32s%-10s%-8s%7d\n", "SHARE$"+img.Name, "no", "Image", 0)
+
+			count++
+		}
+	}
+
 	kind := "total"
-	if len(languages) == 1 {
+	if len(languages) == 1 && !share {
 		kind += " " + languages[0]
 	}
 
-	c.Printf("\n%-32sbytes allocated: %d.\n", fmt.Sprintf("%s modules: %d.", kind, len(modules)), total)
+	c.Printf("\n%-32sbytes allocated: %d.\n", fmt.Sprintf("%s modules: %d.", kind, count), total)
 
 	return nil
+}
+
+// currentImage is the image SET IMAGE last named, or the main image.
+func (d *Debugger) currentImage() (machine.ImageInfo, bool) {
+	images := d.Machine.Images()
+
+	for _, img := range images {
+		if d.imageName != "" && strings.EqualFold(img.Name, d.imageName) {
+			return img, true
+		}
+	}
+
+	for _, img := range images {
+		if img.Main {
+			return img, true
+		}
+	}
+
+	return machine.ImageInfo{}, false
+}
+
+// imageModules are the current image's modules.
+func (d *Debugger) imageModules() []*dbgsym.Module {
+	img, ok := d.currentImage()
+	if !ok || img.Program == nil {
+		return nil
+	}
+
+	return slices.Clone(img.Program.Modules)
+}
+
+// otherImages are the images but the current one, by name.
+func (d *Debugger) otherImages() []machine.ImageInfo {
+	current, _ := d.currentImage()
+
+	var others []machine.ImageInfo
+
+	for _, img := range d.Machine.Images() {
+		if img.Name != current.Name {
+			others = append(others, img)
+		}
+	}
+
+	sort.SliceStable(others, func(i, j int) bool { return others[i].Name < others[j].Name })
+
+	return others
+}
+
+// setImage runs SET IMAGE name, which makes it the image SHOW MODULE and SET MODULE/ALL
+// are about, and sets its symbols' first module, as VMS's does (dbg85c.dlg).
+func (d *Debugger) setImage(name string) error {
+	name = strings.TrimSpace(name)
+
+	for _, img := range d.Machine.Images() {
+		if strings.EqualFold(img.Name, name) {
+			d.imageName = img.Name
+
+			return nil
+		}
+	}
+
+	return vmserrors.New(vmserrors.DBG_NOSUCHIMAGE, name)
 }
 
 // setModule runs SET MODULE name[,name...] and SET MODULE/ALL: marks
@@ -428,7 +529,7 @@ func (d *Debugger) setModule(list string, all bool) error {
 	}
 
 	if all {
-		for _, m := range d.allModules() {
+		for _, m := range d.imageModules() {
 			d.symbolsSet[m] = true
 		}
 
@@ -619,10 +720,6 @@ func (d *Debugger) showSymbol(text string, address, typed bool) error {
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "symbol")
 	}
 
-	if !address && !typed {
-		address = true
-	}
-
 	searched := make([]*dbgsym.Module, 0, len(d.allModules()))
 
 	if modules == nil {
@@ -650,10 +747,20 @@ func (d *Debugger) showSymbol(text string, address, typed bool) error {
 				continue
 			}
 
+			// A program section is listed only by a wildcard: SHOW SYMBOL $LOCAL finds
+			// none, where SHOW SYMBOL * has it (testdata/dbg85).
+			if s.Has(symtab.Psect) && !strings.ContainsAny(pattern, "*%") {
+				continue
+			}
+
 			matched++
 
 			d.printSymbol(m, s, address, typed)
 		}
+	}
+
+	if modules == nil {
+		matched += d.printGlobals(pattern, address)
 	}
 
 	if matched > 0 {
@@ -666,7 +773,42 @@ func (d *Debugger) showSymbol(text string, address, typed bool) error {
 		return c.ShowSymbol(pattern)
 	}
 
-	return vmserrors.New(vmserrors.DBG_NOSYMBOL, pattern)
+	c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_SYMNOTFND, pattern))
+
+	return nil
+}
+
+// printGlobals lists the current image's global symbols that match, after the
+// modules' symbols, each marked (global), as VMS's SHOW SYMBOL does. It says how many.
+func (d *Debugger) printGlobals(pattern string, address bool) int {
+	img, ok := d.currentImage()
+	if !ok || img.Program == nil || img.Program.Globals == nil || strings.Contains(pattern, `\`) {
+		return 0
+	}
+
+	matched := 0
+
+	for _, name := range img.Program.GlobalOrder {
+		s, found := img.Program.Globals.Get(name)
+		if !found || !lnm.Match(strings.ToUpper(pattern), strings.ToUpper(s.Name)) {
+			continue
+		}
+
+		kind := "data"
+		if s.IsEntry() {
+			kind = "routine"
+		}
+
+		d.Machine.Printf("%s %s (global)\n", kind, s.Name)
+
+		if address {
+			d.Machine.Printf("    address: %08X\n", s.Value)
+		}
+
+		matched++
+	}
+
+	return matched
 }
 
 // splitIn separates SHOW SYMBOL's parameter "pattern IN module[,module]"

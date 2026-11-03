@@ -113,6 +113,7 @@ grammar debugger
         keyword     radix               /syntax=set_radix/nonegatable
         keyword     language            /syntax=set_language/nonegatable
         keyword     module              /syntax=set_module/nonegatable
+        keyword     image               /syntax=set_image/nonegatable
         keyword     psl                 /syntax=set_psl/nonegatable
         keyword     pte                 /syntax=set_pte/nonegatable
         keyword     page                /syntax=set_pte/nonegatable
@@ -212,6 +213,9 @@ grammar debugger
         ! SET MODULE module[,module...] (or /ALL) loads a module's symbols;
         ! govax has them all loaded already, so it only changes what SHOW
         ! MODULE says.
+        syntax set_image/id=1823
+            parameter   name/id=1824            -
+                        /type=$rest_of_line
         syntax set_module/id=279
             qualifier   all/id=280/nonegatable
             parameter   modules/id=281          -
@@ -434,6 +438,9 @@ grammar debugger
         syntax show_image/id=270
             qualifier   full/id=271
         syntax show_module/id=272
+            qualifier   share/id=1821/nonegatable
+            parameter   modules/id=1822         -
+                        /type=$rest_of_line
         syntax show_process/id=319
         syntax show_symbol/id=273
             qualifier   address/id=274
@@ -645,6 +652,7 @@ grammar debugger
     ! /NOSYMBOLIC names each location by its address. The location is
     ! the rest of the line, which internal/debugger takes apart.
     verb examine/id=87
+        qualifier   source/id=1818/nonegatable
         qualifier   instruction/id=88/nonegatable
         qualifier   operands/id=89              -
                     /type=$string               -
@@ -692,6 +700,12 @@ grammar debugger
         disallow    any2(byte, word, longword, quadword, octaword, psl, psw, pte, instruction, float, d_float, g_float, h_float, packed, ascic, asciw, asciz, ascid, date_time, condition_value, type)
         disallow    any2(hexadecimal, decimal, octal, binary, default)
     verb ex/alias=examine
+
+    ! TYPE [module\]line[:line][,...] shows lines of a module's source, as VMS's does
+    ! (testdata/dbg85), of the module the program is in unless one is named.
+    verb type/id=1819
+        parameter   lines/id=1820               -
+                    /type=$rest_of_line
 
     ! DEPOSIT[/type] location = value stores a value (a number in the
     ! input radix, a floating literal, or a quoted string) at a location:

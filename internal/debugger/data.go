@@ -206,6 +206,10 @@ func (d *Dispatcher) examineData(r *dcl.Result) error {
 		}
 	}
 
+	if r.Present("SOURCE") {
+		return dbg.examineSource(items)
+	}
+
 	for _, item := range items {
 		// /NOSYMBOLIC names a location typed as a number by its address
 		// (the manual's "0000086F: 03020100"); one typed by name keeps its
@@ -319,6 +323,10 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 
 	addr, err := d.evalWhole(item)
 	if err != nil {
+		return err
+	}
+
+	if shown, err := d.examineLabel(r, item, addr); shown || err != nil {
 		return err
 	}
 
@@ -590,8 +598,11 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 
 	var datum *dbgsym.Datum
 
+	exact := false
+
 	if prog != nil {
 		datum, _, _ = prog.DatumAt(addr)
+		exact = datum != nil
 
 		// An address inside an array is typed by its elements.
 		if datum == nil {
@@ -608,6 +619,14 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 	}
 
 	if typed {
+		// A label of an array of longwords or more, named alone, shows as many of a
+		// floating type as it holds. Over bytes the label doesn't say what the type's
+		// values are, and one is shown, as VMS's text types do (ours for a number).
+		if size, fixed := t.fixedSize(); fixed && t.kind == typeFloat && !inRange && datum != nil && datum.IsArray() &&
+			len(datum.Descriptor.Bounds) == 1 && datum.ElementSize() >= 4 {
+			return d.examineArrayAs(addr, t, datum, size, radix)
+		}
+
 		return d.examineTyped(addr, t, datum, radix)
 	}
 
@@ -617,7 +636,7 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 	}
 
 	// A label of a type data.go's sizes don't show (a floating value).
-	if dt, ok := datumType(datum); ok && !inRange {
+	if dt, ok := datumType(datum); ok && (!inRange || exact && !datum.IsArray()) {
 		return d.examineTyped(addr, dt, datum, radix)
 	}
 
@@ -881,6 +900,74 @@ func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum)
 	d.examined = examineState{addr: addr, size: size * uint32(bounds.Upper-bounds.Lower+1), set: true}
 
 	return nil
+}
+
+// examineArrayAs shows a label's array as a type the command gives: its bounds as the label
+// has them, and as many of the type as fit, numbered from the lower bound (testdata/dbg85:
+// EXAMINE/D_FLOAT of two longwords shows [0:1], and one value).
+func (d *Debugger) examineArrayAs(addr uint32, t dataType, datum *dbgsym.Datum, size uint32, radix int) error {
+	c := d.Machine
+	bounds := datum.Descriptor.Bounds[0]
+	total := datum.ElementSize() * uint32(bounds.Upper-bounds.Lower+1)
+
+	c.Printf("%s[%d:%d]\n", strings.SplitN(d.locationName(addr), "[", 2)[0], bounds.Lower, bounds.Upper)
+
+	for i := uint32(0); (i+1)*size <= total; i++ {
+		data, err := c.ReadBytes(addr+i*size, size)
+		if err != nil {
+			return err
+		}
+
+		text, _ := d.fixedText(t, data, radix)
+		c.Printf("%s%s\n", tabPad(fmt.Sprintf("    [%d]:", int(i)+int(bounds.Lower))), text)
+	}
+
+	d.examined = examineState{addr: addr, size: total, set: true}
+
+	return nil
+}
+
+// examineLabel shows a MACRO label named alone that's over data, as a label is: by a
+// type the command gives, or as an instruction, however the bytes are really used,
+// under the label's own name (testdata/dbg85: EXAMINE DBG85.IC, in a common block). What
+// the label is over is the program's business, and the array around it no name of its.
+// A compiled program's variables don't get here, under /DEBUG's table.
+func (d *Debugger) examineLabel(r *dcl.Result, item string, addr uint32) (bool, error) {
+	prog := d.Machine.DebugProgramAt(addr)
+	if prog == nil {
+		return false, nil
+	}
+
+	s, ok := prog.Lookup(strings.TrimSpace(item))
+	if !ok || !s.IsLabel() || s.IsEntry() || s.Value != addr {
+		return false, nil
+	}
+
+	if _, _, inRoutine := prog.RoutineAt(addr); inRoutine {
+		return false, nil
+	}
+
+	m, ok := prog.ModuleAt(addr)
+	if !ok {
+		return false, nil
+	}
+
+	d.namedPlace = m.Name + `\` + s.Name
+	defer func() { d.namedPlace = "" }()
+
+	t, typed, err := d.commandType(r)
+	if err != nil {
+		return true, err
+	}
+
+	if typed {
+		return true, d.examineTyped(addr, t, nil, d.examineRadix(r))
+	}
+
+	d.examined = examineState{addr: addr, size: 1, set: true}
+	d.Machine.Printf("%s%s\n", tabPad(d.namedPlace+":"), d.instructionAt(addr))
+
+	return true, nil
 }
 
 // examineText shows data as a string in quotes: count characters when

@@ -18,6 +18,10 @@ type Program struct {
 	// where no module's symbols name an address. Empty without a GST.
 	Globals *symtab.Table
 
+	// GlobalOrder are those symbols' names in the order the table has them, which is
+	// how VMS's SHOW SYMBOL lists them.
+	GlobalOrder []string
+
 	// Skipped counts the records of each type the reader didn't
 	// interpret: none, in the images MACRO and LINK write.
 	Skipped map[byte]int
@@ -247,7 +251,7 @@ func (p *Program) Lookup(path string) (*symtab.Symbol, bool) {
 
 	if len(parts) == 1 {
 		for _, m := range p.Modules {
-			if s, ok := m.Symbols.Get(parts[0]); ok {
+			if s, ok := m.Symbols.Get(parts[0]); ok && !s.Has(symtab.Psect) {
 				return s, true
 			}
 		}
@@ -265,8 +269,10 @@ func (p *Program) Lookup(path string) (*symtab.Symbol, bool) {
 		parts = append([]string{m.Name}, parts...)
 	}
 
+	// A program section is in SHOW SYMBOL *, but it's no name to look up (testdata/dbg85:
+	// EXAMINE $LOCAL is NOSYMBOL on VMS, in either form).
 	s, ok := m.Symbols.Get(parts[len(parts)-1])
-	if !ok {
+	if !ok || s.Has(symtab.Psect) {
 		return nil, false
 	}
 

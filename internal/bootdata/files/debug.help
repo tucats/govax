@@ -1319,6 +1319,17 @@ $SH,LANG
 
     SHOW LANGUAGE
 
+$TYPE
+  Shows lines of a module's source file.
+
+  Format:
+
+    TYPE [module\]line[:line][,...]
+
+  Without a module's name the lines are of the module the program is in. The
+  numbers are read in the input radix. In a FORTRAN program the source file is
+  the MACRO file the compiler wrote, whose lines hold the FORTRAN lines as comments.
+
 $STEP
 $ST
 $S

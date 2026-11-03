@@ -531,6 +531,8 @@ func floatDigits(f vaxfloat.Format) int {
 		return 7
 	case vaxfloat.H:
 		return 33
+	case vaxfloat.D:
+		return 16 // testdata/dbg85's EXAMINE/D_FLOAT: 2.500000000000000
 	}
 
 	return 15

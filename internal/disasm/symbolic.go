@@ -307,7 +307,14 @@ func (op Operand) debuggerOther(decimal bool) string {
 			return "I^#" + strings.TrimPrefix(formatWideHex(op.Bytes), "^X")
 		}
 
-		return "I^#" + number(op.Value, op.Width, decimal)
+		// A hexadecimal number starting with a letter gets a 0 first, or it would read
+		// as a name (testdata/dbg85: MOVL I^#0FFFFFFFF,R0).
+		text := number(op.Value, op.Width, decimal)
+		if text != "" && text[0] >= 'A' && text[0] <= 'F' {
+			text = "0" + text
+		}
+
+		return "I^#" + text
 
 	case ModeAbsolute:
 		return "@#" + op.debuggerTarget(decimal)
