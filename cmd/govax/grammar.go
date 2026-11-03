@@ -75,6 +75,9 @@ type fortranFlags struct {
 	check        string // --check: /CHECK's keywords, separated by commas
 	warnings     string // --warnings: /WARNINGS's keywords, separated by commas
 	standard     string // --standard: /STANDARD's keywords, separated by commas
+	debug        string // --debug: /DEBUG's keywords, separated by commas
+	object       bool   // --object: /OBJECT
+	objectFile   string // --object-file: /OBJECT=file
 
 	// continuations is --continuations: the most continuation lines a
 	// statement may have, and whether it was given.
@@ -444,6 +447,37 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
 			fortran.standard, _ = c.String("standard")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "debug",
+		Description: "What MACRO is to write for the debugger: all, none, [no]symbols, [no]traceback, separated by commas",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.debug, _ = c.String("debug")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "object",
+		Description: "Run MACRO on the MACRO file too, for an object file",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.object = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "object-file",
+		Description: "The object file to write, implying --object",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			fortran.object = true
+			fortran.objectFile, _ = c.String("object-file")
 
 			return nil
 		},
@@ -989,6 +1023,17 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.standard != "" {
 		command += "/STANDARD=(" + f.standard + ")"
+	}
+
+	if f.debug != "" {
+		command += "/DEBUG=(" + f.debug + ")"
+	}
+
+	switch {
+	case f.objectFile != "":
+		command += "/OBJECT=" + dclQuote(f.objectFile)
+	case f.object:
+		command += "/OBJECT"
 	}
 
 	if f.continuationsGiven {

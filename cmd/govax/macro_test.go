@@ -264,6 +264,9 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{check: "bounds,nooverflow"}, `FORTRAN "sq"/CHECK=(bounds,nooverflow)`},
 		{[]string{"sq"}, fortranFlags{warnings: "nogeneral,unused"}, `FORTRAN "sq"/WARNINGS=(nogeneral,unused)`},
 		{[]string{"sq"}, fortranFlags{standard: "syntax"}, `FORTRAN "sq"/STANDARD=(syntax)`},
+		{[]string{"sq"}, fortranFlags{debug: "symbols"}, `FORTRAN "sq"/DEBUG=(symbols)`},
+		{[]string{"sq"}, fortranFlags{object: true}, `FORTRAN "sq"/OBJECT`},
+		{[]string{"sq"}, fortranFlags{object: true, objectFile: "out/sq.obj"}, `FORTRAN "sq"/OBJECT="out/sq.obj"`},
 	}
 
 	for _, c := range cases {

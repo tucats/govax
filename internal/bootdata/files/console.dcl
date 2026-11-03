@@ -798,7 +798,9 @@ grammar console
     ! is /[NO]CROSS_REFERENCE, where each name is mentioned. CHECK is /[NO]CHECK[=(keyword,...)], what the
     ! compiled code looks out for (sema.Checks), and WARNINGS is /[NO]WARNINGS[=(keyword,...)], what
     ! the compiler says beyond errors (diag.Warnings), and STANDARD is /[NO]STANDARD[=(keyword,...)], what
-    ! to flag as an extension to FORTRAN-77 (sema.Conformance). Elements joined by + are one compilation
+    ! to flag as an extension to FORTRAN-77 (sema.Conformance), DEBUG is /[NO]DEBUG[=(keyword,...)], what
+    ! MACRO is to write for the debugger (fortran.Debug), and OBJECT is /[NO]OBJECT[=file], MACRO run on
+    ! the result (empty default: the source's name with type OBJ). Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY"). Later phases add
@@ -842,6 +844,12 @@ grammar console
                     /default=""
         qualifier   standard/id=1387            -
                     /type=$any/list             -
+                    /default=""
+        qualifier   debug/id=1388               -
+                    /type=$any/list             -
+                    /default=""
+        qualifier   object/id=1389              -
+                    /type=$string               -
                     /default=""
         qualifier   continuations/id=1376       -
                     /type=$integer

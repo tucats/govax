@@ -217,6 +217,8 @@ const (
 	cliForCheck
 	cliForWarnKey
 	cliForStandard
+	cliForDebug
+	cliForObject
 
 	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
@@ -573,6 +575,12 @@ const (
 
 	// CLI_FORSTANDARD refuses a FORTRAN whose /STANDARD has a keyword that isn't one.
 	CLI_FORSTANDARD = CLIFacility<<FacilityPosition | cliForStandard<<MessagePosition | StatusError
+
+	// CLI_FORDEBUG refuses a FORTRAN whose /DEBUG has a keyword that isn't one.
+	CLI_FORDEBUG = CLIFacility<<FacilityPosition | cliForDebug<<MessagePosition | StatusError
+
+	// CLI_FOROBJECT refuses a FORTRAN with both /OBJECT and /NOMACRO.
+	CLI_FOROBJECT = CLIFacility<<FacilityPosition | cliForObject<<MessagePosition | StatusError
 )
 
 func init() {
@@ -740,5 +748,7 @@ func init() {
 	DefineMessage(CLI_FORCHECK, CLIFacility, "FORCHECK", "!S")
 	DefineMessage(CLI_FORWARNKEY, CLIFacility, "FORWARNKEY", "!S")
 	DefineMessage(CLI_FORSTANDARD, CLIFacility, "FORSTANDARD", "!S")
+	DefineMessage(CLI_FORDEBUG, CLIFacility, "FORDEBUG", "!S")
+	DefineMessage(CLI_FOROBJECT, CLIFacility, "FOROBJECT", "/OBJECT needs the MACRO file that /NOMACRO leaves out")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

@@ -525,6 +525,11 @@ analysis can tell `SIND(X)` from an array element, so the one place that notes a
 a statement, so the first pass notes them as `source.Mark`s, which nothing reads unless asked. The findings are sorted
 into the source's order before they're reported, since a walk and those notes each find theirs in their own order.
 
+`/DEBUG` and `/OBJECT` show what writing MACRO saves. The compiler knows nothing of debugger records: `/DEBUG` is a
+line or two in the MACRO file's opening (`fortran.Debug`), and `/OBJECT` is the MACRO command called on the file just
+written (`assembleFortran`), reading it back through RMS as it would if you'd typed it. What's left for this compiler to do is
+choose names and comments a person can read, and the debugger's section of this tour says how far that goes.
+
 ## 8. Declarations and storage
 
 AVERAGE declares very little. A real FORTRAN program's declarations are

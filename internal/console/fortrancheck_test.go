@@ -641,3 +641,111 @@ func TestFortranStandardQualifier(t *testing.T) {
 		t.Errorf("a keyword that isn't one: %v", err)
 	}
 }
+
+// TestFortranObjectQualifier runs /OBJECT through the command: where its files go, that a
+// program built with it runs, and when nothing is assembled.
+func TestFortranObjectQualifier(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	source := func(name, text string) {
+		t.Helper()
+
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name + ".FOR"},
+			rms.TextRecords, splitSource(text)); err != nil {
+			t.Fatal(err)
+		}
+
+		deleteFilesAfter(t, d, name)
+	}
+
+	exists := func(name string) bool {
+		t.Helper()
+
+		_, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]" + name}, rms.VariableRecords)
+
+		return err == nil
+	}
+
+	source("OBJQ", "      PRINT *, 'FROM OBJQ'\n      END\n")
+	deleteFilesAfter(t, d, "OBJOTHER")
+	deleteFilesAfter(t, d, "OBJMAC")
+
+	// By default there's no object.
+	shareFindRun(t, d, "FORTRAN OBJQ")
+
+	if exists("OBJQ.OBJ") {
+		t.Error("an object with no /OBJECT")
+	}
+
+	// /NOOBJECT is the same.
+	shareFindRun(t, d, "FORTRAN/NOOBJECT OBJQ")
+
+	if exists("OBJQ.OBJ") {
+		t.Error("an object with /NOOBJECT")
+	}
+
+	// As on VMS: FORTRAN, LINK, RUN.
+	shareFindRun(t, d, "FORTRAN/OBJECT OBJQ")
+
+	if !exists("OBJQ.OBJ") || !exists("OBJQ.MAR") {
+		t.Errorf("/OBJECT: OBJ %v, MAR %v", exists("OBJQ.OBJ"), exists("OBJQ.MAR"))
+	}
+
+	shareFindRun(t, d, "LINK OBJQ")
+	buf.Reset()
+	shareFindRun(t, d, "RUN OBJQ")
+
+	if !strings.Contains(buf.String(), "FROM OBJQ") {
+		t.Errorf("RUN: %q", buf.String())
+	}
+
+	// The object's name is its own, or the source's whatever the MACRO file is called.
+	shareFindRun(t, d, "FORTRAN/OBJECT=OBJOTHER OBJQ")
+
+	if !exists("OBJOTHER.OBJ") {
+		t.Error("/OBJECT=OBJOTHER wrote no OBJOTHER.OBJ")
+	}
+
+	shareFindRun(t, d, "DELETE OBJQ.OBJ;*")
+	shareFindRun(t, d, "FORTRAN/OBJECT/MACRO=OBJMAC OBJQ")
+
+	if !exists("OBJQ.OBJ") || !exists("OBJMAC.MAR") || exists("OBJMAC.OBJ") {
+		t.Errorf("/MACRO=OBJMAC: OBJQ.OBJ %v, OBJMAC.MAR %v, OBJMAC.OBJ %v", exists("OBJQ.OBJ"), exists("OBJMAC.MAR"), exists("OBJMAC.OBJ"))
+	}
+
+	// A status from the compilation outlives MACRO's.
+	source("OBJW", "      INTEGER A(3)\n      A(7) = 0\n      END\n")
+	shareFindRun(t, d, "FORTRAN/OBJECT OBJW")
+	buf.Reset()
+	shareFindRun(t, d, `WRITE SYS$OUTPUT F$INTEGER($SEVERITY)`)
+
+	if severity := strings.TrimSpace(buf.String()); severity != "0" || !exists("OBJW.OBJ") {
+		t.Errorf("a warning: $SEVERITY %s, OBJ %v", severity, exists("OBJW.OBJ"))
+	}
+
+	// A compilation with errors assembles nothing.
+	source("OBJE", "      GOTO 10\n      END\n")
+
+	if err := d.Dispatch("FORTRAN/OBJECT OBJE"); err == nil || exists("OBJE.OBJ") {
+		t.Errorf("errors: %v, OBJ %v", err, exists("OBJE.OBJ"))
+	}
+
+	// MACRO takes what each form of /DEBUG writes.
+	for _, form := range []string{"/DEBUG", "/DEBUG=SYMBOLS", "/DEBUG=NONE", "/DEBUG=NOTRACEBACK", "/NODEBUG", "/DEBUG/NOOPTIMIZE"} {
+		buf.Reset()
+		shareFindRun(t, d, "FORTRAN/OBJECT"+form+" OBJQ")
+
+		if strings.Contains(buf.String(), "MACRO-") {
+			t.Errorf("%s: %s", form, buf.String())
+		}
+	}
+
+	// Decision 17.
+	if err := d.Dispatch("FORTRAN/OBJECT/NOMACRO OBJQ"); !errors.Is(err, vmserrors.New(vmserrors.CLI_FOROBJECT)) {
+		t.Errorf("/OBJECT/NOMACRO: %v", err)
+	}
+
+	if err := d.Dispatch("FORTRAN/DEBUG=LINES OBJQ"); !errors.Is(err, vmserrors.New(vmserrors.CLI_FORDEBUG)) {
+		t.Errorf("/DEBUG=LINES: %v", err)
+	}
+}

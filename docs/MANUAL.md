@@ -4965,7 +4965,7 @@ The command's syntax and qualifiers are in
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)). An `OPTIONS` statement before a unit may give `/I4`,
 `/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, or `/NOEXTEND_SOURCE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, and `--standard keywords` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, and `/STANDARD=(keywords)`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, and `--object-file file` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, and `/OBJECT=file`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -5091,6 +5091,34 @@ The keywords also come as `NOSYNTAX` and `NOSOURCE_FORM`, with `ALL` and `NONE`,
 alone is `ALL`, and the default is `/NOSTANDARD`. `/WARNINGS=NOGENERAL` doesn't hold these back, since you asked for
 them. What a program *means* isn't looked at: a non-integer subscript, `.AND.` of integers, and a character variable
 beside a number in a common block aren't flagged, and neither is a bare `X`, or anything in a text library's module.
+
+**Objects in one step.** `FORTRAN/OBJECT` runs MACRO on the MACRO file it wrote, so that `FORTRAN/OBJECT`, `LINK`, `RUN`
+works as it does on VMS. The MACRO file is kept, so `/OBJECT/NOMACRO` is refused. The object is the source's name with
+type `OBJ` unless `/OBJECT=file` says otherwise, whatever `/MACRO=` calls the MACRO file. MACRO's messages appear as they
+do when it's run by hand, and a compilation with errors assembles nothing. The default is `/NOOBJECT`, unlike VAX
+FORTRAN's.
+
+**Debugging.** `/DEBUG` says what MACRO is to write for the debugger, by writing `.ENABLE DEBUG` or
+`.DISABLE TRACEBACK` in the MACRO file, so that a plain `MACRO` command does it:
+
+| Form | Debugger records | Traceback records |
+| --- | --- | --- |
+| `/NODEBUG`, the default | no | yes |
+| `/DEBUG`, `/DEBUG=ALL` | yes | yes |
+| `/DEBUG=TRACEBACK` | no | yes |
+| `/DEBUG=SYMBOLS` | yes | no |
+| `/DEBUG=NONE`, `/DEBUG=NOTRACEBACK` | no | no |
+
+A list naming what's wanted means only that, as with MACRO's `/DEBUG`, and `NOSYMBOLS` or `NOTRACEBACK` alone takes from
+the default. `/DEBUG` doesn't turn the optimizer off, so under `/OPTIMIZE`, the default, it gets `%FORT-I-DEBUGOPTIMIZE`:
+a variable may be in a register, its home out of date. To debug, say both, as the DCL Dictionary's examples do, and link
+with `/DEBUG` too:
+
+```
+$ FORTRAN/DEBUG/NOOPTIMIZE/OBJECT SQUARES
+$ LINK/DEBUG SQUARES
+$ RUN SQUARES
+```
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5565,6 +5593,8 @@ FORTRAN compiler was available to check them). So far:
 - `/STANDARD`: the manuals at hand give the keywords' names and no more. What's flagged comes from the language
   manual's blue print and FORTRAN-77's own rules, and the messages are govax's. No keyword covers what a program
   means, nor does any OPTIONS statement take it.
+- `/DEBUG`: the keywords are as remembered of VAX FORTRAN's and as MACRO's own, the manuals at hand giving none. VAX
+  FORTRAN's `/OBJECT` was on by default; govax's is off, leaving the MACRO step visible.
 - In a tab-format line, the tab stands for the columns before column 7,
   so the statement still ends at column 72 (or 132).
 - A line whose first nonblank character is `!` is a comment line, and

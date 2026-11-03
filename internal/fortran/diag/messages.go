@@ -38,6 +38,9 @@ var messages = map[string]kind{
 	// /STANDARD asks (sema/standard.go): a remark, so a program flagged still compiles.
 	"EXTENSION": {Informational, "extension to FORTRAN-77: %s"},
 
+	// DEBUGOPTIMIZE is /DEBUG with /OPTIMIZE, which is allowed but may surprise.
+	"DEBUGOPTIMIZE": {Informational, "under /OPTIMIZE the debugger may find a variable out of date, its value in a register; use /NOOPTIMIZE to debug"},
+
 	// The source form's messages (internal/fortran/source).
 
 	// NOINITIAL is a continuation line with no statement before it to

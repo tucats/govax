@@ -30,6 +30,7 @@ import (
 //	        [/[NO]CROSS_REFERENCE] [/CHECK[=(keyword,...)] | /NOCHECK]
 //	        [/WARNINGS[=(keyword,...)] | /NOWARNINGS]
 //	        [/STANDARD[=(keyword,...)] | /NOSTANDARD]
+//	        [/DEBUG[=(keyword,...)] | /NODEBUG] [/OBJECT[=file] | /NOOBJECT]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -129,6 +130,16 @@ type FortranOptions struct {
 	// /STANDARD alone). /NOSTANDARD is the default (sema.Conformance).
 	Standard      []string
 	StandardGiven bool
+
+	// Debug is /DEBUG's keywords, if DebugGiven says it was given (none for /DEBUG
+	// alone). /NODEBUG is the default (fortran.Debug).
+	Debug      []string
+	DebugGiven bool
+
+	// Object is /OBJECT: run MACRO on the MACRO file written, to ObjectFile, or by
+	// default to the source's name with the type OBJ.
+	Object     bool
+	ObjectFile string
 
 	// Continuations is /CONTINUATIONS=n.
 	Continuations FortranContinuations
@@ -277,6 +288,21 @@ func (opts FortranOptions) standard() (sema.Conformance, error) {
 	return standard, nil
 }
 
+// debug is what /DEBUG asks MACRO to write, or an error if it has a keyword that isn't
+// one.
+func (opts FortranOptions) debug() (fortran.Debug, error) {
+	if !opts.DebugGiven {
+		return fortran.Debug{}, nil
+	}
+
+	debug, err := fortran.Debug{}.With(opts.Debug)
+	if err != nil {
+		return debug, vmserrors.New(vmserrors.CLI_FORDEBUG, err.Error())
+	}
+
+	return debug, nil
+}
+
 // defaultFortranType is the file type FORTRAN gives a source named
 // without one, as VMS's FORTRAN command does, and defaultTextLibraryType a
 // text library's. fortLibraryName and forSysDefFile name the libraries
@@ -315,6 +341,15 @@ func (c *Context) Fortran(opts FortranOptions) error {
 
 	if _, err := opts.standard(); err != nil {
 		return err
+	}
+
+	if _, err := opts.debug(); err != nil {
+		return err
+	}
+
+	// MACRO reads a file, and the plan keeps the MACRO file (Decision 17).
+	if opts.Object && opts.NoMacro {
+		return vmserrors.New(vmserrors.CLI_FOROBJECT)
 	}
 
 	noListing := func(qualifier string) {
@@ -426,6 +461,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	checks, _ := opts.checks()                     // checked by Fortran
 	warnings, _ := opts.warnings()                 // checked by Fortran
 	standard, _ := opts.standard()                 // checked by Fortran
+	debug, _ := opts.debug()                       // checked by Fortran
 
 	result := fortran.CompileAll(fortran.Options{
 		ExtendSource:   opts.ExtendSource,
@@ -440,6 +476,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		Checks:         checks,
 		Warnings:       warnings,
 		Standard:       standard,
+		Debug:          debug,
 		Continuations:  continuations,
 		Includes:       includes,
 		Version:        BuildVersion,
@@ -456,7 +493,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	var listingErr error
 
 	if opts.List {
-		listingErr = c.writeCompilerFile(result.Listing, opts.ListFile, found, "LIS", "/LIST=")
+		_, listingErr = c.writeCompilerFile(result.Listing, opts.ListFile, found, "LIS", "/LIST=")
 	}
 
 	if result.Errors > 0 {
@@ -464,8 +501,15 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	}
 
 	if !opts.NoMacro {
-		if err := c.writeCompilerFile(result.MACRO, opts.Macro, found, "MAR", "/MACRO="); err != nil {
+		written, err := c.writeCompilerFile(result.MACRO, opts.Macro, found, "MAR", "/MACRO=")
+		if err != nil {
 			return err
+		}
+
+		if opts.Object {
+			if err := c.assembleFortran(written, found, opts); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -482,6 +526,24 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 	}
 
 	return nil
+}
+
+// assembleFortran is /OBJECT: MACRO on the MACRO file just written, with its own
+// messages, as if run by hand. The MACRO file says what /DEBUG asked for, so MACRO needs
+// telling nothing else. The object takes its name from the FORTRAN source, as the listing
+// and the MACRO file do, not from a MACRO file /MACRO= named otherwise.
+func (c *Context) assembleFortran(written, found rms.FileLocation, opts FortranOptions) error {
+	object, err := outputLocation(c.ContainerSession, opts.ObjectFile, found, "OBJ")
+	if err != nil {
+		return FileFailure(err, opts.ObjectFile)
+	}
+
+	return c.Macro(MacroOptions{
+		Source:      written.Name,
+		SourceHost:  written.Host,
+		Object:      object.Name,
+		CommandLine: "MACRO " + written.Name,
+	})
 }
 
 // fortranIncludes reads the files and modules a compilation's INCLUDE
@@ -725,19 +787,19 @@ func recordLines(records [][]byte) []string {
 // writeCompilerFile writes a file the compiler made, of the lines given, for the
 // source found: one named name, or by default the source's name with the type typ.
 // qualifier is what names another, for the message if it's needed.
-func (c *Context) writeCompilerFile(lines []string, name string, found rms.FileLocation, typ, qualifier string) error {
+func (c *Context) writeCompilerFile(lines []string, name string, found rms.FileLocation, typ, qualifier string) (rms.FileLocation, error) {
 	s := c.ContainerSession
 
 	macLoc, err := outputLocation(s, name, found, typ)
 	if err != nil {
-		return FileFailure(err, name)
+		return macLoc, FileFailure(err, name)
 	}
 
 	// A host source that is already a .MAR or .LIS file would be its own
 	// default output file: refuse rather than overwrite the source. (On a
 	// volume the output is a new version, and the source survives.)
 	if macLoc.Host && found.Host && samePath(macLoc.Name, found.Name) {
-		return vmserrors.New(vmserrors.CLI_FORSAMEFILE, macLoc.Name, qualifier)
+		return macLoc, vmserrors.New(vmserrors.CLI_FORSAMEFILE, macLoc.Name, qualifier)
 	}
 
 	records := make([][]byte, len(lines))
@@ -746,10 +808,10 @@ func (c *Context) writeCompilerFile(lines []string, name string, found rms.FileL
 	}
 
 	if _, err := s.CreateRecordFile(macLoc, rms.TextRecords, records); err != nil {
-		return FileFailure(err, macLoc.Name)
+		return macLoc, FileFailure(err, macLoc.Name)
 	}
 
-	return nil
+	return macLoc, nil
 }
 
 // sourceStem is the source file's name without its directory, type, or

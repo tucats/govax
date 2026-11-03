@@ -73,6 +73,19 @@ func TestShowModuleLanguages(t *testing.T) {
 func compiledImage(t *testing.T) string {
 	t.Helper()
 
+	return buildCompiled(t, func(file func(string) string) []string {
+		return []string{
+			`FORTRAN "` + file("dbg85.for") + `"/HOST/NOOPTIMIZE`,
+			`MACRO "` + file("dbg85.mar") + `"/HOST/OBJECT="` + file("dbg85.obj") + `"/DEBUG`,
+		}
+	})
+}
+
+// buildCompiled puts testdata/dbg85's DBG85.FOR in a directory, runs the commands that
+// make its object, links it with /DEBUG, and returns the image's path.
+func buildCompiled(t *testing.T, commands func(file func(string) string) []string) string {
+	t.Helper()
+
 	c := newRunnableConsole(t)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
@@ -88,17 +101,31 @@ func compiledImage(t *testing.T) string {
 		t.Fatal(err)
 	}
 
-	for _, command := range []string{
-		`FORTRAN "` + file("dbg85.for") + `"/HOST/NOOPTIMIZE`,
-		`MACRO "` + file("dbg85.mar") + `"/HOST/OBJECT="` + file("dbg85.obj") + `"/DEBUG`,
-		`LINK "` + file("dbg85.obj") + `"/HOST/DEBUG/NOSYSLIB/EXECUTABLE="` + file("dbg85.exe") + `"`,
-	} {
+	for _, command := range append(commands(file),
+		`LINK "`+file("dbg85.obj")+`"/HOST/DEBUG/NOSYSLIB/EXECUTABLE="`+file("dbg85.exe")+`"`) {
 		if err := d.Dispatch(command); err != nil {
 			t.Fatalf("%s: %v", command, err)
 		}
 	}
 
 	return file("dbg85.exe")
+}
+
+// TestFortranDebugQualifier: FORTRAN/DEBUG/OBJECT by itself makes what the debugger
+// needs, with no MACRO command and no /DEBUG on it, as the MACRO/DEBUG of
+// compiledImage does.
+func TestFortranDebugQualifier(t *testing.T) {
+	c := stoppedAt(t, buildCompiled(t, func(file func(string) string) []string {
+		return []string{`FORTRAN "` + file("dbg85.for") + `"/HOST/NOOPTIMIZE/DEBUG/OBJECT`}
+	}), "TXT85")
+
+	if got, want := examineOutput(t, c, "EXAMINE DBG85.I"), "DBG85\\DBG85.I:  0000000B\n"; got != want {
+		t.Errorf("EXAMINE DBG85.I: got %q, want %q", got, want)
+	}
+
+	if out := say(t, c, "SHOW MODULE"); !strings.Contains(out, "DBG85") || !strings.Contains(out, "MACRO") {
+		t.Errorf("SHOW MODULE: %s", out)
+	}
 }
 
 // TestDottedNamesOnCompiledProgram: the names the FORTRAN compiler writes can be

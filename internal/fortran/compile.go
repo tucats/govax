@@ -51,6 +51,9 @@ type Options struct {
 	// Standard is /STANDARD: what to flag as an extension to FORTRAN-77 (sema.Conformance).
 	Standard sema.Conformance
 
+	// Debug is /DEBUG: what MACRO is to write for the debugger (debug.go).
+	Debug Debug
+
 	// Optimize is /OPTIMIZE: run the optimizer's passes on the IR (package opt). The FORTRAN
 	// command sets it unless it was given /NOOPTIMIZE.
 	Optimize bool
@@ -157,6 +160,10 @@ func CompileAll(opts Options, files []File) (result Result) {
 
 	sema.ReportSourceExtensions(program, opts.Standard, &messages)
 
+	if opts.Debug.Symbols && opts.Optimize {
+		messages.Report("DEBUGOPTIMIZE", diag.Position{})
+	}
+
 	// The second, third, and fourth passes: each statement's kind and
 	// tokens, then the syntax tree, then its meaning. Semantic analysis
 	// runs even after the parser's errors, since the tree keeps a
@@ -237,6 +244,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 func writeHeader(w *codegen.Writer, opts Options, files []File, module, ident string) {
 	w.Statement("", ".TITLE", module, "")
 	w.Statement("", ".IDENT", identOperand(ident), "")
+	opts.Debug.writeDirectives(w)
 	w.Comment("")
 	w.Comment("Compiled by govax FORTRAN V" + opts.Version + " on " + vmsTime(opts.Compiled))
 

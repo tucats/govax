@@ -4247,6 +4247,18 @@ $FOR
                         NONE, and NOSYNTAX and NOSOURCE_FORM.  /STANDARD alone
                         is ALL.  The default is /NOSTANDARD.
 
+        /DEBUG[=(<keyword>,...)]  What MACRO is to write for the debugger: ALL,
+        /NODEBUG        NONE, [NO]SYMBOLS (debugger records), and [NO]TRACEBACK
+                        (a traceback's names).  /DEBUG alone is ALL, so a plain
+                        MACRO then writes debugger records.  /NODEBUG, the
+                        default, is traceback alone.  It doesn't turn the
+                        optimizer off: give /NOOPTIMIZE as well to debug.
+
+        /OBJECT[=<file>]  Runs MACRO on the MACRO file too, for an object file,
+        /NOOBJECT       by default the source's name with type OBJ.  The MACRO
+                        file is kept, so /OBJECT can't go with /NOMACRO.  The
+                        default is /NOOBJECT.
+
     The compiler reports each problem it finds with the line it is on:
 
         %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
@@ -4265,7 +4277,8 @@ $FOR
     --continuations <n>, --no-i4, --g-floating, --align <value>,
     --no-align, --optimize, --no-optimize, --list, --list-file <file>,
     --show <keywords>, --cross-reference, --check <keywords>,
-    --warnings <keywords>, and --standard <keywords>.
+    --warnings <keywords>, --standard <keywords>, --debug <keywords>,
+    --object, and --object-file <file>.
 
     Examples:
 

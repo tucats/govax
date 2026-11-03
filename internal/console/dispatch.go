@@ -669,6 +669,10 @@ func (d *Dispatcher) bindGrammar() {
 			NoWarnings:     r.Negated("WARNINGS"),
 			Standard:       nonEmpty(r.List("STANDARD")),
 			StandardGiven:  r.Present("STANDARD") && !r.Negated("STANDARD") && !r.Defaulted("STANDARD"),
+			Debug:          nonEmpty(r.List("DEBUG")),
+			DebugGiven:     r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
+			Object:         r.Present("OBJECT") && !r.Negated("OBJECT") && !r.Defaulted("OBJECT"),
+			ObjectFile:     r.String("OBJECT"),
 			Continuations: dclcmd.FortranContinuations{
 				Given: r.Present("CONTINUATIONS"),
 				Lines: r.Int("CONTINUATIONS"),
