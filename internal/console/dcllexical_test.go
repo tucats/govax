@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/dclshell"
+	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -375,6 +376,26 @@ func TestLexicalDevice(t *testing.T) {
 		{text: `F$DEVICE("NOSUCH*")`, want: ""},
 		{text: `F$DEVICE(, "NOSUCHCLASS")`, code: vmserrors.CLI_IVKEYW},
 		{text: `F$DEVICE("DUA*",, "RD54")`, vms: "SS$_BADPARAM"},
+	})
+}
+
+// TestLexicalDeviceOrder: F$DEVICE goes through devices in SHOW DEVICE's
+// order, whatever order they were defined in, unit numbers compared as
+// numbers.
+func TestLexicalDeviceOrder(t *testing.T) {
+	c := lexConsole(t)
+
+	for _, name := range []string{"XXB0", "XXA10", "XXA2"} {
+		c.RTL.Devices.Define(name, iodev.DeviceOptions{})
+	}
+
+	node := "_" + c.RTL.NodeName + "$"
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$DEVICE("XX*")`, want: node + "XXA2:"},
+		{text: `F$DEVICE("XX*")`, want: node + "XXA10:"},
+		{text: `F$DEVICE("XX*")`, want: node + "XXB0:"},
+		{text: `F$DEVICE("XX*")`, want: ""},
 	})
 }
 

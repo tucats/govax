@@ -1747,7 +1747,8 @@ choices no fixture has confirmed yet.
     identifier's name. HW_MODEL, HW_NAME, and STS aren't supported
     (IVKEYW). No privilege is asked for to see other processes.
   - F$DEVICE returns names with the node's, "_GOVAX$DUA0:" (VMS 7.3
-    equated OPEN's logical name to "_SIMVAX$DUA1"), sorted by name; the
+    equated OPEN's logical name to "_SIMVAX$DUA1"), in SHOW DEVICE's
+    order (by class, then name and unit number; 2026-11-03); the
     class and type are $DCDEF's and $DTDEF's names without their
     prefixes, one that isn't is IVKEYW, and a type without a class
     SS$_BADPARAM. MOUNT's disks have no device type, so a type selects

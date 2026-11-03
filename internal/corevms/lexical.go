@@ -88,7 +88,8 @@ func (env *Environment) IdentifierText(id uint32) string {
 
 // DeviceScan returns the names of the devices whose names match pattern,
 // as $DEVICE_SCAN finds them for F$DEVICE: each written with the node's
-// name, "_GOVAX$DUA0:", sorted by name. pattern may have
+// name, "_GOVAX$DUA0:", in SHOW DEVICE's order (by class, then name and
+// unit number, DUA2 before DUA10). pattern may have
 // "*" and "%" wildcards ("" is "*"); a leading "_", a node name before a
 // "$", and a trailing ":" are left out of it, so "DUA*" and "_DUA*:"
 // alike match DUA0. With class, only devices of that class (DC$_) are
@@ -107,7 +108,7 @@ func (env *Environment) DeviceScan(pattern string, class, devType uint32, byClas
 
 	var names []string
 
-	for _, d := range env.Devices.All() {
+	for _, d := range env.Devices.Sorted() {
 		switch {
 		case !lnm.Match(pattern, d.Name):
 		case byClass && uint32(d.DevClass) != class:
@@ -116,8 +117,6 @@ func (env *Environment) DeviceScan(pattern string, class, devType uint32, byClas
 			names = append(names, nodeDeviceName(env, d))
 		}
 	}
-
-	sort.Strings(names)
 
 	return names
 }
