@@ -22,7 +22,7 @@ import (
 // Defaults for the DefaultVolume fields a configuration leaves empty.
 const (
 	DefaultVolumeLabel     = "WORK"
-	DefaultVolumeDevice    = "DUA0:"
+	DefaultVolumeDevice    = "DUA" // the next free unit: DUA1 beside the system volume (units.go)
 	DefaultVolumeType      = "RD54"
 	DefaultVolumeDirectory = "[WORK]"
 )
@@ -39,7 +39,8 @@ type DefaultVolume struct {
 	// "WORK" for a new container and no check on an existing one.
 	Label string
 
-	// Device is the device the volume is mounted on, such as "DUA0:".
+	// Device is the device the volume is mounted on, such as "DUA1:", or
+	// a controller alone, such as "DUA", for its next free unit.
 	Device string
 
 	// Type is the disk type (RD54, RA81, ...) that sizes a new container
@@ -77,9 +78,18 @@ func (c *Context) MountDefaultVolume(v DefaultVolume) {
 		label = DefaultVolumeLabel
 	}
 
-	device := strings.ToUpper(strings.TrimSuffix(strings.TrimSpace(v.Device), ":"))
-	if device == "" {
-		device = strings.TrimSuffix(DefaultVolumeDevice, ":")
+	deviceText := strings.TrimSpace(v.Device)
+	if deviceText == "" {
+		deviceText = DefaultVolumeDevice
+	}
+
+	// A controller alone (DUA) is its next free unit (units.go).
+	device := c.ResolveUnit(deviceText)
+
+	if c.Mounts.IsSystem(device) {
+		c.warnDefaultVolume(path, fmt.Errorf("%s: is the system volume", device))
+
+		return
 	}
 
 	devType := strings.ToUpper(strings.TrimSpace(v.Type))

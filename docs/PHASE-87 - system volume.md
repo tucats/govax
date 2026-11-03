@@ -198,7 +198,8 @@ its built-in files, as Decision 1's fallback does.
 the fallback.** Everything on the volume comes from files built into
 govax. If the volume can't be created or mounted (a read-only directory,
 an unknown device type, a damaged container), govax says so
-(`%GOVAX-W-NOSYSVOL, ...`, with the reason) and starts as it does today,
+(`%MOUNT-W-NOSYSVOL, system volume FILE not mounted: reason`, beside the
+default volume's NODEFAULT) and starts as it does today,
 from the built-in files, with no system logical names. `--system-initialize`
 is the cure for a damaged volume; this keeps govax usable until the user
 runs it.
@@ -284,8 +285,8 @@ KEYS say the default changed. DISMOUNT of the system volume is refused
 writable takes an exclusive advisory lock on the container
 (`flock`/`LockFileEx` behind a small `internal/hostlock`; Unix first). A
 second session finding it locked mounts it read-only with
-`%GOVAX-I-SYSREADONLY, ...in use by another govax session, mounted
-read-only`: no refresh, and no page file there (Decision 8). The lock
+`%MOUNT-I-SYSREADONLY, system volume FILE is in use by another govax
+session; mounted read-only`: no refresh, and no page file there (Decision 8). The lock
 goes with the process, so a crashed session leaves none behind. The same
 lock could protect the work volume; this phase does it for the system
 volume only, and logs the other as follow-up.
@@ -403,7 +404,7 @@ recommendation:
    built-in files (`startup.com`, `systartup_vms.com`, `buildftn.com`,
    `buildstarlet.com`), the manifest's format and its reading and writing.
    Plain Go over an interface to RMS, tested without a console.
-3. **Creating and mounting it:** the `vax.default.system.*` keys
+3. (done 2026-11-03) **Creating and mounting it:** the `vax.default.system.*` keys
    (`validConfigs`, HELP CONFIG KEYS), `--system-file`, `--system-device`,
    `--system-initialize` (Decision 10), the unit-number rule for every
    device setting and `--mount` (Decision 6), creation with its
@@ -491,3 +492,70 @@ recommendation:
     and test the procedures. `TestBuildProcedureModules` holds
     BUILDFTN.COM's MACRO lines to FTNRTL.OPT's objects and to the modules
     on the volume.
+- **2026-11-03** — Subtask 3 done: the system volume made and mounted.
+  - `internal/dclcmd/sysvolume.go`: `MountSystemVolume(SystemVolume)` returns a
+    `SystemVolumeResult` (`Mounted`, `Device`, `Path`, `Writable`, `Shared`,
+    `Created`).
+    - **Defaults:** `DefaultSystemFile` (`~/.govax/govax-system.dsk`), and
+      `NoSystemVolume` (`none`, in any case), which mounts nothing and
+      says nothing.
+    - **Finding or making the container:** `openSystemContainer` finds it
+      or makes it (`InitializeContainer`, label GOVAXSYS), taking the host
+      lock as soon as the file exists. A new container is locked right
+      after it's made, so two sessions starting at once still end with one
+      writer.
+    - **`--system-initialize`:** renames the old container to `FILE.old`,
+      unless another session holds it; then it is left alone and mounted
+      read-only.
+    - **Mounting:** for writing, or read-only when shared (SYSREADONLY) or
+      when the host file can only be read (WRITELOCK).
+    - **Refusals:** a label other than GOVAXSYS, a device already mounted,
+      or an unknown type is `%MOUNT-W-NOSYSVOL, system volume FILE not
+      mounted: cause`, and startup goes on.
+    - **A new, writable volume** is filled by `sysvol.Populate` through
+      `systemFiles`, the `sysvol.Volume` over RMS. Text files are written
+      as `TextRecords`, binary files as `ImageBlocks` (FIX 512, LINK's
+      attributes). A failure there is `%MOUNT-W-SYSFILES`, with the volume
+      left mounted; subtask 4's refresh writes the missing files.
+  - **New messages** (`vmserrors/codes_mount.go`): NOSYSVOL, SYSREADONLY,
+    SYSINIT, and SYSFILES, all MOUNT facility like the default volume's.
+    The plan's `%GOVAX-` names are corrected above.
+  - **`internal/hostlock`:** `TryLock`, flock(2) on darwin, linux, and the
+    BSDs; elsewhere it locks nothing (`lock_other.go`). Windows's
+    LockFileEx is follow-up work.
+  - **`rms.MountTable`:** `SetSystem`/`System`/`IsSystem` record the system
+    device, and `Hold` keeps a closer, the lock, which is closed after the
+    volume at dismount. Dismounting forgets the system device.
+  - **DISMOUNT** of the system volume shows `%DISM-W-CANNOTDMT, DUA0:
+    cannot be dismounted` and `%DISM-W-SYSDISK, device is the system
+    volume`. The second line's wording is govax's: VMS's is unconfirmed.
+  - **`internal/dclcmd/units.go`:** `ResolveUnit` takes three letters
+    alone (`DUA`, `dua:`, `_DUA:`) as a controller and returns its lowest
+    unit with nothing mounted on it. Anything else comes back as given,
+    and so does a three-letter logical name, unless written with `_`.
+    - It applies to the system volume's device, the default volume's,
+      and `--mount`'s.
+    - `DefaultVolumeDevice` is now `DUA`. A default volume configured on
+      the system volume's device is NODEFAULT's "is the system volume".
+  - **`cmd/govax`:**
+    - `--system-file`, `--system-device`, and `--system-initialize` go in
+      `systemOptions`. `systemVolume()` takes each option over its
+      `vax.default.system.*` setting, and the settings are in
+      `validConfigs`.
+    - `run` mounts the system volume before the `--mount` options and the
+      default volume. The grammars are still read first; subtask 5 moves
+      them after the mount, when the resolver reads the volume.
+    - `TestMain` gives every test in the package `--system-file none`
+      unless a test sets its own (`withSystemVolume`), so no test touches
+      `~/.govax`.
+  - **HELP CONFIG KEYS** has "The system volume" and the default volume's
+    new device. HELP's and MANUAL.md's `--mount DUA0=...` examples are now
+    DUA1, since DUA0 is the system volume. The rest of MANUAL.md is the
+    close-out's.
+  - **Time:** making and filling an RD54 takes about 150 ms in a whole
+    start (`TestRun_systemVolume` logs it), and an RD51 about 140 ms.
+    The containers are sparse.
+  - **Tests:** `internal/console/sysvolume_test.go` (made, reused, shared,
+    the lock let go, initialized, not used, DISMOUNT refused,
+    `ResolveUnit`, the default volume beside it) and
+    `cmd/govax/sysvolume_test.go` (the options end to end, `--mount DUA`).

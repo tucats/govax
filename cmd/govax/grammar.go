@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/gopackages/app-cli/cli"
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -20,8 +21,13 @@ var (
 	stats            bool
 
 	// mountRequests are the --mount and --mount-write options, in order,
-	// which run mounts before anything else.
+	// which run mounts before anything else but the system volume.
 	mountRequests []mountRequest
+
+	// systemOptions are the --system-file, --system-device, and
+	// --system-initialize options (docs/PHASE-87 - system volume.md),
+	// which take precedence over the vax.default.system.* settings.
+	systemOptions systemFlags
 
 	// macro holds the macro subcommand's options.
 	macro macroFlags
@@ -136,6 +142,33 @@ type mountRequest struct {
 	write        bool
 }
 
+// systemFlags are the system volume's options. An empty string is an
+// option not given, which leaves its setting (or default) in force.
+type systemFlags struct {
+	file, device string
+	initialize   bool
+}
+
+// systemVolume is the system volume to mount: each option given, else
+// its vax.default.system.* setting, else (empty) MountSystemVolume's
+// default.
+func systemVolume() dclcmd.SystemVolume {
+	pick := func(option, key string) string {
+		if strings.TrimSpace(option) != "" {
+			return option
+		}
+
+		return settings.Get(key)
+	}
+
+	return dclcmd.SystemVolume{
+		File:       pick(systemOptions.file, "vax.default.system.file"),
+		Device:     pick(systemOptions.device, "vax.default.system.device"),
+		Type:       settings.Get("vax.default.system.type"),
+		Initialize: systemOptions.initialize,
+	}
+}
+
 var grammar = []cli.Option{
 	{
 		LongName:    "stats",
@@ -188,6 +221,38 @@ var grammar = []cli.Option{
 		ParameterDescription: "device=container",
 		OptionType:           cli.StringType,
 		Action:               func(c *cli.Context) error { return addMount(c, "mount-write", true) },
+	},
+	{
+		LongName:             "system-file",
+		Description:          "The system volume's container, or none (default ~/.govax/govax-system.dsk)",
+		ParameterDescription: "file",
+		OptionType:           cli.StringType,
+		Action: func(c *cli.Context) error {
+			systemOptions.file, _ = c.String("system-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:             "system-device",
+		Description:          "The device the system volume is mounted on (default DUA0)",
+		ParameterDescription: "device",
+		OptionType:           cli.StringType,
+		Action: func(c *cli.Context) error {
+			systemOptions.device, _ = c.String("system-device")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "system-initialize",
+		Description: "Make the system volume again from govax's own files, keeping the old one as FILE.old",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			systemOptions.initialize = true
+
+			return nil
+		},
 	},
 	{
 		LongName:             "console",

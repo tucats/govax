@@ -3,6 +3,7 @@ package rms
 import (
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -38,6 +39,11 @@ type mountedVolume struct {
 	// pageFiles counts the page files open on the volume (pagefile.go):
 	// files DISMOUNT reports apart from users' (FilesOpenError).
 	pageFiles int
+
+	// hold is closed when the volume is dismounted (Hold): the host lock
+	// on the system volume's container (internal/hostlock), so that a
+	// later session can mount it for writing.
+	hold io.Closer
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume
@@ -69,6 +75,42 @@ type MountTable struct {
 	// mounts is keyed by normalized device name (see normalizeDeviceName)
 	// so that "DUA0", "DUA0:", and "dua0:" all name the same entry.
 	mounts map[string]*mountedVolume
+
+	// system is the device the system volume is mounted on (SetSystem),
+	// normalized, or "" (docs/PHASE-87 - system volume.md).
+	system string
+}
+
+// SetSystem records that the volume mounted on device is the system
+// volume, which DISMOUNT refuses to dismount. It is forgotten when the
+// volume is dismounted.
+func (t *MountTable) SetSystem(device string) {
+	t.system = normalizeDeviceName(device)
+}
+
+// System returns the device the system volume is mounted on, without a
+// colon ("DUA0"), or "" if there is none.
+func (t *MountTable) System() string {
+	return t.system
+}
+
+// IsSystem reports whether device is the system volume's.
+func (t *MountTable) IsSystem(device string) bool {
+	return t.system != "" && normalizeDeviceName(device) == t.system
+}
+
+// Hold gives the volume mounted on device something to close when it is
+// dismounted, after the volume itself: the host lock on its container. It
+// fails if nothing is mounted there.
+func (t *MountTable) Hold(device string, c io.Closer) error {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return fmt.Errorf("rms: %s: not mounted", normalizeDeviceName(device))
+	}
+
+	entry.hold = c
+
+	return nil
 }
 
 // NewMountTable returns an empty MountTable, with nothing mounted yet.
@@ -215,6 +257,17 @@ func (t *MountTable) dismount(device string, force bool) error {
 	}
 
 	delete(t.mounts, key)
+
+	if key == t.system {
+		t.system = ""
+	}
+
+	// The container is closed, so its lock can go.
+	if entry.hold != nil {
+		if err := entry.hold.Close(); err != nil {
+			return fmt.Errorf("rms: dismounting %s: %w", key, err)
+		}
+	}
 
 	return nil
 }

@@ -2070,6 +2070,49 @@ $CONF,KEY
     These are the configuration settings govax reads (see HELP CONFIG
     for how to set them).
 
+    The system volume
+
+        govax mounts a system volume, labeled GOVAXSYS, every time it
+        starts, before anything else: an ODS-2 container holding govax's
+        own files (its startup procedure, grammars, help, libraries, and
+        FTNRTL.EXE, with the sources and procedures that rebuild them).
+        The first time, govax makes it from the files built into it:
+
+            %MOUNT-I-CREATED, container /home/me/.govax/govax-system.dsk
+                created as an RD54 volume labeled GOVAXSYS
+            %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
+
+        Only one govax session at a time can write it.  A second session
+        mounts it read-only (%MOUNT-I-SYSREADONLY).  If it can't be used
+        (it can't be made or mounted, or its label isn't GOVAXSYS), a
+        %MOUNT-W-NOSYSVOL warning says why, and govax starts from its
+        built-in files.  DISMOUNT won't dismount it.
+
+        The options --system-file FILE and --system-device DEVICE take
+        precedence over the settings below for one run, and
+        --system-file none starts govax with no system volume at all.
+        --system-initialize makes the volume again from govax's own
+        files, keeping the old container beside it as FILE.old: the way
+        back from a system volume that no longer works.
+
+        vax.default.system.file       The container's host path, or none.
+                                      A leading ~/ is your home
+                                      directory.  Default
+                                      ~/.govax/govax-system.dsk.
+
+        vax.default.system.device     The device it is mounted on.  A
+                                      device with no unit number (DUA) is
+                                      that controller's first unit with
+                                      nothing mounted on it.  Default
+                                      DUA0.
+
+        vax.default.system.type       The disk type (RD51, RD54, RA81,
+                                      ...) that sizes a new container,
+                                      and that the device is defined as.
+                                      Default RD54 (311,200 blocks; the
+                                      host file takes only the space its
+                                      files use).
+
     The default volume
 
         When vax.default.volume.file is set, govax mounts that ODS-2
@@ -2081,12 +2124,13 @@ $CONF,KEY
 
             %MOUNT-I-CREATED, container /home/me/vax/work.dsk created as
                 an RD54 volume labeled WORK
-            %MOUNT-I-MOUNTED, WORK mounted on _DUA0:
+            %MOUNT-I-MOUNTED, WORK mounted on _DUA1:
 
         A container that can only be read is mounted read-only, and
         %MOUNT-I-WRITELOCK says so.  If the volume can't be used (it
         can't be created, opened, or mounted, its label doesn't match,
-        or the device is already mounted with --mount), a
+        or the device is already mounted, by --mount or as the system
+        volume), a
         %MOUNT-W-NODEFAULT warning says why and govax starts without it.
         With no container configured, file names go to the host as they
         always have.
@@ -2102,7 +2146,11 @@ $CONF,KEY
                                       (and no check).
 
         vax.default.volume.device     The device the volume is mounted on.
-                                      Default DUA0:.
+                                      A device with no unit number (DUA)
+                                      is that controller's first unit
+                                      with nothing mounted on it.
+                                      Default DUA: DUA1, beside the
+                                      system volume on DUA0.
 
         vax.default.volume.type       The disk type (RX50, RD54, RA81, ...)
                                       that sizes a new container, and that
@@ -4343,7 +4391,7 @@ $FOR
 
         FORTRAN/DEBUG/NOOPTIMIZE/OBJECT PROG    ! then LINK/DEBUG PROG
 
-        $ govax --mount-write DUA0=work.dsk fortran DUA0:[000000]PROG.FOR
+        $ govax --mount-write DUA1=work.dsk fortran DUA1:[000000]PROG.FOR
 
     See also the help for MACRO, LINK, and RUN.
 
@@ -4537,7 +4585,7 @@ $MACR
 
         MACRO "prog.mar"/LIBRARY=("mymacros","common.mlb")
 
-        $ govax --mount-write DUA0=work.dsk macro DUA0:[000000]HELLO.MAR
+        $ govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
 
     See also the help for COPY, LIBRARY, MOUNT, and SET DEFAULT.
 

@@ -199,6 +199,17 @@ func (c *Context) Dismount(device string) error {
 		return vmserrors.New(vmserrors.SS_DEVNOTMOUNT, device)
 	}
 
+	// The system volume stays mounted for the whole session, as VMS's
+	// system disk does (docs/PHASE-87 - system volume.md). The second
+	// line's wording is govax's: VMS's for this case is unconfirmed.
+	if c.Mounts.IsSystem(device) {
+		head := fmt.Sprintf("DISM-W-CANNOTDMT, %s: cannot be dismounted", device)
+		c.Printf("%%%s\n", head)
+		c.Printf("%%DISM-W-SYSDISK, device is the system volume\n")
+
+		return vmserrors.InhibitMessage(errors.New(head))
+	}
+
 	name, labeled := c.volumeLogicalName(device)
 
 	if err := c.Mounts.Dismount(device); err != nil {

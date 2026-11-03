@@ -269,8 +269,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintf(out, "govax %s\n", BuildVersion)
 	}
 
+	// The system volume first (docs/PHASE-87 - system volume.md), so that
+	// it gets its device, then the --mount options, whose devices may be a
+	// controller alone ("DUA") for its next free unit.
+	c.Commands().MountSystemVolume(systemVolume())
+
 	for _, m := range mountRequests {
-		if err := c.Commands().Mount(m.device, m.path, m.write); err != nil {
+		if err := c.Commands().Mount(c.Commands().ResolveUnit(m.device), m.path, m.write); err != nil {
 			return err
 		}
 	}
@@ -746,6 +751,10 @@ var validConfigs = map[string]bool{
 	"vax.console.lines":    true,
 	"vax.language":         true,
 	"vax.runtime.random":   true,
+
+	"vax.default.system.file":   true,
+	"vax.default.system.device": true,
+	"vax.default.system.type":   true,
 
 	"vax.default.volume.file":      true,
 	"vax.default.volume.label":     true,

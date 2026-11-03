@@ -434,8 +434,8 @@ safety net for a program that loops forever when govax runs unattended,
 in a test script for instance.
 
 ```text
-$ govax --mount-write DUA0=work.dsk macro 'DUA0:[SRC]PROG.MAR'
-$ govax --mount DUA0=ex.dsk run 'DUA0:[DEMO]GREET'
+$ govax --mount-write DUA1=work.dsk macro 'DUA1:[SRC]PROG.MAR'
+$ govax --mount DUA1=ex.dsk run 'DUA1:[DEMO]GREET'
 What is your name? Grace
 Hello, Grace!
 $ govax --instruction-limit 5000000 run "./loop.exe"
@@ -749,7 +749,7 @@ mount containers before anything else, which is how a script runs a
 program that needs a volume:
 
 ```sh
-govax --mount-write DUA0=project.dsk run 'DUA0:[SRC]PROG.EXE'
+govax --mount-write DUA1=project.dsk run 'DUA1:[SRC]PROG.EXE'
 ```
 
 #### Disk types

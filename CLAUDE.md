@@ -615,7 +615,13 @@ never had.
   the kernel's sources with build procedures, and the page file; refreshed by content against a manifest; a device with
   no unit is the next free one. Subtask 1 (2026-11-03) is the survey and plan, and subtask 2 (2026-11-03) the
   volume's contents, `internal/sysvol` (the layout, canonical contents, the manifest, `Populate` over a `Volume`
-  interface), with bootdata's new `startup.com`, `systartup_vms.com`, `buildftn.com`, and `buildstarlet.com`.
+  interface), with bootdata's new `startup.com`, `systartup_vms.com`, `buildftn.com`, and `buildstarlet.com`, and
+  subtask 3 (2026-11-03) making and mounting it: `dclcmd/sysvolume.go`'s `MountSystemVolume` (made, locked with
+  `internal/hostlock`, read-only when another session holds it, `--system-initialize`'s `FILE.old`, NOSYSVOL and
+  startup going on), `dclcmd/units.go`'s `ResolveUnit` (`DUA` is the next free unit; the default volume's default
+  device), `rms.MountTable`'s `SetSystem`/`IsSystem`/`Hold`, DISMOUNT refused, `--system-file`/`--system-device`/
+  `--system-initialize` and the `vax.default.system.*` keys; `cmd/govax`'s `TestMain` runs its tests with
+  `--system-file none`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
