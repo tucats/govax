@@ -148,26 +148,43 @@ go install ./cmd/govax        # or installs govax in your Go bin directory
 ```
 
 govax needs no other files: the files it reads at startup (its command
-grammar, help text, startup procedure, and microkernel) are built into the
-executable. govax runs on macOS, Linux, and Windows.
+grammar, help text, startup procedure, microkernel, and libraries) are
+built into the executable. The first time it runs, govax copies them onto
+a VAX disk of its own, the *system volume*, where you can read and change
+them ([The system volume](#the-system-volume)). govax runs on macOS,
+Linux, and Windows.
 
 ### Your first session
 
-Type `govax` with no arguments to get the console's prompt:
+Type `govax` with no arguments to get the console's prompt. The first
+time, govax makes its system volume:
 
 ```text
 $ govax
-govax 1.0-280
+govax 1.0-745
+%MOUNT-I-CREATED, container /Users/me/.govax/govax-system.dsk created as an RD54 volume labeled GOVAXSYS
+%MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %SYSTEM-S-INIT, Kernel initialized
 
 VAX>
 ```
 
-Before the prompt appears, govax runs its startup procedure, `vax.init`
-(see [What happens at startup](#what-happens-at-startup)): it configures
-8 MB of memory, builds the page tables, loads and starts the microkernel,
-and defines the terminal and null devices. `%SYSTEM-S-INIT` says that has
-been done.
+After that, it mounts the one it made:
+
+```text
+$ govax
+govax 1.0-745
+%MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
+%SYSTEM-S-INIT, Kernel initialized
+
+VAX>
+```
+
+Before the prompt appears, govax runs its startup procedure,
+`SYS$MANAGER:STARTUP.COM` on the system volume (see [What happens at
+startup](#what-happens-at-startup)): it configures 8 MB of memory, builds
+the page tables, loads and starts the microkernel, and defines the
+terminal and null devices. `%SYSTEM-S-INIT` says that has been done.
 
 At the `VAX>` prompt you type DCL commands, as at VMS's `$` prompt. Some
 things to try:
@@ -258,35 +275,36 @@ govax config set vax.default.volume.file="~/vax/work.dsk"
 ```
 
 The next time govax starts, it creates the container (the first time
-only), mounts it as `DUA0:`, and sets your default directory to
-`DUA0:[WORK]`:
+only), mounts it as `DUA1:`, beside the system volume on `DUA0:`, and
+sets your default directory to `DUA1:[WORK]`:
 
 ```text
 $ govax
-govax 1.0-280
+govax 1.0-745
+%MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
 %MOUNT-I-CREATED, container /Users/me/vax/work.dsk created as an RD54 volume labeled WORK
-%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
+%MOUNT-I-MOUNTED, WORK mounted on _DUA1:
 %SYSTEM-S-INIT, Kernel initialized
 
 VAX> SHOW DEFAULT
-  DUA0:[WORK]
+  DUA1:[WORK]
 VAX> COPY "hello.mar"/HOST *
-%COPY-S-COPIED, hello.mar copied to DUA0:[WORK]HELLO.MAR;1
+%COPY-S-COPIED, hello.mar copied to DUA1:[WORK]HELLO.MAR;1
 VAX> MACRO HELLO
 VAX> LINK HELLO
 VAX> RUN HELLO
 Hello, world!
 VAX> DIRECTORY
 
-Directory DUA0:[WORK]
+Directory DUA1:[WORK]
 
 HELLO.EXE;1         HELLO.MAR;1         HELLO.OBJ;1
 
 Total of 3 files.
 ```
 
-Now names work as they do on VMS: `HELLO` means `DUA0:[WORK]HELLO.MAR`
-to `MACRO` and `DUA0:[WORK]HELLO.EXE` to `RUN`, and each new file is a
+Now names work as they do on VMS: `HELLO` means `DUA1:[WORK]HELLO.MAR`
+to `MACRO` and `DUA1:[WORK]HELLO.EXE` to `RUN`, and each new file is a
 new version. `COPY ... /HOST` moves files between your host and the
 volume in either direction. The volume is an ordinary ODS-2 disk image;
 SIMH and other VAX emulators can mount it too.
@@ -295,26 +313,38 @@ SIMH and other VAX emulators can mount it too.
 
 Each time govax starts, it:
 
-1. Mounts the containers named by `--mount` and `--mount-write` options.
-2. Mounts the default volume, if `vax.default.volume.file` is set.
-3. Runs `vax.init`, govax's equivalent of a system startup and login
-   procedure. It is a DCL command procedure that:
+1. Mounts the system volume on `DUA0:`, making it the first time ([The
+   system volume](#the-system-volume)).
+2. Mounts the containers named by `--mount` and `--mount-write` options.
+3. Mounts the default volume, if `vax.default.volume.file` is set.
+4. Runs `SYS$MANAGER:STARTUP.COM` from the system volume, govax's
+   equivalent of a system startup and login procedure. It is a DCL
+   command procedure that:
+   - defines the system logical names (`SYS$SYSTEM`, `SYS$LIBRARY`, ...),
    - sets the size of physical memory (`INITIALIZE/VAX`),
    - builds the page tables for the P0, P1, and S0 address regions and
      the access modes' stacks (`VMINIT`),
-   - loads a console ROM and NVRAM if there are any (`LOAD/ROM/NOERROR`),
-   - assembles the microkernel into memory (`ASM "kernel.asm"`) and runs
-     its initialization under the debugger,
-   - defines the terminal `TTA0:` and the null device `NLA0:`.
-4. Installs the page file, if paging is on.
-5. Runs your own startup procedure, if `vax.startup.procedure` names one.
-6. Runs the command given on govax's command line and exits, or else
+   - loads the console ROM, `SYS$SYSTEM:DEFAULT.ROM`, and the NVRAM
+     (`LOAD/ROM/NOERROR`),
+   - assembles the microkernel, `SYS$SOURCES:KERNEL.ASM`, into memory
+     (`ASM`) and runs its initialization under the debugger,
+   - defines the terminal `TTA0:` and the null device `NLA0:`,
+   - and last runs `SYS$MANAGER:SYSTARTUP_VMS.COM`, the place for your
+     own startup commands.
+5. Installs the page file, if paging is on.
+6. Runs your own startup procedure, if `vax.startup.procedure` names one.
+7. Runs the command given on govax's command line and exits, or else
    shows the `VAX>` prompt.
 
-The memory sizes `vax.init` uses can be changed with configuration
-settings (see [Memory](#memory)), so you rarely need a `vax.init` of your
-own. If you do, put one in a directory and give it to govax with `--path`
-(see [Global options](#global-options)).
+The memory sizes STARTUP.COM uses can be changed with configuration
+settings (see [Memory](#memory)), so you rarely need to change
+STARTUP.COM itself. Commands of your own go in SYSTARTUP_VMS.COM, or in
+the procedure `vax.startup.procedure` names. With no system volume
+(`--system-file none`), govax runs its built-in copy of STARTUP.COM,
+which uses its built-in kernel and ROM and defines no system logical
+names; a `startup.com` in the current directory or a `--path` directory
+is run in its place then. (Older versions of govax ran a procedure
+called `vax.init`; that name is no longer read.)
 
 ---
 
@@ -330,7 +360,9 @@ govax [global-options] subcommand [options] [args...]
 
 With no command, govax starts an interactive session. Anything else on
 the command line that isn't one of govax's subcommands is a DCL command:
-govax starts, runs `vax.init`, runs that one command, and exits.
+govax starts, mounts its system volume, runs STARTUP.COM, runs that one
+command, and exits. The subcommands below start govax the same way, so
+they too find the system volume's libraries and FTNRTL.
 
 ```text
 $ govax show system
@@ -418,9 +450,12 @@ Global options go before the subcommand or command.
 
 | Option | Meaning |
 | --- | --- |
-| `--mount DEV=FILE`, `-m` | Mount the container `FILE` read-only on device `DEV` before anything else. May be repeated. |
+| `--mount DEV=FILE`, `-m` | Mount the container `FILE` read-only on device `DEV`, after the system volume and before anything else. A device with no unit number (`DUA`) is that controller's first unit with nothing mounted on it. May be repeated. |
 | `--mount-write DEV=FILE` | Mount it for reading and writing. May be repeated. |
-| `--path DIR,...` | Host directories to search for files govax and its commands name (its startup files, `@` procedures, MACRO sources, ...), after the name as given. govax's built-in copies of its startup files are always searched last. |
+| `--system-file FILE` | The system volume's container, for this run, instead of `vax.default.system.file`'s (by default `~/.govax/govax-system.dsk`). `none` starts govax with no system volume, from its built-in files. |
+| `--system-device DEV` | The device to mount the system volume on (by default `DUA0`). |
+| `--system-initialize` | Make the system volume again from govax's own files, keeping the old container beside it as `FILE.old`. |
+| `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars and help files, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. govax's built-in copies of its startup files are always searched last. |
 | `--profile NAME` | Use the configuration profile `NAME` instead of the default one (section 4). |
 | `--instruction-limit N`, `-i` | Stop a program after it has executed `N` VAX instructions. Each run (a `RUN`, or the debugger's `GO`, `CALL`, or `STEP`) starts with a fresh budget. |
 | `--time-limit D`, `-t` | Stop a run after the elapsed time `D` (`10s`, `2m`, ...). |
@@ -429,7 +464,7 @@ Global options go before the subcommand or command.
 | `--version`, `-v` | Show the version. |
 | `--help`, `-h` | Show help. |
 
-The limits apply only to your commands, not to `vax.init`. They are a
+The limits apply only to your commands, not to STARTUP.COM. They are a
 safety net for a program that loops forever when govax runs unattended,
 in a test script for instance.
 
@@ -542,9 +577,20 @@ $ PAGING = F$CONFIG("vax.sysgen.paging.enable", "BOOLEAN")
 
 Its second argument is `VALUE` (the default: the value, or `""`),
 `EXISTS` (1 if the key is set), or `BOOLEAN` (1 if the value is TRUE, T,
-YES, Y, or 1 in any case). `vax.init` uses it to read the memory sizes.
+YES, Y, or 1 in any case). STARTUP.COM uses it to read the memory sizes.
 
 ### Configuration keys
+
+#### System volume
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.default.system.file` | The system volume's container ([The system volume](#the-system-volume)), or `none` for no system volume. A leading `~/` is your home directory. | `~/.govax/govax-system.dsk` |
+| `vax.default.system.device` | The device to mount it on. A device with no unit number (`DUA`) is that controller's first unit with nothing mounted on it. | `DUA0` |
+| `vax.default.system.type` | The disk type that sizes a new container ([Disk types](#disk-types)). | `RD54` |
+
+The options `--system-file` and `--system-device` take precedence over
+these for one run.
 
 #### The default volume
 
@@ -552,7 +598,7 @@ YES, Y, or 1 in any case). `vax.init` uses it to read the memory sizes.
 | --- | --- | --- |
 | `vax.default.volume.file` | A container to mount at startup and make the default device. A leading `~/` is your home directory. govax creates it (initialized, with the default directory in it) if it doesn't exist. | none |
 | `vax.default.volume.label` | The label a new container gets. When set, an existing container's label must match or it isn't used. | `WORK` |
-| `vax.default.volume.device` | The device to mount it on. | `DUA0:` |
+| `vax.default.volume.device` | The device to mount it on. A device with no unit number is that controller's first unit with nothing mounted on it. (Before the system volume, the default was `DUA0:`; a configuration that names `DUA0:` now gets `%MOUNT-W-NODEFAULT`, since the system volume is there.) | `DUA`: `DUA1:` |
 | `vax.default.volume.type` | The disk type that sizes a new container (`RX50`, `RD54`, `RA81`, ...; see [Disk types](#disk-types)). | `RD54` (311,200 blocks) |
 | `vax.default.volume.directory` | The default directory, created in a new container. | `[WORK]` |
 
@@ -565,14 +611,14 @@ read-only.
 | Key | Meaning |
 | --- | --- |
 | `vax.path` | Host directories to search for files, separated by commas, as with `--path`. |
-| `vax.library` | A host directory holding VMS's own `STARLET.MLB`, `STARLET.OLB`, `IMAGELIB.OLB`, and shareable images, if you have them. `MACRO` and `LINK` look there when `SYS$LIBRARY` and `SYS$SHARE` don't lead to the files (see [Using VMS's own libraries](#using-vmss-own-libraries)). |
+| `vax.library` | A host directory holding VMS's own `STARLET.MLB`, `STARLET.OLB`, `IMAGELIB.OLB`, and shareable images, if you have them. `MACRO` and `LINK` look there when `SYS$LIBRARY` and `SYS$SHARE` don't lead to the files. With a system volume, `SYS$LIBRARY` holds govax's own macro library, which comes first (see [Using VMS's own libraries](#using-vmss-own-libraries)). |
 | `vax.link.library` | The older name for `vax.library`. |
 
 #### The console
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `vax.startup.procedure` | A DCL procedure to run after `vax.init` each time govax starts: a volume file (`DUA0:[WORK]LOGIN.COM`) or a host file. If it doesn't exist, nothing happens. | none |
+| `vax.startup.procedure` | A DCL procedure to run after STARTUP.COM each time govax starts: a volume file (`DUA1:[WORK]LOGIN.COM`) or a host file. If it doesn't exist, nothing happens. | none |
 | `vax.console.prompt` | The prompt. `SET PROMPT` changes it and saves it here. | `VAX> ` |
 | `vax.console.lines` | The screen height `TYPE/PAGE` uses when it can't ask the terminal. | 24 |
 | `vax.disassemble.symbolic` | Whether the debugger shows instructions with symbolic names by default. | true |
@@ -582,28 +628,30 @@ A login procedure is a good place for your own symbols and logical
 names:
 
 ```text
-$! DUA0:[WORK]LOGIN.COM
+$! DUA1:[WORK]LOGIN.COM
 $ SD :== SET DEFAULT
 $ DIR :== DIRECTORY/SIZE/DATE
-$ DEFINE SRC DUA0:[WORK.SRC]
-$ DEFINE SYS$SHARE DUA0:[SYSLIB]
+$ DEFINE SRC DUA1:[WORK.SRC]
 ```
 
 ```sh
-govax config set "vax.startup.procedure=DUA0:[WORK]LOGIN.COM"
+govax config set "vax.startup.procedure=DUA1:[WORK]LOGIN.COM"
 ```
+
+(The system volume's `SYS$MANAGER:SYSTARTUP_VMS.COM` serves the same
+purpose without a setting; see [The system volume](#the-system-volume).)
 
 #### The machine
 
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `vax.hardware.clock` | true: the system time and clock follow the host's real time. false: time advances with the instructions executed, so every run is exactly repeatable. | false |
-| `vax.quantum` | In instruction-count mode, the instructions between clock ticks. (`vax.init` sets it to 1 with `SET QUANTUM 1`, so each instruction is one emulated millisecond.) | 20 |
+| `vax.quantum` | In instruction-count mode, the instructions between clock ticks. (STARTUP.COM sets it to 1 with `SET QUANTUM 1`, so each instruction is one emulated millisecond.) | 20 |
 | `vax.runtime.random` | true: `MTH$RANDOM`'s numbers come from the host's cryptographic generator, and can't be predicted or repeated; the seed is still rewritten, but its old value plays no part. false: each number follows from the seed by the VMS manual's formula, so setting the same seed repeats a sequence, run after run. | false |
 
 #### Memory
 
-These sizes are read by `vax.init`. Each is a count of 512-byte pages,
+These sizes are read by STARTUP.COM. Each is a count of 512-byte pages,
 decimal or `%X` hexadecimal.
 
 | Key | Meaning | Default |
@@ -682,7 +730,7 @@ of the computer govax runs on, and **volume files**, files on a Files-11
 
 | | Host files | Volume files |
 | --- | --- | --- |
-| Names | your host's: `./src/prog.mar`, `/tmp/x.txt` | VMS's: `DUA0:[WORK.SRC]PROG.MAR;3` |
+| Names | your host's: `./src/prog.mar`, `/tmp/x.txt` | VMS's: `DUA1:[WORK.SRC]PROG.MAR;3` |
 | Versions, directories, protection | the host's | VMS's |
 | Used by the console's commands (`MACRO`, `LINK`, `LIBRARY`, `RUN`, `TYPE`, `COPY`, `@`, ...) | yes | yes |
 | Used by a running program's RMS calls (`$OPEN`, `$CREATE`, `$GET`, ...) | no | yes |
@@ -701,7 +749,7 @@ Each console command applies the same rules to a file name, in order:
    `TYPE "notes.txt"/HOST`.
 2. A name with a directory in brackets (`[SRC]PROG.MAR`), or with a
    device or logical name of two or more characters and a colon
-   (`DUA0:PROG.MAR`, `SRC:PROG.MAR`), is a volume file.
+   (`DUA1:PROG.MAR`, `SRC:PROG.MAR`), is a volume file.
 3. A name with `/` or `\` in it, or a Windows drive letter (`C:`), is a
    host file: `"./prog.mar"`, `"/Users/me/prog.mar"`.
 4. Any other name (`PROG.MAR`, `PROG`) is a volume file in your default
@@ -776,11 +824,11 @@ the highest version unless you give one. `SET DEFAULT` sets the default
 device and directory, which fill in any part of a name you leave out:
 
 ```text
-VAX> SET DEFAULT DUA0:[WORK]
-VAX> SET DEFAULT [.SRC]           ! DUA0:[WORK.SRC]
-VAX> SET DEFAULT [-]              ! back up to DUA0:[WORK]
+VAX> SET DEFAULT DUA1:[WORK]
+VAX> SET DEFAULT [.SRC]           ! DUA1:[WORK.SRC]
+VAX> SET DEFAULT [-]              ! back up to DUA1:[WORK]
 VAX> SHOW DEFAULT
-  DUA0:[WORK]
+  DUA1:[WORK]
 ```
 
 `CREATE/DIRECTORY` makes directories (and any missing ones above them);
@@ -796,7 +844,7 @@ Without it, each name follows the rules of
 so a quoted path with a `/` in it is a host file too:
 
 ```text
-VAX> COPY "prog.mar"/HOST DUA0:[WORK]       ! host to volume, same name
+VAX> COPY "prog.mar"/HOST DUA1:[WORK]       ! host to volume, same name
 VAX> COPY "prog.mar"/HOST *                 ! the same, into the default directory
 VAX> COPY PROG.LIS "prog.lis"/HOST          ! volume to host
 VAX> COPY PROG.LIS "./prog.lis"             ! the same: the "/" makes it a host path
@@ -817,7 +865,7 @@ How the contents are copied:
   location to another always keeps the file's record format.
 
 ```text
-VAX> COPY/BINARY "fromvax.exe"/HOST DUA0:[WORK]PROG.EXE
+VAX> COPY/BINARY "fromvax.exe"/HOST DUA1:[WORK]PROG.EXE
 ```
 
 To move a whole directory tree, with each file's record format, dates,
@@ -835,14 +883,14 @@ and TERMINAL attributes. File names are translated through them, by the
 console's commands and by RMS in a running program:
 
 ```text
-VAX> DEFINE SRC DUA0:[WORK.SRC]
+VAX> DEFINE SRC DUA1:[WORK.SRC]
 VAX> MACRO SRC:PROG
 VAX> DEFINE/TRANSLATION=CONCEALED PROJ DUA1:
 VAX> DIRECTORY PROJ:[PROJECT.SRC]
 
 Directory PROJ:[PROJECT.SRC]
 ...
-VAX> DEFINE LIBS DUA0:[LIB1],DUA0:[LIB2]      ! a search list
+VAX> DEFINE LIBS DUA1:[LIB1],DUA1:[LIB2]      ! a search list
 VAX> TYPE LIBS:HELLO.MAR                      ! the first one that has it
 ```
 
@@ -862,10 +910,12 @@ runs it defines `SYS$INPUT` as the procedure and `SYS$OUTPUT` as its
 lists `SYS$OUTPUT` twice, `[super]` and `[exec]`. It also predefines `TT` (`TTA0:`,
 concealed, in executive mode),
 `SYS$DISK` (set by `SET DEFAULT`), `DISK$label` for each mounted volume, and the date-format
-names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. It doesn't define
-`SYS$LIBRARY`, `SYS$SHARE`, `SYS$SYSTEM`, or `SYS$LOGIN`, because there is
-no system disk; define them yourself (in a login procedure) if you keep
-libraries or shareable images on a volume.
+names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. Mounting the system
+volume defines `SYS$SYSDEVICE` and `SYS$SYSROOT`, and STARTUP.COM the
+other system names (`SYS$SYSTEM`, `SYS$MANAGER`, `SYS$HELP`,
+`SYS$LIBRARY`, `SYS$SHARE`, `SYS$SOURCES`), all in the system table in
+executive mode ([The system volume](#the-system-volume)). There is no
+`SYS$LOGIN`.
 
 ### Devices
 
@@ -873,11 +923,143 @@ libraries or shareable images on a volume.
 `NLA0:` (writes vanish, reads are at end of file), and each disk you've
 mounted. `MOUNT` creates a disk device the first time it's named; any
 disk name works (`DUA0`, `DUA1`, `DKA0`). Programs can also create mailboxes
-(`$CREMBX`), which appear as `MBAn:`. `SHOW DEVICE/FULL DUA0` shows a
+(`$CREMBX`), which appear as `MBAn:`. `SHOW DEVICE/FULL DUA1` shows a
 disk's details, read from the volume.
 
-`DEFINE/DEVICE` defines a device with given characteristics; `vax.init`
+`DEFINE/DEVICE` defines a device with given characteristics; STARTUP.COM
 uses it for `TTA0:` and `NLA0:`. You won't normally need it.
+
+### The system volume
+
+govax keeps its own files on a Files-11 volume of their own, the *system
+volume*: a container, `~/.govax/govax-system.dsk` unless you choose
+another, labeled `GOVAXSYS` and mounted on `DUA0:` every time govax
+starts, before any other volume. The first start makes it from the files
+built into govax, which takes a fraction of a second; the container is a
+sparse host file, taking only the space its files use.
+
+#### What's on it
+
+| Directory | Logical name | Files |
+| --- | --- | --- |
+| `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the page file, with paging on |
+| `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
+| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `CONSOLE.HLP` and `DEBUG.HLP`, the help text |
+| `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
+| `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM` |
+| `[SYSTEM]` | `SYS$SYSROOT` | `GOVAX$FILES.DAT`, the list of files govax supplied |
+
+govax defines `SYS$SYSDEVICE` (the volume's device, `_DUA0:`) and
+`SYS$SYSROOT` (`_DUA0:[SYSTEM]`) when it mounts the volume; STARTUP.COM
+defines the rest, in plain DCL you can read and change. (`SYS$SOURCES`
+is govax's own name. The names aren't rooted directories as VMS's are:
+`SYS$SYSROOT:[SYSLIB]` doesn't lead to `[SYSTEM.SYSLIB]`.)
+
+Every program-development command reads these files through the names,
+ahead of the copies built into govax: `MACRO` the macro library in
+`SYS$LIBRARY`, `FORTRAN` its `FORSYSDEF.TLB`, `LINK` and `RUN` the
+`FTNRTL.EXE` in `SYS$SHARE`, the console and the debugger their grammars
+and help files, and STARTUP.COM the kernel and ROM. So what you change
+on the volume is what govax uses.
+
+#### STARTUP.COM and SYSTARTUP_VMS.COM
+
+`SYS$MANAGER:STARTUP.COM` is govax's startup procedure ([What happens at
+startup](#what-happens-at-startup)). Its last command runs
+`SYS$MANAGER:SYSTARTUP_VMS.COM`, which, as on VMS, is the place for your
+own startup commands: logical names, volumes to mount, symbols, `SET`
+commands. govax makes a SYSTARTUP_VMS.COM of comments once, when it makes
+the volume, and never changes or replaces it (if you delete it, it stays
+deleted):
+
+```text
+$! SYS$MANAGER:SYSTARTUP_VMS.COM
+$ DEFINE/SYSTEM WORK$DISK DUA1:
+$ DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SHARE DUA1:[MYLIB],SYS$SYSDEVICE:[SYSTEM.SYSLIB]
+$ SET PROMPT="MYVAX> "
+$ EXIT
+```
+
+(The second line makes `SYS$SHARE` a search list, so `RUN` finds
+shareable images of your own on `DUA1:` as well as govax's `FTNRTL.EXE`.)
+
+#### When govax is upgraded
+
+Each start compares the volume's files with the ones built into govax,
+using the list in `GOVAX$FILES.DAT`:
+
+- A file that is missing is written again.
+- A file you haven't changed, for which this govax has a newer copy, gets
+  the new copy as a new version. The old one stays below it, so `PURGE`
+  removes it, or a version number gets it back.
+- A file you have changed (or rebuilt, as below) is left alone. If this
+  govax has a newer copy of it, it says so, once for each new copy:
+
+  ```text
+  %MOUNT-I-SYSKEPT, DUA0:[SYSTEM.SYSMGR]STARTUP.COM was changed, govax's new version not installed
+  ```
+
+  To take govax's copy, delete or rename yours; the next start writes it.
+
+A start with nothing to bring up to date writes nothing.
+
+#### Rebuilding FTNRTL and the macro library
+
+`SYS$SOURCES` holds the sources of `FTNRTL.EXE` and of the system macro
+library, with a procedure to rebuild each:
+
+```text
+VAX> @SYS$SOURCES:BUILDFTN
+%COPY-S-COPIED, FTNRTL.EXE;1 copied to DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2
+FTNRTL.EXE built and installed in SYS$SHARE
+VAX> @SYS$SOURCES:BUILDSTARLET
+%COPY-S-COPIED, STARLET.MLB;1 copied to DUA0:[SYSTEM.SYSLIB]STARLET.MLB;2
+STARLET.MLB built and installed in SYS$LIBRARY
+```
+
+Each procedure assembles the sources (with `MACRO`, or `LIBRARY` for the
+macro library) and installs the result as a new version in `SYS$SHARE` or
+`SYS$LIBRARY`, which is then the one used: a program linked before runs
+with the new FTNRTL, and the next `MACRO` uses the new library. Edit a
+source first (`FTN_FORMAT.MAR`, say, or `STARLET.MAR` with a macro of
+your own) and the build carries the change; built from govax's sources
+unchanged, the macro library is byte for byte govax's own, but for its
+date. To go back to govax's, delete the versions you made. The comments
+in `BUILDFTN.COM` say how to add a module or an entry point.
+
+The microkernel needs no build: STARTUP.COM assembles
+`SYS$SOURCES:KERNEL.ASM` each time govax starts, so an edited kernel is
+the one that boots at the next start.
+
+#### Several sessions, and trouble
+
+Only one govax session at a time can write the system volume. A second
+session, started while the first is running, mounts it read-only:
+
+```text
+%MOUNT-I-SYSREADONLY, system volume /Users/me/.govax/govax-system.dsk is in use by another govax session; mounted read-only
+%MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
+```
+
+It brings nothing up to date and keeps no page file there; `SHOW MEMORY`
+says why. `DISMOUNT` won't dismount the system volume.
+
+If the volume can't be used (it can't be made or mounted, or its label
+isn't `GOVAXSYS`), govax says why with `%MOUNT-W-NOSYSVOL` and starts
+from its built-in files, as it does with `--system-file none`. To start
+again with a fresh system volume, use `--system-initialize`: govax renames
+the old container to `govax-system.dsk.old` (replacing an older one), so
+anything you had on it can still be mounted and copied, and makes a new
+one. (If another session is using the volume, it is left alone and
+mounted read-only.)
+
+```sh
+govax --system-initialize
+```
+
+`--system-file FILE` and `--system-device DEV` choose another container
+or device for one run, and the `vax.default.system.*` keys for every run
+([System volume](#system-volume) in section 4's keys).
 
 ---
 
@@ -920,9 +1102,9 @@ is the default directory), and files found in the directory just
 listed go under the same heading and total:
 
 ```text
-VAX> DIRECTORY/SIZE DUA0:[WORK.DUNGEON]*.EXE,*.DAT
+VAX> DIRECTORY/SIZE DUA1:[WORK.DUNGEON]*.EXE,*.DAT
 
-Directory DUA0:[WORK.DUNGEON]
+Directory DUA1:[WORK.DUNGEON]
 
 DUNGEON.EXE;1            210
 DUNGEON_V552.EXE;1       209
@@ -935,7 +1117,7 @@ Total of 4 files, 907 blocks.
 ```text
 VAX> DIRECTORY/SIZE/DATE
 
-Directory DUA0:[HELLO]
+Directory DUA1:[HELLO]
 
 HELLO.EXE;1                5  20-OCT-2026 09:56:08.37
 HELLO.LIS;1                8  20-OCT-2026 09:56:08.37
@@ -1094,10 +1276,10 @@ each subdirectory:
 ```text
 VAX> SET DEFAULT [WORK]
 VAX> BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
-%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]DOC.DIR;1
-%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ.DOC]README.TXT;1
-%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]NOTES.TXT;2
-%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]NOTES.TXT;1
+%BACKUP-S-COPIED, copied DUA1:[WORK.PROJ]DOC.DIR;1
+%BACKUP-S-COPIED, copied DUA1:[WORK.PROJ.DOC]README.TXT;1
+%BACKUP-S-COPIED, copied DUA1:[WORK.PROJ]NOTES.TXT;2
+%BACKUP-S-COPIED, copied DUA1:[WORK.PROJ]NOTES.TXT;1
 ```
 
 A quoted host path (or `/HOST`) writes the save set to the host. Here
@@ -1124,7 +1306,7 @@ Date:              20-OCT-2026 19:36:08.20
 Command:           BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
 Operating system:  OpenVMS VAX version V7.3
 BACKUP version:    V6.2
-Written on:        _GOVAX$DUA0:
+Written on:        _GOVAX$DUA1:
 Block size:        32256
 Group size:        10
 Buffer count:      8
@@ -1150,10 +1332,10 @@ names a tree, in which case the part its `...` matched is kept:
 
 ```text
 VAX> BACKUP/LOG PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] [RESTORED...]
-%BACKUP-S-CREDIR, created directory DUA0:[RESTORED.DOC]
-%BACKUP-S-CREATED, created DUA0:[RESTORED.DOC]README.TXT;1
-%BACKUP-S-CREATED, created DUA0:[RESTORED]NOTES.TXT;2
-%BACKUP-S-CREATED, created DUA0:[RESTORED]NOTES.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[RESTORED.DOC]
+%BACKUP-S-CREATED, created DUA1:[RESTORED.DOC]README.TXT;1
+%BACKUP-S-CREATED, created DUA1:[RESTORED]NOTES.TXT;2
+%BACKUP-S-CREATED, created DUA1:[RESTORED]NOTES.TXT;1
 ```
 
 A restored file keeps its version and every saved attribute: record
@@ -1167,11 +1349,11 @@ restore it again):
 
 ```text
 VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]
-%BACKUP-E-OPENOUT, error opening DUA0:[WORK.PROJ]NOTES.TXT;1 as output
+%BACKUP-E-OPENOUT, error opening DUA1:[WORK.PROJ]NOTES.TXT;1 as output
 -RMS-E-FEX, file already exists, not superseded
-%BACKUP-W-NOFILES, no files selected from DUA0:[WORK]PROJ.BCK;
+%BACKUP-W-NOFILES, no files selected from DUA1:[WORK]PROJ.BCK;
 VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]/NEW_VERSION/LOG
-%BACKUP-S-CREATED, created DUA0:[WORK.PROJ]NOTES.TXT;3
+%BACKUP-S-CREATED, created DUA1:[WORK.PROJ]NOTES.TXT;3
 ```
 
 A host directory can be the output too (`"out"`, or `"out/..."` for a
@@ -1241,7 +1423,13 @@ new). A controller with no unit number, `MOUNT DUA "file"`, picks that
 controller's first unit with nothing mounted on it, and the
 `%MOUNT-I-MOUNTED` message names it. `DISMOUNT` writes pending changes
 and detaches it; it refuses a volume with files open (a process still
-using them, say).
+using them, say), and the system volume:
+
+```text
+VAX> DISMOUNT DUA0:
+%DISM-W-CANNOTDMT, DUA0: cannot be dismounted
+%DISM-W-SYSDISK, device is the system volume
+```
 
 #### SHOW DEVICES
 
@@ -1254,7 +1442,7 @@ Lists devices, or those whose names begin with `name`.
 #### DEFINE/DEVICE
 
 Defines a pseudodevice and its characteristics (`/DEVCLASS`, `/DEVTYPE`,
-`/DEVCHAR`, ...). `vax.init` uses it for the terminal and null device.
+`/DEVCHAR`, ...). STARTUP.COM uses it for the terminal and null device.
 
 ### 6.3 Logical names
 
@@ -1297,13 +1485,13 @@ DCL symbols hold integers and strings; section 7 describes them.
 
 ```text
 VAX> SD :== SET DEFAULT
-VAX> FO*RTH :== $DUA0:[TOOLS]FORTH.EXE
+VAX> FO*RTH :== $DUA1:[TOOLS]FORTH.EXE
 VAX> N = 42
 VAX> SHOW SYMBOL *
   N = 42   Hex = 0000002A  Octal = 00000000052
   $SEVERITY == "1"
   $STATUS == "%X00030001"
-  FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+  FO*RTH == "$DUA1:[TOOLS]FORTH.EXE"
   SD == "SET DEFAULT"
 ```
 
@@ -1354,7 +1542,7 @@ and column:
 
 ```text
 %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
-  at line 7 of DUA0:[WORK]PROG.FOR;1
+  at line 7 of DUA1:[WORK]PROG.FOR;1
         DICTIONARY 'X'
   ------^
 ```
@@ -1391,7 +1579,7 @@ the image, which reads the rest of the line with `LIB$GET_FOREIGN`. `MCR`
 does the same without a symbol.
 
 ```text
-VAX> ECHO :== $DUA0:[TOOLS]ECHO.EXE
+VAX> ECHO :== $DUA1:[TOOLS]ECHO.EXE
 VAX> ECHO one   two "Three"
 ONE TWO "Three"
 ```
@@ -1421,7 +1609,7 @@ VAX> SPAWN DIRECTORY/SIZE
 %DCL-S-SPAWNED, process SYSTEM_1 spawned
 %DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
 
-Directory DUA0:[HELLO]
+Directory DUA1:[HELLO]
 ...
 %DCL-S-RETURNED, control returned to process SYSTEM
 VAX> SPAWN/NOWAIT @NIGHTLY
@@ -1508,7 +1696,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 ### 6.9 The machine and the console
 
 These commands work on the emulated machine itself, rather than on VMS
-objects. Most of them are used by `vax.init`; you need them only to
+objects. Most of them are used by STARTUP.COM; you need them only to
 change how the machine is set up.
 
 | Command | Purpose |
@@ -1591,7 +1779,7 @@ $ TOTAL == COUNT + 1             ! global (==)
 $ GREETING := Hello there        ! string assignment, := (value uppercased: HELLO THERE)
 $ MSG :== "Mixed Case kept"      ! global string assignment
 $ SD :== SET DEFAULT             ! a symbol as a command abbreviation
-$ FO*RTH :== $DUA0:[TOOLS]FORTH.EXE   ! foreign command; FO, FOR, FORT, FORTH all work
+$ FO*RTH :== $DUA1:[TOOLS]FORTH.EXE   ! foreign command; FO, FOR, FORT, FORTH all work
 ```
 
 - `=` and `==` take an *expression* (below). `:=` and `:==` take the rest
@@ -1965,7 +2153,7 @@ $   WRITE SYS$OUTPUT F$FAO("!2UL. !AS (!UL letters)", I+1, F$EDIT(COLOR,"LOWERCA
 $   I = I + 1
 $   GOTO LOOP
 $ DONE:
-$ SPEC = "DUA0:[WORK.SUB]REPORT.LIS;3"
+$ SPEC = "DUA1:[WORK.SUB]REPORT.LIS;3"
 $ WRITE SYS$OUTPUT F$PARSE(SPEC,,,"NAME","SYNTAX_ONLY"), " / ", F$PARSE(SPEC,,,"DIRECTORY","SYNTAX_ONLY")
 $ WRITE SYS$OUTPUT F$MESSAGE(%X1C)
 $ WRITE SYS$OUTPUT "Hex: ", F$FAO("!XL", 255), "  Upcase: ", F$EDIT("  mixed   Case ","COMPRESS,TRIM,UPCASE")
@@ -2058,7 +2246,7 @@ $ EXIT $STATUS
 
 ```text
 VAX> @BUILD HELLO
-Building DUA0:[HELLO]HELLO.MAR;1
+Building DUA1:[HELLO]HELLO.MAR;1
 Hello, world!
 HELLO exited with status %X00000001
 VAX> @BUILD NOSUCH
@@ -2079,7 +2267,7 @@ VAX> @BUILD HELLO
 $ IF SOURCE .EQS. ""
 $ ENDIF
 $ WRITE SYS$OUTPUT "Building ", SOURCE
-Building DUA0:[HELLO]HELLO.MAR;1
+Building DUA1:[HELLO]HELLO.MAR;1
 $ QUALS = ""
 $ IF P2 .EQS. "DEBUG" THEN QUALS = "/DEBUG"
 $ MACRO HELLO
@@ -2372,7 +2560,7 @@ OUTDSC: .LONG   160
 ```
 
 ```text
-VAX> SET DEFAULT DUA0:[DEMO]
+VAX> SET DEFAULT DUA1:[DEMO]
 VAX> COPY "lines.mar"/HOST *
 VAX> COPY "lines.dat"/HOST *
 VAX> MACRO LINES
@@ -2466,7 +2654,7 @@ Build the macro library, then the program:
 ```text
 VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC
 VAX> LIBRARY/LIST MYMAC.MLB
-Directory of MACRO library DUA0:[DEMO]MYMAC.MLB;1 on 20-OCT-2026 10:09:28
+Directory of MACRO library DUA1:[DEMO]MYMAC.MLB;1 on 20-OCT-2026 10:09:28
 Creation date:  20-OCT-2026 10:09:28      Creator:  govax Librarian
 ...
 CHECK
@@ -2695,7 +2883,7 @@ of `HELLO.LIS`:
 
 ```text
 HELLO                           Fixture 9: hello, world                  20-OCT-2026 09:56:08  govax MACRO V0.0-0          Page   1
-V1.0                                                                     20-OCT-2026 09:56:08  DUA0:[HELLO]HELLO.MAR;1           (1)
+V1.0                                                                     20-OCT-2026 09:56:08  DUA1:[HELLO]HELLO.MAR;1           (1)
 
                                      0000     1         .TITLE  HELLO   Fixture 9: hello, world
                                      0000     2         .IDENT  /V1.0/
@@ -2829,6 +3017,19 @@ and point `vax.library` at it, or keep them on a volume and define
 These are copyrighted files and aren't part of govax; the project's
 README lists them.
 
+With a system volume, `SYS$LIBRARY` leads to govax's own macro library
+on it, which `MACRO` finds before it would look in `vax.library`'s
+directory. (The volume holds no `STARLET.OLB`, `IMAGELIB.OLB`, or VMS
+shareable images, so `LINK` still finds those in `vax.library`.) To have
+`MACRO` use VMS's macro library, keep it on a volume and put its
+directory first in `SYS$LIBRARY`, in `SYS$MANAGER:SYSTARTUP_VMS.COM`:
+
+```text
+$ DEFINE/SYSTEM/EXECUTIVE_MODE SYS$LIBRARY DUA1:[VMS],SYS$SYSDEVICE:[SYSTEM.SYSLIB]
+```
+
+or start govax with `--system-file none`.
+
 ### Mixing in other languages
 
 Besides MACRO (and govax's FORTRAN compiler, which writes MACRO:
@@ -2881,7 +3082,7 @@ VAX> LINK HELLO
 and several objects and a library:
 
 ```text
-VAX> LINK MAIN,SUBS,DUA0:[LIB]MATHLIB/LIBRARY
+VAX> LINK MAIN,SUBS,DUA1:[LIB]MATHLIB/LIBRARY
 VAX> LINK/EXECUTABLE=PROG/MAP/FULL MAIN,PROG/OPTIONS
 ```
 
@@ -2926,8 +3127,8 @@ VAX> TYPE MAIN3.MAP
 
 Module Name     Ident              Bytes      File                                Creation Date      Creator
 -----------     -----              -----      -----                               -------------      -------
-MAIN            0                     198 DUA0:[SHR]MAIN.OBJ;1                 20-OCT-2026 09:59  govax MACRO V0.0-0
-ROUTINES        0                      18 DUA0:[SHR]MATHLIB.OLB;1              20-OCT-2026 09:59  govax MACRO V0.0-0
+MAIN            0                     198 DUA1:[SHR]MAIN.OBJ;1                 20-OCT-2026 09:59  govax MACRO V0.0-0
+ROUTINES        0                      18 DUA1:[SHR]MATHLIB.OLB;1              20-OCT-2026 09:59  govax MACRO V0.0-0
 ...
                                                  +----------------+
                                                  ! Image Synopsis !
@@ -3042,7 +3243,7 @@ VAX> MACRO VECTOR
 VAX> MACRO ROUTINES
 VAX> LINK/SHAREABLE=MYSHR VECTOR,ROUTINES,MYSHR/OPTIONS
 VAX> MACRO MAIN
-VAX> DEFINE MYSHR DUA0:[SHR]MYSHR.EXE
+VAX> DEFINE MYSHR DUA1:[SHR]MYSHR.EXE
 VAX> LINK MAIN,MAIN/OPTIONS
 VAX> RUN MAIN
 double(7) = 14, square = 49
@@ -3066,7 +3267,7 @@ define symbols, so programs needn't name them:
 
 ```text
 VAX> LIBRARY/CREATE/SHARE SHRLIB MYSHR.EXE
-VAX> DEFINE LNK$LIBRARY DUA0:[SHR]SHRLIB.OLB
+VAX> DEFINE LNK$LIBRARY DUA1:[SHR]SHRLIB.OLB
 VAX> LINK/EXECUTABLE=MAIN2 MAIN
 VAX> RUN MAIN2
 double(7) = 14, square = 49
@@ -3158,9 +3359,9 @@ though a data-reduced library can be read.
 
 ```text
 VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
-%LIBRAR-S-INSERTED, module ROUTINES inserted in DUA0:[SHR]MATHLIB.OLB;1
+%LIBRAR-S-INSERTED, module ROUTINES inserted in DUA1:[SHR]MATHLIB.OLB;1
 VAX> LIBRARY/LIST/FULL/NAMES MATHLIB
-Directory of OBJECT library DUA0:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
+Directory of OBJECT library DUA1:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
 Creation date:  20-OCT-2026 10:10:06      Creator:  govax Librarian
 Revision date:  20-OCT-2026 10:10:06      Library format:   3.0
 Number of modules:      1                 Max. key length:  31
@@ -3215,7 +3416,7 @@ are flagged with `***` and counted at the end.
 ```text
 VAX> ANALYZE/OBJECT/GSD ROUTINES
 Analyze Object File                          20-OCT-2026 10:10:06.53   Page 1
-DUA0:[SHR]ROUTINES.OBJ;1
+DUA1:[SHR]ROUTINES.OBJ;1
 ANALYZ V07-04
 
 This is an OpenVMS VAX object file
@@ -3257,10 +3458,10 @@ VAX> RUN/DEBUG FACT
 command or `MCR`, or from the host shell, `govax run image text...`:
 
 ```text
-VAX> ECHO :== $DUA0:[TOOLS]ECHO.EXE
+VAX> ECHO :== $DUA1:[TOOLS]ECHO.EXE
 VAX> ECHO one   two "Three"
 ONE TWO "Three"
-VAX> MCR DUA0:[TOOLS]ECHO via mcr
+VAX> MCR DUA1:[TOOLS]ECHO via mcr
 VIA MCR
 $ govax run echo.exe Hello there, '"Mixed Case"'
 Hello there, "Mixed Case"
@@ -3289,15 +3490,20 @@ When `RUN` starts an image, govax does what VMS's image activator does:
       instead.
    2. Otherwise its name is looked up with the default `SYS$SHARE:.EXE`,
       as on VMS: a logical name of the image's name, or `SYS$SHARE`
-      (which you define; each element of a search list in turn).
+      (each element of a search list in turn). STARTUP.COM defines
+      `SYS$SHARE` as the system volume's `[SYSTEM.SYSLIB]`, where
+      `FTNRTL.EXE` is; to keep shareable images of your own on another
+      volume, define it as a search list in `SYSTARTUP_VMS.COM`.
    3. Otherwise, the host: the `vax.library` directory, then the name as
       given.
+   4. Last, an image built into govax (`FTNRTL.EXE`, when no copy of it
+      was found).
 
    An image no rule finds stops the activation:
 
    ```text
    %DCL-W-ACTIMAGE, error activating image MYSHR
-   -CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]MYSHR.EXE;
+   -CLI-E-IMAGEFNF, image file not found DUA0:[SYSTEM.SYSLIB]MYSHR.EXE;
    ```
 
 3. **Checks each shareable image's ident** against the program's `GSMATCH`
@@ -3354,7 +3560,7 @@ Copy the image into govax with `COPY/BINARY` (or mount the VAX disk it's
 on), and run it:
 
 ```text
-VAX> COPY/BINARY "prog.exe"/HOST DUA0:[WORK]PROG.EXE
+VAX> COPY/BINARY "prog.exe"/HOST DUA1:[WORK]PROG.EXE
 VAX> RUN PROG
 ```
 
@@ -3949,7 +4155,7 @@ architecture allows.
 govax has two clocks to choose from (`vax.hardware.clock`):
 
 - **Instruction-count time** (the default). Time advances with the
-  instructions executed: after `vax.init`'s `SET QUANTUM 1`, each
+  instructions executed: after STARTUP.COM's `SET QUANTUM 1`, each
   instruction is one emulated millisecond. When every process is waiting
   (for a timer, say), time jumps straight to the next timer. Every run of
   a program is therefore exactly repeatable: the same output, the same
@@ -4056,7 +4262,7 @@ DBG> SHOW PAGE 7FDFFE00
 
 #### VMINIT: setting up memory
 
-At startup, `vax.init` runs `INITIALIZE/VAX` (physical memory, 8 MB by
+At startup, STARTUP.COM runs `INITIALIZE/VAX` (physical memory, 8 MB by
 default) and then `VMINIT`, which writes VMS V1's system service vector
 at the start of S0 (80000000: an entry per service, at its P1 vector
 entry's offset, that jumps to that entry, for images linked before VMS
@@ -4518,10 +4724,10 @@ it an INTEGER function there:
 ```text
 VAX> FORTRAN AVERAGE
 %FORT-E-FUNCTYPE, the function MEAN is REAL (line 8), but is used here as INTEGER
-  at line 5 of DUA0:[WORK]AVERAGE.FOR;1
+  at line 5 of DUA1:[WORK]AVERAGE.FOR;1
         PRINT *, 'Mean:', MEAN(V, 4)
   ------------------------^
-%DCL-E-FORERRORS, 1 error(s) compiling DUA0:[WORK]AVERAGE.FOR;1; no MACRO file written
+%DCL-E-FORERRORS, 1 error(s) compiling DUA1:[WORK]AVERAGE.FOR;1; no MACRO file written
 ```
 
 A program may be several files, each compiled and assembled on its own.
@@ -5045,7 +5251,7 @@ the same words as the MACRO file's.
 
 ```text
 SQUARES                                  2-NOV-2026 14:42:20  govax FORTRAN V1.0-115        Page 1
-                                         DUA0:[WORK]SQUARES.FOR;1
+                                         DUA1:[WORK]SQUARES.FOR;1
 
     1        PROGRAM SQUARES
     2        INTEGER I, N
@@ -5276,7 +5482,9 @@ directory. Included files may include others, ten deep.
 1. the libraries given with the source: `FORTRAN PROG+MYDEFS/LIBRARY`, in order
    (a library's type is `.TLB` by default);
 2. the library or search list the logical name `FORT$LIBRARY` names;
-3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one;
+3. `SYS$LIBRARY:FORSYSDEF.TLB`, if there is one: on the system volume,
+   govax's modules below as a text library, which `LIBRARY/TEXT` can add
+   modules to;
 4. govax's own definition modules, built in.
 
 `INCLUDE 'lib(module)'` reads only that library, found as an INCLUDE file is.
@@ -5312,9 +5520,10 @@ in a text library's module (of any library, not only these) reaches the object
 module only if the unit uses the name. An `EXTERNAL` statement in the program's
 own files always does, used or not, since that's how a BLOCK DATA unit gets linked.
 
-To read them, make them a text library with
-`go run ./internal/fortran/sysdef/mkforsysdef` in govax's source directory, which
-writes `FORSYSDEF.TLB`. `FORT$LIBRARY` or `/LIBRARY` can name a changed copy.
+To read them, look in `SYS$LIBRARY:FORSYSDEF.TLB` on the system volume
+(`LIBRARY/TEXT/EXTRACT=module`), or make the text library with
+`go run ./internal/fortran/sysdef/mkforsysdef` in govax's source directory.
+`FORT$LIBRARY` or `/LIBRARY` can name a changed copy.
 
 An INCLUDE's lines appear in the MACRO file only with `/LIST`, as in
 `INCLUDE 'limits/LIST'` or `INCLUDE '(TIMES)/LIST'`, and `/NOLIST`, the default,
@@ -5371,7 +5580,7 @@ C     Squares of the first N integers
 	.IDENT	/01/
 ;
 ; Compiled by govax FORTRAN V1.0-712 on  2-NOV-2026 09:14:22.05
-; from DUA0:[WORK]SQUARES.FOR;1
+; from DUA1:[WORK]SQUARES.FOR;1
 ; by the command FORTRAN/NOOPTIMIZE SQUARES
 ;
 ; Each line of the FORTRAN source appears as a comment, with its line number, before
@@ -5418,9 +5627,9 @@ SQUARES.$D2:
 	.ENTRY	SQUARES,^M<>
 ;    2  C     Squares of the first N integers
 ;    3        INCLUDE 'limits/LIST'
-; INCLUDE file DUA0:[WORK]LIMITS.FOR;1:
+; INCLUDE file DUA1:[WORK]LIMITS.FOR;1:
 ;1   1        INTEGER N
-; end of DUA0:[WORK]LIMITS.FOR;1
+; end of DUA1:[WORK]LIMITS.FOR;1
 ;    4        DO 10 I = 1, N
 	MOVL	SQUARES.N,SQUARES.$C1	; DO 10's count
 	MOVL	#1,SQUARES.I
@@ -5498,9 +5707,10 @@ their layout. What to look for in the code:
 FTNRTL.EXE holds the routines compiled programs call (I/O, STOP, and so
 on). It is a shareable image written in MACRO-32, its sources in
 `internal/ftnrtl` (`mar/*.mar` and the options file `ftnrtl.opt`), and
-built into govax, so it is always there. RUN and LINK look for it as for
-any shareable image (a logical name `FTNRTL`, `SYS$SHARE:FTNRTL.EXE`,
-the host library directory) and take govax's own last, so `LINK`
+built into govax, so it is always there; the system volume has a copy in
+`SYS$SHARE` and its sources in `SYS$SOURCES`. RUN and LINK look for it as
+for any shareable image (a logical name `FTNRTL`, `SYS$SHARE:FTNRTL.EXE`,
+the host library directory) and take govax's built-in one last, so `LINK`
 resolves its routines with no options file. Its routines are named
 `FTN$...`, and its transfer vector keeps each at a fixed offset, so a
 program linked against one FTNRTL runs with any later one.
@@ -5632,8 +5842,12 @@ VAX> SHOW SYMBOL $STATUS
   $STATUS == "%X00000001"
 ```
 
-To change FTNRTL, build your own from its sources and point the logical
-name at it. With the 19 `.MAR` files and `ftnrtl.opt` on your volume:
+To change FTNRTL, edit its sources in `SYS$SOURCES` and run
+`@SYS$SOURCES:BUILDFTN`, which builds it and installs it in `SYS$SHARE`
+as a new version ([Rebuilding FTNRTL and the macro
+library](#rebuilding-ftnrtl-and-the-macro-library)). Or build one of your
+own elsewhere and point the logical name at it. With the 19 `.MAR` files
+and `ftnrtl.opt` on your volume:
 
 ```text
 VAX> MACRO FTN_VECTOR,FTN_CONTROL,FTN_UNITS,FTN_STATEMENT,FTN_FORMAT,FTN_EDIT
@@ -5641,7 +5855,7 @@ VAX> MACRO FTN_FLOAT,FTN_LISTOUT,FTN_LISTIN,FTN_NAMELIST,FTN_INTERNAL,FTN_OPEN
 VAX> MACRO FTN_INQUIRE,FTN_POSITION,FTN_UNFORMATTED,FTN_DIRECT,FTN_RECORD
 VAX> MACRO FTN_INTRINSICS,FTN_SYSTEM
 VAX> LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
-VAX> DEFINE FTNRTL DUA0:[WORK]FTNRTL.EXE
+VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 ```
 
 ### 14.7 Differences from VAX FORTRAN

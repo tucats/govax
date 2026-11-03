@@ -136,7 +136,7 @@ questions, and a progress log extended as that phase is worked.
 | 84 | [PHASE-84 - FORTRAN optimizer](PHASE-84%20-%20FORTRAN%20optimizer.md) | `/OPTIMIZE`: folding, dead code, common subexpressions, loop invariants, strength reduction, register allocation, VAX loop instructions, a peephole pass — done 2026-11-02 |
 | 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on FORTRAN programs — done 2026-11-02 |
 | 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | DUNGEON V3.2A compiled and run in every mode (local only), the VMS round (`testdata/ftn86`), the manual's chapter, the internals tour, the follow-up list — done 2026-11-03 |
-| 87 | [PHASE-87 - system volume](PHASE-87%20-%20system%20volume.md) | A system volume govax always mounts, made from its built-in files: STARTUP.COM (was vax.init), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and the kernel's sources with build procedures, the page file; refreshed on upgrade; next-free unit numbers — planned 2026-11-03, the plan reviewed and accepted the same day |
+| 87 | [PHASE-87 - system volume](PHASE-87%20-%20system%20volume.md) | A system volume govax always mounts, made from its built-in files: STARTUP.COM (was vax.init), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and the kernel's sources with build procedures, the page file; refreshed on upgrade; next-free unit numbers — planned 2026-11-03, the plan reviewed and accepted the same day; done 2026-11-03 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -546,3 +546,26 @@ survey, Part B the decisions, and Part C the phases; each phase's doc has its pr
 
 MANUAL.md's chapter 14 is the user's side, and FORTRAN-INTERNALS.md a guided tour. What the program left,
 RMS's indexed files first, is in PHASE-86's "Where things stand".
+
+## The system volume (Phase 87)
+
+Phase 87 (2026-11-03) gave govax a system disk. Its doc's Part A is the survey, Part B the decisions with
+the author's review, and its progress log the work.
+
+- **The volume.** An ODS-2 container govax mounts on DUA0 at every start, `~/.govax/govax-system.dsk`
+  labeled GOVAXSYS, made at the first start from the files built into govax (`internal/sysvol`'s table):
+  STARTUP.COM and SYSTARTUP_VMS.COM, the grammars and help files, the kernel and ROM, the macro library,
+  FORSYSDEF.TLB, FTNRTL.EXE, and the sources and procedures that rebuild them. `--system-file none` runs
+  without one, from the built-in files.
+- **Startup.** `vax.init` became STARTUP.COM, run from the volume; govax defines SYS$SYSDEVICE and
+  SYS$SYSROOT, STARTUP.COM the other system names, and SYSTARTUP_VMS.COM is the user's. The grammars, help,
+  kernel, ROM, libraries, and FTNRTL are read from the volume ahead of govax's own copies.
+- **Upgrades.** Each start brings govax's files up to date by content against a manifest: a file the user
+  hasn't changed gets govax's new copy as a new version, a changed one is kept (SYSKEPT).
+- **Sharing.** One writer, by a host lock; a second session mounts the volume read-only and has no page file.
+  The page file's default is the volume's `[SYSTEM.SYSEXE]PAGEFILE.SYS`.
+- **Units.** A device with no unit number (`DUA`, in MOUNT, `--mount`, and the settings) is that
+  controller's next free unit, so the default volume moved to DUA1.
+
+MANUAL.md's section 5, "The system volume", is the user's side. What the phase left is its doc's
+"Where things stand".

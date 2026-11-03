@@ -183,6 +183,10 @@
 //                          text module (docs/PHASE-83 - FORTRAN and VMS.md)
 //              11/01/26    FORTRAN: services, handlers, ASTs, and the system
 //                          subroutines (docs/PHASE-83 - FORTRAN and VMS.md)
+//              11/03/26    Added STARTUP (and SYSTEM_VOLUME): the system
+//                          volume, STARTUP.COM, SYSTARTUP_VMS.COM, and
+//                          rebuilding FTNRTL and STARLET.MLB
+//                          (docs/PHASE-87 - system volume.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2660,6 +2664,8 @@ $HELP
     CONFIG          govax's configuration settings, and how to set them
     KEYS            The control keys: Ctrl/C, Ctrl/Y, and Ctrl/Z
     PSL             The processor status longword and its fields
+    STARTUP         What govax does as it starts: the system volume,
+                    STARTUP.COM, and SYSTARTUP_VMS.COM
     XFC             govax's extended function codes
     
 
@@ -3247,6 +3253,74 @@ $INQU
 
         $ INQUIRE ANSWER "Continue (Y/N)"
         $ IF .NOT. ANSWER THEN EXIT
+
+$STAR
+$SYST
+
+    Each time govax starts, it:
+
+    1.  Mounts the system volume on DUA0: (below), making it the first
+        time.
+    2.  Mounts the containers the --mount and --mount-write options name,
+        and the default volume (vax.default.volume.file), on DUA1: unless
+        configured otherwise.
+    3.  Runs SYS$MANAGER:STARTUP.COM from the system volume, at command
+        level 1, as a login command procedure.  It defines the system
+        logical names, sizes the memory (INITIALIZE/VAX and VMINIT, from
+        the vax.memory.* settings), loads SYS$SYSTEM:DEFAULT.ROM,
+        assembles SYS$SOURCES:KERNEL.ASM and starts it, defines TTA0: and
+        NLA0:, and last runs SYS$MANAGER:SYSTARTUP_VMS.COM.
+    4.  Installs the page file, with paging on.
+    5.  Runs vax.startup.procedure, if that names a procedure.
+    6.  Runs the command on govax's command line and exits, or else
+        shows the VAX> prompt.
+
+    The system volume is an ODS-2 container, by default
+    ~/.govax/govax-system.dsk, labeled GOVAXSYS, holding govax's own
+    files:
+
+        [SYSTEM.SYSEXE]  SYS$SYSTEM     DEFAULT.ROM, PAGEFILE.SYS
+        [SYSTEM.SYSMGR]  SYS$MANAGER    STARTUP.COM, SYSTARTUP_VMS.COM,
+                                        CONSOLE.DCL, DEBUG.DCL
+        [SYSTEM.SYSHLP]  SYS$HELP       CONSOLE.HLP, DEBUG.HLP
+        [SYSTEM.SYSLIB]  SYS$LIBRARY,   STARLET.MLB, FORSYSDEF.TLB,
+                         SYS$SHARE      FTNRTL.EXE
+        [SYSTEM.SOURCES] SYS$SOURCES    KERNEL.ASM, SSDEF.ASM, FTNRTL's
+                                        sources, STARLET.MAR and
+                                        STARLETDEF.MAR, BUILDFTN.COM,
+                                        BUILDSTARLET.COM
+        [SYSTEM]         SYS$SYSROOT    GOVAX$FILES.DAT, the list of
+                                        files govax supplied
+
+    govax defines SYS$SYSDEVICE and SYS$SYSROOT when it mounts the
+    volume; STARTUP.COM defines the rest, so you can see and change them.
+    MACRO, FORTRAN, LINK, and RUN find their libraries and FTNRTL.EXE
+    through SYS$LIBRARY and SYS$SHARE ahead of the copies built into
+    govax, so an edited kernel, a rebuilt FTNRTL, or a rebuilt macro
+    library is the one used.
+
+    Your own startup commands belong in SYS$MANAGER:SYSTARTUP_VMS.COM:
+    govax makes it once and never changes it.  Every other file is
+    govax's: when a newer govax has a new copy of a file you haven't
+    changed, it writes its copy as a new version (the old one stays); a
+    file you have changed is kept, and %MOUNT-I-SYSKEPT says so once for
+    each new copy.
+
+    To rebuild FTNRTL.EXE or STARLET.MLB from the sources, as new versions
+    in SYS$SHARE and SYS$LIBRARY:
+
+        VAX> @SYS$SOURCES:BUILDFTN
+        VAX> @SYS$SOURCES:BUILDSTARLET
+
+    Delete the versions you made to go back to govax's.
+
+    Only one govax session at a time can write the volume; a second
+    mounts it read-only (%MOUNT-I-SYSREADONLY), with no page file there.
+    DISMOUNT refuses it.  If it can't be used, %MOUNT-W-NOSYSVOL says why
+    and govax starts from its built-in files, as it does with the option
+    --system-file none.  --system-initialize makes the volume again from
+    govax's own files, keeping the old container as FILE.old.  See HELP
+    CONFIG KEYS for the settings.
 
 $BOOT
 $ROM

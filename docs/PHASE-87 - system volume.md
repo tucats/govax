@@ -1,8 +1,46 @@
 # Phase 87 — the system volume
 
-**Status:** planned 2026-11-03; the plan reviewed and accepted by the
-author the same day ("The review", after Part B). Needs nothing beyond
-what Phases 1–86 left in place.
+**Status:** done 2026-11-03. Planned 2026-11-03; the plan reviewed and
+accepted by the author the same day ("The review", after Part B). Needed
+nothing beyond what Phases 1–86 left in place.
+
+## Where things stand
+
+Done: the system volume made, mounted, locked, and refreshed by content;
+STARTUP.COM, the grammars, help, kernel, ROM, libraries, and FTNRTL read
+from it, with govax's built-in files behind; the page file on it; the
+build procedures run and tested; next-free unit numbers; every one-shot
+subcommand on it; the manual (section 5's "The system volume"), HELP
+STARTUP and CONFIG KEYS, CLAUDE.md, and PLAN.md.
+
+**Left for later:**
+
+- **The work volume's lock.** Decision 7 locks the system volume only; a
+  default volume two sessions both mount for writing is still unguarded.
+- **Locking on Windows** (`LockFileEx`): `internal/hostlock` locks nothing
+  outside Unix (`lock_other.go`), so there two sessions may both write the
+  system volume.
+- **Rooted directories.** RMS pastes a logical name's equivalence in as
+  text, so `SYS$SYSROOT` is a plain name and `SYS$SYSROOT:[SYSLIB]` isn't
+  `[SYSTEM.SYSLIB]` (subtask 5). Doing it as VMS does means placing the
+  root after the default directory and changing how expanded names show.
+- **SAVE/ROM and SAVE/NVRAM to a volume** (subtask 6): LOAD reads volume
+  files, SAVE still writes host files only.
+- **`vax.library`'s macro library comes after the volume's.** STARTUP.COM's
+  SYS$LIBRARY leads MACRO to govax's own STARLET.MLB first, so a user who
+  pointed `vax.library` at VMS's gets govax's now; MANUAL.md's "Using VMS's
+  own libraries" gives the search list that puts VMS's first. A setting
+  that does it, or STARTUP.COM adding the host directory, would need RMS to
+  reach host directories through a logical name.
+- **A crash in the middle of a refresh's write** leaves a file that matches
+  neither digest, kept as the user's with SYSKEPT (subtask 4);
+  `--system-initialize` or a DELETE of the version is the cure.
+- **Unconfirmed against VMS:** the attributes of SYS$SYSDEVICE and
+  SYS$SYSROOT (govax's aren't concealed), and DISMOUNT's second line,
+  `%DISM-W-SYSDISK`'s wording.
+- **COPY's message.** govax's COPY shows `%COPY-S-COPIED` without `/LOG`,
+  as it always has, so BUILDFTN.COM and BUILDSTARLET.COM show one; VMS's
+  COPY says nothing. COPY's own choice, older than this phase.
 
 ## Goal
 
@@ -442,7 +480,7 @@ recommendation:
    `link`, `library`, `analyze` with the system volume; the time a first
    start takes to create the volume, measured and recorded; the tests that
    used a host `vax.init` (Decision 11).
-10. **The close-out:** MANUAL.md (the command line, configuration, a
+10. (done 2026-11-03) **The close-out:** MANUAL.md (the command line, configuration, a
     section on the system volume: its layout, STARTUP.COM and
     SYSTARTUP_VMS.COM, the refresh, rebuilding FTNRTL, recovery with
     `--system-initialize`), HELP (CONFIG KEYS, the options, STARTUP),
@@ -862,3 +900,41 @@ recommendation:
     a file a test reads; subtask 5 had already moved the tests' procedures
     and `--path` overrides to `startup.com`), and HELP DEBUG's one. The help
     file's history keeps its old entry, and MANUAL.md's are the close-out's.
+- **2026-11-03** — Subtask 10 done: the close-out; the phase is done.
+  - **MANUAL.md:**
+    - Section 2: the first session's output, making and then mounting the
+      system volume, from a real run; the work volume on DUA1; "What happens
+      at startup" as the new sequence, with STARTUP.COM's steps and
+      SYSTARTUP_VMS.COM, and what runs with `--system-file none`.
+    - Section 3: the one-shot commands and subcommands mount the volume,
+      and the options `--system-file`, `--system-device`, and
+      `--system-initialize`.
+    - Section 4: the `vax.default.system.*` keys ("System volume", not "The
+      system volume", so section 5's heading keeps its anchor), the default
+      volume's new device, and the login procedure's example on DUA1.
+    - Section 5: the logical names govax and STARTUP.COM define, and a new
+      "The system volume": what's on it, STARTUP.COM and SYSTARTUP_VMS.COM,
+      the refresh, rebuilding FTNRTL and the macro library, a second
+      session, NOSYSVOL, and `--system-initialize`. DISMOUNT's refusal under
+      MOUNT.
+    - "Using VMS's own libraries": with a system volume, govax's own macro
+      library comes first; a SYS$LIBRARY search list in SYSTARTUP_VMS.COM
+      puts VMS's ahead (checked on govax with a library of one macro).
+    - "How an image is activated": SYS$SHARE is STARTUP.COM's, the
+      built-in FTNRTL last, and IMAGEFNF's spec as govax now shows it (from a
+      run).
+    - Chapter 14: FORSYSDEF.TLB on the volume (`LIBRARY/TEXT/EXTRACT`
+      reads a module, checked), FTNRTL's copy and sources there, and
+      BUILDFTN.COM as the way to change it.
+    - The examples' work volume, DUA0 from section 5 on, is DUA1 (DUA0 is
+      the system volume); only the device's name changed in them, and they
+      weren't each run again. `vax.init` is now STARTUP.COM throughout, but
+      for the sentence saying the old name is no longer read.
+  - **HELP:** a new topic, STARTUP (also HELP SYSTEM_VOLUME), listed under
+    HELP's other topics: the startup sequence, the volume's layout, the
+    names, SYSTARTUP_VMS.COM, the refresh, the build procedures, and
+    sharing and recovery. HELP CONFIG KEYS already had the keys and the
+    options (subtasks 3 to 7).
+  - **CLAUDE.md** and **PLAN.md:** the phase done, with a PLAN.md section
+    summarizing it.
+  - **Follow-up:** "Where things stand", at the top.
