@@ -368,6 +368,15 @@ func TestFortranStatements(t *testing.T) {
 		t.Errorf("a step by instruction stays with its line: %q", out)
 	}
 
+	// A location with subscripts is good wherever a location is.
+	say(t, c, "SET WATCH FV.M(2,3)")
+
+	if out := say(t, c, "SHOW WATCH"); !strings.Contains(out, "watchpoint") {
+		t.Errorf("SHOW WATCH: %q", out)
+	}
+
+	say(t, c, "CANCEL WATCH/ALL")
+
 	// A bare label is the current routine's, and a break there says where it is.
 	say(t, c, "SET BREAK $LINE40")
 

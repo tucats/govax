@@ -53,6 +53,23 @@ $HELP
   command line (DIRECTORY, MACRO, LINK, RUN, ...) isn't available here.
   EXIT returns to the console, where it is.
 
+$FORTRAN
+  A FORTRAN program compiled with FORTRAN/DEBUG has its variables known by what they
+  are, though the debugger's language stays MACRO:
+
+    EXAMINE X         in a routine, that routine's X, shown by its type
+    EXAMINE UNIT.X    a unit's X, from anywhere; a dummy argument needs an active call
+    EXAMINE M(2,3)    an element, by FORTRAN's bounds and order; EXAMINE M is them all
+    EXAMINE S(2:4)    a substring
+    DEPOSIT X = 1.5   a value read as the variable's type
+    EVALUATE X        what it holds
+    SET BREAK UNIT.$LINE30   the statement on line 30, or $LINE30 in that routine
+
+  A stop shows the FORTRAN line above the MACRO line, and STEP goes a FORTRAN line at
+  a time (STEP/INSTRUCTION an instruction). Subscripts are read in the input radix, so
+  SET RADIX DECIMAL makes them FORTRAN's numbers. Give /NOOPTIMIZE when compiling: under
+  /OPTIMIZE a variable may be in a register, and EXAMINE says so when it knows.
+
 $EXPR
 $EXPRESSIONS
   An address or a value is an expression, which may hold:
@@ -407,6 +424,9 @@ $EX
   /ASCIZ  /ASCID  /DATE_TIME  /CONDITION_VALUE  /TYPE  /HEXADECIMAL
   /DECIMAL  /OCTAL  /BINARY  /DEFAULT  /PSL  /PSW  /PTE  /CONSTANTS
   /SHAREABLE  /SYMBOLIC
+
+$EXAM,/SOU
+  Shows the source line of the code at each location, under its module's name.
 
 $EXAM,/INS
   Shows the machine instruction at each location, in the VMS debugger's
@@ -763,6 +783,15 @@ $SE,LANG
   a record's component, and DBG85.X means X in routine DBG85. The FORTRAN
   compiler's names (SQUARES.I) are MACRO's, so a program it compiled, whose
   language is MACRO, reads them whole.
+
+$SET,IMAGE
+$SET,IMA
+  Makes an image the current one, as SHOW IMAGE marks with a *: the one SHOW MODULE
+  lists and SET MODULE/ALL sets.
+
+  Format:
+
+    SET IMAGE image
 
 $SET,MODU
 $SE,MODU
@@ -1245,12 +1274,13 @@ $SH,IMAG
 
 $SHOW,MODU
 $SH,MODU
-  Lists the modules of the program's debug symbols, whether each is set,
-  and the size of its symbol records.
+  Lists the current image's modules (see SET IMAGE), whether each is set,
+  and the size of its symbol records. Names, with wildcards, pick some of
+  them, and /SHARE adds a line for each other image.
 
   Format:
 
-    SHOW MODULE
+    SHOW MODULE [module[,module...]] [/SHARE]
 
 $SHOW,PROC
 $SH,PROC

@@ -40,6 +40,9 @@ import (
 // shareable image's initialization routines) until the program is about to
 // execute its main routine's first instruction, and stops there.
 func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
+	d.Machine.ForgetSources()
+	d.fortranTables = nil
+
 	c := d.Machine
 
 	// VMS shows its version banner, a blank line, and then the language

@@ -1,6 +1,6 @@
 # Phase 85 — FORTRAN compiler usability: listings, checks, warnings
 
-**Status:** in progress. Subtask 1, the survey, was reviewed by the author on
+**Status:** done 2026-11-02. Subtask 1, the survey, was reviewed by the author on
 2026-11-02; their answers are in Part A, "The review". Planned 2026-10-29. Needs
 Phase 80 (I/O, for the run-time checks' messages); best done after Phase 83.
 Part of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`
@@ -73,7 +73,18 @@ The list as the survey proposed it and the author's review settled it:
     - **10b. Statements** (done 2026-11-02): labels on FORTRAN's lines, the FORTRAN line at a stop, stepping by it, D5, D9.
     - **10c. What's left against VMS's logs** (done 2026-11-02): D7, D8, SHOW SYMBOL's form.
 11. **`/[NO]F77`** (answer 5) (done 2026-11-02).
-12. **Close-out:** HELP FORTRAN complete; MANUAL.md; FORTRAN-INTERNALS.md.
+12. **Close-out:** HELP FORTRAN complete; MANUAL.md; FORTRAN-INTERNALS.md (done 2026-11-02).
+
+## Where things stand
+
+Done: the listing, cross reference, `/CHECK`, OPTIONS's `/EXTEND_SOURCE`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, `/[NO]F77`, and the debugger on a compiled program at the review's level B.
+
+Left for later, none of it blocking Phase 86:
+
+- **The debugger on FORTRAN programs:** a record's fields (a record shows as longwords); which of several active calls of one routine a dummy means (the innermost); SET SCOPE; a variable's register during a loop only as a remark, since the table doesn't say where the loop is. The review's level C, real FORTRAN debugger records, remains a phase of its own if wanted.
+- **`/STANDARD`:** what a program means rather than how it's written (`SEMANTIC`, on memory's list); a FUNCTION with no parentheses and `&s`, which the tree doesn't keep; a bare `X`.
+- **`testdata/dbg85`'s differences left:** `SHOW SYMBOL *`'s lines for VMS's debugger's own images, and how VMS reads `@(AP+N)`, not understood. `dbg85c.dlg` isn't replayed.
+- **Unconfirmed,** there being no VAX FORTRAN to compare: every layout and message marked ours in the log, and `/CHECK`'s default (MANUAL.md's 14.7).
 
 # Part A — the survey (2026-11-02)
 
@@ -518,3 +529,4 @@ For subtask 10, and changing what the survey assumed:
   Tests: `TestDebuggerSessionOracle`, with its list shortened; `TestFortranShowModule`; `TestSetModule`, `TestShowSymbolForms`, and `TestShowSymbol_undefined`, changed to VMS's behavior, along with `TestFloatTypes` and `TestRegisterTypes`'s digit.
 - **2026-11-02:** Subtask 11, by answer 5, with the manual's four rules. `/[NO]F77`, `--no-f77`, and OPTIONS's, per unit (`sema.Options.NoF77`, `Unit.NoF77`). **DO** (5.3.1): `countedLoop`'s `oneTrip`, no test before the body; a statement's DO only, not an implied-DO list, since the manual says only DO; it records no `CountedLoop`, so the optimizer's loop forms, which take a count's end to mean what FORTRAN-77 means, leave it alone, and `testdata/fortran/nof77.for` runs both ways. **OPEN** (9.1.3, 9.1.25): `openDefaults`, STATUS='NEW' and BLANK='ZERO'. **EXTERNAL** (A.6): `*name` parses always, `AttrItem.Star`, and semantic analysis refuses it without `/NOF77` (`NOF77`, which the parser reported before, when it didn't know the unit's options); under `/NOF77` a name that's a library function's means it, `libraryExternal`, as if in INTRINSIC, unless it has the `*`; `SINDEG`, not one, is the program's either way, as the manual's example has it.
   Ours, each unconfirmed: a dummy's name in EXTERNAL stays the dummy, library name or not; a generic name so passed takes the same specific row as INTRINSIC's (the manual's text says only "library function"); the manual's `/NOF77` EXTERNAL rule is the only one given for "a name": no difference is made for where else the name appears. `/STANDARD=SYNTAX` flags `*name` too. Tests: `nof77.for` (by hand from the manual's rules; the values were right as written, and the expected file's layout was corrected for `1X` being the carriage control), `TestFortranF77Qualifier`, `sema_test.go`'s cases, `TestFortranCommand`.
+- **2026-11-02:** Subtask 12, the close-out. HELP FORTRAN has every qualifier and examples of the new ones, and the debugger's HELP FORTRAN, SET IMAGE, and TYPE; MANUAL.md's new 14.10, whose session was run on govax (on host files, with the commands shown there leaving out their paths, and some of the commands run left out), and 14.7's entries; FORTRAN-INTERNALS.md's section 18. "Where things stand" above lists what's left. **Found on the way:** the source files read were kept by name for the whole session, so a host file recompiled and rerun showed its old lines, and now would have given its old table: `Machine.ForgetSources` at each image's start, checked by hand with a program recompiled in one session, its X a REAL and then an INTEGER; no Go test holds it. A claim the manual made, `SET WATCH V(2)`, got a test.

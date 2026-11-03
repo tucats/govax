@@ -3567,7 +3567,9 @@ An address or value is an expression:
 | `SHOW CALLS`, `SHOW STACK` | The call frames. |
 | `SHOW REGISTERS`, `SHOW PSL`, `SHOW name` | Registers, including privileged ones (`SHOW P0BR`). |
 | `SHOW IMAGE [/FULL]` | The loaded images; `/FULL` shows their sections, protections, and page states. |
-| `SHOW MODULE`, `SHOW SYMBOL pattern`, `SHOW SCOPE` | The program's debug symbols; `SHOW MODULE` has a language column when the modules' languages differ. |
+| `SHOW MODULE [names] [/SHARE]`, `SHOW SYMBOL pattern [/ADDRESS] [/TYPE]`, `SHOW SCOPE` | The program's debug symbols. `SHOW MODULE` is the current image's, with a language column when the modules' languages differ, and `/SHARE` adds a line for each other image; `SHOW SYMBOL` lists the set modules' symbols, then the image's globals. |
+| `SET IMAGE image` | Makes an image the current one, which `SHOW IMAGE` marks with a `*`. |
+| `EXAMINE/SOURCE location`, `TYPE [module\]line[:line]` | Source lines, by a location's code or by number. |
 
 **Settings**
 
@@ -5112,13 +5114,7 @@ FORTRAN's.
 A list naming what's wanted means only that, as with MACRO's `/DEBUG`, and `NOSYMBOLS` or `NOTRACEBACK` alone takes from
 the default. `/DEBUG` doesn't turn the optimizer off, so under `/OPTIMIZE`, the default, it gets `%FORT-I-DEBUGOPTIMIZE`:
 a variable may be in a register, its home out of date. To debug, say both, as the DCL Dictionary's examples do, and link
-with `/DEBUG` too:
-
-```
-$ FORTRAN/DEBUG/NOOPTIMIZE/OBJECT SQUARES
-$ LINK/DEBUG SQUARES
-$ RUN SQUARES
-```
+with `/DEBUG` too, as [section 14.10](#1410-debugging-a-compiled-program) shows.
 
 `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -5395,8 +5391,8 @@ their layout. What to look for in the code:
   `CALLS` under the VAX calling standard.
 - **Storage is static.** Each routine's variables, arrays, and the
   compiler's cells are in the `$LOCAL` program section, named
-  `routine.name` (`SQUARES.I`), so `MACRO/DEBUG` and the debugger can
-  name them; constants, descriptors, and I/O control blocks are in
+  `routine.name` (`SQUARES.I`), so the debugger can
+  name them ([section 14.10](#1410-debugging-a-compiled-program)); constants, descriptors, and I/O control blocks are in
   `$PDATA`, read-only; the code is in `$CODE`. The compiler's own names
   have a `$`: `$Cn` a DO loop's count, `$Sn` its step, `$Tn` a
   temporary, `$Kn` and `$Fn` constants, `$Dn` descriptors, `$IOn` I/O
@@ -5593,6 +5589,10 @@ FORTRAN compiler was available to check them). So far:
 - `/STANDARD`: the manuals at hand give the keywords' names and no more. What's flagged comes from the language
   manual's blue print and FORTRAN-77's own rules, and the messages are govax's. No keyword covers what a program
   means, nor does any OPTIONS statement take it.
+- The debugger: its language stays MACRO, unlike VAX FORTRAN's, which wrote debugger records of its own language, and
+  what it knows of a variable it reads from the MACRO file, so it needs that file as it does for source lines.
+  `$LINEn`, the layouts, and the messages about subscripts are govax's.
+- `/NOF77`: the four rules are the manual's. A dummy's name in EXTERNAL staying the dummy is govax's choice.
 - `/DEBUG`: the keywords are as remembered of VAX FORTRAN's and as MACRO's own, the manuals at hand giving none. VAX
   FORTRAN's `/OBJECT` was on by default; govax's is off, leaving the MACRO step visible.
 - In a tab-format line, the tab stands for the columns before column 7,
@@ -6146,6 +6146,91 @@ A store whose value can fault stays, even if nothing reads it.
 
 Output through real VAX MACRO is unconfirmed: the optimizer's branch lengths are held
 to govax's MACRO's, and real MACRO won't lengthen a branch that doesn't reach.
+
+### 14.10 Debugging a compiled program
+
+Compile with `/DEBUG` and `/NOOPTIMIZE`, and link with `/DEBUG`, and `RUN` starts in the debugger
+(the rest of what it does is in [chapter 12](#12-the-debugger)). Here is a small program:
+
+```fortran
+      PROGRAM TOTALS
+      REAL PRICES(3), SUM
+      CHARACTER*8 NAME
+      INTEGER M(2,2)
+      DATA PRICES /1.5, 2.5, 3.0/
+      NAME = 'WIDGETS'
+      M(2,1) = 21
+      SUM = TOTAL(PRICES, 3)
+      PRINT *, NAME, SUM
+      END
+      REAL FUNCTION TOTAL(A, N)
+      REAL A(N)
+      TOTAL = 0.0
+      DO 10 I = 1, N
+         TOTAL = TOTAL + A(I)
+ 10   CONTINUE
+      RETURN
+      END
+```
+
+A session with it:
+
+```
+VAX> FORTRAN/DEBUG/NOOPTIMIZE/OBJECT TOTALS
+VAX> LINK/DEBUG TOTALS
+VAX> RUN TOTALS
+
+         GOVAX DEBUG
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TOTALS
+DBG> SET RADIX DECIMAL
+DBG> EXAMINE PRICES
+TOTALS\TOTALS.PRICES(1):        1.500000
+TOTALS\TOTALS.PRICES(2):        2.500000
+TOTALS\TOTALS.PRICES(3):        3.000000
+DBG> SET BREAK TOTAL.$LINE15
+DBG> GO
+break at TOTALS\TOTAL\TOTAL.$2
+FORTRAN line 15: TOTAL = TOTAL + A(I)
+   155:         MOVL    TOTAL.$B1+16,R0
+DBG> EXAMINE N
+TOTALS\TOTAL.N: 3
+DBG> EXAMINE A(3)
+TOTALS\TOTAL.A(3):      3.000000
+DBG> EXAMINE TOTALS.M(2,1)
+TOTALS\TOTALS.M(2,1):   21
+DBG> STEP
+stepped to TOTALS\TOTAL\TOTAL.$LINE16
+FORTRAN line 16: 10   CONTINUE
+   161:         INCL    TOTAL.I
+DBG> DEPOSIT A(3) = 10.5
+DBG> CANCEL BREAK/ALL
+DBG> GO
+WIDGETS    14.50000
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+```
+
+- **Names.** A bare name is the variable of the routine the program is in, and `UNIT.NAME` is a unit's from anywhere.
+  A dummy argument is found through its routine's active call, so from a routine with no such call it's
+  `%DEBUG-W-NOTACTIVE`. A register's name is the register, so `EXAMINE R1` isn't your variable `R1`, and `EXAMINE U.R1` is.
+- **Types.** Each is shown as what it is: a REAL as a number, a LOGICAL as `.TRUE.` or `.FALSE.`, a COMPLEX as `(re,im)`, and
+  CHARACTER as text. A qualifier still decides, as `EXAMINE/HEXADECIMAL/LONGWORD X` does. A record shows as longwords.
+- **Subscripts.** `M(2,1)` uses FORTRAN's bounds and order, and an array named alone is all its elements, but
+  an assumed-size array's first only. An adjustable array's bounds are its current ones. `S(2:4)` is a substring. A
+  subscript is read in the input radix: under the default, hexadecimal, `V(10)` is `V(16)`, which is why the session starts
+  with `SET RADIX DECIMAL`. `V[1]` keeps MACRO's meaning, a zero-based element of the label.
+- **Statements.** `UNIT.$LINEn` is the first instruction of FORTRAN line `n`, or `$LINEn` in that routine; an included file's
+  lines have no such label. A stop shows the FORTRAN line above the MACRO line, and `break at` may name another label at the
+  same place, as above. `STEP` goes to the next FORTRAN line, and `STEP/INSTRUCTION` to the next instruction. `%LINE` and
+  `TYPE` still count the MACRO file's lines, in which the FORTRAN lines are comments.
+- **Expressions.** Within one a name stands as a MACRO label does: under `EVALUATE` for what it holds (`EVALUATE I + 1`), and
+  elsewhere for its address. `SET WATCH V(2)` watches that element.
+- **What it needs.** All this comes from a table the compiler writes in the MACRO file under `/DEBUG`, as comments, so keep the
+  file where the object says it is, as you must to see source lines. Without it, or without `/DEBUG`, the debugger knows only
+  what MACRO's records say: `EXAMINE SQUARES.I` is a longword, and a dummy's symbol is its place in the argument list.
+- **The optimizer.** `/DEBUG` changes no instruction, so a bug doesn't go away when you debug it, but under `/OPTIMIZE` a variable
+  may be in a register. A variable there throughout is read from it, and one in a register only during a loop gets a
+  line saying which, and what it holds, since the debugger can't tell whether the program is in that loop.
 
 ## 15. Appendices
 

@@ -2450,3 +2450,37 @@ pipeline is tested end to end on govax.
   first, or is longest, or holds the values, the program must print the
   same thing. That is the test of everything the compiler leaves to the
   linker.
+
+## 18. Telling the debugger
+
+A compiler has to tell a debugger what a program's names mean, and on VMS the way is the debug symbol table: records in
+the object module, carried by LINK into the image, with a type for each variable. This compiler writes MACRO, and MACRO
+writes records only for what it knows: a label over a directive. To MACRO `TOTAL.N` is the number 8, its place in the argument
+list, and `TOTALS.X` a longword. Writing FORTRAN's own records instead would have meant a compiler that writes objects, which
+Phase 74 chose against (Decision 3).
+
+What the compiler does instead (`codegen/debugtable.go`, under `/DEBUG`) is leave a note, in a file both ends can see:
+
+```
+;DBG$ E TOTAL TOTAL
+;DBG$ V TOTAL A RF 4 A:1 1:? TOTAL.$B1
+;DBG$ V TOTAL N I 4 A:2 - -
+```
+
+MACRO sees comments. The debugger, which reads that file anyway to show source lines, finds a variable's type, how to
+reach it, and its bounds (`internal/fortran/dbgtable`, a leaf package each side imports, so neither knows the other).
+The cost is that the file must be there, the same cost as seeing source at all; the gain is that MACRO and LINK needed nothing
+and a program's bytes depend on nothing it wasn't already asked. The alternative was the same table as data in the image, which
+would survive losing the file but make `/DEBUG` change the program.
+
+Most of `debugger/fortran.go` is then the calling standard read backwards. A dummy argument's address is in its routine's argument
+list, so it needs that routine's frame: the debugger walks the saved FPs (`fortranFrames`), since a routine two calls up has
+arguments too. Each frame's saved AP is at `8(FP)`. A CHARACTER dummy's longword is a descriptor's address, and in a unit with ENTRY statements
+a dummy's address is in a cell, since the entry points fill those in. An adjustable array's bounds are in the class A
+descriptor the entry point filled, so what `EXAMINE A` shows is what this call has.
+
+Statements get labels, `TOTAL.$LINE15`, written among the source's comment lines, an item in the code list (`codegen.Text`)
+no optimizer pass looks at. That matters: a debugging qualifier that moved one instruction would make bugs vanish when looked
+for. `TestDebugChangesNoCode` compiles every program both ways and takes the directive, the table, and the labels out of the result: what's
+left has to be the same file. That test earned its place at once: the first name tried, `$Ln`, was already the optimizer's name for a
+loop's limit.

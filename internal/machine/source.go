@@ -73,6 +73,10 @@ func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 	return line.Line, records[record-1], true
 }
 
+// ForgetSources drops the source files read so far, so that an image started next sees
+// its source as it is now: on the host, a file rewritten since has the same name.
+func (m *Machine) ForgetSources() { m.sourceCache = nil }
+
 // SourceAt returns the lines of the source file pc's line is in, and which of them,
 // counted from 0, is that line. ok is as SourceLine's.
 func (m *Machine) SourceAt(pc uint32) (records []string, index int, ok bool) {
