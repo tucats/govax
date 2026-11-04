@@ -3,56 +3,22 @@ package console_test
 import (
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/backup"
 )
 
-// for88OpenCases says which of round 2's cases are FTNRTL's OPEN, CLOSE, and INQUIRE
-// (docs/PHASE-88 - keyed index files.md, subtask 12): the first three sections, but
-// for #92, which makes STD.IDX with WRITEs, subtask 13's. The cases after it use the
-// file VMS made.
-func for88OpenCases(title string) bool {
-	number, _, _ := strings.Cut(strings.TrimPrefix(title, "#"), " ")
-
-	n, err := strconv.Atoi(number)
-	if err != nil {
-		return false
-	}
-
-	return n <= 148 && n != 92
+// for88FTNRTLDifferences are the cases whose output on FTNRTL differs from VMS's, by
+// the case's line, with why: as FORRTL's over govax (for88Differences), but for NAME
+// by file, which FTNRTL's own INQUIRE has.
+var for88FTNRTLDifferences = map[string]string{
+	"#295 many records, past a bucket: ten buckets' worth": "W7's splits",
 }
 
-// for88CutProgram is for88.mar with the cases for88OpenCases doesn't want taken out
-// of its main routine, which runs them in order: #92's call, and every case from the
-// section on keyed READs on. Their code stays, calling nothing that runs.
-func for88CutProgram(t *testing.T, source string) string {
-	t.Helper()
-
-	heading := regexp.MustCompile(`(?m)^(T\d+):\t\.ASCID\t~##### Keyed READs: each match on each key~$`).FindStringSubmatch(source)
-	if heading == nil {
-		t.Fatal("no heading for the keyed READs in for88.mar")
-	}
-
-	from := strings.Index(source, "\tPUSHAB\t"+heading[1]+"\n")
-	to := strings.Index(source, "\tPUSHAB\tENDM\n")
-
-	if from < 0 || to < from {
-		t.Fatal("no keyed READs in for88.mar's main routine")
-	}
-
-	source = source[:from] + source[to:]
-
-	return strings.Replace(source, "\tCALLS\t#0,L^C92\n", "", 1)
-}
-
-// TestFor88OnFTNRTL runs round 2's cases of OPEN, CLOSE, and INQUIRE on FTNRTL, by
-// for88f.mar's FOR$ names, and holds each one's output, every FAB, RAB, and XABKEY
-// shown to its USEROPEN routine among them, and each file it made, to VMS's run of
-// them on FORRTL.
+// TestFor88OnFTNRTL runs all of round 2's cases on FTNRTL, by for88f.mar's FOR$ names,
+// and holds each one's output, every FAB, RAB, and XABKEY shown to its USEROPEN routine
+// among them, and each file it made, to VMS's run of them on FORRTL.
 func TestFor88OnFTNRTL(t *testing.T) {
 	_, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "for88.dsk")
@@ -61,13 +27,8 @@ func TestFor88OnFTNRTL(t *testing.T) {
 	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
 	dispatch("SET DEFAULT DUA1:[000000]")
 
-	source, err := os.ReadFile(filepath.Join(for88Dir, "for88.mar"))
+	program, err := filepath.Abs(filepath.Join(for88Dir, "for88.mar"))
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	program := filepath.Join(t.TempDir(), "for88.mar")
-	if err := os.WriteFile(program, []byte(for88CutProgram(t, string(source))), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -76,17 +37,8 @@ func TestFor88OnFTNRTL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	save, err := filepath.Abs(filepath.Join(for88Dir, "vax", "for88.bck"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	dispatch(`COPY "` + program + `"/HOST FOR88.MAR`)
 	dispatch(`COPY "` + adapter + `"/HOST FOR88F.MAR`)
-
-	if out := dispatch(`BACKUP "` + save + `"/SAVE_SET/SELECT=[000000]STD.IDX [000000]`); strings.Contains(out, "-E-") || strings.Contains(out, "-F-") {
-		t.Fatalf("BACKUP: %s", out)
-	}
 
 	for _, command := range []string{"MACRO/NOLIST FOR88", "MACRO/NOLIST FOR88F", "LINK/NOMAP FOR88,FOR88F"} {
 		if out := dispatch(command); out != "" {
@@ -106,29 +58,27 @@ func TestFor88OnFTNRTL(t *testing.T) {
 	}
 
 	got, want := for88Cases(out), for88Cases(string(text))
-	compared := 0
 
-	for title, w := range want {
-		if !for88OpenCases(title) {
-			continue
-		}
-
-		compared++
-
-		if g, ok := got[title]; !ok {
-			t.Errorf("%s: not run", title)
-		} else if g != w {
-			t.Errorf("%s:\nVMS:\n%s\nFTNRTL:\n%s", title, w, g)
-		}
+	if len(want) != 310 {
+		t.Errorf("%d cases in VMS's run, where gen.go wrote 310", len(want))
 	}
 
-	if compared != 148 {
-		t.Errorf("%d cases compared, where #0 to #148 less #92 are 148", compared)
+	for title, w := range want {
+		_, expected := for88FTNRTLDifferences[title]
+
+		switch g, ok := got[title]; {
+		case !ok:
+			t.Errorf("%s: not run", title)
+		case g != w && !expected:
+			t.Errorf("%s:\nVMS:\n%s\nFTNRTL:\n%s", title, w, g)
+		case g == w && expected:
+			t.Errorf("%s: expected to differ from VMS, but matches; remove it from for88FTNRTLDifferences", title)
+		}
 	}
 
 	saved := filepath.Join(t.TempDir(), "ftn88.bck")
 
-	dispatch(`BACKUP B*.IDX;* FTN88.BCK/SAVE_SET`)
+	dispatch(`BACKUP *.IDX;* FTN88.BCK/SAVE_SET`)
 	dispatch(`COPY FTN88.BCK "` + saved + `"/HOST/BINARY`)
 
 	ours := map[string]*backup.File{}
@@ -137,24 +87,17 @@ func TestFor88OnFTNRTL(t *testing.T) {
 		ours[f.Name] = f
 	}
 
-	files := 0
-
 	for _, f := range readSaveSet(t, filepath.Join(for88Dir, "vax", "for88.bck")).Files {
-		if !strings.HasPrefix(f.Name, "[000000]B") {
-			continue
-		}
+		g, ok := ours[f.Name]
 
-		files++
-
-		if g, ok := ours[f.Name]; !ok {
+		switch {
+		case !ok:
 			t.Errorf("%s: VMS's run made it, FTNRTL's not", f.Name)
-		} else {
+		case f.Name == "[000000]W7.IDX;1":
+			compareRecordsOnly(t, f, g)
+		default:
 			compareConvertFile(t, f, g)
 		}
-	}
-
-	if files == 0 {
-		t.Error("no B files in VMS's save set")
 	}
 }
 
@@ -234,5 +177,124 @@ func TestFortranIndexedOpen(t *testing.T) {
 		if !strings.Contains(report, s) {
 			t.Errorf("ANALYZE/RMS_FILE has no %q:\n%s", s, strings.ReplaceAll(report, "|", "\n"))
 		}
+	}
+}
+
+// TestFortranIndexedRecords runs the record statements on an indexed file from FORTRAN
+// source: WRITE out of order, every specifier on an ascending and a descending key, an
+// INTEGER*2 value on a longword key, READ in sequence after a keyed one, REWRITE, DELETE,
+// UNLOCK, and each statement's IOSTAT where VMS's run has one (testdata/for88).
+func TestFortranIndexedRecords(t *testing.T) {
+	_, dispatch := wsDispatcher(t)
+	dsk := filepath.Join(t.TempDir(), "ftn88.dsk")
+
+	dispatch(`INITIALIZE/CONTAINER "` + dsk + `" /DEVICE=RD54 FTN88`)
+	dispatch(`MOUNT/WRITE DUA1 "` + dsk + `"`)
+	dispatch("SET DEFAULT DUA1:[000000]")
+
+	source := filepath.Join(t.TempDir(), "keyrec.for")
+	text := `      PROGRAM KEYREC
+      CHARACTER*4 NAME, DOWN
+      INTEGER*2 SHORT
+      INTEGER ID, IOS
+      OPEN (UNIT=2, FILE='P.IDX', STATUS='NEW', ORGANIZATION='INDEXED',
+     1 ACCESS='KEYED', FORM='UNFORMATTED', RECL=3,
+     2 KEY=(1:4, 5:8:INTEGER, 9:12:CHARACTER:DESCENDING), IOSTAT=IOS)
+      WRITE (6, 90) 'OPEN', IOS
+      WRITE (2) 'MMMM', 30, 'bbbb'
+      WRITE (2) 'CCCC', 10, 'dddd'
+      WRITE (2) 'TTTT', 20, 'aaaa'
+      WRITE (2, IOSTAT=IOS) 'CCCC', 40, 'cccc'
+      WRITE (6, 90) 'DUP', IOS
+      READ (2, KEY='MMMM') NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEYGT='MMMM') NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEYGE='D') NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEY='ZZZZ', IOSTAT=IOS) NAME
+      WRITE (6, 90) 'NONE', IOS
+      READ (2, KEYLT='MMMM', IOSTAT=IOS) NAME
+      WRITE (6, 90) 'LT', IOS
+      SHORT = 20
+      READ (2, KEY=SHORT, KEYID=1) NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2) NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, IOSTAT=IOS) NAME
+      WRITE (6, 90) 'END', IOS
+      READ (2, KEYLT='cccc', KEYID=2) NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEYNXT='cccc') NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEYGE='cccc', IOSTAT=IOS) NAME
+      WRITE (6, 90) 'GE', IOS
+      READ (2, KEY=9, KEYID=7, IOSTAT=IOS) NAME
+      WRITE (6, 90) 'KEYID', IOS
+      READ (2, KEY='MMMM', KEYID=0) NAME, ID, DOWN
+      REWRITE (2) NAME, 31, 'eeee'
+      REWRITE (2, IOSTAT=IOS) NAME, 32, 'ffff'
+      WRITE (6, 90) 'AGAIN', IOS
+      READ (2, KEY='MMMM') NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      REWRITE (2, IOSTAT=IOS) 'NNNN', ID, DOWN
+      WRITE (6, 90) 'CHANGED', IOS
+      READ (2, KEY='CCCC') NAME
+      DELETE (2)
+      DELETE (2, IOSTAT=IOS)
+      WRITE (6, 90) 'GONE', IOS
+      READ (2, KEY='CCCC', IOSTAT=IOS) NAME
+      WRITE (6, 90) 'NOTHERE', IOS
+      UNLOCK (2)
+      REWIND (2, IOSTAT=IOS)
+      WRITE (6, 90) 'REWIND', IOS
+      CLOSE (2)
+      OPEN (UNIT=2, FILE='P.IDX', STATUS='OLD', ORGANIZATION='INDEXED',
+     1 ACCESS='SEQUENTIAL', FORM='UNFORMATTED', IOSTAT=IOS)
+      READ (2) NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      READ (2, KEY='TTTT', IOSTAT=IOS) NAME
+      WRITE (6, 90) 'SEQKEY', IOS
+      READ (2) NAME, ID, DOWN
+      WRITE (6, 91) NAME, ID, DOWN
+      CLOSE (2)
+      OPEN (UNIT=3, FILE='F.IDX', STATUS='NEW', ORGANIZATION='INDEXED',
+     1 ACCESS='KEYED', FORM='FORMATTED', RECL=8, KEY=(1:2),
+     2 IOSTAT=IOS)
+      WRITE (3, '(A)') 'BBb2'
+      WRITE (3, '(A)') 'AAa1'
+      WRITE (3, '(A)') 'CCc3'
+      READ (3, '(A4/A4)', KEY='AA') NAME, DOWN
+      WRITE (6, '(1X,A,1X,A)') NAME, DOWN
+      CLOSE (3)
+90    FORMAT (1X, A, I3)
+91    FORMAT (1X, A, I3, 1X, A)
+      END
+`
+
+	if err := os.WriteFile(source, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	dispatch(`COPY "` + source + `"/HOST KEYREC.FOR`)
+
+	for _, command := range []string{"FORTRAN KEYREC", "MACRO KEYREC", "LINK KEYREC"} {
+		if out := dispatch(command); out != "" {
+			t.Fatalf("%s: %s", command, out)
+		}
+	}
+
+	// The FOR numbers: 50 INCKEYCHG, 36 ATTACCNON, 49 INVKEYSPE, 53 NO_CURREC, 20 REWERR,
+	// 26 OPEDEFREQ, 94 INVMATKEY, and -1 for an end of file. KEYLT and KEYNXT of 'cccc' on the
+	// descending key both find 'bbbb', the next in its order.
+	want := []string{
+		"OPEN  0", "DUP 50", "MMMM 30 bbbb", "TTTT 20 aaaa", "MMMM 30 bbbb", "NONE 36", "LT 94",
+		"TTTT 20 aaaa", "MMMM 30 bbbb", "END -1", "MMMM 30 bbbb", "MMMM 30 bbbb", "GE 94", "KEYID 49",
+		"AGAIN 53", "MMMM 31 eeee", "CHANGED 50", "GONE 53", "NOTHERE 36", "REWIND 20",
+		"MMMM 31 eeee", "SEQKEY 26", "TTTT 20 aaaa", "AAa1 BBb2",
+	}
+
+	if out := strings.TrimSpace(dispatch("RUN KEYREC")); out != strings.Join(want, "|") {
+		t.Errorf("the program's output:\n%s\nwant:\n%s", strings.ReplaceAll(out, "|", "\n"), strings.Join(want, "\n"))
 	}
 }

@@ -271,7 +271,9 @@ func TestFTN86Oracle(t *testing.T) {
 
 	// FTNRTL's section on VMS has its options file too, which LINK echoes under SET
 	// VERIFY: what both say is the status of each command.
-	if a, b := ftn86Statuses(got["FTNRTL"]), ftn86Statuses(want["FTNRTL"]); a != b {
+	// VMS built the FTNRTL of its day, which had no FTN_KEYED to assemble: one status more
+	// here, until subtask 15 of docs/PHASE-88 runs this again.
+	if a, b := ftn86Statuses(got["FTNRTL"]), "  $STATUS == \"%X10000001\"\n"+ftn86Statuses(want["FTNRTL"]); a != b {
 		t.Errorf("building FTNRTL ended with:\n%s\nVMS's:\n%s", a, b)
 	}
 

@@ -24,6 +24,7 @@ COPY/QUIET DUA2:[FTN86]FTN_POSITION.OBJ "testdata/ftn86/vax/ftn_position.obj"/HO
 COPY/QUIET DUA2:[FTN86]FTN_UNFORMATTED.OBJ "testdata/ftn86/vax/ftn_unformatted.obj"/HOST
 COPY/QUIET DUA2:[FTN86]FTN_DIRECT.OBJ "testdata/ftn86/vax/ftn_direct.obj"/HOST
 COPY/QUIET DUA2:[FTN86]FTN_RECORD.OBJ "testdata/ftn86/vax/ftn_record.obj"/HOST
+COPY/QUIET DUA2:[FTN86]FTN_KEYED.OBJ "testdata/ftn86/vax/ftn_keyed.obj"/HOST
 COPY/QUIET DUA2:[FTN86]FTN_INTRINSICS.OBJ "testdata/ftn86/vax/ftn_intrinsics.obj"/HOST
 COPY/QUIET DUA2:[FTN86]FTN_SYSTEM.OBJ "testdata/ftn86/vax/ftn_system.obj"/HOST
 DISMOUNT DUA2:

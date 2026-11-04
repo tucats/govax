@@ -555,6 +555,8 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	BNEQ	26$
 	TSTL	OPS_TYPE(R11)
 	BNEQ	25$
+	CMPL	OPS_ORG(R11),#ORG_INDEXED ; an indexed file is 26$'s to see to: for88's
+	BEQL	26$			;  #293 opens one of VARIABLE records
 	MOVL	#TYPE_FIXED,OPS_TYPE(R11)
 	BRB	26$
 25$:	CMPL	OPS_TYPE(R11),#TYPE_FIXED

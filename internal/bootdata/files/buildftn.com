@@ -35,6 +35,7 @@ $ macro/nolist ftn_position
 $ macro/nolist ftn_unformatted
 $ macro/nolist ftn_direct
 $ macro/nolist ftn_record
+$ macro/nolist ftn_keyed
 $ macro/nolist ftn_intrinsics
 $ macro/nolist ftn_system
 $ link/shareable=ftnrtl/nosyslib ftnrtl/options

@@ -79,5 +79,4 @@ Allow several minutes: MACRO has 25,000 lines to read. If a case hangs, Ctrl/Y a
 `TestFor88Oracle` (`internal/console/for88_test.go`) runs the program on VMS's FORRTL.EXE over
 govax's RMS, holding its output and files to VMS's, or skips without one on a local volume. Set
 `FOR88_WRITE` to a file to keep its output. `TestFor88OnFTNRTL` (`for88ftn_test.go`) needs no
-FORRTL: it links the program with `for88f.mar`, and holds FTNRTL to `#0` to `#148` but `#92`,
-on `STD.IDX` as VMS made it.
+FORRTL: it links the program with `for88f.mar`, and holds FTNRTL to every case and file.

@@ -29,7 +29,7 @@ const (
 var rtlModules = []string{
 	"FTN_VECTOR", "FTN_CONTROL", "FTN_UNITS", "FTN_STATEMENT", "FTN_FORMAT", "FTN_EDIT", "FTN_FLOAT",
 	"FTN_LISTOUT", "FTN_LISTIN", "FTN_NAMELIST", "FTN_INTERNAL", "FTN_OPEN", "FTN_INQUIRE", "FTN_POSITION",
-	"FTN_UNFORMATTED", "FTN_DIRECT", "FTN_RECORD", "FTN_INTRINSICS", "FTN_SYSTEM",
+	"FTN_UNFORMATTED", "FTN_DIRECT", "FTN_RECORD", "FTN_KEYED", "FTN_INTRINSICS", "FTN_SYSTEM",
 }
 
 // variants are the two ways every program is compiled, each in a directory of its own.

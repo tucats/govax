@@ -27,6 +27,7 @@ COPY/QUIET "internal/ftnrtl/mar/ftn_position.mar"/HOST DUA2:[FTN86]FTN_POSITION.
 COPY/QUIET "internal/ftnrtl/mar/ftn_unformatted.mar"/HOST DUA2:[FTN86]FTN_UNFORMATTED.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_direct.mar"/HOST DUA2:[FTN86]FTN_DIRECT.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_record.mar"/HOST DUA2:[FTN86]FTN_RECORD.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_keyed.mar"/HOST DUA2:[FTN86]FTN_KEYED.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_intrinsics.mar"/HOST DUA2:[FTN86]FTN_INTRINSICS.MAR
 COPY/QUIET "internal/ftnrtl/mar/ftn_system.mar"/HOST DUA2:[FTN86]FTN_SYSTEM.MAR
 CREATE/DIRECTORY DUA2:[ADJUST]
