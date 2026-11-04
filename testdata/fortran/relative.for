@@ -86,7 +86,7 @@ C
       WRITE (6, '(1X,A,I3)') 'KEYED', IOS
       CLOSE (2, DISPOSE='DELETE')
 C
-C An indexed file isn't here yet.
+C An indexed file must have keys (FOR$_INVKEYSPE).
 C
       ORG = 'INDEXED'
       OPEN (3, FILE='IDX.DAT', STATUS='NEW', ORGANIZATION=ORG, RECL=8,

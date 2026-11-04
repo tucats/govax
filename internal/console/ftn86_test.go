@@ -277,6 +277,17 @@ func TestFTN86Oracle(t *testing.T) {
 
 	delete(want, "FTNRTL")
 
+	// VMS built the FTNRTL of its day, when OPEN of an indexed file was NOTIMP (2). An
+	// indexed file with no keys is now INVKEYSPE (49), as VMS's FORRTL says (testdata/for88's
+	// #42). This is the only line of these sections to expect a new run to change.
+	for _, name := range []string{"RELATIVE", "RELATIVEN"} {
+		if !strings.Contains(want[name], "INDEXED  2\n") {
+			t.Errorf("%s: no line for an indexed file in VMS's log", name)
+		}
+
+		want[name] = strings.Replace(want[name], "INDEXED  2\n", "INDEXED 49\n", 1)
+	}
+
 	for name, text := range want {
 		base := strings.TrimSuffix(name, "N")
 		if _, ok := ftn86VMSDifferences[name]; ok {

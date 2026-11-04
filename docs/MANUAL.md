@@ -1738,7 +1738,7 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
 
 Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default) into MACRO-32
 source files, which MACRO assembles and LINK links. It compiles the whole language;
-what's missing is indexed files, which fail when the program runs, and DICTIONARY, which
+what's missing is the record statements on indexed files, which fail when the program runs, and DICTIONARY, which
 draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
@@ -4895,7 +4895,7 @@ and RTL routines, condition handlers, ASTs, exit handlers, and the system
 subroutines (section 14.8). The compiler optimizes what it writes by default
 (section 14.9), and has listings, cross references, run-time checks (section
 14.3), and the debugger (section 14.10). The language's largest omissions are
-indexed files and DICTIONARY (section 14.7).
+the record statements on indexed files and DICTIONARY (section 14.7).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -5322,10 +5322,11 @@ output it prints, and programs of several files in its `modules` directory.
   DELETE is `DELERR`, and REWRITE works where the record keeps its length (or the file's
   records are fixed-length); on a unit not open DELETE is `DELERR`, UNLOCK `UNLERR`
   (56), and REWRITE `NO_CURREC`.
-- **Indexed files and keyed READs** (`ORGANIZATION='INDEXED'`, `READ (u, KEY=k)`) aren't
-  there, since RMS has no indexed files: OPEN of an indexed file is FOR's `NOTIMP` (2), and a keyed READ
-  connects its unit as a READ would and is `OPEDEFREQ` (26) on a unit not opened
-  `ACCESS='KEYED'`, as VMS's library says of such a unit.
+- **Indexed files.** OPEN (`ORGANIZATION='INDEXED'`, `KEY=`), CLOSE, and INQUIRE work as
+  VMS's FORRTL's do, but the record statements on such a unit aren't all there yet: a keyed READ
+  is `NOTIMP` on a unit opened `ACCESS='KEYED'`, and `OPEDEFREQ` (26) on any other. A unit
+  opened with `USEROPEN=` may reach its RAB by `FTN$RAB(unit)`, the unit by reference, as
+  VMS's `FOR$RAB`: 0 if it has no file.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`
@@ -5965,6 +5966,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$IO_END()` | Ends the statement, writing its last record, and returns its status in R0: 0, -1 at an end of file, or the error's FOR number; signals the error if the control block names none of ERR=, END=, and IOSTAT= |
 | `FTN$READ_SU(icb, unit)`, `FTN$WRITE_SU(icb, unit)` | Start an unformatted sequential READ or WRITE |
 | `FTN$READ_DF(icb, unit, format, rec)`, `FTN$WRITE_DF`, `FTN$READ_DU(icb, unit, rec)`, `FTN$WRITE_DU` | Start a direct access READ or WRITE of record `rec` (by value), formatted or unformatted |
+| `FTN$RAB(unit)` | The address of a connected unit's RAB in R0, or 0: `unit` by reference |
 | `FTN$REWRITE_SF(icb, unit, format)`, `FTN$REWRITE_SU(icb, unit)` | Start a REWRITE of the unit's current record, formatted or unformatted |
 | `FTN$READ_KF(icb, unit, format, key, keyid, match)`, `FTN$READ_KU(icb, unit, key, keyid, match)` | Start a keyed READ (`key` a descriptor, `keyid` by value, -1 with no KEYID=, when the unit goes on with its last; `match` by value: 0 KEY= or KEYEQ=, 1 KEYGE=, 2 KEYGT=, 3 KEYNXT=, 4 KEYNXTNE=, 5 KEYLE=, 6 KEYLT=): until indexed files, OPEDEFREQ or NOTIMP |
 | `FTN$OPEN(icb, unit, keyword, value, ...)`, `FTN$CLOSE(...)` | OPEN and CLOSE: after the unit (by value), each keyword a longword of its code (bits 0 to 7, VMS's library's codes) and how its value comes (bits 8 to 15: 4 the value itself, 7 a descriptor's address, 3 or 5 a word's or longword's address), then the value (KEY=, code 23, the address of a block: a word, a word counting the longwords after it, then for each key three longwords, its type, 14 CHARACTER or 8 INTEGER with 512 added for DESCENDING, its first byte, and its last byte); returns the status as `FTN$IO_END` does |
@@ -6096,7 +6098,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 
 | What | What happens |
 | --- | --- |
-| Indexed files and keyed access | OPEN of one is FOR's `NOTIMP`, and a keyed READ `OPEDEFREQ` or `NOTIMP` (section 14.2); RMS has no indexed files |
+| Keyed access | OPEN, CLOSE, and INQUIRE of an indexed file work; a keyed READ is `OPEDEFREQ` or `NOTIMP` (section 14.2) |
 | `DICTIONARY` | `%FORT-E-NOTIMPL`: there is no Common Data Dictionary |
 | `CONVERT=` other than `'NATIVE'` | FOR's `NOTIMP` when the OPEN is done |
 | Files on the host, for a running program | A program's RMS reaches only mounted volumes; the compiler itself reads and writes either |

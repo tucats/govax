@@ -20,8 +20,17 @@
 ; "Round 2's FORRTL program". A relative file (ORGANIZATION='RELATIVE') has
 ; fixed-length records unless RECORDTYPE says VARIABLE, and RECL is their
 ; length; a relative file found by an OPEN that names no organization is opened
-; as one (#576). An indexed file is FOR$_NOTIMP, until a later program
-; (Decision 13).
+; as one (#576).
+;
+; An indexed file (ORGANIZATION='INDEXED') has fixed-length records unless
+; RECORDTYPE says VARIABLE, and its keys are KEY='s (docs/PHASE-88 - keyed index
+; files.md, testdata/for88's README). KEY= passes a block: a word no one reads, a
+; word counting the longwords after it, then for each key its type, first byte,
+; and last byte. Each key becomes an XABKEY in the FAB's chain, on this routine's
+; stack, so the chain is cut before the routine returns. On a new file RMS makes
+; those keys. On a file that is there RMS writes the file's own into them, and
+; each must have the place, length, and direction KEY= gave (VMS doesn't compare
+; a string with an integer, #137).
 ;
 ; CONVERT= is taken, and NATIVE (0 or 9, or the text) is all FTNRTL converts
 ; to: any other is FOR$_NOTIMP when the OPEN is done (the author's answer to
@@ -42,6 +51,8 @@
 	$SSDEF
 	$XABDEF
 	$XABFHCDEF
+	$XABKEYDEF
+	$XABSUMDEF
 
 UB_OPEN		= 0			; A unit's block (FTN_UNITS)
 UB_KIND		= 4
@@ -60,6 +71,8 @@ UB_STS		= 8
 UB_STV		= 12
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
+UB_NAM		= UB_RAB+RAB$C_BLN
+UB_XAB		= UB_NAM+NAM$C_BLN
 UB_ASV		= 620
 UB_ASVSIZE	= UB_ASV+4
 UB_MAXREC	= UB_ASV+12
@@ -76,13 +89,16 @@ FOR$_KEYVALERR	= ^X0018816C
 FOR$_INCOPECLO	= ^X00188174
 FOR$_INCFILORG	= ^X0018819C
 FOR$_OPEFAI	= ^X001880F4
+FOR$_INVARGFOR	= ^X00188184
+FOR$_INVKEYSPE	= ^X0018818C
 
 ; The keywords' values, kept in a longword per code on the stack, R11 their
 ; base: 0 if the keyword wasn't given, which for a number means the same. After
-; them, ASSOCIATEVARIABLE's mechanism, which says the variable's width.
+; them, ASSOCIATEVARIABLE's mechanism, which says the variable's width, and KEY's.
 CODES		= 29
 OPS_ASVMECH	= CODES*4
-OPS_SIZE	= OPS_ASVMECH+4
+OPS_KEYMECH	= OPS_ASVMECH+4
+OPS_SIZE	= OPS_KEYMECH+4
 OPS_DISPOSE	= 2*4
 OPS_ACCESS	= 4*4
 OPS_FORM	= 5*4
@@ -109,6 +125,7 @@ OPS_CONVERT	= 27*4
 
 CODE_FILE	= 14
 CODE_ASSOC	= 17
+CODE_KEY	= 23
 CODE_DEFAULT	= 26
 
 MECHANISM_WORD	= 3			; a word, at the next argument's address
@@ -143,8 +160,15 @@ DSC$K_DTYPE_T	= 14
 
 DEFAULT_RECL	= 133			; Table 9-3, with no RECL=
 DEFAULT_SEG	= 2044			; an unformatted unit's, in bytes, by VMS's run
+DEFAULT_FIX	= 128			; one of fixed-length records, the same (for88's #101)
+
+KEY_DESCENDING	= 9			; the bit of a key's type that says so
+KEY_MOST	= 255			; the keys RMS allows, and a key's longest
+DESCENDING_DTP	= 32			; what makes an XABKEY's type descending
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+PROTO_SUM:	$XABSUM
 
 ;
 ; The texts of the choices: a counted string and the number it means, then a 0.
@@ -313,7 +337,10 @@ START:	MOVAB	4(SP),R11
 30$:	CMPL	R2,#CODES
 	BGEQU	10$
 	MOVL	R1,(R11)[R2]
-	CMPL	R2,#CODE_ASSOC
+	CMPL	R2,#CODE_KEY
+	BNEQ	35$
+	MOVL	R3,OPS_KEYMECH(R11)
+35$:	CMPL	R2,#CODE_ASSOC
 	BNEQ	10$
 	MOVL	R3,OPS_ASVMECH(R11)	; the associated variable's width
 	BRB	10$
@@ -451,11 +478,19 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 7$:	MOVL	OPS_STATUS(R11),R2
 	MOVL	OPS_DISPOSE(R11),R3
 	;
-	; Indexed files aren't here yet.
+	; An indexed file is read in sequence or by key, its records fixed or
+	; variable in length (for88's #58, #60, #74, #76). Only it has keys.
 	;
 	CMPL	OPS_ORG(R11),#ORG_INDEXED
 	BNEQ	10$
-	BRW	NOT_YET
+	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
+	BEQL	8$
+	CMPL	OPS_ACCESS(R11),#ACCESS_APPEND
+	BEQL	8$
+	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
+	BGEQ	8$
+	BRB	14$
+8$:	BRW	BAD_KEYWORDS
 10$:	TSTL	OPS_KEY(R11)
 	BEQL	12$
 	BRW	BAD_KEYWORDS
@@ -508,11 +543,13 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 24$:	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
 	BNEQ	241$
 	TSTL	OPS_ORG(R11)
-	BNEQ	15$			; indexed went above
+	BEQL	241$
+	CMPL	OPS_ORG(R11),#ORG_INDEXED
+	BNEQ	15$
 	;
-	; Direct or keyed access is to FIXED records, a relative file's aren't
-	; STREAM, and are FIXED unless it says (but for a file that is there,
-	; which has its own).
+	; Direct or keyed access is to FIXED records, a relative or indexed
+	; file's aren't STREAM, and are FIXED unless it says (but for a file that
+	; is there, or may be, which has its own).
 	;
 241$:	BSBW	KEYLIKE
 	BNEQ	26$
@@ -522,22 +559,24 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	BRB	26$
 25$:	CMPL	OPS_TYPE(R11),#TYPE_FIXED
 	BEQL	26$
-	CMPL	OPS_ORG(R11),#ORG_RELATIVE ; a relative file's may vary (#574)
-	BNEQ	15$
+	CMPL	OPS_ORG(R11),#ORG_SEQ	; a relative file's may vary (#574), and an
+	BLEQ	15$			;  indexed one's (unconfirmed: Table 9-3)
 	CMPL	OPS_TYPE(R11),#TYPE_VARIABLE
 	BNEQ	15$
 26$:	CMPL	OPS_ORG(R11),#ORG_RELATIVE
-	BNEQ	30$
+	BLSS	30$
 	CMPL	OPS_TYPE(R11),#TYPE_STREAM
 	BGEQ	15$
 	TSTL	OPS_TYPE(R11)
 	BNEQ	30$
 	CMPL	R2,#STATUS_OLD
 	BEQL	30$
+	TSTL	OPS_READONLY(R11)
+	BNEQ	30$
 	MOVL	#TYPE_FIXED,OPS_TYPE(R11)
 	;
 	; The numbers. RECL's limits by its units, and it is mandatory for a
-	; new file of FIXED records.
+	; new file of FIXED records. READONLY can only find a file (for88's #122).
 	;
 30$:	MOVL	OPS_RECL(R11),R4
 	BLSS	38$
@@ -552,6 +591,8 @@ RULES:	TSTL	OPS_STATUS(R11)		; none is NEW (FORRTL's rule; the compiler
 	BNEQ	40$
 	CMPL	R2,#STATUS_OLD		; an existing file has its own
 	BEQL	40$
+	TSTL	OPS_READONLY(R11)
+	BNEQ	40$
 	CMPL	OPS_TYPE(R11),#TYPE_FIXED
 	BEQL	38$
 	CMPL	OPS_ORG(R11),#ORG_RELATIVE
@@ -636,14 +677,23 @@ SETUP:	PUSHL	R7
 	BNEQ	25$
 	MOVL	#DEFAULT_RECL,R4
 	BRB	25$
-20$:	TSTL	OPS_TYPE(R11)		; unformatted: segmented unless it says
-	BEQL	21$
-	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
+20$:	TSTL	OPS_TYPE(R11)		; unformatted: segmented unless it says,
+	BNEQ	201$			;  or the file has fixed-length records
+	CMPL	OPS_ORG(R11),#ORG_RELATIVE
+	BLSS	21$
+	BRB	22$
+201$:	CMPL	OPS_TYPE(R11),#TYPE_SEGMENTED
 	BNEQ	22$
 21$:	MOVB	#1,UB_SEGMENTED(R7)
 22$:	TSTL	R4
 	BNEQ	23$
 	MOVL	#DEFAULT_SEG,R4
+	BLBS	UB_SEGMENTED(R7),25$
+	CMPL	OPS_TYPE(R11),#TYPE_VARIABLE
+	BEQL	25$
+	CMPL	OPS_TYPE(R11),#TYPE_STREAM
+	BGEQ	25$
+	MOVL	#DEFAULT_FIX,R4
 	BRB	25$
 23$:	ASHL	#2,R4,R4
 	BLBC	UB_SEGMENTED(R7),25$
@@ -656,8 +706,14 @@ SETUP:	PUSHL	R7
 	MOVAB	FORMATS,R1
 	MOVB	(R1)[R0],FAB$B_RFM(R6)
 	CMPL	OPS_ORG(R11),#ORG_RELATIVE ; a relative file's cells are as long
-	BNEQ	251$			;  as its longest record, whatever the type
-	MOVB	#FAB$C_REL,FAB$B_ORG(R6)
+	BLSS	251$			;  as its longest record, whatever the type,
+	BNEQ	249$			;  as an indexed file's records may be, and
+	MOVB	#FAB$C_REL,FAB$B_ORG(R6) ;  with no type its FAB asks for FIXED
+	BRB	250$
+249$:	MOVB	#FAB$C_IDX,FAB$B_ORG(R6)
+250$:	TSTL	R0
+	BNEQ	252$
+	MOVB	#FAB$C_FIX,FAB$B_RFM(R6)
 	BRB	252$
 251$:	CMPL	R0,#TYPE_FIXED
 	BNEQ	26$
@@ -715,9 +771,12 @@ SETUP:	PUSHL	R7
 	BISL2	#RAB$M_EOF,RAB$L_ROP(R10)
 	BICL2	#FAB$M_NEF,FAB$L_FOP(R6)
 37$:	BSBW	KEYLIKE
-	BNEQ	39$
+	BEQL	371$
+	BRW	39$
+371$:	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT ; only a direct unit has a next record
+	BNEQ	372$
 	MOVL	#1,UB_NEXTREC(R7)
-	MOVL	OPS_MAXREC(R11),UB_MAXREC(R7) ; FTNRTL's own limit (FTN_UNITS)
+372$:	MOVL	OPS_MAXREC(R11),UB_MAXREC(R7) ; FTNRTL's own limit (FTN_UNITS)
 	MOVL	OPS_ASSOC(R11),UB_ASV(R7) ; the associated variable, a word by
 	MOVL	#4,UB_ASVSIZE(R7)	;  mechanism 3 or (as FORRTL took it) 4
 	CMPL	OPS_ASVMECH(R11),#MECHANISM_WORD
@@ -729,10 +788,107 @@ SETUP:	PUSHL	R7
 	CMPL	OPS_ACCESS(R11),#ACCESS_DIRECT
 	BNEQ	39$
 	BISL2	#RAB$M_UIF,RAB$L_ROP(R10)
+39$:	BRW	KEYS
+
+;
+; KEYS: the XABs after the unit's XABFHC, on the stack: an XABSUM, as VMS's has
+; for every file (#374), then an XABKEY for each key KEY= gave. Each key's XAB has
+; its type, place, length, and number, and an alternate may have duplicates and
+; change (for88's #18). Every other field is 0, which is RMS's choice.
+; A list that isn't a list is FOR$_INVARGFOR, and bounds that aren't a key's are
+; FOR$_INVKEYSPE, before any of it reaches RMS.
+;
+KEYS:	SUBL2	#XAB$C_SUMLEN,SP
+	MOVC3	#XAB$C_SUMLEN,PROTO_SUM,(SP)
+	MOVL	SP,UB_XAB+XAB$L_NXT(R7)
+	MOVL	SP,R8			; the last XAB in the chain
+	MOVL	OPS_KEY(R11),R2
+	BNEQ	2$
+	BRW	OPEN_FILE
+2$:	CMPL	OPS_KEYMECH(R11),#MECHANISM_VALUE
+	BNEQ	4$
+	MOVZWL	2(R2),R3		; how many longwords
+	CLRL	R4
+	EDIV	#3,R3,R3,R0
+	TSTL	R0
+	BNEQ	4$
+	CMPL	R3,#KEY_MOST
+	BLEQ	5$
+4$:	MOVL	#FOR$_INVARGFOR,R0
+	BRW	FAILED
+5$:	TSTL	R3
+	BNEQ	6$
+	BRW	OPEN_FILE
+6$:	MULL3	#XAB$C_KEYLEN,R3,R0
+	SUBL2	R0,SP
+	PUSHR	#^M<R2,R3>
+	MOVC5	#0,(SP),#0,R0,8(SP)
+	POPR	#^M<R2,R3>
+	MOVAB	4(R2),R2		; the first key's type
+	MOVL	SP,R5			; R5 its XAB
+	CLRL	R4			; R4 its number
 	;
-	; Open it, by the status. READONLY with 'UNKNOWN' only opens.
+	; The type: a string, or an integer, signed or not, of the key's length.
 	;
-39$:	MOVL	OPS_STATUS(R11),R0
+10$:	MOVZBL	(R2),R0
+	MOVL	#XAB$C_STG,R1
+	TSTL	R0
+	BEQL	20$
+	CMPL	R0,#DSC$K_DTYPE_T
+	BEQL	20$
+	MOVL	#XAB$C_IN2,R1
+	CMPL	R0,#7
+	BEQL	20$
+	CMPL	R0,#8
+	BEQL	15$
+	MOVL	#XAB$C_BN2,R1
+	CMPL	R0,#3
+	BEQL	20$
+	CMPL	R0,#4
+	BEQL	15$
+	BRW	4$
+15$:	SUBL3	4(R2),8(R2),R0		; the longer form, for 4 bytes
+	CMPL	R0,#3
+	BNEQ	20$
+	ADDL2	#XAB$C_IN4-XAB$C_IN2,R1
+20$:	BBC	#KEY_DESCENDING,(R2),25$
+	ADDL2	#DESCENDING_DTP,R1
+25$:	MOVB	R1,XAB$B_DTP(R5)
+	;
+	; The bytes, from 1.
+	;
+	MOVL	4(R2),R0
+	BLEQ	30$
+	SUBL3	R0,8(R2),R1
+	BLSS	30$
+	CMPL	R1,#KEY_MOST-1
+	BLEQ	35$
+30$:	MOVL	#FOR$_INVKEYSPE,R0
+	BRW	FAILED
+35$:	INCL	R1
+	DECL	R0
+	MOVW	R0,XAB$W_POS0(R5)
+	MOVB	R1,XAB$B_SIZ0(R5)
+	MOVB	#XAB$C_KEY,XAB$B_COD(R5)
+	MOVB	#XAB$C_KEYLEN,XAB$B_BLN(R5)
+	MOVB	R4,XAB$B_REF(R5)
+	TSTL	R4
+	BEQL	40$
+	MOVB	#XAB$M_DUP!XAB$M_CHG,XAB$B_FLG(R5)
+40$:	MOVL	R5,XAB$L_NXT(R8)
+	MOVL	R5,R8
+	ADDL2	#12,R2
+	ADDL2	#XAB$C_KEYLEN,R5
+	INCL	R4
+	CMPL	R4,R3
+	BGEQ	OPEN_FILE
+	BRW	10$
+
+;
+; Open it, by the status. READONLY with 'UNKNOWN' only opens.
+;
+OPEN_FILE:
+	MOVL	OPS_STATUS(R11),R0
 	CMPL	R0,#STATUS_OLD
 	BEQL	50$
 	CMPL	R0,#STATUS_SCRATCH
@@ -777,8 +933,8 @@ EXISTING:
 	BEQL	5$
 	CLRB	UB_SEGMENTED(R7)
 	;
-	; Its organization: the one asked for, or any but indexed if none was
-	; (#576); and only an indexed file has keys (round 2's #32).
+	; Its organization: the one asked for, or any if none was (#576, for88's
+	; #93); and only an indexed file has keys (round 2's #32).
 	;
 5$:	MOVZBL	FAB$B_ORG(R6),R0
 	MOVL	#ORG_SEQ,R1
@@ -787,19 +943,49 @@ EXISTING:
 	MOVL	#ORG_RELATIVE,R1
 	CMPL	R0,#FAB$C_REL
 	BEQL	7$
-	MOVL	#FOR$_NOTIMP,R2		; indexed: not here yet
-	TSTL	OPS_ORG(R11)
-	BEQL	80$
-	MOVL	#FOR$_INCFILORG,R2	;  or not what was asked for
-	BRB	80$
+	MOVL	#ORG_INDEXED,R1
 7$:	MOVL	#FOR$_INCFILORG,R2
 	TSTL	OPS_ORG(R11)
 	BEQL	8$
 	CMPL	R1,OPS_ORG(R11)
-	BNEQ	80$
-8$:	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
-	BEQL	80$
-	MOVL	#FOR$_INCRECLEN,R2
+	BNEQ	18$
+8$:	CMPL	R1,#ORG_INDEXED
+	BEQL	9$
+	CMPL	OPS_ACCESS(R11),#ACCESS_KEYED
+	BEQL	18$
+	;
+	; Each key KEY= gave must be the file's, now in its XAB, but for being
+	; a string or an integer (for88's #125 to #141). Fewer than the file has
+	; will do; RMS refused more ($OPEN, RMS$_REF).
+	;
+9$:	MOVL	OPS_KEY(R11),R3
+	BEQL	19$
+	MOVZWL	2(R3),R4		; the longwords
+	BEQL	19$
+	MOVAB	4(R3),R3
+	MOVL	UB_XAB+XAB$L_NXT(R7),R5	; the XABSUM
+	MOVL	#FOR$_INVKEYSPE,R2
+10$:	MOVL	XAB$L_NXT(R5),R5
+	BEQL	19$			; a USEROPEN routine's chain may be shorter
+	CMPB	XAB$B_COD(R5),#XAB$C_KEY
+	BNEQ	10$
+	SUBL3	#1,4(R3),R0
+	CMPW	R0,XAB$W_POS0(R5)
+	BNEQ	18$
+	SUBL3	4(R3),8(R3),R0
+	INCL	R0
+	CMPB	R0,XAB$B_SIZ0(R5)
+	BNEQ	18$
+	EXTZV	#KEY_DESCENDING,#1,(R3),R0
+	EXTZV	#5,#1,XAB$B_DTP(R5),R1
+	CMPL	R0,R1
+	BNEQ	18$
+	ADDL2	#12,R3
+	SUBL2	#3,R4
+	BGTR	10$
+	BRB	19$
+18$:	BRW	80$
+19$:	MOVL	#FOR$_INCRECLEN,R2
 	TSTL	OPS_RECL(R11)
 	BEQL	20$
 	MOVZWL	FAB$W_MRS(R6),R0
@@ -818,8 +1004,10 @@ EXISTING:
 
 ;
 ; USER_OPEN: the program's routine opens the file: its arguments the FAB, the
-; RAB, and the unit's number. A file it opened OLD is checked as any other;
-; one it may have made (any other status) is taken as it is.
+; RAB, and the unit's number. With 'OLD', or 'UNKNOWN' if it opened a file rather
+; than making one, which the FAB's status says, the file is checked as any other
+; (for88's #114, #120); a new one is taken as it is. A failure of the keys is
+; FOR$_INVKEYSPE (for88's #7, #27, #31), and any other FOR$_OPEFAI.
 ;
 USER_OPEN:
 	PUSHAL	UB_UNIT(R7)
@@ -829,13 +1017,26 @@ USER_OPEN:
 	BLBS	R0,10$
 	MOVL	R0,UB_STS(R7)		; its status, as RMS's
 	MOVL	FAB$L_STV(R6),UB_STV(R7)
+	MOVL	R0,R1
+	MOVL	#FOR$_INVKEYSPE,R0
+	CMPL	R1,#RMS$_SIZ
+	BEQL	FAILED
+	CMPL	R1,#RMS$_POS
+	BEQL	FAILED
+	CMPL	R1,#RMS$_NPK
+	BEQL	FAILED
 	MOVL	#FOR$_OPEFAI,R0
 	BRB	FAILED
 10$:	CMPL	OPS_STATUS(R11),#STATUS_OLD
+	BEQL	20$
+	CMPL	OPS_STATUS(R11),#STATUS_UNKNOWN
 	BNEQ	READY
-	BRW	EXISTING
+	CMPL	FAB$L_STS(R6),#RMS$_CREATED
+	BEQL	READY
+20$:	BRW	EXISTING
 
-READY:	PUSHL	R7
+READY:	CLRL	UB_XAB+XAB$L_NXT(R7)	; the XABs on the stack are gone next
+	PUSHL	R7
 	CALLS	#1,FTN$$UNIT_READY	; FTN_UNITS
 	BLBC	R0,FAILED
 	BRW	END
@@ -859,6 +1060,7 @@ BAD_NAME:
 ; The statement's error is the condition in R0.
 ;
 FAILED:	MOVL	R0,CTX_STATUS(R9)
+	CLRL	UB_XAB+XAB$L_NXT(R7)
 END:	CALLS	#0,FTN$IO_END		; FTN_STATEMENT: R0 the status, or signaled
 	RET
 

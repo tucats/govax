@@ -1,0 +1,157 @@
+	.TITLE	FOR88F - round 2's program on FTNRTL
+;
+; for88.mar calls VMS's FORTRAN run-time library, FOR$OPEN and the rest. FTNRTL's
+; statements take the compiler's arguments instead (ftn_open.mar's header), so this
+; module defines each FOR$ name the program calls, and passes the call on:
+;
+;	FOR$OPEN(unit, ERR=, keyword, ...)
+;	FTN$OPEN(control block, unit, keyword, value, keyword, value, ...)
+;
+; A FOR$ keyword is a longword, its code in bits 0 to 7 and its mechanism in bits 8
+; to 15. Mechanism 1 is the unit, in the high word. Mechanism 2 is a value in the
+; high word, and mechanism 0 a keyword with no value at all; FTNRTL takes either as
+; a value by mechanism 4. Any other has its value in the next argument, which is
+; FTNRTL's form as it stands. Code 3 by mechanism 2 is ERR=, a flag of the control
+; block.
+;
+; FTNRTL returns 0, -1 at an end of file, or a FOR number, where FORRTL returns a
+; condition value, which is what the program shows. So R0 is made a condition value.
+; TestFor88OnFTNRTL links this with for88.mar, and FTNRTL decides everything.
+; Statements FTNRTL can't do yet on an indexed file come back as FOR$_NOTIMP.
+;
+	.PSECT	FOR88F_DATA,NOEXE,WRT,LONG
+
+CONTROL:
+	.WORD	8			; its size
+FLAGS:	.WORD	0			; bit 0, ERR=
+	.LONG	0
+NEWARGS:
+	.BLKL	256
+
+	.PSECT	FOR88F_CODE,EXE,NOWRT,LONG
+
+;
+; TRANSLATE: this call's arguments into NEWARGS. R4 is 1 if the unit is an argument
+; of its own (OPEN, CLOSE), and 0 if a keyword like the others (INQUIRE).
+;
+TRANSLATE:
+	CLRW	FLAGS
+	MOVAB	CONTROL,NEWARGS+4
+	MOVAB	NEWARGS+8,R3		; where the next one goes
+	TSTL	R4
+	BEQL	5$
+	ADDL2	#4,R3			; past the unit's place
+5$:	MOVL	#1,R2
+10$:	MOVZBL	(AP),R0
+	CMPL	R2,R0
+	BGTR	90$
+	MOVL	(AP)[R2],R0
+	INCL	R2
+	EXTZV	#8,#8,R0,R1		; the mechanism
+	CMPL	R1,#1
+	BEQL	20$
+	CMPL	R1,#2
+	BEQL	30$
+	TSTL	R1
+	BEQL	40$
+	MOVL	R0,(R3)+		; as it stands
+	MOVL	(AP)[R2],(R3)+
+	INCL	R2
+	BRB	10$
+20$:	EXTV	#16,#16,R0,R1		; the unit
+	TSTL	R4
+	BEQL	25$
+	MOVL	R1,NEWARGS+8
+	BRB	10$
+25$:	MOVL	#^X0401,(R3)+
+	MOVL	R1,(R3)+
+	BRB	10$
+30$:	CMPB	R0,#3			; ERR=
+	BNEQ	35$
+	BISW2	#1,FLAGS
+	BRB	10$
+35$:	MOVZBL	R0,R1			; a value in the high word
+	BISL3	#^X0400,R1,(R3)+
+	EXTZV	#16,#16,R0,(R3)+
+	BRB	10$
+40$:	MOVZBL	R0,R1			; a keyword with no value
+	BISL3	#^X0400,R1,(R3)+
+	MOVL	#1,(R3)+
+	BRB	10$
+90$:	MOVAB	NEWARGS,R0		; the count
+	SUBL3	R0,R3,R1
+	ASHL	#-2,R1,R1
+	DECL	R1
+	MOVL	R1,NEWARGS
+	RSB
+
+;
+; CONDITION: R0, FTNRTL's status, as FORRTL's. A FOR number n is the condition
+; ^X188004 + 8n, each with the severity E but for those it doesn't matter to here.
+;
+CONDITION:
+	TSTL	R0
+	BNEQ	10$
+	MOVL	#1,R0
+	RSB
+10$:	BGTR	20$
+	MOVL	#24,R0			; ENDDURREA
+20$:	MULL2	#8,R0
+	ADDL2	#^X188004,R0
+	RSB
+
+	.ENTRY	FOR$OPEN,^M<R2,R3,R4>
+	MOVL	#1,R4
+	BSBW	TRANSLATE
+	CALLG	NEWARGS,G^FTN$OPEN
+	BSBW	CONDITION
+	RET
+
+	.ENTRY	FOR$CLOSE,^M<R2,R3,R4>
+	MOVL	#1,R4
+	BSBW	TRANSLATE
+	CALLG	NEWARGS,G^FTN$CLOSE
+	BSBW	CONDITION
+	RET
+
+	.ENTRY	FOR$INQUIRE,^M<R2,R3,R4>
+	CLRL	R4
+	BSBW	TRANSLATE
+	CALLG	NEWARGS,G^FTN$INQUIRE
+	BSBW	CONDITION
+	RET
+
+	.ENTRY	FOR$RAB,^M<>
+	CALLG	(AP),G^FTN$RAB
+	RET
+
+;
+; The record statements (subtask 13).
+;
+	.MACRO	NOT_YET	NAME
+	.ENTRY	NAME,^M<>
+	MOVL	#^X00188014,R0		; FOR$_NOTIMP
+	RET
+	.ENDM	NOT_YET
+
+	NOT_YET	FOR$BACKSPACE
+	NOT_YET	FOR$DELETE
+	NOT_YET	FOR$DELETE_D
+	NOT_YET	FOR$ENDFILE
+	NOT_YET	FOR$FIND
+	NOT_YET	FOR$IO_END
+	NOT_YET	FOR$IO_T_DS
+	NOT_YET	FOR$READ_DU
+	NOT_YET	FOR$READ_KO
+	NOT_YET	FOR$READ_KU
+	NOT_YET	FOR$READ_SO
+	NOT_YET	FOR$READ_SU
+	NOT_YET	FOR$REWIND
+	NOT_YET	FOR$REWRITE_SO
+	NOT_YET	FOR$REWRITE_SU
+	NOT_YET	FOR$UNLOCK
+	NOT_YET	FOR$WRITE_DU
+	NOT_YET	FOR$WRITE_SO
+	NOT_YET	FOR$WRITE_SU
+
+	.END

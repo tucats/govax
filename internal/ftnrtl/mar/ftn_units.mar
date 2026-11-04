@@ -166,6 +166,7 @@ FOR$_OPEFAI	= ^X001880F4
 FOR$_MIXFILACC	= ^X001880FC
 FOR$_INVLOGUNI	= ^X00188104
 FOR$_ERRDURREA	= ^X0018813C
+FOR$_INVKEYSPE	= ^X0018818C
 FOR$_INSVIRMEM	= ^X0018814C
 FOR$_NO_SUCDEV	= ^X00188154
 FOR$_FILNAMSPE	= ^X0018815C
@@ -480,7 +481,9 @@ EXIT_DECLARED:	.LONG	0
 ; A $OPEN or $CREATE failed with RMS's status: keeps it and its value in the
 ; block, and returns in R0 the FOR$_ condition VMS's library has for it (round
 ; 1 of testdata/for81): a file not found, a device that isn't there, a name
-; that can't be one, and for all the rest FOR$_OPEFAI.
+; that can't be one, keys RMS won't have (testdata/for88's #7, #27, #42, where a
+; USEROPEN routine returned them; unconfirmed without one), and for all the rest
+; FOR$_OPEFAI.
 ;
 	.ENTRY	FTN$$UNIT_FAILED,^M<R2>
 	MOVL	4(AP),R2
@@ -507,6 +510,13 @@ EXIT_DECLARED:	.LONG	0
 	CMPL	R1,#RMS$_TYP
 	BEQL	90$
 	CMPL	R1,#RMS$_VER
+	BEQL	90$
+	MOVL	#FOR$_INVKEYSPE,R0
+	CMPL	R1,#RMS$_SIZ
+	BEQL	90$
+	CMPL	R1,#RMS$_POS
+	BEQL	90$
+	CMPL	R1,#RMS$_NPK
 	BEQL	90$
 	MOVL	#FOR$_OPEFAI,R0
 90$:	RET
@@ -558,7 +568,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVZWL	FAB$W_MRS(R3),R0
 	BEQL	20$
 	MOVL	R0,UB_SIZE(R2)
-20$:	MOVL	UB_SIZE(R2),R0
+20$:	MOVW	UB_SIZE(R2),RAB$W_USZ(R4) ; as VMS's leaves it (testdata/for88)
+	MOVL	UB_SIZE(R2),R0
 	CMPL	R0,#MIN_BUFFER
 	BGEQ	22$
 	MOVL	#MIN_BUFFER,R0
@@ -689,6 +700,26 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	BLBS	UB_OPEN(R0),10$
 	CLRL	R0
 10$:	RET
+
+;
+; FTN$RAB(unit)
+;
+; A unit's RAB, for a program that calls RMS itself, as VMS's FOR$RAB gives it: the
+; unit's number by reference, R0 the RAB's address, or 0 if the unit has no file.
+;
+	.ENTRY	FTN$RAB,^M<>
+	MOVL	@4(AP),R1
+	CMPL	R1,#UNIT_LOW
+	BLSS	10$
+	CMPL	R1,#UNIT_HIGH
+	BGTR	10$
+	MOVL	UNITS+16[R1],R0
+	BEQL	20$
+	BLBC	UB_OPEN(R0),10$
+	MOVAB	UB_RAB(R0),R0
+	RET
+10$:	CLRL	R0
+20$:	RET
 
 ;
 ; FTN$$UNIT_NAMED(name, length)

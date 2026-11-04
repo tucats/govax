@@ -6,7 +6,7 @@ does becomes FTNRTL's requirement (only what it does is used, never its code). T
 program and its output are `testdata/for81`'s, whose README explains them, and the records are
 our own data.
 
-`gen.go` writes everything here but this README and the output files:
+`gen.go` writes everything here but this README, `for88f.mar`, and the output files:
 
     go run testdata/for88/gen.go
 
@@ -15,6 +15,7 @@ our own data.
 | `for88.mar` | 310 cases: KEY='s block, OPEN's keywords around it, an existing file, every match on every key, a keyed READ's arguments and failures, sequential READs after keyed ones, WRITE, REWRITE, DELETE, UNLOCK, positioning |
 | `for88.com`, `for88b.com` | Build and run it, then DIRECTORY, ANALYZE/RMS_FILE, and a save set of the files FORRTL made |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
+| `for88f.mar` | By hand: the `FOR$` names `for88.mar` calls, passed on to FTNRTL's `FTN$` routines, so `TestFor88OnFTNRTL` runs the cases on FTNRTL |
 | `vax/` | VMS's run: `for88-vax.txt`, `for88.log`, `for88.bck` |
 
 ## FORRTL's interface, found by calling it over govax (2026-11-04)
@@ -77,4 +78,6 @@ Allow several minutes: MACRO has 25,000 lines to read. If a case hangs, Ctrl/Y a
 
 `TestFor88Oracle` (`internal/console/for88_test.go`) runs the program on VMS's FORRTL.EXE over
 govax's RMS, holding its output and files to VMS's, or skips without one on a local volume. Set
-`FOR88_WRITE` to a file to keep its output.
+`FOR88_WRITE` to a file to keep its output. `TestFor88OnFTNRTL` (`for88ftn_test.go`) needs no
+FORRTL: it links the program with `for88f.mar`, and holds FTNRTL to `#0` to `#148` but `#92`,
+on `STD.IDX` as VMS made it.
