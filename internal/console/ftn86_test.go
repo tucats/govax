@@ -263,6 +263,16 @@ func TestFTN86Oracle(t *testing.T) {
 	log, _, _ := runFTN86(t)
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
 
+	// Programs newer than VMS's run, which TestFTN86Procedure holds to their own output
+	// until subtask 15 of docs/PHASE-88 runs this again.
+	for _, name := range []string{"PARTS", "PARTSN", "SHARED", "SHAREDN"} {
+		if _, ok := got[name]; !ok {
+			t.Errorf("no section %s in govax's log", name)
+		}
+
+		delete(got, name)
+	}
+
 	if len(got) != len(want) {
 		t.Errorf("%d sections, VMS's %d", len(got), len(want))
 	}

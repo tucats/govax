@@ -1,0 +1,291 @@
+	.TITLE	PHONES	An indexed file through RMS's services (Phase 88)
+;
+; A telephone book. Each record is a surname of 12 bytes, a given name of 8, a
+; number of 8, and then a note, which not every record has. Four keys:
+;
+;   0  name    two segments, the surname and the given name; no duplicates
+;   1  number  no duplicates, no changes
+;   2  area    the number's first 3 bytes, descending; duplicates and changes
+;   3  note    6 bytes past the end of a record without one, so such a record
+;              isn't in this key's index; duplicates and changes
+;
+; The program makes the file and works through RMS's record services, printing
+; each service's status by name and the record it reached. It leaves the file
+; for PHONESL.MAR, PHONESF.FOR, and DCL.
+;
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+	$XABSUMDEF
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+FAB:	$FAB	FNM=<PHONES.IDX>,ORG=IDX,RFM=VAR,MRS=60,RAT=CR,-
+		FAC=<GET,PUT,UPD,DEL>,XAB=KEY0
+RAB:	$RAB	FAB=FAB,UBF=BUF,USZ=60
+BUF:	.BLKB	60
+
+	.ALIGN	LONG
+KEY0:	$XABKEY	REF=0,DTP=STG,POS=<0,12>,SIZ=<12,8>,NXT=KEY1
+	.ALIGN	LONG
+KEY1:	$XABKEY	REF=1,DTP=STG,POS=<20>,SIZ=<8>,NXT=KEY2
+	.ALIGN	LONG
+KEY2:	$XABKEY	REF=2,DTP=DSTG,POS=<20>,SIZ=<3>,FLG=<DUP,CHG>,NXT=KEY3
+	.ALIGN	LONG
+KEY3:	$XABKEY	REF=3,DTP=STG,POS=<28>,SIZ=<6>,FLG=<DUP,CHG>
+	.ALIGN	LONG
+SUM:	$XABSUM
+
+; REC makes a record with a label, its length the word before it.
+	.MACRO	REC,LABEL,TEXT
+	.ALIGN	WORD
+	.WORD	LABEL'_E-LABEL
+LABEL:	.ASCII	"'TEXT'"
+LABEL'_E:
+	.ENDM	REC
+
+	REC	P1,<WALKER      ANN     617-1001GARDEN>
+	REC	P2,<ADAMS       JOE     212-2002>
+	REC	P3,<WALKER      BEN     212-3003CHESS and more>
+	REC	P4,<CHAN        LI      415-4004GARDEN>
+	REC	P5,<ADAMS       AMY     617-5005>
+	REC	P6,<MILLER      ZOE     212-6006TENNIS>
+	REC	DUP1,<ADAMS       JOE     999-9999>
+	REC	DUP2,<BAKER       TOM     617-1001>
+	REC	NEW1,<CHAN        LI      415-4444GARDEN>
+	REC	NEW2,<CHANG       LI      415-4004GARDEN>
+	REC	NEW3,<CHAN        LI      415-4004GARDEN and pond and a long note>
+	REC	NEW4,<CHAN        LI      415-4004CHESS >
+
+FSUM:	.ASCID	/keys !UB areas !UB prolog !UW/
+RFA1:	.LONG	0,0
+
+; SHOW prints a label and the status in R0, and the status stays in R0.
+	.MACRO	SHOW,LABEL,?L
+	.SAVE_PSECT
+	.PSECT	LABELS,NOWRT,NOEXE,LONG
+L:	.ASCID	/'LABEL'/
+	.RESTORE_PSECT
+	PUSHL	R0
+	PUSHAQ	L
+	CALLS	#2,PH_SHOW
+	.ENDM	SHOW
+
+; SECTION prints a line of its own.
+	.MACRO	SECTION,LABEL,?L
+	.SAVE_PSECT
+	.PSECT	LABELS,NOWRT,NOEXE,LONG
+L:	.ASCID	/-- 'LABEL'/
+	.RESTORE_PSECT
+	PUSHAQ	L
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SECTION
+
+; GETKEY sets the RAB for a keyed search and does a $GET: the key's number, its
+; text's label, its text's size, and any of ROP's options.
+	.MACRO	GETKEY,KRF,TXT,OPTIONS=0,?L
+	.SAVE_PSECT
+	.PSECT	LABELS,NOWRT,NOEXE,LONG
+L:	.ASCII	"'TXT'"
+	.NCHR	$$N,<TXT>
+	.RESTORE_PSECT
+	MOVB	#KRF,RAB+RAB$B_KRF
+	MOVB	#RAB$C_KEY,RAB+RAB$B_RAC
+	MOVAB	L,RAB+RAB$L_KBF
+	MOVB	#$$N,RAB+RAB$B_KSZ
+	MOVL	#OPTIONS,RAB+RAB$L_ROP
+	$GET	RAB=RAB
+	.ENDM	GETKEY
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R2,R3>
+	CLRB	KEY1+XAB$B_FLG		; the macro gives an alternate DUP and CHG
+	$CREATE	FAB=FAB
+	SHOW	<CREATE>
+	$CONNECT RAB=RAB
+	SHOW	<CONNECT>
+	MOVB	#RAB$C_KEY,RAB+RAB$B_RAC
+	MOVAB	P1,R2
+	BSBW	PUT
+	MOVAB	P2,R2
+	BSBW	PUT
+	MOVAB	P3,R2
+	BSBW	PUT
+	MOVAB	P4,R2
+	BSBW	PUT
+	MOVAB	P5,R2
+	BSBW	PUT
+	MOVAB	P6,R2
+	BSBW	PUT
+	SECTION	<refused>
+	MOVAB	DUP1,R2
+	BSBW	PUT
+	SHOW	<PUT, same name>
+	MOVAB	DUP2,R2
+	BSBW	PUT
+	SHOW	<PUT, same number>
+
+	SECTION	<by name>
+	MOVB	#0,R2
+	BSBW	WALK
+	SECTION	<by area, largest first>
+	MOVB	#2,R2
+	BSBW	WALK
+	SECTION	<by note, those with one>
+	MOVB	#3,R2
+	BSBW	WALK
+
+	SECTION	<keyed>
+	GETKEY	0,<CHAN        LI      >
+	BSBW	GOT
+	GETKEY	0,<WALKER>
+	BSBW	GOT
+	GETKEY	0,<B>,OPTIONS=RAB$M_KGE
+	BSBW	GOT
+	GETKEY	0,<CHAN>,OPTIONS=RAB$M_KGT
+	BSBW	GOT
+	GETKEY	0,<N>,OPTIONS=<RAB$M_KGE!RAB$M_REV>
+	BSBW	GOT
+	GETKEY	0,<M>,OPTIONS=<RAB$M_KGT!RAB$M_REV>
+	BSBW	GOT
+	GETKEY	0,<BAKER>
+	SHOW	<GET, no such name>
+	GETKEY	1,<415-4004>
+	BSBW	GOT
+	GETKEY	3,<CHESS >
+	BSBW	GOT
+	GETKEY	2,<500>,OPTIONS=RAB$M_KGE
+	BSBW	GOT
+	GETKEY	2,<500>,OPTIONS=RAB$M_KGT
+	BSBW	GOT
+	GETKEY	0,<WALKER      ANN     AND MORE>
+	SHOW	<GET, key too long>
+	GETKEY	9,<A>
+	SHOW	<GET, no such key>
+	GETKEY	0,<A>,OPTIONS=RAB$M_REV
+	SHOW	<GET, REV alone>
+
+	SECTION	<limit and duplicates>
+	GETKEY	2,<617>
+	BSBW	GOT
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	MOVL	#RAB$M_LIM,RAB+RAB$L_ROP
+	$GET	RAB=RAB
+	BSBW	GOT
+	$GET	RAB=RAB
+	BSBW	GOT
+	GETKEY	2,<617>,OPTIONS=RAB$M_CDK
+	BSBW	GOT
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	$GET	RAB=RAB
+	BSBW	GOT
+
+	SECTION	<by address>
+	GETKEY	1,<617-5005>
+	MOVL	RAB+RAB$W_RFA,RFA1
+	MOVW	RAB+RAB$W_RFA+4,RFA1+4
+	GETKEY	0,<WALKER>
+	BSBW	GOT
+	MOVB	#RAB$C_RFA,RAB+RAB$B_RAC
+	MOVL	RFA1,RAB+RAB$W_RFA
+	MOVW	RFA1+4,RAB+RAB$W_RFA+4
+	CLRL	RAB+RAB$L_ROP
+	$GET	RAB=RAB
+	BSBW	GOT
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	$GET	RAB=RAB
+	BSBW	GOT
+
+	SECTION	<find, then read it>
+	GETKEY	0,<MILLER>
+	MOVB	#RAB$C_KEY,RAB+RAB$B_RAC
+	$FIND	RAB=RAB
+	SHOW	<FIND>
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	$GET	RAB=RAB
+	BSBW	GOT
+
+	SECTION	<update>
+	GETKEY	0,<CHAN>
+	MOVAB	NEW1,R2
+	BSBW	UPDATE
+	SHOW	<UPDATE, a new number>
+	GETKEY	0,<CHAN>
+	MOVAB	NEW2,R2
+	BSBW	UPDATE
+	SHOW	<UPDATE, a new name>
+	GETKEY	0,<CHAN>
+	MOVAB	NEW3,R2
+	BSBW	UPDATE
+	SHOW	<UPDATE, longer>
+	GETKEY	1,<415-4004>
+	BSBW	GOT
+	MOVAB	NEW4,R2
+	BSBW	UPDATE
+	SHOW	<UPDATE, shorter>
+	$UPDATE	RAB=RAB
+	SHOW	<UPDATE again>
+	GETKEY	1,<617-5005>
+	$DELETE	RAB=RAB
+	SHOW	<DELETE>
+	$DELETE	RAB=RAB
+	SHOW	<DELETE again>
+	GETKEY	1,<617-5005>
+	SHOW	<GET, deleted>
+	GETKEY	2,<617>
+	BSBW	GOT
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	CLRL	RAB+RAB$L_ROP
+	$GET	RAB=RAB
+	BSBW	GOT
+	$REWIND	RAB=RAB
+	SHOW	<REWIND>
+	$GET	RAB=RAB
+	BSBW	GOT
+	$CLOSE	FAB=FAB
+	SHOW	<CLOSE>
+
+	SECTION	<open again>
+	MOVAB	SUM,FAB+FAB$L_XAB
+	MOVB	#FAB$M_GET,FAB+FAB$B_FAC
+	$OPEN	FAB=FAB
+	SHOW	<OPEN>
+	MOVZWL	SUM+XAB$W_PVN,-(SP)
+	MOVZBL	SUM+XAB$B_NOA,-(SP)
+	MOVZBL	SUM+XAB$B_NOK,-(SP)
+	PUSHAQ	FSUM
+	CALLS	#4,PH_PRINT
+	$CLOSE	FAB=FAB
+	MOVL	#1,R0
+	RET
+
+; PUT writes the record at R2, by the word before it, and leaves its status.
+PUT:	MOVAB	(R2),RAB+RAB$L_RBF
+	MOVW	-2(R2),RAB+RAB$W_RSZ
+	$PUT	RAB=RAB
+	RSB
+
+; UPDATE is the same for $UPDATE.
+UPDATE:	MOVAB	(R2),RAB+RAB$L_RBF
+	MOVW	-2(R2),RAB+RAB$W_RSZ
+	$UPDATE	RAB=RAB
+	RSB
+
+; WALK reads key R2's records from its start, printing each and the last status.
+WALK:	MOVB	R2,RAB+RAB$B_KRF
+	$REWIND	RAB=RAB
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	CLRL	RAB+RAB$L_ROP
+10$:	$GET	RAB=RAB
+	BLBC	R0,20$
+	BSBW	GOT
+	BRB	10$
+20$:	SHOW	<GET>
+	RSB
+
+; GOT is PH_GOT, for the RAB here.
+GOT:	PUSHAB	RAB
+	PUSHL	R0
+	CALLS	#2,PH_GOT
+	RSB
+
+	.END	START

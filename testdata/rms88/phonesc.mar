@@ -1,0 +1,52 @@
+	.TITLE	PHONESC	The other process, for PHONESL (Phase 88)
+;
+; Reads the record PHONESL may hold: with no options; with ROP NLK, which doesn't
+; lock it, but won't read another's lock either; and with ROP RRL, which reads
+; regardless, a success of its own. With nobody else holding it, the first $GET
+; locks it, so the others are RMS$_OK_ALK. Then a record nobody holds, and a new
+; one, which a second run finds there.
+;
+	$RABDEF
+	$RMSDEF
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+FAB:	$FAB	FNM=<PHONES.IDX>,FAC=<GET,PUT>,SHR=<GET,PUT,UPD,DEL>
+RAB:	$RAB	FAB=FAB,UBF=BUF,USZ=60,RAC=KEY,KBF=KEY1,KSZ=20
+BUF:	.BLKB	60
+KEY1:	.ASCII	/WALKER      ANN     /
+KEY2:	.ASCII	/MILLER      ZOE     /
+NEW:	.ASCII	/OWENS       PAT     716-8008/
+LPUT:	.ASCID	/child PUT/
+LHEAD:	.ASCID	/-- the child/
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<>
+	PUSHAQ	LHEAD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	$OPEN	FAB=FAB
+	$CONNECT RAB=RAB
+	CLRL	RAB+RAB$L_ROP
+	BSBB	READ
+	MOVL	#RAB$M_NLK,RAB+RAB$L_ROP
+	BSBB	READ
+	MOVL	#RAB$M_RRL,RAB+RAB$L_ROP
+	BSBB	READ
+	CLRL	RAB+RAB$L_ROP
+	MOVAB	KEY2,RAB+RAB$L_KBF
+	BSBB	READ
+	MOVAB	NEW,RAB+RAB$L_RBF
+	MOVW	#28,RAB+RAB$W_RSZ
+	$PUT	RAB=RAB
+	PUSHL	R0
+	PUSHAQ	LPUT
+	CALLS	#2,PH_SHOW
+	$CLOSE	FAB=FAB
+	MOVL	#1,R0
+	RET
+
+READ:	$GET	RAB=RAB
+	PUSHAB	RAB
+	PUSHL	R0
+	CALLS	#2,PH_GOT
+	RSB
+	.END	START

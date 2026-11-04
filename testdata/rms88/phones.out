@@ -1,0 +1,75 @@
+CREATE NORMAL
+CONNECT NORMAL
+-- refused
+PUT, same name DUP
+PUT, same number DUP
+-- by name
+  ADAMS       AMY     617-5005
+  ADAMS       JOE     212-2002
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+  WALKER      ANN     617-1001GARDEN
+  WALKER      BEN     212-3003CHESS and more
+GET EOF
+-- by area, largest first
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+  CHAN        LI      415-4004GARDEN
+  ADAMS       JOE     212-2002
+  WALKER      BEN     212-3003CHESS and more
+  MILLER      ZOE     212-6006TENNIS
+GET EOF
+-- by note, those with one
+  WALKER      BEN     212-3003CHESS and more
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+GET EOF
+-- keyed
+  CHAN        LI      415-4004GARDEN
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+  MILLER      ZOE     212-6006TENNIS
+  CHAN        LI      415-4004GARDEN
+GET, no such name RNF
+  CHAN        LI      415-4004GARDEN
+  WALKER      BEN     212-3003CHESS and more
+  CHAN        LI      415-4004GARDEN
+  CHAN        LI      415-4004GARDEN
+GET, key too long KSZ
+GET, no such key KRF
+GET, REV alone ROP
+-- limit and duplicates
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+status OK_LIM
+  CHAN        LI      415-4004GARDEN
+status OK_DUP
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+-- by address
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+  ADAMS       JOE     212-2002
+-- find, then read it
+FIND NORMAL
+  MILLER      ZOE     212-6006TENNIS
+-- update
+UPDATE, a new number CHG
+UPDATE, a new name CHG
+UPDATE, longer NORMAL
+  CHAN        LI      415-4004GARDEN and pond and a long note
+UPDATE, shorter OK_DUP
+UPDATE again CUR
+DELETE NORMAL
+DELETE again CUR
+GET, deleted RNF
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004CHESS 
+REWIND NORMAL
+  WALKER      ANN     617-1001GARDEN
+CLOSE NORMAL
+-- open again
+OPEN NORMAL
+keys 4 areas 1 prolog 3
