@@ -4496,8 +4496,8 @@ $FOR
     concatenation), and every intrinsic function, in line or by MTHRTL;
     every IF, DO, and GO TO, CALL, RETURN, STOP, and PAUSE; READ, WRITE,
     and the other I/O statements, and OPEN and the other file statements,
-    on sequential and relative files.  Indexed files aren't there: OPEN of
-    one fails when the program runs.  DICTIONARY draws %FORT-E-NOTIMPL.  A
+    on sequential, relative, and indexed files, the keyed READ with every
+    key specifier among them.  DICTIONARY draws %FORT-E-NOTIMPL.  A
     program compiles, links, and runs:
 
         FORTRAN AVERAGE

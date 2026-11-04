@@ -58,8 +58,8 @@ programs to run as they would under VMS:
 - **RMS**, on real Files-11 (ODS-2) disk volumes: `$OPEN`, `$CREATE`,
   `$CONNECT`, `$GET`, `$PUT`, `$UPDATE`, `$FIND`, `$DELETE`, `$PARSE`,
   `$SEARCH`, and the rest, with FABs, RABs, NAM blocks, and XABs, file
-  sharing between processes, and record locks, on sequential and relative
-  files laid out as VMS lays them out.
+  sharing between processes, and record locks, on sequential, relative, and
+  indexed files laid out as VMS lays them out.
 - **The run-time library.** About 170 `LIB$` routines (strings,
   descriptors, conversions, dates and times, memory zones, condition
   handling, file searches, the CLI routines, `LIB$SPAWN`), and the whole
@@ -1219,9 +1219,14 @@ COPY source[/HOST] destination[/HOST]
 Copies files between the host and a volume, or between volume locations
 (see [Moving files](#moving-files-between-the-host-and-a-volume)). A
 destination that's only a directory, or whose name is `*`, takes each
-source file's name; a `*` type takes the source's type. A wildcarded
+source file's name; a `*` type, or none, takes the source's type, and a
+type given as nothing (`NOTYPE.`, `.;1`) is the null type. A wildcarded
 source copies every match. A copy never replaces an existing version:
-with no version in the destination, the copy is the next version.
+with no version in the destination, a copy between volume files has the
+source's version, or the next if one as high is there, as VMS's COPY
+does. A volume copy keeps the source's contiguity, and an indexed file
+whose prolog RMS can't read isn't copied (`%COPY-E-OPENIN`, with RMS's
+status).
 
 `/RECORD_FORMAT` is govax's own, with the three qualifiers that go with it,
 named as in FDL's RECORD section. A Files-11 file's header says how its bytes
@@ -1737,9 +1742,8 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
 ```
 
 Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default) into MACRO-32
-source files, which MACRO assembles and LINK links. It compiles the whole language;
-what's missing is the record statements on indexed files, which fail when the program runs, and DICTIONARY, which
-draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
+source files, which MACRO assembles and LINK links. It compiles the whole language
+but DICTIONARY, which draws the message below ([section 14.7](#147-differences-from-vax-fortran)). The MACRO file holds every source line as a comment,
 with its number, before the instructions it became. Sources and the MACRO file follow MACRO's
 rules for a source and its object: the MACRO file has the source's name
 with the type `MAR`, beside the source, unless `/MACRO=` names another;
@@ -4886,16 +4890,16 @@ expression in every type with every intrinsic function, all of the language's
 control statements and subprograms, and every I/O and file statement, with
 FORMAT checked as it compiles. FTNRTL runs formatted input and output, with
 every edit descriptor and variable format expressions, list-directed, namelist,
-and unformatted input and output, sequential and direct access, on sequential
-and relative files through OPEN (USEROPEN= too), CLOSE, INQUIRE, REWIND,
-BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and UNLOCK (section
-14.2). DEC's data extensions compile too, structures and records among them, and
+and unformatted input and output, sequential, direct, and keyed access, on
+sequential, relative, and indexed files through OPEN (USEROPEN= too), CLOSE,
+INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE, FIND, REWRITE, DELETE, and
+UNLOCK (section 14.2). DEC's data extensions compile too, structures and records among them, and
 a program can use VMS as VMS programmers did: definition modules, system services
 and RTL routines, condition handlers, ASTs, exit handlers, and the system
 subroutines (section 14.8). The compiler optimizes what it writes by default
 (section 14.9), and has listings, cross references, run-time checks (section
-14.3), and the debugger (section 14.10). The language's largest omissions are
-the record statements on indexed files and DICTIONARY (section 14.7).
+14.3), and the debugger (section 14.10). The language's largest omission is
+DICTIONARY (section 14.7).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -5181,7 +5185,7 @@ output it prints, and programs of several files in its `modules` directory.
   runs formatted, list-directed, namelist, and unformatted sequential input
   and output, to the default units, units 0 to 119, and internal files (which,
   like the default unit `*`, take only formatted I/O: `%FORT-E-UNFUNIT`).
-- **OPEN and CLOSE** (chapter 9) on sequential and relative files on a mounted volume: a host file
+- **OPEN and CLOSE** (chapter 9) on sequential, relative, and indexed files on a mounted volume: a host file
   is brought in with COPY. A value known at compile time is checked then
   (`%FORT-E-KEYCHOICE`, `%FORT-E-OPENCONFLICT`, `%FORT-E-NEEDRECL`), and one known only
   when the program runs gets the same rules from FTNRTL, as VMS's FOR numbers. A unit
@@ -5199,7 +5203,7 @@ output it prints, and programs of several files in its `modules` directory.
   leaves unconnected FTNRTL connects. `CONVERT=` (the later manual's, which VMS's
   library has) takes `'NATIVE'`, which an unformatted unit is anyway; any other
   conversion (`'VAXG'`, `'BIG_ENDIAN'`, ...) is FOR's `NOTIMP` (2) when the program
-  runs, and a name that isn't one `KEYVALERR` (45). Indexed files are `NOTIMP`.
+  runs, and a name that isn't one `KEYVALERR` (45).
 - **INQUIRE** (section 9.3), by a unit or by a file, every specifier in the manual. It
   doesn't fail: a unit that can't exist (anything but 0 to 119) has EXIST false, as does a
   file that isn't there, and IOSTAT= is 0. A name that can't be parsed, or has a wildcard,
@@ -5322,11 +5326,37 @@ output it prints, and programs of several files in its `modules` directory.
   DELETE is `DELERR`, and REWRITE works where the record keeps its length (or the file's
   records are fixed-length); on a unit not open DELETE is `DELERR`, UNLOCK `UNLERR`
   (56), and REWRITE `NO_CURREC`.
-- **Indexed files.** OPEN (`ORGANIZATION='INDEXED'`, `KEY=`), CLOSE, and INQUIRE work as
-  VMS's FORRTL's do, but the record statements on such a unit aren't all there yet: a keyed READ
-  is `NOTIMP` on a unit opened `ACCESS='KEYED'`, and `OPEDEFREQ` (26) on any other. A unit
-  opened with `USEROPEN=` may reach its RAB by `FTN$RAB(unit)`, the unit by reference, as
-  VMS's `FOR$RAB`: 0 if it has no file.
+- **Indexed files** (sections 7.1.1.7, 7.4, 9.1.15) work as VMS's FORTRAN run-time library
+  has them, held to its runs (`testdata/for88`):
+
+  ```fortran
+        OPEN (1, FILE='PARTS.IDX', STATUS='NEW', ORGANIZATION='INDEXED',
+       1 ACCESS='KEYED', FORM='UNFORMATTED', RECORDTYPE='FIXED', RECL=4,
+       2 KEY=(1:4:INTEGER, 5:10:CHARACTER, 11:14:INTEGER:DESCENDING))
+        WRITE (1) 1042, 'WIDGET', 120, 'A1'
+        READ (1, KEY='BOLT  ', KEYID=1) NUM, NAME, QTY, BIN
+        READ (1, END=11) NUM, NAME, QTY, BIN
+  ```
+
+  `KEY=` makes the file's keys, the first the primary key; an OPEN of a file that's there may
+  give fewer keys, or none, but each it gives must have the file's place, length, and
+  direction (`INVKEYSPE`, 49). A keyed READ takes any of KEY, KEYEQ, KEYGE, KEYGT, KEYNXT,
+  KEYNXTNE, KEYLE, and KEYLT, with KEYID= the key (by default the unit's last, then the
+  primary). KEYGE and KEYGT are for ascending keys and KEYLE and KEYLT for descending ones,
+  the other direction `INVMATKEY` (94); KEYNXT and KEYNXTNE go by the key's own direction.
+  A CHARACTER value shorter than the key finds the first record it begins; longer is
+  `INVKEYSPE`. An INTEGER value of either length on an integer key is taken at the key's
+  size. A READ with no key goes on in the order of the key last read, `END=` at the end. A
+  WRITE puts a record where its keys say; a primary key or a no-duplicates key already
+  there is `INCKEYCHG` (50), as is a REWRITE that changes the primary key. REWRITE and
+  `DELETE (u)` take the record the last READ reached, and leave none (`NO_CURREC`, 53).
+  Each failure's IOSTAT is VMS's: no such record `ATTACCNON` (36), a record another unit
+  holds `SPERECLOC` (52). Units opened with SHARED each have their own place and key: a
+  record one has read is the other's `SPERECLOC` until UNLOCK or the first unit's next
+  statement, and what one writes the other sees at once. Without RECORDTYPE an indexed
+  file's records are fixed-length, and RECL= is needed to make one. A unit opened with
+  `USEROPEN=` may reach its RAB by `FTN$RAB(unit)`, the unit by reference, as VMS's
+  `FOR$RAB`: 0 if it has no file. `testdata/fortran/parts.for` and `shared.for` use all of this.
 - **Namelist I/O** (sections 4.10, 7.2.1.3, and 7.3.1.3 of the language
   manual) follows VMS's FORTRAN run-time library where the manual is silent.
   `READ (5, PARAM)` passes over records until one has `$PARAM` or `&PARAM`
@@ -6098,7 +6128,6 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 
 | What | What happens |
 | --- | --- |
-| Keyed access | OPEN, CLOSE, and INQUIRE of an indexed file work; a keyed READ is `OPEDEFREQ` or `NOTIMP` (section 14.2) |
 | `DICTIONARY` | `%FORT-E-NOTIMPL`: there is no Common Data Dictionary |
 | `CONVERT=` other than `'NATIVE'` | FOR's `NOTIMP` when the OPEN is done |
 | Files on the host, for a running program | A program's RMS reaches only mounted volumes; the compiler itself reads and writes either |
@@ -6815,7 +6844,8 @@ $ LINK PROG,PROG/OPTIONS
 $ RUN PROG
 ```
 
-VMS 7.1 did this for every program in govax's `testdata/fortran` directory, compiled both with and
+VMS 7.1 did this for every program in govax's `testdata/fortran` directory, the ones on indexed files
+among them, compiled both with and
 without the optimizer, with no message from its MACRO or LINK, and for DUNGEON, whose log of a game, a
 save, and a restore is the same to the byte as govax's. The programs print what they print on govax,
 but for a program using `$GETCHN`, which govax doesn't have; SECNDS within a second of its argument, by
@@ -6951,7 +6981,10 @@ The main differences, gathered from the rest of the manual:
   queues, networking, or clusters.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
   not host files (section 5). Indexed files are Prolog 3 only: a lower
-  prolog is `RMS$_PLV`.
+  prolog is `RMS$_PLV`. VMS 7.1's ANALYZE/RMS_FILE/CHECK and RMS read and change govax's
+  indexed files, and govax's VMS's; a file govax's RMS makes is VMS's to the byte but where
+  a bucket splits after many records, which can fall a record apart (`testdata/vms88`).
+  There's no `$SPACE`, and no CONVERT/RECLAIM, EDIT/FDL, or ANALYZE/RMS_FILE/INTERACTIVE.
 - No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).

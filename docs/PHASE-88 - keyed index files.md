@@ -3,29 +3,46 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Subtask 10d, ANALYZE/RMS_FILE, done 2026-11-04 ("What ANALYZE/RMS_FILE settled", in Part A). Subtask 11, the compiler, done 2026-11-04 ("What the compiler settled", in Part A). Subtask 12, FTNRTL's OPEN and CLOSE, done 2026-11-04 ("What round 2 settled" and "What FTNRTL's OPEN settled", in Part A). Subtask 13, FTNRTL's record statements, done 2026-11-04 ("What FTNRTL's record statements settled", in Part A). Subtask 14, programs end to end, done 2026-11-04. Subtask 15, the VMS round, done 2026-11-04 ("What the VMS round settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Subtask 10d, ANALYZE/RMS_FILE, done 2026-11-04 ("What ANALYZE/RMS_FILE settled", in Part A). Subtask 11, the compiler, done 2026-11-04 ("What the compiler settled", in Part A). Subtask 12, FTNRTL's OPEN and CLOSE, done 2026-11-04 ("What round 2 settled" and "What FTNRTL's OPEN settled", in Part A). Subtask 13, FTNRTL's record statements, done 2026-11-04 ("What FTNRTL's record statements settled", in Part A). Subtask 14, programs end to end, done 2026-11-04. Subtask 15, the VMS round, done 2026-11-04 ("What the VMS round settled", in Part A). Subtask 16, the close-out, done 2026-11-04: **the phase is done.** Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
 
-Part A is the survey, Part B the accepted decisions and the author's answers, and
-Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create`, `Put`, and `PutLoad`,
-splits and all: the probe's in-order loads, three index levels, root splits, duplicates past a bucket, and SIDRs past a bucket come
-out as VMS's in every structure, and `Check` holds any file to the rules. `Update`, `Delete`, and `DropPointer` change and take out
-records, the probe's twelve "changing" cases coming out as VMS's at every dump, ten of them to the byte. RMS makes and opens
-indexed files through it (`rms/indexed.go`, `indexedxab.go`, `extend.go`): every `$CREATE` of the probe gives VMS's status, STV,
-and FAB but where govax's Prolog 3 alone refuses what VMS made as Prolog 1 or 2, and `$OPEN` and `$DISPLAY` of VMS's own 77
-Prolog 3 files report every key and area as VMS's did. The record services read and change them (`rms/indexedrecords.go`): `$GET`,
-`$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`, by key, in sequence on any key, and by RFA, with ROP's options and record locks,
-and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the other seven listed with their reasons.
-DCL reads and writes them (subtask 9): READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE through
-the record services (`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys, held to VMS's run of round 4 line for
-line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Subtask 10,** the
-utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) ran on VMS 7.1, its log and
-the files it made in `vax/` ("What round 3 settled"). `internal/fdl` reads FDL files and CREATE/FDL makes files from them through
-RMS's `$CREATE` (`rms/fdlcreate.go`, `dclcmd/createfdl.go`), `TestIdx88CCreateOracle` holding sections C2 to C5 to VMS's log and 42
-files to VMS's byte for byte, the Prolog 1 files govax refuses left out. CONVERT reads and writes through RMS's services, and fast-loads through `isam`'s
-`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. ANALYZE/RMS_FILE writes all four reports (`isam/inspect.go`'s walk, `anl/rmsfile.go`'s layout, `dclcmd/analyzerms.go`), `TestIdx88ReportsOracle` holding 309 of round 1's reports to VMS's line for line, `TestIdx88CAnalyzeOracle` every such command of round 3, statuses and damaged files too, and `TestStatisticsAsVMS` the figures of 155 keys. The compiler takes every statement (subtask 11): all eight key specifiers, `KEY=` checked and passed to FTNRTL as a block, held by `TestFortranKeyedArguments`; FTNRTL still answers `NOTIMP` for an indexed file. **Subtask 12:** round 2 of the probe, `testdata/for88`, ran on VMS 7.1, FORRTL's interface (its README) confirmed and passed by the compiler as it stands, and `TestFor88Oracle` holds FORRTL over govax's RMS to VMS's 321 sections and 46 files, the differences listed. FTNRTL's OPEN, CLOSE, and INQUIRE take indexed files. **Subtask 13:** so do its record statements (`ftn_keyed.mar`, and FTN_UNITS's `$GET` and `$PUT`), `TestFor88OnFTNRTL` now holding all 310 of VMS's cases and 46 files to FTNRTL, W7's load the one case and file apart, as on FORRTL; `TestFortranIndexedOpen` and `TestFortranIndexedRecords` run them through the compiler. **Subtask 14:** `testdata/fortran`'s `parts.for` and `shared.for`, and `testdata/rms88`: one file through MACRO, two processes, FORTRAN, and DCL (`TestIndexedPhones`), and a load with a second index level (`TestIndexedLoad`), in both paging modes and both optimizer modes, each file passing ANALYZE/RMS_FILE/CHECK. **Subtask 15:** round 1 ran on VMS 7.1 (`testdata/vms88/vax`): VMS's ANALYZE/RMS_FILE/CHECK passed every file govax made but LOAD.IDX's records past RRVs, and `TestVMS88Procedure` now holds govax to its log, 606 of 613 reports, and 147 of 158 files VMS's RMS changed, byte for byte ("What the VMS round settled"). Round 2 (`vax/round2`) ran everything: every log section is VMS's but ANALYZE/DISK_STRUCTURE's, 609 of 615 reports, and 151 of 160 files byte for byte, the rest listed. `testdata/ftn86`'s round ran again too, FTNRTL with FTN_KEYED built by VMS's MACRO and LINK and every program, PARTS and SHARED among them, printing govax's output; `TestFTN86Oracle` needs no exception for this phase now. **Next: 16,** the close-out.
+**Done 2026-11-04.** Part A is the survey and what each subtask and probe round settled, Part B the accepted decisions and the
+author's answers, Part C the subtasks, and the progress log the work.
+
+- **The format.** `internal/isam` reads and writes RMS's Prolog 3 indexed files: keys of every type and direction, segments,
+  duplicates, CHG and NUL, all three compressions, areas, splits, RRVs, continuations, index levels, update, delete, fast delete,
+  the fast load, and `Check`. Its files are VMS's to the byte in all of the probe's cases but a few where a bucket splits after
+  many records (below).
+- **RMS.** `$CREATE`, `$OPEN`, `$DISPLAY`, `$EXTEND`, and every record service by key, in sequence on any key, and by RFA, with
+  ROP's options and record locks shared between processes (`rms/indexed*.go`), held to VMS's run of `testdata/idx88` by
+  `TestIdx88Oracle`.
+- **DCL and the utilities.** READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`, WRITE and WRITE/UPDATE, TYPE, DUMP/RECORD,
+  DIRECTORY/FULL; CREATE/FDL (`internal/fdl`), CONVERT, and ANALYZE/RMS_FILE's four reports, each held to VMS's log.
+- **FORTRAN.** OPEN's KEY=, every key specifier, READ by key and in sequence after one, WRITE, REWRITE, DELETE, UNLOCK, and
+  shared units, in the compiler and FTNRTL (`ftn_keyed.mar`), held to VMS's FORRTL by `TestFor88OnFTNRTL`, all 310 cases.
+- **On a real VMS.** VMS 7.1's ANALYZE/RMS_FILE/CHECK and RMS judged 153 files govax made and changed them; its MACRO and LINK
+  built FTNRTL and ran every FORTRAN program, the indexed ones among them (`testdata/vms88`, `testdata/ftn86`).
+
+**Left for later**, each listed in an oracle with its reason:
+
+1. **A split point after many records** can fall a record apart from VMS's: G117 and G118, F122, the SIDR splits of Q124, Q125,
+   and LOADV, W7, and LOAD.IDX as VMS built it. The records and every walk are VMS's; the bucket a record lands in isn't always.
+2. **Check characters** a few higher on VMS with the same records (R1 to R4, CONVERT's C72 to C91), by no rule found.
+3. **ANALYZE's DATA_FILL** a point off on a file with RRVs or deleted pointers; leaving RRVs out broke VMS's own files.
+4. **A SIDR value with no live pointer:** VMS kept one in some files (the D2 class, R_PHONES) and took it out in PHONES.IDX;
+   and G108's stub beside a record put after it. No rule found fits all of them.
+5. **Contiguity after an extension:** VMS's copies of B78 and B79 lost theirs when its changes extended them; govax's
+   extension stays one run, so whether it would is untested.
+6. **What `$PUT` in sequence is held to** after a keyed `$GET` between (vms88l's part B) is only partly known.
+7. **Unconfirmed in FORTRAN:** a longword value on a word key (no such key in round 2), and FORRTL's by-name INQUIRE NAME,
+   blank over govax's RMS (Phase 81's "Open").
+8. **Left out by the author's answers:** Prologs 1 and 2, collating keys, RU journaling, statistics monitoring, DECnet;
+   EDIT/FDL, CONVERT/RECLAIM, ANALYZE/RMS_FILE/INTERACTIVE. `$SPACE` isn't there for any organization.
+9. **Small gaps found on the way:** DIRECTORY/TOTAL; ods2's `Spec` can't tell a null type given from none, so RMS reads it
+   from the text (`rms.ExplicitNullType`), which could move into ods2; `TestAttentionStdin_ctrlYAtPrompt` in `cmd/govax` once
+   failed under the full suite's load, and passes alone (not this phase's code).
 
 ## Goal
 
@@ -1117,7 +1134,7 @@ them.
 15. **The VMS round.** VMS's ANALYZE/RMS_FILE/CHECK and RMS on govax's files, and on FTNRTL's. Probably
     two passes. (done 2026-11-04: `testdata/vms88`'s two rounds and `testdata/ftn86`'s fourth)
 16. **Close-out.** MANUAL.md (chapter 14's table of what isn't there, RMS's limits, the new commands),
-    HELP, FORTRAN-INTERNALS.md, CLAUDE.md, PLAN.md, and "Where things stand".
+    HELP, FORTRAN-INTERNALS.md, CLAUDE.md, PLAN.md, and "Where things stand". (done 2026-11-04)
 
 ## The probe (subtask 2)
 
@@ -1349,3 +1366,7 @@ has REV at all.
   corpus program and DUNGEON. Its run is now `testdata/ftn86/vax` (round 3 moved to `vax/round3`, its DUNGEON log to
   `testdata/disks/ftn86d-round3.log`), and `TestFTN86Oracle` lost its three exceptions for this phase: FTNRTL's one status
   more, RELATIVE's NOTIMP, and PARTS and SHARED set aside.
+- **2026-11-04: subtask 16, the close-out, and the phase done.** MANUAL.md: RMS's indexed files in section 1's list, the
+  FORTRAN chapter's indexed files (14.2's new entry with an example, 14.7's table without its keyed-access row, 14.11's VMS
+  round), COPY's version and null-type rules, RMS's limits with what VMS's round showed. HELP FORTRAN; FORTRAN-INTERNALS.md's
+  section 22; PLAN.md's summary; "Where things stand", the follow-up list.

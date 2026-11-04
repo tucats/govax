@@ -137,7 +137,7 @@ questions, and a progress log extended as that phase is worked.
 | 85 | [PHASE-85 - FORTRAN compiler usability](PHASE-85%20-%20FORTRAN%20compiler%20usability.md) | Listings, cross references, `/CHECK`, `/WARNINGS`, `/STANDARD`, `/DEBUG`, `/OBJECT`, and the debugger on FORTRAN programs — done 2026-11-02 |
 | 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | DUNGEON V3.2A compiled and run in every mode (local only), the VMS round (`testdata/ftn86`), the manual's chapter, the internals tour, the follow-up list — done 2026-11-03 |
 | 87 | [PHASE-87 - system volume](PHASE-87%20-%20system%20volume.md) | A system volume govax always mounts, made from its built-in files: STARTUP.COM (was vax.init), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and the kernel's sources with build procedures, the page file; refreshed on upgrade; next-free unit numbers — planned 2026-11-03, the plan reviewed and accepted the same day; done 2026-11-03 |
-| 88 | [PHASE-88 - keyed index files](PHASE-88%20-%20keyed%20index%20files.md) | RMS's indexed organization (XABKEY, Prolog 3 files as VMS's, keyed access, alternate keys, compression, areas) and FORTRAN's keyed statements through FTNRTL — planned 2026-11-03; the survey done and accepted the same day |
+| 88 | [PHASE-88 - keyed index files](PHASE-88%20-%20keyed%20index%20files.md) | RMS's indexed organization (XABKEY, Prolog 3 files as VMS's, keyed access, alternate keys, compression, areas) and FORTRAN's keyed statements through FTNRTL — planned 2026-11-03, the survey accepted the same day; done 2026-11-04 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -570,3 +570,21 @@ the author's review, and its progress log the work.
 
 MANUAL.md's section 5, "The system volume", is the user's side. What the phase left is its doc's
 "Where things stand".
+
+## Keyed index files (Phase 88)
+
+Phase 88 (2026-11-03 to 2026-11-04) gave RMS its indexed organization, the one gap the FORTRAN program left. Its doc's
+Part A is the survey and what each probe round settled, Part B the decisions with the author's review, and its log the work.
+
+- **The format,** in plain Go: `internal/isam`, Prolog 3, built from VMS's own files and held to them byte for byte (a probe of
+  154 cases, `testdata/idx88`, and VMS's internal definitions' values, through a probe).
+- **RMS, DCL, and the utilities:** every service on indexed files, READ and WRITE's keyed qualifiers, CREATE/FDL, CONVERT, and
+  ANALYZE/RMS_FILE, each held to a VMS log.
+- **FORTRAN:** OPEN's KEY= and every keyed statement, in the compiler and FTNRTL, held to VMS's FORRTL (`testdata/for88`).
+- **VMS's verdict:** VMS 7.1's RMS and ANALYZE read, checked, and changed govax's files, and ran FTNRTL's keyed programs
+  (`testdata/vms88`, `testdata/ftn86`), which found the one fault no test of ours could: records past a bucket's RRVs,
+  invisible to VMS's RMS in sequence.
+
+MANUAL.md has the commands (section 6) and the FORTRAN side (14.2), FORTRAN-INTERNALS.md's section 22 the run-time library's.
+What the phase left is its doc's "Where things stand".
+

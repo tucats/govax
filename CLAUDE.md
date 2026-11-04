@@ -649,8 +649,7 @@ never had.
   (section 5's "The system volume", the startup sequence, the options and
   keys, the work volume on DUA1 in the examples), HELP STARTUP (and
   SYSTEM_VOLUME), PLAN.md's section.
-  Phase 88 (planned 2026-11-03; subtask 1, the survey, done and accepted the
-  same day) is keyed index files: RMS's indexed
+  Phase 88 (planned 2026-11-03, done 2026-11-04; its "Where things stand" is the follow-up list, and PLAN.md summarizes it) is keyed index files: RMS's indexed
   organization on volume files, laid out as VMS's, and FORTRAN's keyed statements
   through FTNRTL; its Part A has the layout read from VMS's own files, and
   subtask 2 (2026-11-03) is the probe, `testdata/idx88`, on RMS, and

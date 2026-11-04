@@ -19,14 +19,14 @@ INTEGER of every length, REAL\*4, \*8 in D or G, and \*16, COMPLEX\*8 and
 and GO TO, CALL, RETURN, STOP, and PAUSE; and the I/O statements, READ,
 WRITE, PRINT, TYPE, ACCEPT, ENCODE, and DECODE, formatted, list-directed,
 namelist, and unformatted, at the terminal, to internal files, and to the
-files of units 0 to 119, sequential and relative, by sequential and direct
-access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
+files of units 0 to 119, sequential, relative, and indexed, by sequential, direct,
+and keyed access, with ERR=, END=, IOSTAT=, and ERRSNS; and the file statements, OPEN
 (with USEROPEN=), CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE, DEFINE FILE,
 FIND, REWRITE, DELETE, and UNLOCK; and DEC's data extensions, structures and
 records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
 and `/ALIGN`; and what a program needs to use VMS: definition modules, null
-arguments, handlers, ASTs, and the system subroutines. It has no indexed files
-or DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
+arguments, handlers, ASTs, and the system subroutines; and indexed files, by
+every key (section 22). It has no DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -2611,8 +2611,9 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Listings; the debugger's table | `internal/fortran/listing`; `internal/fortran/dbgtable` |
 | The run-time library | `internal/ftnrtl/mar/*.mar`, `ftnrtl.opt`, and `go generate ./internal/ftnrtl` |
 | Math routines | `internal/mthrtl`, Go, not MACRO |
-| Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/ftn86` |
-| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, each with its decisions and log |
+| Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/for88`, `testdata/ftn86` |
+| Indexed files under FTNRTL | `ftn_open.mar`'s `KEYS`, `ftn_keyed.mar`, `ftn_units.mar`'s `UB_KEYED`; RMS's `internal/rms/indexed*.go`, `internal/isam` |
+| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, and `PHASE-88` for indexed files, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 
@@ -2622,3 +2623,41 @@ If you're writing a compiler for this machine, this one's history suggests a few
 - **Follow the calling standard exactly,** and the system comes free: handlers, ASTs, services, and RTL routines needed almost no code generation (section 15).
 - **Measure before optimizing.** Passes were chosen from counts on real programs, and some standard ones were left out because nothing asked for them (section 16).
 - **Find a witness outside your own reading:** a real run-time library to call, another compiler, and in the end the real machine. Every one of them found what the hand-written expected output couldn't, since the same person wrote both.
+
+## 22. Indexed files (Phase 88)
+
+The FORTRAN program left one part of the language out: the keyed statements, since RMS had no indexed
+files. Phase 88 gave RMS its indexed organization first (`internal/isam`, the format in plain Go, held
+to VMS's own files to the byte; `internal/rms/indexed.go` and `indexedrecords.go` its services), and
+only then came back to FORTRAN. Most of the work is in FTNRTL, little in the compiler.
+
+**The compiler** has two jobs. A keyed READ's specifier is which of the eight was written, passed as a
+number (`sema/io.go`'s `keyMatches`; FORRTL's numbers, 0 for KEY and KEYEQ to 6 for KEYLT), with the
+value by descriptor and KEYID= by value, -1 for none. Whether KEYGE suits the key can't be known until
+the file is open, so the check is FTNRTL's. `KEY=` on OPEN is checked where its bounds are constants
+(`sema/keylist.go`) and lowered to a block the statement fills in when it runs (`ir/lowerfile.go`'s
+`keyListBlock`): a word, a count of longwords, and for each key its type, first byte, and last byte.
+That block's layout isn't the manual's; it's what VMS's FORRTL takes, found by calling `FOR$OPEN`
+in a loop over thousands of shapes until one made an XABKEY (`testdata/for88`'s README). FTNRTL could
+have had its own form, but taking FORRTL's let one probe check both libraries.
+
+**FTNRTL's OPEN** (`ftn_open.mar`'s `KEYS`) builds an XABSUM and an XABKEY per key on its own stack,
+chains them to the unit's FAB, and cuts the chain before it returns, since the stack goes. For a file
+that's there, `$OPEN` fills the XABKEYs in, and each key KEY= gave is compared with them.
+
+**A keyed READ** (`ftn_keyed.mar`'s `FTN$$KEY_START`) checks in the order VMS's did, each step seen in
+what it left in the RAB: the unit, its access, the key's number into KRF, the value into KBF and KSZ,
+then the direction. Knowing the direction needs the key's descriptor, so it does a `$DISPLAY` through
+a copy of the FAB on the stack: `$DISPLAY` writes its FAB, and VMS's READ left the unit's alone. Then
+`$GET` by key, and the unit remembers it read by key (`UB_KEYED`), so a READ with no key goes on in
+that key's order. A WRITE is a `$PUT` by key; RMS's `RMS$_DUP` and `RMS$_CHG` become `INCKEYCHG`.
+
+**What tested it.** `testdata/for88` ran 310 cases on VMS's FORRTL; `for88f.mar` passes the same calls
+to FTNRTL, so one program holds FTNRTL to VMS's answers case by case and file by file. Then
+`testdata/vms88` had VMS judge govax's files, and that found what nothing else had: govax put a record
+past a bucket's last *after* the bucket's RRVs, where VMS's RMS, reading in sequence, never looks. Every
+key but the primary still found the record, and VMS's own ANALYZE/RMS_FILE/CHECK passed the file. Only
+VMS's RMS walking it in order, which `vms88w.mar` did, showed 65 records of 2,000 missing. The lesson is
+section 20's again, one level down: a checker built from your own reading of the format agrees with
+your writer, and only the real reader of the format says what the format is.
+
