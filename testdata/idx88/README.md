@@ -165,9 +165,4 @@ never committed. `IDX88CM.LOG`, MACRO's own output, stays on the volume.
 
 ## What's next
 
-`vax/` is VMS V7.1's third run; the phase doc's "What round 1 settled" says what it showed. Round 2 is on FORRTL, as Part C says, before FTNRTL's subtask 12. What's known so far of
-FOR$OPEN's KEY= (code 23, by trial over govax, 2026-11-03): the value is the address of a block
-whose word at +2 is a count that must be a multiple of 3 (0 is accepted and makes no key, a
-number that isn't a multiple is FOR$_INVARGFOR, and any other multiple is FOR$_INVKEYSPE so far).
-The items' form isn't found yet, and no shape tried has put a XABKEY in the chain. Round 2 can
-make its files by RMS and open them without KEY= in any case.
+`vax/` is VMS V7.1's third run; the phase doc's "What round 1 settled" says what it showed. Round 2 is on FORRTL, in `testdata/for88`, whose README has FOR$OPEN's KEY= and FOR$READ_KU's arguments.

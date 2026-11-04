@@ -37,7 +37,7 @@ const ftnKeyedProgram = `      PROGRAM KEYS
 
 // ftnKeyedStub is the routines the program calls, each printing its arguments:
 // FTN$OPEN its key block, found by the keyword's code; FTN$READ_KF and _KU the
-// key, the match, and KEYID='s number, -1 when the argument isn't there.
+// key, KEYID='s number, and the match.
 const ftnKeyedStub = `	.TITLE	KEYSTUB
 	.PSECT	KS_DATA,WRT,NOEXE,LONG
 BUF:	.BLKB	132
@@ -46,7 +46,7 @@ BUFD:	.LONG	132
 OUTD:	.LONG	0
 	.ADDRESS BUF
 FKEYS:	.ASCID	/OPEN !UL key!%S/
-FKEY:	.ASCID	/  !UL:!UL flags !UL/
+FKEY:	.ASCID	/  !UL:!UL type !UL/
 FTEXT:	.ASCID	/READ !AF match !UL id !SL/
 FINT:	.ASCID	/READ !SL match !UL id !SL/
 	.PSECT	KS_CODE,NOWRT,EXE,LONG
@@ -70,15 +70,17 @@ FINT:	.ASCID	/READ !SL match !UL id !SL/
 	ADDL2	#2,R2
 	BRB	10$
 20$:	MOVL	4(AP)[R2],R3
-	MOVL	(R3)+,R4
+	MOVZWL	2(R3),R4		; three longwords per key
+	DIVL2	#3,R4
+	ADDL2	#4,R3
 	PUSHL	R4
 	PUSHAQ	FKEYS
 	CALLS	#2,PRINT
 30$:	SOBGEQ	R4,40$
 	BRB	90$
-40$:	PUSHL	8(R3)
+40$:	PUSHL	(R3)
+	PUSHL	8(R3)
 	PUSHL	4(R3)
-	PUSHL	(R3)
 	PUSHAQ	FKEY
 	CALLS	#4,PRINT
 	ADDL2	#12,R3
@@ -90,16 +92,10 @@ FINT:	.ASCID	/READ !SL match !UL id !SL/
 	BRB	READ
 	.ENTRY	FTN$READ_KF,^M<R2,R3,R4,R5>
 	MOVAL	16(AP),R2
-READ:	MOVZBL	(AP),R0			; the address past the last argument
-	MOVAL	4(AP)[R0],R0
-	MNEGL	#1,R4			; KEYID's number, if it's there
-	MOVAL	8(R2),R1
-	CMPL	R1,R0
-	BGEQU	10$
-	MOVL	(R1),R4
-10$:	MOVL	(R2),R3			; the key's descriptor
-	PUSHL	R4
+READ:
+	MOVL	(R2),R3			; the key's descriptor
 	PUSHL	4(R2)
+	PUSHL	8(R2)
 	CMPB	2(R3),#14		; text
 	BEQL	30$
 	CMPB	3(R3),#4		; class A: BYTE array
@@ -129,18 +125,18 @@ READ:	MOVZBL	(AP),R0			; the address past the last argument
 
 var ftnKeyedRun = []string{
 	"OPEN 4 keys",
-	"  1:10 flags 0",
-	"  11:14 flags 3",
-	"  3:8 flags 0",
-	"  6:7 flags 1",
+	"  1:10 type 14",
+	"  11:14 type 520",
+	"  3:8 type 14",
+	"  6:7 type 8",
 	"READ AB match 0 id -1",
 	"READ ABCDEF match 0 id 2",
 	"READ -5 match 1 id -1",
 	"READ 4 match 2 id 3",
-	"READ XYZ match 3 id -1",
-	"READ 7 match 4 id -1",
-	"READ BC match 5 id -1",
-	"READ ABCDEF match 6 id -1",
+	"READ XYZ match 5 id -1",
+	"READ 7 match 6 id -1",
+	"READ BC match 3 id -1",
+	"READ ABCDEF match 4 id -1",
 }
 
 func TestFortranKeyedArguments(t *testing.T) {

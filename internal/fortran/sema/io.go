@@ -432,18 +432,18 @@ func (a *analyzer) direct(io *IO, s *ast.TransferStmt, path []frame) Stmt {
 }
 
 // How a keyed READ's key compares (section 7.1.1.7), passed to FTNRTL as it
-// stands. A file's direction isn't known until the program runs, so these say
-// which specifier was written: FTNRTL makes KeyNext and KeyNextDifferent mean
-// what the key's direction says, and refuses the four one-directional forms
-// against the other direction (FOR$_INVMATKEY).
+// stands, in the numbers VMS's FORRTL takes (testdata/for88). A file's direction
+// isn't known until the program runs, so these say which specifier was written:
+// FTNRTL refuses the four one-directional forms against the other direction
+// (FOR$_INVMATKEY), and a key's own direction decides what next means.
 const (
 	KeyEqual         = iota // KEY=, KEYEQ=
 	KeyGreaterEqual         // KEYGE=, ascending keys only
 	KeyGreater              // KEYGT=, ascending keys only
-	KeyLessEqual            // KEYLE=, descending keys only
-	KeyLess                 // KEYLT=, descending keys only
 	KeyNext                 // KEYNXT=, equal or next in the key's direction
 	KeyNextDifferent        // KEYNXTNE=, next in the key's direction
+	KeyLessEqual            // KEYLE=, descending keys only
+	KeyLess                 // KEYLT=, descending keys only
 )
 
 // keyMatches are the keyed READ's specifiers and the comparison each asks for.

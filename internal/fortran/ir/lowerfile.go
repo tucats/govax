@@ -99,23 +99,24 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)
 }
 
-// Key list flags: the third longword of a key in OPEN's key list block.
+// A key's type in OPEN's key list block: a descriptor's type, with descending
+// added. These are VMS's FORRTL's (testdata/for88).
 const (
-	keyFlagInteger    = 1 // an INTEGER key, not a CHARACTER one
-	keyFlagDescending = 2 // DESCENDING, not ASCENDING
+	keyTypeString     = 14  // DSC$K_DTYPE_T: a CHARACTER key
+	keyTypeInteger    = 8   // DSC$K_DTYPE_L: an INTEGER key, signed, of the key's length
+	keyTypeDescending = 512 // DESCENDING, not ASCENDING
 )
 
 // keyListBlock is the block OPEN's KEY= passes, a cell of its own that the
-// statement fills in, since a key's bounds may be expressions (section 9.1.15):
+// statement fills in, since a key's bounds may be expressions (section 9.1.15).
+// Its form is VMS's FORRTL's: a word no one reads, then a word counting the
+// longwords after it, three per key:
 //
 //	OPEN (UNIT=3, ..., KEY=(1:10, N:N+1:INTEGER:DESCENDING))
 //
-//	  $KL1+0  <- 2             how many keys
-//	  $KL1+4  <- 1, 10, 0      the first key: first byte, last byte, flags
-//	  $KL1+16 <- N, N+1, 3     the second
-//
-// FTNRTL's own form (Decision 8): VMS's FORRTL has one of its own that it
-// doesn't document.
+//	  $KL1+0  <- 6 * 65536     the words: 0, and 2 keys' 6 longwords
+//	  $KL1+4  <- 14, 1, 10     the first key: type, first byte, last byte
+//	  $KL1+16 <- 520, N, N+1   the second
 func (l *lowerer) keyListBlock(list []*sema.KeyDef) *Mem {
 	const header, perKey = 4, 12
 
@@ -126,22 +127,22 @@ func (l *lowerer) keyListBlock(list []*sema.KeyDef) *Mem {
 		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: offset, T: Long}, Src: x})
 	}
 
-	store(0, LongConst(int32(len(list))))
+	store(0, LongConst(int32(3*len(list))<<16))
 
 	for i, k := range list {
-		flags := 0
+		kind := keyTypeString
 		if k.Integer {
-			flags |= keyFlagInteger
+			kind = keyTypeInteger
 		}
 
 		if k.Descending {
-			flags |= keyFlagDescending
+			kind += keyTypeDescending
 		}
 
 		base := header + perKey*i
-		store(base, l.expr(k.First))
-		store(base+4, l.expr(k.Last))
-		store(base+8, LongConst(int32(flags)))
+		store(base, LongConst(int32(kind)))
+		store(base+4, l.expr(k.First))
+		store(base+8, l.expr(k.Last))
 	}
 
 	return &Mem{Cell: c, T: Long}
