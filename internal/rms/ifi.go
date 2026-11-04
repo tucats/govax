@@ -118,6 +118,10 @@ type FileHandle struct {
 	rel       *relativeLayout
 	relStream relativeStream
 
+	// indexed is set when $CONNECT arms an indexed file's stream
+	// (indexed.go), which has no Reader or Writer either.
+	indexed bool
+
 	// readBuffer and writeBuffer are the last multiblock buffers the
 	// stream read and wrote, and written whether it wrote anything, for
 	// the I/O counts (iocount.go).

@@ -181,16 +181,24 @@ func (ctx *Context) storeLongword(addr uint32, v uint32) error {
 // file specs are plain 8-bit text, not C strings — a zero byte there has
 // no special meaning).
 func (ctx *Context) loadFixedString(addr uint32, n int) (string, error) {
+	buf, err := ctx.loadBytes(addr, n)
+
+	return string(buf), err
+}
+
+// loadBytes reads n bytes starting at addr: a control block whose fields
+// are read together.
+func (ctx *Context) loadBytes(addr uint32, n int) ([]byte, error) {
 	buf := make([]byte, n)
 
 	for i := range buf {
 		b, err := ctx.loadByte(addr + uint32(i))
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		buf[i] = b
 	}
 
-	return string(buf), nil
+	return buf, nil
 }

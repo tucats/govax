@@ -87,6 +87,12 @@ type FileAttributes struct {
 	// ACL is the file's access control list, its entries packed as the
 	// header holds them (ondisk.FileHeader.ACL); nil for none.
 	ACL []byte
+
+	// Keys, Areas, and Prolog are an indexed file's number of keys, of
+	// areas, and its prolog's level, from the prolog (XABSUM's NOK, NOA,
+	// and PVN); 0 for any other file, or an indexed one whose prolog
+	// can't be read.
+	Keys, Areas, Prolog int
 }
 
 // Used is how many blocks the file's data uses, as DIRECTORY/SIZE counts
@@ -166,6 +172,12 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 			}
 
 			attrs = headerAttributes(f.Header)
+
+			if isIndexed(f) {
+				if file, err := openIndexed(f, false); err == nil {
+					attrs.Keys, attrs.Areas, attrs.Prolog = len(file.Keys), len(file.Areas), file.Version
+				}
+			}
 			attrs.Name = r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';')
 			attrs.Device = r.Spec.Device
 			attrs.FID = m.Fid.String()

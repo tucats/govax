@@ -32,9 +32,8 @@ const consoleDeviceName = "TTA0"
 // to the console) for output access, and stores the resulting IFI back
 // into the FAB's FAB$W_IFI field.
 //
-// Only sequential organization (fab.go's orgSeq) is implemented — anything
-// else in the FAB's FAB$B_ORG field is a real RMS$_ORG error, not a panic
-// or a silent misinterpretation, matching docs/PHASE-22.md's scope.
+// Sequential, relative (relative.go), and indexed (indexed.go) files are
+// made; anything else in FAB$B_ORG is RMS$_ORG.
 func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	fabAddr := argv[0]
 
@@ -160,13 +159,17 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	case normalizeDeviceName(p.Lookup) == consoleDeviceName:
 		ifi, device = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), p.Lookup
 	default:
-		newIFI, found, opened, failStatus, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
+		newIFI, found, opened, plan, failStatus, failSTV, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
 		if err != nil {
 			return 0, err
 		}
 
 		if failStatus != 0 {
-			return fabStatus(ctx, fabAddr, failStatus, stvFor(failStatus))
+			if failSTV == 0 {
+				failSTV = stvFor(failStatus)
+			}
+
+			return fabStatus(ctx, fabAddr, failStatus, failSTV)
 		}
 
 		if !opened {
@@ -192,6 +195,13 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 				alq = in.Alloc
 			}
 
+			// An indexed file's allocation is its areas', which its
+			// prolog's writing asks for (indexed.go), and its default
+			// extension area 0's.
+			if plan != nil {
+				alq, in.HasAll = 0, false
+			}
+
 			// A relative file has its prologue at least (relative.go).
 			relative := isRelative(h.File)
 			if relative {
@@ -199,9 +209,22 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 			}
 
 			if err := applyCreateXABs(h.File, in, alq); err != nil {
-				ctx.Files.Release(newIFI)
+				ctx.abandon(newIFI)
 
 				return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
+			}
+
+			if plan != nil {
+				sts, stv, err := ctx.initIndexed(h.File, plan)
+				if err != nil {
+					return 0, err
+				}
+
+				if sts != 0 {
+					ctx.abandon(newIFI)
+
+					return fabStatus(ctx, fabAddr, sts, stv)
+				}
 			}
 
 			if relative {
@@ -211,7 +234,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 				}
 
 				if err := initRelative(h.File, mrn); err != nil {
-					ctx.Files.Release(newIFI)
+					ctx.abandon(newIFI)
 
 					return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
 				}
@@ -274,39 +297,42 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 // own (the caller stores it into the FAB and returns it as R0, via
 // storeStatus); and, when both are zero-valued, ifi is the freshly
 // allocated handle for the newly created file.
-func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bool) (ifi uint16, found foundFile, opened bool, failStatus uint32, err error) {
+//
+// An indexed file's $CREATE is checked here, before the file exists
+// (indexed.go): plan is what initIndexed makes of it, and failSTV a
+// refusal's STV, 0 for stvFor's.
+func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bool) (ifi uint16, found foundFile, opened bool, plan *indexedPlan, failStatus, failSTV uint32, err error) {
 	spec := p.spec()
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
 	if !ok {
-		return 0, found, false, rmsDeviceNotReady, nil
+		return 0, found, false, nil, rmsDeviceNotReady, 0, nil
 	}
 
 	// The device's block size is the FAB's once the device is found,
 	// whether the create then succeeds or not (the oracle's CREATE cases
 	// 3 and 8).
 	if err := ctx.storeWord(fabAddr+fabOffset("BLS"), ondisk.BlockSize); err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	if !ctx.Mounts.Writable(spec.Device) {
-		return 0, found, false, rmsPrivilegeViolation, nil
+		return 0, found, false, nil, rmsPrivilegeViolation, 0, nil
 	}
 
 	org, err := ctx.loadByte(fabAddr + fabORG)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
-	// Sequential and relative files (relative.go); indexed files aren't
-	// govax's yet.
-	if org != orgSeq && org != orgRel {
-		return 0, found, false, rmsInvalidOrg, nil
+	// Sequential, relative (relative.go), and indexed files (indexed.go).
+	if org != orgSeq && org != orgRel && org != orgIdx {
+		return 0, found, false, nil, rmsInvalidOrg, 0, nil
 	}
 
 	rfm, err := ctx.loadByte(fabAddr + fabRFM)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	// ondisk.RecordFormatUndefined (0, VMS's FAB$C_UDF) is deliberately
@@ -320,23 +346,23 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// implemented so far.
 	format := ondisk.RecordFormat(rfm)
 	if format < ondisk.RecordFormatFixed || format > ondisk.RecordFormatStreamCR {
-		return 0, found, false, rmsInvalidRFM, nil
+		return 0, found, false, nil, rmsInvalidRFM, 0, nil
 	}
 
 	rat, err := ctx.loadByte(fabAddr + fabRAT)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	mrs, err := ctx.loadWord(fabAddr + fabMRS)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	// A fixed-length record needs a length, and one that fits a word's
 	// positive values (VMS 7.1: testdata/for81, FOR81R and FOR81's #205).
 	if format == ondisk.RecordFormatFixed && (mrs == 0 || mrs > maxFixedRecord) {
-		return 0, found, false, rmsInvalidMRS, nil
+		return 0, found, false, nil, rmsInvalidMRS, 0, nil
 	}
 
 	// A VFC record's fixed control is FAB$B_FSZ bytes, 0 meaning 2 (RMS
@@ -345,7 +371,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 
 	if format == ondisk.RecordFormatVFC {
 		if fsz, err = ctx.loadByte(fabAddr + fabOffset("FSZ")); err != nil {
-			return 0, found, false, 0, err
+			return 0, found, false, nil, 0, 0, err
 		}
 
 		if fsz == 0 {
@@ -358,29 +384,38 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	if org == orgRel {
 		var sts uint32
 		if bks, sts, err = ctx.checkRelativeCreate(fabAddr, format, mrs, fsz); err != nil || sts != 0 {
-			return 0, found, false, sts, err
+			return 0, found, false, nil, sts, 0, err
 		}
+	}
+
+	if org == orgIdx {
+		var sts, stv uint32
+		if plan, sts, stv, err = ctx.checkIndexedCreate(fabAddr, format, mrs); err != nil || sts != 0 {
+			return 0, found, false, nil, sts, stv, err
+		}
+
+		bks = plan.bks
 	}
 
 	shr, err := ctx.loadByte(fabAddr + fabSHR)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	if spec.Name == "" && spec.Type == "" {
-		return 0, found, false, rmsFileNameError, nil
+		return 0, found, false, nil, rmsFileNameError, 0, nil
 	}
 
 	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
 	if err != nil {
-		return 0, found, false, rmsDirNotFound, nil
+		return 0, found, false, nil, rmsDirNotFound, 0, nil
 	}
 
 	name := specFileName(spec)
 
 	version, ok := parseOpenVersion(spec.Version)
 	if !ok {
-		return 0, found, false, rmsInvalidVersion, nil
+		return 0, found, false, nil, rmsInvalidVersion, 0, nil
 	}
 
 	// FAB$V_CIF: a file that's already there is opened instead.
@@ -388,7 +423,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		if entry, sts := lookupVersion(dir, name, spec.Version); sts == 0 {
 			ifi, sts, err := openFID(ctx, fac, shr, spec.Device, vol, entry.Fid)
 			if err != nil || sts != 0 {
-				return 0, found, false, sts, err
+				return 0, found, false, nil, sts, 0, err
 			}
 
 			n, t := splitEntryName(entry.Name)
@@ -398,24 +433,24 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 				FID: entry.Fid, DID: dir.Header.Fid,
 			}
 
-			return ifi, found, true, 0, nil
+			return ifi, found, true, nil, 0, 0, nil
 		}
 	}
 
 	if version == 0 {
 		if version, err = dir.NextVersion(name); err != nil {
-			return 0, found, false, rmsDeviceError, nil
+			return 0, found, false, nil, rmsDeviceError, 0, nil
 		}
 	}
 
 	bm, err := dir.Device.Bitmap()
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	ib, err := dir.Device.IndexBitmap()
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	// FAB$W_DEQ is the file's default extension quantity, kept in its
@@ -423,7 +458,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// with the XABs, takes its place.
 	deq, err := ctx.loadWord(fabAddr + fabOffset("DEQ"))
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	// The header's record type byte holds the organization in its high
@@ -445,7 +480,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 
 	f, err := vol.CreateFileVersion(dir, name, version, recAttr, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
-		return 0, found, false, rmsFileExists, nil
+		return 0, found, false, nil, rmsFileExists, 0, nil
 	}
 
 	if err != nil {
@@ -456,7 +491,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		// calling VAX program sees an ordinary (if generic) RMS$_
 		// completion code instead of the whole emulator raising a
 		// fault.
-		return 0, found, false, rmsDeviceError, nil
+		return 0, found, false, nil, rmsDeviceError, 0, nil
 	}
 
 	// The creator is the new file's first accessor, so no one else can
@@ -465,12 +500,12 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 
 	a, err := vol.AccessFile(f, mode)
 	if err != nil {
-		return 0, found, false, rmsDeviceError, nil
+		return 0, found, false, nil, rmsDeviceError, 0, nil
 	}
 
 	fop, err := ctx.loadLongword(fabAddr + fabFOP)
 	if err != nil {
-		return 0, found, false, 0, err
+		return 0, found, false, nil, 0, 0, err
 	}
 
 	n, t := splitEntryName(name)
@@ -485,7 +520,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// no version (fop.go).
 	if fop&(fopTMP|fopTMD) != 0 {
 		if err := makeTemporary(dir, name, version, f, fop); err != nil {
-			return 0, found, false, rmsDeviceError, nil
+			return 0, found, false, nil, rmsDeviceError, 0, nil
 		}
 
 		found.Version = 0
@@ -494,7 +529,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	h := &FileHandle{File: f, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: true, Access: fac,
 		claim: ctx.Mounts.claimOpen(spec.Device, fileIDFrom(f.Header.Fid), fac, shr)}
 
-	return ctx.Files.Alloc(h), found, false, 0, nil
+	return ctx.Files.Alloc(h), found, false, plan, 0, 0, nil
 }
 
 // loadFileSpecString reads the FAB$L_FNA/FAB$B_FNS pair out of the FAB at

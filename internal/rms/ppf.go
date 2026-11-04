@@ -446,6 +446,14 @@ func closeHandle(h *FileHandle) error {
 func (h *FileHandle) arm(fac byte, rop uint32) uint32 {
 	h.startStream(fac, rop)
 
+	// An indexed file's records are internal/isam's, reached through its
+	// buckets by block (indexed.go): no Reader or Writer.
+	if isIndexed(h.File) {
+		h.indexed = true
+
+		return 0
+	}
+
 	// A relative file's records are its cells, which relative.go reads and
 	// writes by block.
 	if isRelative(h.File) {

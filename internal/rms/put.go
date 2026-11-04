@@ -78,6 +78,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// ifi.go's FileHandle doc comment).
 	relative := onVolume && handle.relativeRecords()
 
+	if onVolume && handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
+	}
+
 	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil && !relative {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}

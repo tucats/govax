@@ -88,6 +88,10 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return getRecordDevice(ctx, rabAddr, handle)
 	}
 
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
+	}
+
 	if handle.relativeRecords() {
 		return ctx.relativeLocate(rabAddr, handle, false)
 	}

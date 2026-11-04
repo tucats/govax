@@ -115,6 +115,80 @@ func Create(blocks WritableBlocks, spec Spec) (*File, error) {
 	return f, nil
 }
 
+// PrologBlocks is how many blocks the prolog of a file with keys keys and
+// areas areas takes: VBN 1 (key 0 and the file's fields), the blocks of the
+// other keys' descriptors, and the blocks of the area descriptors. RMS
+// asks for at least this much in area 0, and reports it as the FAB's
+// allocation when a $CREATE fails after the areas are known.
+func PrologBlocks(keys, areas int) uint32 {
+	areaVBN := uint32(2 + (keys-2+keysPerBlock)/keysPerBlock)
+
+	return areaVBN + uint32((areas-1)/(BlockSize/areaDescSize))
+}
+
+// ExtendArea gives area i count more blocks, as RMS's $EXTEND does with a
+// XABALL: the file grows, and the blocks become the area's current extent
+// if it has none, or else the extent to come (AREA$L_NXT and NXBLK), which
+// allocate moves to when the current one is used up. Blocks that continue
+// the extent to come lengthen it. It returns the blocks the volume gave.
+// That $EXTEND fills the extent to come is govax's reading of the
+// descriptor, which no VMS run here shows; an area with an extent to come
+// that the new blocks don't continue is ErrBadSpec.
+func (f *File) ExtendArea(i int, count uint32) (uint32, error) {
+	if f.out == nil {
+		return 0, ErrReadOnly
+	}
+
+	if i < 0 || i >= len(f.Areas) {
+		return 0, ErrBadSpec
+	}
+
+	a := &f.Areas[i]
+	if a.ExtentSize != 0 && a.NextExtent != 0 && a.NextExtent+a.NextExtentSize != f.fileEnd() {
+		return 0, ErrBadSpec
+	}
+
+	first, got, err := f.out.Extend(count)
+	if err != nil {
+		return 0, err
+	}
+
+	a.TotalAllocation += got
+
+	switch {
+	case a.ExtentSize == 0:
+		a.ExtentVBN, a.ExtentSize, a.Used, a.NextVBN = first, got, 0, first
+	case a.NextExtent == 0:
+		a.NextExtent, a.NextExtentSize = first, got
+	default:
+		a.NextExtentSize += got
+	}
+
+	return got, f.updateArea(i)
+}
+
+// SizedBlocks is a file that can say how many blocks it has: where its next
+// extension starts. ExtendArea asks for it; without it, the end is taken to
+// be the last block any area has.
+type SizedBlocks interface {
+	Size() uint32
+}
+
+// fileEnd is the VBN past the file's last block.
+func (f *File) fileEnd() uint32 {
+	if s, ok := f.out.(SizedBlocks); ok {
+		return s.Size() + 1
+	}
+
+	end := uint32(1)
+
+	for _, a := range f.Areas {
+		end = max(end, a.ExtentVBN+a.ExtentSize, a.NextExtent+a.NextExtentSize)
+	}
+
+	return end
+}
+
 // check refuses a Spec the code below couldn't lay out.
 func (s *Spec) check() error {
 	if len(s.Keys) == 0 || len(s.Keys) > 255 || len(s.Areas) == 0 || len(s.Areas) > 255 {
@@ -359,15 +433,16 @@ func encodeArea(d []byte, a *Area) {
 	d[areaAlignment] = a.Alignment
 	d[areaOptions] = a.Options
 	binary.LittleEndian.PutUint32(d[areaAvailable:], a.Available)
-	binary.LittleEndian.PutUint32(d[areaNextExtent:], a.NextExtent)
-	binary.LittleEndian.PutUint32(d[areaNextSize:], a.NextExtentSize)
 	binary.LittleEndian.PutUint16(d[areaExtend:], uint16(a.ExtendSize))
 	binary.LittleEndian.PutUint32(d[areaLocation:], a.Location)
 	encodeAreaState(d, a)
 }
 
-// encodeAreaState writes the fields that change as an area is used.
+// encodeAreaState writes the fields that change as an area is used, and
+// by $EXTEND (the extent to come).
 func encodeAreaState(d []byte, a *Area) {
+	binary.LittleEndian.PutUint32(d[areaNextExtent:], a.NextExtent)
+	binary.LittleEndian.PutUint32(d[areaNextSize:], a.NextExtentSize)
 	binary.LittleEndian.PutUint32(d[areaExtentVBN:], a.ExtentVBN)
 	binary.LittleEndian.PutUint32(d[areaExtentSize:], a.ExtentSize)
 	binary.LittleEndian.PutUint32(d[areaUsed:], a.Used)
@@ -412,6 +487,13 @@ func (f *File) updateArea(i int) error {
 func (f *File) allocate(i int) (uint32, error) {
 	a := &f.Areas[i]
 	size := uint32(a.BucketSize)
+
+	// An extent to come, which $EXTEND gave the area (ExtendArea), is used
+	// before the file grows again.
+	if (a.NextVBN+size > a.ExtentVBN+a.ExtentSize || a.ExtentSize == 0) && a.NextExtentSize >= size {
+		a.ExtentVBN, a.ExtentSize, a.Used, a.NextVBN = a.NextExtent, a.NextExtentSize, 0, a.NextExtent
+		a.NextExtent, a.NextExtentSize = 0, 0
+	}
 
 	if a.NextVBN+size > a.ExtentVBN+a.ExtentSize || a.ExtentSize == 0 {
 		first, got, err := f.out.Extend(max(size, uint32(a.ExtendSize)))

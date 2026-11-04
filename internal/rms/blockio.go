@@ -80,8 +80,16 @@ func (ctx *Context) blockHandle(rabAddr uint32) (*FileHandle, uint32, uint32, er
 	return h, vbn, 0, nil
 }
 
-// lastDataBlock is the last block of h's file that holds data.
+// lastDataBlock is the last block of h's file that holds data. An indexed
+// file's are all its blocks: its header's end of file is 0 until RMS first
+// extends it, and VMS 7.1's $READ read every allocated block all the same
+// (testdata/idx88's S2, S64, and S65, whose ends of file were 0; and where it
+// isn't 0, it's the block after the allocation).
 func (h *FileHandle) lastDataBlock() uint32 {
+	if isIndexed(h.File) {
+		return h.File.Blocks()
+	}
+
 	ra := h.File.Header.RecordAttributes
 	if ra.FirstFreeByte == 0 && ra.EndOfFileBlock > 0 {
 		return ra.EndOfFileBlock - 1

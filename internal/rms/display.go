@@ -65,5 +65,17 @@ func SysDisplay(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// An indexed file's XABSUM, XABKEYs, and XABALLs (indexedxab.go).
+	if isIndexed(h.File) {
+		sts, stv, err := ctx.fillIndexedXABs(chain, h.File, xabDisplay)
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			return fabStatus(ctx, fab, sts, stv)
+		}
+	}
+
 	return fabStatus(ctx, fab, rmsNormal, 0)
 }

@@ -6780,8 +6780,9 @@ The main differences, gathered from the rest of the manual:
 - One user, `SYSTEM`, with all privileges; no login, batch, print
   queues, networking, or clusters.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
-  not host files (section 5), and only sequential and relative files:
-  an indexed file's `$CREATE` is `RMS$_ORG`.
+  not host files (section 5). Indexed files can be made, opened, displayed,
+  and extended (Prolog 3 only: a lower prolog is `RMS$_PLV`), but not yet
+  read or written by record: their record operations are `RMS$_ORG`.
 - No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).

@@ -198,15 +198,13 @@ func facAccess(fac, implied byte) byte {
 	return fac
 }
 
-// FAB$C_ORG values (file organizations). orgSeq is the only one this
-// package's handlers actually accept; the rest are named purely so a
-// handler rejecting an unsupported organization can say precisely which
-// one it saw in an error message, rather than just "some other value".
+// FAB$C_ORG values (file organizations): sequential, relative (Phase 81,
+// relative.go), and indexed (Phase 88, indexed.go). VMS has no hashed
+// files either.
 var (
-	orgSeq = byte(vmsConst("FAB$C_SEQ")) // sequential; the only organization this phase implements.
-	orgRel = byte(vmsConst("FAB$C_REL")) // relative; not implemented.
-	//orgIdx = byte(vmsConst("FAB$C_IDX")) // indexed; not implemented.
-	//orgHsh = byte(vmsConst("FAB$C_HSH")) // hashed; not implemented.
+	orgSeq = byte(vmsConst("FAB$C_SEQ"))
+	orgRel = byte(vmsConst("FAB$C_REL"))
+	orgIdx = byte(vmsConst("FAB$C_IDX"))
 )
 
 // fabOffset looks up keyword (e.g. "FAC") in internal/vmsdef.FABFields,

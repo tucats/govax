@@ -261,7 +261,8 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File, mode xabMode) err
 			}
 
 		case xabALL:
-			if mode == xabCreate {
+			// An indexed file's XABALLs are its areas' (indexedxab.go).
+			if mode == xabCreate || isIndexed(f) {
 				continue
 			}
 
@@ -277,6 +278,10 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File, mode xabMode) err
 			}
 
 		case xabSUM:
+			if isIndexed(f) {
+				continue
+			}
+
 			stores = []func() error{
 				func() error { return ctx.storeByte(a+xabNOA, 0) },
 				func() error { return ctx.storeByte(a+xabNOK, 0) },
@@ -354,6 +359,13 @@ func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File, mode xabMode) 
 
 			if mode != xabCreate {
 				fop &^= fopCTG | fopCBT
+			}
+
+			// A new indexed file's contiguity comes from its XABALL, which
+			// VMS's $CREATE leaves out of the FAB's FOP; $OPEN shows it
+			// (S64, S65).
+			if mode == xabCreate && isIndexed(f) {
+				return ctx.storeLongword(fab+fabFOP, fop)
 			}
 
 			switch {
@@ -516,10 +528,13 @@ func applyCreateXABs(f *volume.File, in xabInputs, alq uint32) error {
 // otherwise now and one more than they were; a XABPRO gives the
 // protection and owner.
 func applyCloseXABs(f *volume.File, in xabInputs, now vmstime.VMSTime) error {
+	indexed := isIndexed(f)
+
 	return volume.UpdateHeader(f, func(h *ondisk.FileHeader, id *ondisk.Ident) {
 		// An empty file ends at the start of its first block, as VMS
-		// writes it, not at block 0 (the oracle's CREATE case 7).
-		if h.RecordAttributes.EndOfFileBlock == 0 {
+		// writes it, not at block 0 (the oracle's CREATE case 7). An
+		// indexed file's stays 0 until RMS extends it (E71).
+		if h.RecordAttributes.EndOfFileBlock == 0 && !indexed {
 			h.RecordAttributes.EndOfFileBlock = 1
 			h.RecordAttributes.FirstFreeByte = 0
 		}

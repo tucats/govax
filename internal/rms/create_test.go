@@ -317,11 +317,12 @@ func TestSysCreate_facNone(t *testing.T) {
 }
 
 // TestSysCreate_unsupportedOrg confirms a FAB naming an organization
-// govax doesn't have, indexed, fails with RMS$_ORG.
+// that isn't sequential, relative, or indexed (30 hex, which the hashed
+// organization VMS never had would have been) fails with RMS$_ORG.
 func TestSysCreate_unsupportedOrg(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:TEST.DAT")
-	putByte(t, f.ctx, testFabAddr+fabORG, byte(vmsConst("FAB$C_IDX")))
+	putByte(t, f.ctx, testFabAddr+fabORG, 0x30)
 
 	r0, err := SysCreate(f.ctx, []uint32{testFabAddr})
 	if err != nil {

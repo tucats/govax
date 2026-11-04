@@ -241,6 +241,16 @@ func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, c
 	h, _ := ctx.Files.Lookup(ifi)
 	h.Found = &found
 
+	// An indexed file's prolog is read as it's opened: a level govax
+	// doesn't have is RMS$_PLV, a damaged one RMS$_PLG (indexed.go).
+	if isIndexed(h.File) && mode != xabCreate {
+		if _, err := openIndexed(h.File, false); err != nil {
+			ctx.abandon(ifi)
+
+			return prologStatus(err), nil
+		}
+	}
+
 	if nam != 0 {
 		sts, err := ctx.fillNAM(fab, nam, found, out)
 		if err != nil {
@@ -248,7 +258,7 @@ func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, c
 		}
 
 		if sts != 0 {
-			ctx.Files.Release(ifi)
+			ctx.abandon(ifi)
 
 			return sts, nil
 		}
@@ -264,5 +274,32 @@ func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, c
 		return 0, err
 	}
 
-	return 0, ctx.fillXABs(chain, h.File, mode)
+	if err := ctx.fillXABs(chain, h.File, mode); err != nil {
+		return 0, err
+	}
+
+	if !isIndexed(h.File) {
+		return 0, nil
+	}
+
+	sts, _, err := ctx.fillIndexedXABs(chain, h.File, mode)
+	if err != nil || sts == 0 {
+		return 0, err
+	}
+
+	ctx.abandon(ifi)
+
+	return sts, nil
+}
+
+// abandon gives up a file $OPEN or $CREATE opened before failing: its access
+// ends as at $CLOSE (closeHandle), so the file isn't left held, then its IFI
+// goes. Releasing the IFI alone left the file accessed, so a later $OPEN of
+// it was RMS$_FLK (found by Phase 88's E85 case).
+func (ctx *Context) abandon(ifi uint16) {
+	if h, ok := ctx.Files.Lookup(ifi); ok {
+		_ = closeHandle(h)
+	}
+
+	ctx.Files.Release(ifi)
 }

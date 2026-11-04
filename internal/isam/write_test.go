@@ -38,6 +38,8 @@ func (g *growingBlocks) WriteBlock(vbn uint32, block []byte) error {
 	return nil
 }
 
+func (g *growingBlocks) Size() uint32 { return uint32(len(g.data) / BlockSize) }
+
 func (g *growingBlocks) Extend(count uint32) (uint32, uint32, error) {
 	got := count
 	if rest := got % g.cluster; rest != 0 {
@@ -865,4 +867,77 @@ func TestLoadAsVMS(t *testing.T) {
 	}
 
 	compareFiles(t, "after the rest", f, final)
+}
+
+// TestExtendArea is $EXTEND's way into an area: the blocks become the extent
+// to come, buckets are taken from it once the current extent is used, and the
+// file doesn't grow again until it's used too.
+func TestExtendArea(t *testing.T) {
+	g := &growingBlocks{cluster: 1}
+
+	f, err := Create(g, oneKey(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := f.ExtendArea(0, 20)
+	if err != nil || got != 20 {
+		t.Fatalf("ExtendArea: %d, %v", got, err)
+	}
+
+	a := f.Areas[0]
+	if a.NextExtentSize != 20 || a.TotalAllocation != a.ExtentSize+20 {
+		t.Fatalf("area after ExtendArea: %+v", a)
+	}
+
+	next, size := a.NextExtent, a.NextExtentSize
+	blocks := len(g.data) / BlockSize
+
+	// Records of 150 bytes, six to a 2-block bucket, until a bucket comes
+	// from the extent to come.
+	for n := 1; f.Areas[0].ExtentVBN != next; n++ {
+		record := []byte(fmt.Sprintf("K%07d%s", n, strings.Repeat("x", 142)))
+		if _, err := f.Put(record); err != nil {
+			t.Fatalf("Put %d: %v", n, err)
+		}
+
+		if n > 200 {
+			t.Fatal("no bucket came from the extent to come")
+		}
+	}
+
+	if f.Areas[0].NextExtent != 0 || f.Areas[0].ExtentSize != size || len(g.data)/BlockSize != blocks {
+		t.Errorf("area %+v, file %d blocks, was %d", f.Areas[0], len(g.data)/BlockSize, blocks)
+	}
+
+	reopened, err := Open(g, f.attr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reopened.Areas[0] != f.Areas[0] {
+		t.Errorf("the descriptor says %+v, the file %+v", reopened.Areas[0], f.Areas[0])
+	}
+
+	if err := reopened.Check(); err != nil {
+		t.Error(err)
+	}
+
+	// The extent to come lengthens when the next extension follows it; one
+	// that doesn't is refused while it's waiting.
+	if _, err := f.ExtendArea(0, 4); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := f.ExtendArea(0, 4); err != nil || f.Areas[0].NextExtentSize != 8 {
+		t.Errorf("a second extension: %v, %+v", err, f.Areas[0])
+	}
+
+	if _, _, err := g.Extend(1); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := f.ExtendArea(0, 4); !errors.Is(err, ErrBadSpec) {
+		t.Errorf("an extension apart from the one waiting: %v", err)
+	}
 }

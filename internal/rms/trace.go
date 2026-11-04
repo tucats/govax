@@ -192,8 +192,30 @@ func (ctx *Context) traceRAB(b *strings.Builder, rab uint32) {
 		fmt.Fprintf(b, " MBF %d", int8(v))
 	}
 
+	// A keyed operation's key: on an indexed file its key of reference
+	// and the key's bytes, KSZ of them (Phase 88), on a relative file the
+	// record number.
+	_, h := ctx.traceStream(isi)
+	indexed := h != nil && isIndexed(h.File)
+
+	if indexed {
+		krf, _ := ctx.loadByte(rab + rabOffset("KRF"))
+		fmt.Fprintf(b, " KRF %d", krf)
+	}
+
 	if rac == racKey {
-		if kbf, err := ctx.loadLongword(rab + rabKBF); err == nil {
+		kbf, err := ctx.loadLongword(rab + rabKBF)
+		ksz, _ := ctx.loadByte(rab + rabKSZ)
+
+		switch {
+		case err != nil:
+		case indexed:
+			fmt.Fprintf(b, " KSZ %d", ksz)
+
+			if s, err := ctx.loadFixedString(kbf, int(min(ksz, 60))); err == nil && ksz > 0 {
+				fmt.Fprintf(b, " key %q", s)
+			}
+		default:
 			if n, err := ctx.loadLongword(kbf); err == nil {
 				fmt.Fprintf(b, " record %d", n)
 			}
@@ -242,9 +264,10 @@ var xabNames = map[byte]string{
 	xabPRO: "PRO", xabRDT: "RDT", xabSUM: "SUM", xabTRM: "TRM",
 }
 
-// traceXABs shows the types in a FAB's XAB chain, in brackets, and an
-// XABALL's allocation and extension quantities, which a program sets
-// there rather than in the FAB.
+// traceXABs shows the types in a FAB's XAB chain, in brackets, with what a
+// program sets in them rather than in the FAB: a XABALL's area, bucket
+// size, allocation, and extension quantities, and a XABKEY's key of
+// reference, data type, flags, and segments as position:size (Phase 88).
 func (ctx *Context) traceXABs(b *strings.Builder, fab uint32) {
 	addr, err := ctx.loadLongword(fab + fabOffset("XAB"))
 	if err != nil || addr == 0 {
@@ -272,9 +295,15 @@ func (ctx *Context) traceXABs(b *strings.Builder, fab uint32) {
 		}
 
 		if cod == xabALL {
+			aid, _ := ctx.loadByte(addr + xabAllAID)
+			bkz, _ := ctx.loadByte(addr + xabAllBKZ)
 			alq, _ := ctx.loadLongword(addr + xabALQ)
 			deq, _ := ctx.loadWord(addr + xabDEQ)
-			fmt.Fprintf(b, " ALQ %d DEQ %d", alq, deq)
+			fmt.Fprintf(b, " AID %d BKZ %d ALQ %d DEQ %d", aid, bkz, alq, deq)
+		}
+
+		if cod == xabKEY {
+			ctx.traceKey(b, addr)
 		}
 
 		if addr, err = ctx.loadLongword(addr + xabNXT); err != nil {
@@ -283,4 +312,25 @@ func (ctx *Context) traceXABs(b *strings.Builder, fab uint32) {
 	}
 
 	b.WriteString("]")
+}
+
+// traceKey shows a XABKEY's input fields: "REF 1 DTP 00 FLG 03 0:8,16:4".
+func (ctx *Context) traceKey(b *strings.Builder, addr uint32) {
+	k, err := ctx.readXABKey(xabEntry{Addr: addr, Cod: xabKEY})
+	if err != nil {
+		b.WriteString(" ?")
+
+		return
+	}
+
+	fmt.Fprintf(b, " REF %d DTP %02X FLG %02X", k.ref, k.dtp, k.flg)
+
+	for i, s := range k.segments() {
+		sep := ","
+		if i == 0 {
+			sep = " "
+		}
+
+		fmt.Fprintf(b, "%s%d:%d", sep, s.Position, s.Size)
+	}
 }

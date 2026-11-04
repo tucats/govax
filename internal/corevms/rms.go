@@ -45,9 +45,9 @@ func registerRMSServices(t *ServiceTable) {
 	}
 }
 
-// rmsServices are the RMS services, by name: Phase 22's and 33's, and
+// rmsServices are the RMS services, by name: Phase 22's and 33's,
 // Phase 49's record operations past $GET and $PUT ($FIND, $UPDATE,
-// $TRUNCATE, $DELETE, $REWIND).
+// $TRUNCATE, $DELETE, $REWIND), and Phase 88's $EXTEND.
 var rmsServices = map[string]func(*rms.Context, []uint32) (uint32, error){
 	"SYS$CREATE":     rms.SysCreate,
 	"SYS$CONNECT":    rms.SysConnect,
@@ -62,6 +62,7 @@ var rmsServices = map[string]func(*rms.Context, []uint32) (uint32, error){
 	"SYS$WAIT":       rms.SysWait,
 	"SYS$FLUSH":      rms.SysFlush,
 	"SYS$ERASE":      rms.SysErase,
+	"SYS$EXTEND":     rms.SysExtend,
 	"SYS$FREE":       rms.SysFree,
 	"SYS$RELEASE":    rms.SysRelease,
 	"SYS$FIND":       rms.SysFind,

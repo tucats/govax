@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -12,8 +12,11 @@ Part A is the survey, Part B the accepted decisions and the author's answers, an
 Part C the subtasks. `internal/isam` reads every Prolog 3 file VMS made, by every key, and makes files by `Create`, `Put`, and `PutLoad`,
 splits and all: the probe's in-order loads, three index levels, root splits, duplicates past a bucket, and SIDRs past a bucket come
 out as VMS's in every structure, and `Check` holds any file to the rules. `Update`, `Delete`, and `DropPointer` change and take out
-records, the probe's twelve "changing" cases coming out as VMS's at every dump, ten of them to the byte. RMS doesn't call it yet.
-`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 7,** RMS's `$CREATE`, `$OPEN`, and `$DISPLAY`.
+records, the probe's twelve "changing" cases coming out as VMS's at every dump, ten of them to the byte. RMS makes and opens
+indexed files through it (`rms/indexed.go`, `indexedxab.go`, `extend.go`): every `$CREATE` of the probe gives VMS's status, STV,
+and FAB but where govax's Prolog 3 alone refuses what VMS made as Prolog 1 or 2, and `$OPEN` and `$DISPLAY` of VMS's own 77
+Prolog 3 files report every key and area as VMS's did. The record services answer RMS$_ORG on an indexed file until subtask 8.
+`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 8,** RMS's record operations.
 
 ## Goal
 
@@ -446,6 +449,52 @@ above differ, this one wins.
   record whose key is stored again after a removal is the next one *with a key*, not the next entry.
 - **ods2** needed nothing.
 
+## What RMS's `$CREATE` settled (2026-11-03)
+
+Subtask 7 runs the probe on govax (`TestIdx88CreateOracle`, on a volume of VMS's 3-block clusters) and holds every `$CREATE` of
+cases 1 to 103 to VMS's, with the FAB the probe printed after it, and each refusal case whole; and it restores VMS's files from
+the save set and opens each as the probe's `OPN` did (`TestIndexedOpenAsVMS`, in `internal/rms`): all 77 Prolog 3 files' FAB,
+XABSUM, XABKEYs, and XABALLs are VMS's. Case 2's file, made with no records, is VMS's to the byte. Where this section and the
+ones above differ, this one wins.
+
+- **The order of the checks** is read off what the FAB holds after each refusal. A key's faults (RMS$_NPK, IMX, DTP, FLG, SEG,
+  SIZ, POS) and PLV, BKS, BKZ, RFM, and FIX's MRS 0 leave FAB$B_BKS and FAB$L_ALQ as they were. The XABALLs write ALQ as each
+  is read (E100: 4, then RMS$_IMX at AID 2), and then the whole with area 0 holding at least the prolog (E79 to E81: 2). The
+  keys' areas are checked next (DAN, IAN, LAN), then BKS is written, then the record's size against the primary key's data
+  bucket (RMS$_MRS) and each fill size (DFL, IFL). KNM is read only as the prolog is written, after the file exists, which is
+  why E85 is a file with an empty prolog; govax's `$OPEN` of such a file is RMS$_PLG.
+- **STV:** the key of reference for DTP, FLG, SEG, SIZ, POS, DAN, IAN, LAN, DFL, IFL, KNM, and KSI ("for key = !UL" in each
+  message), the area for BKZ. RMS$_IMX's is an XAB's address: for two XABKEYs of one key, the second in chain order (E70); for
+  a gap, **the key before it** (E69: key 0's, for keys 0 and 2); for a XABALL out of order, **the primary key's XABKEY** (E99, E100),
+  which no rule explains. RMS$_NPK's is the first XABKEY, 0 with none. A success's STV is 0 in govax where VMS's was A0, the
+  channel; the oracle masks it, as earlier phases' did.
+- **Flags:** an XABKEY's DUP, CHG, and NUL go to the descriptor as they are. A string key of 6 bytes or more has its key and
+  index compressed unless the XABKEY says not; no numeric or packed key, and no shorter string, is (S3, S4, S16 to S30). Only
+  the primary key's records are compressed (an alternate's FLG always shows DAT_NCMPR, S35). `$DISPLAY`'s FLG is the
+  descriptor's with the three compression bits inverted, KEY$M_INITIDX (10 hex) as it is (S2, S47).
+- **The default bucket** is the smallest that holds one record of MRS bytes, and at least 2 blocks (S54's 10 for MRS 5000; 2
+  for every smaller record). A Prolog 3 bucket of b blocks holds a record of b×512−32 bytes (S55's 32224 in 63 blocks); 9 more
+  fit VMS's Prolog 1 (E92), which govax refuses with RMS$_PLV, and past that it's RMS$_MRS (E91, E93). That FIX records have
+  the same limit is unconfirmed.
+- **The header:** an indexed file's bucket size and default extension are area 0's (S62's 3; S64's DEQ 4, S66's 2), its record
+  size MRS for FIX and 0 for VAR, and **its end of file 0** until RMS extends it past its first allocation (E71, E84, S2, S56,
+  S64, S65), when it's the block after the allocation; `$CLOSE` leaves it so. `$READ` reads every allocated block whatever
+  the end of file (S2's dump). A XABALL's CTG or CBT makes the file contiguous, which `$OPEN`'s FOP shows and `$CREATE`'s
+  doesn't (S64, S65).
+- **govax's choices, by answer 1:** PROLOG=1 or 2, a primary key whose segments overlap, and a record only a lower prolog would
+  hold are RMS$_PLV where VMS quietly made Prolog 1 or 2 (S34, S59 to S61, E92); `$OPEN` of a Prolog 1 or 2 file is RMS$_PLV.
+  Collating keys are RMS$_DTP (Decision 7).
+- **Unconfirmed, no case reaching them:** an alternate key past MRS is RMS$_POS as the primary is; an alternate's overlapping
+  segments are taken; RMS$_KSI when an index bucket can't hold two keys of 4 bytes' overhead each; no XABALL's area takes AOP
+  from FOP's CTG or CBT; a REF past the file's keys at `$OPEN` or `$DISPLAY` is RMS$_REF, an AID past its areas RMS$_AID, each
+  with the number as STV.
+- **`$EXTEND`** (the RMS manual's description): FAB$L_ALQ, or each XABALL's ALQ for its area of an indexed file, which becomes
+  the area's current extent if it has none, or else the extent to come (AREA$L_NXT, NXBLK), used when the current one is
+  (`isam.File.ExtendArea`); an ALQ of 0 is RMS$_ALQ, no room RMS$_FUL, a file not opened to write RMS$_FAC. ALQ's and STV's
+  outputs, and the end of file afterwards, are unconfirmed.
+- **Found on the way:** a `$CREATE` or `$OPEN` failing after the file was accessed released its IFI but not the access, so the
+  file stayed held (RMS$_FLK at the next `$OPEN`); `abandon` closes it.
+
 ## The rules
 
 ### Keys [manual]
@@ -669,7 +718,7 @@ them.
 6. **`isam`: update and delete.** Length changes, alternates moved, deleted records and pointers, RRV
    chains; ods2's additions if any. (done 2026-11-03; ods2 needed none)
 7. **RMS: `$CREATE`, `$OPEN`, `$DISPLAY`.** XABKEY, XABSUM, XABALLs, every status; CIF;
-   F$FILE_ATTRIBUTES; `$EXTEND`; SET DEBUG RMS.
+   F$FILE_ATTRIBUTES; `$EXTEND`; SET DEBUG RMS. (done 2026-11-03)
 8. **RMS: record operations.** `$CONNECT`, `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`,
    `$FREE`, `$RELEASE`, `$SPACE`; ROP's options; contexts; locks; `TestIdx88Oracle`.
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
@@ -813,3 +862,14 @@ has REV at all.
   each key's order of equal values), `Check` every 25 operations; `TestChangeRefuses` the refusals. Two orders VMS uses were
   read off stale bytes (U130, U136); the randomized test found subtask 4's RRV-between-records fault. "What update and delete
   settled" has the findings.
+- **2026-11-03: subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`.** `rms/indexed.go`: `checkIndexedCreate` (the
+  XABKEYs and XABALLs read and checked in VMS's order, an `isam.Spec` made, FAB$L_ALQ and FAB$B_BKS written as VMS's are),
+  `initIndexed` (the key names, then `isam.Create` through `indexedBlocks`, a volume file as `isam.WritableBlocks`, and the
+  header's fields), `isIndexed`, `openIndexed`, and the record services' interim RMS$_ORG (`indexedPending`); `indexedxab.go`
+  (`fillIndexedXABs`: XABSUM, XABKEY by REF, XABALL by AID, for `$OPEN`, `$DISPLAY`, and `$CREATE`'s XABSUM); `extend.go`
+  (`SysExtend`, registered in corevms). `isam`: `PrologBlocks`, `ExtendArea`, `SizedBlocks`, and `allocate` taking the extent
+  to come. F$FILE_ATTRIBUTES's NOK, NOA, and PVN (`FileAttributes.Keys`, `Areas`, `Prolog`); SET DEBUG RMS shows a XABKEY's
+  REF, DTP, FLG, and segments, a XABALL's AID and BKZ, and a RAB's KRF, KSZ, and key on an indexed file. Tests:
+  `TestIdx88CreateOracle` (`internal/console`; `runIdx88` now runs the probe on an RD54 of 3-block clusters, so `TestIdx88Probe`
+  does too), `TestIndexedOpenAsVMS` (VMS's files restored and opened), and `indexed_test.go`'s cases the probe lacks, and
+  `TestExtendArea`. "What RMS's `$CREATE` settled" has the findings.

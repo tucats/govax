@@ -311,7 +311,7 @@ func fileFlag(f func(a rms.FileAttributes) bool) fileItem {
 	return func(_ *Interpreter, a rms.FileAttributes) dclValue { return dclTrueFalse(f(a)) }
 }
 
-func fileInt[T uint8 | uint16 | uint32](f func(a rms.FileAttributes) T) fileItem {
+func fileInt[T uint8 | uint16 | uint32 | int](f func(a rms.FileAttributes) T) fileItem {
 	return func(_ *Interpreter, a rms.FileAttributes) dclValue { return dclInteger(int32(f(a))) }
 }
 
@@ -332,7 +332,8 @@ var (
 
 // fileItems are F$FILE_ATTRIBUTES's keywords (the DCL Dictionary's Table
 // DCLI-5, without PRESHELVED, which is Alpha's), and what each returns:
-// the file header's fields, as rms.FileAttributes has them. What an
+// the file header's fields, as rms.FileAttributes has them, and an indexed
+// file's keys, areas, and prolog level (NOK, NOA, PVN; Phase 88). What an
 // ODS-2 volume in govax has no counterpart for is answered as a plain
 // sequential file would answer it (unconfirmed against VMS: KNOWN,
 // MOVE, SHELVABLE, SHELVED, STORED_SEMANTICS, FILE_LENGTH_HINT; and
@@ -378,14 +379,14 @@ var fileItems = map[string]fileItem{
 	"MOVE":         fileFlag(func(rms.FileAttributes) bool { return true }),
 	"MRN":          fileInt(func(rms.FileAttributes) uint32 { return 0 }),
 	"MRS":          fileInt(func(a rms.FileAttributes) uint16 { return a.RecordSize }),
-	"NOA":          fileInt(func(rms.FileAttributes) uint32 { return 0 }),
+	"NOA":          fileInt(func(a rms.FileAttributes) int { return a.Areas }),
 	"NOBACKUP":     fileFlag(rms.FileAttributes.NoBackup),
-	"NOK":          fileInt(func(rms.FileAttributes) uint32 { return 0 }),
+	"NOK":          fileInt(func(a rms.FileAttributes) int { return a.Keys }),
 	"ORG": func(_ *Interpreter, a rms.FileAttributes) dclValue {
 		return dclString(codeName(fileOrganizations, a.Organization))
 	},
 	"PRO": func(_ *Interpreter, a rms.FileAttributes) dclValue { return dclString(a.ProtectionText()) },
-	"PVN": fileInt(func(rms.FileAttributes) uint32 { return 0 }),
+	"PVN": fileInt(func(a rms.FileAttributes) int { return a.Prolog }),
 	"RAT": func(_ *Interpreter, a rms.FileAttributes) dclValue { return dclString(recordAttributeName(a.RecordAttributes)) },
 	"RCK": fileFlag(rms.FileAttributes.ReadCheck),
 	"RDT": fileTime(func(a rms.FileAttributes) uint64 { return a.Revised }),

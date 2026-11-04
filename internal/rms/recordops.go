@@ -42,6 +42,10 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 		return findOnDevice(ctx, rabAddr, handle)
 	}
 
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
+	}
+
 	if handle.relativeRecords() {
 		return ctx.relativeLocate(rabAddr, handle, true)
 	}
@@ -121,6 +125,10 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 
 	if handle.IsConsole() || handle.IsRecordDevice() {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
+	}
+
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
 	}
 
 	if handle.relativeRecords() {
@@ -283,6 +291,10 @@ func SysTruncate(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
 	}
 
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
+	}
+
 	s := &handle.stream
 
 	fail := func(sts uint32) (uint32, error) {
@@ -349,6 +361,10 @@ func SysDelete(ctx *Context, argv []uint32) (uint32, error) {
 		return sts, err
 	}
 
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
+	}
+
 	if handle.relativeRecords() {
 		return ctx.relativeDelete(rabAddr, handle)
 	}
@@ -375,6 +391,10 @@ func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	} else if isIndirect(isi) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
+	}
+
+	if handle.indexedRecords() {
+		return ctx.indexedPending(rabAddr)
 	}
 
 	if !handle.IsConsole() && !handle.IsRecordDevice() {
