@@ -577,9 +577,26 @@ func (f *File) removePointer(k *Key, value []byte, rfa RFA) error {
 func (f *File) removeFromSIDR(b *bucket, k *Key, list []sidr, i, j int) error {
 	s := &list[i]
 
-	if len(s.pointers) == 1 {
+	live := 0
+
+	for _, p := range s.pointers {
+		if !p.isDeleted() {
+			live++
+		}
+	}
+
+	switch {
+	case live <= 1:
+		// The last one left: whatever deleted pointers it has go with it
+		// (unconfirmed, no case having deleted the last after the first).
 		f.removeSIDR(b, k, list, i)
-	} else {
+
+	case j == 0:
+		// A value's first pointer stays, with others after it, marked deleted
+		// and the array its size (testdata/for88's D1, D2, and R1).
+		b.data[s.pointers[j].offset] |= ircDeleted
+
+	default:
 		whole := int(binary.LittleEndian.Uint16(b.data[s.offset:]))
 		end := s.offset + 2 + whole
 

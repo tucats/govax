@@ -1,0 +1,383 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ MACRO/NOLIST FOR88
+$ LINK/NOMAP FOR88,FOR88/OPTIONS
+SYS$SHARE:FORRTL/SHAREABLE
+$ ! Through a procedure with /OUTPUT, so that SYS$OUTPUT is a process-permanent file.
+$ @FOR88B/OUTPUT=FOR88-VAX.TXT
+  $STATUS == "%X00000001"
+
+Directory DUA1:[000000]
+
+B40.IDX;1                  3/3         4-NOV-2026 13:28:33.57
+B41.IDX;1                  3/3         4-NOV-2026 13:28:33.57
+B52.IDX;1                  0/0         4-NOV-2026 13:28:33.58
+B53.IDX;1                  0/0         4-NOV-2026 13:28:33.58
+B56.IDX;1                  3/3         4-NOV-2026 13:28:33.59
+B57.IDX;1                  3/3         4-NOV-2026 13:28:33.59
+B62.IDX;1                  3/3         4-NOV-2026 13:28:33.59
+B63.IDX;1                  3/3         4-NOV-2026 13:28:33.60
+B64.IDX;1                  3/3         4-NOV-2026 13:28:33.60
+B65.IDX;1                  3/3         4-NOV-2026 13:28:33.60
+B66.IDX;1                  3/3         4-NOV-2026 13:28:33.61
+B67.IDX;1                  3/3         4-NOV-2026 13:28:33.61
+B68.IDX;1                  3/3         4-NOV-2026 13:28:33.61
+B69.IDX;1                  3/3         4-NOV-2026 13:28:33.61
+B70.IDX;1                  3/3         4-NOV-2026 13:28:33.62
+B71.IDX;1                  3/3         4-NOV-2026 13:28:33.62
+B72.IDX;1                  3/3         4-NOV-2026 13:28:33.62
+B73.IDX;1                  3/3         4-NOV-2026 13:28:33.62
+B78.IDX;1                 30/30        4-NOV-2026 13:28:33.63
+B79.IDX;1                 30/30        4-NOV-2026 13:28:33.63
+B80.IDX;1                  3/3         4-NOV-2026 13:28:33.64
+B81.IDX;1                  3/3         4-NOV-2026 13:28:33.64
+B82.IDX;1                  3/3         4-NOV-2026 13:28:33.64
+B83.IDX;1                  3/3         4-NOV-2026 13:28:33.64
+B84.IDX;1                  3/3         4-NOV-2026 13:28:33.65
+B85.IDX;1                  3/3         4-NOV-2026 13:28:33.65
+B86.IDX;1                  3/3         4-NOV-2026 13:28:33.65
+B87.IDX;1                  3/3         4-NOV-2026 13:28:33.66
+B88.IDX;1                  3/3         4-NOV-2026 13:28:33.66
+B89.IDX;1                  3/3         4-NOV-2026 13:28:33.66
+B91.IDX;1                  3/3         4-NOV-2026 13:28:33.66
+D1.IDX;1                  21/21        4-NOV-2026 13:28:34.25
+D2.IDX;1                  21/21        4-NOV-2026 13:28:34.27
+L1.IDX;1                  21/21        4-NOV-2026 13:28:34.29
+R1.IDX;1                  21/21        4-NOV-2026 13:28:34.20
+R2.IDX;1                  21/21        4-NOV-2026 13:28:34.22
+R3.IDX;1                  21/21        4-NOV-2026 13:28:34.23
+R4.IDX;1                   9/9         4-NOV-2026 13:28:34.25
+STD.IDX;1                 21/21        4-NOV-2026 13:28:33.67
+W1.IDX;1                  21/21        4-NOV-2026 13:28:33.97
+W2.IDX;1                  21/21        4-NOV-2026 13:28:33.98
+W3.IDX;1                  21/21        4-NOV-2026 13:28:33.99
+W4.IDX;1                  21/21        4-NOV-2026 13:28:34.00
+W5.IDX;1                  15/15        4-NOV-2026 13:28:34.01
+W6.IDX;1                  21/21        4-NOV-2026 13:28:34.03
+W7.IDX;1                  78/78        4-NOV-2026 13:28:34.04
+
+Total of 46 files, 495/495 blocks.
+
+Directory DUA1:[000000]
+
+STD.IDX;1                     File ID:  (50,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:    4-NOV-2026 13:28:33.67
+Revised:    4-NOV-2026 13:28:34.31 (173)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 3 keys
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Fixed length 16 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 21/21 blocks.
+IDENT	" 4-NOV-2026 13:28:34	OpenVMS ANALYZE/RMS_FILE Utility"
+
+SYSTEM
+	SOURCE                  OpenVMS
+
+FILE
+	ALLOCATION              21
+	BEST_TRY_CONTIGUOUS     no
+	BUCKET_SIZE             2
+	CLUSTER_SIZE            3
+	CONTIGUOUS              no
+	EXTENSION               0
+	FILE_MONITORING         no
+	GLOBAL_BUFFER_COUNT     0
+	NAME                    "DUA1:[000000]STD.IDX;1"
+	ORGANIZATION            indexed
+	OWNER                   [SYSTEM]
+	PROTECTION              (system:RWED, owner:RWED, group:RE, world:)
+
+RECORD
+	BLOCK_SPAN              yes
+	CARRIAGE_CONTROL        none
+	FORMAT                  fixed
+	SIZE                    16
+
+AREA 0
+	ALLOCATION              21
+	BUCKET_SIZE             2
+	EXTENSION               0
+
+KEY 0
+	CHANGES                 no
+	DATA_KEY_COMPRESSION    no
+	DATA_RECORD_COMPRESSION yes
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              no
+	INDEX_AREA              0
+	INDEX_COMPRESSION       no
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	PROLOG                  3
+	SEG0_LENGTH             4
+	SEG0_POSITION           0
+	TYPE                    string
+
+KEY 1
+	CHANGES                 yes
+	DATA_KEY_COMPRESSION    no
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              yes
+	INDEX_AREA              0
+	INDEX_COMPRESSION       no
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	SEG0_LENGTH             4
+	SEG0_POSITION           4
+	TYPE                    int4
+
+KEY 2
+	CHANGES                 yes
+	DATA_KEY_COMPRESSION    no
+	DATA_AREA               0
+	DATA_FILL               100
+	DUPLICATES              yes
+	INDEX_AREA              0
+	INDEX_COMPRESSION       no
+	INDEX_FILL              100
+	LEVEL1_INDEX_AREA       0
+	NAME                    ""
+	NULL_KEY                no
+	SEG0_LENGTH             4
+	SEG0_POSITION           8
+	TYPE                    dstring
+
+ANALYSIS_OF_AREA 0
+	RECLAIMED_SPACE         0
+
+ANALYSIS_OF_KEY 0
+	DATA_FILL               24
+	DATA_KEY_COMPRESSION    0
+	DATA_RECORD_COMPRESSION -25
+	DATA_RECORD_COUNT       8
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	INDEX_COMPRESSION       0
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        16
+	MEAN_INDEX_LENGTH       6
+
+ANALYSIS_OF_KEY 1
+	DATA_FILL               9
+	DATA_KEY_COMPRESSION    0
+	DATA_RECORD_COUNT       7
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	DUPLICATES_PER_SIDR     0
+	INDEX_COMPRESSION       0
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        12
+	MEAN_INDEX_LENGTH       6
+
+ANALYSIS_OF_KEY 2
+	DATA_FILL               9
+	DATA_KEY_COMPRESSION    0
+	DATA_RECORD_COUNT       7
+	DATA_SPACE_OCCUPIED     2
+	DEPTH                   1
+	DUPLICATES_PER_SIDR     0
+	INDEX_COMPRESSION       0
+	INDEX_FILL              2
+	INDEX_SPACE_OCCUPIED    2
+	LEVEL1_RECORD_COUNT     1
+	MEAN_DATA_LENGTH        12
+	MEAN_INDEX_LENGTH       6
+
+Check RMS File Integrity                      4-NOV-2026 13:28:34.37   Page 1
+DUA1:[000000]W7.IDX;1
+
+
+FILE HEADER
+
+	File Spec: DUA1:[000000]W7.IDX;1
+	File ID: (60,1,0)
+	Owner UIC: [SYSTEM]
+	Protection:  System: RWED, Owner: RWED, Group: RE, World: 
+	Creation Date:    4-NOV-2026 13:28:34.04
+	Revision Date:    4-NOV-2026 13:28:34.20, Number: 1
+	Expiration Date: none specified
+	Backup Date:     none posted
+	Contiguity Options:  none
+	Performance Options: none
+	Reliability Options: none
+	Journaling Enabled:  none
+
+
+RMS FILE ATTRIBUTES
+
+	File Organization: indexed
+	Record Format: fixed
+	Record Attributes:   
+	Maximum Record Size: 16
+	Longest Record: 16
+	Blocks Allocated: 78, Default Extend Size: 0
+	Bucket Size: 2
+	File Monitoring: disabled
+	Global Buffer Count: 0
+
+
+FIXED PROLOG
+
+	Number of Areas: 1, VBN of First Descriptor: 3
+	Prolog Version: 3
+
+AREA DESCRIPTOR #0 (VBN 3, offset %X'0000')
+
+	Bucket Size: 2
+	Reclaimed Bucket VBN: 0
+	Current Extent Start: 76, Blocks: 3, Used: 2, Next: 78
+	Default Extend Quantity: 0
+	Total Allocation: 78
+
+KEY DESCRIPTOR #0 (VBN 1, offset %X'0000')
+
+	Next Key Descriptor VBN: 2, Offset: %X'0000'
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 2, Data Bucket Size: 2
+	Root VBN: 7
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+
+Check RMS File Integrity                      4-NOV-2026 13:28:34.38   Page 2
+DUA1:[000000]W7.IDX;1
+
+
+		(7)  KEY$V_REC_COMPR  1
+	Key Segments: 1
+	Key Size: 4
+	Minimum Record Size: 4
+	Index Fill Quantity: 1024, Data Fill Quantity: 1024
+	Segment Positions:       0
+	Segment Sizes:           4
+	Data Type: string
+	Name: ""
+	First Data Bucket VBN: 4
+
+KEY DESCRIPTOR #1 (VBN 2, offset %X'0000')
+
+	Next Key Descriptor VBN: 2, Offset: %X'0066'
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 2, Data Bucket Size: 2
+	Root VBN: 13
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    1
+		(1)  KEY$V_CHGKEYS    1
+		(2)  KEY$V_NULKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+	Key Segments: 1
+	Key Size: 4
+	Minimum Record Size: 8
+	Index Fill Quantity: 1024, Data Fill Quantity: 1024
+	Segment Positions:       4
+	Segment Sizes:           4
+	Data Type: signed longword
+	Name: ""
+	First Data Bucket VBN: 10
+
+KEY DESCRIPTOR #2 (VBN 2, offset %X'0066')
+
+	Index Area: 0, Level 1 Index Area: 0, Data Area: 0
+	Root Level: 1
+	Index Bucket Size: 2, Data Bucket Size: 2
+	Root VBN: 19
+	Key Flags:
+		(0)  KEY$V_DUPKEYS    1
+		(1)  KEY$V_CHGKEYS    1
+		(2)  KEY$V_NULKEYS    0
+		(3)  KEY$V_IDX_COMPR  0
+		(4)  KEY$V_INITIDX    0
+		(6)  KEY$V_KEY_COMPR  0
+	Key Segments: 1
+	Key Size: 4
+	Minimum Record Size: 12
+	Index Fill Quantity: 1024, Data Fill Quantity: 1024
+	Segment Positions:       8
+	Segment Sizes:           4
+
+Check RMS File Integrity                      4-NOV-2026 13:28:34.39   Page 3
+DUA1:[000000]W7.IDX;1
+
+
+	Data Type: descending string
+	Name: ""
+	First Data Bucket VBN: 16
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/RMS_FILE/CHECK W7.IDX
+%BACKUP-S-COPIED, copied DUA1:[000000]B40.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B41.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B52.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B53.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B56.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B57.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B62.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B63.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B64.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B65.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B66.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B67.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B68.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B69.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B70.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B71.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B72.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B73.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B78.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B79.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B80.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B81.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B82.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B83.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B84.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B85.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B86.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B87.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B88.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B89.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]B91.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]D1.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]D2.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]L1.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]R1.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]R2.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]R3.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]R4.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]STD.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W1.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W2.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W3.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W4.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W5.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W6.IDX;1
+%BACKUP-S-COPIED, copied DUA1:[000000]W7.IDX;1

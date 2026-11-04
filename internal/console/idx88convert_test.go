@@ -130,6 +130,10 @@ var expectedConvertFiles = map[string]bool{
 // /MERGEs that took a record each, has 3 on VMS, 2 here. No rule fits these so far.
 var expectedConvertChecks = map[string]bool{
 	"[R3]C72.IDX;1": true, "[R3]C74.IDX;1": true, "[R3]C75.IDX;1": true, "[R3]C91.IDX;1": true,
+
+	// testdata/for88's REWRITEs: a data bucket's check character is 2, 2, 3, and 1 more
+	// on VMS, with the same records, by no rule found.
+	"[000000]R1.IDX;1": true, "[000000]R2.IDX;1": true, "[000000]R3.IDX;1": true, "[000000]R4.IDX;1": true,
 }
 
 // bucketCheck is a bucket's check character in a Dump.

@@ -61,12 +61,14 @@ const (
 // compressData turns a record's bytes after its key into fragments: each a
 // word's length, that many bytes, and a byte of how many more times the
 // last of them repeats. Bytes with no run to compress are one fragment
-// with a repeat count of 0.
+// with a repeat count of 0. The scan stops before a longword that ends the
+// bytes, which it never looks at (testdata/for88's W4.IDX: "bbbbcc" and six
+// blanks isn't compressed, the blanks' only whole longword being the last).
 func compressData(rest []byte) []byte {
 	out := make([]byte, 0, len(rest)+3)
 	start := 0
 
-	for at := 0; at+runScanStep <= len(rest); {
+	for at := 0; at+runScanStep < len(rest); {
 		from, to, found := runAt(rest, start, at)
 		if !found {
 			at += runScanStep

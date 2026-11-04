@@ -565,8 +565,8 @@ func (ctx *Context) createKeys(chain []xabEntry, format ondisk.RecordFormat, mrs
 // (RMS$_BKZ, STV the area). FAB$L_ALQ takes each area's allocation as it's
 // read (E100: 4 after area 0, then RMS$_IMX at area 2), and at the end the
 // whole, area 0 holding at least the prolog (E79: 2 for a file of one key
-// and area). With no XABALL, the FAB's BKS, ALQ, DEQ, and FOP's CTG and CBT
-// are area 0's; that its AOP follows FOP is unconfirmed.
+// and area). With no XABALL, the FAB's BKS, ALQ, and DEQ are area 0's, and
+// FOP's CTG and CBT the file's.
 func (ctx *Context) createAreas(fab uint32, chain []xabEntry, plan *indexedPlan, keys []xabKey) (uint32, uint32, error) {
 	var total uint32
 
@@ -618,6 +618,10 @@ func (ctx *Context) createAreas(fab uint32, chain []xabEntry, plan *indexedPlan,
 			return 0, 0, err
 		}
 
+		// The FAB's CTG and CBT are the file's, not the area's: VMS's area
+		// descriptor has an AOP of 0 (testdata/for88's B78, FORRTL's
+		// INITIALSIZE asking for CBT).
+		plan.aop, a.Options = a.Options, 0
 		plan.spec.Areas = []isam.AreaSpec{a}
 		total = a.Allocation
 	}

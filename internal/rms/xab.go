@@ -197,6 +197,13 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File, mode xabMode) err
 
 	ra := h.RecordAttributes
 
+	// An indexed file with no end of file in its header, one RMS made and has
+	// never extended, reports the block after its allocation (testdata/for88's
+	// B40: 0 on the volume, 4 from XABFHC).
+	if isIndexed(f) && ra.EndOfFileBlock == 0 {
+		ra.EndOfFileBlock = ra.HighestBlock + 1
+	}
+
 	for _, x := range chain {
 		a := x.Addr
 

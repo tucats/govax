@@ -49,7 +49,7 @@ and the match by value (left out, 0):
 | 6 | KEYLT= | KGT | descending, else FOR$_INVMATKEY |
 | 7 and up, negative | | | FOR$_INVARGFOR |
 
-The VAX run is what confirms these, on VMS's RMS rather than govax's.
+VMS 7.1's run confirmed these on its own RMS (2026-11-04): `vax/`, and the phase doc's "What round 2 settled".
 
 ## The VAX run
 
@@ -75,5 +75,6 @@ Allow several minutes: MACRO has 25,000 lines to read. If a case hangs, Ctrl/Y a
 
    which brings back `vax/for88-vax.txt`, `vax/for88.log`, and `vax/for88.bck`.
 
-`TestFor88Rehearsal` (`internal/console/for88_test.go`) runs the program on VMS's FORRTL.EXE over
-govax, or skips without one on a local volume. Set `FOR88_WRITE` to a file to keep its output.
+`TestFor88Oracle` (`internal/console/for88_test.go`) runs the program on VMS's FORRTL.EXE over
+govax's RMS, holding its output and files to VMS's, or skips without one on a local volume. Set
+`FOR88_WRITE` to a file to keep its output.

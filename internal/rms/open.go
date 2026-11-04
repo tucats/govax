@@ -46,6 +46,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	// A FAB that asks for no access is opened for GET.
+	asked := fac
 	fac = facAccess(fac, facGet)
 
 	shr, err := ctx.loadByte(fabAddr + fabSHR)
@@ -205,6 +206,14 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 			}
 
 			return fabStatus(ctx, fabAddr, sts, 0)
+		}
+
+		// An indexed file's FAC then says so; a sequential file's stays 0
+		// (testdata/for88's #121, testdata/for81's #421).
+		if h, _ := ctx.Files.Lookup(ifi); asked&facRequests == 0 && isIndexed(h.File) {
+			if err := ctx.storeByte(fabAddr+fabFAC, fac); err != nil {
+				return 0, err
+			}
 		}
 	}
 

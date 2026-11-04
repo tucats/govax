@@ -229,6 +229,14 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 	}
 
 	req.Mode = recordLockMode(rop)
+
+	// A stream of an indexed file that can only read doesn't keep another such
+	// stream out (testdata/for88, #306, FORRTL's READONLY and SHARED): a read
+	// lock, unconfirmed against a stream that writes. The Guide's 7.2.2.1 has
+	// every stream exclusive by default, and for sequential files that stands.
+	if handle.indexed && handle.Access&(facPut|facUpd|facDel|facTrn) == 0 && req.Mode == lck.EX {
+		req.Mode = lck.PR
+	}
 	req.NoQueue = rop&ropWAT == 0
 	req.Data = ctx.Waker
 
