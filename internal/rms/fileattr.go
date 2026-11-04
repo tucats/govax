@@ -171,13 +171,7 @@ func (s *Session) FileAttributes(spec string) (FileAttributes, error) {
 				return err
 			}
 
-			attrs = headerAttributes(f.Header)
-
-			if isIndexed(f) {
-				if file, err := openIndexed(f, false); err == nil {
-					attrs.Keys, attrs.Areas, attrs.Prolog = len(file.Keys), len(file.Areas), file.Version
-				}
-			}
+			attrs = indexedAttributesOf(f)
 			attrs.Name = r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';')
 			attrs.Device = r.Spec.Device
 			attrs.FID = m.Fid.String()
@@ -287,4 +281,18 @@ func hostFileAttributes(path string) (FileAttributes, error) {
 	}
 
 	return a, nil
+}
+
+// indexedAttributesOf is f's header's attributes and, for an indexed file whose
+// prolog govax reads, its keys, areas, and prolog level.
+func indexedAttributesOf(f *volume.File) FileAttributes {
+	attrs := headerAttributes(f.Header)
+
+	if isIndexed(f) {
+		if file, err := openIndexed(f, false); err == nil {
+			attrs.Keys, attrs.Areas, attrs.Prolog = len(file.Keys), len(file.Areas), file.Version
+		}
+	}
+
+	return attrs
 }

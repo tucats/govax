@@ -664,7 +664,10 @@ never had.
   RMS$_ORG until subtask 8), held to VMS by `TestIdx88CreateOracle` and `TestIndexedOpenAsVMS`, and subtask 8 (2026-11-03)
   RMS's record operations (`rms/indexedrecords.go`: `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND` by key, in
   sequence on the stream's key of reference, and by RFA; ROP's KGE, KGT, REV, LIM, CDK, UIF, LOA, FDL; locks by RFA), held to
-  VMS's whole run by `TestIdx88Oracle`.
+  VMS's whole run by `TestIdx88Oracle`, and subtask 9 (written 2026-11-04, its VMS round to come) DCL on indexed files: READ's
+  `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`, WRITE, and WRITE/UPDATE through a RAB of DCL's own in a small memory
+  (`rms/dclkeyed.go`, calling `SysGet` and the rest), TYPE and DUMP/RECORD by the primary key, DIRECTORY/FULL's prolog and keys;
+  round 4 of the probe is `testdata/idx88`'s `idx88d.com`, rehearsed by `TestIdx88DProbe`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

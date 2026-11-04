@@ -1,0 +1,51 @@
+	.TITLE	IDX88D - round 4's indexed files, made empty for DCL
+; Phase 88's round 4 (docs/PHASE-88 - keyed index files.md, subtask 9): DCL's
+; READ, WRITE, TYPE, DUMP, and the lexical functions on indexed files. DCL can't
+; make an indexed file, so this program makes the files IDX88D.COM uses, with
+; no records: DCL's WRITE puts them in. Written by hand.
+;
+; D1.IDX  variable records of up to 80 bytes, four keys:
+;         0  STG  at 0, 6 bytes, no duplicates
+;         1  STG  at 6, 4 bytes, DUP and CHG
+;         2  BN2  at 10, 2 bytes, DUP and CHG (READ/KEY can't use it)
+;         3  DSTG at 12, 3 bytes, DUP and CHG (descending)
+; D2.IDX  fixed records of 20 bytes, one key:
+;         0  STG  at 0, 4 bytes, duplicates allowed
+; D3.IDX  variable records of up to 80 bytes, one key, NCH alone:
+;         0  STG  at 0, 4 bytes, no duplicates, no changes (the primary's rule)
+;
+; The program's status is the first $CREATE's or $CLOSE's that fails, or
+; RMS$_NORMAL.
+	$FABDEF
+	$XABDEF
+	$XABKEYDEF
+	.PSECT	D,NOEXE,WRT,LONG
+D1FAB:	$FAB	FNM=<D1.IDX>,ORG=IDX,RFM=VAR,MRS=80,FAC=<PUT,GET,UPD,DEL>,-
+		RAT=CR,XAB=D1K0
+D1K0:	$XABKEY	REF=0,DTP=STG,POS=<0>,SIZ=<6>,NXT=D1K1
+D1K1:	$XABKEY	REF=1,DTP=STG,POS=<6>,SIZ=<4>,FLG=<DUP,CHG>,NXT=D1K2
+D1K2:	$XABKEY	REF=2,DTP=BN2,POS=<10>,SIZ=<2>,FLG=<DUP,CHG>,NXT=D1K3
+D1K3:	$XABKEY	REF=3,DTP=DSTG,POS=<12>,SIZ=<3>,FLG=<DUP,CHG>,NXT=0
+D2FAB:	$FAB	FNM=<D2.IDX>,ORG=IDX,RFM=FIX,MRS=20,FAC=<PUT,GET,UPD,DEL>,-
+		RAT=CR,XAB=D2K0
+D2K0:	$XABKEY	REF=0,DTP=STG,POS=<0>,SIZ=<4>,FLG=<DUP>,NXT=0
+D3FAB:	$FAB	FNM=<D3.IDX>,ORG=IDX,RFM=VAR,MRS=80,FAC=<PUT,GET,UPD,DEL>,-
+		RAT=CR,XAB=D3K0
+D3K0:	$XABKEY	REF=0,DTP=STG,POS=<0>,SIZ=<4>,NXT=0
+	.PSECT	C,EXE,NOWRT,LONG
+	.ENTRY	START,^M<R2>
+	MOVAL	D1FAB,R2
+	BSBB	MAKE
+	BLBC	R0,90$
+	MOVAL	D2FAB,R2
+	BSBB	MAKE
+	BLBC	R0,90$
+	MOVAL	D3FAB,R2
+	BSBB	MAKE
+90$:	RET
+; MAKE makes the file whose FAB R2 points to, and closes it.
+MAKE:	$CREATE	FAB=(R2)
+	BLBC	R0,10$
+	$CLOSE	FAB=(R2)
+10$:	RSB
+	.END	START

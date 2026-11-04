@@ -27,6 +27,8 @@ import (
 // stream is a FileHandle's (stream.go): READ is a sequential $GET, WRITE
 // a $PUT, which must be at the end of the file (RMS$_NEF otherwise), and
 // WRITE/UPDATE an $UPDATE of the record READ read last, the same length.
+// An indexed file's READ, WRITE, and WRITE/UPDATE are the indexed record
+// services themselves, called through a RAB of DCL's (dclkeyed.go).
 //
 // What the DCL Dictionary says of OPEN's files:
 //
@@ -69,6 +71,10 @@ type DCLAccess struct {
 	// $CREATE makes one (corevms's outfile.go; the record attributes are
 	// unconfirmed, the blocks used VMS 7.1's, testdata/tb70).
 	Variable bool
+
+	// Locks are where an indexed file's records are locked as READ reads
+	// them (dclkeyed.go); none without a Manager.
+	Locks DCLLocks
 }
 
 // recordAttributes are the record attributes of a file the open makes
@@ -159,6 +165,10 @@ type DCLFile struct {
 	ifi    uint16
 
 	host *hostDCLFile
+
+	// index is the key of reference of READ's last /INDEX, 0 before one
+	// (dclkeyed.go).
+	index int
 }
 
 // OpenDCLFile opens the file at loc as DCL's OPEN does, with access a. A
@@ -168,7 +178,10 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		return openHostDCLFile(loc.Name, a)
 	}
 
-	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s, Files: NewFileTable(nil)}
+	ctx := &Context{
+		Mounts: s.Mounts, Logicals: s.Logicals, Session: s, Files: NewFileTable(nil),
+		Locks: a.Locks.Manager, PID: a.Locks.PID, CanLock: a.Locks.CanLock,
+	}
 
 	fail := func(name string, sts uint32) (*DCLFile, error) {
 		return nil, newDCLFileError(name, sts)
@@ -261,7 +274,17 @@ func (f *DCLFile) arm(fac byte, appending bool) uint32 {
 		rop = ropEOF
 	}
 
-	return f.handle.arm(fac, rop)
+	// An indexed file opened to write may have its records deleted too
+	// (READ/DELETE; dclkeyed.go).
+	if isIndexed(f.handle.File) && fac&facPut != 0 {
+		fac |= facDel
+	}
+
+	if sts := f.handle.arm(fac, rop); sts != 0 || !f.handle.indexedRecords() {
+		return sts
+	}
+
+	return f.connectRAB(appending)
 }
 
 // dclVFCSize is how many bytes of fixed control a record of a file OPEN
@@ -377,6 +400,10 @@ func (f *DCLFile) Get() ([]byte, uint32) {
 		return f.host.get()
 	}
 
+	if f.handle.indexedRecords() {
+		return f.Read(DCLRead{})
+	}
+
 	return f.handle.getSequential(f.ctx)
 }
 
@@ -430,6 +457,10 @@ func (f *DCLFile) Put(record []byte) uint32 {
 		return f.host.put(record)
 	}
 
+	if f.handle.indexedRecords() {
+		return f.putIndexed(record)
+	}
+
 	return f.handle.putSequential(f.ctx, record)
 }
 
@@ -477,6 +508,10 @@ func (h *FileHandle) putSequential(ctx *Context, record []byte) uint32 {
 func (f *DCLFile) Update(record []byte) uint32 {
 	if f.host != nil {
 		return f.host.update(record)
+	}
+
+	if f.handle.indexedRecords() {
+		return f.updateIndexed(record)
 	}
 
 	h := f.handle

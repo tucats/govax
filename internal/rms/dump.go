@@ -3,6 +3,7 @@ package rms
 import (
 	"errors"
 	"fmt"
+	"github.com/tucats/govax/internal/isam"
 	"io"
 	"strings"
 
@@ -50,6 +51,10 @@ func (d *DumpFile) Block(vbn uint32) ([]byte, error) {
 
 // Records reads the file's records, in order, each with its address.
 func (d *DumpFile) Records() ([]DumpRecord, error) {
+	if isIndexed(d.file) {
+		return d.indexedRecords()
+	}
+
 	r, err := odsrms.NewReader(d.file)
 	if err != nil {
 		return nil, err
@@ -79,6 +84,40 @@ func (d *DumpFile) Records() ([]DumpRecord, error) {
 			Offset: uint16(off % ondisk.BlockSize),
 		})
 	}
+}
+
+// indexedRecords is Records for an indexed file: its records by the primary
+// key, each with its RFA, its bucket's VBN and its ID in the offset's place,
+// as RMS's RAB$W_RFA has them (Phase 88, subtask 9; unconfirmed until round 4's
+// run).
+func (d *DumpFile) indexedRecords() ([]DumpRecord, error) {
+	file, err := openIndexed(d.file, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		records []DumpRecord
+		failed  error
+	)
+
+	err = file.Walk(0, func(e isam.Entry) bool {
+		data, err := file.Record(e.RFA)
+		if err != nil {
+			failed = err
+
+			return false
+		}
+
+		records = append(records, DumpRecord{Data: data, VBN: e.RFA.VBN, Offset: e.RFA.ID})
+
+		return true
+	})
+	if err == nil {
+		err = failed
+	}
+
+	return records, err
 }
 
 // OpenDump finds the one volume file spec names, for DUMP: the newest

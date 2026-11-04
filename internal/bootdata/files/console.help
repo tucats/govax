@@ -189,6 +189,8 @@
 //                          (docs/PHASE-87 - system volume.md)
 //              11/03/26    Added EDIT, SET EDITOR, and SHOW EDITOR; CONFIG
 //                          KEYS' vax.editor.command and vax.editor.scratch
+//              11/04/26    READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK,
+//                          and WRITE, on indexed files (docs/PHASE-88)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3196,7 +3198,8 @@ $READ
     Syntax:
 
         READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string]
-             logical-name symbol-name
+             [/KEY=string] [/INDEX=n] [/MATCH=EQ|GE|GT] [/DELETE]
+             [/NOLOCK] logical-name symbol-name
 
     The file is one OPEN opened, or SYS$INPUT, SYS$COMMAND, SYS$OUTPUT,
     or SYS$ERROR, which need no OPEN.  In a command procedure, READ
@@ -3209,8 +3212,21 @@ $READ
     or failing that the /ERROR label, with $STATUS RMS$_EOF; with
     neither, RMS-E-EOF is an error, and the ON action is taken.  A READ
     that fails leaves its symbol as it was.  A record
-    longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /NOLOCK and
-    /TIME_OUT are accepted, and change nothing.
+    longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /TIME_OUT is
+    accepted, and changes nothing.
+
+    On an indexed file, READ reads the next record in the order of the
+    key it last used (the primary key at first).  /KEY=string reads the
+    record whose key is the string: a string shorter than the key matches
+    the key's first characters.  /MATCH=GE reads the first record whose
+    key is equal or next, GT the first next, in the key's own order (EQ,
+    the default, only an equal one).  /INDEX=n chooses the key, 0 the
+    primary, and stays for later READs of the file until another /INDEX.
+    After a keyed READ, READ goes on in that key's order.  /DELETE deletes
+    the record read, on a file opened /READ/WRITE.  On a file opened with
+    /SHARE=WRITE, READ locks the record until the next operation on the
+    file, and another READ of it is RMS-E-RLK; /NOLOCK reads it without
+    a lock, even one another READ holds.
 
     Example:
 
@@ -3236,7 +3252,10 @@ $WRIT
     write, or SYS$OUTPUT, or SYS$ERROR or SYS$COMMAND, which are the
     terminal even when a procedure's output goes to an /OUTPUT file.
     WRITE/UPDATE replaces the record READ read last with one of the same
-    length.  A record WRITE can't write is RMS's error (RMS-F-NEF for a
+    length.  On an indexed file, WRITE puts the record where its keys say,
+    in any order (RMS-F-DUP for a key that allows no duplicates), and
+    WRITE/UPDATE's record may be another length, but not change the
+    primary key (RMS-F-CHG).  A record WRITE can't write is RMS's error (RMS-F-NEF for a
     /READ/WRITE file READ hasn't read to its end), or with /ERROR the
     procedure goes to the label.  Without /SYMBOL, an item longer than
     255 characters is DCL-W-TKNOVF.  WRITE leaves $STATUS RMS$_NORMAL.

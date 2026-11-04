@@ -260,6 +260,17 @@ func (t *FileTable) Lookup(ifi uint16) (*FileHandle, bool) {
 // a harmless no-op — Go's built-in delete on a map behaves the same way
 // whether or not the key was present, so there's nothing extra for this
 // method to check.
+// Find returns the IFI h has in t, if it has one.
+func (t *FileTable) Find(h *FileHandle) (uint16, bool) {
+	for ifi, x := range t.handles {
+		if x == h {
+			return ifi, true
+		}
+	}
+
+	return 0, false
+}
+
 func (t *FileTable) Release(ifi uint16) {
 	delete(t.handles, ifi)
 }

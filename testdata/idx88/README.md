@@ -17,6 +17,8 @@ records are our own data, made from a number, so the files can be kept.
 | `def_bkt.mar`, `def_irc.mar`, `def_key.mar`, `def_area.mar`, `def_plg.mar` | One internal definition macro each, `GLOBAL`: its values from the object, no listing (the author's answer 5) |
 | `decode.go` | Turns `vax/def_*.obj` into `defined.txt`, names and values only |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
+| `idx88d.mar`, `idx88d.com` | Round 4, DCL on indexed files (below); written by hand |
+| `exchanged.cmd`, `copyoutd.cmd` | Round 4's exchange volume scripts |
 
 ## Running it
 
@@ -85,6 +87,37 @@ Records go in by RAC KEY unless a case says otherwise. Numbers in the ROP field 
 assemble, link, and reach its end with no condition. Until govax has indexed files, nearly
 every case there fails with RMS$_ORG or what follows from it; the first case, on a sequential
 file, exercises the helpers.
+
+## Round 4: DCL (`idx88d.com`)
+
+Phase 88's subtask 9. DCL can't make an indexed file, so `idx88d.mar` (written by hand)
+makes three with no records: D1.IDX (variable records, four keys: a string primary, a
+string alternate with duplicates, a binary one, a descending string), D2.IDX (fixed
+records of 20 bytes, a primary key with duplicates), and D3.IDX (one key). `idx88d.com`
+then writes, reads, changes, and shows them, in sections D1 to D11: WRITE in any order and
+its refusals; READ in sequence; READ's `/KEY`, `/MATCH`, `/INDEX`, `/DELETE`, and
+`/NOLOCK`; WRITE/UPDATE; two streams on one file; the fixed-length file; OPEN/APPEND;
+TYPE, DUMP/RECORD, DIRECTORY/FULL, and F$FILE_ATTRIBUTES. It runs with SET NOON and SET
+VERIFY, each command's `$STATUS` shown, and each READ's symbol set to "-" first. A loop's
+READ leaves on `/ERROR` as well as `/END_OF_FILE`, so nothing can go round forever.
+MACRO's own output goes to `IDX88DM.LOG`, which stays on the volume.
+
+On the host, from the repository root:
+
+    govax console < testdata/idx88/exchanged.cmd
+
+That makes `testdata/disks/idx88d-exchange.dsk`, mounted there as DUA5. On the VAX, with
+its `[000000]` the default directory:
+
+    $ @IDX88D/OUTPUT=IDX88D.LOG
+
+It takes a few seconds and reads nothing from the terminal. Back on the host:
+
+    govax console < testdata/idx88/copyoutd.cmd
+
+which brings back `vax/idx88d.log`. `TestIdx88DProbe` (`internal/console/idx88dcl_test.go`)
+rehearses it on govax and checks what the DCL Dictionary says; with VMS's log here, an oracle
+holds govax's log to it.
 
 ## What's next
 

@@ -219,7 +219,9 @@ func (t *FileTable) AddPermanent(h *FileHandle, opts PermanentOptions) (*Permane
 			rop = ropEOF
 		}
 
-		if h.Reader == nil && h.Writer == nil {
+		// An indexed stream has neither, and is armed already (DCL's
+		// OPEN's, dclkeyed.go).
+		if h.Reader == nil && h.Writer == nil && !h.indexed {
 			if sts := h.arm(h.Access, rop); sts != 0 {
 				return nil, errors.New("rms: process-permanent file can't be armed")
 			}

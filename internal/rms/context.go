@@ -165,6 +165,17 @@ func (ctx *Context) storeWord(addr uint32, v uint16) error {
 	return ctx.Mem.StoreWord(ctx.CPU, addr, v)
 }
 
+// storeBytes writes b at addr, a byte at a time.
+func (ctx *Context) storeBytes(addr uint32, b []byte) error {
+	for i, v := range b {
+		if err := ctx.storeByte(addr+uint32(i), v); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (ctx *Context) storeLongword(addr uint32, v uint32) error {
 	return ctx.Mem.StoreLongword(ctx.CPU, addr, v)
 }

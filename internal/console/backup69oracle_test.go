@@ -142,7 +142,6 @@ func backup69CutPart1(t *testing.T, lines []string) []string {
 // (backup69Mask), that govax's needn't match.
 var backup69Differences = []link68Difference{
 	{regexp.MustCompile(`^V7\.1 +VAX 8600$`), "F$GETSYI's VERSION and HW_NAME: govax says V7.3 and names itself"},
-	{regexp.MustCompile(`^File organization:  Indexed, Prolog: 3, Using 1 key$`), "DIRECTORY/FULL of INDEXED.IDX: govax doesn't read an indexed file's prolog, so it shows neither its version nor its keys"},
 	{regexp.MustCompile(`Revised: +<time> \(0\)$`), "the tree's [B69.SUB1] and [B69.SUB1.SUB2]: VMS's CREATE/DIRECTORY made them with revision 0, the test's restore with 1, as VMS's BACKUP makes a directory"},
 }
 

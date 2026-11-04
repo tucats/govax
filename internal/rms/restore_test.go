@@ -163,14 +163,6 @@ func TestRestoreTreeOracle(t *testing.T) {
 	compareRestoredListing(t, listing, string(want))
 }
 
-// expectedRestoreDifferences are the lines of VMS's DIRECTORY/FULL that
-// govax's doesn't write, each with govax's line: an indexed file's prolog
-// and key count come from the file's own prolog, which govax's DIRECTORY
-// doesn't read.
-var expectedRestoreDifferences = map[string]string{
-	"File organization:  Indexed, Prolog: 3, Using 1 key": "File organization:  Indexed",
-}
-
 // compareRestoredListing matches got, govax's DIRECTORY/FULL, with want,
 // VMS's, line for line, with the file IDs masked, and the creation and
 // revision dates of the directory files.
@@ -195,10 +187,6 @@ func compareRestoredListing(t *testing.T, got, want string) {
 				}
 
 				lines[i] = line[:len("Created:")] + " (the restore's)" + count
-			}
-
-			if difference, ok := expectedRestoreDifferences[line]; ok {
-				lines[i] = difference
 			}
 		}
 

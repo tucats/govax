@@ -18,7 +18,10 @@ and FAB but where govax's Prolog 3 alone refuses what VMS made as Prolog 1 or 2,
 Prolog 3 files report every key and area as VMS's did. The record services read and change them (`rms/indexedrecords.go`): `$GET`,
 `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`, by key, in sequence on any key, and by RFA, with ROP's options and record locks,
 and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the other seven listed with their reasons.
-`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 9,** DCL.
+`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. Subtask 9, DCL, is written and rehearsed:
+READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE on indexed files through the record services
+(`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys; its probe, round 4 (`testdata/idx88`'s `idx88d.com`),
+**waits for its VMS run**, which finishes the subtask with an oracle.
 
 ## Goal
 
@@ -769,7 +772,7 @@ them.
    `$FREE`, `$RELEASE`, `$SPACE`; ROP's options; contexts; locks; `TestIdx88Oracle`. (done 2026-11-03; `$SPACE` left out, as
    "What the record services settled" says)
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
-   to a probe log.
+   to a probe log. (written and rehearsed 2026-11-04; round 4's VMS run and its oracle to come)
 10. **Utilities,** as Question 2 chooses: an FDL reader, CREATE/FDL, CONVERT, ANALYZE/RMS_FILE, each
     possibly its own subtask.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
@@ -932,3 +935,22 @@ has REV at all.
   two subtask 8 exceptions, and `indexedrecords_test.go` for what the probe lacks (FAC refusals, `$FIND` then `$UPDATE` and
   `$DELETE` with the sequence going on among duplicates, RFA access, the end of file, `$REWIND`'s key). "What the record
   services settled" has the findings.
+- **2026-11-04: subtask 9, DCL, written; round 4 waits for its run.** Round 4 of the probe (`testdata/idx88`'s `idx88d.mar`, which
+  makes three empty indexed files, and `idx88d.com`, sections D1 to D11: WRITE in any order and its refusals, READ in sequence,
+  `/KEY` exact and generic, `/MATCH`, `/INDEX` and its persistence, a descending and a binary key, `/DELETE`, WRITE/UPDATE,
+  two streams and `/NOLOCK`, a fixed-length file, OPEN/APPEND, TYPE, DUMP/RECORD, DIRECTORY/FULL, F$FILE_ATTRIBUTES;
+  `exchanged.cmd`, `copyoutd.cmd`). The code: `rms/dclkeyed.go` gives a DCL file that needs one a RAB in a small memory of its
+  own (MAPEN off) and calls `SysGet`, `SysPut`, `SysUpdate`, and `SysDelete` with it, as VMS's DCL calls RMS, so subtask 8's
+  services, statuses, stream context, and locks are DCL's with nothing written twice; `DCLFile.Read` takes a `DCLRead`, the
+  DCL side's `readQualifiers` and `keyedStream`. An OPEN's file is locked in the process's lock database (`DCLAccess.Locks`).
+  TYPE and DUMP/RECORD walk the primary key (`writeIndexedRecords`, `DumpFile.indexedRecords`, an RFA's offset word the record's
+  ID); DIRECTORY/FULL shows "Indexed, Prolog: 3, Using n keys" (`organizationText`), as VMS's did, so `TestBackup69Oracle` and
+  `restore_test.go` lost their entries for it. HELP READ and WRITE and MANUAL.md's file I/O section describe them.
+  `TestIdx88DProbe` rehearses round 4 on govax and holds it to the DCL Dictionary meanwhile. The choices the run is to settle,
+  each unconfirmed: WRITE is a `$PUT` by key (RAC KEY), so any order, after OPEN/APPEND too; `/MATCH` takes an abbreviation
+  only if it's one keyword's (`G` is CLI$_IVKEYW); `/NOLOCK` is ROP NLK with RRL, after the manual's "a record ... locked by other
+  accessors"; `/INDEX` stays the file's even when its READ fails; READ/DELETE is a `$GET` then a `$DELETE`, and a failed delete
+  leaves the symbol as it was; an indexed stream opened to write has FAB$V_DEL; `/KEY` on a sequential file is whatever `$GET` by
+  key says (RMS$_RAC); TYPE's order and DUMP/RECORD's RFAs. Found on the way: a process-permanent file armed its stream again when
+  it had no Reader or Writer, which for an indexed stream dropped DEL and its key of reference (`ppf.go`); and an endless READ loop
+  in a probe that goes round on any error under SET NOON, so round 4's loops leave on `/ERROR` too.

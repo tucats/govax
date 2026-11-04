@@ -359,7 +359,7 @@ func matchAttributes(vol *volume.Volume, m filespec.Match) (FileAttributes, erro
 		return FileAttributes{}, fmt.Errorf("opening %s.%s: %w", m.Name, m.Type, err)
 	}
 
-	return headerAttributes(f.Header), nil
+	return indexedAttributesOf(f), nil
 }
 
 // writeColumnsEntry writes one file's line with the columns cols asks
@@ -426,7 +426,7 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 	fmt.Fprintf(b, "Backup:    %s\n", optional(a.Backup, "<No backup recorded>"))
 	b.WriteString("Effective: <None specified>\n")
 	b.WriteString("Recording: <None specified>\n")
-	fmt.Fprintf(b, "File organization:  %s\n", organizationName(a.Organization))
+	fmt.Fprintf(b, "File organization:  %s\n", organizationText(a))
 	b.WriteString("Shelved state:      Online \n")
 	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, %sGlobal buffer count: %d, %s%s\n",
 		a.Allocated, a.Extend, bucketText(a), a.GlobalBuffers, limit, characteristicsText(a.Characteristics))
@@ -601,6 +601,25 @@ func directoryTime(t uint64) string {
 
 	return fmt.Sprintf("%2d-%s-%04d %02d:%02d:%02d.%02d", tm.Day(), strings.ToUpper(tm.Month().String()[:3]),
 		tm.Year(), tm.Hour(), tm.Minute(), tm.Second(), tm.Nanosecond()/10_000_000)
+}
+
+// organizationText is /FULL's file organization: an indexed file's with its
+// prolog's level and its keys, "Indexed, Prolog: 3, Using 2 keys", as VMS
+// 7.1's (testdata/idx88's IDX88DIR.TXT), and just "Indexed" when govax can't
+// read its prolog (a file with none, as VMS's was; a Prolog 1 or 2 file, where
+// VMS's has its level and keys).
+func organizationText(a FileAttributes) string {
+	name := organizationName(a.Organization)
+	if a.Organization != 2 || a.Prolog == 0 {
+		return name
+	}
+
+	keys := "keys"
+	if a.Keys == 1 {
+		keys = "key"
+	}
+
+	return fmt.Sprintf("%s, Prolog: %d, Using %d %s", name, a.Prolog, a.Keys, keys)
 }
 
 // organizationName is /FULL's file organization.

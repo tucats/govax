@@ -1188,7 +1188,9 @@ grammar console
     ! SYS$ERROR, and SYS$COMMAND need no OPEN. /SHARE's keyword (READ or
     ! WRITE, WRITE when there is none) and each /ERROR and /END_OF_FILE
     ! label are read by the handlers. WRITE's data, after its qualifiers,
-    ! is the rest of the line: expressions separated by commas. INQUIRE
+    ! is the rest of the line: expressions separated by commas. READ's
+    ! /KEY, /INDEX, /MATCH, and /DELETE are for indexed files (Phase 88),
+    ! /MATCH's keyword read by the handler. INQUIRE
     ! asks the terminal for a symbol's value; its prompt is the rest of
     ! the line too.
     verb open/id=2100
@@ -1224,6 +1226,13 @@ grammar console
         qualifier   lock/id=2124
         qualifier   time_out/id=2125            -
                     /type=$integer
+        qualifier   key/id=2128                 -
+                    /type=$string/nonegatable
+        qualifier   index/id=2129               -
+                    /type=$string/nonegatable
+        qualifier   match/id=2118               -
+                    /type=$string/nonegatable
+        qualifier   delete/id=2119/nonegatable
         parameter   logical_name/id=2126        -
                     /type=$string
         parameter   symbol/id=2127              -

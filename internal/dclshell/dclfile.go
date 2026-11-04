@@ -97,10 +97,13 @@ import (
 // verification on, the substituted reply is shown on the procedure's
 // output (Q1, Q11); at Ctrl/Z the value is "", and nothing is shown.
 //
-// Not here: indexed files (READ's /INDEX, /KEY, /MATCH, and /DELETE),
-// record locking (/NOLOCK is accepted, and nothing is locked), READ's
-// /TIME_OUT (accepted; a read waits), and WRITE's 1024-byte record
-// buffer.
+// Indexed files (docs/PHASE-88 - keyed index files.md, subtask 9): READ's
+// /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK (readQualifiers) go to the
+// file's stream (keyedStream), and rms's dclkeyed.go turns them, WRITE, and
+// WRITE/UPDATE into the record services a program would call, records locked
+// as RMS locks them. Not here: record locking on the other organizations
+// (/NOLOCK changes nothing there), READ's /TIME_OUT (accepted; a read
+// waits), and WRITE's 1024-byte record buffer.
 
 // The RMS statuses DCL's file I/O reports.
 var (
@@ -133,6 +136,61 @@ type dclStream interface {
 	Put(record []byte) uint32
 	Update(record []byte) uint32
 	Close() error
+}
+
+// keyedStream is a dclStream that takes READ's qualifiers for indexed files
+// (rms.DCLFile; docs/PHASE-88 - keyed index files.md, subtask 9). The other
+// streams read in sequence whatever READ's qualifiers say.
+type keyedStream interface {
+	Read(r rms.DCLRead) ([]byte, uint32)
+}
+
+// readQualifiers reads READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK. A
+// /MATCH keyword is EQ, GE, or GT, or enough of one to tell it from the
+// others (CLI$_IVKEYW otherwise); /INDEX is a decimal key of reference.
+func readQualifiers(r *dcl.Result) (rms.DCLRead, error) {
+	var q rms.DCLRead
+
+	if r.Present("KEY") {
+		q.Key, q.HasKey = []byte(r.String("KEY")), true
+	}
+
+	if r.Present("INDEX") {
+		text := strings.TrimSpace(r.String("INDEX"))
+
+		n, err := strconv.ParseUint(text, 10, 8)
+		if err != nil {
+			return q, vmserrors.NewSegment(vmserrors.CLI_IVVALU, text)
+		}
+
+		q.Index, q.HasIndex = int(n), true
+	}
+
+	if r.Present("MATCH") {
+		option := strings.ToUpper(strings.TrimSpace(r.String("MATCH")))
+
+		var matches []rms.DCLMatch
+
+		for _, m := range []struct {
+			name  string
+			match rms.DCLMatch
+		}{{"EQ", rms.MatchEqual}, {"GE", rms.MatchEqualOrNext}, {"GT", rms.MatchNext}} {
+			if option != "" && strings.HasPrefix(m.name, option) {
+				matches = append(matches, m.match)
+			}
+		}
+
+		if len(matches) != 1 {
+			return q, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, option)
+		}
+
+		q.Match = matches[0]
+	}
+
+	q.Delete = r.Present("DELETE")
+	q.NoLock = r.Negated("LOCK")
+
+	return q, nil
 }
 
 // nullStream is NL:, opened by OPEN: every read is at its end of file,
@@ -338,6 +396,10 @@ func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 		return errors.New("OPEN needs a process to open the file in")
 	}
 
+	// An indexed file's records are locked as READ reads them, in the
+	// process's lock database (rms's dclkeyed.go).
+	access.Locks = rms.DCLLocks{Manager: c.RTL.Locks, PID: c.RTL.Process.PID}
+
 	file, err := c.openDCLFile(spec, r.ParamPresent("FILESPEC", "HOST"), access)
 	if err != nil {
 		var fe *rms.DCLFileError
@@ -507,6 +569,7 @@ func (c *Interpreter) closeCommand(id int64, r *dcl.Result) error {
 }
 
 // readCommand is READ[/END_OF_FILE=label][/ERROR=label][/PROMPT=string]
+// [/KEY=string][/INDEX=n][/MATCH=option][/DELETE][/[NO]LOCK]
 // logical-name symbol-name.
 func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 	errorLabel, err := qualifierLabel(r, "ERROR")
@@ -533,7 +596,12 @@ func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 		prompt = r.String("PROMPT")
 	}
 
-	record, sts, err := c.readDCLRecord(r.String("LOGICAL_NAME"), prompt)
+	keyed, err := readQualifiers(r)
+	if err != nil {
+		return err
+	}
+
+	record, sts, err := c.readDCLRecord(r.String("LOGICAL_NAME"), prompt, keyed)
 	if err != nil {
 		return c.failOrBranch(errorLabel, ConditionValue(err), err)
 	}
@@ -557,11 +625,12 @@ func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 
 // readDCLRecord reads READ's record from the file logical names (as
 // typed): one OPEN opened, or another process-permanent file (see the top
-// of this file). It returns the record and RMS$_NORMAL, or the RMS status
+// of this file), with keyed's qualifiers if the file takes them. It returns
+// the record and RMS$_NORMAL, or the RMS status
 // for why there is none (RMS$_EOF at the end of the file, RMS$_RTB with
 // the whole record for one too long), or err for a name that has no
 // file.
-func (c *Interpreter) readDCLRecord(logical, prompt string) (string, uint32, error) {
+func (c *Interpreter) readDCLRecord(logical, prompt string, keyed rms.DCLRead) (string, uint32, error) {
 	var (
 		record string
 		sts    = rmsNormalStatus
@@ -569,8 +638,15 @@ func (c *Interpreter) readDCLRecord(logical, prompt string) (string, uint32, err
 
 	switch f, e := c.dclTarget(logical); {
 	case f != nil:
-		data, s := f.stream.Get()
-		record, sts = string(data), s
+		var data []byte
+
+		if k, ok := f.stream.(keyedStream); ok {
+			data, sts = k.Read(keyed)
+		} else {
+			data, sts = f.stream.Get()
+		}
+
+		record = string(data)
 	case e != nil && e == c.procedureInput:
 		level := c.currentLevel()
 		if level == nil || level.source.plain {

@@ -3,6 +3,7 @@ package rms
 import (
 	"bytes"
 	"fmt"
+	"github.com/tucats/govax/internal/isam"
 	"io"
 
 	"github.com/tucats/ods2/filespec"
@@ -112,6 +113,10 @@ func (s *Session) Type(specText string) (string, error) {
 			return err
 		}
 
+		if isIndexed(f) {
+			return writeIndexedRecords(&buf, f)
+		}
+
 		if f.Header.RecordAttributes.Attributes&ondisk.AttrFortranCC != 0 {
 			return writeFortranRecords(&buf, f)
 		}
@@ -123,6 +128,34 @@ func (s *Session) Type(specText string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// writeIndexedRecords writes an indexed file's records to w as TYPE shows
+// them, by the primary key, each ending in LF (Phase 88, subtask 9: the order
+// is a sequential $GET's on a stream just connected, unconfirmed for TYPE).
+func writeIndexedRecords(w io.Writer, f *volume.File) error {
+	file, err := openIndexed(f, false)
+	if err != nil {
+		return err
+	}
+
+	var failed error
+
+	err = file.Walk(0, func(e isam.Entry) bool {
+		record, err := file.Record(e.RFA)
+		if err == nil {
+			_, err = w.Write(append(record, '\n'))
+		}
+
+		failed = err
+
+		return err == nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return failed
 }
 
 // writeFortranRecords writes f's records to w as TYPE shows a file of FORTRAN

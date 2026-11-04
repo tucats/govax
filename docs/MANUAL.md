@@ -2104,7 +2104,8 @@ instead.
 
 ```text
 OPEN [/READ] [/WRITE] [/APPEND] [/SHARE[=READ|WRITE]] [/ERROR=label] logical-name file
-READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string] logical-name symbol
+READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string]
+     [/KEY=string] [/INDEX=n] [/MATCH=EQ|GE|GT] [/DELETE] [/NOLOCK] logical-name symbol
 WRITE [/ERROR=label] [/UPDATE] [/SYMBOL] logical-name expression[,...]
 CLOSE [/ERROR=label] logical-name
 INQUIRE [/LOCAL|/GLOBAL] [/[NO]PUNCTUATION] symbol [prompt]
@@ -2143,6 +2144,19 @@ $ IF .NOT. ANSWER THEN EXIT
 
 `/END_OF_FILE`, `/ERROR`, and the `OPEN` and `CLOSE` `/ERROR` labels
 branch without a message and without taking the `ON` action.
+
+An indexed file is read in the order of a key: the primary key at
+first, then whichever key a keyed `READ` last used. `/KEY=string` reads
+the record with that key (a shorter string matches the key's first
+characters), `/MATCH=GE` or `GT` the first equal-or-next or next one in
+the key's own order, and `/INDEX=n` chooses the key, 0 being the
+primary; it stays the file's until another `/INDEX`. `/DELETE` deletes
+the record read. `WRITE` puts a record wherever its keys say, in any
+order, and `WRITE/UPDATE` may change a record's length, but not its
+primary key. On a file opened `/SHARE=WRITE`, `READ` locks the record
+it reads until the next operation on the file, and `/NOLOCK` reads one
+without locking it, even if another stream has it locked. DCL can't
+make an indexed file; a program makes one (`$CREATE` with XABKEYs).
 
 ### Lexical functions
 
