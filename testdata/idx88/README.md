@@ -158,7 +158,7 @@ It reads nothing from the terminal. Back on the host:
     mkdir -p testdata/disks/idx88c-help
     govax console < testdata/idx88/copyoutc.cmd
 
-which brings back `vax/idx88c.log`, `vax/idx88c.bck` (the files made, of our own data), and
+which brings back `vax/idx88c.log` (VMS V7.1's run, 2026-11-04), `vax/idx88c.bck` (the files made, of our own data), and
 `vax/idx88cbck.txt`, and puts the `MSG*.TXT` files in `testdata/disks/idx88c-help`, which is
 never committed. `IDX88CM.LOG`, MACRO's own output, stays on the volume.
 `TestIdx88CProbe` (`internal/console/idx88util_test.go`) rehearses the round on govax.

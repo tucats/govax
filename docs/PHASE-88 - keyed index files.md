@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), written 2026-11-04 and waiting for its VAX run. Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -21,8 +21,9 @@ and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the
 DCL reads and writes them (subtask 9): READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE through
 the record services (`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys, held to VMS's run of round 4 line for
 line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Subtask 10,** the
-utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) is written and rehearsed on
-govax, and **waits for its VAX run**; then the FDL reader and CREATE/FDL (10b), CONVERT (10c), and ANALYZE/RMS_FILE (10d).
+utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) ran on VMS 7.1, its log and
+the files it made in `vax/` ("What round 3 settled"). **Next: 10b,** the FDL reader and CREATE/FDL; then CONVERT (10c) and
+ANALYZE/RMS_FILE (10d).
 
 ## Goal
 
@@ -583,6 +584,86 @@ govax's run to it line for line, times masked. Where this section and the ones a
   file OPEN makes keeps 1 (`FileHandle.reviseAtClose`).
 - **DIRECTORY/FULL** says "Indexed, Prolog: 3, Using 4 keys", and `F$FILE_ATTRIBUTES`'s ORG, NOK, NOA, PVN, and the rest are VMS's.
 
+## What round 3 settled (2026-11-04)
+
+Round 3 (`testdata/idx88`'s `idx88c.com`) ran on VMS 7.1 to its end: `vax/idx88c.log` (21,342 lines) and `vax/idx88c.bck`, the
+191 files it made, which govax's BACKUP reads and restores. The manual has the attributes and qualifiers; this is what it leaves
+out. Subtasks 10b to 10d hold govax to the log, and read the save set's files for what the log only summarizes.
+
+**FDL's parse** (C4, and C2's and C3's faults):
+
+- **A statement is a line or a `;`-separated part of one**, numbered from 1 through the file, and every message names the
+  statement: `KEY; SEG0_LENGTH 8` on line 3, after `FILE; ORGANIZATION indexed`, is statements 3 and 4. Messages with a
+  segment end their first line with a blank, and the segment's line is the text upcased between backslashes.
+- **A statement that isn't a secondary of the current primary is read as a primary**, so an unknown secondary (`ORGANISATION`),
+  a secondary before any primary, and every secondary after a failed primary are each `%FDL-E-UNPRIKW, unrecognized primary keyword
+  in statement n`. `KEY` with no number is `%FDL-W-VALPRI, value required on primary`; `KEY 300`, and keys or areas out of
+  order (KEY 1 then KEY 0; KEY 0 then KEY 2), are `%FDL-E-OUTORDER, key or area primary defined out of order`. A primary
+  whose secondaries all failed adds `%FDL-W-NULLPRI, null primary block`.
+- **Warnings make the file anyway**, the value left at its default: an unknown keyword value or switch (`squential`, `maybe`,
+  `BLOCK_SPAN 1`, `variabel`) is `%FDL-W-UNQUAKW, unrecognized qualifier keyword`, an ambiguous one (`CONT`) `%FDL-W-ABKW`, a
+  secondary twice `%FDL-W-MULSEC, multiple secondary definition` (the first value kept: to be read from the file), a primary
+  twice or a value missing `%FDL-W-NOQUAL, no qualifier`, a bad date `%FDL-W-INVDATIM, invalid date/time`; then
+  `%FDL-W-WARNING, parsed with warnings`, and `$STATUS` is `%X00010001` (from CONVERT, `%X00B48058`, and CONVERT then made
+  no file). An error (`-E-`) ends with `%FDL-E-FDLERROR, error parsing FDL file`, `%X00B48072`, and no file; a bad protection
+  is `%FDL-E-SYNTAX, syntax error`, its segment the value with its leading blank.
+- **Not refused:** primaries out of the manual's order (RECORD before FILE), a string with no closing quotation mark, T, F,
+  true, abbreviations, comments, and tabs.
+- **CREATE/FDL's own:** `%FDL-F-OPENFDL, error opening DUA1:[R3]NOSUCH.FDL;` with RMS's reason (`%X10B4808C`; the default type
+  `.FDL`), `%FDL-F-CREATE, error creating DUA1:[R3]C44.DAT;` with RMS's (`%X10B4806C`: MRS for a relative bucket of 64, SIZ, FLG,
+  POS, IAN, DFL, NPK, each "for key = 0" from the STV), and `/LOG`'s `%FDL-I-CREATED, DUA1:[R3]C23.DAT;1 created`. A file not
+  named takes FILE NAME, then is `DUA1:[R3].;1`; a name without a type takes DEFAULT_NAME's (`C2BOTHER.XYZ`). `/FDL` with no
+  value is DCL's VALREQ.
+- **Prolog levels:** PROLOG 2, PROLOG 1, and an overlapping primary key with no PROLOG all make a file ANALYZE calls Prolog 1.
+  govax refuses them (answer 1); the status is subtask 10b's choice.
+- **Round trip:** CREATE/FDL from ANALYZE/RMS_FILE/FDL's file of S35.IDX made a file whose FDL matches S35's to the ANALYSIS
+  sections.
+- **The end of file:** a file CREATE/FDL makes, and one CONVERT loads with `/NOFAST_LOAD`, has an EFBLK of 0 in its header (C31,
+  C72), and VMS's DIRECTORY/SIZE and BACKUP/LIST count it at its high block (C31's 3, C72's 246), where govax's `backup.Attributes.Used`
+  counts 0: 15 of the save set's files. A fast load's has HIBLK+1 (C75, 105 and 106). A sequential file with an EFBLK of 1 and no
+  data counts 0 on both.
+
+**CONVERT** (C6 to C10):
+
+- **Success is `%X00000001`**, exceptions and all. An exception is an informational message, one per record, to SYS$OUTPUT:
+  `%CONVERT-I-DUP, duplicate key encountered`, `-I-RSK, record shorter than primary key`, `-I-RTL, record longer than maximum
+  record length`, `-I-RTS, record too short for fixed record format file`, `-I-SEQ` (each record out of order under `/NOSORT`:
+  299 of a reversed 300), `-I-VFC`; `/PAD` on a file that isn't fixed is `%CONVERT-I-PAD, PAD option ignored, output record format
+  not fixed`, once. `/EXIT` ends at the first with `%CONVERT-E-FATALEXC, fatal exception encountered` (`%X00B2808A`), the file
+  left with the records before it.
+- **Sorting is stable:** of `AAA two` and `AAA a duplicate`, the first is kept. `/EXCEPTIONS_FILE` with no value names the output's
+  file with type `.EXC`; its records are the input's.
+- **`/STATISTICS`** is six lines, `CONVERT Statistics` then the counts beside the I/O and times (a tab layout, in the log).
+- **Refusals:** `%CONV-F-OPENIN` (`%X10B2109C`), `%CONV-F-OPENOUT` (a wildcard output: RMS's FNM; `/NOCREATE` of a missing file;
+  `/PROLOG=4`, RMS's PLV; `%X10B210A4`), `%CONV-E-NOWILD` for a wildcard input, `%CONVERT-E-INP_FILES` past 10 inputs,
+  `%CONVERT-E-NOKEY` for `/KEY=9`, `%CONV-E-CONFQUAL` for `/APPEND/MERGE`, `%CONVERT-E-NOTSEQ` for `/APPEND` to an indexed file,
+  and `%CONV-F-WRITEERR` with RMS's NEF for `/NOCREATE` or `/MERGE` into a sequential file. `/WORK_FILES=11` is SORT's
+  `%SORT-F-BAD_MERGE` after the output file is made. **Not refused:** `/KEY=1` on a sequential input, `/PAD=%X300`.
+  `/STATISTICS=FULL` and `/IDENTICAL` are DCL's NOVALU and IVQUAL.
+- **Inputs, outputs:** `/KEY=n` reads in that key's order; with no FDL the output has the input's attributes (areas too), its type
+  the input's.
+
+**ANALYZE/RMS_FILE** (C11, C12):
+
+- **The status:** a report to SYS$OUTPUT, or `/NOOUTPUT`, ends with `%ANLRMS-I-ERRORS, <DUA1:[R3]T.TXT;1> 0 errors` and is
+  `%X103B8103`; one to a file, and `/SUMMARY` anywhere (which writes no ERRORS line), is `%X103B8009`; with errors the
+  status is an error's (`%X103B877A` and up). With no `/OUTPUT`, `/CHECK` and `/STATISTICS` go to SYS$OUTPUT and `/FDL` to `name.FDL`.
+- **`/CHECK` on damage:** each finding is `***  VBN n:  text`, and some end the walk with `Unrecoverable error encountered in
+  structure of file.`, the report going on to its end with the descriptors it hadn't shown left out. The texts seen: "Bucket check
+  byte is out of phase" (either end, both reported at the bucket's first VBN), "Prolog block checksum is invalid" (the
+  descriptor shown with the changed value), "Invalid key of reference in bucket header", "Invalid level number in bucket header",
+  "BKT$V_ROOTBKT flag in index bucket header is not correct", "Key and/or data bytes do not fit in primary data record", "Record id
+  at offset %X'00CE' is duplicate or too large", "SIDR pointer extends past end of SIDR record", "Key spills over into free key
+  space of bucket", "Reserved flag bit 1 is set" (once per record), "The bucket chains for key #0 contain a loop", "VBN free space
+  offset is invalid", "Invalid bucket address sample in bucket header", "Invalid first free byte offset in bucket header", and
+  "Next-bucket pointer out of range of file". A key's data type changed is only the block's sum; the next-bucket pointer of the
+  only bucket in its chain isn't checked at all (X07: no errors).
+- **The four reports** (`Check RMS File Integrity`, `RMS File Statistics`, `RMS File Summary`, and FDL) are in the log for
+  sequential, relative, and indexed files of every format.
+
+**HELP/MESSAGE** knows the facilities CONVERT, CONV, FDL, and ANALYZE (the last one message); CREATEFDL and ANLRMS are
+`%MSGHLP-F-NOSUCHFAC`. Their text is in `testdata/disks/idx88c-help`, local only.
+
 ## The rules
 
 ### Keys [manual]
@@ -813,7 +894,7 @@ them.
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
    to a probe log. (done 2026-11-04)
 10. **Utilities,** as Question 2 chooses, in four parts: (a) round 3 of the probe, `idx88c.com`
-    (written 2026-11-04; waits for its VAX run); (b) the FDL reader and CREATE/FDL; (c) CONVERT; (d)
+    (done 2026-11-04); (b) the FDL reader and CREATE/FDL; (c) CONVERT; (d)
     ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
     forms on indexed units; messages.
@@ -1024,3 +1105,9 @@ has REV at all.
   with no file named, from ANALYZE's FDL of `[IN]S35.IDX`, would make a new version of the file C12 copies, so it's last.
   Not done: DCL's bit-field assignment (`R[0,32] = n`), which govax lacks, so the round makes no binary data in DCL and
   takes round 1's files for that.
+- **2026-11-04: round 3's run, and subtask 10a done.** VMS 7.1 ran `idx88c.com` to its end, and the author audited `IDX88CM.LOG`
+  and brought back `vax/idx88c.log`, `vax/idx88c.bck` (191 files, read and restored by govax's BACKUP), `vax/idx88cbck.txt`, and
+  HELP/MESSAGE's text (local only). "What round 3 settled" has the findings: FDL's statement numbering and messages, which faults are
+  warnings that still make the file, CREATE/FDL's names and refusals, Prologs 1 and 2, CONVERT's exceptions, statuses, and
+  refusals, ANALYZE's statuses and the texts of 20 kinds of damage. Found for 10b: VMS counts a file whose EFBLK is 0 at its high
+  block, which govax's `backup.Attributes.Used` (and so BACKUP/LIST) doesn't. No code changed.
