@@ -1,0 +1,141 @@
+	.TITLE	VMS88M	Changes every kind of file the same way (Phase 88, subtask 15)
+;
+; The file named on the command line: its records' RFAs in primary key order, then
+; by each RFA, each third record deleted and put back, and each fifth (not a third)
+; updated with what it holds. No record changes, but the file's buckets, RRVs, and
+; alternate pointers all do. It says how many of each, and the first failure.
+;
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+
+; GOOD goes on if R0 is a success, FAILED being too far for a byte branch.
+	.MACRO	GOOD,?L
+	BLBS	R0,L
+	BRW	FAILED
+L:
+	.ENDM	GOOD
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+MAXREC = 20000
+FAB:	$FAB	FNA=NAME,FAC=<GET,PUT,UPD,DEL>
+RAB:	$RAB	FAB=FAB,UBF=BUF,USZ=32767
+NAMED:	.LONG	128
+	.ADDRESS NAME
+NAME:	.BLKB	128
+LENGTH:	.WORD	0
+BUF:	.BLKB	32767
+	.ALIGN	LONG
+SIZE:	.LONG	0
+FAILS:	.LONG	0
+DELS:	.LONG	0
+UPDS:	.LONG	0
+RFAS:	.BLKB	6*MAXREC
+FONE:	.ASCID	/  records !UL deleted and put back !UL updated !UL failed !UL/
+FNOT:	.ASCID	/  not indexed/
+LOPEN:	.ASCID	/  OPEN/
+LREAD:	.ASCID	/  reading/
+LFAIL:	.ASCID	/  first failure/
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R2,R3,R4,R5,R6>
+	PUSHAW	LENGTH
+	CLRL	-(SP)
+	PUSHAQ	NAMED
+	CALLS	#3,G^LIB$GET_FOREIGN
+	MOVB	LENGTH,FAB+FAB$B_FNS
+	$OPEN	FAB=FAB
+	BLBS	R0,10$
+	PUSHL	R0
+	PUSHAQ	LOPEN
+	CALLS	#2,PH_SHOW
+	BRW	90$
+10$:	CMPB	FAB+FAB$B_ORG,#FAB$C_IDX
+	BEQL	20$
+	PUSHAQ	FNOT
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	BRW	80$
+20$:	$CONNECT RAB=RAB
+	MOVB	#RAB$C_SEQ,RAB+RAB$B_RAC
+	CLRL	R5			; records
+	MOVAB	RFAS,R6
+30$:	$GET	RAB=RAB
+	BLBC	R0,40$
+	CMPL	R5,#MAXREC
+	BGEQ	40$
+	MOVL	RAB+RAB$W_RFA,(R6)+
+	MOVW	RAB+RAB$W_RFA+4,(R6)+
+	INCL	R5
+	BRB	30$
+40$:	CMPL	R0,#RMS$_EOF
+	BEQL	50$
+	PUSHL	R0
+	PUSHAQ	LREAD
+	CALLS	#2,PH_SHOW
+50$:	MOVB	#RAB$C_RFA,RAB+RAB$B_RAC
+	CLRL	R2			; which record, from 1
+	MOVAB	RFAS,R6
+60$:	INCL	R2
+	CMPL	R2,R5
+	BGTR	70$
+	MOVL	(R6)+,RAB+RAB$W_RFA
+	MOVW	(R6)+,RAB+RAB$W_RFA+4
+	BSBW	CHANGE
+	BRB	60$
+70$:	PUSHL	FAILS
+	PUSHL	UPDS
+	PUSHL	DELS
+	PUSHL	R5
+	PUSHAQ	FONE
+	CALLS	#5,PH_PRINT
+80$:	$CLOSE	FAB=FAB
+90$:	MOVL	#1,R0
+	RET
+
+; CHANGE is record R2's change, its RFA in the RAB.
+CHANGE:	CLRL	R1
+	MOVL	R2,R0
+	EDIV	#3,R0,R3,R4
+	TSTL	R4
+	BNEQ	10$
+	BRW	PUTBACK
+10$:	CLRL	R1
+	MOVL	R2,R0
+	EDIV	#5,R0,R3,R4
+	TSTL	R4
+	BNEQ	20$
+	BRW	REWRITE
+20$:	RSB
+
+PUTBACK:
+	$GET	RAB=RAB
+	GOOD
+	MOVZWL	RAB+RAB$W_RSZ,SIZE
+	$DELETE	RAB=RAB
+	GOOD
+	MOVB	#RAB$C_KEY,RAB+RAB$B_RAC
+	MOVAB	BUF,RAB+RAB$L_RBF
+	MOVW	SIZE,RAB+RAB$W_RSZ
+	$PUT	RAB=RAB
+	MOVB	#RAB$C_RFA,RAB+RAB$B_RAC
+	GOOD
+	INCL	DELS
+	RSB
+
+REWRITE:
+	$GET	RAB=RAB
+	GOOD
+	MOVAB	BUF,RAB+RAB$L_RBF
+	$UPDATE	RAB=RAB
+	GOOD
+	INCL	UPDS
+	RSB
+
+FAILED:	INCL	FAILS
+	CMPL	FAILS,#1
+	BNEQ	10$
+	PUSHL	R0
+	PUSHAQ	LFAIL
+	CALLS	#2,PH_SHOW
+10$:	RSB
+	.END	START

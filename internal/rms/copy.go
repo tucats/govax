@@ -718,7 +718,7 @@ func isStreamFormat(format ondisk.RecordFormat) bool {
 // raw-copied object module (recordfile.go). Functionally matches ods2's
 // own copyBinary.
 func copyRawTo(out io.Writer, f *volume.File) error {
-	remaining := odsrms.FileByteLength(f.Header.RecordAttributes)
+	remaining := rawByteLength(f)
 
 	buf := make([]byte, ondisk.BlockSize)
 	for vbn := uint32(1); remaining > 0; vbn++ {
@@ -1104,13 +1104,26 @@ func lookUpVersion(destDir *volume.Directory, fullName string) (uint16, error) {
 	return entry.Version, nil
 }
 
-// copyRawToVolume copies src's exact valid bytes (see odsrms.
-// FileByteLength) to dst block by block, then records dst's true byte
+// rawByteLength is how many bytes of f a copy of its bytes takes. It's the end of
+// file a header records, but an indexed file's records are wherever its buckets
+// are, all through its allocation, and until RMS first extends it the header has no
+// end of file at all (RMS's XABFHC answers past the allocation for such a file:
+// testdata/for88's B40). Stopping at the header's would leave an empty file.
+func rawByteLength(f *volume.File) int64 {
+	if isIndexed(f) {
+		return int64(f.Blocks()) * ondisk.BlockSize
+	}
+
+	return odsrms.FileByteLength(f.Header.RecordAttributes)
+}
+
+// copyRawToVolume copies src's exact valid bytes (see rawByteLength)
+// to dst block by block, then records dst's true byte
 // length -- which may end partway through its last block -- via
 // CloseWithFinalByte rather than Close's own whole-block-only rounding.
 // Functionally matches ods2's own same-named function.
 func copyRawToVolume(dst, src *volume.File) error {
-	total := odsrms.FileByteLength(src.Header.RecordAttributes)
+	total := rawByteLength(src)
 	remaining := total
 
 	buf := make([]byte, ondisk.BlockSize)

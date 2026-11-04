@@ -1,0 +1,112 @@
+! EXCHANGE.CMD - builds Phase 88's VMS round's exchange volume with govax: the files
+! VMS is to judge, made here, and what it runs. Written by hand. From the repository root:
+!
+!     govax console < testdata/vms88/exchange.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/vms88-exchange.dsk" /DEVICE=RD54 /CLUSTER=3 VMS88
+MOUNT/WRITE DUA5 "testdata/disks/vms88-exchange.dsk"
+SET DEFAULT DUA5:[000000]
+COPY/QUIET "testdata/vms88/vms88.com"/HOST VMS88.COM
+COPY/QUIET "testdata/vms88/vms88w.mar"/HOST VMS88W.MAR
+COPY/QUIET "testdata/vms88/vms88m.mar"/HOST VMS88M.MAR
+COPY/QUIET "testdata/vms88/vms88l.mar"/HOST VMS88L.MAR
+COPY/QUIET "testdata/rms88/phutil.mar"/HOST PHUTIL.MAR
+!
+! [G88]: every shape of file in round 1 of the probe, made by govax's RMS.
+CREATE/DIRECTORY DUA5:[G88]
+COPY/QUIET "testdata/idx88/idx88.mar"/HOST DUA5:[G88]IDX88.MAR
+SET DEFAULT DUA5:[G88]
+MACRO/NOLIST IDX88
+LINK/NOMAP IDX88
+DEFINE/USER_MODE SYS$OUTPUT IDX88-GOVAX.TXT
+RUN IDX88
+!
+! [F88]: what round 2's cases make, by FTNRTL.
+CREATE/DIRECTORY DUA5:[F88]
+COPY/QUIET "testdata/for88/for88.mar"/HOST DUA5:[F88]FOR88.MAR
+COPY/QUIET "testdata/for88/for88f.mar"/HOST DUA5:[F88]FOR88F.MAR
+SET DEFAULT DUA5:[F88]
+MACRO/NOLIST FOR88
+MACRO/NOLIST FOR88F
+LINK/NOMAP FOR88,FOR88F
+DEFINE/USER_MODE SYS$OUTPUT FOR88-GOVAX.TXT
+RUN FOR88
+!
+! [R88]: testdata/rms88's programs' files: the telephone book, what CONVERT made of it,
+! and the big load.
+CREATE/DIRECTORY DUA5:[R88]
+COPY/QUIET "testdata/rms88/phutil.mar"/HOST DUA5:[R88]PHUTIL.MAR
+COPY/QUIET "testdata/rms88/phones.mar"/HOST DUA5:[R88]PHONES.MAR
+COPY/QUIET "testdata/rms88/phonesl.mar"/HOST DUA5:[R88]PHONESL.MAR
+COPY/QUIET "testdata/rms88/phonesc.mar"/HOST DUA5:[R88]PHONESC.MAR
+COPY/QUIET "testdata/rms88/phonesf.for"/HOST DUA5:[R88]PHONESF.FOR
+COPY/QUIET "testdata/rms88/load.for"/HOST DUA5:[R88]LOAD.FOR
+COPY/QUIET "testdata/rms88/phones.com"/HOST DUA5:[R88]PHONES.COM
+SET DEFAULT DUA5:[R88]
+MACRO/NOLIST PHUTIL
+MACRO/NOLIST PHONES
+MACRO/NOLIST PHONESL
+MACRO/NOLIST PHONESC
+FORTRAN PHONESF
+MACRO/NOLIST PHONESF
+FORTRAN LOAD
+MACRO/NOLIST LOAD
+LINK/NOMAP PHONES,PHUTIL
+LINK/NOMAP PHONESL,PHUTIL
+LINK/NOMAP PHONESC,PHUTIL
+LINK/NOMAP PHONESF
+LINK/NOMAP LOAD
+DEFINE/USER_MODE SYS$OUTPUT RUN1.TXT
+RUN PHONES
+DEFINE/USER_MODE SYS$OUTPUT RUN2.TXT
+RUN PHONESL
+DEFINE/USER_MODE SYS$OUTPUT RUN3.TXT
+RUN PHONESF
+@PHONES/OUTPUT=RUN4.TXT
+DEFINE/USER_MODE SYS$OUTPUT RUN5.TXT
+RUN LOAD
+!
+! [P88]: the same programs, for VMS to run: its MACRO and LINK on the .MAR files, the
+! FORTRAN programs' being what govax's compiler wrote.
+CREATE/DIRECTORY DUA5:[P88]
+COPY/QUIET DUA5:[R88]PHONES.MAR DUA5:[P88]PHONES.MAR
+COPY/QUIET DUA5:[R88]PHONESL.MAR DUA5:[P88]PHONESL.MAR
+COPY/QUIET DUA5:[R88]PHONESC.MAR DUA5:[P88]PHONESC.MAR
+COPY/QUIET DUA5:[R88]PHUTIL.MAR DUA5:[P88]PHUTIL.MAR
+COPY/QUIET DUA5:[R88]PHONESF.MAR DUA5:[P88]PHONESF.MAR
+COPY/QUIET DUA5:[R88]LOAD.MAR DUA5:[P88]LOAD.MAR
+COPY/QUIET DUA5:[R88]PHONES.COM DUA5:[P88]PHONES.COM
+!
+! [FTN]: FTNRTL's sources.
+CREATE/DIRECTORY DUA5:[FTN]
+COPY/QUIET "internal/ftnrtl/ftnrtl.opt"/HOST DUA5:[FTN]FTNRTL.OPT
+COPY/QUIET "testdata/ftn86/ftn86.opt"/HOST DUA5:[FTN]FTN86.OPT
+COPY/QUIET "internal/ftnrtl/mar/ftn_vector.mar"/HOST DUA5:[FTN]FTN_VECTOR.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_control.mar"/HOST DUA5:[FTN]FTN_CONTROL.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_units.mar"/HOST DUA5:[FTN]FTN_UNITS.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_statement.mar"/HOST DUA5:[FTN]FTN_STATEMENT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_format.mar"/HOST DUA5:[FTN]FTN_FORMAT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_edit.mar"/HOST DUA5:[FTN]FTN_EDIT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_float.mar"/HOST DUA5:[FTN]FTN_FLOAT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_listout.mar"/HOST DUA5:[FTN]FTN_LISTOUT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_listin.mar"/HOST DUA5:[FTN]FTN_LISTIN.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_namelist.mar"/HOST DUA5:[FTN]FTN_NAMELIST.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_internal.mar"/HOST DUA5:[FTN]FTN_INTERNAL.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_open.mar"/HOST DUA5:[FTN]FTN_OPEN.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_inquire.mar"/HOST DUA5:[FTN]FTN_INQUIRE.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_position.mar"/HOST DUA5:[FTN]FTN_POSITION.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_unformatted.mar"/HOST DUA5:[FTN]FTN_UNFORMATTED.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_direct.mar"/HOST DUA5:[FTN]FTN_DIRECT.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_record.mar"/HOST DUA5:[FTN]FTN_RECORD.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_keyed.mar"/HOST DUA5:[FTN]FTN_KEYED.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_intrinsics.mar"/HOST DUA5:[FTN]FTN_INTRINSICS.MAR
+COPY/QUIET "internal/ftnrtl/mar/ftn_system.mar"/HOST DUA5:[FTN]FTN_SYSTEM.MAR
+!
+! [ODD]: names with no type and with no name, as govax's volumes write them.
+CREATE/DIRECTORY DUA5:[ODD]
+COPY/QUIET "testdata/vms88/odd.fdl"/HOST DUA5:[ODD]ODD.FDL
+CREATE/FDL=DUA5:[ODD]ODD.FDL DUA5:[ODD]NOTYPE.
+CREATE/FDL=DUA5:[ODD]ODD.FDL DUA5:[ODD].TYPEONLY
+CREATE/FDL=DUA5:[ODD]ODD.FDL DUA5:[ODD].;1
+SET DEFAULT DUA5:[000000]
+DISMOUNT DUA5

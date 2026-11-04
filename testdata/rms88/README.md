@@ -4,8 +4,8 @@
 `TestIndexedLoad` (`internal/console/rms88_test.go`) run these on govax, in both
 paging modes, with FORTRAN's `/NOOPTIMIZE` and `/OPTIMIZE`, and compare what they
 print with the `.out` files, written by hand from the manuals (`make_load_out.py`
-works out `load.out` from a plain model of the statements). None of it is a
-VMS run; `testdata/idx88` and `testdata/for88` are those.
+works out `load.out` from a plain model of the statements). `testdata/vms88` runs
+them on VMS.
 
 | Files | What they do |
 | ----- | ------------ |

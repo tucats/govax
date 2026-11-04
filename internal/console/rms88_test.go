@@ -154,3 +154,33 @@ func TestIndexedLoad(t *testing.T) {
 		}
 	})
 }
+
+// TestCopyIndexedNoEndOfFile copies an indexed file RMS hasn't extended, whose header
+// has no end of file: its buckets are all through its allocation, so a copy that stopped
+// at the header's end would be empty, which RMS can't open (testdata/vms88's rehearsal).
+func TestCopyIndexedNoEndOfFile(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	fdl := "FILE\n\tORGANIZATION\t\tindexed\nRECORD\n\tFORMAT\t\t\tfixed\n\tSIZE\t\t\t20\n" +
+		"KEY 0\n\tPOSITION\t\t0\n\tLENGTH\t\t\t4\n\tTYPE\t\t\tstring\n"
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]EMPTY.FDL"},
+		rms.TextRecords, splitSource(fdl)); err != nil {
+		t.Fatal(err)
+	}
+
+	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
+	rms88Silent(t, d, buf, "CREATE/FDL=EMPTY.FDL EMPTY.IDX", "COPY/QUIET EMPTY.IDX COPY.IDX")
+	rms88Check(t, d, buf, "COPY.IDX")
+
+	host := filepath.Join(t.TempDir(), "empty.idx")
+	shareFindRun(t, d, `COPY/QUIET/BINARY EMPTY.IDX "`+host+`"/HOST`)
+
+	info, err := os.Stat(host)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if info.Size() == 0 || info.Size()%512 != 0 {
+		t.Errorf("the host's copy is %d bytes, want whole blocks of the file", info.Size())
+	}
+}
