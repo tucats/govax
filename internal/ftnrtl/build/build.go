@@ -33,10 +33,8 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/asm"
-	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/ftnrtl"
-	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/obj"
 )
@@ -60,7 +58,7 @@ func Build(fsys fs.FS) ([]byte, error) {
 		return nil, err
 	}
 
-	macros, err := systemMacros()
+	macros, err := asm.SystemMacros()
 	if err != nil {
 		return nil, err
 	}
@@ -178,20 +176,4 @@ func assemble(fsys fs.FS, name string, macros asm.MacroLibrary) (*obj.Module, er
 	}
 
 	return m, nil
-}
-
-// systemMacros is govax's own system macro library, from bootdata: the
-// macros ($EXIT_S, $SSDEF, ...) the sources use.
-func systemMacros() (asm.MacroLibrary, error) {
-	data, err := fs.ReadFile(bootdata.FS, bootdata.StarletLibrary)
-	if err != nil {
-		return nil, err
-	}
-
-	l, err := lbr.Open(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return asm.NewMacroLibrary(l)
 }

@@ -1,11 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_BU = 2			; byte logical
-DSC$K_DTYPE_WU = 3			; word logical
-DSC$K_DTYPE_W = 7			; word integer
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-DSC$K_CLASS_A = 4			; array
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for SHORTS, the main program
 ;   B     LOGICAL*1      $LOCAL+0   SHORTS.B

@@ -1,9 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_T = 14			; text
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-DSC$K_CLASS_D = 2			; dynamic string
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for ALT, the main program
 ;   A     REAL     $LOCAL+0   ALT.A

@@ -1,8 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_T = 14			; text
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for CONTROL, the main program
 ;   N     INTEGER  $LOCAL+0  CONTROL.N

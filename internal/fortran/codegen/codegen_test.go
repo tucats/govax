@@ -60,6 +60,7 @@ func assemble(t *testing.T, name string, lines []string) {
 
 	a := asm.New(false)
 	a.SetDialect(asm.DialectMACRO)
+	a.SetMacroLibraries(systemMacros(t))
 
 	if _, err := a.Assemble(strings.Join(lines, "\n") + "\n"); err != nil {
 		var list *asm.Errors
@@ -371,4 +372,17 @@ func TestTexts(t *testing.T) {
 			t.Errorf("no %q in:\n%s", want, text)
 		}
 	}
+}
+
+// systemMacros is govax's own system macro library, which the compiler's
+// MACRO files call ($DSCDEF).
+func systemMacros(t *testing.T) asm.MacroLibrary {
+	t.Helper()
+
+	lib, err := asm.SystemMacros()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return lib
 }

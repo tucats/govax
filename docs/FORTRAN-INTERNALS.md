@@ -962,8 +962,8 @@ own, a long one is split), and writes the FORTRAN source as comments. A
 source line's prefix (`;`, the number in five columns, two blanks) is
 exactly 8 characters, one tab stop, so tab-format source keeps its
 layout; an included line, when it's listed at all, has a prefix that
-starts with its include depth (`;1  12  `). `Generate` writes the module: the `DSC$K_` codes its
-descriptors use (govax's STARLET has no `$DSCDEF`), then for each
+starts with its include depth (`;1  12  `). `Generate` writes the module: a call of STARLET's `$DSCDEF` if it
+has descriptors, for their `DSC$K_` codes, then for each
 routine a storage map, its `$LOCAL` storage, its `$PDATA` data, and its
 `$CODE`. Each routine's code is generated before its storage is written,
 since generating it makes cells and constants of its own.

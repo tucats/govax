@@ -346,6 +346,7 @@ func TestIdent(t *testing.T) {
 
 		a := asm.New(false)
 		a.SetDialect(asm.DialectMACRO)
+		a.SetMacroLibraries(systemMacros(t))
 
 		if _, err := a.Assemble(strings.Join(r.MACRO, "\n") + "\n"); err != nil {
 			t.Errorf("%s: %s doesn't assemble: %v", c.name, r.MACRO[1], err)
@@ -874,4 +875,17 @@ func TestOptionsExtendSource(t *testing.T) {
 	if r.Errors != 1 || r.Messages[0].Ident != "OPTIONSFIRST" {
 		t.Errorf("OPTIONS in a unit: %v", r.Messages)
 	}
+}
+
+// systemMacros is govax's own system macro library, which the compiler's
+// MACRO files call ($DSCDEF).
+func systemMacros(t *testing.T) asm.MacroLibrary {
+	t.Helper()
+
+	lib, err := asm.SystemMacros()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return lib
 }

@@ -117,6 +117,7 @@ func TestBoundsHold(t *testing.T) {
 
 			a := asm.New(false)
 			a.SetDialect(asm.DialectMACRO)
+			a.SetMacroLibraries(systemMacros(t))
 
 			if _, err := a.Assemble(strings.Join(lines, "\n") + "\n"); err != nil {
 				var all *asm.Errors
@@ -157,4 +158,17 @@ func TestBoundsHold(t *testing.T) {
 	}
 
 	t.Logf("%d compilations, %d instructions: bounds total %d bytes, MACRO's %d", checked, instructions, bytesBound, bytesActual)
+}
+
+// systemMacros is govax's own system macro library, which the compiler's
+// MACRO files call ($DSCDEF).
+func systemMacros(t *testing.T) asm.MacroLibrary {
+	t.Helper()
+
+	lib, err := asm.SystemMacros()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return lib
 }

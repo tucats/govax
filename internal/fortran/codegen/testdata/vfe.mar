@@ -1,9 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_L = 8			; longword integer
-DSC$K_DTYPE_F = 10			; F_floating
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for VFE, a subroutine
 ;   N     INTEGER        argument 1  @VFE.N(AP)

@@ -2860,11 +2860,13 @@ The program, `GREET.MAR`:
         .TITLE  GREET   Ask for a name, and greet it
         .LIBRARY /MYMAC/                ; search MYMAC.MLB for macros
 
+        $DSCDEF                         ; the descriptor codes, DSC$K_
+
         .PSECT  DATA, WRT, NOEXE, LONG
 PROMPT: .ASCID  /What is your name? /
 NAME:   .WORD   0                       ; a dynamic string descriptor:
-        .BYTE   14                      ;   DSC$K_DTYPE_T, text
-        .BYTE   2                       ;   DSC$K_CLASS_D, so LIB$GET_INPUT
+        .BYTE   DSC$K_DTYPE_T           ;   text,
+        .BYTE   DSC$K_CLASS_D           ;   dynamic, so LIB$GET_INPUT
         .LONG   0                       ;   gets the memory for it
 CTRSTR: .ASCID  /Hello, !AS!!/
 BUFFER: .BLKB   100
@@ -2905,9 +2907,10 @@ Instead of `.LIBRARY` in the source, you can name the library on the
 command line: `MACRO GREET/LIBRARY=MYMAC`. For a one-off macro, just
 define it in the source with `.MACRO` ... `.ENDM`.
 
-`$DSCDEF` isn't among govax's own system macros (see
-[System macros](#system-macros)), which is why this example writes the
-descriptor's type and class as numbers.
+`$DSCDEF` comes from the system macro library (see
+[System macros](#system-macros)): it defines the descriptor names of
+the OpenVMS Calling Standard, such as `DSC$K_DTYPE_T` (14) and
+`DSC$K_CLASS_D` (2).
 
 ### Example 5: A condition handler
 
@@ -3220,7 +3223,7 @@ contains:
   `$SETEXV`, `$UNWIND`, `$SYNCH`, `$SETRWM`, `$ASCTOID`, `$IDTOASC`,
   `$CANWAK`.
 - **Definitions**: `$ACCDEF`, `$ATRDEF`, `$BRKDEF`, `$CLIDEF`, `$DCDEF`,
-  `$DEVDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$IODEF`, `$JPIDEF`,
+  `$DEVDEF`, `$DSCDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$IODEF`, `$JPIDEF`,
   `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`, `$MSGDEF`, `$NAMDEF`,
   `$PQLDEF`, `$PRCDEF`, `$PRTDEF`, `$PRVDEF`, `$PSLDEF`, `$RABDEF`,
   `$RMSDEF`, `$SECDEF`, `$SSDEF`, `$SYIDEF`, `$TTDEF`, and the XAB
@@ -5851,10 +5854,7 @@ C     Squares of the first N integers
 ; /LIST, their include depth before the number; a comment names the file either way.
 ; Each routine's storage map says where its variables are.
 ;
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_L = 8			; longword integer
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for SQUARES, the main program
 ;   N     INTEGER  $LOCAL+0  SQUARES.N
@@ -6987,7 +6987,7 @@ The main differences, gathered from the rest of the manual:
   There's no `$SPACE`, and no CONVERT/RECLAIM, EDIT/FDL, or ANALYZE/RMS_FILE/INTERACTIVE.
 - No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
-  (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).
+  (`$STSDEF`, for one); VMS's own library can be used instead (section 8).
 - Some LIBRTL routines aren't implemented yet (Appendix B).
 - A handler that continues from a condition of the mathematics library gets
   what the first signal left, where VMS's routine may go on, and signal again

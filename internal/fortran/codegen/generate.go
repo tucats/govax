@@ -156,71 +156,34 @@ func Generate(w *Writer, routines []*ir.Routine, lines []*source.Line, opts Opti
 	return maps
 }
 
-// The descriptor codes the file may use, with what each means, in the
-// order they are defined at the top of the file. govax's STARLET has no
-// $DSCDEF, so the file defines the few it uses itself.
-var definitions = []struct {
-	name    string
-	value   int
-	comment string
-}{
-	{"DSC$K_DTYPE_BU", int(ir.DTypeBU), "byte logical"},
-	{"DSC$K_DTYPE_WU", int(ir.DTypeWU), "word logical"},
-	{"DSC$K_DTYPE_LU", int(ir.DTypeLU), "longword logical"},
-	{"DSC$K_DTYPE_Z", int(ir.DTypeZ), "unspecified"},
-	{"DSC$K_DTYPE_W", int(ir.DTypeW), "word integer"},
-	{"DSC$K_DTYPE_L", int(ir.DTypeL), "longword integer"},
-	{"DSC$K_DTYPE_F", int(ir.DTypeF), "F_floating"},
-	{"DSC$K_DTYPE_D", int(ir.DTypeD), "D_floating"},
-	{"DSC$K_DTYPE_FC", int(ir.DTypeFC), "F_floating complex"},
-	{"DSC$K_DTYPE_DC", int(ir.DTypeDC), "D_floating complex"},
-	{"DSC$K_DTYPE_T", int(ir.DTypeT), "text"},
-	{"DSC$K_DTYPE_ZEM", int(ir.DTypeZEM), "procedure entry mask"},
-	{"DSC$K_DTYPE_G", int(ir.DTypeG), "G_floating"},
-	{"DSC$K_DTYPE_H", int(ir.DTypeH), "H_floating"},
-	{"DSC$K_DTYPE_GC", int(ir.DTypeGC), "G_floating complex"},
-	{"DSC$K_CLASS_S", int(ir.ClassS), "scalar or fixed-length string"},
-	{"DSC$K_CLASS_D", int(ir.ClassD), "dynamic string"},
-	{"DSC$K_CLASS_A", int(ir.ClassA), "array"},
+// writeDefinitions defines the descriptor codes (the OpenVMS Calling
+// Standard's DSC$K_ values) the routines' descriptors use, by calling
+// STARLET's $DSCDEF, if any routine has a descriptor. The macro defines
+// every DSC$ name; the listing's symbol table shows only those used.
+func writeDefinitions(w *Writer, routines []*ir.Routine) {
+	if usesDescriptors(routines) {
+		w.Statement("", "$DSCDEF", "", "descriptor codes, DSC$K_")
+	}
 }
 
-// writeDefinitions defines the descriptor codes the routines'
-// descriptors use.
-func writeDefinitions(w *Writer, routines []*ir.Routine) {
-	used := map[string]bool{}
-
-	note := func(d *ir.Descriptor) {
-		used["DSC$K_DTYPE_"+d.DType.String()] = true
-		used["DSC$K_CLASS_"+d.Class.String()] = true
-	}
-
+// usesDescriptors says whether any routine has a descriptor, in its
+// $PDATA or its $LOCAL.
+func usesDescriptors(routines []*ir.Routine) bool {
 	for _, r := range routines {
 		for _, d := range r.Data {
 			if d.Kind == ir.DescriptorDatum {
-				note(d.Desc)
+				return true
 			}
 		}
 
 		for _, c := range r.Cells {
 			if c.Kind == ir.DescriptorCell {
-				note(c.Desc)
+				return true
 			}
 		}
 	}
 
-	if len(used) == 0 {
-		return
-	}
-
-	w.Comment("Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)")
-
-	for _, d := range definitions {
-		if used[d.name] {
-			w.Assignment(d.name, strconv.Itoa(d.value), d.comment)
-		}
-	}
-
-	w.Comment("")
+	return false
 }
 
 // writeCommons writes the file's common blocks, each once, whichever units

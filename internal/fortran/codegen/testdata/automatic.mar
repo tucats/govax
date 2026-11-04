@@ -1,12 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_W = 7			; word integer
-DSC$K_DTYPE_L = 8			; longword integer
-DSC$K_DTYPE_F = 10			; F_floating
-DSC$K_DTYPE_T = 14			; text
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-DSC$K_CLASS_A = 4			; array
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for LOCALS, a subroutine
 ;   ARG   REAL (?)       an argument  @LOCALS.$A1

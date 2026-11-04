@@ -1011,6 +1011,8 @@ and the later phases' docs have been changed to follow them.
   - **Left for later:** Decision 18's `file+file` concatenation (and
     `+LIB/LIBRARY`, Phase 83); INCLUDE of text library modules (Phase
     83); `/LIST` on INCLUDE (Phase 85's listings); a `$DSCDEF` in govax's
-    STARLET (FTNRTL's module defines the three values it uses);
+    STARLET (FTNRTL's module defines the three values it uses; done
+    2026-11-04: mkdefs makes it from STARLET.OLB's module of that name,
+    and the compiler's MACRO files call it);
     statement labels on INCLUDE statements are ignored without a
     message.

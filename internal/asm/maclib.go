@@ -2,7 +2,9 @@ package asm
 
 import (
 	"fmt"
+	"io/fs"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -27,6 +29,24 @@ type MacroLibrary interface {
 	// Macro returns the source lines of the library's module for the
 	// macro name (uppercase), and whether the library has one.
 	Macro(name string) (lines []string, found bool, err error)
+}
+
+// SystemMacros returns govax's own system macro library, built into
+// govax (internal/bootdata): the macros ($EXIT_S, $FAB, $DSCDEF, ...)
+// MACRO uses when no other STARLET is found. The FTNRTL build uses it,
+// and so do tests that assemble what the FORTRAN compiler writes.
+func SystemMacros() (MacroLibrary, error) {
+	data, err := fs.ReadFile(bootdata.FS, bootdata.StarletLibrary)
+	if err != nil {
+		return nil, err
+	}
+
+	l, err := lbr.Open(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewMacroLibrary(l)
 }
 
 // lbrMacros is a MacroLibrary read from a librarian file.

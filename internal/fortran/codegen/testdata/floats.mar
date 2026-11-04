@@ -1,11 +1,5 @@
 	.TITLE	TEST
-; Descriptor codes (the OpenVMS Calling Standard's DSC$K_ values)
-DSC$K_DTYPE_D = 11			; D_floating
-DSC$K_DTYPE_G = 27			; G_floating
-DSC$K_DTYPE_H = 28			; H_floating
-DSC$K_CLASS_S = 1			; scalar or fixed-length string
-DSC$K_CLASS_A = 4			; array
-;
+	$DSCDEF				; descriptor codes, DSC$K_
 
 ; Storage map for FLOATS, the main program
 ;   D     REAL*8       $LOCAL+0   FLOATS.D
