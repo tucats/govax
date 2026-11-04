@@ -184,7 +184,23 @@ const (
 func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResult, bool, error) {
 	s := &handle.locks
 	if s.records[r] != nil {
+		// Asked not to lock it, or to read whatever's locked, the stream just reads
+		// it, and goes on holding it (testdata/vms88's part F).
+		if rop&(ropNLK|ropRRL) != 0 {
+			return lockNone, false, nil
+		}
+
 		return lockAlready, false, nil
+	}
+
+	// A stream that can only read takes no lock, on any organization: another stream
+	// that can write then gets the record, though a stream that can write and holds
+	// it keeps this one out (testdata/vms88's part E, VMS 7.1). The Guide's 7.2.2.1
+	// has every stream exclusive by default. With ROP WAT such a stream's wait is
+	// a read lock, unconfirmed.
+	readOnly := handle.Access&(facPut|facUpd|facDel|facTrn) == 0
+	if readOnly && rop&ropWAT == 0 {
+		rop |= ropNLK
 	}
 
 	// Each lock RMS takes, the file's and the record's, counts against
@@ -230,11 +246,7 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 
 	req.Mode = recordLockMode(rop)
 
-	// A stream of an indexed file that can only read doesn't keep another such
-	// stream out (testdata/for88, #306, FORRTL's READONLY and SHARED): a read
-	// lock, unconfirmed against a stream that writes. The Guide's 7.2.2.1 has
-	// every stream exclusive by default, and for sequential files that stands.
-	if handle.indexed && handle.Access&(facPut|facUpd|facDel|facTrn) == 0 && req.Mode == lck.EX {
+	if readOnly && req.Mode == lck.EX {
 		req.Mode = lck.PR
 	}
 	req.NoQueue = rop&ropWAT == 0

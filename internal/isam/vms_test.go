@@ -113,9 +113,10 @@ func openProbe(t *testing.T, name string) *File {
 	return nil
 }
 
-// unreadable lists the files Open must refuse, and why: E85's $CREATE
-// failed and left no prolog, and the others are Prolog 1 and 2, the first
-// being what a lower level's keys or MRS gives (the phase doc's Part A).
+// unreadable lists the files Open must refuse, and why, by their prolog level:
+// E85's $CREATE failed and left a prolog of level 0, which VMS's RMS calls a level
+// it doesn't support (RMS$_PLV, testdata/vms88), and the others are Prolog 1 and 2,
+// the first being what a lower level's keys or MRS gives (the phase doc's Part A).
 var unreadable = map[string]int{
 	"E85": 0, "E92": 1, "S34": 1, "S59": 1, "S60": 1, "S61": 2,
 }
@@ -141,11 +142,9 @@ func TestOpenRefuses(t *testing.T) {
 		var wrong *ErrPrologLevel
 
 		switch {
-		case level == 0 && !errors.Is(err, ErrBadProlog):
-			t.Errorf("%s: %v, not ErrBadProlog", v.name, err)
-		case level != 0 && !errors.As(err, &wrong):
+		case !errors.As(err, &wrong):
 			t.Errorf("%s: %v, not ErrPrologLevel", v.name, err)
-		case level != 0 && wrong.Version != level:
+		case wrong.Version != level:
 			t.Errorf("%s: level %d, not %d", v.name, wrong.Version, level)
 		}
 	}

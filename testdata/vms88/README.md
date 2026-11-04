@@ -32,7 +32,7 @@ FTNRTL built there from its sources. Everything on the volume is our own data.
 
 3. Dismount it or pause simh, then:
 
-       mkdir -p testdata/vms88/vax
+       mkdir -p testdata/vms88/vax/round2
        ./govax console < testdata/vms88/copyout.cmd
 
 4. And `testdata/ftn86`'s round again, which now has FTN_KEYED, `parts.for`, and `shared.for`: rename `testdata/disks/ftn86-exchange.dsk` and `ftn86d.log` first, then its README's steps. Its `vax/` is what `TestFTN86Oracle` reads, so keep the old run (`vax/round3/`, by that README's custom) when the new one comes back.
@@ -42,3 +42,11 @@ FTNRTL built there from its sources. Everything on the volume is our own data.
 - `results.bck`: VMS's reports. For `[G88]`, VMS's own on VMS's own files are `testdata/idx88/vax/anl`, so the two can be compared.
 - `vms88.log`: for each file, whether VMS's walk is govax's on the same bytes, and whether its changes went in. `==== PHONES` and the sections after it say whether testdata/rms88's expected files are right.
 - `changed.bck`: the files VMS's RMS changed, for govax to read back, and to compare with what govax's RMS makes of the same changes.
+
+## What came back
+
+`vax/` is round 1, VMS 7.1 on 4-NOV-2026, which `TestVMS88Procedure` holds govax's run to, each difference that remains
+named in `vms88LogDifferences`, `vms88ReportDifferences`, and `vms88FileDifferences`. FTNRTL didn't build there (real
+MACRO took `01$` and `1$` for one label, which govax's MACRO didn't), so PHONESF and LOAD didn't run, and `[ODD]`'s
+directory was one VMS calls bad. Both are fixed. Round 2 is the same procedure on a new volume: rename
+`testdata/disks/vms88-exchange.dsk` first, then the steps above; `copyout.cmd` now writes `vax/round2/`.

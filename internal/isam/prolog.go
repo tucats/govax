@@ -253,7 +253,9 @@ func Open(blocks Blocks, attr Attributes) (*File, error) {
 	}
 
 	version := int(binary.LittleEndian.Uint16(first[plgVersion:]))
-	if version == 1 || version == 2 {
+	// Any level but 3 is one RMS doesn't support, version 0 too (VMS 7.1's RMS$_PLV
+	// on E85, whose $CREATE failed: testdata/vms88).
+	if version != 3 {
 		return nil, &ErrPrologLevel{Version: version}
 	}
 

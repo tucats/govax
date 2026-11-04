@@ -148,6 +148,17 @@ func (b indexedBlocks) Extend(count uint32) (uint32, uint32, error) {
 		return 0, 0, err
 	}
 
+	// An extension that leaves the blocks in more than one run loses the header's
+	// contiguity (testdata/vms88: VMS's copies of B78 and B79, which its changes
+	// extended, report none, and S64's and S65's, which they didn't, keep theirs).
+	if !contiguous(b.f.Extents) && b.f.Header.FileCharacteristics&(ondisk.FchContig|ondisk.FchContigB) != 0 {
+		if err := volume.UpdateHeader(b.f, func(h *ondisk.FileHeader, _ *ondisk.Ident) {
+			h.FileCharacteristics &^= ondisk.FchContig | ondisk.FchContigB
+		}); err != nil {
+			return 0, 0, err
+		}
+	}
+
 	// Once RMS has extended an indexed file its end of file is the block
 	// after the allocation (VMS 7.1: the phase doc's "What RMS's $CREATE
 	// settled"); until then it's 0.
@@ -352,7 +363,7 @@ func overlapping(segs []isam.Segment) bool {
 // and only the primary key's records, the alternates having none (VMS
 // 7.1: testdata/idx88's shape cases, the phase doc's "What the writer
 // settled").
-func descriptorFlags(k *xabKey, total int) uint8 {
+func descriptorFlags(k *xabKey, total int, mrs uint16) uint8 {
 	flags := k.flg & (xabFlagDUP | xabFlagCHG | xabFlagNUL)
 
 	kind := isam.Type(k.dtp) &^ isam.Descending
@@ -366,7 +377,10 @@ func descriptorFlags(k *xabKey, total int) uint8 {
 		}
 	}
 
-	if k.ref == 0 && k.flg&xabFlagNoRecordCmpr == 0 {
+	// A record with too little past its key has nothing to compress: 4 bytes past a
+	// key of 4 weren't (testdata/vms88's L.IDX). That it's the same 6 as a key's is
+	// unconfirmed.
+	if k.ref == 0 && k.flg&xabFlagNoRecordCmpr == 0 && (mrs == 0 || int(mrs)-total >= shortestCompressedKey) {
 		flags |= isam.FlagRecordCompress
 	}
 
@@ -722,7 +736,7 @@ func (p *indexedPlan) addKeys(keys []xabKey, mrs uint16) (uint32, uint32) {
 		p.spec.Keys = append(p.spec.Keys, isam.KeySpec{
 			Segments:   segs,
 			Type:       isam.Type(k.dtp),
-			Flags:      descriptorFlags(k, total),
+			Flags:      descriptorFlags(k, total, mrs),
 			Null:       k.nul,
 			IndexArea:  k.ian,
 			Level1Area: k.lan,

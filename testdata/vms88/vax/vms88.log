@@ -1,0 +1,3015 @@
+V7.1     VAX 8600
+==== TOOLS
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+==== G88
+== G_E103
+%ANLRMS-I-ERRORS, <DUA1:[G88]E103.IDX;2> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]E103.IDX;2> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_E103.IDX;2> 0 errors
+  $STATUS == "%X103B8103"
+== G_E71
+%ANLRMS-I-ERRORS, <DUA1:[G88]E71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]E71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  key 1 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+  key 1 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_E71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_E84
+%ANLRMS-I-ERRORS, <DUA1:[G88]E84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]E84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_E84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_E85
+%ANLRMS-I-ERRORS, <DUA1:[G88]E85.IDX;1> 1 error
+  $STATUS == "%X103B8762"
+%ANLRMS-I-ERRORS, <DUA1:[G88]E85.IDX;1> 1 error
+  $STATUS == "%X103B8762"
+  OPEN %X0001872C
+%COPY-E-OPENIN, error opening DUA1:[G88]E85.IDX;1 as input
+-RMS-F-PLV, unsupported prolog version
+  OPEN %X00018292
+  OPEN %X00018292
+%ANALYZE-E-OPENIN, error opening DUA1:[M88]G_E85.IDX; as input
+-RMS-E-FNF, file not found
+  $STATUS == "%X10B1109A"
+== G_F120
+%ANLRMS-I-ERRORS, <DUA1:[G88]F120.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]F120.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 000D22B8 order 11F28F3B
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 000D22B8 order 11F28F3B
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_F120.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_F121
+%ANLRMS-I-ERRORS, <DUA1:[G88]F121.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]F121.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 000D22B8 order 11042E9C
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 000D22B8 order 11042E9C
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_F121.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_F122
+%ANLRMS-I-ERRORS, <DUA1:[G88]F122.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]F122.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 300 sum 0965FC2E order 2A6A5DFA
+  key 1 records 300 sum 0965FC2E order 2A6A5DFA
+  key 2 records 300 sum 0965FC2E order B47F868D
+  key 3 records 300 sum 0965FC2E order FC2CE66C
+  key 4 records 300 sum 0965FC2E order 2A6A5DFA
+  key 5 records 300 sum 0965FC2E order 2A6A5DFA
+  key 6 records 300 sum 0965FC2E order 2A6A5DFA
+  key 7 records 300 sum 0965FC2E order 2A6A5DFA
+  records 300 deleted and put back 100 updated 40 failed 0
+  key 0 records 300 sum 0965FC2E order 2A6A5DFA
+  key 1 records 300 sum 0965FC2E order 2A6A5DFA
+  key 2 records 300 sum 0965FC2E order B47F868D
+  key 3 records 300 sum 0965FC2E order 923A9130
+  key 4 records 300 sum 0965FC2E order 2A6A5DFA
+  key 5 records 300 sum 0965FC2E order 2A6A5DFA
+  key 6 records 300 sum 0965FC2E order 2A6A5DFA
+  key 7 records 300 sum 0965FC2E order 2A6A5DFA
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_F122.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G104
+%ANLRMS-I-ERRORS, <DUA1:[G88]G104.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G104.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G104.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G105
+%ANLRMS-I-ERRORS, <DUA1:[G88]G105.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G105.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G105.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G106
+%ANLRMS-I-ERRORS, <DUA1:[G88]G106.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G106.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G106.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G107
+%ANLRMS-I-ERRORS, <DUA1:[G88]G107.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G107.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G107.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G108
+%ANLRMS-I-ERRORS, <DUA1:[G88]G108.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G108.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G108.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G109
+%ANLRMS-I-ERRORS, <DUA1:[G88]G109.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G109.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 12 sum 00B23EEB order 1EC7B574
+  records 12 deleted and put back 4 updated 2 failed 0
+  key 0 records 12 sum 00B23EEB order 1EC7B574
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G109.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G110
+%ANLRMS-I-ERRORS, <DUA1:[G88]G110.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G110.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 12 sum 0356FE9F order 275CB8C6
+  records 12 deleted and put back 4 updated 2 failed 0
+  key 0 records 12 sum 0356FE9F order 275CB8C6
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G110.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G111
+%ANLRMS-I-ERRORS, <DUA1:[G88]G111.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G111.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+  key 1 records 16 sum 00EDA7AD order 2EA51780
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDA7AD order 2EA51780
+  key 1 records 16 sum 00EDA7AD order 6F55C538
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G111.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G112
+%ANLRMS-I-ERRORS, <DUA1:[G88]G112.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G112.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+  key 1 records 16 sum 00EDB485 order 59F25EE8
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 00EDB485 order 59F25EE8
+  key 1 records 16 sum 00EDB485 order 59F25EE8
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G112.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G113
+%ANLRMS-I-ERRORS, <DUA1:[G88]G113.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G113.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 12 sum 00B23B24 order D100303C
+  records 12 deleted and put back 4 updated 2 failed 0
+  key 0 records 12 sum 00B23B24 order D19C651B
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G113.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G114
+%ANLRMS-I-ERRORS, <DUA1:[G88]G114.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G114.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 400 sum 17352A6D order 49C867B9
+  key 1 records 400 sum 17352A6D order 49C867B9
+  records 400 deleted and put back 133 updated 54 failed 0
+  key 0 records 400 sum 17352A6D order 49C867B9
+  key 1 records 400 sum 17352A6D order 20B0C600
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G114.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G115
+%ANLRMS-I-ERRORS, <DUA1:[G88]G115.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G115.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 1200 sum 8A3DA3E2 order 7F4AC210
+  key 1 records 1200 sum 8A3DA3E2 order 7F4AC210
+  records 1200 deleted and put back 400 updated 160 failed 0
+  key 0 records 1200 sum 8A3DA3E2 order 7F4AC210
+  key 1 records 1200 sum 8A3DA3E2 order 04A61333
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G115.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G116
+%ANLRMS-I-ERRORS, <DUA1:[G88]G116.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G116.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 1500 sum ACCA45AC order AA1413FB
+  key 1 records 1500 sum ACCA45AC order AA1413FB
+  records 1500 deleted and put back 500 updated 200 failed 0
+  key 0 records 1500 sum ACCA45AC order AA1413FB
+  key 1 records 1500 sum ACCA45AC order 66FE1729
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G116.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G117
+%ANLRMS-I-ERRORS, <DUA1:[G88]G117.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G117.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 500 sum 08A08F3F order 23C435D3
+  key 1 records 500 sum 08A08F3F order B630FC1E
+  records 500 deleted and put back 166 updated 67 failed 0
+  key 0 records 500 sum 08A08F3F order 23C435D3
+  key 1 records 500 sum 08A08F3F order 05577ADC
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G117.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G118
+%ANLRMS-I-ERRORS, <DUA1:[G88]G118.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G118.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 500 sum 08A08F3F order 23C435D3
+  key 1 records 500 sum 08A08F3F order B630FC1E
+  records 500 deleted and put back 166 updated 67 failed 0
+  key 0 records 500 sum 08A08F3F order 23C435D3
+  key 1 records 500 sum 08A08F3F order 05577ADC
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G118.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_G119
+%ANLRMS-I-ERRORS, <DUA1:[G88]G119.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]G119.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 16 sum 004656DD order E233304F
+  records 16 deleted and put back 5 updated 2 failed 0
+  key 0 records 16 sum 004656DD order E233304F
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_G119.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_L140
+%ANLRMS-I-ERRORS, <DUA1:[G88]L140.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]L140.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 6 sum 001A2990 order EAEEC0EA
+  key 1 records 6 sum 001A2990 order EAEEC0EA
+  records 6 deleted and put back 2 updated 1 failed 0
+  key 0 records 6 sum 001A2990 order EAEEC0EA
+  key 1 records 6 sum 001A2990 order EAEEC0EA
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_L140.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_Q123
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q123.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q123.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 000D146B order 11FDF3FE
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 000D146B order 11FDF3FE
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_Q123.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_Q124
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q124.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q124.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 60 sum 037B3B20 order 39F722AF
+  key 1 records 60 sum 037B3B20 order 39F722AF
+  records 60 deleted and put back 20 updated 8 failed 0
+  key 0 records 60 sum 037B3B20 order 39F722AF
+  key 1 records 60 sum 037B3B20 order DEFB5757
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_Q124.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_Q125
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q125.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q125.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 60 sum 037B3B20 order 39F722AF
+  key 1 records 60 sum 037B3B20 order 39F722AF
+  records 60 deleted and put back 20 updated 8 failed 0
+  key 0 records 60 sum 037B3B20 order 39F722AF
+  key 1 records 60 sum 037B3B20 order DEFB5757
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_Q125.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_Q126
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q126.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q126.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 000D146B order 11E22809
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 000D146B order 11E22809
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_Q126.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_Q127
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q127.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]Q127.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 6 sum 001A2546 order E81D5030
+  key 1 records 6 sum 001A2546 order E81D5030
+  records 6 deleted and put back 2 updated 1 failed 0
+  key 0 records 6 sum 001A2546 order E81D5030
+  key 1 records 6 sum 001A2546 order E81D5030
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_Q127.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S1
+%ANLRMS-I-ERRORS, <DUA1:[G88]S1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S10
+%ANLRMS-I-ERRORS, <DUA1:[G88]S10.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S10.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S10.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S11
+%ANLRMS-I-ERRORS, <DUA1:[G88]S11.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S11.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S11.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S12
+%ANLRMS-I-ERRORS, <DUA1:[G88]S12.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S12.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S12.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S13
+%ANLRMS-I-ERRORS, <DUA1:[G88]S13.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S13.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S13.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S14
+%ANLRMS-I-ERRORS, <DUA1:[G88]S14.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S14.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S14.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S15
+%ANLRMS-I-ERRORS, <DUA1:[G88]S15.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S15.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S15.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S16
+%ANLRMS-I-ERRORS, <DUA1:[G88]S16.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S16.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S16.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S17
+%ANLRMS-I-ERRORS, <DUA1:[G88]S17.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S17.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S17.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S18
+%ANLRMS-I-ERRORS, <DUA1:[G88]S18.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S18.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S18.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S19
+%ANLRMS-I-ERRORS, <DUA1:[G88]S19.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S19.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S19.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S2
+%ANLRMS-I-ERRORS, <DUA1:[G88]S2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S20
+%ANLRMS-I-ERRORS, <DUA1:[G88]S20.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S20.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S20.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S21
+%ANLRMS-I-ERRORS, <DUA1:[G88]S21.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S21.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S21.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S22
+%ANLRMS-I-ERRORS, <DUA1:[G88]S22.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S22.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S22.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S23
+%ANLRMS-I-ERRORS, <DUA1:[G88]S23.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S23.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S23.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S24
+%ANLRMS-I-ERRORS, <DUA1:[G88]S24.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S24.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S24.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S25
+%ANLRMS-I-ERRORS, <DUA1:[G88]S25.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S25.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S25.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S26
+%ANLRMS-I-ERRORS, <DUA1:[G88]S26.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S26.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S26.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S27
+%ANLRMS-I-ERRORS, <DUA1:[G88]S27.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S27.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S27.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S28
+%ANLRMS-I-ERRORS, <DUA1:[G88]S28.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S28.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S28.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S29
+%ANLRMS-I-ERRORS, <DUA1:[G88]S29.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S29.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S29.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S3
+%ANLRMS-I-ERRORS, <DUA1:[G88]S3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S30
+%ANLRMS-I-ERRORS, <DUA1:[G88]S30.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S30.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S30.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S31
+%ANLRMS-I-ERRORS, <DUA1:[G88]S31.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S31.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S31.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S32
+%ANLRMS-I-ERRORS, <DUA1:[G88]S32.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S32.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 1 sum 00046752 order 00046752
+  records 1 deleted and put back 0 updated 0 failed 0
+  key 0 records 1 sum 00046752 order 00046752
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S32.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S33
+%ANLRMS-I-ERRORS, <DUA1:[G88]S33.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S33.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S33.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S35
+%ANLRMS-I-ERRORS, <DUA1:[G88]S35.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S35.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S35.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S36
+%ANLRMS-I-ERRORS, <DUA1:[G88]S36.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S36.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDD7A9D5
+  key 2 records 5 sum 0015EF52 order 56BF2A4E
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDD7A9D5
+  key 2 records 5 sum 0015EF52 order 56BF2A4E
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S36.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S37
+%ANLRMS-I-ERRORS, <DUA1:[G88]S37.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S37.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S37.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S38
+%ANLRMS-I-ERRORS, <DUA1:[G88]S38.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S38.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S38.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S39
+%ANLRMS-I-ERRORS, <DUA1:[G88]S39.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S39.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S39.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S4
+%ANLRMS-I-ERRORS, <DUA1:[G88]S4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S40
+%ANLRMS-I-ERRORS, <DUA1:[G88]S40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S41
+%ANLRMS-I-ERRORS, <DUA1:[G88]S41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S42
+%ANLRMS-I-ERRORS, <DUA1:[G88]S42.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S42.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S42.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S43
+%ANLRMS-I-ERRORS, <DUA1:[G88]S43.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S43.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S43.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S44
+%ANLRMS-I-ERRORS, <DUA1:[G88]S44.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S44.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S44.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S45
+%ANLRMS-I-ERRORS, <DUA1:[G88]S45.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S45.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0008C61C order 008FBE12
+  key 1 records 2 sum 0008C61C order 008FBE12
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S45.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S46
+%ANLRMS-I-ERRORS, <DUA1:[G88]S46.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S46.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S46.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S47
+%ANLRMS-I-ERRORS, <DUA1:[G88]S47.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S47.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 0 sum 00000000 order 00000000
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S47.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S48
+%ANLRMS-I-ERRORS, <DUA1:[G88]S48.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S48.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S48.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S49
+%ANLRMS-I-ERRORS, <DUA1:[G88]S49.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S49.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S49.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S5
+%ANLRMS-I-ERRORS, <DUA1:[G88]S5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S50
+%ANLRMS-I-ERRORS, <DUA1:[G88]S50.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S50.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S50.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S51
+%ANLRMS-I-ERRORS, <DUA1:[G88]S51.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S51.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S51.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S52
+%ANLRMS-I-ERRORS, <DUA1:[G88]S52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S53
+%ANLRMS-I-ERRORS, <DUA1:[G88]S53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S54
+%ANLRMS-I-ERRORS, <DUA1:[G88]S54.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S54.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S54.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S55
+%ANLRMS-I-ERRORS, <DUA1:[G88]S55.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S55.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S55.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S56
+%ANLRMS-I-ERRORS, <DUA1:[G88]S56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S57
+%ANLRMS-I-ERRORS, <DUA1:[G88]S57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S58
+%ANLRMS-I-ERRORS, <DUA1:[G88]S58.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S58.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S58.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S6
+%ANLRMS-I-ERRORS, <DUA1:[G88]S6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0008C61C order 008FBE12
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0008C61C order 008FBE12
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S62
+%ANLRMS-I-ERRORS, <DUA1:[G88]S62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC64E31
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  key 1 records 5 sum 0015EF52 order CDC68D9D
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S63
+%ANLRMS-I-ERRORS, <DUA1:[G88]S63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S64
+%ANLRMS-I-ERRORS, <DUA1:[G88]S64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S65
+%ANLRMS-I-ERRORS, <DUA1:[G88]S65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S66
+%ANLRMS-I-ERRORS, <DUA1:[G88]S66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 40 sum 00AFEAAD order 59859FCA
+  records 40 deleted and put back 13 updated 6 failed 0
+  key 0 records 40 sum 00AFEAAD order 59859FCA
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S7
+%ANLRMS-I-ERRORS, <DUA1:[G88]S7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S8
+%ANLRMS-I-ERRORS, <DUA1:[G88]S8.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S8.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S8.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_S9
+%ANLRMS-I-ERRORS, <DUA1:[G88]S9.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]S9.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+  records 5 deleted and put back 1 updated 1 failed 0
+  key 0 records 5 sum 0015EF52 order CDD7A9D5
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_S9.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U128
+%ANLRMS-I-ERRORS, <DUA1:[G88]U128.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U128.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 10 sum 0029FAB4 order 3FFD6593
+  key 1 records 10 sum 0029FAB4 order 3FFD6593
+  key 2 records 10 sum 0029FAB4 order 3FFD6593
+  records 10 deleted and put back 3 updated 2 failed 0
+  key 0 records 10 sum 0029FAB4 order 3FFD6593
+  key 1 records 10 sum 0029FAB4 order 3FFD6593
+  key 2 records 10 sum 0029FAB4 order 3FFD6593
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U128.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U129
+%ANLRMS-I-ERRORS, <DUA1:[G88]U129.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U129.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order 3FFD68B4
+  records 10 deleted and put back 3 updated 2 failed 0
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order 3FFD68B4
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U129.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U130
+%ANLRMS-I-ERRORS, <DUA1:[G88]U130.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U130.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 10 sum 002B881E order F25368AF
+  key 1 records 10 sum 002B881E order F25368AF
+  key 2 records 10 sum 002B881E order DAFFE77C
+  key 3 records 10 sum 002B881E order C07EE8AF
+  records 10 deleted and put back 3 updated 2 failed 0
+  key 0 records 10 sum 002B881E order F25368AF
+  key 1 records 10 sum 002B881E order F25368AF
+  key 2 records 10 sum 002B881E order DAFFE77C
+  key 3 records 10 sum 002B881E order C07EE8AF
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U130.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U131
+%ANLRMS-I-ERRORS, <DUA1:[G88]U131.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U131.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order DC201850
+  records 10 deleted and put back 3 updated 2 failed 0
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order DC201850
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U131.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U132
+%ANLRMS-I-ERRORS, <DUA1:[G88]U132.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U132.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 11 sum 0044DE1E order DFC16400
+  key 1 records 11 sum 0044DE1E order BFA167D4
+  key 2 records 11 sum 0044DE1E order DFC16400
+  records 11 deleted and put back 3 updated 2 failed 0
+  key 0 records 11 sum 0044DE1E order DFC16400
+  key 1 records 11 sum 0044DE1E order BFA167D4
+  key 2 records 11 sum 0044DE1E order DFC16400
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U132.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U133
+%ANLRMS-I-ERRORS, <DUA1:[G88]U133.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U133.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order DC201850
+  records 10 deleted and put back 3 updated 2 failed 0
+  key 0 records 10 sum 002B8D34 order 3FFD68B4
+  key 1 records 10 sum 002B8D34 order 3FFD68B4
+  key 2 records 10 sum 002B8D34 order DC201850
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U133.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U134
+%ANLRMS-I-ERRORS, <DUA1:[G88]U134.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U134.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 9 sum 00273200 order AE6C9D6D
+  key 1 records 9 sum 00273200 order AE6C9D6D
+  key 2 records 9 sum 00273200 order CED7DD8B
+  records 9 deleted and put back 3 updated 1 failed 0
+  key 0 records 9 sum 00273200 order AE6C9D6D
+  key 1 records 9 sum 00273200 order AE6C9D6D
+  key 2 records 9 sum 00273200 order CED7DD8B
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U134.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U135
+%ANLRMS-I-ERRORS, <DUA1:[G88]U135.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U135.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 11 sum 002FF324 order 85C3D3FB
+  key 1 records 11 sum 002FF324 order 85C3D3FB
+  records 11 deleted and put back 3 updated 2 failed 0
+  key 0 records 11 sum 002FF324 order 85C3D3FB
+  key 1 records 11 sum 002FF324 order 85C3D3FB
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U135.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U136
+%ANLRMS-I-ERRORS, <DUA1:[G88]U136.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U136.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 9 sum 002732E6 order B9CC9D6D
+  key 1 records 9 sum 002732E6 order B9CC9D6D
+  key 2 records 9 sum 002732E6 order D977DD8B
+  records 9 deleted and put back 3 updated 1 failed 0
+  key 0 records 9 sum 002732E6 order B9CC9D6D
+  key 1 records 9 sum 002732E6 order B9CC9D6D
+  key 2 records 9 sum 002732E6 order D977DD8B
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U136.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U137
+%ANLRMS-I-ERRORS, <DUA1:[G88]U137.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U137.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 9 sum 0085833A order C9E7328F
+  key 1 records 9 sum 0085833A order C9E7328F
+  records 9 deleted and put back 3 updated 1 failed 0
+  key 0 records 9 sum 0085833A order C9E7328F
+  key 1 records 9 sum 0085833A order C9E7328F
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U137.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U138
+%ANLRMS-I-ERRORS, <DUA1:[G88]U138.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U138.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 4 sum 003B4737 order 525A602C
+  records 4 deleted and put back 1 updated 0 failed 0
+  key 0 records 4 sum 003B4737 order 525A602C
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U138.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== G_U139
+%ANLRMS-I-ERRORS, <DUA1:[G88]U139.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[G88]U139.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 4 sum 003B5C34 order 536992A4
+  records 4 deleted and put back 1 updated 0 failed 0
+  key 0 records 4 sum 003B5C34 order 536992A4
+%ANLRMS-I-ERRORS, <DUA1:[M88]G_U139.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+==== F88
+== F_B40
+%ANLRMS-I-ERRORS, <DUA1:[F88]B40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B40.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B41
+%ANLRMS-I-ERRORS, <DUA1:[F88]B41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B41.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B52
+%ANLRMS-I-ERRORS, <DUA1:[F88]B52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  not indexed
+  not indexed
+  not indexed
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B52.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B53
+%ANLRMS-I-ERRORS, <DUA1:[F88]B53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  not indexed
+  not indexed
+  not indexed
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B53.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B56
+%ANLRMS-I-ERRORS, <DUA1:[F88]B56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B56.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B57
+%ANLRMS-I-ERRORS, <DUA1:[F88]B57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B57.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B62
+%ANLRMS-I-ERRORS, <DUA1:[F88]B62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B62.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B63
+%ANLRMS-I-ERRORS, <DUA1:[F88]B63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B63.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B64
+%ANLRMS-I-ERRORS, <DUA1:[F88]B64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B64.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B65
+%ANLRMS-I-ERRORS, <DUA1:[F88]B65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B65.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B66
+%ANLRMS-I-ERRORS, <DUA1:[F88]B66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B66.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B67
+%ANLRMS-I-ERRORS, <DUA1:[F88]B67.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B67.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B67.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B68
+%ANLRMS-I-ERRORS, <DUA1:[F88]B68.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B68.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B68.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B69
+%ANLRMS-I-ERRORS, <DUA1:[F88]B69.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B69.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B69.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B70
+%ANLRMS-I-ERRORS, <DUA1:[F88]B70.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B70.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B70.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B71
+%ANLRMS-I-ERRORS, <DUA1:[F88]B71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B71.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B72
+%ANLRMS-I-ERRORS, <DUA1:[F88]B72.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B72.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B72.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B73
+%ANLRMS-I-ERRORS, <DUA1:[F88]B73.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B73.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B73.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B78
+%ANLRMS-I-ERRORS, <DUA1:[F88]B78.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B78.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B78.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B79
+%ANLRMS-I-ERRORS, <DUA1:[F88]B79.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B79.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B79.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B80
+%ANLRMS-I-ERRORS, <DUA1:[F88]B80.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B80.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B80.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B81
+%ANLRMS-I-ERRORS, <DUA1:[F88]B81.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B81.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B81.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B82
+%ANLRMS-I-ERRORS, <DUA1:[F88]B82.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B82.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B82.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B83
+%ANLRMS-I-ERRORS, <DUA1:[F88]B83.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B83.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B83.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B84
+%ANLRMS-I-ERRORS, <DUA1:[F88]B84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B84.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B85
+%ANLRMS-I-ERRORS, <DUA1:[F88]B85.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B85.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B85.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B86
+%ANLRMS-I-ERRORS, <DUA1:[F88]B86.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B86.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B86.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B87
+%ANLRMS-I-ERRORS, <DUA1:[F88]B87.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B87.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B87.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B88
+%ANLRMS-I-ERRORS, <DUA1:[F88]B88.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B88.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B88.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B89
+%ANLRMS-I-ERRORS, <DUA1:[F88]B89.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B89.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B89.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_B91
+%ANLRMS-I-ERRORS, <DUA1:[F88]B91.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]B91.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 0 sum 00000000 order 00000000
+  records 0 deleted and put back 0 updated 0 failed 0
+  key 0 records 0 sum 00000000 order 00000000
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_B91.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_D1
+%ANLRMS-I-ERRORS, <DUA1:[F88]D1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]D1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 6 sum 0000A1E9 order A1A42FA5
+  key 1 records 6 sum 0000A1E9 order BB0A41B9
+  key 2 records 6 sum 0000A1E9 order 28D3932B
+  records 6 deleted and put back 2 updated 1 failed 0
+  key 0 records 6 sum 0000A1E9 order A1A42FA5
+  key 1 records 6 sum 0000A1E9 order BB0A41B9
+  key 2 records 6 sum 0000A1E9 order 28D3932B
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_D1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_D2
+%ANLRMS-I-ERRORS, <DUA1:[F88]D2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]D2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 8 sum 0000CC77 order E6855725
+  key 1 records 8 sum 0000CC77 order 7EAF8E95
+  key 2 records 8 sum 0000CC77 order 43607F5F
+  records 8 deleted and put back 2 updated 1 failed 0
+  key 0 records 8 sum 0000CC77 order E6855725
+  key 1 records 8 sum 0000CC77 order 7EAF8E95
+  key 2 records 8 sum 0000CC77 order 43607F5F
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_D2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_L1
+%ANLRMS-I-ERRORS, <DUA1:[F88]L1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]L1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 8 sum 0000CEC0 order CF348109
+  key 1 records 8 sum 0000CEC0 order 3EAF8F0B
+  key 2 records 8 sum 0000CEC0 order 436023A4
+  records 8 deleted and put back 2 updated 1 failed 0
+  key 0 records 8 sum 0000CEC0 order CF348109
+  key 1 records 8 sum 0000CEC0 order 29B28F0B
+  key 2 records 8 sum 0000CEC0 order 436023A4
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_L1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_R1
+%ANLRMS-I-ERRORS, <DUA1:[F88]R1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]R1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 8 sum 0000D4F5 order 7534811D
+  key 1 records 8 sum 0000D4F5 order 2C9C0F0B
+  key 2 records 8 sum 0000D4F5 order 1A1BF4CA
+  records 8 deleted and put back 2 updated 1 failed 0
+  key 0 records 8 sum 0000D4F5 order 7534811D
+  key 1 records 8 sum 0000D4F5 order 2C9C0F0B
+  key 2 records 8 sum 0000D4F5 order 1A1BF4CA
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_R1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_R2
+%ANLRMS-I-ERRORS, <DUA1:[F88]R2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]R2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 9 sum 0000E688 order E6903110
+  key 1 records 9 sum 0000E688 order F3C19B73
+  key 2 records 9 sum 0000E688 order A1446794
+  records 9 deleted and put back 3 updated 1 failed 0
+  key 0 records 9 sum 0000E688 order E6903110
+  key 1 records 9 sum 0000E688 order 2FF69B73
+  key 2 records 9 sum 0000E688 order A1446794
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_R2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_R3
+%ANLRMS-I-ERRORS, <DUA1:[F88]R3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]R3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 8 sum 0000E339 order CF3564D1
+  key 1 records 8 sum 0000E339 order D5DFEF09
+  key 2 records 8 sum 0000E339 order 1A1A4D92
+  records 8 deleted and put back 2 updated 1 failed 0
+  key 0 records 8 sum 0000E339 order CF3564D1
+  key 1 records 8 sum 0000E339 order 367FEF0B
+  key 2 records 8 sum 0000E339 order 1A1A4D92
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_R3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_R4
+%ANLRMS-I-ERRORS, <DUA1:[F88]R4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]R4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 000035F8 order 00066E14
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 000035F8 order 00066E14
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_R4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_STD
+%ANLRMS-I-ERRORS, <DUA1:[F88]STD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]STD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 8 sum 0000CEC0 order CF348109
+  key 1 records 8 sum 0000CEC0 order 3EAF8F0B
+  key 2 records 8 sum 0000CEC0 order 436023A4
+  records 8 deleted and put back 2 updated 1 failed 0
+  key 0 records 8 sum 0000CEC0 order CF348109
+  key 1 records 8 sum 0000CEC0 order 29B28F0B
+  key 2 records 8 sum 0000CEC0 order 436023A4
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_STD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W1
+%ANLRMS-I-ERRORS, <DUA1:[F88]W1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 000038A9 order 0049105E
+  key 1 records 3 sum 000038A9 order 0049B076
+  key 2 records 3 sum 000038A9 order 00491515
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 000038A9 order 0049105E
+  key 1 records 3 sum 000038A9 order 00491916
+  key 2 records 3 sum 000038A9 order 0049105E
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W1.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W2
+%ANLRMS-I-ERRORS, <DUA1:[F88]W2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 000025D4 order 0002407A
+  key 1 records 2 sum 000025D4 order 0002407A
+  key 2 records 2 sum 000025D4 order 000275DA
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 000025D4 order 0002407A
+  key 1 records 2 sum 000025D4 order 0002407A
+  key 2 records 2 sum 000025D4 order 000275DA
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W3
+%ANLRMS-I-ERRORS, <DUA1:[F88]W3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 1 sum 000000A8 order 000000A8
+  key 1 records 1 sum 000000A8 order 000000A8
+  key 2 records 1 sum 000000A8 order 000000A8
+  records 1 deleted and put back 0 updated 0 failed 0
+  key 0 records 1 sum 000000A8 order 000000A8
+  key 1 records 1 sum 000000A8 order 000000A8
+  key 2 records 1 sum 000000A8 order 000000A8
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W3.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W4
+%ANLRMS-I-ERRORS, <DUA1:[F88]W4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 2 sum 0000516F order 00038D98
+  key 1 records 2 sum 0000516F order 00038D98
+  key 2 records 2 sum 0000516F order 000672F7
+  records 2 deleted and put back 0 updated 0 failed 0
+  key 0 records 2 sum 0000516F order 00038D98
+  key 1 records 2 sum 0000516F order 00038D98
+  key 2 records 2 sum 0000516F order 000672F7
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W4.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W5
+%ANLRMS-I-ERRORS, <DUA1:[F88]W5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 3 sum 00003345 order 0009A335
+  key 1 records 1 sum 00001CC6 order 00001CC6
+  records 3 deleted and put back 1 updated 0 failed 0
+  key 0 records 3 sum 00003345 order 0009A335
+  key 1 records 1 sum 00001CC6 order 00001CC6
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W5.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W6
+%ANLRMS-I-ERRORS, <DUA1:[F88]W6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 9 sum 0000E1DC order E6903225
+  key 1 records 9 sum 0000E1DC order 3E819B73
+  key 2 records 9 sum 0000E1DC order 6C046794
+  records 9 deleted and put back 3 updated 1 failed 0
+  key 0 records 9 sum 0000E1DC order E6903225
+  key 1 records 9 sum 0000E1DC order 299C9B73
+  key 2 records 9 sum 0000E1DC order 6C046794
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W6.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== F_W7
+%ANLRMS-I-ERRORS, <DUA1:[F88]W7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[F88]W7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 300 sum 0012DF23 order D3181F7E
+  key 1 records 300 sum 0012DF23 order 4058BB9F
+  key 2 records 300 sum 0012DF23 order CDA2820C
+  records 300 deleted and put back 100 updated 40 failed 0
+  key 0 records 300 sum 0012DF23 order D3181F7E
+  key 1 records 300 sum 0012DF23 order 9F694CA1
+  key 2 records 300 sum 0012DF23 order CDA2820C
+%ANLRMS-I-ERRORS, <DUA1:[M88]F_W7.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+==== R88
+== R_LOAD
+%ANLRMS-I-ERRORS, <DUA1:[R88]LOAD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[R88]LOAD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 1935 sum 2C5FA230 order B6591047
+  key 1 records 2000 sum 2DDD446F order B9DBE531
+  key 2 records 2000 sum 2DDD446F order 693CAC46
+  records 1935 deleted and put back 645 updated 258 failed 0
+  key 0 records 1944 sum 2C946B51 order 3C458A91
+  key 1 records 2000 sum 2DDD446F order 6DED6022
+  key 2 records 2000 sum 2DDD446F order 693CAC46
+%ANLRMS-I-ERRORS, <DUA1:[M88]R_LOAD.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== R_LOADV
+%ANLRMS-I-ERRORS, <DUA1:[R88]LOADV.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[R88]LOADV.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 500 sum 0983E4F3 order 83660C50
+  key 1 records 364 sum 096A420E order 2BE531DA
+  records 500 deleted and put back 166 updated 67 failed 0
+  key 0 records 500 sum 0983E4F3 order 83660C50
+  key 1 records 364 sum 096A420E order 90ABBE3C
+%ANLRMS-I-ERRORS, <DUA1:[M88]R_LOADV.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== R_PHONES
+%ANLRMS-I-ERRORS, <DUA1:[R88]PHONES.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[R88]PHONES.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 7 sum 000385EA order 2B329E64
+  key 1 records 7 sum 000385EA order ED95BD13
+  key 2 records 7 sum 000385EA order 1747A8F6
+  key 3 records 5 sum 0002F15C order 3EFCB4FA
+  records 7 deleted and put back 2 updated 1 failed 0
+  key 0 records 7 sum 000385EA order 2B329E64
+  key 1 records 7 sum 000385EA order ED95BD13
+  key 2 records 7 sum 000385EA order 1747A8F6
+  key 3 records 5 sum 0002F15C order 3EFCB4FA
+%ANLRMS-I-ERRORS, <DUA1:[M88]R_PHONES.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+== R_PHONES2
+%ANLRMS-I-ERRORS, <DUA1:[R88]PHONES2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[R88]PHONES2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+  key 0 records 7 sum 000385EA order 2B329E64
+  key 1 records 7 sum 000385EA order ED95BD13
+  key 2 records 7 sum 000385EA order 174946E0
+  key 3 records 5 sum 0002F15C order FB97AE41
+  records 7 deleted and put back 2 updated 1 failed 0
+  key 0 records 7 sum 000385EA order 2B329E64
+  key 1 records 7 sum 000385EA order ED95BD13
+  key 2 records 7 sum 000385EA order 174946E0
+  key 3 records 5 sum 0002F15C order 3EFCAE49
+%ANLRMS-I-ERRORS, <DUA1:[M88]R_PHONES2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+==== OPEN
+-- A a keyed FIND, then a sequential GET
+  AAAA1111
+FIND CCCC NORMAL
+status OK_ALK
+  CCCC3333
+  DDDD4444
+-- B what a PUT in sequence remembers
+PUT MMMM NORMAL
+PUT CCCC, below it SEQ
+after REWIND PUT DDDD, below it NORMAL
+PUT PPPP NORMAL
+  DDDD3333
+after GET DDDD PUT EEEE, below PPPP NORMAL
+PUT RRRR NORMAL
+-- C TRUNCATE with access to
+TRUNCATE IOP
+-- D the last pointers of a value
+DELETE the first NORMAL
+DELETE the second NORMAL
+  CCCCSAME
+DELETE the last NORMAL
+GET SAME RNF
+-- F a record this stream holds
+  AAAA1111
+status OK_ALK
+  AAAA1111
+  AAAA1111
+  AAAA1111
+FREE NORMAL
+FREE again RNL
+  AAAA1111
+GET at the end, holding one EOF
+-- E two streams on a sequential file
+  read then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read and update then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+  read and update then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+-- E two streams on a relative file
+  read then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read and update then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+  read and update then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+-- E two streams on an indexed file
+  read then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET NORMAL
+  read and update then read
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+  read and update then read and update
+  A's OPEN NORMAL
+  A's GET NORMAL
+  B's OPEN NORMAL
+  B's GET RLK
+  $STATUS == "%X00000001"
+==== FTNRTL
+                                     0792   886 01$:	BLBS	R4,0$			; any other $GET is the next in sequence
+%MACRO-E-SYMOUTPHAS, Symbol out of phase
+                                     07BA   896 02$:
+%MACRO-E-SYMOUTPHAS, Symbol out of phase
+                                     07D2   906 1$:	TSTL	UB_KIND(R3)
+%MACRO-E-MULDEFLBL, Multiple definition of label  !
+                                     07FD   920 2$:	MOVL	#RMS$_RTB,UB_STS(R3)	; too long for FORTRAN
+%MACRO-E-MULDEFLBL, Multiple definition of label  !
+%LINK-E-ERRORS, compilation errors
+	in module FTN_UNITS file DUA1:[FTN]FTN_UNITS.OBJ;1
+%LINK-E-NOIMGFIL, image file not created
+  $STATUS == "%X106482B2"
+%LINK-F-OPENIN, error opening DUA1:[FTN]FTNRTL.EXE; as input
+-RMS-E-FNF, file not found
+%LINK-F-OPENIN, error opening DUA1:[FTN]FTNRTL.EXE; as input
+-RMS-E-FNF, file not found
+==== PHONES
+CREATE NORMAL
+CONNECT NORMAL
+-- refused
+PUT, same name DUP
+PUT, same number DUP
+-- by name
+  ADAMS       AMY     617-5005
+  ADAMS       JOE     212-2002
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+  WALKER      ANN     617-1001GARDEN
+  WALKER      BEN     212-3003CHESS and more
+GET EOF
+-- by area, largest first
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+  CHAN        LI      415-4004GARDEN
+  ADAMS       JOE     212-2002
+  WALKER      BEN     212-3003CHESS and more
+  MILLER      ZOE     212-6006TENNIS
+GET EOF
+-- by note, those with one
+  WALKER      BEN     212-3003CHESS and more
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+GET EOF
+-- keyed
+  CHAN        LI      415-4004GARDEN
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004GARDEN
+  MILLER      ZOE     212-6006TENNIS
+  MILLER      ZOE     212-6006TENNIS
+  CHAN        LI      415-4004GARDEN
+GET, no such name RNF
+  CHAN        LI      415-4004GARDEN
+  WALKER      BEN     212-3003CHESS and more
+  CHAN        LI      415-4004GARDEN
+  CHAN        LI      415-4004GARDEN
+GET, key too long KSZ
+GET, no such key KRF
+GET, REV alone ROP
+-- limit and duplicates
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+status OK_LIM
+  CHAN        LI      415-4004GARDEN
+status OK_DUP
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+-- by address
+  WALKER      ANN     617-1001GARDEN
+  ADAMS       AMY     617-5005
+  ADAMS       JOE     212-2002
+-- find, then read it
+FIND NORMAL
+  MILLER      ZOE     212-6006TENNIS
+-- update
+UPDATE, a new number CHG
+UPDATE, a new name CHG
+UPDATE, longer NORMAL
+  CHAN        LI      415-4004GARDEN and pond and a long note
+UPDATE, shorter OK_DUP
+UPDATE again CUR
+DELETE NORMAL
+DELETE again CUR
+GET, deleted RNF
+  WALKER      ANN     617-1001GARDEN
+  CHAN        LI      415-4004CHESS 
+REWIND NORMAL
+  WALKER      ANN     617-1001GARDEN
+CLOSE NORMAL
+-- open again
+OPEN NORMAL
+keys 4 areas 1 prolog 3
+==== PHONESL
+parent OPEN NORMAL
+  WALKER      ANN     617-1001GARDEN
+-- the child
+status RLK
+status RLK
+status OK_RRL
+  WALKER      ANN     617-1001GARDEN
+  MILLER      ZOE     212-6006TENNIS
+child PUT NORMAL
+parent FREE NORMAL
+-- the child
+  WALKER      ANN     617-1001GARDEN
+  WALKER      ANN     617-1001GARDEN
+  WALKER      ANN     617-1001GARDEN
+  MILLER      ZOE     212-6006TENNIS
+child PUT DUP
+  OWENS       PAT     716-8008
+==== PHONESF
+%DCL-W-ACTIMAGE, error activating image PHONESF
+-CLI-E-IMAGEFNF, image file not found DUA1:[P88]PHONESF.EXE;
+==== PHONESD
+-- TYPE
+ADAMS       JOE     212-2002
+CHAN        LI      415-4004CHESS 
+MILLER      ZOE     212-6006TENNIS
+OWENS       PAT     716-8008
+WALKER      ANN     617-1001GARDEN
+WALKER      BEN     212-3003CHESS and more
+-- READ
+CHAN        LI      415-4004CHESS 
+WALKER      ANN     617-1001GARDEN
+ADAMS       JOE     212-2002
+NO NOBODY
+-- CONVERT
+ADAMS       JOE     212-2002
+CHAN        LI      415-4004CHESS 
+MILLER      ZOE     212-6006TENNIS
+OWENS       PAT     716-8008
+WALKER      ANN     617-1001GARDEN
+WALKER      BEN     212-3003CHESS and more
+MILLER      ZOE     212-6006TENNIS
+%RMS-E-EOF, end of file detected
+==== LOAD
+%DCL-W-ACTIMAGE, error activating image LOAD
+-CLI-E-IMAGEFNF, image file not found DUA1:[P88]LOAD.EXE;
+==== CHECKS
+%ANLRMS-I-ERRORS, <DUA1:[P88]PHONES.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANLRMS-I-ERRORS, <DUA1:[P88]PHONES2.IDX;1> 0 errors
+  $STATUS == "%X103B8103"
+%ANALYZE-E-OPENIN, error opening DUA1:[P88]LOAD.IDX; as input
+-RMS-E-FNF, file not found
+  $STATUS == "%X10B1109A"
+%ANALYZE-E-OPENIN, error opening DUA1:[P88]LOADV.IDX; as input
+-RMS-E-FNF, file not found
+  $STATUS == "%X10B1109A"
+==== ODD
+%DIRECT-E-OPENIN, error opening DUA1:[ODD]*.*;* as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%DIRECT-E-OPENIN, error opening DUA1:[ODD]NOTYPE.;* as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%DIRECT-E-OPENIN, error opening DUA1:[ODD]*.TYPEONLY;* as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%DIRECT-E-OPENIN, error opening DUA1:[ODD]*.;1 as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+
+%COPY-E-OPENIN, error opening DUA1:[ODD]ODD.FDL; as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%COPY-E-OPENIN, error opening DUA1:[ODD]ODD.FDL; as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%COPY-E-OPENIN, error opening DUA1:[ODD]ODD.FDL; as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+%DIRECT-E-OPENIN, error opening DUA1:[ODD]*.*;* as input
+-RMS-E-FND, ACP file or directory lookup failed
+-SYSTEM-W-BADIRECTORY, bad directory file format
+==== SAVE
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+==== END
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+%ANALDISK-W-FUTCREDAT, file (1,1,1) [000000]INDEXF.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (1,1,1) [000000]INDEXF.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (2,2,1) [000000]BITMAP.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (2,2,1) [000000]BITMAP.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (3,3,1) [000000]BADBLK.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (3,3,1) [000000]BADBLK.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (4,4,1) [000000]000000.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (4,4,1) [000000]000000.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (5,5,1) [000000]CORIMG.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (5,5,1) [000000]CORIMG.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (6,6,1) [000000]VOLSET.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (6,6,1) [000000]VOLSET.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (7,7,1) [000000]CONTIN.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (7,7,1) [000000]CONTIN.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (8,8,1) [000000]BACKUP.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (8,8,1) [000000]BACKUP.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (9,9,1) [000000]BADLOG.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (9,9,1) [000000]BADLOG.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (10,10,1) [000000]SECURITY.SYS;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (10,10,1) [000000]SECURITY.SYS;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (11,1,1) 
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (11,1,1) 
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (12,1,1) [000000]VMS88W.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (12,1,1) [000000]VMS88W.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (13,1,1) [000000]VMS88M.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (13,1,1) [000000]VMS88M.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (14,1,1) [000000]VMS88L.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (14,1,1) [000000]VMS88L.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (15,1,1) [000000]PHUTIL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (15,1,1) [000000]PHUTIL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (16,1,1) [000000]G88.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (16,1,1) [000000]G88.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (17,1,1) [G88]IDX88.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (17,1,1) [G88]IDX88.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (18,1,1) [G88]IDX88.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (18,1,1) [G88]IDX88.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (19,1,1) [G88]IDX88.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (19,1,1) [G88]IDX88.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (20,1,1) [G88]IDX88-GOVAX.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (20,1,1) [G88]IDX88-GOVAX.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (21,1,1) [G88]HELPERS.DAT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (21,1,1) [G88]HELPERS.DAT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (22,1,1) [G88]S1.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (22,1,1) [G88]S1.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (23,1,1) [G88]S2.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (23,1,1) [G88]S2.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (24,1,1) [G88]S3.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (24,1,1) [G88]S3.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (25,1,1) [G88]S4.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (25,1,1) [G88]S4.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (26,1,1) [G88]S5.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (26,1,1) [G88]S5.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (27,1,1) [G88]S6.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (27,1,1) [G88]S6.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (28,1,1) [G88]S7.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (28,1,1) [G88]S7.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (29,1,1) [G88]S8.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (29,1,1) [G88]S8.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (30,1,1) [G88]S9.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (30,1,1) [G88]S9.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (31,1,1) [G88]S10.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (31,1,1) [G88]S10.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (32,1,1) [G88]S11.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (32,1,1) [G88]S11.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (33,1,1) [G88]S12.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (33,1,1) [G88]S12.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (34,1,1) [G88]S13.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (34,1,1) [G88]S13.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (35,1,1) [G88]S14.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (35,1,1) [G88]S14.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (36,1,1) [G88]S15.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (36,1,1) [G88]S15.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (37,1,1) [G88]S16.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (37,1,1) [G88]S16.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (38,1,1) [G88]S17.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (38,1,1) [G88]S17.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (39,1,1) [G88]S18.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (39,1,1) [G88]S18.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (40,1,1) [G88]S19.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (40,1,1) [G88]S19.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (41,1,1) [G88]S20.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (41,1,1) [G88]S20.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (42,1,1) [G88]S21.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (42,1,1) [G88]S21.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (43,1,1) [G88]S22.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (43,1,1) [G88]S22.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (44,1,1) [G88]S23.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (44,1,1) [G88]S23.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (45,1,1) [G88]S24.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (45,1,1) [G88]S24.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (46,1,1) [G88]S25.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (46,1,1) [G88]S25.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (47,1,1) [G88]S26.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (47,1,1) [G88]S26.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (48,1,1) [G88]S27.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (48,1,1) [G88]S27.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (49,1,1) [G88]S28.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (49,1,1) [G88]S28.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (50,1,1) [G88]S29.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (50,1,1) [G88]S29.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (51,1,1) [G88]S30.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (51,1,1) [G88]S30.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (52,1,1) [G88]S31.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (52,1,1) [G88]S31.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (53,1,1) [G88]S32.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (53,1,1) [G88]S32.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (54,1,1) [G88]S33.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (54,1,1) [G88]S33.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (55,1,1) [G88]S35.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (55,1,1) [G88]S35.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (56,1,1) [G88]S36.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (56,1,1) [G88]S36.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (57,1,1) [G88]S37.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (57,1,1) [G88]S37.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (58,1,1) [G88]S38.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (58,1,1) [G88]S38.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (59,1,1) [G88]S39.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (59,1,1) [G88]S39.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (60,1,1) [G88]S40.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (60,1,1) [G88]S40.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (61,1,1) [G88]S41.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (61,1,1) [G88]S41.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (62,1,1) [G88]S42.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (62,1,1) [G88]S42.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (63,1,1) [G88]S43.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (63,1,1) [G88]S43.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (64,1,1) [G88]S44.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (64,1,1) [G88]S44.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (65,1,1) [G88]S45.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (65,1,1) [G88]S45.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (66,1,1) [G88]S46.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (66,1,1) [G88]S46.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (67,1,1) [G88]S47.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (67,1,1) [G88]S47.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (68,1,1) [G88]S48.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (68,1,1) [G88]S48.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (69,1,1) [G88]S49.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (69,1,1) [G88]S49.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (70,1,1) [G88]S50.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (70,1,1) [G88]S50.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (71,1,1) [G88]S51.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (71,1,1) [G88]S51.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (72,1,1) [G88]S52.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (72,1,1) [G88]S52.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (73,1,1) [G88]S53.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (73,1,1) [G88]S53.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (74,1,1) [G88]S54.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (74,1,1) [G88]S54.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (75,1,1) [G88]S55.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (75,1,1) [G88]S55.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (76,1,1) [G88]S56.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (76,1,1) [G88]S56.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (77,1,1) [G88]S57.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (77,1,1) [G88]S57.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (78,1,1) [G88]S58.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (78,1,1) [G88]S58.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (79,1,1) [G88]S62.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (79,1,1) [G88]S62.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (80,1,1) [G88]S63.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (80,1,1) [G88]S63.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (81,1,1) [G88]S64.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (81,1,1) [G88]S64.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (82,1,1) [G88]S65.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (82,1,1) [G88]S65.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (83,1,1) [G88]S66.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (83,1,1) [G88]S66.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (84,1,1) [G88]E71.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (84,1,1) [G88]E71.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (85,1,1) [G88]E84.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (85,1,1) [G88]E84.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (86,1,1) [G88]E85.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (86,1,1) [G88]E85.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (87,1,1) [G88]E103.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (87,1,1) [G88]E103.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (88,1,1) [G88]E103.IDX;2
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (88,1,1) [G88]E103.IDX;2
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (89,1,1) [G88]G104.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (89,1,1) [G88]G104.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (90,1,1) [G88]G105.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (90,1,1) [G88]G105.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (91,1,1) [G88]G106.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (91,1,1) [G88]G106.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (93,1,1) [G88]G107.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (93,1,1) [G88]G107.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (94,1,1) [G88]G108.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (94,1,1) [G88]G108.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (95,1,1) [G88]G109.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (95,1,1) [G88]G109.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (96,1,1) [G88]G110.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (96,1,1) [G88]G110.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (97,1,1) [G88]G111.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (97,1,1) [G88]G111.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (98,1,1) [G88]G112.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (98,1,1) [G88]G112.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (99,1,1) [G88]G113.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (99,1,1) [G88]G113.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (100,1,1) [G88]G114.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (100,1,1) [G88]G114.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (101,1,1) [G88]G115.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (101,1,1) [G88]G115.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (102,1,1) [G88]G116.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (102,1,1) [G88]G116.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (103,1,1) [G88]G117.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (103,1,1) [G88]G117.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (104,1,1) [G88]G118.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (104,1,1) [G88]G118.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (105,1,1) [G88]G119.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (105,1,1) [G88]G119.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (106,1,1) [G88]F120.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (106,1,1) [G88]F120.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (107,1,1) [G88]F121.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (107,1,1) [G88]F121.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (108,1,1) [G88]F122.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (108,1,1) [G88]F122.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (109,1,1) [G88]Q123.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (109,1,1) [G88]Q123.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (110,1,1) [G88]Q124.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (110,1,1) [G88]Q124.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (111,1,1) [G88]Q125.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (111,1,1) [G88]Q125.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (112,1,1) [G88]Q126.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (112,1,1) [G88]Q126.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (113,1,1) [G88]Q127.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (113,1,1) [G88]Q127.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (114,1,1) [G88]U128.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (114,1,1) [G88]U128.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (115,1,1) [G88]U129.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (115,1,1) [G88]U129.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (116,1,1) [G88]U130.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (116,1,1) [G88]U130.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (117,1,1) [G88]U131.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (117,1,1) [G88]U131.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (118,1,1) [G88]U132.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (118,1,1) [G88]U132.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (119,1,1) [G88]U133.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (119,1,1) [G88]U133.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (120,1,1) [G88]U134.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (120,1,1) [G88]U134.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (121,1,1) [G88]U135.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (121,1,1) [G88]U135.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (122,1,1) [G88]U136.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (122,1,1) [G88]U136.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (123,1,1) [G88]U137.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (123,1,1) [G88]U137.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (124,1,1) [G88]U138.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (124,1,1) [G88]U138.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (125,1,1) [G88]U139.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (125,1,1) [G88]U139.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (126,1,1) [G88]L140.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (126,1,1) [G88]L140.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (127,1,1) [000000]F88.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (127,1,1) [000000]F88.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (128,1,1) [F88]FOR88.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (128,1,1) [F88]FOR88.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (129,1,1) [F88]FOR88F.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (129,1,1) [F88]FOR88F.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (130,1,1) [F88]FOR88.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (130,1,1) [F88]FOR88.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (131,1,1) [F88]FOR88F.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (131,1,1) [F88]FOR88F.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (132,1,1) [F88]FOR88.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (132,1,1) [F88]FOR88.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (133,1,1) [F88]FOR88-GOVAX.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (133,1,1) [F88]FOR88-GOVAX.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (134,21,1) [F88]B40.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (134,21,1) [F88]B40.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (135,1,1) [F88]B41.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (135,1,1) [F88]B41.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (136,1,1) [F88]B52.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (136,1,1) [F88]B52.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (137,1,1) [F88]B53.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (137,1,1) [F88]B53.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (138,1,1) [F88]B56.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (138,1,1) [F88]B56.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (139,1,1) [F88]B57.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (139,1,1) [F88]B57.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (140,1,1) [F88]B62.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (140,1,1) [F88]B62.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (141,1,1) [F88]B63.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (141,1,1) [F88]B63.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (142,1,1) [F88]B64.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (142,1,1) [F88]B64.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (143,1,1) [F88]B65.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (143,1,1) [F88]B65.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (144,1,1) [F88]B66.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (144,1,1) [F88]B66.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (145,1,1) [F88]B67.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (145,1,1) [F88]B67.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (146,1,1) [F88]B68.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (146,1,1) [F88]B68.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (147,1,1) [F88]B69.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (147,1,1) [F88]B69.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (148,1,1) [F88]B70.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (148,1,1) [F88]B70.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (149,1,1) [F88]B71.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (149,1,1) [F88]B71.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (150,1,1) [F88]B72.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (150,1,1) [F88]B72.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (151,1,1) [F88]B73.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (151,1,1) [F88]B73.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (152,1,1) [F88]B78.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (152,1,1) [F88]B78.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (153,1,1) [F88]B79.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (153,1,1) [F88]B79.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (154,1,1) [F88]B80.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (154,1,1) [F88]B80.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (155,1,1) [F88]B81.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (155,1,1) [F88]B81.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (156,1,1) [F88]B82.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (156,1,1) [F88]B82.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (157,1,1) [F88]B83.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (157,1,1) [F88]B83.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (158,1,1) [F88]B84.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (158,1,1) [F88]B84.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (159,1,1) [F88]B85.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (159,1,1) [F88]B85.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (160,1,1) [F88]B86.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (160,1,1) [F88]B86.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (161,1,1) [F88]B87.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (161,1,1) [F88]B87.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (162,1,1) [F88]B88.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (162,1,1) [F88]B88.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (163,1,1) [F88]B89.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (163,1,1) [F88]B89.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (164,1,1) [F88]B91.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (164,1,1) [F88]B91.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (165,1,1) [F88]STD.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (165,1,1) [F88]STD.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (166,3,1) [F88]FOR013.DAT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (166,3,1) [F88]FOR013.DAT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (167,1,1) [F88]SQ.DAT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (167,1,1) [F88]SQ.DAT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (168,1,1) [F88]RL.DAT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (168,1,1) [F88]RL.DAT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (169,1,1) [F88]W1.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (169,1,1) [F88]W1.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (170,1,1) [F88]W2.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (170,1,1) [F88]W2.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (171,1,1) [F88]W3.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (171,1,1) [F88]W3.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (172,1,1) [F88]W4.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (172,1,1) [F88]W4.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (173,1,1) [F88]W5.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (173,1,1) [F88]W5.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (174,1,1) [F88]W6.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (174,1,1) [F88]W6.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (175,1,1) [F88]W7.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (175,1,1) [F88]W7.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (176,1,1) [F88]R1.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (176,1,1) [F88]R1.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (177,1,1) [F88]R2.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (177,1,1) [F88]R2.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (178,1,1) [F88]R3.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (178,1,1) [F88]R3.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (179,1,1) [F88]R4.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (179,1,1) [F88]R4.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (180,1,1) [F88]D1.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (180,1,1) [F88]D1.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (181,1,1) [F88]D2.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (181,1,1) [F88]D2.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (182,1,1) [F88]L1.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (182,1,1) [F88]L1.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (183,1,1) [000000]R88.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (183,1,1) [000000]R88.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (184,1,1) [R88]PHUTIL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (184,1,1) [R88]PHUTIL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (185,1,1) [R88]PHONES.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (185,1,1) [R88]PHONES.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (186,1,1) [R88]PHONESL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (186,1,1) [R88]PHONESL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (187,1,1) [R88]PHONESC.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (187,1,1) [R88]PHONESC.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (188,1,1) [R88]PHONESF.FOR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (188,1,1) [R88]PHONESF.FOR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (189,1,1) [R88]LOAD.FOR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (189,1,1) [R88]LOAD.FOR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (190,1,1) [R88]PHONES.COM;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (190,1,1) [R88]PHONES.COM;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (191,1,1) [R88]PHUTIL.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (191,1,1) [R88]PHUTIL.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (192,1,1) [R88]PHONES.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (192,1,1) [R88]PHONES.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (193,1,1) [R88]PHONESL.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (193,1,1) [R88]PHONESL.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (194,1,1) [R88]PHONESC.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (194,1,1) [R88]PHONESC.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (195,1,1) [R88]PHONESF.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (195,1,1) [R88]PHONESF.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (196,1,1) [R88]PHONESF.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (196,1,1) [R88]PHONESF.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (197,1,1) [R88]LOAD.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (197,1,1) [R88]LOAD.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (198,1,1) [R88]LOAD.OBJ;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (198,1,1) [R88]LOAD.OBJ;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (199,1,1) [R88]PHONES.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (199,1,1) [R88]PHONES.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (200,1,1) [R88]PHONESL.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (200,1,1) [R88]PHONESL.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (201,1,1) [R88]PHONESC.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (201,1,1) [R88]PHONESC.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (202,1,1) [R88]PHONESF.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (202,1,1) [R88]PHONESF.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (203,1,1) [R88]LOAD.EXE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (203,1,1) [R88]LOAD.EXE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (204,1,1) [R88]PHONES.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (204,1,1) [R88]PHONES.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (205,1,1) [R88]RUN1.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (205,1,1) [R88]RUN1.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (206,1,1) [R88]RUN2.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (206,1,1) [R88]RUN2.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (207,1,1) [R88]RUN2.TXT;2
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (207,1,1) [R88]RUN2.TXT;2
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (208,1,1) [R88]RUN2.TXT;3
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (208,1,1) [R88]RUN2.TXT;3
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (209,1,1) [R88]RUN3.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (209,1,1) [R88]RUN3.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (210,1,1) [R88]RUN4.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (210,1,1) [R88]RUN4.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (211,1,1) [R88]PHONES.FDL;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (211,1,1) [R88]PHONES.FDL;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (212,1,1) [R88]PHONES2.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (212,1,1) [R88]PHONES2.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (213,1,1) [R88]LOAD.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (213,1,1) [R88]LOAD.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (214,1,1) [R88]RUN5.TXT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (214,1,1) [R88]RUN5.TXT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (215,1,1) [R88]LOADV.IDX;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (215,1,1) [R88]LOADV.IDX;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (216,1,1) [000000]P88.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (216,1,1) [000000]P88.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (217,1,1) [P88]PHONES.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (217,1,1) [P88]PHONES.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (218,1,1) [P88]PHONESL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (218,1,1) [P88]PHONESL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (219,1,1) [P88]PHONESC.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (219,1,1) [P88]PHONESC.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (220,1,1) [P88]PHUTIL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (220,1,1) [P88]PHUTIL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (221,1,1) [P88]PHONESF.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (221,1,1) [P88]PHONESF.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (222,1,1) [P88]LOAD.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (222,1,1) [P88]LOAD.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (223,1,1) [P88]PHONES.COM;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (223,1,1) [P88]PHONES.COM;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (224,1,1) [000000]FTN.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (224,1,1) [000000]FTN.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (225,1,1) [FTN]FTNRTL.OPT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (225,1,1) [FTN]FTNRTL.OPT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (226,1,1) [FTN]FTN86.OPT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (226,1,1) [FTN]FTN86.OPT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (227,1,1) [FTN]FTN_VECTOR.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (227,1,1) [FTN]FTN_VECTOR.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (228,1,1) [FTN]FTN_CONTROL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (228,1,1) [FTN]FTN_CONTROL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (229,1,1) [FTN]FTN_UNITS.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (229,1,1) [FTN]FTN_UNITS.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (230,1,1) [FTN]FTN_STATEMENT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (230,1,1) [FTN]FTN_STATEMENT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (231,1,1) [FTN]FTN_FORMAT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (231,1,1) [FTN]FTN_FORMAT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (232,1,1) [FTN]FTN_EDIT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (232,1,1) [FTN]FTN_EDIT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (233,1,1) [FTN]FTN_FLOAT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (233,1,1) [FTN]FTN_FLOAT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (234,1,1) [FTN]FTN_LISTOUT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (234,1,1) [FTN]FTN_LISTOUT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (235,1,1) [FTN]FTN_LISTIN.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (235,1,1) [FTN]FTN_LISTIN.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (236,1,1) [FTN]FTN_NAMELIST.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (236,1,1) [FTN]FTN_NAMELIST.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (237,1,1) [FTN]FTN_INTERNAL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (237,1,1) [FTN]FTN_INTERNAL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (238,1,1) [FTN]FTN_OPEN.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (238,1,1) [FTN]FTN_OPEN.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (239,1,1) [FTN]FTN_INQUIRE.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (239,1,1) [FTN]FTN_INQUIRE.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (240,1,1) [FTN]FTN_POSITION.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (240,1,1) [FTN]FTN_POSITION.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (241,1,1) [FTN]FTN_UNFORMATTED.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (241,1,1) [FTN]FTN_UNFORMATTED.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (242,1,1) [FTN]FTN_DIRECT.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (242,1,1) [FTN]FTN_DIRECT.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (243,1,1) [FTN]FTN_RECORD.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (243,1,1) [FTN]FTN_RECORD.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (244,1,1) [FTN]FTN_KEYED.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (244,1,1) [FTN]FTN_KEYED.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (245,1,1) [FTN]FTN_INTRINSICS.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (245,1,1) [FTN]FTN_INTRINSICS.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (246,1,1) [FTN]FTN_SYSTEM.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (246,1,1) [FTN]FTN_SYSTEM.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (247,1,1) [000000]ODD.DIR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (247,1,1) [000000]ODD.DIR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (248,1,1) [ODD]ODD.FDL;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (248,1,1) [ODD]ODD.FDL;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (249,1,1) [ODD]NOTYPE;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (249,1,1) [ODD]NOTYPE;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (250,1,1) [ODD].TYPEONLY;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (250,1,1) [ODD].TYPEONLY;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (251,1,1) [ODD];1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (251,1,1) [ODD];1
+	revision date is in the future
+%ANALDISK-W-ALLOCCLR, blocks incorrectly marked allocated
+	LBN 147561 to 147578, RVN 1
+%ANALDISK-W-BADDIR, directory [ODD] has invalid format
+-ANALDISK-I-BAD_DIRSIZE, directory record has invalid size
+%ANALDISK-W-LOSTHEADER, file (248,1,1) ODD.FDL;1
+	not found in a directory
+%ANALDISK-W-LOSTHEADER, file (249,1,1) NOTYPE;1
+	not found in a directory
+%ANALDISK-W-LOSTHEADER, file (250,1,1) .TYPEONLY;1
+	not found in a directory
+%ANALDISK-W-LOSTHEADER, file (251,1,1) ;1
+	not found in a directory
+%ANALDISK-W-FREESPADRIFT, free block count of 268863 is incorrect (RVN 1);
+	the correct value is 268560
+  $STATUS == "%X00000001"

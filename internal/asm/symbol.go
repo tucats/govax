@@ -282,9 +282,16 @@ func isLocalLabel(name string) bool {
 
 // localLabelName returns the symbol-table name a local label is stored
 // under in the current local label block. The "@" can't appear in a
-// source symbol, so these never collide with an ordinary name.
+// source symbol, so these never collide with an ordinary name. A local
+// label is a number, so 01$ is 1$: real MACRO calls a second definition of
+// either a multiple definition (testdata/vms88's first run).
 func (a *Assembler) localLabelName(name string) string {
-	return fmt.Sprintf("%s@%d", name, a.localBlock)
+	digits := strings.TrimLeft(name, "0")
+	if digits == "$" {
+		digits = "0$"
+	}
+
+	return fmt.Sprintf("%s@%d", digits, a.localBlock)
 }
 
 // closeLocalBlock ends the current local label block, matching MACRO-32:

@@ -3,8 +3,8 @@
 ; Reads the record PHONESL may hold: with no options; with ROP NLK, which doesn't
 ; lock it, but won't read another's lock either; and with ROP RRL, which reads
 ; regardless, a success of its own. With nobody else holding it, the first $GET
-; locks it, so the others are RMS$_OK_ALK. Then a record nobody holds, and a new
-; one, which a second run finds there.
+; locks it and the others just read it. Then a record nobody holds, and a new one,
+; which a second run finds there.
 ;
 	$RABDEF
 	$RMSDEF

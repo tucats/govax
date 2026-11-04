@@ -323,7 +323,8 @@ func TestSessionCopy_wildcardOutputFields(t *testing.T) {
 		dests = append(dests, r.Dest)
 	}
 
-	if want := []string{"DUA0:[000000]DUP.OLD;1", "DUA0:[000000]FOO.OLD;1"}; !reflect.DeepEqual(dests, want) {
+	// New names, so each takes its input's version (the DCL Dictionary, under COPY).
+	if want := []string{"DUA0:[000000]DUP.OLD;2", "DUA0:[000000]FOO.OLD;2"}; !reflect.DeepEqual(dests, want) {
 		t.Errorf("Copy *.TXT *.OLD: Dests = %q, want %q", dests, want)
 	}
 

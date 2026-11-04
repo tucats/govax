@@ -881,19 +881,19 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
 	BNEQ	0$
 	MOVZWL	UB_FAB+FAB$W_MRS(R3),R0	; the file's size, as VMS's leaves it (for88's
-	BEQL	01$			;  #282), if it has one
+	BEQL	8$			;  #282), if it has one
 	MOVW	R0,RAB$W_USZ(R2)
-01$:	BLBS	R4,0$			; any other $GET is the next in sequence
+8$:	BLBS	R4,0$			; any other $GET is the next in sequence
 	MOVB	#RAB$C_SEQ,RAB$B_RAC(R2)
 0$:	$GET	RAB=R2
 	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
 	CMPL	RAB$L_RBF(R2),UB_RECP(R3) ; located elsewhere: copied to the buffer
-	BEQL	02$
+	BEQL	9$
 	PUSHR	#^M<R1,R2,R3>
 	MOVC3	R1,@RAB$L_RBF(R2),@UB_RECP(R3)
 	POPR	#^M<R1,R2,R3>
-02$:
+9$:
 	CMPB	UB_ACCESS(R3),#1
 	BNEQ	1$
 	MOVL	R3,R6			; a direct record, of the file's size

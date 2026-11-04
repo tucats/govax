@@ -281,7 +281,11 @@ func (f *File) dataRecord(b *bucket, k *Key, at int, previous []byte) (dataRecor
 	end := 0
 
 	if f.fixedStorage(k) {
+		// A deleted record's stub is only its key, size word or none (G_G109).
 		end = cursor + f.attr.Size
+		if r.isDeleted() {
+			end = cursor + k.Size
+		}
 	} else {
 		if cursor+2 > b.free {
 			return dataRecord{}, 0, b.corrupt(at, "a record's size past the free offset")
@@ -389,25 +393,31 @@ func (f *File) sidrs(b *bucket, k *Key) ([]sidr, error) {
 		s := sidr{offset: at, key: key}
 
 		for cursor := at + 2 + used; cursor < end; {
+			// A pointer taken out from the middle of an array is its control byte
+			// alone, IRC$M_DELETED and IRC$M_NOPTRSZ (testdata/vms88's changed files).
+			p := sidrPointer{offset: cursor, control: b.data[cursor]}
+			if p.control&ircNoPtr != 0 {
+				cursor++
+
+				s.pointers = append(s.pointers, p)
+
+				continue
+			}
+
 			if cursor+3 > end {
 				return nil, b.corrupt(cursor, "a SIDR pointer past its record")
 			}
 
-			p := sidrPointer{offset: cursor, control: b.data[cursor]}
 			id := binary.LittleEndian.Uint16(b.data[cursor+1:])
 			cursor += 3
 
-			if p.control&ircNoPtr == 0 {
-				size := int(p.control&ircPtrSize) + 2
-				if cursor+size > end {
-					return nil, b.corrupt(cursor, "a SIDR pointer past its record")
-				}
-
-				p.rfa = RFA{VBN: readPointer(b.data[cursor : cursor+size]), ID: id}
-				cursor += size
-			} else {
-				p.rfa = RFA{VBN: b.vbn, ID: id}
+			size := int(p.control&ircPtrSize) + 2
+			if cursor+size > end {
+				return nil, b.corrupt(cursor, "a SIDR pointer past its record")
 			}
+
+			p.rfa = RFA{VBN: readPointer(b.data[cursor : cursor+size]), ID: id}
+			cursor += size
 
 			s.pointers = append(s.pointers, p)
 		}

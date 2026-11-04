@@ -240,8 +240,11 @@ func TestRecordLock_unshared(t *testing.T) {
 	b.close()
 }
 
-// TestRecordLock_readersDefault: by default every stream locks
-// exclusively, readers too (the guide, 7.2.2.5); read locks (REA) share.
+// TestRecordLock_readersDefault: the Guide (7.2.2.5) has every stream lock
+// exclusively by default, but VMS 7.1 has a stream that can only read take no
+// lock (testdata/vms88's part E): two such streams both read a record, one that
+// can write gets it after one, and one that holds it keeps the reader out. Read
+// locks (REA) share.
 func TestRecordLock_readersDefault(t *testing.T) {
 	p, mounts, _ := newLockingSharers(t, 2)
 	a, b := p[0], p[1]
@@ -253,12 +256,35 @@ func TestRecordLock_readersDefault(t *testing.T) {
 
 	a.get()
 
-	if _, sts := b.get(); sts != rmsRecordLocked {
-		t.Errorf("a second reader's default $GET: %#x, want RMS$_RLK", sts)
+	if rec, sts := b.get(); rec != "R0" || sts != rmsNormal {
+		t.Errorf("a second reader's default $GET: %q, %#x", rec, sts)
 	}
 
 	a.close()
 	b.close()
+
+	for _, writerFirst := range []bool{false, true} {
+		reader, writer := a, b
+		reader.mustOpen("RD.DAT", facGet, shrAll, false, 0)
+		writer.mustOpen("RD.DAT", facGet|facUpd, shrAll, false, 0)
+
+		if writerFirst {
+			writer.get()
+
+			if _, sts := reader.get(); sts != rmsRecordLocked {
+				t.Errorf("a reader after a writer's $GET: %#x, want RMS$_RLK", sts)
+			}
+		} else {
+			reader.get()
+
+			if rec, sts := writer.get(); rec != "R0" || sts != rmsNormal {
+				t.Errorf("a writer after a reader's $GET: %q, %#x", rec, sts)
+			}
+		}
+
+		reader.close()
+		writer.close()
+	}
 
 	a.mustOpen("RD.DAT", facGet, shrAll, false, 0)
 	b.mustOpen("RD.DAT", facGet, shrAll, false, 0)
@@ -285,9 +311,10 @@ func TestRecordLock_errorUnlocks(t *testing.T) {
 
 	writeFile(t, mounts, "E.DAT", "R0", "R1")
 
-	a.mustOpen("E.DAT", facGet, shrAll, false, 0)
-	b.mustOpen("E.DAT", facGet, shrAll, false, 0)
-	c.mustOpen("E.DAT", facGet, shrAll, false, 0)
+	// Streams that can write: one that can only read holds no lock.
+	a.mustOpen("E.DAT", facGet|facUpd, shrAll, false, 0)
+	b.mustOpen("E.DAT", facGet|facUpd, shrAll, false, 0)
+	c.mustOpen("E.DAT", facGet|facUpd, shrAll, false, 0)
 
 	b.getWith(ropRRL) // B is past R0, unlocked
 	b.get()           // B holds R1

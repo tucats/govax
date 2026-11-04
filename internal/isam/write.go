@@ -885,6 +885,17 @@ func (b *bucket) replace(at, old int, with []byte) {
 	b.free += len(with) - old
 }
 
+// stubOf finds the stub of a deleted record with a key, or -1.
+func stubOf(list []dataRecord, k *Key, value []byte) int {
+	for i := range list {
+		if r := &list[i]; r.isDeleted() && !r.isRRV() && k.Compare(r.key, value) == 0 {
+			return i
+		}
+	}
+
+	return -1
+}
+
 // insertRecord puts a record in its place in a data bucket, after any with
 // the same key, and writes the bucket. A compressed key depends on the key
 // before it, so the record after the new one has its key stored again.
@@ -894,27 +905,18 @@ func (f *File) insertRecord(b *bucket, k *Key, value, rest []byte) (RFA, error) 
 		return RFA{}, err
 	}
 
-	// A deleted record's stub with this key gives way to it, in the same write:
-	// U139's P0000003 went where its stub was, with a new ID, the bucket counting
-	// one write.
-	for i := range list {
-		if r := &list[i]; r.isDeleted() && !r.isRRV() && k.Compare(r.key, value) == 0 {
-			f.closeUp(b, k, list, i)
-
-			if list, err = f.dataRecords(b, k); err != nil {
-				return RFA{}, err
-			}
-
-			break
-		}
-	}
-
 	at, previous, next := b.free, []byte(nil), (*dataRecord)(nil)
 
 	for i := range list {
 		r := &list[i]
+
+		// A bucket's RRVs end its records: VMS's RMS reading in sequence takes the
+		// first one for the end, so a record past it is lost to the primary key
+		// though every alternate still finds it (testdata/vms88's LOAD.IDX).
 		if r.isRRV() {
-			continue
+			at = r.offset
+
+			break
 		}
 
 		if k.Compare(r.key, value) > 0 {
@@ -939,6 +941,15 @@ func (f *File) insertRecord(b *bucket, k *Key, value, rest []byte) (RFA, error) 
 	}
 
 	if !b.roomFor(f.limit(k, next == nil), len(stored)+len(again)-oldKey) {
+		// Rather than split, a deleted record's stub with this key gives way, in the
+		// same write: U139's P0000003 went where its stub was, with a new ID. With
+		// room for both it stays, the new record after it (testdata/vms88's G_F120).
+		if i := stubOf(list, k, value); i >= 0 {
+			f.closeUp(b, k, list, i)
+
+			return f.insertRecord(b, k, value, rest)
+		}
+
 		return f.splitData(b, k, list, value, rest)
 	}
 

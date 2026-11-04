@@ -433,12 +433,31 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
+		// VMS's COPY opens its input through RMS, which refuses an indexed file whose
+		// prolog it can't read (testdata/vms88's E85: RMS$_PLV).
+		if isIndexed(src) {
+			if _, err := openIndexed(src, false); err != nil {
+				return results, &InputOpenError{
+					Spec:   filespec.Spec{Device: srcSpec.Device, Dirs: m.Dirs, Name: m.Name, Type: m.Type, Version: fmt.Sprint(m.Version)}.String(),
+					Status: prologStatus(err),
+				}
+			}
+		}
+
 		version, err := destVersion(destSpec, m.Version)
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
 		dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
+
+		// With no version given, the input's, or one past the highest there if
+		// that's more (the DCL Dictionary; testdata/vms88's E103.IDX;2).
+		if version == 0 {
+			if e, err := destDir.Lookup(name+"."+typ, 0); err != nil || e.Version < m.Version {
+				version = m.Version
+			}
+		}
 
 		version, err = createBinaryFile(destVol, destDir, destBm, destIb, name, typ, version, src)
 		if err != nil {
@@ -945,6 +964,15 @@ func createBinaryFile(destVol *volume.Volume, destDir *volume.Directory, destBm 
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 
+	// A copy asks for the contiguity its input has (testdata/vms88's S64 and S65).
+	if bits := src.Header.FileCharacteristics & (ondisk.FchContig | ondisk.FchContigB); bits != 0 && contiguous(dst.Extents) {
+		if err := volume.UpdateHeader(dst, func(h *ondisk.FileHeader, _ *ondisk.Ident) {
+			h.FileCharacteristics |= bits
+		}); err != nil {
+			return 0, fmt.Errorf("writing %s: %w", fullName, err)
+		}
+	}
+
 	return createdVersion(destDir, fullName, version)
 }
 
@@ -1102,6 +1130,16 @@ func lookUpVersion(destDir *volume.Directory, fullName string) (uint16, error) {
 	}
 
 	return entry.Version, nil
+}
+
+// InputOpenError is an input file COPY couldn't open: its name, and RMS's status.
+type InputOpenError struct {
+	Spec   string
+	Status uint32
+}
+
+func (e *InputOpenError) Error() string {
+	return fmt.Sprintf("error opening %s as input: %s", e.Spec, StatusName(e.Status))
 }
 
 // rawByteLength is how many bytes of f a copy of its bytes takes. It's the end of

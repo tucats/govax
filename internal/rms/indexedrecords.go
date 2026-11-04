@@ -110,6 +110,12 @@ func (s *indexedStream) lost() {
 func (s *indexedStream) moveTo(e isam.Entry) {
 	s.krf, s.place, s.hasPlace, s.atEnd = e.Ref, e, true, false
 	s.queued, s.queuedEnd = nil, false
+
+	// A $PUT in sequence is only held to the last one if nothing came between:
+	// after a keyed $GET of DDDD, VMS took EEEE below the last $PUT's PPPP
+	// (testdata/vms88's part B). That it isn't held to DDDD instead is a choice:
+	// EEEE is above that too.
+	s.lastPut = nil
 }
 
 // rewind puts the stream's place before key krf's first record.

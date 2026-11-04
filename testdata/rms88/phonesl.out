@@ -10,9 +10,7 @@ child PUT NORMAL
 parent FREE NORMAL
 -- the child
   WALKER      ANN     617-1001GARDEN
-status OK_ALK
   WALKER      ANN     617-1001GARDEN
-status OK_ALK
   WALKER      ANN     617-1001GARDEN
   MILLER      ZOE     212-6006TENNIS
 child PUT DUP

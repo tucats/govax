@@ -63,6 +63,14 @@ func TestLocalLabelDuplicateInBlock(t *testing.T) {
 	requireCode(t, assembleErr(t, "1$: NOP\n1$: NOP"), vmserrors.VAX_DUPSYM)
 }
 
+// A local label is a number: real MACRO found 01$ and 1$ in one block a multiple
+// definition, in FTNRTL's FTN_UNITS (testdata/vms88's first run).
+func TestLocalLabelLeadingZeros(t *testing.T) {
+	requireCode(t, assembleErr(t, "01$: NOP\n1$: NOP"), vmserrors.VAX_DUPSYM)
+	requireCode(t, assembleErr(t, "00$: NOP\n0$: NOP"), vmserrors.VAX_DUPSYM)
+	assembleBytes(t, "BRB 01$\n1$: NOP")
+}
+
 func TestLocalLabelUndefinedAtBlockEnd(t *testing.T) {
 	requireCode(t, assembleErr(t, "BRB 1$\nA: NOP\n1$: NOP"), vmserrors.VAX_UNDEFSYM)
 }

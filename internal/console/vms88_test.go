@@ -12,8 +12,9 @@ import (
 // exchange.cmd makes it, and VMS88.COM on it, so a mistake of ours can't cost the author a
 // run on the VAX.
 
-// runVMS88 makes the exchange volume and runs the procedure, and returns its log.
-func runVMS88(t *testing.T) string {
+// runVMS88 makes the exchange volume and runs the procedure, and returns its log and the
+// dispatcher, the volume on DUA1.
+func runVMS88(t *testing.T) (string, *Dispatcher) {
 	t.Helper()
 
 	d, c, buf := shareFindConsole(t, false)
@@ -61,13 +62,13 @@ func runVMS88(t *testing.T) string {
 	shareFindRun(t, d, "@VMS88/OUTPUT=VMS88.LOG")
 	buf.Reset()
 
-	return ftn86Log(t, d, "VMS88.LOG")
+	return ftn86Log(t, d, "VMS88.LOG"), d
 }
 
 // TestVMS88Procedure is the rehearsal: the procedure reaches its end, each file's walks
 // agree before and after the changes, and the programs print testdata/rms88's output.
 func TestVMS88Procedure(t *testing.T) {
-	log := runVMS88(t)
+	log, d := runVMS88(t)
 	sections := ftn86Sections(log)
 
 	for _, name := range []string{"TOOLS", "G88", "F88", "R88", "OPEN", "FTNRTL", "PHONES", "PHONESL", "PHONESF", "PHONESD", "LOAD", "CHECKS", "ODD", "SAVE", "END"} {
@@ -130,4 +131,6 @@ func TestVMS88Procedure(t *testing.T) {
 
 	// A file that's meant to be damaged or empty shows in FILES's status; see the log.
 	t.Logf("OPEN:\n%s\nODD:\n%s\nTOOLS:\n%s\nFTNRTL:\n%s\nCHECKS:\n%s\nSAVE:\n%s", sections["OPEN"], sections["ODD"], sections["TOOLS"], sections["FTNRTL"], sections["CHECKS"], sections["SAVE"])
+
+	vms88Oracle(t, d, sections)
 }

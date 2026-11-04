@@ -282,7 +282,7 @@ func (f *File) Delete(rfa RFA, fast bool) error {
 	r := p.record()
 	moved := r.rfa.VBN != p.b.vbn
 
-	if f.lastLeft(p) {
+	if f.lastLeft(p, k) {
 		f.makeStub(p, k)
 	} else {
 		f.closeUp(p.b, k, p.list, p.at)
@@ -315,13 +315,13 @@ func (f *File) Delete(rfa RFA, fast bool) error {
 	return nil
 }
 
-// lastLeft says whether the place's record is the bucket's only record, an RRV
-// not counting. Whether it's the last by key that a bucket keeps, or only its last
-// record left, no VMS case tells apart: each that kept a stub had deleted the
-// others first, or had no others. "Only" is the choice, unconfirmed.
-func (f *File) lastLeft(p *place) bool {
-	for i := range p.list {
-		if i != p.at && !p.list[i].isRRV() {
+// lastLeft says whether the place's record is the bucket's last by key, whatever else
+// is before it: the index's entry for the bucket has that key, so VMS keeps a stub of
+// it (testdata/vms88's changed files, G_F120's key 51 with three records before it).
+// Later records with its own key don't count (G_S31's duplicates).
+func (f *File) lastLeft(p *place, k *Key) bool {
+	for i := p.at + 1; i < len(p.list); i++ {
+		if r := &p.list[i]; !r.isRRV() && k.Compare(r.key, p.record().key) != 0 {
 			return false
 		}
 	}
@@ -330,17 +330,10 @@ func (f *File) lastLeft(p *place) bool {
 }
 
 // makeStub turns a record into a deleted one's stub: its control byte with
-// IRC$M_DELETED, its ID and RFA, a size word, and its key (U137, U139). A file
-// whose records have no size word can't have a shorter record than the rest, and
-// no VMS case deletes one there; its stub keeps the whole record, marked.
+// IRC$M_DELETED, its ID and RFA, a size word if the file's records have one, and its
+// key (U137, U139; testdata/vms88's G_G109 for a fixed file with none).
 func (f *File) makeStub(p *place, k *Key) {
 	b, r := p.b, p.record()
-
-	if f.fixedStorage(k) {
-		b.data[r.offset] |= ircDeleted
-
-		return
-	}
 
 	var previous []byte
 
@@ -569,11 +562,9 @@ func (f *File) removePointer(k *Key, value []byte, rfa RFA) error {
 	}
 }
 
-// removeFromSIDR takes pointer j out of SIDR i and writes the bucket. A value's
-// first pointer has IRC$M_FIRST_KEY, so if it goes, the next pointer takes the
-// mark: unconfirmed, no VMS case taking out a first pointer that has others after
-// it. A SIDR left with none goes whole; if that leaves the bucket empty, it stays
-// empty, which no VMS case shows either.
+// removeFromSIDR takes pointer j out of SIDR i and writes the bucket: by where it is
+// in the array, as VMS's changed files have it (testdata/vms88). A SIDR left with none
+// goes whole; if that leaves the bucket empty, it stays empty, which no VMS case shows.
 func (f *File) removeFromSIDR(b *bucket, k *Key, list []sidr, i, j int) error {
 	s := &list[i]
 
@@ -586,6 +577,15 @@ func (f *File) removeFromSIDR(b *bucket, k *Key, list []sidr, i, j int) error {
 	}
 
 	switch {
+	case live <= 1 && i+1 == len(list):
+		// The bucket's last value stays, as its last record does: the index's entry
+		// for the bucket has it (D2, U134, L140). Its first pointer holds the place.
+		b.data[s.pointers[0].offset] |= ircDeleted
+
+		if j != 0 {
+			f.leavePointerByte(b, s, j)
+		}
+
 	case live <= 1:
 		// The last one left: whatever deleted pointers it has go with it
 		// (unconfirmed, no case having deleted the last after the first).
@@ -597,27 +597,30 @@ func (f *File) removeFromSIDR(b *bucket, k *Key, list []sidr, i, j int) error {
 		b.data[s.pointers[j].offset] |= ircDeleted
 
 	default:
-		whole := int(binary.LittleEndian.Uint16(b.data[s.offset:]))
-		end := s.offset + 2 + whole
-
-		p := s.pointers[j]
-
-		next := end
-		if j+1 < len(s.pointers) {
-			next = s.pointers[j+1].offset
-		}
-
-		if p.control&ircFirstKey != 0 && j+1 < len(s.pointers) {
-			b.data[next] |= ircFirstKey
-		}
-
-		binary.LittleEndian.PutUint16(b.data[s.offset:], uint16(whole-(next-p.offset)))
-		b.replace(p.offset, next-p.offset, nil)
+		f.leavePointerByte(b, s, j)
 	}
 
 	b.touch()
 
 	return f.writeBucket(b)
+}
+
+// leavePointerByte takes a pointer that isn't an array's first down to its control
+// byte, IRC$M_DELETED and IRC$M_NOPTRSZ (testdata/vms88's R_PHONES, U137).
+func (f *File) leavePointerByte(b *bucket, s *sidr, j int) {
+	p := s.pointers[j]
+	whole := int(binary.LittleEndian.Uint16(b.data[s.offset:]))
+
+	end := s.offset + 2 + whole
+	if j+1 < len(s.pointers) {
+		end = s.pointers[j+1].offset
+	}
+
+	gone := end - p.offset - 1
+
+	b.data[p.offset] = ircDeleted | ircNoPtr
+	binary.LittleEndian.PutUint16(b.data[s.offset:], uint16(whole-gone))
+	b.replace(p.offset+1, gone, nil)
 }
 
 // removeSIDR closes up a whole SIDR, then stores the next one's key again

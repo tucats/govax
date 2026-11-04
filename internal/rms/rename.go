@@ -346,10 +346,6 @@ func parseRenameVersion(v string) (uint16, uint32) {
 // specFileName is spec's NAME.TYP as a directory entry spells it, the way
 // SYS$OPEN and SYS$CREATE form it.
 func specFileName(spec filespec.Spec) string {
-	if spec.Type == "" {
-		return spec.Name
-	}
-
 	return spec.Name + "." + spec.Type
 }
 

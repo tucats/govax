@@ -240,6 +240,7 @@ func (f *File) checkPrimary() (map[RFA][]byte, error) {
 		}
 
 		ids := map[uint16]bool{}
+		pastRecords := false
 
 		for i := range list {
 			r := &list[i]
@@ -252,8 +253,13 @@ func (f *File) checkPrimary() (map[RFA][]byte, error) {
 
 			if r.isRRV() {
 				forwards = append(forwards, forward{RFA{VBN: b.vbn, ID: r.id}, b, r.offset})
+				pastRecords = true
 
 				continue
+			}
+
+			if pastRecords {
+				return nil, b.corrupt(r.offset, "a record after an RRV, which VMS's RMS never reads in sequence")
 			}
 
 			if r.isDeleted() {

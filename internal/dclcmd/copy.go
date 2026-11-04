@@ -116,6 +116,13 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 			return vmserrors.ConditionError{Status: rmsFEX, Text: text}
 		}
 
+		var input *rms.InputOpenError
+		if errors.As(err, &input) {
+			text := "COPY-E-OPENIN, error opening " + input.Spec + " as input\n" + ConditionLine(input.Status)
+
+			return vmserrors.ConditionError{Status: input.Status, Text: text}
+		}
+
 		var hostToHost *rms.HostToHostError
 		if errors.As(err, &hostToHost) {
 			return vmserrors.Wrap(vmserrors.CLI_BADQUALIFIERCOMBO, err, "SOURCE/HOST", "DESTINATION/HOST")

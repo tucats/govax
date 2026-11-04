@@ -25,6 +25,7 @@ const (
 	statusRecordFit  = 0x103B8812
 	statusSIDR       = 0x103B887A
 	statusChainLoop  = 0x103B88B2
+	statusAreaVBN    = 0x103B8762
 	statusRecordID   = 0x103B95F2
 	statusNotCounted = 0 // a reserved bit's finding counts as an error, but sets no status
 
@@ -177,7 +178,7 @@ func (in *Inspector) fatal(vbn uint32, status uint32, text string) {
 // doesn't read Prologs 1 and 2 (the author's answer 1).
 func (in *Inspector) CheckAreasLocated() {
 	if in.Prolog.Version != 3 || in.Prolog.AreaCount == 0 || in.Prolog.AreaVBN == 0 {
-		in.fatal(1, inspectUnseen, "Information for locating area descriptors from prolog is invalid.")
+		in.fatal(1, statusAreaVBN, "Information for locating area descriptors from prolog is invalid.")
 	}
 }
 

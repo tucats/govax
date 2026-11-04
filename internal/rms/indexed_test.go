@@ -261,7 +261,8 @@ func TestIndexedCreateRefusals(t *testing.T) {
 
 // TestIndexedBadKeyName is VMS's E85: a key name RMS can't read is RMS$_KNM,
 // found as the prolog is written, so the file stays with an empty prolog,
-// which $OPEN then calls RMS$_PLG.
+// which $OPEN then calls RMS$_PLV, its level 0 (VMS 7.1's COPY of it,
+// testdata/vms88).
 func TestIndexedBadKeyName(t *testing.T) {
 	f := newCreateFixture(t, true)
 	putXABKey(t, f.ctx, xabKey0Addr, 0, 0, 0, 0, 8, 0)
@@ -275,8 +276,8 @@ func TestIndexedBadKeyName(t *testing.T) {
 	indexedFAB(t, f.ctx, "DUA0:E85.IDX", 0, 0)
 	putByte(t, f.ctx, testFabAddr+fabFAC, facGet)
 
-	if r0 := run(t, f.ctx, SysOpen, testFabAddr); r0 != rmsPrologError {
-		t.Errorf("$OPEN: %s, want RMS$_PLG", StatusName(r0))
+	if r0 := run(t, f.ctx, SysOpen, testFabAddr); r0 != rmsPrologLevel {
+		t.Errorf("$OPEN: %s, want RMS$_PLV", StatusName(r0))
 	}
 }
 
