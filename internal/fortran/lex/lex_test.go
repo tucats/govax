@@ -96,6 +96,16 @@ func TestClassify(t *testing.T) {
 		{text: "FUNCTION ROOT(A)", want: "FUNCTION: ROOT ( A )", first: true},
 		{text: "LOGICAL FUNCTION", want: "LOGICAL: FUNCTION", first: true},
 
+		// RECURSIVE, before the type or after it (docs/PHASE-89), only at a
+		// unit's start; RESULT is a name for the parser.
+		{text: "RECURSIVE FUNCTION F(N) RESULT(L)", want: "FUNCTION (recursive): F ( N ) RESULT ( L )", first: true},
+		{text: "RECURSIVE INTEGER*2 FUNCTION F(N)", want: "FUNCTION (INTEGER) (recursive): * 2 FUNCTION F ( N )", first: true},
+		{text: "INTEGER RECURSIVE FUNCTION F(N)", want: "FUNCTION (INTEGER) (recursive): FUNCTION F ( N )", first: true},
+		{text: "CHARACTER*(*) RECURSIVE FUNCTION H(S)", want: "FUNCTION (CHARACTER) (recursive): * ( * ) FUNCTION H ( S )", first: true},
+		{text: "RECURSIVE SUBROUTINE WALK(NODE)", want: "SUBROUTINE (recursive): WALK ( NODE )", first: true},
+		{text: "INTEGER RECURSIVE FUNCTION F(N)", want: "INTEGER: RECURSIVEFUNCTIONF ( N )"},
+		{text: "RECURSIVE = 1", want: "assignment: RECURSIVE = 1", first: true},
+
 		// Declarations, and type lengths before names.
 		{text: "INTEGER COUNT, MATRIX(4,4), SUM", want: "INTEGER: COUNT , MATRIX ( 4 , 4 ) , SUM"},
 		{text: "REAL*8 D1, D2", want: "REAL: * 8 D1 , D2"},
@@ -208,6 +218,33 @@ func TestTokenKinds(t *testing.T) {
 
 	if s := statements[0]; s.Kind != IfThen || !s.Kind.Executable() {
 		t.Errorf("IF THEN's kind is %v", s.Kind)
+	}
+}
+
+// TestRecursiveRefused checks the RECURSIVE forms that are no statement: twice,
+// away from a unit's start, and before what isn't a header.
+func TestRecursiveRefused(t *testing.T) {
+	cases := []struct {
+		text  string
+		first bool
+	}{
+		{"RECURSIVE INTEGER RECURSIVE FUNCTION F(N)", true},
+		{"RECURSIVE SUBROUTINE WALK(NODE)", false},
+		{"RECURSIVE X", true},
+		{"RECURSIVE PROGRAM P", true},
+	}
+
+	for _, c := range cases {
+		lines := []string{fixed(c.text)}
+		if !c.first {
+			lines = append([]string{fixed("CONTINUE")}, lines...)
+		}
+
+		_, dumps, idents := lexLines(t, lines...)
+
+		if len(idents) != 1 || idents[0] != "UNRECSTMT" || dumps[len(dumps)-1] != "unrecognized statement:" {
+			t.Errorf("%s: got %s with %v, want an unrecognized statement", c.text, dumps[len(dumps)-1], idents)
+		}
 	}
 }
 

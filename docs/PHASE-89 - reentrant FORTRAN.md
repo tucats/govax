@@ -1,8 +1,8 @@
 # Phase 89 — FORTRAN: recursive and reentrant routines
 
-**Status:** planned 2026-11-04. Subtask 1, the survey (Part A below), written the
-same day, for the author's review; "Questions for the author" are open, and no
-implementation has begun. Needs Phases 74 to 88 (the FORTRAN program, and the
+**Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
+below), which the author reviewed the same day, taking every recommendation ("The
+author's answers"); subtask 2, the syntax, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -350,6 +350,23 @@ aren't.
 8. **The VMS round** (subtask 12) needs a run on your VAX: include it, or leave the
    frame code checked by govax and gfortran only?
 
+## The author's answers (2026-11-04)
+
+Every recommendation is taken:
+
+1. **The default stays static**, recursion by request (RECURSIVE, `/RECURSIVE`,
+   OPTIONS `/RECURSIVE`). NON_RECURSIVE, the "middle way", isn't taken: OPTIONS
+   `/NORECURSIVE` exempts a unit from `/RECURSIVE`.
+2. **A recursive function's own name with an argument list is a call**, without
+   RESULT.
+3. **5.3 wins** over 5.17's "saved by default"; MANUAL.md's 14.7 is to say so.
+4. **No `/REENTRANCY`.**
+5. **AUTOMATIC alone keeps the compiler's cells static.**
+6. **Frame descriptors are written whole at each use.**
+7. **SET SCOPE is this phase's**, with `testdata/dbg89`.
+8. **The VMS round is in**, and wanted: VMS's MACRO and LINK build and run the
+   `.MAR` files the compiler writes for recursive programs (subtask 12).
+
 ## Subtasks (provisional, revised by the survey)
 
 One phase is enough: the work is a storage class threaded through passes that
@@ -357,7 +374,7 @@ already exist, and FTNRTL needs little. If subtask 8 or 10 grows past a subtask,
 it moves to a Phase 90.
 
 1. **Survey** (done 2026-11-04): Part A, for the author's review.
-2. **The syntax:** RECURSIVE in both orders, RESULT on FUNCTION and ENTRY, the
+2. **The syntax** (done 2026-11-04): RECURSIVE in both orders, RESULT on FUNCTION and ENTRY, the
    command's `/[NO]RECURSIVE` (`console.dcl`, `dclcmd/fortran.go`, `govax fortran
    --recursive`), OPTIONS `/[NO]RECURSIVE`; sema's RECURSIVE message lifted in a
    recursive unit and extended to ENTRY names in others; a function's name as a
@@ -421,3 +438,49 @@ it moves to a Phase 90.
   change, that FTNRTL is already reentrant but for a leak in the format cache,
   and that the debugger always shows the innermost activation. Eight questions
   wait for answers.
+- **2026-11-04:** The author's answers: every recommendation taken, and the VMS round
+  wanted. Subtask 2, the syntax.
+  - **Lexer** (`lex.go`): `Statement.Recursive`. At a unit's start, text beginning
+    RECURSIVE is classified again from after the keyword, and taken if that is a
+    FUNCTION or SUBROUTINE statement not already recursive; `typedFunction` takes
+    RECURSIVE between the type's length and FUNCTION. So `RECURSIVE INTEGER*2
+    FUNCTION`, `INTEGER RECURSIVE FUNCTION`, and `RECURSIVE SUBROUTINE` are headers,
+    `RECURSIVE = 1` is still an assignment (the = test comes first), and RECURSIVE
+    twice, away from a unit's start, or before PROGRAM is UNRECSTMT
+    (`TestRecursiveRefused`). The keyword is no token; `Dump` shows "(recursive)".
+  - **Parser** (`parse/decl.go`): `FunctionStmt.Recursive` and `Result`,
+    `SubroutineStmt.Recursive`, `EntryStmt.Result`; `result` reads `RESULT (name)`
+    only after a parenthesized list, since squeezed `FUNCTION F RESULT(R)` is a name
+    FRESULT (both of the HP manual's syntax diagrams write the parentheses with
+    RESULT); a SUBROUTINE's RESULT is RESULTSUB.
+  - **Sema:** `Unit.Recursive` (the header's RECURSIVE, or the unit's `/RECURSIVE`;
+    never a main program or BLOCK DATA); `Options.Recursive`, OPTIONS
+    `/[NO]RECURSIVE` (`source/options.go`'s table, `prologue`). In a recursive unit a
+    CALL of the subroutine's own name or an entry point's is a `Call`, and a
+    function's own name or an entry point's with an argument list a `FuncRef`
+    (`selfReference`), its type the value's; both are among the unit's `calls`, so
+    `checkReferences` now checks a recursive unit's references to itself (ARGCOUNT)
+    as another unit's. An entry point's name may be used before its ENTRY there
+    (`usedBeforeEntry`; its dummies still may not). RESULT (`resultVariable`): the
+    function's or entry point's name becomes a `UnitName` whose `ResultVar` is the
+    variable, which is `Unit.Result` or `Entry.Sym` and gets the header's type;
+    RESULTSAME, RESULTNAME (a routine's name, another result, a dummy), RESULTDECL (a
+    type statement naming the function), RESULTSUB (an ENTRY in a subroutine). `Entry.Name`
+    is the entry point's name, which `Entry.Sym.Name` no longer is with RESULT
+    (lowering's `.ENTRY` uses it). A statement function still can't use itself, and
+    RECURSIVE's text now says the subprogram isn't RECURSIVE. Without RECURSIVE every
+    old message stands; `RESULT` in a function that isn't recursive makes the name's
+    references RECURSIVE's error. The golden is `sema/testdata/recursive.for`; the
+    dump's unit line says "recursive".
+  - **`/STANDARD`:** "a RECURSIVE subprogram" and "RESULT", and RESULT's name is
+    checked as a name (`TestRecursiveStandard`).
+  - **The command:** `/[NO]RECURSIVE` (`console.dcl`, id 1391; `dclcmd`'s
+    `FortranOptions.Recursive`; `fortran.Options.Recursive`), `govax fortran
+    --recursive`, HELP FORTRAN, MANUAL.md's 6.5 and 14.3 (a paragraph on recursion).
+    `TestFortranRecursiveQualifier` runs it through DCL.
+  - **Until subtask 4** `fortran.Compile` reports each recursive unit NOTIMPL ("a
+    RECURSIVE subprogram") at its header after analysis, so nothing is lowered with
+    static storage that a second activation would share (`TestRecursiveUnits`).
+  - **Left for later:** the listing and cross reference show nothing new yet; the
+    storage map's frame column is subtask 3's. HELP and MANUAL.md say recursive units
+    are NOTIMPL, which subtask 4 takes out.

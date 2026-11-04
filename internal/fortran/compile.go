@@ -54,6 +54,11 @@ type Options struct {
 	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (sema.Unit.NoF77).
 	NoF77 bool
 
+	// Recursive is /RECURSIVE: every subprogram may be active more than once at a
+	// time, as if each FUNCTION and SUBROUTINE statement said RECURSIVE
+	// (sema.Unit.Recursive; docs/PHASE-89 - reentrant FORTRAN.md).
+	Recursive bool
+
 	// Debug is /DEBUG: what MACRO is to write for the debugger (debug.go).
 	Debug Debug
 
@@ -182,12 +187,22 @@ func CompileAll(opts Options, files []File) (result Result) {
 		prog = sema.Analyze(tree, MainName(file.Name), sema.Options{
 			NoI4:      opts.NoI4,
 			NoF77:     opts.NoF77,
+			Recursive: opts.Recursive,
 			GFloating: opts.GFloating,
 			Align:     align,
 			Checks:    opts.Checks,
 			Warnings:  opts.Warnings,
 			Standard:  opts.Standard,
 		}, &messages)
+
+		// A recursive unit is analyzed, but its storage isn't in its frame yet
+		// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 4), so it isn't
+		// compiled.
+		for _, u := range prog.Units {
+			if u.Recursive {
+				messages.Report("NOTIMPL", u.AST.Header.Position(), "a RECURSIVE subprogram")
+			}
+		}
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)

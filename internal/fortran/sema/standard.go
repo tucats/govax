@@ -293,13 +293,31 @@ func (x *extensions) statement(s ast.Stmt) {
 		x.name(s.Name, s.Pos)
 	case *ast.SubroutineStmt:
 		x.name(s.Name, s.Pos)
+
+		if s.Recursive {
+			x.add(s.Pos, "a RECURSIVE subprogram")
+		}
+
 	case *ast.BlockDataStmt:
 		x.name(s.Name, s.Pos)
 	case *ast.EntryStmt:
 		x.name(s.Name, s.Pos)
 
+		if s.Result != nil {
+			x.add(s.Result.Pos, "RESULT")
+		}
+
 	case *ast.FunctionStmt:
 		x.name(s.Name, s.Pos)
+
+		if s.Recursive {
+			x.add(s.Pos, "a RECURSIVE subprogram")
+		}
+
+		if s.Result != nil {
+			x.add(s.Result.Pos, "RESULT")
+			x.name(s.Result.Name, s.Result.Pos)
+		}
 
 		if s.Type != nil {
 			x.typeSpec(*s.Type)

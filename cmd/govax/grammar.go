@@ -70,6 +70,7 @@ type fortranFlags struct {
 	dLines       bool   // --d-lines
 	noI4         bool   // --no-i4
 	noF77        bool   // --no-f77
+	recursive    bool   // --recursive
 	gFloating    bool   // --g-floating
 	align        string // --align: /ALIGN's value
 	noAlign      bool   // --no-align
@@ -392,6 +393,16 @@ var fortranGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			fortran.noF77 = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "recursive",
+		Description: "Every subprogram may be recursive, as if each said RECURSIVE: /RECURSIVE",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			fortran.recursive = true
 
 			return nil
 		},
@@ -1058,6 +1069,10 @@ func fortranCommand(sources []string, f fortranFlags) string {
 
 	if f.noI4 {
 		command += "/NOI4"
+	}
+
+	if f.recursive {
+		command += "/RECURSIVE"
 	}
 
 	if f.gFloating {

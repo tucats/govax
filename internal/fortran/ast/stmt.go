@@ -28,6 +28,12 @@ type (
 		Type   *TypeSpec
 		Name   string
 		Params []*Name
+
+		// Recursive is set if the statement says RECURSIVE, and Result is
+		// RESULT's name, or nil (the HP Fortran manual's 8.5.1.1 and
+		// 8.5.2.1; docs/PHASE-89 - reentrant FORTRAN.md).
+		Recursive bool
+		Result    *Name
 	}
 
 	// SubroutineStmt is SUBROUTINE name [([p[,p]...])]. A dummy written *
@@ -35,8 +41,9 @@ type (
 	// is "*".
 	SubroutineStmt struct {
 		StmtBase
-		Name   string
-		Params []*Name
+		Name      string
+		Params    []*Name
+		Recursive bool // as FunctionStmt's
 	}
 
 	// BlockDataStmt is BLOCK DATA [name]; Name is "" without one.
@@ -51,6 +58,7 @@ type (
 		StmtBase
 		Name   string
 		Params []*Name
+		Result *Name // RESULT's name, as FunctionStmt's; nil without one
 	}
 )
 

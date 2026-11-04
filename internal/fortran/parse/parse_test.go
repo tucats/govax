@@ -138,6 +138,11 @@ func TestStatements(t *testing.T) {
 		{"LOGICAL FUNCTION L*4(A)", "LOGICAL*4 FUNCTION L(A)"},
 		{"SUBROUTINE S", "SUBROUTINE S"},
 		{"SUBROUTINE S(A, B, C)", "SUBROUTINE S(A, B, C)"},
+		{"RECURSIVE FUNCTION FACT(P) RESULT(L)", "RECURSIVE FUNCTION FACT(P) RESULT(L)"},
+		{"INTEGER RECURSIVE FUNCTION F(N)", "RECURSIVE INTEGER FUNCTION F(N)"},
+		{"RECURSIVE CHARACTER*8 FUNCTION C(S) RESULT (T)", "RECURSIVE CHARACTER*8 FUNCTION C(S) RESULT(T)"},
+		{"FUNCTION G() RESULT(R)", "FUNCTION G() RESULT(R)"},
+		{"RECURSIVE SUBROUTINE WALK(NODE)", "RECURSIVE SUBROUTINE WALK(NODE)"},
 
 		{"INTEGER I, J, K", "INTEGER I, J, K"},
 		{"INTEGER*2 I, M12*4, IVEC*4(10)", "INTEGER*2 I, M12*4, IVEC*4(10)"},
@@ -351,7 +356,7 @@ func TestStatements(t *testing.T) {
 		}
 
 		switch {
-		case strings.Contains(c.text, "FUNCTION"), strings.HasPrefix(c.text, "SUBROUTINE"),
+		case strings.Contains(c.text, "FUNCTION"), strings.Contains(c.text, "SUBROUTINE"),
 			strings.HasPrefix(c.text, "PROGRAM"), strings.HasPrefix(c.text, "BLOCK DATA"):
 			lines = []string{text, fixed("END")}
 		case strings.HasPrefix(c.text, "FORMAT"):
@@ -410,6 +415,9 @@ func TestErrors(t *testing.T) {
 		{"STOP 123456", "SYNTAX", 12, "expected a character constant or 1 to 5 digits, but found the number 123456"},
 		{"STOP X", "SYNTAX", 12, ""},
 		{"CALL S(A", "SYNTAX", 15, ""},
+		{"ENTRY E(A) RESULT", "SYNTAX", 24, "expected '(', but found the end of the statement"},
+		{"ENTRY E(A) RESULT(1)", "SYNTAX", 25, "expected the result's name, but found the number 1"},
+		{"ENTRY E(A) RESULT(R", "SYNTAX", 26, ""},
 		{"DIMENSION A", "SYNTAX", 18, "expected '(', but found the end of the statement"},
 		{"PRINT * X", "SYNTAX", 15, "expected ',', but found the name X"},
 		{"WRITE (FMT=*) X", "SYNTAX", 19, "expected a unit (UNIT=), but found ')'"},
@@ -512,6 +520,27 @@ func TestUnits(t *testing.T) {
 
 	if _, ok := file.Units[0].Body[1].(*ast.EndStmt); !ok || file.Units[0].Header != nil {
 		t.Errorf("first unit: %s", ast.Dump(file))
+	}
+}
+
+// TestRecursiveHeaders checks the headers RECURSIVE and RESULT go wrong in: a
+// subroutine has no result to name, and RESULT needs its parentheses.
+func TestRecursiveHeaders(t *testing.T) {
+	cases := []struct {
+		header, ident string
+		column        int
+	}{
+		{"RECURSIVE SUBROUTINE S(A) RESULT(R)", "RESULTSUB", 33},
+		{"SUBROUTINE S() RESULT(R)", "RESULTSUB", 22},
+		{"FUNCTION F(A) RESULT", "SYNTAX", 27},
+		{"FUNCTION F(A) RESULT R", "EXTRATEXT", 21}, // squeezed, RESULTR
+	}
+
+	for _, c := range cases {
+		_, ms := parseLines(t, "R.FOR", fixed(c.header), fixed("END"))
+		if len(ms) != 1 || ms[0].Ident != c.ident || ms[0].Pos.Column != c.column {
+			t.Errorf("%s: got %v, want %s at column %d", c.header, ms, c.ident, c.column)
+		}
 	}
 }
 

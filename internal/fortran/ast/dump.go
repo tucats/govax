@@ -186,21 +186,29 @@ func dumpSpec(s Stmt) (string, bool) {
 		return "PROGRAM " + s.Name, true
 
 	case *FunctionStmt:
-		text := "FUNCTION " + s.Name + names(s.Params)
+		text := "FUNCTION " + s.Name + names(s.Params) + result(s.Result)
 		if s.Type != nil {
 			text = s.Type.String() + " " + text
+		}
+
+		if s.Recursive {
+			text = "RECURSIVE " + text
 		}
 
 		return text, true
 
 	case *SubroutineStmt:
+		if s.Recursive {
+			return "RECURSIVE SUBROUTINE " + s.Name + names(s.Params), true
+		}
+
 		return "SUBROUTINE " + s.Name + names(s.Params), true
 
 	case *BlockDataStmt:
 		return strings.TrimSpace("BLOCK DATA " + s.Name), true
 
 	case *EntryStmt:
-		return "ENTRY " + s.Name + names(s.Params), true
+		return "ENTRY " + s.Name + names(s.Params) + result(s.Result), true
 
 	case *TypeStmt:
 		return s.Type.String() + " " + declarators(s.Entities), true
@@ -701,4 +709,13 @@ func items(list []Expr) string {
 	}
 
 	return b.String()
+}
+
+// result is a FUNCTION or ENTRY statement's RESULT clause as Dump shows it.
+func result(n *Name) string {
+	if n == nil {
+		return ""
+	}
+
+	return " RESULT(" + n.Name + ")"
 }

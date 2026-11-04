@@ -608,8 +608,20 @@ var messages = map[string]kind{
 	// subprogram.
 	"BLOCKSTMT": {Error, "%s can't be in a block data subprogram"},
 
-	// RECURSIVE is a subprogram referring to itself (section 6.2).
-	"RECURSIVE": {Error, "%s can't refer to itself: a FORTRAN subprogram is not recursive"},
+	// RECURSIVE is a subprogram referring to itself (section 6.2), which only
+	// a RECURSIVE one may do (the HP Fortran manual's 8.5.1.1), and a statement
+	// function never.
+	"RECURSIVE": {Error, "%s can't refer to itself: it isn't a RECURSIVE subprogram"},
+
+	// RESULT's messages (the HP Fortran manual's 8.5.2.1 and 8.11; docs/PHASE-89 -
+	// reentrant FORTRAN.md). RESULTSUB is RESULT where there is no function,
+	// RESULTSAME a result named for its own function or entry point, RESULTNAME
+	// one that is another name the unit gives meaning to already, and RESULTDECL
+	// a declaration of a function's name when RESULT names its value.
+	"RESULTSUB":  {Error, "a subroutine has no result: RESULT is for a FUNCTION statement or a function's ENTRY"},
+	"RESULTSAME": {Error, "the result of %s must be named for something else"},
+	"RESULTNAME": {Error, "%s can't be a result's name: it is %s"},
+	"RESULTDECL": {Error, "%s can't be declared: its RESULT, %s, has its type and its value"},
 
 	// NOTARRAY is subscripts on a name that isn't an array.
 	"NOTARRAY": {Error, "%s is not an array, so it can't have subscripts"},

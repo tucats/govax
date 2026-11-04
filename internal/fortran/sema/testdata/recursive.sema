@@ -1,0 +1,61 @@
+== main program RECUR
+  RECUR                   program unit
+  FACT      INTEGER       function
+  FIB       INTEGER       function
+  ACK       INTEGER       function
+  WALK                    subroutine
+  $LOCAL is 0 bytes
+6           PRINT * FACT(5) FIB(10) ACK(2, 3)
+7           CALL WALK(4)
+8           END
+== recursive FUNCTION FACT
+  FACT      INTEGER       result           $LOCAL+0
+  N         INTEGER       variable         argument 1
+  $LOCAL is 4 bytes
+11          FACT = 1
+12          IF (.GT.:I N 1) FACT = (*:I N FACT((-:I N 1)))
+13          END
+== recursive FUNCTION FIB
+  FIB                     program unit
+  F         INTEGER       result           $LOCAL+0
+  N         INTEGER       variable         argument 1
+  LUCAS                   program unit
+  L         INTEGER       result           $LOCAL+0
+  entry LUCAS (N) result L
+  $LOCAL is 4 bytes
+16          IF (.LT.:I N 2) THEN
+17            F = N
+18          ELSE
+19            F = (+:I FIB((-:I N 1)) FIB((-:I N 2)))
+20          END IF
+21          RETURN
+22          ENTRY LUCAS
+23          L = 2
+24          IF (.GT.:I N 0) L = (+:I FIB((-:I N 1)) FIB((+:I N 1)))
+25          END
+== recursive FUNCTION ACK
+  ACK       INTEGER       result           $LOCAL+0
+  M         INTEGER       variable         argument 1
+  N         INTEGER       variable         argument 2
+  $LOCAL is 4 bytes
+29          IF (.EQ.:I M 0) THEN
+30            ACK = (+:I N 1)
+31          ELSE IF (.EQ.:I N 0) THEN
+32            ACK = ACK((-:I M 1), 1)
+33          ELSE
+34            ACK = ACK((-:I M 1), ACK(M, (-:I N 1)))
+35          END IF
+36          END
+== recursive SUBROUTINE WALK
+  WALK                    program unit
+  N         INTEGER       variable         argument 1
+  STEP                    program unit
+  K         INTEGER       variable         argument 2
+  entry STEP (K)
+  $LOCAL is 0 bytes
+39          IF (.GT.:I N 0) CALL STEP(N)
+40          RETURN
+41          ENTRY STEP
+42          PRINT * K
+43          CALL WALK((-:I K 1))
+44          END

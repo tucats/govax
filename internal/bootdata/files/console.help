@@ -4716,6 +4716,14 @@ $FOR
                         /F77.  An OPTIONS statement before a unit may change it
                         for that unit.
 
+        /RECURSIVE      Every FUNCTION and SUBROUTINE may be active more than
+        /NORECURSIVE    once at a time, as if each said RECURSIVE: its local
+                        variables are in its stack frame unless SAVE'd, given
+                        initial values, in COMMON, or STATIC.  The default is
+                        /NORECURSIVE.  An OPTIONS statement before a unit may
+                        change it for that unit.  (Recursive units are
+                        accepted but not yet compiled: NOTIMPL.)
+
         /OBJECT[=<file>]  Runs MACRO on the MACRO file too, for an object file,
         /NOOBJECT       by default the source's name with type OBJ.  The MACRO
                         file is kept, so /OBJECT can't go with /NOMACRO.  The
@@ -4740,7 +4748,7 @@ $FOR
     --no-align, --optimize, --no-optimize, --list, --list-file <file>,
     --show <keywords>, --cross-reference, --check <keywords>,
     --warnings <keywords>, --standard <keywords>, --debug <keywords>,
-    --object, --object-file <file>, and --no-f77.
+    --object, --object-file <file>, --no-f77, and --recursive.
 
     Examples:
 

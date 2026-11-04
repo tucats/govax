@@ -1738,7 +1738,7 @@ FORTRAN source[,...][/HOST]  /MACRO[=file] | /NOMACRO
     /LIST[=file] | /NOLIST  /SHOW[=(keyword,...)] | /NOSHOW
     /[NO]CROSS_REFERENCE  /CHECK[=(keyword,...)] | /NOCHECK
     /WARNINGS[=(keyword,...)] | /NOWARNINGS  /STANDARD[=(keyword,...)] | /NOSTANDARD
-    /DEBUG[=(keyword,...)] | /NODEBUG  /OBJECT[=file] | /NOOBJECT  /[NO]F77
+    /DEBUG[=(keyword,...)] | /NODEBUG  /OBJECT[=file] | /NOOBJECT  /[NO]F77  /[NO]RECURSIVE
 ```
 
 Compiles VAX FORTRAN V5.0 source files (type `.FOR` by default) into MACRO-32
@@ -1754,7 +1754,7 @@ run to column 132, `/D_LINES` compiles the lines with a `D` in column 1,
 19 by default), `/NOI4` makes INTEGER and LOGICAL with no length 2
 bytes rather than 4, and `/G_FLOATING` makes REAL\*8 G_floating rather
 than D_floating, `/ALIGN` lays out structures and common blocks on
-natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds; `/CHECK` adds run-time checks, `/WARNINGS` and `/STANDARD` say what to report, `/DEBUG` what MACRO writes for the debugger, `/OBJECT` runs MACRO too, and `/NOF77` reads a program as FORTRAN-66 ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
+natural boundaries rather than packed ([section 14.3](#143-the-fortran-command)), and `/OPTIMIZE`, the default, runs the optimizer's passes, which the MACRO file's header names ([section 14.9](#149-what-optimize-does)); `/NOOPTIMIZE` leaves them out. `/LIST` writes a listing and `/SHOW` says what it holds; `/CHECK` adds run-time checks, `/WARNINGS` and `/STANDARD` say what to report, `/DEBUG` what MACRO writes for the debugger, `/OBJECT` runs MACRO too, `/NOF77` reads a program as FORTRAN-66, and `/RECURSIVE` makes every subprogram recursive ([section 14.3](#143-the-fortran-command)). `INCLUDE 'file'` reads a file (type `.FOR` by default)
 found relative to the file that includes it, in its host directory or on
 its volume's device and directory, and `INCLUDE '(module)'` a text library's module. The compiler's messages show the line
 and column:
@@ -5502,9 +5502,9 @@ The command's syntax and qualifiers are in
 `/LIBRARY` ([section 14.4](#144-source-lines)), `/MACRO` and `/NOMACRO`,
 `/EXTEND_SOURCE`, `/D_LINES`, `/CONTINUATIONS=n`, `/[NO]I4`,
 `/[NO]G_FLOATING`, and `/[NO]OPTIMIZE` (`/OPTIMIZE` by default, [section 14.9](#149-what-optimize-does)); the others are described below. An `OPTIONS` statement before a unit may give `/I4`,
-`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, or `/NOF77` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
+`/NOI4`, `/G_FLOATING`, `/NOG_FLOATING`, `/CHECK`, `/NOCHECK`, `/EXTEND_SOURCE`, `/NOEXTEND_SOURCE`, `/F77`, `/NOF77`, `/RECURSIVE`, or `/NORECURSIVE` for that unit alone, each name cut short if it stands for only one of them; the qualifier takes effect on the lines after the statement, and an `OPTIONS` statement must come before its unit's first statement. From the
 host shell, `govax fortran` runs it (`--optimize` and `--no-optimize` are `/[NO]OPTIMIZE`, and `--align value` and `--no-align` are
-`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, and `--object-file file` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, and `/OBJECT=file`, and `a.for+lib.tlb/library` an argument with `+`).
+`/ALIGN=value` and `/NOALIGN`, `--list`, `--list-file file`, `--show keywords`, `--cross-reference`, `--check keywords`, `--warnings keywords`, `--standard keywords`, `--debug keywords`, `--object`, `--object-file file`, and `--recursive` are `/LIST`, `/LIST=file`, `/SHOW=(keywords)`, `/CROSS_REFERENCE`, `/CHECK=(keywords)`, `/WARNINGS=(keywords)`, `/STANDARD=(keywords)`, `/DEBUG=(keywords)`, `/OBJECT`, `/OBJECT=file`, and `/RECURSIVE`, and `a.for+lib.tlb/library` an argument with `+`).
 
 **The listing.** `/LIST` writes a listing, by default the source's name with the
 type `.LIS`, beside the source; `/LIST=file` names another. It is written after
@@ -5662,6 +5662,20 @@ meaning. The default is `/F77`:
 | OPEN's default `STATUS=` | `'UNKNOWN'` | `'NEW'` |
 | OPEN's default `BLANK=` | `'NULL'` | `'ZERO'` |
 | `EXTERNAL SIN` | A routine of your own called `SIN` | The library's function; `EXTERNAL *SIN` is your own |
+
+**Recursion.** VAX FORTRAN V5.0's subprograms can't refer to themselves (its manual's
+section 6.2). govax takes recursion from the HP Fortran manual (8.5.1.1): a FUNCTION
+or SUBROUTINE statement may say `RECURSIVE`, before or after a function's type
+(`RECURSIVE INTEGER FUNCTION FACT(N)`, `INTEGER RECURSIVE FUNCTION FACT(N)`), and
+`/RECURSIVE`, or an `OPTIONS /RECURSIVE` before a unit, makes every subprogram it
+covers recursive, never a main program or BLOCK DATA. A recursive unit may call
+itself and its ENTRY points; in a function without `RESULT`, the function's name with
+an argument list is a call, and without one its value. `RESULT(name)` after a FUNCTION
+or ENTRY statement's argument list names the variable that holds the value instead,
+with the header's type; the function's name is then only a call, and may not be
+declared (`RESULTDECL`). Recursive units are analyzed but not yet compiled: each is
+`%FORT-E-NOTIMPL` at its header until their storage is in the stack frame
+(docs/PHASE-89).
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX

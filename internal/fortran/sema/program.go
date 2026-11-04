@@ -51,8 +51,17 @@ type Unit struct {
 	Entries []*Entry
 
 	// Result is a function's own name, the variable whose last value is
-	// the function's value; nil in a main program or subroutine.
+	// the function's value; nil in a main program or subroutine. With RESULT
+	// it is RESULT's variable, and the function's name is a UnitName whose
+	// ResultVar it is.
 	Result *Symbol
+
+	// Recursive is set for a function or subroutine that may be active more
+	// than once at a time: its header says RECURSIVE, or /RECURSIVE or an
+	// OPTIONS statement's says so (the HP Fortran manual's 8.5.1.1;
+	// docs/PHASE-89 - reentrant FORTRAN.md). It may refer to itself and its
+	// entry points. A main program or block data subprogram never is.
+	Recursive bool
 
 	// Body is the unit's executable statements, END last. IF blocks and
 	// DO loops hold the statements inside them.
@@ -240,8 +249,13 @@ type Symbol struct {
 	Dummy int
 
 	// Result is set for a function's own name within the function, and for
-	// its entry points' names.
+	// its entry points' names: or, with RESULT, for the variable RESULT names.
 	Result bool
+
+	// ResultVar is, for a function's or a function's entry point's name whose
+	// statement says RESULT, the variable RESULT names, which holds its value
+	// and has its type (the HP Fortran manual's 8.5.2.1); nil otherwise.
+	ResultVar *Symbol
 
 	// laterEntry is the ENTRY statement that first names the name, an entry
 	// point or a dummy argument, while the statement walk hasn't reached it.

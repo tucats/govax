@@ -277,6 +277,7 @@ func TestFortranCommand(t *testing.T) {
 		{[]string{"sq"}, fortranFlags{object: true}, `FORTRAN "sq"/OBJECT`},
 		{[]string{"sq"}, fortranFlags{object: true, objectFile: "out/sq.obj"}, `FORTRAN "sq"/OBJECT="out/sq.obj"`},
 		{[]string{"sq"}, fortranFlags{noF77: true}, `FORTRAN "sq"/NOF77`},
+		{[]string{"sq"}, fortranFlags{recursive: true}, `FORTRAN "sq"/RECURSIVE`},
 	}
 
 	for _, c := range cases {

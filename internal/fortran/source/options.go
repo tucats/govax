@@ -31,6 +31,7 @@ var optionsNames = []string{
 	"F77", "NOF77",
 	"G_FLOATING", "NOG_FLOATING",
 	"I4", "NOI4",
+	"RECURSIVE", "NORECURSIVE",
 }
 
 // OptionsQualifier is the whole name of an OPTIONS qualifier written name, which

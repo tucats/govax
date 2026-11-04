@@ -165,6 +165,8 @@ func (a *analyzer) typeStatement(s *ast.TypeStmt) {
 		a.checkBoundType(sym, t, ok, d.Pos)
 
 		switch {
+		case sym.ResultVar != nil:
+			a.report("RESULTDECL", d.Pos, d.Name, sym.ResultVar.Name)
 		case sym.Class == UnitName || sym.Struct != nil:
 			a.badUse(sym, d.Pos, "be given a type")
 		case sym.Class == Constant && sym.oldForm:

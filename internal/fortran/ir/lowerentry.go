@@ -57,7 +57,7 @@ func (l *lowerer) prepareEntries(hidden int) {
 			l.params[e.Sym] = l.params[u.Result]
 		}
 
-		entry := &Entry{Name: e.Sym.Name, Number: i + 2, Args: l.entryArgs(e.Params, hidden), Source: e.AST}
+		entry := &Entry{Name: e.Name, Number: i + 2, Args: l.entryArgs(e.Params, hidden), Source: e.AST}
 		r.Entries = append(r.Entries, entry)
 		l.entries[e] = entry
 	}
@@ -159,7 +159,7 @@ func (l *lowerer) layOutReturns() {
 // to go to, which control from the statements above falls into.
 func (l *lowerer) entryPoint(s *sema.EntryPoint) {
 	b := l.newBlock()
-	b.Note = "ENTRY " + s.Entry.Sym.Name
+	b.Note = "ENTRY " + s.Entry.Name
 
 	l.begin(b)
 	l.entries[s.Entry].First = b

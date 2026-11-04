@@ -780,3 +780,31 @@ func TestFortranF77Qualifier(t *testing.T) {
 		}
 	}
 }
+
+// TestFortranRecursiveQualifier runs /[NO]RECURSIVE through the command: a
+// subroutine calling itself is RECURSIVE's error without it, and with it is
+// analyzed and left NOTIMPL until its storage is in its frame (docs/PHASE-89 -
+// reentrant FORTRAN.md, subtask 2).
+func TestFortranRecursiveQualifier(t *testing.T) {
+	d, c, buf := shareFindConsole(t, false)
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA1:[000000]RECQ.FOR"},
+		rms.TextRecords, splitSource("      CALL S(2)\n      END\n      SUBROUTINE S(N)\n      IF (N .GT. 0) CALL S(N - 1)\n      END\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	deleteFilesAfter(t, d, "RECQ")
+
+	for _, f := range []struct{ qualifier, want string }{
+		{"", "%FORT-E-RECURSIVE, S can't refer to itself: it isn't a RECURSIVE subprogram"},
+		{"/NORECURSIVE", "%FORT-E-RECURSIVE"},
+		{"/RECURSIVE", "%FORT-E-NOTIMPL, a RECURSIVE subprogram is not implemented yet"},
+	} {
+		buf.Reset()
+		_ = d.Dispatch("FORTRAN" + f.qualifier + " RECQ")
+
+		if !strings.Contains(buf.String(), f.want) {
+			t.Errorf("%q: got %q, want %q", f.qualifier, buf.String(), f.want)
+		}
+	}
+}

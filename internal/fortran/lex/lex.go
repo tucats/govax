@@ -33,6 +33,12 @@ type Statement struct {
 	// among the tokens before the FUNCTION keyword token.
 	FunctionType Kind
 
+	// Recursive is set for a FUNCTION or SUBROUTINE statement that says
+	// RECURSIVE, before the type or FUNCTION or SUBROUTINE, or between the type
+	// and FUNCTION (the HP Fortran manual's 8.5.2 and 8.5.3; docs/PHASE-89 -
+	// reentrant FORTRAN.md). The keyword is no token.
+	Recursive bool
+
 	// Offset is where the statement (its keyword, or its first token)
 	// starts in the source statement's text, for messages about the
 	// statement as a whole.
@@ -211,6 +217,19 @@ func (l *lexer) classify(i, j int, unitStart bool) *Statement {
 		return st
 	}
 
+	// RECURSIVE FUNCTION F(N), RECURSIVE INTEGER*2 FUNCTION F(N), RECURSIVE
+	// SUBROUTINE S: a unit's header, which only a unit's first statement can be.
+	// No statement's keyword starts with RECURSIVE, and the = test above has
+	// already taken RECURSIVE = 1.
+	if unitStart && l.hasPrefix(i, j, recursive) {
+		if fn := l.classify(i+len(recursive), j, true); (fn.Kind == Function || fn.Kind == Subroutine) && !fn.Recursive {
+			fn.Recursive = true
+			fn.Offset = st.Offset
+
+			return fn
+		}
+	}
+
 	// A keyword statement: the longest keyword the text starts with.
 	for _, k := range byKeyword {
 		kw := kinds[k].keyword
@@ -345,9 +364,12 @@ func (l *lexer) oldParameter(i, eq int) bool {
 	return true
 }
 
+// recursive is the keyword that makes a subprogram recursive (Statement.Recursive).
+const recursive = "RECURSIVE"
+
 // typedFunction recognizes a typed FUNCTION statement (INTEGER FUNCTION
-// F(X), REAL*8 FUNCTION G, CHARACTER*(*) FUNCTION H(S)), whose type
-// keyword k ends at i, or returns nil. Squeezed, INTEGER FUNCTION F(10)
+// F(X), REAL*8 FUNCTION G, CHARACTER*(*) FUNCTION H(S), INTEGER RECURSIVE
+// FUNCTION F(N)), whose type keyword k ends at i, or returns nil. Squeezed, INTEGER FUNCTION F(10)
 // and INTEGER FUNCTIONF(10), which declares an array named FUNCTIONF,
 // are the same text; a FUNCTION statement can only be a program unit's
 // first statement, so only there is the text taken for one.
@@ -375,13 +397,22 @@ func (l *lexer) typedFunction(st *Statement, k Kind, i, j int) *Statement {
 
 	const fn = "FUNCTION"
 
+	length := p
+
+	if l.hasPrefix(p, j, recursive+fn) {
+		p += len(recursive)
+		st.Recursive = true
+	}
+
 	if !l.hasPrefix(p, j, fn) || p+len(fn) >= j || !isLetter(l.sq.text[p+len(fn)]) {
+		st.Recursive = false
+
 		return nil
 	}
 
 	st.Kind = Function
 	st.FunctionType = k
-	st.Tokens = l.tokenize(i, p, modeLengths)
+	st.Tokens = l.tokenize(i, length, modeLengths)
 	st.Tokens = append(st.Tokens, Token{Kind: Keyword, Text: fn, Offset: l.offset(p)})
 	st.Tokens = append(st.Tokens, l.tokenize(p+len(fn), j, modeLengths)...)
 
@@ -497,6 +528,10 @@ func Dump(s *Statement) string {
 
 	if s.FunctionType != Unknown {
 		b.WriteString(" (" + s.FunctionType.String() + ")")
+	}
+
+	if s.Recursive {
+		b.WriteString(" (recursive)")
 	}
 
 	b.WriteString(":")

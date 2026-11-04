@@ -30,7 +30,11 @@ func Dump(p *Program) string {
 	var b strings.Builder
 
 	for _, u := range p.Units {
-		fmt.Fprintf(&b, "== %s %s\n", u.Kind, u.Name)
+		if u.Recursive {
+			fmt.Fprintf(&b, "== recursive %s %s\n", u.Kind, u.Name)
+		} else {
+			fmt.Fprintf(&b, "== %s %s\n", u.Kind, u.Name)
+		}
 
 		for _, s := range u.Symbols {
 			b.WriteString(strings.TrimRight("  "+dumpSymbol(s), " ") + "\n")
@@ -42,7 +46,12 @@ func Dump(p *Program) string {
 				params[i] = s.Name
 			}
 
-			fmt.Fprintf(&b, "  entry %s (%s)%s\n", e.Sym.Name, strings.Join(params, ", "), dumpAltPlaces(e.AltPlaces))
+			result := ""
+			if e.Sym.Name != e.Name {
+				result = " result " + e.Sym.Name
+			}
+
+			fmt.Fprintf(&b, "  entry %s (%s)%s%s\n", e.Name, strings.Join(params, ", "), dumpAltPlaces(e.AltPlaces), result)
 		}
 
 		if u.AltPlaces != nil {
@@ -292,7 +301,7 @@ func stmtText(list []Stmt) string {
 
 		return verb + " " + quote(s.Display)
 	case *EntryPoint:
-		return "ENTRY " + s.Entry.Sym.Name
+		return "ENTRY " + s.Entry.Name
 	case *Return:
 		if s.Alt != nil {
 			return "RETURN " + DumpExpr(s.Alt)

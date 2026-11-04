@@ -22,9 +22,13 @@ type Entry struct {
 	// AST is the ENTRY statement.
 	AST *ast.EntryStmt
 
+	// Name is the entry point's name.
+	Name string
+
 	// Sym is the entry point's name: in a function a variable, the value
 	// of the function called by that name; in a subroutine a name that
-	// stands for nothing else.
+	// stands for nothing else. In a function, with RESULT, it is RESULT's
+	// variable, and the name a UnitName whose ResultVar it is.
 	Sym *Symbol
 
 	// Params are the entry point's dummy arguments, in its list's order.
@@ -87,15 +91,30 @@ func (a *analyzer) entryName(s *ast.EntryStmt) *Entry {
 		return nil
 	}
 
-	if a.unit.Kind == ast.FunctionUnit {
-		sym.Class, sym.Result = Variable, true
-	} else {
+	e := &Entry{AST: s, Name: s.Name, Sym: sym}
+
+	switch {
+	case a.unit.Kind != ast.FunctionUnit:
 		sym.Class = UnitName
+
+		if s.Result != nil {
+			a.report("RESULTSUB", s.Result.Pos)
+		}
+
+	case s.Result != nil:
+		sym.Class = UnitName
+
+		if r := a.resultVariable(s.Result, s.Name); r != nil {
+			sym.ResultVar, e.Sym = r, r
+		} else {
+			sym.broken = true
+		}
+
+	default:
+		sym.Class, sym.Result = Variable, true
 	}
 
 	sym.laterEntry = s
-
-	e := &Entry{AST: s, Sym: sym}
 	a.entryOf[s] = e
 
 	if fu := a.units[s.Name]; fu != nil && fu.pos == s.Pos {
@@ -151,6 +170,7 @@ func (a *analyzer) entryPoint(s *ast.EntryStmt) {
 	}
 
 	e.Sym.laterEntry = nil
+	a.unit.byName[e.Name].laterEntry = nil // the name, if RESULT names the value
 
 	for _, p := range e.Params {
 		if p.laterEntry == s {
@@ -164,8 +184,12 @@ func (a *analyzer) entryPoint(s *ast.EntryStmt) {
 // usedBeforeEntry reports a name used in a statement before the ENTRY
 // statement that first names it, which section 6.2.4 forbids for entry names
 // and for dummy arguments. Once for each name.
+//
+// A recursive unit may call its entry points anywhere in it (the HP Fortran
+// manual's 8.5.1.1 and 8.11), so there an entry point's name is never too
+// early; its dummy arguments still are.
 func (a *analyzer) usedBeforeEntry(s *Symbol, pos diag.Position) {
-	if s.laterEntry == nil {
+	if s.laterEntry == nil || (a.unit.Recursive && s.laterEntry.Name == s.Name) {
 		return
 	}
 
@@ -227,4 +251,41 @@ func (a *analyzer) placeResults() int {
 	}
 
 	return size
+}
+
+// resultVariable enters RESULT's variable, named by n in the FUNCTION or ENTRY
+// statement of the function or entry point named owner, and returns it: a
+// variable that is the routine's value (Symbol.Result), as the function's own
+// name is without RESULT. It is nil, after a message, for a name that can't
+// be one: the owner's own (RESULTSAME), or a name the unit has already given a
+// meaning, another routine's name, value, or a dummy argument (RESULTNAME).
+// Dummy arguments are entered after this, so one named for the result is
+// refused there (params).
+func (a *analyzer) resultVariable(n *ast.Name, owner string) *Symbol {
+	if n.Name == owner {
+		a.report("RESULTSAME", n.Pos, owner)
+
+		return nil
+	}
+
+	r := a.declare(n.Name, n.Pos)
+
+	switch {
+	case r.Class == UnitName:
+		a.report("RESULTNAME", n.Pos, n.Name, "the name of a routine")
+
+		return nil
+	case r.Result:
+		a.report("RESULTNAME", n.Pos, n.Name, "another routine's result")
+
+		return nil
+	case r.Dummy != 0:
+		a.report("RESULTNAME", n.Pos, n.Name, "a dummy argument")
+
+		return nil
+	}
+
+	r.Class, r.Result = Variable, true
+
+	return r
 }

@@ -26,6 +26,10 @@ type Options struct {
 	// NoF77 is /NOF77: FORTRAN-66's reading of what FORTRAN-77 changed (Program.NoF77).
 	NoF77 bool
 
+	// Recursive is /RECURSIVE: every subprogram is recursive, as if its header
+	// said RECURSIVE (Unit.Recursive).
+	Recursive bool
+
 	// Align is /[NO]ALIGN: how each unit starts, which its CDEC$ OPTIONS groups
 	// change (align.go).
 	Align Alignment
@@ -81,6 +85,7 @@ func Analyze(file *ast.File, mainName string, opts Options, messages *diag.List)
 			defaultLogical: defaultLogical,
 			gFloating:      unitOpts.GFloating,
 			noF77:          unitOpts.NoF77,
+			recursive:      unitOpts.Recursive,
 			align:          opts.Align,
 			warnings:       opts.Warnings,
 			extensions:     newExtensions(opts.Standard),
@@ -157,6 +162,10 @@ func prologue(prog *Program, list []ast.Stmt, opts Options, messages *diag.List)
 					opts.NoF77 = false
 				case "NOF77":
 					opts.NoF77 = true
+				case "RECURSIVE":
+					opts.Recursive = true
+				case "NORECURSIVE":
+					opts.Recursive = false
 				case "CHECK":
 					checks, err := opts.Checks.With(q.Values)
 					if err != nil {
@@ -354,6 +363,10 @@ type analyzer struct {
 	// noF77 is the unit's /NOF77.
 	noF77 bool
 
+	// recursive is the unit's /RECURSIVE: a subprogram is recursive whether its
+	// header says so or not (Unit.Recursive).
+	recursive bool
+
 	// warnings is /WARNINGS (warnings.go).
 	warnings diag.Warnings
 
@@ -486,6 +499,17 @@ func (a *analyzer) header(au *ast.Unit) {
 		s.Class = Variable
 		s.Result = true
 		u.Result = s
+		u.Recursive = h.Recursive || a.recursive
+
+		// With RESULT the function's name is the routine's alone, and RESULT's
+		// variable is the value, with the header's type (8.5.2.1). A RESULT
+		// that can't be (RESULTSAME) is reported and left out.
+		if h.Result != nil {
+			if r := a.resultVariable(h.Result, h.Name); r != nil {
+				s.Class, s.Result, s.ResultVar = UnitName, false, r
+				u.Result, s = r, r
+			}
+		}
 
 		if h.Type != nil {
 			if t, ok := a.functionType(*h.Type, s); ok {
@@ -500,12 +524,15 @@ func (a *analyzer) header(au *ast.Unit) {
 	case *ast.SubroutineStmt:
 		s := a.declare(h.Name, h.Pos)
 		s.Class = UnitName
+		u.Recursive = h.Recursive || a.recursive
 
 		a.params(h.Params, &u.AltPlaces)
 
 	default:
 		// A main program's name, whether its PROGRAM statement gave it
-		// or not, names nothing else in it.
+		// or not, names nothing else in it. No main program or block data
+		// subprogram is recursive, whatever /RECURSIVE says: neither is
+		// called.
 		s := a.lookup(u.Name, au.Position())
 		s.Class = UnitName
 	}
@@ -720,7 +747,9 @@ func checkReferences(prog *Program, units map[string]*fileUnit, messages *diag.L
 	for _, u := range prog.Units {
 		for _, r := range u.calls {
 			fu := units[r.sym.Name]
-			if r.sym.Dummy != 0 || fu == nil || fu.unit == nil || fu.unit == u || fu.kind == ast.MainProgram || fu.kind == ast.BlockDataUnit || u.incomplete || fu.unit.incomplete {
+			// A recursive unit's references to itself are checked as any other
+			// unit's would be.
+			if r.sym.Dummy != 0 || fu == nil || fu.unit == nil || (fu.unit == u && !u.Recursive) || fu.kind == ast.MainProgram || fu.kind == ast.BlockDataUnit || u.incomplete || fu.unit.incomplete {
 				continue
 			}
 

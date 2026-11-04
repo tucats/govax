@@ -146,6 +146,30 @@ func (a *analyzer) name(n *ast.Name, wholeOK bool) Expr {
 	return a.bad(n.Pos)
 }
 
+// ownName reports whether name is the unit's own or one of its entry points'.
+func (a *analyzer) ownName(name string) bool {
+	if name == a.unit.Name {
+		return true
+	}
+
+	for _, e := range a.unit.Entries {
+		if e.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// selfReference is a recursive function's reference to itself or one of its
+// entry points, named by s, whose value is of type t.
+func (a *analyzer) selfReference(s *Symbol, t Type, e *ast.Apply) Expr {
+	args := a.args(e.Args)
+	a.unit.calls = append(a.unit.calls, routineRef{sym: s, args: args, pos: e.Pos})
+
+	return &FuncRef{exprBase{t, e.Pos}, s, args}
+}
+
 // apply analyzes Name(args): an array element if Name is an array, and
 // otherwise a reference to an external function of Name's type. A name
 // the unit hasn't classified that names one of FORTRAN's intrinsic
@@ -197,16 +221,27 @@ func (a *analyzer) apply(e *ast.Apply) Expr {
 		return &FuncRef{exprBase{s.Type, e.Pos}, s, args}
 
 	case Variable:
-		if s.Result {
-			a.report("RECURSIVE", e.Pos, e.Name)
-		} else {
+		switch {
+		case !s.Result || !a.ownName(s.Name):
 			a.report("NOTARRAY", e.Pos, e.Name)
+		case a.unit.Recursive:
+			// A recursive function's name, or an entry point's, with an
+			// argument list is a call: its value without one (Fortran 90's
+			// rule for a function without RESULT, 12.5.2.2; docs/PHASE-89's
+			// answer 2). A substring of it is a Substring, not an Apply.
+			return a.selfReference(s, s.Type, e)
+		default:
+			a.report("RECURSIVE", e.Pos, e.Name)
 		}
 
 	case UnitName:
-		if a.unit.Kind == ast.SubroutineUnit {
+		switch {
+		case s.ResultVar != nil && a.unit.Recursive:
+			// A function's or entry point's name whose RESULT holds its value.
+			return a.selfReference(s, s.ResultVar.Type, e)
+		case s.ResultVar != nil, a.unit.Kind == ast.SubroutineUnit && !a.unit.Recursive:
 			a.report("RECURSIVE", e.Pos, e.Name)
-		} else {
+		default:
 			a.badUse(s, e.Pos, "be used as a function")
 		}
 

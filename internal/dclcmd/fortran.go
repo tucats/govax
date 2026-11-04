@@ -31,7 +31,7 @@ import (
 //	        [/WARNINGS[=(keyword,...)] | /NOWARNINGS]
 //	        [/STANDARD[=(keyword,...)] | /NOSTANDARD]
 //	        [/DEBUG[=(keyword,...)] | /NODEBUG] [/OBJECT[=file] | /NOOBJECT]
-//	        [/[NO]F77]
+//	        [/[NO]F77] [/[NO]RECURSIVE]
 //
 // It compiles each FORTRAN source file with internal/fortran and writes a
 // MACRO-32 source file, which the MACRO command assembles. As MACRO does
@@ -93,6 +93,9 @@ type FortranOptions struct {
 
 	// NoF77 is /NOF77 (fortran.Options).
 	NoF77 bool
+
+	// Recursive is /RECURSIVE (fortran.Options).
+	Recursive bool
 
 	// GFloating is /G_FLOATING (fortran.Options).
 	GFloating bool
@@ -472,6 +475,7 @@ func (c *Context) compileFortran(group []FortranSource, opts FortranOptions) err
 		DLines:         opts.DLines,
 		NoI4:           opts.NoI4,
 		NoF77:          opts.NoF77,
+		Recursive:      opts.Recursive,
 		GFloating:      opts.GFloating,
 		Align:          align,
 		Optimize:       opts.Optimize,

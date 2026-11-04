@@ -22,14 +22,15 @@ func parseProgram(p *parser) ast.Stmt {
 }
 
 // parseFunction parses [type[*n]] FUNCTION name[*n] [([p[,p]...])]
-// (section 6.2.2). The lexer has already found the type keyword, if any
+// [RESULT(r)] (section 6.2.2; RECURSIVE, which the lexer has taken, and RESULT
+// are the HP Fortran manual's 8.5.2). The lexer has already found the type keyword, if any
 // (the statement's FunctionType), and split off FUNCTION as a keyword
 // token after the type's length. A length after the name of a function
 // with no type keyword (FUNCTION F*8) gives a TypeSpec of no type, for
 // semantic analysis to report. A CHARACTER function may have a length in
 // only one of the two places (section 6.2.2.2).
 func parseFunction(p *parser) ast.Stmt {
-	s := &ast.FunctionStmt{StmtBase: p.base()}
+	s := &ast.FunctionStmt{StmtBase: p.base(), Recursive: p.st.Recursive}
 
 	if k := p.st.FunctionType; k != lex.Unknown {
 		s.Type = &ast.TypeSpec{Type: ast.TypeKeywords[k], Pos: s.Pos}
@@ -58,15 +59,22 @@ func parseFunction(p *parser) ast.Stmt {
 	}
 
 	s.Params = p.params()
+	s.Result = p.result(s.Params)
 	p.end()
 
 	return s
 }
 
-// parseSubroutine parses SUBROUTINE name [([p[,p]...])] (section 6.2.3).
+// parseSubroutine parses [RECURSIVE] SUBROUTINE name [([p[,p]...])] (section
+// 6.2.3; the lexer has taken RECURSIVE, Statement.Recursive).
 func parseSubroutine(p *parser) ast.Stmt {
-	s := &ast.SubroutineStmt{StmtBase: p.base(), Name: p.name("the subroutine's name").Name}
+	s := &ast.SubroutineStmt{StmtBase: p.base(), Name: p.name("the subroutine's name").Name, Recursive: p.st.Recursive}
 	s.Params = p.params()
+
+	if s.Params != nil && p.atName("RESULT") {
+		p.fail("RESULTSUB", p.here())
+	}
+
 	p.end()
 
 	return s
@@ -89,9 +97,27 @@ func parseBlockData(p *parser) ast.Stmt {
 func parseEntry(p *parser) ast.Stmt {
 	s := &ast.EntryStmt{StmtBase: p.base(), Name: p.name("the entry point's name").Name}
 	s.Params = p.params()
+	s.Result = p.result(s.Params)
 	p.end()
 
 	return s
+}
+
+// result reads a FUNCTION or ENTRY statement's RESULT (name), which follows its
+// list of dummy arguments, and only a list in parentheses: FUNCTION F RESULT(R)
+// is squeezed to a name FRESULT (the HP Fortran manual's 8.5.2 and 8.11 both
+// write the parentheses as required with RESULT). Without one it is nil.
+func (p *parser) result(params []*ast.Name) *ast.Name {
+	if params == nil || !p.atName("RESULT") {
+		return nil
+	}
+
+	p.next()
+	p.expect("(")
+	n := p.name("the result's name")
+	p.expect(")")
+
+	return n
 }
 
 // params reads a subprogram's dummy arguments: nothing, (), or a

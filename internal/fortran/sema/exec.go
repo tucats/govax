@@ -332,16 +332,22 @@ func (a *analyzer) call(s *ast.CallStmt, path []frame) Stmt {
 	case Subroutine:
 
 	case UnitName:
-		if a.unit.Kind == ast.SubroutineUnit {
+		switch {
+		case a.unit.Kind == ast.SubroutineUnit && a.unit.Recursive:
+			// A recursive subroutine calling itself or one of its entry points
+			// (the HP Fortran manual's 8.5.1.1).
+		case a.unit.Kind == ast.SubroutineUnit, sym.ResultVar != nil && !a.unit.Recursive:
 			a.report("RECURSIVE", s.NamePos, s.Name)
-		} else {
+
+			return nil
+		default:
 			a.badUse(sym, s.NamePos, "be called")
+
+			return nil
 		}
 
-		return nil
-
 	default:
-		if sym.Result {
+		if sym.Result && a.ownName(sym.Name) && !a.unit.Recursive {
 			a.report("RECURSIVE", s.NamePos, s.Name)
 		} else {
 			a.badUse(sym, s.NamePos, "be called")

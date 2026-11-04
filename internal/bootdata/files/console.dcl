@@ -866,7 +866,8 @@ grammar console
     ! to flag as an extension to FORTRAN-77 (sema.Conformance), DEBUG is /[NO]DEBUG[=(keyword,...)], what
     ! MACRO is to write for the debugger (fortran.Debug), and OBJECT is /[NO]OBJECT[=file], MACRO run on
     ! the result (empty default: the source's name with type OBJ), and F77 is /[NO]F77, FORTRAN-66's reading
-    ! of what FORTRAN-77 changed. Elements joined by + are one compilation
+    ! of what FORTRAN-77 changed, and RECURSIVE is /[NO]RECURSIVE, every
+    ! subprogram recursive, as if each said RECURSIVE (docs/PHASE-89). Elements joined by + are one compilation
     ! (docs/PHASE-83, subtask 3), and LIBRARY is positional, as LINK's: the
     ! element is a text library that compilation's INCLUDE '(module)'
     ! statements search ("FORTRAN PROG+MYLIB/LIBRARY").
@@ -890,6 +891,7 @@ grammar console
         qualifier   d_lines/id=1375
         qualifier   i4/id=1377
         qualifier   f77/id=1390
+        qualifier   recursive/id=1391
         qualifier   g_floating/id=1378
         qualifier   align/id=1379               -
                     /type=$any/list             -
