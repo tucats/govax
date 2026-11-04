@@ -122,7 +122,12 @@ type FileHandle struct {
 	// (indexed.go), which has no Reader or Writer either, and idx is what
 	// its stream keeps beside stream (indexedrecords.go).
 	indexed bool
-	idx     indexedStream
+
+	// reviseAtClose says the file gets a new revision date and number when
+	// it's closed without a FAB (closeRevision): DCL's OPEN of a file that
+	// was there, to write.
+	reviseAtClose bool
+	idx           indexedStream
 
 	// readBuffer and writeBuffer are the last multiblock buffers the
 	// stream read and wrote, and written whether it wrote anything, for

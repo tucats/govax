@@ -92,6 +92,12 @@ type indexedStream struct {
 	// the file's last, after $CONNECT with RAB$V_EOF): a sequential $PUT of
 	// a lower key is RMS$_SEQ.
 	lastPut []byte
+
+	// fromEOF says the stream was connected with RAB$V_EOF and has put no
+	// record since: its first $PUT must be past lastPut by any RAB$B_RAC
+	// (VMS 7.1: DCL's OPEN/APPEND, testdata/idx88's round 4, D10; the RMS
+	// manual's "a first $PUT out of order is RMS$_SEQ").
+	fromEOF bool
 }
 
 // lost is the context after a failed operation, and after the operations
@@ -156,7 +162,7 @@ func (ctx *Context) connectIndexed(rabAddr uint32, h *FileHandle, rop uint32) (u
 			return rmsDeviceError, nil
 		}
 
-		h.idx.lastPut = last
+		h.idx.lastPut, h.idx.fromEOF = last, true
 	}
 
 	return 0, nil
@@ -595,7 +601,7 @@ func (ctx *Context) indexedPut(rabAddr uint32, h *FileHandle, record []byte) (ui
 		return fail(rmsRecordTooBig)
 	}
 
-	if rac == racSeq && s.lastPut != nil && k.Compare(value, s.lastPut) < 0 {
+	if (rac == racSeq || s.fromEOF) && s.lastPut != nil && k.Compare(value, s.lastPut) < 0 {
 		return fail(rmsOutOfSequence)
 	}
 
@@ -620,6 +626,13 @@ func (ctx *Context) indexedPut(rabAddr uint32, h *FileHandle, record []byte) (ui
 	}
 
 	s.lost()
+	s.fromEOF = false
+
+	// A new record gives up the stream's record locks, unless it unlocks
+	// manually (the Guide to OpenVMS File Applications, 7.2.1).
+	if rop&ropULK == 0 && ctx.locksRecords(h) {
+		ctx.unlockRecords(h, nil)
+	}
 
 	if rac == racSeq {
 		s.lastPut = value
@@ -761,6 +774,18 @@ func (ctx *Context) indexedUpdate(rabAddr uint32, h *FileHandle) (uint32, error)
 	}
 
 	s.lost()
+
+	// The update gives up the record's lock, unless the stream unlocks
+	// manually (the Guide to OpenVMS File Applications, 7.2.1; VMS 7.1: DCL's
+	// WRITE/UPDATE, round 4's D8, after which another stream read it).
+	rop, err := ctx.loadLongword(rabAddr + rabROP)
+	if err != nil {
+		return 0, err
+	}
+
+	if rop&ropULK == 0 {
+		ctx.releaseRecord(h, at)
+	}
 
 	if err := ctx.storeRFA(rabAddr, at); err != nil {
 		return 0, err

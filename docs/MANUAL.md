@@ -2152,7 +2152,8 @@ characters), `/MATCH=GE` or `GT` the first equal-or-next or next one in
 the key's own order, and `/INDEX=n` chooses the key, 0 being the
 primary; it stays the file's until another `/INDEX`. `/DELETE` deletes
 the record read. `WRITE` puts a record wherever its keys say, in any
-order, and `WRITE/UPDATE` may change a record's length, but not its
+order (after `OPEN/APPEND`, the first must come after the file's last
+record), and `WRITE/UPDATE` may change a record's length, but not its
 primary key. On a file opened `/SHARE=WRITE`, `READ` locks the record
 it reads until the next operation on the file, and `/NOLOCK` reads one
 without locking it, even if another stream has it locked. DCL can't

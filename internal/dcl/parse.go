@@ -690,7 +690,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 			return active, nextParam, lastParam, rest, nil
 		}
 
-		return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
+		return nil, 0, nil, "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, q.Name)
 	}
 
 	val, redirect, kwNegated, err := g.resolveValue(q.Type, q.TypeName, token)
@@ -1224,7 +1224,7 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 		case q.Default != nil:
 			item.set(q.Name, q.ID, negated, *q.Default)
 		default:
-			return "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
+			return "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, q.Name)
 		}
 
 		return rest, nil

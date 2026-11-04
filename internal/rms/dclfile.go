@@ -249,7 +249,16 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		handle.Found = &found
 	}
 
-	f := &DCLFile{Name: found.resultant().String(), Device: found.Device, ctx: ctx, handle: handle, ifi: ifi}
+	f := &DCLFile{
+		Name: found.resultant().String(), Device: found.Device, ctx: ctx, handle: handle, ifi: ifi,
+	}
+
+	// A file that was there before OPEN opened it to write gets a new
+	// revision date and number at its close, as $CLOSE gives one. VMS 7.1
+	// counted each such OPEN of an indexed file (testdata/idx88's round 4:
+	// D1.IDX's 5 after its $CREATE and four), and a file OPEN makes has
+	// revision 1 (VMS 7.3, testdata/dcl50's F1), which the volume gives it.
+	handle.reviseAtClose = !a.creates() && fac&facPut != 0
 
 	if sts := f.arm(fac, a.Append); sts != 0 {
 		_ = f.Close()
@@ -298,6 +307,7 @@ var dclRecordControl = []byte{0x01, 0x8D}
 
 // dclRatPrint is FAT$M_PRINTCC (RAT=PRN): print-file carriage control.
 const dclRatPrint = ondisk.AttrPrintCC
+
 // createDCLFile makes the new file OPEN/WRITE opens, as $CREATE makes one
 // (create.go's createOnVolume): the next version, unless p names one, a
 // sequential file of VFC records with print-file carriage control. It returns the file's handle, opened
@@ -574,7 +584,7 @@ func (f *DCLFile) Close() error {
 
 	defer f.ctx.Files.Release(f.ifi)
 
-	return closeVolumeFile(f.handle, nil)
+	return closeVolumeFile(f.handle, f.handle.closeRevision)
 }
 
 // hostDCLFile is a host file DCL has open: lines of text. pos is the

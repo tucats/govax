@@ -23,31 +23,40 @@ import (
 // WRITE stay DCLFile's own (dclfile.go), as they were before; only a READ with
 // /KEY or /DELETE goes through the RAB on one.
 //
-// What the DCL Dictionary says, and the choices made where it says nothing
-// (each unconfirmed until round 4's run, testdata/idx88's IDX88D.COM):
+// What the DCL Dictionary says, as VMS 7.1 showed it in round 4
+// (testdata/idx88's IDX88D.COM, whose log TestIdx88DOracle holds govax's to):
 //
 //   - READ/KEY=string is a $GET by key (RAB$B_RAC KEY), the string's bytes
 //     the key, RAB$B_KSZ its length: shorter than a string key is a generic
-//     search, and any other length is RMS's to refuse (RMS$_KSZ). "Binary and
-//     integer keys are not allowed": RMS decides that too, a string the key's
-//     size being taken as its bytes.
+//     search, and a longer or empty one RMS$_KSZ. "Binary and integer keys
+//     are not allowed", the manual says, but a string the key's size is
+//     taken as its bytes, and any other length is RMS$_KSZ (D4).
 //   - /MATCH=EQ, GE, or GT is ROP's nothing, KGE, or KGT; EQ without /MATCH.
+//     A descending key's GT is the next lower value (D4).
 //   - /INDEX=n is RAB$B_KRF, and the value stays the file's for later READs
-//     until another /INDEX: a READ without /KEY is a $GET in sequence, which
-//     follows the key of reference the last keyed READ made the stream's.
-//   - READ/DELETE is the $GET, then a $DELETE of the record it read.
+//     until another /INDEX, even after a READ it failed (D4): a READ without
+//     /KEY is a $GET in sequence, which follows the key of reference the last
+//     keyed READ made the stream's.
+//   - READ/DELETE is the $GET, then a $DELETE of the record it read; the
+//     symbol gets the record even when the $DELETE fails, and $STATUS is the
+//     $DELETE's (D5, D7). On a file opened only to read that's RMS$_FAC, and
+//     on a sequential file RMS$_IOP.
 //   - /NOLOCK is ROP NLK and RRL: the record isn't locked, and is read even
-//     if another stream has it locked (the manual's "enables a record to be
-//     read that has been locked by other accessors"). A READ without it
-//     locks the record (when the file is shared for writing, as RMS
-//     locks), and the next operation on the stream gives it up, RMS's
-//     default.
-//   - WRITE is a $PUT by key (RAC KEY), so records may come in any order;
-//     after OPEN/APPEND ($CONNECT with ROP EOF) too.
-//   - WRITE/UPDATE is an $UPDATE of the record READ read.
+//     if another stream has it locked (D8). A READ without it locks the
+//     record when the file is shared for writing, and the next operation on
+//     the stream gives it up, RMS's default; so does WRITE/UPDATE (D8, the
+//     record free for the other stream at once), and a WRITE/UPDATE of a
+//     record READ/NOLOCK read is RMS$_RNL.
+//   - WRITE is a $PUT by key (RAC KEY), so records may come in any order,
+//     and $STATUS is the $PUT's success status, RMS$_OK_DUP for a record
+//     whose alternate key another has (D1, D9). After OPEN/APPEND ($CONNECT
+//     with ROP EOF) the first must be past the file's last key (RMS$_SEQ,
+//     D10), and those after it may come in any order.
+//   - WRITE/UPDATE is an $UPDATE of the record READ read, its status the
+//     $UPDATE's too (D6).
 //   - An indexed file opened to write may also delete records: its stream has
 //     FAB$V_DEL beside GET, PUT, and UPD (the DCL Dictionary's READ/DELETE
-//     needs only /READ/WRITE).
+//     needs only /READ/WRITE; D7).
 
 // The layout of a DCLFile's memory: its RAB, the key buffer (a key is at most
 // 255 bytes), and the record buffer, which holds the longest record RMS
@@ -210,7 +219,8 @@ func (f *DCLFile) connectRAB(appending bool) uint32 {
 
 // Read reads a record as READ does with r's qualifiers (see the top of this
 // file), returning it with its success status, or nil and the status for why
-// not.
+// not; with r.Delete, the record and the $DELETE's status, whether it worked
+// or not.
 func (f *DCLFile) Read(r DCLRead) ([]byte, uint32) {
 	if r.HasIndex {
 		f.index = r.Index
@@ -238,16 +248,29 @@ func (f *DCLFile) Read(r DCLRead) ([]byte, uint32) {
 	}
 
 	record, sts := f.callRAB(SysGet, req)
+
+	// A VFC record's fixed control isn't part of what READ reads (RAB$L_RHB,
+	// which DCL's RAB has no place for here).
+	if n := f.handle.vfcSize(); n > 0 && len(record) >= n {
+		record = record[n:]
+	}
+
 	if sts&1 == 0 || !r.Delete {
 		return record, sts
 	}
 
-	if _, del := f.callRAB(SysDelete, rabRequest{}); del&1 == 0 {
-		return nil, del
+	// A delete that fails still returns the record, which READ puts in its
+	// symbol (VMS 7.1, round 4's D5); one that works returns its own status.
+	_, del := f.callRAB(SysDelete, rabRequest{})
+	if record == nil {
+		record = []byte{}
 	}
 
-	return record, sts
+	return record, del
 }
+
+// Indexed reports whether f is an indexed file.
+func (f *DCLFile) Indexed() bool { return f.handle != nil && f.handle.indexedRecords() }
 
 // putIndexed is Put on an indexed file: a $PUT by key.
 func (f *DCLFile) putIndexed(record []byte) uint32 {

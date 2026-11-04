@@ -120,6 +120,22 @@ func (d *DumpFile) indexedRecords() ([]DumpRecord, error) {
 	return records, err
 }
 
+// lastUsedBlock is the "End of file block" DUMP shows for f. An indexed
+// file's header ends at the block after its allocation, byte 0, and VMS 7.1's
+// DUMP/RECORD showed that as the allocation, "End of file block 27 / Allocated
+// 27" for a header's 28 (testdata/idx88's round 4); its DUMP of a relative file
+// so ended showed the header's 4 of 3 (testdata/for81). Which of the file's
+// organization and /RECORD made the difference is unconfirmed: here it's the
+// organization.
+func lastUsedBlock(f *volume.File) uint32 {
+	ra := f.Header.RecordAttributes
+	if isIndexed(f) && ra.FirstFreeByte == 0 && ra.EndOfFileBlock > 0 {
+		return ra.EndOfFileBlock - 1
+	}
+
+	return ra.EndOfFileBlock
+}
+
 // OpenDump finds the one volume file spec names, for DUMP: the newest
 // version unless spec gives one. A name with wildcards is a *DCLFileError
 // with RMS$_WLD, and one that finds no file is NotFound's.
@@ -155,7 +171,7 @@ func (s *Session) OpenDump(spec string) (*DumpFile, error) {
 		dump = &DumpFile{
 			Name:      r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';'),
 			FID:       m.Fid.String(),
-			EndBlock:  f.Header.RecordAttributes.EndOfFileBlock,
+			EndBlock:  lastUsedBlock(f),
 			Allocated: f.Header.RecordAttributes.HighestBlock,
 			file:      f,
 		}

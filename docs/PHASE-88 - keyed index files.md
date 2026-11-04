@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -18,10 +18,10 @@ and FAB but where govax's Prolog 3 alone refuses what VMS made as Prolog 1 or 2,
 Prolog 3 files report every key and area as VMS's did. The record services read and change them (`rms/indexedrecords.go`): `$GET`,
 `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`, by key, in sequence on any key, and by RFA, with ROP's options and record locks,
 and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the other seven listed with their reasons.
-`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. Subtask 9, DCL, is written and rehearsed:
-READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE on indexed files through the record services
-(`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys; its probe, round 4 (`testdata/idx88`'s `idx88d.com`),
-**waits for its VMS run**, which finishes the subtask with an oracle.
+DCL reads and writes them (subtask 9): READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE through
+the record services (`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys, held to VMS's run of round 4 line for
+line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Next: subtask 10,**
+the utilities (round 3 of the probe first).
 
 ## Goal
 
@@ -544,6 +544,37 @@ Where this section and the ones above differ, this one wins.
 - **Not done:** `$SPACE`, which govax has for no organization (it's block I/O, not a record service); the subtask list's mention
   of it was the survey's guess.
 
+## What DCL's round settled (2026-11-04)
+
+Round 4 (`testdata/idx88`'s `idx88d.com`, sections D1 to D11) ran on VMS 7.1, `vax/idx88d.log`, and `TestIdx88DOracle` holds
+govax's run to it line for line, times masked. Where this section and the ones above differ, this one wins.
+
+- **WRITE** is a `$PUT` by key: records came in any order (D1). Its `$STATUS` is RMS's success status, RMS$_OK_DUP (`%X00018011`)
+  for a record whose alternate key another has, not always RMS$_NORMAL; WRITE/UPDATE's likewise (D6, D9).
+- **OPEN/APPEND** is `$CONNECT` with ROP EOF, after which the *first* `$PUT` must be past the file's highest primary key, by any RAC
+  (RMS$_SEQ), and later ones may come in any order: on an empty file, M001 then A001 were both taken (D10). `indexedStream.fromEOF`.
+- **`/MATCH=G`** is CLI$_ABKEYW ("ambiguous qualifier or keyword"), `/MATCH=LT` CLI$_IVKEYW, both with the keyword as segment. A
+  qualifier with no value it needs is CLI$_VALREQ, the qualifier as segment (`/MATCH`, `/INDEX`): the grammar engine (`dcl/parse.go`)
+  now says so for every qualifier, where it used govax's own NEEDQUALIFIERVALUE.
+- **`/KEY`** on a binary key takes a string of the key's size as its bytes, and another length is RMS$_KSZ; an empty or long key
+  RMS$_KSZ; a key of reference past the file's RMS$_KRF, and `/INDEX` stays the failed one (D3, D4). `/KEY` on a sequential file is
+  RMS$_RAC, and `/INDEX` alone changes nothing there (D5).
+- **READ/DELETE** puts the record in the symbol even when its `$DELETE` fails (RMS$_FAC on a file opened to read, RMS$_IOP on a
+  sequential file), and when it works leaves `$STATUS` RMS$_NORMAL, the `$DELETE`'s, not CLI$_NORMAL (D5, D7).
+- **Locks:** a READ locks its record on a file shared for writing, another stream's READ of it is RMS$_RLK, `/NOLOCK` reads it anyway
+  (ROP NLK and RRL), and a WRITE/UPDATE of a record read that way is RMS$_RNL. **`$UPDATE` gives up the record's lock** (the other
+  stream read it at once, D8), as the File Applications guide's 7.2.1 has it, and so does a `$PUT`; govax's indexed services kept
+  them, and now don't, unless ROP ULK.
+- **TYPE** of an indexed file types it by the primary key; TYPE of the logical name of one DCL has open is `%TYPE-W-OPENIN, error
+  opening F:.; as input` with RMS$_ORG, and READ goes on where it was (D11).
+- **DUMP/RECORD**'s "End of file block" of an indexed file is its allocation, 27, where the header says block 28, byte 0, as
+  VMS's own indexed headers do (round 1's save set); VMS's DUMP of a relative file so ended showed the header's 4 of 3
+  (`testdata/for81`). Whether the organization or `/RECORD` makes the difference is unconfirmed; `lastUsedBlock` goes by the
+  organization.
+- **Revisions:** each OPEN of an existing file to write gives it a new revision at its close (D1.IDX's 5), as `$CLOSE` does; a
+  file OPEN makes keeps 1 (`FileHandle.reviseAtClose`).
+- **DIRECTORY/FULL** says "Indexed, Prolog: 3, Using 4 keys", and `F$FILE_ATTRIBUTES`'s ORG, NOK, NOA, PVN, and the rest are VMS's.
+
 ## The rules
 
 ### Keys [manual]
@@ -772,7 +803,7 @@ them.
    `$FREE`, `$RELEASE`, `$SPACE`; ROP's options; contexts; locks; `TestIdx88Oracle`. (done 2026-11-03; `$SPACE` left out, as
    "What the record services settled" says)
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
-   to a probe log. (written and rehearsed 2026-11-04; round 4's VMS run and its oracle to come)
+   to a probe log. (done 2026-11-04)
 10. **Utilities,** as Question 2 chooses: an FDL reader, CREATE/FDL, CONVERT, ANALYZE/RMS_FILE, each
     possibly its own subtask.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
@@ -954,3 +985,10 @@ has REV at all.
   key says (RMS$_RAC); TYPE's order and DUMP/RECORD's RFAs. Found on the way: a process-permanent file armed its stream again when
   it had no Reader or Writer, which for an indexed stream dropped DEL and its key of reference (`ppf.go`); and an endless READ loop
   in a probe that goes round on any error under SET NOON, so round 4's loops leave on `/ERROR` too.
+- **2026-11-04: round 4's run, and subtask 9 done.** VMS ran `idx88d.com` (`vax/idx88d.log`, 1,087 lines), and govax's log differed in
+  ten places, now VMS's ("What DCL's round settled"): WRITE's and WRITE/UPDATE's RMS$_OK_DUP; OPEN/APPEND's first `$PUT` checked
+  against the file's last key; CLI$_ABKEYW, and CLI$_VALREQ from the grammar engine for every qualifier; READ/DELETE's symbol and
+  status; `$UPDATE` and `$PUT` giving up record locks (`indexedrecords.go`); a VFC record's fixed control left out of a READ through
+  the RAB; TYPE of an open indexed file's logical name; DUMP's end of file for an indexed file; revisions at CLOSE (`FileHandle.reviseAtClose`, `ppf.go`'s
+  `closeRevision`). `TestIdx88DOracle` holds the whole log, times masked; `TestIdx88DProbe` is the rehearsal still. Round 1's
+  oracles are unchanged.

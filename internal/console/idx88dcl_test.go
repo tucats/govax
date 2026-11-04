@@ -3,6 +3,7 @@ package console_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -62,12 +63,10 @@ func runIdx88D(t *testing.T) (log, terminal string) {
 	return b.String(), strings.ReplaceAll(buf.String(), "\r", "")
 }
 
-// TestIdx88DProbe rehearses round 4 on govax, so that a mistake of ours can't
-// cost the author a VAX run: IDX88D.MAR must assemble, link, and make its files,
-// and the procedure must run through every section to its end. Until VMS's log
-// is here, it also holds govax to what the DCL Dictionary says READ and WRITE
-// do on an indexed file (each command, then the lines it showed, as the log
-// has them). IDX88D_LOG=file keeps govax's log in the file.
+// TestIdx88DProbe rehearses round 4 on govax, so that a change to the
+// procedure can't cost the author a VAX run: IDX88D.MAR must assemble, link,
+// and make its files, and the procedure must run through every section to its
+// end. IDX88D_LOG=file keeps govax's log in the file.
 func TestIdx88DProbe(t *testing.T) {
 	log, _ := runIdx88D(t)
 
@@ -79,48 +78,67 @@ func TestIdx88DProbe(t *testing.T) {
 
 	for _, want := range []string{
 		"$ RUN IDX88D\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00010001\"\n",
-
-		// WRITE in any order, and a duplicate primary key refused.
-		"$ WRITE F \"K00010GRPBaaZZZ one\"\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00010001\"\n",
-		"$ WRITE F \"K00010GRPZzzZZZ a second K00010\"\n%RMS-F-DUP,",
-
-		// READ in sequence is the primary key's order.
-		"  R = \"K00010GRPBaaZZZ one\"\n$ GOTO D2LOOP\n$ D2LOOP:\n$ R = \"-\"\n$ READ/END_OF_FILE=D2END/ERROR=D2END F R\n" +
-			"$ SHOW SYMBOL R\n  R = \"K00020GRPAbbMMM two\"\n",
-
-		// /KEY, then on in sequence; generic; /MATCH=GT.
-		"$ READ/KEY=\"K00030\" F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n$ SHOW SYMBOL R\n" +
-			"  R = \"K00030GRPBbbMMM three\"\n$ R = \"-\"\n$ READ F R\n$ SHOW SYMBOL R\n  R = \"K00040GRPAccAAA four\"\n",
-		"$ READ/KEY=\"K0002\" F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n$ SHOW SYMBOL R\n  R = \"K00020",
-		"$ READ/KEY=\"K00030\"/MATCH=GT F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n$ SHOW SYMBOL R\n  R = \"K00040",
-
-		// /INDEX's key, its duplicates in the order written, and on in its order.
-		"$ READ/INDEX=1/KEY=\"GRPB\" F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n$ SHOW SYMBOL R\n" +
-			"  R = \"K00010GRPBaaZZZ one\"\n$ R = \"-\"\n$ READ F R\n$ SHOW SYMBOL R\n  R = \"K00030GRPBbbMMM three\"\n",
-
-		// A descending key's GT is the next lower value.
-		"$ READ/INDEX=3/KEY=\"MMM\"/MATCH=GT F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n$ SHOW SYMBOL R\n  R = \"K00040",
-
-		// READ/DELETE, and the record gone.
-		"$ READ/INDEX=0/DELETE/KEY=\"K00040\" F R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n",
-		"$ READ/KEY=\"K00040\" F R\n%RMS-E-RNF,",
-
-		// WRITE/UPDATE longer, and the primary key unchanged.
-		"$ READ/KEY=\"K00020\" F R\n$ SHOW SYMBOL R\n  R = \"K00020GRPAbbMMM two, made longer\"\n",
-		"$ WRITE/UPDATE F \"K00021GRPCbbMMM changed\"\n%RMS-F-CHG,",
-
-		// A record another stream has locked, and /NOLOCK.
-		"$ READ/KEY=\"K00050\" B R\n%RMS-E-RLK,",
-		"$ READ/NOLOCK/KEY=\"K00050\" B R\n$ SHOW SYMBOL $STATUS\n  $STATUS == \"%X00030001\"\n",
-
-		// TYPE and DIRECTORY/FULL.
-		"$ TYPE D2.IDX\nAAAA the only AAAA..\nBBBB first of BBBB..\nBBBB second of BBBB.\n",
-		"File organization:  Indexed, Prolog: 3, Using 4 keys\n",
-
 		"  M = \"END\"\n",
 	} {
 		if !strings.Contains(log, want) {
 			t.Errorf("no %q in the log", want)
 		}
 	}
+}
+
+// TestIdx88DOracle holds round 4's log on govax to VMS V7.1's,
+// testdata/idx88/vax/idx88d.log, line for line (docs/PHASE-88 - keyed index
+// files.md, subtask 9): every WRITE, READ, and WRITE/UPDATE on an indexed file,
+// its message and $STATUS, each READ's symbol, TYPE, DUMP/RECORD, DIRECTORY/FULL,
+// and F$FILE_ATTRIBUTES. Times are masked (idx88DMask), and VMS's log starts
+// earlier, with the procedure's comments, since verification was already on in
+// the author's session: both are compared from the first command after SET
+// VERIFY.
+func TestIdx88DOracle(t *testing.T) {
+	text, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88d.log"))
+	if err != nil {
+		t.Skipf("no VMS log: %v", err)
+	}
+
+	got, _ := runIdx88D(t)
+	want, have := idx88DMask(string(text)), idx88DMask(got)
+
+	for i := 0; i < max(len(want), len(have)); i++ {
+		var w, g string
+		if i < len(want) {
+			w = want[i]
+		}
+
+		if i < len(have) {
+			g = have[i]
+		}
+
+		if w != g {
+			t.Fatalf("line %d differs:\nVMS:   %q\ngovax: %q\nVMS's lines before it:\n%s", i+1, w, g,
+				strings.Join(want[max(0, i-8):i], "\n"))
+		}
+	}
+}
+
+// idx88DTimes are the times DUMP's heading and DIRECTORY/FULL's dates show.
+var idx88DTimes = regexp.MustCompile(`[ 0-9]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
+
+// idx88DMask is a round 4 log's lines from its first command after SET
+// VERIFY, carriage returns gone and times made "<time>".
+func idx88DMask(text string) []string {
+	lines := strings.Split(strings.TrimRight(strings.ReplaceAll(text, "\r", ""), "\n"), "\n")
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, "$ DELETE D%.IDX") {
+			lines = lines[i:]
+
+			break
+		}
+	}
+
+	for i, line := range lines {
+		lines[i] = idx88DTimes.ReplaceAllString(line, "<time>")
+	}
+
+	return lines
 }

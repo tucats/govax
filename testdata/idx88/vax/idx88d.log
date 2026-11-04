@@ -1,0 +1,1087 @@
+$ ! IDX88D.COM - Phase 88's round 4: DCL on indexed files (subtask 9;
+$ ! docs/PHASE-88 - keyed index files.md). Run it with the exchange volume's
+$ ! [000000] as the default directory, after IDX88.COM or on its own:
+$ !
+$ !     @IDX88D/OUTPUT=IDX88D.LOG
+$ !
+$ ! IDX88D.MAR makes D1.IDX, D2.IDX, and D3.IDX with no records (their keys are
+$ ! in its comments), and this procedure writes, reads, changes, and shows them:
+$ ! WRITE, READ's/KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK, WRITE/UPDATE,
+$ ! two streams on one file, a fixed-length file, OPEN/APPEND, TYPE, DUMP/RECORD,
+$ ! DIRECTORY/FULL, and F$FILE_ATTRIBUTES. Each command's $STATUS is shown, and
+$ ! each READ's symbol, which is set to "-" first. Nothing reads the terminal.
+$ SET NOON
+$ SET VERIFY
+$ DELETE D%.IDX;*,D4.DAT;*
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[000000]D%.IDX;*
+-RMS-E-FNF, file not found
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[000000]D4.DAT;*
+-RMS-E-FNF, file not found
+$ ! MACRO's own output goes to a log of its own, which stays on the volume
+$ ! until the author has read it, as round 1's did.
+$ DEFINE/USER_MODE SYS$OUTPUT IDX88DM.LOG
+$ DEFINE/USER_MODE SYS$ERROR NL:
+$ MACRO/NOLIST IDX88D
+$ LINK/NOMAP IDX88D
+$ RUN IDX88D
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ !
+$ ! D1: WRITE on an indexed file: records out of order (does DCL's $PUT go by
+$ ! key, or in sequence?), a duplicate primary key, a duplicate alternate, a
+$ ! record too short for the primary key, one too short for an alternate, and
+$ ! one longer than the file's maximum.
+$ M = "D1"
+$ SHOW SYMBOL M
+  M = "D1"
+$ OPEN/READ/WRITE F D1.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW LOGICAL/FULL F
+   "F" [super,confine] = "_SIMVAX$DUA1" [terminal] (LNM$PROCESS_TABLE)
+$ WRITE F "K00020GRPAbbMMM two"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "K00010GRPBaaZZZ one"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "K00040GRPAccAAA four"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018011"
+$ WRITE F "K00030GRPBbbMMM three"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018011"
+$ WRITE F "K00050GRPCddQQQ five"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "K00010GRPZzzZZZ a second K00010"
+%RMS-F-DUP, duplicate key detected (DUP not set)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184EC"
+$ WRITE F "K0006"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ WRITE F "K00060GR"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "K00070", F$FAO("!75*x")
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ WRITE F "K00080", F$FAO("!74*y")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE F
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ !
+$ ! D2: READ in sequence: the primary key's order, to the end of the file,
+$ ! then READ at the end without /END_OF_FILE.
+$ M = "D2"
+$ SHOW SYMBOL M
+  M = "D2"
+$ OPEN/READ F D1.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00060GR"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ SHOW SYMBOL R
+  R = "K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+$ GOTO D2LOOP
+$ D2LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D2END/ERROR=D2END F R
+$ D2END:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ R = "-"
+$ READ F R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ !
+$ ! D3: READ/KEY on the primary key: exact, then on in sequence; generic; not
+$ ! there; /MATCH=GE and GT, generic too; a key longer than the key, an empty
+$ ! one, lowercase, unquoted; /MATCH's keywords, abbreviated and wrong.
+$ M = "D3"
+$ SHOW SYMBOL M
+  M = "D3"
+$ R = "-"
+$ READ/KEY="K00030" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/KEY="K0002" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ/KEY="K00025" F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/KEY="K00025"/MATCH=GE F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/KEY="K00030"/MATCH=GT F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/KEY="K0001"/MATCH=GT F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ/KEY="K0008"/MATCH=GT F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="K000300" F R
+%RMS-F-KSZ, invalid key size for $GET/$FIND
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000185A4"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="" F R
+%RMS-F-KSZ, invalid key size for $GET/$FIND
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000185A4"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="k00030" F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY=k00030 F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/KEY="K00040"/MATCH=EQ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/KEY="K00040"/MATCH=G F R
+%DCL-W-ABKEYW, ambiguous qualifier or keyword - supply more characters
+ \G\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038010"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="K00040"/MATCH=LT F R
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \LT\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038060"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="K00040"/MATCH F R
+%DCL-W-VALREQ, missing qualifier or keyword value - supply all required values
+ \MATCH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038150"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/MATCH=GE F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ !
+$ ! D4: /INDEX: an alternate key with duplicates, then on in its order; /KEY
+$ ! with no /INDEX after it (the last /INDEX given, the manual says); /INDEX
+$ ! with no /KEY; the descending key with each match; the binary key; a key
+$ ! the file hasn't; /INDEX with no value.
+$ M = "D4"
+$ SHOW SYMBOL M
+  M = "D4"
+$ R = "-"
+$ READ/INDEX=1/KEY="GRPB" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+$ R = "-"
+$ READ/KEY="GRPA" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ/INDEX=0/KEY="K00010" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ R = "-"
+$ READ/INDEX=1 F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/INDEX=3/KEY="MMM" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/INDEX=3/KEY="MMM"/MATCH=GT F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/INDEX=3/KEY="NNN"/MATCH=GE F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ/INDEX=3/KEY="M"/MATCH=GT F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/INDEX=2/KEY="bb" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ R = "-"
+$ READ/INDEX=2/KEY="b" F R
+%RMS-F-KSZ, invalid key size for $GET/$FIND
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000185A4"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/INDEX=4/KEY="K00010" F R
+%RMS-F-KRF, invalid key-of-reference
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001859C"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/INDEX/KEY="K00010" F R
+%DCL-W-VALREQ, missing qualifier or keyword value - supply all required values
+ \INDEX\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038150"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/INDEX=0/KEY="K00010" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ !
+$ ! D5: READ/KEY and /INDEX on a file opened only to read are D1 to D4; on a
+$ ! sequential file, and READ/DELETE on a file opened only to read.
+$ M = "D5"
+$ SHOW SYMBOL M
+  M = "D5"
+$ R = "-"
+$ READ/DELETE/KEY="K00010" F R
+%RMS-F-FAC, record operation not permitted by specified file access (FAC)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018514"
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ R = "-"
+$ READ/DELETE F R
+%RMS-F-FAC, record operation not permitted by specified file access (FAC)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018514"
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ CLOSE F
+$ OPEN/WRITE S D4.DAT
+$ WRITE S "K00010 a sequential record"
+$ WRITE S "K00020 another"
+$ CLOSE S
+$ OPEN/READ S D4.DAT
+$ R = "-"
+$ READ/KEY="K00020" S R
+%RMS-F-RAC, invalid record access mode
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018644"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/INDEX=1 S R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00010 a sequential record"
+$ R = "-"
+$ READ S R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00020 another"
+$ R = "-"
+$ READ/DELETE S R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ CLOSE S
+$ OPEN/READ/WRITE S D4.DAT
+$ R = "-"
+$ READ/DELETE S R
+%RMS-F-IOP, operation invalid for file organization or device
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018574"
+$ SHOW SYMBOL R
+  R = "K00010 a sequential record"
+$ R = "-"
+$ READ S R
+$ SHOW SYMBOL R
+  R = "K00020 another"
+$ CLOSE S
+$ !
+$ ! D6: WRITE/UPDATE: the same length, longer, shorter, an alternate changed,
+$ ! the primary key changed, too short for the primary key, with no READ
+$ ! before it, after a failed READ, and READ in sequence after an update.
+$ M = "D6"
+$ SHOW SYMBOL M
+  M = "D6"
+$ OPEN/READ/WRITE F D1.IDX
+$ R = "-"
+$ READ/KEY="K00020" F R
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two"
+$ WRITE/UPDATE F "K00020GRPAbbMMM TWO"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ R = "-"
+$ READ/KEY="K00020" F R
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM TWO"
+$ WRITE/UPDATE F "K00020GRPAbbMMM two, made longer"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ R = "-"
+$ READ/KEY="K00020" F R
+$ SHOW SYMBOL R
+  R = "K00020GRPAbbMMM two, made longer"
+$ WRITE/UPDATE F "K00020GRPCbbMMM"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018011"
+$ R = "-"
+$ READ/KEY="K00020" F R
+$ SHOW SYMBOL R
+  R = "K00020GRPCbbMMM"
+$ WRITE/UPDATE F "K00021GRPCbbMMM changed"
+%RMS-F-CHG, invalid key change in $UPDATE (CHG not set)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001849C"
+$ R = "-"
+$ READ/KEY="K00020" F R
+$ SHOW SYMBOL R
+  R = "K00020GRPCbbMMM"
+$ WRITE/UPDATE F "K0002"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ WRITE/UPDATE F "K00020GRPCbbMMM again"
+%RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184B4"
+$ R = "-"
+$ READ/KEY="K00099" F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ WRITE/UPDATE F "K00020GRPCbbMMM after RNF"
+%RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184B4"
+$ R = "-"
+$ READ/INDEX=1/KEY="GRPC" F R
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00020GRPCbbMMM"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+$ !
+$ ! D7: READ/DELETE: by key, then the same key again; in sequence, and READ
+$ ! after it; a deleted record's alternate; WRITE/UPDATE after READ/DELETE.
+$ M = "D7"
+$ SHOW SYMBOL M
+  M = "D7"
+$ R = "-"
+$ READ/INDEX=0/DELETE/KEY="K00040" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ SHOW SYMBOL R
+  R = "K00040GRPAccAAA four"
+$ R = "-"
+$ READ/KEY="K00040" F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/KEY="K00010" F R
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ R = "-"
+$ READ/DELETE F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ SHOW SYMBOL R
+  R = "K00020GRPCbbMMM"
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM three"
+$ WRITE/UPDATE F "K00030GRPBbbMMM after a delete"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ R = "-"
+$ READ/INDEX=3/KEY="AAA" F R
+%RMS-E-RNF, record not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182B2"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/INDEX=0/KEY="K" F R
+$ SHOW SYMBOL R
+  R = "K00010GRPBaaZZZ one"
+$ D7LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D7END/ERROR=D7END F R
+$ SHOW SYMBOL R
+  R = "K00030GRPBbbMMM after a delete"
+$ GOTO D7LOOP
+$ D7LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D7END/ERROR=D7END F R
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ GOTO D7LOOP
+$ D7LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D7END/ERROR=D7END F R
+$ SHOW SYMBOL R
+  R = "K00060GR"
+$ GOTO D7LOOP
+$ D7LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D7END/ERROR=D7END F R
+$ SHOW SYMBOL R
+  R = "K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+$ GOTO D7LOOP
+$ D7LOOP:
+$ R = "-"
+$ READ/END_OF_FILE=D7END/ERROR=D7END F R
+$ D7END:
+$ CLOSE F
+$ !
+$ ! D8: two streams on one file, each with /SHARE: a record one has read,
+$ ! read by the other, then with /NOLOCK, then after the first has read on;
+$ ! WRITE/UPDATE of a record READ/NOLOCK read; and a second OPEN without
+$ ! /SHARE while one is open.
+$ M = "D8"
+$ SHOW SYMBOL M
+  M = "D8"
+$ OPEN/READ/WRITE/SHARE A D1.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ OPEN/READ/WRITE/SHARE B D1.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ R = "-"
+$ READ/KEY="K00050" A R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ R = "-"
+$ READ/KEY="K00050" B R
+%RMS-E-RLK, target record currently locked by another stream
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000182AA"
+$ SHOW SYMBOL R
+  R = "-"
+$ R = "-"
+$ READ/NOLOCK/KEY="K00050" B R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ WRITE/UPDATE B "K00050GRPCddQQQ five, by B"
+%RMS-W-RNL, record not locked
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000181A0"
+$ R = "-"
+$ READ/KEY="K00060" A R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00060GR"
+$ R = "-"
+$ READ/KEY="K00050" B R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five"
+$ WRITE/UPDATE B "K00050GRPCddQQQ five, by B"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ R = "-"
+$ READ/KEY="K00050" A R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five, by B"
+$ OPEN/READ C D1.IDX
+%DCL-E-OPENIN, error opening DUA1:[000000]D1.IDX; as input
+-RMS-E-FLK, file currently locked by another user
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001828A"
+$ CLOSE A
+$ CLOSE B
+$ OPEN/READ C D1.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ CLOSE C
+$ !
+$ ! D9: the fixed-length file, whose primary key has duplicates: WRITE of
+$ ! a record of the size, shorter, and longer; duplicates in order; READ/KEY
+$ ! of a duplicate and on; WRITE/UPDATE shorter; TYPE.
+$ M = "D9"
+$ SHOW SYMBOL M
+  M = "D9"
+$ OPEN/READ/WRITE F D2.IDX
+$ WRITE F "BBBB first of BBBB.."
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "AAAA the only AAAA.."
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "BBBB second of BBBB."
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018011"
+$ WRITE F "CCCC short"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ WRITE F "CCCC far too long for twenty"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ R = "-"
+$ READ/KEY="BBBB" F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "BBBB first of BBBB.."
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL R
+  R = "BBBB second of BBBB."
+$ WRITE/UPDATE F "BBBB updated"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ WRITE/UPDATE F "BBBB second, updated"
+%RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184B4"
+$ CLOSE F
+$ TYPE D2.IDX
+AAAA the only AAAA..
+BBBB first of BBBB..
+BBBB second of BBBB.
+$ !
+$ ! D10: OPEN/APPEND of an indexed file, and WRITE of a lower key after a
+$ ! higher one (does /APPEND mean RMS's EOF, and so a $PUT in sequence?).
+$ M = "D10"
+$ SHOW SYMBOL M
+  M = "D10"
+$ OPEN/APPEND F D3.IDX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE F "M001 first"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "A001 lower"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE F "Z001 higher"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE F
+$ OPEN/APPEND F D3.IDX
+$ WRITE F "B001 lower again"
+%RMS-F-SEQ, primary key out of sequence (SEQ access)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186AC"
+$ R = "-"
+$ READ F R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ CLOSE F
+$ TYPE D3.IDX
+A001 lower
+M001 first
+Z001 higher
+$ !
+$ ! D11: TYPE of an indexed file and of its open logical name, DUMP/RECORD,
+$ ! DIRECTORY/FULL, and F$FILE_ATTRIBUTES.
+$ M = "D11"
+$ SHOW SYMBOL M
+  M = "D11"
+$ TYPE D1.IDX
+K00010GRPBaaZZZ one
+K00030GRPBbbMMM after a delete
+K00050GRPCddQQQ five, by B
+K00060GR
+K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+$ OPEN/READ F D1.IDX
+$ R = "-"
+$ READ/INDEX=1/KEY="GRPC" F R
+$ SHOW SYMBOL R
+  R = "K00050GRPCddQQQ five, by B"
+$ TYPE F
+%TYPE-W-OPENIN, error opening F:.; as input
+-RMS-F-ORG, invalid file organization value
+$ R = "-"
+$ READ F R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL R
+  R = "K00080yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+$ CLOSE F
+$ DUMP/RECORD D1.IDX
+
+Dump of file DUA1:[000000]D1.IDX;1 on  4-NOV-2026 04:42:24.46
+File ID (16,1,0)   End of file block 27 / Allocated 27
+
+Record number 1 (00000001), 19 (0013) bytes, RFA(0004,0000,0002)
+
+                              656E6F 205A5A5A 61614250 52473031 3030304B K00010GRPBaaZZZ one............. 000000
+
+Record number 2 (00000002), 30 (001E) bytes, RFA(0004,0000,0004)
+
+     6574 656C6564 20612072 65746661 204D4D4D 62624250 52473033 3030304B K00030GRPBbbMMM after a delete.. 000000
+
+Record number 3 (00000003), 26 (001A) bytes, RFA(0004,0000,0005)
+
+              4220 7962202C 65766966 20515151 64644350 52473035 3030304B K00050GRPCddQQQ five, by B...... 000000
+
+Record number 4 (00000004), 8 (0008) bytes, RFA(0004,0000,0006)
+
+                                                       52473036 3030304B K00060GR........................ 000000
+
+Record number 5 (00000005), 80 (0050) bytes, RFA(0004,0000,0007)
+
+ 79797979 79797979 79797979 79797979 79797979 79797979 79793038 3030304B K00080yyyyyyyyyyyyyyyyyyyyyyyyyy 000000
+ 79797979 79797979 79797979 79797979 79797979 79797979 79797979 79797979 yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy 000020
+                                     79797979 79797979 79797979 79797979 yyyyyyyyyyyyyyyy................ 000040
+$ DUMP/RECORD D2.IDX
+
+Dump of file DUA1:[000000]D2.IDX;1 on  4-NOV-2026 04:42:24.47
+File ID (17,1,0)   End of file block 9 / Allocated 9
+
+Record number 1 (00000001), 20 (0014) bytes, RFA(0004,0000,0002)
+
+                            2E2E4141 41412079 6C6E6F20 65687420 41414141 AAAA the only AAAA.............. 000000
+
+Record number 2 (00000002), 20 (0014) bytes, RFA(0004,0000,0001)
+
+                            2E2E4242 42422066 6F207473 72696620 42424242 BBBB first of BBBB.............. 000000
+
+Record number 3 (00000003), 20 (0014) bytes, RFA(0004,0000,0003)
+
+                            2E424242 4220666F 20646E6F 63657320 42424242 BBBB second of BBBB............. 000000
+$ DIRECTORY/FULL D1.IDX,D2.IDX,D3.IDX
+
+Directory DUA1:[000000]
+
+D1.IDX;1                      File ID:  (16,1,0)              
+Size:           27/27         Owner:    [SYSTEM]
+Created:    4-NOV-2026 04:42:24.33
+Revised:    4-NOV-2026 04:42:24.42 (5)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 4 keys
+Shelved state:      Online 
+File attributes:    Allocation: 27, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 80 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+D2.IDX;1                      File ID:  (17,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    4-NOV-2026 04:42:24.34
+Revised:    4-NOV-2026 04:42:24.43 (2)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Fixed length 20 byte records
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+D3.IDX;1                      File ID:  (18,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:    4-NOV-2026 04:42:24.34
+Revised:    4-NOV-2026 04:42:24.44 (3)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Indexed, Prolog: 3, Using 1 key
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Maximum bucket size: 2, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 80 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 3 files, 45/45 blocks.
+$ N = 0
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+ORG: IDX IDX SEQ
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+RFM: VAR FIX VFC
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+RAT: CR CR PRN
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+MRS: 80 20 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+LRL: 0 20 26
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+FSZ: 0 0 2
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+BKS: 2 2 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+GBC: 0 0 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+KNOWN: FALSE FALSE FALSE
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+NOK: 4 1 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+NOA: 1 1 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+PVN: 3 3 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+MRN: 0 0 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+EOF: 27 9 1
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+ALQ: 27 9 3
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+DEQ: 0 0 0
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+FFB: 0 0 48
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+CTG: FALSE FALSE FALSE
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ V1 = F$FILE_ATTRIBUTES("D1.IDX", I)
+$ V2 = F$FILE_ATTRIBUTES("D2.IDX", I)
+$ V3 = F$FILE_ATTRIBUTES("D4.DAT", I)
+$ WRITE SYS$OUTPUT I, ": ", V1, " ", V2, " ", V3
+CBT: FALSE FALSE FALSE
+$ N = N + 1
+$ GOTO D11LOOP
+$ D11LOOP:
+$ I = F$ELEMENT(N, ",", "ORG,RFM,RAT,MRS,LRL,FSZ,BKS,GBC,KNOWN,NOK,NOA,PVN,MRN,EOF,ALQ,DEQ,FFB,CTG,CBT")
+$ IF I .EQS. "," THEN GOTO D11END
+$ D11END:
+$ !
+$ ! The end.
+$ M = "END"
+$ SHOW SYMBOL M
+  M = "END"
+$ SET NOVERIFY

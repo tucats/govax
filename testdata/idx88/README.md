@@ -115,9 +115,9 @@ It takes a few seconds and reads nothing from the terminal. Back on the host:
 
     govax console < testdata/idx88/copyoutd.cmd
 
-which brings back `vax/idx88d.log`. `TestIdx88DProbe` (`internal/console/idx88dcl_test.go`)
-rehearses it on govax and checks what the DCL Dictionary says; with VMS's log here, an oracle
-holds govax's log to it.
+which brings back `vax/idx88d.log`, VMS V7.1's run (2026-11-04). `TestIdx88DProbe`
+(`internal/console/idx88dcl_test.go`) rehearses it on govax, and `TestIdx88DOracle` holds govax's
+log to VMS's line for line, times masked.
 
 ## What's next
 

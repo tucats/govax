@@ -222,6 +222,11 @@ const (
 
 	// docs/PHASE-83 - FORTRAN and VMS.md: FORTRAN's +-lists.
 	cliForNoSource
+
+	// docs/PHASE-88 - keyed index files.md: DCL's own messages for a
+	// qualifier's value.
+	cliValReq
+	cliAbKeyw
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -507,6 +512,14 @@ const (
 	CLI_IVDTIME  = CLIFacility<<FacilityPosition | cliIvDTime<<MessagePosition | StatusWarning
 	CLI_IVVALU   = CLIFacility<<FacilityPosition | cliIvValu<<MessagePosition | StatusWarning
 
+	// A qualifier's value, as VMS 7.1's DCL reports it (testdata/idx88's
+	// round 4), warnings with the qualifier or keyword as the segment:
+	// CLI_VALREQ a qualifier given no value it needs (READ/MATCH), CLI_ABKEYW
+	// a keyword abbreviated so far that it could be more than one
+	// (READ/MATCH=G).
+	CLI_VALREQ = CLIFacility<<FacilityPosition | cliValReq<<MessagePosition | StatusWarning
+	CLI_ABKEYW = CLIFacility<<FacilityPosition | cliAbKeyw<<MessagePosition | StatusWarning
+
 	// Verification's messages (docs/PHASE-50, subtask 15), as VMS 7.3
 	// showed them (testdata/dcl50's round 2): CLI_CONFLICT, a warning,
 	// for SET NOVERIFY with keywords; CLI_INVPREFIX, an error, for a SET
@@ -731,6 +744,8 @@ func init() {
 	DefineMessage(CLI_IVATIME, CLIFacility, "IVATIME", "invalid absolute time - use DD-MMM-YYYY:HH:MM:SS.CC format")
 	DefineMessage(CLI_IVDTIME, CLIFacility, "IVDTIME", "invalid delta time - use DDDD-HH:MM:SS.CC format")
 	DefineMessage(CLI_IVVALU, CLIFacility, "IVVALU", "invalid value syntax - see command documentation")
+	DefineMessage(CLI_VALREQ, CLIFacility, "VALREQ", "missing qualifier or keyword value - supply all required values")
+	DefineMessage(CLI_ABKEYW, CLIFacility, "ABKEYW", "ambiguous qualifier or keyword - supply more characters")
 	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
 	DefineMessage(CLI_UNDFIL, CLIFacility, "UNDFIL", "file has not been opened by DCL - check logical name")

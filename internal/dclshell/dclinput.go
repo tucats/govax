@@ -307,5 +307,5 @@ func (c *Interpreter) TypeDCL(spec string) (handled bool, err error) {
 		return true, c.typeInput()
 	}
 
-	return c.typeOpenFile(spec), nil
+	return c.typeOpenFile(spec)
 }

@@ -1,7 +1,10 @@
 package rms
 
 import (
+	"time"
+
 	"errors"
+	"github.com/tucats/ods2/vmstime"
 
 	"github.com/tucats/govax/internal/lnm"
 	odsrms "github.com/tucats/ods2/rms"
@@ -437,7 +440,18 @@ func closeHandle(h *FileHandle) error {
 		return nil
 	}
 
-	return closeVolumeFile(h, nil)
+	return closeVolumeFile(h, h.closeRevision)
+}
+
+// closeRevision gives h's file a new revision date and number as it's closed,
+// if h.reviseAtClose says it's owed one (a file DCL's OPEN opened to write;
+// dclfile.go) and isn't about to be deleted.
+func (h *FileHandle) closeRevision() error {
+	if !h.reviseAtClose || h.File == nil || h.File.MarkedForDelete() {
+		return nil
+	}
+
+	return applyCloseXABs(h.File, xabInputs{}, vmstime.FromTime(time.Now()))
 }
 
 // arm connects h's record stream for access fac, as $CONNECT does: at

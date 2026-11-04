@@ -151,13 +151,20 @@ func (c *Context) typeFailure(err error, specText string, loc rms.FileLocation) 
 	// condition value TYPE's image signals, its message shown.
 	var locked *rms.LockedError
 	if errors.As(err, &locked) {
-		return vmserrors.ConditionError{
-			Status: typeOpenIn | stsInhibitMsg,
-			Text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + ConditionLine(vmsdef.Symbols["RMS$_FLK"]),
-		}
+		return TypeOpenFailure(locked.Name, vmsdef.Symbols["RMS$_FLK"])
 	}
 
 	return FileFailure(err, specText)
+}
+
+// TypeOpenFailure is TYPE's message for a file it found and couldn't open,
+// name as TYPE names it, sts RMS's status: OPENIN, then RMS's message, with
+// the condition value TYPE's image signals, its message shown.
+func TypeOpenFailure(name string, sts uint32) error {
+	return vmserrors.ConditionError{
+		Status: typeOpenIn | stsInhibitMsg,
+		Text:   "TYPE-W-OPENIN, error opening " + name + " as input\n" + ConditionLine(sts),
+	}
 }
 
 // typeMissing is TYPE's message for a file name that found no file,

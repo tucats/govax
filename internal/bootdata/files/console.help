@@ -3223,7 +3223,9 @@ $READ
     the default, only an equal one).  /INDEX=n chooses the key, 0 the
     primary, and stays for later READs of the file until another /INDEX.
     After a keyed READ, READ goes on in that key's order.  /DELETE deletes
-    the record read, on a file opened /READ/WRITE.  On a file opened with
+    the record read, on a file opened /READ/WRITE (on another, the symbol
+    gets the record and READ fails with RMS-F-FAC), and leaves $STATUS
+    RMS$_NORMAL.  On a file opened with
     /SHARE=WRITE, READ locks the record until the next operation on the
     file, and another READ of it is RMS-E-RLK; /NOLOCK reads it without
     a lock, even one another READ holds.
@@ -3253,12 +3255,15 @@ $WRIT
     terminal even when a procedure's output goes to an /OUTPUT file.
     WRITE/UPDATE replaces the record READ read last with one of the same
     length.  On an indexed file, WRITE puts the record where its keys say,
-    in any order (RMS-F-DUP for a key that allows no duplicates), and
-    WRITE/UPDATE's record may be another length, but not change the
-    primary key (RMS-F-CHG).  A record WRITE can't write is RMS's error (RMS-F-NEF for a
+    in any order (RMS-F-DUP for a key that allows no duplicates), but after
+    OPEN/APPEND the first record must come after the file's last
+    (RMS-F-SEQ); WRITE/UPDATE's record may be another length, but not
+    change the primary key (RMS-F-CHG).  A record WRITE can't write is RMS's error (RMS-F-NEF for a
     /READ/WRITE file READ hasn't read to its end), or with /ERROR the
     procedure goes to the label.  Without /SYMBOL, an item longer than
-    255 characters is DCL-W-TKNOVF.  WRITE leaves $STATUS RMS$_NORMAL.
+    255 characters is DCL-W-TKNOVF.  WRITE leaves $STATUS RMS$_NORMAL, or
+    on an indexed file RMS$_OK_DUP for a record whose alternate key another
+    record has already.
 
     Example:
 

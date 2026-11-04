@@ -147,7 +147,8 @@ type keyedStream interface {
 
 // readQualifiers reads READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK. A
 // /MATCH keyword is EQ, GE, or GT, or enough of one to tell it from the
-// others (CLI$_IVKEYW otherwise); /INDEX is a decimal key of reference.
+// others: CLI$_ABKEYW for too little, CLI$_IVKEYW for none of them; /INDEX
+// is a decimal key of reference.
 func readQualifiers(r *dcl.Result) (rms.DCLRead, error) {
 	var q rms.DCLRead
 
@@ -180,8 +181,12 @@ func readQualifiers(r *dcl.Result) (rms.DCLRead, error) {
 			}
 		}
 
-		if len(matches) != 1 {
+		switch len(matches) {
+		case 0:
 			return q, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, option)
+		case 2, 3:
+			// VMS 7.1: /MATCH=G (round 4's D3).
+			return q, vmserrors.NewSegment(vmserrors.CLI_ABKEYW, option)
 		}
 
 		q.Match = matches[0]
@@ -603,7 +608,18 @@ func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 
 	record, sts, err := c.readDCLRecord(r.String("LOGICAL_NAME"), prompt, keyed)
 	if err != nil {
-		return c.failOrBranch(errorLabel, ConditionValue(err), err)
+		var unread *deleteFailed
+		if !errors.As(err, &unread) {
+			return c.failOrBranch(errorLabel, ConditionValue(err), err)
+		}
+
+		// READ/DELETE read the record and couldn't delete it: VMS 7.1 set
+		// the symbol, then failed with the $DELETE's status (testdata/idx88's
+		// D5: RMS$_FAC on a file opened to read, RMS$_IOP on a sequential
+		// file).
+		c.dclSymbols.local()[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: record}
+
+		return c.failOrBranch(errorLabel, unread.sts, rmsStatusFailure(unread.sts, 0))
 	}
 
 	switch {
@@ -618,10 +634,23 @@ func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 	}
 
 	c.dclSymbols.local()[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: record}
-	c.SetCommandStatus(CLINormal, nil)
+
+	// READ/DELETE leaves its $DELETE's status, RMS$_NORMAL (round 4's D7),
+	// where a READ leaves CLI$_NORMAL.
+	if keyed.Delete {
+		c.SetCommandStatus(sts, nil)
+	} else {
+		c.SetCommandStatus(CLINormal, nil)
+	}
 
 	return nil
 }
+
+// deleteFailed is readDCLRecord's error for a READ/DELETE that read its
+// record and couldn't delete it, sts the $DELETE's status.
+type deleteFailed struct{ sts uint32 }
+
+func (e *deleteFailed) Error() string { return fmt.Sprintf("READ/DELETE: status %%X%08X", e.sts) }
 
 // readDCLRecord reads READ's record from the file logical names (as
 // typed): one OPEN opened, or another process-permanent file (see the top
@@ -641,7 +670,9 @@ func (c *Interpreter) readDCLRecord(logical, prompt string, keyed rms.DCLRead) (
 		var data []byte
 
 		if k, ok := f.stream.(keyedStream); ok {
-			data, sts = k.Read(keyed)
+			if data, sts = k.Read(keyed); sts&1 == 0 && data != nil {
+				return string(data), sts, &deleteFailed{sts: sts}
+			}
 		} else {
 			data, sts = f.stream.Get()
 		}
@@ -805,7 +836,10 @@ func (c *Interpreter) writeCommand(id int64, r *dcl.Result) error {
 		return c.failOrBranch(label, sts, rmsStatusFailure(sts, 0))
 	}
 
-	c.SetCommandStatus(rmsNormalStatus, nil)
+	// RMS's success status: RMS$_NORMAL, or RMS$_OK_DUP for an indexed
+	// file's record whose alternate key a record has already (VMS 7.1,
+	// testdata/idx88's round 4).
+	c.SetCommandStatus(sts, nil)
 
 	return nil
 }
@@ -911,11 +945,20 @@ func (c *Interpreter) inquireCommand(id int64, r *dcl.Result) error {
 // typeOpenFile is TYPE of a logical name OPEN defined: it types the
 // file's records from where READ has got to, through the same stream, so
 // a READ after it is at the end of the file, as VMS 7.3's was
-// (testdata/dcl50's F2). ok is false for a name that isn't one.
-func (c *Interpreter) typeOpenFile(spec string) (ok bool) {
+// (testdata/dcl50's F2). ok is false for a name that isn't one; err is the
+// message for an indexed file, which TYPE can't type this way.
+func (c *Interpreter) typeOpenFile(spec string) (ok bool, err error) {
 	f, open := c.openFile(spec)
 	if !open {
-		return false
+		return false, nil
+	}
+
+	// An indexed file isn't typed through its logical name: VMS 7.1 gave
+	// OPENIN with RMS$_ORG, naming the logical name as a device with an
+	// empty name, type, and version ("F:.;"), and READ went on where it was
+	// (testdata/idx88's round 4, D11).
+	if k, ok := f.stream.(interface{ Indexed() bool }); ok && k.Indexed() {
+		return true, dclcmd.TypeOpenFailure(strings.ToUpper(strings.TrimSpace(spec))+":.;", vmsdef.Symbols["RMS$_ORG"])
 	}
 
 	for c.Running() {
@@ -927,7 +970,7 @@ func (c *Interpreter) typeOpenFile(spec string) (ok bool) {
 		c.Printf("%s\n", record)
 	}
 
-	return true
+	return true, nil
 }
 
 // CloseDCLFiles closes every file OPEN left open, those whose logical
