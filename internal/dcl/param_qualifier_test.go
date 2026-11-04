@@ -277,7 +277,7 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // (docs/PHASE-27.md subtask 10), LINK (docs/PHASE-30.md), and LIBRARY
 // (docs/PHASE-28.md subtask 7), whose SOURCE, OBJECTS, LIBRARY, and INPUTS
 // take COPY's /HOST, RUN (docs/PHASE-37.md), whose FILE does, and
-// ANALYZE/OBJECT and ANALYZE/IMAGE (docs/PHASE-38.md, PHASE-40.md), whose
+// ANALYZE/OBJECT, ANALYZE/IMAGE, and ANALYZE/RMS_FILE (docs/PHASE-38.md, PHASE-40.md, PHASE-88), whose
 // FILES do, CREATE, whose FILE does, OPEN, whose FILESPEC does,
 // BACKUP (docs/PHASE-69 - backup save sets.md), whose INPUT and OUTPUT
 // carry their own save-set and file qualifiers, and FORTRAN
@@ -286,7 +286,7 @@ func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" {
+		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "ANALYZE_RMS_FILE" || e.Name == "CREATE" || e.Name == "OPEN" || e.Name == "BACKUP" || e.Name == "FORTRAN" {
 			continue
 		}
 

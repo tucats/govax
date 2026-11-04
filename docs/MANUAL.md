@@ -1400,6 +1400,62 @@ accepted and do nothing. `/STATISTICS`'s I/O counts and page faults are 0, as
 govax doesn't count them for a utility. `/PROLOG=1` or `2` is `RMS$_PLV`:
 govax's indexed files are Prolog 3.
 
+#### ANALYZE/RMS_FILE
+
+```text
+ANALYZE/RMS_FILE [/CHECK | /STATISTICS | /SUMMARY | /FDL] [/[NO]OUTPUT[=file]] file[,...]
+```
+
+Describes files of any organization in VMS's words and page layout, reading their
+blocks directly so that a damaged file can be described. With a wildcard or a list,
+each file has its own report.
+
+- `/CHECK`, the default, walks an indexed file's every key: index levels from the root
+  down, then the data chain. Each thing wrong is a `***` line where it's found, and
+  what can't be gone on from is `Unrecoverable error encountered in structure of
+  file.`, with the keys not reached left out.
+- `/STATISTICS` is the same with each key's figures: index levels, bucket fills,
+  compression, record counts, and the file's overall space efficiency.
+- `/SUMMARY` describes the file without walking it, so it finds no damage.
+- `/FDL` writes an FDL file, by default `name.FDL`, which `CREATE/FDL` and `CONVERT/FDL`
+  can use. Its `ANALYSIS_OF_KEY` sections are `/STATISTICS`'s figures.
+
+With no `/OUTPUT`, a report goes to SYS$OUTPUT, with `/FDL` to its file. `/OUTPUT=file`
+takes the default name `ANALYZE.ANL`, `/NOOUTPUT` writes no report, and each of those,
+but for `/SUMMARY` and `/FDL`, also shows a message with the count of errors. `$STATUS`
+is the first error's, if there is one. Prolog 1 and 2 files stop at their fixed prolog,
+govax reading Prolog 3 alone. `/INTERACTIVE` and `/RU_JOURNAL` aren't there. A file on
+the host takes `/HOST` and is described as a sequential file.
+
+```text
+$ ANALYZE/RMS_FILE/STATISTICS/OUTPUT=SYS$OUTPUT PARTS.IDX
+...
+STATISTICS FOR KEY #0
+
+	Number of Index Levels:                 1
+	Count of Level 1 Records:               1
+	Mean Length of Index Entry:            10
+	Count of Index Blocks:                  2
+	Mean Index Bucket Fill:                 2%
+	Mean Index Entry Compression:          50%
+
+	Count of Data Records:                  3
+	Mean Length of Data Record:            17
+	Count of Data Blocks:                   2
+	Mean Data Bucket Fill:                 11%
+	Mean Data Key Compression:            -25%
+	Mean Data Record Compression:         -33%
+
+	Overall Space Efficiency:               1%
+
+
+The analysis uncovered NO errors.
+%ANLRMS-I-ERRORS, <DUA5:[WORK]PARTS.IDX;1> 0 errors
+```
+
+(Three short records are a poor case for compression, whose overhead outweighs what
+it saves: the negative figures say so.)
+
 #### BACKUP
 
 ```text
@@ -1666,6 +1722,7 @@ These commands are described fully in their own sections:
 | `LINK file[,...] [qualifiers]` | [9. The linker](#9-the-linker) |
 | `LIBRARY library [input[,...]] [qualifiers]` | [10. The librarian](#10-the-librarian) |
 | `ANALYZE/OBJECT` and `ANALYZE/IMAGE` | [Analyzing objects and images](#analyzing-objects-and-images) |
+| `ANALYZE/RMS_FILE` | [ANALYZE/RMS_FILE](#analyzerms_file), with the file commands |
 
 #### FORTRAN
 
@@ -2252,7 +2309,7 @@ primary key. On a file opened `/SHARE=WRITE`, `READ` locks the record
 it reads until the next operation on the file, and `/NOLOCK` reads one
 without locking it, even if another stream has it locked. `CREATE/FDL`
 makes an indexed file (see CREATE), as does a program (`$CREATE` with
-XABKEYs), and `CONVERT` loads one.
+XABKEYs), `CONVERT` loads one, and `ANALYZE/RMS_FILE` checks one.
 
 ### Lexical functions
 
@@ -3569,7 +3626,8 @@ VAX> FORTRAN PROG+MYDEFS/LIBRARY
 
 ### Analyzing objects and images
 
-`ANALYZE/OBJECT` and `ANALYZE/IMAGE` describe object and image files in
+`ANALYZE/OBJECT` and `ANALYZE/IMAGE` describe object and image files
+(`ANALYZE/RMS_FILE`, with the file commands, describes RMS files) in
 the same words and page layout as VMS's `ANALYZE`, which is useful for
 seeing exactly what the assembler or linker produced.
 

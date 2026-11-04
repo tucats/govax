@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Subtask 10d, ANALYZE/RMS_FILE, done 2026-11-04 ("What ANALYZE/RMS_FILE settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -25,7 +25,7 @@ utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, a
 the files it made in `vax/` ("What round 3 settled"). `internal/fdl` reads FDL files and CREATE/FDL makes files from them through
 RMS's `$CREATE` (`rms/fdlcreate.go`, `dclcmd/createfdl.go`), `TestIdx88CCreateOracle` holding sections C2 to C5 to VMS's log and 42
 files to VMS's byte for byte, the Prolog 1 files govax refuses left out. CONVERT reads and writes through RMS's services, and fast-loads through `isam`'s
-`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. **Next: 10d,** ANALYZE/RMS_FILE.
+`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. ANALYZE/RMS_FILE writes all four reports (`isam/inspect.go`'s walk, `anl/rmsfile.go`'s layout, `dclcmd/analyzerms.go`), `TestIdx88ReportsOracle` holding 309 of round 1's reports to VMS's line for line, `TestIdx88CAnalyzeOracle` every such command of round 3, statuses and damaged files too, and `TestStatisticsAsVMS` the figures of 155 keys. **Next: subtask 11,** FORTRAN: the compiler.
 
 ## Goal
 
@@ -727,7 +727,47 @@ at the bucket: not worth emulating. `/NOFAST_LOAD`'s roots of keys 0 and 1 have 
 
 **Unconfirmed, govax's choices:** a load's fill smaller than the bucket follows ROP LOA's (K50's had no bucket size to be a percentage of, so nothing tested one); a primary key's duplicates in a load, a value with more pointers than a bucket holds, and a no-duplicates alternate's second value (DUP); `/APPEND` making a missing file (the manual's words); `READERR`'s status, never reached, since a read failure ends the reading quietly; an output's owner and protection with no FDL being the creator's and the volume's; `/NOCREATE` on an indexed file that has records going by `$PUT`; a host file as output, which RMS refuses.
 
-**Left:** `/FDL=SYS$INPUT`, the manual's examples 7 and 8, and CREATE/FDL's too. `A122.FDL` and the others are VMS's in the oracle until 10d (`runIdx88C`).
+**Left:** `/FDL=SYS$INPUT`, the manual's examples 7 and 8, and CREATE/FDL's too. `A122.FDL` and the others were VMS's in the oracle until 10d, and are govax's now.
+
+## What ANALYZE/RMS_FILE settled (2026-11-04)
+
+Subtask 10d, read from rounds 1's and 3's reports. Where this section and those above differ, this one wins.
+
+**The output and status** (`dclcmd/analyzerms.go`):
+
+- "What round 3 settled" had this wrong for a report to a file. Any report with `/OUTPUT` or `/NOOUTPUT` shows `%ANLRMS-I-ERRORS` and is `%X103B8103`; to a file the message goes to the terminal and not in the file (216 such lines in `IDX88.LOG`), and to SYS$OUTPUT it's in the report. A report with no `/OUTPUT`, and `/SUMMARY` and `/FDL` however they're sent, shows none and is `%X103B8009`.
+- **The status is the first finding's**, but for "Reserved flag bit n is set", which counts as an error and sets none (X11's is its loop's). The reports chosen by more than one qualifier go FDL, then STATISTICS, then SUMMARY, then CHECK.
+- `/FDL` of a list writes only its first file (C11L). A missing file is `%ANALYZE-E-OPENIN`, `%X10B1109A`.
+
+**The walk** (`isam/inspect.go`'s `Inspector`):
+
+- **The prolog's sums come first,** each block of the key chain and the areas once, before FIXED PROLOG. A bad sum doesn't stop anything: a damaged descriptor is shown as it is, and used.
+- **A key is walked from its root down, a level at a time, and then its level 0 from the descriptor's first data bucket,** not from the index (X14 reports VBN 11, the descriptor's changed value, and nothing of the root).
+- **A bucket's header** is checked in this order: check byte, key of reference, address sample, free offset, level, the root flag (or at level 0, each reserved bit), then, if it isn't the last, the next pointer. A key of reference, a sample, a free offset, or a next pointer wrong ends the walk, once the rest are reported. A level wrong doesn't: a data bucket claiming level 1 is taken for an index bucket, its end's free word is checked ("VBN free space offset is invalid", X12), and the key ends there, with the next key still walked.
+- **A chain's loop:** a level may have as many buckets as the file could hold, allocation over bucket size. X11's bucket pointing to itself was read 7 times in 15 blocks of buckets of 2, its reserved bit reported each time, and then the loop at the 8th. (Round 3's note took those 7 for one per record.) The last bucket's next pointer isn't looked at (X07).
+- Records: an ID at or past the bucket's next ID, or seen before in the bucket, is reported and goes on (X06). A record that doesn't parse, a SIDR's pointer past its record, or an index key past the free offset ends the walk (X05, X09, X10).
+- `/SUMMARY` walks nothing. `/FDL` walks after the KEY and ANALYSIS_OF_AREA sections, with an ANALYSIS_OF_KEY after each key's walk, so a finding comes just before the section it would have had; and it reads the areas where the report tests the prolog, so E85's is "Attempt to read block with invalid VBN 0" there and "Information for locating area descriptors" in the report.
+
+**The figures** (`KeyStats`, held to 155 keys by `TestStatisticsAsVMS`):
+
+- A bucket's fill counts everything in use: a data bucket's free offset and its check byte, an index bucket's free offset, its pointers, and its 4 end bytes. Percentages are truncated.
+- Index compression counts the pointers on both sides: (key + pointer) against (stored entry + pointer). Key compression compares the key's size to the 2 count bytes and what's stored. Record compression compares the bytes after the key, expanded and stored. All go negative when compression costs more than it saves.
+- **Mean length:** a primary key's is a record uncompressed, an alternate's a SIDR's bytes as stored (size word, compressed key, and pointers, the bytes between each bucket's header and its free offset), both rounded: 21 bytes over 2 SIDRs is 11.
+- **Duplicates:** FDL's DUPLICATES_PER_SIDR is the extra pointers over the SIDRs, rounded (3 over 2 is 2), and the statistics report's Mean Duplicates the same truncated (1).
+- Overall space efficiency is the records' uncompressed bytes as a share of the file's allocation.
+- FDL's fills are `(bytes+1)*100/bucket`, truncated and at most 100: the only form giving C37's 80 from 1638 of 2048 and G119's 58 from 300 of 512.
+
+**The report's layout** (`anl/rmsfile.go`):
+
+- A page is a form feed line, the heading, the file's name, two blanks, and 54 lines; a section's heading goes to a new page with fewer than 3 lines left for it.
+- "Longest Record" is shown for a sequential file and for a file of any organization with fixed records (G109, C2H), not for another (C65, whose header has 200). "Null Character" follows "Key Segments" when NULKEYS is set; a primary key has no CHGKEYS or NULKEYS lines, and an alternate no REC_COMPR.
+- An area's AOP gives FDL's AREA BEST_TRY_CONTIGUOUS (XAB$M_CBT, S64) and CONTIGUOUS (XAB$M_CTG, S65).
+
+**Differences left:** Prolog 1 and 2 files stop with "Information for locating area descriptors" after their fixed prolog (answer 1), so E92, S34, S59, S60, and S61 and round 3's C3A, C3B, C3C, C93A, C93B, and C93C aren't compared. L138, U126, and U127 have reports but aren't in the save set. [000000]R3.DIR differs, ods2 extending a directory by less than VMS (9 blocks to 15).
+
+**Unconfirmed, govax's choices:** the status of a /CHECK or /STATISTICS report to a file, `%X103B8103` by its message (round 1 showed the message and no status, and round 3 no such command); the status of a finding no report had first (key of reference, sample, free offset, root flag, next pointer, VBN free space, the area descriptors' and read failures': the invalid level's, `inspectUnseen`); a report's Reliability Options words (read-check, write-check), and Performance Options and Journaling always `none`; a key's order and its index entries' pointers aren't checked, no report having a message for them; Count of Reclaimed Blocks and RECLAIMED_SPACE always 0, as govax never reclaims; the layout of statistics for an alternate key followed by another key, no file showing one; `/OUTPUT` with no value as no `/OUTPUT`; `/FDL`'s default in the default directory, not the input's (the two were the same in the log).
+
+**Left:** `/INTERACTIVE` and `/RU_JOURNAL` (answer 2's scope).
 
 ## The rules
 
@@ -960,7 +1000,7 @@ them.
    to a probe log. (done 2026-11-04)
 10. **Utilities,** as Question 2 chooses, in four parts: (a) round 3 of the probe, `idx88c.com`
     (done 2026-11-04); (b) the FDL reader and CREATE/FDL (done 2026-11-04); (c) CONVERT (done 2026-11-04); (d)
-    ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log.
+    ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log (done 2026-11-04).
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
     forms on indexed units; messages.
 12. **FTNRTL: OPEN and CLOSE.** The XABKEY chain, indexed defaults and refusals, INQUIRE.
@@ -1182,3 +1222,4 @@ has REV at all.
   with `/syntax=` now does both (`dcl.Qualifier.hasValue`). `TestIdx88CCreateOracle` holds every CREATE/FDL of C2 to C4 to VMS's log, times and file IDs masked and ANALYZE's reports left out, and 39 files' headers and blocks to VMS's save set, and 3 more
   (C5) from VMS's own A35, A62, and A122.FDL, restored since ANALYZE is 10d's, with C13's `;2` and K50's fills; `TestCreateFDLForms` is what the log lacks; `fdl/parse_test.go` the parser alone. "What CREATE/FDL settled" has the findings.
 - **2026-11-04: subtask 10c, CONVERT.** `isam/load.go` is the fast load (`StartLoad`, `Add`, `FinishPrimary`, `FinishAlternate`; `File.holdProlog`), fitted to VMS's files by `TestFastLoadAsVMS`, which reads each file's records and builds it again. `rms/convert.go` reads an input whole through a FAB and RAB of its own (`ReadConvertInput`), makes a file with its attributes when there's no FDL (`CreateLike`, shown fills in bytes), and writes through `$PUT` or the load (`ConvertOutput`). `dclcmd/convert.go` is the command: exceptions, sorting, padding, statistics. `fdlcreate.go` split so CONVERT shares its `$CREATE`. `TestIdx88CConvertOracle` holds C6 to C10 command by command and 60 of the files; "What CONVERT settled" has the findings.
+- **2026-11-04: subtask 10d, ANALYZE/RMS_FILE.** `isam/inspect.go` is an `Inspector`, a lenient reading of the prolog and a walk of each key that reports each `Finding` as it comes and counts `KeyStats`; `anl/rmsfile.go` is the four reports (anl now imports rms); `rms/analyze.go`'s `AnalyzeSearch` finds the files; `dclcmd/analyzerms.go` is the command. `TestStatisticsAsVMS` fitted the figures to round 1's FDL files, `TestIdx88ReportsOracle` holds the report, /CHECK, and /FDL of each file to VMS's, and `TestIdx88CAnalyzeOracle` every ANALYZE command of round 3 with its status. `runIdx88C` no longer restores VMS's FDL files: C5 to C7 use govax's own, and CREATE's oracle restores VMS's for itself. "What ANALYZE/RMS_FILE settled" has the findings.

@@ -1038,9 +1038,30 @@ grammar console
         qualifier   header/id=1924
         qualifier   fixup_section/id=1925
 
+    !
+    ! Phase 88: ANALYZE/RMS_FILE describes RMS files. OUTPUT's empty default
+    ! is SYS$OUTPUT, or NAME.FDL beside the input with /FDL. CHECK is the
+    ! report without another's name; FDL, STATISTICS, and SUMMARY each
+    ! choose theirs.
+    !
+    syntax analyze_rms_file
+        parameter   files/id=1931               -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   host/id=1932                -
+                    /parameter=files
+        qualifier   output/id=1933              -
+                    /type=$string               -
+                    /default=""
+        qualifier   check/id=1934
+        qualifier   fdl/id=1935
+        qualifier   statistics/id=1936
+        qualifier   summary/id=1937
+
     verb analyze/id=1900
         qualifier object/syntax=analyze_object
         qualifier image/syntax=analyze_image
+        qualifier rms_file/syntax=analyze_rms_file
 
     !
     ! govax-native extension (docs/PHASE-28.md subtask 7, internal/console

@@ -668,7 +668,7 @@ never had.
   `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`, WRITE, and WRITE/UPDATE through a RAB of DCL's own in a small memory
   (`rms/dclkeyed.go`, calling `SysGet` and the rest), TYPE and DUMP/RECORD by the primary key, DIRECTORY/FULL's prolog and keys;
   round 4 of the probe is `testdata/idx88`'s `idx88d.com`, whose VMS log `TestIdx88DOracle` holds govax's to. Subtask 10 is the utilities (10a, round 3 of the
-  probe, run on VMS 7.1 2026-11-04, `vax/idx88c.log` and `idx88c.bck`; 10b, done 2026-11-04, the FDL reader, `internal/fdl`, and CREATE/FDL, `rms/fdlcreate.go`, a FAB and XABs through `$CREATE`, held to VMS by `TestIdx88CCreateOracle`; 10c, done 2026-11-04, CONVERT, `dclcmd/convert.go`, `rms/convert.go`, and `isam/load.go`, the fast load, held to VMS by `TestIdx88CConvertOracle` and `TestFastLoadAsVMS`; 10d ANALYZE/RMS_FILE).
+  probe, run on VMS 7.1 2026-11-04, `vax/idx88c.log` and `idx88c.bck`; 10b, done 2026-11-04, the FDL reader, `internal/fdl`, and CREATE/FDL, `rms/fdlcreate.go`, a FAB and XABs through `$CREATE`, held to VMS by `TestIdx88CCreateOracle`; 10c, done 2026-11-04, CONVERT, `dclcmd/convert.go`, `rms/convert.go`, and `isam/load.go`, the fast load, held to VMS by `TestIdx88CConvertOracle` and `TestFastLoadAsVMS`; 10d, done 2026-11-04, ANALYZE/RMS_FILE, `isam/inspect.go`'s walk, `anl/rmsfile.go`'s reports, and `dclcmd/analyzerms.go`, held to VMS by `TestIdx88ReportsOracle`, `TestIdx88CAnalyzeOracle`, and `TestStatisticsAsVMS`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2113,7 +2113,7 @@ expect adjustment as phases land):
   the layouts no fixture settles. ANALYZE/IMAGE (Phase 40) is beside it:
   `vmsimage.ReadImage` decodes an image's header blocks, ISDs, and fixup
   section, and `AnalyzeImage` (`imagehdr.go`, `imagefix.go`) reports them on
-  the same `Pager` (`TitleImage`). `TestImagePages` matches all 29
+  the same `Pager` (`TitleImage`). ANALYZE/RMS_FILE (Phase 88) is `rmsfile.go`, with a page layout of its own, over `isam.Inspector`. `TestImagePages` matches all 29
   `.ani`/`.exe` pairs (`testdata/link/vax`, `testdata/mar/list/vax`,
   `testdata/mar/round/vax`) byte for byte but for the time;
   `testdata/imagekinds.txt` shows the unconfirmed layouts. Debug table

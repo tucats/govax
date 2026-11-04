@@ -56,16 +56,6 @@ func runIdx88C(t *testing.T) (string, *console.Console) {
 	dispatch("CREATE/DIRECTORY [IN]")
 	dispatch(`BACKUP "` + source(filepath.Join("vax", "idx88.bck")) + `"/SAVE_SET [IN]`)
 
-	// VMS's own FDL files of round 1's files, which C5 to C7 use, until govax's
-	// ANALYZE/RMS_FILE/FDL makes them (subtask 10d): the whole save set is in [V].
-	dispatch("CREATE/DIRECTORY [V]")
-	dispatch(`BACKUP "` + source(filepath.Join("vax", "idx88c.bck")) + `"/SAVE_SET [V]`)
-	dispatch("CREATE/DIRECTORY [R3]")
-
-	for _, name := range []string{"A35", "A62", "A122"} {
-		dispatch("COPY [V]" + name + ".FDL [R3]" + name + ".FDL")
-	}
-
 	dispatch("@IDX88C/OUTPUT=IDX88C.LOG")
 
 	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]IDX88C.LOG"}, rms.TextRecords)

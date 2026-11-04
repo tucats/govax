@@ -118,8 +118,8 @@ func TestIdx88CCreateOracle(t *testing.T) {
 
 // fdlFromAnalysis is round 3's C5 and C13 on govax: CREATE/FDL from the FDL
 // files VMS's ANALYZE/RMS_FILE/FDL wrote of round 1's S35.IDX, S62.IDX, and
-// F122.IDX (A35.FDL, A62.FDL, A122.FDL, restored from VMS's save set into
-// [V] by runIdx88C, since govax's ANALYZE/RMS_FILE is subtask 10d's), each file compared
+// F122.IDX (A35.FDL, A62.FDL, A122.FDL, restored here from VMS's save set into
+// [V], so this holds CREATE/FDL to VMS's own FDL files), each file compared
 // with VMS's C51.IDX to C53.IDX; then A35.FDL with no file named, which makes
 // the file its NAME names, DUA1:[IN]S35.IDX;1, as its next version, ;2. It
 // returns how many files it compared.
@@ -135,6 +135,13 @@ func fdlFromAnalysis(t *testing.T, c *console.Console, vmsSet *backup.SaveSet) i
 		}
 	}
 
+	save, err := filepath.Abs(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88c.bck"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dispatch("CREATE/DIRECTORY [V]")
+	dispatch(`BACKUP "` + save + `"/SAVE_SET [V]`)
 	dispatch("CREATE/DIRECTORY [R5]")
 
 	// The save set's file of no name or type comes back with the rest.

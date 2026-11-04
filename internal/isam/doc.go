@@ -38,7 +38,8 @@
 // out records already there (change.go, subtask 6): an update in place, its RFA
 // kept, or by a split if it outgrows its bucket; a delete closing up, but for a
 // bucket's last record, kept as a deleted stub with its key. Check walks a whole
-// file for what no operation may leave, which the tests run after them. It's plain Go that
+// file for what no operation may leave, which the tests run after them. An Inspector
+// (inspect.go) is ANALYZE/RMS_FILE's walk, which reports what's wrong and goes on. It's plain Go that
 // knows nothing of VAX memory, FABs, or RABs: internal/rms maps those
 // onto it. Only Prolog 3 files are read, by the author's choice; Open
 // reports anything else as an ErrPrologLevel.

@@ -1,6 +1,7 @@
 package console
 
 import (
+	"github.com/tucats/govax/internal/anl"
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
@@ -587,7 +588,31 @@ func (d *Dispatcher) bindGrammar() {
 	// analysis is a qualifier with its own syntax; a bare ANALYZE names
 	// none.
 	g.Bind("ANALYZE", func(id int64, r *dcl.Result) error {
-		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/OBJECT or /IMAGE")
+		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/OBJECT, /IMAGE, or /RMS_FILE")
+	})
+
+	// Phase 88: ANALYZE/RMS_FILE describes RMS files (Console.AnalyzeRMSFile).
+	g.Bind("ANALYZE_RMS_FILE", func(id int64, r *dcl.Result) error {
+		mode := anl.RMSCheck
+
+		switch {
+		case r.Present("FDL") && !r.Negated("FDL"):
+			mode = anl.RMSFDL
+		case r.Present("STATISTICS") && !r.Negated("STATISTICS"):
+			mode = anl.RMSStatistics
+		case r.Present("SUMMARY") && !r.Negated("SUMMARY"):
+			mode = anl.RMSSummary
+		}
+
+		return d.Console.cmd().AnalyzeRMSFile(dclcmd.AnalyzeRMSOptions{
+			Files:       r.List("FILES"),
+			Host:        r.ParamPresent("FILES", "HOST"),
+			Mode:        mode,
+			NoOutput:    r.Negated("OUTPUT"),
+			OutputFile:  r.String("OUTPUT"),
+			HasOutput:   r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
+			CommandLine: d.Console.Line(),
+		})
 	})
 
 	// docs/PHASE-40.md: ANALYZE/IMAGE describes image files
