@@ -3223,11 +3223,11 @@ contains:
   `$SETEXV`, `$UNWIND`, `$SYNCH`, `$SETRWM`, `$ASCTOID`, `$IDTOASC`,
   `$CANWAK`.
 - **Definitions**: `$ACCDEF`, `$ATRDEF`, `$BRKDEF`, `$CLIDEF`, `$DCDEF`,
-  `$DEVDEF`, `$DSCDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$IODEF`, `$JPIDEF`,
-  `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`, `$MSGDEF`, `$NAMDEF`,
-  `$PQLDEF`, `$PRCDEF`, `$PRTDEF`, `$PRVDEF`, `$PSLDEF`, `$RABDEF`,
-  `$RMSDEF`, `$SECDEF`, `$SSDEF`, `$SYIDEF`, `$TTDEF`, and the XAB
-  definitions.
+  `$DEVDEF`, `$DSCDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$FORDEF`,
+  `$IODEF`, `$JPIDEF`, `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`,
+  `$MSGDEF`, `$NAMDEF`, `$PQLDEF`, `$PRCDEF`, `$PRTDEF`, `$PRVDEF`,
+  `$PSLDEF`, `$RABDEF`, `$RMSDEF`, `$SECDEF`, `$SSDEF`, `$SYIDEF`,
+  `$TTDEF`, and the XAB definitions.
 
 If you have VMS's own system macro library, govax uses it instead (see
 below), and every VMS system macro is available.

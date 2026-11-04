@@ -18,11 +18,8 @@
 ; R0's value after a subroutine means nothing to a program, but it comes out as
 ; FORRTL's does here, which lets the oracle compare it.
 ;
+	$DSCDEF				; descriptors' fields and codes
 	$SSDEF				; SS$_NORMAL
-
-; A string descriptor's fields, as FTN_CONTROL has them.
-DSC$W_LENGTH	= 0			; the length, in bytes
-DSC$A_POINTER	= 4			; the string's address
 
 BLANK		= ^A/ /			; what pads a long buffer
 

@@ -43,6 +43,7 @@
 ;
 	$DEVDEF
 	$FABDEF
+	$FORDEF				; FORRTL's condition values
 	$RABDEF
 	$RMSDEF
 	$SSDEF
@@ -69,11 +70,9 @@ FORM_UNFORMATTED = 2
 
 OPEN_ENDFILE	= 2			; FTN$$UNIT_OPEN's: no carriage control, no form
 
-FOR$_REWERR	= ^X001880A4		; FORRTL's condition values, with
-FOR$_BACERR	= ^X001880BC		;  their severities
-FOR$_ENDFILERR	= ^X0018810C
-FOR$_NOTFOD	= ^X00188844		; BACKSPACE's reasons: not by the names
-FOR$_NOBACK	= ^X0018884C		;  VMS gives them, which aren't known
+FOR$_NOTFOD	= ^X00188844		; BACKSPACE's reasons, which $FORDEF
+FOR$_NOBACK	= ^X0018884C		;  lacks: not by the names VMS gives
+					;  them, which aren't known
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 

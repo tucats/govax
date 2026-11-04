@@ -87,36 +87,9 @@
 ; this module's FTN$$FMT_PUT, FTN$$FMT_WRITE, FTN$$FMT_FAIL, and
 ; FTN$$FMT_WARN; F, E, D, and G are FTN_FLOAT's (FTN$$EDIT_FLOAT).
 ;
+	$DSCDEF				; descriptors' fields and codes
+	$FORDEF				; FORRTL's condition values
 	$SSDEF
-
-; FORRTL's condition values, with their severities.
-FOR$_ERRDURWRI	= ^X00188134
-FOR$_INSVIRMEM	= ^X0018814C
-FOR$_INFFORLOO	= ^X001881E4
-FOR$_FORVARMIS	= ^X001881EC
-FOR$_SYNERRFOR	= ^X001881F4
-FOR$_OUTSTAOVE	= ^X00188214
-FOR$_VFEVALERR	= ^X00188224
-
-; The descriptor's fields and codes (the VAX calling standard's).
-DSC$W_LENGTH	= 0
-DSC$B_DTYPE	= 2
-DSC$B_CLASS	= 3
-DSC$A_POINTER	= 4
-DSC$L_ARSIZE	= 12
-DSC$K_DTYPE_BU	= 2
-DSC$K_DTYPE_WU	= 3
-DSC$K_DTYPE_LU	= 4
-DSC$K_DTYPE_B	= 6
-DSC$K_DTYPE_W	= 7
-DSC$K_DTYPE_L	= 8
-DSC$K_DTYPE_F	= 10
-DSC$K_DTYPE_D	= 11
-DSC$K_DTYPE_FC	= 12
-DSC$K_DTYPE_DC	= 13
-DSC$K_DTYPE_G	= 27
-DSC$K_DTYPE_GC	= 29
-DSC$K_CLASS_A	= 4
 
 ; A FORMAT statement's block, made by the compiler: the address of the
 ; longword where the parsed format is kept, the text's length and a word
@@ -132,7 +105,6 @@ FB_A_VFE	= 12			; with flag bit 0: the expressions' routine
 FLAG_ERR	= 1
 FLAG_IOSTAT	= 4
 FLAG_RUNFMT	= 8
-FOR$_INPCONERR	= ^X00188204
 
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags

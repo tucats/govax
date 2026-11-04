@@ -32,6 +32,7 @@
 ; and any other failure of RMS's FOR$_FINERR.
 ;
 	$FABDEF
+	$FORDEF				; FORRTL's condition values
 	$RABDEF
 	$RMSDEF
 	$SSDEF
@@ -52,12 +53,6 @@ UB_CURRENT	= UB_ASV+36
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
 
 MAX_WORDS	= 32767/2		; the longest record DEFINE FILE describes
-
-FOR$_DUPFILSPE	= ^X001880AC		; FORRTL's condition values, with
-FOR$_UNIALROPE	= ^X00188114		;  their severities
-FOR$_ATTACCNON	= ^X00188124
-FOR$_INCRECTYP	= ^X00188164
-FOR$_FINERR	= ^X001881CC
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
