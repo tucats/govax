@@ -12,7 +12,7 @@
 ; The begin call is chosen by the statement's kind, named as VMS's
 ; FORTRAN run-time library names its own: READ or WRITE, then S for a
 ; unit (sequential access), D for a unit's record by its number (direct
-; access), K for a record by its key, or I for an internal file, then F formatted, L list-directed, N
+; access), or I for an internal file, then F formatted, L list-directed, N
 ; namelist, or U unformatted; and FTN$ENCODE and FTN$DECODE. Its arguments
 ; are
 ;
@@ -34,9 +34,7 @@
 ;		the number of entities, then for each the address of its
 ;		name and of its descriptor)
 ;	16(AP)	for ENCODE and DECODE, the count of characters, by value
-;	last	for a direct statement, the record's number, by value; for a keyed
-;		READ (FTN$READ_KF, FTN$READ_KU, FTN_KEYED), the last three are the
-;		key's descriptor, the key's number by value, and which specifier
+;	last	for a direct statement, the record's number, by value
 ;
 ; FTN$IO_ITEM's argument is an item's descriptor; FTN$IO_END returns the
 ; statement's status in R0: 0 for success, -1 at an end of file, or the
@@ -124,7 +122,6 @@
 ; Three namelist conditions name what was wrong (the text, or the
 ; entity's name) in their messages, before the unit: CTX_NM_FAO.
 ;
-	$RMSDEF
 	$SSDEF
 
 FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
@@ -149,23 +146,18 @@ FOR$_BACERR	= ^X001880BC
 FOR$_ENDFILERR	= ^X0018810C
 FOR$_ATTACCNON	= ^X00188124
 FOR$_FINERR	= ^X001881CC
+FOR$_NOTIMP_K	= ^X00188014		; (FOR$_NOTIMP, for a keyed READ)
 FOR$_OPEDEFREQ	= ^X001880D4
 FOR$_NO_CURREC	= ^X001881AC
 FOR$_REWRITERR	= ^X001881B4
 FOR$_DELERR	= ^X001881BC
 FOR$_UNLERR	= ^X001881C4
 FOR$_SPERECLOC	= ^X001881A4
-FOR$_MIXFILACC	= ^X001880FC
-FOR$_INVKEYSPE	= ^X0018818C
-FOR$_INCKEYCHG	= ^X00188194
 
 UB_OPEN		= 0			; A unit's block (FTN_UNITS)
-UB_STS		= 8
 UB_ACCESS	= 37
 UB_CURRENT	= 620+36
 UB_REWRITE	= 620+37
-UB_KEYED	= 620+38
-ACCESS_DIRECT	= 1
 ACCESS_KEYED	= 4
 
 ; The control block's fields and flags.
@@ -277,7 +269,7 @@ RMS_REPORTED:
 	.LONG	FOR$_FILNOTFOU, FOR$_OPEFAI, FOR$_NO_SUCDEV, FOR$_FILNAMSPE
 	.LONG	FOR$_CLOERR, FOR$_REWERR, FOR$_BACERR, FOR$_ENDFILERR
 	.LONG	FOR$_ATTACCNON, FOR$_FINERR, FOR$_REWRITERR, FOR$_DELERR
-	.LONG	FOR$_UNLERR, FOR$_SPERECLOC, FOR$_INVKEYSPE, FOR$_INCKEYCHG, 0
+	.LONG	FOR$_UNLERR, FOR$_SPERECLOC, 0
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -413,12 +405,7 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	BLBC	R0,34$
 	BSBW	CHECK_NESTED
 	BLBC	R0,34$
-	MOVL	CTX_STREAM(R3),R1	; never on a keyed unit (for88's #302)
-	BLBC	UB_OPEN(R1),33$
-	MOVL	#FOR$_MIXFILACC,R0
-	CMPB	UB_ACCESS(R1),#ACCESS_KEYED
-	BEQL	34$
-33$:	MOVZBL	(AP),R0
+	MOVZBL	(AP),R0
 	PUSHL	(AP)[R0]		; the record
 	BICL3	#^C1,R6,R0
 	XORL2	#1,R0			; 1 for a READ
@@ -447,9 +434,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
 	BLBS	R0,65$
 	BRW	FAIL
-65$:	MOVZBL	CTX_DIRECT(R3),-(SP)	; 1 for a direct statement, a REWRITE, or a
-	BISB2	CTX_REWRITE(R3),(SP)	;  keyed READ, which have seen to the access
-	BISB2	CTX_KEYED(R3),(SP)
+65$:	MOVZBL	CTX_DIRECT(R3),-(SP)	; 1 for a direct statement or a
+	BISB2	CTX_REWRITE(R3),(SP)	;  REWRITE, which has either kind of unit
 	MOVL	#FORM_FORMATTED,-(SP)	; the statement's form
 	CMPL	R6,#K_READ_SU
 	BLSSU	66$
@@ -460,20 +446,8 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	CALLS	#5,FTN$$UNIT_RECORD	; FTN_UNITS
 	MOVL	R0,CTX_RECP(R3)
 	TSTL	R1
-	BEQL	70$
-	MOVL	R1,R0			; the statement can't use the unit
-	BRW	FAIL
-70$:	TSTB	CTX_KEYED(R3)
 	BEQL	75$
-	MOVZBL	(AP),R0			; a keyed READ: its last three arguments
-	PUSHL	(AP)[R0]		; the specifier
-	DECL	R0
-	PUSHL	(AP)[R0]		; the key's number
-	DECL	R0
-	PUSHL	(AP)[R0]		; the value
-	PUSHL	CTX_STREAM(R3)
-	CALLS	#4,FTN$$KEY_START	; FTN_KEYED
-	BLBS	R0,75$
+	MOVL	R1,R0			; the statement can't use the unit
 	BRW	FAIL
 75$:	CMPL	R6,#K_READ_SU
 	BLSSU	76$
@@ -538,10 +512,11 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 42$:	BRW	FAIL
 
 ;
-; A keyed READ's unit is connected as a READ's would be, so that one with no file
-; is FOR$_FILNOTFOU (testdata/for81, round 2's #37 to #40). It must have keyed
-; access: a sequential unit's is FOR$_OPEDEFREQ, and a direct unit's FOR$_MIXFILACC
-; (testdata/for88's #277, #278). FTN_KEYED has the key.
+; A keyed READ (KEY=, KEYEQ=, KEYGE=, KEYGT=) reads an indexed file,
+; which FTNRTL doesn't open yet (Decision 13). As VMS's run shows (testdata/for81,
+; round 2's #37 to #40), the unit is connected as a READ's would be, so that one
+; with no file is FOR$_FILNOTFOU, and a unit whose access isn't keyed is
+; FOR$_OPEDEFREQ; any other would be FOR$_NOTIMP.
 ;
 50$:	BSBW	OPEN_FLAGS
 	PUSHL	R0
@@ -552,13 +527,10 @@ BEGIN:	MOVL	12(FP),R2		; the caller's FP, saved in this frame
 	BSBW	CHECK_NESTED
 	BLBC	R0,52$
 	MOVL	CTX_STREAM(R3),R1
-	MOVL	#FOR$_MIXFILACC,R0
-	CMPB	UB_ACCESS(R1),#ACCESS_DIRECT
-	BEQL	52$
 	MOVL	#FOR$_OPEDEFREQ,R0
 	CMPB	UB_ACCESS(R1),#ACCESS_KEYED
 	BNEQ	52$
-	BRW	65$
+	MOVL	#FOR$_NOTIMP_K,R0
 52$:	BRW	FAIL
 
 ;
@@ -881,20 +853,8 @@ REPORT		= -36			; the name's length and address, RMS's
 10$:	MOVL	R2,R7
 	PUSHL	R2
 	CALLS	#1,POP_TO
-	MOVL	CTX_STREAM(R2),R0	; a keyed READ that failed before its $GET
-	BEQL	101$
-	CLRB	UB_KEYED(R0)
-101$:	MOVL	CTX_STATUS(R2),R3
-	CMPL	R3,#FOR$_ERRDURWRI	; a key RMS wouldn't have, for a WRITE or a
-	BNEQ	11$			;  REWRITE, is its own condition (for88's
-	MOVL	CTX_STREAM(R2),R0	;  #289, #296)
-	BEQL	11$
-	CMPL	UB_STS(R0),#RMS$_DUP
-	BEQL	105$
-	CMPL	UB_STS(R0),#RMS$_CHG
-	BNEQ	11$
-105$:	MOVL	#FOR$_INCKEYCHG,R3
-11$:	TSTB	CTX_REWRITE(R2)		; a REWRITE: its record is written
+	MOVL	CTX_STATUS(R2),R3
+	TSTB	CTX_REWRITE(R2)		; a REWRITE: its record is written
 	BEQL	15$
 	MOVL	CTX_STREAM(R2),R0
 	BEQL	12$
@@ -1025,11 +985,7 @@ SIGNAL_FAILURE:
 	CLRL	-(SP)
 	PUSHL	R0
 	ADDL2	#2,R6
-51$:	CMPL	R3,#FOR$_MIXFILACC	; one longword more, as VMS's run counts them
-	BNEQ	52$			;  (testdata/for81 and for88, n=10; what it is
-	CLRL	-(SP)			;  VMS's handler didn't show)
-	INCL	R6
-52$:	PUSHL	REPORT+12(FP)		; RMS's status value
+51$:	PUSHL	REPORT+12(FP)		; RMS's status value
 	PUSHL	REPORT+8(FP)		;  and status
 	PUSHL	R5			; the user PC
 	PUSHAQ	FILE_DESC(FP)		; the file

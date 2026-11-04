@@ -1,5 +1,5 @@
 
-FTNRTL                                                           3-NOV-2026 09:41        Linker V11-39                    Page    1
+FTNRTL                                                           4-NOV-2026 15:58        Linker V11-39                    Page    1
 
                                              +------------------------+
                                              ! Object Module Synopsis !
@@ -7,25 +7,26 @@ FTNRTL                                                           3-NOV-2026 09:4
 
 Module Name     Ident              Bytes      File                                Creation Date      Creator
 -----------     -----              -----      -----                               -------------      -------
-FTN_VECTOR      V1.0                  664 DUA1:[FTN86]FTN_VECTOR.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_CONTROL     V1.0                  174 DUA1:[FTN86]FTN_CONTROL.OBJ;1         3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_UNITS       V2.0                 3336 DUA1:[FTN86]FTN_UNITS.OBJ;1           3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_STATEMENT   V1.0                 2106 DUA1:[FTN86]FTN_STATEMENT.OBJ;1       3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_FORMAT      V1.0                 3342 DUA1:[FTN86]FTN_FORMAT.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_EDIT        V1.0                 1323 DUA1:[FTN86]FTN_EDIT.OBJ;1            3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_FLOAT       V1.0                 1099 DUA1:[FTN86]FTN_FLOAT.OBJ;1           3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_LISTOUT     V1.0                 1372 DUA1:[FTN86]FTN_LISTOUT.OBJ;1         3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_LISTIN      V1.0                 1535 DUA1:[FTN86]FTN_LISTIN.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_NAMELIST    V1.0                 2902 DUA1:[FTN86]FTN_NAMELIST.OBJ;1        3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_INTERNAL    V1.0                  290 DUA1:[FTN86]FTN_INTERNAL.OBJ;1        3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_OPEN        V1.0                 2078 DUA1:[FTN86]FTN_OPEN.OBJ;1            3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_INQUIRE     V1.0                 1399 DUA1:[FTN86]FTN_INQUIRE.OBJ;1         3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_POSITION    V1.0                  385 DUA1:[FTN86]FTN_POSITION.OBJ;1        3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_UNFORMATTED V1.0                  539 DUA1:[FTN86]FTN_UNFORMATTED.OBJ;1     3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_DIRECT      V1.0                  259 DUA1:[FTN86]FTN_DIRECT.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_RECORD      V1.0                  375 DUA1:[FTN86]FTN_RECORD.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_INTRINSICS  V1.0                  403 DUA1:[FTN86]FTN_INTRINSICS.OBJ;1      3-NOV-2026 09:41  VAX MACRO V5.4-3
-FTN_SYSTEM      V1.0                  462 DUA1:[FTN86]FTN_SYSTEM.OBJ;1          3-NOV-2026 09:41  VAX MACRO V5.4-3
+FTN_VECTOR      V1.0                  672 DUA1:[FTN86]FTN_VECTOR.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_CONTROL     V1.0                  174 DUA1:[FTN86]FTN_CONTROL.OBJ;1         4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_UNITS       V2.0                 3545 DUA1:[FTN86]FTN_UNITS.OBJ;1           4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_STATEMENT   V1.0                 2251 DUA1:[FTN86]FTN_STATEMENT.OBJ;1       4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_FORMAT      V1.0                 3342 DUA1:[FTN86]FTN_FORMAT.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_EDIT        V1.0                 1323 DUA1:[FTN86]FTN_EDIT.OBJ;1            4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_FLOAT       V1.0                 1099 DUA1:[FTN86]FTN_FLOAT.OBJ;1           4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_LISTOUT     V1.0                 1372 DUA1:[FTN86]FTN_LISTOUT.OBJ;1         4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_LISTIN      V1.0                 1535 DUA1:[FTN86]FTN_LISTIN.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_NAMELIST    V1.0                 2902 DUA1:[FTN86]FTN_NAMELIST.OBJ;1        4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_INTERNAL    V1.0                  290 DUA1:[FTN86]FTN_INTERNAL.OBJ;1        4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_OPEN        V1.0                 2607 DUA1:[FTN86]FTN_OPEN.OBJ;1            4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_INQUIRE     V1.0                 1399 DUA1:[FTN86]FTN_INQUIRE.OBJ;1         4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_POSITION    V1.0                  385 DUA1:[FTN86]FTN_POSITION.OBJ;1        4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_UNFORMATTED V1.0                  553 DUA1:[FTN86]FTN_UNFORMATTED.OBJ;1     4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_DIRECT      V1.0                  259 DUA1:[FTN86]FTN_DIRECT.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_RECORD      V1.0                  410 DUA1:[FTN86]FTN_RECORD.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_KEYED       V1.0                  358 DUA1:[FTN86]FTN_KEYED.OBJ;1           4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_INTRINSICS  V1.0                  403 DUA1:[FTN86]FTN_INTRINSICS.OBJ;1      4-NOV-2026 15:58  VAX MACRO V5.4-3
+FTN_SYSTEM      V1.0                  462 DUA1:[FTN86]FTN_SYSTEM.OBJ;1          4-NOV-2026 15:58  VAX MACRO V5.4-3
 FOR$MSGDEF      X-6                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 14:54  Message T02-12
 SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
 LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
@@ -36,15 +37,15 @@ LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      2
 
 Module Name                        Number  Module Name                        Number  Module Name                        Number
 -----------                        ------  -----------                        ------  -----------                        ------
-FTN_VECTOR                              1  FTN_CONTROL                             6  FTN_UNITS                              21  
+FTN_VECTOR                              1  FTN_CONTROL                             6  FTN_UNITS                              22  
 FTN_STATEMENT                          35  FTN_FORMAT                             17  FTN_EDIT                                2  
 FTN_FLOAT                               2  FTN_LISTOUT                             8  FTN_LISTIN                              8  
 FTN_NAMELIST                            3  FTN_INTERNAL                            5  FTN_OPEN                                4  
 FTN_INQUIRE                             3  FTN_POSITION                            5  FTN_UNFORMATTED                         4  
-FTN_DIRECT                              4  FTN_RECORD                              4  FTN_INTRINSICS                         29  
-FTN_SYSTEM                             12  
+FTN_DIRECT                              4  FTN_RECORD                              4  FTN_KEYED                               2  
+FTN_INTRINSICS                         29  FTN_SYSTEM                             12  
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    2
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    2
 
                                              +------------------------+
                                              ! Image Section Synopsis !
@@ -56,9 +57,9 @@ DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:4
 FTNRTL_VECTOR      3     2    00000000-R        2   0 READ ONLY     
 
 DEFAULT_CLUSTER    3     3    00000400-R        4   0 READ ONLY     
-                   3    42    00000A00-R        7   0 READ ONLY     
-                   4     2    00005E00-R       49   0 READ WRITE   COPY ON REF
-                   2     1    00006200-R       51   0 READ WRITE   FIXUP VECTORS
+                   3    45    00000A00-R        7   0 READ ONLY     
+                   4     2    00006400-R       52   0 READ WRITE   COPY ON REF
+                   2     1    00006800-R       54   0 READ WRITE   FIXUP VECTORS
 
 LIBRTL             3   264    00000000-R        0   0 READ ONLY                  LIBRTL_001       LESS/EQUAL        1        14
                    4    15    00021000-R        0   0 READ WRITE   DEMAND ZERO   LIBRTL_002       LESS/EQUAL        1        14
@@ -71,7 +72,7 @@ LIBRTL             3   264    00000000-R        0   0 READ ONLY                 
 		! P  - Protected     !
 		+--------------------+
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    3
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    3
 
                                             +--------------------------+
                                             ! Program Section Synopsis !
@@ -80,44 +81,45 @@ DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:4
 Psect Name      Module Name       Base     End           Length            Align                 Attributes
 ----------      -----------       ----     ---           ------            -----                 ----------
 
-$$FTN_VECTOR                    00000000 00000297 00000298 (        664.) PAGE  9   PIC,USR,CON,REL,GBL,  SHR,  EXE,  RD,NOWRT,NOVEC
-                FTN_VECTOR      00000000 00000297 00000298 (        664.) PAGE  9
+$$FTN_VECTOR                    00000000 0000029F 000002A0 (        672.) PAGE  9   PIC,USR,CON,REL,GBL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                FTN_VECTOR      00000000 0000029F 000002A0 (        672.) PAGE  9
 
-$FTN_PDATA                      00000400 00000968 00000569 (       1385.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,NOEXE,  RD,NOWRT,NOVEC
+$FTN_PDATA                      00000400 0000097C 0000057D (       1405.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,NOEXE,  RD,NOWRT,NOVEC
                 FTN_CONTROL     00000400 00000423 00000024 (         36.) LONG  2
                 FTN_UNITS       00000424 000005DA 000001B7 (        439.) LONG  2
-                FTN_STATEMENT   000005DC 00000627 0000004C (         76.) LONG  2
-                FTN_FORMAT      00000628 00000639 00000012 (         18.) LONG  2
-                FTN_LISTIN      0000063C 0000063C 00000001 (          1.) LONG  2
-                FTN_OPEN        00000640 000007DE 0000019F (        415.) LONG  2
-                FTN_INQUIRE     000007E0 00000964 00000185 (        389.) LONG  2
-                FTN_POSITION    00000968 00000968 00000001 (          1.) LONG  2
+                FTN_STATEMENT   000005DC 0000062F 00000054 (         84.) LONG  2
+                FTN_FORMAT      00000630 00000641 00000012 (         18.) LONG  2
+                FTN_LISTIN      00000644 00000644 00000001 (          1.) LONG  2
+                FTN_OPEN        00000648 000007F2 000001AB (        427.) LONG  2
+                FTN_INQUIRE     000007F4 00000978 00000185 (        389.) LONG  2
+                FTN_POSITION    0000097C 0000097C 00000001 (          1.) LONG  2
 
-$FTN_CODE                       00000A00 00005DE1 000053E2 (      21474.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+$FTN_CODE                       00000A00 000062D9 000058DA (      22746.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
                 FTN_CONTROL     00000A00 00000A89 0000008A (        138.) LONG  2
-                FTN_UNITS       00000A8C 000013D4 00000949 (       2377.) LONG  2
-                FTN_STATEMENT   000013D8 00001BA5 000007CE (       1998.) LONG  2
-                FTN_FORMAT      00001BA8 000028A3 00000CFC (       3324.) LONG  2
-                FTN_EDIT        000028A4 00002DCE 0000052B (       1323.) LONG  2
-                FTN_FLOAT       00002DD0 0000321A 0000044B (       1099.) LONG  2
-                FTN_LISTOUT     0000321C 00003777 0000055C (       1372.) LONG  2
-                FTN_LISTIN      00003778 00003D75 000005FE (       1534.) LONG  2
-                FTN_NAMELIST    00003D78 000048CD 00000B56 (       2902.) LONG  2
-                FTN_INTERNAL    000048D0 000049F1 00000122 (        290.) LONG  2
-                FTN_OPEN        000049F4 00005072 0000067F (       1663.) LONG  2
-                FTN_INQUIRE     00005074 00005465 000003F2 (       1010.) LONG  2
-                FTN_POSITION    00005468 000055E7 00000180 (        384.) LONG  2
-                FTN_UNFORMATTED 000055E8 00005802 0000021B (        539.) LONG  2
-                FTN_DIRECT      00005804 00005906 00000103 (        259.) LONG  2
-                FTN_RECORD      00005908 00005A7E 00000177 (        375.) LONG  2
-                FTN_INTRINSICS  00005A80 00005C12 00000193 (        403.) LONG  2
-                FTN_SYSTEM      00005C14 00005DE1 000001CE (        462.) LONG  2
+                FTN_UNITS       00000A8C 000014A5 00000A1A (       2586.) LONG  2
+                FTN_STATEMENT   000014A8 00001CFE 00000857 (       2135.) LONG  2
+                FTN_FORMAT      00001D00 000029FB 00000CFC (       3324.) LONG  2
+                FTN_EDIT        000029FC 00002F26 0000052B (       1323.) LONG  2
+                FTN_FLOAT       00002F28 00003372 0000044B (       1099.) LONG  2
+                FTN_LISTOUT     00003374 000038CF 0000055C (       1372.) LONG  2
+                FTN_LISTIN      000038D0 00003ECD 000005FE (       1534.) LONG  2
+                FTN_NAMELIST    00003ED0 00004A25 00000B56 (       2902.) LONG  2
+                FTN_INTERNAL    00004A28 00004B49 00000122 (        290.) LONG  2
+                FTN_OPEN        00004B4C 000053CF 00000884 (       2180.) LONG  2
+                FTN_INQUIRE     000053D0 000057C1 000003F2 (       1010.) LONG  2
+                FTN_POSITION    000057C4 00005943 00000180 (        384.) LONG  2
+                FTN_UNFORMATTED 00005944 00005B6C 00000229 (        553.) LONG  2
+                FTN_DIRECT      00005B70 00005C72 00000103 (        259.) LONG  2
+                FTN_RECORD      00005C74 00005E0D 0000019A (        410.) LONG  2
+                FTN_KEYED       00005E10 00005F75 00000166 (        358.) LONG  2
+                FTN_INTRINSICS  00005F78 0000610A 00000193 (        403.) LONG  2
+                FTN_SYSTEM      0000610C 000062D9 000001CE (        462.) LONG  2
 
-$FTN_DATA                       00005E00 00006027 00000228 (        552.) LONG  2   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
-                FTN_UNITS       00005E00 00006007 00000208 (        520.) LONG  2
-                FTN_STATEMENT   00006008 00006027 00000020 (         32.) LONG  2
+$FTN_DATA                       00006400 00006627 00000228 (        552.) LONG  2   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                FTN_UNITS       00006400 00006607 00000208 (        520.) LONG  2
+                FTN_STATEMENT   00006608 00006627 00000020 (         32.) LONG  2
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    4
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    4
 
                                                 +-----------------+
                                                 ! Symbols By Name !
@@ -125,115 +127,115 @@ DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:4
 
 Symbol                          Value       Symbol                          Value       Symbol                          Value       
 ------                          -----       ------                          -----       ------                          -----       
-FOR$_ADJARRDIM                  001882EC                                                FTN$$UNIT_RECORD                0000107E-R  
-FOR$_FORVARMIS                  001881EC                                                FTN$$UNIT_REPORT                00001394-R  
-FTN$$EDIT_FIELD                 00002CF4-R                                              FTN$$UNIT_SAME                  00000F9F-R  
-FTN$$EDIT_FLOAT                 00002DD0-R                                              FTN$$UNIT_TERMINAL              000013C0-R  
-FTN$$EDIT_INT                   000028A4-R                                              FTN$ADJARRDIM                   00000A7A-RU 
-FTN$$FMT_END                    00001CE7-R                                              FTN$BACKSPACE                   000054E8-RU 
-FTN$$FMT_FAIL                   00001D5A-R                                              FTN$BITEST                      00005B5D-RU 
-FTN$$FMT_FREE                   00001D37-R                                              FTN$BJTEST                      00005B55-RU 
-FTN$$FMT_ITEM                   00001C6E-R                                              FTN$CHAR                        00005B13-RU 
-FTN$$FMT_PUT                    00002119-R                                              FTN$CLOSE                       00005026-RU 
-FTN$$FMT_READ                   000020DF-R                                              FTN$DATE                        00005C33-RU 
-FTN$$FMT_START                  00001BA8-R                                              FTN$DATE_T_DS                   00005C44-RU 
-FTN$$FMT_WARN                   00001D83-R                                              FTN$DBLEQ                       00005BD9-RU 
-FTN$$FMT_WRITE                  00002074-R                                              FTN$DECODE                      00001498-RU 
-FTN$$INT_END                    00004975-R                                              FTN$DEF_FILE                    00005830-RU 
-FTN$$INT_NEXT                   00004937-R                                              FTN$DEF_FILE_W                  00005837-RU 
-FTN$$INT_READ                   000049AB-R                                              FTN$DELETE                      0000593F-RU 
-FTN$$INT_START                  000048D0-R                                              FTN$DELETE_D                    0000597E-RU 
-FTN$$IO_SIGNAL                  00001A1E-R                                              FTN$ENCODE                      000014A0-RU 
-FTN$$LISTIN_ITEM                00003790-R                                              FTN$ENDFILE                     0000557C-RU 
-FTN$$LISTIN_START               00003778-R                                              FTN$ERRSNS                      00001B5B-RU 
-FTN$$LIST_END                   00003288-R                                              FTN$ERRSNS_W                    00001B61-RU 
-FTN$$LIST_ITEM                  00003246-R                                              FTN$EXIT                        00005D86-RU 
-FTN$$LIST_START                 0000321C-R                                              FTN$EXIT_W                      00005D9C-RU 
-FTN$$LIST_VALUE                 000033F2-R                                              FTN$FIND                        00005894-RU 
-FTN$$LI_ADD                     0000395D-R                                              FTN$GBLEQ                       00005BE1-RU 
-FTN$$LI_SKIP                    000038AE-R                                              FTN$ICHAR                       00005B08-RU 
-FTN$$LI_STORE                   00003B00-R                                              FTN$IDATE                       00005CD5-RU 
-FTN$$LI_TEXT                    00003984-R                                              FTN$IIBCLR                      00005BB1-RU 
-FTN$$NAME_TEXT                  00004AE5-R                                              FTN$IIBITS                      00005B79-RU 
-FTN$$NML_READ                   00003D78-R                                              FTN$IIBSET                      00005B96-RU 
-FTN$$NML_WRITE                  00004611-R                                              FTN$IISHFTC                     00005A91-RU 
-FTN$$STMT_FILE                  000016AD-R                                              FTN$IMVBITS                     00005DB2-RU 
-FTN$$UNF_END                    000056D7-R                                              FTN$INDEX                       00005AE3-RU 
-FTN$$UNF_ITEM                   00005614-R                                              FTN$INQUIRE                     00005074-RU 
-FTN$$UNF_START                  000055E8-R                                              FTN$IO_END                      00001943-RU 
-FTN$$UNIT_BLOCK                 0000102E-R                                              FTN$IO_ITEM                     000018D3-RU 
-FTN$$UNIT_CLOSE                 00000F1F-R                                              FTN$IZEXT                       00005BC3-RU 
-FTN$$UNIT_DEFINED               0000130B-R                                              FTN$JDATE                       00005D05-RU 
-FTN$$UNIT_DIRECT                000012A2-R                                              FTN$JIBCLR                      00005BA5-RU 
-FTN$$UNIT_FAILED                00000D9E-R                                              FTN$JIBITS                      00005B6E-RU 
-FTN$$UNIT_FIND                  00000A8C-R                                              FTN$JIBSET                      00005B8A-RU 
-FTN$$UNIT_FOUND                 000012F8-R                                              FTN$JISHFTC                     00005A80-RU 
-FTN$$UNIT_GET                   0000117D-R                                              FTN$JMVBITS                     00005DCD-RU 
-FTN$$UNIT_INIT                  00000B40-R                                              FTN$JZEXT                       00005BCA-RU 
-FTN$$UNIT_NAMED                 00001044-R                                              FTN$LEN                         00005ADC-RU 
-FTN$$UNIT_OPEN                  00000D2B-R                                              FTN$LGE                         00005B37-RU 
-FTN$$UNIT_PUT                   000010F8-R                                              FTN$LGT                         00005B2F-RU 
-FTN$$UNIT_READY                 00000E20-R                                              FTN$LLE                         00005B27-RU 
+FOR$_ADJARRDIM                  001882EC                                                FTN$$UNIT_READY                 00000E46-R  
+FOR$_FORVARMIS                  001881EC                                                FTN$$UNIT_RECORD                000010D7-R  
+FTN$$EDIT_FIELD                 00002E4C-R                                              FTN$$UNIT_REPORT                00001465-R  
+FTN$$EDIT_FLOAT                 00002F28-R                                              FTN$$UNIT_SAME                  00000FCA-R  
+FTN$$EDIT_INT                   000029FC-R                                              FTN$$UNIT_TERMINAL              00001491-R  
+FTN$$FMT_END                    00001E3F-R                                              FTN$ADJARRDIM                   00000A7A-RU 
+FTN$$FMT_FAIL                   00001EB2-R                                              FTN$BACKSPACE                   00005844-RU 
+FTN$$FMT_FREE                   00001E8F-R                                              FTN$BITEST                      00006055-RU 
+FTN$$FMT_ITEM                   00001DC6-R                                              FTN$BJTEST                      0000604D-RU 
+FTN$$FMT_PUT                    00002271-R                                              FTN$CHAR                        0000600B-RU 
+FTN$$FMT_READ                   00002237-R                                              FTN$CLOSE                       00005383-RU 
+FTN$$FMT_START                  00001D00-R                                              FTN$DATE                        0000612B-RU 
+FTN$$FMT_WARN                   00001EDB-R                                              FTN$DATE_T_DS                   0000613C-RU 
+FTN$$FMT_WRITE                  000021CC-R                                              FTN$DBLEQ                       000060D1-RU 
+FTN$$INT_END                    00004ACD-R                                              FTN$DECODE                      00001568-RU 
+FTN$$INT_NEXT                   00004A8F-R                                              FTN$DEF_FILE                    00005B9C-RU 
+FTN$$INT_READ                   00004B03-R                                              FTN$DEF_FILE_W                  00005BA3-RU 
+FTN$$INT_START                  00004A28-R                                              FTN$DELETE                      00005CAB-RU 
+FTN$$IO_SIGNAL                  00001B6A-R                                              FTN$DELETE_D                    00005D0D-RU 
+FTN$$KEY_START                  00005E10-R                                              FTN$ENCODE                      00001570-RU 
+FTN$$LISTIN_ITEM                000038E8-R                                              FTN$ENDFILE                     000058D8-RU 
+FTN$$LISTIN_START               000038D0-R                                              FTN$ERRSNS                      00001CB4-RU 
+FTN$$LIST_END                   000033E0-R                                              FTN$ERRSNS_W                    00001CBA-RU 
+FTN$$LIST_ITEM                  0000339E-R                                              FTN$EXIT                        0000627E-RU 
+FTN$$LIST_START                 00003374-R                                              FTN$EXIT_W                      00006294-RU 
+FTN$$LIST_VALUE                 0000354A-R                                              FTN$FIND                        00005C00-RU 
+FTN$$LI_ADD                     00003AB5-R                                              FTN$GBLEQ                       000060D9-RU 
+FTN$$LI_SKIP                    00003A06-R                                              FTN$ICHAR                       00006000-RU 
+FTN$$LI_STORE                   00003C58-R                                              FTN$IDATE                       000061CD-RU 
+FTN$$LI_TEXT                    00003ADC-R                                              FTN$IIBCLR                      000060A9-RU 
+FTN$$NAME_TEXT                  00004C46-R                                              FTN$IIBITS                      00006071-RU 
+FTN$$NML_READ                   00003ED0-R                                              FTN$IIBSET                      0000608E-RU 
+FTN$$NML_WRITE                  00004769-R                                              FTN$IISHFTC                     00005F89-RU 
+FTN$$STMT_FILE                  000017C5-R                                              FTN$IMVBITS                     000062AA-RU 
+FTN$$UNF_END                    00005A41-R                                              FTN$INDEX                       00005FDB-RU 
+FTN$$UNF_ITEM                   00005970-R                                              FTN$INQUIRE                     000053D0-RU 
+FTN$$UNF_START                  00005944-R                                              FTN$IO_END                      00001A5B-RU 
+FTN$$UNIT_BLOCK                 00001059-R                                              FTN$IO_ITEM                     000019EB-RU 
+FTN$$UNIT_CLOSE                 00000F4A-R                                              FTN$IZEXT                       000060BB-RU 
+FTN$$UNIT_DEFINED               000013DC-R                                              FTN$JDATE                       000061FD-RU 
+FTN$$UNIT_DIRECT                00001373-R                                              FTN$JIBCLR                      0000609D-RU 
+FTN$$UNIT_FAILED                00000DA2-R                                              FTN$JIBITS                      00006066-RU 
+FTN$$UNIT_FIND                  00000A8C-R                                              FTN$JIBSET                      00006082-RU 
+FTN$$UNIT_FOUND                 000013C9-R                                              FTN$JISHFTC                     00005F78-RU 
+FTN$$UNIT_GET                   000011EA-R                                              FTN$JMVBITS                     000062C5-RU 
+FTN$$UNIT_INIT                  00000B40-R                                              FTN$JZEXT                       000060C2-RU 
+FTN$$UNIT_NAMED                 0000109D-R                                              FTN$LEN                         00005FD4-RU 
+FTN$$UNIT_OPEN                  00000D2F-R                                              FTN$LGE                         0000602F-RU 
+FTN$$UNIT_PUT                   0000114B-R                                              FTN$LGT                         00006027-RU 
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    5
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    5
 
 
 Symbol                          Value       Symbol                          Value       Symbol                          Value       
 ------                          -----       ------                          -----       ------                          -----       
-FTN$LLT                         00005B1F-RU                                             OTS$CVT_T_H                     00006260-RX 
-FTN$NWORKERS                    00005C0D-RU                                             POP_GONE                        000018B2-R  
-FTN$OPEN                        00004B18-RU                                             POP_TO                          0000188B-R  
-FTN$PAUSE                       00000A4D-RU                                             SYS$ASCTIM                      7FFEDE48    
-FTN$PRINT_LIST                  000014A8-RU                                             SYS$CLOSE                       7FFEE1B8    
-FTN$QEXT                        00005BE9-RU                                             SYS$CONNECT                     7FFEE1C0    
-FTN$QEXTD                       00005BF2-RU                                             SYS$CREATE                      7FFEE1C8    
-FTN$QEXTG                       00005BFB-RU                                             SYS$DCLEXH                      7FFEDEF0    
-FTN$QFLOAT                      00005C04-RU                                             SYS$DELETE                      7FFEE168    
-FTN$READ_DF                     00001418-RU                                             SYS$EXIT                        7FFEDF40    
-FTN$READ_DU                     00001430-RU                                             SYS$FIND                        7FFEE170    
-FTN$READ_IF                     00001478-RU                                             SYS$FREE                        7FFEE178    
-FTN$READ_IL                     00001488-RU                                             SYS$GET                         7FFEE180    
-FTN$READ_KF                     00001460-RU                                             SYS$IMGSTA                      7FFEDF68    
-FTN$READ_KU                     0000146C-RU                                             SYS$NUMTIM                      7FFEDFB8    
-FTN$READ_SF                     000013D8-RU                                             SYS$OPEN                        7FFEE208    
-FTN$READ_SL                     000013E8-RU                                             SYS$PARSE                       7FFEE230    
-FTN$READ_SN                     000013F8-RU                                             SYS$PUT                         7FFEE188    
-FTN$READ_SU                     00001408-RU                                             SYS$REWIND                      7FFEE210    
-FTN$REWIND                      000054A9-RU                                             SYS$SEARCH                      7FFEE248    
-FTN$REWRITE_SF                  00001448-RU                                             SYS$SETAST                      7FFEDFF8    
-FTN$REWRITE_SU                  00001454-RU                                             SYS$TRNLNM                      7FFEE490    
-FTN$SECNDS                      00005D35-RU                                             SYS$UPDATE                      7FFEE1A0    
-FTN$SNGLQ                       00005BD1-RU                                             
+FTN$LLE                         0000601F-RU                                             OTS$CVT_T_F                     0000685C-RX 
+FTN$LLT                         00006017-RU                                             OTS$CVT_T_G                     00006864-RX 
+FTN$NWORKERS                    00006105-RU                                             OTS$CVT_T_H                     00006860-RX 
+FTN$OPEN                        00004C79-RU                                             POP_GONE                        000019CA-R  
+FTN$PAUSE                       00000A4D-RU                                             POP_TO                          000019A3-R  
+FTN$PRINT_LIST                  00001578-RU                                             SYS$ASCTIM                      7FFEDE48    
+FTN$QEXT                        000060E1-RU                                             SYS$CLOSE                       7FFEE1B8    
+FTN$QEXTD                       000060EA-RU                                             SYS$CONNECT                     7FFEE1C0    
+FTN$QEXTG                       000060F3-RU                                             SYS$CREATE                      7FFEE1C8    
+FTN$QFLOAT                      000060FC-RU                                             SYS$DCLEXH                      7FFEDEF0    
+FTN$RAB                         0000106F-RU                                             SYS$DELETE                      7FFEE168    
+FTN$READ_DF                     000014E8-RU                                             SYS$DISPLAY                     7FFEE1D8    
+FTN$READ_DU                     00001500-RU                                             SYS$EXIT                        7FFEDF40    
+FTN$READ_IF                     00001548-RU                                             SYS$FIND                        7FFEE170    
+FTN$READ_IL                     00001558-RU                                             SYS$FREE                        7FFEE178    
+FTN$READ_KF                     00001530-RU                                             SYS$GET                         7FFEE180    
+FTN$READ_KU                     0000153C-RU                                             SYS$IMGSTA                      7FFEDF68    
+FTN$READ_SF                     000014A8-RU                                             SYS$NUMTIM                      7FFEDFB8    
+FTN$READ_SL                     000014B8-RU                                             SYS$OPEN                        7FFEE208    
+FTN$READ_SN                     000014C8-RU                                             SYS$PARSE                       7FFEE230    
+FTN$READ_SU                     000014D8-RU                                             SYS$PUT                         7FFEE188    
+FTN$REWIND                      00005805-RU                                             SYS$REWIND                      7FFEE210    
+FTN$REWRITE_SF                  00001518-RU                                             SYS$SEARCH                      7FFEE248    
+FTN$REWRITE_SU                  00001524-RU                                             SYS$SETAST                      7FFEDFF8    
+FTN$SECNDS                      0000622D-RU                                             SYS$TRNLNM                      7FFEE490    
+FTN$SNGLQ                       000060C9-RU                                             SYS$UPDATE                      7FFEE1A0    
 FTN$STOP                        00000A1F-RU                                             
-FTN$TIME                        00005C65-RU                                             
-FTN$TIME_T_DS                   00005C7F-RU                                             
-FTN$UNLOCK                      00005A32-RU                                             
+FTN$TIME                        0000615D-RU                                             
+FTN$TIME_T_DS                   00006177-RU                                             
+FTN$UNLOCK                      00005DC1-RU                                             
 FTN$VERSION                     00000A00-RU                                             
-FTN$WRITE_DF                    00001424-RU                                             
-FTN$WRITE_DU                    0000143C-RU                                             
-FTN$WRITE_IF                    00001480-RU                                             
-FTN$WRITE_IL                    00001490-RU                                             
-FTN$WRITE_LIST                  000014B2-RU                                             
-FTN$WRITE_SF                    000013E0-RU                                             
-FTN$WRITE_SL                    000013F0-RU                                             
-FTN$WRITE_SN                    00001400-RU                                             
-FTN$WRITE_SU                    00001410-RU                                             
-LIB$FREE_VM                     0000627C-RX                                             
-LIB$GET_VM                      00006280-RX                                             
-LIB$PAUSE                       0000626C-RX                                             
-LIB$PUT_OUTPUT                  00006270-RX                                             
-LIB$SIGNAL                      00006278-RX                                             
-LIB$STOP                        00006274-RX                                             
-OTS$$CVT_D_T_R8                 0000624C-RX                                             
-OTS$$CVT_F_T_R8                 00006248-RX                                             
-OTS$$CVT_G_T_R8                 00006254-RX                                             
-OTS$$CVT_H_T_R8                 00006250-RX                                             
-OTS$CVT_L_TI                    00006258-RX                                             
-OTS$CVT_T_D                     00006268-RX                                             
-OTS$CVT_T_F                     0000625C-RX                                             
-OTS$CVT_T_G                     00006264-RX                                             
+FTN$WRITE_DF                    000014F4-RU                                             
+FTN$WRITE_DU                    0000150C-RU                                             
+FTN$WRITE_IF                    00001550-RU                                             
+FTN$WRITE_IL                    00001560-RU                                             
+FTN$WRITE_LIST                  00001582-RU                                             
+FTN$WRITE_SF                    000014B0-RU                                             
+FTN$WRITE_SL                    000014C0-RU                                             
+FTN$WRITE_SN                    000014D0-RU                                             
+FTN$WRITE_SU                    000014E0-RU                                             
+LIB$FREE_VM                     0000687C-RX                                             
+LIB$GET_VM                      00006880-RX                                             
+LIB$PAUSE                       0000686C-RX                                             
+LIB$PUT_OUTPUT                  00006870-RX                                             
+LIB$SIGNAL                      00006878-RX                                             
+LIB$STOP                        00006874-RX                                             
+OTS$$CVT_D_T_R8                 0000684C-RX                                             
+OTS$$CVT_F_T_R8                 00006848-RX                                             
+OTS$$CVT_G_T_R8                 00006854-RX                                             
+OTS$$CVT_H_T_R8                 00006850-RX                                             
+OTS$CVT_L_TI                    00006858-RX                                             
+OTS$CVT_T_D                     00006868-RX                                             
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    6
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    6
 
                                                 +------------------+
                                                 ! Symbols By Value !
@@ -247,171 +249,173 @@ Value                                   Symbols...
 00000A7A      R-FTN$ADJARRDIM     
 00000A8C      R-FTN$$UNIT_FIND    
 00000B40      R-FTN$$UNIT_INIT    
-00000D2B      R-FTN$$UNIT_OPEN    
-00000D9E      R-FTN$$UNIT_FAILED  
-00000E20      R-FTN$$UNIT_READY   
-00000F1F      R-FTN$$UNIT_CLOSE   
-00000F9F      R-FTN$$UNIT_SAME    
-0000102E      R-FTN$$UNIT_BLOCK   
-00001044      R-FTN$$UNIT_NAMED   
-0000107E      R-FTN$$UNIT_RECORD  
-000010F8      R-FTN$$UNIT_PUT     
-0000117D      R-FTN$$UNIT_GET     
-000012A2      R-FTN$$UNIT_DIRECT  
-000012F8      R-FTN$$UNIT_FOUND   
-0000130B      R-FTN$$UNIT_DEFINED 
-00001394      R-FTN$$UNIT_REPORT  
-000013C0      R-FTN$$UNIT_TERMINAL
-000013D8      R-FTN$READ_SF       
-000013E0      R-FTN$WRITE_SF      
-000013E8      R-FTN$READ_SL       
-000013F0      R-FTN$WRITE_SL      
-000013F8      R-FTN$READ_SN       
-00001400      R-FTN$WRITE_SN      
-00001408      R-FTN$READ_SU       
-00001410      R-FTN$WRITE_SU      
-00001418      R-FTN$READ_DF       
-00001424      R-FTN$WRITE_DF      
-00001430      R-FTN$READ_DU       
-0000143C      R-FTN$WRITE_DU      
-00001448      R-FTN$REWRITE_SF    
-00001454      R-FTN$REWRITE_SU    
-00001460      R-FTN$READ_KF       
-0000146C      R-FTN$READ_KU       
-00001478      R-FTN$READ_IF       
-00001480      R-FTN$WRITE_IF      
-00001488      R-FTN$READ_IL       
-00001490      R-FTN$WRITE_IL      
-00001498      R-FTN$DECODE        
-000014A0      R-FTN$ENCODE        
-000014A8      R-FTN$PRINT_LIST    
-000014B2      R-FTN$WRITE_LIST    
-000016AD      R-FTN$$STMT_FILE    
-0000188B      R-POP_TO            
-000018B2      R-POP_GONE          
-000018D3      R-FTN$IO_ITEM       
+00000D2F      R-FTN$$UNIT_OPEN    
+00000DA2      R-FTN$$UNIT_FAILED  
+00000E46      R-FTN$$UNIT_READY   
+00000F4A      R-FTN$$UNIT_CLOSE   
+00000FCA      R-FTN$$UNIT_SAME    
+00001059      R-FTN$$UNIT_BLOCK   
+0000106F      R-FTN$RAB           
+0000109D      R-FTN$$UNIT_NAMED   
+000010D7      R-FTN$$UNIT_RECORD  
+0000114B      R-FTN$$UNIT_PUT     
+000011EA      R-FTN$$UNIT_GET     
+00001373      R-FTN$$UNIT_DIRECT  
+000013C9      R-FTN$$UNIT_FOUND   
+000013DC      R-FTN$$UNIT_DEFINED 
+00001465      R-FTN$$UNIT_REPORT  
+00001491      R-FTN$$UNIT_TERMINAL
+000014A8      R-FTN$READ_SF       
+000014B0      R-FTN$WRITE_SF      
+000014B8      R-FTN$READ_SL       
+000014C0      R-FTN$WRITE_SL      
+000014C8      R-FTN$READ_SN       
+000014D0      R-FTN$WRITE_SN      
+000014D8      R-FTN$READ_SU       
+000014E0      R-FTN$WRITE_SU      
+000014E8      R-FTN$READ_DF       
+000014F4      R-FTN$WRITE_DF      
+00001500      R-FTN$READ_DU       
+0000150C      R-FTN$WRITE_DU      
+00001518      R-FTN$REWRITE_SF    
+00001524      R-FTN$REWRITE_SU    
+00001530      R-FTN$READ_KF       
+0000153C      R-FTN$READ_KU       
+00001548      R-FTN$READ_IF       
+00001550      R-FTN$WRITE_IF      
+00001558      R-FTN$READ_IL       
+00001560      R-FTN$WRITE_IL      
+00001568      R-FTN$DECODE        
+00001570      R-FTN$ENCODE        
+00001578      R-FTN$PRINT_LIST    
+00001582      R-FTN$WRITE_LIST    
+000017C5      R-FTN$$STMT_FILE    
+000019A3      R-POP_TO            
+000019CA      R-POP_GONE          
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    7
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    7
 
 
 Value                                   Symbols...
 -----                                   ----------
-00001943      R-FTN$IO_END        
-00001A1E      R-FTN$$IO_SIGNAL    
-00001B5B      R-FTN$ERRSNS        
-00001B61      R-FTN$ERRSNS_W      
-00001BA8      R-FTN$$FMT_START    
-00001C6E      R-FTN$$FMT_ITEM     
-00001CE7      R-FTN$$FMT_END      
-00001D37      R-FTN$$FMT_FREE     
-00001D5A      R-FTN$$FMT_FAIL     
-00001D83      R-FTN$$FMT_WARN     
-00002074      R-FTN$$FMT_WRITE    
-000020DF      R-FTN$$FMT_READ     
-00002119      R-FTN$$FMT_PUT      
-000028A4      R-FTN$$EDIT_INT     
-00002CF4      R-FTN$$EDIT_FIELD   
-00002DD0      R-FTN$$EDIT_FLOAT   
-0000321C      R-FTN$$LIST_START   
-00003246      R-FTN$$LIST_ITEM    
-00003288      R-FTN$$LIST_END     
-000033F2      R-FTN$$LIST_VALUE   
-00003778      R-FTN$$LISTIN_START 
-00003790      R-FTN$$LISTIN_ITEM  
-000038AE      R-FTN$$LI_SKIP      
-0000395D      R-FTN$$LI_ADD       
-00003984      R-FTN$$LI_TEXT      
-00003B00      R-FTN$$LI_STORE     
-00003D78      R-FTN$$NML_READ     
-00004611      R-FTN$$NML_WRITE    
-000048D0      R-FTN$$INT_START    
-00004937      R-FTN$$INT_NEXT     
-00004975      R-FTN$$INT_END      
-000049AB      R-FTN$$INT_READ     
-00004AE5      R-FTN$$NAME_TEXT    
-00004B18      R-FTN$OPEN          
-00005026      R-FTN$CLOSE         
-00005074      R-FTN$INQUIRE       
-000054A9      R-FTN$REWIND        
-000054E8      R-FTN$BACKSPACE     
-0000557C      R-FTN$ENDFILE       
-000055E8      R-FTN$$UNF_START    
-00005614      R-FTN$$UNF_ITEM     
-000056D7      R-FTN$$UNF_END      
-00005830      R-FTN$DEF_FILE      
-00005837      R-FTN$DEF_FILE_W    
-00005894      R-FTN$FIND          
-0000593F      R-FTN$DELETE        
-0000597E      R-FTN$DELETE_D      
-00005A32      R-FTN$UNLOCK        
-00005A80      R-FTN$JISHFTC       
-00005A91      R-FTN$IISHFTC       
-00005ADC      R-FTN$LEN           
-00005AE3      R-FTN$INDEX         
+000019EB      R-FTN$IO_ITEM       
+00001A5B      R-FTN$IO_END        
+00001B6A      R-FTN$$IO_SIGNAL    
+00001CB4      R-FTN$ERRSNS        
+00001CBA      R-FTN$ERRSNS_W      
+00001D00      R-FTN$$FMT_START    
+00001DC6      R-FTN$$FMT_ITEM     
+00001E3F      R-FTN$$FMT_END      
+00001E8F      R-FTN$$FMT_FREE     
+00001EB2      R-FTN$$FMT_FAIL     
+00001EDB      R-FTN$$FMT_WARN     
+000021CC      R-FTN$$FMT_WRITE    
+00002237      R-FTN$$FMT_READ     
+00002271      R-FTN$$FMT_PUT      
+000029FC      R-FTN$$EDIT_INT     
+00002E4C      R-FTN$$EDIT_FIELD   
+00002F28      R-FTN$$EDIT_FLOAT   
+00003374      R-FTN$$LIST_START   
+0000339E      R-FTN$$LIST_ITEM    
+000033E0      R-FTN$$LIST_END     
+0000354A      R-FTN$$LIST_VALUE   
+000038D0      R-FTN$$LISTIN_START 
+000038E8      R-FTN$$LISTIN_ITEM  
+00003A06      R-FTN$$LI_SKIP      
+00003AB5      R-FTN$$LI_ADD       
+00003ADC      R-FTN$$LI_TEXT      
+00003C58      R-FTN$$LI_STORE     
+00003ED0      R-FTN$$NML_READ     
+00004769      R-FTN$$NML_WRITE    
+00004A28      R-FTN$$INT_START    
+00004A8F      R-FTN$$INT_NEXT     
+00004ACD      R-FTN$$INT_END      
+00004B03      R-FTN$$INT_READ     
+00004C46      R-FTN$$NAME_TEXT    
+00004C79      R-FTN$OPEN          
+00005383      R-FTN$CLOSE         
+000053D0      R-FTN$INQUIRE       
+00005805      R-FTN$REWIND        
+00005844      R-FTN$BACKSPACE     
+000058D8      R-FTN$ENDFILE       
+00005944      R-FTN$$UNF_START    
+00005970      R-FTN$$UNF_ITEM     
+00005A41      R-FTN$$UNF_END      
+00005B9C      R-FTN$DEF_FILE      
+00005BA3      R-FTN$DEF_FILE_W    
+00005C00      R-FTN$FIND          
+00005CAB      R-FTN$DELETE        
+00005D0D      R-FTN$DELETE_D      
+00005DC1      R-FTN$UNLOCK        
+00005E10      R-FTN$$KEY_START    
+00005F78      R-FTN$JISHFTC       
+00005F89      R-FTN$IISHFTC       
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    8
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    8
 
 
 Value                                   Symbols...
 -----                                   ----------
-00005B08      R-FTN$ICHAR         
-00005B13      R-FTN$CHAR          
-00005B1F      R-FTN$LLT           
-00005B27      R-FTN$LLE           
-00005B2F      R-FTN$LGT           
-00005B37      R-FTN$LGE           
-00005B55      R-FTN$BJTEST        
-00005B5D      R-FTN$BITEST        
-00005B6E      R-FTN$JIBITS        
-00005B79      R-FTN$IIBITS        
-00005B8A      R-FTN$JIBSET        
-00005B96      R-FTN$IIBSET        
-00005BA5      R-FTN$JIBCLR        
-00005BB1      R-FTN$IIBCLR        
-00005BC3      R-FTN$IZEXT         
-00005BCA      R-FTN$JZEXT         
-00005BD1      R-FTN$SNGLQ         
-00005BD9      R-FTN$DBLEQ         
-00005BE1      R-FTN$GBLEQ         
-00005BE9      R-FTN$QEXT          
-00005BF2      R-FTN$QEXTD         
-00005BFB      R-FTN$QEXTG         
-00005C04      R-FTN$QFLOAT        
-00005C0D      R-FTN$NWORKERS      
-00005C33      R-FTN$DATE          
-00005C44      R-FTN$DATE_T_DS     
-00005C65      R-FTN$TIME          
-00005C7F      R-FTN$TIME_T_DS     
-00005CD5      R-FTN$IDATE         
-00005D05      R-FTN$JDATE         
-00005D35      R-FTN$SECNDS        
-00005D86      R-FTN$EXIT          
-00005D9C      R-FTN$EXIT_W        
-00005DB2      R-FTN$IMVBITS       
-00005DCD      R-FTN$JMVBITS       
-00006248     RX-OTS$$CVT_F_T_R8   
-0000624C     RX-OTS$$CVT_D_T_R8   
-00006250     RX-OTS$$CVT_H_T_R8   
-00006254     RX-OTS$$CVT_G_T_R8   
-00006258     RX-OTS$CVT_L_TI      
-0000625C     RX-OTS$CVT_T_F       
-00006260     RX-OTS$CVT_T_H       
-00006264     RX-OTS$CVT_T_G       
-00006268     RX-OTS$CVT_T_D       
-0000626C     RX-LIB$PAUSE         
-00006270     RX-LIB$PUT_OUTPUT    
-00006274     RX-LIB$STOP          
-00006278     RX-LIB$SIGNAL        
-0000627C     RX-LIB$FREE_VM       
-00006280     RX-LIB$GET_VM        
+00005FD4      R-FTN$LEN           
+00005FDB      R-FTN$INDEX         
+00006000      R-FTN$ICHAR         
+0000600B      R-FTN$CHAR          
+00006017      R-FTN$LLT           
+0000601F      R-FTN$LLE           
+00006027      R-FTN$LGT           
+0000602F      R-FTN$LGE           
+0000604D      R-FTN$BJTEST        
+00006055      R-FTN$BITEST        
+00006066      R-FTN$JIBITS        
+00006071      R-FTN$IIBITS        
+00006082      R-FTN$JIBSET        
+0000608E      R-FTN$IIBSET        
+0000609D      R-FTN$JIBCLR        
+000060A9      R-FTN$IIBCLR        
+000060BB      R-FTN$IZEXT         
+000060C2      R-FTN$JZEXT         
+000060C9      R-FTN$SNGLQ         
+000060D1      R-FTN$DBLEQ         
+000060D9      R-FTN$GBLEQ         
+000060E1      R-FTN$QEXT          
+000060EA      R-FTN$QEXTD         
+000060F3      R-FTN$QEXTG         
+000060FC      R-FTN$QFLOAT        
+00006105      R-FTN$NWORKERS      
+0000612B      R-FTN$DATE          
+0000613C      R-FTN$DATE_T_DS     
+0000615D      R-FTN$TIME          
+00006177      R-FTN$TIME_T_DS     
+000061CD      R-FTN$IDATE         
+000061FD      R-FTN$JDATE         
+0000622D      R-FTN$SECNDS        
+0000627E      R-FTN$EXIT          
+00006294      R-FTN$EXIT_W        
+000062AA      R-FTN$IMVBITS       
+000062C5      R-FTN$JMVBITS       
+00006848     RX-OTS$$CVT_F_T_R8   
+0000684C     RX-OTS$$CVT_D_T_R8   
+00006850     RX-OTS$$CVT_H_T_R8   
+00006854     RX-OTS$$CVT_G_T_R8   
+00006858     RX-OTS$CVT_L_TI      
+0000685C     RX-OTS$CVT_T_F       
+00006860     RX-OTS$CVT_T_H       
+00006864     RX-OTS$CVT_T_G       
+00006868     RX-OTS$CVT_T_D       
+0000686C     RX-LIB$PAUSE         
+00006870     RX-LIB$PUT_OUTPUT    
+00006874     RX-LIB$STOP          
+00006878     RX-LIB$SIGNAL        
+0000687C     RX-LIB$FREE_VM       
+00006880     RX-LIB$GET_VM        
+
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page    9
+
+
+Value                                   Symbols...
+-----                                   ----------
 001881EC        FOR$_FORVARMIS    
 001882EC        FOR$_ADJARRDIM    
-
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page    9
-
-
-Value                                   Symbols...
------                                   ----------
 7FFEDE48        SYS$ASCTIM        
 7FFEDEF0        SYS$DCLEXH        
 7FFEDF40        SYS$EXIT          
@@ -427,6 +431,7 @@ Value                                   Symbols...
 7FFEE1B8        SYS$CLOSE         
 7FFEE1C0        SYS$CONNECT       
 7FFEE1C8        SYS$CREATE        
+7FFEE1D8        SYS$DISPLAY       
 7FFEE208        SYS$OPEN          
 7FFEE210        SYS$REWIND        
 7FFEE230        SYS$PARSE         
@@ -446,46 +451,46 @@ Value                                   Symbols...
 		! WK - Weak          !
 		+--------------------+
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page   10
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page   10
 
                                                  +----------------+
                                                  ! Image Synopsis !
                                                  +----------------+
 
-Virtual memory allocated:                         00000000 000063FF 00006400 (25600. bytes, 50. pages)
+Virtual memory allocated:                         00000000 000069FF 00006A00 (27136. bytes, 53. pages)
 Stack size:                                              0. pages
 Image header virtual block limits:                       1.        1. (    1. block)
-Image binary virtual block limits:                       2.       51. (   50. blocks)
+Image binary virtual block limits:                       2.       54. (   53. blocks)
 Image name and identification:                    FTNRTL V1.0
-Number of files:                                        22.
-Number of modules:                                      22.
+Number of files:                                        23.
+Number of modules:                                      23.
 Number of program sections:                              8.
-Number of global symbols:                              463.
+Number of global symbols:                              466.
 Number of image sections:                                7.
 Debugger transfer address:                        7FFEDF68
 Number of code references to shareable images:          15.
-Image type:                                         PIC, SHAREABLE. Global Section Match=LESS/EQUAL, Ident, Major=1, Minor=17
+Image type:                                         PIC, SHAREABLE. Global Section Match=LESS/EQUAL, Ident, Major=1, Minor=18
 Map format:                                       FULL in file DUA1:[FTN86]FTNRTL.MAP;1
-Estimated map length:                             84. blocks
+Estimated map length:                             86. blocks
                                               +---------------------+
                                               ! Link Run Statistics !
                                               +---------------------+
 
 Performance Indicators                            Page Faults	CPU Time	Elapsed Time
 ----------------------                            -----------	--------	------------
-    Command processing:                                   439	00:00:00.02	00:00:00.02
-    Pass 1:                                              1483	00:00:00.03	00:00:00.03
-    Allocation/Relocation:                                108	00:00:00.00	00:00:00.00
-    Pass 2:                                              1056	00:00:00.03	00:00:00.03
-    Map data after object module synopsis:                 91	00:00:00.01	00:00:00.01
-    Symbol table output:                                   17	00:00:00.00	00:00:00.00
-Total run values:                                        3194	00:00:00.09	00:00:00.09
+    Command processing:                                   470	00:00:00.00	00:00:00.01
+    Pass 1:                                              2788	00:00:00.00	00:00:00.05
+    Allocation/Relocation:                                153	00:00:00.00	00:00:00.01
+    Pass 2:                                              1365	00:00:00.03	00:00:00.04
+    Map data after object module synopsis:                124	00:00:00.00	00:00:00.01
+    Symbol table output:                                   31	00:00:00.00	00:00:00.01
+Total run values:                                        4931	00:00:00.03	00:00:00.13
 
-Using a working set limited to 962 pages and 1078 pages of data storage (excluding image)
+Using a working set limited to 662 pages and 1082 pages of data storage (excluding image)
 
-Total number object records read (both passes):   1538
-    of which 32 were in libraries and 59 were DEBUG data records containing 4512 bytes
-3790 bytes of DEBUG data were written,starting at VBN 52 with 10 blocks allocated
+Total number object records read (both passes):   1584
+    of which 32 were in libraries and 62 were DEBUG data records containing 4604 bytes
+3867 bytes of DEBUG data were written,starting at VBN 55 with 10 blocks allocated
 
 Number of modules extracted explicitly             = 0
     with 2 extracted to resolve undefined symbols
@@ -504,7 +509,7 @@ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 !	$ MACRO FTN_UNITS
 !	$ MACRO FTN_STATEMENT
 
-DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:41        Linker V11-39                    Page   11
+DUA1:[FTN86]FTNRTL.EXE;1                                         4-NOV-2026 15:58        Linker V11-39                    Page   11
 
 !	$ MACRO FTN_FORMAT
 !	$ MACRO FTN_EDIT
@@ -519,6 +524,7 @@ DUA1:[FTN86]FTNRTL.EXE;1                                         3-NOV-2026 09:4
 !	$ MACRO FTN_UNFORMATTED
 !	$ MACRO FTN_DIRECT
 !	$ MACRO FTN_RECORD
+!	$ MACRO FTN_KEYED
 !	$ MACRO FTN_INTRINSICS
 !	$ MACRO FTN_SYSTEM
 !	$ LINK/SHAREABLE=FTNRTL/NOSYSLIB FTNRTL/OPTIONS
@@ -547,7 +553,8 @@ FTN_POSITION.OBJ
 FTN_UNFORMATTED.OBJ
 FTN_DIRECT.OBJ
 FTN_RECORD.OBJ
+FTN_KEYED.OBJ
 FTN_INTRINSICS.OBJ
 FTN_SYSTEM.OBJ
-GSMATCH=LEQUAL,1,17
+GSMATCH=LEQUAL,1,18
 IDENTIFICATION="V1.0"

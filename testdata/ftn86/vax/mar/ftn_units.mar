@@ -138,6 +138,8 @@ UB_CURRENT	= UB_ASV+36		; byte: 1 if the unit's last statement to
 					;  or DELETE
 UB_REWRITE	= UB_ASV+37		; byte: 1 while a REWRITE is in progress:
 					;  FTN$$UNIT_PUT updates the record
+UB_KEYED	= UB_ASV+38		; byte: 1 from a keyed READ's start to its
+					;  first $GET, which is by key
 UB_BLN		= UB_ASV+40
 
 	.IIF NE UB_ASV-620, .ERROR	; FTN_OPEN and FTN_DIRECT say 620
@@ -166,6 +168,7 @@ FOR$_OPEFAI	= ^X001880F4
 FOR$_MIXFILACC	= ^X001880FC
 FOR$_INVLOGUNI	= ^X00188104
 FOR$_ERRDURREA	= ^X0018813C
+FOR$_INVKEYSPE	= ^X0018818C
 FOR$_INSVIRMEM	= ^X0018814C
 FOR$_NO_SUCDEV	= ^X00188154
 FOR$_FILNAMSPE	= ^X0018815C
@@ -326,6 +329,7 @@ EXIT_DECLARED:	.LONG	0
 	CLRL	UB_NEXTREC(R6)
 	CLRB	UB_CURRENT(R6)
 	CLRB	UB_REWRITE(R6)
+	CLRB	UB_KEYED(R6)
 	;
 	; The default names. R7 is the unit.
 	;
@@ -480,7 +484,9 @@ EXIT_DECLARED:	.LONG	0
 ; A $OPEN or $CREATE failed with RMS's status: keeps it and its value in the
 ; block, and returns in R0 the FOR$_ condition VMS's library has for it (round
 ; 1 of testdata/for81): a file not found, a device that isn't there, a name
-; that can't be one, and for all the rest FOR$_OPEFAI.
+; that can't be one, keys RMS won't have (testdata/for88's #7, #27, #42, where a
+; USEROPEN routine returned them; unconfirmed without one), and for all the rest
+; FOR$_OPEFAI.
 ;
 	.ENTRY	FTN$$UNIT_FAILED,^M<R2>
 	MOVL	4(AP),R2
@@ -507,6 +513,13 @@ EXIT_DECLARED:	.LONG	0
 	CMPL	R1,#RMS$_TYP
 	BEQL	90$
 	CMPL	R1,#RMS$_VER
+	BEQL	90$
+	MOVL	#FOR$_INVKEYSPE,R0
+	CMPL	R1,#RMS$_SIZ
+	BEQL	90$
+	CMPL	R1,#RMS$_POS
+	BEQL	90$
+	CMPL	R1,#RMS$_NPK
 	BEQL	90$
 	MOVL	#FOR$_OPEFAI,R0
 90$:	RET
@@ -558,7 +571,8 @@ EXIT_DECLARED:	.LONG	0
 	MOVZWL	FAB$W_MRS(R3),R0
 	BEQL	20$
 	MOVL	R0,UB_SIZE(R2)
-20$:	MOVL	UB_SIZE(R2),R0
+20$:	MOVW	UB_SIZE(R2),RAB$W_USZ(R4) ; as VMS's leaves it (testdata/for88)
+	MOVL	UB_SIZE(R2),R0
 	CMPL	R0,#MIN_BUFFER
 	BGEQ	22$
 	MOVL	#MIN_BUFFER,R0
@@ -691,6 +705,26 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 10$:	RET
 
 ;
+; FTN$RAB(unit)
+;
+; A unit's RAB, for a program that calls RMS itself, as VMS's FOR$RAB gives it: the
+; unit's number by reference, R0 the RAB's address, or 0 if the unit has no file.
+;
+	.ENTRY	FTN$RAB,^M<>
+	MOVL	@4(AP),R1
+	CMPL	R1,#UNIT_LOW
+	BLSS	10$
+	CMPL	R1,#UNIT_HIGH
+	BGTR	10$
+	MOVL	UNITS+16[R1],R0
+	BEQL	20$
+	BLBC	UB_OPEN(R0),10$
+	MOVAB	UB_RAB(R0),R0
+	RET
+10$:	CLRL	R0
+20$:	RET
+
+;
 ; FTN$$UNIT_NAMED(name, length)
 ;
 ; R0 is the block of the unit from 0 to 119 that has the file open whose
@@ -723,7 +757,8 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 ; buffer, and puts at place the longest record it may write, then a longword, 1
 ; if blanks in numbers are zeros. R1 is 0, or the FOR$_ condition if the
 ; statement can't use the unit: MIXFILACC for a statement of the other form, or
-; a sequential one on a unit that is direct, WRIREAFIL for a write on a READONLY
+; a sequential one on a unit that is direct (a keyed unit may have one: testdata/for88's
+; #280), WRIREAFIL for a write on a READONLY
 ; unit. (FTN$$UNIT_DIRECT has seen that a direct statement's unit is direct.) A
 ; unit with no form yet takes the statement's, and if unformatted, the size and
 ; segments of a unit connected for one.
@@ -754,8 +789,6 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	BLSSU	15$
 	BLBS	20(AP),17$		; a direct statement
 15$:	CMPB	UB_ACCESS(R1),#1
-	BEQL	30$
-	CMPB	UB_ACCESS(R1),#4
 	BEQL	30$
 17$:	BLBC	12(AP),20$
 	TSTB	UB_READONLY(R1)
@@ -800,9 +833,17 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	BEQL	12$
 	$UPDATE	RAB=R7
 	BLBC	R0,20$
-	RET
+	CMPB	UB_FAB+FAB$B_ORG(R6),#FAB$C_IDX
+	BNEQ	11$
+	CLRB	UB_CURRENT(R6)		; none for the next: FOR$_NO_CURREC (for88's #297)
+11$:	RET
 12$:	CLRB	UB_CURRENT(R6)
-	$PUT	RAB=R7
+	CMPB	UB_FAB+FAB$B_ORG(R6),#FAB$C_IDX
+	BNEQ	13$
+	CMPB	UB_ACCESS(R6),#4	; keyed access writes by key, whatever a READ
+	BNEQ	13$			;  left; sequential in the key's order (#290)
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R7)
+13$:	$PUT	RAB=R7
 	BLBC	R0,20$
 	INCL	UB_RECORDS(R6)
 	CMPB	UB_ACCESS(R6),#1
@@ -835,15 +876,24 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
 	MOVW	UB_RECSIZE(R3),RAB$W_USZ(R2) ; and its size
 	MOVB	#1,UB_CURRENT(R3)
-	$GET	RAB=R2
+	MOVZBL	UB_KEYED(R3),R4		; R4 is 1 for a keyed READ's first $GET
+	CLRB	UB_KEYED(R3)
+	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
+	BNEQ	0$
+	MOVZWL	UB_FAB+FAB$W_MRS(R3),R0	; the file's size, as VMS's leaves it (for88's
+	BEQL	8$			;  #282), if it has one
+	MOVW	R0,RAB$W_USZ(R2)
+8$:	BLBS	R4,0$			; any other $GET is the next in sequence
+	MOVB	#RAB$C_SEQ,RAB$B_RAC(R2)
+0$:	$GET	RAB=R2
 	BLBC	R0,5$
 	MOVZWL	RAB$W_RSZ(R2),R1
 	CMPL	RAB$L_RBF(R2),UB_RECP(R3) ; located elsewhere: copied to the buffer
-	BEQL	0$
+	BEQL	9$
 	PUSHR	#^M<R1,R2,R3>
 	MOVC3	R1,@RAB$L_RBF(R2),@UB_RECP(R3)
 	POPR	#^M<R1,R2,R3>
-0$:
+9$:
 	CMPB	UB_ACCESS(R3),#1
 	BNEQ	1$
 	MOVL	R3,R6			; a direct record, of the file's size
@@ -873,7 +923,23 @@ FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
 	RET
 5$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
 	MOVL	RAB$L_STV(R2),UB_STV(R3)
-	CMPL	R0,#RMS$_RLK		; another stream has it
+	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
+	BNEQ	52$
+	CLRB	UB_CURRENT(R3)		; an indexed file: no current record then, and
+52$:	BLBC	R4,54$			;  a failed key is FORTRAN's to say (for88's
+	MOVL	#FOR$_ATTACCNON,R1	;  #156, #269, #271)
+	CMPL	R0,#RMS$_RNF
+	BEQL	53$
+	CMPL	R0,#RMS$_EOF
+	BEQL	53$
+	MOVL	#FOR$_INVKEYSPE,R1
+	CMPL	R0,#RMS$_KRF
+	BEQL	53$
+	CMPL	R0,#RMS$_KSZ
+	BNEQ	54$
+53$:	MOVL	R1,R0
+	RET
+54$:	CMPL	R0,#RMS$_RLK		; another stream has it
 	BNEQ	6$
 	MOVL	#FOR$_SPERECLOC,R0
 	RET

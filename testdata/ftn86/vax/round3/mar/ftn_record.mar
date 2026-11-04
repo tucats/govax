@@ -29,13 +29,9 @@
 ;	UNLOCK		A $FREE of the records the unit holds; with none held
 ;			(RMS$_RNL), nothing.
 ;
-; Both DELETEs are FOR$_DELERR on a unit not connected and on a sequential file,
-; and UNLOCK is FOR$_UNLERR on a unit not connected; none of them connects a unit.
-;
-; An indexed file (testdata/for88's #301 to #304) has DELETE (u) on any access, by
-; the same rule but for two things: a READONLY unit is FOR$_WRIREAFIL, and a DELETE
-; leaves no current record, so that a second is FOR$_NO_CURREC. DELETE (u'r) is
-; FOR$_DELERR, a record there having no number.
+; Both DELETEs are FOR$_DELERR on a unit not connected and on a file that isn't
+; relative (an indexed one never opens: Decision 13), and UNLOCK is FOR$_UNLERR
+; on a unit not connected; none of them connects a unit.
 ;
 	$FABDEF
 	$RABDEF
@@ -46,7 +42,6 @@ UB_OPEN		= 0			; A unit's block (FTN_UNITS)
 UB_STS		= 8
 UB_STV		= 12
 UB_ACCESS	= 37
-UB_READONLY	= 40
 UB_FAB		= 76
 UB_RAB		= UB_FAB+FAB$C_BLN
 UB_ASV		= 620
@@ -63,7 +58,6 @@ FOR$_ATTACCNON	= ^X00188124		;  their severities
 FOR$_NO_CURREC	= ^X001881AC
 FOR$_DELERR	= ^X001881BC
 FOR$_UNLERR	= ^X001881C4
-FOR$_WRIREAFIL	= ^X0018817C
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -106,26 +100,16 @@ RELATIVE:
 	BSBW	START
 	BLBS	R0,1$
 	BRW	END
-1$:	CLRL	R8			; R8 is 1 for an indexed file
-	MOVL	#FOR$_DELERR,R0
-	BLBC	UB_OPEN(R7),2$
-	CMPB	UB_FAB+FAB$B_ORG(R7),#FAB$C_REL
-	BEQL	15$
-	CMPB	UB_FAB+FAB$B_ORG(R7),#FAB$C_IDX
+1$:	MOVL	#FOR$_DELERR,R0
+	BSBB	RELATIVE
 	BNEQ	2$
-	MOVL	#1,R8
-	MOVL	#FOR$_WRIREAFIL,R0
-	TSTB	UB_READONLY(R7)
-	BNEQ	2$
-15$:	MOVL	#FOR$_NO_CURREC,R0
+	MOVL	#FOR$_NO_CURREC,R0
 	TSTB	UB_CURRENT(R7)
 	BNEQ	3$
 2$:	BRW	REFUSED
 3$:	$DELETE	RAB=R6
 	BLBC	R0,4$
-	BLBC	R8,35$
-	CLRB	UB_CURRENT(R7)
-35$:	BRW	END
+	BRW	END
 4$:	MOVL	#FOR$_DELERR,R0
 	BRW	RMS_FAILED
 

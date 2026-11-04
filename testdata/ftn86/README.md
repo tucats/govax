@@ -50,10 +50,10 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
 
 ## What came back
 
-`vax/` is the author's third run on VMS 7.1, 3-NOV-2026: the log, FTNRTL's objects, image, and map. `vax/mar/` is the
+`vax/` is the author's fourth run on VMS 7.1, 4-NOV-2026, after Phase 88 added FTN_KEYED and the indexed programs (`parts.for`, `shared.for`): the log, FTNRTL's objects, image, and map. `vax/mar/` is the
 sources it built, so `TestFTN86Objects` stays true as FTNRTL changes. `TestFTN86Oracle` holds the log to govax's run but for
 `ftn86VMSDifferences`, and `TestFTN86Dungeon` DUNGEON's to VMS's digests: its log is local, `testdata/disks/ftn86d.log`.
-`vax/round1/` and `vax/round2/` are the runs before the fixes each led to. `exitmore.for` and `powbits.for` are questions those
+`vax/round1/` and `vax/round2/` are the runs before the fixes each led to, and `vax/round3/` the third, 3-NOV-2026, from Phase 86's FTNRTL. `exitmore.for` and `powbits.for` are questions those
 rounds raised. The phase doc's log has what each round found.
 
 Before a later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one. The scripts use DUA5, since

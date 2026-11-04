@@ -33,7 +33,8 @@
 ; A WRITE past the end of a record that can't have more segments (VARIABLE,
 ; FIXED, STREAM) is FOR$_OUTSTAOVE, and writes nothing, but for a direct WRITE,
 ; which writes as much as the record holds and still fails (testdata/for81's
-; #553, where a sequential FIXED unit's, #533, wrote nothing).
+; #553, where a sequential FIXED unit's, #533, wrote nothing). A REWRITE past
+; the end is FOR$_TOOMANREC, and writes nothing (testdata/for88's #298).
 ;
 ; The unit's count of records (FTN_UNITS's UB_RECORDS, which BACKSPACE
 ; reads) counts logical records: each segment's FTN$$UNIT_PUT or
@@ -60,6 +61,7 @@ CTX_UNF_POS	= 504			; long: the next byte to read in the buffer
 CTX_UNF_LEN	= 508			; long: the bytes the buffer holds
 CTX_UNF_STATE	= 512			; long: S_ bits
 CTX_DIRECT	= 516			; long: 1 for a direct statement
+CTX_REWRITE	= 520			; byte: 1 for a REWRITE
 
 S_SEGMENTED	= 1			; the unit's records are segmented
 S_WRITTEN	= 2			; a segment of this record has been written
@@ -75,6 +77,7 @@ FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition values, with
 FOR$_SEGRECFOR	= ^X0018811C		;  their severities
 FOR$_OUTSTAOVE	= ^X00188214
 FOR$_INPSTAREQ	= ^X0018821C
+FOR$_TOOMANREC	= ^X001880DC
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 
@@ -169,6 +172,9 @@ WRITE_ITEM:
 	SUBL2	R9,R8
 	BRB	40$
 70$:	MOVL	#FOR$_OUTSTAOVE,CTX_STATUS(R6)
+	TSTB	CTX_REWRITE(R6)
+	BEQL	90$
+	MOVL	#FOR$_TOOMANREC,CTX_STATUS(R6)
 90$:	MOVL	#SS$_NORMAL,R0
 	RET
 

@@ -263,16 +263,6 @@ func TestFTN86Oracle(t *testing.T) {
 	log, _, _ := runFTN86(t)
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
 
-	// Programs newer than VMS's run, which TestFTN86Procedure holds to their own output
-	// until subtask 15 of docs/PHASE-88 runs this again.
-	for _, name := range []string{"PARTS", "PARTSN", "SHARED", "SHAREDN"} {
-		if _, ok := got[name]; !ok {
-			t.Errorf("no section %s in govax's log", name)
-		}
-
-		delete(got, name)
-	}
-
 	if len(got) != len(want) {
 		t.Errorf("%d sections, VMS's %d", len(got), len(want))
 	}
@@ -281,24 +271,11 @@ func TestFTN86Oracle(t *testing.T) {
 
 	// FTNRTL's section on VMS has its options file too, which LINK echoes under SET
 	// VERIFY: what both say is the status of each command.
-	// VMS built the FTNRTL of its day, which had no FTN_KEYED to assemble: one status more
-	// here, until subtask 15 of docs/PHASE-88 runs this again.
-	if a, b := ftn86Statuses(got["FTNRTL"]), "  $STATUS == \"%X10000001\"\n"+ftn86Statuses(want["FTNRTL"]); a != b {
+	if a, b := ftn86Statuses(got["FTNRTL"]), ftn86Statuses(want["FTNRTL"]); a != b {
 		t.Errorf("building FTNRTL ended with:\n%s\nVMS's:\n%s", a, b)
 	}
 
 	delete(want, "FTNRTL")
-
-	// VMS built the FTNRTL of its day, when OPEN of an indexed file was NOTIMP (2). An
-	// indexed file with no keys is now INVKEYSPE (49), as VMS's FORRTL says (testdata/for88's
-	// #42). This is the only line of these sections to expect a new run to change.
-	for _, name := range []string{"RELATIVE", "RELATIVEN"} {
-		if !strings.Contains(want[name], "INDEXED  2\n") {
-			t.Errorf("%s: no line for an indexed file in VMS's log", name)
-		}
-
-		want[name] = strings.Replace(want[name], "INDEXED  2\n", "INDEXED 49\n", 1)
-	}
 
 	for name, text := range want {
 		base := strings.TrimSuffix(name, "N")
