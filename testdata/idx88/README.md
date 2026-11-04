@@ -165,7 +165,7 @@ never committed. `IDX88CM.LOG`, MACRO's own output, stays on the volume.
 
 ## What's next
 
-`vax/` is VMS V7.1's third run; the phase doc's "What round 1 settled" says what it showed. Round 2 is on FORRTL, as Part C says, once this round's files can be read. What's known so far of
+`vax/` is VMS V7.1's third run; the phase doc's "What round 1 settled" says what it showed. Round 2 is on FORRTL, as Part C says, before FTNRTL's subtask 12. What's known so far of
 FOR$OPEN's KEY= (code 23, by trial over govax, 2026-11-03): the value is the address of a block
 whose word at +2 is a count that must be a multiple of 3 (0 is accepted and makes no key, a
 number that isn't a multiple is FOR$_INVARGFOR, and any other multiple is FOR$_INVKEYSPE so far).

@@ -1,6 +1,8 @@
 package ir
 
 import (
+	"strconv"
+
 	"github.com/tucats/govax/internal/fortran/lex"
 	"github.com/tucats/govax/internal/fortran/sema"
 )
@@ -55,6 +57,8 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 
 	for _, k := range s.Keys {
 		switch {
+		case k.KeyList != nil:
+			args = append(args, keyword(k.Code, mechanismValue), Arg{Ref: l.keyListBlock(k.KeyList)})
 		case k.Answer != nil:
 			args = append(args, l.fileAnswer(k)...)
 		case k.Proc != nil:
@@ -93,6 +97,54 @@ func (l *lowerer) fileStatement(s *sema.FileStmt) {
 	}
 
 	l.ioFinish(&Call{origin: l.origin(), Routine: routine, Args: args}, c, s.Err, 0, s.IOStat)
+}
+
+// Key list flags: the third longword of a key in OPEN's key list block.
+const (
+	keyFlagInteger    = 1 // an INTEGER key, not a CHARACTER one
+	keyFlagDescending = 2 // DESCENDING, not ASCENDING
+)
+
+// keyListBlock is the block OPEN's KEY= passes, a cell of its own that the
+// statement fills in, since a key's bounds may be expressions (section 9.1.15):
+//
+//	OPEN (UNIT=3, ..., KEY=(1:10, N:N+1:INTEGER:DESCENDING))
+//
+//	  $KL1+0  <- 2             how many keys
+//	  $KL1+4  <- 1, 10, 0      the first key: first byte, last byte, flags
+//	  $KL1+16 <- N, N+1, 3     the second
+//
+// FTNRTL's own form (Decision 8): VMS's FORRTL has one of its own that it
+// doesn't document.
+func (l *lowerer) keyListBlock(list []*sema.KeyDef) *Mem {
+	const header, perKey = 4, 12
+
+	l.keyLists++
+	c := l.newCell("$KL"+strconv.Itoa(l.keyLists), KeyListCell, Long, header+perKey*len(list))
+
+	store := func(offset int, x Expr) {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: offset, T: Long}, Src: x})
+	}
+
+	store(0, LongConst(int32(len(list))))
+
+	for i, k := range list {
+		flags := 0
+		if k.Integer {
+			flags |= keyFlagInteger
+		}
+
+		if k.Descending {
+			flags |= keyFlagDescending
+		}
+
+		base := header + perKey*i
+		store(base, l.expr(k.First))
+		store(base+4, l.expr(k.Last))
+		store(base+8, LongConst(int32(flags)))
+	}
+
+	return &Mem{Cell: c, T: Long}
 }
 
 // fileAnswer is the two arguments of one of INQUIRE's answers.

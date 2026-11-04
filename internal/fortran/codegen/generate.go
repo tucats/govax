@@ -897,6 +897,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "the parsed form of FORMAT " + strings.TrimPrefix(c.Name, "$FC") + ", FTNRTL's"
 	case ir.FrameBaseCell:
 		return "the routine's FP, for its variable format expressions"
+	case ir.KeyListCell:
+		return "the keys of an OPEN's KEY=, for FTNRTL"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {

@@ -34,6 +34,31 @@ func analyzeLines(t *testing.T, spec string, lines ...string) (*Program, []diag.
 	return prog, messages.Messages()
 }
 
+// TestKeyListLimit holds OPEN's KEY= to the manual's 85 keys (section 9.1.15),
+// on continuation lines, since so many keys don't fit on one.
+func TestKeyListLimit(t *testing.T) {
+	for n, want := range map[int]string{85: "", 86: "KEYLISTLONG"} {
+		lines := []string{"      OPEN (1, KEY=(1:2"}
+		for i := 1; i < n; i += 15 {
+			count := min(15, n-i)
+			lines = append(lines, "     1"+strings.Repeat(",1:2", count))
+		}
+
+		lines = append(lines, "     1))", "      END")
+
+		var got string
+
+		_, ms := analyzeLines(t, "T.FOR", lines...)
+		for _, m := range ms {
+			got += m.Ident
+		}
+
+		if got != want {
+			t.Errorf("%d keys: got %q, want %q", n, got, want)
+		}
+	}
+}
+
 // TestGolden analyzes each program in testdata and compares its dump
 // and messages with the .sema file beside it.
 func TestGolden(t *testing.T) {
@@ -758,7 +783,7 @@ func TestErrors(t *testing.T) {
 		{"a jump to a declaration", []string{"10 INTEGER I", "GO TO 10", "END"}, "NOTEXEC@2:13"},
 		{"a jump to a FORMAT", []string{"10 FORMAT (I5)", "GO TO 10", "END"}, "NOTEXEC@2:13"},
 		{"a jump to ELSE", []string{"IF (L) THEN", "GO TO 10", "10 ELSE", "END IF", "END"}, "NOTEXEC@2:13"},
-		{"a jump to a statement with an error", []string{"10 READ (1, KEYLE=1) X", "GO TO 10", "END"}, "NOTIMPL@1:16"},
+		{"a jump to a statement with an error", []string{"10 READ (1, KEYLE=1.5) X", "GO TO 10", "END"}, "KEYEDVALUE@1:16"},
 		{"a jump into an IF block", []string{"GO TO 10", "IF (L) THEN", "10 CONTINUE", "END IF", "END"}, "INTOBLOCK@1:13"},
 		{"a jump between blocks", []string{"IF (L) THEN", "10 X = 1", "ELSE", "GO TO 10", "END IF", "END"}, "INTOBLOCK@4:13"},
 		{"a jump to END IF from an earlier block", []string{"IF (L) THEN", "GO TO 10", "ELSE", "X = 1", "10 END IF", "END"}, "INTOBLOCK@2:13"},
@@ -1022,7 +1047,29 @@ func TestErrors(t *testing.T) {
 		{"a keyed READ by a REAL", []string{"READ (1, KEY=1.5) X", "END"}, "KEYEDVALUE@1:16"},
 		{"a keyed READ with a REC=", []string{"READ (1, KEY=1, REC=2) X", "END"}, "KEYEDREC@1:7"},
 		{"a keyed READ with two keys", []string{"READ (1, KEY=1, KEYGE=2) X", "END"}, "KEYTWICE@1:23"},
-		{"a later Fortran's key", []string{"READ (1, KEYLE=1) X", "END"}, "NOTIMPL@1:16"},
+		{"every key specifier", []string{"READ (1, KEYEQ=1) X", "READ (1, KEYLE=1) X", "READ (1, KEYLT=1) X", "READ (1, KEYNXT=1) X", "READ (1, KEYNXTNE=1) X", "END"}, ""},
+		{"a keyed READ by a BYTE array", []string{"BYTE B(4)", "READ (1, KEY=B) X", "END"}, ""},
+		{"a keyed READ by an INTEGER array", []string{"INTEGER N(4)", "READ (1, KEY=N) X", "END"}, "NEEDSUBSCRIPT@2:20"},
+		{"a keyed READ by a BYTE array of no known size", []string{"SUBROUTINE S(B)", "BYTE B(*)", "READ (1, KEY=B) X", "END"}, "NOSIZE@3:16"},
+		{"a keyed READ by a LOGICAL", []string{"LOGICAL L", "READ (1, KEY=L) X", "END"}, "KEYEDVALUE@2:16"},
+		{"KEYID= with no key", []string{"READ (1, KEYID=1) X", "END"}, "KEYIDALONE@1:16"},
+		{"KEYID= twice", []string{"READ (1, KEY=1, KEYID=1, KEYID=2) X", "END"}, "DUPSPECIFIER@1:32"},
+		{"KEYID= by a REAL", []string{"READ (1, KEY=1, KEYID=1.0) X", "END"}, "KEYEDVALUE@1:23"},
+		{"a keyed READ with END=", []string{"READ (1, KEY=1, END=9) X", "9 END"}, "KEYEDEND@1:23"},
+		{"a REWRITE with END=", []string{"REWRITE (1, END=9) X", "9 END"}, "BADSPECIFIER@1:19"},
+		{"KEY= of every form", []string{"N = 3", "OPEN (1, KEY=(1:4, 5:6:INTEGER, 7:10:INTEGER:DESCENDING))", "OPEN (1, KEY=(2:N:CHARACTER:ASCENDING))", "END"}, ""},
+		{"KEY= without RECL=", []string{"OPEN (1, ORGANIZATION='INDEXED', KEY=(1:4))", "END"}, "NEEDRECL@1:7"},
+		{"KEY= of an old file without RECL=", []string{"OPEN (1, STATUS='OLD', ORGANIZATION='INDEXED', KEY=(1:4))", "END"}, ""},
+		{"KEY= on a relative file", []string{"OPEN (1, ORGANIZATION='RELATIVE', RECL=9, KEY=(1:4))", "END"}, "OPENCONFLICT@1:7"},
+		{"a key of another type", []string{"OPEN (1, KEY=(1:4:REAL))", "END"}, "KEYFIELDTYPE@1:21"},
+		{"a key of another direction", []string{"OPEN (1, KEY=(1:4:INTEGER:UP))", "END"}, "KEYFIELDDIR@1:21"},
+		{"a key from byte 0", []string{"OPEN (1, KEY=(0:4))", "END"}, "KEYBOUNDS@1:21"},
+		{"a key ending before it starts", []string{"OPEN (1, KEY=(5:4))", "END"}, "KEYBOUNDS@1:21"},
+		{"a key of 256 bytes", []string{"OPEN (1, KEY=(1:256))", "END"}, "KEYLENGTH@1:21"},
+		{"a key of 255 bytes", []string{"OPEN (1, KEY=(1:255))", "END"}, ""},
+		{"an INTEGER key of 3 bytes", []string{"OPEN (1, KEY=(1:3:INTEGER))", "END"}, "KEYINTEGER@1:21"},
+		{"an INTEGER key of unknown bounds", []string{"N = 1", "OPEN (1, KEY=(N:3*N:INTEGER))", "END"}, ""},
+		{"a key by a CHARACTER position", []string{"OPEN (1, KEY=('A':4))", "END"}, "KEYNUMBER@1:21"},
 		{"a REWIND of *", []string{"REWIND *", "END"}, "BADUNIT@1:14"},
 		{"a BACKSPACE of a text", []string{"BACKSPACE (UNIT='A')", "END"}, "BADUNIT@1:23"},
 		{"an ENDFILE of a REAL", []string{"X = 1", "ENDFILE X", "END"}, "BADUNIT@2:15"},

@@ -188,6 +188,8 @@ func cellNote(c *Cell) string {
 		return "the parsed form of a FORMAT"
 	case FrameBaseCell:
 		return "the routine's FP"
+	case KeyListCell:
+		return "an OPEN's list of keys"
 	}
 
 	return "temporary"

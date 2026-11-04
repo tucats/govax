@@ -281,7 +281,7 @@ func TestCompileParseErrors(t *testing.T) {
 		Lines: []string{
 			"      PROGRAM P",
 			"      X = (1 + 2",
-			"      READ (1, KEYLE=1) Y",
+			"      READ (1, KEYLE=1.5) Y",
 			"      GO TO 10",
 		},
 	})
@@ -291,7 +291,7 @@ func TestCompileParseErrors(t *testing.T) {
 		got = append(got, m.Ident)
 	}
 
-	if r.MACRO != nil || r.Errors != 4 || strings.Join(got, " ") != "SYNTAX NOEND NOTIMPL UNDEFLBL" {
+	if r.MACRO != nil || r.Errors != 4 || strings.Join(got, " ") != "SYNTAX NOEND KEYEDVALUE UNDEFLBL" {
 		t.Errorf("result: %d errors, %v", r.Errors, r.Messages)
 	}
 }

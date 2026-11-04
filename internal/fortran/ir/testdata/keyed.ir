@@ -1,0 +1,90 @@
+routine KEYED main
+  cell  S       B  $LOCAL+0    variable S
+  cell  B       B  $LOCAL+6    array B, 4 bytes
+  cell  K2      W  $LOCAL+10   variable K2
+  cell  N       L  $LOCAL+12   variable N
+  cell  X       F  $LOCAL+16   variable X
+  cell  I       L  $LOCAL+20   variable I
+  cell  $KL1    L  $LOCAL+24   an OPEN's list of keys
+  cell  $T1     L  $LOCAL+64   temporary
+  $LOCAL is 68 bytes
+  datum $IO1    control
+  datum $K1     text 'K.DAT'
+  datum $D1     descriptor T S 5 $K1
+  datum $K2     text 'AB'
+  datum $D2     descriptor T S 2 $K2
+  datum $D3     descriptor F S 4 X
+  datum $D4     descriptor T S 6 S
+  datum $D5     descriptor W S 2 K2
+  datum $D6     descriptor L S 4 $T1
+  datum $D7     descriptor BU A 1 (1:4) B
+  datum $IO2    control ERR= run-time format
+  datum $K3     text '(F5.1)'
+  datum $D8     descriptor T S 6 $K3
+  datum $K4     L 7
+  datum $D9     descriptor L S 4 $K4
+  datum $IO3    control IOSTAT=
+  datum $D10    descriptor T S 2 S
+B1:
+  ; line 7
+  assign N = 3
+  ; line 8
+  assign $KL1 = 3
+  assign $KL1+4 = 1
+  assign $KL1+8 = 10
+  assign $KL1+12 = 0
+  assign $KL1+16 = 11
+  assign $KL1+20 = 14
+  assign $KL1+24 = 3
+  assign $KL1+28 = N
+  assign $KL1+32 = add.L(N, 5)
+  assign $KL1+36 = 0
+  call FTN$OPEN(ref $IO1, val 2, val 1806, ref $D1, val 1043, val 3, val 1028, val 4, val 1030, val 40, val 1029, val 1, val 1047, ref $KL1, val 1039, val 4, val 1048, val 2)
+  ; line 11
+  call FTN$READ_KU(ref $IO1, val 2, ref $D2, val 0)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 12
+  call FTN$READ_KU(ref $IO1, val 2, ref $D4, val 0, val 2)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 13
+  call FTN$READ_KU(ref $IO1, val 2, ref $D5, val 1)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 14
+  assign $T1 = add.L(N, 1)
+  call FTN$READ_KU(ref $IO1, val 2, ref $D6, val 2, val N)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 15
+  call FTN$READ_KU(ref $IO1, val 2, ref $D7, val 3)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 16
+  call FTN$READ_KF(ref $IO2, val 2, ref $D8, ref $D9, val 4)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  sign R0 B3 B2 B3
+B2:
+  ; line 17
+  call FTN$READ_KU(ref $IO3, val 2, ref $D10, val 5)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END() -> $T1
+  assign I = $T1
+  ; line 18
+  call FTN$READ_KU(ref $IO1, val 2, ref $D4, val 6)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 19
+  call FTN$REWRITE_SU(ref $IO1, val 2)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 20
+  call FTN$DELETE(ref $IO1, val 2)
+  ; line 21
+  call FTN$UNLOCK(ref $IO1, val 2)
+  ; line 22
+  jump B3
+B3: L10
+  return 1

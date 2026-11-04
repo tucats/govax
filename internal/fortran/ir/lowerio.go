@@ -32,9 +32,11 @@ import (
 // fourth, the count of characters, by value: a longword, since VMS's take
 // counts past a descriptor's word. A direct access statement's last argument
 // is its record number, by value (docs/PHASE-81 - FORTRAN files.md, Decision
-// 4), and a keyed READ's last three its key's descriptor, how a record's key
-// must compare with it (0 equal, 1 greater or equal, 2 greater), and the key's
-// number, by value. REWRITE's begin call is FTN$REWRITE_SF or _SU, a keyed
+// 4), and a keyed READ's last ones its key's descriptor, how a record's key
+// must compare with it (sema's Key constants, by value), and if the READ has
+// KEYID=, the key's number, by value; with none, the argument isn't there and
+// the unit goes on with its last (section 7.1.1.8), which a number couldn't
+// say, since FTNRTL must find a KEYID= out of range. REWRITE's begin call is FTN$REWRITE_SF or _SU, a keyed
 // READ's FTN$READ_KF or _KU.
 //
 // FTN$IO_END's status is 0 for success, negative at an end of file, and
@@ -72,12 +74,11 @@ func (l *lowerer) io(s *sema.IO) {
 	}
 
 	if s.Key != nil {
-		var id Expr = LongConst(0)
-		if s.KeyID != nil {
-			id = l.expr(s.KeyID)
-		}
+		args = append(args, Arg{Ref: l.item(s.Key)}, Arg{Value: LongConst(int32(s.KeyMatch))})
 
-		args = append(args, Arg{Ref: l.item(s.Key)}, Arg{Value: LongConst(int32(s.KeyMatch))}, Arg{Value: id})
+		if s.KeyID != nil {
+			args = append(args, Arg{Value: l.expr(s.KeyID)})
+		}
 	}
 
 	l.emit(&Call{origin: l.origin(), Routine: beginRoutine(s), Args: args})

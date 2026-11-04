@@ -169,17 +169,18 @@ type FileDef struct {
 
 // FileKey is one keyword: its code, and its value: Number, a number known
 // now (a choice's, or a flag's 1); Value, an INTEGER*4 expression; Text, a
-// character value or a numeric place holding a name; or Answer, the place
-// INQUIRE stores its answer in.
+// character value or a numeric place holding a name; Answer, the place
+// INQUIRE stores its answer in; or KeyList, OPEN's KEY=.
 type FileKey struct {
-	Code   int
-	Name   string
-	Number int
-	Value  Expr
-	Text   Expr
-	Answer Expr
-	Proc   *Procedure
-	Known  bool
+	Code    int
+	Name    string
+	Number  int
+	Value   Expr
+	Text    Expr
+	Answer  Expr
+	Proc    *Procedure
+	KeyList []*KeyDef
+	Known   bool
 }
 
 // fileStatement analyzes OPEN, CLOSE, INQUIRE, REWIND, BACKSPACE, ENDFILE,
@@ -400,12 +401,16 @@ func (a *analyzer) fileKeyword(spec *ast.IOSpec, k fileKeyword) (*FileKey, bool)
 
 		return nil, false
 
-	case flagKeyword, keysKeyword:
-		// KEY='s list is the indexed program's: FTNRTL only needs to know
-		// there is one (Decision 13).
+	case flagKeyword:
 		key.Number, key.Known = 1, true
 
 		return key, true
+
+	case keysKeyword:
+		list, good := a.keyList(spec)
+		key.KeyList = list
+
+		return key, good
 
 	case numberKeyword:
 		v := a.value(spec.Value)
@@ -614,6 +619,8 @@ func (a *analyzer) checkOpen(s *ast.AuxIOStmt, keys map[int]*FileKey) bool {
 			why = "ACCESS='DIRECT'"
 		case is(codeOrg, relative):
 			why = "ORGANIZATION='RELATIVE'"
+		case is(codeOrg, indexed):
+			why = "ORGANIZATION='INDEXED'"
 		case is(codeType, fixed):
 			why = "RECORDTYPE='FIXED'"
 		}

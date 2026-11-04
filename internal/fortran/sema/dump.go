@@ -332,6 +332,8 @@ func dumpFile(s *FileStmt) string {
 
 	for _, k := range s.Keys {
 		switch {
+		case k.KeyList != nil:
+			control = append(control, k.Name+"="+dumpKeyList(k.KeyList))
 		case k.Known:
 			control = append(control, k.Name+"="+strconv.Itoa(k.Number))
 		case k.Value != nil:
@@ -635,4 +637,24 @@ func dumpItems(items []*Item) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// dumpKeyList is OPEN's KEY= list, each key's type and direction spelled out.
+func dumpKeyList(list []*KeyDef) string {
+	keys := make([]string, len(list))
+
+	for i, k := range list {
+		kind, direction := "CHARACTER", "ASCENDING"
+		if k.Integer {
+			kind = "INTEGER"
+		}
+
+		if k.Descending {
+			direction = "DESCENDING"
+		}
+
+		keys[i] = DumpExpr(k.First) + ":" + DumpExpr(k.Last) + ":" + kind + ":" + direction
+	}
+
+	return "(" + strings.Join(keys, ", ") + ")"
 }

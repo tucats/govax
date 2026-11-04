@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Subtask 10d, ANALYZE/RMS_FILE, done 2026-11-04 ("What ANALYZE/RMS_FILE settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Subtask 10d, ANALYZE/RMS_FILE, done 2026-11-04 ("What ANALYZE/RMS_FILE settled", in Part A). Subtask 11, the compiler, done 2026-11-04 ("What the compiler settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -25,7 +25,7 @@ utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, a
 the files it made in `vax/` ("What round 3 settled"). `internal/fdl` reads FDL files and CREATE/FDL makes files from them through
 RMS's `$CREATE` (`rms/fdlcreate.go`, `dclcmd/createfdl.go`), `TestIdx88CCreateOracle` holding sections C2 to C5 to VMS's log and 42
 files to VMS's byte for byte, the Prolog 1 files govax refuses left out. CONVERT reads and writes through RMS's services, and fast-loads through `isam`'s
-`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. ANALYZE/RMS_FILE writes all four reports (`isam/inspect.go`'s walk, `anl/rmsfile.go`'s layout, `dclcmd/analyzerms.go`), `TestIdx88ReportsOracle` holding 309 of round 1's reports to VMS's line for line, `TestIdx88CAnalyzeOracle` every such command of round 3, statuses and damaged files too, and `TestStatisticsAsVMS` the figures of 155 keys. **Next: subtask 11,** FORTRAN: the compiler.
+`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. ANALYZE/RMS_FILE writes all four reports (`isam/inspect.go`'s walk, `anl/rmsfile.go`'s layout, `dclcmd/analyzerms.go`), `TestIdx88ReportsOracle` holding 309 of round 1's reports to VMS's line for line, `TestIdx88CAnalyzeOracle` every such command of round 3, statuses and damaged files too, and `TestStatisticsAsVMS` the figures of 155 keys. The compiler takes every statement (subtask 11): all eight key specifiers, `KEY=` checked and passed to FTNRTL as a block, held by `TestFortranKeyedArguments`; FTNRTL still answers `NOTIMP` for an indexed file. **Next: subtask 12,** FTNRTL's OPEN and CLOSE, after round 2 of the probe, on FORRTL, which now comes first.
 
 ## Goal
 
@@ -352,7 +352,7 @@ RMS$_RSZ (too short for the primary), RMS$_CUR (no current record, and after a f
 **Still to be fitted from the run, not asked of VMS again:** where a split falls when a record lands mid-bucket; continuation buckets for a long duplicate chain; SIDR pointers across buckets; how index compression treats a split; and an area's extension. The block dumps after each step hold all of these, and
 subtasks 3 to 6 replay them. A case the dumps don't answer can go in a later round.
 
-**The later rounds move to their subtasks,** since each is best written with its code at hand: FORRTL's (round 2) before subtask 11, the utilities' (round 3) before 10, and DCL's (round 4) before 9.
+**The later rounds move to their subtasks,** since each is best written with its code at hand: FORRTL's (round 2) before subtask 12 (it was to come before 11, but what it finds is FTNRTL's requirement: there's no VAX FORTRAN to compare a compiler with, and FTNRTL's interface is our own), the utilities' (round 3) before 10, and DCL's (round 4) before 9.
 
 ## What the reader settled (2026-11-03)
 
@@ -769,6 +769,18 @@ Subtask 10d, read from rounds 1's and 3's reports. Where this section and those 
 
 **Left:** `/INTERACTIVE` and `/RU_JOURNAL` (answer 2's scope).
 
+## What the compiler settled (2026-11-04)
+
+Subtask 11, read from the LRM, there being no VAX FORTRAN to run. Where this section and those above differ, this one wins.
+
+- **The specifiers.** All eight are compiled (`sema/io.go`'s `keyMatches`), and the match passed is which was written: sema's `Key` constants, 0 KEY and KEYEQ, 1 KEYGE, 2 KEYGT, 3 KEYLE, 4 KEYLT, 5 KEYNXT, 6 KEYNXTNE. A key's direction isn't known until the program runs, so `FOR$_INVMATKEY` and what KEYNXT means are FTNRTL's.
+- **KEYID=.** No KEYID= is no argument, not a 0: section 7.1.1.8 goes on with the unit's last, and a number couldn't say so while FTNRTL still checks a KEYID= out of range. KEYID= with no key is `KEYIDALONE`; the manual has no such form, and what would it search for?
+- **A key's value.** INTEGER or CHARACTER, or the name of a BYTE array (7.1.1.7's "BYTE (LOGICAL\*1) array names"), passed as its class A descriptor, FTNRTL taking the array's whole size as the length. Any other array still needs a subscript. An array of no known size is `NOSIZE`.
+- **END=** on a keyed READ is `KEYEDEND` (7.2.3's form has none); the parser already refuses it on REWRITE.
+- **`KEY=`.** `sema/keylist.go`. Bounds are expressions, converted to INTEGER\*4 as OPEN's numbers are. If both are constants, 9.1.15's rules are checked now: `KEYBOUNDS`, `KEYLENGTH` (255), `KEYINTEGER` (2 or 4). Otherwise, and for e2 against the record's length, whose RECL units depend on FORM=, they're FTNRTL's, at subtask 12. More than the manual's 85 keys is `KEYLISTLONG`. The block is `ir/lowerfile.go`'s `keyListBlock`, a `KeyListCell` the statement fills in: a longword count, then first byte, last byte, and flags (1 INTEGER, 2 DESCENDING) for each key. It's our own form (Decision 8), and the trials of FORRTL's (below, "The probe") don't bear on it. The optimizer leaves the stores, since the cell's address goes to the call.
+- **RECL.** `ORGANIZATION='INDEXED'` without RECL= is `NEEDRECL` unless STATUS='OLD', as relative's is ("RECL is mandatory when opening files with ... relative or indexed organization", 9.1.21).
+- **Nothing else changes.** REWRITE, `DELETE (u)`, `UNLOCK` already compile; their tests stay. FTNRTL and its GSMATCH don't change: code 23's value is still nonzero, and the keyed READ still fails before it reads its arguments.
+
 ## The rules
 
 ### Keys [manual]
@@ -1002,8 +1014,8 @@ them.
     (done 2026-11-04); (b) the FDL reader and CREATE/FDL (done 2026-11-04); (c) CONVERT (done 2026-11-04); (d)
     ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log (done 2026-11-04).
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
-    forms on indexed units; messages.
-12. **FTNRTL: OPEN and CLOSE.** The XABKEY chain, indexed defaults and refusals, INQUIRE.
+    forms on indexed units; messages. (done 2026-11-04)
+12. **FTNRTL: OPEN and CLOSE.** First round 2 of the probe, on FORRTL. The XABKEY chain, indexed defaults and refusals, INQUIRE.
 13. **FTNRTL: the record statements.** Keyed READ, sequential READ after it, WRITE, REWRITE, DELETE,
     UNLOCK, positioning's refusals, each condition; the oracle on FORRTL's run.
 14. **End to end.** `testdata/fortran` programs (an inventory by part number and by name, duplicates,
@@ -1223,3 +1235,4 @@ has REV at all.
   (C5) from VMS's own A35, A62, and A122.FDL, restored since ANALYZE is 10d's, with C13's `;2` and K50's fills; `TestCreateFDLForms` is what the log lacks; `fdl/parse_test.go` the parser alone. "What CREATE/FDL settled" has the findings.
 - **2026-11-04: subtask 10c, CONVERT.** `isam/load.go` is the fast load (`StartLoad`, `Add`, `FinishPrimary`, `FinishAlternate`; `File.holdProlog`), fitted to VMS's files by `TestFastLoadAsVMS`, which reads each file's records and builds it again. `rms/convert.go` reads an input whole through a FAB and RAB of its own (`ReadConvertInput`), makes a file with its attributes when there's no FDL (`CreateLike`, shown fills in bytes), and writes through `$PUT` or the load (`ConvertOutput`). `dclcmd/convert.go` is the command: exceptions, sorting, padding, statistics. `fdlcreate.go` split so CONVERT shares its `$CREATE`. `TestIdx88CConvertOracle` holds C6 to C10 command by command and 60 of the files; "What CONVERT settled" has the findings.
 - **2026-11-04: subtask 10d, ANALYZE/RMS_FILE.** `isam/inspect.go` is an `Inspector`, a lenient reading of the prolog and a walk of each key that reports each `Finding` as it comes and counts `KeyStats`; `anl/rmsfile.go` is the four reports (anl now imports rms); `rms/analyze.go`'s `AnalyzeSearch` finds the files; `dclcmd/analyzerms.go` is the command. `TestStatisticsAsVMS` fitted the figures to round 1's FDL files, `TestIdx88ReportsOracle` holds the report, /CHECK, and /FDL of each file to VMS's, and `TestIdx88CAnalyzeOracle` every ANALYZE command of round 3 with its status. `runIdx88C` no longer restores VMS's FDL files: C5 to C7 use govax's own, and CREATE's oracle restores VMS's for itself. "What ANALYZE/RMS_FILE settled" has the findings.
+- **2026-11-04: subtask 11, the compiler.** `sema/keylist.go` (`KeyDef`, `keyList`), `sema/io.go`'s `keyMatches` and `keyValue`, and `ir/lowerfile.go`'s `keyListBlock`. `keySpecs`'s wrong comment is gone with its NOTIMPL. Round 2 moved to before subtask 12, its findings being FTNRTL's. `TestFortranKeyedArguments` links a program with a MACRO module defining FTN$OPEN and FTN$READ_KF, which print what they're given, in both optimizer modes; `ir/testdata/keyed.for` is the lowered form, and `sema_test.go` has each message. "What the compiler settled" has the choices.

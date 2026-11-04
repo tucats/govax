@@ -996,8 +996,35 @@ var messages = map[string]kind{
 	"KEYEDREC": {Error, "a READ can't have both a key and a record number"},
 
 	// KEYEDVALUE is a key that isn't an INTEGER or CHARACTER value, or a
-	// KEYID= that isn't an INTEGER (section 7.1.1.5).
+	// KEYID= that isn't an INTEGER (sections 7.1.1.7 and 7.1.1.8).
 	"KEYEDVALUE": {Error, "%s= must be %s, not %s"},
+
+	// KEYIDALONE is a READ with KEYID= and no key to look for (section
+	// 7.1.1.8: the key of reference "accompanies" a key's value).
+	"KEYIDALONE": {Error, "a READ with KEYID= needs a key to look for, such as KEY="},
+
+	// KEYEDEND is a keyed READ with END=, which its form doesn't have (section
+	// 7.2.3).
+	"KEYEDEND": {Error, "a keyed READ can't have END="},
+
+	// KEYLISTLONG is an OPEN listing more keys than it can (section 9.1.15).
+	"KEYLISTLONG": {Error, "an OPEN statement can list at most %d keys in KEY=, not %d; make the file with FDL"},
+
+	// KEYFIELDTYPE is a key whose type isn't one of section 9.1.15's.
+	"KEYFIELDTYPE": {Error, "a key's type is INTEGER or CHARACTER, not %s"},
+
+	// KEYFIELDDIR is a key whose direction isn't one of section 9.1.15's.
+	"KEYFIELDDIR": {Error, "a key's direction is ASCENDING or DESCENDING, not %s"},
+
+	// KEYBOUNDS is a key whose positions break section 9.1.15's rule, 1 <= e1
+	// <= e2.
+	"KEYBOUNDS": {Error, "the key %d:%d can't be: its first byte must be 1 or later, and not after its last"},
+
+	// KEYLENGTH is a key too long (section 9.1.15).
+	"KEYLENGTH": {Error, "the key %d:%d is %d bytes long, and a key can be at most 255"},
+
+	// KEYINTEGER is an INTEGER key of another length (section 9.1.15).
+	"KEYINTEGER": {Error, "the INTEGER key %d:%d is %d bytes long, and an INTEGER key must be 2 or 4"},
 
 	// FINDREC is a FIND with no record number (appendix A.3).
 	"FINDREC": {Error, "a FIND needs a record number, u'r or REC="},

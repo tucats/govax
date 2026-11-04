@@ -225,6 +225,7 @@ const (
 	SelectorCell                   // which entry point the routine was called by
 	FormatCell                     // where FTNRTL keeps a FORMAT statement's parsed form
 	FrameBaseCell                  // the frame's FP, for a FORMAT's variable format expressions (lowervfe.go)
+	KeyListCell                    // what an OPEN's KEY= tells FTNRTL, filled in by the statement (lowerfile.go)
 )
 
 // Cell is a place in the routine's static storage, or, if Frame is set, in the

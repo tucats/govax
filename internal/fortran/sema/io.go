@@ -78,11 +78,10 @@ type IO struct {
 	// Rewrite is set for REWRITE, which writes over a file's current record.
 	Rewrite bool
 
-	// Key is a keyed READ's key (KEY=, KEYEQ=, KEYGE=, or KEYGT=), an INTEGER
-	// or CHARACTER value, nil for any other statement; KeyMatch is how a
-	// record's key must compare with it, 0 equal (KEY=, KEYEQ=), 1 greater or
-	// equal (KEYGE=), 2 greater (KEYGT=); and KeyID is KEYID='s key number, an
-	// INTEGER*4, or nil for the primary key.
+	// Key is a keyed READ's key, an INTEGER or CHARACTER value or a BYTE array
+	// holding text, nil for any other statement; KeyMatch is how a record's key
+	// must compare with it, one of the Key constants; and KeyID is KEYID='s key
+	// number, an INTEGER*4, or nil to go on with the unit's last.
 	Key      Expr
 	KeyMatch int
 	KeyID    Expr
@@ -432,21 +431,43 @@ func (a *analyzer) direct(io *IO, s *ast.TransferStmt, path []frame) Stmt {
 	return a.ioItems(io, s.Items)
 }
 
-// keyMatches are the keyed READ's specifiers and the comparison each asks
-// for; the later Fortran's KEYLE=, KEYLT=, KEYNXT=, and KEYNXTNE= aren't
-// the 1988 manual's.
-var keyMatches = map[string]int{"KEY": 0, "KEYEQ": 0, "KEYGE": 1, "KEYGT": 2}
+// How a keyed READ's key compares (section 7.1.1.7), passed to FTNRTL as it
+// stands. A file's direction isn't known until the program runs, so these say
+// which specifier was written: FTNRTL makes KeyNext and KeyNextDifferent mean
+// what the key's direction says, and refuses the four one-directional forms
+// against the other direction (FOR$_INVMATKEY).
+const (
+	KeyEqual         = iota // KEY=, KEYEQ=
+	KeyGreaterEqual         // KEYGE=, ascending keys only
+	KeyGreater              // KEYGT=, ascending keys only
+	KeyLessEqual            // KEYLE=, descending keys only
+	KeyLess                 // KEYLT=, descending keys only
+	KeyNext                 // KEYNXT=, equal or next in the key's direction
+	KeyNextDifferent        // KEYNXTNE=, next in the key's direction
+)
 
-// keySpecs takes a READ's key specifiers out of its control list (section
-// 7.1.1.5), returning the rest, and whether the READ is keyed.
+// keyMatches are the keyed READ's specifiers and the comparison each asks for.
+var keyMatches = map[string]int{
+	"KEY": KeyEqual, "KEYEQ": KeyEqual,
+	"KEYGE": KeyGreaterEqual, "KEYGT": KeyGreater,
+	"KEYLE": KeyLessEqual, "KEYLT": KeyLess,
+	"KEYNXT": KeyNext, "KEYNXTNE": KeyNextDifferent,
+}
+
+// keySpecs takes a READ's key specifiers out of its control list (sections
+// 7.1.1.7 and 7.1.1.8), returning the rest, and whether the READ is keyed.
 func (a *analyzer) keySpecs(io *IO, s *ast.TransferStmt) (rest []*ast.IOSpec, keyed, ok bool) {
 	ok = true
+
+	var keyID *ast.IOSpec
 
 	for _, spec := range s.Specs {
 		match, isKey := keyMatches[spec.Keyword]
 
 		switch {
 		case isKey:
+			keyed = true
+
 			if io.Key != nil {
 				a.report("KEYTWICE", spec.Pos, spec.Keyword, "a key")
 
@@ -455,22 +476,16 @@ func (a *analyzer) keySpecs(io *IO, s *ast.TransferStmt) (rest []*ast.IOSpec, ke
 				continue
 			}
 
-			v := a.value(spec.Value)
-
-			switch t := v.Type(); t.Kind {
-			case Invalid:
-				ok = false
-			case Integer, Character:
+			if v := a.keyValue(spec); v != nil {
 				io.Key, io.KeyMatch = v, match
-			default:
-				a.report("KEYEDVALUE", spec.Pos, spec.Keyword, "an INTEGER or CHARACTER value", article(t.String())+" value")
-
+			} else {
 				ok = false
 			}
 
+		case spec.Keyword == "KEYID":
 			keyed = true
 
-		case spec.Keyword == "KEYID":
+			keyID = spec
 			v := a.value(spec.Value)
 
 			switch t := v.Type(); t.Kind {
@@ -484,19 +499,49 @@ func (a *analyzer) keySpecs(io *IO, s *ast.TransferStmt) (rest []*ast.IOSpec, ke
 				ok = false
 			}
 
-			keyed = true
-
-		case strings.HasPrefix(spec.Keyword, "KEY"):
-			a.notImplForm(spec.Pos, "the "+spec.Keyword+"= specifier")
-
-			ok = false
-
 		default:
 			rest = append(rest, spec)
 		}
 	}
 
+	// KEYID= only says which key the key's value is for (section 7.1.1.8).
+	if keyID != nil && io.Key == nil && ok {
+		a.report("KEYIDALONE", keyID.Pos)
+
+		ok = false
+	}
+
 	return rest, keyed, ok
+}
+
+// keyValue analyzes a key's value (section 7.1.1.7): an INTEGER or CHARACTER
+// expression, or the name of a BYTE array holding text; nil, the error
+// reported, if it is none.
+func (a *analyzer) keyValue(spec *ast.IOSpec) Expr {
+	if n, isName := spec.Value.(*ast.Name); isName {
+		if s := a.unit.byName[n.Name]; s != nil && len(s.Dims) > 0 && s.Type.Kind == Logical && s.Type.Size == 1 {
+			if s.AssumedSize() {
+				a.report("NOSIZE", spec.Pos, s.Name)
+
+				return nil
+			}
+
+			return a.name(n, true)
+		}
+	}
+
+	v := a.value(spec.Value)
+
+	switch t := v.Type(); t.Kind {
+	case Invalid:
+		return nil
+	case Integer, Character:
+		return v
+	default:
+		a.report("KEYEDVALUE", spec.Pos, spec.Keyword, "an INTEGER or CHARACTER value", article(t.String())+" value")
+
+		return nil
+	}
 }
 
 // byRecord analyzes a REWRITE (section 7.4) or a keyed READ (section 7.2.3),
@@ -528,6 +573,16 @@ func (a *analyzer) byRecord(io *IO, s *ast.TransferStmt, path []frame, what stri
 		ok = false
 	case !a.ioFormat(io, s.Format):
 		ok = false
+	}
+
+	// A keyed READ has no END=: a key has no end of file to reach (section
+	// 7.2.3). The parser already refuses it on a REWRITE.
+	for _, spec := range s.Specs {
+		if spec.Keyword == "END" {
+			a.report("KEYEDEND", spec.Pos)
+
+			ok = false
+		}
 	}
 
 	if !a.ioSpecs(io, s.Specs, path) || !ok {
