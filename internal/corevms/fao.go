@@ -455,7 +455,7 @@ func (f *faoFormatter) emitFiltered(s string, width int, filter bool) {
 	if filter {
 		b := []byte(s)
 		for i, c := range b {
-			if c < ' ' || c > '~' {
+			if !faoPrintable(c) {
 				b[i] = '.'
 			}
 		}
@@ -464,6 +464,16 @@ func (f *faoFormatter) emitFiltered(s string, width int, filter bool) {
 	}
 
 	f.emit(s, width)
+}
+
+// faoPrintable reports whether !AF shows the byte c as it is: the DEC
+// Multinational Character Set's graphic characters, ASCII's from space to
+// tilde and the supplemental ones from A1 to FE hex. VMS 7.1's !AF kept every
+// byte from BA to FE and showed a period for the control characters, 00 to
+// 1F and 80 to 9F, and for FF (testdata/idx88's records); that DEL (7F) and
+// A0 are periods too is unconfirmed.
+func faoPrintable(c byte) bool {
+	return c >= ' ' && c <= '~' || c >= 0xA1 && c <= 0xFE
 }
 
 // valueString is the string of the F$FAO argument just read: a string

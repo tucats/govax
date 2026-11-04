@@ -661,7 +661,10 @@ never had.
   `DropPointer`), each of the probe's changing cases VMS's at every dump, and subtask 7 (2026-11-03) RMS's
   `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND` of indexed files (`rms/indexed.go`: the XABs checked in VMS's order into an
   `isam.Spec`, `indexedBlocks` a volume file for isam; `indexedxab.go`, XABSUM, XABKEY, XABALL; `extend.go`; the record services
-  RMS$_ORG until subtask 8), held to VMS by `TestIdx88CreateOracle` and `TestIndexedOpenAsVMS`.
+  RMS$_ORG until subtask 8), held to VMS by `TestIdx88CreateOracle` and `TestIndexedOpenAsVMS`, and subtask 8 (2026-11-03)
+  RMS's record operations (`rms/indexedrecords.go`: `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND` by key, in
+  sequence on the stream's key of reference, and by RFA; ROP's KGE, KGT, REV, LIM, CDK, UIF, LOA, FDL; locks by RFA), held to
+  VMS's whole run by `TestIdx88Oracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

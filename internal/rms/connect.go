@@ -124,5 +124,11 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr, rabAddr uint32) (failS
 	// of a file with records in it is RMS$_NEF (stream.go). A Reader or
 	// Writer the file has already is kept: a second RAB connected to it
 	// continues the same stream rather than racing it.
-	return handle.arm(fac, rop), nil
+	if sts := handle.arm(fac, rop); sts != 0 || !handle.indexedRecords() {
+		return sts, nil
+	}
+
+	// An indexed stream starts at its key of reference's first record
+	// (indexedrecords.go).
+	return ctx.connectIndexed(rabAddr, handle, rop)
 }

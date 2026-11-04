@@ -137,7 +137,6 @@ var idx88CreateDifferences = map[int]string{
 	60:  "PROLOG=1: Prolog 3 only (RMS$_PLV)",
 	61:  "PROLOG=2: Prolog 3 only (RMS$_PLV)",
 	92:  "MRS 32225: VMS made Prolog 1, govax has only Prolog 3 (RMS$_PLV)",
-	103: "the CIF $CREATE's ALQ: the file grew by a $PUT, which is subtask 8's",
 }
 
 // TestIdx88CreateOracle holds govax's $CREATE of an indexed file to VMS 7.1's
@@ -146,7 +145,7 @@ var idx88CreateDifferences = map[int]string{
 // the FAB$L_ALQ and FAB$B_BKS that show how far VMS got), each refusal case
 // whole, and the file of case 2, made with no records, to the byte. The
 // $OPEN and $DISPLAY of VMS's own files are internal/rms's
-// TestIndexedOpenAsVMS.
+// TestIndexedOpenAsVMS, and the record operations TestIdx88Oracle.
 func TestIdx88CreateOracle(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "idx88", "vax", "idx88-vax.txt"))
 	if err != nil {
@@ -195,24 +194,7 @@ func TestIdx88CreateOracle(t *testing.T) {
 		}
 	}
 
-	// Case 2's file has no records: the $GET after its $OPEN is subtask 8's.
-	without := func(lines []string) []string {
-		var out []string
-
-		for i := 0; i < len(lines); i++ {
-			if strings.HasPrefix(lines[i], "=$GET ") {
-				i++
-
-				continue
-			}
-
-			out = append(out, lines[i])
-		}
-
-		return out
-	}
-
-	same(2, "whole", without(vms[2]), without(ours[2]))
+	same(2, "whole", vms[2], ours[2])
 }
 
 // TestXABKEYRefusals holds govax's $XABKEY to the four keys real MACRO's refuses at

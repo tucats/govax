@@ -183,11 +183,12 @@ func (f *File) Update(rfa RFA, record []byte) (PutResult, error) {
 		return PutResult{}, err
 	}
 
-	if err := f.rewrite(p, k, rest); err != nil {
+	split, err := f.rewrite(p, k, rest)
+	if err != nil {
 		return PutResult{}, err
 	}
 
-	result := PutResult{RFA: rfa}
+	result := PutResult{RFA: rfa, Split: split}
 
 	// The new pointer goes in before the old one comes out: U130's stale bytes
 	// are its new SIDR's, moved down over the old one's place.
@@ -213,8 +214,9 @@ func (f *File) Update(rfa RFA, record []byte) (PutResult, error) {
 
 // rewrite puts a record's new bytes after its key where the old ones were. The
 // key itself doesn't change, so the stored key, compressed against the record
-// before, is the same, and so is the next record's.
-func (f *File) rewrite(p *place, k *Key, rest []byte) error {
+// before, is the same, and so is the next record's. It reports whether the
+// bucket had to split for them.
+func (f *File) rewrite(p *place, k *Key, rest []byte) (bool, error) {
 	b, r := p.b, p.record()
 
 	var previous []byte
@@ -230,13 +232,13 @@ func (f *File) rewrite(p *place, k *Key, rest []byte) error {
 
 	length := p.end(b) - r.offset
 	if !b.room(len(stored) - length) {
-		return f.splitForUpdate(b, k, p.list, p.at, rest)
+		return true, f.splitForUpdate(b, k, p.list, p.at, rest)
 	}
 
 	b.replace(r.offset, length, stored)
 	b.touch()
 
-	return f.writeBucket(b)
+	return false, f.writeBucket(b)
 }
 
 // end is where the place's record ends: the next record, or the free offset.

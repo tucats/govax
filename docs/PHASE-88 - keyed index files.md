@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -15,8 +15,10 @@ out as VMS's in every structure, and `Check` holds any file to the rules. `Updat
 records, the probe's twelve "changing" cases coming out as VMS's at every dump, ten of them to the byte. RMS makes and opens
 indexed files through it (`rms/indexed.go`, `indexedxab.go`, `extend.go`): every `$CREATE` of the probe gives VMS's status, STV,
 and FAB but where govax's Prolog 3 alone refuses what VMS made as Prolog 1 or 2, and `$OPEN` and `$DISPLAY` of VMS's own 77
-Prolog 3 files report every key and area as VMS's did. The record services answer RMS$_ORG on an indexed file until subtask 8.
-`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 8,** RMS's record operations.
+Prolog 3 files report every key and area as VMS's did. The record services read and change them (`rms/indexedrecords.go`): `$GET`,
+`$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`, by key, in sequence on any key, and by RFA, with ROP's options and record locks,
+and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the other seven listed with their reasons.
+`testdata/idx88` holds VMS's run, files, and definitions. ods2 needed no change. **Next: subtask 9,** DCL.
 
 ## Goal
 
@@ -495,6 +497,50 @@ ones above differ, this one wins.
 - **Found on the way:** a `$CREATE` or `$OPEN` failing after the file was accessed released its IFI but not the access, so the
   file stayed held (RMS$_FLK at the next `$OPEN`); `abandon` closes it.
 
+## What the record services settled (2026-11-03)
+
+Subtask 8 runs the whole probe on govax and holds every case to VMS's run (`TestIdx88Oracle`): 146 of the 153 cases are VMS's
+line for line, statuses, RABs, records, walks, and blocks, a block dump that isn't VMS's byte for byte being the same file by
+`isam.Dump`. The seven left are the five Prolog 1 and 2 refusals (answer 1) and G117 and G118 ("What the splits settled").
+Where this section and the ones above differ, this one wins.
+
+- **The key of reference.** A stream follows one key in sequence: `$CONNECT` and `$REWIND` take it from RAB$B_KRF, a keyed `$GET`
+  or `$FIND` makes it the key searched, and an RFA access the primary key. A sequential `$GET` ignores RAB$B_KRF (case 125: a keyed
+  `$GET` by key 3, then sequential `$GET`s with KRF 0 went on by key 3). `$CONNECT` with ROP EOF and KRF 1 was taken (case 137),
+  though the manual says RMS$_ROP.
+- **The stream's place** is the record it reached last, by key and RFA: a successful `$GET` or `$FIND` of any kind moves it there,
+  and a sequential `$GET` right after a `$FIND` reads the found record. A failure leaves it (case 131: a keyed `$GET` past the
+  end, RMS$_RNF, then the record after the last one read). After a `$DELETE` the stream goes on from the record after the deleted
+  one by the stream's key (case 146); govax works that out before the record goes, since isam can find only what follows a gone
+  record's *key*, which would pass over its other duplicates (`indexedStream.queued`). That a keyed `$FIND` moves the place as a
+  `$GET` does is unconfirmed: no case tells it from leaving it.
+- **What a service leaves in the RAB.** A failed `$GET` or `$FIND` leaves RFA 0 and a `$GET` RSZ 0 (RNF, RLK, EOF, KSZ, KRF,
+  KBF, ROP, DEL); RMS$_RTB leaves the RFA, RSZ the part stored, and STV the record's size (case 130). A failed `$PUT`, `$UPDATE`,
+  or `$DELETE` leaves both as they were (cases 133, 139 to 141, 153). A successful `$DELETE` leaves RFA 0. A successful `$UPDATE`
+  that split its bucket leaves **STV 1** (case 147), why isn't known; `isam.PutResult.Split` reports it.
+- **Keyed access** (cases 120 to 129): ROP's KGE, KGT, and REV as the manual's Table 7-4, RMS$_ROP for REV alone and for KGE
+  with KGT. A string key's KSZ may be 1 to its size, a generic search; 0 or more is RMS$_KSZ. Any other key's must be 0 (the whole
+  key) or its size, packed decimal too. KRF past the keys is RMS$_KRF before KSZ is looked at; a KBF RMS can't read RMS$_KBF.
+- **ROP LIM** compares the record's key, by KSZ bytes, with KBF's, and a different one is the success RMS$_OK_LIM with the record
+  returned and the stream past it (case 130: two in a row). **ROP CDK** is RMS$_OK_DUP when the *next* record by the key has the
+  same value: of three duplicates, the first two (case 130).
+- **`$PUT` in sequence** is refused RMS$_SEQ for a primary key below the stream's last sequential `$PUT`, by the key's own order
+  (case 136, descending), and an equal one goes on to RMS$_DUP (case 133). After `$CONNECT` with ROP EOF the last is the file's
+  highest key (case 137). That `$REWIND` and `$CONNECT` forget it, and that a `$GET` doesn't change it, are unconfirmed.
+- **`$PUT` with UIF** over a record that's there is an update of it, its RFA in the RAB, RMS$_RLK if another stream holds it
+  (cases 142, 153). **`$TRUNCATE`** without TRN access is RMS$_FAC (case 132); with it, RMS$_IOP, unconfirmed.
+- **Locks** are by RFA as on the other organizations (Phase 47), and VMS's answers to another stream's lock are the same:
+  RMS$_RLK for a plain `$GET`, NLK, REA, NXR, and TMO without WAT, RMS$_OK_RRL with RRL (case 151); ULK, `$RELEASE`, and
+  `$FREE` as before (case 152).
+- **A pointer a fast delete left** is taken out when a search reaches it, and the search goes on (`findLive`, `nextLive`), so case
+  144's later `$GET`s by each alternate were RMS$_RNF and its walks one record short, as VMS's.
+- **The header.** Once RMS extends an indexed file its end of file is the block after the allocation (VMS's DIRECTORY/FULL: "Size:
+  9/9"), and the longest record stays 0 ("longest 0 bytes").
+- **`$FAO`'s `!AF`** kept the DEC Multinational graphic characters (BA to FE in the records) and showed periods for 00 to 1F, 80
+  to 9F, and FF, where govax's showed a period for every byte past 7E; `faoPrintable` is VMS's now, 7F and A0 unconfirmed.
+- **Not done:** `$SPACE`, which govax has for no organization (it's block I/O, not a record service); the subtask list's mention
+  of it was the survey's guess.
+
 ## The rules
 
 ### Keys [manual]
@@ -720,7 +766,8 @@ them.
 7. **RMS: `$CREATE`, `$OPEN`, `$DISPLAY`.** XABKEY, XABSUM, XABALLs, every status; CIF;
    F$FILE_ATTRIBUTES; `$EXTEND`; SET DEBUG RMS. (done 2026-11-03)
 8. **RMS: record operations.** `$CONNECT`, `$GET`, `$FIND`, `$PUT`, `$UPDATE`, `$DELETE`, `$REWIND`,
-   `$FREE`, `$RELEASE`, `$SPACE`; ROP's options; contexts; locks; `TestIdx88Oracle`.
+   `$FREE`, `$RELEASE`, `$SPACE`; ROP's options; contexts; locks; `TestIdx88Oracle`. (done 2026-11-03; `$SPACE` left out, as
+   "What the record services settled" says)
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
    to a probe log.
 10. **Utilities,** as Question 2 chooses: an FDL reader, CREATE/FDL, CONVERT, ANALYZE/RMS_FILE, each
@@ -873,3 +920,15 @@ has REV at all.
   `TestIdx88CreateOracle` (`internal/console`; `runIdx88` now runs the probe on an RD54 of 3-block clusters, so `TestIdx88Probe`
   does too), `TestIndexedOpenAsVMS` (VMS's files restored and opened), and `indexed_test.go`'s cases the probe lacks, and
   `TestExtendArea`. "What RMS's `$CREATE` settled" has the findings.
+- **2026-11-03: subtask 8, RMS's record operations.** `rms/indexedrecords.go`: `indexedStream` (the key of reference, the place
+  as an `isam.Entry`, the record queued after a deletion, the current record, the last sequential `$PUT`'s key), `connectIndexed`
+  (from `armForFAC`), `indexedLocate` (`$GET` and `$FIND`: sequence, key with `keyMatch` and `searchValue`, RFA; locks through
+  `lockFound`; LIM and CDK by `keyStatus`), `indexedPut` (SEQ, UIF by `putOver`, LOA), `indexedUpdate`, `indexedDelete`
+  (FDL), `indexedRewind`; `findLive` and `nextLive` take out a fast delete's pointers as a search meets them. The interim
+  `indexedPending` is gone, `$TRUNCATE` is RMS$_IOP after its FAC check, and RMS$_OK_RRL is an indexed file's as a relative
+  one's. `isam.PutResult.Split`; `indexedBlocks.Extend` sets the end of file; `$FAO`'s `!AF` keeps the DEC Multinational
+  graphics (`corevms/fao.go`'s `faoPrintable`). Tests: `TestIdx88Oracle` (`internal/console/idx88oracle_test.go`, every case
+  whole, dumps that differ compared by `isam.Dump`; a mutation ignoring ROP LOA fails it), `TestIdx88CreateOracle` without its
+  two subtask 8 exceptions, and `indexedrecords_test.go` for what the probe lacks (FAC refusals, `$FIND` then `$UPDATE` and
+  `$DELETE` with the sequence going on among duplicates, RFA access, the end of file, `$REWIND`'s key). "What the record
+  services settled" has the findings.

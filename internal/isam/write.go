@@ -700,6 +700,10 @@ type PutResult struct {
 	// Duplicate means an allowed duplicate was taken for some key: RMS's
 	// success status RMS$_OK_DUP rather than RMS$_SUC.
 	Duplicate bool
+
+	// Split means an Update's record no longer fitted its bucket, which split
+	// for it. VMS's $UPDATE left an STV of 1 then (testdata/idx88, U137).
+	Split bool
 }
 
 // dataPointerControl is a data record's control byte: its pointer is always

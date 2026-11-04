@@ -78,11 +78,7 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// ifi.go's FileHandle doc comment).
 	relative := onVolume && handle.relativeRecords()
 
-	if onVolume && handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
-	}
-
-	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil && !relative {
+	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil && !relative && !handle.indexedRecords() {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
@@ -120,6 +116,11 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// An indirect accessor's record to a VFC file takes the fixed
 	// control its record attributes call for (ppfaccess.go).
 	record = ctx.indirectRecord(ifi, handle, record)
+
+	// An indexed file's record goes where its keys say (indexedrecords.go).
+	if onVolume && handle.indexedRecords() {
+		return ctx.indexedPut(rabAddr, handle, record)
+	}
 
 	// A relative file's record goes in its cell (relative.go).
 	if relative {

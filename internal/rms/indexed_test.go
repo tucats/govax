@@ -10,7 +10,7 @@ import (
 // The tests in this file are an indexed $CREATE's and the services around it
 // that the probe's run doesn't reach (Phase 88, subtask 7): its own cases are
 // internal/console's TestIdx88CreateOracle, and VMS's files opened are
-// TestIndexedOpenAsVMS.
+// TestIndexedOpenAsVMS. The record services' are indexedrecords_test.go.
 
 // Where these tests put their XABs, and a key name.
 const (
@@ -277,44 +277,6 @@ func TestIndexedBadKeyName(t *testing.T) {
 
 	if r0 := run(t, f.ctx, SysOpen, testFabAddr); r0 != rmsPrologError {
 		t.Errorf("$OPEN: %s, want RMS$_PLG", StatusName(r0))
-	}
-}
-
-// TestIndexedRecordsWait holds the record services to RMS$_ORG on an indexed
-// file until subtask 8 gives them one, block I/O reading every allocated
-// block, and $CLOSE leaving the end of file 0, as VMS's are until RMS
-// extends them.
-func TestIndexedRecordsWait(t *testing.T) {
-	f := newCreateFixture(t, true)
-	putXABKey(t, f.ctx, xabKey0Addr, 0, 0, 0, 0, 8, 0)
-	indexedFAB(t, f.ctx, "DUA0:W.IDX", 100, xabKey0Addr)
-	run(t, f.ctx, SysCreate, testFabAddr)
-	connectRAB(t, f.ctx, testFabAddr)
-
-	if sts := readLongword(t, f.ctx, testRabAddr+rabSTS); sts != rmsNormal {
-		t.Fatalf("$CONNECT: %s", StatusName(sts))
-	}
-
-	putRecord(t, f.ctx, testRabAddr, []byte("P0000001 the rest"))
-
-	for name, service := range map[string]func(*Context, []uint32) (uint32, error){
-		"$PUT": SysPut, "$GET": SysGet, "$FIND": SysFind, "$UPDATE": SysUpdate,
-		"$DELETE": SysDelete, "$REWIND": SysRewind,
-	} {
-		if r0 := run(t, f.ctx, service, testRabAddr); r0 != rmsInvalidOrg {
-			t.Errorf("%s: %s, want RMS$_ORG", name, StatusName(r0))
-		}
-	}
-
-	run(t, f.ctx, SysClose, testFabAddr)
-
-	h, err := NewSession(f.ctx.Mounts).FileAttributes("DUA0:W.IDX")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if h.EndBlock != 0 || h.Allocated < 2 {
-		t.Errorf("end of file %d over %d blocks, want 0", h.EndBlock, h.Allocated)
 	}
 }
 

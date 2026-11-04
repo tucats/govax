@@ -43,7 +43,7 @@ func SysFind(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
+		return ctx.indexedLocate(rabAddr, handle, true)
 	}
 
 	if handle.relativeRecords() {
@@ -128,7 +128,7 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
+		return ctx.indexedUpdate(rabAddr, handle)
 	}
 
 	if handle.relativeRecords() {
@@ -291,9 +291,7 @@ func SysTruncate(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsIOP)
 	}
 
-	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
-	}
+
 
 	s := &handle.stream
 
@@ -307,9 +305,10 @@ func SysTruncate(ctx *Context, argv []uint32) (uint32, error) {
 		return fail(rmsFACNotAllowed)
 	}
 
-	// A relative file can't be cut off (unconfirmed: VMS 7.1 refused one
-	// with RMS$_FAC for want of TRN access, FOR81R's #23).
-	if handle.relativeRecords() {
+	// A relative or indexed file can't be cut off (unconfirmed: VMS 7.1
+	// refused each with RMS$_FAC for want of TRN access, FOR81R's #23 and
+	// testdata/idx88's case 132).
+	if handle.relativeRecords() || handle.indexedRecords() {
 		return fail(rmsIOP)
 	}
 
@@ -362,7 +361,7 @@ func SysDelete(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
+		return ctx.indexedDelete(rabAddr, handle)
 	}
 
 	if handle.relativeRecords() {
@@ -394,7 +393,7 @@ func SysRewind(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
+		return ctx.indexedRewind(rabAddr, handle)
 	}
 
 	if !handle.IsConsole() && !handle.IsRecordDevice() {

@@ -89,7 +89,7 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.indexedRecords() {
-		return ctx.indexedPending(rabAddr)
+		return ctx.indexedLocate(rabAddr, handle, false)
 	}
 
 	if handle.relativeRecords() {

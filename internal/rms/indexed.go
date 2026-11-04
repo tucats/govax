@@ -148,6 +148,11 @@ func (b indexedBlocks) Extend(count uint32) (uint32, uint32, error) {
 		return 0, 0, err
 	}
 
+	// Once RMS has extended an indexed file its end of file is the block
+	// after the allocation (VMS 7.1: the phase doc's "What RMS's $CREATE
+	// settled"); until then it's 0.
+	b.f.SetEndOfFile(b.f.Blocks()+1, 0)
+
 	return old + 1, b.f.Blocks() - old, nil
 }
 
@@ -781,12 +786,4 @@ func (ctx *Context) initIndexed(f *volume.File, plan *indexedPlan) (uint32, uint
 // (not a block stream, whose operations are any file's).
 func (h *FileHandle) indexedRecords() bool {
 	return h.indexed && !h.stream.blocks
-}
-
-// indexedPending is a record operation on an indexed file, which subtask 8
-// of Phase 88 gives RMS: until then it's RMS$_ORG, so a program learns at
-// once that the organization isn't one govax reads by record yet, and no
-// record service treats the file's buckets as a sequential file's records.
-func (ctx *Context) indexedPending(rabAddr uint32) (uint32, error) {
-	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidOrg)
 }
