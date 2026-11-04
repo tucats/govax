@@ -226,6 +226,8 @@ const (
 	// docs/PHASE-88 - keyed index files.md: DCL's own messages for a
 	// qualifier's value.
 	cliValReq
+	cliIVQUAL
+	cliNOVALU
 	cliAbKeyw
 )
 
@@ -518,6 +520,12 @@ const (
 	// a keyword abbreviated so far that it could be more than one
 	// (READ/MATCH=G).
 	CLI_VALREQ = CLIFacility<<FacilityPosition | cliValReq<<MessagePosition | StatusWarning
+
+	// CLI_IVQUAL is a qualifier the command doesn't have, and CLI_NOVALU a
+	// value given to one that takes none, each with its segment, as VMS 7.1
+	// showed them (testdata/idx88's round 3, C10).
+	CLI_IVQUAL = CLIFacility<<FacilityPosition | cliIVQUAL<<MessagePosition | StatusWarning
+	CLI_NOVALU = CLIFacility<<FacilityPosition | cliNOVALU<<MessagePosition | StatusWarning
 	CLI_ABKEYW = CLIFacility<<FacilityPosition | cliAbKeyw<<MessagePosition | StatusWarning
 
 	// Verification's messages (docs/PHASE-50, subtask 15), as VMS 7.3
@@ -745,6 +753,8 @@ func init() {
 	DefineMessage(CLI_IVDTIME, CLIFacility, "IVDTIME", "invalid delta time - use DDDD-HH:MM:SS.CC format")
 	DefineMessage(CLI_IVVALU, CLIFacility, "IVVALU", "invalid value syntax - see command documentation")
 	DefineMessage(CLI_VALREQ, CLIFacility, "VALREQ", "missing qualifier or keyword value - supply all required values")
+	DefineMessage(CLI_IVQUAL, CLIFacility, "IVQUAL", "unrecognized qualifier - check validity, spelling, and placement")
+	DefineMessage(CLI_NOVALU, CLIFacility, "NOVALU", "value not allowed - remove value specification")
 	DefineMessage(CLI_ABKEYW, CLIFacility, "ABKEYW", "ambiguous qualifier or keyword - supply more characters")
 	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")

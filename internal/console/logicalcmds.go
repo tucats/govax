@@ -59,6 +59,24 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 		})
 	})
 
+	g.Bind("CONVERT", func(id int64, r *dcl.Result) error {
+		on := func(name string) bool { return r.Present(name) && !r.Negated(name) }
+		off := func(name string) bool { return r.Present(name) && r.Negated(name) }
+		given := func(name string) bool { return on(name) && !r.Defaulted(name) }
+
+		return c.cmd().Convert(dclcmd.ConvertRequest{
+			Inputs: r.List("INPUT"), Output: r.String("OUTPUT"),
+			Append: on("APPEND"), NoCreate: off("CREATE"),
+			Exceptions: given("EXCEPTIONS_FILE"), ExceptionsFile: r.String("EXCEPTIONS_FILE"),
+			Exit: on("EXIT"), NoFastLoad: off("FAST_LOAD"), FDL: r.String("FDL"),
+			FillBuckets: on("FILL_BUCKETS"), FixedControl: on("FIXED_CONTROL"),
+			HasKey: r.Present("KEY"), Key: int(r.Int("KEY")), Merge: on("MERGE"),
+			Pad: given("PAD"), PadValue: r.String("PAD"), Prolog: int(r.Int("PROLOG")),
+			Share: on("SHARE"), NoSort: off("SORT"), Statistics: on("STATISTICS"),
+			Truncate: on("TRUNCATE"), HasWorkFiles: r.Present("WORK_FILES"), WorkFiles: int(r.Int("WORK_FILES")),
+		})
+	})
+
 	g.Bind("CREATE_DIRECTORY", func(id int64, r *dcl.Result) error {
 		req := dclcmd.CreateDirectoryRequest{
 			Directories: r.List("DIRECTORIES"),

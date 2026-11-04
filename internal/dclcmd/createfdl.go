@@ -72,16 +72,7 @@ func (c *Context) CreateFDL(req CreateFDLRequest) error {
 	}
 
 	def, msgs := fdl.Parse(text, fdl.Options{ParseTime: c.ParseTime})
-
-	for _, m := range msgs {
-		for i, line := range m.Lines() {
-			if i == 0 {
-				line = "%" + line
-			}
-
-			c.Printf("%s\n", line)
-		}
-	}
+	c.showFDLMessages(msgs)
 
 	if fdl.Failed(msgs) {
 		return vmserrors.ConditionError{Status: fdlStatusError, Text: fdl.Text("FDLERROR", 'E', "")}
@@ -108,6 +99,19 @@ func (c *Context) CreateFDL(req CreateFDLRequest) error {
 	}
 
 	return nil
+}
+
+// showFDLMessages shows a parse's messages.
+func (c *Context) showFDLMessages(msgs []fdl.Message) {
+	for _, m := range msgs {
+		for i, line := range m.Lines() {
+			if i == 0 {
+				line = "%" + line
+			}
+
+			c.Printf("%s\n", line)
+		}
+	}
 }
 
 // readFDLFile reads the FDL file spec names, its default type .FDL, as one

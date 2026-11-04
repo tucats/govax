@@ -85,6 +85,34 @@ grammar console
         qualifier directory/syntax=create_directory
         qualifier fdl/id=1514/type=$string/syntax=create_fdl
 
+    !
+    ! CONVERT copies records from up to 10 files to one, changing their
+    ! organization and format (docs/PHASE-88 - keyed index files.md, subtask
+    ! 10c; internal/dclcmd/convert.go).
+    !
+    verb convert
+        parameter input/id=1520/type=$string/list/prompt="File"
+        parameter output/id=1521/type=$string/prompt="Output"
+        qualifier append/id=1522
+        qualifier create/id=1523
+        qualifier exceptions_file/id=1524/type=$string/default=""
+        qualifier exit/id=1525
+        qualifier fast_load/id=1526
+        qualifier fdl/id=1527/type=$string
+        qualifier fill_buckets/id=1528
+        qualifier fixed_control/id=1529
+        qualifier key/id=1530/type=$integer
+        qualifier merge/id=1531
+        qualifier pad/id=1532/type=$any/default=""
+        qualifier prolog/id=1533/type=$integer
+        qualifier read_check/id=1534
+        qualifier share/id=1535
+        qualifier sort/id=1536
+        qualifier statistics/id=1537
+        qualifier truncate/id=1538
+        qualifier work_files/id=1539/type=$integer
+        qualifier write_check/id=1540
+
     verb assign
         parameter value/id=221/type=$any/list/prompt="Equ_Name"
         parameter name/id=222/type=$any/prompt="Log_Name"
@@ -568,7 +596,7 @@ grammar console
     ! the same "keep only the single most recent version" default ods2's
     ! own cmdPurge uses -- see docs/PHASE-23.md's subtask 7.
     !
-    ! DUMP shows a volume file in hexadecimal, by block (/BLOCK, the
+    ! DUMP shows a volume file in hexadecimal, by block (/BLOCKS, the
     ! default) or by record (/RECORD), each with an optional range,
     ! (START=n,END=n,COUNT=n) (docs/PHASE-51).
     verb dump/id=1170
@@ -576,7 +604,7 @@ grammar console
         parameter   spec/id=1171                -
                     /type=$string               -
                     /prompt="File"
-        qualifier   block/id=1172/nonegatable   -
+        qualifier   blocks/id=1172/nonegatable  -
                     /type=$string/default=ALL
         qualifier   record/id=1173/nonegatable  -
                     /type=$string/default=ALL

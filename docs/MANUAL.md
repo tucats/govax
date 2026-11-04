@@ -1344,11 +1344,61 @@ moved too, with everything in them.
 #### DUMP
 
 ```text
-DUMP [/BLOCK[=(START=n,END=n,COUNT=n)] | /RECORD[=(...)]] file-spec
+DUMP [/BLOCKS[=(START:n,END:n,COUNT:n)] | /RECORD[=(...)]] file-spec
 ```
 
 Shows a volume file in hexadecimal and ASCII, a block or a record at a
 time, as VMS's DUMP does.
+
+#### CONVERT
+
+```text
+CONVERT [qualifiers] input[,...] output
+```
+
+Copies the records of up to 10 files, in turn, to one file, changing their
+organization and format to the output's. `/FDL=file` makes the output from an
+FDL file (see CREATE), and without it the output has the first input's
+attributes, areas and keys too. An output with no type takes the first input's.
+`/NOCREATE` uses an existing file, `/APPEND` adds to the end of a sequential
+one, and `/MERGE` inserts into an indexed one by key. The output is a volume
+file; an input may be a host file, each line a record, which is how an indexed
+file gets its first records from outside govax.
+
+An indexed output is sorted by its primary key (`/NOSORT` if the input's in order
+already) and loaded fast by building its indexes directly, each bucket filled to its
+key's fill size (`/FILL_BUCKETS` fills them whole). `/NOFAST_LOAD` loads it by
+RMS's `$PUT`. `/KEY=n` reads an indexed input in the order of key n.
+
+A record that can't go in is an exception: a message, and CONVERT goes on, its
+status still success. `/EXCEPTIONS_FILE[=file]` copies such records to a file
+(type `.EXC`) or, with no file, shows them, and `/EXIT` ends at the first.
+
+```text
+$ CONVERT/FDL=PARTS/EXCEPTIONS_FILE=BAD/STATISTICS PARTS.TXT PARTS.IDX
+%CONVERT-I-DUP, duplicate key encountered
+%CONVERT-I-RSK, record shorter than primary key
+
+ CONVERT Statistics
+Number of Files Processed:         1
+Total Records Processed:           4	Buffered I/O Count: 	       0
+Total Exception Records:           2	Direct I/O Count: 	       0
+Total Valid Records:               2	Page Faults: 		       0
+Elapsed Time:          0 00:00:00.00	CPU Time:          0 00:00:00.00
+$ TYPE BAD.EXC
+NUT00001Wing nut
+SHORT
+```
+
+The exceptions are `DUP` (a duplicate key), `RSK` (shorter than the primary key),
+`RTL` (too long), `RTS` (too short for fixed records), `SEQ` (out of order under
+`/NOSORT`), and `VFC` (too short to fill the fixed control). `/TRUNCATE` cuts long
+records, `/PAD[=c]` fills short fixed ones (`c` a character, or `%Dn`, `%On`, or
+`%Xn`), and `/FIXED_CONTROL` moves a VFC record's fixed control to or from the data
+rather than dropping it. `/READ_CHECK`, `/WRITE_CHECK`, and `/WORK_FILES` are
+accepted and do nothing. `/STATISTICS`'s I/O counts and page faults are 0, as
+govax doesn't count them for a utility. `/PROLOG=1` or `2` is `RMS$_PLV`:
+govax's indexed files are Prolog 3.
 
 #### BACKUP
 
@@ -2202,7 +2252,7 @@ primary key. On a file opened `/SHARE=WRITE`, `READ` locks the record
 it reads until the next operation on the file, and `/NOLOCK` reads one
 without locking it, even if another stream has it locked. `CREATE/FDL`
 makes an indexed file (see CREATE), as does a program (`$CREATE` with
-XABKEYs).
+XABKEYs), and `CONVERT` loads one.
 
 ### Lexical functions
 

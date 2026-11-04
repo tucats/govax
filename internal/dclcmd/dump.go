@@ -61,7 +61,11 @@ func ParseDumpRange(value string) (DumpRange, error) {
 			continue
 		}
 
-		key, text, _ := strings.Cut(item, "=")
+		// VMS's form is START:n; "=" is taken too.
+		key, text, found := strings.Cut(item, ":")
+		if !found {
+			key, text, _ = strings.Cut(item, "=")
+		}
 
 		n, err := strconv.ParseUint(strings.TrimSpace(text), 10, 32)
 		if err != nil {
@@ -170,8 +174,13 @@ func (c *Context) dumpRecords(file *rms.DumpFile, span DumpRange) error {
 			continue
 		}
 
-		c.Printf("\nRecord number %d (%08X), %d (%04X) bytes, RFA(%04X,%04X,%04X)\n\n",
-			n, n, len(rec.Data), len(rec.Data), rec.VBN&0xFFFF, rec.VBN>>16, rec.Offset)
+		bytesWord := "bytes"
+		if len(rec.Data) == 1 {
+			bytesWord = "byte" // VMS 7.1's (testdata/idx88's round 3, C83C)
+		}
+
+		c.Printf("\nRecord number %d (%08X), %d (%04X) %s, RFA(%04X,%04X,%04X)\n\n",
+			n, n, len(rec.Data), len(rec.Data), bytesWord, rec.VBN&0xFFFF, rec.VBN>>16, rec.Offset)
 		c.dumpBytes(rec.Data)
 	}
 

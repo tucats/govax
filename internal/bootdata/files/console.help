@@ -191,7 +191,7 @@
 //                          KEYS' vax.editor.command and vax.editor.scratch
 //              11/04/26    READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK,
 //                          and WRITE, on indexed files (docs/PHASE-88)
-//              11/04/26    Added CREATE/FDL
+//              11/04/26    Added CREATE/FDL and CONVERT
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -573,6 +573,67 @@ $CREA,/DIR
         CREATE/DIRECTORY/PROTECTION=(S:RWE,O:RWE,G:RE,W) [.SHARED]
 
     See also the help for DIRECTORY and SET DEFAULT.
+
+$CONV
+    The CONVERT command copies the records of up to 10 files, one after
+    another, to one file, changing their organization and format to the
+    output file's.  It makes the output file from an FDL file, or else
+    with the first input file's attributes, unless told to use one that's
+    there.  An indexed output is sorted by its primary key, and loaded fast
+    by building its indexes directly.  A host file can be an input, each
+    line a record, but the output is a volume file.
+
+    Syntax:
+
+        CONVERT [qualifiers] <input>[,<input>...] <output>
+
+    Parameters:
+
+        <input>         A file to read; no wildcards.
+
+        <output>        The file to write; no wildcards.  Without a type,
+                        it takes the first input's.
+
+    Qualifiers:
+
+        /FDL=<file>     Make the output from this FDL file (default type
+                        .FDL).  Any warning from it stops the conversion.
+
+        /NOCREATE       Use an existing output file.
+        /APPEND         Add to the end of an existing sequential file.
+        /MERGE          Insert into an existing indexed file by its keys.
+
+        /EXCEPTIONS_FILE[=<file>]
+                        Copy each record that can't go in to this file
+                        (default type .EXC), or with no file show it.
+        /EXIT           End at the first such record.
+
+        /PAD[=c]        Fill short records of a fixed-length file with c, a
+                        character or %Dn, %On, or %Xn; null by default.
+        /TRUNCATE       Cut off records too long for the output.
+        /FIXED_CONTROL  Between VFC and other records, move the fixed control
+                        to or from the data, rather than dropping it.
+
+        /KEY=n          Read an indexed input in the order of key n.
+        /NOSORT         The input is in order already.
+        /NOFAST_LOAD    Load an indexed output by RMS's $PUT.
+        /FILL_BUCKETS   Fill its buckets, whatever its FDL's fills.
+        /PROLOG=3       Only Prolog 3 is available: 1 or 2 is RMS$_PLV.
+        /STATISTICS     Show the counts and the time taken.
+
+        /READ_CHECK, /WRITE_CHECK, and /WORK_FILES=n are taken and do nothing
+        (n past 10 is SORT's BAD_MERGE); /SHARE reads the input shared.
+
+    A record that can't go in is reported and passed over, and CONVERT goes
+    on: %CONVERT-I-DUP (a duplicate key), RSK (shorter than the primary
+    key), RTL (too long), RTS (too short for fixed records), SEQ (out of
+    order under /NOSORT), or VFC (too short to fill the fixed control).
+
+    Example:
+
+        $ CONVERT/FDL=PARTS/EXCEPTIONS_FILE=BAD PARTS.TXT PARTS.IDX
+
+    See also the help for CREATE /FDL.
 
 $CREA,/FDL
     The CREATE/FDL command creates an empty file from the description in
@@ -3971,7 +4032,7 @@ $DUMP
 
     Syntax:
 
-        DUMP [/BLOCK[=range] | /RECORD[=range]] file-spec
+        DUMP [/BLOCKS[=range] | /RECORD[=range]] file-spec
 
     Parameter:
 
@@ -3980,7 +4041,7 @@ $DUMP
 
     Qualifiers:
 
-        /BLOCK[=(START=n, END=n, COUNT=n)]
+        /BLOCKS[=(START:n, END:n, COUNT:n)]
                         Show the file's blocks, from START (1) to END or
                         for COUNT blocks.
 
@@ -3989,7 +4050,7 @@ $DUMP
 
     Examples:
 
-        DUMP/BLOCK=COUNT=1 LOGIN.COM
+        DUMP/BLOCKS=COUNT:1 LOGIN.COM
         DUMP/RECORD=(START=10,COUNT=5) DATA.DAT
 
 $PURG

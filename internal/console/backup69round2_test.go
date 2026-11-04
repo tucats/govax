@@ -200,7 +200,7 @@ const (
 // device it was written on); so [VHOST...] is missing from VMS's
 // DIRECTORY, whose lines before it are compared. ANALYZE/DISK_STRUCTURE
 // is VMS's report (only BADHIGHWATER notices for its own header-only
-// restores of NOBACK.TXT) and govax's DCL-E-UNRECOGNIZED.
+// restores of NOBACK.TXT) and govax's DCL-W-IVQUAL.
 func backup69Round2Log(t *testing.T, out string) {
 	vms := backup69Mask(link68Read(t, filepath.Join(backup69Round2, "run2.log")))
 	govax := backup69Mask(link68Read(t, filepath.Join(out, "run2.log")))
@@ -314,7 +314,7 @@ func backup69Analyzed(t *testing.T, lines []string) {
 
 // backup69NoAnalyze: govax has no ANALYZE/DISK_STRUCTURE.
 func backup69NoAnalyze(t *testing.T, lines []string) {
-	if len(lines) != 2 || !strings.HasPrefix(lines[0], "%DCL-E-UNRECOGNIZED, ") {
+	if len(lines) != 3 || !strings.HasPrefix(lines[0], "%DCL-W-IVQUAL, ") {
 		t.Errorf("govax's lines %q", lines)
 	}
 }

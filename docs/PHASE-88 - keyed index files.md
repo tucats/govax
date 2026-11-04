@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Subtask 10c, CONVERT, done 2026-11-04 ("What CONVERT settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -24,7 +24,8 @@ line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and defini
 utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) ran on VMS 7.1, its log and
 the files it made in `vax/` ("What round 3 settled"). `internal/fdl` reads FDL files and CREATE/FDL makes files from them through
 RMS's `$CREATE` (`rms/fdlcreate.go`, `dclcmd/createfdl.go`), `TestIdx88CCreateOracle` holding sections C2 to C5 to VMS's log and 42
-files to VMS's byte for byte, the Prolog 1 files govax refuses left out. **Next: 10c,** CONVERT; then ANALYZE/RMS_FILE (10d).
+files to VMS's byte for byte, the Prolog 1 files govax refuses left out. CONVERT reads and writes through RMS's services, and fast-loads through `isam`'s
+`Load` (`rms/convert.go`, `dclcmd/convert.go`), `TestIdx88CConvertOracle` holding sections C6 to C10 to VMS's log and 60 files to VMS's, and `TestFastLoadAsVMS` 17 fast loads. **Next: 10d,** ANALYZE/RMS_FILE.
 
 ## Goal
 
@@ -698,6 +699,36 @@ unmarked rather than refused; FAB$C_UDF on a relative or indexed file is RMS$_RF
 convention, older than this phase), and the `.;1` file's name is empty; whether VMS finds such entries on a volume it mounts hasn't been tried, and subtask 15 is the place. `DIRECTORY/TOTAL`, which
 C0 and C13 use, is still an unrecognized qualifier.
 
+## What CONVERT settled (2026-11-04)
+
+Subtask 10c, read from round 3's log and save set. Where this section and those above differ, this one wins.
+
+**A fast load** (`isam/load.go`; `TestFastLoadAsVMS` makes 17 of VMS's files the same by `Dump` and prolog bytes):
+
+- A key's first data bucket and first index bucket are allocated together, before anything's written: data 5, root 7, then data 9 (C71).
+  C78D, stopped after one record, grew by both and has an area and key that know nothing of it, so the prolog is written only as each key ends. C10B has key 0 whole and key 1 empty.
+- A full data bucket's highest key goes up first, which can add a level (a root, then a new bucket: G116's root 98, level 1's 99), and then the next data bucket is allocated.
+- Every bucket's check character is 0. SIDR pointers have 4-byte VBNs (control 82 and 02), where a `$PUT`'s are the shortest that fit. A SIDR isn't divided if it fits a bucket.
+- A loaded index bucket keeps room for one key whole: G116's stopped at 504 of 512 bytes, refusing 507 (a key of 8; other sizes unconfirmed).
+- A file of one area ends at the area's next block; of several, where `$CREATE` left it. Stopped before key 0's end, it ends where it did (C78D's 0).
+- **Revisions:** one for each alternate loaded, so a file of 8 keys is 8 and of 1 key is 1; `/NOFAST_LOAD`'s is 2 (`$CREATE`, `$OPEN`); a sequential or relative file's 1; `/NOCREATE` adds one.
+
+**The command** (`dclcmd/convert.go`, held by `TestIdx88CConvertOracle`):
+
+- VMS corrected the manual three times: an alternate's `DUPLICATES` default is NO (K2's key 1, C68), which changes CREATE/FDL too; a VFC record with no control of its own in a print file has `01 8D`, not null (C83D); `/APPEND` to an indexed file is NOTSEQ, not ignored.
+- With more than one input, equal keys sort by the whole record (C79's "AAA a duplicate" before "AAA two"); with one, they keep their order (C78). A record short of the key sorts zero-padded (`CC` before `CCC`). Exceptions come out in sorted order, since they're found at the load.
+- CONVERT reads nothing else of a key already in order: `/WORK_FILES=11` copying S35.IDX to a file with the same primary key loaded key 0 and failed at key 1 (C10B), so the check waits for the first sort needed.
+- A file of undefined records holds its bytes one after another, written by block (C84E): `$PUT` frames no such record.
+- **`DUMP/BLOCKS=(START:1,COUNT:1)`** is VMS's spelling, which govax's `/BLOCK` and `=` weren't (`/BLOCK` still abbreviates it, and `=` is still taken), and DUMP/RECORD says "1 (0001) byte".
+- **DCL:** `%DCL-W-IVQUAL` and `%DCL-W-NOVALU`, with their segments and VMS's statuses, replace govax's own messages for a qualifier a command lacks and a value on one that takes none (`verbError`).
+
+**Differences left, listed in the oracle:** the Prolog 1 files (C93A, C93B, so C93C), `%CONV-F-OPENOUT` with `-RMS-F-PLV`, as CREATE/FDL's. C12A.SEQ, the records VMS could still read past a damaged free offset (X05), where govax's reader stops
+at the bucket: not worth emulating. `/NOFAST_LOAD`'s roots of keys 0 and 1 have check characters 3B and D3 where govax has 1B and 03, keys 2 to 7 and every data bucket the same (C72, C74, C75), and C91's data bucket 3 where govax has 2: no rule fits so far, and a check character says nothing of what a bucket holds. COPY's `%COPY-S-COPIED` without `/LOG` is govax's own, and the oracle ignores it. `/STATISTICS` shows VMS's layout with 0 for I/O and page faults, its CPU time the time taken.
+
+**Unconfirmed, govax's choices:** a load's fill smaller than the bucket follows ROP LOA's (K50's had no bucket size to be a percentage of, so nothing tested one); a primary key's duplicates in a load, a value with more pointers than a bucket holds, and a no-duplicates alternate's second value (DUP); `/APPEND` making a missing file (the manual's words); `READERR`'s status, never reached, since a read failure ends the reading quietly; an output's owner and protection with no FDL being the creator's and the volume's; `/NOCREATE` on an indexed file that has records going by `$PUT`; a host file as output, which RMS refuses.
+
+**Left:** `/FDL=SYS$INPUT`, the manual's examples 7 and 8, and CREATE/FDL's too. `A122.FDL` and the others are VMS's in the oracle until 10d (`runIdx88C`).
+
 ## The rules
 
 ### Keys [manual]
@@ -928,7 +959,7 @@ them.
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
    to a probe log. (done 2026-11-04)
 10. **Utilities,** as Question 2 chooses, in four parts: (a) round 3 of the probe, `idx88c.com`
-    (done 2026-11-04); (b) the FDL reader and CREATE/FDL (done 2026-11-04); (c) CONVERT; (d)
+    (done 2026-11-04); (b) the FDL reader and CREATE/FDL (done 2026-11-04); (c) CONVERT (done 2026-11-04); (d)
     ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
     forms on indexed units; messages.
@@ -1150,3 +1181,4 @@ has REV at all.
   `SysClose`, so every refusal is RMS's own. `dclcmd/createfdl.go` is the command, and `console.dcl`'s `create_fdl` its syntax; so that `/FDL=file` can take a value and still make the file parameter optional, a typed qualifier
   with `/syntax=` now does both (`dcl.Qualifier.hasValue`). `TestIdx88CCreateOracle` holds every CREATE/FDL of C2 to C4 to VMS's log, times and file IDs masked and ANALYZE's reports left out, and 39 files' headers and blocks to VMS's save set, and 3 more
   (C5) from VMS's own A35, A62, and A122.FDL, restored since ANALYZE is 10d's, with C13's `;2` and K50's fills; `TestCreateFDLForms` is what the log lacks; `fdl/parse_test.go` the parser alone. "What CREATE/FDL settled" has the findings.
+- **2026-11-04: subtask 10c, CONVERT.** `isam/load.go` is the fast load (`StartLoad`, `Add`, `FinishPrimary`, `FinishAlternate`; `File.holdProlog`), fitted to VMS's files by `TestFastLoadAsVMS`, which reads each file's records and builds it again. `rms/convert.go` reads an input whole through a FAB and RAB of its own (`ReadConvertInput`), makes a file with its attributes when there's no FDL (`CreateLike`, shown fills in bytes), and writes through `$PUT` or the load (`ConvertOutput`). `dclcmd/convert.go` is the command: exceptions, sorting, padding, statistics. `fdlcreate.go` split so CONVERT shares its `$CREATE`. `TestIdx88CConvertOracle` holds C6 to C10 command by command and 60 of the files; "What CONVERT settled" has the findings.

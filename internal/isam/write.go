@@ -460,6 +460,10 @@ func encodeAreaState(d []byte, a *Area) {
 // leaving every other byte as it was: a VMS-made block may have anything in
 // its unused bytes.
 func (f *File) updateKey(k *Key) error {
+	if f.holdProlog {
+		return nil
+	}
+
 	block, err := f.readPrologBlock(k.DescriptorVBN)
 	if err != nil {
 		return err
@@ -472,6 +476,10 @@ func (f *File) updateKey(k *Key) error {
 
 // updateArea rewrites an area's changed fields in its descriptor's block.
 func (f *File) updateArea(i int) error {
+	if f.holdProlog {
+		return nil
+	}
+
 	perBlock := BlockSize / areaDescSize
 	vbn := f.AreaVBN + uint32(i/perBlock)
 

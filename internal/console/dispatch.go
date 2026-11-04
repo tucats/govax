@@ -416,7 +416,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("DUMP", func(id int64, r *dcl.Result) error {
 		records := r.Present("RECORD") && !r.Defaulted("RECORD")
 
-		which := "BLOCK"
+		which := "BLOCKS"
 		if records {
 			which = "RECORD"
 		}

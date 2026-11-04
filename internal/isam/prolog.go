@@ -233,6 +233,10 @@ type File struct {
 	Areas       []Area
 
 	loading bool // the Put in progress is a PutLoad
+
+	// holdProlog says a fast load is keeping what it changes from the prolog
+	// until a key is finished (load.go).
+	holdProlog bool
 }
 
 // Open reads a file's prolog. Nothing else is read until asked for, and

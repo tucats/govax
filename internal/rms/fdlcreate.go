@@ -35,8 +35,9 @@ import (
 //   - AREA n: a XABALL, AID n; BUCKET_SIZE is the FILE's when the AREA
 //     doesn't give one (the manual: an AREA's attributes override the
 //     FILE's).
-//   - KEY n: a XABKEY, REF n. DUPLICATES is NO for key 0 and YES for the
-//     others unless given, the compressions are on unless NO, and DATA_FILL
+//   - KEY n: a XABKEY, REF n. DUPLICATES is NO unless given, the manual's YES for
+//     an alternate notwithstanding (K2.FDL's key 1 in VMS's C68.IDX has none), the
+//     compressions are on unless NO, and DATA_FILL
 //     and INDEX_FILL are percentages of the area's bucket, which the XABKEY
 //     takes in bytes (C3I's 600 percent of a 1-block bucket was RMS$_DFL);
 //     LENGTH and POSITION are segment 0 when no SEG0_ is given. PROLOG is
@@ -133,6 +134,10 @@ type FDLCreate struct {
 	// UIC; false leaves the file the creator's (unconfirmed: what VMS
 	// does with an identifier it doesn't know).
 	Owner func(text string) (uint32, bool)
+
+	// Prolog is CONVERT/PROLOG's level, which overrides KEY 0's PROLOG; 0
+	// for none.
+	Prolog int
 }
 
 // FDLCreated is what CreateFDL made, or why it didn't.
@@ -167,10 +172,7 @@ func (b *fdlBlocks) xab(addr uint32, cod byte, bln uint32) {
 
 // CreateFDL makes the file c describes, as CREATE/FDL does, and closes it.
 func (s *Session) CreateFDL(c FDLCreate) FDLCreated {
-	ctx := &Context{
-		Mounts: s.Mounts, Logicals: s.Logicals, Session: s, Files: NewFileTable(nil),
-		Mem: vm.NewMemory(fdlMemSize), CPU: registers.New(),
-	}
+	ctx := s.blockContext()
 
 	b := &fdlBlocks{mem: make([]byte, fdlMemSize)}
 	def := c.Definition
@@ -189,6 +191,24 @@ func (s *Session) CreateFDL(c FDLCreate) FDLCreated {
 	buckets := fdlAreas(b, def, file)
 	fdlKeys(b, def, buckets, file)
 
+	if c.Prolog != 0 {
+		b.byteAt(fdlKeyAddr+xabKeyPROLOG, byte(c.Prolog))
+	}
+
+	return createFromBlocks(ctx, b)
+}
+
+// blockContext is a context for services called on blocks in a memory of its
+// own, MAPEN off, as DCL's READ and WRITE call them on their RAB.
+func (s *Session) blockContext() *Context {
+	return &Context{
+		Mounts: s.Mounts, Logicals: s.Logicals, Session: s, Files: NewFileTable(nil),
+		Mem: vm.NewMemory(fdlMemSize), CPU: registers.New(),
+	}
+}
+
+// createFromBlocks chains b's XABs, then calls $CREATE and $CLOSE on its FAB.
+func createFromBlocks(ctx *Context, b *fdlBlocks) FDLCreated {
 	// The chain, in the order built.
 	next := fdlFABAddr + fabOffset("XAB")
 	for _, x := range b.chain {
@@ -419,7 +439,7 @@ func fdlKeys(b *fdlBlocks, def *fdl.Definition, buckets map[int]int64, file *fdl
 			def  bool
 			on   bool // the bit is set when the switch is on
 		}{
-			{"DUPLICATES", xabFlagDUP, key.ID != 0, true},
+			{"DUPLICATES", xabFlagDUP, false, true},
 			{"CHANGES", xabFlagCHG, false, true},
 			{"NULL_KEY", xabFlagNUL, false, true},
 			{"DATA_KEY_COMPRESSION", xabFlagNoKeyCmpr, true, false},

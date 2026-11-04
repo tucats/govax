@@ -257,7 +257,24 @@ func (c *Interpreter) readingTerminal() bool {
 // is.
 func verbError(err error) error {
 	var ve vmserrors.VMSError
-	if !errors.As(err, &ve) || len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
+	if !errors.As(err, &ve) {
+		return err
+	}
+
+	// A qualifier the command doesn't have, or a value on one that takes none,
+	// each with VMS's message and segment (testdata/idx88's round 3, C10).
+	switch {
+	case ve.Status == vmserrors.CLI_UNRECOGNIZED && len(ve.Arguments) == 2 && ve.Arguments[0] == "qualifier":
+		name, _ := ve.Arguments[1].(string)
+
+		return vmserrors.NewSegment(vmserrors.CLI_IVQUAL, strings.TrimPrefix(name, "/"))
+	case ve.Status == vmserrors.CLI_NOQUALIFIERVALUE && len(ve.Arguments) == 1:
+		name, _ := ve.Arguments[0].(string)
+
+		return vmserrors.NewSegment(vmserrors.CLI_NOVALU, name+"=")
+	}
+
+	if len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
 		return err
 	}
 
