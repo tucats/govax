@@ -61,6 +61,18 @@ grammar console
         qualifier log/id=1506
 
     !
+    ! CREATE/FDL=fdl-file [file] makes an empty file from an FDL file's
+    ! description (docs/PHASE-88 - keyed index files.md, subtask 10b;
+    ! internal/dclcmd/createfdl.go). The file is optional: without one, the
+    ! FDL file's FILE NAME names it. /FDL takes its value, then switches to
+    ! this syntax.
+    !
+    syntax create_fdl
+        parameter file/id=1515/type=$string
+        qualifier fdl/id=1514/type=$string
+        qualifier log/id=1516
+
+    !
     ! CREATE with neither /NAME_TABLE nor /DIRECTORY makes a text file
     ! from SYS$INPUT (internal/dclcmd/createfile.go): the terminal up to
     ! Ctrl/Z, or a command procedure's data lines.
@@ -71,6 +83,7 @@ grammar console
         qualifier log/id=1513
         qualifier name_table/syntax=create_name_table
         qualifier directory/syntax=create_directory
+        qualifier fdl/id=1514/type=$string/syntax=create_fdl
 
     verb assign
         parameter value/id=221/type=$any/list/prompt="Equ_Name"

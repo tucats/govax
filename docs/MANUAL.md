@@ -1253,6 +1253,7 @@ VAX> COPY "report.txt"/HOST REPORT.LIS/RECORD_FORMAT=VFC
 CREATE [/LOG] file-spec[/HOST]
 CREATE/DIRECTORY [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)]
                  [/VERSION_LIMIT=n] [/ALLOCATION=n] directory[,...]
+CREATE/FDL=fdl-file [/LOG] [file-spec]
 CREATE/NAME_TABLE [/PARENT_TABLE=table] table-name
 ```
 
@@ -1268,6 +1269,49 @@ $ TYPE SETUP.DAT
 
 `CREATE/DIRECTORY` makes a directory and any missing ones above it.
 `CREATE/NAME_TABLE` makes a logical name table.
+
+`CREATE/FDL` makes an empty file from a description in the File
+Definition Language: a sequential, relative, or indexed file, with its
+record format, allocation, protection, dates, and an indexed file's keys
+and areas. The FDL file's default type is `.FDL`. With no file named, its
+`FILE NAME` names the file, and `FILE DEFAULT_NAME` supplies what a name
+leaves out.
+
+```text
+$ CREATE PARTS.FDL
+FILE
+    ORGANIZATION indexed
+RECORD
+    SIZE 80
+KEY 0
+    SEG0_LENGTH 8
+KEY 1
+    SEG0_LENGTH 20
+    SEG0_POSITION 8
+$ CREATE/FDL=PARTS/LOG PARTS.IDX
+%FDL-I-CREATED, DUA1:[000000]PARTS.IDX;1 created
+$ OPEN/READ/WRITE F PARTS.IDX
+$ WRITE F "NUT00001Hex nut"
+$ READ/KEY=NUT00001 F R
+$ CLOSE F
+```
+
+Sections and attributes may be abbreviated, in any case, and any section
+may be left out. A statement is a line, or a part of one between
+semicolons, and `!` starts a comment. A fault in a value, such as an unknown
+keyword, a missing value, or a bad date, is a warning: the attribute keeps
+its default and the file is still made. An unknown section or attribute,
+keys or areas out of order, or a bad protection is an error, and no file is
+made. Every message names its statement. What RMS refuses is RMS's message:
+
+```text
+$ CREATE/FDL=NOKEYS X.IDX
+%FDL-F-CREATE, error creating DUA1:[000000]X.IDX;
+-RMS-F-NPK, no primary key defined for indexed file
+```
+
+Indexed files are Prolog 3 only: `PROLOG 1` or `2`, or a primary key whose
+segments overlap, is `RMS$_PLV`, where VMS makes a Prolog 1 file.
 
 #### DELETE
 
@@ -2156,8 +2200,9 @@ order (after `OPEN/APPEND`, the first must come after the file's last
 record), and `WRITE/UPDATE` may change a record's length, but not its
 primary key. On a file opened `/SHARE=WRITE`, `READ` locks the record
 it reads until the next operation on the file, and `/NOLOCK` reads one
-without locking it, even if another stream has it locked. DCL can't
-make an indexed file; a program makes one (`$CREATE` with XABKEYs).
+without locking it, even if another stream has it locked. `CREATE/FDL`
+makes an indexed file (see CREATE), as does a program (`$CREATE` with
+XABKEYs).
 
 ### Lexical functions
 
@@ -6795,9 +6840,8 @@ The main differences, gathered from the rest of the manual:
 - One user, `SYSTEM`, with all privileges; no login, batch, print
   queues, networking, or clusters.
 - A program's RMS calls reach only files on mounted Files-11 volumes,
-  not host files (section 5). Indexed files can be made, opened, displayed,
-  and extended (Prolog 3 only: a lower prolog is `RMS$_PLV`), but not yet
-  read or written by record: their record operations are `RMS$_ORG`.
+  not host files (section 5). Indexed files are Prolog 3 only: a lower
+  prolog is `RMS$_PLV`.
 - No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).

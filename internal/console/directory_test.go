@@ -293,7 +293,7 @@ func TestDirectory_layouts(t *testing.T) {
 	}
 
 	wantOutput(t, d, buf, "DIRECTORY *.TXT", "\nDirectory DUA0:[000000]\n\n"+
-		"A.TXT;1             AVERYLONGFILENAME.TXT;1                 B.TXT;1             \n"+
+		"A.TXT;1             AVERYLONGFILENAME.TXT;1                 B.TXT;1            \n"+
 		"C.TXT;1             D.TXT;1             E.TXT;1             \n"+
 		"\nTotal of 6 files.\n")
 

@@ -184,6 +184,7 @@ type Key struct {
 	IndexFill, DataFill             int   // bytes to fill a bucket to, under ROP LOA
 	Segments                        []Segment
 	Name                            string
+	Named                           bool   // its name's bytes aren't all zeros (KeySpec.Named)
 	FirstData                       uint32 // the first data bucket's VBN; 0 with no index yet
 	DescriptorVBN                   uint32 // where the descriptor is
 	DescriptorOffset                int
@@ -367,6 +368,7 @@ func parseKey(d []byte) *Key {
 	}
 
 	k.Name = strings.TrimRight(string(d[keyName:keyName+keyNameSize]), " \x00")
+	k.Named = strings.Trim(string(d[keyName:keyName+keyNameSize]), "\x00") != ""
 
 	count := int(d[keySegments])
 	for i := 0; i < count && i < 8; i++ {

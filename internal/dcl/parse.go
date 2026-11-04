@@ -708,6 +708,12 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 		r.set(q.Name, q.ID, kwNegated, val)
 	}
 
+	// A keyword value, or the qualifier itself, may switch to another
+	// syntax once the value is recorded.
+	if redirect == "" {
+		redirect = q.Syntax
+	}
+
 	if redirect != "" {
 		target, ok := g.entries[redirect]
 		if !ok {

@@ -365,10 +365,16 @@ func (f Attributes) GlobalBuffers() uint16 {
 
 // Used is how many blocks the file's data uses, as BACKUP/LIST and
 // DIRECTORY/SIZE count them: the end-of-file block, less one when the
-// data ends at that block's start.
+// data ends at that block's start. An end of file of block 0, which an
+// indexed file CREATE/FDL makes has, is its high block: VMS 7.1's
+// BACKUP/LIST counted C31.IDX's 3 blocks (testdata/idx88's round 3).
 func (f Attributes) Used() uint32 {
 	end := f.EndBlock()
-	if end > 0 && f.FirstFreeByte() == 0 {
+
+	switch {
+	case end == 0:
+		return f.HighBlock()
+	case f.FirstFreeByte() == 0:
 		return end - 1
 	}
 

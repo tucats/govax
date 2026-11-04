@@ -191,6 +191,7 @@
 //                          KEYS' vax.editor.command and vax.editor.scratch
 //              11/04/26    READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK,
 //                          and WRITE, on indexed files (docs/PHASE-88)
+//              11/04/26    Added CREATE/FDL
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -573,6 +574,54 @@ $CREA,/DIR
 
     See also the help for DIRECTORY and SET DEFAULT.
 
+$CREA,/FDL
+    The CREATE/FDL command creates an empty file from the description in
+    an FDL (File Definition Language) file: sequential, relative, or
+    indexed, with its record format, allocation, protection, dates, and
+    an indexed file's keys and areas.  RMS makes the file, so what RMS
+    refuses is reported with RMS's message.
+
+    Syntax:
+
+        CREATE/FDL=<fdl-file> [/LOG] [<file>]
+
+    Parameters:
+
+        <fdl-file>      The FDL file; its default type is .FDL.
+
+        <file>          The file to create.  Without one, the FDL file's
+                        FILE NAME names it.  FILE DEFAULT_NAME supplies
+                        what the name leaves out.  An existing file gets
+                        a new version.
+
+    Qualifiers:
+
+        /LOG            Report the file created, with its version.
+
+    An FDL file holds sections, such as FILE, RECORD, AREA n, and KEY n,
+    each followed by its attributes, one to a line or separated by
+    semicolons; "!" begins a comment.  Names may be abbreviated.  A warning
+    leaves that attribute at its default and the file is still made; an
+    error means no file.  Indexed files are Prolog 3 only: PROLOG 1 or 2,
+    or a primary key whose segments overlap, is RMS$_PLV.
+
+    Example:
+
+        $ CREATE PARTS.FDL
+        FILE
+            ORGANIZATION indexed
+        RECORD
+            SIZE 80
+        KEY 0
+            SEG0_LENGTH 8
+        KEY 1
+            SEG0_LENGTH 20
+            SEG0_POSITION 8
+        $ CREATE/FDL=PARTS/LOG PARTS.IDX
+        %FDL-I-CREATED, DUA1:[000000]PARTS.IDX;1 created
+
+    See also the help for OPEN, READ, and WRITE.
+
 $CREA
     The CREATE command creates a file, as VMS DCL's CREATE does, from
     the lines of SYS$INPUT: at the terminal, the lines typed up to
@@ -618,14 +667,16 @@ $CREA
         ITEM TWO
         $ TYPE DUA0:[WORK]SETUP.DAT
 
-    CREATE has two other forms, each its own command:
+    CREATE has other forms, each its own command:
 
         CREATE/DIRECTORY    creates a directory on a mounted volume.
+        CREATE/FDL          creates an empty file from an FDL file.
         CREATE/NAME_TABLE   creates a logical name table.
 
     For details, see:
 
         HELP CREATE /DIRECTORY
+        HELP CREATE /FDL
         HELP CREATE /NAME_TABLE
 
     See also the help for TYPE and SET DEFAULT.

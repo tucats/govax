@@ -52,6 +52,7 @@ var (
 	fopCIF = vmsConst("FAB$M_CIF")
 	fopCTG = vmsConst("FAB$M_CTG")
 	fopCBT = vmsConst("FAB$M_CBT")
+	fopMXV = vmsConst("FAB$M_MXV")
 )
 
 // diskDevChar is FAB$L_DEV and FAB$L_SDC for a mounted Files-11 disk, as

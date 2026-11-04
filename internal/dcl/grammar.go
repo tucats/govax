@@ -185,11 +185,12 @@ type Qualifier struct {
 	aliasRef *Qualifier // resolved by validate()
 }
 
-// hasValue reports whether this qualifier expects a "=value" suffix,
-// matching the C source's DCL_REQ flag on a qualifier: any typed,
-// non-redirecting qualifier requires a value (defaulted or explicit) once
-// specified.
-func (q *Qualifier) hasValue() bool { return q.Type != TypeSwitch && q.Syntax == "" }
+// hasValue reports whether this qualifier expects a "=value" suffix: any
+// typed qualifier requires a value (defaulted or explicit) once specified. A typed
+// qualifier with /syntax= takes its value and then switches to its syntax
+// (CREATE/FDL=file, whose file parameter is optional); an untyped one only
+// switches.
+func (q *Qualifier) hasValue() bool { return q.Type != TypeSwitch }
 
 // Disallow records one grammar "disallow" statement: an illegal combination
 // of two qualifier presence/negation states within the same Entry.

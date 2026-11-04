@@ -47,9 +47,16 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 	})
 
 	// A bare CREATE makes a text file from SYS$INPUT (createfile.go);
-	// /DIRECTORY (create.go) and /NAME_TABLE are below.
+	// /FDL (createfdl.go), /DIRECTORY (create.go), and /NAME_TABLE are
+	// below.
 	g.Bind("CREATE", func(id int64, r *dcl.Result) error {
 		return c.cmd().CreateFile(r.String("FILE"), r.ParamPresent("FILE", "HOST"), r.Present("LOG") && !r.Negated("LOG"))
+	})
+
+	g.Bind("CREATE_FDL", func(id int64, r *dcl.Result) error {
+		return c.cmd().CreateFDL(dclcmd.CreateFDLRequest{
+			FDL: r.String("FDL"), File: r.String("FILE"), Log: r.Present("LOG") && !r.Negated("LOG"),
+		})
 	})
 
 	g.Bind("CREATE_DIRECTORY", func(id int64, r *dcl.Result) error {

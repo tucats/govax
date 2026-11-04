@@ -668,7 +668,7 @@ never had.
   `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`, WRITE, and WRITE/UPDATE through a RAB of DCL's own in a small memory
   (`rms/dclkeyed.go`, calling `SysGet` and the rest), TYPE and DUMP/RECORD by the primary key, DIRECTORY/FULL's prolog and keys;
   round 4 of the probe is `testdata/idx88`'s `idx88d.com`, whose VMS log `TestIdx88DOracle` holds govax's to. Subtask 10 is the utilities (10a, round 3 of the
-  probe, run on VMS 7.1 2026-11-04, `vax/idx88c.log` and `idx88c.bck`; 10b the FDL reader and CREATE/FDL, 10c CONVERT, 10d ANALYZE/RMS_FILE).
+  probe, run on VMS 7.1 2026-11-04, `vax/idx88c.log` and `idx88c.bck`; 10b, done 2026-11-04, the FDL reader, `internal/fdl`, and CREATE/FDL, `rms/fdlcreate.go`, a FAB and XABs through `$CREATE`, held to VMS by `TestIdx88CCreateOracle`; 10c CONVERT, 10d ANALYZE/RMS_FILE).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -2102,6 +2102,7 @@ expect adjustment as phases land):
   decompression; `search.go` `Find` (`Match`: RMS's ROP KGE, KGT, and REV), `First`, `Following`, `Walk`, and `Record` by RFA (an `Entry`
   is a key and an RFA, no bucket, so a split can't lose it); `dump.go` a text form that shows nothing past a free offset, for comparing
   files. Its tests read `testdata/idx88/vax`'s save set, ANALYZE's reports, and the run's log. `write.go` is `Create` (a `Spec`, its flags the descriptor's) and `Put`, through `WritableBlocks` (`Extend` says what the volume gave), `compress.go` both compressions, as VMS's to the byte (`CheckCompression`). `split.go` is what a full bucket does (data, SIDR, and index splits, RRVs, continuations, new roots; `PutLoad` is ROP LOA), and `check.go` `Check`, which walks a whole file for what no operation may leave; `growth_test.go` holds random loads to a model with it. `change.go` is `Update` (in place, its RFA kept, or by a split), `Delete` (closing up; a bucket's last record a deleted stub with its key; a moved record's RRV taken out; `fast` is ROP FDL, leaving the alternates' pointers), and `DropPointer` (RMS's taking out such a pointer when a search finds it); `change_test.go` replays the probe's changing cases and runs random changes against the model. `ExtendArea` is `$EXTEND`'s (the extent to come, which `allocate` takes next), and `PrologBlocks` the prolog's size.
+- `internal/fdl` — the File Definition Language (Phase 88, subtask 10b; `doc.go` has VMS's rules): a leaf package. `Parse` turns an FDL file's text into a `Definition` of `Section`s and the `Message`s VMS's parser gives, from `table.go`'s table of every primary and secondary. `rms/fdlcreate.go`'s `Session.CreateFDL` makes a file from a `Definition`.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

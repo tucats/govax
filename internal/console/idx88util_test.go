@@ -16,8 +16,9 @@ import (
 // CREATE/FDL, CONVERT, ANALYZE/RMS_FILE; docs/PHASE-88 - keyed index files.md,
 // subtask 10), on govax, on a fresh volume of VMS's 3-block clusters as DUA1
 // with node SIMVAX, as the VAX's was, round 1's files restored into [IN] from
-// its save set as EXCHANGEC.CMD restores them, and returns the log it wrote.
-func runIdx88C(t *testing.T) string {
+// its save set as EXCHANGEC.CMD restores them, and returns the log it wrote
+// and the console it ran on.
+func runIdx88C(t *testing.T) (string, *console.Console) {
 	t.Helper()
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
@@ -67,7 +68,7 @@ func runIdx88C(t *testing.T) string {
 		b.WriteByte('\n')
 	}
 
-	return b.String()
+	return b.String(), c
 }
 
 // TestIdx88CProbe rehearses round 3 on govax, so that a change to the
@@ -77,7 +78,7 @@ func runIdx88C(t *testing.T) string {
 // section to its end. Until govax has the utilities their commands fail, and
 // what follows from them. IDX88C_LOG=file keeps govax's log in the file.
 func TestIdx88CProbe(t *testing.T) {
-	log := runIdx88C(t)
+	log, _ := runIdx88C(t)
 
 	if out := os.Getenv("IDX88C_LOG"); out != "" {
 		if err := os.WriteFile(out, []byte(log), 0o644); err != nil {

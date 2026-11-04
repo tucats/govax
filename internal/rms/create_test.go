@@ -2,6 +2,7 @@ package rms
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/registers"
@@ -354,8 +355,8 @@ func TestSysCreate_unsupportedRFM(t *testing.T) {
 }
 
 // TestSysCreate_noNameGiven confirms a file spec naming only a device,
-// with no file name at all, is rejected with RMS$_FNM rather than
-// reaching vol.CreateFile with an empty name.
+// with no file name or type at all, makes the file ".;1", as VMS 7.1's
+// CREATE/FDL did with no name (testdata/idx88's round 3, C2.C).
 func TestSysCreate_noNameGiven(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:")
@@ -365,8 +366,21 @@ func TestSysCreate_noNameGiven(t *testing.T) {
 		t.Fatalf("SysCreate: %v", err)
 	}
 
-	if r0 != rmsFileNameError {
-		t.Errorf("r0 = %d, want rmsFileNameError (%d)", r0, rmsFileNameError)
+	if r0&1 == 0 {
+		t.Fatalf("r0 = %#x, want a success", r0)
+	}
+
+	if _, err := SysClose(f.ctx, []uint32{testFabAddr}); err != nil {
+		t.Fatalf("SysClose: %v", err)
+	}
+
+	listing, _, err := NewSession(f.ctx.Mounts).Directory("DUA0:[000000].;*", DirectoryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(listing, ".;1") {
+		t.Errorf("no .;1 in\n%s", listing)
 	}
 }
 

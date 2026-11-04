@@ -339,7 +339,14 @@ func (c *briefColumns) add(name string) {
 		c.used = 0
 	}
 
-	fmt.Fprintf(c.b, "%-*s", span*directoryColumnWidth, name)
+	// A line's last column is a blank short: VMS's full lines of four are
+	// 79 characters (testdata/idx88's round 3, testdata/dcl50).
+	width := span * directoryColumnWidth
+	if c.used+span == directoryColumns {
+		width--
+	}
+
+	fmt.Fprintf(c.b, "%-*s", width, name)
 
 	c.used += span
 }
@@ -427,6 +434,13 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 	b.WriteString("Effective: <None specified>\n")
 	b.WriteString("Recording: <None specified>\n")
 	fmt.Fprintf(b, "File organization:  %s\n", organizationText(a))
+
+	// An indexed file of more than one area says how many under its
+	// organization (testdata/idx88's IDX88DIR.TXT).
+	if a.Organization == 2 && a.Areas > 1 {
+		fmt.Fprintf(b, "%29sIn %d areas\n", "", a.Areas)
+	}
+
 	b.WriteString("Shelved state:      Online \n")
 	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, %sGlobal buffer count: %d, %s%s\n",
 		a.Allocated, a.Extend, bucketText(a), a.GlobalBuffers, limit, characteristicsText(a.Characteristics))
@@ -520,11 +534,14 @@ func aceText(ace []byte, opts DirectoryOptions) string {
 
 // bucketText is what /FULL's file attributes line says of an indexed
 // file's bucket size, after its extension: "Maximum bucket size: 2, "
-// (testdata/backup69's INDEXED.IDX). A relative file's is taken to be
-// shown the same way (unconfirmed); a sequential file has none.
+// (testdata/backup69's INDEXED.IDX), and of a relative file's, "Bucket
+// size: 3, " (testdata/idx88's round 3, C2H); a sequential file has none.
 func bucketText(a FileAttributes) string {
-	if a.Organization == 0 {
+	switch a.Organization {
+	case 0:
 		return ""
+	case 1:
+		return fmt.Sprintf("Bucket size: %d, ", a.BucketSize)
 	}
 
 	return fmt.Sprintf("Maximum bucket size: %d, ", a.BucketSize)
@@ -610,6 +627,14 @@ func directoryTime(t uint64) string {
 // VMS's has its level and keys).
 func organizationText(a FileAttributes) string {
 	name := organizationName(a.Organization)
+
+	// A relative file's is with its highest record number, VMS 7.1's
+	// "Relative, maximum record number: 500" (testdata/idx88's round 3, C2H;
+	// 2147483647 for none given, C2I).
+	if a.Organization == 1 && a.MaxRecord != 0 {
+		return fmt.Sprintf("%s, maximum record number: %d", name, a.MaxRecord)
+	}
+
 	if a.Organization != 2 || a.Prolog == 0 {
 		return name
 	}

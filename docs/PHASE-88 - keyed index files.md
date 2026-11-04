@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), done 2026-11-04 ("What round 3 settled", in Part A). Subtask 10b, the FDL reader and CREATE/FDL, done 2026-11-04 ("What CREATE/FDL settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -22,8 +22,9 @@ DCL reads and writes them (subtask 9): READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELE
 the record services (`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys, held to VMS's run of round 4 line for
 line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Subtask 10,** the
 utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) ran on VMS 7.1, its log and
-the files it made in `vax/` ("What round 3 settled"). **Next: 10b,** the FDL reader and CREATE/FDL; then CONVERT (10c) and
-ANALYZE/RMS_FILE (10d).
+the files it made in `vax/` ("What round 3 settled"). `internal/fdl` reads FDL files and CREATE/FDL makes files from them through
+RMS's `$CREATE` (`rms/fdlcreate.go`, `dclcmd/createfdl.go`), `TestIdx88CCreateOracle` holding sections C2 to C5 to VMS's log and 42
+files to VMS's byte for byte, the Prolog 1 files govax refuses left out. **Next: 10c,** CONVERT; then ANALYZE/RMS_FILE (10d).
 
 ## Goal
 
@@ -602,8 +603,8 @@ out. Subtasks 10b to 10d hold govax to the log, and read the save set's files fo
   whose secondaries all failed adds `%FDL-W-NULLPRI, null primary block`.
 - **Warnings make the file anyway**, the value left at its default: an unknown keyword value or switch (`squential`, `maybe`,
   `BLOCK_SPAN 1`, `variabel`) is `%FDL-W-UNQUAKW, unrecognized qualifier keyword`, an ambiguous one (`CONT`) `%FDL-W-ABKW`, a
-  secondary twice `%FDL-W-MULSEC, multiple secondary definition` (the first value kept: to be read from the file), a primary
-  twice or a value missing `%FDL-W-NOQUAL, no qualifier`, a bad date `%FDL-W-INVDATIM, invalid date/time`; then
+  secondary twice `%FDL-W-MULSEC, multiple secondary definition` (the last value kept: C46's two ALLOCATIONs made 9 blocks), a primary
+  twice (its secondaries going on into the first: C47) or a value missing `%FDL-W-NOQUAL, no qualifier`, a bad date `%FDL-W-INVDATIM, invalid date/time`; then
   `%FDL-W-WARNING, parsed with warnings`, and `$STATUS` is `%X00010001` (from CONVERT, `%X00B48058`, and CONVERT then made
   no file). An error (`-E-`) ends with `%FDL-E-FDLERROR, error parsing FDL file`, `%X00B48072`, and no file; a bad protection
   is `%FDL-E-SYNTAX, syntax error`, its segment the value with its leading blank.
@@ -663,6 +664,39 @@ out. Subtasks 10b to 10d hold govax to the log, and read the save set's files fo
 
 **HELP/MESSAGE** knows the facilities CONVERT, CONV, FDL, and ANALYZE (the last one message); CREATEFDL and ANLRMS are
 `%MSGHLP-F-NOSUCHFAC`. Their text is in `testdata/disks/idx88c-help`, local only.
+
+## What CREATE/FDL settled (2026-11-04)
+
+Subtask 10b, read from round 3's log and save set. Where this section and "What round 3 settled" differ, this one wins.
+
+- **FDLERROR is DCL's to show.** `%X00B48072` has no STS$M_INHIB_MSG, while CREATE's and OPENFDL's (`%X10B4806C`, `%X10B4808C`) do. VMS's
+  facility field is bits 16 to 27: FDL is 180.
+- **NULLPRI** comes at the next primary recognized after a refused one (C3D's KEY 0), not at the end of the file (C3E, C4D, and C4E have none).
+- **Abbreviations:** a keyword's exact match wins (`STREAM`, beside `STREAM_CR`), `SEG0_LENGTH`'s shown form is `SEG0`, and `1` isn't a switch's value.
+  `CONTROL_FIELD_SIZE` is 7.1's name, where the manual has `CONTROL_FIELD`.
+- **`FILE NAME` is used only with no file named.** C2BOTHER took DEFAULT_NAME's `.XYZ`, not NAME's `.DAT`. FOP MXV is on by default: a NAME
+  of `S35.IDX;1` made `;2`. `$CREATE` had no MXV, and has now.
+- **Fills are percentages of the area's bucket,** in bytes (C37's 80 percent of 4 blocks is 1638), and with no bucket size given there's nothing
+  to take a percentage of: K50's 50 is a whole bucket in VMS's C73.
+- **A key's name** is blank-padded (the manual says null), and `NAME ""` is 32 blanks where no NAME is 32 zeros (`KeySpec.Named`).
+- **Found in `$CREATE`, each as VMS's:** FAB$C_UDF on a sequential file (C28); no name and no type is the file `.;1` (C2.C, where govax said
+  RMS$_FNM, unconfirmed since Phase 33); FOP CTG and CBT mark a sequential or relative file's header when it has blocks (C29, C2A, not C2G); an indexed
+  file's contiguity is any area's (C38's area 2); a file of more than one area ends at HIBLK+1, one area at 0 (C38, C52; C31).
+- **Found elsewhere:** an end of file of 0 counts the high block (`FileAttributes.Used`, `backup.Attributes.Used`); DIRECTORY's full brief line is 79 characters;
+  DIRECTORY/FULL's `In n areas`, and a relative file's `maximum record number` and `Bucket size` (`FileAttributes.MaxRecord`). BACKUP passed over any file with no
+  type, whose entry has no dot, and couldn't restore `.;1` (`dottedName`, `restoreToVolume`).
+
+**The status for Prologs 1 and 2 (answer 1's open choice):** `%FDL-F-CREATE` with `-RMS-F-PLV`, `%X10B4806C`, where VMS makes a Prolog 1 file. These are C3A, C3B, and C3C,
+`expectedFDLDifferences`.
+
+**Unconfirmed, govax's choices:** a blank or comment line takes no statement number (no fault followed one); a number that isn't one is SYNTAX; an ambiguous primary is ABKW; a
+protection's unnamed categories have no access; an OWNER identifier the rights database lacks is ignored; FILE's other run-time switches (SUPERSEDE, CREATE_IF, TEMPORARY, DELETE_ON_CLOSE, and the
+others) go to FOP as MAXIMIZE_VERSION does, though only that one was seen; AREA without BUCKET_SIZE takes FILE's; CBT with no allocation sets nothing, as CTG doesn't; a CTG file not in one run is left
+unmarked rather than refused; FAB$C_UDF on a relative or indexed file is RMS$_RFM; how a name the command gives only in part combines with FILE NAME.
+
+**Left:** `CREATE/FDL=SYS$INPUT`, which the manual shows for CONVERT, is 10c's to settle. A directory entry for a file with no type has no dot on govax's volumes (ods2's and `specFileName`'s
+convention, older than this phase), and the `.;1` file's name is empty; whether VMS finds such entries on a volume it mounts hasn't been tried, and subtask 15 is the place. `DIRECTORY/TOTAL`, which
+C0 and C13 use, is still an unrecognized qualifier.
 
 ## The rules
 
@@ -894,7 +928,7 @@ them.
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
    to a probe log. (done 2026-11-04)
 10. **Utilities,** as Question 2 chooses, in four parts: (a) round 3 of the probe, `idx88c.com`
-    (done 2026-11-04); (b) the FDL reader and CREATE/FDL; (c) CONVERT; (d)
+    (done 2026-11-04); (b) the FDL reader and CREATE/FDL (done 2026-11-04); (c) CONVERT; (d)
     ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
     forms on indexed units; messages.
@@ -1111,3 +1145,8 @@ has REV at all.
   warnings that still make the file, CREATE/FDL's names and refusals, Prologs 1 and 2, CONVERT's exceptions, statuses, and
   refusals, ANALYZE's statuses and the texts of 20 kinds of damage. Found for 10b: VMS counts a file whose EFBLK is 0 at its high
   block, which govax's `backup.Attributes.Used` (and so BACKUP/LIST) doesn't. No code changed.
+- **2026-11-04: subtask 10b, the FDL reader and CREATE/FDL.** `internal/fdl` is a leaf package: `table.go` has every primary and secondary of the manual's chapter 4, `parse.go` splits statements and applies
+  round 3's rules (`doc.go`), `definition.go` is the result, `messages.go` the texts. `rms/fdlcreate.go` lays a FAB, NAM, and XABs out in a memory of its own, as `dclkeyed.go` does a RAB, and calls `SysCreate` and
+  `SysClose`, so every refusal is RMS's own. `dclcmd/createfdl.go` is the command, and `console.dcl`'s `create_fdl` its syntax; so that `/FDL=file` can take a value and still make the file parameter optional, a typed qualifier
+  with `/syntax=` now does both (`dcl.Qualifier.hasValue`). `TestIdx88CCreateOracle` holds every CREATE/FDL of C2 to C4 to VMS's log, times and file IDs masked and ANALYZE's reports left out, and 39 files' headers and blocks to VMS's save set, and 3 more
+  (C5) from VMS's own A35, A62, and A122.FDL, restored since ANALYZE is 10d's, with C13's `;2` and K50's fills; `TestCreateFDLForms` is what the log lacks; `fdl/parse_test.go` the parser alone. "What CREATE/FDL settled" has the findings.

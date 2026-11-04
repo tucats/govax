@@ -93,13 +93,22 @@ type FileAttributes struct {
 	// and PVN); 0 for any other file, or an indexed one whose prolog
 	// can't be read.
 	Keys, Areas, Prolog int
+
+	// MaxRecord is a relative file's highest record number, from its
+	// prologue (7FFFFFFF when none was given); 0 for any other file.
+	MaxRecord uint32
 }
 
 // Used is how many blocks the file's data uses, as DIRECTORY/SIZE counts
 // them: the end-of-file block, less one when the data ends at that
-// block's start.
+// block's start. An end of file of block 0, which an indexed file
+// CREATE/FDL makes has, is its high block: VMS 7.1's DIRECTORY/FULL said
+// "Size: 3/3" of C31.IDX (testdata/idx88's round 3).
 func (a FileAttributes) Used() uint32 {
-	if a.EndBlock > 0 && a.FirstFreeByte == 0 {
+	switch {
+	case a.EndBlock == 0:
+		return a.Allocated
+	case a.FirstFreeByte == 0:
 		return a.EndBlock - 1
 	}
 
@@ -284,13 +293,20 @@ func hostFileAttributes(path string) (FileAttributes, error) {
 }
 
 // indexedAttributesOf is f's header's attributes and, for an indexed file whose
-// prolog govax reads, its keys, areas, and prolog level.
+// prolog govax reads, its keys, areas, and prolog level, or for a relative
+// file its highest record number.
 func indexedAttributesOf(f *volume.File) FileAttributes {
 	attrs := headerAttributes(f.Header)
 
-	if isIndexed(f) {
+	switch {
+	case isIndexed(f):
 		if file, err := openIndexed(f, false); err == nil {
 			attrs.Keys, attrs.Areas, attrs.Prolog = len(file.Keys), len(file.Areas), file.Version
+		}
+
+	case isRelative(f):
+		if mrn, err := prologueMRNOf(f); err == nil {
+			attrs.MaxRecord = mrn
 		}
 	}
 

@@ -214,6 +214,19 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 				return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
 			}
 
+			// A sequential or relative file's FOP CTG or CBT marks its
+			// header when it was given blocks in one run, as VMS 7.1's
+			// CREATE/FDL files were (testdata/idx88's round 3: C29 and
+			// C2A; C2G's CONTIGUOUS with no allocation has neither). An
+			// indexed file's comes from its areas (indexed.go).
+			if plan == nil && alq > 0 {
+				if err := markContiguity(h.File, fop); err != nil {
+					ctx.abandon(newIFI)
+
+					return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
+				}
+			}
+
 			if plan != nil {
 				sts, stv, err := ctx.initIndexed(h.File, plan)
 				if err != nil {
@@ -335,17 +348,12 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, 0, 0, err
 	}
 
-	// ondisk.RecordFormatUndefined (0, VMS's FAB$C_UDF) is deliberately
-	// treated as unsupported here rather than resolved to some chosen
-	// default: real RMS lets a calling program leave FAB$B_RFM at 0 and
-	// picks a sensible format on its behalf, but this phase's own test
-	// program (docs/PHASE-22.md subtask 14) always sets every FAB field
-	// explicitly, so there's no concrete case yet to justify picking one
-	// default over another — a real gap worth revisiting once a program
-	// that actually relies on FAB$C_UDF shows up, not a bug in what's
-	// implemented so far.
+	// FAB$C_UDF (0), undefined records, is a sequential file's only: VMS
+	// 7.1's CREATE/FDL made one from FORMAT undefined (testdata/idx88's
+	// round 3, C28). A relative or indexed file of them is RMS$_RFM
+	// (unconfirmed: govax's choice).
 	format := ondisk.RecordFormat(rfm)
-	if format < ondisk.RecordFormatFixed || format > ondisk.RecordFormatStreamCR {
+	if format > ondisk.RecordFormatStreamCR || (format == ondisk.RecordFormatUndefined && org != orgSeq) {
 		return 0, found, false, nil, rmsInvalidRFM, 0, nil
 	}
 
@@ -402,10 +410,9 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, nil, 0, 0, err
 	}
 
-	if spec.Name == "" && spec.Type == "" {
-		return 0, found, false, nil, rmsFileNameError, 0, nil
-	}
-
+	// A name with neither a name nor a type is made as ".;1": VMS 7.1's
+	// CREATE/FDL with no file named and no FILE NAME made DUA1:[R3].;1
+	// (testdata/idx88's round 3, C2.C).
 	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
 	if err != nil {
 		return 0, found, false, nil, rmsDirNotFound, 0, nil
@@ -437,10 +444,22 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		}
 	}
 
-	if version == 0 {
-		if version, err = dir.NextVersion(name); err != nil {
+	// FAB$V_MXV: the version is the higher of the one given and one more
+	// than the directory's highest (the RMS manual's FAB$L_FOP), so FDL's
+	// MAXIMIZE_VERSION, a default, made [IN]S35.IDX;2 from a NAME of
+	// S35.IDX;1 (testdata/idx88's round 3, C13).
+	fopIn, err := ctx.loadLongword(fabAddr + fabFOP)
+	if err != nil {
+		return 0, found, false, nil, 0, 0, err
+	}
+
+	if version == 0 || fopIn&fopMXV != 0 {
+		next, err := dir.NextVersion(name)
+		if err != nil {
 			return 0, found, false, nil, rmsDeviceError, 0, nil
 		}
+
+		version = max(version, next)
 	}
 
 	bm, err := dir.Device.Bitmap()
@@ -552,3 +571,29 @@ func loadFileSpecString(ctx *Context, fabAddr uint32) (string, error) {
 
 // maxFixedRecord is the longest record a FIX file may have.
 const maxFixedRecord = 32767
+
+// markContiguity sets f's header's FCH$V_CONTIG for FOP CTG, or
+// FCH$V_CONTIGB for CBT, when its blocks are one run. A CTG file whose
+// blocks aren't is left unmarked (unconfirmed: VMS's $CREATE would have
+// refused it, and ods2 gives a new file's first blocks in one run when it
+// can).
+func markContiguity(f *volume.File, fop uint32) error {
+	var bit uint32
+
+	switch {
+	case fop&fopCTG != 0:
+		bit = ondisk.FchContig
+	case fop&fopCBT != 0:
+		bit = ondisk.FchContigB
+	default:
+		return nil
+	}
+
+	if !contiguous(f.Extents) {
+		return nil
+	}
+
+	return volume.UpdateHeader(f, func(h *ondisk.FileHeader, _ *ondisk.Ident) {
+		h.FileCharacteristics |= bit
+	})
+}

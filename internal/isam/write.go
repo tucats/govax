@@ -58,6 +58,11 @@ type KeySpec struct {
 	IndexArea, Level1Area, DataArea int
 	IndexFill, DataFill             int // bytes; 0 is the whole bucket
 	Name                            string
+
+	// Named says the key was given a name, if only an empty one, which
+	// is written as blanks: VMS 7.1 wrote 32 for CREATE/FDL's NAME ""
+	// (testdata/idx88's round 3, C51). A key with neither has zeros.
+	Named bool
 }
 
 // Spec describes a new file. Keys[0] is the primary key.
@@ -235,6 +240,7 @@ func (s *Spec) key(i int) *Key {
 		Null:            in.Null,
 		Segments:        in.Segments,
 		Name:            in.Name,
+		Named:           in.Named || in.Name != "",
 	}
 
 	for _, seg := range in.Segments {
@@ -396,7 +402,7 @@ func encodeKey(d []byte, k *Key) {
 		d[keyTypes+i] = byte(s.Type)
 	}
 
-	if k.Name != "" {
+	if k.Named || k.Name != "" {
 		copy(d[keyName:keyName+keyNameSize], k.Name)
 
 		for i := len(k.Name); i < keyNameSize; i++ {

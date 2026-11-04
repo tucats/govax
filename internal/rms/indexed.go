@@ -426,7 +426,7 @@ type indexedPlan struct {
 	names []uint32 // each key's KNM, 0 for an unnamed key
 	bks   byte     // area 0's bucket size: the header's, and the FAB's
 	deq   uint16   // area 0's default extension: the header's
-	aop   byte     // area 0's options, for the header's contiguity
+	aop   byte     // the areas' options together, for the header's contiguity
 }
 
 // checkIndexedCreate reads an indexed $CREATE's XABKEYs and XABALLs, makes
@@ -630,7 +630,13 @@ func (ctx *Context) createAreas(fab uint32, chain []xabEntry, plan *indexedPlan,
 		first.Allocation = prolog
 	}
 
-	plan.deq, plan.aop = uint16(first.Extend), first.Options
+	// The header's contiguity is any area's: VMS 7.1 marked C38.IDX
+	// "Contiguous best try" for its area 2's CBT, areas 0 and 1 having
+	// none (testdata/idx88's round 3).
+	plan.deq = uint16(first.Extend)
+	for _, a := range plan.spec.Areas {
+		plan.aop |= a.Options
+	}
 
 	return 0, 0, ctx.storeLongword(fab+fabOffset("ALQ"), total)
 }
@@ -754,6 +760,7 @@ func (ctx *Context) initIndexed(f *volume.File, plan *indexedPlan) (uint32, uint
 		}
 
 		plan.spec.Keys[i].Name = strings.TrimRight(name, " \x00")
+		plan.spec.Keys[i].Named = strings.Trim(name, "\x00") != ""
 	}
 
 	if _, err := isam.Create(indexedBlocks{f}, plan.spec); err != nil {
@@ -765,6 +772,15 @@ func (ctx *Context) initIndexed(f *volume.File, plan *indexedPlan) (uint32, uint
 		h.RecordAttributes.DefaultExtend = plan.deq
 		h.RecordAttributes.EndOfFileBlock = 0
 		h.RecordAttributes.FirstFreeByte = 0
+
+		// A file of more than one area ends past its allocation, as if
+		// each area after the first were an extension: VMS 7.1's
+		// CREATE/FDL files C38.IDX and C52.IDX, of three areas and no
+		// records, end at block 52 and 22, where those of one area end at
+		// 0 (testdata/idx88's round 3).
+		if len(plan.spec.Areas) > 1 {
+			h.RecordAttributes.EndOfFileBlock = h.RecordAttributes.HighestBlock + 1
+		}
 
 		if contiguous(f.Extents) {
 			switch {

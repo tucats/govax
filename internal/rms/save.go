@@ -231,7 +231,19 @@ type saveSearch struct {
 
 // matchKey names a file by its directory, name, and version.
 func matchKey(dirs []string, name string, version uint16) string {
-	return strings.ToUpper(strings.Join(dirs, ".") + "]" + name + fmt.Sprintf(";%d", version))
+	return strings.ToUpper(strings.Join(dirs, ".") + "]" + dottedName(name) + fmt.Sprintf(";%d", version))
+}
+
+// dottedName is a directory entry's name with its dot, "NOTYPE." for one
+// with no type, as a save set names it ("[R3].;1" for VMS 7.1's file of no
+// name or type, testdata/idx88's round 3): govax's directory entries may
+// leave the dot out.
+func dottedName(name string) string {
+	if !strings.Contains(name, ".") {
+		return name + "."
+	}
+
+	return name
 }
 
 // directory saves dir's files in its entries' order, going into each
@@ -263,7 +275,7 @@ func (s *saveSearch) directory(path []string, dir *volume.Directory) error {
 		}
 
 		saved := &SaveFile{
-			Name:       s.display + ":" + dirSpec{Elems: path}.String() + e.Name + fmt.Sprintf(";%d", e.Version),
+			Name:       s.display + ":" + dirSpec{Elems: path}.String() + dottedName(e.Name) + fmt.Sprintf(";%d", e.Version),
 			Attributes: savedAttributes(f, dir, path, e),
 			Walked:     sub != nil,
 			mounts:     s.mounts,
@@ -306,7 +318,7 @@ func savedAttributes(f *volume.File, dir *volume.Directory, path []string, e ond
 	}
 
 	a := backup.Attributes{
-		Name:            dirSpec{Elems: path}.String() + e.Name + fmt.Sprintf(";%d", e.Version),
+		Name:            dirSpec{Elems: path}.String() + dottedName(e.Name) + fmt.Sprintf(";%d", e.Version),
 		StructureLevel:  h.StructureLevel,
 		FID:             savedFileID(h.Fid, true),
 		BackLink:        savedFileID(h.Backlink, false),

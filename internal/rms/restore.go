@@ -159,7 +159,9 @@ func (s *Session) restoreToVolume(text string, file *backup.File, opts RestoreOp
 		return RestoreResult{}, fmt.Errorf("restore: %w", err)
 	}
 
-	if spec.Recursive || spec.Name+spec.Type == "" || strings.ContainsAny(spec.Name+spec.Type+spec.Version+strings.Join(spec.Dirs, "."), "*%") {
+	// A saved file may have neither a name nor a type: VMS 7.1's save set has
+	// [R3].;1 (testdata/idx88's round 3, C2.C).
+	if spec.Recursive || strings.ContainsAny(spec.Name+spec.Type+spec.Version+strings.Join(spec.Dirs, "."), "*%") {
 		return RestoreResult{}, fmt.Errorf("restore: %s: a restored file needs one name, with no wildcards", text)
 	}
 
