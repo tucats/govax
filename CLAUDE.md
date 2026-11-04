@@ -667,7 +667,8 @@ never had.
   VMS's whole run by `TestIdx88Oracle`, and subtask 9 (2026-11-04) DCL on indexed files: READ's
   `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`, WRITE, and WRITE/UPDATE through a RAB of DCL's own in a small memory
   (`rms/dclkeyed.go`, calling `SysGet` and the rest), TYPE and DUMP/RECORD by the primary key, DIRECTORY/FULL's prolog and keys;
-  round 4 of the probe is `testdata/idx88`'s `idx88d.com`, whose VMS log `TestIdx88DOracle` holds govax's to.
+  round 4 of the probe is `testdata/idx88`'s `idx88d.com`, whose VMS log `TestIdx88DOracle` holds govax's to. Subtask 10 is the utilities (10a, round 3 of the
+  probe, written 2026-11-04 and waiting for its run; 10b the FDL reader and CREATE/FDL, 10c CONVERT, 10d ANALYZE/RMS_FILE).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -985,7 +986,7 @@ never had.
   `TestFTN86Procedure` rehearses it on govax, and `TestFTN86Oracle` holds that run to VMS's log (`vax/`) but for `ftn86VMSDifferences`.
 - `testdata/idx88/` — Phase 88's probe of RMS's indexed files (README.md): `gen.go` writes `idx88.mar` (152 cases
   making 138 files on the common record of `MKREC`), `idx88.com` (with ANALYZE/RMS_FILE on each file, and a save set of
-  them), and `def_*.mar` (`$BKTDEF` and the rest, `GLOBAL`, values only; `decode.go`, `defined.txt`); `vax/` is VMS V7.1's run, its files in a save set, and ANALYZE's reports. `TestIdx88Probe` rehearses it on govax.
+  them), and `def_*.mar` (`$BKTDEF` and the rest, `GLOBAL`, values only; `decode.go`, `defined.txt`); `vax/` is VMS V7.1's run, its files in a save set, and ANALYZE's reports. `TestIdx88Probe` rehearses it on govax. Round 3 (`idx88c.com`, `idx88p.mar`, a byte patcher) is CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE, rehearsed by `TestIdx88CProbe`; the *Record Management Utilities Reference Manual* (`~/Documents/Technical Doc/VMS/vms-rmu.txt`, an OCR, beside its PDF) describes them and FDL.
 - `testdata/opt84/` — Phase 84's survey measurements (README.md): five compute kernels, which `TestFortranPrograms`
   runs both ways, their loops optimized by hand, and the measuring code (a patch to `Engine.Step`, kept out of the
   tree), part of which `TestFortranDungeonBothWays` uses.

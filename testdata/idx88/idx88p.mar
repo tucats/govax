@@ -1,0 +1,131 @@
+	.TITLE	IDX88P - adds a number to one byte of a file, by block I/O
+; Phase 88's round 3 (docs/PHASE-88 - keyed index files.md, subtask 10):
+; IDX88C.COM damages copies of indexed files with this program, so that
+; ANALYZE/RMS_FILE/CHECK shows how it reports each kind of damage. Written by
+; hand.
+;
+; Its arguments are four DCL symbols, read with LIB$GET_SYMBOL:
+;
+;   PFILE  the file
+;   PVBN   the virtual block, from 1
+;   POFF   the byte's offset in that block, 0 to 511
+;   PADD   what to add to the byte, 0 to 255 (255 subtracts 1)
+;
+; It reads the block with $READ, adds PADD to the byte (modulo 256), writes the
+; block back with $WRITE, and shows one line:
+;
+;   patch FILE vbn N offset M: OLD to NEW
+;
+; Its status is the first failure's, or SS$_NORMAL.
+	$FABDEF
+	$RABDEF
+; ONERR goes to DEST if R0 is a failure: a BLBC can't reach past the
+; service macros' expansions.
+	.MACRO	ONERR	DEST,?L
+	BLBS	R0,L
+	BRW	DEST
+L:
+	.ENDM	ONERR
+	.PSECT	D,NOEXE,WRT,LONG
+FAB:	$FAB	FAC=<BIO,GET,PUT>
+RAB:	$RAB	FAB=FAB,UBF=BLK,USZ=512,RBF=BLK,RSZ=512
+SYMF:	.ASCID	/PFILE/
+SYMV:	.ASCID	/PVBN/
+SYMO:	.ASCID	/POFF/
+SYMA:	.ASCID	/PADD/
+; NAMED receives the file's name; NAMES describes it at its length.
+NAMED:	.LONG	80
+	.ADDRESS NAME
+NAMES:	.LONG	0
+	.ADDRESS NAME
+NAMLEN:	.WORD	0
+NAME:	.BLKB	80
+; NUMD receives a number's text.
+NUMD:	.LONG	20
+	.ADDRESS NUM
+NUMLEN:	.WORD	0
+NUM:	.BLKB	20
+RESULT:	.LONG	0
+VBN:	.LONG	0
+OFF:	.LONG	0
+ADD:	.LONG	0
+OLD:	.LONG	0
+NEW:	.LONG	0
+FMT:	.ASCID	/patch !AS vbn !UL offset !UL: !XB to !XB/
+OUTD:	.LONG	132
+	.ADDRESS OUTB
+OUTS:	.LONG	0
+	.ADDRESS OUTB
+OUTLEN:	.WORD	0
+OUTB:	.BLKB	132
+	.ALIGN	LONG
+BLK:	.BLKB	512
+
+	.PSECT	C,EXE,NOWRT,LONG
+	.ENTRY	START,^M<R2,R3,R4>
+	PUSHAW	NAMLEN
+	PUSHAQ	NAMED
+	PUSHAQ	SYMF
+	CALLS	#3,G^LIB$GET_SYMBOL
+	ONERR	FAIL
+	MOVZWL	NAMLEN,NAMES
+	MOVB	NAMLEN,FAB+FAB$B_FNS
+	MOVAB	NAME,FAB+FAB$L_FNA
+	MOVAQ	SYMV,R2
+	BSBW	GETNUM
+	ONERR	FAIL
+	MOVL	R1,VBN
+	MOVAQ	SYMO,R2
+	BSBW	GETNUM
+	ONERR	FAIL
+	MOVL	R1,OFF
+	MOVAQ	SYMA,R2
+	BSBW	GETNUM
+	ONERR	FAIL
+	MOVL	R1,ADD
+	$OPEN	FAB=FAB
+	ONERR	FAIL
+	$CONNECT RAB=RAB
+	ONERR	CLOSE
+	MOVL	VBN,RAB+RAB$L_BKT
+	$READ	RAB=RAB
+	ONERR	CLOSE
+	MOVL	OFF,R3
+	MOVZBL	BLK[R3],OLD
+	ADDL3	OLD,ADD,R4
+	MOVB	R4,BLK[R3]
+	MOVZBL	R4,NEW
+	MOVL	VBN,RAB+RAB$L_BKT
+	$WRITE	RAB=RAB
+	ONERR	CLOSE
+	$CLOSE	FAB=FAB
+	ONERR	FAIL
+	$FAO_S	CTRSTR=FMT,OUTLEN=OUTLEN,OUTBUF=OUTD,-
+		P1=#NAMES,P2=VBN,P3=OFF,P4=OLD,P5=NEW
+	ONERR	FAIL
+	MOVZWL	OUTLEN,OUTS
+	PUSHAQ	OUTS
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	ONERR	FAIL
+	MOVL	#1,R0
+	RET
+; A failure after the $OPEN: close the file, and keep the failure's status.
+CLOSE:	MOVL	R0,R2
+	$CLOSE	FAB=FAB
+	MOVL	R2,R0
+FAIL:	RET
+
+; GETNUM reads the symbol whose descriptor R2 points to as a decimal number,
+; returning the status in R0 and the number in R1.
+GETNUM:	PUSHAW	NUMLEN
+	PUSHAQ	NUMD
+	PUSHL	R2
+	CALLS	#3,G^LIB$GET_SYMBOL
+	BLBC	R0,10$
+	PUSHAL	RESULT
+	PUSHAB	NUM
+	MOVZWL	NUMLEN,-(SP)
+	CALLS	#3,G^LIB$CVT_DTB
+	MOVL	RESULT,R1
+10$:	RSB
+	.END	START

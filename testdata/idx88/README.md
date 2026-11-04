@@ -19,6 +19,8 @@ records are our own data, made from a number, so the files can be kept.
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
 | `idx88d.mar`, `idx88d.com` | Round 4, DCL on indexed files (below); written by hand |
 | `exchanged.cmd`, `copyoutd.cmd` | Round 4's exchange volume scripts |
+| `idx88c.com`, `idx88p.mar` | Round 3, the utilities (below); written by hand |
+| `exchangec.cmd`, `copyoutc.cmd` | Round 3's exchange volume scripts |
 
 ## Running it
 
@@ -118,6 +120,48 @@ It takes a few seconds and reads nothing from the terminal. Back on the host:
 which brings back `vax/idx88d.log`, VMS V7.1's run (2026-11-04). `TestIdx88DProbe`
 (`internal/console/idx88dcl_test.go`) rehearses it on govax, and `TestIdx88DOracle` holds govax's
 log to VMS's line for line, times masked.
+
+## Round 3: the utilities (`idx88c.com`)
+
+Phase 88's subtask 10: CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE, which the
+*Record Management Utilities Reference Manual* (VAX 6.0) describes. The round is what the
+manual leaves to their behavior. `idx88c.com` (written by hand, its FDL files and text inputs
+inline, by DCL's CREATE) runs in sections C0 to C13, each command's `$STATUS` shown:
+
+| Section | What it does |
+| ------- | ------------ |
+| C0 | Assembles and links `idx88p.mar` (below); round 1's files are already in `[IN]` |
+| C1 | HELP/MESSAGE's text for the CONVERT, FDL, and ANLRMS facilities, to `MSG*.TXT` (DIGITAL's text: local only) |
+| C2, C3 | CREATE/FDL: sequential and relative files of every format and attribute, indexed files of every key type, segments, flags, areas, prologs, and RMS's refusals |
+| C4 | FDL's own refusals, one fault a file |
+| C5 | CREATE/FDL from ANALYZE/RMS_FILE/FDL's files of round 1's |
+| C6 to C10 | CONVERT: between organizations, `/KEY`, reorganizing, loading (fast or not, fills, `/NOSORT`), exceptions, `/EXIT`, `/STATISTICS`, `/PAD`, `/TRUNCATE`, `/FIXED_CONTROL`, stream formats, `/NOCREATE`, `/MERGE`, `/APPEND`, `/PROLOG`, and the refusals |
+| C11 | ANALYZE/RMS_FILE on each organization and format, `/FDL`, `/STATISTICS`, `/SUMMARY`, the output's default name, lists, wildcards, refusals |
+| C12 | `/CHECK` on 14 copies of round 1's S35.IDX, each with one byte changed by IDX88P |
+| C13 | A save set of everything made, `IDX88C.BCK` |
+
+`idx88p.mar` adds a number to one byte of a file by block I/O, its arguments the DCL symbols
+PFILE, PVBN, POFF, and PADD, and prints `patch FILE vbn N offset M: OLD to NEW`.
+
+On the host, from the repository root:
+
+    govax console < testdata/idx88/exchangec.cmd
+
+That makes `testdata/disks/idx88c-exchange.dsk` (mounted there as DUA5), with round 1's
+files restored into `[IN]` from `vax/idx88.bck`. On the VAX, with its `[000000]` the default
+directory:
+
+    $ @IDX88C/OUTPUT=IDX88C.LOG
+
+It reads nothing from the terminal. Back on the host:
+
+    mkdir -p testdata/disks/idx88c-help
+    govax console < testdata/idx88/copyoutc.cmd
+
+which brings back `vax/idx88c.log`, `vax/idx88c.bck` (the files made, of our own data), and
+`vax/idx88cbck.txt`, and puts the `MSG*.TXT` files in `testdata/disks/idx88c-help`, which is
+never committed. `IDX88CM.LOG`, MACRO's own output, stays on the volume.
+`TestIdx88CProbe` (`internal/console/idx88util_test.go`) rehearses the round on govax.
 
 ## What's next
 

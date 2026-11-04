@@ -3,7 +3,7 @@
 **Status:** planned 2026-11-03. Subtask 1, the survey, done the same day, and
 reviewed and accepted by the author the same day ("The review", in Part B).
 Subtask 2, the probe of RMS, done the same day, after three runs ("What round 1 settled",
-in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
+in Part A). Subtask 3, `internal/isam`'s reader, done the same day ("What the reader settled", in Part A). Subtask 4, its writing without splits, done the same day ("What the writer settled", in Part A). Subtask 5, its growth, done the same day ("What the splits settled", in Part A). Subtask 6, its update and delete, done the same day ("What update and delete settled", in Part A). Subtask 7, RMS's `$CREATE`, `$OPEN`, `$DISPLAY`, and `$EXTEND`, done the same day ("What RMS's `$CREATE` settled", in Part A). Subtask 8, RMS's record operations, done the same day ("What the record services settled", in Part A). Subtask 9, DCL, done 2026-11-04 ("What DCL's round settled", in Part A). Subtask 10a, round 3 of the probe (the utilities), written 2026-11-04 and waiting for its VAX run. Needs nothing beyond Phases 1–87. It picks up what Phase 81 left (its Decision
 13) and Phase 74's review deferred to a later program.
 
 ## Where things stand
@@ -20,8 +20,9 @@ Prolog 3 files report every key and area as VMS's did. The record services read 
 and `TestIdx88Oracle` holds 146 of the probe's 153 cases to VMS's run whole, the other seven listed with their reasons.
 DCL reads and writes them (subtask 9): READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, and `/NOLOCK`, WRITE, and WRITE/UPDATE through
 the record services (`rms/dclkeyed.go`), TYPE, DUMP/RECORD, and DIRECTORY/FULL's prolog and keys, held to VMS's run of round 4 line for
-line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Next: subtask 10,**
-the utilities (round 3 of the probe first).
+line by `TestIdx88DOracle`. `testdata/idx88` holds VMS's runs, files, and definitions. ods2 needed no change. **Subtask 10,** the
+utilities, has begun: round 3 of the probe (`idx88c.com`, CREATE/FDL, CONVERT, and ANALYZE/RMS_FILE) is written and rehearsed on
+govax, and **waits for its VAX run**; then the FDL reader and CREATE/FDL (10b), CONVERT (10c), and ANALYZE/RMS_FILE (10d).
 
 ## Goal
 
@@ -71,6 +72,13 @@ How sure each rule is, marked as in earlier phases:
   7.1.1.8 (the key specifiers), 7.2.3 (indexed READ), 7.3.3 (indexed WRITE), 7.4
   (REWRITE), 9.1 (OPEN; 9.1.15 KEY), 9.7 (DELETE), 9.8 (UNLOCK). HP's 2005 manual is
   the secondary source, as Phase 81's answer 4 has it; on keys it adds nothing here.
+- **The *Record Management Utilities Reference Manual*** (OpenVMS AXP 1.5 and VAX 6.0, 1993,
+  AA-PV6QA-TK; text `vms-rmu.txt`, an OCR, beside its PDF; the author, 2026-11-04): ANALYZE/RMS_FILE
+  (chapter 1), CONVERT (2), CONVERT/RECLAIM (3), the File Definition Language with every section and
+  attribute (4), CREATE/FDL (5), and EDIT/FDL with FDL's validity rules (6.1.1). A DIGITAL manual, so
+  usable as the others are. The DCL Dictionary only points to it for these three commands.
+- **The *Utility Routines Manual*** (`OVMS_731_UTILITY_ROUTINES.pdf`): CONV$ (chapter 6, with CONVERT's
+  condition values and its statistics array) and FDL$ (chapter 11).
 - **The DCL Dictionary:** READ's `/KEY`, `/INDEX`, `/MATCH`, `/DELETE`, `/NOLOCK`;
   WRITE's `/UPDATE`; F$FILE_ATTRIBUTES's KNOWN, NOK, NOA, PVN.
 - **VMS's own files, read only.** The local volumes hold real indexed files, and
@@ -804,8 +812,9 @@ them.
    "What the record services settled" says)
 9. **DCL.** READ's and WRITE's qualifiers, TYPE, DUMP/RECORD, DIRECTORY's remaining fields; each held
    to a probe log. (done 2026-11-04)
-10. **Utilities,** as Question 2 chooses: an FDL reader, CREATE/FDL, CONVERT, ANALYZE/RMS_FILE, each
-    possibly its own subtask.
+10. **Utilities,** as Question 2 chooses, in four parts: (a) round 3 of the probe, `idx88c.com`
+    (written 2026-11-04; waits for its VAX run); (b) the FDL reader and CREATE/FDL; (c) CONVERT; (d)
+    ANALYZE/RMS_FILE (`/CHECK`, `/FDL`, `/STATISTICS`, `/SUMMARY`), each held to round 3's log.
 11. **FORTRAN: the compiler.** KEY= checked and passed; all the specifiers; DELETE's and REWRITE's
     forms on indexed units; messages.
 12. **FTNRTL: OPEN and CLOSE.** The XABKEY chain, indexed defaults and refusals, INQUIRE.
@@ -862,8 +871,18 @@ and `/FDL`**, and DIRECTORY/FULL, so that VMS names what the bytes hold.
 match, through FOR$RAB to show RAC, KRF, KSZ, and ROP; WRITE, REWRITE, DELETE, UNLOCK; sequential after
 keyed; each condition; positioning on an indexed unit.
 
-**Round 3 (answer 2):** CREATE/FDL and CONVERT's messages and qualifiers; ANALYZE's
-output on files of each shape.
+**Round 3 (answer 2), `idx88c.com`:** CREATE/FDL and CONVERT's messages and qualifiers; ANALYZE's
+output on files of each shape. Written 2026-11-04, after the *Record Management Utilities* manual came,
+so it asks what the manual leaves to behavior: FDL's messages, one fault a file; the files CREATE/FDL
+makes from each section and attribute, and from ANALYZE's own FDL files; CONVERT between every pair of
+organizations, its loads (fast or not, fills, sorted or not), exceptions and the exceptions file,
+`/STATISTICS`' layout, the record format qualifiers, and its refusals; ANALYZE/RMS_FILE on sequential,
+relative, and indexed files of each format, its four reports, and `/CHECK` on 14 copies of S35.IDX with
+one byte changed each (`idx88p.mar`: a check character at either end, a block's sum, a root VBN, a free
+offset, a record ID, a chain pointer, an area's next VBN, a SIDR pointer's control byte, an index key, a
+bucket's flags and level, a key's data type and first data VBN). Round 1's files are its inputs, restored
+by govax into `[IN]` while it makes the exchange volume. HELP/MESSAGE's text for the facilities comes
+back too, to `testdata/disks` only, being DIGITAL's. The README has its sections and how to run it.
 
 **Round 4, DCL's side:** READ's and WRITE's qualifiers, F$FILE_ATTRIBUTES's KNOWN, NOK, NOA,
 PVN; TYPE, DUMP/RECORD of an indexed file, as a procedure with SET VERIFY.
@@ -992,3 +1011,16 @@ has REV at all.
   the RAB; TYPE of an open indexed file's logical name; DUMP's end of file for an indexed file; revisions at CLOSE (`FileHandle.reviseAtClose`, `ppf.go`'s
   `closeRevision`). `TestIdx88DOracle` holds the whole log, times masked; `TestIdx88DProbe` is the rehearsal still. Round 1's
   oracles are unchanged.
+- **2026-11-04: subtask 10a, round 3 written; it waits for its run.** The author added the *Record Management Utilities
+  Reference Manual* (VAX 6.0), which documents FDL's every attribute, CONVERT's qualifiers and exceptions, CREATE/FDL, and
+  ANALYZE/RMS_FILE's qualifiers; before it, only online help on the VAX had them. So round 3 (`testdata/idx88`'s
+  `idx88c.com`, sections C0 to C13, and `idx88p.mar`, a byte patcher for damaged copies; `exchangec.cmd`, `copyoutc.cmd`) asks
+  only what the manual leaves to behavior ("The probe", round 3). `TestIdx88CProbe` (`internal/console/idx88util_test.go`)
+  rehearses it on govax: IDX88P assembles, links, and changes each byte meant, and the procedure reaches its end. The
+  rehearsal caught two faults that would have cost a round: IDX88P's early `BLBC`s couldn't reach past the service
+  macros (now `ONERR`, a branch round a `BRW`), and each CALL level begins with ON ERROR THEN EXIT, so a failure in a
+  subroutine hid what followed (each now says SET NOON). Two of the probe's own plans were wrong and were changed before
+  the run: F122's keys 1 and 4 both give the primary key's order, so the reversed input is key 2's (-n); and a CREATE/FDL
+  with no file named, from ANALYZE's FDL of `[IN]S35.IDX`, would make a new version of the file C12 copies, so it's last.
+  Not done: DCL's bit-field assignment (`R[0,32] = n`), which govax lacks, so the round makes no binary data in DCL and
+  takes round 1's files for that.
