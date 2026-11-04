@@ -579,7 +579,8 @@ func (f *File) removeFromSIDR(b *bucket, k *Key, list []sidr, i, j int) error {
 	switch {
 	case live <= 1 && i+1 == len(list):
 		// The bucket's last value stays, as its last record does: the index's entry
-		// for the bucket has it (D2, U134, L140). Its first pointer holds the place.
+		// for the bucket has it (D2, U134, L140). Its first pointer holds the place,
+		// until a value goes in after it (insertSIDR).
 		b.data[s.pointers[0].offset] |= ircDeleted
 
 		if j != 0 {

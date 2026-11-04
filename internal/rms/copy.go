@@ -414,7 +414,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			continue
 		}
 
-		name, typ := destNameType(destSpec, m.Name, m.Type)
+		name, typ := destNameType(destSpec, ExplicitNullType(destText), m.Name, m.Type)
 		sourceDisplay := matchDisplay(m)
 
 		if opts.Test {
@@ -501,7 +501,7 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 	}
 
 	hostName, hostType := hostBaseNameType(hostPath)
-	name, typ := destNameType(destSpec, hostName, hostType)
+	name, typ := destNameType(destSpec, ExplicitNullType(destText), hostName, hostType)
 
 	if opts.Test {
 		dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
@@ -848,13 +848,16 @@ func matchDisplay(m filespec.Match) string {
 // directory. A name or type written as "*" is the input file's too, as
 // in VMS's COPY: "COPY FOO.TXT *.OLD" makes FOO.OLD, and "COPY FOO.TXT *"
 // makes FOO.TXT. (checkDestWildcards refuses any other wildcard first.)
-func destNameType(destSpec filespec.Spec, fallbackName, fallbackType string) (name, typ string) {
+// A type given as nothing, "NOTYPE." or ".;1", stays the null type, where a type
+// left out takes the input's: VMS's COPY made COPYNOTYPE.;1 of ODD.FDL
+// (testdata/vms88's round 2). nullType says the text gave it so.
+func destNameType(destSpec filespec.Spec, nullType bool, fallbackName, fallbackType string) (name, typ string) {
 	name, typ = destSpec.Name, destSpec.Type
 	if name == "" || name == "*" {
 		name = fallbackName
 	}
 
-	if typ == "" || typ == "*" {
+	if (typ == "" && !nullType) || typ == "*" {
 		typ = fallbackType
 	}
 
@@ -1130,6 +1133,24 @@ func lookUpVersion(destDir *volume.Directory, fullName string) (uint16, error) {
 	}
 
 	return entry.Version, nil
+}
+
+// ExplicitNullType reports whether a file specification's text gives its type as
+// nothing, a dot with no type after it ("NOTYPE.", ".;1"), which ods2's Spec can't
+// tell from a type left out. A spec in quotes, a host name, never does.
+func ExplicitNullType(text string) bool {
+	if i := strings.LastIndexAny(text, "]>:"); i >= 0 {
+		text = text[i+1:]
+	}
+
+	if i := strings.IndexAny(text, ";"); i >= 0 {
+		text = text[:i]
+	}
+
+	// A version after a second dot, NAME.TYP.3, is still a type and a version.
+	text = strings.TrimSpace(text)
+
+	return strings.Count(text, ".") == 1 && strings.HasSuffix(text, ".")
 }
 
 // InputOpenError is an input file COPY couldn't open: its name, and RMS's status.

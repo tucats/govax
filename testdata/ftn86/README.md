@@ -42,7 +42,7 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
 
 3. Dismount it or pause simh, then copy the results back:
 
-       mkdir -p testdata/ftn86/vax
+       mkdir -p testdata/ftn86/vax/round4
        ./govax console < testdata/ftn86/copyout.cmd
        ./govax console < testdata/ftn86/copyoutd.cmd
 
@@ -56,5 +56,7 @@ sources it built, so `TestFTN86Objects` stays true as FTNRTL changes. `TestFTN86
 `vax/round1/` and `vax/round2/` are the runs before the fixes each led to. `exitmore.for` and `powbits.for` are questions those
 rounds raised. The phase doc's log has what each round found.
 
-Before a later round, rename the old volume and DUNGEON's log in `testdata/disks`: `exchange.cmd` makes a new volume, and
-`copyoutd.cmd` writes the log.
+Before a later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one. The scripts use DUA5, since
+the author's startup mounts XFER on DUA2 (a failed MOUNT there once put a round's files on XFER). `copyout.cmd` writes the next
+run to `vax/round4/`, and `copyoutd.cmd` DUNGEON's log to `testdata/disks/ftn86d-round4.log`, beside the run the tests read,
+until it's checked; gen.go's `round` names them. `vax/round4/mar/` is the sources that round builds, for `TestFTN86Objects`.

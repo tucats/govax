@@ -1,0 +1,1328 @@
+	.TITLE	FTN_NAMELIST - FTNRTL's NAMELIST input and output
+	.IDENT	/V1.0/
+;
+; A namelist statement, READ (5,GRP) or WRITE (6,GRP), has no items: its one
+; argument is a group's block, which the compiler makes (FTN_STATEMENT shows
+; it), and what it transfers is every variable and array the block names (the
+; 1988 VAX FORTRAN Language Reference Manual, 4.10, 7.2.1.3, 7.3.1.3). So the
+; begin call does all the work: FTN$$NML_READ reads a group's records and
+; stores what they assign, and FTN$$NML_WRITE writes the group. An error ends
+; the statement where it is, what was stored staying stored.
+;
+; The rules are the manual's, and where it is silent or differs those of VMS's
+; FORTRAN run-time library, called from a program as a black box
+; (testdata/nml80, which TestNML80Oracle holds this module to).
+;
+; INPUT. A record's first column is passed over, as a carriage control
+; character, always: even in a character constant that runs across records.
+; The search for the group takes whole records. Only a $ or & in column 2,
+; then the group's name in either case, then a blank, a tab, or the record's
+; end, starts it; any other record is passed over, so " $OTHER $GRP" isn't the
+; group. Then the input is a stream, a record's end being a blank:
+;
+;	name[(subscripts)][(substring)] = values
+;
+; repeated until a $ or an &, whatever follows it, ends the statement and the
+; rest of its record is lost. Commas and blanks may separate assignments. A
+; name is letters, digits, _, and $, the first a letter, in either case; a
+; name's subscripts must follow it directly, but blanks may stand anywhere else
+; but in a number. Subscripts and substring bounds are integer constants. What
+; can be wrong with one (out of bounds, too few, a substring of an INTEGER) is
+; FOR$_INVREFVAR, as a name not in the group is, and so is something in the
+; parentheses that couldn't start a number: a number followed by anything but
+; ",", ":", or ")" is FOR$_SYNERRNAM, the condition for all other bad syntax.
+;
+; The values fill the element named and those after it in storage, or a
+; variable alone, one element's worth; one more is FOR$_TOOMANVAL, which a
+; null counts toward, though those stored stay stored. As in list-directed input
+; a comma right after a value belongs to it, and any other comma is a null,
+; which leaves its element as it was: "A=5,,7" sets A(1) and A(3). r*c is r of a
+; value, and r*, or r* before a separator, r nulls. A substring of an array
+; element applies to each element after it too.
+;
+; A value is a number, a logical word, a character constant, or a complex
+; constant. Each is converted to the element's type afresh:
+;
+;	a number	[+-]digits[.digits][E, D, or Q[+-][digits]], ended by a
+;			blank, tab, comma, $, &, ), or the record's end. To an
+;			integer it is truncated (past the type's size,
+;			FOR$_INPCONERR); to a logical it is the same integer, so
+;			1.5 is true and 2 false; to a complex it is the real part.
+;	a logical word	a word starting T or F, or .T or .F, that isn't a name:
+;			one followed by "=" or a direct "(" is the next
+;			assignment. T is -1 and F 0, and goes to a number as
+;			that number does, so R=T is -1.0.
+;	'text'		to a character item only, otherwise FOR$_INPCONERR, as
+;			any other value to a character item is.
+;	(re,im)		numbers only. To an item that isn't complex or character
+;			it is the real part.
+;
+; A number or complex constant followed by "=" is FOR$_SYNERRNAM. A word that
+; is neither a logical word nor followed by "=" is the next assignment, which
+; finds what is wrong with it: a name not in the group, or no "=" after one.
+;
+; A ? or =? where a name or a value could start passes over the rest of the
+; record. At a terminal it also lists the group's names, or for =? the group as
+; a WRITE would write it; and so does either in column 2 during the search.
+;
+; OUTPUT. A record holds 81 bytes, its carriage control and 80 of text:
+;
+;	 $GRP
+;	 I       =          42,
+;	 T       = 'HELLO',
+;	 A       = 2*5,           6
+;	 $END
+;
+; " NAME", blanks to the next multiple of 8 past the name's length, and "=" start
+; each entity on a new record. Its values follow in list-directed output's
+; fields, all of which begin with a blank (FTN_LISTOUT's PUT_VALUE makes them),
+; with a comma after each but the last of the last entity. Elements equal byte
+; for byte are written once, " r*" and the field without its leading blanks. How
+; each piece meets a record's end differs:
+;
+;	a field		goes whole on the next record, if it doesn't fit, its
+;			first blank the carriage control; a repeated one, " r*"
+;			and the field without its blanks, if " r*" and the field
+;			with them wouldn't fit
+;	a comma		starts the next record with a blank, if the record is full
+;	" '" or " r*'"	as a field
+;	a text's bytes	fill the record, and go on after a blank on the next;
+;			an apostrophe in the text is doubled.
+;
+; Unconfirmed, no case of the probe settling it: which record position a syntax
+; error names, after a substring's parentheses; a doubled apostrophe split
+; across records; a repeat value that isn't a number, text, or T or F word.
+;
+FOR$_SYNERRNAM	= ^X0018808C		; FORRTL's condition values, with
+FOR$_TOOMANVAL	= ^X00188094		;  their severities
+FOR$_INVREFVAR	= ^X0018809C
+FOR$_ERRDURWRI	= ^X00188134
+
+; The block's fields.
+NB_NAME		= 0			; long: the group's name, a counted string
+NB_COUNT	= 4			; long: how many entities
+NB_ENTITIES	= 8			; each: its name's address, its descriptor's
+
+; The descriptor's fields and codes (the VAX calling standard's).
+DSC$W_LENGTH	= 0
+DSC$B_DTYPE	= 2
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$B_DIMCT	= 11
+DSC$L_ARSIZE	= 12
+DSC$A_A0	= 16
+DSC$L_M1	= 20
+DSC$K_DTYPE_FC	= 12
+DSC$K_DTYPE_DC	= 13
+DSC$K_DTYPE_T	= 14
+DSC$K_DTYPE_GC	= 29
+DSC$K_CLASS_A	= 4
+
+; The statement's context (FTN_STATEMENT's; FTN_LISTIN's fields).
+CTX_STATUS	= 16			; long: the first error's condition, or 0
+CTX_STREAM	= 20			; long: the unit's stream (FTN_UNITS)
+CTX_RECLEN	= 24			; long: the record's length
+CTX_RECORD	= 28			; the record
+RECORD_SIZE	= 256
+CTX_POS		= CTX_RECORD+RECORD_SIZE ; long: the next byte's place in it
+CTX_LI_BUFFER	= CTX_POS+112		; long: the value's text
+CTX_LI_LENGTH	= CTX_LI_BUFFER+8	; long: the text's length
+CTX_LI_PART	= CTX_LI_LENGTH+4	; long: a complex value's real part's length
+CTX_LI_REPEAT	= CTX_LI_PART+4		; long: FTN_LISTIN's; not used here
+CTX_LI_KIND	= CTX_LI_REPEAT+4	; byte: the value's form, V_...
+CTX_LI_AFTER	= CTX_LI_KIND+1		; byte: 1 if a comma is the last value's
+CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address
+CTX_NM_FAO	= CTX_RECP+12		; long: the message's first FAO argument, or 0
+CTX_NM_DESC	= CTX_RECP+16		; 8 bytes: the descriptor it may point at
+CTX_NM_CAPTURE	= CTX_RECP+24		; long: where FTN_LISTOUT is to put a field
+CTX_NM_CAPLEN	= CTX_RECP+28		; long: and that field's length
+CTX_LI_COLUMN	= CTX_RECP+32		; long: where reading a new record starts
+CTX_NM_SHIFT	= CTX_LI_COLUMN		; the same long, which a WRITE doesn't
+					;  need: 1 to write each record after a
+					;  blank (FTN$$NML_WRITE's fourth argument)
+
+V_WORD		= 1			; the forms of a value (FTN_LISTIN's)
+V_TEXT		= 2
+V_COMPLEX	= 3
+
+RECORD_MAX	= 81			; an output record's length, at most
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; The routine's frame, below FP.
+;
+WORD		= -64			; a name read, in capitals, 63 bytes at most
+NAME		= -68			; long: the current entity's name
+COUNT		= -72			; long: how many of a value (r*c)
+SUBS		= -104			; 8 longwords: the subscripts read
+MISSING		= -108			; long: a bit for each that wasn't given
+ITEMS		= -112			; long: how many there were
+COLON		= -116			; long: 1 if a colon separated them
+FRAME_SIZE	= 116
+
+;
+; FTN$$NML_READ(context, block)
+;
+; The whole READ. R6 is the context and R7 the block; while a value goes in, R8
+; is the entity's descriptor, R9 the item's address, R10 the elements left, and
+; R11 the item's length. An error is recorded, and the routine returns from
+; wherever it is, as RET takes no care of the subroutines (BSB, JSB) in progress.
+;
+	.ENTRY	FTN$$NML_READ,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SUBL2	#FRAME_SIZE,SP
+	MOVL	4(AP),R6
+	MOVL	8(AP),R7
+	CLRL	CTX_LI_KIND(R6)
+	MOVL	#1,CTX_LI_COLUMN(R6)	; column 1 is carriage control
+	BSBW	FIND_GROUP
+ASSIGNMENT:
+	JSB	FTN$$LI_SKIP		; FTN_LISTIN
+	BLBS	R0,10$
+	RET				; no more records
+10$:	CMPB	R1,#^A/$/
+	BEQL	80$
+	CMPB	R1,#^A/&/
+	BEQL	80$
+	BSBW	QUESTION
+	BLBS	R0,ASSIGNMENT
+	MOVL	CTX_POS(R6),R0
+	MOVZBL	@CTX_RECP(R6)[R0],R1
+	BSBW	IS_LETTER
+	BLBS	R0,20$
+	BRW	SYNTAX_HERE
+20$:	BSBW	FIND_ENTITY
+	MOVL	CTX_POS(R6),R0
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	30$
+	CMPB	@CTX_RECP(R6)[R0],#^A/(/
+	BNEQ	30$
+	BSBW	REFERENCE
+30$:	JSB	FTN$$LI_SKIP
+	BLBS	R0,40$
+	RET
+40$:	CMPB	R1,#^A/=/
+	BEQL	50$
+	BRW	SYNTAX_HERE
+50$:	INCL	CTX_POS(R6)
+	BSBW	VALUES
+	BRW	ASSIGNMENT
+80$:	RET
+
+;
+; FIND_GROUP: reads records until one starts the group, leaving the position
+; after its name.
+;
+FIND_GROUP:
+10$:	PUSHL	R6
+	CALLS	#1,FTN$$FMT_READ	; FTN_FORMAT
+	TSTL	CTX_STATUS(R6)
+	BEQL	20$
+	RET				; the end of the file, or a failure
+20$:	CMPL	CTX_RECLEN(R6),#2
+	BLSS	10$
+	MOVL	CTX_RECP(R6),R2		; the record
+	MOVZBL	1(R2),R1		; its second column
+	CMPB	R1,#^A/$/
+	BEQL	30$
+	CMPB	R1,#^A/&/
+	BEQL	30$
+	MOVL	#1,CTX_POS(R6)		; a question, in column 2
+	BSBW	QUESTION
+	BRB	10$
+30$:	MOVL	NB_NAME(R7),R3		; the group's name
+	MOVZBL	(R3)+,R4
+	ADDL3	#2,R4,R5		; where the name in the record ends
+	CMPL	R5,CTX_RECLEN(R6)
+	BGTR	10$			; too short to hold it
+	CLRL	R0
+40$:	CMPL	R0,R4
+	BGEQ	50$
+	ADDL3	#2,R0,R1
+	MOVZBL	(R2)[R1],R1
+	BSBW	UPPER
+	CMPB	R1,(R3)[R0]
+	BNEQ	10$
+	INCL	R0
+	BRB	40$
+50$:	CMPL	R5,CTX_RECLEN(R6)
+	BEQL	70$
+	CMPB	(R2)[R5],#^A/ /
+	BEQL	70$
+	CMPB	(R2)[R5],#9		; a tab
+	BEQL	70$
+	BRW	10$
+70$:	MOVL	R5,CTX_POS(R6)
+	RSB
+
+;
+; QUESTION: if the input at the position is ? or =?, passes over the rest of the
+; record, and at a terminal answers it; R0's low bit is then set. The record
+; is written over by the answer, which is why the rest of it is gone first.
+;
+QUESTION:
+	MOVL	CTX_POS(R6),R0
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	70$
+	MOVL	CTX_RECP(R6),R2
+	CLRL	R3			; 0 for names alone
+	CMPB	(R2)[R0],#^A/?/
+	BEQL	10$
+	CMPB	(R2)[R0],#^A/=/
+	BNEQ	70$
+	INCL	R0
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	70$
+	CMPB	(R2)[R0],#^A/?/
+	BNEQ	70$
+	MOVL	#1,R3			; 1 for values too
+10$:	CLRL	CTX_RECLEN(R6)
+	CLRL	CTX_POS(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#1,FTN$$UNIT_TERMINAL	; FTN_UNITS
+	BLBC	R0,60$
+	PUSHL	#1			; written after a blank, as FORRTL's
+	PUSHL	R3
+	PUSHL	R7
+	PUSHL	R6
+	CALLS	#4,FTN$$NML_WRITE
+	MOVL	#1,CTX_LI_COLUMN(R6)
+	CLRL	CTX_RECLEN(R6)
+	CLRL	CTX_POS(R6)
+60$:	MOVL	#1,R0
+	RSB
+70$:	CLRL	R0
+	RSB
+
+;
+; UPPER: the byte in R1, a capital if it was a small letter. IS_LETTER: R0's
+; low bit is set if the byte in R1 is a letter. IS_NAME_CHAR: or a digit, _, or $.
+; IS_DIGIT: or a digit alone. None changes R1 but UPPER.
+;
+UPPER:	CMPB	R1,#^A/a/
+	BLSSU	10$
+	CMPB	R1,#^A/z/
+	BGTRU	10$
+	BICB2	#^X20,R1
+10$:	RSB
+
+IS_LETTER:
+	BICB3	#^X20,R1,R0
+	CMPB	R0,#^A/A/
+	BLSSU	80$
+	CMPB	R0,#^A/Z/
+	BGTRU	80$
+	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+IS_DIGIT:
+	CMPB	R1,#^A/0/
+	BLSSU	80$
+	CMPB	R1,#^A/9/
+	BGTRU	80$
+	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+IS_NAME_CHAR:
+	BSBB	IS_LETTER
+	BLBS	R0,90$
+	BSBB	IS_DIGIT
+	BLBS	R0,90$
+	MOVL	#1,R0
+	CMPB	R1,#^A/_/
+	BEQL	90$
+	CMPB	R1,#^A/$/
+	BEQL	90$
+	CLRL	R0
+90$:	RSB
+
+;
+; WORD_END: R2 becomes the place in the record after the name characters that
+; start at R2. Changes R0 and R1.
+;
+WORD_END:
+10$:	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	90$
+	MOVZBL	@CTX_RECP(R6)[R2],R1
+	BSBB	IS_NAME_CHAR
+	BLBC	R0,90$
+	INCL	R2
+	BRB	10$
+90$:	RSB
+
+;
+; EQUALS_NEXT: R0's low bit is set if, after any blanks and tabs in this record,
+; the next byte after place R2 is "=". Changes R0 and R1.
+;
+EQUALS_NEXT:
+	MOVL	R2,R0
+10$:	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	80$
+	MOVZBL	@CTX_RECP(R6)[R0],R1
+	INCL	R0
+	CMPB	R1,#^A/ /
+	BEQL	10$
+	CMPB	R1,#9
+	BEQL	10$
+	CMPB	R1,#^A/=/
+	BNEQ	80$
+	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+;
+; FIND_ENTITY: reads the name at the position, and makes it the current entity:
+; R8 its descriptor, and R9, R10, and R11 the whole of it. A name not in the
+; group is FOR$_INVREFVAR, as it was typed.
+;
+FIND_ENTITY:
+	MOVL	CTX_POS(R6),R2
+	MOVL	R2,R3			; its start
+	BSBB	WORD_END
+	SUBL3	R3,R2,R4		; its length
+	MOVL	R2,CTX_POS(R6)
+	CMPL	R4,#63
+	BGTR	NOT_IN_GROUP		; longer than any name
+	CLRL	R0
+10$:	CMPL	R0,R4
+	BGEQ	20$
+	ADDL3	R0,R3,R1
+	MOVZBL	@CTX_RECP(R6)[R1],R1
+	BSBW	UPPER
+	MOVB	R1,WORD(FP)[R0]
+	INCL	R0
+	BRB	10$
+20$:	MOVL	NB_COUNT(R7),R5
+	MOVAB	NB_ENTITIES(R7),R2
+30$:	DECL	R5
+	BLSS	NOT_IN_GROUP
+	MOVL	(R2),R1			; a name in the block, counted
+	CMPB	(R1),R4
+	BNEQ	40$
+	MOVQ	R2,-(SP)		; CMPC3 changes R0 to R3
+	CMPC3	R4,1(R1),WORD(FP)
+	BEQL	45$
+	MOVQ	(SP)+,R2		; (which changes the condition codes)
+40$:	ADDL2	#8,R2
+	BRB	30$
+45$:	MOVQ	(SP)+,R2
+50$:	MOVL	(R2),NAME(FP)
+	MOVL	4(R2),R8
+	MOVL	DSC$A_POINTER(R8),R9
+	MOVZWL	DSC$W_LENGTH(R8),R11
+	MOVL	#1,R10
+	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
+	BNEQ	90$
+	DIVL3	R11,DSC$L_ARSIZE(R8),R10
+90$:	RSB
+NOT_IN_GROUP:
+	MOVW	R4,CTX_NM_DESC(R6)	; the descriptor of the text in the record
+	MOVW	#^X010E,CTX_NM_DESC+2(R6)
+	ADDL3	CTX_RECP(R6),R3,CTX_NM_DESC+4(R6)
+	BRW	INVALID_TEXT
+
+;
+; REFERENCE: the subscripts and substring after the current entity's name, the
+; position at the "(". Makes R9, R10, and R11 the item they name.
+;
+REFERENCE:
+	BSBW	PARENTHESES
+	TSTL	COLON(FP)
+	BEQL	10$
+	;
+	; A substring of a whole variable.
+	;
+	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
+	BEQL	80$
+	BRW	SUBSTRING
+	;
+	; Subscripts.
+	;
+10$:	CMPB	DSC$B_CLASS(R8),#DSC$K_CLASS_A
+	BNEQ	80$
+	MOVZBL	DSC$B_DIMCT(R8),R0
+	CMPL	ITEMS(FP),R0
+	BNEQ	80$
+	TSTL	MISSING(FP)
+	BNEQ	80$
+	MOVZBL	DSC$B_DIMCT(R8),R2	; the dimensions
+	MOVAL	DSC$L_M1(R8),R3		; the multipliers,
+	MOVAL	(R3)[R2],R4		;  then each one's bounds
+	CLRL	R5			; the sum so far
+	;
+	; From the last dimension in: s(n), then s(n-1) + m(n-1)*that, ...
+	; Each subscript is checked against its bounds on the way.
+	;
+20$:	DECL	R2
+	BLSS	30$
+	MOVL	SUBS(FP)[R2],R0
+	ASHL	#3,R2,R1
+	ADDL2	R4,R1			; this dimension's bounds
+	CMPL	R0,(R1)
+	BLSS	80$
+	CMPL	R0,4(R1)
+	BGTR	80$
+	MULL2	(R3)[R2],R5
+	ADDL2	R0,R5
+	BRB	20$
+30$:	MULL3	R11,R5,R0		; the element's address, from A0
+	ADDL3	DSC$A_A0(R8),R0,R9
+	SUBL3	DSC$A_POINTER(R8),R9,R0	; how far it is into the array
+	SUBL3	R0,DSC$L_ARSIZE(R8),R0
+	DIVL3	R11,R0,R10		; and the elements from it on
+	;
+	; A substring may follow, with blanks before it.
+	;
+	JSB	FTN$$LI_SKIP		; FTN_LISTIN
+	BLBS	R0,40$
+	RET
+40$:	CMPB	R1,#^A/(/
+	BNEQ	90$
+	BSBW	PARENTHESES
+	TSTL	COLON(FP)
+	BNEQ	SUBSTRING
+	BRW	SYNTAX_HERE
+80$:	BRW	INVALID_ENTITY
+90$:	RSB
+
+;
+; SUBSTRING: the bounds just read, of the current item, its bytes R9 and R11.
+;
+SUBSTRING:
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_T
+	BNEQ	80$
+	CMPL	ITEMS(FP),#2
+	BNEQ	80$
+	MOVL	#1,R0			; the first, 1 if not given
+	BBS	#0,MISSING(FP),10$
+	MOVL	SUBS(FP),R0
+10$:	MOVL	R11,R1			; the last, the end if not given
+	BBS	#1,MISSING(FP),20$
+	MOVL	SUBS+4(FP),R1
+20$:	CMPL	R0,#1
+	BLSS	80$
+	CMPL	R1,R11
+	BGTR	80$
+	CMPL	R0,R1
+	BGTR	80$
+	SUBL3	R0,R1,R11
+	INCL	R11
+	DECL	R0
+	ADDL2	R0,R9
+	RSB
+80$:	BRW	INVALID_ENTITY
+
+;
+; PARENTHESES: reads "(" and what's in it, to the ")", into SUBS, MISSING,
+; ITEMS, and COLON, where blanks and records' ends may stand anywhere around
+; the numbers. Past eight numbers none is kept, as no reference can be right.
+;
+PARENTHESES:
+	INCL	CTX_POS(R6)
+	CLRL	MISSING(FP)
+	CLRL	ITEMS(FP)
+	CLRL	COLON(FP)
+10$:	JSB	FTN$$LI_SKIP		; FTN_LISTIN
+	BLBS	R0,20$
+	RET
+20$:	CMPB	R1,#^A/,/
+	BEQL	25$
+	CMPB	R1,#^A/:/
+	BEQL	25$
+	CMPB	R1,#^A/)/
+	BNEQ	30$
+25$:	MOVL	ITEMS(FP),R0		; nothing here
+	CMPL	R0,#8
+	BGEQ	50$
+	BBSS	R0,MISSING(FP),50$
+	BRB	50$
+	;
+	; A number: a sign, then digits, which keep to the largest longword
+	; rather than overflow, so that the bounds refuse it.
+	;
+30$:	CLRL	R2			; 1 if negative
+	CMPB	R1,#^A/+/
+	BEQL	32$
+	CMPB	R1,#^A/-/
+	BNEQ	35$
+	MOVL	#1,R2
+32$:	INCL	CTX_POS(R6)
+	BSBW	PEEK
+35$:	BSBW	IS_DIGIT
+	BLBS	R0,37$
+	BRW	INVALID_ENTITY		; something else: FOR$_INVREFVAR
+37$:	CLRL	R3
+40$:	SUBL3	#^A/0/,R1,R0
+	MOVL	R0,R1
+	MULL2	#10,R3
+	BVS	42$
+	ADDL2	R1,R3
+	BVC	44$
+42$:	MOVL	#^X7FFFFFFF,R3
+44$:	INCL	CTX_POS(R6)
+	BSBW	PEEK
+	BSBW	IS_DIGIT
+	BLBS	R0,40$
+	BLBC	R2,46$
+	MNEGL	R3,R3
+46$:	CMPL	ITEMS(FP),#8
+	BGEQ	47$
+	MOVL	ITEMS(FP),R0
+	MOVL	R3,SUBS(FP)[R0]
+47$:	JSB	FTN$$LI_SKIP
+	BLBS	R0,50$
+	RET
+	;
+	; What follows it.
+	;
+50$:	INCL	ITEMS(FP)
+	CMPB	R1,#^A/)/
+	BEQL	80$
+	CMPB	R1,#^A/,/
+	BNEQ	60$
+	TSTL	COLON(FP)		; a comma and a colon together
+	BEQL	70$
+	BRW	SYNTAX_HERE
+60$:	CMPB	R1,#^A/:/
+	BEQL	65$
+	BRW	SYNTAX_HERE
+65$:	TSTL	COLON(FP)		; a second colon, or one after a comma
+	BNEQ	67$
+	CMPL	ITEMS(FP),#1
+	BEQL	68$
+67$:	BRW	SYNTAX_HERE
+68$:	MOVL	#1,COLON(FP)
+70$:	INCL	CTX_POS(R6)
+	BRW	10$
+80$:	INCL	CTX_POS(R6)
+	RSB
+
+;
+; PEEK: the byte at the position in R1, or a blank at the record's end. Changes
+; R0 and R1.
+;
+PEEK:	MOVL	CTX_POS(R6),R0
+	MOVZBL	#^A/ /,R1
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	10$
+	MOVZBL	@CTX_RECP(R6)[R0],R1
+10$:	RSB
+
+;
+; VALUES: the values of an assignment, until the next byte starts no value:
+; a $ or an &, or the next assignment's name. For any byte that can't start
+; either, FOR$_SYNERRNAM.
+;
+VALUES:
+	CLRB	CTX_LI_AFTER(R6)
+NEXT_VALUE:
+	JSB	FTN$$LI_SKIP		; FTN_LISTIN
+	BLBS	R0,10$
+	RET
+10$:	CMPB	R1,#^A/$/
+	BEQL	20$
+	CMPB	R1,#^A/&/
+	BNEQ	30$
+20$:	RSB
+30$:	PUSHL	R1
+	BSBW	QUESTION
+	MOVL	(SP)+,R1
+	BLBS	R0,NEXT_VALUE
+	CMPB	R1,#^A/,/
+	BNEQ	50$
+	INCL	CTX_POS(R6)
+	TSTB	CTX_LI_AFTER(R6)
+	BEQL	40$
+	CLRB	CTX_LI_AFTER(R6)	; the last value's own comma
+	BRB	NEXT_VALUE
+40$:	MOVL	#1,COUNT(FP)		; a null
+	BSBW	NULLS
+	BRB	NEXT_VALUE
+50$:	CLRL	CTX_LI_LENGTH(R6)
+	CLRL	CTX_LI_PART(R6)
+	MOVL	#1,COUNT(FP)
+	BSBW	IS_LETTER
+	BLBC	R0,60$
+	;
+	; A word: the next assignment's name, or a logical value.
+	;
+	MOVL	CTX_POS(R6),R2
+	BSBW	WORD_END
+	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	55$
+	CMPB	@CTX_RECP(R6)[R2],#^A/(/
+	BEQL	20$			; a name with subscripts
+55$:	BSBW	EQUALS_NEXT
+	BLBS	R0,20$			; a name
+	MOVL	CTX_POS(R6),R0
+	MOVZBL	@CTX_RECP(R6)[R0],R1
+	BSBW	UPPER
+	CMPB	R1,#^A/T/
+	BEQL	57$
+	CMPB	R1,#^A/F/
+	BNEQ	20$			; a name, for ASSIGNMENT to refuse
+57$:	MOVL	R2,CTX_POS(R6)
+	BSBW	LOGICAL_FROM_R1
+	BRW	PUT_VALUE
+60$:	BSBW	IS_DIGIT
+	BLBC	R0,BY_FIRST_BYTE
+	BSBW	REPEAT_COUNT		; digits: maybe a count
+	BLBS	R0,VALUE_AFTER_COUNT
+	BSBW	PEEK
+	BRW	BY_FIRST_BYTE
+
+;
+; After r*, a value or the end of one: nulls, then.
+;
+VALUE_AFTER_COUNT:
+	MOVL	CTX_POS(R6),R0
+	CMPL	R0,CTX_RECLEN(R6)
+	BGEQ	65$
+	MOVZBL	@CTX_RECP(R6)[R0],R1
+	CMPB	R1,#^A/ /
+	BEQL	65$
+	CMPB	R1,#9
+	BEQL	65$
+	CMPB	R1,#^A/,/
+	BEQL	65$
+	CMPB	R1,#^A/$/
+	BEQL	65$
+	CMPB	R1,#^A/&/
+	BNEQ	67$
+65$:	BSBW	NULLS
+	MOVB	#1,CTX_LI_AFTER(R6)
+	BRW	NEXT_VALUE
+67$:	BSBW	IS_LETTER
+	BLBS	R0,68$
+	BRW	BY_FIRST_BYTE
+68$:
+	BICB2	#^X20,R1
+	CMPB	R1,#^A/T/
+	BEQL	69$
+	CMPB	R1,#^A/F/
+	BEQL	69$
+	BRW	SYNTAX_HERE
+69$:	PUSHL	R1			; T or F
+	MOVL	CTX_POS(R6),R2
+	BSBW	WORD_END
+	MOVL	R2,CTX_POS(R6)
+	MOVL	(SP)+,R1
+	BSBW	LOGICAL_FROM_R1
+	BRW	PUT_VALUE
+;
+; BY_FIRST_BYTE: a value by its first byte, in R1.
+;
+BY_FIRST_BYTE:
+	CMPB	R1,#^A/'/
+	BNEQ	75$
+	JSB	FTN$$LI_TEXT		; FTN_LISTIN
+	TSTL	CTX_STATUS(R6)
+	BEQL	72$
+	RET
+72$:	BRW	PUT_VALUE
+75$:	CMPB	R1,#^A/(/
+	BNEQ	80$
+	BRW	COMPLEX_VALUE
+80$:	CMPB	R1,#^A/./
+	BNEQ	90$
+	;
+	; .T and .F are a logical word; any other . starts a number.
+	;
+	MOVL	CTX_POS(R6),R2
+	INCL	R2
+	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	90$
+	MOVZBL	@CTX_RECP(R6)[R2],R1
+	BSBW	UPPER
+	CMPB	R1,#^A/T/
+	BEQL	85$
+	CMPB	R1,#^A/F/
+	BNEQ	90$
+85$:	PUSHL	R1
+86$:	CMPL	R2,CTX_RECLEN(R6)	; to the word's end, periods and all
+	BGEQ	88$
+	MOVZBL	@CTX_RECP(R6)[R2],R1
+	CMPB	R1,#^A/./
+	BEQL	87$
+	BSBW	IS_NAME_CHAR
+	BLBC	R0,88$
+87$:	INCL	R2
+	BRB	86$
+88$:	BSBW	EQUALS_NEXT
+	BLBC	R0,89$
+	BRW	SYNTAX_HERE
+89$:	MOVL	R2,CTX_POS(R6)
+	MOVL	(SP)+,R1
+	BSBW	LOGICAL_FROM_R1
+	BRW	PUT_VALUE
+	;
+	; A number, ended as the introduction says.
+	;
+90$:	BSBW	PEEK
+	MOVL	CTX_POS(R6),R3
+	CMPB	R1,#^A/./
+	BEQL	92$
+	CMPB	R1,#^A/+/
+	BEQL	92$
+	CMPB	R1,#^A/-/
+	BEQL	92$
+	BSBW	IS_DIGIT
+	BLBS	R0,92$
+	BRW	SYNTAX_HERE
+92$:	BSBW	SCAN_NUMBER
+	BLBC	R0,BAD_TOKEN
+	BSBW	PEEK
+	CMPL	CTX_POS(R6),CTX_RECLEN(R6)
+	BGEQ	94$
+	CMPB	R1,#^A/ /
+	BEQL	94$
+	CMPB	R1,#9
+	BEQL	94$
+	CMPB	R1,#^A/,/
+	BEQL	94$
+	CMPB	R1,#^A/$/
+	BEQL	94$
+	CMPB	R1,#^A/&/
+	BEQL	94$
+	CMPB	R1,#^A/)/
+	BEQL	94$
+	BRW	BAD_TOKEN
+94$:	MOVB	#V_WORD,CTX_LI_KIND(R6)
+	MOVL	CTX_POS(R6),R2
+	BSBW	EQUALS_NEXT
+	BLBS	R0,99$
+	BRW	PUT_VALUE
+99$:	BRW	SYNTAX_HERE
+
+BAD_TOKEN:
+	MOVL	R3,R0			; the place the token started
+	BRW	SYNTAX_AT
+
+;
+; COMPLEX_VALUE: (re,im), its parenthesis next.
+;
+COMPLEX_VALUE:
+	INCL	CTX_POS(R6)
+	BSBW	PART
+	MOVL	CTX_LI_LENGTH(R6),CTX_LI_PART(R6)
+	CMPB	R1,#^A/,/
+	BEQL	10$
+	BRW	SYNTAX_HERE
+10$:	INCL	CTX_POS(R6)
+	BSBW	PART
+	CMPB	R1,#^A/)/
+	BEQL	20$
+	BRW	SYNTAX_HERE
+20$:	INCL	CTX_POS(R6)
+	MOVB	#V_COMPLEX,CTX_LI_KIND(R6)
+	MOVL	CTX_POS(R6),R2
+	BSBW	EQUALS_NEXT
+	BLBS	R0,99$
+	BRW	PUT_VALUE
+99$:	BRW	SYNTAX_HERE
+
+;
+; PART: a complex value's part: blanks and records' ends, a number, and more of
+; them, leaving the byte after them in R1.
+;
+PART:	JSB	FTN$$LI_SKIP		; FTN_LISTIN
+	BLBS	R0,10$
+	RET
+10$:	MOVL	CTX_POS(R6),R3
+	BSBW	SCAN_NUMBER
+	BLBC	R0,BAD_TOKEN
+	CMPL	CTX_POS(R6),CTX_RECLEN(R6)
+	BGEQ	20$
+	BSBW	PEEK
+	CMPB	R1,#^A/ /
+	BEQL	20$
+	CMPB	R1,#9
+	BEQL	20$
+	CMPB	R1,#^A/,/
+	BEQL	20$
+	CMPB	R1,#^A/)/
+	BNEQ	BAD_TOKEN
+20$:	JSB	FTN$$LI_SKIP
+	BLBS	R0,30$
+	RET
+30$:	RSB
+
+;
+; PUT_VALUE: the value read gives COUNT(FP) elements, as many as are left, and
+; FOR$_TOOMANVAL if that isn't enough. The value that won't go in an item that
+; takes only part of it goes as its real part.
+;
+PUT_VALUE:
+	CMPB	CTX_LI_KIND(R6),#V_COMPLEX
+	BNEQ	10$
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_FC
+	BEQL	10$
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_DC
+	BEQL	10$
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_GC
+	BEQL	10$
+	CMPB	DSC$B_DTYPE(R8),#DSC$K_DTYPE_T
+	BEQL	10$
+	MOVL	CTX_LI_PART(R6),CTX_LI_LENGTH(R6)
+	MOVB	#V_WORD,CTX_LI_KIND(R6)
+10$:	TSTL	R10
+	BNEQ	20$
+	BRW	TOO_MANY
+20$:	PUSHL	R11			; the length,
+	PUSHL	R9			;  the address,
+	MOVZBL	DSC$B_DTYPE(R8),-(SP)	;  the type,
+	PUSHL	R6			;  and the context
+	CALLS	#4,FTN$$LI_STORE	; FTN_LISTIN
+	TSTL	CTX_STATUS(R6)
+	BEQL	30$
+	RET
+30$:	MOVZWL	DSC$W_LENGTH(R8),R0
+	ADDL2	R0,R9			; the next element
+	DECL	R10
+	SOBGTR	COUNT(FP),10$
+	MOVB	#1,CTX_LI_AFTER(R6)
+	BRW	NEXT_VALUE
+
+;
+; NULLS: COUNT(FP) elements stay as they were.
+;
+NULLS:	TSTL	R10
+	BNEQ	10$
+	BRW	TOO_MANY
+10$:	MOVZWL	DSC$W_LENGTH(R8),R0
+	ADDL2	R0,R9
+	DECL	R10
+	SOBGTR	COUNT(FP),NULLS
+	RSB
+
+;
+; REPEAT_COUNT: if digits and a * are next, passes over them and sets COUNT(FP),
+; with R0's low bit set. A count of 0, or too large, is FOR$_SYNERRNAM.
+;
+REPEAT_COUNT:
+	MOVL	CTX_POS(R6),R2
+	CLRL	R3
+10$:	CMPL	R2,CTX_RECLEN(R6)
+	BGEQ	70$
+	MOVZBL	@CTX_RECP(R6)[R2],R1
+	BSBW	IS_DIGIT
+	BLBC	R0,20$
+	SUBL3	#^A/0/,R1,R1
+	MULL2	#10,R3
+	BVS	15$
+	ADDL2	R1,R3
+	BVC	17$
+15$:	MNEGL	#1,R3			; too large: known by its sign
+	MOVL	#^X7FFFFFFF,R1
+	BRB	18$
+17$:	TSTL	R3
+	BGEQ	18$
+	MNEGL	#1,R3
+18$:	INCL	R2
+	BRB	10$
+20$:	CMPB	R1,#^A/*/
+	BNEQ	70$
+	TSTL	R3
+	BGTR	30$
+	BRW	SYNTAX_HERE
+30$:	ADDL3	#1,R2,CTX_POS(R6)
+	MOVL	R3,COUNT(FP)
+	MOVL	#1,R0
+	RSB
+70$:	CLRL	R0
+	RSB
+
+;
+; SCAN_NUMBER: adds the number at the position to the value's text, passing over
+; it: an optional sign, digits with at most one period, at least one digit, and
+; an optional exponent. R0's low bit is clear if it isn't one. R3 is kept.
+;
+SCAN_NUMBER:
+	CLRL	R2			; digits so far
+	CLRL	R4			; 1 after the period
+	BSBW	PEEK
+	CMPB	R1,#^A/+/
+	BEQL	5$
+	CMPB	R1,#^A/-/
+	BNEQ	10$
+5$:	BSBW	TAKE
+10$:	BSBW	PEEK
+	BSBW	IS_DIGIT
+	BLBC	R0,20$
+	INCL	R2
+	BSBW	TAKE
+	BRB	10$
+20$:	CMPB	R1,#^A/./
+	BNEQ	30$
+	TSTL	R4
+	BNEQ	30$
+	MOVL	#1,R4
+	BSBW	TAKE
+	BRB	10$
+30$:	TSTL	R2
+	BEQL	80$
+	BSBW	UPPER
+	CMPB	R1,#^A/E/
+	BEQL	40$
+	CMPB	R1,#^A/D/
+	BEQL	40$
+	CMPB	R1,#^A/Q/
+	BNEQ	70$
+40$:	BSBW	TAKE
+	BSBW	PEEK
+	CMPB	R1,#^A/+/
+	BEQL	50$
+	CMPB	R1,#^A/-/
+	BNEQ	60$
+50$:	BSBW	TAKE
+60$:	BSBW	PEEK
+	BSBW	IS_DIGIT
+	BLBC	R0,70$
+	BSBW	TAKE
+	BRB	60$
+70$:	MOVL	#1,R0
+	RSB
+80$:	CLRL	R0
+	RSB
+
+;
+; TAKE: adds the byte at the position, in R1, to the value's text, and passes
+; over it. ADD_CHAR, which may need more room, calls routines that keep R2 up.
+;
+TAKE:	JSB	FTN$$LI_ADD		; FTN_LISTIN
+	INCL	CTX_POS(R6)
+	RSB
+
+;
+; LOGICAL_FROM_R1: a logical word whose first letter, a capital, is in R1: T is
+; -1 and F 0, kept as a number's text, for each item to convert as it would.
+;
+LOGICAL_FROM_R1:
+	CMPB	R1,#^A/F/
+	BEQL	10$
+	MOVZBL	#^A/-/,R1
+	JSB	FTN$$LI_ADD
+	MOVZBL	#^A/1/,R1
+	BRB	20$
+10$:	MOVZBL	#^A/0/,R1
+20$:	JSB	FTN$$LI_ADD
+	MOVB	#V_WORD,CTX_LI_KIND(R6)
+	RSB
+
+;
+; The failures. SYNTAX_HERE and SYNTAX_AT are FOR$_SYNERRNAM at the position, or
+; at the place in R0: its message shows up to six bytes of the record, the last
+; of them that place's, never column 1. FOR$_TOOMANVAL's shows the entity's
+; name, a counted string, and FOR$_INVREFVAR's the entity's or the text's.
+;
+SYNTAX_HERE:
+	MOVL	CTX_POS(R6),R0
+SYNTAX_AT:
+	CMPL	R0,CTX_RECLEN(R6)	; never past the record's last byte
+	BLSS	10$
+	SUBL3	#1,CTX_RECLEN(R6),R0
+10$:	SUBL3	#5,R0,R1		; the first of the six
+	CMPL	R1,#1
+	BGEQ	20$
+	MOVL	#1,R1
+20$:	SUBL3	R1,R0,R0
+	INCL	R0
+	MOVW	R0,CTX_NM_DESC(R6)
+	MOVW	#^X010E,CTX_NM_DESC+2(R6)
+	ADDL3	CTX_RECP(R6),R1,CTX_NM_DESC+4(R6)
+	MOVAB	CTX_NM_DESC(R6),CTX_NM_FAO(R6)
+	MOVL	#FOR$_SYNERRNAM,CTX_STATUS(R6)
+	RET
+
+TOO_MANY:
+	MOVL	NAME(FP),CTX_NM_FAO(R6)
+	MOVL	#FOR$_TOOMANVAL,CTX_STATUS(R6)
+	RET
+
+INVALID_ENTITY:
+	MOVL	NAME(FP),R0		; the name in the block, as a descriptor
+	MOVZBW	(R0)+,CTX_NM_DESC(R6)
+	MOVW	#^X010E,CTX_NM_DESC+2(R6)
+	MOVL	R0,CTX_NM_DESC+4(R6)
+INVALID_TEXT:
+	MOVAB	CTX_NM_DESC(R6),CTX_NM_FAO(R6)
+	MOVL	#FOR$_INVREFVAR,CTX_STATUS(R6)
+	RET
+
+;
+; FTN$$NML_WRITE(context, block, values[, shift])
+;
+; Writes the group: with its values, or for a ? with values 0 its names alone.
+; An answer to a question has shift 1: each record is written with a blank
+; before it, so that its own first byte is shown, not taken as carriage
+; control, as FORRTL's answers are.
+; R6 is the context, R7 the block, R8 the next entity's place in the block, R9
+; how many are left, R10 the next element, and R11 the elements left.
+;
+TYPE		= -4			; long: the data type
+LENGTH		= -8			; long: an element's length
+RUN		= -12			; long: how many elements are equal
+FIELD		= -112			; 100 bytes: a piece being made, a field
+					;  from FTN_LISTOUT at FIELD+16
+FRAME2_SIZE	= 112
+
+	.ENTRY	FTN$$NML_WRITE,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SUBL2	#FRAME2_SIZE,SP
+	MOVL	4(AP),R6
+	MOVL	8(AP),R7
+	CLRL	CTX_RECLEN(R6)
+	CLRL	CTX_NM_SHIFT(R6)
+	CMPB	(AP),#4
+	BLSS	5$
+	MOVL	16(AP),CTX_NM_SHIFT(R6)
+5$:	MOVW	#^A/ $/,FIELD(FP)	; " $GRP" (MOVC3 changes R0 to R5)
+	MOVL	NB_NAME(R7),R0
+	MOVZBL	(R0)+,R2
+	PUSHL	R2
+	MOVC3	R2,(R0),FIELD+2(FP)
+	ADDL3	#2,(SP)+,R0
+	MOVAB	FIELD(FP),R1
+	BSBW	PIECE
+	BSBW	FLUSH
+	MOVAB	NB_ENTITIES(R7),R8
+	MOVL	NB_COUNT(R7),R9
+	BEQL	80$
+10$:	BSBW	ENTITY_NAME
+	TSTL	12(AP)
+	BEQL	20$
+	BSBW	ENTITY_VALUES
+	CMPL	R9,#1
+	BLEQ	20$
+	BSBW	COMMA
+20$:	BSBW	FLUSH
+	ADDL2	#8,R8
+	SOBGTR	R9,10$
+80$:	MOVL	#^A/ $EN/,FIELD(FP)	; " $END"
+	MOVB	#^A/D/,FIELD+4(FP)
+	MOVL	#5,R0
+	MOVAB	FIELD(FP),R1
+	BSBW	PIECE
+	BSBW	FLUSH
+	RET
+
+;
+; ENTITY_NAME: a record's " NAME", blanks, and "=": or for the names alone, all
+; that the record holds but the name.
+;
+ENTITY_NAME:
+	MOVL	(R8),R0
+	MOVZBL	(R0)+,R2		; the name's length
+	PUSHL	R2			; (MOVC3 and MOVC5 change R0 to R5)
+	MOVB	#^A/ /,CTX_RECORD(R6)
+	MOVC3	R2,(R0),CTX_RECORD+1(R6)
+	MOVL	(SP)+,R2
+	ADDL3	#1,R2,CTX_RECLEN(R6)
+	TSTL	12(AP)
+	BEQL	90$
+	BICL2	#7,R2			; the next multiple of 8 past the name's
+	ADDL2	#9,R2			;  length, plus 1: the place of the =
+	PUSHL	R2
+	SUBL3	CTX_RECLEN(R6),R2,R0	; the blanks before it
+	MOVAB	CTX_RECORD(R6),R1
+	ADDL2	CTX_RECLEN(R6),R1
+	MOVC5	#0,(SP),#^A/ /,R0,(R1)
+	MOVL	(SP)+,R3
+	MOVB	#^A/=/,CTX_RECORD(R6)[R3]
+	ADDL3	#1,R3,CTX_RECLEN(R6)
+90$:	RSB
+
+;
+; ENTITY_VALUES: the values of the entity at R8.
+;
+ENTITY_VALUES:
+	MOVL	4(R8),R3		; its descriptor
+	MOVZBL	DSC$B_DTYPE(R3),TYPE(FP)
+	MOVZWL	DSC$W_LENGTH(R3),LENGTH(FP)
+	MOVL	DSC$A_POINTER(R3),R10
+	MOVL	#1,R11
+	CMPB	DSC$B_CLASS(R3),#DSC$K_CLASS_A
+	BNEQ	10$
+	DIVL3	LENGTH(FP),DSC$L_ARSIZE(R3),R11
+10$:	MOVL	#1,RUN(FP)		; how many are equal to this one
+	ADDL3	LENGTH(FP),R10,R2	; the next one
+20$:	CMPL	RUN(FP),R11
+	BGEQ	30$
+	PUSHL	R2			; CMPC3 changes R0 to R3
+	CMPC3	LENGTH(FP),(R10),(R2)
+	BNEQ	25$
+	MOVL	(SP)+,R2		; (which changes the condition codes)
+	INCL	RUN(FP)
+	ADDL2	LENGTH(FP),R2
+	BRB	20$
+25$:	MOVL	(SP)+,R2
+30$:	CMPL	TYPE(FP),#DSC$K_DTYPE_T
+	BNEQ	40$
+	BSBW	TEXT_VALUE
+	BRB	50$
+40$:	BSBW	FIELD_VALUE
+50$:	MULL3	LENGTH(FP),RUN(FP),R0
+	ADDL2	R0,R10
+	SUBL2	RUN(FP),R11
+	BLEQ	90$
+	BSBW	COMMA
+	BRB	10$
+90$:	RSB
+
+;
+; FIELD_VALUE: the value at R10 in its list-directed field (FTN_LISTOUT, which
+; puts it here because CTX_NM_CAPTURE says so), and a count before it if the value
+; repeats, without the field's leading blanks.
+;
+FIELD_VALUE:
+	MOVAB	FIELD+16(FP),CTX_NM_CAPTURE(R6)
+	PUSHL	R6			; the context,
+	PUSHL	LENGTH(FP)		;  the length,
+	PUSHL	R10			;  the address,
+	PUSHL	TYPE(FP)		;  and the type
+	CALLS	#4,FTN$$LIST_VALUE	; FTN_LISTOUT
+	CLRL	CTX_NM_CAPTURE(R6)
+	CMPL	RUN(FP),#1
+	BGTR	10$
+	MOVL	CTX_NM_CAPLEN(R6),R0
+	MOVAB	FIELD+16(FP),R1
+	BRW	PIECE
+10$:	SKPC	#^A/ /,CTX_NM_CAPLEN(R6),FIELD+16(FP)
+	MOVQ	R0,-(SP)		; what's left of the field
+	BSBW	COUNT_TEXT		; " r*", R3 its length
+	MOVQ	(SP)+,R4		; R4 the length, R5 the address
+	MOVAB	FIELD(FP),R2
+	ADDL3	R2,R3,R1		; where the rest goes (MOVC3 may overlap:
+	PUSHL	R4			;  it moves the right way, either way)
+	PUSHL	R3
+	MOVC3	R4,(R5),(R1)
+	MOVL	(SP)+,R3
+	MOVL	(SP)+,R4
+	ADDL3	R3,R4,R0
+	ADDL3	R3,CTX_NM_CAPLEN(R6),R1	; it goes on this record only if it
+	ADDL2	CTX_RECLEN(R6),R1	;  would with the field's blanks
+	CMPL	R1,#RECORD_MAX
+	BLEQ	20$
+	PUSHL	R0
+	BSBW	FLUSH
+	MOVL	(SP)+,R0
+20$:	MOVAB	FIELD(FP),R1
+	BRW	PIECE
+
+;
+; TEXT_VALUE: the value at R10 as a character constant: " '" or " r*'" as a
+; field, then its bytes wherever they fall.
+;
+TEXT_VALUE:
+	CMPL	RUN(FP),#1
+	BGTR	10$
+	MOVW	#^A/ '/,FIELD(FP)
+	MOVL	#2,R0
+	BRB	20$
+10$:	BSBW	COUNT_TEXT
+	MOVAB	FIELD(FP),R1
+	MOVB	#^A/'/,(R1)[R3]
+	ADDL3	#1,R3,R0
+20$:	MOVAB	FIELD(FP),R1
+	BSBW	PIECE
+	CLRL	R2			; each byte, an apostrophe twice
+30$:	CMPL	R2,LENGTH(FP)
+	BGEQ	50$
+	MOVZBL	(R10)[R2],R1
+	CMPB	R1,#^A/'/
+	BNEQ	40$
+	BSBB	ONE_BYTE
+	MOVZBL	#^A/'/,R1
+40$:	BSBB	ONE_BYTE
+	INCL	R2
+	BRB	30$
+50$:	MOVZBL	#^A/'/,R1
+	BRB	ONE_BYTE
+
+;
+; ONE_BYTE: adds the byte in R1 to the record, or if it is full to the next, after
+; a blank. Keeps R2.
+;
+ONE_BYTE:
+	MOVL	CTX_RECLEN(R6),R0
+	CMPL	R0,#RECORD_MAX
+	BLSS	10$
+	PUSHL	R1
+	BSBW	FLUSH
+	MOVB	#^A/ /,CTX_RECORD(R6)
+	MOVL	#1,CTX_RECLEN(R6)
+	MOVL	#1,R0
+	MOVL	(SP)+,R1
+10$:	MOVB	R1,CTX_RECORD(R6)[R0]
+	INCL	CTX_RECLEN(R6)
+	RSB
+
+;
+; COMMA: a comma, which is a byte like any other.
+;
+COMMA:	MOVZBL	#^A/,/,R1
+	BRB	ONE_BYTE
+
+;
+; PIECE: adds R0 bytes at R1 to the record, whole: on the next, if they don't fit.
+;
+PIECE:	ADDL3	R0,CTX_RECLEN(R6),R2
+	CMPL	R2,#RECORD_MAX
+	BLEQ	10$
+	MOVQ	R0,-(SP)
+	BSBW	FLUSH
+	MOVQ	(SP)+,R0
+10$:	MOVL	CTX_RECLEN(R6),R3
+	ADDL2	R0,CTX_RECLEN(R6)
+	MOVC3	R0,(R1),CTX_RECORD(R6)[R3]
+	RSB
+
+;
+; FLUSH: writes the record. A write that fails is the statement's error.
+;
+FLUSH:	BLBC	CTX_NM_SHIFT(R6),5$
+	MOVQ	R0,-(SP)		; a blank first (MOVC3 changes R0 to R5,
+	MOVQ	R2,-(SP)		;  which FLUSH's callers keep up to R3)
+	MOVC3	CTX_RECLEN(R6),CTX_RECORD(R6),CTX_RECORD+1(R6)
+	MOVB	#^A/ /,CTX_RECORD(R6)
+	INCL	CTX_RECLEN(R6)
+	MOVQ	(SP)+,R2
+	MOVQ	(SP)+,R0
+5$:	PUSHL	CTX_RECLEN(R6)
+	PUSHAB	CTX_RECORD(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,10$
+	MOVL	#FOR$_ERRDURWRI,CTX_STATUS(R6)
+	RET
+10$:	CLRL	CTX_RECLEN(R6)
+	RSB
+
+;
+; COUNT_TEXT: " r*" in FIELD(FP), r being RUN(FP); R3 is its length. Changes R0 to R3.
+;
+COUNT_TEXT:
+	MOVB	#^A/ /,FIELD(FP)
+	MOVL	RUN(FP),R0		; the digits, the last first, on the stack
+	CLRL	R3
+10$:	CLRL	R1
+	EDIV	#10,R0,R0,R1
+	ADDL2	#^A/0/,R1
+	PUSHL	R1
+	INCL	R3
+	TSTL	R0
+	BNEQ	10$
+	MOVAB	FIELD+1(FP),R1
+	MOVL	R3,R2
+20$:	MOVL	(SP)+,R0
+	MOVB	R0,(R1)+
+	SOBGTR	R2,20$
+	MOVB	#^A/*/,(R1)
+	ADDL2	#2,R3
+	RSB
+
+	.END

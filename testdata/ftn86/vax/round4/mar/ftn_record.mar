@@ -1,0 +1,210 @@
+	.TITLE	FTN_RECORD - FTNRTL's DELETE and UNLOCK statements
+	.IDENT	/V1.0/
+;
+; Two statements on a file's records that move no data (the 1988 VAX FORTRAN
+; Language Reference Manual, 9.7 and 9.8) are one call each, by the compiler
+; (docs/PHASE-81 - FORTRAN files.md, Decision 4):
+;
+;	FTN$DELETE(control block, unit)		DELETE (u): the current record
+;	FTN$DELETE_D(control block, unit, record) DELETE (u,REC=r), DELETE (u'r)
+;	FTN$UNLOCK(control block, unit)		UNLOCK (u), UNLOCK u
+;
+; The record's number is by value. Each is a statement like any other, ending
+; in FTN$IO_END, which returns the status in R0 or signals the failure. The
+; rules are VMS's FORTRAN run-time library's, from testdata/for81's runs (#571,
+; #577, round 2's #33 to #36 and #68):
+;
+;	DELETE (u)	The current record (FTN_UNITS's UB_CURRENT), a $DELETE: a
+;			unit with none is FOR$_NO_CURREC, and RMS's refusal (the
+;			record already deleted, or rewritten, which leaves RMS no
+;			current record) FOR$_DELERR. The unit keeps its current
+;			record, so a second DELETE is RMS's to refuse too.
+;	DELETE (u'r)	A $FIND of record r by its number, then a $DELETE. Record
+;			0, or one past the unit's MAXREC, is FOR$_RECNUMOUT; a record
+;			that isn't there FOR$_ATTACCNON. It takes the current record
+;			away, and on a direct unit the next record is r+1, its
+;			NEXTREC and associated variable's value (the LRM's 9.7). On a
+;			sequential-access unit the $FIND is by key all the same
+;			(govax's choice; VMS's run had none).
+;	UNLOCK		A $FREE of the records the unit holds; with none held
+;			(RMS$_RNL), nothing.
+;
+; Both DELETEs are FOR$_DELERR on a unit not connected and on a sequential file,
+; and UNLOCK is FOR$_UNLERR on a unit not connected; none of them connects a unit.
+;
+; An indexed file (testdata/for88's #301 to #304) has DELETE (u) on any access, by
+; the same rule but for two things: a READONLY unit is FOR$_WRIREAFIL, and a DELETE
+; leaves no current record, so that a second is FOR$_NO_CURREC. DELETE (u'r) is
+; FOR$_DELERR, a record there having no number.
+;
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+	$SSDEF
+
+UB_OPEN		= 0			; A unit's block (FTN_UNITS)
+UB_STS		= 8
+UB_STV		= 12
+UB_ACCESS	= 37
+UB_READONLY	= 40
+UB_FAB		= 76
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_ASV		= 620
+UB_KEY		= UB_ASV+8
+UB_MAXREC	= UB_ASV+12
+UB_CURRENT	= UB_ASV+36
+
+CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
+
+ACCESS_DIRECT	= 1
+
+FOR$_RECNUMOUT	= ^X001880CC		; FORRTL's condition values, with
+FOR$_ATTACCNON	= ^X00188124		;  their severities
+FOR$_NO_CURREC	= ^X001881AC
+FOR$_DELERR	= ^X001881BC
+FOR$_UNLERR	= ^X001881C4
+FOR$_WRIREAFIL	= ^X0018817C
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
+
+;
+; START: begins the statement. R9 is the context, R7 the unit's block, R6 its
+; RAB. R0's low bit is clear if the statement has failed already.
+;
+START:	PUSHL	4(AP)			; the control block
+	PUSHL	16(FP)			; the user PC, saved in this frame
+	PUSHL	8(FP)			;  and its AP
+	PUSHL	12(FP)			;  and FP
+	PUSHL	8(AP)			; the unit
+	CALLS	#5,FTN$$STMT_FILE	; FTN_STATEMENT
+	MOVL	R0,R9
+	MOVL	R1,R7
+	MOVAB	UB_RAB(R7),R6
+	CLRL	R0
+	TSTL	CTX_STATUS(R9)
+	BNEQ	10$
+	MOVL	#SS$_NORMAL,R0
+10$:	RSB
+
+;
+; RELATIVE: the Z bit set if the unit is connected to a relative file. Changes
+; nothing else.
+;
+RELATIVE:
+	BLBC	UB_OPEN(R7),10$
+	CMPB	UB_FAB+FAB$B_ORG(R7),#FAB$C_REL
+	RSB
+10$:	TSTL	#1			; not connected: the Z bit clear
+	RSB
+
+;
+; FTN$DELETE(control block, unit)
+;
+	.ENTRY	FTN$DELETE,ALL_MASK
+	BSBW	START
+	BLBS	R0,1$
+	BRW	END
+1$:	CLRL	R8			; R8 is 1 for an indexed file
+	MOVL	#FOR$_DELERR,R0
+	BLBC	UB_OPEN(R7),2$
+	CMPB	UB_FAB+FAB$B_ORG(R7),#FAB$C_REL
+	BEQL	15$
+	CMPB	UB_FAB+FAB$B_ORG(R7),#FAB$C_IDX
+	BNEQ	2$
+	MOVL	#1,R8
+	MOVL	#FOR$_WRIREAFIL,R0
+	TSTB	UB_READONLY(R7)
+	BNEQ	2$
+15$:	MOVL	#FOR$_NO_CURREC,R0
+	TSTB	UB_CURRENT(R7)
+	BNEQ	3$
+2$:	BRW	REFUSED
+3$:	$DELETE	RAB=R6
+	BLBC	R0,4$
+	BLBC	R8,35$
+	CLRB	UB_CURRENT(R7)
+35$:	BRW	END
+4$:	MOVL	#FOR$_DELERR,R0
+	BRW	RMS_FAILED
+
+;
+; FTN$DELETE_D(control block, unit, record)
+;
+	.ENTRY	FTN$DELETE_D,ALL_MASK
+	BSBW	START
+	BLBS	R0,1$
+	BRW	END
+1$:	MOVL	#FOR$_DELERR,R0
+	BSBW	RELATIVE
+	BNEQ	2$
+	MOVL	#FOR$_RECNUMOUT,R0	; FTNRTL's own limits, as a direct READ's
+	MOVL	12(AP),R2
+	BEQL	2$
+	MOVL	UB_MAXREC(R7),R1
+	BLEQ	5$			; none
+	CMPL	R2,R1
+	BLEQ	5$
+2$:	BRW	REFUSED
+5$:	CLRB	UB_CURRENT(R7)
+	MOVB	RAB$B_RAC(R6),R8	; the stream's access, kept
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R6)
+	MOVL	R2,UB_KEY(R7)		; RAB$L_KBF's longword
+	$FIND	RAB=R6
+	BLBS	R0,10$
+	BRW	20$
+10$:	$DELETE	RAB=R6
+	BLBS	R0,12$
+	BRW	30$
+12$:	MOVB	R8,RAB$B_RAC(R6)
+	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
+	BNEQ	15$
+	ADDL3	#1,R2,-(SP)		; the next record
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_FOUND	; FTN_UNITS
+15$:	BRW	END
+20$:	MOVB	R8,RAB$B_RAC(R6)
+	MOVL	#FOR$_ATTACCNON,R1	; no such record
+	CMPL	R0,#RMS$_RNF
+	BEQL	25$
+	CMPL	R0,#RMS$_EOF
+	BEQL	25$
+	MOVL	#FOR$_DELERR,R1
+25$:	MOVL	R1,R0
+	BRW	RMS_FAILED
+30$:	MOVB	R8,RAB$B_RAC(R6)
+	MOVL	#FOR$_DELERR,R0
+	BRW	RMS_FAILED
+
+;
+; FTN$UNLOCK(control block, unit)
+;
+	.ENTRY	FTN$UNLOCK,ALL_MASK
+	BSBW	START
+	BLBC	R0,END
+	MOVL	#FOR$_UNLERR,R0
+	BLBC	UB_OPEN(R7),REFUSED
+	$FREE	RAB=R6
+	BLBS	R0,END
+	CMPL	R0,#RMS$_RNL		; nothing held: nothing to do
+	BEQL	END
+	MOVL	#FOR$_UNLERR,R0
+
+;
+; RMS_FAILED: the statement's error is the condition in R0, with RMS's status
+; and value from the RAB. REFUSED: with none.
+;
+RMS_FAILED:
+	MOVL	RAB$L_STS(R6),UB_STS(R7)
+	MOVL	RAB$L_STV(R6),UB_STV(R7)
+	BRB	FAILED
+REFUSED:
+	TSTL	R7			; no block for an invalid unit
+	BEQL	FAILED
+	CLRQ	UB_STS(R7)
+FAILED:	MOVL	R0,CTX_STATUS(R9)
+END:	CALLS	#0,FTN$IO_END		; FTN_STATEMENT: R0 the status, or signaled
+	RET
+
+	.END

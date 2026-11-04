@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sort"
+	"slices"
 	"strings"
 
 	"github.com/tucats/ods2/filespec"
@@ -156,6 +157,12 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 			matches, err := filespec.Glob(vol, spec)
 			if err != nil {
 				return err
+			}
+
+			// A type given as nothing is the null type alone, not every type
+			// (VMS's DIRECTORY .;1 listed .;1 and NOTYPE.;1: testdata/vms88).
+			if ExplicitNullType(text) {
+				matches = slices.DeleteFunc(matches, func(m filespec.Match) bool { return m.Type != "" })
 			}
 
 			for _, group := range groupMatchesByDir(matches) {

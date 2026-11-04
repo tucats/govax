@@ -13,7 +13,7 @@ import (
 	"github.com/tucats/govax/internal/isam"
 )
 
-// The VMS round's answers (testdata/vms88/vax): what VMS 7.1 said of the files govax made
+// The VMS round's answers (testdata/vms88/vax/round2): what VMS 7.1 said of the files govax made
 // and of the programs, against what govax says of the same on the same run of VMS88.COM.
 
 // vms88SaveSet is a save set's files by name, with no version, from a host file.
@@ -69,51 +69,41 @@ func vms88Text(f *backup.File) []string {
 // vms88Dates are what a report says of when it ran and when its file was made.
 var vms88Dates = regexp.MustCompile(`\d?\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?|File ID: \(\d+,\d+,\d+\)|;2$`)
 
-// vms88LogDifferences are the log's sections that differ from VMS's, with why.
+// vms88LogDifferences are the log's sections that differ from VMS's, with why. Round 2's
+// is the log held to (round 1's, vax/vms88.log, had FTNRTL fail to build).
 var vms88LogDifferences = map[string]string{
-	"R88": "VMS walked LOAD.IDX as govax made it then, with records past its buckets' RRVs, which its RMS never reads in " +
-		"sequence; govax's LOAD.IDX no longer has them (isam's insertRecord)",
-	"FTNRTL":  "VMS's MACRO refused FTN_UNITS's 01$ beside 1$, which govax's took; both are fixed now",
-	"PHONESF": "not run on VMS, FTNRTL not built",
-	"PHONESD": "on VMS, without what PHONESF writes",
-	"LOAD":    "not run on VMS, FTNRTL not built",
-	"CHECKS":  "on VMS, without LOAD's files",
-	"ODD": "govax's volumes wrote entries for no type without the dot, which VMS calls a bad directory; " +
-		"specFileName writes it now",
 	"END": "ANALYZE/DISK_STRUCTURE, which govax lacks",
 }
 
 // vms88ReportDifferences are VMS's reports that aren't govax's, with why.
 var vms88ReportDifferences = map[string]string{
-	"[RESULTS]G_G117.CK2": "G117's split, the phase doc's known one",
-	"[RESULTS]P_PHONES.CHK": "the revision count: govax's PHONES.COM run left one revision more",
-	"[RESULTS]F_B78.CK2":  "contiguity after VMS's changes extended its copy; govax's extension stays one run",
-	"[RESULTS]F_B79.CK2":  "the same",
-	"[RESULTS]R_LOAD.FDL": "DATA_FILL of a file with RRVs, one point apart, by no rule found",
-	"[RESULTS]R_LOADV.FDL": "the same",
-	"[RESULTS]R_PHONES.FDL": "the same, on a key with deleted pointers",
+	"[RESULTS]G_G117.CK2":   "G117's split, the phase doc's known one",
+	"[RESULTS]F_B78.CK2":    "contiguity after VMS's changes extended its copy; govax's extension stays one run",
+	"[RESULTS]F_B79.CK2":    "the same",
+	"[RESULTS]R_PHONES.FDL": "DATA_FILL on a key with deleted pointers, one point apart, by no rule found",
+	"[RESULTS]P_LOAD.CHK":   "the allocation of LOAD.IDX as FTNRTL made it on VMS, its splits G117's class",
+	"[RESULTS]P_LOADV.CHK":  "the same, for LOADV.IDX",
 }
 
-// vms88FileDifferences are the files VMS's RMS changed that govax's doesn't change to
-// the same bytes, with why.
+// vms88FileDifferences are the files VMS's RMS changed or made that govax's doesn't make
+// the same bytes of, with why.
 var vms88FileDifferences = map[string]string{
-	"[M88]G_G117.IDX":  "G117's split",
-	"[M88]G_G118.IDX":  "G118's split, its class",
-	"[M88]G_F122.IDX":  "a split, G117's class",
-	"[M88]G_Q124.IDX":  "where a SIDR bucket splits",
-	"[M88]G_Q125.IDX":  "the same",
-	"[M88]G_G108.IDX":  "a deleted record's stub kept beside a record put after it, by no rule found",
-	"[M88]R_LOAD.IDX":  "VMS's input was govax's old LOAD.IDX",
-	"[M88]R_LOADV.IDX": "where SIDR buckets split",
-	"[M88]R_PHONES.IDX": "a SIDR's deleted pointer left by VMS that govax closes up",
-	"[P88]PHONES.IDX":  "the file PHONES.COM's run made on VMS, without PHONESF's records",
-	"[P88]PHONES2.IDX": "the same",
+	"[M88]G_G117.IDX": "G117's split",
+	"[M88]G_G118.IDX": "G118's split, its class",
+	"[M88]G_F122.IDX": "a split, G117's class",
+	"[M88]G_Q124.IDX": "where a SIDR bucket splits",
+	"[M88]G_Q125.IDX": "the same",
+	"[M88]G_G108.IDX": "a deleted record's stub kept beside a record put after it, by no rule found",
+	"[P88]LOAD.IDX":   "the splits of 2,500 records, G117's class; the same records and walks",
+	"[P88]LOADV.IDX":  "the same",
+	"[P88]PHONES.IDX": "a bucket's last alternate value with no live pointer: VMS took it out here, where it kept " +
+		"one in R_PHONES and the D2 class",
 }
 
 func vms88Oracle(t *testing.T, d *Dispatcher, sections map[string]string) {
 	t.Helper()
 
-	vax := filepath.Join("testdata", "vms88", "vax")
+	vax := filepath.Join("testdata", "vms88", "vax", "round2")
 
 	logText, err := os.ReadFile(filepath.Join(vax, "vms88.log"))
 	if err != nil {

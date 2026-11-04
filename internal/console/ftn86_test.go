@@ -50,7 +50,7 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Mount("DUA2:", path, true); err != nil {
+	if err := c.cmd().Mount("DUA5:", path, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -83,7 +83,7 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 
 	// The volume as VMS has it, on DUA1, so the names programs print are the same.
 	shareFindRun(t, d, "SET DEFAULT DUA2:[000000]")
-	shareFindRun(t, d, "DISMOUNT DUA2")
+	shareFindRun(t, d, "DISMOUNT DUA5")
 
 	if err := c.cmd().Mount("DUA1:", path, true); err != nil {
 		t.Fatal(err)
@@ -362,7 +362,7 @@ func TestFTN86Dungeon(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	text := strings.ReplaceAll(string(script), "DUA2", "DUA1")
+	text := strings.ReplaceAll(string(script), "DUA5", "DUA1")
 
 	for line := range strings.SplitSeq(text, "\n") {
 		for _, skip := range []string{"!", "MOUNT/", "DISMOUNT", "QUIT"} {

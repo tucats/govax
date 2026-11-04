@@ -22,7 +22,11 @@ import (
 const (
 	dir    = "testdata/ftn86"
 	volume = "testdata/disks/ftn86-exchange.dsk"
-	device = "DUA2:"
+	device = "DUA5:" // DUA2 is the author's XFER volume, mounted at startup
+
+	// round is where copyout.cmd puts the next VMS run, under vax/ (and DUNGEON's log
+	// as testdata/disks/ftn86d-ROUND.log), to be checked before it replaces vax/'s.
+	round = "round4"
 )
 
 // rtlModules are FTNRTL's sources, in ftnrtl.opt's order.
@@ -191,16 +195,18 @@ $ ENDSUBROUTINE
 	fmt.Fprintf(&out, `! COPYOUT.CMD - copies VMS's results off the exchange volume. Written by
 ! testdata/ftn86/gen.go. Run from the repository root, after the VAX has dismounted it:
 !
+!     mkdir -p testdata/ftn86/vax/%[1]s
 !     govax console < testdata/ftn86/copyout.cmd
 !
-MOUNT/NOWRITE %s "%s"
-COPY/QUIET %s[000000]FTN86.LOG "%s/vax/ftn86.log"/HOST
-COPY/QUIET %s[FTN86]FTNRTL.MAP "%s/vax/ftnrtl.map"/HOST
-COPY/QUIET/BINARY %s[FTN86]FTNRTL.EXE "%s/vax/ftnrtl.exe"/HOST
-`, device, volume, device, dir, device, dir, device, dir)
+! A run goes to vax/%[1]s, beside the one the tests read in vax/, until it's checked.
+MOUNT/NOWRITE %[2]s "%[3]s"
+COPY/QUIET %[2]s[000000]FTN86.LOG "%[4]s/ftn86.log"/HOST
+COPY/QUIET %[2]s[FTN86]FTNRTL.MAP "%[4]s/ftnrtl.map"/HOST
+COPY/QUIET/BINARY %[2]s[FTN86]FTNRTL.EXE "%[4]s/ftnrtl.exe"/HOST
+`, round, device, volume, dir+"/vax/"+round)
 
 	for _, m := range rtlModules {
-		fmt.Fprintf(&out, "COPY/QUIET %s[FTN86]%s.OBJ \"%s/vax/%s.obj\"/HOST\n", device, m, dir, strings.ToLower(m))
+		fmt.Fprintf(&out, "COPY/QUIET %s[FTN86]%s.OBJ \"%s/vax/%s/%s.obj\"/HOST\n", device, m, dir, round, strings.ToLower(m))
 	}
 
 	fmt.Fprintf(&out, "DISMOUNT %s\nQUIT\n", device)
@@ -297,9 +303,9 @@ $ WRITE SYS$OUTPUT "==== END"
 !     govax console < testdata/ftn86/copyoutd.cmd
 !
 MOUNT/NOWRITE %[1]s "%[2]s"
-COPY/QUIET %[1]s[000000]FTN86D.LOG "testdata/disks/ftn86d.log"/HOST
+COPY/QUIET %[1]s[000000]FTN86D.LOG "testdata/disks/ftn86d-%[3]s.log"/HOST
 DISMOUNT %[1]s
 QUIT
-`, device, volume))
+`, device, volume, round))
 }
 

@@ -1,0 +1,1126 @@
+	.TITLE	FTN_UNITS - FTNRTL's logical units
+	.IDENT	/V2.0/
+;
+; A FORTRAN program reads and writes logical units: numbers its I/O
+; statements name (WRITE (6,...)), or the default units of the statements
+; that name none (PRINT, TYPE, ACCEPT, READ f) and of a unit written *
+; (WRITE (*,...), READ (*,...)). Each unit is connected to a file through
+; RMS, with a FAB (the file) and a RAB (the stream of records), which this
+; module keeps (docs/PHASE-81 - FORTRAN files.md, Decisions 2 and 3).
+;
+; The unit table has a longword for each unit from -4 to 119, the address of
+; the unit's block, made by LIB$GET_VM the first time the unit is named. Any
+; other number is FOR$_INVLOGUNI, as on VMS. VMS's FORTRAN run-time library
+; numbers the default units -1 to -4 (the probe, testdata/for80, round 2);
+; the compiler uses -1 for PRINT and WRITE (*,...), -2 for TYPE, -3 for
+; ACCEPT, and -4 for READ f and READ (*,...).
+;
+; A unit no OPEN has connected is connected at its first use (FTN$$UNIT_OPEN),
+; by the names VMS's library uses (the phase doc's "Default names"):
+;
+;	unit	file name	default name	logical name it looks for
+;	0-119	FORnnn		FORnnn.DAT	(RMS translates FORnnn itself)
+;	5	SYS$INPUT:	FOR005.DAT	FOR005
+;	6	SYS$OUTPUT:	FOR006.DAT	FOR006
+;	-1	SYS$OUTPUT:	FORPRINT.DAT	FOR$PRINT
+;	-2	SYS$OUTPUT:	FORTYPE.DAT	FOR$TYPE
+;	-3	SYS$INPUT:	FORACCEPT.DAT	FOR$ACCEPT
+;	-4	SYS$INPUT:	FORREAD.DAT	FOR$READ
+;
+; Units 5, 6, and -1 to -4 use their logical name in place of SYS$INPUT: or
+; SYS$OUTPUT: when it is defined, and are then files like any other. A unit
+; on SYS$OUTPUT: may be written, and read only at a terminal; one on
+; SYS$INPUT: may be read and, as on VMS, written too (a program may write
+; unit 5 and read unit 6 at a terminal, as DUNGEON does; where SYS$INPUT is a
+; procedure, RMS refuses the write). Each has a FAB of its own, and opening it on
+; a process-permanent file opens no new file but gives the FAB indirect access
+; to the one the process has. A record written without a carriage
+; return ($) is RMS's to remember, for whichever unit writes next.
+;
+; A statement's records are in the unit's buffer, as long as its record can
+; be, or as the longest record in the file if that is longer, and at least
+; 256 bytes. The FAB asks for FORTRAN carriage control (RAT=FTN) unless an
+; OPEN said otherwise: each record's first byte is its carriage control (' '
+; a new line, '0' a blank line first, '1' a new page, '+' overprinting, '$' a
+; prompt), which RMS turns into what the terminal is sent, or a print file's
+; fixed control.
+;
+; The FAB, RAB, NAM, and XAB hold addresses, which a shareable image can't
+; store at link time without the image activator fixing them up wherever the
+; image goes. So each block is copied from a prototype with those fields zero,
+; and the addresses are stored in them when the unit is set up.
+;
+; A unit's block keeps what a message and ERRSNS report of it (docs/PHASE-80 -
+; FORTRAN formatted IO.md, subtask 12): the file's name, which the NAM on the
+; FAB receives (for a process-permanent file VMS's resultant string is the
+; expanded name, SYS$OUTPUT:.;, as VMS's run showed), or if the file couldn't
+; be opened the name RMS got as far as; RMS's status and status value from
+; the last operation that failed, the RMS STS and STV of ERRSNS; and how many
+; records come before the unit's place, the record number of FOR$_INVTEXREC's
+; message, which REWIND starts again and BACKSPACE takes one from.
+;
+; Image exit closes every unit by its disposition, through an exit handler
+; declared when the first unit is connected (Decision 12).
+;
+; A direct access unit (ACCESS='DIRECT', or one DEFINE FILE described) reads
+; and writes a record by its number, RMS's keyed $GET and $PUT on a file of
+; fixed-length records (RAB$B_RAC KEY, RAB$L_KBF the unit's UB_KEY). Each
+; record a statement moves takes the next number, so a format that writes two
+; records writes r and r+1; after each, the next number is the unit's NEXTREC
+; and its associated variable's value (FTN$$UNIT_DIRECT, DIRECT_DONE). DEFINE
+; FILE (FTN_DIRECT) only describes a unit: its file is opened by the first
+; direct statement, created by a WRITE and found by a READ or FIND, as the 1988
+; LRM's A.2 says.
+;
+; A relative file (ORGANIZATION='RELATIVE') is read and written as either: by
+; its records' numbers on a direct unit, and in sequence on a sequential one,
+; where RMS passes over the cells with no record. Either may REWRITE or DELETE
+; the current record, the one its last READ or FIND reached (UB_CURRENT): as
+; VMS's runs show (testdata/for81, #571, round 2's #33 to #36), a READ that
+; reached RMS gives the unit one even if it failed, so that the REWRITE or
+; DELETE is RMS's to refuse, and a WRITE, a DELETE by number, or a statement
+; that moves the unit's place takes it away, so that FORRTL refuses it with
+; FOR$_NO_CURREC. A READ of a record another stream holds is FOR$_SPERECLOC,
+; at once (round 2's #68).
+;
+; FTN_OPEN and FTN_INQUIRE use this block too, and define its fields the same:
+;
+	$DEVDEF				; the device's characteristics
+	$FABDEF				; the FAB's fields
+	$NAMDEF				; the NAM's
+	$RABDEF				; the RAB's fields
+	$RMSDEF				; RMS's statuses
+	$SSDEF
+	$XABDEF				; the XAB's
+	$XABFHCDEF
+
+UB_OPEN		= 0			; long: 1 once the unit is connected
+UB_KIND		= 4			; long: 0 a file, K_OUTPUT, K_INPUT
+UB_STS		= 8			; long: RMS's status from the last failure
+UB_STV		= 12			; long: and its status value
+UB_RECORDS	= 16			; long: the records before the unit's place
+UB_UNIT		= 20			; long: the unit's number
+UB_RECP		= 24			; long: the record buffer's address
+UB_RECSIZE	= 28			; long: and its size
+UB_SIZE		= 32			; long: the longest record it may write
+UB_FORM		= 36			; byte: 1 FORMATTED, 2 UNFORMATTED, 0 not known
+					;  yet (a unit ENDFILE connected)
+UB_ACCESS	= 37			; byte: 1 DIRECT, 2 SEQUENTIAL, 3 APPEND, 4 KEYED
+UB_BLANK	= 38			; byte: 1 ZERO, 2 NULL
+UB_DISPOSE	= 39			; byte: 1 KEEP to 6 SUBMIT/DELETE
+UB_READONLY	= 40			; byte: 1 for READONLY
+UB_SCRATCH	= 41			; byte: 1 for STATUS='SCRATCH'
+UB_SEGMENTED	= 42			; byte: 1 for unformatted segmented records
+UB_APPENDED	= 43			; byte: 1 at the end of a file that was there,
+					;  with no count of its records
+UB_NEXTREC	= 44			; long: the next direct record, or 0 (INQUIRE)
+UB_FNA		= 48			; the default file name's text
+UB_DNA		= 60			; the default default name's text
+UB_FAB		= 76
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_NAM		= UB_RAB+RAB$C_BLN
+UB_XAB		= UB_NAM+NAM$C_BLN
+UB_RSA		= UB_XAB+XAB$C_FHCLEN
+RSA_SIZE	= 255			; NAM$C_MAXRSS
+UB_ASV		= UB_RSA+RSA_SIZE+1	; long: the associated variable's address, or 0
+UB_ASVSIZE	= UB_ASV+4		; long: and its size, 2 or 4
+UB_KEY		= UB_ASV+8		; long: the next direct record's number, RMS's key
+UB_MAXREC	= UB_ASV+12		; long: the highest record number, or 0 for any
+UB_DEFINED	= UB_ASV+16		; long: 1 once DEFINE FILE has described the
+					;  unit, which FTN$$UNIT_INIT leaves alone:
+UB_DEF_RECORDS	= UB_ASV+20		; long: its number of records,
+UB_DEF_LENGTH	= UB_ASV+24		; long: their length in words,
+UB_DEF_ASV	= UB_ASV+28		; long: and its associated variable's address
+UB_DEF_ASVSIZE	= UB_ASV+32		;  and size
+UB_CURRENT	= UB_ASV+36		; byte: 1 if the unit's last statement to
+					;  reach the file was a READ or FIND, so
+					;  that it has a current record to REWRITE
+					;  or DELETE
+UB_REWRITE	= UB_ASV+37		; byte: 1 while a REWRITE is in progress:
+					;  FTN$$UNIT_PUT updates the record
+UB_KEYED	= UB_ASV+38		; byte: 1 from a keyed READ's start to its
+					;  first $GET, which is by key
+UB_BLN		= UB_ASV+40
+
+	.IIF NE UB_ASV-620, .ERROR	; FTN_OPEN and FTN_DIRECT say 620
+
+K_OUTPUT	= 1			; a unit on SYS$OUTPUT:
+K_INPUT		= 2			; a unit on SYS$INPUT:
+
+UNIT_LOW	= -4			; the units the table holds
+UNIT_HIGH	= 119
+
+DEFAULT_RECL	= 133			; a record's length with no RECL= (Table 9-3)
+DEFAULT_SEG	= 2044			; an unformatted one's, a segment with its
+					;  control word (testdata/for81, round 1)
+MIN_BUFFER	= 256			; a unit's buffer holds at least this
+INPUT_MAX	= 199			; the longest record read from SYS$INPUT:
+					;  (testdata/for80, round 2)
+
+FOR$_INPRECTOO	= ^X001880B4		; FORRTL's condition values, with
+FOR$_ENDDURREA	= ^X001880C4		;  their severities
+FOR$_RECNUMOUT	= ^X001880CC
+FOR$_OPEDEFREQ	= ^X001880D4
+FOR$_ATTACCNON	= ^X00188124
+FOR$_CLOERR	= ^X001880E4
+FOR$_FILNOTFOU	= ^X001880EC
+FOR$_OPEFAI	= ^X001880F4
+FOR$_MIXFILACC	= ^X001880FC
+FOR$_INVLOGUNI	= ^X00188104
+FOR$_ERRDURREA	= ^X0018813C
+FOR$_INVKEYSPE	= ^X0018818C
+FOR$_INSVIRMEM	= ^X0018814C
+FOR$_NO_SUCDEV	= ^X00188154
+FOR$_FILNAMSPE	= ^X0018815C
+FOR$_WRIREAFIL	= ^X0018817C
+FOR$_SPERECLOC	= ^X001881A4
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+;
+; What a unit's blocks start as: FORRTL's choices for a unit with no OPEN
+; (testdata/for81's trials, and the RAB a USEROPEN routine is given, #374).
+; ROP LOC lets RMS leave a record it reads in its own buffer, RAB$L_RBF, from
+; which FTN$$UNIT_GET copies it.
+;
+PROTO_FAB:	$FAB	FAC=<GET,PUT,DEL,UPD,TRN>,FOP=<DFW,NEF>,RAT=FTN,RFM=VAR
+PROTO_RAB:	$RAB	ROP=<LOC,TPT,RAH,WBH>
+PROTO_NAM:	$NAM	RSS=RSA_SIZE,ESS=RSA_SIZE
+PROTO_XAB:	$XABFHC
+
+TABLE_NAME:	.ASCII	/LNM$FILE_DEV/	; where a unit's logical name is looked up
+TABLE_LEN	= .-TABLE_NAME
+OUTPUT_NAME:	.ASCII	/SYS$OUTPUT:/
+OUTPUT_LEN	= .-OUTPUT_NAME
+INPUT_NAME:	.ASCII	/SYS$INPUT:/
+INPUT_LEN	= .-INPUT_NAME
+
+;
+; The default units' names, by -unit: the logical name and the default name,
+; each a counted string.
+;
+NEGATIVE_NAMES:
+	.ASCIC	/FOR$PRINT/
+	.ASCIC	/FORPRINT.DAT/
+	.ASCIC	/FOR$TYPE/
+	.ASCIC	/FORTYPE.DAT/
+	.ASCIC	/FOR$ACCEPT/
+	.ASCIC	/FORACCEPT.DAT/
+	.ASCIC	/FOR$READ/
+	.ASCIC	/FORREAD.DAT/
+
+;
+; What $CLOSE's FOP is for each disposition, from 1 KEEP (the phase doc's table):
+; PRINT and SUBMIT set their bits, and RMS keeps the file if nothing is queued.
+;
+DISPOSITIONS:
+	.LONG	0			; none: keep
+	.LONG	0			; KEEP, SAVE
+	.LONG	FAB$M_DLT		; DELETE
+	.LONG	FAB$M_SPL		; PRINT
+	.LONG	FAB$M_SCF		; SUBMIT
+	.LONG	FAB$M_SPL!FAB$M_DLT	; PRINT/DELETE
+	.LONG	FAB$M_SCF!FAB$M_DLT	; SUBMIT/DELETE
+
+;
+; The unit table and the exit handler's block: data each program has its own
+; copy of (NOSHR), as it changes.
+;
+	.PSECT	$FTN_DATA,NOEXE,WRT,PIC,NOSHR,LONG
+
+UNITS:		.BLKL	UNIT_HIGH-UNIT_LOW+1
+EXIT_BLOCK:	.LONG	0, 0, 1, 0	; link, handler, one argument, its address
+EXIT_STATUS:	.LONG	0
+EXIT_DECLARED:	.LONG	0
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$UNIT_FIND(unit, read)
+;
+; Finds the block of the unit numbered unit (a longword, by value), making it
+; if this is the unit's first use, for reading if read (by value) is 1, for
+; writing if 0, with 4 added for an unformatted statement (FTN$$UNIT_OPEN). Returns in R0 SS$_NORMAL and in R1 the block, or in R0 the
+; FOR$_ condition that the unit can't be used: INVLOGUNI for a number outside
+; -4 to 119 (R1 0); and for a read, whatever connecting the unit failed with,
+; or ERRDURREA for an output unit that isn't a terminal (R1 its block, whose
+; STS is then RMS$_FAC, as VMS's $GET of SYS$OUTPUT reported where it was a
+; file). Only a read connects the unit here, to see which it is.
+;
+	.ENTRY	FTN$$UNIT_FIND,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6		; the unit
+	CMPL	R6,#UNIT_LOW
+	BLSS	2$
+	CMPL	R6,#UNIT_HIGH
+	BLEQ	3$
+2$:	BRW	80$
+3$:	MOVL	UNITS+16[R6],R2
+	BNEQ	10$
+	CLRL	-(SP)			; a new block: its address goes here
+	PUSHL	#UB_BLN			; the size
+	PUSHAL	4(SP)			; LIB$GET_VM's second argument
+	PUSHAL	4(SP)			;  and its first
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,5$
+	PUSHL	#FOR$_INSVIRMEM		; no memory: the end
+	CALLS	#1,G^LIB$STOP
+5$:	MOVL	4(SP),R3
+	ADDL2	#8,SP
+	MOVL	R3,R2
+	PUSHL	R2
+	MOVC5	#0,(SP),#0,#UB_BLN,(R2)
+	MOVL	(SP)+,R2
+	MOVL	R2,UNITS+16[R6]
+	MOVL	R6,UB_UNIT(R2)
+10$:	BLBC	8(AP),60$		; written: nothing to see yet
+	BLBS	UB_OPEN(R2),30$
+	PUSHL	8(AP)
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_OPEN
+	BLBC	R0,70$
+30$:	CMPL	UB_KIND(R2),#K_OUTPUT
+	BNEQ	60$			; only an output unit has a question
+	BBS	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R2),60$
+	MOVL	#RMS$_FAC,UB_STS(R2)	; never elsewhere
+	CLRL	UB_STV(R2)
+	MOVL	#FOR$_ERRDURREA,R0
+	BRB	70$
+60$:	MOVL	#SS$_NORMAL,R0
+70$:	MOVL	R2,R1
+	RET
+80$:	CLRL	R1
+	MOVL	#FOR$_INVLOGUNI,R0
+	RET
+
+;
+; FTN$$UNIT_INIT(block)
+;
+; Sets up a unit's blocks for a new connection: copies of the prototypes,
+; linked together, its default names, and the attributes of a unit with no
+; OPEN.
+;
+	.ENTRY	FTN$$UNIT_INIT,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MOVC3	#FAB$C_BLN,PROTO_FAB,UB_FAB(R6)
+	MOVC3	#RAB$C_BLN,PROTO_RAB,UB_RAB(R6)
+	MOVC3	#NAM$C_BLN,PROTO_NAM,UB_NAM(R6)
+	MOVC3	#XAB$C_FHCLEN,PROTO_XAB,UB_XAB(R6)
+	MOVAB	UB_FAB(R6),UB_RAB+RAB$L_FAB(R6)
+	MOVAB	UB_NAM(R6),UB_FAB+FAB$L_NAM(R6)
+	MOVAB	UB_XAB(R6),UB_FAB+FAB$L_XAB(R6)
+	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_RSA(R6)
+	MOVAB	UB_RSA(R6),UB_NAM+NAM$L_ESA(R6)
+	MOVAB	UB_KEY(R6),UB_RAB+RAB$L_KBF(R6)	; a direct record's number (KSZ 0,
+					;  RMS's 4, as VMS's library leaves it)
+	CLRL	UB_ASV(R6)
+	CLRL	UB_MAXREC(R6)
+	CLRL	UB_KIND(R6)
+	CLRQ	UB_STS(R6)
+	CLRL	UB_RECORDS(R6)
+	MOVL	#DEFAULT_RECL,UB_SIZE(R6)
+	MOVB	#1,UB_FORM(R6)
+	MOVB	#2,UB_ACCESS(R6)
+	MOVB	#1,UB_BLANK(R6)
+	MOVB	#1,UB_DISPOSE(R6)
+	CLRB	UB_READONLY(R6)
+	CLRB	UB_SCRATCH(R6)
+	CLRB	UB_SEGMENTED(R6)
+	CLRB	UB_APPENDED(R6)
+	CLRL	UB_NEXTREC(R6)
+	CLRB	UB_CURRENT(R6)
+	CLRB	UB_REWRITE(R6)
+	CLRB	UB_KEYED(R6)
+	;
+	; The default names. R7 is the unit.
+	;
+	MOVL	UB_UNIT(R6),R7
+	BLSS	20$
+	MOVAB	UB_FNA(R6),R3		; FORnnn
+	MOVB	#^A/F/,(R3)
+	MOVB	#^A/O/,1(R3)
+	MOVB	#^A/R/,2(R3)
+	MOVL	R7,R0
+	CLRL	R1
+	EDIV	#100,R0,R0,R1		; R0 the hundreds, R1 the rest
+	ADDB3	#^A/0/,R0,3(R3)
+	CLRL	R2
+	EDIV	#10,R1,R0,R1
+	ADDB3	#^A/0/,R0,4(R3)
+	ADDB3	#^A/0/,R1,5(R3)
+	MOVC3	#6,(R3),UB_DNA(R6)	; FORnnn.DAT
+	MOVB	#^A/./,UB_DNA+6(R6)
+	MOVB	#^A/D/,UB_DNA+7(R6)
+	MOVB	#^A/A/,UB_DNA+8(R6)
+	MOVB	#^A/T/,UB_DNA+9(R6)
+	MOVAB	UB_FAB(R6),R2
+	MOVAB	UB_FNA(R6),FAB$L_FNA(R2)
+	MOVB	#6,FAB$B_FNS(R2)
+	MOVAB	UB_DNA(R6),FAB$L_DNA(R2)
+	MOVB	#10,FAB$B_DNS(R2)
+	CMPL	R7,#5			; unit 5 or 6 may be SYS$INPUT: or SYS$OUTPUT:
+	BLSS	35$
+	CMPL	R7,#6
+	BGTR	35$
+	MOVL	#6,R0
+	MOVAB	UB_FNA(R6),R1
+	BRB	40$
+35$:	BRW	90$
+	;
+	; A default unit: its names from the table, -1 first.
+	;
+20$:	MOVAB	NEGATIVE_NAMES,R3
+	MNEGL	R7,R4
+	DECL	R4			; how many pairs to pass
+25$:	SOBGEQ	R4,27$
+	BRB	28$
+27$:	MOVZBL	(R3),R0			; past the logical name
+	ADDL3	#1,R0,R0
+	ADDL2	R0,R3
+	MOVZBL	(R3),R0			; and the default name
+	ADDL3	#1,R0,R0
+	ADDL2	R0,R3
+	BRB	25$
+28$:	PUSHL	R3			; the logical name, the file's if defined
+	MOVZBL	(R3),R0
+	MOVC3	R0,1(R3),UB_FNA(R6)
+	MOVL	(SP),R3
+	MOVZBL	(R3),R0
+	MOVAB	UB_FAB(R6),R2
+	MOVAB	UB_FNA(R6),FAB$L_FNA(R2)
+	MOVB	R0,FAB$B_FNS(R2)
+	ADDL3	R0,R3,R3		; the default name
+	INCL	R3
+	MOVZBL	(R3),R0
+	MOVB	R0,FAB$B_DNS(R2)
+	MOVC3	R0,1(R3),UB_DNA(R6)
+	MOVL	(SP)+,R3
+	MOVAB	UB_FAB(R6),R2
+	MOVAB	UB_DNA(R6),FAB$L_DNA(R2)
+	MOVZBL	FAB$B_FNS(R2),R0
+	MOVAB	UB_FNA(R6),R1
+	;
+	; Is the logical name, R1 and R0, defined? $TRNLNM with no items says.
+	;
+40$:	PUSHL	R1			; its descriptor, on the stack
+	PUSHL	R0
+	MOVL	SP,R3
+	PUSHAB	TABLE_NAME		; the table's
+	PUSHL	#TABLE_LEN
+	MOVL	SP,R4
+	CLRQ	-(SP)			; no item list, no access mode
+	PUSHL	R3			; the name
+	PUSHL	R4			; the table
+	CLRL	-(SP)			; no attributes
+	CALLS	#5,G^SYS$TRNLNM
+	ADDL2	#16,SP
+	BLBS	R0,90$			; defined: the unit is a file by that name
+	MOVAB	UB_FAB(R6),R2
+	CMPL	R7,#5
+	BEQL	60$
+	CMPL	R7,#-3
+	BEQL	60$
+	CMPL	R7,#-4
+	BEQL	60$
+	MOVAB	OUTPUT_NAME,FAB$L_FNA(R2) ; SYS$OUTPUT:
+	MOVB	#OUTPUT_LEN,FAB$B_FNS(R2)
+	MOVL	#K_OUTPUT,UB_KIND(R6)
+	BRB	90$
+60$:	MOVAB	INPUT_NAME,FAB$L_FNA(R2) ; SYS$INPUT:
+	MOVB	#INPUT_LEN,FAB$B_FNS(R2)
+	MOVL	#K_INPUT,UB_KIND(R6)
+90$:	RET
+
+;
+; FTN$$UNIT_OPEN(block, read)
+;
+; Connects a unit with no OPEN, if it isn't yet, for its first statement,
+; a READ if read (by value) is 1: a READ finds a file, and a WRITE makes one.
+; A unit on SYS$INPUT: follows the rule too, as VMS's library does (docs/PHASE-86):
+; on a process-permanent file either gives the FAB indirect access to it, and with
+; SYS$INPUT defined as a file, DEFINE/USER SYS$INPUT DATA.DAT, a READ must read that
+; file, not make a new version of it. A unit on SYS$OUTPUT: is a $CREATE either way,
+; so a READ of one reaches the file it's writing. With read 2 it is for ENDFILE, which makes one with
+; no carriage control and leaves the unit's form to its next statement. With 4
+; added it is for an unformatted statement, and the unit is as VMS's library
+; connects one (testdata/for81's #508): unformatted, segmented, with no
+; carriage control. Returns SS$_NORMAL in R0, or the FOR$_ condition for the
+; failure, RMS's status and value kept in the block.
+;
+	.ENTRY	FTN$$UNIT_OPEN,^M<R2,R3>
+	MOVL	4(AP),R2
+	BLBS	UB_OPEN(R2),30$		; connected already
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_INIT
+	MOVAB	UB_FAB(R2),R3
+	CMPL	8(AP),#2
+	BNEQ	3$
+	CLRB	UB_FORM(R2)
+	CLRB	FAB$B_RAT(R3)
+3$:	BBC	#2,8(AP),5$
+	MOVB	#2,UB_FORM(R2)		; unformatted
+	CLRB	FAB$B_RAT(R3)
+	MOVB	#1,UB_SEGMENTED(R2)
+	MOVL	#DEFAULT_SEG,UB_SIZE(R2)
+5$:	BLBC	8(AP),10$
+	CMPL	UB_KIND(R2),#K_OUTPUT
+	BEQL	10$
+	$OPEN	FAB=R3
+	BRB	20$
+10$:	$CREATE	FAB=R3
+20$:	BLBC	R0,40$
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_READY
+	RET
+30$:	MOVL	#SS$_NORMAL,R0
+	RET
+40$:	PUSHL	R0
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_FAILED
+	RET
+
+;
+; FTN$$UNIT_FAILED(block, status)
+;
+; A $OPEN or $CREATE failed with RMS's status: keeps it and its value in the
+; block, and returns in R0 the FOR$_ condition VMS's library has for it (round
+; 1 of testdata/for81): a file not found, a device that isn't there, a name
+; that can't be one, keys RMS won't have (testdata/for88's #7, #27, #42, where a
+; USEROPEN routine returned them; unconfirmed without one), and for all the rest
+; FOR$_OPEFAI.
+;
+	.ENTRY	FTN$$UNIT_FAILED,^M<R2>
+	MOVL	4(AP),R2
+	MOVL	UB_FAB+FAB$L_STS(R2),UB_STS(R2)
+	MOVL	UB_FAB+FAB$L_STV(R2),UB_STV(R2)
+	MOVL	8(AP),R1
+	MOVL	#FOR$_FILNOTFOU,R0
+	CMPL	R1,#RMS$_FNF
+	BEQL	90$
+	MOVL	#FOR$_NO_SUCDEV,R0
+	CMPL	R1,#RMS$_DEV
+	BEQL	90$
+	CMPL	R1,#RMS$_DNR
+	BEQL	90$
+	MOVL	#FOR$_FILNAMSPE,R0
+	CMPL	R1,#RMS$_SYN
+	BEQL	90$
+	CMPL	R1,#RMS$_FNM
+	BEQL	90$
+	CMPL	R1,#RMS$_DIR
+	BEQL	90$
+	CMPL	R1,#RMS$_WLD
+	BEQL	90$
+	CMPL	R1,#RMS$_TYP
+	BEQL	90$
+	CMPL	R1,#RMS$_VER
+	BEQL	90$
+	MOVL	#FOR$_INVKEYSPE,R0
+	CMPL	R1,#RMS$_SIZ
+	BEQL	90$
+	CMPL	R1,#RMS$_POS
+	BEQL	90$
+	CMPL	R1,#RMS$_NPK
+	BEQL	90$
+	MOVL	#FOR$_OPEFAI,R0
+90$:	RET
+
+;
+; FTN$$UNIT_READY(block)
+;
+; A unit's file is open: connects the RAB (unless a USEROPEN routine has),
+; gives the unit its record buffer,
+; and if this is the first unit connected declares the exit handler. Only a
+; file of variable-length records has segments. A unit with no form yet gets a
+; buffer that holds a segment, should its first statement be unformatted. Returns
+; SS$_NORMAL in R0, or FOR$_OPEFAI with RMS's status kept, the file closed.
+;
+	.ENTRY	FTN$$UNIT_READY,^M<R2,R3,R4>
+	MOVL	4(AP),R2
+	MOVAB	UB_FAB(R2),R3
+	MOVAB	UB_RAB(R2),R4
+	TSTW	RAB$W_ISI(R4)		; connected already, by a USEROPEN routine
+	BNEQ	10$
+	$CONNECT RAB=R4
+	BLBS	R0,10$
+	MOVL	RAB$L_STS(R4),UB_STS(R2)
+	MOVL	RAB$L_STV(R4),UB_STV(R2)
+	$CLOSE	FAB=R3
+	MOVL	#FOR$_OPEFAI,R0
+	RET
+	;
+	; A file's own records may be longer than the unit would write: the
+	; buffer holds the longest. A file with a record size has records of it.
+	;
+10$:	CMPB	FAB$B_RFM(R3),#FAB$C_VAR
+	BEQL	12$
+	CLRB	UB_SEGMENTED(R2)
+	;
+	; A relative file has its own highest record number, which FTNRTL takes
+	; for the unit's when OPEN gave none (RMS's 7FFFFFFF is none).
+	;
+12$:	CMPB	FAB$B_ORG(R3),#FAB$C_REL
+	BNEQ	15$
+	TSTL	UB_MAXREC(R2)
+	BNEQ	15$
+	MOVL	FAB$L_MRN(R3),R0
+	CMPL	R0,#^X7FFFFFFF
+	BEQL	15$
+	MOVL	R0,UB_MAXREC(R2)
+15$:	TSTL	UB_KIND(R2)
+	BNEQ	20$
+	MOVZWL	FAB$W_MRS(R3),R0
+	BEQL	20$
+	MOVL	R0,UB_SIZE(R2)
+20$:	MOVW	UB_SIZE(R2),RAB$W_USZ(R4) ; as VMS's leaves it (testdata/for88)
+	MOVL	UB_SIZE(R2),R0
+	CMPL	R0,#MIN_BUFFER
+	BGEQ	22$
+	MOVL	#MIN_BUFFER,R0
+22$:	TSTB	UB_FORM(R2)
+	BNEQ	25$
+	CMPL	R0,#DEFAULT_SEG
+	BGEQ	25$
+	MOVL	#DEFAULT_SEG,R0
+25$:	TSTL	UB_KIND(R2)
+	BNEQ	30$
+	MOVZWL	UB_XAB+XAB$W_LRL(R2),R1
+	CMPL	R0,R1
+	BGEQ	30$
+	MOVL	R1,R0
+30$:	MOVL	R0,UB_RECSIZE(R2)
+	PUSHAL	UB_RECP(R2)
+	PUSHAL	UB_RECSIZE(R2)
+	CALLS	#2,G^LIB$GET_VM
+	BLBS	R0,40$
+	PUSHL	#FOR$_INSVIRMEM
+	CALLS	#1,G^LIB$STOP
+40$:	MOVL	#1,UB_OPEN(R2)
+	BBSS	#0,EXIT_DECLARED,50$	; one instruction: an AST may OPEN too
+	MOVAB	EXIT_HANDLER,EXIT_BLOCK+4
+	MOVAB	EXIT_STATUS,EXIT_BLOCK+12
+	$DCLEXH_S DESBLK=EXIT_BLOCK
+50$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$UNIT_CLOSE(block, disposition)
+;
+; Closes a connected unit, disposition (by value) saying what happens to its
+; file, and frees its buffer. Returns SS$_NORMAL in R0, or FOR$_CLOERR, RMS's
+; status and value kept in the block.
+;
+	.ENTRY	FTN$$UNIT_CLOSE,^M<R2,R3,R4>
+	MOVL	4(AP),R2
+	MOVAB	UB_FAB(R2),R3
+	MOVL	8(AP),R0
+	BISL2	DISPOSITIONS[R0],FAB$L_FOP(R3)
+	$CLOSE	FAB=R3
+	MOVL	R0,R4
+	CLRL	UB_OPEN(R2)
+	CLRL	UB_DEFINED(R2)		; DEFINE FILE's description goes with the file
+	CLRB	UB_NAM+NAM$B_RSL(R2)
+	CLRB	UB_NAM+NAM$B_ESL(R2)
+	PUSHAL	UB_RECP(R2)
+	PUSHAL	UB_RECSIZE(R2)
+	CALLS	#2,G^LIB$FREE_VM
+	BLBS	R4,10$
+	MOVL	FAB$L_STS(R3),UB_STS(R2)
+	MOVL	FAB$L_STV(R3),UB_STV(R2)
+	MOVL	#FOR$_CLOERR,R0
+	RET
+10$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; EXIT_HANDLER: image exit closes every unit by its disposition.
+;
+EXIT_HANDLER:
+	.WORD	^M<R2,R3>
+	MOVAL	UNITS,R3
+	MOVL	#UNIT_HIGH-UNIT_LOW+1,R2
+10$:	MOVL	(R3)+,R0
+	BEQL	20$
+	BLBC	UB_OPEN(R0),20$
+	MOVZBL	UB_DISPOSE(R0),-(SP)
+	PUSHL	R0
+	CALLS	#2,FTN$$UNIT_CLOSE
+20$:	SOBGTR	R2,10$
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$UNIT_SAME(block, name, length, default, default's length)
+;
+; R0's low bit is set if the name given (with its default name) is the file a
+; connected unit has open, by the expanded names without their versions
+; (unconfirmed: VMS's run opened the same text each time).
+;
+FRAME_FAB	= -FAB$C_BLN
+FRAME_NAM	= FRAME_FAB-NAM$C_BLN
+FRAME_ESA	= FRAME_NAM-<RSA_SIZE+1>
+
+	.ENTRY	FTN$$UNIT_SAME,^M<R2,R3,R4,R5,R6>
+	MOVAB	FRAME_ESA(SP),SP
+	MOVL	4(AP),R6
+	MOVC3	#FAB$C_BLN,PROTO_FAB,FRAME_FAB(FP)
+	MOVC3	#NAM$C_BLN,PROTO_NAM,FRAME_NAM(FP)
+	MOVL	8(AP),FRAME_FAB+FAB$L_FNA(FP)
+	MOVB	12(AP),FRAME_FAB+FAB$B_FNS(FP)
+	MOVL	16(AP),FRAME_FAB+FAB$L_DNA(FP)
+	MOVB	20(AP),FRAME_FAB+FAB$B_DNS(FP)
+	MOVAB	FRAME_NAM(FP),FRAME_FAB+FAB$L_NAM(FP)
+	MOVAB	FRAME_ESA(FP),FRAME_NAM+NAM$L_ESA(FP)
+	MOVAB	FRAME_FAB(FP),R2
+	$PARSE	FAB=R2
+	BLBC	R0,80$			; no such name: not this file
+	MOVZBL	FRAME_NAM+NAM$B_ESL(FP),R0
+	LOCC	#^A/;/,R0,FRAME_ESA(FP)
+	MOVZBL	FRAME_NAM+NAM$B_ESL(FP),R2
+	SUBL2	R0,R2			; the expanded name to its ;
+	MOVZBL	UB_NAM+NAM$B_RSL(R6),R0
+	LOCC	#^A/;/,R0,UB_RSA(R6)
+	MOVZBL	UB_NAM+NAM$B_RSL(R6),R3
+	SUBL2	R0,R3			; the file's name to its ;
+	CMPL	R2,R3
+	BNEQ	80$
+	CMPC3	R2,FRAME_ESA(FP),UB_RSA(R6)
+	BNEQ	80$
+	MOVL	#1,R0
+	RET
+80$:	CLRL	R0
+	RET
+
+;
+; FTN$$UNIT_BLOCK(unit)
+;
+; R0 is the block of the unit numbered unit (by value, from 0 to 119) if it is
+; connected, and otherwise 0: unlike FTN$$UNIT_FIND, it makes nothing.
+;
+	.ENTRY	FTN$$UNIT_BLOCK,^M<>
+	MOVL	4(AP),R1
+	MOVL	UNITS+16[R1],R0
+	BEQL	10$
+	BLBS	UB_OPEN(R0),10$
+	CLRL	R0
+10$:	RET
+
+;
+; FTN$RAB(unit)
+;
+; A unit's RAB, for a program that calls RMS itself, as VMS's FOR$RAB gives it: the
+; unit's number by reference, R0 the RAB's address, or 0 if the unit has no file.
+;
+	.ENTRY	FTN$RAB,^M<>
+	MOVL	@4(AP),R1
+	CMPL	R1,#UNIT_LOW
+	BLSS	10$
+	CMPL	R1,#UNIT_HIGH
+	BGTR	10$
+	MOVL	UNITS+16[R1],R0
+	BEQL	20$
+	BLBC	UB_OPEN(R0),10$
+	MOVAB	UB_RAB(R0),R0
+	RET
+10$:	CLRL	R0
+20$:	RET
+
+;
+; FTN$$UNIT_NAMED(name, length)
+;
+; R0 is the block of the unit from 0 to 119 that has the file open whose
+; resultant name, version and all, is given, and otherwise 0.
+;
+	.ENTRY	FTN$$UNIT_NAMED,^M<R2,R3,R4,R5,R6,R7>
+	MOVAL	UNITS+<4*4>,R6		; unit 0
+	MOVL	#UNIT_HIGH+1,R7
+10$:	MOVL	(R6)+,R2
+	BEQL	20$
+	BLBC	UB_OPEN(R2),20$
+	MOVZBL	UB_NAM+NAM$B_RSL(R2),R0
+	CMPL	R0,8(AP)
+	BNEQ	20$
+	MOVL	R2,R3			; CMPC3 changes R0 to R3
+	CMPC3	R0,@4(AP),UB_RSA(R3)
+	BNEQ	20$
+	MOVL	-4(R6),R0
+	RET
+20$:	SOBGTR	R7,10$
+	CLRL	R0
+	RET
+
+;
+; FTN$$UNIT_RECORD(block, place, write[, form[, direct]])
+;
+; What a statement uses of a connected unit, for reading if write (by value)
+; is 0, its form (by value) 1 formatted, the default, or 2 unformatted, and
+; direct (by value) 1 for a direct access statement: returns in R0 its record
+; buffer, and puts at place the longest record it may write, then a longword, 1
+; if blanks in numbers are zeros. R1 is 0, or the FOR$_ condition if the
+; statement can't use the unit: MIXFILACC for a statement of the other form, or
+; a sequential one on a unit that is direct (a keyed unit may have one: testdata/for88's
+; #280), WRIREAFIL for a write on a READONLY
+; unit. (FTN$$UNIT_DIRECT has seen that a direct statement's unit is direct.) A
+; unit with no form yet takes the statement's, and if unformatted, the size and
+; segments of a unit connected for one.
+;
+	.ENTRY	FTN$$UNIT_RECORD,^M<R2,R3>
+	MOVL	4(AP),R1
+	MOVL	#1,R3			; the statement's form
+	CMPB	(AP),#4
+	BLSSU	5$
+	MOVL	16(AP),R3
+5$:	TSTB	UB_FORM(R1)
+	BNEQ	8$
+	MOVB	R3,UB_FORM(R1)
+	CMPL	R3,#1
+	BEQL	8$
+	MOVB	#1,UB_SEGMENTED(R1)
+	MOVL	#DEFAULT_SEG,UB_SIZE(R1)
+8$:	MOVL	8(AP),R2
+	MOVL	UB_SIZE(R1),(R2)+
+	CLRL	(R2)
+	CMPB	UB_BLANK(R1),#1
+	BNEQ	10$
+	MOVL	#1,(R2)
+10$:	MOVL	UB_RECP(R1),R0
+	CMPB	UB_FORM(R1),R3
+	BNEQ	30$
+	CMPB	(AP),#5
+	BLSSU	15$
+	BLBS	20(AP),17$		; a direct statement
+15$:	CMPB	UB_ACCESS(R1),#1
+	BEQL	30$
+17$:	BLBC	12(AP),20$
+	TSTB	UB_READONLY(R1)
+	BEQL	20$
+	MOVL	#FOR$_WRIREAFIL,R1
+	RET
+20$:	CLRL	R1
+	RET
+30$:	MOVL	#FOR$_MIXFILACC,R1
+	RET
+
+;
+; FTN$$UNIT_PUT(block, record, length)
+;
+; Writes a record, its first byte the carriage control unless the unit's file
+; has none, to the unit whose block is given, which is connected: the record's
+; address is the second argument, its length (a longword, by value) the third.
+; A file of fixed-length records gets the record filled out, with blanks, or
+; zeros if unformatted. During a REWRITE (UB_REWRITE) the record replaces the
+; current one, an $UPDATE, which leaves the unit's place and current record
+; alone; any other write takes the current record away. Returns RMS's status
+; in R0.
+;
+	.ENTRY	FTN$$UNIT_PUT,^M<R2,R3,R4,R5,R6,R7>
+	MOVL	4(AP),R6
+	MOVAB	UB_RAB(R6),R7		; the RAB
+	MOVL	8(AP),RAB$L_RBF(R7)	; the record
+	MOVW	12(AP),RAB$W_RSZ(R7)	; and its length
+	CMPB	UB_FAB+FAB$B_RFM(R6),#FAB$C_FIX
+	BNEQ	10$
+	MOVZWL	UB_FAB+FAB$W_MRS(R6),R2
+	CMPL	12(AP),R2
+	BGEQ	10$
+	MOVL	#^A/ /,R1
+	CMPB	UB_FORM(R6),#1
+	BEQL	5$
+	CLRL	R1
+5$:	MOVC5	12(AP),@8(AP),R1,R2,@UB_RECP(R6)
+	MOVL	UB_RECP(R6),RAB$L_RBF(R7)
+	MOVW	UB_FAB+FAB$W_MRS(R6),RAB$W_RSZ(R7)
+10$:	TSTB	UB_REWRITE(R6)
+	BEQL	12$
+	$UPDATE	RAB=R7
+	BLBC	R0,20$
+	CMPB	UB_FAB+FAB$B_ORG(R6),#FAB$C_IDX
+	BNEQ	11$
+	CLRB	UB_CURRENT(R6)		; none for the next: FOR$_NO_CURREC (for88's #297)
+11$:	RET
+12$:	CLRB	UB_CURRENT(R6)
+	CMPB	UB_FAB+FAB$B_ORG(R6),#FAB$C_IDX
+	BNEQ	13$
+	CMPB	UB_ACCESS(R6),#4	; keyed access writes by key, whatever a READ
+	BNEQ	13$			;  left; sequential in the key's order (#290)
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R7)
+13$:	$PUT	RAB=R7
+	BLBC	R0,20$
+	INCL	UB_RECORDS(R6)
+	CMPB	UB_ACCESS(R6),#1
+	BNEQ	15$
+	PUSHL	R0
+	BSBW	DIRECT_DONE
+	POPL	R0
+15$:	RET
+20$:	MOVL	RAB$L_STS(R7),UB_STS(R6)
+	MOVL	RAB$L_STV(R7),UB_STV(R6)
+	RET
+
+;
+; FTN$$UNIT_GET(block)
+;
+; Reads the next record of the unit whose block is given, which is connected,
+; into its record buffer. Returns in R0 SS$_NORMAL and in R1 the record's
+; length, or in R0 the FOR$_ condition for the failure: ENDDURREA at the end of
+; the file or for a record of ^Z alone, which ENDFILE wrote, INPRECTOO for a record longer than the buffer (RMS's RTB or RSZ) or,
+; on SYS$INPUT:, than 199 bytes, SPERECLOC for a record another stream holds
+; (RMS's RLK), ERRDURREA for any other. Either way the unit has a current
+; record, for RMS to say whether REWRITE and DELETE may have it. RMS's status and value
+; are kept in the block: for a record longer than 199 bytes that the buffer
+; held, RMS$_RTB and its size, as RMS gives for one longer than the buffer, and
+; as VMS's run reported for a record of 200.
+;
+	.ENTRY	FTN$$UNIT_GET,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R3
+	MOVAB	UB_RAB(R3),R2		; the RAB
+	MOVL	UB_RECP(R3),RAB$L_UBF(R2) ; the buffer
+	MOVW	UB_RECSIZE(R3),RAB$W_USZ(R2) ; and its size
+	MOVB	#1,UB_CURRENT(R3)
+	MOVZBL	UB_KEYED(R3),R4		; R4 is 1 for a keyed READ's first $GET
+	CLRB	UB_KEYED(R3)
+	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
+	BNEQ	0$
+	MOVZWL	UB_FAB+FAB$W_MRS(R3),R0	; the file's size, as VMS's leaves it (for88's
+	BEQL	8$			;  #282), if it has one
+	MOVW	R0,RAB$W_USZ(R2)
+8$:	BLBS	R4,0$			; any other $GET is the next in sequence
+	MOVB	#RAB$C_SEQ,RAB$B_RAC(R2)
+0$:	$GET	RAB=R2
+	BLBC	R0,5$
+	MOVZWL	RAB$W_RSZ(R2),R1
+	CMPL	RAB$L_RBF(R2),UB_RECP(R3) ; located elsewhere: copied to the buffer
+	BEQL	9$
+	PUSHR	#^M<R1,R2,R3>
+	MOVC3	R1,@RAB$L_RBF(R2),@UB_RECP(R3)
+	POPR	#^M<R1,R2,R3>
+9$:
+	CMPB	UB_ACCESS(R3),#1
+	BNEQ	1$
+	MOVL	R3,R6			; a direct record, of the file's size
+	PUSHL	R1
+	BSBW	DIRECT_DONE
+	POPL	R1
+	INCL	UB_RECORDS(R3)
+	MOVL	#SS$_NORMAL,R0
+	RET
+1$:	TSTL	UB_KIND(R3)
+	BEQL	4$
+	CMPL	R1,#INPUT_MAX
+	BGTRU	2$
+4$:	INCL	UB_RECORDS(R3)
+	CMPL	R1,#1			; ENDFILE's record: RMS has no complaint
+	BNEQ	3$
+	CMPB	@UB_RECP(R3),#^X1A
+	BNEQ	3$
+	CLRQ	UB_STS(R3)
+	MOVL	#FOR$_ENDDURREA,R0
+	RET
+3$:	MOVL	#SS$_NORMAL,R0
+	RET
+2$:	MOVL	#RMS$_RTB,UB_STS(R3)	; too long for FORTRAN
+	MOVL	R1,UB_STV(R3)
+	MOVL	#FOR$_INPRECTOO,R0
+	RET
+5$:	MOVL	RAB$L_STS(R2),UB_STS(R3)
+	MOVL	RAB$L_STV(R2),UB_STV(R3)
+	CMPB	UB_FAB+FAB$B_ORG(R3),#FAB$C_IDX
+	BNEQ	52$
+	CLRB	UB_CURRENT(R3)		; an indexed file: no current record then, and
+52$:	BLBC	R4,54$			;  a failed key is FORTRAN's to say (for88's
+	MOVL	#FOR$_ATTACCNON,R1	;  #156, #269, #271)
+	CMPL	R0,#RMS$_RNF
+	BEQL	53$
+	CMPL	R0,#RMS$_EOF
+	BEQL	53$
+	MOVL	#FOR$_INVKEYSPE,R1
+	CMPL	R0,#RMS$_KRF
+	BEQL	53$
+	CMPL	R0,#RMS$_KSZ
+	BNEQ	54$
+53$:	MOVL	R1,R0
+	RET
+54$:	CMPL	R0,#RMS$_RLK		; another stream has it
+	BNEQ	6$
+	MOVL	#FOR$_SPERECLOC,R0
+	RET
+6$:	CMPB	UB_ACCESS(R3),#1
+	BNEQ	10$
+	CMPL	R0,#RMS$_EOF		; a direct record past the end: no such record
+	BEQL	7$
+	CMPL	R0,#RMS$_RNF
+	BNEQ	20$
+7$:	MOVL	#FOR$_ATTACCNON,R0
+	RET
+10$:	CMPL	R0,#RMS$_EOF
+	BNEQ	20$
+	MOVL	#FOR$_ENDDURREA,R0
+	RET
+20$:	CMPL	R0,#RMS$_RTB
+	BEQL	30$
+	CMPL	R0,#RMS$_RSZ
+	BNEQ	40$
+30$:	MOVL	#FOR$_INPRECTOO,R0
+	RET
+40$:	MOVL	#FOR$_ERRDURREA,R0
+	RET
+
+;
+; DIRECT_DONE: a direct record of the unit whose block is R6 has been read or
+; written: the next one is the next number, the unit's NEXTREC and its
+; associated variable's value. Changes R0 and R1.
+;
+DIRECT_DONE:
+	INCL	UB_KEY(R6)
+	MOVL	UB_KEY(R6),R0
+	BRB	SET_NEXT
+
+;
+; SET_NEXT: R0 is the next direct record of the unit whose block is R6: its
+; NEXTREC, and its associated variable's value, a word or a longword. Changes
+; R1.
+;
+SET_NEXT:
+	MOVL	R0,UB_NEXTREC(R6)
+	MOVL	UB_ASV(R6),R1
+	BEQL	20$
+	CMPL	UB_ASVSIZE(R6),#2
+	BNEQ	10$
+	MOVW	R0,(R1)
+	RSB
+10$:	MOVL	R0,(R1)
+20$:	RSB
+
+;
+; FTN$$UNIT_DIRECT(block, read, record)
+;
+; Readies the unit whose block is given for a direct access statement on the
+; record numbered record (by value), a READ or FIND if read (by value) is 1, a
+; WRITE if 0; R0 returns SS$_NORMAL, or the FOR$_ condition the statement fails
+; with. A unit that isn't connected is opened now if DEFINE FILE described it
+; (FTN$$UNIT_DEFINED), and is otherwise FOR$_OPEDEFREQ, as is a unit whose
+; access isn't direct, as on VMS (testdata/for81's #558, #562). Record 0, or one
+; past MAXREC, is FOR$_RECNUMOUT; any other goes to RMS, so that -1 fails as
+; RMS fails it (#553, #556). FTNRTL's own MAXREC is the one OPEN gave, which RMS
+; doesn't keep for a sequential file.
+;
+	.ENTRY	FTN$$UNIT_DIRECT,^M<R2>
+	MOVL	4(AP),R2
+	BLBS	UB_OPEN(R2),20$
+	BLBS	UB_DEFINED(R2),10$
+	MOVL	#FOR$_OPEDEFREQ,R0
+	RET
+10$:	PUSHL	8(AP)
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_DEFINED
+	BLBC	R0,90$
+20$:	CMPB	UB_ACCESS(R2),#1
+	BEQL	30$
+	MOVL	#FOR$_OPEDEFREQ,R0
+	RET
+30$:	MOVL	12(AP),R0
+	BEQL	40$
+	MOVL	UB_MAXREC(R2),R1
+	BLEQ	35$			; 0, or DEFINE FILE's -1: no limit
+	CMPL	R0,R1
+	BGTR	40$
+35$:	MOVL	R0,UB_KEY(R2)
+	MOVL	#SS$_NORMAL,R0
+	RET
+40$:	MOVL	#FOR$_RECNUMOUT,R0
+90$:	RET
+
+;
+; FTN$$UNIT_FOUND(block, record)
+;
+; FIND has positioned the unit whose block is given at the record numbered
+; record (by value): that is its NEXTREC and its associated variable's value,
+; and the next direct statement's record unless it says another (testdata/for81,
+; #561 and round 2's code 17 cases).
+;
+	.ENTRY	FTN$$UNIT_FOUND,^M<R6>
+	MOVL	4(AP),R6
+	MOVL	8(AP),R0
+	MOVL	R0,UB_KEY(R6)
+	BSBW	SET_NEXT
+	RET
+
+;
+; FTN$$UNIT_DEFINED(block, read)
+;
+; Opens the unit whose block is given as its DEFINE FILE described it: a file
+; of fixed-length records, 2n bytes each, MRN m, unformatted and direct, read
+; and written by its number (VMS's run, testdata/for81's #564), with the
+; definition's associated variable; created if read (by value) is 0, for a
+; WRITE, and found if 1, for a READ or FIND (the LRM's A.2; unconfirmed, as
+; VMS's run had only writes). Returns SS$_NORMAL in R0, or the FOR$_ condition
+; for the failure, RMS's status and value kept in the block.
+;
+	.ENTRY	FTN$$UNIT_DEFINED,^M<R2,R3,R4>
+	MOVL	4(AP),R2
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_INIT
+	MOVAB	UB_FAB(R2),R3
+	MOVAB	UB_RAB(R2),R4
+	MOVB	#2,UB_FORM(R2)		; unformatted
+	MOVB	#1,UB_ACCESS(R2)	; direct
+	MOVL	#1,UB_NEXTREC(R2)
+	MOVL	UB_DEF_RECORDS(R2),UB_MAXREC(R2)
+	MOVL	UB_DEF_RECORDS(R2),FAB$L_MRN(R3)
+	ADDL3	UB_DEF_LENGTH(R2),UB_DEF_LENGTH(R2),R0 ; the record's bytes
+	MOVL	R0,UB_SIZE(R2)
+	MOVW	R0,FAB$W_MRS(R3)
+	MOVB	#FAB$C_FIX,FAB$B_RFM(R3)
+	CLRB	FAB$B_RAT(R3)
+	MOVB	#RAB$C_KEY,RAB$B_RAC(R4)
+	BISL2	#RAB$M_UIF,RAB$L_ROP(R4)
+	MOVL	UB_DEF_ASV(R2),UB_ASV(R2)
+	MOVL	UB_DEF_ASVSIZE(R2),UB_ASVSIZE(R2)
+	BLBS	8(AP),10$
+	$CREATE	FAB=R3
+	BRB	20$
+10$:	$OPEN	FAB=R3
+20$:	BLBC	R0,40$
+	PUSHL	R2
+	CALLS	#1,FTN$$UNIT_READY
+	RET
+40$:	PUSHL	R0
+	PUSHL	R2
+	CALLS	#2,FTN$$UNIT_FAILED
+	RET
+
+;
+; FTN$$UNIT_REPORT(block, report)
+;
+; What a message and ERRSNS say of the unit whose block is given, put in the
+; five longwords at report: the length of the file's name (0 if the unit has
+; none yet) and its address, the status RMS gave the last failure and its
+; value, and the records transferred. A unit whose file couldn't be opened has
+; the name as far as RMS expanded it.
+;
+	.ENTRY	FTN$$UNIT_REPORT,^M<R2>
+	MOVL	4(AP),R1		; the block
+	MOVL	8(AP),R2		; the report
+	MOVZBL	UB_NAM+NAM$B_RSL(R1),(R2)
+	BNEQ	10$
+	MOVZBL	UB_NAM+NAM$B_ESL(R1),(R2)
+10$:	MOVAB	UB_RSA(R1),4(R2)
+	MOVL	UB_STS(R1),8(R2)
+	MOVL	UB_STV(R1),12(R2)
+	MOVL	UB_RECORDS(R1),16(R2)
+	RET
+
+;
+; FTN$$UNIT_TERMINAL(block)
+;
+; R0's low bit is set if the unit whose block is given, connected, is a
+; terminal (FTN_NAMELIST answers a ? only at one).
+;
+	.ENTRY	FTN$$UNIT_TERMINAL,^M<>
+	MOVL	4(AP),R0
+	CLRL	R1
+	BBC	#DEV$V_TRM,UB_FAB+FAB$L_DEV(R0),10$
+	MOVL	#1,R1
+10$:	MOVL	R1,R0
+	RET
+
+	.END

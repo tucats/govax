@@ -1152,3 +1152,15 @@ func TestSessionCopy_dirsTest(t *testing.T) {
 		t.Error("directory should not have been created under /TEST")
 	}
 }
+
+// TestExplicitNullType: a dot with no type after it is the null type, given.
+func TestExplicitNullType(t *testing.T) {
+	for text, want := range map[string]bool{
+		"NOTYPE.": true, ".;1": true, "DUA0:[A.B]X.;3": true, "X": false, "X.TXT": false,
+		"[A.B]X": false, "X.TXT;2": false, "*": false, ".TYP": false,
+	} {
+		if got := ExplicitNullType(text); got != want {
+			t.Errorf("ExplicitNullType(%q) = %v, want %v", text, got, want)
+		}
+	}
+}

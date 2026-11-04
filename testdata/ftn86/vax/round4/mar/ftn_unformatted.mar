@@ -1,0 +1,286 @@
+	.TITLE	FTN_UNFORMATTED - FTNRTL's unformatted sequential I/O
+	.IDENT	/V1.0/
+;
+; An unformatted READ or WRITE (the 1988 VAX FORTRAN Language Reference
+; Manual, 7.2.1.4 and 7.3.1.4) moves its items' bytes as they are, with no
+; format: a WRITE puts them one after another into one logical record, and a
+; READ takes one logical record and gives each item as many bytes as it holds.
+; The compiler calls FTN$WRITE_SU or FTN$READ_SU (FTN_STATEMENT), then
+; FTN$IO_ITEM for each item and FTN$IO_END, which come here.
+;
+; A logical record is one RMS record, unless the unit's records are segmented
+; (RECORDTYPE='SEGMENTED', an unformatted unit's default on a file of
+; variable-length records). Then it is one or more RMS records, each a segment
+; beginning with a control word, as VMS's FORTRAN run-time library writes them
+; (testdata/for81, round 1):
+;
+;	3	the record's only segment
+;	1	its first segment, more to follow
+;	0	a segment in the middle
+;	2	its last segment
+;
+; Each segment is as long as the unit's record (RAB$W_USZ: 2044 bytes, or
+; 4*RECL+2), so it holds 2042 bytes of data by default. A segment is written
+; only when it is full and another byte comes, so a record that fills its first
+; segment exactly is one segment, and a WRITE with no items one segment of the
+; control word alone.
+;
+; A READ that finds a control word that isn't one of these, or a segment out of
+; place (a first segment where a record goes on, or a later one where a record
+; starts), fails with FOR$_SEGRECFOR, as VMS's does reading a file whose
+; records have no segments. Items past the record's end are FOR$_INPSTAREQ;
+; what the items leave of the record is passed over, whatever its segments.
+; A WRITE past the end of a record that can't have more segments (VARIABLE,
+; FIXED, STREAM) is FOR$_OUTSTAOVE, and writes nothing, but for a direct WRITE,
+; which writes as much as the record holds and still fails (testdata/for81's
+; #553, where a sequential FIXED unit's, #533, wrote nothing). A REWRITE past
+; the end is FOR$_TOOMANREC, and writes nothing (testdata/for88's #298).
+;
+; The unit's count of records (FTN_UNITS's UB_RECORDS, which BACKSPACE
+; reads) counts logical records: each segment's FTN$$UNIT_PUT or
+; FTN$$UNIT_GET counts one, and those that don't end a record are taken off.
+;
+	$SSDEF
+
+DSC$W_LENGTH	= 0			; A descriptor
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_CLASS_A	= 4			; an array
+
+UB_RECORDS	= 16			; A unit's block (FTN_UNITS)
+UB_SEGMENTED	= 42
+
+CTX_KIND	= 14			; A statement's context (FTN_STATEMENT): a
+CTX_STATUS	= 16			;  READ's kind is even, a WRITE's odd
+CTX_STREAM	= 20
+CTX_RECLEN	= 24			; long: the bytes in the record being written
+CTX_RECP	= 444			; long: the unit's buffer
+CTX_UNITMAX	= 488			; long: the longest record (RAB$W_USZ)
+CTX_UNF_POS	= 504			; long: the next byte to read in the buffer
+CTX_UNF_LEN	= 508			; long: the bytes the buffer holds
+CTX_UNF_STATE	= 512			; long: S_ bits
+CTX_DIRECT	= 516			; long: 1 for a direct statement
+CTX_REWRITE	= 520			; byte: 1 for a REWRITE
+
+S_SEGMENTED	= 1			; the unit's records are segmented
+S_WRITTEN	= 2			; a segment of this record has been written
+S_LAST		= 4			; the buffer holds the record's last segment
+
+SEG_MIDDLE	= 0			; the control word's values
+SEG_FIRST	= 1
+SEG_LAST	= 2
+SEG_ONLY	= 3
+SEGMENT_WORD	= 2			; its size
+
+FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition values, with
+FOR$_SEGRECFOR	= ^X0018811C		;  their severities
+FOR$_OUTSTAOVE	= ^X00188214
+FOR$_INPSTAREQ	= ^X0018821C
+FOR$_TOOMANREC	= ^X001880DC
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
+
+;
+; FTN$$UNF_START(context)
+;
+; Starts an unformatted statement on its unit, which is connected: a WRITE's
+; record is empty, but for a segment's control word; a READ reads its record's
+; first segment. A failure is the context's status.
+;
+	.ENTRY	FTN$$UNF_START,ALL_MASK
+	MOVL	4(AP),R6
+	CLRL	CTX_UNF_STATE(R6)
+	CLRL	CTX_RECLEN(R6)
+	MOVL	CTX_STREAM(R6),R0
+	BLBC	UB_SEGMENTED(R0),10$
+	BISL2	#S_SEGMENTED,CTX_UNF_STATE(R6)
+	MOVL	#SEGMENT_WORD,CTX_RECLEN(R6)
+10$:	BLBS	CTX_KIND(R6),90$	; a WRITE
+	MOVL	#SEG_FIRST,R0
+	BSBW	GET_SEGMENT
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$UNF_ITEM(context, descriptor)
+;
+; One item: a scalar's bytes (class S, or D), or a whole array's (class A).
+;
+	.ENTRY	FTN$$UNF_ITEM,ALL_MASK
+	MOVL	4(AP),R6
+	MOVL	8(AP),R0
+	MOVL	DSC$A_POINTER(R0),R7	; R7 the item's bytes,
+	MOVZWL	DSC$W_LENGTH(R0),R8	;  R8 how many are left
+	CMPB	DSC$B_CLASS(R0),#DSC$K_CLASS_A
+	BNEQ	5$
+	MOVL	DSC$L_ARSIZE(R0),R8
+5$:	BLBC	CTX_KIND(R6),10$
+	BRW	WRITE_ITEM
+	;
+	; A READ: as much as the segment has, then the next segment.
+	;
+10$:	TSTL	R8
+	BEQL	90$
+	SUBL3	CTX_UNF_POS(R6),CTX_UNF_LEN(R6),R9 ; what the segment has left
+	BNEQ	20$
+	BITL	#S_LAST,CTX_UNF_STATE(R6)
+	BNEQ	80$			; the record's end
+	MOVL	#SEG_MIDDLE,R0		; a segment after the first
+	BSBW	GET_SEGMENT
+	BLBC	R0,90$
+	BRB	10$
+20$:	CMPL	R9,R8
+	BLEQ	25$
+	MOVL	R8,R9
+25$:	ADDL3	CTX_RECP(R6),CTX_UNF_POS(R6),R1
+	MOVC3	R9,(R1),(R7)		; R3 is past the bytes moved to
+	MOVL	R3,R7
+	ADDL2	R9,CTX_UNF_POS(R6)
+	SUBL2	R9,R8
+	BRB	10$
+80$:	MOVL	#FOR$_INPSTAREQ,CTX_STATUS(R6)
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+	;
+	; A WRITE: as much as fits, then a full segment written, if the record
+	; may have more.
+	;
+WRITE_ITEM:
+40$:	TSTL	R8
+	BEQL	90$
+	SUBL3	CTX_RECLEN(R6),CTX_UNITMAX(R6),R9 ; the room left
+	BGTR	50$
+	BITL	#S_SEGMENTED,CTX_UNF_STATE(R6)
+	BEQL	70$
+	MOVL	#SEG_FIRST,R0		; the first segment, or one in the middle
+	BITL	#S_WRITTEN,CTX_UNF_STATE(R6)
+	BEQL	45$
+	MOVL	#SEG_MIDDLE,R0
+45$:	BSBW	PUT_SEGMENT
+	BLBC	R0,90$
+	BRB	40$
+50$:	CMPL	R9,R8
+	BLEQ	55$
+	MOVL	R8,R9
+55$:	ADDL3	CTX_RECP(R6),CTX_RECLEN(R6),R1
+	MOVC3	R9,(R7),(R1)		; R1 is past the bytes moved from
+	MOVL	R1,R7
+	ADDL2	R9,CTX_RECLEN(R6)
+	SUBL2	R9,R8
+	BRB	40$
+70$:	MOVL	#FOR$_OUTSTAOVE,CTX_STATUS(R6)
+	TSTB	CTX_REWRITE(R6)
+	BEQL	90$
+	MOVL	#FOR$_TOOMANREC,CTX_STATUS(R6)
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; FTN$$UNF_END(context)
+;
+; Ends an unformatted statement that hasn't failed: a WRITE writes its record,
+; or its last segment; a READ passes over the segments its items left.
+;
+	.ENTRY	FTN$$UNF_END,ALL_MASK
+	MOVL	4(AP),R6
+	TSTL	CTX_STATUS(R6)
+	BEQL	5$
+	CMPL	CTX_STATUS(R6),#FOR$_OUTSTAOVE
+	BNEQ	90$
+	BLBC	CTX_DIRECT(R6),90$	; a direct record, full: written all the same
+	PUSHL	CTX_RECLEN(R6)
+	PUSHL	CTX_RECP(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BRB	90$
+5$:	BLBC	CTX_KIND(R6),50$
+	BITL	#S_SEGMENTED,CTX_UNF_STATE(R6)
+	BEQL	20$
+	MOVL	#SEG_ONLY,R0
+	BITL	#S_WRITTEN,CTX_UNF_STATE(R6)
+	BEQL	10$
+	MOVL	#SEG_LAST,R0
+10$:	BSBW	PUT_SEGMENT
+	BRB	90$
+20$:	PUSHL	CTX_RECLEN(R6)		; a record with no segments
+	PUSHL	CTX_RECP(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,90$
+	MOVL	#FOR$_ERRDURWRI,CTX_STATUS(R6)
+	BRB	90$
+50$:	BITL	#S_LAST,CTX_UNF_STATE(R6)
+	BNEQ	90$
+	MOVL	#SEG_MIDDLE,R0
+	BSBW	GET_SEGMENT
+	BLBS	R0,50$
+90$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; GET_SEGMENT: reads the unit's next record into its buffer, R0 SEG_FIRST if
+; it starts a logical record and SEG_MIDDLE if not. R6 is the context. R0's low
+; bit is clear, the context's status set, if it fails. Changes R0 to R2.
+;
+GET_SEGMENT:
+	MOVL	R0,R2
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#1,FTN$$UNIT_GET	; FTN_UNITS: R1 the record's length
+	BLBS	R0,10$
+	MOVL	R0,CTX_STATUS(R6)
+	BRB	85$
+10$:	MOVL	R1,CTX_UNF_LEN(R6)
+	CLRL	CTX_UNF_POS(R6)
+	BITL	#S_SEGMENTED,CTX_UNF_STATE(R6)
+	BNEQ	20$
+	BISL2	#S_LAST,CTX_UNF_STATE(R6) ; a record of one RMS record
+	BRB	90$
+20$:	BLBS	R2,25$
+	MOVL	CTX_STREAM(R6),R0	; not a new record: counted once
+	DECL	UB_RECORDS(R0)
+25$:	CMPL	R1,#SEGMENT_WORD
+	BLSSU	80$
+	MOVZWL	@CTX_RECP(R6),R0	; the control word
+	CMPL	R0,#SEG_ONLY
+	BGTRU	80$
+	XORL3	R0,R2,R1		; a first segment exactly where one goes
+	BLBS	R1,80$
+	BICL2	#S_LAST,CTX_UNF_STATE(R6)
+	BBC	#1,R0,30$
+	BISL2	#S_LAST,CTX_UNF_STATE(R6)
+30$:	MOVL	#SEGMENT_WORD,CTX_UNF_POS(R6)
+	BRB	90$
+80$:	MOVL	#FOR$_SEGRECFOR,CTX_STATUS(R6)
+85$:	CLRL	R0
+	RSB
+90$:	MOVL	#1,R0
+	RSB
+
+;
+; PUT_SEGMENT: writes the record in the unit's buffer as a segment, its
+; control word R0. R6 is the context. R0's low bit is clear, the context's
+; status set, if it fails. Changes R0 to R2.
+;
+PUT_SEGMENT:
+	MOVL	R0,R2
+	MOVW	R0,@CTX_RECP(R6)
+	PUSHL	CTX_RECLEN(R6)
+	PUSHL	CTX_RECP(R6)
+	PUSHL	CTX_STREAM(R6)
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,10$
+	MOVL	#FOR$_ERRDURWRI,CTX_STATUS(R6)
+	CLRL	R0
+	RSB
+10$:	BBS	#1,R2,20$		; the record's end: it counts
+	MOVL	CTX_STREAM(R6),R0
+	DECL	UB_RECORDS(R0)
+20$:	BISL2	#S_WRITTEN,CTX_UNF_STATE(R6)
+	MOVL	#SEGMENT_WORD,CTX_RECLEN(R6)
+	MOVL	#1,R0
+	RSB
+
+	.END

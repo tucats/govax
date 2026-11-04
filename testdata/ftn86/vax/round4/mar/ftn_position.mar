@@ -1,0 +1,224 @@
+	.TITLE	FTN_POSITION - FTNRTL's REWIND, BACKSPACE, and ENDFILE
+	.IDENT	/V1.0/
+;
+; The statements that move a unit's place in its file (the 1988 VAX FORTRAN
+; Language Reference Manual, 9.4 to 9.6) are one call each, by the compiler
+; (docs/PHASE-81 - FORTRAN files.md, Decision 4):
+;
+;	FTN$REWIND(control block, unit)
+;	FTN$BACKSPACE(control block, unit)
+;	FTN$ENDFILE(control block, unit)
+;
+; Each is a statement like any other: it has a context (FTN_STATEMENT), and ends
+; in FTN$IO_END, which returns the status in R0 or signals the failure. The rules
+; are VMS's FORTRAN run-time library's, from testdata/for81's runs and the trials
+; in the phase doc's subtask 6:
+;
+;	REWIND		A unit not connected: nothing. A $REWIND, whose RMS$_IOP
+;			(a terminal, a process-permanent file) doesn't matter.
+;	BACKSPACE	A unit not connected: nothing. RMS can't go back a record
+;			in a file of variable-length records, so this is the
+;			manual's way, a $REWIND and then a $GET for each record
+;			before the one to go back to. So the unit's record count
+;			says where it is, and a read that met the end of the file
+;			added nothing to it. On a unit of segmented records, a
+;			record is its segments to the last (FTN_UNFORMATTED).
+;	ENDFILE		A unit not connected is connected, to a file with no
+;			carriage control and no form yet. A record of one byte,
+;			^Z, which a READ of any unit takes for an end of file
+;			(FTN$$UNIT_GET).
+;
+; Each takes the unit's current record away (FTN_UNITS), as the 1988 LRM's 7.4
+; says any statement does; ENDFILE's write does it in FTN$$UNIT_PUT.
+;
+; None of them works on a unit with direct or keyed access, or on a file that
+; isn't sequential. BACKSPACE doesn't work on a device that isn't file-oriented,
+; which a process-permanent file's FAB says it isn't, or on a file opened with
+; ACCESS='APPEND' that was already there, until a REWIND says where it is: the
+; unit has no count of the records before the end. ENDFILE doesn't work on
+; fixed-length records, or on an unformatted file that isn't segmented.
+;
+; VMS's failures of BACKSPACE carry a second condition, FTN$IO_END's CTX_REASON.
+; A refusal reports RMS's status from the RAB if the last operation failed.
+;
+	$DEVDEF
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+	$SSDEF
+
+UB_OPEN		= 0			; A unit's block (FTN_UNITS)
+UB_STS		= 8
+UB_RECORDS	= 16
+UB_RECP		= 24
+UB_RECSIZE	= 28
+UB_FORM		= 36
+UB_ACCESS	= 37
+UB_SEGMENTED	= 42
+UB_APPENDED	= 43
+UB_FAB		= 76
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_CURRENT	= 620+36
+
+CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
+CTX_REASON	= 500
+
+ACCESS_DIRECT	= 1
+ACCESS_KEYED	= 4
+FORM_UNFORMATTED = 2
+
+OPEN_ENDFILE	= 2			; FTN$$UNIT_OPEN's: no carriage control, no form
+
+FOR$_REWERR	= ^X001880A4		; FORRTL's condition values, with
+FOR$_BACERR	= ^X001880BC		;  their severities
+FOR$_ENDFILERR	= ^X0018810C
+FOR$_NOTFOD	= ^X00188844		; BACKSPACE's reasons: not by the names
+FOR$_NOBACK	= ^X0018884C		;  VMS gives them, which aren't known
+
+	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
+
+END_RECORD:	.BYTE	^X1A		; ENDFILE's record
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+ALL_MASK	= ^M<R2,R3,R4,R5,R6,R7,R8,R9>
+
+;
+; START: begins the statement. R9 is the context, R7 the unit's block, R6 its
+; RAB. R0's low bit is clear if the statement has failed already.
+;
+START:	PUSHL	4(AP)			; the control block
+	PUSHL	16(FP)			; the user PC, saved in this frame
+	PUSHL	8(FP)			;  and its AP
+	PUSHL	12(FP)			;  and FP
+	PUSHL	8(AP)			; the unit
+	CALLS	#5,FTN$$STMT_FILE	; FTN_STATEMENT
+	MOVL	R0,R9
+	MOVL	R1,R7
+	MOVAB	UB_RAB(R7),R6
+	CLRL	R0
+	TSTL	CTX_STATUS(R9)
+	BNEQ	10$
+	MOVL	#SS$_NORMAL,R0
+10$:	RSB
+
+;
+; RANDOM: the Z bit clear if the unit has direct or keyed access, or a file that
+; isn't sequential. These have no place to move.
+;
+RANDOM:	CMPB	UB_ACCESS(R7),#ACCESS_DIRECT
+	BEQL	80$
+	CMPB	UB_ACCESS(R7),#ACCESS_KEYED
+	BEQL	80$
+	TSTB	UB_FAB+FAB$B_ORG(R7)
+	RSB
+80$:	CLRL	R0			; R0 isn't 0: the Z bit clear
+	INCL	R0
+	RSB
+
+;
+; FTN$REWIND(control block, unit)
+;
+	.ENTRY	FTN$REWIND,ALL_MASK
+	BSBW	START
+	BLBC	R0,1$
+	BLBS	UB_OPEN(R7),2$
+1$:	BRW	END
+2$:	CLRB	UB_CURRENT(R7)		; no current record after
+	BSBW	RANDOM
+	BNEQ	80$
+	$REWIND	RAB=R6
+	BLBS	R0,10$
+	CMPL	R0,#RMS$_IOP
+	BNEQ	80$
+10$:	CLRL	UB_RECORDS(R7)
+	CLRB	UB_APPENDED(R7)
+	BRW	END
+80$:	MOVL	#FOR$_REWERR,R0
+	BRW	REFUSED
+
+;
+; FTN$BACKSPACE(control block, unit)
+;
+	.ENTRY	FTN$BACKSPACE,ALL_MASK
+	BSBW	START
+	BLBC	R0,1$
+	BLBS	UB_OPEN(R7),2$
+1$:	BRW	END
+2$:	CLRB	UB_CURRENT(R7)
+	MOVL	#FOR$_NOBACK,CTX_REASON(R9)
+	BSBW	RANDOM
+	BNEQ	80$
+	TSTB	UB_APPENDED(R7)
+	BNEQ	80$
+	MOVL	#FOR$_NOTFOD,CTX_REASON(R9)
+	BBC	#DEV$V_FOD,UB_FAB+FAB$L_DEV(R7),80$
+	CLRL	CTX_REASON(R9)
+	$REWIND	RAB=R6
+	BLBC	R0,80$
+	;
+	; R8 counts the records to read: those before the one to go back to.
+	;
+	SUBL3	#1,UB_RECORDS(R7),R8
+	BGEQ	10$
+	CLRL	R8
+10$:	MOVL	R8,UB_RECORDS(R7)
+	MOVL	UB_RECP(R7),RAB$L_UBF(R6)
+	MOVW	UB_RECSIZE(R7),RAB$W_USZ(R6)
+20$:	DECL	R8
+	BLSS	30$
+25$:	$GET	RAB=R6
+	BLBS	R0,27$
+	CMPL	R0,#RMS$_RTB		; a record too long to hold is still passed
+	BEQL	20$
+	BRB	80$
+27$:	BLBC	UB_SEGMENTED(R7),20$
+	CMPW	RAB$W_RSZ(R6),#2
+	BLSSU	20$			; ENDFILE's record, which has no segments
+	BBS	#1,@UB_RECP(R7),20$	; a record's last segment
+	BRB	25$			; more of the same record
+30$:	BRW	END
+80$:	MOVL	#FOR$_BACERR,R0
+	BRW	REFUSED
+
+;
+; FTN$ENDFILE(control block, unit)
+;
+	.ENTRY	FTN$ENDFILE,ALL_MASK
+	BSBW	START
+	BLBS	R0,1$
+	BRW	END
+1$:	BLBS	UB_OPEN(R7),10$
+	PUSHL	#OPEN_ENDFILE
+	PUSHL	R7
+	CALLS	#2,FTN$$UNIT_OPEN	; FTN_UNITS
+	BLBS	R0,10$
+	BRW	FAILED
+10$:	BSBW	RANDOM
+	BNEQ	80$
+	CMPB	UB_FAB+FAB$B_RFM(R7),#FAB$C_FIX
+	BEQL	80$
+	CMPB	UB_FORM(R7),#FORM_UNFORMATTED
+	BNEQ	20$
+	BLBC	UB_SEGMENTED(R7),80$
+20$:	PUSHL	#1
+	PUSHAB	END_RECORD
+	PUSHL	R7
+	CALLS	#3,FTN$$UNIT_PUT	; FTN_UNITS
+	BLBS	R0,END
+80$:	MOVL	#FOR$_ENDFILERR,R0
+
+;
+; REFUSED: the statement's error is the condition in R0, with RMS's status from
+; the RAB if the last operation on it failed, and none if not.
+;
+REFUSED:
+	CLRQ	UB_STS(R7)
+	BLBS	RAB$L_STS(R6),FAILED
+	MOVL	RAB$L_STS(R6),UB_STS(R7)
+	MOVL	RAB$L_STV(R6),UB_STS+4(R7)
+FAILED:	MOVL	R0,CTX_STATUS(R9)
+END:	CALLS	#0,FTN$IO_END		; FTN_STATEMENT: R0 the status, or signaled
+	RET
+
+	.END
