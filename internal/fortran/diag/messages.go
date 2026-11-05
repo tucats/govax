@@ -598,7 +598,7 @@ var messages = map[string]kind{
 	"AUTOSAVE":       {Error, "%s is in a SAVE statement, so it can't be AUTOMATIC"},
 	"AUTOINIT":       {Error, "%s has an initial value, so it can't be AUTOMATIC"},
 	"AUTOEQUIVALENT": {Error, "%s is AUTOMATIC, and EQUIVALENCE ties it to %s, which is named in a STATIC statement"},
-	"NMLAUTOMATIC":   {Error, "the AUTOMATIC variable %s can't be in a NAMELIST group"},
+	"ASSOCFRAME":     {Warning, "the associated variable %s is in the frame, which a RETURN gives up while the file stays open"},
 
 	// EXTERNAL's and INTRINSIC's messages (sections 4.7, 4.9).
 	"DUPATTR":      {Error, "%s is %s already"},

@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -388,7 +388,7 @@ it moves to a Phase 90.
    cells, frame alignment (OCTA records under `/ALIGN`), `ir.Check`; frame
    descriptors written whole (Decision 5). Recursive programs without I/O run
    end to end: factorial, Ackermann, mutual recursion, recursive ENTRY.
-5. **Frame addresses in data:** I/O items, arguments, hidden results, dynamic
+5. **Frame addresses in data** (done 2026-11-04)**:** I/O items, arguments, hidden results, dynamic
    strings, internal files, ENCODE/DECODE, KEY= lists, `%DESCR`, adjustable
    arrays; NAMELIST blocks built in the frame (Decision 7, NMLAUTOMATIC withdrawn);
    ASSOCFRAME (Decision 10).
@@ -583,3 +583,32 @@ it moves to a Phase 90.
     name a reentrant routine's frame cells by their symbols, which are displacements, so the
     debugger reads them as addresses (subtask 10). MANUAL.md's paragraph on recursion and HELP
     FORTRAN now say what is NOTIMPL; the full write-up is subtask 13's.
+- **2026-11-04:** Subtask 5, frame addresses in data.
+  - **NAMELIST** (`ir/lowerio.go`'s `namelist`, `namelistCell`; Decision 7): a group with an
+    `Automatic` member has its block in a `NamelistCell` (`$NLname`, one per group), in FTNRTL's
+    layout, which each statement using the group fills in whole: the name's address, the count, and
+    each entity's name and descriptor, the descriptors written by `item` as for any I/O item. The
+    names stay in `$PDATA`. A group of static variables is still a datum in `$PDATA`, so nothing
+    changes for a unit without frame variables. In a reentrant routine the cell is in the frame, by
+    `newCell`; beside AUTOMATIC alone it is in `$LOCAL`, as the author's answer 5 has the compiler's
+    cells.
+  - **NMLAUTOMATIC is withdrawn** (`sema/io.go`, `diag/messages.go`), for AUTOMATIC in any unit, and
+    `notYetReentrant` no longer reports such a group. Only variable format expressions are left in
+    it (subtask 6).
+  - **ASSOCFRAME** (Decision 10; ours, unconfirmed): a warning for an associated variable, OPEN's
+    `ASSOCIATEVARIABLE=` or DEFINE FILE's, that is `Automatic`. `associatedVariable` keeps each in
+    `analyzer.associated`, since statements are analyzed before `recursiveStorage` decides what is in
+    the frame, and `checkAssociated` reports after it. A warning, since a routine that closes the file
+    before returning is correct. A SAVE'd one has no warning.
+  - **The rest of the subtask's list needed no change in the compiler:** I/O items, arguments, hidden
+    results, dynamic strings, internal files, ENCODE and DECODE, KEY= lists, `%DESCR`, and adjustable
+    arrays already go through descriptor cells and blocks that subtask 4 put in the frame. This subtask
+    is what tests them, each with its I/O after the recursive call returns, so shared storage would
+    print the innermost activation's values.
+  - **Tests:** `testdata/fortran/recurio.for`, worked by hand before it ran, both optimizer modes and
+    both paging modes; the goldens `ir/testdata/framenml.for` and `codegen/testdata/framenml.for`;
+    `TestErrors`'s cases for AUTOMATIC in a group and ASSOCFRAME; `TestNotYetReentrant`. The program's
+    first version wrote unit 6 from a function called in a WRITE to unit 6, and FTNRTL rightly stopped
+    it with RECIO_OPE (the 1988 manual's 7.1.2), so the value is computed first.
+    `testdata/ftn86`'s procedure is regenerated with RECURIO, in `ftn86AwaitingVMS` until subtask 12's round.
+  - **Left for later:** recursive I/O at depth and unwinding are subtask 8's.

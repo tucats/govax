@@ -679,7 +679,7 @@ never had.
   `Routine.NewCell`, every cell but `$FCn`; frame descriptors written whole at each
   use, `Descriptor.Fixed`; codegen's spill cells and `cellPlace`; the optimizer's
   `closeUpBoth` and `ChangedByCall` for static locals; `testdata/fortran/recursion.for`);
-  `fortran.notYetReentrant` reports NOTIMPL for a NAMELIST of frame variables and VFEs.
+  subtask 5 (2026-11-04) frame addresses in data (a NAMELIST group with a frame variable is a block each statement fills in, `ir/lowerio.go`'s `namelistCell`; NMLAUTOMATIC withdrawn; the warning ASSOCFRAME; `testdata/fortran/recurio.for`); `fortran.notYetReentrant` reports NOTIMPL for VFEs.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

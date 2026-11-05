@@ -510,8 +510,24 @@ func (a *analyzer) associatedVariable(e ast.Expr) Expr {
 	}
 
 	a.noteAssigned(v)
+	a.associated = append(a.associated, v)
 
 	return v
+}
+
+// checkAssociated warns of each associated variable in the frame, AUTOMATIC or
+// a recursive unit's unsaved local (Decision 10 of docs/PHASE-89 - reentrant
+// FORTRAN.md). FTNRTL keeps the variable's address with the unit, and stores the
+// next record's number there after each direct access statement until the file
+// is closed, whichever routine does the I/O; once the routine that opened it
+// returns, that address is someone else's stack. A warning, not an error: a
+// routine that closes the file before it returns is correct. Ours, unconfirmed.
+func (a *analyzer) checkAssociated() {
+	for _, v := range a.associated {
+		if v.Sym.Automatic {
+			a.report("ASSOCFRAME", v.Pos, v.Sym.Name)
+		}
+	}
 }
 
 // defineFile analyzes DEFINE FILE u(m,n,U,v)[,...] (appendix A.2): each file's

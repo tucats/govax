@@ -102,9 +102,9 @@ func TestRecursiveUnits(t *testing.T) {
 	}
 }
 
-// TestNotYetReentrant checks the NOTIMPLs a recursive unit still has: a NAMELIST
-// group of its frame variables (subtask 5) and variable format expressions (subtask
-// 6). A group of SAVE'd variables is static, and is compiled.
+// TestNotYetReentrant checks the NOTIMPL a recursive unit still has, variable format
+// expressions (subtask 6), and that NAMELIST groups compile, of frame variables or of
+// SAVE'd ones.
 func TestNotYetReentrant(t *testing.T) {
 	got := recursiveUnits(t, false,
 		"      RECURSIVE SUBROUTINE S(N)",
@@ -123,7 +123,7 @@ func TestNotYetReentrant(t *testing.T) {
 		"      END",
 	)
 
-	if want := "4:NOTIMPL 7:NOTIMPL"; got != want {
+	if want := "7:NOTIMPL"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

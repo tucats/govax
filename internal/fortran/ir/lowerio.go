@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/tucats/govax/internal/fortran/sema"
@@ -321,10 +322,16 @@ func (l *lowerer) formatBlock(f *sema.Format) *Mem {
 	return &Mem{Datum: d, T: Byte}
 }
 
-// namelist is the datum holding NAMELIST group n's block: its name, and
-// each entity's name and descriptor, all in the routine's read-only data
-// (a group holds no dummy argument, so each descriptor is a constant).
+// namelist is NAMELIST group n's block: its name, and each entity's name
+// and descriptor. A group holds no dummy argument, so if no entity is in the
+// frame each descriptor is a constant, and the block is a datum in the
+// routine's read-only data; otherwise it is a cell the statement fills in
+// (namelistCell).
 func (l *lowerer) namelist(n *sema.Namelist) *Mem {
+	if slices.ContainsFunc(n.Items, func(s *sema.Symbol) bool { return s.Automatic }) {
+		return l.namelistCell(n)
+	}
+
 	d := l.datum("namelist "+n.Name, func() *Datum {
 		b := &NamelistBlock{Group: n.Name, Name: l.counted(n.Name)}
 
@@ -336,6 +343,47 @@ func (l *lowerer) namelist(n *sema.Namelist) *Mem {
 	})
 
 	return &Mem{Datum: d}
+}
+
+// namelistCell is NAMELIST group n's block, for a group with an entity in the
+// frame (an AUTOMATIC variable, or a recursive unit's unsaved one; Decision 7 of
+// docs/PHASE-89 - reentrant FORTRAN.md): the block FTNRTL takes (namelistBlock's
+// layout, docs/PHASE-80's "The namelist block") in a cell of its own, which each
+// statement that uses the group fills in whole, since an entity's descriptor
+// holds an address only this activation knows. The names stay in read-only
+// data; the cell holds their addresses, the count, and the descriptors'
+// addresses, each descriptor written by item as for any I/O item. In a
+// reentrant routine the cell is in the frame too, so another activation's
+// statement can't change the block under this one's.
+func (l *lowerer) namelistCell(n *sema.Namelist) *Mem {
+	const header, perEntity = 8, 8
+
+	c := l.namelists[n]
+	if c == nil {
+		c = l.newCell("$NL"+n.Name, NamelistCell, Long, header+perEntity*len(n.Items))
+		c.Loop = n.Name
+
+		if l.namelists == nil {
+			l.namelists = map[*sema.Namelist]*Cell{}
+		}
+
+		l.namelists[n] = c
+	}
+
+	store := func(offset int, x Expr) {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: offset, T: Long}, Src: x})
+	}
+
+	store(0, &Addr{&Mem{Datum: l.counted(n.Name), T: Byte}})
+	store(4, LongConst(int32(len(n.Items))))
+
+	for i, s := range n.Items {
+		base := header + perEntity*i
+		store(base, &Addr{&Mem{Datum: l.counted(s.Name), T: Byte}})
+		store(base+4, &Addr{l.item(n.Refs[i])})
+	}
+
+	return &Mem{Cell: c, T: Long}
 }
 
 // counted is the datum holding name as a counted string (.ASCIC): a byte

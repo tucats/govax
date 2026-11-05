@@ -5481,8 +5481,9 @@ output it prints, and programs of several files in its `modules` directory.
   statement forms only: `AUTOMATIC T, K(20)` puts a variable in the routine's stack
   frame, new at each call, with no value until assigned; STATIC, the default, says
   it is in static storage. An AUTOMATIC name can't have an initial value, or be in
-  COMMON, SAVE, or a NAMELIST group. A routine with AUTOMATIC variables isn't
-  reentrant: its temporaries are still static.
+  COMMON or SAVE. It may be in a NAMELIST group, whose block each statement using the
+  group then fills in. A routine with AUTOMATIC variables isn't reentrant: its
+  temporaries are still static (RECURSIVE makes a routine reentrant).
 - **How arguments are passed:** by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
@@ -5679,9 +5680,12 @@ or STATIC (an EQUIVALENCE group goes where any static member goes), its function
 value, and every cell of the compiler's (temporaries, DO counts, descriptors, ENTRY's
 argument cells) but where FTNRTL keeps a FORMAT's parsed form; each entry point
 reserves the frame with one `SUBL2`, and the storage map's heading says `RECURSIVE`.
-A SAVE'd variable or COMMON is one place every activation shares. Not yet in a
-recursive unit (`%FORT-E-NOTIMPL`, docs/PHASE-89): a NAMELIST group of its frame
-variables, and variable format expressions.
+A SAVE'd variable or COMMON is one place every activation shares. A NAMELIST group of
+frame variables has its block in the frame too, filled in by each statement that uses
+it. A file's associated variable (`ASSOCIATEVARIABLE=`, DEFINE FILE's) in the frame
+gets `%FORT-W-ASSOCFRAME`: FTNRTL goes on storing in it until the file is closed,
+after the routine may have returned. Not yet in a recursive unit (`%FORT-E-NOTIMPL`,
+docs/PHASE-89): variable format expressions.
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -6401,7 +6405,8 @@ FORTRAN run-time library, which could be run:
 - AUTOMATIC: a name's EQUIVALENCE group is all in the frame, and can't have a member
   in a block, SAVE, STATIC, or with an initial value. A SAVE with no list leaves
   AUTOMATIC names in the frame. Both AUTOMATIC and STATIC are allowed in a main
-  program. A variable given to `ASSOCIATEVARIABLE=` is the program's to keep alive.
+  program. A variable given to `ASSOCIATEVARIABLE=` is the program's to keep alive;
+  one in the frame gets the warning `ASSOCFRAME` (ours).
   A frame too large for the stack with paging off ends the image with `SS$_ACCVIO`
   and no message; with paging on the stack grows.
 - Directives: a file is one module, so the first IDENT is the file's, where VAX

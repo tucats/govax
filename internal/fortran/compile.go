@@ -354,20 +354,13 @@ func vmsTime(t time.Time) string {
 }
 
 // notYetReentrant reports NOTIMPL for what a recursive unit can't have yet
-// (docs/PHASE-89 - reentrant FORTRAN.md): a NAMELIST group of variables in its
-// frame, whose block in read-only data holds their descriptors (subtask 5), and a
-// FORMAT with variable format expressions, whose routine FTNRTL calls with no way to
-// find this activation's frame (subtask 6).
+// (docs/PHASE-89 - reentrant FORTRAN.md): a FORMAT with variable format
+// expressions, whose routine FTNRTL calls with no way to find this activation's
+// frame (subtask 6).
 func notYetReentrant(prog *sema.Program, messages *diag.List) {
 	for _, u := range prog.Units {
 		if !u.Recursive {
 			continue
-		}
-
-		for _, n := range u.Namelists {
-			if slices.ContainsFunc(n.Items, func(s *sema.Symbol) bool { return s.Automatic }) {
-				messages.Report("NOTIMPL", n.Pos, "a NAMELIST group of a RECURSIVE subprogram's unsaved variables")
-			}
 		}
 
 		labels := slices.Sorted(maps.Keys(u.Formats))

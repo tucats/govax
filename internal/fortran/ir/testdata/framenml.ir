@@ -1,0 +1,92 @@
+routine R subroutine
+  param N       L  argument 1
+  cell  K       L  frame+0    variable K
+  cell  A       L  frame+4    array A, 12 bytes
+  cell  L       L  $LOCAL+0    variable L
+  cell  $NLG    L  frame+16   NAMELIST G's block
+  cell  $D1     L  frame+40   descriptor L S 4
+  cell  $D2     L  frame+48   descriptor L A 4 (1:3)
+  cell  $T1     L  frame+80   temporary
+  $LOCAL is 4 bytes
+  the frame is 84 bytes
+  datum $IO1    control
+  datum $K1     text 'G'
+  datum $K2     text 'K'
+  datum $K3     text 'A'
+  datum $K4     text 'H'
+  datum $K5     text 'L'
+  datum $D3     descriptor L S 4 L
+  datum $NH     namelist H $K4 $K5:$D3
+B1:
+  ; line 10
+  assign $NLG = addr($K1)
+  assign $NLG+4 = 2
+  assign $NLG+8 = addr($K2)
+  assign $D1 = 17301508
+  assign $D1+4 = addr(K)
+  assign $NLG+12 = addr($D1)
+  assign $NLG+16 = addr($K3)
+  assign $D2 = 67633156
+  assign $D2+8 = 31457280
+  assign $D2+12 = 12
+  assign $D2+20 = 3
+  assign $D2+24 = 1
+  assign $D2+28 = 3
+  assign $D2+4 = addr(A)
+  assign $D2+16 = addr(A-4)
+  assign $NLG+20 = addr($D2)
+  call FTN$READ_SN(ref $IO1, val 1, ref $NLG)
+  call FTN$IO_END()
+  ; line 11
+  branch gt.L(@N, 1) B2 B3
+B2:
+  assign $T1 = sub.L(@N, 1)
+  call R(ref $T1)
+  jump B3
+B3:
+  ; line 12
+  assign $NLG = addr($K1)
+  assign $NLG+4 = 2
+  assign $NLG+8 = addr($K2)
+  assign $D1 = 17301508
+  assign $D1+4 = addr(K)
+  assign $NLG+12 = addr($D1)
+  assign $NLG+16 = addr($K3)
+  assign $D2 = 67633156
+  assign $D2+8 = 31457280
+  assign $D2+12 = 12
+  assign $D2+20 = 3
+  assign $D2+24 = 1
+  assign $D2+28 = 3
+  assign $D2+4 = addr(A)
+  assign $D2+16 = addr(A-4)
+  assign $NLG+20 = addr($D2)
+  call FTN$WRITE_SN(ref $IO1, val 6, ref $NLG)
+  call FTN$IO_END()
+  ; line 13
+  call FTN$WRITE_SN(ref $IO1, val 6, ref $NH)
+  call FTN$IO_END()
+  ; line 14
+  return
+routine U subroutine
+  cell  Y       F  frame+0    variable Y
+  cell  $NLV    L  $LOCAL+0    NAMELIST V's block
+  cell  $D1     L  $LOCAL+16   descriptor F S 4
+  $LOCAL is 24 bytes
+  the frame is 4 bytes
+  datum $IO1    control
+  datum $K1     text 'V'
+  datum $K2     text 'Y'
+B1:
+  ; line 19
+  assign Y = 1.0
+  ; line 20
+  assign $NLV = addr($K1)
+  assign $NLV+4 = 1
+  assign $NLV+8 = addr($K2)
+  assign $D1+4 = addr(Y)
+  assign $NLV+12 = addr($D1)
+  call FTN$WRITE_SN(ref $IO1, val 6, ref $NLV)
+  call FTN$IO_END()
+  ; line 21
+  return

@@ -1,0 +1,154 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for R, a RECURSIVE subroutine
+;   N     INTEGER      argument 1  @R.N(AP)
+;   K     INTEGER      FP-84       R.K(FP)
+;   A     INTEGER (3)  FP-80       R.A(FP)
+;   L     INTEGER      $LOCAL+0    R.L
+;
+R.N = 4					; N is argument 1
+R.K = -84				; K, in the frame
+R.A = -80				; A, INTEGER (3), in the frame
+R.$NLG = -68				; NAMELIST G's block, written whole at each use, in the frame
+R.$D1 = -44				; a descriptor, written whole at each use, in the frame
+R.$D2 = -36				; a descriptor, written whole at each use, in the frame
+R.$T1 = -4				; temporary, in the frame
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+R.L:	.BLKL	1			; L
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+R.$IO1:	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+R.$D3:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_L,DSC$K_CLASS_S
+	.ADDRESS R.L
+R.$NH:	.ADDRESS R.$K4			; NAMELIST /H/'s block: its name
+	.LONG	1			; its entities
+	.ADDRESS R.$K5,R.$D3		; L
+R.$K1:	.ASCII	<1>/G/
+R.$K2:	.ASCII	<1>/K/
+R.$K3:	.ASCII	<1>/A/
+R.$K4:	.ASCII	<1>/H/
+R.$K5:	.ASCII	<1>/L/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C Phase 89, subtask 5: a NAMELIST group with a variable in the frame is a block
+;    2  C the statement fills in, in a cell (in the frame, in a recursive unit), each
+;    3  C entity's descriptor written whole; a group of static variables is still a
+;    4  C datum, as a SAVE'd one shows.
+;    5        RECURSIVE SUBROUTINE R(N)
+	.ENTRY	R,^M<>
+	SUBL2	#84,SP			; this activation's own storage
+;    6        INTEGER N, K, A(3), L
+;    7        SAVE L
+;    8        NAMELIST /G/ K, A
+;    9        NAMELIST /H/ L
+;   10        READ (1, G)
+	MOVAB	R.$K1,R.$NLG(FP)
+	MOVL	#2,R.$NLG+4(FP)
+	MOVAB	R.$K2,R.$NLG+8(FP)
+	MOVL	#17301508,R.$D1(FP)	; the descriptor's length, 4, type, and class
+	MOVAL	R.K(FP),R.$D1+4(FP)
+	MOVAL	R.$D1(FP),R.$NLG+12(FP)
+	MOVAB	R.$K3,R.$NLG+16(FP)
+	MOVL	#67633156,R.$D2(FP)	; the descriptor's length, 4, type, and class
+	MOVL	#31457280,R.$D2+8(FP)	; its flags and dimensions
+	MOVL	#12,R.$D2+12(FP)	; the array's size in bytes
+	MOVL	#3,R.$D2+20(FP)		; dimension 1's multiplier
+	MOVL	#1,R.$D2+24(FP)		; dimension 1's lower bound
+	MOVL	#3,R.$D2+28(FP)		; dimension 1's upper bound
+	MOVAL	R.A(FP),R.$D2+4(FP)
+	MOVAL	R.A-4(FP),R.$D2+16(FP)
+	MOVAL	R.$D2(FP),R.$NLG+20(FP)
+	PUSHAL	R.$NLG(FP)
+	PUSHL	#1
+	PUSHAB	R.$IO1
+	CALLS	#3,G^FTN$READ_SN
+	CALLS	#0,G^FTN$IO_END
+;   11        IF (N .GT. 1) CALL R(N - 1)
+	CMPL	@R.N(AP),#1
+	BGTR	R.$2
+	BRW	R.$1
+R.$2:
+	SUBL3	#1,@R.N(AP),R.$T1(FP)
+	PUSHAL	R.$T1(FP)
+	CALLS	#1,G^R
+R.$1:
+;   12        WRITE (6, G)
+	MOVAB	R.$K1,R.$NLG(FP)
+	MOVL	#2,R.$NLG+4(FP)
+	MOVAB	R.$K2,R.$NLG+8(FP)
+	MOVL	#17301508,R.$D1(FP)	; the descriptor's length, 4, type, and class
+	MOVAL	R.K(FP),R.$D1+4(FP)
+	MOVAL	R.$D1(FP),R.$NLG+12(FP)
+	MOVAB	R.$K3,R.$NLG+16(FP)
+	MOVL	#67633156,R.$D2(FP)	; the descriptor's length, 4, type, and class
+	MOVL	#31457280,R.$D2+8(FP)	; its flags and dimensions
+	MOVL	#12,R.$D2+12(FP)	; the array's size in bytes
+	MOVL	#3,R.$D2+20(FP)		; dimension 1's multiplier
+	MOVL	#1,R.$D2+24(FP)		; dimension 1's lower bound
+	MOVL	#3,R.$D2+28(FP)		; dimension 1's upper bound
+	MOVAL	R.A(FP),R.$D2+4(FP)
+	MOVAL	R.A-4(FP),R.$D2+16(FP)
+	MOVAL	R.$D2(FP),R.$NLG+20(FP)
+	PUSHAL	R.$NLG(FP)
+	PUSHL	#6
+	PUSHAB	R.$IO1
+	CALLS	#3,G^FTN$WRITE_SN
+	CALLS	#0,G^FTN$IO_END
+;   13        WRITE (6, H)
+	PUSHAB	R.$NH
+	PUSHL	#6
+	PUSHAB	R.$IO1
+	CALLS	#3,G^FTN$WRITE_SN
+	CALLS	#0,G^FTN$IO_END
+;   14        END
+	RET
+
+; Storage map for U, a subroutine
+;   Y     REAL  FP-4   U.Y(FP)
+;
+U.Y = -4				; Y, in the frame
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+U.$NLV:	.BLKL	4			; NAMELIST V's block, written whole at each use
+U.$D1:
+	.WORD	4			; length
+	.BYTE	DSC$K_DTYPE_F,DSC$K_CLASS_S
+	.LONG	0			; set when the descriptor is used
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+U.$IO1:	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+U.$K1:	.ASCII	<1>/V/
+U.$K2:	.ASCII	<1>/Y/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;   15        SUBROUTINE U
+	.ENTRY	U,^M<>
+	SUBL2	#4,SP			; the frame's AUTOMATIC variables
+;   16        REAL Y
+;   17        AUTOMATIC Y
+;   18        NAMELIST /V/ Y
+;   19        Y = 1.0
+	MOVL	#^X00004080,U.Y(FP)	; 1.0
+;   20        WRITE (6, V)
+	MOVAB	U.$K1,U.$NLV
+	MOVL	#1,U.$NLV+4
+	MOVAB	U.$K2,U.$NLV+8
+	MOVAL	U.Y(FP),U.$D1+4
+	MOVAL	U.$D1,U.$NLV+12
+	PUSHAL	U.$NLV
+	PUSHL	#6
+	PUSHAB	U.$IO1
+	CALLS	#3,G^FTN$WRITE_SN
+	CALLS	#0,G^FTN$IO_END
+;   21        END
+	RET
+
+	.END

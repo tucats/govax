@@ -397,6 +397,11 @@ type analyzer struct {
 	// variable and array of the unit that can be saved (section 4.14).
 	saveAll bool
 
+	// associated are the unit's files' associated variables (OPEN's
+	// ASSOCIATEVARIABLE=, DEFINE FILE's last), each checked for a place in
+	// the frame once the storage rule has run (checkAssociated).
+	associated []*Var
+
 	// volatileStmts are the unit's VOLATILE statements, and storageStmts its
 	// AUTOMATIC and STATIC statements, read when every declaration is known
 	// (storage.go).
@@ -485,6 +490,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.reportExtensions(au)
 	a.passedLengths()
 	a.recursiveStorage()
+	a.checkAssociated()
 	a.layout()
 	a.recordInitials()
 	a.checkAutomaticInitials()

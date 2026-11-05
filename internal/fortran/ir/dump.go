@@ -190,6 +190,8 @@ func cellNote(c *Cell) string {
 		return "the routine's FP"
 	case KeyListCell:
 		return "an OPEN's list of keys"
+	case NamelistCell:
+		return "NAMELIST " + c.Loop + "'s block"
 	}
 
 	return "temporary"

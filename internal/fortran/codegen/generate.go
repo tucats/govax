@@ -869,6 +869,8 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "the routine's FP, for its variable format expressions"
 	case ir.KeyListCell:
 		return "the keys of an OPEN's KEY=, for FTNRTL"
+	case ir.NamelistCell:
+		return "NAMELIST " + c.Loop + "'s block, written whole at each use"
 	case ir.DescriptorCell:
 		if c.Dummy != "" {
 			return c.Dummy + "'s descriptor, filled in at each entry point"

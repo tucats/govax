@@ -1,0 +1,35 @@
+$LEVEL
+DEPTH   =           1,
+SQ      = 2*1
+$END
+$LEVEL
+DEPTH   =           2,
+SQ      =           4,           8
+$END
+$LEVEL
+DEPTH   =           3,
+SQ      =           9,          27
+$END
+NMLIN 1: K = 3, L = 9
+NMLIN 2: K = 2, L = 4
+NMLIN 3: K = 1, L = 1
+$AUTO
+Y       =   2.500000    
+$END
+TRI: "     1     0"
+TRI: "     2     1"
+TRI: "     3     3"
+TRI(3) =  6
+CODES 1:  11
+CODES 2:  22
+CODES 3:  33
+HALVES 1:  5
+HALVES 2:  5  4
+HALVES 5:  5  4  3  2  1
+SHOUT 1: ABXX     abxx!
+SHOUT 2: ABX      abx!
+SHOUT 3: AB       ab!
+KEYS: RECKEY1.DAT 100 1
+KEYS: RECKEY2.DAT 200 2
+KEYS: RECKEY3.DAT 300 3
+  $STATUS == "%X00000001"

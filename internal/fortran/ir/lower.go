@@ -91,6 +91,10 @@ type lowerer struct {
 	// and texts ($K), descriptors ($D), control blocks ($IO), and DO
 	// loops (the $C and $S cells).
 	temps, konsts, descs, controls, loops, keyLists int
+
+	// namelists are the cells of the NAMELIST groups whose blocks the
+	// statements fill in (namelistCell), one per group.
+	namelists map[*sema.Namelist]*Cell
 }
 
 // lowerUnit lowers one program unit.

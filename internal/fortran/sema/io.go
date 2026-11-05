@@ -254,8 +254,6 @@ func (a *analyzer) checkNamelists() {
 			switch {
 			case s.Dummy != 0:
 				a.report("NMLDUMMY", n.Pos, s.Name)
-			case s.Automatic:
-				a.report("NMLAUTOMATIC", n.Pos, s.Name)
 			case s.Struct != nil:
 				a.report("NMLITEM", n.Pos, s.Name, a.describe(s))
 			case s.External || (s.Class != Variable && s.Class != Array):
