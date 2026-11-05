@@ -96,3 +96,48 @@ func TestDepositInScope(t *testing.T) {
 		}
 	}
 }
+
+// TestFortranFrameCells: in a RECURSIVE unit the compiler's own cells are in
+// the frame, so the debugger must find a dummy reached through ENTRY's argument
+// cell, and an adjustable array's bounds in its descriptor, as displacements from
+// the activation's FP rather than as addresses. FILL is entered through ENTRY
+// START, which makes its dummies go through cells; each activation has an array
+// of its own length, N, and calls itself with N-1. Stopped at the innermost
+// (N = 1), the outer activations' arrays have their own bounds and contents.
+func TestFortranFrameCells(t *testing.T) {
+	const source = `      PROGRAM FC
+      INTEGER A(3), B(2), C(1)
+      CALL START(3, A, B, C)
+      END
+
+      RECURSIVE SUBROUTINE FILL(N, X, Y, Z)
+      INTEGER N, X(N), Y(*), Z(*), I
+      RETURN
+      ENTRY START(N, X, Y, Z)
+      DO I = 1, N
+          X(I) = 10 * N + I
+      END DO
+      IF (N .GT. 1) THEN
+          CALL START(N - 1, Y, Z, Z)
+      END IF
+   10 CONTINUE
+      END
+`
+	c := fortranSessionOf(t, source, "FILL.L10")
+
+	dispatch(t, c, "SET RADIX DECIMAL")
+
+	for _, step := range []struct{ line, output string }{
+		{"EXAMINE N", "FC\\FILL.N:  1\n"},
+		{"EXAMINE X", "FC\\FILL.X(1):  11\n"},
+		{"SET SCOPE 1", ""},
+		{"EXAMINE N", "FC\\FILL.N:  2\n"},
+		{"EXAMINE X", "FC\\FILL.X(1):  21\nFC\\FILL.X(2):  22\n"},
+		{"SET SCOPE 2", ""},
+		{"EXAMINE X", "FC\\FILL.X(1):  31\nFC\\FILL.X(2):  32\nFC\\FILL.X(3):  33\n"},
+	} {
+		if got := variableOutput(t, c, step.line); got != step.output {
+			t.Errorf("%s: got %q, want %q", step.line, got, step.output)
+		}
+	}
+}

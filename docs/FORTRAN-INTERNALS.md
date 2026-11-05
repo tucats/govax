@@ -26,7 +26,8 @@ FIND, REWRITE, DELETE, and UNLOCK; and DEC's data extensions, structures and
 records, typeless constants, VOLATILE, AUTOMATIC, STATIC, the CDEC$ directives,
 and `/ALIGN`; and what a program needs to use VMS: definition modules, null
 arguments, handlers, ASTs, and the system subroutines; and indexed files, by
-every key (section 22). It has no DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
+every key (section 22); and recursive routines, safe for ASTs and handlers to enter
+too (section 23). It has no DICTIONARY. A real program, DUNGEON, builds and plays with it, and its
 output has run on a real VAX (section 20).
 
 The tour follows one small program through every pass (section 1), then
@@ -38,6 +39,7 @@ instructions (section 11), and a fourth for control flow and subprograms
 then how the compiler is tested, what it tells the debugger, its listings and
 run-time checks, and what a real program and a real VAX found. Section 21 is a
 map of the files, with what building this one suggests about building another.
+Sections 22 and 23 are later additions: indexed files, and recursive routines.
 Every dump and MACRO listing before section 16
 is `/NOOPTIMIZE`'s, the compiler's plain code, which is what the earlier chapters
 explain; `/OPTIMIZE` is the command's default.
@@ -1413,7 +1415,8 @@ addresses it was given there before going to its statements:
 
 From there `@SCALE.$A3` is N, whichever door came in, and the body needs
 only `argumentPlace` to change. That is why the static storage matters: a
-recursive language couldn't keep these in one place. A unit with no ENTRY
+recursive language couldn't keep these in one static place (a recursive unit keeps
+them in its frame, section 23). A unit with no ENTRY
 keeps `@n(AP)`, so nothing is paid for what isn't used. Every entry point
 has one mask, since the body is one; the mask is computed after the whole
 routine is generated.
@@ -1654,7 +1657,8 @@ format expression is called *by FTNRTL*, so FP isn't the routine's there. FTNRTL
 FP of the routine doing the I/O when the statement began, and passes it, and the expression's
 code reaches the variable as a displacement from that, in R11, which the routine keeps from
 its other uses (`LOCALS.T(R11)`). Note what this doesn't do: the compiler's own temporaries are
-still in `$LOCAL`, so a routine with AUTOMATIC variables still isn't reentrant.
+still in `$LOCAL`, so a routine with AUTOMATIC variables still isn't reentrant; a RECURSIVE
+one is (section 23).
 
 ### Directives
 
@@ -2320,7 +2324,8 @@ the manual's section 5.6.3 says the list "does not affect statement execution".
 range, so that EQUIVALENCE's overlaps and a union's fields are just byte ranges that conflict
 (Decision 7). `effects.go` says what a statement reads and writes and what a call may change: an
 address-taken local, COMMON, or a dummy. Other locals survive calls, and that rests on a rule of
-the language: section 6.2 forbids recursion, so a callee can't reach them.
+the language: section 6.2 forbids recursion, so a callee can't reach them. (A RECURSIVE unit's
+static locals are the exception, section 23.)
 
 ### What correct allows
 
@@ -2616,7 +2621,8 @@ one list, `ftn86VMSDifferences`, each with its reason: a service govax lacks, a 
 | Math routines | `internal/mthrtl`, Go, not MACRO |
 | Programs and expected output | `testdata/fortran`, `testdata/for80`, `testdata/for81`, `testdata/for88`, `testdata/ftn86` |
 | Indexed files under FTNRTL | `ftn_open.mar`'s `KEYS`, `ftn_keyed.mar`, `ftn_units.mar`'s `UB_KEYED`; RMS's `internal/rms/indexed*.go`, `internal/isam` |
-| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, and `PHASE-88` for indexed files, each with its decisions and log |
+| Recursive storage: the rule; one constructor for cells | `sema/storage.go`'s `recursiveStorage`; `ir/lower.go`'s `Routine.NewCell` |
+| Why something is as it is | `docs/PHASE-74` to `PHASE-86`, `PHASE-88` for indexed files, and `PHASE-89` for recursion, each with its decisions and log |
 
 If you're writing a compiler for this machine, this one's history suggests a few things:
 
@@ -2664,3 +2670,149 @@ VMS's RMS walking it in order, which `vms88w.mar` did, showed 65 records of 2,00
 section 20's again, one level down: a checker built from your own reading of the format agrees with
 your writer, and only the real reader of the format says what the format is.
 
+
+## 23. Recursion and reentrancy (Phase 89)
+
+Section 12 said FORTRAN's storage is static and it has no recursion, and much of the compiler
+leans on that: anything a routine must remember between its statements, a temporary, a DO
+count, ENTRY's argument cells, a descriptor, can be a cell of `$LOCAL`, its address known when
+the code is assembled. Phase 89 took recursion from a later DEC FORTRAN (the HP manual's 5.3 and
+8.5.1.1): `RECURSIVE`, `RESULT`, and `/RECURSIVE`. This section is what that cost, and the one
+idea that kept the cost small: **a storage class is a property of a routine, decided in one
+place, and every pass already asks where a cell is rather than assuming.**
+
+### Two storage classes, and who decides
+
+There are three kinds of storage in a compiled routine: static (`$LOCAL`, COMMON's psects,
+`$PDATA`), the argument list (`n(AP)`), and the frame (`-n(FP)`). Phase 82 gave AUTOMATIC the
+frame: each entry point says `SUBL2 #n,SP`, and since CALLS leaves SP at FP the area sits right
+below FP whatever the entry mask saved, so a frame variable is a displacement from FP, as a dummy
+is one from AP. Recursion needed no new mechanism, only two decisions about who goes there.
+
+**The program's variables** are sema's to place, and the HP manual's 5.3 gives the rule: in a
+recursive unit every local is automatic unless it is SAVE'd, given an initial value, in COMMON, or
+STATIC. `sema/storage.go`'s `recursiveStorage` applies it after every declaration has been read,
+since any statement of the unit may SAVE or initialize a name, and marks the rest `Automatic`, so
+`layout` puts them in the frame as it would an AUTOMATIC statement's names. One case the manual
+doesn't settle is an EQUIVALENCE group with one SAVE'd member: storage can't be in two places, so
+the whole group is static.
+
+**The compiler's cells** are the IR's, and they all come from one constructor:
+
+```go
+func (r *Routine) NewCell(name string, kind CellKind, t Type, size int) *Cell {
+	c := &Cell{Name: name, Kind: kind, T: t, Size: size}
+
+	if r.Reentrant && kind != FormatCell {
+		c.Frame, c.Offset = true, r.FrameSize
+		r.FrameSize += (size + 3) &^ 3
+	} else {
+		c.Offset = r.LocalSize
+		r.LocalSize += (size + 3) &^ 3
+	}
+	...
+```
+
+Temporaries (`$T`), DO counts and steps (`$C`, `$S`), descriptors (`$D`), ENTRY's argument cells
+and selector (`$A`, `$E`), adjustable arrays' descriptors (`$B`), NAMELIST blocks, the optimizer's
+temporaries (`$U`, `$H`), and the code generator's spill cells (`$X`) all go through it, so making a
+routine reentrant is `Routine.Reentrant = Unit.Recursive` and nothing else in lowering. `ir.Check`
+refuses a reentrant routine with a compiler's cell in `$LOCAL`. The code generator's spill cells
+are made after lowering, so it puts them in the frame itself, counting every FP displacement from
+the frame's final size. The one cell left static is a FORMAT's cache,
+`$FCn`: it holds FTNRTL's parsed form of a constant FORMAT, the same for every activation, so
+sharing it is right, as long as two activations can't both fill it (below).
+
+Section 12 said a recursive language "couldn't keep these in one place", about ENTRY's argument
+cells. It can, given a frame: `@SCALE.$A3(FP)` is N whichever door came in, *in this activation*.
+The trick needed one place per activation, not one place.
+
+### What a frame can't do: be assembled
+
+A static descriptor is data, written by `.LONG` with its address already in it. A frame
+descriptor is filled in at run time, and the question is when. Writing every constant longword at
+each entry point is the obvious answer and wastes the work in a routine that only sometimes does
+I/O, so a frame descriptor is written whole at each use (`Descriptor.Fixed`, Decision 5): one
+`MOVL` of the length, type, and class together, then the address:
+
+```text
+	MOVL	#17694720,COUNT.$D1(FP)	; the descriptor's length, 0, type, and class
+	MOVW	@COUNT.PATH(AP),COUNT.$D1(FP)
+	MOVL	COUNT.PATH(AP),R0
+	MOVAB	@4(R0),COUNT.$D1+4(FP)
+```
+
+The same holds for everything FTNRTL is handed by address: a NAMELIST group's block is built in the
+frame by each statement that uses it (`ir/lowerio.go`'s `namelistCell`), and an associated
+variable (`ASSOCIATEVARIABLE=`) in the frame gets a warning, ASSOCFRAME, since FTNRTL keeps the address
+past the statement, and possibly past the routine's return.
+
+### Code that runs in someone else's frame
+
+A variable format expression is a routine FTNRTL calls in the middle of a statement (section 14,
+"Variable format expressions: FTNRTL calls back"), so FP there is the expression's routine's own, not the activation doing the
+I/O. FTNRTL notes the FP of the routine that began the statement and passes it as a third argument;
+the expression's code loads it into R11 and reaches every frame cell as a displacement from R11
+rather than FP (`routineGen.frameBase`). That was also a fix for AUTOMATIC, whose old `$FP` cell, a
+static copy of the frame pointer, was wrong as soon as an AST did I/O in the same routine. The price
+is one register: a routine with expressions and a frame saves R11 and has one register cell fewer.
+
+### What the optimizer had assumed
+
+Section 16's `effects.go` says what a call may change: an address-taken local, COMMON, or a dummy.
+Other locals survive calls because section 6.2 forbids recursion. A recursive unit breaks that rule
+for its *static* locals only: a SAVE'd variable can be changed by the call that recurses. Its frame
+locals are safe in a way an ordinary unit's aren't, since no other activation can name them.
+`ChangedByCall` is the one place that answers, and every pass asking that question asks it.
+
+Almost every pass: the register allocator had made section 6.2's argument again by hand, holding a
+local in a register across a loop with a call unless it was a dummy, in COMMON, or address-taken.
+A recursive routine's SAVE'd counter, held in R6 while the loop called the routine again, lost what
+the deeper activations added. The lesson is section 16's again: an assumption about the language
+should live in one function, so that a change to the language changes one answer.
+
+The frame also gave the optimizer something. A frame variable is undefined at each call (the
+standard's rule, and what a stack does), so a store to one that nothing reads before RETURN can go,
+which a static variable's can't: the next call might read it. That's why some programs run fewer
+instructions `/RECURSIVE`.
+
+### FTNRTL was nearly ready
+
+FTNRTL kept its statements on a stack of contexts from the start (section 14), so a statement inside a
+function inside a statement, to any depth, needed nothing. Two things did:
+
+- **The format cache.** A FORMAT's first use parsed it straight into its `$FCn` cell. An AST whose
+  statement used the same FORMAT, between the main line's test of the empty cell and its store, parsed
+  it too, and one copy was lost. Now the parse goes to the statement's context, and moves to the cell
+  with ASTs held off only if the cell is still empty. A timer can't find a window two instructions wide,
+  so `testdata/rtl89/fmtrace.for` traces itself and declares an AST at each instruction of the first use
+  in turn (the method of section 15's "ASTs: every instruction is a boundary").
+- **Unwinding.** A handler may unwind out of a statement, leaving its context on the stack; FTNRTL drops a
+  context when its frame is gone. A recursive routine called again after the unwind may get the very same
+  frames, so a new statement from deeper than the gone one can look like it. Nothing in the frames tells
+  the two apart, so this stays a known difference, held by a test (`gone89.for`) so that it's noticed if
+  it goes.
+
+### The debugger has to count frames
+
+With one copy of each variable, a name was an address. With many, it's an address in a frame, and the
+debugger needs to know which frame. SET SCOPE, `n\NAME`, and `ROUTINE n\NAME` were taken from VMS's
+debugger manual and a probe on VMS 7.1 (`testdata/dbg89`). Their core is `machine/scope.go`'s `RegistersAt`:
+level k's PC, FP, and AP are what level k-1's frame saved, and R2 to R11 come from the nearest frame
+inside level k whose entry mask saved them, else from the live register. FORTRAN's frame variables are then
+displacements from that level's FP.
+
+### Testing what can't be compared
+
+Every program of `testdata/fortran` is also compiled `/RECURSIVE`, in both optimizer modes, and must print
+its `.out` (`recursiveModes`), as must DUNGEON. Six can't: two print addresses, one is an AST's activation
+working as it should, and three read a local or function value the last call left, which is undefined, and
+what the stack holds differs between optimizer modes. They're listed with their reasons
+(`recursiveDifferences`), and that list is the honest form of the test: a program that reads an undefined
+value can't be held to "prints right", only to "is known to read one".
+
+The recursive programs proper were worked by hand before they ran, then given to two witnesses. gfortran
+agreed on every line but an IEEE `-0.0`, and refused a function's name used as a call without `RESULT`,
+which govax accepts by the author's choice. VMS 7.1's MACRO and LINK built every program's MACRO file and ran
+it (`testdata/ftn86`'s fifth round). That round also found a bug far from FORTRAN, in ods2's index file
+growth, because a volume with half again as many files was the first to need an index file extension header.

@@ -243,17 +243,22 @@ func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 			return 0, 0, err
 		}
 
-	case dbgtable.Argument, dbgtable.Frame:
+	case dbgtable.Argument, dbgtable.Frame, dbgtable.ThroughFrame:
 		frame, ok := d.fortranFrameOf(v, mod)
 		if !ok {
 			return 0, 0, vmserrors.New(vmserrors.DBG_NOTACTIVE, v.Unit+"."+v.Name)
 		}
 
-		if v.Place.Kind == dbgtable.Frame {
+		switch v.Place.Kind {
+		case dbgtable.Frame:
 			return frame.fp + uint32(int32(v.Place.N)), length, nil
+		case dbgtable.ThroughFrame:
+			addr, err = d.long(frame.fp + uint32(int32(v.Place.N)))
+		default:
+			addr, err = d.long(frame.ap + 4*uint32(v.Place.N))
 		}
 
-		if addr, err = d.long(frame.ap + 4*uint32(v.Place.N)); err != nil {
+		if err != nil {
 			return 0, 0, err
 		}
 
@@ -278,18 +283,35 @@ func (d *Debugger) fortranBase(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym
 // follow the descriptor's multipliers, one for each dimension, after its first 20 bytes.
 func (d *Debugger) fortranBounds(v *dbgtable.Var, mod *dbgsym.Module, prog *dbgsym.Program) ([]dbgtable.Bound, error) {
 	bounds := append([]dbgtable.Bound(nil), v.Bounds...)
-	if v.Descriptor == "" {
-		return bounds, nil
-	}
 
-	s, ok := prog.Lookup(mod.Name + `\` + v.Descriptor)
-	if !ok {
+	// The descriptor's address: a symbol's, or in a RECURSIVE unit a displacement
+	// from the frame of the activation the scope names.
+	var descriptor uint32
+
+	switch {
+	case v.DescriptorInFrame:
+		frame, ok := d.fortranFrameOf(v, mod)
+		if !ok {
+			return bounds, nil
+		}
+
+		descriptor = frame.fp + uint32(int32(v.DescriptorOffset))
+
+	case v.Descriptor != "":
+		s, ok := prog.Lookup(mod.Name + `\` + v.Descriptor)
+		if !ok {
+			return bounds, nil
+		}
+
+		descriptor = s.Value
+
+	default:
 		return bounds, nil
 	}
 
 	const multipliersAt = 20
 
-	at := s.Value + multipliersAt + 4*uint32(len(bounds))
+	at := descriptor + multipliersAt + 4*uint32(len(bounds))
 
 	for i := range bounds {
 		low, err := d.long(at + 8*uint32(i))

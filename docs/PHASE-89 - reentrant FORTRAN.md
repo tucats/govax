@@ -1,12 +1,51 @@
 # Phase 89 — FORTRAN: recursive and reentrant routines
 
-**Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
+**Status:** done 2026-11-05. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Subtask 12, the VMS round, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Subtask 12, the VMS round, done 2026-11-05. Subtask 13, the close-out, done 2026-11-05: **the phase is done.** Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
 Phases 82, 83, and 86 each left "routines really reentrant" for a later phase.
+
+## Where things stand
+
+**Done 2026-11-05.** Part A is the survey with the author's answers, and the progress log the work.
+
+- **The language.** RECURSIVE (in either order with a type), RESULT on FUNCTION and ENTRY, `/[NO]RECURSIVE` and
+  OPTIONS `/[NO]RECURSIVE`; a recursive routine's own name with an argument list a call; the HP manual's 5.3
+  storage rule. MANUAL.md's 14.12.
+- **The compiler.** Every compiler's cell in the frame of a recursive unit (`ir.Routine.NewCell`) but a FORMAT's
+  cache; frame descriptors and NAMELIST blocks written at each use; variable format expressions through FTNRTL's
+  third argument, in R11; ASSOCFRAME; the optimizer's call rule (`ChangedByCall`, now the register allocator's
+  too) and frame stores that die. FORTRAN-INTERNALS.md's section 23.
+- **FTNRTL.** The format cache's race under ASTs, fixed (GSMATCH 1,19, for the expressions' frame argument);
+  recursive I/O at depth and unwinding, tested.
+- **The debugger.** SET SCOPE (numbers, paths, lists, `\`, `/MODULE`, `/CURRENT`), CANCEL SCOPE, SHOW SCOPE, the
+  scope built-ins, `n\NAME` and `ROUTINE n\NAME`, each level's registers from the frames, held to VMS 7.1's logs
+  (`testdata/dbg89`); a recursive unit's frame cells in the `/DEBUG` table (the close-out).
+- **Witnesses.** Hand-worked recursive programs (`testdata/fortran`'s `recursion`, `recurio`, `recurvfe`,
+  `optrecur`, `recurrtl`, `recurtree`, `recurcalc`, `recurast`, `modules/mutual`), gfortran on the portable ones,
+  every corpus program and DUNGEON also `/RECURSIVE`, and VMS 7.1 building and running all of it
+  (`testdata/ftn86`'s fifth round).
+
+**Left for later:**
+
+1. **RECURAST's WAITED** on VMS: a 10 ms timer's AST can finish before the wait loop starts on the VAX
+   (`ftn86VMSDifferences`). A longer timer would settle it, with another VMS run.
+2. **The same frames after an unwind** (`gone89.for`, DEVIATIONS.md): a recursive routine called again after a handler
+   unwound a statement gets the gone statement's frames, so a new statement on its unit from deeper is `RECIO_OPE`.
+   Nothing in the frames tells the two apart.
+3. **Frame alignment** is a longword at most, whatever `/ALIGN` asks; more would need the frame reached through a
+   register each entry point aligns.
+4. **`/CHECK` for a frame variable read before it's set** isn't there (Decision 9).
+5. **Unconfirmed in the debugger:** where a DEPOSIT to an outer level's register goes (the probe's `^X` DEPOSITs
+   failed on VMS); an outer level's PSL condition codes; `%NEXT_SCOPE_ENTRY` at the last level; G and H short
+   literals' digits; EXAMINE/INSTRUCTION of a register past its bytes; EXAMINE after the PC; TYPE with nothing shown.
+6. **The stack with paging off:** a stack past the top 1,024 pages of P1 runs into a P1 expansion below it, and LINK's
+   `STACK=` does nothing with paging off.
+7. **Not planned:** threads (DECthreads) and HP Fortran's `/REENTRANCY`; `NON_RECURSIVE`; Fortran 90's other procedure
+   features (PURE, ELEMENTAL, modules, interfaces, INTENT, allocatable arrays).
 
 ## Goal
 
@@ -419,7 +458,7 @@ it moves to a Phase 90.
     ones; DUNGEON `/RECURSIVE`, locally.
 12. **The VMS round** (done 2026-11-05): `testdata/ftn86`'s next round, the new programs built and
     run by VMS's MACRO and LINK (Question 8).
-13. **Close-out:** MANUAL.md (14.2's statements, 14.3's qualifier, 14.7's
+13. **Close-out** (done 2026-11-05)**:** MANUAL.md (14.2's statements, 14.3's qualifier, 14.7's
     differences and unconfirmed choices, a section on recursion and ASTs),
     FORTRAN-INTERNALS.md's new section (storage classes, frames, and what
     reentrancy costs a compiler), HELP FORTRAN, PLAN.md, CLAUDE.md, "Where things
@@ -914,3 +953,28 @@ it moves to a Phase 90.
     and made every file of the run on it.
   - `TestFTN86Objects` now reads this round's sources, `vax/mar`; govax's MACRO and LINK still make VMS's objects and
     image. gen.go's next round is `round6`.
+- **2026-11-05:** Subtask 13, the close-out, and the phase done.
+  - **MANUAL.md:** a new 14.12, "Recursive and reentrant routines" (the statements, an example run on govax, a table
+    of what is static and what is in the frame, ASTs and handlers, I/O, the stack, the cost, the debugger, VMS),
+    placed last so no section is renumbered, with a row in chapter 14's table and a line in its introduction; 14.2's
+    bullet for RECURSIVE and RESULT; 14.3's paragraph cut to the qualifier, the rest moved to 14.12; 14.7's row for
+    threads, `/REENTRANCY`, and `NON_RECURSIVE`, and a choices entry with every unconfirmed rule of this phase
+    (5.17 against 5.3, a name as a call, EQUIVALENCE, alignment, no clearing, ASSOCFRAME, the same frames, DEPOSIT
+    in an outer scope); 14.8's advice on ASTs, which said AUTOMATIC gives each call its own storage and now says
+    RECURSIVE does, AUTOMATIC leaving the temporaries static.
+  - **What it costs, measured** for 14.12 and FORTRAN-INTERNALS.md: `testdata/opt84`'s kernels compiled
+    `/RECURSIVE` against the usual way, a whole run's instructions: MATMUL, SIEVE, and TEXTK the same, SUBS 0.1%
+    fewer (frame stores that die), WHET 0.6% more.
+  - **FORTRAN-INTERNALS.md:** section 23, "Recursion and reentrancy": the two storage decisions (sema's rule, the
+    IR's one constructor), descriptors that can't be assembled, code run in another's frame (R11), what the optimizer
+    had assumed (the register allocator's copy of section 6.2's argument), FTNRTL, the debugger counting frames, and
+    testing what can't be compared; sections 12, 13, and 16's statements that a routine can't recur now point there,
+    and the map has a row.
+  - **HELP FORTRAN:** a paragraph on RECURSIVE and RESULT. **PLAN.md:** the phase's row and a section.
+  - **A gap closed** (subtask 4's "left for later", which subtask 10 didn't reach): in a recursive unit with ENTRY, a
+    dummy is reached through an argument cell in the frame, and an adjustable array's descriptor is in the frame too,
+    but the `/DEBUG` table named both by their symbols, displacements the debugger then read as addresses
+    (`NOACCESSR` at `FFFFFFC8`). The table now has a place `P:n` (the address in the longword n bytes from FP,
+    `dbgtable.ThroughFrame`) and a descriptor `F:n` (`Var.DescriptorInFrame`), which `codegen/debugtable.go` writes for
+    frame cells and `debugger/fortran.go` reads from the scope's activation. `TestFortranFrameCells` (a recursive
+    ENTRY with an adjustable array, examined at three levels) failed before and passes; `TestRoundTrip` has both forms.

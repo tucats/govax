@@ -53,8 +53,12 @@ const (
 	Static    PlaceKind = 'S' // at the address of Symbol
 	Argument  PlaceKind = 'A' // at the address in argument N of the routine's frame
 	Through   PlaceKind = 'T' // at the address in the cell Symbol, a routine with ENTRY statements
-	Frame     PlaceKind = 'F' // N bytes from the routine's FP: AUTOMATIC
+	Frame     PlaceKind = 'F' // N bytes from the routine's FP: AUTOMATIC, or a RECURSIVE unit's local
 	InRegister PlaceKind = 'R' // in register N
+
+	// ThroughFrame is Through in a RECURSIVE unit, whose ENTRY cells are in the frame: at
+	// the address in the longword N bytes from the routine's FP.
+	ThroughFrame PlaceKind = 'P'
 )
 
 // Place is where a variable is. For a CHARACTER variable that's a dummy argument, the
@@ -103,8 +107,12 @@ type Var struct {
 	Bounds     []Bound
 
 	// Descriptor is the symbol of the class A descriptor with the bounds that
-	// aren't known until the program runs, "" for none.
-	Descriptor string
+	// aren't known until the program runs, "" for none. In a RECURSIVE unit the
+	// descriptor is in the frame: DescriptorInFrame is set, and DescriptorOffset is
+	// its displacement from the routine's FP (written "F:n" in the line).
+	Descriptor        string
+	DescriptorInFrame bool
+	DescriptorOffset  int
 }
 
 // Line is the variable's line in the MACRO file.
@@ -121,7 +129,11 @@ func (v Var) Line() string {
 	}
 
 	descriptor := "-"
-	if v.Descriptor != "" {
+
+	switch {
+	case v.DescriptorInFrame:
+		descriptor = "F:" + strconv.Itoa(v.DescriptorOffset)
+	case v.Descriptor != "":
 		descriptor = v.Descriptor
 	}
 
@@ -223,7 +235,14 @@ func parseVar(f []string) (*Var, bool) {
 		}
 	}
 
-	if f[7] != "-" {
+	if offset, inFrame := strings.CutPrefix(f[7], "F:"); inFrame {
+		n, err := strconv.Atoi(offset)
+		if err != nil {
+			return nil, false
+		}
+
+		v.DescriptorInFrame, v.DescriptorOffset = true, n
+	} else if f[7] != "-" {
 		v.Descriptor = f[7]
 	}
 
@@ -241,7 +260,7 @@ func parsePlace(text string) (Place, bool) {
 	switch p.Kind {
 	case Static, Through:
 		p.Symbol = value
-	case Argument, Frame, InRegister:
+	case Argument, Frame, InRegister, ThroughFrame:
 		n, err := strconv.Atoi(value)
 		if err != nil {
 			return Place{}, false
@@ -302,7 +321,7 @@ func (v *Var) Sized() bool {
 // DescriptorPassed reports whether what the place leads to is a descriptor of the
 // variable, not the variable: a CHARACTER dummy argument (Phase 78).
 func (v *Var) DescriptorPassed() bool {
-	return v.Type == Char && (v.Place.Kind == Argument || v.Place.Kind == Through)
+	return v.Type == Char && (v.Place.Kind == Argument || v.Place.Kind == Through || v.Place.Kind == ThroughFrame)
 }
 
 // FortranLinePrefix is how long the part before a source line's text is in a MACRO file.

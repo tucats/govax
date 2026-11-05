@@ -4929,8 +4929,9 @@ a program can use VMS as VMS programmers did: definition modules, system service
 and RTL routines, condition handlers, ASTs, exit handlers, and the system
 subroutines (section 14.8). The compiler optimizes what it writes by default
 (section 14.9), and has listings, cross references, run-time checks (section
-14.3), and the debugger (section 14.10). The language's largest omission is
-DICTIONARY (section 14.7).
+14.3), and the debugger (section 14.10). From a later DEC FORTRAN it adds
+recursive routines, which ASTs and handlers may also enter while they run (section
+14.12). The language's largest omission is DICTIONARY (section 14.7).
 
 **How far it can be trusted.** A real program, DUNGEON, compiles and plays on
 govax, and the same game on another compiler and on VMS itself printed the
@@ -4950,6 +4951,7 @@ compiler works.
 | The optimizer | [14.9](#149-what-optimize-does) |
 | The debugger | [14.10](#1410-debugging-a-compiled-program) |
 | A large program, and a program on VMS | [14.11](#1411-a-large-program-and-a-real-vms) |
+| Recursive routines, and routines ASTs can enter | [14.12](#1412-recursive-and-reentrant-routines) |
 
 ### 14.1 A first program
 
@@ -5512,6 +5514,13 @@ output it prints, and programs of several files in its `modules` directory.
   COMMON or SAVE. It may be in a NAMELIST group, whose block each statement using the
   group then fills in. A routine with AUTOMATIC variables isn't reentrant: its
   temporaries are still static (RECURSIVE makes a routine reentrant).
+- **RECURSIVE and RESULT** come from a later DEC FORTRAN too, by way of the HP
+  Fortran manual's 8.5.1.1 and 8.5.2.1: `RECURSIVE` on a FUNCTION or SUBROUTINE
+  statement, before or after a function's type, and `RESULT(name)` after a
+  FUNCTION's or ENTRY's argument list. `/RECURSIVE` and `OPTIONS /RECURSIVE` make
+  every subprogram they cover recursive. A recursive routine may call itself, and
+  each activation has storage of its own
+  ([section 14.12](#1412-recursive-and-reentrant-routines)).
 - **How arguments are passed:** by reference: a routine that assigns to its
   dummy argument changes the caller's variable. An expression, or a
   variable in parentheses `(K)`, passes a copy. A CHARACTER value (a
@@ -5692,33 +5701,13 @@ meaning. The default is `/F77`:
 | OPEN's default `BLANK=` | `'NULL'` | `'ZERO'` |
 | `EXTERNAL SIN` | A routine of your own called `SIN` | The library's function; `EXTERNAL *SIN` is your own |
 
-**Recursion.** VAX FORTRAN V5.0's subprograms can't refer to themselves (its manual's
-section 6.2). govax takes recursion from the HP Fortran manual (8.5.1.1): a FUNCTION
-or SUBROUTINE statement may say `RECURSIVE`, before or after a function's type
-(`RECURSIVE INTEGER FUNCTION FACT(N)`, `INTEGER RECURSIVE FUNCTION FACT(N)`), and
-`/RECURSIVE`, or an `OPTIONS /RECURSIVE` before a unit, makes every subprogram it
-covers recursive, never a main program or BLOCK DATA. A recursive unit may call
-itself and its ENTRY points; in a function without `RESULT`, the function's name with
-an argument list is a call, and without one its value. `RESULT(name)` after a FUNCTION
-or ENTRY statement's argument list names the variable that holds the value instead,
-with the header's type; the function's name is then only a call, and may not be
-declared (`RESULTDECL`). Each activation of a recursive unit has storage of its own
-in its stack frame: its variables but those SAVE'd, given initial values, in COMMON,
-or STATIC (an EQUIVALENCE group goes where any static member goes), its function
-value, and every cell of the compiler's (temporaries, DO counts, descriptors, ENTRY's
-argument cells) but where FTNRTL keeps a FORMAT's parsed form; each entry point
-reserves the frame with one `SUBL2`, and the storage map's heading says `RECURSIVE`.
-A SAVE'd variable or COMMON is one place every activation shares. A NAMELIST group of
-frame variables has its block in the frame too, filled in by each statement that uses
-it. A file's associated variable (`ASSOCIATEVARIABLE=`, DEFINE FILE's) in the frame
-gets `%FORT-W-ASSOCFRAME`: FTNRTL goes on storing in it until the file is closed,
-after the routine may have returned. A variable format expression reads the frame of the
-activation doing the I/O, whichever entered last. How deep a recursion can go is the
-user stack's room ([the user stack](#the-user-stack)): with paging on about 10 MB, with
-paging off 2 MB, the frame being the call's 24 bytes or more, the saved registers,
-and the unit's frame storage (a recursive routine with a `REAL*8 A(100000)` local
-takes 800,000 bytes a level, so 12 levels fit with paging on and 2 with it off). Past
-that the image ends with no message and `$STATUS` `%X1000000C`.
+**Recursion.** `/RECURSIVE` makes every FUNCTION and SUBROUTINE of the compilation
+recursive, as if each said `RECURSIVE`; never a main program or BLOCK DATA.
+`/NORECURSIVE`, the default, leaves recursive only the routines that say so, and an
+`OPTIONS /RECURSIVE` or `OPTIONS /NORECURSIVE` before a unit changes it for that unit.
+The program means the same either way unless it reads a local variable it didn't set in
+the same call, which FORTRAN-77 leaves undefined;
+[section 14.12](#1412-recursive-and-reentrant-routines) has the rules and their costs.
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -6191,6 +6180,7 @@ VAX> DEFINE FTNRTL DUA1:[WORK]FTNRTL.EXE
 | Object modules from the compiler | `/OBJECT` runs MACRO on the MACRO file, and that file is always written |
 | The debugger's FORTRAN language | It reads compiled names from the MACRO file, and its language stays MACRO (section 14.10) |
 | Parallel directives | `CPAR$` lines are comments, and `NWORKERS` is 1 |
+| Threads, HP Fortran's `/REENTRANCY` and `NON_RECURSIVE` | A RECURSIVE routine is safe under ASTs and handlers; there are no threads to be safe under, and `OPTIONS /NORECURSIVE` exempts a unit from `/RECURSIVE` |
 | Output identical to VAX FORTRAN's | Object code, messages, and listings are govax's own, by design |
 
 What a program can see of the optimizer is in [section 14.9](#149-what-optimize-does).
@@ -6442,6 +6432,29 @@ FORTRAN run-time library, which could be run:
   one in the frame gets the warning `ASSOCFRAME` (ours).
   A frame too large for the stack with paging off ends the image with `SS$_ACCVIO`
   and no message; with paging on the stack grows.
+- Recursion ([section 14.12](#1412-recursive-and-reentrant-routines)), none of it in VAX
+  FORTRAN V5.0 and all of it from the HP Fortran manual, read for its DEC dialect:
+  - The manual's 5.17 says the local variables of recursive subprograms are saved by
+    default, and its 5.3 that they are automatic. govax follows 5.3.
+  - A recursive function's own name with an argument list is a call, with or without
+    `RESULT`, as Fortran 90 has it for a scalar result. gfortran refuses that without
+    `RESULT` ("refers to the result variable"), so a program meant for both should use
+    `RESULT`.
+  - An EQUIVALENCE group is static if any member must be, and otherwise in the frame
+    whole.
+  - A frame variable is on a longword at most, whatever `/ALIGN` asks: CALLS leaves SP on
+    a longword, and the VAX doesn't fault on unaligned data.
+  - Frame variables aren't cleared at entry, and `/CHECK` doesn't look for one read
+    before it's set.
+  - `ASSOCFRAME`, the warning for an associated variable in the frame, is govax's.
+  - A run-time library statement unwound by a handler (section 14.8) is told apart from
+    a new one on the same unit by its frame, and a recursive routine called again after
+    the unwind gets the same frames: a statement on that unit from deeper than the gone
+    one, before any statement at its depth or above, is `RECIO_OPE`. Nothing in the
+    frames tells the two activations apart.
+  - In the debugger, a DEPOSIT to a register of an outer call level goes where the RET
+    will restore it from (VMS's run didn't settle it); an outer level's SP and PSL can't
+    be changed.
 - Directives: a file is one module, so the first IDENT is the file's, where VAX
   FORTRAN made a module per unit. `ALIGN=` takes a number as written, not a
   PARAMETER's name. Choosing a PSECT attribute two ways for one block is an error,
@@ -6592,7 +6605,9 @@ again gets its address from elsewhere, and uses `%VAL`:
 An AST can arrive between any two instructions, so a variable both sides use should be
 `VOLATILE`, as `TICKS` is here. **FORTRAN's variables are static:** if an AST routine calls a
 routine the interrupted code was in the middle of, the two share its variables and
-overwrite each other. Declaring them `AUTOMATIC` (section 14.2) gives each call its own.
+the compiler's temporaries, and overwrite each other. Declaring the routine `RECURSIVE`
+gives each call its own of both ([section 14.12](#1412-recursive-and-reentrant-routines));
+`AUTOMATIC` alone gives each call its own variables, but not its temporaries.
 FTNRTL itself is safe to call from an AST, holding ASTs off while its own lists change.
 
 **Exit handlers.** `$DCLEXH` takes a block of four longwords or more: a 0 for VMS's own use,
@@ -6925,6 +6940,150 @@ its argument, and whether a timer's AST came before a loop began, by timing; the
 negative powers and MTHRTL's complex functions; and, compiled `/RECURSIVE`, two programs that read what
 a local held at an earlier call, or where the stack put a record, which FORTRAN-77 leaves undefined.
 `testdata/ftn86/README.md` has the procedure, which the tests hold to VMS's log.
+
+### 14.12 Recursive and reentrant routines
+
+VAX FORTRAN V5.0's subprograms can't refer to themselves, directly or through
+others (its manual's section 6.2), and each has one copy of its variables, which a
+second call while the first is running would share. govax adds what a later DEC
+FORTRAN added, from the HP Fortran manual (5.3, 8.5.1.1, 8.5.2.1, 13.3): a
+routine that may be active more than once at a time, each activation with storage
+of its own. It may be entered again by calling itself, directly or through other
+routines, or by an AST routine or condition handler that calls it while the main
+line is in it.
+
+**Saying so.** `RECURSIVE` goes on the FUNCTION or SUBROUTINE statement, before or
+after a function's type:
+
+```fortran
+      RECURSIVE INTEGER FUNCTION FACT(N) RESULT(F)
+      INTEGER N
+      IF (N .LE. 1) THEN
+          F = 1
+      ELSE
+          F = N * FACT(N - 1)
+      END IF
+      END
+
+      RECURSIVE SUBROUTINE COUNT(N, PATH)
+      INTEGER N, I
+      CHARACTER*(*) PATH
+      COMMON /STATS/ CALLS
+      INTEGER CALLS
+      CALLS = CALLS + 1
+      IF (N .EQ. 0) THEN
+          PRINT *, PATH
+          RETURN
+      END IF
+      DO I = 1, 2
+          CALL COUNT(N - 1, PATH // CHAR(ICHAR('0') + I))
+      END DO
+      END
+```
+
+With a main program that prints `FACT(10)`, calls `COUNT(3, ' ')`, and prints `CALLS`:
+
+```text
+$ FORTRAN TREE
+$ MACRO TREE
+$ LINK TREE
+$ RUN TREE
+FACT(10) =     3628800
+ 111
+ 112
+ 121
+ 122
+ 211
+ 212
+ 221
+ 222
+CALLS =          15
+```
+
+Each activation of COUNT has its own N, I, and copy of the concatenation it passes
+down. CALLS is in COMMON, so there is one CALLS for all of them. `INTEGER RECURSIVE FUNCTION`
+is the same as `RECURSIVE INTEGER FUNCTION`. `/RECURSIVE` on the FORTRAN command makes every
+FUNCTION and SUBROUTINE of the compilation recursive, and `OPTIONS /RECURSIVE` or
+`/NORECURSIVE` does the same for one unit. A main program and a BLOCK DATA are never recursive.
+
+**Calls and RESULT.** In a recursive routine, its own name, or one of its ENTRY names, used
+with an argument list is a call. A CALL of a subroutine's own name is one too. Without
+`RESULT`, a function's name without an argument list is its value, as in any function.
+`RESULT(F)` after the argument list, as in FACT above, names another variable for the value,
+which takes the header's type. The function's name is then only a call, and a type statement
+for it is an error (`RESULTDECL`). An ENTRY statement may have a `RESULT` of its own. In a routine
+that isn't recursive, a reference to itself is still `%FORT-E-RECURSIVE`.
+
+**What each activation has.** A recursive routine's storage is in its stack frame, new at each
+call, except for these, which every activation shares:
+
+| Static, one copy for every activation | In the frame, one per activation |
+| --- | --- |
+| A variable named in SAVE, or every variable after a SAVE with no list | Every other variable and array of the routine |
+| A variable with an initial value (DATA, a type statement, a structure's) | A function's value or RESULT variable, unless it goes through a hidden argument |
+| A variable in COMMON | The compiler's temporaries, DO counts, descriptors, ENTRY's argument cells, and adjustable arrays' bounds |
+| A variable named STATIC | A NAMELIST group's block, when the group has a frame variable |
+| An EQUIVALENCE group with any member above | The rest of an EQUIVALENCE group |
+| A FORMAT's parsed form, which FTNRTL keeps | |
+
+A variable in the frame has no value at the start of each call, and keeps none
+from the last call: a routine that reads one before setting it gets whatever the stack
+held, which may differ between `/OPTIMIZE` and `/NOOPTIMIZE`. FORTRAN-77 already called that
+undefined, unless the variable was SAVE'd, but a static variable used to keep its value
+anyway, and some old programs count on that. Give such a variable SAVE. The storage map
+shows where each name went:
+
+```text
+; Storage map for COUNT, a RECURSIVE subroutine
+;   N      INTEGER        argument 1  @COUNT.N(AP)
+;   PATH   CHARACTER*(*)  argument 2  @COUNT.PATH(AP)
+;   I      INTEGER        R7          R7
+;   CALLS  INTEGER        STATS+0     COUNT.CALLS
+```
+
+The routine's entry point reserves the frame with one instruction, `SUBL2 #28,SP ; this activation's own storage`, and
+a frame variable is a displacement from FP (`COUNT.$D1(FP)`). Under `/OPTIMIZE`, as here, a
+loop's variable may be in a register; the entry mask saves the caller's value of each
+register the routine uses, so the register is each activation's own too.
+
+**ASTs and handlers.** A recursive routine is reentrant as a whole. An AST routine or a
+condition handler may call it while the code it interrupted is in the middle of it, even
+in the middle of an expression or an I/O statement, and neither changes the other's storage
+(`testdata/fortran/recurast.for` does this). `AUTOMATIC` alone isn't enough for that: it puts
+the variables it names in the frame, but leaves the compiler's temporaries static
+([section 14.8](#148-calling-vms-from-fortran)). What the activations share (SAVE, COMMON) is
+still shared, so a variable both sides use should be VOLATILE.
+
+**I/O in recursion.** A recursive routine may do any I/O. A function called from an I/O
+statement's list may itself do I/O on another unit or an internal file, to any depth, but
+not on the unit whose statement is in progress, which is `RECIO_OPE` at any depth. A
+variable format expression is computed in the frame of the activation doing the I/O. A file's
+associated variable (`ASSOCIATEVARIABLE=`, DEFINE FILE's) in the frame gets the warning
+`%FORT-W-ASSOCFRAME`, since FTNRTL goes on storing in it until the file is closed, which may be
+after the routine has returned. Give it SAVE, or close the file before the routine returns.
+
+**How deep.** A recursion can go as deep as the user stack has room for
+([the user stack](#the-user-stack)): about 10 MB with paging on, and 2 MB with paging off.
+Each level takes the call frame's 24 bytes or more, the registers the entry mask saves, and
+the routine's frame storage. A routine with a `REAL*8 A(100000)` local takes 800,000 bytes a
+level, so 12 levels fit with paging on and 2 with it off. A call past the room, or a runaway
+recursion, ends the image with no message and `$STATUS` `%X1000000C`.
+
+**What it costs.** The code for a recursive routine is much like a static one's. Its entry
+point has the one `SUBL2`, and a descriptor in the frame is written whole each time a statement
+uses it, where a static routine's is built at assembly. A routine with variable format
+expressions and a frame keeps R11 for them, and so has one register fewer. On the
+optimizer's test programs (`testdata/opt84`), compiled `/RECURSIVE` against the usual way,
+the instructions run differed by at most 0.6%, and some ran fewer instructions, since a value
+stored in the frame that nothing reads before the routine returns can be left out.
+
+**The debugger.** A bare name in a recursive routine is the innermost activation's. `SET SCOPE n`,
+`SET SCOPE/CURRENT n`, and `n\NAME` reach the activation `n` call levels down, with its
+variables, arguments, and registers ([section 14.10](#1410-debugging-a-compiled-program)).
+
+**On VMS.** The MACRO files of recursive routines assemble, link, and run on VMS 7.1 as they do
+on govax ([section 14.11](#1411-a-large-program-and-a-real-vms)). Two of govax's test programs
+compiled `/RECURSIVE` print differently there, by reading what FORTRAN-77 leaves undefined.
 
 ## 15. Appendices
 

@@ -29,7 +29,10 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 
 	for _, p := range g.r.Params {
 		place := dbgtable.Place{Kind: dbgtable.Argument, N: p.Index}
-		if p.Through != nil {
+		switch {
+		case p.Through != nil && p.Through.Frame:
+			place = dbgtable.Place{Kind: dbgtable.ThroughFrame, N: p.Through.Offset - g.frameSize()}
+		case p.Through != nil:
 			place = dbgtable.Place{Kind: dbgtable.Through, Symbol: g.names.symbol(p.Through.Name)}
 		}
 
@@ -68,7 +71,11 @@ func (g *routineGen) debugVar(name string, s *sema.Symbol, place dbgtable.Place)
 	}
 
 	for _, c := range g.r.Cells {
-		if c.Desc != nil && c.Dummy == name {
+		switch {
+		case c.Desc == nil || c.Dummy != name:
+		case c.Frame:
+			v.DescriptorInFrame, v.DescriptorOffset = true, c.Offset-g.frameSize()
+		default:
 			v.Descriptor = g.names.symbol(c.Name)
 		}
 	}

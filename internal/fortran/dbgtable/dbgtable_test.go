@@ -15,6 +15,9 @@ func TestRoundTrip(t *testing.T) {
 		{Unit: "U", Name: "S", Type: Char, Size: 0, Place: Place{Kind: Through, Symbol: "U.$A1"}},
 		{Unit: "U", Name: "F", Type: Logical, Size: 4, Place: Place{Kind: Frame, N: -16}},
 		{Unit: "U", Name: "R", Type: Integer, Size: 4, Place: Place{Kind: InRegister, N: 6}},
+		// A RECURSIVE unit's: a dummy through a frame cell, and a descriptor in the frame.
+		{Unit: "U", Name: "P", Type: Char, Size: 0, Place: Place{Kind: ThroughFrame, N: -56}},
+		{Unit: "U", Name: "X", Type: Integer, Size: 4, Place: Place{Kind: ThroughFrame, N: -52}, Bounds: []Bound{{}}, DescriptorInFrame: true, DescriptorOffset: -40},
 	}
 
 	lines := []string{"; a comment", EntryLine("U", "U"), EntryLine("U", "OTHER")}

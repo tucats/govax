@@ -138,6 +138,7 @@ questions, and a progress log extended as that phase is worked.
 | 86 | [PHASE-86 - FORTRAN milestone](PHASE-86%20-%20FORTRAN%20milestone.md) | DUNGEON V3.2A compiled and run in every mode (local only), the VMS round (`testdata/ftn86`), the manual's chapter, the internals tour, the follow-up list — done 2026-11-03 |
 | 87 | [PHASE-87 - system volume](PHASE-87%20-%20system%20volume.md) | A system volume govax always mounts, made from its built-in files: STARTUP.COM (was vax.init), the grammars and help, SYS$LIBRARY's and SYS$SHARE's files, FTNRTL's and the kernel's sources with build procedures, the page file; refreshed on upgrade; next-free unit numbers — planned 2026-11-03, the plan reviewed and accepted the same day; done 2026-11-03 |
 | 88 | [PHASE-88 - keyed index files](PHASE-88%20-%20keyed%20index%20files.md) | RMS's indexed organization (XABKEY, Prolog 3 files as VMS's, keyed access, alternate keys, compression, areas) and FORTRAN's keyed statements through FTNRTL — planned 2026-11-03, the survey accepted the same day; done 2026-11-04 |
+| 89 | [PHASE-89 - reentrant FORTRAN](PHASE-89%20-%20reentrant%20FORTRAN.md) | FORTRAN's RECURSIVE, RESULT, and `/RECURSIVE`: each activation's storage in its frame, reentrant under ASTs and handlers; FTNRTL's format cache; the debugger's SET SCOPE — planned 2026-11-04, the survey accepted the same day; done 2026-11-05 |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -588,3 +589,23 @@ Part A is the survey and what each probe round settled, Part B the decisions wit
 MANUAL.md has the commands (section 6) and the FORTRAN side (14.2), FORTRAN-INTERNALS.md's section 22 the run-time library's.
 What the phase left is its doc's "Where things stand".
 
+## Recursive and reentrant FORTRAN (Phase 89)
+
+Phase 89 (2026-11-04 to 2026-11-05) gave the FORTRAN compiler what a later DEC FORTRAN had and V5.0 lacked:
+routines active more than once at a time, by recursion or by an AST or handler entering them, each activation
+with storage of its own. The rules are the HP Fortran manual's. Its doc's Part A is the survey, with the author's
+answers (every recommendation taken: recursion by request, the default still static), and its log is the work.
+
+- **The language:** RECURSIVE, RESULT, `/[NO]RECURSIVE`, and OPTIONS `/[NO]RECURSIVE`; the HP manual's storage
+  rule, a recursive unit's locals in the frame but for SAVE'd, initialized, COMMON, and STATIC ones.
+- **The compiler:** every cell of its own in the frame too (one constructor, `ir.Routine.NewCell`), frame
+  descriptors and NAMELIST blocks built at each use, variable format expressions through the I/O routine's FP
+  (R11), and the optimizer's call rule for a recursive unit's static locals.
+- **FTNRTL:** already reentrant but for its format cache, fixed and tested at every instruction; the
+  debugger's SET SCOPE, CANCEL SCOPE, SHOW SCOPE, and scoped names, held to VMS 7.1's (`testdata/dbg89`).
+- **Witnesses:** the recursive programs worked by hand, then on gfortran; every corpus program and DUNGEON
+  also `/RECURSIVE` on govax; and VMS 7.1 building and running all of it (`testdata/ftn86`'s fifth round),
+  which also found an ods2 bug in the index file's growth.
+
+MANUAL.md's 14.12 is the user's side, FORTRAN-INTERNALS.md's section 23 the compiler's. What the phase left is
+its doc's "Where things stand".

@@ -192,6 +192,8 @@
 //              11/04/26    READ's /KEY, /INDEX, /MATCH, /DELETE, and /NOLOCK,
 //                          and WRITE, on indexed files (docs/PHASE-88)
 //              11/04/26    Added CREATE/FDL and CONVERT
+//              11/05/26    FORTRAN: RECURSIVE and RESULT (docs/PHASE-89 -
+//                          reentrant FORTRAN.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -4497,8 +4499,20 @@ $FOR
     every IF, DO, and GO TO, CALL, RETURN, STOP, and PAUSE; READ, WRITE,
     and the other I/O statements, and OPEN and the other file statements,
     on sequential, relative, and indexed files, the keyed READ with every
-    key specifier among them.  DICTIONARY draws %FORT-E-NOTIMPL.  A
-    program compiles, links, and runs:
+    key specifier among them.  DICTIONARY draws %FORT-E-NOTIMPL.
+
+    From a later DEC FORTRAN, a FUNCTION or SUBROUTINE may be RECURSIVE
+    (RECURSIVE INTEGER FUNCTION FACT(N) RESULT(F)), as may every one in
+    a file under /RECURSIVE or after OPTIONS /RECURSIVE.  Such a routine
+    may call itself, and each activation has its own variables, but for
+    those SAVE'd, given initial values, in COMMON, or STATIC, and its own
+    temporaries, so an AST or a handler may also enter it while it runs.
+    In the routine, its name with an argument list is a call.  Without
+    RESULT the name alone is the function's value; RESULT(name) names
+    another variable for it instead.  AUTOMATIC alone doesn't make a routine
+    safe to enter twice: its temporaries stay static.
+
+    A program compiles, links, and runs:
 
         FORTRAN AVERAGE
         MACRO AVERAGE
