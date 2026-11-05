@@ -420,8 +420,9 @@ const dungeonGameSHA = "a4e1c720a3c32d67ad40110986492a42192101fb6f68106d3d8ca1a2
 
 // TestDungeonMilestone is the FORTRAN program's milestone, its subtask 3: DUNGEON built by
 // its own commands and playing a scripted game, on volume files and from host files, in
-// both paging modes, with and without the optimizer, printing the same every time. On a
-// volume a game is also saved, and restored by another run. fixtime.for fixes the seed.
+// both paging modes, with and without the optimizer, and /RECURSIVE (Phase 89), printing
+// the same every time. On a volume a game is also saved, and restored by another run.
+// fixtime.for fixes the seed.
 func TestDungeonMilestone(t *testing.T) {
 	sources := dungeonSources(t)
 	kit := filepath.Join("..", "..", "testdata", "dungeon86")
@@ -439,7 +440,7 @@ func TestDungeonMilestone(t *testing.T) {
 	}
 
 	for _, paging := range []bool{false, true} {
-		for _, mode := range optimizerModes {
+		for _, mode := range append(optimizerModes, recursiveModes...) {
 			for _, host := range []bool{false, true} {
 				name := map[bool]string{false: "volume", true: "host"}[host] + "/" +
 					map[bool]string{false: "nopaging", true: "paging"}[paging] + "/" + mode.name

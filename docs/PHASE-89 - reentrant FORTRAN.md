@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -395,7 +395,7 @@ it moves to a Phase 90.
 6. **Variable format expressions** (done 2026-11-04) in a reentrant unit: FTNRTL passes the FP
    (GSMATCH's minor id raised), the VFE routine's own frame, `$FP` gone; a VFE
    test in recursion and under an AST.
-7. **The optimizer under recursion:** `ChangedByCall` for a recursive unit's
+7. **The optimizer under recursion** (done 2026-11-05)**:** `ChangedByCall` for a recursive unit's
    static locals, `effects.go`'s argument rewritten, dead code and the frame;
    `optrecur.for`, both modes; every corpus program run `/RECURSIVE` too
    (`recursiveModes`), with any exception explained.
@@ -642,3 +642,39 @@ it moves to a Phase 90.
     above. gfortran has no variable format expressions, so this program has no comparison there. `testdata/ftn86`'s
     procedure is regenerated with RECURVFE, in `ftn86AwaitingVMS` until subtask 12's round.
   - **Left for later:** the format cache's race under ASTs is subtask 8's.
+- **2026-11-05:** Subtask 7, the optimizer under recursion.
+  - **A bug the call rule didn't reach, fixed:** the register allocator held a variable in a register
+    through a loop with a call in it unless it was a dummy, in COMMON, or taken (`registers.go`'s
+    `variableEligible`), which is section 6.2's argument made again by hand, not by `ChangedByCall`. So a
+    RECURSIVE unit's SAVE'd local, held in R6 while the loop called the unit again, lost what the deeper
+    activations added: `optrecur.for`'s WALK printed 72 under `/OPTIMIZE` where 183 is right. It now asks
+    `ChangedByCall`, which is the same answer for an ordinary unit. Every other pass that asks what a call
+    does already asked there (forwarding, common subexpressions, loop invariants, induction, DO limits).
+  - **Dead code and the frame** (`deadcode.go`): a place live at an entry is no longer taken to be live at
+    every exit if it is in the frame (`lasting`), since no call reads what the last one left there; and a
+    scalar variable in the frame, a RECURSIVE unit's local or an AUTOMATIC one, can now die like the
+    compiler's cells (`findDying`): it is undefined at each call (Decision 9), so a store nothing reads
+    before the RETURN goes (`TestFrameStoresDie`). A static variable still can't.
+  - **`effects.go`'s argument** ("Why that's enough: who else could change a local") is rewritten for both
+    kinds of unit: an ordinary unit by section 6.2, a RECURSIVE one by its frame being its own and its static
+    locals shared, which is `ChangedByCall`'s one difference; an AST or handler entering either is still
+    VOLATILE's business.
+  - **Tests:** `testdata/fortran/optrecur.for`, its output worked by hand (and its trickier cases in Python)
+    before it ran, both optimizer and both paging modes: a static local in a register through a recursive
+    loop, a constant forwarded past a call, a common subexpression, a hoisted invariant, a stepped static
+    local, a DO limit the call changes, and frame locals at depth. Taking out the allocator's fix makes it
+    print wrong REGISTER, INVARIANT, and STEPPED lines; taking out subtask 4's call rule, FORWARD's too. Its
+    COMMON and TRIPS cases print right either way (the cost model doesn't merge `V*3`, and a DO's count is
+    fixed at its start), and are kept as cases a later pass could get wrong. `opt/recursive_test.go`'s
+    `TestRecursiveLoopVariables` and `TestFrameStoresDie`, each failing without its fix.
+  - **The corpus `/RECURSIVE`** (`recursiveModes`, in `TestFortranPrograms`, `TestFortranModules`, and,
+    locally, `TestDungeonMilestone`): every program compiled `/RECURSIVE/NOOPTIMIZE` and
+    `/RECURSIVE/OPTIMIZE`, in both paging modes, must print its `.out`. All but six do, and every module
+    program and DUNGEON's game (all 16 ways, the same SHA-256) do. The six are `recursiveDifferences`, each
+    with its reason: `align` and `directives` print addresses (a frame record is on a longword, and the
+    common blocks move as `$LOCAL` shrinks); `optasts`'s REENT is an AST's activation with its own STAT,
+    which is the frame working; and `optflow`, `optforward`, and `optreg` read an unsaved local or function
+    value the last call left, undefined in FORTRAN-77, the garbage differing between the two optimizer
+    modes (and in `/NOOPTIMIZE` often the old value by chance), so they aren't compared with each other.
+    A program can't be held to "now prints right" for the same reason.
+  - `testdata/ftn86`'s procedure is regenerated with OPTRECUR, in `ftn86AwaitingVMS` until subtask 12's round.

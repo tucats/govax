@@ -28,7 +28,7 @@ var fortranPrograms = filepath.Join("..", "..", "testdata", "fortran")
 
 // fortranPagingPrograms are the programs also run with paging on
 // (the plan's Decision 20: both paging modes for a subset).
-var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "checks", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "parts", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "recurio", "recursion", "recurvfe", "rtlcalls", "rtlchars", "runformat", "optalias", "optasts", "optbranch", "optcse", "optchar", "optinvar", "optloop", "optfaults", "optflow", "services", "shared", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
+var fortranPagingPrograms = []string{"adjust", "aggregates", "align", "altreturns", "args", "astrace", "asts", "automatic", "callback", "chars", "checks", "complex", "complexg", "data", "dialog", "direct", "directives", "entries", "exits", "floatedit", "flow", "formats", "funcs", "funcsg", "handlers", "inquire", "intedit", "internal", "intrinsics", "inventory", "iostmt", "itemlist", "jumps", "ledger", "lengths", "loops", "mathfns", "mathfnsg", "mixed", "mixedg", "numeric", "overlay", "parts", "positions", "powers", "relative", "procs", "reals", "realsg", "records", "recurio", "recursion", "recurvfe", "rtlcalls", "rtlchars", "runformat", "optalias", "optasts", "optbranch", "optcse", "optchar", "optinvar", "optloop", "optrecur", "optfaults", "optflow", "services", "shared", "stmtfuncs", "stopdo", "stops", "strings", "strrtl", "sysdef", "sysown", "sysroutines", "tables", "text", "typeless", "unformatted", "useropen", "vfe", "vmstour"}
 
 // fortranKernels are the optimizer's kernels (docs/PHASE-84 - FORTRAN
 // optimizer.md), compute programs that spend their time in their own loops, as
@@ -42,6 +42,37 @@ var fortranKernels = filepath.Join("..", "..", "testdata", "opt84", "kernels")
 var optimizerModes = []struct{ name, qualifier string }{
 	{"noopt", "/NOOPTIMIZE"},
 	{"opt", "/OPTIMIZE"},
+}
+
+// recursiveModes are optimizerModes with every subprogram compiled /RECURSIVE
+// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 7), its locals and the compiler's
+// cells in each activation's frame. A conforming FORTRAN-77 program doesn't depend on
+// an unsaved local keeping its value from one call to the next (section 4.12's SAVE),
+// so each must print what it prints compiled the usual way, but for
+// recursiveDifferences.
+var recursiveModes = []struct{ name, qualifier string }{
+	{"recursive-noopt", "/RECURSIVE/NOOPTIMIZE"},
+	{"recursive-opt", "/RECURSIVE/OPTIMIZE"},
+}
+
+// recursiveDifferences are the programs that print something else compiled
+// /RECURSIVE, each with the reason. A program that reads what a local held at the
+// last call reads whatever is on the stack, which the two optimizer modes needn't
+// leave the same, so their outputs aren't compared with each other either, and one may
+// print what it should by chance: what the last call left can still be there.
+var recursiveDifferences = map[string]string{
+	"align": "prints MOD(%LOC(RC), 16) of SECOND's record, which in the frame is on a " +
+		"longword, not the 16 bytes /ALIGN gives it in $LOCAL (subtask 4's frame alignment)",
+	"directives": "prints a common block's address, and its ACCVIO's, which move up as " +
+		"the subprograms' locals leave $LOCAL for the frame",
+	"optasts": "REENT's AST is another activation, with its own STAT, so the first one " +
+		"prints its own 10 rather than the 20 the AST stored: what the frame is for",
+	"optflow": "WALK's ENTRY AGAIN reads P, which WALK's last call set: an unsaved local " +
+		"keeping its value, undefined in FORTRAN-77 (section 4.12)",
+	"optforward": "KEEP returns what its last call stored in its value, undefined in " +
+		"FORTRAN-77, which deadcode.go keeps working only for static storage",
+	"optreg": "E1's ENTRY E2 reads L, which E1's last call set: an unsaved local keeping " +
+		"its value, undefined in FORTRAN-77 (section 4.12)",
 }
 
 // runCounts is what one program's RUN cost: its instructions, and the memory's
@@ -109,7 +140,11 @@ func TestFortranPrograms(t *testing.T) {
 		printed := map[string]string{}
 		counts := map[string]runCounts{}
 
-		for _, mode := range optimizerModes {
+		recursivePrinted := map[string]string{}
+
+		for _, mode := range append(optimizerModes, recursiveModes...) {
+			recursive := strings.HasPrefix(mode.name, "recursive")
+
 			t.Run(mode.name, func(t *testing.T) {
 				d, c, buf := shareFindConsole(t, paging)
 
@@ -162,12 +197,32 @@ func TestFortranPrograms(t *testing.T) {
 						// /OPTIMIZE moves the code, so what a program prints that
 						// says where its code is can't be the same.
 						matches := got == string(want)
-						if mode.qualifier == "/OPTIMIZE" {
+						if mode.qualifier != "/NOOPTIMIZE" {
 							matches = maskCodeAddresses(got) == maskCodeAddresses(string(want))
 						}
 
-						if hasWant && !matches {
+						_, differs := recursiveDifferences[name]
+
+						if hasWant && !matches && !(recursive && differs) {
 							t.Errorf("RUN %s printed:\n%s\nwant:\n%s", upper, got, want)
+						}
+
+						if recursive && differs {
+							return
+						}
+
+						if recursive {
+							if before, ok := recursivePrinted[name]; !ok {
+								recursivePrinted[name] = got
+							} else if maskCodeAddresses(got) != maskCodeAddresses(before) {
+								t.Errorf("RUN %s printed, compiled %s:\n%s\nand without /OPTIMIZE:\n%s", upper, mode.qualifier, got, before)
+							}
+
+							if !hasWant && !differs && maskCodeAddresses(got) != maskCodeAddresses(printed[name]) {
+								t.Errorf("RUN %s printed, compiled %s:\n%s\nand compiled the usual way:\n%s", upper, mode.qualifier, got, printed[name])
+							}
+
+							return
 						}
 
 						if before, ok := printed[name]; !ok {
@@ -200,7 +255,8 @@ func deleteFilesAfter(t *testing.T, d *Dispatcher, name string) {
 // only copied to the volume. links.txt has a LINK command's modules on each
 // line, and the program, named for its directory, must print name.out however
 // they are ordered: which module's contribution to a common block's overlaid
-// section comes first, or longest, or holds the values, mustn't matter.
+// section comes first, or longest, or holds the values, mustn't matter; nor whether
+// it is compiled /RECURSIVE (recursiveModes).
 func TestFortranModules(t *testing.T) {
 	programs, err := filepath.Glob(filepath.Join(fortranPrograms, "modules", "*"))
 	if err != nil || len(programs) == 0 {
@@ -208,7 +264,7 @@ func TestFortranModules(t *testing.T) {
 	}
 
 	eachLoader(t, func(t *testing.T, paging bool) {
-		for _, mode := range optimizerModes {
+		for _, mode := range append(optimizerModes, recursiveModes...) {
 			t.Run(mode.name, func(t *testing.T) {
 				fortranModules(t, programs, paging, mode.qualifier)
 			})

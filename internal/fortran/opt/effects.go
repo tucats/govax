@@ -27,20 +27,35 @@ import "github.com/tucats/govax/internal/fortran/ir"
 // called may declare too), and a dummy argument (whose real home may be in either
 // of those in the caller). A local that isn't taken survives a call.
 //
-// # Why that's enough: no routine runs twice at once
+// # Why that's enough: who else could change a local
 //
 // A local that isn't taken could only be changed by this same routine running
-// again, and section 6.2 of the language manual rules that out: "A subprogram can
-// refer to other subprograms, but it cannot refer to itself, either directly or
-// indirectly." An AST routine or a condition handler that calls back into a routine
-// is doing what that sentence forbids, and it may arrive between any two
-// instructions, not only at a call. No analysis could see that coming; the way to
+// again, during the call. Whether that can happen depends on the unit.
+//
+// An ordinary unit can't run twice at once. Section 6.2 of the language manual rules
+// it out: "A subprogram can refer to other subprograms, but it cannot refer to itself,
+// either directly or indirectly." So none of its locals, static or in the frame, can
+// change during a call. An AST routine or a condition handler that calls back into
+// such a routine is doing what that sentence forbids, and it may arrive between any
+// two instructions, not only at a call. No analysis could see that coming; the way to
 // tell the compiler is the VOLATILE statement (section 4.16: "a value is entirely
 // unpredictable, based on information local to the current program unit"). So
-// VOLATILE is the only rule for such a variable. asts.for reenters a routine
-// from an AST during $DCLAST and prints a static variable it changed, and that
-// still holds: the variable is in an I/O list, so taken, and the AST came during a
-// call. optasts.for is the same with VOLATILE variables no call may touch.
+// VOLATILE is the only rule for such a variable. asts.for reenters a routine from an
+// AST during $DCLAST and prints a static variable it changed, and that still holds:
+// the variable is in an I/O list, so taken, and the AST came during a call.
+// optasts.for is the same with VOLATILE variables no call may touch.
+//
+// A RECURSIVE unit (ir.Routine.Reentrant; docs/PHASE-89 - reentrant FORTRAN.md) is
+// the case section 6.2 leaves out: any call may lead back into it, directly or through
+// other routines. The activation that call starts is a fresh one, with a frame of its
+// own below the caller's, so it can't change this activation's frame, and a local
+// there survives the call as an ordinary unit's does. But every activation shares the
+// unit's static locals, SAVE'd, given initial values, or STATIC, so any call may
+// change any of them, taken or not. That is ChangedByCall's one difference between
+// the two kinds of unit, and every pass that asks what a call does asks it there.
+// An AST or handler that enters a RECURSIVE unit is only another activation: it
+// leaves this one's frame alone, and while it may change a static local between any
+// two instructions, as in an ordinary unit, that is still VOLATILE's business.
 
 // Effects is what a statement or terminator does to memory.
 type Effects struct {
@@ -179,11 +194,10 @@ func overlapsAny(p Place, list []Place) bool {
 // ChangedByCall reports whether a call may read or change p, though the call's
 // arguments don't name it.
 //
-// A RECURSIVE unit (ir.Routine.Reentrant) is the exception the section 6.2 argument
-// above doesn't cover: any call may lead back into it, and a later activation shares
-// its static locals (SAVE'd, initialized, STATIC), so a call may change any of them.
-// Its frame is still its own: a call that recurses changes the new activation's
-// frame, never this one's (docs/PHASE-89 - reentrant FORTRAN.md, "The optimizer").
+// A RECURSIVE unit's static locals are the difference between the two kinds of unit
+// (see the top of the file): a call may come back into the unit and change any of
+// them. Its frame is its own either way: a call that recurses changes the new
+// activation's frame, never this one's.
 func (s *Storage) ChangedByCall(p Place) bool {
 	switch p.Region {
 	case DataRegion, DescriptorRegion:

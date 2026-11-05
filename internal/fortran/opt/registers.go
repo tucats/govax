@@ -46,8 +46,10 @@ import (
 // didn't touch the variable. It has to be sure nothing else can reach the variable during
 // the loop. A local nothing has the address of (Decision 7) qualifies whatever the loop
 // does, since a call can't see it. A local whose address has been let out, or a variable
-// in COMMON, or a dummy argument, qualifies only in a loop with no call in it. Nothing
-// else in the loop may overlap it. Nothing VOLATILE qualifies.
+// in COMMON, or a dummy argument, qualifies only in a loop with no call in it, and so does
+// a static local of a RECURSIVE unit, which the call may come back into and change: what
+// Storage.ChangedByCall says. Nothing else in the loop may overlap it. Nothing VOLATILE
+// qualifies.
 //
 // A dummy argument's address. @A(AP)[R1] reads the argument list on every use; with the
 // address in R6 that is (R6)[R1], and with a constant subscript 4(R6), which needs no
@@ -886,10 +888,8 @@ func (a *allocator) variableEligible(l *Loop, home *ir.Mem, refs []reference) bo
 
 	self := a.s.Place(home)
 
-	if a.calls[l] {
-		if home.Param != nil || (home.Cell != nil && home.Cell.Common != nil) || a.s.Taken(self) {
-			return false
-		}
+	if a.calls[l] && a.s.ChangedByCall(self) {
+		return false
 	}
 
 	in := refsIn(refs, l)

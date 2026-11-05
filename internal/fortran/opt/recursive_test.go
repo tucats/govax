@@ -1,6 +1,7 @@
 package opt
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -112,5 +113,68 @@ func TestFrameBaseKept(t *testing.T) {
 
 	if got := highest("SUBROUTINE S(N)"); got != 11 {
 		t.Errorf("a routine with no frame's highest register cell is R%d, want R11", got)
+	}
+}
+
+// TestRecursiveLoopVariables checks that a recursive routine's SAVE'd local isn't held
+// in a register through a loop that calls something, since the call may come back into
+// the routine and change it, while its unsaved local, in this activation's frame, is;
+// and that without the call the SAVE'd one is held too, as in any routine.
+func TestRecursiveLoopVariables(t *testing.T) {
+	body := func(call string) []string {
+		return []string{
+			"RECURSIVE SUBROUTINE S(N, M)",
+			"INTEGER N, M, I, V, W",
+			"SAVE V",
+			"DO 10 I = 1, N",
+			"V = V + I",
+			"W = W + V",
+			call,
+			"V = V + W",
+			"W = W + I",
+			"10:CONTINUE",
+			"M = V + W",
+			"END",
+		}
+	}
+
+	held := inRegisters(allocated(t, "S", body("IF (N .GT. 1) CALL S(N - 1, M)")...))
+	if slices.Contains(held, "V") || !slices.Contains(held, "W") {
+		t.Errorf("with a call in the loop the registers hold %v: want W and not V", held)
+	}
+
+	held = inRegisters(allocated(t, "S", body("CONTINUE")...))
+	if !slices.Contains(held, "V") || !slices.Contains(held, "W") {
+		t.Errorf("without a call in the loop the registers hold %v: want V and W", held)
+	}
+}
+
+// TestFrameStoresDie checks that a store to a variable in the frame that nothing reads
+// before the routine returns goes, a recursive unit's local or an AUTOMATIC one, while a
+// SAVE'd local's stays, since the next call reads it.
+func TestFrameStoresDie(t *testing.T) {
+	for _, c := range []struct {
+		name, header, declaration string
+		gone                      bool
+	}{
+		{"recursive", "RECURSIVE SUBROUTINE S(N, M)", "INTEGER K", true},
+		{"automatic", "SUBROUTINE S(N, M)", "AUTOMATIC V", true},
+		{"saved", "RECURSIVE SUBROUTINE S(N, M)", "SAVE V", false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			text := allocatedMacro(t,
+				c.header,
+				"INTEGER N, M, V",
+				c.declaration,
+				"V = N * 3",
+				"M = V + 1",
+				"V = M * 5",
+				"END")
+
+			// The second store is the only MULL with #5.
+			if got := strings.Contains(text, "#5"); got == c.gone {
+				t.Errorf("V's last store kept is %v, want %v:\n%s", got, !c.gone, text)
+			}
+		})
 	}
 }

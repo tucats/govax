@@ -18,11 +18,14 @@ import (
 //
 // # Which places can die
 //
-// A variable can't, as VAX FORTRAN keeps every variable's value from one call to the
-// next (Decision 6 of docs/PHASE-84 - FORTRAN optimizer.md, from the note to SAVE in
-// section 4.14). The compiler's own temporaries, DO counts, and DO steps can, and a
-// function's value, which the RETURN hands over. Anything whose address has been let
-// out can't, nor anything VOLATILE (Storage.Dies).
+// A static variable can't, as VAX FORTRAN keeps every such variable's value from one
+// call to the next (Decision 6 of docs/PHASE-84 - FORTRAN optimizer.md, from the note to
+// SAVE in section 4.14). The compiler's own temporaries, DO counts, and DO steps can, and
+// a function's value, which the RETURN hands over. So can a scalar variable in the frame
+// area, AUTOMATIC or a RECURSIVE unit's local: it is undefined at each call (Decision 9
+// of docs/PHASE-89 - reentrant FORTRAN.md), so its value ends with the activation, and
+// a store nothing reads before the RETURN goes. Anything whose address has been let out
+// can't, nor anything VOLATILE (findDying).
 //
 // # Liveness
 //
@@ -46,7 +49,9 @@ import (
 // a call with L false returns the value of the last call with L true. That's no more
 // than an accident of static storage, but it is what the program has always done, and
 // such a program isn't stopped from working by turning on /OPTIMIZE. So a place live
-// at any entry is taken to be live at every exit too, and its stores stay. Everything
+// at any entry is taken to be live at every exit too, and its stores stay. Not a place
+// in the frame area, though: a RECURSIVE unit's cells are there, and each call has its
+// own, so no call reads what the last one left (lasting). Everything
 // else that can die is written before it is read, however control gets there. The same
 // rule covers a DO count read after a call comes in by an ENTRY statement in the loop.
 //
@@ -80,13 +85,18 @@ func DeadCode(r *ir.Routine) {
 	removeUnusedCells(r)
 }
 
-// findDying lists the cells that can die: a compiler's cell that holds values, or a
-// function's value, whose address hasn't been let out and that isn't VOLATILE. A
-// function's names may share one place with each other, but with nothing else.
+// findDying lists the cells that can die: a compiler's cell that holds values, a
+// function's value, or a scalar variable in the frame area, whose address hasn't been
+// let out and that isn't VOLATILE. A function's names may share one place with each
+// other, but with nothing else.
 func (s *Storage) findDying() {
 	for _, c := range s.r.Cells {
 		switch c.Kind {
 		case ir.TempCell, ir.CountCell, ir.LimitCell, ir.StepCell, ir.ResultCell:
+		case ir.VariableCell:
+			if !c.Frame {
+				continue
+			}
 		default:
 			continue
 		}
@@ -187,11 +197,26 @@ func (d *liveness) solve() {
 		grew = false
 
 		for _, b := range d.g.Entries {
-			if d.exit.add(d.in[b]) {
+			if d.exit.add(d.lasting(d.in[b])) {
 				grew = true
 			}
 		}
 	}
+}
+
+// lasting is the members of live whose values last from one call of the routine to the
+// next: all but those in the frame area, which each activation has afresh (a RECURSIVE
+// unit's cells, docs/PHASE-89 - reentrant FORTRAN.md). A frame cell live at an entry is
+// read before anything writes it, and what it reads is whatever was on the stack, which
+// no store at an exit can be what gave it.
+func (d *liveness) lasting(live liveSet) liveSet {
+	kept := d.set()
+
+	for i, in := range live {
+		kept[i] = in && d.places[i].Region != FrameRegion
+	}
+
+	return kept
 }
 
 // atEnd is what's live after block b's terminator.
