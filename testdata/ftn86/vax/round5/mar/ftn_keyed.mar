@@ -1,0 +1,205 @@
+	.TITLE	FTN_KEYED - FTNRTL's keyed READ
+	.IDENT	/V1.0/
+;
+; A keyed READ (the 1988 VAX FORTRAN Language Reference Manual, 7.1.1.7 and
+; 7.2.3) finds a record of an indexed file by the value of one of its keys:
+;
+;	READ (u, KEYGE=val, KEYID=kn) list
+;
+; The compiler calls FTN$READ_KF or FTN$READ_KU (FTN_STATEMENT), whose last three
+; arguments are VAL's descriptor, KN by value (-1 with no KEYID=), and which
+; specifier was written, by value:
+;
+;	0 KEY, KEYEQ	no ROP bit		either direction
+;	1 KEYGE		RAB$V_KGE		ascending keys only
+;	2 KEYGT		RAB$V_KGT		ascending keys only
+;	3 KEYNXT	RAB$V_KGE		either
+;	4 KEYNXTNE	RAB$V_KGT		either
+;	5 KEYLE		RAB$V_KGE		descending keys only
+;	6 KEYLT		RAB$V_KGT		descending keys only
+;
+; RMS has no "less than": on a descending key the next record in the key's order
+; is the lesser one, so its KGE is KEYLE there. A specifier for the other direction
+; is FOR$_INVMATKEY, as VMS's FORTRAN run-time library has it (testdata/for88's #154).
+;
+; This module readies the RAB, and FTN$$UNIT_GET does the $GET with RAB$B_RAC KEY.
+; What the statement's items do is as in any other READ. VMS's order of things
+; (testdata/for88's #268, #269, and #279, by what each left in the RAB):
+;
+;	A KEYID= from 0 to 255 goes in RAB$B_KRF, and -1 leaves it, the unit's last.
+;	Another number is FOR$_INVKEYSPE, and nothing changes.
+;	VAL's address and length go in RAB$L_KBF and RAB$B_KSZ. A class A descriptor
+;	is a BYTE array, its length the array's size.
+;	A specifier past 6 is FOR$_INVARGFOR.
+;	An integer VAL takes an integer key's size, as below (#231).
+;	A specifier for the wrong direction is FOR$_INVMATKEY. RAB$L_ROP is unchanged.
+;
+; RMS answers the rest, in FTN$$UNIT_GET: a key past the file's or a length the key
+; can't take is FOR$_INVKEYSPE, no such record FOR$_ATTACCNON.
+;
+; The file's key is known from a $DISPLAY with an XABKEY, needed only for a specifier
+; with a direction or an integer VAL. The $DISPLAY writes in the FAB it's given (FAB$L_ALQ
+; among them, which VMS's keyed READ leaves alone, #294), so it gets a copy of the
+; unit's on this routine's stack: RMS knows a file by the FAB's IFI.
+;
+; An integer VAL takes the size of an integer key: a word's value on a longword key is
+; found (#272), so it is sign-extended into UB_KEY, which KBF then names. A longword on
+; a word key is its low word, govax's choice, there being no such key in VMS's run. Any
+; other VAL's bytes go to RMS as they are, as on a string key (#271: its length is then
+; a generic key's), or a string on an integer key (#271).
+;
+	$DSCDEF				; descriptors' fields and codes
+	$FABDEF
+	$FORDEF				; FORRTL's condition values
+	$RABDEF
+	$SSDEF
+	$XABDEF
+	$XABKEYDEF
+
+UB_FAB		= 76			; A unit's block (FTN_UNITS)
+UB_RAB		= UB_FAB+FAB$C_BLN
+UB_ASV		= 620
+UB_KEY		= UB_ASV+8
+UB_KEYED	= UB_ASV+38
+
+MAX_KEY		= 255			; KRF and KSZ are bytes
+DESCENDING	= 5			; the bit that makes XAB$B_DTP descending
+
+FRAME_XAB	= -XAB$C_KEYLEN		; This routine's frame: the XABKEY
+FRAME_FAB	= FRAME_XAB-FAB$C_BLN	;  and the FAB's copy
+
+	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
+
+;
+; FTN$$KEY_START(block, descriptor, key number, specifier)
+;
+; Readies the unit whose block is given for its next $GET, by the key and specifier,
+; the last two by value. Returns SS$_NORMAL in R0, or the FOR$_ condition.
+;
+	.ENTRY	FTN$$KEY_START,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVAB	FRAME_FAB(SP),SP
+	MOVL	4(AP),R7
+	MOVAB	UB_RAB(R7),R6
+	MOVL	8(AP),R9		; the descriptor
+	MOVL	16(AP),R8		; the specifier
+	;
+	; The key's number.
+	;
+	MOVL	12(AP),R0
+	CMPL	R0,#-1
+	BEQL	10$			; the unit's last
+	CMPL	R0,#MAX_KEY
+	BLEQU	5$			; (unsigned, so a negative number isn't)
+3$:	MOVL	#FOR$_INVKEYSPE,R0
+	RET
+5$:	MOVB	R0,RAB$B_KRF(R6)
+	;
+	; The value's place and length.
+	;
+10$:	MOVL	DSC$A_POINTER(R9),RAB$L_KBF(R6)
+	MOVZWL	DSC$W_LENGTH(R9),R0
+	CMPB	DSC$B_CLASS(R9),#DSC$K_CLASS_A
+	BNEQ	15$
+	MOVL	DSC$L_ARSIZE(R9),R0
+15$:	CMPL	R0,#MAX_KEY
+	BGTRU	3$			; longer than any key
+	MOVB	R0,RAB$B_KSZ(R6)
+	;
+	; The specifier.
+	;
+	CMPL	R8,#6
+	BLEQU	18$
+	MOVL	#FOR$_INVARGFOR,R0
+	RET
+18$:	BSBW	NEEDS_KEY
+	BNEQ	20$
+	BRW	50$			; RMS needs nothing more, nor does this
+20$:	MOVC3	#FAB$C_BLN,UB_FAB(R7),FRAME_FAB(FP)
+	MOVC5	#0,(SP),#0,#XAB$C_KEYLEN,FRAME_XAB(FP)
+	MOVB	#XAB$C_KEY,FRAME_XAB+XAB$B_COD(FP)
+	MOVB	#XAB$C_KEYLEN,FRAME_XAB+XAB$B_BLN(FP)
+	MOVB	RAB$B_KRF(R6),FRAME_XAB+XAB$B_REF(FP)
+	MOVAB	FRAME_XAB(FP),FRAME_FAB+FAB$L_XAB(FP)
+	MOVAB	FRAME_FAB(FP),R2
+	$DISPLAY FAB=R2
+	BLBS	R0,22$
+	BRW	50$			; no such key: the $GET's RMS$_KRF
+22$:
+	;
+	; An integer value on an integer key takes the key's size.
+	;
+	CMPB	DSC$B_CLASS(R9),#DSC$K_CLASS_A
+	BEQL	47$
+	BICB3	#^X20,FRAME_XAB+XAB$B_DTP(FP),R1 ; the type, in either direction
+	CMPB	R1,#XAB$C_IN2
+	BEQL	35$
+	CMPB	R1,#XAB$C_BN2
+	BEQL	35$
+	CMPB	R1,#XAB$C_IN4
+	BEQL	35$
+	CMPB	R1,#XAB$C_BN4
+	BNEQ	47$
+35$:	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_L
+	BNEQ	40$
+	MOVL	@DSC$A_POINTER(R9),UB_KEY(R7)
+	BRB	45$
+40$:	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_W
+	BNEQ	47$
+	CVTWL	@DSC$A_POINTER(R9),UB_KEY(R7)
+45$:	MOVAB	UB_KEY(R7),RAB$L_KBF(R6)
+	MOVB	FRAME_XAB+XAB$B_SIZ0(FP),RAB$B_KSZ(R6)
+47$:
+	;
+	; The direction: a specifier of 1 or 2 is ascending only, of 5 or 6 descending
+	; only. R0 is 1 if the key descends.
+	;
+	EXTZV	#DESCENDING,#1,FRAME_XAB+XAB$B_DTP(FP),R0
+	TSTL	R8
+	BEQL	50$
+	CMPL	R8,#2
+	BGTR	48$
+	BLBC	R0,50$
+	BRB	49$
+48$:	CMPL	R8,#5
+	BLSS	50$
+	BLBS	R0,50$
+49$:	MOVL	#FOR$_INVMATKEY,R0
+	RET
+	;
+	; Ready: what the specifier asks of RMS.
+	;
+50$:	BICL2	#RAB$M_KGE!RAB$M_KGT,RAB$L_ROP(R6)
+	TSTL	R8
+	BEQL	60$
+	BLBS	R8,55$			; 1, 3, and 5
+	BISL2	#RAB$M_KGT,RAB$L_ROP(R6)
+	BRB	60$
+55$:	BISL2	#RAB$M_KGE,RAB$L_ROP(R6)
+60$:	MOVB	#RAB$C_KEY,RAB$B_RAC(R6)
+	MOVB	#1,UB_KEYED(R7)		; FTN$$UNIT_GET's first $GET is this
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; NEEDS_KEY: the Z bit clear if the file's key must be looked at: a specifier with a
+; direction (R8), or a value in an integer's type (R9). Changes R0.
+;
+NEEDS_KEY:
+	CMPL	R8,#1
+	BEQL	10$
+	CMPL	R8,#2
+	BEQL	10$
+	CMPL	R8,#5
+	BGEQ	10$
+	CMPB	DSC$B_CLASS(R9),#DSC$K_CLASS_A
+	BEQL	20$			; (the Z bit set)
+	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_L
+	BEQL	10$
+	CMPB	DSC$B_DTYPE(R9),#DSC$K_DTYPE_W
+	BEQL	10$
+	CLRL	R0			; the Z bit set
+	RSB
+10$:	MOVL	#1,R0			; the Z bit clear
+20$:	RSB
+
+	.END

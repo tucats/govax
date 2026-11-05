@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Subtask 12, the VMS round, prepared 2026-11-05, waiting for its run. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -417,7 +417,7 @@ it moves to a Phase 90.
     a routine entered by an AST while active, NAMELIST and VFEs in recursion), in
     both optimizer and paging modes; the gfortran comparison for the portable
     ones; DUNGEON `/RECURSIVE`, locally.
-12. **The VMS round:** `testdata/ftn86`'s next round, the new programs built and
+12. **The VMS round** (prepared 2026-11-05; waiting for the run): `testdata/ftn86`'s next round, the new programs built and
     run by VMS's MACRO and LINK (Question 8).
 13. **Close-out:** MANUAL.md (14.2's statements, 14.3's qualifier, 14.7's
     differences and unconfirmed choices, a section on recursion and ASTs),
@@ -877,3 +877,22 @@ it moves to a Phase 90.
     `recurvfe.for`'s (subtasks 5 and 6), and quicksort `recursion.for`'s, so nothing new was written for them.
   - `testdata/ftn86`'s procedure is regenerated with RECURAST, RECURCALC, RECURTREE, and M_MUTUAL, in
     `ftn86AwaitingVMS` until subtask 12's round.
+- **2026-11-05:** Subtask 12, the VMS round, prepared: `testdata/ftn86`'s fifth round.
+  - **What it runs:** besides the nine programs newer than round 4 (`ftn86AwaitingVMS`: RECURSION, OPTRECUR, RECURIO,
+    RECURVFE, RECURRTL, RECURAST, RECURCALC, RECURTREE, M_MUTUAL), a third variant of every program, `[NAMER]`, compiled
+    `/RECURSIVE` (gen.go's `variants`), so VMS's MACRO, LINK, and VAX run the frame code over the whole corpus, as
+    subtask 7's `recursiveModes` do on govax; and DUNGEON built twice, `[DUNGEONR]` `/RECURSIVE`, its sections BUILDR,
+    GAMER, SAVER, and RESTORER. 342 program runs in all.
+  - **The tests:** `TestFTN86Procedure` holds each R variant to its `name.out` too, but for `recursiveDifferences`, whose
+    runs may print the right thing by chance; `TestFTN86Oracle` sets every R variant aside while `ftn86AwaitingRecursive`;
+    `TestFTN86Dungeon` holds each R section to VMS's digest of its twin, which govax's `/RECURSIVE` DUNGEON prints.
+  - **An ods2 bug found, fixed** (ods2 `b4d4d3b`, `volume/writeheader.go`): the rehearsal's volume, with half as many files
+    again, stopped being mountable at about 1,330 files. INDEXF.SYS grows 16 blocks at a time, each growth a retrieval
+    pointer of its own since files' data lands between them, and when its header filled, the extension header went in the
+    lowest free slot: inside the space it was to describe, so it couldn't be written, and the tail had been relinked to it
+    first. An index file extension header now goes only in a slot the index file maps (`FindFreeSlotWithin`), and
+    `ensureHeaderSlot` keeps one free: with room for fewer than two more pointers, a growth puts just enough for the new
+    file's slot and one more in the last room, then the rest in an extension header in the one more.
+    `TestIndexFileGrowsIntoExtensionHeaders` makes 3,600 files and remounts. The round's own volume, about 1,400 files, is
+    the first govax-made volume with such a header to go to VMS.
+  - The volume is built (`testdata/disks/ftn86-exchange.dsk`, round 4's renamed `-round4`); copyout.cmd writes to `vax/round5`.

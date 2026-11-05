@@ -18,7 +18,8 @@ import (
 
 // ftn86FileDifferences are the programs that don't print their name.out when FTN86.COM runs
 // them, with why. A name.out is a terminal's output, and the procedure's runs write a file
-// and read a file; each of these also runs with its N variant, compiled /NOOPTIMIZE.
+// and read a file; each of these also runs with its N variant, compiled /NOOPTIMIZE, and its
+// R variant, compiled /RECURSIVE.
 var ftn86FileDifferences = map[string]string{
 	"ASTS":       "writes a line by $QIO to SYS$OUTPUT, here a file and not a terminal",
 	"DIALOG":     "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
@@ -135,7 +136,9 @@ func ftn86Sections(log string) map[string]string {
 // TestFTN86Procedure rehearses the VMS round (docs/PHASE-86 - FORTRAN milestone.md, subtask
 // 4) on govax. FTNRTL builds from its sources with no message, and each program prints what
 // the corpus says it should, but for ftn86FileDifferences, which it's held to as well: an
-// entry no longer needed is reported.
+// entry no longer needed is reported. A program's R variant, compiled /RECURSIVE, isn't
+// compared if recursiveDifferences lists it, since what it prints there may be the same by
+// chance (TestFortranPrograms').
 func TestFTN86Procedure(t *testing.T) {
 	log, _, _ := runFTN86(t)
 	sections := ftn86Sections(log)
@@ -180,8 +183,9 @@ func TestFTN86Procedure(t *testing.T) {
 		}
 
 		why, differs := ftn86FileDifferences[upper]
+		_, recursiveDiffers := recursiveDifferences[base]
 
-		for _, variant := range []string{directory, directory + "N"} {
+		for _, variant := range []string{directory, directory + "N", directory + "R"} {
 			got, ok := sections[variant]
 			if !ok {
 				t.Errorf("%s isn't in the log", variant)
@@ -190,6 +194,10 @@ func TestFTN86Procedure(t *testing.T) {
 			}
 
 			checked++
+
+			if recursiveDiffers && variant == directory+"R" {
+				continue
+			}
 
 			// As in TestFortranPrograms: /OPTIMIZE moves the code, so what a program
 			// prints that says where its code is can't be the same.
@@ -218,6 +226,10 @@ var ftn86VMSDifferences = map[string]string{
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
 // the next VMS round is to run (docs/PHASE-89 - reentrant FORTRAN.md, subtask 12).
 var ftn86AwaitingVMS = []string{"M_MUTUAL", "OPTRECUR", "RECURAST", "RECURCALC", "RECURIO", "RECURRTL", "RECURSION", "RECURTREE", "RECURVFE"}
+
+// ftn86AwaitingRecursive says VMS's last run had no R variants, each program compiled
+// /RECURSIVE, which the next round is to run (the same subtask).
+const ftn86AwaitingRecursive = true
 
 // ftn86Lines is a log's section as both sides can be held to it: without the commands SET
 // VERIFY echoed on VMS, or the options files LINK echoes then. The two numbers a traceback
@@ -268,12 +280,24 @@ func TestFTN86Oracle(t *testing.T) {
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
 
 	for _, name := range ftn86AwaitingVMS {
-		for _, variant := range []string{name, name + "N"} {
+		for _, variant := range []string{name, name + "N", name + "R"} {
 			if _, ok := want[variant]; ok {
 				t.Errorf("%s is in VMS's log: take it out of ftn86AwaitingVMS", variant)
 			}
 
 			delete(got, variant)
+		}
+	}
+
+	if ftn86AwaitingRecursive {
+		for name := range got {
+			if _, ok := got[strings.TrimSuffix(name, "R")+"N"]; ok && strings.HasSuffix(name, "R") {
+				if _, ok := want[name]; ok {
+					t.Errorf("%s is in VMS's log: set ftn86AwaitingRecursive false", name)
+				}
+
+				delete(got, name)
+			}
 		}
 	}
 
@@ -292,7 +316,7 @@ func TestFTN86Oracle(t *testing.T) {
 	delete(want, "FTNRTL")
 
 	for name, text := range want {
-		base := strings.TrimSuffix(name, "N")
+		base := strings.TrimSuffix(strings.TrimSuffix(name, "N"), "R")
 		if _, ok := ftn86VMSDifferences[name]; ok {
 			base = name
 		}
@@ -329,7 +353,8 @@ func TestFTN86Oracle(t *testing.T) {
 }
 
 // The game's sections of FTN86D.COM on VMS 7.1: DUNGEON built there, its log local since it
-// holds the game's text (testdata/disks/ftn86d-*.log), so its digests stand for it.
+// holds the game's text (testdata/disks/ftn86d-*.log), so its digests stand for it. Each
+// section's R twin, DUNGEON compiled /RECURSIVE, is to print the same.
 var ftn86DungeonSHA = map[string]string{
 	"GAME":    "a324c46d657770e84b7aeade6af4110736fe20ee520eb741e804c450aae5e24c",
 	"SAVE":    "c5fccbe574ec68dc7ee08fcda7641f175f6457732105ee464cf89c4c7aac0f22",
@@ -372,9 +397,11 @@ func TestFTN86Dungeon(t *testing.T) {
 	sections := ftn86Sections(ftn86Log(t, d, "FTN86D.LOG"))
 
 	for name, want := range ftn86DungeonSHA {
-		sum := sha256.Sum256([]byte(sections[name]))
-		if got := hex.EncodeToString(sum[:]); got != want {
-			t.Errorf("%s: %d bytes, SHA-256 %s, VMS's %s", name, len(sections[name]), got, want)
+		for _, section := range []string{name, name + "R"} {
+			sum := sha256.Sum256([]byte(sections[section]))
+			if got := hex.EncodeToString(sum[:]); got != want {
+				t.Errorf("%s: %d bytes, SHA-256 %s, VMS's %s", section, len(sections[section]), got, want)
+			}
 		}
 	}
 }

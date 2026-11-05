@@ -6,7 +6,7 @@
 //
 //	go run testdata/ftn86/gen.go
 //
-// It writes exchange.cmd (the volume, each program compiled by govax both ways),
+// It writes exchange.cmd (the volume, each program compiled by govax three ways),
 // ftn86.com (VMS's build of FTNRTL, and of each program, and its run), and copyout.cmd;
 // exchanged.cmd, ftn86d.com, and copyoutd.cmd are the same for DUNGEON, which stays local.
 package main
@@ -26,7 +26,7 @@ const (
 
 	// round is where copyout.cmd puts the next VMS run, under vax/ (and DUNGEON's log
 	// as testdata/disks/ftn86d-ROUND.log), to be checked before it replaces vax/'s.
-	round = "round4"
+	round = "round5"
 )
 
 // rtlModules are FTNRTL's sources, in ftnrtl.opt's order.
@@ -36,10 +36,13 @@ var rtlModules = []string{
 	"FTN_UNFORMATTED", "FTN_DIRECT", "FTN_RECORD", "FTN_KEYED", "FTN_INTRINSICS", "FTN_SYSTEM",
 }
 
-// variants are the two ways every program is compiled, each in a directory of its own.
+// variants are the ways every program is compiled, each in a directory of its own:
+// optimized, not, and with every unit /RECURSIVE (docs/PHASE-89 - reentrant FORTRAN.md,
+// subtask 12), its locals and the compiler's cells in each activation's frame.
 var variants = []struct{ suffix, qualifier string }{
 	{"", ""},
 	{"N", "/NOOPTIMIZE"},
+	{"R", "/RECURSIVE"},
 }
 
 func check(err error) {
@@ -112,7 +115,7 @@ $ LINK/SHAREABLE=FTNRTL/MAP=FTNRTL/FULL FTNRTL/OPTIONS
 $ SHOW SYMBOL $STATUS
 $ DEFINE FTNRTL 'ROOT'[FTN86]FTNRTL.EXE
 $ !
-$ ! Each program, compiled by govax both ways, each in a directory of its own, since
+$ ! Each program, compiled by govax three ways, each in a directory of its own, since
 $ ! a program may leave files behind it.
 $ !
 `)
@@ -238,33 +241,22 @@ func writeDungeon(write func(name, text string)) {
 MOUNT/WRITE %[1]s "%[2]s"
 SET DEFAULT %[1]s[000000]
 COPY/QUIET "%[3]s/ftn86d.com"/HOST FTN86D.COM
-CREATE/DIRECTORY %[1]s[DUNGEON]
-SET DEFAULT %[1]s[DUNGEON]
-COPY/QUIET "%[4]s/dindx"/HOST DINDX.DAT
-COPY/QUIET "%[4]s/dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
-COPY/QUIET "%[4]s/dparam.for"/HOST DPARAM.FOR
-COPY/QUIET "testdata/dungeon86/fixtime.for"/HOST FIXTIME.FOR
-COPY/QUIET "testdata/dungeon86/game.in"/HOST GAME.IN
-COPY/QUIET "testdata/dungeon86/save.in"/HOST SAVE.IN
-COPY/QUIET "testdata/dungeon86/restore.in"/HOST RESTORE.IN
-`, device, volume, dir, kit)
+`, device, volume, dir)
 
 	modules := []string{"DUNGEON", "GAME", "GDT", "PARSER", "SUBR", "ROOMS", "VERBS", "OBJECTS", "TIMEFNC"}
+
 	var sources []string
 
 	for _, m := range modules {
-		fmt.Fprintf(&ex, "COPY/QUIET \"%s/%s.f\"/HOST %s.F\n", kit, strings.ToLower(m), m)
-
 		if m != "GAME" {
 			sources = append(sources, m+".F")
 		}
 	}
 
-	fmt.Fprintf(&ex, "FORT/NOCHECK/CONT=40 %s,GAME.F+FIXTIME.FOR\n", strings.Join(sources, ","))
-	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nQUIT\n", device, device)
-
-	fmt.Fprintf(&com, `$ ! FTN86D.COM - DUNGEON on VMS, built by VMS's MACRO and LINK from the .MAR files govax's
+	fmt.Fprint(&com, `$ ! FTN86D.COM - DUNGEON on VMS, built by VMS's MACRO and LINK from the .MAR files govax's
 $ ! compiler made, against the FTNRTL FTN86.COM built. Written by testdata/ftn86/gen.go.
+$ ! [DUNGEON] is compiled the usual way, [DUNGEONR] /RECURSIVE, its sections' names
+$ ! ending in R.
 $ !
 $ ! Run it after FTN86.COM, with the exchange volume's [000000] the default directory:
 $ !
@@ -273,26 +265,52 @@ $ !
 $ SET NOON
 $ ROOT = F$PARSE(F$ENVIRONMENT("DEFAULT"),,,"DEVICE")
 $ DEFINE FTNRTL 'ROOT'[FTN86]FTNRTL.EXE
-$ SET DEFAULT 'ROOT'[DUNGEON]
-$ WRITE SYS$OUTPUT "==== BUILD"
-$ MACRO/NOLIST %[1]s
-$ LINK/NOMAP/EXECUTABLE=DUNGEON %[1]s,'ROOT'[FTN86]FTN86/OPTIONS
+`)
+
+	// Each build, in a directory of its own, since a game saves its file there.
+	for _, build := range []struct{ suffix, qualifier string }{{"", ""}, {"R", "/RECURSIVE"}} {
+		d := "DUNGEON" + build.suffix
+		fmt.Fprintf(&ex, `CREATE/DIRECTORY %[1]s[%[2]s]
+SET DEFAULT %[1]s[%[2]s]
+COPY/QUIET "%[3]s/dindx"/HOST DINDX.DAT
+COPY/QUIET "%[3]s/dtext"/HOST DTEXT.DAT/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=80
+COPY/QUIET "%[3]s/dparam.for"/HOST DPARAM.FOR
+COPY/QUIET "testdata/dungeon86/fixtime.for"/HOST FIXTIME.FOR
+COPY/QUIET "testdata/dungeon86/game.in"/HOST GAME.IN
+COPY/QUIET "testdata/dungeon86/save.in"/HOST SAVE.IN
+COPY/QUIET "testdata/dungeon86/restore.in"/HOST RESTORE.IN
+`, device, d, kit)
+
+		for _, m := range modules {
+			fmt.Fprintf(&ex, "COPY/QUIET \"%s/%s.f\"/HOST %s.F\n", kit, strings.ToLower(m), m)
+		}
+
+		fmt.Fprintf(&ex, "FORT/NOCHECK/CONT=40%s %s,GAME.F+FIXTIME.FOR\n", build.qualifier, strings.Join(sources, ","))
+
+		fmt.Fprintf(&com, `$ SET DEFAULT 'ROOT'[%[1]s]
+$ WRITE SYS$OUTPUT "==== BUILD%[2]s"
+$ MACRO/NOLIST %[3]s
+$ LINK/NOMAP/EXECUTABLE=DUNGEON %[3]s,'ROOT'[FTN86]FTN86/OPTIONS
 $ SHOW SYMBOL $STATUS
-$ WRITE SYS$OUTPUT "==== GAME"
+$ WRITE SYS$OUTPUT "==== GAME%[2]s"
 $ DEFINE/USER_MODE SYS$INPUT GAME.IN
 $ RUN DUNGEON
 $ SHOW SYMBOL $STATUS
-$ WRITE SYS$OUTPUT "==== SAVE"
+$ WRITE SYS$OUTPUT "==== SAVE%[2]s"
 $ DEFINE/USER_MODE SYS$INPUT SAVE.IN
 $ RUN DUNGEON
 $ SHOW SYMBOL $STATUS
-$ WRITE SYS$OUTPUT "==== RESTORE"
+$ WRITE SYS$OUTPUT "==== RESTORE%[2]s"
 $ DEFINE/USER_MODE SYS$INPUT RESTORE.IN
 $ RUN DUNGEON
 $ SHOW SYMBOL $STATUS
-$ SET DEFAULT 'ROOT'[000000]
+`, d, build.suffix, strings.Join(modules, ","))
+	}
+
+	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nQUIT\n", device, device)
+	fmt.Fprint(&com, `$ SET DEFAULT 'ROOT'[000000]
 $ WRITE SYS$OUTPUT "==== END"
-`, strings.Join(modules, ","))
+`)
 
 	write("exchanged.cmd", ex.String())
 	write("ftn86d.com", com.String())
@@ -308,4 +326,3 @@ DISMOUNT %[1]s
 QUIT
 `, device, volume, round))
 }
-

@@ -10,11 +10,11 @@ build everything here from source. Nothing of govax's runs on the VAX but its co
 | File | What it is |
 | --- | --- |
 | `gen.go` | Writes the rest: `go run testdata/ftn86/gen.go`, after the corpus or FTNRTL's modules change |
-| `exchange.cmd` | Makes the volume: FTNRTL's sources, and each program compiled by govax both ways, each in a directory of its own (`[NAME]` by `/OPTIMIZE`, `[NAMEN]` by `/NOOPTIMIZE`, `[M_NAME]` for a program of several files) |
+| `exchange.cmd` | Makes the volume: FTNRTL's sources, and each program compiled by govax three ways, each in a directory of its own (`[NAME]` by `/OPTIMIZE`, `[NAMEN]` by `/NOOPTIMIZE`, `[NAMER]` by `/RECURSIVE`, since Phase 89's round, `[M_NAME]` for a program of several files) |
 | `ftn86.com` | On VMS: assembles and links FTNRTL, defines it, then assembles, links, and runs each program, reading `NAME.IN` if it has one |
 | `ftn86.opt` | The options that link a program against FTNRTL. govax's LINK finds FTNRTL by itself; VMS's has to be told |
 | `copyout.cmd` | Copies the log, and FTNRTL's objects, image, and map, to `vax/` |
-| `exchanged.cmd`, `ftn86d.com`, `copyoutd.cmd` | The same for DUNGEON, playing `testdata/dungeon86`'s game, then saving a game and restoring it |
+| `exchanged.cmd`, `ftn86d.com`, `copyoutd.cmd` | The same for DUNGEON, playing `testdata/dungeon86`'s game, then saving a game and restoring it; built twice, `[DUNGEON]` and `[DUNGEONR]` by `/RECURSIVE`, whose sections end in R |
 
 DUNGEON's part reads the kit through a symbolic link, and its log goes back to `testdata/disks`, since
 it and the volume's `.MAR` files hold the game's text. Everything in `testdata/disks` is gitignored:
@@ -42,7 +42,7 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
 
 3. Dismount it or pause simh, then copy the results back:
 
-       mkdir -p testdata/ftn86/vax/round4
+       mkdir -p testdata/ftn86/vax/round5
        ./govax console < testdata/ftn86/copyout.cmd
        ./govax console < testdata/ftn86/copyoutd.cmd
 
@@ -58,5 +58,9 @@ rounds raised. The phase doc's log has what each round found.
 
 Before a later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one. The scripts use DUA5, since
 the author's startup mounts XFER on DUA2 (a failed MOUNT there once put a round's files on XFER). `copyout.cmd` writes the next
-run to `vax/round4/`, and `copyoutd.cmd` DUNGEON's log to `testdata/disks/ftn86d-round4.log`, beside the run the tests read,
-until it's checked; gen.go's `round` names them. `vax/round4/mar/` is the sources that round builds, for `TestFTN86Objects`.
+run to `vax/round5/`, and `copyoutd.cmd` DUNGEON's log to `testdata/disks/ftn86d-round5.log`, beside the run the tests read,
+until it's checked; gen.go's `round` names them. `vax/round5/mar/` is the sources that round builds, for `TestFTN86Objects`.
+
+The fifth round (Phase 89, subtask 12) adds the recursive programs and every program's R variant, compiled `/RECURSIVE`,
+which `TestFTN86Oracle` sets aside until it comes back (`ftn86AwaitingVMS`, `ftn86AwaitingRecursive`). Its volume holds
+about 1,400 files, enough that INDEXF.SYS needs an extension header, which ods2 couldn't make before this round.
