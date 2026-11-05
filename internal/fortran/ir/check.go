@@ -25,34 +25,33 @@ func Check(r *Routine) error {
 
 	cells := map[*Cell]bool{}
 
-	var local []*Cell
+	var local, frame []*Cell
 
 	for _, c := range r.Cells {
 		cells[c] = true
 
-		if c.Common == nil && !c.Frame && c.Register == 0 {
+		switch {
+		case c.Common != nil || c.Register != 0:
+		case c.Frame:
+			frame = append(frame, c)
+		default:
 			local = append(local, c)
 		}
 
-		if c.Frame && (c.Offset < 0 || c.Offset+c.Size > r.FrameSize) {
-			return fmt.Errorf("%s: cell %s at %d is outside the frame's %d bytes", r.Name, c.Name, c.Offset, r.FrameSize)
+		// A reentrant routine shares nothing of the compiler's between activations
+		// but a FORMAT's parsed form, and the FP its variable format expressions use.
+		if r.Reentrant && c.Sym == nil && !c.Frame && c.Common == nil && c.Register == 0 &&
+			c.Kind != FormatCell && c.Kind != FrameBaseCell {
+			return fmt.Errorf("%s: cell %s of a reentrant routine is in $LOCAL", r.Name, c.Name)
 		}
 	}
 
-	sort.SliceStable(local, func(i, j int) bool { return local[i].Offset < local[j].Offset })
-
-	end := 0
-
-	for _, c := range local {
-		if c.Offset < end && (c.Sym == nil || !c.Sym.Equivalenced) {
-			return fmt.Errorf("%s: cell %s at %d overlaps the cell before it", r.Name, c.Name, c.Offset)
-		}
-
-		end = max(end, c.Offset+c.Size)
+	if err := checkArea(r, local, "$LOCAL", r.LocalSize); err != nil {
+		return err
 	}
 
-	if end > r.LocalSize {
-		return fmt.Errorf("%s: the cells end at %d, past $LOCAL's %d bytes", r.Name, end, r.LocalSize)
+	if err := checkArea(r, frame, "the frame", r.FrameSize); err != nil {
+		return err
 	}
 
 	data := map[*Datum]bool{}
@@ -414,6 +413,32 @@ func (c *checker) expr(e Expr) error {
 
 	case *CharIndex:
 		return fmt.Errorf("%s is inside an expression, where it would hold registers across MATCHC", ExprText(e))
+	}
+
+	return nil
+}
+
+// checkArea reports cells of one storage area, $LOCAL or the frame, that overlap but
+// for EQUIVALENCE, or that are outside its size bytes.
+func checkArea(r *Routine, cells []*Cell, area string, size int) error {
+	sort.SliceStable(cells, func(i, j int) bool { return cells[i].Offset < cells[j].Offset })
+
+	end := 0
+
+	for _, c := range cells {
+		if c.Offset < 0 {
+			return fmt.Errorf("%s: cell %s at %d is outside %s", r.Name, c.Name, c.Offset, area)
+		}
+
+		if c.Offset < end && (c.Sym == nil || !c.Sym.Equivalenced) {
+			return fmt.Errorf("%s: cell %s at %d overlaps the cell before it", r.Name, c.Name, c.Offset)
+		}
+
+		end = max(end, c.Offset+c.Size)
+	}
+
+	if end > size {
+		return fmt.Errorf("%s: the cells end at %d, past %s's %d bytes", r.Name, end, area, size)
 	}
 
 	return nil

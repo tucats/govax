@@ -9,11 +9,12 @@ import (
 )
 
 // The syntax of recursive routines (docs/PHASE-89 - reentrant FORTRAN.md, subtask
-// 2): which units /RECURSIVE, OPTIONS, and RECURSIVE make recursive. Until the
-// frame holds a recursive unit's storage (subtask 4), each such unit is analyzed
-// and then reported NOTIMPL at its header, so these tests read the NOTIMPLs.
+// 2): which units /RECURSIVE, OPTIONS, and RECURSIVE make recursive. Since subtask 4
+// a recursive unit is compiled with its storage in the frame, and its storage map's
+// heading says it is RECURSIVE, so these tests read the headings.
 
-// recursiveUnits compiles lines and lists, as "line:message", what it reports.
+// recursiveUnits compiles lines and lists, as "line:message", what it reports, then
+// as "R:name" each routine compiled as a RECURSIVE one.
 func recursiveUnits(t *testing.T, recursive bool, lines ...string) string {
 	t.Helper()
 
@@ -25,6 +26,13 @@ func recursiveUnits(t *testing.T, recursive bool, lines ...string) string {
 	var got []string
 	for _, m := range r.Messages {
 		got = append(got, strconv.Itoa(m.Pos.Line)+":"+m.Ident)
+	}
+
+	for _, line := range r.MACRO {
+		if rest, ok := strings.CutPrefix(line, "; Storage map for "); ok && strings.Contains(rest, "RECURSIVE") {
+			name, _, _ := strings.Cut(rest, ",")
+			got = append(got, "R:"+name)
+		}
 	}
 
 	return strings.Join(got, " ")
@@ -52,14 +60,14 @@ func TestRecursiveUnits(t *testing.T) {
 		want      string
 	}{
 		{"not recursive", false, program, "5:RECURSIVE"},
-		{"/RECURSIVE: subprograms, not the main program or BLOCK DATA", true, program, "4:NOTIMPL 7:NOTIMPL"},
+		{"/RECURSIVE: subprograms, not the main program or BLOCK DATA", true, program, "R:S R:F"},
 		{"RECURSIVE on the header", false, []string{
 			"      RECURSIVE SUBROUTINE S(N)",
 			"      IF (N .GT. 0) CALL S(N - 1)",
 			"      END",
 			"      SUBROUTINE U",
 			"      END",
-		}, "1:NOTIMPL"},
+		}, "R:S"},
 		{"OPTIONS /RECURSIVE for one unit", false, []string{
 			"      OPTIONS /RECURSIVE",
 			"      SUBROUTINE S(N)",
@@ -68,21 +76,21 @@ func TestRecursiveUnits(t *testing.T) {
 			"      SUBROUTINE U",
 			"      CALL U",
 			"      END",
-		}, "6:RECURSIVE 2:NOTIMPL"}, // the NOTIMPLs come after analysis
+		}, "6:RECURSIVE"}, // an error: no MACRO
 		{"OPTIONS /NORECURSIVE against the command", true, []string{
 			"      OPTIONS /NOREC",
 			"      SUBROUTINE S",
 			"      END",
 			"      SUBROUTINE U",
 			"      END",
-		}, "4:NOTIMPL"},
+		}, "R:U"},
 		{"RECURSIVE wins over /NORECURSIVE", false, []string{
 			"      OPTIONS /NORECURSIVE",
 			"      INTEGER RECURSIVE FUNCTION K(N) RESULT(M)",
 			"      M = 1",
 			"      IF (N .GT. 1) M = N * K(N - 1)",
 			"      END",
-		}, "2:NOTIMPL"},
+		}, "R:K"},
 	}
 
 	for _, tt := range tests {
@@ -91,6 +99,32 @@ func TestRecursiveUnits(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestNotYetReentrant checks the NOTIMPLs a recursive unit still has: a NAMELIST
+// group of its frame variables (subtask 5) and variable format expressions (subtask
+// 6). A group of SAVE'd variables is static, and is compiled.
+func TestNotYetReentrant(t *testing.T) {
+	got := recursiveUnits(t, false,
+		"      RECURSIVE SUBROUTINE S(N)",
+		"      INTEGER K, L",
+		"      SAVE L",
+		"      NAMELIST /G/ K",
+		"      NAMELIST /H/ L",
+		"      WRITE (6, 10) N",
+		"   10 FORMAT (I<N>)",
+		"      WRITE (6, H)",
+		"      END",
+		"      SUBROUTINE U(N)",
+		"      NAMELIST /G/ K",
+		"      WRITE (6, 10) N",
+		"   10 FORMAT (I<N>)",
+		"      END",
+	)
+
+	if want := "4:NOTIMPL 7:NOTIMPL"; got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 

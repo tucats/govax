@@ -134,9 +134,17 @@ func (g *routineGen) facts() {
 		}
 
 		if cell.Frame {
-			c.Displacements[g.names.symbol(cell.Name)] = cell.Offset - g.r.FrameSize
+			c.Displacements[g.names.symbol(cell.Name)] = cell.Offset - g.frameSize()
 		} else {
 			c.Cells[g.names.symbol(cell.Name)] = cell
+		}
+	}
+
+	// A spill cell in the frame is a displacement too; one in $LOCAL is no
+	// variable's.
+	for _, cell := range g.spills {
+		if cell.Frame {
+			c.Displacements[g.names.symbol(cell.Name)] = cell.Offset - g.frameSize()
 		}
 	}
 }

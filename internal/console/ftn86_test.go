@@ -215,6 +215,10 @@ var ftn86VMSDifferences = map[string]string{
 	"POWBITS":     "the same, in exact bits",
 }
 
+// ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
+// the next VMS round is to run (docs/PHASE-89 - reentrant FORTRAN.md, subtask 12).
+var ftn86AwaitingVMS = []string{"RECURSION"}
+
 // ftn86Lines is a log's section as both sides can be held to it: without the commands SET
 // VERIFY echoed on VMS, or the options files LINK echoes then. The two numbers a traceback
 // prints for a frame in a shareable image are where the image was put.
@@ -262,6 +266,16 @@ func TestFTN86Oracle(t *testing.T) {
 
 	log, _, _ := runFTN86(t)
 	got, want := ftn86Sections(log), ftn86Sections(ftn86Lines(string(vms)))
+
+	for _, name := range ftn86AwaitingVMS {
+		for _, variant := range []string{name, name + "N"} {
+			if _, ok := want[variant]; ok {
+				t.Errorf("%s is in VMS's log: take it out of ftn86AwaitingVMS", variant)
+			}
+
+			delete(got, variant)
+		}
+	}
 
 	if len(got) != len(want) {
 		t.Errorf("%d sections, VMS's %d", len(got), len(want))

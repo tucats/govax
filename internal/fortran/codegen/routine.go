@@ -289,6 +289,27 @@ func (g *routineGen) blockLabel(b *ir.Block) string {
 	return l
 }
 
+// descriptorFieldNote is the comment for storing what the compiler knows of a
+// frame descriptor's longword at offset (ir.Descriptor.Fixed).
+func descriptorFieldNote(d *ir.Descriptor, offset int) string {
+	switch {
+	case offset == 0:
+		return fmt.Sprintf("the descriptor's length, %d, type, and class", d.Length)
+	case offset == ir.PointerOffset:
+		return "no string yet"
+	case offset == 8:
+		return "its flags and dimensions"
+	case offset == ir.ArsizeOffset:
+		return "the array's size in bytes"
+	case offset < d.LowerOffset(0):
+		return fmt.Sprintf("dimension %d's multiplier", (offset-d.MultiplierOffset(0))/4+1)
+	case (offset-d.LowerOffset(0))%8 == 0:
+		return fmt.Sprintf("dimension %d's lower bound", (offset-d.LowerOffset(0))/8+1)
+	}
+
+	return fmt.Sprintf("dimension %d's upper bound", (offset-d.LowerOffset(0))/8+1)
+}
+
 // newLabel is a new compiler label: unit.$1, unit.$2, ...
 func (g *routineGen) newLabel() string {
 	g.compiler++
@@ -314,6 +335,11 @@ func (g *routineGen) assign(s *ir.Assign) {
 
 		case ir.StepCell:
 			g.note = c.Loop + "'s step"
+
+		case ir.DescriptorCell:
+			if _, known := s.Src.(*ir.Const); known && c.Frame {
+				g.note = descriptorFieldNote(c.Desc, s.Dst.Offset)
+			}
 		}
 	}
 

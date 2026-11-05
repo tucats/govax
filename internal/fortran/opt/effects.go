@@ -204,11 +204,19 @@ func overlapsAny(p Place, list []Place) bool {
 
 // ChangedByCall reports whether a call may read or change p, though the call's
 // arguments don't name it.
+//
+// A RECURSIVE unit (ir.Routine.Reentrant) is the exception the section 6.2 argument
+// above doesn't cover: any call may lead back into it, and a later activation shares
+// its static locals (SAVE'd, initialized, STATIC), so a call may change any of them.
+// Its frame is still its own: a call that recurses changes the new activation's
+// frame, never this one's (docs/PHASE-89 - reentrant FORTRAN.md, "The optimizer").
 func (s *Storage) ChangedByCall(p Place) bool {
 	switch p.Region {
 	case DataRegion, DescriptorRegion:
 		return false
-	case LocalRegion, FrameRegion:
+	case LocalRegion:
+		return s.r.Reentrant || s.Taken(p) || s.Volatile(p)
+	case FrameRegion:
 		return s.Taken(p) || s.Volatile(p)
 	}
 

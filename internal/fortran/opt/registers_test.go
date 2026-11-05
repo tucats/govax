@@ -361,3 +361,21 @@ func TestRegisterCode(t *testing.T) {
 		})
 	}
 }
+
+// TestSharedResultsStayInMemory checks that a function's names, which share one place
+// when it has ENTRY statements, never get a register by liveness: a store to G is a
+// store to F, which the return reads (testdata/fortran/recursion.for found it).
+func TestSharedResultsStayInMemory(t *testing.T) {
+	r := allocated(t, "F",
+		"LOGICAL FUNCTION F(N)",
+		"LOGICAL G",
+		"F = N .EQ. 0",
+		"RETURN",
+		"ENTRY G(N)",
+		"G = N .NE. 0",
+		"END")
+
+	if got := inRegisters(r); len(got) != 0 {
+		t.Errorf("in registers: %v", got)
+	}
+}

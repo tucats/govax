@@ -1,0 +1,98 @@
+routine F function L
+  param N       L  through $A1
+  param A       L  through $A2
+  param S       B  through $A3
+  param X       F  through $A4
+  entry 1 F N=1 A=2 S=3
+  entry 2 G X=1 at B5
+  cell  F       L  frame+0    result F
+  cell  G       L  frame+0    result G
+  cell  K       L  frame+4    variable K
+  cell  M       L  frame+8    variable M
+  cell  T       B  frame+12   variable T
+  cell  $A1     L  frame+20   address of N
+  cell  $A2     L  frame+24   address of A
+  cell  $A3     L  frame+28   address of S
+  cell  $A4     L  frame+32   address of X
+  cell  $B1     L  frame+36   descriptor L A 4 (?)
+  cell  $S1     L  frame+68   DO 10's step
+  cell  $C1     L  frame+72   DO 10's count
+  cell  $T1     L  frame+76   temporary
+  cell  $T2     B  frame+80   temporary
+  cell  $D1     L  frame+84   descriptor T D 0
+  cell  $T3     W  frame+92   temporary
+  cell  $D2     L  frame+96   descriptor T S 0
+  cell  $D3     L  frame+104  descriptor T S 8
+  cell  $FC100  L  $LOCAL+0    the parsed form of a FORMAT
+  cell  $D4     L  frame+112  descriptor L S 4
+  $LOCAL is 4 bytes
+  the frame is 120 bytes
+  datum $K1     text 'AB'
+  datum $IO1    control
+  datum $K2     text '(I3, 4I5, A)'
+  datum $F100   format 100 $K2 cache $FC100
+B1:
+  assign $B1 = 67633156
+  assign $B1+8 = 31457280
+  assign $B1+12 = 0
+  assign $B1+20 = 0
+  assign $B1+24 = 1
+  assign $B1+28 = 0
+  assign $B1+4 = addr(@A)
+  assign $B1+28 = @N
+  assign $B1+20 = $B1+28
+  assign $B1+16 = addr(@A-4)
+  assign $B1+12 = mul.L(4, $B1+20)
+  ; line 10
+  assign $S1 = M
+  assign $C1 = div.L(sub.L(add.L(@N, $S1), 1), $S1)
+  assign K = 1
+  branch le.L($C1, 0) B4 B2
+B2:  ; DO 10's body
+  ; line 11
+  assign $T1 = sub.L(@N, 1)
+  call F(ref $T1, ref @A, val arg S) -> @($B1+16)[K]
+  ; line 12
+  jump B3
+B3: L10
+  assign K = add.L(K, $S1)
+  assign $C1 = sub.L($C1, 1)
+  branch gt.L($C1, 0) B2 B4
+B4:
+  ; line 13
+  move $T2(2) = @(@(arg S)+4)(2)
+  move $T2+2(2) = $K1(2)
+  move T(8) = $T2(4)
+  ; line 14
+  assign $D1 = 34471936
+  assign $D1+4 = 0
+  assign $T3 = cvt.LW(add.L(zext.WL(@(arg S)), zext.WL(@(arg S))))
+  call LIB$SGET1_DD(ref $T3, ref $D1)
+  move @($D1+4)(zext.WL(@(arg S))) = @(@(arg S)+4)(zext.WL(@(arg S)))
+  move @($D1+4)[zext.WL(@(arg S))](zext.WL(@(arg S))) = @(@(arg S)+4)(zext.WL(@(arg S)))
+  assign $D2 = 17694720
+  assign $D2 = cvt.LW(add.L(zext.WL(@(arg S)), zext.WL(@(arg S))))
+  assign $D2+4 = addr(@($D1+4))
+  assign $D3 = 17694728
+  assign $D3+4 = addr(T)
+  call SUB(ref $D2, ref $D3)
+  call LIB$SFREE1_DD(ref $D1)
+  ; line 15
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $F100)
+  assign $D4 = 17301508
+  assign $D4+4 = addr(K)
+  call FTN$IO_ITEM(ref $D4)
+  call FTN$IO_ITEM(ref $B1)
+  assign $D3 = 17694728
+  assign $D3+4 = addr(T)
+  call FTN$IO_ITEM(ref $D3)
+  call FTN$IO_END()
+  ; line 17
+  assign F = K
+  ; line 18
+  return F
+B5:  ; ENTRY G
+  ; line 20
+  assign G = cvt.FL(@X)
+  ; line 21
+  return F

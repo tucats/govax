@@ -48,7 +48,7 @@ func (g *routineGen) writeDebugTable(w *Writer) {
 			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.InRegister, N: c.Register}).Line())
 
 		case c.Frame:
-			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.Frame, N: c.Offset - g.r.FrameSize}).Line())
+			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.Frame, N: c.Offset - g.frameSize()}).Line())
 
 		default:
 			lines = append(lines, g.debugVar(c.Sym.Name, c.Sym, dbgtable.Place{Kind: dbgtable.Static, Symbol: g.names.symbol(c.Name)}).Line())

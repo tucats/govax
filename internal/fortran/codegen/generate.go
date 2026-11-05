@@ -80,15 +80,6 @@ func alignmentName(align int) string {
 	return strconv.Itoa(align)
 }
 
-// The flags of a class A descriptor (the OpenVMS Calling Standard's
-// DSC$B_AFLAGS): FORTRAN's arrays are stored by columns, and the
-// descriptor holds the multipliers and the bounds.
-const (
-	flagColumn = 1 << 5 // DSC$V_FL_COLUMN
-	flagCoeff  = 1 << 6 // DSC$V_FL_COEFF
-	flagBounds = 1 << 7 // DSC$V_FL_BOUNDS
-)
-
 // Options are the choices Generate is given.
 type Options struct {
 	// Improve, if not nil, is given each routine's code before it is written:
@@ -348,12 +339,13 @@ func (g *routineGen) writeCommonNames(w *Writer) {
 	}
 }
 
-// writeFrameNames defines the symbols of the routine's AUTOMATIC variables, as
+// writeFrameNames defines the symbols of the routine's AUTOMATIC variables, and
+// in a reentrant routine its other variables and the compiler's cells there, as
 // their displacements from FP: UNIT.T = -16.
 func (g *routineGen) writeFrameNames(w *Writer) {
-	for _, c := range g.r.Cells {
-		if c.Frame {
-			w.Assignment(g.names.symbol(c.Name), strconv.Itoa(c.Offset-g.r.FrameSize), g.cellNote(c)+", in the frame")
+	for _, c := range append(append([]*ir.Cell{}, g.r.Cells...), g.spills...) {
+		if c.Frame && c.Register == 0 {
+			w.Assignment(g.names.symbol(c.Name), strconv.Itoa(c.Offset-g.frameSize()), g.cellNote(c)+", in the frame")
 		}
 	}
 }
@@ -499,8 +491,12 @@ func (g *routineGen) writeEntry(w *Writer, e *ir.Entry) {
 func (g *routineGen) writeFrame(w *Writer) {
 	g.writeUnderflow(w)
 
-	if g.r.FrameSize != 0 {
-		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.r.FrameSize)+",SP", "the frame's AUTOMATIC variables")
+	switch {
+	case g.frameSize() == 0:
+	case g.r.Reentrant:
+		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "this activation's own storage")
+	default:
+		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "the frame's AUTOMATIC variables")
 	}
 
 	if c := g.r.FrameBase; c != nil {
@@ -522,11 +518,11 @@ func (g *routineGen) writeUnderflow(w *Writer) {
 // routine's return goes by it, and its arguments' addresses copied to cells.
 func (g *routineGen) writeEntryArgs(w *Writer, e *ir.Entry) {
 	if c := g.r.Selector; c != nil {
-		w.Statement("", "MOVL", "#"+strconv.Itoa(e.Number)+","+g.names.symbol(c.Name), "this entry point's number")
+		w.Statement("", "MOVL", "#"+strconv.Itoa(e.Number)+","+g.cellPlace(c), "this entry point's number")
 	}
 
 	for _, a := range e.Args {
-		w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+g.names.symbol(a.Param.Through.Name),
+		w.Statement("", "MOVL", strconv.Itoa(4*a.Index)+"(AP),"+g.cellPlace(a.Param.Through),
 			fmt.Sprintf("%s is argument %d", a.Param.Name, a.Index))
 	}
 }
@@ -541,18 +537,24 @@ func (g *routineGen) paramNote(p *ir.Param) string {
 	return fmt.Sprintf("%s is argument %d", p.Name, p.Index)
 }
 
-// what a routine is, for its storage map's heading.
+// what a routine is, for its storage map's heading: "a subroutine", "an INTEGER
+// function", "a RECURSIVE subroutine" for a reentrant one.
 func (g *routineGen) what() string {
+	recursive := ""
+	if g.r.Reentrant {
+		recursive = "RECURSIVE "
+	}
+
 	switch g.r.Kind {
 	case ir.Function:
 		article := "a "
-		if strings.ContainsAny(g.r.Unit.Result.Type.String()[:1], "AEIOU") {
+		if recursive == "" && strings.ContainsAny(g.r.Unit.Result.Type.String()[:1], "AEIOU") {
 			article = "an "
 		}
 
-		return article + g.r.Unit.Result.Type.String() + " function"
+		return article + recursive + g.r.Unit.Result.Type.String() + " function"
 	case ir.Subroutine:
-		return "a subroutine"
+		return "a " + recursive + "subroutine"
 	case ir.BlockData:
 		return "a block data subprogram"
 	}
@@ -602,7 +604,7 @@ func (g *routineGen) storageMap() []string {
 
 		case c.Frame:
 			rows = append(rows, row{c.Sym.Name, typeText(c.Sym),
-				"FP" + strconv.Itoa(c.Offset-g.r.FrameSize), g.names.symbol(c.Name) + "(FP)"})
+				"FP" + strconv.Itoa(c.Offset-g.frameSize()), g.names.symbol(c.Name) + "(FP)"})
 
 		default:
 			section := "$LOCAL"
@@ -720,7 +722,12 @@ func (g *routineGen) cells() []*ir.Cell {
 		}
 	}
 
-	cells = append(cells, g.spills...)
+	for _, c := range g.spills {
+		if !c.Frame {
+			cells = append(cells, c)
+		}
+	}
+
 	sort.SliceStable(cells, func(i, j int) bool { return cells[i].Offset < cells[j].Offset })
 
 	return cells
@@ -862,6 +869,12 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "the routine's FP, for its variable format expressions"
 	case ir.KeyListCell:
 		return "the keys of an OPEN's KEY=, for FTNRTL"
+	case ir.DescriptorCell:
+		if c.Dummy != "" {
+			return c.Dummy + "'s descriptor, filled in at each entry point"
+		}
+
+		return "a descriptor, written whole at each use"
 	}
 
 	if strings.HasPrefix(c.Name, "$X") {
@@ -1001,7 +1014,7 @@ func writeDescriptor(w *Writer, d *ir.Descriptor, pointer, a0, note string) {
 		return
 	}
 
-	w.Statement("", ".BYTE", fmt.Sprintf("0,0,^X%02X,%d", flagColumn|flagCoeff|flagBounds, len(d.Dims)),
+	w.Statement("", ".BYTE", fmt.Sprintf("0,0,^X%02X,%d", ir.ArrayFlags, len(d.Dims)),
 		"scale, digits, flags, dimensions")
 	w.Statement("", ".LONG", strconv.Itoa(d.Elements()*d.Length), "the array's size in bytes")
 	w.Statement("", directive, a0, "A0, where the element with zero subscripts would be")

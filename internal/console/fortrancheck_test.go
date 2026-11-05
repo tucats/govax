@@ -782,9 +782,8 @@ func TestFortranF77Qualifier(t *testing.T) {
 }
 
 // TestFortranRecursiveQualifier runs /[NO]RECURSIVE through the command: a
-// subroutine calling itself is RECURSIVE's error without it, and with it is
-// analyzed and left NOTIMPL until its storage is in its frame (docs/PHASE-89 -
-// reentrant FORTRAN.md, subtask 2).
+// subroutine calling itself is RECURSIVE's error without it, and with it compiles
+// with nothing to say (docs/PHASE-89 - reentrant FORTRAN.md, subtasks 2 and 4).
 func TestFortranRecursiveQualifier(t *testing.T) {
 	d, c, buf := shareFindConsole(t, false)
 
@@ -798,13 +797,13 @@ func TestFortranRecursiveQualifier(t *testing.T) {
 	for _, f := range []struct{ qualifier, want string }{
 		{"", "%FORT-E-RECURSIVE, S can't refer to itself: it isn't a RECURSIVE subprogram"},
 		{"/NORECURSIVE", "%FORT-E-RECURSIVE"},
-		{"/RECURSIVE", "%FORT-E-NOTIMPL, a RECURSIVE subprogram is not implemented yet"},
+		{"/RECURSIVE", ""},
 	} {
 		buf.Reset()
 		_ = d.Dispatch("FORTRAN" + f.qualifier + " RECQ")
 
-		if !strings.Contains(buf.String(), f.want) {
-			t.Errorf("%q: got %q, want %q", f.qualifier, buf.String(), f.want)
+		if got := buf.String(); (f.want == "" && got != "") || !strings.Contains(got, f.want) {
+			t.Errorf("%q: got %q, want %q", f.qualifier, got, f.want)
 		}
 	}
 }

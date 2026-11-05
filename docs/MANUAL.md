@@ -5673,9 +5673,15 @@ itself and its ENTRY points; in a function without `RESULT`, the function's name
 an argument list is a call, and without one its value. `RESULT(name)` after a FUNCTION
 or ENTRY statement's argument list names the variable that holds the value instead,
 with the header's type; the function's name is then only a call, and may not be
-declared (`RESULTDECL`). Recursive units are analyzed but not yet compiled: each is
-`%FORT-E-NOTIMPL` at its header until their storage is in the stack frame
-(docs/PHASE-89).
+declared (`RESULTDECL`). Each activation of a recursive unit has storage of its own
+in its stack frame: its variables but those SAVE'd, given initial values, in COMMON,
+or STATIC (an EQUIVALENCE group goes where any static member goes), its function
+value, and every cell of the compiler's (temporaries, DO counts, descriptors, ENTRY's
+argument cells) but where FTNRTL keeps a FORMAT's parsed form; each entry point
+reserves the frame with one `SUBL2`, and the storage map's heading says `RECURSIVE`.
+A SAVE'd variable or COMMON is one place every activation shares. Not yet in a
+recursive unit (`%FORT-E-NOTIMPL`, docs/PHASE-89): a NAMELIST group of its frame
+variables, and variable format expressions.
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX

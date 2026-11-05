@@ -1,0 +1,177 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for F, a RECURSIVE INTEGER function
+;   N     INTEGER        an argument  @F.$A1(FP)
+;   A     INTEGER (?)    an argument  @F.$A2(FP)
+;   S     CHARACTER*(*)  an argument  @F.$A3(FP)
+;   X     REAL           an argument  @F.$A4(FP)
+;   F     INTEGER        FP-120       F.F(FP)
+;   G     INTEGER        FP-120       F.G(FP)
+;   K     INTEGER        FP-116       F.K(FP)
+;   M     INTEGER        FP-112       F.M(FP)
+;   T     CHARACTER*8    FP-108       F.T(FP)
+;
+F.F = -120				; F, the function's value, in the frame
+F.G = -120				; G, the function's value, in the frame
+F.K = -116				; K, in the frame
+F.M = -112				; M, in the frame
+F.T = -108				; T, in the frame
+F.$A1 = -100				; N's longword of the argument list, set at each entry point, in the frame
+F.$A2 = -96				; A's longword of the argument list, set at each entry point, in the frame
+F.$A3 = -92				; S's longword of the argument list, set at each entry point, in the frame
+F.$A4 = -88				; X's longword of the argument list, set at each entry point, in the frame
+F.$B1 = -84				; A's descriptor, filled in at each entry point, in the frame
+F.$S1 = -52				; DO 10's step, in the frame
+F.$C1 = -48				; DO 10's count, in the frame
+F.$T1 = -44				; temporary, in the frame
+F.$T2 = -40				; characters, for one statement, in the frame
+F.$D1 = -36				; a descriptor, written whole at each use, in the frame
+F.$T3 = -28				; temporary, in the frame
+F.$D2 = -24				; a descriptor, written whole at each use, in the frame
+F.$D3 = -16				; a descriptor, written whole at each use, in the frame
+F.$D4 = -8				; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+F.$FC100:
+	.BLKL	1			; the parsed form of FORMAT 100, FTNRTL's
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+F.$IO1:	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+F.$F100:
+	.ADDRESS F.$FC100		; FORMAT 100's block: its parsed form's cell
+	.WORD	12			; the text's length
+	.WORD	0			; flags
+	.ADDRESS F.$K2			; the text
+F.$K1:	.ASCII	/AB/
+F.$K2:	.ASCII	/(I3, 4I5, A)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C Phase 89, subtask 4: a recursive unit's compiler's cells are in its frame
+;    2  C (temporaries, a DO count and step, descriptors written whole at each use, an
+;    3  C adjustable array's descriptor, ENTRY's argument cells and selector, a
+;    4  C concatenation's text and a dynamic string), but a FORMAT's parsed form.
+;    5        RECURSIVE INTEGER FUNCTION F(N, A, S)
+	.ENTRY	F,^M<R2,R3,R4,R5>
+	SUBL2	#120,SP			; this activation's own storage
+	MOVL	4(AP),F.$A1(FP)		; N is argument 1
+	MOVL	8(AP),F.$A2(FP)		; A is argument 2
+	MOVL	12(AP),F.$A3(FP)	; S is argument 3
+	MOVL	#67633156,F.$B1(FP)	; the descriptor's length, 4, type, and class
+	MOVL	#31457280,F.$B1+8(FP)	; its flags and dimensions
+	CLRL	F.$B1+12(FP)		; the array's size in bytes
+	CLRL	F.$B1+20(FP)		; dimension 1's multiplier
+	MOVL	#1,F.$B1+24(FP)		; dimension 1's lower bound
+	CLRL	F.$B1+28(FP)		; dimension 1's upper bound
+	MOVAL	@F.$A2(FP),F.$B1+4(FP)
+	MOVL	@F.$A1(FP),F.$B1+28(FP)
+	MOVL	F.$B1+28(FP),F.$B1+20(FP)
+	MOVL	#-1,R0
+	MOVAL	@F.$A2(FP)[R0],F.$B1+16(FP)
+	MULL3	#4,F.$B1+20(FP),F.$B1+12(FP)
+;    6        INTEGER N, A(N), K, M, G
+;    7        CHARACTER*(*) S
+;    8        CHARACTER*8 T
+;    9        REAL X
+;   10        DO 10 K = 1, N, M
+	MOVL	F.M(FP),F.$S1(FP)	; DO 10's step
+	ADDL3	@F.$A1(FP),F.$S1(FP),R0	; DO 10's count
+	DECL	R0
+	DIVL3	F.$S1(FP),R0,F.$C1(FP)
+	MOVL	#1,F.K(FP)
+	TSTL	F.$C1(FP)
+	BGTR	F.$2
+	BRW	F.$1
+F.$2:
+F.$3:					; DO 10's body
+;   11           A(K) = F(N - 1, A, S)
+	SUBL3	#1,@F.$A1(FP),F.$T1(FP)
+	PUSHL	F.$A3(FP)
+	PUSHAL	@F.$A2(FP)
+	PUSHAL	F.$T1(FP)
+	CALLS	#3,G^F
+	MOVL	F.$B1+16(FP),R1
+	MOVL	F.K(FP),R2
+	MOVL	R0,(R1)[R2]
+;   12     10 CONTINUE
+F.L10:
+	ADDL2	F.$S1(FP),F.K(FP)
+	DECL	F.$C1(FP)		; one pass fewer
+	BLEQ	F.$4
+	BRW	F.$3
+F.$4:
+F.$1:
+;   13        T = S(1:2) // 'AB'
+	MOVL	F.$A3(FP),R0
+	MOVC3	#2,@4(R0),F.$T2(FP)
+	MOVC3	#2,F.$K1,F.$T2+2(FP)
+	MOVC5	#4,F.$T2(FP),#^A/ /,#8,F.T(FP)
+;   14        CALL SUB(S // S, T)
+	MOVL	#34471936,F.$D1(FP)	; the descriptor's length, 0, type, and class
+	CLRL	F.$D1+4(FP)		; no string yet
+	MOVZWL	@F.$A3(FP),R0
+	MOVZWL	@F.$A3(FP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,F.$T3(FP)
+	PUSHAQ	F.$D1(FP)
+	PUSHAW	F.$T3(FP)
+	CALLS	#2,G^LIB$SGET1_DD
+	MOVZWL	@F.$A3(FP),R0
+	MOVL	F.$A3(FP),R1
+	MOVC3	R0,@4(R1),@F.$D1+4(FP)
+	MOVZWL	@F.$A3(FP),R0
+	MOVL	F.$A3(FP),R1
+	MOVL	F.$D1+4(FP),R2
+	MOVZWL	@F.$A3(FP),R3
+	MOVC3	R0,@4(R1),(R2)[R3]
+	MOVL	#17694720,F.$D2(FP)	; the descriptor's length, 0, type, and class
+	MOVZWL	@F.$A3(FP),R0
+	MOVZWL	@F.$A3(FP),R1
+	ADDL2	R1,R0
+	CVTLW	R0,F.$D2(FP)
+	MOVAB	@F.$D1+4(FP),F.$D2+4(FP)
+	MOVL	#17694728,F.$D3(FP)	; the descriptor's length, 8, type, and class
+	MOVAB	F.T(FP),F.$D3+4(FP)
+	PUSHAQ	F.$D3(FP)
+	PUSHAQ	F.$D2(FP)
+	CALLS	#2,G^SUB
+	PUSHAQ	F.$D1(FP)
+	CALLS	#1,G^LIB$SFREE1_DD
+;   15        WRITE (6, 100) K, A, T
+	PUSHAB	F.$F100
+	PUSHL	#6
+	PUSHAB	F.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	#17301508,F.$D4(FP)	; the descriptor's length, 4, type, and class
+	MOVAL	F.K(FP),F.$D4+4(FP)
+	PUSHAQ	F.$D4(FP)
+	CALLS	#1,G^FTN$IO_ITEM
+	PUSHAQ	F.$B1(FP)
+	CALLS	#1,G^FTN$IO_ITEM
+	MOVL	#17694728,F.$D3(FP)	; the descriptor's length, 8, type, and class
+	MOVAB	F.T(FP),F.$D3+4(FP)
+	PUSHAQ	F.$D3(FP)
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   16    100 FORMAT (I3, 4I5, A)
+;   17        F = K
+	MOVL	F.K(FP),F.F(FP)
+;   18        RETURN
+	MOVL	F.F(FP),R0		; the function's value
+	RET
+;   19        ENTRY G(X)
+F.$5:					; ENTRY G
+;   20        G = X
+	CVTFL	@F.$A4(FP),F.G(FP)
+;   21        END
+	MOVL	F.F(FP),R0		; the function's value
+	RET
+
+	.ENTRY	G,^M<R2,R3,R4,R5>
+	SUBL2	#120,SP			; this activation's own storage
+	MOVL	4(AP),F.$A4(FP)		; X is argument 1
+	BRW	F.$5
+
+	.END

@@ -674,7 +674,12 @@ never had.
   compiler's cells in the stack frame, FTNRTL and the debugger (SET SCOPE) beside
   it, and a VMS round. Subtask 2 (2026-11-04) is the syntax (`lex.Statement.Recursive`,
   `ast.FunctionStmt.Result`, `sema.Unit.Recursive`, `Symbol.ResultVar`,
-  `Entry.Name`); until subtask 4 `fortran.Compile` reports a recursive unit NOTIMPL.
+  `Entry.Name`); subtask 3 the storage rule (`sema/storage.go`'s `recursiveStorage`);
+  subtask 4 (2026-11-04) the compiler's cells in the frame (`ir.Routine.Reentrant`,
+  `Routine.NewCell`, every cell but `$FCn`; frame descriptors written whole at each
+  use, `Descriptor.Fixed`; codegen's spill cells and `cellPlace`; the optimizer's
+  `closeUpBoth` and `ChangedByCall` for static locals; `testdata/fortran/recursion.for`);
+  `fortran.notYetReentrant` reports NOTIMPL for a NAMELIST of frame variables and VFEs.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -486,12 +486,19 @@ func (g *routineGen) spill(e ir.Expr) ir.Expr {
 
 	if c == nil {
 		c = &ir.Cell{
-			Name:   "$X" + strconv.Itoa(len(g.spills)+1),
-			Kind:   ir.TempCell,
-			T:      e.Type(),
-			Size:   size,
-			Offset: g.localSize(),
+			Name: "$X" + strconv.Itoa(len(g.spills)+1),
+			Kind: ir.TempCell,
+			T:    e.Type(),
+			Size: size,
 		}
+
+		// A reentrant routine's are in its frame, after lowering's cells there.
+		if g.r.Reentrant {
+			c.Frame, c.Offset = true, g.frameSize()
+		} else {
+			c.Offset = g.localSize()
+		}
+
 		g.spills = append(g.spills, c)
 	}
 
@@ -507,7 +514,25 @@ func (g *routineGen) localSize() int {
 	size := g.r.LocalSize
 
 	for _, c := range g.spills {
-		size += c.Size
+		if !c.Frame {
+			size += c.Size
+		}
+	}
+
+	return size
+}
+
+// frameSize is the size of the routine's frame area, the spill cells in it
+// included: what each entry point reserves, and what a frame cell's displacement
+// from FP is counted from, which the code generator can't know until it has
+// written the code.
+func (g *routineGen) frameSize() int {
+	size := g.r.FrameSize
+
+	for _, c := range g.spills {
+		if c.Frame {
+			size += c.Size
+		}
 	}
 
 	return size
@@ -590,13 +615,23 @@ func (g *routineGen) pointerMem(m *ir.Mem) operand {
 
 // argumentPlace is where the address of the dummy argument p is: the argument
 // list's longword, SUB.A(AP), or in a routine with ENTRY statements the cell
-// its entry points copy it to, SUB.$A1.
+// its entry points copy it to, SUB.$A1, or SUB.$A1(FP) in a reentrant routine.
 func (g *routineGen) argumentPlace(p *ir.Param) string {
 	if p.Through != nil {
-		return g.names.symbol(p.Through.Name)
+		return g.cellPlace(p.Through)
 	}
 
 	return g.names.symbol(p.Name) + "(AP)"
+}
+
+// cellPlace is the operand for the whole of the cell c, which is in memory: its
+// symbol, SUB.$E, or in the frame its displacement from FP, SUB.$E(FP).
+func (g *routineGen) cellPlace(c *ir.Cell) string {
+	if c.Frame {
+		return g.names.symbol(c.Name) + "(FP)"
+	}
+
+	return g.names.symbol(c.Name)
 }
 
 // intoRegister computes e into a register and returns it.

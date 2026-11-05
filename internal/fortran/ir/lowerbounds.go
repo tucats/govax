@@ -129,6 +129,10 @@ func (l *lowerer) computeArrayBounds(s *sema.Symbol, c *Cell) {
 
 	d := c.Desc
 
+	// In a reentrant routine the descriptor is in the frame, and each entry point
+	// writes all of it.
+	l.fillDescriptor(c)
+
 	// A passed-length array's elements are as long as its descriptor says.
 	if s.Type.Size == 0 {
 		store(0, Word, &Load{descriptorField(l.params[s], 0, Word)})

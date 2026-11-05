@@ -348,7 +348,9 @@ func (a *allocator) findTemporaries() {
 	byIndex := make([]*candidate, len(d.places))
 
 	for i, c := range d.s.dying {
-		if d.exit[i] || c.Size != c.T.Size() {
+		// A function's names with ENTRY statements share one place (a store to one
+		// is a store to the others), which no register can be.
+		if d.exit[i] || c.Size != c.T.Size() || a.overlapsAnother(c) {
 			continue
 		}
 
@@ -1252,22 +1254,15 @@ func (a *allocator) place(e Edge, out *ir.Block) {
 // closeUpRegisters takes the compiler's cells that became registers out of $LOCAL. A
 // function's value has a symbol, and leaves a hole where it was.
 func (a *allocator) closeUpRegisters() {
-	var local []*ir.Cell
-
 	gone := map[*ir.Cell]bool{}
 
 	for _, c := range a.r.Cells {
-		if c.Common == nil && !c.Frame && c.Holds == "" {
-			local = append(local, c)
-
-			if c.Register != 0 && c.Sym == nil {
-				gone[c] = true
-			}
+		if c.Common == nil && c.Holds == "" && c.Register != 0 && c.Sym == nil {
+			gone[c] = true
 		}
 	}
 
-	sort.SliceStable(local, func(i, j int) bool { return local[i].Offset < local[j].Offset })
-	closeUp(a.r, local, gone)
+	closeUpBoth(a.r, gone)
 
 	for _, c := range a.r.Cells {
 		if c.Register != 0 {

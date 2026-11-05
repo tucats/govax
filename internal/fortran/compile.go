@@ -1,6 +1,8 @@
 package fortran
 
 import (
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -195,14 +197,7 @@ func CompileAll(opts Options, files []File) (result Result) {
 			Standard:  opts.Standard,
 		}, &messages)
 
-		// A recursive unit is analyzed, but its storage isn't in its frame yet
-		// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 4), so it isn't
-		// compiled.
-		for _, u := range prog.Units {
-			if u.Recursive {
-				messages.Report("NOTIMPL", u.AST.Header.Position(), "a RECURSIVE subprogram")
-			}
-		}
+		notYetReentrant(prog, &messages)
 
 		if !messages.Failed() {
 			routines = ir.Lower(prog)
@@ -356,4 +351,31 @@ func MainName(name string) string {
 // vmsTime is t as VMS shows a date and time: 29-OCT-2026 14:05:11.20.
 func vmsTime(t time.Time) string {
 	return strings.ToUpper(t.Format("2-Jan-2006 15:04:05.00"))
+}
+
+// notYetReentrant reports NOTIMPL for what a recursive unit can't have yet
+// (docs/PHASE-89 - reentrant FORTRAN.md): a NAMELIST group of variables in its
+// frame, whose block in read-only data holds their descriptors (subtask 5), and a
+// FORMAT with variable format expressions, whose routine FTNRTL calls with no way to
+// find this activation's frame (subtask 6).
+func notYetReentrant(prog *sema.Program, messages *diag.List) {
+	for _, u := range prog.Units {
+		if !u.Recursive {
+			continue
+		}
+
+		for _, n := range u.Namelists {
+			if slices.ContainsFunc(n.Items, func(s *sema.Symbol) bool { return s.Automatic }) {
+				messages.Report("NOTIMPL", n.Pos, "a NAMELIST group of a RECURSIVE subprogram's unsaved variables")
+			}
+		}
+
+		labels := slices.Sorted(maps.Keys(u.Formats))
+
+		for _, label := range labels {
+			if f := u.Formats[label]; len(f.VFEs) > 0 {
+				messages.Report("NOTIMPL", f.AST.Position(), "variable format expressions in a RECURSIVE subprogram")
+			}
+		}
+	}
 }

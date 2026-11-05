@@ -122,6 +122,13 @@ type Routine struct {
 	// that each entry point reserves on the stack, in bytes.
 	FrameSize int
 
+	// Reentrant says the routine may be active more than once at a time: its unit
+	// is RECURSIVE (sema.Unit.Recursive). Its compiler's cells are then in the frame
+	// area, as its unsaved variables are, so that no two activations share one
+	// (NewCell); only a FORMAT's parsed form ($FCn) stays in $LOCAL, being the same
+	// for every activation (docs/PHASE-89 - reentrant FORTRAN.md, Decision 2).
+	Reentrant bool
+
 	// FrameBase, in a routine whose variable format expressions use AUTOMATIC
 	// variables, is the cell where each entry point leaves its FP; nil
 	// otherwise (lowervfe.go).
@@ -491,6 +498,55 @@ func (d *Descriptor) MultiplierOffset(i int) int {
 // longword.
 func (d *Descriptor) LowerOffset(i int) int {
 	return 20 + 4*len(d.Dims) + 8*i
+}
+
+// ArrayFlags are a class A descriptor's flags (DSC$B_AFLAGS): its array is stored
+// by columns (DSC$V_FL_COLUMN, bit 5), and it has its multipliers
+// (DSC$V_FL_COEFF, bit 6) and bounds (DSC$V_FL_BOUNDS, bit 7).
+const ArrayFlags = 1<<5 | 1<<6 | 1<<7
+
+// Fixed is each longword of the descriptor that the compiler knows, by its
+// offset: the length, type, and class; for class D a pointer of 0, the string
+// LIB$SGET1_DD hasn't made yet; for class A the flags and dimension count, the
+// size, and the multipliers and bounds, a Set dimension's as 0. It leaves out the
+// addresses (the pointer and A0), which are stored at run time. A descriptor cell
+// in the frame starts as whatever the stack held, so these are stored first each
+// time it is used (lowerer.descriptorCell); one in $LOCAL has them as its initial
+// values, as the code generator writes the descriptor.
+func (d *Descriptor) Fixed() []FixedLong {
+	first := uint32(uint16(d.Length)) | uint32(d.DType)<<16 | uint32(d.Class)<<24
+	fixed := []FixedLong{{0, first}}
+
+	switch d.Class {
+	case ClassD:
+		fixed = append(fixed, FixedLong{PointerOffset, 0})
+
+	case ClassA:
+		fixed = append(fixed,
+			FixedLong{8, uint32(ArrayFlags)<<16 | uint32(len(d.Dims))<<24},
+			FixedLong{ArsizeOffset, uint32(d.Elements() * d.Length)})
+
+		for i, b := range d.Dims {
+			extent, lower, upper := b.Upper-b.Lower+1, b.Lower, b.Upper
+			if b.Set {
+				extent = 0
+			}
+
+			fixed = append(fixed,
+				FixedLong{d.MultiplierOffset(i), uint32(int32(extent))},
+				FixedLong{d.LowerOffset(i), uint32(int32(lower))},
+				FixedLong{d.LowerOffset(i) + 4, uint32(int32(upper))})
+		}
+	}
+
+	return fixed
+}
+
+// FixedLong is one longword of a descriptor that the compiler knows: its offset
+// in the descriptor and its value.
+type FixedLong struct {
+	Offset int
+	Value  uint32
 }
 
 // Size is the descriptor's own size in bytes: two longwords for class S;

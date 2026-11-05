@@ -474,13 +474,10 @@ func (c *cse) temporary(t ir.Type) *ir.Cell {
 	return newTemporary(c.r, "$U"+strconv.Itoa(c.named), t)
 }
 
-// newTemporary is a new temporary of type t, placed as lowering places its cells.
+// newTemporary is a new temporary of type t, placed as lowering places its cells: in
+// $LOCAL, or in a reentrant routine's frame.
 func newTemporary(r *ir.Routine, name string, t ir.Type) *ir.Cell {
-	cell := &ir.Cell{Name: name, Kind: ir.TempCell, T: t, Size: t.Size(), Offset: r.LocalSize}
-	r.Cells = append(r.Cells, cell)
-	r.LocalSize += (cell.Size + 3) &^ 3
-
-	return cell
+	return r.NewCell(name, ir.TempCell, t, t.Size())
 }
 
 // replacer puts with in place of every expression whose key is key. Lowering may use

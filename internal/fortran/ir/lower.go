@@ -95,7 +95,8 @@ type lowerer struct {
 
 // lowerUnit lowers one program unit.
 func lowerUnit(u *sema.Unit) *Routine {
-	r := &Routine{Name: u.Name, Unit: u, Checks: u.Checks, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials}
+	r := &Routine{Name: u.Name, Unit: u, Checks: u.Checks, LocalSize: u.LocalSize, FrameSize: u.FrameSize, Initials: u.Initials,
+		Reentrant: u.Recursive}
 
 	l := &lowerer{
 		unit:     u,
@@ -392,12 +393,30 @@ func (l *lowerer) branch(cond Expr, t, f *Block) {
 	l.terminate(&Branch{l.origin(), cond, t, f})
 }
 
-// newCell adds a compiler's cell to the routine's storage, after the
-// cells before it, on a longword boundary.
+// newCell adds a compiler's cell to the routine's storage (Routine.NewCell).
 func (l *lowerer) newCell(name string, kind CellKind, t Type, size int) *Cell {
-	c := &Cell{Name: name, Kind: kind, T: t, Size: size, Offset: l.r.LocalSize}
-	l.r.Cells = append(l.r.Cells, c)
-	l.r.LocalSize += (size + 3) &^ 3
+	return l.r.NewCell(name, kind, t, size)
+}
+
+// NewCell adds a compiler's cell to the routine's storage, after the cells
+// before it, on a longword boundary: in $LOCAL, or in a reentrant routine in the
+// frame area, which grows by it. Every cell of the compiler's, lowering's and
+// the optimizer's, is made here, so that one rule decides where they go. A
+// FORMAT's cache ($FCn) and the VFEs' FP ($FP) are $LOCAL's in any routine: the
+// first is the same for every activation, and the second is how code running with
+// another routine's FP finds this one's frame.
+func (r *Routine) NewCell(name string, kind CellKind, t Type, size int) *Cell {
+	c := &Cell{Name: name, Kind: kind, T: t, Size: size}
+
+	if r.Reentrant && kind != FormatCell && kind != FrameBaseCell {
+		c.Frame, c.Offset = true, r.FrameSize
+		r.FrameSize += (size + 3) &^ 3
+	} else {
+		c.Offset = r.LocalSize
+		r.LocalSize += (size + 3) &^ 3
+	}
+
+	r.Cells = append(r.Cells, c)
 
 	return c
 }
@@ -438,8 +457,26 @@ func (l *lowerer) descriptorCell(d *Descriptor) *Cell {
 	}
 
 	l.busy = append(l.busy, c)
+	l.fillDescriptor(c)
 
 	return c
+}
+
+// fillDescriptor stores what the compiler knows of descriptor cell c's
+// descriptor (Descriptor.Fixed), if c is in the frame: a frame cell has no
+// initial values, and another activation, or another statement's descriptor of
+// the same form, may have left anything there. Each use writes it whole, the
+// statement storing the addresses after this (Decision 5 of docs/PHASE-89 -
+// reentrant FORTRAN.md): cheaper than filling every descriptor at each entry point
+// for a routine that only sometimes does I/O.
+func (l *lowerer) fillDescriptor(c *Cell) {
+	if !c.Frame {
+		return
+	}
+
+	for _, f := range c.Desc.Fixed() {
+		l.emit(&Assign{origin: l.origin(), Dst: &Mem{Cell: c, Offset: f.Offset, T: Long}, Src: LongConst(int32(f.Value))})
+	}
 }
 
 // release gives back the temporaries and descriptor cells the statement

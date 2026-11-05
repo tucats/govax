@@ -314,6 +314,36 @@ func TestSpill(t *testing.T) {
 	}
 }
 
+// TestSpillInFrame checks that a recursive routine's spill cell is in its frame,
+// after lowering's cells there, and counted in what its entry point reserves
+// (docs/PHASE-89 - reentrant FORTRAN.md, subtask 4).
+func TestSpillInFrame(t *testing.T) {
+	out := generate(t, "T.FOR",
+		"      RECURSIVE SUBROUTINE T(I, J, K)",
+		"      K = ((I+1)*(J+2) + (I+3)*(J+4)) * ((I+5)*(J+6) + (I+7)*(J+8))",
+		"     1  - ((I-1)*(J-2) + (I-3)*(J-4)) * ((I-5)*(J-6) + (I-7)*(J-8))",
+		"      IF (K .GT. 0) CALL T(I, J, K - 1)",
+		"      END")
+	assemble(t, "spillframe", out)
+
+	text := strings.Join(out, "\n")
+
+	for _, want := range []string{
+		"T.$T1 = -8\t\t\t\t; temporary, in the frame",
+		"T.$X1 = -4\t\t\t\t; a part of an expression, set aside, in the frame",
+		"\tSUBL2\t#8,SP\t\t\t; this activation's own storage",
+		"\tSUBL3\tR0,T.$X1(FP),@T.K(AP)",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in:\n%s", want, text)
+		}
+	}
+
+	if strings.Contains(text, "$LOCAL") {
+		t.Errorf("a $LOCAL section in:\n%s", text)
+	}
+}
+
 // TestLongNames checks the numbered form of a symbol past MACRO's 31
 // characters, and the storage map's list of them.
 func TestLongNames(t *testing.T) {

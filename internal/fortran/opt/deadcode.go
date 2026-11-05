@@ -388,32 +388,23 @@ func textMayFault(t ir.Text, overflow bool) bool {
 }
 
 // removeUnusedCells takes out the compiler's temporaries, counts, and steps that no
-// statement uses, and closes up the compiler's cells after each. Lowering puts those
-// after the program's own, each on a longword (newCell), and a program's variable,
-// which may have an initial value by offset, never moves.
+// statement uses, and closes up the compiler's cells after each, in $LOCAL and in the
+// frame. Lowering puts those after the program's own, each on a longword (NewCell),
+// and a program's variable, which may have an initial value by offset, never moves.
 func removeUnusedCells(r *ir.Routine) {
 	used := map[*ir.Cell]bool{}
 	walkMems(r, func(m *ir.Mem) { used[m.Cell] = true })
 
-	var local []*ir.Cell
-
-	for _, c := range r.Cells {
-		if c.Common == nil && !c.Frame {
-			local = append(local, c)
-		}
-	}
-
-	sort.SliceStable(local, func(i, j int) bool { return local[i].Offset < local[j].Offset })
-
 	gone := map[*ir.Cell]bool{}
 
-	for _, c := range local {
-		if !used[c] && c.Sym == nil && (c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.LimitCell || c.Kind == ir.StepCell) {
+	for _, c := range r.Cells {
+		if c.Common == nil && !used[c] && c.Sym == nil &&
+			(c.Kind == ir.TempCell || c.Kind == ir.CountCell || c.Kind == ir.LimitCell || c.Kind == ir.StepCell) {
 			gone[c] = true
 		}
 	}
 
-	if !closeUp(r, local, gone) {
+	if !closeUpBoth(r, gone) {
 		return
 	}
 
@@ -428,11 +419,43 @@ func removeUnusedCells(r *ir.Routine) {
 	r.Cells = kept
 }
 
-// closeUp takes the cells gone out of $LOCAL, whose cells in order of offset are local,
-// and moves those after them down. It reports whether it did: a program's variable, which
-// may have an initial value by offset, never moves, so nothing can if one comes after a
-// cell that's going, which isn't lowering's order.
-func closeUp(r *ir.Routine, local []*ir.Cell, gone map[*ir.Cell]bool) bool {
+// closeUpBoth closes up $LOCAL and the frame area (closeUp) for the cells gone. A cell
+// the allocator made for a register (Holds) has no place in either. It reports whether
+// either changed.
+func closeUpBoth(r *ir.Routine, gone map[*ir.Cell]bool) bool {
+	var local, frame []*ir.Cell
+
+	for _, c := range r.Cells {
+		switch {
+		case c.Common != nil || c.Holds != "":
+		case c.Frame:
+			frame = append(frame, c)
+		default:
+			local = append(local, c)
+		}
+	}
+
+	byOffset := func(cells []*ir.Cell) {
+		sort.SliceStable(cells, func(i, j int) bool { return cells[i].Offset < cells[j].Offset })
+	}
+
+	byOffset(local)
+	byOffset(frame)
+
+	inLocal := closeUp(local, gone, &r.LocalSize)
+	inFrame := closeUp(frame, gone, &r.FrameSize)
+
+	return inLocal || inFrame
+}
+
+// closeUp takes the cells gone out of a storage area of *size bytes, whose cells in
+// order of offset are cells, and moves those after them down. It reports whether it
+// did: a program's variable, which may have an initial value by offset (or, in the
+// frame, a place sema's storage map gave it), never moves, so nothing can if one comes
+// after a cell that's going, which isn't lowering's order.
+func closeUp(cells []*ir.Cell, gone map[*ir.Cell]bool, size *int) bool {
+	local := cells
+
 	shift := 0
 
 	for _, c := range local {
@@ -458,7 +481,7 @@ func closeUp(r *ir.Routine, local []*ir.Cell, gone map[*ir.Cell]bool) bool {
 		}
 	}
 
-	r.LocalSize -= shift
+	*size -= shift
 
 	return true
 }

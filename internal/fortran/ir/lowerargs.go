@@ -184,10 +184,13 @@ func (l *lowerer) loc(e *sema.Loc) Expr {
 // callee is what a call of the routine s goes to: its name, or for a dummy
 // procedure the place it is. The argument list's longword points at the entry
 // mask, so the routine is @F(AP), and a CHARACTER one's descriptor holds that
-// address, so it is what a CHARACTER dummy's text would be.
+// address, so it is what a CHARACTER dummy's text would be. A recursive
+// function's own name (or an entry point's) is its value's symbol, which is a
+// Param when the value goes through a hidden argument, but the call is still of
+// the routine by name.
 func (l *lowerer) callee(s *sema.Symbol) (string, *Mem) {
 	p := l.params[s]
-	if p == nil {
+	if p == nil || s.Result {
 		return s.Name, nil
 	}
 

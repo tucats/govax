@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -383,7 +383,7 @@ it moves to a Phase 90.
 3. **The storage rule** (done 2026-11-04) (sema): which locals are automatic in a recursive unit
    (SAVE, initial values, COMMON, STATIC, EQUIVALENCE groups), the storage map's
    frame column, messages; goldens.
-4. **The compiler's cells in the frame** (ir, codegen, opt): one constructor by
+4. **The compiler's cells in the frame** (done 2026-11-04) (ir, codegen, opt): one constructor by
    `Routine.Reentrant`, every kind in the table, spill cells, the optimizer's
    cells, frame alignment (OCTA records under `/ALIGN`), `ir.Check`; frame
    descriptors written whole (Decision 5). Recursive programs without I/O run
@@ -517,3 +517,69 @@ it moves to a Phase 90.
     recursive unit is on a longword, as an AUTOMATIC one is) is subtask 4's; the
     listing's storage map can't show a recursive unit until subtask 4 lifts the
     NOTIMPL.
+- **2026-11-04:** Subtask 4, the compiler's cells in the frame.
+  - **One constructor** (`ir.Routine.NewCell`): `Routine.Reentrant` is `Unit.Recursive`,
+    and in such a routine every cell of the compiler's goes in the frame area, after
+    sema's frame variables, which grows by it; lowering's `newCell` and the optimizer's
+    `newTemporary` ($U, $H) go through it. A FORMAT's cache ($FCn) stays in `$LOCAL`, as
+    the survey's table has it, and so would the VFEs' `$FP`. `ir.Check` refuses a
+    reentrant routine's compiler's cell in `$LOCAL`, and now checks the frame's cells for
+    overlaps as it did `$LOCAL`'s (`checkArea`).
+  - **Frame descriptors are written whole at each use** (Decision 5): `descriptorCell`
+    stores `Descriptor.Fixed()`, every longword the compiler knows (length, type, class;
+    a class D one's null pointer; a class A one's flags, size, multipliers, and bounds),
+    before the statement stores the addresses, as `MOVL #n` (the code generator's
+    comments name each field); an adjustable array's `$B` cell is filled the same way at
+    each entry point (`computeArrayBounds`). Constants rather than a `MOVQ` from a copy in
+    `$PDATA`, as the survey had it: no datum, and only the longwords that aren't
+    addresses. `ir.ArrayFlags` replaces the code generator's own flag names.
+  - **The code generator:** a reentrant routine's spill cells ($Xn) are in the frame
+    (`frameSize`, which every displacement from FP is now counted from, since a spill is
+    made while the code is), ENTRY's argument cells and selector are reached as
+    `$A1(FP)` (`cellPlace`), the entry point's `SUBL2` says "this activation's own
+    storage", and the storage map's heading says RECURSIVE (`TestRecursiveUnits` reads
+    it, now that recursive units compile).
+  - **The optimizer:** `closeUp` closes up the frame as it does `$LOCAL`, for cells no
+    statement uses and cells made registers (`closeUpBoth`). And the call rule moved here
+    from subtask 7, since `/OPTIMIZE` is the default and a recursive program came out
+    wrong without it: in a reentrant routine a call may change any static local
+    (`ChangedByCall`), so `V = 7; CALL S(...); N = V` no longer forwards the 7 when the
+    call recurses and sets V. The rest of subtask 7 (`effects.go`'s argument rewritten,
+    `optrecur.for`, the corpus `/RECURSIVE`) stays there.
+  - **Two bugs found on the way, fixed:** a recursive CHARACTER (or REAL\*16, COMPLEX\*16)
+    function's call of itself went through its hidden argument as if that were a dummy
+    procedure (`callee`: the function's own value's symbol is a call by name); and, in any
+    unit, the register allocator could give one of a function's ENTRY names a register by
+    liveness though its names share one place, so `G = .TRUE.` after `ENTRY G` was lost
+    when the return read F's (`findTemporaries` now skips a cell that shares storage,
+    `TestSharedResultsStayInMemory`). The second is Phase 84's, and no corpus program had
+    a function whose entry points store their own names.
+  - **Still NOTIMPL in a recursive unit** (`fortran.notYetReentrant`, `TestNotYetReentrant`):
+    a NAMELIST group with a frame variable (subtask 5's blocks in the frame) and a FORMAT with
+    variable format expressions (subtask 6). Everything else compiles, I/O among it: an I/O
+    item, argument, or hidden result in the frame already had a descriptor cell, now in the
+    frame and written whole.
+  - **Frame alignment:** unchanged, a longword at most, as for AUTOMATIC (Phase 82): CALLS
+    leaves SP on a longword, so a frame variable's boundary in the area is its boundary in
+    memory only up to that, and more would need the frame reached through a register each
+    entry point aligns. A NATURAL record of a recursive unit under `/ALIGN` is on a longword
+    (subtask 3); the VAX doesn't fault on unaligned data. Ours, unconfirmed.
+  - **Tests:** `testdata/fortran/recursion.for` (factorial by name, Ackermann by RESULT,
+    mutual recursion through ENTRY, quicksort of an adjustable array, CHARACTER, REAL\*16,
+    and COMPLEX\*16 values through hidden arguments, Fibonacci's local outliving a call,
+    permutations printed from the deepest activation, alternate returns, a statement
+    function, SAVE'd and COMMON storage shared, 10,000 activations, a 1,600-byte array in each
+    frame), both optimizer modes and both paging modes; its output was worked by hand, and
+    gfortran 16 prints the same given RESULT for each direct recursion, but `-0.0` for an
+    imaginary part (IEEE's negative zero; the VAX has none). gfortran refuses a function's
+    name as a call without RESULT ("refers to the result variable"; its 12.5.2.1), against the
+    survey's reading of Fortran 90; the author's answer 2 stands for govax. The goldens
+    `ir/testdata/recursive.for` and `codegen/testdata/recursive.for` (every kind of cell,
+    the descriptors' fields, a dynamic string, ENTRY), `TestSpillInFrame`,
+    `opt/recursive_test.go` (the frame closed up, the call rule), `TestFortranRecursiveQualifier`
+    (no message now). `testdata/ftn86`'s procedure is regenerated with RECURSION, and
+    `TestFTN86Oracle` passes over it as `ftn86AwaitingVMS` until subtask 12's round.
+  - **Left for later:** the debug table's `Through` places and adjustable arrays' descriptors
+    name a reentrant routine's frame cells by their symbols, which are displacements, so the
+    debugger reads them as addresses (subtask 10). MANUAL.md's paragraph on recursion and HELP
+    FORTRAN now say what is NOTIMPL; the full write-up is subtask 13's.
