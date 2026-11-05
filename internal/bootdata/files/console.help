@@ -4721,8 +4721,7 @@ $FOR
                         variables are in its stack frame unless SAVE'd, given
                         initial values, in COMMON, or STATIC.  The default is
                         /NORECURSIVE.  An OPTIONS statement before a unit may
-                        change it for that unit.  (Not yet in a recursive
-                        unit: variable format expressions: NOTIMPL.)
+                        change it for that unit.
 
         /OBJECT[=<file>]  Runs MACRO on the MACRO file too, for an object file,
         /NOOBJECT       by default the source's name with type OBJ.  The MACRO

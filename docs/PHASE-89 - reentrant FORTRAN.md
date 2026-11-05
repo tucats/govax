@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -392,7 +392,7 @@ it moves to a Phase 90.
    strings, internal files, ENCODE/DECODE, KEY= lists, `%DESCR`, adjustable
    arrays; NAMELIST blocks built in the frame (Decision 7, NMLAUTOMATIC withdrawn);
    ASSOCFRAME (Decision 10).
-6. **Variable format expressions** in a reentrant unit: FTNRTL passes the FP
+6. **Variable format expressions** (done 2026-11-04) in a reentrant unit: FTNRTL passes the FP
    (GSMATCH's minor id raised), the VFE routine's own frame, `$FP` gone; a VFE
    test in recursion and under an AST.
 7. **The optimizer under recursion:** `ChangedByCall` for a recursive unit's
@@ -612,3 +612,33 @@ it moves to a Phase 90.
     it with RECIO_OPE (the 1988 manual's 7.1.2), so the value is computed first.
     `testdata/ftn86`'s procedure is regenerated with RECURIO, in `ftn86AwaitingVMS` until subtask 12's round.
   - **Left for later:** recursive I/O at depth and unwinding are subtask 8's.
+- **2026-11-04:** Subtask 6, variable format expressions.
+  - **FTNRTL** (`ftn_format.mar`'s `EXPRESSION`) calls F(n, ap, fp), `CTX_FP` being the FP of the routine that
+    began the statement; GSMATCH 1,19, since a new image's expressions read the third argument.
+  - **The base is a register, R11, not what the survey expected.** Decision 6 stands, but the survey's "its own
+    temporaries in its own frame" isn't done. An expression's code is written like any other block's, but for the
+    register a frame cell's displacement is from (`routineGen.frameBase`: FP, or R11 in `ir.ExpressionBlocks`' blocks),
+    and its routine's start loads it (`MOVL 12(AP),R11`). So an expression's temporaries, spill cells, and descriptors
+    stay in the frame of the activation it computes for, where lowering and the code generator already put them, with no
+    second frame to lay out and nothing for the optimizer's cells to choose between. That's safe because an activation is
+    in one statement at a time, and an expression's call that comes back into the unit is another activation, with
+    another frame. `needsFrameBase` says when a routine has one: it has expressions, and a frame or may get one by a spill.
+  - **`$FP` is gone for every unit** (`FrameBaseCell`, `Routine.FrameBase`, `frameBaseMem`, and `opt/places.go`'s case for
+    it), as Decision 6 has it, so AUTOMATIC with expressions is right under an AST too. The IR now names a frame cell
+    in an expression as it does anywhere, so the optimizer sees the one place rather than the whole frame.
+  - **Keeping R11 free:** `noteCellRegisters` marks it as a cell register, which keeps expressions off it, and as used,
+    which saves it in the routine's one entry mask, and tells the allocator through `ExpressionRegisters`. A routine with
+    expressions and a frame has one register cell fewer and saves one more register at each call. One without a frame is
+    unchanged (`TestFrameBaseKept`), so `vfe.for`'s code is as it was. `ir.Successors` and `ir.ExpressionBlocks` moved from
+    `opt`, since the code generator needs them too.
+  - **`notYetReentrant` is gone:** a recursive unit has no NOTIMPL left of its own (`TestVFEsReentrant`).
+  - **Tests:** `testdata/fortran/recurvfe.for`, its output worked by hand before it ran, passed in both optimizer modes and
+    both paging modes. Its expressions reach a frame variable, a dummy through ENTRY's cell, an adjustable array's bound,
+    a temporary, a descriptor, and a spill cell through R11, as its MACRO file shows, and LOOPER's cells stop at R10. A
+    statement entered again by an AST in the middle of its expressions is run in a RECURSIVE unit and in an AUTOMATIC one.
+    Two checks that the program can fail: FTNRTL changed to pass its own FP fails `recurvfe` and `automatic`; and the AUTOMATIC case on
+    the build before this subtask printed `[     7 7 7    ]`, reading the AST's W through `$FP`, where this one prints
+    `[     7 7     7]`. The goldens `ir/testdata/recurvfe.for` and `codegen/testdata/recurvfe.for`; `automatic`'s changed as
+    above. gfortran has no variable format expressions, so this program has no comparison there. `testdata/ftn86`'s
+    procedure is regenerated with RECURVFE, in `ftn86AwaitingVMS` until subtask 12's round.
+  - **Left for later:** the format cache's race under ASTs is subtask 8's.

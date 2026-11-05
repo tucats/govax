@@ -1,0 +1,109 @@
+	.TITLE	TEST
+	$DSCDEF				; descriptor codes, DSC$K_
+
+; Storage map for S, a RECURSIVE subroutine
+;   N     INTEGER        an argument  @S.$A1(FP)
+;   T     CHARACTER*(*)  an argument  @S.$A2(FP)
+;   K     INTEGER        FP-40        S.K(FP)
+;   U     CHARACTER*4    FP-36        S.U(FP)
+;
+S.K = -40				; K, in the frame
+S.U = -36				; U, in the frame
+S.$A1 = -32				; N's longword of the argument list, set at each entry point, in the frame
+S.$A2 = -28				; T's longword of the argument list, set at each entry point, in the frame
+S.$T1 = -24				; temporary, in the frame
+S.$D1 = -20				; a descriptor, written whole at each use, in the frame
+S.$T2 = -12				; temporary, in the frame
+S.$D2 = -8				; a descriptor, written whole at each use, in the frame
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+S.$FC10:
+	.BLKL	1			; the parsed form of FORMAT 10, FTNRTL's
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+S.$IO1:	.WORD	8			; an I/O statement's control block: its size
+	.WORD	^X0000			; flags: none
+	.LONG	0			; (not used yet)
+S.$F10:	.ADDRESS S.$FC10		; FORMAT 10's block: its parsed form's cell
+	.WORD	18			; the text's length
+	.WORD	1			; flags: it has variable format expressions
+	.ADDRESS S.$K1			; the text
+	.ADDRESS S.$V10			; their routine
+S.$K1:	.ASCII	/(I<1>, I<2>, I<3>)/
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C     A recursive unit's variable format expressions: a frame variable, a dummy
+;    2  C     through ENTRY's cell, a temporary and a descriptor in the frame, each a
+;    3  C     displacement from the base FTNRTL gives the expression's routine.
+;    4        RECURSIVE SUBROUTINE S(N, T)
+	.ENTRY	S,^M<R2,R3,R4,R5,R11>
+	SUBL2	#40,SP			; this activation's own storage
+	MOVL	4(AP),S.$A1(FP)		; N is argument 1
+	MOVL	8(AP),S.$A2(FP)		; T is argument 2
+;    5        INTEGER N, K, L
+;    6        CHARACTER*(*) T
+;    7        CHARACTER*4 U
+;    8        ENTRY E(T, N)
+S.$1:					; ENTRY E
+;    9        K = N + 1
+	ADDL3	@S.$A1(FP),#1,S.K(FP)
+;   10        U = T
+	MOVZWL	@S.$A2(FP),R0
+	MOVL	S.$A2(FP),R1
+	MOVC5	R0,@4(R1),#^A/ /,#4,S.U(FP)
+;   11        IF (N .GT. 1) CALL E(T, N - 1)
+	CMPL	@S.$A1(FP),#1
+	BGTR	S.$3
+	BRW	S.$2
+S.$3:
+	SUBL3	#1,@S.$A1(FP),S.$T1(FP)
+	PUSHAL	S.$T1(FP)
+	PUSHL	S.$A2(FP)
+	CALLS	#2,G^E
+S.$2:
+;   12        WRITE (6, 10) N
+	PUSHAB	S.$F10
+	PUSHL	#6
+	PUSHAB	S.$IO1
+	CALLS	#3,G^FTN$WRITE_SF
+	MOVL	#17301508,S.$D1(FP)	; the descriptor's length, 4, type, and class
+	MOVAL	@S.$A1(FP),S.$D1+4(FP)
+	PUSHAQ	S.$D1(FP)
+	CALLS	#1,G^FTN$IO_ITEM
+	CALLS	#0,G^FTN$IO_END
+;   13     10 FORMAT (I<K>, I<N>, I<L(U)>)
+;   14        END
+	RET
+S.$4:					; FORMAT 10's expression 1
+	MOVL	S.K(R11),R0		; the expression's value
+	RET
+S.$5:					; FORMAT 10's expression 2
+	MOVL	@S.$A1(R11),R0		; the expression's value
+	RET
+S.$6:					; FORMAT 10's expression 3
+	MOVL	#17694724,S.$D2(R11)	; the descriptor's length, 4, type, and class
+	MOVAB	S.U(R11),S.$D2+4(R11)
+	PUSHAQ	S.$D2(R11)
+	CALLS	#1,G^L
+	MOVL	R0,S.$T2(R11)
+	MOVL	S.$T2(R11),R0		; the expression's value
+	RET
+
+	.ENTRY	E,^M<R2,R3,R4,R5,R11>
+	SUBL2	#40,SP			; this activation's own storage
+	MOVL	4(AP),S.$A2(FP)		; T is argument 1
+	MOVL	8(AP),S.$A1(FP)		; N is argument 2
+	BRW	S.$1
+
+S.$V10:	.WORD	^M<R2,R3,R4,R5,R11>	; FORMAT 10's variable format expressions
+	MOVL	4(AP),R0		; which expression FTNRTL wants
+	MOVL	12(AP),R11		; the FP of the routine doing the I/O, for its frame
+	MOVL	8(AP),AP		; the AP of the routine doing the I/O, for its dummy arguments
+	CASEL	R0,#1,#2
+S.$7:
+	.WORD	S.$4-S.$7
+	.WORD	S.$5-S.$7
+	.WORD	S.$6-S.$7
+	RET
+
+	.END

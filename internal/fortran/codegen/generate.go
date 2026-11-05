@@ -448,12 +448,19 @@ func (g *routineGen) write(w *Writer, storage StorageMap) {
 // writeVFE writes the start of a FORMAT's routine for its variable format
 // expressions, whose code is among the routine's blocks (ir/lowervfe.go). It
 // saves the registers the one body uses, as an entry point does. Its label
-// isn't global, as .ENTRY's would be: only the FORMAT's block names it.
+// isn't global, as .ENTRY's would be: only the FORMAT's block names it. Its
+// arguments are the expression's number and the AP and FP of the routine doing the
+// I/O, which may be any activation of it.
 func (g *routineGen) writeVFE(w *Writer, v *ir.VFERoutine) {
 	w.Blank()
 	w.Statement(g.names.symbol(v.Name), ".WORD", g.entryMask(), fmt.Sprintf("FORMAT %d's variable format expressions", v.Label))
 	g.writeUnderflow(w)
 	w.Statement("", "MOVL", "4(AP),R0", "which expression FTNRTL wants")
+
+	if g.needsFrameBase() {
+		w.Statement("", "MOVL", "12(AP),"+register(frameBaseRegister), "the FP of the routine doing the I/O, for its frame")
+	}
+
 	w.Statement("", "MOVL", "8(AP),AP", "the AP of the routine doing the I/O, for its dummy arguments")
 	w.Statement("", "CASEL", "R0,#1,#"+strconv.Itoa(len(v.Cases)-1), "")
 
@@ -497,10 +504,6 @@ func (g *routineGen) writeFrame(w *Writer) {
 		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "this activation's own storage")
 	default:
 		w.Statement("", "SUBL2", "#"+strconv.Itoa(g.frameSize())+",SP", "the frame's AUTOMATIC variables")
-	}
-
-	if c := g.r.FrameBase; c != nil {
-		w.Statement("", "MOVL", "FP,"+g.names.symbol(c.Name), "where variable format expressions find them")
 	}
 }
 
@@ -865,8 +868,6 @@ func (g *routineGen) cellNote(c *ir.Cell) string {
 		return "the entry point the routine was called by"
 	case ir.FormatCell:
 		return "the parsed form of FORMAT " + strings.TrimPrefix(c.Name, "$FC") + ", FTNRTL's"
-	case ir.FrameBaseCell:
-		return "the routine's FP, for its variable format expressions"
 	case ir.KeyListCell:
 		return "the keys of an OPEN's KEY=, for FTNRTL"
 	case ir.NamelistCell:

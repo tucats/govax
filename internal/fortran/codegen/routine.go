@@ -66,6 +66,10 @@ type routineGen struct {
 	// note is a comment for the next instruction written.
 	note string
 
+	// frameBase is the register a frame cell's displacement is from in the block being
+	// written: FP, or in a variable format expression frameBaseRegister.
+	frameBase string
+
 	// set is what the last instruction wrote and whose condition codes
 	// it left: a TST of it right after is not needed. Empty when the
 	// condition codes say nothing known, as after a label, which another
@@ -83,6 +87,8 @@ func newRoutineGen(r *ir.Routine, names *namer, src *sourceLines) *routineGen {
 		src:     src,
 		labels:  map[*ir.Block]string{},
 		targets: map[*ir.Block]bool{},
+
+		frameBase: "FP",
 	}
 }
 
@@ -93,14 +99,23 @@ func (g *routineGen) generate() {
 	g.findTargets()
 	g.noteCellRegisters()
 
+	expressions := ir.ExpressionBlocks(g.r)
+
 	for i, b := range g.r.Blocks {
 		var next *ir.Block
 		if i+1 < len(g.r.Blocks) {
 			next = g.r.Blocks[i+1]
 		}
 
+		g.frameBase = "FP"
+		if expressions[b] {
+			g.frameBase = register(frameBaseRegister)
+		}
+
 		g.block(b, next)
 	}
+
+	g.frameBase = "FP"
 
 	// The rest of the unit's lines, its END among them when nothing came
 	// of it (after a RETURN).
@@ -125,6 +140,25 @@ func (g *routineGen) noteCellRegisters() {
 			}
 		}
 	}
+
+	// The frame's base in a variable format expression is kept from them the same way,
+	// and because it is among the registers used, ExpressionRegisters keeps it from the
+	// allocator too.
+	if g.needsFrameBase() {
+		g.cellRegister[frameBaseRegister], g.used[frameBaseRegister] = true, true
+	}
+}
+
+// frameBaseRegister holds the frame's base in a variable format expression, where FP
+// is the expression's routine's and not the frame's (ir/lowervfe.go). The code generator
+// reaches registers from R0 up, so the last of them is the least likely to cost anything.
+const frameBaseRegister = numRegisters - 1
+
+// needsFrameBase says whether the routine's variable format expressions may touch a
+// frame cell: it has expressions, and a frame. A reentrant routine has one even if
+// FrameSize says none yet, since a spill cell made while its code is written goes there.
+func (g *routineGen) needsFrameBase() bool {
+	return len(g.r.VFEs) > 0 && (g.r.Reentrant || g.r.FrameSize > 0)
 }
 
 // ExpressionRegisters says which registers routine r's expressions use, each from its

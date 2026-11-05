@@ -5684,8 +5684,8 @@ A SAVE'd variable or COMMON is one place every activation shares. A NAMELIST gro
 frame variables has its block in the frame too, filled in by each statement that uses
 it. A file's associated variable (`ASSOCIATEVARIABLE=`, DEFINE FILE's) in the frame
 gets `%FORT-W-ASSOCFRAME`: FTNRTL goes on storing in it until the file is closed,
-after the routine may have returned. Not yet in a recursive unit (`%FORT-E-NOTIMPL`,
-docs/PHASE-89): variable format expressions.
+after the routine may have returned. A variable format expression reads the frame of the
+activation doing the I/O, whichever entered last.
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
@@ -6011,7 +6011,7 @@ It has these routines, which MACRO programs can call too:
 | `FTN$PAUSE([display])` | FORTRAN's `PAUSE`: writes the display (or `FORTRAN PAUSE` without one) to `SYS$OUTPUT`, then calls `LIB$PAUSE`, and returns when the program is to go on |
 | `FTN$ADJARRDIM()` | Signals `%FOR-F-ADJARRDIM`, severe: `/CHECK=BOUNDS` found an adjustable array's upper bound below its lower |
 | `FTN$READ_SL(icb, unit)`, `FTN$WRITE_SL(icb, unit)` | Start a list-directed READ or ACCEPT, or WRITE, PRINT, or TYPE statement: `icb` is its control block (a word of size, 8; a word of flags, bit 0 ERR=, bit 1 END=, bit 2 IOSTAT=, bit 3 a run-time format; a longword, 0), `unit` the unit by value (-1 for PRINT and `WRITE (*,...)`, -2 for TYPE, -3 for ACCEPT, -4 for `READ f` and `READ (*,...)`) |
-| `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP) or, with the control block's bit 3, a run-time format's descriptor |
+| `FTN$READ_SF(icb, unit, format)`, `FTN$WRITE_SF(icb, unit, format)` | Start a formatted READ, or WRITE, PRINT, or TYPE: `format` is a FORMAT statement's block (the address of a longword where FTNRTL keeps the parsed format, a word of the text's length, a word of flags, the text's address, and with flag bit 0 the routine for its variable format expressions, called with the expression's number and the caller's AP and FP) or, with the control block's bit 3, a run-time format's descriptor |
 | `FTN$READ_IF(icb, desc, format)`, `FTN$WRITE_IF(icb, desc, format)`, `FTN$READ_IL(icb, desc)`, `FTN$WRITE_IL(icb, desc)` | Start a formatted or list-directed statement on an internal file: `desc` is a CHARACTER place's descriptor, class S one record, class A a record per element |
 | `FTN$ENCODE(icb, buffer, format, count)`, `FTN$DECODE(icb, buffer, format, count)` | Start ENCODE or DECODE: one record of `count` characters (a longword, by value; negative is 0) at the address `buffer` |
 | `FTN$READ_SN(icb, unit, group)`, `FTN$WRITE_SN(icb, unit, group)` | A whole namelist READ or WRITE (it has no items; `FTN$IO_END` ends it): `group` is the group's block, the address of its name (a counted string, in capitals), a longword of how many entities, and for each the addresses of its name and of its descriptor (class S, or class A for an array) |

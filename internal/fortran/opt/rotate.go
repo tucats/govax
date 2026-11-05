@@ -59,7 +59,7 @@ func Rotate(r *ir.Routine) {
 	}
 
 	g := NewGraph(r)
-	expressions := expressionBlocks(r)
+	expressions := ir.ExpressionBlocks(r)
 
 	for _, l := range g.Loops {
 		if l.Header == r.Blocks[0] || expressions[l.Header] {

@@ -66,8 +66,6 @@ LOCALS.$D5:
 	.LONG	0			; set when the descriptor is used
 LOCALS.$FC100:
 	.BLKL	1			; the parsed form of FORMAT 100, FTNRTL's
-LOCALS.$FP:
-	.BLKL	1			; the routine's FP, for its variable format expressions
 
 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
 LOCALS.$IO1:
@@ -98,11 +96,10 @@ LOCALS.$K3:
 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
 ;    1  C     AUTOMATIC variables reached through FP, descriptors of them filled in at
 ;    2  C     run time, each entry point reserving the frame, a variable format expression
-;    3  C     reaching them through a cell; VOLATILE places marked (Phase 82, subtask 6).
+;    3  C     reaching them through the FP FTNRTL gives it; VOLATILE places marked (Phase 82, subtask 6).
 ;    4        SUBROUTINE LOCALS(ARG, N, TEXT)
-	.ENTRY	LOCALS,^M<R2,R3,R4,R5>
+	.ENTRY	LOCALS,^M<R2,R3,R4,R5,R11>
 	SUBL2	#64,SP			; the frame's AUTOMATIC variables
-	MOVL	FP,LOCALS.$FP		; where variable format expressions find them
 	MOVL	4(AP),LOCALS.$A1	; ARG is argument 1
 	MOVL	8(AP),LOCALS.$A2	; N is argument 2
 	MOVL	12(AP),LOCALS.$A3	; TEXT is argument 3
@@ -207,24 +204,22 @@ LOCALS.$2:				; OTHER's adjustable arrays' bounds
 	MULL3	#4,LOCALS.$B1+20,LOCALS.$B1+12
 	BRW	LOCALS.$1
 LOCALS.$3:				; FORMAT 100's expression 1
-	MOVL	LOCALS.$FP,R0		; the expression's value
-	MOVL	LOCALS.$FP,R1
-	ADDL3	-4(R0),-56(R1),R0
+	ADDL3	LOCALS.I(R11),LOCALS.K+8(R11),R0 ; the expression's value
 	RET
 LOCALS.$4:				; FORMAT 100's expression 2
 	MOVL	#7,R0			; the expression's value
 	RET
 
-	.ENTRY	OTHER,^M<R2,R3,R4,R5>
+	.ENTRY	OTHER,^M<R2,R3,R4,R5,R11>
 	SUBL2	#64,SP			; the frame's AUTOMATIC variables
-	MOVL	FP,LOCALS.$FP		; where variable format expressions find them
 	MOVL	4(AP),LOCALS.$A2	; N is argument 1
 	MOVL	8(AP),LOCALS.$A1	; ARG is argument 2
 	BRW	LOCALS.$2
 
 LOCALS.$V100:
-	.WORD	^M<R2,R3,R4,R5>		; FORMAT 100's variable format expressions
+	.WORD	^M<R2,R3,R4,R5,R11>	; FORMAT 100's variable format expressions
 	MOVL	4(AP),R0		; which expression FTNRTL wants
+	MOVL	12(AP),R11		; the FP of the routine doing the I/O, for its frame
 	MOVL	8(AP),AP		; the AP of the routine doing the I/O, for its dummy arguments
 	CASEL	R0,#1,#1
 LOCALS.$5:

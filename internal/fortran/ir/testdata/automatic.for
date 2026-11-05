@@ -1,6 +1,6 @@
 C     AUTOMATIC variables reached through FP, descriptors of them filled in at
 C     run time, each entry point reserving the frame, a variable format expression
-C     reaching them through a cell; VOLATILE places marked (Phase 82, subtask 6).
+C     reaching them through the FP FTNRTL gives it; VOLATILE places marked (Phase 82, subtask 6).
       SUBROUTINE LOCALS(ARG, N, TEXT)
       STRUCTURE /PAIR/
         INTEGER*2 A

@@ -1650,9 +1650,10 @@ on a longword, so the area is right below FP whatever the entry mask saved. The 
 then a displacement, `LOCALS.T = -12`, and the operand `LOCALS.T(FP)`, just as a dummy's
 is `SUB.A(AP)`. Two things can't be assembled ahead of time: a descriptor of a frame
 variable can't be read-only data, so it is a cell filled in at run time; and a variable
-format expression is called *by FTNRTL*, so FP isn't the routine's there. A routine that
-needs it keeps its FP in a cell, `$FP`, stored at each entry point, and reaches the
-variable through that. Note what this doesn't do: the compiler's own temporaries are
+format expression is called *by FTNRTL*, so FP isn't the routine's there. FTNRTL noted the
+FP of the routine doing the I/O when the statement began, and passes it, and the expression's
+code reaches the variable as a displacement from that, in R11, which the routine keeps from
+its other uses (`LOCALS.T(R11)`). Note what this doesn't do: the compiler's own temporaries are
 still in `$LOCAL`, so a routine with AUTOMATIC variables still isn't reentrant.
 
 ### Directives
@@ -1855,7 +1856,7 @@ expressions into a text and a routine:
 ```
 $K1:  .ASCII  /(I<1>)/           the text: <J+1> is now expression 1
 
-VFE.$V10:                        FTNRTL calls F(n, ap)
+VFE.$V10:                        FTNRTL calls F(n, ap, fp)
       .WORD   ^M<R2>             the routine's own mask
       MOVL    4(AP),R0           which expression
       MOVL    8(AP),AP           the AP of the routine doing the I/O
@@ -1868,11 +1869,13 @@ VFE.$5:                          (among the routine's blocks)
       RET
 ```
 
-Loading AP is safe because `RET` restores the caller's from the frame, and it
-is enough because everything else compiled code uses is static: nothing but a
-dummy argument depends on which frame is running. Each begin call keeps its
-caller's AP in the statement's context (it is in the begin call's own frame) for
-just this. The code is lowered like any statement, with one precaution: it runs
+Loading AP is safe because `RET` restores the caller's from the frame. In a routine
+with static storage that is enough, nothing but a dummy argument depending on which
+frame is running. In one with a frame, AUTOMATIC or RECURSIVE, the code also loads the
+third argument, `MOVL 12(AP),R11`, and a frame cell is a displacement from R11 in these
+blocks: FP has to stay the expression's routine's, for `RET` and a signal's search. Each
+begin call keeps its caller's AP and FP in the statement's context (they are in the begin
+call's own frame) for just this. The code is lowered like any statement, with one precaution: it runs
 between an I/O statement's calls, when that statement's temporaries, implied-DO
 counts, and descriptors are all live, so its temporaries come from a pool of
 their own (`ir/lowervfe.go`).

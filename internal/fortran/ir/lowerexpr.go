@@ -287,10 +287,6 @@ func (l *lowerer) symbolMem(s *sema.Symbol) *Mem {
 		return &Mem{Param: p, T: t, Volatile: s.Volatile}
 	}
 
-	if c := l.cells[s]; c.Frame && l.inVFE {
-		return l.frameBaseMem(c, t)
-	}
-
 	return &Mem{Cell: l.cells[s], T: t, Volatile: s.Volatile}
 }
 

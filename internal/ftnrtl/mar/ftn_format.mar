@@ -137,6 +137,7 @@ CTX_WARNING	= CTX_GROUPS+<MAX_DEPTH*8> ; long: an error the statement goes on
 					;  after (FTN$$FMT_WARN), or 0
 CTX_MISMATCH	= CTX_WARNING+4		; byte: 1 if an item wasn't of a type its
 					;  descriptor takes (FTN_EDIT, FTN_FLOAT)
+CTX_FP		= 4			; long: the FP of the routine that began it
 CTX_AP		= CTX_WARNING+36		; long: the AP of the routine that began it
 						;  (FTN_LISTIN's fields come between)
 CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
@@ -685,13 +686,14 @@ RESOLVE:
 
 ;
 ; EXPRESSION: R0 the value of the expression numbered R0, R2 the context.
-; The routine is given the number and the AP of the routine doing the I/O,
-; through which it reaches its dummy arguments.
+; The routine is given the number, and the AP and FP of the routine doing the
+; I/O, through which it reaches its dummy arguments and what is in its frame.
 ;
 EXPRESSION:
+	PUSHL	CTX_FP(R2)
 	PUSHL	CTX_AP(R2)
 	PUSHL	R0
-	CALLS	#2,@CTX_VFE(R2)
+	CALLS	#3,@CTX_VFE(R2)
 	RSB
 
 ;

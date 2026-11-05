@@ -66,3 +66,51 @@ func TestRecursiveStaticLocals(t *testing.T) {
 		t.Errorf("V is not read after the call, or W is:\n%s", text)
 	}
 }
+
+// TestFrameBaseKept checks that the register a variable format expression keeps the
+// frame's base in goes to no cell, however many the routine could use, and that a
+// routine with no frame, whose expressions need no base, has it for its cells.
+func TestFrameBaseKept(t *testing.T) {
+	body := []string{
+		"INTEGER A, B, C, D, E, F, G, H, I",
+		"A = 0",
+		"B = 1",
+		"C = 2",
+		"D = 3",
+		"E = 4",
+		"F = 5",
+		"G = 6",
+		"H = 7",
+		"DO 20 I = 1, N",
+		"A = A + 1",
+		"B = B + A",
+		"C = C + B",
+		"D = D + C",
+		"E = E + D",
+		"F = F + E",
+		"G = G + F",
+		"H = H + G",
+		"20:CONTINUE",
+		"WRITE (6, 10) A, B, C, D, E, F, G, H",
+		"10:FORMAT (8I<N>)",
+		"END",
+	}
+
+	highest := func(header string) int {
+		top := 0
+
+		for _, c := range allocated(t, "S", append([]string{header}, body...)...).Cells {
+			top = max(top, c.Register)
+		}
+
+		return top
+	}
+
+	if got := highest("RECURSIVE SUBROUTINE S(N)"); got != 10 {
+		t.Errorf("a recursive routine's highest register cell is R%d, want R10", got)
+	}
+
+	if got := highest("SUBROUTINE S(N)"); got != 11 {
+		t.Errorf("a routine with no frame's highest register cell is R%d, want R11", got)
+	}
+}

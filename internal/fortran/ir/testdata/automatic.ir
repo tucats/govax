@@ -21,8 +21,7 @@ routine LOCALS subroutine
   cell  $D4     L  $LOCAL+96   descriptor L S 4
   cell  $D5     L  $LOCAL+104  descriptor W S 2
   cell  $FC100  L  $LOCAL+112  the parsed form of a FORMAT
-  cell  $FP     L  $LOCAL+116  the routine's FP
-  $LOCAL is 120 bytes
+  $LOCAL is 116 bytes
   the frame is 64 bytes
   datum $K1     text 'FRAME'
   datum $IO1    control
@@ -95,6 +94,6 @@ B3:  ; OTHER's adjustable arrays' bounds
   jump B2
 B4:  ; FORMAT 100's expression 1
   ; line 28
-  return add.L(@($FP)-4{volatile}, @($FP)-56)
+  return add.L(I{volatile}, K+8)
 B5:  ; FORMAT 100's expression 2
   return 7

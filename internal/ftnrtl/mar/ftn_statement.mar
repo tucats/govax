@@ -28,7 +28,7 @@
 ;		parsed form is kept, +4 the text's length, a word, +6 a word
 ;		of flags, +8 the text's address, and with flag bit 0 of those
 ;		+12 the routine for its variable format expressions, which
-;		FTN_FORMAT calls with F(n, the caller's AP)); or with flag bit 3 a
+;		FTN_FORMAT calls with F(n, the caller's AP and FP)); or with flag bit 3 a
 ;		run-time format's descriptor; or a NAMELIST group's block
 ;		(+0 the address of the group's name, a counted string, +4
 ;		the number of entities, then for each the address of its

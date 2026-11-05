@@ -1016,7 +1016,7 @@ func TestGraphsOnCorpus(t *testing.T) {
 func checkEdges(t *testing.T, g *Graph, b *ir.Block) {
 	t.Helper()
 
-	for _, want := range Successors(b.End) {
+	for _, want := range ir.Successors(b.End) {
 		if !slices.Contains(g.Succs(b), want) {
 			t.Errorf("%s: %s doesn't go to %s", g.Routine.Name, b.Name, want.Name)
 		}

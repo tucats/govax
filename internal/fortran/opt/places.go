@@ -248,13 +248,6 @@ func (s *Storage) throughPointer(m *ir.Mem, size int, span func(Place, int) Plac
 		case inner.Cell.Points != nil:
 			return s.Whole(inner.Cell.Points)
 
-		// An AUTOMATIC variable from a variable format expression, by the FP each
-		// entry point leaves (ir/lowervfe.go): an offset below it.
-		case inner.Cell == s.r.FrameBase:
-			whole.Region, whole.Lo, whole.Hi = FrameRegion, 0, s.r.FrameSize
-
-			return span(whole, s.r.FrameSize)
-
 		// An adjustable array's element, from A0 in its descriptor. A0 is where an
 		// element of all zero subscripts would be, so its offsets say nothing about
 		// offsets elsewhere.

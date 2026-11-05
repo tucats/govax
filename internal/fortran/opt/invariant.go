@@ -89,7 +89,7 @@ import (
 // LoopInvariants is the pass.
 func LoopInvariants(r *ir.Routine) {
 	m := newMover(r, NewStorage(r))
-	expressions := expressionBlocks(r)
+	expressions := ir.ExpressionBlocks(r)
 	done := map[*ir.Block]bool{}
 
 	// Moving code changes the graph, so each loop gets a new one, outer loops first.

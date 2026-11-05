@@ -39,9 +39,9 @@ func Check(r *Routine) error {
 		}
 
 		// A reentrant routine shares nothing of the compiler's between activations
-		// but a FORMAT's parsed form, and the FP its variable format expressions use.
+		// but a FORMAT's parsed form.
 		if r.Reentrant && c.Sym == nil && !c.Frame && c.Common == nil && c.Register == 0 &&
-			c.Kind != FormatCell && c.Kind != FrameBaseCell {
+			c.Kind != FormatCell {
 			return fmt.Errorf("%s: cell %s of a reentrant routine is in $LOCAL", r.Name, c.Name)
 		}
 	}

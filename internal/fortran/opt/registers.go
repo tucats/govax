@@ -247,7 +247,7 @@ type allocator struct {
 func newAllocator(r *ir.Routine) *allocator {
 	a := &allocator{
 		r: r, s: NewStorage(r), g: NewGraph(r),
-		expressions: expressionBlocks(r),
+		expressions: ir.ExpressionBlocks(r),
 		writes:      map[*Loop][]Place{},
 		calls:       map[*Loop]bool{},
 		touched:     map[*Loop][]Place{},

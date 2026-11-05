@@ -129,11 +129,6 @@ type Routine struct {
 	// for every activation (docs/PHASE-89 - reentrant FORTRAN.md, Decision 2).
 	Reentrant bool
 
-	// FrameBase, in a routine whose variable format expressions use AUTOMATIC
-	// variables, is the cell where each entry point leaves its FP; nil
-	// otherwise (lowervfe.go).
-	FrameBase *Cell
-
 	// Data are the routine's read-only data, its contribution to the
 	// $PDATA program section: constants passed by reference, texts,
 	// descriptors, and I/O control blocks.
@@ -231,7 +226,6 @@ const (
 	ArgCell                        // the address of a dummy argument, in a routine with ENTRY statements
 	SelectorCell                   // which entry point the routine was called by
 	FormatCell                     // where FTNRTL keeps a FORMAT statement's parsed form
-	FrameBaseCell                  // the frame's FP, for a FORMAT's variable format expressions (lowervfe.go)
 	KeyListCell                    // what an OPEN's KEY= tells FTNRTL, filled in by the statement (lowerfile.go)
 	NamelistCell                   // a NAMELIST group's block, filled in by the statement, for a group with a frame variable (lowerio.go)
 )
@@ -598,8 +592,8 @@ type FormatBlock struct {
 
 // VFERoutine is the routine FTNRTL calls for a FORMAT statement's variable
 // format expressions (Decision 5 of docs/PHASE-80 - FORTRAN formatted IO.md):
-// F(n, ap) returns the nth expression's value in R0, ap being the AP of the
-// routine doing the I/O. Its code is one block (or more) per expression, each
+// F(n, ap, fp) returns the nth expression's value in R0, ap and fp being the AP and
+// FP of the routine doing the I/O. Its code is one block (or more) per expression, each
 // ending in a Return, among the routine's blocks, and shares the routine's
 // cells and registers; it is written after the routine's entry points.
 type VFERoutine struct {

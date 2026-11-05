@@ -1,0 +1,53 @@
+routine S subroutine
+  param N       L  through $A1
+  param T       B  through $A2
+  entry 1 S N=1 T=2
+  entry 2 E T=1 N=2 at B2
+  vfe   $V10 B5 B6 B7
+  cell  K       L  frame+0    variable K
+  cell  U       B  frame+4    variable U
+  cell  $A1     L  frame+8    address of N
+  cell  $A2     L  frame+12   address of T
+  cell  $T1     L  frame+16   temporary
+  cell  $FC10   L  $LOCAL+0    the parsed form of a FORMAT
+  cell  $D1     L  frame+20   descriptor L S 4
+  cell  $T2     L  frame+28   temporary
+  cell  $D2     L  frame+32   descriptor T S 4
+  $LOCAL is 4 bytes
+  the frame is 40 bytes
+  datum $IO1    control
+  datum $K1     text '(I<1>, I<2>, I<3>)'
+  datum $F10    format 10 $K1 cache $FC10 expressions $V10
+B1:
+  ; line 8
+  jump B2
+B2:  ; ENTRY E
+  ; line 9
+  assign K = add.L(@N, 1)
+  ; line 10
+  move U(4) = @(@(arg T)+4)(zext.WL(@(arg T)))
+  ; line 11
+  branch gt.L(@N, 1) B3 B4
+B3:
+  assign $T1 = sub.L(@N, 1)
+  call E(val arg T, ref $T1)
+  jump B4
+B4:
+  ; line 12
+  call FTN$WRITE_SF(ref $IO1, val 6, ref $F10)
+  assign $D1 = 17301508
+  assign $D1+4 = addr(@N)
+  call FTN$IO_ITEM(ref $D1)
+  call FTN$IO_END()
+  ; line 14
+  return
+B5:  ; FORMAT 10's expression 1
+  ; line 13
+  return K
+B6:  ; FORMAT 10's expression 2
+  return @N
+B7:  ; FORMAT 10's expression 3
+  assign $D2 = 17694724
+  assign $D2+4 = addr(U)
+  call L(ref $D2) -> $T2
+  return $T2

@@ -217,7 +217,7 @@ var ftn86VMSDifferences = map[string]string{
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
 // the next VMS round is to run (docs/PHASE-89 - reentrant FORTRAN.md, subtask 12).
-var ftn86AwaitingVMS = []string{"RECURIO", "RECURSION"}
+var ftn86AwaitingVMS = []string{"RECURIO", "RECURSION", "RECURVFE"}
 
 // ftn86Lines is a log's section as both sides can be held to it: without the commands SET
 // VERIFY echoed on VMS, or the options files LINK echoes then. The two numbers a traceback

@@ -553,7 +553,7 @@ func (g *routineGen) mem(m *ir.Mem) operand {
 	case m.Param != nil:
 		base = "@" + g.argumentPlace(m.Param)
 	case m.Cell != nil && m.Cell.Frame:
-		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset) + "(FP)"
+		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset) + "(" + g.frameBase + ")"
 	case m.Cell != nil:
 		base = withOffset(g.names.symbol(m.Cell.Name), m.Offset)
 	default:
@@ -625,10 +625,11 @@ func (g *routineGen) argumentPlace(p *ir.Param) string {
 }
 
 // cellPlace is the operand for the whole of the cell c, which is in memory: its
-// symbol, SUB.$E, or in the frame its displacement from FP, SUB.$E(FP).
+// symbol, SUB.$E, or in the frame its displacement from the frame's base,
+// SUB.$E(FP), or in a variable format expression SUB.$E(R11).
 func (g *routineGen) cellPlace(c *ir.Cell) string {
 	if c.Frame {
-		return g.names.symbol(c.Name) + "(FP)"
+		return g.names.symbol(c.Name) + "(" + g.frameBase + ")"
 	}
 
 	return g.names.symbol(c.Name)

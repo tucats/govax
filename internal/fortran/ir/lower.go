@@ -406,13 +406,12 @@ func (l *lowerer) newCell(name string, kind CellKind, t Type, size int) *Cell {
 // before it, on a longword boundary: in $LOCAL, or in a reentrant routine in the
 // frame area, which grows by it. Every cell of the compiler's, lowering's and
 // the optimizer's, is made here, so that one rule decides where they go. A
-// FORMAT's cache ($FCn) and the VFEs' FP ($FP) are $LOCAL's in any routine: the
-// first is the same for every activation, and the second is how code running with
-// another routine's FP finds this one's frame.
+// FORMAT's cache ($FCn) is $LOCAL's in any routine, being the same for every
+// activation.
 func (r *Routine) NewCell(name string, kind CellKind, t Type, size int) *Cell {
 	c := &Cell{Name: name, Kind: kind, T: t, Size: size}
 
-	if r.Reentrant && kind != FormatCell && kind != FrameBaseCell {
+	if r.Reentrant && kind != FormatCell {
 		c.Frame, c.Offset = true, r.FrameSize
 		r.FrameSize += (size + 3) &^ 3
 	} else {

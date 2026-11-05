@@ -186,8 +186,6 @@ func cellNote(c *Cell) string {
 		return "the entry point used"
 	case FormatCell:
 		return "the parsed form of a FORMAT"
-	case FrameBaseCell:
-		return "the routine's FP"
 	case KeyListCell:
 		return "an OPEN's list of keys"
 	case NamelistCell:

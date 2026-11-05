@@ -97,7 +97,7 @@ import (
 // CommonSubexpressions is the pass.
 func CommonSubexpressions(r *ir.Routine) {
 	c := &cse{r: r, s: NewStorage(r), spare: map[ir.Type][]*ir.Cell{}}
-	expressions := expressionBlocks(r)
+	expressions := ir.ExpressionBlocks(r)
 	g := NewGraph(r)
 
 	c.named = highestNamed(r, "$U")

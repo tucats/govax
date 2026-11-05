@@ -116,7 +116,7 @@ func NewGraph(r *ir.Routine) *Graph {
 	assigned := g.assignedBlocks()
 
 	for _, b := range r.Blocks {
-		g.succs[b] = Successors(b.End)
+		g.succs[b] = ir.Successors(b.End)
 
 		if _, ok := b.End.(*ir.IndirectJump); ok {
 			g.succs[b] = union(g.succs[b], assigned)
@@ -331,27 +331,6 @@ func (g *Graph) findDominators() {
 			g.idom[b] = g.Order[d-1]
 		}
 	}
-}
-
-// Successors are the blocks a terminator names, each once, in the order it names
-// them. An assigned GO TO can also go elsewhere, which only the Graph knows.
-func Successors(t ir.Terminator) []*ir.Block {
-	var list []*ir.Block
-
-	switch t := t.(type) {
-	case *ir.Jump:
-		list = []*ir.Block{t.To}
-	case *ir.Branch:
-		list = []*ir.Block{t.True, t.False}
-	case *ir.Switch:
-		list = append(append(list, t.Targets...), t.Else)
-	case *ir.Sign:
-		list = []*ir.Block{t.Neg, t.Zero, t.Pos}
-	case *ir.IndirectJump:
-		list = t.Targets
-	}
-
-	return union(nil, list)
 }
 
 // Succs are the blocks b can go to.
