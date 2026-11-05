@@ -1,0 +1,85 @@
+== recursive FUNCTION KEEP
+  KEEP      INTEGER       result           frame+0
+  N         INTEGER       variable         argument 1
+  RI        /INIT/        variable         $LOCAL+0
+  RB        /BARE/        variable         frame+4
+  A         INTEGER       array(1:10)      frame+8
+  B         INTEGER       variable         $LOCAL+4
+  C         INTEGER       variable         $LOCAL+8
+  D         INTEGER       variable         frame+48
+  E         INTEGER       variable         $LOCAL+12
+  F         INTEGER       variable         BLK+0
+  G         INTEGER       variable         frame+52
+  H         INTEGER       variable         frame+56
+  T         INTEGER       variable         $LOCAL+16
+  EQ1       INTEGER       variable         frame+60
+  EQ2       INTEGER       variable         frame+60
+  EQ3       INTEGER       variable         $LOCAL+20
+  EQ4       INTEGER       variable         $LOCAL+20
+  UNSET     REAL          variable         frame+64
+  structure /INIT/ is 4 bytes
+    COUNT       INTEGER             +0
+    initial +0 COUNT INTEGER = 00 00 00 00
+  structure /BARE/ is 4 bytes
+    COUNT       INTEGER             +0
+  $LOCAL is 24 bytes
+  the frame area is 68 bytes
+  /BLK/ is 4 bytes
+  initial $LOCAL+0 RI.COUNT INTEGER = 00 00 00 00
+  initial $LOCAL+12 E INTEGER = 01 00 00 00
+  initial $LOCAL+16 T INTEGER = 07 00 00 00
+24          DO G = 1, N, 1
+25            A[G] = (+:I (+:I (+:I (+:I (+:I (+:I (+:I G B) C) D) E) F) H) T)
+26          END DO
+27          EQ1 = (+:I RI.COUNT:+0 RB.COUNT:+0)
+28          EQ3 = EQ2
+29          UNSET = (REAL EQ3)
+30          KEEP = (INTEGER (+:R (REAL A[1]) UNSET))
+31          IF (.GT.:I N 0) KEEP = (+:I KEEP KEEP((-:I N 1)))
+32          END
+== recursive FUNCTION VALUE
+  VALUE                   program unit
+  R         REAL          result           frame+0
+  N         INTEGER       variable         argument 1
+  OTHER                   program unit
+  Q         REAL          result           frame+0
+  S         CHARACTER*8   variable         frame+4
+  entry OTHER (N) result Q
+  $LOCAL is 0 bytes
+  the frame area is 12 bytes
+36          R = (REAL N)
+37          S = 'TEXT'
+38          IF (.GT.:I N 0) R = (+:R R VALUE((-:I N 1)))
+39          RETURN
+40          ENTRY OTHER
+41          Q = (REAL N)
+42          END
+== recursive FUNCTION NAME
+  NAME      CHARACTER*8   result
+  N         INTEGER       variable         argument 1
+  K         INTEGER       variable         frame+0
+  $LOCAL is 0 bytes
+  the frame area is 4 bytes
+46          K = N
+47          NAME = 'X'
+48          IF (.GT.:I K 0) NAME = NAME((-:I K 1))
+49          END
+== recursive SUBROUTINE ALL
+  ALL                     program unit
+  N         INTEGER       variable         argument 1
+  I         INTEGER       variable         $LOCAL+0
+  J         INTEGER       variable         $LOCAL+4
+  $LOCAL is 8 bytes
+54          I = N
+55          J = I
+56          IF (.GT.:I N 0) CALL ALL((-:I N 1))
+57          END
+== SUBROUTINE PLAIN
+  PLAIN                   program unit
+  N         INTEGER       variable         argument 1
+  I         INTEGER       variable         $LOCAL+0
+  J         INTEGER       variable         $LOCAL+4
+  $LOCAL is 8 bytes
+61          I = N
+62          J = I
+63          END

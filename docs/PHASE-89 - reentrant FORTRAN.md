@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -380,7 +380,7 @@ it moves to a Phase 90.
    recursive unit and extended to ENTRY names in others; a function's name as a
    call; `/STANDARD`; the listing's and cross reference's notes. Lex, parse, and
    sema goldens. A recursive unit is NOTIMPL past sema until subtask 4.
-3. **The storage rule** (sema): which locals are automatic in a recursive unit
+3. **The storage rule** (done 2026-11-04) (sema): which locals are automatic in a recursive unit
    (SAVE, initial values, COMMON, STATIC, EQUIVALENCE groups), the storage map's
    frame column, messages; goldens.
 4. **The compiler's cells in the frame** (ir, codegen, opt): one constructor by
@@ -484,3 +484,36 @@ it moves to a Phase 90.
   - **Left for later:** the listing and cross reference show nothing new yet; the
     storage map's frame column is subtask 3's. HELP and MANUAL.md say recursive units
     are NOTIMPL, which subtask 4 takes out.
+- **2026-11-04:** Subtask 3, the storage rule (`sema/storage.go`'s `recursiveStorage`,
+  run before `layout`).
+  - **The rule:** in a recursive unit every variable and array of its own, a name
+    nothing classified among them, is `Symbol.Automatic` unless it is SAVE'd, by name
+    or by a SAVE with no list (`analyzer.saveAll`, new: such a SAVE was a no-op
+    before, every local being static anyway), has an initial value (DATA, a type
+    statement, or a record whose structure gives one, `Structure.image`), is in a
+    common block, or is named STATIC. A name made automatic so is placed by `layout`
+    as an AUTOMATIC one is, in the frame area (`Unit.FrameSize`); the storage map's
+    `FP-n` column and the debug table's `Frame` places follow from that.
+  - **An EQUIVALENCE group** is static if any member must be, else in the frame
+    whole (ours, unconfirmed). A group with an AUTOMATIC statement's name keeps
+    Phase 82's handling: the conflicts are AUTOSAVE, AUTOCOMMON, AUTOEQUIVALENT, and
+    AUTOINIT, as in any unit; a name made automatic by recursion is never an error,
+    since whatever would conflict makes it static instead.
+  - **The function's value** is in the frame too (the function's name, RESULT's
+    variable, and the one place `placeResults` gives the names of a function with
+    ENTRY statements), unless it goes through a hidden argument. The survey's note
+    that "a function result" isn't a variable of the frame was about sema's
+    classes; its table already put `ResultCell` in the frame, and since sema lays the
+    value out, this is where it moves.
+  - **No new messages.** NMLAUTOMATIC doesn't fire for names automatic by
+    recursion (the rule runs after `checkNamelists`): a NAMELIST in a recursive
+    unit waits for subtask 5's blocks in the frame, behind subtask 2's NOTIMPL.
+  - **The dump** says "the frame area is n bytes" when a unit has one
+    (`automatic.sema` gains the line). The golden is `sema/testdata/recurstore.for`:
+    every case above, a CHARACTER function's hidden result, a SAVE with no list, and
+    the same names in a unit that isn't recursive, all static; `recursive.sema`'s
+    results moved to the frame.
+  - **Left for later:** frame alignment past a longword (a NATURAL record of a
+    recursive unit is on a longword, as an AUTOMATIC one is) is subtask 4's; the
+    listing's storage map can't show a recursive unit until subtask 4 lifts the
+    NOTIMPL.

@@ -19,6 +19,7 @@
     A           INTEGER*2           +0
     B           REAL*8 (1:2)        +2
   $LOCAL is 8 bytes
+  the frame area is 92 bytes
   /BLK/ is 8 bytes
 20          I = N
 21          K[I] = 1

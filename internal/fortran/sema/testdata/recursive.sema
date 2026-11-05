@@ -9,20 +9,22 @@
 7           CALL WALK(4)
 8           END
 == recursive FUNCTION FACT
-  FACT      INTEGER       result           $LOCAL+0
+  FACT      INTEGER       result           frame+0
   N         INTEGER       variable         argument 1
-  $LOCAL is 4 bytes
+  $LOCAL is 0 bytes
+  the frame area is 4 bytes
 11          FACT = 1
 12          IF (.GT.:I N 1) FACT = (*:I N FACT((-:I N 1)))
 13          END
 == recursive FUNCTION FIB
   FIB                     program unit
-  F         INTEGER       result           $LOCAL+0
+  F         INTEGER       result           frame+0
   N         INTEGER       variable         argument 1
   LUCAS                   program unit
-  L         INTEGER       result           $LOCAL+0
+  L         INTEGER       result           frame+0
   entry LUCAS (N) result L
-  $LOCAL is 4 bytes
+  $LOCAL is 0 bytes
+  the frame area is 4 bytes
 16          IF (.LT.:I N 2) THEN
 17            F = N
 18          ELSE
@@ -34,10 +36,11 @@
 24          IF (.GT.:I N 0) L = (+:I FIB((-:I N 1)) FIB((+:I N 1)))
 25          END
 == recursive FUNCTION ACK
-  ACK       INTEGER       result           $LOCAL+0
+  ACK       INTEGER       result           frame+0
   M         INTEGER       variable         argument 1
   N         INTEGER       variable         argument 2
-  $LOCAL is 4 bytes
+  $LOCAL is 0 bytes
+  the frame area is 4 bytes
 29          IF (.EQ.:I M 0) THEN
 30            ACK = (+:I N 1)
 31          ELSE IF (.EQ.:I N 0) THEN

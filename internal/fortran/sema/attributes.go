@@ -144,6 +144,10 @@ func (a *analyzer) intrinsic(item *ast.AttrItem) {
 // variable from here on, so a use of it as a function is NOTARRAY.
 func (a *analyzer) saves() {
 	for _, st := range a.saveStmts {
+		if len(st.Items) == 0 {
+			a.saveAll = true
+		}
+
 		for _, item := range st.Items {
 			if item.Common {
 				a.saveBlock(item)

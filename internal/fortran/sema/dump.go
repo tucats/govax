@@ -81,6 +81,10 @@ func Dump(p *Program) string {
 
 		b.WriteString("\n")
 
+		if u.FrameSize != 0 {
+			fmt.Fprintf(&b, "  the frame area is %d bytes\n", u.FrameSize)
+		}
+
 		for _, c := range u.Commons {
 			fmt.Fprintf(&b, "  %s is %d bytes", c, c.Size)
 

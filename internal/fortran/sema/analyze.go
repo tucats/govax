@@ -393,6 +393,10 @@ type analyzer struct {
 	dataSets  []dataSet
 	saveStmts []*ast.AttrStmt
 
+	// saveAll is set by a SAVE statement with no list, which saves every
+	// variable and array of the unit that can be saved (section 4.14).
+	saveAll bool
+
 	// volatileStmts are the unit's VOLATILE statements, and storageStmts its
 	// AUTOMATIC and STATIC statements, read when every declaration is known
 	// (storage.go).
@@ -480,6 +484,7 @@ func (a *analyzer) analyzeUnit(au *ast.Unit, name string) *Unit {
 	a.reportUnused()
 	a.reportExtensions(au)
 	a.passedLengths()
+	a.recursiveStorage()
 	a.layout()
 	a.recordInitials()
 	a.checkAutomaticInitials()

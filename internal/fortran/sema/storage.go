@@ -15,13 +15,90 @@ import (
 // so it only has its list checked.
 //
 // That doesn't make a routine reentrant: the compiler's own temporaries, DO
-// counts, and descriptors stay in $LOCAL (Phase 82's survey). The frame area is
-// groundwork for a later phase that moves them too.
+// counts, and descriptors stay in $LOCAL (Phase 82's survey), unless the unit is
+// recursive (Unit.Recursive, Phase 89), when they are in the frame too.
+//
+// A recursive unit's locals are in the frame without being named: the HP
+// manual's 5.3 makes RECURSIVE change the default for variables, as AUTOMATIC
+// does one at a time, so that each activation has its own (recursiveStorage).
 //
 // EQUIVALENCE ties names to one storage, so it spreads both attributes: an
 // AUTOMATIC name's group is in the frame area together (ours: the manual says
 // nothing, and a group can't be in two places), and a VOLATILE name's group is
 // all volatile (the manual's P1 and P4).
+
+// recursiveStorage puts the locals of a recursive unit in its frame area, as
+// though an AUTOMATIC statement named them, but for those the HP manual's 5.3
+// says "are always static ... regardless of whether a compiler option specifies
+// recursion": a name SAVE'd (by name, or by a SAVE with no list), one given an
+// initial value (by DATA or a type statement, or a record whose structure gives
+// its fields some), one in a common block, and one named STATIC. A function's
+// value is in the frame too, since each activation computes its own (its name's,
+// RESULT's variable, and the entry points' names' place, placeResults); one that
+// goes through a hidden argument has no storage of its own.
+//
+// An EQUIVALENCE group is one piece of storage, so it is static if any of its
+// names must be (ours, unconfirmed: the HP manual says nothing). A name already
+// AUTOMATIC by its own statement keeps its group, whose conflicts
+// storageStatements has reported.
+//
+// A dummy argument, a constant, a statement function and its dummies, and a
+// procedure have no storage of the unit's to move.
+func (a *analyzer) recursiveStorage() {
+	if !a.unit.Recursive {
+		return
+	}
+
+	initial := map[*Symbol]bool{}
+	for _, in := range a.unit.Initials {
+		initial[in.Sym] = true
+	}
+
+	static := func(s *Symbol) bool {
+		return s.saved || (a.saveAll && !s.Result) || initial[s] || s.Common != nil ||
+			(s.storageStmt != nil && s.storageStmt.Kind == lex.Static) ||
+			(s.Struct != nil && len(s.Struct.image()) > 0)
+	}
+
+	for _, s := range a.unit.Symbols {
+		if s.Automatic || !inFrameByDefault(s) {
+			continue
+		}
+
+		if s.group == nil {
+			s.Automatic = !static(s)
+
+			continue
+		}
+
+		frame := true
+
+		for _, m := range s.group.members {
+			if m.Automatic || static(m) {
+				frame = frame && m.Automatic
+			}
+		}
+
+		for _, m := range s.group.members {
+			m.Automatic = frame
+		}
+	}
+}
+
+// inFrameByDefault reports whether s is a name a recursive unit keeps in its
+// frame unless something makes it static: a variable or array of the unit's own,
+// its value among them, or a name nothing has classified yet, which layout makes
+// a variable.
+func inFrameByDefault(s *Symbol) bool {
+	switch {
+	case s.Dummy != 0, s.External, s.broken:
+		return false
+	case s.Result:
+		return !s.Type.HiddenResult()
+	}
+
+	return s.Class == Variable || s.Class == Array || s.Class == Unclassified
+}
 
 // storageStatements reads the unit's AUTOMATIC and STATIC statements, once every
 // declaration is known and each EQUIVALENCE group is whole.
@@ -209,7 +286,8 @@ func (a *analyzer) volatileBlock(item *ast.AttrItem) {
 // Storage is static because FORTRAN-77's routines aren't recursive
 // (section 6.2), so a routine's variables are never live in two calls at
 // once, and a variable keeps its value from one call to the next as VAX
-// FORTRAN's do.
+// FORTRAN's do. A recursive unit's are in the frame (recursiveStorage), but for
+// those the program says are static.
 //
 // A dummy argument has no storage: it is the caller's, reached through
 // the argument list, as a function's value is when it goes through a hidden
@@ -225,7 +303,11 @@ func (a *analyzer) layout() {
 	// values, unless they go through a hidden argument.
 	shared := len(a.unit.Entries) > 0 && a.unit.Result != nil && !a.unit.Result.Type.HiddenResult()
 	if shared {
-		offset = a.placeResults()
+		if a.unit.Result.Automatic {
+			frame = a.placeResults()
+		} else {
+			offset = a.placeResults()
+		}
 	}
 
 	for _, s := range a.unit.Symbols {
