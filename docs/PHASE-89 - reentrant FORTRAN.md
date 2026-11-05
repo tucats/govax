@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -401,7 +401,7 @@ it moves to a Phase 90.
    (`recursiveModes`), with any exception explained.
 8. **FTNRTL** (done 2026-11-05)**:** recursive I/O at depth, dead-context popping across unwound
    recursive levels, the format cache under ASTs; fixes as found.
-9. **The stack:** big frames in both paging modes, paging off's limit measured
+9. **The stack** (done 2026-11-05)**:** big frames in both paging modes, paging off's limit measured
    and documented, runaway recursion's report, LINK's STACK= in MANUAL.md.
 10. **The debugger:** SET SCOPE /CALL n and /CURRENT, CANCEL SCOPE, SHOW SCOPE's
     mark, EXAMINE of each activation's locals and arguments; the probe
@@ -713,3 +713,29 @@ it moves to a Phase 90.
     of PCs once implied DO loops and the optimizer have laid it out), so nothing is changed; the test holds
     it, and notices if it goes.
   - `testdata/ftn86`'s procedure is regenerated with RECURRTL, in `ftn86AwaitingVMS` until subtask 12's round.
+- **2026-11-05:** Subtask 9, the stack. Measured, tested, and documented; no code needed changing.
+  - **Paging off's limit:** the user stack is P1's pages from its low end to `UserStackTop`, so
+    `vax.memory.p1` less the 4,096 pages above the stack's top: with STARTUP.COM's 8,192, 4,096 pages,
+    2 MB, some 87,000 levels of a routine whose frame is the call's 24 bytes. Only the top 1,024 pages
+    (`userStackPages`) are the stack's alone: a P1 expansion begins below them, and a deeper stack writes
+    over what it holds. VMS's stack would run into an expansion below it the same way, so this is noted, not
+    changed. LINK's `STACK=` does nothing with paging off (`CreateUserStack` is created space's).
+  - **Paging on's limit:** the table area's room: process 1's 24,576 entries (VMINIT's `/P0` plus `/P1`)
+    less P0's and the 4,096 above the stack, about 20,000 pages, 10 MB, some 430,000 levels; a subprocess
+    shares its job's PGFLQUOTA (40,960 nominal), and a detached process's 16,400 binds first, as
+    `testdata/pg67`'s part C found. A frame of any size grows the stack at its first touch (`expandStack`,
+    every page from P1's low end down). Without a page file a stack of written pages past the free memory is
+    `%GOVAX-F-MEMEXHAUST`, as any memory is; the tests give paging on the default page file for that reason.
+  - **The end:** a frame past the room, or a runaway, is an access violation with no stack for its arrays,
+    so the image ends with no message and `$STATUS` `%X1000000C` (`noStackToReport`, Phase 67's rule and
+    Phase 70's for both modes), the next image running as usual. A condition raised after a big frame is
+    reserved but before its pages are touched is reported on the pages below it, the stack growing for the
+    arrays as for a push, and the program's handler and the traceback see it as usual.
+  - **Tests:** `testdata/stack89` (README.md), run by `internal/console/stack89_test.go` in both paging
+    modes, paging on with a 32,768-block page file: `bigframe.for` (an 800,000-byte frame, every page
+    written and read back, 2 levels fitting paging off and 12 paging on, `TestStack89BigFrames`),
+    `runaway.for` (its depth within a range per mode, `TestStack89Runaway`), and `signal.for` after it (a
+    condition on an untouched frame, continued by a handler, then reported by the traceback). About 1 s.
+  - **Documented:** MANUAL.md's new "The user stack" (section 13, beside the address space), the LINK
+    options table's `STACK=` and activation's step 6, and 14.7's paragraph on recursion (how deep it goes);
+    HELP LINK's `STACK=`.

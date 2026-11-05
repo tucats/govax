@@ -5100,7 +5100,12 @@ $LINK
     the LINK command.  Options and keywords may be abbreviated.  The
     options are VAX LINK's:
 
-        STACK=<pages>           The user stack's size (default 20).
+        STACK=<pages>           The user stack's first size (default
+                                20).  With paging on it grows past
+                                that by itself, to about 10 MB with
+                                the defaults; with paging off the
+                                stack is a fixed 2 MB of P1, and
+                                STACK= is ignored.
         IDENTIFICATION=<id>     The image's identification.
         NAME=<name>             The image's name in its header.
         SYMBOL=<name>,<value>   Defines a global symbol, whatever the

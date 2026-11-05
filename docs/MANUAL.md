@@ -3391,7 +3391,7 @@ lines after the `LINK` command. govax supports every VAX LINK option but
 | --- | --- |
 | `file/SHAREABLE` | Link against a shareable image (found as `RUN` would find it). |
 | `file/LIBRARY`, `/INCLUDE=`, `/SELECTIVE_SEARCH` | As on the command line. |
-| `STACK=pages` | The user stack's size (default 20). |
+| `STACK=pages` | The user stack's first size (default 20); with paging on it grows past that by itself, as on VMS, and with paging off it is ignored ([the user stack](#the-user-stack)). |
 | `IDENTIFICATION=id`, `NAME=name` | The image's ident and name. |
 | `SYMBOL=name,value` | Define a global symbol. |
 | `UNIVERSAL=name,...` | Make symbols visible to images that link against this shareable image. |
@@ -3753,7 +3753,8 @@ When `RUN` starts an image, govax does what VMS's image activator does:
    linked with one).
 5. **Does the fixups**: fills in each image's references to the others,
    and sets each page's protection (code read-only).
-6. **Creates the user stack** in P1 (`STACK=` pages, 20 by default) and
+6. **Creates the user stack** in P1 (`STACK=` pages, 20 by default;
+   with paging off the stack is a fixed part of P1 instead) and
    calls the image at its transfer address (through `SYS$IMGSTA`, for an
    image linked `/TRACEBACK`).
 
@@ -4441,6 +4442,32 @@ address space, in four regions of 1 GB:
 
 P0 and P1 are private to each process: the same address in two
 processes is two different pages. S0 is shared by all.
+
+#### The user stack
+
+The user stack grows down from `7FE00000`; how far it can go depends on
+the paging mode:
+
+- **With paging on**, it is the image's: activation creates LINK's
+  `STACK=` pages (20 by default), and a user-mode access below the
+  stack creates the pages down to it, as VMS's stack expands. Only the
+  process's page table area limits it (and its paging file quota): with
+  VMINIT's defaults, 24,576 entries, the stack can reach about 20,000
+  pages, 10 MB, less what P0 and P1 expansions hold.
+- **With paging off**, it is a fixed part of P1: the pages from P1's
+  low end to `7FE00000`, `vax.memory.p1` less the 4,096 pages above the
+  stack's top (with the default 8192, 4,096 pages, 2 MB). The stack's
+  top 1,024 pages are its own; P1 expansions (`$EXPREG` of P1, a
+  section mapped with `SEC$M_EXPREG`) start below them, and a deeper
+  stack runs into what they hold, as on VMS a stack that grows below
+  them would. `STACK=` changes nothing.
+
+A stack that runs out (a runaway recursion, or a frame bigger than the
+room left) is an access violation with no stack to report it on: the
+image ends at once with no message, no handler run, and `$STATUS`
+`%X1000000C`, as VMS 7.1 ends it. A frame that fits gets its pages as
+it is touched, however large; a condition raised before the frame's
+pages are touched is reported on the pages below it like any other.
 
 Memory is divided into 512-byte *pages*. An address is a page number and
 a byte within the page. Physical memory is divided into 512-byte *page
@@ -5685,7 +5712,12 @@ frame variables has its block in the frame too, filled in by each statement that
 it. A file's associated variable (`ASSOCIATEVARIABLE=`, DEFINE FILE's) in the frame
 gets `%FORT-W-ASSOCFRAME`: FTNRTL goes on storing in it until the file is closed,
 after the routine may have returned. A variable format expression reads the frame of the
-activation doing the I/O, whichever entered last.
+activation doing the I/O, whichever entered last. How deep a recursion can go is the
+user stack's room ([the user stack](#the-user-stack)): with paging on about 10 MB, with
+paging off 2 MB, the frame being the call's 24 bytes or more, the saved registers,
+and the unit's frame storage (a recursive routine with a `REAL*8 A(100000)` local
+takes 800,000 bytes a level, so 12 levels fit with paging on and 2 with it off). Past
+that the image ends with no message and `$STATUS` `%X1000000C`.
 
 **Layout.** `/[NO]ALIGN` isn't in VAX FORTRAN V5.0, whose structures and common blocks
 are always packed, and which is the default here. It comes from a later VAX
