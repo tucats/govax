@@ -86,6 +86,17 @@ type Evaluator struct {
 	// (PRINT's DCL symbols, Hooks.DCLSymbol); ok false passes the name
 	// on to the usual lookup. Nil for none.
 	Names func(name string) (v uint32, ok bool)
+
+	// Register, when set, gives a register's contents in place of the
+	// CPU's: the debugger's, for the call level SET SCOPE chose (Phase 89).
+	// handled false leaves the register to the CPU; err is a register the
+	// level hasn't (%DEBUG-W-SYMNOTACT). Nil for the CPU's own.
+	Register func(name string) (v uint32, handled bool, err error)
+
+	// Scoped, when set, turns a bare name into the path it is looked up
+	// as among the debug symbols (DBG89B\Y under SET SCOPE DBG89B); ok
+	// false leaves the name as it is. Nil for none.
+	Scoped func(name string) (path string, ok bool)
 }
 
 // DebugNames looks names up in a debugger's symbol table, for the
@@ -460,8 +471,8 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			return v, s[i:], err
 		}
 
-		if v, ok := registerValue(e, s[1:i]); ok {
-			return v, s[i:], nil
+		if v, ok, err := e.registerContents(s[1:i]); ok || err != nil {
+			return v, s[i:], err
 		}
 
 		return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, s[:i])
@@ -510,6 +521,14 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 
 		if strings.EqualFold(name, "DEFINED") {
 			return e.parseDefined(rest)
+		}
+
+		// A register the debugger gives for its scope, unless a console
+		// symbol has the name (which wins over a register, as below).
+		if e.Register != nil && !strings.Contains(name, `\`) && !e.consoleName(name) {
+			if v, ok, err := e.registerContents(name); ok || err != nil {
+				return v, rest, err
+			}
 		}
 
 		v, ok := e.lookupSymbol(name)
@@ -660,7 +679,7 @@ func (e *Evaluator) dataContents(name string, addr uint32) (v uint32, isData boo
 		return 0, false, nil
 	}
 
-	size, ok := dd.DataSize(name)
+	size, ok := dd.DataSize(e.scopedPath(name))
 	if !ok {
 		return 0, false, nil
 	}
@@ -727,6 +746,51 @@ func (e *Evaluator) isRegister(s string) bool {
 	}
 
 	return true
+}
+
+// registerContents is a register's contents as the Register hook gives
+// them, or the CPU's. ok is false when name isn't a register.
+func (e *Evaluator) registerContents(name string) (uint32, bool, error) {
+	v, ok := registerValue(e, name)
+	if !ok || e.Register == nil {
+		return v, ok, nil
+	}
+
+	if sv, handled, err := e.Register(strings.ToUpper(name)); handled || err != nil {
+		return sv, true, err
+	}
+
+	return v, true, nil
+}
+
+// consoleName reports whether the Names hook or the console's table has
+// name.
+func (e *Evaluator) consoleName(name string) bool {
+	if e.Names != nil {
+		if _, ok := e.Names(name); ok {
+			return true
+		}
+	}
+
+	if e.Symbols == nil {
+		return false
+	}
+
+	_, ok := e.Symbols.Get(name)
+
+	return ok
+}
+
+// scopedPath is the path a bare name is looked up as among the debug
+// symbols: the Scoped hook's, or the name itself.
+func (e *Evaluator) scopedPath(name string) string {
+	if e.Scoped != nil && !strings.Contains(name, `\`) {
+		if path, ok := e.Scoped(name); ok {
+			return path
+		}
+	}
+
+	return name
 }
 
 // registerValue returns the contents of the register named name: a
@@ -937,7 +1001,7 @@ func (e *Evaluator) lookupSymbol(name string) (uint32, bool) {
 		return 0, false
 	}
 
-	return e.Debug.Lookup(name)
+	return e.Debug.Lookup(e.scopedPath(name))
 }
 
 // lineKeyword returns the length of the debugger's %LINE keyword when s

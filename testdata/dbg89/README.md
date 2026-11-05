@@ -67,3 +67,19 @@ reached through `4(AP)` and its K at `FACT.K(FP)`.
 
 The same procedure ran on govax (a scratch copy, 2026-11-05) from end to end, to find
 mistakes in the probe; govax had no SET SCOPE yet, so its sessions are mostly errors.
+
+## Results (VMS 7.1, 2026-11-05)
+
+`vax/` holds the run: `dbg89.log` (the procedure's log), the sessions `dbg89.dlg`,
+`dbg89s.dlg`, `dbg89f.dlg`, and `gvdbg89.dlg`, and the listings, maps, objects, and
+images. `gvdbg89.dlg` is `dbg89.dbg` run by VMS's debugger on govax's own image. It
+answered as on VMS's image, except for the source lines, which it couldn't open on the
+DUA2 govax had named.
+
+`TestDebuggerSessionOracle` (`internal/debugger/session_oracle_test.go`) replays
+`dbg89.dlg`, `dbg89s.dlg`, and `dbg89f.dlg` on VMS's images. What the logs settled is
+in the phase doc's progress log for subtask 10b.
+
+One mistake in the probe: the DEPOSIT cases were written with `^X`, which VMS's
+debugger doesn't read (`%DEBUG-E-SYNERREXPR`), so they tell nothing. govax reads `^X`,
+so its run of those commands differs from VMS's, as the oracle's list says.

@@ -106,6 +106,7 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 	stopped.fired = true
 
 	if text := d.stopMessage(stopped, pc); text != "" {
+		d.setStopModule(pc)
 		d.Machine.Printf("%s\n", text)
 		d.showSource(pc)
 	}

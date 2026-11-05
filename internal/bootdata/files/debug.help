@@ -198,8 +198,8 @@ $CLEA
 
   Additional information available:
 
-  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  SYMBOL  TB  TRACE  TYPE
-  WATCH
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SCOPE  SOURCE  SYMBOL  TB  TRACE
+  TYPE  WATCH
 
 $CANC,BREA
 $CLEA,BREA
@@ -317,6 +317,15 @@ $CLEA,SYMB
 
   /ALL removes every user symbol, and /TEMPORARY every user symbol not
   defined with SET/PERMANENT.
+
+$CANC,SCOP
+$CLEA,SCOP
+  Goes back to the default scope list (every call level, level 0
+  current), ending SET SCOPE's list or SET SCOPE/CURRENT's level.
+
+  Format:
+
+    CANCEL SCOPE
 
 $CANC,TYPE
 $CLEA,TYPE
@@ -568,8 +577,8 @@ $SE
   Additional information available:
 
   BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE   
-  QUANTUM  RADIX    SOURCE   STEP     TRACE    TYPE     VM
-  WATCH
+  QUANTUM  RADIX    SCOPE    SOURCE   STEP     TRACE    TYPE
+  VM       WATCH
 
   (SET BREAKPOINT, SET TRACEPOINT, and SET WATCHPOINT are the same as
   SET BREAK, SET TRACE, and SET WATCH.)
@@ -805,6 +814,38 @@ $SE,MODU
   govax reads every module's symbols when it loads an image, so this
   changes only the "set" column of SHOW MODULE and which modules a SHOW
   SYMBOL with no IN looks in.
+
+$SET,SCOP
+$SE,SCOP
+  Says where names are looked up, and whose registers EXAMINE, DEPOSIT,
+  and EVALUATE see.
+
+  Format:
+
+    SET SCOPE location[,location...]
+    SET SCOPE/MODULE module[,module...]
+    SET SCOPE/CURRENT n
+
+  A location is a call level's number (0 the routine the program is in,
+  1 its caller, and so on out, the rows of SHOW CALLS), a routine's or
+  module's path name (DBG89\REC, DBG89B), or \, the global scope. A name
+  is looked for in each location's module in turn. The registers are the
+  first location's: an outer level's are the ones it had when it made its
+  call, from the call frames (R0 and R1 are gone; a DEPOSIT to a register
+  a frame saved goes into the frame); a routine's are its innermost
+  activation's; a module has none. The list stays until CANCEL SCOPE or
+  another SET SCOPE, and its numbers count the levels as they are after
+  each GO or STEP. /MODULE takes each name as a module's.
+
+  /CURRENT makes level n of the default list (every level) the current
+  one, as if SET SCOPE n, until the program goes on. The scope's built-in
+  symbols are numbers of the default list: %CURRENT_SCOPE_ENTRY,
+  %NEXT_SCOPE_ENTRY, and %PREVIOUS_SCOPE_ENTRY.
+
+  A name may carry its own scope: 1\R2 (level 1's R2), REC 1\%R2 (REC's
+  second activation from the innermost), 0\Y.
+
+  SHOW SCOPE shows the list.
 
 $SET,PROC
 $SE,PROC
@@ -1322,9 +1363,10 @@ $SH,SYMB
 
 $SHOW,SCOP
 $SH,SCOP
-  Lists the call levels names are looked up in, innermost (level 0, marked
-  with an asterisk) first. A routine entered more than once is numbered
-  (FACT 1).
+  Shows the scope list. The default list is every call level, innermost
+  (level 0) first, the current one marked with an asterisk, each with the
+  routine there; a routine entered more than once is numbered (FACT 1). A
+  SET SCOPE list is shown as it was given.
 
   Format:
 

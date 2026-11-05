@@ -1,0 +1,92 @@
+@DBG89F.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG89F.DBG
+! ! DBG89F.DBG - SET SCOPE on the compiler's MACRO for a recursive function
+! ! (README.md). FACT's N is through 4(AP), K at FACT.K(FP), so each activation's
+! ! are reached through that scope's AP and FP. VMS's log leaves out a command
+! ! that fails, so a comment names each case first.
+! SET BREAK FACT.L10
+! GO
+!break at DBG89F\FACT\FACT.L10
+!    76:         MOVL    FACT.K(FP),FACT.FACT(FP)
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG89F          FACT                76               00000034         0000064E
+!*DBG89F          FACT                68               00000024         0000063E
+!*DBG89F          FACT                68               00000024         0000063E
+!*DBG89F          FACT                68               00000024         0000063E
+!*DBG89F          DBG89F              36               0000000F         0000060F
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG89F\FACT ], 
+!    1 [ = DBG89F\FACT 1 ], 
+!    2 [ = DBG89F\FACT 2 ], 
+!    3 [ = DBG89F\FACT 3 ], 
+!    4 [ = DBG89F ]
+! !> Scope 0, FACT(1)
+! EXAMINE AP
+!DBG89F\FACT\%AP:        7FED52D0
+! EXAMINE FP
+!DBG89F\FACT\%FP:        7FED52BC
+! !> EXAMINE .(.AP+FACT.N), N
+! EXAMINE .(.AP+FACT.N)
+!7FED52E4:       00000001
+! !> EXAMINE .FP+FACT.K, K
+! EXAMINE .FP+FACT.K
+!7FED52B0:       0000000A
+! !> SET SCOPE 1, FACT(2)
+! SET SCOPE 1
+! SHOW SCOPE
+!scope: 
+!    1 [ = DBG89F\FACT 1 ]
+! EXAMINE AP
+!DBG89F\FACT 1\%AP:      7FED52FC
+! EXAMINE FP
+!DBG89F\FACT 1\%FP:      7FED52E8
+! EXAMINE .(.AP+FACT.N)
+!7FED5310:       00000002
+! EXAMINE .FP+FACT.K
+!7FED52DC:       00000014
+! !> EXAMINE/SOURCE .PC
+! EXAMINE/SOURCE .PC
+!module DBG89F
+!    69:         MOVL    R0,FACT.$T1(FP)
+! !> SET SCOPE 3, FACT(4)
+! SET SCOPE 3
+! EXAMINE .(.AP+FACT.N)
+!DBG89F\DBG89F.$K1:      00000004
+! EXAMINE .FP+FACT.K
+!7FED5334:       00000028
+! !> SET SCOPE 4, the main program
+! SET SCOPE 4
+! SHOW SCOPE
+!scope: 
+!    4 [ = DBG89F ]
+!%DEBUG-E-NOSYMBOL, symbol 'R' is not in the symbol table
+! EXAMINE DBG89F.R
+!DBG89F\DBG89F.R:        00000000
+! !> Without SET SCOPE: EXAMINE 2\%FP
+! CANCEL SCOPE
+! EXAMINE 2\%FP
+!DBG89F\FACT 2\%FP:      7FED5314
+! !> EXAMINE FACT 2\%AP
+! EXAMINE FACT 2\%AP
+!DBG89F\FACT 2\%AP:      7FED5328
+! !> SET SCOPE/CURRENT 2, then EXAMINE/SOURCE .PC
+! SET SCOPE/CURRENT 2
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG89F\FACT ], 
+!    1 [ = DBG89F\FACT 1 ], 
+! *  2 [ = DBG89F\FACT 2 ], 
+!    3 [ = DBG89F\FACT 3 ], 
+!    4 [ = DBG89F ]
+! EXAMINE/SOURCE .PC
+!module DBG89F
+!    69:         MOVL    R0,FACT.$T1(FP)
+! CANCEL SCOPE
+! CANCEL BREAK/ALL
+! !> GO to the end
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG89F.DBG
+EXIT

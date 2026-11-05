@@ -32,8 +32,9 @@ import (
 // %NAME 'string', the radix operators %BIN, %DEC, %HEX, and %OCT, and a
 // leading backslash for a global name (\X). The registers' %R0 forms were
 // there already. %PARCNT needs DECLARE, which govax hasn't; the scope
-// entries (%CURRENT_SCOPE_ENTRY ...) come with SET SCOPE, and %ADDR, %REF,
-// %VAL, and %DESCR with CALL's argument forms.
+// entries (%CURRENT_SCOPE_ENTRY, %NEXT_SCOPE_ENTRY, %PREVIOUS_SCOPE_ENTRY)
+// are scope.go's; and %ADDR, %REF, %VAL, and %DESCR come with CALL's
+// argument forms.
 
 // currentValue is %CURVAL: the last value shown or stored, and whether
 // there has been one.
@@ -68,6 +69,10 @@ func (d *Debugger) currentLocation() examineState {
 // builtinSymbol is the console evaluator's hook for the built-in symbols
 // (machine.Machine.DebugBuiltins). ok is false for a name that isn't one.
 func (d *Debugger) builtinSymbol(name string) (uint32, bool, error) {
+	if v, ok, err := d.scopeBuiltin(name); ok {
+		return v, true, err
+	}
+
 	cur := d.currentLocation()
 
 	switch name {

@@ -1,0 +1,70 @@
+DBG89B                          Phase 89 probe: a second module           4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   1
+01                                                                        5-NOV-2026 07:42:26  DUA1:[000000]DBG89B.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBG89B	Phase 89 probe: a second module
+                                     0000     2 	.IDENT	/01/
+                                     0000     3 ; DBG89B.MAR - the probe's second module (README.md): a routine with the
+                                     0000     4 ; module's name, and a Y of its own beside DBG89's, and a Z only it has.
+                                     0000     5 
+                                 00000000     6 	.PSECT	DATA89B, WRT, NOEXE, LONG
+                           0000B111  0000     7 Y:	.LONG	^XB111			; DBG89B's Y
+                           0000B222  0004     8 Z:	.LONG	^XB222			; only here
+                                     0008     9 
+                                 00000000    10 	.PSECT	CODE89B, NOWRT, EXE, LONG
+                               0000  0000    11 	.ENTRY	DBG89B, ^M<>
+              50   00000004'EF   D0  0002    12 	MOVL	Z, R0
+                                 04  0009    13 	RET
+                                     000A    14 
+                                     000A    15 	.END
+DBG89B                          Phase 89 probe: a second module           4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              5-NOV-2026 07:42:26  DUA1:[000000]DBG89B.MAR;1         (1)
+
+DBG89B           00000000 RG D  02      
+Y                00000000 R  D  01      
+Z                00000004 R  D  01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA89B                         00000008  (    8.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE89B                         0000000A  (   10.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  483     00:00:00.00    00:00:00.01
+Command processing              927     00:00:00.00    00:00:00.00
+Pass 1                          186     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           34     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1658     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+222 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+15 source lines were read in Pass 1, producing 18 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DBG89B

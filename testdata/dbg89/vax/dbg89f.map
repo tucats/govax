@@ -1,0 +1,95 @@
+
+                                                                 4-NOV-2026 16:21        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBG89F          01                     96 DUA1:[000000]DBG89F.OBJ;1             4-NOV-2026 16:21  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+$PDATA                          00000200 00000203 00000004 (          4.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,NOEXE,  RD,NOWRT,NOVEC
+                DBG89F          00000200 00000203 00000004 (          4.) LONG  2
+$LOCAL                          00000400 00000403 00000004 (          4.) LONG  2   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBG89F          00000400 00000403 00000004 (          4.) LONG  2
+$CODE                           00000600 00000657 00000058 (         88.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                DBG89F          00000600 00000657 00000058 (         88.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+DBG89F          00000600-R        
+FACT            0000061A-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]DBG89F.EXE;1                                        4-NOV-2026 16:21        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000009FF 00000800 (2048. bytes, 4. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    DBG89F 01
+Number of files:                                         3.
+Number of modules:                                       2.
+Number of program sections:                              5.
+Number of global symbols:                                3.
+Number of image sections:                                5.
+User transfer address:                            00000600
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]DBG89F.MAP;1
+Estimated map length:                             12. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   102	00:00:00.00	00:00:00.00
+    Pass 1:                                              1440	00:00:00.00	00:00:00.01
+    Allocation/Relocation:                                 82	00:00:00.00	00:00:00.01
+    Pass 2:                                              1249	00:00:00.01	00:00:00.02
+    Map data after object module synopsis:                 46	00:00:00.00	00:00:00.00
+    Symbol table output:                                   17	00:00:00.00	00:00:00.00
+Total run values:                                        2936	00:00:00.01	00:00:00.04
+
+Using a working set limited to 662 pages and 52 pages of data storage (excluding image)
+
+Total number object records read (both passes):   100
+    of which 26 were in libraries and 5 were DEBUG data records containing 393 bytes
+355 bytes of DEBUG data were written,starting at VBN 5 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP DBG89F

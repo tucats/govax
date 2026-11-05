@@ -444,27 +444,6 @@ func imageDisplayName(file string) string {
 	return strings.ToUpper(name)
 }
 
-// ScopeFrames returns the routine of each call frame, innermost first, as
-// "MODULE\ROUTINE" (just "MODULE" for a routine named as its module, or a
-// frame in no routine). It is what SHOW SCOPE lists: the same frames as
-// SHOW CALLS. ok is false when the PC isn't in an image with debug
-// symbols.
-func (m *Machine) ScopeFrames() (paths []string, ok bool, err error) {
-	rows, ok, err := m.debugFrames(0)
-
-	for _, row := range rows {
-		path := row.module
-
-		if row.hasRoutine && !strings.EqualFold(row.routine, row.module) {
-			path += `\` + row.routine
-		}
-
-		paths = append(paths, path)
-	}
-
-	return paths, ok, err
-}
-
 // SharedName names an address in a shareable image the program loaded, as
 // the debugger's EXAMINE does: by a universal symbol, or SHARE$name+offset
 // with the offset in radix (sharedSymbolizer).

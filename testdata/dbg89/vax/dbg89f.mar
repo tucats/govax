@@ -1,0 +1,82 @@
+	.TITLE	DBG89F
+	.IDENT	/01/
+;
+; Compiled by govax FORTRAN V0.0-0 on 5-NOV-2026 07:42:26.30
+; from DUA2:[000000]DBG89F.FOR;1
+; by the command FORTRAN/NOOPTIMIZE DUA2:[000000]DBG89F.FOR
+;
+; Each line of the FORTRAN source appears as a comment, with its line number, before
+; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+; /LIST, their include depth before the number; a comment names the file either way.
+; Each routine's storage map says where its variables are.
+;
+
+; Storage map for DBG89F, the main program
+;   R     INTEGER  $LOCAL+0  DBG89F.R
+;
+
+	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+DBG89F.R:
+	.BLKL	1			; R
+
+	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+DBG89F.$K1:
+	.LONG	4
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    1  C DBG89F.FOR - the FORTRAN half of Phase 89's debugger probe (README.md): a
+;    2  C recursive function with an argument and an automatic local in each frame,
+;    3  C and no I/O statement, so VMS's MACRO and LINK build its MACRO file with no
+;    4  C run-time library. FACT(4) is 4*3*2*10 = 240.
+;    5        PROGRAM DBG89F
+	.ENTRY	DBG89F,^M<>
+;    6        INTEGER FACT, R
+;    7        R = FACT(4)
+	PUSHAL	DBG89F.$K1
+	CALLS	#1,G^FACT
+	MOVL	R0,DBG89F.R
+;    8        END
+	MOVL	#1,R0			; SS$_NORMAL
+	RET
+
+; Storage map for FACT, a RECURSIVE INTEGER function
+;   N     INTEGER  argument 1  @FACT.N(AP)
+;   FACT  INTEGER  FP-16       FACT.FACT(FP)
+;   K     INTEGER  FP-12       FACT.K(FP)
+;
+FACT.N = 4				; N is argument 1
+FACT.FACT = -16				; FACT, the function's value, in the frame
+FACT.K = -12				; K, in the frame
+FACT.$T1 = -8				; temporary, in the frame
+FACT.$T2 = -4				; temporary, in the frame
+
+	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+;    9        RECURSIVE INTEGER FUNCTION FACT(N)
+	.ENTRY	FACT,^M<>
+	SUBL2	#16,SP			; this activation's own storage
+;   10        INTEGER N, K
+;   11        K = N * 10
+	MULL3	@FACT.N(AP),#10,FACT.K(FP)
+;   12        IF (N .LE. 1) GO TO 10
+	CMPL	@FACT.N(AP),#1
+	BGTR	FACT.$1
+	BRW	FACT.L10
+FACT.$1:
+;   13        FACT = N * FACT(N-1)
+	SUBL3	#1,@FACT.N(AP),FACT.$T2(FP)
+	PUSHAL	FACT.$T2(FP)
+	CALLS	#1,G^FACT
+	MOVL	R0,FACT.$T1(FP)
+	MULL3	@FACT.N(AP),FACT.$T1(FP),FACT.FACT(FP)
+;   14        RETURN
+	MOVL	FACT.FACT(FP),R0	; the function's value
+	RET
+;   15   10   FACT = K
+FACT.L10:
+	MOVL	FACT.K(FP),FACT.FACT(FP)
+;   16        RETURN
+	MOVL	FACT.FACT(FP),R0	; the function's value
+	RET
+;   17        END
+
+	.END	DBG89F

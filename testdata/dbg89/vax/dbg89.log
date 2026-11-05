@@ -1,0 +1,1347 @@
+$ !
+$ ! 1. Builds.
+$ !
+$ MACRO/DEBUG/LIST DBG89
+$ MACRO/DEBUG/LIST DBG89B
+$ LINK/DEBUG/MAP DBG89,DBG89B
+$ MACRO/DEBUG/LIST DBG89F
+$ LINK/DEBUG/MAP DBG89F
+$ !
+$ ! 2. Debugger sessions: image, command file, log.
+$ !
+$ CALL DEBUG DBG89 DBG89 DBG89
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG89.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG89.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG89
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG89
+%DEBUG-I-VERIFYICF, entering command procedure DBG89.DBG
+ ! DBG89.DBG - SET SCOPE on a recursion (README.md), stopped in LEAF under
+ ! REC(1), REC(2), REC(3), and START. VMS's log leaves out a command that
+ ! fails, so a comment names each case first.
+ SHOW MODULE
+module name                     symbols    size
+
+DBG89                           yes         848
+DBG89B                          no          516
+
+total MACRO modules: 2.         bytes allocated: 60032.
+ SET BREAK INLEAF
+ GO
+break at DBG89\LEAF\INLEAF
+    50: INLEAF: NOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ !> SHOW SCOPE, the default
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> Scope 0's registers
+ EXAMINE R0
+DBG89\LEAF\%R0: 00000F00
+ EXAMINE R1
+DBG89\LEAF\%R1: 00000F01
+ EXAMINE R2
+DBG89\LEAF\%R2: 00000102
+ EXAMINE R5
+DBG89\LEAF\%R5: 00000105
+ EXAMINE R6
+DBG89\LEAF\%R6: 00006006
+ EXAMINE R7
+DBG89\LEAF\%R7: 00007007
+ EXAMINE AP
+DBG89\LEAF\%AP: 7FED52D0
+ EXAMINE FP
+DBG89\LEAF\%FP: 7FED52B8
+ EXAMINE SP
+DBG89\LEAF\%SP: 7FED52B8
+ EXAMINE PC
+DBG89\LEAF\%PC: 00000490
+ EXAMINE PSL
+DBG89\LEAF\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ !> EXAMINE Y, from LEAF
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE Z, only in the module not set
+%DEBUG-E-NOSYMBOL, symbol 'Z' is not in the symbol table
+ !> Numeric path names: EXAMINE 0\Y
+ EXAMINE 0\Y
+DBG89\Y:        00001111
+ !> EXAMINE 1\R2
+ EXAMINE 1\R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE 1\%R2
+ EXAMINE 1\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE 2\%R2
+ EXAMINE 2\%R2
+DBG89\REC 1\%R2:        00000202
+ !> EXAMINE 4\%R2
+ EXAMINE 4\%R2
+DBG89\START\%R2:        00001002
+ !> EXAMINE 9\%R2, past the stack
+ EXAMINE 9\%R2
+%DEBUG-W-SYMNOTACT, non-static variable '9\%R2' is not active
+ !> EXAMINE 1\%PC
+ EXAMINE 1\%PC
+DBG89\REC\%PC:  00000460
+ !> EXAMINE 1\%FP
+ EXAMINE 1\%FP
+DBG89\REC\%FP:  7FED52D4
+ !> Invocation numbers: EXAMINE REC 0\%R2
+ EXAMINE REC 0\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE REC 1\%R2
+ EXAMINE REC 1\%R2
+DBG89\REC 1\%R2:        00000202
+ !> EXAMINE DBG89\REC 2\%R2
+ EXAMINE DBG89\REC 2\%R2
+DBG89\REC 2\%R2:        00000302
+ !> EXAMINE REC 3\%R2, one more than there are
+ EXAMINE REC 3\%R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC 3\%R2' is not active
+ !> EXAMINE REC\%R2
+ EXAMINE REC\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE START\%R2
+ EXAMINE START\%R2
+DBG89\START\%R2:        00001002
+ !> EXAMINE DBG89B\%R2, a routine not active
+%DEBUG-E-NOSYMBOL, symbol 'DBG89B\%R2' is not in the symbol table
+ !> EXAMINE REC 1\Y
+%DEBUG-W-MISINVNUM, misplaced invocation number in REC 1\Y
+ !> EXAMINE/INSTRUCTION REC 1\%PC
+ EXAMINE/INSTRUCTION REC 1\%PC
+DBG89\REC 1\%PC:        CVTWD    S^#04,S^#0.5000000
+ !> The built-in scope symbols
+ EVALUATE %CURRENT_SCOPE_ENTRY
+00000000
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000001
+ !> EVALUATE %PREVIOUS_SCOPE_ENTRY at scope 0
+ EVALUATE %PREVIOUS_SCOPE_ENTRY
+00000000
+ !> SET SCOPE 1
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ]
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ EXAMINE R0
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R0' is not active
+ EXAMINE R1
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R1' is not active
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE R3
+DBG89\REC\%R3:  00000103
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ EXAMINE R6
+DBG89\REC\%R6:  7FED5049
+ EXAMINE R7
+DBG89\REC\%R7:  00007007
+ EXAMINE AP
+DBG89\REC\%AP:  7FED52F4
+ EXAMINE FP
+DBG89\REC\%FP:  7FED52D4
+ EXAMINE SP
+DBG89\REC\%SP:  7FED52D4
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ EXAMINE PSL
+DBG89\REC\%PSL: 
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ !> EXAMINE .PC
+ EXAMINE .PC
+DBG89\REC\DEEP: MOVL     S^#01,R0
+ !> EXAMINE/INSTRUCTION .PC
+ EXAMINE/INSTRUCTION .PC
+DBG89\REC\DEEP: MOVL     S^#01,R0
+ !> EXAMINE .AP+4, REC(1)'s argument
+ EXAMINE .AP+4
+7FED52F8:       00000001
+ !> EXAMINE .(.AP+4)
+ EXAMINE .(.AP+4)
+%DEBUG-E-NOACCESSR, no read access to address 00000001
+ !> EXAMINE Y
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE with no address, after a register
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE
+DBG89\REC\%R3:  00000103
+ !> EVALUATE R2+1
+ EVALUATE R2+1
+00000103
+ !> EVALUATE %CURRENT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %CURRENT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %NEXT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %PREVIOUS_SCOPE_ENTRY
+ !> EXAMINE 0\%R2 under SET SCOPE 1
+ EXAMINE 0\%R2
+DBG89\LEAF\%R2: 00000102
+ !> SET SCOPE 2
+ SET SCOPE 2
+ SHOW SCOPE
+scope: 
+    2 [ = DBG89\REC 1 ]
+ EXAMINE R2
+DBG89\REC 1\%R2:        00000202
+ EXAMINE R3
+DBG89\REC 1\%R3:        00000203
+ EXAMINE R4
+DBG89\REC 1\%R4:        00000204
+ EXAMINE R5
+DBG89\REC 1\%R5:        00000105
+ EXAMINE R6
+DBG89\REC 1\%R6:        7FED5049
+ EXAMINE AP
+DBG89\REC 1\%AP:        7FED531C
+ EXAMINE FP
+DBG89\REC 1\%FP:        7FED52FC
+ EXAMINE PC
+DBG89\REC 1\%PC:        0000046D
+ !> SET SCOPE 4, START
+ SET SCOPE 4
+ SHOW SCOPE
+scope: 
+    4 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\START\%R2:        00001002
+ EXAMINE R5
+DBG89\START\%R5:        00000105
+ EXAMINE R6
+DBG89\START\%R6:        7FED5049
+ EXAMINE PC
+DBG89\START\%PC:        0000042E
+ !> SET SCOPE 5, below START
+ SET SCOPE 5
+ SHOW SCOPE
+scope: 
+    5
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable '5\%R2' is not active
+ EXAMINE PC
+%DEBUG-W-SYMNOTACT, non-static variable '5\%PC' is not active
+ !> SET SCOPE 9, past the stack
+ SET SCOPE 9
+ SHOW SCOPE
+scope: 
+    9
+ !> EXAMINE R2 under SET SCOPE 9
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable '9\%R2' is not active
+ !> SET SCOPE 1, 0, a list
+ SET SCOPE 1, 0
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ], 
+    0 [ = DBG89\LEAF ]
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ !> SET SCOPE \
+ SET SCOPE \
+ SHOW SCOPE
+scope: 
+    \
+ !> EXAMINE Y under SET SCOPE \
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE R2 under SET SCOPE \
+ EXAMINE R2
+DBG89\LEAF\%R2: 00000102
+ !> SET SCOPE DBG89\REC, a routine with three activations
+ SET SCOPE DBG89\REC
+ SHOW SCOPE
+scope: 
+    DBG89\REC
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ !> SET SCOPE REC 1
+ SET SCOPE REC 1
+ SHOW SCOPE
+scope: 
+    DBG89\REC 1
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ !> SET SCOPE DBG89B, the routine of a module not set
+ SET SCOPE DBG89B
+ SHOW SCOPE
+scope: 
+    DBG89B
+ SHOW MODULE
+module name                     symbols    size
+
+DBG89                           yes         848
+DBG89B                          yes         516
+
+total MACRO modules: 2.         bytes allocated: 83840.
+ !> EXAMINE Y under SET SCOPE DBG89B
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ !> EXAMINE Z under SET SCOPE DBG89B
+ EXAMINE Z
+DBG89B\Z:       0000B222
+ !> EXAMINE R2 under SET SCOPE DBG89B
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89B\%R2' is not active
+ !> SET SCOPE/MODULE DBG89B
+ SET SCOPE/MODULE DBG89B
+ SHOW SCOPE
+scope: 
+    DBG89B
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ !> SET SCOPE/MODULE DBG89
+ SET SCOPE/MODULE DBG89
+ SHOW SCOPE
+scope: 
+    DBG89
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> SET SCOPE DBG89B, 1
+ SET SCOPE DBG89B, 1
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89B\%R2' is not active
+ !> SET SCOPE NOSUCH
+ SET SCOPE NOSUCH
+%DEBUG-E-BADSCOPE, invalid pathname NOSUCH, SCOPE not changed
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ !> SET SCOPE/CURRENT 1 while a SET SCOPE list is in effect
+%DEBUG-E-NODEFSCPE, No default scope list: error performing SET SCOPE/CURRENT
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ !> CANCEL SCOPE
+ CANCEL SCOPE
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 1
+ SET SCOPE/CURRENT 1
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+ *  1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ EXAMINE Y
+DBG89\Y:        00001111
+ EVALUATE %CURRENT_SCOPE_ENTRY
+00000001
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000002
+ EVALUATE %PREVIOUS_SCOPE_ENTRY
+00000000
+ !> EXAMINE/SOURCE .PC under SET SCOPE/CURRENT 1
+ EXAMINE/SOURCE .PC
+module DBG89
+    38: DEEP:   MOVL    #1, R0
+ !> TYPE with no line, under SET SCOPE/CURRENT 1
+ TYPE
+module DBG89
+    39:         RET
+ !> SET SCOPE/CURRENT 3 over /CURRENT 1
+ SET SCOPE/CURRENT 3
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+ *  3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+ !> SET SCOPE/CURRENT 0
+ SET SCOPE/CURRENT 0
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 9, past the stack
+ SET SCOPE/CURRENT 9
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT REC, not a number
+%DEBUG-E-NOTNUMSCOPE, specified scope is not a numbered scope.
+ !> SET SCOPE/CURRENT 1, 2, a list
+%DEBUG-E-NOSCOPELIST, a list of scopes is not allowed with this command.
+ !> SET SCOPE/CURRENT with no parameter
+%DEBUG-W-NEEDMORE, unexpected end of command line
+ !> SET SCOPE with no parameter
+%DEBUG-W-NEEDMORE, unexpected end of command line
+ !> SET SCOPE %NEXT_SCOPE_ENTRY
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 1
+ SET SCOPE/CURRENT %NEXT_SCOPE_ENTRY
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+ *  2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 1, then STEP: is it kept?
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 1
+ STEP/INSTRUCTION
+stepped to DBG89\LEAF\%LINE 51: RET     
+    51:         RET
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE 1, then STEP: is it kept, and where does 1 point now?
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ]
+ STEP/INSTRUCTION
+stepped to DBG89\REC\DEEP: MOVL     S^#01,R0
+    38: DEEP:   MOVL    #1, R0
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC 1 ]
+ EXAMINE R2
+DBG89\REC 1\%R2:        00000202
+ EXAMINE PC
+DBG89\REC 1\%PC:        0000046D
+ CANCEL SCOPE
+ !> DEPOSIT to a register in scope 2 (REC(2)'s frame, now that LEAF has
+ !> returned): where does it go?
+ SET SCOPE 2
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+%DEBUG-E-SYNERREXPR, syntax error in expression at or near '^X2222'
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+ !> DEPOSIT R5 in scope 2, which no frame saved
+%DEBUG-E-SYNERREXPR, syntax error in expression at or near '^X5555'
+ EXAMINE R5
+DBG89\REC 2\%R5:        00000105
+ CANCEL SCOPE
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ !> REC(1) returns to REC(2): R2 from its frame
+ SET BREAK BACK
+ GO
+break at DBG89\REC\BACK
+    42: BACK:   MULL2   4(AP), R0               ; each inner REC returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           REC                 42               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\REC ], 
+    1 [ = DBG89\REC 1 ], 
+    2 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\REC\%R2:  00000202
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ !> SET SCOPE 1 at BACK, then GO: kept across GO? REC(2) returns to REC(3),
+ !> its R2 from the frame the DEPOSIT wrote
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC 1 ]
+ GO
+break at DBG89\REC\BACK
+    42: BACK:   MULL2   4(AP), R0               ; each inner REC returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           REC                 42               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\START\%R2:        00001002
+ CANCEL SCOPE
+ CANCEL BREAK/ALL
+ !> GO to the end
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBG89.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG89 DBG89S DBG89S
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG89S.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG89S.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG89
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG89
+%DEBUG-I-VERIFYICF, entering command procedure DBG89S.DBG
+ ! DBG89S.DBG - SET SCOPE at the program's start and after its end (README.md).
+ ! VMS's log leaves out a command that fails, so a comment names each case first.
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           START               18               00000002         00000402
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\START ]
+ !> SET SCOPE 1 at START: the frame below the main routine
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable '1\%R2' is not active
+ EXAMINE PC
+%DEBUG-W-SYMNOTACT, non-static variable '1\%PC' is not active
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-W-SYMNOTACT, non-static variable '1\%PC' is not active
+ !> SET SCOPE/CURRENT 1 at START
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 1
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 2 at START
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 2
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\START ]
+ CANCEL SCOPE
+ !> SET SCOPE REC, not active yet
+ SET SCOPE REC
+ SHOW SCOPE
+scope: 
+    DBG89\REC
+ !> EXAMINE R2 under SET SCOPE REC, not active
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R2' is not active
+ !> EXAMINE Y under SET SCOPE REC
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE DEPTH under SET SCOPE REC
+ EXAMINE DEPTH
+DBG89\DEPTH:    00000000
+ CANCEL SCOPE
+ !> SET SCOPE 0
+ SET SCOPE 0
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\START ]
+ !> SET SCOPE 0, kept across a break in another routine?
+ SET BREAK DBG89B
+ GO
+%DEBUG-I-DYNMODSET, setting module DBG89B
+break at routine DBG89B
+    12:         MOVL    Z, R0
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89B          DBG89B              12               00000002         00000496
+*DBG89           START               22               00000025         00000425
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89B ]
+ EXAMINE R2
+DBG89B\%R2:     00001002
+ CANCEL SCOPE
+ CANCEL BREAK/ALL
+ !> GO to the end
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ !> After the end: SHOW SCOPE
+ SHOW SCOPE
+scope: 
+ *  0
+ !> SET SCOPE 1
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1
+ !> SET SCOPE/CURRENT 0
+%DEBUG-E-NODEFSCPE, No default scope list: error performing SET SCOPE/CURRENT
+ !> SET SCOPE DBG89\REC
+ SET SCOPE DBG89\REC
+ SHOW SCOPE
+scope: 
+    DBG89\REC
+ !> EXAMINE Y
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> CANCEL SCOPE
+ CANCEL SCOPE
+ SHOW SCOPE
+scope: 
+ *  0
+%DEBUG-I-VERIFYICF, exiting command procedure DBG89S.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBG89F DBG89F DBG89F
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBG89F.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG89F.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBG89F
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG89F
+%DEBUG-I-VERIFYICF, entering command procedure DBG89F.DBG
+ ! DBG89F.DBG - SET SCOPE on the compiler's MACRO for a recursive function
+ ! (README.md). FACT's N is through 4(AP), K at FACT.K(FP), so each activation's
+ ! are reached through that scope's AP and FP. VMS's log leaves out a command
+ ! that fails, so a comment names each case first.
+ SET BREAK FACT.L10
+ GO
+break at DBG89F\FACT\FACT.L10
+    76:         MOVL    FACT.K(FP),FACT.FACT(FP)
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89F          FACT                76               00000034         0000064E
+*DBG89F          FACT                68               00000024         0000063E
+*DBG89F          FACT                68               00000024         0000063E
+*DBG89F          FACT                68               00000024         0000063E
+*DBG89F          DBG89F              36               0000000F         0000060F
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89F\FACT ], 
+    1 [ = DBG89F\FACT 1 ], 
+    2 [ = DBG89F\FACT 2 ], 
+    3 [ = DBG89F\FACT 3 ], 
+    4 [ = DBG89F ]
+ !> Scope 0, FACT(1)
+ EXAMINE AP
+DBG89F\FACT\%AP:        7FED52D0
+ EXAMINE FP
+DBG89F\FACT\%FP:        7FED52BC
+ !> EXAMINE .(.AP+FACT.N), N
+ EXAMINE .(.AP+FACT.N)
+7FED52E4:       00000001
+ !> EXAMINE .FP+FACT.K, K
+ EXAMINE .FP+FACT.K
+7FED52B0:       0000000A
+ !> SET SCOPE 1, FACT(2)
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89F\FACT 1 ]
+ EXAMINE AP
+DBG89F\FACT 1\%AP:      7FED52FC
+ EXAMINE FP
+DBG89F\FACT 1\%FP:      7FED52E8
+ EXAMINE .(.AP+FACT.N)
+7FED5310:       00000002
+ EXAMINE .FP+FACT.K
+7FED52DC:       00000014
+ !> EXAMINE/SOURCE .PC
+ EXAMINE/SOURCE .PC
+module DBG89F
+    69:         MOVL    R0,FACT.$T1(FP)
+ !> SET SCOPE 3, FACT(4)
+ SET SCOPE 3
+ EXAMINE .(.AP+FACT.N)
+DBG89F\DBG89F.$K1:      00000004
+ EXAMINE .FP+FACT.K
+7FED5334:       00000028
+ !> SET SCOPE 4, the main program
+ SET SCOPE 4
+ SHOW SCOPE
+scope: 
+    4 [ = DBG89F ]
+%DEBUG-E-NOSYMBOL, symbol 'R' is not in the symbol table
+ EXAMINE DBG89F.R
+DBG89F\DBG89F.R:        00000000
+ !> Without SET SCOPE: EXAMINE 2\%FP
+ CANCEL SCOPE
+ EXAMINE 2\%FP
+DBG89F\FACT 2\%FP:      7FED5314
+ !> EXAMINE FACT 2\%AP
+ EXAMINE FACT 2\%AP
+DBG89F\FACT 2\%AP:      7FED5328
+ !> SET SCOPE/CURRENT 2, then EXAMINE/SOURCE .PC
+ SET SCOPE/CURRENT 2
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89F\FACT ], 
+    1 [ = DBG89F\FACT 1 ], 
+ *  2 [ = DBG89F\FACT 2 ], 
+    3 [ = DBG89F\FACT 3 ], 
+    4 [ = DBG89F ]
+ EXAMINE/SOURCE .PC
+module DBG89F
+    69:         MOVL    R0,FACT.$T1(FP)
+ CANCEL SCOPE
+ CANCEL BREAK/ALL
+ !> GO to the end
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBG89F.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG GVDBG89 DBG89 GVDBG89
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG GVDBG89.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBG89.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG GVDBG89
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBG89
+%DEBUG-I-VERIFYICF, entering command procedure DBG89.DBG
+ ! DBG89.DBG - SET SCOPE on a recursion (README.md), stopped in LEAF under
+ ! REC(1), REC(2), REC(3), and START. VMS's log leaves out a command that
+ ! fails, so a comment names each case first.
+ SHOW MODULE
+module name                     symbols    size
+
+DBG89                           yes         848
+DBG89B                          no          516
+
+total MACRO modules: 2.         bytes allocated: 60048.
+ SET BREAK INLEAF
+ GO
+break at DBG89\LEAF\INLEAF
+%DEBUG-W-UNAOPNSRC, unable to open source file DUA2:[000000]DBG89.MAR;1
+-RMS-E-DNR, device not ready, not mounted, or unavailable
+    50: Source line not available
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ !> SHOW SCOPE, the default
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> Scope 0's registers
+ EXAMINE R0
+DBG89\LEAF\%R0: 00000F00
+ EXAMINE R1
+DBG89\LEAF\%R1: 00000F01
+ EXAMINE R2
+DBG89\LEAF\%R2: 00000102
+ EXAMINE R5
+DBG89\LEAF\%R5: 00000105
+ EXAMINE R6
+DBG89\LEAF\%R6: 00006006
+ EXAMINE R7
+DBG89\LEAF\%R7: 00007007
+ EXAMINE AP
+DBG89\LEAF\%AP: 7FED52D0
+ EXAMINE FP
+DBG89\LEAF\%FP: 7FED52B8
+ EXAMINE SP
+DBG89\LEAF\%SP: 7FED52B8
+ EXAMINE PC
+DBG89\LEAF\%PC: 00000490
+ EXAMINE PSL
+DBG89\LEAF\%PSL:        
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ !> EXAMINE Y, from LEAF
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE Z, only in the module not set
+%DEBUG-E-NOSYMBOL, symbol 'Z' is not in the symbol table
+ !> Numeric path names: EXAMINE 0\Y
+ EXAMINE 0\Y
+DBG89\Y:        00001111
+ !> EXAMINE 1\R2
+ EXAMINE 1\R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE 1\%R2
+ EXAMINE 1\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE 2\%R2
+ EXAMINE 2\%R2
+DBG89\REC 1\%R2:        00000202
+ !> EXAMINE 4\%R2
+ EXAMINE 4\%R2
+DBG89\START\%R2:        00001002
+ !> EXAMINE 9\%R2, past the stack
+ EXAMINE 9\%R2
+%DEBUG-W-SYMNOTACT, non-static variable '9\%R2' is not active
+ !> EXAMINE 1\%PC
+ EXAMINE 1\%PC
+DBG89\REC\%PC:  00000460
+ !> EXAMINE 1\%FP
+ EXAMINE 1\%FP
+DBG89\REC\%FP:  7FED52D4
+ !> Invocation numbers: EXAMINE REC 0\%R2
+ EXAMINE REC 0\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE REC 1\%R2
+ EXAMINE REC 1\%R2
+DBG89\REC 1\%R2:        00000202
+ !> EXAMINE DBG89\REC 2\%R2
+ EXAMINE DBG89\REC 2\%R2
+DBG89\REC 2\%R2:        00000302
+ !> EXAMINE REC 3\%R2, one more than there are
+ EXAMINE REC 3\%R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC 3\%R2' is not active
+ !> EXAMINE REC\%R2
+ EXAMINE REC\%R2
+DBG89\REC\%R2:  00000102
+ !> EXAMINE START\%R2
+ EXAMINE START\%R2
+DBG89\START\%R2:        00001002
+ !> EXAMINE DBG89B\%R2, a routine not active
+%DEBUG-E-NOSYMBOL, symbol 'DBG89B\%R2' is not in the symbol table
+ !> EXAMINE REC 1\Y
+%DEBUG-W-MISINVNUM, misplaced invocation number in REC 1\Y
+ !> EXAMINE/INSTRUCTION REC 1\%PC
+ EXAMINE/INSTRUCTION REC 1\%PC
+DBG89\REC 1\%PC:        CVTWD    S^#04,S^#0.5000000
+ !> The built-in scope symbols
+ EVALUATE %CURRENT_SCOPE_ENTRY
+00000000
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000001
+ !> EVALUATE %PREVIOUS_SCOPE_ENTRY at scope 0
+ EVALUATE %PREVIOUS_SCOPE_ENTRY
+00000000
+ !> SET SCOPE 1
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ]
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ EXAMINE R0
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R0' is not active
+ EXAMINE R1
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R1' is not active
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE R3
+DBG89\REC\%R3:  00000103
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ EXAMINE R6
+DBG89\REC\%R6:  7FED5049
+ EXAMINE R7
+DBG89\REC\%R7:  00007007
+ EXAMINE AP
+DBG89\REC\%AP:  7FED52F4
+ EXAMINE FP
+DBG89\REC\%FP:  7FED52D4
+ EXAMINE SP
+DBG89\REC\%SP:  7FED52D4
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ EXAMINE PSL
+DBG89\REC\%PSL: 
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ !> EXAMINE .PC
+ EXAMINE .PC
+DBG89\REC\DEEP: MOVL     S^#01,R0
+ !> EXAMINE/INSTRUCTION .PC
+ EXAMINE/INSTRUCTION .PC
+DBG89\REC\DEEP: MOVL     S^#01,R0
+ !> EXAMINE .AP+4, REC(1)'s argument
+ EXAMINE .AP+4
+7FED52F8:       00000001
+ !> EXAMINE .(.AP+4)
+ EXAMINE .(.AP+4)
+%DEBUG-E-NOACCESSR, no read access to address 00000001
+ !> EXAMINE Y
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE with no address, after a register
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE
+DBG89\REC\%R3:  00000103
+ !> EVALUATE R2+1
+ EVALUATE R2+1
+00000103
+ !> EVALUATE %CURRENT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %CURRENT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %NEXT_SCOPE_ENTRY
+%DEBUG-E-NODEFSCPE, No default scope list: error performing %PREVIOUS_SCOPE_ENTRY
+ !> EXAMINE 0\%R2 under SET SCOPE 1
+ EXAMINE 0\%R2
+DBG89\LEAF\%R2: 00000102
+ !> SET SCOPE 2
+ SET SCOPE 2
+ SHOW SCOPE
+scope: 
+    2 [ = DBG89\REC 1 ]
+ EXAMINE R2
+DBG89\REC 1\%R2:        00000202
+ EXAMINE R3
+DBG89\REC 1\%R3:        00000203
+ EXAMINE R4
+DBG89\REC 1\%R4:        00000204
+ EXAMINE R5
+DBG89\REC 1\%R5:        00000105
+ EXAMINE R6
+DBG89\REC 1\%R6:        7FED5049
+ EXAMINE AP
+DBG89\REC 1\%AP:        7FED531C
+ EXAMINE FP
+DBG89\REC 1\%FP:        7FED52FC
+ EXAMINE PC
+DBG89\REC 1\%PC:        0000046D
+ !> SET SCOPE 4, START
+ SET SCOPE 4
+ SHOW SCOPE
+scope: 
+    4 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\START\%R2:        00001002
+ EXAMINE R5
+DBG89\START\%R5:        00000105
+ EXAMINE R6
+DBG89\START\%R6:        7FED5049
+ EXAMINE PC
+DBG89\START\%PC:        0000042E
+ !> SET SCOPE 5, below START
+ SET SCOPE 5
+ SHOW SCOPE
+scope: 
+    5
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable '5\%R2' is not active
+ EXAMINE PC
+%DEBUG-W-SYMNOTACT, non-static variable '5\%PC' is not active
+ !> SET SCOPE 9, past the stack
+ SET SCOPE 9
+ SHOW SCOPE
+scope: 
+    9
+ !> EXAMINE R2 under SET SCOPE 9
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable '9\%R2' is not active
+ !> SET SCOPE 1, 0, a list
+ SET SCOPE 1, 0
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ], 
+    0 [ = DBG89\LEAF ]
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ !> SET SCOPE \
+ SET SCOPE \
+ SHOW SCOPE
+scope: 
+    \
+ !> EXAMINE Y under SET SCOPE \
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> EXAMINE R2 under SET SCOPE \
+ EXAMINE R2
+DBG89\LEAF\%R2: 00000102
+ !> SET SCOPE DBG89\REC, a routine with three activations
+ SET SCOPE DBG89\REC
+ SHOW SCOPE
+scope: 
+    DBG89\REC
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ !> SET SCOPE REC 1
+ SET SCOPE REC 1
+ SHOW SCOPE
+scope: 
+    DBG89\REC 1
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ !> SET SCOPE DBG89B, the routine of a module not set
+ SET SCOPE DBG89B
+ SHOW SCOPE
+scope: 
+    DBG89B
+ SHOW MODULE
+module name                     symbols    size
+
+DBG89                           yes         848
+DBG89B                          yes         516
+
+total MACRO modules: 2.         bytes allocated: 83808.
+ !> EXAMINE Y under SET SCOPE DBG89B
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ !> EXAMINE Z under SET SCOPE DBG89B
+ EXAMINE Z
+DBG89B\Z:       0000B222
+ !> EXAMINE R2 under SET SCOPE DBG89B
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89B\%R2' is not active
+ !> SET SCOPE/MODULE DBG89B
+ SET SCOPE/MODULE DBG89B
+ SHOW SCOPE
+scope: 
+    DBG89B
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ !> SET SCOPE/MODULE DBG89
+ SET SCOPE/MODULE DBG89
+ SHOW SCOPE
+scope: 
+    DBG89
+ EXAMINE Y
+DBG89\Y:        00001111
+ !> SET SCOPE DBG89B, 1
+ SET SCOPE DBG89B, 1
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ EXAMINE Y
+DBG89B\Y:       0000B111
+ EXAMINE R2
+%DEBUG-W-SYMNOTACT, non-static variable 'DBG89B\%R2' is not active
+ !> SET SCOPE NOSUCH
+ SET SCOPE NOSUCH
+%DEBUG-E-BADSCOPE, invalid pathname NOSUCH, SCOPE not changed
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ !> SET SCOPE/CURRENT 1 while a SET SCOPE list is in effect
+%DEBUG-E-NODEFSCPE, No default scope list: error performing SET SCOPE/CURRENT
+ SHOW SCOPE
+scope: 
+    DBG89B, 
+    1 [ = DBG89\REC ]
+ !> CANCEL SCOPE
+ CANCEL SCOPE
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 1
+ SET SCOPE/CURRENT 1
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+ *  1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           LEAF                50               0000001E         00000490
+*DBG89           REC                 37               0000002E         00000460
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE PC
+DBG89\REC\%PC:  00000460
+ EXAMINE Y
+DBG89\Y:        00001111
+ EVALUATE %CURRENT_SCOPE_ENTRY
+00000001
+ EVALUATE %NEXT_SCOPE_ENTRY
+00000002
+ EVALUATE %PREVIOUS_SCOPE_ENTRY
+00000000
+ !> EXAMINE/SOURCE .PC under SET SCOPE/CURRENT 1
+ EXAMINE/SOURCE .PC
+module DBG89
+    38: Source line not available
+ !> TYPE with no line, under SET SCOPE/CURRENT 1
+ TYPE
+module DBG89
+    39: Source line not available
+ !> SET SCOPE/CURRENT 3 over /CURRENT 1
+ SET SCOPE/CURRENT 3
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+ *  3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+ !> SET SCOPE/CURRENT 0
+ SET SCOPE/CURRENT 0
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 9, past the stack
+ SET SCOPE/CURRENT 9
+%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT REC, not a number
+%DEBUG-E-NOTNUMSCOPE, specified scope is not a numbered scope.
+ !> SET SCOPE/CURRENT 1, 2, a list
+%DEBUG-E-NOSCOPELIST, a list of scopes is not allowed with this command.
+ !> SET SCOPE/CURRENT with no parameter
+%DEBUG-W-NEEDMORE, unexpected end of command line
+ !> SET SCOPE with no parameter
+%DEBUG-W-NEEDMORE, unexpected end of command line
+ !> SET SCOPE %NEXT_SCOPE_ENTRY
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 1
+ SET SCOPE/CURRENT %NEXT_SCOPE_ENTRY
+ SHOW SCOPE
+scope: 
+    0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+ *  2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE/CURRENT 1, then STEP: is it kept?
+ CANCEL SCOPE
+ SET SCOPE/CURRENT 1
+ STEP/INSTRUCTION
+stepped to DBG89\LEAF\%LINE 51: RET     
+    51: Source line not available
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\LEAF ], 
+    1 [ = DBG89\REC ], 
+    2 [ = DBG89\REC 1 ], 
+    3 [ = DBG89\REC 2 ], 
+    4 [ = DBG89\START ]
+ !> SET SCOPE 1, then STEP: is it kept, and where does 1 point now?
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC ]
+ STEP/INSTRUCTION
+stepped to DBG89\REC\DEEP: MOVL     S^#01,R0
+    38: Source line not available
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC 1 ]
+ EXAMINE R2
+DBG89\REC 1\%R2:        00000202
+ EXAMINE PC
+DBG89\REC 1\%PC:        0000046D
+ CANCEL SCOPE
+ !> DEPOSIT to a register in scope 2 (REC(2)'s frame, now that LEAF has
+ !> returned): where does it go?
+ SET SCOPE 2
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+%DEBUG-E-SYNERREXPR, syntax error in expression at or near '^X2222'
+ EXAMINE R2
+DBG89\REC 2\%R2:        00000302
+ !> DEPOSIT R5 in scope 2, which no frame saved
+%DEBUG-E-SYNERREXPR, syntax error in expression at or near '^X5555'
+ EXAMINE R5
+DBG89\REC 2\%R5:        00000105
+ CANCEL SCOPE
+ EXAMINE R2
+DBG89\REC\%R2:  00000102
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ !> REC(1) returns to REC(2): R2 from its frame
+ SET BREAK BACK
+ GO
+break at DBG89\REC\BACK
+    42: Source line not available
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           REC                 42               0000003B         0000046D
+*DBG89           REC                 41               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBG89\REC ], 
+    1 [ = DBG89\REC 1 ], 
+    2 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\REC\%R2:  00000202
+ EXAMINE R5
+DBG89\REC\%R5:  00000105
+ !> SET SCOPE 1 at BACK, then GO: kept across GO? REC(2) returns to REC(3),
+ !> its R2 from the frame the DEPOSIT wrote
+ SET SCOPE 1
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\REC 1 ]
+ GO
+break at DBG89\REC\BACK
+    42: Source line not available
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBG89           REC                 42               0000003B         0000046D
+*DBG89           START               24               0000002E         0000042E
+ SHOW SCOPE
+scope: 
+    1 [ = DBG89\START ]
+ EXAMINE R2
+DBG89\START\%R2:        00001002
+ CANCEL SCOPE
+ CANCEL BREAK/ALL
+ !> GO to the end
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBG89.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ DIRECTORY/SIZE=ALL/DATE *.*
+
+Directory DUA1:[000000]
+
+000000.DIR;1               3/3         5-NOV-2026 07:42:26.30
+BACKUP.SYS;1               0/0         5-NOV-2026 07:42:26.30
+BADBLK.SYS;1               0/0         5-NOV-2026 07:42:26.30
+BADLOG.SYS;1               0/0         5-NOV-2026 07:42:26.30
+BITMAP.SYS;1               7/7         5-NOV-2026 07:42:26.30
+CONTIN.SYS;1               0/0         5-NOV-2026 07:42:26.30
+CORIMG.SYS;1               0/0         5-NOV-2026 07:42:26.30
+DBG89.COM;1                3/3         5-NOV-2026 07:42:26.30
+DBG89.DBG;1               10/10        5-NOV-2026 07:42:26.30
+DBG89.DLG;1               30/30        4-NOV-2026 16:21:49.36
+DBG89.EXE;1                7/7         4-NOV-2026 16:21:49.12
+DBG89.LIS;1               16/16        4-NOV-2026 16:21:49.03
+DBG89.LOG;1                0/96        4-NOV-2026 16:21:49.02
+DBG89.MAP;1               12/12        4-NOV-2026 16:21:49.10
+DBG89.MAR;1                4/4         5-NOV-2026 07:42:26.30
+DBG89.OBJ;1                2/2         4-NOV-2026 16:21:49.03
+DBG89B.LIS;1               9/9         4-NOV-2026 16:21:49.06
+DBG89B.MAR;1               1/1         5-NOV-2026 07:42:26.30
+DBG89B.OBJ;1               1/1         4-NOV-2026 16:21:49.06
+DBG89F.DBG;1               2/2         5-NOV-2026 07:42:26.30
+DBG89F.DLG;1               6/6         4-NOV-2026 16:21:50.01
+DBG89F.EXE;1               7/7         4-NOV-2026 16:21:49.21
+DBG89F.FOR;1               2/2         5-NOV-2026 07:42:26.30
+DBG89F.LIS;1              22/22        4-NOV-2026 16:21:49.14
+DBG89F.MAP;1              11/11        4-NOV-2026 16:21:49.19
+DBG89F.MAR;1               6/6         5-NOV-2026 07:42:26.30
+DBG89F.OBJ;1               2/2         4-NOV-2026 16:21:49.14
+DBG89S.DBG;1               3/3         5-NOV-2026 07:42:26.30
+DBG89S.DLG;1               6/6         4-NOV-2026 16:21:49.81
+GVDBG89.DLG;1             30/30        4-NOV-2026 16:21:50.22
+GVDBG89.EXE;1              7/7         5-NOV-2026 07:42:26.30
+GVDBG89.MAP;1              9/9         5-NOV-2026 07:42:26.31
+GVDBG89.OBJ;1              2/2         5-NOV-2026 07:42:26.30
+GVDBG89B.OBJ;1             2/2         5-NOV-2026 07:42:26.30
+INDEXF.SYS;1             843/843       5-NOV-2026 07:42:26.30
+RUN.DBG;4                  1/1         4-NOV-2026 16:21:50.07
+RUN.DBG;3                  1/1         4-NOV-2026 16:21:49.87
+RUN.DBG;2                  1/1         4-NOV-2026 16:21:49.67
+RUN.DBG;1                  1/1         4-NOV-2026 16:21:49.22
+SECURITY.SYS;1             1/6         5-NOV-2026 07:42:26.30
+VOLSET.SYS;1               0/0         5-NOV-2026 07:42:26.30
+
+Total of 41 files, 1070/1171 blocks.
+$ EXIT

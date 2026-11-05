@@ -4046,6 +4046,7 @@ An address or value is an expression:
 | `SHOW REGISTERS`, `SHOW PSL`, `SHOW name` | Registers, including privileged ones (`SHOW P0BR`). |
 | `SHOW IMAGE [/FULL]` | The loaded images; `/FULL` shows their sections, protections, and page states. |
 | `SHOW MODULE [names] [/SHARE]`, `SHOW SYMBOL pattern [/ADDRESS] [/TYPE]`, `SHOW SCOPE` | The program's debug symbols. `SHOW MODULE` is the current image's, with a language column when the modules' languages differ, and `/SHARE` adds a line for each other image; `SHOW SYMBOL` lists the set modules' symbols, then the image's globals. |
+| `SET SCOPE location[,...]`, `SET SCOPE/MODULE module`, `SET SCOPE/CURRENT n`, `CANCEL SCOPE` | Where names are looked up, and whose registers `EXAMINE`, `DEPOSIT`, and `EVALUATE` see. A location is a call level's number (0 the routine the program is in, 1 its caller, ... as `SHOW CALLS` lists them), a routine or module (`DBG89\REC`), or `\`. An outer level's registers are the ones it had when it made its call, from the call frames (its R0 and R1 are gone, and a `DEPOSIT` to a register a frame saved goes into the frame). `/CURRENT` picks a level of the default list until the program goes on; `SHOW SCOPE` marks it with `*`. A name may carry its own scope: `1\R2`, `REC 1\%R2` (REC's second activation from the innermost), `0\Y`. `%CURRENT_SCOPE_ENTRY`, `%NEXT_SCOPE_ENTRY`, and `%PREVIOUS_SCOPE_ENTRY` are the default list's numbers. |
 | `SET IMAGE image` | Makes an image the current one, which `SHOW IMAGE` marks with a `*`. |
 | `EXAMINE/SOURCE location`, `TYPE [module\]line[:line]` | Source lines, by a location's code or by number. |
 
@@ -6831,6 +6832,20 @@ DBG> GO
 WIDGETS    14.50000
 %DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
 ```
+
+- **Recursion.** In a recursive unit a bare name is the innermost activation's, and `SET SCOPE n` (or
+  `SET SCOPE/CURRENT n`, or `n\NAME`) reaches the one at call level `n`. Stopped in the fourth call of
+  `testdata/dbg89`'s recursive `FACT`, where `K` is ten times `N`:
+
+  ```
+  DBG> EXAMINE K
+  DBG89F\FACT.K:  10
+  DBG> SET SCOPE 3
+  DBG> EXAMINE N
+  DBG89F\FACT.N:  4
+  DBG> EXAMINE 2\K
+  DBG89F\FACT.K:  30
+  ```
 
 - **Names.** A bare name is the variable of the routine the program is in, and `UNIT.NAME` is a unit's from anywhere.
   A dummy argument is found through its routine's active call, so from a routine with no such call it's

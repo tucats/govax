@@ -223,6 +223,12 @@ type Machine struct {
 	// The debugger sets it (docs/PHASE-42.md, subtask 20).
 	DebugBuiltins func(name string) (uint32, bool, error)
 
+	// DebugRegister and DebugScoped, when set, are the evaluator's
+	// Register and Scoped hooks: the registers and names of the call
+	// level the debugger's SET SCOPE chose (Phase 89).
+	DebugRegister func(name string) (uint32, bool, error)
+	DebugScoped   func(name string) (string, bool)
+
 	// processOne is process 1, the console's own (newRTL), and
 	// processOneLogicals its logical names, which outlive it: made once,
 	// by Console.New, and shared with process 1's DCL.
@@ -594,6 +600,8 @@ func (m *Machine) Evaluator() *Evaluator {
 		Names:     m.DebugNames,
 		Debug:     imageNames{m: m},
 		Builtins: m.DebugBuiltins,
+		Register: m.DebugRegister,
+		Scoped:   m.DebugScoped,
 		Load: func(addr uint32) (uint32, error) {
 			v, err := m.loadSized(addr, SizeLongword)
 			if err != nil {

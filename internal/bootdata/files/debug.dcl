@@ -113,6 +113,7 @@ grammar debugger
         keyword     radix               /syntax=set_radix/nonegatable
         keyword     language            /syntax=set_language/nonegatable
         keyword     module              /syntax=set_module/nonegatable
+        keyword     scope               /syntax=set_scope/nonegatable
         keyword     image               /syntax=set_image/nonegatable
         keyword     psl                 /syntax=set_psl/nonegatable
         keyword     pte                 /syntax=set_pte/nonegatable
@@ -213,6 +214,17 @@ grammar debugger
         ! SET MODULE module[,module...] (or /ALL) loads a module's symbols;
         ! govax has them all loaded already, so it only changes what SHOW
         ! MODULE says.
+        ! SET SCOPE[/MODULE] location[,location...] makes the list of
+        ! places a name is looked up in, and whose registers EXAMINE sees:
+        ! a call level's number, a routine's or module's path name, or "\".
+        ! SET SCOPE/CURRENT n makes level n of the default list the current
+        ! one, until the program goes on (internal/debugger/scope.go).
+        syntax set_scope/id=1830
+            qualifier   module/id=1831/nonegatable
+            qualifier   current/id=1832/nonegatable
+            parameter   locations/id=1833       -
+                        /type=$rest_of_line
+            disallow    module and current
         syntax set_image/id=1823
             parameter   name/id=1824            -
                         /type=$rest_of_line
@@ -556,6 +568,7 @@ grammar debugger
         keyword     translation_buffer  /syntax=cancel_tb
         keyword     memory              /syntax=cancel_memory
         keyword     symbols             /syntax=cancel_symbol
+        keyword     scope               /syntax=cancel_scope
         keyword     type                /syntax=cancel_type
 
     verb cancel/id=50
@@ -628,6 +641,8 @@ grammar debugger
             disallow    all and temporary
 
     ! CANCEL TYPE/OVERRIDE ends SET TYPE/OVERRIDE's type.
+        ! CANCEL SCOPE goes back to the default scope list.
+        syntax cancel_scope/id=1834
         syntax cancel_type/id=446
             qualifier   override/id=447/nonegatable
 

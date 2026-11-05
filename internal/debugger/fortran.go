@@ -177,12 +177,19 @@ func cutLastDot(name string) (string, string, bool) {
 	return name[:i], name[i+1:], true
 }
 
-// fortranArgument finds what a dummy argument or AUTOMATIC variable's frame says: the
-// innermost active frame of a routine in its unit.
+// fortranFrameOf finds the frame a dummy argument's or a frame variable's place is in:
+// the innermost active frame of a routine in its unit, starting at the call level the scope
+// chose (SET SCOPE 2, SET SCOPE/CURRENT 2, 2\K), so a recursive unit's outer activations
+// can be looked at (Phase 89).
 func (d *Debugger) fortranFrameOf(v *dbgtable.Var, mod *dbgsym.Module) (fortranFrame, bool) {
 	table := d.fortranTable(mod)
 
-	for _, f := range d.fortranFrames() {
+	frames := d.fortranFrames()
+	if level, _, ok := d.registerPlace(d.callLevels()); ok && level < len(frames) {
+		frames = frames[level:]
+	}
+
+	for _, f := range frames {
 		prog := d.Machine.DebugProgramAt(f.pc)
 		if prog == nil {
 			continue
@@ -521,8 +528,21 @@ func fortranFloat(code string) vaxfloat.Format {
 // fortranBytes reads a place's value.
 func (d *Debugger) fortranBytes(p fortranPlace) ([]byte, error) {
 	if p.reg {
+		// The register as the scope's call level has it.
+		view, err := d.registerView()
+		if err != nil {
+			return nil, err
+		}
+
+		reg := registers.Reg(p.addr)
+
+		value, err := view.get(reg, registerName(reg))
+		if err != nil {
+			return nil, err
+		}
+
 		data := make([]byte, 4)
-		binary.LittleEndian.PutUint32(data, d.Machine.CPU.GPR(registers.Reg(p.addr)))
+		binary.LittleEndian.PutUint32(data, value)
 
 		return data, nil
 	}
@@ -623,8 +643,19 @@ func (d *Debugger) showLoopRegister(p fortranPlace, radix int) {
 		return
 	}
 
+	// The register as the scope's call level has it.
+	view, err := d.registerView()
+	if err != nil {
+		return
+	}
+
+	value, err := view.get(registers.Reg(n), registerName(registers.Reg(n)))
+	if err != nil {
+		return
+	}
+
 	data := make([]byte, 4)
-	binary.LittleEndian.PutUint32(data, d.Machine.CPU.GPR(registers.Reg(n)))
+	binary.LittleEndian.PutUint32(data, value)
 
 	text, _ := d.fixedText(dataType{kind: typeInteger, size: 4}, data, radix)
 	d.Machine.Printf("%sduring a loop, R%d holds it: %s\n", tabPad(""), n, text)
@@ -712,9 +743,14 @@ func (d *Debugger) depositFortran(places []fortranPlace, t dataType, typed bool,
 			return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
 		}
 
-		d.Machine.CPU.SetGPR(registers.Reg(p.addr), binary.LittleEndian.Uint32(data))
+		view, err := d.registerView()
+		if err != nil {
+			return err
+		}
 
-		return nil
+		reg := registers.Reg(p.addr)
+
+		return d.put(view, reg, registerName(reg), binary.LittleEndian.Uint32(data))
 	}
 
 	d.examined = examineState{addr: p.addr, size: max(uint32(len(data)), 1), set: true}

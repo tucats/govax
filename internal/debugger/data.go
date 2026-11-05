@@ -42,6 +42,13 @@ type examineState struct {
 	addr uint32
 	size uint32
 	set  bool
+
+	// register is the register EXAMINE last showed, when isRegister:
+	// EXAMINE with no location shows the next one (testdata/dbg89, after
+	// EXAMINE R2 in scope 1: DBG89\REC\%R3), leaving addr and size the
+	// last memory location's.
+	register   registers.Reg
+	isRegister bool
 }
 
 // registerLocations are the names of the machine's general registers, as
@@ -254,6 +261,25 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 		return d.examineRegister(r, reg, name, isPSL)
 	}
 
+	// A name with a scope of its own (1\R2, REC 1\%R2, 0\Y) is the name
+	// in that scope.
+	if e, name, ok, err := d.splitScoped(item); ok || err != nil {
+		if err != nil {
+			return err
+		}
+
+		return d.withScope(e, func() error { return d.examineItem(r, name) })
+	}
+
+	// With no location after a register, the next register, then the PSL.
+	if item == "" && d.examined.isRegister {
+		if next := d.examined.register + 1; next <= registers.PC {
+			return d.examineRegister(r, next, registerName(next), false)
+		}
+
+		return d.examineRegister(r, 0, "PSL", true)
+	}
+
 	if places, ok, err := d.fortranPlaces(item); ok {
 		if err != nil {
 			return err
@@ -397,12 +423,12 @@ func (d *Debugger) readValue(addr, size uint32) (uint64, error) {
 func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string, isPSL bool) error {
 	c := d.Machine
 
-	label := "%" + name
-	if scope := d.registerScope(); scope != "" {
-		label = scope + `\` + label
+	view, err := d.registerView()
+	if err != nil {
+		return err
 	}
 
-	label = tabPad(label + ":")
+	label := tabPad(view.label(name) + ":")
 
 	t, typed, err := d.commandType(r)
 	if err != nil {
@@ -410,7 +436,10 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string
 	}
 
 	if isPSL {
-		value := uint32(c.CPU.PSL())
+		value, err := view.psl()
+		if err != nil {
+			return err
+		}
 
 		if typed && t.kind == typePSW {
 			c.Printf("%s\n%s", label, pswTable(value))
@@ -425,12 +454,14 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string
 		t = longwordType
 	}
 
-	data, err := d.registerBytes(reg, t, "EXAMINE")
+	data, err := d.registerBytes(view, reg, t, "EXAMINE")
 	if err != nil {
 		return err
 	}
 
 	d.setCurrentValue(data)
+	d.examined = examineState{register: reg, isRegister: true, set: d.examined.set,
+		addr: d.examined.addr, size: d.examined.size}
 
 	text, multiline := d.fixedText(t, data, d.examineRadix(r))
 	if multiline {
@@ -448,7 +479,7 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string
 // no fixed size (a counted string) can't be in registers, and neither can
 // a value that would run past the PC: %DEBUG-E-OPTNOTALLOW, naming the
 // command (verb).
-func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]byte, error) {
+func (d *Debugger) registerBytes(view regView, reg registers.Reg, t dataType, verb string) ([]byte, error) {
 	size, fixed := t.fixedSize()
 	if !fixed || size == 0 || t.kind == typeInstruction {
 		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, verb)
@@ -462,7 +493,13 @@ func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]
 	data := make([]byte, 0, count*4)
 
 	for i := range count {
-		v := d.Machine.CPU.GPR(reg + registers.Reg(i))
+		at := reg + registers.Reg(i)
+
+		v, err := view.get(at, registerName(at))
+		if err != nil {
+			return nil, err
+		}
+
 		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	}
 
@@ -480,6 +517,16 @@ func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]
 // other fields.
 func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 	size := uint32(4)
+
+	// An outer call level's PSL is what its frame's saved PSW makes it,
+	// which isn't changed here (govax's choice, unconfirmed).
+	if view, err := d.registerView(); err != nil {
+		return err
+	} else if _, err := view.psl(); err != nil {
+		return err
+	} else if view.level > 0 {
+		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+	}
 
 	if typed {
 		var fixed bool
@@ -519,14 +566,19 @@ func (d *Debugger) depositPSL(t dataType, typed bool, value string) error {
 // setRegisterBytes stores data in the registers from reg on, as
 // registerBytes reads them: a register that data only partly fills keeps
 // its other bytes.
-func (d *Debugger) setRegisterBytes(reg registers.Reg, data []byte) error {
+func (d *Debugger) setRegisterBytes(view regView, reg registers.Reg, data []byte) error {
 	count := (uint32(len(data)) + 3) / 4
 	if uint32(reg)+count-1 > uint32(registers.PC) {
 		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
 	}
 
 	for i := range count {
-		v := d.Machine.CPU.GPR(reg + registers.Reg(i))
+		at := reg + registers.Reg(i)
+
+		v, err := view.get(at, registerName(at))
+		if err != nil {
+			return err
+		}
 
 		for b := range uint32(4) {
 			if at := i*4 + b; at < uint32(len(data)) {
@@ -534,10 +586,29 @@ func (d *Debugger) setRegisterBytes(reg registers.Reg, data []byte) error {
 			}
 		}
 
-		d.Machine.CPU.SetGPR(reg+registers.Reg(i), v)
+		if err := d.put(view, at, registerName(at), v); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// registerName is a general register's name as the debugger writes it
+// after a "%": R0 to R11, AP, FP, SP, PC.
+func registerName(reg registers.Reg) string {
+	switch reg {
+	case registers.AP:
+		return "AP"
+	case registers.FP:
+		return "FP"
+	case registers.SP:
+		return "SP"
+	case registers.PC:
+		return "PC"
+	}
+
+	return fmt.Sprintf("R%d", reg)
 }
 
 // pslNames are the access modes' names in the PSL's two mode fields
@@ -1164,21 +1235,30 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		return dbg.depositPSL(t, typed, value)
 	}
 
-	// A register takes a longword, or the type given.
-	if reg, _, isPSL, isReg := registerOf(target); isReg && !isPSL {
+	// A register takes a longword, or the type given: the register of
+	// the scope's call level, a saved one in its frame (scope.go's put).
+	if reg, name, isPSL, isReg := registerOf(target); isReg && !isPSL {
+		view, err := dbg.registerView()
+		if err != nil {
+			return err
+		}
+
 		if !typed {
 			v, err := dbg.Machine.EvalWholeIn(dbg.inputRadix, value)
 			if err != nil {
 				return err
 			}
 
-			c.CPU.SetGPR(reg, v)
+			if err := dbg.put(view, reg, name, v); err != nil {
+				return err
+			}
+
 			dbg.curval = currentValue{v: v, set: true}
 
 			return nil
 		}
 
-		if _, err := dbg.registerBytes(reg, t, "DEPOSIT"); err != nil {
+		if _, err := dbg.registerBytes(view, reg, t, "DEPOSIT"); err != nil {
 			return err
 		}
 
@@ -1189,7 +1269,7 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 
 		dbg.setCurrentValue(data)
 
-		return dbg.setRegisterBytes(reg, data)
+		return dbg.setRegisterBytes(view, reg, data)
 	}
 
 	if places, ok, err := dbg.fortranPlaces(target); ok {

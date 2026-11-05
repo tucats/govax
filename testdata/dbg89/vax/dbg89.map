@@ -1,0 +1,100 @@
+
+                                                                 4-NOV-2026 16:21        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBG89           01                    154 DUA1:[000000]DBG89.OBJ;1              4-NOV-2026 16:21  VAX MACRO V5.4-3
+DBG89B          01                     18 DUA1:[000000]DBG89B.OBJ;1             4-NOV-2026 16:21  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA89                          00000200 00000207 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBG89           00000200 00000207 00000008 (          8.) LONG  2
+DATA89B                         00000208 0000020F 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBG89B          00000208 0000020F 00000008 (          8.) LONG  2
+CODE89                          00000400 00000491 00000092 (        146.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBG89           00000400 00000491 00000092 (        146.) LONG  2
+CODE89B                         00000494 0000049D 0000000A (         10.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBG89B          00000494 0000049D 0000000A (         10.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+DBG89B          00000494-R        
+LEAF            00000472-R        
+REC             00000432-R        
+START           00000400-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]DBG89.EXE;1                                         4-NOV-2026 16:21        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    DBG89 01
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              6.
+Number of global symbols:                                5.
+Number of image sections:                                4.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]DBG89.MAP;1
+Estimated map length:                             13. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   103	00:00:00.00	00:00:00.00
+    Pass 1:                                              1421	00:00:00.00	00:00:00.02
+    Allocation/Relocation:                                102	00:00:00.00	00:00:00.01
+    Pass 2:                                              1142	00:00:00.00	00:00:00.01
+    Map data after object module synopsis:                 49	00:00:00.00	00:00:00.01
+    Symbol table output:                                   28	00:00:00.00	00:00:00.00
+Total run values:                                        2845	00:00:00.00	00:00:00.05
+
+Using a working set limited to 512 pages and 55 pages of data storage (excluding image)
+
+Total number object records read (both passes):   142
+    of which 26 were in libraries and 10 were DEBUG data records containing 515 bytes
+441 bytes of DEBUG data were written,starting at VBN 5 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP DBG89,DBG89B

@@ -173,6 +173,16 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 	}
 
 	for _, item := range items {
+		// A register's contents are decoded as an instruction, as VMS's
+		// debugger does (scope.go's examineRegisterInstruction).
+		if done, err := dbg.examineRegisterInstruction(item, opts); done || err != nil {
+			if err != nil {
+				return err
+			}
+
+			continue
+		}
+
 		start, end, isRange := item, "", false
 
 		if lo, hi, ok := splitRange(item); ok {

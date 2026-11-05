@@ -71,6 +71,14 @@ type Debugger struct {
 		active bool
 	}
 
+	// lastSource is the source line last shown, by a stop, a step,
+	// EXAMINE/SOURCE, or TYPE: TYPE with no line shows the one after it
+	// (testdata/dbg89).
+	lastSource struct {
+		module *dbgsym.Module
+		line   int
+	}
+
 	// InstructionBreakpoints holds every opcode currently flagged to break
 	// on execution — SET BREAK/INSTRUCTION, the Go equivalent of vax.c's
 	// own instruction[n].debugdata & OP_DBG_BREAK flag. Kept separate from
@@ -191,6 +199,10 @@ type Debugger struct {
 	// searches. nil until first needed or until an image starts.
 	symbolsSet map[*dbgsym.Module]bool
 
+	// scope is SET SCOPE's list, or the default list and its current
+	// level (scope.go).
+	scope scopeState
+
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
 	active bool
@@ -242,6 +254,8 @@ func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal
 	c.DebugBuiltins = d.builtinSymbol
+	c.DebugRegister = d.scopeRegister
+	c.DebugScoped = d.scopedName
 	c.DebugNames = d.fortranName
 
 	return d
@@ -414,6 +428,8 @@ func (d *Debugger) NewImage() {
 	d.exception = nil
 
 	d.symbolsSet = nil
+	d.scope = scopeState{}
+	d.lastSource.module = nil
 	d.examined = examineState{}
 	d.curval = currentValue{}
 }

@@ -87,7 +87,8 @@ func TestStepSymbolic(t *testing.T) {
 
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB2+2`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
+	// DBGSUB's symbols aren't set until the program stops in it (testdata/dbg89).
+	if got := dispatchOutput(t, d, buf, "GO"); got != "%DEBUG-I-DYNMODSET, setting module DBGSUB\nbreak at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Errorf("GO: got %q", got)
 	}
 

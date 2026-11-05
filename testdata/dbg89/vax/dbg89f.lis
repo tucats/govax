@@ -1,0 +1,152 @@
+DBG89F                                                                    4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   1
+01                                                                        5-NOV-2026 07:42:26  DUA1:[000000]DBG89F.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBG89F
+                                     0000     2 	.IDENT	/01/
+                                     0000     3 ;
+                                     0000     4 ; Compiled by govax FORTRAN V0.0-0 on 5-NOV-2026 07:42:26.30
+                                     0000     5 ; from DUA2:[000000]DBG89F.FOR;1
+                                     0000     6 ; by the command FORTRAN/NOOPTIMIZE DUA2:[000000]DBG89F.FOR
+                                     0000     7 ;
+                                     0000     8 ; Each line of the FORTRAN source appears as a comment, with its line number, before
+                                     0000     9 ; the instructions it became. An INCLUDE file's lines appear only with INCLUDE's
+                                     0000    10 ; /LIST, their include depth before the number; a comment names the file either way.
+                                     0000    11 ; Each routine's storage map says where its variables are.
+                                     0000    12 ;
+                                     0000    13 
+                                     0000    14 ; Storage map for DBG89F, the main program
+                                     0000    15 ;   R     INTEGER  $LOCAL+0  DBG89F.R
+                                     0000    16 ;
+                                     0000    17 
+                                 00000000    18 	.PSECT	$LOCAL,PIC,CON,REL,LCL,NOSHR,NOEXE,RD,WRT,LONG
+                                     0000    19 DBG89F.R:
+                           00000004  0000    20 	.BLKL	1			; R
+                                     0004    21 
+                                 00000000    22 	.PSECT	$PDATA,PIC,CON,REL,LCL,SHR,NOEXE,RD,NOWRT,LONG
+                                     0000    23 DBG89F.$K1:
+                           00000004  0000    24 	.LONG	4
+                                     0004    25 
+                                 00000000    26 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+                                     0000    27 ;    1  C DBG89F.FOR - the FORTRAN half of Phase 89's debugger probe (README.md): a
+                                     0000    28 ;    2  C recursive function with an argument and an automatic local in each frame,
+                                     0000    29 ;    3  C and no I/O statement, so VMS's MACRO and LINK build its MACRO file with no
+                                     0000    30 ;    4  C run-time library. FACT(4) is 4*3*2*10 = 240.
+                                     0000    31 ;    5        PROGRAM DBG89F
+                               0000  0000    32 	.ENTRY	DBG89F,^M<>
+                                     0002    33 ;    6        INTEGER FACT, R
+                                     0002    34 ;    7        R = FACT(4)
+                   00000000'EF   DF  0002    35 	PUSHAL	DBG89F.$K1
+              0000001A'GF   01   FB  0008    36 	CALLS	#1,G^FACT
+              00000000'EF   50   D0  000F    37 	MOVL	R0,DBG89F.R
+                                     0016    38 ;    8        END
+                       50   01   D0  0016    39 	MOVL	#1,R0			; SS$_NORMAL
+                                 04  0019    40 	RET
+                                     001A    41 
+                                     001A    42 ; Storage map for FACT, a RECURSIVE INTEGER function
+                                     001A    43 ;   N     INTEGER  argument 1  @FACT.N(AP)
+                                     001A    44 ;   FACT  INTEGER  FP-16       FACT.FACT(FP)
+                                     001A    45 ;   K     INTEGER  FP-12       FACT.K(FP)
+                                     001A    46 ;
+                           00000004  001A    47 FACT.N = 4				; N is argument 1
+                           FFFFFFF0  001A    48 FACT.FACT = -16				; FACT, the function's value, in the frame
+                           FFFFFFF4  001A    49 FACT.K = -12				; K, in the frame
+                           FFFFFFF8  001A    50 FACT.$T1 = -8				; temporary, in the frame
+                           FFFFFFFC  001A    51 FACT.$T2 = -4				; temporary, in the frame
+                                     001A    52 
+                                 0000001A    53 	.PSECT	$CODE,PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,LONG
+                                     001A    54 ;    9        RECURSIVE INTEGER FUNCTION FACT(N)
+                               0000  001A    55 	.ENTRY	FACT,^M<>
+                       5E   10   C2  001C    56 	SUBL2	#16,SP			; this activation's own storage
+                                     001F    57 ;   10        INTEGER N, K
+DBG89F                                                                    4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   2
+01                                                                        5-NOV-2026 07:42:26  DUA1:[000000]DBG89F.MAR;1         (1)
+
+                                     001F    58 ;   11        K = N * 10
+            F4 AD   0A   04 BC   C5  001F    59 	MULL3	@FACT.N(AP),#10,FACT.K(FP)
+                                     0025    60 ;   12        IF (N .LE. 1) GO TO 10
+                    01   04 BC   D1  0025    61 	CMPL	@FACT.N(AP),#1
+                            03   14  0029    62 	BGTR	FACT.$1
+                          0020   31  002B    63 	BRW	FACT.L10
+                                     002E    64 FACT.$1:
+                                     002E    65 ;   13        FACT = N * FACT(N-1)
+            FC AD   04 BC   01   C3  002E    66 	SUBL3	#1,@FACT.N(AP),FACT.$T2(FP)
+                         FC AD   DF  0034    67 	PUSHAL	FACT.$T2(FP)
+              0000001A'GF   01   FB  0037    68 	CALLS	#1,G^FACT
+                    F8 AD   50   D0  003E    69 	MOVL	R0,FACT.$T1(FP)
+         F0 AD   F8 AD   04 BC   C5  0042    70 	MULL3	@FACT.N(AP),FACT.$T1(FP),FACT.FACT(FP)
+                                     0049    71 ;   14        RETURN
+                    50   F0 AD   D0  0049    72 	MOVL	FACT.FACT(FP),R0	; the function's value
+                                 04  004D    73 	RET
+                                     004E    74 ;   15   10   FACT = K
+                                     004E    75 FACT.L10:
+                 F0 AD   F4 AD   D0  004E    76 	MOVL	FACT.K(FP),FACT.FACT(FP)
+                                     0053    77 ;   16        RETURN
+                    50   F0 AD   D0  0053    78 	MOVL	FACT.FACT(FP),R0	; the function's value
+                                 04  0057    79 	RET
+                                     0058    80 ;   17        END
+                                     0058    81 
+                                     0058    82 	.END	DBG89F
+DBG89F                                                                    4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              5-NOV-2026 07:42:26  DUA1:[000000]DBG89F.MAR;1         (1)
+
+DBG89F           00000000 RG D  03      
+DBG89F.$K1       00000000 R  D  02      
+DBG89F.R         00000000 R  D  01      
+FACT             0000001A RG D  03      
+FACT.$1          0000002E R  D  03      
+FACT.$T1       = FFFFFFF8    D          
+FACT.$T2       = FFFFFFFC    D          
+FACT.FACT      = FFFFFFF0    D          
+FACT.K         = FFFFFFF4    D          
+FACT.L10         0000004E R  D  03      
+FACT.N         = 00000004    D          
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+$LOCAL                          00000004  (    4.)  01 (  1.)    PIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$PDATA                          00000004  (    4.)  02 (  2.)    PIC   USR   CON   REL   LCL   SHR NOEXE   RD  NOWRT NOVEC LONG  
+$CODE                           00000058  (   88.)  03 (  3.)    PIC   USR   CON   REL   LCL   SHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  481     00:00:00.00    00:00:00.00
+Command processing              929     00:00:00.00    00:00:00.01
+Pass 1                          196     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           56     00:00:00.00    00:00:00.01
+Symbol table output               5     00:00:00.00    00:00:00.00
+Psect synopsis output             4     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1700     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+1300 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 11 non-local and 0 local symbols.
+82 source lines were read in Pass 1, producing 23 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+DBG89F                                                                    4-NOV-2026 16:21:49  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                               5-NOV-2026 07:42:26  DUA1:[000000]DBG89F.MAR;1         (1)
+
+MACRO/DEBUG/LIST DBG89F

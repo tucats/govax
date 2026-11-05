@@ -34,6 +34,7 @@ type callRow struct {
 	rel             uint32
 	hasRoutine      bool
 	pc              uint32
+	fp              uint32 // the frame this level's routine built
 }
 
 // String lays the row out as the debugger does: the module in 16
@@ -108,9 +109,10 @@ func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 		count = maxDebugFrames
 	}
 
-	rows = append(rows, row)
-
 	fp := m.CPU.GPR(registers.FP)
+	row.fp = fp
+
+	rows = append(rows, row)
 
 	for n := uint32(1); n < count && fp != 0 && fp != cpu.SentinelReturn; n++ {
 		savedFP, err := m.Mem.LoadLongword(m.CPU, fp+12)
@@ -128,6 +130,7 @@ func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 			break
 		}
 
+		row.fp = savedFP
 		rows = append(rows, row)
 
 		// The stack grows down, so a caller's frame is above its

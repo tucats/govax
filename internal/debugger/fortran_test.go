@@ -193,13 +193,20 @@ const fortranDebugSource = `      PROGRAM FV
 func fortranDebugSession(t *testing.T, at string) *console.Console {
 	t.Helper()
 
+	return fortranSessionOf(t, fortranDebugSource, at)
+}
+
+// fortranSessionOf is fortranDebugSession for a program of one's own.
+func fortranSessionOf(t *testing.T, source, at string) *console.Console {
+	t.Helper()
+
 	c := newRunnableConsole(t)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
 	dir := t.TempDir()
 	file := func(name string) string { return filepath.Join(dir, name) }
 
-	if err := os.WriteFile(file("fv.for"), []byte(fortranDebugSource), 0o600); err != nil {
+	if err := os.WriteFile(file("fv.for"), []byte(source), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

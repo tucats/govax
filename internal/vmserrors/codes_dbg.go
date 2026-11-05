@@ -38,6 +38,15 @@ const (
 	dbgTooFewSub
 	dbgSubOutBnd
 	dbgNotActive
+	dbgSymNotAct
+	dbgNoDefScpe
+	dbgBadScope
+	dbgNotInScope
+	dbgNotNumScope
+	dbgNoScopeList
+	dbgMisInvNum
+	dbgNeedMore
+	dbgDynModSet
 )
 
 // DBG facility status codes.
@@ -104,6 +113,31 @@ const (
 	DBG_TOOFEWSUB = DBGFacility<<FacilityPosition | dbgTooFewSub<<MessagePosition | StatusWarning
 	DBG_SUBOUTBND = DBGFacility<<FacilityPosition | dbgSubOutBnd<<MessagePosition | StatusWarning
 	DBG_NOTACTIVE = DBGFacility<<FacilityPosition | dbgNotActive<<MessagePosition | StatusWarning
+	// The scope messages (Phase 89, VMS 7.1's texts from testdata/dbg89).
+	// DBG_SYMNOTACT names a register of a call level that isn't there, or
+	// that the level doesn't keep (R0 and R1 of a caller): its argument is
+	// the path, '9\%R2' or 'DBG89\REC\%R0'.
+	DBG_SYMNOTACT = DBGFacility<<FacilityPosition | dbgSymNotAct<<MessagePosition | StatusWarning
+	// DBG_NODEFSCPE is SET SCOPE/CURRENT, or a scope built-in symbol,
+	// while a SET SCOPE list is in effect; its argument is what was asked.
+	DBG_NODEFSCPE = DBGFacility<<FacilityPosition | dbgNoDefScpe<<MessagePosition | StatusError
+	// DBG_BADSCOPE is a SET SCOPE location no module or routine has.
+	DBG_BADSCOPE = DBGFacility<<FacilityPosition | dbgBadScope<<MessagePosition | StatusError
+	// DBG_NOTINSCOPE is SET SCOPE/CURRENT n past the last call level.
+	DBG_NOTINSCOPE = DBGFacility<<FacilityPosition | dbgNotInScope<<MessagePosition | StatusError
+	// DBG_NOTNUMSCOPE is SET SCOPE/CURRENT of a path name.
+	DBG_NOTNUMSCOPE = DBGFacility<<FacilityPosition | dbgNotNumScope<<MessagePosition | StatusError
+	// DBG_NOSCOPELIST is SET SCOPE/CURRENT of a list.
+	DBG_NOSCOPELIST = DBGFacility<<FacilityPosition | dbgNoScopeList<<MessagePosition | StatusError
+	// DBG_MISINVNUM is an invocation number before a name a routine's
+	// activation doesn't hold (REC 1\Y, Y being the module's).
+	DBG_MISINVNUM = DBGFacility<<FacilityPosition | dbgMisInvNum<<MessagePosition | StatusWarning
+	// DBG_NEEDMORE is a command that ended before its parameter (SET SCOPE
+	// alone).
+	DBG_NEEDMORE = DBGFacility<<FacilityPosition | dbgNeedMore<<MessagePosition | StatusWarning
+	// DBG_DYNMODSET is the debugger setting a module's symbols itself, when
+	// the program stops in it.
+	DBG_DYNMODSET = DBGFacility<<FacilityPosition | dbgDynModSet<<MessagePosition | StatusInfo
 	// DBG_NOSUCHMODULE is SET MODULE's and SHOW SYMBOL's answer to a
 	// module name no loaded image has. The wording is govax's choice: no
 	// probe showed it.
@@ -174,6 +208,15 @@ func init() {
 	DefineMessage(DBG_TOOFEWSUB, DBGFacility, "TOOFEWSUB", "too few subscripts, array has !S")
 	DefineMessage(DBG_SUBOUTBND, DBGFacility, "SUBOUTBND", "subscript !S is out of bounds, value is !S, bounds are !S")
 	DefineMessage(DBG_NOTACTIVE, DBGFacility, "NOTACTIVE", "!S has no active call frame")
+	DefineMessage(DBG_SYMNOTACT, DBGFacility, "SYMNOTACT", "non-static variable '!S' is not active")
+	DefineMessage(DBG_NODEFSCPE, DBGFacility, "NODEFSCPE", "No default scope list: error performing !S")
+	DefineMessage(DBG_BADSCOPE, DBGFacility, "BADSCOPE", "invalid pathname !S, SCOPE not changed")
+	DefineMessage(DBG_NOTINSCOPE, DBGFacility, "NOTINSCOPE", "specified scope cannot be found in the default scope list")
+	DefineMessage(DBG_NOTNUMSCOPE, DBGFacility, "NOTNUMSCOPE", "specified scope is not a numbered scope.")
+	DefineMessage(DBG_NOSCOPELIST, DBGFacility, "NOSCOPELIST", "a list of scopes is not allowed with this command.")
+	DefineMessage(DBG_MISINVNUM, DBGFacility, "MISINVNUM", "misplaced invocation number in !S")
+	DefineMessage(DBG_NEEDMORE, DBGFacility, "NEEDMORE", "unexpected end of command line")
+	DefineMessage(DBG_DYNMODSET, DBGFacility, "DYNMODSET", "setting module !S")
 	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
 	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
 	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")

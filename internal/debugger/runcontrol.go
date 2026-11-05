@@ -455,6 +455,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 
 	c.Engine.BeginRun()
 	d.confromexc()
+	d.resumeScope()
 
 	return d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
 }
@@ -483,6 +484,7 @@ func (d *Debugger) callRun(addr uint32, step bool, args []uint32) (runOutcome, e
 	}
 
 	c.Engine.BeginRun()
+	d.resumeScope()
 
 	if step {
 		// One instruction, into the routine, as STEP/INSTRUCTION/INTO would.

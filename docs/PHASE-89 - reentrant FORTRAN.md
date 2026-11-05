@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10a, the debugger's probe (`testdata/dbg89`), written 2026-11-05, waiting for its VMS run. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -403,14 +403,14 @@ it moves to a Phase 90.
    recursive levels, the format cache under ASTs; fixes as found.
 9. **The stack** (done 2026-11-05)**:** big frames in both paging modes, paging off's limit measured
    and documented, runaway recursion's report, LINK's STACK= in MANUAL.md.
-10. **The debugger:** SET SCOPE (numeric scopes, path names, lists, `\`, `/MODULE`) and
+10. **The debugger** (done 2026-11-05)**:** SET SCOPE (numeric scopes, path names, lists, `\`, `/MODULE`) and
     `/CURRENT n`, CANCEL SCOPE, SHOW SCOPE's mark, numeric path names (`1\X`) and
     invocation numbers (`REC 1\X`), the scope built-ins, each scope's registers, EXAMINE
     of each activation's locals and arguments; the probe `testdata/dbg89` on VMS 7.1
     (Question 7). (The survey's "/CALL n" was a misremembering: the 5.5 manual has
     numeric scopes and `/CURRENT`.)
-    - 10a. **The probe** (written 2026-11-05; waiting for the author's run): `testdata/dbg89`.
-    - 10b. **The commands**, held to the probe's logs.
+    - 10a. **The probe** (done 2026-11-05; run on VMS 7.1 the same day): `testdata/dbg89`.
+    - 10b. **The commands** (done 2026-11-05), held to the probe's logs by `TestDebuggerSessionOracle`.
 11. **End to end:** `testdata/fortran`'s recursive programs (a tree of records
     walked recursively, quicksort, a recursive descent expression evaluator with
     CHARACTER functions and concatenation, recursion across files in `modules/`,
@@ -768,3 +768,70 @@ it moves to a Phase 90.
     each scope's AP and FP.
   - **The rehearsal** (a scratch copy of the volume, govax's `@DBG89`) ran every session to its end,
     the program reaching each break and step the sessions expect.
+- **2026-11-05:** Subtask 10b, the commands. The author ran the probe on VMS 7.1 (`testdata/dbg89/vax/`:
+  `dbg89.dlg`, `dbg89s.dlg`, `dbg89f.dlg`, and `gvdbg89.dlg`, VMS's debugger on govax's own image, which
+  answered as on VMS's but for the source lines it couldn't open).
+  - **What VMS said:**
+    - **SHOW SCOPE:** the default list is `scope: `, then ` *  0 [ = DBG89\LEAF ], ` and so on, the
+      `*` at the current level. With no levels, after the program's end, it is ` *  0`. A SET SCOPE
+      list is shown as given, unmarked: `    1 [ = DBG89\REC ]` for a level that's there, `    9` for
+      one that isn't, a normalized path (`DBG89\REC 1` for `REC 1`, `DBG89B` for the routine named
+      for its module), or `    \`.
+    - **Registers:** level k's PC, FP, and AP are what level k-1's frame saved. R2 to R11 come from
+      the nearest frame inside k whose mask saved them, else the live register: R5, written by REC and
+      never saved, is the live 105 at every level. R0 and R1 are SYMNOTACT (`non-static variable
+      'DBG89\REC\%R0' is not active`). SP is what the RET would leave. A level past the last is
+      SYMNOTACT under its number (`'9\%R2'`, `'5\%R2'`); so is the frame below the main routine.
+    - **Paths:** `REC n\%R2` is the nth activation; one too many is SYMNOTACT with the module
+      prefixed. `REC 1\Y` is MISINVNUM. A routine scope (`SET SCOPE REC 1`, even with its number)
+      gives the innermost activation's registers. A module scope gives none. A list's registers are its
+      first place's alone (`SET SCOPE DBG89B, 1`: R2 SYMNOTACT). Its names are each place's module's in
+      turn (`Y` is `DBG89B\Y` under DBG89B).
+    - **Messages:** BADSCOPE, NODEFSCPE (`/CURRENT` and the built-ins under a list), NOTINSCOPE,
+      NOTNUMSCOPE, NOSCOPELIST, and NEEDMORE.
+    - **SET SCOPE sets the module's symbols**, silently. A break in a module not set says
+      `%DEBUG-I-DYNMODSET, setting module DBG89B` first.
+    - **STEP and GO:** both forget `/CURRENT`; both keep a list, its numbers counting the new levels.
+    - **The built-ins:** at level 0, 0, 1, and 0; under `/CURRENT 1`, 1, 2, and 0.
+    - **Smaller answers:** EXAMINE with no location after a register is the next register. EVALUATE
+      `R2+1`, `.AP+4`, and EXAMINE/SOURCE `.PC` all take the scope's registers. TYPE with no line is the
+      line after the last one shown. EXAMINE/INSTRUCTION of a register decodes its contents (`CVTWD
+      S^#04,S^#0.5000000` for 0000046D). A D_floating short literal is written with F's seven digits.
+    - **FORTRAN:** in `dbg89f`, every scope's N and K, through its AP and FP, matched, and so did
+      `2\%FP` and `FACT 2\%AP`.
+  - **Lost:** the DEPOSIT cases were written `DEPOSIT R2=^X2222`, and VMS's debugger doesn't read `^X`
+    (SYNERREXPR), so where a DEPOSIT to an outer level's register goes is unconfirmed. govax puts it
+    where the level's value is kept: in the frame that saved it (the RET restores it), or in the live
+    register. An outer level's SP and PSL, which no frame holds, refuse it (OPTNOTALLOW), as do R0
+    and R1 (SYMNOTACT). `TestDepositInScope` holds that.
+  - **Done:**
+    - `machine/scope.go`: `CallLevels`, `RegistersAt` (by the frames' masks, with each saved
+      register's slot), and `InstructionInBytes`. The outer level's PSL is the live one with the
+      frame's saved PSW, its condition codes clear (unconfirmed: every PSL in the probe was zero).
+    - The evaluator's `Register` and `Scoped` hooks (`Machine.DebugRegister`, `DebugScoped`).
+    - `debugger/scope.go`: the scope list, SET SCOPE, CANCEL SCOPE, SHOW SCOPE, the built-ins, a
+      name's own scope (`splitScoped`), each level's register view (`registerView`, `put`), and
+      EXAMINE/INSTRUCTION of a register.
+    - Elsewhere in the debugger: EXAMINE and DEPOSIT of registers through the view; the next register
+      after one; FORTRAN's frame variables from the scope's level (`fortranFrameOf`); TYPE with no
+      line (`lastSource`); DYNMODSET (`setStopModule`); `/CURRENT` forgotten by GO, STEP, and CALL
+      (`resumeScope`).
+    - Smaller changes: `disasm`'s short literals, debug.dcl's SET SCOPE (`/MODULE`, `/CURRENT`) and
+      CANCEL SCOPE, and HELP.
+  - **The oracle:** `TestDebuggerSessionOracle` replays the three sessions on VMS's images. dbg89s and
+    dbg89f match every command. dbg89 differs in ten, each listed with its reason, none in the scope
+    commands:
+    - two because govax looks names up in every module, where VMS refuses a name in a module not
+      set (`EXAMINE Z`, `DBG89B\%R2`);
+    - three because R6 was whatever each system's image activator left (VMS 7FED5049, govax 0);
+    - five because govax read the `^X` DEPOSITs and stored them.
+  - **Tests:** `TestFortranScope` holds a `/DEBUG` FORTRAN program's activations (SET SCOPE n,
+    `/CURRENT`, `2\K`, a DEPOSIT into an outer frame); `TestDepositInScope` the MACRO DEPOSITs. Three
+    older tests now expect DYNMODSET before a break in DBGSUB.
+  - **Unconfirmed, govax's choices:**
+    - `%NEXT_SCOPE_ENTRY` stops at the last level;
+    - G and H short literals are written with seven digits too;
+    - EXAMINE/INSTRUCTION of a register takes the bytes of the registers after it for a longer
+      instruction;
+    - after the PC, EXAMINE with no location goes to the PSL;
+    - TYPE with no line and none shown yet asks for one.

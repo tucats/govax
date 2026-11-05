@@ -46,7 +46,8 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("GO: %v", err)
 	}
 
-	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
+	// DBGSUB's symbols aren't set until the program stops in it (testdata/dbg89).
+	if got := buf.String(); got != "%DEBUG-I-DYNMODSET, setting module DBGSUB\nbreak at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Fatalf("first GO: got %q, want the break at SUB2", got)
 	}
 
@@ -137,7 +138,7 @@ func TestStepReturnEndsAtBreakpoint(t *testing.T) {
 
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB1+2`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); !strings.HasPrefix(got, "break at DBGSUB\\SUB1") {
+	if got := dispatchOutput(t, d, buf, "GO"); !strings.HasPrefix(got, "%DEBUG-I-DYNMODSET, setting module DBGSUB\nbreak at DBGSUB\\SUB1") {
 		t.Fatalf("GO: got %q, want the break in SUB1", got)
 	}
 

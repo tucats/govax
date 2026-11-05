@@ -63,6 +63,10 @@ func (d *Dispatcher) bindProgram() {
 
 		return dbg.showSymbol(r.String("PATTERN"), r.Present("ADDRESS"), r.Present("TYPE"))
 	})
+	g.Bind("SET_SCOPE", func(id int64, r *dcl.Result) error {
+		return dbg.setScope(r.String("LOCATIONS"), r.Present("MODULE"), r.Present("CURRENT"))
+	})
+	g.Bind("CANCEL_SCOPE", func(id int64, r *dcl.Result) error { return dbg.cancelScope() })
 	g.Bind("SET_MODULE", func(id int64, r *dcl.Result) error {
 		return dbg.setModule(r.String("MODULES"), r.Present("ALL"))
 	})
@@ -99,6 +103,25 @@ func (d *Debugger) seedModules() {
 	if all := d.allModules(); len(all) > 0 {
 		d.symbolsSet[all[0]] = true
 	}
+}
+
+// setStopModule sets the symbols of the module the program stopped in at
+// pc, if they aren't, and says so, as VMS's debugger does before the
+// break's message ("%DEBUG-I-DYNMODSET, setting module DBG89B",
+// testdata/dbg89).
+func (d *Debugger) setStopModule(pc uint32) {
+	prog := d.Machine.DebugProgramAt(pc)
+	if prog == nil {
+		return
+	}
+
+	m, ok := prog.ModuleAt(pc)
+	if !ok || d.moduleSet(m) {
+		return
+	}
+
+	d.symbolsSet[m] = true
+	d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_DYNMODSET, m.Name).Error())
 }
 
 // moduleSet reports whether module m's symbols are "set" (loaded, in the
@@ -629,64 +652,6 @@ func (d *Debugger) useLanguage(language string) {
 	d.languageRadix = languageRadixOf(language)
 	d.inputRadix, d.outputRadix = d.languageRadix, d.languageRadix
 	d.Machine.FieldDots = language == "FORTRAN"
-}
-
-// showScope runs SHOW SCOPE: the call levels, innermost first, that the
-// debugger looks names up in. The innermost, level 0, is the routine the
-// program is in and is marked "*" (the VMS debugger's SET SCOPE can pick
-// another; govax doesn't have it yet, so the current scope is always
-// level 0). From the probe:
-//
-//	scope:
-//	 *  0 [ = DBGCMD\FACT ],
-//	    1 [ = DBGCMD\FACT 1 ],
-//	    2 [ = DBGCMD\START ]
-//
-// A routine that is already in a more inner level is written again with
-// a number after it, how many levels of the same routine are inside it
-// (the recursive FACT's second activation is "FACT 1"). Only one and
-// two activations are confirmed by the probe; the numbering past that
-// is unconfirmed.
-func (d *Debugger) showScope() error {
-	c := d.Machine
-
-	if err := c.RequireInit(); err != nil {
-		return err
-	}
-
-	paths, ok, err := c.ScopeFrames()
-	if !ok || d.imageExited || len(paths) == 0 {
-		return vmserrors.New(vmserrors.DBG_NOCALLS)
-	}
-
-	c.Printf("scope: \n")
-
-	seen := map[string]int{}
-
-	for level, path := range paths {
-		name := path
-		if n := seen[path]; n > 0 {
-			name = fmt.Sprintf("%s %d", path, n)
-		}
-
-		seen[path]++
-
-		mark := ' '
-		if level == 0 {
-			mark = '*'
-		}
-
-		// Every level but the last ends with a comma and a blank, as the
-		// VMS debugger prints it.
-		tail := ""
-		if level < len(paths)-1 {
-			tail = ", "
-		}
-
-		c.Printf(" %c %2d [ = %s ]%s\n", mark, level, name, tail)
-	}
-
-	return err
 }
 
 // showSymbol runs SHOW SYMBOL [/ADDRESS] [/TYPE] pattern [IN module[,...]]:

@@ -58,6 +58,13 @@ func sessionCases() []sessionCase {
 		sessionCase{"dbg85", "dbg85.dbg", "dbg85.dlg", "testdata/dbg85/vax/dbg85.exe", "testdata/dbg85/vax", ""},
 	)
 
+	// Phase 89's probe: SET SCOPE and the scope of registers on a recursion.
+	cases = append(cases,
+		sessionCase{"dbg89", "dbg89.dbg", "dbg89.dlg", "testdata/dbg89/vax/dbg89.exe", "testdata/dbg89", ""},
+		sessionCase{"dbg89", "dbg89s.dbg", "dbg89s.dlg", "testdata/dbg89/vax/dbg89.exe", "testdata/dbg89", ""},
+		sessionCase{"dbg89", "dbg89f.dbg", "dbg89f.dlg", "testdata/dbg89/vax/dbg89f.exe", "testdata/dbg89/vax", ""},
+	)
+
 	for _, name := range []string{"break", "brkcls", "call", "errors", "exam", "except", "step", "trace", "watch"} {
 		cases = append(cases, sessionCase{"dbgcmd", name + ".dbg", name + ".dlg", "testdata/dbgcmd/vax/dbgcmd.exe", "testdata/dbgcmd", ""})
 	}
@@ -383,6 +390,15 @@ const (
 	reasonUnconfirmedMSG = "EVALUATE/ADDRESS of a string label: VMS shows the string's own address, govax the " +
 		"descriptor's (unconfirmed)"
 
+	reasonEveryModule = "a name in a module whose symbols aren't set: VMS's debugger doesn't find it (NOSYMBOL), " +
+		"govax looks names up in every module, as it names addresses from every module (the author's choice)"
+
+	reasonStartR6 = "R6 as LEAF found it: VMS's image activator left a stack address in it (7FED5049), govax 0; " +
+		"each outer level's R6 is that value, from LEAF's frame"
+
+	reasonCaretX = "DEPOSIT R2=^X2222: VMS's debugger doesn't read ^X (SYNERREXPR) and stores nothing, govax " +
+		"reads it and stores, so the registers it changed differ after (the probe meant %X)"
+
 	reasonDebuggerTraced = "under the debugger VMS ran its own debugger code traced after the service's " +
 		"CHMK (TRACE73.LOG's records at P0 000912xx), adding traces govax has no code for"
 )
@@ -401,6 +417,13 @@ var expectedDifferences = map[string]map[int]string{
 		9:  reasonSymbolForm,
 		50: "@(AP+N): VMS takes AP alone there as something other than its value, which isn't understood (D2)",
 		51: "@N(AP): VMS sees the syntax error first; govax reads memory first (D2)",
+	},
+
+	// Phase 89's SET SCOPE probe.
+	"dbg89.dlg": {
+		16: reasonEveryModule, 31: reasonEveryModule,
+		46: reasonStartR6, 71: reasonStartR6, 79: reasonStartR6,
+		162: reasonCaretX, 164: reasonCaretX, 166: reasonCaretX, 169: reasonCaretX, 175: reasonCaretX,
 	},
 
 	"dbgdis.dlg":   {29: reasonGlobalName},

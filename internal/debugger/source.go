@@ -64,6 +64,17 @@ func (d *Debugger) showSource(pc uint32) {
 
 	d.showFortranLine(pc)
 	d.Machine.Printf("%s", formatSource(n, text))
+	d.noteSourceAt(pc, n)
+}
+
+// noteSourceAt records line n of the module the code at pc is in as the
+// source line last shown.
+func (d *Debugger) noteSourceAt(pc uint32, n int) {
+	if prog := d.Machine.DebugProgramAt(pc); prog != nil {
+		if _, mod, found := prog.LineAt(pc); found {
+			d.lastSource.module, d.lastSource.line = mod, n
+		}
+	}
 }
 
 // formatSource lays out source line n, whose text is text, as the debugger
@@ -195,6 +206,7 @@ func (d *Debugger) examineSource(items []string) error {
 		}
 
 		d.Machine.Printf("%s", formatSource(n, text))
+		d.lastSource.module, d.lastSource.line = mod, n
 	}
 
 	return nil
@@ -235,16 +247,23 @@ func (d *Debugger) typeSource(text string) error {
 			return err
 		}
 
-		records := d.Machine.ModuleSource(mod)
-
-		d.Machine.Printf("module %s\n", mod.Name)
-
-		for n := int(first); n <= int(last) && n >= 1 && n <= len(records); n++ {
-			d.Machine.Printf("%s", formatSource(n, records[n-1]))
-		}
+		d.typeLines(mod, int(first), int(last))
 	}
 
 	return nil
+}
+
+// typeLines shows lines first to last of a module's source, under its
+// name.
+func (d *Debugger) typeLines(mod *dbgsym.Module, first, last int) {
+	records := d.Machine.ModuleSource(mod)
+
+	d.Machine.Printf("module %s\n", mod.Name)
+
+	for n := first; n <= last && n >= 1 && n <= len(records); n++ {
+		d.Machine.Printf("%s", formatSource(n, records[n-1]))
+		d.lastSource.module, d.lastSource.line = mod, n
+	}
 }
 
 // scopeModule is the module the program is in, or the current image's first.
@@ -268,6 +287,15 @@ func (d *Dispatcher) bindSource() {
 	d.Grammar.Bind("TYPE", func(id int64, r *dcl.Result) error {
 		if text := strings.TrimSpace(r.String("LINES")); text != "" {
 			return d.Debugger.typeSource(text)
+		}
+
+		// With no line, the one after the source line last shown, as
+		// VMS's does (testdata/dbg89). With none shown yet, a line is
+		// needed (govax's choice).
+		if last := d.Debugger.lastSource; last.module != nil {
+			d.Debugger.typeLines(last.module, last.line+1, last.line+1)
+
+			return nil
 		}
 
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "lines")

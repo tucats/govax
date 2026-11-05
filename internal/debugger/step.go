@@ -303,6 +303,7 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 
 	c.Engine.BeginRun()
 	d.confromexc()
+	d.resumeScope()
 
 	// A step is of the debugged process alone: no other process runs
 	// while it does (docs/PHASE-43.md, Decision 11; docs/PHASE-44.md,
@@ -611,6 +612,7 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 	}
 
 	c := d.Machine
+	d.setStopModule(pc)
 
 	// By line, a step into a routine names the routine; by instruction
 	// it names the place, with the instruction (testdata/trace73's TRCALL:

@@ -249,8 +249,12 @@ func (op Operand) debuggerBase(decimal bool) string {
 			return "S^#" + op.Symbol
 		}
 
+		// A short literal's six bits hold few digits, and the debugger
+		// writes them with F_floating's seven whatever the operand's type
+		// (VMS 7.1's "S^#0.5000000" for a D_floating operand, testdata/dbg89;
+		// G and H are unconfirmed).
 		if op.Type.IsFloat() {
-			return "S^#" + debuggerFloat(op.Type.FloatFormat(), vaxfloat.ShortLiteral(byte(op.Value)))
+			return "S^#" + debuggerFloat(vaxfloat.F, vaxfloat.ShortLiteral(byte(op.Value)))
 		}
 
 		return "S^#" + number(op.Value, 1, decimal)

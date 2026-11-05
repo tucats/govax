@@ -1,0 +1,102 @@
+@DBG89S.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBG89S.DBG
+! ! DBG89S.DBG - SET SCOPE at the program's start and after its end (README.md).
+! ! VMS's log leaves out a command that fails, so a comment names each case first.
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG89           START               18               00000002         00000402
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG89\START ]
+! !> SET SCOPE 1 at START: the frame below the main routine
+! SET SCOPE 1
+! SHOW SCOPE
+!scope: 
+!    1
+! EXAMINE R2
+!%DEBUG-W-SYMNOTACT, non-static variable '1\%R2' is not active
+! EXAMINE PC
+!%DEBUG-W-SYMNOTACT, non-static variable '1\%PC' is not active
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-W-SYMNOTACT, non-static variable '1\%PC' is not active
+! !> SET SCOPE/CURRENT 1 at START
+! CANCEL SCOPE
+! SET SCOPE/CURRENT 1
+!%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG89\START ]
+! !> SET SCOPE/CURRENT 2 at START
+! CANCEL SCOPE
+! SET SCOPE/CURRENT 2
+!%DEBUG-E-NOTINSCOPE, specified scope cannot be found in the default scope list
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBG89\START ]
+! CANCEL SCOPE
+! !> SET SCOPE REC, not active yet
+! SET SCOPE REC
+! SHOW SCOPE
+!scope: 
+!    DBG89\REC
+! !> EXAMINE R2 under SET SCOPE REC, not active
+! EXAMINE R2
+!%DEBUG-W-SYMNOTACT, non-static variable 'DBG89\REC\%R2' is not active
+! !> EXAMINE Y under SET SCOPE REC
+! EXAMINE Y
+!DBG89\Y:        00001111
+! !> EXAMINE DEPTH under SET SCOPE REC
+! EXAMINE DEPTH
+!DBG89\DEPTH:    00000000
+! CANCEL SCOPE
+! !> SET SCOPE 0
+! SET SCOPE 0
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG89\START ]
+! !> SET SCOPE 0, kept across a break in another routine?
+! SET BREAK DBG89B
+! GO
+!%DEBUG-I-DYNMODSET, setting module DBG89B
+!break at routine DBG89B
+!    12:         MOVL    Z, R0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBG89B          DBG89B              12               00000002         00000496
+!*DBG89           START               22               00000025         00000425
+! SHOW SCOPE
+!scope: 
+!    0 [ = DBG89B ]
+! EXAMINE R2
+!DBG89B\%R2:     00001002
+! CANCEL SCOPE
+! CANCEL BREAK/ALL
+! !> GO to the end
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! !> After the end: SHOW SCOPE
+! SHOW SCOPE
+!scope: 
+! *  0
+! !> SET SCOPE 1
+! SET SCOPE 1
+! SHOW SCOPE
+!scope: 
+!    1
+! !> SET SCOPE/CURRENT 0
+!%DEBUG-E-NODEFSCPE, No default scope list: error performing SET SCOPE/CURRENT
+! !> SET SCOPE DBG89\REC
+! SET SCOPE DBG89\REC
+! SHOW SCOPE
+!scope: 
+!    DBG89\REC
+! !> EXAMINE Y
+! EXAMINE Y
+!DBG89\Y:        00001111
+! !> CANCEL SCOPE
+! CANCEL SCOPE
+! SHOW SCOPE
+!scope: 
+! *  0
+!%DEBUG-I-VERIFYICF, exiting command procedure DBG89S.DBG
+EXIT
