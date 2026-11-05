@@ -5,6 +5,6 @@
 !     govax console < testdata/ftn86/copyoutd.cmd
 !
 MOUNT/NOWRITE DUA5: "testdata/disks/ftn86-exchange.dsk"
-COPY/QUIET DUA5:[000000]FTN86D.LOG "testdata/disks/ftn86d-round5.log"/HOST
+COPY/QUIET DUA5:[000000]FTN86D.LOG "testdata/disks/ftn86d-round6.log"/HOST
 DISMOUNT DUA5:
 QUIT

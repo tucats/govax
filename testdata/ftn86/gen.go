@@ -26,7 +26,7 @@ const (
 
 	// round is where copyout.cmd puts the next VMS run, under vax/ (and DUNGEON's log
 	// as testdata/disks/ftn86d-ROUND.log), to be checked before it replaces vax/'s.
-	round = "round5"
+	round = "round6"
 )
 
 // rtlModules are FTNRTL's sources, in ftnrtl.opt's order.

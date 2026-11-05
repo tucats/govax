@@ -21,13 +21,13 @@ import (
 // and read a file; each of these also runs with its N variant, compiled /NOOPTIMIZE, and its
 // R variant, compiled /RECURSIVE.
 var ftn86FileDifferences = map[string]string{
-	"ASTS":       "writes a line by $QIO to SYS$OUTPUT, here a file and not a terminal",
-	"DIALOG":     "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
-	"FORMATS":    "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
-	"INQUIRE":    "the directory is the program's own, not [000000]",
-	"IOSTMT":     "writes unit 5, which only a terminal allows: RMS refuses it in a procedure",
-	"SERVICES":   "no prompt for a read of a file",
-	"WHET":       "a kernel with no name.out",
+	"ASTS":     "writes a line by $QIO to SYS$OUTPUT, here a file and not a terminal",
+	"DIALOG":   "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
+	"FORMATS":  "a $ prompt's line isn't ended by a terminal read, so the next record starts its own",
+	"INQUIRE":  "the directory is the program's own, not [000000]",
+	"IOSTMT":   "writes unit 5, which only a terminal allows: RMS refuses it in a procedure",
+	"SERVICES": "no prompt for a read of a file",
+	"WHET":     "a kernel with no name.out",
 }
 
 // runFTN86 builds the volume as exchange.cmd does and runs FTN86.COM on it, returning the
@@ -214,22 +214,28 @@ func TestFTN86Procedure(t *testing.T) {
 }
 
 // ftn86VMSDifferences are the sections of VMS 7.1's log (testdata/ftn86/vax/ftn86.log) that
-// aren't what the same procedure prints on govax, with why. Each runs with its N variant.
+// aren't what the same procedure prints on govax, with why. Each runs with its N and R
+// variants; a name ending in R is the /RECURSIVE variant alone.
 var ftn86VMSDifferences = map[string]string{
 	"SERVICES":    "$GETCHN, a service govax lacks, which the program expects to be told so of",
 	"SYSROUTINES": "SECNDS(T1+1.0) less than a second after T1 is a day more, and VMS's run got there in time",
 	"MATHFNS":     "CSIN's last bit: MTHRTL's complex functions aren't always VMS's in it",
 	"POWERS":      "OTS$POWRJ of a negative power: its last bit isn't always VMS's (the phase doc's round 2)",
 	"POWBITS":     "the same, in exact bits",
+	"RECURAST": "WAITED: on the VAX the 10 ms timer's AST can run SPIN six deep and end before " +
+		"the wait loop's first test (a quantum end after $SETIMR, or simh's clock catching up), " +
+		"as it did in two of the three builds; govax's clock is the instructions'",
+	"ALIGNR":   "recursiveDifferences': MOD(%LOC(RC), 16) of a record in the frame, where VMS's stack put it on 16",
+	"OPTFLOWR": "recursiveDifferences': ENTRY AGAIN reads an unsaved local, whatever the stack holds there",
 }
 
 // ftn86AwaitingVMS are corpus programs newer than VMS's last run of the procedure, which
-// the next VMS round is to run (docs/PHASE-89 - reentrant FORTRAN.md, subtask 12).
-var ftn86AwaitingVMS = []string{"M_MUTUAL", "OPTRECUR", "RECURAST", "RECURCALC", "RECURIO", "RECURRTL", "RECURSION", "RECURTREE", "RECURVFE"}
+// the next VMS round is to run. None are, since Phase 89's round (subtask 12).
+var ftn86AwaitingVMS = []string{}
 
 // ftn86AwaitingRecursive says VMS's last run had no R variants, each program compiled
-// /RECURSIVE, which the next round is to run (the same subtask).
-const ftn86AwaitingRecursive = true
+// /RECURSIVE. It has since Phase 89's round.
+const ftn86AwaitingRecursive = false
 
 // ftn86Lines is a log's section as both sides can be held to it: without the commands SET
 // VERIFY echoed on VMS, or the options files LINK echoes then. The two numbers a traceback

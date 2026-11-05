@@ -32,6 +32,9 @@
 ; The context's fields (FTN_STATEMENT's); CTX_INTERNAL is nonzero in every
 ; statement this module serves.
 ;
+	$DSCDEF				; descriptors' fields and codes
+	$FORDEF				; FORRTL's condition values
+
 CTX_KIND	= 14			; byte: odd for a WRITE
 CTX_INTERNAL	= 15			; byte: 0 a unit, 1 an internal file,
 INT_CODE	= 2			;  2 ENCODE or DECODE
@@ -44,16 +47,6 @@ CTX_RECMAX	= CTX_POS+4		; long: the most bytes a record holds
 CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address
 CTX_IN_NEXT	= CTX_RECP+4		; long: the next record's address
 CTX_IN_LEFT	= CTX_IN_NEXT+4		; long: how many records are left after it
-
-; The descriptor's fields and codes (the VAX calling standard's).
-DSC$W_LENGTH	= 0
-DSC$B_CLASS	= 3
-DSC$A_POINTER	= 4
-DSC$L_ARSIZE	= 12
-DSC$K_CLASS_A	= 4
-
-FOR$_ENDDURREA	= ^X001880C4		; FORRTL's condition values, with
-FOR$_MORONEREC	= ^X001880DC		;  their severities
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 

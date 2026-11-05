@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Subtask 12, the VMS round, prepared 2026-11-05, waiting for its run. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Subtask 12, the VMS round, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -417,7 +417,7 @@ it moves to a Phase 90.
     a routine entered by an AST while active, NAMELIST and VFEs in recursion), in
     both optimizer and paging modes; the gfortran comparison for the portable
     ones; DUNGEON `/RECURSIVE`, locally.
-12. **The VMS round** (prepared 2026-11-05; waiting for the run): `testdata/ftn86`'s next round, the new programs built and
+12. **The VMS round** (done 2026-11-05): `testdata/ftn86`'s next round, the new programs built and
     run by VMS's MACRO and LINK (Question 8).
 13. **Close-out:** MANUAL.md (14.2's statements, 14.3's qualifier, 14.7's
     differences and unconfirmed choices, a section on recursion and ASTs),
@@ -896,3 +896,21 @@ it moves to a Phase 90.
     `TestIndexFileGrowsIntoExtensionHeaders` makes 3,600 files and remounts. The round's own volume, about 1,400 files, is
     the first govax-made volume with such a header to go to VMS.
   - The volume is built (`testdata/disks/ftn86-exchange.dsk`, round 4's renamed `-round4`); copyout.cmd writes to `vax/round5`.
+- **2026-11-05:** Subtask 12, the VMS round's run, and the subtask done. VMS 7.1 built FTNRTL from this phase's sources
+  and ran all 342 programs and both DUNGEONs to the end. Its run is now `testdata/ftn86/vax` (round 4 moved to
+  `vax/round4`, its DUNGEON log to `testdata/disks/ftn86d-round4.log`), and the waiting lists are empty.
+  - **Every program printed what govax's run does** but for three, now in `ftn86VMSDifferences`:
+    - RECURAST's WAITED, in two of its three builds: SPIN's deepest activation sets a 10 ms timer and loops until the
+      AST's work is done, and on the VAX the AST ran SPIN six deep and ended before the loop's first test, so the loop
+      never counted (a quantum end just after `$SETIMR`, or simh's clock catching up ticks). Everything the program
+      checks (each activation's array, text, and loop) was right in all three; only whether the wait began is timing.
+      govax's clock is the instructions', so it always waits. A longer timer would make VMS wait too; left as it is,
+      since the line isn't wrong on either side.
+    - ALIGNR and OPTFLOWR, both in `recursiveDifferences`: a record's address modulo 16 in the frame (VMS's stack put
+      it on 16 bytes there), and an ENTRY reading an unsaved local, whatever the stack held.
+  - **DUNGEON `/RECURSIVE`** (BUILDR, GAMER, SAVER, RESTORER) built with no message and printed the game, the save, and
+    the restore to the same digests as the usual build and govax's.
+  - **The volume's INDEXF.SYS** was govax's with extension headers (the ods2 fix above); VMS mounted it, extended it,
+    and made every file of the run on it.
+  - `TestFTN86Objects` now reads this round's sources, `vax/mar`; govax's MACRO and LINK still make VMS's objects and
+    image. gen.go's next round is `round6`.

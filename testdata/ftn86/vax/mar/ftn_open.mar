@@ -44,7 +44,9 @@
 ; $CONNECT, and a failure it returns in R0 is FOR$_OPEFAI (#376); if it leaves
 ; the RAB unconnected, FTNRTL connects it (#377, which VMS's OPEN took).
 ;
+	$DSCDEF				; descriptors' fields and codes
 	$FABDEF
+	$FORDEF				; FORRTL's condition values
 	$NAMDEF
 	$RABDEF
 	$RMSDEF
@@ -79,18 +81,6 @@ UB_MAXREC	= UB_ASV+12
 UB_DEFINED	= UB_ASV+16
 
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
-
-FOR$_NOTIMP	= ^X00188014		; FORRTL's condition values, with
-FOR$_DUPFILSPE	= ^X001880AC
-FOR$_INCRECLEN	= ^X0018812C		;  their severities
-FOR$_FILNAMSPE	= ^X0018815C
-FOR$_INCRECTYP	= ^X00188164
-FOR$_KEYVALERR	= ^X0018816C
-FOR$_INCOPECLO	= ^X00188174
-FOR$_INCFILORG	= ^X0018819C
-FOR$_OPEFAI	= ^X001880F4
-FOR$_INVARGFOR	= ^X00188184
-FOR$_INVKEYSPE	= ^X0018818C
 
 ; The keywords' values, kept in a longword per code on the stack, R11 their
 ; base: 0 if the keyword wasn't given, which for a number means the same. After
@@ -155,8 +145,6 @@ DISP_DELETE	= 2
 DISP_PRINT_DEL	= 5
 DISP_SUBMIT_DEL	= 6
 CONVERT_NATIVE	= 9			; also 0, which is no CONVERT= at all
-
-DSC$K_DTYPE_T	= 14
 
 DEFAULT_RECL	= 133			; Table 9-3, with no RECL=
 DEFAULT_SEG	= 2044			; an unformatted unit's, in bytes, by VMS's run

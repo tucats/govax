@@ -48,13 +48,20 @@
 ; other VAL's bytes go to RMS as they are, as on a string key (#271: its length is then
 ; a generic key's), or a string on an integer key (#271).
 ;
-	$DSCDEF				; descriptors' fields and codes
 	$FABDEF
-	$FORDEF				; FORRTL's condition values
 	$RABDEF
 	$SSDEF
 	$XABDEF
 	$XABKEYDEF
+
+DSC$W_LENGTH	= 0			; A descriptor
+DSC$B_DTYPE	= 2
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_CLASS_A	= 4
+DSC$K_DTYPE_W	= 7
+DSC$K_DTYPE_L	= 8
 
 UB_FAB		= 76			; A unit's block (FTN_UNITS)
 UB_RAB		= UB_FAB+FAB$C_BLN
@@ -64,6 +71,10 @@ UB_KEYED	= UB_ASV+38
 
 MAX_KEY		= 255			; KRF and KSZ are bytes
 DESCENDING	= 5			; the bit that makes XAB$B_DTP descending
+
+FOR$_INVARGFOR	= ^X00188184		; FORRTL's condition values, with
+FOR$_INVKEYSPE	= ^X0018818C		;  their severities
+FOR$_INVMATKEY	= ^X001882F4
 
 FRAME_XAB	= -XAB$C_KEYLEN		; This routine's frame: the XABKEY
 FRAME_FAB	= FRAME_XAB-FAB$C_BLN	;  and the FAB's copy

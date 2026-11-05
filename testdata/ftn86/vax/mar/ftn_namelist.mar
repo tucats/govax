@@ -93,30 +93,13 @@
 ; error names, after a substring's parentheses; a doubled apostrophe split
 ; across records; a repeat value that isn't a number, text, or T or F word.
 ;
-FOR$_SYNERRNAM	= ^X0018808C		; FORRTL's condition values, with
-FOR$_TOOMANVAL	= ^X00188094		;  their severities
-FOR$_INVREFVAR	= ^X0018809C
-FOR$_ERRDURWRI	= ^X00188134
+	$DSCDEF				; descriptors' fields and codes
+	$FORDEF				; FORRTL's condition values
 
 ; The block's fields.
 NB_NAME		= 0			; long: the group's name, a counted string
 NB_COUNT	= 4			; long: how many entities
 NB_ENTITIES	= 8			; each: its name's address, its descriptor's
-
-; The descriptor's fields and codes (the VAX calling standard's).
-DSC$W_LENGTH	= 0
-DSC$B_DTYPE	= 2
-DSC$B_CLASS	= 3
-DSC$A_POINTER	= 4
-DSC$B_DIMCT	= 11
-DSC$L_ARSIZE	= 12
-DSC$A_A0	= 16
-DSC$L_M1	= 20
-DSC$K_DTYPE_FC	= 12
-DSC$K_DTYPE_DC	= 13
-DSC$K_DTYPE_T	= 14
-DSC$K_DTYPE_GC	= 29
-DSC$K_CLASS_A	= 4
 
 ; The statement's context (FTN_STATEMENT's; FTN_LISTIN's fields).
 CTX_STATUS	= 16			; long: the first error's condition, or 0

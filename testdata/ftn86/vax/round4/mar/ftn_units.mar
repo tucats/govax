@@ -87,7 +87,6 @@
 ;
 	$DEVDEF				; the device's characteristics
 	$FABDEF				; the FAB's fields
-	$FORDEF				; FORRTL's condition values
 	$NAMDEF				; the NAM's
 	$RABDEF				; the RAB's fields
 	$RMSDEF				; RMS's statuses
@@ -157,6 +156,24 @@ DEFAULT_SEG	= 2044			; an unformatted one's, a segment with its
 MIN_BUFFER	= 256			; a unit's buffer holds at least this
 INPUT_MAX	= 199			; the longest record read from SYS$INPUT:
 					;  (testdata/for80, round 2)
+
+FOR$_INPRECTOO	= ^X001880B4		; FORRTL's condition values, with
+FOR$_ENDDURREA	= ^X001880C4		;  their severities
+FOR$_RECNUMOUT	= ^X001880CC
+FOR$_OPEDEFREQ	= ^X001880D4
+FOR$_ATTACCNON	= ^X00188124
+FOR$_CLOERR	= ^X001880E4
+FOR$_FILNOTFOU	= ^X001880EC
+FOR$_OPEFAI	= ^X001880F4
+FOR$_MIXFILACC	= ^X001880FC
+FOR$_INVLOGUNI	= ^X00188104
+FOR$_ERRDURREA	= ^X0018813C
+FOR$_INVKEYSPE	= ^X0018818C
+FOR$_INSVIRMEM	= ^X0018814C
+FOR$_NO_SUCDEV	= ^X00188154
+FOR$_FILNAMSPE	= ^X0018815C
+FOR$_WRIREAFIL	= ^X0018817C
+FOR$_SPERECLOC	= ^X001881A4
 
 	.PSECT	$FTN_PDATA,NOEXE,NOWRT,PIC,SHR,LONG
 

@@ -87,36 +87,9 @@
 ; this module's FTN$$FMT_PUT, FTN$$FMT_WRITE, FTN$$FMT_FAIL, and
 ; FTN$$FMT_WARN; F, E, D, and G are FTN_FLOAT's (FTN$$EDIT_FLOAT).
 ;
+	$DSCDEF				; descriptors' fields and codes
+	$FORDEF				; FORRTL's condition values
 	$SSDEF
-
-; FORRTL's condition values, with their severities.
-FOR$_ERRDURWRI	= ^X00188134
-FOR$_INSVIRMEM	= ^X0018814C
-FOR$_INFFORLOO	= ^X001881E4
-FOR$_FORVARMIS	= ^X001881EC
-FOR$_SYNERRFOR	= ^X001881F4
-FOR$_OUTSTAOVE	= ^X00188214
-FOR$_VFEVALERR	= ^X00188224
-
-; The descriptor's fields and codes (the VAX calling standard's).
-DSC$W_LENGTH	= 0
-DSC$B_DTYPE	= 2
-DSC$B_CLASS	= 3
-DSC$A_POINTER	= 4
-DSC$L_ARSIZE	= 12
-DSC$K_DTYPE_BU	= 2
-DSC$K_DTYPE_WU	= 3
-DSC$K_DTYPE_LU	= 4
-DSC$K_DTYPE_B	= 6
-DSC$K_DTYPE_W	= 7
-DSC$K_DTYPE_L	= 8
-DSC$K_DTYPE_F	= 10
-DSC$K_DTYPE_D	= 11
-DSC$K_DTYPE_FC	= 12
-DSC$K_DTYPE_DC	= 13
-DSC$K_DTYPE_G	= 27
-DSC$K_DTYPE_GC	= 29
-DSC$K_CLASS_A	= 4
 
 ; A FORMAT statement's block, made by the compiler: the address of the
 ; longword where the parsed format is kept, the text's length and a word
@@ -132,7 +105,6 @@ FB_A_VFE	= 12			; with flag bit 0: the expressions' routine
 FLAG_ERR	= 1
 FLAG_IOSTAT	= 4
 FLAG_RUNFMT	= 8
-FOR$_INPCONERR	= ^X00188204
 
 ; The statement's context: FTN_STATEMENT's fields, then this module's.
 CTX_FLAGS	= 12			; word: the control block's flags
@@ -165,6 +137,7 @@ CTX_WARNING	= CTX_GROUPS+<MAX_DEPTH*8> ; long: an error the statement goes on
 					;  after (FTN$$FMT_WARN), or 0
 CTX_MISMATCH	= CTX_WARNING+4		; byte: 1 if an item wasn't of a type its
 					;  descriptor takes (FTN_EDIT, FTN_FLOAT)
+CTX_FP		= 4			; long: the FP of the routine that began it
 CTX_AP		= CTX_WARNING+36		; long: the AP of the routine that began it
 						;  (FTN_LISTIN's fields come between)
 CTX_VFE		= CTX_AP+4		; long: the format's expressions' routine, or 0
@@ -298,7 +271,12 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	BNEQ	20$
 	;
 	; A FORMAT statement's: parsed already, or parsed now and kept in its
-	; cell.
+	; cell. An AST's statement may parse the same FORMAT while this one
+	; does (another activation of a recursive routine, or the same routine
+	; entered again), so the parse goes where a run-time format's does, and
+	; is moved to the cell with ASTs held off only if the cell is still
+	; empty; if it isn't, this statement uses its own copy, which goes at
+	; its end, and nothing is lost.
 	;
 	BLBC	FB_W_FLAGS(R2),15$
 	MOVL	FB_A_VFE(R2),CTX_VFE(R6)
@@ -306,12 +284,23 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	(R3),R0
 	BNEQ	30$
 	BICL3	#^C1,FB_W_FLAGS(R2),-(SP) ; whether it may have expressions,
-	PUSHL	R3			; where the parsed format goes,
+	PUSHAL	CTX_FREEFMT(R6)		; where the parsed format goes,
 	MOVZWL	FB_W_LENGTH(R2),-(SP)	;  the text's length,
 	PUSHL	FB_A_TEXT(R2)		;  and its address
 	CALLS	#4,PARSE
 	BLBC	R0,90$
-	MOVL	(R3),R0
+	$SETAST_S ENBFLG=#0
+	MOVL	R0,R4			; SS$_WASSET if ASTs were enabled
+	TSTL	(R3)
+	BNEQ	17$			; parsed meanwhile: ours is this statement's
+	MOVL	CTX_FREEFMT(R6),(R3)	; the cell's now
+	CLRL	CTX_FREEFMT(R6)
+17$:	CMPL	R4,#SS$_WASSET
+	BNEQ	18$
+	$SETAST_S ENBFLG=#1
+18$:	MOVL	CTX_FREEFMT(R6),R0	; this statement's own copy,
+	BNEQ	30$
+	MOVL	(R3),R0			;  or the cell's
 	BRB	30$
 	;
 	; A run-time format's: its descriptor's text (a whole array's, for an
@@ -713,13 +702,14 @@ RESOLVE:
 
 ;
 ; EXPRESSION: R0 the value of the expression numbered R0, R2 the context.
-; The routine is given the number and the AP of the routine doing the I/O,
-; through which it reaches its dummy arguments.
+; The routine is given the number, and the AP and FP of the routine doing the
+; I/O, through which it reaches its dummy arguments and what is in its frame.
 ;
 EXPRESSION:
+	PUSHL	CTX_FP(R2)
 	PUSHL	CTX_AP(R2)
 	PUSHL	R0
-	CALLS	#2,@CTX_VFE(R2)
+	CALLS	#3,@CTX_VFE(R2)
 	RSB
 
 ;

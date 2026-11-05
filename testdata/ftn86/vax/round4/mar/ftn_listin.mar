@@ -68,9 +68,26 @@
 ; of the file cuts off is FOR$_ENDDURREA; text right after a V_TEXT's
 ; closing apostrophe, 'AB'X, is left for the next item.
 ;
-	$DSCDEF				; descriptors' fields and codes
-	$FORDEF				; FORRTL's condition values
 	$SSDEF
+
+FOR$_INVARGFOR	= ^X00188184		; FORRTL's condition values, with
+FOR$_LISIO_SYN	= ^X001881DC		;  their severities
+FOR$_INPCONERR	= ^X00188204
+FOR$_INSVIRMEM	= ^X0018814C
+
+; The descriptor's fields and codes (the VAX calling standard's).
+DSC$W_LENGTH	= 0
+DSC$B_DTYPE	= 2
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12
+DSC$K_DTYPE_BU	= 2
+DSC$K_DTYPE_T	= 14
+DSC$K_DTYPE_G	= 27
+DSC$K_DTYPE_H	= 28
+DSC$K_DTYPE_GC	= 29
+DSC$K_CLASS_S	= 1
+DSC$K_CLASS_A	= 4
 
 ; The statement's context: FTN_STATEMENT's fields and FTN_FORMAT's, then
 ; this module's. The buffer and its size outlast a statement, going with the

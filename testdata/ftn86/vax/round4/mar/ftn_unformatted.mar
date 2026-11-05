@@ -40,9 +40,13 @@
 ; reads) counts logical records: each segment's FTN$$UNIT_PUT or
 ; FTN$$UNIT_GET counts one, and those that don't end a record are taken off.
 ;
-	$DSCDEF				; descriptors' fields and codes
-	$FORDEF				; FORRTL's condition values
 	$SSDEF
+
+DSC$W_LENGTH	= 0			; A descriptor
+DSC$B_CLASS	= 3
+DSC$A_POINTER	= 4
+DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_CLASS_A	= 4			; an array
 
 UB_RECORDS	= 16			; A unit's block (FTN_UNITS)
 UB_SEGMENTED	= 42
@@ -68,6 +72,12 @@ SEG_FIRST	= 1
 SEG_LAST	= 2
 SEG_ONLY	= 3
 SEGMENT_WORD	= 2			; its size
+
+FOR$_ERRDURWRI	= ^X00188134		; FORRTL's condition values, with
+FOR$_SEGRECFOR	= ^X0018811C		;  their severities
+FOR$_OUTSTAOVE	= ^X00188214
+FOR$_INPSTAREQ	= ^X0018821C
+FOR$_TOOMANREC	= ^X001880DC
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 

@@ -42,7 +42,7 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
 
 3. Dismount it or pause simh, then copy the results back:
 
-       mkdir -p testdata/ftn86/vax/round5
+       mkdir -p testdata/ftn86/vax/round6
        ./govax console < testdata/ftn86/copyout.cmd
        ./govax console < testdata/ftn86/copyoutd.cmd
 
@@ -50,17 +50,17 @@ it and the volume's `.MAR` files hold the game's text. Everything in `testdata/d
 
 ## What came back
 
-`vax/` is the author's fourth run on VMS 7.1, 4-NOV-2026, after Phase 88 added FTN_KEYED and the indexed programs (`parts.for`, `shared.for`): the log, FTNRTL's objects, image, and map. `vax/mar/` is the
+`vax/` is the author's fifth run on VMS 7.1, 5-NOV-2026, after Phase 89's recursion (the recursive programs, and every program's R variant, compiled `/RECURSIVE`): the log, FTNRTL's objects, image, and map. `vax/mar/` is the
 sources it built, so `TestFTN86Objects` stays true as FTNRTL changes. `TestFTN86Oracle` holds the log to govax's run but for
 `ftn86VMSDifferences`, and `TestFTN86Dungeon` DUNGEON's to VMS's digests: its log is local, `testdata/disks/ftn86d.log`.
-`vax/round1/` and `vax/round2/` are the runs before the fixes each led to, and `vax/round3/` the third, 3-NOV-2026, from Phase 86's FTNRTL. `exitmore.for` and `powbits.for` are questions those
+`vax/round1/` and `vax/round2/` are the runs before the fixes each led to, `vax/round3/` the third, 3-NOV-2026, from Phase 86's FTNRTL, and `vax/round4/` the fourth, 4-NOV-2026, after Phase 88 added FTN_KEYED and the indexed programs; DUNGEON's logs are `testdata/disks/ftn86d-roundN.log`. `exitmore.for` and `powbits.for` are questions those
 rounds raised. The phase doc's log has what each round found.
 
 Before a later round, rename the old volume in `testdata/disks`: `exchange.cmd` makes a new one. The scripts use DUA5, since
 the author's startup mounts XFER on DUA2 (a failed MOUNT there once put a round's files on XFER). `copyout.cmd` writes the next
-run to `vax/round5/`, and `copyoutd.cmd` DUNGEON's log to `testdata/disks/ftn86d-round5.log`, beside the run the tests read,
-until it's checked; gen.go's `round` names them. `vax/round5/mar/` is the sources that round builds, for `TestFTN86Objects`.
+run to `vax/round6/`, and `copyoutd.cmd` DUNGEON's log to `testdata/disks/ftn86d-round6.log`, beside the run the tests read,
+until it's checked; gen.go's `round` names them. `vax/round6/mar/` is to be the sources that round builds, for `TestFTN86Objects`.
+A program newer than the run in `vax/` goes in `ftn86AwaitingVMS` until a round runs it.
 
-The fifth round (Phase 89, subtask 12) adds the recursive programs and every program's R variant, compiled `/RECURSIVE`,
-which `TestFTN86Oracle` sets aside until it comes back (`ftn86AwaitingVMS`, `ftn86AwaitingRecursive`). Its volume holds
-about 1,400 files, enough that INDEXF.SYS needs an extension header, which ods2 couldn't make before this round.
+The fifth round's volume held about 1,400 files, enough that INDEXF.SYS needed an extension header, which ods2 couldn't
+make before that round (the phase doc's log).

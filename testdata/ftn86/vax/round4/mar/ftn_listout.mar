@@ -78,9 +78,30 @@
 ; rounded to as many significant digits as asked, into its caller's
 ; frame (internal/librtl/otscvtfor.go has its interface).
 ;
-	$DSCDEF				; descriptors' fields and codes
-	$FORDEF				; FORRTL's condition values
 	$SSDEF				; SS$_NORMAL, SS$_BADPARAM
+
+; The descriptor's fields and codes (the VAX calling standard's; govax's
+; STARLET has no $DSCDEF yet).
+DSC$W_LENGTH	= 0			; the length, in bytes
+DSC$B_DTYPE	= 2			; the data type
+DSC$B_CLASS	= 3			; the class
+DSC$A_POINTER	= 4			; the data's address
+DSC$L_ARSIZE	= 12			; an array's size in bytes
+DSC$K_DTYPE_BU	= 2			; byte logical
+DSC$K_DTYPE_WU	= 3			; word logical
+DSC$K_DTYPE_LU	= 4			; longword logical
+DSC$K_DTYPE_W	= 7			; word integer
+DSC$K_DTYPE_L	= 8			; longword integer
+DSC$K_DTYPE_F	= 10			; F_floating
+DSC$K_DTYPE_D	= 11			; D_floating
+DSC$K_DTYPE_FC	= 12			; F_floating complex
+DSC$K_DTYPE_DC	= 13			; D_floating complex
+DSC$K_DTYPE_T	= 14			; text
+DSC$K_DTYPE_G	= 27			; G_floating
+DSC$K_DTYPE_H	= 28			; H_floating
+DSC$K_DTYPE_GC	= 29			; G_floating complex
+DSC$K_CLASS_S	= 1			; a scalar or fixed-length string
+DSC$K_CLASS_A	= 4			; an array
 
 RECORD_MAX	= 81			; a record's length, at most, its control byte
 					;  and 80 of text
@@ -98,6 +119,9 @@ CTX_RECP	= CTX_RECORD+RECORD_SIZE+160 ; long: the record's address (the context'
 CTX_INTERNAL	= 15			; byte: nonzero for an internal file (FTN_INTERNAL)
 CTX_NM_CAPTURE	= CTX_RECP+24		; long: FTN_NAMELIST's: where a field goes
 CTX_NM_CAPLEN	= CTX_RECP+28		;  instead of the record, and its length
+
+FOR$_ERRDURWRI	= ^X00188134		; FORRTL's conditions: a write failed,
+FOR$_OUTSTAOVE	= ^X00188214		;  a value too long for a record
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 

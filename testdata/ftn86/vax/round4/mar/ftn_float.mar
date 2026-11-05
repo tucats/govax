@@ -67,8 +67,17 @@
 ; either format; w 42, d 33, and e 3 for a REAL*16.
 ;
 
-	$DSCDEF				; descriptors' fields and codes
-	$FORDEF				; FORRTL's condition values
+; FORRTL's condition values, with their severities.
+FOR$_OUTCONERR	= ^X001881FA
+FOR$_INPCONERR	= ^X00188204
+
+; The descriptor's data types and class.
+DSC$K_DTYPE_F	= 10
+DSC$K_DTYPE_D	= 11
+DSC$K_DTYPE_T	= 14
+DSC$K_DTYPE_G	= 27
+DSC$K_DTYPE_H	= 28
+DSC$K_CLASS_S	= 1
 
 ; OTS$CVT_T_x's flags.
 OTS_IGNORE_BLANKS = 1

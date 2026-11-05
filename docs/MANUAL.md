@@ -6917,11 +6917,13 @@ $ RUN PROG
 ```
 
 VMS 7.1 did this for every program in govax's `testdata/fortran` directory, the ones on indexed files
-among them, compiled both with and
-without the optimizer, with no message from its MACRO or LINK, and for DUNGEON, whose log of a game, a
-save, and a restore is the same to the byte as govax's. The programs print what they print on govax,
-but for a program using `$GETCHN`, which govax doesn't have; SECNDS within a second of its argument, by
-timing; and the last bits of `OTS$` negative powers and MTHRTL's complex functions.
+and the recursive ones among them, compiled with and without the optimizer and `/RECURSIVE`, with no
+message from its MACRO or LINK, and for DUNGEON, built the usual way and `/RECURSIVE`, whose log of a
+game, a save, and a restore is the same to the byte as govax's both ways. The programs print what they
+print on govax, but for a program using `$GETCHN`, which govax doesn't have; SECNDS within a second of
+its argument, and whether a timer's AST came before a loop began, by timing; the last bits of `OTS$`
+negative powers and MTHRTL's complex functions; and, compiled `/RECURSIVE`, two programs that read what
+a local held at an earlier call, or where the stack put a record, which FORTRAN-77 leaves undefined.
 `testdata/ftn86/README.md` has the procedure, which the tests hold to VMS's log.
 
 ## 15. Appendices

@@ -15,8 +15,15 @@
 ; its code reaches its own data only through PC-relative addresses (a
 ; label used as an operand), never through stored addresses.
 ;
-	$DSCDEF				; descriptors' fields and codes
 	$SSDEF				; SS$_NORMAL
+
+; A string descriptor (the VAX calling standard's): a word of length, a
+; byte of data type, a byte of class, then the string's address. govax's
+; STARLET has no $DSCDEF yet, so the values this module uses are here.
+DSC$W_LENGTH	= 0			; the length, in bytes
+DSC$A_POINTER	= 4			; the string's address
+DSC$K_DTYPE_T	= 14			; data type: text
+DSC$K_CLASS_S	= 1			; class: a fixed-length string
 
 ; FTNRTL's version, 1.0, as FTN$VERSION returns it: the major number in
 ; the high word, the minor number in the low.

@@ -38,7 +38,6 @@
 ; FOR$_DELERR, a record there having no number.
 ;
 	$FABDEF
-	$FORDEF				; FORRTL's condition values
 	$RABDEF
 	$RMSDEF
 	$SSDEF
@@ -58,6 +57,13 @@ UB_CURRENT	= UB_ASV+36
 CTX_STATUS	= 16			; A statement's context (FTN_STATEMENT)
 
 ACCESS_DIRECT	= 1
+
+FOR$_RECNUMOUT	= ^X001880CC		; FORRTL's condition values, with
+FOR$_ATTACCNON	= ^X00188124		;  their severities
+FOR$_NO_CURREC	= ^X001881AC
+FOR$_DELERR	= ^X001881BC
+FOR$_UNLERR	= ^X001881C4
+FOR$_WRIREAFIL	= ^X0018817C
 
 	.PSECT	$FTN_CODE,EXE,NOWRT,PIC,SHR,LONG
 

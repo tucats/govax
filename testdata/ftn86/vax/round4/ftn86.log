@@ -1,0 +1,5313 @@
+==== FTNRTL
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+  $STATUS == "%X10000001"
+==== ADJUST
+  631925.0       168.0000       55550.00    
+          2           1   999.0000       111.0000       222.0000    
+A           3           4           1           3          10          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           4           3           1           4           9          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           6           2           1           6           7          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+          4          12
+          8          12
+          1           3           5           7          12
+          2          12
+          1           3           4           8          12
+  3.000000       1.000000    
+  4.000000    
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+          1
+          1           2
+  1.500000000000000       2.500000000000000       3.500000000000000    
+  4.500000000000000    
+  1.500000000000000       2.500000000000000       3.500000000000000    
+  4.500000000000000    
+(3.000000,4.000000) (5.000000,6.000000)
+(-9.000000,22.00000)
+(3.000000000000000,-3.000000000000000)
+(4.000000000000000,-4.000000000000000)
+     7      8
+ONEDOGEN
+ONETWOSIXTENFOXDOG
+          3DOG OX
+ONETWOSIXTENFOXDOG
+          3DOG OX
+ONETWOSIXTENFOXDOG
+          3DOG EN
+ONETWOSIXTENFOXDOG
+SIXDOG           3
+          2GH F
+ABCDEFGH
+ABGH           2
+E
+A           3           4           1           3          10          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           3           3           4           6          10          12
+          4           5           6           7           8           9
+         10          11          12
+A           3           3           4           6          10          12
+          4           5           6           7           8           9
+         10          11          12
+         48
+          0
+LATE
+  3.000000    
+DOG
+  $STATUS == "%X00000001"
+==== ADJUSTN
+  631925.0       168.0000       55550.00    
+          2           1   999.0000       111.0000       222.0000    
+A           3           4           1           3          10          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           4           3           1           4           9          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           6           2           1           6           7          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+          4          12
+          8          12
+          1           3           5           7          12
+          2          12
+          1           3           4           8          12
+  3.000000       1.000000    
+  4.000000    
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+          1
+          1           2
+  1.500000000000000       2.500000000000000       3.500000000000000    
+  4.500000000000000    
+  1.500000000000000       2.500000000000000       3.500000000000000    
+  4.500000000000000    
+(3.000000,4.000000) (5.000000,6.000000)
+(-9.000000,22.00000)
+(3.000000000000000,-3.000000000000000)
+(4.000000000000000,-4.000000000000000)
+     7      8
+ONEDOGEN
+ONETWOSIXTENFOXDOG
+          3DOG OX
+ONETWOSIXTENFOXDOG
+          3DOG OX
+ONETWOSIXTENFOXDOG
+          3DOG EN
+ONETWOSIXTENFOXDOG
+SIXDOG           3
+          2GH F
+ABCDEFGH
+ABGH           2
+E
+A           3           4           1           3          10          12
+          1           2           3           4           5           6
+          7           8           9          10          11          12
+A           3           3           4           6          10          12
+          4           5           6           7           8           9
+         10          11          12
+A           3           3           4           6          10          12
+          4           5           6           7           8           9
+         10          11          12
+         48
+          0
+LATE
+  3.000000    
+DOG
+  $STATUS == "%X00000001"
+==== AGGREGATES
+   9    2   2000
+ONE   2000          11          99          13
+NEW   1988
+  2000
+         22          24          26 DBL
+         22
+  2001
+         38
+         33
+        302          23         123
+        102
+  1999
+       1999
+          3
+         19
+         24
+         19          57           4          19          12           8
+          7BLK |
+          8BUMP|
+          3           4
+DBL          22          99   1999
+  2000
+         72
+         22          24          26
+          1           2           3
+         72
+ABCDEF
+CD           2
+X1X3
+  1235   1988
+       1988
+         22          24          26
+          6
+         44          48          52
+DBL   2002           7
+         57          11ONE
+          1           2STARTZZ
+  $STATUS == "%X00000001"
+==== AGGREGATESN
+   9    2   2000
+ONE   2000          11          99          13
+NEW   1988
+  2000
+         22          24          26 DBL
+         22
+  2001
+         38
+         33
+        302          23         123
+        102
+  1999
+       1999
+          3
+         19
+         24
+         19          57           4          19          12           8
+          7BLK |
+          8BUMP|
+          3           4
+DBL          22          99   1999
+  2000
+         72
+         22          24          26
+          1           2           3
+         72
+ABCDEF
+CD           2
+X1X3
+  1235   1988
+       1988
+         22          24          26
+          6
+         44          48          52
+DBL   2002           7
+         57          11ONE
+          1           2STARTZZ
+  $STATUS == "%X00000001"
+==== ALIGN
+PACKED           5           1
+NAT          32          16
+STRIDE          32
+BOUND           0
+INIT           7
+CX          32          16
+CXMOD           0
+UN          16           4
+UNC           4
+UNB           8          12          11
+OUTER          80           4
+OUTERP           1
+OUTERG           9
+OUTERQ          64           7
+AFTER           5
+CN           4           8
+CND          16           0
+CNX          32           0
+CNI          44
+CS           4          12
+CP           1
+VALUES           5         300ABC
+SECOND           5           0           1
+THIRD           3
+  $STATUS == "%X00000001"
+==== ALIGNN
+PACKED           5           1
+NAT          32          16
+STRIDE          32
+BOUND           0
+INIT           7
+CX          32          16
+CXMOD           0
+UN          16           4
+UNC           4
+UNB           8          12          11
+OUTER          80           4
+OUTERP           1
+OUTERG           9
+OUTERQ          64           7
+AFTER           5
+CN           4           8
+CND          16           0
+CNX          32           0
+CNI          44
+CS           4          12
+CP           1
+VALUES           5         300ABC
+SECOND           5           0           1
+THIRD           3
+  $STATUS == "%X00000001"
+==== ALTRETURNS
+VALUE LESS THAN ZERO
+VALUE EQUALS ZERO
+VALUE MORE THAN ZERO
+         -1 goes on
+          0 goes on
+          1 first
+          2 second
+          3 goes on
+ROUGH first
+IF first
+IF goes on
+IF not run
+Left the loop at           3           3
+INNER returned
+INNER went on
+GIVE   3.500000       2.500000    
+GIVE goes on
+FIRST   1.500000       4.500000    
+FIRST first
+LAST   6.500000       7.500000    
+LAST first
+To one label
+ABCD           4
+JOIN second
+BARE goes on
+  $STATUS == "%X00000001"
+==== ALTRETURNSN
+VALUE LESS THAN ZERO
+VALUE EQUALS ZERO
+VALUE MORE THAN ZERO
+         -1 goes on
+          0 goes on
+          1 first
+          2 second
+          3 goes on
+ROUGH first
+IF first
+IF goes on
+IF not run
+Left the loop at           3           3
+INNER returned
+INNER went on
+GIVE   3.500000       2.500000    
+GIVE goes on
+FIRST   1.500000       4.500000    
+FIRST first
+LAST   6.500000       7.500000    
+LAST first
+To one label
+ABCD           4
+JOIN second
+BARE goes on
+  $STATUS == "%X00000001"
+==== ARGS
+After TWICE(K), K is          10
+After TWICE(K+1) and TWICE((K)), K is          10
+ISUM(V,5) is         150, ISUM(V(3),3) is         120
+         30          60          90         120         150
+  3.375000       15.62500      -8.000000    
+ICLAMP:           0           7          10
+        189
+  $STATUS == "%X00000001"
+==== ARGSN
+After TWICE(K), K is          10
+After TWICE(K+1) and TWICE((K)), K is          10
+ISUM(V,5) is         150, ISUM(V(3),3) is         120
+         30          60          90         120         150
+  3.375000       15.62500      -8.000000    
+ICLAMP:           0           7          10
+        189
+  $STATUS == "%X00000001"
+==== ARRAYS
+          1           2           3          11          12          13
+          3          11
+          4           1           0           1           4
+          4           0           4
+          6           1
+        109         221
+          7         209
+          8         210
+          9         211
+         10         219
+         11         220
+         12         221
+         99         100
+          1          11
+          2          99
+          3         100
+         86           7
+  $STATUS == "%X00000001"
+==== ARRAYSN
+          1           2           3          11          12          13
+          3          11
+          4           1           0           1           4
+          4           0           4
+          6           1
+        109         221
+          7         209
+          8         210
+          9         211
+         10         219
+         11         220
+         12         221
+         99         100
+          1          11
+          2          99
+          3         100
+         86           7
+  $STATUS == "%X00000001"
+==== ASTRACE
+WRONG           0           0
+ANY TICKS T
+  $STATUS == "%X00000001"
+==== ASTRACEN
+WRONG           0           0
+ANY TICKS T
+  $STATUS == "%X00000001"
+==== ASTS
+PARM        1234
+DCLAST           1
+WAKER          77
+SETIMR           1
+WOKEN           1
+CANTIM           1
+QIO REFUSED         172
+WASSET T
+HELD           0
+WASCLR T           1
+INTERNAL   42     
+UNIT 13 ANOTHER   
+AFTER THE AST
+firstsecond 
+LEVEL           2          20          20
+LEVEL           1          10          20
+  $STATUS == "%X00000001"
+==== ASTSN
+PARM        1234
+DCLAST           1
+WAKER          77
+SETIMR           1
+WOKEN           1
+CANTIM           1
+QIO REFUSED         172
+WASSET T
+HELD           0
+WASCLR T           1
+INTERNAL   42     
+UNIT 13 ANOTHER   
+AFTER THE AST
+firstsecond 
+LEVEL           2          20          20
+LEVEL           1          10          20
+  $STATUS == "%X00000001"
+==== AUTOMATIC
+          7   3.500000       7.000000000000000       -1     -3
+          9           0           1           4           9          16
+         23          11          21          12          22          13
+         23
+ABCDEF BCXY   XY  AB BCXY  XY  ABABCDEF
+     1      1          23          22RST
+(-3.000000,4.000000)   4.500000    
+          5          10          15
+         30          25           6           2
+         18           4          12
+   700
+        701
+ASSIGNED
+A           4   4.000000       8.000000    
+B           5           6   11.00000       12.00000    
+A           7   7.000000       14.00000    
+Frames:         120           1
+    3        3
+    3
+ 16705  16962AABB
+ 1128481089AACC
+     435030          -1
+HELLO HE    
+         11           2           3   6.000000       7.000000    
+  $STATUS == "%X00000001"
+==== AUTOMATICN
+          7   3.500000       7.000000000000000       -1     -3
+          9           0           1           4           9          16
+         23          11          21          12          22          13
+         23
+ABCDEF BCXY   XY  AB BCXY  XY  ABABCDEF
+     1      1          23          22RST
+(-3.000000,4.000000)   4.500000    
+          5          10          15
+         30          25           6           2
+         18           4          12
+   700
+        701
+ASSIGNED
+A           4   4.000000       8.000000    
+B           5           6   11.00000       12.00000    
+A           7   7.000000       14.00000    
+Frames:         120           1
+    3        3
+    3
+ 16705  16962AABB
+ 1128481089AACC
+     435030          -1
+HELLO HE    
+         11           2           3   6.000000       7.000000    
+  $STATUS == "%X00000001"
+==== AVERAGE
+Mean:   3.750000    
+  $STATUS == "%X00000001"
+==== AVERAGEN
+Mean:   3.750000    
+  $STATUS == "%X00000001"
+==== CALLBACK
+SIGNAL           3        1200
+CONTINUED
+AST           7
+          1
+         42
+         42
+  $STATUS == "%X00000001"
+==== CALLBACKN
+SIGNAL           3        1200
+CONTINUED
+AST           7
+          1
+         42
+         42
+  $STATUS == "%X00000001"
+==== CHARS
+[ABC     ]
+[VWX]
+[VWX         ]
+BCDABGH
+AB123FGH
+Q 123FGH
+HH HELLO
+EHE ELLO
+LHEL LLO
+LHELL LO
+OHELLO O
+[OLLEH]
+[BCDE] [OEFGH   ]
+AABCDEFG
+BCDEFGHH
+ANN BOBBCY  |
+          1 ANN |
+          2 BOBB|
+          3 CY  |
+T T T T F T
+F T T
+ANN  is before B
+BOBB is a B
+CY   is C or after
+Not L:           3
+Code 200 is after Z
+and not before
+ 1145258561
+[>SHIFTED  ]
+  $STATUS == "%X00000001"
+==== CHARSN
+[ABC     ]
+[VWX]
+[VWX         ]
+BCDABGH
+AB123FGH
+Q 123FGH
+HH HELLO
+EHE ELLO
+LHEL LLO
+LHELL LO
+OHELLO O
+[OLLEH]
+[BCDE] [OEFGH   ]
+AABCDEFG
+BCDEFGHH
+ANN BOBBCY  |
+          1 ANN |
+          2 BOBB|
+          3 CY  |
+T T T T F T
+F T T
+ANN  is before B
+BOBB is a B
+CY   is C or after
+Not L:           3
+Code 200 is after Z
+and not before
+ 1145258561
+[>SHIFTED  ]
+  $STATUS == "%X00000001"
+==== CHECKS
+ENDS     1     3     2
+TWO    21    19     1
+SUB BCD BCDE ABCD B E
+ELEM GHI IJ
+SET AXYZE
+REC     5
+FLD Q
+DUMMY    10    22    31
+DUMMY    40
+TEXT LMNOP P P
+MOST  2147483647
+LEAST -2147483648
+SHIFT         -16
+BIT -2147483648
+SMALL
+  $STATUS == "%X00000001"
+==== CHECKSN
+ENDS     1     3     2
+TWO    21    19     1
+SUB BCD BCDE ABCD B E
+ELEM GHI IJ
+SET AXYZE
+REC     5
+FLD Q
+DUMMY    10    22    31
+DUMMY    40
+TEXT LMNOP P P
+MOST  2147483647
+LEAST -2147483648
+SHIFT         -16
+BIT -2147483648
+SMALL
+  $STATUS == "%X00000001"
+==== COMMON
+BLANK   100.0000               1
+ADDED   130.0000               3
+SHARED           8   5.000000       1.000000       4.000000       3.000000    
+EXT   5.000000       6.000000       8.000000    
+B   5.000000       6.000000       8.000000    
+BITS       16512
+REAL  0.7500000    
+Q          20          30          40
+P          99
+  $STATUS == "%X00000001"
+==== COMMONN
+BLANK   100.0000               1
+ADDED   130.0000               3
+SHARED           8   5.000000       1.000000       4.000000       3.000000    
+EXT   5.000000       6.000000       8.000000    
+B   5.000000       6.000000       8.000000    
+BITS       16512
+REAL  0.7500000    
+Q          20          30          40
+P          99
+  $STATUS == "%X00000001"
+==== COMPLEX
+(1.000000,2.000000) (3.000000,-1.500000)
+(4.000000,0.5000000) (-2.000000,3.500000) (-1.000000,-2.000000)
+(1.500000,2.000000) (2.000000,4.000000) (0.0000000E+00,-2.000000)
+(6.000000,4.500000)
+(0.0000000E+00,0.6666667) (-1.000000,-2.000000)
+(-3.000000,4.000000)
+(0.4400000,7.9999998E-02)
+(0.3333333,0.3333333)
+  3.000000               3
+EQUAL
+NOT EQUAL
+(1.000000,-1.000000) (2.000000,-2.000000) (3.000000,-3.000000)
+(0.0000000E+00,-4.000000)
+(1.000000,0.0000000E+00)
+(-1.500000,2.000000)
+(4.000000,-4.000000)
+(-6.000000000000000,8.000000000000000)
+(0.3333333333333333,0.3333333333333333)
+(-1.400000000000000,2.000000000000000)
+(-1.166666666666667,0.1666666666666667)
+(-0.1875000000000000,-0.2500000000000000)
+(0.2500000000000000,-0.5000000000000000)
+  $STATUS == "%X00000001"
+==== COMPLEXN
+(1.000000,2.000000) (3.000000,-1.500000)
+(4.000000,0.5000000) (-2.000000,3.500000) (-1.000000,-2.000000)
+(1.500000,2.000000) (2.000000,4.000000) (0.0000000E+00,-2.000000)
+(6.000000,4.500000)
+(0.0000000E+00,0.6666667) (-1.000000,-2.000000)
+(-3.000000,4.000000)
+(0.4400000,7.9999998E-02)
+(0.3333333,0.3333333)
+  3.000000               3
+EQUAL
+NOT EQUAL
+(1.000000,-1.000000) (2.000000,-2.000000) (3.000000,-3.000000)
+(0.0000000E+00,-4.000000)
+(1.000000,0.0000000E+00)
+(-1.500000,2.000000)
+(4.000000,-4.000000)
+(-6.000000000000000,8.000000000000000)
+(0.3333333333333333,0.3333333333333333)
+(-1.400000000000000,2.000000000000000)
+(-1.166666666666667,0.1666666666666667)
+(-0.1875000000000000,-0.2500000000000000)
+(0.2500000000000000,-0.5000000000000000)
+  $STATUS == "%X00000001"
+==== COMPLEXG
+(1.000000,2.000000) (3.000000,-1.500000)
+(4.000000,0.5000000) (-2.000000,3.500000) (-1.000000,-2.000000)
+(1.500000,2.000000) (2.000000,4.000000) (0.0000000E+00,-2.000000)
+(6.000000,4.500000)
+(0.0000000E+00,0.6666667) (-1.000000,-2.000000)
+(-3.000000,4.000000)
+(0.4400000,7.9999998E-02)
+(0.3333333,0.3333333)
+  3.000000               3
+EQUAL
+NOT EQUAL
+(1.000000,-1.000000) (2.000000,-2.000000) (3.000000,-3.000000)
+(0.0000000E+00,-4.000000)
+(1.000000,0.0000000E+00)
+(-1.500000,2.000000)
+(4.000000,-4.000000)
+(-6.00000000000000,8.00000000000000)
+(0.333333333333333,0.333333333333333)
+(-1.40000000000000,2.00000000000000)
+(-1.16666666666667,0.166666666666667)
+(-0.187500000000000,-0.250000000000000) (0.250000000000000,-0.500000000000000)
+(1.000000000000000E+300,2.000000000000000E+100)
+  $STATUS == "%X00000001"
+==== COMPLEXGN
+(1.000000,2.000000) (3.000000,-1.500000)
+(4.000000,0.5000000) (-2.000000,3.500000) (-1.000000,-2.000000)
+(1.500000,2.000000) (2.000000,4.000000) (0.0000000E+00,-2.000000)
+(6.000000,4.500000)
+(0.0000000E+00,0.6666667) (-1.000000,-2.000000)
+(-3.000000,4.000000)
+(0.4400000,7.9999998E-02)
+(0.3333333,0.3333333)
+  3.000000               3
+EQUAL
+NOT EQUAL
+(1.000000,-1.000000) (2.000000,-2.000000) (3.000000,-3.000000)
+(0.0000000E+00,-4.000000)
+(1.000000,0.0000000E+00)
+(-1.500000,2.000000)
+(4.000000,-4.000000)
+(-6.00000000000000,8.00000000000000)
+(0.333333333333333,0.333333333333333)
+(-1.40000000000000,2.00000000000000)
+(-1.16666666666667,0.166666666666667)
+(-0.187500000000000,-0.250000000000000) (0.250000000000000,-0.500000000000000)
+(1.000000000000000E+300,2.000000000000000E+100)
+  $STATUS == "%X00000001"
+==== DATA
+M           1           7           7          42   1.000000      -2.500000    
+AREA1   1.000000       2.000000       2.000000              11 F
+AREA2 T          -6   3.500000    
+CALL           1
+CALL           2
+CALL           3
+      16512  1145258561   538985025       16512        5349
+ 1145258561        8280       16512           0
+  591790078  2139029759  1140802113
+          1           2           9           9           3           4
+          5          -1           5          -2           5
+  $STATUS == "%X00000001"
+==== DATAN
+M           1           7           7          42   1.000000      -2.500000    
+AREA1   1.000000       2.000000       2.000000              11 F
+AREA2 T          -6   3.500000    
+CALL           1
+CALL           2
+CALL           3
+      16512  1145258561   538985025       16512        5349
+ 1145258561        8280       16512           0
+  591790078  2139029759  1140802113
+          1           2           9           9           3           4
+          5          -1           5          -2           5
+  $STATUS == "%X00000001"
+==== DIALOG
+
+Your name? Hello, Pat.
+
+Command: %FOR-F-OPEFAI, open failure
+  unit 5  file DUA1:[DIALOG]DIALOG.IN;
+  user PC 00000710
+-RMS-E-FLK, file currently locked by another user
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000256AC  000256AC
+DIALOG          DIALOG                                     00000110  00000710
+  $STATUS == "%X101880F4"
+==== DIALOGN
+
+Your name? Hello, Pat.
+
+Command: %FOR-F-OPEFAI, open failure
+  unit 5  file DUA1:[DIALOGN]DIALOG.IN;
+  user PC 00000711
+-RMS-E-FLK, file currently locked by another user
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000256AC  000256AC
+DIALOG          DIALOG                                     00000111  00000711
+  $STATUS == "%X101880F4"
+==== DIRECT
+AFTER 3  4
+  30  31  32  4
+   0   0   0
+  10  2
+   0  3
+  30  4
+PAST THE END  36
+TOO LONG 66  40  41  42
+RECORD 0
+SEQUENTIAL  31
+FIND  2  2
+THREE   |TWO     |
+  66  36
+DEFINED, OPENED F
+NEXT  6
+PAST 5  25
+ T  1  6
+  16   5
+  $STATUS == "%X00000001"
+==== DIRECTN
+AFTER 3  4
+  30  31  32  4
+   0   0   0
+  10  2
+   0  3
+  30  4
+PAST THE END  36
+TOO LONG 66  40  41  42
+RECORD 0
+SEQUENTIAL  31
+FIND  2  2
+THREE   |TWO     |
+  66  36
+DEFINED, OPENED F
+NEXT  6
+PAST 5  25
+ T  1  6
+  16   5
+  $STATUS == "%X00000001"
+==== DIRECTIVES
+PAGE           0
+BYTE           1
+OCTA           0
+BYTE           1
+QUAD           0
+WORD           0
+READ          60
+NOTES           7    9
+FIXED          10          20          30
+STORE AT      304
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B7B, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+DIRECTIVES      CHANGE                                     00000002  00000B7B
+DIRECTIVES      DIRECTIVES                                 000002B0  00000AB0
+  $STATUS == "%X1000000C"
+==== DIRECTIVESN
+PAGE           0
+BYTE           1
+OCTA           0
+BYTE           1
+QUAD           0
+WORD           0
+READ          60
+NOTES           7    9
+FIXED          10          20          30
+STORE AT      304
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000304, PC=00000B88, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+DIRECTIVES      CHANGE                                     00000002  00000B88
+DIRECTIVES      DIRECTIVES                                 000002BD  00000ABD
+  $STATUS == "%X1000000C"
+==== ENTRIES
+          7
+         -7
+        110
+        120
+          2
+  6.000000    
+  12.00000    
+          9
+          4
+ABC
+          3
+EFG
+         12
+ 0.0000000E+00
+ 0.0000000E+00
+  1.000000    
+  1.500000    
+          2
+     3
+  2.500000000000000    
+(1.000000,2.000000)
+T
+  2.500000    
+         10
+         12
+HELLO
+ELLO 
+--------
+[***     ]
+  2.50000000000000000000000000000000      
+(1.500000000000000,2.500000000000000)
+  $STATUS == "%X00000001"
+==== ENTRIESN
+          7
+         -7
+        110
+        120
+          2
+  6.000000    
+  12.00000    
+          9
+          4
+ABC
+          3
+EFG
+         12
+ 0.0000000E+00
+ 0.0000000E+00
+  1.000000    
+  1.500000    
+          2
+     3
+  2.500000000000000    
+(1.000000,2.000000)
+T
+  2.500000    
+         10
+         12
+HELLO
+ELLO 
+--------
+[***     ]
+  2.50000000000000000000000000000000      
+(1.500000000000000,2.500000000000000)
+  $STATUS == "%X00000001"
+==== EXITS
+DECLARE           1
+DECLARE           1
+DECLARE           1
+DECLARE           1
+CANCEL           1
+END
+THIRD           1
+  $STATUS == "%X00000003"
+==== EXITSN
+DECLARE           1
+DECLARE           1
+DECLARE           1
+DECLARE           1
+CANCEL           1
+END
+THIRD           1
+  $STATUS == "%X00000003"
+==== EXTSOURCE
+WIDE         351
+LENGTH         115
+SHORT         105
+AGAIN         253
+  $STATUS == "%X00000001"
+==== EXTSOURCEN
+WIDE         351
+LENGTH         115
+SHORT         105
+AGAIN         253
+  $STATUS == "%X00000001"
+==== FACTORIALS
+N, N! as an INTEGER, and N! as a REAL
+          1           1   1.000000    
+          2           2   2.000000    
+          3           6   6.000000    
+          4          24   24.00000    
+          5         120   120.0000    
+          6         720   720.0000    
+          7        5040   5040.000    
+          8       40320   40320.00    
+          9      362880   362880.0    
+         10     3628800   3628800.    
+         11    39916800  3.9916800E+07
+         12   479001600  4.7900160E+08
+  3.000000       3.500000       3.500000              -3
+          8          -2   2.000000    
+  2.083333      -2083.333      2.0833335E-04
+  $STATUS == "%X00000001"
+==== FACTORIALSN
+N, N! as an INTEGER, and N! as a REAL
+          1           1   1.000000    
+          2           2   2.000000    
+          3           6   6.000000    
+          4          24   24.00000    
+          5         120   120.0000    
+          6         720   720.0000    
+          7        5040   5040.000    
+          8       40320   40320.00    
+          9      362880   362880.0    
+         10     3628800   3628800.    
+         11    39916800  3.9916800E+07
+         12   479001600  4.7900160E+08
+  3.000000       3.500000       3.500000              -3
+          8          -2   2.000000    
+  2.083333      -2083.333      2.0833335E-04
+  $STATUS == "%X00000001"
+==== FILES
+FIRST               
+ N=  42             
+END OF FILE          -1
+MISSING          29
+NO DEVICE          42
+BAD NAME          43
+NO DIRECTORY          30
+BAD UNIT          32
+BAD STATUS          45
+READONLY NEW          46
+ANY CASE           0
+FIXED, NO RECL          37
+NEGATIVE RECL          37
+BUFFERCOUNT          45
+TOO LONG          66
+ANOTHER RECL          37
+ANOTHER TYPE          44
+THE SAME           0
+[ABC                 ]
+SCRATCH KEPT          46
+SCRATCH GONE          29
+DELETED          29
+SAVED           0
+PRINTED, THERE           0
+WRITE READONLY          47
+DELETE READONLY          46
+LAST                
+CLOSE TWICE           0
+NEVER OPEN           0
+CLOSE BAD UNIT          32
+ZERO         102
+THE SAME FILE           0
+NULL          12
+ANOTHER FILE           0
+THE FIRST WENT          29
+IMPLICIT         304
+LIST           7           8
+DEFAULTFILE           0
+NO FILE          29
+STARTEND
+PAST 133          66
+SIX
+SIX AGAIN
+DONE
+  $STATUS == "%X00000001"
+==== FILESN
+FIRST               
+ N=  42             
+END OF FILE          -1
+MISSING          29
+NO DEVICE          42
+BAD NAME          43
+NO DIRECTORY          30
+BAD UNIT          32
+BAD STATUS          45
+READONLY NEW          46
+ANY CASE           0
+FIXED, NO RECL          37
+NEGATIVE RECL          37
+BUFFERCOUNT          45
+TOO LONG          66
+ANOTHER RECL          37
+ANOTHER TYPE          44
+THE SAME           0
+[ABC                 ]
+SCRATCH KEPT          46
+SCRATCH GONE          29
+DELETED          29
+SAVED           0
+PRINTED, THERE           0
+WRITE READONLY          47
+DELETE READONLY          46
+LAST                
+CLOSE TWICE           0
+NEVER OPEN           0
+CLOSE BAD UNIT          32
+ZERO         102
+THE SAME FILE           0
+NULL          12
+ANOTHER FILE           0
+THE FIRST WENT          29
+IMPLICIT         304
+LIST           7           8
+DEFAULTFILE           0
+NO FILE          29
+STARTEND
+PAST 133          66
+SIX
+SIX AGAIN
+DONE
+  $STATUS == "%X00000001"
+==== FLOATEDIT
+ 2.35472 8789.736  -23.2435-0.20
+.5-.200.   1.   0.0
+ 0.48E+06   0.690E-03.555E+00-0.10010E+0001
+  -2.701E+02   -0.03E+04   2701.E-01   0.270E+03
+   25.00 2500.00 2500.00
+ 0.123457E-01
+  123457.    
+-0.123457E+07
+ 0.000000E+00
+ 0.100000    
+-0.123457    
+     5.00        50.00E+07
+   +1.00  +0.100E+01    +1.00        1.00    1.00
+ 2.35472 3.45673
+    2.35
+    3.46
+  2.3  2.3   0.0  -0.1
+     0.541387625793D+04   5413.8763
+   3.250 0.3250E+001
+      3.2500000
+  0.3250000E+01
+   3.250000    
+  0.3250000D+01
+       3.2500000000000000
+   0.3250000000000000E+01
+    3.250000000000000    
+       3.250000000000000000000000000000000
+  0.325000000000000000000000000000000E+001
+   3.25000000000000000000000000000000     
+************
+OUTCONERR          63
+** 1.00
+OUTCONERR          63
+    0.00
+    0.00
+FORVARMIS          61
+  $STATUS == "%X00000001"
+==== FLOATEDITN
+ 2.35472 8789.736  -23.2435-0.20
+.5-.200.   1.   0.0
+ 0.48E+06   0.690E-03.555E+00-0.10010E+0001
+  -2.701E+02   -0.03E+04   2701.E-01   0.270E+03
+   25.00 2500.00 2500.00
+ 0.123457E-01
+  123457.    
+-0.123457E+07
+ 0.000000E+00
+ 0.100000    
+-0.123457    
+     5.00        50.00E+07
+   +1.00  +0.100E+01    +1.00        1.00    1.00
+ 2.35472 3.45673
+    2.35
+    3.46
+  2.3  2.3   0.0  -0.1
+     0.541387625793D+04   5413.8763
+   3.250 0.3250E+001
+      3.2500000
+  0.3250000E+01
+   3.250000    
+  0.3250000D+01
+       3.2500000000000000
+   0.3250000000000000E+01
+    3.250000000000000    
+       3.250000000000000000000000000000000
+  0.325000000000000000000000000000000E+001
+   3.25000000000000000000000000000000     
+************
+OUTCONERR          63
+** 1.00
+OUTCONERR          63
+    0.00
+    0.00
+FORVARMIS          61
+  $STATUS == "%X00000001"
+==== FLOW
+FLOW
+         14
+         -3
+UNDERFLOW
+BAD CHARACTER
+  9.000000    
+  2.000000    
+  1.175000    
+ 0.0000000E+00
+  1.260000    
+NO ROOT
+ -83.00000      -86.00000      -20.00000      -20.00000    
+         30
+ 0.7620000       1.175000       1.543000    
+*AB*    *CD*
+          8
+DONE
+  $STATUS == "%X00000001"
+==== FLOWN
+FLOW
+         14
+         -3
+UNDERFLOW
+BAD CHARACTER
+  9.000000    
+  2.000000    
+  1.175000    
+ 0.0000000E+00
+  1.260000    
+NO ROOT
+ -83.00000      -86.00000      -20.00000      -20.00000    
+         30
+ 0.7620000       1.175000       1.543000    
+*AB*    *CD*
+          8
+DONE
+  $STATUS == "%X00000001"
+==== FORMATS
+TEXT AND HOLLERITH
+TEXT AND HOLLERITH
+A C BD   E
+ALPHA, BRAVO, GAMMA
+ALPHA, BRAVO
+NAMES: ALPHA BRAVO
+GAMMA DELTA
+ONE
+
+THREE
+
+
+PROMPT: CONTINUEDRUN-TIME
+ARRAY
+ABC|  ABCDE|ABCDE
+DCBA
+Q TAKES 99
+TYPE
+SYNERRFOR          62
+INFFORLOO TAKEN BY ERR=
+OUTSTAOVE          66
+                                                                                                                                   X
+T133           0
+F5.1 IS  5.0
+F5.1           0
+  $STATUS == "%X00000001"
+==== FORMATSN
+TEXT AND HOLLERITH
+TEXT AND HOLLERITH
+A C BD   E
+ALPHA, BRAVO, GAMMA
+ALPHA, BRAVO
+NAMES: ALPHA BRAVO
+GAMMA DELTA
+ONE
+
+THREE
+
+
+PROMPT: CONTINUEDRUN-TIME
+ARRAY
+ABC|  ABCDE|ABCDE
+DCBA
+Q TAKES 99
+TYPE
+SYNERRFOR          62
+INFFORLOO TAKEN BY ERR=
+OUTSTAOVE          66
+                                                                                                                                   X
+T133           0
+F5.1 IS  5.0
+F5.1           0
+  $STATUS == "%X00000001"
+==== FUNCS
+A-CDE
+AB-DE
+OLLEH
+AAAAAAAAAA
+         10
+AABBCC
+H
+XX
+-
+          5
+[YYZ]
+EQUAL
+         65
+          3
+[Z   ]
+[W   ]
+ONE
+TWO
+  3.75000000000000000000000000000000      
+  3.00000000000000000000000000000000      
+  13.5000000000000000000000000000000      
+  15.0000000000000000000000000000000      
+  2.50000000000000000000000000000000      
+ -7.00000000000000000000000000000000      
+(-3.000000000000000,4.000000000000000)
+(-6.000000000000000,-24.00000000000000)
+(-1.000000000000000,2.000000000000000)
+  3.000000000000000    
+  4.000000000000000    
+  $STATUS == "%X00000001"
+==== FUNCSN
+A-CDE
+AB-DE
+OLLEH
+AAAAAAAAAA
+         10
+AABBCC
+H
+XX
+-
+          5
+[YYZ]
+EQUAL
+         65
+          3
+[Z   ]
+[W   ]
+ONE
+TWO
+  3.75000000000000000000000000000000      
+  3.00000000000000000000000000000000      
+  13.5000000000000000000000000000000      
+  15.0000000000000000000000000000000      
+  2.50000000000000000000000000000000      
+ -7.00000000000000000000000000000000      
+(-3.000000000000000,4.000000000000000)
+(-6.000000000000000,-24.00000000000000)
+(-1.000000000000000,2.000000000000000)
+  3.000000000000000    
+  4.000000000000000    
+  $STATUS == "%X00000001"
+==== FUNCSG
+(-3.00000000000000,4.00000000000000)
+  1.00000000000000     
+  3.00000000000000     
+  $STATUS == "%X00000001"
+==== FUNCSGN
+(-3.00000000000000,4.00000000000000)
+  1.00000000000000     
+  3.00000000000000     
+  $STATUS == "%X00000001"
+==== GRADES
+         95 A
+Passed so far:           1  honors: F
+         83 B
+Passed so far:           2  honors: F
+         71 C
+Passed so far:           3  honors: F
+         64 F
+        100 A
+Passed so far:           4  honors: T
+END OF SCORES
+  $STATUS == "%X00000001"
+==== GRADESN
+         95 A
+Passed so far:           1  honors: F
+         83 B
+Passed so far:           2  honors: F
+         71 C
+Passed so far:           3  honors: F
+         64 F
+        100 A
+Passed so far:           4  honors: T
+END OF SCORES
+  $STATUS == "%X00000001"
+==== HANDLERS
+GOON           1           4
+I           0          77           1
+GOON           1           4
+O          -1          77           2
+GOON           1           4
+GOON           2           4
+WRONG TYPE           4
+GOON           3           4
+**                 1
+          3
+         77
+         55
+       2160
+  1.000000               0
+  3.500000       2.500000    
+INTOVF T
+          0           1 -2147483648
+         55
+GOON           4           4
+%SYSTEM-F-ENDOFFILE, end of file
+  $STATUS == "%X10000874"
+==== HANDLERSN
+GOON           1           4
+I           0          77           1
+GOON           1           4
+O          -1          77           2
+GOON           1           4
+GOON           2           4
+WRONG TYPE           4
+GOON           3           4
+**                 1
+          3
+         77
+         55
+       2160
+  1.000000               0
+  3.500000       2.500000    
+INTOVF T
+          0           1 -2147483648
+         55
+GOON           4           4
+%SYSTEM-F-ENDOFFILE, end of file
+  $STATUS == "%X10000874"
+==== INQUIRE
+T F          19 F [    ] UNKNOWN                0           0           0
+F           0           0
+F           0
+F T           0 DUA1:[INQUIRE]MISSING.DAT;              
+F F OLD*.DAT                                
+F F NOSUCH:[X]Y.DAT                         
+F F A[B                                                0
+T T          10 T DUA1:[INQUIRE]INQ1.DAT;1                
+SEQUENTIAL  YES         NO          
+FORMATTED   YES         YES         
+        133           0 NULL        SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+         10 T FORMATTED   
+         10
+T F           0 T DUA1:[INQUIRE]INQ1.DAT;1                
+UNKNOWN     YES         NO          
+UNKNOWN     YES         YES         
+          9           0 UNKNOWN     SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+F DUA1:[INQUIRE]INQ1.XYZ;                 
+T
+F          19 [    ]
+YES                   20 FIXED       
+          5 UNFORMATTED UNKNOWN     FIXED       
+     4 T           1
+A BYTE IS TRUE
+DIRE UNFORMATTED  FIXED  
+F DUA1:[INQUIRE]FOR013.DAT;                        133
+F [    ]
+UNIT 6
+T T           6 SYS$OUTPUT:.;                           
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== INQUIREN
+T F          19 F [    ] UNKNOWN                0           0           0
+F           0           0
+F           0
+F T           0 DUA1:[INQUIREN]MISSING.DAT;             
+F F OLD*.DAT                                
+F F NOSUCH:[X]Y.DAT                         
+F F A[B                                                0
+T T          10 T DUA1:[INQUIREN]INQ1.DAT;1               
+SEQUENTIAL  YES         NO          
+FORMATTED   YES         YES         
+        133           0 NULL        SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+         10 T FORMATTED   
+         10
+T F           0 T DUA1:[INQUIREN]INQ1.DAT;1               
+UNKNOWN     YES         NO          
+UNKNOWN     YES         YES         
+          9           0 UNKNOWN     SEQUENTIAL  
+VARIABLE    NO          FORTRAN     
+F DUA1:[INQUIREN]INQ1.XYZ;                
+T
+F          19 [    ]
+YES                   20 FIXED       
+          5 UNFORMATTED UNKNOWN     FIXED       
+     4 T           1
+A BYTE IS TRUE
+DIRE UNFORMATTED  FIXED  
+F DUA1:[INQUIREN]FOR013.DAT;                       133
+F [    ]
+UNIT 6
+T T           6 SYS$OUTPUT:.;                           
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== INTEDIT
+     284  284 +284 -284
+     434     11C0007  0A94
+  177344    FEE40177  007F
+T  F   T F
+DEFAULT         284   -284    177        4080 T
+    4080   40200
+**  42
+OUTCONERR          63
+   16512
+FORVARMIS          61
+  $STATUS == "%X00000001"
+==== INTEDITN
+     284  284 +284 -284
+     434     11C0007  0A94
+  177344    FEE40177  007F
+T  F   T F
+DEFAULT         284   -284    177        4080 T
+    4080   40200
+**  42
+OUTCONERR          63
+   16512
+FORVARMIS          61
+  $STATUS == "%X00000001"
+==== INTERNAL
+|  1.50 -2.25|
+|  1.50 -2.25|
+|      3.14          |
+|      3.14          |
+  1.500000      -2.250000    
+  1.500000      -2.250000    
+       1234        5678        9012
+901256781234
+|901256781234|
+|   7    XXXXXXXXXXXX|
+|ONE  |TWO  |CCCCC|
+         27|X    |
+|XX  12XXXXXXXXXXXXXX|
+|           1   2.500000    ABC          |
+          1   2.500000     ABC     
+|    1XXXXXXXXXXXXXXX|
+       1234          99
+|X       |
+         27
+|  END       Z|
+ENDZ
+IS    6.000000     DONE
+| 42!                | 43  |   875831328
+  $STATUS == "%X00000001"
+==== INTERNALN
+|  1.50 -2.25|
+|  1.50 -2.25|
+|      3.14          |
+|      3.14          |
+  1.500000      -2.250000    
+  1.500000      -2.250000    
+       1234        5678        9012
+901256781234
+|901256781234|
+|   7    XXXXXXXXXXXX|
+|ONE  |TWO  |CCCCC|
+         27|X    |
+|XX  12XXXXXXXXXXXXXX|
+|           1   2.500000    ABC          |
+          1   2.500000     ABC     
+|    1XXXXXXXXXXXXXXX|
+       1234          99
+|X       |
+         27
+|  END       Z|
+ENDZ
+IS    6.000000     DONE
+| 42!                | 43  |   875831328
+  $STATUS == "%X00000001"
+==== INTRINSICS
+          5           3          12          -7
+  2.500000       2.500000      -3.000000       1.500000    
+ 0.0000000E+00  -2.500000       2.000000000000000    
+          2          -2           2          -3
+          8           0           5           4
+   300    100   -300     -6     -7
+          2           3          -3          -3          -2        -300
+     3           2   3.000000       3.000000       2.500000000000000    
+      65535    254         254          -3
+  3.000000      -4.000000     (3.000000,4.000000)
+(2.500000,2.000000) (3.000000,0.0000000E+00)
+ -2.500000000000000       2.500000000000000       7.500000000000000    
+          8          14           6         -13
+        192          15           3           0
+        255           3          13           4
+-32768     15 -32767          -2          -1
+T F T F
+          5           3           9          69           3 -1073741824
+     -32768          -1       71680
+         12           5           8           0          87
+          4           0           7           5           9
+          3           0          65 ABC
+ABC!           4           2|
+          6           3          72 HELLO,
+HELLO,!           6           0|
+AHiY         |
+T T T T F
+BOTH
+          1          -7           7
+          2          -7          12
+     3      2      2     -2
+  $STATUS == "%X00000001"
+==== INTRINSICSN
+          5           3          12          -7
+  2.500000       2.500000      -3.000000       1.500000    
+ 0.0000000E+00  -2.500000       2.000000000000000    
+          2          -2           2          -3
+          8           0           5           4
+   300    100   -300     -6     -7
+          2           3          -3          -3          -2        -300
+     3           2   3.000000       3.000000       2.500000000000000    
+      65535    254         254          -3
+  3.000000      -4.000000     (3.000000,4.000000)
+(2.500000,2.000000) (3.000000,0.0000000E+00)
+ -2.500000000000000       2.500000000000000       7.500000000000000    
+          8          14           6         -13
+        192          15           3           0
+        255           3          13           4
+-32768     15 -32767          -2          -1
+T F T F
+          5           3           9          69           3 -1073741824
+     -32768          -1       71680
+         12           5           8           0          87
+          4           0           7           5           9
+          3           0          65 ABC
+ABC!           4           2|
+          6           3          72 HELLO,
+HELLO,!           6           0|
+AHiY         |
+T T T T F
+BOTH
+          1          -7           7
+          2          -7          12
+     3      2      2     -2
+  $STATUS == "%X00000001"
+==== INVENTORY
+ 6 items, 1 refused
+Item          Qty    Price      Value
+-------------------------------------
+WIDGET         10     2.50      25.00
+GADGET          3    19.99      59.97
+BOLT          250     0.04      10.00
+GEAR            7     4.50      31.50
+FLANGE          2  1234.50    2469.00
+NUT             0     0.00       0.00
+-------------------------------------
+Total         272             2595.47
+Average price         9.54
+$TOTALS
+N       =           6,
+NBAD    =           1,
+TOTQTY  =         272,
+TOTAL   =   2595.470    
+$END
+  $STATUS == "%X00000001"
+==== INVENTORYN
+ 6 items, 1 refused
+Item          Qty    Price      Value
+-------------------------------------
+WIDGET         10     2.50      25.00
+GADGET          3    19.99      59.97
+BOLT          250     0.04      10.00
+GEAR            7     4.50      31.50
+FLANGE          2  1234.50    2469.00
+NUT             0     0.00       0.00
+-------------------------------------
+Total         272             2595.47
+Average price         9.54
+$TOTALS
+N       =           6,
+NBAD    =           1,
+TOTQTY  =         272,
+TOTAL   =   2595.470    
+$END
+  $STATUS == "%X00000001"
+==== IOSTMT
+PRINT           1
+WRITE (*,*)           2
+WRITE (6,*)           3
+TYPE           4
+%FOR-F-ERRDURWRI, error during write
+  unit 5  file SYS$INPUT:.;
+  user PC 000006FE
+-RMS-F-FAC, record operation not permitted by specified file access (FAC)
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000258AC  000258AC
+IOSTMT          IOSTMT                                     000000FE  000006FE
+  $STATUS == "%X10188134"
+==== IOSTMTN
+PRINT           1
+WRITE (*,*)           2
+WRITE (6,*)           3
+TYPE           4
+%FOR-F-ERRDURWRI, error during write
+  unit 5  file SYS$INPUT:.;
+  user PC 000006FE
+-RMS-F-FAC, record operation not permitted by specified file access (FAC)
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+                                                           000258AC  000258AC
+IOSTMT          IOSTMT                                     000000FE  000006FE
+  $STATUS == "%X10188134"
+==== ITEMLIST
+SIZE          28
+FIRST    4    0   25    3
+SECOND   12    0    2    2
+LONGS    51970052    33685516           0
+BUFADR 1
+RETADR 1
+BUFADR 2
+RETADR 2
+  $STATUS == "%X00000001"
+==== ITEMLISTN
+SIZE          28
+FIRST    4    0   25    3
+SECOND   12    0    2    2
+LONGS    51970052    33685516           0
+BUFADR 1
+RETADR 1
+BUFADR 2
+RETADR 2
+  $STATUS == "%X00000001"
+==== JUMPS
+Index           0 goes on
+Index           1 goes to 11
+Index           2 goes to 12
+Index           3 goes to 13
+Index           4 goes on
+X = 2.7 goes to 42
+X = -0.5 goes on
+I2 + 1 = 3 goes to 53
+Step           1 at 61
+Step           2 at 62
+Step           3 at 63
+PICK           1 went to 10
+PICK           2 went to 20
+         -1 is negative
+          0 is zero
+          1 is positive
+X - 0.5 is not positive
+D is negative
+I2 is zero
+  $STATUS == "%X00000001"
+==== JUMPSN
+Index           0 goes on
+Index           1 goes to 11
+Index           2 goes to 12
+Index           3 goes to 13
+Index           4 goes on
+X = 2.7 goes to 42
+X = -0.5 goes on
+I2 + 1 = 3 goes to 53
+Step           1 at 61
+Step           2 at 62
+Step           3 at 63
+PICK           1 went to 10
+PICK           2 went to 20
+         -1 is negative
+          0 is zero
+          1 is positive
+X - 0.5 is not positive
+D is negative
+I2 is zero
+  $STATUS == "%X00000001"
+==== LEDGER
+REFUSED      ADAMS
+NO ACCOUNT  9, IOSTAT 36
+ 9 TRANSACTIONS
+RELATIVE     DIRECT       T
+     BAKER   200
+     DAVIS     0
+     ADAMS   125
+     TOTAL   325
+CHECKPOINT    3  325    9
+  $STATUS == "%X00000001"
+==== LEDGERN
+REFUSED      ADAMS
+NO ACCOUNT  9, IOSTAT 36
+ 9 TRANSACTIONS
+RELATIVE     DIRECT       T
+     BAKER   200
+     DAVIS     0
+     ADAMS   125
+     TOTAL   325
+CHECKPOINT    3  325    9
+  $STATUS == "%X00000001"
+==== LENGTHS
+  -1     -1
+-128 -32768
+     -31072
+     100000
+      60000
+-32768
+      72767
+  7231
+    -3
+ -7.000000    
+   -27
+  12
+  -1 F T
+F T T T
+T F T F
+     1      7     -6
+          6          -7           4
+     0          -2      4
+   200
+I2 IS 5
+B IS OVER 99
+L1 IS TRUE
+L2 IS FALSE
+I2 IS ODD
+BV      1 IS ODD
+BV      3 IS ODD
+     1      4      9
+  -1    0    1
+     5   -1
+     6          15
+-32768 -25536 T      5
+      32768           5
+  $STATUS == "%X00000001"
+==== LENGTHSN
+  -1     -1
+-128 -32768
+     -31072
+     100000
+      60000
+-32768
+      72767
+  7231
+    -3
+ -7.000000    
+   -27
+  12
+  -1 F T
+F T T T
+T F T F
+     1      7     -6
+          6          -7           4
+     0          -2      4
+   200
+I2 IS 5
+B IS OVER 99
+L1 IS TRUE
+L2 IS FALSE
+I2 IS ODD
+BV      1 IS ODD
+BV      3 IS ODD
+     1      4      9
+  -1    0    1
+     5   -1
+     6          15
+-32768 -25536 T      5
+      32768           5
+  $STATUS == "%X00000001"
+==== LOOPS
+Passes           9, NUMBER          41
+Passes          27, J          -4
+Triangle          10, I           5, J           5
+No passes: K           7, I           5
+REAL loop passes           4, 10X          25
+Powers of 3: K         243
+Still         243
+First nonblank at           5: TEXT
+Multiples of 3 add to          18
+Twos: K           6
+First square past 50:           8
+Shared terminal: N           6
+Extended range: N          36
+Back into a loop without a label: N         202
+  $STATUS == "%X00000001"
+==== LOOPSN
+Passes           9, NUMBER          41
+Passes          27, J          -4
+Triangle          10, I           5, J           5
+No passes: K           7, I           5
+REAL loop passes           4, 10X          25
+Powers of 3: K         243
+Still         243
+First nonblank at           5: TEXT
+Multiples of 3 add to          18
+Twos: K           6
+First square past 50:           8
+Shared terminal: N           6
+Extended range: N          36
+Back into a loop without a label: N         202
+  $STATUS == "%X00000001"
+==== MATHFNS
+  1.414214       2.718282       2.302585      0.3010300    
+  1.414213562373095       2.718281828459045       2.302585092994046    
+ 0.3010299956639812      0.5000000000000000      0.3678794411714423    
+  1.41421356237309504880168872420970      
+  2.71828182845904523536028747135266      
+  2.30258509299404568401799145468436      
+ 0.301029995663981195213738894724493      
+ 0.8414710      0.5403023       1.557408      0.7853982    
+ 0.5000000      0.5000000       1.000000       45.00000    
+ 0.5235988       1.047198       30.00000       60.00000    
+  2.356194      -135.0000    
+ 0.8414709848078965      0.5403023058681397       1.557407724654902    
+  3.141592653589793      0.5000000000000000       45.00000000000000    
+ 0.841470984807896506652502321630299      
+  3.14159265358979323846264338327950      
+  1.175201       1.543081      0.7615942    
+  1.175201193643801       1.543080634815244      0.7615941559557649    
+ 0.761594155955764888119458282604794      
+  2.000000      -2.000000       3.000000      -3.000000    
+ -7.000000000000000       8.000000000000000    
+ -1.00000000000000000000000000000000      
+  1.500000      -1.500000       1.000000000000000    
+  1.00000000000000000000000000000000      
+  5.000000     (0.0000000E+00,2.000000) (1.000000,0.0000000E+00)
+(0.0000000E+00,3.141593) (2.000000,1.000000)
+(3.853738,-27.01681)
+(-27.03494,-3.851153)
+  5.000000000000000       5.000000000000000    
+(2.000000000000000,1.000000000000000)
+(0.0000000000000000E+00,1.570796326794897)
+(-13.12878308146216,-15.20078446306795)
+         16   268435455           0           0
+-32768      1      0
+  2.000000       30.00000       1.000000    
+BOTH
+  $STATUS == "%X00000001"
+==== MATHFNSN
+  1.414214       2.718282       2.302585      0.3010300    
+  1.414213562373095       2.718281828459045       2.302585092994046    
+ 0.3010299956639812      0.5000000000000000      0.3678794411714423    
+  1.41421356237309504880168872420970      
+  2.71828182845904523536028747135266      
+  2.30258509299404568401799145468436      
+ 0.301029995663981195213738894724493      
+ 0.8414710      0.5403023       1.557408      0.7853982    
+ 0.5000000      0.5000000       1.000000       45.00000    
+ 0.5235988       1.047198       30.00000       60.00000    
+  2.356194      -135.0000    
+ 0.8414709848078965      0.5403023058681397       1.557407724654902    
+  3.141592653589793      0.5000000000000000       45.00000000000000    
+ 0.841470984807896506652502321630299      
+  3.14159265358979323846264338327950      
+  1.175201       1.543081      0.7615942    
+  1.175201193643801       1.543080634815244      0.7615941559557649    
+ 0.761594155955764888119458282604794      
+  2.000000      -2.000000       3.000000      -3.000000    
+ -7.000000000000000       8.000000000000000    
+ -1.00000000000000000000000000000000      
+  1.500000      -1.500000       1.000000000000000    
+  1.00000000000000000000000000000000      
+  5.000000     (0.0000000E+00,2.000000) (1.000000,0.0000000E+00)
+(0.0000000E+00,3.141593) (2.000000,1.000000)
+(3.853738,-27.01681)
+(-27.03494,-3.851153)
+  5.000000000000000       5.000000000000000    
+(2.000000000000000,1.000000000000000)
+(0.0000000000000000E+00,1.570796326794897)
+(-13.12878308146216,-15.20078446306795)
+         16   268435455           0           0
+-32768      1      0
+  2.000000       30.00000       1.000000    
+BOTH
+  $STATUS == "%X00000001"
+==== MATHFNSG
+  1.41421356237310        2.71828182845905        2.30258509299405     
+ 0.301029995663981       0.500000000000000       0.367879441171442     
+ 0.841470984807897       0.540302305868140        1.55740772465490     
+  3.14159265358979       0.500000000000000        45.0000000000000     
+ 0.523598775598299        60.0000000000000        2.35619449019234     
+  1.17520119364380        1.54308063481524       0.761594155955765     
+ -7.00000000000000        8.00000000000000        1.00000000000000     
+  690.775527898214       1.000000000000000E+150  1.014232054735004E+304
+  5.00000000000000        5.00000000000000     
+(2.00000000000000,1.00000000000000)
+(0.000000000000000E+000,1.57079632679490)
+(-13.1287830814622,-15.2007844630680)
+(0.841470984807897,0.000000000000000E+000)
+  $STATUS == "%X00000001"
+==== MATHFNSGN
+  1.41421356237310        2.71828182845905        2.30258509299405     
+ 0.301029995663981       0.500000000000000       0.367879441171442     
+ 0.841470984807897       0.540302305868140        1.55740772465490     
+  3.14159265358979       0.500000000000000        45.0000000000000     
+ 0.523598775598299        60.0000000000000        2.35619449019234     
+  1.17520119364380        1.54308063481524       0.761594155955765     
+ -7.00000000000000        8.00000000000000        1.00000000000000     
+  690.775527898214       1.000000000000000E+150  1.014232054735004E+304
+  5.00000000000000        5.00000000000000     
+(2.00000000000000,1.00000000000000)
+(0.000000000000000E+000,1.57079632679490)
+(-13.1287830814622,-15.2007844630680)
+(0.841470984807897,0.000000000000000E+000)
+  $STATUS == "%X00000001"
+==== MIXED
+  -7     -7          -7  -7.000000    
+ -7.000000000000000    
+ -7.00000000000000000000000000000000      
+(-7.000000,0.0000000E+00) (-7.000000000000000,0.0000000000000000E+00)
+(1234.568,-1.000000)
+  1234.567800000000       1234.568    
+       1234  -3702 -118
+ 0.5000000          300000       33333  0.7500000000000000    
+  3.250000000000000       1.50000000000000000000000000000000      
+     2     -100000 (0.0000000E+00,7.000000)
+(308.6419372558594,-0.2500000000000000) (1237.567800000000,-1.000000000000000)
+  1.333333300000000       1.333333313465118    
+     2  0.5000000000000000       1.500000000000000    
+         15
+  22.50000000000000    
+I2 EQ 2.0D0
+R OK
+COMPLEX EQ
+  1.000000000000000      -41.00000000000000    
+ -4.62800000000000000000000000000000      
+(-5.000000,2.000000) (7.000000,8.000000)
+  $STATUS == "%X00000001"
+==== MIXEDN
+  -7     -7          -7  -7.000000    
+ -7.000000000000000    
+ -7.00000000000000000000000000000000      
+(-7.000000,0.0000000E+00) (-7.000000000000000,0.0000000000000000E+00)
+(1234.568,-1.000000)
+  1234.567800000000       1234.568    
+       1234  -3702 -118
+ 0.5000000          300000       33333  0.7500000000000000    
+  3.250000000000000       1.50000000000000000000000000000000      
+     2     -100000 (0.0000000E+00,7.000000)
+(308.6419372558594,-0.2500000000000000) (1237.567800000000,-1.000000000000000)
+  1.333333300000000       1.333333313465118    
+     2  0.5000000000000000       1.500000000000000    
+         15
+  22.50000000000000    
+I2 EQ 2.0D0
+R OK
+COMPLEX EQ
+  1.000000000000000      -41.00000000000000    
+ -4.62800000000000000000000000000000      
+(-5.000000,2.000000) (7.000000,8.000000)
+  $STATUS == "%X00000001"
+==== MIXEDG
+  -7     -7          -7  -7.000000    
+ -7.00000000000000     
+ -7.00000000000000000000000000000000      
+(-7.000000,0.0000000E+00) (-7.00000000000000,0.000000000000000E+000)
+(1234.568,-1.000000)
+  1234.56780000000        1234.568    
+       1234  -3702 -118
+ 0.5000000          300000       33333  0.750000000000000     
+  3.25000000000000        1.50000000000000000000000000000000      
+     2     -100000 (0.0000000E+00,7.000000)
+(308.641937255859,-0.250000000000000) (1237.56780000000,-1.00000000000000)
+  1.33333330000000        1.33333331346512     
+     2  0.500000000000000        1.50000000000000     
+         15
+  22.5000000000000     
+I2 EQ 2.0D0
+R OK
+COMPLEX EQ
+  1.00000000000000       -41.0000000000000     
+ -4.62800000000000000000000000000000      
+(-5.000000,2.000000) (7.000000,8.000000)
+  $STATUS == "%X00000001"
+==== MIXEDGN
+  -7     -7          -7  -7.000000    
+ -7.00000000000000     
+ -7.00000000000000000000000000000000      
+(-7.000000,0.0000000E+00) (-7.00000000000000,0.000000000000000E+000)
+(1234.568,-1.000000)
+  1234.56780000000        1234.568    
+       1234  -3702 -118
+ 0.5000000          300000       33333  0.750000000000000     
+  3.25000000000000        1.50000000000000000000000000000000      
+     2     -100000 (0.0000000E+00,7.000000)
+(308.641937255859,-0.250000000000000) (1237.56780000000,-1.00000000000000)
+  1.33333330000000        1.33333331346512     
+     2  0.500000000000000        1.50000000000000     
+         15
+  22.5000000000000     
+I2 EQ 2.0D0
+R OK
+COMPLEX EQ
+  1.00000000000000       -41.0000000000000     
+ -4.62800000000000000000000000000000      
+(-5.000000,2.000000) (7.000000,8.000000)
+  $STATUS == "%X00000001"
+==== NOF77
+VARIABLE LIMIT   1
+I AFTER   2
+CONSTANT LIMIT   1
+I AFTER   2
+A REAL LOOP   3
+A REAL LOOP   2
+A REAL LOOP   1
+END DO   5
+BLANKS ARE ZEROS 102
+SIN  0.00
+THE PROGRAM'S TAN  5.00
+SINDEG  7.00
+BLANKS ARE IGNORED  12
+  $STATUS == "%X00000001"
+==== NOF77N
+VARIABLE LIMIT   1
+I AFTER   2
+CONSTANT LIMIT   1
+I AFTER   2
+A REAL LOOP   3
+A REAL LOOP   2
+A REAL LOOP   1
+END DO   5
+BLANKS ARE ZEROS 102
+SIN  0.00
+THE PROGRAM'S TAN  5.00
+SINDEG  7.00
+BLANKS ARE IGNORED  12
+  $STATUS == "%X00000001"
+==== NUMERIC
+          6   1.414213562373095    
+T
+(3.000000,0.0000000E+00) (2.000000,0.0000000E+00)
+(-1.000000,2.000000) (-1.000000,-2.000000)
+    2000000 T
+  3.141593       3.141592653589793    
+  3.14159265358979323846264338327950      
+ 0.5000000      0.5000000       45.00000       1.000000    
+  3.000000000000000       1.000000       5.000000    
+T  0.0000000E+00
+  5.000000       2.000000    
+     162889
+  2.000000000000000       3.000000000000000      -1.000000000000000    
+         21           1           9
+      23562
+  $STATUS == "%X00000001"
+==== NUMERICN
+          6   1.414213562373095    
+T
+(3.000000,0.0000000E+00) (2.000000,0.0000000E+00)
+(-1.000000,2.000000) (-1.000000,-2.000000)
+    2000000 T
+  3.141593       3.141592653589793    
+  3.14159265358979323846264338327950      
+ 0.5000000      0.5000000       45.00000       1.000000    
+  3.000000000000000       1.000000       5.000000    
+T  0.0000000E+00
+  5.000000       2.000000    
+     162889
+  2.000000000000000       3.000000000000000      -1.000000000000000    
+         21           1           9
+      23562
+  $STATUS == "%X00000001"
+==== OPTALIAS
+EQUIVALENCE       7       7      13
+OVERLAP  131074       2       2
+COMMON       3       3       2
+ACROSS CALL       3       4       1
+BY REFERENCE       8      11
+KEPT ADDRESS      20      21
+DO VARIABLE       4       4       5
+NO SAVE       3       3
+DATA       2       3       5
+READ      13      31
+ASSOCIATE       4       6      33
+SAME ARRAY      14
+THROUGH DUMMY       6
+UNSIGNED
+  $STATUS == "%X00000001"
+==== OPTALIASN
+EQUIVALENCE       7       7      13
+OVERLAP  131074       2       2
+COMMON       3       3       2
+ACROSS CALL       3       4       1
+BY REFERENCE       8      11
+KEPT ADDRESS      20      21
+DO VARIABLE       4       4       5
+NO SAVE       3       3
+DATA       2       3       5
+READ      13      31
+ASSOCIATE       4       6      33
+SAME ARRAY      14
+THROUGH DUMMY       6
+UNSIGNED
+  $STATUS == "%X00000001"
+==== OPTASTS
+REENT          20
+BUMP           2
+FLAG           7 T
+  $STATUS == "%X00000001"
+==== OPTASTSN
+REENT          20
+BUMP           2
+FLAG           7 T
+  $STATUS == "%X00000001"
+==== OPTBRANCH
+LE           6           6
+LT           5           5
+GE           4           4
+SAME           3           4
+UP          13           4
+DOWNGE          -4           3
+DOWNGT           0           2
+DOWN1           5           3
+WORD      4           4
+DUMMY           8           7
+FARDO           4         120
+FARGOTO           3         174
+ZERO           0           1
+NEGATIVE          -1
+CHAINS
+REACHED
+ISPOS           1           0           0
+  $STATUS == "%X00000001"
+==== OPTBRANCHN
+LE           6           6
+LT           5           5
+GE           4           4
+SAME           3           4
+UP          13           4
+DOWNGE          -4           3
+DOWNGT           0           2
+DOWN1           5           3
+WORD      4           4
+DUMMY           8           7
+FARDO           4         120
+FARGOTO           3         174
+ZERO           0           1
+NEGATIVE          -1
+CHAINS
+REACHED
+ISPOS           1           0           0
+  $STATUS == "%X00000001"
+==== OPTCHAR
+CONSTANT [X]
+CUT CONSTANT [X]
+CUT VARIABLE [A]
+CUT SUBSTRING [C]
+ONE OF FIVE [AQCDE]
+INSIDE ITSELF [AQCAE]
+FILLED [C    ]
+HIGH, UNKNOWN  T T F F F T
+CONSTANT FIRST  T T F F F T
+HIGH, KNOWN  T T F F F T
+TWO HIGH    111
+ABOVE NUL     11
+NUL  F T F T T F
+NUL FIRST  T F
+NUL STORED      0
+SHARED TEXT [M]
+CONDITIONS    331
+TWO LENGTHS  T F T T
+STORE IN LOOP      1
+STRING IN LOOP      1
+OTHER IN LOOP      3
+OVERLAP  T
+OVERLAP     66
+OVERLAP    322
+OVERLAP     65
+COMMON  F T
+ADJUSTABLE [TSR]
+SQUEEZED [ABCDE]
+SHIFTED [BCDE]
+FUNCTION [B]
+FUNCTIONS  T F T
+VOLATILE  T
+RECORD      7
+  $STATUS == "%X00000001"
+==== OPTCHARN
+CONSTANT [X]
+CUT CONSTANT [X]
+CUT VARIABLE [A]
+CUT SUBSTRING [C]
+ONE OF FIVE [AQCDE]
+INSIDE ITSELF [AQCAE]
+FILLED [C    ]
+HIGH, UNKNOWN  T T F F F T
+CONSTANT FIRST  T T F F F T
+HIGH, KNOWN  T T F F F T
+TWO HIGH    111
+ABOVE NUL     11
+NUL  F T F T T F
+NUL FIRST  T F
+NUL STORED      0
+SHARED TEXT [M]
+CONDITIONS    331
+TWO LENGTHS  T F T T
+STORE IN LOOP      1
+STRING IN LOOP      1
+OTHER IN LOOP      3
+OVERLAP  T
+OVERLAP     66
+OVERLAP    322
+OVERLAP     65
+COMMON  F T
+ADJUSTABLE [TSR]
+SQUEEZED [ABCDE]
+SHIFTED [BCDE]
+FUNCTION [B]
+FUNCTIONS  T F T
+VOLATILE  T
+RECORD      7
+  $STATUS == "%X00000001"
+==== OPTCSE
+ADD   12.50
+MUL   25.00
+SUB   20.00
+DIV    5.00
+SUBR   -4.00
+DIVR   -5.00
+OTHER    5.00
+TWICE   10.00
+INC      13
+DEC      12
+MULDIV       7
+XOR       2
+OR      11
+AND       2
+WORD       8
+DOUBLE    2.00
+DUMMY    1.00    3.00    6.00
+FIXED    1.00    5.00    3.00
+MERGED   31.00   29.00   32.00
+INDEX   31.00   59.00   62.00
+INDEX   63.00
+ELEMENT   31.00  299.00  302.00
+SHARED    7.00   -1.00    2.00
+COMMON      13      23      26
+TAKEN      16      17      20
+LOCAL      29      27      30
+HOLDER      17      99
+CHANGED      18      77       0
+HALF       1      55       0
+ITSELF       7      11
+COMMUTE   11.00    9.00   30.00
+NOT   -2.00    4.00
+NESTED      50
+LOOP   36.00
+NOFAULT       7
+USED      10
+VOLATILE    7.00    5.00    8.00
+VFE       8  16
+SUBSTR CD DE
+STORED XD XD
+EQUAL
+  $STATUS == "%X00000001"
+==== OPTCSEN
+ADD   12.50
+MUL   25.00
+SUB   20.00
+DIV    5.00
+SUBR   -4.00
+DIVR   -5.00
+OTHER    5.00
+TWICE   10.00
+INC      13
+DEC      12
+MULDIV       7
+XOR       2
+OR      11
+AND       2
+WORD       8
+DOUBLE    2.00
+DUMMY    1.00    3.00    6.00
+FIXED    1.00    5.00    3.00
+MERGED   31.00   29.00   32.00
+INDEX   31.00   59.00   62.00
+INDEX   63.00
+ELEMENT   31.00  299.00  302.00
+SHARED    7.00   -1.00    2.00
+COMMON      13      23      26
+TAKEN      16      17      20
+LOCAL      29      27      30
+HOLDER      17      99
+CHANGED      18      77       0
+HALF       1      55       0
+ITSELF       7      11
+COMMUTE   11.00    9.00   30.00
+NOT   -2.00    4.00
+NESTED      50
+LOOP   36.00
+NOFAULT       7
+USED      10
+VOLATILE    7.00    5.00    8.00
+VFE       8  16
+SUBSTR CD DE
+STORED XD XD
+EQUAL
+  $STATUS == "%X00000001"
+==== OPTFAULTS
+NO TRIPS       5
+GUARDED       3       5
+INTEGER       3       9
+RESERVED       3       2
+WHILE       4
+TRAPPED       1
+KNOWN       2
+  $STATUS == "%X00000001"
+==== OPTFAULTSN
+NO TRIPS       5
+GUARDED       3       5
+INTEGER       3       9
+RESERVED       3       2
+WHILE       4
+TRAPPED       1
+KNOWN       2
+  $STATUS == "%X00000001"
+==== OPTFLOW
+ENTRY      43
+ASSIGNED       2      11
+EXTENDED     306       4
+GO TO LOOP      30       5
+ALTERNATE       1       5      10
+ 1
+  4
+   9
+NAMELIST       7      14
+STATEMENT FN      36
+AXCAXC       2
+LISTED       2
+  $STATUS == "%X00000001"
+==== OPTFLOWN
+ENTRY      43
+ASSIGNED       2      11
+EXTENDED     306       4
+GO TO LOOP      30       5
+ALTERNATE       1       5      10
+ 1
+  4
+   9
+NAMELIST       7      14
+STATEMENT FN      36
+AXCAXC       2
+LISTED       2
+  $STATUS == "%X00000001"
+==== OPTFORWARD
+HALF  327681
+BITS   0.750
+SUBSCRIPT      31      10
+UNKNOWN       7      30
+AGREE       4
+DIFFER       5
+LOOP       3       4
+COUNT       6       4
+NO TRIPS       6       5
+CALL      11      22       3
+LOGICAL
+COMPUTED 42
+OUT OF RANGE
+ARITHMETIC NEGATIVE
+ASSIGNED
+DOUBLE   3.000   1.000
+TEXT ABXDEF XD
+CHARS       2       4
+FUNC       3       6      10
+KEPT       7       7
+KEPT       7
+DIVIDE       1       8
+RESERVED       2
+FIXED   1.500
+  $STATUS == "%X00000001"
+==== OPTFORWARDN
+HALF  327681
+BITS   0.750
+SUBSCRIPT      31      10
+UNKNOWN       7      30
+AGREE       4
+DIFFER       5
+LOOP       3       4
+COUNT       6       4
+NO TRIPS       6       5
+CALL      11      22       3
+LOGICAL
+COMPUTED 42
+OUT OF RANGE
+ARITHMETIC NEGATIVE
+ASSIGNED
+DOUBLE   3.000   1.000
+TEXT ABXDEF XD
+CHARS       2       4
+FUNC       3       6      10
+KEPT       7       7
+KEPT       7
+DIVIDE       1       8
+RESERVED       2
+FIXED   1.500
+  $STATUS == "%X00000001"
+==== OPTINVAR
+NESTED     198
+NO TRIPS       0    5.00
+GUARDED       3    5.00
+SHORT       3    5.00
+LEFT       1    5.00
+SURE       4    3.50
+COMMON      18
+PASSED      12
+KEPT      36
+EQUIVALENT      36
+ELEMENT      22
+GO TO      24
+EXTENDED      24
+ASSIGNED      18
+ASSIGNED TOP      24
+OMITTED       3
+ROUTINE      18
+FROM THE TOP     118
+FROM ENTRY     124
+ADJUSTABLE       3    8.00
+ADJUSTABLE       3    9.00
+ADJUSTABLE       3    4.00
+CD EF AB
+GIVING UP       1
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== OPTINVARN
+NESTED     198
+NO TRIPS       0    5.00
+GUARDED       3    5.00
+SHORT       3    5.00
+LEFT       1    5.00
+SURE       4    3.50
+COMMON      18
+PASSED      12
+KEPT      36
+EQUIVALENT      36
+ELEMENT      22
+GO TO      24
+EXTENDED      24
+ASSIGNED      18
+ASSIGNED TOP      24
+OMITTED       3
+ROUTINE      18
+FROM THE TOP     118
+FROM ENTRY     124
+ADJUSTABLE       3    8.00
+ADJUSTABLE       3    9.00
+ADJUSTABLE       3    4.00
+CD EF AB
+GIVING UP       1
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== OPTLOOP
+ CHANGED           6           0           5
+ NONE UP           1           0
+ NONE DN           1           0
+ BY 3 ON          13          22
+BY 3 OFF          10          12
+  DOWN 1           0          10
+  DOWN 0          -1           5
+  DOWN L           1           3
+  DOWN 2           0           2
+ LARGEST -2147483648           3
+SMALLEST  2147483647           3
+ BY CALL          34           3
+ BY NAME          34           3
+  COMMON           4          33           3
+     OWN           5           4
+     OUT           3           2
+EXTENDED           4          36
+   DUMMY           6          15
+  SHARED           3           4           6
+IMPLIED            7          14          21
+   AFTER           4
+    REAL        2.50           3
+    WORD           4           3
+   GO TO           7           9
+NOT ONCE           9           0
+   WHILE          32           5
+WHILE FN           4           3
+   STMTS           5          10
+TWO BACK          11           6
+  TWO IN           3
+  TWO IN         100
+  STARTS           3
+DIAGONAL           6         165
+     ROW           6         115
+IN PLACE           0           1           4
+IN PLACE           0           2           0
+    DOWN           0         205
+    BY 2           7          69
+BACKWARD           6         335
+SOMETIME           6           3         109
+   TWICE           5        2624
+ OVERLAP           5          26
+    CALL           4          36
+ CHANGED           7          39
+    TEXTBEH
+  ADJUST         115         205
+     MID           3           2
+  VALUES           5          70          26
+    BOTH           5          20
+  $STATUS == "%X00000001"
+==== OPTLOOPN
+ CHANGED           6           0           5
+ NONE UP           1           0
+ NONE DN           1           0
+ BY 3 ON          13          22
+BY 3 OFF          10          12
+  DOWN 1           0          10
+  DOWN 0          -1           5
+  DOWN L           1           3
+  DOWN 2           0           2
+ LARGEST -2147483648           3
+SMALLEST  2147483647           3
+ BY CALL          34           3
+ BY NAME          34           3
+  COMMON           4          33           3
+     OWN           5           4
+     OUT           3           2
+EXTENDED           4          36
+   DUMMY           6          15
+  SHARED           3           4           6
+IMPLIED            7          14          21
+   AFTER           4
+    REAL        2.50           3
+    WORD           4           3
+   GO TO           7           9
+NOT ONCE           9           0
+   WHILE          32           5
+WHILE FN           4           3
+   STMTS           5          10
+TWO BACK          11           6
+  TWO IN           3
+  TWO IN         100
+  STARTS           3
+DIAGONAL           6         165
+     ROW           6         115
+IN PLACE           0           1           4
+IN PLACE           0           2           0
+    DOWN           0         205
+    BY 2           7          69
+BACKWARD           6         335
+SOMETIME           6           3         109
+   TWICE           5        2624
+ OVERLAP           5          26
+    CALL           4          36
+ CHANGED           7          39
+    TEXTBEH
+  ADJUST         115         205
+     MID           3           2
+  VALUES           5          70          26
+    BOTH           5          20
+  $STATUS == "%X00000001"
+==== OPTREG
+EXIT       3       6
+END       6      21
+KEPT     102     104     105
+CALLER     200
+COMMON       6      33
+EQUIV  196611
+RO      21
+MAYBE      10      13       7
+OPT       0      12
+OUT       4
+  1
+   2
+EIGHT     108
+DOUBLE  12.000
+QUAD   3.375
+WORD  -31536
+BYTE     -56
+LOGICAL       4
+CHARS       1 E
+SWITCH       4       8       7
+SIGN       3       0
+FSUM      15
+ENTRY       4       6
+MATRIX     129      12
+TEXT       2
+FIXUP    4.50       3
+BITS       5
+  $STATUS == "%X00000001"
+==== OPTREGN
+EXIT       3       6
+END       6      21
+KEPT     102     104     105
+CALLER     200
+COMMON       6      33
+EQUIV  196611
+RO      21
+MAYBE      10      13       7
+OPT       0      12
+OUT       4
+  1
+   2
+EIGHT     108
+DOUBLE  12.000
+QUAD   3.375
+WORD  -31536
+BYTE     -56
+LOGICAL       4
+CHARS       1 E
+SWITCH       4       8       7
+SIGN       3       0
+FSUM      15
+ENTRY       4       6
+MATRIX     129      12
+TEXT       2
+FIXUP    4.50       3
+BITS       5
+  $STATUS == "%X00000001"
+==== OVERLAY
+M   1.000000       1.000000       1.000000    
+V   5.000000      0.0000000E+00
+GRID          11          12
+CHAIN   2.000000       3.000000    
+B   1.000000       20.00000       30.00000    
+FLAG          -1
+BIT0 F
+BIT0 T
+BITS       16576
+TWICE   3.000000    
+P           1          20          30          40
+Q           0
+GUARD          -1          -2
+POINT   2.000000       4.000000       6.000000       6.000000    
+Y   10.00000    
+SWAPPED   6.000000       2.000000    
+  $STATUS == "%X00000001"
+==== OVERLAYN
+M   1.000000       1.000000       1.000000    
+V   5.000000      0.0000000E+00
+GRID          11          12
+CHAIN   2.000000       3.000000    
+B   1.000000       20.00000       30.00000    
+FLAG          -1
+BIT0 F
+BIT0 T
+BITS       16576
+TWICE   3.000000    
+P           1          20          30          40
+Q           0
+GUARD          -1          -2
+POINT   2.000000       4.000000       6.000000       6.000000    
+Y   10.00000    
+SWAPPED   6.000000       2.000000    
+  $STATUS == "%X00000001"
+==== PARAMS
+CONSTANTS:
+          5          11        1024          11          -3
+  3.141593       1.570796      0.2500000    
+          1           4           9          16          25
+        -55           0          55
+T          65 T
+  $STATUS == "%X00000001"
+==== PARAMSN
+CONSTANTS:
+          5          11        1024          11          -3
+  3.141593       1.570796      0.2500000    
+          1           4           9          16          25
+        -55           0          55
+T          65 T
+  $STATUS == "%X00000001"
+==== PARTS
+SAME NUMBER  50
+-- BY NUMBER
+1007 BOLT   500 A2
+1015 BOLT    75 B2
+1023 GEAR    40 C2
+1042 WIDGET 120 A1
+1060 WASHER 300 C1
+1081 BOLT   220 A3
+1099 NUT    300 B1
+-- BY NAME
+1007 BOLT   500 A2
+1015 BOLT    75 B2
+1081 BOLT   220 A3
+1023 GEAR    40 C2
+1099 NUT    300 B1
+1060 WASHER 300 C1
+1042 WIDGET 120 A1
+NO SUCH NAME  36
+1060 WASHER
+1023 GEAR  
+1042 WIDGET
+NAME TOO LONG  49
+-- BY QUANTITY
+1099 300
+1060 300
+1081 220
+1081 220
+1015  75
+1023  40
+KEYGE  94
+KEYGT  94
+NOTHING BELOW  36
+KEYLE  94
+NEW NUMBER  50
+-- CHANGED
+1015 BOLT   600 B2
+1007 BOLT   500 A2
+1099 NUT    300 B1
+1060 BOLT   300 C1
+1081 BOLT   220 A3
+1042 WIDGET 120 A1
+1023 GEAR    40 C2
+1007 BOLT   500 A2
+1015 BOLT   600 B2
+1081 BOLT   220 A3
+1060 BOLT   300 C1
+NO RECORD  53
+GONE  36
+1060 BOLT  
+1042 SPROCK  15 E1
+-- AGAIN
+1007 BOLT   500 A2
+1015 BOLT   600 B2
+1042 SPROCK  15 E1
+1060 BOLT   300 C1
+1081 BOLT   220 A3
+1099 NUT    300 B1
+1007
+OTHER KEYS  49
+BOSTON  |0210|
+ALBANY  |1220|
+CHICAGO |6060|
+BOSTON  |0210|
+ALBANY  |1220|
+ALBANY  1220
+CHICAGO 6060
+DENVER         0
+BOSTON  0210
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== PARTSN
+SAME NUMBER  50
+-- BY NUMBER
+1007 BOLT   500 A2
+1015 BOLT    75 B2
+1023 GEAR    40 C2
+1042 WIDGET 120 A1
+1060 WASHER 300 C1
+1081 BOLT   220 A3
+1099 NUT    300 B1
+-- BY NAME
+1007 BOLT   500 A2
+1015 BOLT    75 B2
+1081 BOLT   220 A3
+1023 GEAR    40 C2
+1099 NUT    300 B1
+1060 WASHER 300 C1
+1042 WIDGET 120 A1
+NO SUCH NAME  36
+1060 WASHER
+1023 GEAR  
+1042 WIDGET
+NAME TOO LONG  49
+-- BY QUANTITY
+1099 300
+1060 300
+1081 220
+1081 220
+1015  75
+1023  40
+KEYGE  94
+KEYGT  94
+NOTHING BELOW  36
+KEYLE  94
+NEW NUMBER  50
+-- CHANGED
+1015 BOLT   600 B2
+1007 BOLT   500 A2
+1099 NUT    300 B1
+1060 BOLT   300 C1
+1081 BOLT   220 A3
+1042 WIDGET 120 A1
+1023 GEAR    40 C2
+1007 BOLT   500 A2
+1015 BOLT   600 B2
+1081 BOLT   220 A3
+1060 BOLT   300 C1
+NO RECORD  53
+GONE  36
+1060 BOLT  
+1042 SPROCK  15 E1
+-- AGAIN
+1007 BOLT   500 A2
+1015 BOLT   600 B2
+1042 SPROCK  15 E1
+1060 BOLT   300 C1
+1081 BOLT   220 A3
+1099 NUT    300 B1
+1007
+OTHER KEYS  49
+BOSTON  |0210|
+ALBANY  |1220|
+CHICAGO |6060|
+BOSTON  |0210|
+ALBANY  |1220|
+ALBANY  1220
+CHICAGO 6060
+DENVER         0
+BOSTON  0210
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== POSITIONS
+FIRST           1
+SECOND           4
+SECOND AGAIN           4
+FIRST AGAIN           1
+RECORDS           5           0
+PAST THE END          -1
+LAST          25
+AFTER THE WRITE          -1
+          1
+         99
+         -1
+ PART ONE   
+END OF PART           2
+ PART TWO   
+END OF PART           4
+END OF PART           5
+          0
+          0
+DIRECT REWIND          20
+DIRECT BACKSPACE          23
+DIRECT ENDFILE          33
+FIXED ENDFILE          33
+NO SUCH UNIT          32
+         32
+         32
+F
+T UNKNOWN     
+FORMATTED   
+         -1
+ WORDS      
+APPEND BACKSPACE          23
+ NEW        
+ ONLY       
+READONLY ENDFILE          33
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== POSITIONSN
+FIRST           1
+SECOND           4
+SECOND AGAIN           4
+FIRST AGAIN           1
+RECORDS           5           0
+PAST THE END          -1
+LAST          25
+AFTER THE WRITE          -1
+          1
+         99
+         -1
+ PART ONE   
+END OF PART           2
+ PART TWO   
+END OF PART           4
+END OF PART           5
+          0
+          0
+DIRECT REWIND          20
+DIRECT BACKSPACE          23
+DIRECT ENDFILE          33
+FIXED ENDFILE          33
+NO SUCH UNIT          32
+         32
+         32
+F
+T UNKNOWN     
+FORMATTED   
+         -1
+ WORDS      
+APPEND BACKSPACE          23
+ NEW        
+ ONLY       
+READONLY ENDFILE          33
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== POWERS
+          3           9          27          81
+        243         729        2187        6561
+      19683           0           1         -27
+         -2           0           1           0
+         -1           0          -1           0
+          0           1           1           1
+          1           2          -1           3
+          2           4           1           9
+  1000    100 -31072        1000
+  2.250000       3.375000       25.62891    
+ 0.4444445      0.6666667       38.44336    
+  2.000000       1.500000       1.732051    
+  6.250000      -2.250000      0.3535534    
+  27.00000               1           4           9          81
+BOTH
+  3.375000000000000      0.6666666666666667       1.224744871391589    
+  1.837117307087384       1.837117307087384    
+  8.00000000000000000000000000000000      
+  1024.00000000000000000000000000000      
+ 0.125000000000000000000000000000000      
+  1.41421356237309504880168872420970      
+(0.0000000E+00,2.000000) (-2.000000,2.000000) (0.5000000,-0.5000000)
+(2.000000,0.0000000E+00) (2.000000,0.0000000E+00)
+(0.0000000000000000E+00,2.000000000000000)
+(0.0000000000000000E+00,-0.5000000000000000)
+(2.000000000000000,0.0000000000000000E+00)
+(2.000000000000000,0.0000000000000000E+00)
+  3.37500000000000       0.666666666666667        1.22474487139159     
+  1.83711730708738        1.83711730708738     
+(0.000000000000000E+000,2.00000000000000)
+(0.000000000000000E+000,-0.500000000000000)
+(2.00000000000000,0.000000000000000E+000)
+  $STATUS == "%X00000001"
+==== POWERSN
+          3           9          27          81
+        243         729        2187        6561
+      19683           0           1         -27
+         -2           0           1           0
+         -1           0          -1           0
+          0           1           1           1
+          1           2          -1           3
+          2           4           1           9
+  1000    100 -31072        1000
+  2.250000       3.375000       25.62891    
+ 0.4444445      0.6666667       38.44336    
+  2.000000       1.500000       1.732051    
+  6.250000      -2.250000      0.3535534    
+  27.00000               1           4           9          81
+BOTH
+  3.375000000000000      0.6666666666666667       1.224744871391589    
+  1.837117307087384       1.837117307087384    
+  8.00000000000000000000000000000000      
+  1024.00000000000000000000000000000      
+ 0.125000000000000000000000000000000      
+  1.41421356237309504880168872420970      
+(0.0000000E+00,2.000000) (-2.000000,2.000000) (0.5000000,-0.5000000)
+(2.000000,0.0000000E+00) (2.000000,0.0000000E+00)
+(0.0000000000000000E+00,2.000000000000000)
+(0.0000000000000000E+00,-0.5000000000000000)
+(2.000000000000000,0.0000000000000000E+00)
+(2.000000000000000,0.0000000000000000E+00)
+  3.37500000000000       0.666666666666667        1.22474487139159     
+  1.83711730708738        1.83711730708738     
+(0.000000000000000E+000,2.00000000000000)
+(0.000000000000000E+000,-0.500000000000000)
+(2.00000000000000,0.000000000000000E+000)
+  $STATUS == "%X00000001"
+==== PRIMES
+         25 primes below 100:
+          2           3           5           7          11          13
+         17          19          23          29          31          37
+         41          43          47          53          59          61
+         67          71          73          79          83          89
+         97
+Is 91 prime?  F
+  $STATUS == "%X00000001"
+==== PRIMESN
+         25 primes below 100:
+          2           3           5           7          11          13
+         17          19          23          29          31          37
+         41          43          47          53          59          61
+         67          71          73          79          83          89
+         97
+Is 91 prime?  F
+  $STATUS == "%X00000001"
+==== PROCS
+  6.000000       4.000000    
+ 0.0000000E+00
+SHOW           7
+          7           2
+  16.00000       36.00000    
+  2.50000000000000000000000000000000      
+  2.23606797749978969640917366873128      
+(2.000000000000000,1.000000000000000)
+  4.000000000000000    
+**ABC           5
+**ABC!
+****A           5
+****A!
+***AB       
+L
+A
+          5
+ENTRY2          11
+VIA1   1.000000    
+SHOW          12
+ENTRY2          13
+NO ALTERNATE RETURN
+FIRST
+SECOND
+F T F
+T F T
+T T T
+ 1145258561
+ 1145258561
+ 1515804759
+ABCD           4
+ABCDEF           6
+CHARSUB STRING
+HOLLSUB   2.500000      1230132307
+        300          -2          -1         -56
+          5         301       16576       65534
+          0           0           0           2
+      16576
+  7.500000    
+  8.500000    
+ 1145258561
+ 1212630597
+ 1145258561
+T
+T
+T
+          1           4
+  1.500000    
+ 1145258561
+          4 T
+          8 T
+          2 T
+          4 T
+          4 T
+          8 T
+          2 T
+          4 F
+          4 T
+          4 T
+T
+T T
+          0 T           5 T T
+          0 T           5 T
+  $STATUS == "%X00000001"
+==== PROCSN
+  6.000000       4.000000    
+ 0.0000000E+00
+SHOW           7
+          7           2
+  16.00000       36.00000    
+  2.50000000000000000000000000000000      
+  2.23606797749978969640917366873128      
+(2.000000000000000,1.000000000000000)
+  4.000000000000000    
+**ABC           5
+**ABC!
+****A           5
+****A!
+***AB       
+L
+A
+          5
+ENTRY2          11
+VIA1   1.000000    
+SHOW          12
+ENTRY2          13
+NO ALTERNATE RETURN
+FIRST
+SECOND
+F T F
+T F T
+T T T
+ 1145258561
+ 1145258561
+ 1515804759
+ABCD           4
+ABCDEF           6
+CHARSUB STRING
+HOLLSUB   2.500000      1230132307
+        300          -2          -1         -56
+          5         301       16576       65534
+          0           0           0           2
+      16576
+  7.500000    
+  8.500000    
+ 1145258561
+ 1212630597
+ 1145258561
+T
+T
+T
+          1           4
+  1.500000    
+ 1145258561
+          4 T
+          8 T
+          2 T
+          4 T
+          4 T
+          8 T
+          2 T
+          4 F
+          4 T
+          4 T
+T
+T T
+          0 T           5 T T
+          0 T           5 T
+  $STATUS == "%X00000001"
+==== REALS
+ 0.3333333333333333    
+ 0.1000000014901161      0.1000000000000000    
+ 0.1000000    
+  3.800000047683716    
+  1000000000000000.      1.0000000000000000E+16  0.1000000000000000    
+ 1.0000000000000000E-02  -12345.67800000000      0.0000000000000000E+00
+ 0.333333333333333333333333333333333      
+ 2.312964634635742808598648845082841E-0018
+  65536.0000000000000000000000000000      
+ 0.2500000000000000       1.000000000000000       2.250000000000000    
+  4.000000000000000       7.500000000000000    
+         -2
+  25.00000000000000    
+  2.500000000000000       40.00000000000000    
+BETWEEN
+ -546.0000000000000    
+ -546.000000000000000000000000000000      
+  $STATUS == "%X00000001"
+==== REALSN
+ 0.3333333333333333    
+ 0.1000000014901161      0.1000000000000000    
+ 0.1000000    
+  3.800000047683716    
+  1000000000000000.      1.0000000000000000E+16  0.1000000000000000    
+ 1.0000000000000000E-02  -12345.67800000000      0.0000000000000000E+00
+ 0.333333333333333333333333333333333      
+ 2.312964634635742808598648845082841E-0018
+  65536.0000000000000000000000000000      
+ 0.2500000000000000       1.000000000000000       2.250000000000000    
+  4.000000000000000       7.500000000000000    
+         -2
+  25.00000000000000    
+  2.500000000000000       40.00000000000000    
+BETWEEN
+ -546.0000000000000    
+ -546.000000000000000000000000000000      
+  $STATUS == "%X00000001"
+==== REALSG
+ 0.333333333333333     
+ 0.100000001490116       0.100000000000000     
+ 0.1000000    
+  3.80000004768372     
+ 1.000000000000000E+015  1.000000000000000E+016  0.100000000000000     
+ 1.000000000000000E-002  -12345.6780000000       0.000000000000000E+000
+ 0.333333333333333333333333333333333      
+-1.850371707708594232434444493162004E-0017
+  65536.0000000000000000000000000000      
+ 0.250000000000000        1.00000000000000        2.25000000000000     
+  4.00000000000000        7.50000000000000     
+         -2
+  25.0000000000000     
+  2.50000000000000        40.0000000000000     
+BETWEEN
+ -546.000000000000     
+ -546.000000000000000000000000000000      
+ 1.000000000000000E+307   1.00000000000000     
+  $STATUS == "%X00000001"
+==== REALSGN
+ 0.333333333333333     
+ 0.100000001490116       0.100000000000000     
+ 0.1000000    
+  3.80000004768372     
+ 1.000000000000000E+015  1.000000000000000E+016  0.100000000000000     
+ 1.000000000000000E-002  -12345.6780000000       0.000000000000000E+000
+ 0.333333333333333333333333333333333      
+-1.850371707708594232434444493162004E-0017
+  65536.0000000000000000000000000000      
+ 0.250000000000000        1.00000000000000        2.25000000000000     
+  4.00000000000000        7.50000000000000     
+         -2
+  25.0000000000000     
+  2.50000000000000        40.0000000000000     
+BETWEEN
+ -546.000000000000     
+ -546.000000000000000000000000000000      
+ 1.000000000000000E+307   1.00000000000000     
+  $STATUS == "%X00000001"
+==== RECORDS
+   1    1   1988
+NONE |   1988          -1
+     2      1
+          2
+        324          14
+ITEM1   1991ITEM2   1992ITEM3   1993ITEM4   1994
+  129.0000        4
+JTEM1 2
+         44 NEW  |
+(-2.000000,1.000000)
+12345       12346
+       1991
+(2.000000,4.000000)
+FOUND
+          0       12345
+          2
+  $STATUS == "%X00000001"
+==== RECORDSN
+   1    1   1988
+NONE |   1988          -1
+     2      1
+          2
+        324          14
+ITEM1   1991ITEM2   1992ITEM3   1993ITEM4   1994
+  129.0000        4
+JTEM1 2
+         44 NEW  |
+(-2.000000,1.000000)
+12345       12346
+       1991
+(2.000000,4.000000)
+FOUND
+          0       12345
+          2
+  $STATUS == "%X00000001"
+==== RELATIVE
+HEX BOLT    |  6
+MISSING 36
+PAST MAXREC 25
+LOCK NUT    
+DELETED, NEXT  8
+DELETED TWICE 36
+NO CURRENT 53
+1 LOCK NUT    
+2 SPRING      
+3 HEX BOLT    
+REWIND 20
+RECORDS 2
+WXYZ        
+DELETE 55
+KEYED 26
+INDEXED 49
+  $STATUS == "%X00000001"
+==== RELATIVEN
+HEX BOLT    |  6
+MISSING 36
+PAST MAXREC 25
+LOCK NUT    
+DELETED, NEXT  8
+DELETED TWICE 36
+NO CURRENT 53
+1 LOCK NUT    
+2 SPRING      
+3 HEX BOLT    
+REWIND 20
+RECORDS 2
+WXYZ        
+DELETE 55
+KEYED 26
+INDEXED 49
+  $STATUS == "%X00000001"
+==== RTLCALLS
+T           0           1
+T          -1           0
+T           5           1
+T       65536           5
+T   11.00000    
+F T        1024
+T F           0
+          1
+          3           0           2           0           3
+T
+          3 T
+T T
+WHICH           2
+UNWINDING
+PAST THE OPEN
+BACK          77
+WHICH           2
+UNWINDING
+WHICH           0
+BACK          55
+LINE: %SYSTEM-F-ABORT, abort
+CONTINUED
+DONE
+  $STATUS == "%X00000001"
+==== RTLCALLSN
+T           0           1
+T          -1           0
+T           5           1
+T       65536           5
+T   11.00000    
+F T        1024
+T F           0
+          1
+          3           0           2           0           3
+T
+          3 T
+T T
+WHICH           2
+UNWINDING
+PAST THE OPEN
+BACK          77
+WHICH           2
+UNWINDING
+WHICH           0
+BACK          55
+LINE: %SYSTEM-F-ABORT, abort
+CONTINUED
+DONE
+  $STATUS == "%X00000001"
+==== RTLCHARS
+     (I12)  2147483647           0
+     (I12)           0          64
+     (I12) -2147483648           0
+     (I12)           0          64
+     (I12)   214748364           0
+     (I12)   214748365           0
+     (I12)          12           0
+     (I12)           0          64
+      (I5)          42           0
+      (I5)         -42           0
+      (I5)           0          64
+      (I5)           0          64
+      (I5)           0           0
+      (I5)           0           0
+      (I5)           0           0
+      (I5)        1020           0
+   (BZ,I5)        1020           0
+   (BZ,I5)        -100           0
+      (I5)           7           0
+      (I5)           8           0
+      (I5)           0           0
+      (I5)          12           0
+      (I2)          12           0
+   (T3,I2)          34           0
+   (T9,I2)           0           0
+    WORD         300           0
+    BYTE           0          64
+WORD BIG          64
+BYTE NEG         -12           0
+                     (A)[ABC                           ]    0
+                    (A5)[  ABC                         ]    0
+                    (A2)[AB                            ]    0
+                ('X', A)[XABC                          ]    0
+                (T10, A)[         ABC                  ]    0
+                (10X, A)[          ABC                 ]    0
+        ('12345', T3, A)[12ABC                         ]    0
+        ('12345', T2, A)[1ABC5                         ]    0
+     ('1234567', TL4, A)[123ABC7                       ]    0
+          ('12', TR3, A)[12   ABC                      ]    0
+              ('12', 3X)[12****************************]   60
+    ('AB', T9, A, T1, A)[AB      CD                    ]    0
+                (T28, A)[                           ABC]    0
+                (T29, A)[******************************]   66
+                (T31, A)[******************************]   66
+                   (A32)[******************************]   66
+                   (A30)[                           ABC]    0
+                    (I0)[                              ]   63
+                 (T0, A)[BC                            ]    0
+          ('12', TL5, A)[ABC                           ]    0
+                (TL1, A)[ABC                           ]    0
+          (A5)[ABCDE]    0
+          (A5)[ABC  ]    0
+           (A)[AB   ]    0
+          (A7)[CDEFG]    0
+          (A2)[AB   ]    0
+      (T3, A5)[CDEFG]    0
+      (T3, A5)[CD   ]    0
+      (T7, A5)[     ]    0
+      (5X, A5)[     ]    0
+    ('XX', A5)[CDEFG]    0
+     (TL1, A5)[ABCDE]    0
+      (T0, A5)[ ABCD]    0
+     TWO[AB][BC   ]           0
+    BACK[FIRS 42 LAST                  ]
+    BACK -2147483648
+    BACK           0
+  $STATUS == "%X00000001"
+==== RTLCHARSN
+     (I12)  2147483647           0
+     (I12)           0          64
+     (I12) -2147483648           0
+     (I12)           0          64
+     (I12)   214748364           0
+     (I12)   214748365           0
+     (I12)          12           0
+     (I12)           0          64
+      (I5)          42           0
+      (I5)         -42           0
+      (I5)           0          64
+      (I5)           0          64
+      (I5)           0           0
+      (I5)           0           0
+      (I5)           0           0
+      (I5)        1020           0
+   (BZ,I5)        1020           0
+   (BZ,I5)        -100           0
+      (I5)           7           0
+      (I5)           8           0
+      (I5)           0           0
+      (I5)          12           0
+      (I2)          12           0
+   (T3,I2)          34           0
+   (T9,I2)           0           0
+    WORD         300           0
+    BYTE           0          64
+WORD BIG          64
+BYTE NEG         -12           0
+                     (A)[ABC                           ]    0
+                    (A5)[  ABC                         ]    0
+                    (A2)[AB                            ]    0
+                ('X', A)[XABC                          ]    0
+                (T10, A)[         ABC                  ]    0
+                (10X, A)[          ABC                 ]    0
+        ('12345', T3, A)[12ABC                         ]    0
+        ('12345', T2, A)[1ABC5                         ]    0
+     ('1234567', TL4, A)[123ABC7                       ]    0
+          ('12', TR3, A)[12   ABC                      ]    0
+              ('12', 3X)[12****************************]   60
+    ('AB', T9, A, T1, A)[AB      CD                    ]    0
+                (T28, A)[                           ABC]    0
+                (T29, A)[******************************]   66
+                (T31, A)[******************************]   66
+                   (A32)[******************************]   66
+                   (A30)[                           ABC]    0
+                    (I0)[                              ]   63
+                 (T0, A)[BC                            ]    0
+          ('12', TL5, A)[ABC                           ]    0
+                (TL1, A)[ABC                           ]    0
+          (A5)[ABCDE]    0
+          (A5)[ABC  ]    0
+           (A)[AB   ]    0
+          (A7)[CDEFG]    0
+          (A2)[AB   ]    0
+      (T3, A5)[CDEFG]    0
+      (T3, A5)[CD   ]    0
+      (T7, A5)[     ]    0
+      (5X, A5)[     ]    0
+    ('XX', A5)[CDEFG]    0
+     (TL1, A5)[ABCDE]    0
+      (T0, A5)[ ABCD]    0
+     TWO[AB][BC   ]           0
+    BACK[FIRS 42 LAST                  ]
+    BACK -2147483648
+    BACK           0
+  $STATUS == "%X00000001"
+==== RUNFORMAT
+ 100.50  50.2500 0.050000  200.00   1.0000
+0.010000 1000.00   2.5000   0.5000 0.090000
+    1  2
+    3  4
+G 5
+D  6
+ 7   8
+ 9  10
+ 2
+  3
+   4
+11
+ 12
+  13
+   14
+    15
+ 62
+  $STATUS == "%X00000001"
+==== RUNFORMATN
+ 100.50  50.2500 0.050000  200.00   1.0000
+0.010000 1000.00   2.5000   0.5000 0.090000
+    1  2
+    3  4
+G 5
+D  6
+ 7   8
+ 9  10
+ 2
+  3
+   4
+11
+ 12
+  13
+   14
+    15
+ 62
+  $STATUS == "%X00000001"
+==== SERVICES
+T T           4 T
+T T
+T           8V
+T     23 19-OCT-1987 13:30:15.25
+T     11 13:30:15.25
+T
+T
+T
+T           9 THE VALUE
+T
+T     16 DISK has 5 files
+T     15 7 then 000000FF
+--::.
+FROM THE SUBPROCESS
+T
+T     11 Alice Baker
+T
+F
+          0         100          10           1         111
+       1010         100
+--BA--A-B
+  $STATUS == "%X00000001"
+==== SERVICESN
+T T           4 T
+T T
+T           8V
+T     23 19-OCT-1987 13:30:15.25
+T     11 13:30:15.25
+T
+T
+T
+T           9 THE VALUE
+T
+T     16 DISK has 5 files
+T     15 7 then 000000FF
+--::.
+FROM THE SUBPROCESS
+T
+T     11 Alice Baker
+T
+F
+          0         100          10           1         111
+       1010         100
+--BA--A-B
+  $STATUS == "%X00000001"
+==== SHARED
+1 HALL     14
+HELD  52
+2 NOVAK    21
+HELD BY 2  52
+2 HALL     14
+1 CHEN     30
+2 NOVAK    21
+1 HALL     14
+2 ORTIZ    21
+1 ORTIZ     5
+1 HALL     14
+1 NOVAK    21
+1 IBARRA   21
+1 IBARRA   21
+DELETED  36
+3 CHEN     30
+READONLY  47
+NOT SHARED  30
+  $STATUS == "%X00000001"
+==== SHAREDN
+1 HALL     14
+HELD  52
+2 NOVAK    21
+HELD BY 2  52
+2 HALL     14
+1 CHEN     30
+2 NOVAK    21
+1 HALL     14
+2 ORTIZ    21
+1 ORTIZ     5
+1 HALL     14
+1 NOVAK    21
+1 IBARRA   21
+1 IBARRA   21
+DELETED  36
+3 CHEN     30
+READONLY  47
+NOT SHARED  30
+  $STATUS == "%X00000001"
+==== SQUARES
+The squares of 1 to 10
+          1           1
+          2           4
+          3           9
+          4          16
+          5          25
+          6          36
+          7          49
+          8          64
+          9          81
+         10         100
+  $STATUS == "%X00000001"
+==== SQUARESN
+The squares of 1 to 10
+          1           1
+          2           4
+          3           9
+          4          16
+          5          25
+          6          36
+          7          49
+          8          64
+          9          81
+         10         100
+  $STATUS == "%X00000001"
+==== STMTFUNCS
+  4.189000       33.51200    
+ 0.0000000E+00
+  4.000000    
+LESS
+FGHIJKLMNO
+F T          42   99.00000              77
+         25          35
+     5     33
+  2.250000000000000    
+(2.000000,1.000000)
+(4.000000,3.000000)
+(7.000000,0.0000000E+00)
+  9.000000    
+  27.00000    
+  9.000000    
+[ABCD]
+[AB  ]
+[ABC]
+[AB ]
+[     VWXYZ]
+[X     ]
+          4          10
+[ABCD      ]
+[FGHI!]
+  2.000000    
+  3.000000    
+  20.00000       2.000000    
+  2.000000               4ABCD
+  2.000000    
+          3
+          6
+          2
+          4
+T
+  5.00000000000000000000000000000000      
+(2.000000000000000,-1.000000000000000)
+[PAS]
+[APA]
+[ZZZ]
+SAME
+DIFFERENT
+  $STATUS == "%X00000001"
+==== STMTFUNCSN
+  4.189000       33.51200    
+ 0.0000000E+00
+  4.000000    
+LESS
+FGHIJKLMNO
+F T          42   99.00000              77
+         25          35
+     5     33
+  2.250000000000000    
+(2.000000,1.000000)
+(4.000000,3.000000)
+(7.000000,0.0000000E+00)
+  9.000000    
+  27.00000    
+  9.000000    
+[ABCD]
+[AB  ]
+[ABC]
+[AB ]
+[     VWXYZ]
+[X     ]
+          4          10
+[ABCD      ]
+[FGHI!]
+  2.000000    
+  3.000000    
+  20.00000       2.000000    
+  2.000000               4ABCD
+  2.000000    
+          3
+          6
+          2
+          4
+T
+  5.00000000000000000000000000000000      
+(2.000000000000000,-1.000000000000000)
+[PAS]
+[APA]
+[ZZZ]
+SAME
+DIFFERENT
+  $STATUS == "%X00000001"
+==== STOPDO
+          1
+END OF THE BODY
+THE TERMINAL STATEMENT
+  $STATUS == "%X00000001"
+==== STOPDON
+          1
+END OF THE BODY
+THE TERMINAL STATEMENT
+  $STATUS == "%X00000001"
+==== STOPS
+          4
+         20
+          5          10
+         20
+00098
+  $STATUS == "%X00000001"
+==== STOPSN
+          4
+         20
+          5          10
+         20
+00098
+  $STATUS == "%X00000001"
+==== STORE
+          7       16512   2.500000       2.500000       2.500000    
+  $STATUS == "%X00000001"
+==== STOREN
+          7       16512   2.500000       2.500000       2.500000    
+  $STATUS == "%X00000001"
+==== STRINGS
+[ABCDEFGH]
+[LITERAL]
+[CDE]
+[BCDE]
+[TWO ]
+[ABC]
+[ABC]
+[AB-XYZ      ]
+[XYZXYZ]
+[AB+GH]
+XYZ.FGH|
+BCDEFGHA
+ABCDBCDE
+******
+A###EF
+ONE ????SIX |
+ABCDEF
+ONE TWO |
+TWO NE|
+>WO SIX |
+SIX WO|
+ONE >IX |
+ONE >WO |
+>WO NE|
+ONE >W|
+[E ]
+[MIDDLE]
+[IDDLE]
+[<MIDDLE>            ]
+<MIDDLE>|
+[MIDDLEMIDDLE]
+MIDDLE seen
+[AB]
+[B]
+[<AB>                ]
+<AB>|
+[ABAB]
+not MIDDLE
+  $STATUS == "%X00000001"
+==== STRINGSN
+[ABCDEFGH]
+[LITERAL]
+[CDE]
+[BCDE]
+[TWO ]
+[ABC]
+[ABC]
+[AB-XYZ      ]
+[XYZXYZ]
+[AB+GH]
+XYZ.FGH|
+BCDEFGHA
+ABCDBCDE
+******
+A###EF
+ONE ????SIX |
+ABCDEF
+ONE TWO |
+TWO NE|
+>WO SIX |
+SIX WO|
+ONE >IX |
+ONE >WO |
+>WO NE|
+ONE >W|
+[E ]
+[MIDDLE]
+[IDDLE]
+[<MIDDLE>            ]
+<MIDDLE>|
+[MIDDLEMIDDLE]
+MIDDLE seen
+[AB]
+[B]
+[<AB>                ]
+<AB>|
+[ABAB]
+not MIDDLE
+  $STATUS == "%X00000001"
+==== STRRTL
+COPY_DX     "HELLO   " T
+TRUNCATED   "HEL" T
+UPCASE      "ABC1D   " T
+CONCAT      "ABCDE   " T
+TRIM        "XY" T
+LEFT        "AB      " T
+RIGHT       "DE      " T
+POS_EXTR    "BCD     " T
+LEN_EXTR    "AB      " T
+REPLACE     "AxyzDE  " T
+DUPL_CHAR   "ZZZ     " T
+DUPL blanks "        " T
+ELEMENT     "CD      " T
+NO ELEMENT  "CD      " T
+TRANSLATE   "xyCDx   " T
+COMPARE       0
+COMPARE      -1
+EQL           1
+BLIND         0
+MULTI        -1
+MULTI blind   0
+POSITION      4
+IN SET        3
+NOT IN SET    0
+SUBSTRING     1  2  2
+WILD        T
+WILD        T
+ILLSTRCLA   T
+UNCHANGED   "xyCDx   " T
+%STR-W-TRU, truncation
+%STR-S-ILLSTRPOS, illegal string position
+  $STATUS == "%X00000001"
+==== STRRTLN
+COPY_DX     "HELLO   " T
+TRUNCATED   "HEL" T
+UPCASE      "ABC1D   " T
+CONCAT      "ABCDE   " T
+TRIM        "XY" T
+LEFT        "AB      " T
+RIGHT       "DE      " T
+POS_EXTR    "BCD     " T
+LEN_EXTR    "AB      " T
+REPLACE     "AxyzDE  " T
+DUPL_CHAR   "ZZZ     " T
+DUPL blanks "        " T
+ELEMENT     "CD      " T
+NO ELEMENT  "CD      " T
+TRANSLATE   "xyCDx   " T
+COMPARE       0
+COMPARE      -1
+EQL           1
+BLIND         0
+MULTI        -1
+MULTI blind   0
+POSITION      4
+IN SET        3
+NOT IN SET    0
+SUBSTRING     1  2  2
+WILD        T
+WILD        T
+ILLSTRCLA   T
+UNCHANGED   "xyCDx   " T
+%STR-W-TRU, truncation
+%STR-S-ILLSTRPOS, illegal string position
+  $STATUS == "%X00000001"
+==== SYSDEF
+          1          44         793           3
+T
+T 19-OCT-1987 13:30:15.25
+          0          19
+T          29
+T
+          5 T
+          1           4           0
+          8          20
+CONTINUED
+NOTHING
+  $STATUS == "%X00000001"
+==== SYSDEFN
+          1          44         793           3
+T
+T 19-OCT-1987 13:30:15.25
+          0          19
+T          29
+T
+          5 T
+          1           4           0
+          8          20
+CONTINUED
+NOTHING
+  $STATUS == "%X00000001"
+==== SYSOWN
+own DATE           3
+  7.500000    
+          6
+own EXIT
+  $STATUS == "%X00000001"
+==== SYSOWNN
+own DATE           3
+  7.500000    
+          6
+own EXIT
+  $STATUS == "%X00000001"
+==== SYSROUTINES
+CHARACTER T
+BYTE array T
+BYTE element T
+INTEGER array T
+substring T
+element T T
+array T T
+field T     -1     -2
+short T
+long T
+passed length T
+clock T
+bytes T
+long T T
+short T
+longwords T T T
+words T T T
+elements T T T
+neighbors     -1     -1
+elapsed T
+today T
+ahead T
+once T
+an expression F
+       269.0        69070
+   1857923.0    475628535
+   3330690.0    852656806
+         0.0            1
+                part  00000070  0000000F
+       in the middle  FF56FFFF  12345678
+            in place  00000077  00000077
+        the sign bit  80000000  00000001
+             no bits  00000007  12345678
+            them all  12345678  12345678
+         expressions  00000000  0000FF00
+               words  0070  000F
+        the sign bit  8000  0001
+   word and longword  0FF0  0000
+  $STATUS == "%X00000003"
+==== SYSROUTINESN
+CHARACTER T
+BYTE array T
+BYTE element T
+INTEGER array T
+substring T
+element T T
+array T T
+field T     -1     -2
+short T
+long T
+passed length T
+clock T
+bytes T
+long T T
+short T
+longwords T T T
+words T T T
+elements T T T
+neighbors     -1     -1
+elapsed T
+today T
+ahead T
+once T
+an expression F
+       269.0        69070
+   1857923.0    475628535
+   3330690.0    852656806
+         0.0            1
+                part  00000070  0000000F
+       in the middle  FF56FFFF  12345678
+            in place  00000077  00000077
+        the sign bit  80000000  00000001
+             no bits  00000007  12345678
+            them all  12345678  12345678
+         expressions  00000000  0000FF00
+               words  0070  000F
+        the sign bit  8000  0001
+   word and longword  0FF0  0000
+  $STATUS == "%X00000003"
+==== TABLES
+DAYS          61          60         366
+DAYS          60          61
+FOUND           9           1          10           0
+INTERP   5.000000       20.00000       50.00000       90.00000    
+TAX  0.0000000E+00   250.0000       2250.000       9250.000    
+PRODUCT          58         139          64         154
+  $STATUS == "%X00000001"
+==== TABLESN
+DAYS          61          60         366
+DAYS          60          61
+FOUND           9           1          10           0
+INTERP   5.000000       20.00000       50.00000       90.00000    
+TAX  0.0000000E+00   250.0000       2250.000       9250.000    
+PRODUCT          58         139          64         154
+  $STATUS == "%X00000001"
+==== TEXT
+          9 WORDS
+BROWNDOG  FOX  JUMPSLAZY 
+OVER QUICKTHE  THE  
+LEVEL     | T T F
+T T F
+fox jumps |
+ABC DEF   |
+XYZ ABC   |
+MOST: O           4
+[-30215      ]
+[0           ]
+[         CHAPTER ONE          ]
+DOG FOX JUMPS OVER THE LAZY FO|
+  $STATUS == "%X00000001"
+==== TEXTN
+          9 WORDS
+BROWNDOG  FOX  JUMPSLAZY 
+OVER QUICKTHE  THE  
+LEVEL     | T T F
+T T F
+fox jumps |
+ABC DEF   |
+XYZ ABC   |
+MOST: O           4
+[-30215      ]
+[0           ]
+[         CHAPTER ONE          ]
+DOG FOX JUMPS OVER THE LAZY FO|
+  $STATUS == "%X00000001"
+==== TYPELESS
+ 1.0 00004080
+ 2.0
+T
+ 1.0
+   516
+    -1
+  -1
+T
+T
+00FFF99A 00000000
+00004080
+          8
+00008000
+00000001
+0000800A 12345678
+1234FFFF 00008000 89ABCDEF 01234567
+00008000 00000001
+00008000 00000000 00000000 12345678
+       1478
+     -30720
+        -16
+          7
+          1
+          2
+          3
+BC
+ODD
+44434241
+20204241
+5958
+2058
+5958
+ABCDEFGH
+          2
+ -538976323
+20202044
+          0
+ZED
+20204241
+20204241
+20204241
+          2
+20202042
+T
+ -538976323
+20204241
+T
+00034BC2
+ABCDEFGHI
+ABCDEFGHI
+        255
+  1683 -21177      0
+19CE0693
+0693
+19000693
+00000693
+  1680   1680   1683  -3136
+    -1
+    -1
+  -256
+  $STATUS == "%X00000001"
+==== TYPELESSN
+ 1.0 00004080
+ 2.0
+T
+ 1.0
+   516
+    -1
+  -1
+T
+T
+00FFF99A 00000000
+00004080
+          8
+00008000
+00000001
+0000800A 12345678
+1234FFFF 00008000 89ABCDEF 01234567
+00008000 00000001
+00008000 00000000 00000000 12345678
+       1478
+     -30720
+        -16
+          7
+          1
+          2
+          3
+BC
+ODD
+44434241
+20204241
+5958
+2058
+5958
+ABCDEFGH
+          2
+ -538976323
+20202044
+          0
+ZED
+20204241
+20204241
+20204241
+          2
+20202042
+T
+ -538976323
+20204241
+T
+00034BC2
+ABCDEFGHI
+ABCDEFGHI
+        255
+  1683 -21177      0
+19CE0693
+0693
+19000693
+00000693
+  1680   1680   1683  -3136
+    -1
+    -1
+  -256
+  $STATUS == "%X00000001"
+==== UNFORMATTED
+  7  3.50  2.25   1.0  -2.0 T ABCDEF
+   1   4   9
+     7
+   9   4   1
+PAST THE RECORD  67
+END OF U1
+SUM  500500
+AFTER IT   3
+ITS START   1   2
+AND AFTER   3
+UNFORMATTED  SEGMENTED   
+  42
+ENDFILE  -1
+TOO LONG  66
+1000   2
+NOTHING MORE  -1
+NO SEGMENTS  35
+   5   0   0
+FORMATTED ON UNFORMATTED  31
+UNFORMATTED ON FORMATTED  31
+F
+  $STATUS == "%X00000001"
+==== UNFORMATTEDN
+  7  3.50  2.25   1.0  -2.0 T ABCDEF
+   1   4   9
+     7
+   9   4   1
+PAST THE RECORD  67
+END OF U1
+SUM  500500
+AFTER IT   3
+ITS START   1   2
+AND AFTER   3
+UNFORMATTED  SEGMENTED   
+  42
+ENDFILE  -1
+TOO LONG  66
+1000   2
+NOTHING MORE  -1
+NO SEGMENTS  35
+   5   0   0
+FORMATTED ON UNFORMATTED  31
+UNFORMATTED ON FORMATTED  31
+F
+  $STATUS == "%X00000001"
+==== USEROPEN
+CALLED 1  1 FIRST           
+FAILED 30
+CONVERT NATIVE          
+VAXG  2
+OTHER 45
+SHARED ONE             
+READONLY 47
+  $STATUS == "%X00000001"
+==== USEROPENN
+CALLED 1  1 FIRST           
+FAILED 30
+CONVERT NATIVE          
+VAXG  2
+OTHER 45
+SHARED ONE             
+READONLY 47
+  $STATUS == "%X00000001"
+==== VFE
+   1
+   2
+   3
+   4
+   5
+    6
+     7
+      8
+       9
+       10
+       1.
+      2.0       2.0
+     3.00      3.00      3.00
+    4.000     4.000     4.000     4.000
+   5.0000    5.0000    5.0000    5.0000    5.0000
+ 007
+1  2
+ABXDEZ
+  150.00
+    1.50
+ 0.1500E+001
+ 1, 2,
+3, 4,
+    5
+ 008
+ 1  2   3
+  1  2
+  3
+9
+NC  3
+    2          6
+INSIDE
+   5
+    5
+    5
+  5
+   5
+ 2
+  3
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+ERR=
+
+IOS 63
+IOS 62
+  $STATUS == "%X00000001"
+==== VFEN
+   1
+   2
+   3
+   4
+   5
+    6
+     7
+      8
+       9
+       10
+       1.
+      2.0       2.0
+     3.00      3.00      3.00
+    4.000     4.000     4.000     4.000
+   5.0000    5.0000    5.0000    5.0000    5.0000
+ 007
+1  2
+ABXDEZ
+  150.00
+    1.50
+ 0.1500E+001
+ 1, 2,
+3, 4,
+    5
+ 008
+ 1  2   3
+  1  2
+  3
+9
+NC  3
+    2          6
+INSIDE
+   5
+    5
+    5
+  5
+   5
+ 2
+  3
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+IOS 68
+ERR=
+
+IOS 63
+IOS 62
+  $STATUS == "%X00000001"
+==== VMSTOUR
+The two ways agree: T
+"ONE TWO"  7
+Handler: no such file
+NOSUCH.DAT opened: F
+3 ticks
+DATE agrees: T
+IDATE in range: T
+Exit handler: status 00000001
+  $STATUS == "%X00000001"
+==== VMSTOURN
+The two ways agree: T
+"ONE TWO"  7
+Handler: no such file
+NOSUCH.DAT opened: F
+3 ticks
+DATE agrees: T
+IDATE in range: T
+Exit handler: status 00000001
+  $STATUS == "%X00000001"
+==== MATMUL
+  7777500.    
+  $STATUS == "%X00000001"
+==== MATMULN
+  7777500.    
+  $STATUS == "%X00000001"
+==== SIEVE
+       2262
+  $STATUS == "%X00000001"
+==== SIEVEN
+       2262
+  $STATUS == "%X00000001"
+==== SUBS
+ 2.7226574E+07
+  $STATUS == "%X00000001"
+==== SUBSN
+ 2.7226574E+07
+  $STATUS == "%X00000001"
+==== TEXTK
+         10THEQUICKBROWNFOXJUMPSOVERTHELAZYDOGAGAIN
+  $STATUS == "%X00000001"
+==== TEXTKN
+         10THEQUICKBROWNFOXJUMPSOVERTHELAZYDOGAGAIN
+  $STATUS == "%X00000001"
+==== WHET
+-6.7358583E-02  -1.125781      0.4998166    
+  $STATUS == "%X00000001"
+==== WHETN
+-6.7358583E-02  -1.125781      0.4998166    
+  $STATUS == "%X00000001"
+==== EXITMORE
+MAIN ENDS
+THIRD CALLS $EXIT
+  $STATUS == "%X00000003"
+==== EXITMOREN
+MAIN ENDS
+THIRD CALLS $EXIT
+  $STATUS == "%X00000003"
+==== POWBITS
+   F   1  -8 D1CE3E1F
+   D   1  -8 D1CD3E1F CCA75AA3
+   H   1  -8 3FA33FFC 47999AB5 8B414DAF CA59BEFE
+   F   1  -7 BAB43E6F
+   D   1  -7 BAB43E6F B2FB07F5
+   H   1  -7 DF753FFC EB65680F 50E2F487 2F859E7E
+   F   1  -6 CC073EB3
+   D   1  -6 CC073EB3 463D05F8
+   H   1  -6 67983FFD F08C0E0B 7CA97765 A3A3F6DE
+   F   1  -5 D9063F06
+   D   1  -5 D9053F06 34AE447A
+   H   1  -5 0DB23FFE F4690A88 1D7F598C FABA7926
+   F   1  -4 45883F4A
+   D   1  -4 45873F4A 4F04E6B7
+   H   1  -4 948B3FFE 6E9E0FCD 2C3F0652 781835BA
+   F   1  -3 B4273F97
+   D   1  -3 B4253F97 7B43ED09
+   H   1  -3 2F683FFF 12F64BDA A12F84BD DA12684B
+   F   1  -2 8E3A3FE3
+   D   1  -2 8E383FE3 38E4E38E
+   H   1  -2 C71C3FFF 1C7171C7 71C7C71C C71C1C71
+   F   1  -1 AAAB402A
+   D   1  -1 AAAA402A AAABAAAA
+   H   1  -1 55554000 55555555 55555555 55555555
+   F   1   1 000040C0
+   D   1   1 000040C0 00000000
+   H   1   1 80004001 00000000 00000000 00000000
+   F   1   2 00004110
+   D   1   2 00004110 00000000
+   H   1   2 20004002 00000000 00000000 00000000
+   F   1   3 00004158
+   D   1   3 00004158 00000000
+   H   1   3 B0004002 00000000 00000000 00000000
+   F   1   4 000041A2
+   D   1   4 000041A2 00000000
+   H   1   4 44004003 00000000 00000000 00000000
+   F   1   5 000041F3
+   D   1   5 000041F3 00000000
+   H   1   5 E6004003 00000000 00000000 00000000
+   F   1   6 40004236
+   D   1   6 40004236 00000000
+   H   1   6 6C804004 00000000 00000000 00000000
+   F   1   7 B0004288
+   D   1   7 B0004288 00000000
+   H   1   7 11604005 00000000 00000000 00000000
+   F   1   8 080042CD
+   D   1   8 080042CD 00000000
+   H   1   8 9A104005 00000000 00000000 00000000
+   F   1   9 C6004319
+   D   1   9 C6004319 00000000
+   H   1   9 338C4006 00000000 00000000 00000000
+   F   2  -8 D1CE3A1F
+   D   2  -8 D1CD3A1F CCA75AA3
+   H   2  -8 3FA33FF4 47999AB5 8B414DAF CA59BEFE
+   F   2  -7 BAB43AEF
+   D   2  -7 BAB43AEF B2FB07F5
+   H   2  -7 DF753FF5 EB65680F 50E2F487 2F859E7E
+   F   2  -6 CC073BB3
+   D   2  -6 CC073BB3 463D05F8
+   H   2  -6 67983FF7 F08C0E0B 7CA97765 A3A3F6DE
+   F   2  -5 D9063C86
+   D   2  -5 D9053C86 34AE447A
+   H   2  -5 0DB23FF9 F4690A88 1D7F598C FABA7926
+   F   2  -4 45883D4A
+   D   2  -4 45873D4A 4F04E6B7
+   H   2  -4 948B3FFA 6E9E0FCD 2C3F0652 781835BA
+   F   2  -3 B4273E17
+   D   2  -3 B4253E17 7B43ED09
+   H   2  -3 2F683FFC 12F64BDA A12F84BD DA12684B
+   F   2  -2 8E3A3EE3
+   D   2  -2 8E383EE3 38E4E38E
+   H   2  -2 C71C3FFD 1C7171C7 71C7C71C C71C1C71
+   F   2  -1 AAAB3FAA
+   D   2  -1 AAAA3FAA AAABAAAA
+   H   2  -1 55553FFF 55555555 55555555 55555555
+   F   2   1 00004140
+   D   2   1 00004140 00000000
+   H   2   1 80004002 00000000 00000000 00000000
+   F   2   2 00004210
+   D   2   2 00004210 00000000
+   H   2   2 20004004 00000000 00000000 00000000
+   F   2   3 000042D8
+   D   2   3 000042D8 00000000
+   H   2   3 B0004005 00000000 00000000 00000000
+   F   2   4 000043A2
+   D   2   4 000043A2 00000000
+   H   2   4 44004007 00000000 00000000 00000000
+   F   2   5 00004473
+   D   2   5 00004473 00000000
+   H   2   5 E6004008 00000000 00000000 00000000
+   F   2   6 40004536
+   D   2   6 40004536 00000000
+   H   2   6 6C80400A 00000000 00000000 00000000
+   F   2   7 B0004608
+   D   2   7 B0004608 00000000
+   H   2   7 1160400C 00000000 00000000 00000000
+   F   2   8 080046CD
+   D   2   8 080046CD 00000000
+   H   2   8 9A10400D 00000000 00000000 00000000
+   F   2   9 C6004799
+   D   2   9 C6004799 00000000
+   H   2   9 338C400F 00000000 00000000 00000000
+   F   3  -8 421E353A
+   D   3  -8 421D353A 60F18F72
+   H   3  -8 74843FEA E4C13B1E 31D5E053 06350519
+   F   3  -7 F9DA36A2
+   D   3  -7 F9D936A2 14D3DD84
+   H   3  -7 45F33FED 0829B3BB CB9AA448 E56E6475
+   F   3  -6 9A9E380E
+   D   3  -6 9A9E380E 9238A1D3
+   H   3  -6 1D353FF0 A7243D43 B2276FBF 28C017E7
+   F   3  -5 8E953979
+   D   3  -5 8E953979 3FE29B32
+   H   3  -5 F31D3FF2 647F2B36 77C4C38F 875169D4
+   F   3  -4 5CC23ADA
+   D   3  -4 5CC23ADA F7E6E7CB
+   H   3  -4 B4B93FF5 97EF85CF 88CBCB1D F667DC99
+   F   3  -3 112C3C3F
+   D   3  -3 112A3C3F 78E88AD2
+   H   3  -3 7E223FF8 A4F15515 D7B2D1B9 B79A6106
+   F   3  -2 2F063DA7
+   D   3  -2 2F053DA7 29CB3978
+   H   3  -2 4E5E3FFB F0530A72 9CBC9782 E0A714E5
+   F   3  -1 49253F12
+   D   3  -1 49243F12 24929249
+   H   3  -1 24923FFE 92494924 49242492 24929249
+   F   3   1 000041E0
+   D   3   1 000041E0 00000000
+   H   3   1 C0004003 00000000 00000000 00000000
+   F   3   2 00004344
+   D   3   2 00004344 00000000
+   H   3   2 88004006 00000000 00000000 00000000
+   F   3   3 800044AB
+   D   3   3 800044AB 00000000
+   H   3   3 57004009 00000000 00000000 00000000
+   F   3   4 10004616
+   D   3   4 10004616 00000000
+   H   3   4 2C20400C 00000000 00000000 00000000
+   F   3   5 4E004783
+   D   3   5 4E004783 00000000
+   H   3   5 069C400F 00000000 00000000 00000000
+   F   3   6 C88048E5
+   D   3   6 C88048E5 00000000
+   H   3   6 CB914011 00000000 00000000 00000000
+   F   3   7 0F704A49
+   D   3   7 0F704A49 00000000
+   H   3   7 921E4014 0000E000 00000000 00000000
+   F   3   8 ED824BAF
+   D   3   8 ED824BAF 00000000
+   H   3   8 5FDB4017 00000400 00000000 00000000
+   F   3   9 EFD24D19
+   D   3   9 EFD14D19 0000C000
+   H   3   9 33DF401A 0000A380 00000000 00000000
+   F   4  -8 BC1E4DBE
+   D   4  -8 BC1E4DBE C1AC8287
+   H   4  -8 7D78401B 0F833D05 8D345A4E EBBCBE89
+   F   4  -7 967D4C18
+   D   4  -7 967E4C18 A10BF4F8
+   H   4  -7 312C4018 F142FDE9 BE6F160E FA5674F0
+   F   4  -6 23FC4A74
+   D   4  -6 23FE4A74 013F91CA
+   H   4  -6 E8474014 9402FD23 7E5480DE F053C100
+   F   4  -5 4FFE48C3
+   D   4  -5 4FFF48C3 00B60BDC
+   H   4  -5 869F4011 B801FE17 FF2A6E35 6ACF6080
+   F   4  -4 3FFE471C
+   D   4  -4 3FFF471C 006163C0
+   H   4  -4 387F400E 8000FEC7 FF9EC34F 2AB95800
+   F   4  -3 0000457A
+   D   4  -3 FFFF4579 005D4480
+   H   4  -3 F3FF400A 0000FE89 FFB1BB7F 1D4CE000
+   F   4  -2 000043C8
+   D   4  -2 FFFF43C7 00259C00
+   H   4  -2 8FFF4007 0000FF38 FFE74AFF 07D00000
+   F   4  -1 00004220
+   D   4  -1 FFFF421F 000AD800
+   H   4  -1 3FFF4004 0000FFB0 FFFB13FF 01400000
+   F   4   1 CCCD3ECC
+   D   4   1 CCCD3ECC 00000000
+   H   4   1 99993FFD 00009A00 00000000 00000000
+   F   4   2 D70B3D23
+   D   4   2 D70A3D23 29008F5C
+   H   4   2 47AE3FFA B852151E 00000000 00000000
+   F   4   3 126F3B83
+   D   4   3 126E3B83 22E9F9DB
+   H   4   3 06243FF7 B645DDF3 AA00D2F1 00000000
+   F   4   4 B71939D1
+   D   4   4 B71839D1 310D2A99
+   H   4   4 A36E3FF3 32623055 2BED1965 0000FA44
+   F   4   5 C5AE3827
+   D   4   5 C5AD3827 5F4618D2
+   H   4   5 4F8B3FF0 A4BE5A31 69F68BC1 2F98A93F
+   F   4   6 37BF3686
+   D   4   6 37BD3686 0870CF03
+   H   4   6 0C6F3FED 06107B9E 147AE022 BDCFE147
+   F   4   7 BF9734D6
+   D   4   7 BF9634D6 BFD24DB4
+   H   4   7 AD7F3FE9 697F2C9B 8DEBA5D2 2DA50FAE
+   F   4   8 CC7A332B
+   D   4   8 CC78332B 511F691D
+   H   4   8 57983FE6 3AA2F0D2 24AA3D57 86BB0374
+   F   4   9 70623189
+   D   4   9 70603189 8C2E7673
+   H   4   9 12E03FE3 E718C0EC 3DC75B1E C0FD7A97
+   F   5  -8 07FB42CD
+   D   5  -8 07FC42CD 0735CBE0
+   H   5  -8 9A0F4005 C00EF997 E7F96A8F 098A1021
+   F   5  -7 AFFD4288
+   D   5  -7 AFFE4288 03BD2198
+   H   5  -7 115F4005 3007FC43 F4C9799F 040C900E
+   F   5  -6 3FFC4236
+   D   5  -6 3FFD4236 03BDDD40
+   H   5  -6 6C7F4004 8007FBBA F608799F 3670800B
+   F   5  -5 FFFD41F2
+   D   5  -5 FFFD41F2 038FA080
+   H   5  -5 E5FF4003 0007FB41 F7B11E7F 4E40C008
+   F   5  -4 FFFE41A1
+   D   5  -4 FFFE41A1 0195BC00
+   H   5  -4 43FF4003 0003FD78 FCD629FF C4C00002
+   F   5  -3 00004158
+   D   5  -3 FFFE4157 0144BC00
+   H   5  -3 AFFF4002 0002FD78 FDE487FF 95000001
+   F   5  -2 00004110
+   D   5  -2 FFFF410F 006C7000
+   H   5  -2 1FFF4002 0000FEE0 FF70D7FF 5A000000
+   F   5  -1 000040C0
+   D   5  -1 FFFF40BF 0030A000
+   H   5  -1 7FFF4001 0000FF40 FFD05FFF 18000000
+   F   5   1 AAAB402A
+   D   5   1 AAAB402A 00000000
+   H   5   1 55554000 00005600 00000000 00000000
+   F   5   2 8E3A3FE3
+   D   5   2 8E393FE3 7200C71C
+   H   5   2 C71C3FFF 38E4738E 00000000 00000000
+   F   5   3 B4273F97
+   D   5   3 B4263F97 B498D097
+   H   5   3 2F683FFF 2F694DA1 4C002F68 00000000
+   F   5   4 458A3F4A
+   D   5   4 45893F4A 60007B42
+   H   5   4 948B3FFE 84C012F6 00CA0000 00004588
+   F   5   5 D9073F06
+   D   5   5 D9063F06 C3299598
+   H   5   5 0DB23FFE 31860D2B 4086522C 98C2D905
+   F   5   6 CC0A3EB3
+   D   5   6 CC093EB3 5DF0215C
+   H   5   6 67983FFD B8BB1242 5A3FDFB1 D03EE987
+   F   5   7 BAB83E6F
+   D   5   7 BAB73E6F 2E014F03
+   H   5   7 DF753FFC 065C6E9E A03F0167 EAEEAD9B
+   F   5   8 D1D13E1F
+   D   5   8 D1CF3E1F 0670D9EB
+   H   5   8 3FA33FFC D60C9FB3 342AE047 5C83EB9D
+   F   5   9 17C23DD5
+   D   5   9 17C03DD5 3DD137C5
+   H   5   9 AA2F3FFB 8A7B806F A379A2ED 42A1699F
+   F   6  -8 DA0B3FEE
+   D   6  -8 DA0B3FEE 6D2073D8
+   H   6  -8 DDB43FFF B0DA16E7 410C3F80 B5BA0E75
+   F   6  -7 5E534003
+   D   6  -7 5E534003 D7E84915
+   H   6  -7 06BC4000 2BAFA692 82A0D143 8CC2219A
+   F   6  -6 815B4010
+   D   6  -6 815B4010 C203D1BD
+   H   6  -6 21024000 7B84B7A3 EF9D070E 0E16732B
+   F   6  -5 F4B2401E
+   D   6  -5 F4B2401E E08B06EA
+   H   6  -5 3DE94000 D5C1640D 093015F5 CE7904A8
+   F   6  -4 D9F7402E
+   D   6  -4 D9F7402E 0B024731
+   H   6  -4 5DB34000 6216EE8E 3DBD0416 F6549A56
+   F   6  -3 562A4040
+   D   6  -3 56294040 2237E10D
+   H   6  -3 80AC4000 1A4453C2 198570A6 C13465DE
+   F   6  -2 91FB4053
+   D   6  -2 91FB4053 1CCA2AE4
+   H   6  -2 A7234000 C839F655 D10C965A A37C98E5
+   F   6  -1 BA2E4068
+   D   6  -1 BA2E4068 1DBD3702
+   H   6  -1 D1744000 043B5C6E 30307AE7 05AC661D
+   F   6   1 CCCD408C
+   D   6   1 CCCD408C 00000000
+   H   6   1 19994001 00009A00 00000000 00000000
+   F   6   2 E148409A
+   D   6   2 E148409A 52001EB8
+   H   6   2 35C24001 70A4903D 00000000 00000000
+   F   6   3 5E3640AA
+   D   6   3 5E3540AA 10A6F958
+   H   6   3 54BC4001 B0216BF2 A8004BC6 00000000
+   F   6   4 67A240BB
+   D   6   4 67A240BB 27E709A0
+   H   6   4 76CF4001 404F4413 5FB7CE07 0000E910
+   F   6   5 253240CE
+   D   6   5 253240CE 064F88C0
+   H   6   5 9C4A4001 800C6511 3C699D88 7CC48351
+   F   6   6 C28440E2
+   D   6   6 C28440E2 E7F4B5AE
+   H   6   6 C5854001 5DCF096B 477FE77C 66A5E08B
+   F   6   7 6F9240F9
+   D   6   7 6F9240F9 676F55C1
+   H   6   7 F2DF4001 82CE24AB D502DCC7 2410DBE9
+   F   6   8 30914109
+   D   6   8 30904109 495BADDA
+   H   6   8 12614002 B492215B DE87B554 079B541E
+   F   6   9 E8A04116
+   D   6   9 E89F4116 8A905C83
+   H   6   9 2DD14002 07153EB9 C9101F58 A4E69813
+CSIN   1   0 A3A34176 226FC2D8
+CCOS   1   0 4791C2D8 794BC176
+CEXP   1   0 0F7FC252 366AC273
+CLOG   1   0 021040CE 6338406D
+CSIN   2   0 33DB40A6 8CFE4022
+CCOS   2   0 6F534055 2866C07D
+CEXP   2   0 FE2940BB 64074112
+CLOG   2   0 72173FB1 0FDB4049
+CSIN   3   0 2892413C E7DEC1A9
+CCOS   3   0 35FD41AC A3CE4139
+CEXP   3   0 1206C0A9 9945C07C
+CLOG   3   0 9737406F CB99C0AF
+   G   1  -8 FA393FC3 7994AB54
+   G   1  -7 F7563FCD B65E80FE
+   G   1  -6 79803FD6 08C7E0BF
+   G   1  -5 DB203FE0 4695A88F
+   G   1  -4 48B03FE9 E9E0FCD6
+   G   1  -3 F6843FF2 2F68BDA1
+   G   1  -2 71C73FFC C71C1C71
+   G   1  -1 55554005 55555555
+   G   1   1 00004018 00000000
+   G   1   2 00004022 00000000
+   G   1   3 0000402B 00000000
+   G   1   4 40004034 00000000
+   G   1   5 6000403E 00000000
+   G   1   6 C8004046 00000000
+   G   1   7 16004051 00000000
+   G   1   8 A1004059 00000000
+   G   1   9 38C04063 00000000
+   G   2  -8 FA393F43 7994AB54
+   G   2  -7 F7563F5D B65E80FE
+   G   2  -6 79803F76 08C7E0BF
+   G   2  -5 DB203F90 4695A88F
+   G   2  -4 48B03FA9 E9E0FCD6
+   G   2  -3 F6843FC2 2F68BDA1
+   G   2  -2 71C73FDC C71C1C71
+   G   2  -1 55553FF5 55555555
+   G   2   1 00004028 00000000
+   G   2   2 00004042 00000000
+   G   2   3 0000405B 00000000
+   G   2   4 40004074 00000000
+   G   2   5 6000408E 00000000
+   G   2   6 C80040A6 00000000
+   G   2   7 160040C1 00000000
+   G   2   8 A10040D9 00000000
+   G   2   9 38C040F3 00000000
+   G   3  -8 48433EA7 4C1FB1EE
+   G   3  -7 5F3B3ED4 82993BB0
+   G   3  -6 D3533F01 7245D43A
+   G   3  -5 31D23F2F 47FAB366
+   G   3  -4 4B983F5B 7EFB5CF9
+   G   3  -3 E2253F87 4F1C515A
+   G   3  -2 E5E03FB4 0539A72F
+   G   3  -1 49243FE2 24929249
+   G   3   1 0000403C 00000000
+   G   3   2 80004068 00000000
+   G   3   3 70004095 00000000
+   G   3   4 C20040C2 00000000
+   G   3   5 69C040F0 00000000
+   G   3   6 B910411C 00000000
+   G   3   7 21EE4149 00000000
+   G   3   8 FDB04175 00004000
+   G   3   9 3DFA41A3 00003800
+   G   4  -8 D78341B7 F835D050
+   G   4  -7 12CF4183 1422DE9F
+   G   4  -6 847F414E 402AD239
+   G   4  -5 69FF4118 8018E17B
+   G   4  -4 87FF40E3 000DEC78
+   G   4  -3 3FFF40AF 000AE890
+   G   4  -2 FFFF4078 0004F380
+   G   4  -1 FFFF4043 0001FB00
+   G   4   1 99993FD9 0000A000
+   G   4   2 7AE13FA4 852051EB
+   G   4   3 624D3F70 645DDF3B
+   G   4   4 36E33F3A 26220553
+   G   4   5 F8B53F04 4BE9A31A
+   G   4   6 C6F73ED0 610EB9E0
+   G   4   7 D7F23E9A 97FAC9B6
+   G   4   8 798F3E65 AA250D23
+   G   4   9 2E0C3E31 71870ECE
+   G   5  -8 A0FF4059 00E8997C
+   G   5  -7 15FF4051 0076C433
+   G   5  -6 C7FF4046 0075BBA8
+   G   5  -5 5FFF403E 006FB410
+   G   5  -4 3FFF4034 0031D780
+   G   5  -3 FFFF402A 0028D780
+   G   5  -2 FFFF4021 000DEE00
+   G   5  -1 FFFF4017 0006F400
+   G   5   1 55554005 00006000
+   G   5   2 71C73FFC 8E4038E3
+   G   5   3 F6843FF2 F693DA12
+   G   5   4 48B13FE9 4C002F68
+   G   5   5 DB203FE0 1865D2B3
+   G   5   6 79813FD6 8BBE242B
+   G   5   7 F7563FCD 65C0E9E0
+   G   5   8 FA393FC3 60CEFB3D
+   G   5   9 A2F83FBA A7BA06F8
+   G   6  -8 DB413FFD 0DA36E7B
+   G   6  -7 6BCA4000 BAFD6922
+   G   6  -6 102B4002 B8407A37
+   G   6  -5 DE964003 5C1140DD
+   G   6  -4 DB3E4005 2160E8E6
+   G   6  -3 0AC54008 A4483C21
+   G   6  -2 723F400A 839A655C
+   G   6  -1 1745400D 43B8C6E0
+   G   6   1 99994011 0000A000
+   G   6   2 5C294013 0A4003D7
+   G   6   3 4BC64015 0215BF2B
+   G   6   4 6CF44017 04FD4134
+   G   6   5 C4A64019 00CA5118
+   G   6   6 5850401C DCFF96B5
+   G   6   7 2DF2401F 2CEE4AB8
+   G   6   8 26124021 492C15BB
+   G   6   9 DD134022 7153EB90
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== POWBITSN
+   F   1  -8 D1CE3E1F
+   D   1  -8 D1CD3E1F CCA75AA3
+   H   1  -8 3FA33FFC 47999AB5 8B414DAF CA59BEFE
+   F   1  -7 BAB43E6F
+   D   1  -7 BAB43E6F B2FB07F5
+   H   1  -7 DF753FFC EB65680F 50E2F487 2F859E7E
+   F   1  -6 CC073EB3
+   D   1  -6 CC073EB3 463D05F8
+   H   1  -6 67983FFD F08C0E0B 7CA97765 A3A3F6DE
+   F   1  -5 D9063F06
+   D   1  -5 D9053F06 34AE447A
+   H   1  -5 0DB23FFE F4690A88 1D7F598C FABA7926
+   F   1  -4 45883F4A
+   D   1  -4 45873F4A 4F04E6B7
+   H   1  -4 948B3FFE 6E9E0FCD 2C3F0652 781835BA
+   F   1  -3 B4273F97
+   D   1  -3 B4253F97 7B43ED09
+   H   1  -3 2F683FFF 12F64BDA A12F84BD DA12684B
+   F   1  -2 8E3A3FE3
+   D   1  -2 8E383FE3 38E4E38E
+   H   1  -2 C71C3FFF 1C7171C7 71C7C71C C71C1C71
+   F   1  -1 AAAB402A
+   D   1  -1 AAAA402A AAABAAAA
+   H   1  -1 55554000 55555555 55555555 55555555
+   F   1   1 000040C0
+   D   1   1 000040C0 00000000
+   H   1   1 80004001 00000000 00000000 00000000
+   F   1   2 00004110
+   D   1   2 00004110 00000000
+   H   1   2 20004002 00000000 00000000 00000000
+   F   1   3 00004158
+   D   1   3 00004158 00000000
+   H   1   3 B0004002 00000000 00000000 00000000
+   F   1   4 000041A2
+   D   1   4 000041A2 00000000
+   H   1   4 44004003 00000000 00000000 00000000
+   F   1   5 000041F3
+   D   1   5 000041F3 00000000
+   H   1   5 E6004003 00000000 00000000 00000000
+   F   1   6 40004236
+   D   1   6 40004236 00000000
+   H   1   6 6C804004 00000000 00000000 00000000
+   F   1   7 B0004288
+   D   1   7 B0004288 00000000
+   H   1   7 11604005 00000000 00000000 00000000
+   F   1   8 080042CD
+   D   1   8 080042CD 00000000
+   H   1   8 9A104005 00000000 00000000 00000000
+   F   1   9 C6004319
+   D   1   9 C6004319 00000000
+   H   1   9 338C4006 00000000 00000000 00000000
+   F   2  -8 D1CE3A1F
+   D   2  -8 D1CD3A1F CCA75AA3
+   H   2  -8 3FA33FF4 47999AB5 8B414DAF CA59BEFE
+   F   2  -7 BAB43AEF
+   D   2  -7 BAB43AEF B2FB07F5
+   H   2  -7 DF753FF5 EB65680F 50E2F487 2F859E7E
+   F   2  -6 CC073BB3
+   D   2  -6 CC073BB3 463D05F8
+   H   2  -6 67983FF7 F08C0E0B 7CA97765 A3A3F6DE
+   F   2  -5 D9063C86
+   D   2  -5 D9053C86 34AE447A
+   H   2  -5 0DB23FF9 F4690A88 1D7F598C FABA7926
+   F   2  -4 45883D4A
+   D   2  -4 45873D4A 4F04E6B7
+   H   2  -4 948B3FFA 6E9E0FCD 2C3F0652 781835BA
+   F   2  -3 B4273E17
+   D   2  -3 B4253E17 7B43ED09
+   H   2  -3 2F683FFC 12F64BDA A12F84BD DA12684B
+   F   2  -2 8E3A3EE3
+   D   2  -2 8E383EE3 38E4E38E
+   H   2  -2 C71C3FFD 1C7171C7 71C7C71C C71C1C71
+   F   2  -1 AAAB3FAA
+   D   2  -1 AAAA3FAA AAABAAAA
+   H   2  -1 55553FFF 55555555 55555555 55555555
+   F   2   1 00004140
+   D   2   1 00004140 00000000
+   H   2   1 80004002 00000000 00000000 00000000
+   F   2   2 00004210
+   D   2   2 00004210 00000000
+   H   2   2 20004004 00000000 00000000 00000000
+   F   2   3 000042D8
+   D   2   3 000042D8 00000000
+   H   2   3 B0004005 00000000 00000000 00000000
+   F   2   4 000043A2
+   D   2   4 000043A2 00000000
+   H   2   4 44004007 00000000 00000000 00000000
+   F   2   5 00004473
+   D   2   5 00004473 00000000
+   H   2   5 E6004008 00000000 00000000 00000000
+   F   2   6 40004536
+   D   2   6 40004536 00000000
+   H   2   6 6C80400A 00000000 00000000 00000000
+   F   2   7 B0004608
+   D   2   7 B0004608 00000000
+   H   2   7 1160400C 00000000 00000000 00000000
+   F   2   8 080046CD
+   D   2   8 080046CD 00000000
+   H   2   8 9A10400D 00000000 00000000 00000000
+   F   2   9 C6004799
+   D   2   9 C6004799 00000000
+   H   2   9 338C400F 00000000 00000000 00000000
+   F   3  -8 421E353A
+   D   3  -8 421D353A 60F18F72
+   H   3  -8 74843FEA E4C13B1E 31D5E053 06350519
+   F   3  -7 F9DA36A2
+   D   3  -7 F9D936A2 14D3DD84
+   H   3  -7 45F33FED 0829B3BB CB9AA448 E56E6475
+   F   3  -6 9A9E380E
+   D   3  -6 9A9E380E 9238A1D3
+   H   3  -6 1D353FF0 A7243D43 B2276FBF 28C017E7
+   F   3  -5 8E953979
+   D   3  -5 8E953979 3FE29B32
+   H   3  -5 F31D3FF2 647F2B36 77C4C38F 875169D4
+   F   3  -4 5CC23ADA
+   D   3  -4 5CC23ADA F7E6E7CB
+   H   3  -4 B4B93FF5 97EF85CF 88CBCB1D F667DC99
+   F   3  -3 112C3C3F
+   D   3  -3 112A3C3F 78E88AD2
+   H   3  -3 7E223FF8 A4F15515 D7B2D1B9 B79A6106
+   F   3  -2 2F063DA7
+   D   3  -2 2F053DA7 29CB3978
+   H   3  -2 4E5E3FFB F0530A72 9CBC9782 E0A714E5
+   F   3  -1 49253F12
+   D   3  -1 49243F12 24929249
+   H   3  -1 24923FFE 92494924 49242492 24929249
+   F   3   1 000041E0
+   D   3   1 000041E0 00000000
+   H   3   1 C0004003 00000000 00000000 00000000
+   F   3   2 00004344
+   D   3   2 00004344 00000000
+   H   3   2 88004006 00000000 00000000 00000000
+   F   3   3 800044AB
+   D   3   3 800044AB 00000000
+   H   3   3 57004009 00000000 00000000 00000000
+   F   3   4 10004616
+   D   3   4 10004616 00000000
+   H   3   4 2C20400C 00000000 00000000 00000000
+   F   3   5 4E004783
+   D   3   5 4E004783 00000000
+   H   3   5 069C400F 00000000 00000000 00000000
+   F   3   6 C88048E5
+   D   3   6 C88048E5 00000000
+   H   3   6 CB914011 00000000 00000000 00000000
+   F   3   7 0F704A49
+   D   3   7 0F704A49 00000000
+   H   3   7 921E4014 0000E000 00000000 00000000
+   F   3   8 ED824BAF
+   D   3   8 ED824BAF 00000000
+   H   3   8 5FDB4017 00000400 00000000 00000000
+   F   3   9 EFD24D19
+   D   3   9 EFD14D19 0000C000
+   H   3   9 33DF401A 0000A380 00000000 00000000
+   F   4  -8 BC1E4DBE
+   D   4  -8 BC1E4DBE C1AC8287
+   H   4  -8 7D78401B 0F833D05 8D345A4E EBBCBE89
+   F   4  -7 967D4C18
+   D   4  -7 967E4C18 A10BF4F8
+   H   4  -7 312C4018 F142FDE9 BE6F160E FA5674F0
+   F   4  -6 23FC4A74
+   D   4  -6 23FE4A74 013F91CA
+   H   4  -6 E8474014 9402FD23 7E5480DE F053C100
+   F   4  -5 4FFE48C3
+   D   4  -5 4FFF48C3 00B60BDC
+   H   4  -5 869F4011 B801FE17 FF2A6E35 6ACF6080
+   F   4  -4 3FFE471C
+   D   4  -4 3FFF471C 006163C0
+   H   4  -4 387F400E 8000FEC7 FF9EC34F 2AB95800
+   F   4  -3 0000457A
+   D   4  -3 FFFF4579 005D4480
+   H   4  -3 F3FF400A 0000FE89 FFB1BB7F 1D4CE000
+   F   4  -2 000043C8
+   D   4  -2 FFFF43C7 00259C00
+   H   4  -2 8FFF4007 0000FF38 FFE74AFF 07D00000
+   F   4  -1 00004220
+   D   4  -1 FFFF421F 000AD800
+   H   4  -1 3FFF4004 0000FFB0 FFFB13FF 01400000
+   F   4   1 CCCD3ECC
+   D   4   1 CCCD3ECC 00000000
+   H   4   1 99993FFD 00009A00 00000000 00000000
+   F   4   2 D70B3D23
+   D   4   2 D70A3D23 29008F5C
+   H   4   2 47AE3FFA B852151E 00000000 00000000
+   F   4   3 126F3B83
+   D   4   3 126E3B83 22E9F9DB
+   H   4   3 06243FF7 B645DDF3 AA00D2F1 00000000
+   F   4   4 B71939D1
+   D   4   4 B71839D1 310D2A99
+   H   4   4 A36E3FF3 32623055 2BED1965 0000FA44
+   F   4   5 C5AE3827
+   D   4   5 C5AD3827 5F4618D2
+   H   4   5 4F8B3FF0 A4BE5A31 69F68BC1 2F98A93F
+   F   4   6 37BF3686
+   D   4   6 37BD3686 0870CF03
+   H   4   6 0C6F3FED 06107B9E 147AE022 BDCFE147
+   F   4   7 BF9734D6
+   D   4   7 BF9634D6 BFD24DB4
+   H   4   7 AD7F3FE9 697F2C9B 8DEBA5D2 2DA50FAE
+   F   4   8 CC7A332B
+   D   4   8 CC78332B 511F691D
+   H   4   8 57983FE6 3AA2F0D2 24AA3D57 86BB0374
+   F   4   9 70623189
+   D   4   9 70603189 8C2E7673
+   H   4   9 12E03FE3 E718C0EC 3DC75B1E C0FD7A97
+   F   5  -8 07FB42CD
+   D   5  -8 07FC42CD 0735CBE0
+   H   5  -8 9A0F4005 C00EF997 E7F96A8F 098A1021
+   F   5  -7 AFFD4288
+   D   5  -7 AFFE4288 03BD2198
+   H   5  -7 115F4005 3007FC43 F4C9799F 040C900E
+   F   5  -6 3FFC4236
+   D   5  -6 3FFD4236 03BDDD40
+   H   5  -6 6C7F4004 8007FBBA F608799F 3670800B
+   F   5  -5 FFFD41F2
+   D   5  -5 FFFD41F2 038FA080
+   H   5  -5 E5FF4003 0007FB41 F7B11E7F 4E40C008
+   F   5  -4 FFFE41A1
+   D   5  -4 FFFE41A1 0195BC00
+   H   5  -4 43FF4003 0003FD78 FCD629FF C4C00002
+   F   5  -3 00004158
+   D   5  -3 FFFE4157 0144BC00
+   H   5  -3 AFFF4002 0002FD78 FDE487FF 95000001
+   F   5  -2 00004110
+   D   5  -2 FFFF410F 006C7000
+   H   5  -2 1FFF4002 0000FEE0 FF70D7FF 5A000000
+   F   5  -1 000040C0
+   D   5  -1 FFFF40BF 0030A000
+   H   5  -1 7FFF4001 0000FF40 FFD05FFF 18000000
+   F   5   1 AAAB402A
+   D   5   1 AAAB402A 00000000
+   H   5   1 55554000 00005600 00000000 00000000
+   F   5   2 8E3A3FE3
+   D   5   2 8E393FE3 7200C71C
+   H   5   2 C71C3FFF 38E4738E 00000000 00000000
+   F   5   3 B4273F97
+   D   5   3 B4263F97 B498D097
+   H   5   3 2F683FFF 2F694DA1 4C002F68 00000000
+   F   5   4 458A3F4A
+   D   5   4 45893F4A 60007B42
+   H   5   4 948B3FFE 84C012F6 00CA0000 00004588
+   F   5   5 D9073F06
+   D   5   5 D9063F06 C3299598
+   H   5   5 0DB23FFE 31860D2B 4086522C 98C2D905
+   F   5   6 CC0A3EB3
+   D   5   6 CC093EB3 5DF0215C
+   H   5   6 67983FFD B8BB1242 5A3FDFB1 D03EE987
+   F   5   7 BAB83E6F
+   D   5   7 BAB73E6F 2E014F03
+   H   5   7 DF753FFC 065C6E9E A03F0167 EAEEAD9B
+   F   5   8 D1D13E1F
+   D   5   8 D1CF3E1F 0670D9EB
+   H   5   8 3FA33FFC D60C9FB3 342AE047 5C83EB9D
+   F   5   9 17C23DD5
+   D   5   9 17C03DD5 3DD137C5
+   H   5   9 AA2F3FFB 8A7B806F A379A2ED 42A1699F
+   F   6  -8 DA0B3FEE
+   D   6  -8 DA0B3FEE 6D2073D8
+   H   6  -8 DDB43FFF B0DA16E7 410C3F80 B5BA0E75
+   F   6  -7 5E534003
+   D   6  -7 5E534003 D7E84915
+   H   6  -7 06BC4000 2BAFA692 82A0D143 8CC2219A
+   F   6  -6 815B4010
+   D   6  -6 815B4010 C203D1BD
+   H   6  -6 21024000 7B84B7A3 EF9D070E 0E16732B
+   F   6  -5 F4B2401E
+   D   6  -5 F4B2401E E08B06EA
+   H   6  -5 3DE94000 D5C1640D 093015F5 CE7904A8
+   F   6  -4 D9F7402E
+   D   6  -4 D9F7402E 0B024731
+   H   6  -4 5DB34000 6216EE8E 3DBD0416 F6549A56
+   F   6  -3 562A4040
+   D   6  -3 56294040 2237E10D
+   H   6  -3 80AC4000 1A4453C2 198570A6 C13465DE
+   F   6  -2 91FB4053
+   D   6  -2 91FB4053 1CCA2AE4
+   H   6  -2 A7234000 C839F655 D10C965A A37C98E5
+   F   6  -1 BA2E4068
+   D   6  -1 BA2E4068 1DBD3702
+   H   6  -1 D1744000 043B5C6E 30307AE7 05AC661D
+   F   6   1 CCCD408C
+   D   6   1 CCCD408C 00000000
+   H   6   1 19994001 00009A00 00000000 00000000
+   F   6   2 E148409A
+   D   6   2 E148409A 52001EB8
+   H   6   2 35C24001 70A4903D 00000000 00000000
+   F   6   3 5E3640AA
+   D   6   3 5E3540AA 10A6F958
+   H   6   3 54BC4001 B0216BF2 A8004BC6 00000000
+   F   6   4 67A240BB
+   D   6   4 67A240BB 27E709A0
+   H   6   4 76CF4001 404F4413 5FB7CE07 0000E910
+   F   6   5 253240CE
+   D   6   5 253240CE 064F88C0
+   H   6   5 9C4A4001 800C6511 3C699D88 7CC48351
+   F   6   6 C28440E2
+   D   6   6 C28440E2 E7F4B5AE
+   H   6   6 C5854001 5DCF096B 477FE77C 66A5E08B
+   F   6   7 6F9240F9
+   D   6   7 6F9240F9 676F55C1
+   H   6   7 F2DF4001 82CE24AB D502DCC7 2410DBE9
+   F   6   8 30914109
+   D   6   8 30904109 495BADDA
+   H   6   8 12614002 B492215B DE87B554 079B541E
+   F   6   9 E8A04116
+   D   6   9 E89F4116 8A905C83
+   H   6   9 2DD14002 07153EB9 C9101F58 A4E69813
+CSIN   1   0 A3A34176 226FC2D8
+CCOS   1   0 4791C2D8 794BC176
+CEXP   1   0 0F7FC252 366AC273
+CLOG   1   0 021040CE 6338406D
+CSIN   2   0 33DB40A6 8CFE4022
+CCOS   2   0 6F534055 2866C07D
+CEXP   2   0 FE2940BB 64074112
+CLOG   2   0 72173FB1 0FDB4049
+CSIN   3   0 2892413C E7DEC1A9
+CCOS   3   0 35FD41AC A3CE4139
+CEXP   3   0 1206C0A9 9945C07C
+CLOG   3   0 9737406F CB99C0AF
+   G   1  -8 FA393FC3 7994AB54
+   G   1  -7 F7563FCD B65E80FE
+   G   1  -6 79803FD6 08C7E0BF
+   G   1  -5 DB203FE0 4695A88F
+   G   1  -4 48B03FE9 E9E0FCD6
+   G   1  -3 F6843FF2 2F68BDA1
+   G   1  -2 71C73FFC C71C1C71
+   G   1  -1 55554005 55555555
+   G   1   1 00004018 00000000
+   G   1   2 00004022 00000000
+   G   1   3 0000402B 00000000
+   G   1   4 40004034 00000000
+   G   1   5 6000403E 00000000
+   G   1   6 C8004046 00000000
+   G   1   7 16004051 00000000
+   G   1   8 A1004059 00000000
+   G   1   9 38C04063 00000000
+   G   2  -8 FA393F43 7994AB54
+   G   2  -7 F7563F5D B65E80FE
+   G   2  -6 79803F76 08C7E0BF
+   G   2  -5 DB203F90 4695A88F
+   G   2  -4 48B03FA9 E9E0FCD6
+   G   2  -3 F6843FC2 2F68BDA1
+   G   2  -2 71C73FDC C71C1C71
+   G   2  -1 55553FF5 55555555
+   G   2   1 00004028 00000000
+   G   2   2 00004042 00000000
+   G   2   3 0000405B 00000000
+   G   2   4 40004074 00000000
+   G   2   5 6000408E 00000000
+   G   2   6 C80040A6 00000000
+   G   2   7 160040C1 00000000
+   G   2   8 A10040D9 00000000
+   G   2   9 38C040F3 00000000
+   G   3  -8 48433EA7 4C1FB1EE
+   G   3  -7 5F3B3ED4 82993BB0
+   G   3  -6 D3533F01 7245D43A
+   G   3  -5 31D23F2F 47FAB366
+   G   3  -4 4B983F5B 7EFB5CF9
+   G   3  -3 E2253F87 4F1C515A
+   G   3  -2 E5E03FB4 0539A72F
+   G   3  -1 49243FE2 24929249
+   G   3   1 0000403C 00000000
+   G   3   2 80004068 00000000
+   G   3   3 70004095 00000000
+   G   3   4 C20040C2 00000000
+   G   3   5 69C040F0 00000000
+   G   3   6 B910411C 00000000
+   G   3   7 21EE4149 00000000
+   G   3   8 FDB04175 00004000
+   G   3   9 3DFA41A3 00003800
+   G   4  -8 D78341B7 F835D050
+   G   4  -7 12CF4183 1422DE9F
+   G   4  -6 847F414E 402AD239
+   G   4  -5 69FF4118 8018E17B
+   G   4  -4 87FF40E3 000DEC78
+   G   4  -3 3FFF40AF 000AE890
+   G   4  -2 FFFF4078 0004F380
+   G   4  -1 FFFF4043 0001FB00
+   G   4   1 99993FD9 0000A000
+   G   4   2 7AE13FA4 852051EB
+   G   4   3 624D3F70 645DDF3B
+   G   4   4 36E33F3A 26220553
+   G   4   5 F8B53F04 4BE9A31A
+   G   4   6 C6F73ED0 610EB9E0
+   G   4   7 D7F23E9A 97FAC9B6
+   G   4   8 798F3E65 AA250D23
+   G   4   9 2E0C3E31 71870ECE
+   G   5  -8 A0FF4059 00E8997C
+   G   5  -7 15FF4051 0076C433
+   G   5  -6 C7FF4046 0075BBA8
+   G   5  -5 5FFF403E 006FB410
+   G   5  -4 3FFF4034 0031D780
+   G   5  -3 FFFF402A 0028D780
+   G   5  -2 FFFF4021 000DEE00
+   G   5  -1 FFFF4017 0006F400
+   G   5   1 55554005 00006000
+   G   5   2 71C73FFC 8E4038E3
+   G   5   3 F6843FF2 F693DA12
+   G   5   4 48B13FE9 4C002F68
+   G   5   5 DB203FE0 1865D2B3
+   G   5   6 79813FD6 8BBE242B
+   G   5   7 F7563FCD 65C0E9E0
+   G   5   8 FA393FC3 60CEFB3D
+   G   5   9 A2F83FBA A7BA06F8
+   G   6  -8 DB413FFD 0DA36E7B
+   G   6  -7 6BCA4000 BAFD6922
+   G   6  -6 102B4002 B8407A37
+   G   6  -5 DE964003 5C1140DD
+   G   6  -4 DB3E4005 2160E8E6
+   G   6  -3 0AC54008 A4483C21
+   G   6  -2 723F400A 839A655C
+   G   6  -1 1745400D 43B8C6E0
+   G   6   1 99994011 0000A000
+   G   6   2 5C294013 0A4003D7
+   G   6   3 4BC64015 0215BF2B
+   G   6   4 6CF44017 04FD4134
+   G   6   5 C4A64019 00CA5118
+   G   6   6 5850401C DCFF96B5
+   G   6   7 2DF2401F 2CEE4AB8
+   G   6   8 26124021 492C15BB
+   G   6   9 DD134022 7153EB90
+FORTRAN STOP
+  $STATUS == "%X00000001"
+==== M_ALIGNED
+OTHER           5
+DMOD           0
+ZMOD           0
+D           7
+  $STATUS == "%X00000001"
+==== M_ALIGNEDN
+OTHER           5
+DMOD           0
+ZMOD           0
+D           7
+  $STATUS == "%X00000001"
+==== M_ALTRETURNS
+          2   2.500000    
+Second
+          1   2.500000    
+Again
+  $STATUS == "%X00000001"
+==== M_ALTRETURNSN
+          2   2.500000    
+Second
+          1   2.500000    
+Again
+  $STATUS == "%X00000001"
+==== M_ENTRIES
+  4.500000    
+  1.500000    
+  3.000000000000000    
+  $STATUS == "%X00000001"
+==== M_ENTRIESN
+  4.500000    
+  1.500000    
+  3.000000000000000    
+  $STATUS == "%X00000001"
+==== M_LEDGER
+OPEN   100.0000       200.0000       300.0000               0  0.0000000E+00
+BAL   137.5000       225.0000       304.0000    
+POSTS           4   66.50000               3
+HIST   50.00000       25.00000      -12.50000       4.000000    
+UNUSED  0.0000000E+00
+SUM   677.5000    
+  $STATUS == "%X00000001"
+==== M_LEDGERN
+OPEN   100.0000       200.0000       300.0000               0  0.0000000E+00
+BAL   137.5000       225.0000       304.0000    
+POSTS           4   66.50000               3
+HIST   50.00000       25.00000      -12.50000       4.000000    
+UNUSED  0.0000000E+00
+SUM   677.5000    
+  $STATUS == "%X00000001"
+==== M_PROCS
+  8.000000       2.000000    
+ANOTE           6
+NAME           4
+ANOTE           7
+  $STATUS == "%X00000001"
+==== M_PROCSN
+  8.000000       2.000000    
+ANOTE           6
+NAME           4
+ANOTE           7
+  $STATUS == "%X00000001"
+==== M_PSECTS
+OTHER           0   2.500000              11          77
+MAIN           0   3.500000              12          77
+  $STATUS == "%X00000001"
+==== M_PSECTSN
+OTHER           0   2.500000              11          77
+MAIN           0   3.500000              12          77
+  $STATUS == "%X00000001"
+==== M_STORE
+          7   2.500000       2.500000       2.500000    
+  $STATUS == "%X00000001"
+==== M_STOREN
+          7   2.500000       2.500000       2.500000    
+  $STATUS == "%X00000001"
+==== END
