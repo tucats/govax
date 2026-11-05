@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10a, the debugger's probe (`testdata/dbg89`), written 2026-11-05, waiting for its VMS run. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -403,9 +403,14 @@ it moves to a Phase 90.
    recursive levels, the format cache under ASTs; fixes as found.
 9. **The stack** (done 2026-11-05)**:** big frames in both paging modes, paging off's limit measured
    and documented, runaway recursion's report, LINK's STACK= in MANUAL.md.
-10. **The debugger:** SET SCOPE /CALL n and /CURRENT, CANCEL SCOPE, SHOW SCOPE's
-    mark, EXAMINE of each activation's locals and arguments; the probe
-    `testdata/dbg89` on VMS 7.1 (Question 7).
+10. **The debugger:** SET SCOPE (numeric scopes, path names, lists, `\`, `/MODULE`) and
+    `/CURRENT n`, CANCEL SCOPE, SHOW SCOPE's mark, numeric path names (`1\X`) and
+    invocation numbers (`REC 1\X`), the scope built-ins, each scope's registers, EXAMINE
+    of each activation's locals and arguments; the probe `testdata/dbg89` on VMS 7.1
+    (Question 7). (The survey's "/CALL n" was a misremembering: the 5.5 manual has
+    numeric scopes and `/CURRENT`.)
+    - 10a. **The probe** (written 2026-11-05; waiting for the author's run): `testdata/dbg89`.
+    - 10b. **The commands**, held to the probe's logs.
 11. **End to end:** `testdata/fortran`'s recursive programs (a tree of records
     walked recursively, quicksort, a recursive descent expression evaluator with
     CHARACTER functions and concatenation, recursion across files in `modules/`,
@@ -739,3 +744,27 @@ it moves to a Phase 90.
   - **Documented:** MANUAL.md's new "The user stack" (section 13, beside the address space), the LINK
     options table's `STACK=` and activation's step 6, and 14.7's paragraph on recursion (how deep it goes);
     HELP LINK's `STACK=`.
+- **2026-11-05:** Subtask 10a, the debugger's probe, `testdata/dbg89` (README.md), written and
+  rehearsed on govax; it waits for a run on VMS 7.1.
+  - **What the manual settles** (the *VMS 5.5 Debugger Manual*: SET SCOPE, CD-165 to CD-168;
+    CANCEL SCOPE; SHOW SCOPE; 5.3.2.2 to 5.3.3; D.3.9): the survey's "SET SCOPE/CALL n" doesn't
+    exist. SET SCOPE takes a list of locations, each a path name, a decimal n (the routine n levels
+    down the call stack, which moves as the program runs), or `\` (global); a list is searched in
+    order, and only it. `/CURRENT n` is the default list 0, 1, ... started at n, allowed only while the
+    default list is in effect, and the default comes back when the program goes on; a plain SET SCOPE
+    stays until CANCEL SCOPE or another SET SCOPE. `/MODULE` reads a name as a module where a routine
+    has it too, and SET SCOPE of a module not set sets it. Without SET SCOPE, `n\X` names X in scope
+    n, and `ROUTINE n\X` X in the routine's nth activation, 0 the most recent. Under `SET SCOPE 1`,
+    `EXAMINE %R5` is R5 in the caller. `%CURRENT_SCOPE_ENTRY`, `%NEXT_SCOPE_ENTRY`, and
+    `%PREVIOUS_SCOPE_ENTRY` are numbers of call frames. SHOW SCOPE's layout for the default list and
+    for `/CURRENT 2` is in its entry (the `*` moves to the start); a numeric scope is shown with its
+    routine's name where possible.
+  - **What the probe asks** (the manual doesn't say): the layouts of SHOW SCOPE after a path name, a
+    list, `\`, and a scope past the stack; the messages for each misuse; which registers scope n shows
+    (the saved ones from the frames above, by their masks, and the live ones for the rest? and R0, R1,
+    SP?); where a DEPOSIT to a register in scope n goes; whether STEP and GO reset `/CURRENT` and keep a
+    plain SET SCOPE; EXAMINE/SOURCE and TYPE under `/CURRENT`; the scope symbols' values; the frame
+    below the main routine; and the compiler's MACRO for a recursive function, N and K reached through
+    each scope's AP and FP.
+  - **The rehearsal** (a scratch copy of the volume, govax's `@DBG89`) ran every session to its end,
+    the program reaching each break and step the sessions expect.

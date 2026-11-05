@@ -1,0 +1,53 @@
+	.TITLE	DBG89	Phase 89 probe: SET SCOPE on a recursion
+	.IDENT	/01/
+; DBG89.MAR - the program behind Phase 89's debugger probe (README.md). START
+; calls DBG89B (another module's routine, which returns at once), then REC(3),
+; which calls itself down to REC(1), which calls LEAF. Each register a routine
+; writes says who wrote it: REC(n) leaves n*^X100 + k in Rk (R1 to R5), START
+; ^X1000 + k, LEAF ^X6006 in R6 and ^X7007 in R7. REC saves R2 to R4 and not
+; R5; LEAF saves R6 and not R7; START saves R2 to R5. So in each scope the
+; register a frame above saved, and the one nothing saved, can be told apart.
+; Y is a datum in both modules; DEPTH counts REC's activations.
+
+	.PSECT	DATA89, WRT, NOEXE, LONG
+Y:	.LONG	^X1111			; DBG89's Y; DBG89B has one too
+DEPTH:	.LONG	0			; REC's activations so far
+
+	.PSECT	CODE89, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<R2,R3,R4,R5>
+	MOVL	#^X1002, R2
+	MOVL	#^X1003, R3
+	MOVL	#^X1004, R4
+	MOVL	#^X1005, R5
+	CALLS	#0, G^DBG89B		; another module's routine
+	PUSHL	#3
+	CALLS	#1, REC			; REC(3), recursively
+	MOVL	#1, R0
+	RET
+
+	.ENTRY	REC, ^M<R2,R3,R4>	; R5 is written but not saved
+	MULL3	#^X100, 4(AP), R1	; n*^X100
+	ADDL3	#2, R1, R2
+	ADDL3	#3, R1, R3
+	ADDL3	#4, R1, R4
+	ADDL3	#5, R1, R5
+	INCL	DEPTH
+	CMPL	4(AP), #1
+	BGTR	RECUR
+	CALLS	#0, LEAF		; REC(1) calls LEAF
+DEEP:	MOVL	#1, R0
+	RET
+RECUR:	SUBL3	#1, 4(AP), -(SP)
+	CALLS	#1, REC
+BACK:	MULL2	4(AP), R0		; each inner REC returns here
+	RET
+
+	.ENTRY	LEAF, ^M<R6>		; R7 is written but not saved
+	MOVL	#^X6006, R6
+	MOVL	#^X7007, R7
+	MOVL	#^X0F00, R0
+	MOVL	#^X0F01, R1
+INLEAF:	NOP
+	RET
+
+	.END	START

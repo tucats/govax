@@ -1,0 +1,41 @@
+$ ! DBG89.COM - Phase 89's probe of the debugger's SET SCOPE on a recursion
+$ ! (docs/PHASE-89 - reentrant FORTRAN.md, subtask 10; README.md). EXCHANGE.CMD
+$ ! put the sources, the compiler's DBG89F.MAR, and govax's own image GVDBG89.EXE
+$ ! on this volume.
+$ !
+$ ! Run it with the exchange volume as the default directory:
+$ !
+$ !     @DBG89/OUTPUT=DBG89.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ !
+$ ! 1. Builds.
+$ !
+$ MACRO/DEBUG/LIST DBG89
+$ MACRO/DEBUG/LIST DBG89B
+$ LINK/DEBUG/MAP DBG89,DBG89B
+$ MACRO/DEBUG/LIST DBG89F
+$ LINK/DEBUG/MAP DBG89F
+$ !
+$ ! 2. Debugger sessions: image, command file, log.
+$ !
+$ CALL DEBUG DBG89 DBG89 DBG89
+$ CALL DEBUG DBG89 DBG89S DBG89S
+$ CALL DEBUG DBG89F DBG89F DBG89F
+$ CALL DEBUG GVDBG89 DBG89 GVDBG89
+$ DIRECTORY/SIZE=ALL/DATE *.*
+$ EXIT
+$ !
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG ''P3'.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@''P2'.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG 'P1'
+$   SHOW SYMBOL $STATUS
+$ ENDSUBROUTINE

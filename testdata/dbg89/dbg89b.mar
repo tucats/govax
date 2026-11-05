@@ -1,0 +1,15 @@
+	.TITLE	DBG89B	Phase 89 probe: a second module
+	.IDENT	/01/
+; DBG89B.MAR - the probe's second module (README.md): a routine with the
+; module's name, and a Y of its own beside DBG89's, and a Z only it has.
+
+	.PSECT	DATA89B, WRT, NOEXE, LONG
+Y:	.LONG	^XB111			; DBG89B's Y
+Z:	.LONG	^XB222			; only here
+
+	.PSECT	CODE89B, NOWRT, EXE, LONG
+	.ENTRY	DBG89B, ^M<>
+	MOVL	Z, R0
+	RET
+
+	.END
