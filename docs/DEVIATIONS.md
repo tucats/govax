@@ -1891,6 +1891,10 @@ nothing is changed until a program needs it. `TestLink82Oracle` lists the case.
 - **What**: FTNRTL tells a statement a handler unwound from by its frame's FP and saved PC. If the routine is called again from the same place, its frame is the same, and
   a statement on that unit from something it calls is `FOR$_RECIO_OPE`, unless a statement ran between at or above that frame. VMS's FORRTL goes on (`testdata/for83/vax/for83g-forrtl.txt`, cases 2 and 7;
   `TestFor83GoneOnFTNRTL` holds this as the known difference).
+- **Recursion** (Phase 89, subtask 8): a recursive routine that goes down again from where a handler unwound to gives each activation the frame it had, so after
+  an unwind this is the usual case, not a coincidence: a statement on the gone statement's unit from deeper than it, before any statement at its depth or above, is
+  `FOR$_RECIO_OPE`. One at its depth, or after any statement nearer the main program, is fine. Nothing in the frames tells the activations apart, so nothing is changed;
+  `testdata/rtl89/gone89.for` (`TestRTL89SameFrames`) holds the recursive form as the known difference.
 
 ### [Phase 83] The address an INSV's access violation reports
 

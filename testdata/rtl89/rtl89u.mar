@@ -1,0 +1,53 @@
+	.TITLE	RTL89U	Tracing and a FORMAT's cache, for FMTRACE.FOR
+;
+; TRACEON, TRACEOFF, and KEEPT are testdata/for83's FOR83U.MAR's: a frame saves T
+; clear and RET restores it from the frame, so these keep T set through a whole
+; statement. CLEARFMT is white-box: it knows FTNRTL's FORMAT block (the parsed
+; format's cell first) and parsed format (its size first).
+;
+	.PSECT	RTL89U_CODE,EXE,NOWRT
+;
+; TRACEON: T set on return to the caller.
+;
+	.ENTRY	TRACEON,^M<>
+	BISL2	#^X10,4(FP)
+	RET
+;
+; TRACEOFF: T clear at once, the handler seeing one trace after it (TP), which may
+; set T in this frame again, so that's cleared after the trace has gone.
+;
+	.ENTRY	TRACEOFF,^M<>
+	BICPSW	#^X10
+	NOP
+	BICL2	#^X10,4(FP)
+	RET
+;
+; KEEPT(establisher's FP, by value), from the trace handler: T set in the saved PSW
+; of every frame from the code that was traced out to the establisher's.
+;
+	.ENTRY	KEEPT,^M<>
+	MOVL	12(FP),R0		; the handler's frame
+	MOVL	12(R0),R0		; the traced code's
+10$:	CMPL	R0,4(AP)
+	BGEQU	20$			; the establisher: its RET is the program's
+	BISL2	#^X10,4(R0)
+	MOVL	12(R0),R1
+	CMPL	R1,R0
+	BLEQU	20$			; the chain's end
+	MOVL	R1,R0
+	BRB	10$
+20$:	RET
+;
+; CLEARFMT(FORMAT block, by value): frees the block's parsed format, if FTNRTL
+; has made one, and empties its cell, so the next statement parses it again.
+;
+	.ENTRY	CLEARFMT,^M<R2>
+	MOVL	@4(AP),R2		; the cell
+	MOVL	(R2),R0			; the parsed format
+	BEQL	10$
+	PUSHL	R2			; LIB$FREE_VM's second argument: the
+	PUSHL	R0			;  block's address; its first, its size
+	CALLS	#2,G^LIB$FREE_VM
+	CLRL	(R2)			; the cell, empty
+10$:	RET
+	.END

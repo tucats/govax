@@ -271,7 +271,12 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	BNEQ	20$
 	;
 	; A FORMAT statement's: parsed already, or parsed now and kept in its
-	; cell.
+	; cell. An AST's statement may parse the same FORMAT while this one
+	; does (another activation of a recursive routine, or the same routine
+	; entered again), so the parse goes where a run-time format's does, and
+	; is moved to the cell with ASTs held off only if the cell is still
+	; empty; if it isn't, this statement uses its own copy, which goes at
+	; its end, and nothing is lost.
 	;
 	BLBC	FB_W_FLAGS(R2),15$
 	MOVL	FB_A_VFE(R2),CTX_VFE(R6)
@@ -279,12 +284,23 @@ BLANKS:	.ASCII	/        /		; a source of blanks, 8 at a time
 	MOVL	(R3),R0
 	BNEQ	30$
 	BICL3	#^C1,FB_W_FLAGS(R2),-(SP) ; whether it may have expressions,
-	PUSHL	R3			; where the parsed format goes,
+	PUSHAL	CTX_FREEFMT(R6)		; where the parsed format goes,
 	MOVZWL	FB_W_LENGTH(R2),-(SP)	;  the text's length,
 	PUSHL	FB_A_TEXT(R2)		;  and its address
 	CALLS	#4,PARSE
 	BLBC	R0,90$
-	MOVL	(R3),R0
+	$SETAST_S ENBFLG=#0
+	MOVL	R0,R4			; SS$_WASSET if ASTs were enabled
+	TSTL	(R3)
+	BNEQ	17$			; parsed meanwhile: ours is this statement's
+	MOVL	CTX_FREEFMT(R6),(R3)	; the cell's now
+	CLRL	CTX_FREEFMT(R6)
+17$:	CMPL	R4,#SS$_WASSET
+	BNEQ	18$
+	$SETAST_S ENBFLG=#1
+18$:	MOVL	CTX_FREEFMT(R6),R0	; this statement's own copy,
+	BNEQ	30$
+	MOVL	(R3),R0			;  or the cell's
 	BRB	30$
 	;
 	; A run-time format's: its descriptor's text (a whole array's, for an

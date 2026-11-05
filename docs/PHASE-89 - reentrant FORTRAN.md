@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -399,7 +399,7 @@ it moves to a Phase 90.
    static locals, `effects.go`'s argument rewritten, dead code and the frame;
    `optrecur.for`, both modes; every corpus program run `/RECURSIVE` too
    (`recursiveModes`), with any exception explained.
-8. **FTNRTL:** recursive I/O at depth, dead-context popping across unwound
+8. **FTNRTL** (done 2026-11-05)**:** recursive I/O at depth, dead-context popping across unwound
    recursive levels, the format cache under ASTs; fixes as found.
 9. **The stack:** big frames in both paging modes, paging off's limit measured
    and documented, runaway recursion's report, LINK's STACK= in MANUAL.md.
@@ -678,3 +678,38 @@ it moves to a Phase 90.
     modes (and in `/NOOPTIMIZE` often the old value by chance), so they aren't compared with each other.
     A program can't be held to "now prints right" for the same reason.
   - `testdata/ftn86`'s procedure is regenerated with OPTRECUR, in `ftn86AwaitingVMS` until subtask 12's round.
+- **2026-11-05:** Subtask 8, FTNRTL under recursion.
+  - **The format cache, fixed** (`ftn_format.mar`'s `FTN$$FMT_START`): a FORMAT statement's first use
+    parsed straight into its `$FCn` cell, so an AST whose statement used the same FORMAT (the same routine
+    entered again, a recursive one's other activation) between the main line's test of the cell and its
+    store parsed it too, stored its copy, and lost it when the main line stored over it. The parse now goes
+    to the context's `CTX_FREEFMT`, as a run-time format's does, and moves to the cell with ASTs held off
+    only if the cell is still empty; otherwise the statement uses its own copy, freed at its end. Two
+    `$SETAST`s at each FORMAT's first use, none after. No new entry, so GSMATCH stays 1,19.
+  - **Testing it** (`testdata/rtl89`'s `fmtrace.for`, `TestRTL89FormatCache`): a timer can only sample a
+    window this narrow, so the program traces itself as `for83t.for` does, and declares one AST at the Kth
+    trace of the routine's first statement, for K = 1, 4, 7, ... until no AST comes, the cell emptied
+    before each (`rtl89u.mar`'s `CLEARFMT`, white-box: it frees the parsed format through the FORMAT
+    block's cell, and is the one place a program knows FTNRTL's layouts). A run in which LIB$GET_VM is
+    called twice is a race; the heap's bytes in use must be the same at the end. On the old library 30,576
+    bytes were lost (`/NOOPTIMIZE`; 30,368 `/OPTIMIZE`), on the new none, with races in both. About 0.6 s.
+  - **Recursive I/O at depth and unwinding** needed no change (`testdata/fortran/recurrtl.for`, worked by
+    hand before it ran, in all four compile modes and both paging modes): 300 internal WRITEs under way at
+    once beneath a WRITE to unit 6 (the item's call comes after the begin call, as its MACRO file shows); a
+    WRITE under way on each of 50 units at once, each from its own activation; RECIO_OPE at each of four
+    levels below a statement on unit 7, each statement's IOSTAT its own and only the outermost's record
+    written; a handler at activation 3 unwinding 57 activations out of their internal WRITEs 21 times,
+    after which activation 2's statement goes on with the value the handler gave and the heap doesn't grow
+    after the first round, the gone contexts popped by activation 2's `FTN$IO_ITEM` and used again; and a
+    WRITE to unit 8 at depth 30 unwound, then a statement on unit 8 from the establisher's caller, from the
+    same depth in the same frames again (popped as at its own FP), and from the main program. Taking the
+    begin call's popping out of `PUSH_CONTEXT` makes it stop with RECIO_OPE at the third.
+  - **The known difference, in its recursive form** (`gone89.for`, `TestRTL89SameFrames`; DEVIATIONS.md's
+    entry extended): going down again from where a handler unwound to gives each activation the frame it
+    had, so a statement on the gone statement's unit from deeper than it, before any statement at its depth
+    or above, is RECIO_OPE, as Phase 83 found for a routine called again from one place. Recursion makes
+    that the usual case after an unwind rather than a coincidence. Nothing in the frames tells the two
+    activations apart (the saved registers may or may not differ, and the statement's code isn't one range
+    of PCs once implied DO loops and the optimizer have laid it out), so nothing is changed; the test holds
+    it, and notices if it goes.
+  - `testdata/ftn86`'s procedure is regenerated with RECURRTL, in `ftn86AwaitingVMS` until subtask 12's round.
