@@ -1,0 +1,36 @@
+routine F function
+  param S       B  argument 1
+  param N       L  argument 2
+  cell  R       B  frame+0    variable R
+  cell  $T1     B  frame+12   temporary
+  cell  $T2     L  frame+24   temporary
+  cell  $D1     L  frame+28   descriptor T S 12
+  cell  $T3     B  frame+36   temporary
+  $LOCAL is 0 bytes
+  the frame is 52 bytes
+  datum $K1     text 'END'
+  datum $K2     text '<'
+B1:
+  ; line 7
+  branch le.L(@N, 0) B2 B3
+B2:
+  ; line 8
+  move @(@(arg S)+4)(12) = $K1(3)
+  ; line 9
+  jump B4
+B3:
+  ; line 10
+  assign $T2 = sub.L(@N, 1)
+  assign $D1 = 17694732
+  assign $D1+4 = addr($T1)
+  call F(ref $D1, ref $T2)
+  move R(12) = $T1(12)
+  ; line 11
+  move $T3(1) = $K2(1)
+  move $T3+1(12) = R(12)
+  move @(@(arg S)+4)(12) = $T3(13)
+  ; line 12
+  jump B4
+B4:
+  ; line 13
+  return

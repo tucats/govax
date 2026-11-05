@@ -1,0 +1,4 @@
+F:   606    80   ASTS 1
+NEST: ((((*))))        (((#)))            ASTS 1
+SPIN:   944  1896   BAD 0   DONE 1   WAITED T
+  $STATUS == "%X00000001"

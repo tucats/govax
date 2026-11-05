@@ -211,7 +211,7 @@ func (l *lowerer) callFunction(f *sema.FuncRef, result *Mem) {
 	switch {
 	case f.T.Kind == sema.Character:
 		d := &Descriptor{DType: DTypeT, Class: ClassS}
-		place := Text{result, l.charLength(f.Fn)}
+		place := Text{result, l.funcLength(f)}
 		args = append([]Arg{{Ref: l.describeText(d, place)}}, args...)
 		result = nil
 

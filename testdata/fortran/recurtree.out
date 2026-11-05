@@ -1,0 +1,26 @@
+ROOT  1   NODES  8   HEIGHT  5   WORDS 12
+  APPLE              3
+        CHERRY       1
+      DATE           1
+    FIG              2
+      KIWI           1
+        LIME         1
+PEAR                 2
+  PLUM               1
+PATH /PEAR/APPLE/FIG/DATE/CHERRY
+PATH /PEAR/APPLE/FIG/KIWI/LIME
+PATH /PEAR/PLUM
+ROOT 16   NODES 16   HEIGHT  5   WORDS 12
+  PLUM               1
+PEAR                 2
+        LIME         1
+      KIWI           1
+    FIG              2
+      DATE           1
+        CHERRY       1
+  APPLE              3
+PATH /PEAR/PLUM
+PATH /PEAR/APPLE/FIG/KIWI/LIME
+PATH /PEAR/APPLE/FIG/DATE/CHERRY
+DEPTHS  3 -1  4  0
+  $STATUS == "%X00000001"

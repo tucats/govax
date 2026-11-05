@@ -2,7 +2,7 @@
 
 **Status:** in progress. Planned 2026-11-04, with subtask 1, the survey (Part A
 below), which the author reviewed the same day, taking every recommendation ("The
-author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Needs Phases 74 to 88 (the FORTRAN program, and the
+author's answers"); subtask 2, the syntax, done 2026-11-04; subtask 3, the storage rule, done 2026-11-04; subtask 4, the compiler's cells in the frame, done 2026-11-04. Subtask 5, frame addresses in data, done 2026-11-04. Subtask 6, variable format expressions, done 2026-11-04. Subtask 7, the optimizer under recursion, done 2026-11-05. Subtask 8, FTNRTL under recursion, done 2026-11-05. Subtask 9, the stack, done 2026-11-05. Subtask 10, the debugger, done 2026-11-05 (10a the probe, `testdata/dbg89`, run on VMS 7.1; 10b the commands). Subtask 11, end to end, done 2026-11-05. Needs Phases 74 to 88 (the FORTRAN program, and the
 frame area Phase 82 gave AUTOMATIC).
 Follows the pattern of the FORTRAN program laid out in `PHASE-74 - FORTRAN plan.md`;
 its "Future work" listed "RECURSIVE routines (VAX FORTRAN V5 had none)", and
@@ -411,7 +411,7 @@ it moves to a Phase 90.
     numeric scopes and `/CURRENT`.)
     - 10a. **The probe** (done 2026-11-05; run on VMS 7.1 the same day): `testdata/dbg89`.
     - 10b. **The commands** (done 2026-11-05), held to the probe's logs by `TestDebuggerSessionOracle`.
-11. **End to end:** `testdata/fortran`'s recursive programs (a tree of records
+11. **End to end** (done 2026-11-05)**:** `testdata/fortran`'s recursive programs (a tree of records
     walked recursively, quicksort, a recursive descent expression evaluator with
     CHARACTER functions and concatenation, recursion across files in `modules/`,
     a routine entered by an AST while active, NAMELIST and VFEs in recursion), in
@@ -835,3 +835,45 @@ it moves to a Phase 90.
       instruction;
     - after the PC, EXAMINE with no location goes to the PSL;
     - TYPE with no line and none shown yet asks for one.
+- **2026-11-05:** Subtask 11, end to end.
+  - **New programs**, each worked by hand before it ran, in all four compile modes and both paging modes
+    (`testdata/fortran/README.md` has each one's row):
+    - `recurtree.for`: a binary tree of records in an array in COMMON, linked by subscripts. INSERT is
+      given the parent's link field as the dummy it sets; WALK keeps its node, a whole record, and the
+      line it prints in its frame across the walk of the left subtree; MIRROR builds the mirror image
+      from a record in each frame, assigned whole, its links from calls of itself; PATHS passes a
+      concatenation in its frame down as the next activation's passed-length dummy and uses it again
+      after the first child; HEIGHT, TOTAL, and DEPTH are RESULT functions given fields.
+    - `recurcalc.for`: a recursive descent evaluator, EXPR, TERM, and FACTOR, CHARACTER\*60 functions
+      with RESULT returning what they read with each operation in parentheses (concatenations of
+      substrings of passed lengths), the value through the argument; a parenthesis calls EXPR from
+      FACTOR, a unary minus FACTOR from itself; each result is read again and must give itself.
+    - `recurast.for`: recursive routines entered by an AST while active: F in the middle of
+      `N * K + F(N - 1, K) + POKE(N)` when POKE's `$DCLAST` lets an AST call F with other values (the
+      held call's value is a frame temporary); NEST holding its own call's CHARACTER value across PING's
+      AST, which runs NEST with another leaf; and SPIN's fourth activation waiting, with no call in its
+      loop, for a timer's AST that runs SPIN six deep below it, every activation then checking its array,
+      its internal file's text, and its DO loop.
+    - `modules/mutual`: recursion across files, linked in three orders: Hofstadter's female and male
+      sequences (FEM RECURSIVE with RESULT in one file, MALE by OPTIONS `/RECURSIVE` in the other,
+      calling itself by name), and the towers of Hanoi, HANOI and STEP calling each other across the two.
+  - **A bug found, fixed** (`ir/lowerchars.go`'s `funcLength`): a CHARACTER function whose value is a
+    RESULT variable, calling itself, passed a hidden result as long as the function's *name's* type,
+    which RESULT leaves the implicit REAL's 4 bytes, so `R = FACTOR(V)` in FACTOR kept four characters of
+    a value of sixty. A function reference's length is now its value's type (`FuncRef.T`), or for a
+    passed-length one its descriptor's, through the RESULT variable when there is one. The three places
+    that asked the function's symbol (`callFunction`, `chars`, `charLen`) ask `funcLength`. Found by
+    `recurcalc.for`'s last line (`-(1+1)` printed `-(1+1`), and gfortran agreed with the hand-worked
+    output; `ir/testdata/recurchar.for` is the golden.
+  - **gfortran** (`testdata/fortran/gfortran/compare.py`): the portable recursive programs
+    (`recursion`, `optrecur`, `recurtree`, `recurcalc`, `modules/mutual`) built by gfortran 16.2 and
+    compared with their `.out`s, all the same but for `recursion`'s IEEE `-0.0`, listed in `KNOWN`. The
+    script gives each recursive function without RESULT one (gfortran reads the name as the result, govax
+    as a call with an argument list), takes OPTIONS `/RECURSIVE` out, and compiles `-frecursive`. The
+    others (`recurio`, `recurvfe`, `recurrtl`, `recurast`) use VMS's extensions gfortran lacks.
+  - **DUNGEON** `/RECURSIVE` (subtask 7's `recursiveModes`) plays the milestone's game to the same SHA-256
+    in all 16 modes, locally.
+  - NAMELIST and variable format expressions in recursion were already `recurio.for`'s and
+    `recurvfe.for`'s (subtasks 5 and 6), and quicksort `recursion.for`'s, so nothing new was written for them.
+  - `testdata/ftn86`'s procedure is regenerated with RECURAST, RECURCALC, RECURTREE, and M_MUTUAL, in
+    `ftn86AwaitingVMS` until subtask 12's round.

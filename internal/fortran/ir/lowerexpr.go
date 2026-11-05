@@ -187,7 +187,7 @@ func (l *lowerer) chars(e sema.Expr) Text {
 		// temporary of that length; a dummy procedure declared CHARACTER*(*)
 		// is as long as the unit that passed it says, which only its
 		// descriptor knows, in a dynamic string.
-		n := l.charLength(e.Fn)
+		n := l.funcLength(e)
 
 		var result *Mem
 		if e.T.Size > 0 {

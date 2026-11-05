@@ -50,6 +50,24 @@ func dummyText(p *Param) *Mem {
 	return &Mem{Ptr: &Load{descriptorField(p, PointerOffset, Long)}, T: Byte}
 }
 
+// funcLength is the length of a CHARACTER function's value, as this unit
+// declares it: the reference's type, or for a passed-length one the length
+// its descriptor says. A recursive function's call of its own name, when
+// RESULT holds the value (docs/PHASE-89 - reentrant FORTRAN.md), is as long
+// as that variable, the function's name having no CHARACTER type of its
+// own.
+func (l *lowerer) funcLength(f *sema.FuncRef) Expr {
+	if f.T.Size > 0 {
+		return LongConst(int32(f.T.Size))
+	}
+
+	if f.Fn.ResultVar != nil {
+		return l.charLength(f.Fn.ResultVar)
+	}
+
+	return l.charLength(f.Fn)
+}
+
 // charLength is the length of a CHARACTER variable or of each element of a
 // CHARACTER array: its declared length, or for a passed-length dummy
 // argument its descriptor's, an unsigned word made a longword.
