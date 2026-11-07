@@ -691,7 +691,12 @@ never had.
   lines), the Builder's names folded by the index's case rule and `Abandon`
   (a module a bad key line left in the data, as VMS leaves it), held to VMS's
   libraries byte for byte (`TestHelp90NewLibraries`) and part A's log
-  (`TestHelp90LibraryOracle`).
+  (`TestHelp90LibraryOracle`). Subtask 4 (done 2026-11-07) is the engine,
+  `internal/help`'s `ParseModule`, `Lookup`, and `Render` over a `Library`
+  (`NewLBRLibrary`, `NewMemoryLibrary`), held to the probe's HELP logs by
+  `TestHelp90Oracle` and to VMS's own modules (local) by
+  `TestHelp90VMSModules`; the old `$` format is `oldformat.go` until
+  subtask 7.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1338,8 +1343,11 @@ expect adjustment as phases land):
   until Phase 52): reads a grammar file (`console.dcl`, `debug.dcl`),
   parses a command line into a `Result`, and dispatches it to the
   handler bound to its verb or syntax. The console and the debugger
-  each have a grammar. `internal/help` reads the help files (`help.File`:
-  `Parse`, `Load`, `Show`).
+  each have a grammar. `internal/help` is VMS's HELP (Phase 90): help
+  modules' trees (`ParseModule`), `Lookup`'s matching, and `Render`'s
+  layout; the console and debugger still read the old format
+  (`help.File`: `Parse`, `Load`, `Show`, in `oldformat.go`) until Phase
+  90's subtask 7.
 - `internal/dclshell` — DCL, the command language interpreter (Phases 48,
   50, 51; its own package since Phase 52). An `Interpreter` is every
   process's DCL: each process that runs DCL has a `Shell` (its process,

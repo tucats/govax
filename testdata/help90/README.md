@@ -180,6 +180,16 @@ Round 1c and round 2 ran 2026-11-07. Both logs passed the check and are in
 VT100 with a 52-line page, and HELP's `/PAGE` clears the screen before
 each display. Round 3, the LBR$ writing routines, is subtask 11's.
 
+## The tests
+
+`internal/lbr`'s `TestHelp90NewLibraries` and the console's
+`TestHelp90LibraryOracle` hold LIBRARY/HELP to part A (subtask 3).
+`internal/help`'s `TestHelp90Oracle` holds HELP's lookup and layout to
+part B of `vax/round1b/help90.log` and to `vax/round2/help90c.log`
+(subtask 4), and `TestHelp90VMSModules` to part G's local log, with
+VMS's HELPLIB.HLB copied beside it (the test's comment says how); it
+skips without them.
+
 ## What the run settles
 
 The phase doc's A.4 lists the questions. Its "What the probe settled"

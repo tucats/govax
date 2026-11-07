@@ -754,7 +754,8 @@ Scope):
    library is left for later, see the log).
 4. The engine's tree, lookup, and display: `internal/help` rewritten
    (`ParseModule`, `Lookup`, `Render`), held to round 1's B part
-   (`TestHelp90Oracle`), and to G's local log when it's present.
+   (`TestHelp90Oracle`), and to G's local log when it's present
+   (done 2026-11-07).
 5. The interactive session: prompts and responses, held to round 2's
    terminal log and round 1's D part.
 6. DCL's HELP: the grammar's qualifiers, the library search and
@@ -878,3 +879,59 @@ Scope):
   own); it comes with subtask 7's work on the libraries in the build if it's
   wanted. MANUAL.md's section 10 and HELP LIBRARY describe `/HELP`.
   Subtask 3 done.
+- **2026-11-07** — Subtask 4, the engine. `internal/help` is VMS's HELP
+  beside the old `$`-format reader (`oldformat.go`, which the console and
+  debugger use until subtask 7 removes it). `module.go`'s `ParseModule`
+  makes a module's tree of `Topic`s: a key line is a level, a blank *or a
+  tab*, and the rest of the line (HELP takes the tab LIBRARY doesn't:
+  NOBLANK's Tabbed), and a `/` line in column 1 is a qualifier line's
+  topic (`Slashes`) inside the topic whose text it's in, its text running
+  to the next `/` line or key line. A topic lists its numbered subtopics,
+  each followed by the `/` lines in its text (`list`); a word starting
+  with `/` also names the topic's own `/` lines and its subtopics'
+  (`candidates`). `library.go` is the `Library` interface over
+  `lbr.Library` (`NewLBRLibrary`) and help text in memory
+  (`NewMemoryLibrary`); `request.go` is `Split` and the matching
+  (abbreviations, `*`, `%`, case); `lookup.go` is `Lookup`, a list of
+  `Display`s; `render.go` is `Render` at a width. `TestHelp90Oracle`
+  holds all 167 HELP requests of round 1b's part B and round 1c to VMS's
+  logs line for line (the three that name a library that isn't there or
+  isn't a help library are subtask 6's). `TestHelp90VMSModules` holds the
+  28 requests of round 1's part G on VMS's own EXCHANGE, SUBMIT, and
+  ANALYZE modules to its local log, reading HELPLIB.HLB copied (COPY/BINARY)
+  from the local system disk into `testdata/disks/help90-vms/`; it skips
+  without them. The VAX that ran the probe has modules that disk's
+  HELPLIB.HLB lacks (DECnet-Plus, ON, RECALL, ...), so the two requests
+  listing every module are compared up to their lists. What the logs
+  settled beyond "What the probe settled":
+  - **The list's margin.** A key goes on a line if its text ends by column
+    width-3: at 132 a key ending at 129 stays and one ending at 130 or
+    later starts a line (ANALYZE /AUDIT /SELECT's list at depth 3, and
+    WIDE). That it's width-3 at 80 columns is unconfirmed.
+  - **Trailing blanks** are dropped from a text line, but not its last
+    character: VMS's modules have records of one blank, shown as the
+    shift and a blank.
+  - **The display's shape**: each heading after an empty line; then an
+    empty line and the text; then, with subtopics, two empty lines, the
+    "Additional information available:" line, an empty line, and the
+    list; then an empty line. "Sorry" follows the last heading with no
+    empty line between. A topic found with no text and no subtopics (EMPTY
+    Child) is shown, then "Sorry" with the request's words and the root
+    library's list, as if nothing had been found.
+  - **Where a qualifier line is shown**: one level below the numbered
+    topics last matched, which VMS keeps from one match to the next, so in
+    `HELP ALPHA /*` /NOTQUAL (in Description) is shown under /DIRECT,
+    matched just before it. govax copies this.
+  - **The level-1 heading** is the word upper-cased when it names a module
+    exactly (MIXEDCASE, LOWER), and the module's name otherwise (`*`, an
+    abbreviation).
+  - **The words** of the "Sorry" line are all the request's, as split,
+    upper-cased; "..." is taken off the first word; past nine words each
+    word is the one nine before it (only the tenth is in the logs).
+
+  Unconfirmed, and chosen: a word that is only `(` is dropped (`ODD (`
+  showed ODD); a first word with a comma is INVKEY, and which other
+  characters are is unknown; where several wildcard paths fail, the
+  "Sorry" is the deepest, the first of equals; a request going on past a
+  qualifier line's topic is "Sorry" below it; qualifier lines two levels
+  down aren't found. Subtask 4 done.

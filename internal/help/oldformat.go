@@ -1,7 +1,9 @@
-// Package help reads govax's help files (vax.help, the console's, and
-// debug.help, the debugger's) and finds a HELP command's topic in them.
-// The console and the debugger each have one.
 package help
+
+// This file is govax's old help format, which the console's and the
+// debugger's HELP still read: console.help and debug.help, text files of
+// "$KEY,KEY" lines. Phase 90's subtask 7 replaces them with VMS help
+// libraries read by the rest of this package, and removes this file.
 
 import (
 	"bufio"
