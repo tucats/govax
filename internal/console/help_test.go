@@ -27,17 +27,21 @@ func TestHelpTopics(t *testing.T) {
 	}{
 		{[]string{"SHOW", "LOGICAL"}, []string{"logical names"}},
 		{[]string{"SH", "LOGI"}, []string{"logical names"}},
-		{[]string{"INITIALIZE"}, []string{"required qualifier"}},
-		{[]string{"INIT"}, []string{"required qualifier"}},
-		{[]string{"INITIALIZE", "/VAX"}, []string{"INITIALIZE/VAX"}},
-		{[]string{"INITIALIZE", "/CONTAINER"}, []string{"INITIALIZE/CONTAINER"}},
-		{[]string{"DIRECTORY"}, []string{"DIRECTORY command lists files"}},
-		{[]string{"DIR"}, []string{"DIRECTORY command lists files"}},
-		{[]string{"DELETE"}, []string{"DELETE command removes a file"}},
-		{[]string{"DELETE", "/SYMBOL"}, []string{"DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL"}},
-		{[]string{"PURGE"}, []string{"PURGE command trims old versions"}},
-		{[]string{"TYPE"}, []string{"TYPE command writes"}},
-		{[]string{"COPY"}, []string{"COPY command copies a file"}},
+		{[]string{"INITIALIZE"}, []string{"chosen by its qualifier, which must be given"}},
+		{[]string{"INIT"}, []string{"chosen by its qualifier, which must be given"}},
+		{[]string{"INITIALIZE", "/VAX"}, []string{"INITIALIZE/VAX pages"}},
+		{[]string{"INITIALIZE", "/CONTAINER"}, []string{"INITIALIZE/CONTAINER container-file"}},
+		{[]string{"DIRECTORY"}, []string{"Lists files on a mounted volume"}},
+		{[]string{"DIR"}, []string{"Lists files on a mounted volume"}},
+		{[]string{"DIRECTORY", "/SIZE"}, []string{"USED (the default), ALLOCATION"}},
+		{[]string{"DIR", "Qualifiers", "/VERS"}, []string{"newest versions"}},
+		{[]string{"DELETE"}, []string{"Deletes files from a mounted volume"}},
+		{[]string{"DELETE", "/SYMBOL"}, []string{"DELETE/SYMBOL [symbol-name]"}},
+		{[]string{"PURGE"}, []string{"all but the newest versions"}},
+		{[]string{"TYPE"}, []string{"Writes a file to the terminal"}},
+		{[]string{"COPY"}, []string{"COPY input-filespec output-filespec"}},
+		{[]string{"COPY", "/RECORD_FORMAT"}, []string{"STREAM_LF", "govax's own"}},
+		{[]string{"CREATE", "/DIRECTORY", "Qualifiers", "/OWNER"}, []string{"PARENT"}},
 		{[]string{"SET", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
 		{[]string{"SE", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
 		{[]string{"SHOW", "DEFAULT"}, []string{"SHOW DEFAULT command displays"}},
@@ -108,9 +112,22 @@ var qualifierHelpExceptions = map[string]string{
 	"VMINIT/VERIFY":   "the old help never described it",
 }
 
+// rewrittenHelp are the verbs whose help subtask 8 has rewritten in VMS's
+// shape (docs/PHASE-90 - VMS help.md): each of their qualifiers must be a
+// qualifier line ("/NAME" in column 1, under a Qualifiers topic) or a
+// "/NAME" key somewhere in the verb's module. When every verb is here,
+// the looser check by text and qualifierHelpExceptions go.
+var rewrittenHelp = map[string]bool{
+	"BACKUP": true, "CONVERT": true, "COPY": true, "CREATE": true,
+	"DELETE": true, "DIRECTORY": true, "DISMOUNT": true, "DUMP": true,
+	"EDIT": true, "INITIALIZE": true, "MOUNT": true, "PURGE": true,
+	"RENAME": true, "TYPE": true,
+}
+
 // TestEveryQualifierHasHelp: each qualifier a verb's grammar takes (its
 // syntaxes' too) is named somewhere in the verb's topic or below it, as
-// "/NAME" or "/[NO]NAME" (Decision 10), but for qualifierHelpExceptions.
+// "/NAME" or "/[NO]NAME" (Decision 10), but for qualifierHelpExceptions;
+// a verb of rewrittenHelp's must have a qualifier line or key for it.
 func TestEveryQualifierHasHelp(t *testing.T) {
 	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 	g := consoletest.ConsoleGrammar(t)
@@ -127,8 +144,17 @@ func TestEveryQualifierHasHelp(t *testing.T) {
 		}
 
 		text := strings.ToUpper(topicText(lib, verb))
+		keys := qualifierKeys(lib, verb)
 
 		for _, q := range g.Qualifiers(verb) {
+			if rewrittenHelp[verb] {
+				if !qualifierKeyed(keys, q) {
+					missing = append(missing, verb+"/"+q+" (no qualifier line)")
+				}
+
+				continue
+			}
+
 			if qualifierNamed(text, q) {
 				continue
 			}
@@ -169,6 +195,61 @@ func qualifierNamed(text, q string) bool {
 	}
 
 	return strings.HasPrefix(q, "NO") && strings.Contains(text, "/[NO]"+q[2:])
+}
+
+// qualifierKeys is every qualifier line's key and every "/" key in the
+// module named name (as a word abbreviating it finds it), upper-cased.
+func qualifierKeys(lib help.Library, name string) []string {
+	var keys []string
+
+	var walk func(t *help.Topic)
+
+	walk = func(t *help.Topic) {
+		if strings.HasPrefix(t.Key, "/") {
+			keys = append(keys, strings.ToUpper(t.Key))
+		}
+
+		for _, s := range t.Slashes {
+			walk(s)
+		}
+
+		for _, s := range t.Subtopics {
+			walk(s)
+		}
+	}
+
+	for _, n := range lib.Names() {
+		if strings.HasPrefix(strings.ToUpper(n), strings.ToUpper(name)) {
+			if t := lib.Module(n); t != nil {
+				walk(t)
+			}
+		}
+	}
+
+	return keys
+}
+
+// qualifierKeyed reports whether one of keys, from qualifierKeys, is the
+// qualifier q's: "/Q", "/Q=value", "/Q[=value]", "/[NO]Q", or "/NOQ" for
+// a negatable Q (CONVERT's "/[NO]CREATE" is CREATE's, and "/NOQ" names Q).
+func qualifierKeyed(keys []string, q string) bool {
+	for _, k := range keys {
+		name := strings.TrimPrefix(k, "/")
+		negatable := strings.HasPrefix(name, "[NO]")
+		name = strings.TrimPrefix(name, "[NO]")
+
+		if end := strings.IndexFunc(name, func(r rune) bool {
+			return !(r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '$')
+		}); end >= 0 {
+			name = name[:end]
+		}
+
+		if name == q || negatable && "NO"+name == q || name == "NO"+q {
+			return true
+		}
+	}
+
+	return false
 }
 
 // topicText is every key and line of text in the module named name (as
@@ -217,7 +298,7 @@ func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
 			t.Fatalf("HELP %s: %v", arg, err)
 		}
 
-		if !strings.Contains(buf.String(), "DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL") {
+		if !strings.Contains(buf.String(), "DELETE/SYMBOL [symbol-name]") {
 			t.Errorf("HELP %s = %q, want the DELETE/SYMBOL topic", arg, buf.String())
 		}
 	}

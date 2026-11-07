@@ -49,7 +49,7 @@ func TestSystemHelpLibraries(t *testing.T) {
 		}
 	}
 
-	if out := run("HELP/NOPROMPT MOUNT"); !strings.Contains(out, "MOUNT command attaches") {
+	if out := run("HELP/NOPROMPT MOUNT"); !strings.Contains(out, "Mounts a container, a host file holding") {
 		t.Errorf("HELP MOUNT:\n%s", out)
 	}
 
@@ -141,7 +141,7 @@ func TestSystemHelpRefresh(t *testing.T) {
 		t.Errorf("the user's modules are gone: SITE %q, COPY %q", got["SITE"], got["COPY"])
 	}
 
-	if strings.Contains(got["TYPE"], "An older TYPE.") || !strings.Contains(got["TYPE"], "TYPE command writes") {
+	if strings.Contains(got["TYPE"], "An older TYPE.") || !strings.Contains(got["TYPE"], "Writes a file to the terminal") {
 		t.Errorf("TYPE wasn't refreshed: %q", got["TYPE"])
 	}
 

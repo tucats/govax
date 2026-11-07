@@ -34,9 +34,11 @@ func TestHelpLibrariesMatchSources(t *testing.T) {
 // TestHelpModulesWellFormed is Decision 10's last check on govax's help
 // files: every module parses, each key line is at most one level below
 // the one before it (LIBRARY's ILLKEYLVL), no two subtopics of a topic have
-// the same key, no line of text would be read as a key line or a
-// qualifier line by accident (a digit or a "/" in column 1), and each
-// library reads back as a help library holding every module.
+// the same key, nor two qualifier lines of one topic, no line of text
+// would be read as a key line by accident (a digit in column 1), and each
+// library reads back as a help library holding every module. A "/" in
+// column 1 is a qualifier line, as VMS's modules write a command's
+// qualifiers under its Qualifiers topic (Phase 90's subtask 8).
 func TestHelpModulesWellFormed(t *testing.T) {
 	for name, dir := range HelpLibraries {
 		entries, err := HelpModules(FS, dir)
@@ -54,8 +56,8 @@ func TestHelpModulesWellFormed(t *testing.T) {
 			for i, rec := range e.Records {
 				level, key, ok := lbr.HelpKeyLine(rec)
 				if !ok {
-					if len(rec) > 0 && (rec[0] == '/' || rec[0] >= '0' && rec[0] <= '9') {
-						t.Errorf("%s module %s, record %d: %q starts like a key or qualifier line", dir, e.Name, i+1, rec)
+					if len(rec) > 0 && rec[0] >= '0' && rec[0] <= '9' {
+						t.Errorf("%s module %s, record %d: %q starts like a key line", dir, e.Name, i+1, rec)
 					}
 
 					continue
@@ -99,7 +101,7 @@ func TestHelpModulesWellFormed(t *testing.T) {
 }
 
 // checkSiblings reports subtopics of t, and of each topic below it, that
-// share a key.
+// share a key, and qualifier lines of one topic that do.
 func checkSiblings(t *testing.T, where string, top *help.Topic) {
 	t.Helper()
 
@@ -114,6 +116,17 @@ func checkSiblings(t *testing.T, where string, top *help.Topic) {
 		seen[k] = true
 
 		checkSiblings(t, where, s)
+	}
+
+	seen = map[string]bool{}
+
+	for _, s := range top.Slashes {
+		k := strings.ToUpper(s.Key)
+		if seen[k] {
+			t.Errorf("%s %s: two qualifier lines %s", where, top.Key, s.Key)
+		}
+
+		seen[k] = true
 	}
 }
 

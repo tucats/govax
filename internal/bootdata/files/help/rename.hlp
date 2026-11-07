@@ -1,55 +1,61 @@
 1 RENAME
-    The RENAME command changes the name of one or more files on a mounted
-    ODS-2 volume, or moves them to another directory, as VMS DCL's RENAME
-    does.  The files' contents are not copied.  A file can't be renamed
-    to another device: the old and new names must be on the same volume.
 
-    Syntax:
+   Changes the names of files on a mounted volume, or moves them to
+   another directory on it.  The files' contents aren't copied.
 
-        RENAME [/LOG] [/[NO]NEW_VERSION] <input>[,<input>...] <output>
+   Format
 
-    Parameters:
+     RENAME input-filespec[,...] output-filespec
 
-        <input>         The file or files to rename.  Wildcards are
-                        allowed.  With no version, each name's highest
-                        version is renamed.  The device and directory of
-                        one input carry over to the next as its defaults,
-                        and any part left out of the first is filled in
-                        from the current default device/directory (see
-                        SET DEFAULT).
+2 Parameters
 
-        <output>        The new name.  Any part left out -- device,
-                        directory, name, or type -- is the input file's
-                        own, and a name, type, or version written as "*"
-                        is the input file's too, so one output serves
-                        several files (RENAME *.TXT *.OLD).  No other
-                        wildcards are allowed.  With no output version, a
-                        file keeps its version if the input named one (or
-                        ;*); otherwise it gets the next version of its new
-                        name.  An existing name and version is never
-                        replaced.
+ input-filespec[,...]
 
-    Qualifiers:
+   The files to rename.  Wildcards are allowed.  Without a version, each
+   name's newest version is renamed.  The device and directory of one
+   input are the defaults of the next, and the parts left out of the
+   first are the default device and directory's (see SET DEFAULT).
 
-        /LOG            Reports each file renamed.
+ output-filespec
 
-        /NEW_VERSION    With no versions given, gives each file the next
-        /NONEW_VERSION  version of its new name (the default).  With
-                        /NONEW_VERSION, each file keeps its version.
+   The new name.  A part left out (device, directory, name, or type) is
+   the input file's own, and a name, type, or version written as * is
+   the input file's too, so one output serves several files (RENAME
+   *.TXT *.OLD).  No other wildcards are allowed.
 
-    A directory file (NAME.DIR;1) can be renamed or moved like any other
-    file, taking everything in it along, but not into itself or one of
-    its own subdirectories.  A file that can't be renamed is reported and
-    the rest are still renamed.
+   With no version in the output, a file keeps its version if the input
+   named one (or ;*), and otherwise gets the next version of its new
+   name.  An existing name and version is never replaced.
 
-    Examples:
+2 Description
 
-        RENAME FEES.DAT;4 [SAVETEXT]RECORDS.DAT
+   A file can't be moved to another volume: the input and output must be
+   on the same one.  A directory file (NAME.DIR;1) can be renamed or
+   moved like any other file, and everything in it goes along, but not
+   into itself or one of its own subdirectories.  A file that can't be
+   renamed is reported, and the rest are still renamed.
 
-        RENAME/LOG *.TXT *.OLD
+2 Qualifiers
+/LOG
 
-        RENAME [A]X.TXT,Y.TXT [B]
+   Shows each file renamed.
 
-        REN/NONEW_VERSION REPORT.LIS SUMMARY
+/[NO]NEW_VERSION
 
-    See also the help for COPY, DELETE, DIRECTORY, and SET DEFAULT.
+   With no versions given, /NEW_VERSION (the default) gives each file
+   the next version of its new name, and /NONEW_VERSION has each keep
+   its version.
+
+2 Examples
+
+   1.$ RENAME FEES.DAT;4 [SAVETEXT]RECORDS.DAT
+
+     Moves FEES.DAT;4 to [SAVETEXT] as RECORDS.DAT;4.
+
+   2.$ RENAME/LOG *.TXT *.OLD
+
+     Gives each .TXT file the type .OLD, showing each.
+
+   3.$ RENAME [A]X.TXT,Y.TXT [B]
+
+     Moves X.TXT and Y.TXT from [A] to [B].

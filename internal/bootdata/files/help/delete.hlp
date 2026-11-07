@@ -1,73 +1,96 @@
 1 DELETE
-    The DELETE command removes a file from a mounted ODS-2 volume and
-    reclaims its storage.
 
-    A DELETE file specification must name a version: an explicit version
-    number (;3), all versions (;*), or the newest version, written as ;0 or
-    as a semicolon with no number after it (FOO.TXT;).  Unlike DIRECTORY,
-    TYPE, and COPY, DELETE never defaults an omitted version to "the
-    newest one"; this matches real VMS DCL's own DELETE, which requires a
-    version to guard against accidentally deleting the wrong copy of a
-    file.
+   Deletes files from a mounted volume, giving their space back.
 
-    Several files may be deleted at once, their specifications separated
-    by commas or plus signs.  Each specification after the first takes
-    the device, directory, name, and type it leaves out from the one
-    before it, but never the version: DELETE A.TXT;1,;2,B;1 deletes
-    A.TXT;1, A.TXT;2, and B.TXT;1.  A specification that fails is
-    reported, and the rest are still deleted.
+   Format
 
-    As VMS's DELETE, it says nothing of the files it deletes unless /LOG is
-    given.  A specification that finds no file is a warning:
+     DELETE filespec[,...]
 
-        %DELETE-W-SEARCHFAIL, error searching for DUA0:[WORK]X.TMP;*
-        -RMS-E-FNF, file not found
+   DELETE/SYMBOL deletes a DCL symbol instead (see DELETE /SYMBOL).
 
-    Syntax:
+2 Parameter
 
-        DELETE[/LOG] <file-spec>;<version>[,...]
+ filespec[,...]
 
-    Parameter:
+   The files to delete.  Each must have a version: a number (;3), every
+   version (;*), or the newest, written ;0 or a semicolon alone
+   (FOO.TXT;).  Wildcards are allowed in the name, type, and version.
 
-        <file-spec>;<version>[,...]
-                        The files, and versions, to delete.  <file-spec>
-                        may include wildcards in its name/type; any part
-                        left out of the first is filled in from the current
-                        default device/directory (see SET DEFAULT), and of
-                        the others from the specification before it.
+   Specifications are separated by commas or plus signs.  A part left
+   out of the first is the default device and directory's (see SET
+   DEFAULT), and a part left out of a later one, but its version, is the
+   one before it's: DELETE A.TXT;1,;2,B;1 deletes A.TXT;1, A.TXT;2, and
+   B.TXT;1.
 
-    Qualifier:
+2 Description
 
-        /LOG            Show each file deleted, and the blocks it had:
-                        %DELETE-I-FILDEL, DUA0:[WORK]FOO.TXT;1 deleted
-                        (3 blocks)
+   DELETE needs a version so that the newest version isn't deleted by
+   mistake: unlike DIRECTORY, TYPE, and COPY, it never takes a missing
+   version to mean the newest.
 
-    Examples:
+   It says nothing of the files it deletes unless /LOG is given.  A
+   specification that finds no file is a warning, and the others are
+   still deleted:
 
-        DELETE FOO.TXT;1
+     %DELETE-W-SEARCHFAIL, error searching for DUA0:[WORK]X.TMP;*
+     -RMS-E-FNF, file not found
 
-        DELETE FOO.TXT;
+2 Qualifiers
+/LOG
 
-        DELETE OLDFILE.DAT;*
+   Shows each file deleted, and the blocks it had:
 
-        DELETE A.LIS;*,B;*,C.OBJ;*
+     %DELETE-I-FILDEL, DUA0:[WORK]FOO.TXT;1 deleted (3 blocks)
 
-        DEL *.TMP;1
+2 Examples
 
-    See also the help for PURGE, DIRECTORY, and SET DEFAULT.
+   1.$ DELETE FOO.TXT;1
+
+     Deletes version 1 of FOO.TXT.
+
+   2.$ DELETE FOO.TXT;
+
+     Deletes the newest version of FOO.TXT.
+
+   3.$ DELETE/LOG A.LIS;*,B;*,C.OBJ;*
+
+     Deletes every version of A.LIS, B.LIS, and C.OBJ, showing each.
+
 2 /SYMBOL
-    The DELETE/SYMBOL command deletes a symbol (see HELP SYMBOL).
 
-    Syntax:
+   Deletes a DCL symbol, or every symbol in a table.
 
-        DELETE/SYMBOL [/LOCAL | /GLOBAL] symbol-name
-        DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL
+   Format
 
-    The name may be any abbreviation the symbol allows.
+     DELETE/SYMBOL [symbol-name]
 
-    Qualifiers:
+3 Parameter
 
-        /LOCAL          Delete from the local symbol table of the current
-                        command level (the default).
-        /GLOBAL         Delete from the global symbol table.
-        /ALL            Delete every symbol in the table, instead of one.
+ symbol-name
+
+   The symbol to delete, in any abbreviation the symbol allows (see
+   SYMBOL).  It is needed unless /ALL is given.
+
+3 Qualifiers
+/ALL
+
+   Deletes every symbol in the table, instead of one.
+
+/GLOBAL
+
+   Deletes from the global symbol table.
+
+/LOCAL
+
+   Deletes from the current command level's local symbol table.  This is
+   the default.
+
+3 Examples
+
+   1.$ DELETE/SYMBOL COUNT
+
+     Deletes the local symbol COUNT.
+
+   2.$ DELETE/SYMBOL/GLOBAL/ALL
+
+     Deletes every global symbol.

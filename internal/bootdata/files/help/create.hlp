@@ -1,194 +1,225 @@
 1 CREATE
-    The CREATE command creates a file, as VMS DCL's CREATE does, from
-    the lines of SYS$INPUT: at the terminal, the lines typed up to
-    Ctrl/Z; in a command procedure, the data lines after the CREATE
-    command, up to the next line that starts with "$" (or the end of a
-    DECK).  The file is created even when there are no lines.
 
-    Syntax:
+   Creates a text file from the lines of SYS$INPUT: at the terminal, the
+   lines typed up to Ctrl/Z; in a command procedure, the data lines
+   after the command, up to the next line starting with "$" (or the end
+   of a DECK).  The file is made even when there are no lines.
 
-        CREATE [/LOG] <file>[/HOST]
+   Format
 
-    Parameter:
+     CREATE filespec
 
-        <file>          The file to create.  A file on a mounted ODS-2
-                        volume, such as DUA0:[WORK]NOTES.TXT or, with
-                        SET DEFAULT on a volume, NOTES.TXT, is a
-                        variable-length record file with carriage-return
-                        carriage control, as VMS makes a text file; it
-                        is a new version if the file already exists.  A
-                        host file makes a plain host text file instead,
-                        each line ending as the host's do: LF on Unix
-                        and macOS, CR LF on Windows.  A name with a host
-                        path ("./notes.txt", quoted to keep its case) is
-                        a host file; so is a bare name when the default
-                        directory isn't on a mounted volume.
+   CREATE has other forms, each a command of its own:
 
-    Qualifiers:
+     CREATE/DIRECTORY    Creates a directory on a mounted volume.
+     CREATE/FDL          Creates an empty file from an FDL file.
+     CREATE/NAME_TABLE   Creates a logical name table.
 
-        /HOST           Attached to <file>, makes it a host file name,
-                        whatever it looks like: CREATE "notes.txt"/HOST.
+2 Parameter
 
-        /LOG            Report the file created, with its version.
+ filespec
 
-    Examples:
+   The file to create.  A file on a mounted volume, such as
+   DUA0:[WORK]NOTES.TXT, or NOTES.TXT with the default directory on a
+   volume, is made with variable-length records and carriage return
+   carriage control, as VMS makes a text file, and is a new version if
+   the file exists.
 
-        CREATE NOTES.TXT
-        This is the first line.
-        This is the last.
-        ^Z
+   A host file is a plain host text file, each line ending as the
+   host's lines do: a line feed on Unix and macOS, a carriage return and
+   line feed on Windows.  A name with a host path ("./notes.txt", quoted
+   to keep its case) is a host file, and so is a bare name when the
+   default directory isn't on a volume.
 
-        $ CREATE/LOG DUA0:[WORK]SETUP.DAT
-        ITEM ONE
-        ITEM TWO
-        $ TYPE DUA0:[WORK]SETUP.DAT
+2 Qualifiers
+/HOST
 
-    CREATE has other forms, each its own command:
+   After filespec, makes it a host file name, whatever it looks like:
+   CREATE "notes.txt"/HOST.
 
-        CREATE/DIRECTORY    creates a directory on a mounted volume.
-        CREATE/FDL          creates an empty file from an FDL file.
-        CREATE/NAME_TABLE   creates a logical name table.
+/LOG
 
-    For details, see:
+   Shows the file created, with its version.
 
-        HELP CREATE /DIRECTORY
-        HELP CREATE /FDL
-        HELP CREATE /NAME_TABLE
+2 Examples
 
-    See also the help for TYPE and SET DEFAULT.
+   1.$ CREATE NOTES.TXT
+     This is the first line.
+     This is the last.
+     ^Z
+
+     At the terminal, makes NOTES.TXT from the two lines typed.
+
+   2.$ CREATE/LOG DUA0:[WORK]SETUP.DAT
+     ITEM ONE
+     ITEM TWO
+     $ TYPE DUA0:[WORK]SETUP.DAT
+
+     In a command procedure, makes SETUP.DAT from the data lines after
+     the command.
+
 2 /DIRECTORY
-    The CREATE/DIRECTORY command creates a directory on a mounted ODS-2
-    volume, as VMS DCL's CREATE/DIRECTORY does, and every directory above
-    it that doesn't exist yet: CREATE/DIRECTORY [A.B.C] makes [A], [A.B],
-    and [A.B.C], whichever are missing.  A directory that already exists
-    is reported, and isn't an error.
 
-    Syntax:
+   Creates a directory on a mounted volume, and each directory above it
+   that doesn't exist yet: CREATE/DIRECTORY [A.B.C] makes whichever of
+   [A], [A.B], and [A.B.C] are missing.  A directory that exists already
+   is reported, and isn't an error.
 
-        CREATE/DIRECTORY [qualifiers] <directory>[,<directory>...]
+   Format
 
-    Parameter:
+     CREATE/DIRECTORY directory-spec[,...]
 
-        <directory>     A directory specification, such as [A.B] or
-                        DUA0:[A.B].  It may be relative to the current
-                        default directory ([.SUB], [-.OTHER]; see SET
-                        DEFAULT), and its device may be a logical name.
-                        It can't name a file, or use wildcards.  With no
-                        device and no default device on a mounted volume,
-                        the directory is made on the host instead,
-                        relative to the host's current directory.
+3 Parameter
 
-    Qualifiers:
+ directory-spec[,...]
 
-        /OWNER_UIC=<uic>
-        /OWNER_UIC=PARENT
-                        The new directory's owner: a UIC, [group,member]
-                        in octal, or PARENT for the owner of the
-                        directory it's made in, which is also the
-                        default.
+   A directory, such as [A.B] or DUA0:[A.B].  It may be relative to the
+   default directory ([.SUB], [-.OTHER]; see SET DEFAULT), and its device
+   may be a logical name.  It can't name a file or have wildcards.  With
+   no device, and no default device on a mounted volume, the directory
+   is made on the host, relative to the host's current directory.
 
-        /VERSION_LIMIT=<n>
-                        The default version limit for files created in
-                        the new directory; 0 means no limit.  The default
-                        is the limit of the directory it's made in.
+3 Qualifiers
+/ALLOCATION=n
 
-        /PROTECTION=(<category>:<access>,...)
-                        The new directory's protection: for each of
-                        SYSTEM, OWNER, GROUP, and WORLD (or S, O, G, W),
-                        the access granted, any of R, W, E, and D, or
-                        none.  The default is the protection of the
-                        directory it's made in, less delete access; a
-                        category not given keeps that default.
+   The blocks to give the directory at once.  The default is 1.
 
-        /ALLOCATION=<n> The number of blocks to give the directory at
-                        once.  The default is 1.
+/LOG
 
-        /LOG            Reports the directory made.  The directories
-                        made above it aren't reported.
+   Shows the directory made.  The directories made above it aren't
+   shown.
 
-    A /VERSION_LIMIT out of range is reported and ignored, and the
-    directory still made, as VMS does.
+/OWNER_UIC=option
 
-    Examples:
+   The directory's owner: a UIC, [group,member] in octal, or PARENT, the
+   owner of the directory it is made in, which is the default.
 
-        CREATE/DIRECTORY [PROJECTS.TEST]
+/PROTECTION=(category[:access][,...])
 
-        CREATE/DIRECTORY/LOG/OWNER_UIC=[200,201]/VERSION_LIMIT=3 [USER]
+   The directory's protection: for each of SYSTEM, OWNER, GROUP, and
+   WORLD (or S, O, G, and W), the access granted, any of R, W, E, and D,
+   or none.  The default is the protection of the directory it is made
+   in, less delete access; a category not given keeps that default.
 
-        CREATE/DIRECTORY/PROTECTION=(S:RWE,O:RWE,G:RE,W) [.SHARED]
+/VERSION_LIMIT=n
 
-    See also the help for DIRECTORY and SET DEFAULT.
+   The default version limit of files created in the directory, 0 for
+   none.  The default is the limit of the directory it is made in.  A
+   value out of range is reported and ignored, and the directory still
+   made, as VMS does.
+
+3 Examples
+
+   1.$ CREATE/DIRECTORY [PROJECTS.TEST]
+
+     Makes [PROJECTS] if it's missing, then [PROJECTS.TEST].
+
+   2.$ CREATE/DIRECTORY/LOG/OWNER_UIC=[200,201]/VERSION_LIMIT=3 [USER]
+
+     Makes [USER], owned by [200,201], keeping three versions of a file.
+
+   3.$ CREATE/DIRECTORY/PROTECTION=(S:RWE,O:RWE,G:RE,W) [.SHARED]
+
+     Makes [.SHARED] below the default directory, with no world access.
+
 2 /FDL
-    The CREATE/FDL command creates an empty file from the description in
-    an FDL (File Definition Language) file: sequential, relative, or
-    indexed, with its record format, allocation, protection, dates, and
-    an indexed file's keys and areas.  RMS makes the file, so what RMS
-    refuses is reported with RMS's message.
 
-    Syntax:
+   Creates an empty file from the description in an FDL (File
+   Definition Language) file: sequential, relative, or indexed, with its
+   record format, allocation, protection, dates, and an indexed file's
+   keys and areas.  RMS makes the file, so what RMS refuses is reported
+   with RMS's message.
 
-        CREATE/FDL=<fdl-file> [/LOG] [<file>]
+   Format
 
-    Parameters:
+     CREATE/FDL=fdl-filespec [filespec]
 
-        <fdl-file>      The FDL file; its default type is .FDL.
+3 Parameter
 
-        <file>          The file to create.  Without one, the FDL file's
-                        FILE NAME names it.  FILE DEFAULT_NAME supplies
-                        what the name leaves out.  An existing file gets
-                        a new version.
+ filespec
 
-    Qualifiers:
+   The file to create.  Without one, the FDL file's FILE NAME names it.
+   FILE DEFAULT_NAME gives what the name leaves out.  An existing file
+   gets a new version.
 
-        /LOG            Report the file created, with its version.
+3 Description
 
-    An FDL file holds sections, such as FILE, RECORD, AREA n, and KEY n,
-    each followed by its attributes, one to a line or separated by
-    semicolons; "!" begins a comment.  Names may be abbreviated.  A warning
-    leaves that attribute at its default and the file is still made; an
-    error means no file.  Indexed files are Prolog 3 only: PROLOG 1 or 2,
-    or a primary key whose segments overlap, is RMS$_PLV.
+   An FDL file holds sections, such as FILE, RECORD, AREA n, and KEY n,
+   each followed by its attributes, one to a line or separated by
+   semicolons; "!" begins a comment.  Names may be abbreviated.  A
+   warning leaves that attribute at its default, and the file is still
+   made; an error means no file.  Indexed files are Prolog 3 only: PROLOG
+   1 or 2, or a primary key whose segments overlap, is RMS$_PLV.
 
-    Example:
+3 Qualifiers
+/FDL=fdl-filespec
 
-        $ CREATE PARTS.FDL
-        FILE
-            ORGANIZATION indexed
-        RECORD
-            SIZE 80
-        KEY 0
-            SEG0_LENGTH 8
-        KEY 1
-            SEG0_LENGTH 20
-            SEG0_POSITION 8
-        $ CREATE/FDL=PARTS/LOG PARTS.IDX
-        %FDL-I-CREATED, DUA1:[000000]PARTS.IDX;1 created
+   The FDL file.  Its default type is .FDL.
 
-    See also the help for OPEN, READ, and WRITE.
+/LOG
+
+   Shows the file created, with its version.
+
+3 Examples
+
+   1.$ CREATE PARTS.FDL
+     FILE
+         ORGANIZATION indexed
+     RECORD
+         SIZE 80
+     KEY 0
+         SEG0_LENGTH 8
+     KEY 1
+         SEG0_LENGTH 20
+         SEG0_POSITION 8
+     $ CREATE/FDL=PARTS/LOG PARTS.IDX
+     %FDL-I-CREATED, DUA1:[000000]PARTS.IDX;1 created
+
+     Makes an indexed file with two keys.
+
 2 /NAME_TABLE
-    The CREATE/NAME_TABLE command creates a logical name table.
 
-    Syntax:
+   Creates a logical name table.
 
-         CREATE/NAME_TABLE table-name
+   Format
 
-    Qualifiers:
+     CREATE/NAME_TABLE table-name
 
-        /PARENT_TABLE=table
+3 Parameter
 
-            The new table's parent.  The default, LNM$PROCESS_DIRECTORY,
-            makes a table private to the process.  A shareable parent
-            such as LNM$SYSTEM_DIRECTORY makes a shareable table.
+ table-name
 
-        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+   The table's name, such as TAX.  To have file names looked up in the
+   new table, add it to LNM$PROCESS (see the example).
 
-            The access mode of the table.  The default is supervisor mode.
+3 Qualifiers
+/EXECUTIVE_MODE
 
-        /LOG (default), /NOLOG
+   Makes the table an executive-mode table.
 
-            Report when an existing table is superseded.
+/[NO]LOG
 
-    To have file lookups search the new table, add it to LNM$PROCESS:
+   /LOG (the default) reports an existing table superseded.
 
-         $ DEFINE/TABLE=LNM$PROCESS_DIRECTORY LNM$PROCESS -
-                LNM$PROCESS_TABLE, TAX
+/PARENT_TABLE=table
+
+   The new table's parent.  The default, LNM$PROCESS_DIRECTORY, makes a
+   table private to the process; a shareable parent such as
+   LNM$SYSTEM_DIRECTORY makes a shareable table.
+
+/SUPERVISOR_MODE
+
+   Makes the table a supervisor-mode table.  This is the default.
+
+/USER_MODE
+
+   Makes the table a user-mode table.
+
+3 Examples
+
+   1.$ CREATE/NAME_TABLE TAX
+     $ DEFINE/TABLE=LNM$PROCESS_DIRECTORY LNM$PROCESS -
+     _$ LNM$PROCESS_TABLE, TAX
+
+     Makes the table TAX, and has file names looked up in it after the
+     process table.

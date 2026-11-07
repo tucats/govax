@@ -720,7 +720,12 @@ never had.
   by module (`sysvol/helplib.go`, the manifest's `SPEC(MODULE)` records,
   SYSKEPT naming a module); Decision 10's tests (`TestEveryVerbHasHelp`,
   `TestEveryQualifierHasHelp` over `dcl.Grammar.Qualifiers`,
-  `TestConfigKeysHaveHelp`, `TestHelpModulesWellFormed`).
+  `TestConfigKeysHaveHelp`, `TestHelpModulesWellFormed`). Subtask 8a
+  (done 2026-11-07) is the file and volume commands' help rewritten in
+  VMS's shapes (Parameters, Description, Qualifiers with a `/` line for
+  each, Examples; a `2 /KEY` topic per form), each such verb in
+  `internal/console/help_test.go`'s `rewrittenHelp`, whose qualifiers
+  must all be qualifier lines.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -1,73 +1,96 @@
 1 DIRECTORY
-    The DIRECTORY command lists files on a mounted ODS-2 volume, laid out
-    as VMS's DIRECTORY lays them out: a heading for each directory, the
-    names four to a line (or one to a line, with the columns the
-    qualifiers ask for), and "Total of n files." after each directory
-    ("Grand total" after more than one).  A specification that finds no
-    file is %DIRECT-W-NOFILES.
 
-    Syntax:
+   Lists files on a mounted volume, laid out as VMS's DIRECTORY lays
+   them out: a heading for each directory, the files' names, and the
+   totals.
 
-        DIRECTORY [/FULL] [/FILE] [/SIZE[=option]] [/DATE] [/OWNER]
-                  [/PROTECTION] [/VERSIONS=n] [/[NO]HEADING]
-                  [/[NO]TRAILING] [/OUTPUT[=file]] [file-spec[,...]]
+   Format
 
-    Parameter:
+     DIRECTORY [filespec[,...]]
 
-        file-spec       The file specification to list, which may include
-                        wildcards (e.g. DUA0:[MYDIR]*.TXT;*), or a list of
-                        them, each listed in turn with one grand total
-                        (e.g. [A...],[B...]).  Any part of
-                        the specification left out is filled in from the
-                        current default device/directory (see SET
-                        DEFAULT), but a version left out is every
-                        version.  If omitted entirely, lists "*.*;*" --
-                        every file, every version, in the current default
-                        directory.
+2 Parameter
 
-    Qualifiers:
+ filespec[,...]
 
-        /FULL           Shows everything the file's header says: its
-                        file ID, used and allocated sizes, owner, dates,
-                        organization, record format and attributes, and
-                        protection.
+   The files to list.  Wildcards are allowed, and a list of
+   specifications is listed in turn, with one grand total.  A part left
+   out of the first is the default device and directory's (see SET
+   DEFAULT), and a part left out of a later one is the one before it's;
+   but a version left out is every version.  With no filespec, DIRECTORY
+   lists *.*;*, every version of every file in the default directory.
 
-        /FILE           Includes each file's file ID.
+2 Description
 
-        /SIZE[=option]  Includes each file's size, in blocks: USED (the
-                        default), ALLOCATION, or ALL (used/allocated).
+   Each directory's files are listed under the heading "Directory
+   DUA0:[NAME]", four names to a line, or one to a line with the columns
+   the qualifiers ask for, then "Total of n files." after the directory,
+   and "Grand total of ..." after more than one.  A specification that
+   finds no file is %DIRECT-W-NOFILES.
 
-        /DATE           Includes each file's creation date.
+2 Qualifiers
+/DATE
 
-        /OWNER          Includes each file's owner, as [SYSTEM] or
-                        [group,member].
+   Shows each file's creation date.
 
-        /PROTECTION     Includes each file's protection: the access
-                        granted to system, owner, group, and world, in
-                        that order, as in (RWED,RWED,RE,).
+/FILE
 
-        /VERSIONS=n     Lists only the n most recent versions of each
-                        file: /VERSIONS=1 shows just the newest.  The
-                        value is required and must be at least 1.
+   Shows each file's file ID.
 
-        /NOHEADING      No "Directory" headings: each file is listed by
-                        its full name, one to a line.
+/FULL
 
-        /NOTRAILING     No totals.
+   Shows everything the file's header says: its file ID, the blocks used
+   and allocated, owner, dates, organization, record format and
+   attributes, protection, and access control list.
 
-        /OUTPUT[=file]  Writes the listing to a file in place of the
-                        terminal: file (type LIS unless it gives one), or
-                        DIRECTORY.LIS.  A specification that finds no file
-                        still shows %DIRECT-W-NOFILES at the terminal.
+/[NO]HEADING
 
-    Examples:
+   /NOHEADING leaves out the directory headings, and shows each file by
+   its whole name, one to a line.
 
-        DIRECTORY
+/OUTPUT[=filespec]
 
-        DIRECTORY/VERSIONS=2 *.TXT;*
+   Writes the listing to a file instead of the terminal: filespec (type
+   .LIS unless it gives one), or DIRECTORY.LIS.  %DIRECT-W-NOFILES still
+   goes to the terminal.
 
-        DIRECTORY/SIZE *.TXT;*
+/OWNER
 
-        DIR DUA0:[MYDIR]
+   Shows each file's owner, as [SYSTEM] or [group,member].
 
-    See also the help for SET DEFAULT, SHOW DEFAULT, TYPE, and MOUNT.
+/PROTECTION
+
+   Shows each file's protection: the access the system, the owner, the
+   group, and the world have, in that order, as (RWED,RWED,RE,).
+
+/SIZE[=keyword]
+
+   Shows each file's size in blocks: USED (the default), ALLOCATION, or
+   ALL (used/allocated).
+
+/[NO]TRAILING
+
+   /NOTRAILING leaves out the totals.
+
+/VERSIONS=n
+
+   Lists only each file's n newest versions: /VERSIONS=1 shows the
+   newest alone.  The value must be at least 1.
+
+2 Examples
+
+   1.$ DIRECTORY
+
+     Lists every file in the default directory.
+
+   2.$ DIRECTORY/VERSIONS=2 *.TXT
+
+     Lists the two newest versions of each .TXT file.
+
+   3.$ DIRECTORY/SIZE=ALL/DATE DUA1:[WORK...]
+
+     Lists the files in [WORK] and below it on DUA1, with their sizes
+     and creation dates.
+
+   4.$ DIRECTORY/OUTPUT=FILES [A...],[B...]
+
+     Writes the listing of two trees to FILES.LIS.

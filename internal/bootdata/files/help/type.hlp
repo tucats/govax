@@ -1,57 +1,60 @@
 1 TYPE
-    The TYPE command writes one file's entire content to the console as
-    text, expanding VFC/Fixed/Variable/Stream record formats into
-    readable lines the same way COPY's own text-mode copying does.
 
-    TYPE requires its file specification to match exactly one file --
-    unlike DIRECTORY, it does not accept a wildcard that could match more
-    than one file.
+   Writes a file to the terminal, a line for each record.
 
-    TYPE SYS$INPUT types the process's input a line at a time: in a
-    command procedure, the data lines after the command, up to the next
-    "$" line (see HELP @ and HELP DECK); at the terminal, what is typed,
-    up to Ctrl/Z.
+   Format
 
-    Syntax:
+     TYPE filespec
 
-        TYPE [/PAGE] [/HOST] <file-spec>
+2 Parameter
 
-    Parameter:
+ filespec
 
-        <file-spec>     The file to display, on a mounted ODS-2 volume or
-                        on the host.  For a volume file, an omitted
-                        version defaults to the highest surviving
-                        version, and any part left out is filled in from
-                        the current default device/directory (see SET
-                        DEFAULT).  A name with a host path ("./notes.txt",
-                        quoted to keep its case) is a host file; so is a
-                        bare name when the default directory isn't on a
-                        mounted volume.  A host file is shown line by
-                        line as it is.
+   One file, on a mounted volume or on the host.  A wildcard must match
+   one file only.  For a volume file, a version left out is the newest,
+   and the other parts left out are the default device and directory's
+   (see SET DEFAULT).
 
-    Qualifiers:
+   A name with a host path ("./notes.txt", quoted to keep its case) is a
+   host file, and so is a bare name when the default directory isn't on
+   a volume.  A host file is shown line by line as it is.
 
-        /HOST           Makes <file-spec> a host file name, whatever it
-                        looks like.  It may follow the verb or the file:
-                        TYPE/HOST "notes.txt" and TYPE "notes.txt"/HOST
-                        are the same.
+   TYPE SYS$INPUT types the process's input: in a command procedure, the
+   data lines after the command, up to the next "$" line (see @ and
+   DECK); at the terminal, what is typed, up to Ctrl/Z.
 
-        /PAGE           Display the file a screenful at a time.  After
-                        each screen, TYPE prompts "Press RETURN to
-                        continue": RETURN shows the next screen, and any
-                        text typed before RETURN ends the display.  The
-                        screen's size is the terminal's; when that can't
-                        be read, the vax.console.lines setting gives its
-                        height (default 24 lines).
+2 Description
 
-    Examples:
+   A volume file's records are shown as text, whatever their format
+   (fixed, variable, VFC, or stream), as COPY shows them when it copies
+   a file to the host as text.  An indexed file's records are shown in
+   the order of its primary key.
 
-        TYPE FOO.TXT
+2 Qualifiers
+/HOST
 
-        TYPE/PAGE DUA0:[MYDIR]README.TXT;2
+   Makes filespec a host file name, whatever it looks like.  It may
+   follow the verb or the file: TYPE/HOST "notes.txt" and TYPE
+   "notes.txt"/HOST are the same.
 
-        TYPE/PAGE "../docs/notes.txt"
+/PAGE
 
-        TYPE "README.md"/HOST
+   Shows the file a screenful at a time.  After each screen, TYPE asks
+   "Press RETURN to continue": Return shows the next screen, and any
+   text typed before Return ends the display.  The screen is the
+   terminal's size, or when that can't be read, the vax.console.lines
+   setting's height (24 lines by default).
 
-    See also the help for COPY, DIRECTORY, and SET DEFAULT.
+2 Examples
+
+   1.$ TYPE FOO.TXT
+
+     Shows the newest FOO.TXT in the default directory.
+
+   2.$ TYPE/PAGE DUA1:[WORK]README.TXT;2
+
+     Shows version 2 of README.TXT a screen at a time.
+
+   3.$ TYPE "README.md"/HOST
+
+     Shows the host file README.md.

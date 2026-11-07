@@ -767,7 +767,8 @@ Scope):
    tests. The help at this point is a mechanical conversion of today's
    files, so nothing is lost while subtasks 8 and 9 rewrite it (done
    2026-11-07).
-8. The DCL help rewritten as modules, in parts: (a) the file commands; (b)
+8. The DCL help rewritten as modules, in parts: (a) the file commands
+   (done 2026-11-07); (b)
    DCL itself (symbols, procedures, flow, lexicals, file I/O); (c) the
    programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN); (d)
    govax's own topics and the machine's commands, HELP, INSTRUCTIONS, and
@@ -1086,3 +1087,39 @@ Scope):
   reads as a key or qualifier line). The qualifier check looks for a
   qualifier's name anywhere in the text, not yet a `/` line in column 1:
   that waits for subtask 8's rewrite. Subtask 7 done.
+- **2026-11-07** — Subtask 8a, the file commands rewritten. BACKUP,
+  CONVERT, COPY, CREATE (with its `/DIRECTORY`, `/FDL`, and `/NAME_TABLE`
+  forms), DELETE (with `/SYMBOL`), DIRECTORY, DISMOUNT, DUMP, EDIT,
+  INITIALIZE (`/CONTAINER`, `/VAX`), MOUNT, PURGE, RENAME, and TYPE are
+  now in A.2's shapes, in govax's own words: a level-1 summary and
+  Format, then `2 Parameter(s)` (each name a line in column 1),
+  `Description` where there is more to say, `Qualifiers` with a `/` line
+  in column 1 for each qualifier, in alphabetical order (`/[NO]Q` for a
+  negatable one whose two forms are described together), and `Examples`
+  (`1.$ command` and a sentence on what it does); a verb whose qualifier
+  picks the command (CREATE, INITIALIZE, DELETE/SYMBOL) has a `2 /KEY`
+  topic per form, ANALYZE's shape, with the same topics at level 3. Text
+  is indented three blanks, as VMS's DCL modules are. The scope of 8a,
+  chosen: the commands on files and volumes. DEFINE, ASSIGN, and DEASSIGN
+  go with DCL itself in 8b; PRINT (the console's expression display) in
+  8d; SET and SHOW, whose keywords span every part, are rewritten whole in
+  8d, SET DEFAULT and SHOW DEFAULT among them. Rewriting checked each
+  claim against govax: COPY of a host text file makes a Stream_LF file
+  (the help now says so, rather than variable-length records), CONVERT
+  /APPEND needs no /NOCREATE, and INITIALIZE/VAX's count is in the
+  console's radix (the old example, `INITIALIZE/VAX 8192` for 4 MB, was
+  hexadecimal; it's `^D16384` now, as MANUAL.md has it). The old
+  INITIALIZE `/NVRAM` topic is gone: the grammar has no INITIALIZE/NVRAM.
+  The tests: `TestHelpModulesWellFormed` takes a `/` in column 1 as the
+  qualifier line it now is (a digit there is still an error), and also
+  refuses two qualifier lines of one topic with the same key; the
+  console's `rewrittenHelp` lists the rewritten verbs, each of whose
+  grammar qualifiers must be a qualifier line or `/` key in its module
+  (`qualifierKeys`, `qualifierKeyed`: `/Q`, `/Q=value`, `/Q[=value]`,
+  `/[NO]Q`, `/NOQ`), the looser check by text left for the rest until 8d
+  empties it with `qualifierHelpExceptions`. `TestHelpTopics` and the
+  tests that quoted the old texts (`TestSystemHelpLibraries`' TYPE and
+  MOUNT, cmd/govax's `TestRun_helpMountAndDismountFromEmbeddedFile`) look
+  for the new ones, and `TestHelpTopics` also finds a qualifier line by
+  abbreviation, through Qualifiers, and under a form's Qualifiers
+  (`CREATE /DIRECTORY Qualifiers /OWNER`). Subtask 8a done.

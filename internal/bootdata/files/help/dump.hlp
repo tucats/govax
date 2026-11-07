@@ -1,32 +1,54 @@
 1 DUMP
-    The DUMP command shows a file on a mounted volume in hexadecimal and as
-    text, as VMS's DUMP does: a virtual block at a time (the default, up
-    to the file's end-of-file block), or with /RECORD a record at a time,
-    each with its record's file address (RFA) and without a VFC record's
-    fixed control.  Each line shows 32 bytes: eight longwords in
-    hexadecimal, the highest first, so that each reads as a number; then
-    the bytes as text, lowest first, "." for one that isn't printable; then
-    the offset of the line's first byte.
 
-    Syntax:
+   Shows a file on a mounted volume in hexadecimal and as text, as
+   VMS's DUMP does: a block at a time, or with /RECORD a record at a
+   time.
 
-        DUMP [/BLOCKS[=range] | /RECORD[=range]] file-spec
+   Format
 
-    Parameter:
+     DUMP filespec
 
-        file-spec       One file on a mounted volume (no wildcards); the
-                        newest version unless a version is given.
+2 Parameter
 
-    Qualifiers:
+ filespec
 
-        /BLOCKS[=(START:n, END:n, COUNT:n)]
-                        Show the file's blocks, from START (1) to END or
-                        for COUNT blocks.
+   One file on a mounted volume, with no wildcards.  Without a version,
+   the newest.
 
-        /RECORD[=(START=n, END=n, COUNT=n)]
-                        Show the file's records, numbered from 1.
+2 Description
 
-    Examples:
+   Each line shows 32 bytes: eight longwords in hexadecimal, the highest
+   first, so that each reads as a number; then the bytes as text, lowest
+   first, with "." for a byte that can't be shown; then the offset of the
+   line's first byte.
 
-        DUMP/BLOCKS=COUNT:1 LOGIN.COM
-        DUMP/RECORD=(START=10,COUNT=5) DATA.DAT
+   By blocks (the default), DUMP shows each virtual block up to the
+   file's end-of-file block.  By records, it shows each record with its
+   record's file address (RFA), and a VFC record without its fixed
+   control.
+
+2 Qualifiers
+/BLOCKS[=(option[,...])]
+
+   Shows the file's blocks, numbered from 1.  The options say which:
+
+     START:n    The first block to show (1).
+     END:n      The last block to show.
+     COUNT:n    How many blocks to show.
+
+   START=n, END=n, and COUNT=n are taken too.  This is the default.
+
+/RECORD[=(option[,...])]
+
+   Shows the file's records, numbered from 1.  The options are /BLOCKS'
+   options, counting records.
+
+2 Examples
+
+   1.$ DUMP/BLOCKS=COUNT:1 LOGIN.COM
+
+     Shows LOGIN.COM's first block.
+
+   2.$ DUMP/RECORD=(START:10,COUNT:5) DATA.DAT
+
+     Shows records 10 to 14 of DATA.DAT.

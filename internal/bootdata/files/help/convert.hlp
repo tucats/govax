@@ -1,60 +1,129 @@
 1 CONVERT
-    The CONVERT command copies the records of up to 10 files, one after
-    another, to one file, changing their organization and format to the
-    output file's.  It makes the output file from an FDL file, or else
-    with the first input file's attributes, unless told to use one that's
-    there.  An indexed output is sorted by its primary key, and loaded fast
-    by building its indexes directly.  A host file can be an input, each
-    line a record, but the output is a volume file.
 
-    Syntax:
+   Copies the records of up to 10 files, one after another, to one file,
+   changing their organization and format to the output file's.
 
-        CONVERT [qualifiers] <input>[,<input>...] <output>
+   Format
 
-    Parameters:
+     CONVERT input-filespec[,...] output-filespec
 
-        <input>         A file to read; no wildcards.
+2 Parameters
 
-        <output>        The file to write; no wildcards.  Without a type,
-                        it takes the first input's.
+ input-filespec[,...]
 
-    Qualifiers:
+   The files to read, with no wildcards.  A host file can be an input,
+   each line a record.
 
-        /FDL=<file>     Make the output from this FDL file (default type
-                        .FDL).  Any warning from it stops the conversion.
+ output-filespec
 
-        /NOCREATE       Use an existing output file.
-        /APPEND         Add to the end of an existing sequential file.
-        /MERGE          Insert into an existing indexed file by its keys.
+   The file to write, on a mounted volume, with no wildcards.  Without a
+   type, it takes the first input's.
 
-        /EXCEPTIONS_FILE[=<file>]
-                        Copy each record that can't go in to this file
-                        (default type .EXC), or with no file show it.
-        /EXIT           End at the first such record.
+2 Description
 
-        /PAD[=c]        Fill short records of a fixed-length file with c, a
-                        character or %Dn, %On, or %Xn; null by default.
-        /TRUNCATE       Cut off records too long for the output.
-        /FIXED_CONTROL  Between VFC and other records, move the fixed control
-                        to or from the data, rather than dropping it.
+   CONVERT makes the output file from an FDL file (/FDL), or else with
+   the first input file's attributes, unless told to use one that exists
+   (/NOCREATE).  An indexed output is sorted by its primary key, and
+   loaded fast, by building its indexes directly.
 
-        /KEY=n          Read an indexed input in the order of key n.
-        /NOSORT         The input is in order already.
-        /NOFAST_LOAD    Load an indexed output by RMS's $PUT.
-        /FILL_BUCKETS   Fill its buckets, whatever its FDL's fills.
-        /PROLOG=3       Only Prolog 3 is available: 1 or 2 is RMS$_PLV.
-        /STATISTICS     Show the counts and the time taken.
+   A record that can't go in is reported and passed over, and CONVERT
+   goes on: %CONVERT-I-DUP (a duplicate key), RSK (shorter than the
+   primary key), RTL (too long), RTS (too short for fixed records), SEQ
+   (out of order under /NOSORT), or VFC (too short to fill the fixed
+   control).  /EXCEPTIONS_FILE keeps them, and /EXIT ends there.
 
-        /READ_CHECK, /WRITE_CHECK, and /WORK_FILES=n are taken and do nothing
-        (n past 10 is SORT's BAD_MERGE); /SHARE reads the input shared.
+2 Qualifiers
+/APPEND
 
-    A record that can't go in is reported and passed over, and CONVERT goes
-    on: %CONVERT-I-DUP (a duplicate key), RSK (shorter than the primary
-    key), RTL (too long), RTS (too short for fixed records), SEQ (out of
-    order under /NOSORT), or VFC (too short to fill the fixed control).
+   Adds the records to the end of an existing sequential output file.
 
-    Example:
+/[NO]CREATE
 
-        $ CONVERT/FDL=PARTS/EXCEPTIONS_FILE=BAD PARTS.TXT PARTS.IDX
+   /NOCREATE uses an existing output file.  /CREATE, the default, makes
+   a new one.
 
-    See also the help for CREATE /FDL.
+/EXCEPTIONS_FILE[=filespec]
+
+   Copies each record that can't go in to this file (type .EXC), or
+   with no file shows it.
+
+/EXIT
+
+   Ends at the first record that can't go in.
+
+/[NO]FAST_LOAD
+
+   /NOFAST_LOAD loads an indexed output with RMS's $PUT, a record at a
+   time, rather than building its indexes directly.
+
+/FDL=fdl-filespec
+
+   Makes the output from this FDL file (type .FDL).  A warning from it
+   stops the conversion.
+
+/FILL_BUCKETS
+
+   Fills an indexed output's buckets, whatever its FDL's fill values.
+
+/FIXED_CONTROL
+
+   Between VFC and other records, moves the fixed control into or out
+   of the data, rather than dropping it.
+
+/KEY=n
+
+   Reads an indexed input in the order of key n.
+
+/MERGE
+
+   Inserts the records into an existing indexed file by their keys.
+
+/PAD[=c]
+
+   Fills short records of a fixed-length output with c: a character, or
+   %Dn, %On, or %Xn.  The default is a null.
+
+/PROLOG=n
+
+   The prolog of an indexed output.  Only Prolog 3 is there: 1 or 2 is
+   RMS$_PLV.
+
+/READ_CHECK
+
+   Taken, and does nothing.
+
+/SHARE
+
+   Opens the input files so that other processes may write them while
+   CONVERT reads them.
+
+/[NO]SORT
+
+   /NOSORT says the input is in the output's primary key order already.
+
+/STATISTICS
+
+   Shows the counts of records and the time taken.
+
+/TRUNCATE
+
+   Cuts off records too long for the output.
+
+/WORK_FILES=n
+
+   Taken, and does nothing; n past 10 is SORT's BAD_MERGE.
+
+/WRITE_CHECK
+
+   Taken, and does nothing.
+
+2 Examples
+
+   1.$ CONVERT/FDL=PARTS/EXCEPTIONS_FILE=BAD PARTS.TXT PARTS.IDX
+
+     Makes the indexed file PARTS.IDX from PARTS.FDL, loads it with
+     PARTS.TXT's lines, and writes those it can't take to BAD.EXC.
+
+   2.$ CONVERT/APPEND NEW.DAT ALL.DAT
+
+     Adds NEW.DAT's records to the end of ALL.DAT.

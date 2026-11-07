@@ -1,128 +1,220 @@
 1 BACKUP
-    The BACKUP command works with VMS BACKUP save sets, with VMS's syntax:
-    it lists a save set, restores files from one, compares one with the
-    files it was made from, and saves files into a new one.  A save set
-    may be a file on a mounted volume, as VMS keeps one, or a host file
-    holding the same bytes (a binary FTP of a save set, or COPY/BINARY of
-    one).
 
-    It follows VMS V7.1's BACKUP V6.2: the save sets it writes are laid
-    out as that VMS lays them out, and VMS reads them.  Image, physical,
-    and incremental operations, tapes, and copies of files to files are
-    not done.
+   Works with VMS BACKUP save sets: lists a save set, restores files from
+   one, compares one with the files it was made from, and saves files
+   into a new one.  A save set may be a file on a mounted volume, as VMS
+   keeps one, or a host file holding the same bytes (one copied from a
+   VAX by binary FTP, or with COPY/BINARY).
 
-    Syntax:
+   Format
 
-        BACKUP/LIST[=file] save-set/SAVE_SET
-        BACKUP save-set/SAVE_SET output-spec
-        BACKUP/COMPARE save-set/SAVE_SET file-spec
-        BACKUP file-spec[,...] save-set/SAVE_SET
+     BACKUP input-specifier output-specifier
 
-    A save set on a disk must have /SAVE_SET.  Which specifier is the save
-    set says what BACKUP does: as input, a restore (or with /COMPARE, a
-    compare); as output, a save.  /LIST alone lists the input save set.
+   The four operations are:
 
-    Where a qualifier stands says what it is about, as in VMS: after BACKUP
-    it is a command qualifier; after the input specifier, an input
-    save-set or input file-selection qualifier; after the output
-    specifier, an output save-set or output file qualifier.
+     BACKUP/LIST[=filespec] save-set/SAVE_SET
+     BACKUP save-set/SAVE_SET output-specifier
+     BACKUP/COMPARE save-set/SAVE_SET filespec
+     BACKUP filespec[,...] save-set/SAVE_SET
 
-    Command qualifiers:
+2 Parameters
 
-        /LIST[=file]    List the save set, on SYS$OUTPUT or into the file
-                        (its type LIS unless it gives one).  As in VMS
-                        V7.1, a listing shows every file: /SELECT and
-                        /EXCLUDE don't change it.
-        /BRIEF, /FULL   The listing's layout: each file's name, used
-                        blocks, and creation date (the default), or a
-                        block of each file's dates, owner, file ID,
-                        protection, and record attributes.
-        /LOG            Show each file as it is saved, restored, or
-                        compared.
-        /COMPARE        Compare the save set's files with the files named.
-        /IGNORE=NOBACKUP
-                        Save the data of files marked NOBACKUP too.
-                        Without it such a file's header alone is saved.
-        /IGNORE=INTERLOCK
-                        Save a file another process has open for writing,
-                        as it stands.  Without it such a file isn't saved.
+ input-specifier
 
-    Input save-set qualifiers:
+   The files to save, as a list of file specifications, or the save set
+   to list, restore, or compare, with /SAVE_SET after it.
 
-        /SAVE_SET       The input is a save set.
-        /CRC            Check each block's CRC, recovering a damaged block
-                        from its redundancy group.  As in VMS V7.1, the
-                        default is /NOCRC; a block whose header is damaged
-                        is recovered either way.
-        /SELECT=(file-spec[,...])
-                        Only the save set's files these names match.
-        /EXCLUDE=(file-spec[,...])
-                        Not the files these names match.
-        /HOST           The save set is a host file, whatever its name.
+ output-specifier
 
-    Input file-selection qualifiers (a save):
+   The save set to write, with /SAVE_SET after it; or for a restore, the
+   directory the files go to (see Description); or for a compare, the
+   files to compare the save set's with.  /LIST alone needs none.
 
-        /EXCLUDE=(file-spec[,...])
-                        Not the files these names match (a directory file
-                        is never excluded).
-        /BY_OWNER[=uic] Only files with this owner (yours, with no UIC).
-        /SINCE=time, /BEFORE=time
-                        Only files dated since or before the time (TODAY,
-                        YESTERDAY, TOMORROW, or a VMS time), by the date
-                        one of /MODIFIED (the default), /CREATED,
-                        /EXPIRED, or /BACKUP names.
+2 Description
 
-    Output save-set qualifiers (a save):
+   BACKUP follows VMS V7.1's BACKUP V6.2: the save sets it writes are
+   laid out as that version lays them out, and VMS reads them.  Image,
+   physical, and incremental operations, tapes, and copies of files to
+   files aren't done.
 
-        /SAVE_SET       The output is a save set.
-        /BLOCK_SIZE=n   The save set's block size in bytes, 2048 to 65535,
-                        rounded up to a multiple of 512 (32256).
-        /GROUP_SIZE=n   Blocks in each redundancy group (10; 0 for none).
-        /CRC            Write each block's CRC (the default is /NOCRC).
-        /COMMENT=string Put the text in the save set's summary.
-        /BY_OWNER=uic   The save set file's owner.
-        /HOST           Write the save set as a host file.
+   A save set on a disk must have /SAVE_SET, and which specifier is the
+   save set says what BACKUP does: as the input, a restore (or with
+   /COMPARE, a compare); as the output, a save.  /LIST alone lists the
+   input save set.  Where a qualifier stands says what it is about, as
+   in VMS: after BACKUP it is a command qualifier; after the input
+   specifier, an input save-set or input file-selection qualifier; after
+   the output specifier, an output save-set or output file qualifier.
 
-    Output file qualifiers (a restore):
+   The output specifier of a restore names the directory the files go
+   to: [*...] restores each file to the directory it was saved from,
+   [dir...] to a tree under [dir], and [dir] to that one directory (no
+   directory, or [], is the default directory).  Under [dir...] a file
+   keeps its whole directory ([B69.SUB1]A.TXT goes to [dir.B69.SUB1]),
+   or with /SELECT the part the selection's "..." matched:
+   /SELECT=[B69...] restores [B69.SUB1]A.TXT to [dir.SUB1].  A name or
+   type in the output specifier renames the files; each keeps its saved
+   version.  Directories that don't exist are made.  A host directory
+   may be the output too ("out", or "out/..." for a tree); its files are
+   written as COPY writes them.
 
-        /NEW_VERSION    Restore a file that exists as a new version.
-        /OVERLAY        Write over a file that exists, in place.
-        /REPLACE        Delete a file that exists, and restore it again.
-                        With none of the three, a file that exists isn't
-                        restored.
-        /BY_OWNER[=option]
-                        The restored files' owner: DEFAULT (yours, the
-                        default without /BY_OWNER), ORIGINAL (the saved
-                        owner, the default with /BY_OWNER alone), PARENT
-                        (the directory's), or a UIC.
+   A save goes through each directory in order, every version of each
+   file unless the specifier names one, and with [dir...] into each
+   subdirectory, which is saved too, where its directory file is.  Each
+   element of an input list starts in a new save set block, and takes
+   the device and directory of the element before it when it names
+   none.
 
-    The output specifier of a restore names the directory the files go
-    to: [*...] restores each file to the directory it was saved from,
-    [dir...] to a tree under [dir], and [dir] to that one directory (no
-    directory, or [], is the default directory).  Under [dir...] a file
-    keeps its whole directory ([B69.SUB1]A.TXT to [dir.B69.SUB1]), or
-    with /SELECT the part the selection's "..." matched:
-    /SELECT=[B69...] restores [B69.SUB1]A.TXT to [dir.SUB1].  A name or
-    type in the output specifier renames the files; each keeps its saved
-    version.  Directories that don't exist are made.  A host directory
-    may be the output too ("out", or "out/..." for a tree); its files are
-    written as COPY writes them.
+   A restored file keeps its saved attributes: record format, dates,
+   revision count, protection, characteristics, version limit,
+   allocation, and access control list.  A file the save set has only
+   part of is restored with zeros for the blocks missing (VBNMISSING).
 
-    A save goes through each directory in order, every version of each
-    file unless the specifier names one, and with [dir...] into each
-    subdirectory, which is saved too, where its directory file is.  Each
-    element of an input list starts in a new save set block, and takes
-    the device and directory of the element before it when it names
-    none.
+2 Qualifiers
+/BACKUP
 
-    A restored file keeps its saved attributes: record format, dates,
-    revision count, protection, characteristics, version limit,
-    allocation, and access control list.  A file the save set has only
-    part of is restored with zeros for the blocks missing (VBNMISSING).
+   Input file-selection: /SINCE and /BEFORE look at each file's backup
+   date.
 
-    Examples:
+/BEFORE=time
 
-        BACKUP/LIST DUA1:[SETS]B69.BCK/SAVE_SET
-        BACKUP/LOG DUA1:[SETS]B69.BCK/SAVE_SET/SELECT=[B69]*.TXT [R1...]
-        BACKUP/LIST "./pi.bck"/SAVE_SET
-        BACKUP [WORK...]*.* DUA1:[SETS]WORK.BCK/SAVE_SET
+   Input file-selection: saves only files dated before the time (TODAY,
+   YESTERDAY, TOMORROW, or a VMS time), by the date /BACKUP, /CREATED,
+   /EXPIRED, or /MODIFIED (the default) names.
+
+/BLOCK_SIZE=n
+
+   Output save set: the save set's block size in bytes, 2048 to 65535,
+   rounded up to a multiple of 512.  The default is 32256.
+
+/BRIEF
+
+   Command: a listing shows each file's name, used blocks, and creation
+   date.  This is the default.
+
+/BY_OWNER[=option]
+
+   Input file-selection: saves only files with this owner, a UIC (yours
+   if none is given).
+
+   Output save set: the save set file's owner, a UIC.
+
+   Output file (a restore): the restored files' owner: DEFAULT (yours,
+   the default without /BY_OWNER), ORIGINAL (the saved owner, the
+   default with /BY_OWNER alone), PARENT (the directory's), or a UIC.
+
+/COMMENT=string
+
+   Output save set: puts the text in the save set's summary.
+
+/COMPARE
+
+   Command: compares the save set's files with the files named.
+
+/CRC
+
+   Input save set: checks each block's CRC, recovering a damaged block
+   from its redundancy group.  As in VMS V7.1, the default is /NOCRC; a
+   block whose header is damaged is recovered either way.
+
+   Output save set: writes each block's CRC.  The default is /NOCRC.
+
+/CREATED
+
+   Input file-selection: /SINCE and /BEFORE look at each file's creation
+   date.
+
+/EXCLUDE=(filespec[,...])
+
+   Input save set: leaves out the save set's files these names match.
+
+   Input file-selection: leaves out the files these names match.  A
+   directory file is never left out.
+
+/EXPIRED
+
+   Input file-selection: /SINCE and /BEFORE look at each file's
+   expiration date.
+
+/FULL
+
+   Command: a listing shows a block for each file, with its dates,
+   owner, file ID, protection, and record attributes.
+
+/GROUP_SIZE=n
+
+   Output save set: the blocks in each redundancy group.  The default is
+   10, and 0 writes none.
+
+/HOST
+
+   Input or output save set: the save set is a host file, whatever its
+   name.
+
+/IGNORE=(option[,...])
+
+   Command: NOBACKUP saves the data of files marked NOBACKUP too, of
+   which only the header is saved otherwise.  INTERLOCK saves a file
+   another process has open for writing, as it stands; otherwise such a
+   file isn't saved.
+
+/LIST[=filespec]
+
+   Command: lists the save set on SYS$OUTPUT, or into the file (type
+   .LIS unless it gives one).  As in VMS V7.1, a listing shows every
+   file: /SELECT and /EXCLUDE don't change it.
+
+/LOG
+
+   Command: shows each file as it is saved, restored, or compared.
+
+/MODIFIED
+
+   Input file-selection: /SINCE and /BEFORE look at each file's revision
+   date.  This is the default.
+
+/NEW_VERSION
+
+   Output file (a restore): restores a file that exists as a new
+   version.  With none of /NEW_VERSION, /OVERLAY, and /REPLACE, a file
+   that exists isn't restored.
+
+/OVERLAY
+
+   Output file (a restore): writes over a file that exists, in place.
+
+/REPLACE
+
+   Output file (a restore): deletes a file that exists, and restores it
+   again.
+
+/SAVE_SET
+
+   Input or output: the specifier is a save set.
+
+/SELECT=(filespec[,...])
+
+   Input save set: restores or compares only the save set's files these
+   names match.
+
+/SINCE=time
+
+   Input file-selection: saves only files dated since the time, as
+   /BEFORE takes it.
+
+2 Examples
+
+   1.$ BACKUP/LIST DUA1:[SETS]B69.BCK/SAVE_SET
+
+     Lists the save set B69.BCK.
+
+   2.$ BACKUP/LOG DUA1:[SETS]B69.BCK/SAVE_SET/SELECT=[B69]*.TXT [R1...]
+
+     Restores the save set's .TXT files from [B69] to a tree under [R1].
+
+   3.$ BACKUP/LIST "./pi.bck"/SAVE_SET
+
+     Lists a save set that is a host file.
+
+   4.$ BACKUP [WORK...]*.* DUA1:[SETS]WORK.BCK/SAVE_SET
+
+     Saves [WORK] and everything below it in WORK.BCK.

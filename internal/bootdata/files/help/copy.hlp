@@ -1,147 +1,177 @@
 1 COPY
-    The COPY command copies a file between a mounted ODS-2 volume and the
-    host file system, or between two locations on a mounted volume.  The
-    direction of each half of the copy is determined independently: a
-    SOURCE or DESTINATION naming a location on a mounted volume (e.g.
-    DUA0:[DIR]NAME.TYPE) is used as-is, while the /HOST qualifier,
-    attached to either parameter, tells COPY to instead treat that
-    parameter as an ordinary host file system path.
 
-    A file copied to a volume is made at the version its destination
-    gives (COPY V.OBJ Z.OBJ;7 makes Z.OBJ;7), or at the next version when
-    it gives none or ;0.  A destination version of ;* keeps each source
-    file's version.  COPY never replaces an existing version:
+   Copies a file, or files a wildcard matches, from one place on a
+   mounted volume to another, or between a volume and the host's file
+   system.
 
-        %COPY-E-OPENOUT, error opening DUA0:[WORK]Z.OBJ;7 as output
-        -RMS-E-FEX, file already exists, not superseded
+   Format
 
-    Syntax:
+     COPY input-filespec output-filespec
 
-        COPY <source>[/HOST] <destination>[/HOST] [qualifiers...]
+2 Parameters
 
-    Parameters:
+ input-filespec
 
-        <source>        The file to copy from.  With /HOST attached, this
-                        is a host file system path; otherwise it names a
-                        file (or, when <destination> names a directory,
-                        several wildcard-matched files) on a mounted
-                        volume.
+   The file to copy.  On a volume, wildcards may match several files
+   when the output names a directory.  With /HOST after it, the input is
+   a host file system path.
 
-        <destination>   The file, or directory, to copy to.  With /HOST
-                        attached, this is a host file system path;
-                        otherwise it names a file, or directory, on a
-                        mounted volume.  A destination naming no file of
-                        its own (a bare directory, container or host)
-                        inherits each copied source file's own name and
-                        type.  On a volume, a name or type written as "*"
-                        is the source file's too: COPY X.MAR * keeps
-                        X.MAR's name and type, and COPY *.TXT [SAVE]*.OLD
-                        copies each .TXT file to an .OLD file of the same
-                        name.  Other wildcards (A*, %) aren't allowed in
-                        the destination.
+ output-filespec
 
-    Object modules (.OBJ files) are always copied as records, whatever
-    the qualifiers.  On the host, an object module is kept in the same
-    layout ODS-2 uses on disk for variable-length records (each record
-    a 2-byte length, then its bytes, padded to an even length), so its
-    record boundaries survive a copy to the host and back.  A host .OBJ
-    copied onto a volume becomes a variable-length record file with the
-    attributes VAX MACRO gives an object module.
+   Where the copy goes: a file, or a directory.  With /HOST after it,
+   the output is a host file system path.
 
-    Qualifiers:
+   An output that names no file of its own (a directory, or a host
+   directory) takes each input file's name and type.  On a volume, a
+   name or type written as * is the input file's: COPY X.MAR * keeps
+   X.MAR's name and type, and COPY *.TXT [SAVE]*.OLD copies each .TXT
+   file to an .OLD file of the same name.  No other wildcards are
+   allowed in the output.
 
-        /BINARY         Copies exact bytes rather than rendering the file
-                        as text -- no record-format interpretation, no
-                        line-ending translation.  A copy between two
-                        volume locations keeps the source's record
-                        format and attributes.
+2 Description
 
-        /RECORD_FORMAT=<format>
-                        (Copies from a host file only; govax's own.)  What
-                        file to make on the volume, since a host file can't
-                        say what records it holds.  Without /BINARY the host
-                        file is read as lines, each a record.  With /BINARY
-                        it is read as bytes.  <format> is:
+   Each side of a copy is a volume or the host, decided by itself: a
+   name such as DUA0:[DIR]NAME.TYPE is on a mounted volume, and /HOST
+   after a parameter makes it a host path instead.  A name with a host
+   path ("./notes.txt", quoted to keep its case) is a host file too, and
+   so is a bare name when the default directory isn't on a volume.
 
-                          FIXED      Fixed-length records, of /RECORD_SIZE
-                                     bytes.  Lines are padded with blanks;
-                                     bytes are cut, and must make whole
-                                     records.
-                          VARIABLE   Variable-length records.  Bytes are cut
-                                     every /RECORD_SIZE bytes.
-                          VFC        Variable-length with a fixed control
-                                     field.  Lines only.
-                          STREAM, STREAM_LF, STREAM_CR
-                                     Stream files, ending each line with CR LF,
-                                     LF, or CR.  Bytes are kept as they are.
-                          UNDEFINED  No records.  Needs /BINARY, and the bytes
-                                     are kept as they are.
+   A file copied to a volume gets the version its output gives (COPY
+   V.OBJ Z.OBJ;7 makes Z.OBJ;7), or the next version when it gives none
+   or ;0.  An output version of ;* keeps each input file's version.  COPY
+   never writes over an existing version:
 
-        /RECORD_SIZE=<n>
-                        With /RECORD_FORMAT: a fixed record's length, or the
-                        longest record allowed, up to 32767.
+     %COPY-E-OPENOUT, error opening DUA0:[WORK]Z.OBJ;7 as output
+     -RMS-E-FEX, file already exists, not superseded
 
-        /CARRIAGE_CONTROL=<kind>
-                        With /RECORD_FORMAT: CARRIAGE_RETURN, FORTRAN, NONE, or
-                        for VFC, PRINT.  The default is CARRIAGE_RETURN for
-                        lines (PRINT for VFC) and NONE with /BINARY.
+   Unless /BINARY is given, a file is copied as lines of text: a volume
+   file's records, whatever their format, become lines on the host, and
+   a host file becomes a Stream_LF file on the volume, unless
+   /RECORD_FORMAT asks for another kind.  A copy from one place on a
+   volume to another keeps the file's record format and attributes.
 
-        /CONTROL_FIELD_SIZE=<n>
-                        With /RECORD_FORMAT=VFC: the control bytes in each
-                        record, 2 by default.
+   An object module (.OBJ) is always copied as records.  On the host it
+   is kept as ODS-2 keeps variable-length records on disk (each record a
+   2-byte length and its bytes, padded to an even length), so its
+   records survive a copy to the host and back.  A host .OBJ copied to a
+   volume gets the attributes VAX MACRO gives an object module.
 
-        /QUIET          Suppresses the normal %COPY-S-COPIED confirmation
-                        line.
+2 Qualifiers
+/BINARY
 
-        /VERBOSE        Prints an additional %COPY-I-COPYING line before
-                        each file is copied.
+   Copies the bytes as they are, with no records and no line endings
+   changed.
 
-        /TEST           Shows what would be copied without actually
-                        copying anything.
+/CARRIAGE_CONTROL=keyword
 
-        /TIME           (Container-to-host copies only.)  Preserves the
-                        source file's own VMS revision date as the copied
-                        host file's modification time.
+   With /RECORD_FORMAT, the records' carriage control: CARRIAGE_RETURN,
+   FORTRAN, NONE, or for VFC records PRINT.  The default is
+   CARRIAGE_RETURN for lines (PRINT for VFC) and NONE with /BINARY.
 
-        /IGNORE         (Copies to a host destination only.)  Recovers
-                        from a corrupt record partway through a file by
-                        restarting the copy as a raw byte-for-byte copy,
-                        rather than failing outright.
+/CONTROL_FIELD_SIZE=n
 
-        /DIRS           (Copies to a host destination only.)  Materializes
-                        a matched directory entry as an empty host
-                        directory, and mirrors each matched file's own
-                        volume subdirectory path under the destination
-                        directory, instead of flattening every match into
-                        one destination directory.
+   With /RECORD_FORMAT=VFC, the number of control bytes in each record.
+   The default is 2.
 
-        /STREAM         (Copies to a host destination only.)  Copies a
-                        Stream-format source file's exact bytes rather
-                        than normalizing its line endings.
+/CRLF
 
-        /VFC            Accepted for command-line compatibility with the
-                        ods2 utility's own COPY command.  Not otherwise
-                        meaningful here: this project's text-mode copy
-                        already always expands a VFC file's carriage
-                        control, so there is no "un-interpreted" mode for
-                        this qualifier to select.
+   For a host output, ends each line with a carriage return and a line
+   feed.  /CRLF and /LF can't both be given.
 
-        /CRLF           (Copies to a host destination only.)  Ends each
-                        copied text line with CRLF instead of the default
-                        LF.
+/DIRS
 
-        /LF             (Copies to a host destination only.)  Ends each
-                        copied text line with LF.  This is the default;
-                        /CRLF and /LF cannot both be given.
+   For a host output, makes each matched directory an empty host
+   directory, and puts each matched file under the same subdirectories
+   it has on the volume, rather than all of them in the output
+   directory.
 
-    Examples:
+/HOST
 
-        COPY FOO.TXT BAR.TXT
+   After a parameter, makes it a host file system path, whatever it
+   looks like.  Each parameter has its own /HOST.
 
-        COPY foo.txt/HOST BAR.TXT
+/IGNORE
 
-        COPY FOO.TXT bar.txt/HOST
+   For a host output, goes on past a record that can't be read by
+   copying the rest of the file as bytes, rather than failing.
 
-        COPY "/Users/tom/foo.txt" /HOST BAR.TXT
+/LF
 
-    See also the help for TYPE, DIRECTORY, MOUNT, and SET DEFAULT.
+   For a host output, ends each line with a line feed.  This is the
+   default.
+
+/QUIET
+
+   Leaves out the %COPY-S-COPIED message for each file.
+
+/RECORD_FORMAT=keyword
+
+   For a host input, the file to make on the volume, since a host file
+   can't say what records it holds.  Without /BINARY the host file is
+   read as lines, a record each; with /BINARY it is read as bytes.  The
+   keyword is:
+
+     FIXED      Fixed-length records of /RECORD_SIZE bytes.  Lines are
+                padded with blanks; bytes are cut, and must make whole
+                records.
+     VARIABLE   Variable-length records.  Bytes are cut every
+                /RECORD_SIZE bytes.
+     VFC        Variable-length records with a fixed control field.
+                Lines only.
+     STREAM, STREAM_LF, STREAM_CR
+                Stream files, each line ending with a carriage return and
+                line feed, a line feed, or a carriage return.  Bytes are
+                kept as they are.
+     UNDEFINED  No records.  Needs /BINARY; the bytes are kept as they
+                are.
+
+   This qualifier is govax's own.
+
+/RECORD_SIZE=n
+
+   With /RECORD_FORMAT, a fixed record's length, or the longest record
+   allowed, up to 32767.
+
+/STREAM
+
+   For a host output, copies a stream file's bytes as they are, rather
+   than making its line endings the host's.
+
+/TEST
+
+   Shows what would be copied, and copies nothing.
+
+/TIME
+
+   For a host output, gives the host file the volume file's revision
+   date as its modification time.
+
+/VERBOSE
+
+   Shows a %COPY-I-COPYING message before each file is copied.
+
+/VFC
+
+   Taken, and does nothing: a VFC file's carriage control is always
+   expanded when it's copied as text.
+
+2 Examples
+
+   1.$ COPY FOO.TXT BAR.TXT
+
+     Copies FOO.TXT in the default directory to BAR.TXT, a new version
+     if BAR.TXT exists.
+
+   2.$ COPY "notes.txt"/HOST NOTES.TXT
+
+     Copies the host file notes.txt onto the volume, as a Stream_LF
+     file.
+
+   3.$ COPY DUA1:[WORK]*.MAR "save"/HOST
+
+     Copies each .MAR file in [WORK] to the host directory save.
+
+   4.$ COPY/BINARY/RECORD_FORMAT=FIXED/RECORD_SIZE=512 -
+     _$ "image.dat"/HOST IMAGE.DAT
+
+     Copies a host file's bytes into a file of 512-byte fixed records.

@@ -52,11 +52,11 @@ func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
 		t.Errorf("output = %q, want real MOUNT/DISMOUNT help text", out)
 	}
 
-	if !strings.Contains(out, "MOUNT command attaches a disk-image container") {
+	if !strings.Contains(out, "Mounts a container, a host file holding an ODS-2 volume") {
 		t.Errorf("output = %q, want HELP MOUNT's own body text", out)
 	}
 
-	if !strings.Contains(out, "DISMOUNT command detaches") {
+	if !strings.Contains(out, "Dismounts the volume mounted on a device") {
 		t.Errorf("output = %q, want HELP DISMOUNT's own body text", out)
 	}
 }

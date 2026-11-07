@@ -1,33 +1,34 @@
 1 PURGE
-    The PURGE command trims old versions of a file down to a specified
-    number of surviving versions, reclaiming the storage of each version
-    removed.  A file spec matching no files at all is not an error.
 
-    Syntax:
+   Deletes all but the newest versions of files on a mounted volume.
 
-        PURGE [/LIMIT=<n>] [file-spec]
+   Format
 
-    Parameter:
+     PURGE [filespec]
 
-        file-spec       The file, or files (wildcards allowed), to purge.
-                        Any version selector typed as part of file-spec is
-                        ignored -- PURGE always considers every surviving
-                        version of a matched name.  Any part left out is
-                        filled in from the current default device/
-                        directory (see SET DEFAULT).  If omitted entirely,
-                        defaults to "*.*" -- every name in the current
-                        default directory.
+2 Parameter
 
-    Qualifier:
+ filespec
 
-        /LIMIT=<n>      The number of most-recent versions to keep for
-                        each matched name.  Defaults to 1 (keep only the
-                        newest version) if omitted.
+   The files to purge.  Wildcards are allowed.  A version given is
+   ignored: PURGE looks at every version of each name it matches.  The
+   parts left out are the default device and directory's (see SET
+   DEFAULT), and with no filespec PURGE purges *.*, every file in the
+   default directory.  Finding no file isn't an error.
 
-    Examples:
+2 Qualifiers
+/LIMIT=n
 
-        PURGE FOO.TXT
+   How many of each file's newest versions to keep.  The default is 1,
+   the newest alone.
 
-        PURGE/LIMIT=2
+2 Examples
 
-    See also the help for DELETE, DIRECTORY, and SET DEFAULT.
+   1.$ PURGE FOO.TXT
+
+     Deletes every version of FOO.TXT but the newest.
+
+   2.$ PURGE/LIMIT=2
+
+     Keeps the two newest versions of each file in the default
+     directory.
