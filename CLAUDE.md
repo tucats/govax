@@ -686,7 +686,12 @@ never had.
   from VMS-format `.HLP` modules in govax's own words, LIBRARY/HELP, HELP's
   lookup, display, and prompts in one engine (`internal/help`), HLP$LIBRARY,
   and LBRSHR's routines (`internal/lbrrtl`); its probe is `testdata/help90`,
-  whose runs on VMS's own help modules stay local (Decision 9).
+  whose runs on VMS's own help modules stay local (Decision 9). Subtask 3
+  (done 2026-11-07) is LIBRARY/HELP: `lbr/help.go`'s `HelpModules` (VMS's key
+  lines), the Builder's names folded by the index's case rule and `Abandon`
+  (a module a bad key line left in the data, as VMS leaves it), held to VMS's
+  libraries byte for byte (`TestHelp90NewLibraries`) and part A's log
+  (`TestHelp90LibraryOracle`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

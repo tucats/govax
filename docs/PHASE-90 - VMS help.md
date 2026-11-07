@@ -444,7 +444,12 @@ planned now, and each round's findings may change the next:
   and the same in the debugger.
 - **Round 3**: the LBR$ writing routines (subtask 11), a program making
   and changing libraries whose files come back for comparison; and
-  whatever rounds 1–2 leave open.
+  whatever rounds 1–2 leave open. Subtask 3 left these: `$STATUS` after
+  each of LIBRARIAN's help messages (DUPMODULE, ILLKEYLVL, KEYNAMLNG,
+  NOMTCHFOU, RECTYP); a level-1 key of several words; a help file whose
+  first key line isn't level 1; a bad key line after a module that was
+  good in the same file; `/EXTRACT` of a missing name and of a wildcard
+  matching nothing in a text library; and `/DATA=EXPAND`.
 
 ## What the probe settled
 
@@ -745,7 +750,8 @@ Scope):
    into this doc (done 2026-11-07; round 3 belongs to subtask 11).
 3. LIBRARY/HELP: `internal/lbr`'s help modules (input rules, key length,
    DCX) and the command's `/HELP`, held to VMS's libraries and messages
-   (`TestHelp90LibraryOracle`).
+   (`TestHelp90LibraryOracle`) (done 2026-11-07; making a data-reduced
+   library is left for later, see the log).
 4. The engine's tree, lookup, and display: `internal/help` rewritten
    (`ParseModule`, `Lookup`, `Render`), held to round 1's B part
    (`TestHelp90Oracle`), and to G's local log when it's present.
@@ -826,3 +832,49 @@ Scope):
   the whole path, `?` is read without a Return, and the debugger's
   `Topic?` looks at the library's level-1 keys. Subtask 2 done. Round 3
   (the LBR$ writing routines) belongs to subtask 11.
+- **2026-11-07** — Subtask 3, LIBRARY/HELP. `internal/lbr/help.go` is the
+  help file's rules: `HelpKeyLine` (a level number, a blank, and the key,
+  which is the first word after the level: ILLKEYLVL names `apples` for
+  `10 apples is a line ...`), and `Builder.HelpModules`, which splits a
+  file into modules (text before the first key dropped, a line of blanks
+  an empty record) and stops at a bad key line with a `HelpError` (the
+  modules before it, and the module it was in so far). The Builder now
+  keeps its modules by their names as the index compares them (`fold`:
+  upper-cased in a help library, so ALPHA and alpha are one module), its
+  data chain as a list of entries, and `Abandon`: VMS writes a module's
+  records as it reads them, so a bad key line leaves the module's header
+  (no references) and its records before that line in the data, with no
+  end of module and no index entry, which Bytes writes too (H90X2, H90X6).
+  `TestHelp90NewLibraries` makes each of the probe's sixteen one-command
+  help libraries and matches VMS's byte for byte (H90A, H90B to H90S, H90D,
+  H90L and H90K with their key lengths, the malformed modules' H90X1 to
+  H90X7); `TestHelp90OtherLibraries` matches H90Q (an empty object
+  library), H90T, and H90M; `TestHelp90DataReduced` reads H90R;2.
+  DCL's LIBRARY takes `/HELP` (grammar id 1423; the type `.HLB`, input
+  `.HLP`), with LIBRARIAN's messages for a help library: ILLKEYLVL (always
+  "expected 1", as VMS 7.1 says) and KEYNAMLNG end that file's reading but
+  not the command, as VMS 7.1 went on (`library.report`, the command's
+  status the worst message's); DUPMODULE; LOOKUPERR with KEYNOTFND for
+  `/DELETE` of a missing name; NOMTCHFOU for an `/EXTRACT` wildcard
+  matching nothing. An object library given a file of text is RECTYP,
+  naming the record's type and no module, and goes on to write the empty
+  library (H90Q). `/EXTRACT`'s `/OUTPUT=SYS$OUTPUT` shows a text module's
+  records. `TestHelp90LibraryOracle` runs part A of `help90.com` on a
+  volume like the exchange volume and holds its log to VMS's line for
+  line, with for83's masks (times, the librarian's name, the count of
+  history records), but for three commands: `LIBRARY/DATA=REDUCE` (govax
+  reads a data-reduced library and doesn't make one: matching VMS's DCX
+  map would need its tree-building rules, which only its output could
+  teach, so it waits for a phase that needs it), H90X8 (VMS 7.1's failure
+  to insert GONLY after SKIP is a librarian bug; `TestHelp90LibraryGoesOn`
+  holds govax's own way, both modules in), and DIRECTORY/SIZE=ALL (H90E,
+  changed five times, is laid out afresh by govax's LIBRARY). Unconfirmed,
+  and asked of round 3: the condition values of these messages (LIBRAR's
+  facility and severity, with no message number, `librarWarning` and
+  `librarError`), a level-1 key of several words (its first word names the
+  module), a first key line that isn't level 1 (ILLKEYLVL, no module
+  abandoned), and NOMTCHFOU in libraries other than help ones. The
+  one-shot `govax library` has no `--help` (the name is the command line's
+  own); it comes with subtask 7's work on the libraries in the build if it's
+  wanted. MANUAL.md's section 10 and HELP LIBRARY describe `/HELP`.
+  Subtask 3 done.

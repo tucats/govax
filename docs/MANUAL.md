@@ -3551,7 +3551,7 @@ to `SYS$OUTPUT`, and in `FAIL.ERR` alone if it did.
 
 ## 10. The librarian
 
-`LIBRARY` creates and maintains the three kinds of VMS library, laid out
+`LIBRARY` creates and maintains VMS's kinds of library, laid out
 as VMS's librarian lays them out, so libraries move freely between govax
 and VMS:
 
@@ -3560,24 +3560,26 @@ and VMS:
 - **Shareable image libraries** (`.OLB`, made with `/SHARE`), which `LINK`
   searches for the shareable images that define symbols;
 - **Text libraries** (`.TLB`, made with `/TEXT`), which FORTRAN's
-  `INCLUDE '(module)'` reads.
+  `INCLUDE '(module)'` reads;
+- **Help libraries** (`.HLB`, made with `/HELP`), of help modules in VMS's
+  format.
 
 ```text
 LIBRARY library [input[,...]]
         /CREATE[=(option:n,...)]  /INSERT  /REPLACE  /DELETE=(module,...)
         /EXTRACT=(module,...)  /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /WIDTH=n
-        /MACRO  /OBJECT  /SHARE  /TEXT  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
+        /HELP  /MACRO  /OBJECT  /SHARE  /TEXT  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
 ```
 
 | Qualifier | Meaning |
 | --- | --- |
 | `/CREATE` | Make a new library (a new version on a volume), then insert any input files. `/CREATE=(BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n)` gives its sizes; `BLOCKS` is accepted and has no effect. |
-| `/INSERT` | Insert modules; one already there is a warning and is left as it was (in a text library, an error that ends the command). |
+| `/INSERT` | Insert modules; one already there is a warning and is left as it was (`%LIBRAR-W-DUPMODULE` in a help library; in a text library, an error that ends the command). |
 | `/REPLACE` | Replace modules of the same names, inserting the rest. The default when input files are given. |
 | `/DELETE=(...)` | Delete modules (wildcards `*` and `%` allowed). |
-| `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR`, `.OBJ`, or `.TXT`). |
+| `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR`, `.OBJ`, `.TXT`, or `.HLP`). `/OUTPUT=SYS$OUTPUT` shows a text, macro, or help module. |
 | `/LIST[=file]` | List the library's header and modules. `/FULL` adds idents, insertion times, and symbol counts; `/NAMES` lists each object module's global symbols. |
-| `/MACRO`, `/OBJECT`, `/SHARE`, `/TEXT` | The kind of new library (object by default). An existing library keeps its own kind. |
+| `/HELP`, `/MACRO`, `/OBJECT`, `/SHARE`, `/TEXT` | The kind of new library (object by default, whatever the file's type, as on VMS). An existing library keeps its own kind. |
 | `/NOSQUEEZE` | Keep macros' comments and trailing blanks, which are removed by default. |
 | `/SELECTIVE_SEARCH` | Mark inserted object modules for selective search. |
 
@@ -3587,8 +3589,20 @@ files (`.TXT`: one module per file, of its records exactly as they are). A
 text module is named for its file, in capitals, or by a `/MODULE=name` after the
 file's name, up to the library's 39 characters: `LIBRARY/TEXT MYDEFS TIMES.TXT/MODULE=$TIMES`.
 
+Help files (`.HLP`) hold one module per level-1 key. A key line is a level
+number, a blank, and the key (`1 COPY`, `2 Qualifiers`); every other line is
+text, and the text before the first key line is dropped. A module is named by
+its level-1 key, in the case the file has it, up to the library's key length
+(15 characters by default; more with `/CREATE=(KEYSIZE:n)`), and a help
+library's names are matched whatever their case. Each key may be at most one
+level below the one before it. A bad key line is VMS's message
+(`%LIBRAR-E-ILLKEYLVL`, or `%LIBRAR-E-KEYNAMLNG` for a name too long), and ends
+that file's reading but not the command: the file's modules before it go in,
+and so do the other files'.
+
 The librarian builds the whole library and writes it only when every
-step has succeeded, so an error leaves the library as it was. A library
+step has succeeded, so an error leaves the library as it was (a help file's
+bad key line, which VMS's librarian goes on from, is the exception). A library
 made by one command matches VMS's byte for byte, but one changed afterwards
 holds the same modules laid out afresh: VMS's librarian adds to the file in
 place, reuses deleted modules' blocks, and keeps update history records, and
@@ -3629,6 +3643,14 @@ A text library, for FORTRAN ([section 14.4](#144-source-lines)):
 VAX> LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
 VAX> LIBRARY/TEXT/EXTRACT=$TIMES/OUTPUT=OUT.TXT MYDEFS
 VAX> FORTRAN PROG+MYDEFS/LIBRARY
+```
+
+A help library:
+
+```text
+VAX> LIBRARY/CREATE/HELP MYHELP TOOLS.HLP,NOTES.HLP
+VAX> LIBRARY/LIST/HELP MYHELP
+VAX> LIBRARY/HELP/EXTRACT=TOOLS/OUTPUT=SYS$OUTPUT MYHELP
 ```
 
 ### Analyzing objects and images

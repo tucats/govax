@@ -5279,7 +5279,8 @@ $LIBR
     Parameters:
 
         <library>       The library file.  Without a file type it is .OLB,
-                        .MLB with /MACRO, or .TLB with /TEXT.  It can be a host file or a
+                        .MLB with /MACRO, .TLB with /TEXT, or .HLB with
+                        /HELP.  It can be a host file or a
                         file on a mounted volume, by the rules MACRO uses
                         for its source (see HELP MACRO).
 
@@ -5293,7 +5294,9 @@ $LIBR
                         name, ident, and universal symbols, or text files
                         (.TXT, the default for a text library), one module
                         each, of the file's records, named for the file or
-                        by /MODULE=<name> after its name.  A bare name
+                        by /MODULE=<name> after its name, or help files
+                        (.HLP, the default for a help library), one module
+                        for each level-1 key line ("1 KEY").  A bare name
                         is found beside the input before it.  With input
                         files and no operation named, their modules
                         replace any of the same names, as LIBRARIAN's
@@ -5322,8 +5325,9 @@ $LIBR
         /EXTRACT=(<module>,...)
                         Copies modules out of the library, to the file
                         /OUTPUT= names (by default, the library's name
-                        with the type .MAR, .OBJ, or .TXT).  Names may hold * and
-                        %.
+                        with the type .MAR, .OBJ, .TXT, or .HLP).  Names may
+                        hold * and %.  /OUTPUT=SYS$OUTPUT shows a text,
+                        macro, or help module.
 
         /LIST[=<file>]  Lists the library: its header, then its modules.
                         Without a file name, the listing goes to the
@@ -5343,7 +5347,7 @@ $LIBR
                         library, which LINK searches for the images that
                         define symbols (see HELP LINK), and /TEXT a text
                         library, which FORTRAN's INCLUDE reads (see HELP
-                        FORTRAN).  These choose a new library's type; an existing library keeps its
+                        FORTRAN), and /HELP a help library.  These choose a new library's type; an existing library keeps its
                         own.
 
         /NOSQUEEZE      Keeps macros' comments and trailing blanks.  By
@@ -5361,7 +5365,8 @@ $LIBR
 
     LIBRARIAN changes a library in place; LIBRARY builds the whole library
     and writes it only when every step has succeeded, so an error leaves
-    the library as it was.  A changed library keeps its name and version,
+    the library as it was; but a help file's bad key line, as on VMS, ends
+    only that file's reading.  A changed library keeps its name and version,
     and no update history.  /COMPRESS and /DATA aren't implemented.
 
     From the host shell, "govax library <library> [<input>...]" runs this

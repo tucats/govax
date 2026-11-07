@@ -19,14 +19,15 @@ import (
 //	        [/CREATE[=(option:n,...)]] [/INSERT | /REPLACE] [/DELETE=(module,...)]
 //	        [/EXTRACT=(module,...) [/OUTPUT=file]]
 //	        [/LIST[=file] [/FULL] [/NAMES] [/WIDTH=n]]
-//	        [/MACRO | /OBJECT | /SHARE | /TEXT] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
+//	        [/HELP | /MACRO | /OBJECT | /SHARE | /TEXT] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
 //
 // It creates or changes a macro library (.MLB), an object library (.OLB),
 // a shareable image symbol table library (.OLB, /SHARE; docs/PHASE-68 -
-// link shareable images.md, subtask 12), or a text library (.TLB, /TEXT;
-// docs/PHASE-83 - FORTRAN and VMS.md, subtask 3) with internal/lbr, extracts
+// link shareable images.md, subtask 12), a text library (.TLB, /TEXT;
+// docs/PHASE-83 - FORTRAN and VMS.md, subtask 3), or a help library (.HLB,
+// /HELP; docs/PHASE-90 - VMS help.md, subtask 3) with internal/lbr, extracts
 // modules from one, and lists one as LIBRARY/LIST does. /MACRO, /OBJECT,
-// /SHARE, or /TEXT picks the type of a new library (an object library by
+// /SHARE, /TEXT, or /HELP picks the type of a new library (an object library by
 // default, as on VMS) and the library's default file type; an existing
 // library keeps its own type, and naming another is an error.
 //
@@ -34,7 +35,8 @@ import (
 // macro, object files (.OBJ), one module per object module, shareable
 // images (.EXE), one module each, holding its universal symbols, or text
 // files (.TXT), one module each, named by the file's /MODULE= or for the
-// file. With no
+// file, or help files (.HLP), a module for each level-1 key (lbr's
+// HelpModules). With no
 // operation named, they replace modules of the same names, as LIBRARIAN's
 // default /REPLACE does; with /INSERT or /CREATE, a module already in the
 // library is a warning and isn't changed. /DELETE= is done first, and
@@ -63,7 +65,14 @@ import (
 // S2.TLB to S7.TLB show LIBRARIAN's way). Its modules and index are the same.
 //
 // A text library's failures use LIBRARIAN's messages and statuses, as
-// testdata/for83 shows them; the other types' are still govax's words.
+// testdata/for83 shows them, and a help library's LIBRARIAN's messages, as
+// testdata/help90 shows them; the other types' are still govax's words.
+//
+// A help file's bad key line (ILLKEYLVL, KEYNAMLNG) ends that file's reading,
+// but not the command, as on VMS 7.1: the modules before it are inserted, the
+// module it was in is left in the library's data as VMS leaves it
+// (lbr.Builder.Abandon), the other input files are read, and the library is
+// written. So is an object library given a file of text (RECTYP).
 
 // LibraryOptions is one LIBRARY command.
 type LibraryOptions struct {
@@ -101,12 +110,14 @@ type LibraryOptions struct {
 	Names    bool
 	Width    int
 
-	// Macro is /MACRO, Object /OBJECT, Share /SHARE, and Text /TEXT.
+	// Macro is /MACRO, Object /OBJECT, Share /SHARE, Text /TEXT, and Help
+	// /HELP.
 	// NoSqueeze is /NOSQUEEZE, Selective /SELECTIVE_SEARCH, and Log /LOG.
 	Macro     bool
 	Object    bool
 	Share     bool
 	Text      bool
+	Help      bool
 	NoSqueeze bool
 	Selective bool
 	Log       bool
@@ -123,6 +134,10 @@ type library struct {
 	found   rms.FileLocation
 	changed bool
 	logs    []func(name string) error // /LOG's messages, which name the library written
+
+	// problem is the worst of the messages report wrote, the command's
+	// status once the library is written; 0 for none.
+	problem uint32
 }
 
 // Library runs one LIBRARY command.
@@ -131,6 +146,10 @@ func (c *Context) Library(opts LibraryOptions) error {
 
 	if err := l.run(); err != nil {
 		return err
+	}
+
+	if l.problem != 0 {
+		return vmserrors.InhibitMessage(vmserrors.ConditionError{Status: l.problem, Text: "LIBRARY"})
 	}
 
 	// LIBRARIAN's status for a command that worked, as LINK's
@@ -155,6 +174,8 @@ func (l *library) run() error {
 		typ = lbr.TypeShareable
 	case opts.Text:
 		typ, libType = lbr.TypeText, "TLB"
+	case opts.Help:
+		typ, libType = lbr.TypeHelp, "HLB"
 	}
 
 	// /NAMES lists an object library's global symbols. DCL's own syntax for
@@ -204,7 +225,9 @@ func (l *library) run() error {
 	}
 
 	for _, pattern := range opts.Delete {
-		l.delete(pattern)
+		if err := l.delete(pattern); err != nil {
+			return err
+		}
 	}
 
 	if err := l.insert(); err != nil {
@@ -269,6 +292,20 @@ const (
 	librarModNameLng = 0x00868102 // %LIBRAR-E-MODNAMLNG
 )
 
+// LIBRARIAN's condition values for the messages testdata/help90 found, whose
+// $STATUS the probe didn't show. These are LIBRAR's facility and each
+// message's severity, with no message number: unconfirmed (docs/PHASE-90 -
+// VMS help.md, subtask 3).
+const (
+	librarWarning = 0x00868000 // %LIBRAR-W-DUPMODULE, NOMTCHFOU
+	librarError   = 0x00868002 // %LIBRAR-E-ILLKEYLVL, KEYNAMLNG, RECTYP
+)
+
+// objectRecordTypes is how many object record types there are (OBJ$C_HDR to
+// OBJ$C_EOMW): a record whose first byte is another value isn't an object
+// record (RECTYP).
+const objectRecordTypes = 8
+
 // stop ends the command with LIBRARIAN's messages, which it writes itself,
 // and status: DCL shows nothing more, and $STATUS has the inhibit bit, as it
 // does after LIBRARIAN's own.
@@ -278,6 +315,18 @@ func (l *library) stop(status uint32, messages ...string) error {
 	}
 
 	return vmserrors.InhibitMessage(vmserrors.ConditionError{Status: status, Text: messages[len(messages)-1]})
+}
+
+// report writes LIBRARIAN's messages and goes on, the command's status
+// becoming status if that's the worst so far.
+func (l *library) report(status uint32, messages ...string) {
+	for _, m := range messages {
+		l.c.Printf("%s\n", m)
+	}
+
+	if l.problem == 0 || status&7 > l.problem&7 {
+		l.problem = status
+	}
 }
 
 func (l *library) failed(err error, name string) error {
@@ -311,16 +360,23 @@ func (l *library) open(loc rms.FileLocation) error {
 
 	switch t := l.lib.Type; {
 	case l.opts.Macro && t != lbr.TypeMacro, l.opts.Object && t != lbr.TypeObject, l.opts.Share && t != lbr.TypeShareable,
-		l.opts.Text && t != lbr.TypeText:
+		l.opts.Text && t != lbr.TypeText, l.opts.Help && t != lbr.TypeHelp:
 		return l.failed(fmt.Errorf("%s is a %s library", found.Name, t), found.Name)
 	}
 
 	return nil
 }
 
-func (l *library) delete(pattern string) {
+func (l *library) delete(pattern string) error {
 	names := l.b.Match(pattern)
 	if len(names) == 0 {
+		// testdata/help90's /DELETE=NOSUCH.
+		if l.b.Type == lbr.TypeHelp {
+			return l.stop(librarLookupErr,
+				fmt.Sprintf("%%LIBRAR-E-LOOKUPERR, error looking up %s in %s", pattern, l.found.Name),
+				"-LBR-E-KEYNOTFND, key not found")
+		}
+
 		l.warn(fmt.Errorf("no module matches %s", pattern))
 	}
 
@@ -329,6 +385,8 @@ func (l *library) delete(pattern string) {
 		l.changed = true
 		l.log(vmserrors.CLI_LIBDELETED, name)
 	}
+
+	return nil
 }
 
 // insert reads the input files and puts their modules in the library.
@@ -359,7 +417,7 @@ func (l *library) insert() error {
 			module = l.opts.Modules[i]
 		}
 
-		entries, found, err := l.readInput(loc, module)
+		entries, abandoned, found, err := l.readInput(loc, module)
 		if err != nil {
 			return err
 		}
@@ -379,7 +437,11 @@ func (l *library) insert() error {
 							"-LBR-E-DUPKEY, duplicate key in index")
 					}
 
-					l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
+					if l.b.Type == lbr.TypeHelp {
+						l.report(librarWarning, fmt.Sprintf("%%LIBRAR-W-DUPMODULE, module %s from file %s already in %s", e.Name, found.Name, l.found.Name))
+					} else {
+						l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
+					}
 
 					continue
 				}
@@ -404,6 +466,12 @@ func (l *library) insert() error {
 
 			l.changed = true
 		}
+
+		if abandoned != nil {
+			abandoned.Inserted = l.now
+			l.b.Abandon(abandoned)
+			l.changed = true
+		}
 	}
 
 	return nil
@@ -411,11 +479,14 @@ func (l *library) insert() error {
 
 // readInput reads one input file's modules. module is the file's /MODULE=,
 // which only a text file's module can have.
-func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, rms.FileLocation, error) {
+//
+// A help file whose reading stopped at a bad key line also returns the
+// module that line was in, as far as it went, for lbr.Builder.Abandon.
+func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, *lbr.Entry, rms.FileLocation, error) {
 	s := l.c.ContainerSession
 
 	if module != "" && l.b.Type != lbr.TypeText {
-		return nil, loc, l.failed(fmt.Errorf("/MODULE names a module of a text library, not a %s library", l.b.Type), l.found.Name)
+		return nil, nil, loc, l.failed(fmt.Errorf("/MODULE names a module of a text library, not a %s library", l.b.Type), l.found.Name)
 	}
 
 	switch l.b.Type {
@@ -424,7 +495,7 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 
 		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 		if err != nil {
-			return nil, found, FileFailure(err, loc.Name)
+			return nil, nil, found, FileFailure(err, loc.Name)
 		}
 
 		if module == "" {
@@ -434,18 +505,21 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 		module = strings.ToUpper(module)
 
 		if len(module) > l.b.KeySize {
-			return nil, found, l.stop(librarModNameLng,
+			return nil, nil, found, l.stop(librarModNameLng,
 				fmt.Sprintf("%%LIBRAR-E-MODNAMLNG, illegal module name (%s) of %d characters in %s", module, len(module), found.Name))
 		}
 
-		return []*lbr.Entry{lbr.TextModule(module, records)}, found, nil
+		return []*lbr.Entry{lbr.TextModule(module, records)}, nil, found, nil
+
+	case lbr.TypeHelp:
+		return l.readHelp(loc)
 
 	case lbr.TypeMacro:
 		loc = loc.WithDefaultType("MAR")
 
 		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 		if err != nil {
-			return nil, found, FileFailure(err, loc.Name)
+			return nil, nil, found, FileFailure(err, loc.Name)
 		}
 
 		lines := make([]string, len(records))
@@ -459,41 +533,77 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 		}
 
 		if err != nil {
-			return nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			return nil, nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
 		}
 
-		return entries, found, nil
+		return entries, nil, found, nil
 
 	case lbr.TypeObject:
 		loc = loc.WithDefaultType("OBJ")
 
 		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
 		if err != nil {
-			return nil, found, FileFailure(err, loc.Name)
+			return nil, nil, found, FileFailure(err, loc.Name)
+		}
+
+		// A file that isn't an object file, a help file's "1 KEY" among them
+		// (testdata/help90's H90Q): LIBRARIAN names the record's type and no
+		// module, and goes on.
+		if len(records) > 0 && len(records[0]) > 0 && records[0][0] >= objectRecordTypes {
+			l.report(librarError, fmt.Sprintf("%%LIBRAR-E-RECTYP, illegal record type (%d) in module  in %s", records[0][0], found.Name))
+
+			return nil, nil, found, nil
 		}
 
 		entries, err := l.b.ObjectModules(records, l.opts.Selective)
 		if err != nil {
-			return nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			return nil, nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
 		}
 
-		return entries, found, nil
+		return entries, nil, found, nil
 
 	case lbr.TypeShareable:
 		data, found, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
 		if err != nil {
-			return nil, found, FileFailure(err, loc.Name)
+			return nil, nil, found, FileFailure(err, loc.Name)
 		}
 
 		e, err := l.b.ShareableModule(data)
 		if err != nil {
-			return nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			return nil, nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
 		}
 
-		return []*lbr.Entry{e}, found, nil
+		return []*lbr.Entry{e}, nil, found, nil
 	}
 
-	return nil, loc, l.failed(fmt.Errorf("LIBRARY can't insert modules in a %s library", l.b.Type), l.found.Name)
+	return nil, nil, loc, l.failed(fmt.Errorf("LIBRARY can't insert modules in a %s library", l.b.Type), l.found.Name)
+}
+
+// readHelp reads a help file's modules. A bad key line is LIBRARIAN's
+// message, and the file's modules before it are inserted.
+func (l *library) readHelp(loc rms.FileLocation) ([]*lbr.Entry, *lbr.Entry, rms.FileLocation, error) {
+	loc = loc.WithDefaultType("HLP")
+
+	records, found, err := l.c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
+	if err != nil {
+		return nil, nil, found, FileFailure(err, loc.Name)
+	}
+
+	entries, bad := l.b.HelpModules(records)
+	if bad == nil {
+		return entries, nil, found, nil
+	}
+
+	// VMS 7.1 says "expected 1" whatever level would have been allowed
+	// (testdata/help90, rounds 1 and 1b).
+	switch bad.Problem {
+	case lbr.HelpBadLevel:
+		l.report(librarError, fmt.Sprintf("%%LIBRAR-E-ILLKEYLVL, illegal key level %d; key %s in %s; expected 1", bad.Level, bad.Key, found.Name))
+	case lbr.HelpKeyTooLong:
+		l.report(librarError, fmt.Sprintf("%%LIBRAR-E-KEYNAMLNG, key %s name length illegal in %s", bad.Key, found.Name))
+	}
+
+	return entries, bad.Partial, found, nil
 }
 
 // write writes the library: a new one as a new file (a new version, on a
@@ -545,6 +655,9 @@ func (l *library) extract() error {
 		typ = "HLP"
 	}
 
+	// A help library's pattern that matches nothing is a warning
+	// (testdata/help90's /EXTRACT=* of an empty library).
+
 	var records [][]byte
 
 	n := 0
@@ -552,7 +665,13 @@ func (l *library) extract() error {
 	for _, pattern := range l.opts.Extract {
 		keys := l.lib.Match(pattern)
 		if len(keys) == 0 {
-			if l.lib.Type == lbr.TypeText {
+			if l.lib.Type == lbr.TypeHelp && strings.ContainsAny(pattern, "*%") {
+				l.report(librarWarning, "%LIBRAR-W-NOMTCHFOU, no matches found for "+pattern)
+
+				continue
+			}
+
+			if l.lib.Type == lbr.TypeText || l.lib.Type == lbr.TypeHelp {
 				return l.stop(librarLookupErr,
 					fmt.Sprintf("%%LIBRAR-E-LOOKUPERR, error looking up %s in %s", pattern, l.found.Name),
 					"-LBR-E-KEYNOTFND, key not found")
@@ -573,6 +692,16 @@ func (l *library) extract() error {
 	}
 
 	if n == 0 {
+		return nil
+	}
+
+	// /OUTPUT=SYS$OUTPUT shows the modules (testdata/help90's part A), as
+	// ANALYZE/RMS_FILE's /OUTPUT does.
+	if strings.EqualFold(l.opts.Output, "SYS$OUTPUT") && kind == rms.TextRecords {
+		for _, r := range records {
+			l.c.Printf("%s\n", r)
+		}
+
 		return nil
 	}
 

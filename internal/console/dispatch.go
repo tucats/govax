@@ -675,6 +675,7 @@ func (d *Dispatcher) bindGrammar() {
 			Object:      r.Present("OBJECT"),
 			Share:       r.Present("SHARE"),
 			Text:        r.Present("TEXT"),
+			Help:        r.Present("HELP"),
 			NoSqueeze:   r.Present("SQUEEZE") && r.Negated("SQUEEZE"),
 			Selective:   r.Present("SELECTIVE_SEARCH"),
 			Log:         r.Present("LOG"),

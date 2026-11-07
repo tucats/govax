@@ -43,6 +43,10 @@ type Entry struct {
 	// UserData is the library type's own module header data (see
 	// ModuleHeader), cut or zero-filled to the library's size for it.
 	UserData []byte
+
+	// abandoned marks a module whose insertion failed partway (Abandon):
+	// its records are in the data chain, but no index names it.
+	abandoned bool
 }
 
 // Builder is a library being created or changed, held in memory: its
@@ -65,10 +69,10 @@ type Builder struct {
 	// entries /CREATE allows for come to, or what an edited library has.
 	preallocate int
 
-	flags    []uint16 // each index's IDD$W_FLAGS
-	userSize int      // LHD$B_MHDUSZ
-	entries  map[string]*Entry
-	order    []string          // the modules in the order their data is written
+	flags    []uint16          // each index's IDD$W_FLAGS
+	userSize int               // LHD$B_MHDUSZ
+	entries  map[string]*Entry // the modules, by their names as the index compares them (fold)
+	order    []*Entry          // the modules in the order their data is written, abandoned ones too
 	symbols  map[string]string // index 2's keys, and the modules they name
 }
 
@@ -213,8 +217,8 @@ func Edit(l *Library) (*Builder, error) {
 			Inserted: m.Header.Inserted,
 			UserData: m.Header.UserData,
 		}
-		b.entries[e.Name] = e
-		b.order = append(b.order, e.Name)
+		b.entries[b.fold(e.Name)] = e
+		b.order = append(b.order, e)
 	}
 
 	if len(l.Indexes) > 1 {
@@ -224,7 +228,7 @@ func Edit(l *Library) (*Builder, error) {
 				return nil, fmt.Errorf("lbr: index 2's key %s names no module", k.Name)
 			}
 
-			e := b.entries[name]
+			e := b.entries[b.fold(name)]
 			e.Symbols = append(e.Symbols, k.Name)
 			b.symbols[k.Name] = name
 		}
@@ -237,16 +241,33 @@ func rfaLess(a, b RFA) bool {
 	return a.VBN < b.VBN || a.VBN == b.VBN && a.Offset < b.Offset
 }
 
+// fold is name as the module index compares it: upper-cased in an index
+// that upper-cases its entries to compare them (a help library's), so that
+// ALPHA and alpha are one module there.
+func (b *Builder) fold(name string) string {
+	if b.flags[0]&IndexUpcase != 0 {
+		return strings.ToUpper(name)
+	}
+
+	return name
+}
+
 // Module returns the module named name.
 func (b *Builder) Module(name string) (*Entry, bool) {
-	e, ok := b.entries[name]
+	e, ok := b.entries[b.fold(name)]
 
 	return e, ok
 }
 
 // Names returns the modules' names in index order.
 func (b *Builder) Names() []string {
-	names := slices.Clone(b.order)
+	names := make([]string, 0, len(b.entries))
+	for _, e := range b.order {
+		if !e.abandoned {
+			names = append(names, e.Name)
+		}
+	}
+
 	b.sortKeys(0, names)
 
 	return names
@@ -262,27 +283,37 @@ func (b *Builder) SymbolModule(symbol string) (string, bool) {
 // Insert adds a module. A module of the same name, or a symbol another
 // module already defines, is an error.
 func (b *Builder) Insert(e *Entry) error {
-	if _, ok := b.entries[e.Name]; ok {
+	if _, ok := b.entries[b.fold(e.Name)]; ok {
 		return fmt.Errorf("lbr: module %s is already in the library", e.Name)
 	}
 
 	return b.add(e)
 }
 
+// Abandon puts e's records in the data chain as a module whose insertion
+// failed partway: VMS's LIBRARY/HELP writes a module's records as it reads
+// them, so a bad key line leaves the module's header (with no references),
+// the records before that line, and no end of module, which no index names
+// (testdata/help90's H90X2.HLB). Only Bytes sees it.
+func (b *Builder) Abandon(e *Entry) {
+	e.abandoned = true
+	b.order = append(b.order, e)
+}
+
 // Replace adds a module, taking the place of any module of the same name
 // (whose symbols go with it), and reports whether it replaced one.
 func (b *Builder) Replace(e *Entry) (bool, error) {
-	old, ok := b.entries[e.Name]
+	old, ok := b.entries[b.fold(e.Name)]
 	if !ok {
 		return false, b.add(e)
 	}
 
-	pos := slices.Index(b.order, e.Name)
+	pos := slices.Index(b.order, old)
 	b.remove(old)
 
 	if err := b.add(e); err != nil {
-		b.entries[old.Name] = old
-		b.order = slices.Insert(b.order, pos, old.Name)
+		b.entries[b.fold(old.Name)] = old
+		b.order = slices.Insert(b.order, pos, old)
 
 		for _, s := range old.Symbols {
 			b.symbols[s] = old.Name
@@ -296,7 +327,7 @@ func (b *Builder) Replace(e *Entry) (bool, error) {
 
 // Delete removes a module and its symbols.
 func (b *Builder) Delete(name string) error {
-	e, ok := b.entries[name]
+	e, ok := b.entries[b.fold(name)]
 	if !ok {
 		return fmt.Errorf("lbr: no module %s in the library", name)
 	}
@@ -307,8 +338,8 @@ func (b *Builder) Delete(name string) error {
 }
 
 func (b *Builder) remove(e *Entry) {
-	delete(b.entries, e.Name)
-	b.order = slices.DeleteFunc(b.order, func(n string) bool { return n == e.Name })
+	delete(b.entries, b.fold(e.Name))
+	b.order = slices.DeleteFunc(b.order, func(o *Entry) bool { return o == e })
 
 	for _, s := range e.Symbols {
 		delete(b.symbols, s)
@@ -349,8 +380,8 @@ func (b *Builder) add(e *Entry) error {
 		}
 	}
 
-	b.entries[e.Name] = e
-	b.order = append(b.order, e.Name)
+	b.entries[b.fold(e.Name)] = e
+	b.order = append(b.order, e)
 
 	for _, s := range e.Symbols {
 		b.symbols[s] = e.Name
@@ -569,17 +600,27 @@ func (b *Builder) Bytes() []byte {
 	w := &dataWriter{first: uint32(prealloc) + 2}
 	rfas := map[string]RFA{}
 
-	for _, name := range b.order {
-		e := b.entries[name]
-
+	for _, e := range b.order {
 		mhd := make([]byte, mhdLen+b.userSize)
 		mhd[0] = e.Flags
 		mhd[1] = mhdID
-		binary.LittleEndian.PutUint32(mhd[4:], uint32(1+len(e.Symbols)))
 		binary.LittleEndian.PutUint64(mhd[8:], e.Inserted)
 		copy(mhd[mhdLen:], e.UserData)
 
-		rfas[name] = w.write(mhd)
+		// An abandoned module's header counts no references, and it has no
+		// end of module.
+		if e.abandoned {
+			w.write(mhd)
+
+			for _, r := range e.Records {
+				w.write(r)
+			}
+
+			continue
+		}
+
+		binary.LittleEndian.PutUint32(mhd[4:], uint32(1+len(e.Symbols)))
+		rfas[e.Name] = w.write(mhd)
 
 		for _, r := range e.Records {
 			w.write(r)

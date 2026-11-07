@@ -564,8 +564,8 @@ func TestInsertReplaceDelete(t *testing.T) {
 		t.Fatalf("replace: %v, %v", ok, err)
 	}
 
-	if m, _ := b.SymbolModule("X"); m != "" || !slices.Equal(b.order, []string{"B", "A"}) {
-		t.Errorf("after replacing: X in %q, order %v", m, b.order)
+	if m, _ := b.SymbolModule("X"); m != "" || !slices.Equal(orderNames(b), []string{"B", "A"}) {
+		t.Errorf("after replacing: X in %q, order %v", m, orderNames(b))
 	}
 
 	// A failed replacement leaves the old module.
@@ -573,8 +573,8 @@ func TestInsertReplaceDelete(t *testing.T) {
 		t.Fatal("replaced A with a module defining B's symbol")
 	}
 
-	if m, _ := b.SymbolModule("V"); m != "A" || !slices.Equal(b.order, []string{"B", "A"}) {
-		t.Errorf("after a failed replacement: V in %q, order %v", m, b.order)
+	if m, _ := b.SymbolModule("V"); m != "A" || !slices.Equal(orderNames(b), []string{"B", "A"}) {
+		t.Errorf("after a failed replacement: V in %q, order %v", m, orderNames(b))
 	}
 
 	if ok, err := b.Replace(&Entry{Name: "C"}); ok || err != nil {
@@ -681,7 +681,17 @@ func TestEditOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !slices.Equal(e.order, []string{"ZED", "ALPHA", "MIKE"}) {
-		t.Errorf("order %v", e.order)
+	if order := orderNames(e); !slices.Equal(order, []string{"ZED", "ALPHA", "MIKE"}) {
+		t.Errorf("order %v", order)
 	}
+}
+
+// orderNames is the names of b's modules in the order of their data.
+func orderNames(b *Builder) []string {
+	var names []string
+	for _, e := range b.order {
+		names = append(names, e.Name)
+	}
+
+	return names
 }

@@ -1076,7 +1076,8 @@ grammar console
     ! %. LIST is /LIST[=file] (empty default: the console). MACRO, OBJECT,
     ! SHARE (a shareable image symbol table library, whose inputs are
     ! shareable images: docs/PHASE-68, subtask 12), or TEXT (a text library,
-    ! a module per input file: docs/PHASE-83, subtask 3) picks a new library's
+    ! a module per input file: docs/PHASE-83, subtask 3), or HELP (a help
+    ! library, a module per level-1 key: docs/PHASE-90, subtask 3) picks a new library's
     ! type; SQUEEZE is on unless /NOSQUEEZE. MODULE is positional, the
     ! module's name for the text file it follows, by default the file's name.
     ! CREATE may take (BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n).
@@ -1123,12 +1124,17 @@ grammar console
         qualifier   log/id=1419
         qualifier   share/id=1420
         qualifier   text/id=1421
+        qualifier   help/id=1423
         disallow    macro and object
         disallow    macro and share
         disallow    object and share
         disallow    text and macro
         disallow    text and object
         disallow    text and share
+        disallow    help and macro
+        disallow    help and object
+        disallow    help and share
+        disallow    help and text
         disallow    insert and replace
 
     !
