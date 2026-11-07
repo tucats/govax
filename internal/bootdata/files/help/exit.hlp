@@ -1,0 +1,22 @@
+1 EXIT
+    The EXIT command ends the command procedure it is in, and the
+    command level that ran the procedure goes on.  At the terminal
+    (command level 0), EXIT ends govax, as QUIT does.
+
+    Syntax:
+
+        EXIT [status]
+
+    Parameters:
+
+        status      An expression (see HELP SYMBOL EXPRESSIONS) whose
+                    integer value is the procedure's status, the $STATUS
+                    of the level that ran it.  A status that isn't a
+                    success (an even number) has its message shown there,
+                    unless its bit 28 says it has been shown already.
+                    Without a status, the procedure's status is $STATUS,
+                    marked as shown.  See HELP SYMBOL STATUS.
+
+    Example:
+
+        $ EXIT 1            ! end the procedure, successfully

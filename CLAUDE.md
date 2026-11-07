@@ -695,8 +695,7 @@ never had.
   `internal/help`'s `ParseModule`, `Lookup`, and `Render` over a `Library`
   (`NewLBRLibrary`, `NewMemoryLibrary`), held to the probe's HELP logs by
   `TestHelp90Oracle` and to VMS's own modules (local) by
-  `TestHelp90VMSModules`; the old `$` format is `oldformat.go` until
-  subtask 7. Subtask 5 (done 2026-11-07) is the interactive session,
+  `TestHelp90VMSModules`. Subtask 5 (done 2026-11-07) is the interactive session,
   `help.Session` (prompts, `?`, Return, `@library`, end of input, over a
   caller's `Read` and `Write`), held to part D's procedures by
   `TestHelp90Prompting` and to round 2's terminal log by
@@ -705,9 +704,23 @@ never had.
   (SYS$HELP:.HLB), the `HLP$LIBRARY` user libraries by table and the
   search among them (`help.Session`'s `Users`, `LibList`), `/OUTPUT`,
   `/PAGE`, responses from SYS$INPUT (`dclshell`'s `ReadHelpResponse`),
-  held to parts B2, C, and D by `TestHelp90DCLOracle`; with no
-  `/LIBRARY` and no HELPLIB.HLB it shows the old built-in help until
-  subtask 7.
+  held to parts B2, C, and D by `TestHelp90DCLOracle`. Subtask 7 (done
+  2026-11-07) is the libraries in the build: govax's help is `.HLP` files,
+  `internal/bootdata/files/help/` (a file per level-1 topic) and
+  `files/dbghelp/debug.hlp` (one DEBUG module), a mechanical conversion of
+  the old `$`-format files, which are gone with `oldformat.go`;
+  `bootdata/help.go`'s `BuildHelp` makes `helplib.hlb` and `dbghelp.hlb`
+  (`go generate`, `mkhelp`; `TestHelpLibrariesMatchSources`); HELP with no
+  `/LIBRARY` and no SYS$HELP:HELPLIB.HLB reads the built-in one, and the
+  debugger's HELP (`debugger/help.go`, no prompts until subtask 9) reads
+  SYS$HELP:DBG$HELP.HLB or its copy (`debugger.Console.DebuggerHelp`); the
+  system volume has both libraries, their sources in
+  `[SYSTEM.SYSHLP.SOURCES]` (and `[.DEBUG]`), and SYS$SOURCES:BUILDHELP.COM
+  (LIBRARY now takes wildcard inputs); the refresh treats a help library
+  by module (`sysvol/helplib.go`, the manifest's `SPEC(MODULE)` records,
+  SYSKEPT naming a module); Decision 10's tests (`TestEveryVerbHasHelp`,
+  `TestEveryQualifierHasHelp` over `dcl.Grammar.Qualifiers`,
+  `TestConfigKeysHaveHelp`, `TestHelpModulesWellFormed`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -747,9 +760,8 @@ never had.
 - `testdata/{asm,exe,rom,dcl}/` — fixtures pulled from the C repo's root
   (`.asm` sources, real VMS `.exe` binaries, `xdefault.rom`, `evax.dcl`/
   `vax.init`), organized by type for use in Go tests. `vax.help` used to have
-  a second copy here too; it was consolidated down to the single, live copy
-  at `internal/bootdata/files/vax.help` (Phase 22) since, unlike `evax.dcl`,
-  it had no ongoing reason to track a separate upstream-import lineage.
+  a second copy here too; it was consolidated into `internal/bootdata`
+  (Phase 22), and became the help libraries' `.HLP` files in Phase 90.
 - `testdata/mar/forth.mar` — a FORTH interpreter in MACRO-32 (RMS I/O,
   five psects, macro-built dictionary; Phase 36), run by `internal/console`'s
   `TestForth` tests; its VMS 7.3 object, listing, image, and map are in
@@ -1356,9 +1368,9 @@ expect adjustment as phases land):
   handler bound to its verb or syntax. The console and the debugger
   each have a grammar. `internal/help` is VMS's HELP (Phase 90): help
   modules' trees (`ParseModule`), `Lookup`'s matching, and `Render`'s
-  layout; the console and debugger still read the old format
-  (`help.File`: `Parse`, `Load`, `Show`, in `oldformat.go`) until Phase
-  90's subtask 7.
+  layout, and the `Session`; DCL's HELP and the debugger's read help
+  libraries with it (govax's own built from `internal/bootdata`'s `.HLP`
+  files, Phase 90's subtask 7).
 - `internal/dclshell` — DCL, the command language interpreter (Phases 48,
   50, 51; its own package since Phase 52). An `Interpreter` is every
   process's DCL: each process that runs DCL has a `Shell` (its process,
@@ -2374,8 +2386,9 @@ expect adjustment as phases land):
   to (`dclcmd.Context.MountDefaultVolume`, `internal/dclcmd/defvolume.go`;
   defaults WORK, DUA0:, RD54, [WORK]; messages in `vmserrors/codes_mount.go`).
   Unset file: no default volume, names go to the host. Every key read must
-  be in `cmd/govax/main.go`'s `validConfigs`, and documented in vax.help's
-  `HELP CONFIG KEYS`.
+  be in `cmd/govax/main.go`'s `validConfigs`, and documented under
+  `HELP CONFIGURATION KEYS` (`internal/bootdata/files/help/configuration.hlp`;
+  `TestConfigKeysHaveHelp`).
   `vax.sysgen.*` (Phase 62) — govax's SYSGEN parameters, each named for
   the VMS parameter in lowercase: `paging.enable` (bool, VMINIT's
   default for `/[NO]PAGING`, off when unset), `minwscnt`,

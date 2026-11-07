@@ -30,7 +30,7 @@ func newPagedConsole(t *testing.T) *console.Console {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	debugger.Install(c, consoletest.DebugGrammar(t))
 
 	return c
 }

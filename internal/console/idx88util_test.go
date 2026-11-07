@@ -23,7 +23,7 @@ func runIdx88C(t *testing.T) (string, *console.Console) {
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	c.RTL.NodeName = "SIMVAX"
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) {
 		t.Helper()
 

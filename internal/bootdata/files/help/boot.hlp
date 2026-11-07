@@ -1,0 +1,5 @@
+1 BOOT
+    BOOT and ROM are reserved for booting the virtual VAX from a device and
+    from its console ROM.  They are not implemented yet, and say so when
+    typed.  LOAD/ROM and SAVE/ROM, which read and write the ROM's contents,
+    are (see HELP LOAD and HELP SAVE).

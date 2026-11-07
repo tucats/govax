@@ -1,0 +1,53 @@
+1 SPAWN
+    SPAWN creates a subprocess of the console's process, as DCL's SPAWN and
+    a program's LIB$SPAWN do, and (unless /NOWAIT) waits for it to end.  It
+    needs vax.process.scheduler on, as it is unless the configuration turns
+    it off (see HELP CONFIG KEYS).
+
+    Syntax:
+
+        SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
+              [/PROMPT=string] [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]
+
+    The subprocess runs DCL, the same command interpreter as the console:
+    it runs the command and logs out, or, with no command, reads commands
+    from its input until the end of the input, LOGOUT, or EXIT.  Every DCL
+    command works there, command procedures (@) included, with the
+    subprocess's own symbols (copies of the console's, unless /NOSYMBOLS),
+    logical names (copies of its process logical names, unless
+    /NOLOGICAL_NAMES), default directory, $STATUS, and open files.  The
+    commands that work the machine itself (DEBUG, ASM, INITIALIZE/VAX,
+    VMINIT, ZERO, SAVE, LOAD, ...) are the console's own, and give
+    %VAX-E-NOTSUBPROC.  A subprocess can SPAWN a subprocess of its own,
+    which it waits for (unless /NOWAIT) as the console does; a process's
+    subprocesses end when it does.  SPAWN says when the subprocess has
+    been made (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits) and when
+    control is back (%DCL-S-RETURNED), as DCL does.  SPAWN's status is
+    the subprocess's final status.
+
+        /NOWAIT         Don't wait: the subprocess runs beside the console.
+                        It takes turns with the console's DCL, between its
+                        commands (one command each, in a procedure), during
+                        WAIT, while the machine runs (RUN, GO, CALL), and
+                        while the VAX> prompt waits for a line.  What it
+                        writes meanwhile appears above the line being
+                        typed, which is shown again below it.  (With input
+                        from a pipe, not a terminal, it runs at the prompt
+                        only until it waits or has run a while.)
+        /INPUT=file     The subprocess's SYS$INPUT: the terminal, a mailbox,
+                        or a file of commands.  Default: the console's.
+        /OUTPUT=file    Its SYS$OUTPUT: a terminal, a mailbox, NL:, or a
+                        file, which gets each line as a record.
+        /PROCESS=name   Its name.  Default: the user name and "_n".
+        /PROMPT=string  The prompt for commands read from the terminal.
+                        Default: "$ ".
+
+    Example:
+
+        VAX> HELLO :== $DUA0:[WORK]HELLO.EXE
+        VAX> SPAWN HELLO
+        VAX> SPAWN DIRECTORY
+        VAX> SPAWN/NOWAIT @NIGHTLY
+
+    A SPAWN that waits gives the subprocess the terminal.  ATTACH gives it
+    back, or to another process of the console's job (see HELP ATTACH).

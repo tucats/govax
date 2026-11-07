@@ -417,64 +417,116 @@ func (l *library) insert() error {
 			module = l.opts.Modules[i]
 		}
 
-		entries, abandoned, found, err := l.readInput(loc, module)
-		if err != nil {
-			return err
+		// A wildcard name is every file it matches, in directory order,
+		// each an input of its own (BUILDHELP.COM's "[.SOURCES]*.HLP").
+		files := []rms.FileLocation{loc}
+		if !loc.Host && strings.ContainsAny(loc.Name, "*%") {
+			if files, err = l.matchingInputs(loc); err != nil {
+				return err
+			}
 		}
 
-		prev = found
-
-		for _, e := range entries {
-			e.Inserted = l.now
-			l.b.Updated = l.now
-
-			if !replace {
-				if _, ok := l.b.Module(e.Name); ok {
-					if l.b.Type == lbr.TypeText {
-						return l.stop(librarInsertErr,
-							fmt.Sprintf("%%LIBRAR-E-DUPMOD, module %s from file %s already in %s", e.Name, found.Name, l.found.Name),
-							fmt.Sprintf("%%LIBRAR-E-INSERTERR, error inserting %s in %s", e.Name, l.found.Name),
-							"-LBR-E-DUPKEY, duplicate key in index")
-					}
-
-					if l.b.Type == lbr.TypeHelp {
-						l.report(librarWarning, fmt.Sprintf("%%LIBRAR-W-DUPMODULE, module %s from file %s already in %s", e.Name, found.Name, l.found.Name))
-					} else {
-						l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
-					}
-
-					continue
-				}
-
-				if err := l.b.Insert(e); err != nil {
-					return l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
-				}
-
-				l.log(vmserrors.CLI_LIBINSERTED, e.Name)
-			} else {
-				replaced, err := l.b.Replace(e)
-				if err != nil {
-					return l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
-				}
-
-				if replaced {
-					l.log(vmserrors.CLI_LIBREPLACED, e.Name)
-				} else {
-					l.log(vmserrors.CLI_LIBINSERTED, e.Name)
-				}
+		for _, file := range files {
+			found, err := l.insertFile(file, module, replace)
+			if err != nil {
+				return err
 			}
 
-			l.changed = true
-		}
-
-		if abandoned != nil {
-			abandoned.Inserted = l.now
-			l.b.Abandon(abandoned)
-			l.changed = true
+			prev = found
 		}
 	}
 
 	return nil
+}
+
+// inputTypes are each library type's default input file type.
+var inputTypes = map[lbr.Type]string{
+	lbr.TypeText: "TXT", lbr.TypeHelp: "HLP", lbr.TypeMacro: "MAR",
+	lbr.TypeObject: "OBJ", lbr.TypeShareable: "EXE",
+}
+
+// matchingInputs is the files a wildcard input names, with the library's
+// default input type; none is the first one's file-not-found.
+func (l *library) matchingInputs(loc rms.FileLocation) ([]rms.FileLocation, error) {
+	if t, ok := inputTypes[l.b.Type]; ok {
+		loc = loc.WithDefaultType(t)
+	}
+
+	names, err := l.c.ContainerSession.Search(loc.Name)
+	if err != nil {
+		return nil, FileFailure(err, loc.Name)
+	}
+
+	if len(names) == 0 {
+		return []rms.FileLocation{loc}, nil
+	}
+
+	files := make([]rms.FileLocation, len(names))
+	for i, n := range names {
+		files[i] = rms.FileLocation{Name: n}
+	}
+
+	return files, nil
+}
+
+// insertFile inserts (or with replace, replaces) the modules of one input
+// file, and returns the file as found.
+func (l *library) insertFile(loc rms.FileLocation, module string, replace bool) (rms.FileLocation, error) {
+	entries, abandoned, found, err := l.readInput(loc, module)
+	if err != nil {
+		return found, err
+	}
+
+	for _, e := range entries {
+		e.Inserted = l.now
+		l.b.Updated = l.now
+
+		if !replace {
+			if _, ok := l.b.Module(e.Name); ok {
+				if l.b.Type == lbr.TypeText {
+					return found, l.stop(librarInsertErr,
+						fmt.Sprintf("%%LIBRAR-E-DUPMOD, module %s from file %s already in %s", e.Name, found.Name, l.found.Name),
+						fmt.Sprintf("%%LIBRAR-E-INSERTERR, error inserting %s in %s", e.Name, l.found.Name),
+						"-LBR-E-DUPKEY, duplicate key in index")
+				}
+
+				if l.b.Type == lbr.TypeHelp {
+					l.report(librarWarning, fmt.Sprintf("%%LIBRAR-W-DUPMODULE, module %s from file %s already in %s", e.Name, found.Name, l.found.Name))
+				} else {
+					l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
+				}
+
+				continue
+			}
+
+			if err := l.b.Insert(e); err != nil {
+				return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			}
+
+			l.log(vmserrors.CLI_LIBINSERTED, e.Name)
+		} else {
+			replaced, err := l.b.Replace(e)
+			if err != nil {
+				return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			}
+
+			if replaced {
+				l.log(vmserrors.CLI_LIBREPLACED, e.Name)
+			} else {
+				l.log(vmserrors.CLI_LIBINSERTED, e.Name)
+			}
+		}
+
+		l.changed = true
+	}
+
+	if abandoned != nil {
+		abandoned.Inserted = l.now
+		l.b.Abandon(abandoned)
+		l.changed = true
+	}
+
+	return found, nil
 }
 
 // readInput reads one input file's modules. module is the file's /MODULE=,

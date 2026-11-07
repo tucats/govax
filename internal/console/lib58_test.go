@@ -61,7 +61,7 @@ func runLib58(t *testing.T) (uint32, string) {
 		t.Fatal(err)
 	}
 
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for _, line := range []string{
 		"SET DEFAULT DUA1:[000000]",

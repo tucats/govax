@@ -1,0 +1,3141 @@
+1 DEBUG
+  The govax debugger examines and controls the emulated VAX. It is modeled
+  on the VMS debugger, and its commands follow that debugger's syntax. Type
+  HELP topic for more about a command, and HELP topic keyword for a
+  keyword or a qualifier of it (HELP SET BREAK, HELP EXAMINE /INSTRUCTION).
+
+  Additional information available:
+
+  @           ASM         CALL        CANCEL      CLEAR       DEPOSIT
+  EVALUATE    EXAMINE     EXIT        GO          HELP        QUIT
+  SET         SHOW        STEP        SYMBOLIZE
+
+  Other topics:
+
+  EXPRESSIONS     How an address or a value is written
+  REGISTERS       The names of the registers
+  RADIX           The numbers' radix
+  BREAKPOINTS     The kinds of eventpoints and what they report
+
+  The debugger is a separate command set from the console's: the VMS
+  command line (DIRECTORY, MACRO, LINK, RUN, ...) isn't available here.
+  EXIT returns to the console, where it is.
+2 @
+  Runs the debugger commands in a command file.
+
+  Format:
+
+    @file-spec
+
+  The file is read a line at a time, as typed at the DBG> prompt; a file
+  name without a type gets .COM. A command that fails is reported, and the
+  file goes on. With SET OUTPUT VERIFY each line is echoed after a blank
+  as it runs (not at all if it fails before any output), between
+  %DEBUG-I-VERIFYICF's "entering" and "exiting" lines. If a command in it
+  ends the debugger session (EXIT), the lines after it are console
+  commands.
+
+  When RUN starts the debugger on an image and the logical name DBG$INPUT
+  names a file, the debugger reads its commands from that file instead of
+  the terminal, to its end, which is EXIT, before RUN is over (as a
+  command procedure gives the VMS debugger its commands with DEFINE
+  /USER_MODE DBG$INPUT file).
+2 ASM
+    The ASM command invokes the pseudo assembler.  This can be used to store
+    instructions or data in memory.  It recognizes the standard VAX assembler
+    syntax.  It can create a symbol table, including forward references.  It
+    can also be used to set the attributes of the processor itself.
+
+    The assembly continues until the end of the input file is read or a
+    .END pseudo opcode is found.  See the help on ASM PSEUDO for more
+    information on supported pseudo-opcodes, ASM LABELS for labels,
+    local labels, and direct assignment, ASM ADDRESSING for how
+    operands are encoded, and ASM EXPRESSIONS for expressions.
+
+    A statement whose last character before any comment is a hyphen
+    ("-") continues on the next line.
+
+    Syntax:
+
+        ASM  [<file>]
+
+    Parameter:
+
+        <file>       You can optionally specify a file on disk that is to
+                     be read in and assembled.  If you do not specify a
+                     file then the console prompt changes to ASM> and the
+                     assembler statements are entered from the keyboard.
+
+    The file is found as RUN's and @'s are: a VMS file specification
+    (SYS$SOURCES:KERNEL.ASM) is a file on a mounted volume, a host path
+    ("./my.asm") a host file, and a bare name (my.asm) a file in the
+    default directory when SET DEFAULT is on a volume.  A bare name that
+    isn't there, or any name when the default is on the host, is looked
+    for in the host's current directory, the --path directories, and
+    govax's built-in files (kernel.asm, ssdef.asm).  Quote a host file's
+    name to keep its case.  A .INCLUDE of a bare name looks beside the
+    file being assembled first, on the same volume or host directory.
+3 ADDRESSING
+    Operands use the VAX MACRO addressing mode syntax:
+
+        Rn                  Register
+        (Rn)                Register deferred
+        (Rn)+  -(Rn)        Autoincrement, autodecrement
+        @(Rn)+              Autoincrement deferred
+        #value              Short literal, or immediate if it won't fit
+        S^#value  I^#value  Short literal, immediate
+        disp(Rn)  @disp(Rn) Displacement [deferred]
+        B^ W^ L^disp(Rn)    Displacement of a given size
+        address   @address  Relative [deferred]: PC plus a displacement
+        B^ W^ L^address     Relative, with a displacement of a given size
+        @#address           Absolute
+        operand[Rx]         Indexed
+
+    With no B^, W^, or L^ prefix, a displacement or relative address
+    whose value is already known uses the smallest displacement that
+    holds it.  A forward reference uses a longword displacement.  A
+    relative operand is stored as the distance from the end of the
+    operand to the address, so code that uses it must run at the
+    address it was assembled for, or be moved as a whole.
+3 EXPRESSIONS
+    Expressions follow VAX MACRO.  A number is decimal unless a radix
+    operator says otherwise, and all binary operators have the same
+    priority, applied left to right: 1+2*3 is 9, and 1+<2*3> is 7.
+
+        <expression>        Grouping; ( ) also works
+        + - * /             Arithmetic
+        A@B                 Shift A left B bits (right if B is negative)
+        A&B  A!B  A\B       Logical AND, inclusive OR, exclusive OR
+        -A  +A              Negation
+        ^C A                One's complement
+        ^D ^X ^O ^B         Decimal, hexadecimal, octal, binary: ^X1F,
+                            or ^X<10+20> for a whole expression
+        ^A/text/            ASCII: up to four characters, any delimiter
+        'text'              ASCII, as above
+        ^M<R2,R3>           Register mask
+        .                   The current location
+
+    A number must be all digits of its radix: 0FF is an error, where
+    ^X0FF is 255.  The console's SET RADIX does not affect the
+    assembler, and disassembly shows hexadecimal values with ^X so
+    that it can be assembled again.
+
+    An expression may use a symbol that is defined later in the program
+    (a forward reference) where it adds or subtracts that symbol, or
+    multiplies it by a constant: SYM+8, B-A, 2*SYM, SYM-.  The value is
+    completed when the symbol is defined.  Anything else done to a
+    forward reference is an error.
+3 LABELS
+    A statement may start with a label, which defines a symbol whose
+    value is the current location:
+
+        NAME:       An ordinary label.
+        NAME::      A label that survives .CLEAR.
+        10$:        A local label: decimal digits followed by "$".
+
+    A local label is only known within its local label block, the code
+    between two ordinary labels (.ENTRY, .SCOPE, .SHIM, .REGION, and
+    .END also end a block).  The same local label, such as 10$, can be
+    used again in each block.  Referring to a local label that isn't
+    defined in the block before the block ends is an error.  Local
+    labels are not kept in the console's symbol table.
+
+    A symbol can also be given a value with a direct assignment:
+
+        NAME = <expression>
+        NAME == <expression>
+        . = <expression>        Sets the current location.
+
+    The expression may not contain forward references.
+3 PSEUDO
+    The assembler supports a number of "pseudo-opcodes" which are really
+    instructions to the assembler rather than actual VAX opcodes.  You can
+    get help on each of the pseudo-opcodes.  To get help, use the command
+    HELP ASM PSEUDO followed by the name of the pseudo-opcode.
+
+    Note that in the actual assembler code, pseudo opcodes are identified
+    by a leading "." character.  Do not specify this in the help command.
+
+        ALIGN
+        ASCIC
+        ASCID
+        ASCII
+        ASCIZ
+        BASE
+        BLKB
+        BLKD
+        BLKF
+        BLKL
+        BLKW
+        BYTE
+        CASE
+        CLEAR
+        CONSOLE
+        D_FLOAT
+        END
+        ENDM
+        ENDR
+        ENTRY
+        ERROR
+        F_FLOAT
+        G_FLOATING
+        H_FLOATING
+        IF
+        IIF
+        INCLUDE
+        IRP
+        IRPC
+        LONG
+        MACRO
+        MDELETE
+        MEXIT
+        MODE
+        NARG
+        NCHR
+        NTYPE
+        OCTA
+        PACKED
+        PRINT
+        PTE
+        QUAD
+        REGION
+        REPEAT
+        SCB
+        SET
+        SHIM
+        WARN
+        WORD
+        VECTOR
+4 ALIGN
+    The ALIGN directive advances the current location if needed
+    to ensure that it is an even multiple of the alignment value.
+    For example, a system exception handler must start on a quad-
+    word boundary, so an .ALIGN 8 can be used to ensure that the
+    following instruction is sure to have the correct starting
+    address.  Note that while the current location may be changed
+    by this directive, nothing is written into the memory locations
+    that are skipped over.
+
+    Syntax:
+
+        .ALIGN  <expression>
+
+    Parameter:
+
+        <expression>     An integer expression, indicating the
+                         multiple that the current location must
+                         match.  Typically, values of 2, 4, or 8
+                         are most often used for word, longword,
+                         and quadword boundaries.
+4 ASCII
+    The character string storage pseudo-opcodes ASCIC, ASCID, ASCII, and
+    ASCIZ all store a string in memory.  The differences are in the format
+    of the string storage.
+
+    Syntax:
+
+        .ASCIC     "<string>"      Stores a counted ASCII string.  The
+                                   storage contains a byte that holds
+                                   the length of <string> (at most 255),
+                                   followed by the bytes of the string.
+
+        .ASCID     "<string>"      Stores a string descriptor.  The first
+                                   eight bytes are a standard VMS string
+                                   descriptor, followed by the actual bytes
+                                   of the string.  The descriptor is
+                                   initialized with the length and address
+                                   of the string data.
+
+        .ASCII     "<string>"      The bytes of the string data are stored
+                                   in memory.
+
+        .ASCIZ     "<string>"      A null terminated string is stored.  The
+                                   bytes of <string> are written, followed
+                                   by an additional byte containing a zero.
+
+    As in VAX MACRO, the string can be delimited by any printing
+    character except blank, "=", ";", or "<", as long as it does not
+    appear in the string, and lowercase letters are kept.  Between or
+    after delimited strings, an expression in angle brackets stores one
+    byte, for characters such as a line feed:
+
+        CR = ^D13
+        LF = ^D10
+        .ASCII    /Line one/<CR><LF>
+        .ASCIZ    "It's done."<LF>
+
+    A backslash is an ordinary character; there are no escapes like \n.
+    The descriptor .ASCID stores has class S and type T (information
+    word 010E).
+4 BASE
+    The BASE opcode is used to set the address (physical or virtual,
+    depending on the MAPEN register setting) to begin storing the
+    next instructions or data.  This is equivalent to the console
+    command SET BASE.
+
+    Syntax:
+
+        .BASE    <expression>
+
+    Parameter:
+
+        <expression>     Any valid integer expression.  This defines
+                         the location where the next instruction or
+                         data will be written.
+4 BLKB
+    The block storage opcodes BLKB, BLKL, and BLKW create a block of
+    zeros of byte, longword, or word length.
+
+    Syntax:
+
+        .BLKB      <count>        Creates <count> bytes of zeros.
+
+        .BLKW      <count>        Creates <count> 16-bit words of zeros.
+
+        .BLKL      <count>        Creates <count> 32-bit longwords of
+                                  zeros.
+
+    Parameter:
+
+        <count>        The number of elements to write to the storage.
+                       The actual number of bytes is <count> * <size>
+                       where <size> is specified by the opcode (byte,
+                       word, or longword).
+4 BLKL
+    The block storage opcodes BLKB, BLKL, and BLKW create a block of
+    zeros of byte, longword, or word length.
+
+    Syntax:
+
+        .BLKB      <count>        Creates <count> bytes of zeros.
+
+        .BLKW      <count>        Creates <count> 16-bit words of zeros.
+
+        .BLKL      <count>        Creates <count> 32-bit longwords of
+                                  zeros.
+
+    Parameter:
+
+        <count>        The number of elements to write to the storage.
+                       The actual number of bytes is <count> * <size>
+                       where <size> is specified by the opcode (byte,
+                       word, or longword).
+4 BLKW
+    The block storage opcodes BLKB, BLKL, and BLKW create a block of
+    zeros of byte, longword, or word length.
+
+    Syntax:
+
+        .BLKB      <count>        Creates <count> bytes of zeros.
+
+        .BLKW      <count>        Creates <count> 16-bit words of zeros.
+
+        .BLKL      <count>        Creates <count> 32-bit longwords of
+                                  zeros.
+
+    Parameter:
+
+        <count>        The number of elements to write to the storage.
+                       The actual number of bytes is <count> * <size>
+                       where <size> is specified by the opcode (byte,
+                       word, or longword).
+4 BYTE
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
+
+    Syntax:
+
+        .BYTE    <data> [, <data> ]
+
+        .WORD    <data> [, <data> ]
+
+        .LONG    <data> [, <data> ]
+
+        .QUAD    <data> [, <data> ]
+
+        .OCTA    <data> [, <data> ]
+
+
+     Parameter:
+
+        <data>     The data value(s) to be stored.  If more than one
+                   is given, they must be separated by commas.  The
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
+4 CASE
+    The .CASE pseudo operator is used to construct the branch table that
+    follows a CASEB, CASEW, or CASEL instruction.  The branch table must
+    be stored in memory immediately following the CASEx instruction.  Each
+    element of the branch table is a displacement address of where the
+    CASEx will transfer to based on the selector operand.
+
+    This is difficult to code without the .CASE since the table must be
+    a set of word displacements from the start of the table.  With the
+    .CASE pseudo operator you can simply express it as a list of
+    labeled destinations that can be forward references if needed.
+
+    Syntax:
+
+        CASEx selector.rx, base.rx, limit.rx
+
+        .CASE    dest1 [, dest2...]
+
+    Parameters:
+
+        The above syntax specifies that a CASEx opcode must precede the
+        .CASE table for it to be meaningful.  This can be followed by one
+        or more .CASE pseudo opcodes.  If more than one item is to be
+        given for each .CASE then they must be separated by commas.
+
+        Note that an error occurs if the displacement between the label
+        and the address of the first .CASE entry cannot be expressed as
+        a signed 16-bit word.
+
+    Example:
+
+                  CASEB     (R0), @#BASE_VALUE, #2
+                  .CASE     RED
+                  .CASE     BLUE
+                  .CASE     GREEN
+                  MOVL      #ERR_CODE, R0
+                  ...
+
+        RED:      ADDL2   R2, R3
+                  ...
+
+
+        In this example, there is a case table of three items.  Note
+        that the limit value is zero-based, so for a table of three
+        items the range is 0-2 and the limit is 2.  Each .CASE specifies
+        the branch destinations in order.  One of these will be chosen
+        by the VAX based on the selector in R0, less the base value.
+        Note that if the selector value is outside the range allowed
+        by the base value and limit, then control resumes after the
+        .CASE block with the MOVL of the error code.
+
+        It is an undetected programmer error to specify a .CASE table
+        that is not _exactly_ as long as the limit-1 specifies!
+4 CLEAR
+    The CLEAR directive will clear all symbols from the user symbol table,
+    or a specific symbol.  If no name is given then all symbols will be
+    cleared.
+
+    Syntax:
+
+        .CLEAR   [ <symbol-name> ]
+4 D_FLOATING
+    The F_FLOAT, D_FLOAT, G_FLOATING, and H_FLOATING pseudo-opcodes
+    (also F_FLOATING, D_FLOATING, FLOAT, and DOUBLE) store floating
+    values in the VAX's four formats: 4, 8, 8, or 16 bytes.
+
+    Syntax:
+
+        .F_FLOAT     <value> [, <value> ]
+
+        .D_FLOAT     <value> [, <value> ]
+
+        .G_FLOATING  <value> [, <value> ]
+
+        .H_FLOATING  <value> [, <value> ]
+
+     Parameter:
+
+        <value>    A decimal number, such as 1.5, -0.1, or 6.02E23.
+                   Each is rounded once, from its decimal value, to
+                   the format's precision (half away from zero, as
+                   the VAX rounds).  A value too large for the format
+                   is an error; one too small is stored as zero.
+4 END
+    The END opcode terminates the assembly.  If assembling from the
+    console terminal, it returns the prompt to the normal VAX> prompt.
+
+    Syntax:
+
+        .END    [<entry>]
+
+    Parameter:
+
+        <entry>        If specified, it indicates the starting entry
+                       point for execution.  The symbol __ENTRY is set
+                       to this value (which can be any valid address
+                       expression).  A CALL instruction is generated to
+                       this address to start the program.
+
+                       If you do not want to auto-execute an assembled
+                       program, do not include an <entry> value on the
+                       END statement.
+4 ENDC
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 ENDM
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 ENDR
+    Repeat blocks, as in VAX MACRO: the statements up to .ENDR are
+    assembled several times.
+
+    Syntax:
+
+        .REPEAT  <count>        (or .REPT)  <count> times
+        .IRP     <symbol>,<<argument>,...>  once for each argument, with
+                                            <symbol> replaced by it
+        .IRPC    <symbol>,<<text>>          once for each character
+        ...
+        .ENDR
+
+    .MEXIT in a repeat block ends it, skipping the repetitions left.
+
+    Example:
+
+        .IRP     REG, <R2, R3, R4>
+        CLRL     REG
+        .ENDR
+4 ENTRY
+    The ENTRY opcode defines a procedure entry point.  It can be followed
+    by an optional register mask specification.  The symbol is stored as
+    an entry mask label, and a mask word is generated.
+
+    Syntax:
+
+        .ENTRY    <name> [, <mask> ]
+
+    Parameter:
+
+        <name>    The required name of the entry point.  This may be
+                  used as a label in a CALLS or CALLG instruction, or
+                  as the entry for a CALL console command.
+
+        <mask>    If specified, this determines the register mask to
+                  associate with the procedure.  If ommitted, then a
+                  mask of zero (no saved registers) is assumed.  The
+                  mask is usually specified as ^m<r2,r3> syntax.
+4 ERROR
+    .ERROR and .WARN report a message of the program's own: .ERROR as an
+    assembly error, and .WARN as a warning.  The message is the value of
+    the expression, if one is given and it isn't zero, then the
+    statement's comment.  They're most useful in a macro, in a
+    conditional block, to check its arguments.
+
+    Syntax:
+
+        .ERROR   [<expression>] ;<comment>
+        .WARN    [<expression>] ;<comment>
+
+    Example:
+
+        .IIF     BLANK <ARG>, .ERROR ; ARG is required
+
+    In the MACRO command, .PRINT displays its comment the same way; the
+    ASM command's .PRINT is its own (see HELP ASM PSEUDO PRINT).
+4 F_FLOATING
+    The F_FLOAT, D_FLOAT, G_FLOATING, and H_FLOATING pseudo-opcodes
+    (also F_FLOATING, D_FLOATING, FLOAT, and DOUBLE) store floating
+    values in the VAX's four formats: 4, 8, 8, or 16 bytes.
+
+    Syntax:
+
+        .F_FLOAT     <value> [, <value> ]
+
+        .D_FLOAT     <value> [, <value> ]
+
+        .G_FLOATING  <value> [, <value> ]
+
+        .H_FLOATING  <value> [, <value> ]
+
+     Parameter:
+
+        <value>    A decimal number, such as 1.5, -0.1, or 6.02E23.
+                   Each is rounded once, from its decimal value, to
+                   the format's precision (half away from zero, as
+                   the VAX rounds).  A value too large for the format
+                   is an error; one too small is stored as zero.
+4 G_FLOATING
+    The F_FLOAT, D_FLOAT, G_FLOATING, and H_FLOATING pseudo-opcodes
+    (also F_FLOATING, D_FLOATING, FLOAT, and DOUBLE) store floating
+    values in the VAX's four formats: 4, 8, 8, or 16 bytes.
+
+    Syntax:
+
+        .F_FLOAT     <value> [, <value> ]
+
+        .D_FLOAT     <value> [, <value> ]
+
+        .G_FLOATING  <value> [, <value> ]
+
+        .H_FLOATING  <value> [, <value> ]
+
+     Parameter:
+
+        <value>    A decimal number, such as 1.5, -0.1, or 6.02E23.
+                   Each is rounded once, from its decimal value, to
+                   the format's precision (half away from zero, as
+                   the VAX rounds).  A value too large for the format
+                   is an error; one too small is stored as zero.
+4 H_FLOATING
+    The F_FLOAT, D_FLOAT, G_FLOATING, and H_FLOATING pseudo-opcodes
+    (also F_FLOATING, D_FLOATING, FLOAT, and DOUBLE) store floating
+    values in the VAX's four formats: 4, 8, 8, or 16 bytes.
+
+    Syntax:
+
+        .F_FLOAT     <value> [, <value> ]
+
+        .D_FLOAT     <value> [, <value> ]
+
+        .G_FLOATING  <value> [, <value> ]
+
+        .H_FLOATING  <value> [, <value> ]
+
+     Parameter:
+
+        <value>    A decimal number, such as 1.5, -0.1, or 6.02E23.
+                   Each is rounded once, from its decimal value, to
+                   the format's precision (half away from zero, as
+                   the VAX rounds).  A value too large for the format
+                   is an error; one too small is stored as zero.
+4 IFF
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 IFTF
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 IF_FALSE
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 IF_TRUE
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 IIF
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
+4 IRPC
+    Repeat blocks, as in VAX MACRO: the statements up to .ENDR are
+    assembled several times.
+
+    Syntax:
+
+        .REPEAT  <count>        (or .REPT)  <count> times
+        .IRP     <symbol>,<<argument>,...>  once for each argument, with
+                                            <symbol> replaced by it
+        .IRPC    <symbol>,<<text>>          once for each character
+        ...
+        .ENDR
+
+    .MEXIT in a repeat block ends it, skipping the repetitions left.
+
+    Example:
+
+        .IRP     REG, <R2, R3, R4>
+        CLRL     REG
+        .ENDR
+4 LONG
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
+
+    Syntax:
+
+        .BYTE    <data> [, <data> ]
+
+        .WORD    <data> [, <data> ]
+
+        .LONG    <data> [, <data> ]
+
+        .QUAD    <data> [, <data> ]
+
+        .OCTA    <data> [, <data> ]
+
+
+     Parameter:
+
+        <data>     The data value(s) to be stored.  If more than one
+                   is given, they must be separated by commas.  The
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
+4 MACRO
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 MDELETE
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 MEXIT
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 NARG
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 NCHR
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 NTYPE
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+4 OCTA
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
+
+    Syntax:
+
+        .BYTE    <data> [, <data> ]
+
+        .WORD    <data> [, <data> ]
+
+        .LONG    <data> [, <data> ]
+
+        .QUAD    <data> [, <data> ]
+
+        .OCTA    <data> [, <data> ]
+
+
+     Parameter:
+
+        <data>     The data value(s) to be stored.  If more than one
+                   is given, they must be separated by commas.  The
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
+4 PACKED
+    The PACKED pseudo-opcode stores a packed decimal string: the
+    digits two to a byte, most significant first, and the sign in the
+    last byte's low four bits (hex C for plus, D for minus).  An even
+    number of digits gets a zero first half-byte.  The decimal string
+    instructions (MOVP, ADDP4, CVTPL, EDITPC, ...) work on these.
+
+    Syntax:
+
+        .PACKED  <decimal-string> [, <symbol> ]
+
+     Parameter:
+
+        <decimal-string>  A decimal number of 0 to 31 digits, with an
+                          optional sign: -12, +500, 0.
+
+        <symbol>          If given, it is set to the number of digits
+                          (not counting the sign), the length the
+                          decimal instructions take.
+4 PRINT
+    The PRINT opcode is used to display messages during assembly of
+    a source file, such as version or copyright information.  This is
+    equivalent to the PRINT command and has the same parameters.
+
+    Syntax:
+
+        .PRINT    <expression>  [, <expression> ]
+4 PTE
+    The .PTE pseudo operator creates a page table entry longword at the current
+    location in memory.
+4 QUAD
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
+
+    Syntax:
+
+        .BYTE    <data> [, <data> ]
+
+        .WORD    <data> [, <data> ]
+
+        .LONG    <data> [, <data> ]
+
+        .QUAD    <data> [, <data> ]
+
+        .OCTA    <data> [, <data> ]
+
+
+     Parameter:
+
+        <data>     The data value(s) to be stored.  If more than one
+                   is given, they must be separated by commas.  The
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
+4 REGION
+    The REGION pseudo opcode switches between S0 and P0 address
+    spaces.  The assembler maintains two "current locations",
+    one for each of the code regions.  The .BASE directive can
+    be used to set the current location for the current region.
+    Using the REGION directive selects which current locations
+    is to be used.
+
+    After initialization, the P0 base starts at address 00000200
+    and the S0 region starts at the first page following the SCB
+    and page tables.
+
+    Syntax:
+
+        .REGION  <region>
+
+    Parameter:
+
+        <region>    The region to assemble instructions into.
+                    This can be P0, 0, or PROCESS for the P0
+                    region, or S0, 2, or SYSTEM for the S0
+                    region.
+4 REPEAT
+    Repeat blocks, as in VAX MACRO: the statements up to .ENDR are
+    assembled several times.
+
+    Syntax:
+
+        .REPEAT  <count>        (or .REPT)  <count> times
+        .IRP     <symbol>,<<argument>,...>  once for each argument, with
+                                            <symbol> replaced by it
+        .IRPC    <symbol>,<<text>>          once for each character
+        ...
+        .ENDR
+
+    .MEXIT in a repeat block ends it, skipping the repetitions left.
+
+    Example:
+
+        .IRP     REG, <R2, R3, R4>
+        CLRL     REG
+        .ENDR
+4 REPT
+    Repeat blocks, as in VAX MACRO: the statements up to .ENDR are
+    assembled several times.
+
+    Syntax:
+
+        .REPEAT  <count>        (or .REPT)  <count> times
+        .IRP     <symbol>,<<argument>,...>  once for each argument, with
+                                            <symbol> replaced by it
+        .IRPC    <symbol>,<<text>>          once for each character
+        ...
+        .ENDR
+
+    .MEXIT in a repeat block ends it, skipping the repetitions left.
+
+    Example:
+
+        .IRP     REG, <R2, R3, R4>
+        CLRL     REG
+        .ENDR
+4 SCB
+    The SCB directive allows you to define a system control block address
+    for catching system exceptions.  These are stored in the SCB by the
+    assembler, using the current value of the SCBB base register.
+
+    Syntax:
+
+        .SCB  <exception>, <address> [, <stack>]
+
+
+    Parameters:
+
+        <exception>     This is the exception code.  This must be a
+                        multiple of 4.  Usually, it is defined using
+                        one of the predefined symbols.  For example,
+                        use the symbol EXC$ACCVIO to indicate the
+                        Access Violation exception handler slot in
+                        the SCB.
+
+        <address>       This is the address of the exception handler.
+                        It must be a quadword aligned address.
+
+        <stack>         If given, this may be ISP or KSP to indicate
+                        which stack the handler is to run on.  If
+                        omitted, then the Kernel Stack Pointer is
+                        assumed.
+4 SET
+    The SET directive sets a symbol in the symbol table.  This can often
+    be used in conjunction with expressions containing the "." operator
+    which means the current location being assembled into.
+
+    Syntax:
+
+        .SET   <symbol-name> <value>
+
+    Parameters:
+
+        <symbol-name>     The name of the symbol to create or set.
+
+        <value>           Any valid expression.
+4 SHIM
+    The .SHIM pseudo-operand creates a software shim entry.  This is used in
+    the micro-kernel to map runtime library vector points to support routines
+    in the micro-kernel.  Some of these support routines are implemented in
+    the micro-kernel itself, and some transfer control to native runtime code
+    in the govax emulator.
+
+    Syntax:
+
+        .SHIM   <entry-name>, [<runtime-code>], <runtime-library>, <offset>
+
+    Parameters:
+
+        <entry-name>        This is the name of the entry point that supports
+                            the runtime function.  It may be the name of an
+                            already-defined entry point in the micro-kernel,
+                            or a shim stub will be generated by default with
+                            this name.
+
+        <runtime-code>      If specified, this is the dispatch code for the
+                            integrated runtime library in the native emulator
+                            code.  See the files shim.c and rtl.c for more
+                            information.  If omitted or zero, then a shim
+                            stub is not create, and entry-name is assumed to
+                            specify a real VAX support routine in the micro-
+                            kernel.
+
+        <runtime-library>   The name of the runtime library that this is an
+                            entry point shim for, such as LIBRTL or DECC$SHR.
+                            Do not include the ".EXE" suffix.  This name must
+                            match the name of a sharable library list entry
+                            in an image for the shim to be bound to the image.
+
+        <offset>            This is the offset into the sharable image library
+                            where the routine resides.  Usually this is an
+                            offset near the start of the actual sharable image
+                            code that is a jump vector to the "real" routine.
+                            In any case, this offset value (a longword) must
+                            exactly match the offset in the image to be bound.
+
+    Example:
+
+        .SHIM   LIB$PUT_OUTPUT, 0, LIBRTL, ^X0478
+
+        This indicates that when an image is loaded that includes a sharable
+        image reference to LIBRTL+^X0478, then those references will be remapped
+        to the LIB$PUT_OUTPUT routine.  Because the runtime library dispatch
+        code is zero, the routine must be a VAX routine, already assembled in
+        memory.
+
+
+        .SHIM   STR$UPCASE, 2, LIBRTL, ^X0778
+
+        This indicates that when an image is loaded with a reference to
+        LIBRTL+^X0778, it will call a shim stub named STR$UPCASE.  The shim stub
+        is created as part of the assembly of the .SHIM instruction.  This stub
+        will use the special XFC instruction to transfer control to the RTL
+        support routine for code 2.  See shim.c and rtl.c for more information.
+4 VECTOR
+    The VECTOR directive starts assembling code that is stored in the
+    SCB vector.  The address of the code following the directive is
+    stored in the SCB slot.
+
+    Syntax:
+
+        .VECTOR  <slot-number> [, <stack-name> ]
+
+    Parameter:
+
+        <slot-number>   This is the number of the slot that will be
+                        filled with the address of the following
+                        instructions.  The address is aligned on an
+                        8-byte boundary automatically.  The slot
+                        number is usually expressed symbolically,
+                        such as with EXC$ARITH for the arithmentic
+                        trap slot.
+
+        <stack-name>    This can be either ISP or KSP.  If omitted,
+                        then KSP is assumed.  This indicates if the
+                        fault runs on the interrupt stack (with VM
+                        turned off) or not.
+4 WARN
+    .ERROR and .WARN report a message of the program's own: .ERROR as an
+    assembly error, and .WARN as a warning.  The message is the value of
+    the expression, if one is given and it isn't zero, then the
+    statement's comment.  They're most useful in a macro, in a
+    conditional block, to check its arguments.
+
+    Syntax:
+
+        .ERROR   [<expression>] ;<comment>
+        .WARN    [<expression>] ;<comment>
+
+    Example:
+
+        .IIF     BLANK <ARG>, .ERROR ; ARG is required
+
+    In the MACRO command, .PRINT displays its comment the same way; the
+    ASM command's .PRINT is its own (see HELP ASM PSEUDO PRINT).
+4 WORD
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
+
+    Syntax:
+
+        .BYTE    <data> [, <data> ]
+
+        .WORD    <data> [, <data> ]
+
+        .LONG    <data> [, <data> ]
+
+        .QUAD    <data> [, <data> ]
+
+        .OCTA    <data> [, <data> ]
+
+
+     Parameter:
+
+        <data>     The data value(s) to be stored.  If more than one
+                   is given, they must be separated by commas.  The
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
+2 ASSEMBLE
+    The ASM command invokes the pseudo assembler.  This can be used to store
+    instructions or data in memory.  It recognizes the standard VAX assembler
+    syntax.  It can create a symbol table, including forward references.  It
+    can also be used to set the attributes of the processor itself.
+
+    The assembly continues until the end of the input file is read or a
+    .END pseudo opcode is found.  See the help on ASM PSEUDO for more
+    information on supported pseudo-opcodes, ASM LABELS for labels,
+    local labels, and direct assignment, ASM ADDRESSING for how
+    operands are encoded, and ASM EXPRESSIONS for expressions.
+
+    A statement whose last character before any comment is a hyphen
+    ("-") continues on the next line.
+
+    Syntax:
+
+        ASM  [<file>]
+
+    Parameter:
+
+        <file>       You can optionally specify a file on disk that is to
+                     be read in and assembled.  If you do not specify a
+                     file then the console prompt changes to ASM> and the
+                     assembler statements are entered from the keyboard.
+
+    The file is found as RUN's and @'s are: a VMS file specification
+    (SYS$SOURCES:KERNEL.ASM) is a file on a mounted volume, a host path
+    ("./my.asm") a host file, and a bare name (my.asm) a file in the
+    default directory when SET DEFAULT is on a volume.  A bare name that
+    isn't there, or any name when the default is on the host, is looked
+    for in the host's current directory, the --path directories, and
+    govax's built-in files (kernel.asm, ssdef.asm).  Quote a host file's
+    name to keep its case.  A .INCLUDE of a bare name looks beside the
+    file being assembled first, on the same volume or host directory.
+3 PSEUDO
+4 SHIM
+    The .SHIM pseudo-operand creates a software shim entry.  This is used in
+    the micro-kernel to map runtime library vector points to support routines
+    in the micro-kernel.  Some of these support routines are implemented in
+    the micro-kernel itself, and some transfer control to native runtime code
+    in the govax emulator.
+
+    Syntax:
+
+        .SHIM   <entry-name>, [<runtime-code>], <runtime-library>, <offset>
+
+    Parameters:
+
+        <entry-name>        This is the name of the entry point that supports
+                            the runtime function.  It may be the name of an
+                            already-defined entry point in the micro-kernel,
+                            or a shim stub will be generated by default with
+                            this name.
+
+        <runtime-code>      If specified, this is the dispatch code for the
+                            integrated runtime library in the native emulator
+                            code.  See the files shim.c and rtl.c for more
+                            information.  If omitted or zero, then a shim
+                            stub is not create, and entry-name is assumed to
+                            specify a real VAX support routine in the micro-
+                            kernel.
+
+        <runtime-library>   The name of the runtime library that this is an
+                            entry point shim for, such as LIBRTL or DECC$SHR.
+                            Do not include the ".EXE" suffix.  This name must
+                            match the name of a sharable library list entry
+                            in an image for the shim to be bound to the image.
+
+        <offset>            This is the offset into the sharable image library
+                            where the routine resides.  Usually this is an
+                            offset near the start of the actual sharable image
+                            code that is a jump vector to the "real" routine.
+                            In any case, this offset value (a longword) must
+                            exactly match the offset in the image to be bound.
+
+    Example:
+
+        .SHIM   LIB$PUT_OUTPUT, 0, LIBRTL, ^X0478
+
+        This indicates that when an image is loaded that includes a sharable
+        image reference to LIBRTL+^X0478, then those references will be remapped
+        to the LIB$PUT_OUTPUT routine.  Because the runtime library dispatch
+        code is zero, the routine must be a VAX routine, already assembled in
+        memory.
+
+
+        .SHIM   STR$UPCASE, 2, LIBRTL, ^X0778
+
+        This indicates that when an image is loaded with a reference to
+        LIBRTL+^X0778, it will call a shim stub named STR$UPCASE.  The shim stub
+        is created as part of the assembly of the .SHIM instruction.  This stub
+        will use the special XFC instruction to transfer control to the RTL
+        support routine for code 2.  See shim.c and rtl.c for more information.
+2 BREAKPOINTS
+  The debugger has three kinds of eventpoint:
+
+    breakpoints    stop the program before an instruction runs
+                   (SET BREAK), or when a class of instruction is reached
+                   (/CALL, /BRANCH, /RETURN, /LINE, /INSTRUCTION), or when
+                   an exception is signaled (/EXCEPTION), or, govax's own,
+                   when a machine fault is about to be delivered (/FAULT)
+    tracepoints    report where the program is and go on (SET TRACE)
+    watchpoints    stop after the instruction that changes a location
+                   (SET WATCH)
+
+  The report says where, in the names the program's debug symbols give:
+  "break at DBGDIS\START\%LINE 42" or "trace on lines at ...". SHOW BREAK,
+  SHOW TRACE, and SHOW WATCH list them, and CANCEL takes them away.
+2 CALL
+  Calls a routine under the debugger.
+
+  Format:
+
+    CALL[/STEP] routine [(argument[,argument...])]
+
+  The arguments are pushed as a CALLS instruction pushes them. The routine
+  runs until it returns, a breakpoint stops it, or Ctrl-C interrupts it.
+
+  /STEP runs only the routine's first instruction and stops. (/BREAK,
+  /DEBUG, and /DBG mean the same.)
+2 CANCEL
+  Removes eventpoints and settings: the debugger's CANCEL. CLEAR is a
+  synonym for it.
+
+  Format:
+
+    CANCEL keyword [qualifiers] [parameter]
+
+  Additional information available:
+
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SCOPE  SOURCE  SYMBOL  TB  TRACE
+  TYPE  WATCH
+3 BREAK
+  Removes breakpoints.
+
+  Format:
+
+    CANCEL BREAK [qualifier] [address[,address...]]
+
+  With addresses, removes the breakpoints there. With a qualifier, removes
+  the breakpoints of that kind:
+
+    /ALL            every breakpoint
+    /CALL           the breakpoints on calls
+    /BRANCH         the breakpoints on branches
+    /LINE           the breakpoints on source lines
+    /RETURN         the breakpoints on returns
+    /EXCEPTION      the breakpoint on exceptions
+    /INSTRUCTION[=(opcode,...)]
+                    the instruction breakpoints (of the opcodes named, or
+                    all of them)
+    /FAULT[=code]   govax's fault breakpoints (the one for the fault code,
+                    or all of them)
+
+  Cancelling when none is set is %DEBUG-I-NOBREAKS.
+3 INTERRUPT
+  Removes a queued interrupt (govax's own).
+
+  Format:
+
+    CANCEL INTERRUPT [/ALL] [vector]
+
+  vector is the interrupt's SCB offset, in hexadecimal. /ALL removes every
+  queued interrupt.
+3 MEMORY
+  CANCEL MEMORY/STATISTICS zeroes the memory system's counters (govax's
+  own). (At the console, CLEAR MEMORY with no qualifier is a different
+  command, which zeroes the memory itself.)
+
+  Format:
+
+    CANCEL MEMORY/STATISTICS
+3 MODE
+  Restores SET MODE's defaults (symbolic names, operands explained, and the
+  rest).
+
+  Format:
+
+    CANCEL MODE
+3 RADIX
+  Restores the radix to hexadecimal, for input and output.
+
+  Format:
+
+    CANCEL RADIX
+3 SCOPE
+  Goes back to the default scope list (every call level, level 0
+  current), ending SET SCOPE's list or SET SCOPE/CURRENT's level.
+
+  Format:
+
+    CANCEL SCOPE
+3 SOURCE
+  Forgets the directories SET SOURCE named, so source files are looked for
+  where the image says they are.
+
+  Format:
+
+    CANCEL SOURCE
+3 SYMBOL
+  Removes symbols from the machine's symbol table (govax's own): the table
+  ASM and SET SYMBOL define symbols in, and SHOW SYMBOL/ALL lists. System
+  symbols are never removed. (At the console, DELETE/SYMBOL deletes DCL
+  symbols, which are a different table.)
+
+  Format:
+
+    CANCEL SYMBOL name
+    CANCEL SYMBOL/ALL
+    CANCEL SYMBOL/TEMPORARY
+
+  /ALL removes every user symbol, and /TEMPORARY every user symbol not
+  defined with SET/PERMANENT.
+3 TB
+  Empties the translation buffer (govax's own), the cache of recent virtual
+  to physical address translations. The next access to each page walks the
+  page tables again.
+
+  Format:
+
+    CANCEL TB
+3 TRACE
+  Removes tracepoints.
+
+  Format:
+
+    CANCEL TRACE [qualifier] [address[,address...]]
+
+  The qualifiers are /ALL, /CALL, /BRANCH, /LINE, /RETURN, and
+  /INSTRUCTION[=(opcode,...)], as CANCEL BREAK has them.
+3 TYPE
+  Ends SET TYPE/OVERRIDE: locations are typed by the program's debug
+  symbols again.
+
+  Format:
+
+    CANCEL TYPE/OVERRIDE
+
+  (SET TYPE LONGWORD restores the type of locations no symbol types.)
+3 WATCH
+  Removes watchpoints.
+
+  Format:
+
+    CANCEL WATCH [/ALL] [location[,location...]]
+2 CLEAR
+  Removes eventpoints and settings: the debugger's CANCEL. CLEAR is a
+  synonym for it.
+
+  Format:
+
+    CANCEL keyword [qualifiers] [parameter]
+
+  Additional information available:
+
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SCOPE  SOURCE  SYMBOL  TB  TRACE
+  TYPE  WATCH
+3 BREAK
+  Removes breakpoints.
+
+  Format:
+
+    CANCEL BREAK [qualifier] [address[,address...]]
+
+  With addresses, removes the breakpoints there. With a qualifier, removes
+  the breakpoints of that kind:
+
+    /ALL            every breakpoint
+    /CALL           the breakpoints on calls
+    /BRANCH         the breakpoints on branches
+    /LINE           the breakpoints on source lines
+    /RETURN         the breakpoints on returns
+    /EXCEPTION      the breakpoint on exceptions
+    /INSTRUCTION[=(opcode,...)]
+                    the instruction breakpoints (of the opcodes named, or
+                    all of them)
+    /FAULT[=code]   govax's fault breakpoints (the one for the fault code,
+                    or all of them)
+
+  Cancelling when none is set is %DEBUG-I-NOBREAKS.
+3 INTERRUPT
+  Removes a queued interrupt (govax's own).
+
+  Format:
+
+    CANCEL INTERRUPT [/ALL] [vector]
+
+  vector is the interrupt's SCB offset, in hexadecimal. /ALL removes every
+  queued interrupt.
+3 MEMORY
+  CANCEL MEMORY/STATISTICS zeroes the memory system's counters (govax's
+  own). (At the console, CLEAR MEMORY with no qualifier is a different
+  command, which zeroes the memory itself.)
+
+  Format:
+
+    CANCEL MEMORY/STATISTICS
+3 MODE
+  Restores SET MODE's defaults (symbolic names, operands explained, and the
+  rest).
+
+  Format:
+
+    CANCEL MODE
+3 RADIX
+  Restores the radix to hexadecimal, for input and output.
+
+  Format:
+
+    CANCEL RADIX
+3 SCOPE
+  Goes back to the default scope list (every call level, level 0
+  current), ending SET SCOPE's list or SET SCOPE/CURRENT's level.
+
+  Format:
+
+    CANCEL SCOPE
+3 SOURCE
+  Forgets the directories SET SOURCE named, so source files are looked for
+  where the image says they are.
+
+  Format:
+
+    CANCEL SOURCE
+3 SYMBOL
+  Removes symbols from the machine's symbol table (govax's own): the table
+  ASM and SET SYMBOL define symbols in, and SHOW SYMBOL/ALL lists. System
+  symbols are never removed. (At the console, DELETE/SYMBOL deletes DCL
+  symbols, which are a different table.)
+
+  Format:
+
+    CANCEL SYMBOL name
+    CANCEL SYMBOL/ALL
+    CANCEL SYMBOL/TEMPORARY
+
+  /ALL removes every user symbol, and /TEMPORARY every user symbol not
+  defined with SET/PERMANENT.
+3 TB
+  Empties the translation buffer (govax's own), the cache of recent virtual
+  to physical address translations. The next access to each page walks the
+  page tables again.
+
+  Format:
+
+    CANCEL TB
+3 TRACE
+  Removes tracepoints.
+
+  Format:
+
+    CANCEL TRACE [qualifier] [address[,address...]]
+
+  The qualifiers are /ALL, /CALL, /BRANCH, /LINE, /RETURN, and
+  /INSTRUCTION[=(opcode,...)], as CANCEL BREAK has them.
+3 TYPE
+  Ends SET TYPE/OVERRIDE: locations are typed by the program's debug
+  symbols again.
+
+  Format:
+
+    CANCEL TYPE/OVERRIDE
+
+  (SET TYPE LONGWORD restores the type of locations no symbol types.)
+3 WATCH
+  Removes watchpoints.
+
+  Format:
+
+    CANCEL WATCH [/ALL] [location[,location...]]
+2 DEPOSIT
+  Stores a value at a location: a register, or an address.
+
+  Format:
+
+    DEPOSIT[/type] location = value
+    DEPOSIT/ASCII[:count] location = "string"
+    DEPOSIT/INSTRUCTION location = "instruction"
+
+  A number is in the input radix; a floating value is a literal such as
+  1.5 or -2.5E3; a string is in quotes or apostrophes. The type is a type
+  qualifier, else SET TYPE/OVERRIDE's, else the type of the data the
+  location names in the program's debug symbols, else SET TYPE's, else a
+  longword. The type qualifiers are EXAMINE's (HELP EXAMINE), but for
+  /PSL, /PSW, and /PTE:
+
+    /BYTE /WORD /LONGWORD /QUADWORD /OCTAWORD   an integer
+    /FLOAT /D_FLOAT /G_FLOAT /H_FLOAT           a floating value
+    /PACKED:n                                   n packed decimal digits
+    /ASCII[:n]                                  text, padded or cut to n
+    /ASCIC /ASCIW /ASCIZ                        counted or zero-ended text
+    /ASCID                                      text where the descriptor
+                                                at the location points,
+                                                padded or cut to its length
+    /DATE_TIME                                  a time ("11-OCT-2026 14:03")
+    /CONDITION_VALUE                            a longword
+    /TYPE=(name)                                as the datum name is typed
+
+  A value wider than a longword deposited in a register fills the
+  registers after it too (DEPOSIT/D_FLOAT R0 = 1.5 sets R0 and R1).
+
+  DEPOSIT PSL changes only the processor status longword's low word (the
+  PSW); DEPOSIT/BYTE only its low byte. The rest of the PSL (the access
+  modes, IPL) stays as it was; SET PSL changes those. Setting T (^X10)
+  asks for tracing, but going on from the stop clears it again (HELP
+  STEP).
+
+  /INSTRUCTION (or SET TYPE INSTRUCTION) assembles one machine
+  instruction, in quotes, at the location: its numbers are in the input
+  radix, its names the program's, and a branch's displacement is from the
+  location. An image's code is written although its pages are read-only.
+
+  Examples:
+
+    DEPOSIT R0 = 5
+    DEPOSIT PC = 200
+    DEPOSIT/BYTE 2000 = 0FF
+    DEPOSIT COUNT = 10
+    DEPOSIT/FLOAT RATE = 2.75
+    DEPOSIT/ASCIC NAME = 'SMITH'
+    DEPOSIT/INSTRUCTION .PC = 'MOVL #20A,R0'
+    DEPOSIT/WORD PSL = 0
+2 EVALUATE
+  Shows the value of an expression.
+
+  Format:
+
+    EVALUATE[/radix] expression
+    EVALUATE/ADDRESS expression
+
+  The value is shown in the output radix, or in /HEXADECIMAL, /DECIMAL,
+  /OCTAL, or /BINARY. With a data name, the value is its contents.
+  /ADDRESS shows the address instead. /CONDITION_VALUE shows the message
+  of the status the value is (EVALUATE/CONDITION_VALUE R0).
+2 EXAMINE
+  Shows what is at a location.
+
+  Format:
+
+    EXAMINE[/qualifier...] [location[,location...]]
+    EXAMINE[/qualifier...] start:end
+
+  A location is an expression (HELP EXPRESSIONS): an address, a name, a
+  register. A range (start:end) shows each item from start through end. With
+  no location, EXAMINE shows the next location after the last one shown.
+
+  Without /INSTRUCTION, EXAMINE shows data, typed by the type qualifier
+  given, else by SET TYPE/OVERRIDE, else by the program's debug symbols
+  where the location names a datum (arrays as TABLE[0:3], strings through
+  their descriptors, floating values as numbers), else by SET TYPE (a
+  longword unless it says otherwise). An integer is shown in the output
+  radix. A type wider than a longword shown from a register takes the
+  registers after it too (EXAMINE/D_FLOAT R0 is R0 and R1).
+
+  Additional information available:
+
+  /INSTRUCTION  /OPERANDS  /BYTE  /WORD  /LONGWORD  /QUADWORD  /OCTAWORD
+  /FLOAT  /D_FLOAT  /G_FLOAT  /H_FLOAT  /PACKED  /ASCII  /ASCIC  /ASCIW
+  /ASCIZ  /ASCID  /DATE_TIME  /CONDITION_VALUE  /TYPE  /HEXADECIMAL
+  /DECIMAL  /OCTAL  /BINARY  /DEFAULT  /PSL  /PSW  /PTE  /CONSTANTS
+  /SHAREABLE  /SYMBOLIC
+3 /ASCII
+  Shows bytes as ASCII text. /ASCII:count shows count bytes. The other
+  layouts of text:
+
+    /ASCIC (/AC)   a count byte, then the text
+    /ASCIW (/AW)   a count word, then the text
+    /ASCIZ (/AZ)   the text up to a zero byte
+    /ASCID (/AD)   a string descriptor: the text where it points
+3 /BINARY
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
+3 /BYTE
+  Show each item as a byte, a word (two bytes), a longword (four), or a
+  quadword (eight), whatever the program's debug symbols say. /OCTAWORD
+  shows sixteen bytes (HELP EXAMINE /OCT).
+3 /CONSTANTS
+  Without /INSTRUCTION, /CONDITION_VALUE shows a longword as the message of
+  the status it is: %SYSTEM-S-NORMAL, normal successful completion.
+
+  With /INSTRUCTION, govax's own /CONSTANTS names a constant by the symbol
+  that defines it (MOVL S^#DBGDIS\LIMIT,R2), which the VMS debugger
+  doesn't. (Type /CONS or /COND.)
+3 /DATE_TIME
+  Shows a quadword as a VMS date and time, 11-OCT-2026 14:03:22.17.
+3 /DECIMAL
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
+3 /DEFAULT
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
+3 /D_FLOAT
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+3 /FLOAT
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+3 /F_FLOAT
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+3 /G_FLOAT
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+3 /HEXADECIMAL
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
+3 /H_FLOAT
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+3 /INSTRUCTION
+  Shows the machine instruction at each location, in the VMS debugger's
+  layout, with names from the program's debug symbols:
+
+    DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+
+  A range lists every instruction in it.
+3 /LONGWORD
+  Show each item as a byte, a word (two bytes), a longword (four), or a
+  quadword (eight), whatever the program's debug symbols say. /OCTAWORD
+  shows sixteen bytes (HELP EXAMINE /OCT).
+3 /OCTAL
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
+3 /OPERANDS
+  With /INSTRUCTION, explains each operand: its value, and where it is.
+  /OPERANDS=FULL says more. /NOOPERANDS (the default, unless SET MODE
+  OPERANDS) leaves them out.
+3 /PACKED
+  /PACKED:n shows n packed decimal digits: two digits a byte, the sign in
+  the last half byte, as the VAX's decimal instructions keep them.
+3 /PSL
+  Show a longword as a processor status longword, field by field, or a
+  word as a processor status word (the PSL's trap enables and condition
+  codes).
+3 /PSW
+  Show a longword as a processor status longword, field by field, or a
+  word as a processor status word (the PSL's trap enables and condition
+  codes).
+3 /PTE
+  govax's own: shows a longword as a page table entry: its valid bit,
+  protection, modify bit, owner, and page frame number.
+3 /QUADWORD
+  Show each item as a byte, a word (two bytes), a longword (four), or a
+  quadword (eight), whatever the program's debug symbols say. /OCTAWORD
+  shows sixteen bytes (HELP EXAMINE /OCT).
+3 /SHAREABLE
+  govax's own, with /INSTRUCTION: names a G^ reference's routine in a
+  shareable image (CALLS S^#01,G^LIB$PUT_OUTPUT).
+3 /SOURCE
+  Shows the source line of the code at each location, under its module's name.
+3 /SYMBOLIC
+  /NOSYMBOLIC names a location typed as a number by its address
+  (00000200: 00000000), not by the symbol there; one typed by name keeps
+  its name. SET MODE SYMBOLIC or NOSYMBOLIC chooses whether an
+  instruction's addresses are names.
+3 /TYPE
+  /TYPE=(name) shows each item typed as the datum name is: EXAMINE
+  /TYPE=(COUNT) 2000 shows the longword at 2000 if COUNT is a longword.
+3 /WORD
+  Show each item as a byte, a word (two bytes), a longword (four), or a
+  quadword (eight), whatever the program's debug symbols say. /OCTAWORD
+  shows sixteen bytes (HELP EXAMINE /OCT).
+2 EXIT
+  Ends the debugger session and returns to the console. A program still
+  running under it is ended (its exit handlers aren't run), and RUN's
+  status becomes the program's exit status, or %X10028009 if it hadn't
+  exited. A log being written (SET OUTPUT LOG) is closed.
+
+  Format:
+
+    EXIT
+2 EXPRESSIONS
+  An address or a value is an expression, which may hold:
+
+    numbers          in the input radix (hexadecimal unless SET RADIX says
+                     otherwise); ^X, ^D, ^O, and ^B force a radix, as in
+                     MACRO (^D35)
+    symbols          a routine, label, or data name from the program's
+                     debug symbols, or the console's symbol table
+    path names       MODULE\ROUTINE\LABEL, as in DBGDIS\START\LOOP
+    lines            %LINE n, or MODULE\%LINE n, the code of a source line
+    registers        R0 to R11, AP, FP, SP, PC, PSL (also %R0 and so on),
+                     as their values; PC alone is the program counter
+    .name            the contents at an address: .PC, .R1+4
+    operators        + - * / MOD, unary + and -, @ (a shift), the
+                     comparisons EQL NEQ LSS LEQ GTR GEQ, AND OR XOR NOT
+                     (and parentheses)
+
+  and the built-in symbols:
+
+    . or %CURLOC     the current location: the one EXAMINE, DEPOSIT, or
+                     EVALUATE/ADDRESS last referred to
+    %NEXTLOC         the location after it (EXAMINE alone shows it too)
+    ^ or %PREVLOC    the location before it
+    \ or %CURVAL     the value EXAMINE or EVALUATE last showed, or DEPOSIT
+                     last stored
+    %HEX %DEC %OCT %BIN
+                     read the numbers of the operand that follows in that
+                     radix: %HEX 10 is 16, %DEC (10+10) is 20 decimal
+    %NAME 'string'   the symbol named by the string, which may hold
+                     characters a name can't (%NAME 'P.AAA')
+    \name            the global symbol name
+    %EXC_NUMBER      the condition value of the exception the program last
+                     stopped for, and %EXC_SEVERITY its severity
+    %EXC_NAME        that exception's message name ("ACCVIO") and facility
+    %EXC_FACILITY    ("SYSTEM"): strings, which EVALUATE shows and a WHEN
+                     clause may compare: WHEN (%EXC_NAME EQL "ACCVIO")
+    %DECWINDOWS      0: govax has only the command interface
+
+  An address range is start:end (EXAMINE A:B), and a list is separated by
+  commas (EXAMINE A,B). A routine's name stands for the address after its
+  entry mask when a breakpoint is set on it.
+2 FORTRAN
+  A FORTRAN program compiled with FORTRAN/DEBUG has its variables known by what they
+  are, though the debugger's language stays MACRO:
+
+    EXAMINE X         in a routine, that routine's X, shown by its type
+    EXAMINE UNIT.X    a unit's X, from anywhere; a dummy argument needs an active call
+    EXAMINE M(2,3)    an element, by FORTRAN's bounds and order; EXAMINE M is them all
+    EXAMINE S(2:4)    a substring
+    DEPOSIT X = 1.5   a value read as the variable's type
+    EVALUATE X        what it holds
+    SET BREAK UNIT.$LINE30   the statement on line 30, or $LINE30 in that routine
+
+  A stop shows the FORTRAN line above the MACRO line, and STEP goes a FORTRAN line at
+  a time (STEP/INSTRUCTION an instruction). Subscripts are read in the input radix, so
+  SET RADIX DECIMAL makes them FORTRAN's numbers. Give /NOOPTIMIZE when compiling: under
+  /OPTIMIZE a variable may be in a register, and EXAMINE says so when it knows.
+2 GO
+  Runs the program, from the current PC or from an address.
+
+  Format:
+
+    GO [address]
+
+  The program runs until it halts, a breakpoint stops it, or Ctrl-C
+  interrupts it. A breakpoint at the address the run starts from doesn't
+  stop it at once.
+2 HELP
+  Displays help on a debugger command.
+
+  Format:
+
+    HELP [topic ...]
+
+  HELP alone lists the topics.
+2 INCLUDE
+  Runs the debugger commands in a command file.
+
+  Format:
+
+    @file-spec
+
+  The file is read a line at a time, as typed at the DBG> prompt; a file
+  name without a type gets .COM. A command that fails is reported, and the
+  file goes on. With SET OUTPUT VERIFY each line is echoed after a blank
+  as it runs (not at all if it fails before any output), between
+  %DEBUG-I-VERIFYICF's "entering" and "exiting" lines. If a command in it
+  ends the debugger session (EXIT), the lines after it are console
+  commands.
+
+  When RUN starts the debugger on an image and the logical name DBG$INPUT
+  names a file, the debugger reads its commands from that file instead of
+  the terminal, to its end, which is EXIT, before RUN is over (as a
+  command procedure gives the VMS debugger its commands with DEFINE
+  /USER_MODE DBG$INPUT file).
+2 QUIT
+  Ends the debugger session and returns to the console, as EXIT does.
+  (On VMS, QUIT skips the program's exit handlers, which EXIT runs.
+  govax's debugger runs none for either, so the two are the same.)
+
+  Format:
+
+    QUIT
+2 RADIX
+  The debugger reads numbers, and shows them, in a radix: hexadecimal until
+  SET RADIX says otherwise. The input radix is the one numbers typed are
+  read in; the output radix is the one values are shown in. SET RADIX sets
+  both (or SET RADIX/INPUT, SET RADIX/OUTPUT, one of them), SHOW RADIX
+  shows them, and CANCEL RADIX restores hexadecimal. The console has a
+  radix of its own (SET RADIX there); the two don't affect each other.
+2 REGISTERS
+  The registers the debugger knows:
+
+    R0 to R11, AP (R12), FP (R13), SP (R14), PC (R15)   general registers
+    PSL                                                 processor status
+
+  and the privileged registers: P0BR P0LR P1BR P1LR SBR SLR PCBB SCBB IPL
+  ASTLVL SIRR SISR ICCS NICR ICR TODR RXCS RXDB TXCS TXDB TBDR SAVISP SAVPC
+  SAVPSL WCSA WCSB MAPEN TBIA TBIS PMR SID TBCHK.
+
+  EXAMINE, DEPOSIT, and SHOW show or change them, by name.
+2 SET
+  Changes what the debugger does or shows, or sets machine state.
+
+  Format:
+
+    SET keyword [qualifiers] [parameters]
+
+  Additional information available:
+
+  BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE
+  QUANTUM  RADIX    SCOPE    SOURCE   STEP     TRACE    TYPE
+  VM       WATCH
+
+  (SET BREAKPOINT, SET TRACEPOINT, and SET WATCHPOINT are the same as
+  SET BREAK, SET TRACE, and SET WATCH.)
+3 BASE
+  Sets the current location, where EXAMINE with no location starts (govax's
+  own).
+
+  Format:
+
+    SET BASE address
+3 BREAK
+  Sets breakpoints: the program stops before the instruction runs.
+
+  Format:
+
+    SET BREAK [qualifiers] [address[,address...]] [WHEN (condition)]
+              [DO (command[;command...])]
+
+  An address may be a routine's name: the break is after its entry mask, at
+  its first instruction. A qualifier picks a class instead of an address;
+  one at most is given:
+
+    /CALL           each call instruction (CALLS, JSB, ...)
+    /BRANCH         each branch instruction
+    /RETURN routine each RET that ends a call of the routine named
+    /LINE           each source line's first instruction
+    /INSTRUCTION[=(opcode,...)]
+                    each instruction (of the opcodes named, if any)
+    /EXCEPTION      each exception signaled
+    /FAULT=code     govax's own: when the machine fault with that code
+                    (hexadecimal) is about to be delivered
+
+  /AFTER:n skips the first n times the breakpoint is reached. /TEMPORARY
+  removes it when it first stops the program. WHEN (condition) stops only
+  when the condition is nonzero; DO runs the commands at the stop.
+
+  The report is "break at location", "break on lines at ...", and so on.
+  A break at the address a run starts from doesn't stop it at once.
+
+  Examples:
+
+    SET BREAK FACT
+    SET BREAK/TEMPORARY DBGDIS\START\%LINE 47
+    SET BREAK/INSTRUCTION=(MOVC3)
+    SET BREAK SUB2 WHEN (R0 EQL 5) DO (EXAMINE R0)
+3 FAULTS
+  Sets how many machine faults are remembered for SHOW EXCEPTIONS (govax's
+  own).
+
+  Format:
+
+    SET FAULT count
+3 HISTORY
+  Sets how many machine faults are remembered for SHOW EXCEPTIONS (govax's
+  own).
+
+  Format:
+
+    SET FAULT count
+3 IMAGE
+  Makes an image the current one, as SHOW IMAGE marks with a *: the one SHOW MODULE
+  lists and SET MODULE/ALL sets.
+
+  Format:
+
+    SET IMAGE image
+3 LANGUAGE
+  Sets the language commands are read in, which at the start is the main
+  program's.
+
+  Format:
+
+    SET LANGUAGE language
+
+  language is ADA, AMACRO, BASIC, BLISS, C, C_PLUS_PLUS, COBOL, DIBOL,
+  FORTRAN, MACRO, MACRO64, PASCAL, PLI, RPG, SCAN, or UNKNOWN. The radix
+  goes to the language's: decimal for FORTRAN, hexadecimal otherwise.
+
+  In MACRO a period inside a name is part of the name, so EXAMINE T.I
+  reads the symbol T.I; one that starts an operand is the contents of it,
+  so .T.I is the contents of T.I. In FORTRAN a period after a name selects
+  a record's component, and DBG85.X means X in routine DBG85. The FORTRAN
+  compiler's names (SQUARES.I) are MACRO's, so a program it compiled, whose
+  language is MACRO, reads them whole.
+3 LOG
+  Names the file SET OUTPUT LOG writes the session to (DEBUG.LOG unless
+  this names another; .LOG when the name has no type). If the session is
+  being logged already, logging goes on in the new file.
+
+  Format:
+
+    SET LOG file-spec
+3 MAPPING
+  SET VM turns address translation (memory mapping) on, and SET NOVM turns
+  it off (govax's own). The privileged register MAPEN is the switch.
+
+  Format:
+
+    SET VM
+    SET NOVM
+3 MODE
+  Sets display modes, and govax's access mode.
+
+  Format:
+
+    SET MODE keyword[,keyword...]
+
+  Display modes (the VMS debugger's):
+
+    SYMBOLIC | NOSYMBOLIC  whether an address is shown as a name
+    OPERANDS[=FULL|BRIEF] | NOOPERANDS
+                           whether EXAMINE/INSTRUCTION explains operands
+    LINE | NOLINE          whether the debugger works by source line
+    G_FLOAT | NOG_FLOAT    the floating format
+    SCROLL, DYNAMIC, INTERRUPT, and their NO forms are accepted; screen
+    mode isn't available.
+
+  Access modes (govax's own): KERNEL, EXECUTIVE, SUPERVISOR, USER switch
+  the CPU's mode and its stack pointer, and ISP the interrupt stack.
+
+  SHOW MODE shows the settings, and CANCEL MODE restores the defaults.
+3 MODULE
+  Notes that a module's symbols are wanted.
+
+  Format:
+
+    SET MODULE module[,module...]
+    SET MODULE/ALL
+
+  govax reads every module's symbols when it loads an image, so this
+  changes only the "set" column of SHOW MODULE and which modules a SHOW
+  SYMBOL with no IN looks in.
+3 OUTPUT
+  Sets where the debugger's output goes, and what is echoed.
+
+  Format:
+
+    SET OUTPUT keyword[,keyword...]
+
+  The keywords are:
+
+    LOG | NOLOG            whether the session is written to the log file
+                           (SET LOG): each command read, as it was read,
+                           and every line of the debugger's output after
+                           a "!", so the log can be run with @. The
+                           program's own output isn't in it.
+    VERIFY | NOVERIFY      whether an @ file's lines are echoed
+    TERMINAL | NOTERMINAL  whether the output is shown at the terminal
+    SCREEN_LOG | NOSCREEN_LOG
+                           accepted; govax has no screen mode
+
+  SHOW OUTPUT shows the settings.
+3 PAGE
+  Changes page table entries (govax's own).
+
+  Format:
+
+    SET PTE address [TO address] field=value[,field=value...]
+
+  The fields are VALID (V), PROT, MODIFY (M), OWNER (OWN), SOFT (S), and PFN
+  (PAGE), the page frame number. PROT is a number or the name SHOW PTE prints (PTE$K_KW). With
+  TO, every 512-byte page from the first address through the second is
+  changed.
+
+  Example:
+
+    SET PTE 200 TO 400 VALID=1,PFN=10
+3 PROCESS
+  Makes a process the visible one: the one whose registers and memory
+  EXAMINE, DEPOSIT, SHOW REGISTERS, and the rest show.
+
+  Format:
+
+    SET PROCESS [/VISIBLE] [pid | name]
+
+  pid is a process ID in hexadecimal (302 or 00000302); name is a process
+  name, as SHOW PROCESS lists it. With neither, the console's own process
+  (process 1) is made visible again. The CPU moves to the process, as
+  when a run stops in it. Running is unchanged: STEP and breakpoints
+  belong to process 1, and GO, STEP, and CALL give the CPU back to
+  process 1 first. A process that isn't there is %SYSTEM-W-NONEXPR.
+3 PSL
+  Changes fields of the processor status longword (govax's own).
+
+  Format:
+
+    SET PSL field=value[,field=value...]
+
+  The fields are C, V, Z, N, T, IV, FU, DV, IPL, and MOD (also CUR_MOD).
+  Values are in the input radix.
+
+  Example:
+
+    SET PSL IPL=1F, N=1
+3 PTE
+  Changes page table entries (govax's own).
+
+  Format:
+
+    SET PTE address [TO address] field=value[,field=value...]
+
+  The fields are VALID (V), PROT, MODIFY (M), OWNER (OWN), SOFT (S), and PFN
+  (PAGE), the page frame number. PROT is a number or the name SHOW PTE prints (PTE$K_KW). With
+  TO, every 512-byte page from the first address through the second is
+  changed.
+
+  Example:
+
+    SET PTE 200 TO 400 VALID=1,PFN=10
+3 QUANTUM
+    The SET QUANTUM command sets the execution quantum the emulator
+    guarantees before allowing VAX interrupts to be processed. This is
+    expressed as a number of instructions; after that many instructions
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
+
+    Syntax:
+
+        SET QUANTUM n
+
+    Parameter:
+
+        n       The number of instructions to be executed before the
+                emulator will process interrupts deterministically.
+3 RADIX
+  Sets the radix for numbers typed and shown.
+
+  Format:
+
+    SET RADIX [/INPUT|/OUTPUT] radix
+
+  radix is DECIMAL, HEXADECIMAL, OCTAL, or BINARY (also 10, 16, 8, 2).
+  With no qualifier it sets both. HELP RADIX says more.
+3 SCOPE
+  Says where names are looked up, and whose registers EXAMINE, DEPOSIT,
+  and EVALUATE see.
+
+  Format:
+
+    SET SCOPE location[,location...]
+    SET SCOPE/MODULE module[,module...]
+    SET SCOPE/CURRENT n
+
+  A location is a call level's number (0 the routine the program is in,
+  1 its caller, and so on out, the rows of SHOW CALLS), a routine's or
+  module's path name (DBG89\REC, DBG89B), or \, the global scope. A name
+  is looked for in each location's module in turn. The registers are the
+  first location's: an outer level's are the ones it had when it made its
+  call, from the call frames (R0 and R1 are gone; a DEPOSIT to a register
+  a frame saved goes into the frame); a routine's are its innermost
+  activation's; a module has none. The list stays until CANCEL SCOPE or
+  another SET SCOPE, and its numbers count the levels as they are after
+  each GO or STEP. /MODULE takes each name as a module's.
+
+  /CURRENT makes level n of the default list (every level) the current
+  one, as if SET SCOPE n, until the program goes on. The scope's built-in
+  symbols are numbers of the default list: %CURRENT_SCOPE_ENTRY,
+  %NEXT_SCOPE_ENTRY, and %PREVIOUS_SCOPE_ENTRY.
+
+  A name may carry its own scope: 1\R2 (level 1's R2), REC 1\%R2 (REC's
+  second activation from the innermost), 0\Y.
+
+  SHOW SCOPE shows the list.
+3 SOURCE
+  Names the directories searched for a program's source files, when they
+  aren't where the image says.
+
+  Format:
+
+    SET SOURCE directory[,directory...]
+
+  SHOW SOURCE lists them, and CANCEL SOURCE forgets them.
+3 STEP
+  Sets what STEP does when it isn't told.
+
+  Format:
+
+    SET STEP keyword[,keyword...]
+
+  The keywords are:
+
+    LINE | INSTRUCTION     how far a step goes
+    OVER | INTO (IN) | RETURN
+                           what to do at a call (RETURN is govax's: run to
+                           the return of the routine)
+    SILENT | NOSILENT      whether the stop is reported
+    SOURCE | NOSOURCE      whether the source line is shown
+
+  SHOW STEP shows the settings.
+3 TRACE
+  Sets tracepoints: the program reports where it is and goes on.
+
+  Format:
+
+    SET TRACE [qualifiers] [address[,address...]] [WHEN (condition)]
+              [DO (command[;command...])]
+
+  The qualifiers are /AFTER:n, /TEMPORARY, /CALL, /BRANCH, /LINE, /RETURN,
+  and /INSTRUCTION[=(opcode,...)], as SET BREAK has them. SET TRACE
+  /INSTRUCTION traces every instruction. The report is "trace at
+  location", "trace on lines at ...", and so on.
+3 TYPE
+  Sets the type EXAMINE and DEPOSIT give a location the program's debug
+  symbols don't type, or, with /OVERRIDE, every location.
+
+  Format:
+
+    SET TYPE[/OVERRIDE] keyword
+
+  The keywords are the names of EXAMINE's type qualifiers: BYTE, WORD,
+  LONGWORD, QUADWORD, OCTAWORD, FLOAT, D_FLOAT, G_FLOAT, H_FLOAT,
+  PACKED:n, ASCII:n (4 characters without n), ASCIC, ASCIW, ASCIZ, ASCID
+  (or AC, AW, AZ, AD), DATE_TIME, CONDITION_VALUE, PSL, PSW, and
+  TYPE=(name), the type of a datum the program defines; and INSTRUCTION,
+  a machine instruction. A qualifier on the command wins over both.
+
+  SHOW TYPE names the type; SET TYPE LONGWORD restores the default, and
+  CANCEL TYPE/OVERRIDE ends the override.
+
+  Examples:
+
+    SET TYPE BYTE
+    SET TYPE/OVERRIDE ASCII:8
+    SET TYPE TYPE=(COUNT)
+3 VM
+  SET VM turns address translation (memory mapping) on, and SET NOVM turns
+  it off (govax's own). The privileged register MAPEN is the switch.
+
+  Format:
+
+    SET VM
+    SET NOVM
+3 WATCH
+  Sets watchpoints: the program stops after an instruction that changes a
+  location.
+
+  Format:
+
+    SET WATCH [/AFTER:n] [/TEMPORARY] location [WHEN (condition)]
+              [DO (command[;command...])]
+
+  The location's size comes from the program's debug symbols: a scalar by
+  its type, an array (BUFFER[0:15]) item by item, anything else a
+  longword. The report gives the old and new values:
+
+    watch of DBGCMD\COUNT at DBGCMD\START\%LINE 42
+       old value: 00000000
+       new value: 00000001
+2 SHOW
+  Displays what the debugger knows.
+
+  Format:
+
+    SHOW keyword [qualifiers] [parameters]
+
+  Additional information available:
+
+  BASE       BREAK      CALLS      CLOCK      CPU_STATUS EXCEPTIONS
+  IMAGE      INTRUCTION LANGUAGE   MAPS       MEMORY     MODE
+  MODULE     PAGE       PSL        QUANTUM    RADIX      REGIONS
+  REGISTERS  SCB        SCOPE      SHIM       SOURCE     STACK
+  STEP       SYMBOL     TB         TRACE      TYPE       WATCH
+
+  and the register names: SHOW R0, SHOW PC, SHOW P0BR, and so on. SHOW SP,
+  KSP, ESP, SSP, USP, and ISP dump the longwords on a stack.
+3 BASE
+  Shows the current location, where EXAMINE with no location starts
+  (govax's own).
+
+  Format:
+
+    SHOW BASE
+3 BREAK
+  Lists the breakpoints, with their counts and clauses.
+
+  Format:
+
+    SHOW BREAK
+3 CALLS
+  Lists the call frames, innermost first, one row each: module, routine,
+  line, and the PC relative to the routine and absolute. A call frame is the
+  record CALLS and CALLG leave on the stack, which links each routine to its
+  caller.
+
+  Format:
+
+    SHOW CALLS [count]
+
+  With a count, only that many frames. In a JSB subroutine, which has no
+  frame of its own, the row is the routine that holds it.
+3 CLOCK
+  Shows the interval clock and the time-of-day register (govax's own).
+
+  Format:
+
+    SHOW CLOCK
+3 CPU_STATUS
+  Shows the registers and the PSL, the stack pointer of each mode, and the
+  privileged registers, then the current location (govax's own).
+
+  Format:
+
+    SHOW CPU_STATUS
+3 ESP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 EXCEPTIONS
+  Shows the machine faults and exceptions recently taken, and the interrupts
+  pending (govax's own). SET FAULT chooses how many faults are kept.
+
+  Format:
+
+    SHOW EXCEPTIONS
+3 FAULTS
+  Shows the machine faults and exceptions recently taken, and the interrupts
+  pending (govax's own). SET FAULT chooses how many faults are kept.
+
+  Format:
+
+    SHOW EXCEPTIONS
+3 IMAGE
+  Lists the loaded images, the main one marked with an asterisk: whether
+  it has debug symbols (set), and its first and last address.
+
+  Format:
+
+    SHOW IMAGE [/FULL]
+
+  /FULL (govax's own) adds each image's counts of modules and routines,
+  the file it came from, and how its sections are laid out in memory:
+  for each section its kind (read-only, writable, fixup, demand zero,
+  user stack, or a shareable image's global section), first and last
+  address, size in pages, protection now, and backing store; then its
+  pages by what they're mapped to now (valid, in transition on the free
+  or modified list, not yet read from the image file, in the page file,
+  demand zero), and the pages in memory by where their contents go when
+  their frames are reused (the image file, the page file, or nothing
+  yet). With paging on an image is mapped from its file, so these move as
+  the program runs; with paging off it's copied, every page in memory.
+3 INSTRUCTIONS
+    The SHOW INSTRUCTION command prints a reminder of the instruction
+    opcode values, for every VAX instruction (govax implements them
+    all).  The SHOW INSTRUCTIONS/ALL command
+    displays additional information about each instructions operands, if
+    any.
+
+    Syntax:
+
+        SHOW INSTRUCTIONS
+
+        SHOW INSTRUCTIONS/ALL
+4 /MODE
+    The SHOW INSTRUCTION/MODE command displays the number of times each VAX
+    instruction mode has been executed.  This can be used to determine
+    what addressing modes are used, etc..
+
+    You can reset the counters to zero with the CLEAR PROFILE command.
+
+    Syntax:
+
+         SHOW INSTRUCTION/MODE
+4 /PROCESS
+    The SHOW INSTRUCTION/PROFILE command displays the number of times
+    each VAX instruction has been executed.  This can be used to determine
+    where a program is spending it's time, based on the cost of each type
+    of instruction.
+
+    You can reset the counters to zero with the CLEAR PROFILE command.
+
+    Syntax:
+
+         SHOW INSTRUCTION/PROFILE
+4 /UNIMPLEMENTED
+    The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
+    VAX instructions govax doesn't implement, whose use would be a
+    reserved instruction fault.  govax implements every instruction, so
+    the table is empty ("0 Instructions.").
+
+    Syntax:
+
+        SHOW INSTRUCTIONS/UNIMPLEMENTED
+3 ISP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 KSP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 LANGUAGE
+  Shows the language of the current module (MACRO, for the programs govax
+  runs).
+
+  Format:
+
+    SHOW LANGUAGE
+3 LOG
+  Says whether the session is being logged, and to what file.
+
+  Format:
+
+    SHOW LOG
+3 MAPS
+  Reports that govax has no field-offset map of RMS's data structures to
+  show (the VMS command of this name shows one; govax's RMS code keeps no
+  such table).
+
+  Format:
+
+    SHOW MAPS
+3 MEMORY
+  Shows the size of physical memory and, once VMINIT has made page tables,
+  how much of each region (P0, P1, S0) is used (govax's own). With paging
+  on (VMINIT/PAGING), the page frames on the free and modified lists and
+  in use, the page faults by kind, the modified page writer's pages and
+  writes, and the page file's use. With /STATISTICS, counters of the memory system's work;
+  /RUNTIME and /FULL show more.
+
+  Format:
+
+    SHOW MEMORY [/STATISTICS] [/RUNTIME] [/FULL]
+3 MODE
+  Shows the display modes (SET MODE), and, on a last line, govax's access
+  mode.
+
+  Format:
+
+    SHOW MODE
+3 MODULE
+  Lists the current image's modules (see SET IMAGE), whether each is set,
+  and the size of its symbol records. Names, with wildcards, pick some of
+  them, and /SHARE adds a line for each other image.
+
+  Format:
+
+    SHOW MODULE [module[,module...]] [/SHARE]
+3 OUTPUT
+  Shows SET OUTPUT's settings, as "noverify, terminal, noscreen_log,
+  logging to DUA0:[WORK]DEBUG.LOG;1".
+
+  Format:
+
+    SHOW OUTPUT
+3 PAGE
+  Shows the page table entry for an address (govax's own).
+
+  Format:
+
+    SHOW PAGE [/READ|/WRITE] address
+
+  The entry's fields are shown, with its protection by name (PTE$K_KW),
+  and the form it takes: valid; or, when invalid, a process section page
+  (its PSTX), a global page (its GPTX), a page in the page file (its
+  block), a page in transition on the free or modified list (its frame),
+  or demand zero. /READ and /WRITE say which access the entry is checked
+  for.
+3 PROCESS
+  Lists the processes: each one's PID, name, scheduling state (as SHOW
+  SYSTEM shows it), and PC, the visible one (see SET PROCESS) marked
+  with "*".
+
+  Format:
+
+    SHOW PROCESS
+3 PSL
+  Shows the processor status longword as a number and as its fields
+  (govax's own).
+
+  Format:
+
+    SHOW PSL
+3 PTE
+  Shows the page table entry for an address (govax's own).
+
+  Format:
+
+    SHOW PAGE [/READ|/WRITE] address
+
+  The entry's fields are shown, with its protection by name (PTE$K_KW),
+  and the form it takes: valid; or, when invalid, a process section page
+  (its PSTX), a global page (its GPTX), a page in the page file (its
+  block), a page in transition on the free or modified list (its frame),
+  or demand zero. /READ and /WRITE say which access the entry is checked
+  for.
+3 QUANTUM
+    The SHOW QUANTUM command displays the execution quantum the emulator
+    guarantees before allowing VAX interrupts to be processed. This is
+    expressed as a number of instructions; after that many instructions
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
+
+    Syntax:
+
+        SHOW QUANTUM
+3 RADIX
+  Shows the input and output radix.
+
+  Format:
+
+    SHOW RADIX
+3 REGIONS
+  SHOW REGISTERS shows the general registers and the PSL (govax's own).
+  A single register, general or privileged, is SHOW name (SHOW R3, SHOW PC,
+  SHOW P0BR). HELP REGISTERS lists the names.
+
+  SHOW REGIONS shows the limits of the P0, P1, and S0 regions image
+  activation uses (govax's own).
+
+  Format:
+
+    SHOW REGISTERS
+    SHOW REGIONS
+3 REGISTERS
+  SHOW REGISTERS shows the general registers and the PSL (govax's own).
+  A single register, general or privileged, is SHOW name (SHOW R3, SHOW PC,
+  SHOW P0BR). HELP REGISTERS lists the names.
+
+  SHOW REGIONS shows the limits of the P0, P1, and S0 regions image
+  activation uses (govax's own).
+
+  Format:
+
+    SHOW REGISTERS
+    SHOW REGIONS
+3 SCB
+  Shows the system control block (SCB), which holds the address of each
+  exception and interrupt routine (govax's own).
+
+  Format:
+
+    SHOW SCB [/ALL]
+
+  Only the vectors in use, unless /ALL.
+3 SCOPE
+  Shows the scope list. The default list is every call level, innermost
+  (level 0) first, the current one marked with an asterisk, each with the
+  routine there; a routine entered more than once is numbered (FACT 1). A
+  SET SCOPE list is shown as it was given.
+
+  Format:
+
+    SHOW SCOPE
+3 SHIM
+  Shows the shims: the stubs that stand in for shareable images' routines,
+  and what each reaches, native code or a microkernel routine (govax's
+  own).
+
+  Format:
+
+    SHOW SHIM
+3 SOURCE
+  Lists the directories SET SOURCE named.
+
+  Format:
+
+    SHOW SOURCE
+3 SP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 SSP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 STACK
+  Describes each call frame in full: the saved registers, argument count, and
+  condition handler (VMS's SHOW STACK).
+
+  Format:
+
+    SHOW STACK [count]
+
+  govax's longword dump of a stack is SHOW SP, KSP, ESP, SSP, USP, or ISP.
+3 STEP
+  Shows what STEP does when it isn't told (SET STEP).
+
+  Format:
+
+    SHOW STEP
+3 SYMBOL
+  Lists the symbols matching a pattern.
+
+  Format:
+
+    SHOW SYMBOL [/ADDRESS] [/TYPE] pattern [IN module[,module...]]
+
+  The pattern may have * and % wildcards, and is matched with the symbol's
+  name, or its whole path name if it has a backslash. The symbols are the
+  routines first, then the data and labels, then the program sections, each
+  by name. /ADDRESS shows each one's address, and /TYPE its data type.
+
+  A pattern that matches no symbol of the program is tried against the
+  machine's symbol table (the symbols ASM defines, and the predefined
+  system symbols such as PTE$K_UR and VAX$PR_SBR), and then is
+  %DEBUG-E-NOSYMBOL.
+
+  SHOW SYMBOL/ALL and SHOW SYMBOL/SYSTEM (govax's own) list the machine's
+  symbol table alone: every symbol, or only the system symbols. The pattern
+  is then optional.
+
+    SHOW SYMBOL/ALL [pattern]
+    SHOW SYMBOL/SYSTEM [pattern]
+
+  For example, SHOW SYMBOL/SYSTEM CONSOLE$*. (At the console, SHOW SYMBOL
+  shows DCL symbols, a different table.)
+3 TB
+  Shows the translation buffer: its hit and miss counts, and each entry in
+  use (govax's own). The translation buffer is the cache of recent virtual
+  to physical address translations. Flushes counts the times the whole
+  buffer was emptied (MTPR to TBIA); PFlushes the times only its process
+  (P0 and P1) translations were, as LDPCTX does when it switches processes.
+
+  Format:
+
+    SHOW TB
+3 TRACE
+  Lists the tracepoints.
+
+  Format:
+
+    SHOW TRACE
+3 TYPE
+  Names SET TYPE's type for locations no program symbol types (long
+  integer unless it says otherwise), or with /OVERRIDE the type SET
+  TYPE/OVERRIDE gives every location ("none" without one).
+
+  Format:
+
+    SHOW TYPE[/OVERRIDE]
+3 UNIMPLEMENTED
+4 INSTRUCTIONS
+    The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
+    VAX instructions govax doesn't implement, whose use would be a
+    reserved instruction fault.  govax implements every instruction, so
+    the table is empty ("0 Instructions.").
+
+    Syntax:
+
+        SHOW INSTRUCTIONS/UNIMPLEMENTED
+3 USP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+3 VM
+  Shows the size of physical memory and, once VMINIT has made page tables,
+  how much of each region (P0, P1, S0) is used (govax's own). With paging
+  on (VMINIT/PAGING), the page frames on the free and modified lists and
+  in use, the page faults by kind, the modified page writer's pages and
+  writes, and the page file's use. With /STATISTICS, counters of the memory system's work;
+  /RUNTIME and /FULL show more.
+
+  Format:
+
+    SHOW MEMORY [/STATISTICS] [/RUNTIME] [/FULL]
+3 WATCH
+  Lists the watchpoints.
+
+  Format:
+
+    SHOW WATCH
+2 STEP
+  Executes one or more steps of the program and stops again. A step is
+  one source line, or one instruction, as SET STEP says.
+
+  Format:
+
+    STEP[/qualifier...] [count]
+
+  count is the number of steps to take (one if none is given); only where
+  the last one ends is reported.
+
+  /LINE (the default) steps to the first instruction of the next source
+  line. /INSTRUCTION steps one instruction. Where the program has no line
+  numbers, a step is one instruction either way.
+
+  /OVER (the default) runs a call (CALLS, CALLG, JSB, BSBB, BSBW, or a
+  change-mode instruction) to its end, and the step stops after it. /INTO
+  (also /IN) follows the call into the routine.
+
+  /RETURN runs until the RET that ends the routine's call frame is about
+  to execute. The wait belongs to that frame: a deeper call's RET doesn't
+  end it, and it stays in force across breakpoints and other STEPs until
+  the RET is reached.
+
+  /BRANCH and /CALL run until the next branch or call instruction is about
+  to execute.
+
+  /SILENT reports nothing. /NOSILENT (the default) reports where the
+  step stopped. /[NO]SOURCE chooses whether the source line is shown with
+  it.
+
+  With a qualifier left out, STEP uses what SET STEP chose.
+
+  A program may trace itself (PSL<T> set, its condition handler taking
+  SS$_TBIT after each instruction). As the VMS debugger does, a
+  breakpoint takes the trace due where it stops, and going on from a
+  breakpoint or a step, by STEP or GO, clears T after the first
+  instruction, so the program's tracing ends there. A breakpoint in the
+  program's trace handler, or SET BREAK/EXCEPTION, leaves the tracing as
+  it is.
+2 SYMBOLIZE
+  Shows each name the debugger has for an address.
+
+  Format:
+
+    SYMBOLIZE address
+
+  The program's routines, labels, and lines come first, then the names in
+  the console's symbol table. An address with no name is shown as itself.
+
+  Example:
+
+    SYMBOLIZE 5A0
+2 TYPE
+  Shows lines of a module's source file.
+
+  Format:
+
+    TYPE [module\]line[:line][,...]
+
+  Without a module's name the lines are of the module the program is in. The
+  numbers are read in the input radix. In a FORTRAN program the source file is
+  the MACRO file the compiler wrote, whose lines hold the FORTRAN lines as comments.

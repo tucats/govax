@@ -329,7 +329,7 @@ func buildImage(t *testing.T, c *console.Console, name, source string) string {
 		t.Fatal(err)
 	}
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	for _, cmd := range []string{
 		`MACRO "` + src + `"/OBJECT="` + obj + `"`,

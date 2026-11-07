@@ -1,0 +1,194 @@
+1 CREATE
+    The CREATE command creates a file, as VMS DCL's CREATE does, from
+    the lines of SYS$INPUT: at the terminal, the lines typed up to
+    Ctrl/Z; in a command procedure, the data lines after the CREATE
+    command, up to the next line that starts with "$" (or the end of a
+    DECK).  The file is created even when there are no lines.
+
+    Syntax:
+
+        CREATE [/LOG] <file>[/HOST]
+
+    Parameter:
+
+        <file>          The file to create.  A file on a mounted ODS-2
+                        volume, such as DUA0:[WORK]NOTES.TXT or, with
+                        SET DEFAULT on a volume, NOTES.TXT, is a
+                        variable-length record file with carriage-return
+                        carriage control, as VMS makes a text file; it
+                        is a new version if the file already exists.  A
+                        host file makes a plain host text file instead,
+                        each line ending as the host's do: LF on Unix
+                        and macOS, CR LF on Windows.  A name with a host
+                        path ("./notes.txt", quoted to keep its case) is
+                        a host file; so is a bare name when the default
+                        directory isn't on a mounted volume.
+
+    Qualifiers:
+
+        /HOST           Attached to <file>, makes it a host file name,
+                        whatever it looks like: CREATE "notes.txt"/HOST.
+
+        /LOG            Report the file created, with its version.
+
+    Examples:
+
+        CREATE NOTES.TXT
+        This is the first line.
+        This is the last.
+        ^Z
+
+        $ CREATE/LOG DUA0:[WORK]SETUP.DAT
+        ITEM ONE
+        ITEM TWO
+        $ TYPE DUA0:[WORK]SETUP.DAT
+
+    CREATE has other forms, each its own command:
+
+        CREATE/DIRECTORY    creates a directory on a mounted volume.
+        CREATE/FDL          creates an empty file from an FDL file.
+        CREATE/NAME_TABLE   creates a logical name table.
+
+    For details, see:
+
+        HELP CREATE /DIRECTORY
+        HELP CREATE /FDL
+        HELP CREATE /NAME_TABLE
+
+    See also the help for TYPE and SET DEFAULT.
+2 /DIRECTORY
+    The CREATE/DIRECTORY command creates a directory on a mounted ODS-2
+    volume, as VMS DCL's CREATE/DIRECTORY does, and every directory above
+    it that doesn't exist yet: CREATE/DIRECTORY [A.B.C] makes [A], [A.B],
+    and [A.B.C], whichever are missing.  A directory that already exists
+    is reported, and isn't an error.
+
+    Syntax:
+
+        CREATE/DIRECTORY [qualifiers] <directory>[,<directory>...]
+
+    Parameter:
+
+        <directory>     A directory specification, such as [A.B] or
+                        DUA0:[A.B].  It may be relative to the current
+                        default directory ([.SUB], [-.OTHER]; see SET
+                        DEFAULT), and its device may be a logical name.
+                        It can't name a file, or use wildcards.  With no
+                        device and no default device on a mounted volume,
+                        the directory is made on the host instead,
+                        relative to the host's current directory.
+
+    Qualifiers:
+
+        /OWNER_UIC=<uic>
+        /OWNER_UIC=PARENT
+                        The new directory's owner: a UIC, [group,member]
+                        in octal, or PARENT for the owner of the
+                        directory it's made in, which is also the
+                        default.
+
+        /VERSION_LIMIT=<n>
+                        The default version limit for files created in
+                        the new directory; 0 means no limit.  The default
+                        is the limit of the directory it's made in.
+
+        /PROTECTION=(<category>:<access>,...)
+                        The new directory's protection: for each of
+                        SYSTEM, OWNER, GROUP, and WORLD (or S, O, G, W),
+                        the access granted, any of R, W, E, and D, or
+                        none.  The default is the protection of the
+                        directory it's made in, less delete access; a
+                        category not given keeps that default.
+
+        /ALLOCATION=<n> The number of blocks to give the directory at
+                        once.  The default is 1.
+
+        /LOG            Reports the directory made.  The directories
+                        made above it aren't reported.
+
+    A /VERSION_LIMIT out of range is reported and ignored, and the
+    directory still made, as VMS does.
+
+    Examples:
+
+        CREATE/DIRECTORY [PROJECTS.TEST]
+
+        CREATE/DIRECTORY/LOG/OWNER_UIC=[200,201]/VERSION_LIMIT=3 [USER]
+
+        CREATE/DIRECTORY/PROTECTION=(S:RWE,O:RWE,G:RE,W) [.SHARED]
+
+    See also the help for DIRECTORY and SET DEFAULT.
+2 /FDL
+    The CREATE/FDL command creates an empty file from the description in
+    an FDL (File Definition Language) file: sequential, relative, or
+    indexed, with its record format, allocation, protection, dates, and
+    an indexed file's keys and areas.  RMS makes the file, so what RMS
+    refuses is reported with RMS's message.
+
+    Syntax:
+
+        CREATE/FDL=<fdl-file> [/LOG] [<file>]
+
+    Parameters:
+
+        <fdl-file>      The FDL file; its default type is .FDL.
+
+        <file>          The file to create.  Without one, the FDL file's
+                        FILE NAME names it.  FILE DEFAULT_NAME supplies
+                        what the name leaves out.  An existing file gets
+                        a new version.
+
+    Qualifiers:
+
+        /LOG            Report the file created, with its version.
+
+    An FDL file holds sections, such as FILE, RECORD, AREA n, and KEY n,
+    each followed by its attributes, one to a line or separated by
+    semicolons; "!" begins a comment.  Names may be abbreviated.  A warning
+    leaves that attribute at its default and the file is still made; an
+    error means no file.  Indexed files are Prolog 3 only: PROLOG 1 or 2,
+    or a primary key whose segments overlap, is RMS$_PLV.
+
+    Example:
+
+        $ CREATE PARTS.FDL
+        FILE
+            ORGANIZATION indexed
+        RECORD
+            SIZE 80
+        KEY 0
+            SEG0_LENGTH 8
+        KEY 1
+            SEG0_LENGTH 20
+            SEG0_POSITION 8
+        $ CREATE/FDL=PARTS/LOG PARTS.IDX
+        %FDL-I-CREATED, DUA1:[000000]PARTS.IDX;1 created
+
+    See also the help for OPEN, READ, and WRITE.
+2 /NAME_TABLE
+    The CREATE/NAME_TABLE command creates a logical name table.
+
+    Syntax:
+
+         CREATE/NAME_TABLE table-name
+
+    Qualifiers:
+
+        /PARENT_TABLE=table
+
+            The new table's parent.  The default, LNM$PROCESS_DIRECTORY,
+            makes a table private to the process.  A shareable parent
+            such as LNM$SYSTEM_DIRECTORY makes a shareable table.
+
+        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+
+            The access mode of the table.  The default is supervisor mode.
+
+        /LOG (default), /NOLOG
+
+            Report when an existing table is superseded.
+
+    To have file lookups search the new table, add it to LNM$PROCESS:
+
+         $ DEFINE/TABLE=LNM$PROCESS_DIRECTORY LNM$PROCESS -
+                LNM$PROCESS_TABLE, TAX

@@ -111,7 +111,7 @@ func TestConsoleDirectory_badFileSpec(t *testing.T) {
 func TestDispatch_directoryViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -134,7 +134,7 @@ func TestDispatch_directoryViaDCL(t *testing.T) {
 // LINK68.COM writes its FILES.LST so.
 func TestDispatch_directoryOutput(t *testing.T) {
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -192,7 +192,7 @@ func TestDispatch_directoryAbbreviated(t *testing.T) {
 func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -210,7 +210,7 @@ func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
 // be at least 1.
 func TestDispatch_directoryVersions(t *testing.T) {
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	mountFreshContainer(t, c, "DUA0")
 

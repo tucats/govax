@@ -1,0 +1,30 @@
+1 FUNCTIONS
+    Any place an arithmetic expression can be used, functions can be used as
+    replacements for numeric arguments.  Functions are built-in to the expression
+    handler for the console.  They may accept between zero and four arguments
+    depending on the function.  The result is always numeric.
+
+    BYTE( addr )            Returns the integer byte located at the given address.
+
+    DEFINED( "string" )     Returns 0 if the string is not the name of a symbol.
+                            Returns 1 if the string is a user symbol name.
+                            Returns 2 if the string is a system symbol name.
+
+    LONG( addr )            Returns the integer longword located at the given address.
+
+    PMEMSIZE()              Returns the number of bytes of physical memory in
+                            the virtual VAX.
+
+    UBYTE( addr )           Returns the unsigned byte located at the given address.
+
+    ULONG( addr )           Returns the unsigned long located at the given address.
+
+    UWORD( addr )           Returns the unsigned word located at the given address.
+
+    WORD( addr )            Returns the integer word located at the given address.
+
+    FILE_EXISTS( "name" )   Returns 1 if the named file exists, else zero
+
+    VMVALID()               Returns 1 if console VM is enabled, else zero
+
+    MKVALID()               Returns 1 if console microkernel is enabled, else zero.

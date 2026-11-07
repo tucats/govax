@@ -455,7 +455,7 @@ Global options go before the subcommand or command.
 | `--system-file FILE` | The system volume's container, for this run, instead of `vax.default.system.file`'s (by default `~/.govax/govax-system.dsk`). `none` starts govax with no system volume, from its built-in files. |
 | `--system-device DEV` | The device to mount the system volume on (by default `DUA0`). |
 | `--system-initialize` | Make the system volume again from govax's own files, keeping the old container beside it as `FILE.old`. |
-| `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars and help files, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. govax's built-in copies of its startup files are always searched last. |
+| `--path DIR,...` | Host directories to search for files govax and its commands name (its grammars, `@` procedures, MACRO sources, ...), after the name as given and before the system volume's copies. govax's built-in copies of its startup files are always searched last. |
 | `--profile NAME` | Use the configuration profile `NAME` instead of the default one (section 4). |
 | `--instruction-limit N`, `-i` | Stop a program after it has executed `N` VAX instructions. Each run (a `RUN`, or the debugger's `GO`, `CALL`, or `STEP`) starts with a fresh budget. |
 | `--time-limit D`, `-t` | Stop a run after the elapsed time `D` (`10s`, `2m`, ...). |
@@ -946,9 +946,9 @@ sparse host file, taking only the space its files use.
 | --- | --- | --- |
 | `[SYSTEM.SYSEXE]` | `SYS$SYSTEM` | `DEFAULT.ROM`, the console ROM; `PAGEFILE.SYS`, the page file, with paging on |
 | `[SYSTEM.SYSMGR]` | `SYS$MANAGER` | `STARTUP.COM`, `SYSTARTUP_VMS.COM`; `CONSOLE.DCL` and `DEBUG.DCL`, the console's and the debugger's command grammars |
-| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `CONSOLE.HLP` and `DEBUG.HLP`, the help text |
+| `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB` and `DBG$HELP.HLB`, DCL's and the debugger's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`) |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
-| `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM` |
+| `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
 | `[SYSTEM]` | `SYS$SYSROOT` | `GOVAX$FILES.DAT`, the list of files govax supplied |
 
 govax defines `SYS$SYSDEVICE` (the volume's device, `_DUA0:`) and
@@ -960,8 +960,8 @@ is govax's own name. The names aren't rooted directories as VMS's are:
 Every program-development command reads these files through the names,
 ahead of the copies built into govax: `MACRO` the macro library in
 `SYS$LIBRARY`, `FORTRAN` its `FORSYSDEF.TLB`, `LINK` and `RUN` the
-`FTNRTL.EXE` in `SYS$SHARE`, the console and the debugger their grammars
-and help files, and STARTUP.COM the kernel and ROM. So what you change
+`FTNRTL.EXE` in `SYS$SHARE`, the console and the debugger their grammars,
+HELP and the debugger's HELP their help libraries in `SYS$HELP`, and STARTUP.COM the kernel and ROM. So what you change
 on the volume is what govax uses.
 
 #### STARTUP.COM and SYSTARTUP_VMS.COM
@@ -3667,8 +3667,14 @@ VAX> DEFINE HLP$LIBRARY DUA1:[WORK]MYHELP
 VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
 ```
 
-Until govax's own help comes as libraries, `HELP` with no `/LIBRARY`
-shows govax's built-in help text unless a `SYS$HELP:HELPLIB.HLB` exists.
+With no `/LIBRARY`, HELP reads `SYS$HELP:HELPLIB.HLB`, the system
+volume's, or govax's own copy when there's no system volume; the
+debugger's HELP reads `SYS$HELP:DBG$HELP.HLB` the same way.
+`@SYS$SOURCES:BUILDHELP` rebuilds both from their help files in
+`SYS$HELP:[.SOURCES]`. A module you add to `HELPLIB.HLB` with
+`LIBRARY/HELP`, or change there, is kept when a newer govax refreshes the
+library with its own modules; a changed one it would have replaced is
+reported once, with `%MOUNT-I-SYSKEPT` naming the module.
 
 ### Analyzing objects and images
 

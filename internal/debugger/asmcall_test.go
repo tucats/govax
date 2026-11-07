@@ -18,7 +18,7 @@ func debugModeConsole(t *testing.T) (*console.Console, *console.Dispatcher) {
 	t.Helper()
 
 	c, _ := consoletest.New(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	consoletest.InstallDebugger(t, c, d)
 	consoletest.DebugMode(t, d)
 

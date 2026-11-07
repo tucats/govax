@@ -1,0 +1,479 @@
+1 CONFIGURATION
+    govax keeps configuration settings in a profile in the .govax
+    directory of your home directory.  They are read each time govax
+    starts.  The settings are set and shown with the govax command's
+    CONFIG verb, from the host shell, not from the VAX> prompt:
+
+        govax config set KEY=VALUE      Set a setting.  A KEY alone,
+                                        with no =VALUE, sets it to true.
+        govax config show               Show every setting in the profile.
+        govax config show KEY           Show one setting's value.
+        govax config delete KEY         Remove a setting, so its default
+                                        applies again.
+        govax config list               List the profiles.
+
+    The global option --profile NAME (before the verb) chooses a profile
+    other than the default one, for example:
+
+        govax --profile test config set vax.quantum=50
+        govax --profile test
+
+    For example, to have govax create (the first time) and mount a work
+    volume each time it starts, and make it the default:
+
+        govax config set vax.default.volume.file="~/vax/work.dsk"
+
+    Keys are case-sensitive and written in lowercase.  govax warns at
+    exit about any key in the profile it doesn't recognize, which usually
+    means a misspelling.
+
+    For the list of keys and what each one does, type:
+
+        HELP CONFIG KEYS
+2 KEYS
+    These are the configuration settings govax reads (see HELP CONFIG
+    for how to set them).
+
+    The system volume
+
+        govax mounts a system volume, labeled GOVAXSYS, every time it
+        starts, before anything else: an ODS-2 container holding govax's
+        own files (its startup procedure, grammars, help, libraries, and
+        FTNRTL.EXE, with the sources and procedures that rebuild them).
+        The first time, govax makes it from the files built into it:
+
+            %MOUNT-I-CREATED, container /home/me/.govax/govax-system.dsk
+                created as an RD54 volume labeled GOVAXSYS
+            %MOUNT-I-MOUNTED, GOVAXSYS mounted on _DUA0:
+
+        Only one govax session at a time can write it.  A second session
+        mounts it read-only (%MOUNT-I-SYSREADONLY).  If it can't be used
+        (it can't be made or mounted, or its label isn't GOVAXSYS), a
+        %MOUNT-W-NOSYSVOL warning says why, and govax starts from its
+        built-in files.  DISMOUNT won't dismount it.
+
+        Each start runs the volume's SYS$MANAGER:STARTUP.COM, which
+        defines SYS$SYSTEM, SYS$MANAGER, SYS$HELP, SYS$LIBRARY,
+        SYS$SHARE, and SYS$SOURCES (govax itself defines SYS$SYSDEVICE,
+        the volume's device, and SYS$SYSROOT, its [SYSTEM] directory),
+        and runs your SYS$MANAGER:SYSTARTUP_VMS.COM last.  The console's
+        and the debugger's grammars and help files are the volume's
+        copies too, unless one is in the current directory or a --path
+        directory; one that can't be read, or a grammar that doesn't
+        parse or lacks one of govax's commands, is a %VAX-W-SYSGRAMMAR
+        warning, and govax uses its own.  A newer govax replaces each of
+        its files you haven't changed with its own copy, as a new
+        version; one you have changed is kept, and %MOUNT-I-SYSKEPT says
+        so, once for each new copy.
+
+        The options --system-file FILE and --system-device DEVICE take
+        precedence over the settings below for one run, and
+        --system-file none starts govax with no system volume at all.
+        --system-initialize makes the volume again from govax's own
+        files, keeping the old container beside it as FILE.old: the way
+        back from a system volume that no longer works.
+
+        vax.default.system.file       The container's host path, or none.
+                                      A leading ~/ is your home
+                                      directory.  Default
+                                      ~/.govax/govax-system.dsk.
+
+        vax.default.system.device     The device it is mounted on.  A
+                                      device with no unit number (DUA) is
+                                      that controller's first unit with
+                                      nothing mounted on it.  Default
+                                      DUA0.
+
+        vax.default.system.type       The disk type (RD51, RD54, RA81,
+                                      ...) that sizes a new container,
+                                      and that the device is defined as.
+                                      Default RD54 (311,200 blocks; the
+                                      host file takes only the space its
+                                      files use).
+
+    The default volume
+
+        When vax.default.volume.file is set, govax mounts that ODS-2
+        container at startup and does a SET DEFAULT to it, so file
+        commands (DIRECTORY, TYPE, MACRO, LINK, RUN, ...) work on the
+        volume rather than on the host's files.  A container that doesn't
+        exist is created and initialized first, with the default
+        directory in it:
+
+            %MOUNT-I-CREATED, container /home/me/vax/work.dsk created as
+                an RD54 volume labeled WORK
+            %MOUNT-I-MOUNTED, WORK mounted on _DUA1:
+
+        A container that can only be read is mounted read-only, and
+        %MOUNT-I-WRITELOCK says so.  If the volume can't be used (it
+        can't be created, opened, or mounted, its label doesn't match,
+        or the device is already mounted, by --mount or as the system
+        volume), a
+        %MOUNT-W-NODEFAULT warning says why and govax starts without it.
+        With no container configured, file names go to the host as they
+        always have.
+
+        vax.default.volume.file       The container's host path.  A
+                                      leading ~/ is your home directory.
+                                      Unset: no default volume.
+
+        vax.default.volume.label      The volume label a new container is
+                                      given.  When set, an existing
+                                      container's label must match it, or
+                                      the volume isn't used.  Default WORK
+                                      (and no check).
+
+        vax.default.volume.device     The device the volume is mounted on.
+                                      A device with no unit number (DUA)
+                                      is that controller's first unit
+                                      with nothing mounted on it.
+                                      Default DUA: DUA1, beside the
+                                      system volume on DUA0.
+
+        vax.default.volume.type       The disk type (RX50, RD54, RA81, ...)
+                                      that sizes a new container, and that
+                                      the device is defined as.  Default
+                                      RD54 (311,200 blocks).
+
+        vax.default.volume.directory  The default directory, created in
+                                      a new container's MFD.  If it isn't
+                                      on the volume, the default is the
+                                      MFD, [000000].  Default [WORK].
+
+    Files and libraries
+
+        vax.path                      Host directories to search for
+                                      files a console command names, after
+                                      the name as given, separated by
+                                      commas (like the --path option).
+
+        vax.library                   The host directory LINK and MACRO
+                                      look in for the system object and
+                                      macro libraries and shareable
+                                      images, when SYS$LIBRARY and
+                                      SYS$SHARE don't lead to them.
+
+        vax.link.library              The older name for vax.library,
+                                      read when vax.library isn't set.
+
+    The console
+
+        vax.startup.procedure         If specified, the name of a DCL
+                                      command procedure run automatically
+                                      during startup processing.  If the
+                                      procedure name does not exist, or
+                                      is empty, there is no error.
+
+        vax.console.prompt            The console's prompt.  Default
+                                      "VAX> ".  SET PROMPT changes it.
+
+        vax.console.lines             The screen's height in lines for
+                                      TYPE/PAGE, used when the terminal's
+                                      own size can't be read (output not
+                                      to a terminal).  Default 24.
+
+        vax.disassemble.symbolic      true or false: whether DISASSEMBLE
+                                      and SHOW CALLS show the VMS
+                                      debugger's symbolic layout by
+                                      default.  Default true.
+
+        vax.editor.command            The host command EDIT runs to edit
+                                      a file, %file standing for the file;
+                                      without one, the file goes last.
+                                      SET EDITOR/COMMAND changes it.
+                                      Default "vi %file".
+
+        vax.editor.scratch            The host directory EDIT works in.
+                                      SET EDITOR/SCRATCH changes it.
+                                      Default the host's temporary
+                                      directory.
+
+        vax.language                  The user's language, as
+                                      LIB$GET_USERS_LANGUAGE returns it
+                                      (FRENCH, GERMAN, ...) when the
+                                      SYS$LANGUAGE logical name isn't
+                                      defined.  When neither is set, the
+                                      host's locale (LC_ALL, LC_MESSAGES,
+                                      or LANG) gives it; failing that,
+                                      the routine returns ENGLISH and
+                                      LIB$_ENGLUSED.
+
+        vax.runtime.random            When true, MTH$RANDOM's numbers come
+                                      from the host's cryptographic
+                                      generator, and can't be predicted or
+                                      repeated; the seed is rewritten, but
+                                      its old value plays no part.  When
+                                      false, each follows from the seed by
+                                      the VMS manual's formula, so a seed
+                                      repeats its sequence.  Default false.
+
+    The machine
+
+        vax.hardware.clock            true or false: drive the interval
+                                      clock and time-of-year clock from
+                                      the host's real time rather than
+                                      from instruction counts.  Default
+                                      false.
+
+        vax.quantum                   The number of instructions between
+                                      clock ticks when vax.hardware.clock
+                                      is false.  Default 20.
+
+    Memory
+
+        These are read by the startup procedure, STARTUP.COM (with
+        F$CONFIG), for its INITIALIZE/VAX and VMINIT commands; each is a
+        number of 512-byte pages, a DCL integer (decimal, or %X for hex).
+        One that isn't set keeps STARTUP.COM's own value.  A STARTUP.COM
+        you have changed need not read them.
+
+        vax.memory.size               Physical memory (INITIALIZE/VAX).
+                                      Default 16384 (8MB).
+
+        vax.memory.p0                 VMINIT's P0 region.  Default 16384,
+                                      or VMINIT's paging default with
+                                      paging on.
+
+        vax.memory.p1                 VMINIT's P1 region.  Default 8192,
+                                      or VMINIT's paging default with
+                                      paging on.
+
+        vax.memory.s0                 VMINIT's S0 region.  Default 8192,
+                                      or VMINIT's paging default with
+                                      paging on.
+
+        vax.memory.ksp                The kernel stack.  Default 20.
+
+        vax.memory.esp                The executive stack.  Default 8.
+
+        vax.memory.ssp                The supervisor stack.  Default 8.
+
+        vax.memory.isp                The interrupt stack.  Default 4.
+
+        With paging off, a region given 0 shares, with the others given
+        0, the physical memory the rest leave, and physical memory still
+        left over is added to S0.  With paging on
+        (vax.sysgen.paging.enable), STARTUP.COM gives VMINIT 0 for each
+        region not set here, and VMINIT's paging defaults apply (see
+        HELP VMINIT).
+
+    Processes
+
+        These are for running several processes at once.  With
+        vax.process.scheduler on (the default), a program can create
+        processes ($CREPRC, and LIB$SPAWN), and the CPU is shared among them
+        VMS's way: by priority, a quantum at a time among equals, and
+        giving the CPU to another while one waits.  Mailboxes, common
+        event flags, global sections, the lock services ($ENQ, $ENQW,
+        $DEQ), and shared files (see MOUNT) work between them, and a
+        process waiting for a line from the terminal lets the others
+        run.  SHOW SYSTEM lists them, and STOP deletes one.  With it
+        off, only the console's own process runs, and $CREPRC and
+        LIB$SPAWN return %SYSTEM-E-UNSUPPORTED.
+
+        A process LIB$SPAWN creates, or $CREPRC creates to run
+        LOGINOUT.EXE, runs a small command interpreter in place of DCL.
+        It runs one command (LIB$SPAWN's command-string) or reads its
+        commands from SYS$INPUT (the terminal, a mailbox, or a file),
+        running each command's image in turn in the same process.  It
+        knows RUN, MCR, foreign commands and other DCL symbols, symbol
+        assignments, DELETE/SYMBOL, SHOW SYMBOL, SHOW LOGICAL, EXIT,
+        and LOGOUT; anything else is %DCL-W-IVVERB.  LOGINOUT's,
+        reading a file or a mailbox, echoes each command as it reads
+        it, as DCL's verify does in a batch job, and ends with
+        LOGOUT's accounting report.
+
+        vax.process.scheduler         true or false: whether processes
+                                      other than the console's own can be
+                                      created and run.  Default true.
+
+        vax.process.quantum           The number of instructions a
+                                      process runs before another process
+                                      of the same priority may have the
+                                      CPU.  Default 20000.
+
+        vax.process.preempt           Which access modes a process can
+                                      lose the CPU in, when its quantum
+                                      ends or a higher-priority process
+                                      can run: all (as on VMS), user
+                                      (user mode only), or none (only
+                                      when the process waits).  Default
+                                      all; govax warns at startup about
+                                      any other value.
+
+    System parameters
+
+    The vax.sysgen.* keys are govax's SYSGEN parameters: each is named
+    for the VMS SYSGEN parameter it stands for, in lowercase.  Counts
+    are in 512-byte pages, as a decimal integer or %X followed by hex
+    digits; govax warns at startup about a value that isn't a positive
+    integer, and uses the default.  The values that start a process off
+    are copied into each process when it's created.
+
+        vax.sysgen.paging.enable      true or false: whether VMINIT turns
+                                      VMS paging on (see HELP VMINIT,
+                                      /[NO]PAGING).  Default false.
+
+        vax.sysgen.pql_dwsdefault     PQL_DWSDEFAULT: a new process's
+                                      default working set size.  Default
+                                      294 for a process $CREPRC creates;
+                                      the console's process has the
+                                      SYSTEM account's 512.
+
+        vax.sysgen.pql_dwsquota       PQL_DWSQUOTA: a new process's
+                                      working set quota, the pages it is
+                                      guaranteed.  Default 588; the
+                                      console's process has 1024.
+
+        vax.sysgen.pql_dwsextent      PQL_DWSEXTENT: a new process's
+                                      working set extent, the most its
+                                      working set may grow to while free
+                                      pages allow.  Default 16400.
+
+        vax.sysgen.pql_dpgflquota     PQL_DPGFLQUOTA: a new job's paging
+                                      file quota, the pages its processes
+                                      may together have in the page file.
+                                      Default 16400; the console's job
+                                      has 40960.  With paging on, pages
+                                      are charged as they are created,
+                                      and $CRETVA, $EXPREG, and LIB$GET_VM
+                                      fail past it.
+
+        vax.sysgen.minwscnt           MINWSCNT: the smallest working set
+                                      a process may have.  Default 20.
+
+        vax.sysgen.tbskipwsl          TBSKIPWSL: with paging on, how many
+                                      pages still in the translation
+                                      buffer the pager passes over when
+                                      it chooses a page to take out of a
+                                      working set.  0 turns the check
+                                      off (and is allowed).  Default 8.
+
+        vax.sysgen.growlim            GROWLIM: with paging on, a working
+                                      set at or past its quota takes a
+                                      new page without giving one up
+                                      only while more than this many
+                                      pages are free.  0 is allowed.
+                                      Default 63.
+
+        vax.sysgen.mpw_hilimit        MPW_HILIMIT: with paging on, the
+                                      modified page writer starts when
+                                      more than this many pages are on
+                                      the modified page list, and
+                                      writes it down to one cluster
+                                      (mpw_wrtcluster) below this, as
+                                      VMS 7.1's does.  0 is allowed.
+                                      Default 500.
+
+        vax.sysgen.mpw_lolimit        MPW_LOLIMIT: the modified page
+                                      writer never writes the list
+                                      below this many pages, and writes
+                                      it down to this when the free
+                                      list runs short (freelim).  0 is
+                                      allowed.  Default 32.
+
+        vax.sysgen.mpw_wrtcluster     MPW_WRTCLUSTER: the most pages the
+                                      modified page writer writes in
+                                      one cluster, and so the largest
+                                      run of page file blocks it takes
+                                      at once.  A multiple of 8 from 16
+                                      to 120.  Default 120.
+
+        vax.sysgen.freelim            FREELIM: with paging on, when fewer
+                                      than this many pages are on the
+                                      free page list, govax reclaims
+                                      pages: it writes modified pages it
+                                      can, and trims working sets that
+                                      grew past their quotas.  0 turns
+                                      it off.  Default 32.
+
+        vax.sysgen.freegoal           FREEGOAL: the reclaimer stops when
+                                      this many pages are free.  0 is
+                                      allowed.  Default 200.
+
+        vax.sysgen.gblsections        GBLSECTIONS: the most global
+                                      sections that may exist at once;
+                                      $CRMPSC fails with SS$_GSDFULL
+                                      past it.  Default 128.
+
+        vax.sysgen.gblpages           GBLPAGES: the global page table
+                                      entries the global sections may
+                                      use in all, each section its pages
+                                      and two more, rounded up to an
+                                      even number; $CRMPSC fails with
+                                      SS$_GPTFULL past it.  Default 4096.
+
+        vax.sysgen.gblpagfil          GBLPAGFIL: the pages the page-file
+                                      global sections may have in all;
+                                      $CRMPSC fails with SS$_EXGBLPAGFIL
+                                      past it.  Default 4096.
+
+        vax.sysgen.pfcdefault         PFCDEFAULT: with paging on, the
+                                      most pages a page fault reads
+                                      from a file or the page file at
+                                      once, the page faulted and its
+                                      neighbors, when the section gave
+                                      no cluster size of its own
+                                      ($CRMPSC's pfc argument).  0 and
+                                      1 read only the page faulted.
+                                      From 0 to 127.  Default 32.
+
+        vax.sysgen.virtualpagecnt     VIRTUALPAGECNT: with paging on, how
+                                      many pages a new process's program
+                                      and control regions (P0 and P1)
+                                      may have together: the size of its
+                                      page tables, which the two regions
+                                      share as they grow.  P1 starts
+                                      with 4096 of them (from the user
+                                      stack's top up).  $CRETVA and
+                                      $EXPREG fail with SS$_VASFULL past
+                                      it.  Default VMINIT's /P0 plus /P1
+                                      (process 1's).
+
+        vax.sysgen.paging.file        With paging on, the page file: where
+                                      pages with no file of their own go
+                                      when their memory is needed.  A
+                                      file on a mounted volume
+                                      (DUA1:[WORK]PAGEFILE.SYS), or a
+                                      host file, in quotes
+                                      ("./pagefile.sys").  It's
+                                      installed as govax starts, after
+                                      STARTUP.COM and before your commands
+                                      (and again after each VMINIT,
+                                      INIT, or ZERO): created if it's
+                                      missing, and made
+                                      vax.sysgen.paging.size blocks if
+                                      it isn't, so its space is taken at
+                                      once.  Its volume can't be
+                                      dismounted while it's open.
+                                      Unset, it's the system volume's
+                                      [SYSTEM.SYSEXE]PAGEFILE.SYS, or
+                                      none when there is no system
+                                      volume or it's read-only (another
+                                      govax session has it; SHOW MEMORY
+                                      says so).  With paging off,
+                                      there's no page file.
+
+        vax.sysgen.paging.size        The page file's size in blocks
+                                      (pages).  An existing page file of
+                                      another size is grown or shrunk to
+                                      it (kept at its size, with a
+                                      warning, if its volume hasn't room
+                                      to grow it).  Default 32768.
+
+        vax.sysgen.paging.defer       true or false: true leaves the page
+                                      file unopened until paging first
+                                      needs it, instead of installing it
+                                      as govax starts.  Default false.
+
+    Debugging switches
+
+        vax.debug.NAME                true or false: the initial state of
+                                      the SET DEBUG switch NAME (see HELP
+                                      SET DEBUG).  NAME is one of vm, tb,
+                                      symbols, exceptions, interrupts,
+                                      chm, registers, fulldisasm,
+                                      userhalt, keyboard, images,
+                                      services, dcl, command, logicals,
+                                      devices, process, libinit, rms, or
+                                      userstep.

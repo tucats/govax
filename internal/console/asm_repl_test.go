@@ -16,7 +16,7 @@ func newRunnableDispatcher(t *testing.T) (*Dispatcher, *Console) {
 
 	c := newRunnableConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	return d, c
 }

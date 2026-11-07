@@ -1,11 +1,11 @@
 package console
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/help"
@@ -122,20 +122,11 @@ func (c *Console) Printf(format string, args ...any) {
 	c.Interpreter.Printf(format, args...)
 }
 
-// Help writes the topic words name in h, govax's built-in help, to the
-// console (help.File.Show).
-func (c *Console) Help(h *help.File, words []string) error {
-	h.Show(c.Out, words)
-
-	return nil
-}
-
 // HelpCommand implements DCL's HELP (dclcmd.Context.Help, docs/PHASE-90 -
 // VMS help.md, subtask 6): its qualifiers, read from r, and its responses
 // read from SYS$INPUT. When there's no /LIBRARY and SYS$HELP:HELPLIB.HLB
-// can't be opened, it shows h, govax's built-in help, as before (until the
-// libraries are part of govax's build, the phase's subtask 7).
-func (c *Console) HelpCommand(h *help.File, r *dcl.Result) error {
+// can't be opened, it reads govax's own HELPLIB.HLB.
+func (c *Console) HelpCommand(r *dcl.Result) error {
 	// given: typed on the command line, not a /DEFAULT the grammar filled in.
 	given := func(q string) bool { return r.Present(q) && !r.Defaulted(q) && !r.Negated(q) }
 
@@ -179,15 +170,13 @@ func (c *Console) HelpCommand(h *help.File, r *dcl.Result) error {
 
 	defer c.EndHelpInput()
 
-	err := c.cmd().Help(opts, c.ReadHelpResponse, c.OutputToFile())
-	if errors.Is(err, dclcmd.ErrNoMainLibrary) {
-		// The old help's words: a "/" starts a new word, as it does in
-		// DCL, so HELP SHOW SYMBOL/ALL finds the same "/ALL" topic as
-		// HELP SHOW SYMBOL /ALL.
-		return c.Help(h, strings.Fields(strings.ReplaceAll(topic, "/", " /")))
-	}
+	return c.cmd().Help(opts, c.ReadHelpResponse, c.OutputToFile())
+}
 
-	return err
+// DebuggerHelp is the debugger's help library: SYS$HELP:DBG$HELP.HLB, or
+// govax's own copy when that can't be opened (debugger.Console).
+func (c *Console) DebuggerHelp() (help.Library, error) {
+	return c.cmd().OpenHelpLibrary("SYS$HELP:DBG$HELP", bootdata.DebugHelpLibrary)
 }
 
 // EndSession ends the console's use of the machine as govax exits: an

@@ -28,14 +28,21 @@ const (
 	Root    = "[SYSTEM]"
 	SysExe  = "[SYSTEM.SYSEXE]"  // SYS$SYSTEM: the page file, the console ROM
 	SysMgr  = "[SYSTEM.SYSMGR]"  // SYS$MANAGER: the startup procedures, the grammars
-	SysHlp  = "[SYSTEM.SYSHLP]"  // SYS$HELP: the help files
+	SysHlp  = "[SYSTEM.SYSHLP]"  // SYS$HELP: the help libraries
 	SysLib  = "[SYSTEM.SYSLIB]"  // SYS$LIBRARY and SYS$SHARE: libraries, FTNRTL.EXE
 	Sources = "[SYSTEM.SOURCES]" // SYS$SOURCES: FTNRTL's, the kernel's, and STARLET's sources
 )
 
+// HelpSources holds HELPLIB.HLB's help files, and DebugHelpSources, below
+// it, DBG$HELP.HLB's (BUILDHELP.COM builds the libraries from them).
+const (
+	HelpSources      = "[SYSTEM.SYSHLP.SOURCES]"
+	DebugHelpSources = "[SYSTEM.SYSHLP.SOURCES.DEBUG]"
+)
+
 // Directories lists every directory on the volume, each after its parent,
 // the order they are made in.
-var Directories = []string{Root, SysExe, SysMgr, SysHlp, SysLib, Sources}
+var Directories = []string{Root, SysExe, SysMgr, SysHlp, HelpSources, DebugHelpSources, SysLib, Sources}
 
 // PageFile is the default page file's place on the volume, by directory
 // and name (Decision 8). It isn't one of Files(): the page file's own
@@ -98,6 +105,10 @@ type File struct {
 	// Kind is whose it is.
 	Kind Kind
 
+	// HelpLibrary marks a help library, which the refresh treats module by
+	// module (helplib.go).
+	HelpLibrary bool
+
 	// read returns the file's contents as govax carries them, before
 	// they're put in their canonical form (Contents).
 	read func() ([]byte, error)
@@ -138,8 +149,8 @@ func Files() []File {
 		{Directory: SysMgr, Name: "CONSOLE.DCL", Format: Text, read: boot("console.dcl")},
 		{Directory: SysMgr, Name: "DEBUG.DCL", Format: Text, read: boot("debug.dcl")},
 
-		{Directory: SysHlp, Name: "CONSOLE.HLP", Format: Text, read: boot("console.help")},
-		{Directory: SysHlp, Name: "DEBUG.HLP", Format: Text, read: boot("debug.help")},
+		{Directory: SysHlp, Name: bootdata.HelpLibraryName(bootdata.HelpLibrary), Format: Binary, HelpLibrary: true, read: boot(bootdata.HelpLibrary)},
+		{Directory: SysHlp, Name: bootdata.HelpLibraryName(bootdata.DebugHelpLibrary), Format: Binary, HelpLibrary: true, read: boot(bootdata.DebugHelpLibrary)},
 
 		{Directory: SysLib, Name: strings.ToUpper(bootdata.StarletLibrary), Format: Binary, read: boot(bootdata.StarletLibrary)},
 		{Directory: SysLib, Name: "FTNRTL.EXE", Format: Binary, read: ftnrtlFile(ftnrtl.ImageFile)},
@@ -147,6 +158,10 @@ func Files() []File {
 			return sysdef.Library(definitionTime)
 		}},
 	}
+
+	// The help libraries' sources, which BUILDHELP.COM builds them from.
+	files = append(files, helpSources(HelpSources, bootdata.HelpSourceDir)...)
+	files = append(files, helpSources(DebugHelpSources, bootdata.DebugHelpSourceDir)...)
 
 	// FTNRTL's sources: every module, then the options that link them, and
 	// the procedure that builds the library from them.
@@ -159,7 +174,7 @@ func Files() []File {
 		})
 	}
 
-	return append(files,
+	files = append(files,
 		File{Directory: Sources, Name: strings.ToUpper(ftnrtl.OptionsFile), Format: Text, read: ftnrtlFile(ftnrtl.OptionsFile)},
 		File{Directory: Sources, Name: "BUILDFTN.COM", Format: Text, read: boot("buildftn.com")},
 
@@ -171,19 +186,57 @@ func Files() []File {
 		File{Directory: Sources, Name: strings.ToUpper(bootdata.StarletSource), Format: Text, read: boot(bootdata.StarletSource)},
 		File{Directory: Sources, Name: strings.ToUpper(bootdata.StarletDefSource), Format: Text, read: boot(bootdata.StarletDefSource)},
 		File{Directory: Sources, Name: "BUILDSTARLET.COM", Format: Text, read: boot("buildstarlet.com")},
+
+		// The procedure that builds the help libraries from their sources.
+		File{Directory: Sources, Name: "BUILDHELP.COM", Format: Text, read: boot("buildhelp.com")},
 	)
+
+	// Directory by directory, in Directories' order; within one, as above.
+	order := map[string]int{}
+	for i, d := range Directories {
+		order[d] = i
+	}
+
+	sort.SliceStable(files, func(i, j int) bool { return order[files[i].Directory] < order[files[j].Directory] })
+
+	return files
+}
+
+// helpSources are the system volume's copies, in the directory dir, of the
+// help files in bootdata's directory embedded, sorted.
+func helpSources(dir, embedded string) []File {
+	entries, err := fs.ReadDir(bootdata.FS, embedded)
+	if err != nil {
+		panic("sysvol: " + err.Error()) // embedded, so there by construction
+	}
+
+	var files []File
+
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".hlp") {
+			files = append(files, File{
+				Directory: dir,
+				Name:      strings.ToUpper(e.Name()),
+				Format:    Text,
+				read:      boot(path.Join(embedded, e.Name())),
+			})
+		}
+	}
+
+	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
+
+	return files
 }
 
 // Resolved maps the names govax reads some of its built-in files by, through
 // its resolver (internal/respath), to the system volume's copies that stand
 // in for them (Decision 4): the grammars and the help files, read as govax
 // starts. A copy on the host (in the current directory or a --path
-// directory) still comes first, and govax's own last.
+// directory) still comes first, and govax's own last. (The help libraries
+// aren't here: HELP finds SYS$HELP's through RMS, internal/dclcmd's help.go.)
 var Resolved = map[string]string{
-	"console.dcl":  SysMgr + "CONSOLE.DCL",
-	"debug.dcl":    SysMgr + "DEBUG.DCL",
-	"console.help": SysHlp + "CONSOLE.HLP",
-	"debug.help":   SysHlp + "DEBUG.HLP",
+	"console.dcl": SysMgr + "CONSOLE.DCL",
+	"debug.dcl":   SysMgr + "DEBUG.DCL",
 }
 
 // Lookup returns the file whose specification is spec (in any case), and

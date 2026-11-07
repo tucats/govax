@@ -1,0 +1,15 @@
+1 PSL
+    The PSL is a 32-bit integer value stored in the processor.  The SHOW PSL
+    command can be used to display the PSL as an integer, and also as the
+    individual fields of the PSL.  These fields are:
+
+    C       carry bit
+    V       overflow bit
+    Z       zero value
+    N       negative value
+    T       trace pending
+    IV      integer overflow
+    FU      floating point underflow
+    DV      divide-by-zero
+    IPL     current interrupt priority level
+    MOD     current mode (user, kernel, supervisor, executive)

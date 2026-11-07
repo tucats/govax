@@ -1,0 +1,38 @@
+1 ON
+    The ON command says what a command procedure does when one of its
+    commands fails, or when CTRL/Y is pressed while it runs.  Without
+    one, a procedure ends when a command fails with an error or a fatal
+    error, and goes on after a warning.
+
+    Syntax:
+
+        ON condition THEN [$] command
+
+    Parameters:
+
+        condition   WARNING         a warning, an error, or a fatal error
+                    ERROR           an error or a fatal error
+                    SEVERE_ERROR    a fatal error
+                    CONTROL_Y       CTRL/Y pressed while the
+                                    procedure runs
+
+        command     The command to run in place of the procedure's usual
+                    action, such as EXIT, CONTINUE, or SHOW SYMBOL
+                    $STATUS.
+
+    The command runs once: after it, the usual action is back until the
+    next ON.  ON CONTROL_Y is the exception: its command runs for each
+    CTRL/Y until another ON CONTROL_Y, SET NOCONTROL=Y, or the end of
+    the procedure.  If an image is running when CTRL/Y is pressed, it
+    is stopped first; a command of DCL's own completes first, and the
+    procedure goes on after it unless the command (GOTO, EXIT, STOP)
+    goes elsewhere.  ON applies only to the command level it is in, so a
+    procedure the procedure runs has its own.  SET NOON turns the
+    checking off, and SET ON (or an ON) back on.  At the terminal, ON
+    is accepted and does nothing.
+
+    Example:
+
+        $ ON WARNING THEN EXIT
+        $ ON ERROR THEN CONTINUE
+        $ ON CONTROL_Y THEN GOTO CLEAN_UP

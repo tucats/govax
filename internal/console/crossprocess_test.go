@@ -138,7 +138,7 @@ func TestNullDevice_defined(t *testing.T) {
 // the name taken with or without its colon.
 func TestShowDeviceFull_nla0(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	want := strings.Join([]string{
 		"Device NLA0:, device type null device, is online, record-oriented device,",
@@ -184,7 +184,7 @@ name:	.ascid	/SHOWBOX/
 // mailbox's from its $CREMBX promsk.
 func TestShowDeviceFull_terminalAndMailbox(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if err := c.Run(buildImage(t, c, "showbox", showMailboxSource), machine.RunOptions{}); err != nil {
 		t.Fatal(err)

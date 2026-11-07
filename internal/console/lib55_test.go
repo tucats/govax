@@ -78,7 +78,7 @@ func runLib55(t *testing.T) (uint32, string) {
 	}
 
 	// LIB55_DISK, and the null device as STARTUP.COM defines it.
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for _, line := range []string{
 		"DEFINE LIB55_DISK DUA1:",

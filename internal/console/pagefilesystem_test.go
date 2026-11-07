@@ -104,7 +104,7 @@ func TestReclaimerPageFile(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.size", "400")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	db := c.Mem.Paging()
 
 	if db == nil {

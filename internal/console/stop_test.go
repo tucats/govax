@@ -21,7 +21,7 @@ func TestStop(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, counter())
 	c.RTL.Process.Name = "SYSTEM"
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	byName := handBuiltProcess(t, c, counter())
 	byName.Process.Name = "VICTIM"
@@ -63,7 +63,7 @@ func TestStop(t *testing.T) {
 // INIT deletes all that are left.
 func TestStop_subprocessesAndInit(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, counter())
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	owner := handBuiltProcess(t, c, counter())
 	sub := newSub(t, owner)

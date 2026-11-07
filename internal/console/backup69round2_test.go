@@ -39,7 +39,7 @@ func backup69Round2Govax(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 
 	c, buf := newTestConsole(t)
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {

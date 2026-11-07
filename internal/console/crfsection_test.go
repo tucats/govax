@@ -136,7 +136,7 @@ func TestCopyOnRefSectionPaging(t *testing.T) {
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
 
 	t.Cleanup(func() {
@@ -324,7 +324,7 @@ func TestCopyOnRefSectionPaging(t *testing.T) {
 // untouched, as before Phase 65.
 func TestCopyOnRefSectionPagingOff(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
 
 	if c.Mem.Paging() != nil {
@@ -436,7 +436,7 @@ func TestCopyOnRefSectionQuota(t *testing.T) {
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
 	job := env.Process.Job
 

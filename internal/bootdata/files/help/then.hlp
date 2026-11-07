@@ -1,0 +1,40 @@
+1 THEN
+    The IF command runs a command, or a block of commands, only when an
+    expression is true.  An expression is true when its value is odd: an
+    odd integer, a string that holds an odd number, or a string that
+    starts with T or Y (in either case).  See HELP SYMBOL EXPRESSIONS.
+
+    Syntax:
+
+        IF expression THEN [$] command
+
+        IF expression
+        THEN [[$] command]
+            command ...
+        [ELSE [[$] command]
+            command ...]
+        ENDIF
+
+    In the first form, the command after THEN runs when the expression is
+    true.  In the second, the block form, the commands from THEN to ELSE
+    (or to ENDIF, without ELSE) run when it is true, and those from ELSE
+    to ENDIF when it is false; THEN must be the command after the IF.
+    The commands of the branch that doesn't run are passed over without
+    being read, so their symbols aren't substituted.  Commands between a
+    block's IF and its THEN are passed over; an ELSE among them makes the
+    THEN fail (DCL-E-INVIFNEST).  Blocks may be nested, at most 15 deep in
+    one command level.  A GOTO out of a block ends it.
+
+    IF, THEN, ELSE, and ENDIF leave $STATUS as it was, so a block can test
+    the status of the command before it; a command after THEN or ELSE
+    sets $STATUS as it would on a line of its own.
+
+    Example:
+
+        $ IF P1 .EQS. "" THEN GOTO NO_FILE
+        $ COPY 'P1' SAVE.DAT
+        $ IF .NOT. $STATUS
+        $ THEN
+        $     PRINT "The copy failed"
+        $     EXIT
+        $ ENDIF

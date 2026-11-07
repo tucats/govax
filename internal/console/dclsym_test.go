@@ -64,7 +64,7 @@ func TestAssignSymbol(t *testing.T) {
 // treats an alias of an alias), and DELETE/SYMBOL removes one.
 func TestDispatch_dclSymbols(t *testing.T) {
 	c := newBootableConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for _, line := range []string{"SD :== SET DEFAULT", "LOOP :== LOOP"} {
 		if err := d.Dispatch(line); err != nil {
@@ -104,7 +104,7 @@ func dclSession(t *testing.T) (*Dispatcher, func(string) string) {
 	c := newBootableConsole(t)
 	out := &bytes.Buffer{}
 	c.Out = out
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	return d, func(line string) string {
 		t.Helper()

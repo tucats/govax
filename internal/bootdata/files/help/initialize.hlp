@@ -1,0 +1,96 @@
+1 INITIALIZE
+    The INITIALIZE command performs one of two unrelated operations,
+    selected by a required qualifier -- INITIALIZE (or its unambiguous
+    4-letter abbreviation, INIT) with no qualifier at all is an error.
+
+        INITIALIZE/VAX          (Re-)configures the amount of physical
+                                 RAM the virtual VAX is running with.
+
+        INITIALIZE/CONTAINER    Formats a new, empty ODS-2 disk-image
+                                 container file for use with MOUNT.
+
+    See the help for INITIALIZE/VAX and INITIALIZE/CONTAINER for the
+    syntax of each.
+2 /CONTAINER
+    The INITIALIZE/CONTAINER command formats a new, empty ODS-2 disk-image
+    container file -- a real Files-11 volume, compatible with real VAX/VMS
+    and other emulators such as simh.  The new container is not mounted;
+    use MOUNT afterward to attach it to a device before using it.
+
+    Syntax:
+
+        INITIALIZE/CONTAINER <file> [label] [/SIZE=<n>] [/DEVICE=<dev>] [/CLUSTER=<n>]
+
+    Parameters:
+
+        <file>          The path to the new disk-image container file on
+                        the native file system.  If the native file system
+                        is case sensitive, or the name contains embedded
+                        blanks, it should be enclosed in quotes to preserve
+                        case and spacing.
+
+        <size>          The size of the new volume, in 512-byte blocks.
+
+        [label]         The volume label to record in the container's home
+                        block.  If omitted, the volume is labeled NONAME.
+
+    Qualifier:
+
+        /CLUSTER=<n>    The number of blocks per storage cluster.  If
+                        omitted, the volume uses 1-block clusters.
+
+        /DEVICE=<dev>   Specify the VAX device type for this container,
+                        which sets the maximum block count.
+
+        /SIZE=<n>       Specify the maximum block count for the container.
+                        This is required if /DEVICE is not specified.
+
+    Example:
+
+        INITIALIZE/CONTAINER "newdisk.dsk" /DEVICE=RD54 WORK01
+
+    See also the help for INITIALIZE, INITIALIZE/VAX, and MOUNT.
+2 /NVRAM
+    The INIT/NVRAM command creates an empty non-volatile RAM area for use with
+    a console ROM file.  The console ROM should contain code to initialize the
+    NVRAM to a consistent state.  Use the SAVE/NVRAM command to save the resulting
+    NVRAM file.
+
+
+    Syntax:
+
+
+        INIT/NVRAM [/BASE=<base-addr>] [/SIZE=<size-in-k>]
+
+
+    Parameters:
+
+
+        <base-addr>     When creating an NVRAM area, this specifies
+                        the base physical address of the NVRAM
+                        to use.  If ommitted, 20080000 is assumed.
+
+        <size-in-k>     This is the size of the NVRAM memory in kilobytes.
+                        If ommitted, the default is 1 for a 1K NVRAM.
+2 /VAX
+    The INITIALIZE/VAX command (re-)initializes the virtual VAX, and
+    specifies the amount of physical RAM the machine is configured with.
+    This storage is allocated by the govax process from its own address
+    space.
+
+    Syntax:
+
+        INITIALIZE/VAX <pages>
+
+    Parameter:
+
+        <pages>         The number of physical pages of VAX memory that the
+                        virtual machine is configured with.  Each page is
+                        512 bytes, so a page count of 1024 would require a
+                        half-megabyte virtual machine, for example.
+
+    Example:
+
+        INITIALIZE/VAX 8192   ; Create a 4mb virtual VAX
+
+    See also the help for INITIALIZE and INITIALIZE/CONTAINER.

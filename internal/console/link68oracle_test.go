@@ -96,7 +96,7 @@ func link68Govax(t *testing.T, paging bool) (*Dispatcher, *bytes.Buffer) {
 
 	c, buf := newTestConsole(t)
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {

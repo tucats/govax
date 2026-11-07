@@ -28,10 +28,10 @@ func newSession(t *testing.T) *session {
 
 	c, out := consoletest.New(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), consoletest.ParseHelp(t, "console.help"))
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	c.Dispatcher = d
 
-	db := debugger.Install(c, consoletest.DebugGrammar(t), consoletest.ParseHelp(t, "debug.help"))
+	db := debugger.Install(c, consoletest.DebugGrammar(t))
 
 	return &session{c: c, d: d, db: db, out: out}
 }
@@ -111,7 +111,7 @@ func TestConsoleExitStillQuits(t *testing.T) {
 // TestDebugWithoutDebugger: a console with no debugger installed says so.
 func TestDebugWithoutDebugger(t *testing.T) {
 	c, _ := consoletest.New(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	err := d.Dispatch("DEBUG")
 	if err == nil || !strings.Contains(err.Error(), "NOTAVAILABLE") {
@@ -209,7 +209,8 @@ func TestUnknownWordIsSyntaxError(t *testing.T) {
 	}
 }
 
-// TestDebuggerHelp: HELP at DBG> reads debug.help, not vax.help.
+// TestDebuggerHelp: HELP at DBG> reads the debugger's help library,
+// DBG$HELP.HLB, not DCL's HELPLIB.HLB.
 func TestDebuggerHelp(t *testing.T) {
 	s := newSession(t)
 
@@ -223,7 +224,7 @@ func TestDebuggerHelp(t *testing.T) {
 	}
 
 	if !strings.Contains(out, "govax debugger") {
-		t.Errorf("HELP at DBG>: %q isn't debug.help's", out)
+		t.Errorf("HELP at DBG>: %q isn't DBG$HELP.HLB's", out)
 	}
 
 	out, err = s.do(t, "HELP EXIT")
@@ -231,14 +232,14 @@ func TestDebuggerHelp(t *testing.T) {
 		t.Errorf("HELP EXIT at DBG>: %q, %v", out, err)
 	}
 
-	// The same word at VAX> is vax.help's.
+	// The same word at VAX> is HELPLIB.HLB's.
 	if _, err := s.do(t, "EXIT"); err != nil {
 		t.Fatal(err)
 	}
 
-	out, _ = s.do(t, "HELP")
+	out, _ = s.do(t, "HELP/NOPROMPT")
 	if strings.Contains(out, "govax debugger") {
-		t.Errorf("HELP at VAX> showed debug.help: %q", out)
+		t.Errorf("HELP at VAX> showed DBG$HELP.HLB: %q", out)
 	}
 }
 

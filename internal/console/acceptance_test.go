@@ -30,7 +30,7 @@ import (
 func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	// ---- INITIALIZE/CONTAINER: format a new, empty container file ----
 

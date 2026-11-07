@@ -29,7 +29,7 @@ func volumeFileConsole(t *testing.T) (*Console, *Dispatcher, *bytes.Buffer) {
 	}
 
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	mustDispatch(t, d, "INIT/VAX ^D4096", "VMINIT")
 	buf.Reset()
@@ -156,7 +156,7 @@ func TestBootFromEditedKernel(t *testing.T) {
 	}
 
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	kernel, _ := sysvol.Lookup(sysvol.Sources + "KERNEL.ASM")

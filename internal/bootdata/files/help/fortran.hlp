@@ -1,0 +1,319 @@
+1 FORTRAN
+    The FORTRAN command compiles a VAX FORTRAN source file into a VAX
+    MACRO-32 source file (.MAR).  MACRO assembles that file into an
+    object module, and LINK links the object into an image RUN runs:
+
+        FORTRAN SQUARES         ! SQUARES.FOR -> SQUARES.MAR
+        MACRO SQUARES           ! SQUARES.MAR -> SQUARES.OBJ
+        LINK SQUARES            ! SQUARES.OBJ -> SQUARES.EXE
+        RUN SQUARES
+
+    The MACRO file is meant to be read: it holds the FORTRAN source as
+    comments, each line with its number, so the code and the FORTRAN it
+    came from are side by side.  A comment names each INCLUDE file, whose
+    lines appear only with INCLUDE's /LIST, with their include depth
+    before their numbers.
+
+    The compiler takes VAX FORTRAN V5.0, FORTRAN-77 with DEC's extensions:
+    main programs, subroutines, functions
+    of every type, ENTRY, and BLOCK DATA; declarations of every type,
+    IMPLICIT, PARAMETER, arrays, COMMON, EQUIVALENCE, DATA, SAVE,
+    EXTERNAL, and INTRINSIC; DEC's STRUCTURE, RECORD, UNION, and MAP,
+    octal, hexadecimal, Hollerith, and RADIX-50 constants, VOLATILE,
+    AUTOMATIC, and STATIC, and the CDEC$ directives (IDENT, PSECT,
+    TITLE, SUBTITLE, OPTIONS, and END OPTIONS); assignment and
+    expressions in every type and length (BYTE, LOGICAL, INTEGER, REAL
+    in F, D or G, and H, COMPLEX, and CHARACTER, with substrings and
+    concatenation), and every intrinsic function, in line or by MTHRTL;
+    every IF, DO, and GO TO, CALL, RETURN, STOP, and PAUSE; READ, WRITE,
+    and the other I/O statements, and OPEN and the other file statements,
+    on sequential, relative, and indexed files, the keyed READ with every
+    key specifier among them.  DICTIONARY draws %FORT-E-NOTIMPL.
+
+    From a later DEC FORTRAN, a FUNCTION or SUBROUTINE may be RECURSIVE
+    (RECURSIVE INTEGER FUNCTION FACT(N) RESULT(F)), as may every one in
+    a file under /RECURSIVE or after OPTIONS /RECURSIVE.  Such a routine
+    may call itself, and each activation has its own variables, but for
+    those SAVE'd, given initial values, in COMMON, or STATIC, and its own
+    temporaries, so an AST or a handler may also enter it while it runs.
+    In the routine, its name with an argument list is a call.  Without
+    RESULT the name alone is the function's value; RESULT(name) names
+    another variable for it instead.  AUTOMATIC alone doesn't make a routine
+    safe to enter twice: its temporaries stay static.
+
+    A program compiles, links, and runs:
+
+        FORTRAN AVERAGE
+        MACRO AVERAGE
+        LINK AVERAGE
+        RUN AVERAGE
+        Mean:   3.750000
+
+    The compiler checks the program units of one file against each
+    other: a function's type where it is used, and the number of
+    arguments of each call.
+
+    A program may be several files, each compiled and assembled on its
+    own, then linked together.  A common block of one name is the same
+    storage in each unit that declares it, as long as the longest
+    declaration.  A BLOCK DATA may give it initial values from another
+    file; name the BLOCK DATA in an EXTERNAL statement, so that LINK
+    reports it if it's missing and finds it in a library:
+
+        FORTRAN STORE,SHOW,START
+        MACRO STORE
+        MACRO SHOW
+        MACRO START
+        LINK STORE,SHOW,START
+
+    INCLUDE 'file' reads a file, by default of type .FOR, found relative
+    to the file that includes it: on the host, in its directory; on a
+    volume, on its device and in its directory.  INCLUDE 'file/LIST' puts
+    the file's lines in the MACRO file; /NOLIST is the default.
+
+    INCLUDE '(module)' reads a text library's module (see HELP LIBRARY),
+    from the first of these that has it: the libraries given with the
+    source (FORTRAN PROG+MYLIB/LIBRARY), the library the logical name
+    FORT$LIBRARY names, SYS$LIBRARY:FORSYSDEF.TLB, and last the definition
+    modules built into govax, such as $SSDEF, $IODEF, $JPIDEF, $FORDEF,
+    $CHFDEF, and $SYSSRVNAM, whose INTEGER*4 and PARAMETER statements give
+    VMS's names their values.  INCLUDE 'lib(module)' reads only that library.
+
+    A program can use VMS directly: a system service or RTL routine is a
+    routine like any other, called as a function for its status, with
+    arguments left out (STATUS = SYS$GETJPIW(,,,LIST,IOSB,,)), %VAL, %REF,
+    %DESCR, and %LOC.  A FORTRAN function can be a condition handler
+    (LIB$ESTABLISH), and a subroutine an AST routine or exit handler.
+    The system subroutines are there: DATE, TIME, IDATE, EXIT, SECNDS,
+    RAN, MVBITS, and ERRSNS.
+
+    Compiled programs call FTNRTL, govax's FORTRAN run-time library, a
+    shareable image written in MACRO-32 and built into govax.  LINK
+    finds its routines (named FTN$...) without an options file, and RUN
+    finds the image.  Both look for a file of one's own first: a logical
+    name FTNRTL, SYS$SHARE:FTNRTL.EXE, or FTNRTL.EXE in the host library
+    directory.  FTNRTL has FTN$VERSION, FTN$STOP, the I/O
+    statements' calls (FTN$READ_SF, FTN$WRITE_SF, and the other begin
+    calls, FTN$IO_ITEM, FTN$IO_END), ISHFTC (FTN$IISHFTC,
+    FTN$JISHFTC), and a routine for each intrinsic function MTHRTL
+    lacks, for a program that passes the function's name as an argument
+    (FTN$LEN, FTN$INDEX, ..., FTN$NWORKERS), which MACRO programs can
+    call too.  List-directed output goes to SYS$OUTPUT in records of 80
+    bytes, each starting with a blank (its carriage control), each value
+    in its type's format: LOGICAL as T or F but for LOGICAL*1 and BYTE,
+    an integer in 5 columns, INTEGER*2 in 7 columns, INTEGER*4 in 12, REAL
+    with 7 significant digits, REAL*8 with 16 (15 with /G_FLOATING),
+    REAL*16 with 33, COMPLEX as its two parts in parentheses, as
+    (1.000000,-2.500000), and CHARACTER as its text.
+
+    Syntax:
+
+        FORTRAN <source>[+<source>...][+<library>/LIBRARY][,...][/HOST]
+                [/MACRO[=<file>] | /NOMACRO]
+                [/[NO]EXTEND_SOURCE] [/[NO]D_LINES]
+                [/CONTINUATIONS=<n>] [/[NO]I4] [/[NO]G_FLOATING]
+                [/ALIGN[=<value>] | /NOALIGN] [/[NO]OPTIMIZE]
+                [/LIST[=<file>] | /NOLIST]
+                [/SHOW[=(<keyword>,...)] | /NOSHOW]
+                [/[NO]CROSS_REFERENCE]
+
+    Parameter:
+
+        <source>        The source file, or several separated by commas,
+                        each compiled to its own MACRO file.  Files joined
+                        by + are one compilation, to one MACRO file named
+                        for the first, and a file followed by /LIBRARY is
+                        a text library (.TLB by default) for that
+                        compilation's INCLUDE statements.  Without a
+                        file type a source is .FOR.  A source can be a
+                        host file or a file on a mounted volume, by the
+                        rules MACRO's source follows (HELP MACRO): /HOST
+                        makes each a host path, a name with a directory
+                        in brackets or a device is on a volume, a name
+                        with "/" is a host path, and a bare name follows
+                        SET DEFAULT.  Quote a host path to keep its case.
+
+    Qualifiers:
+
+        /MACRO[=<file>] Writes the MACRO file.  This is the default.
+                        Without a file name, it has the source's name and
+                        location, with the type MAR in the same case as
+                        the source's type: squares.for gives squares.mar.
+                        A name is placed as MACRO's /OBJECT= places its
+                        object, and a VMS name without a type gets MAR.
+                        On a volume, the file is the next version of its
+                        name.  A host source whose type is already MAR is
+                        refused unless /MACRO= names another file, since
+                        its MACRO file would replace it.
+
+        /NOMACRO        Compiles the source and reports any errors, but
+                        writes no MACRO file.
+
+        /EXTEND_SOURCE  Lets the statement field of a fixed-format line
+        /NOEXTEND_SOURCE
+                        run to column 132 instead of column 72.  The
+                        default is /NOEXTEND_SOURCE.  An OPTIONS statement
+                        overrides this for the unit after it.
+
+        /D_LINES        Compiles the debugging lines (those with a D in
+        /NOD_LINES      column 1) as statements.  The default is
+                        /NOD_LINES: they are comments.
+
+        /CONTINUATIONS=<n>
+                        The most continuation lines one statement may
+                        have, from 0 to 99.  The default is 19.
+
+        /I4             INTEGER and LOGICAL with no length, and implied
+        /NOI4           integers, are 4 bytes.  With /NOI4 they are 2, and
+                        an integer constant from -32768 to 32767 is an
+                        INTEGER*2.  The default is /I4.  A unit's OPTIONS
+                        statement overrides this for that unit.
+
+        /G_FLOATING     REAL*8 (DOUBLE PRECISION) values are G_floating:
+        /NOG_FLOATING   53 bits of precision, about 15 decimal digits, and
+                        a range of about 0.56E-308 to 0.9E308.  With
+                        /NOG_FLOATING they are D_floating: 56 bits, about
+                        16 digits, and REAL's range, about 0.29E-38 to
+                        1.7E38.  The default is /NOG_FLOATING.  A unit's
+                        OPTIONS statement overrides this for that unit;
+                        the units of a program must agree, since a value
+                        passed from one format to the other is misread.
+
+        /ALIGN[=<value>] How structures and common blocks are laid out.
+        /NOALIGN        /NOALIGN, the default, packs them, as VAX FORTRAN
+                        V5.0 does.  /ALIGN puts each field and common name
+                        on its natural boundary.  A value is ALL, NONE,
+                        NATURAL, PACKED, or <class>=<rule>, and several go
+                        in parentheses: the classes are RECORDS (or
+                        STRUCTURES) and COMMONS, and the rules PACKED,
+                        NATURAL, and for COMMONS STANDARD, at most a
+                        longword.  /ALIGN alone is ALL.  CDEC$ OPTIONS
+                        groups in the source override it.
+
+        /OPTIMIZE       Runs the optimizer's passes, for code that does what
+        /NOOPTIMIZE     the program says in fewer instructions.  The passes
+                        run are named in the MACRO file's header.  The
+                        default is /OPTIMIZE.
+
+        /LIST[=<file>]  Writes a listing: the source's lines with their
+        /NOLIST         numbers, each message under its line, and each
+                        unit's storage map.  By default it is the source's
+                        name with the type LIS, beside the source, and it is
+                        written after errors too.  The default is /NOLIST.
+                        CDEC$ TITLE and SUBTITLE set the heading of the page
+                        after the one they are on; with no TITLE, a page's
+                        title is its unit's name.
+
+        /SHOW[=(<keyword>,...)]  What a listing holds: ALL, NONE, [NO]INCLUDE
+        /NOSHOW         (every INCLUDE file's lines, whatever INCLUDE's own
+                        /LIST says), and [NO]MAP.  /SHOW alone is ALL and
+                        /NOSHOW NONE; with no /SHOW, a listing has the maps,
+                        and only the INCLUDE files that say /LIST.
+
+        /CROSS_REFERENCE  A listing follows each unit's map with where its
+        /NOCROSS_REFERENCE  names and labels are mentioned: a line number each,
+                        with D if the line defines the name and A if it
+                        assigns it; 1:3 is line 3 of a file included at
+                        depth 1.  It is there after errors too.  Without
+                        /LIST it does nothing but say so.  The default is
+                        /NOCROSS_REFERENCE.
+
+        /CHECK[=(<keyword>,...)]  What the compiled code looks out for: ALL,
+        /NOCHECK        NONE, [NO]BOUNDS (subscripts and substrings: the
+                        subscript range trap; an adjustable array's bounds:
+                        FOR$_ADJARRDIM), [NO]OVERFLOW (integer overflow traps),
+                        and [NO]UNDERFLOW (floating underflow faults).  /CHECK
+                        alone is ALL.  The default is /NOCHECK.  An OPTIONS
+                        statement before a unit may change it for that unit.
+
+        /WARNINGS[=(<keyword>,...)]  What the compiler says, beyond errors: ALL,
+        /NOWARNINGS     NONE, [NO]GENERAL (its warnings and informational
+                        messages; on by default), [NO]DECLARATIONS (each name
+                        with no type of its own), [NO]UNUSED (names only
+                        declared, and labels nothing refers to), and
+                        [NO]ALIGNMENT (fields and common names off their natural
+                        boundaries).  /WARNINGS alone is ALL and /NOWARNINGS is
+                        NONE.  What isn't shown doesn't count: a compilation
+                        with only those ends with a good status.
+
+        /STANDARD[=(<keyword>,...)]  Flags what FORTRAN-77 doesn't have, each an
+        /NOSTANDARD     informational message, so the program still compiles:
+                        SYNTAX (statements, constants, operators, specifiers,
+                        edit descriptors, names, intrinsic functions),
+                        SOURCE_FORM (tabs, small letters, ! comments, debugging
+                        lines, past column 72, over 19 continuation lines), ALL,
+                        NONE, and NOSYNTAX and NOSOURCE_FORM.  /STANDARD alone
+                        is ALL.  The default is /NOSTANDARD.
+
+        /DEBUG[=(<keyword>,...)]  What MACRO is to write for the debugger: ALL,
+        /NODEBUG        NONE, [NO]SYMBOLS (debugger records), and [NO]TRACEBACK
+                        (a traceback's names).  /DEBUG alone is ALL, so a plain
+                        MACRO then writes debugger records.  /NODEBUG, the
+                        default, is traceback alone.  It doesn't turn the
+                        optimizer off: give /NOOPTIMIZE as well to debug.
+
+        /NOF77          FORTRAN-66's reading of what FORTRAN-77 changed: a DO runs
+                        at least once, OPEN's defaults are STATUS='NEW' and
+                        BLANK='ZERO', and EXTERNAL means a library function
+                        of that name unless written *name.  The default is
+                        /F77.  An OPTIONS statement before a unit may change it
+                        for that unit.
+
+        /RECURSIVE      Every FUNCTION and SUBROUTINE may be active more than
+        /NORECURSIVE    once at a time, as if each said RECURSIVE: its local
+                        variables are in its stack frame unless SAVE'd, given
+                        initial values, in COMMON, or STATIC.  The default is
+                        /NORECURSIVE.  An OPTIONS statement before a unit may
+                        change it for that unit.
+
+        /OBJECT[=<file>]  Runs MACRO on the MACRO file too, for an object file,
+        /NOOBJECT       by default the source's name with type OBJ.  The MACRO
+                        file is kept, so /OBJECT can't go with /NOMACRO.  The
+                        default is /NOOBJECT.
+
+    The compiler reports each problem it finds with the line it is on:
+
+        %FORT-E-NOTIMPL, the DICTIONARY statement is not implemented yet
+          at line 7 of DUA0:[WORK]PROG.FOR;1
+                ENCODE (8, 10, BUF) X
+          ------^
+
+    After an error (E) or a fatal error (F) no MACRO file is written, so
+    a failed compilation never replaces a good one, and the command ends
+    with DCL-E-FORERRORS.  After warnings (W) the file is written and
+    $STATUS is a warning.  With several sources, each failure is shown as
+    it happens and the others are still compiled.
+
+    From the host shell, "govax fortran <source>..." runs this command,
+    with --macro <file> or --no-macro, --extend-source, --d-lines,
+    --continuations <n>, --no-i4, --g-floating, --align <value>,
+    --no-align, --optimize, --no-optimize, --list, --list-file <file>,
+    --show <keywords>, --cross-reference, --check <keywords>,
+    --warnings <keywords>, --standard <keywords>, --debug <keywords>,
+    --object, --object-file <file>, --no-f77, and --recursive.
+
+    Examples:
+
+        FORTRAN SQUARES
+
+        FORTRAN "squares.for"
+
+        FORTRAN DUA0:[SRC]PROG /MACRO=DUA0:[OBJ]
+
+        FORTRAN A,B,C
+
+        FORTRAN DUNGEON /CONTINUATIONS=40
+
+        FORTRAN PROG /ALIGN=(RECORDS=NATURAL,COMMONS=STANDARD)
+
+        FORTRAN PROG /LIST /CROSS_REFERENCE /SHOW=INCLUDE
+
+        FORTRAN PROG /CHECK=BOUNDS /WARNINGS=(DECLARATIONS,UNUSED)
+
+        FORTRAN PROG /STANDARD=SYNTAX
+
+        FORTRAN/DEBUG/NOOPTIMIZE/OBJECT PROG    ! then LINK/DEBUG PROG
+
+        $ govax --mount-write DUA1=work.dsk fortran DUA1:[000000]PROG.FOR
+
+    See also the help for MACRO, LINK, and RUN.

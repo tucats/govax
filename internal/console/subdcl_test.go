@@ -25,7 +25,7 @@ import (
 // machine itself is process 1's.
 func TestSpawnDCL(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	reader := buildImage(t, c, "reader", strings.Replace(readerSource, "ONCE", "", 1))
 
@@ -108,7 +108,7 @@ func TestSpawnDCL(t *testing.T) {
 // on at once, and the new process runs beside it.
 func TestSpawnDCL_nested(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
 
@@ -207,7 +207,7 @@ func TestSpawnDCL_nested(t *testing.T) {
 // where process 1's was kept, and a SPAWN there copied process 1's).
 func TestSpawnDCL_nestedInherits(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
 
@@ -245,7 +245,7 @@ func TestSpawnDCL_nestedInherits(t *testing.T) {
 // image, is unwound; process 1 goes on as before.
 func TestSpawnDCL_stopWhileRunning(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	forever := buildImage(t, c, "forever", strings.Replace(spinSource, "COUNT", "0", 1))
 	child := buildChildImage(t, c)

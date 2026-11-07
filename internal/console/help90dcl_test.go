@@ -331,8 +331,8 @@ func TestHelp90DCLPage(t *testing.T) {
 }
 
 // TestHelp90DCLBuiltIn: with no /LIBRARY and no SYS$HELP:HELPLIB.HLB, HELP
-// shows govax's built-in help, as it did before the phase (until subtask 7
-// puts the libraries in the build).
+// reads govax's own HELPLIB.HLB, built into it: its HELP topic, the list
+// of its topics, and the Topic? prompt.
 func TestHelp90DCLBuiltIn(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 
@@ -340,8 +340,10 @@ func TestHelp90DCLBuiltIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(buf.String(), "Top-level help.") {
-		t.Errorf("HELP: %q", buf.String())
+	for _, want := range []string{"govax a VAX software emulator", "Additional information available:", "CONFIGURATION", "Topic? "} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("HELP lacks %q: %q", want, buf.String())
+		}
 	}
 }
 

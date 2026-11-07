@@ -236,19 +236,22 @@ type Console interface {
 	// CreateDebuggerLog creates SET LOG's file, a text file, and returns
 	// it with its full name.
 	CreateDebuggerLog(file string) (io.WriteCloser, string, error)
+
+	// DebuggerHelp is the help library HELP reads: SYS$HELP:DBG$HELP.HLB,
+	// or govax's own copy of it.
+	DebuggerHelp() (help.Library, error)
 }
 
-// New returns a debugger for the console c's machine, with its commands bound to grammar g
-// (parsed from debug.dcl) and its HELP command reading help (parsed from
-// debug.help; nil is allowed, and HELP then says there is none).
-func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
+// New returns a debugger for the console c's machine, with its commands
+// bound to grammar g (parsed from debug.dcl).
+func New(front Console, g *dcl.Grammar) *Debugger {
 	c := front.DebugMachine()
 	d := &Debugger{
 		Machine: c, Console: front, StepMode: StepOver,
 		symbolic: machine.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
 		languageRadix: 16, modes: defaultDisplayModes(),
 	}
-	d.Dispatcher = newDispatcher(d, g, help)
+	d.Dispatcher = newDispatcher(d, g)
 	d.output.terminal = true
 	d.installOutput()
 	c.OnUnhandled = d.onUnhandled
@@ -264,8 +267,8 @@ func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
 // Install creates a debugger for front, as New does, and makes it the one
 // the console starts. cmd/govax calls it once at start-up. The debugger
 // is returned for the caller that wants it (a test).
-func Install(front Console, g *dcl.Grammar, help *help.File) *Debugger {
-	d := New(front, g, help)
+func Install(front Console, g *dcl.Grammar) *Debugger {
+	d := New(front, g)
 	d.Machine.Debugger = d
 
 	return d

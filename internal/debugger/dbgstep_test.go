@@ -35,7 +35,7 @@ func stepImage(t *testing.T, image string) (*console.Dispatcher, *bytes.Buffer, 
 		t.Fatalf("RUN/STEP %s: %v", image, err)
 	}
 
-	return console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil), buf, buf.String()
+	return console.NewDispatcher(c, consoletest.ConsoleGrammar(t)), buf, buf.String()
 }
 
 // dispatchOutput runs command and returns what it printed.

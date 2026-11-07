@@ -152,7 +152,7 @@ func reclaimerRun(t *testing.T, on bool) {
 	setSetting(t, machine.PFCDefaultSetting, "1")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	db := c.Mem.Paging()
 	if db == nil {

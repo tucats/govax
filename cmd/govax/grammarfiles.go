@@ -8,13 +8,12 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/debugger"
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/sysvol"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file reads the grammars and help files govax starts with
+// This file reads the grammars govax starts with
 // (docs/PHASE-87 - system volume.md, Decision 4). Each is found through
 // the resolver: a host copy (the current directory, then --path's
 // directories), the system volume's, then govax's own. The volume's copy
@@ -113,28 +112,8 @@ func (g grammarFiles) unusable(name string, origin respath.Origin, bound *dcl.Gr
 	return true
 }
 
-// help reads the help file name, or returns nil, after warning that there
-// is none, if it can't be found. A system volume's copy that can't be read
-// is warned of, and govax's own read instead.
-func (g grammarFiles) help(name, what string) *help.File {
-	src, origin, err := g.resolver.ReadFileFrom(name)
-	if err != nil && origin == respath.Volume {
-		g.warn(name, err)
-
-		src, err = g.resolver.ReadEmbedded(name)
-	}
-
-	if err != nil {
-		fmt.Fprintf(g.out, "Warning: no %shelp file available: %v\n", what, err)
-
-		return nil
-	}
-
-	return help.Parse(string(src))
-}
-
-// installConsoleGrammar reads the console's grammar and help and makes the
-// console's dispatcher on them. A system volume's grammar that lacks one
+// installConsoleGrammar reads the console's grammar and makes the
+// console's dispatcher on it. A system volume's grammar that lacks one
 // of govax's commands is replaced by govax's own, the dispatcher made
 // again.
 func installConsoleGrammar(c *console.Console, files grammarFiles) (*console.Dispatcher, error) {
@@ -143,9 +122,7 @@ func installConsoleGrammar(c *console.Console, files grammarFiles) (*console.Dis
 		return nil, err
 	}
 
-	consoleHelp := files.help("console.help", "")
-
-	d := console.NewDispatcher(c, grammar, consoleHelp)
+	d := console.NewDispatcher(c, grammar)
 
 	if files.unusable("console.dcl", origin, grammar) {
 		if grammar, err = files.builtinGrammar("console.dcl"); err != nil {
@@ -155,14 +132,14 @@ func installConsoleGrammar(c *console.Console, files grammarFiles) (*console.Dis
 		// NewDispatcher makes the console's own dispatcher only when it
 		// has none.
 		c.Dispatcher = nil
-		d = console.NewDispatcher(c, grammar, consoleHelp)
+		d = console.NewDispatcher(c, grammar)
 	}
 
 	return d, nil
 }
 
-// installDebuggerGrammar reads the debugger's grammar and help and
-// installs the debugger on them, as installConsoleGrammar does the
+// installDebuggerGrammar reads the debugger's grammar and
+// installs the debugger on it, as installConsoleGrammar does the
 // console's (docs/PHASE-42.md: the DEBUG command and the DBG> prompt need
 // them).
 func installDebuggerGrammar(c *console.Console, files grammarFiles) error {
@@ -171,16 +148,14 @@ func installDebuggerGrammar(c *console.Console, files grammarFiles) error {
 		return err
 	}
 
-	debugHelp := files.help("debug.help", "debugger ")
-
-	debugger.Install(c, grammar, debugHelp)
+	debugger.Install(c, grammar)
 
 	if files.unusable("debug.dcl", origin, grammar) {
 		if grammar, err = files.builtinGrammar("debug.dcl"); err != nil {
 			return err
 		}
 
-		debugger.Install(c, grammar, debugHelp)
+		debugger.Install(c, grammar)
 	}
 
 	return nil

@@ -101,7 +101,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 func TestDispatch_purgeViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -131,7 +131,7 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 func TestDispatch_purgeExplicitLimit(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 

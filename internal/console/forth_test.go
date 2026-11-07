@@ -175,7 +175,7 @@ func TestForth_foreignCommand(t *testing.T) {
 	c, out, exe := forthConsole(t, "", nil)
 	prepareRun(t, c)
 
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for _, line := range []string{
 		"FO*RTH :== $" + exe,

@@ -55,7 +55,7 @@ func pauseConsole(t *testing.T, typed string) (*console.Console, func() string, 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "pause", pauseSource)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	for _, line := range []string{"PAUSE :== $" + image, `X = "paused"`} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)

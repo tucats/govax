@@ -29,7 +29,7 @@ func TestPageFileReporting(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.size", "1000")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	exe := buildImage(t, c, "wspf", pfSource)
 

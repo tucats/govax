@@ -402,7 +402,7 @@ func TestMountCommandNextUnit(t *testing.T) {
 	dir := t.TempDir()
 
 	c, buf, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: filepath.Join(dir, "sys.dsk")})
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for i, label := range []string{"FIRST", "SECOND"} {
 		path := filepath.Join(dir, label+".dsk")

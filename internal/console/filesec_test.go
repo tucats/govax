@@ -25,7 +25,7 @@ func sectionMachine(t *testing.T, quantum string, names ...string) *console.Cons
 	t.Helper()
 
 	c, out := scheduledConsole(t, quantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
 	if err := c.Commands().InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {

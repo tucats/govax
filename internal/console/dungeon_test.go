@@ -178,7 +178,7 @@ func TestDungeonCompiles(t *testing.T) {
 
 		c, buf := newTestConsole(t)
 		c.Paths = respath.New(nil, bootdata.FS)
-		d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+		d := NewDispatcher(c, loadEvaxGrammar(t))
 
 		// With no SET DEFAULT onto a volume, a bare name is a host file.
 		t.Chdir(dir)
@@ -380,7 +380,7 @@ func dungeonHostConsole(t *testing.T, paging bool) (*Dispatcher, *Console, *byte
 
 	c, buf := newTestConsole(t)
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {

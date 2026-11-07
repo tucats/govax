@@ -1,0 +1,28 @@
+1 DISMOUNT
+    The DISMOUNT command detaches the disk-image container currently
+    mounted on a device, flushing any pending writes and closing the
+    underlying container file.  The device itself remains known to the
+    console; only its mounted volume is removed.  A later MOUNT command
+    can attach a different container to the same device name.
+
+    Dismounting a device with nothing currently mounted on it is an error,
+    and so is dismounting one with files open (a process the console
+    stopped may still have some): close them, or STOP the process,
+    first.  When govax exits, every volume is dismounted regardless.
+
+    Syntax:
+
+        DISMOUNT <device>
+
+    Parameter:
+
+        <device>        The device name to detach, such as DUA0.  A
+                        trailing colon is optional.  A logical name, such
+                        as the DISK$label name MOUNT defined, is
+                        translated first.
+
+    Example:
+
+        DISMOUNT DUA0
+
+    See also the help for MOUNT and SHOW DEVICE.

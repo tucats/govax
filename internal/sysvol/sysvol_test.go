@@ -146,7 +146,8 @@ func TestFileTable(t *testing.T) {
 
 	for _, want := range []string{
 		SysMgr + "STARTUP.COM", SysMgr + "CONSOLE.DCL", SysMgr + "DEBUG.DCL",
-		SysHlp + "CONSOLE.HLP", SysHlp + "DEBUG.HLP",
+		SysHlp + "HELPLIB.HLB", SysHlp + "DBG$HELP.HLB",
+		HelpSources + "COPY.HLP", DebugHelpSources + "DEBUG.HLP", Sources + "BUILDHELP.COM",
 		SysLib + "FTNRTL.EXE", SysLib + "FORSYSDEF.TLB",
 		SysExe + "DEFAULT.ROM",
 		Sources + "FTN_VECTOR.MAR", Sources + "FTNRTL.OPT", Sources + "BUILDFTN.COM",
@@ -553,6 +554,10 @@ func (r *refreshTest) refresh() (string, *Report) {
 		part := c.File.Name + "=" + c.Action.String()
 		if c.Notify {
 			part += "!"
+		}
+
+		if len(c.KeptModules) > 0 {
+			part += "[" + strings.Join(c.KeptModules, ",") + "]"
 		}
 
 		parts = append(parts, part)

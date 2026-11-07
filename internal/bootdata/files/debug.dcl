@@ -22,8 +22,8 @@ grammar debugger
 
     verb quit/id=2
 
-    ! HELP [topic ...] reads debug.help. A "/" starts a new word, as in
-    ! DCL.
+    ! HELP [topic ...] reads SYS$HELP:DBG$HELP.HLB. A "/" starts a new
+    ! word, as in DCL.
     verb help/id=3
         parameter   topic/id=4                  -
                     /type=$rest_of_line

@@ -1,0 +1,49 @@
+1 READ
+    The READ command reads a record from a file into a symbol, local to
+    the command level, as it is: its case and blanks are kept, and no
+    symbol substitution is done.
+
+    Syntax:
+
+        READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string]
+             [/KEY=string] [/INDEX=n] [/MATCH=EQ|GE|GT] [/DELETE]
+             [/NOLOCK] logical-name symbol-name
+
+    The file is one OPEN opened, or SYS$INPUT, SYS$COMMAND, SYS$OUTPUT,
+    or SYS$ERROR, which need no OPEN.  In a command procedure, READ
+    SYS$INPUT reads the procedure's next line, whatever it is; at the
+    terminal, and from SYS$COMMAND anywhere, READ prompts at the
+    terminal with /PROMPT's string, or "Data:" and a tab, and reads a
+    line.  Ctrl/Z is the end of the file.
+
+    At the end of the file, the procedure goes to the /END_OF_FILE label,
+    or failing that the /ERROR label, with $STATUS RMS$_EOF; with
+    neither, RMS-E-EOF is an error, and the ON action is taken.  A READ
+    that fails leaves its symbol as it was.  A record
+    longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /TIME_OUT is
+    accepted, and changes nothing.
+
+    On an indexed file, READ reads the next record in the order of the
+    key it last used (the primary key at first).  /KEY=string reads the
+    record whose key is the string: a string shorter than the key matches
+    the key's first characters.  /MATCH=GE reads the first record whose
+    key is equal or next, GT the first next, in the key's own order (EQ,
+    the default, only an equal one).  /INDEX=n chooses the key, 0 the
+    primary, and stays for later READs of the file until another /INDEX.
+    After a keyed READ, READ goes on in that key's order.  /DELETE deletes
+    the record read, on a file opened /READ/WRITE (on another, the symbol
+    gets the record and READ fails with RMS-F-FAC), and leaves $STATUS
+    RMS$_NORMAL.  On a file opened with
+    /SHARE=WRITE, READ locks the record until the next operation on the
+    file, and another READ of it is RMS-E-RLK; /NOLOCK reads it without
+    a lock, even one another READ holds.
+
+    Example:
+
+        $ OPEN IN NAMES.DAT
+        $ LOOP:
+        $ READ/END_OF_FILE=DONE IN NAME
+        $ WRITE SYS$OUTPUT "Hello, ", NAME
+        $ GOTO LOOP
+        $ DONE:
+        $ CLOSE IN

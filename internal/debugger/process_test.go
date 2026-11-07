@@ -128,10 +128,10 @@ func bootedSession(t *testing.T) *session {
 	c := console.New(&out)
 	c.Paths = respath.New(nil, bootdata.FS)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), consoletest.ParseHelp(t, "console.help"))
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	c.Dispatcher = d
 
-	db := debugger.Install(c, consoletest.DebugGrammar(t), consoletest.ParseHelp(t, "debug.help"))
+	db := debugger.Install(c, consoletest.DebugGrammar(t))
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {
 		t.Fatalf("STARTUP.COM: %v\n%s", err, out.String())

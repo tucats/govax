@@ -1,59 +1,45 @@
 package debugger_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/help"
 )
 
-// helpText returns what HELP prints for the words, from the help file h.
-func helpText(t *testing.T, h *help.File, words ...string) string {
-	t.Helper()
-
-	var out strings.Builder
-
-	c := console.New(&out)
-	if err := c.Help(h, words); err != nil {
-		t.Fatalf("Help(%v): %v", words, err)
-	}
-
-	return out.String()
+// debugHelp is the debugger's help library, as govax builds it in.
+func debugHelp(t *testing.T) help.Library {
+	return consoletest.HelpLibrary(t, bootdata.DebugHelpLibrary)
 }
 
-// TestEveryVerbHasHelp: each verb of the debugger's grammar, and each
-// verb of the console's, has a topic in its own help file (docs/PHASE-42.md,
-// subtask 15, as Phase 37 did for the console's). An alias, such as S for
-// STEP, is checked through the topic of the verb it stands for; its own
-// name is checked too where it is a word a user might ask about.
+// found reports whether the debugger's HELP of words finds a topic: the
+// words looked up below the library's DEBUG module, as the debugger looks
+// them up.
+func found(t *testing.T, lib help.Library, words ...string) bool {
+	t.Helper()
+
+	_, ok := consoletest.HelpText(t, lib, append([]string{"DEBUG"}, words...)...)
+
+	return ok
+}
+
+// TestEveryVerbHasHelp: each verb of the debugger's grammar has a topic
+// under DBG$HELP.HLB's DEBUG module (docs/PHASE-90 - VMS help.md, Decision
+// 10; the console's are internal/console's help_test.go). An alias, such
+// as S for STEP, shares its verb's topic.
 func TestEveryVerbHasHelp(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		grammar string
-		help    string
-	}{
-		{"debugger", "debug", "debug.help"},
-		{"console", "console", "console.help"},
-	} {
-		g := consoletest.ConsoleGrammar(t)
-		if tc.grammar == "debug" {
-			g = consoletest.DebugGrammar(t)
+	lib := debugHelp(t)
+
+	names, alias := consoletest.DebugGrammar(t).Verbs()
+	for i, verb := range names {
+		if alias[i] {
+			continue
 		}
 
-		h := consoletest.ParseHelp(t, tc.help)
-
-		names, alias := g.Verbs()
-		for i, verb := range names {
-			if alias[i] {
-				continue
-			}
-
-			if got := helpText(t, h, verb); strings.Contains(got, "No help available") {
-				t.Errorf("%s: no help topic for the verb %s", tc.name, verb)
-			}
+		if !found(t, lib, verb) {
+			t.Errorf("no help topic for the debugger's verb %s", verb)
 		}
 	}
 }
@@ -62,7 +48,7 @@ func TestEveryVerbHasHelp(t *testing.T) {
 // and CANCEL keyword and the qualifiers that need explaining, so a HELP of
 // each says something.
 func TestDebuggerHelpTopics(t *testing.T) {
-	h := consoletest.ParseHelp(t, "debug.help")
+	lib := debugHelp(t)
 
 	topics := [][]string{
 		{"ASM"}, {"ASM", "LABELS"}, {"ASM", "ADDRESSING"}, {"ASM", "PSEUDO", "QUAD"}, {"ASM", "PSEUDO", "BYTE"},
@@ -90,55 +76,12 @@ func TestDebuggerHelpTopics(t *testing.T) {
 	}
 
 	for _, words := range topics {
-		if got := helpText(t, h, words...); strings.Contains(got, "No help available") {
+		if !found(t, lib, words...) {
 			t.Errorf("HELP %s: no topic", strings.Join(words, " "))
 		}
 	}
 
-	if got := helpText(t, h); !strings.Contains(got, "SYMBOLIZE") {
+	if got, _ := consoletest.HelpText(t, lib, "DEBUG"); !strings.Contains(got, "SYMBOLIZE") {
 		t.Errorf("HELP alone doesn't list the commands:\n%s", got)
-	}
-}
-
-// TestDebuggerHelpKeysAreUnique: no two keys of debug.help are the same
-// once each word is cut to the four letters HELP matches on (SHOW REGISTERS
-// and SHOW REGIONS would both be "SHOW,REGI"): the later topic would
-// silently replace the earlier.
-func TestDebuggerHelpKeysAreUnique(t *testing.T) {
-	data, err := os.ReadFile(consoletest.BootFile(t, "debug.help"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	seen := map[string]int{}
-	inBody := false
-
-	for n, line := range strings.Split(string(data), "\n") {
-		if !strings.HasPrefix(line, "$") {
-			inBody = true
-
-			continue
-		}
-
-		// Consecutive "$" lines are synonyms for one body; a key repeated
-		// across different bodies is the problem.
-		words := strings.Split(strings.ToUpper(line[1:]), ",")
-		for i, w := range words {
-			w = strings.TrimSpace(w)
-			if len(w) > 4 {
-				w = w[:4]
-			}
-
-			words[i] = w
-		}
-
-		key := strings.Join(words, ",")
-
-		if prev, ok := seen[key]; ok && inBody {
-			t.Errorf("debug.help line %d: key %q is also on line %d", n+1, key, prev)
-		}
-
-		seen[key] = n + 1
-		inBody = false
 	}
 }

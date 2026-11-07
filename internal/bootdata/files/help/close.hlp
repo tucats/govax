@@ -1,0 +1,10 @@
+1 CLOSE
+    The CLOSE command closes a file OPEN opened, and deassigns its
+    logical name.
+
+    Syntax:
+
+        CLOSE [/ERROR=label] [/[NO]LOG] logical-name
+
+    A name OPEN didn't define is DCL-W-UNDFIL, unless /NOLOG; with
+    /ERROR, the procedure goes to the label instead.

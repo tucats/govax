@@ -35,7 +35,7 @@ func runFor81RMS(t *testing.T, name string) for81Run {
 	t.Helper()
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
 		t.Helper()
 

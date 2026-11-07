@@ -76,7 +76,7 @@ func TestLibCLI_symbols(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "symbols", symbolsSource)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	for _, line := range []string{`GREETING == "hello there"`, `DOOMED = 7`} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
@@ -171,7 +171,7 @@ func TestLibCLI_logicals(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	image := buildImage(t, c, "logicals", logicalsSource)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	if err := d.Dispatch("DEFINE DOOMED X"); err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestLibCLI_getCommand(t *testing.T) {
 
 	out.Reset()
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	if err := d.Dispatch(`@"` + proc + `"`); err != nil {
 		t.Fatalf("@: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestLibCLI_common(t *testing.T) {
 	put := buildImage(t, c, "putcommon", putCommonSource)
 	get := buildImage(t, c, "getcommon", getCommonSource)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	out.Reset()
 
@@ -395,7 +395,7 @@ func chainConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dispa
 	docmd := buildImage(t, c, "docmd", fmt.Sprintf(chainSource, "lib$do_command"))
 	runprog := buildImage(t, c, "runprog", fmt.Sprintf(chainSource, "lib$run_program"))
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	for _, line := range []string{"DOCMD :== $" + docmd, "RUNPROG :== $" + runprog, `CHAINED == "yes"`} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
@@ -607,7 +607,7 @@ func controlConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dis
 	disable := buildImage(t, c, "noctrly", fmt.Sprintf(controlSource, "lib$disable_ctrl"))
 	enable := buildImage(t, c, "ctrly", fmt.Sprintf(controlSource, "lib$enable_ctrl"))
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	for _, line := range []string{"NOCTRLY :== $" + disable, "CTRLY :== $" + enable} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)

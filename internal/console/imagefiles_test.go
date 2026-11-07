@@ -55,7 +55,7 @@ func writerConsole(t *testing.T) (*console.Console, *console.Dispatcher) {
 		t.Fatal(err)
 	}
 
-	return c, console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	return c, console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 }
 
 // runImage runs the image at host path exe with RUN.

@@ -60,7 +60,7 @@ func runProbe6(t *testing.T, name string, cluster uint16, want ...string) {
 
 	exe := buildImage(t, c, name, string(src))
 
-	if err := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil).Dispatch("SET DEFAULT DUA0:[000000]"); err != nil {
+	if err := console.NewDispatcher(c, consoletest.ConsoleGrammar(t)).Dispatch("SET DEFAULT DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

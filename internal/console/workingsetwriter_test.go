@@ -119,7 +119,7 @@ func TestModifiedPageWriter(t *testing.T) {
 	setSetting(t, "vax.sysgen.mpw_lolimit", "2")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	db := c.Mem.Paging()
 	if db == nil {

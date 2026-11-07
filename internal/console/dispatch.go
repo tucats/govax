@@ -7,7 +7,6 @@ import (
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/dclshell"
-	"github.com/tucats/govax/internal/help"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/machine"
@@ -20,7 +19,6 @@ import (
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
-	Help    *help.File
 
 	// continued is the command so far, while it goes on in the next line typed
 	// (Dispatch).
@@ -29,8 +27,8 @@ type Dispatcher struct {
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
 // verb/syntax this port implements bound to its handler.
-func NewDispatcher(c *Console, g *dcl.Grammar, h *help.File) *Dispatcher {
-	d := &Dispatcher{Console: c, Grammar: g, Help: h}
+func NewDispatcher(c *Console, g *dcl.Grammar) *Dispatcher {
+	d := &Dispatcher{Console: c, Grammar: g}
 	d.bindGrammar()
 
 	// The first dispatcher is the console's, which XFC$CONSOLE_CMD and

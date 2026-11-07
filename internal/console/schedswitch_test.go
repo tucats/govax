@@ -87,7 +87,7 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 
 	c := console.New(&out)
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {

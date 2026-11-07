@@ -1,0 +1,42 @@
+1 XFC
+    The XFC (extended function code) opcode is supplied by Digital as part
+    of the VAX architecture to allow extensions to the instruction set.
+    The instruction is always followed by a single immediate byte that
+    contains the function operation to perform.
+
+    The govax emulator defines several XFC operations that can be used in
+    assembler programs.  The operations can be identified by symbolic
+    names as shown below.
+
+    XFC  #XFC$CONSOLE_WRITE     ; 01
+
+    The low-order byte of R0 is written to the console terminal.  Note
+    that this is also possible by correctly constructing a write to the
+    TXDB privileged register if the process is in kernel mode.
+
+
+    XFC  #XFC$CONSOLE_READ      ; 02
+
+    A single character is read from the console terminal, and is stored
+    in the low-order byte of R0.  The rest of R0 is undisturbed.
+
+
+    XFC  #XFC$CONSOLE_CMD       ; 03
+
+    The R0 register must point to a counted ASCII string that contains
+    a single govax console command.  The command is executed, as if it
+    were typed at the VAX> prompt (in either case), and the return code
+    is stored back in R0, replacing its contents: 0 if the command
+    succeeded, 1 if it failed.
+
+
+    XFC  #XFC$VM                ; 7F
+
+    The value in R0 as assumed to be a virtual address.  The virtual
+    address is translated (if possible) to a physical address.  This
+    occurs regardless of the state of the MAPEN register, so it assumes
+    that page tables are correctly set up (see the VMINIT console command).
+
+    The resulting physical address is written to R0.  If a TNV fault
+    occurs because the page is not mapped to physical memory, then the
+    V bit of the PSL is set and the result in R0 is undefined.

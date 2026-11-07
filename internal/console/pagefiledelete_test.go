@@ -80,7 +80,7 @@ func TestDeleteGivesPageFileBlocksBack(t *testing.T) {
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	db := c.Mem.Paging()
 
 	exe := buildImage(t, c, "pfdel", deltvaSource)

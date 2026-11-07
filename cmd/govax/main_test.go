@@ -19,7 +19,7 @@ func emptyStdin() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }
 
 // TestRun_startupBootsFromEmbeddedFilesAlone is docs/PHASE-15.md's own named
 // deliverable: govax with zero -path flags must still boot correctly using
-// only internal/bootdata's embedded copies of console.dcl/console.help/startup.com
+// only internal/bootdata's embedded copies of console.dcl/startup.com
 // (and, via startup.com's own "asm kernel.asm", kernel.asm/ssdef.asm) — no
 // testdata/ checkout required.
 func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
@@ -33,18 +33,13 @@ func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
 	}
 }
 
-// TestRun_helpMountAndDismountFromEmbeddedFile confirms internal/bootdata's
-// embedded vax.help (the single copy this HELP command actually reads at
-// runtime, internal/help's Parse fed by main.go's
-// resolver.ReadFile — see that file's own History comment for why there is
-// no separate testdata/dcl/vax.help any more) parses cleanly and resolves
-// "HELP MOUNT"/"HELP DISMOUNT" to real body text, not the "No help
-// available for that topic" fallback (internal/console/help.go's Console.
-// Help). This exercises the real end-to-end path a console operator
-// actually uses, not just internal/console's own more granular
-// Parse/helpKey unit tests.
+// TestRun_helpMountAndDismountFromEmbeddedFile: with no system volume (this
+// package's tests have none, TestMain), HELP reads govax's own HELPLIB.HLB,
+// built into it (internal/bootdata), and finds MOUNT's and DISMOUNT's
+// topics. /NOPROMPT, since HELP otherwise prompts for more and would read
+// the next line as a topic.
 func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
-	script := "HELP MOUNT\nHELP DISMOUNT\n"
+	script := "HELP/NOPROMPT MOUNT\nHELP/NOPROMPT DISMOUNT\n"
 	in := io.NopCloser(strings.NewReader(script))
 
 	var buf bytes.Buffer
@@ -53,8 +48,8 @@ func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
 	}
 
 	out := buf.String()
-	if strings.Contains(out, "No help available for that topic") {
-		t.Errorf("output = %q, want real MOUNT/DISMOUNT help text, not the fallback message", out)
+	if strings.Contains(out, "Sorry, no documentation") {
+		t.Errorf("output = %q, want real MOUNT/DISMOUNT help text", out)
 	}
 
 	if !strings.Contains(out, "MOUNT command attaches a disk-image container") {
@@ -165,8 +160,8 @@ func TestRun_limitsStopAOneShotRun(t *testing.T) {
 
 // TestRun_pathOverridesEmbeddedForThatFileOnly exercises the per-file search
 // order docs/PHASE-15.md describes: a -path directory holding only a
-// customized startup.com is used for startup.com, while console.dcl and
-// console.help still fall through to the embedded copies (never named on
+// customized startup.com is used for startup.com, while console.dcl
+// still falls through to the embedded copies (never named on
 // the command line) — a full replacement set isn't required to override
 // one file. With no system volume (this package's tests have none unless
 // they ask, TestMain) the startup procedure is found this way.

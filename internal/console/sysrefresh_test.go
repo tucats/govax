@@ -73,11 +73,11 @@ func TestSystemVolumeRefresh(t *testing.T) {
 		t.Fatalf("first start = %+v", r)
 	}
 
-	help := sysvol.SysHlp + "CONSOLE.HLP"
+	help := sysvol.HelpSources + "COPY.HLP"
 	image := sysvol.SysLib + "FTNRTL.EXE"
 	startup := sysvol.SysMgr + "STARTUP.COM"
 	grammar := sysvol.SysMgr + "DEBUG.DCL"
-	debugHelp := sysvol.SysHlp + "DEBUG.HLP"
+	debugHelp := sysvol.DebugHelpSources + "DEBUG.HLP"
 
 	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA0:" + sysvol.ManifestSpec}, rms.TextRecords)
 	if err != nil {
@@ -188,7 +188,7 @@ func TestSystemVolumeRefreshReadOnly(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	first, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
-	help := sysvol.SysHlp + "CONSOLE.HLP"
+	help := sysvol.HelpSources + "COPY.HLP"
 	writeVolumeFile(t, first, help, sysvol.Canonical([]byte("1 HELP\n"), sysvol.Text), sysvol.Text)
 
 	_, buf, r := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
@@ -207,9 +207,9 @@ func TestSystemVolumeRefreshDamaged(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "govax-system.dsk")
 
 	c, _, _ := mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
-	writeVolumeFile(t, c, sysvol.ManifestSpec, []byte("[SYSTEM.SYSHLP]CONSOLE.HLP 1234\n"), sysvol.Text)
+	writeVolumeFile(t, c, sysvol.ManifestSpec, []byte("[SYSTEM.SYSHLP.SOURCES]COPY.HLP 1234\n"), sysvol.Text)
 
-	if _, err := c.ContainerSession.Delete("DUA0:" + sysvol.SysHlp + "DEBUG.HLP;*"); err != nil {
+	if _, err := c.ContainerSession.Delete("DUA0:" + sysvol.DebugHelpSources + "DEBUG.HLP;*"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -230,7 +230,7 @@ func TestSystemVolumeRefreshDamaged(t *testing.T) {
 		t.Errorf("the warning doesn't name the manifest's record:\n%s", buf)
 	}
 
-	if versionCount(t, c, sysvol.SysHlp+"DEBUG.HLP") != 0 {
+	if versionCount(t, c, sysvol.DebugHelpSources+"DEBUG.HLP") != 0 {
 		t.Error("a file was written past a damaged manifest")
 	}
 }
@@ -249,7 +249,7 @@ func TestStartupFromSystemVolume(t *testing.T) {
 	}
 
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	// The site's startup, run last: it can see what STARTUP.COM made.

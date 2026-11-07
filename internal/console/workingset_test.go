@@ -146,7 +146,7 @@ func workingSetRun(t *testing.T, tbskip string) uint32 {
 	setSetting(t, "vax.sysgen.tbskipwsl", tbskip)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	db := c.Mem.Paging()
 	if db == nil {

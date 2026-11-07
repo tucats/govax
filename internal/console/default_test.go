@@ -105,7 +105,7 @@ func TestDispatch_setDefaultNeedsArgument(t *testing.T) {
 func TestDispatch_showDefaultViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	if err := c.cmd().SetDefault("DUB0:[OTHERDIR]"); err != nil {
 		t.Fatalf("SetDefault: %v", err)

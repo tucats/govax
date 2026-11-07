@@ -1,11 +1,12 @@
 package dclcmd
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/lnm"
@@ -79,11 +80,10 @@ type HelpOptions struct {
 	Unimplemented string
 }
 
-// ErrNoMainLibrary is Help's answer when no /LIBRARY was given and
-// SYS$HELP:HELPLIB.HLB can't be opened: the caller shows its built-in help
-// instead (until the libraries are part of govax's build, the phase's
-// subtask 7).
-var ErrNoMainLibrary = errors.New("no main help library")
+// When no /LIBRARY is given and SYS$HELP:HELPLIB.HLB can't be opened (no
+// system volume, or one without the library), HELP reads govax's own copy,
+// the one built into it (internal/bootdata), as the grammars fall back on
+// govax's own (Decision 5).
 
 // The statuses of HELP's own messages. VMS 7.1's $STATUS after them wasn't
 // shown by the probe: OPENIN is the shared message's code with no facility
@@ -134,11 +134,11 @@ func (c *Context) Help(opts HelpOptions, read func(prompt string) (string, bool)
 		}
 
 		l, err := c.openHelpLibrary(spec)
-		if err != nil {
-			if opts.Library == "" {
-				return ErrNoMainLibrary
-			}
+		if err != nil && opts.Library == "" {
+			l, err = builtinHelpLibrary(bootdata.HelpLibrary)
+		}
 
+		if err != nil {
 			return err
 		}
 
@@ -376,6 +376,40 @@ func (c *Context) openHelpLibrary(spec string) (helpLibrary, error) {
 	}
 
 	return helpLibrary{lib: help.NewLBRLibrary(l), name: reportFileName(found.Name)}, nil
+}
+
+// OpenHelpLibrary opens the help library spec names, as HELP/LIBRARY
+// does, or, if it can't be opened, govax's own copy of the library whose
+// embedded name (internal/bootdata) is builtin: how the debugger finds
+// SYS$HELP:DBG$HELP.HLB.
+func (c *Context) OpenHelpLibrary(spec, builtin string) (help.Library, error) {
+	l, err := c.openHelpLibrary(spec)
+	if err != nil {
+		if l, err = builtinHelpLibrary(builtin); err != nil {
+			return nil, err
+		}
+	}
+
+	return l.lib, nil
+}
+
+// builtinHelpLibrary is govax's own copy of a help library, by its
+// embedded name. It's opened afresh each time: a Library keeps the modules
+// it has parsed, and HELP may run in several processes' DCL at once.
+func builtinHelpLibrary(name string) (helpLibrary, error) {
+	data, err := fs.ReadFile(bootdata.FS, name)
+	if err != nil {
+		return helpLibrary{}, err
+	}
+
+	l, err := lbr.Open(data)
+	if err != nil {
+		return helpLibrary{}, err
+	}
+
+	spec := bootdata.HelpLibraryName(name)
+
+	return helpLibrary{lib: help.NewLBRLibrary(l), name: strings.TrimSuffix(spec, ".HLB")}, nil
 }
 
 // helpOpenFailure is OPENIN for the library name, with reason, a message's

@@ -42,7 +42,7 @@ func TestShowSystem(t *testing.T) {
 
 	step(t, c, 500) // process 2 hibernates; process 1 counts on
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	text, err := sayConsole(t, c, d, "SHOW SYSTEM")
 	if err != nil {
@@ -107,7 +107,7 @@ func TestShowProcess(t *testing.T) {
 	two.Process.Name = "OTHER"
 	c.RTL.Process.Name = "SYSTEM"
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	for _, tt := range []struct {
 		line, want string

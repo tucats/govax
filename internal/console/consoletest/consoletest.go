@@ -10,14 +10,17 @@ package consoletest
 
 import (
 	"bytes"
+	"io/fs"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/respath"
 )
 
@@ -94,16 +97,42 @@ func loadGrammar(t testing.TB, name string) *dcl.Grammar {
 	return g
 }
 
-// ParseHelp reads one of the help files (vax.help, debug.help).
-func ParseHelp(t testing.TB, name string) *help.File {
+// HelpLibrary reads one of govax's help libraries as it's built in
+// (bootdata.HelpLibrary, bootdata.DebugHelpLibrary).
+func HelpLibrary(t testing.TB, name string) help.Library {
 	t.Helper()
 
-	h, err := help.Load(BootFile(t, name))
+	data, err := fs.ReadFile(bootdata.FS, name)
 	if err != nil {
-		t.Fatalf("loading %s: %v", name, err)
+		t.Fatal(err)
 	}
 
-	return h
+	l, err := lbr.Open(data)
+	if err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+
+	return help.NewLBRLibrary(l)
+}
+
+// HelpText is what HELP shows for words in lib, at 80 columns, and whether
+// it found anything: false when the answer is "Sorry, no documentation".
+func HelpText(t testing.TB, lib help.Library, words ...string) (string, bool) {
+	t.Helper()
+
+	displays, err := help.Lookup(lib, words, help.Options{Instructions: true})
+	if err != nil {
+		t.Fatalf("HELP %s: %v", strings.Join(words, " "), err)
+	}
+
+	found := len(displays) > 0
+	for _, d := range displays {
+		if d.Kind == help.ShowSorry {
+			found = false
+		}
+	}
+
+	return strings.Join(help.Render(displays, 80), "\n"), found
 }
 
 // New returns a console with a machine ready to run programs: 2 MB of

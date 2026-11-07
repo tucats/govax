@@ -1,0 +1,38 @@
+1 DEFINE
+    The DEFINE command creates a logical name, or replaces an existing
+    one defined in the same table at the same access mode.
+
+    Syntax:
+
+         DEFINE logical-name equivalence-string[,...]
+
+    More than one equivalence string makes the name a search list.  Any
+    trailing colon is kept as part of the logical name.  Unquoted text is
+    converted to uppercase.
+
+    Qualifiers:
+
+        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=table
+
+            The table to define the name in.  The default is the process
+            table, LNM$PROCESS.  The job table, LNM$JOB, is shared by the
+            console's process and every subprocess it creates.  /TABLE accepts a table name or a logical
+            name that translates to one, such as LNM$PROCESS.
+
+        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+
+            The access mode of the name.  The default is supervisor mode.
+            A user-mode name in the process table is deleted when the
+            next program started with RUN exits.
+
+        /TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)
+
+            CONCEALED shows the logical name in place of the device it
+            stands for.  TERMINAL stops iterative translation at this
+            name.  The attributes apply to every equivalence string.
+
+        /LOG (default), /NOLOG
+
+            Report when an existing definition is superseded.
+
+    DEFINE/DEVICE, which defines a pseudodevice, is described separately.

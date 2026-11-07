@@ -45,7 +45,7 @@ func TestUserStackImage(t *testing.T) {
 	setSetting(t, machine.PagingSetting, "true")
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
 	exe := buildImage(t, c, "deep", deepStackSource)
 

@@ -46,7 +46,7 @@ func bootOnSystemVolume(t *testing.T, path string, paging bool, pageFile string)
 	}
 
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	installPlainDebugger(c)
 
 	if err := c.RunStartup(d.Dispatch); err != nil {

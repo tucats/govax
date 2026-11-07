@@ -312,7 +312,7 @@ func TestCLI_runMissingImage(t *testing.T) {
 // subprocess's LOGOUT says so in one line (step 9).
 func TestCLI_probe5Answers(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
 	if err := c.Commands().InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {

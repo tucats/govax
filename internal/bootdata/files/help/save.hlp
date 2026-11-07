@@ -1,0 +1,61 @@
+1 SAVE
+    The SAVE command writes the current memory contents to a binary file.
+    This file can later be reloaded with the LOAD command.  For help on
+    saving the entire machine state to a text file, see the help on
+    SAVE/TEXT.  You can also use the SAVE/ROM command to save a ROM image.
+
+    Note that the memory image for the SAVE command is not just a file
+    image of the memory.  It contains a header of approxamately 1K of
+    data describing the state of the virtual VAX at the time the SAVE
+    command is issued.  This is followed by zero or more page ranges,
+    where the address and number of pages is stored followed by that
+    many pages of data.  The SAVE command only saves non-zero pages.
+
+    Syntax:
+
+        SAVE  <file-path>
+
+    Parameter:
+
+        <file-name>     This is the name of the file that the memory
+                        image is saved to.  If omitted, the default
+                        name of "Saved.VAX" is assumed.
+
+    See also:
+
+        SAVE/ROM        Save the current ROM storage as a file
+        SAVE/NVRAM      Save the current NVRAM storage as a file
+2 /NVRAM
+    The SAVE/NVRAM command writes system NVRAM storage to an external file.
+
+    Syntax:
+
+        SAVE/NVRAM <file-path>
+
+    Parameter:
+
+        <file-path>     This is the name of the file where the emulator
+                        NVRAM image is to be saved.  The name can be enclosed in
+                        quotation marks if it contains imbedded blanks.
+                        The file will be overwritten if it already exists.
+
+    Example:
+
+        SAVE/NVRAM "latest.nvram"
+2 /ROM
+    The SAVE/ROM command writes system ROM to an external file.
+
+    Syntax:
+
+        SAVE/ROM <file-path>
+
+    Parameter:
+
+        <file-path>     This is the name of the file where the emulator
+                        ROM image is to be saved.  The name can be enclosed in
+                        quotation marks if it contains imbedded blanks.
+                        The file will be overwritten if it already exists.
+
+    Example:
+
+        SAVE/ROM "current.rom"

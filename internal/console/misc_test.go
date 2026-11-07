@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 )
 
@@ -260,54 +259,6 @@ func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 
 	if pending, queued := c.Engine.PendingInterrupts(); pending != nil || len(queued) != 0 {
 		t.Errorf("pending=%v queued=%v, want both empty after ClearAllInterrupts", pending, queued)
-	}
-}
-
-func TestHelp_lookupAndMissingTopic(t *testing.T) {
-	h := help.Parse("$SHOW,LOGI\n$SH  ,LOGI\nShows logical names.\nMore text.\n$OTHER\nOther text.\n")
-	c, buf := newTestConsole(t)
-
-	buf.Reset()
-
-	if err := c.Help(h, []string{"SHOW", "LOGI"}); err != nil {
-		t.Fatalf("Help: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "Shows logical names.") {
-		t.Errorf("output = %q, want the SHOW LOGICAL help text", buf.String())
-	}
-
-	buf.Reset()
-
-	if err := c.Help(h, []string{"SH", "LOGI"}); err != nil {
-		t.Fatalf("Help: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "Shows logical names.") {
-		t.Errorf("abbreviated key output = %q, want the same help text", buf.String())
-	}
-
-	buf.Reset()
-
-	if err := c.Help(h, []string{"NOSUCHTOPIC"}); err != nil {
-		t.Fatalf("Help: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "No help available") {
-		t.Errorf("output = %q, want a no-help message", buf.String())
-	}
-}
-
-func TestHelp_nilHelp(t *testing.T) {
-	c, buf := newTestConsole(t)
-	buf.Reset()
-
-	if err := c.Help(nil, nil); err != nil {
-		t.Fatalf("Help: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "No help file") {
-		t.Errorf("output = %q, want a no-help-file message", buf.String())
 	}
 }
 

@@ -102,7 +102,7 @@ func runParent(t *testing.T, name, source string) []string {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	if err := d.Dispatch(`ECHO :== "$` + echo + `"`); err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestSpawnCommand(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
 	child := buildChildImage(t, c)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dispatch := func(line string) string {
 		t.Helper()
@@ -315,7 +315,7 @@ func TestSpawnCommand(t *testing.T) {
 func TestSpawn_outputFile(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if err := d.Dispatch(`ECHO :== "$` + echo + `"`); err != nil {
 		t.Fatal(err)
@@ -357,7 +357,7 @@ func TestSpawn_outputFile(t *testing.T) {
 func TestSpawn_permanentFiles(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if err := d.Dispatch(`ECHO :== "$` + echo + `"`); err != nil {
 		t.Fatal(err)

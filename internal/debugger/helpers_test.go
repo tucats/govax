@@ -30,7 +30,7 @@ func newTestConsole(t *testing.T) (*console.Console, *bytes.Buffer) {
 		t.Fatalf("Init: %v", err)
 	}
 
-	debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	debugger.Install(c, consoletest.DebugGrammar(t))
 
 	return c, &buf
 }
@@ -42,7 +42,7 @@ func newRunnableConsole(t testing.TB) *console.Console {
 
 	c, _ := consoletest.New(t)
 
-	debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	debugger.Install(c, consoletest.DebugGrammar(t))
 
 	return c
 }
@@ -93,7 +93,7 @@ func newTestDispatcher(t *testing.T) (*console.Dispatcher, *console.Console) {
 
 	c, _ := newTestConsole(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	c.Dispatcher = d
 
 	return d, c

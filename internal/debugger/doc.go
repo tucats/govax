@@ -6,7 +6,7 @@
 // VAX (EXAMINE, DEPOSIT, STEP, SET BREAK, SHOW REGISTERS, ...). Phase 42
 // separates them. The console stays in internal/console; the debugger
 // lives here, with its own DCL grammar (debug.dcl, in internal/bootdata),
-// its own help file (debug.help), and its own "DBG> " prompt. Where it
+// its own help library (DBG$HELP.HLB), and its own "DBG> " prompt. Where it
 // implements a VMS debugger command, the syntax and the output are the
 // VMS debugger's.
 //
@@ -22,12 +22,13 @@
 //
 // # Commands
 //
-// The grammar is debug.dcl and the help is debug.help. The VMS debugger's
+// The grammar is debug.dcl, and the help is DBG$HELP.HLB's DEBUG module
+// (internal/bootdata's files/dbghelp, help.go). The VMS debugger's
 // commands (EXAMINE, DEPOSIT, EVALUATE, SYMBOLIZE, STEP, GO, CALL, SET and
 // CANCEL BREAK/TRACE/WATCH, SHOW CALLS/IMAGE/MODULE/SYMBOL/SCOPE, SET
 // MODE/RADIX/SOURCE, ...) follow it, and govax's own for the machine
 // (SHOW REGISTERS, SET PTE, SET PSL, SHOW MEMORY, ...) are marked as its
-// own in debug.help. A command's messages and layouts are the VMS
+// own in its help. A command's messages and layouts are the VMS
 // debugger's, checked against the logs of VMS 7.3's debugger
 // (testdata/dbg and testdata/dbgcmd) by the oracle tests, of which
 // TestDebuggerSessionOracle replays every probe session and lists what

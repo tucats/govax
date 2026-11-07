@@ -765,7 +765,8 @@ Scope):
    HELPLIB.HLB and DBG$HELP.HLB, the system volume's entries, sources, and
    BUILDHELP.COM, the refresh by module (Decision 7), and Decision 10's
    tests. The help at this point is a mechanical conversion of today's
-   files, so nothing is lost while subtasks 8 and 9 rewrite it.
+   files, so nothing is lost while subtasks 8 and 9 rewrite it (done
+   2026-11-07).
 8. The DCL help rewritten as modules, in parts: (a) the file commands; (b)
    DCL itself (symbols, procedures, flow, lexicals, file I/O); (c) the
    programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN); (d)
@@ -1021,3 +1022,67 @@ Scope):
   does (`internal/dcl/parse.go`; `TestParse_negatedTakesNoValue`), so
   `/NOLIBRARY` parses without the default `/LIBRARY` had been given to
   allow it, and `/LIBRARY` alone is VALREQ again.
+- **2026-11-07** — Subtask 7, the libraries in the build. govax's help is
+  now VMS help files, a mechanical conversion of the old `$`-format files
+  (made by a one-off program, not kept): `internal/bootdata/files/help/`,
+  81 files, one per level-1 topic (`show.hlp`, `at_sign.hlp` for `@`), and
+  `files/dbghelp/debug.hlp`, one DEBUG module with each command at level 2
+  (Decision 2). Each old key's four-letter words became the full words
+  (SHOW,LOGI is SHOW LOGICAL), its synonyms one topic each: an abbreviation
+  (SH, D, ST) went away, since HELP takes abbreviations; another name (ZERO
+  and CLEAR MEMORY, ASM and ASSEMBLE, CANCEL and CLEAR, each of the
+  pseudo-ops sharing a topic) got its own copy of the text; SHOW REGIONS,
+  which shared SHOW REGISTERS' key, got its copy. Text is as it was, but
+  for a line starting with a digit or "/", which now starts with a blank so
+  it isn't a key or qualifier line. CONFIG is CONFIGURATION, so both words
+  find it. `console.help`, `debug.help`, and `internal/help`'s
+  `oldformat.go` are gone.
+  `bootdata/help.go`'s `BuildHelp` builds `helplib.hlb` and `dbghelp.hlb`
+  from them as LIBRARY/CREATE/HELP would (the files in VMS's directory
+  order, a fixed time; `BuildHelpAt` at another); `go generate
+  ./internal/bootdata` runs `mkhelp`, and `TestHelpLibrariesMatchSources`
+  checks the committed libraries. DCL's HELP with no `/LIBRARY` reads
+  SYS$HELP:HELPLIB.HLB or, when that can't be opened, the built-in one
+  (`dclcmd`'s `builtinHelpLibrary`, opened afresh each time since a Library
+  keeps what it parsed and several processes' DCL may run HELP); the
+  dispatchers lose their help argument. The debugger's HELP
+  (`debugger/help.go`) is a `help.Session` with the words below DEBUG, in
+  SYS$HELP:DBG$HELP.HLB or its built-in copy (`debugger.Console`'s new
+  `DebuggerHelp`, `Context.OpenHelpLibrary`), not prompting until
+  subtask 9.
+  The system volume has HELPLIB.HLB and DBG$HELP.HLB in `[SYSTEM.SYSHLP]`,
+  their sources in `[SYSTEM.SYSHLP.SOURCES]` and, for the debugger's
+  DEBUG.HLP (whose name DCL's DEBUG topic's file has too),
+  `[SYSTEM.SYSHLP.SOURCES.DEBUG]`, and BUILDHELP.COM, which runs
+  LIBRARY/CREATE/HELP on `[.SOURCES]*.HLP` and `[.SOURCES.DEBUG]*.HLP` in
+  SYS$HELP. **A change from Decision 2:** BUILDHELP.COM is in SYS$SOURCES,
+  beside BUILDFTN.COM and BUILDSTARLET.COM, since govax has no SYS$UPDATE.
+  LIBRARY now takes a wildcard input file, each match an input in
+  directory order, as VMS's LIBRARY does (`library.go`'s
+  `matchingInputs`); `TestSystemHelpLibraries` holds BUILDHELP's libraries
+  to `BuildHelpAt`'s byte for byte and HELP to an edited source.
+  The refresh treats a help library by module (Decision 7,
+  `sysvol/helplib.go`): the manifest has a record per module govax wrote,
+  `[SYSTEM.SYSHLP]HELPLIB.HLB(COPY)`, and a library that isn't govax's
+  copy gets govax's missing modules (unless govax wrote them before, when
+  the user deleted them), its changed ones where the user hasn't changed
+  them, and loses the modules govax no longer supplies if they're as govax
+  wrote them; the user's own and changed modules stay, a changed one
+  govax would replace reported once per new copy as
+  `%MOUNT-I-SYSKEPT, DUA0:[SYSTEM.SYSHLP]HELPLIB.HLB(COPY) was changed,
+  ...`. A file that isn't a help library is the user's, whole.
+  `TestRefreshHelpLibrary` walks the cases, `TestSystemHelpRefresh` on a
+  real volume. Unconfirmed, and chosen: the merged library's revision time
+  is its latest insertion.
+  Decision 10's tests: `TestEveryVerbHasHelp` (both grammars),
+  `TestEveryQualifierHasHelp` (each qualifier a verb takes, its syntaxes'
+  too, by `dcl.Grammar.Qualifiers`, named as `/Q` or `/[NO]Q` in the
+  verb's topic or below; `qualifierHelpExceptions` lists what the old help
+  never described, ASSIGN's, DEFINE/DEVICE's, HELP's own, and a few more,
+  for subtask 8 to empty, the test failing on an exception no longer
+  needed), `TestConfigKeysHaveHelp` (every `validConfigs` key under HELP
+  CONFIGURATION KEYS, the debug switches as `vax.debug.NAME`), and
+  `TestHelpModulesWellFormed` (levels, sibling keys, no text line that
+  reads as a key or qualifier line). The qualifier check looks for a
+  qualifier's name anywhere in the text, not yet a `/` line in column 1:
+  that waits for subtask 8's rewrite. Subtask 7 done.

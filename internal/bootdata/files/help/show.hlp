@@ -1,0 +1,301 @@
+1 SHOW
+    The SHOW command is used to display information about the virtual
+    VAX or the console processor.  For additional SHOW commands, see
+    the help for:
+
+        SHOW DEFAULT
+        SHOW DEVICE
+        SHOW LOGICAL
+        SHOW MEMORY
+        SHOW PROCESS
+        SHOW QUANTUM
+        SHOW RADIX
+        SHOW STRINGS
+        SHOW SYMBOL
+        SHOW SYSTEM
+        SHOW TRANSLATION
+        SHOW WORKING_SET
+2 DEBUG
+    The SHOW DEBUG command displays the settings of the internal debug
+    switches.  These are set with the SET DEBUG command.  See the help
+    for SET DEBUG for more information.
+
+    Syntax:
+
+        SHOW DEBUG
+2 DEFAULT
+    The SHOW DEFAULT command displays the operator's current default
+    device and directory, as established by SET DEFAULT.  When the default
+    device is a search list, each place it stands for follows on a line
+    beginning with "=".
+
+    Syntax:
+
+        SHOW DEFAULT
+
+    See also the help for SET DEFAULT.
+2 DEVICES
+    The SHOW DEVICE command displays information about a pseudodevice
+    attached to the VMS system.  These devices are emulated via VMS
+    system service calls that are managed by the emulator when a full
+    version of VMS is not running.
+
+    Syntax:
+
+        SHOW DEVICE [/FULL] [name]
+
+    Parameter:
+
+        name
+
+            The name of a device to display, or the start of one: SHOW
+            DEVICE DU shows every device whose name begins with DU
+            (DUA0, DUA1, ...).  If no device's does, the command says
+            %SYSTEM-W-NOSUCHDEV.  If omitted then all known devices are
+            displayed.
+
+        /FULL
+
+            If this qualifier is present then all information about
+            the device (essentially the device control block contents)
+            is displayed.  For a disk with a volume mounted, "Operations
+            completed" is the number of block reads and writes done on
+            the volume since it was mounted, and the size, free space,
+            label, and file count are read from the volume itself.
+2 EDIT
+    The SHOW EDITOR command shows the host editor EDIT runs, and the
+    directory it works in, as SET EDITOR set them.
+
+    Syntax:
+
+         SHOW EDITOR
+2 LOGICAL
+    The SHOW LOGICAL command displays logical names and their equivalence
+    strings, in the same format as VMS.
+
+    Syntax:
+
+         SHOW LOGICAL [logical-name[,...]]
+
+    Qualifiers:
+
+        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=(table[,...])
+
+            Search only the named table(s).  By default the tables that
+            LNM$DCL_LOGICAL names are searched: the process, job, group,
+            and system tables.
+
+        /FULL
+
+            Also show each name's access mode, such as [super] or [exec],
+            and each equivalence string's translation attributes
+            ([concealed], [terminal]).
+
+        /STRUCTURE
+
+            Show the logical name directories and the tables in each.
+
+    With no logical name, every name in each table searched is listed
+    under the table's name.  A logical name containing the * or %
+    wildcards lists the matching names the same way.  Any other logical
+    name is shown from the first table that has it, followed by the
+    translation of each equivalence string that is itself a logical name,
+    numbered by level:
+
+         $ SHOW LOGICAL MYDISK
+           "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
+         1 "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
+2 MEMORY
+    The SHOW MEMORY command displays the amount of physical and virtual
+    memory available on the virtual VAX. With paging on (VMINIT/PAGING),
+    it also shows how many page frames are on the free list, on the
+    modified list, and in use, by the kind of page each holds (a process's,
+    a global section's, or the system's); the page faults by kind; the
+    pages the modified page writer has written and the writes it took; and
+    the page file: its name, and once it's open its size, its free and
+    used blocks, and whether it has passed the PAGEFRAG (65%) or PAGECRIT
+    (90%) threshold or is full. "Page file committed" is the pages charged
+    against every job's PGFLQUOTA: a page is charged when it's made, and
+    takes a page file block only when it's written there. The page file is
+    installed at startup (opened when it's first needed with
+    vax.sysgen.paging.defer), so it may show as "not opened yet".
+
+    With paging on, each region's lines describe the current process's
+    address space as it is: P0's and P1's size is the pages the region has
+    now, "Table frames" how many pages of its page tables hold their
+    entries (only those take memory), and its virtual addresses the range
+    those pages cover; S0's "Mapped pages" are those with memory behind
+    them (VMINIT's layout, the microkernel, and the system space in use by
+    processes). With paging off, each region shows the physical addresses
+    VMINIT laid it out at.
+
+    Qualifiers:
+
+        /FILES
+
+            Show only the paging files, as VMS does on a VAX: each one's
+            name (a volume file by its volume's DISK$label logical name)
+            and its free, reservable, and total pages. Reservable pages
+            are those not committed to a job's PGFLQUOTA. govax has one
+            page file and no swap file, and lists the page file only
+            while it's open.
+
+        /FULL
+
+            With /FILES, show each file's details instead: its free,
+            reservable, and total blocks, its paging file number (3, as
+            on VMS), and how many processes use it.
+2 PROCESS
+    The SHOW PROCESS command displays a process's details: its user,
+    process ID and name, terminal, user identification code (UIC), base
+    priority, and default device and directory.  With no name or
+    /IDENTIFICATION, it shows the console's own process.
+
+    Syntax:
+
+        SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
+
+    Parameter:
+
+        process-name    The name of the process, as SHOW SYSTEM lists
+                        it (quote a name with blanks or lowercase).
+
+    Qualifier:
+
+        /IDENTIFICATION=pid
+                        The process ID, in hexadecimal, as SHOW SYSTEM
+                        lists it.
+2 RADIX
+    The SHOW RADIX command displays the default radix being used by the
+    console for input.  Valid values are DECIMAL or HEXADECIMAL, and can
+    be set by the SET RADIX command.  (The assembler always uses decimal;
+    see HELP ASM EXPRESSIONS.)
+
+    Syntax:
+
+        SHOW RADIX
+2 STRINGS
+    The SHOW STRINGS command displays the string pool managed by the
+    assembler.  This allows you to use quoted strings in expressions
+    where an address value is normally used.  The assembler creates
+    the string in a reserved area of memory (the string pool) and
+    substibutes the address of a descriptor for the string in the
+    expression.
+
+    Syntax:
+
+        SHOW STRINGS
+
+
+    Usage:
+
+        To use a string constant, place it in an assembly statement
+        anywhere you would use an address expression.  For example,
+        the following writes a string to the console using the
+        Microkernel.
+
+             PUSHL     I^#0A
+             PUSHL     I^#0D
+             PUSHL     I^#"This is a test"
+             CALLS     #3, @#LIB$PUT_OUTPUT
+
+        The use of the quoted string for the longword value causes a
+        descriptor to be created for the string value (stored in a
+        reserved area of S0 space defined by the CONSOLE$STRINGPOOL_BASE
+        symbol) and the descriptor address is pushed on the stack.
+
+        Note that the value use is _always_ a descriptor address, not
+        the address of the string constant itself.
+2 SYMBOL
+    The SHOW SYMBOL command displays DCL symbols, the ones symbol assignments
+    define (see HELP SYMBOL and HELP FOREIGN), as DCL's SHOW SYMBOL displays
+    them.  A global symbol is shown with "==" and a local one with "=";
+    an "*" marks the shortest abbreviation of the name; an integer is shown
+    in decimal, hexadecimal, and octal.
+
+    The machine's symbol table (the symbols ASM defines, and the predefined
+    system symbols) is the debugger's: type DEBUG, then HELP SHOW SYMBOL.
+
+    Syntax:
+
+        SHOW SYMBOL [/LOCAL | /GLOBAL] symbol-name
+        SHOW SYMBOL [/LOCAL | /GLOBAL] /ALL
+
+    Parameter:
+
+        symbol-name     The symbol to display, or an abbreviation it allows.
+                        It is looked up in the local symbol table, then the
+                        global one, and the first found is displayed.  With
+                        the wildcards "*" (any number of characters) and "%"
+                        (exactly one), every symbol whose name matches is
+                        displayed, local symbols first.
+
+    Qualifiers:
+
+        /LOCAL          Search only the local symbol table of the current
+                        command level.
+        /GLOBAL         Search only the global symbol table.
+        /ALL            Display every symbol in the table: the local one,
+                        unless /GLOBAL is given.
+
+    Examples:
+
+        SHOW SYMBOL *
+          FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+          N = 42   Hex = 0000002A  Octal = 00000000052
+        SHOW SYMBOL FO
+        SHOW SYMBOL/GLOBAL/ALL
+2 SYSTEM
+    The SHOW SYSTEM command lists the processes in the system, as VMS's
+    DCL does: each one's process ID, name, scheduling state, current
+    priority, and CPU time.  The first line names the system as govax and
+    its version, and the node as the host computer's name.  States are VMS's: CUR is the process the CPU
+    is running, COM one ready to run, and the wait states are HIB
+    (hibernating), LEF and CEF (waiting for a local or common event
+    flag), SUSP, and a resource wait such as RWMBX (room in a full
+    mailbox).  I/O is the process's buffered and direct I/O operations,
+    Page flts its page faults, and Pages the pages in its working set
+    (with paging off, the pages its address space has in memory).
+    Several processes run only with the vax.process.scheduler setting on
+    (HELP CONFIG KEYS).
+
+    Syntax:
+
+        SHOW SYSTEM
+
+    Example:
+
+        GOVAX 1.0-280  on node mymac    7-OCT-2026 11:37:42.07  Uptime  0 00:00:31
+          Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+        00000301 SYSTEM          CUR      4        0   0 00:00:00.31         0    469
+2 TRANSLATION
+    The SHOW TRANSLATION command displays one level of translation of a
+    logical name: the first match found, with no further translation.
+
+    Syntax:
+
+         SHOW TRANSLATION [/TABLE=table] logical-name
+
+    Qualifier:
+
+        /TABLE=table
+
+            The table to search, or a logical name that translates to a
+            list of tables.  The default is LNM$DCL_LOGICAL (the process,
+            group, and system tables).
+2 WORKING_SET
+    The SHOW WORKING_SET command displays the current process's working
+    set values, in pages: the default working set (shown as the limit),
+    the quota, and the extent; whether automatic adjustment is enabled;
+    and the authorized quota and extent, which SET WORKING_SET can't go
+    beyond.
+
+    Syntax:
+
+        SHOW WORKING_SET
+
+    Example:
+
+        $ SHOW WORKING_SET
+          Working Set      /Limit=512   /Quota=1024    /Extent=16400
+          Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400

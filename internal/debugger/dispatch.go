@@ -7,7 +7,6 @@ import (
 	"unicode"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -19,7 +18,6 @@ import (
 type Dispatcher struct {
 	Debugger *Debugger
 	Grammar  *dcl.Grammar
-	Help     *help.File
 
 	// line is the command line being run, which a handler may need for
 	// what the grammar's result doesn't keep (the order of qualifiers).
@@ -28,8 +26,8 @@ type Dispatcher struct {
 
 // newDispatcher returns a Dispatcher for d with every command this
 // subtask implements bound to its handler.
-func newDispatcher(d *Debugger, g *dcl.Grammar, help *help.File) *Dispatcher {
-	disp := &Dispatcher{Debugger: d, Grammar: g, Help: help}
+func newDispatcher(d *Debugger, g *dcl.Grammar) *Dispatcher {
+	disp := &Dispatcher{Debugger: d, Grammar: g}
 	disp.bind()
 
 	return disp
@@ -61,15 +59,7 @@ func (d *Dispatcher) bind() {
 	g.Bind("EXIT", end)
 	g.Bind("QUIT", end)
 
-	// A "/" starts a new word, as it does in DCL, so HELP SET BREAK
-	// /AFTER finds the same topic as HELP SET BREAK/AFTER.
-	g.Bind("HELP", func(id int64, r *dcl.Result) error {
-		words := strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /"))
-
-		d.Help.Show(d.Debugger.Machine.Hooks.Output(), words)
-
-		return nil
-	})
+	g.Bind("HELP", func(id int64, r *dcl.Result) error { return d.help(r.String("TOPIC")) })
 
 	// GO, CALL, and STEP run the program. When the session is already
 	// open (we are at DBG>), a run that ends leaves it open.

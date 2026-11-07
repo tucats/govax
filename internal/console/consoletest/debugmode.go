@@ -16,7 +16,7 @@ func InstallDebugger(t testing.TB, c *console.Console, d *console.Dispatcher) *d
 
 	c.Dispatcher = d
 
-	return debugger.Install(c, DebugGrammar(t), ParseHelp(t, "debug.help"))
+	return debugger.Install(c, DebugGrammar(t))
 }
 
 // DebugMode puts the command processor into debugger mode, as the DEBUG

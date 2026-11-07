@@ -1,0 +1,9 @@
+1 ASM
+    The ASM command assembles VAX source into memory, either from a file
+    (ASM file) or, with no file, one statement at a time.  The console accepts
+    it only until the microkernel is in place, which is how STARTUP.COM loads
+    it (SYS$SOURCES:KERNEL.ASM on the system volume, or govax's built-in
+    kernel.asm without one).  After that ASM is a debugger command: enter the
+    debugger with DEBUG and type ASM there.  HELP ASM at the DBG> prompt
+    describes the assembler, and how its file is found: a volume file or a
+    host file, as RUN's is.

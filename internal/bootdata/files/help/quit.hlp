@@ -1,0 +1,7 @@
+1 QUIT
+    The QUIT command ends govax, from the terminal or from inside a
+    command procedure.
+
+    Syntax:
+
+        QUIT

@@ -17,7 +17,7 @@ import (
 // VMS (testdata/mar/macros/vax/macros.log).
 func TestRMSCopy_govaxStarlet(t *testing.T) {
 	c := newBootableConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	c.HostLibrary = t.TempDir()
 
 	mountFreshRMSVolume(t, c)

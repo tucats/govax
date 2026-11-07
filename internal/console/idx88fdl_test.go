@@ -126,7 +126,7 @@ func TestIdx88CCreateOracle(t *testing.T) {
 func fdlFromAnalysis(t *testing.T, c *console.Console, vmsSet *backup.SaveSet) int {
 	t.Helper()
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) {
 		t.Helper()
 
@@ -367,7 +367,7 @@ func compareFDLFile(t *testing.T, vms, govax *backup.File) {
 func TestCreateFDLForms(t *testing.T) {
 	_, c := runIdx88C(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	for _, line := range []string{"CREATE/LOG/FDL=[R3]C31 F1.IDX", "CREATE F2.IDX/FDL=[R3]C31", "CREATE/FDL=[R3]C31 F3.IDX/LOG"} {
 		if err := d.Dispatch(line); err != nil {

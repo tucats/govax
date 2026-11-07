@@ -99,7 +99,7 @@ func TestPageFileWriter(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.size", "1000")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	db := c.Mem.Paging()
 	if db == nil {
@@ -307,7 +307,7 @@ func TestPageFileWriterNoFile(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.file", "")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	exe := buildImage(t, c, "wspf", pfSource)
 

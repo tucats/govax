@@ -321,7 +321,7 @@ func TestConsoleCopy_badFileSpec(t *testing.T) {
 func TestDispatch_copyViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -473,7 +473,7 @@ func TestDispatch_copyRequiresBothParameters(t *testing.T) {
 func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 

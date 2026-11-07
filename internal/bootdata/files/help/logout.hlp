@@ -1,0 +1,8 @@
+1 LOGOUT
+    In a subprocess (see HELP SPAWN), LOGOUT ends its DCL and the process,
+    which says so ("Process name logged out at ...").  The process's final
+    status is $STATUS's.  In the console's own process it is QUIT.
+
+    Syntax:
+
+        LOGOUT

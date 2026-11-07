@@ -1,0 +1,10 @@
+1 ASSIGN
+    The ASSIGN command creates a logical name, like DEFINE, but with its
+    parameters in the opposite order.  One trailing colon is removed from
+    the logical name.
+
+    Syntax:
+
+         ASSIGN equivalence-string[,...] logical-name
+
+    ASSIGN takes the same qualifiers as DEFINE.

@@ -1,0 +1,80 @@
+1 HELP
+    govax a VAX software emulator.  It supports execution of a subset
+    of the VAX instruction set.  It also contains emulation of VAX hardware,
+    memory management, and console functions.  The console functions are
+    extended beyond existing VAX implementation to include an assembler
+    and a debugger, modeled on the VMS debugger, with breakpoints,
+    stepping, and commands to examine and change the machine.
+
+    You can get help on a topic by using the HELP command, followed by
+    one or more keywords.  For example, to get help on the SHOW command,
+    issue the command:
+
+           HELP SHOW
+
+    To get help on the SHOW LOGICAL subcommand to SHOW, use the command:
+
+           HELP SHOW LOGICAL
+
+
+
+    For additional information, see the help on the following command topics:
+
+    @               Run a command procedure (a file of DCL commands)
+    ANALYZE         Describe object and image files, as VMS's ANALYZE does
+    ASSIGN          Create a logical name (equivalence first)
+    BACKUP          List, restore, compare, or save VMS BACKUP save sets
+    CALL            Run a command procedure's subroutine at a new level
+    CLEAR           Clear memory, symbols, strings
+    COPY            Copy a file between the host and a mounted volume
+    CREATE          Create a directory or a logical name table
+    DEASSIGN        Delete a logical name
+    DEFINE          Create a logical name
+    DELETE          Delete a file on a mounted volume
+    DIRECTORY       List the files on a mounted volume
+    DEBUG           Start the debugger on the virtual VAX
+    DISMOUNT        Detach a device's mounted disk-image container
+    DECK            Mark data lines that start with "$" (EOD ends them)
+    CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
+    EDIT            Edit a file with an editor on the host
+    EOD             End a command procedure's data lines
+    EXIT            End a command procedure, or govax at the terminal
+    FORTRAN         Compile a FORTRAN source file into a MACRO-32 source file
+    IF              Run a command when an expression is true
+    GOSUB           Call a subroutine at a label (RETURN comes back)
+    GOTO            Go on at a label of a command procedure
+    INITIALIZE      Initialize the virtual VAX, or a disk-image container
+    LIBRARY         Create, change, or list a macro, object, or text library
+    LINK            Link object modules into an executable image
+    LOAD            Load a saved memory image
+    MACRO           Assemble a MACRO-32 source file into an object module
+    MOUNT           Attach a disk-image container file to a device
+    ON              Choose what a command procedure does when a command fails
+    PRINT           Print messages or expressions
+    PURGE           Delete old versions of files on a mounted volume
+    QUIT            Quit govax
+    RENAME          Rename or move files on a mounted volume
+    RUN             Load and run a VAX/VMS image
+    SAVE            Save the machine state
+    SET             Set the state of the console
+    SHOW            Display the state of the console
+    STOP            Delete a process
+    TEST            Run the emulator's debugging sequences
+    TIME            Run a command and report how long it took
+    TYPE            Display a file on a mounted volume or the host
+    VMINIT          Initialize a VM map
+    ZERO            Clear the virtual VAX's memory
+
+    The commands that examine and control the machine itself (EXAMINE,
+    DEPOSIT, STEP, breakpoints, the registers) are the debugger's; type
+    DEBUG for its prompt, DBG>, and HELP there for its commands.
+
+    Other topics:
+
+    ABOUT           About govax
+    CONFIG          govax's configuration settings, and how to set them
+    KEYS            The control keys: Ctrl/C, Ctrl/Y, and Ctrl/Z
+    PSL             The processor status longword and its fields
+    STARTUP         What govax does as it starts: the system volume,
+                    STARTUP.COM, and SYSTARTUP_VMS.COM
+    XFC             govax's extended function codes

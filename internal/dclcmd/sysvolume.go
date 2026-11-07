@@ -214,6 +214,12 @@ func (c *Context) refreshSystemVolume(device string, created bool) {
 		if change.Notify {
 			c.Printf("%%%s\n", vmserrors.New(vmserrors.MOUNT_SYSKEPT, device+":"+change.File.Spec()))
 		}
+
+		// A help library's modules the user changed, each by name
+		// (docs/PHASE-90 - VMS help.md, Decision 7).
+		for _, module := range change.KeptModules {
+			c.Printf("%%%s\n", vmserrors.New(vmserrors.MOUNT_SYSKEPT, device+":"+change.File.Spec()+"("+module+")"))
+		}
 	}
 
 	if written := report.Count(sysvol.Written) + report.Count(sysvol.Updated); written > 0 && !created {

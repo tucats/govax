@@ -19,7 +19,7 @@ import (
 // (testdata/mp/probe5/vax); the test checks that every step reported.
 func TestProbe5(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
 	if err := c.Commands().InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {

@@ -54,7 +54,7 @@ func TestProcedureInput_image(t *testing.T) {
 
 	c := console.New(&out)
 	c.Paths = respath.New(nil, bootdata.FS)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	consoletest.InstallDebugger(t, c, d)
 
 	// Nothing waits at the terminal: a read of it would be the end of

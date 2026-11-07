@@ -161,7 +161,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 func TestDispatch_deleteViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -198,7 +198,7 @@ func TestDispatch_deleteViaDCL(t *testing.T) {
 func TestDispatch_deleteNullVersionAndList(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 

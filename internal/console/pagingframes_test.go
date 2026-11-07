@@ -55,7 +55,7 @@ func TestPagingFrames(t *testing.T) {
 		t.Fatalf("after STARTUP.COM: %v", err)
 	}
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	runImage(t, d, buildImage(t, c, "paged", pagedImageSource))
 
 	if !strings.Contains(out.String(), "paged image done") {

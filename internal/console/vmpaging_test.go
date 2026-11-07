@@ -7,7 +7,7 @@ import "testing"
 // VMINIT builds gets it.
 func TestVMInitPagingQualifier(t *testing.T) {
 	c, _ := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	if err := d.Dispatch("vminit /p0=20 /p1=4116 /s0=120 /ksp=2 /paging"); err != nil {
 		t.Fatalf("VMINIT/PAGING: %v", err)

@@ -95,7 +95,7 @@ func sharedImageConsole(t *testing.T, paging bool) (*console.Console, *console.D
 	}
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if (c.Mem.Paging() != nil) != paging {
 		t.Fatalf("paging is %v, want %v", c.Mem.Paging() != nil, paging)

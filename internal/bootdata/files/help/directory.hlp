@@ -1,0 +1,73 @@
+1 DIRECTORY
+    The DIRECTORY command lists files on a mounted ODS-2 volume, laid out
+    as VMS's DIRECTORY lays them out: a heading for each directory, the
+    names four to a line (or one to a line, with the columns the
+    qualifiers ask for), and "Total of n files." after each directory
+    ("Grand total" after more than one).  A specification that finds no
+    file is %DIRECT-W-NOFILES.
+
+    Syntax:
+
+        DIRECTORY [/FULL] [/FILE] [/SIZE[=option]] [/DATE] [/OWNER]
+                  [/PROTECTION] [/VERSIONS=n] [/[NO]HEADING]
+                  [/[NO]TRAILING] [/OUTPUT[=file]] [file-spec[,...]]
+
+    Parameter:
+
+        file-spec       The file specification to list, which may include
+                        wildcards (e.g. DUA0:[MYDIR]*.TXT;*), or a list of
+                        them, each listed in turn with one grand total
+                        (e.g. [A...],[B...]).  Any part of
+                        the specification left out is filled in from the
+                        current default device/directory (see SET
+                        DEFAULT), but a version left out is every
+                        version.  If omitted entirely, lists "*.*;*" --
+                        every file, every version, in the current default
+                        directory.
+
+    Qualifiers:
+
+        /FULL           Shows everything the file's header says: its
+                        file ID, used and allocated sizes, owner, dates,
+                        organization, record format and attributes, and
+                        protection.
+
+        /FILE           Includes each file's file ID.
+
+        /SIZE[=option]  Includes each file's size, in blocks: USED (the
+                        default), ALLOCATION, or ALL (used/allocated).
+
+        /DATE           Includes each file's creation date.
+
+        /OWNER          Includes each file's owner, as [SYSTEM] or
+                        [group,member].
+
+        /PROTECTION     Includes each file's protection: the access
+                        granted to system, owner, group, and world, in
+                        that order, as in (RWED,RWED,RE,).
+
+        /VERSIONS=n     Lists only the n most recent versions of each
+                        file: /VERSIONS=1 shows just the newest.  The
+                        value is required and must be at least 1.
+
+        /NOHEADING      No "Directory" headings: each file is listed by
+                        its full name, one to a line.
+
+        /NOTRAILING     No totals.
+
+        /OUTPUT[=file]  Writes the listing to a file in place of the
+                        terminal: file (type LIS unless it gives one), or
+                        DIRECTORY.LIS.  A specification that finds no file
+                        still shows %DIRECT-W-NOFILES at the terminal.
+
+    Examples:
+
+        DIRECTORY
+
+        DIRECTORY/VERSIONS=2 *.TXT;*
+
+        DIRECTORY/SIZE *.TXT;*
+
+        DIR DUA0:[MYDIR]
+
+    See also the help for SET DEFAULT, SHOW DEFAULT, TYPE, and MOUNT.

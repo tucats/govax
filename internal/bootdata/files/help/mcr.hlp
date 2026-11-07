@@ -1,0 +1,11 @@
+1 MCR
+    MCR runs an image, as a foreign command does, with the rest of the
+    line as the text LIB$GET_FOREIGN returns.
+
+    Syntax:
+
+        MCR image [text]
+
+    Example:
+
+        VAX> MCR DUA0:[WORK]ECHO hello there

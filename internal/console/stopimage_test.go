@@ -39,7 +39,7 @@ forever: brb	forever
 // no handler called (Phase 51).
 func TestStopImage(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	exh := buildImage(t, c, "exh", exitHandlerSource)
 	child := buildChildImage(t, c)

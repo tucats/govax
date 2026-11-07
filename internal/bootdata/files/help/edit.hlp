@@ -1,0 +1,51 @@
+1 EDIT
+    The EDIT command edits a file with an editor on the host, such as vi.
+    govax copies the file to a scratch directory on the host as lines of
+    text, runs the editor on the copy, and if the editor wrote it, makes
+    what it wrote the next version of the file.
+
+    Syntax:
+
+         EDIT file-spec [/HOST]
+
+    Parameters:
+
+         file-spec    One file.  If no file has the name, and the name has
+                      no version, EDIT makes a new one (variable-length
+                      records, carriage-return carriage control) if the
+                      editor writes it.
+
+    Qualifiers:
+
+         /HOST        The file is a host file, replaced when the editor
+                      has written its copy.
+
+    The new version has the record format, record attributes, protection,
+    and owner of the version edited, so a line becomes a record of the
+    same kind:
+
+         Fixed        A short line is filled out with blanks.  The editor
+                      doesn't see the blanks at the end of a record.
+         Variable,    The line is the record.
+         stream
+         VFC          The line is the record, after control bytes: those
+                      all the records had, or if they differed, the usual
+                      ones for the file, with a warning.
+
+    A line longer than a fixed record, or than a file's maximum record
+    size, loses the blanks at its end if that is enough.  Otherwise it is
+    the error EDIT-E-TOOLONG, and there is no new version.
+
+    The file is left alone if the editor doesn't write its copy (:q! in
+    vi) or ends with a failure status (:cq in vi).  When the editor wrote
+    its copy but that can't become a new version, the message ends with
+    -EDIT-I-KEPT and the name of the copy, which stays until you delete it.
+
+    A file that isn't lines of text is refused before the editor starts: a
+    directory, a relative or indexed file, one with undefined records, or
+    one whose records hold a null byte or a line feed, as an image does.
+    So is a file on a volume mounted read-only.
+
+    Every process waits while the editor runs.
+
+    See also the help for SET EDITOR and SHOW EDITOR.

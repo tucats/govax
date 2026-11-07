@@ -1,0 +1,279 @@
+1 LINK
+    The LINK command links object modules (.OBJ files, such as MACRO
+    writes) into a VAX/VMS executable image (.EXE) that RUN can run, or
+    into a shareable image (/SHAREABLE) whose routines and data other
+    images use.  Its images and maps are laid out as VMS's LINK lays them
+    out, so an image made here runs on VMS, and VMS's images link here.
+
+    Syntax:
+
+        LINK <file>[,<file>...][/HOST] [/EXECUTABLE[=<image>] |
+             /SHAREABLE[=<image>] | /NOEXECUTABLE] [/SYMBOL_TABLE[=<file>]]
+             [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
+             [/[NO]USERLIBRARY[=(<table>[,...])]]
+             [/MAP[=<map>] [/BRIEF | /FULL] | /NOMAP]
+
+    Parameter:
+
+        <file>          An object file (.OBJ), or a file with its own
+                        qualifier, which follows it:
+
+            <library>/LIBRARY
+                        An object library (.OLB) searched for symbols the
+                        objects don't define, before the system libraries,
+                        or a shareable image library (LIBRARY/SHARE, or
+                        IMAGELIB).  A shareable image library's images are
+                        looked for beside it, then in SYS$LIBRARY, then as
+                        RUN finds them.
+            <library>/INCLUDE=(<module>[,...])
+                        Adds those modules of the library to the image:
+                        of a shareable image library, those images, as an
+                        options file's /SHAREABLE does.  With /LIBRARY
+                        too, the library is also searched.
+            <object>/SELECTIVE_SEARCH
+                        Takes only the object's definitions of symbols
+                        something else refers to.
+            <options>/OPTIONS
+                        An options file (.OPT); see below.
+
+                        Files follow MACRO's rules for host files and
+                        files on mounted volumes (see HELP MACRO), and a
+                        later file's bare name is found beside the one
+                        before it.  /HOST applies to every file.
+
+    Qualifiers:
+
+        /EXECUTABLE[=<image>]
+                        Writes the image.  This is the default.  Without
+                        a file name, the image has the first object's
+                        name and location, with the type EXE in the same
+                        case as the object's type.  A name that is only a
+                        directory gets that name in it.
+
+        /SHAREABLE[=<image>]
+                        Makes a shareable image: one with no transfer
+                        address, linked at address 0 so that RUN can put
+                        it anywhere, whose universal symbols (the options
+                        UNIVERSAL= and the objects' .TRANSFER) are in its
+                        global symbol table for other links to use.  The
+                        image is named as /EXECUTABLE names it (one or the
+                        other may name it, not both).  Its options file
+                        sets its ident and match control (GSMATCH=); see
+                        "Shareable images" below.
+
+        /NOEXECUTABLE   Links and reports any errors, but writes no image.
+
+        /SYMBOL_TABLE[=<file>]
+                        Also writes the image's global symbol table as an
+                        object module file (default: the first object's
+                        name with the type STB), which another link can
+                        take as an object.
+
+        /TRACEBACK      Starts the image through SYS$IMGSTA, as VMS LINK
+                        does by default, and gives it a debug symbol
+                        table built from the objects' traceback records.
+                        /NOTRACEBACK starts it at its own transfer
+                        address, with no debug symbol table.
+
+        /DEBUG          Puts the objects' debugger records (from
+                        MACRO/DEBUG) in the debug symbol table too, and
+                        marks the image for the debugger, as VMS LINK
+                        does.  /DEBUG includes /TRACEBACK, even if
+                        /NOTRACEBACK is given.  RUN starts such an
+                        image under the debugger (see HELP RUN).  A
+                        user-written debugger module (/DEBUG=<file>)
+                        isn't supported.  /NODEBUG is the default.
+
+        /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
+                        the objects don't define, as VMS LINK does by
+                        default.  /NOSYSLIB uses only govax's own tables.
+
+        /USERLIBRARY[=(<table>[,...])]
+                        Searches the default user libraries, after the
+                        command's own libraries and before the system's:
+                        the object or shareable image libraries the
+                        logical names LNK$LIBRARY, LNK$LIBRARY_1, ...
+                        LNK$LIBRARY_999 name, taken in turn until one
+                        isn't defined.  The tables are PROCESS, GROUP, and
+                        SYSTEM, searched in that order; ALL, the default,
+                        is all three.  /NOUSERLIBRARY (or NONE) searches
+                        none.
+
+        /MAP[=<map>]    Writes a link map, laid out as VMS LINK lays out
+                        its default map: the object modules, the program
+                        sections and each module's part of them, the
+                        global symbols the objects define, and the image
+                        synopsis.  Without a file name, the map has the
+                        first object's name and location, with the type
+                        MAP.  /NOMAP, the default, writes none.
+
+        /BRIEF          Makes the map brief: only the object modules and
+                        the image synopsis.
+
+        /FULL           Makes the map full: it also lists the image
+                        sections (the Image Section Synopsis: each
+                        cluster's sections, their types, and a shareable
+                        image's global section names, matches, and idents),
+                        and the program sections and symbols the libraries
+                        and shareable images gave.
+
+    An options file has a line for each option or list of input files. An
+    exclamation point starts a comment, and a hyphen at a line's end
+    continues it.  Its files may have /LIBRARY, /INCLUDE, and
+    /SELECTIVE_SEARCH, and also /SHAREABLE, a shareable image (.EXE) whose
+    symbols the image uses, found as RUN would find it (see HELP RUN), so
+    a logical name of its name or SYS$SHARE leads to it.  A host path is
+    written in quotes, for its slashes.  SYS$INPUT/OPTIONS reads the
+    options from SYS$INPUT: in a command procedure, the data lines after
+    the LINK command.  Options and keywords may be abbreviated.  The
+    options are VAX LINK's:
+
+        STACK=<pages>           The user stack's first size (default
+                                20).  With paging on it grows past
+                                that by itself, to about 10 MB with
+                                the defaults; with paging off the
+                                stack is a fixed 2 MB of P1, and
+                                STACK= is ignored.
+        IDENTIFICATION=<id>     The image's identification.
+        NAME=<name>             The image's name in its header.
+        SYMBOL=<name>,<value>   Defines a global symbol, whatever the
+                                objects say.
+        UNIVERSAL=<name>[,...]  Makes symbols universal: a shareable
+                                image's symbols other images may use.
+        GSMATCH=<match>,<major>,<minor>
+                                A shareable image's match control (ALWAYS,
+                                EQUAL, or LEQUAL) and ident; RUN checks it
+                                (see HELP RUN).  Without it the ident comes
+                                from the link time, and the match is
+                                EQUAL, so a program must be relinked when
+                                the image is.
+        CLUSTER=<name>[,<base>][,<pfc>][,<file>...]
+                                A cluster of image sections: the files
+                                named, placed together and in this order,
+                                at an address if <base> is given.
+        COLLECT=<cluster>,<psect>[,...]
+                                Moves program sections into a cluster.
+        PSECT_ATTR=<psect>,<attribute>[,...]
+                                Changes a program section's attributes
+                                (PIC, SHR, WRT, EXE, RD, GBL, ... and their
+                                NO forms, or an alignment).
+        BASE=<address>          The image's base address.  An executable
+                                linked at a base places its shareable
+                                images at link time too.
+        DZRO_MIN=<pages>        The fewest pages of a writable section's
+                                uninitialized run that become a demand-zero
+                                section of their own.
+        ISD_MAX=<count>         The most image sections an executable may
+                                have before demand-zero runs stay with
+                                their sections (ignored, with OPTIGNSHR, for
+                                a shareable image).
+        PROTECT=YES|NO          Marks the image sections of the clusters
+                                that follow as protected, as VMS needs for
+                                a shareable image installed /PROTECT
+                                (govax has no INSTALL; RUN ignores it).
+        IOSEGMENT=<pages>[,[NO]P0BUFS]
+                                The image I/O segment's size.
+
+    UNSUPPORTED= is refused.  Numbers are decimal, or hexadecimal or octal
+    after %X or %O.  A bad option or value is %LINK-F-OPTSYNERR or
+    OPTVALERR, quoting it.
+
+    Program sections are laid out as VMS LINK lays them out: grouped into
+    image sections by their attributes, from address 200 (hexadecimal) in
+    an executable and 0 in a shareable image, cluster by cluster: the
+    options' clusters, then the default cluster, then a cluster for each
+    shareable image.  Writable pages nothing is stored in become
+    demand-zero.
+
+    Shareable images:
+
+    A library of routines linked /SHAREABLE has, in the usual pattern, a
+    transfer vector first, so that its routines keep their addresses from
+    one version of the image to the next:
+
+        .TRANSFER   MY_ROUTINE          ; MY_ROUTINE is universal
+        .MASK       MY_ROUTINE          ; the routine's entry mask
+        JMP         L^MY_ROUTINE+2      ; and a jump past it
+
+    with an options file such as
+
+        CLUSTER=TRANSFER_VECTOR,,,VECTOR
+        GSMATCH=LEQUAL,1,1000
+        UNIVERSAL=MY_DATA
+
+    A program uses it by naming it in an options file (MYSHR/SHAREABLE),
+    and reaches its routines and data with general mode operands
+    (CALLS #0,G^MY_ROUTINE) or a .ADDRESS of them.  The image's GSMATCH=
+    decides which later versions the program accepts: with LEQUAL, any
+    with the same major id and a higher or equal minor id.  A shareable
+    image may itself use others.  LIBRARY/CREATE/SHARE makes a library of
+    shareable images, which LINK searches for the images that define
+    symbols (see HELP LIBRARY).
+
+    A global symbol the objects don't define is looked up, in order, in:
+
+        IMAGELIB.OLB    Which shareable image defines the routine.  Its
+                        offset there comes from the image itself
+                        (SYS$SHARE:LIBRTL.EXE, say) or, with no such
+                        file, from govax's own tables.
+        STARLET.OLB     The module that defines the symbol is added to
+                        the image, as VMS LINK does.
+        govax's tables  Every LIBRTL routine, and the other run-time
+                        library routines govax provides (DECC$..., and
+                        others), in their shareable images; STARLET's
+                        status codes and other definitions (SS$_...,
+                        RMS$_..., IO$_..., and more); and the system
+                        services (SYS$...), at their addresses in the P1
+                        vector.
+
+    The two libraries and the shareable images are VMS files, which govax
+    doesn't include.  LINK looks for them as SYS$LIBRARY:IMAGELIB.OLB,
+    SYS$LIBRARY:STARLET.OLB, and SYS$SHARE:<image>.EXE on a mounted
+    volume, then in the host directory the vax.library setting names
+    (or, if that isn't set, the older vax.link.library).  Without them,
+    govax's own tables, which were captured from those files, give the
+    same image for everything they define.  Running a routine still
+    needs its image, or govax's own routine for it.
+
+    A routine in a shareable image is reached with a general mode operand
+    (CALLS #1,G^LIB$PUT_OUTPUT) or a .ADDRESS of it; the image reaches it
+    through its fixup section, and RUN connects it to the image, or for
+    LIBRTL and the system's other images, to govax's own routines (see
+    HELP RUN).
+
+    A symbol nothing defines is a warning, as in VMS LINK: it is 0, each
+    reference to it is reported, and the image is still written.  A
+    symbol referred to only weakly (.WEAK) is 0 without a warning.  An
+    image with no transfer address is written with a warning too.
+
+    With /TRACEBACK, the objects' traceback records become the image's
+    debug symbol table, after the image's other blocks, as VMS LINK
+    writes it.  The debugger reads it (SHOW CALLS names each routine and
+    line), and the image runs on VMS with VMS's symbolic traceback; govax
+    itself doesn't print a traceback yet when a program fails, only the
+    condition's message.  Debugger records (from MACRO/DEBUG) are skipped
+    unless the link is /DEBUG.
+
+    From the host shell, "govax link <object>..." runs this command, with
+    --executable <file>, --shareable, --no-executable, --symbol-table
+    <file>, --no-traceback, --debug, --no-syslib, --no-userlibrary, --map,
+    --map-file <file>, --brief, --full, --library <file>, or --options
+    <file>.
+
+    Examples:
+
+        MACRO "hello.mar"
+        LINK "hello"
+        RUN "hello.exe"
+
+        LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
+        LINK "hello"/MAP
+        LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS
+
+        LINK/SHAREABLE=MYSHR/MAP/FULL VECTOR,ROUTINES,MYSHR/OPTIONS
+        DEFINE MYSHR DUA0:[WORK]MYSHR.EXE
+        LINK MAIN,SYS$INPUT/OPTIONS     ! in a procedure, then the line:
+        MYSHR/SHAREABLE
+        RUN MAIN
+
+    See also the help for MACRO and RUN.

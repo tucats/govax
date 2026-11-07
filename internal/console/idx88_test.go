@@ -27,7 +27,7 @@ func runIdx88(t *testing.T) string {
 	// The program's lines as written: the usual dispatcher's joins them with
 	// "|", which records hold too.
 	c, buf := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	dispatch := func(line string) string {
 		t.Helper()
 		buf.Reset()

@@ -85,7 +85,7 @@ func TestShowImageFull_copied(t *testing.T) {
 	setSetting(t, machine.PagingSetting, "false")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	host := buildImage(t, c, "imap", imageMapSource)
 
 	if err := d.Dispatch(`RUN/DEBUG "` + host + `"`); err != nil {

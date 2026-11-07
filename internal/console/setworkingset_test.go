@@ -21,7 +21,7 @@ func wsDispatcher(t *testing.T) (*console.Console, func(string) string) {
 	t.Helper()
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	return c, func(line string) string {
 		t.Helper()

@@ -86,7 +86,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 // otherwise be looked for.
 func TestDispatch_runHost(t *testing.T) {
 	c := newBootableConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 	mountFreshContainer(t, c, "DUA0")
 
 	// RUN needs the kernel's shims, as runImage sets them up.

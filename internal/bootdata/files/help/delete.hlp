@@ -1,0 +1,73 @@
+1 DELETE
+    The DELETE command removes a file from a mounted ODS-2 volume and
+    reclaims its storage.
+
+    A DELETE file specification must name a version: an explicit version
+    number (;3), all versions (;*), or the newest version, written as ;0 or
+    as a semicolon with no number after it (FOO.TXT;).  Unlike DIRECTORY,
+    TYPE, and COPY, DELETE never defaults an omitted version to "the
+    newest one"; this matches real VMS DCL's own DELETE, which requires a
+    version to guard against accidentally deleting the wrong copy of a
+    file.
+
+    Several files may be deleted at once, their specifications separated
+    by commas or plus signs.  Each specification after the first takes
+    the device, directory, name, and type it leaves out from the one
+    before it, but never the version: DELETE A.TXT;1,;2,B;1 deletes
+    A.TXT;1, A.TXT;2, and B.TXT;1.  A specification that fails is
+    reported, and the rest are still deleted.
+
+    As VMS's DELETE, it says nothing of the files it deletes unless /LOG is
+    given.  A specification that finds no file is a warning:
+
+        %DELETE-W-SEARCHFAIL, error searching for DUA0:[WORK]X.TMP;*
+        -RMS-E-FNF, file not found
+
+    Syntax:
+
+        DELETE[/LOG] <file-spec>;<version>[,...]
+
+    Parameter:
+
+        <file-spec>;<version>[,...]
+                        The files, and versions, to delete.  <file-spec>
+                        may include wildcards in its name/type; any part
+                        left out of the first is filled in from the current
+                        default device/directory (see SET DEFAULT), and of
+                        the others from the specification before it.
+
+    Qualifier:
+
+        /LOG            Show each file deleted, and the blocks it had:
+                        %DELETE-I-FILDEL, DUA0:[WORK]FOO.TXT;1 deleted
+                        (3 blocks)
+
+    Examples:
+
+        DELETE FOO.TXT;1
+
+        DELETE FOO.TXT;
+
+        DELETE OLDFILE.DAT;*
+
+        DELETE A.LIS;*,B;*,C.OBJ;*
+
+        DEL *.TMP;1
+
+    See also the help for PURGE, DIRECTORY, and SET DEFAULT.
+2 /SYMBOL
+    The DELETE/SYMBOL command deletes a symbol (see HELP SYMBOL).
+
+    Syntax:
+
+        DELETE/SYMBOL [/LOCAL | /GLOBAL] symbol-name
+        DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL
+
+    The name may be any abbreviation the symbol allows.
+
+    Qualifiers:
+
+        /LOCAL          Delete from the local symbol table of the current
+                        command level (the default).
+        /GLOBAL         Delete from the global symbol table.
+        /ALL            Delete every symbol in the table, instead of one.

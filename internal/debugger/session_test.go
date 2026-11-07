@@ -21,7 +21,7 @@ func newRoutedSession(t *testing.T) (*console.Console, *console.Dispatcher, *deb
 
 	c, _ := newTestConsole(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	c.Dispatcher = d
 
 	return c, d, dbgOf(c)

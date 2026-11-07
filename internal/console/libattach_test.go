@@ -49,7 +49,7 @@ func attachConsole(t *testing.T, typed string) (*console.Console, func(string) s
 	t.Helper()
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if image := buildImage(t, c, "attach", attachSource); d.Dispatch("ATT :== $"+image) != nil {
 		t.Fatal("can't define ATT")

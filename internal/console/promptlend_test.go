@@ -19,7 +19,7 @@ func promptConsole(t *testing.T) (*console.Console, *bytes.Buffer, func(string))
 	t.Helper()
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	return c, out, func(line string) {
 		t.Helper()

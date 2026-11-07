@@ -40,7 +40,7 @@ func TestDispatch_stepAndGo(t *testing.T) {
 func TestDispatch_callStepQualifier(t *testing.T) {
 	c := newRunnableConsole(t)
 	g := consoletest.ConsoleGrammar(t)
-	d := console.NewDispatcher(c, g, nil)
+	d := console.NewDispatcher(c, g)
 
 	if err := d.DispatchConsole(`ASM "` + consoletest.RepoPath(t, "testdata", "asm", "xor.asm") + `"`); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
@@ -63,7 +63,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 
 	g := consoletest.ConsoleGrammar(t)
-	d := console.NewDispatcher(c, g, nil)
+	d := console.NewDispatcher(c, g)
 
 	src := "\t.entry\tdbltest, ^m<>\n\tmovl\t4(ap), r0\n\taddl2\tr0, r0\n\tret\n\t.end\n"
 	path := filepath.Join(t.TempDir(), "dbl_test.asm")

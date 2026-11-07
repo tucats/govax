@@ -76,6 +76,11 @@ type Change struct {
 	// SYSKEPT). The manifest then remembers that copy, so each new copy
 	// is reported once.
 	Notify bool
+
+	// KeptModules are, for a help library, the modules the user changed
+	// that govax's new copies didn't replace, to be reported as Notify's
+	// file is, each once per new copy (helplib.go).
+	KeptModules []string
 }
 
 // Report is what Refresh did.
@@ -225,6 +230,10 @@ func refreshFile(v Volume, m *Manifest, f File) (Change, error) {
 		change.Action = Written
 		m.Set(spec, ours)
 
+		if f.HelpLibrary {
+			return change, recordModules(m, spec, contents)
+		}
+
 		return change, nil
 	}
 
@@ -237,7 +246,14 @@ func refreshFile(v Volume, m *Manifest, f File) (Change, error) {
 
 		if !listed || recorded != ours {
 			m.Set(spec, ours)
+
+			if f.HelpLibrary {
+				return change, recordModules(m, spec, contents)
+			}
 		}
+
+	case f.HelpLibrary:
+		return refreshHelpLibrary(v, m, f, Join(records, f.Format), contents)
 
 	case listed && theirs == recorded:
 		if err := writeFile(v, f, contents); err != nil {

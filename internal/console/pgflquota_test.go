@@ -88,7 +88,7 @@ func TestPageFileQuotaServices(t *testing.T) {
 	pageFileSettings(t)
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	env := c.ProcessOne()
 
 	// The console's output shows what went wrong in the image.
@@ -370,7 +370,7 @@ func TestPageFileFullNotice(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.size", "20")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	exe := buildImage(t, c, "wspf", pfSource)
 

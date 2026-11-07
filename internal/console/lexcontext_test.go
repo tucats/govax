@@ -16,7 +16,7 @@ import (
 // and process 1 alone by NEQ.
 func TestLexicalContext_subprocess(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	forever := buildImage(t, c, "forever", strings.Replace(spinSource, "COUNT", "0", 1))
 

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -19,7 +18,7 @@ func newCommandDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 	t.Helper()
 
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), help.Parse("$HELP\nTop-level help.\n"))
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	buf.Reset()
 
@@ -66,14 +65,14 @@ func TestCommands_print(t *testing.T) {
 func TestCommands_helpAliases(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 
-	for _, line := range []string{"HELP", "HEL"} {
+	for _, line := range []string{"HELP/NOPROMPT", "HEL/NOPROMPT"} {
 		buf.Reset()
 
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}
 
-		if !strings.Contains(buf.String(), "Top-level help.") {
+		if !strings.Contains(buf.String(), "govax a VAX software emulator") {
 			t.Errorf("%s printed %q", line, buf.String())
 		}
 	}
@@ -166,7 +165,7 @@ func TestCommands_goIsNotConsole(t *testing.T) {
 // until the microkernel is in place and then says it is unrecognized.
 func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
 	c := newRunnableConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	// A stand-in microkernel: all that matters is that it defines
 	// EXE$INITIALIZE.

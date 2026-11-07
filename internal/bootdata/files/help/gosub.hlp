@@ -1,0 +1,25 @@
+1 GOSUB
+    The GOSUB command calls a subroutine at a label of the same command
+    procedure, and RETURN comes back to the command after the GOSUB.
+    The subroutine runs at the same command level: it sees the
+    procedure's labels and local symbols.
+
+    Syntax:
+
+        GOSUB label
+        RETURN [status]
+
+    GOSUBs may be nested 15 deep.  RETURN's status, an expression, becomes
+    $STATUS, and its message is shown if it's a failure, as EXIT's is;
+    without one, $STATUS is %X10000001.  A label that isn't found ends
+    the procedure (DCL-W-USGOSUB), and a RETURN with no GOSUB is
+    DCL-W-BADRET.  At the terminal, RETURN shows nothing: with a status,
+    $STATUS becomes it, and without one $STATUS is marked as shown.
+
+    Example:
+
+        $ GOSUB SHOW_COUNT
+        $ EXIT
+        $ SHOW_COUNT:
+        $ SHOW SYMBOL COUNT
+        $ RETURN

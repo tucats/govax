@@ -40,7 +40,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 
 	g.Bind(helpTOKEN, func(id int64, r *dcl.Result) error {
-		return d.Console.HelpCommand(d.Help, r)
+		return d.Console.HelpCommand(r)
 	})
 
 	g.Bind(runTOKEN, d.runCommand)

@@ -295,3 +295,74 @@ func (g *Grammar) Missing() []string {
 
 	return missing
 }
+
+// Qualifiers returns the names of every qualifier a command starting with
+// verb can take, sorted: the verb's own, its parameters', and those of
+// each syntax a qualifier or a keyword of its switches to (CREATE/FDL's,
+// SET's keywords'), so a check that a command's help covers its qualifiers
+// sees them all. An alias's are its target's; an unknown verb has none.
+func (g *Grammar) Qualifiers(verb string) []string {
+	e, ok := g.entries[upcase(verb)]
+	if !ok {
+		return nil
+	}
+
+	if e.aliasRef != nil {
+		e = e.aliasRef
+	}
+
+	seen := map[string]bool{}
+	visited := map[*Entry]bool{}
+
+	var walk func(e *Entry)
+
+	follow := func(name string) {
+		if t, ok := g.entries[upcase(name)]; ok && name != "" {
+			walk(t)
+		}
+	}
+
+	qualifiers := func(qs []*Qualifier) {
+		for _, q := range qs {
+			seen[upcase(q.Name)] = true
+			follow(q.Syntax)
+
+			if t := g.types[upcase(q.TypeName)]; t != nil {
+				for _, k := range t.Keywords {
+					follow(k.Syntax)
+				}
+			}
+		}
+	}
+
+	walk = func(e *Entry) {
+		if visited[e] {
+			return
+		}
+
+		visited[e] = true
+
+		qualifiers(e.Qualifiers)
+
+		for _, p := range e.Parameters {
+			qualifiers(p.Qualifiers)
+
+			if t := g.types[upcase(p.TypeName)]; t != nil {
+				for _, k := range t.Keywords {
+					follow(k.Syntax)
+				}
+			}
+		}
+	}
+
+	walk(e)
+
+	names := make([]string, 0, len(seen))
+	for n := range seen {
+		names = append(names, n)
+	}
+
+	sort.Strings(names)
+
+	return names
+}

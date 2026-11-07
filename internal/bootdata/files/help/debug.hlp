@@ -1,0 +1,26 @@
+1 DEBUG
+    The DEBUG command starts the debugger on the virtual VAX as it stands,
+    with nothing running.  It is the way to examine memory and the
+    registers, or set a breakpoint, before running a program (as typing
+    Ctrl/Y and then DEBUG does for a VMS process).
+
+    Syntax:
+
+        DEBUG
+
+    The prompt changes to DBG>.  The debugger is a separate command set,
+    modeled on the VMS debugger: EXAMINE, DEPOSIT, STEP, GO, SET BREAK,
+    SHOW CALLS, and so on.  The console's own commands (DIRECTORY, MACRO,
+    LINK, RUN, ...) aren't available at DBG>.  EXIT returns to the console,
+    leaving the machine as it is.  HELP at DBG> describes the debugger's
+    commands.
+
+    GO, CALL, and ASM (the assembler that puts code into memory) are the
+    debugger's commands, not the console's, for working with live code.  The
+    console's ASM is accepted only until the microkernel is in place, which
+    is how STARTUP.COM loads it.
+
+    The debugger also starts by itself when a program stops: a GO or CALL
+    that reaches a breakpoint, RUN/DEBUG, or an image linked /DEBUG.  A
+    program that runs to its end returns to the console prompt, and the
+    debugger doesn't appear.

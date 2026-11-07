@@ -28,7 +28,7 @@ func TestParameterPrompt(t *testing.T) {
 		t.Fatalf("Init: %v", err)
 	}
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if err := d.Dispatch("SHOW MEMORY"); err != nil {
 		t.Fatalf("SHOW MEMORY: %v", err)

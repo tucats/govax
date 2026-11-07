@@ -166,7 +166,7 @@ func boot(t *testing.T) (*console.Console, *console.Dispatcher, *bytes.Buffer) {
 	t.Chdir(t.TempDir())
 
 	c, buf := consoletest.New(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.RunHostProcedure("startup.com", d.Dispatch); err != nil {

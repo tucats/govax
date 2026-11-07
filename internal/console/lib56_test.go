@@ -129,7 +129,7 @@ func runLib56(t *testing.T) (uint32, string) {
 	c.Out = out
 	dir := t.TempDir()
 
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	for _, line := range []string{
 		"DEFINE/SYSTEM SYS$LANGUAGE ENGLISH",

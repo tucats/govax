@@ -183,7 +183,7 @@ func TestConsoleType_badFileSpec(t *testing.T) {
 func TestDispatch_typeViaDCL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	mountFreshContainer(t, c, "DUA0")
 
@@ -358,7 +358,7 @@ func TestConsoleType_hostPaged(t *testing.T) {
 func TestDispatch_typeHost(t *testing.T) {
 	for _, form := range []string{"TYPE/HOST %q", "TYPE %q/HOST", "TYPE/PAGE %q/HOST"} {
 		c, buf := newTestConsole(t)
-		d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+		d := NewDispatcher(c, loadEvaxGrammar(t))
 		c.ScreenSize = func() (int, int) { return 24, 0 }
 		path := writeHostTextFile(t, "notes.txt", "host notes\n")
 

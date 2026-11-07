@@ -97,7 +97,7 @@ func TestSchedulerRun_otherImageEnds(t *testing.T) {
 			two := startedLikeAnImage(t, c, otherCode, registers.User)
 
 			if tt.debugger {
-				debugger.Install(c, consoletest.DebugGrammar(t), nil)
+				debugger.Install(c, consoletest.DebugGrammar(t))
 			}
 
 			// The CALL runs process 1 in user mode (scheduledConsole set
@@ -160,7 +160,7 @@ func debuggedPair(t *testing.T, bp uint32) (*console.Console, *debugger.Debugger
 	c, _ := scheduledConsole(t, "5", counter())
 	two := handBuiltProcess(t, c, counter())
 
-	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	db := debugger.Install(c, consoletest.DebugGrammar(t))
 	db.AddBreakpoint(bp)
 
 	if err := c.Execute(nil); err != nil {
@@ -334,7 +334,7 @@ func TestSchedulerStop_inProcessTwo(t *testing.T) {
 	}
 
 	// The debugger's EXAMINE (its radix here is hexadecimal).
-	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	db := debugger.Install(c, consoletest.DebugGrammar(t))
 	out.Reset()
 
 	if err := db.Dispatch("EXAMINE 600"); err != nil {
@@ -383,7 +383,7 @@ func TestSchedulerStop_inProcessTwo(t *testing.T) {
 func TestSchedulerStop_debuggerExit(t *testing.T) {
 	c, _ := scheduledConsole(t, "5", counter())
 	two := handBuiltProcess(t, c, counter())
-	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	db := debugger.Install(c, consoletest.DebugGrammar(t))
 
 	if err := c.Debugger.Start(machine.Activation{Kind: machine.ActivateAttach}); err != nil {
 		t.Fatal(err)

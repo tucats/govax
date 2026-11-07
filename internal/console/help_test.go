@@ -1,130 +1,50 @@
-package console
+package console_test
 
 import (
-	"bufio"
-	"os"
-	"path/filepath"
-	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/help"
 )
 
-// vaxHelpPath returns the one true copy of vax.help --
-// internal/bootdata/files/vax.help, the file cmd/govax's own resolver
-// actually reads at runtime (main.go's `resolver.ReadFile("console.help")`).
-// A second, historical copy used to live at testdata/dcl/vax.help (a
-// git-archive import from the upstream C repo, like testdata/dcl/evax.dcl);
-// it was deleted so there is only one file to keep MOUNT/DISMOUNT's help
-// text (and everything else) up to date in, rather than two copies that
-// could silently drift apart -- see docs/PHASE-22.md.
-func vaxHelpPath(t *testing.T) string {
-	t.Helper()
+// This file holds govax's DCL help library (HELPLIB.HLB, built from
+// internal/bootdata/files/help) to the console's grammar (docs/PHASE-90 -
+// VMS help.md, Decision 10), and checks that topics an operator asks for
+// are there.
 
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-
-	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "console.help")
-}
-
-func TestLoadHelpFile_realFixture(t *testing.T) {
-	h, err := help.Load(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("LoadHelpFile: %v", err)
-	}
-
-	c, buf := newTestConsole(t)
-	buf.Reset()
-
-	if err := c.Help(h, []string{"SHOW", "LOGICAL"}); err != nil {
-		t.Fatalf("Help: %v", err)
-	}
-
-	got := buf.String()
-	if !strings.Contains(got, "logical") && !strings.Contains(got, "Logical") {
-		t.Errorf("output = %q, want it to mention logical names", got)
-	}
-}
-
-// TestLoadHelpFile_phase23Topics is docs/PHASE-23.md subtask 12's own
-// regression check for the vax.help topics it added: every HELP command
-// words combination an operator would actually type for this phase's new
-// console commands (both the fully spelled-out verb/qualifier and, where
-// this project's DCL grammar accepts one, its unambiguous abbreviation)
-// resolves to real body text -- not "No help available for that topic",
-// the easy failure mode for this file's own hand-maintained, exact-4-
-// character-padded "$"-key format (see help.go's own helpKey doc comment).
-func TestLoadHelpFile_phase23Topics(t *testing.T) {
-	h, err := help.Load(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("LoadHelpFile: %v", err)
-	}
-
-	cases := []struct {
-		words []string
-		want  string
-	}{
-		{[]string{"INITIALIZE"}, "required qualifier"},
-		{[]string{"INIT"}, "required qualifier"},
-		{[]string{"INITIALIZE", "/VAX"}, "INITIALIZE/VAX"},
-		{[]string{"INITIALIZE", "/CONTAINER"}, "INITIALIZE/CONTAINER"},
-		{[]string{"DIRECTORY"}, "DIRECTORY command lists files"},
-		{[]string{"DIR"}, "DIRECTORY command lists files"},
-		{[]string{"DELETE"}, "DELETE command removes a file"},
-		{[]string{"DEL"}, "DELETE command removes a file"},
-		{[]string{"PURGE"}, "PURGE command trims old versions"},
-		{[]string{"TYPE"}, "TYPE command writes"},
-		{[]string{"TYP"}, "TYPE command writes"},
-		{[]string{"COPY"}, "COPY command copies a file"},
-		{[]string{"SET", "DEFAULT"}, "SET DEFAULT command establishes"},
-		{[]string{"SE", "DEFAULT"}, "SET DEFAULT command establishes"},
-		{[]string{"SHOW", "DEFAULT"}, "SHOW DEFAULT command displays"},
-		{[]string{"SH", "DEFAULT"}, "SHOW DEFAULT command displays"},
-		{[]string{"CONFIG"}, "govax config set KEY=VALUE"},
-		{[]string{"CONFIGURATION"}, "govax config set KEY=VALUE"},
-		{[]string{"CONFIG", "KEYS"}, "vax.default.volume.file"},
-		{[]string{"CONFIG", "KEY"}, "vax.default.volume.directory"},
-	}
-
-	c, buf := newTestConsole(t)
-
-	for _, tc := range cases {
-		buf.Reset()
-
-		if err := c.Help(h, tc.words); err != nil {
-			t.Fatalf("Help(%v): %v", tc.words, err)
-		}
-
-		got := buf.String()
-		if strings.Contains(got, "No help available") {
-			t.Errorf("Help(%v) = %q, want real help text (got the \"no help\" fallback -- check this topic's $-key padding/spelling)", tc.words, got)
-
-			continue
-		}
-
-		if !strings.Contains(got, tc.want) {
-			t.Errorf("Help(%v) = %q, want it to contain %q", tc.words, got, tc.want)
-		}
-	}
-}
-
-// TestLoadHelpFile_phase68Topics checks that HELP RUN, LINK, and LIBRARY
-// describe shareable images (docs/PHASE-68, the close-out): how RUN finds
-// and checks them, and LINK's /SHAREABLE, its options, and its other new
-// qualifiers.
-func TestLoadHelpFile_phase68Topics(t *testing.T) {
-	h, err := help.Load(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("LoadHelpFile: %v", err)
-	}
+// TestHelpTopics: HELP finds each of these topics, by the whole words or
+// their abbreviations, and its text says what's expected.
+func TestHelpTopics(t *testing.T) {
+	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 
 	cases := []struct {
 		words []string
 		want  []string
 	}{
+		{[]string{"SHOW", "LOGICAL"}, []string{"logical names"}},
+		{[]string{"SH", "LOGI"}, []string{"logical names"}},
+		{[]string{"INITIALIZE"}, []string{"required qualifier"}},
+		{[]string{"INIT"}, []string{"required qualifier"}},
+		{[]string{"INITIALIZE", "/VAX"}, []string{"INITIALIZE/VAX"}},
+		{[]string{"INITIALIZE", "/CONTAINER"}, []string{"INITIALIZE/CONTAINER"}},
+		{[]string{"DIRECTORY"}, []string{"DIRECTORY command lists files"}},
+		{[]string{"DIR"}, []string{"DIRECTORY command lists files"}},
+		{[]string{"DELETE"}, []string{"DELETE command removes a file"}},
+		{[]string{"DELETE", "/SYMBOL"}, []string{"DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL"}},
+		{[]string{"PURGE"}, []string{"PURGE command trims old versions"}},
+		{[]string{"TYPE"}, []string{"TYPE command writes"}},
+		{[]string{"COPY"}, []string{"COPY command copies a file"}},
+		{[]string{"SET", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
+		{[]string{"SE", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
+		{[]string{"SHOW", "DEFAULT"}, []string{"SHOW DEFAULT command displays"}},
+		{[]string{"CONFIG"}, []string{"govax config set KEY=VALUE"}},
+		{[]string{"CONFIGURATION"}, []string{"govax config set KEY=VALUE"}},
+		{[]string{"CONFIG", "KEYS"}, []string{"vax.default.volume.file"}},
+		{[]string{"CONFIG", "KEY"}, []string{"vax.default.volume.directory"}},
 		{[]string{"RUN"}, []string{"SYS$SHARE:.EXE", "IMAGEFNF", "SHRIDMISMAT", "%DCL-E-NOTFR"}},
 		{[]string{"LINK"}, []string{
 			"/SHAREABLE[=<image>]", "/SYMBOL_TABLE[=<file>]", "/FULL",
@@ -133,113 +53,167 @@ func TestLoadHelpFile_phase68Topics(t *testing.T) {
 			"DZRO_MIN=<pages>", "ISD_MAX=<count>", "PROTECT=YES|NO",
 			"IOSEGMENT=<pages>", ".TRANSFER", "--shareable", "--symbol-table",
 		}},
-		{[]string{"LIBRARY"}, []string{"/SHARE"}},
+		{[]string{"LIBRARY"}, []string{"/SHARE", "/HELP"}},
 	}
 
-	c, buf := newTestConsole(t)
-
 	for _, tc := range cases {
-		buf.Reset()
+		got, found := consoletest.HelpText(t, lib, tc.words...)
+		if !found {
+			t.Errorf("HELP %s: no topic", strings.Join(tc.words, " "))
 
-		if err := c.Help(h, tc.words); err != nil {
-			t.Fatalf("Help(%v): %v", tc.words, err)
+			continue
 		}
 
-		got := buf.String()
 		for _, want := range tc.want {
 			if !strings.Contains(got, want) {
-				t.Errorf("Help(%v) doesn't mention %q", tc.words, want)
+				t.Errorf("HELP %s doesn't mention %q", strings.Join(tc.words, " "), want)
 			}
 		}
 	}
 }
 
-// TestLoadHelpFile_everyKeyResolves is a whole-file regression check for
-// the class of bug TestLoadHelpFile_phase23Topics originally caught: every
-// "$"-prefixed key line in the real vax.help file, reconstructed into the
-// HELP argument words an operator would actually type (each comma-
-// separated component of the raw key, trimmed of any hand-typed padding),
-// must resolve through Console.Help/helpKey back to real body text --
-// never the "No help available" fallback. Before this phase's fix to
-// normalizeHelpKey/normalizeHelpToken (help.go), roughly forty existing
-// topics in this file -- every one whose last key component was a bare
-// word under four characters (RUN, GO, DO, VM, ASM, PSL, XFC, SH, ST, EX,
-// among others) -- silently failed this exact check, because ParseHelp's
-// old plain strings.TrimSpace call discarded the very padding the file's
-// own preamble documents as required. This test parses the file itself
-// (independently of ParseHelp, deliberately -- it must not share that
-// function's own normalization logic, or a bug reintroduced into both
-// would go undetected) so it keeps checking real, independently-derived
-// queries against whatever normalizeHelpKey and helpKey resolve to.
-func TestLoadHelpFile_everyKeyResolves(t *testing.T) {
-	h, err := help.Load(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("LoadHelpFile: %v", err)
-	}
+// TestEveryVerbHasHelp: each verb of the console's grammar has a level-1
+// topic of HELPLIB.HLB (Decision 10). An alias shares its verb's topic.
+func TestEveryVerbHasHelp(t *testing.T) {
+	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 
-	f, err := os.Open(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	defer f.Close()
-
-	c, buf := newTestConsole(t)
-
-	seen := map[string]bool{}
-
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 0, 4096), 1<<20)
-
-	for sc.Scan() {
-		line := sc.Text()
-		if !strings.HasPrefix(line, "$") {
+	names, alias := consoletest.ConsoleGrammar(t).Verbs()
+	for i, verb := range names {
+		if alias[i] {
 			continue
 		}
 
-		raw := line[1:]
-		if seen[raw] {
-			continue
+		if _, found := consoletest.HelpText(t, lib, verb); !found {
+			t.Errorf("no help topic for the verb %s", verb)
 		}
-
-		seen[raw] = true
-
-		var words []string
-		for _, tok := range strings.Split(raw, ",") {
-			words = append(words, strings.TrimSpace(tok))
-		}
-
-		buf.Reset()
-
-		if err := c.Help(h, words); err != nil {
-			t.Fatalf("Help(%v) (from key %q): %v", words, raw, err)
-		}
-
-		if strings.Contains(buf.String(), "No help available") {
-			t.Errorf("Help(%v) (from key %q) = %q, want real help text", words, raw, buf.String())
-		}
-	}
-
-	if err := sc.Err(); err != nil {
-		t.Fatalf("scanning vax.help: %v", err)
 	}
 }
 
-// TestCmdHelp_qualifierWithoutSpace checks that HELP splits a qualifier
-// off the word it's attached to, as DCL does: HELP DELETE/SYMBOL is
-// HELP DELETE /SYMBOL, not DELE(TE/SYMBOL).
-func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
-	h, err := help.Load(vaxHelpPath(t))
-	if err != nil {
-		t.Fatalf("LoadHelpFile: %v", err)
+// qualifierHelpExceptions are the console's qualifiers whose verb's topic
+// doesn't name them yet, each with the reason: "VERB/QUALIFIER", or
+// "VERB/*" for all of a verb's. The help is still the old help's text
+// converted (Phase 90's subtask 7); subtask 8 rewrites it with a "/" line
+// for every qualifier, and empties this list.
+var qualifierHelpExceptions = map[string]string{
+	"ASSIGN/*":        "its topic says it takes DEFINE's qualifiers, which DEFINE's topic describes",
+	"DEASSIGN/LOG":    "the old help never described it",
+	"DEFINE/*":        "DEFINE/DEVICE's pseudodevice qualifiers were never described",
+	"HELP/*":          "the old help predates HELP's VMS qualifiers (Phase 90, subtask 6)",
+	"OPEN/HOST":       "the old help never described it",
+	"RUN/INIT":        "the old help never described it",
+	"SHOW/RUNTIME":    "the old help never described it",
+	"SHOW/STATISTICS": "the old help never described it",
+	"VMINIT/DEBUG":    "the old help never described it",
+	"VMINIT/LOG":      "the old help never described it",
+	"VMINIT/VERIFY":   "the old help never described it",
+}
+
+// TestEveryQualifierHasHelp: each qualifier a verb's grammar takes (its
+// syntaxes' too) is named somewhere in the verb's topic or below it, as
+// "/NAME" or "/[NO]NAME" (Decision 10), but for qualifierHelpExceptions.
+func TestEveryQualifierHasHelp(t *testing.T) {
+	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
+	g := consoletest.ConsoleGrammar(t)
+
+	names, alias := g.Verbs()
+
+	var missing []string
+
+	used := map[string]bool{}
+
+	for i, verb := range names {
+		if alias[i] {
+			continue
+		}
+
+		text := strings.ToUpper(topicText(lib, verb))
+
+		for _, q := range g.Qualifiers(verb) {
+			if qualifierNamed(text, q) {
+				continue
+			}
+
+			key := verb + "/" + q
+
+			switch {
+			case qualifierHelpExceptions[key] != "":
+				used[key] = true
+			case qualifierHelpExceptions[verb+"/*"] != "":
+				used[verb+"/*"] = true
+			default:
+				missing = append(missing, key)
+			}
+		}
 	}
 
-	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), h)
+	sort.Strings(missing)
+
+	for _, m := range missing {
+		t.Errorf("%s isn't in its verb's help", m)
+	}
+
+	for key := range qualifierHelpExceptions {
+		if !used[key] {
+			t.Errorf("qualifierHelpExceptions' %s is no longer needed", key)
+		}
+	}
+}
+
+// qualifierNamed reports whether text, upper-cased help, names the
+// qualifier q: "/Q", "/NOQ", or "/[NO]Q".
+func qualifierNamed(text, q string) bool {
+	for _, form := range []string{"/" + q, "/NO" + q, "/[NO]" + q} {
+		if strings.Contains(text, form) {
+			return true
+		}
+	}
+
+	return strings.HasPrefix(q, "NO") && strings.Contains(text, "/[NO]"+q[2:])
+}
+
+// topicText is every key and line of text in the module named name (as
+// a word abbreviating it finds it) and below.
+func topicText(lib help.Library, name string) string {
+	var b strings.Builder
+
+	var walk func(t *help.Topic)
+
+	walk = func(t *help.Topic) {
+		b.WriteString(t.Key + "\n")
+
+		for _, l := range t.Text {
+			b.WriteString(l + "\n")
+		}
+
+		for _, s := range t.Subtopics {
+			walk(s)
+		}
+	}
+
+	for _, n := range lib.Names() {
+		if strings.HasPrefix(strings.ToUpper(n), strings.ToUpper(name)) {
+			if t := lib.Module(n); t != nil {
+				walk(t)
+			}
+		}
+	}
+
+	return b.String()
+}
+
+// TestCmdHelp_qualifierWithoutSpace: HELP splits a qualifier off the word
+// it's attached to, as VMS's HELP does: HELP DELETE/SYMBOL is HELP DELETE
+// /SYMBOL.
+func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
+	var buf strings.Builder
+
+	c := console.New(&buf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	for _, arg := range []string{"DELETE/SYMBOL", "DELETE /SYMBOL", "DEL/SYM"} {
 		buf.Reset()
 
-		if err := d.Dispatch("HELP " + arg); err != nil {
+		if err := d.Dispatch("HELP/NOPROMPT " + arg); err != nil {
 			t.Fatalf("HELP %s: %v", arg, err)
 		}
 

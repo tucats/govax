@@ -26,7 +26,7 @@ func newShowDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 	}
 
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	return d, c, &buf
 }
@@ -51,7 +51,7 @@ func newShowRunnableDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buff
 	}
 
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	return d, c, &buf
 }

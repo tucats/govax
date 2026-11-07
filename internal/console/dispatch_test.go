@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 )
@@ -48,7 +47,7 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	return d, c
 }
@@ -59,7 +58,7 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 func TestDispatch_runActivatesImage(t *testing.T) {
 	c := newRunnableConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
@@ -139,7 +138,7 @@ func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 func TestDispatch_debugDCLTrace(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 	c.CPU.SetDebug(registers.DebugDCL)
 
 	if err := d.Dispatch("SHOW RADIX"); err != nil {
@@ -293,9 +292,8 @@ func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
 func TestDispatch_help(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	h := help.Parse("$HELP\nTop-level help.\n")
 
-	d := NewDispatcher(c, g, h)
+	d := NewDispatcher(c, g)
 	if err := d.Dispatch("HELP"); err != nil {
 		t.Fatalf("Dispatch(HELP): %v", err)
 	}
@@ -310,7 +308,7 @@ func TestDispatch_help(t *testing.T) {
 func TestDispatch_initializeVax(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	if err := d.Dispatch("INITIALIZE/VAX ^d20"); err != nil {
 		t.Fatalf("Dispatch(INITIALIZE/VAX): %v", err)
@@ -333,7 +331,7 @@ func TestDispatch_initializeVax(t *testing.T) {
 func TestDispatch_initAbbreviatesInitializeVax(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	d := NewDispatcher(c, g)
 
 	if err := d.Dispatch("INIT/VAX ^d20"); err != nil {
 		t.Fatalf("Dispatch(INIT/VAX): %v", err)

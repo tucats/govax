@@ -191,7 +191,7 @@ func TestCreateDirectoryOracle(t *testing.T) {
 	govaxDisk := filepath.Join(t.TempDir(), "credir-govax.dsk")
 
 	c, out := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	if err := c.cmd().InitializeContainer(govaxDisk, 0, "CREDIR", 0, "RD51"); err != nil {
 		t.Fatal(err)

@@ -73,7 +73,7 @@ func TestAdjwslWorkingSet(t *testing.T) {
 	setSetting(t, "vax.sysgen.pql_dwsdefault", "60")
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	if c.Mem.Paging() == nil {
 		t.Fatal("STARTUP.COM's VMINIT left paging off")

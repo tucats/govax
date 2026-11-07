@@ -469,7 +469,7 @@ func TestDispatch_dismountNotMountedViaDCL(t *testing.T) {
 // verbose.
 func TestDispatch_mountMessage(t *testing.T) {
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
 
@@ -505,7 +505,7 @@ func TestDispatch_mountMessage(t *testing.T) {
 // MOUNT/NOLOG still reports its error.
 func TestDispatch_mountNolog(t *testing.T) {
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
 

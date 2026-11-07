@@ -88,7 +88,7 @@ func buildCompiled(t *testing.T, commands func(file func(string) string) []strin
 	t.Helper()
 
 	c := newRunnableConsole(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	src, err := os.ReadFile(consoletest.RepoPath(t, "testdata", "dbg85", "dbg85.for"))
 	if err != nil {
@@ -201,7 +201,7 @@ func fortranSessionOf(t *testing.T, source, at string) *console.Console {
 	t.Helper()
 
 	c := newRunnableConsole(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
 	file := func(name string) string { return filepath.Join(dir, name) }
@@ -396,7 +396,7 @@ func TestFortranStatements(t *testing.T) {
 // TestFortranLoopRegister: a variable /OPTIMIZE keeps in a register during a loop says so.
 func TestFortranLoopRegister(t *testing.T) {
 	c := newRunnableConsole(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
 	file := func(name string) string { return filepath.Join(dir, name) }
@@ -440,7 +440,7 @@ func TestFortranLoopRegister(t *testing.T) {
 // program using FTNRTL doesn't list FTNRTL's modules (the survey's D8).
 func TestFortranShowModule(t *testing.T) {
 	c := newRunnableConsole(t)
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dir := t.TempDir()
 	file := func(name string) string { return filepath.Join(dir, name) }

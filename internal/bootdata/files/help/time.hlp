@@ -1,0 +1,15 @@
+1 TIME
+    The TIME command runs another console command and reports how long it
+    took.  With no command, it prints the time of day.
+
+    Syntax:
+
+        TIME [<command>]
+
+    Parameter:
+
+        <command>       Any console command.
+
+    Example:
+
+        TIME DIRECTORY

@@ -1,0 +1,32 @@
+1 DUMP
+    The DUMP command shows a file on a mounted volume in hexadecimal and as
+    text, as VMS's DUMP does: a virtual block at a time (the default, up
+    to the file's end-of-file block), or with /RECORD a record at a time,
+    each with its record's file address (RFA) and without a VFC record's
+    fixed control.  Each line shows 32 bytes: eight longwords in
+    hexadecimal, the highest first, so that each reads as a number; then
+    the bytes as text, lowest first, "." for one that isn't printable; then
+    the offset of the line's first byte.
+
+    Syntax:
+
+        DUMP [/BLOCKS[=range] | /RECORD[=range]] file-spec
+
+    Parameter:
+
+        file-spec       One file on a mounted volume (no wildcards); the
+                        newest version unless a version is given.
+
+    Qualifiers:
+
+        /BLOCKS[=(START:n, END:n, COUNT:n)]
+                        Show the file's blocks, from START (1) to END or
+                        for COUNT blocks.
+
+        /RECORD[=(START=n, END=n, COUNT=n)]
+                        Show the file's records, numbered from 1.
+
+    Examples:
+
+        DUMP/BLOCKS=COUNT:1 LOGIN.COM
+        DUMP/RECORD=(START=10,COUNT=5) DATA.DAT

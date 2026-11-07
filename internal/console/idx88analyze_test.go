@@ -75,7 +75,7 @@ func TestIdx88ReportsOracle(t *testing.T) {
 
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	c.RTL.NodeName = "SIMVAX"
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	dispatch := func(line string) {
 		t.Helper()
@@ -240,7 +240,7 @@ func TestIdx88CAnalyzeOracle(t *testing.T) {
 func TestAnalyzeRMSForms(t *testing.T) {
 	_, c := runIdx88C(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t))
 
 	host := filepath.Join(t.TempDir(), "plain.txt")
 	if err := os.WriteFile(host, []byte("a line\n"), 0o644); err != nil {

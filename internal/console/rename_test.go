@@ -15,7 +15,7 @@ func newRenameTestDispatcher(t *testing.T) (*Dispatcher, *bytes.Buffer) {
 	t.Helper()
 
 	c, out := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+	d := NewDispatcher(c, loadEvaxGrammar(t))
 
 	mountFreshContainer(t, c, "DUA0")
 
