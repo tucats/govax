@@ -1,0 +1,67 @@
+1 ALPHA
+   Text of ALPHA, level 1. ALPHA is the first of the probe's
+   topics.
+
+   Format
+
+     ALPHA filespec [count]
+
+
+2 Parameters
+
+
+filespec
+
+   Text of the parameter filespec.
+
+count
+
+   Text of the parameter count.
+
+
+2 Qualifiers
+
+
+/BRIEF
+
+      /BRIEF
+
+   Text of the qualifier /BRIEF.
+
+/COUNT
+
+      /COUNT=n
+
+   Text of the qualifier /COUNT.
+
+/NOCONFIRM
+
+   Text of the qualifier /NOCONFIRM.
+
+
+2 /DIRECT
+   Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+3 Example
+   Text of ALPHA /DIRECT Example.
+2 Description
+   Text of ALPHA Description.
+/NOTQUAL
+   The line above starts with a slash, outside Qualifiers.
+3 Details
+   Text of ALPHA Description Details.
+2 Examples
+   1.  $ ALPHA X.DAT
+
+       Text of ALPHA's first example.
+1 ALPHABET
+   Text of ALPHABET, level 1.
+2 Letters
+   Text of ALPHABET Letters.
+1 ALPS
+   Text of ALPS, level 1, with no subtopics.
+1 HELP
+   Text of the probe library's own HELP topic.
+2 Parameters
+   Text of HELP Parameters, in the probe library.
+2 /QUALIFIER
+   Text of HELP /QUALIFIER, in the probe library.

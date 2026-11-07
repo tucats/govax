@@ -500,3 +500,14 @@ planned now, and each round's findings may change the next:
   review"): VMS's DBG$HELP.HLB; the refresh by module; HELP's screen and
   message qualifiers later; LBR$'s writing routines as subtask 11; VMS's
   modules' logs local. Subtask 1 done.
+- **2026-11-07** — Subtask 2, the probe prepared: `testdata/help90`
+  (README.md). `gen.go` writes the probe's modules (our own text, each line
+  naming its topic), `help90.com` (parts A, B with 126 HELP requests, B2,
+  C, E, then D in `help90d.com`), `help90v.com` (F and G, local only),
+  `lbr90.mar` (79 cases of the LBR$ routines), and the exchange scripts.
+  `copyout.cmd` brings everything to `testdata/disks/help90-vms/`, and a
+  log goes to `vax/` only after a check that it holds none of VMS's text
+  (Decision 9). `lbr90.mar` was rehearsed on govax against stand-in LBR$
+  routines: it assembles with govax's MACRO, runs every case, and its
+  handler reports a fault and goes on. The README has round 2's terminal
+  session. Waiting for the VAX run.

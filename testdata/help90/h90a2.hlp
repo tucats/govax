@@ -1,0 +1,262 @@
+1 DEEP
+   Text of DEEP, level 1.
+2 L2
+   Text of DEEP L2, level 2.
+2 S2
+   Text of S2, L2's sibling at level 2.
+3 L3
+   Text of DEEP L2 L3, level 3.
+3 S3
+   Text of S3, L3's sibling at level 3.
+4 L4
+   Text of DEEP L2 L3 L4, level 4.
+4 S4
+   Text of S4, L4's sibling at level 4.
+5 L5
+   Text of DEEP L2 L3 L4 L5, level 5.
+5 S5
+   Text of S5, L5's sibling at level 5.
+6 L6
+   Text of DEEP L2 L3 L4 L5 L6, level 6.
+6 S6
+   Text of S6, L6's sibling at level 6.
+7 L7
+   Text of DEEP L2 L3 L4 L5 L6 L7, level 7.
+7 S7
+   Text of S7, L7's sibling at level 7.
+8 L8
+   Text of DEEP L2 L3 L4 L5 L6 L7 L8, level 8.
+8 S8
+   Text of S8, L8's sibling at level 8.
+9 L9
+   Text of DEEP L2 L3 L4 L5 L6 L7 L8 L9, level 9.
+9 S9
+   Text of S9, L9's sibling at level 9.
+1 WIDE
+   Text of WIDE: its subtopics' keys are 1 to 32 characters long.
+2 B
+   Text of WIDE B, a key of 1 characters.
+2 Cx
+   Text of WIDE Cx, a key of 2 characters.
+2 Dxx
+   Text of WIDE Dxx, a key of 3 characters.
+2 Exxx
+   Text of WIDE Exxx, a key of 4 characters.
+2 Fxxxx
+   Text of WIDE Fxxxx, a key of 5 characters.
+2 Gxxxxx
+   Text of WIDE Gxxxxx, a key of 6 characters.
+2 Hxxxxxx
+   Text of WIDE Hxxxxxx, a key of 7 characters.
+2 Ixxxxxxx
+   Text of WIDE Ixxxxxxx, a key of 8 characters.
+2 Jxxxxxxxx
+   Text of WIDE Jxxxxxxxx, a key of 9 characters.
+2 Kxxxxxxxxx
+   Text of WIDE Kxxxxxxxxx, a key of 10 characters.
+2 Lxxxxxxxxxx
+   Text of WIDE Lxxxxxxxxxx, a key of 11 characters.
+2 Mxxxxxxxxxxx
+   Text of WIDE Mxxxxxxxxxxx, a key of 12 characters.
+2 Nxxxxxxxxxxxx
+   Text of WIDE Nxxxxxxxxxxxx, a key of 13 characters.
+2 Oxxxxxxxxxxxxx
+   Text of WIDE Oxxxxxxxxxxxxx, a key of 14 characters.
+2 Pxxxxxxxxxxxxxx
+   Text of WIDE Pxxxxxxxxxxxxxx, a key of 15 characters.
+2 Qxxxxxxxxxxxxxxx
+   Text of WIDE Qxxxxxxxxxxxxxxx, a key of 16 characters.
+2 Rxxxxxxxxxxxxxxxx
+   Text of WIDE Rxxxxxxxxxxxxxxxx, a key of 17 characters.
+2 Sxxxxxxxxxxxxxxxxx
+   Text of WIDE Sxxxxxxxxxxxxxxxxx, a key of 18 characters.
+2 Uxxxxxxxxxxxxxxxxxxx
+   Text of WIDE Uxxxxxxxxxxxxxxxxxxx, a key of 20 characters.
+2 Yxxxxxxxxxxxxxxxxxxxxxxx
+   Text of WIDE Yxxxxxxxxxxxxxxxxxxxxxxx, a key of 24 characters.
+2 Cxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   Text of WIDE Cxxxxxxxxxxxxxxxxxxxxxxxxxxx, a key of 28 characters.
+2 Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   Text of WIDE Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx, a key of 32 characters.
+1 MANY
+   Text of MANY: forty subtopics of three characters.
+2 M01
+   Text of MANY M01.
+2 M02
+   Text of MANY M02.
+2 M03
+   Text of MANY M03.
+2 M04
+   Text of MANY M04.
+2 M05
+   Text of MANY M05.
+2 M06
+   Text of MANY M06.
+2 M07
+   Text of MANY M07.
+2 M08
+   Text of MANY M08.
+2 M09
+   Text of MANY M09.
+2 M10
+   Text of MANY M10.
+2 M11
+   Text of MANY M11.
+2 M12
+   Text of MANY M12.
+2 M13
+   Text of MANY M13.
+2 M14
+   Text of MANY M14.
+2 M15
+   Text of MANY M15.
+2 M16
+   Text of MANY M16.
+2 M17
+   Text of MANY M17.
+2 M18
+   Text of MANY M18.
+2 M19
+   Text of MANY M19.
+2 M20
+   Text of MANY M20.
+2 M21
+   Text of MANY M21.
+2 M22
+   Text of MANY M22.
+2 M23
+   Text of MANY M23.
+2 M24
+   Text of MANY M24.
+2 M25
+   Text of MANY M25.
+2 M26
+   Text of MANY M26.
+2 M27
+   Text of MANY M27.
+2 M28
+   Text of MANY M28.
+2 M29
+   Text of MANY M29.
+2 M30
+   Text of MANY M30.
+2 M31
+   Text of MANY M31.
+2 M32
+   Text of MANY M32.
+2 M33
+   Text of MANY M33.
+2 M34
+   Text of MANY M34.
+2 M35
+   Text of MANY M35.
+2 M36
+   Text of MANY M36.
+2 M37
+   Text of MANY M37.
+2 M38
+   Text of MANY M38.
+2 M39
+   Text of MANY M39.
+2 M40
+   Text of MANY M40.
+1 ORDER
+   Text of ORDER: its keys are out of order.
+2 Zebra
+   Text of ORDER Zebra.
+2 apple
+   Text of ORDER apple.
+2 Mango
+   Text of ORDER Mango.
+2 banana
+   Text of ORDER banana.
+2 _under
+   Text of ORDER _under.
+2 9nine
+   Text of ORDER 9nine.
+2 Apple2
+   Text of ORDER Apple2.
+2 zulu
+   Text of ORDER zulu.
+1 ODD
+   Text of ODD: keys with punctuation.
+2 @_(Paren_Name)
+   Text of ODD @_(Paren_Name).
+2 Key,_With_Comma
+   Text of ODD Key,_With_Comma.
+2 :=
+   Text of ODD :=.
+2 $DOLLAR
+   Text of ODD $DOLLAR.
+2 Two Words
+   Text of ODD Two Words.
+2 Slash/Inside
+   Text of ODD Slash/Inside.
+2 dot.name
+   Text of ODD dot.name.
+2 Plus+
+   Text of ODD Plus+.
+1 SAME
+   Text of SAME: the same key under two parents, and twice in one.
+2 P1
+   Text of SAME P1.
+3 Child
+   Text of SAME P1 Child.
+2 P2
+   Text of SAME P2.
+3 Child
+   Text of SAME P2 Child.
+2 Twice
+   Text of the first SAME Twice.
+2 Twice
+   Text of the second SAME Twice.
+2 Example
+   Text of SAME Example.
+2 Examples
+   Text of SAME Examples.
+1 TEXTY
+
+   Text of TEXTY follows an empty line.
+No indent on this line.
+	A tab begins this line.
+   Long line of TEXTY. Long line of TEXTY. Long line of TEXTY. Long line of TEXTY. Long line of TEXTY. end.
+
+   The line above holds one blank.
+10 apples is a line that starts with two digits.
+0 zero is a line that starts with a zero.
+   Quotes " and ' and an exclamation mark ! in the text.
+
+
+1 NOSUB
+   Text of NOSUB, a topic with no subtopics.
+1 EMPTY
+2 Child
+2 Other
+   Text of EMPTY Other; EMPTY and EMPTY Child have no text.
+1 MixedCase
+   Text of MixedCase, a level 1 key in mixed case.
+2 lowerSub
+   Text of MixedCase lowerSub.
+1 BETA_GAMMA
+   Text of BETA_GAMMA.
+1 QUALS
+   Text of QUALS.
+2 Command_Qualifiers
+/CQ1
+   Text of QUALS Command_Qualifiers /CQ1.
+/CQ2
+   Text of QUALS Command_Qualifiers /CQ2.
+2 Qual
+/QQ1
+   Text of QUALS Qual /QQ1, under a topic not named Qualifiers.
+2 Qualifiers
+   Text of QUALS Qualifiers, before its first slash line.
+ /INDENTED is a line with a slash after a blank.
+/[NO]FLAG
+   Text of QUALS /[NO]FLAG.
+/LAST
+   Text of QUALS /LAST.
+3 /SUB
+   Text of QUALS /SUB, a level 3 key after the slash lines.
+4 Deeper
+   Text of QUALS /SUB Deeper.

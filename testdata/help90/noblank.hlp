@@ -1,0 +1,10 @@
+1 NOBLANK
+   Text of NOBLANK.
+2Nospace
+   Text after a key line with no blank.
+2
+   Text after a bare level digit.
+2	Tabbed
+   Text after a key line with a tab.
+2 Last
+   Text of NOBLANK Last.

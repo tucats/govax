@@ -1,0 +1,28 @@
+1 DEBUG
+   Text of the probe's DEBUG module, level 1.
+2 Probe_Concept
+   Text of Probe_Concept (probe).
+2 EXAMINE
+   Text of EXAMINE (probe).
+3 Parameters
+   Text of EXAMINE Parameters (probe).
+3 Qualifiers
+/ASCII
+   Text of EXAMINE /ASCII (probe).
+/HEX
+   Text of EXAMINE /HEX (probe).
+3 Examples
+   Text of EXAMINE Examples (probe).
+2 EXIT
+   Text of EXIT (probe).
+2 SET
+   Text of SET (probe).
+3 BREAK
+   Text of SET BREAK (probe).
+4 Qualifiers
+/AFTER
+   Text of SET BREAK /AFTER (probe).
+3 MODE
+   Text of SET MODE (probe).
+1 EXTRA
+   Text of EXTRA, a second module in the probe's debugger library.

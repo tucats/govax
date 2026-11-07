@@ -1,0 +1,6 @@
+	.TITLE	DBGT - an image for the debugger's HELP
+	.PSECT	C,EXE,NOWRT
+	.ENTRY	START,^M<>
+	MOVL	#1,R0
+	RET
+	.END	START
