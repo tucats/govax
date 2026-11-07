@@ -771,7 +771,8 @@ Scope):
    (done 2026-11-07); (b)
    DCL itself (symbols, procedures, flow, lexicals, file I/O) (done
    2026-11-07); (c) the
-   programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN); (d)
+   programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN) (done
+   2026-11-07); (d)
    govax's own topics and the machine's commands, HELP, INSTRUCTIONS, and
    HINTS.
 9. The debugger's help rewritten as the DEBUG module, and the debugger's
@@ -1162,3 +1163,29 @@ Scope):
   OPEN/HOST; `TestHelpTopics` looks up the new shapes (`=`, `:=`, a
   lexical by abbreviation, DEFINE /DEVICE's qualifiers, SPAWN
   /[NO]WAIT). Subtask 8b done.
+- **2026-11-07** — Subtask 8c, the programming tools rewritten: MACRO,
+  LINK, LIBRARY, ANALYZE, FORTRAN, and RUN, in 8a's shape. Each has
+  Parameter, Description, Qualifiers (a `/` line for every qualifier,
+  the positional ones too: LINK's `/LIBRARY`, `/INCLUDE`,
+  `/SELECTIVE_SEARCH`, `/OPTIONS`, FORTRAN's `/LIBRARY`, LIBRARY's
+  `/MODULE`), and Examples. What was a long run of prose became
+  subtopics of govax's own beside VMS's: LINK's `Options_file` and
+  `Shareable_images`, RUN's `Shareable_images`, FORTRAN's `Language`,
+  `Programs`, and `FTNRTL`. ANALYZE takes the VMS shape A.2 describes,
+  a `2 /IMAGE`, `/OBJECT`, and `/RMS_FILE` form each, with their own
+  Parameter, Qualifiers (each of /OBJECT's record kinds a line of its
+  own), and Examples. MACRO's Parameter holds the rules for finding a
+  file on the host or a volume, which the other five refer to. The
+  host shell's options (`govax macro ...`) stay, in each Description.
+  Rewriting checked each claim against govax: RUN's /[NO]INIT, never
+  described, runs each shareable image's LIB$INITIALIZE, by default as
+  SET DEBUG's LIBINIT switch says; RUN finds FTNRTL last, built in, as
+  a fourth rule; LINK's old text said govax printed no traceback dump,
+  which Phase 70 made untrue; FORTRAN's message example showed an ENCODE
+  line under DICTIONARY's message; LIBRARY takes wildcard inputs (subtask
+  7) and makes help libraries, both missing from its text. RUN's /BREAK
+  and /STEP, aliases of /DEBUG, each have a line saying so.
+  The tests: the six verbs join `rewrittenHelp`, RUN/INIT leaves
+  `qualifierHelpExceptions`, and `TestHelpTopics`' RUN, LINK, and
+  LIBRARY cases look in the subtopics where the text now is.
+  Subtask 8c done.

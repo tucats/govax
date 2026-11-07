@@ -1,127 +1,190 @@
 1 LIBRARY
-    The LIBRARY command creates, changes, lists, and extracts from VAX/VMS
-    libraries, in the style of VMS's LIBRARIAN: macro libraries (.MLB),
-    which MACRO searches for macros, and object libraries (.OLB), which
-    LINK searches for modules.  govax writes libraries as LIBRARIAN lays
-    them out, so a library made here works on VMS, and VMS's work here.
 
-    Syntax:
+   Creates, changes, lists, and extracts from VAX/VMS libraries, as
+   VMS's LIBRARIAN does: object libraries (.OLB), which LINK searches for
+   modules; macro libraries (.MLB), which MACRO searches for macros;
+   shareable image libraries, which LINK searches for images; text
+   libraries (.TLB), which FORTRAN's INCLUDE reads; and help libraries
+   (.HLB), which HELP reads.  govax writes libraries as LIBRARIAN lays
+   them out, so a library made here works on VMS, and VMS's work here.
 
-        LIBRARY <library>[/HOST] [<input>[,...][/HOST]] [qualifiers...]
+   Format
 
-    Parameters:
+     LIBRARY library-file [input-file[,...]]
 
-        <library>       The library file.  Without a file type it is .OLB,
-                        .MLB with /MACRO, .TLB with /TEXT, or .HLB with
-                        /HELP.  It can be a host file or a
-                        file on a mounted volume, by the rules MACRO uses
-                        for its source (see HELP MACRO).
+2 Parameters
 
-        <input>         Files whose modules go into the library: macro
-                        source (.MAR, the default type for a macro
-                        library), one module for each macro, or object
-                        files (.OBJ, the default for an object library),
-                        one module for each object module, or shareable
-                        images (.EXE, the default for a shareable image
-                        library), one module each, holding the image's
-                        name, ident, and universal symbols, or text files
-                        (.TXT, the default for a text library), one module
-                        each, of the file's records, named for the file or
-                        by /MODULE=<name> after its name, or help files
-                        (.HLP, the default for a help library), one module
-                        for each level-1 key line ("1 KEY").  A bare name
-                        is found beside the input before it.  With input
-                        files and no operation named, their modules
-                        replace any of the same names, as LIBRARIAN's
-                        default /REPLACE does.
+ library-file
 
-    Qualifiers:
+   The library.  Without a file type it is .OLB, .MLB with /MACRO, .TLB
+   with /TEXT, or .HLB with /HELP.  It can be a host file or a file on a
+   mounted volume, by MACRO's rules (see MACRO Parameter).
 
-        /CREATE[=(<option>:<n>,...)]
-                        Creates a new library (a new version on a volume),
-                        then inserts any input files' modules.  The options
-                        are BLOCKS (which has no effect), GLOBALS, HISTORY,
-                        KEYSIZE, and MODULES.
+ input-file[,...]
 
-        /INSERT         Inserts the input files' modules.  A module
-                        already in the library is a warning, and is left
-                        as it is (in a text library, an error that ends
-                        the command).
+   Files whose modules go into the library:
 
-        /REPLACE        Replaces modules with the input files' ones of the
-                        same names, inserting the rest.  The default.
+     - macro source (.MAR, the default type for a macro library), a
+       module for each macro;
+     - object files (.OBJ, the default for an object library), a module
+       for each object module;
+     - shareable images (.EXE, the default for a shareable image
+       library), a module each, holding the image's name, ident, and
+       universal symbols;
+     - text files (.TXT, the default for a text library), a module each,
+       of the file's records, named for the file or by /MODULE;
+     - help files (.HLP, the default for a help library), a module for
+       each level-1 key line ("1 KEY").
 
-        /DELETE=(<module>,...)
-                        Deletes modules.  Names may hold the wildcards *
-                        and %.  Deletions are done before any insertions.
+   An input file may have wildcards: each file it matches is an input,
+   in the directory's order.  A bare name is found beside the input
+   before it.  With input files and no operation named, their modules
+   replace any of the same names, as LIBRARIAN's default /REPLACE does.
 
-        /EXTRACT=(<module>,...)
-                        Copies modules out of the library, to the file
-                        /OUTPUT= names (by default, the library's name
-                        with the type .MAR, .OBJ, .TXT, or .HLP).  Names may
-                        hold * and %.  /OUTPUT=SYS$OUTPUT shows a text,
-                        macro, or help module.
+2 Description
 
-        /LIST[=<file>]  Lists the library: its header, then its modules.
-                        Without a file name, the listing goes to the
-                        console; a file's default type is .LIS.
+   LIBRARIAN changes a library in place; LIBRARY builds the whole
+   library and writes it only when every step has succeeded, so an error
+   leaves the library as it was (but a help file's bad key line, as on
+   VMS, ends only that file's reading).  A changed library keeps its name
+   and version, and no update history.  /COMPRESS and /DATA aren't
+   implemented.
 
-        /FULL           With /LIST, adds each module's ident, insertion
-                        time, and number of global symbols.
+   From the host shell, "govax library library-file [input-file...]"
+   runs this command, with --create, --insert, --replace, --delete,
+   --extract, --output, --list, --list-file, --full, --names, --macro,
+   --object, --share, --text, --no-squeeze, --selective-search, and
+   --log.
 
-        /NAMES          With /LIST, adds each object module's global
-                        symbols.
+2 Qualifiers
+/CREATE[=(option:n[,...])]
 
-        /WIDTH=<n>      The width of a /NAMES listing (80 on the console,
-                        132 in a file).
+   Creates a new library (a new version on a volume), then inserts any
+   input files' modules.  The options are BLOCKS (which has no effect),
+   GLOBALS, HISTORY, KEYSIZE, and MODULES.
 
-        /MACRO          A macro library.  /OBJECT (the default) is an
-                        object library, and /SHARE a shareable image
-                        library, which LINK searches for the images that
-                        define symbols (see HELP LINK), and /TEXT a text
-                        library, which FORTRAN's INCLUDE reads (see HELP
-                        FORTRAN), and /HELP a help library.  These choose a new library's type; an existing library keeps its
-                        own.
+/DELETE=(module[,...])
 
-        /NOSQUEEZE      Keeps macros' comments and trailing blanks.  By
-                        default they're removed, as LIBRARIAN's /SQUEEZE
-                        does, except on .MACRO, .ERROR, .WARN, .PRINT,
-                        and .IIF lines.
+   Deletes modules.  Names may hold the wildcards * and %.  Deletions
+   are done before any insertions.
 
-        /SELECTIVE_SEARCH
-                        Marks inserted object modules for selective
-                        search: LINK takes from them only symbols already
-                        referred to.
+/EXTRACT=(module[,...])
 
-        /LOG            Reports each module inserted, replaced, or
-                        deleted.
+   Copies modules out of the library, to the file /OUTPUT names (by
+   default, the library's name with the type .MAR, .OBJ, .TXT, or .HLP).
+   Names may hold * and %.  /OUTPUT=SYS$OUTPUT shows a text, macro, or
+   help module.
 
-    LIBRARIAN changes a library in place; LIBRARY builds the whole library
-    and writes it only when every step has succeeded, so an error leaves
-    the library as it was; but a help file's bad key line, as on VMS, ends
-    only that file's reading.  A changed library keeps its name and version,
-    and no update history.  /COMPRESS and /DATA aren't implemented.
+/FULL
 
-    From the host shell, "govax library <library> [<input>...]" runs this
-    command, with --create, --insert, --replace, --delete, --extract,
-    --output, --list, --list-file, --full, --names, --macro, --object,
-    --share, --text, --no-squeeze, --selective-search, and --log.
+   With /LIST, adds each module's ident, insertion time, and number of
+   global symbols.
 
-    Examples:
+/HELP
 
-        LIBRARY/CREATE/MACRO "mymacros" "mymacros.mar"
-        MACRO "prog.mar"/LIBRARY=("mymacros")
+   A new library is a help library.
 
-        LIBRARY/CREATE DUA0:[LIB]SUBS SUB1,SUB2
-        LINK MAIN,DUA0:[LIB]SUBS/LIBRARY
+/HOST
 
-        LIBRARY/LIST/FULL/NAMES DUA0:[LIB]SUBS
-        LIBRARY/EXTRACT=(ADD*)/OUTPUT="adds.mar" "mymacros.mlb"
+   After the library or an input file, makes it a host path, whatever
+   it looks like.
 
-        LIBRARY/CREATE/SHARE DUA0:[LIB]MYSHR SHR1.EXE,SHR2.EXE
+/INSERT
 
-        LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
-        DEFINE LNK$LIBRARY DUA0:[LIB]MYSHR.OLB
-        LINK MAIN
+   Inserts the input files' modules.  A module already in the library is
+   a warning, and is left as it is (in a text library, an error that
+   ends the command).
 
-    See also the help for MACRO and LINK.
+/LIST[=filespec]
+
+   Lists the library: its header, then its modules.  Without a file
+   name, the listing goes to the terminal; a file's default type is
+   .LIS.
+
+/LOG
+
+   Reports each module inserted, replaced, or deleted.
+
+/MACRO
+
+   A new library is a macro library.
+
+/MODULE=name
+
+   After a text file, names its module; by default the module is named
+   for the file.
+
+/NAMES
+
+   With /LIST, adds each object module's global symbols.
+
+/OBJECT
+
+   A new library is an object library (the default).
+
+/OUTPUT=filespec
+
+   Where /EXTRACT writes the modules.
+
+/REPLACE
+
+   Replaces modules with the input files' ones of the same names,
+   inserting the rest (the default).
+
+/SELECTIVE_SEARCH
+
+   Marks inserted object modules for selective search: LINK takes from
+   them only symbols already referred to.
+
+/SHARE
+
+   A new library is a shareable image library, which LINK searches for
+   the images that define symbols.
+
+/[NO]SQUEEZE
+
+   /SQUEEZE, the default, removes macros' comments and trailing blanks,
+   as LIBRARIAN does, except on .MACRO, .ERROR, .WARN, .PRINT, and .IIF
+   lines.  /NOSQUEEZE keeps them.
+
+/TEXT
+
+   A new library is a text library.
+
+/WIDTH=n
+
+   The width of a /NAMES listing (80 at the terminal, 132 in a file).
+
+2 Examples
+
+   1.$ LIBRARY/CREATE/MACRO MYMACROS MYMACROS.MAR
+     $ MACRO PROG /LIBRARY=(MYMACROS)
+
+     Makes a macro library, and assembles a program that uses it.
+
+   2.$ LIBRARY/CREATE DUA1:[LIB]SUBS SUB1,SUB2
+     $ LINK MAIN,DUA1:[LIB]SUBS/LIBRARY
+
+     Makes an object library, and links a program against it.
+
+   3.$ LIBRARY/LIST/FULL/NAMES DUA1:[LIB]SUBS
+
+     Lists the library's modules and their symbols.
+
+   4.$ LIBRARY/EXTRACT=(ADD*)/OUTPUT="adds.mar" MYMACROS
+
+     Copies the macros whose names start with ADD to a host file.
+
+   5.$ LIBRARY/CREATE/SHARE DUA1:[LIB]MYSHR SHR1.EXE,SHR2.EXE
+     $ DEFINE LNK$LIBRARY DUA1:[LIB]MYSHR.OLB
+     $ LINK MAIN
+
+     Makes a shareable image library, which LINK then searches.
+
+   6.$ LIBRARY/CREATE/TEXT MYDEFS LIMITS.TXT,TIMES.TXT/MODULE=$TIMES
+
+     Makes a text library of two modules, LIMITS and $TIMES.
+
+   7.$ LIBRARY/CREATE/HELP MYHELP TOOLS.HLP,NOTES.HLP
+
+     Makes a help library.

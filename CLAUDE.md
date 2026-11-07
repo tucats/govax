@@ -729,7 +729,9 @@ never had.
   itself the same way (logical names with DEFINE `/DEVICE`, procedures
   and their flow, file I/O, processes); SYMBOL is VMS's `Symbol_Assign`
   beside `=` and `:=`, and LEXICAL is `Lexicals`, a topic per function
-  (`TestEveryLexicalHasHelp`).
+  (`TestEveryLexicalHasHelp`). Subtask 8c (done 2026-11-07) is the
+  programming tools (MACRO, LINK, LIBRARY, ANALYZE in a form per
+  qualifier, FORTRAN, RUN).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

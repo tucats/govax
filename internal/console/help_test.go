@@ -49,15 +49,26 @@ func TestHelpTopics(t *testing.T) {
 		{[]string{"CONFIGURATION"}, []string{"govax config set KEY=VALUE"}},
 		{[]string{"CONFIG", "KEYS"}, []string{"vax.default.volume.file"}},
 		{[]string{"CONFIG", "KEY"}, []string{"vax.default.volume.directory"}},
-		{[]string{"RUN"}, []string{"SYS$SHARE:.EXE", "IMAGEFNF", "SHRIDMISMAT", "%DCL-E-NOTFR"}},
-		{[]string{"LINK"}, []string{
-			"/SHAREABLE[=<image>]", "/SYMBOL_TABLE[=<file>]", "/FULL",
-			"UNIVERSAL=<name>", "GSMATCH=<match>,<major>,<minor>", "CLUSTER=<name>",
-			"COLLECT=<cluster>", "PSECT_ATTR=<psect>", "BASE=<address>",
-			"DZRO_MIN=<pages>", "ISD_MAX=<count>", "PROTECT=YES|NO",
-			"IOSEGMENT=<pages>", ".TRANSFER", "--shareable", "--symbol-table",
+		{[]string{"RUN", "Shareable_images"}, []string{"SYS$SHARE:.EXE", "IMAGEFNF", "SHRIDMISMAT"}},
+		{[]string{"RUN", "Description"}, []string{"%DCL-E-NOTFR"}},
+		{[]string{"RUN", "Qualifiers", "/[NO]INIT"}, []string{"LIB$INITIALIZE"}},
+		{[]string{"LINK", "Qualifiers", "/SHAREABLE"}, []string{"universal symbols"}},
+		{[]string{"LINK", "Qualifiers", "/SYMBOL_TABLE"}, []string{"STB"}},
+		{[]string{"LINK", "Options_file"}, []string{
+			"UNIVERSAL=name", "GSMATCH=match,major,minor", "CLUSTER=name",
+			"COLLECT=cluster", "PSECT_ATTR=psect", "BASE=address",
+			"DZRO_MIN=pages", "ISD_MAX=count", "PROTECT=YES|NO",
+			"IOSEGMENT=pages",
 		}},
-		{[]string{"LIBRARY"}, []string{"/SHARE", "/HELP"}},
+		{[]string{"LINK", "Shareable_images"}, []string{".TRANSFER"}},
+		{[]string{"LINK", "Description"}, []string{"--shareable", "--symbol-table"}},
+		{[]string{"MACRO", "Qualifiers", "/[NO]SHOW"}, []string{"EXPANSIONS (ME)"}},
+		{[]string{"ANALYZE", "/RMS_FILE", "Qualifiers", "/FDL"}, []string{"CREATE/FDL"}},
+		{[]string{"ANALYZE", "/OBJECT"}, []string{"ANALYZE/OBJECT filespec"}},
+		{[]string{"FORTRAN", "FTNRTL"}, []string{"BUILDFTN.COM"}},
+		{[]string{"FORTRAN", "Qualifiers", "/[NO]RECURSIVE"}, []string{"stack frame"}},
+		{[]string{"LIBRARY", "Qualifiers", "/HELP"}, []string{"help library"}},
+		{[]string{"LIBRARY"}, []string{"shareable image libraries", "help libraries"}},
 		{[]string{"SYMBOL"}, []string{"symbol-name :=[=] string"}},
 		{[]string{"SYMBOL", "EXPRESSIONS"}, []string{".EQS. .NES."}},
 		{[]string{"Symbol_Assign", "Substitution"}, []string{"&NAME"}},
@@ -116,7 +127,6 @@ func TestEveryVerbHasHelp(t *testing.T) {
 // for every qualifier, and empties this list.
 var qualifierHelpExceptions = map[string]string{
 	"HELP/*":          "the old help predates HELP's VMS qualifiers (Phase 90, subtask 6)",
-	"RUN/INIT":        "the old help never described it",
 	"SHOW/RUNTIME":    "the old help never described it",
 	"SHOW/STATISTICS": "the old help never described it",
 	"VMINIT/DEBUG":    "the old help never described it",
@@ -145,6 +155,10 @@ var rewrittenHelp = map[string]bool{
 	"LOGOUT": true, "MCR": true, "ON": true, "OPEN": true, "READ": true,
 	"RETURN": true, "SPAWN": true, "STOP": true, "SUBROUTINE": true,
 	"THEN": true, "WAIT": true, "WRITE": true,
+
+	// Subtask 8c: the programming tools.
+	"ANALYZE": true, "FORTRAN": true, "LIBRARY": true, "LINK": true,
+	"MACRO": true, "RUN": true,
 }
 
 // TestEveryQualifierHasHelp: each qualifier a verb's grammar takes (its

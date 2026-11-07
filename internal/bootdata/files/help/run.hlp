@@ -1,194 +1,132 @@
 1 RUN
-    The RUN command loads a VAX/VMS executable image into memory, activates
-    the shareable images it was linked against, and runs it.  This command
-    assumes that a VMINIT has been run, and the standard micro-kernel
-    (kernel.asm) has been loaded and initialized.  The shareable images are
-    activated as VMS's image activator activates images that aren't
-    installed (see "Shareable images" below).
 
-    The image is started at its transfer address.  A shareable image (one
-    LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR, "no
-    transfer address", as on VMS.
+   Loads a VAX/VMS executable image, activates the shareable images it
+   was linked against, and runs it.
 
-    If the optional /DEBUG qualifier is used, the image is loaded and then run
-    under the debugger, which stops it at the first instruction of its main
-    routine (after the entry mask) and prompts with DBG>.  GO continues it;
-    STEP, SET BREAK, EXAMINE, and the rest are the debugger's commands.  An
-    image linked with /DEBUG (LINK/DEBUG) starts the debugger the same way,
-    unless RUN/NODEBUG says not to.  An image linked /NOTRACEBACK has no symbols for
-    the debugger, and runs without it.  /STEP and /BREAK are
-    synonyms of /DEBUG, and /NOEXECUTE loads the image without running it.
+   Format
 
-    Syntax:
+     RUN filespec
 
-        RUN [/DEBUG|/NODEBUG] [/NOEXECUTE] <image-name>[/HOST]
+2 Parameter
 
-    Parameter:
+ filespec
 
-        <image-name>    An image file, on the native system or on a mounted
-                        ODS-2 volume, by the same rules as MACRO's and LINK's
-                        files (see HELP MACRO): a VMS file specification
-                        (DUA0:[PROGS]HELLO.EXE), or a bare name while SET
-                        DEFAULT is on a volume, is a file on the volume, with
-                        the type EXE if it has none.  Anything else, or any
-                        name followed by /HOST, is a native file.  An image
-                        made on a VAX can be copied to the native system in
-                        binary mode, or read in place from its disk.
+   The image, on a mounted volume or on the host, by MACRO's rules for
+   files (see MACRO Parameter): a VMS file specification
+   (DUA1:[PROGS]HELLO.EXE), or a bare name while SET DEFAULT is on a
+   volume, is a file on the volume, with the type EXE if it has none.
+   Anything else, or any name followed by /HOST, is a host file; quote
+   it to keep its case.  An image made on a VAX can be copied to the
+   host in binary mode, or read in place from its disk.
 
-                        If the native file system is case sensitive, the name may
-                        need to be enclosed in quotes to preserve case.
+2 Description
 
-    Shareable images:
+   The image is started at its transfer address.  A shareable image
+   (one LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR,
+   "no transfer address", as on VMS.  RUN needs a VMINIT and the
+   microkernel loaded and initialized, as STARTUP.COM does.
 
-    Each shareable image the program names (in its shareable image list,
-    and those images' own lists in turn) is found, checked, and placed in
-    the process's P0 space before the program runs.  An image is found
-    by these rules, in order:
+   RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
+   string.  To pass an image text, run it as a foreign command (see
+   FOREIGN) or with MCR, or give the text after the file name on govax's
+   own command line ("govax run forth.exe 2 3 + .").
 
-        1. An image govax stands for (LIBRTL, LIBRTL2, MTHRTL, the system's
-           run-time libraries, ...) is govax's own routines, unless a
-           logical name of the image's own name is defined: DEFINE
-           LIBRTL DUA1:[X]LIBRTL.EXE asks for that file instead.
-        2. The image's name parsed with the default SYS$SHARE:.EXE, as
-           VMS's activator does: a logical name of the image's name
-           (DEFINE MYSHR DUA0:[LIB]MYSHR.EXE) leads to its file, with any
-           fields it lacks taken from SYS$SHARE; otherwise SYS$SHARE does,
-           each place of a search list in turn.  With a system volume,
-           its STARTUP.COM defines SYS$SHARE as its [SYSTEM.SYSLIB]
-           directory, where FTNRTL.EXE is; define it as a search list, in
-           SYS$MANAGER:SYSTARTUP_VMS.COM say, to keep shareable images of
-           your own on another volume too.
-        3. The host: the host library directory (the vax.library
-           setting), then the name as given, each as written and then in
-           lower case.
+2 Shareable_images
 
-    An image no rule finds stops the activation, as on VMS:
+   Each shareable image the program names (in its shareable image list,
+   and those images' own lists in turn) is found, checked, and placed in
+   the process's P0 space before the program runs, as VMS's image
+   activator does for images that aren't installed.  An image is found by
+   these rules, in order:
 
-        %DCL-W-ACTIMAGE, error activating image MYSHR
-        -CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]MYSHR.EXE;
+     1. An image govax stands for (LIBRTL, LIBRTL2, MTHRTL, the system's
+        run-time libraries, ...) is govax's own routines, unless a
+        logical name of the image's own name is defined: DEFINE LIBRTL
+        DUA1:[X]LIBRTL.EXE asks for that file instead.
+     2. The image's name parsed with the default SYS$SHARE:.EXE, as VMS's
+        activator does: a logical name of the image's name (DEFINE MYSHR
+        DUA1:[LIB]MYSHR.EXE) leads to its file, with any fields it lacks
+        taken from SYS$SHARE; otherwise SYS$SHARE does, each place of a
+        search list in turn.  With a system volume, STARTUP.COM defines
+        SYS$SHARE as its [SYSTEM.SYSLIB] directory, where FTNRTL.EXE is;
+        define it as a search list, in SYS$MANAGER:SYSTARTUP_VMS.COM say,
+        to keep shareable images of your own on another volume too.
+     3. The host: the host library directory (the vax.library setting),
+        then the name as given, each as written and then in lower case.
+     4. FTNRTL, which is built into govax.
 
-    (here with SYS$SHARE defined as DUA0:[SYSLIB]), and $STATUS %X100388B2.
+   An image no rule finds stops the activation, as on VMS:
 
-    The image's ident and match control (LINK's GSMATCH= option) are
-    checked against those the program was linked with.  The two match
-    controls must agree, and then the program's decides: ALWAYS matches
-    any ident, EQUAL needs the same major and minor ids, and LEQUAL the
-    same major id and a minor id no lower than the program's.  A mismatch
-    is %SYSTEM-F-SHRIDMISMAT, with the image's file named.  govax's own
-    routines always match.
+     %DCL-W-ACTIMAGE, error activating image MYSHR
+     -CLI-E-IMAGEFNF, image file not found DUA1:[SYSLIB]MYSHR.EXE;
 
-    A shareable image linked at a base address (BASE=) goes there, as does
-    one the program's link placed (an executable linked with BASE=); any
-    other goes at the end of P0's pages, the shareable image list taken
-    from its end, so the program's last image is placed first.  Then each
-    image's fixups are done (its .ADDRESS list and its G^ cells, and those
-    of the program), and its pages take their protections.  Shareable
-    images are private to the process: copied into memory, or mapped
-    from their files with paging on (VMINIT/PAGING; see HELP VMINIT), never
-    shared with another process.
+   (here with SYS$SHARE defined as DUA1:[SYSLIB]), and $STATUS
+   %X100388B2.
 
-    The debugger's SHOW IMAGE lists the images and the files they came
-    from, and its HELP SHOW SHIM and HELP ASM PSEUDO SHIM describe how
-    govax's own routines are reached.
+   The image's ident and match control (LINK's GSMATCH= option) are
+   checked against those the program was linked with.  The two match
+   controls must agree, and then the program's decides: ALWAYS matches
+   any ident, EQUAL needs the same major and minor ids, and LEQUAL the
+   same major id and a minor id no lower than the program's.  A mismatch
+   is %SYSTEM-F-SHRIDMISMAT, with the image's file named.  govax's own
+   routines always match.
 
-    RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
-    string.  To pass an image text, run it as a foreign command (see HELP
-    FOREIGN), or give the text after the file name on govax's own command
-    line ("govax run forth.exe 2 3 + .").
-2 /DEBUG
-    The RUN command loads a VAX/VMS executable image into memory, activates
-    the shareable images it was linked against, and runs it.  This command
-    assumes that a VMINIT has been run, and the standard micro-kernel
-    (kernel.asm) has been loaded and initialized.  The shareable images are
-    activated as VMS's image activator activates images that aren't
-    installed (see "Shareable images" below).
+   A shareable image linked at a base address (BASE=) goes there, as
+   does one the program's link placed (an executable linked with BASE=);
+   any other goes at the end of P0's pages, the shareable image list
+   taken from its end, so the program's last image is placed first.
+   Then each image's fixups are done (its .ADDRESS list and its G^
+   cells, and those of the program), and its pages take their
+   protections.  Shareable images are private to the process: copied
+   into memory, or mapped from their files with paging on
+   (VMINIT/PAGING), never shared with another process.
 
-    The image is started at its transfer address.  A shareable image (one
-    LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR, "no
-    transfer address", as on VMS.
+   The debugger's SHOW IMAGE lists the images and the files they came
+   from.
 
-    If the optional /DEBUG qualifier is used, the image is loaded and then run
-    under the debugger, which stops it at the first instruction of its main
-    routine (after the entry mask) and prompts with DBG>.  GO continues it;
-    STEP, SET BREAK, EXAMINE, and the rest are the debugger's commands.  An
-    image linked with /DEBUG (LINK/DEBUG) starts the debugger the same way,
-    unless RUN/NODEBUG says not to.  An image linked /NOTRACEBACK has no symbols for
-    the debugger, and runs without it.  /STEP and /BREAK are
-    synonyms of /DEBUG, and /NOEXECUTE loads the image without running it.
+2 Qualifiers
+/BREAK
 
-    Syntax:
+   The same as /DEBUG.
 
-        RUN [/DEBUG|/NODEBUG] [/NOEXECUTE] <image-name>[/HOST]
+/[NO]DEBUG
 
-    Parameter:
+   /DEBUG runs the image under the debugger, which stops it at the first
+   instruction of its main routine (after the entry mask) and prompts
+   with DBG>.  GO continues it; STEP, SET BREAK, EXAMINE, and the rest
+   are the debugger's commands.  An image linked /DEBUG starts the
+   debugger the same way, unless /NODEBUG says not to.  An image linked
+   /NOTRACEBACK has no symbols for the debugger, and runs without it.
 
-        <image-name>    An image file, on the native system or on a mounted
-                        ODS-2 volume, by the same rules as MACRO's and LINK's
-                        files (see HELP MACRO): a VMS file specification
-                        (DUA0:[PROGS]HELLO.EXE), or a bare name while SET
-                        DEFAULT is on a volume, is a file on the volume, with
-                        the type EXE if it has none.  Anything else, or any
-                        name followed by /HOST, is a native file.  An image
-                        made on a VAX can be copied to the native system in
-                        binary mode, or read in place from its disk.
+/[NO]EXECUTE
 
-                        If the native file system is case sensitive, the name may
-                        need to be enclosed in quotes to preserve case.
+   /NOEXECUTE loads the image, and its shareable images, without
+   running it.
 
-    Shareable images:
+/HOST
 
-    Each shareable image the program names (in its shareable image list,
-    and those images' own lists in turn) is found, checked, and placed in
-    the process's P0 space before the program runs.  An image is found
-    by these rules, in order:
+   After the filespec, makes it a host file, whatever it looks like.
 
-        1. An image govax stands for (LIBRTL, LIBRTL2, MTHRTL, the system's
-           run-time libraries, ...) is govax's own routines, unless a
-           logical name of the image's own name is defined: DEFINE
-           LIBRTL DUA1:[X]LIBRTL.EXE asks for that file instead.
-        2. The image's name parsed with the default SYS$SHARE:.EXE, as
-           VMS's activator does: a logical name of the image's name
-           (DEFINE MYSHR DUA0:[LIB]MYSHR.EXE) leads to its file, with any
-           fields it lacks taken from SYS$SHARE; otherwise SYS$SHARE does,
-           each place of a search list in turn.  With a system volume,
-           its STARTUP.COM defines SYS$SHARE as its [SYSTEM.SYSLIB]
-           directory, where FTNRTL.EXE is; define it as a search list, in
-           SYS$MANAGER:SYSTARTUP_VMS.COM say, to keep shareable images of
-           your own on another volume too.
-        3. The host: the host library directory (the vax.library
-           setting), then the name as given, each as written and then in
-           lower case.
+/[NO]INIT
 
-    An image no rule finds stops the activation, as on VMS:
+   Whether each shareable image's LIB$INITIALIZE routines run before
+   the program.  The default is SET DEBUG's LIBINIT switch, which is on
+   unless it has been turned off.
 
-        %DCL-W-ACTIMAGE, error activating image MYSHR
-        -CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]MYSHR.EXE;
+/STEP
 
-    (here with SYS$SHARE defined as DUA0:[SYSLIB]), and $STATUS %X100388B2.
+   The same as /DEBUG.
 
-    The image's ident and match control (LINK's GSMATCH= option) are
-    checked against those the program was linked with.  The two match
-    controls must agree, and then the program's decides: ALWAYS matches
-    any ident, EQUAL needs the same major and minor ids, and LEQUAL the
-    same major id and a minor id no lower than the program's.  A mismatch
-    is %SYSTEM-F-SHRIDMISMAT, with the image's file named.  govax's own
-    routines always match.
+2 Examples
 
-    A shareable image linked at a base address (BASE=) goes there, as does
-    one the program's link placed (an executable linked with BASE=); any
-    other goes at the end of P0's pages, the shareable image list taken
-    from its end, so the program's last image is placed first.  Then each
-    image's fixups are done (its .ADDRESS list and its G^ cells, and those
-    of the program), and its pages take their protections.  Shareable
-    images are private to the process: copied into memory, or mapped
-    from their files with paging on (VMINIT/PAGING; see HELP VMINIT), never
-    shared with another process.
+   1.$ RUN HELLO
 
-    The debugger's SHOW IMAGE lists the images and the files they came
-    from, and its HELP SHOW SHIM and HELP ASM PSEUDO SHIM describe how
-    govax's own routines are reached.
+     Runs HELLO.EXE in the default directory.
 
-    RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
-    string.  To pass an image text, run it as a foreign command (see HELP
-    FOREIGN), or give the text after the file name on govax's own command
-    line ("govax run forth.exe 2 3 + .").
+   2.$ RUN/DEBUG DUA1:[PROGS]SORTER
+
+     Runs SORTER.EXE under the debugger.
+
+   3.$ RUN "hello.exe"/HOST
+
+     Runs a host file.

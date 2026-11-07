@@ -1,192 +1,175 @@
 1 MACRO
-    The MACRO command assembles VAX MACRO-32 source files and writes
-    VAX/VMS object modules (.OBJ), the same kind of file VMS's own MACRO
-    writes for its linker.
 
-    Syntax:
+   Assembles VAX MACRO-32 source files into object modules (.OBJ), the
+   same kind of file VMS's own MACRO writes for its linker.
 
-        MACRO <source>[{,|+}...][/HOST] [/OBJECT[=<object>] | /NOOBJECT]
-              [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
-              [/SHOW=(<option>[,...]) | /NOSHOW=(<option>[,...])]
-              [/CROSS_REFERENCE[=(<option>[,...])] | /NOCROSS_REFERENCE]
-              [/DEBUG[=(<option>[,...])] | /NODEBUG]
-              [/ENABLE=(<function>[,...])] [/DISABLE=(<function>[,...])]
+   Format
 
-    Parameter:
+     MACRO filespec[{,|+}...]
 
-        <source>        The source file, or a list of them.  Files separated
-                        by commas are each assembled by themselves, to an
-                        object (and listing) of their own, and an error in
-                        one doesn't stop the next.  Files separated by plus
-                        signs are concatenated into one input, for a single
-                        object (and listing), named for the first file.
-                        All have the same qualifiers, and /OBJECT= or /LIST=
-                        with a file name gets each assembly's output in
-                        turn.  Without a file type a source is .MAR.
-                        A source can be a host file or a file on a
-                        mounted volume:
+2 Parameter
 
-                          - with /HOST attached, it is a host path;
-                          - a name with a directory in brackets
-                            ([DIR]HELLO.MAR) or a device or logical name
-                            of two or more characters (DUA0:HELLO.MAR,
-                            SRC:HELLO.MAR) is on a mounted volume;
-                          - a name with "/" or "\" (or a Windows drive
-                            letter) is a host path;
-                          - any other name (HELLO.MAR) is in the current
-                            default directory when SET DEFAULT names a
-                            mounted volume, and a host file otherwise.
+ filespec[{,|+}...]
 
-                        Quote a host path to keep its case; unquoted
-                        names are uppercased, as all DCL input is.
+   The source file, or a list of them.  Files separated by commas are
+   each assembled by themselves, to an object (and listing) of their
+   own, and an error in one doesn't stop the next.  Files separated by
+   plus signs are concatenated into one input, for a single object (and
+   listing), named for the first file.  All have the same qualifiers,
+   and /OBJECT= or /LIST= with a file name gets each assembly's output
+   in turn.  Without a file type a source is .MAR.
 
-    Qualifiers:
+   A source can be a host file or a file on a mounted volume:
 
-        /OBJECT[=<object>]
-                        Writes the object module.  This is the default.
-                        Without a file name, the object has the source's
-                        name and location, with the type OBJ in the same
-                        case as the source's type: hello.mar gives
-                        hello.obj, HELLO.MAR gives HELLO.OBJ.  A bare file
-                        name also goes beside the source (on a volume,
-                        in the same device and directory); a host path or
-                        a VMS file specification goes where it says.  On
-                        a volume, the object is the next version of its
-                        name, and the volume must be mounted /WRITE.
+     - with /HOST after it, it is a host path;
+     - a name with a directory in brackets ([DIR]HELLO.MAR), or a
+       device or logical name of two or more characters (DUA1:HELLO.MAR,
+       SRC:HELLO.MAR), is on a mounted volume;
+     - a name with "/" or "\" (or a Windows drive letter) is a host
+       path;
+     - any other name (HELLO.MAR) is in the default directory when SET
+       DEFAULT names a mounted volume, and a host file otherwise.
 
-        /NOOBJECT       Assembles the source and reports any errors, but
-                        writes no object module.
+   Quote a host path to keep its case; unquoted names are made
+   uppercase, as all DCL input is.  LINK, LIBRARY, ANALYZE, FORTRAN, and
+   RUN find their files by the same rules.
 
-        /LIST[=<listing>]
-                        Writes a listing file: the source beside the
-                        bytes each line produced, in 60-line pages with
-                        headings, then the symbol table, the psect
-                        synopsis, the run statistics, and the command
-                        line, laid out as VAX MACRO lays out its
-                        listings.  The listing is named and placed as the
-                        object is, with the type LIS (hello.mar gives
-                        hello.lis).  It is written even when the assembly
-                        finds errors.  The heading shows the source's
-                        full file specification and when it was last
-                        revised (a volume file's revision date, or a host
-                        file's modification time).
+2 Description
 
-        /NOLIST         Writes no listing.  This is the default.
+   Every error in the source is reported, and then no object module is
+   written, so a failed assembly never replaces a good object.  Warnings
+   are reported, and the object is still written.  .INCLUDE and .LIBRARY
+   file names follow the same rules as the source's, and a bare name is
+   found beside the source.
 
-        /SHOW=(<option>[,...])
-        /NOSHOW=(<option>[,...])
-                        Turns listing options on or off for the whole
-                        listing, whatever the source's .SHOW and .NOSHOW
-                        directives say.  The options are BINARY (MEB),
-                        the lines of a macro expansion that store bytes;
-                        CALLS (MC), macro calls; CONDITIONALS (CND),
-                        conditional directives and the lines they leave
-                        out; DEFINITIONS (MD), macro definitions; and
-                        EXPANSIONS (ME), every line of a macro expansion.
-                        By default, all but BINARY and EXPANSIONS are on.
+   A macro the source calls but doesn't define (a system macro such as
+   $EXIT_S or $QIOW_S) is looked for in the macro libraries, in VMS
+   MACRO's order: the .LIBRARY names, the last named first; then the
+   /LIBRARY names, the last named first; then STARLET.MLB.  STARLET.MLB
+   is SYS$LIBRARY:STARLET.MLB on a mounted volume, or else STARLET.MLB in
+   the host directory the vax.library setting names, or else govax's
+   own.  govax's own has the RMS macros ($FAB, $RAB, $NAM, the XABs,
+   their _STORE forms, and $OPEN, $GET, $PUT, and the other services),
+   the symbol definition macros ($FABDEF, $RMSDEF, $SSDEF, $IODEF,
+   $SECDEF, $LCKDEF, $PSLDEF, $DCDEF, and others), and the system
+   service macros ($EXIT_S, $QIOW_S, $CREPRC_S, $CRMPSC_S, $ENQ_S,
+   $FAO_S, $TRNLNM_S, $GETSYI_S, and the rest), each also as NAME (an
+   argument list in line) and NAME_G (CALLG), giving the same code as VAX
+   MACRO's.  Macro libraries are made with LIBRARY/MACRO.
 
-        /CROSS_REFERENCE[=(<option>[,...])]
-                        Ends the listing (with /LIST) with a cross
-                        reference: for each name, the line that defined
-                        it and the lines that referred to it.  The
-                        options say what it lists: SYMBOLS, MACROS,
-                        OPCODES (instructions), DIRECTIVES, REGISTERS,
-                        ALL, or NONE.  Without options it lists symbols
-                        and macros.  A reference marked #- is an
-                        instruction's register operand, or a symbol in a
-                        literal operand (#VALUE).
+   In the source, .SHOW and .NOSHOW (or .LIST and .NLIST) with options
+   turn listing options on and off; without options they raise and
+   lower the listing level, and nothing is listed below level 0.  .PAGE
+   starts a new page, and .SBTTL names the pages that follow and adds a
+   line to the table of contents, page 0.  .NOCROSS leaves the lines that
+   follow out of the cross reference, until a .CROSS; with symbols
+   named, it leaves out just those symbols, until a .CROSS names them.
 
-        /NOCROSS_REFERENCE
-                        Writes no cross reference.  This is the default.
+   From the host shell, "govax macro filespec..." runs this command, with
+   --object file or --no-object, --list or --list-file file, --show and
+   --no-show option,..., and --library library (which may be repeated).
+   --mount DEVICE=container (or --mount-write, to allow writing) mounts a
+   container first, and may be repeated.  govax exits with a nonzero
+   status if the command fails.
 
-        /DEBUG[=(<option>[,...])]
-        /NODEBUG
-                        Says what the object carries for the debugger and
-                        for traceback, the symbolic stack dump VMS prints
-                        when a program fails.  The options are TRACEBACK
-                        (traceback records), SYMBOLS (debugger records,
-                        and no traceback), ALL (both; the same as /DEBUG
-                        alone), and NONE.  /NODEBUG is /DEBUG=NONE, which
-                        writes no traceback records either.  The default
-                        is /DEBUG=TRACEBACK.  Debugger records give the
-                        source file, a line-number table of the code, and,
-                        with traceback too, a record of each symbol and
-                        its data type.  As with VMS MACRO, .ENABLE DEBUG
-                        part way through a source starts them there, and
-                        .DISABLE DEBUG doesn't stop them.
+2 Qualifiers
+/[NO]CROSS_REFERENCE[=(option[,...])]
 
-        /ENABLE=(<function>[,...])
-        /DISABLE=(<function>[,...])
-                        Turns assembler functions on or off at the start
-                        of the source, as .ENABLE and .DISABLE do in it:
-                        ABSOLUTE (AMA), DEBUG (DBG), GLOBAL (GBL),
-                        SUPPRESSION (SUP), TRACEBACK (TBK), TRUNCATION
-                        (FPT), and VECTOR.  The source's own .ENABLE and
-                        .DISABLE can still change them.  /DISABLE=TRACEBACK
-                        writes no traceback records.  /DEBUG is applied
-                        first, then /ENABLE and /DISABLE.
+   Ends the listing (with /LIST) with a cross reference: for each name,
+   the line that defined it and the lines that referred to it.  The
+   options say what it lists: SYMBOLS, MACROS, OPCODES (instructions),
+   DIRECTIVES, REGISTERS, ALL, or NONE.  Without options it lists
+   symbols and macros.  A reference marked #- is an instruction's
+   register operand, or a symbol in a literal operand (#VALUE).  The
+   default is /NOCROSS_REFERENCE.
 
-    In the source, .SHOW and .NOSHOW (or .LIST and .NLIST) with options
-    turn them on and off; without options they raise and lower the listing
-    level, and nothing is listed below level 0.  .PAGE starts a new page,
-    and .SBTTL names the pages that follow and adds a line to the table of
-    contents, page 0.  .NOCROSS leaves the lines that follow out of the
-    cross reference, until a .CROSS; with symbols named, it leaves out just
-    those symbols, until a .CROSS names them.
+/[NO]DEBUG[=(option[,...])]
 
-        /LIBRARY=(<library>[,...])
-                        Macro libraries (.MLB, the default type) to
-                        search for macros the source calls but doesn't
-                        define, ahead of STARLET.MLB.  A bare name is found
-                        beside the source.  This takes the place of VMS's
-                        "MACRO PROG+LIB/LIBRARY".
+   What the object carries for the debugger and for traceback, the
+   symbolic stack dump VMS prints when a program fails.  The options are
+   TRACEBACK (traceback records), SYMBOLS (debugger records, and no
+   traceback), ALL (both; the same as /DEBUG alone), and NONE.  /NODEBUG
+   is /DEBUG=NONE, which writes no traceback records either.  The
+   default is /DEBUG=TRACEBACK.  Debugger records give the source file,
+   a line-number table of the code, and, with traceback too, a record of
+   each symbol and its data type.  As with VMS MACRO, .ENABLE DEBUG part
+   way through a source starts them there, and .DISABLE DEBUG doesn't
+   stop them.
 
-    Every error in the source is reported, and then no object module is
-    written, so a failed assembly never replaces a good object.  Warnings
-    are reported, and the object is still written.
+/DISABLE=(function[,...])
 
-    .INCLUDE file names follow the same rules as the source's, and a bare
-    name is found beside the source.  So do .LIBRARY names.
+   Turns assembler functions off at the start of the source, as
+   .DISABLE does in it.  The functions are /ENABLE's.  /DISABLE=TRACEBACK
+   writes no traceback records.
 
-    A macro the source calls but doesn't define (a system macro such as
-    $EXIT_S or $QIOW_S, say) is looked for in the macro libraries, in VMS
-    MACRO's order: those .LIBRARY names, the last named first; then those
-    /LIBRARY names, the last named first; then STARLET.MLB.  STARLET.MLB is
-    SYS$LIBRARY:STARLET.MLB on a mounted volume, or else STARLET.MLB in the
-    host directory the vax.library setting names, or else govax's own.
-    govax's own has the RMS macros ($FAB, $RAB, $NAM, the XABs, their
-    _STORE forms, and $OPEN, $GET, $PUT, $CLOSE, and the other RMS
-    services), the symbol definition macros ($FABDEF, $RMSDEF, $SSDEF,
-    $IODEF, $SECDEF, $LCKDEF, $PSLDEF, $DCDEF, and others), and system
-    service macros: $EXIT_S, $ASSIGN_S, $DASSGN_S, $QIO_S, and $QIOW_S;
-    the process services ($CREPRC_S, $DELPRC_S, $WAKE_S, $HIBER_S,
-    $SCHDWK_S, $SETPRI_S, $GETJPI_S, $SETIMR_S, $CREMBX_S, $WAITFR_S, and
-    the like); the section services ($CRMPSC_S, $MGBLSC_S, $DGBLSC_S,
-    $UPDSEC_S, $UPDSECW_S); the lock services ($ENQ_S, $ENQW_S, $DEQ_S, $GETLKI_S,
-    $GETLKIW_S); and the other services ($FAO_S, $GETMSG_S, $CRELNM_S,
-    $TRNLNM_S, $EXPREG_S, $GETSYI_S, and so on).  Each is also there as NAME (an argument list
-    in line) and NAME_G (CALLG), and gives the same code as VAX MACRO's.
-    Macro libraries are made with LIBRARY/MACRO.
+/ENABLE=(function[,...])
 
-    From the host shell, "govax macro <source>..." runs this command, with
-    --object <file> or --no-object, --list or --list-file <file>,
-    --show and --no-show <option,...>, and --library <library> (which may
-    be repeated).  --mount DEVICE=container (or
-    --mount-write, to allow writing) mounts a container first, and may be
-    repeated.  govax exits with a nonzero status if the command fails.
+   Turns assembler functions on at the start of the source, as .ENABLE
+   does in it: ABSOLUTE (AMA), DEBUG (DBG), GLOBAL (GBL), SUPPRESSION
+   (SUP), TRACEBACK (TBK), TRUNCATION (FPT), and VECTOR.  The source's
+   own .ENABLE and .DISABLE can still change them.  /DEBUG is applied
+   first, then /ENABLE and /DISABLE.
 
-    Examples:
+/HOST
 
-        MACRO "hello.mar"
+   After a source, makes it a host path, whatever it looks like.
 
-        MACRO DUA0:[SRC]HELLO /OBJECT=DUA0:[OBJ]
+/LIBRARY=(library[,...])
 
-        MACRO "hello.mar"/HOST /OBJECT=DUA0:[000000]HELLO.OBJ
+   Macro libraries (.MLB, the default type) to search for macros the
+   source calls but doesn't define, ahead of STARLET.MLB.  A bare name
+   is found beside the source.  This takes the place of VMS's "MACRO
+   PROG+LIB/LIBRARY".
 
-        MACRO "hello.mar"/LIST
+/[NO]LIST[=filespec]
 
-        MACRO "prog.mar"/LIBRARY=("mymacros","common.mlb")
+   Writes a listing file: the source beside the bytes each line
+   produced, in 60-line pages with headings, then the symbol table, the
+   psect synopsis, the run statistics, and the command line, laid out as
+   VAX MACRO lays out its listings.  The listing is named and placed as
+   the object is, with the type LIS.  It is written even when the
+   assembly finds errors.  The heading shows the source's full file
+   specification and when it was last revised.  The default is /NOLIST.
 
-        $ govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
+/[NO]OBJECT[=filespec]
 
-    See also the help for COPY, LIBRARY, MOUNT, and SET DEFAULT.
+   Writes the object module (the default).  Without a file name, the
+   object has the source's name and location, with the type OBJ in the
+   same case as the source's type: hello.mar gives hello.obj, HELLO.MAR
+   gives HELLO.OBJ.  A bare file name also goes beside the source; a host
+   path or a VMS file specification goes where it says.  On a volume,
+   the object is the next version of its name, and the volume must be
+   mounted /WRITE.  /NOOBJECT assembles the source and reports any
+   errors, but writes no object.
+
+/[NO]SHOW=(option[,...])
+
+   Turns listing options on (/SHOW) or off (/NOSHOW) for the whole
+   listing, whatever the source's .SHOW and .NOSHOW say: BINARY (MEB),
+   the lines of a macro expansion that store bytes; CALLS (MC), macro
+   calls; CONDITIONALS (CND), conditional directives and the lines they
+   leave out; DEFINITIONS (MD), macro definitions; and EXPANSIONS (ME),
+   every line of a macro expansion.  By default, all but BINARY and
+   EXPANSIONS are on.
+
+2 Examples
+
+   1.$ MACRO "hello.mar"
+
+     Assembles the host file hello.mar into hello.obj.
+
+   2.$ MACRO DUA1:[SRC]HELLO /OBJECT=DUA1:[OBJ]
+
+     Assembles HELLO.MAR into DUA1:[OBJ]HELLO.OBJ.
+
+   3.$ MACRO "hello.mar"/HOST /LIST /OBJECT=DUA1:[000000]HELLO.OBJ
+
+     Assembles a host file into a volume's object, with a listing.
+
+   4.$ MACRO PROG /LIBRARY=(MYMACROS,COMMON.MLB)
+
+     Assembles PROG.MAR, searching two macro libraries.
+
+   5.% govax --mount-write DUA1=work.dsk macro DUA1:[000000]HELLO.MAR
+
+     Assembles a volume's file from the host shell.

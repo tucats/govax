@@ -1,94 +1,194 @@
 1 ANALYZE
-    The ANALYZE/OBJECT command describes each record of an object file
-    (or of an object library's modules) as VMS's ANALYZE/OBJECT does,
-    in the same words and page layout: headers, global symbol directory
-    subrecords with their flags, each TIR command with the linker's
-    stack depth, STORE IMMEDIATE data as hex and characters, and the
-    end of module record.  Errors in the file are flagged with "***"
-    where they're found, and counted in a summary at the end.
 
-    Syntax:
+   Describes a file's contents as VMS's ANALYZE does, in the same words
+   and page layout: an object file, an image, or an RMS file.  The kind
+   of file is chosen by the qualifier, which must be given.
 
-        ANALYZE/OBJECT <file>[,...][/HOST] [qualifiers...]
+   Format
 
-    Parameters:
+     ANALYZE/OBJECT filespec[,...]
+     ANALYZE/IMAGE filespec[,...]
+     ANALYZE/RMS_FILE filespec[,...]
 
-        <file>          An object file (default type .OBJ), or an object
-                        library (.OLB), whose modules are analyzed one
-                        after another.  It can be a host file or a file
-                        on a mounted volume, by the rules MACRO uses for
-                        its source (see HELP MACRO).  A bare name is
-                        found beside the file before it.
+   Files are found by MACRO's rules (see MACRO Parameter), and a bare
+   name is found beside the file before it.  Errors in a file are
+   flagged with "***" where they're found.
 
-    Qualifiers:
+2 /IMAGE
 
-        /OUTPUT[=<file>]
-                        Writes the report to a file instead of the
-                        console: by default the first file's name with
-                        the type .ANL, beside it.
+   Describes an executable or shareable image: the image header
+   (transfer addresses, symbol table locations, the image's name, ident,
+   and link time, and each image section descriptor with its flags),
+   then the image activator's fixup section (the shareable images the
+   image uses, its G^ and .ADDRESS references to them, and the
+   protection changes).  Errors are counted at the end.
 
-        /MHD, /GSD, /TIR, /TBT, /DBG, /LNK, /EOM
-                        Shows only these kinds of records (/MHD shows
-                        every header record).  Every record is still
-                        checked and counted in the summary.
+   Format
 
-        /INCLUDE[=(<module>,...)]
-                        Analyzes these modules of an object library;
-                        names may hold the wildcards * and %.  Without
-                        names, or without /INCLUDE, every module.
+     ANALYZE/IMAGE filespec[,...]
 
-    Examples:
+3 Parameter
 
-        ANALYZE/OBJECT "hello.obj"
-        ANALYZE/OBJECT/OUTPUT DUA0:[000000]HELLO
-        ANALYZE/OBJECT/GSD/INCLUDE=(MAIN) DUA0:[000000]MINE.OLB
+ filespec[,...]
 
-    The ANALYZE/RMS_FILE command describes a file of any organization as
-    VMS's does, reading its blocks directly, so that a damaged file can be
-    described. /CHECK, the default, walks an indexed file's keys and flags
-    what's wrong with *** lines; /STATISTICS adds each key's figures;
-    /SUMMARY describes the file without walking it; /FDL writes an FDL file
-    (by default NAME.FDL) for CREATE/FDL or CONVERT/FDL.
+   Image files, of type .EXE unless one is given.
 
-        ANALYZE/RMS_FILE <file>[,...][/HOST] [qualifiers...]
+3 Qualifiers
+/FIXUP_SECTION
 
-        /OUTPUT[=file]   Write the report to file (default ANALYZE.ANL, or
-                         NAME.FDL with /FDL), and show the count of errors
-        /NOOUTPUT        Show only the count of errors
+   Shows the fixup section with the header (the default when neither
+   /FIXUP_SECTION nor /HEADER is given).
 
-    The ANALYZE/IMAGE command describes an executable or shareable image
-    as VMS's ANALYZE/IMAGE does, in the same words and page layout: the
-    image header (transfer addresses, symbol table locations, the
-    image's name, ident, and link time, and each image section
-    descriptor with its flags), then the image activator's fixup
-    section (the shareable images the image uses, its G^ and .ADDRESS
-    references to them, and the protection changes).  Errors in the
-    file are flagged with "***" where they're found and counted at the
-    end.
+/HEADER
 
-    Syntax:
+   Shows only the image header.
 
-        ANALYZE/IMAGE <file>[,...][/HOST] [qualifiers...]
+/HOST
 
-    Parameters:
+   After a file, makes it a host path, whatever it looks like.
 
-        <file>          An image file (default type .EXE), on the host
-                        or on a mounted volume, found as for
-                        ANALYZE/OBJECT.
+/OUTPUT[=filespec]
 
-    Qualifiers:
+   Writes the report to a file instead of the terminal: by default the
+   first file's name with the type .ANI, beside it.
 
-        /OUTPUT[=<file>]
-                        Writes the report to a file instead of the
-                        console: by default the first file's name with
-                        the type .ANI, beside it.
+3 Examples
 
-        /HEADER         Shows only the image header.
+   1.$ ANALYZE/IMAGE PROG
 
-        /FIXUP_SECTION  Shows the fixup section with the header (the
-                        default when neither qualifier is given).
+     Describes PROG.EXE.
 
-    Examples:
+   2.$ ANALYZE/IMAGE/HEADER/OUTPUT DUA1:[000000]PROG
 
-        ANALYZE/IMAGE "prog.exe"
-        ANALYZE/IMAGE/HEADER/OUTPUT DUA0:[000000]PROG
+     Writes PROG.EXE's header to DUA1:[000000]PROG.ANI.
+
+2 /OBJECT
+
+   Describes each record of an object file, or of an object library's
+   modules: headers, global symbol directory subrecords with their
+   flags, each TIR command with the linker's stack depth, STORE
+   IMMEDIATE data as hexadecimal and characters, and the end of module
+   record.  Errors are counted in a summary at the end.  With any of
+   /DBG, /EOM, /GSD, /LNK, /MHD, /TBT, and /TIR, only those kinds of
+   records are shown; every record is still checked and counted.
+
+   Format
+
+     ANALYZE/OBJECT filespec[,...]
+
+3 Parameter
+
+ filespec[,...]
+
+   Object files (.OBJ by default), or object libraries (.OLB), whose
+   modules are analyzed one after another.
+
+3 Qualifiers
+/DBG
+
+   Shows the debugger records.
+
+/EOM
+
+   Shows the end of module records.
+
+/GSD
+
+   Shows the global symbol directory records.
+
+/HOST
+
+   After a file, makes it a host path, whatever it looks like.
+
+/INCLUDE[=(module[,...])]
+
+   Analyzes these modules of an object library; names may hold the
+   wildcards * and %.  Without names, or without /INCLUDE, every
+   module.
+
+/LNK
+
+   Shows the link option specification records.
+
+/MHD
+
+   Shows the header records, every kind.
+
+/OUTPUT[=filespec]
+
+   Writes the report to a file instead of the terminal: by default the
+   first file's name with the type .ANL, beside it.
+
+/TBT
+
+   Shows the traceback records.
+
+/TIR
+
+   Shows the text information and relocation records.
+
+3 Examples
+
+   1.$ ANALYZE/OBJECT "hello.obj"
+
+     Describes a host object file.
+
+   2.$ ANALYZE/OBJECT/GSD/INCLUDE=(MAIN) DUA1:[000000]MINE.OLB
+
+     Shows the global symbol directory of the library's module MAIN.
+
+2 /RMS_FILE
+
+   Describes a file of any organization, reading its blocks directly,
+   so that a damaged file can be described.  An indexed file's keys are
+   walked, and what's wrong is flagged with "***" lines.
+
+   Format
+
+     ANALYZE/RMS_FILE filespec[,...]
+
+3 Parameter
+
+ filespec[,...]
+
+   The files to describe.  Wildcards are allowed.
+
+3 Qualifiers
+/CHECK
+
+   Describes and checks each file's structure (the default).
+
+/FDL
+
+   Writes an FDL file describing the file, for CREATE/FDL or
+   CONVERT/FDL: by default the file's name with the type .FDL.  Of a
+   list, only the first file's FDL is written.
+
+/HOST
+
+   After a file, makes it a host path, whatever it looks like.
+
+/[NO]OUTPUT[=filespec]
+
+   /OUTPUT writes the report to a file (by default ANALYZE.ANL, or the
+   file's name with the type .FDL with /FDL), and shows the count of
+   errors, %ANLRMS-I-ERRORS.  /NOOUTPUT shows only the count of errors.
+   Without either, the report goes to the terminal.
+
+/STATISTICS
+
+   Adds each key's figures to the report.
+
+/SUMMARY
+
+   Describes the file without walking it.
+
+3 Examples
+
+   1.$ ANALYZE/RMS_FILE PARTS.IDX
+
+     Describes and checks PARTS.IDX.
+
+   2.$ ANALYZE/RMS_FILE/FDL PARTS.IDX
+
+     Writes PARTS.FDL, a description of PARTS.IDX.
