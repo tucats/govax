@@ -40,7 +40,9 @@
 
    Shows each file renamed.
 
-/[NO]NEW_VERSION
+/NEW_VERSION
+
+      /[NO]NEW_VERSION
 
    With no versions given, /NEW_VERSION (the default) gives each file
    the next version of its new name, and /NONEW_VERSION has each keep

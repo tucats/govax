@@ -39,7 +39,9 @@
    with DCL-E-INVCALL.
 
 2 Qualifiers
-/OUTPUT=filespec
+/OUTPUT
+
+      /OUTPUT=filespec
 
    Sends the subroutine's output to the file rather than the terminal,
    as @'s /OUTPUT does.

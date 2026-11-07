@@ -42,12 +42,16 @@
    and allocated, owner, dates, organization, record format and
    attributes, protection, and access control list.
 
-/[NO]HEADING
+/HEADING
+
+      /[NO]HEADING
 
    /NOHEADING leaves out the directory headings, and shows each file by
    its whole name, one to a line.
 
-/OUTPUT[=filespec]
+/OUTPUT
+
+      /OUTPUT[=filespec]
 
    Writes the listing to a file instead of the terminal: filespec (type
    .LIS unless it gives one), or DIRECTORY.LIS.  %DIRECT-W-NOFILES still
@@ -62,16 +66,22 @@
    Shows each file's protection: the access the system, the owner, the
    group, and the world have, in that order, as (RWED,RWED,RE,).
 
-/SIZE[=keyword]
+/SIZE
+
+      /SIZE[=keyword]
 
    Shows each file's size in blocks: USED (the default), ALLOCATION, or
    ALL (used/allocated).
 
-/[NO]TRAILING
+/TRAILING
+
+      /[NO]TRAILING
 
    /NOTRAILING leaves out the totals.
 
-/VERSIONS=n
+/VERSIONS
+
+      /VERSIONS=n
 
    Lists only each file's n newest versions: /VERSIONS=1 shows the
    newest alone.  The value must be at least 1.

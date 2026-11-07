@@ -29,7 +29,9 @@
    ATTACHes back to its parent.
 
 2 Qualifiers
-/IDENTIFICATION=pid
+/IDENTIFICATION
+
+      /IDENTIFICATION=pid
 
    Names the process by its process ID, in hexadecimal, as SHOW SYSTEM
    lists it.

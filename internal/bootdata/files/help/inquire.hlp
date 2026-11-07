@@ -35,7 +35,9 @@
 
    Makes the symbol local to the command level (the default).
 
-/[NO]PUNCTUATION
+/PUNCTUATION
+
+      /[NO]PUNCTUATION
 
    /NOPUNCTUATION leaves out the ": " after the prompt.
 

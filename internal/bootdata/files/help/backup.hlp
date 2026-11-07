@@ -75,13 +75,17 @@
    Input file-selection: /SINCE and /BEFORE look at each file's backup
    date.
 
-/BEFORE=time
+/BEFORE
+
+      /BEFORE=time
 
    Input file-selection: saves only files dated before the time (TODAY,
    YESTERDAY, TOMORROW, or a VMS time), by the date /BACKUP, /CREATED,
    /EXPIRED, or /MODIFIED (the default) names.
 
-/BLOCK_SIZE=n
+/BLOCK_SIZE
+
+      /BLOCK_SIZE=n
 
    Output save set: the save set's block size in bytes, 2048 to 65535,
    rounded up to a multiple of 512.  The default is 32256.
@@ -91,7 +95,9 @@
    Command: a listing shows each file's name, used blocks, and creation
    date.  This is the default.
 
-/BY_OWNER[=option]
+/BY_OWNER
+
+      /BY_OWNER[=option]
 
    Input file-selection: saves only files with this owner, a UIC (yours
    if none is given).
@@ -102,7 +108,9 @@
    the default without /BY_OWNER), ORIGINAL (the saved owner, the
    default with /BY_OWNER alone), PARENT (the directory's), or a UIC.
 
-/COMMENT=string
+/COMMENT
+
+      /COMMENT=string
 
    Output save set: puts the text in the save set's summary.
 
@@ -123,7 +131,9 @@
    Input file-selection: /SINCE and /BEFORE look at each file's creation
    date.
 
-/EXCLUDE=(filespec[,...])
+/EXCLUDE
+
+      /EXCLUDE=(filespec[,...])
 
    Input save set: leaves out the save set's files these names match.
 
@@ -140,7 +150,9 @@
    Command: a listing shows a block for each file, with its dates,
    owner, file ID, protection, and record attributes.
 
-/GROUP_SIZE=n
+/GROUP_SIZE
+
+      /GROUP_SIZE=n
 
    Output save set: the blocks in each redundancy group.  The default is
    10, and 0 writes none.
@@ -150,14 +162,18 @@
    Input or output save set: the save set is a host file, whatever its
    name.
 
-/IGNORE=(option[,...])
+/IGNORE
+
+      /IGNORE=(option[,...])
 
    Command: NOBACKUP saves the data of files marked NOBACKUP too, of
    which only the header is saved otherwise.  INTERLOCK saves a file
    another process has open for writing, as it stands; otherwise such a
    file isn't saved.
 
-/LIST[=filespec]
+/LIST
+
+      /LIST[=filespec]
 
    Command: lists the save set on SYS$OUTPUT, or into the file (type
    .LIS unless it gives one).  As in VMS V7.1, a listing shows every
@@ -191,12 +207,16 @@
 
    Input or output: the specifier is a save set.
 
-/SELECT=(filespec[,...])
+/SELECT
+
+      /SELECT=(filespec[,...])
 
    Input save set: restores or compares only the save set's files these
    names match.
 
-/SINCE=time
+/SINCE
+
+      /SINCE=time
 
    Input file-selection: saves only files dated since the time, as
    /BEFORE takes it.

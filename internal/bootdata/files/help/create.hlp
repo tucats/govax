@@ -80,7 +80,9 @@
    is made on the host, relative to the host's current directory.
 
 3 Qualifiers
-/ALLOCATION=n
+/ALLOCATION
+
+      /ALLOCATION=n
 
    The blocks to give the directory at once.  The default is 1.
 
@@ -89,19 +91,25 @@
    Shows the directory made.  The directories made above it aren't
    shown.
 
-/OWNER_UIC=option
+/OWNER_UIC
+
+      /OWNER_UIC=option
 
    The directory's owner: a UIC, [group,member] in octal, or PARENT, the
    owner of the directory it is made in, which is the default.
 
-/PROTECTION=(category[:access][,...])
+/PROTECTION
+
+      /PROTECTION=(category[:access][,...])
 
    The directory's protection: for each of SYSTEM, OWNER, GROUP, and
    WORLD (or S, O, G, and W), the access granted, any of R, W, E, and D,
    or none.  The default is the protection of the directory it is made
    in, less delete access; a category not given keeps that default.
 
-/VERSION_LIMIT=n
+/VERSION_LIMIT
+
+      /VERSION_LIMIT=n
 
    The default version limit of files created in the directory, 0 for
    none.  The default is the limit of the directory it is made in.  A
@@ -152,7 +160,9 @@
    1 or 2, or a primary key whose segments overlap, is RMS$_PLV.
 
 3 Qualifiers
-/FDL=fdl-filespec
+/FDL
+
+      /FDL=fdl-filespec
 
    The FDL file.  Its default type is .FDL.
 
@@ -197,11 +207,15 @@
 
    Makes the table an executive-mode table.
 
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    /LOG (the default) reports an existing table superseded.
 
-/PARENT_TABLE=table
+/PARENT_TABLE
+
+      /PARENT_TABLE=table
 
    The new table's parent.  The default, LNM$PROCESS_DIRECTORY, makes a
    table private to the process; a shareable parent such as

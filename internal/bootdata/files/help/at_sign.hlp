@@ -53,7 +53,9 @@
    ON, EXIT, and Symbol_Assign Status).
 
 2 Qualifiers
-/OUTPUT=filespec
+/OUTPUT
+
+      /OUTPUT=filespec
 
    Sends the procedure's output to the file rather than the terminal
    (.LIS by default; NL: discards it).  Error messages go to the

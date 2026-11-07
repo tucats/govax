@@ -18,7 +18,9 @@
    command, with no image reading, is DCL-W-IVVALU.
 
 2 Qualifiers
-/DOLLARS[=string]
+/DOLLARS
+
+      /DOLLARS[=string]
 
    Ends the data at a line starting with the string, 1 to 15
    characters, uppercased unless quoted, and matched case and all, in

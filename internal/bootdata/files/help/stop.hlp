@@ -32,7 +32,9 @@
    delete every process but process 1 in the same way.
 
 2 Qualifiers
-/[NO]EXIT[=mode]
+/EXIT
+
+      /[NO]EXIT[=mode]
 
    The exit handlers to run before the process is deleted: those of the
    mode and the more privileged modes (KERNEL_MODE, EXECUTIVE_MODE, the
@@ -41,7 +43,9 @@
    govax's images have exit handlers only in user mode, so the other
    modes and /NOEXIT delete the process at once.
 
-/IDENTIFICATION=pid
+/IDENTIFICATION
+
+      /IDENTIFICATION=pid
 
    Names the process by its process ID, in hexadecimal, as SHOW SYSTEM
    lists it.

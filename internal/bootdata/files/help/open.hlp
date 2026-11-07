@@ -42,7 +42,9 @@
    Opens an existing file to write at its end.  It can't be given with
    /WRITE.
 
-/ERROR=label
+/ERROR
+
+      /ERROR=label
 
    In a command procedure, goes to the label if the file can't be
    opened, with no message and no ON action.
@@ -57,7 +59,9 @@
    Opens an existing file to read (the default).  With /WRITE, opens an
    existing file to read and write, at its start.
 
-/SHARE[=keyword]
+/SHARE
+
+      /SHARE[=keyword]
 
    Lets other users of the file read it (READ), or read and write it
    (WRITE, the default keyword).  Without /SHARE, others may read a file

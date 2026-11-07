@@ -17,7 +17,9 @@
    default directory.  Finding no file isn't an error.
 
 2 Qualifiers
-/LIMIT=n
+/LIMIT
+
+      /LIMIT=n
 
    How many of each file's newest versions to keep.  The default is 1,
    the newest alone.

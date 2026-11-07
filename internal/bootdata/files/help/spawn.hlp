@@ -35,36 +35,50 @@
    configuration turns it off (see CONFIGURATION KEYS).
 
 2 Qualifiers
-/INPUT=filespec
+/INPUT
+
+      /INPUT=filespec
 
    The subprocess's SYS$INPUT: the terminal, a mailbox, or a file of
    commands.  The default is the current process's.
 
-/[NO]LOGICAL_NAMES
+/LOGICAL_NAMES
+
+      /[NO]LOGICAL_NAMES
 
    Copies the current process's process logical names to the
    subprocess (the default, /LOGICAL_NAMES).
 
-/OUTPUT=filespec
+/OUTPUT
+
+      /OUTPUT=filespec
 
    The subprocess's SYS$OUTPUT: a terminal, a mailbox, NL:, or a file,
    which gets each line as a record.
 
-/PROCESS=name
+/PROCESS
+
+      /PROCESS=name
 
    The subprocess's name.  The default is the user name and "_n".
 
-/PROMPT=string
+/PROMPT
+
+      /PROMPT=string
 
    The prompt for commands read from the terminal.  The default is
    "$ ".
 
-/[NO]SYMBOLS
+/SYMBOLS
+
+      /[NO]SYMBOLS
 
    Copies the current process's symbols to the subprocess (the default,
    /SYMBOLS).
 
-/[NO]WAIT
+/WAIT
+
+      /[NO]WAIT
 
    /NOWAIT doesn't wait: the subprocess runs beside the console.  It
    takes turns with the console's DCL: between its commands (one command

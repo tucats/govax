@@ -38,7 +38,8 @@ func TestHelpLibrariesMatchSources(t *testing.T) {
 // would be read as a key line by accident (a digit in column 1), and each
 // library reads back as a help library holding every module. A "/" in
 // column 1 is a qualifier line, as VMS's modules write a command's
-// qualifiers under its Qualifiers topic (Phase 90's subtask 8).
+// qualifiers under its Qualifiers topic (Phase 90's subtask 8), and its
+// key is the qualifier's bare name (bareQualifier).
 func TestHelpModulesWellFormed(t *testing.T) {
 	for name, dir := range HelpLibraries {
 		entries, err := HelpModules(FS, dir)
@@ -127,7 +128,31 @@ func checkSiblings(t *testing.T, where string, top *help.Topic) {
 		}
 
 		seen[k] = true
+
+		if !bareQualifier(s.Key) {
+			t.Errorf("%s %s: qualifier line %s isn't a bare /NAME", where, top.Key, s.Key)
+		}
 	}
+}
+
+// bareQualifier reports whether key, a qualifier line's, is the
+// qualifier's name alone ("/RECURSIVE"), so that HELP finds it by the
+// name and its abbreviations. The full syntax ("/[NO]RECURSIVE",
+// "/LIST[=filespec]") is the first line of the qualifier's text, as
+// VMS's modules restate it.
+func bareQualifier(key string) bool {
+	name, ok := strings.CutPrefix(key, "/")
+	if !ok || name == "" {
+		return false
+	}
+
+	for _, r := range name {
+		if !(r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '$') {
+			return false
+		}
+	}
+
+	return true
 }
 
 // TestDebugHelpLibraryShape: the debugger's library is VMS's shape, one

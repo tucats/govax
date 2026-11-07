@@ -1189,3 +1189,14 @@ Scope):
   `qualifierHelpExceptions`, and `TestHelpTopics`' RUN, LINK, and
   LIBRARY cases look in the subtopics where the text now is.
   Subtask 8c done.
+- **2026-11-07** — A follow-up to subtask 8, at the author's request: a
+  qualifier line's key is the qualifier's bare name (`/RECURSIVE`), not
+  its syntax (`/[NO]RECURSIVE`, `/LIST[=filespec]`). As round 1 found,
+  HELP matches a `/[NO]` key only as written, so `HELP FORTRAN
+  /RECURSIVE` found nothing, and the topic lists showed the syntax. The
+  syntax is now the first line of the qualifier's text, indented six
+  blanks, as VMS's modules restate a qualifier; a qualifier with no
+  value and no negation keeps only its key. All 150 such lines of 8a,
+  8b, and 8c's modules changed mechanically, and
+  `TestHelpModulesWellFormed` refuses a qualifier line whose key isn't a
+  bare `/NAME` (`bareQualifier`). Subtask 8d writes its modules so.

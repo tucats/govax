@@ -62,13 +62,17 @@
    Copies the bytes as they are, with no records and no line endings
    changed.
 
-/CARRIAGE_CONTROL=keyword
+/CARRIAGE_CONTROL
+
+      /CARRIAGE_CONTROL=keyword
 
    With /RECORD_FORMAT, the records' carriage control: CARRIAGE_RETURN,
    FORTRAN, NONE, or for VFC records PRINT.  The default is
    CARRIAGE_RETURN for lines (PRINT for VFC) and NONE with /BINARY.
 
-/CONTROL_FIELD_SIZE=n
+/CONTROL_FIELD_SIZE
+
+      /CONTROL_FIELD_SIZE=n
 
    With /RECORD_FORMAT=VFC, the number of control bytes in each record.
    The default is 2.
@@ -104,7 +108,9 @@
 
    Leaves out the %COPY-S-COPIED message for each file.
 
-/RECORD_FORMAT=keyword
+/RECORD_FORMAT
+
+      /RECORD_FORMAT=keyword
 
    For a host input, the file to make on the volume, since a host file
    can't say what records it holds.  Without /BINARY the host file is
@@ -127,7 +133,9 @@
 
    This qualifier is govax's own.
 
-/RECORD_SIZE=n
+/RECORD_SIZE
+
+      /RECORD_SIZE=n
 
    With /RECORD_FORMAT, a fixed record's length, or the longest record
    allowed, up to 32767.

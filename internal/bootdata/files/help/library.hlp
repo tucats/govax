@@ -57,18 +57,24 @@
    --log.
 
 2 Qualifiers
-/CREATE[=(option:n[,...])]
+/CREATE
+
+      /CREATE[=(option:n[,...])]
 
    Creates a new library (a new version on a volume), then inserts any
    input files' modules.  The options are BLOCKS (which has no effect),
    GLOBALS, HISTORY, KEYSIZE, and MODULES.
 
-/DELETE=(module[,...])
+/DELETE
+
+      /DELETE=(module[,...])
 
    Deletes modules.  Names may hold the wildcards * and %.  Deletions
    are done before any insertions.
 
-/EXTRACT=(module[,...])
+/EXTRACT
+
+      /EXTRACT=(module[,...])
 
    Copies modules out of the library, to the file /OUTPUT names (by
    default, the library's name with the type .MAR, .OBJ, .TXT, or .HLP).
@@ -95,7 +101,9 @@
    a warning, and is left as it is (in a text library, an error that
    ends the command).
 
-/LIST[=filespec]
+/LIST
+
+      /LIST[=filespec]
 
    Lists the library: its header, then its modules.  Without a file
    name, the listing goes to the terminal; a file's default type is
@@ -109,7 +117,9 @@
 
    A new library is a macro library.
 
-/MODULE=name
+/MODULE
+
+      /MODULE=name
 
    After a text file, names its module; by default the module is named
    for the file.
@@ -122,7 +132,9 @@
 
    A new library is an object library (the default).
 
-/OUTPUT=filespec
+/OUTPUT
+
+      /OUTPUT=filespec
 
    Where /EXTRACT writes the modules.
 
@@ -141,7 +153,9 @@
    A new library is a shareable image library, which LINK searches for
    the images that define symbols.
 
-/[NO]SQUEEZE
+/SQUEEZE
+
+      /[NO]SQUEEZE
 
    /SQUEEZE, the default, removes macros' comments and trailing blanks,
    as LIBRARIAN does, except on .MACRO, .ERROR, .WARN, .PRINT, and .IIF
@@ -151,7 +165,9 @@
 
    A new library is a text library.
 
-/WIDTH=n
+/WIDTH
+
+      /WIDTH=n
 
    The width of a /NAMES listing (80 at the terminal, 132 in a file).
 

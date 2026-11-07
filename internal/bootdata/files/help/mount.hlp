@@ -42,7 +42,9 @@
    file deleted while it's open goes when its last opener closes it.
 
 2 Qualifiers
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    /LOG (the default) shows the volume's label and the device it was
    mounted on:
@@ -53,7 +55,9 @@
    each time govax starts; errors are still shown.  SET NOVERBOSE
    leaves it out too.
 
-/[NO]WRITE
+/WRITE
+
+      /[NO]WRITE
 
    /WRITE (the default) mounts the volume for reading and writing.
    /NOWRITE mounts it read-only, and creating or writing a file on it

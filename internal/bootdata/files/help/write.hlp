@@ -33,7 +33,9 @@
    alternate key another record has already.
 
 2 Qualifiers
-/ERROR=label
+/ERROR
+
+      /ERROR=label
 
    In a command procedure, goes to the label if the record can't be
    written.

@@ -33,16 +33,22 @@
    NONAME.
 
 3 Qualifiers
-/CLUSTER=n
+/CLUSTER
+
+      /CLUSTER=n
 
    The blocks in each storage cluster.  The default is 1.
 
-/DEVICE=type
+/DEVICE
+
+      /DEVICE=type
 
    Sizes the volume as a DEC disk of this type, such as RX50, RD51,
    RD54, RA81, or RA92.  Either /DEVICE or /SIZE must be given.
 
-/SIZE=n
+/SIZE
+
+      /SIZE=n
 
    The volume's size in 512-byte blocks.
 

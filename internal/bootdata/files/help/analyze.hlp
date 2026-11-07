@@ -47,7 +47,9 @@
 
    After a file, makes it a host path, whatever it looks like.
 
-/OUTPUT[=filespec]
+/OUTPUT
+
+      /OUTPUT[=filespec]
 
    Writes the report to a file instead of the terminal: by default the
    first file's name with the type .ANI, beside it.
@@ -100,7 +102,9 @@
 
    After a file, makes it a host path, whatever it looks like.
 
-/INCLUDE[=(module[,...])]
+/INCLUDE
+
+      /INCLUDE[=(module[,...])]
 
    Analyzes these modules of an object library; names may hold the
    wildcards * and %.  Without names, or without /INCLUDE, every
@@ -114,7 +118,9 @@
 
    Shows the header records, every kind.
 
-/OUTPUT[=filespec]
+/OUTPUT
+
+      /OUTPUT[=filespec]
 
    Writes the report to a file instead of the terminal: by default the
    first file's name with the type .ANL, beside it.
@@ -168,7 +174,9 @@
 
    After a file, makes it a host path, whatever it looks like.
 
-/[NO]OUTPUT[=filespec]
+/OUTPUT
+
+      /[NO]OUTPUT[=filespec]
 
    /OUTPUT writes the report to a file (by default ANALYZE.ANL, or the
    file's name with the type .FDL with /FDL), and shows the count of

@@ -167,7 +167,9 @@
 
    Makes the map brief: only the object modules and the image synopsis.
 
-/[NO]DEBUG
+/DEBUG
+
+      /[NO]DEBUG
 
    Puts the objects' debugger records (from MACRO/DEBUG) in the debug
    symbol table too, and marks the image for the debugger, as VMS LINK
@@ -175,7 +177,9 @@
    RUN starts such an image under the debugger.  A user-written debugger
    module (/DEBUG=file) isn't supported.  /NODEBUG is the default.
 
-/[NO]EXECUTABLE[=filespec]
+/EXECUTABLE
+
+      /[NO]EXECUTABLE[=filespec]
 
    Writes the image (the default).  Without a file name, the image has
    the first object's name and location, with the type EXE in the same
@@ -194,7 +198,9 @@
 
    After a file, makes every file a host path, whatever it looks like.
 
-/INCLUDE=(module[,...])
+/INCLUDE
+
+      /INCLUDE=(module[,...])
 
    After a library, adds those modules of it to the image: of a
    shareable image library, those images, as an options file's
@@ -208,7 +214,9 @@
    library's images are looked for beside it, then in SYS$LIBRARY, then
    as RUN finds them.
 
-/[NO]MAP[=filespec]
+/MAP
+
+      /[NO]MAP[=filespec]
 
    Writes a link map, laid out as VMS LINK lays out its default map: the
    object modules, the program sections and each module's part of them,
@@ -225,7 +233,9 @@
    After an object, takes only its definitions of symbols something else
    refers to.
 
-/SHAREABLE[=filespec]
+/SHAREABLE
+
+      /SHAREABLE[=filespec]
 
    Makes a shareable image: one with no transfer address, linked at
    address 0 so that RUN can put it anywhere, whose universal symbols
@@ -234,26 +244,34 @@
    /EXECUTABLE names it (one or the other may name it, not both).  See
    Shareable_images.
 
-/SYMBOL_TABLE[=filespec]
+/SYMBOL_TABLE
+
+      /SYMBOL_TABLE[=filespec]
 
    Also writes the image's global symbol table as an object module file
    (by default the first object's name with the type STB), which another
    link can take as an object.
 
-/[NO]SYSLIB
+/SYSLIB
+
+      /[NO]SYSLIB
 
    Searches IMAGELIB.OLB and STARLET.OLB for symbols the objects don't
    define, as VMS LINK does by default.  /NOSYSLIB uses only govax's own
    tables.
 
-/[NO]TRACEBACK
+/TRACEBACK
+
+      /[NO]TRACEBACK
 
    /TRACEBACK, the default, starts the image through SYS$IMGSTA, as VMS
    LINK does, and gives it a debug symbol table built from the objects'
    traceback records.  /NOTRACEBACK starts it at its own transfer
    address, with no debug symbol table.
 
-/[NO]USERLIBRARY[=(table[,...])]
+/USERLIBRARY
+
+      /[NO]USERLIBRARY[=(table[,...])]
 
    Searches the default user libraries, after the command's own
    libraries and before the system's: the object or shareable image

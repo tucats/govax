@@ -33,7 +33,9 @@
    Defines the name in the job table, LNM$JOB, shared by the console's
    process and every subprocess it creates.
 
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    Reports when the name replaces one defined before in the same table
    at the same mode (the default, /LOG).
@@ -50,12 +52,16 @@
 
    Defines the name in the system table, LNM$SYSTEM.
 
-/TABLE=name
+/TABLE
+
+      /TABLE=name
 
    Defines the name in the table named, or the table a logical name
    such as LNM$PROCESS translates to.
 
-/TRANSLATION_ATTRIBUTES=(keyword[,...])
+/TRANSLATION_ATTRIBUTES
+
+      /TRANSLATION_ATTRIBUTES=(keyword[,...])
 
    CONCEALED shows the logical name in place of the device it stands
    for, and TERMINAL stops iterative translation at this name.  The

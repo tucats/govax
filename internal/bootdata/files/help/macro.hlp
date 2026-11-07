@@ -73,7 +73,9 @@
    status if the command fails.
 
 2 Qualifiers
-/[NO]CROSS_REFERENCE[=(option[,...])]
+/CROSS_REFERENCE
+
+      /[NO]CROSS_REFERENCE[=(option[,...])]
 
    Ends the listing (with /LIST) with a cross reference: for each name,
    the line that defined it and the lines that referred to it.  The
@@ -83,7 +85,9 @@
    register operand, or a symbol in a literal operand (#VALUE).  The
    default is /NOCROSS_REFERENCE.
 
-/[NO]DEBUG[=(option[,...])]
+/DEBUG
+
+      /[NO]DEBUG[=(option[,...])]
 
    What the object carries for the debugger and for traceback, the
    symbolic stack dump VMS prints when a program fails.  The options are
@@ -96,13 +100,17 @@
    way through a source starts them there, and .DISABLE DEBUG doesn't
    stop them.
 
-/DISABLE=(function[,...])
+/DISABLE
+
+      /DISABLE=(function[,...])
 
    Turns assembler functions off at the start of the source, as
    .DISABLE does in it.  The functions are /ENABLE's.  /DISABLE=TRACEBACK
    writes no traceback records.
 
-/ENABLE=(function[,...])
+/ENABLE
+
+      /ENABLE=(function[,...])
 
    Turns assembler functions on at the start of the source, as .ENABLE
    does in it: ABSOLUTE (AMA), DEBUG (DBG), GLOBAL (GBL), SUPPRESSION
@@ -114,14 +122,18 @@
 
    After a source, makes it a host path, whatever it looks like.
 
-/LIBRARY=(library[,...])
+/LIBRARY
+
+      /LIBRARY=(library[,...])
 
    Macro libraries (.MLB, the default type) to search for macros the
    source calls but doesn't define, ahead of STARLET.MLB.  A bare name
    is found beside the source.  This takes the place of VMS's "MACRO
    PROG+LIB/LIBRARY".
 
-/[NO]LIST[=filespec]
+/LIST
+
+      /[NO]LIST[=filespec]
 
    Writes a listing file: the source beside the bytes each line
    produced, in 60-line pages with headings, then the symbol table, the
@@ -131,7 +143,9 @@
    assembly finds errors.  The heading shows the source's full file
    specification and when it was last revised.  The default is /NOLIST.
 
-/[NO]OBJECT[=filespec]
+/OBJECT
+
+      /[NO]OBJECT[=filespec]
 
    Writes the object module (the default).  Without a file name, the
    object has the source's name and location, with the type OBJ in the
@@ -142,7 +156,9 @@
    mounted /WRITE.  /NOOBJECT assembles the source and reports any
    errors, but writes no object.
 
-/[NO]SHOW=(option[,...])
+/SHOW
+
+      /[NO]SHOW=(option[,...])
 
    Turns listing options on (/SHOW) or off (/NOSHOW) for the whole
    listing, whatever the source's .SHOW and .NOSHOW say: BINARY (MEB),

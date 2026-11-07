@@ -89,7 +89,9 @@
 
    The same as /DEBUG.
 
-/[NO]DEBUG
+/DEBUG
+
+      /[NO]DEBUG
 
    /DEBUG runs the image under the debugger, which stops it at the first
    instruction of its main routine (after the entry mask) and prompts
@@ -98,7 +100,9 @@
    debugger the same way, unless /NODEBUG says not to.  An image linked
    /NOTRACEBACK has no symbols for the debugger, and runs without it.
 
-/[NO]EXECUTE
+/EXECUTE
+
+      /[NO]EXECUTE
 
    /NOEXECUTE loads the image, and its shareable images, without
    running it.
@@ -107,7 +111,9 @@
 
    After the filespec, makes it a host file, whatever it looks like.
 
-/[NO]INIT
+/INIT
+
+      /[NO]INIT
 
    Whether each shareable image's LIB$INITIALIZE routines run before
    the program.  The default is SET DEBUG's LIBINIT switch, which is on

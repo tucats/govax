@@ -13,12 +13,16 @@
    The name OPEN gave the file.
 
 2 Qualifiers
-/ERROR=label
+/ERROR
+
+      /ERROR=label
 
    In a command procedure, goes to the label if the name names no file
    OPEN opened, or the file can't be closed.
 
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    /NOLOG makes a name that names no file OPEN opened a success, with
    no message.  The default, /LOG, reports it as DCL-W-UNDFIL.

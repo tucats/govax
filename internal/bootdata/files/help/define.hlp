@@ -35,7 +35,9 @@
    Defines the name in the job table, LNM$JOB, shared by the console's
    process and every subprocess it creates.
 
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    Reports when the name replaces one defined before in the same table
    at the same mode (the default, /LOG).
@@ -52,12 +54,16 @@
 
    Defines the name in the system table, LNM$SYSTEM.
 
-/TABLE=name
+/TABLE
+
+      /TABLE=name
 
    Defines the name in the table named, or the table a logical name
    such as LNM$PROCESS translates to.
 
-/TRANSLATION_ATTRIBUTES=(keyword[,...])
+/TRANSLATION_ATTRIBUTES
+
+      /TRANSLATION_ATTRIBUTES=(keyword[,...])
 
    CONCEALED shows the logical name in place of the device it stands
    for, and TERMINAL stops iterative translation at this name.  The
@@ -103,92 +109,134 @@
    The device's name, such as TTA0 or NLA0, without the colon.
 
 3 Qualifiers
-/CLUSTER=n
+/CLUSTER
+
+      /CLUSTER=n
 
    The volume's cluster size, in blocks.
 
-/CYLINDERS=n
+/CYLINDERS
+
+      /CYLINDERS=n
 
    The number of cylinders.
 
-/DEVBUFSIZE=n
+/DEVBUFSIZE
+
+      /DEVBUFSIZE=n
 
    The default buffer size, in bytes: a terminal's width, or a
    mailbox's largest message.
 
-/DEVCHAR=n
+/DEVCHAR
+
+      /DEVCHAR=n
 
    The device characteristics longword, DVI$_DEVCHAR: DEV$M_ bits, such
    as record-oriented, terminal, or file-oriented.
 
-/DEVCHAR2=n
+/DEVCHAR2
+
+      /DEVCHAR2=n
 
    The second characteristics longword, DVI$_DEVCHAR2.
 
-/DEVCLASS=keyword
+/DEVCLASS
+
+      /DEVCLASS=keyword
 
    The device class: DISK, TAPE, SCOM, CARD, TERM, LP, WORKSTATION,
    REALTIME, DECVOICE, AUDIO, VIDEO, BUS, MAILBOX, RECMSL_STORAGE, or
    MISC.
 
-/DEVDEPEND=n
+/DEVDEPEND
+
+      /DEVDEPEND=n
 
    The device-dependent longword, DVI$_DEVDEPEND.
 
-/DEVDEPEND2=n
+/DEVDEPEND2
+
+      /DEVDEPEND2=n
 
    The second device-dependent longword, DVI$_DEVDEPEND2.
 
-/DEVTYPE=keyword
+/DEVTYPE
+
+      /DEVTYPE=keyword
 
    The device type: a disk's model (RD54, RA92, RX50, ...), VT100 for a
    terminal, or NULL for the null device.
 
-/FREEBLOCKS=n
+/FREEBLOCKS
+
+      /FREEBLOCKS=n
 
    The free blocks reported when no volume is mounted.
 
-/LOCKID=n
+/LOCKID
+
+      /LOCKID=n
 
    The device's lock ID, DVI$_LOCKID.
 
-/MAXBLOCK=n
+/MAXBLOCK
+
+      /MAXBLOCK=n
 
    The number of blocks the device holds.
 
-/MAXFILES=n
+/MAXFILES
+
+      /MAXFILES=n
 
    The largest number of files its volume may hold.
 
-/MEDIANAME=string
+/MEDIANAME
+
+      /MEDIANAME=string
 
    The media name, DVI$_MEDIA_NAME.
 
-/MEDIATYPE=string
+/MEDIATYPE
+
+      /MEDIATYPE=string
 
    The media type, DVI$_MEDIA_TYPE.
 
-/OWNUIC=n
+/OWNUIC
+
+      /OWNUIC=n
 
    The owner's UIC, as a longword (65540 is [1,4]).
 
-/RECSIZE=n
+/RECSIZE
+
+      /RECSIZE=n
 
    The record size, DVI$_RECSIZ.
 
-/ROOTDEVNAME=string
+/ROOTDEVNAME
+
+      /ROOTDEVNAME=string
 
    The root device's name, DVI$_ROOTDEVNAM.
 
-/SECTORS=n
+/SECTORS
+
+      /SECTORS=n
 
    The number of sectors per track.
 
-/SERIAL=n
+/SERIAL
+
+      /SERIAL=n
 
    The serial number, DVI$_SERIALNUM.
 
-/VOLNAME=string
+/VOLNAME
+
+      /VOLNAME=string
 
    The volume label reported when no volume is mounted.
 

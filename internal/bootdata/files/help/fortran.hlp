@@ -147,7 +147,9 @@
    (1.000000,-2.500000); and CHARACTER as its text.
 
 2 Qualifiers
-/[NO]ALIGN[=value]
+/ALIGN
+
+      /[NO]ALIGN[=value]
 
    How structures and common blocks are laid out.  /NOALIGN, the
    default, packs them, as VAX FORTRAN V5.0 does.  /ALIGN puts each
@@ -157,7 +159,9 @@
    PACKED, NATURAL, and for COMMONS STANDARD, at most a longword.  /ALIGN
    alone is ALL.  CDEC$ OPTIONS groups in the source override it.
 
-/[NO]CHECK[=(keyword[,...])]
+/CHECK
+
+      /[NO]CHECK[=(keyword[,...])]
 
    What the compiled code looks out for: ALL, NONE, [NO]BOUNDS
    (subscripts and substrings: the subscript range trap; an adjustable
@@ -166,12 +170,16 @@
    is ALL.  The default is /NOCHECK.  An OPTIONS statement before a unit
    may change it for that unit.
 
-/CONTINUATIONS=n
+/CONTINUATIONS
+
+      /CONTINUATIONS=n
 
    The most continuation lines one statement may have, from 0 to 99.
    The default is 19.
 
-/[NO]CROSS_REFERENCE
+/CROSS_REFERENCE
+
+      /[NO]CROSS_REFERENCE
 
    A listing follows each unit's map with where its names and labels
    are mentioned: a line number each, with D if the line defines the
@@ -179,12 +187,16 @@
    depth 1.  It is there after errors too.  Without /LIST it does
    nothing but say so.  The default is /NOCROSS_REFERENCE.
 
-/[NO]D_LINES
+/D_LINES
+
+      /[NO]D_LINES
 
    Compiles the debugging lines (those with a D in column 1) as
    statements.  The default is /NOD_LINES: they are comments.
 
-/[NO]DEBUG[=(keyword[,...])]
+/DEBUG
+
+      /[NO]DEBUG[=(keyword[,...])]
 
    What MACRO is to write for the debugger: ALL, NONE, [NO]SYMBOLS
    (debugger records), and [NO]TRACEBACK (a traceback's names).  /DEBUG
@@ -192,13 +204,17 @@
    /NODEBUG, the default, is traceback alone.  It doesn't turn the
    optimizer off: give /NOOPTIMIZE as well to debug.
 
-/[NO]EXTEND_SOURCE
+/EXTEND_SOURCE
+
+      /[NO]EXTEND_SOURCE
 
    Lets the statement field of a fixed-format line run to column 132
    instead of column 72.  The default is /NOEXTEND_SOURCE.  An OPTIONS
    statement overrides this for the unit after it.
 
-/[NO]F77
+/F77
+
+      /[NO]F77
 
    /NOF77 is FORTRAN-66's reading of what FORTRAN-77 changed: a DO runs
    at least once, OPEN's defaults are STATUS='NEW' and BLANK='ZERO', and
@@ -206,7 +222,9 @@
    The default is /F77.  An OPTIONS statement before a unit may change it
    for that unit.
 
-/[NO]G_FLOATING
+/G_FLOATING
+
+      /[NO]G_FLOATING
 
    REAL*8 (DOUBLE PRECISION) values are G_floating: 53 bits of
    precision, about 15 decimal digits, and a range of about 0.56E-308 to
@@ -220,7 +238,9 @@
 
    After a source, makes it a host path, whatever it looks like.
 
-/[NO]I4
+/I4
+
+      /[NO]I4
 
    INTEGER and LOGICAL with no length, and implied integers, are 4 bytes
    (the default).  With /NOI4 they are 2, and an integer constant from
@@ -232,7 +252,9 @@
    After a source joined to others by +, makes it a text library for
    that compilation's INCLUDE '(module)' statements.
 
-/[NO]LIST[=filespec]
+/LIST
+
+      /[NO]LIST[=filespec]
 
    Writes a listing: the source's lines with their numbers, each message
    under its line, and each unit's storage map.  By default it is the
@@ -241,7 +263,9 @@
    set the heading of the page after the one they are on; with no
    TITLE, a page's title is its unit's name.
 
-/[NO]MACRO[=filespec]
+/MACRO
+
+      /[NO]MACRO[=filespec]
 
    Writes the MACRO file (the default).  Without a file name, it has the
    source's name and location, with the type MAR in the same case as
@@ -252,19 +276,25 @@
    another file, since its MACRO file would replace it.  /NOMACRO
    compiles the source and reports any errors, but writes no MACRO file.
 
-/[NO]OBJECT[=filespec]
+/OBJECT
+
+      /[NO]OBJECT[=filespec]
 
    /OBJECT runs MACRO on the MACRO file too, for an object file, by
    default the source's name with type OBJ.  The MACRO file is kept, so
    /OBJECT can't go with /NOMACRO.  The default is /NOOBJECT.
 
-/[NO]OPTIMIZE
+/OPTIMIZE
+
+      /[NO]OPTIMIZE
 
    Runs the optimizer's passes, for code that does what the program
    says in fewer instructions.  The passes run are named in the MACRO
    file's header.  The default is /OPTIMIZE.
 
-/[NO]RECURSIVE
+/RECURSIVE
+
+      /[NO]RECURSIVE
 
    Every FUNCTION and SUBROUTINE may be active more than once at a time,
    as if each said RECURSIVE: its local variables are in its stack frame
@@ -272,14 +302,18 @@
    default is /NORECURSIVE.  An OPTIONS statement before a unit may
    change it for that unit.
 
-/[NO]SHOW[=(keyword[,...])]
+/SHOW
+
+      /[NO]SHOW[=(keyword[,...])]
 
    What a listing holds: ALL, NONE, [NO]INCLUDE (every INCLUDE file's
    lines, whatever INCLUDE's own /LIST says), and [NO]MAP.  /SHOW alone
    is ALL and /NOSHOW NONE; with no /SHOW, a listing has the maps, and
    only the INCLUDE files that say /LIST.
 
-/[NO]STANDARD[=(keyword[,...])]
+/STANDARD
+
+      /[NO]STANDARD[=(keyword[,...])]
 
    Flags what FORTRAN-77 doesn't have, each an informational message, so
    the program still compiles: SYNTAX (statements, constants, operators,
@@ -288,7 +322,9 @@
    column 72, over 19 continuation lines), ALL, NONE, and NOSYNTAX and
    NOSOURCE_FORM.  /STANDARD alone is ALL.  The default is /NOSTANDARD.
 
-/[NO]WARNINGS[=(keyword[,...])]
+/WARNINGS
+
+      /[NO]WARNINGS[=(keyword[,...])]
 
    What the compiler says, beyond errors: ALL, NONE, [NO]GENERAL (its
    warnings and informational messages; on by default),

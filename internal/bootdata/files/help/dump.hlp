@@ -28,7 +28,9 @@
    control.
 
 2 Qualifiers
-/BLOCKS[=(option[,...])]
+/BLOCKS
+
+      /BLOCKS[=(option[,...])]
 
    Shows the file's blocks, numbered from 1.  The options say which:
 
@@ -38,7 +40,9 @@
 
    START=n, END=n, and COUNT=n are taken too.  This is the default.
 
-/RECORD[=(option[,...])]
+/RECORD
+
+      /RECORD[=(option[,...])]
 
    Shows the file's records, numbered from 1.  The options are /BLOCKS'
    options, counting records.

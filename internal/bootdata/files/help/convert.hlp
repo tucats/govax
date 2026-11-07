@@ -37,12 +37,16 @@
 
    Adds the records to the end of an existing sequential output file.
 
-/[NO]CREATE
+/CREATE
+
+      /[NO]CREATE
 
    /NOCREATE uses an existing output file.  /CREATE, the default, makes
    a new one.
 
-/EXCEPTIONS_FILE[=filespec]
+/EXCEPTIONS_FILE
+
+      /EXCEPTIONS_FILE[=filespec]
 
    Copies each record that can't go in to this file (type .EXC), or
    with no file shows it.
@@ -51,12 +55,16 @@
 
    Ends at the first record that can't go in.
 
-/[NO]FAST_LOAD
+/FAST_LOAD
+
+      /[NO]FAST_LOAD
 
    /NOFAST_LOAD loads an indexed output with RMS's $PUT, a record at a
    time, rather than building its indexes directly.
 
-/FDL=fdl-filespec
+/FDL
+
+      /FDL=fdl-filespec
 
    Makes the output from this FDL file (type .FDL).  A warning from it
    stops the conversion.
@@ -70,7 +78,9 @@
    Between VFC and other records, moves the fixed control into or out
    of the data, rather than dropping it.
 
-/KEY=n
+/KEY
+
+      /KEY=n
 
    Reads an indexed input in the order of key n.
 
@@ -78,12 +88,16 @@
 
    Inserts the records into an existing indexed file by their keys.
 
-/PAD[=c]
+/PAD
+
+      /PAD[=c]
 
    Fills short records of a fixed-length output with c: a character, or
    %Dn, %On, or %Xn.  The default is a null.
 
-/PROLOG=n
+/PROLOG
+
+      /PROLOG=n
 
    The prolog of an indexed output.  Only Prolog 3 is there: 1 or 2 is
    RMS$_PLV.
@@ -97,7 +111,9 @@
    Opens the input files so that other processes may write them while
    CONVERT reads them.
 
-/[NO]SORT
+/SORT
+
+      /[NO]SORT
 
    /NOSORT says the input is in the output's primary key order already.
 
@@ -109,7 +125,9 @@
 
    Cuts off records too long for the output.
 
-/WORK_FILES=n
+/WORK_FILES
+
+      /WORK_FILES=n
 
    Taken, and does nothing; n past 10 is SORT's BAD_MERGE.
 

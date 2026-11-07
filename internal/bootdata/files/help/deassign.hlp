@@ -37,7 +37,9 @@
 
    Deletes from the job table, LNM$JOB.
 
-/[NO]LOG
+/LOG
+
+      /[NO]LOG
 
    Accepted for VMS's sake; DEASSIGN reports nothing either way.
 
@@ -55,7 +57,9 @@
 
    Deletes from the system table, LNM$SYSTEM.
 
-/TABLE=name
+/TABLE
+
+      /TABLE=name
 
    Deletes from the table named.
 
