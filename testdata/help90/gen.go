@@ -37,6 +37,7 @@ func main() {
 	write("help90d.com", help90d())
 	write("help90v.com", help90v())
 	write("help90f.com", help90f())
+	write("help90c.com", help90c())
 	write("help90d.dbg", debuggerCommands("DBGH"))
 	write("help90v.dbg", debuggerCommands("DBGV"))
 	write("dbgt.mar", dbgt)
@@ -58,6 +59,7 @@ var files = []string{
 	"noblank.hlp", "toolong.hlp", "lower.hlp", "digits.hlp", "zero.hlp", "t1.txt", "t2.txt",
 	"h90m.mar", "resp.txt", "help90.com", "help90d.com", "help90v.com",
 	"help90f.com", "help90d.dbg", "help90v.dbg", "dbgt.mar", "lbr90.mar",
+	"deeper.hlp", "help90c.com",
 }
 
 // ---------------------------------------------------------------------
@@ -84,6 +86,7 @@ func modules() map[string]string {
 		"t2.txt":      "Only line of text module T2.\n",
 		"h90m.mar":    "\t.MACRO\tPROBE1\tA\n\t.LONG\tA\n\t.ENDM\tPROBE1\n\t.MACRO\tPROBE2\n\t.BYTE\t2\n\t.ENDM\tPROBE2\n",
 		"resp.txt":    "Parameters\n\n?\n",
+		"deeper.hlp":  deeper(),
 	}
 
 	return m
@@ -678,6 +681,92 @@ $ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90A ALPS
 $ HELP/NOPROMPT/NOLIBRARY/NOUSERLIBRARY ALPS
 $ EXIT
 `
+}
+
+// deeper is round 1c's DEEPER: what DEEP was meant to be (round 1b's DEEP
+// puts each level under the sibling before it, so L3 is DEEP S2 L3). Here
+// each L is the next one's parent, and each S follows its L's whole
+// subtree, so DEEPER L2 L3 ... L9 is a path and S2 to S9 are leaves.
+func deeper() string {
+	var b strings.Builder
+
+	b.WriteString("1 DEEPER\n   Text of DEEPER, level 1.\n")
+	for lv := 2; lv <= 9; lv++ {
+		path := "DEEPER"
+		for k := 2; k <= lv; k++ {
+			path += fmt.Sprintf(" L%d", k)
+		}
+		fmt.Fprintf(&b, "%d L%d\n   Text of %s, level %d.\n", lv, lv, path, lv)
+	}
+	for lv := 9; lv >= 2; lv-- {
+		fmt.Fprintf(&b, "%d S%d\n   Text of S%d, L%d's sibling at level %d, a leaf.\n", lv, lv, lv, lv, lv)
+	}
+
+	return b.String()
+}
+
+// help90c is round 1c: DEEPER's cases, and the libraries round 2's
+// terminal session uses, made again on this round's volume.
+func help90c() string {
+	var b strings.Builder
+	b.WriteString(`$ ! HELP90C.COM - round 1c of the Phase 90 probe: HELP on a chain of
+$ ! levels to 9 (round 1b's DEEP was nested wrongly), and the libraries
+$ ! round 2's terminal session uses. Written by testdata/help90/gen.go.
+$ ! Run it with the exchange volume's [000000] as the default directory:
+$ !
+$ !     @HELP90C/OUTPUT=HELP90C.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ L = F$ENVIRONMENT("DEFAULT")
+$ DEFINE H90DIR 'L'
+$ LIBRARY/CREATE/HELP H90A H90A1,H90A2
+$ LIBRARY/CREATE/HELP H90B H90B
+$ LIBRARY/CREATE/HELP H90D H90D
+$ LIBRARY/CREATE/HELP H90Y DEEPER
+$ MACRO/DEBUG DBGT
+$ LINK/DEBUG DBGT
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90Y
+$ H := HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90Y
+`)
+	for _, c := range deeperCases {
+		fmt.Fprintf(&b, "$ H %s\n", c)
+	}
+	b.WriteString(`$ ! KEY... on a topic with no subtopics, in H90A.
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A ALPHA Parameters...
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A NOSUB...
+$ ! Prompting down the chain, from a procedure's data lines.
+$ HELP/PROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90Y DEEPER
+L2
+L3
+L4
+?
+S5
+NOSUCH
+
+
+
+
+
+
+
+
+$ SHOW SYMBOL $STATUS
+$ EXIT
+`)
+
+	return b.String()
+}
+
+// deeperCases are round 1c's requests on DEEPER.
+var deeperCases = []string{
+	"DEEPER", "DEEPER L2", "DEEPER L2 L3", "DEEPER L2 L3 L4 L5 L6 L7 L8",
+	"DEEPER L2 L3 L4 L5 L6 L7 L8 L9", "DEEPER L2 L3 L4 L5 L6 L7 L8 L9 L10",
+	"DEEPER L2 L3 L4 L5 L6 L7 L8 S9", "DEEPER S2", "DEEPER L2 S3",
+	"DEEPER L", "DEEPER L2 L", "DEEPER S", "DEEPER *", "DEEPER * *", "DEEPER * * *",
+	"DEEPER...", "DEEPER L2...", "DEEPER L2 L3 L4 L5 L6 L7 L8...",
+	"DEEPER L2 L3 L4 L5 L6 L7 L8 L9...", "DEEPER S2...", "DEEPER L2 L3 L4 L5 L6 L7 L8 L9 *",
+	"DEEPER L2 *...", "DEEPER * L3", "DEEPER % L3", "DEEPER L% L%",
 }
 
 func help90f() string {
@@ -1382,13 +1471,13 @@ LIMITED: MOVL	#1,R0
 
 func exchange() string {
 	var b strings.Builder
-	b.WriteString(`! EXCHANGE.CMD - builds round 1b's exchange volume with govax.
+	b.WriteString(`! EXCHANGE.CMD - builds rounds 1c and 2's exchange volume with govax.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/exchange.cmd
 !
-INITIALIZE/CONTAINER "testdata/disks/help90b-exchange.dsk" /DEVICE=RD54 HELP90
-MOUNT/WRITE DUA5 "testdata/disks/help90b-exchange.dsk"
+INITIALIZE/CONTAINER "testdata/disks/help90c-exchange.dsk" /DEVICE=RD54 HELP90
+MOUNT/WRITE DUA5 "testdata/disks/help90c-exchange.dsk"
 `)
 	for _, f := range files {
 		fmt.Fprintf(&b, "COPY \"%s/%s\"/HOST DUA5:[000000]%s\n", dir, f, strings.ToUpper(f))
@@ -1401,19 +1490,16 @@ MOUNT/WRITE DUA5 "testdata/disks/help90b-exchange.dsk"
 // copyout brings everything back to a local directory first: nothing goes
 // into vax/ until it's been checked for VMS's own help text (README.md).
 func copyout() string {
-	return `! COPYOUT.CMD - copies the VAX run's output off the exchange volume,
-! into testdata/disks/help90-vms/round1b/, which git ignores. README.md says how
-! the logs are checked before any of them goes into vax/.
+	return `! COPYOUT.CMD - copies round 1c's output off the exchange volume, into
+! testdata/disks/help90-vms/round2/, which git ignores. README.md says how
+! the logs are checked before any of them goes into vax/. Round 2's
+! terminal log is the host's (simh's SET CONSOLE LOG); put it beside these.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/copyout.cmd
 !
-MOUNT DUA5 "testdata/disks/help90b-exchange.dsk"
-COPY DUA5:[000000]HELP90.LOG "testdata/disks/help90-vms/round1b/help90.log"/HOST
-COPY DUA5:[000000]H90.BCK "testdata/disks/help90-vms/round1b/h90.bck"/HOST/BINARY
-COPY DUA5:[000000]HELP90F.LOG "testdata/disks/help90-vms/round1b/help90f.log"/HOST
-COPY DUA5:[000000]DBGH.DLG "testdata/disks/help90-vms/round1b/dbgh.dlg"/HOST
-COPY DUA5:[000000]DBGV.DLG "testdata/disks/help90-vms/round1b/dbgv.dlg"/HOST
+MOUNT DUA5 "testdata/disks/help90c-exchange.dsk"
+COPY DUA5:[000000]HELP90C.LOG "testdata/disks/help90-vms/round2/help90c.log"/HOST
 DISMOUNT DUA5
 `
 }

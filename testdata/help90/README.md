@@ -23,8 +23,10 @@ Parameters."), so a log shows which text HELP chose. None of it is VMS's.
 | `help90.com` | Round 1, parts A (LIBRARY), B (HELP's matching and layout, 126 requests), B2 (output), C (user libraries), E (`LBR90`), then `HELP90D.COM` (part D), and a save set of the libraries and listings |
 | `help90d.com` | Part D: HELP's prompts answered by a procedure's data lines, and by a file |
 | `help90f.com` | Part F (since round 1b): the debugger's HELP, with DBG$HELP naming the probe's library, then without it. Its log holds VMS's text; `DBGH.DLG`, the first session's, doesn't |
+| `deeper.hlp`, `help90c.com` | Round 1c: DEEPER, a chain of levels to 9 (round 1b's DEEP was nested wrongly), its cases, and the libraries and image round 2's terminal session uses |
 | `help90v.com` | Part G: HELP on VMS's own EXCHANGE, SUBMIT, and ANALYZE modules (round 1 only). Its output holds VMS's text |
 | `vax/round1/` | Round 1's VAX run, checked: `help90.log`, `h90.bck`, `dbgh.dlg`, and `help90-term.log` |
+| `vax/round1b/` | Round 1b's, checked: `help90.log`, `h90.bck`, `dbgh.dlg` (`help90f.log` and `dbgv.dlg` are local) |
 | `help90d.dbg`, `help90v.dbg`, `dbgt.mar` | The debugger sessions' commands, and the image they run |
 | `lbr90.mar` | Part E: 79 cases calling the LBR$ routines on the probe's libraries: the definitions' values, INI_CONTROL, OPEN, GET_HEADER, LOOKUP_KEY, GET_RECORD (move and locate), FIND, GET_INDEX with matches, SET_INDEX, GET_HELP with its action routine's every call (flags, level, data), OUTPUT_HELP with output and input routines of its own (scripted answers to its prompts), the errors |
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
@@ -80,7 +82,7 @@ parts:
   Subtopic?`.
 
 Part D's `DEFINE/USER_MODE SYS$INPUT RESP.TXT` also failed (IVDEVNAM), and
-`LBR$_NOHLPLIS` doesn't exist (the message is NOHLPLIBS).
+`LBR$_NOHLPLIS` doesn't exist (round 1b found `LBR$_NOHLPLIBS` doesn't either).
 
 ## Round 1b
 
@@ -92,73 +94,85 @@ to leave its prompts, names RESP.TXT in full, and asks for
 `LBR$_NOHLPLIBS`. Part G isn't run again. The exchange volume is a new
 one, `help90b-exchange.dsk`, so round 1's stays as it was.
 
+Run on VMS V7.1 2026-11-07, on DUA1 (the VAX had no RQ5). `help90.log`,
+`h90.bck`, and `dbgh.dlg` passed the check and are in `vax/round1b/`;
+`help90f.log` and `dbgv.dlg` are local. Every part ran. One mistake was
+left: DEEP puts each level under the sibling before it (`2 L2`, `2 S2`,
+`3 L3` makes L3 a child of S2), so every `DEEP L2 L3 ...` case, at the
+terminal too, found nothing past L2. Round 1c has the chain DEEP was meant
+to be.
+
+The terminal session typed after round 1b went as far as row 11, where
+the table was wrong: rows 9 and 10 ended HELP, and row 11 (`@H90DIR:H90B`)
+belongs at a `Topic?` prompt, not at `$`. The table below says where each
+row starts.
+
+## Round 1c
+
+`help90c.com` makes H90Y from `deeper.hlp` and runs DEEPER's cases,
+and makes again what round 2 uses (H90A, H90B, H90D, and DBGT.EXE),
+on a new exchange volume, `help90c-exchange.dsk`.
+
 1. Build the exchange volume, from the repository root:
 
        govax console < testdata/help90/exchange.cmd
 
-2. On the VAX:
+2. On the VAX, with the volume on any free unit (DUA1 below):
 
-       $ MOUNT DUA5: HELP90
-       $ SET DEFAULT DUA5:[000000]
-       $ @HELP90/OUTPUT=HELP90.LOG
-       $ @HELP90F/OUTPUT=HELP90F.LOG
+       $ MOUNT DUA1: HELP90
+       $ SET DEFAULT DUA1:[000000]
+       $ @HELP90C/OUTPUT=HELP90C.LOG
 
-   and, with the volume still mounted, round 2 below. Then
-   `DISMOUNT DUA5:`.
+   then round 2 below, with the volume still mounted, then
+   `DISMOUNT DUA1:`.
 
-3. Back on the host:
+3. Back on the host, with the terminal log saved as
+   `testdata/disks/help90-vms/round2/help90-term.log`:
 
-       mkdir -p testdata/disks/help90-vms/round1b
        govax console < testdata/help90/copyout.cmd
 
 ## Round 2, at the terminal
 
 HELP's prompts typed by hand, which a procedure can't show (the prompts
 and the terminal's echo). Log the session on the host (simh's
-`SET CONSOLE LOG=help90-term.log`, or the terminal program's log), after
-round 1b, with its libraries on the volume. The log goes to
-`testdata/disks/help90-vms/round1b/help90-term.log`, and is checked like
-`help90.log` before it goes to `vax/`.
+`SET CONSOLE LOG=help90-term.log`, or the terminal program's log). The log
+is checked like `help90.log` before it goes to `vax/`.
 
-Round 1's session showed something to explain: before each display, HELP
-wrote a run of empty lines (about 30 to 40). That looks like HELP clearing
-the screen for a terminal it believes is a video terminal, so this session
-starts by showing what VMS thinks the terminal is, and tries `/NOPAGE`.
+Before each display at the terminal, HELP wrote a run of empty lines (27
+to 46 in round 1b's session). That looks like HELP clearing the screen
+for a terminal it takes for a video terminal, so the session starts by
+showing what VMS thinks the terminal is, and row 12 tries `/NOPAGE`.
 
     $ SHOW TERMINAL
-    $ SET DEFAULT DUA5:[000000]
-    $ DEFINE H90DIR DUA5:[000000]
+    $ DEFINE H90DIR DUA1:[000000]
     $ HP := HELP/NOUSERLIBRARY/LIBRARY=H90DIR:H90A
+    $ HY := HELP/NOUSERLIBRARY/LIBRARY=H90DIR:H90Y
     $ SET TERMINAL/WIDTH=80
 
-Then type, in order. "Return" means a Return on an empty line. What round
-1 already showed: after a topic with no subtopics, the prompt stays at its
-parent; `?` shows the parent again; Return goes up one level; Return at
-`Topic?` ends HELP.
+Then type each row's lines in order. "Return" means a Return on an empty
+line. **Each row starts at `$`**; if a row ends at a HELP prompt instead,
+press Return until `$` comes back before the next row. Already known:
+Return at `X Subtopic?` goes up one level, Return at `Topic?` ends HELP,
+and after a topic with no subtopics the prompt stays at its parent.
 
 | # | Type | What it shows |
 | - | ---- | ------------- |
-| 1 | `HP` | The topic list and `Topic?` |
-| 2 | `ALPHA` | ALPHA and `ALPHA Subtopic?` |
-| 3 | `Qualifiers` | Qualifiers, and the prompt after it (its `/` lines are its subtopics) |
-| 4 | `/BRIEF` | The qualifier, and the prompt after it |
-| 5 | `?` | What `?` shows at that prompt |
-| 6 | `/NOSUCH` | An unknown subtopic |
-| 7 | Return | Up one level: which prompt? |
-| 8 | Return | Up again: `Topic?`? |
-| 9 | `DEEP`, then `L2`, `L3`, `L4` | Each level's prompt, with its keys |
-| 10 | Return, Return, Return, Return | Each level back up, then `Topic?` |
-| 11 | `@H90DIR:H90B` | The other library's topics and its prompt |
-| 12 | `BONLY` | A topic there, and its prompt |
-| 13 | Return, Return | Back to the main library's `Topic?`? |
-| 14 | `NOSUCH` | "Not found", and the prompt after it |
-| 15 | `ALPHA`, then Ctrl/Z | Ctrl/Z at a subtopic prompt: back to `$`? |
-| 16 | `HP ALPHA`, then Return | Starting from a topic, and Return at its prompt |
-| 17 | `HP/NOPAGE ALPHA`, then Return | The same without paging: are the empty lines gone? |
-| 18 | `HP/PAGE TEXTY...` | /PAGE's stop, if the screen fills; Return to go on |
-| 19 | `SET TERMINAL/WIDTH=132`, then `HP/NOPROMPT WIDE` | The subtopic columns at 132 |
-| 20 | `SET TERMINAL/WIDTH=80`, `DEFINE DBG$HELP H90DIR:H90D`, `RUN/DEBUG DBGT`, then `HELP SET`, `BREAK`, Return, Return, Return, `EXIT` | The debugger's prompts, on the probe's library |
-| 21 | `DEASSIGN DBG$HELP` | |
+| 1 | `HP`, then `@H90DIR:H90B` | Another library's topics, and the prompt it gives |
+| 2 | `BONLY` | A topic there, and its prompt |
+| 3 | Return, Return, Return | Which library each Return goes back to, and when HELP ends |
+| 4 | `HY DEEPER`, then `L2`, `L3`, `L4` | The prompt at each level (does it name the whole path?) |
+| 5 | `S5` | A leaf: which prompt after it? |
+| 6 | `?` | What `?` shows there |
+| 7 | Return until `$` | One prompt per level on the way up |
+| 8 | `HY DEEPER L2 L3` | Starting partway down: which prompt? Then Return until `$` |
+| 9 | `HP ALPHA`, then Ctrl/Z | Ctrl/Z at a subtopic prompt: straight to `$`? |
+| 10 | `HP NOSUCH` | "Sorry", and the prompt after it; Return until `$` |
+| 11 | `HP ALPHA`, then `NOSUCH` | A subtopic that isn't there, and the prompt; Return until `$` |
+| 12 | `HP/NOPAGE ALPHA`, then Return, Return | The same without paging: are the empty lines gone? |
+| 13 | `HP/PAGE TEXTY` | /PAGE's empty lines with a short topic; Return until `$` |
+| 14 | `SET TERMINAL/WIDTH=132`, `HP/NOPROMPT WIDE`, `SET TERMINAL/WIDTH=80` | The subtopic columns at 132 |
+| 15 | `DEFINE DBG$HELP H90DIR:H90D`, `RUN/DEBUG DBGT`, then at `DBG>` `HELP SET`, `BREAK`, Return, Return, Return, `EXIT` | The debugger's prompts on the probe's library |
+| 16 | `DEASSIGN DBG$HELP` | |
 
 ## What the run settles
 

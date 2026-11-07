@@ -1,0 +1,296 @@
+HELP
+!
+!DEBUG
+!
+!     Text of the probe's DEBUG module, level 1.
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+
+
+HELP EXAMINE
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!       Text of EXAMINE (probe).
+!
+!
+!    Additional information available:
+!
+!    Parameters Qualifiers
+!    /ASCII     /HEX
+!    Examples
+!
+
+HELP EX
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!       Text of EXAMINE (probe).
+!
+!
+!    Additional information available:
+!
+!    Parameters Qualifiers
+!    /ASCII     /HEX
+!    Examples
+!
+!
+!DEBUG
+!
+!  EXIT
+!
+!       Text of EXIT (probe).
+!
+
+
+
+HELP EXAMINE Qualifiers
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!    Qualifiers
+!
+!      /ASCII
+!         Text of EXAMINE /ASCII (probe).
+!      /HEX
+!         Text of EXAMINE /HEX (probe).
+!
+
+
+
+HELP EXAMINE/ASCII
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!    /ASCII
+!       Text of EXAMINE /ASCII (probe).
+!
+
+
+
+HELP EXAMINE /ASCII
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!    /ASCII
+!       Text of EXAMINE /ASCII (probe).
+!
+
+
+
+HELP EXAMINE /HEX
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!    /HEX
+!       Text of EXAMINE /HEX (probe).
+!
+
+
+
+HELP SET BREAK
+!
+!DEBUG
+!
+!  SET
+!
+!    BREAK
+!
+!         Text of SET BREAK (probe).
+!
+!
+!      Additional information available:
+!
+!      Qualifiers
+!      /AFTER
+!
+HELP SET BREAK /AFTER
+!
+!DEBUG
+!
+!  SET
+!
+!    BREAK
+!
+!      /AFTER
+!         Text of SET BREAK /AFTER (probe).
+!
+
+
+
+HELP SET
+!
+!DEBUG
+!
+!  SET
+!
+!       Text of SET (probe).
+!
+!
+!    Additional information available:
+!
+!    BREAK      MODE
+!
+
+HELP NOSUCH
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG NOSUCH
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+
+
+
+HELP Probe_Concept
+!
+!DEBUG
+!
+!  Probe_Concept
+!
+!       Text of Probe_Concept (probe).
+!
+
+
+
+HELP DEBUG
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG DEBUG
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+
+
+
+HELP EXTRA
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG EXTRA
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+
+
+
+HELP *
+!
+!DEBUG
+!
+!  Probe_Concept
+!
+!       Text of Probe_Concept (probe).
+!
+!
+!DEBUG
+!
+!  EXAMINE
+!
+!       Text of EXAMINE (probe).
+!
+!
+!    Additional information available:
+!
+!    Parameters Qualifiers
+!    /ASCII     /HEX
+!    Examples
+!
+!
+!DEBUG
+!
+!  EXIT
+!
+!       Text of EXIT (probe).
+!
+!
+!DEBUG
+!
+!  SET
+!
+!       Text of SET (probe).
+!
+!
+!    Additional information available:
+!
+!    BREAK      MODE
+!
+
+
+
+HELP EXAMINE...
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG EXAMINE...
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+
+
+
+HELP SET
+!
+!DEBUG
+!
+!  SET
+!
+!       Text of SET (probe).
+!
+!
+!    Additional information available:
+!
+!    BREAK      MODE
+!
+!
+!DEBUG
+!
+!  SET
+!
+!    BREAK
+!
+!         Text of SET BREAK (probe).
+!
+!
+!      Additional information available:
+!
+!      Qualifiers
+!      /AFTER
+!
+!
+!DEBUG
+!
+!  SET
+!
+!    BREAK
+!
+!      /AFTER
+!         Text of SET BREAK /AFTER (probe).
+!
+EXIT

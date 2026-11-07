@@ -559,7 +559,107 @@ values of `LBR$C_`, `HLP$M_`, and the `LBR$_` statuses; INI_CONTROL
 returns LBR$_NORMAL and LOOKUP_KEY SS$_NORMAL; the first index is 1;
 GET_HEADER's array; records as stored. The messages are LBR's own
 (`%LBR-E-KEYNOTFND, key not found`). `LBR$_NOHLPLIS`, the manual's name,
-doesn't exist; the status is NOHLPLIBS.
+isn't defined (round 1b found `LBR$_NOHLPLIBS` isn't either).
+
+### Round 1b (2026-11-07)
+
+The same procedure with round 1's mistakes fixed, run on DUA1. Logs:
+`testdata/help90/vax/round1b/` (checked; `help90f.log` and `dbgv.dlg`
+local). Two of round 1's findings are corrected here. One mistake was left:
+the DEEP module nests each level under the sibling before it, so its deep
+cases found nothing past L2. Round 1c has a chain that is nested correctly.
+
+**LIBRARY**
+
+- **A key line is a level number, then a blank.** `2Nospace`, a bare `2`,
+  and `2`+tab+key are stored as text lines of the topic before them.
+  `0 zero` is text too. `10 apples` is a key at level 10 (round 1). This
+  corrects round 1's "any line whose first character is a digit".
+- Text before the first key line is dropped without a message (BADTEXT).
+- A help library's default key length is **15** (Max. key length: 15),
+  not 31 as for an object library. A longer level-1 key is `KEYNAMLNG`, and
+  `/CREATE=(KEYSIZE:40)` takes it. A text library's default is 39, a macro
+  library's 31.
+- The module's name keeps the case of its key (`MixedCase`, `lower`),
+  and LIST shows it so. `/EXTRACT=alpha` and `=MIXEDCASE` both find it
+  (case is ignored).
+- **The error doesn't end the command** (this corrects round 1). After
+  SKIP's ILLKEYLVL, `LIBRARY/CREATE/HELP H90X8 H90C,SKIP,H90G` went on to
+  H90G. VMS 7.1 then failed to insert GONLY: an `INSERTERR` message with
+  garbage for the name, `-RMS-E-EOF`, and a library LIST can't read past
+  (`MHDERR`, `INVRFA`). govax will go on to the next file *correctly*.
+  That VMS failure is a VMS bug, not behavior to copy, so it is unconfirmed
+  how a correct librarian would do it.
+- `/INSERT` of modules already there is `DUPMODULE`, one per module, and
+  leaves them. `/REPLACE` replaces or adds. `/DELETE=NOSUCH` is
+  `LOOKUPERR` with `-LBR-E-KEYNOTFND`. Each changing command adds to
+  "Library history records". LIST/FULL says "inserted" with the date for a
+  replaced module too.
+- `/EXTRACT` writes each module's lines as stored: key lines, empty
+  lines, tabs, and long lines kept.
+- `LIBRARY/DATA=REDUCE/HELP` makes a new version, which says "Library is
+  in DCX data reduced format". HELP reads it as it reads any other library.
+
+**HELP's matching**
+
+- **An exact key wins only at level 1** (the library's index). Within a
+  topic, a word matches every subtopic it abbreviates, so `QUALS Qual`
+  shows both Qual and Qualifiers, and `SAME Example` both Example and
+  Examples.
+- A topic list shows keys in file order and in the case of the file. A
+  level-1 topic's heading is its key in uppercase (`MIXEDCASE`). A key
+  longer than 10 characters takes 22 columns (two cells), so a cell is 11
+  columns per 11 characters, or part of 11. Output to a file is 132
+  columns wide (12 cells).
+- The request is split into words at blanks and before each `/`.
+  `ODD Two Words` matches `Two Words` by its first word, then looks for
+  WORDS under it. `ODD Slash/Inside` looks for `/INSIDE` under
+  `Slash/Inside`. The "Sorry" line shows the words in uppercase and the
+  slash split off (`SLASH /INSIDE`).
+- `KEY...` must touch its key: `ALPHA ...` is "Sorry, no documentation on
+  ALPHA ...". `DEEP L2...`, on a topic with no subtopics, is also
+  "Sorry" (round 1c asks again).
+- `/[NO]FLAG` is matched only as written. `/FLAG` and `/NOFLAG` aren't
+  found.
+- A `/` line indented by a blank is text (`/INDENTED`).
+- A subtopic with no text and no subtopics (`EMPTY Child`) displays its
+  heading, then `Sorry, no documentation on EMPTY CHILD`, then the *root*
+  library's topic list.
+- A word that matches nothing at level 1 shows "Sorry" with no heading,
+  then the topic list. A word that matches nothing below a topic shows the
+  topic's heading, then "Sorry", then the topic's subtopics.
+- Text is shifted right by 2 blanks for each level, including lines
+  stored in column 1. Tabs are kept.
+
+**Prompting**
+
+- With SYS$INPUT a file (`DEFINE/USER_MODE SYS$INPUT H90DIR:RESP.TXT`),
+  HELP takes its answers from the file and shows no prompts. Its end of
+  file ends HELP.
+- **At the terminal** (the session typed after round 1b; the README's
+  table went wrong at row 11):
+  - `Qualifiers` at `ALPHA Subtopic?` shows the Qualifiers topic with each
+    `/` subtopic's text inline. The prompt stays `ALPHA Subtopic?`, since
+    the `/` keys are listed and prompted for at ALPHA's level.
+  - An unknown subtopic shows ALPHA's heading, the "Sorry" line, and
+    ALPHA's list, and the prompt stays.
+  - Return at `ALPHA Subtopic?` goes to `Topic?`, and Return there ends
+    HELP, as round 1 found.
+  - The runs of empty lines before each display were 27 to 46 lines long.
+    Round 2 asks why.
+
+**The debugger** (`dbgh.dlg`): the prompts don't reach the log. Topic
+cells follow HELP's rule (`Probe_Concept` takes 22 columns). `HELP EX`
+shows both EXAMINE and EXIT. `HELP DEBUG` and `HELP EXTRA` are "Sorry,
+no documentation on DEBUG DEBUG" and "on DEBUG EXTRA": the debugger
+looks up the words *under* DEBUG only, and EXTRA, a second level-1 module,
+is never reached.
+
+**LBR$** (`#1` to `#79`, all run): the values, the statuses, and what each
+routine returned, for subtask 10 to read in full. Neither `LBR$_NOHLPLIS` nor
+`LBR$_NOHLPLIBS` is a symbol VMS 7.1's LINK finds (`UDFSYM`), and no case
+returned such a status (#61, with libraries defined, returned
+SS$_NORMAL). govax won't define the status until a VMS run shows one.
 
 ## Subtasks
 
@@ -635,3 +735,11 @@ doesn't exist; the status is NOHLPLIBS.
   part and the modules after TEXTY, and the debugger sessions. Round 1b
   (`gen.go` fixed, `help90f.com` for part F) and round 2's terminal table
   are ready.
+- **2026-11-07** — Round 1b run on VMS V7.1 (on DUA1). Every part ran.
+  The logs were checked as round 1's were, and `help90.log`, `h90.bck`, and
+  `dbgh.dlg` are in `testdata/help90/vax/round1b/`. "What the probe
+  settled" has round 1b's findings, which correct two of round 1's (the
+  key line's form, and LIBRARY going on after a bad file). DEEP was nested
+  wrongly, and the README's terminal table ended HELP before row 11. Round
+  1c (`deeper.hlp`, `help90c.com`, a new exchange volume) and a revised
+  round 2 table, each row starting at `$`, are ready.
