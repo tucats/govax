@@ -33,6 +33,16 @@
 // is ambiguous or a wildcard), or the "Sorry, no documentation" display
 // when nothing matched.
 //
+// # Prompting
+//
+// A Session is the interactive HELP: it answers the first request, then
+// prompts ("Topic?", "ALPHA Subtopic?") and answers each response, going
+// down into a topic with subtopics, up a level at an empty response, and
+// into another library at "@library". It reads and writes through
+// functions its caller gives it, so the console, the debugger (whose
+// requests are looked up under its library's DEBUG module), and
+// LBR$OUTPUT_HELP can each supply their own terminal, file, or program.
+//
 // Every rule here was settled by testdata/help90's probe, which asked
 // VMS 7.1's HELP about modules written for it; the phase doc's "What the
 // probe settled" records the answers, and TestHelp90Oracle holds this

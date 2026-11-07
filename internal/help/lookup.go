@@ -52,6 +52,11 @@ type Display struct {
 	List      []Entry
 	Listed    bool
 	ListDepth int
+
+	// path is the topics from level 1 down to the one shown (ShowTopic,
+	// ShowSlash), which Session uses to decide where to prompt next. A
+	// qualifier line's path ends with its own topic.
+	path []*Topic
 }
 
 // Options are a request's settings.
@@ -74,13 +79,56 @@ type Options struct {
 // the end of the first word shows each topic found and every topic below
 // it; on any later word it's part of the word.
 func Lookup(lib Library, words []string, opts Options) ([]Display, error) {
-	names := lib.Names()
-
 	if len(words) == 0 {
-		return instructions(lib, names, opts), nil
+		return instructions(lib, lib.Names(), opts), nil
 	}
 
+	return lookupFrom(lib, nil, words)
+}
+
+// step is one topic of the path a Session is at: the topic, and its
+// heading as HELP showed it.
+type step struct {
+	topic   *Topic
+	heading string
+}
+
+// lookupFrom finds words below the end of at, a path from level 1, or,
+// with at empty, from the library's modules. Below level 1 "..." is part
+// of a word, and the "Sorry" line names at's headings before the words
+// (testdata/help90's part D: "..." at "ALPHA Subtopic?" is "Sorry, no
+// documentation on ALPHA ...").
+func lookupFrom(lib Library, at []step, words []string) ([]Display, error) {
+	names := lib.Names()
+
 	words = append([]string(nil), words...)
+
+	if len(at) > 0 {
+		headings := make([]string, len(at))
+		nodes := make([]*Topic, len(at))
+
+		for i, st := range at {
+			headings[i], nodes[i] = st.heading, st.topic
+		}
+
+		s := &search{
+			lib:          lib,
+			names:        names,
+			words:        words,
+			sorry:        strings.ToUpper(strings.Join(append(append([]string(nil), headings...), words...), " ")),
+			current:      headings,
+			currentNodes: nodes,
+		}
+
+		s.descend(nodes[len(nodes)-1], headings, nodes, words)
+
+		if len(s.out) == 0 && s.failed != nil {
+			return []Display{*s.failed}, nil
+		}
+
+		return s.out, nil
+	}
+
 	if strings.Contains(words[0], ",") {
 		return nil, ErrInvalidKey
 	}
@@ -145,8 +193,9 @@ func Lookup(lib Library, words []string, opts Options) ([]Display, error) {
 		}
 
 		path := []string{f.heading}
-		s.current = path
-		s.descend(t, path, words[1:])
+		nodes := []*Topic{t}
+		s.current, s.currentNodes = path, nodes
+		s.descend(t, path, nodes, words[1:])
 	}
 
 	if len(s.out) == 0 && s.failed != nil {
@@ -205,7 +254,8 @@ type search struct {
 	// match to the next, so in "HELP ALPHA /*" the qualifier line
 	// /NOTQUAL (in ALPHA Description) is shown under /DIRECT, the
 	// numbered topic matched before it (testdata/help90, round 1b).
-	current []string
+	current      []string
+	currentNodes []*Topic
 
 	out    []Display
 	failed *Display // where the request went deepest without a match
@@ -213,10 +263,11 @@ type search struct {
 
 func (s *search) rootList() []Entry { return rootList(s.names) }
 
-// descend finds rest's words below t, whose path is path.
-func (s *search) descend(t *Topic, path []string, rest []string) {
+// descend finds rest's words below t, whose path is path (the headings)
+// and nodes (the topics).
+func (s *search) descend(t *Topic, path []string, nodes []*Topic, rest []string) {
 	if len(rest) == 0 {
-		s.show(t, path)
+		s.show(t, path, nodes)
 
 		return
 	}
@@ -245,14 +296,16 @@ func (s *search) descend(t *Topic, path []string, rest []string) {
 				Headings: append([]string(nil), s.current...),
 				Text:     append([]string{c.Key}, c.Text...),
 				Depth:    len(s.current),
+				path:     append(append([]*Topic(nil), s.currentNodes...), c),
 			})
 
 			continue
 		}
 
 		p := append(append([]string(nil), path...), c.Key)
-		s.current = p
-		s.descend(c, p, rest[1:])
+		n := append(append([]*Topic(nil), nodes...), c)
+		s.current, s.currentNodes = p, n
+		s.descend(c, p, n, rest[1:])
 	}
 
 	if !found {
@@ -276,18 +329,15 @@ func (s *search) fail(t *Topic, path []string, list []Entry) {
 }
 
 // show adds t's display, or with "..." t's and every topic's below it.
-func (s *search) show(t *Topic, path []string) {
+func (s *search) show(t *Topic, path []string, nodes []*Topic) {
 	if s.all {
-		s.showAll(t, path)
+		s.showAll(t, path, nodes)
 
 		return
 	}
 
 	list := t.list()
-	s.out = append(s.out, Display{
-		Kind: ShowTopic, Headings: path, Text: t.Text, Depth: len(path),
-		List: list, Listed: len(list) > 0, ListDepth: len(path),
-	})
+	s.out = append(s.out, topicDisplay(path, nodes))
 
 	// A topic with no text and no subtopics is shown, and then HELP says
 	// it has no documentation and lists the library's topics, as though
@@ -303,10 +353,22 @@ func (s *search) show(t *Topic, path []string) {
 
 // showAll adds t's display and those of all its numbered subtopics, in
 // the module's order, with no lists.
-func (s *search) showAll(t *Topic, path []string) {
-	s.out = append(s.out, Display{Kind: ShowTopic, Headings: path, Text: t.Text, Depth: len(path)})
+func (s *search) showAll(t *Topic, path []string, nodes []*Topic) {
+	s.out = append(s.out, Display{Kind: ShowTopic, Headings: path, Text: t.Text, Depth: len(path), path: nodes})
 
 	for _, c := range t.Subtopics {
-		s.showAll(c, append(append([]string(nil), path...), c.Key))
+		s.showAll(c, append(append([]string(nil), path...), c.Key), append(append([]*Topic(nil), nodes...), c))
+	}
+}
+
+// topicDisplay is a numbered topic's display: the last of nodes, under
+// the headings of path, with its text and its subtopics.
+func topicDisplay(path []string, nodes []*Topic) Display {
+	t := nodes[len(nodes)-1]
+	list := t.list()
+
+	return Display{
+		Kind: ShowTopic, Headings: path, Text: t.Text, Depth: len(path),
+		List: list, Listed: len(list) > 0, ListDepth: len(path), path: nodes,
 	}
 }

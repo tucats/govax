@@ -757,7 +757,7 @@ Scope):
    (`TestHelp90Oracle`), and to G's local log when it's present
    (done 2026-11-07).
 5. The interactive session: prompts and responses, held to round 2's
-   terminal log and round 1's D part.
+   terminal log and round 1's D part (done 2026-11-07).
 6. DCL's HELP: the grammar's qualifiers, the library search and
    `HLP$LIBRARY`, `/OUTPUT`, `/PAGE`, HELP in procedures and subprocesses;
    round 1's C part.
@@ -935,3 +935,37 @@ Scope):
   "Sorry" is the deepest, the first of equals; a request going on past a
   qualifier line's topic is "Sorry" below it; qualifier lines two levels
   down aren't found. Subtask 4 done.
+- **2026-11-07** — Subtask 5, the interactive session. `session.go`'s
+  `Session` answers a request, then prompts and answers each response
+  over a `Read` and a `Write` its caller gives it (a `BeforeDisplay` hook
+  for `/PAGE`'s screen clears, an `Open` for `@library`). Its place is a
+  library and a path of topics (`place`, `step`); the prompt names the
+  path (`DEEPER L2 L3 Subtopic?`, `@H90B BONLY Subtopic?`). Keys at a
+  `Subtopic?` prompt are looked up below its topic (`lookupFrom`, which
+  `Lookup` now uses too: "..." is part of a word there, and "Sorry" names
+  the path and the words); at `Topic?` they're a new request, `@spec`
+  first moving to that library. `?` shows the prompt's topic again (at
+  `Topic?`, HELP's own topic and the list); an empty response goes up a
+  level, from an `@` library's `Topic?` back to the main library's, and
+  from that out of HELP; end of input ends HELP at once. Where it
+  prompts next (`next`, from the topics a `Display` now carries in
+  `path`): at the topic shown if it has numbered subtopics, else at its
+  parent (a qualifier line's too); after a miss where it was, but after a
+  first request that misses at `Topic?` (VMS's debugger's `HELP EST`).
+  The debugger is a Session whose words start with `DEBUG`.
+  `TestHelp90Prompting` holds it to part D's nine HELP/PROMPT commands in
+  round 1b's log and round 1c's chain, answered by the procedures' data
+  lines (SET VERIFY's echo and SKPDAT played by the test) and by
+  `resp.txt`; `TestHelp90Terminal` to round 2's ten sessions at the
+  terminal, the debugger's two among them, with the escape sequences
+  taken out and long lines wrapped as the terminal driver wraps them.
+  What the terminal does is the caller's: the echo, `?` read without a
+  Return, Ctrl/Z's ` Exit `, and `/PAGE`'s clears (subtask 6). Left to
+  subtask 6: HELP/OUTPUT (part D's last command), the library search and
+  its messages. Unconfirmed, and chosen: after several topics are shown
+  HELP prompts at the topics their paths share (the probe's only case
+  was `*` below ALPHA, which stayed at ALPHA; after `ALPHA...` this
+  prompts at ALPHA); `@spec` at a `Subtopic?` prompt is a key, not a
+  library; an empty response in a second `@` library goes back to the
+  main one; INVKEY at `Topic?` leaves the prompt there; nine words'
+  wrap isn't applied below a prompt's path. Subtask 5 done.

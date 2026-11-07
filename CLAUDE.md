@@ -696,7 +696,11 @@ never had.
   (`NewLBRLibrary`, `NewMemoryLibrary`), held to the probe's HELP logs by
   `TestHelp90Oracle` and to VMS's own modules (local) by
   `TestHelp90VMSModules`; the old `$` format is `oldformat.go` until
-  subtask 7.
+  subtask 7. Subtask 5 (done 2026-11-07) is the interactive session,
+  `help.Session` (prompts, `?`, Return, `@library`, end of input, over a
+  caller's `Read` and `Write`), held to part D's procedures by
+  `TestHelp90Prompting` and to round 2's terminal log by
+  `TestHelp90Terminal`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -188,7 +188,9 @@ each display. Round 3, the LBR$ writing routines, is subtask 11's.
 part B of `vax/round1b/help90.log` and to `vax/round2/help90c.log`
 (subtask 4), and `TestHelp90VMSModules` to part G's local log, with
 VMS's HELPLIB.HLB copied beside it (the test's comment says how); it
-skips without them.
+skips without them. `TestHelp90Prompting` holds HELP's prompting to
+part D and round 1c's chain, and `TestHelp90Terminal` to round 2's
+terminal session (subtask 5).
 
 ## What the run settles
 
