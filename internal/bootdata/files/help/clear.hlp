@@ -1,30 +1,32 @@
 1 CLEAR
-    The CLEAR command is used to clear various attributes of the virtual VAX
-    or the console processor.  See the help for
 
-        CLEAR MEMORY
-        CLEAR STRINGS
+   Clears the machine's memory or the console's string pool.
 
-    Breakpoints, interrupts, the translation buffer, and the machine's symbol
-    table (CLEAR SYMBOL) are the debugger's: see CANCEL in the debugger's
-    help (DEBUG, then HELP CANCEL).  A DCL symbol is deleted with
-    DELETE/SYMBOL.
+   Format
+
+     CLEAR keyword
+
+   Breakpoints, interrupts, the translation buffer, and the machine's
+   symbol table are the debugger's: see CANCEL in the debugger's help
+   (DEBUG, then HELP CANCEL).  A DCL symbol is deleted with
+   DELETE/SYMBOL.
+
 2 MEMORY
-    The CLEAR MEMORY command (or ZERO command, which is a synonym) is used
-    to zero out the virtual VAX's memory.  All physical memory is cleared,
-    which implicitly zeros out virtual memory.  When a CLEAR MEMORY command
-    is given, it also turns virtual memory off, since the page tables will
-    have been zeroed.
 
-    Syntax:
+   Sets all of physical memory to zeros, which clears virtual memory
+   too, and turns memory management off, since the page tables are
+   gone.  ZERO is the same.  VMINIT lays virtual memory out again.
 
-        CLEAR MEMORY
+   Format
+
+     CLEAR MEMORY
+
 2 STRINGS
-    The CLEAR STRINGS command resets the string pool.  This invalidates
-    any string values used, so the command should only be used when
-    clearing programs from memory, etc.   See the SHOW STRINGS command
-    for information on the string pool.
 
-    Syntax:
+   Empties the string pool (see SHOW STRING_POOL).  The descriptors
+   already made from it are no longer good, so clear it only when the
+   programs that use them are gone from memory.
 
-        CLEAR STRINGS
+   Format
+
+     CLEAR STRINGS

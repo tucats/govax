@@ -731,7 +731,11 @@ never had.
   beside `=` and `:=`, and LEXICAL is `Lexicals`, a topic per function
   (`TestEveryLexicalHasHelp`). Subtask 8c (done 2026-11-07) is the
   programming tools (MACRO, LINK, LIBRARY, ANALYZE in a form per
-  qualifier, FORTRAN, RUN).
+  qualifier, FORTRAN, RUN). Subtask 8d (done 2026-11-07) is the rest: SET
+  and SHOW a topic per keyword, HELP, INSTRUCTIONS, HINTS, SPECIFY, the
+  machine's commands, and govax's topics; every qualifier of every verb
+  now has a qualifier line (`TestEveryQualifierHasHelp`), each keyed by
+  its bare name.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

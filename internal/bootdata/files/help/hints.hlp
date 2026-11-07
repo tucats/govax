@@ -1,0 +1,94 @@
+1 HINTS
+
+   The topics, by subject.  Type HELP and a topic's name for more.
+
+2 Files_and_volumes
+
+     BACKUP          List, restore, compare, or save BACKUP save sets
+     CONVERT         Copy a file's records into another organization
+     COPY            Copy files between the host and mounted volumes
+     CREATE          Make a file, a directory, or a logical name table
+     DELETE          Delete files on a mounted volume
+     DIRECTORY       List files on a mounted volume
+     DISMOUNT        Detach a volume from its device
+     DUMP            Show a file's blocks or records
+     EDIT            Edit a file with an editor on the host
+     INITIALIZE      Make a container volume, or the machine's memory
+     MOUNT           Attach a container to a device
+     PURGE           Delete all but the newest versions of files
+     RENAME          Rename or move files on a mounted volume
+     SPECIFY         How a file is named: a volume's or the host's
+     TYPE            Show a file at the terminal
+
+2 Command_procedures
+
+     @               Run a command procedure
+     CALL            Run a subroutine of a procedure
+     DECK            Make data lines that start with "$"
+     EXIT            End a procedure, or govax at the terminal
+     GOSUB           Run the commands at a label, then come back
+     GOTO            Go on at a label
+     IF              Run commands when an expression is true
+     INQUIRE         Ask the terminal for a symbol's value
+     Lexicals        F$ functions: the process, files, strings, time
+     ON              Choose what a failing command does
+     Symbol_Assign   Symbols, expressions, and $STATUS
+     WAIT            Wait for a time
+
+2 Files_in_procedures
+
+     CLOSE           Close a file OPEN opened
+     OPEN            Open a file for READ and WRITE
+     READ            Read a record into a symbol
+     WRITE           Write a record
+
+2 Logical_names
+
+     ASSIGN          Make a logical name, equivalence first
+     DEASSIGN        Delete logical names
+     DEFINE          Make a logical name, or a device
+     SHOW            SHOW LOGICAL and SHOW TRANSLATION
+
+2 Programs
+
+     ANALYZE         Describe an object file, an image, or an RMS file
+     FORTRAN         Compile FORTRAN into MACRO-32
+     LIBRARY         Make and change libraries
+     LINK            Link objects into an image
+     MACRO           Assemble MACRO-32 into an object
+     MCR             Run an image with a command line
+     FOREIGN         Run an image as a command
+     RUN             Run an image
+
+2 Processes
+
+     ATTACH          Give the terminal to another process
+     LOGOUT          End a subprocess
+     SPAWN           Make a subprocess
+     STOP            End procedures, or delete a process
+     SHOW            SHOW SYSTEM, SHOW PROCESS, SHOW WORKING_SET
+
+2 The_machine
+
+     ASM             Assemble into memory, before the microkernel
+     CLEAR           Clear memory or the string pool
+     DEBUG           Start the debugger
+     LOAD            Load a ROM or NVRAM image
+     PRINT           Show expressions in the console's radix
+     PSL             The processor status longword
+     SAVE            Save a ROM or NVRAM image
+     SET             The console's settings
+     SHOW            The machine's and the console's state
+     TIME            Time a command
+     VMINIT          Lay out virtual memory
+     XFC             govax's extended function codes
+     ZERO            Clear memory
+
+2 govax
+
+     ABOUT           Who made govax
+     CONFIGURATION   govax's settings, and how to set them
+     KEYS            Ctrl/C, Ctrl/Y, and Ctrl/Z
+     QUIT            Leave govax
+     STARTUP         What govax does as it starts
+     SYSTEM_VOLUME   The volume of govax's own files

@@ -72,7 +72,7 @@ func TestCommands_helpAliases(t *testing.T) {
 			t.Fatalf("%s: %v", line, err)
 		}
 
-		if !strings.Contains(buf.String(), "govax a VAX software emulator") {
+		if !strings.Contains(buf.String(), "govax is a VAX emulator") {
 			t.Errorf("%s printed %q", line, buf.String())
 		}
 	}

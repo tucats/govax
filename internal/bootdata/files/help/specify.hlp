@@ -1,0 +1,37 @@
+1 SPECIFY
+
+   How commands name files, on a mounted volume or on the host.
+
+2 File_spec
+
+   A file on a mounted volume is named as on VMS:
+
+     node::device:[directory]name.type;version
+
+   DUA1:[WORK.SUB]REPORT.TXT;3 is version 3 of REPORT.TXT in the
+   directory [WORK.SUB] on the volume mounted on DUA1:.  A part left out
+   is the default device and directory's (see SET DEFAULT), and a
+   version left out is the newest (DELETE and PURGE have their own
+   rules).  A device may be a logical name (SYS$LIBRARY:STARTUP.COM), and
+   a name or type may hold the wildcards * (any characters) and % (one
+   character) where the command allows.  [-] is the directory above,
+   [.SUB] one below the default, and [...] in a search every directory
+   below.
+
+2 Host_files
+
+   A command decides whether a name is a host file or a volume file by
+   these rules:
+
+     - with /HOST after it, it is a host path;
+     - a name with a directory in brackets ([DIR]HELLO.MAR), or a device
+       or logical name of two or more characters (DUA1:HELLO.MAR,
+       SRC:HELLO.MAR), is on a mounted volume;
+     - a name with "/" or "\" (or a Windows drive letter) is a host
+       path;
+     - any other name (HELLO.MAR) is in the default directory when SET
+       DEFAULT names a mounted volume, and a host file otherwise.
+
+   DCL makes unquoted text uppercase, so quote a host path to keep its
+   case: TYPE "notes/todo.txt".  Relative host paths are from the
+   directory govax was started in.

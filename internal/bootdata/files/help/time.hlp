@@ -1,15 +1,20 @@
 1 TIME
-    The TIME command runs another console command and reports how long it
-    took.  With no command, it prints the time of day.
 
-    Syntax:
+   Runs a command and reports how long it took.  With no command, it
+   shows the time of day.
 
-        TIME [<command>]
+   Format
 
-    Parameter:
+     TIME [command]
 
-        <command>       Any console command.
+2 Parameter
 
-    Example:
+ command
 
-        TIME DIRECTORY
+   Any console command, the rest of the line.
+
+2 Examples
+
+   1.$ TIME LINK BIGPROG
+
+     Links BIGPROG, then shows "Elapsed time:" and the seconds it took.

@@ -1,15 +1,22 @@
 1 PSL
-    The PSL is a 32-bit integer value stored in the processor.  The SHOW PSL
-    command can be used to display the PSL as an integer, and also as the
-    individual fields of the PSL.  These fields are:
 
-    C       carry bit
-    V       overflow bit
-    Z       zero value
-    N       negative value
-    T       trace pending
-    IV      integer overflow
-    FU      floating point underflow
-    DV      divide-by-zero
-    IPL     current interrupt priority level
-    MOD     current mode (user, kernel, supervisor, executive)
+   The processor status longword: the CPU's condition codes, trap
+   enables, and state.  The debugger shows it (SHOW PSL, SHOW
+   REGISTERS) as a value and as its fields:
+
+     C      Carry.
+     V      Overflow.
+     Z      Zero.
+     N      Negative.
+     T      Trace: a trace fault comes before the next instruction.
+     IV     Integer overflow traps are enabled.
+     FU     Floating underflow faults are enabled.
+     DV     Decimal overflow traps are enabled.
+     IPL    The interrupt priority level, 0 to 31.
+     PRV    The previous access mode.
+     CUR    The current access mode: kernel, executive, supervisor, or
+            user.
+     IS     The CPU is on the interrupt stack.
+     FPD    First part done: an interrupted instruction resumes.
+     TP     Trace pending.
+     CM     Compatibility mode (always 0 in govax).

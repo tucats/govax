@@ -1,80 +1,144 @@
 1 HELP
-    govax a VAX software emulator.  It supports execution of a subset
-    of the VAX instruction set.  It also contains emulation of VAX hardware,
-    memory management, and console functions.  The console functions are
-    extended beyond existing VAX implementation to include an assembler
-    and a debugger, modeled on the VMS debugger, with breakpoints,
-    stepping, and commands to examine and change the machine.
 
-    You can get help on a topic by using the HELP command, followed by
-    one or more keywords.  For example, to get help on the SHOW command,
-    issue the command:
+   govax is a VAX emulator that runs VAX/VMS programs, with VMS's DCL as
+   its command language.  HELP describes its commands and topics.  At
+   the Topic? prompt, type:
 
-           HELP SHOW
+     a topic's name            to read about it (HELP COPY, HELP SHOW
+                               LOGICAL; a word may be shortened)
+     INSTRUCTIONS              for more on using HELP
+     HINTS                     for the topics by subject
+     Return or Ctrl/Z          to leave HELP
 
-    To get help on the SHOW LOGICAL subcommand to SHOW, use the command:
+   The machine's own commands (EXAMINE, DEPOSIT, STEP, breakpoints) are
+   the debugger's: type DEBUG, then HELP at its DBG> prompt.
 
-           HELP SHOW LOGICAL
+   Format
 
+     HELP [keyword ...]
 
+2 Parameter
 
-    For additional information, see the help on the following command topics:
+ keyword ...
 
-    @               Run a command procedure (a file of DCL commands)
-    ANALYZE         Describe object and image files, as VMS's ANALYZE does
-    ASSIGN          Create a logical name (equivalence first)
-    BACKUP          List, restore, compare, or save VMS BACKUP save sets
-    CALL            Run a command procedure's subroutine at a new level
-    CLEAR           Clear memory, symbols, strings
-    COPY            Copy a file between the host and a mounted volume
-    CREATE          Create a directory or a logical name table
-    DEASSIGN        Delete a logical name
-    DEFINE          Create a logical name
-    DELETE          Delete a file on a mounted volume
-    DIRECTORY       List the files on a mounted volume
-    DEBUG           Start the debugger on the virtual VAX
-    DISMOUNT        Detach a device's mounted disk-image container
-    DECK            Mark data lines that start with "$" (EOD ends them)
-    CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
-    EDIT            Edit a file with an editor on the host
-    EOD             End a command procedure's data lines
-    EXIT            End a command procedure, or govax at the terminal
-    FORTRAN         Compile a FORTRAN source file into a MACRO-32 source file
-    IF              Run a command when an expression is true
-    GOSUB           Call a subroutine at a label (RETURN comes back)
-    GOTO            Go on at a label of a command procedure
-    INITIALIZE      Initialize the virtual VAX, or a disk-image container
-    LIBRARY         Create, change, or list a macro, object, or text library
-    LINK            Link object modules into an executable image
-    LOAD            Load a saved memory image
-    MACRO           Assemble a MACRO-32 source file into an object module
-    MOUNT           Attach a disk-image container file to a device
-    ON              Choose what a command procedure does when a command fails
-    PRINT           Print messages or expressions
-    PURGE           Delete old versions of files on a mounted volume
-    QUIT            Quit govax
-    RENAME          Rename or move files on a mounted volume
-    RUN             Load and run a VAX/VMS image
-    SAVE            Save the machine state
-    SET             Set the state of the console
-    SHOW            Display the state of the console
-    STOP            Delete a process
-    TEST            Run the emulator's debugging sequences
-    TIME            Run a command and report how long it took
-    TYPE            Display a file on a mounted volume or the host
-    VMINIT          Initialize a VM map
-    ZERO            Clear the virtual VAX's memory
+   The topic, and the subtopics below it, each a word: HELP SHOW
+   LOGICAL, HELP COPY /LOG.  A word may be abbreviated as long as it is
+   (HELP DIR is HELP DIRECTORY; one that fits several topics shows them
+   all), and may have the wildcards * (any characters) and % (one
+   character).  A word ending in "..." shows the topic and everything
+   below it.  "@name" first moves to a user library (see Description).
+   Without a keyword, HELP lists the main library's topics.
 
-    The commands that examine and control the machine itself (EXAMINE,
-    DEPOSIT, STEP, breakpoints, the registers) are the debugger's; type
-    DEBUG for its prompt, DBG>, and HELP there for its commands.
+2 Description
 
-    Other topics:
+   After showing a topic, HELP prompts for one of its subtopics
+   ("SHOW Subtopic?"), or at the top for a topic ("Topic?").  At a
+   prompt, a word shows that subtopic, "?" shows the topic again with
+   its list, Return goes up a level, and Ctrl/Z ends HELP.  /NOPROMPT
+   shows the topic asked for and ends.
 
-    ABOUT           About govax
-    CONFIG          govax's configuration settings, and how to set them
-    KEYS            The control keys: Ctrl/C, Ctrl/Y, and Ctrl/Z
-    PSL             The processor status longword and its fields
-    STARTUP         What govax does as it starts: the system volume,
-                    STARTUP.COM, and SYSTARTUP_VMS.COM
-    XFC             govax's extended function codes
+   The main library is SYS$HELP:HELPLIB.HLB, on the system volume, or
+   govax's own copy built into it when there is no such file.  The user
+   libraries are those the logical names HLP$LIBRARY, HLP$LIBRARY_1,
+   HLP$LIBRARY_2, ... name, in the process, group, and system tables in
+   that order, each table's numbers ending at the first missing one.  A
+   topic the main library doesn't have is looked for in each user
+   library, and "@name" at the start of a request, or at Topic?, moves
+   HELP to the user library whose name starts with name.  A help
+   library is made with LIBRARY/CREATE/HELP from help files; see
+   LIBRARY.
+
+   In a command procedure, HELP's prompts read the procedure's data
+   lines.  /PAGE=SAVE, /SEARCH, /EXACT, /HIGHLIGHT, /WRAP, and
+   HELP/MESSAGE wait for a later version of govax, and are refused with
+   %DCL-W-HELPNOTIMPL.
+
+2 Qualifiers
+/EXACT
+
+   Not yet in govax.
+
+/HIGHLIGHT
+
+   Not yet in govax.
+
+/INSTRUCTIONS
+
+      /[NO]INSTRUCTIONS
+
+   Shows the instructions on using HELP above the main library's list
+   of topics (the default).  /NOINSTRUCTIONS shows the list alone.
+
+/LIBLIST
+
+      /[NO]LIBLIST
+
+   Lists the user libraries' names after a library's list of topics
+   (the default).
+
+/LIBRARY
+
+      /[NO]LIBRARY[=filespec]
+
+   /LIBRARY=filespec makes the library named the main one, its name
+   parsed with the default SYS$HELP:.HLB.  /NOLIBRARY makes the first
+   user library the main one.
+
+/MESSAGE
+
+   Not yet in govax.
+
+/OUTPUT
+
+      /[NO]OUTPUT[=filespec]
+
+   Writes the help to a file, HELP.LIS by default, rather than the
+   terminal, with lists 132 columns wide.  /NOOUTPUT writes nothing.
+
+/PAGE
+
+      /[NO]PAGE[=keyword]
+
+   Stops after each screenful, as TYPE/PAGE does.  CLEAR_SCREEN (the
+   default) clears the screen before each topic, and SCROLL doesn't.
+   Without /PAGE or /NOPAGE, HELP pages when it writes to a terminal.
+
+/PROMPT
+
+      /[NO]PROMPT
+
+   Prompts for further topics after the first (the default).
+
+/SEARCH
+
+   Not yet in govax.
+
+/USERLIBRARY
+
+      /[NO]USERLIBRARY[=(table[,...])]
+
+   The tables whose HLP$LIBRARY names are searched: PROCESS, GROUP,
+   SYSTEM, ALL (the default), or NONE.  /NOUSERLIBRARY is NONE.
+
+/WRAP
+
+   Not yet in govax.
+
+2 Examples
+
+   1.$ HELP
+
+     Lists the topics, then prompts for one.
+
+   2.$ HELP SHOW LOGICAL
+
+     Shows SHOW LOGICAL, then prompts for its subtopics.
+
+   3.$ HELP/NOPROMPT COPY /RECORD_FORMAT
+
+     Shows COPY's /RECORD_FORMAT qualifier, and ends.
+
+   4.$ DEFINE HLP$LIBRARY DUA1:[TOOLS]TOOLS.HLB
+     $ HELP @TOOLS
+
+     Makes TOOLS.HLB a user library, and shows its topics.

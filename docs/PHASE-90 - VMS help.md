@@ -774,7 +774,7 @@ Scope):
    programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN) (done
    2026-11-07); (d)
    govax's own topics and the machine's commands, HELP, INSTRUCTIONS, and
-   HINTS.
+   HINTS (done 2026-11-07).
 9. The debugger's help rewritten as the DEBUG module, and the debugger's
    HELP on it, held to round 1's F part.
 10. LBRSHR: `vmsdef`'s vector, messages, and definitions;
@@ -1200,3 +1200,50 @@ Scope):
   8b, and 8c's modules changed mechanically, and
   `TestHelpModulesWellFormed` refuses a qualifier line whose key isn't a
   bare `/NAME` (`bareQualifier`). Subtask 8d writes its modules so.
+- **2026-11-07** — Subtask 8d, the rest rewritten, which ends subtask 8.
+  SET and SHOW whole: a level-2 topic per keyword the grammar has, each
+  with its Format and, where they have them, level-3 Parameter,
+  Qualifiers, and Examples. The old SET had a SET ASSEMBLER the grammar
+  doesn't (gone), EDIT for EDITOR, and NOCONTROL, NOON, NOPREFIX, and
+  NOVERIFY as copies (gone: each topic's Format has its NO form); it
+  lacked VERBOSE. The old SHOW had SHOW QUANTUM, which isn't there, and
+  STRINGS for STRING_POOL, and lacked NVRAM, ROM, SHARE_PREFIX, and
+  VERSION. SHOW EXPAND is in the grammar with no handler (NOHANDLER),
+  so it has no topic. SET DEBUG lists the switches SHOW DEBUG does.
+  HELP is VMS's shape: its level-1 text is the short instructions HELP
+  with no topic shows (VMS's HELP module serves so too), then Parameter,
+  Description (the prompts, the libraries, HLP$LIBRARY, `@name`),
+  Qualifiers (the five that wait for a later phase say so), and Examples.
+  INSTRUCTIONS (more on using HELP), HINTS (the topics by subject, a
+  level-2 topic per subject), and SPECIFY (file specifications, the
+  volume's and the host's rules; MACRO's Parameter now points there) are
+  new, three of Decision 11's VMS names. The machine's commands (ASM,
+  ASSEMBLE, BOOT, CLEAR, DEBUG, LOAD, PRINT, QUIT, ROM, SAVE, TEST, TIME,
+  VMINIT, ZERO) are in 8a's shape, and govax's topics (ABOUT, AUTHOR,
+  CONFIGURATION, KEYS, PSL, STARTUP, SYSTEM_VOLUME, XFC) re-indented and
+  brought up to date. STARTUP and SYSTEM_VOLUME were one text twice;
+  STARTUP is now the start's steps and SYSTEM_VOLUME the volume, with
+  subtopics, its table naming HELPLIB.HLB, DBG$HELP.HLB, their sources,
+  and BUILDHELP.COM where it named subtask 7's CONSOLE.HLP and DEBUG.HLP.
+  XFC lists all thirteen functions (it had four, one of them gone).
+  FUNCTIONS and COMMAND are gone: of FUNCTIONS' ten console expression
+  functions only DEFINED is still in the evaluator, and PRINT describes
+  it and the console's expressions, which COMMAND PARAMETERS did.
+  Checking each claim against govax found: LOAD/ROM reads only SAVE/ROM's
+  binary image, and has no /BASE or /SIZE; plain LOAD and SAVE need /ROM
+  or /NVRAM (NEEDROMNVRAM); SAVE writes only host files; VMINIT's /DEBUG
+  (and its /LOG and /VERIFY) changes nothing; SHOW MEMORY's /RUNTIME and
+  /STATISTICS change nothing; PRINT writes nothing after SET NOVERBOSE;
+  TEST has no handler (NOHANDLER), and its topic says so; the share
+  prefix is never set. And a bug, fixed: SET RADIX refused HEXADECIMAL
+  and DECIMAL, the spellings its help gave, taking only HEX, HEXA, DEC,
+  DECI, or a number; it now takes any abbreviation of HEXADECIMAL,
+  DECIMAL, or OCTAL of three letters or more (`setcommand.go`'s
+  `radixNames`, `TestDispatch_setRadixKeywords`).
+  The tests: every verb's help is rewritten, so `TestEveryQualifierHasHelp`
+  now holds every verb to a qualifier line or key per qualifier, and
+  `rewrittenHelp`, `qualifierHelpExceptions`, and the looser check by
+  text (`qualifierNamed`, `topicText`) are gone. `TestHelpTopics` looks
+  up the new topics. Left for later: TEST and SHOW EXPAND have no
+  handlers; the grammar could drop them. Subtask 8d done, and with it
+  subtask 8.

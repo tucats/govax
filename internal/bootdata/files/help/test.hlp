@@ -1,14 +1,9 @@
 1 TEST
-    The TEST statement executes special debugging sequences in the emulator.
 
-    Syntax:
+   Reserved for the emulator's own test sequences.  The grammar takes
+   the command, but nothing in govax runs one: TEST is
+   %DCL-E-NOHANDLER.
 
-        TEST    <test>
+   Format
 
-    Parameter:
-
-        <test>      The test number to execute.
-
-                    11004   Toggle VM tracing
-                    11003   Toggle translation buffer usage
-                    11001   Generate instruction.h file
+     TEST code

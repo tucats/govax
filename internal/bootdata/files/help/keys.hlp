@@ -1,62 +1,62 @@
 1 KEYS
-    govax gives the control keys the meanings VMS gives them:
+   govax gives the control keys the meanings VMS gives them:
 
-    Ctrl/C      Stops the command running, such as a RUN or GO, and
-                returns to the prompt of the command line that started it:
-                the console's, or the debugger's DBG>.  A program waiting
-                for a line of input stops too.  At a prompt, it cancels
-                the line being typed.  A program that has enabled a CTRL/C
-                AST gets the AST instead (or its CTRL/Y AST, if it has
-                only that).  With several processes, the AST goes to the
-                running process if it enabled one, else to the first
-                other process (by PID) that did.  govax echoes
-                *Interrupt*.
+   Ctrl/C      Stops the command running, such as a RUN or GO, and
+               returns to the prompt of the command line that started it:
+               the console's, or the debugger's DBG>.  A program waiting
+               for a line of input stops too.  At a prompt, it cancels
+               the line being typed.  A program that has enabled a CTRL/C
+               AST gets the AST instead (or its CTRL/Y AST, if it has
+               only that).  With several processes, the AST goes to the
+               running process if it enabled one, else to the first
+               other process (by PID) that did.  govax echoes
+               *Interrupt*.
 
-    Ctrl/Y      Ends govax, returning to the host's shell: the command
-                running stops, mounted volumes are dismounted, and the
-                terminal is put back as it was.  If govax doesn't end (a
-                command that doesn't finish), a second Ctrl/Y exits at
-                once.  A program that has enabled a CTRL/Y AST gets the
-                AST instead, chosen among processes as for Ctrl/C.  govax
-                echoes *Interrupt*.
+   Ctrl/Y      Ends govax, returning to the host's shell: the command
+               running stops, mounted volumes are dismounted, and the
+               terminal is put back as it was.  If govax doesn't end (a
+               command that doesn't finish), a second Ctrl/Y exits at
+               once.  A program that has enabled a CTRL/Y AST gets the
+               AST instead, chosen among processes as for Ctrl/C.  govax
+               echoes *Interrupt*.
 
-                In a command procedure, Ctrl/Y (and Ctrl/C, when no
-                program takes it) is DCL's instead.  With an ON
-                CONTROL_Y in the procedure, its command runs.  With one
-                only in a procedure that ran it (directly or not), the
-                procedures inside that one end, and it goes on with its
-                next command.  With none at all, the procedure is
-                interrupted and the prompt appears: commands typed then
-                run in the procedure's context (its symbols), CONTINUE
-                resumes it (and its image, if one was running), EXIT or
-                STOP ends every procedure, and a command that runs an
-                image or a procedure ends them and then runs.  Ctrl/Z
-                there is EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
+               In a command procedure, Ctrl/Y (and Ctrl/C, when no
+               program takes it) is DCL's instead.  With an ON
+               CONTROL_Y in the procedure, its command runs.  With one
+               only in a procedure that ran it (directly or not), the
+               procedures inside that one end, and it goes on with its
+               next command.  With none at all, the procedure is
+               interrupted and the prompt appears: commands typed then
+               run in the procedure's context (its symbols), CONTINUE
+               resumes it (and its image, if one was running), EXIT or
+               STOP ends every procedure, and a command that runs an
+               image or a procedure ends them and then runs.  Ctrl/Z
+               there is EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
 
-                While SPAWN (without /NOWAIT) waits for a subprocess,
-                the terminal is attached to the subprocess, and Ctrl/Y
-                and Ctrl/C are its DCL's, by the same rules in its
-                command procedures (its own prompt at the Ctrl/Y level).
-                Outside a procedure, they end the image the subprocess
-                is running, and its DCL goes on with its next command;
-                they don't end govax.  Down a chain of SPAWNs, the keys
-                go to the last subprocess.
+               While SPAWN (without /NOWAIT) waits for a subprocess,
+               the terminal is attached to the subprocess, and Ctrl/Y
+               and Ctrl/C are its DCL's, by the same rules in its
+               command procedures (its own prompt at the Ctrl/Y level).
+               Outside a procedure, they end the image the subprocess
+               is running, and its DCL goes on with its next command;
+               they don't end govax.  Down a chain of SPAWNs, the keys
+               go to the last subprocess.
 
-    Ctrl/Z      End of file.  On an empty line, the read waiting gets
-                the end of file, and govax echoes *Exit*.  Typed after
-                some text, it ends the line as RETURN does, and the next
-                read is the end of file.  A program's read sees end of
-                file (RMS$_EOF from $GET).  At the debugger's DBG> it is
-                EXIT, ending the session; in the interactive assembler
-                (ASM>) it is .END.  At the console's prompt it only
-                echoes *Exit*, as at DCL's: govax ends with EXIT, QUIT,
-                or Ctrl/Y.
+   Ctrl/Z      End of file.  On an empty line, the read waiting gets
+               the end of file, and govax echoes *Exit*.  Typed after
+               some text, it ends the line as RETURN does, and the next
+               read is the end of file.  A program's read sees end of
+               file (RMS$_EOF from $GET).  At the debugger's DBG> it is
+               EXIT, ending the session; in the interactive assembler
+               (ASM>) it is .END.  At the console's prompt it only
+               echoes *Exit*, as at DCL's: govax ends with EXIT, QUIT,
+               or Ctrl/Y.
 
-    The other control keys keep their host meanings: the line editor's
-    at a prompt, and the host terminal's while a program runs.  Nothing
-    suspends govax.
+   The other control keys keep their host meanings: the line editor's
+   at a prompt, and the host terminal's while a program runs.  Nothing
+   suspends govax.
 
-    With the scheduler on (vax.process.scheduler), a process waiting for
-    a line from the terminal lets the other processes run.  Processes
-    reading the terminal get its lines in the order they asked, and each
-    read's prompt appears when its turn comes.
+   With the scheduler on (vax.process.scheduler), a process waiting for
+   a line from the terminal lets the other processes run.  Processes
+   reading the terminal get its lines in the order they asked, and each
+   read's prompt appears when its turn comes.

@@ -42,9 +42,21 @@ func TestHelpTopics(t *testing.T) {
 		{[]string{"COPY"}, []string{"COPY input-filespec output-filespec"}},
 		{[]string{"COPY", "/RECORD_FORMAT"}, []string{"STREAM_LF", "govax's own"}},
 		{[]string{"CREATE", "/DIRECTORY", "Qualifiers", "/OWNER"}, []string{"PARENT"}},
-		{[]string{"SET", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
-		{[]string{"SE", "DEFAULT"}, []string{"SET DEFAULT command establishes"}},
-		{[]string{"SHOW", "DEFAULT"}, []string{"SHOW DEFAULT command displays"}},
+		{[]string{"SET", "DEFAULT"}, []string{"SET DEFAULT [device:][directory]"}},
+		{[]string{"SE", "DEFAULT"}, []string{"SET DEFAULT [device:][directory]"}},
+		{[]string{"SHOW", "DEFAULT"}, []string{"Shows the default device and directory"}},
+		{[]string{"SET", "RADIX"}, []string{"HEXADECIMAL, DECIMAL, or OCTAL"}},
+		{[]string{"SET", "DEBUG"}, []string{"LIBINIT", "USERSTEP"}},
+		{[]string{"SHOW", "STRING_POOL"}, []string{"CLEAR STRINGS"}},
+		{[]string{"SHOW", "MEMORY", "Qualifiers", "/FILES"}, []string{"PGFLQUOTA"}},
+		{[]string{"HELP", "Qualifiers", "/USERLIBRARY"}, []string{"HLP$LIBRARY"}},
+		{[]string{"INSTRUCTIONS"}, []string{"Ctrl/Z"}},
+		{[]string{"HINTS", "Programs"}, []string{"FORTRAN"}},
+		{[]string{"SPECIFY", "Host_files"}, []string{"/HOST"}},
+		{[]string{"VMINIT", "Qualifiers", "/PAGING"}, []string{"vax.sysgen.paging.enable"}},
+		{[]string{"LOAD", "Qualifiers", "/ERROR"}, []string{"/NOERROR"}},
+		{[]string{"XFC"}, []string{"XFC$CONSOLE_PUT"}},
+		{[]string{"SYSTEM_VOLUME", "Contents"}, []string{"HELPLIB.HLB", "BUILDHELP.COM"}},
 		{[]string{"CONFIG"}, []string{"govax config set KEY=VALUE"}},
 		{[]string{"CONFIGURATION"}, []string{"govax config set KEY=VALUE"}},
 		{[]string{"CONFIG", "KEYS"}, []string{"vax.default.volume.file"}},
@@ -120,51 +132,10 @@ func TestEveryVerbHasHelp(t *testing.T) {
 	}
 }
 
-// qualifierHelpExceptions are the console's qualifiers whose verb's topic
-// doesn't name them yet, each with the reason: "VERB/QUALIFIER", or
-// "VERB/*" for all of a verb's. The help is still the old help's text
-// converted (Phase 90's subtask 7); subtask 8 rewrites it with a "/" line
-// for every qualifier, and empties this list.
-var qualifierHelpExceptions = map[string]string{
-	"HELP/*":          "the old help predates HELP's VMS qualifiers (Phase 90, subtask 6)",
-	"SHOW/RUNTIME":    "the old help never described it",
-	"SHOW/STATISTICS": "the old help never described it",
-	"VMINIT/DEBUG":    "the old help never described it",
-	"VMINIT/LOG":      "the old help never described it",
-	"VMINIT/VERIFY":   "the old help never described it",
-}
-
-// rewrittenHelp are the verbs whose help subtask 8 has rewritten in VMS's
-// shape (docs/PHASE-90 - VMS help.md): each of their qualifiers must be a
-// qualifier line ("/NAME" in column 1, under a Qualifiers topic) or a
-// "/NAME" key somewhere in the verb's module. When every verb is here,
-// the looser check by text and qualifierHelpExceptions go.
-var rewrittenHelp = map[string]bool{
-	// Subtask 8a: the commands on files and volumes.
-	"BACKUP": true, "CONVERT": true, "COPY": true, "CREATE": true,
-	"DELETE": true, "DIRECTORY": true, "DISMOUNT": true, "DUMP": true,
-	"EDIT": true, "INITIALIZE": true, "MOUNT": true, "PURGE": true,
-	"RENAME": true, "TYPE": true,
-
-	// Subtask 8b: DCL itself (logical names, procedures and their flow,
-	// file I/O, processes).
-	"ASSIGN": true, "ATTACH": true, "CALL": true, "CLOSE": true,
-	"CONTINUE": true, "DEASSIGN": true, "DECK": true, "DEFINE": true,
-	"ELSE": true, "ENDIF": true, "ENDSUBROUTINE": true, "EOD": true,
-	"EXIT": true, "GOSUB": true, "GOTO": true, "IF": true, "INQUIRE": true,
-	"LOGOUT": true, "MCR": true, "ON": true, "OPEN": true, "READ": true,
-	"RETURN": true, "SPAWN": true, "STOP": true, "SUBROUTINE": true,
-	"THEN": true, "WAIT": true, "WRITE": true,
-
-	// Subtask 8c: the programming tools.
-	"ANALYZE": true, "FORTRAN": true, "LIBRARY": true, "LINK": true,
-	"MACRO": true, "RUN": true,
-}
-
 // TestEveryQualifierHasHelp: each qualifier a verb's grammar takes (its
-// syntaxes' too) is named somewhere in the verb's topic or below it, as
-// "/NAME" or "/[NO]NAME" (Decision 10), but for qualifierHelpExceptions;
-// a verb of rewrittenHelp's must have a qualifier line or key for it.
+// syntaxes' too) has a qualifier line ("/NAME" in column 1, under a
+// Qualifiers topic) or a "/NAME" key somewhere in the verb's module
+// (Decision 10; Phase 90's subtask 8 rewrote every verb's help so).
 func TestEveryQualifierHasHelp(t *testing.T) {
 	lib := consoletest.HelpLibrary(t, bootdata.HelpLibrary)
 	g := consoletest.ConsoleGrammar(t)
@@ -173,38 +144,16 @@ func TestEveryQualifierHasHelp(t *testing.T) {
 
 	var missing []string
 
-	used := map[string]bool{}
-
 	for i, verb := range names {
 		if alias[i] {
 			continue
 		}
 
-		text := strings.ToUpper(topicText(lib, verb))
 		keys := qualifierKeys(lib, verb)
 
 		for _, q := range g.Qualifiers(verb) {
-			if rewrittenHelp[verb] {
-				if !qualifierKeyed(keys, q) {
-					missing = append(missing, verb+"/"+q+" (no qualifier line)")
-				}
-
-				continue
-			}
-
-			if qualifierNamed(text, q) {
-				continue
-			}
-
-			key := verb + "/" + q
-
-			switch {
-			case qualifierHelpExceptions[key] != "":
-				used[key] = true
-			case qualifierHelpExceptions[verb+"/*"] != "":
-				used[verb+"/*"] = true
-			default:
-				missing = append(missing, key)
+			if !qualifierKeyed(keys, q) {
+				missing = append(missing, verb+"/"+q)
 			}
 		}
 	}
@@ -212,26 +161,8 @@ func TestEveryQualifierHasHelp(t *testing.T) {
 	sort.Strings(missing)
 
 	for _, m := range missing {
-		t.Errorf("%s isn't in its verb's help", m)
+		t.Errorf("%s has no qualifier line in its verb's help", m)
 	}
-
-	for key := range qualifierHelpExceptions {
-		if !used[key] {
-			t.Errorf("qualifierHelpExceptions' %s is no longer needed", key)
-		}
-	}
-}
-
-// qualifierNamed reports whether text, upper-cased help, names the
-// qualifier q: "/Q", "/NOQ", or "/[NO]Q".
-func qualifierNamed(text, q string) bool {
-	for _, form := range []string{"/" + q, "/NO" + q, "/[NO]" + q} {
-		if strings.Contains(text, form) {
-			return true
-		}
-	}
-
-	return strings.HasPrefix(q, "NO") && strings.Contains(text, "/[NO]"+q[2:])
 }
 
 // qualifierKeys is every qualifier line's key and every "/" key in the
@@ -287,36 +218,6 @@ func qualifierKeyed(keys []string, q string) bool {
 	}
 
 	return false
-}
-
-// topicText is every key and line of text in the module named name (as
-// a word abbreviating it finds it) and below.
-func topicText(lib help.Library, name string) string {
-	var b strings.Builder
-
-	var walk func(t *help.Topic)
-
-	walk = func(t *help.Topic) {
-		b.WriteString(t.Key + "\n")
-
-		for _, l := range t.Text {
-			b.WriteString(l + "\n")
-		}
-
-		for _, s := range t.Subtopics {
-			walk(s)
-		}
-	}
-
-	for _, n := range lib.Names() {
-		if strings.HasPrefix(strings.ToUpper(n), strings.ToUpper(name)) {
-			if t := lib.Module(n); t != nil {
-				walk(t)
-			}
-		}
-	}
-
-	return b.String()
 }
 
 // TestCmdHelp_qualifierWithoutSpace: HELP splits a qualifier off the word

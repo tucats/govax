@@ -1,457 +1,342 @@
 1 SET
-    The SET command is used to set the state of information in the virtual
-    VAX or the console processor.  See the help text on:
 
-    CONTROL     DEBUG       DEFAULT     ON
-    PREFIX      PROMPT      QUANTUM     RADIX
-    VERIFY      WORKING_SET
+   Changes a setting of DCL, the console, or the current process.
 
-    A symbol is set with DCL's assignments (see HELP SYMBOL).
+   Format
 
-    The settings of the machine itself (breakpoints, stepping, the PSL, page
-    table entries, the base address, the display modes) are the debugger's:
-    see HELP SET in the debugger (type DEBUG, then HELP SET).
-2 ASSEMBLER
-    The SET ASSEMBLER command is used to control characteristics of the
-    built-in instruction assembler in the console.
+     SET keyword [value]
 
-    Syntax:
+   The machine's own settings (breakpoints, stepping, the PSL, page
+   table entries, the display modes) are the debugger's: type DEBUG,
+   then HELP SET.
 
-        SET ASSEMBLER <flag>
-
-    Parameters:
-
-
-        [NO]ADDRESS_PROMPT
-
-            When set, this flag tells the pseudo-assembler to display
-            the memory address in which the instruction(s) will be
-            written as part of the prompt for input.
-
-        [NO]FORWARD_WARNINGS
-
-            When set, this flag tells the assembler to issue a warning
-            whenever the assembler finishes processing statements and
-            there are unresolved forward references.  These symbols
-            must be resolved before the console will allow a RUN
-            statement to execute.
-
-        [NO]BRANCH_DEST
-
-            When set, disassembly of instructions will include a
-            comment field that lists the numeric destinations of
-            symbolic addresses.  This can make reading the disassembly
-            somewhat easier.
-
-        [NO]SYMBOLS
-
-            When set, the disassembler will attempt to convert branch
-            and address references back into symbolic names if there
-            is a label or entry with a matching value.
-
-        [NO]RESOLVE_TEMP
-
-            When set, the assembler allows symbols prefixed with a "_"
-            character to be considered "temporary" with the definition
-            of a .ENTRY procedure.  When the end of the entry is
-            assembled, the temporary names are qualified by the name of
-            the entry that contains them, making them globally unique.
-
-        [NO]SCOPENAMES
-
-            When set, temporary symbols (prefixed with "_") are made
-            global by qualifying them with the name of the ENTRY that
-            contains them.  When clear, a unique integer number is
-            generated instead to define the scope.  This makes the name
-            of the symbol shorter (and easier to read in disassembly)
-            but less clear which entry it belongs to.
 2 CONTROL
-    The SET NOCONTROL=Y command turns CTRL/Y off: pressing it echoes
-    *Interrupt* and does nothing more, and CTRL/C does nothing to a
-    program that hasn't enabled a CTRL/C AST.  It also cancels the
-    current command level's ON CONTROL_Y.  SET CONTROL=Y turns CTRL/Y
-    back on, with its default action.  The setting applies at every
-    command level.  T (CTRL/T) is accepted and remembered, as
-    F$ENVIRONMENT("CONTROL") reports it, but govax shows no statistics
-    for it.
 
-    Syntax:
+   Turns Ctrl/Y on or off.  SET NOCONTROL=Y makes Ctrl/Y echo
+   *Interrupt* and do nothing more, makes Ctrl/C do nothing to a program
+   that hasn't enabled a Ctrl/C AST, and cancels the current command
+   level's ON CONTROL_Y.  SET CONTROL=Y turns Ctrl/Y back on, with its
+   default action.  The setting applies at every command level.  T
+   (Ctrl/T) is accepted and remembered, as F$ENVIRONMENT("CONTROL")
+   reports it, but govax shows no statistics for it.
 
-        SET [NO]CONTROL[=(T,Y)]
+   Format
 
-    With neither T nor Y, Y is meant.
+     SET [NO]CONTROL[=(T,Y)]
 
-    Example:
+   With neither T nor Y, Y is meant.
 
-        $ SET NOCONTROL=Y
-        $ SET CONTROL=Y         ! CTRL/Y's default action is back
+3 Examples
+
+   1.$ SET NOCONTROL=Y
+
+     Turns Ctrl/Y off.
+
 2 DEBUG
-    The SET DEBUG command sets various debugging switches in the console
-    or emulator.  To set the debug switch, use it's name shown below.  To
-    turn off the switch, previx the name with NO.
 
-    Syntax:
+   Turns govax's own debugging switches on or off (SET DBG is the same).
+   SHOW DEBUG shows them.
 
-        SET DEBUG [NO]<name>
+   Format
 
-    Parameter:
+     SET DEBUG [NO]name[,...]
 
-        <name>   The name of a debugging switch.  The values currently
-                 supported are:
+   A name turns its switch on, and NOname off; SET DEBUG alone turns
+   DEBUG on.  The names are:
 
-                 DEBUG         Switch to native debugger if available.
+     CHM          Debug change-mode instructions and REI.
+     COMMAND      Show command lines after symbol substitution.
+     DCL          Debug DCL's parsing of commands.
+     DEBUG        Invoke the host's debugger, if there is one.
+     DEVICES      Debug device operations.
+     EXCEPTIONS   Debug exception handling.
+     FULLDISASM   Show operand values in disassembly.
+     IMAGES       Show an image's details on RUN.
+     INTERRUPTS   Debug interrupt handling.
+     KEYBOARD     Debug the console's keyboard input.
+     LIBINIT      Call shareable images' LIB$INITIALIZE routines on RUN
+                  (on by default; RUN/[NO]INIT overrides it).
+     LOGICALS     Debug logical name operations.
+     MEMORY       Debug memory operations.
+     PROCESSES    Debug process operations (PROCESS is the same).
+     REGISTERS    Show changed registers after each STEP (on by
+                  default).
+     RMS          Show each RMS service's FAB or RAB as the service left
+                  it, and its status by name.
+     SERVICES     Debug system service calls through the P1 vector.
+     SYMBOLS      Debug symbol table handling.
+     TB           Debug translation buffer caching.
+     USERHALT     HALT in user mode halts the CPU (on by default).
+     USERSTEP     STEP steps only user-mode instructions (on by
+                  default).
+     VM           Debug virtual memory translations.
 
-                 VM            Enable debugging messages for virtual memory
-                               translations.
+   P1 to P4 are accepted, and do nothing.
 
-                 TB            Enable debugging messages for translation
-                               buffer caching.
-
-                 SYMBOLS       Enable debugging messages for symbol
-                               creation or resolution.
-
-                 REGISTERS     Enable display of registers that change
-                               value on a STEP command.
-
-                 INTERRUPTS    Enable debugging messages for interrupts.
-
-                 EXCEPTIONS    Enable debugging messages for exceptions.
-
-                 IMAGES        Enabled SYS$IMGACT mapping when RUN
-                               command issued for an image.
-
-                 USERHALT      Enable HALT instruction in USER mode.
-
-                 KEYBOARD      Debug console keyboard IO activity.
-
-                 SERVICES      Debug P1 vector calls to VMS system services.
-
-                 RMS           Show each RMS service's FAB or RAB as the
-                               service left it: the file and default
-                               names, FAC, record format, and IFI; or the
-                               stream (file, terminal, indirect), record
-                               access mode, record number, the record,
-                               and the status by name.
-
-                 DCL           Debug DCL command line parsing in console.
-
-                 CHM           Enable debug messages on CHMx or REI.
-
-                 COMMAND       Display command line expansions after symbol
-                               substitution in the console.
-
-                 LOGICALS      Debug emulated VMS logical name support.
-
-                 DEVICES       Debug emulated VMS device support.
-
-                 LIBINIT       Enable LIB$INITIALIZE calls on image load.
 2 DEFAULT
-    The SET DEFAULT command establishes the operator's current default
-    device and directory, the same way a partial file specification is
-    resolved in real VMS DCL.  DIRECTORY, DELETE, PURGE, COPY, and TYPE
-    all fill in any part of a file specification left unspecified (device,
-    directory, or both) from this default.
 
-    Syntax:
+   Sets the default device and directory, which every command's file
+   names take a part from when they leave it out.
 
-        SET DEFAULT <spec>
+   Format
 
-    Parameter:
+     SET DEFAULT [device:][directory]
 
-        <spec>          A device and/or directory specification, such as
-                        DUA0:[MYDIR].  Any part omitted (e.g. just
-                        [MYDIR], or just DUA0:) is filled in from the
-                        *current* default, the same way a real VMS
-                        SET DEFAULT works.
+   A part left out is the current default's: SET DEFAULT [MYDIR] keeps
+   the device, and SET DEFAULT DUA1: the directory.  [-] is the
+   directory above and [.SUB] one below.  Logical names are translated.
+   The device goes into the logical name SYS$DISK, which is how every
+   file command (and a program's $OPEN and $CREATE) finds the default
+   device; a concealed logical name is kept as the device rather than
+   what it hides.  If the specification starts with a search list,
+   SYS$DISK is set to the search list's name and each element is
+   searched in turn.  SHOW DEFAULT shows the default.
 
-    Logical names in <spec> are translated.  The device goes into the
-    logical name SYS$DISK, which is how every file command (and a program's
-    SYS$OPEN and SYS$CREATE) finds the default device; a concealed logical
-    name is kept as the device rather than what it hides.  If <spec> starts
-    with a search list, SYS$DISK is set to the search list's name and each
-    element is searched in turn.
+3 Examples
 
-    Example:
+   1.$ SET DEFAULT DUA1:[MYDIR]
 
-        SET DEFAULT DUA0:[MYDIR]
+     Makes [MYDIR] on DUA1: the default directory.
 
-    See also the help for SHOW DEFAULT.
-2 EDIT
-    The SET EDITOR command says which host editor EDIT runs, and where its
-    files go.  The values are the configuration keys vax.editor.command and
-    vax.editor.scratch, saved when govax exits, so later sessions keep them.
+   2.$ SET DEFAULT [-]
 
-    Syntax:
+     Moves to the directory above.
 
-         SET EDITOR [/COMMAND="host command"] [/SCRATCH="host directory"]
+2 EDITOR
 
-    Qualifiers:
+   Says which host editor EDIT runs, and where its files go.  The values
+   are the configuration keys vax.editor.command and vax.editor.scratch,
+   saved when govax exits, so later sessions keep them.  SHOW EDITOR
+   shows them.
 
-         /COMMAND     The command to run.  %file in it stands for the file
-                      to edit; without one, the file goes last.  It is split
-                      into words at blanks, and quotes keep blanks in a word.
-                      No shell runs it.  Quote the value, as DCL makes text
-                      without quotes uppercase.  The default is "vi %file".
+   Format
 
-         /SCRATCH     An existing directory to work in.  EDIT makes a private
-                      directory in it for each file.  The default is the
-                      host's temporary directory.
+     SET EDITOR
 
-    An empty value ("") goes back to the default.
+3 Qualifiers
+/COMMAND
 
-    Examples:
+      /COMMAND="host command"
 
-         SET EDITOR/COMMAND="vim -n %file"
+   The command to run.  %file in it stands for the file to edit; without
+   one, the file goes last.  It is split into words at blanks, and quotes
+   keep blanks in a word.  No shell runs it.  Quote the value, as DCL
+   makes text without quotes uppercase.  The default is "vi %file"; ""
+   goes back to it.
 
-         SET EDITOR/COMMAND="code --wait"/SCRATCH="/tmp"
-2 NOCONTROL
-    The SET NOCONTROL=Y command turns CTRL/Y off: pressing it echoes
-    *Interrupt* and does nothing more, and CTRL/C does nothing to a
-    program that hasn't enabled a CTRL/C AST.  It also cancels the
-    current command level's ON CONTROL_Y.  SET CONTROL=Y turns CTRL/Y
-    back on, with its default action.  The setting applies at every
-    command level.  T (CTRL/T) is accepted and remembered, as
-    F$ENVIRONMENT("CONTROL") reports it, but govax shows no statistics
-    for it.
+/SCRATCH
 
-    Syntax:
+      /SCRATCH="host directory"
 
-        SET [NO]CONTROL[=(T,Y)]
+   An existing directory to work in.  EDIT makes a private directory in
+   it for each file.  The default is the host's temporary directory; ""
+   goes back to it.
 
-    With neither T nor Y, Y is meant.
+3 Examples
 
-    Example:
+   1.$ SET EDITOR/COMMAND="vim -n %file"
 
-        $ SET NOCONTROL=Y
-        $ SET CONTROL=Y         ! CTRL/Y's default action is back
-2 NOON
-    The SET NOON command makes the command procedure it is in go on
-    whatever its commands' statuses: no failure ends it, and ON's command
-    isn't run.  $STATUS and $SEVERITY are still set.  SET ON turns the
-    checking back on, with the action that was in effect before.  Each
-    command level has its own setting; at the terminal, SET [NO]ON does
-    nothing.
+     Makes EDIT run vim.
 
-    Syntax:
+   2.$ SET EDITOR/COMMAND="code --wait"/SCRATCH="/tmp"
 
-        SET [NO]ON
-2 NOPREFIX
-    The SET PREFIX command puts a prefix before each verified command line
-    (see HELP SET VERIFY), made from a $FAO control string: the time each
-    command runs, with "(!5%T) ".  The lines that continue a command get
-    blanks as long as the prefix, and data lines get none.  The only
-    directives that may take an argument are the time's and date's, !%T
-    and !%D, which show the current time; a control string with another
-    is refused (%DCL-E-INVPREFIX), and the prefix stays as it was.
-    F$ENVIRONMENT("VERIFY_PREFIX") returns the control string; SET
-    NOPREFIX takes it away.
+     Makes EDIT run Visual Studio Code, working in /tmp.
 
-    Syntax:
-
-        SET PREFIX "control-string"
-        SET NOPREFIX
-
-    Example:
-
-        $ SET PREFIX "(!5%T) "
-        $ SET VERIFY
-        $ @TEST
-        (17:52) $ SET DEFAULT SYS$LOGIN
-2 NOVERIFY
-    The SET VERIFY command shows each line of a command procedure (@) as it
-    runs: procedure verification shows its command lines, and image
-    verification its data lines, as an image (or TYPE SYS$INPUT), the
-    debugger, or the assembler reads each one.
-    SET VERIFY and SET NOVERIFY turn both on or off; a keyword, which may
-    be abbreviated, changes only its own (SET NOVERIFY takes none).  A
-    change lasts after the procedure that made it ends.
-
-    A command line is shown as it is in the file, its "$", indentation,
-    label, and comment included, after 'SYMBOL' substitution (&SYMBOL and
-    the symbols of an expression are not shown replaced).  Comment lines
-    are shown too, and a continued command a line at a time, each line
-    substituted.  The lines of an IF branch that doesn't run are not
-    shown (its ELSE or ENDIF is), nor is the THEN of an IF that was false,
-    an ON command's action, or a command typed at the terminal.
-
-    F$VERIFY (see HELP LEXICAL) reads and sets both settings, and DCL
-    performs it even in a comment, between apostrophes, showing the
-    comment with its value in place of the call: a procedure that starts
-    with
-
-        $ ! 'F$VERIFY(0)'
-
-    turns verification off without that line being shown.
-
-    Syntax:
-
-        SET VERIFY [=([NO]PROCEDURE, [NO]IMAGE)]
-        SET NOVERIFY
-
-    Examples:
-
-        SET VERIFY
-
-        SET VERIFY=PROCEDURE
-
-        SET VERIFY=(NOPROCEDURE, IMAGE)
-
-        SET NOVERIFY
 2 ON
-    The SET NOON command makes the command procedure it is in go on
-    whatever its commands' statuses: no failure ends it, and ON's command
-    isn't run.  $STATUS and $SEVERITY are still set.  SET ON turns the
-    checking back on, with the action that was in effect before.  Each
-    command level has its own setting; at the terminal, SET [NO]ON does
-    nothing.
 
-    Syntax:
+   Turns a command procedure's checking of statuses on or off.  SET NOON
+   makes the procedure go on whatever its commands' statuses: no failure
+   ends it, and ON's command isn't run.  $STATUS and $SEVERITY are still
+   set.  SET ON turns the checking back on, with the action that was in
+   effect before.  Each command level has its own setting; at the
+   terminal, SET [NO]ON does nothing.
 
-        SET [NO]ON
+   Format
+
+     SET [NO]ON
+
 2 PREFIX
-    The SET PREFIX command puts a prefix before each verified command line
-    (see HELP SET VERIFY), made from a $FAO control string: the time each
-    command runs, with "(!5%T) ".  The lines that continue a command get
-    blanks as long as the prefix, and data lines get none.  The only
-    directives that may take an argument are the time's and date's, !%T
-    and !%D, which show the current time; a control string with another
-    is refused (%DCL-E-INVPREFIX), and the prefix stays as it was.
-    F$ENVIRONMENT("VERIFY_PREFIX") returns the control string; SET
-    NOPREFIX takes it away.
 
-    Syntax:
+   Puts a prefix before each verified command line (see SET VERIFY),
+   made from a $FAO control string: the time each command runs, with
+   "(!5%T) ".  The lines that continue a command get blanks as long as
+   the prefix, and data lines get none.  The only directives that may
+   take an argument are the time's and date's, !%T and !%D, which show
+   the current time; a control string with another is refused
+   (%DCL-E-INVPREFIX), and the prefix stays as it was.
+   F$ENVIRONMENT("VERIFY_PREFIX") returns the control string; SET
+   NOPREFIX takes it away.
 
-        SET PREFIX "control-string"
-        SET NOPREFIX
+   Format
 
-    Example:
+     SET PREFIX "control-string"
+     SET NOPREFIX
 
-        $ SET PREFIX "(!5%T) "
-        $ SET VERIFY
-        $ @TEST
-        (17:52) $ SET DEFAULT SYS$LOGIN
+3 Examples
+
+   1.$ SET PREFIX "(!5%T) "
+     $ SET VERIFY
+     $ @TEST
+     (17:52) $ SET DEFAULT SYS$LOGIN
+
+     Shows the time before each line TEST.COM runs.
+
 2 PROMPT
-    The SET PROMPT command changes the prompt the console shows when it
-    reads a command.  The new prompt is also stored as the configuration
-    value vax.console.prompt, so it stays in effect in later govax
-    sessions.
 
-    Syntax:
+   Changes the prompt the console shows when it reads a command.  The
+   new prompt is also stored as the configuration value
+   vax.console.prompt, so it stays in effect in later sessions.  The
+   assembler's ASM> and the debugger's DBG> prompts don't change.
 
-        SET PROMPT="<text>"
+   Format
 
-    Parameter:
+     SET PROMPT="text"
 
-        <text>          The new prompt, in double quotes so that its case
-                        and any blanks (such as a trailing one) are kept.
-                        An empty string ("") returns to the default
-                        prompt, "VAX> ".
+   Quote the text, so that its case and any blanks (such as a trailing
+   one) are kept.  An empty string ("") returns to the default prompt,
+   "VAX> ".
 
-    The ASM> prompt of the interactive assembler and the debugger's DBG>
-    prompt are not changed.
+3 Examples
 
-    Examples:
+   1.$ SET PROMPT="vax$ "
 
-        SET PROMPT="vax$ "
+     Makes the prompt vax$.
 
-        SET PROMPT=""
 2 QUANTUM
-    The SET QUANTUM command sets the internal interrupt interval value,
-    expressed as the number of instrutions that must pass before an
-    interrupt or process context switch can occur. Defaults to 1. Change
-    this only if you need to debug interrupt and context switching operations.
+
+   Sets how many instructions run between the points where an interrupt
+   or a process switch can happen.  0 suspends interrupt delivery
+   (%VAX-I-NOINTERRUPTS), and a later value above 0 resumes it.  Change
+   it only to debug interrupts and process switching.  The default comes
+   from the vax.quantum setting.
+
+   Format
+
+     SET QUANTUM count
+
 2 RADIX
-    The SET RADIX command is used to set the default radix (numeric base) of
-    constant values that do not have an explicit radix indicator like X^ or
-    D^.
 
-    Syntax:
+   Sets the console's radix: the base of numbers PRINT and the console's
+   expressions read and write without a radix prefix (X^, D^, O^).  SHOW
+   RADIX shows it.  The debugger has a radix of its own.
 
-        SET RADIX <base>
+   Format
 
-    Parameter:
+     SET RADIX radix
 
-        <base>          The specified radix.  Valid values are HEXADECIMAL
-                        or DECIMAL.
+   The radix is HEXADECIMAL, DECIMAL, or OCTAL, abbreviated to no less
+   than three letters, or 16, 10, or 8.
 
-    Examples:
+3 Examples
 
-        SET RADIX HEXADECIMAL       ; constant will be interpreted as hex
-                                    ; numeric values as if the X^ prefix
-                                    ; had been used.
+   1.$ SET RADIX HEXADECIMAL
+     $ PRINT 10+10
+
+     Prints 00000020.
+
+2 VERBOSE
+
+   Turns the console's verbose messages on or off: PRINT's output, and
+   the message when a HALT stops the CPU.  It is on unless SET NOVERBOSE
+   has turned it off.
+
+   Format
+
+     SET [NO]VERBOSE
+
 2 VERIFY
-    The SET VERIFY command shows each line of a command procedure (@) as it
-    runs: procedure verification shows its command lines, and image
-    verification its data lines, as an image (or TYPE SYS$INPUT), the
-    debugger, or the assembler reads each one.
-    SET VERIFY and SET NOVERIFY turn both on or off; a keyword, which may
-    be abbreviated, changes only its own (SET NOVERIFY takes none).  A
-    change lasts after the procedure that made it ends.
 
-    A command line is shown as it is in the file, its "$", indentation,
-    label, and comment included, after 'SYMBOL' substitution (&SYMBOL and
-    the symbols of an expression are not shown replaced).  Comment lines
-    are shown too, and a continued command a line at a time, each line
-    substituted.  The lines of an IF branch that doesn't run are not
-    shown (its ELSE or ENDIF is), nor is the THEN of an IF that was false,
-    an ON command's action, or a command typed at the terminal.
+   Shows each line of a command procedure (@) as it runs: procedure
+   verification shows its command lines, and image verification its
+   data lines, as an image (or TYPE SYS$INPUT), the debugger, or the
+   assembler reads each one.
 
-    F$VERIFY (see HELP LEXICAL) reads and sets both settings, and DCL
-    performs it even in a comment, between apostrophes, showing the
-    comment with its value in place of the call: a procedure that starts
-    with
+   Format
 
-        $ ! 'F$VERIFY(0)'
+     SET VERIFY[=([NO]PROCEDURE,[NO]IMAGE)]
+     SET NOVERIFY
 
-    turns verification off without that line being shown.
+   SET VERIFY and SET NOVERIFY turn both on or off; a keyword, which may
+   be abbreviated, changes only its own.  A change lasts after the
+   procedure that made it ends.
 
-    Syntax:
+   A command line is shown as it is in the file, its "$", indentation,
+   label, and comment included, after 'SYMBOL' substitution (&SYMBOL and
+   the symbols of an expression are not shown replaced).  Comment lines
+   are shown too, and a continued command a line at a time.  The lines
+   of an IF branch that doesn't run are not shown (its ELSE or ENDIF is),
+   nor is the THEN of an IF that was false, an ON command's action, or a
+   command typed at the terminal.
 
-        SET VERIFY [=([NO]PROCEDURE, [NO]IMAGE)]
-        SET NOVERIFY
+   F$VERIFY reads and sets both settings, and DCL performs it even in a
+   comment, between apostrophes, showing the comment with its value in
+   place of the call: a procedure that starts with
 
-    Examples:
+     $ ! 'F$VERIFY(0)'
 
-        SET VERIFY
+   turns verification off without that line being shown.
 
-        SET VERIFY=PROCEDURE
+3 Examples
 
-        SET VERIFY=(NOPROCEDURE, IMAGE)
+   1.$ SET VERIFY=(NOPROCEDURE,IMAGE)
 
-        SET NOVERIFY
+     Shows data lines, but not command lines.
+
 2 WORKING_SET
-    The SET WORKING_SET command changes the current process's working set
-    values, within the quota and extent it was authorized when it was
-    created (SHOW WORKING_SET shows them).  A value above its authorized
-    bound is set to the bound, and the command then reports the values,
-    as /LOG does.  The current limit is set to the new default at once
-    (DCL runs between images).  With paging on (HELP CONFIG KEYS,
-    vax.sysgen.paging.enable), a smaller limit takes the oldest pages out
-    of the working set.
 
-    Syntax:
+   Changes the current process's working set values, within the quota
+   and extent it was authorized when it was created (SHOW WORKING_SET
+   shows them).  A value above its authorized bound is set to the bound,
+   and the command then reports the values, as /LOG does.  The current
+   limit is set to the new default at once (DCL runs between images).
+   With paging on (vax.sysgen.paging.enable), a smaller limit takes the
+   oldest pages out of the working set.
 
-        SET WORKING_SET [/LIMIT=n] [/QUOTA=n] [/EXTENT=n] [/[NO]ADJUST]
-                        [/[NO]LOG]
+   Format
 
-    Qualifiers:
+     SET WORKING_SET
 
-        /LIMIT=n        The default working set, in pages: the limit each
-                        image starts with, and goes back to at its exit.
-                        A value above the quota raises the quota too.
-        /QUOTA=n        The working set quota: the most an image's
-                        $ADJWSL can count on.  At most the authorized
-                        quota and the extent.
-        /EXTENT=n       The working set extent: the most $ADJWSL can
-                        reach.  At most the authorized extent, and more
-                        than the SYSGEN parameter MINWSCNT.  A smaller
-                        extent brings the quota and limit down with it.
-        /[NO]ADJUST     Whether the system may adjust the working set by
-                        itself.  govax remembers and shows the setting,
-                        but has no automatic adjustment.
-        /[NO]LOG        Report the new values (/NOLOG is the default).
+3 Qualifiers
+/ADJUST
 
-    Example:
+      /[NO]ADJUST
 
-        $ SET WORKING_SET/QUOTA=5000
-        %SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+   Whether the system may adjust the working set by itself.  govax
+   remembers and shows the setting, but has no automatic adjustment.
+
+/EXTENT
+
+      /EXTENT=n
+
+   The working set extent: the most $ADJWSL can reach.  At most the
+   authorized extent, and more than the SYSGEN parameter MINWSCNT.  A
+   smaller extent brings the quota and limit down with it.
+
+/LIMIT
+
+      /LIMIT=n
+
+   The default working set, in pages: the limit each image starts with,
+   and goes back to at its exit.  A value above the quota raises the
+   quota too.
+
+/LOG
+
+      /[NO]LOG
+
+   Reports the new values.  /NOLOG is the default.
+
+/QUOTA
+
+      /QUOTA=n
+
+   The working set quota: the most an image's $ADJWSL can count on.  At
+   most the authorized quota and the extent.
+
+3 Examples
+
+   1.$ SET WORKING_SET/QUOTA=5000
+     %SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+
+     Asks for a larger quota than authorized, and gets the authorized
+     one.

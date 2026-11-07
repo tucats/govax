@@ -1,0 +1,25 @@
+1 INSTRUCTIONS
+
+   HELP shows information on a topic: type HELP and the topic's name,
+   then the names of the subtopics below it, each word as short as it
+   can be and still name its topic.
+
+     $ HELP COPY
+     $ HELP SHOW LOGICAL
+     $ HELP FORTRAN Qualifiers /LIST
+
+   A topic is followed by the list of its subtopics, and HELP then
+   prompts for one.  At a prompt:
+
+     a word         shows that subtopic
+     ?              shows the topic again, with its list
+     Return         goes back up a level
+     Ctrl/Z         ends HELP
+
+   Words may have the wildcards * and %, and a word ending in "..."
+   shows the topic and everything below it.  HELP HINTS lists the topics
+   by subject, and HELP HELP describes HELP's qualifiers.
+
+   The commands that work the machine itself (EXAMINE, DEPOSIT, STEP,
+   breakpoints, the registers) are the debugger's: type DEBUG for its
+   DBG> prompt, and HELP there.

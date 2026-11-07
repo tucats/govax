@@ -1,65 +1,61 @@
 1 SYSTEM_VOLUME
-    Each time govax starts, it:
 
-    1.  Mounts the system volume on DUA0: (below), making it the first
-        time.
-    2.  Mounts the containers the --mount and --mount-write options name,
-        and the default volume (vax.default.volume.file), on DUA1: unless
-        configured otherwise.
-    3.  Runs SYS$MANAGER:STARTUP.COM from the system volume, at command
-        level 1, as a login command procedure.  It defines the system
-        logical names, sizes the memory (INITIALIZE/VAX and VMINIT, from
-        the vax.memory.* settings), loads SYS$SYSTEM:DEFAULT.ROM,
-        assembles SYS$SOURCES:KERNEL.ASM and starts it, defines TTA0: and
-        NLA0:, and last runs SYS$MANAGER:SYSTARTUP_VMS.COM.
-    4.  Installs the page file, with paging on.
-    5.  Runs vax.startup.procedure, if that names a procedure.
-    6.  Runs the command on govax's command line and exits, or else
-        shows the VAX> prompt.
+   govax keeps its own files on an ODS-2 volume of their own, the system
+   volume: by default the container ~/.govax/govax-system.dsk, labeled
+   GOVAXSYS, mounted on DUA0: every time govax starts (see STARTUP).  The
+   first start makes it from the files built into govax.
 
-    The system volume is an ODS-2 container, by default
-    ~/.govax/govax-system.dsk, labeled GOVAXSYS, holding govax's own
-    files:
+2 Contents
 
-        [SYSTEM.SYSEXE]  SYS$SYSTEM     DEFAULT.ROM, PAGEFILE.SYS
-        [SYSTEM.SYSMGR]  SYS$MANAGER    STARTUP.COM, SYSTARTUP_VMS.COM,
-                                        CONSOLE.DCL, DEBUG.DCL
-        [SYSTEM.SYSHLP]  SYS$HELP       CONSOLE.HLP, DEBUG.HLP
-        [SYSTEM.SYSLIB]  SYS$LIBRARY,   STARLET.MLB, FORSYSDEF.TLB,
-                         SYS$SHARE      FTNRTL.EXE
-        [SYSTEM.SOURCES] SYS$SOURCES    KERNEL.ASM, SSDEF.ASM, FTNRTL's
-                                        sources, STARLET.MAR and
-                                        STARLETDEF.MAR, BUILDFTN.COM,
-                                        BUILDSTARLET.COM
-        [SYSTEM]         SYS$SYSROOT    GOVAX$FILES.DAT, the list of
-                                        files govax supplied
+     [SYSTEM.SYSEXE]   SYS$SYSTEM     DEFAULT.ROM, PAGEFILE.SYS
+     [SYSTEM.SYSMGR]   SYS$MANAGER    STARTUP.COM, SYSTARTUP_VMS.COM,
+                                      CONSOLE.DCL, DEBUG.DCL
+     [SYSTEM.SYSHLP]   SYS$HELP       HELPLIB.HLB, DBG$HELP.HLB
+     [.SOURCES]                       the help libraries' .HLP files
+     [.SOURCES.DEBUG]                 the debugger's DEBUG.HLP
+     [SYSTEM.SYSLIB]   SYS$LIBRARY,   STARLET.MLB, FORSYSDEF.TLB,
+                       SYS$SHARE      FTNRTL.EXE
+     [SYSTEM.SOURCES]  SYS$SOURCES    KERNEL.ASM, SSDEF.ASM, FTNRTL's
+                                      sources, STARLET.MAR and
+                                      STARLETDEF.MAR, BUILDFTN.COM,
+                                      BUILDSTARLET.COM, BUILDHELP.COM
+     [SYSTEM]          SYS$SYSROOT    GOVAX$FILES.DAT, the list of
+                                      files govax supplied
 
-    govax defines SYS$SYSDEVICE and SYS$SYSROOT when it mounts the
-    volume; STARTUP.COM defines the rest, so you can see and change them.
-    MACRO, FORTRAN, LINK, and RUN find their libraries and FTNRTL.EXE
-    through SYS$LIBRARY and SYS$SHARE ahead of the copies built into
-    govax, so an edited kernel, a rebuilt FTNRTL, or a rebuilt macro
-    library is the one used.
+   govax defines SYS$SYSDEVICE and SYS$SYSROOT when it mounts the
+   volume; STARTUP.COM defines the rest, so you can see and change them.
+   MACRO, FORTRAN, LINK, RUN, and HELP find their libraries, FTNRTL.EXE,
+   and the help through SYS$LIBRARY, SYS$SHARE, and SYS$HELP ahead of the
+   copies built into govax, so an edited kernel, a rebuilt FTNRTL, a
+   rebuilt macro library, or changed help is the one used.
 
-    Your own startup commands belong in SYS$MANAGER:SYSTARTUP_VMS.COM:
-    govax makes it once and never changes it.  Every other file is
-    govax's: when a newer govax has a new copy of a file you haven't
-    changed, it writes its copy as a new version (the old one stays); a
-    file you have changed is kept, and %MOUNT-I-SYSKEPT says so once for
-    each new copy.
+2 Rebuilding
 
-    To rebuild FTNRTL.EXE or STARLET.MLB from the sources, as new versions
-    in SYS$SHARE and SYS$LIBRARY:
+   The procedures in SYS$SOURCES rebuild FTNRTL.EXE, STARLET.MLB, and the
+   help libraries from the sources, as new versions:
 
-        VAX> @SYS$SOURCES:BUILDFTN
-        VAX> @SYS$SOURCES:BUILDSTARLET
+     $ @SYS$SOURCES:BUILDFTN
+     $ @SYS$SOURCES:BUILDSTARLET
+     $ @SYS$SOURCES:BUILDHELP
 
-    Delete the versions you made to go back to govax's.
+   Delete the versions you made to go back to govax's.
 
-    Only one govax session at a time can write the volume; a second
-    mounts it read-only (%MOUNT-I-SYSREADONLY), with no page file there.
-    DISMOUNT refuses it.  If it can't be used, %MOUNT-W-NOSYSVOL says why
-    and govax starts from its built-in files, as it does with the option
-    --system-file none.  --system-initialize makes the volume again from
-    govax's own files, keeping the old container as FILE.old.  See HELP
-    CONFIG KEYS for the settings.
+2 Updates
+
+   SYS$MANAGER:SYSTARTUP_VMS.COM is yours: govax makes it once and never
+   changes it.  Every other file is govax's: when a newer govax has a new
+   copy of a file you haven't changed, it writes its copy as a new
+   version (the old one stays); a file you have changed is kept, and
+   %MOUNT-I-SYSKEPT says so once for each new copy.  The help libraries
+   are treated a module at a time: modules you added or changed stay,
+   and govax's new modules are added.
+
+2 Sharing
+
+   Only one govax session at a time can write the volume; a second
+   mounts it read-only (%MOUNT-I-SYSREADONLY), with no page file there.
+   DISMOUNT refuses it.  If it can't be used, %MOUNT-W-NOSYSVOL says why
+   and govax starts from its built-in files, as it does with the option
+   --system-file none.  --system-initialize makes the volume again from
+   govax's own files, keeping the old container as FILE.old.  See
+   CONFIGURATION KEYS for the settings.

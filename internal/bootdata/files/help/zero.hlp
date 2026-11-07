@@ -1,10 +1,8 @@
 1 ZERO
-    The CLEAR MEMORY command (or ZERO command, which is a synonym) is used
-    to zero out the virtual VAX's memory.  All physical memory is cleared,
-    which implicitly zeros out virtual memory.  When a CLEAR MEMORY command
-    is given, it also turns virtual memory off, since the page tables will
-    have been zeroed.
 
-    Syntax:
+   Sets all of physical memory to zeros and turns memory management off,
+   as CLEAR MEMORY does.
 
-        CLEAR MEMORY
+   Format
+
+     ZERO

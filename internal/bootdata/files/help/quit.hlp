@@ -1,7 +1,11 @@
 1 QUIT
-    The QUIT command ends govax, from the terminal or from inside a
-    command procedure.
 
-    Syntax:
+   Ends govax, from the terminal or from inside a command procedure.
+   Mounted volumes are dismounted, and the other processes deleted.
 
-        QUIT
+   Format
+
+     QUIT
+
+   EXIT at the terminal and LOGOUT in the console's own process do the
+   same.

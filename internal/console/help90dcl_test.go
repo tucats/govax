@@ -340,7 +340,7 @@ func TestHelp90DCLBuiltIn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, want := range []string{"govax a VAX software emulator", "Additional information available:", "CONFIGURATION", "Topic? "} {
+	for _, want := range []string{"govax is a VAX emulator", "Additional information available:", "CONFIGURATION", "Topic? "} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("HELP lacks %q: %q", want, buf.String())
 		}

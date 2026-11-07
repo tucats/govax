@@ -1,128 +1,164 @@
 1 VMINIT
-    The VMINIT command creates a functional virtual memory map that uses
-    physical memory to create the P0, P1, and S0 virtual address regions
-    and the privileged modes' stacks.  It also initializes the required
-    privileged registers and stack pointers to begin using it.  The command
-    displays the physical and virtual address ranges of each region it
-    creates.  INITIALIZE/VAX must come first.  The startup procedure,
-    STARTUP.COM, runs it with sizes the configuration may set (see HELP
-    CONFIG KEYS, vax.memory.*).
 
-    Syntax:
+   Lays out virtual memory: the P0, P1, and S0 regions and the
+   privileged modes' stacks, with their page tables, and sets the
+   privileged registers and stack pointers to use them.  It shows the
+   physical and virtual address ranges of each region it makes.
+   INITIALIZE/VAX must come first.  STARTUP.COM runs it, with sizes the
+   configuration may set (vax.memory.*; see CONFIGURATION KEYS).
 
-        VMINIT [/P0=pages] [/P1=pages] [/S0=pages]
-               [/KSP=pages] [/ESP=pages] [/SSP=pages] [/ISP=pages]
-               [/STRINGPOOL=pages] [/[NO]PAGING]
+   Format
 
-    Each value is a count of 512-byte pages, a decimal integer (the
-    console's radix doesn't apply).
+     VMINIT
 
-    Qualifiers:
+2 Description
 
-        /P0=pages       The pages of the P0 region, the program region.
-        /P1=pages       The pages of the P1 region, the control region.
-        /S0=pages       The pages of the S0 region, system space.
+   Each size is a count of 512-byte pages, a decimal integer (the
+   console's radix doesn't apply).
 
-                        With paging off, a region left out (or given 0)
-                        shares, with the others left out, whatever
-                        physical memory the regions given sizes leave,
-                        and any physical memory still left over is added
-                        to S0.  P0 and P1 are paged on demand, so they may
-                        together be larger than physical memory; a
-                        program can still exhaust physical memory by
-                        touching too many pages, since there is no paging
-                        to backing store.  All of S0 is mapped to
-                        physical memory, so it can be no larger.
+   With paging off, a region left out (or given 0) shares, with the
+   others left out, whatever physical memory the regions given sizes
+   leave, and any physical memory still left over is added to S0.  P0
+   and P1 are paged on demand, so they may together be larger than
+   physical memory; a program can still exhaust physical memory by
+   touching too many pages, since there is no paging to backing store.
+   All of S0 is mapped to physical memory, so it can be no larger.
 
-                        With paging on, the regions cost virtual space,
-                        not memory: a page takes memory only when it's
-                        used, and S0 may be larger than physical memory
-                        (its system page table takes a page of memory per
-                        128 S0 pages).  A region left out (or given 0)
-                        takes its paging default, sized for processes
-                        rather than for memory:
+   With paging on, the regions cost virtual space, not memory: a page
+   takes memory only when it's used, and S0 may be larger than physical
+   memory (its system page table takes a page of memory per 128 S0
+   pages).  A region left out (or given 0) takes its paging default,
+   sized for processes rather than for memory:
 
-                            /P1   5120: the 4096 pages above the user
-                                  stack's top, which are inside P1 but
-                                  have no pages, and 1024 for the user
-                                  stack and P1's expansions
-                            /P0   19456: with /P1, a table area of
-                                  24576 pages, which is also each new
-                                  process's (vax.sysgen.virtualpagecnt)
-                            /S0   16384: room for the page tables,
-                                  stacks, and PCBs of some 65
-                                  processes at once
+     /P1   5120: the 4096 pages above the user stack's top, which are
+           inside P1 but have no pages, and 1024 for the user stack and
+           P1's expansions
+     /P0   19456: with /P1, a table area of 24576 pages, which is also
+           each new process's (vax.sysgen.virtualpagecnt)
+     /S0   16384: room for the page tables, stacks, and PCBs of some 65
+           processes at once
 
-                        With paging on, /P1 must be at least 4116: the
-                        4096 pages above the user stack's top and LINK's
-                        default user stack of 20 pages.  A smaller /P1 is
-                        refused (P1TOOSMALL).
+   With paging on, /P1 must be at least 4116: the 4096 pages above the
+   user stack's top and LINK's default user stack of 20 pages.  A
+   smaller /P1 is refused (P1TOOSMALL).
 
-                        S0 has a minimum size, based on the sizes of the
-                        other regions: it holds the page tables for P0 and
-                        P1, as well as the privileged modes' stacks.  If S0
-                        is too small, or (with paging off) larger than
-                        physical memory, or (with paging on) VMINIT's own
-                        part of it doesn't fit in physical memory, an
-                        error message is displayed.
+   S0 has a minimum size, based on the sizes of the other regions: it
+   holds the page tables for P0 and P1, as well as the privileged modes'
+   stacks.  If S0 is too small, or (with paging off) larger than
+   physical memory, or (with paging on) VMINIT's own part of it doesn't
+   fit in physical memory, VMINIT says so.
 
-        /KSP=pages      The size of the kernel stack.  Default 4.
-        /ESP=pages      The size of the executive stack.  Default 8.  Its
-                        pages are writable only from executive or kernel
-                        mode, with a no-access guard page below them.
-        /SSP=pages      The size of the supervisor stack.  Default 8.  Its
-                        pages are writable only from supervisor mode or a
-                        more privileged mode, with a guard page below them.
-        /ISP=pages      The size of the interrupt stack.  Default 4.
-        /STRINGPOOL=pages
-                        The size of the console's string pool.  Default 8.
-        /[NO]PAGING     Whether VMS paging is on: working sets, the free
-                        and modified page lists, and a page file.  Without
-                        either, the vax.sysgen.paging.enable setting
-                        decides (see HELP CONFIG KEYS); it is off unless
-                        set.  The choice lasts until the next VMINIT.
-                        With paging on, each process has a working set (HELP
-                        SET WORKING_SET), pages that leave it keep their
-                        memory on the free or modified page list and come
-                        back without I/O when touched again, and a
-                        reclaimer trims working sets when free memory
-                        runs low.  When the modified list grows long, the
-                        modified page writer writes its pages to the page
-                        file (vax.sysgen.paging.file), or a file
-                        section's to its file, and a page written out is
-                        read back when touched.  Each job's PGFLQUOTA
-                        limits the pages it may create.  Section pages
-                        page too: a global section's pages are shared
-                        among the working sets holding them and leave
-                        memory when none does, a page-file section's
-                        pages take memory only when touched, and a hard
-                        fault reads the neighboring pages of the same
-                        file with it (the section's cluster size, or
-                        vax.sysgen.pfcdefault).  RUN maps an image
-                        rather than copying it: its pages are read from
-                        the image file when first touched (the file is
-                        held open while the image runs; on a volume,
-                        others may only read it), and a writable page
-                        becomes the process's own copy, backed by the
-                        page file.  A process's address space has only
-                        the pages created in it (an access past them is an
-                        access violation, but for the user stack, which
-                        grows by itself from user mode), and only the
-                        parts of its page tables those pages need take
-                        memory; the regions share the tables' size (/P0
-                        plus /P1 for the console's process,
-                        vax.sysgen.virtualpagecnt for the others).  Each
-                        page is charged to the job's PGFLQUOTA when it's
-                        created, and a creation stops where the quota
-                        runs out; a P1 creation the tables can't hold
-                        (or a reference that far below the stack) makes
-                        no pages at all.  An exception the user stack
-                        has no room to report ends the image.  The S0
-                        pool's pages take memory only while allocated.
-                        SHOW MEMORY shows the counts, and
-                        govax's --stats option reports them at exit.
+2 Paging
 
-    Example:
+   With paging on (VMINIT/PAGING, or vax.sysgen.paging.enable), each
+   process has a working set (SET WORKING_SET), pages that leave it keep
+   their memory on the free or modified page list and come back without
+   I/O when touched again, and a reclaimer trims working sets when free
+   memory runs low.  When the modified list grows long, the modified
+   page writer writes its pages to the page file
+   (vax.sysgen.paging.file), or a file section's to its file, and a page
+   written out is read back when touched.  Each job's PGFLQUOTA limits
+   the pages it may create.
 
-        VAX> INITIALIZE/VAX ^D16384
-        VAX> VMINIT /P0=16384 /P1=8192 /S0=8192 /KSP=20
+   Section pages page too: a global section's pages are shared among the
+   working sets holding them and leave memory when none does, a
+   page-file section's pages take memory only when touched, and a hard
+   fault reads the neighboring pages of the same file with it (the
+   section's cluster size, or vax.sysgen.pfcdefault).  RUN maps an image
+   rather than copying it: its pages are read from the image file when
+   first touched (the file is held open while the image runs; on a
+   volume, others may only read it), and a writable page becomes the
+   process's own copy, backed by the page file.
+
+   A process's address space has only the pages created in it (an
+   access past them is an access violation, but for the user stack,
+   which grows by itself from user mode), and only the parts of its page
+   tables those pages need take memory; the regions share the tables'
+   size (/P0 plus /P1 for the console's process,
+   vax.sysgen.virtualpagecnt for the others).  Each page is charged to
+   the job's PGFLQUOTA when it's created, and a creation stops where the
+   quota runs out; a P1 creation the tables can't hold (or a reference
+   that far below the stack) makes no pages at all.  An exception the
+   user stack has no room to report ends the image.  The S0 pool's pages
+   take memory only while allocated.  SHOW MEMORY shows the counts, and
+   govax's --stats option reports them at exit.
+
+2 Qualifiers
+/DEBUG
+
+   Accepted, and changes nothing.  /LOG and /VERIFY are the same.
+
+/ESP
+
+      /ESP=pages
+
+   The executive stack's size.  Default 8.  Its pages are writable only
+   from executive or kernel mode, with a no-access guard page below
+   them.
+
+/ISP
+
+      /ISP=pages
+
+   The interrupt stack's size.  Default 4.
+
+/KSP
+
+      /KSP=pages
+
+   The kernel stack's size.  Default 4.
+
+/LOG
+
+   The same as /DEBUG.
+
+/P0
+
+      /P0=pages
+
+   The pages of the P0 region, the program region.
+
+/P1
+
+      /P1=pages
+
+   The pages of the P1 region, the control region.
+
+/PAGING
+
+      /[NO]PAGING
+
+   Whether VMS paging is on (see Paging).  Without either, the
+   vax.sysgen.paging.enable setting decides; it is off unless set.  The
+   choice lasts until the next VMINIT.
+
+/S0
+
+      /S0=pages
+
+   The pages of the S0 region, system space.
+
+/SSP
+
+      /SSP=pages
+
+   The supervisor stack's size.  Default 8.  Its pages are writable only
+   from supervisor mode or a more privileged mode, with a guard page
+   below them.
+
+/STRINGPOOL
+
+      /STRINGPOOL=pages
+
+   The console's string pool's size (see SHOW STRING_POOL).  Default 8.
+
+/VERIFY
+
+   The same as /DEBUG.
+
+2 Examples
+
+   1.$ INITIALIZE/VAX ^D16384
+     $ VMINIT /P0=16384 /P1=8192 /S0=8192 /KSP=20
+
+     Gives the machine 8 MB of memory and lays it out.

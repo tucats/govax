@@ -229,6 +229,27 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 		t.Errorf("Radix = %d, want 16", c.Radix)
 	}
 
+	// The whole keywords, as HELP SET RADIX writes them, and OCTAL.
+	for _, tc := range []struct {
+		line string
+		want int
+	}{
+		{"SET RADIX DECIMAL", 10}, {"SET RADIX HEXADECIMAL", 16}, {"SET RADIX OCTAL", 8},
+		{"SET RADIX hexa", 16}, {"SET RADIX DECI", 10},
+	} {
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Fatalf("Dispatch(%s): %v", tc.line, err)
+		}
+
+		if c.Radix != tc.want {
+			t.Errorf("%s: Radix = %d, want %d", tc.line, c.Radix, tc.want)
+		}
+	}
+
+	if err := d.Dispatch("SET RADIX HE"); err == nil {
+		t.Error("SET RADIX HE: no error, want BADRADIXVAL (too short)")
+	}
+
 	// The pre-existing bare-numeric form must keep working too.
 	if err := d.Dispatch("SET RADIX 8"); err != nil {
 		t.Fatalf("Dispatch(SET RADIX 8): %v", err)

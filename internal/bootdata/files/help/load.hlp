@@ -1,97 +1,59 @@
 1 LOAD
-    The LOAD command reads the contents of a saved memory image file
-    into the current virtual VAX.  The LOAD command restores the contents
-    of memory and the registers.  It does not restore saved symbols,
-    breakpoints, or other console-specific context.   Also see the help
-    for the LOAD/ROM command is used to load a ROM image into the console
-    ROM memory, and LOAD/NVRAM to load non-volatile RAM images.
 
-    Syntax:
+   Reads a ROM or NVRAM image, one SAVE wrote, into the virtual VAX's
+   memory.  The qualifier that says which must be given.
 
-        LOAD    <file-name>
+   Format
 
+     LOAD/ROM [filespec]
+     LOAD/NVRAM [filespec]
 
+   A plain LOAD, of a whole machine image, isn't in govax
+   (%DCL-E-NEEDROMNVRAM).
 
-    Parameter:
+2 Parameter
 
-        <file-name>     The name of the file to be read.  If
-                        omitted, the default name of "Saved.VAX"
-                        is assumed.
-2 /NVRAM
-    The LOAD/NVRAM command reads a non-volatile RAM file into the special
-    memory area in the virtual VAX physical address space for the NVRAM.
-    The NVRAM area exists on some VAX systems to contain console boot data,
-    etc. and is used by the console ROM on those systems.  The NVRAM file
-    is created with the SAVE/NVRAM command after INIT/NVRAM has first
-    allocated it.
+ filespec
 
+   The file.  A VMS file specification (SYS$SYSTEM:DEFAULT.ROM) is a
+   file on a mounted volume, a host path a host file, and a bare name a
+   file in the default directory when SET DEFAULT is on a volume.  A
+   bare name that isn't there, or any name when the default is on the
+   host, is looked for in the host's current directory, the --path
+   directories, and govax's built-in files.  With /NOERROR it may be
+   left out: default.rom or default.nvram.
 
-    Syntax:
+2 Description
 
+   The image holds its own base address and size, from SAVE.  The ROM
+   is console ROM memory, at physical address 20040000 in govax's own
+   default.rom; NVRAM is the non-volatile RAM some VAX consoles keep
+   their boot data in.  STARTUP.COM loads the system volume's
+   SYS$SYSTEM:DEFAULT.ROM.  SHOW ROM and SHOW NVRAM show what is loaded.
 
-        LOAD/NVRAM  <filename>
+2 Qualifiers
+/ERROR
 
-            or
+      /[NO]ERROR
 
-        LOAD/NVRAM/NOERROR
+   /NOERROR makes a file that can't be opened no error: nothing is
+   loaded.  A startup procedure can then load an image only if it's
+   there.
 
+/NVRAM
 
-    Parameters:
+   Loads an NVRAM image.
 
-        <file-name>     The name of the file to be read.  If
-                        omitted, the default name of "default.nvram"
-                        is assumed.  The file is found as LOAD/ROM's
-                        is: a volume file or a host file.
+/ROM
 
+   Loads a ROM image.
 
-        The second example (using the /NOERROR qualifier) indicates that if
-        the default NVRAM file cannot be found then no error is displayed.  This
-        allows the LOAD/NVRAM/NOERROR command to be placed in the initialization
-        file, and not interfere with startup if a NVRAM file is not found.
-2 /ROM
-    The LOAD/ROM command reads a ROM file into the special memory area
-    in the virtual VAX physical address space for a console ROM.  This
-    ROM file can be a text file containing the console EXAM command
-    output of the console memory, or a binary image created with the
-    SAVE/ROM command.
+2 Examples
 
-    Syntax:
+   1.$ LOAD/ROM SYS$SYSTEM:DEFAULT.ROM
 
+     Loads the system volume's ROM, as STARTUP.COM does.
 
-        LOAD/ROM [/BASE=<base-addr>] [/SIZE=<size-in-k>] <filename>
+   2.$ LOAD/NVRAM/NOERROR
 
-            or
-
-        LOAD/ROM/NOERROR
-
-
-    Parameters:
-
-        <file-name>     The name of the file to be read.  If
-                        omitted, the default name of "default.rom"
-                        is assumed.  A VMS file specification
-                        (SYS$SYSTEM:DEFAULT.ROM) is a file on a
-                        mounted volume, a host path a host file, and
-                        a bare name a file in the default directory
-                        when SET DEFAULT is on a volume.  A bare name
-                        that isn't there, or any name when the default
-                        is on the host, is looked for in the host's
-                        current directory, the --path directories,
-                        and govax's built-in files.  STARTUP.COM loads
-                        the system volume's SYS$SYSTEM:DEFAULT.ROM.
-
-        <base-addr>     When loading a ROM image, this specifies
-                        the base physical address of the ROM image
-                        to use.  If ommitted, 20040000 is assumed.
-
-        <size-in-k>     This is the size of the ROM memory in kilobytes.
-                        If ommitted, the default is ^d256 for a 256K ROM.
-
-        Note that /BASE and /SIZE cannot be used if the ROM file being
-        read is a ROM image created by SAVE/ROM; this has a fixed address
-        and size associated with it.
-
-        The second example (using the /NOERROR qualifier) indicates that if
-        the default ROM file cannot be found then no error is displayed.  This
-        allows the LOAD/ROM/NOERROR command to be placed in the initialization
-        file, and not interfere with startup if a ROM file is not found.
+     Loads default.nvram, if there is one.

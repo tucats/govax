@@ -44,19 +44,30 @@ func (d *Dispatcher) bindSetCommands() {
 
 }
 
-// parseRadixArg accepts either HEX/HEXA/16/DEC/DECI/10
-// keyword forms or a bare number (this port's own pre-existing, more
-// lenient numeric form, kept for backward compatibility — SetRadix itself
-// rejects anything but 8/10/16 either way).
+// radixNames are SET RADIX's keywords, each with its base. A keyword may
+// be abbreviated to as few as three letters (HEX, DEC, OCT).
+var radixNames = []struct {
+	name string
+	base int
+}{
+	{"HEXADECIMAL", 16},
+	{"DECIMAL", 10},
+	{"OCTAL", 8},
+}
+
+// parseRadixArg reads SET RADIX's argument: a keyword of radixNames,
+// whole or abbreviated (SET RADIX HEXADECIMAL, HEX, HEXA), or a bare
+// number, which SetRadix then checks is 8, 10, or 16.
 func parseRadixArg(s string) (int, bool) {
-	switch strings.ToUpper(s) {
-	case "HEX", "HEXA":
-		return 16, true
-	case "DEC", "DECI":
-		return 10, true
+	word := strings.ToUpper(strings.TrimSpace(s))
+
+	for _, r := range radixNames {
+		if len(word) >= 3 && strings.HasPrefix(r.name, word) {
+			return r.base, true
+		}
 	}
 
-	n, err := strconv.Atoi(s)
+	n, err := strconv.Atoi(word)
 	if err != nil {
 		return 0, false
 	}

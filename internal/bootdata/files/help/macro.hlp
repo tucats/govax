@@ -32,7 +32,7 @@
 
    Quote a host path to keep its case; unquoted names are made
    uppercase, as all DCL input is.  LINK, LIBRARY, ANALYZE, FORTRAN, and
-   RUN find their files by the same rules.
+   RUN find their files by the same rules (see SPECIFY).
 
 2 Description
 
