@@ -446,6 +446,121 @@ planned now, and each round's findings may change the next:
   and changing libraries whose files come back for comparison; and
   whatever rounds 1–2 leave open.
 
+## What the probe settled
+
+### Round 1 (2026-11-07)
+
+VMS V7.1 on a VAX 8600 (simh). Logs: `testdata/help90/vax/round1/`
+(checked for VMS text first, Decision 9). Parts of the run were spoiled by
+the probe's own mistakes (its README lists them); round 1b redoes them.
+What the logs settle, in our modules' terms:
+
+**LIBRARY**
+
+- A library's type comes from `/HELP` (or `/TEXT`, `/MACRO`, ...), never
+  from the file type. Without one, LIBRARY works on `.OLB`, and
+  `LIBRARY/CREATE H90Q.HLB H90C.HLP` made an *object* library named
+  `.HLB`, with `%LIBRAR-E-RECTYP, illegal record type (49) in module  in
+  file` (two blanks, no module name).
+- **Any line whose first character is a digit is a key line.** `10 apples`
+  is key `apples` at level 10: `%LIBRAR-E-ILLKEYLVL, illegal key level 10;
+  key apples in file; expected 1`. A skipped level (1, then 3) is the same
+  message, also "expected 1", so the "expected" number isn't the next legal
+  level. The error ends the command. The modules before the bad one are in
+  the library; the bad one and those after it aren't.
+- A level-1 key longer than the key length is `%LIBRAR-E-KEYNAMLNG, key
+  KEY name length illegal in file`, and nothing is inserted.
+  `/CREATE=(KEYSIZE:40)` takes it. An object library's default key length
+  is 31 (H90Q).
+- Text before the first key, a key line with no blank or a tab after the
+  digit, a bare digit, and a lowercase level-1 key draw no message. Round
+  1b shows how they're stored.
+- `/INSERT` of modules already there gives one `%LIBRAR-W-DUPMODULE, module
+  M from file F already in L` per module.
+- `/DATA=REDUCE` with `/CREATE` is DCL's MAXPARM: data reduction is a
+  syntax of its own, with one parameter.
+- A module's records are its lines as written ("1 ALPHA", "2 Parameters"),
+  but a line holding only blanks is stored as an empty record.
+
+**HELP's layout** (each display starts with an empty line)
+
+- A topic's path is shown first: the level-1 key at column 1, and each
+  deeper key on a line of its own, indented 2 blanks per level below 1. A
+  topic's text is shifted right by 2 blanks per level: a level-1 line
+  written with 3 blanks shows at 5, a level-2 line at 7, and a level-2 line
+  written at column 1 (a parameter's name) at 5.
+- After the text: two empty lines, `Additional information available:`
+  indented as the topic's text, an empty line, and the subtopics, indented
+  the same. Subtopics are in the module's order, not sorted, but the
+  level-1 topics come in the index's (alphabetical) order. Keys go in cells
+  of 11 columns, a longer key taking two or more cells, and a line takes as
+  many as the output's width allows: 7 at an 80-column terminal, 10 to 12
+  in a file. The exact rule, as the oracle settles it, is subtask 4's.
+- **A `/` line in column 1 starts a subtopic** of the topic it's in. This
+  holds under any topic, not only `Qualifiers`. The same key is also
+  listed and found one level up: ALPHA's list is `Parameters Qualifiers`,
+  then Qualifiers' `/BRIEF /COUNT /NOCONFIRM` on a line of their own, then
+  `/DIRECT Description`, then Description's `/NOTQUAL` on its own line, then
+  `Examples`. `HELP ALPHA /BRIEF`, `HELP ALPHA/BRIEF`, `HELP ALPHA /B`, and
+  `HELP ALPHA Qualifiers /BRIEF` all show it, indented for the path used.
+  In its own topic's display a `/` line is just text, and no subtopic list
+  follows.
+- A parameter's name under Parameters (`filespec`) is text, not a key:
+  `HELP ALPHA filespec` isn't found.
+- **No topic** shows the root library's own HELP module's level-1 text,
+  then the root's level-1 topics (not HELP's subtopics). A root with no
+  HELP module says `Sorry, no documentation on HELP`, then the list.
+  `HELP HELP` is the HELP module with its own subtopics.
+
+**Matching**
+
+- Case doesn't matter. An exact key wins over longer ones it abbreviates
+  (ALPHA shows only ALPHA, not ALPHABET). Otherwise every key a word
+  abbreviates is shown, one after another (ALP, AL, and A show ALPHA,
+  ALPHABET, and ALPS). `*` and `%` match within a key, and `*` alone
+  matches every key at its level.
+- `KEY...` shows the topic and everything under it.
+- `ALPHA,Parameters` is `%LBR-E-INVKEY, invalid key`.
+- **Not found:** `Sorry, no documentation on KEYS`, the words in uppercase
+  as far as they went, indented one level below the last key found. Then
+  the list of what is at that level, or no list where that level has no
+  numbered subtopics.
+
+**Libraries**
+
+- `/LIBRARY=H90A` is `SYS$HELP:H90A.HLB` (`SYS$COMMON:[SYSHLP]`), and
+  `[]H90A` is `SYS$COMMON:[000000]H90A.HLB`. A library that can't be opened
+  is `%HELP-E-OPENIN, error opening FILE as input` and `-RMS-E-FNF, file not
+  found`. `/NOLIBRARY/NOUSERLIBRARY` is `%LBR-E-NOHLPLIBS, no default help
+  libraries can be opened`.
+- The user libraries are listed after the topics as `Additional help
+  libraries available (type @name for topics):`, then their file names
+  without type, two blanks apart, in process, group, and system order.
+  `@H90` chose H90B, the first that begins with it.
+
+**Prompting**
+
+- The prompts are `Topic?` and `ALPHA Subtopic?` (the keys of the
+  topic). After a subtopic with no subtopics, the prompt stays at its
+  parent. `?` shows the parent again, or at `Topic?` the HELP text and the
+  topic list. Return goes up one level, and Return at `Topic?` ends HELP.
+- In a procedure, HELP takes its answers from the procedure's data lines
+  (SYS$INPUT). Each answer appears in the output, the prompts don't, and
+  lines left when HELP ends are SKPDAT.
+- At the terminal, a run of empty lines comes before each display. Round 2
+  asks whether that is paging or screen clearing.
+
+**The debugger** finds its library through `DBG$HELP`, and looks up the
+words under `DEBUG`. It prompts, reading the debugger's own input (from
+DBG$INPUT's file, too), so a procedure must answer its prompts.
+
+**LBR$** (round 1's E part, `vax/round1/help90.log` from `#1`): the
+values of `LBR$C_`, `HLP$M_`, and the `LBR$_` statuses; INI_CONTROL
+returns LBR$_NORMAL and LOOKUP_KEY SS$_NORMAL; the first index is 1;
+GET_HEADER's array; records as stored. The messages are LBR's own
+(`%LBR-E-KEYNOTFND, key not found`). `LBR$_NOHLPLIS`, the manual's name,
+doesn't exist; the status is NOHLPLIBS.
+
 ## Subtasks
 
 1. The survey and plan (this document), reviewed by the author (done
@@ -511,3 +626,12 @@ planned now, and each round's findings may change the next:
   routines: it assembles with govax's MACRO, runs every case, and its
   handler reports a fault and goes on. The README has round 2's terminal
   session. Waiting for the VAX run.
+- **2026-11-07** — Round 1 run on VMS V7.1. The logs were checked for VMS
+  text by a script listing every line not from our modules, commands, or
+  messages (HELP's framing only). `help90.log`, `h90.bck`, `dbgh.dlg`, and
+  the terminal session's start are in `testdata/help90/vax/round1/`;
+  `help90v.log` and `dbgv.dlg` are local. "What the probe settled" has
+  round 1's findings. Four mistakes of the probe's own spoiled the LIBRARY
+  part and the modules after TEXTY, and the debugger sessions. Round 1b
+  (`gen.go` fixed, `help90f.com` for part F) and round 2's terminal table
+  are ready.

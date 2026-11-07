@@ -1,0 +1,222 @@
+$ hp
+
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD
+  ORDER      SAME       WIDE
+
+Topic? alpha
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+ALPHA Subtopic? parameters
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+ALPHA Subtopic? ?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+ALPHA Subtopic? 
+Topic? qualifiers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Sorry, no documentation on QUALIFIERS
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD
+  ORDER      SAME       WIDE
+
+Topic? 
+Topic? 
+$ 
+$

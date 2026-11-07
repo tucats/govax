@@ -1,0 +1,154 @@
+HELP
+!
+!DEBUG
+!
+!     Text of the probe's DEBUG module, level 1.
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EX
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE QUALIFIERS
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE /ASCII
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE /ASCII
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE /HEX
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP SET BREAK
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP SET BREAK /AFTER
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP SET
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP NOSUCH
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP PROBE_CONCEPT
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP DEBUG
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXTRA
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP *
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!  Sorry, no documentation on DEBUG HELP EXAMINE...
+!
+!
+!  Additional information available:
+!
+!  Probe_Concept         EXAMINE    EXIT       SET
+!
+!
+!DEBUG
+!
+!  EXIT
+!
+!       Text of EXIT (probe).
+!
+EXIT

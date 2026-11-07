@@ -1,19 +1,90 @@
 SET LOG DBGH.DLG
 SET OUTPUT LOG,VERIFY
 HELP
+
+
+
+
 HELP EXAMINE
+
+
+
+
 HELP EX
+
+
+
+
 HELP EXAMINE Qualifiers
+
+
+
+
 HELP EXAMINE/ASCII
+
+
+
+
 HELP EXAMINE /ASCII
+
+
+
+
 HELP EXAMINE /HEX
+
+
+
+
 HELP SET BREAK
+
+
+
+
 HELP SET BREAK /AFTER
+
+
+
+
 HELP SET
+
+
+
+
 HELP NOSUCH
+
+
+
+
 HELP Probe_Concept
+
+
+
+
 HELP DEBUG
+
+
+
+
 HELP EXTRA
+
+
+
+
 HELP *
+
+
+
+
 HELP EXAMINE...
+
+
+
+
+HELP SET
+BREAK
+/AFTER
+
+
+
+
 EXIT

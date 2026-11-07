@@ -36,6 +36,7 @@ func main() {
 	write("help90.com", help90())
 	write("help90d.com", help90d())
 	write("help90v.com", help90v())
+	write("help90f.com", help90f())
 	write("help90d.dbg", debuggerCommands("DBGH"))
 	write("help90v.dbg", debuggerCommands("DBGV"))
 	write("dbgt.mar", dbgt)
@@ -54,9 +55,9 @@ func write(name, text string) {
 var files = []string{
 	"h90a1.hlp", "h90a2.hlp", "alpha2.hlp", "h90b.hlp", "h90c.hlp",
 	"h90g.hlp", "h90s.hlp", "h90d.hlp", "badtext.hlp", "skip.hlp",
-	"noblank.hlp", "toolong.hlp", "lower.hlp", "t1.txt", "t2.txt",
+	"noblank.hlp", "toolong.hlp", "lower.hlp", "digits.hlp", "zero.hlp", "t1.txt", "t2.txt",
 	"h90m.mar", "resp.txt", "help90.com", "help90d.com", "help90v.com",
-	"help90d.dbg", "help90v.dbg", "dbgt.mar", "lbr90.mar",
+	"help90f.com", "help90d.dbg", "help90v.dbg", "dbgt.mar", "lbr90.mar",
 }
 
 // ---------------------------------------------------------------------
@@ -76,6 +77,8 @@ func modules() map[string]string {
 		"skip.hlp":    "1 SKIP\n   Text of SKIP.\n3 THREE\n   Text of SKIP THREE, a level 3 key after level 1.\n2 TWO\n   Text of SKIP TWO.\n",
 		"noblank.hlp": "1 NOBLANK\n   Text of NOBLANK.\n2Nospace\n   Text after a key line with no blank.\n2\n   Text after a bare level digit.\n2\tTabbed\n   Text after a key line with a tab.\n2 Last\n   Text of NOBLANK Last.\n",
 		"toolong.hlp": "1 A_LEVEL_ONE_KEY_OF_FORTY_CHARACTERS_XYZ\n   Text of the long key.\n",
+		"digits.hlp":  "1 DIGITS\n   Text of DIGITS.\n10 apples is a line that starts with two digits.\n",
+		"zero.hlp":    "1 ZERO\n   Text of ZERO.\n0 zero is a line that starts with a zero.\n",
 		"lower.hlp":   "1 lower\n   Text of lower, a level 1 key in lowercase.\n2 sub\n   Text of lower sub.\n",
 		"t1.txt":      "First line of text module T1.\n   Second line, indented.\n\nFourth line, after an empty one.\n",
 		"t2.txt":      "Only line of text module T2.\n",
@@ -220,8 +223,6 @@ No indent on this line.
 ` + "\tA tab begins this line.\n" + `   ` + strings.Repeat("Long line of TEXTY. ", 5) + `end.
 
    The line above holds one blank.
-10 apples is a line that starts with two digits.
-0 zero is a line that starts with a zero.
    Quotes " and ' and an exclamation mark ! in the text.
 
 
@@ -347,8 +348,9 @@ var requests = []string{
 func help90() string {
 	var b strings.Builder
 
-	b.WriteString(`$ ! HELP90.COM - round 1 of the Phase 90 probe: LIBRARY/HELP, HELP,
-$ ! and the LBR$ routines, on the probe's own help modules.
+	b.WriteString(`$ ! HELP90.COM - round 1 (since round 1b) of the Phase 90 probe:
+$ ! LIBRARY/HELP, HELP, and the LBR$ routines, on the probe's own help
+$ ! modules.
 $ ! Written by testdata/help90/gen.go. Run it with the exchange volume's
 $ ! [000000] as the default directory:
 $ !
@@ -364,53 +366,76 @@ $ SHOW LOGICAL DBG$HELP
 $ !
 $ ! Part A: LIBRARY/HELP.
 $ !
+$ ! A library is an object library unless /HELP, /TEXT, or /MACRO says
+$ ! otherwise (round 1), so every command here says which.
 $ LIBRARY/CREATE/HELP H90A H90A1,H90A2
-$ LIBRARY/LIST/FULL H90A
+$ LIBRARY/LIST/FULL/HELP H90A
+$ LIBRARY/LIST/HELP H90A
+$ LIBRARY/LIST/FULL H90A.HLB
 $ LIBRARY/CREATE/HELP H90B H90B
 $ LIBRARY/CREATE/HELP H90C H90C
 $ LIBRARY/CREATE/HELP H90G H90G
 $ LIBRARY/CREATE/HELP H90S H90S
 $ LIBRARY/CREATE/HELP H90D H90D
-$ LIBRARY/LIST/FULL H90D
-$ LIBRARY/CREATE/HELP/DATA=REDUCE H90R H90A1,H90A2
-$ LIBRARY/LIST/FULL H90R
+$ LIBRARY/LIST/FULL/HELP H90D
+$ ! Data reduction is a command of its own (round 1's MAXPARM).
+$ LIBRARY/CREATE/HELP H90R H90A1,H90A2
+$ LIBRARY/DATA=REDUCE/HELP H90R
+$ LIBRARY/LIST/FULL/HELP H90R
 $ LIBRARY/CREATE=(KEYSIZE:80)/HELP H90L H90A1
-$ LIBRARY/LIST/FULL H90L
+$ LIBRARY/LIST/FULL/HELP H90L
 $ LIBRARY/CREATE/HELP H90E H90A1
-$ LIBRARY/INSERT H90E H90A1
 $ LIBRARY/INSERT/HELP H90E H90A1
-$ LIBRARY/REPLACE H90E ALPHA2
-$ LIBRARY/DELETE=ALPS H90E
-$ LIBRARY/LIST/FULL H90E
-$ LIBRARY/EXTRACT=ALPHA/OUTPUT=ALPHAX.HLP H90E
+$ LIBRARY/REPLACE/HELP H90E ALPHA2
+$ LIBRARY/REPLACE/HELP H90E H90C
+$ LIBRARY/DELETE=ALPS/HELP H90E
+$ LIBRARY/DELETE=NOSUCH/HELP H90E
+$ LIBRARY/LIST/FULL/HELP H90E
+$ LIBRARY/EXTRACT=ALPHA/OUTPUT=ALPHAX.HLP/HELP H90E
 $ TYPE ALPHAX.HLP
-$ LIBRARY/EXTRACT=(ALPHA,ALPHABET)/OUTPUT=ALPHAY.HLP H90A
+$ LIBRARY/EXTRACT=(ALPHA,ALPHABET)/OUTPUT=ALPHAY.HLP/HELP H90A
 $ TYPE ALPHAY.HLP
-$ LIBRARY/EXTRACT=*/OUTPUT=ALLX.HLP H90A
+$ LIBRARY/EXTRACT=*/OUTPUT=ALLX.HLP/HELP H90A
 $ TYPE ALLX.HLP
-$ LIBRARY/EXTRACT=alpha/OUTPUT=ALPHAZ.HLP H90A
-$ LIBRARY/EXTRACT=MIXEDCASE/OUTPUT=MIXEDX.HLP H90A
+$ LIBRARY/EXTRACT=alpha/OUTPUT=ALPHAZ.HLP/HELP H90A
+$ TYPE ALPHAZ.HLP
+$ LIBRARY/EXTRACT=MIXEDCASE/OUTPUT=MIXEDX.HLP/HELP H90A
 $ TYPE MIXEDX.HLP
+$ LIBRARY/EXTRACT="MixedCase"/OUTPUT=MIXEDY.HLP/HELP H90A
+$ TYPE MIXEDY.HLP
+$ LIBRARY/EXTRACT=TEXTY/OUTPUT=SYS$OUTPUT/HELP H90A
+$ ! The malformed modules.
 $ LIBRARY/CREATE/HELP H90X1 BADTEXT
-$ LIBRARY/LIST/FULL H90X1
-$ LIBRARY/EXTRACT=*/OUTPUT=X1.HLP H90X1
-$ TYPE X1.HLP
+$ LIBRARY/LIST/FULL/HELP H90X1
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X1
 $ LIBRARY/CREATE/HELP H90X2 SKIP
-$ LIBRARY/LIST/FULL H90X2
+$ LIBRARY/LIST/FULL/HELP H90X2
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X2
 $ LIBRARY/CREATE/HELP H90X3 NOBLANK
-$ LIBRARY/LIST/FULL H90X3
+$ LIBRARY/LIST/FULL/HELP H90X3
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X3
 $ LIBRARY/CREATE/HELP H90X4 TOOLONG
-$ LIBRARY/LIST/FULL H90X4
+$ LIBRARY/LIST/FULL/HELP H90X4
 $ LIBRARY/CREATE=(KEYSIZE:40)/HELP H90K TOOLONG
-$ LIBRARY/LIST/FULL H90K
+$ LIBRARY/LIST/FULL/HELP H90K
 $ LIBRARY/CREATE/HELP H90X5 LOWER
-$ LIBRARY/LIST/FULL H90X5
+$ LIBRARY/LIST/FULL/HELP H90X5
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X5
+$ LIBRARY/CREATE/HELP H90X6 DIGITS
+$ LIBRARY/LIST/FULL/HELP H90X6
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X6
+$ LIBRARY/CREATE/HELP H90X7 ZERO
+$ LIBRARY/LIST/FULL/HELP H90X7
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90X7
+$ ! Several bad modules in one command: does LIBRARY go on?
+$ LIBRARY/CREATE/HELP H90X8 H90C,SKIP,H90G
+$ LIBRARY/LIST/FULL/HELP H90X8
 $ LIBRARY/CREATE H90Q.HLB H90C.HLP
 $ LIBRARY/LIST/FULL H90Q.HLB
 $ LIBRARY/CREATE/TEXT H90T T1,T2
-$ LIBRARY/LIST/FULL H90T
+$ LIBRARY/LIST/FULL/TEXT H90T
 $ LIBRARY/CREATE/MACRO H90M H90M
-$ LIBRARY/LIST/FULL H90M
+$ LIBRARY/LIST/FULL/MACRO H90M
 $ DIRECTORY/SIZE=ALL H90*.*LB
 $ !
 $ ! Part B: HELP's matching and layout, on H90A, without prompting.
@@ -591,7 +616,7 @@ $ HP MANY
 M05
 
 
-$ DEFINE/USER_MODE SYS$INPUT RESP.TXT
+$ DEFINE/USER_MODE SYS$INPUT H90DIR:RESP.TXT
 $ HP ALPHA
 $ HP/OUTPUT=H90P.LIS ALPHA
 Parameters
@@ -604,11 +629,11 @@ $ EXIT
 }
 
 func help90v() string {
-	return `$ ! HELP90V.COM - parts F and G of round 1 of the Phase 90 probe: the
-$ ! debugger's HELP, and HELP on VMS's own EXCHANGE, SUBMIT, and ANALYZE
-$ ! modules. Written by testdata/help90/gen.go. Its log may hold VMS's own
-$ ! help text, so it stays out of the repository (the phase doc's
-$ ! Decision 9). Run it after HELP90.COM, from the same directory:
+	return `$ ! HELP90V.COM - part G of round 1 of the Phase 90 probe: HELP on VMS's
+$ ! own EXCHANGE, SUBMIT, and ANALYZE modules. Written by
+$ ! testdata/help90/gen.go. Its log holds VMS's own help text, so it stays
+$ ! out of the repository (the phase doc's Decision 9). Run it after
+$ ! HELP90.COM, from the same directory:
 $ !
 $ !     @HELP90V/OUTPUT=HELP90V.LOG
 $ !
@@ -616,20 +641,6 @@ $ SET NOON
 $ SET VERIFY
 $ L = F$ENVIRONMENT("DEFAULT")
 $ DEFINE H90DIR 'L'
-$ !
-$ ! Part F: the debugger's HELP, with DBG$HELP naming the probe's library,
-$ ! then with nothing defined.
-$ !
-$ MACRO/DEBUG DBGT
-$ LINK/DEBUG DBGT
-$ DEFINE/USER_MODE DBG$INPUT HELP90D.DBG
-$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
-$ DEFINE/USER_MODE DBG$HELP H90DIR:H90D
-$ RUN DBGT
-$ TYPE DBGH.DLG
-$ DEFINE/USER_MODE DBG$INPUT HELP90V.DBG
-$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
-$ RUN DBGT
 $ !
 $ ! Part G: VMS's own modules, from the main library.
 $ !
@@ -669,26 +680,54 @@ $ EXIT
 `
 }
 
-// debuggerCommands is a debugger session's commands, logged to name.DLG.
-func debuggerCommands(name string) string {
-	return "SET LOG " + name + ".DLG\nSET OUTPUT LOG,VERIFY\n" + `HELP
-HELP EXAMINE
-HELP EX
-HELP EXAMINE Qualifiers
-HELP EXAMINE/ASCII
-HELP EXAMINE /ASCII
-HELP EXAMINE /HEX
-HELP SET BREAK
-HELP SET BREAK /AFTER
-HELP SET
-HELP NOSUCH
-HELP Probe_Concept
-HELP DEBUG
-HELP EXTRA
-HELP *
-HELP EXAMINE...
-EXIT
+func help90f() string {
+	return `$ ! HELP90F.COM - part F of the Phase 90 probe (round 1b): the debugger's
+$ ! HELP, with DBG$HELP naming the probe's library, then with nothing
+$ ! defined. Written by testdata/help90/gen.go. The second session shows
+$ ! VMS's own help, so this log stays out of the repository; DBGH.DLG, the
+$ ! first session's, holds only the probe's. Run it after HELP90.COM:
+$ !
+$ !     @HELP90F/OUTPUT=HELP90F.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ L = F$ENVIRONMENT("DEFAULT")
+$ DEFINE H90DIR 'L'
+$ MACRO/DEBUG DBGT
+$ LINK/DEBUG DBGT
+$ DEFINE/USER_MODE DBG$INPUT HELP90D.DBG
+$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$ DEFINE/USER_MODE DBG$HELP H90DIR:H90D
+$ RUN DBGT
+$ TYPE DBGH.DLG
+$ DEFINE/USER_MODE DBG$INPUT HELP90V.DBG
+$ DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$ RUN DBGT
+$ EXIT
 `
+}
+
+// debuggerCommands is a debugger session's commands, logged to name.DLG.
+// The debugger's HELP prompts for more, reading the debugger's input
+// (round 1), so four empty lines follow each request: enough to climb from
+// the deepest prompt and leave HELP, the rest empty debugger commands.
+func debuggerCommands(name string) string {
+	var b strings.Builder
+	b.WriteString("SET LOG " + name + ".DLG\nSET OUTPUT LOG,VERIFY\n")
+	for _, r := range []string{
+		"HELP", "HELP EXAMINE", "HELP EX", "HELP EXAMINE Qualifiers",
+		"HELP EXAMINE/ASCII", "HELP EXAMINE /ASCII", "HELP EXAMINE /HEX",
+		"HELP SET BREAK", "HELP SET BREAK /AFTER", "HELP SET", "HELP NOSUCH",
+		"HELP Probe_Concept", "HELP DEBUG", "HELP EXTRA", "HELP *",
+		"HELP EXAMINE...",
+	} {
+		b.WriteString(r + "\n\n\n\n\n")
+	}
+	// One request answered at its prompt, as a user would.
+	b.WriteString("HELP SET\nBREAK\n/AFTER\n\n\n\n\n")
+	b.WriteString("EXIT\n")
+
+	return b.String()
 }
 
 const dbgt = `	.TITLE	DBGT - an image for the debugger's HELP
@@ -808,7 +847,7 @@ func lbr90() string {
 		for _, name := range []string{
 			"LBR$_NORMAL", "LBR$_KEYNOTFND", "LBR$_ILLCTL", "LBR$_LIBNOTOPN",
 			"LBR$_NOTHLPLIB", "LBR$_TYPMISMCH", "LBR$_ILLINROU", "LBR$_ILLOUTROU",
-			"LBR$_NOHLPLIS", "LBR$_TOOMNYARG", "LBR$_USRINPERR",
+			"LBR$_NOHLPLIBS", "LBR$_TOOMNYARG", "LBR$_USRINPERR",
 		} {
 			p.emit("MOVL\t#%s,R0", name)
 			p.stat(name)
@@ -1343,13 +1382,13 @@ LIMITED: MOVL	#1,R0
 
 func exchange() string {
 	var b strings.Builder
-	b.WriteString(`! EXCHANGE.CMD - builds round 1's exchange volume with govax.
+	b.WriteString(`! EXCHANGE.CMD - builds round 1b's exchange volume with govax.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/exchange.cmd
 !
-INITIALIZE/CONTAINER "testdata/disks/help90-exchange.dsk" /DEVICE=RD54 HELP90
-MOUNT/WRITE DUA5 "testdata/disks/help90-exchange.dsk"
+INITIALIZE/CONTAINER "testdata/disks/help90b-exchange.dsk" /DEVICE=RD54 HELP90
+MOUNT/WRITE DUA5 "testdata/disks/help90b-exchange.dsk"
 `)
 	for _, f := range files {
 		fmt.Fprintf(&b, "COPY \"%s/%s\"/HOST DUA5:[000000]%s\n", dir, f, strings.ToUpper(f))
@@ -1363,18 +1402,18 @@ MOUNT/WRITE DUA5 "testdata/disks/help90-exchange.dsk"
 // into vax/ until it's been checked for VMS's own help text (README.md).
 func copyout() string {
 	return `! COPYOUT.CMD - copies the VAX run's output off the exchange volume,
-! into testdata/disks/help90-vms/, which git ignores. README.md says how
+! into testdata/disks/help90-vms/round1b/, which git ignores. README.md says how
 ! the logs are checked before any of them goes into vax/.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/copyout.cmd
 !
-MOUNT DUA5 "testdata/disks/help90-exchange.dsk"
-COPY DUA5:[000000]HELP90.LOG "testdata/disks/help90-vms/help90.log"/HOST
-COPY DUA5:[000000]H90.BCK "testdata/disks/help90-vms/h90.bck"/HOST/BINARY
-COPY DUA5:[000000]HELP90V.LOG "testdata/disks/help90-vms/help90v.log"/HOST
-COPY DUA5:[000000]DBGH.DLG "testdata/disks/help90-vms/dbgh.dlg"/HOST
-COPY DUA5:[000000]DBGV.DLG "testdata/disks/help90-vms/dbgv.dlg"/HOST
+MOUNT DUA5 "testdata/disks/help90b-exchange.dsk"
+COPY DUA5:[000000]HELP90.LOG "testdata/disks/help90-vms/round1b/help90.log"/HOST
+COPY DUA5:[000000]H90.BCK "testdata/disks/help90-vms/round1b/h90.bck"/HOST/BINARY
+COPY DUA5:[000000]HELP90F.LOG "testdata/disks/help90-vms/round1b/help90f.log"/HOST
+COPY DUA5:[000000]DBGH.DLG "testdata/disks/help90-vms/round1b/dbgh.dlg"/HOST
+COPY DUA5:[000000]DBGV.DLG "testdata/disks/help90-vms/round1b/dbgv.dlg"/HOST
 DISMOUNT DUA5
 `
 }

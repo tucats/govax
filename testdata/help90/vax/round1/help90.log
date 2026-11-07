@@ -1,0 +1,4778 @@
+$ ! HELP90.COM - round 1 of the Phase 90 probe: LIBRARY/HELP, HELP,
+$ ! and the LBR$ routines, on the probe's own help modules.
+$ ! Written by testdata/help90/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @HELP90/OUTPUT=HELP90.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ L = F$ENVIRONMENT("DEFAULT")
+$ DEFINE H90DIR DUA1:[000000]
+$ SHOW LOGICAL HLP$LIBRARY*
+
+(LNM$PROCESS_TABLE)
+
+(LNM$JOB_81C64D80)
+
+(LNM$GROUP_000001)
+
+(LNM$SYSTEM_TABLE)
+%SHOW-S-NOTRAN, no translation for logical name HLP$LIBRARY*
+$ SHOW LOGICAL DBG$HELP
+%SHOW-S-NOTRAN, no translation for logical name DBG$HELP
+$ !
+$ ! Part A: LIBRARY/HELP.
+$ !
+$ LIBRARY/CREATE/HELP H90A H90A1,H90A2
+%LIBRAR-E-ILLKEYLVL, illegal key level 10; key apples in DUA1:[000000]H90A2.HLP;1; expected 1
+$ LIBRARY/LIST/FULL H90A
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90A.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90B H90B
+$ LIBRARY/CREATE/HELP H90C H90C
+$ LIBRARY/CREATE/HELP H90G H90G
+$ LIBRARY/CREATE/HELP H90S H90S
+$ LIBRARY/CREATE/HELP H90D H90D
+$ LIBRARY/LIST/FULL H90D
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90D.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP/DATA=REDUCE H90R H90A1,H90A2
+%DCL-W-MAXPARM, too many parameters - reenter command with fewer parameters
+ \H90A1\
+$ LIBRARY/LIST/FULL H90R
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90R.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE=(KEYSIZE:80)/HELP H90L H90A1
+$ LIBRARY/LIST/FULL H90L
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90L.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90E H90A1
+$ LIBRARY/INSERT H90E H90A1
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90E.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/INSERT/HELP H90E H90A1
+%LIBRAR-W-DUPMODULE, module ALPHA from file DUA1:[000000]H90A1.HLP;1 already in DUA1:[000000]H90E.HLB;1
+%LIBRAR-W-DUPMODULE, module ALPHABET from file DUA1:[000000]H90A1.HLP;1 already in DUA1:[000000]H90E.HLB;1
+%LIBRAR-W-DUPMODULE, module ALPS from file DUA1:[000000]H90A1.HLP;1 already in DUA1:[000000]H90E.HLB;1
+%LIBRAR-W-DUPMODULE, module HELP from file DUA1:[000000]H90A1.HLP;1 already in DUA1:[000000]H90E.HLB;1
+$ LIBRARY/REPLACE H90E ALPHA2
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90E.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/DELETE=ALPS H90E
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90E.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/LIST/FULL H90E
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90E.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=ALPHA/OUTPUT=ALPHAX.HLP H90E
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90E.OLB; as input
+-RMS-E-FNF, file not found
+$ TYPE ALPHAX.HLP
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]ALPHAX.HLP;
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=(ALPHA,ALPHABET)/OUTPUT=ALPHAY.HLP H90A
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90A.OLB; as input
+-RMS-E-FNF, file not found
+$ TYPE ALPHAY.HLP
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]ALPHAY.HLP;
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=*/OUTPUT=ALLX.HLP H90A
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90A.OLB; as input
+-RMS-E-FNF, file not found
+$ TYPE ALLX.HLP
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]ALLX.HLP;
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=alpha/OUTPUT=ALPHAZ.HLP H90A
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90A.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=MIXEDCASE/OUTPUT=MIXEDX.HLP H90A
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90A.OLB; as input
+-RMS-E-FNF, file not found
+$ TYPE MIXEDX.HLP
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]MIXEDX.HLP;
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90X1 BADTEXT
+$ LIBRARY/LIST/FULL H90X1
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X1.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/EXTRACT=*/OUTPUT=X1.HLP H90X1
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X1.OLB; as input
+-RMS-E-FNF, file not found
+$ TYPE X1.HLP
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]X1.HLP;
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90X2 SKIP
+%LIBRAR-E-ILLKEYLVL, illegal key level 3; key THREE in DUA1:[000000]SKIP.HLP;1; expected 1
+$ LIBRARY/LIST/FULL H90X2
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X2.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90X3 NOBLANK
+$ LIBRARY/LIST/FULL H90X3
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X3.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90X4 TOOLONG
+%LIBRAR-E-KEYNAMLNG, key A_LEVEL_ONE_KEY_OF_FORTY_CHARACTERS_XYZ name length illegal in DUA1:[000000]TOOLONG.HLP;1
+$ LIBRARY/LIST/FULL H90X4
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X4.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE=(KEYSIZE:40)/HELP H90K TOOLONG
+$ LIBRARY/LIST/FULL H90K
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90K.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/HELP H90X5 LOWER
+$ LIBRARY/LIST/FULL H90X5
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90X5.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE H90Q.HLB H90C.HLP
+%LIBRAR-E-RECTYP, illegal record type (49) in module  in DUA1:[000000]H90C.HLP;1
+$ LIBRARY/LIST/FULL H90Q.HLB
+Directory of OBJECT library DUA1:[000000]H90Q.HLB;1 on  7-NOV-2026 07:10:55
+Creation date:   7-NOV-2026 07:10:55      Creator:  Librarian T09-20
+Revision date:   7-NOV-2026 07:10:55      Library format:   3.0
+Number of modules:      0                 Max. key length:  31
+Other entries:          0                 Preallocated index blocks:     49
+Recoverable deleted blocks:      0        Total index blocks used:        0
+Max. Number history records:      20      Library history records:        0
+
+$ LIBRARY/CREATE/TEXT H90T T1,T2
+$ LIBRARY/LIST/FULL H90T
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90T.OLB; as input
+-RMS-E-FNF, file not found
+$ LIBRARY/CREATE/MACRO H90M H90M
+$ LIBRARY/LIST/FULL H90M
+%LIBRAR-F-OPENIN, error opening DUA1:[000000]H90M.OLB; as input
+-RMS-E-FNF, file not found
+$ DIRECTORY/SIZE=ALL H90*.*LB
+
+Directory DUA1:[000000]
+
+H90A.HLB;1                19/102    
+H90B.HLB;1                 7/102    
+H90C.HLB;1                 7/102    
+H90D.HLB;1                 8/102    
+H90E.HLB;1                15/102    
+H90G.HLB;1                 7/102    
+H90K.HLB;1                14/102    
+H90L.HLB;1                29/102    
+H90M.MLB;1                11/102    
+H90Q.HLB;1                50/102    
+H90S.HLB;1                 7/102    
+H90T.TLB;1                13/102    
+H90X1.HLB;1                7/102    
+H90X2.HLB;1                7/102    
+H90X3.HLB;1                7/102    
+H90X4.HLB;1                6/102    
+H90X5.HLB;1                7/102    
+
+Total of 17 files, 221/1734 blocks.
+$ !
+$ ! Part B: HELP's matching and layout, on H90A, without prompting.
+$ !
+$ H := HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A
+$ H 
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H HELP
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  Parameters /QUALIFIER
+
+$ H HELP Parameters
+
+HELP
+
+  Parameters
+
+       Text of HELP Parameters, in the probe library.
+
+$ H HELP /QUALIFIER
+
+HELP
+
+  /QUALIFIER
+
+       Text of HELP /QUALIFIER, in the probe library.
+
+$ H ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H alpha
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHAB
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+$ H ALP
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ H AL
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ H A
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ H ALPS
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ H ALPHA Parameters
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+$ H ALPHA PAR
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+$ H ALPHA P
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+$ H ALPHA Parameters filespec
+
+ALPHA
+
+  Parameters
+    Sorry, no documentation on ALPHA PARAMETERS FILESPEC
+
+$ H ALPHA filespec
+
+ALPHA
+  Sorry, no documentation on ALPHA FILESPEC
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA Parameters *
+
+ALPHA
+
+  Parameters
+    Sorry, no documentation on ALPHA PARAMETERS *
+
+$ H ALPHA Qualifiers
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+$ H ALPHA Q
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+$ H ALPHA Qualifiers /BRIEF
+
+ALPHA
+
+  Qualifiers
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+
+$ H ALPHA Qualifiers BRIEF
+
+ALPHA
+
+  Qualifiers
+    Sorry, no documentation on ALPHA QUALIFIERS BRIEF
+
+$ H ALPHA /BRIEF
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+$ H ALPHA/BRIEF
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+$ H ALPHA /BR
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+$ H ALPHA /B
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+$ H ALPHA BRIEF
+
+ALPHA
+  Sorry, no documentation on ALPHA BRIEF
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA /COUNT
+
+ALPHA
+
+  /COUNT
+
+        /COUNT=n
+
+     Text of the qualifier /COUNT.
+
+
+$ H ALPHA /CONFIRM
+
+ALPHA
+  Sorry, no documentation on ALPHA /CONFIRM
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA /NOCONFIRM
+
+ALPHA
+
+  /NOCONFIRM
+
+     Text of the qualifier /NOCONFIRM.
+
+
+
+$ H ALPHA /NOSUCH
+
+ALPHA
+  Sorry, no documentation on ALPHA /NOSUCH
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA /DIRECT
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+    Additional information available:
+
+    Example
+
+$ H ALPHA /DIRECT Example
+
+ALPHA
+
+  /DIRECT
+
+    Example
+
+         Text of ALPHA /DIRECT Example.
+
+$ H ALPHA /DI
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+    Additional information available:
+
+    Example
+
+$ H ALPHA /
+
+ALPHA
+  Sorry, no documentation on ALPHA /
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA /*
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+
+ALPHA
+
+  /COUNT
+
+        /COUNT=n
+
+     Text of the qualifier /COUNT.
+
+
+
+ALPHA
+
+  /NOCONFIRM
+
+     Text of the qualifier /NOCONFIRM.
+
+
+
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+    Additional information available:
+
+    Example
+
+
+ALPHA
+
+  /DIRECT
+
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+$ H ALPHA Description
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+    Additional information available:
+
+    Details
+
+$ H ALPHA Description /NOTQUAL
+
+ALPHA
+
+  Description
+
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+$ H ALPHA /NOTQUAL
+
+ALPHA
+
+  /NOTQUAL
+     The line above starts with a slash, outside Qualifiers.
+
+$ H ALPHA Description Details
+
+ALPHA
+
+  Description
+
+    Details
+
+         Text of ALPHA Description Details.
+
+$ H ALPHA Examples
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA E
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA Ex
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA *
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+    Additional information available:
+
+    Example
+
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+    Additional information available:
+
+    Details
+
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA * *
+
+ALPHA
+
+  /DIRECT
+
+    Example
+
+         Text of ALPHA /DIRECT Example.
+
+
+ALPHA
+
+  Description
+
+    Details
+
+         Text of ALPHA Description Details.
+
+$ H ALPHA...
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+ALPHA
+
+  /DIRECT
+
+    Example
+
+         Text of ALPHA /DIRECT Example.
+
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+ALPHA
+
+  Description
+
+    Details
+
+         Text of ALPHA Description Details.
+
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA ...
+
+ALPHA
+  Sorry, no documentation on ALPHA ...
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA Description...
+
+ALPHA
+  Sorry, no documentation on ALPHA DESCRIPTION...
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA,Parameters
+%LBR-E-INVKEY, invalid key
+$ H "ALPHA Parameters"
+  Sorry, no documentation on "ALPHA PARAMETERS"
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H ALPHA Qualifiers/BRIEF
+
+ALPHA
+
+  Qualifiers
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+
+$ H *
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+
+DEEP
+
+     Text of DEEP, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  Parameters /QUALIFIER
+
+
+MANY
+
+     Text of MANY: forty subtopics of three characters.
+
+
+  Additional information available:
+
+  M01        M02        M03        M04        M05        M06        M07        M08        M09        M10        M11        M12
+  M13        M14        M15        M16        M17        M18        M19        M20        M21        M22        M23        M24
+  M25        M26        M27        M28        M29        M30        M31        M32        M33        M34        M35        M36
+  M37        M38        M39        M40
+
+
+ODD
+
+     Text of ODD: keys with punctuation.
+
+
+  Additional information available:
+
+  @_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words  Slash/Inside          dot.name   Plus+
+
+
+ORDER
+
+     Text of ORDER: its keys are out of order.
+
+
+  Additional information available:
+
+  Zebra      apple      Mango      banana     _under     9nine      Apple2     zulu
+
+
+SAME
+
+     Text of SAME: the same key under two parents, and twice in one.
+
+
+  Additional information available:
+
+  P1         P2         Twice      Twice      Example    Examples
+
+
+WIDE
+
+     Text of WIDE: its subtopics' keys are 1 to 32 characters long.
+
+
+  Additional information available:
+
+  B          Cx         Dxx        Exxx       Fxxxx      Gxxxxx     Hxxxxxx    Ixxxxxxx   Jxxxxxxxx  Kxxxxxxxxx Lxxxxxxxxxx
+  Mxxxxxxxxxxx          Nxxxxxxxxxxxx         Oxxxxxxxxxxxxx        Pxxxxxxxxxxxxxx       Qxxxxxxxxxxxxxxx      Rxxxxxxxxxxxxxxxx
+  Sxxxxxxxxxxxxxxxxx    Uxxxxxxxxxxxxxxxxxxx  Yxxxxxxxxxxxxxxxxxxxxxxx         Cxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+$ H A*
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHABET
+
+     Text of ALPHABET, level 1.
+
+
+  Additional information available:
+
+  Letters
+
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ H AL%HA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H %%%%
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+
+DEEP
+
+     Text of DEEP, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  Parameters /QUALIFIER
+
+
+MANY
+
+     Text of MANY: forty subtopics of three characters.
+
+
+  Additional information available:
+
+  M01        M02        M03        M04        M05        M06        M07        M08        M09        M10        M11        M12
+  M13        M14        M15        M16        M17        M18        M19        M20        M21        M22        M23        M24
+  M25        M26        M27        M28        M29        M30        M31        M32        M33        M34        M35        M36
+  M37        M38        M39        M40
+
+
+SAME
+
+     Text of SAME: the same key under two parents, and twice in one.
+
+
+  Additional information available:
+
+  P1         P2         Twice      Twice      Example    Examples
+
+
+WIDE
+
+     Text of WIDE: its subtopics' keys are 1 to 32 characters long.
+
+
+  Additional information available:
+
+  B          Cx         Dxx        Exxx       Fxxxx      Gxxxxx     Hxxxxxx    Ixxxxxxx   Jxxxxxxxx  Kxxxxxxxxx Lxxxxxxxxxx
+  Mxxxxxxxxxxx          Nxxxxxxxxxxxx         Oxxxxxxxxxxxxx        Pxxxxxxxxxxxxxx       Qxxxxxxxxxxxxxxx      Rxxxxxxxxxxxxxxxx
+  Sxxxxxxxxxxxxxxxxx    Uxxxxxxxxxxxxxxxxxxx  Yxxxxxxxxxxxxxxxxxxxxxxx         Cxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+$ H *A
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA Q*
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+$ H ALPHA *S
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+$ H ALPHA %escription
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+    Additional information available:
+
+    Details
+
+$ H NOSUCH
+  Sorry, no documentation on NOSUCH
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H NOSUCH SUB
+  Sorry, no documentation on NOSUCH SUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H ALPHA NOSUCH
+
+ALPHA
+  Sorry, no documentation on ALPHA NOSUCH
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ H ALPHA Parameters NOSUCH
+
+ALPHA
+
+  Parameters
+    Sorry, no documentation on ALPHA PARAMETERS NOSUCH
+
+$ H DEEP
+
+DEEP
+
+     Text of DEEP, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEP L2
+
+DEEP
+
+  L2
+
+       Text of DEEP L2, level 2.
+
+$ H DEEP L2 L3 L4 L5 L6 L7 L8 L9
+
+DEEP
+
+  L2
+    Sorry, no documentation on DEEP L2 L3 L4 L5 L6 L7 L8 L9
+
+$ H DEEP L2 L3 L4 L5 L6 L7 L8 L9 L10
+
+DEEP
+
+  L2
+    Sorry, no documentation on DEEP L2 L3 L4 L5 L6 L7 L8 L9 DEEP
+
+$ H DEEP S2
+
+DEEP
+
+  S2
+
+       Text of S2, L2's sibling at level 2.
+
+
+    Additional information available:
+
+    L3         S3
+
+$ H DEEP L2 S3
+
+DEEP
+
+  L2
+    Sorry, no documentation on DEEP L2 S3
+
+$ H DEEP ...
+
+DEEP
+  Sorry, no documentation on DEEP ...
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEP * *
+
+DEEP
+
+  S2
+
+    L3
+
+         Text of DEEP L2 L3, level 3.
+
+
+DEEP
+
+  S2
+
+    S3
+
+         Text of S3, L3's sibling at level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+$ H DEEP L2...
+
+DEEP
+  Sorry, no documentation on DEEP L2...
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H WIDE
+
+WIDE
+
+     Text of WIDE: its subtopics' keys are 1 to 32 characters long.
+
+
+  Additional information available:
+
+  B          Cx         Dxx        Exxx       Fxxxx      Gxxxxx     Hxxxxxx    Ixxxxxxx   Jxxxxxxxx  Kxxxxxxxxx Lxxxxxxxxxx
+  Mxxxxxxxxxxx          Nxxxxxxxxxxxx         Oxxxxxxxxxxxxx        Pxxxxxxxxxxxxxx       Qxxxxxxxxxxxxxxx      Rxxxxxxxxxxxxxxxx
+  Sxxxxxxxxxxxxxxxxx    Uxxxxxxxxxxxxxxxxxxx  Yxxxxxxxxxxxxxxxxxxxxxxx         Cxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+$ H MANY
+
+MANY
+
+     Text of MANY: forty subtopics of three characters.
+
+
+  Additional information available:
+
+  M01        M02        M03        M04        M05        M06        M07        M08        M09        M10        M11        M12
+  M13        M14        M15        M16        M17        M18        M19        M20        M21        M22        M23        M24
+  M25        M26        M27        M28        M29        M30        M31        M32        M33        M34        M35        M36
+  M37        M38        M39        M40
+
+$ H ORDER
+
+ORDER
+
+     Text of ORDER: its keys are out of order.
+
+
+  Additional information available:
+
+  Zebra      apple      Mango      banana     _under     9nine      Apple2     zulu
+
+$ H ORDER *
+
+ORDER
+
+  Zebra
+
+       Text of ORDER Zebra.
+
+
+ORDER
+
+  apple
+
+       Text of ORDER apple.
+
+
+ORDER
+
+  Mango
+
+       Text of ORDER Mango.
+
+
+ORDER
+
+  banana
+
+       Text of ORDER banana.
+
+
+ORDER
+
+  _under
+
+       Text of ORDER _under.
+
+
+ORDER
+
+  9nine
+
+       Text of ORDER 9nine.
+
+
+ORDER
+
+  Apple2
+
+       Text of ORDER Apple2.
+
+
+ORDER
+
+  zulu
+
+       Text of ORDER zulu.
+
+$ H ODD
+
+ODD
+
+     Text of ODD: keys with punctuation.
+
+
+  Additional information available:
+
+  @_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words  Slash/Inside          dot.name   Plus+
+
+$ H ODD @
+
+ODD
+
+  @_(Paren_Name)
+
+       Text of ODD @_(Paren_Name).
+
+$ H ODD @_(Paren_Name)
+
+ODD
+
+  @_(Paren_Name)
+
+       Text of ODD @_(Paren_Name).
+
+$ H ODD (
+
+ODD
+
+     Text of ODD: keys with punctuation.
+
+
+  Additional information available:
+
+  @_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words  Slash/Inside          dot.name   Plus+
+
+$ H ODD Key
+
+ODD
+
+  Key,_With_Comma
+
+       Text of ODD Key,_With_Comma.
+
+$ H ODD Key,_With_Comma
+
+ODD
+
+  Key,_With_Comma
+
+       Text of ODD Key,_With_Comma.
+
+$ H ODD :=
+
+ODD
+
+  :=
+
+       Text of ODD :=.
+
+$ H ODD $DOLLAR
+
+ODD
+
+  $DOLLAR
+
+       Text of ODD $DOLLAR.
+
+$ H ODD Two
+
+ODD
+
+  Two Words
+
+       Text of ODD Two Words.
+
+$ H ODD Two Words
+
+ODD
+
+  Two Words
+    Sorry, no documentation on ODD TWO WORDS
+
+$ H ODD Two_Words
+
+ODD
+  Sorry, no documentation on ODD TWO_WORDS
+
+
+  Additional information available:
+
+  @_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words  Slash/Inside          dot.name   Plus+
+
+$ H ODD Slash
+
+ODD
+
+  Slash/Inside
+
+       Text of ODD Slash/Inside.
+
+$ H ODD Slash/Inside
+
+ODD
+
+  Slash/Inside
+    Sorry, no documentation on ODD SLASH /INSIDE
+
+$ H ODD dot
+
+ODD
+
+  dot.name
+
+       Text of ODD dot.name.
+
+$ H ODD Plus+
+
+ODD
+
+  Plus+
+
+       Text of ODD Plus+.
+
+$ H SAME
+
+SAME
+
+     Text of SAME: the same key under two parents, and twice in one.
+
+
+  Additional information available:
+
+  P1         P2         Twice      Twice      Example    Examples
+
+$ H SAME P1 Child
+
+SAME
+
+  P1
+
+    Child
+
+         Text of SAME P1 Child.
+
+$ H SAME * Child
+
+SAME
+
+  P1
+
+    Child
+
+         Text of SAME P1 Child.
+
+
+SAME
+
+  P2
+
+    Child
+
+         Text of SAME P2 Child.
+
+$ H SAME Twice
+
+SAME
+
+  Twice
+
+       Text of the first SAME Twice.
+
+
+SAME
+
+  Twice
+
+       Text of the second SAME Twice.
+
+$ H SAME Example
+
+SAME
+
+  Example
+
+       Text of SAME Example.
+
+
+SAME
+
+  Examples
+
+       Text of SAME Examples.
+
+$ H SAME Examples
+
+SAME
+
+  Examples
+
+       Text of SAME Examples.
+
+$ H SAME Ex
+
+SAME
+
+  Example
+
+       Text of SAME Example.
+
+
+SAME
+
+  Examples
+
+       Text of SAME Examples.
+
+$ H TEXTY
+  Sorry, no documentation on TEXTY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H NOSUB
+  Sorry, no documentation on NOSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H NOSUB ANY
+  Sorry, no documentation on NOSUB ANY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H EMPTY
+  Sorry, no documentation on EMPTY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H EMPTY Child
+  Sorry, no documentation on EMPTY CHILD
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H MixedCase
+  Sorry, no documentation on MIXEDCASE
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H MIXEDCASE
+  Sorry, no documentation on MIXEDCASE
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H MIXEDCASE lowersub
+  Sorry, no documentation on MIXEDCASE LOWERSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H BETA_GAMMA
+  Sorry, no documentation on BETA_GAMMA
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H BETA
+  Sorry, no documentation on BETA
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H BETA GAMMA
+  Sorry, no documentation on BETA GAMMA
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H BETA-GAMMA
+  Sorry, no documentation on BETA-GAMMA
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H BETA_
+  Sorry, no documentation on BETA_
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS
+  Sorry, no documentation on QUALS
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS Command_Qualifiers
+  Sorry, no documentation on QUALS COMMAND_QUALIFIERS
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /CQ1
+  Sorry, no documentation on QUALS /CQ1
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS Qual
+  Sorry, no documentation on QUALS QUAL
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS Qual /QQ1
+  Sorry, no documentation on QUALS QUAL /QQ1
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /QQ1
+  Sorry, no documentation on QUALS /QQ1
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS Qualifiers /INDENTED
+  Sorry, no documentation on QUALS QUALIFIERS /INDENTED
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /INDENTED
+  Sorry, no documentation on QUALS /INDENTED
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /FLAG
+  Sorry, no documentation on QUALS /FLAG
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /NOFLAG
+  Sorry, no documentation on QUALS /NOFLAG
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /[NO]FLAG
+  Sorry, no documentation on QUALS /[NO]FLAG
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /LAST
+  Sorry, no documentation on QUALS /LAST
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /SUB
+  Sorry, no documentation on QUALS /SUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS /SUB Deeper
+  Sorry, no documentation on QUALS /SUB DEEPER
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H QUALS Qualifiers /SUB
+  Sorry, no documentation on QUALS QUALIFIERS /SUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H/NOINSTRUCTIONS
+
+  Information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H/INSTRUCTIONS
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H/NOINSTRUCTIONS HELP
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  Parameters /QUALIFIER
+
+$ ! A library with no HELP module, and the reduced and wide-key copies.
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90B
+  Sorry, no documentation on HELP
+
+
+  Additional information available:
+
+  ALPHA      BONLY
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90B HELP
+  Sorry, no documentation on HELP
+
+
+  Additional information available:
+
+  ALPHA      BONLY
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90R ALPHA...
+%HELP-E-OPENIN, error opening DUA1:[000000]H90R.HLB; as input
+-RMS-E-FNF, file not found
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90L ALPHA /BRIEF
+
+ALPHA
+
+  /BRIEF
+
+        /BRIEF
+
+     Text of the qualifier /BRIEF.
+
+
+$ ! The malformed modules, as HELP reads them.
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X1 BADTEXT...
+
+BADTEXT
+
+     Text of BADTEXT.
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X2 SKIP...
+  Sorry, no documentation on SKIP
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X2 SKIP
+  Sorry, no documentation on SKIP
+
+
+  Additional information available:
+
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X3 NOBLANK...
+
+NOBLANK
+
+     Text of NOBLANK.
+  2Nospace
+     Text after a key line with no blank.
+  2
+     Text after a bare level digit.
+
+
+NOBLANK
+
+  Tabbed
+
+       Text after a key line with a tab.
+
+
+NOBLANK
+
+  Last
+
+       Text of NOBLANK Last.
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X3 NOBLANK
+
+NOBLANK
+
+     Text of NOBLANK.
+  2Nospace
+     Text after a key line with no blank.
+  2
+     Text after a bare level digit.
+
+
+  Additional information available:
+
+  Tabbed     Last
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90X5 LOWER...
+
+LOWER
+
+     Text of lower, a level 1 key in lowercase.
+
+
+LOWER
+
+  sub
+
+       Text of lower sub.
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90K A_LEVEL
+
+A_LEVEL_ONE_KEY_OF_FORTY_CHARACTERS_XYZ
+
+     Text of the long key.
+
+$ ! The library's name and type.
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=[]H90A ALPS
+%HELP-E-OPENIN, error opening SYS$COMMON:[000000]H90A.HLB; as input
+-RMS-E-FNF, file not found
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A.HLB ALPS
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90T ALPS
+%HELP-E-OPENIN, error opening DUA1:[000000]H90T.HLB; as input
+-RMS-E-FNF, file not found
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:NOSUCH ALPS
+%HELP-E-OPENIN, error opening DUA1:[000000]NOSUCH.HLB; as input
+-RMS-E-FNF, file not found
+$ ! Part B2: output.
+$ H/OUTPUT=H90O.LIS ALPHA
+$ TYPE H90O.LIS
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ DIRECTORY/FULL H90O.LIS
+
+Directory DUA1:[000000]
+
+H90O.LIS;1                    File ID:  (53,1,0)              
+Size:            1/3          Owner:    [SYSTEM]
+Created:    7-NOV-2026 07:10:56.40
+Revised:    7-NOV-2026 07:10:56.40 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 62 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 1/3 blocks.
+$ H/OUTPUT ALPS
+
+ALPS
+
+     Text of ALPS, level 1, with no subtopics.
+
+$ DIRECTORY HELP.LIS
+%DIRECT-W-NOFILES, no files found
+$ TYPE HELP.LIS
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]HELP.LIS;
+-RMS-E-FNF, file not found
+$ H/OUTPUT=[] NOSUB
+$ TYPE HELP.LIS
+  Sorry, no documentation on NOSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ H/NOOUTPUT ALPHA
+$ H/OUTPUT=H90N.LIS NOSUCH
+$ TYPE H90N.LIS
+  Sorry, no documentation on NOSUCH
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ !
+$ ! Part C: the user libraries.
+$ !
+$ HU := HELP/NOPROMPT/LIBRARY=H90DIR:H90A
+$ DEFINE HLP$LIBRARY DUA1:[000000]H90B
+$ DEFINE HLP$LIBRARY_1 DUA1:[000000]H90C
+$ HU NOSUB
+  Sorry, no documentation on NOSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C
+
+$ HU/NOLIBLIST NOSUB
+  Sorry, no documentation on NOSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ HU BONLY
+
+BONLY
+
+     Text of BONLY, in library H90B.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU BONLY Sub
+
+BONLY
+
+  Sub
+
+       Text of BONLY Sub.
+
+$ HU CONLY
+
+CONLY
+
+     Text of CONLY, in library H90C.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ HU NOSUCH
+  Sorry, no documentation on NOSUCH
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C
+
+$ HU @H90B ALPHA
+
+ALPHA
+
+     Text of library H90B's ALPHA.
+
+$ HU @H90B
+  Sorry, no documentation on HELP
+
+
+  Additional information available:
+
+  ALPHA      BONLY
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C
+
+$ HU @H90 ALPHA
+
+ALPHA
+
+     Text of library H90B's ALPHA.
+
+$ HU @DUA1:[000000]H90C CONLY
+
+CONLY
+
+     Text of CONLY, in library H90C.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU @H90DIR:H90C CONLY
+
+CONLY
+
+     Text of CONLY, in library H90C.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU @NOSUCHLIB ALPHA
+  Sorry, no documentation on @NOSUCHLIB ALPHA
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C
+
+$ HU/USERLIBRARY=NONE BONLY
+  Sorry, no documentation on BONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ HU/NOUSERLIBRARY BONLY
+  Sorry, no documentation on BONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ HU/USERLIBRARY=PROCESS BONLY
+
+BONLY
+
+     Text of BONLY, in library H90B.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU/USERLIBRARY=SYSTEM BONLY
+  Sorry, no documentation on BONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+$ HU/LIBLIST
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C
+
+$ ! The group and system tables, only if this VAX has no HLP$LIBRARY there.
+$ G = F$TRNLNM("HLP$LIBRARY","LNM$GROUP")
+$ S = F$TRNLNM("HLP$LIBRARY","LNM$SYSTEM")
+$ IF G .NES. "" .OR. S .NES. "" THEN GOTO NOTABLES
+$ DEFINE/GROUP HLP$LIBRARY DUA1:[000000]H90G
+$ DEFINE/SYSTEM HLP$LIBRARY DUA1:[000000]H90S
+$ HU GONLY
+
+GONLY
+
+     Text of GONLY, in library H90G (the group table's).
+
+$ HU SONLY
+
+SONLY
+
+     Text of SONLY, in library H90S (the system table's).
+
+$ HU/LIBLIST
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C  H90G  H90S
+
+$ HU/USERLIBRARY=(PROCESS,GROUP) SONLY
+  Sorry, no documentation on SONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B  H90C  H90G
+
+$ HU/USERLIBRARY=SYSTEM GONLY
+  Sorry, no documentation on GONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90S
+
+$ HU/USERLIBRARY=GROUP GONLY
+
+GONLY
+
+     Text of GONLY, in library H90G (the group table's).
+
+$ DEASSIGN/GROUP HLP$LIBRARY
+$ DEASSIGN/SYSTEM HLP$LIBRARY
+$ NOTABLES:
+$ ! A gap in the numbers, then a library that isn't there.
+$ DEASSIGN HLP$LIBRARY_1
+$ DEFINE HLP$LIBRARY_2 DUA1:[000000]H90C
+$ HU CONLY
+  Sorry, no documentation on CONLY
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B
+
+$ HU/LIBLIST
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B
+
+$ DEASSIGN HLP$LIBRARY_2
+$ DEFINE HLP$LIBRARY_1 DUA1:[000000]NOSUCH
+$ HU BONLY
+
+BONLY
+
+     Text of BONLY, in library H90B.
+
+
+  Additional information available:
+
+  Sub
+
+$ HU/LIBLIST
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+  Additional help libraries available (type @name for topics):
+
+  H90B
+
+$ DEFINE HLP$LIBRARY_1 DUA1:[000000]H90C
+%DCL-I-SUPERSEDE, previous value of HLP$LIBRARY_1 has been superseded
+$ ! /NOLIBRARY with user libraries: which is the root?
+$ HELP/NOPROMPT/NOLIBRARY BONLY
+
+BONLY
+
+     Text of BONLY, in library H90B.
+
+
+  Additional information available:
+
+  Sub
+
+$ HELP/NOPROMPT/NOLIBRARY CONLY
+
+CONLY
+
+     Text of CONLY, in library H90C.
+
+
+  Additional information available:
+
+  Sub
+
+$ HELP/NOPROMPT/NOLIBRARY ALPHA
+
+ALPHA
+
+     Text of library H90B's ALPHA.
+
+$ !
+$ ! Part E: the LBR$ routines (LBR90.MAR), with the user libraries still
+$ ! defined for OUTPUT_HELP's flags.
+$ !
+$ MACRO LBR90
+$ LINK LBR90
+%LINK-W-NUDFSYMS, 1 undefined symbol:
+%LINK-I-UDFSYM, 	LBR$_NOHLPLIS 
+%LINK-W-USEUNDEF, undefined symbol LBR$_NOHLPLIS referenced
+	in psect C offset %X000004BB
+	in module LBR90 file DUA1:[000000]LBR90.OBJ;1
+$ RUN LBR90
+#1 definitions
+  LBR$C_CREATE = 00000000
+  LBR$C_READ = 00000001
+  LBR$C_UPDATE = 00000002
+  LBR$C_TYP_UNK = 00000000
+  LBR$C_TYP_OBJ = 00000001
+  LBR$C_TYP_MLB = 00000002
+  LBR$C_TYP_HLP = 00000003
+  LBR$C_TYP_TXT = 00000004
+  LBR$C_TYP_SHSTB = 00000005
+  HLP$M_PROMPT = 00000001
+  HLP$M_PROCESS = 00000002
+  HLP$M_GROUP = 00000004
+  HLP$M_SYSTEM = 00000008
+  HLP$M_LIBLIST = 00000010
+  HLP$M_HELP = 00000020
+  HLP$M_NOHLPTXT = 00000001
+  HLP$M_KEYNAMLIN = 00000002
+  HLP$M_OTHERINFO = 00000004
+  LBR$_NORMAL: r=00268001 %LBR-S-NORMAL, success
+  LBR$_KEYNOTFND: r=00269062 %LBR-E-KEYNOTFND, key not found
+  LBR$_ILLCTL: r=00269012 %LBR-E-ILLCTL, illegal control index
+  LBR$_LIBNOTOPN: r=0026906A %LBR-E-LIBNOTOPN, library not open
+  LBR$_NOTHLPLIB: r=00269092 %LBR-E-NOTHLPLIB, not a HELP library
+  LBR$_TYPMISMCH: r=00268830 %LBR-W-TYPMISMCH, library type mismatch
+  LBR$_ILLINROU: r=002690EA %LBR-E-ILLINROU, input routine improperly specified or missing
+  LBR$_ILLOUTROU: r=002690DA %LBR-E-ILLOUTROU, output routine improperly specified or missing
+  LBR$_NOHLPLIS: r=00000000 %NONAME-W-NOMSG, Message number 00000000
+  LBR$_TOOMNYARG: r=002690F2 %LBR-E-TOOMNYARG, too many arguments
+  LBR$_USRINPERR: r=002690FA %LBR-E-USRINPERR, user input routine returned error status
+#2 INI_CONTROL a help library
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  index = 00000001
+#3 OPEN H90A
+  OPEN: r=00268001 %LBR-S-NORMAL, success
+#4 GET_HEADER
+  GET_HEADER: r=00268001 %LBR-S-NORMAL, success
+    0: 00000003 00000001 00000003 00000000 62694C10 69726172 54206E61 322D3930
+    8: 00000030 00000000 00000000 00000000 97DF8A80 00BC520F 97E11120 00BC520F
+   16: 00000000 00000000 00000000 00000013 000001A8 00000014 00000004 00000003
+   24: 00000006 00000001 0000000A 0000000A 00000000 00000014 00000000 00000001
+   32: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   40: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   48: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   56: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   64: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   72: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   80: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   88: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   96: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  104: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  112: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  120: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+#5 LOOKUP_KEY ALPHA and its records
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rfa=7,6
+  rec 1 n=7 |1 ALPHA|
+  rec 2 n=60 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  rec 3 n=10 |   topics.|
+  rec 4 n=0 ||
+  rec 5 n=9 |   Format|
+  rec 6 n=0 ||
+  rec 7 n=27 |     ALPHA filespec [count]|
+  rec 8 n=0 ||
+  rec 9 n=0 ||
+  rec 10 n=12 |2 Parameters|
+  rec 11 n=0 ||
+  rec 12 n=0 ||
+  rec 13 n=8 |filespec|
+  rec 14 n=0 ||
+  rec 15 n=34 |   Text of the parameter filespec.|
+  rec 16 n=0 ||
+  rec 17 n=5 |count|
+  rec 18 n=0 ||
+  rec 19 n=31 |   Text of the parameter count.|
+  rec 20 n=0 ||
+  rec 21 n=0 ||
+  rec 22 n=12 |2 Qualifiers|
+  rec 23 n=0 ||
+  rec 24 n=0 ||
+  rec 25 n=6 |/BRIEF|
+  rec 26 n=0 ||
+  rec 27 n=12 |      /BRIEF|
+  rec 28 n=0 ||
+  rec 29 n=32 |   Text of the qualifier /BRIEF.|
+  rec 30 n=0 ||
+  rec 31 n=6 |/COUNT|
+  rec 32 n=0 ||
+  rec 33 n=14 |      /COUNT=n|
+  rec 34 n=0 ||
+  rec 35 n=32 |   Text of the qualifier /COUNT.|
+  rec 36 n=0 ||
+  rec 37 n=10 |/NOCONFIRM|
+  rec 38 n=0 ||
+  rec 39 n=36 |   Text of the qualifier /NOCONFIRM.|
+  rec 40 n=0 ||
+  rec 41 n=0 ||
+  rec 42 n=9 |2 /DIRECT|
+  rec 43 n=65 |   Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  rec 44 n=9 |3 Example|
+  rec 45 n=33 |   Text of ALPHA /DIRECT Example.|
+  rec 46 n=13 |2 Description|
+  rec 47 n=29 |   Text of ALPHA Description.|
+  rec 48 n=8 |/NOTQUAL|
+  rec 49 n=58 |   The line above starts with a slash, outside Qualifiers.|
+  rec 50 n=9 |3 Details|
+  rec 51 n=37 |   Text of ALPHA Description Details.|
+  rec 52 n=10 |2 Examples|
+  rec 53 n=20 |   1.  $ ALPHA X.DAT|
+  rec 54 n=0 ||
+  rec 55 n=37 |       Text of ALPHA's first example.|
+  records end: r=0001827A
+#6 LOOKUP_KEY alpha
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=7 |1 ALPHA|
+  rec 2 n=60 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  rec 3 n=10 |   topics.|
+  rec 4 n=0 ||
+  rec 5 n=9 |   Format|
+  rec 6 n=0 ||
+  rec 7 n=27 |     ALPHA filespec [count]|
+  rec 8 n=0 ||
+  rec 9 n=0 ||
+  rec 10 n=12 |2 Parameters|
+  rec 11 n=0 ||
+  rec 12 n=0 ||
+  rec 13 n=8 |filespec|
+  rec 14 n=0 ||
+  rec 15 n=34 |   Text of the parameter filespec.|
+  rec 16 n=0 ||
+  rec 17 n=5 |count|
+  rec 18 n=0 ||
+  rec 19 n=31 |   Text of the parameter count.|
+  rec 20 n=0 ||
+  rec 21 n=0 ||
+  rec 22 n=12 |2 Qualifiers|
+  rec 23 n=0 ||
+  rec 24 n=0 ||
+  rec 25 n=6 |/BRIEF|
+  rec 26 n=0 ||
+  rec 27 n=12 |      /BRIEF|
+  rec 28 n=0 ||
+  rec 29 n=32 |   Text of the qualifier /BRIEF.|
+  rec 30 n=0 ||
+  rec 31 n=6 |/COUNT|
+  rec 32 n=0 ||
+  rec 33 n=14 |      /COUNT=n|
+  rec 34 n=0 ||
+  rec 35 n=32 |   Text of the qualifier /COUNT.|
+  rec 36 n=0 ||
+  rec 37 n=10 |/NOCONFIRM|
+  rec 38 n=0 ||
+  rec 39 n=36 |   Text of the qualifier /NOCONFIRM.|
+  rec 40 n=0 ||
+  rec 41 n=0 ||
+  rec 42 n=9 |2 /DIRECT|
+  rec 43 n=65 |   Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  rec 44 n=9 |3 Example|
+  rec 45 n=33 |   Text of ALPHA /DIRECT Example.|
+  rec 46 n=13 |2 Description|
+  rec 47 n=29 |   Text of ALPHA Description.|
+  rec 48 n=8 |/NOTQUAL|
+  rec 49 n=58 |   The line above starts with a slash, outside Qualifiers.|
+  rec 50 n=9 |3 Details|
+  rec 51 n=37 |   Text of ALPHA Description Details.|
+  rec 52 n=10 |2 Examples|
+  rec 53 n=20 |   1.  $ ALPHA X.DAT|
+  rec 54 n=0 ||
+  rec 55 n=37 |       Text of ALPHA's first example.|
+  records end: r=0001827A
+#7 LOOKUP_KEY ALP
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  records end: r=00269072
+#8 LOOKUP_KEY NOSUCH
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  records end: r=00269072
+#9 LOOKUP_KEY MixedCase
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  records end: r=00269072
+#10 LOOKUP_KEY MIXEDCASE
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  records end: r=00269072
+#11 LOOKUP_KEY HELP
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=6 |1 HELP|
+  rec 2 n=46 |   Text of the probe library's own HELP topic.|
+  rec 3 n=12 |2 Parameters|
+  rec 4 n=49 |   Text of HELP Parameters, in the probe library.|
+  rec 5 n=12 |2 /QUALIFIER|
+  rec 6 n=49 |   Text of HELP /QUALIFIER, in the probe library.|
+  records end: r=0001827A
+#12 LOOKUP_KEY ALPHABET
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=10 |1 ALPHABET|
+  rec 2 n=29 |   Text of ALPHABET, level 1.|
+  rec 3 n=9 |2 Letters|
+  rec 4 n=28 |   Text of ALPHABET Letters.|
+  records end: r=0001827A
+#13 SET_LOCATE, ALPHABET's records, SET_MOVE
+  SET_LOCATE: r=00268001 %LBR-S-NORMAL, success
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=10 |1 ALPHABET|
+  rec 2 n=29 |   Text of ALPHABET, level 1.|
+  rec 3 n=9 |2 Letters|
+  rec 4 n=28 |   Text of ALPHABET Letters.|
+  records end: r=0001827A
+  SET_MOVE: r=00268001 %LBR-S-NORMAL, success
+#14 FIND ALPHA's RFA
+  FIND: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=7 |1 ALPHA|
+  rec 2 n=60 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  rec 3 n=10 |   topics.|
+  rec 4 n=0 ||
+  rec 5 n=9 |   Format|
+  rec 6 n=0 ||
+  rec 7 n=27 |     ALPHA filespec [count]|
+  rec 8 n=0 ||
+  rec 9 n=0 ||
+  rec 10 n=12 |2 Parameters|
+  rec 11 n=0 ||
+  rec 12 n=0 ||
+  rec 13 n=8 |filespec|
+  rec 14 n=0 ||
+  rec 15 n=34 |   Text of the parameter filespec.|
+  rec 16 n=0 ||
+  rec 17 n=5 |count|
+  rec 18 n=0 ||
+  rec 19 n=31 |   Text of the parameter count.|
+  rec 20 n=0 ||
+  rec 21 n=0 ||
+  rec 22 n=12 |2 Qualifiers|
+  rec 23 n=0 ||
+  rec 24 n=0 ||
+  rec 25 n=6 |/BRIEF|
+  rec 26 n=0 ||
+  rec 27 n=12 |      /BRIEF|
+  rec 28 n=0 ||
+  rec 29 n=32 |   Text of the qualifier /BRIEF.|
+  rec 30 n=0 ||
+  rec 31 n=6 |/COUNT|
+  rec 32 n=0 ||
+  rec 33 n=14 |      /COUNT=n|
+  rec 34 n=0 ||
+  rec 35 n=32 |   Text of the qualifier /COUNT.|
+  rec 36 n=0 ||
+  rec 37 n=10 |/NOCONFIRM|
+  rec 38 n=0 ||
+  rec 39 n=36 |   Text of the qualifier /NOCONFIRM.|
+  rec 40 n=0 ||
+  rec 41 n=0 ||
+  rec 42 n=9 |2 /DIRECT|
+  rec 43 n=65 |   Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  rec 44 n=9 |3 Example|
+  rec 45 n=33 |   Text of ALPHA /DIRECT Example.|
+  rec 46 n=13 |2 Description|
+  rec 47 n=29 |   Text of ALPHA Description.|
+  rec 48 n=8 |/NOTQUAL|
+  rec 49 n=58 |   The line above starts with a slash, outside Qualifiers.|
+  rec 50 n=9 |3 Details|
+  rec 51 n=37 |   Text of ALPHA Description Details.|
+  rec 52 n=10 |2 Examples|
+  rec 53 n=20 |   1.  $ ALPHA X.DAT|
+  rec 54 n=0 ||
+  rec 55 n=37 |       Text of ALPHA's first example.|
+  records end: r=0001827A
+#15 GET_RECORD with a short buffer
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  records end: r=00269072
+#16 GET_RECORD with no buffers
+  LOOKUP_KEY: r=00269062 %LBR-E-KEYNOTFND, key not found
+  GET_RECORD: r=00269072 %LBR-E-LKPNOTDON, lookup has not been done
+  GET_RECORD: r=00269072 %LBR-E-LKPNOTDON, lookup has not been done
+#17 GET_INDEX
+  key |ALPHA| rfa=7,6
+  key |ALPHABET| rfa=8,348
+  key |ALPS| rfa=8,458
+  key |DEEP| rfa=9,242
+  key |HELP| rfa=9,30
+  key |MANY| rfa=14,230
+  key |ODD| rfa=17,364
+  key |ORDER| rfa=16,506
+  key |SAME| rfa=18,258
+  key |WIDE| rfa=11,50
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#18 GET_INDEX matching A*
+  key |ALPHA| rfa=7,6
+  key |ALPHABET| rfa=8,348
+  key |ALPS| rfa=8,458
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#19 GET_INDEX matching %%%%
+  key |ALPS| rfa=8,458
+  key |DEEP| rfa=9,242
+  key |HELP| rfa=9,30
+  key |MANY| rfa=14,230
+  key |SAME| rfa=18,258
+  key |WIDE| rfa=11,50
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#20 GET_INDEX matching alpha*
+  GET_INDEX: r=00268838 %LBR-W-NOMTCHFOU, no match found
+#21 GET_INDEX matching *S
+  key |ALPS| rfa=8,458
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#22 GET_INDEX stopped by its routine
+  key |ALPHA| rfa=7,6
+  key |ALPHABET| rfa=8,348
+  GET_INDEX: r=00000000 %NONAME-W-NOMSG, Message number 00000000
+#23 SET_INDEX 1 and 2
+  SET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  SET_INDEX: r=00269022 %LBR-E-ILLIDXNUM, illegal index number
+#24 GET_HELP  width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |HELP|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of the probe library's own HELP topic.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000004 lv=00000001 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#25 GET_HELP ALPHA width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  h f=00000000 lv=00000001 la=1 d=2 |   topics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Format|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |     ALPHA filespec [count]|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Parameters Qualifiers|
+  h f=00000004 lv=00000001 la=1 d=2 |/BRIEF     /COUNT     /NOCONFIRM|
+  h f=00000004 lv=00000001 la=1 d=2 |/DIRECT    Description|
+  h f=00000004 lv=00000001 la=1 d=2 |/NOTQUAL|
+  h f=00000004 lv=00000001 la=1 d=2 |Examples|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#26 GET_HELP ALPHA Parameters width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Parameters|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |filespec|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter filespec.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |count|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter count.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#27 GET_HELP ALPHA /BRIEF width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |/BRIEF|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |      /BRIEF|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of the qualifier /BRIEF.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#28 GET_HELP ALPHA Qualifiers /BRIEF width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Qualifiers|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |      /BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /BRIEF.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#29 GET_HELP ALPHA * width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Parameters|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |filespec|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter filespec.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |count|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter count.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Qualifiers|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |      /BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /BRIEF.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/COUNT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |      /COUNT=n|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /COUNT.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/NOCONFIRM|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /NOCONFIRM.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |/DIRECT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 |Example|
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Description|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of ALPHA Description.|
+  h f=00000000 lv=00000002 la=1 d=2 |/NOTQUAL|
+  h f=00000000 lv=00000002 la=1 d=2 |   The line above starts with a slash, outside Qualifiers.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000004 lv=00000002 la=1 d=2 |Details|
+  h f=00000004 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Examples|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   1.  $ ALPHA X.DAT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |       Text of ALPHA's first example.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#30 GET_HELP ALPHA... width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  h f=00000000 lv=00000001 la=1 d=2 |   topics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Format|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |     ALPHA filespec [count]|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Parameters|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |filespec|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter filespec.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |count|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the parameter count.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Qualifiers|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |      /BRIEF|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /BRIEF.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/COUNT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |      /COUNT=n|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /COUNT.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |/NOCONFIRM|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the qualifier /NOCONFIRM.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |/DIRECT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |/DIRECT|
+  h f=00000002 lv=00000003 la=1 d=2 ||
+  h f=00000002 lv=00000003 la=1 d=2 |Example|
+  h f=00000000 lv=00000003 la=1 d=2 ||
+  h f=00000000 lv=00000003 la=1 d=2 |   Text of ALPHA /DIRECT Example.|
+  h f=00000000 lv=00000003 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Description|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of ALPHA Description.|
+  h f=00000000 lv=00000002 la=1 d=2 |/NOTQUAL|
+  h f=00000000 lv=00000002 la=1 d=2 |   The line above starts with a slash, outside Qualifiers.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Description|
+  h f=00000002 lv=00000003 la=1 d=2 ||
+  h f=00000002 lv=00000003 la=1 d=2 |Details|
+  h f=00000000 lv=00000003 la=1 d=2 ||
+  h f=00000000 lv=00000003 la=1 d=2 |   Text of ALPHA Description Details.|
+  h f=00000000 lv=00000003 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Examples|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   1.  $ ALPHA X.DAT|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |       Text of ALPHA's first example.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#31 GET_HELP ALPHA ... width 0
+  h f=00000003 lv=00000001 la=1 d=2 ||
+  h f=00000003 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000001 lv=00000001 la=1 d=2 |Sorry, no documentation on ALPHA ...|
+  h f=00000001 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 |Parameters Qualifiers|
+  h f=00000005 lv=00000001 la=1 d=2 |/BRIEF     /COUNT     /NOCONFIRM|
+  h f=00000005 lv=00000001 la=1 d=2 |/DIRECT    Description|
+  h f=00000005 lv=00000001 la=1 d=2 |/NOTQUAL|
+  h f=00000005 lv=00000001 la=1 d=2 |Examples|
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#32 GET_HELP * width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  h f=00000000 lv=00000001 la=1 d=2 |   topics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Format|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |     ALPHA filespec [count]|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Parameters Qualifiers|
+  h f=00000004 lv=00000001 la=1 d=2 |/BRIEF     /COUNT     /NOCONFIRM|
+  h f=00000004 lv=00000001 la=1 d=2 |/DIRECT    Description|
+  h f=00000004 lv=00000001 la=1 d=2 |/NOTQUAL|
+  h f=00000004 lv=00000001 la=1 d=2 |Examples|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHABET|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHABET, level 1.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Letters|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPS|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPS, level 1, with no subtopics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |DEEP|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of DEEP, level 1.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |L2         S2|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |HELP|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of the probe library's own HELP topic.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Parameters /QUALIFIER|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |MANY|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of MANY: forty subtopics of three characters.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |M01        M02        M03        M04        M05        M06        M07|
+  h f=00000004 lv=00000001 la=1 d=2 |M08        M09        M10        M11        M12        M13        M14|
+  h f=00000004 lv=00000001 la=1 d=2 |M15        M16        M17        M18        M19        M20        M21|
+  h f=00000004 lv=00000001 la=1 d=2 |M22        M23        M24        M25        M26        M27        M28|
+  h f=00000004 lv=00000001 la=1 d=2 |M29        M30        M31        M32        M33        M34        M35|
+  h f=00000004 lv=00000001 la=1 d=2 |M36        M37        M38        M39        M40|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ODD|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ODD: keys with punctuation.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |@_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words|
+  h f=00000004 lv=00000001 la=1 d=2 |Slash/Inside          dot.name   Plus+|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ORDER|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ORDER: its keys are out of order.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Zebra      apple      Mango      banana     _under     9nine      Apple2|
+  h f=00000004 lv=00000001 la=1 d=2 |zulu|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |SAME|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of SAME: the same key under two parents, and twice in one.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |P1         P2         Twice      Twice      Example    Examples|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |WIDE|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of WIDE: its subtopics' keys are 1 to 32 characters long.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |B          Cx         Dxx        Exxx       Fxxxx      Gxxxxx     Hxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Ixxxxxxx   Jxxxxxxxx  Kxxxxxxxxx Lxxxxxxxxxx           Mxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Nxxxxxxxxxxxx         Oxxxxxxxxxxxxx        Pxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Qxxxxxxxxxxxxxxx      Rxxxxxxxxxxxxxxxx     Sxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Uxxxxxxxxxxxxxxxxxxx  Yxxxxxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Cxxxxxxxxxxxxxxxxxxxxxxxxxxx     Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#33 GET_HELP AL width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  h f=00000000 lv=00000001 la=1 d=2 |   topics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Format|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |     ALPHA filespec [count]|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Parameters Qualifiers|
+  h f=00000004 lv=00000001 la=1 d=2 |/BRIEF     /COUNT     /NOCONFIRM|
+  h f=00000004 lv=00000001 la=1 d=2 |/DIRECT    Description|
+  h f=00000004 lv=00000001 la=1 d=2 |/NOTQUAL|
+  h f=00000004 lv=00000001 la=1 d=2 |Examples|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHABET|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPHABET, level 1.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Letters|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPS|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ALPS, level 1, with no subtopics.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#34 GET_HELP NOSUCH width 0
+  h f=00000001 lv=00000000 la=1 d=2 |Sorry, no documentation on NOSUCH|
+  h f=00000001 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000005 lv=00000000 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#35 GET_HELP ALPHA NOSUCH width 0
+  h f=00000003 lv=00000001 la=1 d=2 ||
+  h f=00000003 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000001 lv=00000001 la=1 d=2 |Sorry, no documentation on ALPHA NOSUCH|
+  h f=00000001 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  h f=00000005 lv=00000001 la=1 d=2 |Parameters Qualifiers|
+  h f=00000005 lv=00000001 la=1 d=2 |/BRIEF     /COUNT     /NOCONFIRM|
+  h f=00000005 lv=00000001 la=1 d=2 |/DIRECT    Description|
+  h f=00000005 lv=00000001 la=1 d=2 |/NOTQUAL|
+  h f=00000005 lv=00000001 la=1 d=2 |Examples|
+  h f=00000005 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#36 GET_HELP HELP width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |HELP|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of the probe library's own HELP topic.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000004 lv=00000001 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#37 GET_HELP DEEP L2 L3 L4 L5 L6 L7 L8 L9 width 0
+  h f=00000003 lv=00000001 la=1 d=2 ||
+  h f=00000003 lv=00000001 la=1 d=2 |DEEP|
+  h f=00000003 lv=00000002 la=1 d=2 ||
+  h f=00000003 lv=00000002 la=1 d=2 |L2|
+  h f=00000001 lv=00000002 la=1 d=2 |Sorry, no documentation on DEEP L2 L3 L4 L5 L6 L7 L8 L9|
+  h f=00000001 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#38 GET_HELP DEEP L2 L3 L4 L5 L6 L7 L8 L9 L10 width 0
+  h f=00000003 lv=00000001 la=1 d=2 ||
+  h f=00000003 lv=00000001 la=1 d=2 |DEEP|
+  h f=00000003 lv=00000002 la=1 d=2 ||
+  h f=00000003 lv=00000002 la=1 d=2 |L2|
+  h f=00000001 lv=00000002 la=1 d=2 |Sorry, no documentation on DEEP L2 L3 L4 L5 L6 L7 L8 L9 DEEP|
+  h f=00000001 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#39 GET_HELP DEEP L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 width 0
+  GET_HELP: r=00269052 %LBR-E-INVNAM, invalid NAM block
+#40 GET_HELP WIDE width &W40
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |WIDE|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of WIDE: its subtopics' keys are 1 to 32 characters long.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |B          Cx         Dxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Exxx       Fxxxx      Gxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Hxxxxxx    Ixxxxxxx   Jxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Kxxxxxxxxx Lxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Mxxxxxxxxxxx          Nxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Oxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Pxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Qxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Rxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Sxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Uxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Yxxxxxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Cxxxxxxxxxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 |Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#41 GET_HELP MANY width &W132
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |MANY|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of MANY: forty subtopics of three characters.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |M01        M02        M03        M04        M05        M06        M07        M08        M09        M10        M11        M12|
+  h f=00000004 lv=00000001 la=1 d=2 |M13        M14        M15        M16        M17        M18        M19        M20        M21        M22        M23        M24|
+  h f=00000004 lv=00000001 la=1 d=2 |M25        M26        M27        M28        M29        M30        M31        M32        M33        M34        M35        M36|
+  h f=00000004 lv=00000001 la=1 d=2 |M37        M38        M39        M40|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#42 GET_HELP TEXTY width &W80
+  h f=00000001 lv=00000000 la=1 d=2 |Sorry, no documentation on TEXTY|
+  h f=00000001 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000005 lv=00000000 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#43 GET_HELP QUALS /QQ1 width 0
+  h f=00000001 lv=00000000 la=1 d=2 |Sorry, no documentation on QUALS /QQ1|
+  h f=00000001 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000005 lv=00000000 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#44 GET_HELP QUALS /CQ1 width 0
+  h f=00000001 lv=00000000 la=1 d=2 |Sorry, no documentation on QUALS /CQ1|
+  h f=00000001 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000005 lv=00000000 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#45 GET_HELP ODD width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ODD|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000000 lv=00000001 la=1 d=2 |   Text of ODD: keys with punctuation.|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |Additional information available:|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  h f=00000004 lv=00000001 la=1 d=2 |@_(Paren_Name)        Key,_With_Comma       :=         $DOLLAR    Two Words|
+  h f=00000004 lv=00000001 la=1 d=2 |Slash/Inside          dot.name   Plus+|
+  h f=00000004 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#46 GET_HELP EMPTY width 0
+  h f=00000001 lv=00000000 la=1 d=2 |Sorry, no documentation on EMPTY|
+  h f=00000001 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |Additional information available:|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  h f=00000005 lv=00000000 la=1 d=2 |ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  h f=00000005 lv=00000000 la=1 d=2 |ORDER      SAME       WIDE|
+  h f=00000005 lv=00000000 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#47 GET_HELP SAME Twice width 0
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |SAME|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Twice|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the first SAME Twice.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |SAME|
+  h f=00000002 lv=00000002 la=1 d=2 ||
+  h f=00000002 lv=00000002 la=1 d=2 |Twice|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  h f=00000000 lv=00000002 la=1 d=2 |   Text of the second SAME Twice.|
+  h f=00000000 lv=00000002 la=1 d=2 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#48 GET_HELP with data
+  h f=00000002 lv=00000001 la=1 d=1 ||
+  h f=00000002 lv=00000001 la=1 d=1 |ALPHA|
+  h f=00000002 lv=00000002 la=1 d=1 ||
+  h f=00000002 lv=00000002 la=1 d=1 |Examples|
+  h f=00000000 lv=00000002 la=1 d=1 ||
+  h f=00000000 lv=00000002 la=1 d=1 |   1.  $ ALPHA X.DAT|
+  h f=00000000 lv=00000002 la=1 d=1 ||
+  h f=00000000 lv=00000002 la=1 d=1 |       Text of ALPHA's first example.|
+  h f=00000000 lv=00000002 la=1 d=1 ||
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#49 GET_HELP with no routine
+
+  ALPHA
+
+    Examples
+
+         1.  $ ALPHA X.DAT
+
+             Text of ALPHA's first example.
+
+  GET_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#50 GET_HELP stopped by its routine
+  h f=00000002 lv=00000001 la=1 d=2 ||
+  h f=00000002 lv=00000001 la=1 d=2 |ALPHA|
+  h f=00000000 lv=00000001 la=1 d=2 ||
+  GET_HELP: r=00000000 %NONAME-W-NOMSG, Message number 00000000
+#51 CLOSE, then use the index
+  CLOSE: r=00268001 %LBR-S-NORMAL, success
+  LOOKUP_KEY: r=00269012 %LBR-E-ILLCTL, illegal control index
+  GET_RECORD: r=00269012 %LBR-E-ILLCTL, illegal control index
+  CLOSE: r=00269012 %LBR-E-ILLCTL, illegal control index
+#52 an index never set
+  LOOKUP_KEY: r=00269012 %LBR-E-ILLCTL, illegal control index
+#53 a text library
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  OPEN: r=00268001 %LBR-S-NORMAL, success
+  GET_HEADER: r=00268001 %LBR-S-NORMAL, success
+    0: 00000004 00000001 00000003 00000000 62694C10 69726172 54206E61 322D3930
+    8: 00000030 00000000 00000000 00000000 9811E520 00BC520F 9811E520 00BC520F
+   16: 00000000 00000000 00000000 0000000D 000000B4 0000000E 0000000A 00000003
+   24: 0000000C 00000001 00000002 00000002 00000000 00000014 00000000 00000001
+   32: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   40: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   48: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   56: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   64: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   72: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   80: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   88: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   96: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  104: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  112: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  120: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  key |T1| rfa=13,6
+  key |T2| rfa=13,126
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=29 |First line of text module T1.|
+  rec 2 n=25 |   Second line, indented.|
+  rec 3 n=0 ||
+  rec 4 n=32 |Fourth line, after an empty one.|
+  records end: r=0001827A
+  GET_HELP: r=00269092 %LBR-E-NOTHLPLIB, not a HELP library
+  CLOSE: r=00268001 %LBR-S-NORMAL, success
+#54 a macro library
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  OPEN: r=00268001 %LBR-S-NORMAL, success
+  GET_HEADER: r=00268001 %LBR-S-NORMAL, success
+    0: 00000002 00000001 00000003 00000000 62694C10 69726172 54206E61 322D3930
+    8: 00000030 00000000 00000000 00000000 98136BC0 00BC520F 98136BC0 00BC520F
+   16: 00000000 00000000 00000000 0000000B 0000008C 0000000C 00000008 00000003
+   24: 0000000A 00000001 00000002 00000002 00000000 00000014 00000000 00000001
+   32: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   40: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   48: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   56: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   64: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   72: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   80: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   88: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+   96: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  104: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  112: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  120: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  key |PROBE1| rfa=11,6
+  key |PROBE2| rfa=11,74
+  GET_INDEX: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  LOOKUP_KEY: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+  rec 1 n=16 |	.MACRO	PROBE1	A|
+  rec 2 n=8 |	.LONG	A|
+  rec 3 n=13 |	.ENDM	PROBE1|
+  records end: r=0001827A
+  CLOSE: r=00268001 %LBR-S-NORMAL, success
+#55 a help library opened as a text library
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  OPEN: r=00268830 %LBR-W-TYPMISMCH, library type mismatch
+  RET_RMSSTV: r=00000003 %NONAME-I-NOMSG, Message number 00000003
+  CLOSE: r=00268001 %LBR-S-NORMAL, success
+#56 a library that isn't there
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  OPEN: r=00018292 %RMS-E-FNF, file not found
+  RET_RMSSTV: r=00000910 %SYSTEM-W-NOSUCHFILE, no such file
+  CLOSE: r=00269012 %LBR-E-ILLCTL, illegal control index
+#57 OPEN with no default name
+  INI_CONTROL: r=00268001 %LBR-S-NORMAL, success
+  OPEN: r=00018292 %RMS-E-FNF, file not found
+  CLOSE: r=00269012 %LBR-E-ILLCTL, illegal control index
+#58 OUTPUT_HELP ALPHA, flags 0
+  o ||
+  o |ALPHA|
+  o ||
+  o |     Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  o |     topics.|
+  o ||
+  o |     Format|
+  o ||
+  o |       ALPHA filespec [count]|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#59 OUTPUT_HELP no line, flags 0
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#60 OUTPUT_HELP no line, HELP
+  o ||
+  o |HELP|
+  o ||
+  o |     Text of the probe library's own HELP topic.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#61 OUTPUT_HELP no line, LIBLIST and PROCESS
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  o |  Additional help libraries available (type @name for topics):|
+  o ||
+  o |  H90B  H90C|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#62 OUTPUT_HELP HELP, flags 0
+  o ||
+  o |HELP|
+  o ||
+  o |     Text of the probe library's own HELP topic.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters /QUALIFIER|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#63 OUTPUT_HELP ALPHA Parameters, width 40
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Parameters|
+  o ||
+  o ||
+  o ||
+  o |    filespec|
+  o ||
+  o |       Text of the parameter filespec.|
+  o ||
+  o |    count|
+  o ||
+  o |       Text of the parameter count.|
+  o ||
+  o ||
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#64 OUTPUT_HELP ALPHA/BRIEF
+  o ||
+  o |ALPHA|
+  o ||
+  o |  /BRIEF|
+  o ||
+  o |        /BRIEF|
+  o ||
+  o |     Text of the qualifier /BRIEF.|
+  o ||
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#65 OUTPUT_HELP NOSUCH
+  o |  Sorry, no documentation on NOSUCH|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#66 OUTPUT_HELP @H90DIR:H90B BONLY
+  o ||
+  o |BONLY|
+  o ||
+  o |     Text of BONLY, in library H90B.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Sub|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#67 OUTPUT_HELP BONLY, PROCESS
+  o ||
+  o |BONLY|
+  o ||
+  o |     Text of BONLY, in library H90B.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Sub|
+  o ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#68 OUTPUT_HELP BONLY, flags omitted
+  OUTPUT_HELP: r=002690EA %LBR-E-ILLINROU, input routine improperly specified or missing
+#69 OUTPUT_HELP prompting from ALPHA
+  o ||
+  o |ALPHA|
+  o ||
+  o |     Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  o |     topics.|
+  o ||
+  o |     Format|
+  o ||
+  o |       ALPHA filespec [count]|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> |Parameters|
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Parameters|
+  o ||
+  o ||
+  o ||
+  o |    filespec|
+  o ||
+  o |       Text of the parameter filespec.|
+  o ||
+  o |    count|
+  o ||
+  o |       Text of the parameter count.|
+  o ||
+  o ||
+  o ||
+  i |
+ALPHA Subtopic? | -> ||
+  i |
+Topic? | -> |?|
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> |Qualifiers|
+  o |  Sorry, no documentation on QUALIFIERS|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> |/BRIEF|
+  o |  Sorry, no documentation on /BRIEF|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#70 OUTPUT_HELP prompting from no line
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> |ALPHA|
+  o ||
+  o |ALPHA|
+  o ||
+  o |     Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  o |     topics.|
+  o ||
+  o |     Format|
+  o ||
+  o |       ALPHA filespec [count]|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> |Description|
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Description|
+  o ||
+  o |       Text of ALPHA Description.|
+  o |    /NOTQUAL|
+  o |       The line above starts with a slash, outside Qualifiers.|
+  o ||
+  o ||
+  o |    Additional information available:|
+  o ||
+  o |    Details|
+  o ||
+  i |
+ALPHA Description Subtopic? | -> |Details|
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Description|
+  o ||
+  o |    Details|
+  o ||
+  o |         Text of ALPHA Description Details.|
+  o ||
+  i |
+ALPHA Description Subtopic? | -> ||
+  i |
+ALPHA Subtopic? | -> ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#71 OUTPUT_HELP prompting into another library
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> |@H90DIR:H90B|
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      BONLY|
+  o ||
+  i |
+@H90B Topic? | -> |BONLY|
+  o ||
+  o |BONLY|
+  o ||
+  o |     Text of BONLY, in library H90B.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Sub|
+  o ||
+  i |
+@H90B BONLY Subtopic? | -> ||
+  i |
+@H90B Topic? | -> ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#72 OUTPUT_HELP prompting down DEEP
+  o ||
+  o |DEEP|
+  o ||
+  o |     Text of DEEP, level 1.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  L2         S2|
+  o ||
+  i |
+DEEP Subtopic? | -> |L2|
+  o ||
+  o |DEEP|
+  o ||
+  o |  L2|
+  o ||
+  o |       Text of DEEP L2, level 2.|
+  o ||
+  i |
+DEEP Subtopic? | -> |L3|
+  o ||
+  o |DEEP|
+  o |  Sorry, no documentation on DEEP L3|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  L2         S2|
+  o ||
+  i |
+DEEP Subtopic? | -> |NOSUCH|
+  o ||
+  o |DEEP|
+  o |  Sorry, no documentation on DEEP NOSUCH|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  L2         S2|
+  o ||
+  i |
+DEEP Subtopic? | -> |?|
+  o ||
+  o |DEEP|
+  o ||
+  o |     Text of DEEP, level 1.|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  L2         S2|
+  o ||
+  i |
+DEEP Subtopic? | -> ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#73 OUTPUT_HELP prompting, end of file at once
+  o ||
+  o |  Information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> end of file
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#74 OUTPUT_HELP prompting, * and ...
+  o ||
+  o |ALPHA|
+  o ||
+  o |     Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  o |     topics.|
+  o ||
+  o |     Format|
+  o ||
+  o |       ALPHA filespec [count]|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> |*|
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Parameters|
+  o ||
+  o ||
+  o ||
+  o |    filespec|
+  o ||
+  o |       Text of the parameter filespec.|
+  o ||
+  o |    count|
+  o ||
+  o |       Text of the parameter count.|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Qualifiers|
+  o ||
+  o ||
+  o ||
+  o |    /BRIEF|
+  o ||
+  o |          /BRIEF|
+  o ||
+  o |       Text of the qualifier /BRIEF.|
+  o ||
+  o |    /COUNT|
+  o ||
+  o |          /COUNT=n|
+  o ||
+  o |       Text of the qualifier /COUNT.|
+  o ||
+  o |    /NOCONFIRM|
+  o ||
+  o |       Text of the qualifier /NOCONFIRM.|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |ALPHA|
+  o ||
+  o |  /DIRECT|
+  o ||
+  o |       Text of ALPHA /DIRECT, a qualifier with a key line of its own.|
+  o ||
+  o ||
+  o |    Additional information available:|
+  o ||
+  o |    Example|
+  o ||
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Description|
+  o ||
+  o |       Text of ALPHA Description.|
+  o |    /NOTQUAL|
+  o |       The line above starts with a slash, outside Qualifiers.|
+  o ||
+  o ||
+  o |    Additional information available:|
+  o ||
+  o |    Details|
+  o ||
+  o ||
+  o |ALPHA|
+  o ||
+  o |  Examples|
+  o ||
+  o |       1.  $ ALPHA X.DAT|
+  o ||
+  o |           Text of ALPHA's first example.|
+  o ||
+  i |
+ALPHA Subtopic? | -> |...|
+  o ||
+  o |ALPHA|
+  o |  Sorry, no documentation on ALPHA ...|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> |ALPHA|
+  o ||
+  o |ALPHA|
+  o |  Sorry, no documentation on ALPHA ALPHA|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#75 OUTPUT_HELP prompting from NOSUCH
+  o |  Sorry, no documentation on NOSUCH|
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD|
+  o |  ORDER      SAME       WIDE|
+  o ||
+  i |
+Topic? | -> |ALPHA|
+  o ||
+  o |ALPHA|
+  o ||
+  o |     Text of ALPHA, level 1. ALPHA is the first of the probe's|
+  o |     topics.|
+  o ||
+  o |     Format|
+  o ||
+  o |       ALPHA filespec [count]|
+  o ||
+  o ||
+  o ||
+  o ||
+  o |  Additional information available:|
+  o ||
+  o |  Parameters Qualifiers|
+  o |  /BRIEF     /COUNT     /NOCONFIRM|
+  o |  /DIRECT    Description|
+  o |  /NOTQUAL|
+  o |  Examples|
+  o ||
+  i |
+ALPHA Subtopic? | -> ||
+  i |
+Topic? | -> ||
+  OUTPUT_HELP: r=00000001 %SYSTEM-S-NORMAL, normal successful completion
+#76 OUTPUT_HELP prompting with no input routine
+  OUTPUT_HELP: r=002690EA %LBR-E-ILLINROU, input routine improperly specified or missing
+#77 OUTPUT_HELP no output routine
+  OUTPUT_HELP: r=002690DA %LBR-E-ILLOUTROU, output routine improperly specified or missing
+#78 OUTPUT_HELP output routine failing
+  o ||
+  o |ALPHA|
+  OUTPUT_HELP: r=00000000 %NONAME-W-NOMSG, Message number 00000000
+#79 OUTPUT_HELP too many arguments
+  OUTPUT_HELP: r=002690F2 %LBR-E-TOOMNYARG, too many arguments
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEASSIGN HLP$LIBRARY
+$ DEASSIGN HLP$LIBRARY_1
+$ !
+$ ! Part D: prompting in a procedure.
+$ !
+$ @HELP90D
+$ ! HELP90D.COM - part D of round 1 of the Phase 90 probe: HELP's
+$ ! prompts answered from a procedure's data lines, and from a file.
+$ ! Written by testdata/help90/gen.go; HELP90.COM runs it. If HELP prompts
+$ ! at the terminal instead, answer each prompt with Ctrl/Z, and say so.
+$ SET NOON
+$ SET VERIFY
+$ HP := HELP/PROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A
+$ HP ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+Parameters
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+
+?
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+Qualifiers
+  Sorry, no documentation on QUALIFIERS
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+/BRIEF
+  Sorry, no documentation on /BRIEF
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038120"
+$ HP
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+Description
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+    Additional information available:
+
+    Details
+
+Details
+
+ALPHA
+
+  Description
+
+    Details
+
+         Text of ALPHA Description Details.
+
+
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ HP
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+DEEP
+
+DEEP
+
+     Text of DEEP, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+L2
+
+DEEP
+
+  L2
+
+       Text of DEEP L2, level 2.
+
+L3
+
+DEEP
+  Sorry, no documentation on DEEP L3
+
+
+  Additional information available:
+
+  L2         S2
+
+NOSUCH
+
+DEEP
+  Sorry, no documentation on DEEP NOSUCH
+
+
+  Additional information available:
+
+  L2         S2
+
+?
+
+DEEP
+
+     Text of DEEP, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+$ ! HELP's input ended at the $ line.
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ HP NOSUCH
+  Sorry, no documentation on NOSUCH
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+
+$ HP
+
+HELP
+
+     Text of the probe library's own HELP topic.
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+@H90DIR:H90B
+  Sorry, no documentation on HELP
+
+
+  Additional information available:
+
+  ALPHA      BONLY
+
+BONLY
+
+BONLY
+
+     Text of BONLY, in library H90B.
+
+
+  Additional information available:
+
+  Sub
+
+
+
+
+$ HP ALPHA
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+*
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+
+ALPHA
+
+  Qualifiers
+
+
+
+    /BRIEF
+
+          /BRIEF
+
+       Text of the qualifier /BRIEF.
+
+    /COUNT
+
+          /COUNT=n
+
+       Text of the qualifier /COUNT.
+
+    /NOCONFIRM
+
+       Text of the qualifier /NOCONFIRM.
+
+
+
+
+ALPHA
+
+  /DIRECT
+
+       Text of ALPHA /DIRECT, a qualifier with a key line of its own.
+
+
+    Additional information available:
+
+    Example
+
+
+ALPHA
+
+  Description
+
+       Text of ALPHA Description.
+    /NOTQUAL
+       The line above starts with a slash, outside Qualifiers.
+
+
+    Additional information available:
+
+    Details
+
+
+ALPHA
+
+  Examples
+
+       1.  $ ALPHA X.DAT
+
+           Text of ALPHA's first example.
+
+...
+
+ALPHA
+  Sorry, no documentation on ALPHA ...
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+ALPHA
+
+ALPHA
+  Sorry, no documentation on ALPHA ALPHA
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ HP NOSUB
+  Sorry, no documentation on NOSUB
+
+
+  Additional information available:
+
+  ALPHA      ALPHABET   ALPS       DEEP       HELP       MANY       ODD        ORDER      SAME       WIDE
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ HP MANY
+
+MANY
+
+     Text of MANY: forty subtopics of three characters.
+
+
+  Additional information available:
+
+  M01        M02        M03        M04        M05        M06        M07        M08        M09        M10        M11        M12
+  M13        M14        M15        M16        M17        M18        M19        M20        M21        M22        M23        M24
+  M25        M26        M27        M28        M29        M30        M31        M32        M33        M34        M35        M36
+  M37        M38        M39        M40
+
+M05
+
+MANY
+
+  M05
+
+       Text of MANY M05.
+
+
+
+$ DEFINE/USER_MODE SYS$INPUT RESP.TXT
+$ HP ALPHA
+%SYSTEM-F-IVDEVNAM, invalid device name
+$ HP/OUTPUT=H90P.LIS ALPHA
+Parameters
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ TYPE H90P.LIS
+
+ALPHA
+
+     Text of ALPHA, level 1. ALPHA is the first of the probe's
+     topics.
+
+     Format
+
+       ALPHA filespec [count]
+
+
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+
+ALPHA
+
+  Parameters
+
+
+
+    filespec
+
+       Text of the parameter filespec.
+
+    count
+
+       Text of the parameter count.
+
+
+
+$ EXIT
+$ !
+$ ! The libraries, for comparing with govax's.
+$ !
+$ BACKUP H90*.*LB;*,*.HLP;*,*.LIS;* H90.BCK/SAVE_SET/LOG
+%BACKUP-S-COPIED, copied DUA1:[000000]H90A.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90B.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90C.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90D.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90E.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90G.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90K.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90L.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90M.MLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90Q.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90S.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90T.TLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90X1.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90X2.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90X3.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90X4.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90X5.HLB;1
+%BACKUP-S-COPIED, copied DUA1:[000000]ALPHA2.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]BADTEXT.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90A1.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90A2.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90B.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90C.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90D.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90G.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90S.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]LOWER.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]NOBLANK.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]SKIP.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]TOOLONG.HLP;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90N.LIS;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90O.LIS;1
+%BACKUP-S-COPIED, copied DUA1:[000000]H90P.LIS;1
+%BACKUP-S-COPIED, copied DUA1:[000000]HELP.LIS;1
+$ EXIT
