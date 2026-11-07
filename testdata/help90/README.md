@@ -26,6 +26,7 @@ Parameters."), so a log shows which text HELP chose. None of it is VMS's.
 | `deeper.hlp`, `help90c.com` | Round 1c: DEEPER, a chain of levels to 9 (round 1b's DEEP was nested wrongly), its cases, and the libraries and image round 2's terminal session uses |
 | `help90v.com` | Part G: HELP on VMS's own EXCHANGE, SUBMIT, and ANALYZE modules (round 1 only). Its output holds VMS's text |
 | `vax/round1/` | Round 1's VAX run, checked: `help90.log`, `h90.bck`, `dbgh.dlg`, and `help90-term.log` |
+| `vax/round2/` | Round 1c's `help90c.log` and round 2's `help90-term.log` (simh's console log, escape sequences kept, cut before simh's own help text), checked |
 | `vax/round1b/` | Round 1b's, checked: `help90.log`, `h90.bck`, `dbgh.dlg` (`help90f.log` and `dbgv.dlg` are local) |
 | `help90d.dbg`, `help90v.dbg`, `dbgt.mar` | The debugger sessions' commands, and the image they run |
 | `lbr90.mar` | Part E: 79 cases calling the LBR$ routines on the probe's libraries: the definitions' values, INI_CONTROL, OPEN, GET_HEADER, LOOKUP_KEY, GET_RECORD (move and locate), FIND, GET_INDEX with matches, SET_INDEX, GET_HELP with its action routine's every call (flags, level, data), OUTPUT_HELP with output and input routines of its own (scripted answers to its prompts), the errors |
@@ -173,6 +174,11 @@ and after a topic with no subtopics the prompt stays at its parent.
 | 14 | `SET TERMINAL/WIDTH=132`, `HP/NOPROMPT WIDE`, `SET TERMINAL/WIDTH=80` | The subtopic columns at 132 |
 | 15 | `DEFINE DBG$HELP H90DIR:H90D`, `RUN/DEBUG DBGT`, then at `DBG>` `HELP SET`, `BREAK`, Return, Return, Return, `EXIT` | The debugger's prompts on the probe's library |
 | 16 | `DEASSIGN DBG$HELP` | |
+
+Round 1c and round 2 ran 2026-11-07. Both logs passed the check and are in
+`vax/round2/`. `SHOW TERMINAL` explained round 1's empty lines: OPA0: is a
+VT100 with a 52-line page, and HELP's `/PAGE` clears the screen before
+each display. Round 3, the LBR$ writing routines, is subtask 11's.
 
 ## What the run settles
 

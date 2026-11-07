@@ -1,0 +1,812 @@
+$ ! HELP90C.COM - round 1c of the Phase 90 probe: HELP on a chain of
+$ ! levels to 9 (round 1b's DEEP was nested wrongly), and the libraries
+$ ! round 2's terminal session uses. Written by testdata/help90/gen.go.
+$ ! Run it with the exchange volume's [000000] as the default directory:
+$ !
+$ !     @HELP90C/OUTPUT=HELP90C.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ L = F$ENVIRONMENT("DEFAULT")
+$ DEFINE H90DIR DUA1:[000000]
+%DCL-I-SUPERSEDE, previous value of H90DIR has been superseded
+$ LIBRARY/CREATE/HELP H90A H90A1,H90A2
+$ LIBRARY/CREATE/HELP H90B H90B
+$ LIBRARY/CREATE/HELP H90D H90D
+$ LIBRARY/CREATE/HELP H90Y DEEPER
+$ MACRO/DEBUG DBGT
+$ LINK/DEBUG DBGT
+$ LIBRARY/EXTRACT=*/OUTPUT=SYS$OUTPUT/HELP H90Y
+1 DEEPER
+   Text of DEEPER, level 1.
+2 L2
+   Text of DEEPER L2, level 2.
+3 L3
+   Text of DEEPER L2 L3, level 3.
+4 L4
+   Text of DEEPER L2 L3 L4, level 4.
+5 L5
+   Text of DEEPER L2 L3 L4 L5, level 5.
+6 L6
+   Text of DEEPER L2 L3 L4 L5 L6, level 6.
+7 L7
+   Text of DEEPER L2 L3 L4 L5 L6 L7, level 7.
+8 L8
+   Text of DEEPER L2 L3 L4 L5 L6 L7 L8, level 8.
+9 L9
+   Text of DEEPER L2 L3 L4 L5 L6 L7 L8 L9, level 9.
+9 S9
+   Text of S9, L9's sibling at level 9, a leaf.
+8 S8
+   Text of S8, L8's sibling at level 8, a leaf.
+7 S7
+   Text of S7, L7's sibling at level 7, a leaf.
+6 S6
+   Text of S6, L6's sibling at level 6, a leaf.
+5 S5
+   Text of S5, L5's sibling at level 5, a leaf.
+4 S4
+   Text of S4, L4's sibling at level 4, a leaf.
+3 S3
+   Text of S3, L3's sibling at level 3, a leaf.
+2 S2
+   Text of S2, L2's sibling at level 2, a leaf.
+$ H := HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90Y
+$ H DEEPER
+
+DEEPER
+
+     Text of DEEPER, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEPER L2
+
+DEEPER
+
+  L2
+
+       Text of DEEPER L2, level 2.
+
+
+    Additional information available:
+
+    L3         S3
+
+$ H DEEPER L2 L3
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                   Text of DEEPER L2 L3 L4 L5 L6 L7 L8, level 8.
+
+
+                Additional information available:
+
+                L9         S9
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8 L9
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                L9
+
+                     Text of DEEPER L2 L3 L4 L5 L6 L7 L8 L9, level 9.
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8 L9 L10
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                L9
+                  Sorry, no documentation on DEEPER L2 L3 L4 L5 L6 L7 L8 L9 DEEPER
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8 S9
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                S9
+
+                     Text of S9, L9's sibling at level 9, a leaf.
+
+$ H DEEPER S2
+
+DEEPER
+
+  S2
+
+       Text of S2, L2's sibling at level 2, a leaf.
+
+$ H DEEPER L2 S3
+
+DEEPER
+
+  L2
+
+    S3
+
+         Text of S3, L3's sibling at level 3, a leaf.
+
+$ H DEEPER L
+
+DEEPER
+
+  L2
+
+       Text of DEEPER L2, level 2.
+
+
+    Additional information available:
+
+    L3         S3
+
+$ H DEEPER L2 L
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+$ H DEEPER S
+
+DEEPER
+
+  S2
+
+       Text of S2, L2's sibling at level 2, a leaf.
+
+$ H DEEPER *
+
+DEEPER
+
+  L2
+
+       Text of DEEPER L2, level 2.
+
+
+    Additional information available:
+
+    L3         S3
+
+
+DEEPER
+
+  S2
+
+       Text of S2, L2's sibling at level 2, a leaf.
+
+$ H DEEPER * *
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+
+DEEPER
+
+  L2
+
+    S3
+
+         Text of S3, L3's sibling at level 3, a leaf.
+
+$ H DEEPER * * *
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+           Text of DEEPER L2 L3 L4, level 4.
+
+
+        Additional information available:
+
+        L5         S5
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      S4
+
+           Text of S4, L4's sibling at level 4, a leaf.
+
+$ H DEEPER...
+
+DEEPER
+
+     Text of DEEPER, level 1.
+
+
+DEEPER
+
+  L2
+
+       Text of DEEPER L2, level 2.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+           Text of DEEPER L2 L3 L4, level 4.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+             Text of DEEPER L2 L3 L4 L5, level 5.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+               Text of DEEPER L2 L3 L4 L5 L6, level 6.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+                 Text of DEEPER L2 L3 L4 L5 L6 L7, level 7.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                   Text of DEEPER L2 L3 L4 L5 L6 L7 L8, level 8.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                L9
+
+                     Text of DEEPER L2 L3 L4 L5 L6 L7 L8 L9, level 9.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                S9
+
+                     Text of S9, L9's sibling at level 9, a leaf.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              S8
+
+                   Text of S8, L8's sibling at level 8, a leaf.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            S7
+
+                 Text of S7, L7's sibling at level 7, a leaf.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          S6
+
+               Text of S6, L6's sibling at level 6, a leaf.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        S5
+
+             Text of S5, L5's sibling at level 5, a leaf.
+
+
+DEEPER
+
+  L2
+
+    L3
+
+      S4
+
+           Text of S4, L4's sibling at level 4, a leaf.
+
+
+DEEPER
+
+  L2
+
+    S3
+
+         Text of S3, L3's sibling at level 3, a leaf.
+
+
+DEEPER
+
+  S2
+
+       Text of S2, L2's sibling at level 2, a leaf.
+
+$ H DEEPER L2...
+
+DEEPER
+  Sorry, no documentation on DEEPER L2...
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8...
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+              Sorry, no documentation on DEEPER L2 L3 L4 L5 L6 L7 L8...
+
+
+              Additional information available:
+
+              L8         S8
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8 L9...
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+                Sorry, no documentation on DEEPER L2 L3 L4 L5 L6 L7 L8 L9...
+
+
+                Additional information available:
+
+                L9         S9
+
+$ H DEEPER S2...
+
+DEEPER
+  Sorry, no documentation on DEEPER S2...
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEPER L2 L3 L4 L5 L6 L7 L8 L9 *
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        L5
+
+          L6
+
+            L7
+
+              L8
+
+                L9
+                  Sorry, no documentation on DEEPER L2 L3 L4 L5 L6 L7 L8 L9 DEEPER
+
+$ H DEEPER L2 *...
+
+DEEPER
+
+  L2
+    Sorry, no documentation on DEEPER L2 *...
+
+
+    Additional information available:
+
+    L3         S3
+
+$ H DEEPER * L3
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+$ H DEEPER % L3
+
+DEEPER
+  Sorry, no documentation on DEEPER % L3
+
+
+  Additional information available:
+
+  L2         S2
+
+$ H DEEPER L% L%
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+$ ! KEY... on a topic with no subtopics, in H90A.
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A ALPHA Parameters...
+
+ALPHA
+  Sorry, no documentation on ALPHA PARAMETERS...
+
+
+  Additional information available:
+
+  Parameters Qualifiers
+  /BRIEF     /COUNT     /NOCONFIRM
+  /DIRECT    Description
+  /NOTQUAL
+  Examples
+
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90A NOSUB...
+
+NOSUB
+
+     Text of NOSUB, a topic with no subtopics.
+
+$ ! Prompting down the chain, from a procedure's data lines.
+$ HELP/PROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:H90Y DEEPER
+
+DEEPER
+
+     Text of DEEPER, level 1.
+
+
+  Additional information available:
+
+  L2         S2
+
+L2
+
+DEEPER
+
+  L2
+
+       Text of DEEPER L2, level 2.
+
+
+    Additional information available:
+
+    L3         S3
+
+L3
+
+DEEPER
+
+  L2
+
+    L3
+
+         Text of DEEPER L2 L3, level 3.
+
+
+      Additional information available:
+
+      L4         S4
+
+L4
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+           Text of DEEPER L2 L3 L4, level 4.
+
+
+        Additional information available:
+
+        L5         S5
+
+?
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+           Text of DEEPER L2 L3 L4, level 4.
+
+
+        Additional information available:
+
+        L5         S5
+
+S5
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+
+        S5
+
+             Text of S5, L5's sibling at level 5, a leaf.
+
+NOSUCH
+
+DEEPER
+
+  L2
+
+    L3
+
+      L4
+        Sorry, no documentation on DEEPER L2 L3 L4 NOSUCH
+
+
+        Additional information available:
+
+        L5         S5
+
+
+
+
+
+
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038120"
+$ EXIT

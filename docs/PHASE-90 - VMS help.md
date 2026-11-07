@@ -608,9 +608,9 @@ cases found nothing past L2. Round 1c has a chain that is nested correctly.
   Examples.
 - A topic list shows keys in file order and in the case of the file. A
   level-1 topic's heading is its key in uppercase (`MIXEDCASE`). A key
-  longer than 10 characters takes 22 columns (two cells), so a cell is 11
-  columns per 11 characters, or part of 11. Output to a file is 132
-  columns wide (12 cells).
+  longer than 10 characters takes 22 columns (two cells). Round 2
+  refines the rule: a cell is the key and one blank, rounded up to a
+  multiple of 11. Output to a file is 132 columns wide (12 cells).
 - The request is split into words at blanks and before each `/`.
   `ODD Two Words` matches `Two Words` by its first word, then looks for
   WORDS under it. `ODD Slash/Inside` looks for `/INSIDE` under
@@ -661,13 +661,88 @@ routine returned, for subtask 10 to read in full. Neither `LBR$_NOHLPLIS` nor
 returned such a status (#61, with libraries defined, returned
 SS$_NORMAL). govax won't define the status until a VMS run shows one.
 
+### Round 1c and round 2 (2026-11-07)
+
+Logs: `testdata/help90/vax/round2/` (checked). `help90c.log` is round 1c's
+procedure. `help90-term.log` is the terminal session, as simh logged it
+(escape sequences and all), cut before simh's own help text at its end.
+
+**Levels and wildcards** (DEEPER, a chain to 9):
+
+- All nine levels work, each heading indented 2 more, and text 3 past its
+  heading. A tenth word is VMS 7.1's quirk: `DEEPER L2 ... L9 L10` (or
+  `... L9 *`) is "Sorry, no documentation on DEEPER L2 L3 L4 L5 L6 L7 L8
+  L9 DEEPER". The tenth word is reported as the *first* one, as though HELP
+  kept nine words and the tenth wrapped around. govax will copy the
+  message (unconfirmed why).
+- **`...` is taken only on the first word** (the level-1 topic).
+  `DEEPER...` shows DEEPER and every subtopic below it in file order, each
+  with its whole heading path and no topic lists. `NOSUB...` is just
+  NOSUB. On any later word `...` is part of the word, so `DEEPER L2...`,
+  `S2...`, `L2 L3 ... L8...`, `L2 *...`, and `ALPHA Parameters...` are
+  "Sorry" at the level where the word failed. This settles round 1b's
+  question.
+- `*` matches any key at its level (`DEEPER * L3` works). `%` matches
+  exactly one character, so `DEEPER % L3` fails (the keys are `L2` and
+  `S2`) and `DEEPER L% L%` works. A shared abbreviation (`DEEPER L`, `L2
+  L`) that matches one key shows just that key.
+- In a procedure, `HELP/PROMPT` takes each data line as an answer and
+  echoes it in the output, followed by an empty line. Unread lines are
+  SKPDAT.
+
+**The terminal** (`SHOW TERMINAL`: OPA0:, a VT100, page 52, ANSI_CRT,
+Scope):
+
+- **The empty lines were a screen clear.** On a video terminal with
+  `/PAGE` (the default there), HELP starts by sending `ESC ) 0`, a
+  scrolling region of the page's height (`ESC [1;52r`), and `ESC [;H
+  ESC [2J` (home, clear). It clears again before each display, and sends
+  `ESC [m` at the end. `/NOPAGE` sends none of these; each display just
+  starts with an empty line.
+- **The prompts name the whole path:** `DEEPER L2 L3 L4 Subtopic?`.
+  Return goes up one level at a time to `Topic?`, then ends HELP.
+  Starting partway (`HY DEEPER L2 L3`) prompts at that topic and climbs
+  the same way. After a leaf (S5) the prompt stays at its parent.
+- **`?` is read at once, with no Return** (the author saw this at the
+  terminal; the log shows no line end after it). It redisplays the
+  prompt's topic, with an extra empty line at the top.
+- **Ctrl/Z** at a subtopic prompt shows ` Exit ` in reverse video (`ESC 7
+  ESC [7m Exit ESC [m ESC 8`) and returns to `$` at once.
+- **`@lib` at `Topic?`** goes into that library. H90B has no HELP module,
+  so it shows "Sorry, no documentation on HELP", then H90B's topics, with
+  the prompt `@H90B Topic?`. Its subtopic prompts are `@H90B BONLY
+  Subtopic?`. Return at `@H90B Topic?` returns to the first library's
+  `Topic?`, and Return there ends HELP.
+- An unknown topic at the start (`HP NOSUCH`) shows "Sorry" and the topic
+  list, then `Topic?`. An unknown subtopic shows its parent's heading,
+  "Sorry", and the parent's list, and the prompt stays.
+- `/PAGE` on TEXTY, a topic shorter than the page, didn't stop for more.
+  Its 104-character line was wrapped by the terminal, not by HELP. HELP
+  doesn't wrap text.
+- **Cells at 132** (WIDE): a cell is the key plus one blank, rounded up
+  to a multiple of 11 (a 10-character key 11 columns, 11 to 21 characters
+  22, 22 to 32 characters 33). A key goes on the line if its *text*, not
+  its cell, fits in the width: the first line ends with `Lxxxxxxxxxx` (11
+  characters) at column 123, and the second with an 18-character key
+  ending at column 130.
+
+**The debugger at the terminal:**
+
+- It doesn't clear the screen.
+- Its subtopic prompts start with DEBUG (`DEBUG SET BREAK Subtopic?`) and
+  climb to `Topic?`.
+- A miss at `DBG> HELP` (`HELP EST`) shows the "Sorry" under DEBUG and
+  DEBUG's list, then prompts `Topic?`. **At that `Topic?` the debugger
+  looks at the library's level-1 keys** (`BREAK` was "Sorry", with the
+  list `DEBUG EXTRA`), not under DEBUG.
+
 ## Subtasks
 
 1. The survey and plan (this document), reviewed by the author (done
    2026-11-07).
 2. The probe: `testdata/help90`'s modules, `gen.go`, procedures, and
    `lbr90.mar`; rounds 1 and 2 run on VMS; "What the probe settled" written
-   into this doc.
+   into this doc (done 2026-11-07; round 3 belongs to subtask 11).
 3. LIBRARY/HELP: `internal/lbr`'s help modules (input rules, key length,
    DCX) and the command's `/HELP`, held to VMS's libraries and messages
    (`TestHelp90LibraryOracle`).
@@ -743,3 +818,11 @@ SS$_NORMAL). govax won't define the status until a VMS run shows one.
   wrongly, and the README's terminal table ended HELP before row 11. Round
   1c (`deeper.hlp`, `help90c.com`, a new exchange volume) and a revised
   round 2 table, each row starting at `$`, are ready.
+- **2026-11-07** — Round 1c and round 2 run on VMS V7.1. Both logs were
+  checked and are in `testdata/help90/vax/round2/` (the terminal log cut
+  before simh's own help text). "What the probe settled" has their
+  findings. The empty lines at the terminal were VT100 screen clears
+  from `/PAGE`. `...` is taken only on the first word. The prompts name
+  the whole path, `?` is read without a Return, and the debugger's
+  `Topic?` looks at the library's level-1 keys. Subtask 2 done. Round 3
+  (the LBR$ writing routines) belongs to subtask 11.
