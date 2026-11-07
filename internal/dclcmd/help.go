@@ -393,6 +393,24 @@ func (c *Context) OpenHelpLibrary(spec, builtin string) (help.Library, error) {
 	return l.lib, nil
 }
 
+// DebuggerHelpLibrary is the debugger's help library: the file the logical
+// name DBG$HELP names, if it's defined (VMS 7.1's debugger read the probe's
+// library so, testdata/help90's part F), else SYS$HELP:DBG$HELP.HLB, or
+// govax's own copy, whose embedded name is builtin, when that can't be
+// opened.
+func (c *Context) DebuggerHelpLibrary(builtin string) (help.Library, error) {
+	spec := "SYS$HELP:DBG$HELP"
+
+	if c.Logicals != nil {
+		if e, err := c.Logicals.Translate("LNM$FILE_DEV", "DBG$HELP", lnm.User, lnm.AttrCaseBlind); err == nil &&
+			len(e.Equivalences) > 0 {
+			spec = e.Equivalences[0].Value
+		}
+	}
+
+	return c.OpenHelpLibrary(spec, builtin)
+}
+
 // builtinHelpLibrary is govax's own copy of a help library, by its
 // embedded name. It's opened afresh each time: a Library keeps the modules
 // it has parsed, and HELP may run in several processes' DCL at once.

@@ -1,6 +1,7 @@
 package debugger_test
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -44,6 +45,72 @@ func TestEveryVerbHasHelp(t *testing.T) {
 	}
 }
 
+// TestEveryQualifierHasHelp: each qualifier a debugger verb's grammar
+// takes (its syntaxes' too) has a qualifier line ("/NAME" in column 1,
+// under a Qualifiers topic) or a "/NAME" key somewhere in the verb's
+// topic under DEBUG (Decision 10, as the console's test in
+// internal/console's help_test.go holds DCL's verbs; subtask 9 rewrote the
+// debugger's help so).
+func TestEveryQualifierHasHelp(t *testing.T) {
+	lib := debugHelp(t)
+	g := consoletest.DebugGrammar(t)
+	debug := lib.Module("DEBUG")
+
+	names, alias := g.Verbs()
+
+	var missing []string
+
+	for i, verb := range names {
+		if alias[i] {
+			continue
+		}
+
+		var topic *help.Topic
+
+		for _, s := range debug.Subtopics {
+			if strings.HasPrefix(strings.ToUpper(s.Key), verb) {
+				topic = s
+
+				break
+			}
+		}
+
+		keys := map[string]bool{}
+
+		var walk func(t *help.Topic)
+
+		walk = func(t *help.Topic) {
+			if strings.HasPrefix(t.Key, "/") {
+				keys[strings.ToUpper(t.Key[1:])] = true
+			}
+
+			for _, s := range t.Slashes {
+				walk(s)
+			}
+
+			for _, s := range t.Subtopics {
+				walk(s)
+			}
+		}
+
+		if topic != nil {
+			walk(topic)
+		}
+
+		for _, q := range g.Qualifiers(verb) {
+			if !keys[q] {
+				missing = append(missing, verb+"/"+q)
+			}
+		}
+	}
+
+	sort.Strings(missing)
+
+	for _, m := range missing {
+		t.Errorf("%s has no qualifier line in its verb's help", m)
+	}
+}
+
 // TestDebuggerHelpTopics: the debugger's own help covers each SET, SHOW,
 // and CANCEL keyword and the qualifiers that need explaining, so a HELP of
 // each says something.
@@ -51,7 +118,8 @@ func TestDebuggerHelpTopics(t *testing.T) {
 	lib := debugHelp(t)
 
 	topics := [][]string{
-		{"ASM"}, {"ASM", "LABELS"}, {"ASM", "ADDRESSING"}, {"ASM", "PSEUDO", "QUAD"}, {"ASM", "PSEUDO", "BYTE"},
+		{"@"}, {"ASM"}, {"ASM", "LABELS"}, {"ASM", "ADDRESSING"}, {"ASM", "DIRECTIVES", "QUAD"},
+		{"ASM", "DIRECTIVES", "BYTE"}, {"ASM", "DIR", "IF_FALSE"}, {"ASM", "DIRECTIVES", "SHIM"},
 		{"SET", "BREAK"}, {"SET", "TRACE"}, {"SET", "WATCH"}, {"SET", "STEP"},
 		{"SET", "SOURCE"}, {"SET", "MODE"}, {"SET", "RADIX"}, {"SET", "MODULE"},
 		{"SET", "PSL"}, {"SET", "PTE"}, {"SET", "FAULT"}, {"SET", "VM"}, {"SET", "BASE"},
@@ -59,18 +127,19 @@ func TestDebuggerHelpTopics(t *testing.T) {
 		{"SHOW", "SOURCE"}, {"SHOW", "CALLS"}, {"SHOW", "STACK"}, {"SHOW", "KSP"},
 		{"SHOW", "SP"}, {"SHOW", "REGISTERS"}, {"SHOW", "REGIONS"}, {"SHOW", "PSL"},
 		{"SHOW", "CPU_STATUS"}, {"SHOW", "CLOCK"}, {"SHOW", "BASE"}, {"SHOW", "MEMORY"},
-		{"SHOW", "MAPS"}, {"SHOW", "TB"}, {"SHOW", "PAGE"}, {"SHOW", "SCB"},
+{"SHOW", "TB"}, {"SHOW", "PAGE"}, {"SHOW", "SCB"},
 		{"SHOW", "SHIM"}, {"SHOW", "EXCEPTIONS"}, {"SHOW", "MODE"}, {"SHOW", "RADIX"},
 		{"SHOW", "IMAGE"}, {"SHOW", "MODULE"}, {"SHOW", "SYMBOL"}, {"SHOW", "SCOPE"},
 		{"SHOW", "LANGUAGE"}, {"SET", "TYPE"}, {"SHOW", "TYPE"}, {"CANCEL", "TYPE"},
 		{"EXAMINE", "/FLOAT"}, {"EXAMINE", "/PACKED"}, {"EXAMINE", "/DATE_TIME"}, {"EXAMINE", "/TYPE"},
 		{"CANCEL", "BREAK"}, {"CANCEL", "TRACE"}, {"CANCEL", "WATCH"}, {"CANCEL", "SOURCE"},
 		{"CANCEL", "RADIX"}, {"CANCEL", "MODE"}, {"CANCEL", "INTERRUPT"}, {"CANCEL", "TB"},
-		{"CANCEL", "MEMORY"}, {"CLEAR", "BREAK"},
+		{"CANCEL", "MEMORY"}, {"CLEAR"},
 		{"EXAMINE", "/INSTRUCTION"}, {"EXAMINE", "/OPERANDS"}, {"EXAMINE", "/BYTE"},
 		{"EXAMINE", "/ASCII"}, {"EXAMINE", "/HEXADECIMAL"}, {"EXAMINE", "/PSL"},
 		{"EXAMINE", "/PTE"}, {"EXAMINE", "/CONSTANTS"}, {"EXAMINE", "/SHAREABLE"},
-		{"EXPRESSIONS"}, {"REGISTERS"}, {"RADIX"}, {"BREAKPOINTS"},
+		{"EXPRESSIONS"}, {"REGISTERS"}, {"RADIX"}, {"EVENTPOINTS"}, {"BUILT_IN_SYMBOLS"},
+		{"PATH_NAMES"}, {"FORTRAN_PROGRAMS"}, {"SET", "BREAK", "QUALIFIERS", "/AFTER"},
 		{"EVALUATE"}, {"SYMBOLIZE"}, {"DEPOSIT"}, {"EX"}, {"D"}, {"S"}, {"ST"},
 		{"SH", "BREAK"}, {"SE", "BREAK"},
 	}

@@ -256,6 +256,7 @@ func TestCommandFileSwitchesGrammars(t *testing.T) {
 		`$ PRINT "one: console"`,
 		`$ DEBUG`,
 		`HELP EXIT`,
+		``,
 		`EXIT`,
 		`$ PRINT "two: console again"`,
 	}, "\n")
@@ -314,7 +315,7 @@ func TestDebuggerAtFile(t *testing.T) {
 	s := newSession(t)
 
 	path := filepath.Join(t.TempDir(), "dbg.com")
-	if err := os.WriteFile(path, []byte("HELP QUIT\nEXIT\nPRINT \"back\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("HELP QUIT\n\nEXIT\nPRINT \"back\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

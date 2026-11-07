@@ -29,8 +29,8 @@ import (
 //     ends HELP at once.
 //
 // After a topic with subtopics HELP prompts for them. After one with
-// none, or a qualifier line's, the prompt stays where it was: at the
-// topic's parent. A response that finds nothing shows "Sorry" and leaves
+// none, a qualifier line, or several topics, the prompt stays where it
+// was ("Topic?" after the first request; see next). A response that finds nothing shows "Sorry" and leaves
 // the prompt where it was; a first request that finds nothing prompts at
 // "Topic?" (the debugger's "HELP EST", which looks up "DEBUG EST",
 // prompted "Topic?").
@@ -342,15 +342,19 @@ func (s *Session) again(p place) {
 }
 
 // next is where HELP prompts after showing displays, from at: the topic
-// shown, if it has subtopics; its parent if it has none; and if several
-// topics were shown, the topics their paths share (unconfirmed: the probe
-// showed only "*" below a topic, after which the prompt stayed at that
-// topic). If nothing was found, the prompt stays at at.
+// shown, if one topic was shown and it has numbered subtopics; otherwise
+// where the prompt was. After a first request (at is nil) that means
+// "Topic?": VMS 7.1's debugger, asked for a leaf below DEBUG
+// (Probe_Concept), for a qualifier line (EXAMINE /ASCII), for a topic's
+// Qualifiers, or for several topics (EX, *), prompted "Topic?" at once
+// (testdata/help90's dbgh.dlg, round 1b). At a "Subtopic?" prompt a leaf
+// leaves the prompt at its topic (round 2's S5 at "DEEPER L2 L3 L4
+// Subtopic?"), and so did "*" below ALPHA. A response of several words
+// reaching a leaf further down keeps the prompt where it was too
+// (unconfirmed: the probe's responses were single words). If nothing was
+// found, the prompt stays at at.
 func next(displays []Display, at []step) []step {
-	var (
-		shown    []*Display
-		headings []string
-	)
+	var shown []*Display
 
 	for i := range displays {
 		if d := &displays[i]; d.path != nil {
@@ -358,32 +362,19 @@ func next(displays []Display, at []step) []step {
 		}
 	}
 
-	if len(shown) == 0 {
+	if len(shown) != 1 {
 		return at
 	}
 
 	path := shown[0].path
-	headings = shown[0].Headings
 
-	if len(shown) == 1 {
-		t := path[len(path)-1]
-		if t.Slash || len(t.Subtopics) == 0 {
-			path = path[:len(path)-1]
-		}
-	} else {
-		for _, d := range shown[1:] {
-			n := 0
-			for n < len(path) && n < len(d.path) && path[n] == d.path[n] {
-				n++
-			}
-
-			path = path[:n]
-		}
+	if t := path[len(path)-1]; t.Slash || len(t.Subtopics) == 0 {
+		return at
 	}
 
 	steps := make([]step, len(path))
 	for i, t := range path {
-		steps[i] = step{topic: t, heading: headings[i]}
+		steps[i] = step{topic: t, heading: shown[0].Headings[i]}
 	}
 
 	return steps

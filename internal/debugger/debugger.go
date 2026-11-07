@@ -199,6 +199,11 @@ type Debugger struct {
 	// searches. nil until first needed or until an image starts.
 	symbolsSet map[*dbgsym.Module]bool
 
+	// inputs are the files of commands being read, innermost last:
+	// DBG$INPUT's and @'s (dbginput.go). HELP reads its responses from the
+	// innermost, or, when there is none, as the console reads them.
+	inputs []*inputSource
+
 	// scope is SET SCOPE's list, or the default list and its current
 	// level (scope.go).
 	scope scopeState
@@ -237,9 +242,16 @@ type Console interface {
 	// it with its full name.
 	CreateDebuggerLog(file string) (io.WriteCloser, string, error)
 
-	// DebuggerHelp is the help library HELP reads: SYS$HELP:DBG$HELP.HLB,
-	// or govax's own copy of it.
+	// DebuggerHelp is the help library HELP reads: the file the logical
+	// name DBG$HELP names, else SYS$HELP:DBG$HELP.HLB, or govax's own copy
+	// of it.
 	DebuggerHelp() (help.Library, error)
+
+	// ReadDebuggerReply reads a response to one of HELP's prompts when no
+	// file of the debugger's own is being read: SYS$INPUT's next record (a
+	// command procedure's data line), or a line typed at the terminal
+	// after the prompt. ok is false at the end of the input or a Ctrl/Z.
+	ReadDebuggerReply(prompt string) (line string, ok bool)
 }
 
 // New returns a debugger for the console c's machine, with its commands

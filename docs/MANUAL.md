@@ -3669,7 +3669,8 @@ VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
 
 With no `/LIBRARY`, HELP reads `SYS$HELP:HELPLIB.HLB`, the system
 volume's, or govax's own copy when there's no system volume; the
-debugger's HELP reads `SYS$HELP:DBG$HELP.HLB` the same way.
+debugger's HELP reads the library the logical name `DBG$HELP` names, or
+`SYS$HELP:DBG$HELP.HLB`, the same way.
 `@SYS$SOURCES:BUILDHELP` rebuilds both from their help files in
 `SYS$HELP:[.SOURCES]`. A module you add to `HELPLIB.HLB` with
 `LIBRARY/HELP`, or change there, is kept when a newer govax refreshes the
@@ -4241,8 +4242,8 @@ DBG> EXIT
 Numbers in the assembler are decimal unless marked (`^X1000`), as in
 MACRO. Code assembled this way runs in user mode; privileged instructions
 such as `HALT` fault there, as on a real VAX (`%SYSTEM-F-OPCDEC`), so end
-a test with a breakpoint, as above. `HELP ASM` at `DBG>` describes the
-assembler's directives.
+a test with a breakpoint, as above. `HELP ASM DIRECTIVES` at `DBG>`
+describes the assembler's directives.
 
 `ASM file` finds its file as `RUN` does. A VMS file specification
 (`ASM SYS$SOURCES:KERNEL.ASM`) is a file on a mounted volume, a host path
@@ -4255,7 +4256,12 @@ on the same volume or in the same host directory. `LOAD/ROM` and
 `LOAD/NVRAM` find their files the same way.
 
 The debugger's `HELP` covers every command: `HELP SET BREAK`, `HELP
-EXAMINE /INSTRUCTION`, `HELP EXPRESSIONS`, and so on.
+EXAMINE /INSTRUCTION`, `HELP EXPRESSIONS`, and so on. As the VMS
+debugger's does, it then prompts for a subtopic (`DEBUG SET Subtopic?`),
+Return going up a level until `Topic?`, where Return ends it. When the
+debugger reads its commands from a file (`DBG$INPUT`, or `@`), the file's
+next lines answer the prompts, so it needs an empty line for each level
+to climb.
 
 ---
 

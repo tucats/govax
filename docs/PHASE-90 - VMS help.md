@@ -776,7 +776,7 @@ Scope):
    govax's own topics and the machine's commands, HELP, INSTRUCTIONS, and
    HINTS (done 2026-11-07).
 9. The debugger's help rewritten as the DEBUG module, and the debugger's
-   HELP on it, held to round 1's F part.
+   HELP on it, held to round 1's F part (done 2026-11-07).
 10. LBRSHR: `vmsdef`'s vector, messages, and definitions;
     `internal/lbrrtl`'s reading routines; LINK and RUN finding them; held
     to round 1's E part (`TestLBR90Oracle`), in both paging modes.
@@ -1247,3 +1247,65 @@ Scope):
   up the new topics. Left for later: TEST and SHOW EXPAND have no
   handlers; the grammar could drop them. Subtask 8d done, and with it
   subtask 8.
+- **2026-11-07** — Subtask 9, the debugger's help. **The debugger's HELP
+  prompts**, as VMS 7.1's does: `debugger/help.go`'s Session has `Prompt`
+  set and reads its responses through `Debugger.readResponse`
+  (`dbginput.go`): from the innermost file of commands being read, now
+  an `inputSource` that DBG$INPUT's loop and `@`'s share with it
+  (`pushInput`, `popInput`), so the commands after the answers are read
+  after them, neither prompt nor answer shown or logged, as `dbgh.dlg`
+  shows neither; otherwise through the new `debugger.Console`
+  `ReadDebuggerReply`, which is DCL's `ReadHelpResponse` (a procedure's
+  data lines, or the terminal after the prompt). The library is the file
+  the logical name **DBG$HELP** names, else SYS$HELP:DBG$HELP.HLB, else
+  govax's copy (`dclcmd`'s `DebuggerHelpLibrary`), as part F found.
+  **A fix to the Session's prompts** (`internal/help`'s `next`): after a
+  first request that shows a leaf (`Probe_Concept`), a qualifier line
+  (`EXAMINE /ASCII`), a topic's Qualifiers, or several topics (`EX`,
+  `*`), VMS prompts `Topic?` at once, not at the parent, as `dbgh.dlg`'s
+  empty commands left after each HELP show; at a `Subtopic?` prompt such
+  a response leaves the prompt where it was (round 2's S5). The earlier
+  rule passed every DCL case, none of which asked for a leaf below level
+  1 first. Unconfirmed, and chosen: a response of several words reaching
+  a leaf further down keeps the prompt where it was. `TestHelp90DebuggerOracle`
+  (`internal/console/help90debug_test.go`) makes H90D with LIBRARY/HELP,
+  builds DBGT `/DEBUG`, runs it with DBG$HELP and DBG$INPUT
+  (HELP90D.DBG) as HELP90F.COM does, and holds DBGH.DLG to VMS's
+  (round 1b) line for line, every HELP's display and the empty commands
+  after it; it fails without the fix. Two tests' procedures now answer
+  HELP's prompt (`TestDebuggerAtFile`, `TestCommandFileSwitchesGrammars`).
+  **The DEBUG module rewritten** in VMS's shape and govax's own words
+  (`files/dbghelp/debug.hlp`): level-2 concept topics first, as VMS's
+  has them (`Built_in_Symbols`, `Eventpoints`, `Expressions`,
+  `FORTRAN_Programs`, `Path_Names`, `Radix`, `Registers`), then the
+  commands, each with its summary and Format and, below it, `Parameter`,
+  `Qualifiers` (a bare-keyed `/` line per qualifier, the syntax restated
+  six blanks in), `Description`, and `Examples`; `@` is VMS's
+  `@_(Execute_Procedure)`, which `HELP @` finds; SET, SHOW, and CANCEL a
+  level-3 topic per keyword, each with its own level-4 topics; the
+  keyword synonyms (BREAKPOINT, IMAGES, VM, ...) named in their topics
+  rather than copied. ASM has `Parameter`, `Description`, `Addressing`,
+  `Expressions`, `Labels`, and `Directives`, a level-4 topic per
+  directive name, the groups' shared text once (BYTE, IF, IRP, MACRO,
+  F_FLOAT, BLKB) and a short topic pointing to it for each other name;
+  the old file's copies of a group's text under each name (some 1,000
+  lines) are gone, and ASSEMBLE, CLEAR, and INCLUDE are short topics
+  naming the command they're the same as. Checking each claim against
+  govax found: CANCEL MEMORY/STATISTICS is refused (%DEBUG-E-SYNTAX),
+  SHOW MEMORY's /FULL, /RUNTIME, and /STATISTICS change nothing, and
+  SHOW INSTRUCTIONS/MODES and /PROFILE report NOMODES and NOPROFILE (the
+  old help described each as working; the old /PROCESS topic and CLEAR
+  PROFILE don't exist); SHOW MAPS and SET UIQUANTUM have no handlers and
+  get no topic; .VECTOR reports NOTLIVE and .PTE isn't a directive (both
+  were described); .VERSION sets SYS$MK_VERSION from a number and stores
+  nothing; CALL's arguments are read in the console's radix, and
+  EXAMINE's and DEPOSIT's /ASCII:n and /PACKED:n counts in the input
+  radix; CANCEL RADIX goes back to the language's radix, not always
+  hexadecimal; SET BASE and SHOW BASE are the next storage address, not
+  EXAMINE's. The tests: the debugger's `TestEveryQualifierHasHelp` holds
+  each qualifier of each debugger verb to a qualifier line or `/` key in
+  its topic under DEBUG (CALL's /BREAK, /DBG, and /DEBUG, aliases of
+  /STEP, each have a line saying so); `TestDebuggerHelpTopics` looks up
+  the new topics. MANUAL.md's 12 says the debugger's HELP prompts and
+  reads DBG$HELP. Left for later: SHOW MAPS, SET UIQUANTUM, and CANCEL
+  MEMORY could leave the grammar. Subtask 9 done.

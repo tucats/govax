@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"io"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -40,7 +41,10 @@ func (d *Debugger) readInput(name string) {
 		return
 	}
 
-	for _, line := range lines {
+	src := d.pushInput(lines)
+	defer d.popInput()
+
+	for line, ok := src.read(); ok; line, ok = src.read() {
 		if !d.active {
 			return
 		}
@@ -73,7 +77,9 @@ func (d *Debugger) runProcedure(file string, dispatch func(string) error) error 
 
 	d.procDepth++
 
-	for _, line := range lines {
+	src := d.pushInput(lines)
+
+	for line, ok := src.read(); ok; line, ok = src.read() {
 		if !d.active {
 			d.showError(dispatch(line))
 
@@ -96,6 +102,7 @@ func (d *Debugger) runProcedure(file string, dispatch func(string) error) error 
 		d.showError(err)
 	}
 
+	d.popInput()
 	d.procDepth--
 
 	if verify && d.active {
@@ -103,6 +110,63 @@ func (d *Debugger) runProcedure(file string, dispatch func(string) error) error 
 	}
 
 	return nil
+}
+
+// inputSource is a file of commands being read: DBG$INPUT's or @'s. A
+// command that reads lines of its own (HELP's responses) takes them from
+// the same place, so the commands after them are read after them.
+type inputSource struct {
+	lines []string
+	next  int
+}
+
+// read returns the next line, and false at the end.
+func (s *inputSource) read() (string, bool) {
+	if s.next >= len(s.lines) {
+		return "", false
+	}
+
+	s.next++
+
+	return s.lines[s.next-1], true
+}
+
+// pushInput makes lines the innermost input, and popInput ends it.
+func (d *Debugger) pushInput(lines []string) *inputSource {
+	src := &inputSource{lines: lines}
+	d.inputs = append(d.inputs, src)
+
+	return src
+}
+
+func (d *Debugger) popInput() {
+	d.inputs = d.inputs[:len(d.inputs)-1]
+}
+
+// readResponse reads a response to a prompt of HELP's: VMS 7.1's debugger
+// read them from its own input (testdata/help90's part F, whose DBG$INPUT
+// file had to answer each prompt). From a file the next line is taken and
+// neither the prompt nor the line is shown or logged, as VMS's log
+// (dbgh.dlg) shows neither. Otherwise the console reads it: a command
+// procedure's next data line, or a line typed after the prompt, which goes
+// to the terminal and not to the log. io.EOF is the input's end or Ctrl/Z,
+// which ends HELP.
+func (d *Debugger) readResponse(prompt string) (string, error) {
+	if n := len(d.inputs); n > 0 {
+		line, ok := d.inputs[n-1].read()
+		if !ok {
+			return "", io.EOF
+		}
+
+		return line, nil
+	}
+
+	line, ok := d.Console.ReadDebuggerReply(prompt)
+	if !ok {
+		return "", io.EOF
+	}
+
+	return line, nil
 }
 
 // flushEcho shows the echo of the procedure line being run, if it hasn't

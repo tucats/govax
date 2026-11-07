@@ -173,10 +173,18 @@ func (c *Console) HelpCommand(r *dcl.Result) error {
 	return c.cmd().Help(opts, c.ReadHelpResponse, c.OutputToFile())
 }
 
-// DebuggerHelp is the debugger's help library: SYS$HELP:DBG$HELP.HLB, or
-// govax's own copy when that can't be opened (debugger.Console).
+// DebuggerHelp is the debugger's help library: DBG$HELP's file, or
+// SYS$HELP:DBG$HELP.HLB, or govax's own copy when that can't be opened
+// (debugger.Console).
 func (c *Console) DebuggerHelp() (help.Library, error) {
-	return c.cmd().OpenHelpLibrary("SYS$HELP:DBG$HELP", bootdata.DebugHelpLibrary)
+	return c.cmd().DebuggerHelpLibrary(bootdata.DebugHelpLibrary)
+}
+
+// ReadDebuggerReply reads a response to the debugger's HELP as DCL's HELP
+// reads one: from SYS$INPUT, a procedure's data lines when the debugger
+// runs in one, else the terminal after the prompt.
+func (c *Console) ReadDebuggerReply(prompt string) (string, bool) {
+	return c.ReadHelpResponse(prompt)
 }
 
 // EndSession ends the console's use of the machine as govax exits: an
