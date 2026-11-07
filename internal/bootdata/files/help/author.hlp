@@ -6,7 +6,7 @@
 
        Forest Edge Software
        112 Forest Edge Drive
-       Raleigh NC 27518
+       Cary NC 27518
 
    or email
 
@@ -25,6 +25,6 @@
        Sergey Tikhonov
 
 
-   The Go version, MACRO assembler, LINKER, and DEBUG facility were
-   written by Tom Cole, supported by Sonnet 5 and Opus 5.5 LLM models
-   via Claude Code.
+   The Go version, MACRO assembler, FORTRAN compiler, LINKER, and
+   DEBUG facility were written by Tom Cole, supported by Sonnet 5
+   and Opus 5.5 LLM models via Claude Code.
