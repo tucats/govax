@@ -1210,8 +1210,7 @@ grammar console
         qualifier   instructions/id=1633
         qualifier   liblist/id=1634
         qualifier   library/id=1635             -
-                    /type=$string               -
-                    /default=""
+                    /type=$string
         qualifier   userlibrary/id=1636         -
                     /type=$string/list          -
                     /default=""

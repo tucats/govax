@@ -690,6 +690,18 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 			return active, nextParam, lastParam, rest, nil
 		}
 
+		// A qualifier's /NO form takes no value, as in DCL: /NOLIBRARY,
+		// /NOOUTPUT. It is present and negated, with no value.
+		if negated {
+			if scopeParam != nil {
+				r.markParamPresent(scopeParam.Name, q.Name, q.ID, true)
+			} else {
+				r.markPresent(q.Name, q.ID, true)
+			}
+
+			return active, nextParam, lastParam, rest, nil
+		}
+
 		return nil, 0, nil, "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, q.Name)
 	}
 
@@ -1229,6 +1241,9 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 			item.markPresent(q.Name, q.ID, negated)
 		case q.Default != nil:
 			item.set(q.Name, q.ID, negated, *q.Default)
+		case negated:
+			// A /NO form takes no value (parseQualifier).
+			item.markPresent(q.Name, q.ID, true)
 		default:
 			return "", vmserrors.NewSegment(vmserrors.CLI_VALREQ, q.Name)
 		}

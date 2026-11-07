@@ -970,8 +970,7 @@ Scope):
   main one; INVKEY at `Topic?` leaves the prompt there; nine words'
   wrap isn't applied below a prompt's path. Subtask 5 done.
 - **2026-11-07** — Subtask 6, DCL's HELP. `console.dcl`'s HELP takes
-  VMS's qualifiers (ids 1612–1615, 1632–1639; `/LIBRARY` has a default so
-  that `/NOLIBRARY` parses), and `internal/dclcmd/help.go` is the command:
+  VMS's qualifiers (ids 1612–1615, 1632–1639), and `internal/dclcmd/help.go` is the command:
   the main library (`/LIBRARY`, SYS$HELP:HELPLIB.HLB by default, its name
   parsed with SYS$HELP:.HLB through `rms.Session.FindImageFile`, or a host
   path), the user libraries (`HLP$LIBRARY`, `_1`, ... in the process,
@@ -1017,3 +1016,8 @@ Scope):
   scrolling region and character set VMS's HELP sets; `?` read with a
   Return, and Ctrl/Z with no ` Exit `, at govax's terminal. Subtask 6
   done.
+- **2026-11-07** — A follow-up to subtask 6, at the author's request: the
+  grammar engine now takes a qualifier's /NO form with no value, as DCL
+  does (`internal/dcl/parse.go`; `TestParse_negatedTakesNoValue`), so
+  `/NOLIBRARY` parses without the default `/LIBRARY` had been given to
+  allow it, and `/LIBRARY` alone is VALREQ again.
