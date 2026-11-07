@@ -1,21 +1,13 @@
 1 LABELS
-    The GOTO command goes on at a labeled line of the command procedure.
-    A label is a name followed by a colon at the start of a command line,
-    alone or before a command:
 
-        $ LOOP:
-        $ COUNT = COUNT + 1
-        $ IF COUNT .LT. 10 THEN GOTO LOOP
+   A label names a command line of a command procedure, for GOTO, GOSUB,
+   and CALL.  It is a name of letters, digits, "$", and "_", starting
+   with a letter, "$", or "_", followed by a colon at the start of the
+   line, alone or before a command:
 
-    Syntax:
+       $ LOOP:
+       $ RETRY: COUNT = COUNT + 1
 
-        GOTO label
-
-    A label is known once the procedure has run past it; GOTO takes the
-    one run past last, and otherwise searches forward for the first one.
-    A label inside an IF block or a subroutine (see HELP CALL) that the
-    GOTO isn't in can't be gone to.  When the label isn't found, GOTO
-    reports it (DCL-W-USGOTO), and the procedure ends.  Labels belong to
-    their command level: a procedure, or a CALL subroutine.  At the
-    terminal a label is ignored (DCL-W-NOLBLS).  GOTO leaves $STATUS as
-    it was.
+   A label belongs to its command level, and a label inside an IF block
+   or a subroutine is reached only from within it.  At the terminal a
+   label is ignored (DCL-W-NOLBLS).  See GOTO.

@@ -1,21 +1,47 @@
 1 INQUIRE
-    The INQUIRE command asks the terminal for a symbol's value.  It
-    prompts with the prompt string, or the symbol's name, then ": "
-    (/NOPUNCTUATION leaves that out).
 
-    Syntax:
+   Asks the terminal for a symbol's value.
 
-        INQUIRE [/LOCAL|/GLOBAL] [/[NO]PUNCTUATION] symbol-name
-                [prompt-string]
+   Format
 
-    The reply has its symbols substituted ('SYMBOL'), and is then read
-    as a string assignment's value is: uppercased, its blanks compressed,
-    and quoted text kept as it is.  Ctrl/Z gives the symbol "".  The
-    symbol is local unless /GLOBAL.  In a command procedure INQUIRE
-    still reads the terminal, not the procedure's data, and with SET
-    VERIFY the reply, substituted, is shown on the procedure's output.
+     INQUIRE symbol-name [prompt-string]
 
-    Example:
+2 Parameters
 
-        $ INQUIRE ANSWER "Continue (Y/N)"
-        $ IF .NOT. ANSWER THEN EXIT
+ symbol-name
+
+   The symbol to assign.
+
+ prompt-string
+
+   The prompt, the rest of the line.  Without one, the symbol's name.
+
+2 Description
+
+   INQUIRE prompts with the prompt string and ": ".  The reply has its
+   symbols substituted ('SYMBOL'), and is then read as a string
+   assignment's value is: uppercased, its blanks compressed, and quoted
+   text kept as it is.  Ctrl/Z gives the symbol "".  In a command
+   procedure INQUIRE still reads the terminal, not the procedure's data,
+   and with SET VERIFY the reply, substituted, is shown on the
+   procedure's output.
+
+2 Qualifiers
+/GLOBAL
+
+   Makes the symbol global.
+
+/LOCAL
+
+   Makes the symbol local to the command level (the default).
+
+/[NO]PUNCTUATION
+
+   /NOPUNCTUATION leaves out the ": " after the prompt.
+
+2 Examples
+
+   1.$ INQUIRE ANSWER "Continue (Y/N)"
+     $ IF .NOT. ANSWER THEN EXIT
+
+     Asks "Continue (Y/N): ", and exits unless the reply starts with Y.

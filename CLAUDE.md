@@ -725,7 +725,11 @@ never had.
   VMS's shapes (Parameters, Description, Qualifiers with a `/` line for
   each, Examples; a `2 /KEY` topic per form), each such verb in
   `internal/console/help_test.go`'s `rewrittenHelp`, whose qualifiers
-  must all be qualifier lines.
+  must all be qualifier lines. Subtask 8b (done 2026-11-07) is DCL
+  itself the same way (logical names with DEFINE `/DEVICE`, procedures
+  and their flow, file I/O, processes); SYMBOL is VMS's `Symbol_Assign`
+  beside `=` and `:=`, and LEXICAL is `Lexicals`, a topic per function
+  (`TestEveryLexicalHasHelp`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

@@ -1,12 +1,15 @@
 1 FOREIGN
-    A foreign command runs an image with the rest of the command line as its
-    command text, which the image reads with LIB$GET_FOREIGN.  Define one with
-    a symbol whose value is "$" and the image's file name (see HELP SYMBOL):
 
-        FORTH :== $DUA0:[TOOLS]FORTH.EXE
-        FORTH 2 3 + . CR
+   A foreign command runs an image with the rest of the command line as
+   its command text, which the image reads with LIB$GET_FOREIGN.  Define
+   one with a symbol whose value is "$" and the image's file name (see
+   Symbol_Assign):
 
-    The image is found as RUN finds it.  The command text is treated as DCL
-    treats a command's parameters: outside quotes it is made uppercase and its
-    blanks are compressed, and a "!" begins a comment; quoted text, quotes and
-    all, is passed as typed.
+     $ FORTH :== $DUA1:[TOOLS]FORTH.EXE
+     $ FORTH 2 3 + . CR
+
+   The image is found as RUN finds it.  The command text is treated as
+   DCL treats a command's parameters: outside quotes it is made
+   uppercase and its blanks are compressed, and a "!" begins a comment;
+   quoted text, quotes and all, is passed as typed.  MCR runs an image
+   the same way without a symbol.

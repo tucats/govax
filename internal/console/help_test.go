@@ -58,6 +58,22 @@ func TestHelpTopics(t *testing.T) {
 			"IOSEGMENT=<pages>", ".TRANSFER", "--shareable", "--symbol-table",
 		}},
 		{[]string{"LIBRARY"}, []string{"/SHARE", "/HELP"}},
+		{[]string{"SYMBOL"}, []string{"symbol-name :=[=] string"}},
+		{[]string{"SYMBOL", "EXPRESSIONS"}, []string{".EQS. .NES."}},
+		{[]string{"Symbol_Assign", "Substitution"}, []string{"&NAME"}},
+		{[]string{"="}, []string{"symbol-name =[=] expression"}},
+		{[]string{":="}, []string{"symbol-name :=[=] string"}},
+		{[]string{"LEXICAL"}, []string{"F$name([argument[,...]])"}},
+		{[]string{"LEXICALS", "F$TRNLNM"}, []string{"LNM$DCL_LOGICAL"}},
+		{[]string{"LEX", "F$CONF"}, []string{"govax's own"}},
+		{[]string{"DEFINE", "/DEVICE"}, []string{"DEFINE/DEVICE device-name"}},
+		{[]string{"DEFINE", "/DEVICE", "Qualifiers", "/DEVCLASS"}, []string{"MAILBOX"}},
+		{[]string{"READ", "/KEY"}, []string{"shorter than the key"}},
+		{[]string{"SPAWN", "/[NO]WAIT"}, []string{"beside the console"}},
+		{[]string{"@"}, []string{"@filespec [p1 [p2 ... p8]]"}},
+		{[]string{"IF"}, []string{"IF expression THEN [$] command"}},
+		{[]string{"IF", "Description"}, []string{"INVIFNEST"}},
+		{[]string{"STOP", "/IMAGE"}, []string{"FORCEDEXIT"}},
 	}
 
 	for _, tc := range cases {
@@ -99,11 +115,7 @@ func TestEveryVerbHasHelp(t *testing.T) {
 // converted (Phase 90's subtask 7); subtask 8 rewrites it with a "/" line
 // for every qualifier, and empties this list.
 var qualifierHelpExceptions = map[string]string{
-	"ASSIGN/*":        "its topic says it takes DEFINE's qualifiers, which DEFINE's topic describes",
-	"DEASSIGN/LOG":    "the old help never described it",
-	"DEFINE/*":        "DEFINE/DEVICE's pseudodevice qualifiers were never described",
 	"HELP/*":          "the old help predates HELP's VMS qualifiers (Phase 90, subtask 6)",
-	"OPEN/HOST":       "the old help never described it",
 	"RUN/INIT":        "the old help never described it",
 	"SHOW/RUNTIME":    "the old help never described it",
 	"SHOW/STATISTICS": "the old help never described it",
@@ -118,10 +130,21 @@ var qualifierHelpExceptions = map[string]string{
 // "/NAME" key somewhere in the verb's module. When every verb is here,
 // the looser check by text and qualifierHelpExceptions go.
 var rewrittenHelp = map[string]bool{
+	// Subtask 8a: the commands on files and volumes.
 	"BACKUP": true, "CONVERT": true, "COPY": true, "CREATE": true,
 	"DELETE": true, "DIRECTORY": true, "DISMOUNT": true, "DUMP": true,
 	"EDIT": true, "INITIALIZE": true, "MOUNT": true, "PURGE": true,
 	"RENAME": true, "TYPE": true,
+
+	// Subtask 8b: DCL itself (logical names, procedures and their flow,
+	// file I/O, processes).
+	"ASSIGN": true, "ATTACH": true, "CALL": true, "CLOSE": true,
+	"CONTINUE": true, "DEASSIGN": true, "DECK": true, "DEFINE": true,
+	"ELSE": true, "ENDIF": true, "ENDSUBROUTINE": true, "EOD": true,
+	"EXIT": true, "GOSUB": true, "GOTO": true, "IF": true, "INQUIRE": true,
+	"LOGOUT": true, "MCR": true, "ON": true, "OPEN": true, "READ": true,
+	"RETURN": true, "SPAWN": true, "STOP": true, "SUBROUTINE": true,
+	"THEN": true, "WAIT": true, "WRITE": true,
 }
 
 // TestEveryQualifierHasHelp: each qualifier a verb's grammar takes (its

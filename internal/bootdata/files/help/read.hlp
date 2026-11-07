@@ -1,49 +1,101 @@
 1 READ
-    The READ command reads a record from a file into a symbol, local to
-    the command level, as it is: its case and blanks are kept, and no
-    symbol substitution is done.
 
-    Syntax:
+   Reads a record from a file into a symbol.
 
-        READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string]
-             [/KEY=string] [/INDEX=n] [/MATCH=EQ|GE|GT] [/DELETE]
-             [/NOLOCK] logical-name symbol-name
+   Format
 
-    The file is one OPEN opened, or SYS$INPUT, SYS$COMMAND, SYS$OUTPUT,
-    or SYS$ERROR, which need no OPEN.  In a command procedure, READ
-    SYS$INPUT reads the procedure's next line, whatever it is; at the
-    terminal, and from SYS$COMMAND anywhere, READ prompts at the
-    terminal with /PROMPT's string, or "Data:" and a tab, and reads a
-    line.  Ctrl/Z is the end of the file.
+     READ logical-name[:] symbol-name
 
-    At the end of the file, the procedure goes to the /END_OF_FILE label,
-    or failing that the /ERROR label, with $STATUS RMS$_EOF; with
-    neither, RMS-E-EOF is an error, and the ON action is taken.  A READ
-    that fails leaves its symbol as it was.  A record
-    longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /TIME_OUT is
-    accepted, and changes nothing.
+2 Parameters
 
-    On an indexed file, READ reads the next record in the order of the
-    key it last used (the primary key at first).  /KEY=string reads the
-    record whose key is the string: a string shorter than the key matches
-    the key's first characters.  /MATCH=GE reads the first record whose
-    key is equal or next, GT the first next, in the key's own order (EQ,
-    the default, only an equal one).  /INDEX=n chooses the key, 0 the
-    primary, and stays for later READs of the file until another /INDEX.
-    After a keyed READ, READ goes on in that key's order.  /DELETE deletes
-    the record read, on a file opened /READ/WRITE (on another, the symbol
-    gets the record and READ fails with RMS-F-FAC), and leaves $STATUS
-    RMS$_NORMAL.  On a file opened with
-    /SHARE=WRITE, READ locks the record until the next operation on the
-    file, and another READ of it is RMS-E-RLK; /NOLOCK reads it without
-    a lock, even one another READ holds.
+ logical-name[:]
 
-    Example:
+   A file OPEN opened, or SYS$INPUT, SYS$COMMAND, SYS$OUTPUT, or
+   SYS$ERROR, which need no OPEN.
 
-        $ OPEN IN NAMES.DAT
-        $ LOOP:
-        $ READ/END_OF_FILE=DONE IN NAME
-        $ WRITE SYS$OUTPUT "Hello, ", NAME
-        $ GOTO LOOP
-        $ DONE:
-        $ CLOSE IN
+ symbol-name
+
+   The symbol, local to the command level, that gets the record as it
+   is: its case and blanks are kept, and no symbol substitution is
+   done.
+
+2 Description
+
+   In a command procedure, READ SYS$INPUT reads the procedure's next
+   line, whatever it is.  At the terminal, and from SYS$COMMAND
+   anywhere, READ prompts at the terminal and reads a line; Ctrl/Z is
+   the end of the file.
+
+   At the end of the file, the procedure goes to the /END_OF_FILE label,
+   or failing that the /ERROR label, with $STATUS RMS$_EOF; with
+   neither, RMS-E-EOF is an error, and the ON action is taken.  A READ
+   that fails leaves its symbol as it was.  A record longer than 2048
+   bytes is cut to 2048, with RMS-W-RTB.
+
+   On an indexed file, READ reads the next record in the order of the
+   key it last used, the primary key at first.  After a keyed READ, READ
+   goes on in that key's order.
+
+2 Qualifiers
+/DELETE
+
+   Deletes the record read, on an indexed file opened /READ/WRITE, and
+   leaves $STATUS RMS$_NORMAL.  On another file the symbol gets the
+   record and READ fails with RMS-F-FAC.
+
+/END_OF_FILE=label
+
+   In a command procedure, goes to the label at the end of the file.
+
+/ERROR=label
+
+   In a command procedure, goes to the label if the READ fails, or at
+   the end of the file when there is no /END_OF_FILE.
+
+/INDEX=n
+
+   Chooses the key of an indexed file that /KEY looks up and READ
+   follows, 0 being the primary key.  It stays for later READs of the
+   file until another /INDEX.
+
+/KEY=string
+
+   Reads the record of an indexed file whose key is the string.  A
+   string shorter than the key matches the key's first characters.
+
+/[NO]LOCK
+
+   On a file opened with /SHARE=WRITE, READ locks the record until the
+   next operation on the file, and another READ of it is RMS-E-RLK.
+   /NOLOCK reads it without a lock, even one another READ holds.
+
+/MATCH=keyword
+
+   How /KEY's string matches: EQ, an equal key (the default); GE, the
+   first key equal or next in the key's own order; GT, the first next.
+
+/PROMPT=string
+
+   The prompt for a READ from the terminal.  The default is "Data:" and
+   a tab.
+
+/TIME_OUT=n
+
+   Accepted, and changes nothing.
+
+2 Examples
+
+   1.$ OPEN IN NAMES.DAT
+     $ LOOP:
+     $ READ/END_OF_FILE=DONE IN NAME
+     $ WRITE SYS$OUTPUT "Hello, ", NAME
+     $ GOTO LOOP
+     $ DONE:
+     $ CLOSE IN
+
+     Greets each name in NAMES.DAT.
+
+   2.$ READ/KEY="SMITH"/MATCH=GE PHONES ENTRY
+
+     Reads the first record of PHONES whose primary key is SMITH or
+     follows it.

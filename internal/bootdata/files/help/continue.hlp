@@ -1,10 +1,12 @@
 1 CONTINUE
-    The CONTINUE command resumes a command procedure that CTRL/Y (or
-    CTRL/C) interrupted, and the image it was running, if one was (see
-    HELP KEYS).  Anywhere else it does nothing, and leaves $STATUS as it
-    was: in a command procedure, ON ERROR THEN CONTINUE makes the
-    procedure go on after an error.
 
-    Syntax:
+   Resumes a command procedure that Ctrl/Y (or Ctrl/C) interrupted, and
+   the image it was running, if one was (see KEYS).
 
-        CONTINUE
+   Format
+
+     CONTINUE
+
+   Anywhere else CONTINUE does nothing, and leaves $STATUS as it was:
+   in a command procedure, ON ERROR THEN CONTINUE makes the procedure go
+   on after an error.

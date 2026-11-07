@@ -1,38 +1,200 @@
 1 DEFINE
-    The DEFINE command creates a logical name, or replaces an existing
-    one defined in the same table at the same access mode.
 
-    Syntax:
+   Creates a logical name, or replaces one defined in the same table at
+   the same access mode.
 
-         DEFINE logical-name equivalence-string[,...]
+   Format
 
-    More than one equivalence string makes the name a search list.  Any
-    trailing colon is kept as part of the logical name.  Unquoted text is
-    converted to uppercase.
+     DEFINE logical-name equivalence-string[,...]
 
-    Qualifiers:
+   DEFINE/DEVICE defines a device instead (see DEFINE /DEVICE).
 
-        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=table
+2 Parameters
 
-            The table to define the name in.  The default is the process
-            table, LNM$PROCESS.  The job table, LNM$JOB, is shared by the
-            console's process and every subprocess it creates.  /TABLE accepts a table name or a logical
-            name that translates to one, such as LNM$PROCESS.
+ logical-name
 
-        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+   The name to define.  A trailing colon is kept as part of the name.
 
-            The access mode of the name.  The default is supervisor mode.
-            A user-mode name in the process table is deleted when the
-            next program started with RUN exits.
+ equivalence-string[,...]
 
-        /TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)
+   What the logical name stands for.  More than one makes the name a
+   search list, translated to each string in turn.  Unquoted text is
+   made uppercase.
 
-            CONCEALED shows the logical name in place of the device it
-            stands for.  TERMINAL stops iterative translation at this
-            name.  The attributes apply to every equivalence string.
+2 Qualifiers
+/EXECUTIVE_MODE
 
-        /LOG (default), /NOLOG
+   Defines the name at executive mode.
 
-            Report when an existing definition is superseded.
+/GROUP
 
-    DEFINE/DEVICE, which defines a pseudodevice, is described separately.
+   Defines the name in the group table, LNM$GROUP.
+
+/JOB
+
+   Defines the name in the job table, LNM$JOB, shared by the console's
+   process and every subprocess it creates.
+
+/[NO]LOG
+
+   Reports when the name replaces one defined before in the same table
+   at the same mode (the default, /LOG).
+
+/PROCESS
+
+   Defines the name in the process table, LNM$PROCESS (the default).
+
+/SUPERVISOR_MODE
+
+   Defines the name at supervisor mode (the default).
+
+/SYSTEM
+
+   Defines the name in the system table, LNM$SYSTEM.
+
+/TABLE=name
+
+   Defines the name in the table named, or the table a logical name
+   such as LNM$PROCESS translates to.
+
+/TRANSLATION_ATTRIBUTES=(keyword[,...])
+
+   CONCEALED shows the logical name in place of the device it stands
+   for, and TERMINAL stops iterative translation at this name.  The
+   attributes apply to every equivalence string.
+
+/USER_MODE
+
+   Defines the name at user mode.  A user-mode name in the process
+   table is deleted when the next image exits: one RUN runs, or a
+   command VMS runs as an image, such as MACRO, LINK, or TYPE.
+
+2 Examples
+
+   1.$ DEFINE WORK DUA1:[WORK]
+
+     Defines WORK in the process table, at supervisor mode.
+
+   2.$ DEFINE/SYSTEM/TRANSLATION_ATTRIBUTES=CONCEALED DISK$DATA DUA2:
+
+     Defines a concealed device name for every process.
+
+   3.$ DEFINE/USER SYS$OUTPUT LISTING.TXT
+
+     Sends the next image's output to LISTING.TXT, until it exits.
+
+2 /DEVICE
+
+   Defines a device: a name in the device table, with the
+   characteristics $GETDVI and F$GETDVI report for it.  STARTUP.COM
+   defines the terminal TTA0: and the null device NLA0: this way; MOUNT
+   makes a disk's device itself, so DEFINE/DEVICE is seldom needed.  A
+   characteristic not given is 0.  Defining a name again makes a new
+   device of that name, which is found in place of the old one.
+
+   Format
+
+     DEFINE/DEVICE device-name
+
+3 Parameter
+
+ device-name
+
+   The device's name, such as TTA0 or NLA0, without the colon.
+
+3 Qualifiers
+/CLUSTER=n
+
+   The volume's cluster size, in blocks.
+
+/CYLINDERS=n
+
+   The number of cylinders.
+
+/DEVBUFSIZE=n
+
+   The default buffer size, in bytes: a terminal's width, or a
+   mailbox's largest message.
+
+/DEVCHAR=n
+
+   The device characteristics longword, DVI$_DEVCHAR: DEV$M_ bits, such
+   as record-oriented, terminal, or file-oriented.
+
+/DEVCHAR2=n
+
+   The second characteristics longword, DVI$_DEVCHAR2.
+
+/DEVCLASS=keyword
+
+   The device class: DISK, TAPE, SCOM, CARD, TERM, LP, WORKSTATION,
+   REALTIME, DECVOICE, AUDIO, VIDEO, BUS, MAILBOX, RECMSL_STORAGE, or
+   MISC.
+
+/DEVDEPEND=n
+
+   The device-dependent longword, DVI$_DEVDEPEND.
+
+/DEVDEPEND2=n
+
+   The second device-dependent longword, DVI$_DEVDEPEND2.
+
+/DEVTYPE=keyword
+
+   The device type: a disk's model (RD54, RA92, RX50, ...), VT100 for a
+   terminal, or NULL for the null device.
+
+/FREEBLOCKS=n
+
+   The free blocks reported when no volume is mounted.
+
+/LOCKID=n
+
+   The device's lock ID, DVI$_LOCKID.
+
+/MAXBLOCK=n
+
+   The number of blocks the device holds.
+
+/MAXFILES=n
+
+   The largest number of files its volume may hold.
+
+/MEDIANAME=string
+
+   The media name, DVI$_MEDIA_NAME.
+
+/MEDIATYPE=string
+
+   The media type, DVI$_MEDIA_TYPE.
+
+/OWNUIC=n
+
+   The owner's UIC, as a longword (65540 is [1,4]).
+
+/RECSIZE=n
+
+   The record size, DVI$_RECSIZ.
+
+/ROOTDEVNAME=string
+
+   The root device's name, DVI$_ROOTDEVNAM.
+
+/SECTORS=n
+
+   The number of sectors per track.
+
+/SERIAL=n
+
+   The serial number, DVI$_SERIALNUM.
+
+/VOLNAME=string
+
+   The volume label reported when no volume is mounted.
+
+3 Examples
+
+   1.$ DEFINE/DEVICE NLA0/DEVCLASS=MAILBOX/DEVTYPE=NULL/DEVBUFSIZE=512
+
+     Defines a null device, as STARTUP.COM does (with more of its
+     characteristics).

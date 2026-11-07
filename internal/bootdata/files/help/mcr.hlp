@@ -1,11 +1,24 @@
 1 MCR
-    MCR runs an image, as a foreign command does, with the rest of the
-    line as the text LIB$GET_FOREIGN returns.
 
-    Syntax:
+   Runs an image, as a foreign command does, with the rest of the line
+   as the text LIB$GET_FOREIGN returns.
 
-        MCR image [text]
+   Format
 
-    Example:
+     MCR image [text]
 
-        VAX> MCR DUA0:[WORK]ECHO hello there
+2 Parameters
+
+ image
+
+   The image, found as RUN finds one.
+
+ text
+
+   The command text, treated as a foreign command's (see FOREIGN).
+
+2 Examples
+
+   1.$ MCR DUA1:[WORK]ECHO hello there
+
+     Runs ECHO.EXE, which LIB$GET_FOREIGN gives "HELLO THERE".

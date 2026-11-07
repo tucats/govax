@@ -1,39 +1,83 @@
 1 OPEN
-    The OPEN command opens a file for READ and WRITE, and gives it a
-    logical name, which it defines in the process table.  The file stays
-    open until CLOSE closes it, even after the command procedure that
-    opened it ends.  The file is on a mounted volume or on the host, by
-    the usual rules, and its type is .DAT unless one is given.
 
-    Syntax:
+   Opens a file for READ and WRITE, and gives it a logical name.
 
-        OPEN [/READ] [/WRITE] [/APPEND] [/SHARE[=READ|WRITE]]
-             [/ERROR=label] logical-name filespec
+   Format
 
-    /READ (the default) opens an existing file to read.  /WRITE makes a
-    new file (the next version) to write; /READ/WRITE opens an existing
-    one to read and write, at its start.  /APPEND opens an existing file
-    to write at its end.  /SHARE=READ lets others read the file, and
-    /SHARE or /SHARE=WRITE read and write it.  Without /SHARE, others may
-    read a file opened to read, and nothing may open a file opened to
-    write, not even TYPE.  A file OPEN makes has variable-length records
-    with two bytes of fixed control (VFC), and print-file carriage
-    control.
+     OPEN logical-name[:] filespec
 
-    A file that can't be opened is reported as
+2 Parameters
 
-        %DCL-E-OPENIN, error opening DUA0:[WORK]NOSUCH.DAT; as input
-        -RMS-E-FNF, file not found
+ logical-name[:]
 
-    (OPENOUT for a new file), and $STATUS is RMS's status.  With /ERROR,
-    the procedure goes to the label instead, with no message and no ON
-    action.  A logical name OPEN already has a file for gets no other.
-    The logical name is the way to the file: TYPE of it types the file
-    from where READ has got to, and once it is deassigned, READ and
-    CLOSE can't reach the file.
+   The name READ, WRITE, and CLOSE know the file by, defined in the
+   process table at supervisor mode.  A logical name OPEN already has a
+   file for gets no other: OPEN then does nothing.
 
-    Example:
+ filespec
 
-        $ OPEN/WRITE OUT RESULTS.DAT
-        $ WRITE OUT "Count is ", COUNT
-        $ CLOSE OUT
+   The file, on a mounted volume or on the host, by the usual rules.
+   Its type is .DAT unless one is given.
+
+2 Description
+
+   The file stays open until CLOSE closes it, even after the command
+   procedure that opened it ends.  A file OPEN makes has variable-length
+   records with two bytes of fixed control (VFC), and print-file
+   carriage control.
+
+   A file that can't be opened is reported as
+
+     %DCL-E-OPENIN, error opening DUA0:[WORK]NOSUCH.DAT; as input
+     -RMS-E-FNF, file not found
+
+   (OPENOUT for a new file), and $STATUS is RMS's status.  The logical
+   name is the way to the file: TYPE of it types the file from where
+   READ has got to, and once it is deassigned, READ and CLOSE can't
+   reach the file.
+
+2 Qualifiers
+/APPEND
+
+   Opens an existing file to write at its end.  It can't be given with
+   /WRITE.
+
+/ERROR=label
+
+   In a command procedure, goes to the label if the file can't be
+   opened, with no message and no ON action.
+
+/HOST
+
+   After the filespec, makes it a host file name, whatever it looks
+   like.
+
+/READ
+
+   Opens an existing file to read (the default).  With /WRITE, opens an
+   existing file to read and write, at its start.
+
+/SHARE[=keyword]
+
+   Lets other users of the file read it (READ), or read and write it
+   (WRITE, the default keyword).  Without /SHARE, others may read a file
+   opened to read, and nothing may open a file opened to write, not
+   even TYPE.
+
+/WRITE
+
+   Makes a new file, the next version, to write.  With /READ, opens an
+   existing one to read and write.
+
+2 Examples
+
+   1.$ OPEN/WRITE OUT RESULTS.DAT
+     $ WRITE OUT "Count is ", COUNT
+     $ CLOSE OUT
+
+     Writes one record to a new RESULTS.DAT.
+
+   2.$ OPEN/READ/WRITE/SHARE=WRITE PARTS PARTS.IDX
+
+     Opens an indexed file to read and change, sharing it with other
+     processes.

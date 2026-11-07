@@ -1,30 +1,78 @@
 1 DEASSIGN
-    The DEASSIGN command deletes a logical name.  One trailing colon is
-    removed from the logical name, so to delete a name that ends in a
-    colon, give two.
 
-    Syntax:
+   Deletes a logical name, or every logical name of a table.
 
-         DEASSIGN logical-name
-         DEASSIGN/ALL
+   Format
 
-    Qualifiers:
+     DEASSIGN logical-name[:]
+     DEASSIGN/ALL [logical-name-table-qualifier]
 
-        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=table
+2 Parameter
 
-            The table to delete from.  The default is the process table.
-            Deleting a table's name from LNM$PROCESS_DIRECTORY or
-            LNM$SYSTEM_DIRECTORY deletes the table and all its descendants:
+ logical-name[:]
 
-                 DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX
+   The name to delete.  One trailing colon is removed, so to delete a
+   name that ends in a colon, give two.  With /ALL, no name is given.
 
-        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+2 Description
 
-            Delete names at this access mode and any less privileged
-            mode.  The default is supervisor mode, so the executive-mode
-            names SYS$INPUT, SYS$OUTPUT, SYS$ERROR and SYS$COMMAND are not
-            deleted.
+   Deleting a table's name from LNM$PROCESS_DIRECTORY or
+   LNM$SYSTEM_DIRECTORY deletes the table and every table below it.
 
-        /ALL
+2 Qualifiers
+/ALL
 
-            Delete every such name in the table.
+   Deletes every name of the table at the access mode and any less
+   privileged mode.
+
+/EXECUTIVE_MODE
+
+   Deletes names at executive mode and any less privileged mode.
+
+/GROUP
+
+   Deletes from the group table, LNM$GROUP.
+
+/JOB
+
+   Deletes from the job table, LNM$JOB.
+
+/[NO]LOG
+
+   Accepted for VMS's sake; DEASSIGN reports nothing either way.
+
+/PROCESS
+
+   Deletes from the process table, LNM$PROCESS (the default).
+
+/SUPERVISOR_MODE
+
+   Deletes names at supervisor mode and user mode (the default), so the
+   executive-mode names SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and
+   SYS$COMMAND are left alone.
+
+/SYSTEM
+
+   Deletes from the system table, LNM$SYSTEM.
+
+/TABLE=name
+
+   Deletes from the table named.
+
+/USER_MODE
+
+   Deletes names at user mode only.
+
+2 Examples
+
+   1.$ DEASSIGN WORK
+
+     Deletes the process table's WORK.
+
+   2.$ DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX
+
+     Deletes the table TAX and every table below it.
+
+   3.$ DEASSIGN/JOB/ALL
+
+     Deletes every supervisor-mode and user-mode name of the job table.

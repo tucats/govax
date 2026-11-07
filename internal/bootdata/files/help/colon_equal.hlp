@@ -1,0 +1,31 @@
+1 :=
+
+   Assigns a string, the rest of the line, to a symbol.
+
+   Format
+
+     symbol-name :=[=] string
+
+2 Parameters
+
+ symbol-name
+
+   The symbol.  ":=" makes it local to the command level, and ":=="
+   global.  See Symbol_Assign.
+
+ string
+
+   The rest of the line.  Outside quotes, letters are made uppercase,
+   runs of blanks become one, and a "!" begins a comment; quotes keep
+   text as written, and are removed ("" inside them is a quote).
+   Symbols between apostrophes are substituted first.
+
+2 Examples
+
+   1.$ LIST :== DIRECTORY/SIZE/DATE
+
+     Makes LIST a command.
+
+   2.$ TITLE := "Monthly Report"
+
+     Gives TITLE the string Monthly Report, case and all.

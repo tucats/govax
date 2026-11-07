@@ -1,10 +1,77 @@
 1 ASSIGN
-    The ASSIGN command creates a logical name, like DEFINE, but with its
-    parameters in the opposite order.  One trailing colon is removed from
-    the logical name.
 
-    Syntax:
+   Creates a logical name, as DEFINE does, with its parameters the
+   other way round.
 
-         ASSIGN equivalence-string[,...] logical-name
+   Format
 
-    ASSIGN takes the same qualifiers as DEFINE.
+     ASSIGN equivalence-string[,...] logical-name[:]
+
+2 Parameters
+
+ equivalence-string[,...]
+
+   What the logical name stands for.  More than one makes the name a
+   search list.  Unquoted text is made uppercase.
+
+ logical-name[:]
+
+   The name to define.  One trailing colon is removed, so ASSIGN DUA1:
+   WORK: defines WORK.
+
+2 Qualifiers
+/EXECUTIVE_MODE
+
+   Defines the name at executive mode.
+
+/GROUP
+
+   Defines the name in the group table, LNM$GROUP.
+
+/JOB
+
+   Defines the name in the job table, LNM$JOB, shared by the console's
+   process and every subprocess it creates.
+
+/[NO]LOG
+
+   Reports when the name replaces one defined before in the same table
+   at the same mode (the default, /LOG).
+
+/PROCESS
+
+   Defines the name in the process table, LNM$PROCESS (the default).
+
+/SUPERVISOR_MODE
+
+   Defines the name at supervisor mode (the default).
+
+/SYSTEM
+
+   Defines the name in the system table, LNM$SYSTEM.
+
+/TABLE=name
+
+   Defines the name in the table named, or the table a logical name
+   such as LNM$PROCESS translates to.
+
+/TRANSLATION_ATTRIBUTES=(keyword[,...])
+
+   CONCEALED shows the logical name in place of the device it stands
+   for, and TERMINAL stops iterative translation at this name.  The
+   attributes apply to every equivalence string.
+
+/USER_MODE
+
+   Defines the name at user mode.  A user-mode name in the process
+   table is deleted when the next image exits.
+
+2 Examples
+
+   1.$ ASSIGN DUA1:[WORK] WORK:
+
+     Defines WORK as DUA1:[WORK] in the process table.
+
+   2.$ ASSIGN/JOB DUA1:[DATA],DUA2:[DATA] DATA
+
+     Defines DATA, a search list of two directories, in the job table.

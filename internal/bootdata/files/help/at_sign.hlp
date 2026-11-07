@@ -1,69 +1,76 @@
 1 @
-    The @ command (the execute procedure command) runs a command
-    procedure: a file of DCL commands.  The procedure runs at a new
-    command level, one deeper than the level that ran it; the terminal is
-    command level 0, and procedures may nest 32 levels deep.
 
-    Syntax:
+   Runs a command procedure: a file of DCL commands.
 
-        @file-spec[/OUTPUT=file-spec] [p1 [p2 ... p8]]
+   Format
 
-    Parameters:
+     @filespec [p1 [p2 ... p8]]
 
-        file-spec       The command procedure: a file on a mounted volume
-                        or on the host, by the same rules as every
-                        console command's file names.  The file type
-                        defaults to .COM.  A host file name with
-                        lowercase letters or a "/" must be quoted.
+2 Parameters
 
-        p1 ... p8       Up to eight parameters, separated by blanks.  The
-                        procedure sees them as the local symbols P1 to
-                        P8; the ones not given are "".  Letters are
-                        uppercased unless quoted; quotes keep blanks and
-                        case, and "" passes an empty parameter.
+ filespec
 
-    Qualifier:
+   The command procedure, a file on a mounted volume or on the host, by
+   the same rules as the other commands' file names.  The file type is
+   .COM unless one is given.  A host file name with lowercase letters or
+   a "/" must be quoted.
 
-        /OUTPUT=file    Sends the procedure's output to the file instead
-                        of the terminal (.LIS by default; NL: discards
-                        it).  Error messages go to the terminal too.  A
-                        file on a volume is made when the procedure
-                        starts, and written a line at a time.  The
-                        qualifier must follow the file name with no blank
-                        between them; otherwise it is a parameter.
+ p1 ... p8
 
-    In the procedure, each command line starts with "$", and "$!" starts
-    a comment line.  A line ending in "-" continues on the next line,
-    which has no "$".  A line without a "$" is data, for whatever reads
-    the procedure's input (SYS$INPUT): an image the procedure runs (with
-    LIB$GET_INPUT, RMS's $GET, or a terminal $QIO read), TYPE SYS$INPUT,
-    the debugger, once a DEBUG or RUN/DEBUG in the procedure has started
-    it, or the interactive assembler.  An image reading the data comes to
-    its end of file at the next "$" line; DECK lets data lines start with
-    "$" (see HELP DECK).  Data that nothing reads is skipped after an
-    image, with a SKPDAT warning, up to the next "$" line (a lone "$"
-    will do); after one of DCL's own commands (an assignment, IF, SET
-    VERIFY, ...), a data line is read as a command.
+   Up to eight parameters, separated by blanks.  The procedure sees them
+   as the local symbols P1 to P8; those not given are "".  Letters are
+   made uppercase unless quoted; quotes keep blanks and case, and ""
+   passes an empty parameter.
 
-    Each command level has its own local symbols (assigned with "=" or
-    ":="), which go when the procedure ends; global symbols ("==" and
-    ":==") stay.  A procedure sees the local symbols of the levels that
-    ran it.
+2 Description
 
-    The procedure ends at its last line, at an EXIT, or when a command
-    fails with an error or a fatal error (a warning doesn't end it).  An
-    error ends the procedures that ran it too.  ON and SET [NO]ON change
-    what a failure does, and EXIT can give the procedure's status (see
-    HELP ON, HELP EXIT, and HELP SYMBOL STATUS).
+   The procedure runs at a new command level, one deeper than the level
+   that ran it.  The terminal is command level 0, and procedures may
+   nest 32 levels deep.
 
-    Example:
+   In the procedure, each command line starts with "$", and "$!" starts
+   a comment line.  A line ending in "-" continues on the next line,
+   which has no "$".  A line without a "$" is data, for whatever reads
+   the procedure's input (SYS$INPUT): an image the procedure runs (by
+   LIB$GET_INPUT, RMS's $GET, or a terminal $QIO read), TYPE SYS$INPUT,
+   READ SYS$INPUT, the debugger once a DEBUG or RUN/DEBUG in the
+   procedure has started it, or the interactive assembler.  An image
+   reading the data comes to its end of file at the next "$" line; DECK
+   lets data lines start with "$".  Data that nothing reads is skipped
+   after an image, with a SKPDAT warning, up to the next "$" line (a lone
+   "$" will do); after one of DCL's own commands (an assignment, IF, SET
+   VERIFY, ...), a data line is read as a command.
 
-        @"setup.com" "Test Run" fast
+   Each command level has its own local symbols (assigned with "=" or
+   ":="), which go when the procedure ends; global symbols ("==" and
+   ":==") stay.  A procedure sees the local symbols of the levels that
+   ran it.
 
-        where setup.com is:
+   The procedure ends at its last line, at an EXIT, or when a command
+   fails with an error or a fatal error (a warning doesn't end it).  An
+   error ends the procedures that ran it too.  ON and SET [NO]ON change
+   what a failure does, and EXIT can give the procedure's status (see
+   ON, EXIT, and Symbol_Assign Status).
 
-        $! Show the parameters this procedure was given.
-        $ SHOW SYMBOL P1
-        $ SHOW SYMBOL P2
+2 Qualifiers
+/OUTPUT=filespec
 
-        shows P1 = "Test Run" and P2 = "FAST".
+   Sends the procedure's output to the file rather than the terminal
+   (.LIS by default; NL: discards it).  Error messages go to the
+   terminal too.  A file on a volume is made when the procedure starts,
+   and written a line at a time.  The qualifier must follow the file
+   name with no blank between them; otherwise it is a parameter.
+
+2 Examples
+
+   1.$ @SETUP
+
+     Runs SETUP.COM in the default directory.
+
+   2.$ @"setup.com" "Test Run" fast
+
+     Runs the host file setup.com with P1 "Test Run" and P2 "FAST".
+
+   3.$ @NIGHTLY/OUTPUT=NIGHTLY.LOG
+
+     Runs NIGHTLY.COM, its output written to NIGHTLY.LOG.

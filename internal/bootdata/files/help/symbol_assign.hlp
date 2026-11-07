@@ -1,0 +1,154 @@
+1 Symbol_Assign
+
+   Gives a name, a DCL symbol, to an integer or a string.
+
+   Format
+
+     symbol-name =[=] expression
+     symbol-name :=[=] string
+
+   "=" and "==" give the symbol an expression's value (see =), ":=" and
+   ":==" a string, the rest of the line (see :=).  One "=" or ":=" makes
+   a local symbol, and "==" or ":==" a global one.
+
+2 Parameters
+
+ symbol-name
+
+   A name of letters, digits, "$", and "_", starting with a letter, "$",
+   or "_".  An "*" in the name says how short an abbreviation still
+   means the symbol: after FO*RTH :== $FORTH, FO, FOR, FORT, and FORTH
+   all do.
+
+ expression
+
+   A DCL expression (see Expressions).
+
+ string
+
+   The rest of the line: outside quotes, letters are made uppercase,
+   runs of blanks become one, and a "!" begins a comment; quotes keep
+   text as written, and are removed ("" inside them is a quote).
+
+2 Description
+
+   When the first word of a command is a symbol, its value replaces the
+   word before the command is read.  A value beginning with "$" makes
+   the symbol a foreign command (see FOREIGN); any other value is the
+   start of a command, so a symbol can abbreviate or rename one.  To use
+   a symbol's value elsewhere in a command, put it between apostrophes
+   (see Substitution).
+
+   Local symbols belong to the current command level: the terminal's,
+   or the command procedure's (see @), and go when it ends.  A local
+   symbol is found before a global one of the same name.  SHOW SYMBOL
+   displays them, and DELETE/SYMBOL deletes them.  These are DCL
+   symbols, not the machine's symbol table, which ASM and the debugger
+   use (see the debugger's HELP SHOW SYMBOL).
+
+2 Expressions
+
+   The value of an "=" or "==" assignment, and of IF's, WRITE's, and
+   EXIT's expressions, is a DCL expression.  Its operands are:
+
+     integers     13, -5, %X1F (hexadecimal), %O17 (octal), %D10
+     strings      "in quotes", with "" for a quote inside
+     symbols      a name, replaced by the symbol's value
+     functions    F$LENGTH(...) and the other lexical functions (see
+                  Lexicals)
+
+   The operators, from the first done to the last; parentheses group:
+
+     + -          unary plus and minus
+     * /          multiplication and division (integers; no fraction)
+     + -          addition and subtraction; on two strings,
+                  concatenation and removing the first occurrence
+     .EQ. .NE. .LT. .LE. .GT. .GE.         compare numbers
+     .EQS. .NES. .LTS. .LES. .GTS. .GES.   compare strings
+     .NOT.        inverts every bit
+     .AND.        bitwise and
+     .OR.         bitwise or
+
+   A comparison is 1 when true and 0 when false.  Where an integer is
+   needed, a string that holds a number is that number, one beginning
+   with T or Y (either case) is 1, and any other is 0.  Where a string
+   is needed, an integer is its decimal digits.  Integers are 32 bits
+   and wrap around.  In a test, odd is true and even false.
+
+   Examples:
+
+     $ BALANCE = 142 * 14
+     $ WEEKEND = "Saturday, " + "Sunday"
+     $ BIG = COUNT .GT. 10 .AND. NAME .EQS. "TOTAL"
+
+2 Status
+
+   Each command ends with a status, a VMS condition value, which DCL
+   keeps in the global symbol $STATUS, and its severity in $SEVERITY:
+
+     $ SHOW SYMBOL $STATUS
+       $STATUS == "%X00030001"
+
+   The low three bits are the severity: 0 a warning, 1 success, 2 an
+   error, 3 informational, 4 fatal.  So $STATUS is odd (true) after a
+   command that succeeded:
+
+     $ IF $STATUS THEN WRITE SYS$OUTPUT "it worked"
+
+   Bit 28 set means the status's message has been shown already, so it
+   isn't shown again.  A command that succeeds gives %X00030001; one
+   that fails gives VMS's condition value for its message, where VMS
+   has one.  RUN gives the image's exit status (showing its message if
+   it failed), and @ the procedure's (see EXIT).  SHOW SYMBOL, IF, and
+   CONTINUE leave $STATUS as it was when they succeed.  In a command
+   procedure, the status decides whether the procedure goes on (see
+   ON).
+
+2 Substitution
+
+   A symbol's value takes the place of its name in a command when the
+   name is between apostrophes:
+
+     $ TYPE 'FILE'
+     $ @NEXT 'P1' 'P2'
+
+   Inside quotes, the name takes two apostrophes before it and one
+   after: "Creating ''NAME'.DAT".  A lexical function can be between
+   apostrophes too: 'F$LENGTH(X)'.  Outside quotes, the closing
+   apostrophe may be left out at the end of a word ('NAME), and a value
+   that itself has a symbol between apostrophes is replaced in turn.  An
+   undefined symbol is replaced by nothing.  This happens before
+   anything else reads the command, so the value can be any part of it,
+   the verb included.  The value is then made uppercase with the rest of
+   the command, unless it's inside quotes.
+
+   &NAME is also replaced by the symbol's value, later: after the
+   command's first word is looked up as a symbol, and after the command
+   is made uppercase, so the value keeps its case, and it stays one
+   parameter even with blanks in it.  It must follow a blank or a
+   special character, and does nothing inside quotes, in a ":="
+   assignment, or in an @ command's parameters.
+
+     $ COUNT = 1
+     $ TYPE &P'COUNT'          ! 'COUNT' first, giving &P1
+
+   Data lines in a procedure, and debugger commands, are not
+   substituted.
+
+2 Examples
+
+   1.$ SD :== SET DEFAULT
+
+     Makes SD a command that sets the default directory.
+
+   2.$ FORTH :== $DUA1:[TOOLS]FORTH.EXE
+
+     Makes FORTH a foreign command.
+
+   3.$ GREETING == "Hello, ""World"""
+
+     Makes GREETING a global symbol whose value is Hello, "World".
+
+   4.$ TOTAL = COUNT + 1
+
+     Makes TOTAL a local symbol, one more than COUNT.

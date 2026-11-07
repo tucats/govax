@@ -1,0 +1,29 @@
+1 =
+
+   Assigns an expression's value, an integer or a string, to a symbol.
+
+   Format
+
+     symbol-name =[=] expression
+
+2 Parameters
+
+ symbol-name
+
+   The symbol.  One "=" makes it local to the command level, and "=="
+   global.  See Symbol_Assign.
+
+ expression
+
+   A DCL expression: integers, quoted strings, symbols, and lexical
+   functions, with DCL's operators (see Symbol_Assign Expressions).
+
+2 Examples
+
+   1.$ COUNT = COUNT + 1
+
+     Adds one to the local symbol COUNT.
+
+   2.$ NAME == F$PARSE(P1,,,"NAME")
+
+     Gives the global symbol NAME the name part of P1.

@@ -1,25 +1,10 @@
 1 EOD
-    In a command procedure, the DECK command makes the lines after it
-    data, for the image reading the procedure's input (SYS$INPUT), even
-    when they start with "$".  The data ends at an EOD command, or, with
-    /DOLLARS, at a line starting with the string given; after that, any
-    "$" line ends data again.  DECK comes after the command that runs
-    the image, where its data begins.
 
-    Syntax:
+   Ends the data that a DECK command began in a command procedure.  An
+   image reading the procedure's input comes to its end of file there.
 
-        DECK [/DOLLARS[=string]]
-        EOD
+   Format
 
-    The string is 1 to 15 characters, uppercased unless quoted, and ends
-    the data at a line starting with it, case and all.  An image reading
-    an EOD line comes to its end of file there, and the next read gets
-    the data after it.  DECK read as a command, with no image reading,
-    is DCL-W-IVVALU, and EOD that no image reads does nothing.
+     EOD
 
-    Example:
-
-        $ TYPE SYS$INPUT
-        $ DECK
-        $ This line starts with a dollar sign, and is typed.
-        $ EOD
+   EOD that no image reads does nothing.  See DECK.

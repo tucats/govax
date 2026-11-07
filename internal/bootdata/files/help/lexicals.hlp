@@ -1,0 +1,596 @@
+1 Lexicals
+
+   A lexical function returns an integer or a string: about the
+   process, its files and devices, its logical names, the time, or a
+   string it is given.  It is used in an expression (see Symbol_Assign
+   Expressions) or between apostrophes ('F$TIME()').
+
+   Format
+
+     F$name([argument[,...]])
+
+   The arguments are expressions, in parentheses and separated by
+   commas.  An optional one may be left out, keeping its comma, and a
+   function with no arguments still takes "()".  A name may be
+   shortened while it names only one function (F$LEN is F$LENGTH; F$L
+   is ambiguous).  A keyword argument (an item, a field) is a string,
+   spelled in full, in either case.
+
+2 F$CONFIG
+
+   Returns an item of govax's configuration (see CONFIGURATION KEYS).
+   F$CONFIG is govax's own, not VMS's.
+
+   Format
+
+     F$CONFIG(key [,operation])
+
+   The key is a configuration item's name, such as "vax.library", in
+   either case.  The operation is one of:
+
+     VALUE      The item's value, or "" if it isn't set (the default).
+     EXISTS     1 if it's set, else 0.
+     BOOLEAN    1 if its value is TRUE, T, YES, Y, or 1 (any case),
+                else 0.
+
+   Example:
+
+     $ IF F$CONFIG("vax.library", "EXISTS") THEN -
+           WRITE SYS$OUTPUT F$CONFIG("vax.library")
+
+2 F$CONTEXT
+
+   Sets a criterion that F$PID's processes must meet.
+
+   Format
+
+     F$CONTEXT("PROCESS", context-symbol, item [,value] [,qualifier])
+
+   The context symbol, "" for a new context, is then passed to F$PID,
+   which returns only the processes whose item matches.  The items are
+   $GETJPI's: PRCNAM, USERNAME, OWNER, GRP, PRI, UIC, CURPRIV, STATE,
+   MODE, and others.  The qualifier says how the value matches: EQL or
+   NEQ; for a number, also LSS, LEQ, GTR, or GEQ; for CURPRIV, ALL or
+   ANY.  Each call adds a criterion, and the item CANCEL ends the
+   context.  F$CONTEXT returns "".
+
+   Example:
+
+     $ CTX = ""
+     $ X = F$CONTEXT("PROCESS", CTX, "PRCNAM", "SYSTEM*", "EQL")
+     $ PID = F$PID(CTX)
+
+2 F$CSID
+
+   Not in govax: it reports cluster members, and govax has no cluster.
+   It is DCL-W-LEXNOTIMPL.
+
+2 F$CVSI
+
+   Returns a bit field of a string as a signed integer.
+
+   Format
+
+     F$CVSI(start-bit, bits, string)
+
+   Bits are counted from 0, the low bit of the string's first byte.
+
+   Example:
+
+     $ X = F$CVSI(0, 8, "A")          ! 65
+
+2 F$CVTIME
+
+   Converts a time to another format, or returns one of its fields.
+
+   Format
+
+     F$CVTIME([time] [,format] [,field])
+
+   The time is an absolute, combination, or delta time; left out or "",
+   it is now.  The format is one of:
+
+     COMPARISON   yyyy-mm-dd hh:mm:ss.cc, which sorts as text (the
+                  default).
+     ABSOLUTE     dd-mmm-yyyy hh:mm:ss.cc.
+     DELTA        dddd hh:mm:ss.cc; the time must be a delta time.
+
+   The field is DATETIME (the default), DATE, TIME, YEAR, MONTH, DAY,
+   HOUR, MINUTE, SECOND, HUNDREDTH, or, but for a delta time, WEEKDAY.
+
+   Example:
+
+     $ NOW = F$CVTIME(,,"TIME")
+     $ TOMORROW = F$CVTIME("TOMORROW", "ABSOLUTE", "DATE")
+
+2 F$CVUI
+
+   Returns a bit field of a string as an unsigned integer.
+
+   Format
+
+     F$CVUI(start-bit, bits, string)
+
+   Bits are counted from 0, the low bit of the string's first byte.
+
+   Example:
+
+     $ FLAGS = F$CVUI(4, 4, RECORD)
+
+2 F$DEVICE
+
+   Returns the next device that matches, then "" after the last.
+
+   Format
+
+     F$DEVICE([name] [,class] [,type] [,stream-id])
+
+   The name may have the wildcards * and %; left out, every device
+   matches.  The class is DISK, TERM, MAILBOX, or another of DEFINE
+   /DEVICE's /DEVCLASS keywords, and the type a type such as RD54 (a
+   type needs a class).  Each stream (0 without a stream-id) keeps its
+   place between calls while the selection stays the same.
+
+   Example:
+
+     $ LOOP:
+     $ DISK = F$DEVICE(, "DISK")
+     $ IF DISK .EQS. "" THEN EXIT
+     $ WRITE SYS$OUTPUT DISK
+     $ GOTO LOOP
+
+2 F$DIRECTORY
+
+   Returns the default directory, such as [WORK].
+
+   Format
+
+     F$DIRECTORY()
+
+2 F$EDIT
+
+   Returns a string edited.
+
+   Format
+
+     F$EDIT(string, edit-list)
+
+   The edits, separated by commas, are:
+
+     COLLAPSE    removes every blank and tab
+     COMPRESS    makes each run of blanks and tabs one blank
+     LOWERCASE   makes letters lowercase
+     TRIM        removes blanks and tabs at both ends
+     UNCOMMENT   removes a comment, from a "!" on
+     UPCASE      makes letters uppercase
+
+   Text inside quotes is never edited, quotes and all.
+
+   Example:
+
+     $ LINE = F$EDIT(LINE, "TRIM,COMPRESS,UPCASE")
+
+2 F$ELEMENT
+
+   Returns one element of a string of elements separated by a
+   delimiter.
+
+   Format
+
+     F$ELEMENT(number, delimiter, string)
+
+   Elements are counted from 0, and the delimiter is one character.
+   Past the last element, the result is the delimiter itself.
+
+   Example:
+
+     $ DAY = F$ELEMENT(2, ",", "MON,TUE,WED")     ! WED
+
+2 F$ENVIRONMENT
+
+   Returns a fact about the command environment.
+
+   Format
+
+     F$ENVIRONMENT(item)
+
+   The items are:
+
+     CAPTIVE            FALSE: govax has no captive accounts.
+     CONTROL            The control characters SET CONTROL enables.
+     DEFAULT            The default device and directory.
+     DEPTH              The command level, 0 at the terminal.
+     INTERACTIVE        TRUE.
+     KEY_STATE          DEFAULT.
+     MAX_DEPTH          The deepest command level allowed.
+     MESSAGE            The parts of a message shown, as SET MESSAGE
+                        writes them.
+     NOCONTROL          The control characters SET NOCONTROL disables.
+     ON_CONTROL_Y       TRUE if an ON CONTROL_Y is in effect.
+     ON_SEVERITY        The severity ON acts at: WARNING, ERROR, SEVERE,
+                        or NONE after SET NOON and at the terminal.
+     PROCEDURE          The current command procedure's file, or "".
+     PROMPT             The prompt.
+     PROMPT_CONTROL     TRUE.
+     PROTECTION         The default file protection.
+     SYMBOL_SCOPE       LOCAL,GLOBAL.
+     VERB_SCOPE         LOCAL,GLOBAL.
+     VERIFY_IMAGE       TRUE if image verification is on.
+     VERIFY_PREFIX      SET PREFIX's string.
+     VERIFY_PROCEDURE   TRUE if procedure verification is on.
+
+   Example:
+
+     $ IF F$ENVIRONMENT("DEPTH") .EQ. 0 THEN EXIT
+
+2 F$EXTRACT
+
+   Returns part of a string.
+
+   Format
+
+     F$EXTRACT(start, length, string)
+
+   The part starts at offset start, counting from 0, and is length
+   characters long, fewer if the string ends first.  A start past the
+   end, or a negative one, gives "", and a negative length the rest of
+   the string.
+
+   Example:
+
+     $ YEAR = F$EXTRACT(0, 4, F$CVTIME())
+
+2 F$FAO
+
+   Returns a string formatted by $FAO's directives.
+
+   Format
+
+     F$FAO(control-string [,argument...])
+
+   Each directive (!AS a string, !UL and !SL an integer in decimal, !XL
+   in hexadecimal, !n< ... !> a field, !/ a new line, and the rest of
+   $FAO's) takes the next argument, up to 15.  A string directive takes a
+   string, and a numeric one an integer.
+
+   Example:
+
+     $ WRITE SYS$OUTPUT F$FAO("!AS has !UL block!%S", NAME, SIZE)
+
+2 F$FILE_ATTRIBUTES
+
+   Returns an attribute of a file on a mounted volume, from its header.
+
+   Format
+
+     F$FILE_ATTRIBUTES(filespec, item)
+
+   Among the items: ORG (SEQ, REL, IDX), RFM (FIX, VAR, VFC, UDF, STM,
+   STMLF, STMCR), RAT, MRS, LRL, FSZ, ALQ, DEQ, EOF, FFB, BKS, CDT, RDT,
+   EDT, BDT, PRO, UIC, GRP, MBM, FID, DID, DVI, DIRECTORY, VERLIMIT,
+   CTG, CBT, KNOWN, LOCKED, NOBACKUP, and NOK (the number of keys).
+
+   Example:
+
+     $ SIZE = F$FILE_ATTRIBUTES("REPORT.DAT", "EOF")
+
+2 F$GETDVI
+
+   Returns an item of a device's information, as $GETDVI does.
+
+   Format
+
+     F$GETDVI(device, item)
+
+   The items are $GETDVI's, without DVI$_: DEVNAM, FULLDEVNAM, DEVCLASS,
+   DEVTYPE, DEVCHAR, MNT, MOUNTCNT, VOLNAM, FREEBLOCKS, MAXBLOCK,
+   CLUSTER, ERRCNT, OPCNT, REFCNT, OWNUIC, and others.  EXISTS is TRUE
+   if there is such a device.
+
+   Example:
+
+     $ IF F$GETDVI("DUA1", "MNT") THEN -
+           WRITE SYS$OUTPUT F$GETDVI("DUA1", "VOLNAM")
+
+2 F$GETJPI
+
+   Returns an item of a process's information, as $GETJPI does.
+
+   Format
+
+     F$GETJPI(pid, item)
+
+   The pid is a process ID in hexadecimal, or "" for the current
+   process.  The items are $GETJPI's, without JPI$_: PID, PRCNAM,
+   USERNAME, UIC, OWNER, GRP, MASTER_PID, PRI, PRIB, STATE, MODE,
+   JOBTYPE, TERMINAL, IMAGNAME, CURPRIV, AUTHPRIV, CPUTIM, BUFIO, DIRIO,
+   PAGEFLTS, WSSIZE, WSQUOTA, WSEXTENT, PGFLQUOTA, PAGFILCNT, the
+   address space's FREP0VA and FREP1VA (eight hexadecimal digits;
+   FREP0VA is "" with no P0 pages), FREPTECNT, VIRTPEAK, and the quotas
+   and limits.
+
+   Example:
+
+     $ ME = F$GETJPI("", "PRCNAM")
+
+2 F$GETQUI
+
+   Not in govax: it reports batch and print queues, and govax has none.
+   It is DCL-W-LEXNOTIMPL.
+
+2 F$GETSYI
+
+   Returns an item of the system's information, as $GETSYI does.
+
+   Format
+
+     F$GETSYI(item [,node])
+
+   The node, if given, must be this system's.  The items are $GETSYI's,
+   without SYI$_: NODENAME, VERSION, BOOTTIME, SID, CPU, HW_NAME ("VAX
+   (govax)"), CLUSTER_MEMBER, the paging parameters (MINWSCNT, GROWLIM,
+   FREELIM, FREEGOAL, MPW_HILIMIT, PFCDEFAULT, ...), PAGEFILE_PAGE and
+   PAGEFILE_FREE (the page file's size and free pages), and the global
+   section limits GBLSECTIONS, GBLPAGES, and GBLPAGFIL with what's left,
+   FREE_GBLSECTS, FREE_GBLPAGES, and CONTIG_GBLPAGES.
+
+   Example:
+
+     $ WRITE SYS$OUTPUT "Running on ", F$GETSYI("NODENAME")
+
+2 F$IDENTIFIER
+
+   Converts a rights identifier's name to its value, or its value to
+   its name.
+
+   Format
+
+     F$IDENTIFIER(identifier, conversion)
+
+   The conversion is NAME_TO_NUMBER (an identifier the rights database
+   doesn't have is 0) or NUMBER_TO_NAME (one it doesn't have is "").
+
+2 F$INTEGER
+
+   Returns an expression's value as an integer: a string that holds a
+   number is that number, one starting with T or Y is 1, and any other
+   is 0.
+
+   Format
+
+     F$INTEGER(expression)
+
+2 F$LENGTH
+
+   Returns a string's length.
+
+   Format
+
+     F$LENGTH(string)
+
+2 F$LICENSE
+
+   Not in govax: it reports software licenses, and govax has none.  It
+   is DCL-W-LEXNOTIMPL.
+
+2 F$LOCATE
+
+   Returns the offset of a substring in a string, counting from 0, or
+   the string's length if it isn't there.
+
+   Format
+
+     F$LOCATE(substring, string)
+
+   Example:
+
+     $ IF F$LOCATE(".", NAME) .EQ. F$LENGTH(NAME) THEN -
+           NAME = NAME + ".DAT"
+
+2 F$LOGICAL
+
+   Returns a logical name's first equivalence string, from the process,
+   job, group, and system tables, or "".  F$TRNLNM does more.
+
+   Format
+
+     F$LOGICAL(logical-name)
+
+2 F$MESSAGE
+
+   Returns a status's message text, as $GETMSG gives it, such as
+   "%SYSTEM-S-NORMAL, normal successful completion".
+
+   Format
+
+     F$MESSAGE(status)
+
+   Example:
+
+     $ WRITE SYS$OUTPUT F$MESSAGE($STATUS)
+
+2 F$MODE
+
+   Returns the process's mode, INTERACTIVE.
+
+   Format
+
+     F$MODE()
+
+2 F$PARSE
+
+   Returns a file specification with the parts it leaves out filled in,
+   or one part of it.
+
+   Format
+
+     F$PARSE(filespec [,default] [,related] [,field] [,type])
+
+   The parts come from filespec, then the default specification, then
+   the related specification's name and type, then the default device
+   and directory.  The field is NODE, DEVICE, DIRECTORY, NAME, TYPE, or
+   VERSION.  The type SYNTAX_ONLY doesn't check that the device and
+   directory are there, and NO_CONCEAL shows the device a concealed
+   logical name stands for.  The result is "" when the device isn't
+   mounted, the directory isn't there (unless SYNTAX_ONLY), or the
+   specification can't be parsed.
+
+   Example:
+
+     $ OUT = F$PARSE(".LIS", P1)           ! P1's name, type .LIS
+
+2 F$PID
+
+   Returns each process's PID in turn, then "" after the last.
+
+   Format
+
+     F$PID(context-symbol)
+
+   The context symbol, set to "" before the first call, keeps the
+   place; F$CONTEXT can make it choose only some processes.
+
+   Example:
+
+     $ CTX = ""
+     $ LOOP:
+     $ PID = F$PID(CTX)
+     $ IF PID .EQS. "" THEN EXIT
+     $ WRITE SYS$OUTPUT PID, " ", F$GETJPI(PID, "PRCNAM")
+     $ GOTO LOOP
+
+2 F$PRIVILEGE
+
+   Returns TRUE if every privilege named is enabled, and every one
+   named with NO isn't; FALSE otherwise.
+
+   Format
+
+     F$PRIVILEGE(privilege-list)
+
+   Example:
+
+     $ IF .NOT. F$PRIVILEGE("SYSPRV") THEN EXIT
+
+2 F$PROCESS
+
+   Returns the current process's name.
+
+   Format
+
+     F$PROCESS()
+
+2 F$SEARCH
+
+   Returns the next file that matches a file specification, then ""
+   after the last.
+
+   Format
+
+     F$SEARCH(filespec [,stream-id])
+
+   Each stream (0 without a stream-id) keeps its place between calls
+   while the specification stays the same; a different one starts a
+   new search, and after the "" the stream starts again.  A
+   specification with no wildcards finds its file on every call.  A
+   volume's files are written as DUA1:[WORK]LOGIN.COM;3, and host files
+   as host paths.
+
+   Example:
+
+     $ IF F$SEARCH("TEMP.DAT") .NES. "" THEN DELETE TEMP.DAT;*
+
+2 F$SETPRV
+
+   Enables the privileges named, and disables those named with NO (ALL
+   and NOALL are every privilege), and returns what they were, in the
+   same form.  Privileges the process isn't authorized for aren't
+   enabled.
+
+   Format
+
+     F$SETPRV(privilege-list)
+
+   Example:
+
+     $ SAVED = F$SETPRV("SYSPRV")
+     $ ...
+     $ X = F$SETPRV(SAVED)
+
+2 F$STRING
+
+   Returns an expression's value as a string; an integer is its decimal
+   digits.
+
+   Format
+
+     F$STRING(expression)
+
+2 F$TIME
+
+   Returns the date and time now, in absolute format: dd-mmm-yyyy
+   hh:mm:ss.cc.
+
+   Format
+
+     F$TIME()
+
+2 F$TRNLNM
+
+   Returns a logical name's translation, or an item of its information.
+
+   Format
+
+     F$TRNLNM(logical-name [,table] [,index] [,mode] [,case] [,item])
+
+   The table is LNM$DCL_LOGICAL if not given: the process, job, group,
+   and system tables.  The index chooses an equivalence string of a
+   search list (0, the first, if not given).  The mode is USER (the
+   default), SUPERVISOR, EXECUTIVE, or KERNEL.  The case is CASE_BLIND
+   (the default) or CASE_SENSITIVE.  The item is VALUE (the default),
+   ACCESS_MODE, CONCEALED, CONFINE, CRELOG, LENGTH, MAX_INDEX, NO_ALIAS,
+   TABLE, TABLE_NAME, or TERMINAL.  A name that isn't there is "".
+
+   Example:
+
+     $ IF F$TRNLNM("NAMES") .EQS. "" THEN DEFINE NAMES EMPLOYEES.DAT
+
+2 F$TYPE
+
+   Returns INTEGER for a symbol whose value is an integer or a string
+   that is one, STRING for another string, PROCESS_CONTEXT for a symbol
+   F$CONTEXT made, and "" for a name that isn't a symbol.
+
+   Format
+
+     F$TYPE(symbol-name)
+
+2 F$USER
+
+   Returns the process's UIC, as an identifier where the rights database
+   names it ([SYSTEM]), as numbers otherwise ([1,4]).
+
+   Format
+
+     F$USER()
+
+2 F$VERIFY
+
+   Returns whether procedure verification is on (1) or off (0), and
+   then sets verification.
+
+   Format
+
+     F$VERIFY([procedure-value] [,image-value])
+
+   An odd procedure-value turns procedure verification on, and an even
+   one off; it sets image verification too unless image-value is given
+   to set it.  Without procedure-value, image-value changes nothing.
+   F$VERIFY in a comment line ('F$VERIFY(0)' after "$!") is still
+   performed.
+
+   Example:
+
+     $ SAVED = F$VERIFY(0)
+     $ ...
+     $ X = F$VERIFY(SAVED)

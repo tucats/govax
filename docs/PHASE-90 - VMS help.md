@@ -769,7 +769,8 @@ Scope):
    2026-11-07).
 8. The DCL help rewritten as modules, in parts: (a) the file commands
    (done 2026-11-07); (b)
-   DCL itself (symbols, procedures, flow, lexicals, file I/O); (c) the
+   DCL itself (symbols, procedures, flow, lexicals, file I/O) (done
+   2026-11-07); (c) the
    programming tools (MACRO, LINK, LIBRARY, ANALYZE, FORTRAN, RUN); (d)
    govax's own topics and the machine's commands, HELP, INSTRUCTIONS, and
    HINTS.
@@ -1123,3 +1124,41 @@ Scope):
   for the new ones, and `TestHelpTopics` also finds a qualifier line by
   abbreviation, through Qualifiers, and under a form's Qualifiers
   (`CREATE /DIRECTORY Qualifiers /OWNER`). Subtask 8a done.
+- **2026-11-07** — Subtask 8b, DCL itself rewritten. The verbs: @,
+  ASSIGN, DEASSIGN, and DEFINE (8a left the logical-name commands here);
+  CALL, SUBROUTINE, ENDSUBROUTINE, GOSUB, RETURN, GOTO, IF, THEN, ELSE,
+  ENDIF, EXIT, ON, CONTINUE, STOP, DECK, and EOD; OPEN, CLOSE, READ,
+  WRITE, and INQUIRE; and SPAWN, ATTACH, LOGOUT, WAIT, and MCR (DCL's
+  process commands, which the plan's list didn't name; they fit here
+  better than in 8d). Each is in 8a's shape. A command that is part of
+  another's syntax (THEN, ELSE, ENDIF; SUBROUTINE, ENDSUBROUTINE; RETURN;
+  EOD) has a short module of its own, its summary and Format, pointing
+  to the command it belongs to (IF, CALL, GOSUB, DECK), where the whole
+  description is, as VMS's IF module covers its block. DEFINE has the
+  DEFINE/DEVICE form as `2 /DEVICE` (ANALYZE's shape), with each of its
+  22 qualifiers, which the old help never described: each sets the
+  `DVI$_` item of the same name. Rewriting checked each claim against
+  govax: DEASSIGN's /LOG is accepted and reports nothing, CLOSE/NOLOG
+  makes an unopened name a success, WRITE/SYMBOL only lifts the 255
+  character limit on an item, and MCR finds its image as RUN does (no
+  SYS$SYSTEM default). A label has no length limit in govax, so LABELS
+  gives none.
+  Decision 11's names: SYMBOL is now VMS's `Symbol_Assign` (with
+  `Expressions`, `Status`, and `Substitution` below it, so HELP SYMBOL
+  EXPRESSIONS still finds them by abbreviation), beside two modules
+  VMS also has, `=` (an expression's value) and `:=` (a string's); their
+  files are `equal_sign.hlp` and `colon_equal.hlp`. `HELP =` and
+  `HELP :=` typed so are DCL assignments to a symbol HELP (EXPSYN, and
+  HELP = ""), as DCL reads them; `=` at the Topic? prompt finds the
+  module, and so does `HELP/NOPROMPT =`, a qualifier keeping the verb
+  from being a symbol's name. LEXICAL is now `Lexicals`, a level-2 topic per
+  function, keyed by its whole name (`F$TRNLNM`), each with its Format,
+  keywords, and usually an example; F$CSID, F$GETQUI, and F$LICENSE have
+  topics saying govax lacks them. FOREIGN and LABELS stay govax's own
+  topics. `TestEveryLexicalHasHelp` (`internal/dclshell`) holds the
+  Lexicals module to `lexicalNames`, both ways.
+  The tests: `rewrittenHelp` has the 29 verbs, and
+  `qualifierHelpExceptions` loses ASSIGN's, DEASSIGN/LOG, DEFINE's, and
+  OPEN/HOST; `TestHelpTopics` looks up the new shapes (`=`, `:=`, a
+  lexical by abbreviation, DEFINE /DEVICE's qualifiers, SPAWN
+  /[NO]WAIT). Subtask 8b done.

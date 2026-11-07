@@ -1,30 +1,10 @@
 1 SUBROUTINE
-    The CALL command runs a subroutine of the same command procedure at a
-    new command level, as @ runs a procedure in a file: with parameters
-    P1 to P8, local symbols and labels of its own, and an optional output
-    file.  The subroutine is the commands between its label's SUBROUTINE
-    and its ENDSUBROUTINE.
 
-    Syntax:
+   Begins a subroutine of a command procedure, which CALL runs.
 
-        CALL[/OUTPUT=filespec] label [p1 [p2 ... p8]]
+   Format
 
-        label: SUBROUTINE
-            command ...
-        ENDSUBROUTINE
+     label: SUBROUTINE
 
-    The subroutine ends at its ENDSUBROUTINE or at an EXIT, and CALL's
-    status is the subroutine's, as @'s is the procedure's.  A procedure
-    run line by line passes over its subroutines: they run only when
-    called.  A subroutine inside another subroutine, or inside an IF
-    block, can be called only from within it.  A label that isn't found
-    is DCL-W-USCALL.  A label not on a SUBROUTINE line runs from there at
-    a new level, and CALL then fails with DCL-E-INVCALL.
-
-    Example:
-
-        $ CALL GREET "Hello there"
-        $ EXIT
-        $ GREET: SUBROUTINE
-        $     PRINT P1
-        $ ENDSUBROUTINE
+   The subroutine's commands follow, up to its ENDSUBROUTINE.  A
+   procedure run line by line passes over them.  See CALL.

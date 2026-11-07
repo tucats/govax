@@ -1,30 +1,55 @@
 1 CALL
-    The CALL command runs a subroutine of the same command procedure at a
-    new command level, as @ runs a procedure in a file: with parameters
-    P1 to P8, local symbols and labels of its own, and an optional output
-    file.  The subroutine is the commands between its label's SUBROUTINE
-    and its ENDSUBROUTINE.
 
-    Syntax:
+   Runs a subroutine of the same command procedure at a new command
+   level, as @ runs a procedure in a file.
 
-        CALL[/OUTPUT=filespec] label [p1 [p2 ... p8]]
+   Format
 
-        label: SUBROUTINE
-            command ...
-        ENDSUBROUTINE
+     CALL label [p1 [p2 ... p8]]
 
-    The subroutine ends at its ENDSUBROUTINE or at an EXIT, and CALL's
-    status is the subroutine's, as @'s is the procedure's.  A procedure
-    run line by line passes over its subroutines: they run only when
-    called.  A subroutine inside another subroutine, or inside an IF
-    block, can be called only from within it.  A label that isn't found
-    is DCL-W-USCALL.  A label not on a SUBROUTINE line runs from there at
-    a new level, and CALL then fails with DCL-E-INVCALL.
+2 Parameters
 
-    Example:
+ label
 
-        $ CALL GREET "Hello there"
-        $ EXIT
-        $ GREET: SUBROUTINE
-        $     PRINT P1
-        $ ENDSUBROUTINE
+   The label of the subroutine's SUBROUTINE command.
+
+ p1 ... p8
+
+   Up to eight parameters, the subroutine's local symbols P1 to P8, as
+   @'s are.
+
+2 Description
+
+   A subroutine is the commands from a label's SUBROUTINE to its
+   ENDSUBROUTINE:
+
+       $ label: SUBROUTINE
+       $     command ...
+       $ ENDSUBROUTINE
+
+   It has parameters, local symbols, and labels of its own.  It ends at
+   its ENDSUBROUTINE or at an EXIT, and CALL's status is the
+   subroutine's, as @'s is the procedure's.  A procedure run line by
+   line passes over its subroutines: they run only when called.  A
+   subroutine inside another subroutine, or inside an IF block, can be
+   called only from within it.
+
+   A label that isn't found is DCL-W-USCALL.  A label not on a
+   SUBROUTINE line runs from there at a new level, and CALL then fails
+   with DCL-E-INVCALL.
+
+2 Qualifiers
+/OUTPUT=filespec
+
+   Sends the subroutine's output to the file rather than the terminal,
+   as @'s /OUTPUT does.
+
+2 Examples
+
+   1.$ CALL GREET "Hello there"
+     $ EXIT
+     $ GREET: SUBROUTINE
+     $     WRITE SYS$OUTPUT P1
+     $ ENDSUBROUTINE
+
+     Calls GREET, which writes its first parameter.

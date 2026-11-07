@@ -1,10 +1,30 @@
 1 CLOSE
-    The CLOSE command closes a file OPEN opened, and deassigns its
-    logical name.
 
-    Syntax:
+   Closes a file OPEN opened, and deassigns its logical name.
 
-        CLOSE [/ERROR=label] [/[NO]LOG] logical-name
+   Format
 
-    A name OPEN didn't define is DCL-W-UNDFIL, unless /NOLOG; with
-    /ERROR, the procedure goes to the label instead.
+     CLOSE logical-name[:]
+
+2 Parameter
+
+ logical-name[:]
+
+   The name OPEN gave the file.
+
+2 Qualifiers
+/ERROR=label
+
+   In a command procedure, goes to the label if the name names no file
+   OPEN opened, or the file can't be closed.
+
+/[NO]LOG
+
+   /NOLOG makes a name that names no file OPEN opened a success, with
+   no message.  The default, /LOG, reports it as DCL-W-UNDFIL.
+
+2 Examples
+
+   1.$ CLOSE/NOLOG OUT
+
+     Closes OUT's file, if it is open.

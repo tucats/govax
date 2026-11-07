@@ -1,21 +1,40 @@
 1 GOTO
-    The GOTO command goes on at a labeled line of the command procedure.
-    A label is a name followed by a colon at the start of a command line,
-    alone or before a command:
 
-        $ LOOP:
-        $ COUNT = COUNT + 1
-        $ IF COUNT .LT. 10 THEN GOTO LOOP
+   Goes on at a labeled command of the command procedure.
 
-    Syntax:
+   Format
 
-        GOTO label
+     GOTO label
 
-    A label is known once the procedure has run past it; GOTO takes the
-    one run past last, and otherwise searches forward for the first one.
-    A label inside an IF block or a subroutine (see HELP CALL) that the
-    GOTO isn't in can't be gone to.  When the label isn't found, GOTO
-    reports it (DCL-W-USGOTO), and the procedure ends.  Labels belong to
-    their command level: a procedure, or a CALL subroutine.  At the
-    terminal a label is ignored (DCL-W-NOLBLS).  GOTO leaves $STATUS as
-    it was.
+2 Parameter
+
+ label
+
+   A label, a name followed by a colon at the start of a command line,
+   alone or before a command:
+
+       $ LOOP:
+       $ COUNT = COUNT + 1
+       $ IF COUNT .LT. 10 THEN GOTO LOOP
+
+2 Description
+
+   A label is known once the procedure has run past it.  GOTO takes the
+   one run past last, and otherwise searches forward for the first one.
+   A label inside an IF block or a subroutine (see CALL) that the GOTO
+   isn't in can't be gone to, and a GOTO out of an IF block ends the
+   block.  When the label isn't found, GOTO reports it (DCL-W-USGOTO),
+   and the procedure ends.
+
+   Labels belong to their command level: a procedure, or a CALL
+   subroutine.  At the terminal a label is ignored (DCL-W-NOLBLS).  GOTO
+   leaves $STATUS as it was.
+
+2 Examples
+
+   1.$ IF P1 .EQS. "" THEN GOTO USAGE
+     $ ...
+     $ USAGE:
+     $ WRITE SYS$OUTPUT "A file name is needed"
+
+     Goes to USAGE when no parameter was given.

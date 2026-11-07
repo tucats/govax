@@ -1,27 +1,60 @@
 1 WRITE
-    The WRITE command writes one record to a file: the values of its
-    expressions, one after another, an integer's in decimal.
 
-    Syntax:
+   Writes one record to a file: the values of its expressions, one after
+   another.
 
-        WRITE [/ERROR=label] [/UPDATE] [/SYMBOL] logical-name
-              expression[,...]
+   Format
 
-    The qualifiers come before the data.  The file is one OPEN opened to
-    write, or SYS$OUTPUT, or SYS$ERROR or SYS$COMMAND, which are the
-    terminal even when a procedure's output goes to an /OUTPUT file.
-    WRITE/UPDATE replaces the record READ read last with one of the same
-    length.  On an indexed file, WRITE puts the record where its keys say,
-    in any order (RMS-F-DUP for a key that allows no duplicates), but after
-    OPEN/APPEND the first record must come after the file's last
-    (RMS-F-SEQ); WRITE/UPDATE's record may be another length, but not
-    change the primary key (RMS-F-CHG).  A record WRITE can't write is RMS's error (RMS-F-NEF for a
-    /READ/WRITE file READ hasn't read to its end), or with /ERROR the
-    procedure goes to the label.  Without /SYMBOL, an item longer than
-    255 characters is DCL-W-TKNOVF.  WRITE leaves $STATUS RMS$_NORMAL, or
-    on an indexed file RMS$_OK_DUP for a record whose alternate key another
-    record has already.
+     WRITE logical-name[:] expression[,...]
 
-    Example:
+2 Parameters
 
-        $ WRITE SYS$OUTPUT "Today is ", F$TIME()
+ logical-name[:]
+
+   A file OPEN opened to write, or SYS$OUTPUT, or SYS$ERROR or
+   SYS$COMMAND, which are the terminal even when a procedure's output
+   goes to an /OUTPUT file.
+
+ expression[,...]
+
+   The record's contents (see Symbol_Assign Expressions).  An integer
+   is written in decimal.  The qualifiers come before the data.
+
+2 Description
+
+   On an indexed file, WRITE puts the record where its keys say, in any
+   order (RMS-F-DUP for a key that allows no duplicates), but after
+   OPEN/APPEND the first record must come after the file's last
+   (RMS-F-SEQ).
+
+   A record WRITE can't write is RMS's error (RMS-F-NEF for a
+   /READ/WRITE file READ hasn't read to its end).  WRITE leaves $STATUS
+   RMS$_NORMAL, or on an indexed file RMS$_OK_DUP for a record whose
+   alternate key another record has already.
+
+2 Qualifiers
+/ERROR=label
+
+   In a command procedure, goes to the label if the record can't be
+   written.
+
+/SYMBOL
+
+   Lets an item's value be longer than 255 characters.  Without
+   /SYMBOL, a longer one is DCL-W-TKNOVF.
+
+/UPDATE
+
+   Replaces the record READ read last, with one of the same length.  On
+   an indexed file the record may be another length, but may not change
+   the primary key (RMS-F-CHG).
+
+2 Examples
+
+   1.$ WRITE SYS$OUTPUT "Today is ", F$TIME()
+
+     Writes the date and time to the terminal.
+
+   2.$ WRITE/UPDATE PARTS "WIDGET    ", COUNT
+
+     Replaces the record of PARTS that READ read last.
