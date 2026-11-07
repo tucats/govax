@@ -1,8 +1,6 @@
 package console
 
 import (
-	"strings"
-
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -41,10 +39,8 @@ func (d *Dispatcher) bindConsoleCommands() {
 		return d.Console.Print(r.List("ITEMS"))
 	})
 
-	// A "/" starts a new word, as it does in DCL, so HELP SHOW
-	// SYMBOL/ALL finds the same "/ALL" topic as HELP SHOW SYMBOL /ALL.
 	g.Bind(helpTOKEN, func(id int64, r *dcl.Result) error {
-		return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /")))
+		return d.Console.HelpCommand(d.Help, r)
 	})
 
 	g.Bind(runTOKEN, d.runCommand)

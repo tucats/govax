@@ -39,7 +39,7 @@ type Session struct {
 	Library Library
 	// Open opens the library "@spec" names, returning it and the name
 	// its prompts show (H90B for "@H90DIR:H90B"). If it's nil, or it
-	// fails, the error's text is written and the prompt stays.
+	// fails, the request is one that found nothing.
 	Open func(spec string) (Library, string, error)
 	// Write writes one line of output.
 	Write func(line string)
@@ -55,14 +55,39 @@ type Session struct {
 	// Prompt is HELP/PROMPT: without it HELP answers the first request
 	// and ends.
 	Prompt bool
+	// Users are the user libraries (HLP$LIBRARY, HLP$LIBRARY_1, ... in
+	// the process, group, and system tables), in the order they're
+	// searched. A first word that names no level-1 topic in the library
+	// HELP is in is looked for in the main library and then in each of
+	// these, and "@name" may name one by the start of its name.
+	Users []NamedLibrary
+	// LibList is HELP/LIBLIST (the default): the user libraries' names
+	// are listed after a list of a library's topics.
+	LibList bool
+}
+
+// NamedLibrary is a help library and the name HELP shows for it: its
+// file's name, without device, directory, or type ("H90B").
+type NamedLibrary struct {
+	Name    string
+	Library Library
 }
 
 // place is where a Session's prompt is: a library, and a path of topics
-// in it (none at "Topic?").
+// in it (none at "Topic?"). home is the library "Topic?" is in, the root:
+// the main library, or one "@name" moved to. lib is the library the
+// path's topics are in, which is another when the topic was found by
+// searching the other libraries.
 type place struct {
+	home  Library
 	lib   Library
-	name  string // the library's name for "@NAME", "" for the main library
+	name  string // the root's name for "@NAME", "" for the main library
 	steps []step
+}
+
+// at is the place of "Topic?" in the library lib, named name.
+func at(lib Library, name string) place {
+	return place{home: lib, lib: lib, name: name}
 }
 
 // prompt is the place's prompt.
@@ -91,7 +116,7 @@ func (p place) prompt() string {
 // Run answers a request's words, then, with Prompt, prompts until HELP
 // ends. It returns an error only if Read fails other than with io.EOF.
 func (s *Session) Run(words []string) error {
-	p := s.request(place{lib: s.Library}, words)
+	p := s.request(at(s.Library, ""), words)
 
 	if !s.Prompt {
 		return nil
@@ -114,10 +139,13 @@ func (s *Session) Run(words []string) error {
 			switch {
 			case len(p.steps) > 0:
 				p.steps = p.steps[:len(p.steps)-1]
+				if len(p.steps) == 0 {
+					p.lib = p.home
+				}
 			case p.name != "":
 				// Unconfirmed after a second "@": the probe went into
 				// only one other library.
-				p = place{lib: s.Library}
+				p = at(s.Library, "")
 			default:
 				return nil
 			}
@@ -133,47 +161,162 @@ func (s *Session) Run(words []string) error {
 
 // request answers words at "Topic?" (or as HELP's first request) in p's
 // library, and returns where to prompt next. A first word "@spec" moves
-// to that library; the rest of the words are looked up there.
+// to that library; the rest of the words are looked up there. A library
+// "@spec" can't name is a request that found nothing: VMS 7.1's "HELP
+// @NOSUCHLIB ALPHA" was "Sorry, no documentation on @NOSUCHLIB ALPHA",
+// with the main library's topics (testdata/help90's part C).
 func (s *Session) request(p place, words []string) place {
 	if len(words) > 0 && strings.HasPrefix(words[0], "@") {
-		lib, name, err := s.open(words[0][1:])
-		if err != nil {
-			s.show(strings.Split(err.Error(), "\n"))
+		lib, name, ok := s.atLibrary(words[0][1:])
+		if !ok {
+			s.show(s.render([]Display{{
+				Kind: ShowSorry, Sorry: strings.ToUpper(strings.Join(words, " ")),
+				List: rootList(p.home.Names()), Listed: true, ListDepth: 1, rooted: true,
+			}}))
 
-			return p
+			return at(p.home, p.name)
 		}
 
-		p = place{lib: lib, name: name}
+		p = at(lib, name)
 		words = words[1:]
 	}
 
 	if len(words) == 0 {
-		s.show(Render(instructions(p.lib, p.lib.Names(), s.Options), s.width()))
+		s.show(s.render(instructions(p.home, p.home.Names(), s.Options)))
 
-		return place{lib: p.lib, name: p.name}
+		return at(p.home, p.name)
 	}
 
-	displays, err := lookupFrom(p.lib, nil, words)
+	displays, err := lookupFrom(p.home, nil, words)
 	if err != nil {
 		// Unconfirmed where HELP prompts after this message; the probe
 		// asked only with /NOPROMPT.
 		s.show([]string{"%LBR-E-INVKEY, invalid key"})
 
-		return place{lib: p.lib, name: p.name}
+		return at(p.home, p.name)
 	}
 
-	s.show(Render(displays, s.width()))
+	found := p.home
 
+	// Nothing at level 1: the main library and the user libraries are
+	// searched in turn, and the first in which the first word names a
+	// topic answers (testdata/help90's part C: "HU BONLY" found H90B's
+	// BONLY, "HU CONLY" H90C's). If none does, the root's "Sorry" stands.
+	if missed(displays) {
+		for _, lib := range s.searchOrder(p.home) {
+			if d, err := lookupFrom(lib, nil, words); err == nil && !missed(d) {
+				displays, found = d, lib
+
+				break
+			}
+		}
+	}
+
+	s.show(s.render(displays))
+
+	p = at(p.home, p.name)
 	p.steps = next(displays, nil)
 
+	if len(p.steps) > 0 {
+		p.lib = found
+	}
+
 	return p
+}
+
+// missed reports whether displays are a request's answer when its first
+// word named nothing at level 1.
+func missed(displays []Display) bool {
+	return len(displays) == 1 && displays[0].levelOneMiss
+}
+
+// searchOrder is the libraries searched after home when a first word
+// names nothing there: the main library, then the user libraries, each
+// once (the manual: root, main, process, group, system).
+func (s *Session) searchOrder(home Library) []Library {
+	var order []Library
+
+	seen := map[Library]bool{home: true}
+
+	for _, lib := range append([]Library{s.Library}, s.libraries()...) {
+		if lib != nil && !seen[lib] {
+			seen[lib] = true
+			order = append(order, lib)
+		}
+	}
+
+	return order
+}
+
+// libraries are the user libraries' Libraries.
+func (s *Session) libraries() []Library {
+	libs := make([]Library, len(s.Users))
+	for i, u := range s.Users {
+		libs[i] = u.Library
+	}
+
+	return libs
+}
+
+// atLibrary is the library "@spec" names: the first user library whose
+// name starts with spec (VMS 7.1's "@H90" chose H90B, the first of H90B
+// and H90C), or the library Open finds.
+func (s *Session) atLibrary(spec string) (Library, string, bool) {
+	upper := strings.ToUpper(spec)
+
+	if upper != "" && !strings.ContainsAny(upper, ":[<") {
+		for _, u := range s.Users {
+			if strings.HasPrefix(strings.ToUpper(u.Name), upper) {
+				return u.Library, u.Name, true
+			}
+		}
+	}
+
+	if s.Open == nil {
+		return nil, "", false
+	}
+
+	lib, name, err := s.Open(spec)
+	if err != nil || lib == nil {
+		return nil, "", false
+	}
+
+	return lib, name, true
+}
+
+// render lays displays out at the session's width, with the user
+// libraries' names after each list of a library's topics when LibList is
+// set:
+//
+//	  Additional help libraries available (type @name for topics):
+//
+//	  H90B  H90C
+//
+// (testdata/help90's part C, after the topics of "HU NOSUCH", "HU @H90B",
+// and "HU/LIBLIST"). Whether the names wrap at the width is unconfirmed:
+// the probe had no more than four.
+func (s *Session) render(displays []Display) []string {
+	if s.LibList && len(s.Users) > 0 {
+		names := make([]string, len(s.Users))
+		for i, u := range s.Users {
+			names[i] = u.Name
+		}
+
+		for i := range displays {
+			if displays[i].rooted {
+				displays[i].Libraries = names
+			}
+		}
+	}
+
+	return Render(displays, s.width())
 }
 
 // below answers words at a "Subtopic?" prompt: they're looked up below
 // the prompt's topic.
 func (s *Session) below(p place, words []string) place {
 	displays, _ := lookupFrom(p.lib, p.steps, words)
-	s.show(Render(displays, s.width()))
+	s.show(s.render(displays))
 
 	p.steps = next(displays, p.steps)
 
@@ -183,7 +326,7 @@ func (s *Session) below(p place, words []string) place {
 // again shows the prompt's topic again, for "?".
 func (s *Session) again(p place) {
 	if len(p.steps) == 0 {
-		s.show(Render(instructions(p.lib, p.lib.Names(), s.Options), s.width()))
+		s.show(s.render(instructions(p.home, p.home.Names(), s.Options)))
 
 		return
 	}
@@ -195,7 +338,7 @@ func (s *Session) again(p place) {
 		headings[i], nodes[i] = st.heading, st.topic
 	}
 
-	s.show(Render([]Display{topicDisplay(headings, nodes)}, s.width()))
+	s.show(s.render([]Display{topicDisplay(headings, nodes)}))
 }
 
 // next is where HELP prompts after showing displays, from at: the topic
@@ -244,15 +387,6 @@ func next(displays []Display, at []step) []step {
 	}
 
 	return steps
-}
-
-// open opens the library "@spec" names.
-func (s *Session) open(spec string) (Library, string, error) {
-	if s.Open == nil {
-		return nil, "", errors.New("Sorry, no documentation on @" + strings.ToUpper(spec))
-	}
-
-	return s.Open(spec)
 }
 
 // show writes one response's output.

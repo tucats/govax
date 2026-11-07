@@ -1199,9 +1199,37 @@ grammar console
                     /type=$expression/list
     verb echo/alias=print
 
-    ! HELP's topic words are the help file's to match, so they're the
-    ! rest of the line ("HELP SHOW SYMBOL/ALL").
+    ! HELP's topic words are the help library's to match, so they're the
+    ! rest of the line ("HELP SHOW SYMBOL/ALL"), and its qualifiers come
+    ! right after the verb ("HELP/NOPROMPT COPY /LOG" asks about /LOG).
+    ! The qualifiers are VMS's (docs/PHASE-90, subtask 6); SEARCH, EXACT,
+    ! HIGHLIGHT, WRAP, MESSAGE, and PAGE=SAVE are taken and refused, for a
+    ! later phase.
     verb help/id=1630
+        qualifier   prompt/id=1632
+        qualifier   instructions/id=1633
+        qualifier   liblist/id=1634
+        qualifier   library/id=1635             -
+                    /type=$string               -
+                    /default=""
+        qualifier   userlibrary/id=1636         -
+                    /type=$string/list          -
+                    /default=""
+        qualifier   output/id=1637              -
+                    /type=$string               -
+                    /default=""
+        qualifier   page/id=1638                -
+                    /type=$string/list          -
+                    /default=""
+        qualifier   search/id=1639              -
+                    /type=$string               -
+                    /default=""
+        qualifier   exact/id=1612
+        qualifier   highlight/id=1613           -
+                    /type=$string               -
+                    /default=""
+        qualifier   wrap/id=1614
+        qualifier   message/id=1615
         parameter   topic/id=1631               -
                     /type=$rest_of_line
 

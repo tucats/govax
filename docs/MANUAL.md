@@ -1910,7 +1910,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SHOW RADIX` | The console's numeric radix. |
 | `SHOW DEBUG` | The debugging switches. |
 | `SHOW STRINGS` | The console's string pool. |
-| `HELP [topic ...]` | The help text. |
+| `HELP [topic ...]` | The help text: govax's own, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |
 
 ### 6.9 The machine and the console
 
@@ -3652,6 +3652,23 @@ VAX> LIBRARY/CREATE/HELP MYHELP TOOLS.HLP,NOTES.HLP
 VAX> LIBRARY/LIST/HELP MYHELP
 VAX> LIBRARY/HELP/EXTRACT=TOOLS/OUTPUT=SYS$OUTPUT MYHELP
 ```
+
+HELP reads a help library as VMS's HELP does. `/LIBRARY=` names it (the
+default directory and type are `SYS$HELP:` and `.HLB`); without
+`/NOPROMPT` HELP then prompts `Topic?` and `TOOLS Subtopic?` for more,
+Return going up a level and Ctrl/Z ending it. A library named by
+`HLP$LIBRARY`, `HLP$LIBRARY_1`, and so on (in the process, group, and
+system tables) is searched when the main library has no such topic, and
+`@name` at a `Topic?` prompt moves into one. In a command procedure the
+answers to the prompts are the data lines after the command.
+
+```text
+VAX> DEFINE HLP$LIBRARY DUA1:[WORK]MYHELP
+VAX> HELP/LIBRARY=DUA1:[WORK]OTHER TOOLS
+```
+
+Until govax's own help comes as libraries, `HELP` with no `/LIBRARY`
+shows govax's built-in help text unless a `SYS$HELP:HELPLIB.HLB` exists.
 
 ### Analyzing objects and images
 

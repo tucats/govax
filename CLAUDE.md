@@ -700,7 +700,14 @@ never had.
   `help.Session` (prompts, `?`, Return, `@library`, end of input, over a
   caller's `Read` and `Write`), held to part D's procedures by
   `TestHelp90Prompting` and to round 2's terminal log by
-  `TestHelp90Terminal`.
+  `TestHelp90Terminal`. Subtask 6 (done 2026-11-07) is DCL's HELP,
+  `internal/dclcmd/help.go`: VMS's qualifiers, the main library
+  (SYS$HELP:.HLB), the `HLP$LIBRARY` user libraries by table and the
+  search among them (`help.Session`'s `Users`, `LibList`), `/OUTPUT`,
+  `/PAGE`, responses from SYS$INPUT (`dclshell`'s `ReadHelpResponse`),
+  held to parts B2, C, and D by `TestHelp90DCLOracle`; with no
+  `/LIBRARY` and no HELPLIB.HLB it shows the old built-in help until
+  subtask 7.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

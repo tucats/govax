@@ -229,6 +229,10 @@ const (
 	cliIVQUAL
 	cliNOVALU
 	cliAbKeyw
+
+	// docs/PHASE-90 - VMS help.md: HELP's qualifiers that wait for a later
+	// phase.
+	cliHelpNotImpl
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -558,6 +562,11 @@ const (
 	// DCL's 1024-byte command buffer (VMS V7.1, testdata/lib57).
 	CLI_BUFOVF = CLIFacility<<FacilityPosition | cliBufOvf<<MessagePosition | StatusWarning
 
+	// CLI_HELPNOTIMPL, a warning, is a HELP qualifier govax takes but
+	// doesn't do yet (/SEARCH, /EXACT, /HIGHLIGHT, /WRAP, /MESSAGE,
+	// /PAGE=SAVE: docs/PHASE-90 - VMS help.md, Decision 4).
+	CLI_HELPNOTIMPL = CLIFacility<<FacilityPosition | cliHelpNotImpl<<MessagePosition | StatusWarning
+
 	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
 	// can't hold P1's permanent part and the user stack.
 	CLI_P1TOOSMALL = CLIFacility<<FacilityPosition | cliP1TooSmall<<MessagePosition | StatusError
@@ -729,6 +738,7 @@ func init() {
 	DefineMessage(CLI_IVVERB, CLIFacility, "IVVERB", "unrecognized command verb - check validity and spelling")
 	DefineMessage(CLI_ABVERB, CLIFacility, "ABVERB", "ambiguous command verb - supply more characters")
 	DefineMessage(CLI_LEXNOTIMPL, CLIFacility, "LEXNOTIMPL", "lexical function !S is not implemented yet")
+	DefineMessage(CLI_HELPNOTIMPL, CLIFacility, "HELPNOTIMPL", "HELP !S is not implemented yet")
 	DefineMessage(CLI_NOTHEN, CLIFacility, "NOTHEN", "IF or ON statement syntax error - check placement of THEN keyword")
 	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")
 	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")

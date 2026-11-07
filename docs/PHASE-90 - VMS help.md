@@ -760,7 +760,7 @@ Scope):
    terminal log and round 1's D part (done 2026-11-07).
 6. DCL's HELP: the grammar's qualifiers, the library search and
    `HLP$LIBRARY`, `/OUTPUT`, `/PAGE`, HELP in procedures and subprocesses;
-   round 1's C part.
+   round 1's C part (done 2026-11-07).
 7. The libraries in the build: `go generate`, the committed and embedded
    HELPLIB.HLB and DBG$HELP.HLB, the system volume's entries, sources, and
    BUILDHELP.COM, the refresh by module (Decision 7), and Decision 10's
@@ -969,3 +969,51 @@ Scope):
   library; an empty response in a second `@` library goes back to the
   main one; INVKEY at `Topic?` leaves the prompt there; nine words'
   wrap isn't applied below a prompt's path. Subtask 5 done.
+- **2026-11-07** — Subtask 6, DCL's HELP. `console.dcl`'s HELP takes
+  VMS's qualifiers (ids 1612–1615, 1632–1639; `/LIBRARY` has a default so
+  that `/NOLIBRARY` parses), and `internal/dclcmd/help.go` is the command:
+  the main library (`/LIBRARY`, SYS$HELP:HELPLIB.HLB by default, its name
+  parsed with SYS$HELP:.HLB through `rms.Session.FindImageFile`, or a host
+  path), the user libraries (`HLP$LIBRARY`, `_1`, ... in the process,
+  group, and system tables by `/USERLIBRARY`, each table's numbers ending
+  at the first missing name, a library that can't be opened passed over),
+  `/NOLIBRARY`'s first user library as the main one, `/OUTPUT` (no value
+  is SYS$OUTPUT, `[]` is HELP.LIS, `/NOOUTPUT` nothing; a file is 132
+  wide), `/PAGE` (the screen cleared before each display, `SCROLL`
+  leaving it, a stop after a screenful), and OPENIN and NOHLPLIBS as
+  VMS words them. `internal/help`'s Session gained `Users` and `LibList`:
+  a first word that names no level-1 topic is looked for in the main
+  library and then each user library (`searchOrder`), the first library
+  that has it answering and the prompts going on in it until they climb
+  back to `Topic?`; "@name" names a user library by the start of its name
+  before `Open` is tried, and one that can't be found is a "Sorry" with
+  every word; the user libraries' names follow a list of a library's
+  topics (`Display.Libraries`, "Additional help libraries available").
+  HELP's responses are SYS$INPUT's (`dclshell`'s `ReadHelpResponse`): a
+  procedure's data lines, which SET VERIFY shows, a file SYS$INPUT names
+  (`corevms.Environment.ReadInputRecord`, closed after HELP by
+  `CloseInputFile`), or a line typed after the prompt; HELP is an image
+  to DCL, so lines it leaves are SKPDAT and user-mode names go after it.
+  `$STATUS` after HELP is SS$_NORMAL, as VMS 7.1's. `/SEARCH`, `/EXACT`,
+  `/HIGHLIGHT`, `/WRAP`, `/MESSAGE`, and `/PAGE=SAVE` are
+  `%DCL-W-HELPNOTIMPL`. Until subtask 7, HELP with no `/LIBRARY` and no
+  SYS$HELP:HELPLIB.HLB shows the old built-in help (`ErrNoMainLibrary`).
+  `TestHelp90DCLOracle` runs part B's library-name requests, B2, C, and D
+  (HELP90D.COM whole, its data lines and RESP.TXT) on govax's DCL with
+  part A's libraries, and holds every line to round 1b's log (file IDs
+  and times masked) but `/LIBRARY=[]H90A`, which on VMS went to SYS$HELP's
+  rooted directory; it runs the procedure at a 132-column terminal, since
+  govax's DCL writes its messages at the terminal rather than in a
+  procedure's `/OUTPUT` file. `TestHelp90DCLTerminal`, `...Messages`,
+  `...Page`, `...BuiltIn`, and `...Subprocess` cover the prompts at the
+  terminal and Ctrl/Z, the messages, `/PAGE`, the fallback, and HELP in a
+  SPAWNed DCL with the parent's HLP$LIBRARY. Unconfirmed, and chosen:
+  OPENIN's and NOHLPLIBS's `$STATUS` (the shared message's code with no
+  facility, LBR's facility with no message number); OPENIN with LBR's
+  NOTHLPLIB for a file that isn't a help library; the numbers going on
+  past a user library that can't be opened; the library names not
+  wrapped; whether a topic found in a user library prompts there; `/PAGE`'s
+  stop prompt (paging's "Press RETURN to continue"), and leaving out the
+  scrolling region and character set VMS's HELP sets; `?` read with a
+  Return, and Ctrl/Z with no ` Exit `, at govax's terminal. Subtask 6
+  done.

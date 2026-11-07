@@ -53,6 +53,17 @@ type Display struct {
 	Listed    bool
 	ListDepth int
 
+	// Libraries are the user libraries' names, listed after List when
+	// HELP/LIBLIST is in effect and List is the library's topics.
+	Libraries []string
+
+	// rooted says List is the library's level-1 topics, after which
+	// Session lists the user libraries; levelOneMiss that the request's
+	// first word named no level-1 topic, so Session searches the other
+	// libraries.
+	rooted       bool
+	levelOneMiss bool
+
 	// path is the topics from level 1 down to the one shown (ShowTopic,
 	// ShowSlash), which Session uses to decide where to prompt next. A
 	// qualifier line's path ends with its own topic.
@@ -178,9 +189,9 @@ func lookupFrom(lib Library, at []step, words []string) ([]Display, error) {
 	if len(level1) == 0 {
 		// Nothing at level 1: the library's topics are listed, but not
 		// after "KEY..." (testdata/help90's "SKIP...").
-		d := Display{Kind: ShowSorry, Sorry: s.sorry, ListDepth: 1}
+		d := Display{Kind: ShowSorry, Sorry: s.sorry, ListDepth: 1, levelOneMiss: true}
 		if !all {
-			d.List, d.Listed = s.rootList(), true
+			d.List, d.Listed, d.rooted = s.rootList(), true, true
 		}
 
 		return []Display{d}, nil
@@ -213,7 +224,7 @@ func instructions(lib Library, names []string, opts Options) []Display {
 	list := rootList(names)
 
 	if !opts.Instructions {
-		return []Display{{Kind: ShowList, List: list, Listed: true, ListDepth: 1}}
+		return []Display{{Kind: ShowList, List: list, Listed: true, ListDepth: 1, rooted: true}}
 	}
 
 	for _, name := range names {
@@ -221,13 +232,13 @@ func instructions(lib Library, names []string, opts Options) []Display {
 			if t := lib.Module(name); t != nil {
 				return []Display{{
 					Kind: ShowTopic, Headings: []string{"HELP"}, Text: t.Text, Depth: 1,
-					List: list, Listed: true, ListDepth: 1,
+					List: list, Listed: true, ListDepth: 1, rooted: true,
 				}}
 			}
 		}
 	}
 
-	return []Display{{Kind: ShowSorry, Sorry: "HELP", List: list, Listed: true, ListDepth: 1}}
+	return []Display{{Kind: ShowSorry, Sorry: "HELP", List: list, Listed: true, ListDepth: 1, rooted: true}}
 }
 
 // rootList is the list of a library's topics: its modules, in index
@@ -346,7 +357,7 @@ func (s *search) show(t *Topic, path []string, nodes []*Topic) {
 	if len(t.Text) == 0 && len(list) == 0 {
 		s.out = append(s.out, Display{
 			Kind: ShowSorry, Sorry: s.sorry,
-			List: s.rootList(), Listed: true, ListDepth: 1,
+			List: s.rootList(), Listed: true, ListDepth: 1, rooted: true,
 		})
 	}
 }

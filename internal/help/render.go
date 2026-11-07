@@ -65,6 +65,11 @@ func (d Display) render(width int) []string {
 
 		out = append(out, "", indent(d.ListDepth)+listTitle, "")
 		out = append(out, listLines(d.List, d.ListDepth, width)...)
+
+		if len(d.Libraries) > 0 {
+			out = append(out, "", indent(1)+"Additional help libraries available (type @name for topics):", "",
+				indent(1)+strings.Join(d.Libraries, "  "))
+		}
 	}
 
 	return append(out, "")

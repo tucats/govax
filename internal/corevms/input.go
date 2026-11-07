@@ -210,6 +210,32 @@ func (env *Environment) ReadLine(maxLen int) (line string, ok bool) {
 	return readTerminalLine(env, maxLen)
 }
 
+// ReadInputRecord reads SYS$INPUT's next line when SYS$INPUT isn't the
+// terminal: a command procedure's data record, a mailbox's or file's
+// process-permanent record, or a record of a file SYS$INPUT names in the
+// process table (DEFINE/USER_MODE SYS$INPUT file), at most maxLen bytes.
+// handled is false when SYS$INPUT is the terminal, which the caller reads
+// itself, with a prompt if it has one (DCL's HELP). ok is false at the
+// input's end.
+func (env *Environment) ReadInputRecord(maxLen int) (line string, ok, handled bool) {
+	if line, ok, handled, err := env.inputRecord("SYS$INPUT", maxLen); handled {
+		return line, ok && err == nil, true
+	}
+
+	return env.inputFileRecord("SYS$INPUT", maxLen)
+}
+
+// CloseInputFile closes the file ReadInputRecord opened for a SYS$INPUT
+// the process table names, as an image's rundown does: a command DCL
+// runs in Go where VMS runs an image (HELP) calls it at its end, so the
+// next one reads the file from its start.
+func (env *Environment) CloseInputFile() {
+	if env.input != nil {
+		_ = env.input.file.Close()
+		env.input = nil
+	}
+}
+
 // inputRecord reads the next record of the process-permanent file name
 // (SYS$INPUT, SYS$COMMAND) leads to, when that isn't the terminal (a
 // command procedure's data records, a mailbox, a file), truncated to
