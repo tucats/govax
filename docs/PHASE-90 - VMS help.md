@@ -745,6 +745,98 @@ Scope):
   looks at the library's level-1 keys** (`BREAK` was "Sorry", with the
   list `DEBUG EXTRA`), not under DEBUG.
 
+### Round 3 (2026-11-08)
+
+VMS V7.1 on the VAX 8600, `testdata/help90/vax/round3/` (`help90w.log`,
+and `h90w.bck`, every library it made), checked for VMS text first. All 36
+cases ran, each its own image under the two-minute timer; the first run's
+hang in W10's INSERT_KEY didn't happen again (the same help library, the
+same options), so it's left unexplained. Two cases didn't finish: W13's
+binary keys (an access violation at address 4 in the first INSERT_KEY, which
+left W13.ULB empty, 0 blocks) and the second update OPEN of W2 (still
+waiting at two minutes, not the manual's 30 seconds then RMS$_FLK). Both are
+for a round 3b with subtask 11d.
+
+**Definitions.** CRE$C_VMSV2 2, CRE$C_VMSV3 3, CRE$C_HLPCASING 6,
+CRE$C_OBJCASING 3, CRE$C_MACTXTCAS 0; the CRE$L_ offsets as the manual
+gives them; LBR$C_MAXRECSIZ 2048, LBR$C_FLUSHDATA 1, LBR$C_FLUSHALL 0;
+MHD$B_USRDAT 16. Every LBR$_ status's message text is in the log, for
+`vmsdef/lbrmessages.go`.
+
+**Statuses.** PUT_RECORD, PUT_END, INSERT_KEY, REPLACE_KEY, DELETE_KEY,
+DELETE_DATA, SEARCH, and SET_MODULE return SS$_NORMAL, as the reading
+routines of subtask 10 did; INI_CONTROL, OPEN, CLOSE, GET_HEADER,
+PUT_HISTORY, and FLUSH return LBR$_NORMAL. A library opened to read gives
+ILLOP for every writing routine but PUT_HISTORY, which returns LBR$_NORMAL;
+FLUSH then gives WRITEERR and CLOSE RMS$_FAC. Inside GET_INDEX's or
+SEARCH's routine INSERT_KEY and DELETE_KEY are UPDURTRAV, and the
+traversal returns the routine's status.
+
+**Layout.** A library created with the manual's options (allocation 8,
+ENTALL 96) has 7 preallocated index blocks and its first module at RFA
+9,6; modules follow one another in the data blocks (W3: 9,6, 9,44, 9,108),
+and a module DELETE_DATA freed isn't reused at once (D went to 9,146).
+A module header is 16 bytes: `00 AD 00 00`, a longword reference count
+(the number of keys pointing at the module: 1, or 3 in W12), and the
+quadword insertion time; with UHDMAX n, n bytes of user data follow
+(MHD$B_USRDAT 16), SET_MODULE's update zero-filled or cut to n, HDRTRUNC
+for a short buffer (with the length still returned). LIBRARY's shareable
+image module header is 49 bytes. A help library the routines made has key
+length 31 where LIBRARY's has 15 (W10L), and 102 blocks for LIBRARY's
+against 9. 127 modules in W9 take 5 index blocks.
+
+**Keys.** In a text library (MACTXTCAS) keys are upper-cased (`x` is
+DUPKEY of `X`, `walpha2` is `WALPHA2`); with HLPCASING they're kept as
+given, and GET_HELP still finds `WALPHA2`. A 32-character key went into a
+library of key length 31; an empty key is INVKEY; `a b` went in as `A`.
+INSERT_KEY with an RFA past the file's end is RFAPASTEOF, with block 1
+offset 3 or RFA 0,0 RMS$_EOF, and in each case **the key is inserted
+anyway**, which LIBRARY/LIST later reports as MHDERR with INVRFA (W4).
+PUT_END with no PUT_RECORD before it leaves the RFA 0,0. DELETE_DATA with a
+key still on the module is STILLKEYS; twice on the same module, both
+SS$_NORMAL. REPLACE_KEY of a key not there inserts it; with a bad old RFA,
+INVRFA; with a bad new one, RFAPASTEOF. Records up to 2048 bytes go in,
+longer ones are RECLNG.
+
+**History.** GET_HISTORY of a new library is EMPTYHIST, of a library with
+LUHMAX 0 NOHISTORY (and PUT_HISTORY there NOHISTORY too). Past LUHMAX the
+oldest records go. GET_HISTORY gives the newest record first, and on the
+probe's own records (text, not LIBRARIAN's form) it fails after the first
+with LIB$_BADBLOSIZ; LIBRARY/LIST/HISTORY of the same library fails with
+FAOFAIL and HISTERR (ACCVIO). LIBRARIAN's own record (H90T) is the
+replacement's time (8 bytes), a word of 1 (the module count), the operation
+(3, replaced), a counted user name (12 bytes, blank-padded), and the
+modules' names, counted.
+
+**Options and errors.** No create options is ILLCREOPT, and frees the
+control index (CLOSE is then ILLCTL); a key length of 200 is ILLCREOPT;
+IDXMAX 9 and a help type with text options were taken (WE3, WE2); every
+option 0 but the type made a library with no index (GET_INDEX ILLIDXNUM,
+LIBRARY/LIST INDEXERR) in which INSERT_KEY and LOOKUP_KEY still succeeded.
+INI_CONTROL of function 99 is ILLFUNC, of type 99 success. An update OPEN
+of a missing library is RMS$_FNF (RET_RMSSTV NOSUCHFILE) and frees the
+index. FLUSH of 99 is BADPARAM. 16 control indexes, the 17th TOOMNYLIB.
+
+**The NAM block.** OPEN fills in the resultant name string; a NAM given to
+INI_CONTROL is filled in at OPEN (RSL, FID), and a later INI_CONTROL with
+it opens the file by its FID with no name at all, or even with the name of
+a file that isn't there (NOSUCH opened W2). A related NAM supplies the name
+and type. OPEN with no name and no NAM is NOFILNAM, freeing the index.
+
+**LIBRARY.** The routines' libraries list and extract as LIBRARY's own do;
+LIBRARY/HELP reads the routines' help library, and LINK resolved H90O_SYM
+from the routines' object library (whose module shows no ident, where
+LIBRARY's shows `0`). LIBRARY/LIST takes `/HISTORY`. LIBRARIAN's statuses:
+DUPMODULE %X10868088, ILLKEYLVL %X108680D2, KEYNAMLNG %X108680EA,
+NOMTCHFOU %X10868080, LOOKUPERR %X108680F2; an object library made from a
+help library is SEQNCE, COMCOD, and INSERTERR with INVKEY, %X108680E2. A
+level-1 key of several words is its first word (`TWO`, `THREE`). A file
+whose first key is level 2 is ILLKEYLVL and inserts nothing; a bad key after
+good modules keeps the modules before the one holding it (GOODONE, not
+BADONE). `/DATA=REDUCE` and `/DATA=EXPAND` each write a new version,
+REDUCE's listed as "Library is in DCX data reduced format", both SS$_NORMAL
+with the facility's inhibit bit (%X10000001).
+
 ## Subtasks
 
 1. The survey and plan (this document), reviewed by the author (done
@@ -790,8 +882,9 @@ Scope):
     not only help: the author's direction of 2026-11-08, which widens
     Decision 8's list to the whole of LBRSHR's documented vector. In parts:
     (a) round 3 of the probe prepared, `testdata/help90`'s `lbr90w.mar` and
-    `help90w.com` (done 2026-11-08), and run on VMS 7.1, its log and save set
-    checked into `vax/round3/` and "What the probe settled" written; (b) the
+    `help90w.com`, run on VMS 7.1, its log and save set checked into
+    `vax/round3/` and "What the probe settled" written (done 2026-11-08;
+    binary keys and the double update OPEN need a round 3b, 11d's); (b) the
     writing routines (`LBR$PUT_RECORD`, `LBR$PUT_END`, `LBR$INSERT_KEY`,
     `LBR$REPLACE_KEY`, `LBR$DELETE_KEY`, `LBR$DELETE_DATA`) and OPEN's
     `LBR$C_CREATE` and `LBR$C_UPDATE`, through `internal/lbr`'s Builder, on
@@ -1432,3 +1525,8 @@ Scope):
   LIBRARY's W10L (made in part A now). 36 cases; rehearsed on govax, also
   with the timer at 0.2 seconds, every case then cut off and the procedure
   going on. Waiting for the second run.
+- **2026-11-08** — Round 3's second run: all 36 cases, two not finished
+  (W13's binary keys, an ACCVIO in INSERT_KEY; the double update OPEN, still
+  waiting at two minutes). The log and save set are in `vax/round3/`, our
+  own text but VMS's messages and listings; "What the probe settled" has
+  round 3's answers. Subtask 11a done.

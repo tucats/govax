@@ -28,6 +28,7 @@ their own section below):
 | `help90v.com` | Part G: HELP on VMS's own EXCHANGE, SUBMIT, and ANALYZE modules (round 1 only). Its output holds VMS's text |
 | `vax/round1/` | Round 1's VAX run, checked: `help90.log`, `h90.bck`, `dbgh.dlg`, and `help90-term.log` |
 | `vax/round2/` | Round 1c's `help90c.log` and round 2's `help90-term.log` (simh's console log, escape sequences kept, cut before simh's own help text), checked |
+| `vax/round3/` | Round 3's second run: `help90w.log` and `h90w.bck`, every library it made |
 | `vax/round1b/` | Round 1b's, checked: `help90.log`, `h90.bck`, `dbgh.dlg` (`help90f.log` and `dbgv.dlg` are local) |
 | `help90d.dbg`, `help90v.dbg`, `dbgt.mar` | The debugger sessions' commands, and the image they run |
 | `lbr90.mar` | Part E: 79 cases calling the LBR$ routines on the probe's libraries: the definitions' values, INI_CONTROL, OPEN, GET_HEADER, LOOKUP_KEY, GET_RECORD (move and locate), FIND, GET_INDEX with matches, SET_INDEX, GET_HELP with its action routine's every call (flags, level, data), OUTPUT_HELP with output and input routines of its own (scripted answers to its prompts), the errors |
@@ -214,6 +215,11 @@ minutes whose AST writes `=t timed out after two minutes` and ends the
 image; a hang costs one case, and the procedure goes on. W10T is W10 with
 text casing, to tell whether the casing is the cause, and the program reads
 LIBRARY's own W10L. The second run starts on a fresh exchange volume.
+
+The second run (2026-11-08) ran all 36 cases; W13 (binary keys) ended in an
+access violation and the double update OPEN of W2 at the timer. Its
+`help90w.log` and `h90w.bck` passed the check (our modules' text, VMS's
+messages and listings) and are in `vax/round3/`.
 
 1. Build the exchange volume, from the repository root:
 

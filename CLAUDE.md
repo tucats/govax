@@ -746,8 +746,8 @@ never had.
   SET_MODULE, the history routines, FLUSH, binary keys, and the NAM block,
   in parts (a) to (e); 11a (done 2026-11-08) is round 3 of the probe,
   `testdata/help90`'s `lbr90w.mar` and `help90w.com` (its README's round 3
-  section; its first VAX run hung in a help library's INSERT_KEY, so each
-  case is now a timed run of its own), waiting for the second run.
+  section; each case a timed run of its own), run on VMS 7.1, its log and
+  save set in `vax/round3/` and its answers in the phase doc's "Round 3".
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
