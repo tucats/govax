@@ -1422,4 +1422,13 @@ Scope):
   its end and the program through all 34 cases, the handler going on past
   each NOTIMPL. The rehearsal showed govax's LIBRARY lacks `/HISTORY` and
   `/DATA`, which part C and D use; they're 11e's if VMS's run wants them.
-  Waiting for the VAX run.
+- **2026-11-08** — Round 3's first run on VMS 7.1 hung in case 22: W10, a
+  help library created with `CRE$C_HLPCASING`, wrote its first module, and
+  its first `LBR$INSERT_KEY` used CPU for minutes with no I/O until
+  stopped. Cases 1 to 21 had run. The probe now runs each case as an image
+  of its own (`LBR90W n`, the case number by LIB$GET_FOREIGN), under a
+  timer of two minutes whose AST ends the image (`=t`), so a hang costs one
+  case; W10T is the same help library with text casing, and a case reads
+  LIBRARY's W10L (made in part A now). 36 cases; rehearsed on govax, also
+  with the timer at 0.2 seconds, every case then cut off and the procedure
+  going on. Waiting for the second run.

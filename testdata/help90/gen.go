@@ -1633,6 +1633,7 @@ func lbr90w() string {
 	p.opts("OPTK", with(txt, 1, "200")...)
 	p.opts("OPTZ", "LBR$C_TYP_TXT")
 	p.opts("OPTH", "LBR$C_TYP_HLP", "31", "8", "1", "0", "96", "20", "CRE$C_VMSV3", "CRE$C_HLPCASING")
+	p.opts("OPTHT", "LBR$C_TYP_HLP", "31", "8", "1", "0", "96", "20", "CRE$C_VMSV3", "CRE$C_MACTXTCAS")
 	p.opts("OPTM", "LBR$C_TYP_MLB", "31", "8", "1", "0", "96", "20", "CRE$C_VMSV3", "CRE$C_MACTXTCAS")
 	p.opts("OPTO", "LBR$C_TYP_OBJ", "31", "8", "2", "0", "96", "20", "CRE$C_VMSV3", "CRE$C_OBJCASING")
 	p.opts("OPTB", "LBR$C_TYP_USRLW", "0", "8", "1", "0", "96", "20", "CRE$C_VMSV3", "CRE$C_MACTXTCAS")
@@ -1929,18 +1930,32 @@ func lbr90w() string {
 	})
 
 	// W10: a help library, the same as LIBRARY/HELP's W10L from W10.HLP.
-	p.kase("W10, a help library", func() {
+	helpLibrary := func(name, opts string) {
 		p.ini("IDX", "FCRE", "THLP")
-		p.open("IDX", "H90DIR:W10", "OPTH", ".HLB")
+		p.open("IDX", "H90DIR:"+name, opts, ".HLB")
 		p.module("IDX", "RFA1", "1 WALPHA", "   Text of WALPHA.", "2 Sub", "   Text of WALPHA Sub.")
 		p.insert("IDX", "WALPHA", "RFA1")
 		p.module("IDX", "RFA2", "1 walpha2", "   Text of walpha2.")
 		p.insert("IDX", "walpha2", "RFA2")
 		p.closeLib("IDX")
 		p.ini("IDX", "FREAD", "THLP")
-		p.open("IDX", "H90DIR:W10", "", ".HLB")
+		p.open("IDX", "H90DIR:"+name, "", ".HLB")
+		p.header("IDX")
 		p.index("IDX")
 		p.lbr("GET_HELP", "&IDX", "0", "&HELPR", "0", "$WALPHA", "$Sub")
+		p.lbr("GET_HELP", "&IDX", "0", "&HELPR", "0", "$WALPHA2")
+		p.closeLib("IDX")
+	}
+	// Round 3's first run hung in W10's first INSERT_KEY (the README).
+	p.kase("W10, a help library", func() { helpLibrary("W10", "OPTH") })
+	p.kase("W10T, a help library with text casing", func() { helpLibrary("W10T", "OPTHT") })
+	p.kase("W10L, LIBRARY's help library of the same modules", func() {
+		p.ini("IDX", "FREAD", "THLP")
+		p.open("IDX", "H90DIR:W10L", "", ".HLB")
+		p.header("IDX")
+		p.index("IDX")
+		p.lbr("LOOKUP_KEY", "&IDX", "$WALPHA", "&RFA1")
+		p.modhdr("IDX", "RFA1")
 		p.lbr("GET_HELP", "&IDX", "0", "&HELPR", "0", "$WALPHA2")
 		p.closeLib("IDX")
 	})
@@ -2286,19 +2301,79 @@ NOBJ:	.ASCID	~object file~
 NPUT:	.ASCID	~PUT_RECORD~
 NHDR:	.ASCID	~GET_HEADER~
 INTRAV:	.ASCID	~INTRAV~
+TDS:	.ASCID	~0 00:02:00.00~
+TDELTA:	.QUAD	0
+CASEN:	.LONG	0
+ARGL:	.WORD	0
+ARGB:	.BLKB	80
+ARGD:	.WORD	80
+	.BYTE	14,1
+	.ADDRESS ARGB
+ARGN:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS ARGB
+MTIME:	.ASCID	~  =t timed out after two minutes~
+MNOCASE: .ASCID	~  no such case~
 `)
 	b.WriteString(p.data.String())
 	b.WriteString(lbr90wCode)
 	b.WriteString(p.code.String())
-	b.WriteString("\t.ENTRY\tSTART,^M<>\n")
-	b.WriteString("\tMOVC5\t#0,BIG,#^A/B/,#3000,BIG\n")
+	lbr90wCases = len(p.cases)
+	b.WriteString("\t.PSECT\tD,NOEXE,WRT,LONG\nCASES:")
+	for _, c := range p.cases {
+		fmt.Fprintf(&b, "\t.ADDRESS\t%s\n", c)
+	}
+	fmt.Fprintf(&b, `	.PSECT	C,EXE,NOWRT,LONG
+; START runs the case its command line names under a timer of two
+; minutes, or with no number every case in turn, untimed.
+	.ENTRY	START,^M<R2>
+	MOVC5	#0,BIG,#^A/B/,#3000,BIG
+	$BINTIM_S TIMBUF=TDS,TIMADR=TDELTA
+	PUSHAW	ARGL
+	CLRL	-(SP)
+	PUSHAQ	ARGD
+	CALLS	#3,G^LIB$GET_FOREIGN
+	TSTW	ARGL
+	BEQL	ALL
+	MOVW	ARGL,ARGN
+	PUSHL	#1
+	PUSHL	#4
+	PUSHAL	CASEN
+	PUSHAQ	ARGN
+	CALLS	#4,G^OTS$CVT_TI_L
+	MOVL	CASEN,R2
+	BLEQ	10$
+	CMPL	R2,#%d
+	BGTR	10$
+	$SETIMR_S EFN=#24,DAYTIM=TDELTA,ASTADR=TIMEOUT
+	MOVL	CASES-4[R2],R0
+	CALLS	#0,(R0)
+	MOVL	#1,R0
+	RET
+10$:	PUSHAB	MNOCASE
+	CALLS	#1,OUT
+	MOVL	#SS$_BADPARAM,R0
+	RET
+ALL:
+`, len(p.cases))
 	for _, c := range p.cases {
 		fmt.Fprintf(&b, "\tCALLS\t#0,%s\n", c)
 	}
-	b.WriteString("\tMOVL\t#1,R0\n\tRET\n\t.END\tSTART\n")
+	b.WriteString(`	MOVL	#1,R0
+	RET
+; TIMEOUT, the timer's AST: a case that ran past its two minutes.
+	.ENTRY	TIMEOUT,^M<>
+	PUSHAB	MTIME
+	CALLS	#1,OUT
+	$EXIT_S	CODE=#SS$_TIMEOUT
+	.END	START
+`)
 
 	return b.String()
 }
+
+// lbr90wCases is how many cases lbr90w wrote, for help90w's runs of them.
+var lbr90wCases int
 
 // lbr90wCode is LBR90W's own routines; OUT to LIMITED are LBR90's.
 const lbr90wCode = `	.PSECT	C,EXE,NOWRT,LONG
@@ -2734,13 +2809,20 @@ $ LINK/SHAREABLE=H90OS H90O,SYS$INPUT/OPTIONS
 UNIVERSAL=H90O_SYM,H90O_TWO
 $ LIBRARY/CREATE/SHARE H90S H90OS
 $ LIBRARY/LIST/FULL/NAMES/SHARE H90S
+$ LIBRARY/CREATE/HELP W10L W10
 $ MACRO LBR90W
 $ LINK LBR90W
 $ !
 $ ! Part B: LBR90W.
 $ !
-$ RUN LBR90W
-$ SHOW SYMBOL $STATUS
+$ ! Each case is a run of its own, ended by the program's timer if it
+$ ! runs past two minutes (round 3's first run hung in W10's INSERT_KEY).
+$ LBR90W := $'L'LBR90W
+`)
+	for i := 1; i <= lbr90wCases; i++ {
+		fmt.Fprintf(&b, "$ LBR90W %d\n", i)
+	}
+	b.WriteString(`$ SHOW SYMBOL $STATUS
 $ !
 $ ! Part C: the libraries as LIBRARY sees them, and LIBRARY's own to
 $ ! compare with them.
@@ -2757,8 +2839,9 @@ $ LIBRARY/LIST/FULL/HISTORY/TEXT W2L
 $ LIBRARY/LIST/FULL/HELP W10
 $ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:W10 WALPHA...
 $ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:W10 WALPHA2
-$ LIBRARY/CREATE/HELP W10L W10
 $ LIBRARY/LIST/FULL/HELP W10L
+$ LIBRARY/LIST/FULL/HELP W10T
+$ HELP/NOPROMPT/NOUSERLIBRARY/LIBRARY=H90DIR:W10T WALPHA...
 $ LIBRARY/LIST/FULL/MACRO W11
 $ LIBRARY/EXTRACT=WMAC/OUTPUT=SYS$OUTPUT/MACRO W11
 $ LIBRARY/LIST/FULL/NAMES/OBJECT W12

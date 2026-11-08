@@ -189,7 +189,7 @@ volume, `help90w-exchange.dsk`. Its files:
 
 | File | What it holds |
 | ---- | ------------- |
-| `lbr90w.mar` | 34 cases calling the LBR$ routines to write libraries of every kind, each case on a library of its own (W1 to W16), most read back after: the definitions round 1 didn't print and every LBR$_ status's message; an empty text library with the manual's create options; modules written, keyed, replaced, and deleted (PUT_RECORD, PUT_END, INSERT_KEY, REPLACE_KEY, DELETE_KEY, DELETE_DATA, and what a new module takes of the space freed); keys' errors and edges (duplicates, case, bad and zero RFAs, two keys on one module, keys of 31 and 32 characters, an empty key, empty and over-long records); INSERT_KEY and DELETE_KEY inside GET_INDEX's and SEARCH's routines; writing a library opened to read, or not open; history records past LUHMAX and with LUHMAX 0 (PUT_HISTORY, GET_HISTORY); module headers with UHDMAX (SET_MODULE, read and updated, dumped in hex); FLUSH; 126 modules in a scrambled order and a 300-record module; a help library, a macro library, an object library with its symbol index (H90O.OBJ's records), binary keys in a library of a user's type, the VMS V2 format, options all zero, create errors; a library opened twice to update; records with no PUT_END or key; LIBRARY's H90T changed by the routines; LIBRARY's shareable image library H90S read; the NAM block (open by NAM, a related name, the resultant name); and last, 17 control indexes |
+| `lbr90w.mar` | 36 cases calling the LBR$ routines to write libraries of every kind, each case on a library of its own (W1 to W16), most read back after: the definitions round 1 didn't print and every LBR$_ status's message; an empty text library with the manual's create options; modules written, keyed, replaced, and deleted (PUT_RECORD, PUT_END, INSERT_KEY, REPLACE_KEY, DELETE_KEY, DELETE_DATA, and what a new module takes of the space freed); keys' errors and edges (duplicates, case, bad and zero RFAs, two keys on one module, keys of 31 and 32 characters, an empty key, empty and over-long records); INSERT_KEY and DELETE_KEY inside GET_INDEX's and SEARCH's routines; writing a library opened to read, or not open; history records past LUHMAX and with LUHMAX 0 (PUT_HISTORY, GET_HISTORY); module headers with UHDMAX (SET_MODULE, read and updated, dumped in hex); FLUSH; 126 modules in a scrambled order and a 300-record module; a help library (with help casing, W10, and with text casing, W10T, beside LIBRARY's W10L), a macro library, an object library with its symbol index (H90O.OBJ's records), binary keys in a library of a user's type, the VMS V2 format, options all zero, create errors; a library opened twice to update; records with no PUT_END or key; LIBRARY's H90T changed by the routines; LIBRARY's shareable image library H90S read; the NAM block (open by NAM, a related name, the resultant name); and last, 17 control indexes |
 | `help90w.com` | Part A makes what LBR90W reads (H90T, H90O.OBJ, H90OS.EXE and H90S.OLB); part B runs LBR90W; part C lists every library LIBRARY's way, with LIBRARY's own W2L, W10L, and W12L to compare with W2, W10, and W12, HELP on W10, and a LINK against W12; part D is what subtask 3 left of LIBRARY/HELP, each command followed by its `$STATUS` (DUPMODULE, ILLKEYLVL, KEYNAMLNG, NOMTCHFOU, RECTYP, a level-1 key of several words, a file whose first key is level 2, a bad key after good modules, `/EXTRACT` misses in a text library, `/DATA=REDUCE` and `/DATA=EXPAND`); then a save set of the libraries |
 | `one.txt`, `two.txt`, `w10.hlp`, `h90o.mar`, `h90om.mar`, `multi.hlp`, `notfirst.hlp`, `goodbad.hlp` | The input files: W2L's and W10L's modules (the records LBR90W writes for W2 and W10), the object module, the program that links against W12, and part D's help files |
 
@@ -199,10 +199,21 @@ committed once checked as before (`vax/round3/`).
 `lbr90w.mar` was rehearsed on govax (not kept) with stand-in values for the
 names govax's STARLET lacks (`$MHDDEF`, the `CRE$C_` values,
 `LBR$C_MAXRECSIZ`, `LBR$C_FLUSHDATA`, `LBR$C_FLUSHALL`, `MHD$B_USRDAT`): the
-procedure reaches its end, the program assembles, links, and runs all 34
+procedure reaches its end, the program assembles, links, and runs all 36
 cases (the writing routines NOTIMPL), and the handler goes on past each
 failure. On VMS the cases that may wait: the second update OPEN of W2
 retries for 30 seconds before RMS$_FLK.
+
+**The first run (2026-11-08) hung.** Cases 1 to 21 ran; case 22, W10 (a
+help library created with `CRE$C_HLPCASING`), wrote its first module and
+then used CPU for minutes with no I/O in its first `LBR$INSERT_KEY`, and
+was stopped with Ctrl/Y. Its log is local, superseded by the second run.
+So since then `LBR90W n` runs case n alone (the procedure runs each in
+turn, `LBR90W` with no number runs them all), under a timer of two
+minutes whose AST writes `=t timed out after two minutes` and ends the
+image; a hang costs one case, and the procedure goes on. W10T is W10 with
+text casing, to tell whether the casing is the cause, and the program reads
+LIBRARY's own W10L. The second run starts on a fresh exchange volume.
 
 1. Build the exchange volume, from the repository root:
 
