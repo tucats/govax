@@ -23,21 +23,13 @@ const lbr90wCases = 36
 // parts of subtask 11 do (docs/PHASE-90 - VMS help.md): the reason for each.
 // Their output isn't compared yet.
 var lbr90wLater = map[int]string{
-	10: "SEARCH (11c)",
-	12: "SEARCH (11c)",
-	13: "PUT_HISTORY and FLUSH (11c)",
-	14: "PUT_HISTORY and GET_HISTORY (11c)",
-	15: "the history routines (11c)",
-	16: "the history routines (11c)",
-	17: "GET_HISTORY and SET_MODULE (11c), LIBRARY's history records (11e)",
-	19: "FLUSH (11c)",
-	26: "SEARCH and SET_MODULE (11c)",
+	17: "LIBRARY's history records (11e)",
 	27: "binary keys (11d)",
 	28: "the VMS V2 format (11d)",
 	29: "the create options' defaults (11d)",
 	30: "the create options' errors (11d)",
 	31: "a second update open: VMS waited past the timer",
-	33: "PUT_HISTORY (11c)",
+	33: "H90T's history record, LIBRARY's (11e)",
 	35: "the NAM block (11d)",
 }
 
@@ -49,7 +41,7 @@ var lbr90wLater = map[int]string{
 var lbr90wLibraries = []string{
 	"W1.TLB;1", "W1.TLB;2", "W2.TLB;1", "W3.TLB;1", "W4.TLB;1", "W9.TLB;1",
 	"W10.HLB;1", "W10T.HLB;1", "W11.MLB;1", "W16.TLB;1", "WE2.TLB;1", "WE3.TLB;1",
-	"W6.TLB;1", "W7.TLB;1",
+	"W6.TLB;1", "W7.TLB;1", "W5.TLB;1", "W8.TLB;1",
 }
 
 // TestLBR90WOracle runs round 3 of testdata/help90 (LBR90W.MAR, subtask
@@ -145,6 +137,10 @@ func lbr90wCompare(t *testing.T, n int, got, want []string) {
 
 	got, want = lbr90wMaskedLines(got), lbr90wMaskedLines(want)
 
+	if n == lbr90wObjectCase {
+		got, want = lbr90wObjectSize(got), lbr90wObjectSize(want)
+	}
+
 	for i := 0; i < max(len(got), len(want)); i++ {
 		var g, w string
 		if i < len(got) {
@@ -226,6 +222,31 @@ func lbr90wMaskedLines(lines []string) []string {
 		}
 
 		out[i] = line
+	}
+
+	return out
+}
+
+// lbr90wObjectCase is the case that writes H90O.OBJ's records into W12,
+// an object library. govax's MACRO's object isn't VMS's to the byte (its
+// translator record is shorter than "VAX MACRO V5.4-3"), so the records'
+// size and the library's next RFA after them, which follow from it, are
+// masked (lbr90wObjectSize).
+const lbr90wObjectCase = 26
+
+var (
+	lbr90wNextRFA = regexp.MustCompile(`^(   16: (?:[0-9A-F]{8} ){4})[0-9A-F]{8}`)
+	lbr90wBytes   = regexp.MustCompile(`^(  records n=\d+ bytes=)\d+`)
+)
+
+// lbr90wObjectSize masks lbr90wObjectCase's lines that hold the object's
+// size: the header's next RFA offset, and the records' byte count.
+func lbr90wObjectSize(lines []string) []string {
+	out := make([]string, len(lines))
+
+	for i, line := range lines {
+		line = lbr90wNextRFA.ReplaceAllString(line, "${1}(offset)")
+		out[i] = lbr90wBytes.ReplaceAllString(line, "${1}(size)")
 	}
 
 	return out

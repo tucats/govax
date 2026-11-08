@@ -800,9 +800,12 @@ longer ones are RECLNG.
 
 **History.** GET_HISTORY of a new library is EMPTYHIST, of a library with
 LUHMAX 0 NOHISTORY (and PUT_HISTORY there NOHISTORY too). Past LUHMAX the
-oldest records go. GET_HISTORY gives the newest record first, and on the
-probe's own records (text, not LIBRARIAN's form) it fails after the first
-with LIB$_BADBLOSIZ; LIBRARY/LIST/HISTORY of the same library fails with
+oldest records go. (Corrected by subtask 11c, from W5's blocks: GET_HISTORY
+gives the **oldest** record first, and its LIB$_BADBLOSIZ after the first
+of W5's records is the second, an empty record, for which VMS asks LIB$GET_VM
+for 0 bytes, not the records' being text. PUT_HISTORY of a record too long,
+RECLNG, still took the oldest off first, so W5 kept two records after its
+first session.) LIBRARY/LIST/HISTORY of the same library fails with
 FAOFAIL and HISTERR (ACCVIO). LIBRARIAN's own record (H90T) is the
 replacement's time (8 bytes), a word of 1 (the module count), the operation
 (3, replaced), a counted user name (12 bytes, blank-padded), and the
@@ -893,7 +896,7 @@ with the facility's inhibit bit (%X10000001).
     with `LBR$SET_MODULE` taken from (c)); (c)
     the routines Decision 8 left as NOTIMPL: `LBR$SEARCH`, `LBR$SET_MODULE`
     (module headers, `$MHDDEF`; done with (b)), `LBR$GET_HISTORY` and `LBR$PUT_HISTORY`,
-    `LBR$FLUSH`; (d) binary keys in every routine that takes a key, the NAM
+    `LBR$FLUSH` (done 2026-11-08); (d) binary keys in every routine that takes a key, the NAM
     block (`LBR$INI_CONTROL`'s, open by NAM), OPEN's related name and
     resultant name, and the create options' defaults and errors; (e) what
     round 3 shows of DCL's LIBRARY (`/HISTORY`, `/DATA=REDUCE` and
@@ -1612,3 +1615,37 @@ with the facility's inhibit bit (%X10000001).
   against a model (it found the split keeping more than a block holds),
   and `TestUpdaterDeleteData` checks the deleted blocks' list. Subtask 11b
   done.
+- **2026-11-08** — **Subtask 11c, SEARCH, the update history, and FLUSH.**
+  `internal/lbr`'s `history.go` is the update history as W5's and H90T's
+  blocks have it: records in data blocks of their own (record count 0),
+  each a marker word `BA AB`, a length word, and the bytes, packed with no
+  alignment; the header's two RFAs at 0x80 (the oldest record kept) and
+  0x86 (where the next goes), their offsets counted from the block's data
+  (H90T's first record, at byte 6, is offset 0), both 0 until the first
+  record, which takes a new block at the next VBN; LHD$W_NUMLUHREC the
+  count. `Library.UpdateHistory` reads the records oldest first, and
+  `Updater.PutHistory` takes the oldest off when the count is at LUHMAX (by
+  moving the head; the block isn't cleared or given back), then checks the
+  length, then appends. W5's blocks corrected round 3's reading of the
+  log: GET_HISTORY is oldest first, and its BADBLOSIZ is the empty record
+  W5 wrote (VMS asks LIB$GET_VM for 0 bytes for it); RECLNG had cost the
+  oldest record, which is why W5 had two after its first session. A record
+  that doesn't fit its block goes on in a new one, linked (unconfirmed: no
+  case filled a block). `internal/lbrrtl`'s `history.go`: LBR$PUT_HISTORY
+  (LBR$_NORMAL; NOHISTORY with LUHMAX 0; in a library opened to read, nothing
+  written but the library taken for changed, so LBR$FLUSH is WRITEERR and
+  LBR$CLOSE RMS$_FAC, case 13), LBR$GET_HISTORY (EMPTYHIST, NOHISTORY, a
+  routine's failure returned, LIB$_BADBLOSIZ at an empty record),
+  LBR$SEARCH (each key of the index whose RFA is the one asked for, in the
+  index's order, as GET_INDEX calls its routine, UPDURTRAV inside it;
+  KEYNOTFND for none, the manual's, unconfirmed), and LBR$FLUSH (BADPARAM
+  for a block type other than FLUSHDATA or FLUSHALL; otherwise the whole
+  library written now, and a new library's file then written over by
+  LBR$CLOSE rather than made again: W8 has one version). `TestLBR90WOracle`
+  now compares cases 10, 12 to 16, 19, and 26 (the object's size masked in
+  26, `lbr90wObjectSize`: govax's MACRO's H90O.OBJ is 3 bytes shorter), and
+  holds W5 and W8 to VMS's files byte for byte; 17 and 33 wait for 11e
+  (LIBRARY's own history records). `TestUpdateHistoryW5` replays W5 without
+  the console and checks the header's RFAs against VMS's file, and
+  `TestUpdateHistoryBlocks` holds 200 records across blocks to a model.
+  Subtask 11c done.

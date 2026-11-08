@@ -102,6 +102,15 @@ type control struct {
 	file    rms.FileLocation
 	changed bool
 
+	// written says LBR$FLUSH has written a new library's file, which
+	// LBR$CLOSE then writes over rather than making another.
+	written bool
+
+	// unwritable says a routine took a library opened only to read for
+	// changed (LBR$PUT_HISTORY does), so that LBR$FLUSH and LBR$CLOSE fail
+	// to write it, as VMS 7.1's did.
+	unwritable bool
+
 	// traversing is set while LBR$GET_INDEX calls its routine, which may
 	// not change the index (LBR$_UPDURTRAV).
 	traversing bool
@@ -511,6 +520,10 @@ func closeLibrary(env *corevms.Environment, argv []uint32) (uint32, error) {
 		env.FreeVM(c.buffer)
 	}
 
+	if c.unwritable {
+		return rmsFAC, nil
+	}
+
 	if c.upd != nil && c.changed {
 		if err := writeLibrary(env, c); err != nil {
 			return lbrWriteErr, nil
@@ -521,8 +534,9 @@ func closeLibrary(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 // writeLibrary writes a library the routines created or changed: a new
-// one as a new file (a new version, on a volume), a changed one over the
-// old, keeping its version, as LIBRARY writes them.
+// one as a new file (a new version, on a volume), a changed one, or a new
+// one LBR$FLUSH has written before, over the old, keeping its version, as
+// LIBRARY writes them.
 func writeLibrary(env *corevms.Environment, c *control) error {
 	if c.function == funcUpdate {
 		c.upd.SetUpdated(env.Clock())
@@ -536,11 +550,14 @@ func writeLibrary(env *corevms.Environment, c *control) error {
 	}
 
 	write := env.Session.RewriteRecordFile
-	if c.function == funcCreate {
+	if c.function == funcCreate && !c.written {
 		write = env.Session.CreateRecordFile
 	}
 
-	_, err := write(c.file, rms.ImageBlocks, blocks)
+	written, err := write(c.file, rms.ImageBlocks, blocks)
+	if err == nil {
+		c.file = written // with its version, for a later rewrite
+	}
 
 	return err
 }
