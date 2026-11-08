@@ -1,28 +1,57 @@
 package vmsdef
 
 // lbrMessages are the LBR facility's messages (the librarian's, LBRSHR.EXE's
-// LBR$_ conditions), keyed as Messages is, without the severity bits. Each text
-// is one VMS 7.1 showed: $GETMSG's for the statuses testdata/help90's LBR90.MAR
-// printed (round 1b's log, part E), and LIBRARY's and HELP's messages in the
-// probe's other logs (INVKEY, LKPNOTDON, DUPKEY, INVRFA). The condition values
-// themselves are LBRSHR's universal symbols (ImageSymbols). The others' texts
-// aren't known, and $GETMSG shows them as NOMSG, as it would on a VMS without
-// the librarian's messages.
+// LBR$_ conditions), keyed as Messages is, without the severity bits. Each
+// text is the one VMS 7.1's $GETMSG gave for the status: testdata/help90's
+// round 3 printed every LBR$_ status (LBR90W.MAR's first case,
+// vax/round3/help90w.log). The condition values themselves are LBRSHR's
+// universal symbols (ImageSymbols).
 var lbrMessages = map[uint32]Message{
 	0x00268000: {Facility: "LBR", Ident: "NORMAL", Text: "success"},
+	0x00268008: {Facility: "LBR", Ident: "KEYINDEX", Text: "key already in index"},
+	0x00268010: {Facility: "LBR", Ident: "KEYINS", Text: "key being inserted"},
+	0x00268018: {Facility: "LBR", Ident: "OLDLIBRARY", Text: "old format library opened"},
+	0x00268400: {Facility: "LBR", Ident: "NOHISTORY", Text: "library has no update history"},
+	0x00268408: {Facility: "LBR", Ident: "EMPTYHIST", Text: "library update history is empty"},
+	0x00268800: {Facility: "LBR", Ident: "HDRTRUNC", Text: "header truncated"},
+	0x00268808: {Facility: "LBR", Ident: "NOUPDHIST", Text: "no update history found"},
+	0x00268810: {Facility: "LBR", Ident: "NULIDX", Text: "index is empty"},
+	0x00268818: {Facility: "LBR", Ident: "OLDMISMCH", Text: "old format library type mismatch"},
+	0x00268820: {Facility: "LBR", Ident: "RECTRUNC", Text: "record truncated"},
+	0x00268828: {Facility: "LBR", Ident: "STILLKEYS", Text: "keys still point at data"},
 	0x00268830: {Facility: "LBR", Ident: "TYPMISMCH", Text: "library type mismatch"},
 	0x00268838: {Facility: "LBR", Ident: "NOMTCHFOU", Text: "no match found"},
+	0x00268840: {Facility: "LBR", Ident: "ERRCLOSE", Text: "Error occurred during a previous write to library"},
+	0x00268848: {Facility: "LBR", Ident: "ENDTOPIC", Text: "Request LBR$OUTPUT_HELP terminate printing"},
+	0x00269000: {Facility: "LBR", Ident: "ALLWRNGBLK", Text: "wrong block allocated; contact a Digital support representative."},
 	0x00269008: {Facility: "LBR", Ident: "DUPKEY", Text: "duplicate key in index"},
 	0x00269010: {Facility: "LBR", Ident: "ILLCTL", Text: "illegal control index"},
+	0x00269018: {Facility: "LBR", Ident: "ILLCREOPT", Text: "illegal create options"},
 	0x00269020: {Facility: "LBR", Ident: "ILLIDXNUM", Text: "illegal index number"},
+	0x00269028: {Facility: "LBR", Ident: "ILLFMT", Text: "illegal library format"},
+	0x00269030: {Facility: "LBR", Ident: "ILLFUNC", Text: "illegal library function"},
+	0x00269038: {Facility: "LBR", Ident: "ILLOP", Text: "illegal operation for access requested"},
+	0x00269040: {Facility: "LBR", Ident: "ILLTYP", Text: "illegal library type"},
 	0x00269048: {Facility: "LBR", Ident: "INVKEY", Text: "invalid key"},
 	0x00269050: {Facility: "LBR", Ident: "INVNAM", Text: "invalid NAM block"},
 	0x00269058: {Facility: "LBR", Ident: "INVRFA", Text: "invalid RFA"},
 	0x00269060: {Facility: "LBR", Ident: "KEYNOTFND", Text: "key not found"},
 	0x00269068: {Facility: "LBR", Ident: "LIBNOTOPN", Text: "library not open"},
 	0x00269070: {Facility: "LBR", Ident: "LKPNOTDON", Text: "lookup has not been done"},
+	0x00269078: {Facility: "LBR", Ident: "LIBOPN", Text: "library already open"},
+	0x00269080: {Facility: "LBR", Ident: "NOFILNAM", Text: "no file specification found"},
+	0x00269088: {Facility: "LBR", Ident: "NOHLPTXT", Text: "help text not found"},
 	0x00269090: {Facility: "LBR", Ident: "NOTHLPLIB", Text: "not a HELP library"},
+	0x00269098: {Facility: "LBR", Ident: "RECLNG", Text: "illegal record length"},
+	0x002690A0: {Facility: "LBR", Ident: "REFCNTZERO", Text: "module reference count zero"},
+	0x002690A8: {Facility: "LBR", Ident: "RFAPASTEOF", Text: "VBN in map block request past EOF; contact a Digital support representative."},
+	0x002690B0: {Facility: "LBR", Ident: "TOOMNYLIB", Text: "too many libraries open"},
+	0x002690B8: {Facility: "LBR", Ident: "UPDURTRAV", Text: "index update during traverse illegal"},
+	0x002690C0: {Facility: "LBR", Ident: "BADPARAM", Text: "bad parameter"},
+	0x002690C8: {Facility: "LBR", Ident: "INTRNLERR", Text: "LBR internal error; contact a Digital support representative."},
+	0x002690D0: {Facility: "LBR", Ident: "WRITEERR", Text: "error writing library"},
 	0x002690D8: {Facility: "LBR", Ident: "ILLOUTROU", Text: "output routine improperly specified or missing"},
+	0x002690E0: {Facility: "LBR", Ident: "ILLOUTWID", Text: "output width improperly specified or missing"},
 	0x002690E8: {Facility: "LBR", Ident: "ILLINROU", Text: "input routine improperly specified or missing"},
 	0x002690F0: {Facility: "LBR", Ident: "TOOMNYARG", Text: "too many arguments"},
 	0x002690F8: {Facility: "LBR", Ident: "USRINPERR", Text: "user input routine returned error status"},

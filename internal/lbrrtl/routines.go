@@ -38,8 +38,8 @@ type Routine struct {
 }
 
 // Routines are the routines this package provides: those that read a
-// library (docs/PHASE-90 - VMS help.md, Decision 8). The transfer vector's
-// other entries, the writing routines among them, signal NOTIMPL.
+// library (docs/PHASE-90 - VMS help.md, Decision 8) and those that write
+// one (subtask 11). The transfer vector's other entries signal NOTIMPL.
 var Routines = []Routine{
 	{Name: "LBR$INI_CONTROL", Fn: iniControl},
 	{Name: "LBR$OPEN", Fn: open},
@@ -55,6 +55,13 @@ var Routines = []Routine{
 	{Name: "LBR$GET_HELP", Fn: getHelp, CallsBack: true},
 	{Name: "LBR$OUTPUT_HELP", Fn: outputHelp, CallsBack: true},
 	{Name: "LBR$RET_RMSSTV", Fn: retRMSSTV},
+	{Name: "LBR$PUT_RECORD", Fn: putRecord},
+	{Name: "LBR$PUT_END", Fn: putEnd},
+	{Name: "LBR$INSERT_KEY", Fn: insertKey},
+	{Name: "LBR$DELETE_KEY", Fn: deleteKey},
+	{Name: "LBR$REPLACE_KEY", Fn: replaceKey},
+	{Name: "LBR$DELETE_DATA", Fn: deleteData},
+	{Name: "LBR$SET_MODULE", Fn: setModule},
 }
 
 // dataCells are the transfer vector's data: two longwords a program may

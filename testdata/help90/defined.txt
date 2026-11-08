@@ -4,7 +4,11 @@
 #
 #   - VMS 7.1's own values, printed by LBR90.MAR's first case
 #     (vax/round1b/help90.log, "#1 definitions"): LBR$C_CREATE to
-#     LBR$C_TYP_SHSTB, and every HLP$M_ name.
+#     LBR$C_TYP_SHSTB, and every HLP$M_ name; and round 3's first case
+#     (vax/round3/help90w.log, subtask 11): the CRE$C_ values,
+#     LBR$C_MAXRECSIZ, LBR$C_FLUSHDATA, LBR$C_FLUSHALL, and MHD$B_USRDAT
+#     (the librarian's module header; the object language's MHD$ names
+#     are another family's, which $MHDDEF doesn't define).
 #   - The OpenVMS Utility Routines Manual (V7.3), chapter 12: the library
 #     types it adds (LBR$C_TYP_NCS to LBR$C_TYP_USRHI); LBR$OPEN's create
 #     options array (CRE$, "Offset in Longwords" times 4); and
@@ -15,6 +19,11 @@
 # symbols (vmsdef.ImageSymbols), which LINK resolves.
 
 # $CREDEF
+CRE$C_HLPCASING = 0x6
+CRE$C_MACTXTCAS = 0x0
+CRE$C_OBJCASING = 0x3
+CRE$C_VMSV2 = 0x2
+CRE$C_VMSV3 = 0x3
 CRE$L_ALLOC = 0x8
 CRE$L_ENTALL = 0x14
 CRE$L_IDXMAX = 0xc
@@ -38,6 +47,9 @@ HLP$M_SYSTEM = 0x8
 
 # $LBRDEF
 LBR$C_CREATE = 0x0
+LBR$C_FLUSHALL = 0x0
+LBR$C_FLUSHDATA = 0x1
+LBR$C_MAXRECSIZ = 0x800
 LBR$C_READ = 0x1
 LBR$C_TYP_EOBJ = 0x7
 LBR$C_TYP_ESHSTB = 0x8
@@ -75,3 +87,6 @@ LHI$L_TYPE = 0x0
 LHI$L_UPDHIS = 0x40
 LHI$L_UPDTIM = 0x38
 LHI$T_LBRVER = 0x10
+
+# $MHDDEF
+MHD$B_USRDAT = 0x10

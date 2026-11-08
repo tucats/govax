@@ -143,10 +143,6 @@ func getHelp(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// lbrInvKey is LBR$_INVKEY: a key the librarian can't look up (a comma in
-// the first one, help.ErrInvalidKey).
-const lbrInvKey = 0x0026904A
-
 // helpKeys reads LBR$GET_HELP's key descriptors, up to the first that ends
 // the list.
 func helpKeys(env *corevms.Environment, keys []uint32) ([]string, error) {
@@ -422,7 +418,7 @@ const (
 // its file's name, without device, directory, type, or version (H90B for
 // H90DIR:H90B).
 func openHelpLibrary(env *corevms.Environment, spec string) (help.Library, string, error) {
-	data, name, err := readLibraryFile(env.Session, spec, "SYS$HELP:.HLB")
+	data, found, err := readLibraryFile(env.Session, spec, "SYS$HELP:.HLB")
 	if err != nil {
 		return nil, "", err
 	}
@@ -436,7 +432,7 @@ func openHelpLibrary(env *corevms.Environment, spec string) (help.Library, strin
 		return nil, "", errors.New("lbrrtl: not a help library")
 	}
 
-	return help.NewLBRLibrary(lib), fileName(name), nil
+	return help.NewLBRLibrary(lib), fileName(found.Name), nil
 }
 
 // fileName is a file specification's name alone.

@@ -2,7 +2,9 @@
 // (.OLB), shareable image symbol table libraries (IMAGELIB.OLB), macro
 // libraries (.MLB), help libraries (.HLB), and text libraries (.TLB) all
 // share one format (docs/PHASE-30.md, subtask 3; the writer is
-// docs/PHASE-28.md's subtask 6, write.go and input.go). It reads a library
+// docs/PHASE-28.md's subtask 6, write.go and input.go, and update.go's
+// Updater changes a library in place for the LBR$ routines, docs/PHASE-90
+// - VMS help.md's subtask 11). It reads a library
 // from its bytes and writes one as bytes; callers find, read, and write
 // the file. It imports only internal/obj, to read object modules' names
 // and symbols, internal/vmsimage, to read a shareable image's global
@@ -583,4 +585,24 @@ func counted(b []byte) string {
 	n := min(int(b[0]), len(b)-1)
 
 	return string(b[1 : 1+n])
+}
+
+// HeaderBytes returns the bytes of the module header at rfa, as
+// LBR$SET_MODULE gives them: ErrPastEOF for an RFA past the file's end,
+// ErrNoRecord for one where no module header is.
+func (l *Library) HeaderBytes(rfa RFA) ([]byte, error) {
+	if int64(rfa.VBN)*blockSize > int64(len(l.data)) {
+		return nil, ErrPastEOF
+	}
+
+	if rfa.VBN <= 1 {
+		return nil, ErrNoRecord
+	}
+
+	b, _, err := l.readRecord(rfa)
+	if err != nil || len(b) != mhdLen+l.mhdUserSize || b[1] != mhdID {
+		return nil, ErrNoRecord
+	}
+
+	return append([]byte(nil), b...), nil
 }

@@ -747,7 +747,13 @@ never had.
   in parts (a) to (e); 11a (done 2026-11-08) is round 3 of the probe,
   `testdata/help90`'s `lbr90w.mar` and `help90w.com` (its README's round 3
   section; each case a timed run of its own), run on VMS 7.1, its log and
-  save set in `vax/round3/` and its answers in the phase doc's "Round 3".
+  save set in `vax/round3/` and its answers in the phase doc's "Round 3";
+  11b (done 2026-11-08) is the writing routines and LBR$SET_MODULE
+  (`internal/lbrrtl/write.go`) over `internal/lbr`'s `Updater`
+  (`update.go`: a library changed in place, block by block, as VMS's
+  LBRSHR changes it), LBR$OPEN's create and update and LBR$CLOSE writing
+  the file, held by `TestLBR90WOracle` (each case `LBR90W n`; the
+  libraries VMS's byte for byte) and `lbr`'s `TestUpdaterW9`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1947,15 +1953,18 @@ expect adjustment as phases land):
 - `internal/lbrrtl` — LBRSHR.EXE's routines (Phase 90, subtask 10), beside
   `internal/mthrtl`: a stub for each entry of LBRSHR's vector (5 bytes
   apart; code 5000 plus the offset; the data cells LBR$GL_CONTROL and
-  LBR$GL_RMSSTV a longword of 0), NOTIMPL for the writing routines.
+  LBR$GL_RMSSTV a longword of 0), NOTIMPL for those it lacks.
   `control.go` is the control indexes (Go state per image), OPEN (a
-  library read whole through RMS's name rules, reading only), CLOSE,
+  library read whole through RMS's name rules; one to create or update an
+  `lbr.Updater`), CLOSE (writing it back, `writeLibrary`),
   GET_HEADER (`lbr.Library.HeaderInfo`), SET_INDEX, the modes, and
   RET_RMSSTV; `records.go` LOOKUP_KEY and GET_INDEX (`lbr.Index.Find` and
   `Select`, the two case rules), FIND, GET_RECORD, and `callWith` (a
   callback's arguments below SP); `help.go` GET_HELP (`help.Lookup` and
   `help.Lines`) and OUTPUT_HELP (a `help.Session` over the program's
-  output and input routines). Strings through `librtl/export.go`.
+  output and input routines); `write.go` the writing routines and
+  SET_MODULE (subtask 11b), each on the control's `lbr.Updater`.
+  Strings through `librtl/export.go`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s
@@ -2179,6 +2188,10 @@ expect adjustment as phases land):
   shareable image (its GST's header and end records, its ident, its
   universal symbols); LINK searches such libraries by name and through
   LNK$LIBRARY (`internal/dclcmd/userlib.go`, `/[NO]USERLIBRARY`).
+  Phase 90: `update.go`'s `Updater` changes a library in place, call by
+  call, for the LBR$ writing routines (`internal/lbrrtl`), its blocks as
+  VMS 7.1's LBRSHR leaves them (B-tree splits, index blocks between data
+  blocks, deleted blocks' list).
 - `internal/backup` — VMS BACKUP save sets (Phase 69): a leaf package
   (standard library only). `Read` takes any `io.ReaderAt` (a volume
   file or a host file), the block size from the first block's header;

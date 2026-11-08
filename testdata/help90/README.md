@@ -250,7 +250,12 @@ part B of `vax/round1b/help90.log` and to `vax/round2/help90c.log`
 VMS's HELPLIB.HLB copied beside it (the test's comment says how); it
 skips without them. `TestHelp90Prompting` holds HELP's prompting to
 part D and round 1c's chain, and `TestHelp90Terminal` to round 2's
-terminal session (subtask 5).
+terminal session (subtask 5). The console's `TestLBR90WOracle` runs round 3's
+cases on govax, each as `LBR90W n`, and holds their output to
+`vax/round3/help90w.log` and the libraries they made to `h90w.bck`'s, byte
+for byte but for times (subtask 11b; the cases later parts of subtask 11
+finish are listed in the test, with why); `internal/lbr`'s `TestUpdaterW9`
+makes W9 again without the console.
 
 ## What the run settles
 

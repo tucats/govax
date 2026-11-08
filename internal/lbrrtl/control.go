@@ -21,6 +21,8 @@ const (
 	rmsFNF   = 0x00018292 // RMS$_FNF
 	ssNoFile = 0x00000910 // SS$_NOSUCHFILE, RMS$_FNF's status value
 
+	rmsFLK   = 0x0001828A // RMS$_FLK
+
 	lbrNormal    = 0x00268001
 	lbrNulIdx    = 0x00268810
 	lbrRecTrunc  = 0x00268820
@@ -43,6 +45,17 @@ const (
 	lbrIllInRou  = 0x002690EA
 	lbrTooMnyArg = 0x002690F2
 	lbrUsrInpErr = 0x002690FA
+
+	// The writing routines' statuses (round 3's definitions).
+	lbrDupKey     = 0x0026900A
+	lbrIllCreOpt  = 0x0026901A
+	lbrIllOp      = 0x0026903A
+	lbrInvKey     = 0x0026904A
+	lbrRecLng     = 0x0026909A
+	lbrRFAPastEOF = 0x002690AA
+	lbrUpdurTrav  = 0x002690BA
+	lbrWriteErr   = 0x002690D2
+	lbrStillKeys  = 0x00268828
 )
 
 // The library functions LBR$INI_CONTROL takes (LBR$C_CREATE, LBR$C_READ,
@@ -77,6 +90,31 @@ type control struct {
 	records [][]byte
 	next    int
 	looked  bool
+
+	// lastModule is the records of the module last read, which a lookup of
+	// a key whose module can't be read gives again (readModule).
+	lastModule [][]byte
+
+	// upd is the library being created or changed (LBR$C_CREATE or
+	// LBR$C_UPDATE), written back to file by LBR$CLOSE; nil when it's
+	// only read. changed says a routine has changed it.
+	upd     *lbr.Updater
+	file    rms.FileLocation
+	changed bool
+
+	// traversing is set while LBR$GET_INDEX calls its routine, which may
+	// not change the index (LBR$_UPDURTRAV).
+	traversing bool
+}
+
+// refresh reads the library again after a routine changed it, so that the
+// reading routines see the change.
+func (c *control) refresh() {
+	c.changed = true
+
+	if lib, err := c.upd.Library(); err == nil {
+		c.lib, c.help = lib, nil
+	}
 }
 
 // state is one image's control indexes, and the RMS status value of its
@@ -203,9 +241,10 @@ func iniControl(env *corevms.Environment, argv []uint32) (uint32, error) {
 //     type (VMS 7.1's was 3 for a help library opened as text,
 //     unconfirmed why).
 //
-// Only reading is govax's yet: LBR$C_CREATE and LBR$C_UPDATE are the
-// writing routines' (subtask 11), and signal NOTIMPL. The related name
-// (rlfna) isn't used.
+// A library opened to create is made in memory from the create options
+// (createOptions) and written as a new file by LBR$CLOSE; one opened to
+// update is read whole and written back over itself (subtask 11, round
+// 3). The related name (rlfna) isn't used.
 func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 	c, n, err := controlAt(env, arg(argv, 0))
 	if err != nil {
@@ -216,8 +255,10 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return lbrLibOpn, nil
 	}
 
-	if c.function != funcRead {
-		return librtl.NotImplemented("LBR$OPEN of a library to create or update")(env, argv)
+	st := stateOf(env)
+
+	if c.function == funcCreate {
+		return openCreate(env, argv, c, n)
 	}
 
 	if arg(argv, 1) == 0 {
@@ -237,10 +278,9 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	st := stateOf(env)
-	data, name, readErr := readLibraryFile(env.Session, spec, dns)
+	data, found, readErr := readLibraryFile(env.Session, spec, dns)
 
-	if r, err := resultName(env, argv, name); err != nil || r != 0 {
+	if r, err := resultName(env, argv, found.Name); err != nil || r != 0 {
 		return r, err
 	}
 
@@ -249,6 +289,18 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 		st.stv = ssNoFile
 
 		return rmsFNF, nil
+	}
+
+	// A library another control index has open to update is locked
+	// (VMS 7.1 waited for it, past the probe's two minutes).
+	if c.function == funcUpdate {
+		for _, o := range st.controls {
+			if o.upd != nil && strings.EqualFold(o.file.Name, found.Name) {
+				delete(st.controls, n)
+
+				return rmsFLK, nil
+			}
+		}
 	}
 
 	lib, err := lbr.Open(data)
@@ -261,11 +313,133 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	c.lib, c.index, st.stv = lib, 1, 0
 
+	if c.function == funcUpdate {
+		if c.upd, err = lbr.OpenUpdater(data); err != nil {
+			delete(st.controls, n)
+
+			return lbrIllFmt, nil
+		}
+
+		c.upd.Now, c.file = env.Clock, found
+	}
+
 	if c.typ != lbr.TypeUnknown && c.typ != lib.Type {
 		st.stv = uint32(lib.Type)
 
 		return lbrTypMismch, nil
 	}
+
+	return lbrNormal, nil
+}
+
+// The create options' longwords (the manual's CRE$ block, round 3's
+// definitions).
+const (
+	creType   = 0x00
+	creKeyLen = 0x04
+	creIdxMax = 0x0C
+	creUhdMax = 0x10
+	creEntAll = 0x14
+	creLuhMax = 0x18
+	creVerTyp = 0x1C
+	creIdxOpt = 0x20
+
+	creVMSV3 = 3 // CRE$C_VMSV3
+)
+
+// openCreate is LBR$OPEN of a library to create: the create options read
+// (LBR$_ILLCREOPT without them, or with values out of range, the control
+// index then gone as it is for a missing file), the new library made in
+// memory, and its file's name, fns with dns's defaults, kept for
+// LBR$CLOSE. The type is the options', whatever LBR$INI_CONTROL said
+// (round 3's WE2). Only the V3 format is govax's: CRE$C_VMSV2 signals
+// NOTIMPL.
+func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (uint32, error) {
+	st := stateOf(env)
+
+	if arg(argv, 2) == 0 {
+		delete(st.controls, n)
+
+		return lbrIllCreOpt, nil
+	}
+
+	var cre [9]uint32
+
+	for i := range cre {
+		v, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 2)+uint32(4*i))
+		if err != nil {
+			return librtl.MemoryFault(env, err)
+		}
+
+		cre[i] = v
+	}
+
+	if cre[creVerTyp/4] != creVMSV3 {
+		return librtl.NotImplemented("LBR$OPEN of a library in the VMS V2 format")(env, argv)
+	}
+
+	if arg(argv, 1) == 0 {
+		delete(st.controls, n)
+
+		return lbrNoFilNam, nil
+	}
+
+	spec, err := librtl.ReadString(env, arg(argv, 1))
+	if err != nil {
+		return librtl.StringFailure(env, err)
+	}
+
+	var dns string
+
+	if arg(argv, 3) != 0 {
+		if dns, err = librtl.ReadString(env, arg(argv, 3)); err != nil {
+			return librtl.StringFailure(env, err)
+		}
+	}
+
+	loc, err := env.Session.Locate(spec, false)
+	if err != nil {
+		delete(st.controls, n)
+
+		return lbrNoFilNam, nil
+	}
+
+	if typ := strings.TrimPrefix(path.Ext(dns), "."); typ != "" {
+		loc = loc.WithDefaultType(strings.ToUpper(typ))
+	}
+
+	now := env.Clock()
+
+	u, err := lbr.NewUpdater(lbr.UpdateOptions{
+		Type:      lbr.Type(cre[creType/4]),
+		KeyLength: int(cre[creKeyLen/4]),
+		Indexes:   int(cre[creIdxMax/4]),
+		UserData:  int(cre[creUhdMax/4]),
+		Entries:   int(cre[creEntAll/4]),
+		History:   int(cre[creLuhMax/4]),
+		IndexOpts: int(cre[creIdxOpt/4]),
+		Librarian: lbr.LibrarianName,
+		Created:   now,
+	})
+	if err != nil {
+		delete(st.controls, n)
+
+		return lbrIllCreOpt, nil
+	}
+
+	lib, err := u.Library()
+	if err != nil {
+		delete(st.controls, n)
+
+		return lbrIllCreOpt, nil
+	}
+
+	if r, err := resultName(env, argv, loc.Name); err != nil || r != 0 {
+		return r, err
+	}
+
+	u.Now = env.Clock
+	c.lib, c.upd, c.file, c.index, c.changed, st.stv = lib, u, loc, 1, true, 0
 
 	return lbrNormal, nil
 }
@@ -292,10 +466,10 @@ func resultName(env *corevms.Environment, argv []uint32, name string) (uint32, e
 // readLibraryFile reads the file spec names, with dns's defaults: on a
 // volume through RMS's name processing (logical names, search lists), or a
 // host file with dns's type if it has none. It returns the file's bytes and
-// its name, or the name it tried with an error.
-func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, string, error) {
+// its place, or the name it tried with an error.
+func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, rms.FileLocation, error) {
 	if s == nil {
-		return nil, spec, errors.New("lbrrtl: no files")
+		return nil, rms.FileLocation{Name: spec}, errors.New("lbrrtl: no files")
 	}
 
 	loc, err := s.Locate(spec, false)
@@ -303,7 +477,7 @@ func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, string, error) {
 	if err != nil || !loc.Host {
 		found, tried, ferr := s.FindImageFile(spec, dns)
 		if ferr != nil {
-			return nil, tried, ferr
+			return nil, rms.FileLocation{Name: tried}, ferr
 		}
 
 		loc = found
@@ -313,10 +487,10 @@ func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, string, error) {
 
 	data, found, err := s.ReadRawFile(loc)
 	if err != nil {
-		return nil, loc.Name, err
+		return nil, loc, err
 	}
 
-	return data, found.Name, nil
+	return data, found, nil
 }
 
 // closeLibrary is LBR$CLOSE library_index: the library closed and its
@@ -337,7 +511,38 @@ func closeLibrary(env *corevms.Environment, argv []uint32) (uint32, error) {
 		env.FreeVM(c.buffer)
 	}
 
+	if c.upd != nil && c.changed {
+		if err := writeLibrary(env, c); err != nil {
+			return lbrWriteErr, nil
+		}
+	}
+
 	return lbrNormal, nil
+}
+
+// writeLibrary writes a library the routines created or changed: a new
+// one as a new file (a new version, on a volume), a changed one over the
+// old, keeping its version, as LIBRARY writes them.
+func writeLibrary(env *corevms.Environment, c *control) error {
+	if c.function == funcUpdate {
+		c.upd.SetUpdated(env.Clock())
+	}
+
+	data := c.upd.Bytes()
+
+	blocks := make([][]byte, 0, len(data)/512)
+	for i := 0; i < len(data); i += 512 {
+		blocks = append(blocks, data[i:i+512])
+	}
+
+	write := env.Session.RewriteRecordFile
+	if c.function == funcCreate {
+		write = env.Session.CreateRecordFile
+	}
+
+	_, err := write(c.file, rms.ImageBlocks, blocks)
+
+	return err
 }
 
 // getHeader is LBR$GET_HEADER library_index, retary: the library's header

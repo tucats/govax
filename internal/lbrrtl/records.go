@@ -67,14 +67,28 @@ func find(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return readModule(c, lbr.RFA{VBN: vbn, Offset: offset})
 }
 
-// readModule makes the module at rfa c's records to read.
+// readModule makes the module at rfa c's records to read. A module that
+// can't be read is LBR$_INVRFA, unless one was read before: then, as VMS
+// 7.1's LBR$LOOKUP_KEY did for keys with bad RFAs (round 3's W4), the
+// lookup succeeds and the records are that module's again, from its
+// start.
 func readModule(c *control, rfa lbr.RFA) (uint32, error) {
 	m, err := c.lib.Module(rfa)
 	if err != nil {
-		return lbrInvRFA, nil
+		if c.lastModule == nil {
+			return lbrInvRFA, nil
+		}
+
+		c.records, c.next, c.looked = c.lastModule, 0, true
+
+		return ssNormal, nil
 	}
 
-	c.records, c.next, c.looked = m.Records, 0, true
+	if c.upd != nil {
+		c.upd.NoteRead(rfa)
+	}
+
+	c.records, c.next, c.looked, c.lastModule = m.Records, 0, true, m.Records
 
 	return ssNormal, nil
 }
@@ -216,6 +230,9 @@ func getIndex(env *corevms.Environment, argv []uint32) (uint32, error) {
 			return lbrNoMtchFou, nil
 		}
 	}
+
+	c.traversing = true
+	defer func() { c.traversing = false }()
 
 	for _, k := range keys {
 		rfa := make([]byte, 8)

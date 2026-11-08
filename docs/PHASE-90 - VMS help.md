@@ -888,9 +888,11 @@ with the facility's inhibit bit (%X10000001).
     writing routines (`LBR$PUT_RECORD`, `LBR$PUT_END`, `LBR$INSERT_KEY`,
     `LBR$REPLACE_KEY`, `LBR$DELETE_KEY`, `LBR$DELETE_DATA`) and OPEN's
     `LBR$C_CREATE` and `LBR$C_UPDATE`, through `internal/lbr`'s Builder, on
-    every kind of library, the libraries VMS's to the byte but for times; (c)
+    every kind of library, the libraries VMS's to the byte but for times
+    (done 2026-11-08, through an `lbr.Updater` rather than the Builder, and
+    with `LBR$SET_MODULE` taken from (c)); (c)
     the routines Decision 8 left as NOTIMPL: `LBR$SEARCH`, `LBR$SET_MODULE`
-    (module headers, `$MHDDEF`), `LBR$GET_HISTORY` and `LBR$PUT_HISTORY`,
+    (module headers, `$MHDDEF`; done with (b)), `LBR$GET_HISTORY` and `LBR$PUT_HISTORY`,
     `LBR$FLUSH`; (d) binary keys in every routine that takes a key, the NAM
     block (`LBR$INI_CONTROL`'s, open by NAM), OPEN's related name and
     resultant name, and the create options' defaults and errors; (e) what
@@ -1530,3 +1532,83 @@ with the facility's inhibit bit (%X10000001).
   waiting at two minutes). The log and save set are in `vax/round3/`, our
   own text but VMS's messages and listings; "What the probe settled" has
   round 3's answers. Subtask 11a done.
+- **2026-11-08** — **Subtask 11b, the writing routines.** `internal/lbr`'s
+  `Updater` (`update.go`) changes a library's blocks in place, call by
+  call, as VMS 7.1's LBRSHR did; the Builder, which lays a whole library
+  out at once, couldn't make the files round 3's calls made (W9's index
+  blocks taken between its data blocks, W2's two sessions' unlinked
+  blocks, W4's keys with bad RFAs). `internal/lbrrtl`'s `write.go` is
+  LBR$PUT_RECORD, PUT_END, INSERT_KEY, DELETE_KEY, REPLACE_KEY,
+  DELETE_DATA, and SET_MODULE (taken from 11c: most cases dump a module
+  header with it); LBR$OPEN's `LBR$C_CREATE` makes the library from the
+  create options in memory and LBR$CLOSE writes it as a new file, and
+  `LBR$C_UPDATE` reads it whole and writes it back over itself, as LIBRARY
+  does. Round 3's definitions are in `testdata/help90/defined.txt`
+  (`CRE$C_`, `LBR$C_MAXRECSIZ`, the FLUSH codes, and `$MHDDEF`'s
+  `MHD$B_USRDAT`, which is the librarian's module header's, not the object
+  language's MHD$ family), so govax's STARLET has them, and every LBR$_
+  status's text is in `vmsdef/lbrmessages.go`, from case 1's `$GETMSG`s.
+  What the libraries showed, now the Updater's rules:
+  - **Data.** Records are written as LIBRARY writes them (a length word,
+    word-aligned, running on into a new block, linked, which the next VBN
+    gives), a module's header written by its first record and counted in
+    LHD$L_MODHDRS. A session starts its data in a new block, not linked to
+    the last, unless the block at the header's next RFA is the data block
+    a routine last read (W3's update, after LOOKUP_KEY and DELETE_DATA read
+    block 9, went on at 9,146; W2's, after only GET_HEADER, started block
+    10; unconfirmed beyond these two). An end of module with no records
+    starts a new block (W4's two).
+  - **Index blocks** come from the free list the library was created with,
+    then from the next VBN, between data blocks (W9: 7, 8, 11, 14). A leaf
+    whose entries would pass 494 bytes splits: it keeps the entries up to
+    the one that takes it past 70% of their bytes, as many as fit, and the
+    new block, taken next, gets the rest; a root that splits gets a new
+    root after it. W9's 11-byte entries (44 fit, the 45th split them 32
+    and 13) are all that settles it: the limit and the share are
+    unconfirmed for other key lengths. VMS doesn't clear a block past its
+    entries: the whole list is written before the split shortens the
+    count, so W9's block 2 still holds K062 past its 44 entries. A block
+    written with fewer entries (a deletion) keeps its old tail too
+    (unconfirmed).
+  - **Keys** are cut at their first blank and upper-cased unless the index
+    keeps case (IDD$V_NOCASENTR; the create options' IDXOPT goes into the
+    index flags three bits up: CRE$C_HLPCASING's 0x35, CRE$C_OBJCASING's
+    0x1D, and 5 for CRE$C_MACTXTCAS), compared upper-cased if
+    IDD$V_UPCASNTRY. A key longer than the index descriptor's length (the
+    options' KEYLEN plus 1: W4's 32-character key went into KEYLEN 31) is
+    INVKEY (unconfirmed past 32), as is an empty one. INSERT_KEY enters
+    the key, counts it in LHD$L_IDXCNT (and MODCNT for index 1), then adds
+    1 to the module's reference count: an RFA past the file is RFAPASTEOF,
+    one at no module header RMS$_EOF (block 0 or 1, or no `00 AD` header
+    there), the key left in. REPLACE_KEY of a key not there inserts it; of
+    one pointing elsewhere than the old RFA, INVRFA; otherwise it takes
+    the old module's count before it looks at the new RFA, so W4's failed
+    replacement left X's count at 4 (unconfirmed: the other reading of
+    W4's counts, the absent key's insertion taking the old count too, fits
+    as well).
+  - **DELETE_DATA** is STILLKEYS while the count isn't 0, and otherwise
+    takes each of the module's records off each block's count (a record
+    counts in every block it has bytes in), a block left at 0 going on the
+    deleted blocks' list (LHD$L_FREEVBN through DATA$L_LINK, LHD$L_FREEBLK;
+    H90T's block 13), and takes 1 from MODHDRS. It doesn't know it was done
+    before, so W3's second call took B's records off again. Deleted blocks
+    aren't reused (unconfirmed: no case wrote after one was freed).
+  - **LOOKUP_KEY** of a key whose RFA is no module's succeeds and gives
+    the last module read's records again (W4's NORECS, Y, and ZERO).
+  govax's choices: the library's creator is `govax Librarian`, as LIBRARY
+  writes; a second update open of a library the image has open to update
+  is RMS$_FLK at once, where VMS waited past the probe's two minutes;
+  `CRE$C_VMSV2` is NOTIMPL until 11d. **The tests**: `TestLBR90WOracle`
+  (`internal/console/lbr90w_test.go`) makes part A's libraries, runs each
+  case as `LBR90W n`, and holds its output to VMS's line for line, masking
+  the libraries' times and creator and the module headers' times, in both
+  paging modes; 16 cases wait for 11c to 11e (`lbr90wLater`, each with
+  why). Then 14 libraries are held to VMS's in `h90w.bck` byte for byte
+  but for the same fields: W1 (both versions), W2, W3, W4, W6, W7, W9,
+  W10, W10T, W11, W16, WE2, and WE3; W12 isn't, its module being govax's
+  MACRO's object of H90O. `internal/lbr`'s `TestUpdaterW9` makes W9 again
+  without the console and holds it to VMS's file, `TestUpdaterKeys` runs
+  2,000 random insertions and deletions of keys of 2 to 101 characters
+  against a model (it found the split keeping more than a block holds),
+  and `TestUpdaterDeleteData` checks the deleted blocks' list. Subtask 11b
+  done.
