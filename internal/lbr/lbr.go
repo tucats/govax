@@ -106,10 +106,12 @@ const (
 
 	iddLength = 8 // $IDDDEF: flags word, key length word, VBN longword
 
-	// Sanity longwords: a V3 library, and a V3 library whose data is DCX
-	// data-reduced. LHD$C_SANEID, the V2 format's, isn't supported.
+	// Sanity longwords: a V3 library, a V3 library whose data is DCX
+	// data-reduced, and a library in the VMS V2 format (LHD$C_SANEID, which
+	// VMS 7.1's LBR$OPEN wrote for CRE$C_VMSV2: round 3's W14).
 	saneID3 = 233579905
 	saneIDC = 319232342
+	saneID2 = 123454321
 
 	indexEntries = 12     // INDEX$C_ENTRIES: after the used word, parent VBN, and 6 reserved bytes
 	indexParent  = 2      // INDEX$L_PARENT
@@ -200,6 +202,10 @@ type Library struct {
 	// modules; an object library's index 2 holds its global symbols.
 	Indexes []*Index
 
+	// V2 says the library is in the VMS V2 format (its index entries are
+	// of a fixed length).
+	V2 bool
+
 	data        []byte
 	mhdUserSize int
 	dcx         *dcxMap // nil unless the library is data-reduced
@@ -259,7 +265,7 @@ func Open(data []byte) (*Library, error) {
 	h := data[:blockSize]
 
 	switch sanity := le32(h, lhdSanity); sanity {
-	case saneID3, saneIDC:
+	case saneID3, saneIDC, saneID2:
 	default:
 		return nil, fmt.Errorf("lbr: not a library, or an unsupported library format (sanity %08X)", sanity)
 	}
@@ -281,6 +287,7 @@ func Open(data []byte) (*Library, error) {
 		DeletedBlocks:  le32(h, lhdFreeBlk),
 		data:           data,
 		mhdUserSize:    int(h[lhdMhdUsz]),
+		V2:             le32(h, lhdSanity) == saneID2,
 	}
 
 	n := int(h[lhdNIndex])
@@ -323,10 +330,6 @@ func (l *Library) block(vbn uint32) ([]byte, error) {
 // readIndex reads an index's B-tree, from its root block. An index with
 // no keys has no blocks (root 0).
 func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
-	if flags&IndexASCII == 0 {
-		return nil, fmt.Errorf("binary keys aren't supported")
-	}
-
 	x := &Index{Flags: flags, KeyLen: keyLen, byKey: map[string]RFA{}}
 	if root == 0 {
 		return x, nil
@@ -353,20 +356,9 @@ func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
 		}
 
 		for pos := indexEntries; pos < end; {
-			if pos+7 > end {
-				return fmt.Errorf("index block %d: entry at %d is cut short", vbn, pos)
-			}
-
-			r := RFA{VBN: le32(b, pos), Offset: le16(b, pos+4)}
-			n := int(b[pos+6])
-
-			size := 7 + n
-			if flags&IndexVarLength == 0 {
-				size = 6 + int(keyLen)
-			}
-
-			if pos+7+n > end || size < 7+n {
-				return fmt.Errorf("index block %d: key at %d is cut short", vbn, pos)
+			r, key, size, err := readEntry(b[:end], pos, flags, keyLen)
+			if err != nil {
+				return fmt.Errorf("index block %d: %w", vbn, err)
 			}
 
 			if r.Offset == rfaIndex {
@@ -374,7 +366,7 @@ func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
 					return err
 				}
 			} else {
-				k := Key{Name: string(b[pos+7 : pos+7+n]), RFA: r}
+				k := Key{Name: string(key), RFA: r}
 				x.Keys = append(x.Keys, k)
 				x.byKey[k.Name] = r
 			}
@@ -389,11 +381,80 @@ func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
 		return nil, err
 	}
 
-	if !sort.SliceIsSorted(x.Keys, func(i, j int) bool { return x.Keys[i].Name < x.Keys[j].Name }) && flags&(IndexNoCaseCmp|IndexUpcase) == 0 {
+	if !sort.SliceIsSorted(x.Keys, func(i, j int) bool { return compare(flags, []byte(x.Keys[i].Name), []byte(x.Keys[j].Name)) < 0 }) &&
+		flags&(IndexNoCaseCmp|IndexUpcase) == 0 {
 		return nil, fmt.Errorf("keys are out of order")
 	}
 
 	return x, nil
+}
+
+// readEntry reads the index entry at pos in a block's used bytes b: its
+// RFA, its key, and its size. An ASCII key is counted, its entry only as
+// long as the key (IDD$V_VARLENGTH) or of the index's key length (the VMS
+// V2 format's); a binary key (no IDD$V_ASCII) is the index's key length's
+// bytes, a little-endian unsigned number, with no count.
+func readEntry(b []byte, pos int, flags, keyLen uint16) (RFA, []byte, int, error) {
+	if pos+rfaLength > len(b) {
+		return RFA{}, nil, 0, fmt.Errorf("entry at %d is cut short", pos)
+	}
+
+	r := RFA{VBN: le32(b, pos), Offset: le16(b, pos+4)}
+
+	if flags&IndexASCII == 0 {
+		size := rfaLength + int(keyLen)
+		if pos+size > len(b) {
+			return RFA{}, nil, 0, fmt.Errorf("binary key at %d is cut short", pos)
+		}
+
+		return r, b[pos+rfaLength : pos+size], size, nil
+	}
+
+	if pos+keyOverhead > len(b) {
+		return RFA{}, nil, 0, fmt.Errorf("entry at %d is cut short", pos)
+	}
+
+	n := int(b[pos+rfaLength])
+
+	size := keyOverhead + n
+	if flags&IndexVarLength == 0 {
+		size = rfaLength + int(keyLen)
+	}
+
+	if pos+keyOverhead+n > len(b) || size < keyOverhead+n {
+		return RFA{}, nil, 0, fmt.Errorf("key at %d is cut short", pos)
+	}
+
+	return r, b[pos+keyOverhead : pos+keyOverhead+n], size, nil
+}
+
+// Binary reports whether the index's keys are binary: unsigned numbers of
+// KeyLen bytes, little-endian, where an ASCII index's are counted text.
+// (CRE$L_KEYLEN 0 makes a library with binary keys.)
+func (x *Index) Binary() bool { return x.Flags&IndexASCII == 0 }
+
+// Slot returns index n (0 the first), read from its descriptor in the
+// header even past the header's count of indexes: VMS 7.1's LBR$INSERT_KEY
+// and LBR$LOOKUP_KEY used index 1 of a library created with no indexes
+// (round 3's W15), where LBR$GET_INDEX said LBR$_ILLIDXNUM. It returns nil
+// for a descriptor past the header block, or one that can't be read.
+func (l *Library) Slot(n int) *Index {
+	if n >= 0 && n < len(l.Indexes) {
+		return l.Indexes[n]
+	}
+
+	if n < 0 || lhdIdxDesc+(n+1)*iddLength > blockSize {
+		return nil
+	}
+
+	d := l.data[lhdIdxDesc+n*iddLength:]
+
+	x, err := l.readIndex(le16(d, 0), le16(d, 2), le32(d, 4))
+	if err != nil {
+		return nil
+	}
+
+	return x
 }
 
 // KeySize is the longest key the library allows.

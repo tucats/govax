@@ -149,7 +149,9 @@ func search(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	found := false
 
-	for _, k := range c.lib.Indexes[n-1].Keys {
+	x := c.lib.Indexes[n-1]
+
+	for _, k := range x.Keys {
 		if k.RFA != want {
 			continue
 		}
@@ -160,7 +162,7 @@ func search(env *corevms.Environment, argv []uint32) (uint32, error) {
 		binary.LittleEndian.PutUint16(rfa[4:], k.RFA.Offset)
 
 		r0, err := callWith(env, arg(argv, 3), func() ([]uint32, error) {
-			desc, err := env.StackString(k.Name)
+			desc, err := keyArgument(env, x, k)
 			if err != nil {
 				return nil, err
 			}

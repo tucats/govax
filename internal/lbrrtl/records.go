@@ -15,8 +15,10 @@ import (
 // nothing), its module header's RFA stored at txtrfa (6 bytes: the block
 // and the offset), and its records made the ones LBR$GET_RECORD reads. A
 // key that isn't there is LBR$_KEYNOTFND, and LBR$GET_RECORD then says
-// LBR$_LKPNOTDON. Found, VMS 7.1 returned SS$_NORMAL. Only ASCII keys are
-// govax's: a library with binary keys finds none.
+// LBR$_LKPNOTDON. Found, VMS 7.1 returned SS$_NORMAL. In an index of
+// binary keys key_name is the address of the key's longword (the
+// manual's). The index is read even if the header counts fewer (round 3's
+// W15, made with none, found its key).
 func lookupKey(env *corevms.Environment, argv []uint32) (uint32, error) {
 	c, err := openControl(env, arg(argv, 0))
 	if err != nil {
@@ -25,12 +27,32 @@ func lookupKey(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	c.looked = false
 
-	key, err := librtl.ReadString(env, arg(argv, 1))
-	if err != nil {
-		return librtl.StringFailure(env, err)
+	x := c.lib.Slot(c.index - 1)
+	if x == nil {
+		return lbrIllIdxNum, nil
 	}
 
-	rfa, ok := c.lib.Indexes[c.index-1].Find(key)
+	var (
+		rfa lbr.RFA
+		ok  bool
+	)
+
+	if x.Binary() {
+		v, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 1))
+		if err != nil {
+			return librtl.MemoryFault(env, err)
+		}
+
+		rfa, ok = x.Lookup(string(binaryKey(x, v)))
+	} else {
+		key, err := librtl.ReadString(env, arg(argv, 1))
+		if err != nil {
+			return librtl.StringFailure(env, err)
+		}
+
+		rfa, ok = x.Find(key)
+	}
+
 	if !ok {
 		return lbrKeyNotFnd, nil
 	}
@@ -240,7 +262,7 @@ func getIndex(env *corevms.Environment, argv []uint32) (uint32, error) {
 		binary.LittleEndian.PutUint16(rfa[4:], k.RFA.Offset)
 
 		r0, err := callWith(env, arg(argv, 2), func() ([]uint32, error) {
-			desc, err := env.StackString(k.Name)
+			desc, err := keyArgument(env, x, k)
 			if err != nil {
 				return nil, err
 			}
@@ -259,6 +281,31 @@ func getIndex(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	return ssNormal, nil
+}
+
+// keyArgument puts key k of index x where a routine LBR$GET_INDEX or
+// LBR$SEARCH calls is given it, and returns its address: a descriptor of an
+// ASCII key, or a binary key's longword (the manual's).
+func keyArgument(env *corevms.Environment, x *lbr.Index, k lbr.Key) (uint32, error) {
+	if !x.Binary() {
+		return env.StackString(k.Name)
+	}
+
+	v := make([]byte, 4)
+	copy(v, k.Name)
+
+	return below(env, v)
+}
+
+// binaryKey is the longword v as index x holds a binary key: its key
+// length's bytes, little-endian.
+func binaryKey(x *lbr.Index, v uint32) []byte {
+	k := binary.LittleEndian.AppendUint32(nil, v)
+	if n := int(x.KeyLen); n <= len(k) {
+		return k[:n]
+	}
+
+	return append(k, make([]byte, int(x.KeyLen)-len(k))...)
 }
 
 // below puts data below the stack pointer, on a longword boundary, and

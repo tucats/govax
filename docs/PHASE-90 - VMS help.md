@@ -898,7 +898,10 @@ with the facility's inhibit bit (%X10000001).
     (module headers, `$MHDDEF`; done with (b)), `LBR$GET_HISTORY` and `LBR$PUT_HISTORY`,
     `LBR$FLUSH` (done 2026-11-08); (d) binary keys in every routine that takes a key, the NAM
     block (`LBR$INI_CONTROL`'s, open by NAM), OPEN's related name and
-    resultant name, and the create options' defaults and errors; (e) what
+    resultant name, and the create options' defaults and errors (done
+    2026-11-08, binary keys from the manual, VMS 7.1's having failed on
+    them; a round 3b, if wanted, would settle them and the double update
+    OPEN); (e) what
     round 3 shows of DCL's LIBRARY (`/HISTORY`, `/DATA=REDUCE` and
     `EXPAND`, and the rest of part D) and of LINK on a library the routines
     made. Each of (b) to (e) is held to round 3 (`TestLBR90WOracle`) in both
@@ -1649,3 +1652,61 @@ with the facility's inhibit bit (%X10000001).
   the console and checks the header's RFAs against VMS's file, and
   `TestUpdateHistoryBlocks` holds 200 records across blocks to a model.
   Subtask 11c done.
+- **2026-11-08** — **Subtask 11d, binary keys, the V2 format, the create
+  options, and the NAM block.** What round 3's cases 27 to 30 and 35, and
+  W13's, W14's, and W15's blocks, showed, now `internal/lbr`'s and
+  `internal/lbrrtl`'s rules:
+  - **The V2 format** (`CRE$C_VMSV2`, W14) is the V3 library with the
+    sanity longword LHD$C_SANEID (123454321) and index 1's flags without
+    IDD$V_VARLENGTH: an ASCII entry is the RFA and the key length's 32
+    bytes (the count, the key, zeros), 38 bytes. The reader takes it
+    (`Library.V2`; `readEntry` reads every form of entry), and the Updater
+    makes it (`UpdateOptions.V2`; `entrySize` by the library's layout). Any
+    version other than 2 makes V3: W15's, whose version was 0, was
+    (unconfirmed for other values).
+  - **Preallocation** (`preallocated`): V3's rule, entries of the RFA and
+    the longest key in blocks of 500 bytes, at least 1, fits W9 (8 entries,
+    1 block), W6 (96, 7), and W13 (binary keys, 96, 1); V2 took 9 for 96
+    (W14), taken as 10 entries of 38 bytes a block, 4/5 of 500; and W15's
+    0 entries took 3, taken as 0 meaning 256 entries (any default from 249
+    to 331 fits). The V2 rule and the default are unconfirmed.
+  - **Binary keys.** The manual says a KEYLEN of 0 makes "32-bit unsigned
+    keys", and that a routine taking a key then takes the address of its
+    longword, and GET_INDEX's and SEARCH's routines are given one. VMS
+    7.1's first INSERT_KEY in W13 failed with an access violation at
+    address 4, so nothing of its layout is VMS's: govax's index has flags 0
+    (no IDD$V_ASCII) and a key length of 4, each entry the RFA and the
+    key's four bytes, compared as unsigned numbers (`compareBinary`;
+    `Updater.Binary`, `BinaryKey`; `Index.Binary`; lbrrtl's `keyed`,
+    `keyArgument`, `binaryKey`). W15, made with no indexes, shows what VMS
+    did with index 1's descriptor all zeros (flags 0, key length 0):
+    INSERT_KEY entered a key there anyway, an entry of 6 bytes, the RFA,
+    with `01 00 ED 7F` past it that no case explains; LOOKUP_KEY found it;
+    GET_INDEX was ILLIDXNUM. So the key routines use an index's
+    descriptor even past the header's count (`Library.Slot`; the
+    Updater's `index`), and GET_INDEX, SET_INDEX, and SEARCH keep to the
+    count.
+  - **Create errors** (case 30) already matched.
+  - **The NAM block** (`internal/lbrrtl/nam.go`): LBR$OPEN fills in
+    LBR$INI_CONTROL's NAM with its resultant length and file ID, but not the
+    string in the NAM's own buffer (VMS's NRS stayed zeros, rsl 21); a NAM
+    so filled in opens its file by ID whatever name OPEN is given, or none
+    (`byNAM`); the NAM as OPEN's related name gives the file's name and type
+    (`relatedName`, `withRelated`), so VMS's LBRSHR kept the name somewhere
+    of its own, and govax keeps it in Go by the NAM's address
+    (`state.nams`). A NAM govax didn't fill in gives its resultant string,
+    or its expanded one, as RMS reads a related NAM (unconfirmed). OPEN with
+    no name and no such NAM is NOFILNAM and the control index is gone, as
+    VMS's was (CLOSE then ILLCTL).
+  The tests: `TestLBR90WOracle` now compares cases 28, 29, 30, and 35
+  (device units and file IDs masked, `lbr90wDevice`, `lbr90wFID`), and case
+  27 through its sixth line, VMS's crash (`lbr90wThrough`); W14 and W15 are
+  held to VMS's files byte for byte, but for W15's four stale bytes
+  (`lbr90wStale`). `internal/lbr`'s `TestUpdaterW14` makes W14 without the
+  console against VMS's file, and `TestUpdaterBinaryKeys` enters 201
+  binary keys and reads them back in the numbers' order. What's left of
+  round 3 for 11d is VMS's own: its binary keys, and the double update
+  OPEN (case 31), which a round 3b could settle (a KEYLEN 0 library with
+  ENTALL 0 and keys entered, and a KEYLEN 31 one with ENTALL 0 to tell the
+  default from W15's binary keys; the second OPEN under a timer past 30
+  seconds). Subtask 11d done.

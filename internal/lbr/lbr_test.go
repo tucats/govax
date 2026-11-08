@@ -144,10 +144,10 @@ func TestOpenErrors(t *testing.T) {
 	data, _ := syntheticLibrary(t)
 
 	bad := append([]byte(nil), data...)
-	binary.LittleEndian.PutUint32(bad[lhdSanity:], 123454321)
+	binary.LittleEndian.PutUint32(bad[lhdSanity:], 12345)
 
 	if _, err := Open(bad); err == nil {
-		t.Error("an old-format sanity longword was accepted")
+		t.Error("a bad sanity longword was accepted")
 	}
 
 	if _, err := Open(data[:100]); err == nil {

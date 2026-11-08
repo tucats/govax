@@ -95,9 +95,46 @@ type UpdateOptions struct {
 	Entries   int // CRE$L_ENTALL: index entries to preallocate blocks for
 	History   int // CRE$L_LUHMAX
 	IndexOpts int // CRE$L_IDXOPT: CRE$M_NOCASECMP, NOCASENTR, UPCASNTRY
+	// V2 makes the library in the VMS V2 format (CRE$C_VMSV2): its own
+	// sanity longword, and ASCII index entries of a fixed length.
+	V2        bool
 	Librarian string
 	Created   uint64
 }
+
+// binaryKeyLength is a binary key's length: CRE$L_KEYLEN 0 asks for
+// binary keys, the manual's "32-bit unsigned keys". (Unconfirmed: VMS 7.1's
+// LBR$INSERT_KEY failed with an access violation in round 3's W13, the one
+// library with binary keys and an index; W15, with none, left index 1's
+// descriptor all zeros, a key length of 0.)
+const binaryKeyLength = 4
+
+// preallocated is how many index blocks a new library starts with, for
+// opts.Entries entries: as many as blocks of 500 bytes hold entries of the
+// RFA and the longest key, at least 1. Round 3 has five cases. In V3 keys
+// of 31 took 1 block for 8 entries (W9) and 7 for 96 (W6), and binary keys
+// (KEYLEN 0, entries of 6 bytes) 1 for 96 (W13). The V2 format took 9 for
+// 96 keys of 31 (W14), its fixed entries of 38 bytes taken here at 4/5 of
+// the 500 bytes, 10 to a block. 0 entries with binary keys took 3 (W15),
+// taken here as 0 meaning defaultEntries. The V2 rule and the default are
+// unconfirmed.
+func preallocated(opts UpdateOptions) int {
+	entries := opts.Entries
+	if entries == 0 {
+		entries = defaultEntries
+	}
+
+	if opts.V2 && opts.KeyLength > 0 {
+		return max(entries/(indexSpace*4/5/(keyOverhead+opts.KeyLength)), 1)
+	}
+
+	return max(entries/(indexSpace/(opts.KeyLength+rfaLength)), 1)
+}
+
+// defaultEntries is the entries a library is preallocated for when
+// CRE$L_ENTALL is 0 (unconfirmed: W15's 3 blocks of binary keys fit any
+// default from 249 to 331).
+const defaultEntries = 256
 
 // NewUpdater makes a new, empty library with opts: the header, and the
 // index blocks the entries need, on a free list.
@@ -108,7 +145,7 @@ func NewUpdater(opts UpdateOptions) (*Updater, error) {
 		return nil, ErrCreate
 	}
 
-	prealloc := max(opts.Entries/(indexSpace/(opts.KeyLength+rfaLength)), 1)
+	prealloc := preallocated(opts)
 	first := uint32(prealloc) + 2
 
 	data := make([]byte, int(first-1)*blockSize)
@@ -116,6 +153,10 @@ func NewUpdater(opts UpdateOptions) (*Updater, error) {
 	h[lhdType] = byte(opts.Type)
 	h[lhdNIndex] = byte(opts.Indexes)
 	binary.LittleEndian.PutUint32(h[lhdSanity:], saneID3)
+	if opts.V2 {
+		binary.LittleEndian.PutUint32(h[lhdSanity:], saneID2)
+	}
+
 	binary.LittleEndian.PutUint16(h[lhdMajorID:], 3)
 	h[lhdLbrVer] = byte(copy(h[lhdLbrVer+1:lhdLbrVer+32], opts.Librarian))
 	binary.LittleEndian.PutUint64(h[lhdCreDat:], opts.Created)
@@ -128,10 +169,22 @@ func NewUpdater(opts UpdateOptions) (*Updater, error) {
 	binary.LittleEndian.PutUint32(h[lhdHiPreAl:], first-1)
 	binary.LittleEndian.PutUint16(h[lhdMaxLUHRec:], uint16(opts.History))
 
+	// An ASCII index's key length counts the key's count byte; a binary
+	// one's is the key's. The V2 format's ASCII entries are all of the key
+	// length (W14's flags 1, no IDD$V_VARLENGTH).
+	flags, keyLen := uint16(IndexASCII|IndexVarLength), uint16(opts.KeyLength+1)
+
+	switch {
+	case opts.KeyLength == 0:
+		flags, keyLen = 0, binaryKeyLength
+	case opts.V2:
+		flags = IndexASCII
+	}
+
 	for i := range opts.Indexes {
 		d := h[lhdIdxDesc+i*iddLength:]
-		binary.LittleEndian.PutUint16(d, IndexASCII|IndexVarLength|uint16(opts.IndexOpts&7)<<3)
-		binary.LittleEndian.PutUint16(d[2:], uint16(opts.KeyLength+1))
+		binary.LittleEndian.PutUint16(d, flags|uint16(opts.IndexOpts&7)<<3)
+		binary.LittleEndian.PutUint16(d[2:], keyLen)
 	}
 
 	for v := uint32(2); v < first-1; v++ {
@@ -474,10 +527,27 @@ type entry struct {
 	key []byte
 }
 
-func entriesSize(es []entry) int {
+// layout is how the library's index entries are laid out: index 1's flags
+// and key length. (Every index of a library the routines make is laid out
+// alike.)
+func (u *Updater) layout() (flags, keyLen uint16) {
+	return le16(u.data, lhdIdxDesc), le16(u.data, lhdIdxDesc+2)
+}
+
+// entrySize is the bytes an entry with key takes in an index block.
+func (u *Updater) entrySize(key []byte) int {
+	flags, keyLen := u.layout()
+	if flags&IndexASCII == 0 || flags&IndexVarLength == 0 {
+		return rfaLength + int(keyLen)
+	}
+
+	return keyOverhead + len(key)
+}
+
+func (u *Updater) entriesSize(es []entry) int {
 	n := 0
 	for _, e := range es {
-		n += keyOverhead + len(e.key)
+		n += u.entrySize(e.key)
 	}
 
 	return n
@@ -485,17 +555,19 @@ func entriesSize(es []entry) int {
 
 func (u *Updater) readBlock(vbn uint32) (uint32, []entry) {
 	b := u.block(vbn)
-	end := indexEntries + int(le16(b, 0))
+	end := min(indexEntries+int(le16(b, 0)), blockSize)
+	flags, keyLen := u.layout()
 
 	var es []entry
 
-	for pos := indexEntries; pos+keyOverhead <= end; {
-		n := int(b[pos+6])
-		es = append(es, entry{
-			rfa: RFA{VBN: le32(b, pos), Offset: le16(b, pos+4)},
-			key: append([]byte(nil), b[pos+7:pos+7+n]...),
-		})
-		pos += keyOverhead + n
+	for pos := indexEntries; pos < end; {
+		r, key, size, err := readEntry(b[:end], pos, flags, keyLen)
+		if err != nil {
+			break
+		}
+
+		es = append(es, entry{rfa: r, key: append([]byte(nil), key...)})
+		pos += size
 	}
 
 	return le32(b, indexParent), es
@@ -508,16 +580,29 @@ func (u *Updater) writeBlock(vbn, parent uint32, es []entry) {
 	b := u.block(vbn)
 	binary.LittleEndian.PutUint32(b[indexParent:], parent)
 
+	flags, _ := u.layout()
+
 	pos := indexEntries
 	for _, e := range es {
-		if pos+keyOverhead+len(e.key) > blockSize {
+		size := u.entrySize(e.key)
+		if pos+size > blockSize {
 			break
 		}
 
 		binary.LittleEndian.PutUint32(b[pos:], e.rfa.VBN)
 		binary.LittleEndian.PutUint16(b[pos+4:], e.rfa.Offset)
-		b[pos+6] = byte(len(e.key))
-		pos += keyOverhead + copy(b[pos+keyOverhead:], e.key)
+
+		if flags&IndexASCII == 0 {
+			clear(b[pos+rfaLength : pos+size])
+			copy(b[pos+rfaLength:pos+size], e.key)
+		} else {
+			// A fixed-length entry's key is followed by zeros to its end.
+			b[pos+rfaLength] = byte(len(e.key))
+			clear(b[pos+keyOverhead : pos+size])
+			copy(b[pos+keyOverhead:pos+size], e.key)
+		}
+
+		pos += size
 	}
 
 	binary.LittleEndian.PutUint16(b, uint16(pos-indexEntries))
@@ -546,9 +631,11 @@ func (u *Updater) indexBlock() uint32 {
 	return v
 }
 
-// index returns index ix's descriptor, 0 the first.
+// index returns index ix's descriptor, 0 the first. It may be past the
+// header's count of indexes: VMS 7.1's LBR$INSERT_KEY entered a key in
+// index 1 of a library made with none (round 3's W15).
 func (u *Updater) index(ix int) ([]byte, error) {
-	if ix < 0 || ix >= int(u.data[lhdNIndex]) {
+	if ix < 0 || lhdIdxDesc+(ix+1)*iddLength > blockSize {
 		return nil, ErrIndexNumber
 	}
 
@@ -579,13 +666,63 @@ func (u *Updater) Key(ix int, key string) ([]byte, error) {
 	return k, nil
 }
 
+// Binary reports whether index ix's keys are binary.
+func (u *Updater) Binary(ix int) bool {
+	d, err := u.index(ix)
+
+	return err == nil && le16(d, 0)&IndexASCII == 0
+}
+
+// BinaryKey returns the binary key v as index ix enters it: its key
+// length's bytes of v, little-endian.
+func (u *Updater) BinaryKey(ix int, v uint32) ([]byte, error) {
+	d, err := u.index(ix)
+	if err != nil {
+		return nil, err
+	}
+
+	k := binary.LittleEndian.AppendUint32(nil, v)
+	n := int(le16(d, 2))
+
+	if n <= len(k) {
+		return k[:n], nil
+	}
+
+	return append(k, make([]byte, n-len(k))...), nil
+}
+
 // compare orders two keys as index flags compares them.
 func compare(flags uint16, a, b []byte) int {
+	if flags&IndexASCII == 0 {
+		return compareBinary(a, b)
+	}
+
 	if flags&IndexUpcase != 0 {
 		return bytes.Compare(bytes.ToUpper(a), bytes.ToUpper(b))
 	}
 
 	return bytes.Compare(a, b)
+}
+
+// compareBinary orders two binary keys of one length as the unsigned
+// numbers they are, little-endian: from their last bytes.
+func compareBinary(a, b []byte) int {
+	for i := max(len(a), len(b)) - 1; i >= 0; i-- {
+		var x, y byte
+		if i < len(a) {
+			x = a[i]
+		}
+
+		if i < len(b) {
+			y = b[i]
+		}
+
+		if x != y {
+			return int(x) - int(y)
+		}
+	}
+
+	return 0
 }
 
 // path is the blocks from the root to the leaf where key goes, and in each
@@ -704,7 +841,7 @@ func (u *Updater) add(ix int, path []step, level int, e entry) {
 
 	es = append(es[:pos], append([]entry{e}, es[pos:]...)...)
 
-	if entriesSize(es) <= indexFull {
+	if u.entriesSize(es) <= indexFull {
 		u.writeBlock(v, parent, es)
 
 		if pos == len(es)-1 {
@@ -716,9 +853,9 @@ func (u *Updater) add(ix int, path []step, level int, e entry) {
 
 	// The split: the old block keeps the entries up to the one that takes
 	// it past its share of their bytes, as many as fit.
-	total, kept, p := entriesSize(es), 0, 0
-	for p < len(es)-1 && kept*10 < total*splitShare && kept+keyOverhead+len(es[p].key) <= indexFull {
-		kept += keyOverhead + len(es[p].key)
+	total, kept, p := u.entriesSize(es), 0, 0
+	for p < len(es)-1 && kept*10 < total*splitShare && kept+u.entrySize(es[p].key) <= indexFull {
+		kept += u.entrySize(es[p].key)
 		p++
 	}
 

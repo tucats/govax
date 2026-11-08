@@ -75,6 +75,7 @@ const maxControls = 16
 type control struct {
 	function uint32
 	typ      lbr.Type // LBR$C_TYP_UNK for any
+	nam      uint32   // LBR$INI_CONTROL's NAM block, 0 for none (nam.go)
 
 	lib   *lbr.Library // nil until opened
 	help  help.Library // the library as the help engine reads it, made on first need
@@ -132,13 +133,16 @@ func (c *control) refresh() {
 type state struct {
 	controls map[uint32]*control
 	stv      uint32
+
+	// nams are the NAM blocks LBR$OPEN has filled in, by address (nam.go).
+	nams map[uint32]namFill
 }
 
 type stateKey struct{}
 
 func stateOf(env *corevms.Environment) *state {
 	return env.ImageData(stateKey{}, func() any {
-		return &state{controls: map[uint32]*control{}}
+		return &state{controls: map[uint32]*control{}, nams: map[uint32]namFill{}}
 	}).(*state)
 }
 
@@ -201,8 +205,8 @@ func loadOptional(env *corevms.Environment, addr, def uint32) (uint32, error) {
 
 // iniControl is LBR$INI_CONTROL library_index, func [,type] [,namblk]: a
 // new control index, the lowest free one from 1 (VMS 7.1 gave a program's
-// first 1), stored at library_index. The NAM block isn't used: govax's
-// LBR$OPEN finds the file by name each time.
+// first 1), stored at library_index. The NAM block, if given, is the one
+// LBR$OPEN fills in and later opens the file by (nam.go).
 func iniControl(env *corevms.Environment, argv []uint32) (uint32, error) {
 	fn, err := loadOptional(env, arg(argv, 1), funcRead+100)
 	if err != nil {
@@ -229,7 +233,7 @@ func iniControl(env *corevms.Environment, argv []uint32) (uint32, error) {
 			return librtl.MemoryFault(env, librtl.Writing(err))
 		}
 
-		st.controls[n] = &control{function: fn, typ: lbr.Type(typ), index: 1}
+		st.controls[n] = &control{function: fn, typ: lbr.Type(typ), nam: arg(argv, 3), index: 1}
 
 		return lbrNormal, nil
 	}
@@ -253,7 +257,11 @@ func iniControl(env *corevms.Environment, argv []uint32) (uint32, error) {
 // A library opened to create is made in memory from the create options
 // (createOptions) and written as a new file by LBR$CLOSE; one opened to
 // update is read whole and written back over itself (subtask 11, round
-// 3). The related name (rlfna) isn't used.
+// 3). A NAM block LBR$INI_CONTROL was given and LBR$OPEN has filled in
+// opens its file whatever fns says, and is filled in again; rlfna, a NAM
+// block, gives the name and type fns and dns don't (nam.go). With neither a
+// name nor such a NAM the open is LBR$_NOFILNAM, and the control index is
+// gone, as it is for a missing file.
 func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 	c, n, err := controlAt(env, arg(argv, 0))
 	if err != nil {
@@ -270,24 +278,45 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return openCreate(env, argv, c, n)
 	}
 
-	if arg(argv, 1) == 0 {
-		return lbrNoFilNam, nil
-	}
-
-	spec, err := librtl.ReadString(env, arg(argv, 1))
+	loc, opened, err := byNAM(env, c.nam)
 	if err != nil {
-		return librtl.StringFailure(env, err)
+		return librtl.MemoryFault(env, err)
 	}
 
-	var dns string
+	var (
+		data    []byte
+		found   rms.FileLocation
+		readErr error
+	)
 
-	if arg(argv, 3) != 0 {
-		if dns, err = librtl.ReadString(env, arg(argv, 3)); err != nil {
+	switch {
+	case opened:
+		data, found, readErr = readFound(env.Session, loc)
+	case arg(argv, 1) == 0:
+		delete(st.controls, n)
+
+		return lbrNoFilNam, nil
+	default:
+		spec, err := librtl.ReadString(env, arg(argv, 1))
+		if err != nil {
 			return librtl.StringFailure(env, err)
 		}
-	}
 
-	data, found, readErr := readLibraryFile(env.Session, spec, dns)
+		var dns string
+
+		if arg(argv, 3) != 0 {
+			if dns, err = librtl.ReadString(env, arg(argv, 3)); err != nil {
+				return librtl.StringFailure(env, err)
+			}
+		}
+
+		related, err := relatedName(env, arg(argv, 4))
+		if err != nil {
+			return librtl.MemoryFault(env, err)
+		}
+
+		data, found, readErr = readLibraryFile(env.Session, spec, withRelated(dns, related))
+	}
 
 	if r, err := resultName(env, argv, found.Name); err != nil || r != 0 {
 		return r, err
@@ -322,6 +351,10 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	c.lib, c.index, st.stv = lib, 1, 0
 
+	if err := fillNAM(env, c.nam, found); err != nil {
+		return librtl.MemoryFault(env, librtl.Writing(err))
+	}
+
 	if c.function == funcUpdate {
 		if c.upd, err = lbr.OpenUpdater(data); err != nil {
 			delete(st.controls, n)
@@ -353,7 +386,7 @@ const (
 	creVerTyp = 0x1C
 	creIdxOpt = 0x20
 
-	creVMSV3 = 3 // CRE$C_VMSV3
+	creVMSV2 = 2 // CRE$C_VMSV2
 )
 
 // openCreate is LBR$OPEN of a library to create: the create options read
@@ -361,8 +394,10 @@ const (
 // index then gone as it is for a missing file), the new library made in
 // memory, and its file's name, fns with dns's defaults, kept for
 // LBR$CLOSE. The type is the options', whatever LBR$INI_CONTROL said
-// (round 3's WE2). Only the V3 format is govax's: CRE$C_VMSV2 signals
-// NOTIMPL.
+// (round 3's WE2). CRE$C_VMSV2 makes the VMS V2 format (W14), and any
+// other version the V3 format: VMS 7.1's made W15's, whose version was 0,
+// in V3 (unconfirmed for other values). A key length of 0 makes binary
+// keys (the manual's).
 func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (uint32, error) {
 	st := stateOf(env)
 
@@ -381,10 +416,6 @@ func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (
 		}
 
 		cre[i] = v
-	}
-
-	if cre[creVerTyp/4] != creVMSV3 {
-		return librtl.NotImplemented("LBR$OPEN of a library in the VMS V2 format")(env, argv)
 	}
 
 	if arg(argv, 1) == 0 {
@@ -427,6 +458,7 @@ func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (
 		Entries:   int(cre[creEntAll/4]),
 		History:   int(cre[creLuhMax/4]),
 		IndexOpts: int(cre[creIdxOpt/4]),
+		V2:        cre[creVerTyp/4] == creVMSV2,
 		Librarian: lbr.LibrarianName,
 		Created:   now,
 	})
@@ -492,6 +524,20 @@ func readLibraryFile(s *rms.Session, spec, dns string) ([]byte, rms.FileLocation
 		loc = found
 	} else if typ := strings.TrimPrefix(path.Ext(dns), "."); typ != "" {
 		loc = loc.WithDefaultType(typ)
+	}
+
+	data, found, err := s.ReadRawFile(loc)
+	if err != nil {
+		return nil, loc, err
+	}
+
+	return data, found, nil
+}
+
+// readFound reads the file a NAM block named, found before.
+func readFound(s *rms.Session, loc rms.FileLocation) ([]byte, rms.FileLocation, error) {
+	if s == nil {
+		return nil, loc, errors.New("lbrrtl: no files")
 	}
 
 	data, found, err := s.ReadRawFile(loc)

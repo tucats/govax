@@ -119,7 +119,9 @@ func putEnd(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 // keyed reads a key routine's control and key: LBR$_UPDURTRAV inside
-// LBR$GET_INDEX's routine, and the key as the current index enters it.
+// LBR$GET_INDEX's routine, and the key as the current index enters it, an
+// ASCII key by descriptor and a binary one as the address of its longword
+// (the manual's).
 func keyed(env *corevms.Environment, argv []uint32) (*control, []byte, uint32, error) {
 	c, err := writable(env, arg(argv, 0))
 	if err != nil {
@@ -132,6 +134,24 @@ func keyed(env *corevms.Environment, argv []uint32) (*control, []byte, uint32, e
 		return nil, nil, lbrUpdurTrav, nil
 	}
 
+	var key []byte
+
+	if c.upd.Binary(c.index - 1) {
+		v, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 1))
+		if err != nil {
+			r, err := librtl.MemoryFault(env, err)
+
+			return nil, nil, r, err
+		}
+
+		key, err = c.upd.BinaryKey(c.index-1, v)
+		if err != nil {
+			return nil, nil, writeStatus(err), nil
+		}
+
+		return c, key, 0, nil
+	}
+
 	text, err := librtl.ReadString(env, arg(argv, 1))
 	if err != nil {
 		r, err := librtl.StringFailure(env, err)
@@ -139,7 +159,7 @@ func keyed(env *corevms.Environment, argv []uint32) (*control, []byte, uint32, e
 		return nil, nil, r, err
 	}
 
-	key, err := c.upd.Key(c.index-1, text)
+	key, err = c.upd.Key(c.index-1, text)
 	if err != nil {
 		return nil, nil, writeStatus(err), nil
 	}

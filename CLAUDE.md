@@ -757,7 +757,12 @@ never had.
   11c (done 2026-11-08) is LBR$SEARCH, LBR$FLUSH, and the update history
   (`internal/lbrrtl/history.go`, over `lbr/history.go`: records in blocks of
   their own, the header's head and tail RFAs at 0x80 and 0x86), held by the
-  same oracle and `lbr`'s `TestUpdateHistoryW5`.
+  same oracle and `lbr`'s `TestUpdateHistoryW5`;
+  11d (done 2026-11-08) is binary keys (KEYLEN 0, the manual's longwords;
+  VMS 7.1's crashed on them), the VMS V2 format (`Library.V2`, fixed-length
+  entries), the create options' defaults, and the NAM block
+  (`internal/lbrrtl/nam.go`: filled in, opened by, and a related name),
+  held by the same oracle and `lbr`'s `TestUpdaterW14`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1968,7 +1973,8 @@ expect adjustment as phases land):
   `help.Lines`) and OUTPUT_HELP (a `help.Session` over the program's
   output and input routines); `write.go` the writing routines and
   SET_MODULE (subtask 11b), each on the control's `lbr.Updater`;
-  `history.go` PUT_HISTORY, GET_HISTORY, SEARCH, and FLUSH (11c).
+  `history.go` PUT_HISTORY, GET_HISTORY, SEARCH, and FLUSH (11c);
+  `nam.go` the NAM blocks INI_CONTROL and OPEN take (11d).
   Strings through `librtl/export.go`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction

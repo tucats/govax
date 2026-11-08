@@ -24,14 +24,15 @@ const lbr90wCases = 36
 // Their output isn't compared yet.
 var lbr90wLater = map[int]string{
 	17: "LIBRARY's history records (11e)",
-	27: "binary keys (11d)",
-	28: "the VMS V2 format (11d)",
-	29: "the create options' defaults (11d)",
-	30: "the create options' errors (11d)",
 	31: "a second update open: VMS waited past the timer",
 	33: "H90T's history record, LIBRARY's (11e)",
-	35: "the NAM block (11d)",
 }
+
+// lbr90wThrough are cases held to VMS's output only through a line: W13,
+// case 27, whose first LBR$INSERT_KEY of a binary key failed on VMS 7.1
+// with an access violation at address 4 (the key's longword is at an
+// ordinary address), where govax's enters the key as the manual says.
+var lbr90wThrough = map[int]int{27: 6}
 
 // lbr90wLibraries are the libraries the routines made whose blocks are held
 // to VMS's (h90w.bck) byte for byte but for times and the librarian's name.
@@ -41,7 +42,7 @@ var lbr90wLater = map[int]string{
 var lbr90wLibraries = []string{
 	"W1.TLB;1", "W1.TLB;2", "W2.TLB;1", "W3.TLB;1", "W4.TLB;1", "W9.TLB;1",
 	"W10.HLB;1", "W10T.HLB;1", "W11.MLB;1", "W16.TLB;1", "WE2.TLB;1", "WE3.TLB;1",
-	"W6.TLB;1", "W7.TLB;1", "W5.TLB;1", "W8.TLB;1",
+	"W6.TLB;1", "W7.TLB;1", "W5.TLB;1", "W8.TLB;1", "W14.TLB;1", "W15.TLB;1",
 }
 
 // TestLBR90WOracle runs round 3 of testdata/help90 (LBR90W.MAR, subtask
@@ -111,7 +112,14 @@ func TestLBR90WOracle(t *testing.T) {
 			}
 
 			got := strings.Split(strings.TrimSuffix(strings.ReplaceAll(buf.String(), "\r\n", "\n"), "\n"), "\n")
-			lbr90wCompare(t, n, got, want[n])
+			vms := want[n]
+
+			if through, ok := lbr90wThrough[n]; ok {
+				t.Logf("case %d compared through line %d", n, through)
+				got, vms = got[:min(through, len(got))], vms[:min(through, len(vms))]
+			}
+
+			lbr90wCompare(t, n, got, vms)
 		}
 
 		for _, name := range lbr90wLibraries {
@@ -126,7 +134,7 @@ func TestLBR90WOracle(t *testing.T) {
 				_ = os.WriteFile(filepath.Join(dir, name), data, 0o644)
 			}
 
-			lbr90wSameLibrary(t, name, data, vmsLibraries[name])
+			lbr90wSameLibrary(t, name, lbr90wUnwritten(name, data), lbr90wUnwritten(name, vmsLibraries[name]))
 		}
 	})
 }
@@ -203,6 +211,12 @@ func lbr90wVMSCases(t *testing.T, path string) map[int][]string {
 var (
 	lbr90wModuleHeader = regexp.MustCompile(`^(  0000: 00 AD (?:[0-9A-F]{2} ){6})(?:[0-9A-F]{2} ?){8}$`)
 	lbr90wImageTime    = regexp.MustCompile(`^(  0010: [0-9A-F]{2} )(?:[0-9A-F]{2} ){8}`)
+
+	// A file's device unit and file ID (case 35's NAM block): VMS's run had
+	// the libraries on DUA1, the test has them on DUA3, and file numbers
+	// depend on the volume. A file ID of 0 stays as it is.
+	lbr90wDevice = regexp.MustCompile(`\bDUA\d:`)
+	lbr90wFID    = regexp.MustCompile(`fid=[1-9]\d*,\d+,\d+`)
 )
 
 // lbr90wMaskedLines masks what may differ from VMS's in a case's lines: the
@@ -213,6 +227,8 @@ func lbr90wMaskedLines(lines []string) []string {
 
 	for i, line := range lines {
 		line = lbr90Masked(line)
+		line = lbr90wDevice.ReplaceAllString(line, "DUAn:")
+		line = lbr90wFID.ReplaceAllString(line, "fid=(file)")
 		if i > 0 && strings.HasPrefix(lines[i-1], "  module header len=") {
 			line = lbr90wModuleHeader.ReplaceAllString(line, "${1}(time)")
 		}
@@ -276,6 +292,31 @@ func lbr90wSaveSet(t *testing.T, path string) map[string][]byte {
 	}
 
 	return libs
+}
+
+// lbr90wStale are bytes of VMS's libraries that no routine wrote, past an
+// index block's used bytes, cleared in both libraries before they're
+// compared: W15's block 2, after its one entry of 6 bytes (a binary key's
+// RFA, with a key length of 0), has 01 00 ED 7F, which looks like the low
+// word of a key and the high word of a P1 address; govax leaves zeros.
+var lbr90wStale = map[string][][2]int{"W15.TLB;1": {{512 + 18, 512 + 22}}}
+
+// lbr90wUnwritten returns data with name's lbr90wStale bytes cleared.
+func lbr90wUnwritten(name string, data []byte) []byte {
+	spans, ok := lbr90wStale[name]
+	if !ok || data == nil {
+		return data
+	}
+
+	out := append([]byte(nil), data...)
+
+	for _, s := range spans {
+		if s[1] <= len(out) {
+			clear(out[s[0]:s[1]])
+		}
+	}
+
+	return out
 }
 
 // lbr90wSameLibrary holds a library govax's routines made to VMS's, block

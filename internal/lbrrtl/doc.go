@@ -20,7 +20,11 @@
 // RMS's rules (internal/rms). One opened to create or update is an
 // lbr.Updater, which changes the library's blocks as VMS's LBRSHR does,
 // written back by LBR$CLOSE (or earlier, by LBR$FLUSH): a new file for
-// LBR$C_CREATE, the same file for LBR$C_UPDATE. A control index names Go state kept per image
+// LBR$C_CREATE, the same file for LBR$C_UPDATE. A library may have
+// binary keys (the address of a longword where an ASCII key is a
+// descriptor) and be made in the VMS V2 format, and a NAM block given to
+// LBR$INI_CONTROL is filled in and opens its file again (nam.go). A
+// control index names Go state kept per image
 // (corevms.Environment.ImageData), as LIB$'s zones do. LBR$GET_HELP and
 // LBR$OUTPUT_HELP run on internal/help, the engine DCL's HELP uses, and call
 // the program's own routines back (corevms.Environment.Callback).

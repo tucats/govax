@@ -2,6 +2,8 @@ package lbr
 
 import (
 	"bytes"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -261,5 +263,126 @@ func TestUpdaterDeleteData(t *testing.T) {
 
 	if u.hdr(lhdModHdrs) != 1 {
 		t.Errorf("%d module headers", u.hdr(lhdModHdrs))
+	}
+}
+
+// TestUpdaterW14 makes round 3's W14 again: a text library in the VMS V2
+// format (its own sanity longword, index entries of the key length's 38
+// bytes, 9 preallocated index blocks) with one module. The file is VMS's
+// to the byte, and reads back.
+func TestUpdaterW14(t *testing.T) {
+	u, err := NewUpdater(UpdateOptions{Type: TypeText, KeyLength: 31, Indexes: 1, Entries: 96, History: 20, V2: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rfa, err := u.PutRecord([]byte("V2's record."))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u.PutEnd()
+
+	key, err := u.Key(0, "V2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := u.InsertKey(0, key, rfa); err != nil {
+		t.Fatal(err)
+	}
+
+	sameAsVMS(t, u, []RFA{rfa}, round3Library(t, "W14.TLB;1"))
+
+	lib, err := u.Library()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !lib.V2 {
+		t.Error("the library isn't taken for the V2 format")
+	}
+
+	if got, ok := lib.Lookup("V2"); !ok || got != rfa {
+		t.Errorf("V2 is at %v, %t; want %v", got, ok, rfa)
+	}
+}
+
+// TestUpdaterBinaryKeys enters binary keys (KEYLEN 0: the manual's 32-bit
+// unsigned keys) in an order and with values whose bytes, compared as text,
+// would order them otherwise, and reads them back in the numbers' order,
+// through enough of them to split the index.
+func TestUpdaterBinaryKeys(t *testing.T) {
+	u, err := NewUpdater(UpdateOptions{Type: 128, Indexes: 1, Entries: 96})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !u.Binary(0) {
+		t.Fatal("index 1 isn't binary")
+	}
+
+	rfa, err := u.PutRecord([]byte("A module."))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u.PutEnd()
+
+	r := rand.New(rand.NewSource(14))
+	want := map[uint32]bool{}
+
+	for len(want) < 200 {
+		v := r.Uint32() >> (r.Intn(4) * 8)
+		if want[v] || v == 256 {
+			continue
+		}
+
+		key, err := u.BinaryKey(0, v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := u.InsertKey(0, key, rfa); err != nil {
+			t.Fatalf("key %d: %v", v, err)
+		}
+
+		want[v] = true
+	}
+
+	key, _ := u.BinaryKey(0, 256)
+	if err := u.InsertKey(0, key, rfa); err != nil {
+		t.Fatal(err)
+	}
+
+	want[256] = true
+
+	if dup := u.InsertKey(0, key, rfa); !errors.Is(dup, ErrDuplicateKey) {
+		t.Errorf("a second 256: %v", dup)
+	}
+
+	lib, err := u.Library()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	x := lib.Indexes[0]
+	if !x.Binary() || len(x.Keys) != len(want) {
+		t.Fatalf("binary %t, %d keys; want %d", x.Binary(), len(x.Keys), len(want))
+	}
+
+	var last uint32
+
+	for i, k := range x.Keys {
+		v := binary.LittleEndian.Uint32([]byte(k.Name))
+		if !want[v] || (i > 0 && v <= last) {
+			t.Fatalf("key %d is %d, after %d", i, v, last)
+		}
+
+		last = v
+	}
+
+	if lib.IndexBlocks < 2 {
+		t.Errorf("%d index blocks: the index didn't split", lib.IndexBlocks)
 	}
 }
