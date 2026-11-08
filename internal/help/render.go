@@ -30,63 +30,140 @@ const cell = 11
 func Render(displays []Display, width int) []string {
 	var out []string
 
-	for _, d := range displays {
-		out = append(out, d.render(width)...)
+	for _, l := range Lines(displays, width) {
+		out = append(out, l.String())
 	}
 
 	return out
 }
 
-func (d Display) render(width int) []string {
-	var out []string
+// LineFlags say what a Line holds, as LBR$GET_HELP tells its routine
+// (HLP$M_NOHLPTXT, HLP$M_KEYNAMLIN, HLP$M_OTHERINFO). None set is a topic's
+// text.
+type LineFlags uint32
+
+const (
+	// NoText marks the lines of a display that found nothing: its
+	// headings, the "Sorry" line, and what follows them.
+	NoText LineFlags = 1
+	// KeyName marks a heading, and the empty line before it.
+	KeyName LineFlags = 2
+	// OtherInfo marks the list of subtopics ("Additional information
+	// available:"), from the empty line before its title to its end.
+	OtherInfo LineFlags = 4
+)
+
+// Line is one line of HELP's output, apart: its text without the blanks
+// HELP puts before it, how many those are, what kind of line it is, and its
+// level. LBR$GET_HELP passes a routine the text, the flags, and the level
+// (testdata/help90's LBR90, round 1b); Render puts the indentation back.
+//
+// A heading's level is its own (1 for the topic the module is); every other
+// line's is the number of headings its display has, 0 for a display with
+// none (a first word that named nothing).
+type Line struct {
+	Text   string
+	Indent int
+	Flags  LineFlags
+	Level  int
+}
+
+// String is the line as HELP shows it.
+func (l Line) String() string {
+	if l.Text == "" {
+		return ""
+	}
+
+	return strings.Repeat(" ", l.Indent) + l.Text
+}
+
+// Lines lays out HELP's displays at width columns, as Render does, as
+// Lines.
+func Lines(displays []Display, width int) []Line {
+	var out []Line
+
+	for _, d := range displays {
+		out = append(out, d.lines(width)...)
+	}
+
+	return out
+}
+
+func (d Display) lines(width int) []Line {
+	var out []Line
+
+	// base is the flags of the display's own lines.
+	var base LineFlags
+	if d.Kind == ShowSorry {
+		base = NoText
+	}
+
+	level := len(d.Headings)
 
 	for i, h := range d.Headings {
-		out = append(out, "", indent(i)+h)
+		f := base | KeyName
+		out = append(out, Line{Flags: f, Level: i + 1}, Line{Text: h, Indent: 2 * i, Flags: f, Level: i + 1})
 	}
 
 	listTitle := "Additional information available:"
 
 	switch d.Kind {
 	case ShowTopic, ShowSlash:
-		out = append(out, "")
+		out = append(out, Line{Level: level})
 		for _, line := range d.Text {
-			out = append(out, shift(line, d.Depth))
+			text, n := shift(line, d.Depth)
+			out = append(out, Line{Text: text, Indent: n, Level: level})
 		}
 	case ShowSorry:
-		out = append(out, indent(max(len(d.Headings), 1))+"Sorry, no documentation on "+d.Sorry)
+		out = append(out, Line{
+			Text: "Sorry, no documentation on " + d.Sorry, Indent: 2 * max(level, 1), Flags: NoText, Level: level,
+		})
 	case ShowList:
 		listTitle = "Information available:"
 	}
 
+	last := base
+
 	if d.Listed {
 		if d.Kind != ShowList {
-			out = append(out, "")
+			out = append(out, Line{Flags: base, Level: level})
 		}
 
-		out = append(out, "", indent(d.ListDepth)+listTitle, "")
-		out = append(out, listLines(d.List, d.ListDepth, width)...)
+		f := base | OtherInfo
+		at := 2 * d.ListDepth
+
+		out = append(out, Line{Flags: f, Level: level}, Line{Text: listTitle, Indent: at, Flags: f, Level: level},
+			Line{Flags: f, Level: level})
+
+		for _, line := range listLines(d.List, d.ListDepth, width) {
+			out = append(out, Line{Text: strings.TrimPrefix(line, indent(d.ListDepth)), Indent: at, Flags: f, Level: level})
+		}
 
 		if len(d.Libraries) > 0 {
-			out = append(out, "", indent(1)+"Additional help libraries available (type @name for topics):", "",
-				indent(1)+strings.Join(d.Libraries, "  "))
+			out = append(out, Line{Flags: f, Level: level},
+				Line{Text: "Additional help libraries available (type @name for topics):", Indent: 2, Flags: f, Level: level},
+				Line{Flags: f, Level: level},
+				Line{Text: strings.Join(d.Libraries, "  "), Indent: 2, Flags: f, Level: level})
 		}
+
+		last = f
 	}
 
-	return append(out, "")
+	return append(out, Line{Flags: last, Level: level})
 }
 
 // indent is n steps of 2 blanks.
 func indent(n int) string { return strings.Repeat("  ", n) }
 
-// shift moves a line of text right by n steps of 2 blanks. An empty line
-// stays empty, and a line starting in column 1 or with a tab moves too.
-// Blanks at a line's end are dropped, but not its last character: a line
-// of one blank is shown as the shift and a blank (VMS's own HELPLIB.HLB
-// has both kinds of line; LIBRARY/HELP now stores a line of blanks as an
-// empty record).
-func shift(line string, n int) string {
+// shift moves a line of text right by n steps of 2 blanks: it returns the
+// text and how many blanks go before it. An empty line stays empty, and a
+// line starting in column 1 or with a tab moves too. Blanks at a line's end
+// are dropped, but not its last character: a line of one blank is shown as
+// the shift and a blank (VMS's own HELPLIB.HLB has both kinds of line;
+// LIBRARY/HELP now stores a line of blanks as an empty record).
+func shift(line string, n int) (string, int) {
 	if line == "" {
-		return ""
+		return "", 0
 	}
 
 	end := len(line)
@@ -94,7 +171,7 @@ func shift(line string, n int) string {
 		end--
 	}
 
-	return indent(n) + line[:end]
+	return line[:end], 2 * n
 }
 
 // listLines lays out a list of topics in cells, depth steps of 2 blanks

@@ -1,0 +1,77 @@
+# The librarian's definitions govax's STARLET.MLB defines for the LBR$
+# routines (docs/PHASE-90 - VMS help.md, subtask 10), and vmsdef's Symbols
+# holds (internal/vmsdef/gen -values). Two sources, kept apart:
+#
+#   - VMS 7.1's own values, printed by LBR90.MAR's first case
+#     (vax/round1b/help90.log, "#1 definitions"): LBR$C_CREATE to
+#     LBR$C_TYP_SHSTB, and every HLP$M_ name.
+#   - The OpenVMS Utility Routines Manual (V7.3), chapter 12: the library
+#     types it adds (LBR$C_TYP_NCS to LBR$C_TYP_USRHI); LBR$OPEN's create
+#     options array (CRE$, "Offset in Longwords" times 4); and
+#     LBR$GET_HEADER's array (LHI$, the same). Unconfirmed on VMS: no run
+#     printed them. CRE$C_'s values aren't given there, so they're left out.
+#
+# The LBR$_ condition values aren't here: they're LBRSHR.EXE's universal
+# symbols (vmsdef.ImageSymbols), which LINK resolves.
+
+# $CREDEF
+CRE$L_ALLOC = 0x8
+CRE$L_ENTALL = 0x14
+CRE$L_IDXMAX = 0xc
+CRE$L_IDXOPT = 0x20
+CRE$L_KEYLEN = 0x4
+CRE$L_LUHMAX = 0x18
+CRE$L_TYPE = 0x0
+CRE$L_UHDMAX = 0x10
+CRE$L_VERTYP = 0x1c
+
+# $HLPDEF
+HLP$M_GROUP = 0x4
+HLP$M_HELP = 0x20
+HLP$M_KEYNAMLIN = 0x2
+HLP$M_LIBLIST = 0x10
+HLP$M_NOHLPTXT = 0x1
+HLP$M_OTHERINFO = 0x4
+HLP$M_PROCESS = 0x2
+HLP$M_PROMPT = 0x1
+HLP$M_SYSTEM = 0x8
+
+# $LBRDEF
+LBR$C_CREATE = 0x0
+LBR$C_READ = 0x1
+LBR$C_TYP_EOBJ = 0x7
+LBR$C_TYP_ESHSTB = 0x8
+LBR$C_TYP_HLP = 0x3
+LBR$C_TYP_MLB = 0x2
+LBR$C_TYP_NCS = 0x6
+LBR$C_TYP_OBJ = 0x1
+LBR$C_TYP_SHSTB = 0x5
+LBR$C_TYP_TXT = 0x4
+LBR$C_TYP_UNK = 0x0
+LBR$C_TYP_USRHI = 0xff
+LBR$C_TYP_USRLW = 0x80
+LBR$C_UPDATE = 0x2
+
+# $LHIDEF
+LHI$B_NEXTRFA = 0x4c
+LHI$L_CREDAT = 0x30
+LHI$L_FREEBLK = 0x48
+LHI$L_FREEIDX = 0x5c
+LHI$L_FREEVBN = 0x44
+LHI$L_FREIDXBLK = 0x58
+LHI$L_HIPREAL = 0x60
+LHI$L_IDXBLKS = 0x64
+LHI$L_IDXCNT = 0x68
+LHI$L_LIBSTATUS = 0x7c
+LHI$L_MAJORID = 0x8
+LHI$L_MAXLUHREC = 0x74
+LHI$L_MHDUSZ = 0x70
+LHI$L_MINORID = 0xc
+LHI$L_MODCNT = 0x6c
+LHI$L_NEXTVBN = 0x54
+LHI$L_NINDEX = 0x4
+LHI$L_NUMLUHREC = 0x78
+LHI$L_TYPE = 0x0
+LHI$L_UPDHIS = 0x40
+LHI$L_UPDTIM = 0x38
+LHI$T_LBRVER = 0x10

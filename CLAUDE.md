@@ -735,7 +735,12 @@ never had.
   and SHOW a topic per keyword, HELP, INSTRUCTIONS, HINTS, SPECIFY, the
   machine's commands, and govax's topics; every qualifier of every verb
   now has a qualifier line (`TestEveryQualifierHasHelp`), each keyed by
-  its bare name.
+  its bare name. Subtask 10 (done 2026-11-08) is LBRSHR's reading
+  routines, `internal/lbrrtl` (below): VMS 7.1's LBRSHR vector in
+  `vmsdef`, LBR's messages (`vmsdef/lbrmessages.go`), `$LBRDEF`,
+  `$HLPDEF`, `$CREDEF`, and `$LHIDEF` from `testdata/help90/defined.txt`,
+  and `help.Lines` (each line's flags and level, which `Render` is built
+  on); held to part E's 79 cases by `TestLBR90Oracle`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1932,6 +1937,18 @@ expect adjustment as phases land):
   `complexIntegerPower`, `complexQuotient`, `complexProduct`, `integerPowerOfEntry`.
   `random.go` is `MTH$RANDOM`: the manual's generator, or with `vax.runtime.random`
   true each new seed from `crypto/rand`.
+- `internal/lbrrtl` — LBRSHR.EXE's routines (Phase 90, subtask 10), beside
+  `internal/mthrtl`: a stub for each entry of LBRSHR's vector (5 bytes
+  apart; code 5000 plus the offset; the data cells LBR$GL_CONTROL and
+  LBR$GL_RMSSTV a longword of 0), NOTIMPL for the writing routines.
+  `control.go` is the control indexes (Go state per image), OPEN (a
+  library read whole through RMS's name rules, reading only), CLOSE,
+  GET_HEADER (`lbr.Library.HeaderInfo`), SET_INDEX, the modes, and
+  RET_RMSSTV; `records.go` LOOKUP_KEY and GET_INDEX (`lbr.Index.Find` and
+  `Select`, the two case rules), FIND, GET_RECORD, and `callWith` (a
+  callback's arguments below SP); `help.go` GET_HELP (`help.Lookup` and
+  `help.Lines`) and OUTPUT_HELP (a `help.Session` over the program's
+  output and input routines). Strings through `librtl/export.go`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

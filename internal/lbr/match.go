@@ -85,3 +85,55 @@ func wildMatch(pattern, s string) bool {
 
 	return true
 }
+
+// Find returns where the module key names starts, by LBR$LOOKUP_KEY's rule
+// (testdata/help90's LBR90, round 1b): unless the index compares keys as
+// they are (IDD$V_NOCASECMP), the key is upper-cased, and if the index
+// upper-cases its entries to compare them (IDD$V_UPCASNTRY), so is each
+// entry. A help library's index does the second, so "alpha" and
+// "MIXEDCASE" find ALPHA and MixedCase. Abbreviations find nothing.
+func (x *Index) Find(key string) (RFA, bool) {
+	if r, ok := x.byKey[key]; ok {
+		return r, true
+	}
+
+	if x.Flags&IndexNoCaseCmp == 0 {
+		key = upcase(key)
+	}
+
+	for _, k := range x.Keys {
+		name := k.Name
+		if x.Flags&IndexUpcase != 0 {
+			name = upcase(name)
+		}
+
+		if name == key {
+			return k.RFA, true
+		}
+	}
+
+	return RFA{}, false
+}
+
+// Select returns the index's keys that pattern matches, in index order, by
+// LBR$GET_INDEX's rule: the pattern, with the wildcards * and %, is taken
+// as it is, and each entry upper-cased if the index upper-cases its
+// entries to compare them. VMS 7.1's GET_INDEX found nothing in a help
+// library for "alpha*", where LBR$LOOKUP_KEY found "alpha" (testdata/help90's
+// LBR90, round 1b).
+func (x *Index) Select(pattern string) []Key {
+	var out []Key
+
+	for _, k := range x.Keys {
+		name := k.Name
+		if x.Flags&IndexUpcase != 0 {
+			name = upcase(name)
+		}
+
+		if name == pattern || strings.ContainsAny(pattern, "*%") && wildMatch(pattern, name) {
+			out = append(out, k)
+		}
+	}
+
+	return out
+}

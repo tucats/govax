@@ -10,8 +10,11 @@
 // (testdata/mar/rms/decode.go); and, since Phase 45, from
 // testdata/mp/defs/defined.txt ($PRCDEF, $PQLDEF, $ACCDEF, and
 // $MSGDEF; and since Phase 46 $SECDEF, $LCKDEF, $LKIDEF, $PSLDEF, and
-// $DCDEF; from global symbol directories). The macros are generated
-// from those lists, not written from VMS's own.
+// $DCDEF; from global symbol directories); and, since Phase 90,
+// testdata/help90/defined.txt ($LBRDEF, $HLPDEF, $CREDEF, and $LHIDEF:
+// the values VMS 7.1 printed for the probe's LBR90.MAR, and the offsets
+// the Utility Routines manual gives). The macros are generated from those
+// lists, not written from VMS's own.
 //
 // A few families real MACRO's probes never covered come instead from
 // the global symbol directory of STARLET.OLB's definition module of the
@@ -40,6 +43,7 @@ import (
 var defined = []string{
 	filepath.Join("..", "..", "testdata", "mar", "rms", "defined.txt"),
 	filepath.Join("..", "..", "testdata", "mp", "defs", "defined.txt"),
+	filepath.Join("..", "..", "testdata", "help90", "defined.txt"),
 }
 
 // libraryFamilies are the families taken from STARLET.OLB's definition

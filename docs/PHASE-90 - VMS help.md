@@ -779,7 +779,8 @@ Scope):
    HELP on it, held to round 1's F part (done 2026-11-07).
 10. LBRSHR: `vmsdef`'s vector, messages, and definitions;
     `internal/lbrrtl`'s reading routines; LINK and RUN finding them; held
-    to round 1's E part (`TestLBR90Oracle`), in both paging modes.
+    to round 1's E part (`TestLBR90Oracle`), in both paging modes (done
+    2026-11-08).
 11. LBRSHR's writing routines (Decision 8): a program creating a library,
     inserting and replacing modules and keys, deleting them, and writing
     history records, through `internal/lbr`'s Builder; held to a probe
@@ -1309,3 +1310,71 @@ Scope):
   the new topics. MANUAL.md's 12 says the debugger's HELP prompts and
   reads DBG$HELP. Left for later: SHOW MAPS, SET UIQUANTUM, and CANCEL
   MEMORY could leave the grammar. Subtask 9 done.
+- **2026-11-08** — Subtask 10, LBRSHR's reading routines.
+  **`vmsdef`**: VMS 7.1's LBRSHR.EXE (from the local system disk,
+  `testdata/disks/rq0-ra92.dsk`, not kept) merged by `gen -image`: 27
+  routines, the two data cells LBR$GL_CONTROL and LBR$GL_RMSSTV, and the
+  48 LBR$_ condition values. Its vector entries are 5 bytes apart (an entry
+  mask and a BRW), not MTHRTL's 8. LBR's message texts are
+  `lbrmessages.go`, each one VMS printed (part E's statuses, and INVKEY,
+  LKPNOTDON, DUPKEY, INVRFA from the probe's other logs), as STR$'s were;
+  the rest show as NOMSG. **Definitions**: `testdata/help90/defined.txt`
+  holds `$LBRDEF`, `$HLPDEF`, `$CREDEF`, and `$LHIDEF`: the LBR$C_ and
+  HLP$M_ values VMS printed in part E's first case, and the types, CRE$
+  offsets, and LHI$ offsets the Utility Routines manual gives (unconfirmed;
+  CRE$C_'s values aren't given, so they're left out). They're merged into
+  `vmsdef.Symbols` (`gen -values`) and are govax's own system macros
+  (`mkdefs` reads the file beside the earlier lists). STARLET.OLB's
+  definition modules don't have them, and `$MHDDEF`, which names an object
+  module's header in govax's tables, waits for the writing routines.
+  **`internal/lbrrtl`**, beside `internal/mthrtl`: a stub for each entry
+  (code 5000 plus its offset), the 14 routines of Decision 8, and NOTIMPL
+  for the rest. A control index is Go state per image (the lowest free one
+  from 1, at most 16); LBR$OPEN reads the library whole through RMS's name
+  rules (`readLibraryFile`, as DCL's HELP finds a library), for reading
+  only: LBR$C_CREATE and LBR$C_UPDATE are NOTIMPL until subtask 11. As VMS
+  7.1 did: a missing file is RMS$_FNF with SS$_NOSUCHFILE for
+  LBR$RET_RMSSTV, and frees the control index; a library of another type is
+  opened with LBR$_TYPMISMCH, the status value then the library's type (3,
+  unconfirmed why); SET_INDEX, LOOKUP_KEY, FIND, GET_INDEX, and the help
+  routines return SS$_NORMAL where the others return LBR$_NORMAL.
+  **Keys**: `lbr.Index.Find` is LOOKUP_KEY's rule (the key upper-cased, and
+  the entries too in a help library: "alpha" and "MIXEDCASE" find their
+  modules, "ALP" nothing) and `lbr.Index.Select` GET_INDEX's (the pattern
+  as it is: "alpha*" finds nothing); `lbr.Library.HeaderInfo` is
+  GET_HEADER's array, the header block's fields moved into the manual's
+  order (the update history's block and the first deleted block read where
+  that order puts them, unconfirmed: both 0 in every probe library).
+  **Records**: move mode copies into the caller's buffer (LBR$_RECTRUNC
+  past its end), locate mode returns a 4,096-byte heap buffer of the
+  control's own. **Callbacks**: GET_INDEX, GET_HELP, and OUTPUT_HELP are
+  registered to call back (`corevms.Environment.Callback`), each call's
+  arguments below SP and SP put back after it (`callWith`, not deferred,
+  since an abandoned routine's deferred calls mustn't touch the registers).
+  **GET_HELP** is the engine's `Lookup` and the new `help.Lines`, which
+  `Render` is now built on: each line's text without its indentation, its
+  flags (NOHLPTXT for a display that found nothing, KEYNAMLIN for a heading
+  and the empty line before it, OTHERINFO from the list's empty line on),
+  and its level (a heading's own, else the display's number of headings).
+  No key, or HELP alone, is HELP's instructions display, where DCL's `HELP
+  HELP` lists the HELP topic's own subtopics; without a routine each line
+  goes to SYS$OUTPUT two blanks further in than HELP shows it; more than
+  ten keys is LBR$_INVNAM. **OUTPUT_HELP** is a `help.Session` whose Write
+  and Read call the program's routines (each prompt starting with a
+  carriage return and line feed, a 256-byte fixed string for the
+  response), with the flags' libraries, LIBLIST, HELP, and prompting; an
+  omitted flags argument turns on prompting and every table, so an input
+  routine is needed. Not done: binary keys (a library with them finds
+  nothing), the NAM block and related name, and a placed (BASE=) LBRSHR,
+  whose vector the activator would write as 8-byte entries over 5-byte ones
+  (`placeEmulated`); no program links LBRSHR so. `librtl/export.go` gives
+  another RTL package LIBRTL's descriptor handling (`ReadString`,
+  `WriteString`, `Buffer`, `StringFailure`). **The test**:
+  `TestLBR90Oracle` (`internal/console/lbr90_test.go`) makes the libraries
+  with LIBRARY as part A did, defines HLP$LIBRARY and HLP$LIBRARY_1 as part
+  C left them, assembles, links, and runs LBR90.MAR, and holds its 1,664
+  lines to VMS's in both paging modes, masking only the libraries' times
+  and librarian's name (govax's LIBRARY writes its own) and case 16's
+  access violation's address and reason (VMS's came from whatever followed
+  the argument list; govax's address is 0). `TestTables` and `TestStatuses`
+  hold the package's tables to LBRSHR's. Subtask 10 done.
