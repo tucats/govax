@@ -442,8 +442,12 @@ planned now, and each round's findings may change the next:
   README, logged on the console: `Topic?` and `Subtopic?` at each depth,
   `?`, Return, Ctrl/Z, an unknown subtopic, `@lib` at each prompt, `/PAGE`,
   and the same in the debugger.
-- **Round 3**: the LBR$ writing routines (subtask 11), a program making
-  and changing libraries whose files come back for comparison; and
+- **Round 3** (prepared 2026-11-08, subtask 11a; `testdata/help90`'s
+  README has its table): the LBR$ writing routines on every kind of
+  library, and the routines and arguments subtask 10 left (SEARCH,
+  SET_MODULE, the history routines, FLUSH, binary keys, the NAM block), a
+  program making and changing libraries whose files come back for
+  comparison; and
   whatever rounds 1–2 leave open. Subtask 3 left these: `$STATUS` after
   each of LIBRARIAN's help messages (DUPMODULE, ILLKEYLVL, KEYNAMLNG,
   NOMTCHFOU, RECTYP); a level-1 key of several words; a help file whose
@@ -781,10 +785,26 @@ Scope):
     `internal/lbrrtl`'s reading routines; LINK and RUN finding them; held
     to round 1's E part (`TestLBR90Oracle`), in both paging modes (done
     2026-11-08).
-11. LBRSHR's writing routines (Decision 8): a program creating a library,
-    inserting and replacing modules and keys, deleting them, and writing
-    history records, through `internal/lbr`'s Builder; held to a probe
-    round of their own (round 3), the libraries VMS's to the byte.
+11. LBRSHR for every kind of library LIBRARY makes (text, help, macro,
+    object with its symbol index, shareable image, and a user's own type),
+    not only help: the author's direction of 2026-11-08, which widens
+    Decision 8's list to the whole of LBRSHR's documented vector. In parts:
+    (a) round 3 of the probe prepared, `testdata/help90`'s `lbr90w.mar` and
+    `help90w.com` (done 2026-11-08), and run on VMS 7.1, its log and save set
+    checked into `vax/round3/` and "What the probe settled" written; (b) the
+    writing routines (`LBR$PUT_RECORD`, `LBR$PUT_END`, `LBR$INSERT_KEY`,
+    `LBR$REPLACE_KEY`, `LBR$DELETE_KEY`, `LBR$DELETE_DATA`) and OPEN's
+    `LBR$C_CREATE` and `LBR$C_UPDATE`, through `internal/lbr`'s Builder, on
+    every kind of library, the libraries VMS's to the byte but for times; (c)
+    the routines Decision 8 left as NOTIMPL: `LBR$SEARCH`, `LBR$SET_MODULE`
+    (module headers, `$MHDDEF`), `LBR$GET_HISTORY` and `LBR$PUT_HISTORY`,
+    `LBR$FLUSH`; (d) binary keys in every routine that takes a key, the NAM
+    block (`LBR$INI_CONTROL`'s, open by NAM), OPEN's related name and
+    resultant name, and the create options' defaults and errors; (e) what
+    round 3 shows of DCL's LIBRARY (`/HISTORY`, `/DATA=REDUCE` and
+    `EXPAND`, and the rest of part D) and of LINK on a library the routines
+    made. Each of (b) to (e) is held to round 3 (`TestLBR90WOracle`) in both
+    paging modes.
 12. The close-out: MANUAL.md (HELP, LIBRARY/HELP, the system volume's
     table, a section on writing help modules), FORTRAN-INTERNALS.md and
     other docs that mention HELP, CLAUDE.md, PLAN.md, and this doc's "Where
@@ -1378,3 +1398,28 @@ Scope):
   access violation's address and reason (VMS's came from whatever followed
   the argument list; govax's address is 0). `TestTables` and `TestStatuses`
   hold the package's tables to LBRSHR's. Subtask 10 done.
+- **2026-11-08** — Subtask 11 widened, at the author's direction: LBRSHR is
+  to serve every use of libraries LIBRARY has (text, object, macro,
+  shareable image, user types), not only help, so subtask 11 takes in the
+  rest of the documented vector (SEARCH, SET_MODULE, the history routines,
+  FLUSH), binary keys, and the NAM block, in parts (a) to (e). The reading
+  routines of subtask 10 already open every type `internal/lbr` reads, and
+  TestLBR90Oracle ran them on a text and a macro library.
+  **Subtask 11a, round 3 prepared.** `gen.go` writes `lbr90w.mar`, 34
+  cases each on a library of its own (W1 to W16, the README's table), and
+  `help90w.com` (part A makes H90T, H90O.OBJ, and a shareable image and its
+  library; B runs LBR90W; C lists each library LIBRARY's way, beside
+  LIBRARY's own W2L, W10L, and W12L made from the same records, HELP on the
+  routines' help library, and a LINK against the routines' object library;
+  D is what subtask 3 left of LIBRARY/HELP, each with its `$STATUS`; then a
+  save set). The cases print every status with its message, RFAs, the
+  header array, module headers in hex (SET_MODULE into a buffer of EE),
+  history records, keys (binary keys as the longword they address), and
+  the NAM block's resultant name and FID. `exchange.cmd` and `copyout.cmd`
+  are round 3's now, on `help90w-exchange.dsk`. Rehearsed on govax with
+  stand-ins for the names govax's STARLET lacks (`$MHDDEF`, `CRE$C_`,
+  `LBR$C_MAXRECSIZ`, the FLUSH codes, `MHD$B_USRDAT`): the procedure ran to
+  its end and the program through all 34 cases, the handler going on past
+  each NOTIMPL. The rehearsal showed govax's LIBRARY lacks `/HISTORY` and
+  `/DATA`, which part C and D use; they're 11e's if VMS's run wants them.
+  Waiting for the VAX run.

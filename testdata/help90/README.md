@@ -7,7 +7,8 @@ what the LBR$ routines do. Every question is asked of **help modules written
 for the probe**, whose text names its own topic ("Text of ALPHA
 Parameters."), so a log shows which text HELP chose. None of it is VMS's.
 
-`gen.go` writes everything here but this README:
+`gen.go` writes everything here but this README (round 3's files are in
+their own section below):
 
     go run testdata/help90/gen.go
 
@@ -179,6 +180,48 @@ Round 1c and round 2 ran 2026-11-07. Both logs passed the check and are in
 `vax/round2/`. `SHOW TERMINAL` explained round 1's empty lines: OPA0: is a
 VT100 with a 52-line page, and HELP's `/PAGE` clears the screen before
 each display. Round 3, the LBR$ writing routines, is subtask 11's.
+
+## Round 3, the LBR$ writing routines
+
+Prepared 2026-11-08 (subtask 11a). `exchange.cmd` and `copyout.cmd` are
+now round 3's (rounds 1 to 1c's are in the repository's history), on a new
+volume, `help90w-exchange.dsk`. Its files:
+
+| File | What it holds |
+| ---- | ------------- |
+| `lbr90w.mar` | 34 cases calling the LBR$ routines to write libraries of every kind, each case on a library of its own (W1 to W16), most read back after: the definitions round 1 didn't print and every LBR$_ status's message; an empty text library with the manual's create options; modules written, keyed, replaced, and deleted (PUT_RECORD, PUT_END, INSERT_KEY, REPLACE_KEY, DELETE_KEY, DELETE_DATA, and what a new module takes of the space freed); keys' errors and edges (duplicates, case, bad and zero RFAs, two keys on one module, keys of 31 and 32 characters, an empty key, empty and over-long records); INSERT_KEY and DELETE_KEY inside GET_INDEX's and SEARCH's routines; writing a library opened to read, or not open; history records past LUHMAX and with LUHMAX 0 (PUT_HISTORY, GET_HISTORY); module headers with UHDMAX (SET_MODULE, read and updated, dumped in hex); FLUSH; 126 modules in a scrambled order and a 300-record module; a help library, a macro library, an object library with its symbol index (H90O.OBJ's records), binary keys in a library of a user's type, the VMS V2 format, options all zero, create errors; a library opened twice to update; records with no PUT_END or key; LIBRARY's H90T changed by the routines; LIBRARY's shareable image library H90S read; the NAM block (open by NAM, a related name, the resultant name); and last, 17 control indexes |
+| `help90w.com` | Part A makes what LBR90W reads (H90T, H90O.OBJ, H90OS.EXE and H90S.OLB); part B runs LBR90W; part C lists every library LIBRARY's way, with LIBRARY's own W2L, W10L, and W12L to compare with W2, W10, and W12, HELP on W10, and a LINK against W12; part D is what subtask 3 left of LIBRARY/HELP, each command followed by its `$STATUS` (DUPMODULE, ILLKEYLVL, KEYNAMLNG, NOMTCHFOU, RECTYP, a level-1 key of several words, a file whose first key is level 2, a bad key after good modules, `/EXTRACT` misses in a text library, `/DATA=REDUCE` and `/DATA=EXPAND`); then a save set of the libraries |
+| `one.txt`, `two.txt`, `w10.hlp`, `h90o.mar`, `h90om.mar`, `multi.hlp`, `notfirst.hlp`, `goodbad.hlp` | The input files: W2L's and W10L's modules (the records LBR90W writes for W2 and W10), the object module, the program that links against W12, and part D's help files |
+
+Everything in the run is our own text, so its log and save set are
+committed once checked as before (`vax/round3/`).
+
+`lbr90w.mar` was rehearsed on govax (not kept) with stand-in values for the
+names govax's STARLET lacks (`$MHDDEF`, the `CRE$C_` values,
+`LBR$C_MAXRECSIZ`, `LBR$C_FLUSHDATA`, `LBR$C_FLUSHALL`, `MHD$B_USRDAT`): the
+procedure reaches its end, the program assembles, links, and runs all 34
+cases (the writing routines NOTIMPL), and the handler goes on past each
+failure. On VMS the cases that may wait: the second update OPEN of W2
+retries for 30 seconds before RMS$_FLK.
+
+1. Build the exchange volume, from the repository root:
+
+       govax console < testdata/help90/exchange.cmd
+
+2. On the VAX, with the volume on any free unit (DUA1 below):
+
+       $ MOUNT DUA1: HELP90
+       $ SET DEFAULT DUA1:[000000]
+       $ @HELP90W/OUTPUT=HELP90W.LOG
+       $ SET DEFAULT SYS$LOGIN
+       $ DISMOUNT DUA1:
+
+3. Back on the host:
+
+       govax console < testdata/help90/copyout.cmd
+
+   which puts `help90w.log` and `h90w.bck` in
+   `testdata/disks/help90-vms/round3/`.
 
 ## The tests
 

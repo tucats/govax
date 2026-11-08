@@ -1,0 +1,9 @@
+	.TITLE	H90O - an object module for LBR90W's object library
+	.PSECT	C,EXE,NOWRT
+	.ENTRY	H90O_SYM,^M<>
+	MOVL	#1,R0
+	RET
+	.ENTRY	H90O_TWO,^M<>
+	MOVL	#3,R0
+	RET
+	.END
