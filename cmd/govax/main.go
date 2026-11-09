@@ -281,6 +281,9 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// function's doc comment.
 	c.SetRunLimits(instructionLimit, timeLimit)
 
+	// We've done all the setup we can before tracking actual user run time.
+	startTime = time.Now()
+
 	// STARTUP.COM is govax's login command procedure, run at command level
 	// 1 (docs/PHASE-50 - DCL command procedures.md): the system volume's,
 	// or govax's own without one (docs/PHASE-87 - system volume.md). A
