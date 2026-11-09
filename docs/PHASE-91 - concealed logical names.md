@@ -1,7 +1,9 @@
 # Phase 91 — concealed logical names and rooted directories
 
-**Status:** planned 2026-11-09; awaiting the author's review. Subtask 1
-(the survey, Part A below) is done. Nothing is implemented yet.
+**Status:** planned 2026-11-09; the plan and the answers to its questions
+accepted by the author the same day ("The review"). Subtask 1 (the survey,
+Part A below) is done; subtask 2 (the probe) is written and waiting for
+its run on the VAX. Nothing is implemented yet.
 
 ## Goal
 
@@ -22,9 +24,16 @@ because it has one system and no need for `SYS0`, `SYS1`, and the
 common root (the author, 2026-11-09). The directories on the system
 volume don't change.
 
-Out of scope: the `CONCEAL_DEVICES` SYSGEN parameter, node names, the
-`[g,m]` directory form, and `SYS$COMMON`/`SYS$SPECIFIC` unless the review
-asks for them (Question 1).
+`SYS$COMMON` and `SYS$SPECIFIC` are defined too, for procedures and
+programs that assume them, both naming the one root.
+
+Along the way, RMS's two name processors become one, so that this and
+later changes to file names have one code path (Decision 4).
+
+Out of scope: the `CONCEAL_DEVICES` SYSGEN parameter and node names. The
+`[g,m]` directory form is a future enhancement (the author, 2026-11-09);
+one name processor gives it one place to go. (The guide says it isn't
+allowed in a rooted directory.)
 
 ## Part A — the survey (2026-11-09)
 
@@ -127,8 +136,9 @@ neither knows about roots:
 
 1. **`rms/name.go`'s `expandName`**, for the system services: `$PARSE`,
    `$SEARCH`, `$OPEN`, `$CREATE`, the image locator, DCL's OPEN, F$SEARCH.
-   `scanDir` refuses `[ROOT1.]` as `RMS$_DIR`, so by reading the code a
-   rooted name fails outright here.
+   `scanDir` refuses `[ROOT1.]`, so a rooted name fails outright here:
+   the probe's rehearsal on govax had `$PARSE` of `BASE:[SUB]A.DAT` return
+   `RMS$_DIR`.
 2. **`rms/logicals.go`'s `expandSpec`**, for the DCL utilities: DIRECTORY,
    TYPE, COPY, DELETE, PURGE, RENAME, CREATE/DIRECTORY, BACKUP, ANALYZE,
    DUMP, F$PARSE. It goes through ods2's `filespec.Parse`, which is more
@@ -186,31 +196,46 @@ Also missing or affected:
 **Decision 1 — the system root is `[SYSTEM.]`** (the author, 2026-11-09).
 `SYS$SYSROOT` is `_DUA0:[SYSTEM.]`, concealed and terminal, in the system
 table at executive mode. It is one name, not VMS's search list of
-`[SYS0.]` and `SYS$COMMON`.
+`[SYS0.]` and `SYS$COMMON`, since a search list of two identical places
+would list every file twice. `SYS$COMMON` and `SYS$SPECIFIC` (the author,
+2026-11-09) are defined at the same time, as the same root, so
+`SYS$COMMON:[SYSMGR]X.COM` and `SYS$SPECIFIC:[SYSEXE]` work. Each is
+shown by its own name.
 
 **Decision 2 — one model: device, root, directory.** A name is a device,
 a root (a list of directory names, usually empty), and a directory
-*relative to the root*. Both processors parse the logical directory
-exactly as they do now, against a logical default directory, and only
-prepend the root when they go to the volume. That makes "you can't get
-above the root" automatic, since `applyDir` and `filespec.Parse` never see
-it, and `[-]` at the top fails with the error they already give.
-
-- In `expandName`: `fileName` gains `Root`, `scanName` recognizes
-  `[ROOT.]` and `[ROOT.][DIR]`, `parsedName.DirSpec` stays logical, and
-  `parsedName.spec()` returns root + directory.
-- In `expandSpec`: `resolvedSpec` gains `Root`, and `Spec.Dirs` is root +
-  directory, so everything below it (ods2, the volume walks) works
-  unchanged. `filespec.Spec` is not changed.
+*relative to the root*. The processor parses the logical directory as it
+does now, against a logical default directory, and only prepends the root
+when it goes to the volume. That makes "you can't get above the root"
+automatic, since `applyDir` never sees it, and `[-]` at the top fails with
+the error it already gives. `fileName` gains `Root`, `scanName` recognizes
+`[ROOT.]` and `[ROOT.][DIR]`, `parsedName.DirSpec` stays logical, and
+`parsedName.spec()` returns root + directory, so everything below it
+(ods2, the volume walks) works unchanged.
 
 **Decision 3 — no change to `internal/lnm`** beyond whatever the probe
 finds wrong. Roots are a matter of reading the translated text.
 
-**Decision 4 — keep two name processors.** Merging `expandSpec` into
-`expandName` is the right long-term shape, but it would touch every DCL
-utility and isn't needed here. Both call one shared function that splits
-a root off directory text, so the syntax rules exist once. If the probe
-shows the two can't be kept in step cheaply, I'll raise it.
+**Decision 4 — one name processor** (the author, 2026-11-09, on the
+condition that later changes benefit; they do). `expandName` becomes the
+only one, and `expandSpec` a thin adapter that returns its `parsedName`s
+as `resolvedSpec`s. The reasons:
+
+- Roots would otherwise be written twice, and the survey's `SYS$DISK` bug
+  is what comes of two copies: `expandName` has it right, `expandSpec`
+  doesn't.
+- F$PARSE carries a third partial copy (`lexical.go`'s `Parse` and
+  `mfdRelative`), and SET DEFAULT, `LocateRelated`, and RENAME call
+  `filespec.Parse` for themselves.
+
+Measured 2026-11-09 by replacing `expandSpec` with a call of `expandName`
+in a throwaway worktree, with `internal/rms`, `dclcmd`, `dclshell`, and
+`console` tested: 7 tests failed. 5 were how the stand-in reported an
+error (a logical name loop's `SS$_TOOMANYLNAM`, CREATE/DIRECTORY's
+second message line), and 2 needed `.out` files that are gitignored and
+so weren't in the worktree. None showed a name resolving differently.
+The merge is its own subtask, with no change in behavior but the
+`SYS$DISK` fix, before roots go in.
 
 **Decision 5 — one helper for showing a directory.** A `resolvedSpec`
 method gives the shown directory from a physical path, by removing the
@@ -218,9 +243,10 @@ root and showing the root itself as `[000000]`. All the sites in A.3 use
 it, so a new command can't get it wrong by copying the old expression.
 
 **Decision 6 — the system names, as VMS's.** `defineSystemNames` defines
-the rooted `SYS$SYSROOT`. STARTUP.COM's names become
-`define/system/executive_mode sys$system sys$sysroot:[sysexe]` and so on.
-Consequences:
+the rooted `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC`. STARTUP.COM's
+names become `define/system/executive_mode sys$system
+sys$sysroot:[sysexe]` and so on, `SYS$SOURCES` as
+`SYS$SYSROOT:[SOURCES]`. Consequences:
 
 - Listings of system files are headed `SYS$SYSROOT:[SYSEXE]`, not
   `DUA0:[SYSTEM.SYSEXE]`.
@@ -247,42 +273,48 @@ Each is one commit, with tests, stopping for review.
 2. **The probe**: `testdata/lnm91`, as in Part D; run on the simh VAX by
    the author; "The probe's answers" added to Part A and any decision it
    changes revised.
-3. **Syntax and `$PARSE`**: `.][` and `[ROOT.]` in `scanName`, the root
+3. **One name processor** (Decision 4): `expandSpec` over `expandName`,
+   errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
+   RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
+   behavior but the `SYS$DISK` fix; the whole test suite is the check.
+4. **Syntax and `$PARSE`**: `.][` and `[ROOT.]` in `scanName`, the root
    through `expandName`, the guide's table, errors, `NAM$V_ROOT_DIR`,
    `DIR_LVLS`, `NOCONCEAL`. Held to the probe's `$PARSE` cases, in an
    oracle test.
-4. **Files through the services**: `$OPEN`, `$CREATE`, `$SEARCH` with
+5. **Files through the services**: `$OPEN`, `$CREATE`, `$SEARCH` with
    wildcards (`[*]`, `[*...]`, `[...]`), `$ERASE`, `$RENAME`, resultant
    strings, related names, a search list of roots.
-5. **The DCL utilities**: `expandSpec` and the display helper, every
-   command in A.3, SET and SHOW DEFAULT with a rooted device, F$PARSE,
-   F$SEARCH, and the `SYS$DISK` concealment bug. Held to the probe's DCL
-   log.
-6. **Devices and the rest**: `PhysicalDevice`, `$ASSIGN`, `$GETDVI` and
+6. **The DCL utilities**: the display helper, every command in A.3, SET
+   and SHOW DEFAULT with a rooted device, F$PARSE, and F$SEARCH. Held to
+   the probe's DCL log.
+7. **Devices and the rest**: `PhysicalDevice`, `$ASSIGN`, `$GETDVI` and
    `DVI$_CONCEALED`, the image activator's message and
    `JPI$_IMAGNAME`, `LIB$FID_TO_NAME`, BACKUP, and the depth (with an
    `ods2` release if Decision 7 needs one).
-7. **The system names**: `defineSystemNames`, STARTUP.COM, the refresh
-   on an existing volume, removing `TestLink68Oracle`'s mask and the
-   tests' plain `SYS$SYSROOT`, and running the system volume's tests.
-8. **The close-out**: MANUAL.md (the rooted-names paragraph, "The system
+8. **The system names**: `defineSystemNames` with `SYS$COMMON` and
+   `SYS$SPECIFIC`, STARTUP.COM, the refresh on an existing volume,
+   removing `TestLink68Oracle`'s mask and the tests' plain `SYS$SYSROOT`,
+   and running the system volume's tests.
+9. **The close-out**: MANUAL.md (the rooted-names paragraph, "The system
    volume", the "no rooted names" line in the list of gaps), HELP DEFINE,
    ASSIGN, SET DEFAULT, F$PARSE, and SYSTEM_VOLUME, `sysnames.go`'s and
    Phase 87's notes, PLAN.md, and CLAUDE.md.
 
 ## Part D — the probe (subtask 2)
 
-`testdata/lnm91/`, in the usual layout: `gen.go` writes `lnm91.mar`,
-`lnm91.com`, `exchange.cmd`, and `copyout.cmd`, with the README giving
-the steps. It runs on an exchange volume on DUA5, makes its own tree
-under `[LNM91]`, and needs no privilege beyond what `DEFINE/PROCESS`
-wants, so the VAX's system tables aren't changed. Results go in `vax/`.
+`testdata/lnm91/`: `lnm91.mar` is one small program that takes its cases
+from a command procedure's data lines, and `gen.go` writes `lnm91.com`
+(the table of cases), `exchange.cmd`, and `copyout.cmd`, with the README
+giving the steps. It runs on an exchange volume on DUA5, makes its own
+tree on that volume, and defines only process logical names, which it
+deassigns at the end, so the VAX's system tables aren't changed. Results
+go in `vax/`.
 
-**`lnm91.mar`, the services.** A table of cases, each reporting status,
-STV, expanded and resultant strings, FNB in hex with `ROOT_DIR` and
-`CNCL_DEV` named, each component's length, and DVI, DID, and FID. Every
-case runs with and without `NAM$V_NOCONCEAL`, and with `NAM$V_SYNCHK`
-where that differs.
+**`lnm91.mar`, the services.** Each case reports status, STV, expanded
+and resultant strings, FNB in hex with `ROOT_DIR`, `CNCL_DEV`, and
+`DIR_LVLS` picked out, each component's length, and DVI, DID, and FID.
+The `$PARSE` and `$SEARCH` cases run with and without `NAM$V_NOCONCEAL`,
+and with `NAM$V_SYNCHK`.
 
 | Group | Cases |
 | --- | --- |
@@ -293,7 +325,7 @@ where that differs.
 | Defaults | rooted as default name, as related file, and as `SYS$DISK`; a physical default directory with a rooted primary |
 | Depth | root and directory sums of 7, 8, 9, 15, 16, 17 levels; CREATE/DIRECTORY at each |
 | Rendering | `[000000]`, `[000000.SUB]`, `[.SUB]` from the root, `[-]` from a child; `DIR_LVLS` |
-| Files | `$CREATE`, `$OPEN`, `$ENTER`, `$REMOVE`, `$ERASE`, `$RENAME` across roots, wildcard `$SEARCH` over `[*]`, `[*...]`, `[...]`, including where each walk ends |
+| Files | `$CREATE`, `$OPEN`, `$ERASE`, `$RENAME` across roots, wildcard `$SEARCH` over `[*]`, `[*...]`, `[...]`, including where each walk ends (govax has no `$ENTER` or `$REMOVE`, so they aren't probed) |
 | Devices | `$ASSIGN` and `$GETDVI` of a rooted name: DEVNAM, FULLDEVNAM, `CONCEALED` |
 | Names back | `LIB$FID_TO_NAME`, `JPI$_IMAGNAME`, for a file reached through a root |
 
@@ -316,18 +348,18 @@ where that differs.
 The probe prints a status at every step, resets NAM fields between
 cases, and has nothing to wait on.
 
-## Questions for the review
+## The review (2026-11-09)
 
-1. **`SYS$COMMON` and `SYS$SPECIFIC`.** VMS has them and govax needn't.
-   VMS procedures sometimes name `SYS$COMMON:[SYSMGR]`, and both could be
-   defined equal to `SYS$SYSROOT` for that one reason. *Recommended:
-   leave them out, and add them if a real procedure needs them.*
-2. **`SYS$SOURCES`**, govax's own name, would become
-   `SYS$SYSROOT:[SOURCES]`, like the others. *Recommended: yes.*
-3. **Merging the two name processors** (Decision 4). *Recommended: not
-   in this phase.*
-4. **`CONCEAL_DEVICES`** is left out. *Recommended: leave it out; VMS's
-   default is on, which is the only behavior govax would have.*
+The author accepted the plan and answered its questions:
+
+1. **`SYS$COMMON` and `SYS$SPECIFIC`:** define them, because a user's
+   procedure or program might reasonably assume they are there
+   (Decision 1).
+2. **`SYS$SOURCES`** becomes `SYS$SYSROOT:[SOURCES]` like the others.
+3. **The two name processors:** merge them if later changes to file names
+   would benefit from a single code path. They would, and it measured
+   cheap (Decision 4).
+4. **`CONCEAL_DEVICES`:** not supported.
 
 ## Progress log
 
@@ -339,3 +371,13 @@ cases, and has nothing to wait on.
   a concealed `SYS$DISK` is shown by its physical device in DIRECTORY's
   heading. Stopped for the author's review. The author set the root to
   `[SYSTEM.]` during the survey.
+- **2026-11-09** The review: see "The review". Measured the merge of the
+  name processors (Decision 4) and reordered Part C around it.
+- **2026-11-09** Subtask 2, written: `testdata/lnm91` (`lnm91.mar`, and
+  `gen.go`'s `lnm91.com`, 453 program cases and the DCL commands). Part
+  D's `gen.go` writes the procedure only; the program is by hand, taking
+  its cases from data lines. Rehearsed on govax from start to finish, so
+  the program assembles, links, and runs. Waiting for the VAX run.
+  The rehearsal also shows what govax doesn't accept yet, to be added or
+  left out of the oracle once VMS's log is in: `COPY/LOG`, `PURGE/LOG`,
+  `DIRECTORY/TOTAL`, `SET PROTECTION`, and F$GETDVI's `CONCEALED`.
