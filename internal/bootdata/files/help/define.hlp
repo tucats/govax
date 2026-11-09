@@ -69,6 +69,12 @@
    for, and TERMINAL stops iterative translation at this name.  The
    attributes apply to every equivalence string.
 
+   An equivalence string whose directory ends in a period (DUA1:[WORK.])
+   makes a rooted name: the directory looks like a volume's master file
+   directory, its subdirectories like top-level directories, the root
+   itself is [000000], and nothing above it can be reached.  Such a name
+   is usually concealed.
+
 /USER_MODE
 
    Defines the name at user mode.  A user-mode name in the process
@@ -88,6 +94,12 @@
    3.$ DEFINE/USER SYS$OUTPUT LISTING.TXT
 
      Sends the next image's output to LISTING.TXT, until it exits.
+
+   4.$ DEFINE/TRANSLATION_ATTRIBUTES=CONCEALED PROJ DUA1:[PROJECT.]
+     $ DIRECTORY PROJ:[SRC]
+
+     Makes [PROJECT] a root: PROJ:[SRC] is the directory
+     DUA1:[PROJECT.SRC], and is shown as PROJ:[SRC].
 
 2 /DEVICE
 

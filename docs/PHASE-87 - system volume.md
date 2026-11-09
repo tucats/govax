@@ -667,7 +667,8 @@ recommendation:
     `[SYSTEM.SYSLIB]`. Doing it as VMS does would mean placing the root
     after the default directory is applied, and changing how expanded names
     are shown. That isn't small, so, as the plan allowed, the names are
-    plain ones; rooted directories are follow-up work.
+    plain ones; rooted directories are follow-up work. (Phase 91 did it:
+    `SYS$SYSROOT` is `_DUA0:[SYSTEM.]`, and the next item describes what it replaced.)
   - **The names govax defines** (`dclcmd/sysnames.go`, at mount, in the
     system table at executive mode, both terminal): `SYS$SYSDEVICE` is
     `_DUA0:`, and `SYS$SYSROOT` is `_DUA0:[SYSTEM]`, so

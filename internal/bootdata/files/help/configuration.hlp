@@ -55,7 +55,8 @@
        Each start runs the volume's SYS$MANAGER:STARTUP.COM, which
        defines SYS$SYSTEM, SYS$MANAGER, SYS$HELP, SYS$LIBRARY,
        SYS$SHARE, and SYS$SOURCES (govax itself defines SYS$SYSDEVICE,
-       the volume's device, and SYS$SYSROOT, its [SYSTEM] directory),
+       the volume's device, and SYS$SYSROOT, its [SYSTEM] directory as
+       a root),
        and runs your SYS$MANAGER:SYSTARTUP_VMS.COM last.  The console's
        and the debugger's grammars are the volume's copies too, unless
        one is in the current directory or a --path directory; one that

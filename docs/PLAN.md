@@ -631,3 +631,20 @@ settled" each round's answers (`testdata/help90`, five rounds on VMS 7.1), and i
 
 MANUAL.md's section 10 is the user's side (help libraries, writing help modules) and Appendix B the routines.
 What the phase left is its doc's "Where things stand".
+
+## Concealed names and rooted directories (Phase 91)
+
+Phase 91 (2026-11-09) gave RMS VMS's rooted directories, `DEV:[ROOT.]`, and put the system names on one. Its doc's
+Part A is the survey and the probe's answers (`testdata/lnm91`, two rounds on VMS 7.1), Part B the decisions, and its log the work.
+
+- **One name processor:** `rms/name.go`'s `expandNames` is all of RMS's name processing, the services' and the DCL
+  utilities'; `expandSpec` and F$PARSE are ways to it.
+- **Names:** a name is a device, a root, and a directory relative to the root, kept in logical terms until it reaches the
+  volume (`parsedName.volumeDir`), so nothing above a root can be reached. A field on both sides of a logical name's translation
+  is an error, and a concealed name must be a device and at most a root, as on VMS.
+- **Shown and physical names:** one helper shows a name (`resolvedSpec.shownDir`), `NAM$V_ROOT_DIR` and `NOCONCEAL` are RMS's, and the
+  image activator, `JPI$_IMAGNAME`, and BACKUP use a name's physical form or the path below its root as VMS's do. 15 directory levels in all.
+- **The system names:** `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` are `_DUA0:[SYSTEM.]`, concealed, and `SYS$SYSTEM`
+  and the others `SYS$SYSROOT:[dir]`. The volume's directories didn't change.
+
+MANUAL.md's "Logical names" and "The system volume" are the user's side. What the phase left is its doc's "Where things stand".

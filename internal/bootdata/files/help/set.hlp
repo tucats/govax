@@ -89,7 +89,9 @@
    The device goes into the logical name SYS$DISK, which is how every
    file command (and a program's $OPEN and $CREATE) finds the default
    device; a concealed logical name is kept as the device rather than
-   what it hides.  If the specification starts with a search list,
+   what it hides.  A concealed rooted name is the device with its root,
+   and [-] stops at the root, shown as [000000]; a root that isn't
+   concealed is refused.  If the specification starts with a search list,
    SYS$DISK is set to the search list's name and each element is
    searched in turn.  SHOW DEFAULT shows the default.
 

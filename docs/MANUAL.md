@@ -896,10 +896,37 @@ VAX> DEFINE LIBS DUA1:[LIB1],DUA1:[LIB2]      ! a search list
 VAX> TYPE LIBS:HELLO.MAR                      ! the first one that has it
 ```
 
-One VMS feature is missing: *rooted* directory logical names, whose
-equivalence ends in `.]` (`DEFINE/TRANSLATION=CONCEALED PROJ
-DUA1:[PROJECT.]`, then `PROJ:[SRC]`). govax doesn't yet treat such a name
-as the root of a directory tree.
+A *rooted* logical name is one whose equivalence ends its directory in a
+period. The directory then looks like a volume's master file directory:
+its subdirectories look like top-level directories, the root itself is
+`[000000]`, and nothing above it can be reached. Concealed, as it usually
+is, the name is what every command and program shows:
+
+```text
+VAX> DEFINE/TRANSLATION=CONCEALED PROJ DUA1:[PROJECT.]
+VAX> DIRECTORY PROJ:[SRC]                     ! really DUA1:[PROJECT.SRC]
+
+Directory PROJ:[SRC]
+
+HELLO.MAR;1
+
+Total of 1 file.
+VAX> SET DEFAULT PROJ:[SRC]
+VAX> SET DEFAULT [-]
+VAX> SHOW DEFAULT
+  PROJ:[000000]
+VAX> SET DEFAULT [-]
+%RMS-F-DIR, error in directory name
+VAX> WRITE SYS$OUTPUT F$PARSE("PROJ:[SRC]HELLO.MAR",,,,"NO_CONCEAL")
+DUA1:[PROJECT.][SRC]HELLO.MAR;
+```
+
+The last line is a name's physical form, the root and then the directory
+below it, which can also be typed. A root that isn't concealed works as
+well, and shows that form everywhere, but `SET DEFAULT` refuses it, as
+VMS's does. A root has at most 7 levels and the directory below it at
+most 8. The system's own names are rooted ([The system
+volume](#the-system-volume)).
 
 govax predefines `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and
 `SYS$COMMAND`, the terminal opened as process-permanent files, as VMS's
@@ -913,7 +940,8 @@ lists `SYS$OUTPUT` twice, `[super]` and `[exec]`. It also predefines `TT` (`TTA0
 concealed, in executive mode),
 `SYS$DISK` (set by `SET DEFAULT`), `DISK$label` for each mounted volume, and the date-format
 names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. Mounting the system
-volume defines `SYS$SYSDEVICE` and `SYS$SYSROOT`, and STARTUP.COM the
+volume defines `SYS$SYSDEVICE`, `SYS$SYSROOT`, `SYS$COMMON`, and
+`SYS$SPECIFIC`, and STARTUP.COM the
 other system names (`SYS$SYSTEM`, `SYS$MANAGER`, `SYS$HELP`,
 `SYS$LIBRARY`, `SYS$SHARE`, `SYS$SOURCES`), all in the system table in
 executive mode ([The system volume](#the-system-volume)). There is no
@@ -949,13 +977,18 @@ sparse host file, taking only the space its files use.
 | `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB` and `DBG$HELP.HLB`, DCL's and the debugger's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`) |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
 | `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
-| `[SYSTEM]` | `SYS$SYSROOT` | `GOVAX$FILES.DAT`, the list of files govax supplied; `GOVAX$UPDATE.LOG`, the log of what each start updated |
+| `[SYSTEM]` | `SYS$SYSROOT:[000000]` | `GOVAX$FILES.DAT`, the list of files govax supplied; `GOVAX$UPDATE.LOG`, the log of what each start updated |
 
 govax defines `SYS$SYSDEVICE` (the volume's device, `_DUA0:`) and
-`SYS$SYSROOT` (`_DUA0:[SYSTEM]`) when it mounts the volume; STARTUP.COM
-defines the rest, in plain DCL you can read and change. (`SYS$SOURCES`
-is govax's own name. The names aren't rooted directories as VMS's are:
-`SYS$SYSROOT:[SYSLIB]` doesn't lead to `[SYSTEM.SYSLIB]`.)
+`SYS$SYSROOT` (`_DUA0:[SYSTEM.]`, a rooted name) when it mounts the
+volume, all concealed; STARTUP.COM defines the rest, in plain DCL you can
+read and change, each as `SYS$SYSROOT:[dir]`. So `SYS$SYSROOT:[SYSLIB]` is
+the directory `[SYSTEM.SYSLIB]`, and a system file is shown that way:
+`DIRECTORY SYS$SYSTEM:` is headed `Directory SYS$SYSROOT:[SYSEXE]`.
+`SYS$COMMON` and `SYS$SPECIFIC` are defined too, the same root under VMS's
+other two names, for procedures and programs that use them; VMS's root is
+`[SYS0.]`, a search list with its common root, and govax has one system and
+one root. (`SYS$SOURCES` is govax's own name.)
 
 Every program-development command reads these files through the names,
 ahead of the copies built into govax: `MACRO` the macro library in
@@ -1005,7 +1038,7 @@ using the list in `GOVAX$FILES.DAT`:
 
 Each file a start writes on a volume that was there already, and each
 help library module it inserts, replaces, or removes, is a line in
-`SYS$SYSROOT:GOVAX$UPDATE.LOG`, with the time. The log is made the first
+`SYS$SYSROOT:[000000]GOVAX$UPDATE.LOG`, with the time. The log is made the first
 time there is something to put in it, and added to at its end after that
 (it never gets a new version); you can delete it, and a later start makes
 it again:
@@ -1634,7 +1667,9 @@ Sets and shows the default device and directory. Omitted parts are kept
 from the current default; `[.SUB]` and `[-]` are relative. A logical name
 that's concealed, or gives only a device, becomes the default device as
 it stands. One that gives a directory as well sets both, and can't have
-another directory after it. SHOW DEFAULT says so when the default
+another directory after it. A concealed rooted name is the default device
+with its root, and `[-]` stops there; a root that isn't concealed is
+refused. SHOW DEFAULT says so when the default
 directory doesn't exist:
 
 ```text
@@ -3897,7 +3932,7 @@ When `RUN` starts an image, govax does what VMS's image activator does:
 
    ```text
    %DCL-W-ACTIMAGE, error activating image MYSHR
-   -CLI-E-IMAGEFNF, image file not found _DUA0:[SYSTEM.SYSLIB]MYSHR.EXE;
+   -CLI-E-IMAGEFNF, image file not found _DUA0:[SYSTEM.][SYSLIB]MYSHR.EXE;
    ```
 
 3. **Checks each shareable image's ident** against the program's `GSMATCH`
@@ -7398,7 +7433,6 @@ The main differences, gathered from the rest of the manual:
   indexed files, and govax's VMS's; a file govax's RMS makes is VMS's to the byte but where
   a bucket splits after many records, which can fall a record apart (`testdata/vms88`).
   There's no `$SPACE`, and no CONVERT/RECLAIM, EDIT/FDL, or ANALYZE/RMS_FILE/INTERACTIVE.
-- No rooted-directory logical names (`DEV:[ROOT.]`).
 - govax's own system macro library lacks some of VMS's definition macros
   (`$STSDEF`, for one); VMS's own library can be used instead (section 8).
 - Some LIBRTL routines aren't implemented yet (Appendix B).

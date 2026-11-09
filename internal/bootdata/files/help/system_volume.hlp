@@ -19,13 +19,17 @@
                                       sources, STARLET.MAR and
                                       STARLETDEF.MAR, BUILDFTN.COM,
                                       BUILDSTARLET.COM, BUILDHELP.COM
-     [SYSTEM]          SYS$SYSROOT    GOVAX$FILES.DAT, the list of
-                                      files govax supplied;
+     [SYSTEM]          SYS$SYSROOT:   GOVAX$FILES.DAT, the list of
+                       [000000]       files govax supplied;
                                       GOVAX$UPDATE.LOG, the log of
                                       what each start updated
 
    govax defines SYS$SYSDEVICE and SYS$SYSROOT when it mounts the
-   volume; STARTUP.COM defines the rest, so you can see and change them.
+   volume, and SYS$COMMON and SYS$SPECIFIC, the same root as SYS$SYSROOT;
+   STARTUP.COM defines the rest, so you can see and change them.
+   SYS$SYSROOT is a rooted name, _DUA0:[SYSTEM.], and concealed, so that
+   SYS$SYSTEM is SYS$SYSROOT:[SYSEXE], the directory [SYSTEM.SYSEXE],
+   and shown under that name.
    MACRO, FORTRAN, LINK, RUN, and HELP find their libraries, FTNRTL.EXE,
    and the help through SYS$LIBRARY, SYS$SHARE, and SYS$HELP ahead of the
    copies built into govax, so an edited kernel, a rebuilt FTNRTL, a
@@ -54,7 +58,7 @@
 
    Each file a start writes on an existing volume, and each help library
    module it inserts, replaces, or removes (as LIBNAME(MODULE)), is a
-   line in SYS$SYSROOT:GOVAX$UPDATE.LOG with the time.  The log is made
+   line in SYS$SYSROOT:[000000]GOVAX$UPDATE.LOG with the time.  The log is made
    when first needed and added to at its end after that.
 
 2 Sharing

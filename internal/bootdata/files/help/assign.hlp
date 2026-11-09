@@ -67,6 +67,12 @@
    for, and TERMINAL stops iterative translation at this name.  The
    attributes apply to every equivalence string.
 
+   An equivalence string whose directory ends in a period (DUA1:[WORK.])
+   makes a rooted name: the directory looks like a volume's master file
+   directory, its subdirectories like top-level directories, the root
+   itself is [000000], and nothing above it can be reached.  Such a name
+   is usually concealed.
+
 /USER_MODE
 
    Defines the name at user mode.  A user-mode name in the process

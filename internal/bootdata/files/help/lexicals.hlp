@@ -431,7 +431,8 @@
    and directory.  The field is NODE, DEVICE, DIRECTORY, NAME, TYPE, or
    VERSION.  The type SYNTAX_ONLY doesn't check that the device and
    directory are there, and NO_CONCEAL shows the device a concealed
-   logical name stands for.  The result is "" when the device isn't
+   logical name stands for, and any root before the directory
+   (DUA1:[PROJECT.][SRC]A.DAT;).  The result is "" when the device isn't
    mounted, the directory isn't there (unless SYNTAX_ONLY), or the
    specification can't be parsed.
 

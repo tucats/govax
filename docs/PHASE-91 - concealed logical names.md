@@ -1,13 +1,14 @@
 # Phase 91 — concealed logical names and rooted directories
 
-**Status:** planned 2026-11-09; the plan and the answers to its questions
+**Status:** done 2026-11-09 ("Where things stand" lists what it left);
+the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
 answers"), 3 (one name processor), 4 (syntax and `$PARSE`), 5 (files
 through the services), 6 (the DCL utilities), 7 (devices and the rest), and
-8 (the system names) are done. RMS's services, DCL's commands, the device
-services, the image activator, and BACKUP know roots, and `SYS$SYSROOT` is
-one; subtask 9 is the close-out.
+8 (the system names), and 9 (the close-out) are done. RMS's services, DCL's
+commands, the device services, the image activator, and BACKUP know roots,
+and `SYS$SYSROOT` is one.
 
 ## Goal
 
@@ -479,7 +480,7 @@ Each is one commit, with tests, stopping for review.
    `SYS$SPECIFIC`, STARTUP.COM, the refresh on an existing volume,
    removing `TestLink68Oracle`'s mask and the tests' plain `SYS$SYSROOT`,
    and running the system volume's tests.
-9. **The close-out**: MANUAL.md (the rooted-names paragraph, "The system
+9. **The close-out** (done 2026-11-09): MANUAL.md (the rooted-names paragraph, "The system
    volume", the "no rooted names" line in the list of gaps), HELP DEFINE,
    ASSIGN, SET DEFAULT, F$PARSE, and SYSTEM_VOLUME, `sysnames.go`'s and
    Phase 87's notes, PLAN.md, and CLAUDE.md.
@@ -558,6 +559,25 @@ The author accepted the plan and answered its questions:
    would benefit from a single code path. They would, and it measured
    cheap (Decision 4).
 4. **`CONCEAL_DEVICES`:** not supported.
+
+## Where things stand
+
+Phase 91 is done (2026-11-09). Concealed and rooted logical names work as VMS 7.1's do through RMS's services, DCL's commands,
+the device services, the image activator, and BACKUP, held to both rounds of the probe, and the system names are built on a root. What
+it left:
+
+- **The Part A scope notes.** `[g,m]` directories (a future enhancement, by the author), the `CONCEAL_DEVICES` SYSGEN parameter (not
+  supported, the review's answer 4), and node names.
+- **A default name's search list.** `expandNames` fans out only the primary name's list. `findFile` takes a default's elements one at a
+  time for images and libraries, but a program's `$PARSE` with a search list as its default name uses the first element. Not probed.
+- **VMS's system names are a search list** on two roots, and govax's one root, by Decision 1. So the log's cases that use them
+  are held by form (`TestSystemNames`), not line for line, and a file there shows the name it was reached by, where VMS's show `SYS$COMMON`.
+- **COPY without `/LOG`** says `%COPY-S-COPIED`, where VMS's says nothing, an older difference; under a root it gives the whole physical
+  path, `DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;2`.
+- **LNM91.EXE's size** in the BACKUP section's replay, 17 blocks to VMS's 16, masked and not looked into.
+- **What the probe didn't try**, each marked in its subtask's log entry: a `*` name over a translation's name, a typed root on a concealed
+  name with no root, a related file deciding brackets, a list element that fails at `$OPEN`, `[000000...]` on a plain device,
+  `SET DEFAULT` to a root reached through a plain name, and a save of `[000000...]` through a root.
 
 ## Progress log
 
@@ -770,3 +790,7 @@ The author accepted the plan and answered its questions:
   `SIMVAX$DUA0:[SYS0.SYSCOMMON.]`, concealed and terminal, and the log's IMAGEFNF lines match as they stand.
 
   Left for subtask 9: the help and the manual, which still describe the plain names.
+- **2026-11-09** Subtask 9: the close-out. MANUAL.md's rooted names under "Logical names" (the example run on govax), "The system volume", SET
+  DEFAULT, the activator's message, the line in the list of gaps gone. HELP DEFINE (with an example), ASSIGN, SET DEFAULT, F$PARSE, SYSTEM_VOLUME,
+  and CONFIGURATION, and the libraries regenerated. `sysnames.go`'s notes changed with subtask 8; Phase 87's log points here. PLAN.md's section, and CLAUDE.md. `ods2`'s
+  15 levels are in its v0.1.28, which `go.mod` pins, so subtask 7's note about the pin no longer applies. Phase 91 done.

@@ -627,7 +627,7 @@ never had.
   `%MOUNT-I-SYSKEPT` once per copy; the manifest's `KEPT=` and `SEEDED` notes, written only when it changes);
   and subtask 5 (2026-11-03) STARTUP.COM from the volume (`Console.RunStartup`; bootdata's `vax.init` is gone, its
   `startup.com` run only without a volume), `SYS$SYSDEVICE` and `SYS$SYSROOT` defined at mount (`dclcmd/sysnames.go`;
-  plain names, RMS having no rooted directories), and the grammars and help files through the resolver's volume
+  plain names until Phase 91), and the grammars and help files through the resolver's volume
   layer (`respath.Resolver.Volume`, `dclcmd.SystemFS`, `sysvol.Resolved`), a volume grammar that doesn't parse or lacks
   a bound syntax (`dcl.Grammar.Missing`) replaced by govax's own with `%VAX-W-SYSGRAMMAR` (`cmd/govax/grammarfiles.go`);
   and subtask 6 (2026-11-03) ASM and LOAD on volume files (`machine/consolefile.go`: `Session.Locate`'s rules, a bare
@@ -783,7 +783,8 @@ never had.
   Appendix B's LBR$ routines, and HELP's default library always
   `SYS$HELP:HELPLIB`.
   Phase 91 (planned 2026-11-09, the plan accepted by the author the same
-  day, its "The review") is concealed logical names and rooted directories
+  day, its "The review"; done 2026-11-09; its "Where things stand" is the
+  follow-up list, and PLAN.md summarizes it) is concealed logical names and rooted directories
   (`DEV:[ROOT.]`, `.][`), with RMS's two name processors made one first,
   `SYS$SYSROOT` then a concealed root, `_DUA0:[SYSTEM.]`, `SYS$COMMON` and
   `SYS$SPECIFIC` the same root, and the system names `SYS$SYSROOT:[dir]`;
@@ -803,7 +804,7 @@ never had.
   `parsedName.physical` (`FileLocation.Physical`, JPI$_IMAGNAME, IMAGEFNF), `Session.ImageLocation`, `DVI$_CONCEALED`, BACKUP's
   paths relative to the root (`parsedName.belowRoot`), and `ods2`'s 15 levels.
   Subtask 8 (2026-11-09) is the system names: `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` the root `_DUA0:[SYSTEM.]` (`sysvol.Rooted`), `SYS$SYSDEVICE` concealed,
-  STARTUP.COM's names `SYS$SYSROOT:[dir]`, held by `TestSystemNames` (`internal/console/sysnames_test.go`).
+  STARTUP.COM's names `SYS$SYSROOT:[dir]`, held by `TestSystemNames` (`internal/console/sysnames_test.go`). Subtask 9 (2026-11-09) is the close-out.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
