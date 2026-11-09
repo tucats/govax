@@ -849,6 +849,41 @@ BADONE). `/DATA=REDUCE` and `/DATA=EXPAND` each write a new version,
 REDUCE's listed as "Library is in DCX data reduced format", both SS$_NORMAL
 with the facility's inhibit bit (%X10000001).
 
+### Round 3b (2026-11-08)
+
+VMS V7.1 on the VAX 8600, `testdata/help90/vax/round3b/` (`help90x.log`
+and `h90x.bck`). All 17 cases ran.
+
+**Binary keys don't work in VMS 7.1's LBRSHR.** Given the address of the
+key's longword, as the manual says, the first INSERT_KEY failed with an
+access violation at address 4 in every library with binary keys (X1, X2,
+X3, and X5, as W13 had), whatever its type, entries, or indexes. Given a
+string descriptor instead (X4), it took for the key the descriptor's length
+word and two bytes of whatever was on its stack: K5, K1, and K3 were all
+`7FED0002` (so the second and third were DUPKEY), K256 `7FED0004`;
+LOOKUP_KEY of K3 found K5's module, and DELETE_KEY of K1, with other bytes
+on the stack, found nothing. (W15's `01 00 ED 7F` past its entry is the
+same thing for a key of length 1.) LIBRARY/LIST of the libraries left
+behind failed (ACCVIO, FAOFAIL). A binary index's key length is 4
+(LIBRARY/LIST's "Max. key length: 3" for X1, its descriptor's less 1).
+govax does what the manual says (subtask 11d), and the oracle compares
+these cases up to their first INSERT_KEY.
+
+**Preallocation.** X6, keys of 31 with ENTALL 0, has 23 preallocated index
+blocks; X7, ENTALL 1, 1; X8, keys of 15 with 96, 4; X9, V2 keys of 15 with
+96, 5; X10, V2 keys of 31 with 8, 1; X1 and X5, binary with 0, 3. All fit
+subtask 11d's rules, and ENTALL 0 is 300 entries (X6 fits 299 to 311, the
+binary libraries 249 to 331).
+
+**Opens.** A library open to update in another process (X12, held 90
+seconds) made X13's open to update and X14's to read wait until it closed,
+76 seconds each, and then succeed; no 30-second limit showed. In one
+image, an open to read after one to update, or to update after one to
+read, was RMS$_FLK after 120 seconds, its status value SS$_ACCONFLICT, the
+control index gone (CLOSE then ILLCTL); two opens to read were both fine.
+After a successful open LBR$RET_RMSSTV gave 4, the type of the text
+library opened, as round 1b's 3 was a help library's.
+
 ## Subtasks
 
 1. The survey and plan (this document), reviewed by the author (done
@@ -1755,3 +1790,25 @@ with the facility's inhibit bit (%X10000001).
   holds the clock to within 5 seconds of a procedure's start over 3
   seconds of WAITs beside a waiting subprocess (it was 12 minutes 44
   seconds before the fix).
+- **2026-11-08** — **Round 3b run on VMS 7.1, and govax changed to its
+  answers.** The log and save set are in `vax/round3b/` ("What the probe
+  settled" has its answers). VMS 7.1's binary keys are broken (the
+  manual's form crashes, a descriptor gives keys of stack garbage), so
+  govax keeps the manual's. `defaultEntries` is 300. LBR$RET_RMSSTV after a
+  successful open is the library's type, which round 1b's TYPMISMCH case
+  had shown without its reason. And a library is now held while it's
+  open (`internal/lbrrtl/hold.go`, over `rms.Session.HoldFile`, an ACP
+  access: to update, denying others reading and writing; to read, writing):
+  an open conflicting with another process's hold waits in the scheduler
+  (`corevms.Environment.WaitFor`, a wait that isn't for the host's time) up
+  to 120 seconds and then is RMS$_FLK, and one conflicting with the image's
+  own hold is RMS$_FLK with SS$_ACCONFLICT at once (VMS took 120 seconds),
+  the control index gone. The hold goes before the routines write the file
+  (LBR$CLOSE, and LBR$FLUSH, which takes it again), and at image rundown,
+  for which image data now may have a `Rundown` method
+  (`corevms.ImageRundowner`). `TestLBR90XOracle` runs every case in both
+  paging modes, X12 in a subprocess holding WX while X13 and then X14 wait
+  for it (89 emulated seconds, the holder's LIB$WAIT, where VMS's took 76),
+  and holds the output to VMS's, times masked, the binary-key cases up to
+  their first INSERT_KEY, and X6 to X10's libraries and WX to VMS's byte
+  for byte.

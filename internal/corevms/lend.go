@@ -51,6 +51,21 @@ func (env *Environment) WaitUntil(over func() bool, deadline uint64) error {
 	return err
 }
 
+// WaitFor is a shim's way to wait until over reports true, in LEF, woken
+// with a timer's boost: a wait for something another process does, which
+// the scheduler tests at each of its calls. deadline, when not 0, is the
+// system time by which the shim gives up, so the scheduler, with nothing
+// to run, moves time on to it; the shim runs again then (or when over is
+// true) and decides. Unlike WaitUntil's, the wait isn't for the host's
+// time.
+func (env *Environment) WaitFor(over func() bool, deadline uint64) error {
+	env.waitDeadline = deadline
+
+	return env.waitOn(sched.StateLEF, sched.ResourceNone, sched.ClassTimer, func() bool {
+		return over() || (deadline != 0 && env.Clock() >= deadline)
+	})
+}
+
 // LendCPU makes env, the scheduler's current process, give the CPU up
 // between instructions, while it runs nothing (process 1, between two of
 // its DCL commands): it yields, staying computable, if over is nil, or

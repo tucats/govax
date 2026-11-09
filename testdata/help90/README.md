@@ -29,7 +29,7 @@ are in their own sections below):
 | `vax/round1/` | Round 1's VAX run, checked: `help90.log`, `h90.bck`, `dbgh.dlg`, and `help90-term.log` |
 | `vax/round2/` | Round 1c's `help90c.log` and round 2's `help90-term.log` (simh's console log, escape sequences kept, cut before simh's own help text), checked |
 | `vax/round3/` | Round 3's second run: `help90w.log` and `h90w.bck`, every library it made |
-| `vax/round3b/` | Round 3b's run, once made and checked: `help90x.log` and `h90x.bck` |
+| `vax/round3b/` | Round 3b's run: `help90x.log` and `h90x.bck` |
 | `vax/round1b/` | Round 1b's, checked: `help90.log`, `h90.bck`, `dbgh.dlg` (`help90f.log` and `dbgv.dlg` are local) |
 | `help90d.dbg`, `help90v.dbg`, `dbgt.mar` | The debugger sessions' commands, and the image they run |
 | `lbr90.mar` | Part E: 79 cases calling the LBR$ routines on the probe's libraries: the definitions' values, INI_CONTROL, OPEN, GET_HEADER, LOOKUP_KEY, GET_RECORD (move and locate), FIND, GET_INDEX with matches, SET_INDEX, GET_HELP with its action routine's every call (flags, level, data), OUTPUT_HELP with output and input routines of its own (scripted answers to its prompts), the errors |
@@ -285,6 +285,10 @@ seconds into X12's 90.
    which puts `help90x.log` and `h90x.bck` in
    `testdata/disks/help90-vms/round3b/`. They're our own text and VMS's
    messages and listings; once checked they go in `vax/round3b/`.
+
+The run (2026-11-08) ran all 17 cases. Its `help90x.log` and `h90x.bck`
+passed the check (our own text, VMS's messages and listings) and are in
+`vax/round3b/`; the console's `TestLBR90XOracle` replays it.
 
 ## The tests
 

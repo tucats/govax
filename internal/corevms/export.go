@@ -334,7 +334,9 @@ func (env *Environment) CallService(name string, argv []uint32) (uint32, error) 
 // flag and LUN pools, its static timer block) is in the image's P0
 // pages, so each image starts with it fresh; here ImageRundown forgets
 // it. key should be a value of a type private to the package, so no two
-// packages' keys collide.
+// packages' keys collide. A value with a Rundown method (ImageRundowner)
+// has it called at image rundown, before it's forgotten: what it holds
+// outside the image's memory (a file held open) goes then.
 func (env *Environment) ImageData(key any, create func() any) any {
 	if v, ok := env.imageData[key]; ok {
 		return v
@@ -348,4 +350,19 @@ func (env *Environment) ImageData(key any, create func() any) any {
 	env.imageData[key] = v
 
 	return v
+}
+
+// ImageRundowner is image data (ImageData) with something to give back at
+// image rundown.
+type ImageRundowner interface {
+	Rundown()
+}
+
+// rundownImageData runs each image data value's Rundown.
+func (env *Environment) rundownImageData() {
+	for _, v := range env.imageData {
+		if r, ok := v.(ImageRundowner); ok {
+			r.Rundown()
+		}
+	}
 }

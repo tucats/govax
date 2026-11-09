@@ -115,6 +115,13 @@ type control struct {
 	// traversing is set while LBR$GET_INDEX calls its routine, which may
 	// not change the index (LBR$_UPDURTRAV).
 	traversing bool
+
+	// held is the library's file, held while it's open (hold.go), and
+	// heldName its name; holdUntil is when an open waiting for another
+	// process's hold gives up.
+	held      *rms.ACPFile
+	heldName  string
+	holdUntil uint64
 }
 
 // refresh reads the library again after a routine changed it, so that the
@@ -250,9 +257,8 @@ func iniControl(env *corevms.Environment, argv []uint32) (uint32, error) {
 //     SS$_NOSUCHFILE for LBR$RET_RMSSTV), and the control index is gone
 //     with it: LBR$CLOSE then says LBR$_ILLCTL;
 //   - a library of another type than LBR$INI_CONTROL's is opened, with
-//     LBR$_TYPMISMCH, a warning; the status value is then the library's
-//     type (VMS 7.1's was 3 for a help library opened as text,
-//     unconfirmed why).
+//     LBR$_TYPMISMCH, a warning;
+//   - the status value of any open that succeeds is the library's type.
 //
 // A library opened to create is made in memory from the create options
 // (createOptions) and written as a new file by LBR$CLOSE; one opened to
@@ -329,27 +335,25 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return rmsFNF, nil
 	}
 
-	// A library another control index has open to update is locked
-	// (VMS 7.1 waited for it, past the probe's two minutes).
-	if c.function == funcUpdate {
-		for _, o := range st.controls {
-			if o.upd != nil && strings.EqualFold(o.file.Name, found.Name) {
-				delete(st.controls, n)
-
-				return rmsFLK, nil
-			}
-		}
+	// The file is held while the library is open, and an open that
+	// conflicts with a hold waits or is RMS$_FLK (hold.go).
+	if r, err := holdLibrary(env, c, n, found); r != 0 || err != nil {
+		return r, err
 	}
 
 	lib, err := lbr.Open(data)
 	if err != nil {
+		c.release()
 		delete(st.controls, n)
 		st.stv = 0
 
 		return lbrIllFmt, nil
 	}
 
-	c.lib, c.index, st.stv = lib, 1, 0
+	// The status value of an open that succeeds is the library's type
+	// (round 3b's X13, X14, X17: 4 for a text library; round 1b's 3 for a
+	// help library opened as text).
+	c.lib, c.index, st.stv = lib, 1, uint32(lib.Type)
 
 	if err := fillNAM(env, c.nam, found); err != nil {
 		return librtl.MemoryFault(env, librtl.Writing(err))
@@ -357,6 +361,7 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	if c.function == funcUpdate {
 		if c.upd, err = lbr.OpenUpdater(data); err != nil {
+			c.release()
 			delete(st.controls, n)
 
 			return lbrIllFmt, nil
@@ -366,8 +371,6 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if c.typ != lbr.TypeUnknown && c.typ != lib.Type {
-		st.stv = uint32(lib.Type)
-
 		return lbrTypMismch, nil
 	}
 
@@ -561,6 +564,7 @@ func closeLibrary(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	delete(stateOf(env).controls, n)
+	c.release()
 
 	if c.buffer != 0 {
 		env.FreeVM(c.buffer)

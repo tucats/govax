@@ -209,7 +209,19 @@ func flush(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if c.upd != nil && c.changed {
-		if err := writeLibrary(env, c); err != nil {
+		// The hold goes while the file is written, and is taken again.
+		hadHold := c.held != nil
+		c.release()
+
+		err := writeLibrary(env, c)
+
+		if hadHold {
+			if f, herr := env.Session.HoldFile(c.file, true); herr == nil {
+				c.held, c.heldName = f, c.file.Name
+			}
+		}
+
+		if err != nil {
 			return lbrWriteErr, nil
 		}
 

@@ -111,13 +111,13 @@ const binaryKeyLength = 4
 
 // preallocated is how many index blocks a new library starts with, for
 // opts.Entries entries: as many as blocks of 500 bytes hold entries of the
-// RFA and the longest key, at least 1. Round 3 has five cases. In V3 keys
-// of 31 took 1 block for 8 entries (W9) and 7 for 96 (W6), and binary keys
-// (KEYLEN 0, entries of 6 bytes) 1 for 96 (W13). The V2 format took 9 for
-// 96 keys of 31 (W14), its fixed entries of 38 bytes taken here at 4/5 of
-// the 500 bytes, 10 to a block. 0 entries with binary keys took 3 (W15),
-// taken here as 0 meaning defaultEntries. The V2 rule and the default are
-// unconfirmed.
+// RFA and the longest key, at least 1. In V3, keys of 31 took 1 block for
+// 1 entry and 8 (round 3b's X7, round 3's W9) and 7 for 96 (W6), keys of 15
+// 4 for 96 (X8), and binary keys (KEYLEN 0, entries of 6 bytes) 1 for 96
+// (W13). The V2 format took 9 for 96 keys of 31 (W14), 5 for 96 of 15 (X9),
+// and 1 for 8 of 31 (X10), its fixed entries taken here at 4/5 of the 500
+// bytes. 0 entries is defaultEntries: keys of 31 took 23 blocks (X6), and
+// binary keys 3 (W15, X1).
 func preallocated(opts UpdateOptions) int {
 	entries := opts.Entries
 	if entries == 0 {
@@ -132,9 +132,9 @@ func preallocated(opts UpdateOptions) int {
 }
 
 // defaultEntries is the entries a library is preallocated for when
-// CRE$L_ENTALL is 0 (unconfirmed: W15's 3 blocks of binary keys fit any
-// default from 249 to 331).
-const defaultEntries = 256
+// CRE$L_ENTALL is 0: X6's 23 blocks for keys of 31 fit 299 to 311, and
+// W15's 3 for binary keys 249 to 331, so 300.
+const defaultEntries = 300
 
 // NewUpdater makes a new, empty library with opts: the header, and the
 // index blocks the entries need, on a free list.

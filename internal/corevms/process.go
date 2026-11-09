@@ -467,6 +467,7 @@ func (env *Environment) ImageRundown() {
 	env.qiowWaits = nil
 	env.enqWaits = nil
 	env.releaseHeap()
+	env.rundownImageData()
 	env.imageData = nil
 	env.Process.ImageName = ""
 }

@@ -24,7 +24,7 @@ const lbr90wCases = 36
 // Their output isn't compared yet.
 var lbr90wLater = map[int]string{
 	17: "LIBRARY's history records (11e)",
-	31: "a second update open: VMS waited past the timer",
+	31: "a second update open: VMS waited past the timer (round 3b: FLK after 120 seconds, govax's at once)",
 	33: "H90T's history record, LIBRARY's (11e)",
 }
 
@@ -172,6 +172,14 @@ func lbr90wCompare(t *testing.T, n int, got, want []string) {
 func lbr90wVMSCases(t *testing.T, path string) map[int][]string {
 	t.Helper()
 
+	return lbrVMSCases(t, path, "$ LBR90W ", lbr90wCases)
+}
+
+// lbrVMSCases reads a round 3 log: each case's lines, by number, after the
+// command that ran it, prefix and its number, up to the next command.
+func lbrVMSCases(t *testing.T, path, prefix string, count int) map[int][]string {
+	t.Helper()
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -181,7 +189,7 @@ func lbr90wVMSCases(t *testing.T, path string) map[int][]string {
 	n := 0
 
 	for line := range strings.SplitSeq(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
-		if rest, ok := strings.CutPrefix(line, "$ LBR90W "); ok {
+		if rest, ok := strings.CutPrefix(line, prefix); ok {
 			if n, err = strconv.Atoi(rest); err != nil {
 				n = 0
 			}
@@ -198,8 +206,8 @@ func lbr90wVMSCases(t *testing.T, path string) map[int][]string {
 		}
 	}
 
-	if len(cases) != lbr90wCases {
-		t.Fatalf("the log has %d cases, want %d", len(cases), lbr90wCases)
+	if len(cases) != count {
+		t.Fatalf("the log has %d cases, want %d", len(cases), count)
 	}
 
 	return cases

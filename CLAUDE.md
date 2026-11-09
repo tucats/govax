@@ -762,7 +762,10 @@ never had.
   VMS 7.1's crashed on them), the VMS V2 format (`Library.V2`, fixed-length
   entries), the create options' defaults, and the NAM block
   (`internal/lbrrtl/nam.go`: filled in, opened by, and a related name),
-  held by the same oracle and `lbr`'s `TestUpdaterW14`.
+  held by the same oracle and `lbr`'s `TestUpdaterW14`; round 3b
+  (`testdata/help90`'s `lbr90x.mar`, run on VMS 7.1 2026-11-08,
+  `TestLBR90XOracle`) found VMS's binary keys broken, ENTALL 0 300 entries,
+  and opens of a library held open waiting (`internal/lbrrtl/hold.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -1978,7 +1981,9 @@ expect adjustment as phases land):
   output and input routines); `write.go` the writing routines and
   SET_MODULE (subtask 11b), each on the control's `lbr.Updater`;
   `history.go` PUT_HISTORY, GET_HISTORY, SEARCH, and FLUSH (11c);
-  `nam.go` the NAM blocks INI_CONTROL and OPEN take (11d).
+  `nam.go` the NAM blocks INI_CONTROL and OPEN take (11d); `hold.go` the
+  library's file held while it's open (an ACP access, `rms.Session.HoldFile`),
+  another process's open waiting for it (`corevms.Environment.WaitFor`).
   Strings through `librtl/export.go`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
