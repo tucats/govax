@@ -15,8 +15,9 @@ import (
 // doesn't run as VMS 7.1 did, by a piece of the command's text:
 //
 //   - LIBRARY=[]H90A: VMS's SYS$HELP is SYS$COMMON:[SYSHLP], a rooted
-//     directory, so "[]H90A" was SYS$COMMON:[000000]H90A.HLB; govax has no
-//     rooted directories and no SYS$HELP on the test's volume.
+//     directory, so "[]H90A" was SYS$COMMON:[000000]H90A.HLB; this test's
+//     volume has no SYS$HELP (TestSystemNames has the case on the system
+//     volume's).
 var help90DCLLeft = []string{"LIBRARY=[]H90A"}
 
 // help90FileID is DIRECTORY/FULL's file ID, which the run decides.

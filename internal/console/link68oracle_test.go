@@ -71,12 +71,9 @@ var link68Origins = regexp.MustCompile(`(SHR1_ORIGIN|SHR3_GET\(\)|SHR3_DATA) 000
 
 // link68MaskLog masks what differs in every run of the log, VMS's or
 // govax's: dates and times (DIRECTORY's), and the addresses
-// link68Origins finds. VMS's SYS$SHARE is SYS$SYSROOT:[SYSLIB] on a
-// rooted SYS$SYSROOT, which govax doesn't have: the test's SYS$SYSROOT
-// is DUA0:, so VMS's root becomes DUA0:.
+// link68Origins finds.
 func link68MaskLog(text string) []string {
 	text = strings.ReplaceAll(text, "\r", "")
-	text = strings.ReplaceAll(text, "SIMVAX$DUA0:[SYS0.SYSCOMMON.]", "DUA0:")
 	text = link68Dates.ReplaceAllString(text, "<date>")
 	text = link68Origins.ReplaceAllString(text, "$1 <address>")
 
@@ -86,7 +83,9 @@ func link68MaskLog(text string) []string {
 // link68Govax is a console with the probe's sources and LINK68.COM on
 // an RD51 in DUA1, as the exchange volume had them (exchange.cmd), the
 // default directory. SYS$SHARE is SYS$SYSROOT:[SYSLIB] in the system
-// table, as on VMS, and SYS$SYSROOT is DUA0: (nothing mounted there).
+// table, as on VMS, and SYS$SYSROOT is the root the log's messages show
+// (nothing mounted there), as VMS's search list leaves it at its last
+// element.
 func link68Govax(t *testing.T, paging bool) (*Dispatcher, *bytes.Buffer) {
 	t.Helper()
 
@@ -120,7 +119,7 @@ func link68Govax(t *testing.T, paging bool) (*Dispatcher, *bytes.Buffer) {
 	}
 
 	shareFindRun(t, d, "SET DEFAULT DUA1:[000000]")
-	shareFindRun(t, d, "DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SYSROOT DUA0:")
+	shareFindRun(t, d, "DEFINE/SYSTEM/EXECUTIVE_MODE/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL) SYS$SYSROOT SIMVAX$DUA0:[SYS0.SYSCOMMON.]")
 	shareFindRun(t, d, "DEFINE/SYSTEM/EXECUTIVE_MODE SYS$SHARE SYS$SYSROOT:[SYSLIB]")
 	buf.Reset()
 
@@ -588,7 +587,7 @@ func TestLink68MaskLog(t *testing.T) {
 		"MAIN1: SHR1_ORIGIN <address>, MAIN1 00000400",
 		"MAIN3: SHR3_GET() 00300200, G^SHR3_DATA 00300200 holds 00003333",
 		"MAIN3: SHR3_GET() <address>, G^SHR3_DATA <address> holds 00003333",
-		"-CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]SHR1.EXE;",
+		"-CLI-E-IMAGEFNF, image file not found SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSLIB]SHR1.EXE;",
 		"SHR1.EXE;8                17/17       <date>",
 	}
 

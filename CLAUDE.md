@@ -802,6 +802,8 @@ never had.
   `Session.SetDefault`'s `defaultDevice`, held by `TestLnm91DCLOracle`, and subtask 7 (2026-11-09) devices and the rest:
   `parsedName.physical` (`FileLocation.Physical`, JPI$_IMAGNAME, IMAGEFNF), `Session.ImageLocation`, `DVI$_CONCEALED`, BACKUP's
   paths relative to the root (`parsedName.belowRoot`), and `ods2`'s 15 levels.
+  Subtask 8 (2026-11-09) is the system names: `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC` the root `_DUA0:[SYSTEM.]` (`sysvol.Rooted`), `SYS$SYSDEVICE` concealed,
+  STARTUP.COM's names `SYS$SYSROOT:[dir]`, held by `TestSystemNames` (`internal/console/sysnames_test.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command

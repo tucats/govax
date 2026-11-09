@@ -4,9 +4,10 @@
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
 Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
 answers"), 3 (one name processor), 4 (syntax and `$PARSE`), 5 (files
-through the services), 6 (the DCL utilities), and 7 (devices and the rest)
-are done. RMS's services, DCL's commands, the device services, the image
-activator, and BACKUP know roots; the system names are subtask 8.
+through the services), 6 (the DCL utilities), 7 (devices and the rest), and
+8 (the system names) are done. RMS's services, DCL's commands, the device
+services, the image activator, and BACKUP know roots, and `SYS$SYSROOT` is
+one; subtask 9 is the close-out.
 
 ## Goal
 
@@ -474,7 +475,7 @@ Each is one commit, with tests, stopping for review.
    `DVI$_CONCEALED`, the image activator's message and
    `JPI$_IMAGNAME`, `LIB$FID_TO_NAME`, BACKUP, and the depth (with an
    `ods2` release if Decision 7 needs one).
-8. **The system names**: `defineSystemNames` with `SYS$COMMON` and
+8. **The system names** (done 2026-11-09): `defineSystemNames` with `SYS$COMMON` and
    `SYS$SPECIFIC`, STARTUP.COM, the refresh on an existing volume,
    removing `TestLink68Oracle`'s mask and the tests' plain `SYS$SYSROOT`,
    and running the system volume's tests.
@@ -747,3 +748,25 @@ The author accepted the plan and answered its questions:
   Unconfirmed, the probe having no such case: a walk's end when the deepest directory wasn't the last one walked (`AtLimit` stays
   set); RUN of a bare name that's a search list (its first element); a save of `BASE:[000000...]` (recorded `[SUB]`, logged
   `BASE:[000000.SUB]`, as `$SEARCH` shows it); a restore's message through a root, `_DUA1:[R.][OUT]C.DAT;1`.
+- **2026-11-09** Subtask 8: the system names. `defineSystemNames` makes `SYS$SYSROOT`, `SYS$COMMON`, and `SYS$SPECIFIC`
+  `_DUA0:[SYSTEM.]` (`sysvol.Rooted`) and `SYS$SYSDEVICE` `_DUA0:`, all `[concealed,terminal]`, and STARTUP.COM's six names are
+  `SYS$SYSROOT:[dir]`. Nothing on the volume moved, and the manifest changes only by STARTUP.COM's digest.
+
+  One fix in the code: `FindImageFile` translated its default name to the end before parsing it, so a file found through
+  `SYS$SHARE` was named by its physical device. It now takes each search list element's `Display` text, up to the concealed name, so
+  LINK's map says `SYS$SYSROOT:[SYSLIB]FTNRTL.EXE;1`, as VMS's says `SYS$COMMON:[SYSLIB]LIBRTL.EXE;1`. And the last name tried is now
+  two: IMAGEFNF wants it physical (`_DUA0:[SYSTEM.][SYSLIB]X.EXE;`), and a utility's message as RMS shows it
+  (HELP's `%HELP-E-OPENIN, error opening SYS$SYSROOT:[000000]H90A.HLB; as input`, VMS's form); `findFile` returns both. The full
+  round of `SYS$SHARE` search lists still goes through `findFile`'s loop, since `expandNames` fans out only the primary name's.
+
+  What shows differently, by Decision 6: a file through a system name is `SYS$SYSROOT:[SYSEXE]...` (SHOW ROM, a map, DIRECTORY's
+  heading), through `SYS$SYSDEVICE:` is `SYS$SYSDEVICE:[SYSTEM.SYSEXE]...`, and a missing image's message has `.][`.
+
+  `TestSystemNames` holds govax's names to the forms of `testdata/lnm91/vax/lnm91.log`: VMS's are a search list on `[SYS0.]` and
+  `[SYS0.SYSCOMMON.]`, so the log's cases can't be replayed, and `lnm91Later` still leaves them out of the oracles, its comments now
+  saying why. Each name shows itself here, where VMS's show `SYS$COMMON` for a file in its second element. `TestSystemNamesRefresh` is a
+  volume with the old STARTUP.COM, which the next start replaces; `TestSystemNamesKeptStartup` is one the user changed, kept with
+  SYSKEPT, its `SYS$SYSDEVICE:[SYSTEM.SYSLIB]` names still working. `TestLink68Oracle`'s mask is gone: its `SYS$SYSROOT` is VMS's own
+  `SIMVAX$DUA0:[SYS0.SYSCOMMON.]`, concealed and terminal, and the log's IMAGEFNF lines match as they stand.
+
+  Left for subtask 9: the help and the manual, which still describe the plain names.

@@ -76,7 +76,7 @@ func TestRun_systemVolumeStartup(t *testing.T) {
 		t.Errorf("a host startup.com ran with a system volume:\n%s", out)
 	}
 
-	if want := "_DUA0: _DUA0:[SYSTEM] SYS$SYSDEVICE:[SYSTEM.SYSLIB]\n"; !strings.Contains(out, want) {
+	if want := "_DUA0: _DUA0:[SYSTEM.] SYS$SYSROOT:[SYSLIB]\n"; !strings.Contains(out, want) {
 		t.Errorf("output lacks %q:\n%s", want, out)
 	}
 
@@ -106,7 +106,7 @@ func TestRun_systemVolumeKernel(t *testing.T) {
 	withSystemVolume(t, systemFlags{file: filepath.Join(t.TempDir(), "govax-system.dsk")})
 
 	out = runOnce(t, nil, "SHOW ROM")
-	if want := `ROM FILE="_DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(out, want) {
+	if want := `ROM FILE="SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(out, want) {
 		t.Errorf("with a system volume, output lacks %s:\n%s", want, out)
 	}
 

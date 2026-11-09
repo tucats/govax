@@ -125,7 +125,7 @@ func TestLoadVolumeFiles(t *testing.T) {
 
 	mustDispatch(t, d, "LOAD/ROM SYS$SYSDEVICE:[SYSTEM.SYSEXE]DEFAULT.ROM", "SHOW ROM")
 
-	if want := `ROM FILE="_DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(buf.String(), want) {
+	if want := `ROM FILE="SYS$SYSDEVICE:[SYSTEM.SYSEXE]DEFAULT.ROM;1"`; !strings.Contains(buf.String(), want) {
 		t.Errorf("SHOW ROM lacks %s:\n%s", want, buf)
 	}
 
@@ -194,7 +194,7 @@ func TestBootFromEditedKernel(t *testing.T) {
 		t.Errorf("the edited kernel didn't boot:\n%s", buf)
 	}
 
-	if got, want := c.Engine.Memory().ROMFile, "_DUA0:[SYSTEM.SYSEXE]DEFAULT.ROM;1"; got != want {
+	if got, want := c.Engine.Memory().ROMFile, "SYS$SYSROOT:[SYSEXE]DEFAULT.ROM;1"; got != want {
 		t.Errorf("ROM file = %q, want %q", got, want)
 	}
 }

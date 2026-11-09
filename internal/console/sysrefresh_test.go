@@ -334,9 +334,9 @@ func TestStartupFromSystemVolume(t *testing.T) {
 
 	for name, want := range map[string]string{
 		dclcmd.SystemDeviceName: "_DUA0:",
-		dclcmd.SystemRootName:   "_DUA0:[SYSTEM]",
-		"SYS$LIBRARY":           "SYS$SYSDEVICE:[SYSTEM.SYSLIB]",
-		"SYS$MANAGER":           "SYS$SYSDEVICE:[SYSTEM.SYSMGR]",
+		dclcmd.SystemRootName:   "_DUA0:[SYSTEM.]",
+		"SYS$LIBRARY":           "SYS$SYSROOT:[SYSLIB]",
+		"SYS$MANAGER":           "SYS$SYSROOT:[SYSMGR]",
 	} {
 		e, err := c.Logicals.Translate(lnm.SystemTableName, name, lnm.Executive, 0)
 		if err != nil || e.Equivalences[0].Value != want {
@@ -352,7 +352,7 @@ func TestStartupFromSystemVolume(t *testing.T) {
 		t.Error("STARTUP.COM didn't define TTA0:")
 	}
 
-	if want := "site startup: SYS$SYSDEVICE:[SYSTEM.SYSLIB]\n"; !strings.Contains(buf.String(), want) {
+	if want := "site startup: SYS$SYSROOT:[SYSLIB]\n"; !strings.Contains(buf.String(), want) {
 		t.Errorf("output lacks %q:\n%s", want, buf)
 	}
 

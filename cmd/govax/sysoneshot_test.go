@@ -98,7 +98,7 @@ func TestRun_oneShotsOnSystemVolume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if want := "DUA0:[SYSTEM.SYSLIB]FTNRTL.EXE;1"; !strings.Contains(string(mapText), want) {
+	if want := "SYS$SYSROOT:[SYSLIB]FTNRTL.EXE;1"; !strings.Contains(string(mapText), want) {
 		t.Errorf("the map doesn't name %s:\n%s", want, mapText)
 	}
 

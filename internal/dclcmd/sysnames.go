@@ -18,29 +18,41 @@ import (
 
 // The logical names govax defines when it mounts the system volume, in the
 // system table at executive mode as VMS's boot defines its own. STARTUP.COM
-// defines the rest (SYS$SYSTEM, SYS$LIBRARY, ...) from SystemDeviceName.
+// defines the rest (SYS$SYSTEM, SYS$LIBRARY, ...) from SystemRootName.
 const (
 	// SystemDeviceName is the system volume's device ("_DUA0:").
 	SystemDeviceName = "SYS$SYSDEVICE"
 
-	// SystemRootName is the volume's [SYSTEM] directory. VMS's is a rooted
-	// directory (DUA0:[SYS0.], so that SYS$SYSROOT:[SYSEXE] is
-	// DUA0:[SYS0.SYSEXE]); govax's RMS has no rooted directories, so this
-	// is a plain one, and SYS$SYSROOT:[SYSLIB] isn't [SYSTEM.SYSLIB].
+	// SystemRootName is the volume's [SYSTEM] directory as a root, a
+	// directory that looks like a volume's master file directory
+	// ("_DUA0:[SYSTEM.]"), so that SYS$SYSROOT:[SYSEXE] is the directory
+	// [SYSTEM.SYSEXE], and is shown as SYS$SYSROOT:[SYSEXE]. VMS's is
+	// [SYS0.]; govax has one system, and so one root
+	// (docs/PHASE-91 - concealed logical names.md, Decision 1).
 	SystemRootName = "SYS$SYSROOT"
+
+	// SystemCommonName and SystemSpecificName are VMS's two halves of
+	// SYS$SYSROOT. govax's are the one root again, for procedures and
+	// programs that assume the names exist.
+	SystemCommonName   = "SYS$COMMON"
+	SystemSpecificName = "SYS$SPECIFIC"
 )
 
-// defineSystemNames defines SystemDeviceName and SystemRootName for the
-// system volume on device. Each is terminal: its equivalence is a device's
-// physical name, not translated again.
+// defineSystemNames defines the names above for the system volume on
+// device. Each is concealed, so that a file reached through it is shown by
+// its logical name rather than by its device, and terminal: its equivalence
+// is a device's physical name, not translated again.
 func (c *Context) defineSystemNames(device string) {
 	physical := "_" + device + ":"
+	root := physical + sysvol.Rooted
 
 	for name, value := range map[string]string{
-		SystemDeviceName: physical,
-		SystemRootName:   physical + sysvol.Root,
+		SystemDeviceName:   physical,
+		SystemRootName:     root,
+		SystemCommonName:   root,
+		SystemSpecificName: root,
 	} {
-		eqv := []lnm.Equivalence{{Value: value, Attrs: lnm.AttrTerminal}}
+		eqv := []lnm.Equivalence{{Value: value, Attrs: lnm.AttrConcealed | lnm.AttrTerminal}}
 		_, _ = c.Logicals.Define(lnm.SystemTableName, name, lnm.Executive, 0, eqv)
 	}
 }

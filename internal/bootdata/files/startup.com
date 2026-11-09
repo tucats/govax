@@ -14,8 +14,10 @@ $!  in SYS$MANAGER:SYSTARTUP_VMS.COM, which this procedure runs last and
 $!  govax never replaces.
 $!
 $!  The system logical names. govax defines SYS$SYSDEVICE (the system
-$!  volume's device) and SYS$SYSROOT (its [SYSTEM] directory) when it
-$!  mounts the volume; the rest are defined here, so they can be changed.
+$!  volume's device), and SYS$SYSROOT, SYS$COMMON, and SYS$SPECIFIC (its
+$!  [SYSTEM] directory, as a root: SYS$SYSROOT:[SYSEXE] is the directory
+$!  [SYSTEM.SYSEXE]) when it mounts the volume; the rest are defined
+$!  here, so they can be changed.
 $!  With no system volume (govax started with --system-file none, or a
 $!  volume it couldn't mount), there is no SYS$SYSDEVICE, and govax's
 $!  built-in files are used instead.
@@ -23,12 +25,12 @@ $!
 $ system_volume = f$trnlnm("SYS$SYSDEVICE") .nes. ""
 $ if system_volume
 $ then
-$    define/system/executive_mode sys$system  sys$sysdevice:[system.sysexe]
-$    define/system/executive_mode sys$manager sys$sysdevice:[system.sysmgr]
-$    define/system/executive_mode sys$help    sys$sysdevice:[system.syshlp]
-$    define/system/executive_mode sys$library sys$sysdevice:[system.syslib]
-$    define/system/executive_mode sys$share   sys$sysdevice:[system.syslib]
-$    define/system/executive_mode sys$sources sys$sysdevice:[system.sources]
+$    define/system/executive_mode sys$system  sys$sysroot:[sysexe]
+$    define/system/executive_mode sys$manager sys$sysroot:[sysmgr]
+$    define/system/executive_mode sys$help    sys$sysroot:[syshlp]
+$    define/system/executive_mode sys$library sys$sysroot:[syslib]
+$    define/system/executive_mode sys$share   sys$sysroot:[syslib]
+$    define/system/executive_mode sys$sources sys$sysroot:[sources]
 $ endif
 $!
 $!  The microkernel and the console ROM. On the system volume they are

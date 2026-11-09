@@ -189,28 +189,48 @@ func (s *Session) definesName(name string) bool {
 // its logical name is one), the highest version, as the image activator
 // opens it. It returns the file's location (Name its resultant
 // specification, Physical with its physical device) and the last
-// specification tried; when none is there, a *NotFoundError, with that
-// specification. A name RMS can't parse (a host path) finds nothing.
+// specification tried, in its physical form as the activator's IMAGEFNF
+// names it; when none is there, a *NotFoundError, with that specification.
+// A name RMS can't parse (a host path) finds nothing.
 func (s *Session) FindShareableImage(name string) (FileLocation, string, error) {
-	return s.FindImageFile(name, ShareableDefault)
+	loc, _, physical, err := s.findFile(name, ShareableDefault)
+	if err != nil {
+		return loc, physical, &NotFoundError{Spec: physical}
+	}
+
+	return loc, physical, nil
 }
 
 // FindImageFile is FindShareableImage with another default file
-// specification than SYS$SHARE:.EXE: LINK looks for a shareable image a
-// library names in the library's own directory first
-// ("DUA1:[000000].EXE"), then in SYS$LIBRARY (the Linker manual, 6.3.3.2).
+// specification than SYS$SHARE:.EXE, and with the last specification tried
+// as RMS shows it, a concealed name and all, for a utility's messages. LINK
+// looks for a shareable image a library names in the library's own directory
+// first ("DUA1:[000000].EXE"), then in SYS$LIBRARY (the Linker manual,
+// 6.3.3.2).
 func (s *Session) FindImageFile(name, defaultSpec string) (FileLocation, string, error) {
+	loc, shown, _, err := s.findFile(name, defaultSpec)
+
+	return loc, shown, err
+}
+
+// findFile is the search of FindShareableImage and FindImageFile. It returns
+// the file's location and the last specification tried, as RMS shows it and
+// in its physical form.
+func (s *Session) findFile(name, defaultSpec string) (FileLocation, string, string, error) {
 	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s}
 
+	// The default's search list, an element at a time. Each is its text up
+	// to any concealed name, for the file to be shown by that name
+	// (SYS$SYSROOT:[SYSLIB]X.EXE;1).
 	defaults := []string{defaultSpec}
 	if fs, err := translateSpec(s.Logicals, defaultSpec); err == nil && len(fs) > 0 {
 		defaults = defaults[:0]
 		for _, f := range fs {
-			defaults = append(defaults, f.Spec)
+			defaults = append(defaults, f.Display)
 		}
 	}
 
-	tried := ""
+	shown, physical := "", ""
 
 	for _, def := range defaults {
 		names, sts := ctx.expandName(nameInputs{Primary: name, Default: def})
@@ -220,19 +240,19 @@ func (s *Session) FindImageFile(name, defaultSpec string) (FileLocation, string,
 
 		for _, p := range names {
 			spec := p.spec()
-			tried = p.physical()
+			shown, physical = p.String(), p.physical()
 
 			if p.FNB&fnbWildcard != 0 || spec.Name == "" || s.Mounts == nil {
 				continue
 			}
 
 			if loc, ok := s.findVersion(p, spec); ok {
-				return loc, tried, nil
+				return loc, shown, physical, nil
 			}
 		}
 	}
 
-	return FileLocation{}, tried, &NotFoundError{Spec: tried}
+	return FileLocation{}, shown, physical, &NotFoundError{Spec: shown}
 }
 
 // findVersion is the file p (spec, for the volume layer) names, if it's

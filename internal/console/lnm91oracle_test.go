@@ -279,11 +279,14 @@ var lnm91DCLSections = map[string][]string{
 	"lnm91b": {"DCL ON THOSE NAMES", "FIFTEEN LEVELS"},
 }
 
-// lnm91SystemName is a name VMS's system has and subtask 8 gives govax's.
+// lnm91SystemName is a name of VMS's system, a search list on the root
+// [SYS0.], where govax's is one root, [SYSTEM.]: the cases that use one
+// can't be replayed against VMS's log, and TestSystemNames holds govax's
+// to their forms.
 var lnm91SystemName = regexp.MustCompile(`SYS\$(SYSTEM|SYSROOT|COMMON|SPECIFIC|SYSDEVICE)`)
 
-// lnm91Later reports a command, with its output, that isn't this subtask's to match: the system
-// names (subtask 8), and SET PROTECTION, which govax doesn't have.
+// lnm91Later reports a command, with its output, that can't be matched: the system
+// names (lnm91SystemName), and SET PROTECTION, which govax doesn't have.
 func lnm91Later(cmd string) bool {
 	return lnm91SystemName.MatchString(cmd) || strings.HasPrefix(cmd, "$ SET PROTECTION")
 }
@@ -382,7 +385,7 @@ func lnm91Masked(lines []string) string {
 
 // lnm91CompareSection holds a section's commands to VMS's. After a SET
 // DEFAULT to a system name, the rest of the section shows that default, and
-// is subtask 8's too.
+// is left out with it (lnm91SystemName).
 func lnm91CompareSection(t *testing.T, sect string, want, got [][]string) {
 	t.Helper()
 

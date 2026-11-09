@@ -26,6 +26,7 @@ const (
 // system logical name leads (STARTUP.COM defines them, Decision 5).
 const (
 	Root    = "[SYSTEM]"
+	Rooted  = "[SYSTEM.]"        // Root as SYS$SYSROOT's equivalence has it, the root of the names below
 	SysExe  = "[SYSTEM.SYSEXE]"  // SYS$SYSTEM: the page file, the console ROM
 	SysMgr  = "[SYSTEM.SYSMGR]"  // SYS$MANAGER: the startup procedures, the grammars
 	SysHlp  = "[SYSTEM.SYSHLP]"  // SYS$HELP: the help libraries
