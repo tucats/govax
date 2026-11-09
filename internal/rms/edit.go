@@ -99,8 +99,8 @@ func (e *EditFile) ScratchName() string {
 		return filepath.Base(e.Spec)
 	}
 
-	spec, err := filespec.Parse(e.Spec, filespec.Spec{})
-	if err != nil || spec.Name+spec.Type == "" {
+	spec, sts := scanSpec(e.Spec)
+	if sts != 0 || spec.Name+spec.Type == "" {
 		return "edit.tmp"
 	}
 

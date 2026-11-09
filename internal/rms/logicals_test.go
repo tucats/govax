@@ -337,3 +337,164 @@ func TestNormalizeDeviceName_prefix(t *testing.T) {
 		}
 	}
 }
+
+// A concealed name that SYS$DISK holds is the device a name with none is
+// shown on, as it is for a name that gives it itself (docs/PHASE-91, A.3;
+// VMS 7.1: testdata/lnm91's SET DEFAULT CDISK:[LNM91.ROOT1]).
+func TestExpandSpec_concealedSysDisk(t *testing.T) {
+	s, _, _ := newTwoVolumeSession(t)
+	defineTestLogicalAttrs(t, s.Logicals, "CDISK", lnm.AttrConcealed, "DUA1:")
+
+	if err := s.SetDefault("CDISK:[A]"); err != nil {
+		t.Fatal(err)
+	}
+
+	specs, err := expandSpec(s.Logicals, "X.DAT", s.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r := specs[0]; r.Display != "CDISK" || r.Spec.Device != "DUA1" {
+		t.Errorf("X.DAT is on %s (%s), want CDISK (DUA1)", r.Display, r.Spec.Device)
+	}
+
+	if got, err := s.ExpandName("X.DAT"); err != nil || got != "CDISK:[A]X.DAT;" {
+		t.Errorf("ExpandName = %q, %v", got, err)
+	}
+}
+
+// F$PARSE is $PARSE's name processing: the same text for the same name.
+func TestParseFollowsNameProcessing(t *testing.T) {
+	s, _, _ := newTwoVolumeSession(t)
+	defineTestLogicalAttrs(t, s.Logicals, "CDISK", lnm.AttrConcealed, "DUA1:")
+	defineTestLogical(t, s.Logicals, "PLAIN", "_DUA1:[A]")
+
+	if err := s.SetDefault("DUA0:[A.B]"); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s}
+
+	for _, tt := range []struct {
+		spec, def string
+		noConceal bool
+	}{
+		{spec: "X.DAT"},
+		{spec: "[.C]X"},
+		{spec: "[-]X.DAT;3"},
+		{spec: "[...]*.*;*"},
+		{spec: "[000000]X"},
+		{spec: "CDISK:[Z]X.DAT"},
+		{spec: "CDISK:[Z]X.DAT", noConceal: true},
+		{spec: "PLAIN:X.DAT"},
+		{spec: "X", def: "CDISK:[Y].TXT"},
+		{spec: "[.K]X", def: "[Y]"},
+	} {
+		names, sts := ctx.expandName(nameInputs{Primary: tt.spec, Default: tt.def, NoConceal: tt.noConceal})
+		if sts != 0 {
+			t.Errorf("expandName(%q): status %#x", tt.spec, sts)
+
+			continue
+		}
+
+		p, _, err := s.Parse(tt.spec, tt.def, "", true, tt.noConceal)
+		if err != nil || p.String() != names[0].String() {
+			t.Errorf("Parse(%q, %q) = %q, %v; $PARSE gives %q", tt.spec, tt.def, p, err, names[0])
+		}
+	}
+
+	// A related file gives F$PARSE only the name and type.
+	p, _, err := s.Parse("", "", "DUA1:[R]REL.TXT;4", true, false)
+	if err != nil || p.String() != "DUA0:[A.B]REL.TXT;" {
+		t.Errorf("related = %q, %v", p, err)
+	}
+
+	if _, _, err := s.Parse("A.B.C", "", "", true, false); err == nil {
+		t.Error("F$PARSE of A.B.C: no error")
+	}
+}
+
+// Against stands in for the process defaults, for a name defaulted by the
+// name before it in a list or by the file being renamed.
+func TestExpandNames_against(t *testing.T) {
+	db := newTestLogicals(t)
+	defineTestLogical(t, db, "SYS$DISK", "DISK9:")
+	defineTestLogical(t, db, "ELSE", "DISK2:[Q]")
+
+	against := filespec.Spec{Device: "DUA1", Dirs: []string{"A", "B"}, Name: "OLD", Type: "TXT"}
+	process := filespec.Spec{Dirs: []string{"PROCESS"}}
+
+	for _, tt := range []struct{ text, want string }{
+		{"", "DUA1:[A.B]OLD.TXT;"},
+		{"NEW", "DUA1:[A.B]NEW.TXT;"},
+		{".DAT", "DUA1:[A.B]OLD.DAT;"},
+		{"[.C]", "DUA1:[A.B.C]OLD.TXT;"},
+		{"[-]", "DUA1:[A]OLD.TXT;"},
+		{"[Z]", "DUA1:[Z]OLD.TXT;"},
+		{"DUA2:", "DUA2:[A.B]OLD.TXT;"},
+		{"ELSE:", "DISK2:[Q]OLD.TXT;"},
+	} {
+		names, sts := expandNames(db, process, nameInputs{Primary: tt.text, Against: &against})
+		if sts != 0 || names[0].String() != tt.want {
+			t.Errorf("%q against = %v, %#x; want %s", tt.text, names, sts, tt.want)
+		}
+	}
+
+	tree := filespec.Spec{Device: "DUA1", Dirs: []string{"A"}, Recursive: true}
+
+	names, sts := expandNames(db, process, nameInputs{Primary: "X", Against: &tree})
+	if sts != 0 || !names[0].spec().Recursive || names[0].String() != "DUA1:[A...]X.;" {
+		t.Errorf("X against a tree = %v, %#x", names, sts)
+	}
+
+	// An empty one is no defaults at all: not SYS$DISK, not the process's.
+	names, sts = expandNames(db, process, nameInputs{Primary: "X", Against: &filespec.Spec{}})
+	if sts != 0 || names[0].Dev != "" || len(names[0].spec().Dirs) != 0 {
+		t.Errorf("X against nothing = %v, %#x", names, sts)
+	}
+}
+
+// A name processing refuses is a *NameError with RMS's status.
+func TestExpandSpec_nameError(t *testing.T) {
+	db := newTestLogicals(t)
+
+	for _, tt := range []struct {
+		text string
+		sts  uint32
+	}{
+		{"[UNCLOSED", rmsSyntaxError},
+		{"[A..B]X", rmsDirError},
+		{"[-]X", rmsDirError},
+		{"A.B.C", rmsSyntaxError},
+		{"DEV*:X", rmsDeviceError},
+	} {
+		_, err := expandSpec(db, tt.text, filespec.Spec{})
+
+		var ne *NameError
+		if !errors.As(err, &ne) || ne.Status != tt.sts {
+			t.Errorf("expandSpec(%q) = %v, want status %#x", tt.text, err, tt.sts)
+		}
+	}
+}
+
+func TestScanSpec(t *testing.T) {
+	spec, sts := scanSpec("_DUA1:[A.B]X.DAT;2")
+	if sts != 0 || spec.Device != "_DUA1" || strings.Join(spec.Dirs, ".") != "A.B" ||
+		spec.Name != "X" || spec.Type != "DAT" || spec.Version != "2" {
+		t.Errorf("scanSpec = %+v, %#x", spec, sts)
+	}
+
+	if _, sts := scanSpec("[A"); sts != rmsSyntaxError {
+		t.Errorf("scanSpec([A) status %#x", sts)
+	}
+}
+
+// A device service reads only the device field, whatever RMS would make of
+// a name that long (VMS 7.1: testdata/lib58's FTN 64-character device).
+func TestPhysicalDevice_longName(t *testing.T) {
+	long := strings.Repeat("D", 63)
+
+	if got, err := PhysicalDevice(newTestLogicals(t), long+":"); err != nil || got != long {
+		t.Errorf("PhysicalDevice = %q, %v", got, err)
+	}
+}

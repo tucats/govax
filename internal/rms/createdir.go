@@ -137,9 +137,10 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 			return nil, fmt.Errorf("create directory: %w", err)
 		}
 
-		// Going up past the MFD ("[-.X]" there) is an error in the
-		// directory name, RMS$_DIR, as VMS reports it.
-		if errors.Is(err, filespec.ErrAboveMFD) {
+		// Going up past the MFD ("[-.X]" there), or too many levels, is
+		// an error in the directory name, RMS$_DIR, as VMS reports it.
+		var nameErr *NameError
+		if errors.As(err, &nameErr) && nameErr.Status == rmsDirError {
 			return nil, fmt.Errorf("create directory: %w: %v", volume.ErrDirectoryName, err)
 		}
 

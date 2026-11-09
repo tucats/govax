@@ -12,6 +12,8 @@ import (
 // $PARSE, $OPEN, $CREATE, and the rest turn a FAB's file name into the
 // expanded file specification. Written from the OpenVMS RMS Reference
 // Manual (FAB$L_DNA, NAM$L_RLF, FAB$V_OFP, and Table 5-2's NAM$L_FNB).
+// It is the only name processor: the DCL utilities reach it through
+// logicals.go's expandSpec (docs/PHASE-91, Decision 4).
 //
 // A specification is filled in from several sources, each supplying only
 // the fields the ones before it left out:
@@ -393,6 +395,19 @@ type nameInputs struct {
 	// translation rather than its logical name.
 	NoConceal bool
 
+	// ThroughPermanent takes a process-permanent file's name as the device
+	// its string names, for callers that want a device or a volume file
+	// (the DCL utilities, $ASSIGN): the name isn't reported as Permanent.
+	ThroughPermanent bool
+
+	// Against, when set, stands in for the process defaults: its device
+	// for SYS$DISK's, its directory for the default directory (and what a
+	// relative directory applies to), and its name and type for ones no
+	// other source gives. It's how a name takes its defaults from the name
+	// before it in a list, or from the file being renamed, and an empty
+	// Spec means no defaults at all.
+	Against *filespec.Spec
+
 	// BadString is RMS$_FNA or RMS$_DNA when the file name's or default
 	// name's string can't be read, and 0 otherwise. A status, not a fault:
 	// RMS checks a program's strings. FORRTL's INQUIRE gives a $PARSE an
@@ -438,7 +453,10 @@ type translatedName struct {
 // translateName translates text's logical name and scans each result,
 // the program's fields winning over the translation's. A search list
 // gives one per element.
-func translateName(db *lnm.Database, text string) ([]translatedName, uint32) {
+//
+// A process-permanent file ends the name there, unless throughPermanent
+// asks for the device its string names instead.
+func translateName(db *lnm.Database, text string, throughPermanent bool) ([]translatedName, uint32) {
 	if text == "" {
 		return []translatedName{{}}, 0
 	}
@@ -459,7 +477,7 @@ func translateName(db *lnm.Database, text string) ([]translatedName, uint32) {
 		// A process-permanent file ends name processing: the device is
 		// the logical name, and nothing else is merged (the Guide to
 		// OpenVMS File Applications, 6.2).
-		if f.Permanent != nil {
+		if f.Permanent != nil && !throughPermanent {
 			own.Dev = f.PermanentName + ":"
 			out = append(out, translatedName{fileName: own, Permanent: f.Permanent})
 
@@ -538,18 +556,27 @@ func mergeName(f, def fileName) (fileName, uint32) {
 // has no device) is a search list. On failure it returns the RMS status
 // instead.
 func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
+	var base filespec.Spec
+	if ctx.Session != nil {
+		base = ctx.Session.Default
+	}
+
+	return expandNames(ctx.Logicals, base, in)
+}
+
+// expandNames is name processing itself, with the logical names db and
+// the process default directory base (expandName's are a Context's).
+func expandNames(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedName, uint32) {
 	if in.BadString != 0 {
 		return nil, in.BadString
 	}
 
-	db := ctx.Logicals
-
-	primaries, sts := translateName(db, in.Primary)
+	primaries, sts := translateName(db, in.Primary, in.ThroughPermanent)
 	if sts != 0 {
 		return nil, sts
 	}
 
-	defs, sts := translateName(db, in.Default)
+	defs, sts := translateName(db, in.Default, in.ThroughPermanent)
 	if sts != 0 {
 		return nil, sts
 	}
@@ -567,12 +594,14 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 		}
 	}
 
-	var base filespec.Spec
-	if ctx.Session != nil {
-		base = ctx.Session.Default
+	if in.Against != nil {
+		base = *in.Against
 	}
 
 	defaultDir := dirSpec{Elems: base.Dirs}.String()
+	if in.Against != nil && base.Recursive {
+		defaultDir = dirSpec{Elems: append(append([]string{}, base.Dirs...), ellipsis)}.String()
+	}
 
 	var out []parsedName
 
@@ -630,6 +659,10 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 			f, _ = mergeName(f, src)
 		}
 
+		if in.Against != nil {
+			f, _ = mergeName(f, againstFields(*in.Against))
+		}
+
 		if dir != "" {
 			d, _ := scanDir(strings.Trim(dir, "[]"))
 			if d.Relative {
@@ -646,9 +679,13 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 		// per element) and the default directory.
 		disks := []translatedName{{}}
 
-		if f.Dev == "" {
+		switch {
+		case f.Dev != "":
+		case in.Against != nil:
+			disks[0].Dev = againstDevice(*in.Against)
+		case db != nil:
 			if _, err := db.Translate(lnm.FileDevName, sysDiskName, lnm.User, 0); err == nil {
-				if disks, sts = translateName(db, sysDiskName+":"); sts != 0 {
+				if disks, sts = translateName(db, sysDiskName+":", in.ThroughPermanent); sts != 0 {
 					return nil, sts
 				}
 
@@ -690,6 +727,42 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 	}
 
 	return out, 0
+}
+
+// againstFields is the name and type an Against spec gives.
+func againstFields(s filespec.Spec) fileName {
+	f := fileName{Name: s.Name}
+	if s.Type != "" {
+		f.Type = "." + s.Type
+	}
+
+	return f
+}
+
+// againstDevice is an Against spec's device as a name's device field, or
+// "" for none.
+func againstDevice(s filespec.Spec) string {
+	if s.Device == "" {
+		return ""
+	}
+
+	return s.Device + ":"
+}
+
+// scanSpec is text's own fields as a filespec.Spec: nothing translated and
+// no defaults applied, and a device's "_" kept. For a name that's already
+// complete, such as a resultant string. On failure it returns the RMS
+// status, as scanName does.
+func scanSpec(text string) (filespec.Spec, uint32) {
+	f, sts := scanName(text)
+	if sts != 0 {
+		return filespec.Spec{}, sts
+	}
+
+	spec := finishName(f, "", 0, false).spec()
+	spec.Device = strings.TrimSuffix(f.Dev, ":")
+
+	return spec, 0
 }
 
 // permanentName is the name a primary name p, with the default name def,

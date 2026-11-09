@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
-Part A below) and 2 (the probe, two rounds on the VAX; A.4, "The probe's
-answers") are done. Nothing is implemented yet.
+Part A below), 2 (the probe, two rounds on the VAX; A.4, "The probe's
+answers"), and 3 (one name processor) are done. Roots aren't implemented yet.
 
 ## Goal
 
@@ -451,7 +451,7 @@ Each is one commit, with tests, stopping for review.
 1. **The survey** (done 2026-11-09): Part A.
 2. **The probe**: `testdata/lnm91`, as in Part D; run on the simh VAX by
    the author (done 2026-11-09, A.4).
-3. **One name processor** (Decision 4): `expandSpec` over `expandName`,
+3. **One name processor** (done 2026-11-09; Decision 4): `expandSpec` over `expandName`,
    errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
    RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
    behavior but the `SYS$DISK` fix; the whole test suite is the check.
@@ -584,3 +584,33 @@ The author accepted the plan and answered its questions:
   logical name, which changes behavior Phase 33 assumed; a concealed name
   must be a device or a device and root; 15 physical levels exist on disk.
   Decisions 2, 7, and 8 revised. Subtask 2 done.
+- **2026-11-09** Subtask 3: one name processor. `expandNames` (`name.go`) is
+  name processing, `Context.expandName` its face for the services, and
+  `expandSpec` for the DCL utilities (`logicals.go`; `expandText` turns a status
+  into a `*LogicalNameError` or a new `*NameError`, and `parsedName.resolved` makes a
+  `resolvedSpec`). `nameInputs` has two new fields: `ThroughPermanent` (a
+  process-permanent file's name as its device, for callers that want one) and
+  `Against` (a spec standing in for the process defaults: the name before it in
+  DELETE's or RENAME's list, the file being renamed). `parseTranslated`,
+  `physical`, and `mfdRelative` are gone; F$PARSE is one call of it (a related
+  file by `OFP`, whose meaning is the same), and SET DEFAULT, `defaultSpecs`,
+  `LocateRelated`, RENAME, and DELETE's list go through it. `scanSpec` replaces
+  `filespec.Parse` for a name that's already complete (RENAME's, EDIT's, and
+  `DirectoryExists`). `filespec.Parse` is no longer called outside tests.
+  `PhysicalDevice` reads only the translation's device field and doesn't go
+  through name processing, as VMS's device services reach names RMS refuses
+  (A.4, and `testdata/lib58`'s 64-character device, which the first try failed).
+  The whole test suite passes, and A.3's last row is fixed: `DIRECTORY` after
+  `SET DEFAULT CDISK:[ROOT1]` is headed `CDISK:[ROOT1]`.
+
+  The DCL side used to be laxer than RMS, so a few corners changed with the merge,
+  none of them seen by a test and each now as `$PARSE` has it. A name RMS refuses
+  (`A.B.C`, a 40-character name, `[A..B]`, more than 8 levels) is an error
+  (`CLI_BADFILESPEC`, RMS$_DIR at CREATE/DIRECTORY) where DCL used to look for
+  it and find nothing. Text is uppercased. `[000000.X]` is `[X]`, not a directory
+  `000000` below the MFD. F$PARSE's relative directory applies to the process default,
+  not to the default name's directory, and it keeps a physical device's `_`
+  from SYS$DISK or with NO_CONCEAL (A.4 has both). `RENAME A.B C.` gives `C.`,
+  no longer taking `.B`. `[A...B]` (an ellipsis in the middle) looks in `[A.B]`
+  rather than matching nothing; subtask 5 is the walk. A relative directory
+  with a SYS$DISK that has its own applies to the process default (Round 2).

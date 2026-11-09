@@ -124,11 +124,11 @@ func (s *Session) ForProcess(logicals *lnm.Database) *Session {
 // "DUA0:[MYDIR]") against the current Default and, on success, makes it
 // the new default — the Go equivalent of running SET DEFAULT.
 //
-// Per filespec.Parse's own documented rules, any component text doesn't
-// specify is inherited from the previous Default rather than cleared: SET
-// DEFAULT DUA0: alone, for instance, changes only the device, leaving
-// whatever directory was previously in effect untouched — exactly how real
-// VMS's own SET DEFAULT behaves for a device-only argument.
+// Any component text doesn't specify is inherited from the previous Default
+// rather than cleared: SET DEFAULT DUA0: alone, for instance, changes only
+// the device, leaving whatever directory was previously in effect
+// untouched — exactly how real VMS's own SET DEFAULT behaves for a
+// device-only argument.
 //
 // The device goes into SYS$DISK (process table, supervisor mode) and the
 // rest into Default, as VMS keeps them. Logical names in text are
@@ -142,30 +142,20 @@ func (s *Session) SetDefault(text string) error {
 		return err
 	}
 
-	base := s.Default
-	base.Device = ""
-
-	var (
-		device string
-		spec   filespec.Spec
-	)
-
+	primary, device := text, ""
 	if len(fs) > 1 {
-		device = strings.TrimSuffix(text[:len(text)-len(fs[0].Remainder)], ":")
-
-		spec, err = filespec.Parse(fs[0].Remainder, base)
-	} else {
-		t := fs[0].Spec
-		if fs[0].Concealed != "" {
-			t = fs[0].Display
-		}
-
-		spec, err = filespec.Parse(t, base)
-		device = spec.Device
+		primary = fs[0].Remainder
+		device = strings.TrimSuffix(text[:len(text)-len(primary)], ":")
 	}
 
+	names, err := expandText(s.Logicals, s.Default, nameInputs{Primary: primary, ThroughPermanent: true})
 	if err != nil {
 		return fmt.Errorf("rms: SET DEFAULT %q: %w", text, err)
+	}
+
+	n := names[0]
+	if len(fs) == 1 && n.FNB&fnbExpDev != 0 {
+		device = strings.TrimSuffix(n.Dev, ":")
 	}
 
 	if device != "" {
@@ -175,6 +165,7 @@ func (s *Session) SetDefault(text string) error {
 		}
 	}
 
+	spec := n.spec()
 	spec.Device = ""
 	s.Default = spec
 

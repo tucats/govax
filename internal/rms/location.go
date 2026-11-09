@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/ods2/filespec"
 )
 
 // This file implements the file-name rules of docs/PHASE-27.md's "File
@@ -171,12 +170,12 @@ func (s *Session) LocateRelated(name string, host bool, related FileLocation) (F
 		return FileLocation{}, err
 	}
 
-	base := filespec.Spec{Device: specs[0].Spec.Device, Dirs: specs[0].Spec.Dirs}
-
-	spec, err := filespec.Parse(name, base)
-	if err != nil {
-		return FileLocation{}, fmt.Errorf("rms: %q: %w", name, err)
+	spec, sts := scanSpec(name)
+	if sts != 0 {
+		return FileLocation{}, &NameError{Spec: name, Status: sts}
 	}
+
+	spec.Device, spec.Dirs = specs[0].Spec.Device, specs[0].Spec.Dirs
 
 	return FileLocation{Name: spec.String()}, nil
 }

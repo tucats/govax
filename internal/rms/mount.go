@@ -400,16 +400,16 @@ func (t *MountTable) DirectoryExists(device, dir string) (bool, error) {
 		return false, fmt.Errorf("rms: %s: not mounted", normalizeDeviceName(device))
 	}
 
-	spec, err := filespec.Parse(dir, filespec.Spec{})
-	if err != nil {
-		return false, fmt.Errorf("rms: directory %q: %w", dir, err)
+	spec, sts := scanSpec(dir)
+	if sts != 0 {
+		return false, &NameError{Spec: dir, Status: sts}
 	}
 
 	if spec.Name != "" || spec.Type != "" || spec.Version != "" || spec.Recursive {
 		return false, fmt.Errorf("rms: directory %q: %w", dir, ErrNotDirectorySpec)
 	}
 
-	_, err = filespec.ResolveDirectory(entry.Volume, spec.Dirs)
+	_, err := filespec.ResolveDirectory(entry.Volume, spec.Dirs)
 
 	return err == nil, nil
 }

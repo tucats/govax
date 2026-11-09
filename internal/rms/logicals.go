@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/filespec"
 )
 
@@ -14,16 +15,10 @@ import (
 // the default device (SYS$DISK) and directory, and fanning a search list
 // out into the specs it stands for.
 //
-// A file specification is resolved in three layers, each filling in only
-// what the one above left out, as RMS does:
-//
-//  1. the fields written in the spec itself, after its logical name;
-//  2. the fields of that logical name's translation (so PAY_FILE:*.DAT,
-//     with PAY_FILE = DISK1:[SALES_STAFF]PAYROLL, is
-//     DISK1:[SALES_STAFF]*.DAT);
-//  3. the defaults: SYS$DISK's device (and directory, when SYS$DISK is a
-//     search list whose elements have one) and the process default
-//     directory.
+// How the fields of a name are filled in is name processing's own affair
+// (name.go); this file is its face toward the DCL utilities, which take Go
+// errors and a resolvedSpec where the services take a status and a
+// parsedName.
 //
 // A search list in the spec, or in SYS$DISK when the spec has no device,
 // gives one resolved spec per element, in order.
@@ -81,135 +76,99 @@ func translateSpec(db *lnm.Database, text string) ([]lnm.FileSpec, error) {
 	return fs, nil
 }
 
-// parseTranslated parses one translation of a spec with the precedence
-// described at the top of this file: the fields in f.Remainder (what the
-// user wrote after the logical name), then those of the translation
-// itself, then def.
-func parseTranslated(f lnm.FileSpec, def filespec.Spec) (filespec.Spec, error) {
-	prefix := f.Spec[:len(f.Spec)-len(f.Remainder)]
-	if prefix == "" {
-		return physical(filespec.Parse(f.Spec, def))
-	}
-
-	mid, err := filespec.Parse(prefix, def)
-	if err != nil {
-		return filespec.Spec{}, err
-	}
-
-	spec, err := filespec.Parse(f.Remainder, mid)
-	if err != nil {
-		return filespec.Spec{}, err
-	}
-
-	// filespec.Parse inherits a default's directory but not its "..."
-	// flag, so carry that across when the remainder has no directory.
-	if !strings.ContainsAny(f.Remainder, "[<") {
-		spec.Recursive = mid.Recursive
-	}
-
-	return physical(spec, nil)
+// NameError reports a file specification name processing refused. Status
+// is the RMS status it failed with: RMS$_DIR, RMS$_SYN, and the like.
+type NameError struct {
+	Spec   string
+	Status uint32
 }
 
-// physical removes the "_" that marks a physical device name from spec's
-// device, passing err through.
-func physical(spec filespec.Spec, err error) (filespec.Spec, error) {
-	spec.Device = strings.TrimPrefix(spec.Device, "_")
+func (e *NameError) Error() string {
+	if m, ok := vmsdef.LookupMessage(e.Status); ok {
+		return fmt.Sprintf("rms: %q: %s", e.Spec, m.Text)
+	}
 
-	return spec, err
+	return fmt.Sprintf("rms: %q: status %%X%08X", e.Spec, e.Status)
+}
+
+// expandText is expandNames with a failure as a Go error, for callers
+// outside the system services: a *LogicalNameError or a *NameError.
+func expandText(db *lnm.Database, base filespec.Spec, in nameInputs) ([]parsedName, error) {
+	names, sts := expandNames(db, base, in)
+	if sts == 0 {
+		return names, nil
+	}
+
+	if sts == rmsLogicalNameError {
+		// Name processing keeps only the status; translating again finds
+		// which name it was, and why.
+		for _, text := range []string{in.Primary, in.Default, sysDiskName + ":"} {
+			if _, err := translateSpec(db, strings.ToUpper(text)); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return nil, &NameError{Spec: in.Primary, Status: sts}
+}
+
+// resolved is p as the DCL utilities use a name: the volume layer's spec,
+// and the device to show them.
+func (p parsedName) resolved() resolvedSpec {
+	return resolvedSpec{
+		Spec:     p.spec(),
+		Display:  strings.TrimPrefix(strings.TrimSuffix(p.Dev, ":"), "_"),
+		Explicit: p.FNB&fnbExpDir != 0,
+	}
+}
+
+// resolvedAll is resolved for each of names.
+func resolvedAll(names []parsedName) []resolvedSpec {
+	out := make([]resolvedSpec, len(names))
+	for i, p := range names {
+		out[i] = p.resolved()
+	}
+
+	return out
 }
 
 // defaultSpecs returns the defaults a spec with no device is resolved
 // against: one per element of SYS$DISK's translation, each with base's
 // directory unless that element has its own. When SYS$DISK isn't
-// defined it returns base alone.
+// defined it returns base's directory alone.
 func defaultSpecs(db *lnm.Database, base filespec.Spec) ([]filespec.Spec, error) {
-	if db == nil {
-		return []filespec.Spec{base}, nil
-	}
-
-	if _, err := db.Translate(lnm.FileDevName, sysDiskName, lnm.User, 0); err != nil {
-		return []filespec.Spec{base}, nil
-	}
-
-	fs, err := translateSpec(db, sysDiskName)
+	names, err := expandText(db, base, nameInputs{ThroughPermanent: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rms: %s: %w", sysDiskName, err)
 	}
 
-	out := make([]filespec.Spec, 0, len(fs))
-
-	for _, f := range fs {
-		d, err := parseTranslated(f, base)
-		if err != nil {
-			return nil, fmt.Errorf("rms: %s: %w", sysDiskName, err)
-		}
-
-		out = append(out, d)
+	out := make([]filespec.Spec, len(names))
+	for i, p := range names {
+		out[i] = p.spec()
 	}
 
 	return out, nil
 }
 
-// expandSpec translates text and applies the defaults, returning every
-// resolved spec in search order. base is the process default (its
-// directory); a translation that names no device is resolved once
-// against each of SYS$DISK's defaults, one that does name a device
-// against base alone.
+// expandSpec is name processing for the DCL utilities: text's logical
+// names translated and the process defaults applied (base is the default
+// directory, SYS$DISK the device), every resolved spec in search order.
 func expandSpec(db *lnm.Database, text string, base filespec.Spec) ([]resolvedSpec, error) {
-	fs, err := translateSpec(db, text)
+	names, err := expandText(db, base, nameInputs{Primary: text, ThroughPermanent: true})
 	if err != nil {
 		return nil, err
 	}
 
-	var (
-		out      []resolvedSpec
-		defaults []filespec.Spec
-	)
-
-	for _, f := range fs {
-		// The probe only asks whether the translation names a device, but
-		// it's parsed against the default directory too, or a relative
-		// directory that goes up ("[-.X]") would fail as going above the
-		// MFD.
-		probe, err := parseTranslated(f, filespec.Spec{Dirs: base.Dirs})
-		if err != nil {
-			return nil, fmt.Errorf("rms: %q: %w", text, err)
-		}
-
-		ds := []filespec.Spec{{Dirs: base.Dirs}}
-
-		if probe.Device == "" {
-			if defaults == nil {
-				if defaults, err = defaultSpecs(db, base); err != nil {
-					return nil, err
-				}
-			}
-
-			ds = defaults
-		}
-
-		for _, d := range ds {
-			spec, err := parseTranslated(f, d)
-			if err != nil {
-				return nil, fmt.Errorf("rms: %q: %w", text, err)
-			}
-
-			display := spec.Device
-			if f.Concealed != "" {
-				display = f.Concealed
-			}
-
-			out = append(out, resolvedSpec{Spec: spec, Display: display, Explicit: strings.ContainsAny(f.Spec, "[<")})
-		}
-	}
-
-	return out, nil
+	return resolvedAll(names), nil
 }
 
 // PhysicalDevice translates text, a device name as typed for MOUNT or
 // DISMOUNT ("DUA0:", "DUA0", "_DUA0:", or a logical name such as
 // "DISK:"), into the device it names, without its "_" or ":". A search
-// list names its first element's device.
+// list names its first element's device. Only the device field is read:
+// the services that want a device reach it whatever RMS would make of the
+// rest of the name (VMS 7.1: testdata/lnm91; testdata/lib58's 64-character
+// device).
 func PhysicalDevice(db *lnm.Database, text string) (string, error) {
 	if !strings.Contains(text, ":") {
 		text += ":"
@@ -220,16 +179,16 @@ func PhysicalDevice(db *lnm.Database, text string) (string, error) {
 		return "", err
 	}
 
-	spec, err := parseTranslated(fs[0], filespec.Spec{})
-	if err != nil {
-		return "", fmt.Errorf("rms: %q: %w", text, err)
-	}
+	spec := fs[0].Spec
 
-	if spec.Device == "" {
+	device, _, ok := strings.Cut(spec, ":")
+	device = strings.TrimPrefix(device, "_")
+
+	if !ok || device == "" || strings.ContainsAny(device, "[<") {
 		return "", fmt.Errorf("rms: %q: no device name", text)
 	}
 
-	return spec.Device, nil
+	return device, nil
 }
 
 // isNotFound reports whether err is one a search list moves past to try

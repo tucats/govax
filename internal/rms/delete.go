@@ -121,7 +121,7 @@ func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 // nullVersion returns specText with a null version -- a semicolon with no
 // number after it, "FOO.TXT;" -- written as version 0, "FOO.TXT;0". DELETE
 // reads both as the file's latest version (DCL Dictionary, DELETE), but
-// filespec.Parse can't tell "FOO.TXT;" from a spec with no version at all
+// a filespec.Spec can't tell "FOO.TXT;" from a spec with no version at all
 // (see filespec.Spec.Version's own doc comment), so the 0 has to be added
 // to the text before it is parsed.
 func nullVersion(specText string) string {
@@ -189,28 +189,12 @@ func (s *Session) listDefaults(text string, sticky *filespec.Spec) string {
 		return text
 	}
 
-	fs, err := translateSpec(s.Logicals, text)
-	if err != nil {
+	names, sts := expandNames(s.Logicals, filespec.Spec{}, nameInputs{Primary: text, ThroughPermanent: true, Against: sticky})
+	if sts != 0 || names[0].FNB&fnbExpDev != 0 {
 		return text
 	}
 
-	probe, err := parseTranslated(fs[0], filespec.Spec{})
-	if err != nil || probe.Device != "" {
-		return text
-	}
-
-	spec, err := parseTranslated(fs[0], *sticky)
-	if err != nil {
-		return text
-	}
-
-	// filespec.Parse inherits a default's directory but not its "..."
-	// flag, so carry that across when the text has no directory.
-	if !strings.ContainsAny(text, "[<") {
-		spec.Recursive = sticky.Recursive
-	}
-
-	return spec.String()
+	return names[0].spec().String()
 }
 
 // listSticky returns the defaults text supplies to the next element of a

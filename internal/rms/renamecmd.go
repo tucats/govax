@@ -202,32 +202,16 @@ func (s *Session) expandRenameInput(input string, sticky *filespec.Spec) ([]reso
 		return expandSpec(s.Logicals, input, s.Default)
 	}
 
-	fs, err := translateSpec(s.Logicals, input)
+	names, err := expandText(s.Logicals, filespec.Spec{}, nameInputs{Primary: input, ThroughPermanent: true, Against: sticky})
 	if err != nil {
 		return nil, err
 	}
 
-	probe, err := parseTranslated(fs[0], filespec.Spec{})
-	if err != nil {
-		return nil, err
-	}
-
-	if probe.Device != "" {
+	if names[0].FNB&fnbExpDev != 0 {
 		return expandSpec(s.Logicals, input, s.Default)
 	}
 
-	out := make([]resolvedSpec, 0)
-
-	for _, f := range fs {
-		spec, err := parseTranslated(f, *sticky)
-		if err != nil {
-			return nil, err
-		}
-
-		out = append(out, resolvedSpec{Spec: spec, Display: spec.Device})
-	}
-
-	return out, nil
+	return resolvedAll(names), nil
 }
 
 // searchRenameElement finds the files one resolved input names, or the
@@ -289,18 +273,15 @@ func (s *Session) renameOne(ctx *Context, src renameSource, output string, opts 
 // comment). A search list in output uses its first element. On RMS$_WLD
 // the parsed target is still returned, for the message to show.
 func (s *Session) renameTarget(src renameSource, output string, opts RenameOptions) (filespec.Spec, uint32) {
-	fs, err := translateSpec(s.Logicals, output)
-	if err != nil {
-		return filespec.Spec{}, rmsLogicalNameError
-	}
-
 	old := src.spec
 	related := filespec.Spec{Device: old.Device, Dirs: old.Dirs, Name: old.Name, Type: old.Type}
 
-	target, err := parseTranslated(fs[0], related)
-	if err != nil {
-		return filespec.Spec{}, rmsSyntaxError
+	names, sts := expandNames(s.Logicals, filespec.Spec{}, nameInputs{Primary: output, ThroughPermanent: true, Against: &related})
+	if sts != 0 {
+		return filespec.Spec{}, sts
 	}
+
+	target := names[0].spec()
 
 	if target.Name == "*" {
 		target.Name = old.Name
@@ -375,8 +356,8 @@ func resultName(device string, spec filespec.Spec) string {
 // value and the new name as far as it was worked out ("" when not at
 // all).
 func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool) (string, uint32, uint32) {
-	spec, err := filespec.Parse(old, filespec.Spec{})
-	if err != nil {
+	spec, sts := scanSpec(old)
+	if sts != 0 {
 		return "", rmsSyntaxError, 0
 	}
 
@@ -420,8 +401,8 @@ func (s *Session) RenameFile(old, target string) (string, uint32, uint32) {
 		return target, sts, stv
 	}
 
-	spec, err := filespec.Parse(target, filespec.Spec{})
-	if err != nil {
+	spec, bad := scanSpec(target)
+	if bad != 0 {
 		return target, sts, stv
 	}
 
