@@ -12,6 +12,7 @@ stop or disagree.
 | `lnm91.com` | The whole probe: makes a tree, defines the names, runs the cases, then DCL's commands |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
+| `lnm91b.com`, `exchangeb.cmd`, `copyoutb.cmd` | Round 2's, also written by `gen.go` |
 | `vax/lnm91.log` | VMS's log |
 | `vax/lnm91.exe` | VMS's image, for a later oracle to run on govax |
 
@@ -84,6 +85,28 @@ procedure doesn't wait for input.
 
        mkdir -p testdata/lnm91/vax
        go run ./cmd/govax --profile tbprobe --system-file none console < testdata/lnm91/copyout.cmd
+
+## Round 2
+
+`lnm91b.com` runs the same program on what round 1 left open: plain and
+concealed names whose equivalence has a plain directory, `SYS$DISK` with a
+directory, a tree 15 levels deep through a 7-level root, and angle
+brackets. Its steps are round 1's with these names:
+
+1. `go run ./cmd/govax --profile tbprobe --system-file none console < testdata/lnm91/exchangeb.cmd`
+   (makes `testdata/disks/lnm91b-exchange.dsk`, label LNM91B; delete an
+   old one first).
+2. `sim> attach rq1 testdata/disks/lnm91b-exchange.dsk`
+3. On the VAX:
+
+       $ MOUNT DUA1: LNM91B
+       $ SET DEFAULT DUA1:[000000]
+       $ @LNM91B/OUTPUT=LNM91B.LOG
+
+   The log's last line is `LNM91B FINISHED`.
+4. `$ SET DEFAULT SYS$LOGIN`, `$ DISMOUNT DUA1:`, `sim> detach rq1`
+5. `go run ./cmd/govax --profile tbprobe --system-file none console < testdata/lnm91/copyoutb.cmd`
+   (writes `vax/lnm91b.log`).
 
 ## What the run is expected to show
 

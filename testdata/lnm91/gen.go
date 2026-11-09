@@ -540,11 +540,209 @@ COPY/BINARY DUA5:[000000]LNM91.EXE "testdata/lnm91/vax/lnm91.exe"/HOST/QUIET
 DISMOUNT DUA5
 `
 
+// buildB is round 2: plain and concealed names with plain directories, a
+// tree 15 levels deep through a root, and angle brackets.
+func buildB() string {
+	var p proc
+
+	p.line("$ ! LNM91B.COM - Phase 91's probe, round 2. Written by testdata/lnm91/gen.go.")
+	p.line("$ ! Run it on its exchange volume, with that volume's [000000] as the")
+	p.line("$ ! default directory:")
+	p.line("$ !")
+	p.line("$ !     @LNM91B/OUTPUT=LNM91B.LOG")
+	p.line("$ !")
+	p.line("$ SET NOON")
+	p.line("$ SET VERIFY")
+	p.section("ENVIRONMENT")
+	p.line("$ WRITE SYS$OUTPUT F$GETSYI(\"VERSION\"), \" \", F$GETSYI(\"HW_NAME\"), \" \", F$GETSYI(\"NODENAME\")")
+	p.line("$ DEV = F$PARSE(\"[000000]\",,,\"DEVICE\")")
+	p.line("$ PDEV = F$GETDVI(DEV,\"DEVNAM\")")
+	p.line("$ SHOW SYMBOL DEV")
+	p.line("$ SHOW SYMBOL PDEV")
+	p.line("$ SET DEFAULT 'DEV'[000000]")
+
+	p.section("TREE")
+
+	for _, d := range []string{"LNM91.SUB", "LNM91.ROOT1", "SUB", "JONES", "OTHER", "R1.R2.R3.R4.R5.R6.R7"} {
+		p.line("$ CREATE/DIRECTORY 'DEV'[%s]", d)
+	}
+
+	p.line("$ CREATE T.DAT")
+	p.line("template record")
+	p.line("$ !")
+
+	for _, f := range []string{"LNM91", "LNM91.SUB", "LNM91.ROOT1", "SUB", "JONES", "OTHER"} {
+		p.line("$ COPY T.DAT 'DEV'[%s]A.DAT", f)
+	}
+
+	p.line("$ DEFINE/USER_MODE SYS$OUTPUT LNM91.MLG")
+	p.line("$ MACRO/NOLIST LNM91")
+	p.line("$ SHOW SYMBOL $STATUS")
+	p.line("$ DEFINE/USER_MODE SYS$OUTPUT LNM91.LLG")
+	p.line("$ LINK/NOMAP LNM91")
+	p.line("$ SHOW SYMBOL $STATUS")
+	p.line("$ IF F$SEARCH(\"LNM91.EXE\") .EQS. \"\" THEN EXIT")
+	p.line("$ PROG = DEV + \"[000000]LNM91\"")
+
+	p.section("DEFINITIONS")
+
+	const both, conceal = "/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)", "/TRANSLATION_ATTRIBUTES=CONCEALED"
+
+	for _, d := range [][3]string{
+		{"", "LDEV", "'PDEV'"},
+		{"", "P", "'PDEV'[LNM91]"},
+		{"", "P2", "P:"},
+		{"", "P3", "LDEV:[LNM91]"},
+		{"", "N", "'PDEV'[LNM91]A.DAT"},
+		{"", "L", "'PDEV'[LNM91],'PDEV'[LNM91.SUB]"},
+		{conceal, "C", "'PDEV'[LNM91]"},
+		{both, "C2", "'PDEV'[LNM91]"},
+		{conceal, "C3", "LDEV:[LNM91]"},
+		{both, "D7", "'PDEV'[R1.R2.R3.R4.R5.R6.R7.]"},
+	} {
+		p.line("$ DEFINE%s %s %s", d[0], d[1], d[2])
+		p.line("$ SHOW LOGICAL/FULL %s", d[1])
+	}
+
+	p.section("PLAIN NAMES WITH A DIRECTORY")
+	p.line("$ SET DEFAULT 'DEV'[JONES]")
+	p.run(each(parseOps,
+		"P:A.DAT", "P:", "P", "P:[SUB]A.DAT", "P:[.ROOT1]A.DAT", "P:[-]A.DAT", "P:[]A.DAT", "P:[000000]A.DAT",
+		"P:[*]A.DAT", "P:[...]A.DAT", "P2:A.DAT", "P2:[SUB]A.DAT", "P3:A.DAT", "P3:[SUB]A.DAT",
+		"N:", "N", "N:B.DAT", "N:.TXT", "N:;5", "N:[SUB]", "N:[SUB]B.DAT",
+		"L:A.DAT", "L:*.DAT", "L:[SUB]A.DAT",
+		"A.DAT|P:", "[SUB]A.DAT|P:", "[.SUB]A.DAT|P:", "B.DAT|N:", "P:B.DAT|[SUB]", "P:[SUB]B.DAT|[OTHER]",
+		"A.DAT||P:X.DAT",
+	)...)
+
+	p.section("CONCEALED NAMES WITH A DIRECTORY")
+	p.line("$ SET DEFAULT 'DEV'[JONES]")
+	p.run(each(parseOps,
+		"C:A.DAT", "C:", "C:[SUB]A.DAT", "C:[.ROOT1]A.DAT", "C:[-]A.DAT", "C:[]A.DAT", "C:[000000]A.DAT",
+		"C2:A.DAT", "C2:", "C2:[SUB]A.DAT", "C3:A.DAT", "C3:[SUB]A.DAT",
+		"A.DAT|C:", "[SUB]A.DAT|C:", "A.DAT||C:X.DAT",
+	)...)
+
+	p.section("SYS$DISK WITH A DIRECTORY")
+	p.line("$ SET DEFAULT 'DEV'[JONES]")
+	p.line("$ DEFINE SYS$DISK 'PDEV'[LNM91]")
+	p.line("$ SHOW DEFAULT")
+	p.run(each(parseOps, "A.DAT", "[SUB]A.DAT", "[.SUB]A.DAT", "[]A.DAT", "[-]A.DAT")...)
+	p.line("$ DEFINE/TRANSLATION_ATTRIBUTES=CONCEALED SYS$DISK 'PDEV'[LNM91]")
+	p.line("$ SHOW DEFAULT")
+	p.run(each(parseOps, "A.DAT", "[SUB]A.DAT")...)
+	p.line("$ SET DEFAULT 'DEV'[JONES]")
+
+	p.section("DCL ON THOSE NAMES")
+
+	for _, s := range []string{"P:", "P:A.DAT", "P:[SUB]", "C:", "C:A.DAT", "C:[SUB]", "C2:", "N:", "L:"} {
+		p.line("$ DIRECTORY %s", s)
+		p.line("$ WRITE SYS$OUTPUT \"<\", F$PARSE(\"%s\"), \"> <\", F$PARSE(\"%s\",,,,\"NO_CONCEAL\"), \">\"", s, s)
+	}
+
+	for _, s := range []string{"P:", "P:[SUB]", "C:", "C:[SUB]", "C2:", "N:"} {
+		p.line("$ SET DEFAULT %s", s)
+		p.line("$ SHOW DEFAULT")
+		p.line("$ SHOW LOGICAL SYS$DISK")
+		p.line("$ SET DEFAULT 'DEV'[JONES]")
+	}
+
+	p.line("$ TYPE P:A.DAT")
+	p.line("$ TYPE C:A.DAT")
+	p.line("$ TYPE N:")
+	p.line("$ CREATE/DIRECTORY/LOG P:[NEW]")
+	p.line("$ CREATE/DIRECTORY/LOG C:[NEW]")
+
+	p.section("FIFTEEN LEVELS")
+	p.line("$ SET DEFAULT 'DEV'[000000]")
+	p.line("$ CREATE/DIRECTORY/LOG D7:[E1.E2.E3.E4.E5.E6.E7.E8]")
+	p.line("$ COPY T.DAT D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT")
+	p.line("$ DIRECTORY D7:[E1.E2.E3.E4.E5.E6.E7.E8]")
+	p.line("$ DIRECTORY LDEV:[R1.R2.R3.R4.R5.R6.R7.E1]")
+	p.line("$ DIRECTORY LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]")
+	p.line("$ TYPE D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT")
+	p.run(
+		"C- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+		"O- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+		"ON D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+		"F- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+		"S- D7:[E1.E2.E3.E4.E5.E6.E7.E8]*.DAT",
+		"S- D7:[E1...]*.DAT",
+		"S- D7:[*...]*.DAT",
+		"SN D7:[E1...]*.DAT",
+		"S- LDEV:[R1...]*.DAT",
+		"S- LDEV:[R1.R2.R3.R4.R5.R6.R7...]*.DAT",
+		"P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1]X.DAT",
+		"P- LDEV:[R1.R2.R3.R4.R5.R6.R7.E1.E2]X.DAT",
+		"P- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+		"S- LDEV:[R1.R2.R3.R4.R5.R6.R7.][E1.E2.E3.E4.E5.E6.E7.E8]*.DAT",
+		"E- D7:[E1.E2.E3.E4.E5.E6.E7.E8]X.DAT",
+	)
+	p.line("$ DELETE/LOG D7:[E1.E2.E3.E4.E5.E6.E7.E8]Y.DAT;*")
+	p.line("$ SET DEFAULT D7:[E1.E2.E3.E4.E5.E6.E7.E8]")
+	p.line("$ SHOW DEFAULT")
+	p.line("$ SET DEFAULT [-]")
+	p.line("$ SHOW DEFAULT")
+
+	p.section("ANGLE BRACKETS")
+	p.line("$ SET DEFAULT 'DEV'[JONES]")
+	p.run(each(parseOps,
+		"LDEV:<SUB>A.DAT", "LDEV:<LNM91.SUB>A.DAT", "LDEV:<LNM91.SUB...>A.DAT", "LDEV:<.K>A.DAT", "LDEV:<>A.DAT",
+		"LDEV:<->A.DAT", "LDEV:<000000>A.DAT", "<SUB>A.DAT", "A.DAT|<SUB>", "A.DAT|LDEV:<SUB>", "<SUB>A.DAT|[OTHER]",
+		"A.DAT||LDEV:<SUB>X.DAT",
+	)...)
+	p.line("$ DIRECTORY LDEV:<SUB>")
+	p.line("$ WRITE SYS$OUTPUT F$PARSE(\"LDEV:<SUB>A.DAT\")")
+	p.line("$ SET DEFAULT LDEV:<SUB>")
+	p.line("$ SHOW DEFAULT")
+
+	p.section("CLEANUP")
+	p.line("$ SET DEFAULT 'DEV'[000000]")
+
+	for _, n := range []string{"LDEV", "P", "P2", "P3", "N", "L", "C", "C2", "C3", "D7"} {
+		p.line("$ DEASSIGN %s", n)
+	}
+
+	p.line("$ SHOW DEFAULT")
+	p.line("$ WRITE SYS$OUTPUT \"LNM91B FINISHED\"")
+	p.line("$ SET NOVERIFY")
+	p.line("$ EXIT")
+
+	return p.String()
+}
+
+const exchangeB = `! EXCHANGEB.CMD - builds round 2's exchange volume with govax. Written by
+! testdata/lnm91/gen.go. Run from the repository root:
+!
+!     govax console < testdata/lnm91/exchangeb.cmd
+!
+INITIALIZE/CONTAINER "testdata/disks/lnm91b-exchange.dsk" /DEVICE=RD51 LNM91B
+MOUNT/WRITE DUA5 "testdata/disks/lnm91b-exchange.dsk"
+COPY "testdata/lnm91/lnm91.mar"/HOST DUA5:[000000]LNM91.MAR
+COPY "testdata/lnm91/lnm91b.com"/HOST DUA5:[000000]LNM91B.COM
+DIRECTORY DUA5:[000000]
+DISMOUNT DUA5
+`
+
+const copyoutB = `! COPYOUTB.CMD - copies round 2's log off lnm91b-exchange.dsk into
+! testdata/lnm91/vax (README.md). Written by testdata/lnm91/gen.go. Run from
+! the repository root after @LNM91B/OUTPUT=LNM91B.LOG on the VAX:
+!
+!     govax console < testdata/lnm91/copyoutb.cmd
+!
+MOUNT DUA5 "testdata/disks/lnm91b-exchange.dsk"
+COPY DUA5:[000000]LNM91B.LOG "testdata/lnm91/vax/lnm91b.log"/HOST/QUIET
+DISMOUNT DUA5
+`
+
 func main() {
 	for name, text := range map[string]string{
-		"lnm91.com":    build(),
-		"exchange.cmd": exchange,
-		"copyout.cmd":  copyout,
+		"lnm91.com":     build(),
+		"exchange.cmd":  exchange,
+		"copyout.cmd":   copyout,
+		"lnm91b.com":    buildB(),
+		"exchangeb.cmd": exchangeB,
+		"copyoutb.cmd":  copyoutB,
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 			log.Fatal(err)

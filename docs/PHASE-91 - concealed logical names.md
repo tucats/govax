@@ -393,7 +393,7 @@ Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-09): Part A.
 2. **The probe**: `testdata/lnm91`, as in Part D; run on the simh VAX by
-   the author (done 2026-11-09, A.4); Round 2 if the author wants it.
+   the author (round 1 done 2026-11-09, A.4; Round 2 written).
 3. **One name processor** (Decision 4): `expandSpec` over `expandName`,
    errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
    RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
@@ -469,9 +469,10 @@ and with `NAM$V_SYNCHK`.
 The probe prints a status at every step, resets NAM fields between
 cases, and has nothing to wait on.
 
-## Round 2 (proposed)
+## Round 2
 
-A short second run, a handful of cases on a new exchange volume:
+Accepted by the author 2026-11-09, and written: `lnm91b.com` on its own
+exchange volume (README.md), the same program. It covers:
 
 | Case | Why |
 | --- | --- |
@@ -479,6 +480,7 @@ A short second run, a handful of cases on a new exchange volume:
 | `C = _DUA1:[LNM91]` concealed; `C:A.DAT`, `C:[SUB]A.DAT` | The Dictionary's "must be a physical device name". |
 | A 7-level root and an 8-level directory: CREATE/DIRECTORY, `$CREATE`, `$OPEN`, `$SEARCH` | Whether 15 physical levels really exist on disk (Decision 7). |
 | `<A>` plain directories: `$PARSE` and `$SEARCH` | Whether brackets are kept without a root as well. |
+| `SYS$DISK` defined with a directory, plain and concealed | How a directory there meets the default directory and one in the name. |
 
 ## The review (2026-11-09)
 
@@ -515,5 +517,6 @@ The author accepted the plan and answered its questions:
   `DIRECTORY/TOTAL`, `SET PROTECTION`, and F$GETDVI's `CONCEALED`.
 - **2026-11-09** Subtask 2's first round ran on VMS V7.1 (`vax/lnm91.log`,
   `vax/lnm91.exe`). A.4 is its answers. Decisions 2, 6, and 7 changed by
-  them, and Decision 8 is new. Round 2 is proposed, for the author to
-  decide.
+  them, and Decision 8 is new.
+- **2026-11-09** Round 2 written (`lnm91b.com`, 275 program cases) and
+  rehearsed on govax. Waiting for the VAX run.
