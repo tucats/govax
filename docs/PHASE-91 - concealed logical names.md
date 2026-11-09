@@ -2,8 +2,8 @@
 
 **Status:** planned 2026-11-09; the plan and the answers to its questions
 accepted by the author the same day ("The review"). Subtask 1 (the survey,
-Part A below) is done; subtask 2 (the probe) is written and waiting for
-its run on the VAX. Nothing is implemented yet.
+Part A below) is done, and subtask 2's first round has run on the VAX
+(A.4, "The probe's answers"). Nothing is implemented yet.
 
 ## Goal
 
@@ -191,7 +191,114 @@ Also missing or affected:
   paths used with `DUA0:`. They stay as they are, and nothing about the
   volume's layout or the manifest changes.
 
-## Part B — decisions (proposed)
+### A.4 The probe's answers (2026-11-09)
+
+`testdata/lnm91/vax/lnm91.log`, VMS V7.1, 453 program cases and the DCL
+commands, ran to the end. The guide's table (A.1) is right in every row.
+What the manuals didn't settle:
+
+**What makes a root.** A directory ending in a period, and nothing else.
+Concealment isn't needed, whatever the Dictionary says: `NOCON` (no
+attributes), `TERM`, and a typed `LDEV:[LNM91.ROOT1.][SUB]A.DAT` all work.
+A root can be typed, with or without a device: `[LNM91.ROOT1.]A.DAT` is
+that root with the default directory, `[LNM91.ROOT1.][JONES]`.
+
+**How names show.**
+
+| Name | Expanded and resultant strings | CNCL_DEV | ROOT_DIR |
+| --- | --- | --- | --- |
+| `BASE:[SUB]A.DAT`, concealed root | `BASE:[SUB]A.DAT;` | 1 | 1 |
+| the same with `NOCONCEAL` | `_DUA1:[LNM91.ROOT1.][SUB]A.DAT;` | 1 | 1 |
+| `NOCON:[SUB]A.DAT`, root not concealed | `_DUA1:[LNM91.ROOT1.][SUB]A.DAT;` | 0 | 1 |
+| `CDISK:[LNM91]A.DAT`, concealed, no root | `CDISK:[LNM91]A.DAT;` | 1 | 0 |
+
+- The device text in `.][` form is the equivalence string's as written
+  (`_DUA1:`, `DUA1:` for `PHYS`, `SIMVAX$DUA0:`). `NAM$B_DIR` is the whole
+  of `[ROOT.][DIR]`.
+- `DIR_LVLS` and the wildcard fields count from the root.
+- A name through a plain name shows the concealed one it reaches:
+  `A1:A.DAT` (`A1` = `BASE:[SUB]`) is `BASE:[SUB]A.DAT;`. A concealed name
+  over a root shows itself: `A3:[SUB]A.DAT;`.
+- A list shows each element's name: `LIST:` (`BASE:,BASE2:`) finds
+  `BASE:[SUB]A.DAT;1` then `BASE2:[SUB]A.DAT;1`; `LIST2:` (concealed
+  itself) shows `LIST2:` for both.
+- Brackets are kept as written: `_DUA1:<LNM91.ROOT1.>[SUB]A.DAT;`.
+
+**Errors.**
+
+| Case | Status |
+| --- | --- |
+| A directory after a name whose translation already has one: `A1:[OTHER]A.DAT`, `A1:[.DEEP]A.DAT` (`LIST3`'s `CDISK:[LNM91]` element too) | `RMS$_DIR` |
+| `[--]` from one level below the root, `[-]` at the root | `RMS$_DIR` |
+| A wildcard in a root (`[R*.]`), or a relative one with `-` (`[-.A.][B]`) | `RMS$_DIR` |
+| A second root after a real one, typed: `[A.][B.]`; `[A...][B]`; `[A..B.]` | `RMS$_SYN` |
+| A second root reached through a concealed name: `BASE:[A.]X.DAT`, and `A2` = `BASE:[SUB.]` | `RMS$_DEV` |
+| A concealed name that translates to more than a device and root: `A4` = `BASE:[SUB]` | `RMS$_DEV` |
+| `[.A.][B]`, `[.][SUB]` | parse, keep the text, and end `RMS$_DNF` |
+| `[000000.][SUB]` | a root; `_DUA1:[000000.][SUB]A.DAT;` |
+
+**Depth.** A root may have at most **7** levels (`DEEP8`, 8 levels, is
+`RMS$_DEV`), and the directory after it at most 8 (a ninth is `RMS$_DIR`).
+So up to 15 physical levels: the guide's 16 is one too many, and Phase 58's
+"seven more in a root" was right.
+
+**Defaults.** The root goes with the device. `LDEV:A.DAT` with default
+name `BASE:[SUB]` is `_DUA1:[SUB]A.DAT;`, no root; `A.DAT` with that
+default is `BASE:[SUB]A.DAT;`. A related file's root comes with its
+device likewise. A relative directory applies to the process default,
+under whichever root the device gives (`[.K]A.DAT` with `BASE:[SUB]` is
+`BASE:[JONES.K]A.DAT;`), as it does without roots.
+
+**SYS$DISK on a root** behaves as the guide says, `[.SUB]` from the root
+being `BASE:[000000.SUB]`, as `applyDir` already writes it.
+
+**Wildcards.** `$SEARCH` walks below the root as it walks below an MFD,
+and ends with the same `RMS$_NMF` marks (`BASE:[.......]*.DIR;1`,
+`BASE:[SUB]*.DIR;1`). `[000000...]` shows `[000000]`, `[000000.JONES]`,
+and so on.
+
+**Devices.** `$ASSIGN` and `$GETDVI` of every form, even `A2` and `A4`,
+which RMS refuses, reach the device. **`DVI$_CONCEALED` and F$GETDVI's
+`CONCEALED` are FALSE for every name here**, concealed or not.
+
+**Names back.** `JPI$_IMAGNAME` is physical with the root:
+`_DUA1:[LNM91.ROOT1.][SUB]LNM91.EXE;1`. `LIB$FID_TO_NAME` is the whole
+path, `DISK$LNM91:[LNM91.ROOT1.SUB]A.DAT;1`. `IMAGEFNF` names the physical
+form: `_DUA1:[LNM91.ROOT1.][SUB]NOSUCH.EXE;`.
+
+**DCL.**
+
+- Every utility shows the name RMS gives: `Directory BASE:[SUB]`,
+  `Directory _DUA1:[LNM91.ROOT1.][SUB]` for a root not concealed,
+  `%COPY-S-COPIED, BASE:[NEWD]C.DAT;1 copied to _DUA1:[LNM91]E.DAT;1`,
+  `File Spec: BASE:[SUB]A.DAT;1` (ANALYZE).
+- `SET DEFAULT CDISK:[LNM91.ROOT1]` then `DIRECTORY` is headed `CDISK:`,
+  as the guide says (the `SYS$DISK` bug of A.3).
+- F$PARSE follows `$PARSE`. With `NO_CONCEAL`, `DEVICE` is `_DUA1:` and
+  `DIRECTORY` is `[LNM91.ROOT1.][SUB]`.
+- SET DEFAULT keeps the concealed name (`BASE:[SUB]`, `SYS$DISK` =
+  `BASE:`), follows a plain name to it (`A1:` gives `BASE:[SUB]`), and
+  **refuses a root that isn't concealed**: `SET DEFAULT NOCON:[SUB]` is
+  `%DCL-W-DIRECT`, and the default doesn't change. A typed root is
+  `%RMS-F-DIR`, though `SYS$DISK` had by then changed to `LDEV:`.
+- `SET DEFAULT BASE:[NOSUCH]` succeeds, and SHOW DEFAULT then adds
+  `%DCL-I-INVDEF, BASE:[NOSUCH] does not exist`.
+- **BACKUP saves paths relative to the root**: a save of `BASE:[SUB...]`
+  lists `[SUB]A.DAT;1` and `[SUB.DEEP]A.DAT;1`.
+
+**The system names on VMS.** `SYS$SYSROOT` is `[concealed,terminal]`
+(`SIMVAX$DUA0:[SYS0.]`, then `SYS$COMMON:`), `SYS$COMMON`, `SYS$SPECIFIC`,
+and **`SYS$SYSDEVICE` are `[concealed,terminal]`**, all `[exec]` in the
+system table, and `SYS$SYSTEM` and the others are plain
+`SYS$SYSROOT:[dir]`.
+
+**Left open** (Round 2, below): whether a plain name with a plain directory
+fails the same way as `A1:[OTHER]`, which only `LIST3`'s element shows;
+what a concealed name with a plain directory does; and whether files can
+really be made 15 levels down, since the probe's deep tree used an 8-level
+root that VMS refused.
+
+## Part B — decisions
 
 **Decision 1 — the system root is `[SYSTEM.]`** (the author, 2026-11-09).
 `SYS$SYSROOT` is `_DUA0:[SYSTEM.]`, concealed and terminal, in the system
@@ -211,7 +318,13 @@ automatic, since `applyDir` never sees it, and `[-]` at the top fails with
 the error it already gives. `fileName` gains `Root`, `scanName` recognizes
 `[ROOT.]` and `[ROOT.][DIR]`, `parsedName.DirSpec` stays logical, and
 `parsedName.spec()` returns root + directory, so everything below it
-(ods2, the volume walks) works unchanged.
+(ods2, the volume walks) works unchanged. The root keeps its text as
+written, brackets and all, for `.][` strings. A.4's errors are this
+decision's rules.
+
+The existing "fields the program wrote win over the translation's" stays
+for name, type, and version, but a directory on both sides becomes
+`RMS$_DIR` (A.4). `mergeName` applies one to the other today.
 
 **Decision 3 — no change to `internal/lnm`** beyond whatever the probe
 finds wrong. Roots are a matter of reading the translated text.
@@ -257,13 +370,22 @@ sys$sysroot:[sysexe]` and so on, `SYS$SOURCES` as
   at their next start, by the refresh. A STARTUP.COM the user changed is
   kept, with `SYSKEPT`, and its `sys$sysdevice:[system.sysexe]` names go
   on working.
-- `SYS$SYSDEVICE` keeps its name and its use; its attributes follow what
-  the VAX shows (Phase 87 left them unconfirmed).
+- `SYS$SYSDEVICE` becomes `[concealed,terminal]`, as VMS's is (A.4), so
+  `DIRECTORY SYS$SYSDEVICE:[X]` is headed `SYS$SYSDEVICE:[X]`. The four
+  names' equivalences keep govax's `_DUA0:` form.
+- Messages that give the physical name read
+  `_DUA0:[SYSTEM.][SYSLIB]X.EXE;`, as VMS's do.
 
-**Decision 7 — depth.** RMS's check applies to the root and the directory
-separately, by whatever limits the probe finds. If VMS really allows more
-than 8 physical levels, `ods2`'s `MaxDirectoryDepth` is raised in a
-tagged `ods2` release, as Phase 22's note on `go.work` describes.
+**Decision 7 — depth.** RMS's check is on the root (at most 7 levels,
+`RMS$_DEV` past it) and the directory (at most 8, `RMS$_DIR`) separately.
+Reaching 15 physical levels needs `ods2`'s `MaxDirectoryDepth` raised in a
+tagged `ods2` release, as Phase 22's note on `go.work` describes, and
+waits for Round 2 to show VMS really makes them.
+
+**Decision 8 — what names show.** Everything a user reads follows A.4.
+`DVI$_CONCEALED` is added and answers FALSE, as VMS's did. SET DEFAULT
+refuses a root that isn't concealed. BACKUP records paths relative to the
+root.
 
 ## Part C — subtasks
 
@@ -271,8 +393,7 @@ Each is one commit, with tests, stopping for review.
 
 1. **The survey** (done 2026-11-09): Part A.
 2. **The probe**: `testdata/lnm91`, as in Part D; run on the simh VAX by
-   the author; "The probe's answers" added to Part A and any decision it
-   changes revised.
+   the author (done 2026-11-09, A.4); Round 2 if the author wants it.
 3. **One name processor** (Decision 4): `expandSpec` over `expandName`,
    errors reported as before, F$PARSE, SET DEFAULT, `LocateRelated`, and
    RENAME's own parsing moved onto it, `mfdRelative` gone. No change in
@@ -348,6 +469,17 @@ and with `NAM$V_SYNCHK`.
 The probe prints a status at every step, resets NAM fields between
 cases, and has nothing to wait on.
 
+## Round 2 (proposed)
+
+A short second run, a handful of cases on a new exchange volume:
+
+| Case | Why |
+| --- | --- |
+| `P = _DUA1:[LNM91]` plain; `P:[SUB]A.DAT`, `P:[.ROOT1]A.DAT`, `P:A.DAT` | Is `mergeName`'s directory rule wrong for plain names too? govax lets these through. |
+| `C = _DUA1:[LNM91]` concealed; `C:A.DAT`, `C:[SUB]A.DAT` | The Dictionary's "must be a physical device name". |
+| A 7-level root and an 8-level directory: CREATE/DIRECTORY, `$CREATE`, `$OPEN`, `$SEARCH` | Whether 15 physical levels really exist on disk (Decision 7). |
+| `<A>` plain directories: `$PARSE` and `$SEARCH` | Whether brackets are kept without a root as well. |
+
 ## The review (2026-11-09)
 
 The author accepted the plan and answered its questions:
@@ -381,3 +513,7 @@ The author accepted the plan and answered its questions:
   The rehearsal also shows what govax doesn't accept yet, to be added or
   left out of the oracle once VMS's log is in: `COPY/LOG`, `PURGE/LOG`,
   `DIRECTORY/TOTAL`, `SET PROTECTION`, and F$GETDVI's `CONCEALED`.
+- **2026-11-09** Subtask 2's first round ran on VMS V7.1 (`vax/lnm91.log`,
+  `vax/lnm91.exe`). A.4 is its answers. Decisions 2, 6, and 7 changed by
+  them, and Decision 8 is new. Round 2 is proposed, for the author to
+  decide.

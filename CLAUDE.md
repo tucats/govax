@@ -788,7 +788,7 @@ never had.
   `SYS$SYSROOT` then a concealed root, `_DUA0:[SYSTEM.]`, `SYS$COMMON` and
   `SYS$SPECIFIC` the same root, and the system names `SYS$SYSROOT:[dir]`;
   subtask 1 is the survey, its doc's Part A, and subtask 2 the probe,
-  `testdata/lnm91`.
+  `testdata/lnm91`, whose first round has run on VMS 7.1 (its doc's A.4).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
