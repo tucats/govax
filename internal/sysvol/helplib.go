@@ -148,6 +148,7 @@ func refreshHelpLibrary(v Volume, m *Manifest, f File, theirs, ours []byte) (Cha
 			}
 
 			changed = true
+			change.Modules = append(change.Modules, ModuleChange{Name: key, Action: Inserted})
 			m.Set(ms, sum)
 		case moduleSum(there.Records) == sum:
 			if !listed || recorded != sum {
@@ -159,6 +160,7 @@ func refreshHelpLibrary(v Volume, m *Manifest, f File, theirs, ours []byte) (Cha
 			}
 
 			changed = true
+			change.Modules = append(change.Modules, ModuleChange{Name: key, Action: Replaced})
 			m.Set(ms, sum)
 		default:
 			told, wasTold := m.Kept(ms)
@@ -182,6 +184,7 @@ func refreshHelpLibrary(v Volume, m *Manifest, f File, theirs, ours []byte) (Cha
 			}
 
 			changed = true
+			change.Modules = append(change.Modules, ModuleChange{Name: key, Action: Removed})
 
 			m.Delete(ms)
 		}

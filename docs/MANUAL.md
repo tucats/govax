@@ -949,7 +949,7 @@ sparse host file, taking only the space its files use.
 | `[SYSTEM.SYSHLP]` | `SYS$HELP` | `HELPLIB.HLB` and `DBG$HELP.HLB`, DCL's and the debugger's help libraries; their help files in `[.SOURCES]` (the debugger's `DEBUG.HLP` in `[.SOURCES.DEBUG]`) |
 | `[SYSTEM.SYSLIB]` | `SYS$LIBRARY`, `SYS$SHARE` | `STARLET.MLB`, the system macro library; `FORSYSDEF.TLB`, FORTRAN's definition modules; `FTNRTL.EXE`, the FORTRAN run-time library |
 | `[SYSTEM.SOURCES]` | `SYS$SOURCES` | `KERNEL.ASM` and `SSDEF.ASM`, the microkernel; FTNRTL's sources (`FTN_*.MAR`, `FTNRTL.OPT`) and `BUILDFTN.COM`; `STARLET.MAR`, `STARLETDEF.MAR`, and `BUILDSTARLET.COM`; `BUILDHELP.COM`, which rebuilds the help libraries |
-| `[SYSTEM]` | `SYS$SYSROOT` | `GOVAX$FILES.DAT`, the list of files govax supplied |
+| `[SYSTEM]` | `SYS$SYSROOT` | `GOVAX$FILES.DAT`, the list of files govax supplied; `GOVAX$UPDATE.LOG`, the log of what each start updated |
 
 govax defines `SYS$SYSDEVICE` (the volume's device, `_DUA0:`) and
 `SYS$SYSROOT` (`_DUA0:[SYSTEM]`) when it mounts the volume; STARTUP.COM
@@ -1002,6 +1002,19 @@ using the list in `GOVAX$FILES.DAT`:
   ```
 
   To take govax's copy, delete or rename yours; the next start writes it.
+
+Each file a start writes on a volume that was there already, and each
+help library module it inserts, replaces, or removes, is a line in
+`SYS$SYSROOT:GOVAX$UPDATE.LOG`, with the time. The log is made the first
+time there is something to put in it, and added to at its end after that
+(it never gets a new version); you can delete it, and a later start makes
+it again:
+
+```text
+ 8-NOV-2026 14:03:22  UPDATED   [SYSTEM.SYSLIB]FTNRTL.EXE
+ 8-NOV-2026 14:03:22  WRITTEN   [SYSTEM.SYSHLP.SOURCES.DEBUG]DEBUG.HLP
+ 8-NOV-2026 14:03:22  REPLACED  [SYSTEM.SYSHLP]HELPLIB.HLB(COPY)
+```
 
 A start with nothing to bring up to date writes nothing.
 

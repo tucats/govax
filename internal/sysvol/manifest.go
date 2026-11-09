@@ -13,6 +13,13 @@ const ManifestName = "GOVAX$FILES.DAT"
 // ManifestSpec is the manifest's specification on the volume.
 const ManifestSpec = Root + ManifestName
 
+// UpdateLogSpec is the update log's specification on the volume: a text
+// file of a line for each file or help library module a refresh of an
+// existing volume wrote (Report.Updates), made at the first such refresh
+// and added to at each later one. It isn't one of Files(): govax only
+// ever adds lines to it, and the user may delete it.
+const UpdateLogSpec = Root + "GOVAX$UPDATE.LOG"
+
 // The words a manifest record may have after its specification, beside a
 // digest: keptWord starts the digest of a newer govax copy the user has
 // been told about (KEPT=3f5a...), and seededWord marks a seeded file.

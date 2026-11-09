@@ -20,7 +20,9 @@
                                       STARLETDEF.MAR, BUILDFTN.COM,
                                       BUILDSTARLET.COM, BUILDHELP.COM
      [SYSTEM]          SYS$SYSROOT    GOVAX$FILES.DAT, the list of
-                                      files govax supplied
+                                      files govax supplied;
+                                      GOVAX$UPDATE.LOG, the log of
+                                      what each start updated
 
    govax defines SYS$SYSDEVICE and SYS$SYSROOT when it mounts the
    volume; STARTUP.COM defines the rest, so you can see and change them.
@@ -49,6 +51,11 @@
    %MOUNT-I-SYSKEPT says so once for each new copy.  The help libraries
    are treated a module at a time: modules you added or changed stay,
    and govax's new modules are added.
+
+   Each file a start writes on an existing volume, and each help library
+   module it inserts, replaces, or removes (as LIBNAME(MODULE)), is a
+   line in SYS$SYSROOT:GOVAX$UPDATE.LOG with the time.  The log is made
+   when first needed and added to at its end after that.
 
 2 Sharing
 

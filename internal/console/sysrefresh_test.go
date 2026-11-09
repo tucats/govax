@@ -3,6 +3,7 @@ package console
 import (
 	"bytes"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -123,6 +124,20 @@ func TestSystemVolumeRefresh(t *testing.T) {
 		t.Fatalf("second start = %+v; output:\n%s", r, buf)
 	}
 
+	// What the start wrote is in the update log, a line each in the file
+	// table's order; the first
+	// start, which made the volume, logged nothing.
+	logged := updateLog(t, c)
+	for i, want := range []string{"UPDATED   " + help, "WRITTEN   " + debugHelp, "UPDATED   " + image} {
+		if i >= len(logged) || !strings.HasSuffix(logged[i], want) {
+			t.Errorf("update log line %d: want ...%q, log:\n%s", i+1, want, strings.Join(logged, "\n"))
+		}
+	}
+
+	if len(logged) != 3 {
+		t.Errorf("update log has %d lines, want 3:\n%s", len(logged), strings.Join(logged, "\n"))
+	}
+
 	out := buf.String()
 	for _, want := range []string{
 		"%MOUNT-I-SYSKEPT, DUA0:" + startup + " was changed, govax's new version not installed\n",
@@ -180,6 +195,55 @@ func TestSystemVolumeRefresh(t *testing.T) {
 	if got := versionCount(t, c, sysvol.ManifestSpec); got != manifests {
 		t.Errorf("the manifest has %d versions, was %d", got, manifests)
 	}
+
+	if got := len(updateLog(t, c)); got != 3 {
+		t.Errorf("a start with nothing to do logged: %d lines", got)
+	}
+
+	// A start that writes again adds to the log's end, in the same version.
+	if _, err := c.ContainerSession.Delete("DUA0:" + debugHelp + ";*"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Mounts.DismountAll(); err != nil {
+		t.Fatal(err)
+	}
+
+	c, _, _ = mountTestSystemVolume(t, dclcmd.SystemVolume{File: path})
+
+	logged = updateLog(t, c)
+	if len(logged) != 4 || !strings.HasSuffix(logged[3], "WRITTEN   "+debugHelp) {
+		t.Errorf("update log after a fourth start:\n%s", strings.Join(logged, "\n"))
+	}
+
+	if got := versionCount(t, c, sysvol.UpdateLogSpec); got != 1 {
+		t.Errorf("the update log has %d versions, want 1", got)
+	}
+}
+
+// updateLog returns the lines of the system volume's update log on DUA0,
+// none if there isn't one, each checked for its time stamp's form.
+func updateLog(t *testing.T, c *Console) []string {
+	t.Helper()
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA0:" + sysvol.UpdateLogSpec}, rms.TextRecords)
+	if err != nil {
+		return nil
+	}
+
+	stamp := regexp.MustCompile(`^[ 0-9][0-9]-[A-Z]{3}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}  `)
+
+	var lines []string
+
+	for _, r := range records {
+		if !stamp.Match(r) {
+			t.Errorf("update log line without a time stamp: %q", r)
+		}
+
+		lines = append(lines, string(r))
+	}
+
+	return lines
 }
 
 // TestSystemVolumeRefreshReadOnly checks that a volume another session

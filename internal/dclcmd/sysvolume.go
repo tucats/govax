@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tucats/govax/internal/hostlock"
 	iodev "github.com/tucats/govax/internal/io"
@@ -222,6 +223,14 @@ func (c *Context) refreshSystemVolume(device string, created bool) {
 		}
 	}
 
+	// What the refresh wrote on a volume that was there already goes in
+	// the update log; a new volume's files are all govax's first copies.
+	if !created {
+		if err := c.logSystemUpdates(device, report.Updates(), time.Now()); err != nil {
+			c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.MOUNT_SYSFILES, err, device+":"+sysvol.UpdateLogSpec))
+		}
+	}
+
 	if written := report.Count(sysvol.Written) + report.Count(sysvol.Updated); written > 0 && !created {
 		files := "1 file"
 		if written > 1 {
@@ -230,6 +239,47 @@ func (c *Context) refreshSystemVolume(device string, created bool) {
 
 		c.info(vmserrors.New(vmserrors.MOUNT_SYSUPDATED, files, device+":"))
 	}
+}
+
+// logSystemUpdates adds a line for each of updates to the update log on
+// the system volume on device (sysvol.UpdateLogSpec), each with the time
+// now, the action, and the file or LIBNAME(MODULE): the log is made, a
+// text file of variable-length records, if it isn't there, and otherwise
+// added to at its end, as DCL's OPEN/APPEND adds to a file. With nothing
+// to log, the log isn't touched.
+func (c *Context) logSystemUpdates(device string, updates []sysvol.Update, now time.Time) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	_, exists, err := c.systemFiles(device).ReadFile(sysvol.UpdateLogSpec)
+	if err != nil {
+		return err
+	}
+
+	access := rms.DCLAccess{Append: true}
+	if !exists {
+		access = rms.DCLAccess{Write: true, Variable: true}
+	}
+
+	f, err := c.ContainerSession.OpenDCLFile(rms.FileLocation{Name: device + ":" + sysvol.UpdateLogSpec}, access)
+	if err != nil {
+		return err
+	}
+
+	// VMS's way of writing a time: " 8-NOV-2026 14:03:22".
+	stamp := strings.ToUpper(now.Format("_2-Jan-2006 15:04:05"))
+
+	for _, u := range updates {
+		line := fmt.Sprintf("%s  %-8s  %s", stamp, strings.ToUpper(u.Action), u.Name)
+		if sts := f.Put([]byte(line)); sts&1 == 0 {
+			_ = f.Close()
+
+			return fmt.Errorf("writing %s: status %%X%08X", f.Name, sts)
+		}
+	}
+
+	return f.Close()
 }
 
 // systemContainer is what openSystemContainer found or made.

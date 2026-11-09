@@ -188,3 +188,55 @@ func TestRefreshHelpLibrary(t *testing.T) {
 	expect("kept!")
 	expect("kept")
 }
+
+// TestReportUpdates checks Report.Updates, what the update log is told: a
+// file written or updated whole by its specification, and a help library
+// refreshed module by module as each module, LIBNAME(MODULE), never the
+// library.
+func TestReportUpdates(t *testing.T) {
+	r := newRefreshTest(t)
+	r.copies["H.HLB"] = string(helpLibrary(t, "1 A\nA one.", "1 C\nC one."))
+
+	files := func() []File {
+		read := func() ([]byte, error) { return []byte(r.copies["H.HLB"]), nil }
+
+		return append(r.files(), File{Directory: SysHlp, Name: "H.HLB", Format: Binary, HelpLibrary: true, read: read})
+	}
+
+	updates := func() string {
+		t.Helper()
+
+		report, err := refreshFiles(r.v, files())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var lines []string
+		for _, u := range report.Updates() {
+			lines = append(lines, u.Action+" "+u.Name)
+		}
+
+		return strings.Join(lines, "; ")
+	}
+
+	want := "written [SYSTEM.SYSMGR]A.COM; written [SYSTEM.SYSLIB]B.EXE; written [SYSTEM.SYSMGR]SITE.COM; " +
+		"written [SYSTEM.SYSHLP]H.HLB"
+	if got := updates(); got != want {
+		t.Errorf("first refresh: %s\n    want %s", got, want)
+	}
+
+	if got := updates(); got != "" {
+		t.Errorf("second refresh: %s, want nothing", got)
+	}
+
+	// A newer govax: B.EXE whole; in the library, A replaced, B inserted,
+	// C taken out.
+	r.copies["B.EXE"] = "image two"
+	r.copies["H.HLB"] = string(helpLibrary(t, "1 A\nA two.", "1 B\nB one."))
+
+	want = "updated [SYSTEM.SYSLIB]B.EXE; replaced [SYSTEM.SYSHLP]H.HLB(A); inserted [SYSTEM.SYSHLP]H.HLB(B); " +
+		"removed [SYSTEM.SYSHLP]H.HLB(C)"
+	if got := updates(); got != want {
+		t.Errorf("newer govax: %s\n    want %s", got, want)
+	}
+}

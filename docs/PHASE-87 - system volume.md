@@ -938,3 +938,16 @@ recommendation:
   - **CLAUDE.md** and **PLAN.md:** the phase done, with a PLAN.md section
     summarizing it.
   - **Follow-up:** "Where things stand", at the top.
+- **2026-11-08** — After the phase, at the author's request: the update
+  log, `[SYSTEM]GOVAX$UPDATE.LOG` (`sysvol.UpdateLogSpec`). A refresh of a
+  volume that was there already adds a line for each file it wrote or
+  updated, and for a help library refreshed module by module each module
+  it inserted, replaced, or removed as `LIBNAME(MODULE)`
+  (`Report.Updates`, `Change.Modules`), each with the host's time:
+  ` 8-NOV-2026 14:03:22  UPDATED   [SYSTEM.SYSLIB]FTNRTL.EXE`. The log is
+  made (VAR, CR) when first needed and added to at its end through DCL's
+  OPEN/APPEND path (`dclcmd`'s `logSystemUpdates`), so it stays one
+  version; a new volume's files aren't logged. A failure writing it is
+  SYSFILES's warning. `TestReportUpdates`, and `TestSystemVolumeRefresh`
+  reads the log after each start. MANUAL.md's "When govax is upgraded"
+  and HELP SYSTEM_VOLUME describe it.

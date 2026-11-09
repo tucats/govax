@@ -81,6 +81,56 @@ type Change struct {
 	// that govax's new copies didn't replace, to be reported as Notify's
 	// file is, each once per new copy (helplib.go).
 	KeptModules []string
+
+	// Modules are, for a help library refreshed module by module
+	// (Updated), the modules govax inserted, replaced, or took out, by
+	// name and in the order it did them.
+	Modules []ModuleChange
+}
+
+// ModuleChange is what a help library's refresh did with one module.
+type ModuleChange struct {
+	Name   string
+	Action ModuleAction
+}
+
+// ModuleAction is what a help library's refresh did with a module.
+type ModuleAction int
+
+const (
+	// Inserted is a module govax's copy has and the volume's library
+	// didn't.
+	Inserted ModuleAction = iota
+
+	// Replaced is a module the user hadn't changed, replaced by govax's
+	// newer copy.
+	Replaced
+
+	// Removed is a module govax wrote before and no longer supplies.
+	Removed
+)
+
+// String names a ModuleAction as the update log does.
+func (a ModuleAction) String() string {
+	switch a {
+	case Inserted:
+		return "inserted"
+	case Replaced:
+		return "replaced"
+	case Removed:
+		return "removed"
+	}
+
+	return fmt.Sprintf("ModuleAction(%d)", int(a))
+}
+
+// Update is one thing a refresh wrote on the volume: a file, by its
+// specification ("[SYSTEM.SYSLIB]FTNRTL.EXE"), or a library's module, as
+// LIBNAME(MODULE) ("[SYSTEM.SYSHLP]HELPLIB.HLB(COPY)"), with what was done
+// ("written", "updated", "inserted", "replaced", "removed").
+type Update struct {
+	Name   string
+	Action string
 }
 
 // Report is what Refresh did.
@@ -107,6 +157,28 @@ func (r *Report) Count(a Action) int {
 	}
 
 	return n
+}
+
+// Updates lists what Refresh wrote, in the order it wrote it: each file
+// written or updated whole, and for a help library refreshed module by
+// module, each module it inserted, replaced, or took out instead of the
+// library itself.
+func (r *Report) Updates() []Update {
+	var updates []Update
+
+	for _, c := range r.Changes {
+		switch {
+		case c.Action != Written && c.Action != Updated:
+		case len(c.Modules) > 0:
+			for _, m := range c.Modules {
+				updates = append(updates, Update{Name: moduleSpec(c.File.Spec(), m.Name), Action: m.Action.String()})
+			}
+		default:
+			updates = append(updates, Update{Name: c.File.Spec(), Action: c.Action.String()})
+		}
+	}
+
+	return updates
 }
 
 // Refresh brings the system volume up to date with this govax's files
