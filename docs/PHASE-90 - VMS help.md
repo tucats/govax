@@ -948,8 +948,9 @@ library opened, as round 1b's 3 was a help library's.
     OPEN); (e) what
     round 3 shows of DCL's LIBRARY (`/HISTORY`, `/DATA=REDUCE` and
     `EXPAND`, and the rest of part D) and of LINK on a library the routines
-    made. Each of (b) to (e) is held to round 3 (`TestLBR90WOracle`) in both
-    paging modes.
+    made (done 2026-11-08: LIBRARY changes an existing library in place,
+    with LIBRARIAN's history records). Each of (b) to (e) is held to round 3
+    (`TestLBR90WOracle`) in both paging modes.
 12. The close-out: MANUAL.md (HELP, LIBRARY/HELP, the system volume's
     table, a section on writing help modules), FORTRAN-INTERNALS.md and
     other docs that mention HELP, CLAUDE.md, PLAN.md, and this doc's "Where
@@ -1812,3 +1813,100 @@ library opened, as round 1b's 3 was a help library's.
   and holds the output to VMS's, times masked, the binary-key cases up to
   their first INSERT_KEY, and X6 to X10's libraries and WX to VMS's byte
   for byte.
+- **2026-11-08** — **Subtask 11e, LIBRARY as round 3 shows it.**
+  `TestLBR90WOracle` now runs HELP90W.COM's parts C and D after part B, as a
+  procedure with VERIFY on (`lbr90wlib_test.go`), and holds the log to VMS's
+  command by command (times, the librarian's name, and the device masked),
+  then the libraries the parts made to VMS's byte for byte (W2L, WD1 to WD3,
+  WD5 to WD7, WD8;1 to ;3), on a volume of 3-block clusters as VMS's was, so
+  DIRECTORY/SIZE=ALL's allocations are compared too. Cases 17 and 33 (H90T's
+  history) are compared now, and H90T.TLB byte for byte (the history
+  record's time masked). What it took:
+  - **LIBRARY changes an existing library in place** (`internal/dclcmd/
+    library.go`'s `openUpdater`, `updateInsert`, `updateReplace`,
+    `updateDelete`), through an `lbr.Updater` as LIBRARIAN does through
+    LBRSHR, a Builder edited alongside for the names and keys; a new
+    library is still laid out whole by the Builder, which was already
+    VMS's. A module goes in by `Updater.PutModule` (`lbr/librarian.go`),
+    its symbols' keys and then its name's; a replacement's new data, then
+    its keys, then `DeleteData` of the old; a deletion's keys, then its
+    data. Round 1b's H90E.HLB (changed by five commands; in
+    `vax/round1b/h90.bck`) and round 3's H90T, WD1, and WD4 settled the
+    rules: an insertion reads the header of a module of the same name
+    first, so a session goes on in the last data block only if that module
+    is there (WD1's BONLY was; H90E's ALPHA wasn't); a key that can't go
+    in (a help module already there) leaves the module's data, and
+    LIBRARIAN then ends a module once more, an end of module in a block of
+    its own (WD1 after each of its two modules, H90E after each of four;
+    `Builder.Failed` does the same for a new library, WD4).
+  - **Update history records** (`lbr.LibrarianHistory`): one for each kind
+    of change a command made to an existing library, deletions, insertions,
+    then replacements (H90E: three commands, three records; its /INSERT of
+    modules all already there, none). The operation is 1 deleted, 2
+    inserted, 3 replaced (H90E's ALPS, CONLY inserted by /REPLACE, and
+    ALPHA). A new library's modules get none (H90T). The record's first
+    block is taken from the deleted blocks' list if it has one
+    (`Updater.reuseBlock`: H90E's history is in block 7, which the
+    replacement before it had freed, and so "Recoverable deleted blocks"
+    was 0); whether module data reuses deleted blocks too is unconfirmed.
+  - **LIBRARY/LIST/HISTORY** (`lbr.ListOptions.History`): after the
+    modules, a blank line, "Library Update History", a blank line, then
+    each record's line (`SYSTEM       replaced   1 module on  8-NOV-2026
+    14:35:44`), its modules' names, and a blank line; nothing when the
+    library has no records. The names fill lines of the listing's width in
+    columns of the key length and 2, as /NAMES's symbols do (unconfirmed:
+    every record seen had one name). A record that isn't LIBRARIAN's (the
+    routines', W5's and H90T's second) is VMS 7.1's FAOFAIL and HISTERR,
+    each with the access violation its FAO call met, copied as VMS wrote
+    them (`HistoryFormatError`); HISTERR's status is unconfirmed.
+  - **Listings' failures**: a key whose RFA is outside the file (W4's
+    NORECS at 0,0 and Y past the end) is listed with a time, taken as the
+    last module's (unconfirmed); one in the file but not at a module header
+    (Z, at 1,3) ends the listing with MHDERR and INVRFA
+    (`ModuleHeaderError`); a library with no indexes (W15) is INDEXERR and
+    ILLIDXNUM (`ErrNoIndex`), with no heading. Their statuses are
+    unconfirmed.
+  - **/DATA=REDUCE and /DATA=EXPAND** (`lbr.Rebuild`): a new version of the
+    library laid out afresh, its modules in index order, only the index
+    blocks used preallocated, created and updated now, given the old
+    version's allocation. A reduced library has LHD$C_SANEIDC and a DCX map
+    block after its index blocks, at LHD$L_DCXMAPVBN: VMS 7.1's for WD8's
+    two modules was a map of 20 bytes with no sub-maps (records stored as
+    they are), and the two bytes after it, 02 FF, are copied unexplained.
+    govax always writes that map; VMS's for round 1b's H90R (16 modules)
+    really reduced it (15 blocks, govax's 18), which
+    `TestHelp90LibraryOracle` lists as a difference. Real DCX reduction is
+    left for later.
+  - **Allocation**: LIBRARY/CREATE gives the file /CREATE=BLOCKS's blocks
+    (100 by default; VMS's libraries took 102 on 3-block clusters), and
+    LBR$OPEN's create CRE$L_ALLOC (`rms.Session.CreateRecordFileAllocated`);
+    a rewritten file keeps its allocation (`RewriteRecordFile`). When the
+    volume hasn't room for the allocation it's left out and the file takes
+    only its records' blocks, where VMS's $CREATE would fail with RMS$_FUL:
+    a deliberate difference, so that small volumes still take libraries
+    (the console tests' volumes grew from 400 blocks to 2,000 for the
+    oracles that make several libraries).
+  - **LIBRARIAN's statuses** as round 3 showed them: NOMTCHFOU %X10868080,
+    DUPMODULE %X10868088, ILLKEYLVL %X108680D2, KEYNAMLNG %X108680EA, and
+    INSERTERR; /EXTRACT of a wildcard that matches nothing in a text library
+    is NOMTCHFOU, as in a help library.
+  - **An object library given a file that isn't an object file** but whose
+    first record has an object record type other than the header's (WD4,
+    from WD1.HLB, whose header block reads as an end of module record of 512
+    bytes, severity 1): SEQNCE, then COMCOD's "compilation warnings" for an
+    end of module of severity 1 ("errors" for more is unconfirmed), then
+    INSERTERR with INVKEY for the module's empty name, after the library is
+    written, which holds the module's records with no key. WD4's size is
+    VMS's (53 blocks), but its blocks aren't: VMS's took the module's
+    records off its blocks' counts and set the next RFA back to the
+    module's start (51,0), which isn't modeled.
+  - The tests: `TestLBR90WOracle` compares all its cases but 31; of parts C
+    and D only W13's listing is left out (its binary keys crashed VMS 7.1,
+    subtask 11d), and W13's line in DIRECTORY is masked, with the totals'
+    blocks used. `TestHelp90LibraryOracle` now runs round 1b's /DATA=REDUCE
+    and DIRECTORY/SIZE=ALL (H90E's 17 blocks and every allocation VMS's),
+    and it and `TestFor83LibraryOracle` compare the history record counts.
+    `lbr`'s `TestLibrarianHistoryRecord` holds the record to H90T's bytes,
+    and `TestHistoryListing` the listing's layout. LINK on the routines'
+    object library (W12) was already VMS's. HELP LIBRARY has /DATA and
+    /HISTORY. Subtask 11e done, and with it subtask 11.

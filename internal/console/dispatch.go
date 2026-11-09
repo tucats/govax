@@ -668,6 +668,8 @@ func (d *Dispatcher) bindGrammar() {
 			ListFile:    r.String("LIST"),
 			Full:        r.Present("FULL"),
 			Names:       r.Present("NAMES"),
+			History:     r.Present("HISTORY"),
+			Data:        r.String("DATA"),
 			Width:       int(r.Int("WIDTH")),
 			Macro:       r.Present("MACRO"),
 			Object:      r.Present("OBJECT"),

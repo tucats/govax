@@ -25,15 +25,34 @@ var help90Inputs = []string{
 // help90Left are part A's commands govax doesn't run as VMS 7.1 did, each
 // with its listing:
 //
-//   - LIBRARY/DATA=REDUCE: govax reads a data-reduced library but doesn't
-//     make one (the phase doc's subtask 3).
 //   - H90X8: VMS 7.1 failed to insert GONLY after SKIP's bad key line, a
 //     librarian bug govax doesn't copy; TestHelp90LibraryGoesOn checks
 //     govax's way.
-//   - DIRECTORY/SIZE=ALL: H90E, changed by five commands, is laid out afresh
-//     by govax's LIBRARY and incrementally by VMS's (internal/dclcmd/
-//     library.go).
-var help90Left = []string{"/DATA=REDUCE", "H90R", "H90X8", "DIRECTORY/SIZE=ALL"}
+var help90Left = []string{"H90X8"}
+
+// help90Directory takes out of DIRECTORY/SIZE=ALL's listing what isn't
+// govax's to match: H90X8, which help90Left leaves out, and the totals that
+// count it; and H90R.HLB;2's blocks used, which VMS 7.1's DCX data
+// reduction made fewer (15) where govax's map leaves its records as they
+// are (lbr.Rebuild).
+func help90Directory(lines []string) []string {
+	out := make([]string, 0, len(lines))
+
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "H90X8."):
+			continue
+		case strings.HasPrefix(line, "Total of "):
+			line = "Total of (files and blocks)"
+		case strings.HasPrefix(line, "H90R.HLB;2 "):
+			line = "H90R.HLB;2 (data reduced)"
+		}
+
+		out = append(out, line)
+	}
+
+	return out
+}
 
 // help90PartA is part A of HELP90.COM, verified, without help90Left's
 // commands.
@@ -180,7 +199,8 @@ func TestHelp90LibraryOracle(t *testing.T) {
 	}
 
 	got := for83Mask(run)
-	want := for83Mask(help90PartALog(t))
+	want := help90Directory(for83Mask(help90PartALog(t)))
+	got = help90Directory(got)
 
 	for i := 0; i < len(got) || i < len(want); i++ {
 		g, w := "<end>", "<end>"

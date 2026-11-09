@@ -1081,6 +1081,8 @@ grammar console
     ! type; SQUEEZE is on unless /NOSQUEEZE. MODULE is positional, the
     ! module's name for the text file it follows, by default the file's name.
     ! CREATE may take (BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n).
+    ! HISTORY lists the library's update history with LIST, and DATA is
+    ! /DATA=REDUCE or /DATA=EXPAND (docs/PHASE-90, subtask 11e).
     !
     verb library/id=1400
 
@@ -1125,6 +1127,9 @@ grammar console
         qualifier   share/id=1420
         qualifier   text/id=1421
         qualifier   help/id=1423
+        qualifier   history/id=1424
+        qualifier   data/id=1425                -
+                    /type=$string
         disallow    macro and object
         disallow    macro and share
         disallow    object and share

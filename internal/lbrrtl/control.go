@@ -102,6 +102,9 @@ type control struct {
 	upd     *lbr.Updater
 	file    rms.FileLocation
 	changed bool
+	// alloc is a created library's CRE$L_ALLOC, the blocks its file is
+	// given when LBR$CLOSE first writes it.
+	alloc uint32
 
 	// written says LBR$FLUSH has written a new library's file, which
 	// LBR$CLOSE then writes over rather than making another.
@@ -382,6 +385,7 @@ func open(env *corevms.Environment, argv []uint32) (uint32, error) {
 const (
 	creType   = 0x00
 	creKeyLen = 0x04
+	creAlloc  = 0x08
 	creIdxMax = 0x0C
 	creUhdMax = 0x10
 	creEntAll = 0x14
@@ -484,6 +488,7 @@ func openCreate(env *corevms.Environment, argv []uint32, c *control, n uint32) (
 
 	u.Now = env.Clock
 	c.lib, c.upd, c.file, c.index, c.changed, st.stv = lib, u, loc, 1, true, 0
+	c.alloc = cre[creAlloc/4]
 
 	return lbrNormal, nil
 }
@@ -601,7 +606,9 @@ func writeLibrary(env *corevms.Environment, c *control) error {
 
 	write := env.Session.RewriteRecordFile
 	if c.function == funcCreate && !c.written {
-		write = env.Session.CreateRecordFile
+		write = func(loc rms.FileLocation, kind rms.RecordKind, records [][]byte) (rms.FileLocation, error) {
+			return env.Session.CreateRecordFileAllocated(loc, kind, records, c.alloc)
+		}
 	}
 
 	written, err := write(c.file, rms.ImageBlocks, blocks)

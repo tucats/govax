@@ -24,6 +24,9 @@ type ListOptions struct {
 	// count. Names is /NAMES: an object library module's global symbols.
 	Full  bool
 	Names bool
+	// History is /HISTORY: the library's update history after the modules
+	// (librarian.go's historyLines).
+	History bool
 	// Width is the line width /NAMES fills; 0 is 80, and the most is 132
 	// (LIB$C_LISRECLNG).
 	Width int
@@ -65,7 +68,7 @@ func (l *Library) List(opts ListOptions) ([]string, error) {
 	out = append(out, "")
 
 	if len(l.Indexes) == 0 {
-		return trimLines(out), nil
+		return nil, ErrNoIndex
 	}
 
 	object := l.Type == TypeObject || l.Type == TypeShareable
@@ -79,6 +82,8 @@ func (l *Library) List(opts ListOptions) ([]string, error) {
 		}
 	}
 
+	var last ModuleHeader
+
 	for _, k := range l.Indexes[0].Keys {
 		var (
 			h   ModuleHeader
@@ -86,8 +91,17 @@ func (l *Library) List(opts ListOptions) ([]string, error) {
 		)
 
 		if opts.Full || (object && opts.Names) {
-			if h, err = l.Header(k.RFA); err != nil {
-				return nil, err
+			// A key whose RFA is outside the file (round 3's W4: NORECS at
+			// 0,0, Y past the end) was listed by VMS 7.1 with a time, taken
+			// here as the last module's (unconfirmed); one that's in the
+			// file but not at a module header (Z, at 1,3) ends the listing.
+			switch h, err = l.Header(k.RFA); {
+			case err == nil:
+				last = h
+			case k.RFA.VBN == 0 || int(k.RFA.VBN) > len(l.data)/blockSize:
+				h = last
+			default:
+				return trimLines(out), ModuleHeaderError{Name: k.Name}
 			}
 		}
 
@@ -160,7 +174,20 @@ func (l *Library) List(opts ListOptions) ([]string, error) {
 		out = append(out, "")
 	}
 
-	return trimLines(out), nil
+	return l.withHistory(out, opts, width)
+}
+
+// withHistory adds /HISTORY's section to a listing. A record that isn't
+// LIBRARIAN's ends the listing with a HistoryFormatError, out's lines
+// before it still returned.
+func (l *Library) withHistory(out []string, opts ListOptions, width int) ([]string, error) {
+	if !opts.History {
+		return trimLines(out), nil
+	}
+
+	lines, err := l.historyLines(width)
+
+	return trimLines(append(out, lines...)), err
 }
 
 // listDate is FAO's !20<!%D!>: $ASCTIM's absolute time, day padded with a

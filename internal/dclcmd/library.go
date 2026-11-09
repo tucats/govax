@@ -1,6 +1,7 @@
 package dclcmd
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -49,20 +50,22 @@ import (
 // beside the library, with the types OBJ or MAR (by the library's type)
 // and LIS.
 //
-// Unlike LIBRARIAN, which updates a library in place, LIBRARY builds the
-// whole library in memory and writes it only when every step has
-// succeeded: an error leaves the library as it was. A changed library
-// keeps its name and version, as LIBRARIAN's does, so that a library
-// copied back to VMS is where VMS expects it: a host library is replaced,
-// and a volume library is rewritten at its version
+// A new library (/CREATE) is laid out whole by an lbr.Builder, as
+// LIBRARIAN lays one out, and given /CREATE=BLOCKS's allocation. An
+// existing library is changed in place by an lbr.Updater, as LIBRARIAN
+// changes one through LBRSHR (docs/PHASE-90 - VMS help.md, subtask 11e):
+// each module written into new data, its keys entered, a replaced or
+// deleted module's data deleted, and LIBRARIAN's update history records
+// added for what changed; a Builder edits a copy alongside, for the
+// modules' names and keys. Either way the library is written only when
+// every step has succeeded, so an error leaves it as it was. A changed
+// library keeps its name, version, and allocation, as LIBRARIAN's does,
+// so that a library copied back to VMS is where VMS expects it: a host
+// library is replaced, and a volume library is rewritten at its version
 // (rms.Session.RewriteRecordFile). /CREATE makes a new file, a new version
-// on a volume, as on VMS.
-//
-// So a library made by one command matches LIBRARIAN's byte for byte, but
-// one changed since doesn't: LIBRARIAN adds each session's modules in new
-// blocks, reuses deleted modules' blocks, and keeps update history records,
-// and LIBRARY lays the modules out afresh with no history (testdata/for83's
-// S2.TLB to S7.TLB show LIBRARIAN's way). Its modules and index are the same.
+// on a volume, as on VMS. /DATA=REDUCE and /DATA=EXPAND write a new
+// version laid out afresh (lbr.Rebuild). testdata/help90's round 3 holds
+// the libraries all of these make to VMS 7.1's byte for byte.
 //
 // A text library's failures use LIBRARIAN's messages and statuses, as
 // testdata/for83 shows them, and a help library's LIBRARIAN's messages, as
@@ -110,6 +113,11 @@ type LibraryOptions struct {
 	Names    bool
 	Width    int
 
+	// History is /HISTORY: the listing's update history. Data is
+	// /DATA='s keyword, REDUCE or EXPAND, or "".
+	History bool
+	Data    string
+
 	// Macro is /MACRO, Object /OBJECT, Share /SHARE, Text /TEXT, and Help
 	// /HELP.
 	// NoSqueeze is /NOSQUEEZE, Selective /SELECTIVE_SEARCH, and Log /LOG.
@@ -131,9 +139,18 @@ type library struct {
 
 	lib     *lbr.Library // the library as read, or as written
 	b       *lbr.Builder // the library being changed, if it is
+	// upd is an existing library being changed in place, as LIBRARIAN
+	// changes one; b keeps the same changes, for its modules' names and
+	// keys. Nil for a new library, which b lays out.
+	upd *lbr.Updater
+	// changes are the modules each history operation changed, for
+	// LIBRARIAN's update history records.
+	changes map[byte][]string
 	found   rms.FileLocation
 	changed bool
 	logs    []func(name string) error // /LOG's messages, which name the library written
+	after   []func(name string)       // messages written once the library is, which name it
+	blocks  uint32                    // a new library's allocation, /CREATE=BLOCKS
 
 	// problem is the worst of the messages report wrote, the command's
 	// status once the library is written; 0 for none.
@@ -196,15 +213,23 @@ func (l *library) run() error {
 	switch {
 	case (opts.Insert || opts.Replace) && len(opts.Inputs) == 0:
 		return l.failed(fmt.Errorf("/INSERT and /REPLACE need input files"), loc.Name)
-	case !opts.Create && !edit && len(opts.Extract) == 0 && !opts.List:
-		return l.failed(fmt.Errorf("nothing to do: name input files, or /CREATE, /DELETE, /EXTRACT, or /LIST"), loc.Name)
+	case !opts.Create && !edit && len(opts.Extract) == 0 && !opts.List && opts.Data == "":
+		return l.failed(fmt.Errorf("nothing to do: name input files, or /CREATE, /DATA, /DELETE, /EXTRACT, or /LIST"), loc.Name)
+	}
+
+	if opts.Data != "" {
+		if err := l.rebuild(loc); err != nil {
+			return err
+		}
 	}
 
 	if opts.Create {
-		sizes, err := createSizes(opts.CreateSizes)
+		sizes, blocks, err := createSizes(opts.CreateSizes)
 		if err != nil {
 			return err
 		}
+
+		l.blocks = blocks
 
 		if l.b, err = lbr.CreateWith(typ, sizes); err != nil {
 			return l.failed(err, loc.Name)
@@ -220,6 +245,10 @@ func (l *library) run() error {
 		if edit {
 			if l.b, err = lbr.Edit(l.lib); err != nil {
 				return l.failed(err, l.found.Name)
+			}
+
+			if err := l.openUpdater(); err != nil {
+				return err
 			}
 		}
 	}
@@ -253,21 +282,29 @@ func (l *library) run() error {
 	return nil
 }
 
-// createSizes reads /CREATE's values. BLOCKS is the file's first allocation,
-// which LIBRARY doesn't choose, and is only checked.
-func createSizes(values []string) (lbr.CreateOptions, error) {
+// defaultBlocks is /CREATE=BLOCKS's default: the blocks a new library's
+// file is given (VMS 7.1's libraries took 102 on a volume of 3-block
+// clusters: testdata/help90).
+const defaultBlocks = 100
+
+// createSizes reads /CREATE's values, and BLOCKS's, the file's first
+// allocation.
+func createSizes(values []string) (lbr.CreateOptions, uint32, error) {
 	var sizes lbr.CreateOptions
+
+	blocks := uint32(defaultBlocks)
 
 	for _, value := range values {
 		keyword, number, _ := strings.Cut(strings.ToUpper(value), ":")
 
 		n, err := strconv.Atoi(number)
 		if err != nil || n < 0 {
-			return sizes, vmserrors.New(vmserrors.CLI_IVKEYW, value)
+			return sizes, 0, vmserrors.New(vmserrors.CLI_IVKEYW, value)
 		}
 
 		switch {
 		case abbreviates(keyword, "BLOCKS", 1):
+			blocks = uint32(n)
 		case abbreviates(keyword, "GLOBALS", 1):
 			sizes.Globals = n
 		case abbreviates(keyword, "HISTORY", 1):
@@ -277,11 +314,11 @@ func createSizes(values []string) (lbr.CreateOptions, error) {
 		case abbreviates(keyword, "MODULES", 1):
 			sizes.Modules = n
 		default:
-			return sizes, vmserrors.New(vmserrors.CLI_IVKEYW, value)
+			return sizes, 0, vmserrors.New(vmserrors.CLI_IVKEYW, value)
 		}
 	}
 
-	return sizes, nil
+	return sizes, blocks, nil
 }
 
 // LIBRARIAN's condition values for a text library's failures, as $STATUS
@@ -292,13 +329,30 @@ const (
 	librarModNameLng = 0x00868102 // %LIBRAR-E-MODNAMLNG
 )
 
-// LIBRARIAN's condition values for the messages testdata/help90 found, whose
-// $STATUS the probe didn't show. These are LIBRAR's facility and each
-// message's severity, with no message number: unconfirmed (docs/PHASE-90 -
-// VMS help.md, subtask 3).
+// LIBRARIAN's condition values for the messages testdata/help90's round 3
+// showed with their $STATUS (docs/PHASE-90 - VMS help.md, subtask 11e).
 const (
-	librarWarning = 0x00868000 // %LIBRAR-W-DUPMODULE, NOMTCHFOU
-	librarError   = 0x00868002 // %LIBRAR-E-ILLKEYLVL, KEYNAMLNG, RECTYP
+	librarNoMatch   = 0x00868080 // %LIBRAR-W-NOMTCHFOU
+	librarDupModule = 0x00868088 // %LIBRAR-W-DUPMODULE
+	librarKeyLevel  = 0x008680D2 // %LIBRAR-E-ILLKEYLVL
+	librarKeyLength = 0x008680EA // %LIBRAR-E-KEYNAMLNG
+)
+
+// LIBRARIAN's condition values for messages whose $STATUS no probe showed:
+// LIBRAR's facility and each message's severity, with no message number
+// (unconfirmed).
+const (
+	librarWarning = 0x00868000 // %LIBRAR-W-HISTERR
+	librarError   = 0x00868002 // %LIBRAR-E-RECTYP, INDEXERR
+	librarFatal   = 0x00868004 // %LIBRAR-F-MHDERR
+)
+
+// objectHeader and objectEnd are the object records a module starts and
+// ends with (OBJ$C_HDR, and OBJ$C_EOM and OBJ$C_EOMW).
+const (
+	objectHeader  = 0
+	objectEnd     = 3
+	objectEndWord = 7
 )
 
 // objectRecordTypes is how many object record types there are (OBJ$C_HDR to
@@ -345,6 +399,84 @@ func (l *library) log(status uint32, module string) {
 	}
 }
 
+// openUpdater starts the in-place change of the library open read: the
+// LBRSHR way LIBRARIAN changes an existing library, each module written in
+// new data and its keys entered, and the library's update history kept
+// (docs/PHASE-90 - VMS help.md, subtask 11e).
+func (l *library) openUpdater() error {
+	var err error
+
+	if l.upd, err = lbr.OpenUpdater(l.lib.Bytes()); err != nil {
+		return l.failed(err, l.found.Name)
+	}
+
+	l.changes = map[byte][]string{}
+
+	return nil
+}
+
+// rebuild is /DATA=REDUCE or /DATA=EXPAND: the library laid out afresh, its
+// records data-reduced or not (lbr.Rebuild), as a new version of the file
+// (round 3's WD8.HLB;2 and ;3).
+func (l *library) rebuild(loc rms.FileLocation) error {
+	var reduce bool
+
+	switch keyword := strings.ToUpper(l.opts.Data); {
+	case keyword != "" && abbreviates(keyword, "REDUCE", 1):
+		reduce = true
+	case keyword != "" && abbreviates(keyword, "EXPAND", 1):
+	default:
+		return vmserrors.New(vmserrors.CLI_IVKEYW, l.opts.Data)
+	}
+
+	if err := l.open(loc); err != nil {
+		return err
+	}
+
+	data, err := lbr.Rebuild(l.lib, l.now, reduce)
+	if err != nil {
+		return l.failed(err, l.found.Name)
+	}
+
+	// The new version is given the old one's allocation (WD8.HLB;2 and ;3).
+	alloc, err := l.c.ContainerSession.AllocatedBlocks(l.found)
+	if err != nil {
+		return FileFailure(err, l.found.Name)
+	}
+
+	created, err := l.c.ContainerSession.CreateRecordFileAllocated(loc, rms.ImageBlocks, libraryBlocks(data), alloc)
+	if err != nil {
+		return objectFailureAs(vmserrors.CLI_LIBRARY, err, l.found.Name)
+	}
+
+	l.found = created
+
+	if l.lib, err = lbr.Open(data); err != nil {
+		return l.failed(err, created.Name)
+	}
+
+	return nil
+}
+
+// libraryBlocks is a library file's bytes as its blocks.
+func libraryBlocks(data []byte) [][]byte {
+	blocks := make([][]byte, 0, len(data)/512)
+	for i := 0; i < len(data); i += 512 {
+		blocks = append(blocks, data[i:i+512])
+	}
+
+	return blocks
+}
+
+// user is the user name LIBRARIAN's history records give.
+func (l *library) user() string {
+	if rtl := l.c.RTL; rtl != nil && rtl.Process != nil && rtl.Process.Username != "" {
+		return rtl.Process.Username
+	}
+
+	return "SYSTEM"
+}
+
 // open reads an existing library.
 func (l *library) open(loc rms.FileLocation) error {
 	data, found, err := l.c.ContainerSession.ReadRawFile(loc)
@@ -381,12 +513,166 @@ func (l *library) delete(pattern string) error {
 	}
 
 	for _, name := range names {
+		if l.upd != nil {
+			if e, ok := l.b.Module(name); ok {
+				if err := l.updateDelete(e); err != nil {
+					return l.failed(err, l.found.Name)
+				}
+			}
+
+			l.changes[lbr.HistoryDeleted] = append(l.changes[lbr.HistoryDeleted], name)
+		}
+
 		_ = l.b.Delete(name)
 		l.changed = true
 		l.log(vmserrors.CLI_LIBDELETED, name)
 	}
 
 	return nil
+}
+
+// updateDelete takes module e out of the library being changed in place:
+// its symbols' keys, its name's, and its data.
+func (l *library) updateDelete(e *lbr.Entry) error {
+	key, err := l.upd.Key(0, e.Name)
+	if err != nil {
+		return err
+	}
+
+	rfa, ok := l.upd.Lookup(0, key)
+	if !ok {
+		return lbr.ErrKeyNotFound
+	}
+
+	if err := l.deleteSymbols(e); err != nil {
+		return err
+	}
+
+	if err := l.upd.DeleteKey(0, key); err != nil {
+		return err
+	}
+
+	return l.upd.DeleteData(rfa)
+}
+
+// deleteSymbols takes module e's global symbols out of index 2.
+func (l *library) deleteSymbols(e *lbr.Entry) error {
+	for _, sym := range e.Symbols {
+		k, err := l.upd.Key(1, sym)
+		if err != nil {
+			return err
+		}
+
+		if err := l.upd.DeleteKey(1, k); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// updateInsert writes module e into the library being changed in place and
+// enters its keys: its global symbols first, then its name, as LIBRARIAN
+// enters them (Builder.Bytes's comment). A key already there leaves the
+// module's data in the library with no key (round 3's WD1.HLB), and
+// reports false.
+//
+// LIBRARIAN reads the header of a module of the same name before it writes
+// the new one, so a session's first module goes on in the last data block
+// if that's where the old module is (round 3's WD1.HLB, whose BONLY was
+// there; round 1b's H90E.HLB, whose ALPHA wasn't, started a new block).
+func (l *library) updateInsert(e *lbr.Entry) (bool, error) {
+	key, err := l.upd.Key(0, e.Name)
+	if err != nil {
+		return false, err
+	}
+
+	if old, found := l.upd.Lookup(0, key); found {
+		l.upd.NoteRead(old)
+	}
+
+	rfa := l.upd.PutModule(e)
+
+	// After a key that can't go in, LIBRARIAN ends a module once more,
+	// which with no module starts a block of its own with an end of module
+	// (WD1.HLB, after each of its two modules).
+	if _, dup := l.upd.Lookup(0, key); dup {
+		l.upd.PutEnd()
+
+		return false, nil
+	}
+
+	if err := l.insertSymbols(e, rfa); err != nil {
+		return false, err
+	}
+
+	return true, l.upd.InsertKey(0, key, rfa)
+}
+
+func (l *library) insertSymbols(e *lbr.Entry, rfa lbr.RFA) error {
+	for _, sym := range e.Symbols {
+		k, err := l.upd.Key(1, sym)
+		if err != nil {
+			return err
+		}
+
+		if err := l.upd.InsertKey(1, k, rfa); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// updateReplace writes module e into the library being changed in place,
+// in place of old, a module of the same name (nil for none): the old
+// module's symbols come out, the new one's go in, its name's key points at
+// the new data, and the old data is deleted.
+func (l *library) updateReplace(e, old *lbr.Entry) error {
+	rfa := l.upd.PutModule(e)
+
+	if old == nil {
+		_, err := l.updateInsertKeys(e, rfa)
+
+		return err
+	}
+
+	key, err := l.upd.Key(0, e.Name)
+	if err != nil {
+		return err
+	}
+
+	was, ok := l.upd.Lookup(0, key)
+	if !ok {
+		return lbr.ErrKeyNotFound
+	}
+
+	if err := l.deleteSymbols(old); err != nil {
+		return err
+	}
+
+	if err := l.insertSymbols(e, rfa); err != nil {
+		return err
+	}
+
+	if err := l.upd.ReplaceKey(0, key, was, rfa); err != nil {
+		return err
+	}
+
+	return l.upd.DeleteData(was)
+}
+
+func (l *library) updateInsertKeys(e *lbr.Entry, rfa lbr.RFA) (bool, error) {
+	key, err := l.upd.Key(0, e.Name)
+	if err != nil {
+		return false, err
+	}
+
+	if err := l.insertSymbols(e, rfa); err != nil {
+		return false, err
+	}
+
+	return true, l.upd.InsertKey(0, key, rfa)
 }
 
 // insert reads the input files and puts their modules in the library.
@@ -483,6 +769,16 @@ func (l *library) insertFile(loc rms.FileLocation, module string, replace bool) 
 
 		if !replace {
 			if _, ok := l.b.Module(e.Name); ok {
+				// LIBRARIAN writes a help module's data before its key
+				// finds the name taken (round 3's WD1.HLB).
+				if l.upd != nil && l.b.Type == lbr.TypeHelp {
+					if _, err := l.updateInsert(e); err != nil {
+						return found, l.failed(err, l.found.Name)
+					}
+
+					l.changed = true
+				}
+
 				if l.b.Type == lbr.TypeText {
 					return found, l.stop(librarInsertErr,
 						fmt.Sprintf("%%LIBRAR-E-DUPMOD, module %s from file %s already in %s", e.Name, found.Name, l.found.Name),
@@ -491,7 +787,7 @@ func (l *library) insertFile(loc rms.FileLocation, module string, replace bool) 
 				}
 
 				if l.b.Type == lbr.TypeHelp {
-					l.report(librarWarning, fmt.Sprintf("%%LIBRAR-W-DUPMODULE, module %s from file %s already in %s", e.Name, found.Name, l.found.Name))
+					l.report(librarDupModule, fmt.Sprintf("%%LIBRAR-W-DUPMODULE, module %s from file %s already in %s", e.Name, found.Name, l.found.Name))
 				} else {
 					l.warn(fmt.Errorf("module %s from %s is already in the library", e.Name, found.Name))
 				}
@@ -503,11 +799,37 @@ func (l *library) insertFile(loc rms.FileLocation, module string, replace bool) 
 				return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
 			}
 
+			if l.upd != nil {
+				if _, err := l.updateInsert(e); err != nil {
+					return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+				}
+
+				l.changes[lbr.HistoryInserted] = append(l.changes[lbr.HistoryInserted], e.Name)
+			}
+
 			l.log(vmserrors.CLI_LIBINSERTED, e.Name)
 		} else {
+			var old *lbr.Entry
+			if m, ok := l.b.Module(e.Name); ok {
+				old = m
+			}
+
 			replaced, err := l.b.Replace(e)
 			if err != nil {
 				return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+			}
+
+			if l.upd != nil {
+				if err := l.updateReplace(e, old); err != nil {
+					return found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+				}
+
+				op := byte(lbr.HistoryInserted)
+				if replaced {
+					op = lbr.HistoryReplaced
+				}
+
+				l.changes[op] = append(l.changes[op], e.Name)
 			}
 
 			if replaced {
@@ -523,6 +845,11 @@ func (l *library) insertFile(loc rms.FileLocation, module string, replace bool) 
 	if abandoned != nil {
 		abandoned.Inserted = l.now
 		l.b.Abandon(abandoned)
+
+		if l.upd != nil {
+			l.upd.PutAbandoned(abandoned)
+		}
+
 		l.changed = true
 	}
 
@@ -607,6 +934,10 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 			return nil, nil, found, nil
 		}
 
+		if len(records) > 0 && len(records[0]) > 0 && records[0][0] != objectHeader {
+			return nil, l.badSequence(records, found), found, nil // nil: the module is in the library already
+		}
+
 		entries, err := l.b.ObjectModules(records, l.opts.Selective)
 		if err != nil {
 			return nil, nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
@@ -631,6 +962,58 @@ func (l *library) readInput(loc rms.FileLocation, module string) ([]*lbr.Entry, 
 	return nil, nil, loc, l.failed(fmt.Errorf("LIBRARY can't insert modules in a %s library", l.b.Type), l.found.Name)
 }
 
+// badSequence is an object file whose first record isn't a module's header,
+// as LIBRARIAN reads it: an illegal record sequence in a module with no
+// name, which ends at the first end of module record (and is compiled
+// with warnings if that record says so), and whose key, its empty name,
+// can't go in. Round 3's WD4.HLB, an object library made from a help
+// library, whose header block reads as an end of module record of 512
+// bytes, of severity 1. The module's records are left in the library with
+// no key, which VMS 7.1 did too (its blocks differ from govax's:
+// docs/PHASE-90 - VMS help.md, subtask 11e).
+func (l *library) badSequence(records [][]byte, found rms.FileLocation) *lbr.Entry {
+	// The module goes in as LIBRARIAN leaves it (Builder.Failed), so
+	// nothing is returned for insertFile to abandon.
+	l.c.Printf("%%LIBRAR-E-SEQNCE, illegal record sequence in module  in %s\n", found.Name)
+
+	end := len(records)
+
+	for i, r := range records {
+		if len(r) > 0 && (r[0] == objectEnd || r[0] == objectEndWord) {
+			end = i + 1
+
+			// EOM$B_COMCOD: 1 is warnings, 2 or more errors (the word
+			// for errors is unconfirmed).
+			switch {
+			case len(r) > 1 && r[1] == 1:
+				l.c.Printf("%%LIBRAR-W-COMCOD, compilation warnings in module  file %s\n", found.Name)
+			case len(r) > 1 && r[1] > 1:
+				l.c.Printf("%%LIBRAR-E-COMCOD, compilation errors in module  file %s\n", found.Name)
+			}
+
+			break
+		}
+	}
+
+	// The library's name is the file written, which a new library's isn't
+	// yet.
+	l.after = append(l.after, func(name string) {
+		l.report(librarInsertErr, "%LIBRAR-E-INSERTERR, error inserting  in "+name, "-LBR-E-INVKEY, invalid key")
+	})
+
+	e := &lbr.Entry{Records: records[:end], Inserted: l.now}
+	l.b.Failed(e)
+
+	if l.upd != nil {
+		l.upd.PutModule(e)
+		l.upd.PutEnd()
+	}
+
+	l.changed = true
+
+	return nil
+}
+
 // readHelp reads a help file's modules. A bad key line is LIBRARIAN's
 // message, and the file's modules before it are inserted.
 func (l *library) readHelp(loc rms.FileLocation) ([]*lbr.Entry, *lbr.Entry, rms.FileLocation, error) {
@@ -650,9 +1033,9 @@ func (l *library) readHelp(loc rms.FileLocation) ([]*lbr.Entry, *lbr.Entry, rms.
 	// (testdata/help90, rounds 1 and 1b).
 	switch bad.Problem {
 	case lbr.HelpBadLevel:
-		l.report(librarError, fmt.Sprintf("%%LIBRAR-E-ILLKEYLVL, illegal key level %d; key %s in %s; expected 1", bad.Level, bad.Key, found.Name))
+		l.report(librarKeyLevel, fmt.Sprintf("%%LIBRAR-E-ILLKEYLVL, illegal key level %d; key %s in %s; expected 1", bad.Level, bad.Key, found.Name))
 	case lbr.HelpKeyTooLong:
-		l.report(librarError, fmt.Sprintf("%%LIBRAR-E-KEYNAMLNG, key %s name length illegal in %s", bad.Key, found.Name))
+		l.report(librarKeyLength, fmt.Sprintf("%%LIBRAR-E-KEYNAMLNG, key %s name length illegal in %s", bad.Key, found.Name))
 	}
 
 	return entries, bad.Partial, found, nil
@@ -661,18 +1044,29 @@ func (l *library) readHelp(loc rms.FileLocation) ([]*lbr.Entry, *lbr.Entry, rms.
 // write writes the library: a new one as a new file (a new version, on a
 // volume), and a changed one over the old, keeping its version.
 func (l *library) write() error {
-	data := l.b.Bytes()
+	var data []byte
 
-	blocks := make([][]byte, 0, len(data)/512)
-	for i := 0; i < len(data); i += 512 {
-		blocks = append(blocks, data[i:i+512])
+	if l.upd != nil {
+		l.upd.SetUpdated(l.now)
+
+		if err := l.putHistory(); err != nil {
+			return l.failed(err, l.found.Name)
+		}
+
+		data = l.upd.Bytes()
+	} else {
+		data = l.b.Bytes()
 	}
+
+	blocks := libraryBlocks(data)
 
 	s := l.c.ContainerSession
 	write := s.RewriteRecordFile
 
 	if l.opts.Create {
-		write = s.CreateRecordFile
+		write = func(loc rms.FileLocation, kind rms.RecordKind, records [][]byte) (rms.FileLocation, error) {
+			return s.CreateRecordFileAllocated(loc, kind, records, l.blocks)
+		}
 	}
 
 	created, err := write(l.found, rms.ImageBlocks, blocks)
@@ -688,6 +1082,31 @@ func (l *library) write() error {
 
 	for _, m := range l.logs {
 		l.c.Printf("%%%s\n", m(created.Name))
+	}
+
+	for _, f := range l.after {
+		f(created.Name)
+	}
+
+	return nil
+}
+
+// putHistory adds LIBRARIAN's update history records for what the command
+// changed in a library that already existed, a record for each operation
+// (a new library's modules get none: round 3's H90T, created and then
+// changed, had the change's record alone). A library that keeps no history
+// gets none.
+func (l *library) putHistory() error {
+	for _, op := range []byte{lbr.HistoryDeleted, lbr.HistoryInserted, lbr.HistoryReplaced} {
+		names := l.changes[op]
+		if len(names) == 0 {
+			continue
+		}
+
+		err := l.upd.PutHistory(lbr.LibrarianHistory(l.now, op, l.user(), names))
+		if err != nil && !errors.Is(err, lbr.ErrNoHistory) {
+			return err
+		}
 	}
 
 	return nil
@@ -717,8 +1136,8 @@ func (l *library) extract() error {
 	for _, pattern := range l.opts.Extract {
 		keys := l.lib.Match(pattern)
 		if len(keys) == 0 {
-			if l.lib.Type == lbr.TypeHelp && strings.ContainsAny(pattern, "*%") {
-				l.report(librarWarning, "%LIBRAR-W-NOMTCHFOU, no matches found for "+pattern)
+			if (l.lib.Type == lbr.TypeHelp || l.lib.Type == lbr.TypeText) && strings.ContainsAny(pattern, "*%") {
+				l.report(librarNoMatch, "%LIBRAR-W-NOMTCHFOU, no matches found for "+pattern)
 
 				continue
 			}
@@ -781,13 +1200,40 @@ func (l *library) list() error {
 	}
 
 	lines, err := l.lib.List(lbr.ListOptions{
-		Name:  l.found.Name,
-		Now:   l.now,
-		Full:  l.opts.Full,
-		Names: l.opts.Names,
-		Width: width,
+		Name:    l.found.Name,
+		Now:     l.now,
+		Full:    l.opts.Full,
+		Names:   l.opts.Names,
+		History: l.opts.History,
+		Width:   width,
 	})
-	if err != nil {
+
+	var (
+		history lbr.HistoryFormatError
+		header  lbr.ModuleHeaderError
+	)
+
+	switch {
+	case errors.As(err, &header):
+		lines = append(lines, fmt.Sprintf("%%LIBRAR-F-MHDERR, module header error for %s in %s", header.Name, l.found.Name),
+			"-LBR-E-INVRFA, invalid RFA")
+		l.problem = librarFatal
+	case errors.Is(err, lbr.ErrNoIndex):
+		lines = append(lines, "%LIBRAR-E-INDEXERR, index error in "+l.found.Name, "-LBR-E-ILLIDXNUM, illegal index number")
+		l.problem = librarError
+	case errors.As(err, &history):
+		// VMS 7.1's LIBRARIAN on a history record the LBR$ routines wrote:
+		// its FAO call failed, and these are its messages, numbers and all
+		// (round 3's W5 and H90T).
+		lines = append(lines,
+			"%LIBRAR-E-FAOFAIL, FAO system service failure",
+			"-SYSTEM-F-ACCVIO, access violation, reason mask=D7, virtual address=03C00000, PC=00000000, PSL=20000000",
+			"%LIBRAR-W-HISTERR, error accessing library update history in "+l.found.Name,
+			"-SYSTEM-F-ACCVIO, access violation, reason mask=F0, virtual address=03C00000, PC=00000000, PSL=00000000")
+		if l.problem == 0 {
+			l.problem = librarWarning
+		}
+	case err != nil:
 		return l.failed(err, l.found.Name)
 	}
 

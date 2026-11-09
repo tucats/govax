@@ -32,7 +32,7 @@ func mountClusteredContainer(t *testing.T, c *Console, device string, cluster ui
 
 	path := filepath.Join(t.TempDir(), "dir.dsk")
 
-	if err := c.cmd().InitializeContainer(path, 400, "DIRVOL", cluster, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 2000, "DIRVOL", cluster, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 

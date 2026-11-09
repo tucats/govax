@@ -16,7 +16,7 @@ const for83Dir = "../../testdata/for83/"
 var (
 	for83Times   = regexp.MustCompile(`[ 0-9]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d(\.\d\d)?`)
 	for83FileIDs = regexp.MustCompile(`File ID \(\d+,\d+,\d+\)`)
-	for83Tails   = regexp.MustCompile(`(Creator: +|Library history records: +).*$`)
+	for83Tails   = regexp.MustCompile(`(Creator: +).*$`)
 )
 
 // for83PartD is part D of FOR83.COM, without the commands govax doesn't have:
@@ -111,8 +111,7 @@ func for83PartDLog(t *testing.T) []string {
 }
 
 // for83Mask takes out of a line what the run decides: times, a file's ID, and
-// who made the library. The count of history records goes too: LIBRARY writes
-// none (internal/dclcmd/library.go).
+// who made the library.
 func for83Mask(lines []string) []string {
 	out := make([]string, 0, len(lines))
 
@@ -131,7 +130,17 @@ func for83Mask(lines []string) []string {
 // /EXTRACT wrote.
 func TestFor83LibraryOracle(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
-	mountClusteredContainer(t, c, "DUA2", 3)
+
+	// Each library LIBRARY/CREATE makes takes 100 blocks, as VMS's did, more
+	// than mountClusteredContainer's small volume has room for.
+	path := filepath.Join(t.TempDir(), "for83.dsk")
+	if err := c.cmd().InitializeContainer(path, 4000, "FOR83", 3, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().Mount("DUA2", path, true); err != nil {
+		t.Fatal(err)
+	}
 
 	host := filepath.Join(t.TempDir(), "partd.com")
 	writeFile(t, host, for83PartD(t))

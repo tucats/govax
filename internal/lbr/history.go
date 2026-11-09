@@ -107,7 +107,7 @@ func (u *Updater) PutHistory(rec []byte) error {
 
 	tail := historyRFA(u.data, lhdHisTail)
 	if tail.VBN == 0 {
-		tail = RFA{VBN: u.newBlock(), Offset: dataData}
+		tail = RFA{VBN: u.reuseBlock(), Offset: dataData}
 		u.setHistoryRFA(lhdHisHead, tail)
 	}
 
@@ -117,7 +117,7 @@ func (u *Updater) PutHistory(rec []byte) error {
 
 	for len(out) > 0 {
 		if tail.Offset >= blockSize {
-			v := u.newBlock()
+			v := u.reuseBlock()
 			binary.LittleEndian.PutUint32(u.block(tail.VBN)[dataLink:], v)
 			tail = RFA{VBN: v, Offset: dataData}
 		}
@@ -131,6 +131,25 @@ func (u *Updater) PutHistory(rec []byte) error {
 	binary.LittleEndian.PutUint16(u.data[lhdNumLUHRec:], n+1)
 
 	return nil
+}
+
+// reuseBlock takes a block for the update history: the first of the
+// deleted blocks' list if it has one, cleared, or else the next VBN. VMS
+// 7.1's LIBRARIAN put H90E.HLB's first history record (round 1b) in the
+// block the replacement before it had just freed; whether module data
+// reuses deleted blocks too is unconfirmed (round 3's W3 showed a module
+// going on in its session's block rather than into one).
+func (u *Updater) reuseBlock() uint32 {
+	v := u.hdr(lhdFreeVBN)
+	if v == 0 || v > u.blocks() || u.hdr(lhdFreeBlk) == 0 {
+		return u.newBlock()
+	}
+
+	u.setHdr(lhdFreeVBN, le32(u.block(v), dataLink))
+	u.addHdr(lhdFreeBlk, -1)
+	clear(u.block(v))
+
+	return v
 }
 
 // historyRFA reads one of the header's history RFAs, its offset made one

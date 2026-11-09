@@ -43,11 +43,14 @@
 
 2 Description
 
-   LIBRARIAN changes a library in place; LIBRARY builds the whole
-   library and writes it only when every step has succeeded, so an error
-   leaves the library as it was (but a help file's bad key line, as on
-   VMS, ends only that file's reading).  A changed library keeps its name
-   and version, and no update history.  /COMPRESS and /DATA aren't
+   A new library is laid out whole, as LIBRARIAN lays one out.  An
+   existing library is changed in place, as LIBRARIAN changes one: each
+   module inserted or replaced goes into new data blocks, a replaced or
+   deleted module's data is deleted, and the change is recorded in the
+   library's update history (a record for each kind of change, which
+   LIBRARY/LIST/HISTORY shows).  A changed library keeps its name and
+   version.  An error leaves the library as it was, but a help file's bad
+   key line, as on VMS, ends only that file's reading.  /COMPRESS isn't
    implemented.
 
    From the host shell, "govax library library-file [input-file...]"
@@ -62,8 +65,19 @@
       /CREATE[=(option:n[,...])]
 
    Creates a new library (a new version on a volume), then inserts any
-   input files' modules.  The options are BLOCKS (which has no effect),
-   GLOBALS, HISTORY, KEYSIZE, and MODULES.
+   input files' modules.  The options are BLOCKS (the blocks the file is
+   given, 100 by default, if the volume has room), GLOBALS, HISTORY,
+   KEYSIZE, and MODULES.
+
+/DATA
+
+      /DATA=REDUCE
+      /DATA=EXPAND
+
+   Writes the library again as a new version, laid out afresh (its
+   modules in index order, only the index blocks it uses), in the DCX
+   data-reduced format or not.  govax's data-reduced library has an
+   empty DCX map, so its records are stored as they are; VMS reads it.
 
 /DELETE
 
@@ -89,6 +103,12 @@
 /HELP
 
    A new library is a help library.
+
+/HISTORY
+
+   With /LIST, adds the library's update history: for each change
+   LIBRARY made, who made it, what was done to how many modules, when,
+   and the modules' names.
 
 /HOST
 

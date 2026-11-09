@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/backup"
-	"github.com/tucats/govax/internal/rms"
 )
 
 // lbr90wCases is how many cases LBR90W.MAR has, each run as an image of its
@@ -23,9 +22,7 @@ const lbr90wCases = 36
 // parts of subtask 11 do (docs/PHASE-90 - VMS help.md): the reason for each.
 // Their output isn't compared yet.
 var lbr90wLater = map[int]string{
-	17: "LIBRARY's history records (11e)",
 	31: "a second update open: VMS waited past the timer (round 3b: FLK after 120 seconds, govax's at once)",
-	33: "H90T's history record, LIBRARY's (11e)",
 }
 
 // lbr90wThrough are cases held to VMS's output only through a line: W13,
@@ -43,6 +40,7 @@ var lbr90wLibraries = []string{
 	"W1.TLB;1", "W1.TLB;2", "W2.TLB;1", "W3.TLB;1", "W4.TLB;1", "W9.TLB;1",
 	"W10.HLB;1", "W10T.HLB;1", "W11.MLB;1", "W16.TLB;1", "WE2.TLB;1", "WE3.TLB;1",
 	"W6.TLB;1", "W7.TLB;1", "W5.TLB;1", "W8.TLB;1", "W14.TLB;1", "W15.TLB;1",
+	"H90T.TLB;1",
 }
 
 // TestLBR90WOracle runs round 3 of testdata/help90 (LBR90W.MAR, subtask
@@ -60,7 +58,16 @@ func TestLBR90WOracle(t *testing.T) {
 
 	eachLoader(t, func(t *testing.T, paging bool) {
 		d, c, buf := shareFindConsole(t, paging)
-		mountFreshContainerSized(t, c, "DUA3:", 20000)
+		// VMS's exchange volume had clusters of 3 blocks, which the
+		// libraries' allocations in DIRECTORY/SIZE=ALL follow.
+		path := filepath.Join(t.TempDir(), "lbr90w.dsk")
+		if err := c.cmd().InitializeContainer(path, 20000, "LBR90W", 3, "RD54"); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := c.cmd().Mount("DUA3:", path, true); err != nil {
+			t.Fatal(err)
+		}
 
 		for _, name := range []string{"t1.txt", "t2.txt", "h90o.mar", "h90om.mar", "w10.hlp", "lbr90w.mar"} {
 			src, err := filepath.Abs(filepath.Join(dir, name))
@@ -122,20 +129,8 @@ func TestLBR90WOracle(t *testing.T) {
 			lbr90wCompare(t, n, got, vms)
 		}
 
-		for _, name := range lbr90wLibraries {
-			data, _, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: "DUA3:[000000]" + name})
-			if err != nil {
-				t.Errorf("%s: %v", name, err)
-
-				continue
-			}
-
-			if dir := os.Getenv("LBR90W_DUMP"); dir != "" {
-				_ = os.WriteFile(filepath.Join(dir, name), data, 0o644)
-			}
-
-			lbr90wSameLibrary(t, name, lbr90wUnwritten(name, data), lbr90wUnwritten(name, vmsLibraries[name]))
-		}
+		lbr90wSameLibraries(t, c, lbr90wLibraries, vmsLibraries)
+		lbr90wRunParts(t, d, c, dir, vmsLibraries)
 	})
 }
 
@@ -147,6 +142,10 @@ func lbr90wCompare(t *testing.T, n int, got, want []string) {
 
 	if n == lbr90wObjectCase {
 		got, want = lbr90wObjectSize(got), lbr90wObjectSize(want)
+	}
+
+	if n == lbr90wHistoryCase {
+		got, want = lbr90wHistoryTime(got), lbr90wHistoryTime(want)
 	}
 
 	for i := 0; i < max(len(got), len(want)); i++ {
@@ -276,6 +275,34 @@ func lbr90wObjectSize(lines []string) []string {
 	return out
 }
 
+// lbr90wHistoryCase is the case that reads H90T's update history record,
+// LIBRARY's, whose first 8 bytes are the time of LIBRARY's replacement.
+const lbr90wHistoryCase = 17
+
+var lbr90wHistHex = regexp.MustCompile(`^(  0000: )(?:[0-9A-F]{2} ){8}`)
+
+// lbr90wHistoryTime masks the time in lbr90wHistoryCase's history record:
+// its text and the first line of its hex.
+func lbr90wHistoryTime(lines []string) []string {
+	out := make([]string, len(lines))
+
+	for i, line := range lines {
+		if i > 0 && strings.HasPrefix(lines[i-1], "  hist n=") {
+			line = lbr90wHistHex.ReplaceAllString(line, "${1}(time) ")
+		}
+
+		// The record's text is its bytes, so the time is cut out by bytes,
+		// not runes.
+		if bar := strings.IndexByte(line, '|'); strings.HasPrefix(line, "  hist n=") && bar >= 0 && len(line) >= bar+9 {
+			line = line[:bar+1] + "(time)" + line[bar+9:]
+		}
+
+		out[i] = line
+	}
+
+	return out
+}
+
 // lbr90wSaveSet reads the libraries in VMS's save set, by name and version.
 func lbr90wSaveSet(t *testing.T, path string) map[string][]byte {
 	t.Helper()
@@ -386,6 +413,15 @@ func lbr90wMaskLibrary(data []byte) []byte {
 		}
 
 		return int(vbn-1)*512 + off + i
+	}
+
+	// LIBRARIAN's update history records (lbr.LibrarianHistory) start with
+	// the change's time: each record follows the marker BA AB and its
+	// length, at any byte of a history block.
+	for i := 512; i+4+12 <= len(out); i++ {
+		if out[i] == 0xBA && out[i+1] == 0xAB && out[i+4+10] >= 1 && out[i+4+10] <= 3 && out[i+4+11] == 12 {
+			clear(out[i+4 : i+12])
+		}
 	}
 
 	for v := uint32(2); v <= blocks; v++ {

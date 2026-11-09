@@ -466,6 +466,9 @@ func (l *Library) KeySize() int {
 	return int(l.Indexes[0].KeyLen) - 1
 }
 
+// Bytes returns a copy of the library's file.
+func (l *Library) Bytes() []byte { return append([]byte(nil), l.data...) }
+
 // DataReduced reports whether the library's records are DCX data-reduced.
 func (l *Library) DataReduced() bool { return l.dcx != nil }
 

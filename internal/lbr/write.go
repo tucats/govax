@@ -45,8 +45,11 @@ type Entry struct {
 	UserData []byte
 
 	// abandoned marks a module whose insertion failed partway (Abandon):
-	// its records are in the data chain, but no index names it.
+	// its records are in the data chain, but no index names it. failed
+	// marks one whose key couldn't go in (Failed): it has its end of
+	// module, and an empty one follows in a block of its own.
 	abandoned bool
+	failed    bool
 }
 
 // Builder is a library being created or changed, held in memory: its
@@ -68,6 +71,10 @@ type Builder struct {
 	// preallocate is how many index blocks to reserve, at least: what the
 	// entries /CREATE allows for come to, or what an edited library has.
 	preallocate int
+
+	// reduced makes Bytes write a data-reduced library (Rebuild): a DCX
+	// map block after the index blocks, and the sanity longword saying so.
+	reduced bool
 
 	flags    []uint16          // each index's IDD$W_FLAGS
 	userSize int               // LHD$B_MHDUSZ
@@ -300,6 +307,15 @@ func (b *Builder) Abandon(e *Entry) {
 	b.order = append(b.order, e)
 }
 
+// Failed puts e's records in the data chain as a module whose key couldn't
+// go in: its header (with no references), its records, and its end, then,
+// as LIBRARIAN ends a module once more after such a failure, an empty end
+// of module in a block of its own (testdata/help90's round 3, WD4.HLB).
+func (b *Builder) Failed(e *Entry) {
+	e.abandoned, e.failed = true, true
+	b.order = append(b.order, e)
+}
+
 // Replace adds a module, taking the place of any module of the same name
 // (whose symbols go with it), and reports whether it replaced one.
 func (b *Builder) Replace(e *Entry) (bool, error) {
@@ -517,6 +533,13 @@ func (w *dataWriter) newBlock(recs byte) {
 	w.off = dataData
 }
 
+// startUnlinked starts the next data block with no link to it from the
+// last, as an end of module with no module before it starts one.
+func (w *dataWriter) startUnlinked() {
+	w.blocks = append(w.blocks, make([]byte, blockSize))
+	w.off = dataData
+}
+
 // advance moves past n bytes, word-aligned (incr_rfa), starting a new
 // block when this one is full: the record goes on into it (recs 1), or,
 // if done is set, it's empty so far.
@@ -596,8 +619,14 @@ func (b *Builder) Bytes() []byte {
 
 	prealloc := max(b.preallocate, 1, used)
 
-	// The data, after the preallocated index blocks.
-	w := &dataWriter{first: uint32(prealloc) + 2}
+	// The data, after the preallocated index blocks and a reduced
+	// library's DCX map.
+	mapBlocks := 0
+	if b.reduced {
+		mapBlocks = 1
+	}
+
+	w := &dataWriter{first: uint32(prealloc+mapBlocks) + 2}
 	rfas := map[string]RFA{}
 
 	for _, e := range b.order {
@@ -614,6 +643,12 @@ func (b *Builder) Bytes() []byte {
 
 			for _, r := range e.Records {
 				w.write(r)
+			}
+
+			if e.failed {
+				w.write(eot)
+				w.startUnlinked()
+				w.write(eot)
 			}
 
 			continue
@@ -652,7 +687,7 @@ func (b *Builder) Bytes() []byte {
 		trees[i] = buildTree(keys[i], &next)
 	}
 
-	nblocks := 1 + prealloc + len(w.blocks)
+	nblocks := 1 + prealloc + mapBlocks + len(w.blocks)
 	out := make([]byte, nblocks*blockSize)
 
 	overhead := 0
@@ -698,6 +733,13 @@ func (b *Builder) Bytes() []byte {
 	h[lhdType] = byte(b.Type)
 	h[lhdNIndex] = byte(len(b.flags))
 	binary.LittleEndian.PutUint32(h[lhdSanity:], saneID3)
+
+	if b.reduced {
+		binary.LittleEndian.PutUint32(h[lhdSanity:], saneIDC)
+		binary.LittleEndian.PutUint32(h[lhdDcxMapVBN:], uint32(prealloc)+2)
+		copy(out[(prealloc+1)*blockSize:], emptyDCXMap())
+	}
+
 	binary.LittleEndian.PutUint16(h[lhdMajorID:], 3)
 	h[lhdLbrVer] = byte(copy(h[lhdLbrVer+1:lhdLbrVer+32], b.Librarian))
 	binary.LittleEndian.PutUint64(h[lhdCreDat:], b.Created)

@@ -501,6 +501,12 @@ func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [
 		return failed(err)
 	}
 
+	// The file keeps its allocation, as a file updated in place does.
+	alloc, err := s.allocatedBlocks(spec.String())
+	if err != nil {
+		return failed(err)
+	}
+
 	temp := spec
 	temp.Name, temp.Type, temp.Version = rewriteTempName, rewriteTempType, ""
 
@@ -515,7 +521,7 @@ func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [
 		return failed(err)
 	}
 
-	created, err := s.createVolumeRecords(spec.String(), kind, records)
+	created, err := s.createVolumeRecordsAllocated(spec.String(), kind, records, alloc)
 	if err != nil {
 		return failed(fmt.Errorf("%w (the new contents are in %s)", err, tempLoc.Name))
 	}
@@ -644,6 +650,66 @@ func writeHostRecords(path string, kind RecordKind, records [][]byte) error {
 
 // createVolumeRecords creates a volume file holding records.
 func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]byte) (FileLocation, error) {
+	return s.createVolumeRecordsAllocated(text, kind, records, 0)
+}
+
+// CreateRecordFileAllocated is CreateRecordFile with at least alloc blocks
+// allocated to a volume file, as an RMS $CREATE with FAB$L_ALQ allocates
+// them (LIBRARY/CREATE's /CREATE=BLOCKS, LBR$OPEN's CRE$L_ALLOC). The volume
+// rounds the allocation up to its cluster. A host file takes no allocation,
+// and neither does a volume file when the volume hasn't room for it.
+func (s *Session) CreateRecordFileAllocated(loc FileLocation, kind RecordKind, records [][]byte, alloc uint32) (FileLocation, error) {
+	if loc.Host {
+		return loc, writeHostRecords(loc.Name, kind, records)
+	}
+
+	created, err := s.createVolumeRecordsAllocated(loc.Name, kind, records, alloc)
+	if err != nil {
+		return FileLocation{}, fmt.Errorf("rms: creating %s: %w", loc.Name, err)
+	}
+
+	return created, nil
+}
+
+// AllocatedBlocks is how many blocks are allocated to the file at loc: 0
+// for a host file.
+func (s *Session) AllocatedBlocks(loc FileLocation) (uint32, error) {
+	if loc.Host {
+		return 0, nil
+	}
+
+	return s.allocatedBlocks(loc.Name)
+}
+
+// allocatedBlocks is how many blocks are allocated to the volume file named
+// by its full specification.
+func (s *Session) allocatedBlocks(text string) (uint32, error) {
+	var blocks uint32
+
+	err := s.firstSpec(text, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		if len(matches) != 1 {
+			return &NotFoundError{Spec: text}
+		}
+
+		f, err := vol.OpenFID(matches[0].Fid)
+		if err != nil {
+			return err
+		}
+
+		blocks = f.Blocks()
+
+		return nil
+	})
+
+	return blocks, err
+}
+
+func (s *Session) createVolumeRecordsAllocated(text string, kind RecordKind, records [][]byte, alloc uint32) (FileLocation, error) {
 	vol, spec, err := s.resolveVolume(text)
 	if err != nil {
 		return FileLocation{}, err
@@ -684,6 +750,14 @@ func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]
 
 	if err := putRecords(f, records); err != nil {
 		return FileLocation{}, err
+	}
+
+	// An allocation the volume hasn't room for is left out, and the file
+	// keeps the blocks its records take: VMS's $CREATE would fail with
+	// RMS$_FUL, but a library's 100 blocks shouldn't fill a small volume
+	// that holds its records.
+	if alloc > f.Blocks() {
+		_ = volume.Extend(f, bm, ib, alloc-f.Blocks())
 	}
 
 	if version == 0 {

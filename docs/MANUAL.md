@@ -3567,18 +3567,20 @@ and VMS:
 ```text
 LIBRARY library [input[,...]]
         /CREATE[=(option:n,...)]  /INSERT  /REPLACE  /DELETE=(module,...)
-        /EXTRACT=(module,...)  /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /WIDTH=n
+        /EXTRACT=(module,...)  /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /HISTORY  /WIDTH=n
+        /DATA=REDUCE|EXPAND
         /HELP  /MACRO  /OBJECT  /SHARE  /TEXT  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
 ```
 
 | Qualifier | Meaning |
 | --- | --- |
-| `/CREATE` | Make a new library (a new version on a volume), then insert any input files. `/CREATE=(BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n)` gives its sizes; `BLOCKS` is accepted and has no effect. |
+| `/CREATE` | Make a new library (a new version on a volume), then insert any input files. `/CREATE=(BLOCKS:n,GLOBALS:n,HISTORY:n,KEYSIZE:n,MODULES:n)` gives its sizes; `BLOCKS` is the blocks the file is given (100 by default), if the volume has room for them. |
 | `/INSERT` | Insert modules; one already there is a warning and is left as it was (`%LIBRAR-W-DUPMODULE` in a help library; in a text library, an error that ends the command). |
 | `/REPLACE` | Replace modules of the same names, inserting the rest. The default when input files are given. |
 | `/DELETE=(...)` | Delete modules (wildcards `*` and `%` allowed). |
 | `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR`, `.OBJ`, `.TXT`, or `.HLP`). `/OUTPUT=SYS$OUTPUT` shows a text, macro, or help module. |
-| `/LIST[=file]` | List the library's header and modules. `/FULL` adds idents, insertion times, and symbol counts; `/NAMES` lists each object module's global symbols. |
+| `/LIST[=file]` | List the library's header and modules. `/FULL` adds idents, insertion times, and symbol counts; `/NAMES` lists each object module's global symbols; `/HISTORY` adds the library's update history. |
+| `/DATA=REDUCE`, `/DATA=EXPAND` | Write the library again, as a new version laid out afresh, in the DCX data-reduced format or not. govax's reduced library has an empty DCX map, so its records are stored as they are (VMS reads it, and govax reads VMS's). |
 | `/HELP`, `/MACRO`, `/OBJECT`, `/SHARE`, `/TEXT` | The kind of new library (object by default, whatever the file's type, as on VMS). An existing library keeps its own kind. |
 | `/NOSQUEEZE` | Keep macros' comments and trailing blanks, which are removed by default. |
 | `/SELECTIVE_SEARCH` | Mark inserted object modules for selective search. |
@@ -3600,14 +3602,15 @@ level below the one before it. A bad key line is VMS's message
 that file's reading but not the command: the file's modules before it go in,
 and so do the other files'.
 
-The librarian builds the whole library and writes it only when every
-step has succeeded, so an error leaves the library as it was (a help file's
-bad key line, which VMS's librarian goes on from, is the exception). A library
-made by one command matches VMS's byte for byte, but one changed afterwards
-holds the same modules laid out afresh: VMS's librarian adds to the file in
-place, reuses deleted modules' blocks, and keeps update history records, and
-govax's keeps no history. VMS's `/COMPRESS` and `/DATA=REDUCE` aren't here,
-though a data-reduced library can be read.
+A new library is laid out whole, and an existing one changed in place, as
+VMS's librarian does each: an inserted or replaced module goes into new data
+blocks, a replaced or deleted module's data is deleted, and the change is
+recorded in the library's update history, a record for each kind of change
+(`LIBRARY/LIST/HISTORY` shows them). The libraries match VMS's byte for byte
+(but for times), changed or not. The library is written only when every step
+has succeeded, so an error leaves it as it was (a help file's bad key line,
+which VMS's librarian goes on from, is the exception). VMS's `/COMPRESS`
+isn't here.
 
 ```text
 VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
