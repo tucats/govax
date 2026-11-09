@@ -9,8 +9,6 @@ import (
 const (
 	romTOKEN   = "ROM"
 	nvramTOKEN = "NVRAM"
-	zeroTOKEN  = "ZERO"
-	bootTOKEN  = "BOOT"
 	timeTOKEN  = "TIME"
 	printTOKEN = "PRINT"
 	helpTOKEN  = "HELP"
@@ -27,8 +25,6 @@ const (
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
 
-	g.Bind(zeroTOKEN, func(id int64, r *dcl.Result) error { return d.Console.Zero() })
-	g.Bind(bootTOKEN, notImplemented(bootTOKEN, "device/RTL support"))
 	g.Bind(romTOKEN, notImplemented(romTOKEN, "device support"))
 
 	g.Bind(timeTOKEN, func(id int64, r *dcl.Result) error {

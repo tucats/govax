@@ -1,8 +1,0 @@
-1 ZERO
-
-   Sets all of physical memory to zeros and turns memory management off,
-   as CLEAR MEMORY does.
-
-   Format
-
-     ZERO

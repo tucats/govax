@@ -752,7 +752,8 @@ func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, di
 // makes the level do: its message is shown, and its status may run the
 // ON command's action (which is handled the same way, being a command
 // at this level) or end the procedure, with the status the procedure
-// ends with (stop true). QUIT ends it too, and govax with it, and STOP
+// ends with (stop true). LOGOUT in process 1 ends it too, and govax with
+// it, and STOP
 // every level; a Ctrl/Y typed during the line takes its action in place
 // of the status's (dclcontroly.go). The action goes to dispatch, as the
 // level's lines do.
@@ -907,7 +908,7 @@ func (c *Interpreter) procedureMessage(level *commandLevel, err error) {
 // with status (nil for none) as the procedure's status (13.14.2). With
 // none, the procedure's status is $STATUS, marked as shown (VMS 7.3 gave
 // %X10038028 after a procedure whose last command had failed with
-// %X00038028, testdata/dcl50). At the terminal it ends govax, as QUIT
+// %X00038028, testdata/dcl50). At the terminal it ends govax, as LOGOUT
 // does.
 func (c *Interpreter) Exit(status *uint32) error {
 	level := c.currentLevel()

@@ -138,53 +138,6 @@ func TestShowShim(t *testing.T) {
 	}
 }
 
-func TestShowString(t *testing.T) {
-	d, c, buf := newShowDispatcher(t)
-
-	// Fabricate a two-entry CONSOLE$STRINGPOOL chain directly in memory
-	// (MAPEN is 0 here, so these are also physical addresses) rather than
-	// booting a real microkernel just to exercise the walk.
-	const (
-		base    = 0x1000 // holds the head-of-chain pointer
-		descOne = 0x2000
-		strOne  = 0x3000
-	)
-
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, machine.SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 0x100, machine.SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL", descOne, machine.SymbolSystem)
-
-	if err := c.Mem.StoreLongword(c.CPU, base, descOne); err != nil {
-		t.Fatalf("seed chain head: %v", err)
-	}
-
-	text := "HELLO"
-	if err := c.Mem.StoreLongword(c.CPU, descOne, uint32(len(text))); err != nil {
-		t.Fatalf("seed descriptor length: %v", err)
-	}
-
-	if err := c.Mem.StoreLongword(c.CPU, descOne+4, strOne); err != nil {
-		t.Fatalf("seed descriptor address: %v", err)
-	}
-
-	if err := c.Mem.StoreLongword(c.CPU, descOne+8, 0); err != nil {
-		t.Fatalf("seed next pointer: %v", err)
-	}
-
-	if err := c.Mem.Store(c.CPU, strOne, []byte(text)); err != nil {
-		t.Fatalf("seed string bytes: %v", err)
-	}
-
-	if err := d.Dispatch("SHOW STRING"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "HELLO") {
-		t.Errorf("output = %q, want it to contain the descriptor's string %q", out, text)
-	}
-}
-
 // TestShowPage_beforeFirstTouch covers this port's DYNVM demand paging
 // (internal/vm.Memory.AllocatePage, wired into Translate): a freshly
 // VMINIT'd P0 page has no physical page assigned yet, so SHOW

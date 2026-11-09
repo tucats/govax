@@ -110,7 +110,7 @@ func (m *Machine) ClearSymbolTemporary() error {
 	return nil
 }
 
-// ClearString implements CLEAR STRINGS: resets CONSOLE$STRINGPOOL
+// ClearString implements the debugger's CANCEL (or CLEAR) STRINGS: resets CONSOLE$STRINGPOOL
 // back to CONSOLE$STRINGPOOL_BASE and zeroes the pool's backing
 // storage — the write side of ShowString, requiring the
 // same booted-microkernel symbols.
@@ -147,12 +147,6 @@ func (m *Machine) ClearTB() error {
 	m.Mem.ResetTBCounters()
 
 	return nil
-}
-
-// ClearMemory implements CLEAR MEMORY,  which simply calls console_zero(),
-// the same routine the ZERO command itself runs.
-func (m *Machine) ClearMemory() error {
-	return m.Zero()
 }
 
 // ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every

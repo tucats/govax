@@ -125,7 +125,6 @@ grammar debugger
         keyword     base                /syntax=set_base/nonegatable
         keyword     process             /syntax=set_process/nonegatable
         keyword     quantum             /syntax=set_quantum/nonegatable
-        keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     type                /syntax=set_type/nonegatable
         keyword     log                 /syntax=set_log/nonegatable
         keyword     output              /syntax=set_output/nonegatable
@@ -275,12 +274,6 @@ grammar debugger
             parameter   count/id=1802               -
                         /type=$integer              -
                         /prompt="Quantum"
-        
-        ! SET UIQUANTUM value
-        syntax set_uiquantum/id=1803
-            parameter   count/id=1802               -
-                        /type=$integer              -
-                        /prompt="Quantum"
 
         ! SET PSL field=value[,field=value...] changes fields of the
         ! processor status longword (govax's own).
@@ -333,7 +326,8 @@ grammar debugger
         keyword     base                /syntax=show_base
         keyword     memory              /syntax=show_memory
         keyword     vm                  /syntax=show_memory
-        keyword     maps                /syntax=show_map
+        keyword     string_pool         /syntax=show_string
+        keyword     strings             /syntax=show_string
         keyword     tb                  /syntax=show_tb
         keyword     translation_buffer  /syntax=show_tb
         keyword     regions             /syntax=show_regions
@@ -481,7 +475,6 @@ grammar debugger
             qualifier   statistics/id=216
             qualifier   runtime/id=217
             qualifier   full/id=218
-        syntax show_map/id=219
         syntax show_tb/id=220
         syntax show_regions/id=221
         syntax show_page/id=222
@@ -494,6 +487,9 @@ grammar debugger
         syntax show_scb/id=226
             qualifier   all/id=227
         syntax show_shim/id=228
+        ! SHOW STRING_POOL (STRINGS) shows the console's string pool, and
+        ! CANCEL STRINGS empties it (govax's own).
+        syntax show_string/id=340
         syntax show_fault/id=229
         syntax show_mode/id=230
         syntax show_radix/id=231
@@ -566,7 +562,7 @@ grammar debugger
         keyword     interrupt           /syntax=cancel_interrupt
         keyword     tb                  /syntax=cancel_tb
         keyword     translation_buffer  /syntax=cancel_tb
-        keyword     memory              /syntax=cancel_memory
+        keyword     strings             /syntax=cancel_strings
         keyword     symbols             /syntax=cancel_symbol
         keyword     scope               /syntax=cancel_scope
         keyword     type                /syntax=cancel_type
@@ -619,15 +615,14 @@ grammar debugger
         syntax cancel_mode/id=260
 
         ! CANCEL INTERRUPT [/ALL] [number] removes a pending interrupt,
-        ! CANCEL TB empties the translation buffer, and CANCEL
-        ! MEMORY/STATISTICS zeroes the memory counters (all govax's own).
+        ! CANCEL TB empties the translation buffer, and CANCEL STRINGS
+        ! empties the console's string pool (all govax's own).
         syntax cancel_interrupt/id=261
             qualifier   all/id=262
             parameter   code/id=263             -
                         /type=$rest_of_line
         syntax cancel_tb/id=264
-        syntax cancel_memory/id=265
-            qualifier   statistics/id=266
+        syntax cancel_strings/id=341
 
         ! CANCEL SYMBOL name removes a symbol from the machine's symbol
         ! table (the one ASM and DEPOSIT use); /ALL removes every user

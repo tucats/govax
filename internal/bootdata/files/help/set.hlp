@@ -8,7 +8,8 @@
 
    The machine's own settings (breakpoints, stepping, the PSL, page
    table entries, the display modes) are the debugger's: type DEBUG,
-   then HELP SET.
+   then HELP SET.  So are the console's string pool (SHOW STRING_POOL,
+   CANCEL STRINGS) and the PSL's fields (HELP PSL).
 
 2 CONTROL
 

@@ -113,8 +113,8 @@ func (d *Dispatcher) Continuing() bool { return d.continued != "" }
 func (d *Dispatcher) CancelContinuation() { d.continued = "" }
 
 // bindGrammar binds every DCL verb/syntax this port implements a handler
-// for. Everything else (device/RTL/assembler-dependent SHOW/CLEAR/DEFINE
-// sub-forms, TEST) is deliberately left unbound:
+// for. Everything else (device/RTL/assembler-dependent SHOW/DEFINE
+// sub-forms) is deliberately left unbound:
 // Grammar.Dispatch's own "no handler bound" error already reports that
 // clearly, so no separate stub code is needed for each one.
 func (d *Dispatcher) bindGrammar() {
@@ -126,7 +126,8 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
-	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {
+	// INITIALIZE/MEMORY (VMINIT until 2026-11-08) lays out virtual memory.
+	g.Bind("INITIALIZE_MEMORY", func(id int64, r *dcl.Result) error {
 		sizes := []uint32{
 			uint32(r.Int("P0")), uint32(r.Int("P1")), uint32(r.Int("S0")),
 			uint32(r.Int("KSP")), uint32(r.Int("ESP")), uint32(r.Int("SSP")), uint32(r.Int("ISP")),
@@ -143,9 +144,6 @@ func (d *Dispatcher) bindGrammar() {
 			sizes[0], sizes[1], sizes[2], sizes[3], sizes[4], sizes[5], sizes[6], sizes[7])
 	})
 
-	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
-	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
-
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	// SHOW VERSION names the microkernel. (It and the ABOUT command once
 	// called the microkernel's EXE$ABOUT; ABOUT is gone, HELP ABOUT
@@ -154,7 +152,6 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
 	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })
-	g.Bind("SHOW_STRING", func(id int64, r *dcl.Result) error { return d.Console.ShowString() })
 
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
 

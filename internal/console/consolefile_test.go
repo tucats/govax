@@ -31,7 +31,7 @@ func volumeFileConsole(t *testing.T) (*Console, *Dispatcher, *bytes.Buffer) {
 	c.Paths = respath.New(nil, bootdata.FS)
 	d := NewDispatcher(c, loadEvaxGrammar(t))
 
-	mustDispatch(t, d, "INIT/VAX ^D4096", "VMINIT")
+	mustDispatch(t, d, "INIT/VAX ^D4096", "INITIALIZE/MEMORY")
 	buf.Reset()
 
 	return c, d, buf

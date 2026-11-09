@@ -51,15 +51,15 @@ $!  own. A configured value is read as a DCL integer: decimal, or %X for
 $!  hex.
 $!
 $!  SIZE is physical memory (16384 pages is 8MB). P0, P1, and S0 are the
-$!  virtual address regions VMINIT maps (0 shares what physical memory is
-$!  left among the regions given 0), and KSP, ESP, SSP, and ISP the
-$!  kernel, executive, supervisor, and interrupt stacks (ESP, SSP, and
-$!  ISP's defaults are VMINIT's own).
+$!  virtual address regions INITIALIZE/MEMORY maps (0 shares what
+$!  physical memory is left among the regions given 0), and KSP, ESP,
+$!  SSP, and ISP the kernel, executive, supervisor, and interrupt stacks
+$!  (ESP, SSP, and ISP's defaults are INITIALIZE/MEMORY's own).
 $!
 $!  With paging on (vax.sysgen.paging.enable), the regions cost virtual
 $!  space rather than memory, and P0, P1, and S0 are 0 unless configured:
-$!  VMINIT's paging defaults, sized for processes rather than for memory
-$!  (see HELP VMINIT).
+$!  INITIALIZE/MEMORY's paging defaults, sized for processes rather than
+$!  for memory (see HELP INITIALIZE /MEMORY).
 $!
 $ memory_size = 16384
 $ if f$config("vax.memory.size", "EXISTS") then -
@@ -104,7 +104,7 @@ $!   With paging off, S0 is mapped to physical memory
 $!   and must fit in it; with paging on, it may be
 $!   larger.
 $!
-$ vminit /p0='memory_p0' /p1='memory_p1' /s0='memory_s0' -
+$ initialize/memory /p0='memory_p0' /p1='memory_p1' /s0='memory_s0' -
      /ksp='memory_ksp' /esp='memory_esp' /ssp='memory_ssp' /isp='memory_isp'
 $!
 $!	Load the console ROM into ROM storage, if there is one found.

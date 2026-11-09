@@ -7,8 +7,9 @@
 
      SHOW keyword
 
-   The machine's registers, memory, breakpoints, and the call stack are
-   the debugger's: type DEBUG, then HELP SHOW.
+   The machine's registers, memory, breakpoints, the call stack, and the
+   console's string pool are the debugger's: type DEBUG, then HELP
+   SHOW.
 
 2 DEBUG
 
@@ -129,7 +130,7 @@
 
      SHOW MEMORY
 
-   With paging on (VMINIT/PAGING), it also shows how many page frames
+   With paging on (INITIALIZE/MEMORY/PAGING), it also shows how many page frames
    are on the free list, on the modified list, and in use, by the kind of
    page each holds (a process's, a global section's, or the system's);
    the page faults by kind; the pages the modified page writer has
@@ -148,7 +149,7 @@
    entries (only those take memory), and its virtual addresses the range
    those pages cover; S0's "Mapped pages" are those with memory behind
    them.  With paging off, each region shows the physical addresses
-   VMINIT laid it out at.
+   INITIALIZE/MEMORY laid it out at.
 
 3 Qualifiers
 /FILES
@@ -236,18 +237,6 @@
    Format
 
      SHOW SHARE_PREFIX
-
-2 STRING_POOL
-
-   Shows the console's string pool: its base, size, and the next free
-   place.  The pool is the S0 memory where the interactive assembler
-   (ASM) keeps the string constants its statements use: a quoted string
-   where an address belongs becomes a descriptor in the pool, and its
-   address is the operand's value.  CLEAR STRINGS empties it.
-
-   Format
-
-     SHOW STRING_POOL
 
 2 SYMBOL
 

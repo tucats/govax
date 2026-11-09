@@ -21,8 +21,8 @@
    console, with its own symbols, logical names, default directory,
    $STATUS, and open files.  Every DCL command works there, command
    procedures (@) included.  The commands that work the machine itself
-   (DEBUG, ASM, INITIALIZE/VAX, VMINIT, ZERO, SAVE, LOAD, ...) are the
-   console's own, and give %VAX-E-NOTSUBPROC.  A subprocess can SPAWN a
+   (DEBUG, ASM, INITIALIZE/VAX, INITIALIZE/MEMORY, SAVE, LOAD, ...) are
+   the console's own, and give %VAX-E-NOTSUBPROC.  A subprocess can SPAWN a
    subprocess of its own; a process's subprocesses end when it does.
 
    SPAWN says when the subprocess has been made (%DCL-S-SPAWNED, and

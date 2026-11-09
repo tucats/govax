@@ -129,6 +129,29 @@
    that starts an operand is the contents of what follows (.T.I).  SET
    LANGUAGE FORTRAN makes a period select a record's component instead.
 
+2 PSL
+
+   The processor status longword: the CPU's condition codes, trap
+   enables, and state.  SHOW PSL and SHOW REGISTERS show it as a value
+   and as its fields, and SET PSL changes them:
+
+     C      Carry.
+     V      Overflow.
+     Z      Zero.
+     N      Negative.
+     T      Trace: a trace fault comes before the next instruction.
+     IV     Integer overflow traps are enabled.
+     FU     Floating underflow faults are enabled.
+     DV     Decimal overflow traps are enabled.
+     IPL    The interrupt priority level, 0 to 31.
+     PRV    The previous access mode.
+     CUR    The current access mode: kernel, executive, supervisor, or
+            user.
+     IS     The CPU is on the interrupt stack.
+     FPD    First part done: an interrupted instruction resumes.
+     TP     Trace pending.
+     CM     Compatibility mode (always 0 in govax).
+
 2 Radix
 
    The debugger reads numbers, and shows them, in a radix: hexadecimal
@@ -145,7 +168,7 @@
 
      R0 to R11, AP (R12), FP (R13), SP (R14), PC (R15)
                     The general registers.
-     PSL            The processor status longword.
+     PSL            The processor status longword (see PSL).
 
    and the privileged registers: P0BR, P0LR, P1BR, P1LR, SBR, SLR, PCBB,
    SCBB, IPL, ASTLVL, SIRR, SISR, ICCS, NICR, ICR, TODR, RXCS, RXDB,
@@ -806,7 +829,7 @@
 
    Chooses the region statements are stored in: P0 (also 0 or PROCESS)
    or S0 (2 or SYSTEM).  The assembler keeps a current location for
-   each, which .BASE sets.  After VMINIT, P0's starts at ^X200 and S0's
+   each, which .BASE sets.  After INITIALIZE/MEMORY, P0's starts at ^X200 and S0's
    at the first page after the system's tables.
 
      .REGION  region
@@ -1041,21 +1064,6 @@
 
    Every interrupt waiting.
 
-3 MEMORY
-
-   Not available in the debugger: CANCEL MEMORY is in its grammar, but
-   reports %DEBUG-E-SYNTAX.  The memory counters it was to zero aren't
-   kept.
-
-   Format
-
-     CANCEL MEMORY/STATISTICS
-
-4 Qualifier
-/STATISTICS
-
-   The memory system's counters.
-
 3 MODE
 
    Puts SET MODE's display modes back as they were at the start.
@@ -1090,6 +1098,17 @@
    Format
 
      CANCEL SOURCE
+
+3 STRINGS
+
+   Empties the console's string pool (govax's own; see SHOW
+   STRING_POOL).  The descriptors already made from it are no longer
+   good, so empty it only when the programs that use them are gone from
+   memory.
+
+   Format
+
+     CANCEL STRINGS
 
 3 SYMBOLS
 
@@ -2390,9 +2409,10 @@
 
 3 MEMORY
 
-   Shows the size of physical memory and, once VMINIT has made page
-   tables, how much of each region (P0, P1, S0) is in use (govax's own).
-   With paging on (VMINIT/PAGING), the page frames on the free and
+   Shows the size of physical memory and, once INITIALIZE/MEMORY has
+   made page tables, how much of each region (P0, P1, S0) is in use
+   (govax's own).  With paging on (INITIALIZE/MEMORY/PAGING), the page
+   frames on the free and
    modified lists and in use, the page faults by kind, the modified page
    writer's work, and the page file's use.  VM is the same keyword.
 
@@ -2638,6 +2658,19 @@
    Format
 
      SHOW STEP
+
+3 STRING_POOL
+
+   Shows the console's string pool: its base, size, and the next free
+   place (govax's own).  The pool is the S0 memory where the interactive
+   assembler (ASM) keeps the string constants its statements use: a
+   quoted string where an address belongs becomes a descriptor in the
+   pool, and its address is the operand's value.  STRINGS is the same
+   keyword, and CANCEL STRINGS empties the pool.
+
+   Format
+
+     SHOW STRING_POOL
 
 3 SYMBOLS
 

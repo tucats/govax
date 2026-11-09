@@ -222,25 +222,25 @@
    Memory
 
        These are read by the startup procedure, STARTUP.COM (with
-       F$CONFIG), for its INITIALIZE/VAX and VMINIT commands; each is a
-       number of 512-byte pages, a DCL integer (decimal, or %X for hex).
-       One that isn't set keeps STARTUP.COM's own value.  A STARTUP.COM
-       you have changed need not read them.
+       F$CONFIG), for its INITIALIZE/VAX and INITIALIZE/MEMORY commands;
+       each is a number of 512-byte pages, a DCL integer (decimal, or %X
+       for hex).  One that isn't set keeps STARTUP.COM's own value.  A
+       STARTUP.COM you have changed need not read them.
 
        vax.memory.size               Physical memory (INITIALIZE/VAX).
                                      Default 16384 (8MB).
 
-       vax.memory.p0                 VMINIT's P0 region.  Default 16384,
-                                     or VMINIT's paging default with
-                                     paging on.
+       vax.memory.p0                 INITIALIZE/MEMORY's P0 region.
+                                     Default 16384, or its paging
+                                     default with paging on.
 
-       vax.memory.p1                 VMINIT's P1 region.  Default 8192,
-                                     or VMINIT's paging default with
-                                     paging on.
+       vax.memory.p1                 INITIALIZE/MEMORY's P1 region.
+                                     Default 8192, or its paging
+                                     default with paging on.
 
-       vax.memory.s0                 VMINIT's S0 region.  Default 8192,
-                                     or VMINIT's paging default with
-                                     paging on.
+       vax.memory.s0                 INITIALIZE/MEMORY's S0 region.
+                                     Default 8192, or its paging
+                                     default with paging on.
 
        vax.memory.ksp                The kernel stack.  Default 20.
 
@@ -253,9 +253,9 @@
        With paging off, a region given 0 shares, with the others given
        0, the physical memory the rest leave, and physical memory still
        left over is added to S0.  With paging on
-       (vax.sysgen.paging.enable), STARTUP.COM gives VMINIT 0 for each
-       region not set here, and VMINIT's paging defaults apply (see
-       HELP VMINIT).
+       (vax.sysgen.paging.enable), STARTUP.COM gives INITIALIZE/MEMORY
+       0 for each region not set here, and its paging defaults apply
+       (see HELP INITIALIZE /MEMORY).
 
    Processes
 
@@ -310,9 +310,10 @@
    integer, and uses the default.  The values that start a process off
    are copied into each process when it's created.
 
-       vax.sysgen.paging.enable      true or false: whether VMINIT turns
-                                     VMS paging on (see HELP VMINIT,
-                                     /[NO]PAGING).  Default false.
+       vax.sysgen.paging.enable      true or false: whether
+                                     INITIALIZE/MEMORY turns VMS
+                                     paging on (see HELP INITIALIZE
+                                     /MEMORY /PAGING).  Default false.
 
        vax.sysgen.pql_dwsdefault     PQL_DWSDEFAULT: a new process's
                                      default working set size.  Default
@@ -427,7 +428,8 @@
                                      with 4096 of them (from the user
                                      stack's top up).  $CRETVA and
                                      $EXPREG fail with SS$_VASFULL past
-                                     it.  Default VMINIT's /P0 plus /P1
+                                     it.  Default INITIALIZE/MEMORY's
+                                     /P0 plus /P1
                                      (process 1's).
 
        vax.sysgen.paging.file        With paging on, the page file: where
@@ -439,8 +441,9 @@
                                      ("./pagefile.sys").  It's
                                      installed as govax starts, after
                                      STARTUP.COM and before your commands
-                                     (and again after each VMINIT,
-                                     INIT, or ZERO): created if it's
+                                     (and again after each
+                                     INITIALIZE/MEMORY or
+                                     INITIALIZE/VAX): created if it's
                                      missing, and made
                                      vax.sysgen.paging.size blocks if
                                      it isn't, so its space is taken at

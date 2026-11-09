@@ -1511,7 +1511,10 @@ their libraries VMS's byte for byte. What it left:
   /STEP, each have a line saying so); `TestDebuggerHelpTopics` looks up
   the new topics. MANUAL.md's 12 says the debugger's HELP prompts and
   reads DBG$HELP. Left for later: SHOW MAPS, SET UIQUANTUM, and CANCEL
-  MEMORY could leave the grammar. Subtask 9 done.
+  MEMORY could leave the grammar (they did, 2026-11-08, in a cleanup of
+  the console's commands that also took out BOOT, TEST, ZERO, QUIT, and
+  CLEAR, made VMINIT INITIALIZE/MEMORY, and moved SHOW STRING_POOL,
+  CANCEL STRINGS, and the PSL topic to the debugger). Subtask 9 done.
 - **2026-11-08** — Subtask 10, LBRSHR's reading routines.
   **`vmsdef`**: VMS 7.1's LBRSHR.EXE (from the local system disk,
   `testdata/disks/rq0-ra92.dsk`, not kept) merged by `gen -image`: 27

@@ -30,4 +30,4 @@ COPY/QUIET DUA5:[FTN86]FTN_KEYED.OBJ "testdata/ftn86/vax/round6/ftn_keyed.obj"/H
 COPY/QUIET DUA5:[FTN86]FTN_INTRINSICS.OBJ "testdata/ftn86/vax/round6/ftn_intrinsics.obj"/HOST
 COPY/QUIET DUA5:[FTN86]FTN_SYSTEM.OBJ "testdata/ftn86/vax/round6/ftn_system.obj"/HOST
 DISMOUNT DUA5:
-QUIT
+EXIT

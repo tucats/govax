@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -123,26 +122,22 @@ func TestCommands_ifErrors(t *testing.T) {
 func TestCommands_notImplemented(t *testing.T) {
 	d, _, _ := newCommandDispatcher(t)
 
-	for _, line := range []string{"BOOT", "ROM"} {
+	for _, line := range []string{"ROM"} {
 		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_NEEDDEP)) {
 			t.Errorf("%s: %v, want CLI_NEEDDEP", line, err)
 		}
 	}
 }
 
-func TestCommands_zero(t *testing.T) {
-	d, c, _ := newCommandDispatcher(t)
+// TestCommands_removed: the console's BOOT, TEST, ZERO, QUIT, VMINIT
+// (INITIALIZE/MEMORY now), and CLEAR are gone (2026-11-08).
+func TestCommands_removed(t *testing.T) {
+	d, _, _ := newCommandDispatcher(t)
 
-	if err := c.Deposit("", 0x1000, machine.SizeLongword, 0x55); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := d.Dispatch("ZERO"); err != nil {
-		t.Fatal(err)
-	}
-
-	if got, err := c.Mem.LoadLongword(c.CPU, 0x1000); err != nil || got != 0 {
-		t.Errorf("memory after ZERO = %#x, %v", got, err)
+	for _, line := range []string{"BOOT", "TEST X", "ZERO", "QUIT", "VMINIT", "CLEAR MEMORY", "CLEAR STRINGS", "SHOW STRING_POOL"} {
+		if err := d.Dispatch(line); err == nil {
+			t.Errorf("%s: no error", line)
+		}
 	}
 }
 

@@ -252,16 +252,13 @@ grammar console
         disallow any2(user_mode, supervisor_mode, executive_mode)
         
     ! EXIT [status] ends the command procedure it's in, or govax at the
-    ! terminal; the status, a DCL expression, is the procedure's. QUIT
-    ! ends govax wherever it is.
+    ! terminal; the status, a DCL expression, is the procedure's.
     verb exit
         parameter   status/id=1645              -
                     /type=$rest_of_line
 
-    verb quit
-
     ! LOGOUT ends a subprocess's DCL, and so the process (docs/PHASE-50,
-    ! subtask 19); in process 1 it is QUIT.
+    ! subtask 19); in process 1 it ends govax.
     verb logout
 
     ! MCR image [text]: runs the image, with the text for
@@ -298,32 +295,12 @@ grammar console
     ! nothing running (docs/PHASE-42.md). It is how to look at memory and
     ! registers now that EXAMINE and SHOW REGISTERS are debugger commands.
     verb debug/id=6000
-    
-    verb test
-    
-        parameter   what/id=161                 -
-                    /type=$rest_of_line         -
-                    /prompt="Code"
 
-
-    ! GO and CALL are the debugger's (debug.dcl); ASM is there too.
-
-    
-    ! CLEAR (docs/PHASE-42.md): what is left of it at the console. The
-    ! debugger's CANCEL took breakpoints, interrupts, the translation
-    ! buffer, memory statistics, and the machine's symbol table (CLEAR
-    ! SYMBOL); CLEAR ERROR and CLEAR PROFILES had no handler and are gone.
-    ! A DCL symbol is deleted with DELETE/SYMBOL, as in DCL.
-    type clear_types
-        keyword     memory              /syntax=clear_memory
-        keyword     strings             /syntax=clear_strings
-
-    verb clear
-
-        parameter   CLEAR_TYPE/type=clear_types/prompt="What"
-
-        syntax clear_strings/id=105
-        syntax clear_memory/id=103
+    ! GO and CALL are the debugger's (debug.dcl); ASM is there too. CLEAR
+    ! is gone from the console: the debugger's CANCEL (and its alias
+    ! CLEAR) took breakpoints, interrupts, the translation buffer, the
+    ! machine's symbol table, and the string pool. A DCL symbol is deleted
+    ! with DELETE/SYMBOL, as in DCL.
 
 
     type show_types
@@ -336,7 +313,6 @@ grammar console
         keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
         keyword         version         /syntax=show_version
-        keyword         string_pool     /syntax=show_string
         keyword         nvram           /syntax=show_nvram      
         keyword         debug           /syntax=show_debug
         keyword         radix           /syntax=show_radix
@@ -354,45 +330,6 @@ grammar console
         ! EDITOR: the editor EDIT runs, and where it works.
         keyword         editor          /syntax=show_editor
                 
-
-	verb vminit
-
-            qualifier       p0 /id=1801 -
-		                /type=$integer
-
-	    qualifier       p1 /id=1802 -
-		                /type=$integer
-
-	    qualifier       s0 /id=1803 -
-		                /type=$integer
-
-            qualifier       ksp /id=1804 -
-                                /type=$integer -
-                                /default=4
-
-            qualifier       esp /id=1805 -
-                                /type=$integer -
-                                /default=8
-
-            qualifier       ssp /id=1806 -
-                                /type=$integer -
-                                /default=8
-
-            qualifier       isp /id=1807 -
-                                /type=$integer -
-                                /default=4
-
-            qualifier       stringpool /id=1808 -
-			        /type=$integer -
-                                /default=8
-
-            ! /[NO]PAGING (docs/PHASE-62 - VMS paging.md, Decision 1):
-            ! VMS paging on or off; without it, vax.sysgen.paging.enable.
-            qualifier       paging /id=1818
-
-            qualifier       debug /id=1809
-            qualifier       verify /alias=debug
-            qualifier       log /alias=debug
 
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
     ! (registers, memory, breakpoints, the stack, ...) are the debugger's.
@@ -418,7 +355,6 @@ grammar console
                         /type=$name
             disallow    local and global
         syntax          show_radix/id=146
-        syntax          show_string/id=121
         syntax          show_nvram/id=122
         syntax          show_debug/id=129
         syntax          show_instructions/id=131
@@ -500,6 +436,7 @@ grammar console
 
         qualifier   vax/id=801/syntax=initialize_vax
         qualifier   container/id=802/syntax=initialize_container
+        qualifier   memory/id=811/syntax=initialize_memory
 
     ! No /prompt= on PAGES: cmdInit's original CLI_NEEDPAGES error (a
     ! specific wording, not a formal interactive re-prompt) is preserved by
@@ -529,6 +466,34 @@ grammar console
                     /type=$integer
         qualifier   device/id=810               -
                     /type=$string
+
+    ! INITIALIZE/MEMORY (was VMINIT) lays out virtual memory: the P0, P1,
+    ! and S0 regions, the privileged modes' stacks, and the string pool,
+    ! sizes in pages.
+    syntax initialize_memory/id=812
+
+        qualifier   p0/id=1801                  -
+                    /type=$integer
+        qualifier   p1/id=1802                  -
+                    /type=$integer
+        qualifier   s0/id=1803                  -
+                    /type=$integer
+        qualifier   ksp/id=1804                 -
+                    /type=$integer/default=4
+        qualifier   esp/id=1805                 -
+                    /type=$integer/default=8
+        qualifier   ssp/id=1806                 -
+                    /type=$integer/default=8
+        qualifier   isp/id=1807                 -
+                    /type=$integer/default=4
+        qualifier   stringpool/id=1808          -
+                    /type=$integer/default=8
+        ! /[NO]PAGING (docs/PHASE-62 - VMS paging.md, Decision 1): VMS
+        ! paging on or off; without it, vax.sysgen.paging.enable.
+        qualifier   paging/id=1818
+        qualifier   debug/id=1809
+        qualifier   verify/alias=debug
+        qualifier   log/alias=debug
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
@@ -1172,8 +1137,6 @@ grammar console
     ! an abbreviation (S is STEP, D is DEPOSIT). An $expression is a
     ! console expression, evaluated by the handler (expr.go).
     !
-    verb zero/id=1600
-
     ! STOP deletes a process (and its subprocesses): by name, or by its
     ! hexadecimal PID with /IDENTIFICATION, as SHOW PROCESS names one.
     ! With neither, it ends every command procedure (docs/PHASE-50,
@@ -1189,7 +1152,6 @@ grammar console
         parameter   process_name/id=1607        -
                     /type=$string
 
-    verb boot/id=1601
     verb rom/id=1602
 
     ! TIME runs a command and reports how long it took; with none, it

@@ -23,8 +23,8 @@
 
    The image is started at its transfer address.  A shareable image
    (one LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR,
-   "no transfer address", as on VMS.  RUN needs a VMINIT and the
-   microkernel loaded and initialized, as STARTUP.COM does.
+   "no transfer address", as on VMS.  RUN needs an INITIALIZE/MEMORY and
+   the microkernel loaded and initialized, as STARTUP.COM does.
 
    RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
    string.  To pass an image text, run it as a foreign command (see
@@ -79,7 +79,7 @@
    cells, and those of the program), and its pages take their
    protections.  Shareable images are private to the process: copied
    into memory, or mapped from their files with paging on
-   (VMINIT/PAGING), never shared with another process.
+   (INITIALIZE/MEMORY/PAGING), never shared with another process.
 
    The debugger's SHOW IMAGE lists the images and the files they came
    from.

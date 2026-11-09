@@ -28,8 +28,8 @@
    one) is sent the termination message, with the final status
    %SYSTEM-F-ABORT, and a process suspended is resumed first so that it
    can end.  Process 1, the console's own process, can't be stopped;
-   EXIT ends the session.  INITIALIZE, VMINIT, ZERO, and leaving govax
-   delete every process but process 1 in the same way.
+   EXIT ends the session.  INITIALIZE/VAX, INITIALIZE/MEMORY, and
+   leaving govax delete every process but process 1 in the same way.
 
 2 Qualifiers
 /EXIT

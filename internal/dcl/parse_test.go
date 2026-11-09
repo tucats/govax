@@ -113,16 +113,16 @@ func TestParse_define(t *testing.T) {
 	}
 }
 
-func TestParse_vminitQualifiers(t *testing.T) {
+func TestParse_initializeMemoryQualifiers(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse("VMINIT/P0=2048/P1=8192/S0=2048/KSP=20")
+	r, err := g.Parse("INITIALIZE/MEMORY/P0=2048/P1=8192/S0=2048/KSP=20")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if r.Active != "VMINIT" {
-		t.Errorf("Active=%s, want VMINIT", r.Active)
+	if r.Active != "INITIALIZE_MEMORY" {
+		t.Errorf("Active=%s, want INITIALIZE_MEMORY", r.Active)
 	}
 
 	if got := r.Int("P0"); got != 2048 {
@@ -150,27 +150,20 @@ func TestParse_vminitQualifiers(t *testing.T) {
 	}
 }
 
-// TestParse_quitIsItsOwnVerb: QUIT isn't EXIT's alias, since EXIT ends a
-// command procedure and QUIT ends govax (docs/PHASE-50 - DCL command
-// procedures.md).
-func TestParse_quitIsItsOwnVerb(t *testing.T) {
+// TestParse_noQuit: the console has no QUIT (2026-11-08); EXIT and LOGOUT
+// end govax.
+func TestParse_noQuit(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse("QUIT")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if r.Verb != "QUIT" {
-		t.Errorf("Verb=%s, want QUIT", r.Verb)
+	if _, err := g.Parse("QUIT"); err == nil {
+		t.Error("QUIT parses")
 	}
 }
 
 func TestParse_ambiguousVerb(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// C and CA... let's find a genuinely ambiguous abbreviation: "CA" could
-	// only mean CALL among {define,about,exit,quit,test,call,clear,
-	// show,vminit} - not ambiguous. Use a single letter that's ambiguous.
+	// only mean CALL among {define,exit,call,show} - not ambiguous. Use a single letter that's ambiguous.
 	if _, err := g.Parse("C"); err == nil {
 		t.Error("expected ambiguous verb error for \"C\"")
 	}
@@ -199,16 +192,16 @@ func TestParse_unknownVerb(t *testing.T) {
 	}
 }
 
-func TestParse_testRestOfLine(t *testing.T) {
+func TestParse_restOfLine(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse(`TEST foo/bar baz`)
+	r, err := g.Parse(`MCR PROG foo/bar baz`)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if got := r.String("WHAT"); got != "FOO/BAR BAZ" {
-		t.Errorf("WHAT=%q, want \"FOO/BAR BAZ\"", got)
+	if got := r.String("TEXT"); got != "FOO/BAR BAZ" {
+		t.Errorf("TEXT=%q, want \"FOO/BAR BAZ\"", got)
 	}
 }
 
@@ -391,7 +384,7 @@ func TestParse_initializeBareHasNoDefault(t *testing.T) {
 func TestParse_quotedStringPreservesCase(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse(`VMINIT/DEBUG`)
+	r, err := g.Parse(`INITIALIZE/MEMORY/DEBUG`)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}

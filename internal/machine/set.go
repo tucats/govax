@@ -318,17 +318,6 @@ func (m *Machine) SetQuantum(n int) error {
 	return nil
 }
 
-// SetUIQuantum implements SET UIQUANTUM <n>.
-func (m *Machine) SetUIQuantum(n int) error {
-	if err := m.requireInit(); err != nil {
-		return err
-	}
-
-	m.Printf("UI time slicing is not modeled by this port (no cooperative host-UI polling loop); value accepted but has no effect.\n")
-
-	return nil
-}
-
 // SetFaultHistory implements SET FAULT/SET HIST <n>.
 func (m *Machine) SetFaultHistory(n int) error {
 	if err := m.requireInit(); err != nil {

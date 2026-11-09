@@ -13,7 +13,7 @@ import (
 // and a default directory of its own, and the machine's Hooks for what
 // it asks of DCL (its output and default directory, $STATUS, Ctrl/Y, the
 // subprocess CLIs, process 1's creation, the terminal input,
-// XFC$CONSOLE_CMD, and QUIT).
+// XFC$CONSOLE_CMD, and the end of the session).
 func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 	session := rms.NewSession(m.Mounts)
 	session.Logicals = m.ProcessOneLogicals()

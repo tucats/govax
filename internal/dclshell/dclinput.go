@@ -89,7 +89,6 @@ var dclOwnCommands = map[string]bool{
 	"INQUIRE":          true,
 	"ON":               true,
 	"OPEN":             true,
-	"QUIT":             true,
 	"ATTACH":           true,
 	"READ":             true,
 	"RETURN":           true,

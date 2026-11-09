@@ -134,7 +134,7 @@ func TestDebuggerHelpTopics(t *testing.T) {
 		{"EXAMINE", "/FLOAT"}, {"EXAMINE", "/PACKED"}, {"EXAMINE", "/DATE_TIME"}, {"EXAMINE", "/TYPE"},
 		{"CANCEL", "BREAK"}, {"CANCEL", "TRACE"}, {"CANCEL", "WATCH"}, {"CANCEL", "SOURCE"},
 		{"CANCEL", "RADIX"}, {"CANCEL", "MODE"}, {"CANCEL", "INTERRUPT"}, {"CANCEL", "TB"},
-		{"CANCEL", "MEMORY"}, {"CLEAR"},
+		{"CANCEL", "STRINGS"}, {"CLEAR"}, {"SHOW", "STRING_POOL"}, {"PSL"},
 		{"EXAMINE", "/INSTRUCTION"}, {"EXAMINE", "/OPERANDS"}, {"EXAMINE", "/BYTE"},
 		{"EXAMINE", "/ASCII"}, {"EXAMINE", "/HEXADECIMAL"}, {"EXAMINE", "/PSL"},
 		{"EXAMINE", "/PTE"}, {"EXAMINE", "/CONSTANTS"}, {"EXAMINE", "/SHAREABLE"},

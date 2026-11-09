@@ -483,7 +483,7 @@ func readCommandLine(rl *readline.Instance, c *console.Console, attn *attentionS
 // endOfFile is CTRL/Z at a prompt. In the debugger it is EXIT, ending the
 // session, and in the interactive assembler .END. At the console's prompt
 // it does nothing more than echo *Exit*, as at DCL's: govax ends only by
-// EXIT, QUIT, or CTRL/Y.
+// EXIT, LOGOUT, or CTRL/Y.
 func endOfFile(c *console.Console, d *console.Dispatcher, out io.Writer) {
 	var command string
 

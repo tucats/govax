@@ -65,7 +65,7 @@ func runFTN86(t *testing.T) (string, *Console, *Dispatcher) {
 	buf.Reset()
 
 	for line := range strings.SplitSeq(string(script), "\n") {
-		for _, skip := range []string{"!", "INITIALIZE/", "MOUNT/", "DISMOUNT", "QUIT"} {
+		for _, skip := range []string{"!", "INITIALIZE/", "MOUNT/", "DISMOUNT", "EXIT"} {
 			if strings.HasPrefix(line, skip) {
 				line = ""
 			}
@@ -387,7 +387,7 @@ func TestFTN86Dungeon(t *testing.T) {
 	text := strings.ReplaceAll(string(script), "DUA5", "DUA1")
 
 	for line := range strings.SplitSeq(text, "\n") {
-		for _, skip := range []string{"!", "MOUNT/", "DISMOUNT", "QUIT"} {
+		for _, skip := range []string{"!", "MOUNT/", "DISMOUNT", "EXIT"} {
 			if strings.HasPrefix(line, skip) {
 				line = ""
 			}

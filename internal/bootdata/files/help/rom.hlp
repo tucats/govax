@@ -1,9 +1,8 @@
 1 ROM
 
-   Reserved for booting the virtual VAX from a device (BOOT) or from its
-   console ROM (ROM).  Neither is in govax yet; each says so
-   (%DCL-E-NEEDDEP).  LOAD/ROM and SAVE/ROM read and write the ROM's
-   contents.
+   Reserved for booting the virtual VAX from its console ROM.  It isn't
+   in govax yet, and says so (%DCL-E-NEEDDEP).  LOAD/ROM and SAVE/ROM
+   read and write the ROM's contents.
 
    Format
 

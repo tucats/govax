@@ -43,6 +43,7 @@ func (d *Dispatcher) bindMachine() {
 		"SHOW_TB":      c.ShowTB,
 		"SHOW_REGIONS": func() error { return c.ShowRegionsOf(c.ProcessOne()) },
 		"SHOW_SHIM":    c.ShowShim,
+		"SHOW_STRING":  c.ShowString,
 		"SHOW_FAULT":   c.ShowFault,
 		"SHOW_MODE":    d.Debugger.ShowMode,
 		"SHOW_RADIX":   d.Debugger.ShowRadix,
@@ -152,9 +153,7 @@ func (d *Dispatcher) bindMachine() {
 
 		return c.ClearSymbol(r.String("NAME"), false)
 	})
-	g.Bind("CANCEL_MEMORY", func(id int64, r *dcl.Result) error {
-		return vmserrors.New(vmserrors.DBG_SYNTAX, "MEMORY")
-	})
+	g.Bind("CANCEL_STRINGS", func(id int64, r *dcl.Result) error { return c.ClearString() })
 
 	g.Bind("CANCEL_INTERRUPT", func(id int64, r *dcl.Result) error {
 		if r.Present("ALL") {

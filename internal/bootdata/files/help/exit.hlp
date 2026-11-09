@@ -20,7 +20,7 @@
 
 2 Description
 
-   At the terminal (command level 0), EXIT ends govax, as QUIT does.  In
+   At the terminal (command level 0), EXIT ends govax.  In
    a subprocess's DCL, EXIT at command level 0 logs the subprocess out,
    as LOGOUT does.
 

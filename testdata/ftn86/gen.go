@@ -193,7 +193,7 @@ $   SHOW SYMBOL $STATUS
 $ ENDSUBROUTINE
 `)
 
-	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nQUIT\n", device, device)
+	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nEXIT\n", device, device)
 
 	fmt.Fprintf(&out, `! COPYOUT.CMD - copies VMS's results off the exchange volume. Written by
 ! testdata/ftn86/gen.go. Run from the repository root, after the VAX has dismounted it:
@@ -212,7 +212,7 @@ COPY/QUIET/BINARY %[2]s[FTN86]FTNRTL.EXE "%[4]s/ftnrtl.exe"/HOST
 		fmt.Fprintf(&out, "COPY/QUIET %s[FTN86]%s.OBJ \"%s/vax/%s/%s.obj\"/HOST\n", device, m, dir, round, strings.ToLower(m))
 	}
 
-	fmt.Fprintf(&out, "DISMOUNT %s\nQUIT\n", device)
+	fmt.Fprintf(&out, "DISMOUNT %s\nEXIT\n", device)
 
 	write := func(name, text string) {
 		check(os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644))
@@ -307,7 +307,7 @@ $ SHOW SYMBOL $STATUS
 `, d, build.suffix, strings.Join(modules, ","))
 	}
 
-	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nQUIT\n", device, device)
+	fmt.Fprintf(&ex, "SET DEFAULT %s[000000]\nDISMOUNT %s\nEXIT\n", device, device)
 	fmt.Fprint(&com, `$ SET DEFAULT 'ROOT'[000000]
 $ WRITE SYS$OUTPUT "==== END"
 `)
@@ -323,6 +323,6 @@ $ WRITE SYS$OUTPUT "==== END"
 MOUNT/NOWRITE %[1]s "%[2]s"
 COPY/QUIET %[1]s[000000]FTN86D.LOG "testdata/disks/ftn86d-%[3]s.log"/HOST
 DISMOUNT %[1]s
-QUIT
+EXIT
 `, device, volume, round))
 }

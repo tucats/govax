@@ -144,11 +144,9 @@ var (
 // (VAX_NOTSUBPROC). (SPAWN was among them until a subprocess's DCL
 // could wait for its own subprocess: Phase 51's subtask 2.)
 var processOneCommands = map[string]bool{
-	"ASM": true, "ASSEMBLE": true, "BOOT": true,
-	"CLEAR": true, "CLEAR_MEMORY": true, "CLEAR_STRINGS": true,
-	"DEBUG": true, "INITIALIZE_VAX": true, "LOAD": true, "ROM": true,
-	"SAVE": true, "SET_QUANTUM": true, "TEST": true,
-	"VMINIT": true, "ZERO": true,
+	"ASM": true, "ASSEMBLE": true,
+	"DEBUG": true, "INITIALIZE_MEMORY": true, "INITIALIZE_VAX": true,
+	"LOAD": true, "ROM": true, "SAVE": true, "SET_QUANTUM": true,
 }
 
 // useShell makes s the console's Shell, the DCL whose commands run now,
@@ -903,7 +901,7 @@ func (c *Interpreter) cliActivate(cli *subprocessCLI, image, commandLine string)
 }
 
 // logoutCommand is LOGOUT: in a subprocess, it logs the process out,
-// which says so (a spawned process's one line); in process 1 it is QUIT.
+// which says so (a spawned process's one line); in process 1 it ends govax.
 // It leaves $STATUS as it was, the process's final status.
 func (c *Interpreter) logoutCommand() error {
 	c.keepStatus()

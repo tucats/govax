@@ -76,17 +76,19 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "EXIT", "QUIT", "TEST", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
+	wantVerbs := []string{"DEFINE", "EXIT", "LOGOUT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
 		}
 	}
 
-	// QUIT is its own verb (docs/PHASE-50 - DCL command procedures.md):
-	// EXIT ends a command procedure, QUIT ends govax.
-	if quit := g.entries["QUIT"]; quit.aliasRef != nil {
-		t.Errorf("QUIT is an alias of %s, want its own verb", quit.aliasRef.Name)
+	// QUIT, TEST, CLEAR, VMINIT, ZERO, and BOOT are gone (2026-11-08):
+	// EXIT and LOGOUT end govax, and VMINIT is INITIALIZE/MEMORY.
+	for _, v := range []string{"QUIT", "TEST", "CLEAR", "VMINIT", "ZERO", "BOOT"} {
+		if _, ok := g.entries[v]; ok {
+			t.Errorf("verb %s is still in the grammar", v)
+		}
 	}
 
 	show := g.entries["SHOW"]
@@ -126,9 +128,11 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE, and LOGOUT and
 	// MCR; and ABOUT goes (HELP ABOUT is its replacement); and WAIT.
 	// Phase 51 adds DUMP, Phase 57 ATTACH, Phase 69 BACKUP, Phase 74
-	// FORTRAN, and Phase 88 CONVERT, and EDIT is govax's own.
-	if len(g.verbOrder) != 68 {
-		t.Errorf("got %d verbs, want 68: %v", len(g.verbOrder), verbNames(g))
+	// FORTRAN, and Phase 88 CONVERT, and EDIT is govax's own. QUIT, TEST,
+	// CLEAR, VMINIT (now INITIALIZE/MEMORY), ZERO, and BOOT went
+	// (2026-11-08).
+	if len(g.verbOrder) != 62 {
+		t.Errorf("got %d verbs, want 62: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

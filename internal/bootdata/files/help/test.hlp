@@ -1,9 +1,0 @@
-1 TEST
-
-   Reserved for the emulator's own test sequences.  The grammar takes
-   the command, but nothing in govax runs one: TEST is
-   %DCL-E-NOHANDLER.
-
-   Format
-
-     TEST code

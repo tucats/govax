@@ -181,7 +181,9 @@ func TestClearString(t *testing.T) {
 	}
 }
 
-func TestClearMemory_reinitializes(t *testing.T) {
+// TestZero_reinitializes: Zero, which INITIALIZE/VAX runs, clears memory
+// and the symbols.
+func TestZero_reinitializes(t *testing.T) {
 	c, _ := newTestConsole(t)
 	c.Symbols.Set("FOO", 1, machine.SymbolUser)
 
@@ -189,12 +191,12 @@ func TestClearMemory_reinitializes(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := c.ClearMemory(); err != nil {
-		t.Fatalf("ClearMemory: %v", err)
+	if err := c.Zero(); err != nil {
+		t.Fatalf("Zero: %v", err)
 	}
 
 	if _, ok := c.Symbols.Get("FOO"); ok {
-		t.Error("expected CLEAR MEMORY (== ZERO) to clear symbols too")
+		t.Error("expected Zero to clear symbols too")
 	}
 
 	got, err := c.Mem.LoadLongword(c.CPU, 0x100)

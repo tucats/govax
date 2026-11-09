@@ -799,8 +799,9 @@ func (m *Machine) ShowShim() error {
 	return nil
 }
 
-// ShowString walks kernel.asm's CONSOLE$STRINGPOOL linked list of VAX
-// string descriptors. Requires a booted microkernel.
+// ShowString is the debugger's SHOW STRING_POOL: it walks kernel.asm's
+// CONSOLE$STRINGPOOL linked list of VAX string descriptors. Requires a
+// booted microkernel.
 func (m *Machine) ShowString() error {
 	if err := m.requireInit(); err != nil {
 		return err

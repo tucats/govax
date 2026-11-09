@@ -114,7 +114,7 @@ func TestProcedure_symbolScope(t *testing.T) {
 }
 
 // TestProcedure_exit: EXIT ends the procedure it's in, and the level
-// above goes on; at the terminal it ends govax. QUIT ends govax from
+// above goes on; at the terminal it ends govax. LOGOUT ends govax from
 // inside a procedure.
 func TestProcedure_exit(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
@@ -131,7 +131,7 @@ func TestProcedure_exit(t *testing.T) {
 		t.Errorf("output %q, running %v; want %q, still running", got, c.Running(), "before\nback\n")
 	}
 
-	quits := writeProcedure(t, dir, "quits.com", "$ QUIT", `$ PRINT "after"`)
+	quits := writeProcedure(t, dir, "quits.com", "$ LOGOUT", `$ PRINT "after"`)
 	caller := writeProcedure(t, dir, "caller.com", "$ @"+quits, `$ PRINT "back"`)
 
 	buf.Reset()
@@ -141,7 +141,7 @@ func TestProcedure_exit(t *testing.T) {
 	}
 
 	if buf.Len() != 0 || c.Running() || c.CommandLevel() != 0 {
-		t.Errorf("after QUIT in a procedure: output %q, running %v, level %d; want none, ended, 0",
+		t.Errorf("after LOGOUT in a procedure: output %q, running %v, level %d; want none, ended, 0",
 			buf.String(), c.Running(), c.CommandLevel())
 	}
 

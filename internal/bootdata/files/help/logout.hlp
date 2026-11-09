@@ -7,5 +7,6 @@
      LOGOUT
 
    The process says so ("Process name logged out at ..."), and its final
-   status is $STATUS's.  In the console's own process LOGOUT is QUIT.
-   See SPAWN.
+   status is $STATUS's.  In the console's own process LOGOUT ends
+   govax, from the terminal or from inside a command procedure: mounted
+   volumes are dismounted, and the other processes deleted.  See SPAWN.

@@ -71,24 +71,20 @@
 2 The_machine
 
      ASM             Assemble into memory, before the microkernel
-     CLEAR           Clear memory or the string pool
      DEBUG           Start the debugger
+     INITIALIZE      Size memory (/VAX), lay it out (/MEMORY)
      LOAD            Load a ROM or NVRAM image
      PRINT           Show expressions in the console's radix
-     PSL             The processor status longword
      SAVE            Save a ROM or NVRAM image
      SET             The console's settings
      SHOW            The machine's and the console's state
      TIME            Time a command
-     VMINIT          Lay out virtual memory
      XFC             govax's extended function codes
-     ZERO            Clear memory
 
 2 govax
 
      ABOUT           Who made govax
      CONFIGURATION   govax's settings, and how to set them
      KEYS            Ctrl/C, Ctrl/Y, and Ctrl/Z
-     QUIT            Leave govax
      STARTUP         What govax does as it starts
      SYSTEM_VOLUME   The volume of govax's own files

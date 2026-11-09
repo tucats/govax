@@ -1358,7 +1358,10 @@ expect adjustment as phases land):
   grammar finds and whose value the handler gets from the machine's
   expression evaluator. Unquoted text is uppercased, so a case-sensitive
   host file name must be quoted. The one-shot command line and run
-  limits are `misc.go`. Most end-to-end and oracle tests are here;
+  limits are `misc.go`. VMINIT is INITIALIZE/MEMORY since 2026-11-08 (the
+  docs' and code's "VMINIT" still names it), and the console's BOOT,
+  TEST, ZERO, QUIT, and CLEAR are gone; SHOW STRING_POOL and CANCEL
+  STRINGS are the debugger's. Most end-to-end and oracle tests are here;
   `internal/console/consoletest` is test support for packages that drive
   a console (the debugger's tests).
 - `internal/machine` — the emulated machine as the operator sees it

@@ -9,10 +9,11 @@
         unless configured otherwise.
      3. Runs SYS$MANAGER:STARTUP.COM from the system volume, at command
         level 1, as a login command procedure.  It defines the system
-        logical names, sizes the memory (INITIALIZE/VAX and VMINIT, from
-        the vax.memory.* settings), loads SYS$SYSTEM:DEFAULT.ROM,
-        assembles SYS$SOURCES:KERNEL.ASM and starts it, defines TTA0: and
-        NLA0:, and last runs SYS$MANAGER:SYSTARTUP_VMS.COM.
+        logical names, sizes the memory (INITIALIZE/VAX and
+        INITIALIZE/MEMORY, from the vax.memory.* settings), loads
+        SYS$SYSTEM:DEFAULT.ROM, assembles SYS$SOURCES:KERNEL.ASM and
+        starts it, defines TTA0: and NLA0:, and last runs
+        SYS$MANAGER:SYSTARTUP_VMS.COM.
      4. Installs the page file, with paging on.
      5. Runs vax.startup.procedure, if that names a procedure.
      6. Runs the command on govax's command line and exits, or else

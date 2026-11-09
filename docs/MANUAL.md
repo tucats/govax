@@ -207,7 +207,7 @@ VAX> HELP
 this manual cover the same ground; the help text is the place to look up
 a qualifier quickly.
 
-To leave govax, type `EXIT` (or `QUIT`, or `LOGOUT`) at the `VAX>`
+To leave govax, type `EXIT` (or `LOGOUT`) at the `VAX>`
 prompt, or press **Ctrl/Y**.
 
 The prompt has a line editor: the arrow keys move through the line and
@@ -323,7 +323,7 @@ Each time govax starts, it:
    - defines the system logical names (`SYS$SYSTEM`, `SYS$LIBRARY`, ...),
    - sets the size of physical memory (`INITIALIZE/VAX`),
    - builds the page tables for the P0, P1, and S0 address regions and
-     the access modes' stacks (`VMINIT`),
+     the access modes' stacks (`INITIALIZE/MEMORY`),
    - loads the console ROM, `SYS$SYSTEM:DEFAULT.ROM`, and the NVRAM
      (`LOAD/ROM/NOERROR`),
    - assembles the microkernel, `SYS$SOURCES:KERNEL.ASM`, into memory
@@ -1850,7 +1850,7 @@ VAX> SPAWN/NOWAIT @NIGHTLY
 A `/NOWAIT` subprocess runs alongside you: between your commands, while
 you type, and while your programs run. What it writes appears above the
 line you're typing. Commands that work on the machine itself (`DEBUG`,
-`VMINIT`, `INITIALIZE/VAX`, `SAVE`, `LOAD`, ...) aren't available in a
+`INITIALIZE/MEMORY`, `INITIALIZE/VAX`, `SAVE`, `LOAD`, ...) aren't available in a
 subprocess (`%VAX-E-NOTSUBPROC`).
 
 `ATTACH` gives the terminal to another process of your job that's
@@ -1906,7 +1906,7 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `OPEN`, `CLOSE`, `READ`, `WRITE`, `INQUIRE` | File and terminal I/O. |
 | `SET VERIFY`, `SET PREFIX` | Show a procedure's lines as they run. |
 | `SET CONTROL=Y`, `SET NOCONTROL=Y` | Turn Ctrl/Y on and off. |
-| `QUIT` | End govax, even from inside a procedure. |
+| `LOGOUT` | End govax, even from inside a procedure. |
 
 ### 6.8 Information
 
@@ -1922,7 +1922,6 @@ These are described in [section 7](#7-command-procedures-and-the-dcl-language).
 | `SHOW VERSION` | The microkernel's version. |
 | `SHOW RADIX` | The console's numeric radix. |
 | `SHOW DEBUG` | The debugging switches. |
-| `SHOW STRINGS` | The console's string pool. |
 | `HELP [topic ...]` | The help text: govax's own, or with `/LIBRARY=` a help library's, as VMS's HELP shows it (`/[NO]PROMPT`, `/[NO]INSTRUCTIONS`, `/[NO]LIBLIST`, `/[NO]LIBRARY`, `/[NO]USERLIBRARY`, `/[NO]OUTPUT`, `/[NO]PAGE`). |
 
 ### 6.9 The machine and the console
@@ -1934,8 +1933,7 @@ change how the machine is set up.
 | Command | Purpose |
 | --- | --- |
 | `INITIALIZE/VAX pages` | Set physical memory to `pages` 512-byte pages, clearing the machine. The count is in the console's radix, hexadecimal by default: write `^D16384` for decimal. |
-| `VMINIT [/P0=n] [/P1=n] [/S0=n] [/KSP=n] [/ESP=n] [/SSP=n] [/ISP=n] [/[NO]PAGING]` | Build page tables for the address regions, and turn memory management on (section 13). |
-| `CLEAR MEMORY`, `ZERO` | Clear physical memory (and so turn memory management off). |
+| `INITIALIZE/MEMORY [/P0=n] [/P1=n] [/S0=n] [/KSP=n] [/ESP=n] [/SSP=n] [/ISP=n] [/[NO]PAGING]` | Build page tables for the address regions, and turn memory management on (section 13). |
 | `SAVE file`, `LOAD file` | Save and restore memory and registers. |
 | `SAVE/ROM`, `LOAD/ROM`, `INIT/NVRAM`, `SAVE/NVRAM`, `LOAD/NVRAM` | The console ROM and NVRAM areas. |
 | `DEBUG` | Start the debugger on the machine as it is (section 12). |
@@ -1946,9 +1944,9 @@ change how the machine is set up.
 | `SET DEBUG [NO]switch` | govax's internal tracing switches. |
 | `PRINT item[,...]` | Print quoted text and machine expressions, numbers in the console's radix (`PRINT "Base: ", 200+10`). A name is a DCL symbol's value first, if it's an integer or a string holding a number (`COUNT = 5`, then `PRINT COUNT+1`), then the machine's symbol. For DCL string values use `WRITE SYS$OUTPUT`. |
 | `TIME command` | Run a command and say how long it took. |
-| `TEST n` | govax's internal test sequences. |
 
-`BOOT` and `ROM` are reserved and not implemented.
+`ROM` is reserved and not implemented. The console's string pool is the
+debugger's to show (`SHOW STRING_POOL`) and empty (`CANCEL STRINGS`).
 
 ---
 
@@ -4277,6 +4275,7 @@ These go beyond VMS's debugger, to the machine itself:
 | `SHOW EXCEPTIONS` | Recent machine faults and exceptions. |
 | `SET BREAK/FAULT=code` | Stop when a machine fault is about to be delivered. |
 | `SHOW SHIM` | The stubs that stand for run-time library routines. |
+| `SHOW STRING_POOL`, `CANCEL STRINGS` | The console's string pool, where the interactive assembler keeps its string constants; and emptying it. |
 | `SHOW PROCESS`, `SET PROCESS pid` | List processes, and look at another one's registers and memory. |
 | `SHOW KSP`, `ESP`, `SSP`, `USP`, `ISP` | Dump a mode's stack. |
 | `SET MODE KERNEL` (or `EXECUTIVE`, `SUPERVISOR`, `USER`) | Switch the CPU's access mode. |
@@ -4587,7 +4586,7 @@ the paging mode:
   `STACK=` pages (20 by default), and a user-mode access below the
   stack creates the pages down to it, as VMS's stack expands. Only the
   process's page table area limits it (and its paging file quota): with
-  VMINIT's defaults, 24,576 entries, the stack can reach about 20,000
+  INITIALIZE/MEMORY's defaults, 24,576 entries, the stack can reach about 20,000
   pages, 10 MB, less what P0 and P1 expansions hold.
 - **With paging off**, it is a fixed part of P1: the pages from P1's
   low end to `7FE00000`, `vax.memory.p1` less the 4,096 pages above the
@@ -4661,10 +4660,10 @@ DBG> SHOW PAGE 7FDFFE00
     Physical address:  00400C00
 ```
 
-#### VMINIT: setting up memory
+#### INITIALIZE/MEMORY: setting up memory
 
 At startup, STARTUP.COM runs `INITIALIZE/VAX` (physical memory, 8 MB by
-default) and then `VMINIT`, which writes VMS V1's system service vector
+default) and then `INITIALIZE/MEMORY`, which writes VMS V1's system service vector
 at the start of S0 (80000000: an entry per service, at its P1 vector
 entry's offset, that jumps to that entry, for images linked before VMS
 V4 that call services there), builds the system page table and the
@@ -4730,7 +4729,7 @@ logical names and channels. govax keeps two kinds of state:
   quotas, event flags, ASTs, channels, logical names, and image.
 
 The console's own process is process 1, PID `00000301`, named `SYSTEM`,
-with VMINIT's tables and stacks. Other processes are created by
+with INITIALIZE/MEMORY's tables and stacks. Other processes are created by
 `$CREPRC`, `LIB$SPAWN`, and `SPAWN`, in a *job* (the console's process
 and its subprocesses share the job logical name table and the job's
 quotas, such as the page file quota). A detached process is a job of its
@@ -4818,7 +4817,7 @@ Turn it on with:
 govax config set vax.sysgen.paging.enable=true
 ```
 
-STARTUP.COM then runs `VMINIT/PAGING`, and govax creates the page file
+STARTUP.COM's `INITIALIZE/MEMORY` then turns paging on, and govax creates the page file
 (`vax.sysgen.paging.size` blocks, 32,768 by default) before your first
 command: `PAGEFILE.SYS` in the system volume's `[SYSTEM.SYSEXE]`, VMS's
 `SYS$SYSTEM:PAGEFILE.SYS`. The next start uses the same file again. To put
@@ -7383,7 +7382,7 @@ The main differences, gathered from the rest of the manual:
 - BACKUP works with save sets of files only: no image, physical, or
   incremental operations, no tapes, and no copies of files to files. It
   reads a save set stored as 512-byte records, which VMS refuses.
-- The console has commands VMS's DCL doesn't (`VMINIT`, `PRINT`,
+- The console has commands VMS's DCL doesn't (`INITIALIZE/MEMORY`, `PRINT`,
   `DEBUG` without an image, ...), and lacks some VMS has (section 7).
 
 `docs/DEVIATIONS.md` is the full, detailed list, including every known

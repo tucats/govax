@@ -34,7 +34,7 @@ func TestGrammarSplit(t *testing.T) {
 		// Verbs the console keeps: the VMS commands and the machine's
 		// life cycle.
 		{"ASSIGN A B", consoleOnly},
-		{"BOOT", consoleOnly},
+		{"BOOT", neither},
 		{"COPY A B", consoleOnly},
 		{"CREATE/DIRECTORY [A]", consoleOnly},
 		{"DEBUG", consoleOnly},
@@ -64,16 +64,18 @@ func TestGrammarSplit(t *testing.T) {
 		{"SAVE/ROM A", consoleOnly},
 		{"TIME", consoleOnly},
 		{"TYPE A", both},
-		{"VMINIT", consoleOnly},
+		{"INITIALIZE/MEMORY", consoleOnly},
+		{"VMINIT", neither},
 		{"STOP SOMEONE", consoleOnly},
-		{"ZERO", consoleOnly},
+		{"ZERO", neither},
+		{"TEST", neither},
 
 		// Verbs both have, each its own: starting and ending a run, help,
 		// and command files.
 		{"ASM", both}, // the console keeps it until the microkernel is in place
 		{"ASSEMBLE", both},
 		{"EXIT", both},
-		{"QUIT", both},
+		{"QUIT", debuggerOnly}, // the console ends with EXIT or LOGOUT
 		{"HELP", both},
 
 		// Command files: the debugger's @ is in its grammar (INCLUDE is
@@ -114,7 +116,8 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW EXPAND", consoleOnly},
 		{"SHOW ROM", consoleOnly},
 		{"SHOW NVRAM", consoleOnly},
-		{"SHOW STRING_POOL", consoleOnly},
+		{"SHOW STRING_POOL", debuggerOnly},
+		{"SHOW STRINGS", debuggerOnly},
 		{"SHOW SYMBOLS A", both},              // the console's are DCL's symbols; the debugger's the program's and the machine's
 		{"SHOW SYMBOL/GLOBAL A", consoleOnly}, // DCL's
 		{"SHOW SYMBOL/LOCAL/ALL", consoleOnly},
@@ -131,7 +134,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW CLOCK", debuggerOnly},
 		{"SHOW BASE", debuggerOnly},
 		{"SHOW MEMORY", both},
-		{"SHOW MAPS", debuggerOnly},
+		{"SHOW MAPS", neither},
 		{"SHOW TB", debuggerOnly},
 		{"SHOW REGIONS", debuggerOnly},
 		{"SHOW PAGE 200", debuggerOnly},
@@ -168,7 +171,7 @@ func TestGrammarSplit(t *testing.T) {
 		// SET: the console's.
 		{"SET DEFAULT A", consoleOnly},
 		{"SET QUANTUM 1", both},
-		{"SET UIQUANTUM 1", debuggerOnly},
+		{"SET UIQUANTUM 1", neither},
 		{"SET DEBUG", consoleOnly},
 		{"SET VERBOSE", consoleOnly},
 		{"SET VERIFY", consoleOnly},
@@ -189,14 +192,16 @@ func TestGrammarSplit(t *testing.T) {
 		{"SET VM", debuggerOnly},
 		{"SET BASE 200", debuggerOnly},
 
-		// CLEAR and CANCEL: the console clears its own data; the debugger
-		// cancels (and takes CLEAR as a synonym for the keywords it has).
-		{"CLEAR STRINGS", consoleOnly},
+		// CLEAR and CANCEL: the debugger's, CLEAR a synonym of CANCEL. The
+		// console has no CLEAR.
+		{"CLEAR STRINGS", debuggerOnly},
+		{"CANCEL STRINGS", debuggerOnly},
 		{"CLEAR SYMBOL/ALL", debuggerOnly}, // the machine's symbol table; DCL's is DELETE/SYMBOL
 		{"CANCEL SYMBOL A", debuggerOnly},
 		{"CLEAR SYM/ALL", debuggerOnly},
 		{"SHOW SYM A", both},
-		{"CLEAR MEMORY", both}, // the console's wipes memory; the debugger's has /STATISTICS
+		{"CLEAR MEMORY", neither},
+		{"CANCEL MEMORY", neither},
 		{"CANCEL BREAK/ALL", debuggerOnly},
 		{"CANCEL TRACE/ALL", debuggerOnly},
 		{"CANCEL WATCH/ALL", debuggerOnly},

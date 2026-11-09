@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
 )
 
@@ -101,14 +100,14 @@ func TestDispatch_showRegisterShortcut(t *testing.T) {
 	}
 }
 
-func TestDispatch_vminitViaDCL(t *testing.T) {
+func TestDispatch_initializeMemoryViaDCL(t *testing.T) {
 	d, c := newTestDispatcher(t)
-	if err := d.Dispatch("VMINIT/P0=20/P1=20/S0=0/KSP=2/ESP=2/SSP=2/ISP=2"); err != nil {
-		t.Fatalf("Dispatch(VMINIT): %v", err)
+	if err := d.Dispatch("INITIALIZE/MEMORY/P0=20/P1=20/S0=0/KSP=2/ESP=2/SSP=2/ISP=2"); err != nil {
+		t.Fatalf("Dispatch(INITIALIZE/MEMORY): %v", err)
 	}
 
 	if !c.VMInitValid {
-		t.Error("expected VMInitValid true after VMINIT")
+		t.Error("expected VMInitValid true after INITIALIZE/MEMORY")
 	}
 }
 
@@ -260,20 +259,10 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 	}
 }
 
-func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
-	d, c := newTestDispatcher(t)
-
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", 0x2000, machine.SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 8, machine.SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL", 0x2008, machine.SymbolSystem)
-
-	if err := d.Dispatch("CLEAR STRINGS"); err != nil {
-		t.Fatalf("Dispatch(CLEAR STRINGS): %v", err)
-	}
-
-	if got, _ := c.Symbols.Get("CONSOLE$STRINGPOOL"); got != 0x2000 {
-		t.Errorf("CONSOLE$STRINGPOOL = %#x, want reset to 0x2000", got)
-	}
+// TestDispatch_clearInterrupt: CLEAR INTERRUPT/ALL's work (the debugger's
+// CANCEL INTERRUPT/ALL now) empties the interrupt queue.
+func TestDispatch_clearInterrupt(t *testing.T) {
+	_, c := newTestDispatcher(t)
 
 	psl := c.CPU.PSL()
 	psl.SetIPL(20)
@@ -290,16 +279,16 @@ func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	}
 }
 
-// TestDispatch_notImplementedCommand checks BOOT, still gated behind
-// notImplemented (commands.go; device/RTL support) -- ASM used to be this test's own
+// TestDispatch_notImplementedCommand checks ROM, still gated behind
+// notImplemented (commands.go; device support) -- ASM used to be this test's own
 // example (its bare, no-filename form returned CLI_NOASMREPL) until
 // docs/PHASE-19.md implemented interactive assembler mode; see
 // TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
 // current behavior.
 func TestDispatch_notImplementedCommand(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	if err := d.Dispatch("BOOT"); err == nil {
-		t.Error("expected an error for BOOT")
+	if err := d.Dispatch("ROM"); err == nil {
+		t.Error("expected an error for ROM")
 	}
 }
 

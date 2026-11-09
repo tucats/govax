@@ -52,7 +52,7 @@ type Shell struct {
 	// subCLI is the process's CLI, nil in process 1's DCL.
 	subCLI *subprocessCLI
 
-	// quit is set by QUIT (misc.go), and by LOGOUT in a subprocess; read
+	// quit is set by EXIT at the terminal and by LOGOUT (Quit); read
 	// via Console.Running.
 	quit bool
 

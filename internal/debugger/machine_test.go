@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -307,6 +308,53 @@ func TestShowCallsAfterExit(t *testing.T) {
 	for _, cmd := range []string{"SHOW CALLS", "SHOW STACK"} {
 		if _, err := sayErr(c, cmd); !errors.Is(err, vmserrors.New(vmserrors.DBG_NOCALLS)) {
 			t.Errorf("%s: %v, want %%DEBUG-E-NOCALLS", cmd, err)
+		}
+	}
+}
+
+// TestStringPool: SHOW STRING_POOL (and STRINGS) walks the console's
+// string pool, and CANCEL STRINGS (and CLEAR STRINGS) empties it; both are
+// the debugger's, not the console's (2026-11-08).
+func TestStringPool(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	// A one-entry CONSOLE$STRINGPOOL chain made in memory (MAPEN is 0, so
+	// these are physical addresses), rather than booting a microkernel.
+	const (
+		base    = 0x1000 // holds the head of the chain
+		descOne = 0x2000
+		strOne  = 0x3000
+		text    = "HELLO"
+	)
+
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 0x100, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", descOne, machine.SymbolSystem)
+
+	for _, w := range []struct{ addr, value uint32 }{
+		{base, descOne}, {descOne, uint32(len(text))}, {descOne + 4, strOne}, {descOne + 8, 0},
+	} {
+		if err := c.Mem.StoreLongword(c.CPU, w.addr, w.value); err != nil {
+			t.Fatalf("seed %#x: %v", w.addr, err)
+		}
+	}
+
+	if err := c.Mem.Store(c.CPU, strOne, []byte(text)); err != nil {
+		t.Fatalf("seed string: %v", err)
+	}
+
+	for _, cmd := range []string{"SHOW STRING_POOL", "SHOW STRINGS"} {
+		if out := say(t, c, cmd); !strings.Contains(out, text) {
+			t.Errorf("%s: %q, want it to show %q", cmd, out, text)
+		}
+	}
+
+	for _, cmd := range []string{"CANCEL STRINGS", "CLEAR STRINGS"} {
+		c.Symbols.Set("CONSOLE$STRINGPOOL", descOne, machine.SymbolSystem)
+		say(t, c, cmd)
+
+		if got, _ := c.Symbols.Get("CONSOLE$STRINGPOOL"); got != base {
+			t.Errorf("%s: CONSOLE$STRINGPOOL = %#x, want %#x", cmd, got, base)
 		}
 	}
 }

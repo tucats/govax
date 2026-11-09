@@ -228,7 +228,7 @@ func TestProcedureFiles_vminit(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 
 	proc := writeProcedure(t, t.TempDir(), "init.com",
-		"$ VMINIT", "$ CHECK", "$ TYPE SYS$INPUT", "after vminit", `$ PRINT "done"`)
+		"$ INITIALIZE/MEMORY", "$ CHECK", "$ TYPE SYS$INPUT", "after vminit", `$ PRINT "done"`)
 
 	buf.Reset()
 
@@ -273,7 +273,7 @@ func TestProcedureFiles_vminitOpen(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	proc := writeProcedure(t, t.TempDir(), "init.com",
-		`$ OPEN/WRITE KEEP KEPT.TXT`, `$ WRITE KEEP "before"`, "$ VMINIT", `$ WRITE KEEP "after"`,
+		`$ OPEN/WRITE KEEP KEPT.TXT`, `$ WRITE KEEP "before"`, "$ INITIALIZE/MEMORY", `$ WRITE KEEP "after"`,
 		"$ CHECK", "$ CLOSE KEEP", "$ TYPE KEPT.TXT")
 
 	open := false

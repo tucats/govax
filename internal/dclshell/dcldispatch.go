@@ -315,12 +315,12 @@ func readCommandVerb(s string) (verb, rest string) {
 
 // BindDCL binds DCL's own verbs in g, the console's grammar: the flow of
 // a procedure (EXIT, ON, GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN,
-// CALL/SUBROUTINE), DECK/EOD, DCL's file I/O, WAIT, CONTINUE, QUIT,
+// CALL/SUBROUTINE), DECK/EOD, DCL's file I/O, WAIT, CONTINUE,
 // LOGOUT, STOP, SPAWN, MCR, SHOW SYMBOL, and DCL's SET commands (VERIFY,
 // PREFIX, CONTROL, ON, PROMPT). The console binds the rest.
 func (c *Interpreter) BindDCL(g *dcl.Grammar) {
-	// EXIT ends the command procedure it's in, or govax at the terminal;
-	// QUIT ends govax wherever it is (procedure.go).
+	// EXIT ends the command procedure it's in, or govax at the terminal
+	// (procedure.go); LOGOUT in process 1 ends govax wherever it is.
 	g.Bind("EXIT", c.exitCommand)
 	g.Bind("ON", c.onCommand)
 	// Labels, IF blocks, GOSUB, and CALL (dcllabel.go, dclif.go,
@@ -345,7 +345,6 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 	g.Bind("INQUIRE", c.inquireCommand)
 	g.Bind("WAIT", c.waitCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return c.continueCommand() })
-	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return c.Quit() })
 	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return c.logoutCommand() })
 	g.Bind("MCR", func(id int64, r *dcl.Result) error {
 		return c.runForeign(r.String("IMAGE"), r.String("TEXT"))
