@@ -454,6 +454,15 @@ planned now, and each round's findings may change the next:
   first key line isn't level 1; a bad key line after a module that was
   good in the same file; `/EXTRACT` of a missing name and of a wildcard
   matching nothing in a text library; and `/DATA=EXPAND`.
+- **Round 3b** (prepared 2026-11-08, subtask 11d; the README has its
+  table): what round 3 left to VMS. Binary keys in five libraries, each
+  flushed after OPEN and after each key so its blocks reach the disk if a
+  call fails (W13's crashed before its CLOSE, leaving an empty file); the
+  index blocks preallocated for ENTALL 0 and 1, keys of 15, and V2 (to
+  test `preallocated`'s rules and its default of 256); and LBR$OPEN of a
+  library open to update in another process (a subprocess holding it 90
+  seconds), to update and to read, timed against the manual's 30 seconds,
+  and twice in one image three ways.
 
 ## What the probe settled
 
@@ -1710,3 +1719,19 @@ with the facility's inhibit bit (%X10000001).
   ENTALL 0 and keys entered, and a KEYLEN 31 one with ENTALL 0 to tell the
   default from W15's binary keys; the second OPEN under a timer past 30
   seconds). Subtask 11d done.
+- **2026-11-08** — **Round 3b prepared** (after subtask 11d). `gen.go`'s
+  round 3 program is now laid out by `assemble`, a `program` giving the
+  title, the timer, and routines of its own (LBR90W.MAR comes out byte for
+  byte as VMS ran it), and `lbr90x()` writes LBR90X.MAR, 17 cases (the
+  README's table): X1 to X5 binary keys, X6 to X10 preallocation, X11 to
+  X17 opens of a library already open, with NOW and MARK/SINCE to show
+  when each open began and how long it took. `help90x.com` runs them, X12
+  in a subprocess holding WX while X13 and X14 open it, then LIBRARY/LIST
+  of each library and a save set; `exchange.cmd` and `copyout.cmd` are
+  round 3b's (`help90x-exchange.dsk`, `vax/round3b/`). Rehearsed on govax:
+  the procedure ran to its end. The rehearsal found a govax bug the run
+  doesn't depend on: in quantum-clock mode, a procedure's WAIT while a
+  spawned subprocess waits returns far past its time (`WAIT 00:00:05`
+  after `SPAWN/NOWAIT WAIT 00:00:20` took 33 emulated minutes, the next
+  `WAIT 00:00:20` 1 hour 41), so X12 had closed WX before X13 ran. It's
+  for a fix of its own. Waiting for the VAX run.

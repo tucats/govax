@@ -7,8 +7,8 @@ what the LBR$ routines do. Every question is asked of **help modules written
 for the probe**, whose text names its own topic ("Text of ALPHA
 Parameters."), so a log shows which text HELP chose. None of it is VMS's.
 
-`gen.go` writes everything here but this README (round 3's files are in
-their own section below):
+`gen.go` writes everything here but this README (round 3's and 3b's files
+are in their own sections below):
 
     go run testdata/help90/gen.go
 
@@ -29,10 +29,11 @@ their own section below):
 | `vax/round1/` | Round 1's VAX run, checked: `help90.log`, `h90.bck`, `dbgh.dlg`, and `help90-term.log` |
 | `vax/round2/` | Round 1c's `help90c.log` and round 2's `help90-term.log` (simh's console log, escape sequences kept, cut before simh's own help text), checked |
 | `vax/round3/` | Round 3's second run: `help90w.log` and `h90w.bck`, every library it made |
+| `vax/round3b/` | Round 3b's run, once made and checked: `help90x.log` and `h90x.bck` |
 | `vax/round1b/` | Round 1b's, checked: `help90.log`, `h90.bck`, `dbgh.dlg` (`help90f.log` and `dbgv.dlg` are local) |
 | `help90d.dbg`, `help90v.dbg`, `dbgt.mar` | The debugger sessions' commands, and the image they run |
 | `lbr90.mar` | Part E: 79 cases calling the LBR$ routines on the probe's libraries: the definitions' values, INI_CONTROL, OPEN, GET_HEADER, LOOKUP_KEY, GET_RECORD (move and locate), FIND, GET_INDEX with matches, SET_INDEX, GET_HELP with its action routine's every call (flags, level, data), OUTPUT_HELP with output and input routines of its own (scripted answers to its prompts), the errors |
-| `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume |
+| `exchange.cmd`, `copyout.cmd` | The govax console scripts for the exchange volume (round 3b's) |
 
 `lbr90.mar` was rehearsed on govax against stand-in LBR$ routines (not
 kept): it assembles, links, runs all 79 cases, and its handler reports a
@@ -238,7 +239,51 @@ messages and listings) and are in `vax/round3/`.
        govax console < testdata/help90/copyout.cmd
 
    which puts `help90w.log` and `h90w.bck` in
-   `testdata/disks/help90-vms/round3/`.
+   `testdata/disks/help90-vms/round3/`. (Since round 3b the scripts are
+   its own; round 3's are in the repository's history.)
+
+## Round 3b, binary keys, preallocation, and opens
+
+Prepared 2026-11-08 (subtask 11d), for what round 3 left to VMS.
+`exchange.cmd` and `copyout.cmd` are now round 3b's, on a new volume,
+`help90x-exchange.dsk`, which holds only its two files:
+
+| File | What it holds |
+| ---- | ------------- |
+| `lbr90x.mar` | 17 cases on LBR90W's routines and data (gen.go's `assemble`), under a timer of three minutes. X1 to X5: binary keys (CRE$L_KEYLEN 0) in a text library and a user's with ENTALL 0, with W13's options, with W13's options and keys passed as descriptors, and with W15's (no index); each library is flushed after OPEN and after each key, so its header and blocks are on the disk if a call fails; keys 5, 1, 3, 256 and a duplicate 3, LOOKUP_KEY of 3 and of a missing 7, GET_INDEX, SEARCH, DELETE_KEY, REPLACE_KEY, then read back. X6 to X10: one module each, for the index blocks preallocated (keys of 31 with ENTALL 0 and 1; keys of 15 with 96, in V3 and V2; V2 keys of 31 with 8). X11 makes WX; X12 holds it open to update for 90 seconds; X13 and X14 open it to update and to read, timed (`elapsed`) with the time of day before and after (`now`), as X12 shows its own; X15 to X17 open it twice in one image (update then read, read then update, read twice), timed |
+| `help90x.com` | MACRO and LINK of LBR90X, then cases 1 to 11; X12 spawned with `/NOWAIT/OUTPUT=HOLD1.LOG`, X13 15 seconds later, a wait for the holder to end, its log; the same for X14 (`HOLD2.LOG`); cases 15 to 17; `LIBRARY/LIST/FULL` of each library; a save set, `H90X.BCK` |
+
+The manual says a second open of a library open for writing retries every
+second for 30 seconds, then RMS$_FLK; X13's `elapsed` says whether VMS
+7.1's does, from another process.
+
+Rehearsed on govax (2026-11-08): the procedure ran to its end, all 17
+cases. It showed a govax bug the run doesn't depend on: in quantum-clock
+mode a procedure's WAIT, while a spawned subprocess waits, returns long
+after its time (5 seconds took 33 emulated minutes), so X13 ran after X12
+had closed WX.
+
+1. Build the exchange volume, from the repository root:
+
+       govax console < testdata/help90/exchange.cmd
+
+2. On the VAX, with the volume on any free unit (DUA1 below):
+
+       $ MOUNT DUA1: HELP90
+       $ SET DEFAULT DUA1:[000000]
+       $ @HELP90X/OUTPUT=HELP90X.LOG
+       $ SET DEFAULT SYS$LOGIN
+       $ DISMOUNT DUA1:
+
+   The run takes about eight minutes, most of it the waits.
+
+3. Back on the host:
+
+       govax console < testdata/help90/copyout.cmd
+
+   which puts `help90x.log` and `h90x.bck` in
+   `testdata/disks/help90-vms/round3b/`. They're our own text and VMS's
+   messages and listings; once checked they go in `vax/round3b/`.
 
 ## The tests
 

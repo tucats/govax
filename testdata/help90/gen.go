@@ -14,8 +14,9 @@
 // the debugger's command files, dbgt.mar, and lbr90.mar; and round 3's
 // (subtask 11): lbr90w.mar (the LBR$ writing routines on every kind of
 // library), help90w.com, their input files, and exchange.cmd and
-// copyout.cmd, which are round 3's since it was written (rounds 1 to 1c's
-// are in the repository's history).
+// copyout.cmd; and round 3b's (subtask 11d): lbr90x.mar and help90x.com.
+// exchange.cmd and copyout.cmd are round 3b's (earlier rounds' are in the
+// repository's history).
 //
 // Every topic's text names the topic, so a log shows which text HELP chose,
 // and none of it is VMS's.
@@ -52,6 +53,8 @@ func main() {
 
 	write("lbr90w.mar", lbr90w())
 	write("help90w.com", help90w())
+	write("lbr90x.mar", lbr90x())
+	write("help90x.com", help90x())
 	write("exchange.cmd", exchange())
 	write("copyout.cmd", copyout())
 }
@@ -2147,10 +2150,226 @@ func lbr90w() string {
 		p.emit("CALLS\t#0,SEVENTEEN")
 	})
 
+	lbr90wCases = len(p.cases)
+
+	return assemble(p, program{
+		title:     "LBR90W - Phase 90's round 3: the LBR$ writing routines",
+		timer:     "0 00:02:00.00",
+		timerText: "two minutes",
+		startNote: "; START runs the case its command line names under a timer of two\n" +
+			"; minutes, or with no number every case in turn, untimed.",
+		timeoutNote: "; TIMEOUT, the timer's AST: a case that ran past its two minutes.",
+	})
+}
+
+// lbr90x is round 3b (subtask 11d): what round 3 left to VMS. Binary keys
+// (W13's first INSERT_KEY failed with an access violation; W15's, in an
+// index the header didn't count, worked), each library flushed before its
+// first key so that its header is on the disk whatever happens; the
+// preallocation of index blocks for other entry counts, key lengths, and
+// the V2 format; and LBR$OPEN of a library another opening has open, from
+// another process (X12 holds WX.TLB while X13 and X14 open it) and from the
+// same one, timed.
+func lbr90x() string {
+	p := &prog{strs: map[string]string{}}
+
+	bin := func(typ, idxmax, entall string) []string {
+		return []string{typ, "0", "8", idxmax, "0", entall, "20", "CRE$C_VMSV3", "CRE$C_MACTXTCAS"}
+	}
+	txt := func(keylen, entall, version string) []string {
+		return []string{"LBR$C_TYP_TXT", keylen, "8", "1", "0", entall, "20", version, "CRE$C_MACTXTCAS"}
+	}
+	p.opts("OPTB1", bin("LBR$C_TYP_TXT", "1", "0")...)
+	p.opts("OPTB2", bin("LBR$C_TYP_USRLW", "1", "0")...)
+	p.opts("OPTB3", bin("LBR$C_TYP_USRLW", "1", "96")...)
+	p.opts("OPTB5", bin("LBR$C_TYP_TXT", "0", "0")...)
+	p.opts("OPTP0", txt("31", "0", "CRE$C_VMSV3")...)
+	p.opts("OPTP1", txt("31", "1", "CRE$C_VMSV3")...)
+	p.opts("OPTP15", txt("15", "96", "CRE$C_VMSV3")...)
+	p.opts("OPTP2", txt("15", "96", "CRE$C_VMSV2")...)
+	p.opts("OPTP28", txt("31", "8", "CRE$C_VMSV2")...)
+	p.opts("OPTPT", txt("31", "96", "CRE$C_VMSV3")...)
+	p.data.WriteString("BK256:\t.LONG\t256\nBK7:\t.LONG\t7\nSECS:\t.FLOAT\t90.0\nT0:\t.QUAD\t0\nT1:\t.QUAD\t0\n" +
+		"MELAP:\t.ASCID\t~  elapsed !UL s~\nMNOW:\t.ASCID\t~  now !AD~\nTNOWB:\t.BLKB\t23\n" +
+		"TNOWD:\t.WORD\t23\n\t.BYTE\t14,1\n\t.ADDRESS TNOWB\nTNOWL:\t.WORD\t0\n")
+
+	// binary writes and reads back binary keys in library name, made with
+	// opts as type typ; asText passes each key as a descriptor of its text
+	// rather than the address of its longword.
+	binary := func(title, name, opts, typ, ext string, asText bool) {
+		key := func(k string) string {
+			if asText {
+				return "$K" + k
+			}
+			return "&BK" + k
+		}
+		p.kase(title, func() {
+			p.ini("IDX", "FCRE", typ)
+			p.open("IDX", name, opts, ext)
+			p.lbr("FLUSH", "&IDX", "#LBR$C_FLUSHALL")
+			p.header("IDX")
+			for _, k := range []string{"5", "1", "3"} {
+				p.module("IDX", "RFA"+k, "Record of binary key "+k+".")
+				p.lbr("INSERT_KEY", "&IDX", key(k), "&RFA"+k)
+				p.lbr("FLUSH", "&IDX", "#LBR$C_FLUSHALL")
+			}
+			p.lbr("INSERT_KEY", "&IDX", key("256"), "&RFA3")
+			p.lbr("INSERT_KEY", "&IDX", key("3"), "&RFA3")
+			p.lbr("LOOKUP_KEY", "&IDX", key("3"), "&RFAX")
+			p.emit("PUSHAL\tIDX")
+			p.emit("CALLS\t#1,RECSI")
+			p.lbr("LOOKUP_KEY", "&IDX", key("7"), "&RFAX")
+			p.emit("CLRL\tCOUNT")
+			p.lbr("GET_INDEX", "&IDX", "&ONE", "&KEYB")
+			p.emit("CLRL\tCOUNT")
+			p.lbr("SEARCH", "&IDX", "&ONE", "&RFA3", "&KEYB")
+			p.lbr("DELETE_KEY", "&IDX", key("1"))
+			p.lbr("REPLACE_KEY", "&IDX", key("5"), "&RFA5", "&RFA3")
+			p.header("IDX")
+			p.closeLib("IDX")
+			p.ini("IDX3", "FREAD", typ)
+			p.open("IDX3", name, "", ext)
+			p.header("IDX3")
+			p.emit("CLRL\tCOUNT")
+			p.lbr("GET_INDEX", "&IDX3", "&ONE", "&KEYB")
+			p.lbr("LOOKUP_KEY", "&IDX3", key("256"), "&RFAX")
+			p.emit("PUSHAL\tIDX3")
+			p.emit("CALLS\t#1,RECSI")
+			p.closeLib("IDX3")
+		})
+	}
+	binary("X1, binary keys in a text library, ENTALL 0", "H90DIR:X1", "OPTB1", "TTXT", ".TLB", false)
+	binary("X2, binary keys in a user's library, ENTALL 0", "H90DIR:X2", "OPTB2", "TUSR", ".ULB", false)
+	binary("X3, binary keys, W13's options", "H90DIR:X3", "OPTB3", "TUSR", ".ULB", false)
+	binary("X4, W13's options, keys as text", "H90DIR:X4", "OPTB3", "TUSR", ".ULB", true)
+	binary("X5, W15's options, three keys", "H90DIR:X5", "OPTB5", "TTXT", ".TLB", false)
+
+	// The index blocks preallocated: each library has one module and key,
+	// and its blocks are in the save set.
+	for _, c := range []struct{ title, name, opts string }{
+		{"X6, keys of 31, ENTALL 0", "X6", "OPTP0"},
+		{"X7, keys of 31, ENTALL 1", "X7", "OPTP1"},
+		{"X8, keys of 15, ENTALL 96", "X8", "OPTP15"},
+		{"X9, V2, keys of 15, ENTALL 96", "X9", "OPTP2"},
+		{"X10, V2, keys of 31, ENTALL 8", "X10", "OPTP28"},
+	} {
+		c := c
+		p.kase(c.title, func() {
+			p.ini("IDX", "FCRE", "TTXT")
+			p.open("IDX", "H90DIR:"+c.name, c.opts, ".TLB")
+			p.module("IDX", "RFA1", c.name+"'s record.")
+			p.insert("IDX", c.name, "RFA1")
+			p.header("IDX")
+			p.closeLib("IDX")
+		})
+	}
+
+	// Opening a library another opening has open.
+	p.kase("X11, WX made", func() {
+		p.ini("IDX", "FCRE", "TTXT")
+		p.open("IDX", "H90DIR:WX", "OPTPT", ".TLB")
+		p.module("IDX", "RFA1", "WX's record.")
+		p.insert("IDX", "WX", "RFA1")
+		p.closeLib("IDX")
+	})
+	p.kase("X12, WX held open to update for 90 seconds", func() {
+		p.ini("IDX", "FUPD", "TTXT")
+		p.open("IDX", "H90DIR:WX", "", ".TLB")
+		p.emit("CALLS\t#0,NOW")
+		p.emit("PUSHAF\tSECS")
+		p.emit("CALLS\t#1,G^LIB$WAIT")
+		p.stat("WAIT")
+		p.emit("CALLS\t#0,NOW")
+		p.closeLib("IDX")
+	})
+	held := func(title, fn string) {
+		p.kase(title, func() {
+			p.ini("IDX", fn, "TTXT")
+			p.emit("CALLS\t#0,NOW")
+			p.emit("CALLS\t#0,MARK")
+			p.open("IDX", "H90DIR:WX", "", ".TLB")
+			p.emit("CALLS\t#0,SINCE")
+			p.emit("CALLS\t#0,NOW")
+			p.emit("CALLS\t#0,G^LBR$RET_RMSSTV")
+			p.stat("RET_RMSSTV")
+			p.closeLib("IDX")
+		})
+	}
+	held("X13, WX opened to update while X12 holds it", "FUPD")
+	held("X14, WX opened to read while X12 holds it", "FREAD")
+	twice := func(title, first, second string) {
+		p.kase(title, func() {
+			p.ini("IDX", first, "TTXT")
+			p.open("IDX", "H90DIR:WX", "", ".TLB")
+			p.ini("IDX2", second, "TTXT")
+			p.emit("CALLS\t#0,MARK")
+			p.open("IDX2", "H90DIR:WX", "", ".TLB")
+			p.emit("CALLS\t#0,SINCE")
+			p.emit("CALLS\t#0,G^LBR$RET_RMSSTV")
+			p.stat("RET_RMSSTV")
+			p.closeLib("IDX2")
+			p.closeLib("IDX")
+		})
+	}
+	twice("X15, WX opened to update, then to read", "FUPD", "FREAD")
+	twice("X16, WX opened to read, then to update", "FREAD", "FUPD")
+	twice("X17, WX opened to read twice", "FREAD", "FREAD")
+
+	lbr90xCases = len(p.cases)
+
+	return assemble(p, program{
+		title:     "LBR90X - Phase 90's round 3b: binary keys, preallocation, and opens",
+		timer:     "0 00:03:00.00",
+		timerText: "three minutes",
+		startNote: "; START runs the case its command line names under a timer of three\n" +
+			"; minutes, or with no number every case in turn, untimed.",
+		timeoutNote: "; TIMEOUT, the timer's AST: a case that ran past its three minutes.",
+		code: `; NOW shows the time of day, so that the holder's and the opener's logs
+; show they overlapped.
+	.ENTRY	NOW,^M<R2,R3,R4,R5>
+	$ASCTIM_S TIMLEN=TNOWL,TIMBUF=TNOWD
+	PUSHAB	TNOWB
+	MOVZWL	TNOWL,-(SP)
+	PUSHAB	MNOW
+	CALLS	#3,OUT
+	RET
+; MARK notes the time, and SINCE shows the whole seconds since.
+	.ENTRY	MARK,^M<>
+	$GETTIM_S TIMADR=T0
+	RET
+	.ENTRY	SINCE,^M<R2,R3>
+	$GETTIM_S TIMADR=T1
+	MOVQ	T1,R0
+	SUBL2	T0,R0
+	SBWC	T0+4,R1
+	EDIV	#10000000,R0,R2,R3
+	PUSHL	R2
+	PUSHAB	MELAP
+	CALLS	#2,OUT
+	RET
+`,
+	})
+}
+
+// lbr90xCases is how many cases lbr90x wrote, for help90x's runs of them.
+var lbr90xCases int
+
+// A program is how a round 3 program is laid out around its cases: its
+// title, its timer (a delta time, and in words), and routines of its own.
+type program struct {
+	title, timer, timerText, code string
+
+	// startNote and timeoutNote are the comments on START and TIMEOUT.
+	startNote, timeoutNote string
+}
+
+// assemble lays out p's cases as a program: LBR90W's data, then p's, then
+// LBR90W's routines and pr's, the cases, and START, which runs the case
+// its command line names under the timer.
+func assemble(p *prog, pr program) string {
 	var b strings.Builder
-	b.WriteString(`	.TITLE	LBR90W - Phase 90's round 3: the LBR$ writing routines
-; Written by testdata/help90/gen.go.
-	$SSDEF
+	b.WriteString("\t.TITLE\t" + pr.title + "\n; Written by testdata/help90/gen.go.\n")
+	b.WriteString(`	$SSDEF
 	$RMSDEF
 	$RABDEF
 	$NAMDEF
@@ -2301,7 +2520,7 @@ NOBJ:	.ASCID	~object file~
 NPUT:	.ASCID	~PUT_RECORD~
 NHDR:	.ASCID	~GET_HEADER~
 INTRAV:	.ASCID	~INTRAV~
-TDS:	.ASCID	~0 00:02:00.00~
+TDS:	.ASCID	~` + pr.timer + `~
 TDELTA:	.QUAD	0
 CASEN:	.LONG	0
 ARGL:	.WORD	0
@@ -2312,20 +2531,19 @@ ARGD:	.WORD	80
 ARGN:	.WORD	0
 	.BYTE	14,1
 	.ADDRESS ARGB
-MTIME:	.ASCID	~  =t timed out after two minutes~
+MTIME:	.ASCID	~  =t timed out after ` + pr.timerText + `~
 MNOCASE: .ASCID	~  no such case~
 `)
 	b.WriteString(p.data.String())
 	b.WriteString(lbr90wCode)
+	b.WriteString(pr.code)
 	b.WriteString(p.code.String())
-	lbr90wCases = len(p.cases)
 	b.WriteString("\t.PSECT\tD,NOEXE,WRT,LONG\nCASES:")
 	for _, c := range p.cases {
 		fmt.Fprintf(&b, "\t.ADDRESS\t%s\n", c)
 	}
 	fmt.Fprintf(&b, `	.PSECT	C,EXE,NOWRT,LONG
-; START runs the case its command line names under a timer of two
-; minutes, or with no number every case in turn, untimed.
+%s
 	.ENTRY	START,^M<R2>
 	MOVC5	#0,BIG,#^A/B/,#3000,BIG
 	$BINTIM_S TIMBUF=TDS,TIMADR=TDELTA
@@ -2355,13 +2573,13 @@ MNOCASE: .ASCID	~  no such case~
 	MOVL	#SS$_BADPARAM,R0
 	RET
 ALL:
-`, len(p.cases))
+`, pr.startNote, len(p.cases))
 	for _, c := range p.cases {
 		fmt.Fprintf(&b, "\tCALLS\t#0,%s\n", c)
 	}
 	b.WriteString(`	MOVL	#1,R0
 	RET
-; TIMEOUT, the timer's AST: a case that ran past its two minutes.
+` + pr.timeoutNote + `
 	.ENTRY	TIMEOUT,^M<>
 	PUSHAB	MTIME
 	CALLS	#1,OUT
@@ -2904,15 +3122,15 @@ $ BACKUP W*.*LB;*,H90T.TLB;*,H90S.OLB;*,WD*.*;* H90W.BCK/SAVE_SET/LOG
 
 func exchange() string {
 	var b strings.Builder
-	b.WriteString(`! EXCHANGE.CMD - builds round 3's exchange volume with govax.
+	b.WriteString(`! EXCHANGE.CMD - builds round 3b's exchange volume with govax.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/exchange.cmd
 !
-INITIALIZE/CONTAINER "testdata/disks/help90w-exchange.dsk" /DEVICE=RD54 HELP90
-MOUNT/WRITE DUA5 "testdata/disks/help90w-exchange.dsk"
+INITIALIZE/CONTAINER "testdata/disks/help90x-exchange.dsk" /DEVICE=RD54 HELP90
+MOUNT/WRITE DUA5 "testdata/disks/help90x-exchange.dsk"
 `)
-	for _, f := range round3Files {
+	for _, f := range round3bFiles {
 		fmt.Fprintf(&b, "COPY \"%s/%s\"/HOST DUA5:[000000]%s\n", dir, f, strings.ToUpper(f))
 	}
 	b.WriteString("DIRECTORY DUA5:[000000]\nDISMOUNT DUA5\n")
@@ -2920,19 +3138,82 @@ MOUNT/WRITE DUA5 "testdata/disks/help90w-exchange.dsk"
 	return b.String()
 }
 
+// round3bFiles is every file round 3b's VAX run needs.
+var round3bFiles = []string{"lbr90x.mar", "help90x.com"}
+
 // copyout brings everything back to a local directory first: the log and
-// the save set go into vax/round3/ after the README's check.
+// the save set go into vax/round3b/ after the README's check.
 func copyout() string {
-	return `! COPYOUT.CMD - copies round 3's output off the exchange volume, into
-! testdata/disks/help90-vms/round3/, which git ignores. README.md says how
+	return `! COPYOUT.CMD - copies round 3b's output off the exchange volume, into
+! testdata/disks/help90-vms/round3b/, which git ignores. README.md says how
 ! the log is checked before it goes into vax/.
 ! Written by testdata/help90/gen.go. Run from the repository root:
 !
 !     govax console < testdata/help90/copyout.cmd
 !
-MOUNT DUA5 "testdata/disks/help90w-exchange.dsk"
-COPY DUA5:[000000]HELP90W.LOG "testdata/disks/help90-vms/round3/help90w.log"/HOST
-COPY DUA5:[000000]H90W.BCK "testdata/disks/help90-vms/round3/h90w.bck"/HOST/BINARY
+MOUNT DUA5 "testdata/disks/help90x-exchange.dsk"
+COPY DUA5:[000000]HELP90X.LOG "testdata/disks/help90-vms/round3b/help90x.log"/HOST
+COPY DUA5:[000000]H90X.BCK "testdata/disks/help90-vms/round3b/h90x.bck"/HOST/BINARY
 DISMOUNT DUA5
 `
+}
+
+// help90x is round 3b's procedure: LBR90X's cases, X12 run twice in a
+// subprocess to hold WX.TLB while X13 and X14 open it, then the libraries
+// as LIBRARY lists them, and a save set of them.
+func help90x() string {
+	var b strings.Builder
+	b.WriteString(`$ ! HELP90X.COM - round 3b of the Phase 90 probe: binary keys, the index
+$ ! blocks preallocated, and opening a library another opening has open
+$ ! (LBR90X.MAR). Written by testdata/help90/gen.go. Run it with the
+$ ! exchange volume's [000000] as the default directory:
+$ !
+$ !     @HELP90X/OUTPUT=HELP90X.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ L = F$ENVIRONMENT("DEFAULT")
+$ DEFINE H90DIR 'L'
+$ MACRO LBR90X
+$ LINK LBR90X
+$ ! Each case is a run of its own, ended by the program's timer if it
+$ ! runs past three minutes.
+$ LBR90X := $'L'LBR90X
+`)
+	for i := 1; i <= 11; i++ {
+		fmt.Fprintf(&b, "$ LBR90X %d\n", i)
+	}
+	b.WriteString(`$ ! X12 holds WX open to update for 90 seconds in a subprocess, while
+$ ! X13 opens it to update, then (a second holder) X14 to read.
+$ SPAWN/NOWAIT/OUTPUT=HOLD1.LOG LBR90X 12
+$ WAIT 00:00:15
+$ LBR90X 13
+$ WAIT 00:01:45
+$ TYPE HOLD1.LOG
+$ SPAWN/NOWAIT/OUTPUT=HOLD2.LOG LBR90X 12
+$ WAIT 00:00:15
+$ LBR90X 14
+$ WAIT 00:01:45
+$ TYPE HOLD2.LOG
+`)
+	for i := 15; i <= lbr90xCases; i++ {
+		fmt.Fprintf(&b, "$ LBR90X %d\n", i)
+	}
+	b.WriteString(`$ SHOW SYMBOL $STATUS
+$ !
+$ ! The libraries as LIBRARY sees them.
+$ !
+$ DIRECTORY/SIZE=ALL X*.*LB;*,WX.TLB;*
+`)
+	for _, l := range []string{"X1.TLB", "X2.ULB", "X3.ULB", "X4.ULB", "X5.TLB", "X6.TLB", "X7.TLB", "X8.TLB", "X9.TLB", "X10.TLB", "WX.TLB"} {
+		fmt.Fprintf(&b, "$ LIBRARY/LIST/FULL %s\n", l)
+	}
+	b.WriteString(`$ !
+$ ! The libraries, for the host.
+$ !
+$ BACKUP X*.*LB;*,WX.TLB;* H90X.BCK/SAVE_SET/LOG
+`)
+
+	return b.String()
 }
